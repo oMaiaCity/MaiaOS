@@ -58,6 +58,12 @@ jobs:
       - name: Build frontend
         run: bun run build
 
+      - name: Build Rust library for iOS
+        run: |
+          cd src-tauri
+          cargo build --release --target aarch64-apple-ios
+        working-directory: ${{ github.workspace }}
+
       - name: Build iOS app
         env:
           APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
@@ -66,8 +72,6 @@ jobs:
           echo "Available SDKs:"
           xcodebuild -showsdks
           
-          # Use Tauri's build command which handles Rust compilation
-          # The issue is iOS SDK version - let's use the SDK that's actually available
           cd src-tauri/gen/apple
           
           # Find available iOS SDK version
@@ -82,24 +86,14 @@ jobs:
             -configuration release \
             -destination 'generic/platform=iOS' \
             archive \
-            -archivePath build/app.xcarchive || {
-              echo "Archive failed, trying build instead..."
-              xcodebuild -allowProvisioningUpdates \
-                -workspace app.xcodeproj/project.xcworkspace \
-                -scheme app_iOS \
-                -sdk "$IOS_SDK" \
-                -configuration release \
-                build
-            }
+            -archivePath build/app.xcarchive
           
-          # Export IPA if archive succeeded
-          if [ -d "build/app.xcarchive" ]; then
-            xcodebuild -exportArchive \
-              -archivePath build/app.xcarchive \
-              -exportPath build \
-              -exportOptionsPlist ExportOptions.plist \
-              -allowProvisioningUpdates
-          fi
+          # Export IPA
+          xcodebuild -exportArchive \
+            -archivePath build/app.xcarchive \
+            -exportPath build \
+            -exportOptionsPlist ExportOptions.plist \
+            -allowProvisioningUpdates
         working-directory: ${{ github.workspace }}
 
       - name: Find IPA file
