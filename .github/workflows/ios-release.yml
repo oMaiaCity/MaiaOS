@@ -179,7 +179,7 @@ jobs:
 
           # Check if library exists in target directory first (this is cached)
           LIBRARY=$(find target/aarch64-apple-ios/release -name "libapp*.a" -type f 2>/dev/null | head -1)
-          
+
           if [ -n "$LIBRARY" ]; then
             echo "✅ Found Rust library in cache: $LIBRARY"
             cp "$LIBRARY" gen/apple/Externals/arm64/release/libapp.a
