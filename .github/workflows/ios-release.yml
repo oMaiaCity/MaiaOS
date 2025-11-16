@@ -14,7 +14,7 @@ on:
 jobs:
   build-and-upload:
     runs-on: macos-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: read
     steps:
@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.workflow_run.head_branch }}
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -58,9 +58,18 @@ jobs:
       - name: Build frontend
         run: bun run build
 
+      - name: Setup App Store Connect API key for signing
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "${{ secrets.APPSTORE_CONNECT_API_KEY }}" > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}.p8
+          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}.p8
+
       - name: Build iOS app
         env:
           APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ""
+          FASTLANE_USER: ""
+          FASTLANE_PASSWORD: ""
         run: |
           # Check available SDKs
           echo "Available SDKs:"
@@ -73,12 +82,15 @@ jobs:
           echo "Using iOS SDK: $IOS_SDK"
 
           # Build with explicit SDK and destination
+          # Use CODE_SIGN_IDENTITY and CODE_SIGNING_REQUIRED for automatic signing
           xcodebuild -allowProvisioningUpdates \
             -workspace app.xcodeproj/project.xcworkspace \
             -scheme app_iOS \
             -sdk "$IOS_SDK" \
             -configuration release \
             -destination 'generic/platform=iOS' \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_DEVELOPMENT_TEAM }}" \
             archive \
             -archivePath build/app.xcarchive
 
