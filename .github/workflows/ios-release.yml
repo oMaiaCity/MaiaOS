@@ -227,6 +227,54 @@ jobs:
             echo "✅ Rust library built and ready: $(ls -lh gen/apple/Externals/arm64/release/libapp.a)"
           fi
 
+      - name: Configure Xcode project for manual signing
+        run: |
+          cd src-tauri/gen/apple
+          
+          # Find the provisioning profile UUID
+          PROFILE_FILE=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | head -1)
+          
+          if [ -n "$PROFILE_FILE" ] && [ -f "$PROFILE_FILE" ]; then
+            PROFILE_UUID=$(basename "$PROFILE_FILE" .mobileprovision)
+            echo "Found provisioning profile UUID: $PROFILE_UUID"
+            
+            # Update project.yml to include provisioning profile UUID using Python
+            # This ensures proper YAML formatting
+            python3 << EOF
+import yaml
+import sys
+
+try:
+    with open('project.yml', 'r') as f:
+        data = yaml.safe_load(f)
+    
+    # Update the settings for app_iOS target
+    if 'targets' in data and 'app_iOS' in data['targets']:
+        if 'settings' not in data['targets']['app_iOS']:
+            data['targets']['app_iOS']['settings'] = {}
+        if 'base' not in data['targets']['app_iOS']['settings']:
+            data['targets']['app_iOS']['settings']['base'] = {}
+        
+        data['targets']['app_iOS']['settings']['base']['PROVISIONING_PROFILE_SPECIFIER'] = '$PROFILE_UUID'
+        data['targets']['app_iOS']['settings']['base']['PROVISIONING_PROFILE'] = '$PROFILE_UUID'
+        
+        with open('project.yml', 'w') as f:
+            yaml.dump(data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        print("✅ Updated project.yml with provisioning profile UUID: $PROFILE_UUID")
+    else:
+        print("⚠️  Could not find app_iOS target in project.yml")
+        sys.exit(1)
+except Exception as e:
+    print(f"⚠️  Error updating project.yml: {e}")
+    print("Will continue with existing configuration")
+EOF
+            
+            echo "✅ Configured project.yml for manual signing with profile: $PROFILE_UUID"
+          else
+            echo "⚠️  No provisioning profile found, will use automatic signing"
+          fi
+        working-directory: ${{ github.workspace }}
+
       - name: Build iOS app with Tauri CLI
         env:
           APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
@@ -239,12 +287,12 @@ jobs:
           export CI=true
           export TAURI_BUILD=1
           export RUST_BACKTRACE=1
-
+          
           echo "CI mode enabled - Tauri should skip dev server connection"
           echo "Environment variables: CI=$CI, TAURI_BUILD=$TAURI_BUILD"
-
-          # Use Tauri CLI to build iOS app - it handles CI mode detection better
-          # This will build the IPA directly without manual xcodebuild steps
+          
+          # Use Tauri CLI to build iOS app - it will respect the manual signing settings
+          # configured in project.yml and use the imported certificates/profiles
           cd ${{ github.workspace }}
           bun tauri ios build
         working-directory: ${{ github.workspace }}
@@ -255,15 +303,25 @@ jobs:
       - name: Find IPA file
         id: find-ipa
         run: |
-          # Tauri ios build outputs IPA in src-tauri/gen/apple/build/arm64/ or similar
-          IPA_PATH=$(find src-tauri/gen/apple/build -name "*.ipa" -type f | head -1)
+          # Tauri ios build outputs IPA in src-tauri/gen/apple/build/arm64/APPNAME.ipa
+          # Search in multiple possible locations
+          IPA_PATH=$(find src-tauri/gen/apple/build -name "*.ipa" -type f 2>/dev/null | head -1)
+          
+          if [ -z "$IPA_PATH" ]; then
+            # Try alternative locations
+            IPA_PATH=$(find src-tauri/gen/apple -name "*.ipa" -type f 2>/dev/null | head -1)
+          fi
+          
           if [ -z "$IPA_PATH" ]; then
             echo "Error: IPA file not found"
             echo "Searching in common locations:"
-            find src-tauri/gen/apple -name "*.ipa" -type f 2>/dev/null || echo "No IPA found"
+            find src-tauri/gen/apple -name "*.ipa" -type f 2>/dev/null || echo "No IPA found in gen/apple"
             find src-tauri/target -name "*.ipa" -type f 2>/dev/null || echo "No IPA in target"
+            echo "Build output directories:"
+            ls -la src-tauri/gen/apple/build/ 2>/dev/null || echo "Build directory not found"
             exit 1
           fi
+          
           echo "ipa_path=$IPA_PATH" >> $GITHUB_OUTPUT
           echo "Found IPA: $IPA_PATH"
           ls -lh "$IPA_PATH"
