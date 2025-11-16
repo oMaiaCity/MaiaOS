@@ -2,7 +2,7 @@ name: iOS Release to TestFlight
 
 on:
   workflow_run:
-    workflows: ["Release"]
+    workflows: ['Release']
     types:
       - completed
   workflow_dispatch:
@@ -61,7 +61,26 @@ jobs:
       - name: Build iOS app
         env:
           APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
-        run: bun run tauri:ios:build
+        run: |
+          # Use Tauri to build, but we need to ensure destination is available
+          # Tauri's build command will handle Rust compilation and Xcode setup
+          bun run tauri:ios:build || {
+            echo "Tauri build failed, trying direct xcodebuild approach..."
+            cd src-tauri/gen/apple
+            # List available destinations
+            xcodebuild -workspace app.xcodeproj/project.xcworkspace \
+              -scheme app_iOS \
+              -showdestinations
+            
+            # Build with explicit destination
+            xcodebuild -allowProvisioningUpdates \
+              -workspace app.xcodeproj/project.xcworkspace \
+              -scheme app_iOS \
+              -sdk iphoneos \
+              -configuration release \
+              -destination 'generic/platform=iOS' \
+              build
+          }
         working-directory: ${{ github.workspace }}
 
       - name: Find IPA file
