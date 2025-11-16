@@ -236,15 +236,21 @@ jobs:
           IOS_SDK=$(xcodebuild -showsdks | grep -i "iphoneos" | head -1 | awk '{print $NF}' || echo "iphoneos")
           echo "Using iOS SDK: $IOS_SDK"
 
+          # Set CI environment variables globally so Tauri's xcode-script can detect CI mode
+          export CI=true
+          export TAURI_BUILD=1
+          export RUST_BACKTRACE=1
+
           # Create server address file that Tauri's xcode-script expects (must exist when Xcode runs)
-          # Tauri checks this file to see if dev server is running - create empty file to prevent panic
+          # Tauri checks this file to see if dev server is running - use a dummy URL to prevent EmptyHost error
           echo "Creating server address file for Tauri..."
+          SERVER_ADDR="http://localhost:5173"
           if [ -n "$TMPDIR" ] && [ -d "$TMPDIR" ]; then
-            echo "" > "${TMPDIR}/me.hominio.app-server-addr" && echo "✅ Created: ${TMPDIR}/me.hominio.app-server-addr"
+            echo "$SERVER_ADDR" > "${TMPDIR}/me.hominio.app-server-addr" && echo "✅ Created: ${TMPDIR}/me.hominio.app-server-addr with $SERVER_ADDR"
           fi
           # Also create in /var/folders/*/T/ directories (macOS temp pattern)
           find /var/folders -type d -name "T" 2>/dev/null | head -5 | while read T_DIR; do
-            echo "" > "${T_DIR}/me.hominio.app-server-addr" 2>/dev/null && echo "✅ Created: ${T_DIR}/me.hominio.app-server-addr" || true
+            echo "$SERVER_ADDR" > "${T_DIR}/me.hominio.app-server-addr" 2>/dev/null && echo "✅ Created: ${T_DIR}/me.hominio.app-server-addr" || true
           done
 
           # Build with code signing
@@ -285,12 +291,8 @@ jobs:
             # List available certificates
             security find-identity -v -p codesigning
             
-            # Set CI environment variables to skip dev server check
-            export CI=true
-            export TAURI_BUILD=1
-            export RUST_BACKTRACE=1
-            
             # Use UUID for PROVISIONING_PROFILE (Xcode expects UUID, not path)
+            # CI and TAURI_BUILD are already set above
             xcodebuild \
               -workspace app.xcodeproj/project.xcworkspace \
               -scheme app_iOS \
@@ -311,6 +313,7 @@ jobs:
               }
           else
             echo "Using automatic code signing..."
+            # CI and TAURI_BUILD are already set above
             xcodebuild -allowProvisioningUpdates \
               -workspace app.xcodeproj/project.xcworkspace \
               -scheme app_iOS \
