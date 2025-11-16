@@ -194,14 +194,6 @@ jobs:
             echo "✅ Rust library ready: $(ls -lh gen/apple/Externals/arm64/release/libapp.a)"
           fi
 
-          # Create server address file that Tauri's xcode-script expects (must exist before Xcode runs)
-          if [ -n "$TMPDIR" ] && [ -d "$TMPDIR" ]; then
-            echo "" > "${TMPDIR}/me.hominio.app-server-addr" && echo "✅ Created server address file in $TMPDIR"
-          fi
-          find /var/folders -type d -name "T" 2>/dev/null | head -3 | while read T_DIR; do
-            echo "" > "${T_DIR}/me.hominio.app-server-addr" 2>/dev/null || true
-          done
-
       - name: Archive and export iOS app
         env:
           APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
@@ -210,6 +202,17 @@ jobs:
 
           IOS_SDK=$(xcodebuild -showsdks | grep -i "iphoneos" | head -1 | awk '{print $NF}' || echo "iphoneos")
           echo "Using iOS SDK: $IOS_SDK"
+
+          # Create server address file that Tauri's xcode-script expects (must exist when Xcode runs)
+          # Tauri checks this file to see if dev server is running - create empty file to prevent panic
+          echo "Creating server address file for Tauri..."
+          if [ -n "$TMPDIR" ] && [ -d "$TMPDIR" ]; then
+            echo "" > "${TMPDIR}/me.hominio.app-server-addr" && echo "✅ Created: ${TMPDIR}/me.hominio.app-server-addr"
+          fi
+          # Also create in /var/folders/*/T/ directories (macOS temp pattern)
+          find /var/folders -type d -name "T" 2>/dev/null | head -5 | while read T_DIR; do
+            echo "" > "${T_DIR}/me.hominio.app-server-addr" 2>/dev/null && echo "✅ Created: ${T_DIR}/me.hominio.app-server-addr" || true
+          done
 
           # Build with code signing
           # If certificates/profiles are imported, use manual signing
