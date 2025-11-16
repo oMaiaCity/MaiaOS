@@ -1,3 +1,10 @@
+## [0.1.2](https://github.com/hominiome/hominio-app/compare/v0.1.1...v0.1.2) (2025-11-16)
+
+
+### Bug Fixes
+
+* **ci:** add permissions to iOS workflow and set baseline version tag ([67e6fb3](https://github.com/hominiome/hominio-app/commit/67e6fb3708e95452e28e264e03736781cdb43363))
+
 # 1.0.0 (2025-11-16)
 
 
