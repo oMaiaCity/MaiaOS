@@ -19,10 +19,13 @@
 <style>
 	.coming-soon-container {
 		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100vw;
-		height: 100vh;
+		/* Extend behind safe areas (notch, bottom bar) */
+		top: calc(0px - env(safe-area-inset-top));
+		left: calc(0px - env(safe-area-inset-left));
+		right: calc(0px - env(safe-area-inset-right));
+		bottom: calc(0px - env(safe-area-inset-bottom));
+		width: auto;
+		height: auto;
 		overflow: hidden;
 	}
 
@@ -57,7 +60,11 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: 2rem;
+		/* Add safe area padding so content doesn't go behind notch/bottom */
+		padding-top: calc(2rem + env(safe-area-inset-top));
+		padding-right: calc(2rem + env(safe-area-inset-right));
+		padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+		padding-left: calc(2rem + env(safe-area-inset-left));
 	}
 
 	.glass-card {
