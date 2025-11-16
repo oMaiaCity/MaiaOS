@@ -270,10 +270,34 @@ jobs:
             # Execute the Python script with the profile UUID as an environment variable
             PROFILE_UUID="$PROFILE_UUID" python3 /tmp/update_project_yml.py
             
+            if [ $? -ne 0 ]; then
+              echo "⚠️  Failed to update project.yml, but continuing..."
+            fi
+            
+            # Verify the update worked
+            if grep -q "PROVISIONING_PROFILE_SPECIFIER.*$PROFILE_UUID" project.yml; then
+              echo "✅ Verified project.yml contains provisioning profile UUID"
+            else
+              echo "⚠️  Warning: project.yml might not have been updated correctly"
+            fi
+            
             echo "✅ Configured project.yml for manual signing with profile: $PROFILE_UUID"
           else
             echo "⚠️  No provisioning profile found, will use automatic signing"
           fi
+        working-directory: ${{ github.workspace }}
+
+      - name: Verify code signing setup
+        run: |
+          echo "=== Code Signing Verification ==="
+          echo "Available certificates:"
+          security find-identity -v -p codesigning || echo "No certificates found"
+          echo ""
+          echo "Available provisioning profiles:"
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || echo "No profiles found"
+          echo ""
+          echo "Default keychain:"
+          security default-keychain || echo "No default keychain"
         working-directory: ${{ github.workspace }}
 
       - name: Build iOS app with Tauri CLI
