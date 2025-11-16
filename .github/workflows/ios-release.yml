@@ -239,35 +239,33 @@ jobs:
             echo "Found provisioning profile UUID: $PROFILE_UUID"
             
             # Update project.yml to include provisioning profile UUID using Python
-            # This ensures proper YAML formatting
-            python3 << EOF
-import yaml
-import sys
-
-try:
-    with open('project.yml', 'r') as f:
-        data = yaml.safe_load(f)
-    
-    # Update the settings for app_iOS target
-    if 'targets' in data and 'app_iOS' in data['targets']:
-        if 'settings' not in data['targets']['app_iOS']:
-            data['targets']['app_iOS']['settings'] = {}
-        if 'base' not in data['targets']['app_iOS']['settings']:
-            data['targets']['app_iOS']['settings']['base'] = {}
-        
-        data['targets']['app_iOS']['settings']['base']['PROVISIONING_PROFILE_SPECIFIER'] = '$PROFILE_UUID'
-        data['targets']['app_iOS']['settings']['base']['PROVISIONING_PROFILE'] = '$PROFILE_UUID'
-        
-        with open('project.yml', 'w') as f:
-            yaml.dump(data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
-        print("✅ Updated project.yml with provisioning profile UUID: $PROFILE_UUID")
-    else:
-        print("⚠️  Could not find app_iOS target in project.yml")
-        sys.exit(1)
-except Exception as e:
-    print(f"⚠️  Error updating project.yml: {e}")
-    print("Will continue with existing configuration")
-EOF
+            # Write Python script to a temporary file using echo to avoid YAML heredoc issues
+            echo 'import yaml' > /tmp/update_project_yml.py
+            echo 'import sys' >> /tmp/update_project_yml.py
+            echo 'import os' >> /tmp/update_project_yml.py
+            echo 'profile_uuid = os.environ.get("PROFILE_UUID", "")' >> /tmp/update_project_yml.py
+            echo 'try:' >> /tmp/update_project_yml.py
+            echo '    with open("project.yml", "r") as f:' >> /tmp/update_project_yml.py
+            echo '        data = yaml.safe_load(f)' >> /tmp/update_project_yml.py
+            echo '    if "targets" in data and "app_iOS" in data["targets"]:' >> /tmp/update_project_yml.py
+            echo '        if "settings" not in data["targets"]["app_iOS"]:' >> /tmp/update_project_yml.py
+            echo '            data["targets"]["app_iOS"]["settings"] = {}' >> /tmp/update_project_yml.py
+            echo '        if "base" not in data["targets"]["app_iOS"]["settings"]:' >> /tmp/update_project_yml.py
+            echo '            data["targets"]["app_iOS"]["settings"]["base"] = {}' >> /tmp/update_project_yml.py
+            echo '        data["targets"]["app_iOS"]["settings"]["base"]["PROVISIONING_PROFILE_SPECIFIER"] = profile_uuid' >> /tmp/update_project_yml.py
+            echo '        data["targets"]["app_iOS"]["settings"]["base"]["PROVISIONING_PROFILE"] = profile_uuid' >> /tmp/update_project_yml.py
+            echo '        with open("project.yml", "w") as f:' >> /tmp/update_project_yml.py
+            echo '            yaml.dump(data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)' >> /tmp/update_project_yml.py
+            echo '        print(f"✅ Updated project.yml with provisioning profile UUID: {profile_uuid}")' >> /tmp/update_project_yml.py
+            echo '    else:' >> /tmp/update_project_yml.py
+            echo '        print("⚠️  Could not find app_iOS target in project.yml")' >> /tmp/update_project_yml.py
+            echo '        sys.exit(1)' >> /tmp/update_project_yml.py
+            echo 'except Exception as e:' >> /tmp/update_project_yml.py
+            echo '    print(f"⚠️  Error updating project.yml: {e}")' >> /tmp/update_project_yml.py
+            echo '    print("Will continue with existing configuration")' >> /tmp/update_project_yml.py
+            
+            # Execute the Python script with the profile UUID as an environment variable
+            PROFILE_UUID="$PROFILE_UUID" python3 /tmp/update_project_yml.py
             
             echo "✅ Configured project.yml for manual signing with profile: $PROFILE_UUID"
           else
