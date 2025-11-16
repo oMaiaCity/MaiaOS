@@ -96,19 +96,19 @@ jobs:
           else
             echo "✅ IOS_DISTRIBUTION_CERTIFICATE is available"
           fi
-          
+
           if [ -z "${{ secrets.IOS_PROVISIONING_PROFILE }}" ]; then
             echo "⚠️  IOS_PROVISIONING_PROFILE is empty or not accessible"
           else
             echo "✅ IOS_PROVISIONING_PROFILE is available"
           fi
-          
+
           if [ -z "${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}" ]; then
             echo "⚠️  IOS_DISTRIBUTION_CERTIFICATE_PASSWORD is empty or not accessible"
           else
             echo "✅ IOS_DISTRIBUTION_CERTIFICATE_PASSWORD is available"
           fi
-          
+
           # Check if secrets are provided (they may be empty)
           CERT="${{ secrets.IOS_DISTRIBUTION_CERTIFICATE }}"
           PROFILE="${{ secrets.IOS_PROVISIONING_PROFILE }}"
@@ -256,7 +256,8 @@ jobs:
           cd src-tauri/gen/apple
 
           # Install PyYAML for Python YAML manipulation
-          pip3 install pyyaml --quiet || python3 -m pip install pyyaml --quiet
+          # Use --user flag to avoid externally-managed-environment error (PEP 668)
+          pip3 install --user pyyaml --quiet || python3 -m pip install --user pyyaml --quiet
 
           # Find the provisioning profile UUID
           PROFILE_FILE=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | head -1)
@@ -324,26 +325,74 @@ jobs:
           security default-keychain || echo "No default keychain"
         working-directory: ${{ github.workspace }}
 
-      - name: Build iOS app with Tauri CLI
+      - name: Archive and export iOS app with xcodebuild
         env:
           APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
           CI: 'true'
           TAURI_BUILD: '1'
           RUST_BACKTRACE: '1'
         run: |
-          # Explicitly export CI environment variables so they're available to all child processes
-          # This includes Tauri's xcode-script which runs during Xcode build
+          cd src-tauri/gen/apple
+
+          IOS_SDK=$(xcodebuild -showsdks | grep -i "iphoneos" | head -1 | awk '{print $NF}' || echo "iphoneos")
+          echo "Using iOS SDK: $IOS_SDK"
+
+          # Explicitly export CI environment variables so they're available to Xcode build scripts
+          # Xcode build scripts run in a separate shell and need these exported
           export CI=true
           export TAURI_BUILD=1
           export RUST_BACKTRACE=1
-
           echo "CI mode enabled - Tauri should skip dev server connection"
           echo "Environment variables: CI=$CI, TAURI_BUILD=$TAURI_BUILD"
 
-          # Use Tauri CLI to build iOS app - it will respect the manual signing settings
-          # configured in project.yml and use the imported certificates/profiles
-          cd ${{ github.workspace }}
-          bun tauri ios build
+          # Find the provisioning profile UUID
+          PROFILE_FILE=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | head -1)
+
+          if [ -n "$PROFILE_FILE" ] && [ -f "$PROFILE_FILE" ]; then
+            PROFILE_UUID=$(basename "$PROFILE_FILE" .mobileprovision)
+            echo "Using provisioning profile UUID: $PROFILE_UUID"
+            
+            # Build with manual code signing
+            xcodebuild \
+              -workspace app.xcodeproj/project.xcworkspace \
+              -scheme app_iOS \
+              -sdk "$IOS_SDK" \
+              -configuration release \
+              -destination 'generic/platform=iOS' \
+              CODE_SIGN_STYLE=Manual \
+              CODE_SIGN_IDENTITY="Apple Distribution" \
+              DEVELOPMENT_TEAM="${{ secrets.APPLE_DEVELOPMENT_TEAM }}" \
+              PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
+              PROVISIONING_PROFILE="$PROFILE_UUID" \
+              archive \
+              -archivePath build/app.xcarchive \
+              2>&1 | tee build.log || {
+                echo "Build failed, showing last 50 lines of log:"
+                tail -50 build.log
+                exit 1
+              }
+          else
+            echo "⚠️  No provisioning profile found, trying automatic signing..."
+            xcodebuild -allowProvisioningUpdates \
+              -workspace app.xcodeproj/project.xcworkspace \
+              -scheme app_iOS \
+              -sdk "$IOS_SDK" \
+              -configuration release \
+              -destination 'generic/platform=iOS' \
+              CODE_SIGN_STYLE=Automatic \
+              DEVELOPMENT_TEAM="${{ secrets.APPLE_DEVELOPMENT_TEAM }}" \
+              archive \
+              -archivePath build/app.xcarchive || {
+                echo "Automatic signing failed - manual signing required"
+                exit 1
+              }
+          fi
+
+          # Export IPA
+          xcodebuild -exportArchive \
+            -archivePath build/app.xcarchive \
+            -exportPath build \
+            -exportOptionsPlist ExportOptions.plist
         working-directory: ${{ github.workspace }}
 
       # ============================================
