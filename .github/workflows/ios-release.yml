@@ -230,20 +230,22 @@ jobs:
       - name: Archive and export iOS app
         env:
           APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
+          CI: "true"
+          TAURI_BUILD: "1"
+          RUST_BACKTRACE: "1"
         run: |
           cd src-tauri/gen/apple
 
           IOS_SDK=$(xcodebuild -showsdks | grep -i "iphoneos" | head -1 | awk '{print $NF}' || echo "iphoneos")
           echo "Using iOS SDK: $IOS_SDK"
 
-          # Set CI environment variables globally so Tauri's xcode-script can detect CI mode
+          # Explicitly export CI environment variables so they're available to Xcode build scripts
+          # Xcode build scripts run in a separate shell and need these exported
           export CI=true
           export TAURI_BUILD=1
           export RUST_BACKTRACE=1
-
-          # Don't create server address file - Tauri should detect CI mode and skip dev server check
-          # If CI=true is properly passed to xcodebuild, Tauri won't try to connect to dev server
-          echo "Skipping server address file creation - CI mode should prevent dev server connection"
+          echo "CI mode enabled - Tauri should skip dev server connection"
+          echo "Environment variables: CI=$CI, TAURI_BUILD=$TAURI_BUILD"
 
           # Build with code signing
           # If certificates/profiles are imported, use manual signing
@@ -284,8 +286,8 @@ jobs:
             security find-identity -v -p codesigning
             
             # Use UUID for PROVISIONING_PROFILE (Xcode expects UUID, not path)
-            # Pass CI environment variables to xcodebuild so they're available to build scripts
-            CI=true TAURI_BUILD=1 RUST_BACKTRACE=1 xcodebuild \
+            # CI environment variables are inherited from the step's env section
+            xcodebuild \
               -workspace app.xcodeproj/project.xcworkspace \
               -scheme app_iOS \
               -sdk "$IOS_SDK" \
@@ -305,8 +307,8 @@ jobs:
               }
           else
             echo "Using automatic code signing..."
-            # Pass CI environment variables to xcodebuild so they're available to build scripts
-            CI=true TAURI_BUILD=1 RUST_BACKTRACE=1 xcodebuild -allowProvisioningUpdates \
+            # CI environment variables are inherited from the step's env section
+            xcodebuild -allowProvisioningUpdates \
               -workspace app.xcodeproj/project.xcworkspace \
               -scheme app_iOS \
               -sdk "$IOS_SDK" \
