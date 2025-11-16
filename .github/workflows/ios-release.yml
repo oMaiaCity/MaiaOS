@@ -64,43 +64,13 @@ jobs:
           echo "${{ secrets.APPSTORE_CONNECT_API_KEY }}" > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}.p8
           chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}.p8
 
-      - name: Build iOS app
+      - name: Build iOS app with Tauri
         env:
           APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
         run: |
-          # Check available SDKs
-          echo "Available SDKs:"
-          xcodebuild -showsdks
-
-          cd src-tauri/gen/apple
-
-          # Find available iOS SDK version
-          IOS_SDK=$(xcodebuild -showsdks | grep -i "iphoneos" | head -1 | awk '{print $NF}' || echo "iphoneos")
-          echo "Using iOS SDK: $IOS_SDK"
-
-          # Try to build with automatic signing
-          # The -allowProvisioningUpdates flag should create profiles if Xcode can authenticate
-          # But in CI, we need to provide certificates/profiles or use a different method
-          # For now, let's try building without code signing, then sign during export
-          xcodebuild \
-            -workspace app.xcodeproj/project.xcworkspace \
-            -scheme app_iOS \
-            -sdk "$IOS_SDK" \
-            -configuration release \
-            -destination 'generic/platform=iOS' \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            archive \
-            -archivePath build/app.xcarchive
-
-          # Export IPA with signing
-          # The exportOptions.plist should handle signing during export
-          xcodebuild -exportArchive \
-            -archivePath build/app.xcarchive \
-            -exportPath build \
-            -exportOptionsPlist ExportOptions.plist \
-            -allowProvisioningUpdates
+          # Use Tauri's build command which handles the build process
+          # Tauri will call xcodebuild with proper settings
+          bun run tauri:ios:build
         working-directory: ${{ github.workspace }}
 
       - name: Find IPA file
