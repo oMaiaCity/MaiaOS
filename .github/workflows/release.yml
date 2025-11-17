@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     tags:
-      - 'v*' # Trigger on version tags (v0.1.1, v1.0.0, etc.)
+      - 'v*' # Trigger on version tags (for creating releases from tags)
 
 jobs:
   # Job 1: Run semantic-release (only on main branch pushes)
@@ -27,8 +27,52 @@ jobs:
       - run: bun run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # After semantic-release runs, check if release was created
+      # If not, create it manually
+      - name: Check and create release if missing
+        run: |
+          # Get the latest tag created by semantic-release
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LATEST_TAG" ]; then
+            echo "Latest tag: $LATEST_TAG"
+            # Check if release exists
+            RELEASE_EXISTS=$(gh release view "$LATEST_TAG" 2>&1 || echo "not found")
+            if [[ "$RELEASE_EXISTS" == *"not found"* ]]; then
+              echo "Release not found for $LATEST_TAG, creating it..."
+              # Extract release notes from CHANGELOG
+              VERSION_NUM="${LATEST_TAG#v}"  # Remove 'v' prefix
+              if [ -f services/app/CHANGELOG.md ]; then
+                NOTES=$(awk "/^## \[${VERSION_NUM}\]/,/^## \[/" services/app/CHANGELOG.md | sed '$d' || echo "")
+                if [ -n "$NOTES" ]; then
+                  gh release create "$LATEST_TAG" \
+                    --title "$LATEST_TAG" \
+                    --notes "$NOTES" \
+                    --target main
+                else
+                  gh release create "$LATEST_TAG" \
+                    --title "$LATEST_TAG" \
+                    --generate-notes \
+                    --target main
+                fi
+              else
+                gh release create "$LATEST_TAG" \
+                  --title "$LATEST_TAG" \
+                  --generate-notes \
+                  --target main
+              fi
+              echo "✅ Release created for $LATEST_TAG"
+            else
+              echo "✅ Release already exists for $LATEST_TAG"
+            fi
+          else
+            echo "No tags found, skipping release creation"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Job 2: Create release for tag (only on tag pushes)
+  # Job 2: Create release from tag (runs on tag pushes)
+  # This job creates releases for tags that don't have releases yet
+  # It runs independently on tag pushes, or can be triggered manually
   create-release-from-tag:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
@@ -41,9 +85,17 @@ jobs:
       - name: Extract tag name
         id: tag
         run: |
-          TAG_NAME=${GITHUB_REF#refs/tags/}
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # Tag push event
+            TAG_NAME=${GITHUB_REF#refs/tags/}
+          else
+            # Main branch push - get latest tag
+            TAG_NAME=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          fi
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "Tag: $TAG_NAME"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Check if release exists
         id: check-release
         run: |
@@ -57,6 +109,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Extract release notes from CHANGELOG
         id: changelog
+        if: steps.check-release.outputs.exists == 'false'
         run: |
           if [ -f services/app/CHANGELOG.md ]; then
             # Extract the section for this version from CHANGELOG.md
@@ -76,7 +129,7 @@ jobs:
             echo "has_notes=false" >> $GITHUB_OUTPUT
           fi
       - name: Create GitHub release
-        if: steps.check-release.outputs.exists == 'false'
+        if: steps.check-release.outputs.exists == 'false' && steps.tag.outputs.tag_name != ''
         run: |
           if [ "${{ steps.changelog.outputs.has_notes }}" == "true" ]; then
             gh release create "${{ steps.tag.outputs.tag_name }}" \

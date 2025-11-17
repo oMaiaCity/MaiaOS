@@ -12,7 +12,7 @@ on:
 
 jobs:
   deploy-wallet:
-    name: Deploy wallet service
+    name: Deploy Wallet
     runs-on: ubuntu-latest
     environment: PRODUCTION
     # FLY_API_TOKEN is an organization-wide secret (accessible regardless of environment)
