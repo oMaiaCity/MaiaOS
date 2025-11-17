@@ -1,6 +1,5 @@
 <script>
 	import '../app.css';
-	import favicon from '$lib/assets/favicon.svg';
 	import NavPill from '$lib/components/NavPill.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
