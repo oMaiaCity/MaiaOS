@@ -21,6 +21,8 @@ COPY --from=build /app/build build
 COPY --from=build /app/package.json .
 # Copy scripts directory for migration script
 COPY --from=build /app/scripts scripts
+# Copy auth.migrate.ts for BetterAuth CLI migrations
+COPY --from=build /app/auth.migrate.ts auth.migrate.ts
 
 # Set environment
 ENV NODE_ENV=production
