@@ -11,7 +11,7 @@
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
-		"migrate:auth": "better-auth migrate --config auth.migrate.ts",
+		"migrate:auth": "bunx @better-auth/cli migrate --config auth.migrate.ts",
 		"migrate:auth:legacy": "bun scripts/migrate-auth-db.js"
 	},
 	"devDependencies": {
