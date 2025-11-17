@@ -1,13 +1,13 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Hominio",
-  "version": "0.2.0cd",
+  "version": "0.5.3",
   "identifier": "me.hominio.app",
   "build": {
     "frontendDist": "../build",
     "devUrl": "http://localhost:4202",
     "beforeDevCommand": "bun dev",
-    "beforeBuildCommand": "bun run build"
+    "beforeBuildCommand": "TAURI_BUILD=1 bun run build"
   },
   "app": {
     "windows": [
