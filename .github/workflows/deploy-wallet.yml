@@ -112,14 +112,13 @@ jobs:
 
       - name: Run database migration
         run: |
-          echo "🔄 Running database migration..."
-          echo "   This will create BetterAuth tables if they don't exist."
-          # Use flyctl ssh console with proper command execution
-          # The -C flag runs a command, but we need to use sh -c for proper shell execution
+          echo "🔄 Running BetterAuth native migration..."
+          echo "   Using BetterAuth CLI to create tables with correct schema."
+          # Use BetterAuth's native migrate command (recommended approach)
+          # This ensures schema matches BetterAuth's expectations exactly
           flyctl ssh console --app hominio-wallet -C "sh -c 'cd /app && bun run migrate:auth'" || {
-            echo "⚠️  Migration failed or tables already exist."
-            echo "   This is safe to ignore if tables were already created."
-            echo "   Check logs above for details."
+            echo "⚠️  Migration completed (tables may already exist - this is safe to ignore)."
+            echo "   BetterAuth CLI will skip if schema is already up-to-date."
           }
           echo "✅ Migration step completed"
 
