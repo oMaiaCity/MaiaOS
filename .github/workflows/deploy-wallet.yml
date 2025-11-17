@@ -2,12 +2,13 @@ name: Deploy Wallet Service to Fly.io
 
 on:
   push:
-    branches: [main]  # Only trigger on main branch
+    tags:
+      - 'v*'  # Only trigger after successful release (semantic-release creates tags)
     paths:
       - 'services/wallet/**'
       - 'libs/hominio-auth/**'
       - '.github/workflows/deploy-wallet.yml'
-  workflow_dispatch: # Allow manual trigger (still requires main branch)
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
   deploy-wallet:
@@ -44,6 +45,26 @@ jobs:
             echo "✅ App hominio-wallet already exists"
           fi
 
+      - name: Configure custom domain (wallet.hominio.me)
+        run: |
+          echo "🌐 Configuring custom domain: wallet.hominio.me"
+          # Add the custom domain to Fly.io (idempotent - safe to run multiple times)
+          flyctl certs create wallet.hominio.me --app hominio-wallet || {
+            echo "⚠️  Certificate may already exist or domain already configured"
+            echo "   Checking certificate status..."
+            flyctl certs list --app hominio-wallet || true
+          }
+          
+          echo ""
+          echo "📋 DNS Configuration Required:"
+          echo "   Add a CNAME record in your DNS provider:"
+          echo "   Type: CNAME"
+          echo "   Name: wallet"
+          echo "   Value: hominio-wallet.fly.dev"
+          echo "   TTL: 300 (or your preferred TTL)"
+          echo ""
+          echo "   After DNS propagates, Fly.io will automatically provision Let's Encrypt certificate."
+
       - name: Set Fly.io secrets for wallet service
         run: |
           # Set all required environment variables from GitHub secrets
@@ -75,4 +96,12 @@ jobs:
           flyctl status --app hominio-wallet
           echo "📋 Recent logs:"
           flyctl logs --app hominio-wallet --no-tail | tail -50
+          
+      - name: Verify SSL certificate status
+        run: |
+          echo "🔒 Checking SSL certificate status for wallet.hominio.me..."
+          flyctl certs check wallet.hominio.me --app hominio-wallet || {
+            echo "⚠️  Certificate not yet issued. This is normal if DNS hasn't propagated yet."
+            echo "   Certificate will be automatically provisioned once DNS CNAME record is configured."
+          }
 

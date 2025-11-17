@@ -66,13 +66,14 @@ export const auth = betterAuth({
   plugins: [
     sveltekitCookies(getRequestEvent),
     // Polar plugin - automatically creates customers on signup
+    // Note: Checkout and webhooks are handled by the legacy system for now
+    // Dedicated services will be created later
     ...(polarClient
       ? [
           polar({
             client: polarClient,
             createCustomerOnSignUp: true, // Automatically sync user accounts with Polar
-            // Note: Checkout and webhooks are handled by the legacy system for now
-            // Dedicated services will be created later
+            use: [], // Empty array - checkout and webhooks handled by legacy system
           }),
         ]
       : []),

@@ -6,88 +6,98 @@ This document provides DNS configuration instructions for the `hominio-wallet` s
 
 The wallet service runs on Fly.io as `hominio-wallet` and should be accessible at `wallet.hominio.me`.
 
-## DNS Records
+## DNS Configuration
 
-After deploying the wallet service to Fly.io, you need to configure DNS records to point `wallet.hominio.me` to the Fly.io app.
+After deploying the wallet service to Fly.io, you need to configure DNS to point `wallet.hominio.me` to the Fly.io app.
 
-### Step 1: Get Fly.io IP Addresses
+### Step 1: Add Custom Domain to Fly.io
 
-First, get the IP addresses assigned to your Fly.io app:
+The deployment workflow automatically adds the custom domain to Fly.io. If you need to do it manually:
 
 ```bash
-flyctl ips list --app hominio-wallet
+flyctl certs create wallet.hominio.me --app hominio-wallet
 ```
 
-This will show you the IPv4 and IPv6 addresses assigned to your app. Example output:
+This will output the DNS configuration needed. Fly.io will automatically provision a Let's Encrypt SSL certificate once DNS is configured.
 
-```
-TYPE  IP                  REGION  CREATED AT
-v4    66.241.124.146     fra     2024-01-15T10:00:00Z
-v6    2a09:8280:1::aa:d39:1  fra     2024-01-15T10:00:00Z
-```
+### Step 2: Configure DNS CNAME Record
 
-### Step 2: Configure DNS Records
-
-Add the following DNS records in your DNS provider (wherever `hominio.me` is managed):
-
-#### Option A: Direct A/AAAA Records (Recommended)
-
-**For wallet.hominio.me:**
-
-```
-Type: A
-Name: wallet
-Value: [IPv4_ADDRESS_FROM_FLY_IO]
-TTL: 300 (or your preferred TTL)
-
-Type: AAAA
-Name: wallet
-Value: [IPv6_ADDRESS_FROM_FLY_IO]
-TTL: 300 (or your preferred TTL)
-```
-
-**Example:**
-```
-Type: A
-Name: wallet
-Value: 66.241.124.146
-TTL: 300
-
-Type: AAAA
-Name: wallet
-Value: 2a09:8280:1::aa:d39:1
-TTL: 300
-```
-
-#### Option B: CNAME Record (Alternative)
-
-If your DNS provider supports CNAME for subdomains:
+**Add a CNAME record in your DNS provider** (wherever `hominio.me` is managed):
 
 ```
 Type: CNAME
 Name: wallet
 Value: hominio-wallet.fly.dev
-TTL: 300
+TTL: 300 (or your preferred TTL)
 ```
 
-**Note:** CNAME records may have limitations depending on your DNS provider. A/AAAA records are generally more reliable.
+**Why CNAME?**
+- Fly.io recommends using CNAME records for custom domains
+- CNAME automatically handles IP address changes if Fly.io migrates infrastructure
+- Let's Encrypt certificate provisioning works seamlessly with CNAME records
 
-### Step 3: Verify SSL Certificate
+**DNS Provider Examples:**
 
-After DNS records are configured and propagated (usually takes a few minutes to hours), verify the SSL certificate:
+**Cloudflare:**
+1. Go to DNS settings for `hominio.me`
+2. Add record:
+   - Type: `CNAME`
+   - Name: `wallet`
+   - Target: `hominio-wallet.fly.dev`
+   - Proxy status: DNS only (gray cloud) or Proxied (orange cloud)
+   - TTL: Auto or 300
+
+**Namecheap/Other Providers:**
+1. Go to Advanced DNS settings
+2. Add new record:
+   - Type: `CNAME Record`
+   - Host: `wallet`
+   - Value: `hominio-wallet.fly.dev`
+   - TTL: 300
+
+### Step 3: Verify DNS Propagation
+
+Check if DNS has propagated:
+
+```bash
+# Check CNAME record
+dig wallet.hominio.me CNAME
+
+# Or use nslookup
+nslookup wallet.hominio.me
+```
+
+You should see `hominio-wallet.fly.dev` as the CNAME target.
+
+**Online DNS Checkers:**
+- https://dnschecker.org/
+- https://www.whatsmydns.net/
+
+### Step 4: Verify SSL Certificate (Automatic)
+
+Fly.io automatically provisions a Let's Encrypt SSL certificate once DNS has propagated. Check the certificate status:
 
 ```bash
 flyctl certs check wallet.hominio.me --app hominio-wallet
 ```
 
-The certificate should show as "Issued" once DNS has propagated and Fly.io can verify domain ownership.
+The certificate should show as **"Issued"** once DNS has propagated (usually 5-15 minutes after DNS configuration).
 
-### Step 4: Test the Service
+**Certificate Status:**
+- ✅ **Issued**: Certificate is active and HTTPS is working
+- ⏳ **Pending**: DNS hasn't propagated yet, wait a few minutes
+- ❌ **Error**: Check DNS configuration and try again
+
+### Step 5: Test the Service
 
 Once DNS has propagated and the certificate is issued, test the service:
 
 ```bash
+# Test HTTPS endpoint
 curl https://wallet.hominio.me/api/auth
+
+# Or open in browser
+open https://wallet.hominio.me/api/auth
 ```
 
 You should receive a response from the BetterAuth API.

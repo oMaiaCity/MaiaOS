@@ -58,8 +58,8 @@
 		<p class="m-0 text-lg">Redirecting...</p>
 	</div>
 {:else}
-	{@render children()}
+{@render children()}
 	{#if $page.url.pathname !== '/' && !$page.url.pathname.startsWith('/signin')}
-		<NavPill />
+<NavPill />
 	{/if}
 {/if}
