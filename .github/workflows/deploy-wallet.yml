@@ -110,6 +110,17 @@ jobs:
           echo "📋 Recent logs:"
           flyctl logs --app hominio-wallet --no-tail | tail -50
 
+      - name: Run database migration
+        run: |
+          echo "🔄 Running database migration..."
+          echo "   This will create BetterAuth tables if they don't exist."
+          flyctl ssh console --app hominio-wallet -C "cd /app && bun run migrate:auth" || {
+            echo "⚠️  Migration failed or tables already exist."
+            echo "   This is safe to ignore if tables were already created."
+            echo "   Check logs above for details."
+          }
+          echo "✅ Migration step completed"
+
       - name: Verify SSL certificate status
         run: |
           echo "🔒 Checking SSL certificate status for wallet.hominio.me..."

@@ -19,6 +19,8 @@ FROM base AS release
 COPY --from=install /temp/dev/node_modules node_modules
 COPY --from=build /app/build build
 COPY --from=build /app/package.json .
+# Copy scripts directory for migration script
+COPY --from=build /app/scripts scripts
 
 # Set environment
 ENV NODE_ENV=production
