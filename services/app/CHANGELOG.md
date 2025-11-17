@@ -1,3 +1,11 @@
+## [0.5.11](https://github.com/hominiome/hominio/compare/v0.5.10...v0.5.11) (2025-11-17)
+
+
+### Bug Fixes
+
+* add Node.js 22 setup for semantic-release compatibility ([3388dc2](https://github.com/hominiome/hominio/commit/3388dc2555166fc8b42644f7378ad944a1f51464))
+* use npx to run semantic-release with Node.js ([bc53f46](https://github.com/hominiome/hominio/commit/bc53f4698b94a5218bd25c0223f77c355893fb91))
+
 ## [0.5.10](https://github.com/hominiome/hominio/compare/v0.5.9...v0.5.10) (2025-11-17)
 
 
