@@ -1,4 +1,4 @@
-name: Deploy Wallet Service to Fly.io
+name: Deploy Wallet
 
 on:
   workflow_run:
