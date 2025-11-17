@@ -90,6 +90,9 @@ try {
 }
 
 // 5. Update iOS Info.plist (if exists)
+// NOTE: iOS files are NOT committed by semantic-release (they don't exist in CI)
+// They will be generated with correct version during Tauri build
+// Only update if running locally and files exist
 const iosInfoPlistPath = join(rootDir, 'services', 'app', 'src-tauri', 'gen', 'apple', 'app_iOS', 'Info.plist');
 try {
 	let infoPlist = readFileSync(iosInfoPlistPath, 'utf-8');
@@ -102,12 +105,15 @@ try {
 		`<key>CFBundleVersion</key>\n\t<string>${newVersion}</string>`
 	);
 	writeFileSync(iosInfoPlistPath, infoPlist);
-	console.log('✅ Updated services/app/src-tauri/gen/apple/app_iOS/Info.plist');
+	console.log('✅ Updated services/app/src-tauri/gen/apple/app_iOS/Info.plist (local only, not committed)');
 } catch (error) {
 	console.log('⚠️  iOS Info.plist not found (will be generated on build)');
 }
 
 // 6. Update iOS project.yml (if exists)
+// NOTE: iOS files are NOT committed by semantic-release (they don't exist in CI)
+// They will be generated with correct version during Tauri build
+// Only update if running locally and files exist
 const projectYmlPath = join(rootDir, 'services', 'app', 'src-tauri', 'gen', 'apple', 'project.yml');
 try {
 	let projectYml = readFileSync(projectYmlPath, 'utf-8');
@@ -120,7 +126,7 @@ try {
 		`CFBundleVersion: "${newVersion}"`
 	);
 	writeFileSync(projectYmlPath, projectYml);
-	console.log('✅ Updated services/app/src-tauri/gen/apple/project.yml');
+	console.log('✅ Updated services/app/src-tauri/gen/apple/project.yml (local only, not committed)');
 } catch (error) {
 	console.log('⚠️  iOS project.yml not found (will be generated on build)');
 }
