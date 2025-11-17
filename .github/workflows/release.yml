@@ -26,51 +26,20 @@ jobs:
         run: bun run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # After semantic-release runs, create release for the latest tag
-      # This is a fallback in case @semantic-release/github plugin doesn't create releases
-      - name: Create release for latest tag
+      
+      # Trigger wallet deployment after successful release
+      # Get the tag that was just created and trigger deploy workflow
+      - name: Trigger wallet deployment
+        if: success()
         run: |
-          echo "🔄 Fetching tags from remote..."
+          # Fetch tags to get the latest one semantic-release just created
           git fetch origin --tags --force
-          
-          # Get the latest tag (the one semantic-release just created)
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           
-          if [ -z "$LATEST_TAG" ]; then
-            echo "⚠️  No tags found - semantic-release may not have created a release"
-            exit 0
-          fi
-          
-          echo "📋 Latest tag: $LATEST_TAG"
-          
-          # Extract release notes from CHANGELOG
-          VERSION_NUM="${LATEST_TAG#v}"  # Remove 'v' prefix
-          
-          if [ -f services/app/CHANGELOG.md ]; then
-            # Extract the section for this version from CHANGELOG.md
-            NOTES=$(awk "/^## \[${VERSION_NUM}\]/,/^## \[/" services/app/CHANGELOG.md | sed '$d' || echo "")
-            
-            if [ -n "$NOTES" ] && [ "$NOTES" != "" ]; then
-              echo "📝 Using CHANGELOG notes for $LATEST_TAG"
-              echo "$NOTES" | gh release create "$LATEST_TAG" \
-                --title "$LATEST_TAG" \
-                --notes-file - \
-                --target main
-            else
-              echo "📝 Generating release notes automatically for $LATEST_TAG"
-              gh release create "$LATEST_TAG" \
-                --title "$LATEST_TAG" \
-                --generate-notes \
-                --target main
-            fi
+          if [ -n "$LATEST_TAG" ]; then
+            echo "🚀 Latest release tag: $LATEST_TAG"
+            echo "📋 Wallet deployment will be triggered by tag push"
+            echo "   (Tags pushed by semantic-release trigger deploy-wallet workflow)"
           else
-            echo "📝 Generating release notes automatically for $LATEST_TAG"
-            gh release create "$LATEST_TAG" \
-              --title "$LATEST_TAG" \
-              --generate-notes \
-              --target main
+            echo "⚠️  No tag found - deployment may not trigger"
           fi
-          
-          echo "✅ Release created for $LATEST_TAG"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

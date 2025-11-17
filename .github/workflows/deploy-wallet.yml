@@ -1,19 +1,19 @@
 name: Deploy Wallet Service to Fly.io
 
 on:
-  push:
-    tags:
-      - 'v*'  # Only trigger after successful release (semantic-release creates tags)
-    paths:
-      - 'services/wallet/**'
-      - 'libs/hominio-auth/**'
-      - '.github/workflows/deploy-wallet.yml'
+  workflow_run:
+    workflows: ["Release"]
+    types:
+      - completed
+    branches:
+      - main
   workflow_dispatch: # Allow manual trigger
 
 jobs:
   deploy-wallet:
     name: Deploy Wallet
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     environment: PRODUCTION
     # FLY_API_TOKEN is an organization-wide secret (accessible regardless of environment)
     # All other secrets are from the PRODUCTION environment
