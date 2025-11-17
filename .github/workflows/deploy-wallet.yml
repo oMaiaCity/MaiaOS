@@ -13,7 +13,7 @@ jobs:
   deploy-wallet:
     name: Deploy Wallet
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: (github.event_name == 'workflow_dispatch') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     environment: PRODUCTION
     # FLY_API_TOKEN is an organization-wide secret (accessible regardless of environment)
     # All other secrets are from the PRODUCTION environment
@@ -36,13 +36,26 @@ jobs:
             
             # Set primary region
             flyctl regions set fra --app hominio-wallet || true
-            
-            # Allocate IP addresses (shared IPv4 is free, IPv6 for dual-stack)
-            echo "🌐 Allocating IP addresses..."
-            flyctl ips allocate-v4 --app hominio-wallet --shared || true
-            flyctl ips allocate-v6 --app hominio-wallet || true
           else
             echo "✅ App hominio-wallet already exists"
+          fi
+          
+          # Always ensure IP addresses are allocated (idempotent - safe to run multiple times)
+          echo "🌐 Ensuring IP addresses are allocated..."
+          # Check if IPv4 exists, allocate if missing
+          if ! flyctl ips list --app hominio-wallet | grep -q "v4"; then
+            echo "   Allocating IPv4 address..."
+            flyctl ips allocate-v4 --app hominio-wallet --shared || true
+          else
+            echo "   IPv4 address already allocated"
+          fi
+          
+          # Check if IPv6 exists, allocate if missing
+          if ! flyctl ips list --app hominio-wallet | grep -q "v6"; then
+            echo "   Allocating IPv6 address..."
+            flyctl ips allocate-v6 --app hominio-wallet || true
+          else
+            echo "   IPv6 address already allocated"
           fi
 
       - name: Configure custom domain (wallet.hominio.me)

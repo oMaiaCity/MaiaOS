@@ -13,7 +13,7 @@ jobs:
   deploy-app:
     name: Deploy App
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: (github.event_name == 'workflow_dispatch') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     environment: PRODUCTION
     # FLY_API_TOKEN is an organization-wide secret (accessible regardless of environment)
     # All other secrets are from the PRODUCTION environment
@@ -111,4 +111,3 @@ jobs:
             echo "⚠️  Certificate not yet issued. This is normal if DNS hasn't propagated yet."
             echo "   Certificate will be automatically provisioned once DNS CNAME record is configured."
           }
-
