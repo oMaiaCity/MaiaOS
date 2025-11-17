@@ -3,7 +3,6 @@ name: Release
 on:
   push:
     branches: [main]
-  push:
     tags:
       - 'v*'  # Trigger on version tags (v0.1.1, v1.0.0, etc.)
 
