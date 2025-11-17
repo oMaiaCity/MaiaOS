@@ -15,16 +15,14 @@ const config = {
 	kit: {
 		adapter: isTauriBuild
 			? adapterStatic({
-					// For Tauri: generate static files that Tauri can serve
-					pages: 'build',
-					assets: 'build',
-					fallback: undefined,
-					precompress: false,
-					strict: true
+					// For Tauri: SPA mode with static files
+					// See: https://v2.tauri.app/start/frontend/sveltekit/
+					fallback: 'index.html'
 				})
 			: adapterNode({
 					// For Fly.io web server: adapter-node automatically uses PORT and HOST env vars
 					// PORT=3000 and HOST=0.0.0.0 are set in Dockerfile
+					// Note: SSR is disabled (ssr = false in +layout.js), so this is also client-only
 				})
 	}
 };
