@@ -7,6 +7,12 @@
  * bun run scripts/migrate-auth-db.js
  * 
  * Schema matches BetterAuth's PostgreSQL schema exactly (snake_case columns)
+ * Includes tables for:
+ * - user: User accounts
+ * - session: Authentication sessions
+ * - account: OAuth provider accounts
+ * - verification: Email verification and password reset tokens
+ * - passkey: WebAuthn/passkey credentials (for passwordless authentication)
  */
 
 import { Kysely, sql } from "kysely";
@@ -116,6 +122,34 @@ async function createBetterAuthSchema() {
     // Create index for verification.identifier
     await sql`
       CREATE INDEX IF NOT EXISTS "verification_identifier_idx" ON "verification"("identifier")
+    `.execute(db);
+
+    // 5. Passkey table (for WebAuthn/passkey authentication)
+    console.log("🔑 Creating passkey table...");
+    await sql`
+      CREATE TABLE IF NOT EXISTS "passkey" (
+        "id" TEXT PRIMARY KEY,
+        "name" TEXT,
+        "public_key" TEXT NOT NULL,
+        "user_id" TEXT NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
+        "credential_id" TEXT NOT NULL,
+        "counter" INTEGER NOT NULL,
+        "device_type" TEXT NOT NULL,
+        "backed_up" BOOLEAN NOT NULL,
+        "transports" TEXT,
+        "created_at" TIMESTAMP,
+        "aaguid" TEXT
+      )
+    `.execute(db);
+    console.log("✅ Passkey table created\n");
+
+    // Create indexes for passkey table
+    await sql`
+      CREATE INDEX IF NOT EXISTS "passkey_userId_idx" ON "passkey"("user_id")
+    `.execute(db);
+    
+    await sql`
+      CREATE INDEX IF NOT EXISTS "passkey_credentialID_idx" ON "passkey"("credential_id")
     `.execute(db);
 
     console.log("✨ BetterAuth schema migration completed successfully!\n");
