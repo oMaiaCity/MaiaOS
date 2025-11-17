@@ -4,32 +4,36 @@ alwaysApply: true
 
 ## Version Management System
 
-This project uses **semantic-release** with conventional commits for automated version management across all platforms (package.json, Cargo.toml, tauri.conf.json, iOS Info.plist).
+This project uses **semantic-release** with conventional commits for **centralized version management** across the entire monorepo. All services and libraries share the same version number.
 
-### Version Sync
+### Centralized Version Sync
 
-Versions are automatically synced across:
-- `package.json`
-- `src-tauri/Cargo.toml`
-- `src-tauri/tauri.conf.json`
-- `src-tauri/gen/apple/app_iOS/Info.plist` (iOS)
-- `src-tauri/gen/apple/project.yml` (iOS)
+Versions are automatically synced across **all packages** in the monorepo:
+- **All services**: `services/*/package.json` (app, me, etc.)
+- **All libraries**: `libs/*/package.json` (all shared packages)
+- **Tauri/Rust**: `services/app/src-tauri/Cargo.toml`
+- **Tauri config**: `services/app/src-tauri/tauri.conf.json`
+- **iOS**: `services/app/src-tauri/gen/apple/app_iOS/Info.plist`
+- **iOS project**: `services/app/src-tauri/gen/apple/project.yml`
+
+**Single Source of Truth:** Version is managed in `services/app/package.json` and automatically propagated to all other packages during release.
 
 **Commands:**
-- `bun run version:sync <version>` - Sync specific version across all files
-- `bun run release` - Run semantic-release (analyzes commits, bumps version, creates release)
-- `bun run release:dry-run` - Test what semantic-release would do
+- `bun version:sync <version>` - Manually sync specific version across all packages (from root)
+- `bun release` - Run semantic-release (analyzes commits, bumps version, syncs all packages, creates release)
+- `bun release:dry-run` - Test what semantic-release would do
 
 ### How Semantic Release Works
 
 1. **Only runs on `main` branch** - Releases are only triggered when running on the `main` branch
 2. Analyzes commits since last release using conventional commit format
 3. Determines next version (patch/minor) based on commit types
-4. Updates all version files automatically
-5. Generates CHANGELOG.md
-6. **Creates git tag** (e.g., `v0.2.0`) locally
-7. **Creates GitHub release** with the tag (automatically pushes tag to GitHub)
-8. Commits all changes
+4. **Syncs version across all packages** - Updates all `services/*/package.json` and `libs/*/package.json` files automatically
+5. Updates platform-specific files (Cargo.toml, tauri.conf.json, iOS files)
+6. Generates CHANGELOG.md
+7. **Creates git tag** (e.g., `v0.2.0`) locally
+8. **Creates GitHub release** with the tag (automatically pushes tag to GitHub)
+9. Commits all changes (including all package.json files)
 
 **Git Tags:** Semantic-release automatically creates git tags and pushes them to GitHub via the `@semantic-release/github` plugin. You don't need to manually push tags - they're handled automatically.
 

@@ -1,0 +1,12 @@
+{
+	"/": [
+		"src/routes/+layout.js",
+		"src/routes/+layout.js"
+	],
+	"/mini-apps": [
+		"src/routes/+layout.js"
+	],
+	"/mini-apps/[id]": [
+		"src/routes/+layout.js"
+	]
+}

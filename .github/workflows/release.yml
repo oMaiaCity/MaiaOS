@@ -58,12 +58,12 @@ jobs:
       - name: Extract release notes from CHANGELOG
         id: changelog
         run: |
-          if [ -f CHANGELOG.md ]; then
+          if [ -f services/app/CHANGELOG.md ]; then
             # Extract the section for this version from CHANGELOG.md
             VERSION="${{ steps.tag.outputs.tag_name }}"
             VERSION_NUM="${VERSION#v}"  # Remove 'v' prefix
             # Try to find the version section in CHANGELOG
-            NOTES=$(awk "/^## \[${VERSION_NUM}\]/,/^## \[/" CHANGELOG.md | sed '$d' || echo "")
+            NOTES=$(awk "/^## \[${VERSION_NUM}\]/,/^## \[/" services/app/CHANGELOG.md | sed '$d' || echo "")
             if [ -n "$NOTES" ]; then
               echo "notes<<EOF" >> $GITHUB_OUTPUT
               echo "$NOTES" >> $GITHUB_OUTPUT
