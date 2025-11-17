@@ -6,7 +6,7 @@
  * Run this script once to initialize the database schema:
  * bun run scripts/migrate-auth-db.js
  * 
- * Schema matches BetterAuth's PostgreSQL schema exactly (snake_case columns)
+ * Schema matches BetterAuth's PostgreSQL schema exactly (camelCase columns)
  * Includes tables for:
  * - user: User accounts
  * - session: Authentication sessions
@@ -37,7 +37,7 @@ const db = new Kysely({
 
 /**
  * Create BetterAuth database schema
- * Based on BetterAuth's PostgreSQL schema (uses snake_case column names)
+ * Based on BetterAuth's PostgreSQL schema (uses camelCase column names)
  */
 async function createBetterAuthSchema() {
   console.log("🚀 Creating BetterAuth database schema...\n");
@@ -50,10 +50,10 @@ async function createBetterAuthSchema() {
         "id" TEXT PRIMARY KEY,
         "name" TEXT,
         "email" TEXT NOT NULL UNIQUE,
-        "email_verified" BOOLEAN NOT NULL DEFAULT FALSE,
+        "emailVerified" BOOLEAN NOT NULL DEFAULT FALSE,
         "image" TEXT,
-        "created_at" TIMESTAMP NOT NULL DEFAULT NOW(),
-        "updated_at" TIMESTAMP NOT NULL DEFAULT NOW()
+        "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+        "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `.execute(db);
     console.log("✅ User table created\n");
@@ -63,20 +63,20 @@ async function createBetterAuthSchema() {
     await sql`
       CREATE TABLE IF NOT EXISTS "session" (
         "id" TEXT PRIMARY KEY,
-        "expires_at" TIMESTAMP NOT NULL,
+        "expiresAt" TIMESTAMP NOT NULL,
         "token" TEXT NOT NULL UNIQUE,
-        "created_at" TIMESTAMP NOT NULL DEFAULT NOW(),
-        "updated_at" TIMESTAMP NOT NULL DEFAULT NOW(),
-        "ip_address" TEXT,
-        "user_agent" TEXT,
-        "user_id" TEXT NOT NULL REFERENCES "user"("id") ON DELETE CASCADE
+        "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+        "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+        "ipAddress" TEXT,
+        "userAgent" TEXT,
+        "userId" TEXT NOT NULL REFERENCES "user"("id") ON DELETE CASCADE
       )
     `.execute(db);
     console.log("✅ Session table created\n");
 
-    // Create index for session.user_id
+    // Create index for session.userId
     await sql`
-      CREATE INDEX IF NOT EXISTS "session_userId_idx" ON "session"("user_id")
+      CREATE INDEX IF NOT EXISTS "session_userId_idx" ON "session"("userId")
     `.execute(db);
 
     // 3. Account table (for OAuth providers)
@@ -84,26 +84,26 @@ async function createBetterAuthSchema() {
     await sql`
       CREATE TABLE IF NOT EXISTS "account" (
         "id" TEXT PRIMARY KEY,
-        "account_id" TEXT NOT NULL,
-        "provider_id" TEXT NOT NULL,
-        "user_id" TEXT NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-        "access_token" TEXT,
-        "refresh_token" TEXT,
-        "id_token" TEXT,
-        "access_token_expires_at" TIMESTAMP,
-        "refresh_token_expires_at" TIMESTAMP,
+        "accountId" TEXT NOT NULL,
+        "providerId" TEXT NOT NULL,
+        "userId" TEXT NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
+        "accessToken" TEXT,
+        "refreshToken" TEXT,
+        "idToken" TEXT,
+        "accessTokenExpiresAt" TIMESTAMP,
+        "refreshTokenExpiresAt" TIMESTAMP,
         "scope" TEXT,
         "password" TEXT,
-        "created_at" TIMESTAMP NOT NULL DEFAULT NOW(),
-        "updated_at" TIMESTAMP NOT NULL DEFAULT NOW(),
-        UNIQUE("provider_id", "account_id")
+        "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+        "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+        UNIQUE("providerId", "accountId")
       )
     `.execute(db);
     console.log("✅ Account table created\n");
 
-    // Create index for account.user_id
+    // Create index for account.userId
     await sql`
-      CREATE INDEX IF NOT EXISTS "account_userId_idx" ON "account"("user_id")
+      CREATE INDEX IF NOT EXISTS "account_userId_idx" ON "account"("userId")
     `.execute(db);
 
     // 4. Verification table (for email verification, password reset, etc.)
@@ -113,9 +113,9 @@ async function createBetterAuthSchema() {
         "id" TEXT PRIMARY KEY,
         "identifier" TEXT NOT NULL,
         "value" TEXT NOT NULL,
-        "expires_at" TIMESTAMP NOT NULL,
-        "created_at" TIMESTAMP NOT NULL DEFAULT NOW(),
-        "updated_at" TIMESTAMP NOT NULL DEFAULT NOW()
+        "expiresAt" TIMESTAMP NOT NULL,
+        "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+        "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `.execute(db);
     console.log("✅ Verification table created\n");
@@ -131,14 +131,14 @@ async function createBetterAuthSchema() {
       CREATE TABLE IF NOT EXISTS "passkey" (
         "id" TEXT PRIMARY KEY,
         "name" TEXT,
-        "public_key" TEXT NOT NULL,
-        "user_id" TEXT NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-        "credential_id" TEXT NOT NULL,
+        "publicKey" TEXT NOT NULL,
+        "userId" TEXT NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
+        "credentialId" TEXT NOT NULL,
         "counter" INTEGER NOT NULL,
-        "device_type" TEXT NOT NULL,
-        "backed_up" BOOLEAN NOT NULL,
+        "deviceType" TEXT NOT NULL,
+        "backedUp" BOOLEAN NOT NULL,
         "transports" TEXT,
-        "created_at" TIMESTAMP,
+        "createdAt" TIMESTAMP,
         "aaguid" TEXT
       )
     `.execute(db);
@@ -146,11 +146,11 @@ async function createBetterAuthSchema() {
 
     // Create indexes for passkey table
     await sql`
-      CREATE INDEX IF NOT EXISTS "passkey_userId_idx" ON "passkey"("user_id")
+      CREATE INDEX IF NOT EXISTS "passkey_userId_idx" ON "passkey"("userId")
     `.execute(db);
     
     await sql`
-      CREATE INDEX IF NOT EXISTS "passkey_credentialID_idx" ON "passkey"("credential_id")
+      CREATE INDEX IF NOT EXISTS "passkey_credentialID_idx" ON "passkey"("credentialId")
     `.execute(db);
 
     console.log("✨ BetterAuth schema migration completed successfully!\n");
