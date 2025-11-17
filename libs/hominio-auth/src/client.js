@@ -3,15 +3,16 @@ import { polarClient } from "@polar-sh/better-auth";
 
 /**
  * Get the wallet service API URL
- * - Production builds (Tauri iOS/macOS/desktop): Always use wallet.hominio.me
+ * - Production builds (Fly.io web app, Tauri iOS/macOS/desktop): Always use wallet.hominio.me
  * - Development: Use env var or localhost:4201
  * Works in both browser and server contexts
  */
 function getWalletApiUrl() {
-  // Check if we're in a production build (Tauri builds are always production)
+  // Check if we're in a production build
+  // This is true for Fly.io deployments and Tauri builds
   const isProduction = import.meta.env.PROD;
   
-  // For production builds (Tauri iOS, macOS, desktop), always use production wallet service
+  // For production builds (Fly.io web app, Tauri iOS, macOS, desktop), always use production wallet service
   if (isProduction) {
     return 'https://wallet.hominio.me/api/auth';
   }

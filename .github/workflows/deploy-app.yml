@@ -1,0 +1,114 @@
+name: Deploy App
+
+on:
+  workflow_run:
+    workflows: ["Release"]
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  deploy-app:
+    name: Deploy App
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    environment: PRODUCTION
+    # FLY_API_TOKEN is an organization-wide secret (accessible regardless of environment)
+    # All other secrets are from the PRODUCTION environment
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Create Fly.io app if it doesn't exist
+        run: |
+          # Check if app exists, create if it doesn't
+          if ! flyctl apps list | grep -q "hominio-app"; then
+            echo "📦 Creating Fly.io app: hominio-app..."
+            flyctl apps create hominio-app --org personal || {
+              echo "⚠️  Failed to create app. It may already exist or you need to specify a different org."
+              echo "   Continuing with deployment - app may need to be created manually."
+            }
+            
+            # Set primary region
+            flyctl regions set fra --app hominio-app || true
+          else
+            echo "✅ App hominio-app already exists"
+          fi
+          
+          # Always ensure IP addresses are allocated (idempotent - safe to run multiple times)
+          echo "🌐 Ensuring IP addresses are allocated..."
+          # Check if IPv4 exists, allocate if missing
+          if ! flyctl ips list --app hominio-app | grep -q "v4"; then
+            echo "   Allocating IPv4 address..."
+            flyctl ips allocate-v4 --app hominio-app --shared || true
+          else
+            echo "   IPv4 address already allocated"
+          fi
+          
+          # Check if IPv6 exists, allocate if missing
+          if ! flyctl ips list --app hominio-app | grep -q "v6"; then
+            echo "   Allocating IPv6 address..."
+            flyctl ips allocate-v6 --app hominio-app || true
+          else
+            echo "   IPv6 address already allocated"
+          fi
+
+      - name: Configure custom domain (app.hominio.me)
+        run: |
+          echo "🌐 Configuring custom domain: app.hominio.me"
+          # Add the custom domain to Fly.io (idempotent - safe to run multiple times)
+          flyctl certs create app.hominio.me --app hominio-app || {
+            echo "⚠️  Certificate may already exist or domain already configured"
+            echo "   Checking certificate status..."
+            flyctl certs list --app hominio-app || true
+          }
+          
+          echo ""
+          echo "📋 DNS Configuration Required:"
+          echo "   Add a CNAME record in your DNS provider:"
+          echo "   Type: CNAME"
+          echo "   Name: app"
+          echo "   Value: hominio-app.fly.dev"
+          echo "   TTL: 300 (or your preferred TTL)"
+          echo ""
+          echo "   After DNS propagates, Fly.io will automatically provision Let's Encrypt certificate."
+
+      - name: Set Fly.io secrets for app service
+        run: |
+          # Set all required environment variables from GitHub secrets
+          # App service only needs PUBLIC_ vars (auth is handled by wallet service)
+          flyctl secrets set \
+            PUBLIC_DOMAIN_ROOT="${{ secrets.PUBLIC_DOMAIN_ROOT }}" \
+            PUBLIC_DOMAIN_APP="${{ secrets.PUBLIC_DOMAIN_APP }}" \
+            PUBLIC_DOMAIN_WALLET="${{ secrets.PUBLIC_DOMAIN_WALLET }}" \
+            PUBLIC_DOMAIN_SYNC="${{ secrets.PUBLIC_DOMAIN_SYNC }}" \
+            NODE_ENV="production" \
+            --app hominio-app
+
+          echo "✅ App service secrets set. Verifying..."
+          flyctl secrets list --app hominio-app
+
+      - name: Deploy app service
+        run: |
+          # Build from monorepo root to properly resolve workspace dependencies
+          flyctl deploy --remote-only --app hominio-app --config services/app/fly.toml --dockerfile services/app/Dockerfile
+
+      - name: Check deployment status
+        run: |
+          flyctl status --app hominio-app
+          echo "📋 Recent logs:"
+          flyctl logs --app hominio-app --no-tail | tail -50
+          
+      - name: Verify SSL certificate status
+        run: |
+          echo "🔒 Checking SSL certificate status for app.hominio.me..."
+          flyctl certs check app.hominio.me --app hominio-app || {
+            echo "⚠️  Certificate not yet issued. This is normal if DNS hasn't propagated yet."
+            echo "   Certificate will be automatically provisioned once DNS CNAME record is configured."
+          }
+
