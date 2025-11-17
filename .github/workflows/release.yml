@@ -17,6 +17,9 @@ jobs:
         with:
           fetch-depth: 0 # Required for semantic-release
           token: ${{ secrets.GITHUB_TOKEN }} # Required for pushing tags
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
