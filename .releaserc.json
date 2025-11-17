@@ -87,7 +87,8 @@
                 "releasedLabels": false,
                 "assets": [],
                 "draft": false,
-                "generateNotes": true
+                "generateNotes": true,
+                "addReleases": "bottom"
             }
         ]
     ]
