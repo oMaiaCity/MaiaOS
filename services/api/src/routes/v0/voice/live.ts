@@ -72,8 +72,6 @@ export const voiceLiveHandler = {
             ws.close(1008, "Authentication failed: No request data");
             return;
         }
-
-        console.log(`[voice/live] WebSocket opened for user: ${authData.sub}`);
         
         // Store authData for later use
         ws.data.authData = authData;
@@ -96,7 +94,6 @@ export const voiceLiveHandler = {
                 model: MODEL,
                 callbacks: {
                     onopen: () => {
-                        console.log(`[voice/live] Google Live API connected for user: ${authData.sub}`);
                         // Send connection status to client
                         ws.send(JSON.stringify({
                             type: "status",
@@ -107,24 +104,19 @@ export const voiceLiveHandler = {
                     onmessage: (message: any) => {
                         // Forward Google messages to client
                         try {
-                            console.log(`[voice/live] Received message from Google:`, Object.keys(message), message.serverContent ? 'has serverContent' : '', message.data ? 'has data' : '', message.audio ? 'has audio' : '');
-                            
                             // Handle different message types from Google Live API
-                            // Reference implementation shows audio is in: message.serverContent?.modelTurn?.parts[0]?.inlineData?.data
                             if (message.serverContent) {
-                                // Check for audio in modelTurn.parts (as per reference implementation)
+                                // Check for audio in modelTurn.parts
                                 const audioData = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
                                 if (audioData) {
                                     // Audio data chunk from Google
-                                    console.log(`[voice/live] Forwarding audio chunk to client (${audioData.length} base64 chars)`);
                                     ws.send(JSON.stringify({
                                         type: "audio",
-                                        data: audioData, // Base64 encoded audio
+                                        data: audioData,
                                         mimeType: message.serverContent.modelTurn.parts[0].inlineData.mimeType || "audio/pcm;rate=24000",
                                     }));
                                 } else {
                                     // Other server content (turn complete, etc.)
-                                    console.log(`[voice/live] Forwarding serverContent to client`);
                                     ws.send(JSON.stringify({
                                         type: "serverContent",
                                         data: message.serverContent,
@@ -132,29 +124,17 @@ export const voiceLiveHandler = {
                                 }
                             } else if (message.data) {
                                 // Direct audio data chunk (fallback)
-                                console.log(`[voice/live] Forwarding audio chunk to client (direct format, ${message.data.length} bytes)`);
                                 ws.send(JSON.stringify({
                                     type: "audio",
-                                    data: message.data, // Base64 encoded audio
+                                    data: message.data,
                                     mimeType: message.mimeType || "audio/pcm;rate=24000",
                                 }));
                             } else if (message.setupComplete) {
-                                // Setup complete message - forward as serverContent
-                                console.log("[voice/live] Setup complete received from Google");
+                                // Setup complete message
                                 ws.send(JSON.stringify({
                                     type: "serverContent",
                                     data: { setupComplete: message.setupComplete },
                                 }));
-                            } else {
-                                // Log unknown message types for debugging
-                                console.log("[voice/live] Received unknown message type from Google:", Object.keys(message), JSON.stringify(message).substring(0, 500));
-                                // Send as serverContent so frontend can inspect it
-                                if (Object.keys(message).length > 0) {
-                                    ws.send(JSON.stringify({
-                                        type: "serverContent",
-                                        data: message,
-                                    }));
-                                }
                             }
                         } catch (error) {
                             console.error("[voice/live] Error forwarding message to client:", error);
@@ -172,7 +152,6 @@ export const voiceLiveHandler = {
                         }));
                     },
                     onclose: (event: CloseEvent) => {
-                        console.log(`[voice/live] Google Live API closed for user ${authData.sub}:`, event.reason);
                         ws.send(JSON.stringify({
                             type: "status",
                             status: "disconnected",
@@ -234,11 +213,10 @@ export const voiceLiveHandler = {
 
             // Handle different message types from client
             if (clientMessage.type === "audio" && clientMessage.data) {
-                // Forward audio to Google Live API using Blob format (as per reference implementation)
-                console.log(`[voice/live] Forwarding audio chunk to Google (${clientMessage.data.length} base64 chars)`);
+                // Forward audio to Google Live API
                 session.sendRealtimeInput({
                     media: {
-                        data: clientMessage.data, // Base64 encoded PCM audio
+                        data: clientMessage.data,
                         mimeType: clientMessage.mimeType || "audio/pcm;rate=16000",
                     },
                 });
@@ -270,8 +248,6 @@ export const voiceLiveHandler = {
     async close(ws: any) {
         const authData = ws.data.authData as AuthData;
         const session = ws.data.googleSession;
-
-        console.log(`[voice/live] WebSocket closed for user: ${authData.sub}`);
 
         // Clean up Google Live API session
         if (session) {

@@ -85,7 +85,6 @@
 		if (ws && ws.readyState === WebSocket.OPEN && isRecording) {
 			const inputData = audioBuffer.getChannelData(0);
 			const pcmBlob = createBlob(inputData);
-			console.log(`[VoiceCall] Sending audio chunk (${pcmBlob.data.length} base64 chars, ${audioBuffer.length} samples)`);
 			ws.send(JSON.stringify({
 				type: 'audio',
 				data: pcmBlob.data, // Send the base64 string
@@ -117,23 +116,10 @@
 			inputSourceRef = inputAudioContext.createMediaStreamSource(mediaStream);
 			processorRef = inputAudioContext.createScriptProcessor(4096, 1, 1);
 			
-			let firstProcess = true;
 			processorRef.onaudioprocess = (e) => {
-				if (firstProcess) {
-					console.log('[VoiceCall] Audio processing started (first callback)');
-					firstProcess = false;
-				}
-
 				if (isRecording && ws && ws.readyState === WebSocket.OPEN) {
 					const inputBuffer = e.inputBuffer;
 					processAudioChunk(inputBuffer);
-				} else {
-					if (!isRecording) {
-						// throttling log to avoid spam
-						if (Math.random() < 0.01) console.log('[VoiceCall] Skipping audio - not recording');
-					} else if (!ws || ws.readyState !== WebSocket.OPEN) {
-						console.log('[VoiceCall] Skipping audio - WebSocket not open:', ws?.readyState);
-					}
 				}
 			};
 
@@ -141,7 +127,6 @@
 			processorRef.connect(inputAudioContext.destination);
 
 			isRecording = true;
-			console.log('[VoiceCall] Recording started');
 		} catch (err) {
 			console.error('[VoiceCall] Failed to start recording:', err);
 			error = err instanceof Error ? err.message : 'Failed to start recording';
@@ -167,8 +152,6 @@
 			mediaStream.getTracks().forEach(track => track.stop());
 			mediaStream = null;
 		}
-
-		console.log('[VoiceCall] Recording stopped');
 	}
 
 	// Decode base64 to Uint8Array
@@ -265,12 +248,10 @@
 
 					switch (message.type) {
 						case 'status':
-							console.log('[VoiceCall] Status:', message.status, message.message);
 							if (message.status === 'connected') {
 								status = 'connected';
-								// Google Live API is ready - start recording now (as per reference implementation)
+								// Google Live API is ready - start recording now
 								if (!isRecording) {
-									console.log('[VoiceCall] Google ready, starting recording...');
 									startRecording();
 								}
 							} else if (message.status === 'disconnected') {
@@ -281,7 +262,6 @@
 
 						case 'audio':
 							// Play received audio
-							console.log(`[VoiceCall] Received audio chunk (${message.data?.length || 0} base64 chars)`);
 							playAudio(message.data, 24000);
 							break;
 
@@ -291,9 +271,6 @@
 							break;
 
 						case 'serverContent':
-							// Handle server content (turn complete, interruptions, etc.)
-							console.log('[VoiceCall] Server content:', message.data);
-							
 							// Handle interruption - stop all playing audio
 							if (message.data?.interrupted) {
 								playingSources.forEach(s => {
@@ -303,9 +280,6 @@
 								nextStartTime = 0;
 							}
 							break;
-
-						default:
-							console.log('[VoiceCall] Unknown message type:', message.type);
 					}
 				} catch (err) {
 					console.error('[VoiceCall] Failed to parse message:', err);
