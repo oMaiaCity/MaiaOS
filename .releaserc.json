@@ -62,6 +62,12 @@
             }
         ],
         [
+            "@semantic-release/npm",
+            {
+                "npmPublish": false
+            }
+        ],
+        [
             "@semantic-release/exec",
             {
                 "prepareCmd": "node scripts/sync-version.js ${nextRelease.version}"
