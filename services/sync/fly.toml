@@ -1,7 +1,7 @@
 # fly.toml for Zero Sync Service (sync.hominio.me)
 # This is a separate Fly.io app for the zero-cache service
 
-app = 'hominio-app-sync'
+app = 'hominio-sync'
 primary_region = 'fra'
 
 [build]

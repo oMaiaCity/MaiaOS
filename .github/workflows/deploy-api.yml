@@ -1,0 +1,118 @@
+name: Deploy API Service
+
+on:
+  workflow_run:
+    workflows: ['Release']
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  deploy-api:
+    name: Deploy API Service
+    runs-on: ubuntu-latest
+    if: (github.event_name == 'workflow_dispatch') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    environment: PRODUCTION
+    # FLY_API_TOKEN is an organization-wide secret (accessible regardless of environment)
+    # All other secrets are from the PRODUCTION environment
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Create Fly.io app if it doesn't exist
+        run: |
+          # Check if app exists, create if it doesn't
+          if ! flyctl apps list | grep -q "hominio-api"; then
+            echo "📦 Creating Fly.io app: hominio-api..."
+            flyctl apps create hominio-api --org personal || {
+              echo "⚠️  Failed to create app. It may already exist or you need to specify a different org."
+              echo "   Continuing with deployment - app may need to be created manually."
+            }
+            
+            # Set primary region
+            flyctl regions set fra --app hominio-api || true
+          else
+            echo "✅ App hominio-api already exists"
+          fi
+
+          # Always ensure IP addresses are allocated (idempotent - safe to run multiple times)
+          echo "🌐 Ensuring IP addresses are allocated..."
+          # Check if IPv4 exists, allocate if missing
+          if ! flyctl ips list --app hominio-api | grep -q "v4"; then
+            echo "   Allocating IPv4 address..."
+            flyctl ips allocate-v4 --app hominio-api --shared || true
+          else
+            echo "   IPv4 address already allocated"
+          fi
+
+          # Check if IPv6 exists, allocate if missing
+          if ! flyctl ips list --app hominio-api | grep -q "v6"; then
+            echo "   Allocating IPv6 address..."
+            flyctl ips allocate-v6 --app hominio-api || true
+          else
+            echo "   IPv6 address already allocated"
+          fi
+
+      - name: Configure custom domain (api.hominio.me)
+        run: |
+          echo "🌐 Configuring custom domain: api.hominio.me"
+          # Add the custom domain to Fly.io (idempotent - safe to run multiple times)
+          flyctl certs create api.hominio.me --app hominio-api || {
+            echo "⚠️  Certificate may already exist or domain already configured"
+            echo "   Checking certificate status..."
+            flyctl certs list --app hominio-api || true
+          }
+
+          echo ""
+          echo "📋 DNS Configuration Required:"
+          echo "   Add a CNAME record in your DNS provider:"
+          echo "   Type: CNAME"
+          echo "   Name: api"
+          echo "   Value: hominio-api.fly.dev"
+          echo "   TTL: 300 (or your preferred TTL)"
+          echo ""
+          echo "   After DNS propagates, Fly.io will automatically provision Let's Encrypt certificate."
+
+      - name: Set Fly.io secrets for API service
+        run: |
+          # Set all required environment variables from GitHub secrets
+          # Using standardized naming convention
+          flyctl secrets set \
+            ZERO_POSTGRES_SECRET="${{ secrets.ZERO_POSTGRES_SECRET }}" \
+            AUTH_POSTGRES_SECRET="${{ secrets.AUTH_POSTGRES_SECRET }}" \
+            AUTH_SECRET="${{ secrets.AUTH_SECRET }}" \
+            GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
+            GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+            ADMIN="${{ secrets.ADMIN }}" \
+            PUBLIC_DOMAIN_API="${{ secrets.PUBLIC_DOMAIN_API }}" \
+            PUBLIC_DOMAIN_SYNC="${{ secrets.PUBLIC_DOMAIN_SYNC }}" \
+            NODE_ENV="production" \
+            --app hominio-api
+
+          echo "✅ API service secrets set. Verifying..."
+          flyctl secrets list --app hominio-api
+
+      - name: Deploy API service
+        run: |
+          cd services/api
+          flyctl deploy --remote-only --app hominio-api
+
+      - name: Check deployment status
+        run: |
+          flyctl status --app hominio-api
+          echo "📋 Recent logs:"
+          flyctl logs --app hominio-api --no-tail | tail -50
+
+      - name: Verify SSL certificate status
+        run: |
+          echo "🔒 Checking SSL certificate status for api.hominio.me..."
+          flyctl certs check api.hominio.me --app hominio-api || {
+            echo "⚠️  Certificate not yet issued. This is normal if DNS hasn't propagated yet."
+            echo "   Certificate will be automatically provisioned once DNS CNAME record is configured."
+          }
+

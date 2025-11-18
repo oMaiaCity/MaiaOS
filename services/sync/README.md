@@ -1,43 +1,40 @@
-# Sync Service
+# Zero Sync Service
 
-Zero sync service for Hominio monorepo. This service runs the Zero cache server that syncs data between clients and the Postgres database.
+Zero sync service using Rocicorp's Zero sync engine for real-time data synchronization.
 
-## Architecture
+## Overview
 
-- **Client** → Connects directly to Zero sync service (`sync.hominio.me` or `localhost:4203`)
-- **Zero sync** → Forwards cookies to API service for authentication
-- **API service** → Handles get-queries and push endpoints (uses Better Auth cookies from wallet service)
+This service runs `zero-cache-dev` (development) or `zero-cache` (production) to sync data from PostgreSQL to clients via WebSocket connections.
 
-## Port
+## Admin Password
 
-- **Development**: `4203` (Note: Zero cache runs on port 4848 internally, but we use 4203 for consistency)
-- **Production**: `sync.hominio.me` (port 4848 internally)
+The `--admin-password` flag is used for **debugging and administration** of the Zero cache server:
+
+- **Purpose**: Access admin endpoints like `/statz` (stats endpoint) for monitoring and debugging
+- **Required**: Optional, but recommended for production debugging
+- **Value**: Uses `ZERO_AUTH_SECRET` (defaults to `AUTH_SECRET` if not set)
+- **Security**: Should be a strong, random password (same as your `AUTH_SECRET`)
+
+**What it's used for:**
+- Accessing `/statz` endpoint for server statistics and health monitoring
+- Debugging Zero cache server state
+- Admin operations on the Zero sync service
+
+**Note**: This is separate from user authentication - it's for server administration only. User authentication is handled via Better Auth cookies.
 
 ## Environment Variables
 
-Set these in Fly.io secrets:
+- `ZERO_POSTGRES_SECRET` - PostgreSQL connection string (non-pooler, required)
+- `AUTH_SECRET` - Shared auth secret (used for admin password if `ZERO_AUTH_SECRET` not set)
+- `ZERO_AUTH_SECRET` - Zero-specific auth secret (optional, defaults to `AUTH_SECRET`)
 
-- `ZERO_UPSTREAM_DB` - Postgres connection string (non-pooler, same as API service)
-- `ZERO_AUTH_SECRET` - JWT secret (same as `AUTH_SECRET` from wallet service)
-- `ZERO_GET_QUERIES_URL` - `https://api.hominio.me/api/v0/zero/get-queries`
-- `ZERO_PUSH_URL` - `https://api.hominio.me/api/v0/zero/push`
-- `ZERO_ADMIN_PASSWORD` - Admin password for debugging
-
-## Deployment
+## Development
 
 ```bash
-cd services/sync
-fly deploy -c fly.toml
-fly secrets set ZERO_UPSTREAM_DB="..." ZERO_AUTH_SECRET="..." ZERO_GET_QUERIES_URL="..." ZERO_PUSH_URL="..." ZERO_ADMIN_PASSWORD="..."
+bun dev  # Runs migration + zero-cache-dev
 ```
 
-## Migration
+## Production
 
-Run migration to set up database schema:
+Uses Docker image `rocicorp/zero:0.24.3000000000` with `zero-cache` binary.
 
-```bash
-cd services/sync
-bun run migrate
-```
-
-Requires `SECRET_ZERO_DEV_PG` environment variable (same as `ZERO_UPSTREAM_DB`).
