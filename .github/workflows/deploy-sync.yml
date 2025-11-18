@@ -86,6 +86,7 @@ jobs:
           # Production URLs point to api.hominio.me API service
           flyctl secrets set \
             ZERO_UPSTREAM_DB="${{ secrets.ZERO_POSTGRES_SECRET }}" \
+            ZERO_CHANGE_DB="${{ secrets.ZERO_POSTGRES_SECRET }}" \
             ZERO_POSTGRES_SECRET="${{ secrets.ZERO_POSTGRES_SECRET }}" \
             ZERO_AUTH_SECRET="${{ secrets.ZERO_AUTH_SECRET }}" \
             ZERO_GET_QUERIES_URL="https://api.hominio.me/api/v0/zero/get-queries" \

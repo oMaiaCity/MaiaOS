@@ -21,8 +21,9 @@ import { neon } from "@neondatabase/serverless";
 // Get environment variables
 // AUTH_SECRET must match wallet service for cookie verification
 const AUTH_SECRET = process.env.AUTH_SECRET || "dev-secret-key-change-in-production";
-// Support both new name (AUTH_POSTGRES_SECRET) and old names for backward compatibility
-const AUTH_POSTGRES_SECRET = process.env.AUTH_POSTGRES_SECRET || process.env.SECRET_NEON_PG_AUTH || process.env.WALLET_POSTGRES_SECRET || "";
+// Use WALLET_POSTGRES_SECRET (matches GitHub secrets naming convention)
+// Support backward compatibility with old names
+const AUTH_POSTGRES_SECRET = process.env.WALLET_POSTGRES_SECRET || process.env.AUTH_POSTGRES_SECRET || process.env.SECRET_NEON_PG_AUTH || "";
 
 // Detect environment
 const isProduction = process.env.NODE_ENV === "production";
@@ -34,7 +35,7 @@ let _authDb: Kysely<any> | null = null;
 
 function getAuthDb(): Kysely<any> {
     if (!AUTH_POSTGRES_SECRET) {
-        throw new Error("AUTH_POSTGRES_SECRET (or SECRET_NEON_PG_AUTH or WALLET_POSTGRES_SECRET) environment variable is required");
+        throw new Error("WALLET_POSTGRES_SECRET (or AUTH_POSTGRES_SECRET or SECRET_NEON_PG_AUTH) environment variable is required");
     }
 
     if (!_authDb) {

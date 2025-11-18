@@ -81,10 +81,10 @@ jobs:
       - name: Set Fly.io secrets for API service
         run: |
           # Set all required environment variables from GitHub secrets
-          # Using standardized naming convention
+          # Using WALLET_POSTGRES_SECRET (matches GitHub secrets naming convention)
           flyctl secrets set \
             ZERO_POSTGRES_SECRET="${{ secrets.ZERO_POSTGRES_SECRET }}" \
-            AUTH_POSTGRES_SECRET="${{ secrets.AUTH_POSTGRES_SECRET }}" \
+            WALLET_POSTGRES_SECRET="${{ secrets.WALLET_POSTGRES_SECRET }}" \
             AUTH_SECRET="${{ secrets.AUTH_SECRET }}" \
             GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
             GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
