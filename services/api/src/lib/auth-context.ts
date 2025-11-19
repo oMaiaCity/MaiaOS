@@ -10,34 +10,25 @@
  * - Cookie setting
  * 
  * This API service ONLY verifies cookies for authorization checks.
+ * Cookie verification is delegated to the wallet service via HTTP API call.
  */
 
-import { auth } from "./auth";
+import { verifyCookie } from "./auth-client";
 
 /**
  * AuthData structure used throughout the application
- * Extracted from BetterAuth session cookies (set by wallet service)
+ * Returned by wallet service cookie verification endpoint
  */
 export type AuthData = {
     sub: string; // User ID (subject)
-    isAdmin: boolean; // Admin status (checked against ADMIN env var)
+    isAdmin: boolean; // Admin status (checked by wallet service)
 };
-
-/**
- * Check if a user ID matches the ADMIN environment variable
- */
-function isAdmin(userId: string | undefined | null): boolean {
-    if (!userId || !process.env.ADMIN) {
-        return false;
-    }
-    return userId === process.env.ADMIN;
-}
 
 /**
  * Extract authentication data from request cookies (Read-Only)
  * 
- * This function verifies cookies that were set by the wallet service.
- * It does NOT create sessions or set cookies - it only reads them.
+ * This function verifies cookies by calling the wallet service verification endpoint.
+ * It does NOT create sessions or set cookies - it only verifies them via API call.
  * 
  * Usage:
  * - Zero push endpoint: Get auth for mutator permissions
@@ -46,40 +37,42 @@ function isAdmin(userId: string | undefined | null): boolean {
  *
  * @param request - The incoming request (cookies set by wallet service)
  * @returns AuthData if authenticated, undefined if anonymous
+ * @throws Error if wallet service is unavailable (rejects requests per requirement)
  */
 export async function extractAuthData(
     request: Request
 ): Promise<AuthData | undefined> {
-    // Verify cookies using Better Auth instance
-    // Cookies were set by wallet service, we just verify them here
-    // For requests from zero-cache, cookies are forwarded in the Cookie header
-    const session = await auth.api.getSession({
-        headers: request.headers,
-    });
+    // Get cookies and origin from request
+    const cookieHeader = request.headers.get("cookie");
+    const origin = request.headers.get("origin");
 
     // Debug logging for cookie-based auth issues
-    const cookieHeader = request.headers.get("cookie");
-    if (!session?.user && cookieHeader) {
-        // Cookies present but no session - might be cookie domain/secure issue
-        const cookieNames = cookieHeader
-            .split(";")
-            .map((c) => c.split("=")[0].trim());
-        console.log(
-            "[auth-context] Cookies present but no session. Cookie names:",
-            cookieNames
-        );
-    }
-
-    // If no session, user is anonymous
-    if (!session?.user) {
+    if (!cookieHeader) {
+        // No cookies - anonymous request
         return undefined;
     }
 
-    // Return standardized auth data
-    return {
-        sub: session.user.id,
-        isAdmin: isAdmin(session.user.id),
-    };
+    try {
+        // Verify cookies by calling wallet service verification endpoint
+        // This delegates all cookie verification to the wallet service
+        // Wallet service validates origin and returns auth data
+        const authData = await verifyCookie(cookieHeader, origin || undefined);
+
+        // Log for debugging
+        if (authData) {
+            console.log(
+                `[auth-context] Authenticated user: ${authData.sub}, isAdmin: ${authData.isAdmin}`
+            );
+        } else {
+            console.log("[auth-context] Anonymous request (no valid session)");
+        }
+
+        return authData;
+    } catch (error) {
+        // Wallet service unavailable - reject request (per requirement #3)
+        console.error("[auth-context] Cookie verification failed:", error);
+        throw error;
+    }
 }
 
 /**

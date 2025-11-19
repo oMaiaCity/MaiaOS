@@ -28,7 +28,7 @@ function getProcessor(): PushProcessor {
  * Flow:
  * 1. Client calls mutator → runs optimistically on client
  * 2. zero-cache forwards mutation to this endpoint
- * 3. We authenticate via cookies (BetterAuth)
+ * 3. We authenticate via cookies (delegated to wallet service)
  * 4. We run server mutator with permission checks
  * 5. Result synced back to all clients
  */
@@ -41,7 +41,7 @@ export async function push({ request }: { request: Request }) {
         console.log('[push] Request referer:', request.headers.get('referer'));
 
         // Extract auth data from cookies using centralized auth context
-        // This automatically reads BetterAuth session and checks admin status
+        // This delegates cookie verification to wallet service (no DB access)
         const authData = await extractAuthData(request);
 
         // Log for debugging (without sensitive cookie data)

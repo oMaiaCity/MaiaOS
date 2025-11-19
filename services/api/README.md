@@ -6,7 +6,8 @@ Elysia + Bun server for Hominio monorepo. Handles Zero sync endpoints (get-queri
 
 - **Client** → Connects directly to Zero sync service (`sync.hominio.me`)
 - **Zero sync** → Forwards cookies to this API service for authentication
-- **API service** → Handles get-queries and push endpoints (uses Better Auth cookies from wallet service)
+- **API service** → Handles get-queries and push endpoints (verifies cookies via wallet service `/api/auth/verify` endpoint)
+- **Wallet service** → Verifies cookies and returns auth data (API service has NO auth database access)
 
 ## Port
 
@@ -18,11 +19,14 @@ Elysia + Bun server for Hominio monorepo. Handles Zero sync endpoints (get-queri
 Set these in Fly.io secrets and root `.env`:
 
 - `SECRET_ZERO_DEV_PG` or `ZERO_POSTGRES_SECRET` - Postgres connection string (non-pooler, same as sync service)
-- `AUTH_SECRET` - Better Auth secret (same as wallet service)
-- `SECRET_NEON_PG_AUTH` or `WALLET_POSTGRES_SECRET` - Auth database connection (same as wallet service)
+- `PUBLIC_DOMAIN_WALLET` or `WALLET_URL` - Wallet service URL (e.g., `wallet.hominio.me` or `localhost:4201`) - **Required for cookie verification**
 - `GOOGLE_AI_API_KEY` - Google Gemini API key (required for voice API)
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - OAuth (optional)
-- `ADMIN` - Admin user IDs (comma-separated)
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - OAuth (optional, not used by API service)
+- `ADMIN` - Admin user IDs (comma-separated, checked by wallet service)
+
+**Removed (no longer needed):**
+- ~~`AUTH_SECRET`~~ - No longer needed (wallet service handles all auth)
+- ~~`SECRET_NEON_PG_AUTH` / `WALLET_POSTGRES_SECRET`~~ - No longer needed (API service no longer has auth database access)
 
 ## Endpoints
 
@@ -36,15 +40,17 @@ Set these in Fly.io secrets and root `.env`:
 ### API Endpoints
 - `GET /api/v0/projects` - Returns list of projects
 
-### Better Auth
-- All `/api/auth/*` routes are handled by Better Auth handler
+### Authentication
+- Cookie verification is delegated to wallet service via `POST /api/auth/verify` endpoint
+- API service has NO auth database access (security improvement)
+- All `/api/auth/*` routes are handled by wallet service, not this API service
 
 ## Deployment
 
 ```bash
 cd services/api
 fly deploy -c fly.toml
-fly secrets set SECRET_ZERO_DEV_PG="..." AUTH_SECRET="..." SECRET_NEON_PG_AUTH="..." ADMIN="..."
+fly secrets set SECRET_ZERO_DEV_PG="..." PUBLIC_DOMAIN_WALLET="wallet.hominio.me" ADMIN="..."
 ```
 
 ## Development

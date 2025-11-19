@@ -1,5 +1,4 @@
 import { Elysia } from "elysia";
-import { auth } from "./lib/auth";
 import { zeroRoutes } from "./routes/v0/zero";
 import { voiceRoutes } from "./routes/v0/voice";
 import { projects } from "./routes/v0/projects";

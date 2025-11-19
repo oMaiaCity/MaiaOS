@@ -4,6 +4,14 @@ import { building } from "$app/environment";
 import { isTrustedOrigin } from "$lib/utils/domain";
 
 export async function handle({ event, resolve }) {
+	// Skip BetterAuth handling for our custom verification endpoint
+	// This endpoint is handled by the route handler at /api/auth/verify/+server.ts
+	const url = new URL(event.request.url);
+	if (url.pathname === '/api/auth/verify') {
+		// Let SvelteKit handle this route normally (don't intercept with BetterAuth)
+		return resolve(event);
+	}
+
 	// Handle CORS preflight requests for BetterAuth API
 	if (event.request.method === 'OPTIONS') {
 		const origin = event.request.headers.get('origin');
@@ -20,7 +28,7 @@ export async function handle({ event, resolve }) {
 		return new Response(null, { status: 204, headers });
 	}
 
-	// Handle BetterAuth requests
+	// Handle BetterAuth requests (all other /api/auth/* routes)
 	const response = await svelteKitHandler({ event, resolve, auth, building });
 	
 	// Add CORS headers to BetterAuth responses

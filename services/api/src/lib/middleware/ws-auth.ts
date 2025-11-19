@@ -1,7 +1,7 @@
 /**
  * WebSocket Authentication Middleware
  * 
- * Reuses existing Better Auth cookie verification (DRY principle)
+ * Reuses existing cookie verification (delegated to wallet service)
  * Extracts authentication from WebSocket upgrade request headers
  * 
  * Usage in WebSocket handlers:

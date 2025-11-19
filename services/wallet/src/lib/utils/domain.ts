@@ -39,6 +39,14 @@ export function getDomainSync(): string {
 }
 
 /**
+ * Get the API service domain from environment variable
+ * Defaults to localhost:4204 for development
+ */
+export function getDomainApi(): string {
+  return publicEnv.PUBLIC_DOMAIN_API || 'localhost:4204';
+}
+
+/**
  * Get full URL for a domain (adds protocol)
  */
 function getDomainUrl(domain: string): string {
@@ -66,6 +74,7 @@ export function getTrustedOrigins(): string[] {
     getDomainUrl(getDomainApp()),
     getDomainUrl(getDomainWallet()),
     getDomainUrl(getDomainSync()),
+    getDomainUrl(getDomainApi()),
   ];
   
   return origins;

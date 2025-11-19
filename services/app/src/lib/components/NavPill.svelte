@@ -20,7 +20,15 @@
 		signingOut = true;
 		try {
 			await authClient.signOut();
-			goto('/signin');
+			// Redirect to wallet service sign-in page
+			const walletDomain = import.meta.env.PUBLIC_DOMAIN_WALLET || 'localhost:4201';
+			const protocol = walletDomain.startsWith('localhost') || walletDomain.startsWith('127.0.0.1') ? 'http' : 'https';
+			const walletUrl = `${protocol}://${walletDomain}`;
+			const appDomain = import.meta.env.PUBLIC_DOMAIN_APP || 'localhost:4202';
+			const appProtocol = appDomain.startsWith('localhost') || appDomain.startsWith('127.0.0.1') ? 'http' : 'https';
+			const appUrl = `${appProtocol}://${appDomain}`;
+			const callbackUrl = `${appUrl}/me`;
+			window.location.href = `${walletUrl}?callback=${encodeURIComponent(callbackUrl)}`;
 		} catch (error) {
 			console.error('Sign out error:', error);
 			signingOut = false;
