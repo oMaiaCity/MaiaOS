@@ -32,7 +32,7 @@ export function createMutators(authData: AuthData | undefined) {
           description: string;
           country: string;
           city: string;
-          userId: string;
+          ownedBy: string;
           videoUrl?: string;
           bannerImage?: string;
           profileImageUrl?: string;
@@ -56,7 +56,7 @@ export function createMutators(authData: AuthData | undefined) {
           description: args.description.trim(),
           country: args.country.trim(),
           city: args.city.trim(),
-          userId: args.userId,
+          ownedBy: args.ownedBy,
           videoUrl: (args.videoUrl || '').trim(),
           bannerImage: (args.bannerImage || '').trim(),
           profileImageUrl: (args.profileImageUrl || '').trim(),
@@ -82,7 +82,7 @@ export function createMutators(authData: AuthData | undefined) {
           bannerImage?: string;
           profileImageUrl?: string;
           sdgs?: string;
-          userId?: string; // Only admins can change owner
+          ownedBy?: string; // Only users with manage capability can change owner
         }
       ) => {
         const { id, ...updates } = args;
@@ -130,9 +130,9 @@ export function createMutators(authData: AuthData | undefined) {
         if (updates.sdgs !== undefined) {
           updateData.sdgs = updates.sdgs;
         }
-        // Only admins can change userId (enforced server-side)
-        if (updates.userId !== undefined) {
-          updateData.userId = updates.userId;
+        // Only users with manage capability can change ownedBy (enforced server-side)
+        if (updates.ownedBy !== undefined) {
+          updateData.ownedBy = updates.ownedBy;
         }
 
         // Update project

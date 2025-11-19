@@ -34,7 +34,7 @@
 				loading = false;
 				error = 'Failed to initialize Zero client';
 				return;
-			}
+	}
 
 			try {
 				// Query all projects using synced query - data is already cached locally!
@@ -48,11 +48,11 @@
 					loading = false;
 					error = null;
 				});
-			} catch (err) {
+		} catch (err) {
 				console.error('Error setting up Zero query:', err);
-				error = err instanceof Error ? err.message : 'Failed to load projects';
-				loading = false;
-			}
+			error = err instanceof Error ? err.message : 'Failed to load projects';
+			loading = false;
+		}
 		})();
 
 		return () => {

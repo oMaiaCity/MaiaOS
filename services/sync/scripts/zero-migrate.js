@@ -38,7 +38,7 @@ async function createTables() {
       .addColumn("description", "text", (col) => col.notNull())
       .addColumn("country", "text", (col) => col.notNull())
       .addColumn("city", "text", (col) => col.notNull())
-      .addColumn("userId", "text", (col) => col.notNull())
+      .addColumn("ownedBy", "text", (col) => col.notNull())
       .addColumn("videoUrl", "text", (col) => col.notNull().defaultTo(""))
       .addColumn("bannerImage", "text", (col) => col.notNull().defaultTo(""))
       .addColumn("profileImageUrl", "text", (col) =>
@@ -105,15 +105,48 @@ async function setupReplication() {
     }
   }
 
-  console.log("✅ Replication setup complete\n");
+    console.log("✅ Replication setup complete\n");
 }
 
 /**
- * Add example project if projects table is empty
- * Useful for development and testing
+ * Migrate existing userId column to ownedBy (if table exists)
  */
-async function addExampleProjectIfEmpty() {
-  console.log("📝 Checking if example project is needed...\n");
+async function migrateUserIdToOwnedBy() {
+  console.log("🔄 Checking for userId column migration...\n");
+
+  try {
+    // Check if userId column exists
+    const columnCheck = await sql`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'project' AND column_name = 'userId'
+    `.execute(db);
+
+    if (columnCheck.rows.length > 0) {
+      console.log("📝 Migrating userId column to ownedBy...\n");
+      await sql`ALTER TABLE project RENAME COLUMN "userId" TO "ownedBy"`.execute(db);
+      console.log("✅ Column renamed successfully\n");
+    } else {
+      console.log("ℹ️  No userId column found, skipping migration\n");
+    }
+  } catch (error) {
+    console.log(`ℹ️  Column migration skipped: ${error.message}\n`);
+  }
+}
+
+/**
+ * Seed admin data (only if ADMIN_USER_ID is set)
+ * Creates example project owned by admin user
+ */
+async function seedAdminData() {
+  const ADMIN = process.env.ADMIN;
+  
+  if (!ADMIN) {
+    console.log("ℹ️  ADMIN not set, skipping admin data seeding\n");
+    return;
+  }
+
+  console.log("📝 Checking if admin data seeding is needed...\n");
 
   try {
     // Check if projects table has any rows
@@ -124,16 +157,16 @@ async function addExampleProjectIfEmpty() {
     const count = parseInt(countResult.rows[0]?.count || "0", 10);
 
     if (count === 0) {
-      console.log("📝 Projects table is empty, adding example project...\n");
+      console.log(`📝 Projects table is empty, creating example project owned by admin: ${ADMIN}...\n`);
 
       // Generate a unique ID for the example project
       const exampleProjectId = `example-project-${Date.now()}`;
       const now = new Date().toISOString();
 
-      // Insert example project
+      // Insert example project owned by admin
       await sql`
         INSERT INTO project (
-          id, title, description, country, city, "userId",
+          id, title, description, country, city, "ownedBy",
           "videoUrl", "bannerImage", "profileImageUrl", sdgs, "createdAt"
         ) VALUES (
           ${exampleProjectId},
@@ -141,7 +174,7 @@ async function addExampleProjectIfEmpty() {
           ${"This is an example project to help you get started. Create your own projects to showcase your work and connect with others!"},
           ${"Global"},
           ${"Everywhere"},
-          ${"example-user"},
+          ${ADMIN},
           ${""},
           ${""},
           ${""},
@@ -150,22 +183,23 @@ async function addExampleProjectIfEmpty() {
         )
       `.execute(db);
 
-      console.log("✅ Example project added successfully!\n");
+      console.log("✅ Example project created successfully!\n");
       console.log(`   Project ID: ${exampleProjectId}\n`);
-      console.log(`   Title: Welcome to Hominio\n`);
+      console.log(`   Owner: ${ADMIN}\n`);
     } else {
-      console.log(`ℹ️  Projects table already has ${count} project(s), skipping example project\n`);
+      console.log(`ℹ️  Projects table already has ${count} project(s), skipping admin data seeding\n`);
     }
   } catch (error) {
-    console.error("❌ Error adding example project:", error.message);
+    console.error("❌ Error seeding admin data:", error.message);
     // Don't throw - this is optional, migration can continue
-    console.log("⚠️  Continuing migration despite example project error...\n");
+    console.log("⚠️  Continuing migration despite admin data seeding error...\n");
   }
 }
 
 // Run migration
 createTables()
-  .then(() => addExampleProjectIfEmpty())
+  .then(() => migrateUserIdToOwnedBy())
+  .then(() => seedAdminData())
   .then(() => {
     console.log("✨ Migration completed successfully!");
     process.exit(0);

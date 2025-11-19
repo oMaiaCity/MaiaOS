@@ -307,7 +307,7 @@
 
 			ws.onerror = (event) => {
 				console.error('[VoiceCall] WebSocket error:', event);
-				error = 'WebSocket connection error';
+				// Error message will be set in onclose based on close code
 				status = 'disconnected';
 				stopRecording();
 			};
@@ -316,6 +316,48 @@
 				console.log('[VoiceCall] WebSocket closed:', event.code, event.reason);
 				status = 'disconnected';
 				stopRecording();
+				
+				// Set user-friendly error message based on close code and reason
+				// IMPORTANT: Only show error if it wasn't a normal closure (user-initiated)
+				if (event.code === 1000) {
+					// Normal closure - no error (user clicked "End Call" or server closed normally)
+					error = null;
+				} else if (event.code === 1008 || event.reason?.includes('capability') || event.reason?.includes('Forbidden') || event.reason?.includes('No api:voice')) {
+					error = 'Access denied. You don\'t have permission to use the voice assistant. Please contact an administrator to grant access.';
+				} else if (event.code === 1001 || event.reason?.includes('Unauthorized') || event.reason?.includes('Authentication') || event.reason?.includes('not authenticated')) {
+					error = 'Please sign in to use the voice assistant.';
+				} else if (event.code === 1006) {
+					// Abnormal closure (1006) - check if we have a reason
+					// If the connection was blocked before upgrade, we might not get a reason
+					// Check if this was likely a capability/auth denial
+					if (event.reason) {
+						if (event.reason.includes('capability') || event.reason.includes('Forbidden') || event.reason.includes('Unauthorized')) {
+							error = event.reason.includes('capability') || event.reason.includes('Forbidden')
+								? 'Access denied. You don\'t have permission to use the voice assistant. Please contact an administrator to grant access.'
+								: 'Please sign in to use the voice assistant.';
+						} else {
+							error = `Connection failed: ${event.reason}`;
+						}
+					} else {
+						// No reason provided - could be blocked before upgrade
+						// Don't show generic connection error, show access denied instead
+						// (Most likely cause is capability denial if user is authenticated)
+						error = 'Access denied. You don\'t have permission to use the voice assistant. Please contact an administrator to grant access.';
+					}
+				} else if (event.reason) {
+					// Use the reason from server
+					if (event.reason.includes('capability') || event.reason.includes('Forbidden')) {
+						error = 'Access denied. You don\'t have permission to use the voice assistant. Please contact an administrator to grant access.';
+					} else if (event.reason.includes('Unauthorized') || event.reason.includes('Authentication')) {
+						error = 'Please sign in to use the voice assistant.';
+					} else {
+						error = event.reason;
+					}
+				} else {
+					// Unknown error - don't show generic connection error
+					error = 'Connection error. Please try again.';
+				}
+				
 				ws = null;
 			};
 		} catch (err) {
@@ -336,14 +378,17 @@
 		playingSources.clear();
 		nextStartTime = 0;
 
+		// Clear error when user initiates disconnect
+		error = null;
+
 		if (ws) {
-			ws.close();
+			// Close with normal closure code (1000) to indicate user-initiated disconnect
+			ws.close(1000, 'User ended call');
 			ws = null;
 		}
 
 		status = 'disconnected';
 		aiState = 'idle';
-		error = null;
 	}
 
 	// Handle start/end call button
@@ -411,7 +456,9 @@
 
 		<!-- Error message -->
 		{#if error}
-			<p class="text-sm text-yellow-400">{error}</p>
+			<div class="w-full rounded-lg border border-yellow-400/30 bg-yellow-400/10 p-3">
+				<p class="text-sm text-yellow-400">{error}</p>
+			</div>
 		{/if}
 
 		<!-- Call button -->

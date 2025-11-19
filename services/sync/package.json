@@ -8,6 +8,7 @@
 		"migrate": "bun run scripts/zero-migrate.js"
 	},
 	"dependencies": {
+		"@hominio/caps": "workspace:*",
 		"@hominio/zero": "workspace:*",
 		"@rocicorp/zero": "^0.24.0",
 		"@rocicorp/zero-sqlite3": "^1.0.12"

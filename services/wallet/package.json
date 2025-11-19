@@ -29,6 +29,7 @@
 	"dependencies": {
 		"@better-auth/cli": "^1.3.34",
 		"@hominio/auth": "workspace:*",
+		"@hominio/caps": "workspace:*",
 		"@neondatabase/serverless": "^1.0.2",
 		"@polar-sh/better-auth": "^1.3.0",
 		"@polar-sh/sdk": "^0.41.4",

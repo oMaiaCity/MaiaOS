@@ -1,18 +1,20 @@
-import { extractAuthData } from '../../lib/auth-context';
 import { getZeroDbPool } from '../../lib/db';
-import { isTrustedOrigin } from '../../lib/utils/trusted-origins';
+import { successResponse, errorResponse } from '../../lib/middleware/response';
+import type { AuthData } from '../../lib/auth-context';
 
 /**
  * Projects API endpoint (v0)
  * Returns a list of projects from Zero database
- * Manually adds CORS headers like hominio-me implementation
- * Returns Response object directly to avoid Elysia header duplication
+ * Uses DRY middleware for CORS and responses
  */
-export async function projects({ request }: { request: Request }) {
+export async function projects({ 
+  request, 
+  authData 
+}: { 
+  request: Request;
+  authData?: AuthData;
+}) {
   try {
-    // Extract auth data (optional - projects can be public)
-    const authData = await extractAuthData(request);
-
     const pool = getZeroDbPool();
     
     // Query projects from database
@@ -20,46 +22,13 @@ export async function projects({ request }: { request: Request }) {
       'SELECT * FROM project ORDER BY "createdAt" DESC'
     );
 
-    // Manually add CORS headers like hominio-me does
+    // Return standardized success response with CORS
     const origin = request.headers.get('origin');
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    
-    // Set CORS headers if origin is trusted
-    if (origin && isTrustedOrigin(origin)) {
-      headers['Access-Control-Allow-Origin'] = origin;
-      headers['Access-Control-Allow-Credentials'] = 'true';
-      headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS';
-      headers['Access-Control-Allow-Headers'] = 'Content-Type, Cookie';
-    }
-
-    return new Response(
-      JSON.stringify({ projects: result.rows }),
-      {
-        headers,
-        status: 200,
-      }
-    );
+    return successResponse({ projects: result.rows }, 200, origin);
   } catch (error) {
-    const errorHeaders: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    // Return standardized error response with CORS
     const origin = request.headers.get('origin');
-    if (origin && isTrustedOrigin(origin)) {
-      errorHeaders['Access-Control-Allow-Origin'] = origin;
-      errorHeaders['Access-Control-Allow-Credentials'] = 'true';
-    }
-    
-    return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      }),
-      {
-        headers: errorHeaders,
-        status: 500,
-      }
-    );
+    return errorResponse(error instanceof Error ? error : new Error('Unknown error'), 500, origin);
   }
 }
 

@@ -12,6 +12,7 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 import { requireWebSocketAuth } from "../../../lib/middleware/ws-auth";
 import type { AuthData } from "../../../lib/auth-context";
+import { checkCapability } from "@hominio/caps";
 
 const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY;
 const MODEL = "gemini-2.5-flash-native-audio-preview-09-2025";
@@ -75,6 +76,32 @@ export const voiceLiveHandler = {
         
         // Store authData for later use
         ws.data.authData = authData;
+        
+        // Check capability: require api:voice capability (default deny)
+        const principal = `user:${authData.sub}`;
+        console.log(`[voice/live] 🔍 Checking capability for user ${authData.sub} (principal: ${principal})`);
+        
+        let hasVoiceCapability = false;
+        try {
+            hasVoiceCapability = await checkCapability(
+                principal,
+                { type: 'api', namespace: 'voice' },
+                'read'
+            );
+            console.log(`[voice/live] 🔍 Capability check result: ${hasVoiceCapability}`);
+        } catch (error) {
+            console.error(`[voice/live] ❌ Error checking capability:`, error);
+            // Default deny on error
+            hasVoiceCapability = false;
+        }
+        
+        if (!hasVoiceCapability) {
+            console.log(`[voice/live] ❌ BLOCKED WebSocket connection - user ${authData.sub} does not have api:voice capability`);
+            ws.close(1008, "Forbidden: No api:voice capability. Access denied by default.");
+            return;
+        }
+        
+        console.log(`[voice/live] ✅ ALLOWED WebSocket connection - user ${authData.sub} has api:voice capability`);
 
         // Connect to Google Live API
         try {

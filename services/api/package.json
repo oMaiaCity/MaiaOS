@@ -11,6 +11,7 @@
 	"dependencies": {
 		"@elysiajs/cors": "^1.1.1",
 		"@google/genai": "^1.30.0",
+		"@hominio/caps": "workspace:*",
 		"@hominio/zero": "workspace:*",
 		"@neondatabase/serverless": "^1.0.2",
 		"@rocicorp/zero": "^0.24.0",

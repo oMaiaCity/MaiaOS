@@ -19,6 +19,21 @@
 	async function handleSignOut() {
 		signingOut = true;
 		try {
+			// Clear Zero sync cache before signing out (privacy/security)
+			// This removes all synced data from the device
+			try {
+				const { dropAllDatabases } = await import('@rocicorp/zero');
+				const { dropped, errors } = await dropAllDatabases();
+				if (errors && errors.length > 0) {
+					console.warn('[NavPill] Some Zero databases could not be dropped:', errors);
+				} else {
+					console.log('[NavPill] ✅ Cleared Zero sync cache on logout');
+				}
+			} catch (zeroError) {
+				console.error('[NavPill] Failed to clear Zero cache on logout:', zeroError);
+				// Continue with logout even if cache clearing fails
+			}
+			
 			await authClient.signOut();
 			// Redirect to wallet service sign-in page
 			const walletDomain = import.meta.env.PUBLIC_DOMAIN_WALLET || 'localhost:4201';

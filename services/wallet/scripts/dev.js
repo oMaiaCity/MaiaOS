@@ -39,7 +39,7 @@ async function main() {
   await new Promise((resolve, reject) => {
     migrateProcess.on('exit', (code) => {
       if (code === 0 || code === null) {
-        console.log('✅ [Wallet] Migration completed successfully\n');
+        console.log('✅ [Wallet] BetterAuth migration completed successfully\n');
         resolve();
       } else {
         console.error(`❌ [Wallet] Migration failed with code ${code}`);
@@ -49,6 +49,31 @@ async function main() {
     migrateProcess.on('error', (error) => {
       console.error('❌ [Wallet] Migration error:', error);
       reject(error);
+    });
+  });
+
+  // Step 1.5: Run capabilities migration
+  console.log('🔄 [Wallet] Running capabilities migration...');
+  const capsMigrateProcess = spawn('bun', ['run', 'auth.migrate.ts'], {
+    cwd: walletDir,
+    env: { ...process.env, WALLET_POSTGRES_SECRET },
+    stdio: 'inherit',
+  });
+
+  await new Promise((resolve) => {
+    capsMigrateProcess.on('exit', (code) => {
+      if (code === 0 || code === null) {
+        console.log('✅ [Wallet] Capabilities migration completed successfully\n');
+      } else {
+        // Don't fail - capabilities migration is optional if tables already exist
+        console.log('⚠️  Capabilities migration exited with code', code, '- continuing...\n');
+      }
+      resolve();
+    });
+    capsMigrateProcess.on('error', (error) => {
+      // Don't fail - capabilities migration is optional
+      console.log('⚠️  Capabilities migration error (continuing):', error.message, '\n');
+      resolve();
     });
   });
 

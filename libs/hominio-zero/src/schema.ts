@@ -15,7 +15,7 @@ const project = table('project')
     description: string(),
     country: string(),
     city: string(),
-    userId: string(), // Reference to user
+    ownedBy: string(), // Owner of the project (user ID)
     videoUrl: string(), // YouTube URL for project pitch video (optional)
     bannerImage: string(), // Custom banner image URL (optional)
     profileImageUrl: string(), // Custom project profile image URL (optional)

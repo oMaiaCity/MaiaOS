@@ -1,66 +1,38 @@
 // Server-side mutator definitions
-// These add permission checks and server-only logic
+// These add capability checks and server-only logic
 import type { Transaction } from '@rocicorp/zero';
 import type { Schema } from '@hominio/zero';
 import { createMutators } from '@hominio/zero';
-import { isAdmin } from './admin';
+import { checkCapability } from '@hominio/caps';
+import type { Resource } from '@hominio/caps';
 
 // Type alias to avoid TypeScript complexity with ServerTransaction
-// ServerTransaction requires 2 type arguments, but for our purposes we can simplify
 type AnyTransaction = Transaction<Schema> | any;
 
 export type AuthData = {
     sub: string; // User ID
-    isAdmin?: boolean; // Admin flag (optional)
+    isAdmin?: boolean; // Admin flag (optional, legacy - not used for permissions)
 };
 
 /**
- * Create server-side mutators with permission checks
+ * Create server-side mutators with capability checks
  * @param authData - Authentication data from cookie session
  * @param clientMutators - Client mutators to reuse
  */
-// Helper function to check if user can update a project
-async function canUpdateProject(
-    tx: AnyTransaction,
-    projectId: string,
-    userId: string
-): Promise<boolean> {
-    // Admins can always update
-    if (isAdmin(userId)) {
-        return true;
-    }
-
-    // If projectId is empty, checking for create permission
-    // For now, allow any authenticated user to create projects
-    if (!projectId) {
-        return true;
-    }
-
-    // Check if user owns the project
-    const projects = await tx.query.project.where('id', '=', projectId).run();
-    const project = projects.length > 0 ? projects[0] : null;
-
-    if (!project) {
-        return false; // Project doesn't exist
-    }
-
-    // Owner can update
-    return project.userId === userId;
-}
-
 export function createServerMutators(
     authData: AuthData | undefined,
     clientMutators: any // Typed as any to avoid complex CustomMutatorDefs inference
 ) {
     return {
         // ========================================
-        // PROJECT MUTATORS (Reference Implementation)
+        // PROJECT MUTATORS
         // ========================================
 
         project: {
             /**
              * Create a project (server-side)
-             * Enforces permissions: founder OR admin
+             * Enforces: User must be authenticated
+             * Creator automatically owns the project (ownedBy set)
              */
             create: async (
                 tx: AnyTransaction,
@@ -70,7 +42,7 @@ export function createServerMutators(
                     description: string;
                     country: string;
                     city: string;
-                    userId: string;
+                    ownedBy: string;
                     videoUrl?: string;
                     bannerImage?: string;
                     profileImageUrl?: string;
@@ -83,12 +55,9 @@ export function createServerMutators(
                     throw new Error('Unauthorized: Must be logged in to create projects');
                 }
 
-                // For now, allow any authenticated user to create projects
-                // TODO: Add proper permission checks (founder/admin) when identities are implemented
-
-                // Ensure user is creating project for themselves (unless admin)
-                const userIsAdmin = isAdmin(authData.sub);
-                if (!userIsAdmin && args.userId !== authData.sub) {
+                // Ensure user is creating project for themselves
+                // Creator automatically owns the project
+                if (args.ownedBy !== authData.sub) {
                     throw new Error('Forbidden: You can only create projects for yourself');
                 }
 
@@ -98,7 +67,7 @@ export function createServerMutators(
 
             /**
              * Update a project (server-side)
-             * Enforces permissions: admin OR owner
+             * Enforces: User must have 'write' capability or be owner (has 'manage' rights)
              */
             update: async (
                 tx: AnyTransaction,
@@ -112,7 +81,7 @@ export function createServerMutators(
                     bannerImage?: string;
                     profileImageUrl?: string;
                     sdgs?: string;
-                    userId?: string; // Only admins can change owner
+                    ownedBy?: string; // Only users with 'manage' capability can change owner
                 }
             ) => {
                 // Check authentication
@@ -120,28 +89,44 @@ export function createServerMutators(
                     throw new Error('Unauthorized: Must be logged in to update projects');
                 }
 
-                const { id, userId: newUserId } = args;
+                const { id, ownedBy: newOwnedBy } = args;
 
-                // Check permissions
-                const canUpdate = await canUpdateProject(tx, id, authData.sub);
+                // Get current project to check ownership
+                const projects = await tx.query.project.where('id', '=', id).run();
+                const currentProject = projects.length > 0 ? projects[0] : null;
 
-                if (!canUpdate) {
-                    throw new Error(
-                        'Forbidden: Only admins and project owners can update projects'
-                    );
+                if (!currentProject) {
+                    throw new Error('Project not found');
                 }
 
-                // If trying to change userId (project owner), only admins can do this
-                if (newUserId !== undefined && newUserId !== null) {
-                    // Get current project to check current owner
-                    const projects = await tx.query.project.where('id', '=', id).run();
-                    const currentProject = projects.length > 0 ? projects[0] : null;
+                // Extract principal
+                const principal = `user:${authData.sub}` as const;
 
-                    if (currentProject && newUserId !== currentProject.userId) {
-                        // userId is being changed to a different user - only admins allowed
-                        const userIsAdmin = isAdmin(authData.sub);
-                        if (!userIsAdmin) {
-                            throw new Error('Forbidden: Only admins can change project owner');
+                // Check capability: write or manage
+                const resource: Resource = {
+                    type: 'data',
+                    namespace: 'project',
+                    id: id,
+                };
+
+                // Check ownership first (grants manage rights automatically)
+                const isOwner = currentProject.ownedBy === authData.sub;
+                
+                // Check capability if not owner
+                if (!isOwner) {
+                    const hasWrite = await checkCapability(principal, resource, 'write', { ownedBy: currentProject.ownedBy });
+                    if (!hasWrite) {
+                        throw new Error('Forbidden: No write capability for this project');
+                    }
+                }
+
+                // If trying to change ownedBy (project owner), require 'manage' capability
+                if (newOwnedBy !== undefined && newOwnedBy !== null && newOwnedBy !== currentProject.ownedBy) {
+                    // Only owner (has manage rights) can change ownership
+                    if (!isOwner) {
+                        const hasManage = await checkCapability(principal, resource, 'manage', { ownedBy: currentProject.ownedBy });
+                        if (!hasManage) {
+                            throw new Error('Forbidden: Only project owners can change ownership');
                         }
                     }
                 }
@@ -152,7 +137,7 @@ export function createServerMutators(
 
             /**
              * Delete a project (server-side)
-             * Enforces permissions: admin OR (founder AND owner)
+             * Enforces: User must have 'delete' capability or be owner (has 'manage' rights)
              */
             delete: async (
                 tx: AnyTransaction,
@@ -167,106 +152,31 @@ export function createServerMutators(
 
                 const { id } = args;
 
-                // Check permissions
-                const canUpdate = await canUpdateProject(tx, id, authData.sub);
+                // Get current project to check ownership
+                const projects = await tx.query.project.where('id', '=', id).run();
+                const currentProject = projects.length > 0 ? projects[0] : null;
 
-                if (!canUpdate) {
-                    throw new Error(
-                        'Forbidden: Only admins and project owners can delete projects'
-                    );
+                if (!currentProject) {
+                    throw new Error('Project not found');
                 }
 
-                // For now, allow any authenticated user to create projects
-                // TODO: Add proper permission checks (founder/admin) when identities are implemented
+                // Extract principal
+                const principal = `user:${authData.sub}` as const;
 
-                // Ensure user is creating project for themselves (unless admin)
-                const userIsAdmin = isAdmin(authData.sub);
-                if (!userIsAdmin && args.userId !== authData.sub) {
-                    throw new Error('Forbidden: You can only create projects for yourself');
-                }
+                // Check ownership first (grants manage rights automatically)
+                const isOwner = currentProject.ownedBy === authData.sub;
 
-                // Delegate to client mutator
-                await clientMutators.project.create(tx, args);
-            },
-
-            /**
-             * Update a project (server-side)
-             * Enforces permissions: admin OR owner
-             */
-            update: async (
-                tx: AnyTransaction,
-                args: {
-                    id: string;
-                    title?: string;
-                    description?: string;
-                    country?: string;
-                    city?: string;
-                    videoUrl?: string;
-                    bannerImage?: string;
-                    profileImageUrl?: string;
-                    sdgs?: string;
-                    userId?: string; // Only admins can change owner
-                }
-            ) => {
-                // Check authentication
-                if (!authData?.sub) {
-                    throw new Error('Unauthorized: Must be logged in to update projects');
-                }
-
-                const { id, userId: newUserId } = args;
-
-                // Check permissions
-                const canUpdate = await canUpdateProject(tx, id, authData.sub);
-
-                if (!canUpdate) {
-                    throw new Error(
-                        'Forbidden: Only admins and project owners can update projects'
-                    );
-                }
-
-                // If trying to change userId (project owner), only admins can do this
-                if (newUserId !== undefined && newUserId !== null) {
-                    // Get current project to check current owner
-                    const projects = await tx.query.project.where('id', '=', id).run();
-                    const currentProject = projects.length > 0 ? projects[0] : null;
-
-                    if (currentProject && newUserId !== currentProject.userId) {
-                        // userId is being changed to a different user - only admins allowed
-                        const userIsAdmin = isAdmin(authData.sub);
-                        if (!userIsAdmin) {
-                            throw new Error('Forbidden: Only admins can change project owner');
-                        }
+                // Check capability if not owner
+                if (!isOwner) {
+                    const resource: Resource = {
+                        type: 'data',
+                        namespace: 'project',
+                        id: id,
+                    };
+                    const hasDelete = await checkCapability(principal, resource, 'delete', { ownedBy: currentProject.ownedBy });
+                    if (!hasDelete) {
+                        throw new Error('Forbidden: No delete capability for this project');
                     }
-                }
-
-                // Delegate to client mutator
-                await clientMutators.project.update(tx, args);
-            },
-
-            /**
-             * Delete a project (server-side)
-             * Enforces permissions: admin OR owner
-             */
-            delete: async (
-                tx: AnyTransaction,
-                args: {
-                    id: string;
-                }
-            ) => {
-                // Check authentication
-                if (!authData?.sub) {
-                    throw new Error('Unauthorized: Must be logged in to delete projects');
-                }
-
-                const { id } = args;
-
-                // Check permissions
-                const canUpdate = await canUpdateProject(tx, id, authData.sub);
-
-                if (!canUpdate) {
-                    throw new Error(
-                        'Forbidden: Only admins and project owners can delete projects'
-                    );
                 }
 
                 // Delegate to client mutator
@@ -275,4 +185,3 @@ export function createServerMutators(
         },
     } as const;
 }
-
