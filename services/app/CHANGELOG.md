@@ -1,3 +1,11 @@
+# [0.7.0](https://github.com/hominiome/hominio/compare/v0.6.3...v0.7.0) (2025-11-19)
+
+
+### Features
+
+* add tool call example with AI state indicators ([76ae863](https://github.com/hominiome/hominio/commit/76ae863edfd1fbafedde226c85932e9227e5a0a9))
+* enable voice mode with Google Live API integration ([6116c82](https://github.com/hominiome/hominio/commit/6116c828833a8c79f0c25b398215cdaa0d6a2a24))
+
 ## [0.6.3](https://github.com/hominiome/hominio/compare/v0.6.2...v0.6.3) (2025-11-18)
 
 
