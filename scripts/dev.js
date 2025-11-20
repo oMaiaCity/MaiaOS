@@ -66,7 +66,7 @@ function startService(service) {
  * Kill processes by port (fallback cleanup)
  */
 function killPorts() {
-	const ports = [4200, 4201, 4202, 4203, 4204, 4205];
+	const ports = [4200, 4201, 4202, 4203, 4204, 4205, 4848, 4849];
 	ports.forEach((port) => {
 		try {
 			const pids = execSync(`lsof -ti:${port}`, { encoding: 'utf8', stdio: 'pipe' }).trim();
@@ -134,7 +134,7 @@ function shutdown(exitCode = 0) {
 		});
 
 		// Final cleanup: kill any processes still holding our ports
-		console.log('[Cleanup] Killing any remaining processes on ports 4200-4205...');
+		console.log('[Cleanup] Killing any remaining processes on ports 4200-4205, 4848-4849 (Zero)...');
 		killPorts();
 
 		// Exit after cleanup
