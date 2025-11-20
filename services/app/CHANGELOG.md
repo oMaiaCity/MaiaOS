@@ -1,3 +1,10 @@
+## [0.10.6](https://github.com/hominiome/hominio/compare/v0.10.5...v0.10.6) (2025-11-20)
+
+
+### Bug Fixes
+
+* remove TypeScript type annotation from JavaScript Svelte file ([db26b97](https://github.com/hominiome/hominio/commit/db26b97c2ba5945ed74bb335e7b9f4855fb08712))
+
 ## [0.10.5](https://github.com/hominiome/hominio/compare/v0.10.4...v0.10.5) (2025-11-20)
 
 
