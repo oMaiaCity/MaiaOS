@@ -8,6 +8,7 @@
 
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let signingOut = $state(false);
 
 	$effect(() => {
 		// Handle session state changes
@@ -23,6 +24,18 @@
 		
 		loading = false;
 	});
+
+	async function handleSignOut() {
+		signingOut = true;
+		try {
+			await authClient.signOut();
+			// Redirect to sign-in page
+			goto('/');
+		} catch (error) {
+			console.error('Sign out error:', error);
+			signingOut = false;
+		}
+	}
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-[#f8f9fa] via-[#f2f4f6] to-[#e9ecef] p-6 font-sans text-slate-800 antialiased selection:bg-blue-100">
@@ -112,6 +125,25 @@
 									<span class="text-sm font-medium text-slate-700">Active</span>
 								</div>
 							</div>
+						</div>
+
+						<!-- Logout Button -->
+						<div class="mt-8 flex justify-center">
+							<button
+								onclick={handleSignOut}
+								disabled={signingOut}
+								class="group flex items-center gap-2 rounded-xl border border-red-200 bg-red-50/50 px-6 py-3 font-medium text-red-600 transition-all hover:border-red-300 hover:bg-red-100/50 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+							>
+								{#if signingOut}
+									<div class="h-4 w-4 animate-spin rounded-full border-2 border-red-300 border-t-red-600"></div>
+									<span>Signing out...</span>
+								{:else}
+									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+									</svg>
+									<span>Sign Out</span>
+								{/if}
+							</button>
 						</div>
 					</div>
 				</div>
