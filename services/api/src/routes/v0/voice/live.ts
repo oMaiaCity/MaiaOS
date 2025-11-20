@@ -211,9 +211,6 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                 ],
             };
 
-            // Debug: Log currentAgentId after initialization
-            console.log(`[voice/live] 🔍 DEBUG: currentAgentId after initialization: ${currentAgentId}, initialAgentId: ${initialAgentId}`);
-
             const session = await ai.live.connect({
                 model: MODEL,
                 callbacks: {
@@ -228,9 +225,6 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                     onmessage: async (message: any) => {
                         // Forward Google messages to client
                         try {
-                            // Debug: Log currentAgentId at start of onmessage callback
-                            console.log(`[voice/live] 🔍 DEBUG onmessage start: currentAgentId=${currentAgentId}, initialAgentId was=${initialAgentId}`);
-
                             // Handle different message types from Google Live API
                             if (message.serverContent) {
                                 // Check for audio in modelTurn.parts
@@ -482,7 +476,6 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                                         // Frontend handles actionSkill execution, just acknowledge
                                         const { agentId, skillId, args } = fc.args || {};
                                         console.log(`[voice/live] ✅ Handling actionSkill tool call: agent="${agentId}", skill="${skillId}", args:`, args);
-                                        console.log(`[voice/live] 🔍 DEBUG toolCall handler: currentAgentId=${currentAgentId}, agentId=${agentId}, initialAgentId was=${initialAgentId}`);
 
                                         // Check if we're in the right agent context
                                         // If currentAgentId is null (dashboard) or doesn't match, reject the skill call
