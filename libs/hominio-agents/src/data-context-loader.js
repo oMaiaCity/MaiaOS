@@ -9,6 +9,9 @@
  * Returns JSON data context directly from agent config (no queries executed)
  * This context is passed as prompt/instructions/background knowledge to the LLM
  * 
+ * IMPORTANT: Menu data (id: "menu") is EXCLUDED from general context.
+ * Menu context is only injected when the show-menu tool is called.
+ * 
  * @param {import('./types.ts').AgentConfig} agentConfig - Agent configuration
  * @returns {Promise<string>} - Formatted data context string to pass to LLM
  */
@@ -19,9 +22,15 @@ export async function loadDataContext(agentConfig) {
 	
 	// Format data context as a readable string for LLM prompt
 	// Each data context entry is added as background knowledge/instructions
+	// EXCEPT menu data (id: "menu") which is only injected during menu tool calls
 	const contextParts = [];
 	
 	for (const contextItem of agentConfig.dataContext) {
+		// Skip menu data - it's only injected during show-menu tool calls
+		if (contextItem.id === 'menu') {
+			continue;
+		}
+		
 		if (typeof contextItem === 'string') {
 			// Simple string instruction
 			contextParts.push(contextItem);

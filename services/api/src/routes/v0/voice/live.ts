@@ -113,34 +113,40 @@ export const voiceLiveHandler = {
 
         // Connect to Google Live API
         try {
+            // Store current agent ID in session
+            // Initialize with initialAgentId if provided (from query param when starting call from agent route)
+            let currentAgentId: string | null = initialAgentId || null;
+            let currentAgentConfig: any = null;
+
             // Load agent config if initialAgentId is provided
-            let systemInstruction = "You are a helpful AI assistant. When users ask to go to the dashboard or agent view, use the switchAgent tool to navigate them.";
+            let systemInstruction = "Du bist ein hilfreicher KI-Assistent. Wenn Benutzer darum bitten, zum Dashboard oder zur Agentenansicht zu wechseln, verwende das switchAgent-Tool, um sie dorthin zu navigieren.";
             if (initialAgentId) {
                 try {
                     const agentConfig = await loadAgentConfig(initialAgentId);
-                    const skillsDesc = agentConfig.skills.map((skill: any) => 
+                    currentAgentConfig = agentConfig; // Store config for later use
+                    const skillsDesc = agentConfig.skills.map((skill: any) =>
                         `- **${skill.name}** (skillId: "${skill.id}"): ${skill.description}`
                     ).join('\n');
-                    
+
                     // Load data context for background knowledge
                     const { loadDataContext } = await import('@hominio/agents');
                     const dataContextString = await loadDataContext(agentConfig);
-                    
+
                     systemInstruction = `Du bist ${agentConfig.name}, ${agentConfig.role}. ${agentConfig.description}
 
 Verfügbare Funktionen, die du mit actionSkill ausführen kannst:
 ${skillsDesc}
 
-Wenn der Benutzer nach etwas fragt, verwende die entsprechende skillId mit dem actionSkill-Tool. Zum Beispiel: Wenn sie nach dem Menü fragen, verwende actionSkill mit skillId: "show-menu". Für show-menu kannst du optional args.category verwenden, um nach Kategorie zu filtern (z.B. "appetizers", "mains", "desserts", "drinks").
+Wenn der Benutzer nach etwas fragt, verwende die entsprechende skillId mit dem actionSkill-Tool. Zum Beispiel: Wenn er nach dem Menü fragt, verwende actionSkill mit skillId: "show-menu". Für show-menu kannst du optional args.category verwenden, um nach Kategorie zu filtern (z.B. "appetizers", "mains", "desserts", "drinks").
 
 ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
-                    
+
                     console.log(`[voice/live] ✅ Loaded initial agent context: ${initialAgentId}`);
                 } catch (err) {
                     console.error(`[voice/live] Failed to load initial agent config:`, err);
                 }
             }
-            
+
             const config = {
                 responseModalities: [Modality.AUDIO],
                 systemInstruction: systemInstruction,
@@ -205,9 +211,8 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                 ],
             };
 
-            // Store current agent ID in session
-            let currentAgentId: string | null = null;
-            let currentAgentConfig: any = null;
+            // Debug: Log currentAgentId after initialization
+            console.log(`[voice/live] 🔍 DEBUG: currentAgentId after initialization: ${currentAgentId}, initialAgentId: ${initialAgentId}`);
 
             const session = await ai.live.connect({
                 model: MODEL,
@@ -223,6 +228,9 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                     onmessage: async (message: any) => {
                         // Forward Google messages to client
                         try {
+                            // Debug: Log currentAgentId at start of onmessage callback
+                            console.log(`[voice/live] 🔍 DEBUG onmessage start: currentAgentId=${currentAgentId}, initialAgentId was=${initialAgentId}`);
+
                             // Handle different message types from Google Live API
                             if (message.serverContent) {
                                 // Check for audio in modelTurn.parts
@@ -258,12 +266,12 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                                             // Handle agent switch: load config and update system context
                                             const agentId = functionCall.args?.agentId || 'unknown';
                                             console.log(`[voice/live] 🔄 Switching agent to: "${agentId}" (serverContent handler)`);
-                                            
+
                                             if (agentId === 'dashboard') {
                                                 currentAgentId = null;
                                                 currentAgentConfig = null;
                                                 session.sendClientContent({
-                                                    turns: `[System] Sie befinden sich jetzt auf dem Haupt-Dashboard. Verwenden Sie switchAgent, um zu einem bestimmten Agenten zu navigieren.`,
+                                                    turns: `[System] Du befindest Dich jetzt auf dem Haupt-Dashboard. Verwende switchAgent, um zu einem bestimmten Agenten zu navigieren.`,
                                                     turnComplete: true,
                                                 });
                                                 response = { success: true, message: "Switched to dashboard", agentId: 'dashboard' };
@@ -273,24 +281,24 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                                                     const config = await loadAgentConfig(agentId);
                                                     currentAgentId = agentId;
                                                     currentAgentConfig = config;
-                                                    
-                                                    const skillsDesc = config.skills.map((skill: any) => 
+
+                                                    const skillsDesc = config.skills.map((skill: any) =>
                                                         `- **${skill.name}** (skillId: "${skill.id}"): ${skill.description}`
                                                     ).join('\n');
-                                                    
+
                                                     // Load data context for background knowledge
                                                     const { loadDataContext } = await import('@hominio/agents');
                                                     const dataContextString = await loadDataContext(config);
-                                                    
+
                                                     const contextMessage = `[System] Du bist jetzt ${config.name}, ${config.role}. ${config.description}
 
 Verfügbare Funktionen, die du mit actionSkill ausführen kannst:
 ${skillsDesc}
 
-Wenn der Benutzer nach etwas fragt, verwende die entsprechende skillId mit dem actionSkill-Tool. Zum Beispiel: Wenn sie nach dem Menü fragen, verwende actionSkill mit skillId: "show-menu". Für show-menu kannst du optional args.category verwenden, um nach Kategorie zu filtern (z.B. "appetizers", "mains", "desserts", "drinks").
+Wenn der Benutzer nach etwas fragt, verwende die entsprechende skillId mit dem actionSkill-Tool. Zum Beispiel: Wenn er nach dem Menü fragt, verwende actionSkill mit skillId: "show-menu". Für show-menu kannst du optional args.category verwenden, um nach Kategorie zu filtern (z.B. "appetizers", "mains", "desserts", "drinks").
 
 ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
-                                                    
+
                                                     session.sendClientContent({
                                                         turns: contextMessage,
                                                         turnComplete: true,
@@ -301,6 +309,47 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                                                     console.error(`[voice/live] Failed to load agent config:`, err);
                                                     response = { success: false, error: `Failed to load agent config: ${agentId}` };
                                                 }
+                                            }
+                                        } else if (functionCall.name === "actionSkill") {
+                                            // Handle actionSkill tool call
+                                            const { agentId, skillId, args } = functionCall.args || {};
+                                            console.log(`[voice/live] ✅ Handling actionSkill tool call: agent="${agentId}", skill="${skillId}", args:`, args);
+
+                                            // Check if we're in the right agent context
+                                            if (!currentAgentId || currentAgentId !== agentId) {
+                                                session.sendClientContent({
+                                                    turns: `[System] Entschuldigung, ich habe diese Funktion nicht verfügbar. Bitte wechsle zu einem Agenten, der diese Funktion unterstützt.`,
+                                                    turnComplete: true,
+                                                });
+                                                response = { success: false, error: `Skill "${skillId}" not available in current context. Current agent: ${currentAgentId || 'dashboard'}, requested agent: ${agentId}` };
+                                            } else {
+                                                // Provide dynamic context knowledge when menu tool is called
+                                                if (skillId === "show-menu") {
+                                                    loadAgentConfig(agentId).then(async config => {
+                                                        const skill = config.skills?.find((s: any) => s.id === 'show-menu');
+                                                        let menuContextItem = null;
+                                                        if (skill?.dataContext) {
+                                                            const skillDataContext = Array.isArray(skill.dataContext) ? skill.dataContext : [skill.dataContext];
+                                                            menuContextItem = skillDataContext.find((item: any) => item.id === 'menu');
+                                                        }
+                                                        if (!menuContextItem) {
+                                                            menuContextItem = config.dataContext?.find((item: any) => item.id === 'menu');
+                                                        }
+
+                                                        if (menuContextItem && menuContextItem.data) {
+                                                            const { getMenuContextString } = await import('@hominio/agents');
+                                                            const menuContext = getMenuContextString(menuContextItem.data, menuContextItem);
+                                                            session.sendClientContent({
+                                                                turns: menuContext,
+                                                                turnComplete: true,
+                                                            });
+                                                            console.log(`[voice/live] ✅ Injected menu context for show-menu tool call (from skill dataContext)`);
+                                                        }
+                                                    }).catch(err => {
+                                                        console.error(`[voice/live] Error loading menu context:`, err);
+                                                    });
+                                                }
+                                                response = { success: true, message: `Executing skill ${skillId} for agent ${agentId}`, agentId, skillId };
                                             }
                                         }
 
@@ -341,7 +390,7 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                                 console.log("[voice/live] Received top-level tool call:", JSON.stringify(message.toolCall));
 
                                 const functionCalls = message.toolCall.functionCalls;
-                                
+
                                 // Send each tool call to frontend for client-side handling
                                 functionCalls.forEach((fc: any) => {
                                     ws.send(JSON.stringify({
@@ -363,7 +412,7 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                                 const responses = functionCalls.map((fc: any) => {
                                     const toolName = fc.name;
                                     console.log(`[voice/live] 🔧 Processing tool call: "${toolName}"`, JSON.stringify(fc.args));
-                                    
+
                                     // Handle known tools
                                     if (toolName === "get_name") {
                                         console.log(`[voice/live] ✅ Responding to get_name`);
@@ -373,18 +422,18 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                                             id: fc.id
                                         };
                                     }
-                                    
+
                                     if (toolName === "switchAgent") {
                                         // Handle agent switch: load config and update system context
                                         const agentId = fc.args?.agentId || 'unknown';
                                         console.log(`[voice/live] 🔄 Switching agent to: "${agentId}"`);
-                                        
+
                                         if (agentId === 'dashboard') {
                                             currentAgentId = null;
                                             currentAgentConfig = null;
                                             // Send text message to update AI context
                                             session.sendClientContent({
-                                                turns: `[System] Sie befinden sich jetzt auf dem Haupt-Dashboard. Verwenden Sie switchAgent, um zu einem bestimmten Agenten zu navigieren.`,
+                                                turns: `[System] Du befindest Dich jetzt auf dem Haupt-Dashboard. Verwende switchAgent, um zu einem bestimmten Agenten zu navigieren.`,
                                                 turnComplete: true,
                                             });
                                         } else {
@@ -392,26 +441,26 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                                             loadAgentConfig(agentId).then(async config => {
                                                 currentAgentId = agentId;
                                                 currentAgentConfig = config;
-                                                
+
                                                 // Build skills description for AI
-                                                const skillsDesc = config.skills.map((skill: any) => 
+                                                const skillsDesc = config.skills.map((skill: any) =>
                                                     `- **${skill.name}** (skillId: "${skill.id}"): ${skill.description}`
                                                 ).join('\n');
-                                                
+
                                                 // Load data context for background knowledge
                                                 const { loadDataContext } = await import('@hominio/agents');
                                                 const dataContextString = await loadDataContext(config);
-                                                
+
                                                 // Update AI context with agent info, available skills, and data context
                                                 const contextMessage = `[System] Du bist jetzt ${config.name}, ${config.role}. ${config.description}
 
 Verfügbare Funktionen, die du mit actionSkill ausführen kannst:
 ${skillsDesc}
 
-Wenn der Benutzer nach etwas fragt, verwende die entsprechende skillId mit dem actionSkill-Tool. Zum Beispiel: Wenn sie nach dem Menü fragen, verwende actionSkill mit skillId: "show-menu". Für show-menu kannst du optional args.category verwenden, um nach Kategorie zu filtern (z.B. "appetizers", "mains", "desserts", "drinks").
+Wenn der Benutzer nach etwas fragt, verwende die entsprechende skillId mit dem actionSkill-Tool. Zum Beispiel: Wenn er nach dem Menü fragt, verwende actionSkill mit skillId: "show-menu". Für show-menu kannst du optional args.category verwenden, um nach Kategorie zu filtern (z.B. "appetizers", "mains", "desserts", "drinks").
 
 ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
-                                                
+
                                                 session.sendClientContent({
                                                     turns: contextMessage,
                                                     turnComplete: true,
@@ -421,70 +470,84 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                                                 console.error(`[voice/live] Failed to load agent config:`, err);
                                             });
                                         }
-                                        
+
                                         return {
                                             name: "switchAgent",
                                             response: { result: { success: true, message: `Switched to ${agentId}`, agentId: agentId } },
                                             id: fc.id
                                         };
                                     }
-                                    
+
                                     if (toolName === "actionSkill") {
                                         // Frontend handles actionSkill execution, just acknowledge
                                         const { agentId, skillId, args } = fc.args || {};
                                         console.log(`[voice/live] ✅ Handling actionSkill tool call: agent="${agentId}", skill="${skillId}", args:`, args);
-                                        
+                                        console.log(`[voice/live] 🔍 DEBUG toolCall handler: currentAgentId=${currentAgentId}, agentId=${agentId}, initialAgentId was=${initialAgentId}`);
+
                                         // Check if we're in the right agent context
                                         // If currentAgentId is null (dashboard) or doesn't match, reject the skill call
                                         if (!currentAgentId || currentAgentId !== agentId) {
                                             // Send error message to LLM that this skill is not available
                                             session.sendClientContent({
-                                                turns: `[System] Entschuldigung, ich habe diese Funktion nicht verfügbar. Bitte wechseln Sie zu einem Agenten, der diese Funktion unterstützt.`,
+                                                turns: `[System] Entschuldigung, ich habe diese Funktion nicht verfügbar. Bitte wechsle zu einem Agenten, der diese Funktion unterstützt.`,
                                                 turnComplete: true,
                                             });
-                                            
+
                                             return {
                                                 name: "actionSkill",
                                                 response: { result: { success: false, error: `Skill "${skillId}" not available in current context. Current agent: ${currentAgentId || 'dashboard'}, requested agent: ${agentId}` } },
                                                 id: fc.id
                                             };
                                         }
-                                        
+
                                         // Provide dynamic context knowledge when menu tool is called
                                         // Send as text message to conversation (same way as agent switch context)
                                         // Menu data comes from agent config's dataContext (single source of truth)
                                         if (skillId === "show-menu") {
                                             // Use same pattern as switchAgent - load config and send context
                                             loadAgentConfig(agentId).then(async config => {
-                                                // Find menu data in dataContext (id: "menu")
-                                                const menuContextItem = config.dataContext?.find((item: any) => item.id === 'menu');
-                                                
+                                                // Find show-menu skill
+                                                const skill = config.skills?.find((s: any) => s.id === 'show-menu');
+
+                                                // Get menu data from skill-specific dataContext (preferred)
+                                                let menuContextItem = null;
+                                                if (skill?.dataContext) {
+                                                    const skillDataContext = Array.isArray(skill.dataContext) ? skill.dataContext : [skill.dataContext];
+                                                    menuContextItem = skillDataContext.find((item: any) => item.id === 'menu');
+                                                }
+
+                                                // Fallback to agent-level dataContext (for backwards compatibility)
+                                                if (!menuContextItem) {
+                                                    menuContextItem = config.dataContext?.find((item: any) => item.id === 'menu');
+                                                }
+
                                                 if (menuContextItem && menuContextItem.data) {
                                                     // Import menu context generator
                                                     const { getMenuContextString } = await import('@hominio/agents');
-                                                    const menuContext = getMenuContextString(menuContextItem.data);
-                                                    
+                                                    // Pass both menu data and full config (for instructions, categoryNames, currency, reminder)
+                                                    const menuContext = getMenuContextString(menuContextItem.data, menuContextItem);
+
                                                     // Send menu context as text message to conversation using sendClientContent
                                                     session.sendClientContent({
                                                         turns: menuContext,
                                                         turnComplete: true,
                                                     });
-                                                    console.log(`[voice/live] ✅ Injected menu context for show-menu tool call (from agent config)`);
+                                                    console.log(`[voice/live] ✅ Injected menu context for show-menu tool call (from skill dataContext)`);
                                                 } else {
-                                                    console.warn(`[voice/live] ⚠️ Menu data not found in agent config dataContext`);
+                                                    console.warn(`[voice/live] ⚠️ Menu data not found in skill or agent config`);
                                                 }
                                             }).catch(err => {
                                                 console.error(`[voice/live] Error loading menu context:`, err);
                                             });
                                         }
-                                        
+
                                         return {
                                             name: "actionSkill",
                                             response: { result: { success: true, message: `Executing skill ${skillId} for agent ${agentId}`, agentId, skillId } },
                                             id: fc.id
                                         };
                                     }
-                                    
+
                                     // Unknown tool
                                     console.warn(`[voice/live] ⚠️ Unknown tool: "${toolName}"`);
                                     return {

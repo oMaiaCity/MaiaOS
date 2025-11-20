@@ -30,6 +30,9 @@ export interface Skill {
 	description: string;
 	functionId: string;
 	parameters?: Record<string, ParameterDefinition>;
+	// Skill-specific data context (e.g., menu data for show-menu skill)
+	// Only injected when this specific skill is called
+	dataContext?: DataContextItem | DataContextItem[];
 }
 
 export interface ParameterDefinition {
@@ -49,6 +52,7 @@ export interface FunctionHandler {
 export interface FunctionContext {
 	dataContext: string; // Formatted string context for LLM prompt
 	rawDataContext?: DataContextItem[]; // Raw data context from agent config (for extracting structured data)
+	skillDataContext?: DataContextItem[]; // Skill-specific data context (e.g., menu data for show-menu skill)
 	userId?: string;
 	agentId: string;
 }

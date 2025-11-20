@@ -13,10 +13,10 @@
 	let agentError = $state(null);
 
 	// Agent info (fallback if config fails)
-	const agent = {
+		const agent = {
 		name: 'Charles',
 		role: 'Hotel Concierge',
-		description: 'Ihr persönlicher KI-Hotel-Concierge. Ich kann Ihnen bei Buchungen, Empfehlungen, Room Service und allem anderen helfen, was Sie während Ihres Aufenthalts benötigen.',
+		description: 'Dein persönlicher Concierge. Ich kann Dir bei Buchungen, Empfehlungen, Room Service und allem anderen helfen, was Du während Deines Aufenthalts benötigst.',
 		color: 'from-blue-400 to-cyan-400'
 	};
 
@@ -300,7 +300,7 @@
 
 			<!-- Projects Section -->
 			<div class="mb-8">
-				<h2 class="mb-6 text-2xl font-bold text-center text-slate-900">Ihre Hotel-Projekte</h2>
+				<h2 class="mb-6 text-2xl font-bold text-center text-slate-900">Deine Hotel-Projekte</h2>
 				
 				{#if loading}
 					<div class="flex relative z-10 flex-col justify-center items-center py-12">

@@ -12,30 +12,52 @@
  * @param {string} [args.category] - Optional category filter
  * @param {Object} context - Function context
  * @param {string} context.dataContext - Data context string from agent config (formatted)
- * @param {Object} context.rawDataContext - Raw data context from agent config (for extracting menu data)
- * @param {string} context.userId - Current user ID
+ * @param {Object[]} [context.rawDataContext] - Raw data context from agent config (for extracting menu data)
+ * @param {Object[]} [context.skillDataContext] - Skill-specific data context (e.g., menu data for show-menu skill)
+ * @param {string} [context.userId] - Current user ID
  * @param {string} context.agentId - Agent ID
  * @returns {Promise<Object>}
  */
 export async function handler(args, context) {
 	const { category } = args || {};
 	
-	// Extract menu data from agent config's dataContext
-	// Menu should be in a dataContext entry with id: "menu"
+	// Extract menu data from skill-specific dataContext
+	// Menu should be in skill.dataContext with id: "menu"
+	/** @type {any} */
 	let menu = null;
+	/** @type {any} */
+	let menuConfig = null;
 	
-	if (context.rawDataContext && Array.isArray(context.rawDataContext)) {
-		const menuContext = context.rawDataContext.find(item => item.id === 'menu');
-		if (menuContext && menuContext.data) {
-			menu = menuContext.data;
+	// First try skill-specific dataContext (preferred)
+	if (context.skillDataContext && Array.isArray(context.skillDataContext)) {
+		/** @type {any} */
+		const menuContext = context.skillDataContext.find((/** @type {any} */ item) => item && item.id === 'menu');
+		if (menuContext) {
+			menuConfig = menuContext; // Store full config for instructions
+			if (menuContext.data) {
+				menu = menuContext.data;
+			}
 		}
 	}
 	
-	// Fallback: if menu not found in context, return error
+	// Fallback to rawDataContext (for backwards compatibility)
+	if (!menu && context.rawDataContext && Array.isArray(context.rawDataContext)) {
+		/** @type {any} */
+		const menuContext = context.rawDataContext.find((/** @type {any} */ item) => item && item.id === 'menu');
+		if (menuContext) {
+			menuConfig = menuContext;
+			if (menuContext.data) {
+				menu = menuContext.data;
+			}
+		}
+	}
+	
+	// Fallback: if menu not found in context, return error with configurable message
 	if (!menu) {
+		const errorMsg = (menuConfig && menuConfig.errorMessage) || 'Menu data not found in agent configuration';
 		return {
 			success: false,
-			error: 'Menu data not found in agent configuration'
+			error: errorMsg
 		};
 	}
 	
@@ -60,60 +82,73 @@ export const uiComponent = () => import('./show-menu-ui.svelte');
 /**
  * Generate menu context string for LLM from agent config data
  * Formats the menu data from agent config into a readable string for LLM prompts
+ * Uses configurable instructions, category names, currency, and reminder from menu config
  * @param {Object} menuData - Menu data from agent config dataContext
+ * @param {Object} [menuConfig={}] - Full menu config item with instructions, categoryNames, currency, reminder
+ * @param {string[]} [menuConfig.instructions] - Array of instruction strings for LLM
+ * @param {string} [menuConfig.reminder] - Reminder text to append at end
+ * @param {Object<string, string>} [menuConfig.categoryNames] - Mapping of category keys to display names
+ * @param {Object} [menuConfig.currency] - Currency configuration
+ * @param {string} [menuConfig.currency.code] - Currency code (e.g., 'EUR')
+ * @param {string} [menuConfig.currency.locale] - Locale for formatting (e.g., 'de-DE')
  * @returns {string} Formatted menu context string
  */
-export function getMenuContextString(menuData) {
+export function getMenuContextString(menuData, menuConfig = {}) {
 	if (!menuData) {
 		return '';
 	}
 	
-	const categoryNames = {
-		appetizers: 'APPETIZERS',
-		mains: 'MAIN COURSES',
-		desserts: 'DESSERTS',
-		drinks: 'DRINKS'
-	};
-	
-	const lines = [
-		'[Menu Context - CRITICAL INSTRUCTIONS]',
-		'',
+	// Get configurable values from menuConfig, with fallbacks
+	const instructions = menuConfig.instructions || [
 		'DU MUSST DIESE REGELN STRENG BEFOLGEN:',
-		'1. Du darfst NUR Menüpunkte erwähnen, die unten aufgelistet sind. Erfinde, erfinde oder schlage KEINE Menüpunkte vor, die NICHT auf dieser Liste stehen.',
-		'2. ALLE Preise sind in EUR (Euro) NUR. Erwähne KEINE Dollar, USD oder andere Währungen.',
-		'3. Wenn ein Benutzer nach einem Artikel fragt, der NICHT auf dieser Liste steht (wie "Erdbeeren mit Sahne", "Crème Brûlée", "Club Sandwich" usw.), musst du ihn höflich informieren, dass dieser Artikel nicht verfügbar ist.',
-		'4. Übersetze Menüpunkte NICHT in andere Sprachen, es sei denn, der Benutzer fragt ausdrücklich danach.',
-		'5. Die EINZIGEN verfügbaren Nachspeisen sind: Schokoladen-Lava-Kuchen, Tiramisu und Käsekuchen. Nichts anderes.',
-		'',
-		'TATSÄCHLICHE MENÜPUNKTE (NUR DIESE EXISTIEREN):',
-		''
+		'1. Du darfst NUR Menüpunkte erwähnen, die unten aufgelistet sind.',
+		'2. ALLE Preise sind in EUR (Euro) NUR.',
+		'3. Wenn ein Benutzer nach einem Artikel fragt, der NICHT auf dieser Liste steht, musst du ihn höflich informieren, dass dieser Artikel nicht verfügbar ist.'
 	];
 	
-	const categoryNamesDE = {
+	const reminder = menuConfig.reminder || 'ERINNERE DICH: Wenn ein Benutzer nach IRGENDEINEM Artikel fragt, der oben NICHT aufgeführt ist, musst du sagen, dass er nicht verfügbar ist. Alle Preise sind nur in EUR.';
+	
+	const categoryNames = menuConfig.categoryNames || {
 		appetizers: 'VORSPEISEN',
 		mains: 'HAUPTGERICHTE',
 		desserts: 'NACHSPEISEN',
 		drinks: 'GETRÄNKE'
 	};
 	
-	// Format each category
-	for (const [categoryKey, categoryName] of Object.entries(categoryNamesDE)) {
-		if (menuData[categoryKey] && menuData[categoryKey].length > 0) {
+	const currency = menuConfig.currency || {
+		code: 'EUR',
+		locale: 'de-DE'
+	};
+	
+	const lines = [
+		'[Menu Context - CRITICAL INSTRUCTIONS]',
+		'',
+		...instructions,
+		'',
+		'TATSÄCHLICHE MENÜPUNKTE (NUR DIESE EXISTIEREN):',
+		''
+	];
+	
+	// Format each category using configurable category names
+	for (const [categoryKey, categoryName] of Object.entries(categoryNames)) {
+		// @ts-ignore - Dynamic category access from menuData
+		const categoryItems = menuData[categoryKey];
+		if (categoryItems && categoryItems.length > 0) {
 			lines.push(`${categoryName}:`);
-			for (const item of menuData[categoryKey]) {
-				const priceEUR = new Intl.NumberFormat('de-DE', {
+			for (const item of categoryItems) {
+				const priceFormatted = new Intl.NumberFormat(currency.locale, {
 					style: 'currency',
-					currency: 'EUR',
+					currency: currency.code,
 					minimumFractionDigits: 2,
 					maximumFractionDigits: 2
 				}).format(item.price);
-				lines.push(`- ${item.name} - ${priceEUR} (${item.type})`);
+				lines.push(`- ${item.name} - ${priceFormatted} (${item.type})`);
 			}
 			lines.push('');
 		}
 	}
 	
-	lines.push('ERINNERE DICH: Wenn ein Benutzer nach IRGENDEINEM Artikel fragt, der oben NICHT aufgeführt ist, musst du sagen, dass er nicht verfügbar ist. Alle Preise sind nur in EUR. Erfinde keine Artikel und verwende keine anderen Währungen.');
+	lines.push(reminder);
 	
 	return lines.join('\n');
 }

@@ -8,10 +8,21 @@
 	const session = authClient.useSession();
 
 	// Detect if we're on an agent page and extract agent ID
+	// Matches /me/charles, /me/charles/admin, /me/charles/anything, etc.
 	const currentAgentId = $derived.by(() => {
 		const path = $page.url.pathname;
+		// Match /me/{agentId} or /me/{agentId}/... (any sub-route)
 		const match = path.match(/^\/me\/([^\/]+)/);
-		return match ? match[1] : undefined;
+		const agentId = match ? match[1] : undefined;
+		
+		// Only return valid agent IDs (exclude 'admin' if it's a top-level route)
+		// For now, we know 'charles' is a valid agent, so return it if matched
+		if (agentId === 'charles') {
+			return 'charles';
+		}
+		
+		// Could add more agent IDs here in the future
+		return undefined;
 	});
 
 	// Initialize voice call service with tool call handler
