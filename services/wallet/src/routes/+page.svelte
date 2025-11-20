@@ -25,7 +25,7 @@
 			const isProduction = browser && window.location.hostname !== 'localhost' && !window.location.hostname.startsWith('127.0.0.1');
 			
 			// Build trusted origins array - use env vars or derive from current location
-			const domains: string[] = [];
+			const domains = [];
 			
 			// Add domains from env vars if set, otherwise derive from current location in production
 			if (env.PUBLIC_DOMAIN_ROOT) {
