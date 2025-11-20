@@ -1,3 +1,10 @@
+## [0.10.4](https://github.com/hominiome/hominio/compare/v0.10.3...v0.10.4) (2025-11-20)
+
+
+### Bug Fixes
+
+* remove --frozen-lockfile from Docker builds for testing ([cdfc8bd](https://github.com/hominiome/hominio/commit/cdfc8bd658dadef773f84e4d19eaedbeb99da2a6))
+
 ## [0.10.3](https://github.com/hominiome/hominio/compare/v0.10.2...v0.10.3) (2025-11-20)
 
 
