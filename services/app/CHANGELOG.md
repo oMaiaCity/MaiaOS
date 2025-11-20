@@ -1,3 +1,12 @@
+## [0.10.2](https://github.com/hominiome/hominio/compare/v0.10.1...v0.10.2) (2025-11-20)
+
+
+### Bug Fixes
+
+* run capabilities migration in production deployment ([cc6d6e3](https://github.com/hominiome/hominio/commit/cc6d6e3d152c1b8298e59b7c6ea1a90758716406))
+* update lockfile to sync with dependencies ([2c11bb9](https://github.com/hominiome/hominio/commit/2c11bb9260d47af7b6e72bbbcd60d4f8fd25f4b3))
+* update lockfile to sync with dependencies ([13f1ae7](https://github.com/hominiome/hominio/commit/13f1ae76dd6d9dd53c941fa819ebb90c16f82179))
+
 ## [0.10.1](https://github.com/hominiome/hominio/compare/v0.10.0...v0.10.1) (2025-11-20)
 
 
