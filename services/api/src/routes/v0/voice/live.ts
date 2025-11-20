@@ -43,7 +43,7 @@ export const voiceLiveHandler = {
         // Try to get request from WebSocket data (Elysia may provide this)
         // If not available, try to access from WebSocket instance properties
         let request: Request | null = null;
-        
+
         // Try different ways to access the upgrade request
         if (ws.data?.request) {
             request = ws.data.request as Request;
@@ -73,14 +73,14 @@ export const voiceLiveHandler = {
             ws.close(1008, "Authentication failed: No request data");
             return;
         }
-        
+
         // Store authData for later use
         ws.data.authData = authData;
-        
+
         // Check capability: require api:voice capability (default deny)
         const principal = `user:${authData.sub}`;
         console.log(`[voice/live] 🔍 Checking capability for user ${authData.sub} (principal: ${principal})`);
-        
+
         let hasVoiceCapability = false;
         try {
             hasVoiceCapability = await checkCapability(
@@ -94,20 +94,20 @@ export const voiceLiveHandler = {
             // Default deny on error
             hasVoiceCapability = false;
         }
-        
+
         if (!hasVoiceCapability) {
             console.log(`[voice/live] ❌ BLOCKED WebSocket connection - user ${authData.sub} does not have api:voice capability`);
             ws.close(1008, "Forbidden: No api:voice capability. Access denied by default.");
             return;
         }
-        
+
         console.log(`[voice/live] ✅ ALLOWED WebSocket connection - user ${authData.sub} has api:voice capability`);
 
         // Connect to Google Live API
         try {
             const config = {
                 responseModalities: [Modality.AUDIO],
-                systemInstruction: "You are a helpful assistant and answer in a friendly tone.",
+                systemInstruction: "You are Charles, a helpful hotel concierge assistant. You help guests with hotel services, bookings, and recommendations. When users ask to go to the dashboard or agent view, use the switchAgent tool to navigate them.",
                 speechConfig: {
                     voiceConfig: {
                         prebuiltVoiceConfig: {
@@ -119,8 +119,19 @@ export const voiceLiveHandler = {
                     {
                         functionDeclarations: [
                             {
-                                name: "get_name",
-                                description: "Get the name of the assistant",
+                                name: "switchAgent",
+                                description: "Navigate to a specific agent view or the dashboard. Use 'dashboard' to go to the main agents list, or specify an agent ID like 'charles' to go to that agent's page.",
+                                parameters: {
+                                    type: "object",
+                                    properties: {
+                                        agentId: {
+                                            type: "string",
+                                            description: "The agent ID to navigate to (e.g., 'charles') or 'dashboard' to go to the main agents list",
+                                            enum: ["dashboard", "charles"]
+                                        }
+                                    },
+                                    required: ["agentId"]
+                                }
                             }
                         ]
                     }
@@ -161,7 +172,7 @@ export const voiceLiveHandler = {
                                         // Handle function call from serverContent
                                         const functionCall = functionCallPart.functionCall;
                                         console.log("[voice/live] Handling function call:", JSON.stringify(functionCall));
-                                        
+
                                         ws.send(JSON.stringify({
                                             type: "toolCall",
                                             data: functionCall,
@@ -177,9 +188,9 @@ export const voiceLiveHandler = {
                                         // Note: sendToolResponse is not directly on session in some versions, 
                                         // or requires specific structure. 
                                         // Based on reference, sendToolResponse takes { functionResponses: [...] }
-                                        
+
                                         console.log("[voice/live] Sending tool response:", JSON.stringify(response));
-                                        
+
                                         session.sendToolResponse({
                                             functionResponses: [
                                                 {
@@ -213,7 +224,7 @@ export const voiceLiveHandler = {
                             } else if (message.toolCall) {
                                 // Handle top-level toolCall (if SDK abstracts it this way)
                                 console.log("[voice/live] Received top-level tool call:", JSON.stringify(message.toolCall));
-                                
+
                                 // Notify frontend
                                 ws.send(JSON.stringify({
                                     type: "toolCall",
@@ -226,7 +237,7 @@ export const voiceLiveHandler = {
                                         return {
                                             name: "get_name",
                                             response: { result: { name: "hominio" } }, // Wrap in result
-                                            id: fc.id 
+                                            id: fc.id
                                         };
                                     }
                                     return {

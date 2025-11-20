@@ -11,8 +11,14 @@
 	const authClient = createAuthClient();
 	const session = authClient.useSession();
 	
-	// Initialize voice call service
-	const voiceCall = createVoiceCallService();
+	// Initialize voice call service with tool call handler
+	const voiceCall = createVoiceCallService({
+		onToolCall: (toolName, args) => {
+			console.log('[NavPill] Tool call:', toolName, args);
+			// Wallet service doesn't handle agent switching
+			// Could add other tool handlers here if needed
+		}
+	});
 
 	$effect(() => {
 		// Skip protection for root route (/)

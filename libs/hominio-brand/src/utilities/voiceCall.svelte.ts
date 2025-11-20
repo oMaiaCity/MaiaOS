@@ -5,8 +5,9 @@
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 export type AIState = 'listening' | 'thinking' | 'speaking' | 'idle';
+export type ToolCallHandler = (toolName: string, args: any) => void;
 
-export function createVoiceCallService() {
+export function createVoiceCallService(options?: { onToolCall?: ToolCallHandler }) {
 	// Reactive state using Svelte 5 runes
 	let status = $state<ConnectionStatus>('disconnected');
 	let aiState = $state<AIState>('idle');
@@ -233,6 +234,14 @@ export function createVoiceCallService() {
 
 						case 'toolCall':
 							aiState = 'thinking';
+							// Handle tool call on client side
+							if (options?.onToolCall && message.toolName) {
+								try {
+									options.onToolCall(message.toolName, message.args || {});
+								} catch (toolErr) {
+									console.error('[VoiceCall] Tool call handler error:', toolErr);
+								}
+							}
 							break;
 
 						case 'error':

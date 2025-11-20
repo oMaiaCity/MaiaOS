@@ -6,8 +6,20 @@
 	const authClient = createAuthClient();
 	const session = authClient.useSession();
 
-	// Initialize voice call service
-	const voiceCall = createVoiceCallService();
+	// Initialize voice call service with tool call handler
+	const voiceCall = createVoiceCallService({
+		onToolCall: (toolName, args) => {
+			console.log('[NavPill] Tool call:', toolName, args);
+			if (toolName === 'switchAgent') {
+				const agentId = args.agentId;
+				if (agentId === 'dashboard') {
+					goto('/me');
+				} else {
+					goto(`/me/${agentId}`);
+				}
+			}
+		}
+	});
 
 	function goHome() {
 		goto('/me');
