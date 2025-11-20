@@ -1,0 +1,146 @@
+{
+    "id": "charles",
+    "name": "Charles",
+    "role": "Hotel Concierge",
+    "description": "Ihr persönlicher KI-Hotel-Concierge. Ich kann Ihnen bei Buchungen, Empfehlungen, Room Service und allem anderen helfen, was Sie während Ihres Aufenthalts benötigen.",
+    "dataContext": [
+        {
+            "title": "Hotelinformationen",
+            "content": "Dies ist ein Luxushotel mit Vollservice-Restaurant, Room Service, Spa-Einrichtungen und Concierge-Services. Gäste können Essen auf ihre Zimmer bestellen, Spa-Behandlungen buchen, Transport anfordern und lokale Empfehlungen erhalten."
+        },
+        {
+            "id": "menu",
+            "title": "Restaurant-Speisekarte",
+            "description": "Vollständige Restaurant-Speisekarte mit allen verfügbaren Artikeln, Preisen und Typen",
+            "data": {
+                "appetizers": [
+                    {
+                        "id": 1,
+                        "name": "Caesar Salat",
+                        "description": "Frischer Römersalat mit Caesar-Dressing",
+                        "price": 11.90,
+                        "type": "Portion"
+                    },
+                    {
+                        "id": 2,
+                        "name": "Bruschetta",
+                        "description": "Geröstetes Brot mit Tomaten und Basilikum",
+                        "price": 9.20,
+                        "type": "Portion"
+                    },
+                    {
+                        "id": 3,
+                        "name": "Tagesuppe",
+                        "description": "Tägliche Auswahl des Küchenchefs",
+                        "price": 8.30,
+                        "type": "Schüssel"
+                    }
+                ],
+                "mains": [
+                    {
+                        "id": 4,
+                        "name": "Gegrillter Lachs",
+                        "description": "Atlantischer Lachs mit Zitronenbuttersauce",
+                        "price": 23.00,
+                        "type": "Portion"
+                    },
+                    {
+                        "id": 5,
+                        "name": "Ribeye Steak",
+                        "description": "340g Ribeye-Steak mit geröstetem Gemüse",
+                        "price": 30.40,
+                        "type": "Portion"
+                    },
+                    {
+                        "id": 6,
+                        "name": "Vegetarische Pasta",
+                        "description": "Frische Pasta mit saisonalem Gemüse",
+                        "price": 17.50,
+                        "type": "Portion"
+                    },
+                    {
+                        "id": 7,
+                        "name": "Hähnchen-Risotto",
+                        "description": "Cremiges Risotto mit gegrilltem Hähnchen",
+                        "price": 21.20,
+                        "type": "Portion"
+                    }
+                ],
+                "desserts": [
+                    {
+                        "id": 8,
+                        "name": "Schokoladen-Lava-Kuchen",
+                        "description": "Warmer Schokoladenkuchen mit Vanilleeis",
+                        "price": 10.10,
+                        "type": "Portion"
+                    },
+                    {
+                        "id": 9,
+                        "name": "Tiramisu",
+                        "description": "Klassisches italienisches Dessert",
+                        "price": 9.20,
+                        "type": "Portion"
+                    },
+                    {
+                        "id": 10,
+                        "name": "Käsekuchen",
+                        "description": "New York Style Käsekuchen",
+                        "price": 9.20,
+                        "type": "Stück"
+                    }
+                ],
+                "drinks": [
+                    {
+                        "id": 11,
+                        "name": "Weinauswahl",
+                        "description": "Hauswein rot oder weiß",
+                        "price": 8.30,
+                        "type": "Glas"
+                    },
+                    {
+                        "id": 12,
+                        "name": "Craft Beer",
+                        "description": "Auswahl lokaler Craft-Biere",
+                        "price": 6.40,
+                        "type": "Flasche"
+                    },
+                    {
+                        "id": 13,
+                        "name": "Frischer Saft",
+                        "description": "Orange, Apfel oder Cranberry",
+                        "price": 4.60,
+                        "type": "Glas"
+                    },
+                    {
+                        "id": 14,
+                        "name": "Kaffee & Tee",
+                        "description": "Espresso, Cappuccino oder Teeauswahl",
+                        "price": 3.70,
+                        "type": "Tasse"
+                    }
+                ]
+            }
+        }
+    ],
+    "skills": [
+        {
+            "id": "show-menu",
+            "name": "Speisekarte",
+            "description": "Durchsuchen Sie Speiseoptionen und Menüs",
+            "functionId": "show-menu",
+            "parameters": {
+                "category": {
+                    "type": "string",
+                    "description": "Menükategorie-Filter (optional)",
+                    "optional": true,
+                    "enum": [
+                        "appetizers",
+                        "mains",
+                        "desserts",
+                        "drinks"
+                    ]
+                }
+            }
+        }
+    ]
+}

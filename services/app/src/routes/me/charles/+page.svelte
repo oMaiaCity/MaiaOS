@@ -4,17 +4,24 @@
 	import { getZeroContext } from '$lib/zero-utils';
 	import { allProjects } from '@hominio/zero';
 	import { GlassCard, LoadingSpinner, Alert, BackgroundBlobs } from '@hominio/brand';
+	import { loadAgentConfig, handleActionSkill, UIRenderer } from '@hominio/agents';
+	import { createAuthClient } from '@hominio/auth';
 
-	// Agent info
+	// Load agent config
+	let agentConfig = $state(null);
+	let agentLoading = $state(true);
+	let agentError = $state(null);
+
+	// Agent info (fallback if config fails)
 	const agent = {
 		name: 'Charles',
 		role: 'Hotel Concierge',
-		description: 'Your personal AI hotel concierge. I can help you with bookings, recommendations, room service, and anything else you need during your stay.',
+		description: 'Ihr persönlicher KI-Hotel-Concierge. Ich kann Ihnen bei Buchungen, Empfehlungen, Room Service und allem anderen helfen, was Sie während Ihres Aufenthalts benötigen.',
 		color: 'from-blue-400 to-cyan-400'
 	};
 
-	// Agent skills/capabilities
-	const skills = [
+	// Agent skills/capabilities (fallback)
+	const skillsFallback = [
 		{ 
 			id: 'hotels', 
 			name: 'My Hotels', 
@@ -72,14 +79,94 @@
 	/** @type {string | null} */
 	let error = $state(null);
 
-	// Get Zero context from layout
+	// ActionSkill result state
+	let skillResult = $state(null);
+	let skillResultFunctionId = $state(null);
+	let showingSkillResult = $state(false);
+	
+	// Function to go back to agent view
+	function goBackToAgent() {
+		showingSkillResult = false;
+		skillResult = null;
+		skillResultFunctionId = null;
+	}
+
+	// Get Zero context from layout (for projects display)
 	const zeroContext = getZeroContext();
+	const authClient = createAuthClient();
+	const session = authClient.useSession();
+
+	// Handle actionSkill tool calls
+	async function executeSkill(agentId: string, skillId: string, args: any) {
+		try {
+			const userId = $session.data?.user?.id;
+			const result = await handleActionSkill(
+				{ agentId, skillId, args },
+				{
+					userId
+				}
+			);
+
+			if (result.success) {
+				// Find function ID from agent config
+				const skill = agentConfig?.skills.find(s => s.id === skillId);
+				const functionId = skill?.functionId || skillId;
+				
+				skillResult = result.data;
+				skillResultFunctionId = functionId;
+				showingSkillResult = true;
+			} else {
+				console.error('[Charles] Skill execution failed:', result.error);
+				alert(`Fehler: ${result.error}`);
+			}
+		} catch (err) {
+			console.error('[Charles] Error executing skill:', err);
+			alert(`Fehler beim Ausführen der Funktion: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`);
+		}
+	}
 
 	onMount(() => {
+		// Load agent config
+		(async () => {
+			try {
+				const config = await loadAgentConfig('charles');
+				agentConfig = config;
+				agentLoading = false;
+			} catch (err) {
+				console.error('[Charles] Failed to load agent config:', err);
+				agentError = err instanceof Error ? err.message : 'Fehler beim Laden der Agent-Konfiguration';
+				agentLoading = false;
+			}
+		})();
+
+		// Listen for actionSkill events from NavPill
+		const handleActionSkillEvent = async (event: Event) => {
+			const customEvent = event as CustomEvent;
+			const { agentId, skillId, args } = customEvent.detail;
+			
+			if (agentId === 'charles') {
+				// Ensure agent config is loaded before executing
+				if (!agentConfig) {
+					// Wait for config to load
+					while (!agentConfig && !agentError) {
+						await new Promise((resolve) => setTimeout(resolve, 100));
+					}
+					if (agentError) {
+						console.error('[Charles] Failed to load agent config:', agentError);
+						return;
+					}
+				}
+				executeSkill(agentId, skillId, args);
+			}
+		};
+
+		window.addEventListener('actionSkill', handleActionSkillEvent);
+
+		// Load projects (still using Zero for projects display)
 		if (!zeroContext) {
 			console.error('Zero context not found');
 			loading = false;
-			error = 'Zero sync is not available';
+			error = 'Zero-Synchronisation ist nicht verfügbar';
 			return;
 		}
 
@@ -94,7 +181,7 @@
 
 			if (!zero) {
 				loading = false;
-				error = 'Failed to initialize Zero client';
+				error = 'Fehler beim Initialisieren des Zero-Clients';
 				return;
 			}
 
@@ -111,115 +198,151 @@
 				});
 			} catch (err) {
 				console.error('Error setting up Zero query:', err);
-				error = err instanceof Error ? err.message : 'Failed to load projects';
+				error = err instanceof Error ? err.message : 'Fehler beim Laden der Projekte';
 				loading = false;
 			}
 		})();
 
 		return () => {
+			window.removeEventListener('actionSkill', handleActionSkillEvent as EventListener);
 			if (projectsView) projectsView.destroy();
 		};
 	});
 
 	function handleSkillClick(skillId: string) {
 		console.log(`Skill clicked: ${skillId}`);
-		// TODO: Implement skill-specific actions
+		executeSkill('charles', skillId, {});
 	}
+
+	// Use skills from config or fallback
+	const skills = $derived(agentConfig?.skills || skillsFallback);
 </script>
 
 <div class="relative min-h-screen overflow-x-hidden bg-glass-gradient px-6 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
 	<BackgroundBlobs />
 
 	<div class="relative z-10 mx-auto max-w-6xl">
-		<!-- Agent Info Card -->
-		<div class="mb-8">
-			<GlassCard class="overflow-hidden p-8">
-				<div class="flex flex-col items-center text-center md:flex-row md:text-left md:gap-6">
-					<div class="mb-4 md:mb-0">
-						<svg class="h-20 w-20 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
-							<path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3zm0 2.83l6 6V19h-2v-6H8v6H6v-7.17l6-6z"/>
-						</svg>
-					</div>
-					<div class="flex-1">
-						<h1 class="mb-2 text-3xl font-bold text-slate-900">{agent.name}</h1>
-						<div class="mb-3 inline-block rounded-full bg-gradient-to-r {agent.color} px-4 py-1 text-sm font-semibold text-white">
-							{agent.role}
-						</div>
-						<p class="mt-3 text-base leading-relaxed text-slate-600">{agent.description}</p>
-					</div>
-				</div>
-			</GlassCard>
-		</div>
-
-		<!-- Skills Section -->
-		<div class="mb-12">
-			<h2 class="mb-6 text-center text-2xl font-bold text-slate-900">What I Can Help With</h2>
-			<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-				{#each skills as skill (skill.id)}
-					<GlassCard 
-						lifted={true}
-						class="group relative cursor-pointer p-6 transition-all duration-300 hover:scale-105"
-						role="button"
-						tabindex="0"
-						onclick={() => handleSkillClick(skill.id)}
-						onkeydown={(e) => e.key === 'Enter' && handleSkillClick(skill.id)}
-					>
-						<div class="flex flex-col items-center text-center">
-							<svg class="mb-3 h-10 w-10 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
-								{@html skill.svg}
-							</svg>
-							<h3 class="mb-2 text-sm font-bold text-slate-900">{skill.name}</h3>
-							<p class="text-xs leading-relaxed text-slate-600">{skill.description}</p>
-						</div>
-					</GlassCard>
-				{/each}
+		{#if showingSkillResult && skillResult && skillResultFunctionId}
+			<!-- Skill Result View (replaces agent UI) -->
+			<div class="pt-8">
+				<GlassCard class="p-6">
+					<UIRenderer 
+						functionId={skillResultFunctionId}
+						resultData={skillResult}
+						onClose={goBackToAgent}
+					/>
+				</GlassCard>
 			</div>
-		</div>
-
-		<!-- Projects Section -->
-		<div class="mb-8">
-			<h2 class="mb-6 text-center text-2xl font-bold text-slate-900">Your Hotel Projects</h2>
-			
-			{#if loading}
-				<div class="relative z-10 flex flex-col items-center justify-center py-12">
-					<LoadingSpinner />
-					<p class="mt-4 text-sm font-medium text-slate-500">Loading projects...</p>
-				</div>
-			{:else if error}
-				<div class="relative z-10 py-12 text-center">
-					<Alert type="warning" class="mx-auto max-w-md">
-						<p class="font-medium">Error</p>
-						<p class="mt-1 text-sm opacity-80">{error}</p>
-					</Alert>
-				</div>
-			{:else if projects.length === 0}
-				<div class="relative z-10 py-12 text-center">
-					<GlassCard class="mx-auto max-w-md p-8">
-						<p class="text-base text-slate-500">No hotel projects yet. Create your first project to get started!</p>
-					</GlassCard>
-				</div>
-			{:else}
-				<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-					{#each projects as project (project.id)}
-						<GlassCard lifted={true} class="group relative flex cursor-pointer flex-col gap-3 p-6" role="button" tabindex="0">
-							<div class="flex-1">
-								<h3 class="mb-2 text-lg font-semibold tracking-tight text-slate-900">
-									{project.title}
-								</h3>
-								{#if project.description}
-									<p class="mb-3 text-sm leading-relaxed text-slate-600">
-										{project.description}
-									</p>
-								{/if}
-								<div class="mt-auto text-xs text-slate-400">
-									Created {new Date(project.createdAt).toLocaleDateString()}
-								</div>
+		{:else}
+			<!-- Agent Info Card -->
+			<div class="mb-8">
+				<GlassCard class="overflow-hidden p-8">
+					<div class="flex flex-col items-center text-center md:flex-row md:text-left md:gap-6">
+						<div class="mb-4 md:mb-0">
+							<svg class="w-20 h-20 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+								<path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3zm0 2.83l6 6V19h-2v-6H8v6H6v-7.17l6-6z"/>
+							</svg>
+						</div>
+						<div class="flex-1">
+							<h1 class="mb-2 text-3xl font-bold text-slate-900">{agentConfig?.name || agent.name}</h1>
+							<div class="mb-3 inline-block rounded-full bg-gradient-to-r {agent.color} px-4 py-1 text-sm font-semibold text-white">
+								{agentConfig?.role || agent.role}
 							</div>
+							<p class="mt-3 text-base leading-relaxed text-slate-600">{agentConfig?.description || agent.description}</p>
+						</div>
+					</div>
+				</GlassCard>
+			</div>
+
+			<!-- Skills Section -->
+			<div class="mb-12">
+				<h2 class="mb-6 text-2xl font-bold text-center text-slate-900">Womit ich helfen kann</h2>
+				{#if agentLoading}
+					<div class="flex justify-center py-8">
+						<LoadingSpinner />
+					</div>
+				{:else if agentError}
+					<div class="py-8 text-center">
+						<Alert type="warning" class="mx-auto max-w-md">
+							<p class="font-medium">Konfigurationsfehler</p>
+							<p class="mt-1 text-sm opacity-80">{agentError}</p>
+						</Alert>
+					</div>
+				{:else}
+					<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+						{#each skills as skill (skill.id)}
+							<GlassCard 
+								lifted={true}
+								class="relative p-6 transition-all duration-300 cursor-pointer group hover:scale-105"
+								role="button"
+								tabindex="0"
+								onclick={() => handleSkillClick(skill.id)}
+								onkeydown={(e) => e.key === 'Enter' && handleSkillClick(skill.id)}
+							>
+								<div class="flex flex-col items-center text-center">
+									{#if skill.svg}
+										<svg class="mb-3 w-10 h-10 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+											{@html skill.svg}
+										</svg>
+									{:else}
+										<div class="flex justify-center items-center mb-3 w-10 h-10 text-xl text-white bg-blue-500 rounded-full">
+											{skill.name[0]?.toUpperCase() || '?'}
+										</div>
+									{/if}
+									<h3 class="mb-2 text-sm font-bold text-slate-900">{skill.name}</h3>
+									<p class="text-xs leading-relaxed text-slate-600">{skill.description}</p>
+								</div>
+							</GlassCard>
+						{/each}
+					</div>
+				{/if}
+			</div>
+
+			<!-- Projects Section -->
+			<div class="mb-8">
+				<h2 class="mb-6 text-2xl font-bold text-center text-slate-900">Ihre Hotel-Projekte</h2>
+				
+				{#if loading}
+					<div class="flex relative z-10 flex-col justify-center items-center py-12">
+						<LoadingSpinner />
+						<p class="mt-4 text-sm font-medium text-slate-500">Projekte werden geladen...</p>
+					</div>
+				{:else if error}
+					<div class="relative z-10 py-12 text-center">
+						<Alert type="warning" class="mx-auto max-w-md">
+							<p class="font-medium">Fehler</p>
+							<p class="mt-1 text-sm opacity-80">{error}</p>
+						</Alert>
+					</div>
+				{:else if projects.length === 0}
+					<div class="relative z-10 py-12 text-center">
+						<GlassCard class="p-8 mx-auto max-w-md">
+							<p class="text-base text-slate-500">Noch keine Hotel-Projekte. Erstellen Sie Ihr erstes Projekt, um zu beginnen!</p>
 						</GlassCard>
-					{/each}
-				</div>
-			{/if}
-		</div>
+					</div>
+				{:else}
+					<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+						{#each projects as project (project.id)}
+							<GlassCard lifted={true} class="flex relative flex-col gap-3 p-6 cursor-pointer group" role="button" tabindex="0">
+								<div class="flex-1">
+									<h3 class="mb-2 text-lg font-semibold tracking-tight text-slate-900">
+										{project.title}
+									</h3>
+									{#if project.description}
+										<p class="mb-3 text-sm leading-relaxed text-slate-600">
+											{project.description}
+										</p>
+									{/if}
+									<div class="mt-auto text-xs text-slate-400">
+										Erstellt am {new Date(project.createdAt).toLocaleDateString('de-DE')}
+									</div>
+								</div>
+							</GlassCard>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</div>
 </div>
 

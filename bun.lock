@@ -15,6 +15,14 @@
         "semantic-release": "^25.0.2",
       },
     },
+    "libs/hominio-agents": {
+      "name": "@hominio/agents",
+      "version": "0.1.0",
+      "peerDependencies": {
+        "@hominio/zero": "workspace:*",
+        "svelte": "^5.0.0",
+      },
+    },
     "libs/hominio-auth": {
       "name": "@hominio/auth",
       "version": "0.10.6",
@@ -78,6 +86,7 @@
       "name": "app",
       "version": "0.10.6",
       "dependencies": {
+        "@hominio/agents": "workspace:*",
         "@hominio/auth": "workspace:*",
         "@hominio/brand": "workspace:*",
         "@hominio/caps": "workspace:*",
@@ -406,6 +415,8 @@
     "@grpc/proto-loader": ["@grpc/proto-loader@0.8.0", "", { "dependencies": { "lodash.camelcase": "^4.3.0", "long": "^5.0.0", "protobufjs": "^7.5.3", "yargs": "^17.7.2" }, "bin": { "proto-loader-gen-types": "build/bin/proto-loader-gen-types.js" } }, "sha512-rc1hOQtjIWGxcxpb9aHAfLpIctjEnsDehj0DAiVfBlmT84uvR0uUtN2hEi/ecvWVjXUGf5qPF4qEgiLOx1YIMQ=="],
 
     "@hexagon/base64": ["@hexagon/base64@1.1.28", "", {}, "sha512-lhqDEAvWixy3bZ+UOYbPwUbBkwBq5C1LAJ/xPC8Oi+lL54oyakv/npbA0aU2hgCsx/1NUd4IBvV03+aUBWxerw=="],
+
+    "@hominio/agents": ["@hominio/agents@workspace:libs/hominio-agents"],
 
     "@hominio/auth": ["@hominio/auth@workspace:libs/hominio-auth"],
 

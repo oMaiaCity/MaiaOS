@@ -12,7 +12,7 @@
 
 import { watch } from 'fs';
 import { copyFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'fs';
-import { resolve, join, relative } from 'path';
+import { resolve, join, relative, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -42,7 +42,7 @@ function copyAssetToServices(relativePath) {
 	serviceStaticDirs.forEach(staticDir => {
 		try {
 			const targetPath = join(staticDir, relativePath);
-			const targetDir = targetPath.substring(0, targetPath.lastIndexOf('/'));
+			const targetDir = dirname(targetPath); // Use path.dirname() for cross-platform compatibility
 			
 			// Create directory if it doesn't exist (preserves subfolder structure)
 			if (!existsSync(targetDir)) {

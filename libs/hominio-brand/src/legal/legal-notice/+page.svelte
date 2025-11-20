@@ -1,5 +1,5 @@
 <script>
-	import TextWrap from '$lib/components/TextWrap.svelte';
+	import { TextWrap } from '@hominio/brand';
 </script>
 
 <TextWrap>

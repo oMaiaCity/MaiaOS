@@ -15,11 +15,19 @@ export default defineConfig({
     resolve: {
         // Ensure proper module resolution in monorepo
         preserveSymlinks: false,
+        alias: {
+            // Ensure workspace packages resolve correctly
+            '@hominio/agents': resolve(__dirname, '../../libs/hominio-agents/src')
+        }
     },
     server: {
         host: process.env.TAURI_DEV_HOST || 'localhost',
         port: process.env.TAURI_DEV_PORT ? Number(process.env.TAURI_DEV_PORT) : 4202,
         strictPort: true,
+        fs: {
+            // Allow access to workspace packages and monorepo root
+            allow: ['..', '../..', '../../libs']
+        },
         hmr: process.env.TAURI_DEV_HOST
             ? {
                     host: process.env.TAURI_DEV_HOST,

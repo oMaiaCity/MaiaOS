@@ -15,6 +15,7 @@
 		class: className = '',
 		type = 'button',
 		onclick,
+		children,
 		...restProps
 	} = $props();
 	
@@ -33,6 +34,6 @@
 </script>
 
 <button class={classes} type={type} disabled={disabled} onclick={onclick} {...restProps}>
-	<slot />
+	{@render children()}
 </button>
 

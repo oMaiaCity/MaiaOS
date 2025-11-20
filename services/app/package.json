@@ -27,6 +27,7 @@
 		"release:major": "node scripts/release-major.js"
 	},
 	"dependencies": {
+		"@hominio/agents": "workspace:*",
 		"@hominio/auth": "workspace:*",
 		"@hominio/brand": "workspace:*",
 		"@hominio/caps": "workspace:*",

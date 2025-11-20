@@ -7,7 +7,10 @@ export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 export type AIState = 'listening' | 'thinking' | 'speaking' | 'idle';
 export type ToolCallHandler = (toolName: string, args: any) => void;
 
-export function createVoiceCallService(options?: { onToolCall?: ToolCallHandler }) {
+export function createVoiceCallService(options?: { 
+	onToolCall?: ToolCallHandler;
+	initialAgentId?: string; // Agent ID to load context for at conversation start
+}) {
 	// Reactive state using Svelte 5 runes
 	let status = $state<ConnectionStatus>('disconnected');
 	let aiState = $state<AIState>('idle');
@@ -188,7 +191,7 @@ export function createVoiceCallService(options?: { onToolCall?: ToolCallHandler 
 	}
 
 	// Connect to WebSocket
-	async function connect() {
+	async function connect(agentId?: string) {
 		if (ws && ws.readyState === WebSocket.OPEN) {
 			console.log('[VoiceCall] Already connected');
 			return;
@@ -199,7 +202,11 @@ export function createVoiceCallService(options?: { onToolCall?: ToolCallHandler 
 
 		try {
 			const apiUrl = getApiUrl();
-			const wsUrl = `${apiUrl}/api/v0/voice/live`;
+			// Use provided agentId or fall back to initialAgentId from options
+			const effectiveAgentId = agentId || options?.initialAgentId;
+			const wsUrl = effectiveAgentId 
+				? `${apiUrl}/api/v0/voice/live?agentId=${encodeURIComponent(effectiveAgentId)}`
+				: `${apiUrl}/api/v0/voice/live`;
 			
 			ws = new WebSocket(wsUrl);
 
@@ -346,11 +353,13 @@ export function createVoiceCallService(options?: { onToolCall?: ToolCallHandler 
 	}
 
 	// Start call
-	async function startCall() {
+	async function startCall(agentId?: string) {
 		isWaitingForPermission = true;
 		try {
 			await resumeAudioContexts();
-			await connect();
+			// Use provided agentId or fall back to initialAgentId from options
+			const effectiveAgentId = agentId || options?.initialAgentId;
+			await connect(effectiveAgentId);
 			isWaitingForPermission = false;
 		} catch (err) {
 			console.error('[VoiceCall] Failed to start call:', err);

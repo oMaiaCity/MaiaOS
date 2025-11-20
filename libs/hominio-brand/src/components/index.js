@@ -16,4 +16,5 @@ export { default as Alert } from './Alert.svelte';
 export { default as NavPill } from './NavPill.svelte';
 export { default as Footer } from './Footer.svelte';
 export { default as Favicon } from './Favicon.svelte';
+export { default as TextWrap } from './TextWrap.svelte';
 

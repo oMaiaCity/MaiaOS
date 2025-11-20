@@ -1,14 +1,22 @@
 <script>
     import { goto } from '$app/navigation';
+    import { page } from '$app/stores';
     import { createAuthClient } from '@hominio/auth';
     import { NavPill, createVoiceCallService } from '@hominio/brand';
 
 	const authClient = createAuthClient();
 	const session = authClient.useSession();
 
+	// Detect if we're on an agent page and extract agent ID
+	const currentAgentId = $derived.by(() => {
+		const path = $page.url.pathname;
+		const match = path.match(/^\/me\/([^\/]+)/);
+		return match ? match[1] : undefined;
+	});
+
 	// Initialize voice call service with tool call handler
 	const voiceCall = createVoiceCallService({
-		onToolCall: (toolName, args) => {
+		onToolCall: async (toolName, args) => {
 			console.log('[NavPill] Tool call:', toolName, args);
 			if (toolName === 'switchAgent') {
 				const agentId = args.agentId;
@@ -17,6 +25,17 @@
 				} else {
 					goto(`/me/${agentId}`);
 				}
+			} else if (toolName === 'actionSkill') {
+				// Handle actionSkill tool calls
+				// Dispatch custom event for Charles page to handle
+				const event = new CustomEvent('actionSkill', {
+					detail: {
+						agentId: args.agentId,
+						skillId: args.skillId,
+						args: args.args || {}
+					}
+				});
+				window.dispatchEvent(event);
 			}
 		}
 	});
@@ -119,7 +138,8 @@
 
 	// Voice call handlers - Using actual voice call service
 	async function handleStartCall() {
-		await voiceCall.startCall();
+		// Pass current agent ID when starting call (reactive)
+		await voiceCall.startCall(currentAgentId);
 	}
 
 	async function handleStopCall() {

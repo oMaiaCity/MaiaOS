@@ -1,0 +1,21 @@
+{
+	"name": "@hominio/agents",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"main": "src/index.js",
+	"exports": {
+		".": "./src/index.js",
+		"./agents": "./lib/agents",
+		"./functions": "./lib/functions"
+	},
+	"peerDependencies": {
+		"svelte": "^5.0.0",
+		"@hominio/zero": "workspace:*"
+	},
+	"files": [
+		"src",
+		"lib"
+	]
+}
+
