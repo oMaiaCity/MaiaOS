@@ -5,7 +5,6 @@ export default {
 	...brandConfig,
 	content: [
 		'./src/**/*.{html,js,svelte,ts}',
-		'./src-tauri/**/*.{html,js,svelte,ts}',
 	],
 };
 

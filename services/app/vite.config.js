@@ -12,6 +12,10 @@ export default defineConfig({
 	// Load env vars from monorepo root
 	envDir: resolve(__dirname, '../..'),
 	envPrefix: ['PUBLIC_'],
+	resolve: {
+		// Ensure proper module resolution in monorepo
+		preserveSymlinks: false,
+	},
 	server: {
 		host: process.env.TAURI_DEV_HOST || 'localhost',
 		port: process.env.TAURI_DEV_PORT ? Number(process.env.TAURI_DEV_PORT) : 4202,

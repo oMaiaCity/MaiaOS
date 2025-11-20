@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { createAuthClient } from '@hominio/auth';
+	import { GlassPill, GlassIconButton, LoadingSpinner } from '@hominio/brand';
 
 	const authClient = createAuthClient();
 	const session = authClient.useSession();
@@ -82,28 +83,14 @@
 	const isAuthenticated = $derived($session.data?.user);
 </script>
 
-<nav
-	class="fixed bottom-0 left-1/2 z-[1000] mb-[env(safe-area-inset-bottom)] flex -translate-x-1/2 gap-2 rounded-full border border-white/60 bg-white/40 p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.08)] backdrop-blur-xl nav-pill"
-	style="margin-bottom: max(env(safe-area-inset-bottom), 1rem);"
->
-	<button
-		class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-slate-600 transition-all duration-200 hover:bg-white/60 hover:text-slate-900 active:scale-95"
-		onclick={goHome}
-		aria-label="Home"
-	>
+<GlassPill class="glass-pill">
+	<GlassIconButton onclick={goHome} aria-label="Home">
 		<img src="/logo_clean.png" alt="Home" class="h-7 w-7 object-contain" />
-	</button>
+	</GlassIconButton>
 	{#if isAuthenticated}
-		<button
-			class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-slate-600 transition-all duration-200 hover:bg-red-50/60 hover:text-red-600 active:scale-95"
-			onclick={handleSignOut}
-			disabled={signingOut}
-			aria-label="Sign Out"
-		>
+		<GlassIconButton variant="danger" onclick={handleSignOut} disabled={signingOut} aria-label="Sign Out">
 			{#if signingOut}
-				<div
-					class="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600"
-				></div>
+				<LoadingSpinner size="h-4 w-4" />
 			{:else}
 				<svg
 					width="18"
@@ -120,18 +107,6 @@
 					<line x1="21" y1="12" x2="9" y2="12" />
 				</svg>
 			{/if}
-		</button>
+		</GlassIconButton>
 	{/if}
-</nav>
-
-<style>
-	.nav-pill {
-		/* On desktop, add bottom padding (iOS uses safe-area-inset-bottom) */
-	}
-
-	@media (min-width: 768px) {
-		.nav-pill {
-			margin-bottom: max(env(safe-area-inset-bottom), 1rem) !important;
-		}
-	}
-</style>
+</GlassPill>

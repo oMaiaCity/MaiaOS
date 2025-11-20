@@ -28,6 +28,7 @@
 	},
 	"dependencies": {
 		"@hominio/auth": "workspace:*",
+		"@hominio/brand": "workspace:*",
 		"@hominio/caps": "workspace:*",
 		"@hominio/zero": "workspace:*",
 		"@rocicorp/zero": "^0.24.0",

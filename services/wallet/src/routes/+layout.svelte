@@ -1,5 +1,5 @@
 <script lang="ts">
-	import '../app.css';
+	import '@hominio/brand/app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { createAuthClient } from '@hominio/auth';
 	import { goto } from '$app/navigation';

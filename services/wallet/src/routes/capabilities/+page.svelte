@@ -3,6 +3,7 @@
 	import { createAuthClient } from '@hominio/auth';
 	import type { Capability, CapabilityRequest } from '@hominio/caps';
 	import { env } from '$env/dynamic/public';
+	import { DarkGlassCard, LoadingSpinner, GlassButton } from '@hominio/brand';
 
 	const authClient = createAuthClient();
 	const session = authClient.useSession();
@@ -95,20 +96,22 @@
 
 		{#if loading}
 			<div class="flex items-center justify-center py-12">
-				<div class="h-10 w-10 animate-spin rounded-full border-4 border-white/30 border-t-cyan-400"></div>
+				<LoadingSpinner variant="white" size="h-10 w-10" />
 			</div>
 		{:else if error}
-			<div class="rounded-lg bg-red-500/20 p-4 text-red-400">{error}</div>
+			<DarkGlassCard class="bg-red-500/20 p-4 text-red-400">
+				{error}
+			</DarkGlassCard>
 		{:else if activeTab === 'granted'}
 			<!-- My Capabilities Tab -->
 			<div class="space-y-4">
 				{#if capabilities.length === 0}
-					<div class="rounded-lg border border-white/10 bg-white/5 p-8 text-center text-white/60">
+					<DarkGlassCard class="p-8 text-center text-white/60">
 						No capabilities granted yet.
-					</div>
+					</DarkGlassCard>
 				{:else}
 					{#each capabilities as capability}
-						<div class="rounded-lg border border-white/10 bg-white/5 p-6">
+						<DarkGlassCard class="p-6">
 							<div class="flex items-start justify-between">
 								<div class="flex-1">
 									<div class="mb-2 flex items-center gap-2">
@@ -131,14 +134,11 @@
 										Granted: {new Date(capability.created_at).toLocaleString()}
 									</div>
 								</div>
-								<button
-									onclick={() => revokeCapability(capability.id)}
-									class="rounded-lg bg-red-500/20 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/30"
-								>
+								<GlassButton variant="danger" onclick={() => revokeCapability(capability.id)} class="px-4 py-2 text-sm">
 									Revoke
-								</button>
+								</GlassButton>
 							</div>
-						</div>
+						</DarkGlassCard>
 					{/each}
 				{/if}
 			</div>
@@ -146,12 +146,12 @@
 			<!-- Pending Requests Tab -->
 			<div class="space-y-4">
 				{#if requests.length === 0}
-					<div class="rounded-lg border border-white/10 bg-white/5 p-8 text-center text-white/60">
+					<DarkGlassCard class="p-8 text-center text-white/60">
 						No pending requests.
-					</div>
+					</DarkGlassCard>
 				{:else}
 					{#each requests as request}
-						<div class="rounded-lg border border-white/10 bg-white/5 p-6">
+						<DarkGlassCard class="p-6">
 							<div class="mb-4">
 								<div class="mb-2 flex items-center gap-2">
 									<span class="text-sm font-medium text-white/60">Requester:</span>
@@ -181,12 +181,14 @@
 							<div class="flex gap-3">
 								<a
 									href="/capabilities/requests/{request.id}"
-									class="rounded-lg bg-cyan-500/20 px-4 py-2 text-sm font-medium text-cyan-400 transition-colors hover:bg-cyan-500/30"
+									class="inline-block"
 								>
-									Review Request
+									<GlassButton variant="navy" class="px-4 py-2 text-sm">
+										Review Request
+									</GlassButton>
 								</a>
 							</div>
-						</div>
+						</DarkGlassCard>
 					{/each}
 				{/if}
 			</div>

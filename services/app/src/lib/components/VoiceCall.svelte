@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { env } from '$env/dynamic/public';
+	import { GlassCard, Alert, GlassButton } from '@hominio/brand';
 
 	// Connection state
 	let status = $state<'disconnected' | 'connecting' | 'connected'>('disconnected');
@@ -424,11 +425,9 @@
 	});
 </script>
 
-<div class="relative z-10 mt-8 overflow-hidden rounded-3xl border border-white/60 bg-white/40 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-xl transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
-	<!-- Gradient Accent Header -->
-	<div class="-mx-6 -mt-6 mb-6 h-16 w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 opacity-50"></div>
-	
-	<h3 class="mb-6 text-center text-xl font-bold tracking-tight text-slate-900">Voice Assistant</h3>
+<div class="relative z-10 mt-8">
+	<GlassCard accent={true} hover={true} class="p-6">
+		<h3 class="mb-6 text-center text-xl font-bold tracking-tight text-slate-900">Voice Assistant</h3>
 
 	<div class="flex flex-col items-center gap-4">
 		<!-- Status indicator -->
@@ -459,21 +458,21 @@
 
 		<!-- Error message -->
 		{#if error}
-			<div class="w-full rounded-2xl border border-yellow-100 bg-yellow-50/50 p-4 backdrop-blur-md">
-				<p class="text-sm font-medium text-yellow-600">{error}</p>
-			</div>
+			<Alert type="warning" class="w-full p-4">
+				<p class="text-sm font-medium">{error}</p>
+			</Alert>
 		{/if}
 
 		<!-- Call button -->
-		<button
+		<GlassButton
+			variant={status === 'connected' ? 'danger' : 'navy'}
 			onclick={toggleCall}
 			disabled={status === 'connecting'}
-			class="group relative flex w-full items-center justify-center gap-2 rounded-xl border px-6 py-3 text-base font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:shadow-sm {status === 'connected'
-				? 'border-red-200 bg-red-50/50 text-red-600 hover:border-red-300 hover:bg-red-100/50 hover:shadow-sm'
-				: 'border-slate-200 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:shadow-md'}"
+			class="w-full items-center justify-center gap-2"
 		>
 			{status === 'connected' ? 'End Call' : 'Start Call'}
-		</button>
+		</GlassButton>
 	</div>
+	</GlassCard>
 </div>
 

@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { createAuthClient } from '@hominio/auth';
 	import type { CapabilityRequest } from '@hominio/caps';
+	import { DarkGlassCard, LoadingSpinner, GlassButton } from '@hominio/brand';
 
 	const authClient = createAuthClient();
 	const session = authClient.useSession();
@@ -96,12 +97,14 @@
 
 		{#if loading}
 			<div class="flex items-center justify-center py-12">
-				<div class="h-10 w-10 animate-spin rounded-full border-4 border-white/30 border-t-cyan-400"></div>
+				<LoadingSpinner variant="white" size="h-10 w-10" />
 			</div>
 		{:else if error}
-			<div class="rounded-lg bg-red-500/20 p-4 text-red-400">{error}</div>
+			<DarkGlassCard class="bg-red-500/20 p-4 text-red-400">
+				{error}
+			</DarkGlassCard>
 		{:else if request}
-			<div class="rounded-lg border border-white/10 bg-white/5 p-6">
+			<DarkGlassCard class="p-6">
 				<div class="mb-6 space-y-4">
 					<div>
 						<div class="mb-1 text-sm font-medium text-white/60">Requester</div>
@@ -135,22 +138,14 @@
 				</div>
 
 				<div class="flex gap-3">
-					<button
-						onclick={approve}
-						disabled={processing}
-						class="flex-1 rounded-lg bg-green-500/20 px-6 py-3 font-medium text-green-400 transition-colors hover:bg-green-500/30 disabled:opacity-50"
-					>
+					<GlassButton variant="navy" onclick={approve} disabled={processing} class="flex-1 px-6 py-3">
 						{processing ? 'Processing...' : 'Approve'}
-					</button>
-					<button
-						onclick={reject}
-						disabled={processing}
-						class="flex-1 rounded-lg bg-red-500/20 px-6 py-3 font-medium text-red-400 transition-colors hover:bg-red-500/30 disabled:opacity-50"
-					>
+					</GlassButton>
+					<GlassButton variant="danger" onclick={reject} disabled={processing} class="flex-1 px-6 py-3">
 						{processing ? 'Processing...' : 'Reject'}
-					</button>
+					</GlassButton>
 				</div>
-			</div>
+			</DarkGlassCard>
 		{/if}
 	</div>
 </div>

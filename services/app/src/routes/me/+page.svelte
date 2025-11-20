@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { getZeroContext } from '$lib/zero-utils';
 	import { allProjects } from '@hominio/zero';
+	import { GlassCard, LoadingSpinner, Alert, BackgroundBlobs } from '@hominio/brand';
 	import VoiceCall from '$lib/components/VoiceCall.svelte';
 
 	/** @type {Array<{id: string, title: string, description: string | null, createdAt: string, userId: string}>} */
@@ -61,11 +62,8 @@
 	});
 </script>
 
-<div class="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-[#f8f9fa] via-[#f2f4f6] to-[#e9ecef] px-6 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
-	<!-- Decorative background blobs -->
-	<div class="fixed -top-[20%] -left-[10%] h-[500px] w-[500px] rounded-full bg-blue-200/20 blur-3xl filter pointer-events-none"></div>
-	<div class="fixed top-[20%] -right-[10%] h-[600px] w-[600px] rounded-full bg-purple-200/20 blur-3xl filter pointer-events-none"></div>
-	<div class="fixed -bottom-[20%] left-[20%] h-[500px] w-[500px] rounded-full bg-emerald-200/20 blur-3xl filter pointer-events-none"></div>
+<div class="relative min-h-screen overflow-x-hidden bg-glass-gradient px-6 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
+	<BackgroundBlobs />
 
 	<div class="relative z-10 mb-12 pt-[env(safe-area-inset-top)] text-center">
 		<h1 class="mb-2 text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">My Projects</h1>
@@ -74,30 +72,26 @@
 
 	{#if loading}
 		<div class="relative z-10 flex flex-col items-center justify-center py-12">
-			<div class="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800"></div>
+			<LoadingSpinner />
 			<p class="mt-4 text-sm font-medium text-slate-500">Loading projects...</p>
 		</div>
 	{:else if error}
 		<div class="relative z-10 py-12 text-center">
-			<div class="mx-auto max-w-md rounded-2xl border border-yellow-100 bg-yellow-50/50 p-6 text-yellow-600 backdrop-blur-md">
+			<Alert type="warning" class="mx-auto max-w-md">
 				<p class="font-medium">Error</p>
 				<p class="mt-1 text-sm opacity-80">{error}</p>
-			</div>
+			</Alert>
 		</div>
 	{:else if projects.length === 0}
 		<div class="relative z-10 py-12 text-center">
-			<div class="mx-auto max-w-md rounded-2xl border border-white/60 bg-white/40 p-8 backdrop-blur-xl">
+			<GlassCard class="mx-auto max-w-md p-8">
 				<p class="text-base text-slate-500">No projects found. Create your first project to get started!</p>
-			</div>
+			</GlassCard>
 		</div>
 	{:else}
 		<div class="relative z-10 mx-auto grid max-w-4xl grid-cols-1 gap-6 px-4 md:grid-cols-2 lg:grid-cols-3">
 			{#each projects as project (project.id)}
-				<div
-					class="group relative flex cursor-pointer flex-col gap-3 overflow-hidden rounded-3xl border border-white/60 bg-white/40 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-white/80 hover:bg-white/50 hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] active:translate-y-0"
-					role="button"
-					tabindex="0"
-				>
+				<GlassCard lifted={true} class="group relative flex cursor-pointer flex-col gap-3 p-6" role="button" tabindex="0">
 					<div class="flex-1">
 						<h2 class="mb-2 text-lg font-semibold tracking-tight text-slate-900">
 							{project.title}
@@ -111,7 +105,7 @@
 							Created {new Date(project.createdAt).toLocaleDateString()}
 						</div>
 					</div>
-				</div>
+				</GlassCard>
 			{/each}
 		</div>
 	{/if}

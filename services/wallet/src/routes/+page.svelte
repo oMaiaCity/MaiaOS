@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { browser } from '$app/environment';
+	import { BackgroundBlobs, GlassCard, GlassButton, LoadingSpinner } from '@hominio/brand';
 
 	const authClient = createAuthClient();
 	const session = authClient.useSession();
@@ -139,31 +140,25 @@
 	}
 </script>
 
-<div class="min-h-screen bg-gradient-to-br from-[#f8f9fa] via-[#f2f4f6] to-[#e9ecef] p-6 font-sans text-slate-800 antialiased selection:bg-blue-100">
-	<!-- Decorative background blobs for liquid effect -->
-	<div class="fixed -top-[20%] -left-[10%] h-[500px] w-[500px] rounded-full bg-blue-200/20 blur-3xl filter pointer-events-none"></div>
-	<div class="fixed top-[20%] -right-[10%] h-[600px] w-[600px] rounded-full bg-purple-200/20 blur-3xl filter pointer-events-none"></div>
-	<div class="fixed -bottom-[20%] left-[20%] h-[500px] w-[500px] rounded-full bg-emerald-200/20 blur-3xl filter pointer-events-none"></div>
+<div class="min-h-screen bg-glass-gradient p-6 font-sans text-slate-800 antialiased selection:bg-blue-100">
+	<BackgroundBlobs />
 
 	<div class="relative flex min-h-screen items-center justify-center">
 		<div class="w-full max-w-md">
 			{#if $session.isPending}
 				<div class="flex flex-col items-center justify-center py-24">
-					<div class="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800"></div>
+					<LoadingSpinner />
 					<p class="mt-4 text-sm font-medium text-slate-500">Loading...</p>
 				</div>
 			{:else if $session.data?.user}
 				<!-- Redirecting... (handled by $effect above) -->
 				<div class="flex flex-col items-center justify-center py-24">
-					<div class="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800"></div>
+					<LoadingSpinner />
 					<p class="mt-4 text-sm font-medium text-slate-500">Redirecting...</p>
 				</div>
 			{:else}
 				<!-- Liquid Glass Card -->
-				<div class="overflow-hidden rounded-3xl border border-white/60 bg-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-xl transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
-					<!-- Gradient Accent Header -->
-					<div class="h-24 w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 opacity-50"></div>
-					
+				<GlassCard accent={true} hover={true}>
 					<div class="px-8 pb-10 pt-8">
 						<!-- Header -->
 						<div class="mb-8 text-center">
@@ -173,11 +168,7 @@
 
 						<!-- Sign In Form -->
 						<div class="space-y-6">
-							<button
-								onclick={signInWithGoogle}
-								disabled={signingIn}
-								class="group relative flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-6 py-4 font-medium text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:shadow-sm"
-							>
+							<GlassButton onclick={signInWithGoogle} disabled={signingIn} class="w-full items-center justify-center gap-3">
 								{#if signingIn}
 									<div class="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600"></div>
 									<span>Signing in...</span>
@@ -203,7 +194,7 @@
 									</svg>
 									<span>Continue with Google</span>
 								{/if}
-							</button>
+							</GlassButton>
 
 							<p class="text-center text-xs text-slate-500">
 								By continuing, you agree to our{' '}
@@ -213,7 +204,7 @@
 							</p>
 						</div>
 					</div>
-				</div>
+				</GlassCard>
 			{/if}
 		</div>
 	</div>

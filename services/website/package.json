@@ -8,7 +8,12 @@
 		"build": "vite build",
 		"preview": "vite preview"
 	},
+	"dependencies": {
+		"@hominio/brand": "workspace:*"
+	},
 	"devDependencies": {
+		"@tailwindcss/vite": "^4.1.14",
+		"tailwindcss": "^4.1.14",
 		"vite": "^7.1.10"
 	}
 }

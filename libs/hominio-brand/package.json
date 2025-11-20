@@ -1,0 +1,25 @@
+{
+	"name": "@hominio/brand",
+	"version": "0.10.6",
+	"private": true,
+	"type": "module",
+	"main": "src/index.js",
+	"exports": {
+		".": "./src/index.js",
+		"./app.css": "./src/app.css",
+		"./tailwind.config.js": "./tailwind.config.js",
+		"./components": "./src/components/index.js",
+		"./tokens": "./src/tokens/index.js",
+		"./utilities": "./src/utilities/index.js"
+	},
+	"peerDependencies": {
+		"svelte": "^5.0.0",
+		"tailwindcss": "^4.0.0",
+		"@tailwindcss/vite": "^4.0.0"
+	},
+	"files": [
+		"src",
+		"tailwind.config.js"
+	]
+}
+

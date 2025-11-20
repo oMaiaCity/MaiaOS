@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '../app.css';
+	import { BackgroundBlobs, LoadingSpinner } from '@hominio/brand';
 	import NavPill from '$lib/components/NavPill.svelte';
-	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { createAuthClient } from '@hominio/auth';
 	import { Zero } from '@rocicorp/zero';
@@ -175,32 +175,25 @@
 </script>
 
 {#if $session.isPending}
-	<div class="min-h-screen bg-gradient-to-br from-[#f8f9fa] via-[#f2f4f6] to-[#e9ecef] flex flex-col items-center justify-center font-sans text-slate-800">
-		<!-- Decorative background blobs -->
-		<div class="fixed -top-[20%] -left-[10%] h-[500px] w-[500px] rounded-full bg-blue-200/20 blur-3xl filter pointer-events-none"></div>
-		<div class="fixed top-[20%] -right-[10%] h-[600px] w-[600px] rounded-full bg-purple-200/20 blur-3xl filter pointer-events-none"></div>
-		<div class="relative flex flex-col items-center">
-			<div class="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800"></div>
+	<div class="flex flex-col justify-center items-center min-h-screen font-sans bg-glass-gradient text-slate-800">
+		<BackgroundBlobs />
+		<div class="flex relative flex-col items-center">
+			<LoadingSpinner />
 			<p class="mt-4 text-sm font-medium text-slate-500">Checking authentication...</p>
 		</div>
 	</div>
 {:else if !$session.data?.user}
 	<!-- Redirecting... (handled by $effect above) -->
-	<div class="min-h-screen bg-gradient-to-br from-[#f8f9fa] via-[#f2f4f6] to-[#e9ecef] flex flex-col items-center justify-center font-sans text-slate-800">
-		<!-- Decorative background blobs -->
-		<div class="fixed -top-[20%] -left-[10%] h-[500px] w-[500px] rounded-full bg-blue-200/20 blur-3xl filter pointer-events-none"></div>
-		<div class="fixed top-[20%] -right-[10%] h-[600px] w-[600px] rounded-full bg-purple-200/20 blur-3xl filter pointer-events-none"></div>
-		<div class="relative flex flex-col items-center">
-			<div class="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800"></div>
+	<div class="flex flex-col justify-center items-center min-h-screen font-sans bg-glass-gradient text-slate-800">
+		<BackgroundBlobs />
+		<div class="flex relative flex-col items-center">
+			<LoadingSpinner />
 			<p class="mt-4 text-sm font-medium text-slate-500">Redirecting...</p>
 		</div>
 	</div>
 {:else}
-<div class="min-h-screen bg-gradient-to-br from-[#f8f9fa] via-[#f2f4f6] to-[#e9ecef] font-sans text-slate-800 antialiased">
-	<!-- Decorative background blobs -->
-	<div class="fixed -top-[20%] -left-[10%] h-[500px] w-[500px] rounded-full bg-blue-200/20 blur-3xl filter pointer-events-none"></div>
-	<div class="fixed top-[20%] -right-[10%] h-[600px] w-[600px] rounded-full bg-purple-200/20 blur-3xl filter pointer-events-none"></div>
-	<div class="fixed -bottom-[20%] left-[20%] h-[500px] w-[500px] rounded-full bg-emerald-200/20 blur-3xl filter pointer-events-none"></div>
+<div class="min-h-screen font-sans antialiased bg-glass-gradient text-slate-800">
+	<BackgroundBlobs />
 	{@render children()}
 	{#if $page.url.pathname !== '/'}
 	<NavPill />
