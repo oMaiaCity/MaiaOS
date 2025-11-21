@@ -1,3 +1,15 @@
+## [0.11.4](https://github.com/hominiome/hominio/compare/v0.11.3...v0.11.4) (2025-11-21)
+
+
+### Bug Fixes
+
+* add CORS headers to capabilities endpoint and update brand colors ([346f2cc](https://github.com/hominiome/hominio/commit/346f2cc011ed6525b710d6d1e9e28308c94901f3))
+* add CORS headers to capabilities endpoint for cross-origin requests ([8ee19fe](https://github.com/hominiome/hominio/commit/8ee19fe68eb705c1e561ac2adc7c1e91f34b88c6))
+* improve WebSocket reconnection and admin dashboard mobile responsiveness ([a1f4621](https://github.com/hominiome/hominio/commit/a1f46218451cced07e83ade077b951d7149a3c89))
+* restore service detection fallback for monorepo root execution ([5e04472](https://github.com/hominiome/hominio/commit/5e0447233983dc48a1e74bad9f5033f19770dd69))
+* update voice call UI colors to match brand guidelines ([4c5dae3](https://github.com/hominiome/hominio/commit/4c5dae3727efa63043ef12bb93ed12b59e23f4f8)), closes [#dc2626](https://github.com/hominiome/hominio/issues/dc2626)
+* use darker red-700 for end call button to match brand alert color ([8d443f5](https://github.com/hominiome/hominio/commit/8d443f5f0bee281877cd90055d96843c990091b7)), closes [#b91c1c](https://github.com/hominiome/hominio/issues/b91c1c)
+
 ## [0.11.3](https://github.com/hominiome/hominio/compare/v0.11.2...v0.11.3) (2025-11-21)
 
 
