@@ -1,3 +1,11 @@
+## [0.11.5](https://github.com/hominiome/hominio/compare/v0.11.4...v0.11.5) (2025-11-21)
+
+
+### Bug Fixes
+
+* iOS safe area background colors match page background ([1ce6661](https://github.com/hominiome/hominio/commit/1ce66616fbd24101e56ebb6721c0ebd1ab9d288f))
+* prevent double wallet subdomain in production admin API calls ([0a7c375](https://github.com/hominiome/hominio/commit/0a7c375d7e332080e375effd05190c39364b8038))
+
 ## [0.11.4](https://github.com/hominiome/hominio/compare/v0.11.3...v0.11.4) (2025-11-21)
 
 
