@@ -491,8 +491,8 @@
 		color: var(--color-primary-50);
 	}
 	
-	/* Tablet and Desktop: Larger buttons to match nav pill */
-	@media (min-width: 769px) {
+	/* Desktop only: Larger buttons to match nav pill */
+	@media (min-width: 1024px) {
 		.nav-action-button {
 			width: 56px;
 			height: 56px;
