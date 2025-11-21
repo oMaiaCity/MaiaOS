@@ -240,41 +240,131 @@ export async function seedAdminCapabilities(dbInstance: Kysely<any>) {
           .where("id", "=", existingCapability.id)
           .execute();
         console.log("✅ Updated existing admin voice capability with title and description!\n");
-        return;
+      } else {
+        console.log(`ℹ️  Admin ${ADMIN} already has voice API capability with title/description, skipping\n`);
       }
-      console.log(`ℹ️  Admin ${ADMIN} already has voice API capability with title/description, skipping\n`);
-      return;
+      // Continue to check schema and hotel capabilities (don't return early)
+    } else {
+      console.log(`📝 Granting voice API capability to admin: ${ADMIN}...\n`);
+
+      // Grant api:voice capability to admin (allows using voice API endpoint)
+      await dbInstance
+        .insertInto("capabilities")
+        .values({
+          id: sql`gen_random_uuid()`,
+          principal: principal,
+          resource_type: "api",
+          resource_namespace: "voice",
+          resource_id: null, // API resources don't have specific IDs (applies to all voice endpoints)
+          device_id: null,
+          actions: ["read"], // Read = use/call the voice API
+          conditions: null,
+          metadata: {
+            granted_by: "system",
+            reason: "admin_seeding",
+            created_at: new Date().toISOString(),
+          },
+          title: "Voice Assistant Access",
+          description: "Unlimited voice minutes",
+          created_at: new Date(),
+          updated_at: new Date(),
+        })
+        .execute();
+
+      console.log("✅ Admin voice API capability granted successfully!\n");
+      console.log(`   Principal: ${principal}\n`);
+      console.log(`   Resource: api:voice\n`);
+      console.log(`   Actions: read\n`);
     }
 
-    console.log(`📝 Granting voice API capability to admin: ${ADMIN}...\n`);
+    // Grant admin wildcard access to schema table
+    const existingSchemaCapability = await dbInstance
+      .selectFrom("capabilities")
+      .selectAll()
+      .where("principal", "=", principal)
+      .where("resource_type", "=", "data")
+      .where("resource_namespace", "=", "schema")
+      .where("resource_id", "=", "*")
+      .executeTakeFirst();
 
-    // Grant api:voice capability to admin (allows using voice API endpoint)
-    await dbInstance
-      .insertInto("capabilities")
-      .values({
-        principal: principal,
-        resource_type: "api",
-        resource_namespace: "voice",
-        resource_id: null, // API resources don't have specific IDs (applies to all voice endpoints)
-        device_id: null,
-        actions: ["read"], // Read = use/call the voice API
-        conditions: null,
-        metadata: {
-          granted_by: "system",
-          reason: "admin_seeding",
-          created_at: new Date().toISOString(),
-        },
-        title: "Voice Assistant Access",
-        description: "Unlimited voice minutes",
-        created_at: new Date(),
-        updated_at: new Date(),
-      })
-      .execute();
+    if (!existingSchemaCapability) {
+      console.log(`📝 Granting schema wildcard capability to admin: ${ADMIN}...\n`);
 
-    console.log("✅ Admin voice API capability granted successfully!\n");
-    console.log(`   Principal: ${principal}\n`);
-    console.log(`   Resource: api:voice\n`);
-    console.log(`   Actions: read\n`);
+      await dbInstance
+        .insertInto("capabilities")
+        .values({
+          id: sql`gen_random_uuid()`,
+          principal: principal,
+          resource_type: "data",
+          resource_namespace: "schema",
+          resource_id: "*", // Wildcard - access to all schemas
+          device_id: null,
+          actions: ["read", "write", "delete", "manage"], // Full access
+          conditions: null,
+          metadata: {
+            granted_by: "system",
+            reason: "admin_seeding",
+            created_at: new Date().toISOString(),
+          },
+          title: "Schema Management Access",
+          description: "Full access to manage all schemas",
+          created_at: new Date(),
+          updated_at: new Date(),
+        })
+        .execute();
+
+      console.log("✅ Admin schema wildcard capability granted successfully!\n");
+      console.log(`   Principal: ${principal}\n`);
+      console.log(`   Resource: data:schema:*\n`);
+      console.log(`   Actions: read, write, delete, manage\n`);
+    } else {
+      console.log(`ℹ️  Admin ${ADMIN} already has schema wildcard capability, skipping\n`);
+    }
+
+    // Grant admin wildcard access to hotel data entries only (not all data)
+    // This allows CRUD operations on hotels (data entries with schema='hotel-schema-v1')
+    const existingHotelCapability = await dbInstance
+      .selectFrom("capabilities")
+      .selectAll()
+      .where("principal", "=", principal)
+      .where("resource_type", "=", "data")
+      .where("resource_namespace", "=", "hotel-schema-v1")
+      .where("resource_id", "=", "*")
+      .executeTakeFirst();
+
+    if (!existingHotelCapability) {
+      console.log(`📝 Granting hotel data wildcard capability to admin: ${ADMIN}...\n`);
+
+      await dbInstance
+        .insertInto("capabilities")
+        .values({
+          id: sql`gen_random_uuid()`,
+          principal: principal,
+          resource_type: "data",
+          resource_namespace: "hotel-schema-v1", // Hotel schema namespace
+          resource_id: "*", // Wildcard - access to all hotel data entries
+          device_id: null,
+          actions: ["read", "write", "delete", "manage"], // Full CRUD access
+          conditions: null,
+          metadata: {
+            granted_by: "system",
+            reason: "admin_seeding",
+            created_at: new Date().toISOString(),
+          },
+          title: "Hotel Management Access",
+          description: "Full access to manage all hotel data entries",
+          created_at: new Date(),
+          updated_at: new Date(),
+        })
+        .execute();
+
+      console.log("✅ Admin hotel data wildcard capability granted successfully!\n");
+      console.log(`   Principal: ${principal}\n`);
+      console.log(`   Resource: data:hotel-schema-v1:*\n`);
+      console.log(`   Actions: read, write, delete, manage\n`);
+    } else {
+      console.log(`ℹ️  Admin ${ADMIN} already has hotel data wildcard capability, skipping\n`);
+    }
   } catch (error: any) {
     console.error("❌ Error seeding admin capabilities:", error.message);
     // Don't throw - this is optional, migration can continue

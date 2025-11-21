@@ -33,7 +33,9 @@ export function createVoiceCallService(options?: {
 		const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && !window.location.hostname.startsWith('127.0.0.1');
 		const apiDomain = isProduction ? 'api.hominio.me' : 'localhost:4204';
 		const protocol = apiDomain.startsWith('localhost') || apiDomain.startsWith('127.0.0.1') ? 'ws' : 'wss';
-		return `${protocol}://${apiDomain}`;
+		const url = `${protocol}://${apiDomain}`;
+		console.log('[VoiceCall] WebSocket URL:', url, '(production:', isProduction, ')');
+		return url;
 	}
 
 	// Initialize audio contexts
@@ -199,10 +201,19 @@ export function createVoiceCallService(options?: {
 				console.log('[VoiceCall] Already connected');
 				return;
 			}
-			// If WebSocket is closed or closing (e.g., Safari suspension), clean it up
-			if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
-				console.log('[VoiceCall] WebSocket is closed/closing, cleaning up and reconnecting');
+			// Only clean up if WebSocket is actually CLOSED (not CLOSING or CONNECTING)
+			// CONNECTING state (0) should not be treated as closed
+			if (ws.readyState === WebSocket.CLOSED) {
+				console.log('[VoiceCall] WebSocket is closed, cleaning up and reconnecting');
 				ws = null;
+			} else if (ws.readyState === WebSocket.CLOSING) {
+				// Wait for close to complete before reconnecting
+				console.log('[VoiceCall] WebSocket is closing, waiting before reconnect');
+				return;
+			} else if (ws.readyState === WebSocket.CONNECTING) {
+				// Don't interrupt an active connection attempt
+				console.log('[VoiceCall] WebSocket is already connecting, waiting...');
+				return;
 			}
 		}
 
@@ -217,6 +228,7 @@ export function createVoiceCallService(options?: {
 				? `${apiUrl}/api/v0/voice/live?agentId=${encodeURIComponent(effectiveAgentId)}`
 				: `${apiUrl}/api/v0/voice/live`;
 			
+			console.log('[VoiceCall] Connecting to WebSocket:', wsUrl);
 			ws = new WebSocket(wsUrl);
 
 			ws.onopen = () => {
@@ -312,12 +324,14 @@ export function createVoiceCallService(options?: {
 
 			ws.onerror = (event) => {
 				console.error('[VoiceCall] WebSocket error:', event);
+				console.error('[VoiceCall] WebSocket state:', ws?.readyState, 'URL:', wsUrl);
 				status = 'disconnected';
 				stopRecording();
 			};
 
 			ws.onclose = (event) => {
-				console.log('[VoiceCall] WebSocket closed:', event.code, event.reason);
+				console.log('[VoiceCall] WebSocket closed:', event.code, event.reason, 'URL:', wsUrl);
+				console.log('[VoiceCall] Close wasClean:', event.wasClean, 'code:', event.code);
 				status = 'disconnected';
 				stopRecording();
 				
@@ -365,13 +379,7 @@ export function createVoiceCallService(options?: {
 	async function startCall(agentId?: string) {
 		isWaitingForPermission = true;
 		try {
-			// Proactively check and clean up any closed/closing WebSocket connections
-			// This handles Safari suspension cases where the WebSocket might be in a bad state
-			if (ws && (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING)) {
-				console.log('[VoiceCall] Detected closed/closing WebSocket, cleaning up before reconnect');
-				ws = null;
-			}
-			
+			// Let connect() handle WebSocket state checks - don't interfere here
 			await resumeAudioContexts();
 			// Use provided agentId or fall back to initialAgentId from options
 			const effectiveAgentId = agentId || options?.initialAgentId;

@@ -22,10 +22,10 @@ const db = new Kysely({
 
 /**
  * Clean migration system for Zero database schema
- * Creates ONLY project table (clean slate)
+ * Creates project table + schema/data tables for flexible schema system
  */
 async function createTables() {
-  console.log("🚀 Creating Zero database schema (projects only)...\n");
+  console.log("🚀 Creating Zero database schema (projects + schema/data tables)...\n");
 
   try {
     // Project table
@@ -49,6 +49,127 @@ async function createTables() {
       .execute();
     console.log("✅ Project table created\n");
 
+    // Schema table - stores JSON Schema definitions
+    // Using jsonb type - Zero's json() helper maps to jsonb in PostgreSQL
+    console.log("📊 Creating schema table...");
+    await db.schema
+      .createTable("schema")
+      .ifNotExists()
+      .addColumn("id", "text", (col) => col.primaryKey())
+      .addColumn("ownedBy", "text", (col) => col.notNull())
+      .addColumn("data", "jsonb", (col) => col.notNull()) // jsonb matches Zero's json() type
+      .execute();
+    console.log("✅ Schema table created\n");
+
+    // Data table - stores actual data validated against schemas
+    // Using jsonb type - Zero's json() helper maps to jsonb in PostgreSQL
+    console.log("📊 Creating data table...");
+    await db.schema
+      .createTable("data")
+      .ifNotExists()
+      .addColumn("id", "text", (col) => col.primaryKey())
+      .addColumn("ownedBy", "text", (col) => col.notNull())
+      .addColumn("schema", "text", (col) => col.notNull())
+      .addColumn("data", "jsonb", (col) => col.notNull()) // jsonb matches Zero's json() type
+      .execute();
+    console.log("✅ Data table created\n");
+
+    // Ensure columns are jsonb (migrate from text or json if needed)
+    // Zero's json() helper expects jsonb columns in PostgreSQL
+    console.log("📊 Checking column types...");
+    try {
+      // Check if schema.data exists and needs migration
+      const schemaColumnCheck = await sql`
+        SELECT data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'schema' AND column_name = 'data'
+      `.execute(db);
+      
+      if (schemaColumnCheck.rows.length > 0) {
+        const currentType = schemaColumnCheck.rows[0].data_type;
+        if (currentType === 'text') {
+          console.log("📝 Migrating schema.data from text to jsonb...");
+          await sql`
+            ALTER TABLE schema 
+            ALTER COLUMN data TYPE jsonb USING data::jsonb
+          `.execute(db);
+          console.log("✅ Migrated schema.data to jsonb\n");
+        } else if (currentType === 'json') {
+          console.log("📝 Migrating schema.data from json to jsonb...");
+          await sql`
+            ALTER TABLE schema 
+            ALTER COLUMN data TYPE jsonb USING data::jsonb
+          `.execute(db);
+          console.log("✅ Migrated schema.data to jsonb\n");
+        } else if (currentType === 'jsonb') {
+          console.log("ℹ️  schema.data is already jsonb\n");
+        } else {
+          console.log(`⚠️  schema.data has unexpected type: ${currentType}\n`);
+        }
+      }
+    } catch (error) {
+      if (error.message?.includes("does not exist")) {
+        console.log("ℹ️  Schema table doesn't exist yet, skipping check\n");
+      } else {
+        console.log(`ℹ️  Schema column check: ${error.message}\n`);
+      }
+    }
+
+    try {
+      // Check if data.data exists and needs migration
+      const dataColumnCheck = await sql`
+        SELECT data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'data' AND column_name = 'data'
+      `.execute(db);
+      
+      if (dataColumnCheck.rows.length > 0) {
+        const currentType = dataColumnCheck.rows[0].data_type;
+        if (currentType === 'text') {
+          console.log("📝 Migrating data.data from text to jsonb...");
+          await sql`
+            ALTER TABLE data 
+            ALTER COLUMN data TYPE jsonb USING data::jsonb
+          `.execute(db);
+          console.log("✅ Migrated data.data to jsonb\n");
+        } else if (currentType === 'json') {
+          console.log("📝 Migrating data.data from json to jsonb...");
+          await sql`
+            ALTER TABLE data 
+            ALTER COLUMN data TYPE jsonb USING data::jsonb
+          `.execute(db);
+          console.log("✅ Migrated data.data to jsonb\n");
+        } else if (currentType === 'jsonb') {
+          console.log("ℹ️  data.data is already jsonb\n");
+        } else {
+          console.log(`⚠️  data.data has unexpected type: ${currentType}\n`);
+        }
+      }
+    } catch (error) {
+      if (error.message?.includes("does not exist")) {
+        console.log("ℹ️  Data table doesn't exist yet, skipping check\n");
+      } else {
+        console.log(`ℹ️  Data column check: ${error.message}\n`);
+      }
+    }
+
+    // Add foreign key constraint: data.schema references schema.id
+    console.log("📊 Adding foreign key constraint...");
+    try {
+      await sql`
+        ALTER TABLE data 
+        ADD CONSTRAINT data_schema_fk 
+        FOREIGN KEY (schema) REFERENCES schema(id)
+      `.execute(db);
+      console.log("✅ Foreign key constraint added\n");
+    } catch (error) {
+      if (error.message?.includes("already exists") || error.message?.includes("duplicate")) {
+        console.log("ℹ️  Foreign key constraint already exists\n");
+      } else {
+        throw error;
+      }
+    }
+
     // Setup replication for Zero tables
     await setupReplication();
 
@@ -64,14 +185,14 @@ async function createTables() {
 
 /**
  * Setup PostgreSQL logical replication for Zero
- * Enables replica identity and creates publication for project table only
+ * Enables replica identity and creates publication for all Zero tables
  */
 async function setupReplication() {
   console.log("🔄 Setting up replication...\n");
 
-  const tables = ["project"];
+  const tables = ["project", "schema", "data"];
 
-  // Enable replica identity for project table
+  // Enable replica identity for all tables
   for (const table of tables) {
     try {
       await sql`ALTER TABLE ${sql.raw(table)} REPLICA IDENTITY FULL`.execute(
@@ -87,18 +208,22 @@ async function setupReplication() {
 
   // Create or update publication
   try {
-    await sql`CREATE PUBLICATION zero_data FOR TABLE project`.execute(db);
+    await sql`CREATE PUBLICATION zero_data FOR TABLE project, schema, data`.execute(db);
     console.log("✅ Created publication 'zero_data'\n");
   } catch (error) {
     if (error.message?.includes("already exists")) {
       console.log("ℹ️  Publication 'zero_data' already exists\n");
 
-      // Ensure project table is included
+      // Ensure all tables are included
       try {
-        await sql`ALTER PUBLICATION zero_data SET TABLE project`.execute(db);
-        console.log("✅ Updated publication to include project table\n");
+        await sql`ALTER PUBLICATION zero_data ADD TABLE schema, data`.execute(db);
+        console.log("✅ Updated publication to include schema and data tables\n");
       } catch (alterError) {
-        console.log("ℹ️  Publication already up to date\n");
+        if (alterError.message?.includes("already exists") || alterError.message?.includes("already in publication")) {
+          console.log("ℹ️  Tables already in publication\n");
+        } else {
+          console.log(`ℹ️  Could not add tables to publication: ${alterError.message}\n`);
+        }
       }
     } else {
       throw error;
@@ -196,10 +321,81 @@ async function seedAdminData() {
   }
 }
 
+/**
+ * Seed hotel schema (owned by admin)
+ */
+async function seedHotelSchema() {
+  const ADMIN = process.env.ADMIN;
+  
+  if (!ADMIN) {
+    console.log("ℹ️  ADMIN not set, skipping hotel schema seeding\n");
+    return;
+  }
+
+  console.log("📝 Checking if hotel schema seeding is needed...\n");
+
+  try {
+    // Check if hotel schema already exists
+    const existingSchema = await sql`
+      SELECT id FROM schema WHERE id = 'hotel-schema-v1'
+    `.execute(db);
+
+    if (existingSchema.rows.length > 0) {
+      console.log("ℹ️  Hotel schema already exists, skipping seeding\n");
+      return;
+    }
+
+    console.log(`📝 Creating hotel schema owned by admin: ${ADMIN}...\n`);
+
+    // Read hotel schema JSON file
+    const fs = await import('fs');
+    const path = await import('path');
+    const hotelSchemaPath = path.join(process.cwd(), 'libs/hominio-zero/src/schemas/hotel.json');
+    
+    let hotelSchemaJson;
+    try {
+      hotelSchemaJson = JSON.parse(fs.readFileSync(hotelSchemaPath, 'utf-8'));
+    } catch (readError) {
+      console.error(`❌ Error reading hotel schema file: ${readError.message}`);
+      // Use inline schema as fallback
+      hotelSchemaJson = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "Hotel Schema",
+        "description": "Schema for hotel data entries",
+        "required": ["name", "address", "city", "country"],
+        "properties": {
+          "name": { "type": "string", "description": "Hotel name", "minLength": 1, "maxLength": 200 },
+          "address": { "type": "string", "description": "Street address", "minLength": 1, "maxLength": 500 },
+          "city": { "type": "string", "description": "City name", "minLength": 1, "maxLength": 100 },
+          "country": { "type": "string", "description": "Country name", "minLength": 1, "maxLength": 100 },
+          "rating": { "type": "number", "description": "Hotel rating (1-5 stars)", "minimum": 1, "maximum": 5 }
+        },
+        "additionalProperties": false
+      };
+    }
+
+    // Insert hotel schema (data is stored as jsonb)
+    await sql`
+      INSERT INTO schema (id, "ownedBy", data)
+      VALUES ('hotel-schema-v1', ${ADMIN}, ${JSON.stringify(hotelSchemaJson)}::jsonb)
+    `.execute(db);
+
+    console.log("✅ Hotel schema created successfully!\n");
+    console.log(`   Schema ID: hotel-schema-v1\n`);
+    console.log(`   Owner: ${ADMIN}\n`);
+  } catch (error) {
+    console.error("❌ Error seeding hotel schema:", error.message);
+    // Don't throw - this is optional, migration can continue
+    console.log("⚠️  Continuing migration despite hotel schema seeding error...\n");
+  }
+}
+
 // Run migration
 createTables()
   .then(() => migrateUserIdToOwnedBy())
   .then(() => seedAdminData())
+  .then(() => seedHotelSchema())
   .then(() => {
     console.log("✨ Migration completed successfully!");
     process.exit(0);

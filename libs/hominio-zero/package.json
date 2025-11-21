@@ -8,6 +8,8 @@
 	},
 	"dependencies": {
 		"@rocicorp/zero": "^0.24.0",
-		"zod": "^3.23.8"
+		"zod": "^3.23.8",
+		"ajv": "^8.12.0",
+		"ajv-formats": "^2.1.1"
 	}
 }

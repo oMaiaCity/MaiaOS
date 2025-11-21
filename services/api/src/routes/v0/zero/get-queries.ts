@@ -12,8 +12,8 @@ import z from 'zod';
 // Instead, we implement the queries directly using the builder
 // IMPORTANT: Filtering MUST happen in the query definition, not after!
 // Zero sync uses logical replication - the query filter determines what gets synced
-// This function is synchronous - capabilities are pre-fetched before calling
-function getQuery(
+// This function is async - capabilities are checked per query
+async function getQuery(
     name: string, 
     args: readonly ReadonlyJSONValue[], 
     principal: string,
@@ -92,6 +92,135 @@ function getQuery(
         return queryResult;
     }
 
+    // ========================================
+    // SCHEMA QUERIES
+    // ========================================
+
+    if (name === 'allSchemas') {
+        console.log(`[get-queries] 🔍 Processing query: ${name} for user: ${currentUserId || 'anon'}`);
+        z.tuple([]).parse(args);
+
+        // Check admin wildcard capability for schema table
+        const schemaResource: Resource = {
+            type: 'data',
+            namespace: 'schema',
+            id: '*',
+        };
+
+        // Admin can see all schemas, others see nothing
+        if (!currentUserId) {
+            return {
+                query: builder.schema.where('id', '=', '__never_match__'), // Empty query
+            };
+        }
+
+        const principal = `user:${currentUserId}` as const;
+        const hasAdminAccess = await checkCapability(principal, schemaResource, 'read', {});
+
+        if (hasAdminAccess) {
+            console.log(`[get-queries] 🌟 User ${currentUserId} has admin access - returning all schemas`);
+            return {
+                query: builder.schema,
+            };
+        }
+
+        // Non-admin users see nothing (schemas are admin-only)
+        console.log(`[get-queries] 🔒 User ${currentUserId} has no admin access - returning empty query`);
+        return {
+            query: builder.schema.where('id', '=', '__never_match__'), // Empty query
+        };
+    }
+
+    if (name === 'schemaById') {
+        console.log(`[get-queries] 🔍 Processing query: ${name}`);
+        const [schemaId] = z.tuple([z.string()]).parse(args);
+
+        // Check admin wildcard capability
+        if (!currentUserId) {
+            return {
+                query: builder.schema.where('id', '=', '__never_match__'),
+            };
+        }
+
+        const principal = `user:${currentUserId}` as const;
+        const schemaResource: Resource = {
+            type: 'data',
+            namespace: 'schema',
+            id: '*',
+        };
+
+        const hasAdminAccess = await checkCapability(principal, schemaResource, 'read', {});
+
+        if (hasAdminAccess) {
+            return {
+                query: builder.schema.where('id', '=', schemaId),
+            };
+        }
+
+        return {
+            query: builder.schema.where('id', '=', '__never_match__'),
+        };
+    }
+
+    // ========================================
+    // DATA QUERIES
+    // ========================================
+
+    if (name === 'allDataBySchema') {
+        console.log(`[get-queries] 🔍 Processing query: ${name}`);
+        const [schemaId] = z.tuple([z.string()]).parse(args);
+
+        if (!currentUserId) {
+            return {
+                query: builder.data.where('id', '=', '__never_match__'),
+            };
+        }
+
+        const principal = `user:${currentUserId}` as const;
+
+        // Check if user has wildcard capability for this schema namespace
+        const schemaResource: Resource = {
+            type: 'data',
+            namespace: schemaId,
+            id: '*',
+        };
+
+        const hasWildcardAccess = await checkCapability(principal, schemaResource, 'read', {});
+
+        if (hasWildcardAccess) {
+            // User has wildcard access to this schema namespace (e.g., admin for hotels)
+            console.log(`[get-queries] 🌟 User ${currentUserId} has wildcard access to ${schemaId} - returning all entries`);
+            return {
+                query: builder.data.where('schema', '=', schemaId),
+            };
+        }
+
+        // Users can see data entries they own
+        return {
+            query: builder.data
+                .where('schema', '=', schemaId)
+                .where('ownedBy', '=', currentUserId),
+        };
+    }
+
+    if (name === 'dataById') {
+        console.log(`[get-queries] 🔍 Processing query: ${name}`);
+        const [dataId] = z.tuple([z.string()]).parse(args);
+
+        if (!currentUserId) {
+            return {
+                query: builder.data.where('id', '=', '__never_match__'),
+            };
+        }
+
+        // Users can see data entries they own
+        return {
+            query: builder.data
+                .where('id', '=', dataId)
+                .where('ownedBy', '=', currentUserId),
+        };
+    }
+
     throw new Error(`No such query: ${name}`);
 }
 
@@ -164,9 +293,9 @@ export async function getQueries({ request }: { request: Request }) {
         }
 
         // Create a wrapper that passes principal, userId, and allowedProjectIds to getQuery
-        // getQuery is now synchronous - we pre-fetch capabilities above
-        const getQueryWithAuth = (name: string, args: readonly ReadonlyJSONValue[]) => {
-            return getQuery(name, args, principal, authData?.sub, allowedProjectIds);
+        // getQuery is async - capabilities are checked per query
+        const getQueryWithAuth = async (name: string, args: readonly ReadonlyJSONValue[]) => {
+            return await getQuery(name, args, principal, authData?.sub, allowedProjectIds);
         };
 
         // Zero forwards cookies automatically for get-queries requests (no env var needed)

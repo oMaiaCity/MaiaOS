@@ -249,7 +249,7 @@ body::before {
 	left: 0;
 	right: 0;
 	height: env(safe-area-inset-top);
-	background: linear-gradient(to bottom right, #f8f9fa, #f2f4f6, #e9ecef);
+	background: #fafafa; /* Clean white/cream - no gradient */
 	z-index: 9999;
 	pointer-events: none;
 }
@@ -262,7 +262,7 @@ body::after {
 	left: 0;
 	right: 0;
 	height: env(safe-area-inset-bottom);
-	background: linear-gradient(to bottom right, #f8f9fa, #f2f4f6, #e9ecef);
+	background: #fafafa; /* Clean white/cream - no gradient */
 	z-index: 9999;
 	pointer-events: none;
 }

@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Hotel Schema",
+  "description": "Schema for hotel data entries",
+  "required": ["name", "address", "city", "country"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Hotel name",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "address": {
+      "type": "string",
+      "description": "Street address",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "city": {
+      "type": "string",
+      "description": "City name",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "country": {
+      "type": "string",
+      "description": "Country name",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "rating": {
+      "type": "number",
+      "description": "Hotel rating (1-5 stars)",
+      "minimum": 1,
+      "maximum": 5
+    }
+  },
+  "additionalProperties": false
+}
+

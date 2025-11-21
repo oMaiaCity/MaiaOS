@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { getZeroContext } from '$lib/zero-utils';
-	import { allProjects } from '@hominio/zero';
+	// Hotels query will be imported dynamically
 	import { GlassCard, LoadingSpinner, Alert, BackgroundBlobs } from '@hominio/brand';
 	import { loadAgentConfig, handleActionSkill, UIRenderer } from '@hominio/agents';
 	import { createAuthClient } from '@hominio/auth';
@@ -72,9 +72,9 @@
 		}
 	];
 
-	// Projects state
-	/** @type {Array<{id: string, title: string, description: string | null, createdAt: string, userId: string}>} */
-	let projects = $state([]);
+	// Hotels state (replacing projects)
+	/** @type {Array<{id: string, ownedBy: string, schema: string, data: string}>} */
+	let hotels = $state([]);
 	let loading = $state(true);
 	/** @type {string | null} */
 	let error = $state(null);
@@ -170,7 +170,7 @@
 			return;
 		}
 
-		let projectsView: any;
+		let hotelsView: any;
 
 		(async () => {
 			// Wait for Zero to be ready
@@ -186,26 +186,27 @@
 			}
 
 			try {
-				// Query all projects using synced query
-				const projectsQuery = allProjects();
-				projectsView = zero.materialize(projectsQuery);
+				// Query all hotels using synced query (data entries with hotel schema)
+				const { allDataBySchema } = await import('@hominio/zero');
+				const hotelsQuery = allDataBySchema('hotel-schema-v1');
+				hotelsView = zero.materialize(hotelsQuery);
 
-				projectsView.addListener((data: any) => {
-					const newProjects = Array.from(data || []);
-					projects = newProjects;
+				hotelsView.addListener((data: any) => {
+					const newHotels = Array.from(data || []);
+					hotels = newHotels;
 					loading = false;
 					error = null;
 				});
 			} catch (err) {
 				console.error('Error setting up Zero query:', err);
-				error = err instanceof Error ? err.message : 'Fehler beim Laden der Projekte';
+				error = err instanceof Error ? err.message : 'Fehler beim Laden der Hotels';
 				loading = false;
 			}
 		})();
 
 		return () => {
 			window.removeEventListener('actionSkill', handleActionSkillEvent as EventListener);
-			if (projectsView) projectsView.destroy();
+			if (hotelsView) hotelsView.destroy();
 		};
 	});
 
@@ -298,14 +299,14 @@
 				{/if}
 			</div>
 
-			<!-- Projects Section -->
+			<!-- Hotels Section -->
 			<div class="mb-8">
-				<h2 class="mb-6 text-2xl font-bold text-center text-slate-900">Deine Hotel-Projekte</h2>
+				<h2 class="mb-6 text-2xl font-bold text-center text-slate-900">Verfügbare Hotels</h2>
 				
 				{#if loading}
 					<div class="flex relative z-10 flex-col justify-center items-center py-12">
 						<LoadingSpinner />
-						<p class="mt-4 text-sm font-medium text-slate-500">Projekte werden geladen...</p>
+						<p class="mt-4 text-sm font-medium text-slate-500">Hotels werden geladen...</p>
 					</div>
 				{:else if error}
 					<div class="relative z-10 py-12 text-center">
@@ -314,28 +315,36 @@
 							<p class="mt-1 text-sm opacity-80">{error}</p>
 						</Alert>
 					</div>
-				{:else if projects.length === 0}
+				{:else if hotels.length === 0}
 					<div class="relative z-10 py-12 text-center">
 						<GlassCard class="p-8 mx-auto max-w-md">
-							<p class="text-base text-slate-500">Noch keine Hotel-Projekte. Erstellen Sie Ihr erstes Projekt, um zu beginnen!</p>
+							<p class="text-base text-slate-500">Noch keine Hotels verfügbar. Der Administrator kann Hotels im Admin-Bereich hinzufügen.</p>
 						</GlassCard>
 					</div>
 				{:else}
 					<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-						{#each projects as project (project.id)}
+						{#each hotels as hotel (hotel.id)}
+							{@const hotelData = hotel.data}
 							<GlassCard lifted={true} class="flex relative flex-col gap-3 p-6 cursor-pointer group" role="button" tabindex="0">
 								<div class="flex-1">
 									<h3 class="mb-2 text-lg font-semibold tracking-tight text-slate-900">
-										{project.title}
+										{hotelData.name || 'Unnamed Hotel'}
 									</h3>
-									{#if project.description}
-										<p class="mb-3 text-sm leading-relaxed text-slate-600">
-											{project.description}
+									{#if hotelData.address}
+										<p class="mb-1 text-sm leading-relaxed text-slate-600">
+											{hotelData.address}
 										</p>
 									{/if}
-									<div class="mt-auto text-xs text-slate-400">
-										Erstellt am {new Date(project.createdAt).toLocaleDateString('de-DE')}
-									</div>
+									{#if hotelData.city || hotelData.country}
+										<p class="mb-3 text-sm leading-relaxed text-slate-500">
+											{hotelData.city}{hotelData.city && hotelData.country ? ', ' : ''}{hotelData.country}
+										</p>
+									{/if}
+									{#if hotelData.rating}
+										<div class="mt-auto text-xs text-slate-400">
+											{'⭐'.repeat(hotelData.rating)} {hotelData.rating}/5
+										</div>
+									{/if}
 								</div>
 							</GlassCard>
 						{/each}

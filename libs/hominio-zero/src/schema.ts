@@ -4,6 +4,7 @@ import {
   createBuilder,
   table,
   string,
+  json,
   definePermissions,
 } from '@rocicorp/zero';
 
@@ -24,8 +25,27 @@ const project = table('project')
   })
   .primaryKey('id');
 
+// Schema table - stores JSON Schema definitions
+const schemaTable = table('schema')
+  .columns({
+    id: string(), // Schema ID (e.g., 'hotel-schema-v1')
+    ownedBy: string(), // Owner user ID (defaults to admin)
+    data: json<any>(), // JSONB column - contains JSON Schema definition
+  })
+  .primaryKey('id');
+
+// Data table - stores actual data validated against schemas
+const dataTable = table('data')
+  .columns({
+    id: string(), // Data entry ID
+    ownedBy: string(), // Owner user ID
+    schema: string(), // Foreign key reference to schema.id
+    data: json<any>(), // JSONB column - contains actual data
+  })
+  .primaryKey('id');
+
 export const schema = createSchema({
-  tables: [project], // ONLY project table
+  tables: [project, schemaTable, dataTable], // Project table + new schema/data tables
   // Disable legacy queries - we use synced queries instead
   enableLegacyQueries: false,
   // Disable legacy CRUD mutators - we use custom mutators instead
