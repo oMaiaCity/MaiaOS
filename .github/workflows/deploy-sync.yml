@@ -61,12 +61,17 @@ jobs:
       - name: Configure custom domain (sync.hominio.me)
         run: |
           echo "🌐 Configuring custom domain: sync.hominio.me"
-          # Add the custom domain to Fly.io (idempotent - safe to run multiple times)
-          flyctl certs create sync.hominio.me --app hominio-sync || {
-            echo "⚠️  Certificate may already exist or domain already configured"
-            echo "   Checking certificate status..."
-            flyctl certs list --app hominio-sync || true
-          }
+          # Check if certificate already exists
+          if flyctl certs list --app hominio-sync 2>/dev/null | grep -q "sync.hominio.me"; then
+            echo "✅ Certificate for sync.hominio.me already exists"
+            flyctl certs list --app hominio-sync
+          else
+            echo "📝 Creating certificate for sync.hominio.me..."
+            flyctl certs create sync.hominio.me --app hominio-sync || {
+              echo "⚠️  Failed to create certificate (may already exist)"
+              flyctl certs list --app hominio-sync || true
+            }
+          fi
 
           echo ""
           echo "📋 DNS Configuration Required:"
@@ -118,29 +123,46 @@ jobs:
 
       - name: Wait for health check to pass
         run: |
-          echo "Waiting for health check to pass..."
-          for i in {1..60}; do
+          echo "⏳ Waiting for health check to pass (this may take up to 5 minutes for Zero initialization)..."
+          MAX_ATTEMPTS=120  # 120 attempts * 5 seconds = 10 minutes max wait
+          for i in $(seq 1 $MAX_ATTEMPTS); do
             # Check machine health status via flyctl
             HEALTH_STATUS=$(flyctl status --app hominio-sync --json 2>/dev/null | jq -r '.Machines[0].HealthChecks[0].Status // .Machines[0].Checks[0].Status // "unknown"' 2>/dev/null || echo "unknown")
             
-            # Also check if we can connect to the service
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://sync.hominio.me/ 2>/dev/null || echo "000")
+            # Also check if we can connect to the service directly
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://sync.hominio.me/ 2>/dev/null || echo "000")
             
-            echo "Health check status: $HEALTH_STATUS, HTTP response: $HTTP_CODE (attempt $i/60)"
+            # Show progress every 10 attempts
+            if [ $((i % 10)) -eq 0 ] || [ "$HEALTH_STATUS" = "pass" ] || [ "$HEALTH_STATUS" = "ok" ]; then
+              echo "   Health check status: $HEALTH_STATUS, HTTP response: $HTTP_CODE (attempt $i/$MAX_ATTEMPTS)"
+            fi
             
-            if [ "$HEALTH_STATUS" = "pass" ] || [ "$HEALTH_STATUS" = "ok" ] || ([ "$HTTP_CODE" != "000" ] && [ "$HTTP_CODE" != "502" ] && [ "$HTTP_CODE" != "503" ]) || [ $i -gt 15 ]; then
-              echo "✅ Health check passed"
+            # Success conditions: health check passes OR service responds (not 502/503/000)
+            if [ "$HEALTH_STATUS" = "pass" ] || [ "$HEALTH_STATUS" = "ok" ]; then
+              echo "✅ Health check passed!"
               break
             fi
             
-            if [ $i -eq 60 ]; then
-              echo "❌ Timeout: Health check did not pass within 60 attempts"
-              echo "Checking machine status and logs..."
+            # Also accept if service is responding (even if health check hasn't updated yet)
+            if [ "$HTTP_CODE" != "000" ] && [ "$HTTP_CODE" != "502" ] && [ "$HTTP_CODE" != "503" ]; then
+              echo "✅ Service is responding (HTTP $HTTP_CODE), health check may still be initializing..."
+              # Wait a bit more to ensure health check catches up
+              sleep 10
+              break
+            fi
+            
+            # Timeout after max attempts
+            if [ $i -eq $MAX_ATTEMPTS ]; then
+              echo "❌ Timeout: Health check did not pass within $MAX_ATTEMPTS attempts (10 minutes)"
+              echo "Checking machine status and recent logs..."
               flyctl status --app hominio-sync
-              flyctl logs --app hominio-sync --limit 50
+              echo ""
+              echo "📋 Recent logs:"
+              flyctl logs --app hominio-sync --limit 100
               exit 1
             fi
-            sleep 2
+            
+            sleep 5  # Check every 5 seconds
           done
           echo "✅ Machine is ready for migrations"
 

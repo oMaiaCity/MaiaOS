@@ -20,11 +20,11 @@ primary_region = 'fra'
   min_machines_running = 1  # Keep sync service always running
 
 [[http_service.checks]]
-  grace_period = "10s"
+  grace_period = "5m"  # Increased to 5 minutes - Zero can take time to initialize, especially on first sync
   interval = "30s"
   method = "GET"
-  timeout = "5s"
-  path = "/keepalive"  # Use /keepalive endpoint per Zero docs (better health check)
+  timeout = "10s"  # Increased timeout for Zero initialization
+  path = "/"  # Zero's default health check endpoint (works for single-node deployments)
 
 [[vm]]
   memory = '2gb'  # Increased from 512mb - Zero recommends 2GB+ for better performance
