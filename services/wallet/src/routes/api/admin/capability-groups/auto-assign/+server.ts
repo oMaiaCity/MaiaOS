@@ -1,14 +1,16 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { grantCapabilityGroup } from "@hominio/caps";
+import { requireAdmin } from "$lib/api-helpers";
 
 /**
  * POST /api/admin/capability-groups/auto-assign
- * Grant Hominio Explorer group to a user (typically called after signup)
+ * Grant Hominio Explorer group to a user (admin only)
+ * Note: This endpoint is typically called programmatically after signup via BetterAuth hooks
  */
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    // TODO: Add authentication check (can be called by the user themselves or admin)
+    await requireAdmin(request);
     const { userId, groupName = "hominio-explorer" } = await request.json();
 
     if (!userId) {

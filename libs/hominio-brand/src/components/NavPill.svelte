@@ -596,7 +596,7 @@
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0;
-		min-height: 42px; /* Bit taller to accommodate larger buttons */
+		min-height: 42px;
 	}
 	
 	/* Logo Link */
@@ -608,13 +608,7 @@
 		cursor: pointer;
 		padding: 0.5rem;
 		border-radius: 50%;
-		transition: all 0.2s;
 		text-decoration: none;
-	}
-	
-	.nav-logo-link:hover {
-		background: rgba(255, 255, 255, 0.1); /* Light hover on dark background */
-		transform: scale(1.05);
 	}
 	
 	.nav-logo {
@@ -696,13 +690,7 @@
 		cursor: pointer;
 		padding: 0.5rem;
 		border-radius: 50%;
-		transition: all 0.2s;
 		text-decoration: none;
-	}
-	
-	.nav-user-link:hover {
-		background: rgba(255, 255, 255, 0.1); /* Light hover on dark background */
-		transform: scale(1.05);
 	}
 	
 	.nav-avatar {
