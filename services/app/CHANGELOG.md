@@ -1,3 +1,10 @@
+## [0.11.2](https://github.com/hominiome/hominio/compare/v0.11.1...v0.11.2) (2025-11-21)
+
+
+### Bug Fixes
+
+* sync brand assets during Docker builds and pass ADMIN to migrations ([93116eb](https://github.com/hominiome/hominio/commit/93116ebe218d43fb293e95922d6b36859a1e2e8a))
+
 ## [0.11.1](https://github.com/hominiome/hominio/compare/v0.11.0...v0.11.1) (2025-11-21)
 
 
