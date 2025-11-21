@@ -1,3 +1,11 @@
+## [0.12.9](https://github.com/hominiome/hominio/compare/v0.12.8...v0.12.9) (2025-11-21)
+
+
+### Bug Fixes
+
+* remove invalid --listen flag, --port should be sufficient ([2a2c301](https://github.com/hominiome/hominio/commit/2a2c301a75c785c648440cc39eedaaffc01df374))
+* use AUTH_SECRET instead of ZERO_AUTH_SECRET and ZERO_ADMIN_AUTH ([5472f70](https://github.com/hominiome/hominio/commit/5472f70e5b234343e0cfcd26e15445930f52fd6e))
+
 ## [0.12.8](https://github.com/hominiome/hominio/compare/v0.12.7...v0.12.8) (2025-11-21)
 
 
