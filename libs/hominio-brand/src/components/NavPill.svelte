@@ -596,7 +596,9 @@
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0;
+		height: 36px;
 		min-height: 36px;
+		max-height: 36px;
 	}
 	
 	/* Logo Link */
@@ -818,7 +820,9 @@
 	@media (max-width: 768px) {
 		.nav-container {
 			gap: 0.125rem;
-			min-height: 38px;
+			height: 36px;
+			min-height: 36px;
+			max-height: 36px;
 		}
 		
 		.call-btn {
