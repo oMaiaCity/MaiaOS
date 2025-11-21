@@ -28,7 +28,40 @@ export const GET: RequestHandler = async ({ request }) => {
         const principal = `user:${session.user.id}` as const;
 
         // Get all capabilities for this user
-        const capabilities = await api.caps.getCapabilities(principal);
+        const allCapabilities = await api.caps.getCapabilities(principal);
+
+        // Separate group capabilities from individual capabilities
+        const groupCapabilitiesMap = new Map<string, {
+            capability: any;
+            subCapabilities: any[];
+        }>();
+        const individualCapabilities: any[] = [];
+
+        for (const cap of allCapabilities) {
+            // Check if this is a group membership capability
+            if (cap.resource.type === 'group') {
+                // This is a group capability - initialize it
+                const groupName = cap.resource.namespace;
+                if (!groupCapabilitiesMap.has(groupName)) {
+                    groupCapabilitiesMap.set(groupName, {
+                        capability: cap,
+                        subCapabilities: [],
+                    });
+                }
+            } else if (cap.metadata?.isGroupCapability) {
+                // This is a sub-capability from a group - add it to the group
+                const groupName = cap.metadata.group;
+                if (groupName && groupCapabilitiesMap.has(groupName)) {
+                    groupCapabilitiesMap.get(groupName)!.subCapabilities.push(cap);
+                } else {
+                    // Group capability not found, treat as individual (shouldn't happen)
+                    individualCapabilities.push(cap);
+                }
+            } else {
+                // This is an individual capability
+                individualCapabilities.push(cap);
+            }
+        }
 
         // Add CORS headers if origin is present
         const responseHeaders: HeadersInit = {};
@@ -40,7 +73,13 @@ export const GET: RequestHandler = async ({ request }) => {
         }
 
         return api.json(
-            { capabilities },
+            { 
+                capabilities: individualCapabilities,
+                groupCapabilities: Array.from(groupCapabilitiesMap.values()).map(gc => ({
+                    ...gc.capability,
+                    subCapabilities: gc.subCapabilities,
+                })),
+            },
             { headers: responseHeaders }
         );
     } catch (error) {

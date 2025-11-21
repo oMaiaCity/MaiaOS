@@ -13,9 +13,11 @@
 	let signingOut = $state(false);
 	
 	let capabilities = $state<Capability[]>([]);
+	let groupCapabilities = $state<Array<Capability & { subCapabilities: Capability[] }>>([]);
 	let capabilitiesLoading = $state(true);
 	let capabilitiesError = $state<string | null>(null);
 	let now = $state(new Date());
+	let expandedGroups = $state<Set<string>>(new Set());
 
 	$effect(() => {
 		// Handle session state changes
@@ -102,7 +104,9 @@
 			const data = await response.json();
 			console.log('[Profile] Capabilities data:', data);
 			capabilities = data.capabilities || [];
+			groupCapabilities = data.groupCapabilities || [];
 			console.log('[Profile] Loaded capabilities count:', capabilities.length);
+			console.log('[Profile] Loaded group capabilities count:', groupCapabilities.length);
 		} catch (err) {
 			console.error('[Profile] Error loading capabilities:', err);
 			capabilitiesError = err instanceof Error ? err.message : 'Failed to load capabilities';
@@ -216,12 +220,104 @@
 							<p class="mt-2 text-sm text-slate-500">{capabilitiesError}</p>
 						</div>
 					</GlassCard>
-				{:else if capabilities.length === 0}
+				{:else if capabilities.length === 0 && groupCapabilities.length === 0}
 					<GlassCard class="p-8 text-center">
 						<p class="text-slate-600">No capabilities granted yet.</p>
 					</GlassCard>
 				{:else}
 					<div class="grid gap-3 grid-cols-1">
+						<!-- Group Capabilities (with collapsible sub-capabilities) -->
+						{#each groupCapabilities as groupCap (groupCap.id)}
+							{@const isExpanded = expandedGroups.has(groupCap.id)}
+							<GlassCard class="capability-card">
+								<div class="capability-header">
+									<!-- Left: Title and Description -->
+									<div class="capability-title-section">
+										<div class="flex items-center gap-2 mb-1">
+											<button
+												onclick={() => {
+													if (isExpanded) {
+														expandedGroups.delete(groupCap.id);
+													} else {
+														expandedGroups.add(groupCap.id);
+													}
+													expandedGroups = expandedGroups; // Trigger reactivity
+												}}
+												class="flex items-center justify-center w-6 h-6 rounded transition-colors hover:bg-slate-100"
+											>
+												<svg
+													class="w-4 h-4 text-slate-600 transition-transform {isExpanded ? 'rotate-90' : ''}"
+													fill="none"
+													stroke="currentColor"
+													viewBox="0 0 24 24"
+												>
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+												</svg>
+											</button>
+											{#if groupCap.title}
+												<h3 class="capability-title">{groupCap.title}</h3>
+											{/if}
+											<span class="inline-block rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
+												Group ({groupCap.subCapabilities?.length || 0} capabilities)
+											</span>
+										</div>
+										{#if groupCap.description}
+											<p class="capability-description">
+												{groupCap.description} - GRANTED {new Date(groupCap.created_at).toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })}
+											</p>
+										{:else}
+											<p class="capability-description">
+												No description - GRANTED {new Date(groupCap.created_at).toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })}
+											</p>
+										{/if}
+									</div>
+									
+									<!-- Right: Metadata -->
+									<div class="capability-metadata">
+										<div class="flex items-center justify-end gap-2">
+											<p class="font-mono text-xs text-slate-900">group:{groupCap.resource.namespace}</p>
+											<span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Resource</span>
+										</div>
+									</div>
+								</div>
+								
+								<!-- Collapsible Sub-capabilities -->
+								{#if isExpanded && groupCap.subCapabilities && groupCap.subCapabilities.length > 0}
+									<div class="border-t border-slate-200 pt-4 mt-4 space-y-3 pl-8">
+										{#each groupCap.subCapabilities as subCap (subCap.id)}
+											<div class="capability-sub-item">
+												<div class="flex items-center gap-2 mb-1">
+													{#if subCap.title}
+														<h4 class="text-base font-semibold text-slate-800">{subCap.title}</h4>
+													{/if}
+												</div>
+												{#if subCap.description}
+													<p class="text-sm text-slate-600 mb-2">{subCap.description}</p>
+												{/if}
+												<div class="flex items-center gap-4 text-xs">
+													<div class="flex items-center gap-2">
+														<p class="font-mono text-slate-700">{formatResource(subCap)}</p>
+														<span class="text-slate-400">Resource</span>
+													</div>
+													<div class="flex items-center gap-2">
+														<div class="flex gap-1">
+															{#each subCap.actions as action}
+																<span class="inline-block rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-800">
+																	{action}
+																</span>
+															{/each}
+														</div>
+														<span class="text-slate-400">Actions</span>
+													</div>
+												</div>
+											</div>
+										{/each}
+									</div>
+								{/if}
+							</GlassCard>
+						{/each}
+						
+						<!-- Individual Capabilities -->
 						{#each capabilities as capability (capability.id)}
 							<GlassCard class="capability-card">
 								<div class="capability-header">
@@ -378,6 +474,13 @@
 		padding: 1rem 1.25rem;
 		border-left: 1px solid rgba(0, 0, 0, 0.1);
 		flex-shrink: 0;
+	}
+	
+	.capability-sub-item {
+		padding: 0.75rem;
+		background: rgba(255, 255, 255, 0.3);
+		border-radius: 0.5rem;
+		border: 1px solid rgba(148, 163, 184, 0.2);
 	}
 	
 	/* Mobile Responsive Styles */
