@@ -43,8 +43,8 @@
 	}
 </script>
 
-<div class="space-y-6">
-	<div class="relative flex items-center justify-center">
+<div>
+	<div class="relative flex items-center justify-center mb-3">
 		<h2 class="text-xl sm:text-2xl font-bold text-slate-900 text-center">Speisekarte</h2>
 		{#if onClose}
 			<button
@@ -59,7 +59,7 @@
 		{/if}
 	</div>
 	<!-- Divider below Speisekarte title -->
-	<div class="border-b border-slate-200/60 pb-6"></div>
+	<div class="border-b border-slate-200/60 mb-6"></div>
 	
 	{#if category === 'all'}
 		<!-- Show all categories -->
@@ -78,10 +78,10 @@
 									<h4 class="text-sm sm:text-base font-semibold text-slate-900 mb-1 sm:mb-2">{item.name}</h4>
 									<p class="text-xs sm:text-sm text-slate-600">{item.description}</p>
 								</div>
-								<div class="bg-[#2da6b4] text-white px-3 sm:px-6 py-3 sm:py-4 flex flex-col items-center justify-center flex-shrink-0" style="width: 100px; min-width: 100px;">
-									<div class="text-base sm:text-2xl font-bold whitespace-nowrap text-center">{formatPrice(item.price)}</div>
+								<div class="bg-[#2da6b4] text-white px-3 sm:px-6 py-3 sm:py-4 flex flex-col items-center justify-center flex-shrink-0 w-[100px] sm:w-[140px]">
+									<div class="text-base sm:text-2xl font-bold whitespace-nowrap text-center leading-tight">{formatPrice(item.price)}</div>
 									{#if item.type}
-										<div class="text-[9px] sm:text-[10px] uppercase tracking-wide mt-1 opacity-90 text-center">{item.type}</div>
+										<div class="text-[8px] sm:text-[10px] uppercase tracking-wide mt-0.5 sm:mt-1 opacity-90 text-center leading-tight">{item.type}</div>
 									{/if}
 								</div>
 							</GlassCard>
@@ -106,10 +106,10 @@
 								<h4 class="text-sm sm:text-base font-semibold text-slate-900 mb-1 sm:mb-2">{item.name}</h4>
 								<p class="text-xs sm:text-sm text-slate-600">{item.description}</p>
 							</div>
-							<div class="bg-[#2da6b4] text-white px-3 sm:px-6 py-3 sm:py-4 flex flex-col items-center justify-center flex-shrink-0" style="width: 100px; min-width: 100px;">
-								<div class="text-base sm:text-2xl font-bold whitespace-nowrap text-center">{formatPrice(item.price)}</div>
+							<div class="bg-[#2da6b4] text-white px-3 sm:px-6 py-3 sm:py-4 flex flex-col items-center justify-center flex-shrink-0 w-[100px] sm:w-[140px]">
+								<div class="text-base sm:text-2xl font-bold whitespace-nowrap text-center leading-tight">{formatPrice(item.price)}</div>
 								{#if item.type}
-									<div class="text-[10px] sm:text-xs uppercase tracking-wide mt-1 opacity-90 text-center">{item.type}</div>
+									<div class="text-[8px] sm:text-[10px] uppercase tracking-wide mt-0.5 sm:mt-1 opacity-90 text-center leading-tight">{item.type}</div>
 								{/if}
 							</div>
 						</GlassCard>
