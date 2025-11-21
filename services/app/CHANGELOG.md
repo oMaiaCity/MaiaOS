@@ -1,3 +1,10 @@
+## [0.12.3](https://github.com/hominiome/hominio/compare/v0.12.2...v0.12.3) (2025-11-21)
+
+
+### Bug Fixes
+
+* add PUBLIC_DOMAIN_WALLET to API service deployment secrets ([a8b0f7a](https://github.com/hominiome/hominio/commit/a8b0f7a6a13356ba2d3c8d04d4c47c04556e122f))
+
 ## [0.12.2](https://github.com/hominiome/hominio/compare/v0.12.1...v0.12.2) (2025-11-21)
 
 
