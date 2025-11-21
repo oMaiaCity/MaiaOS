@@ -291,13 +291,24 @@
 		{#if showingSkillResult && skillResult && skillResultFunctionId}
 			<!-- Skill Result View (replaces agent UI) -->
 			<div class="pt-8">
-				<GlassCard class="p-0 sm:p-6">
+				<!-- Mobile: No GlassCard wrapper -->
+				<div class="sm:hidden">
 					<UIRenderer 
 						functionId={skillResultFunctionId}
 						resultData={skillResult}
 						onClose={goBackToAgent}
 					/>
-				</GlassCard>
+				</div>
+				<!-- Tablet/Desktop: With GlassCard wrapper -->
+				<div class="hidden sm:block">
+					<GlassCard class="p-0 sm:p-6">
+						<UIRenderer 
+							functionId={skillResultFunctionId}
+							resultData={skillResult}
+							onClose={goBackToAgent}
+						/>
+					</GlassCard>
+				</div>
 			</div>
 		{:else}
 			<!-- Agent Info Card -->
