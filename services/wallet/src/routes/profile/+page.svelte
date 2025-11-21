@@ -260,11 +260,6 @@
 								
 								<!-- Expand/Collapse Button and Badge Row at Bottom -->
 								<div class="group-capability-toggle-row">
-									<span class="group-capability-badge">
-										<span class="group-capability-badge-text">
-											{groupCap.subCapabilities?.length || 0} {groupCap.subCapabilities?.length === 1 ? 'capability' : 'capabilities'}
-										</span>
-									</span>
 									<button
 										onclick={() => {
 											const newSet = new Set(expandedGroups);
@@ -288,6 +283,11 @@
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
 										</svg>
 									</button>
+									<span class="group-capability-badge">
+										<span class="group-capability-badge-text">
+											{groupCap.subCapabilities?.length || 0} {groupCap.subCapabilities?.length === 1 ? 'capability' : 'capabilities'}
+										</span>
+									</span>
 								</div>
 								
 								<!-- Collapsible Sub-capabilities -->
@@ -492,11 +492,13 @@
 	.group-capability-toggle-row {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
+		justify-content: flex-start;
+		gap: 0.625rem;
 		border-top: 1px solid rgba(148, 163, 184, 0.15);
 		margin-top: 0.75rem;
 		padding-top: 0.75rem;
+		padding-left: 1.25rem;
+		padding-right: 1.25rem;
 	}
 	
 	.group-capability-badge {
