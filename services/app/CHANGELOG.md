@@ -1,3 +1,11 @@
+## [0.11.1](https://github.com/hominiome/hominio/compare/v0.11.0...v0.11.1) (2025-11-21)
+
+
+### Bug Fixes
+
+* resolve container queries import, wallet NavPill CTA state, profile page DOM structure, and deployment issues ([2ecf8be](https://github.com/hominiome/hominio/commit/2ecf8be10f4d27db1ce2762703c03cacdd3e0752))
+* update NavPill CTA state and button text styling ([db24aee](https://github.com/hominiome/hominio/commit/db24aee9061d2b1b0c52bc5649ce2d8ec9535c82))
+
 # [0.11.0](https://github.com/hominiome/hominio/compare/v0.10.6...v0.11.0) (2025-11-21)
 
 
