@@ -1,3 +1,10 @@
+## [0.12.12](https://github.com/hominiome/hominio/compare/v0.12.11...v0.12.12) (2025-11-21)
+
+
+### Bug Fixes
+
+* add ZERO_POSTGRES_SECRET to wallet service deployment ([6c31fcc](https://github.com/hominiome/hominio/commit/6c31fcc33c88f52cac672b0fbb5c1c823c4dded9))
+
 ## [0.12.11](https://github.com/hominiome/hominio/compare/v0.12.10...v0.12.11) (2025-11-21)
 
 
