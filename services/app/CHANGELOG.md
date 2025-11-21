@@ -1,3 +1,19 @@
+# [0.11.0](https://github.com/hominiome/hominio/compare/v0.10.6...v0.11.0) (2025-11-21)
+
+
+### Bug Fixes
+
+* centralize design system into @hominio/brand package ([ad7c599](https://github.com/hominiome/hominio/commit/ad7c5995d285e1e3e02b29646d09dce5fc54e0bf))
+* standardize menu pricing width and add voice capability check modal ([05dcdef](https://github.com/hominiome/hominio/commit/05dcdef79c5a2482b724f4d1a5018ab60855a2e8))
+* universal favicon setup and tool call handler improvements ([efde2d7](https://github.com/hominiome/hominio/commit/efde2d711329dfb0b9fbea678e37468be2ff15d9))
+
+
+### Features
+
+* complete NavPill redesign with voice-controlled agent navigation ([252c641](https://github.com/hominiome/hominio/commit/252c641e3964f502989fecd92e92072940f00608))
+* implement universal tool call system with dynamic menu context ([aebc9cf](https://github.com/hominiome/hominio/commit/aebc9cfe8493781a3e8c346db627d3f603cba4c4))
+* move menu data to skill config and add Charles admin page ([3dc6169](https://github.com/hominiome/hominio/commit/3dc6169a6e4212ce7d6e46a06af648ff869fd3e1))
+
 ## [0.10.6](https://github.com/hominiome/hominio/compare/v0.10.5...v0.10.6) (2025-11-20)
 
 
