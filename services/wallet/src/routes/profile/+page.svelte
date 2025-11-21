@@ -277,10 +277,8 @@
 										}}
 										class="group-toggle-button"
 										type="button"
+										aria-label={isExpanded ? 'Hide capabilities' : 'Show capabilities'}
 									>
-										<span class="group-toggle-text">
-											{isExpanded ? 'Hide' : 'Show'} capabilities
-										</span>
 										<svg
 											class="group-toggle-icon {isExpanded ? 'expanded' : ''}"
 											fill="none"
@@ -495,25 +493,25 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 1rem;
-		border-top: 1px solid rgba(148, 163, 184, 0.2);
-		margin-top: 1rem;
-		padding-top: 1rem;
+		gap: 0.75rem;
+		border-top: 1px solid rgba(148, 163, 184, 0.15);
+		margin-top: 0.75rem;
+		padding-top: 0.75rem;
 	}
 	
 	.group-capability-badge {
 		display: inline-flex;
 		align-items: center;
-		padding: 0.5rem 0.875rem;
-		background: var(--color-primary-100);
-		border: 1px solid var(--color-primary-300);
-		border-radius: 0.5rem;
+		padding: 0.375rem 0.625rem;
+		background: var(--color-primary-50);
+		border: 1px solid var(--color-primary-200);
+		border-radius: 0.375rem;
 	}
 	
 	.group-capability-badge-text {
-		font-size: 0.8125rem;
-		font-weight: 600;
-		color: var(--color-primary-800);
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: var(--color-primary-700);
 		letter-spacing: 0.01em;
 	}
 	
@@ -521,33 +519,27 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		gap: 0.75rem;
-		padding: 0.875rem 1.5rem;
-		background: var(--color-primary-800);
-		border: 1px solid var(--color-primary-700);
-		border-radius: 0.5rem;
-		color: var(--color-primary-100);
-		font-size: 0.9375rem;
-		font-weight: 600;
+		width: 2rem;
+		height: 2rem;
+		padding: 0;
+		background: transparent;
+		border: 1px solid var(--color-primary-200);
+		border-radius: 0.375rem;
+		color: var(--color-primary-600);
 		cursor: pointer;
 		transition: all 0.2s ease;
-		flex: 1;
-		max-width: 300px;
 	}
 	
 	.group-toggle-button:hover {
-		background: var(--color-primary-700);
-		border-color: var(--color-primary-600);
-	}
-	
-	.group-toggle-text {
-		color: var(--color-primary-100);
+		background: var(--color-primary-50);
+		border-color: var(--color-primary-300);
+		color: var(--color-primary-700);
 	}
 	
 	.group-toggle-icon {
-		width: 1.125rem;
-		height: 1.125rem;
-		color: var(--color-primary-100);
+		width: 1rem;
+		height: 1rem;
+		color: currentColor;
 		transition: transform 0.2s ease;
 	}
 	
