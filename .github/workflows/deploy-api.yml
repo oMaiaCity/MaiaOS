@@ -92,6 +92,7 @@ jobs:
             ADMIN="${{ secrets.ADMIN }}" \
             PUBLIC_DOMAIN_API="${{ secrets.PUBLIC_DOMAIN_API }}" \
             PUBLIC_DOMAIN_SYNC="${{ secrets.PUBLIC_DOMAIN_SYNC }}" \
+            PUBLIC_DOMAIN_WALLET="${{ secrets.PUBLIC_DOMAIN_WALLET }}" \
             NODE_ENV="production" \
             --app hominio-api
 
