@@ -17,8 +17,10 @@ ENTRYPOINT []
 # Required: --upstream-db (database connection)
 # Required: --change-db (change database for replication log - uses same as upstream-db if not specified)
 # Required: --replica-file (SQLite replica location in /data mount)
-# Required: --auth-secret (for JWT verification)
-# Required: --admin-password (for admin endpoints - uses ZERO_ADMIN_AUTH secret)
+# Required: --auth-secret (for JWT verification - uses ZERO_AUTH_SECRET, set from AUTH_SECRET)
+# Required: --admin-password (for admin endpoints - uses ZERO_ADMIN_AUTH, set from AUTH_SECRET)
+#   Fallback to ZERO_AUTH_SECRET if ZERO_ADMIN_AUTH not set (both are set to AUTH_SECRET in production)
+# Required: --port=4848 (explicitly set port - zero-cache listens on 0.0.0.0 when port is set)
 # Required: --get-queries-url (for synced queries)
 # Required: --push-url (for custom mutators)
 # Cookie forwarding: --get-queries-forward-cookies and --mutate-forward-cookies

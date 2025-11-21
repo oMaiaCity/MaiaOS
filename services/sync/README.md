@@ -11,8 +11,8 @@ This service runs `zero-cache-dev` (development) or `zero-cache` (production) to
 The `--admin-password` flag is used for **debugging and administration** of the Zero cache server:
 
 - **Purpose**: Access admin endpoints like `/statz` (stats endpoint) for monitoring and debugging
-- **Required**: Optional, but recommended for production debugging
-- **Value**: Uses `ZERO_AUTH_SECRET` (defaults to `AUTH_SECRET` if not set)
+- **Required**: Required in production mode
+- **Value**: Uses `ZERO_ADMIN_AUTH` environment variable (set to `AUTH_SECRET` in production)
 - **Security**: Should be a strong, random password (same as your `AUTH_SECRET`)
 
 **What it's used for:**
@@ -25,8 +25,11 @@ The `--admin-password` flag is used for **debugging and administration** of the 
 ## Environment Variables
 
 - `ZERO_POSTGRES_SECRET` - PostgreSQL connection string (non-pooler, required)
-- `AUTH_SECRET` - Shared auth secret (used for admin password if `ZERO_AUTH_SECRET` not set)
-- `ZERO_AUTH_SECRET` - Zero-specific auth secret (optional, defaults to `AUTH_SECRET`)
+- `AUTH_SECRET` - Shared auth secret (used for both JWT verification and admin password)
+- `ZERO_AUTH_SECRET` - Zero JWT auth secret (set to `AUTH_SECRET` in production)
+- `ZERO_ADMIN_AUTH` - Zero admin password (set to `AUTH_SECRET` in production)
+
+**Note**: In practice, we use `AUTH_SECRET` for all three purposes. The separate environment variables (`ZERO_AUTH_SECRET` and `ZERO_ADMIN_AUTH`) are set from `AUTH_SECRET` during deployment for clarity, but they all use the same value.
 
 ## Development
 
