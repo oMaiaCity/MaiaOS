@@ -1,3 +1,10 @@
+## [0.14.1](https://github.com/hominiome/hominio/compare/v0.14.0...v0.14.1) (2025-11-22)
+
+
+### Bug Fixes
+
+* add wellness skill to Charles agent and improve tool recognition ([76d4751](https://github.com/hominiome/hominio/commit/76d47513db39213a7070e0347c7ff26d4b467352))
+
 # [0.14.0](https://github.com/hominiome/hominio/compare/v0.13.1...v0.14.0) (2025-11-22)
 
 
