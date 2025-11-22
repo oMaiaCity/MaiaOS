@@ -7,6 +7,7 @@
 import { loadAgentConfig } from './agent-loader.js';
 import { loadFunction } from './function-loader.js';
 import { loadDataContext } from './data-context-loader.js';
+import { getCalendarContextString } from '../lib/functions/calendar-store.js';
 
 /**
  * Handle actionSkill tool call
@@ -56,7 +57,22 @@ export async function handleActionSkill(
 			dataContext: combinedDataContext
 		};
 		
-		const dataContextString = await loadDataContext(tempAgentConfig);
+		let dataContextString = await loadDataContext(tempAgentConfig);
+		
+		// Inject calendar context for calendar-related skills
+		if (agentId === 'karl' || skillId?.includes('calendar')) {
+			try {
+				const calendarContext = await getCalendarContextString();
+				if (calendarContext) {
+					dataContextString = dataContextString 
+						? `${dataContextString}\n\n${calendarContext}`
+						: calendarContext;
+				}
+			} catch (error) {
+				console.warn('[ActionSkill] Failed to load calendar context:', error);
+				// Continue without calendar context if it fails
+			}
+		}
 		
 		// 5. Build function context
 		const context = {

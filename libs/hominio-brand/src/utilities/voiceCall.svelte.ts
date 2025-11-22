@@ -395,6 +395,20 @@ export function createVoiceCallService(options?: {
 		}
 	}
 
+	// Send text message (context update) to server
+	function sendTextMessage(text: string, turnComplete: boolean = true) {
+		if (!ws || ws.readyState !== WebSocket.OPEN) {
+			console.warn('[VoiceCall] Cannot send text: WebSocket not connected');
+			return;
+		}
+		
+		ws.send(JSON.stringify({
+			type: "text",
+			text,
+			turnComplete
+		}));
+	}
+
 	// Return reactive state and actions
 	return {
 		// Reactive getters using $derived
@@ -409,6 +423,7 @@ export function createVoiceCallService(options?: {
 		startCall,
 		endCall,
 		cleanup,
+		sendTextMessage,
 	};
 }
 

@@ -1,7 +1,7 @@
 <script>
 	/**
 	 * NavPill - Global navigation pill component
-	 * Layout: Logo (left) | Call Button (center) | User (right)
+	 * Layout: Logo/Avatar (left) | Call Button (center) | User (right)
 	 * When logged out: Shows Google sign-in button
 	 * 
 	 * @typedef {Object} Props
@@ -16,6 +16,7 @@
 	 * @property {boolean} isWaitingForPermission - Whether waiting for permission
 	 * @property {Function} onStartCall - Start call handler
 	 * @property {Function} onStopCall - Stop call handler
+	 * @property {string|null} agentAvatar - Optional agent avatar image path (shows instead of logo when in agent context)
 	 */
 	
 	import { LoadingSpinner } from './index.js';
@@ -42,6 +43,7 @@
 		onRequestAccess = () => {},
 		onCloseCapabilityModal = () => {},
 		onCloseSuccessModal = () => {},
+		agentAvatar = null, // Agent avatar image path (e.g., "/brand/agents/charles.png")
 	} = $props();
 	
 	let userImageFailed = $state(false);
@@ -301,13 +303,19 @@
 		</div>
 	{/if}
 
-	<!-- Authenticated: Logo | Call Button | User -->
+	<!-- Authenticated: Logo/Avatar | Call Button | User -->
 	<nav class="nav-pill">
 		<div class="nav-container">
-			<!-- Left: Logo - Links to app service -->
-			<a href={getAppUrl()} class="nav-logo-link" aria-label="Go to app">
-				<img src="/brand/logo_clean.png" alt="Home" class="nav-logo" />
-			</a>
+			<!-- Left: Logo or Agent Avatar (no link) -->
+			<div class="nav-logo-link" aria-label="App logo">
+				{#if agentAvatar}
+					<!-- Show agent avatar when in agent context -->
+					<img src={agentAvatar} alt="Agent" class="nav-logo nav-agent-avatar" />
+				{:else}
+					<!-- Show default logo when not in agent context -->
+					<img src="/brand/logo_clean.png" alt="Home" class="nav-logo" />
+				{/if}
+			</div>
 			
 			<!-- Center: Call Button -->
 			<div class="nav-center">
@@ -616,6 +624,12 @@
 		height: 38px;
 		border-radius: 50%;
 		flex-shrink: 0;
+		object-fit: cover;
+	}
+	
+	.nav-agent-avatar {
+		/* Agent avatars are already circular images, ensure they display properly */
+		border: 1px solid rgba(255, 255, 255, 0.1);
 	}
 	
 	/* Center Call Button - Larger and overhanging */
@@ -890,15 +904,15 @@
 		}
 		
 		.nav-logo {
-			width: 28px;
-			height: 28px;
+			width: 32px;
+			height: 32px;
 		}
 		
 		.nav-avatar,
 		.nav-avatar-placeholder {
-			width: 28px;
-			height: 28px;
-			font-size: 0.6875rem;
+			width: 32px;
+			height: 32px;
+			font-size: 0.75rem;
 		}
 		
 		.connection-modal {

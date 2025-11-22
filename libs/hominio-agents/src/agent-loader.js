@@ -6,9 +6,11 @@
 
 // Import configs directly - Vite will bundle them
 import charlesConfig from '../lib/agents/charles/config.json';
+import karlConfig from '../lib/agents/karl/config.json';
 
 const agentConfigs = {
-	charles: charlesConfig
+	charles: charlesConfig,
+	karl: karlConfig
 };
 
 /**
@@ -42,6 +44,6 @@ export async function loadAgentConfig(agentId) {
 export async function listAgents() {
 	// For now, return hardcoded list
 	// Later can scan lib/agents directory
-	return ['charles'];
+	return ['charles', 'karl'];
 }
 

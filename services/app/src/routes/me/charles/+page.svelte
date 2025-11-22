@@ -276,10 +276,6 @@
 		};
 	});
 
-	function handleSkillClick(skillId: string) {
-		console.log(`Skill clicked: ${skillId}`);
-		executeSkill('charles', skillId, {});
-	}
 
 	// Use skills from config or fallback
 	const skills = $derived(agentConfig?.skills || skillsFallback);
@@ -313,10 +309,10 @@
 				<!-- Back button - bottom left, aligned with nav pill -->
 				<button
 					onclick={goBackToAgent}
-					class="nav-action-button"
+					class="nav-back-button"
 					aria-label="Back"
 				>
-					<svg class="nav-action-button-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<svg class="nav-back-button-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 					</svg>
 				</button>
@@ -329,13 +325,15 @@
 				<GlassCard class="overflow-hidden p-8">
 					<div class="flex flex-col items-center text-center md:flex-row md:text-left md:gap-6">
 						<div class="mb-4 md:mb-0">
-							<svg class="w-20 h-20 text-[#2da6b4]" fill="currentColor" viewBox="0 0 24 24">
-								<path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3zm0 2.83l6 6V19h-2v-6H8v6H6v-7.17l6-6z"/>
-							</svg>
+							<img 
+								src="/brand/agents/charles.png" 
+								alt={agentConfig?.name || agent.name}
+								class="w-20 h-20 rounded-full object-cover"
+							/>
 						</div>
 						<div class="flex-1">
 							<h1 class="mb-2 text-3xl font-bold text-slate-900">{agentConfig?.name || agent.name}</h1>
-							<div class="mb-3 inline-block rounded-full bg-gradient-to-r {agent.color} px-4 py-1 text-sm font-semibold text-white">
+							<div class="mb-3 inline-block rounded-full bg-linear-to-r {agent.color} px-4 py-1 text-sm font-semibold text-white">
 								{agentConfig?.role || agent.role}
 							</div>
 							<p class="mt-3 text-base leading-relaxed text-slate-600">{agentConfig?.description || agent.description}</p>
@@ -363,11 +361,7 @@
 						{#each skills as skill (skill.id)}
 							<GlassCard 
 								lifted={true}
-								class="relative p-6 transition-all duration-300 cursor-pointer group hover:scale-105"
-								role="button"
-								tabindex="0"
-								onclick={() => handleSkillClick(skill.id)}
-								onkeydown={(e) => e.key === 'Enter' && handleSkillClick(skill.id)}
+								class="relative p-6"
 							>
 								<div class="flex flex-col items-center text-center">
 									{#if skill.svg}
@@ -447,9 +441,11 @@
 				class="nav-action-button"
 				aria-label="Home"
 			>
-				<svg class="nav-action-button-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-				</svg>
+				<img 
+					src="/brand/logo_clean.png" 
+					alt="Home"
+					class="nav-action-button-icon"
+				/>
 			</button>
 			</div>
 		{/if}
@@ -486,8 +482,43 @@
 	}
 	
 	.nav-action-button-icon {
-		width: 1.5rem;
-		height: 1.5rem;
+		width: 2rem;
+		height: 2rem;
+		object-fit: contain;
+	}
+	
+	/* Back button - smaller than home button */
+	.nav-back-button {
+		position: fixed;
+		bottom: 0;
+		left: 1rem;
+		z-index: 1000;
+		margin-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+		width: 40px;
+		height: 40px;
+		border-radius: 9999px;
+		border: 1px solid var(--color-primary-800);
+		background-color: var(--color-primary-800);
+		backdrop-filter: blur(24px) saturate(180%);
+		-webkit-backdrop-filter: blur(24px) saturate(180%);
+		box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: all 0.2s;
+		opacity: 0.95;
+		cursor: pointer;
+	}
+	
+	.nav-back-button:hover {
+		background-color: var(--color-primary-700);
+		border-color: var(--color-primary-700);
+		opacity: 1;
+	}
+	
+	.nav-back-button-icon {
+		width: 1rem;
+		height: 1rem;
 		color: var(--color-primary-50);
 	}
 	
@@ -499,8 +530,18 @@
 		}
 		
 		.nav-action-button-icon {
-			width: 1.75rem;
-			height: 1.75rem;
+			width: 2.5rem;
+			height: 2.5rem;
+		}
+		
+		.nav-back-button {
+			width: 56px;
+			height: 56px;
+		}
+		
+		.nav-back-button-icon {
+			width: 1.25rem;
+			height: 1.25rem;
 		}
 	}
 </style>

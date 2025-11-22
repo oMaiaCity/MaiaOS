@@ -9,21 +9,39 @@
 	const session = authClient.useSession();
 
 	// Detect if we're on an agent page and extract agent ID
-	// Matches /me/charles, /me/charles/admin, /me/charles/anything, etc.
+	// Matches /me/charles, /me/charles/admin, /me/karl, etc.
 	const currentAgentId = $derived.by(() => {
 		const path = $page.url.pathname;
 		// Match /me/{agentId} or /me/{agentId}/... (any sub-route)
 		const match = path.match(/^\/me\/([^\/]+)/);
 		const agentId = match ? match[1] : undefined;
 		
-		// Only return valid agent IDs (exclude 'admin' if it's a top-level route)
-		// For now, we know 'charles' is a valid agent, so return it if matched
-		if (agentId === 'charles') {
-			return 'charles';
+		// Return valid agent IDs (charles, karl, etc.)
+		// Exclude 'admin' if it's a top-level route
+		if (agentId && agentId !== 'admin') {
+			return agentId;
 		}
 		
-		// Could add more agent IDs here in the future
 		return undefined;
+	});
+
+	// Load agent config to get avatar when in agent context
+	let agentAvatar = $state<string | null>(null);
+	
+	$effect(() => {
+		if (currentAgentId) {
+			// Dynamically load agent config to get avatar
+			import('@hominio/agents').then(({ loadAgentConfig }) => {
+				loadAgentConfig(currentAgentId).then((config) => {
+					agentAvatar = config.avatar || null;
+				}).catch((err) => {
+					console.warn('[NavPill] Failed to load agent config for avatar:', err);
+					agentAvatar = null;
+				});
+			});
+		} else {
+			agentAvatar = null; // Reset to default logo when not in agent context
+		}
 	});
 
 	// Initialize voice call service with tool call handler
@@ -39,12 +57,24 @@
 				}
 			} else if (toolName === 'actionSkill') {
 				// Handle actionSkill tool calls
-				// Dispatch custom event for Charles page to handle
+				// Dispatch custom event for Charles/Karl page to handle
+				
+				// Extract agentId and skillId, pass the rest as args (flat structure)
+				const { agentId, skillId, ...rawArgs } = args;
+				
+				// Handle potential nested args from LLM (hallucination or habit)
+				// If rawArgs has a single property 'args' which is an object, use that instead
+				let skillArgs = rawArgs;
+				if (Object.keys(rawArgs).length === 1 && rawArgs.args && typeof rawArgs.args === 'object') {
+					console.log('[NavPill] ⚠️ Detected nested args object from LLM, flattening...');
+					skillArgs = rawArgs.args;
+				}
+				
 				const event = new CustomEvent('actionSkill', {
 					detail: {
-						agentId: args.agentId,
-						skillId: args.skillId,
-						args: args.args || {}
+						agentId,
+						skillId,
+						args: skillArgs
 					}
 				});
 				window.dispatchEvent(event);
@@ -296,6 +326,24 @@
 	$effect(() => {
 		console.log('[NavPill] Auth state changed:', { isAuthenticated, user: user?.name });
 	});
+
+	// Handle context updates from pages
+	$effect(() => {
+		const handleContextUpdate = (event: Event) => {
+			const customEvent = event as CustomEvent;
+			const { text } = customEvent.detail;
+			if (text && voiceCall.isCallActive) {
+				console.log('[NavPill] Sending context update to voice session');
+				voiceCall.sendTextMessage(`[System] Updated context: ${text}`);
+			}
+		};
+
+		window.addEventListener('updateVoiceContext', handleContextUpdate);
+
+		return () => {
+			window.removeEventListener('updateVoiceContext', handleContextUpdate);
+		};
+	});
 </script>
 
 <NavPill 
@@ -316,4 +364,5 @@
 	onRequestAccess={handleRequestAccess}
 	onCloseCapabilityModal={() => showCapabilityModal = false}
 	onCloseSuccessModal={() => showSuccessModal = false}
+	agentAvatar={agentAvatar}
 />

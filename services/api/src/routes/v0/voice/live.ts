@@ -118,28 +118,57 @@ export const voiceLiveHandler = {
             let currentAgentId: string | null = initialAgentId || null;
             let currentAgentConfig: any = null;
 
-            // Load agent config if initialAgentId is provided
+            // Load agent configs and build comprehensive tool schema
             let systemInstruction = "Du bist ein hilfreicher KI-Assistent. Wenn Benutzer darum bitten, zum Dashboard oder zur Agentenansicht zu wechseln, verwende das switchAgent-Tool, um sie dorthin zu navigieren.";
+            let actionSkillArgsSchema = null;
+
+            // Load all agent configs to build comprehensive schema
+            const { buildSystemInstruction, getCalendarContextString, buildActionSkillArgsSchema } = await import('@hominio/agents');
+            const allSkills = [];
+
+            try {
+                // Load all known agents
+                const agentIds = ['charles', 'karl'];
+                for (const agentId of agentIds) {
+                    try {
+                        const agentConfig = await loadAgentConfig(agentId);
+                        if (agentConfig.skills) {
+                            allSkills.push(...agentConfig.skills);
+                        }
+                    } catch (err) {
+                        console.warn(`[voice/live] Failed to load agent config for ${agentId}:`, err);
+                    }
+                }
+
+                // Build comprehensive schema from all skills
+                if (allSkills.length > 0) {
+                    actionSkillArgsSchema = buildActionSkillArgsSchema(allSkills);
+                    console.log(`[voice/live] ✅ Built actionSkill args schema from ${allSkills.length} skills`);
+                    console.log(`[voice/live] Schema has ${Object.keys(actionSkillArgsSchema.properties || {}).length} properties:`, Object.keys(actionSkillArgsSchema.properties || {}));
+                } else {
+                    console.warn(`[voice/live] ⚠️ No skills found to build schema`);
+                }
+            } catch (err) {
+                console.error(`[voice/live] Failed to build tool schema:`, err);
+            }
+
+            // Load initial agent config if provided
             if (initialAgentId) {
                 try {
                     const agentConfig = await loadAgentConfig(initialAgentId);
                     currentAgentConfig = agentConfig; // Store config for later use
-                    const skillsDesc = agentConfig.skills.map((skill: any) =>
-                        `- **${skill.name}** (skillId: "${skill.id}"): ${skill.description}`
-                    ).join('\n');
 
-                    // Load data context for background knowledge
-                    const { loadDataContext } = await import('@hominio/agents');
-                    const dataContextString = await loadDataContext(agentConfig);
+                    // Get calendar context for Karl
+                    let calendarContext = null;
+                    if (initialAgentId === 'karl') {
+                        try {
+                            calendarContext = await getCalendarContextString();
+                        } catch (error) {
+                            console.warn('[voice/live] Failed to load calendar context:', error);
+                        }
+                    }
 
-                    systemInstruction = `Du bist ${agentConfig.name}, ${agentConfig.role}. ${agentConfig.description}
-
-Verfügbare Funktionen, die du mit actionSkill ausführen kannst:
-${skillsDesc}
-
-Wenn der Benutzer nach etwas fragt, verwende die entsprechende skillId mit dem actionSkill-Tool. Zum Beispiel: Wenn er nach dem Menü fragt, verwende actionSkill mit skillId: "show-menu". Für show-menu kannst du optional args.category verwenden, um nach Kategorie zu filtern (z.B. "appetizers", "mains", "desserts", "drinks").
-
-${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
+                    systemInstruction = await buildSystemInstruction(agentConfig, { calendarContext });
 
                     console.log(`[voice/live] ✅ Loaded initial agent context: ${initialAgentId}`);
                 } catch (err) {
@@ -168,8 +197,8 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                                     properties: {
                                         agentId: {
                                             type: "string",
-                                            description: "The agent ID to navigate to (e.g., 'charles') or 'dashboard' to go to the main agents list",
-                                            enum: ["dashboard", "charles"]
+                                            description: "The agent ID to navigate to (e.g., 'charles', 'karl') or 'dashboard' to go to the main agents list",
+                                            enum: ["dashboard", "charles", "karl"]
                                         }
                                     },
                                     required: ["agentId"]
@@ -177,34 +206,30 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                             },
                             {
                                 name: "actionSkill",
-                                description: "Execute a skill/action for the current agent. Use this to perform actions like showing menus, booking services, or accessing information. For show-menu skill, you can filter by category using args.category (e.g., 'appetizers', 'mains', 'desserts', 'drinks').",
-                                parameters: {
-                                    type: "object",
-                                    properties: {
-                                        agentId: {
-                                            type: "string",
-                                            description: "The agent ID (e.g., 'charles')",
-                                            enum: ["charles"]
+                                description: "Execute a skill/action for the current agent. Use this to perform actions like showing menus, booking services, creating calendar entries, or accessing information. REQUIRED: You MUST use this tool to execute any action - verbal responses alone are not sufficient. Skill-specific parameters (like title, date, etc.) are passed as top-level arguments alongside agentId and skillId. For create-calendar-entry: MUST include title, date, time, duration. For edit/delete: MUST include id.",
+                                parameters: (() => {
+                                    if (actionSkillArgsSchema && actionSkillArgsSchema.properties) {
+                                        console.log(`[voice/live] ✅ Using generated schema for actionSkill`);
+                                        return actionSkillArgsSchema;
+                                    }
+                                    console.warn(`[voice/live] ⚠️ No schema available, using fallback`);
+                                    return {
+                                        type: "object",
+                                        properties: {
+                                            agentId: { type: "string", enum: ["charles", "karl"], description: "Agent ID" },
+                                            skillId: { type: "string", description: "Skill ID" },
+                                            // Fallback properties
+                                            title: { type: "string", description: "Calendar entry title" },
+                                            date: { type: "string", description: "Date (YYYY-MM-DD)" },
+                                            time: { type: "string", description: "Time (HH:MM)" },
+                                            duration: { type: "number", description: "Duration in minutes" },
+                                            description: { type: "string", description: "Description" },
+                                            category: { type: "string", enum: ["appetizers", "mains", "desserts", "drinks"] },
+                                            id: { type: "string", description: "Entry ID" }
                                         },
-                                        skillId: {
-                                            type: "string",
-                                            description: "The skill ID to execute (e.g., 'show-menu')"
-                                        },
-                                        args: {
-                                            type: "object",
-                                            description: "Arguments for the skill. For show-menu: { category?: 'appetizers' | 'mains' | 'desserts' | 'drinks' } - Optional category filter to show only specific menu category.",
-                                            properties: {
-                                                category: {
-                                                    type: "string",
-                                                    description: "Menu category filter (only for show-menu skill). Options: 'appetizers', 'mains', 'desserts', 'drinks'",
-                                                    enum: ["appetizers", "mains", "desserts", "drinks"]
-                                                }
-                                            },
-                                            additionalProperties: true
-                                        }
-                                    },
-                                    required: ["agentId", "skillId"]
-                                }
+                                        required: ["agentId", "skillId"]
+                                    };
+                                })()
                             }
                         ]
                     }
@@ -276,22 +301,21 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                                                     currentAgentId = agentId;
                                                     currentAgentConfig = config;
 
-                                                    const skillsDesc = config.skills.map((skill: any) =>
-                                                        `- **${skill.name}** (skillId: "${skill.id}"): ${skill.description}`
-                                                    ).join('\n');
+                                                    // Build system instruction from config
+                                                    const { buildSystemInstruction, getCalendarContextString } = await import('@hominio/agents');
 
-                                                    // Load data context for background knowledge
-                                                    const { loadDataContext } = await import('@hominio/agents');
-                                                    const dataContextString = await loadDataContext(config);
+                                                    // Get calendar context for Karl
+                                                    let calendarContext = null;
+                                                    if (agentId === 'karl') {
+                                                        try {
+                                                            calendarContext = await getCalendarContextString();
+                                                        } catch (error) {
+                                                            console.warn('[voice/live] Failed to load calendar context:', error);
+                                                        }
+                                                    }
 
-                                                    const contextMessage = `[System] Du bist jetzt ${config.name}, ${config.role}. ${config.description}
-
-Verfügbare Funktionen, die du mit actionSkill ausführen kannst:
-${skillsDesc}
-
-Wenn der Benutzer nach etwas fragt, verwende die entsprechende skillId mit dem actionSkill-Tool. Zum Beispiel: Wenn er nach dem Menü fragt, verwende actionSkill mit skillId: "show-menu". Für show-menu kannst du optional args.category verwenden, um nach Kategorie zu filtern (z.B. "appetizers", "mains", "desserts", "drinks").
-
-${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
+                                                    const systemInstructionText = await buildSystemInstruction(config, { calendarContext });
+                                                    const contextMessage = `[System] ${systemInstructionText}`;
 
                                                     session.sendClientContent({
                                                         turns: contextMessage,
@@ -436,24 +460,21 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
                                                 currentAgentId = agentId;
                                                 currentAgentConfig = config;
 
-                                                // Build skills description for AI
-                                                const skillsDesc = config.skills.map((skill: any) =>
-                                                    `- **${skill.name}** (skillId: "${skill.id}"): ${skill.description}`
-                                                ).join('\n');
+                                                // Build system instruction from config
+                                                const { buildSystemInstruction, getCalendarContextString } = await import('@hominio/agents');
 
-                                                // Load data context for background knowledge
-                                                const { loadDataContext } = await import('@hominio/agents');
-                                                const dataContextString = await loadDataContext(config);
+                                                // Get calendar context for Karl
+                                                let calendarContext = null;
+                                                if (agentId === 'karl') {
+                                                    try {
+                                                        calendarContext = await getCalendarContextString();
+                                                    } catch (error) {
+                                                        console.warn('[voice/live] Failed to load calendar context:', error);
+                                                    }
+                                                }
 
-                                                // Update AI context with agent info, available skills, and data context
-                                                const contextMessage = `[System] Du bist jetzt ${config.name}, ${config.role}. ${config.description}
-
-Verfügbare Funktionen, die du mit actionSkill ausführen kannst:
-${skillsDesc}
-
-Wenn der Benutzer nach etwas fragt, verwende die entsprechende skillId mit dem actionSkill-Tool. Zum Beispiel: Wenn er nach dem Menü fragt, verwende actionSkill mit skillId: "show-menu". Für show-menu kannst du optional args.category verwenden, um nach Kategorie zu filtern (z.B. "appetizers", "mains", "desserts", "drinks").
-
-${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
+                                                const systemInstructionText = await buildSystemInstruction(config, { calendarContext });
+                                                const contextMessage = `[System] ${systemInstructionText}`;
 
                                                 session.sendClientContent({
                                                     turns: contextMessage,
@@ -474,7 +495,18 @@ ${dataContextString ? `\nHintergrundwissen:\n${dataContextString}` : ''}`;
 
                                     if (toolName === "actionSkill") {
                                         // Frontend handles actionSkill execution, just acknowledge
-                                        const { agentId, skillId, args } = fc.args || {};
+                                        // Flatten parameters: args are top-level in tool call, but we need to pass them as 'args' object
+                                        const { agentId, skillId, ...rawArgs } = fc.args || {};
+
+                                        // Handle potential nested args from LLM (hallucination or habit)
+                                        // If rawArgs has a single property 'args' which is an object, use that instead
+                                        let args = rawArgs;
+                                        if (Object.keys(rawArgs).length === 1 && rawArgs.args && typeof rawArgs.args === 'object') {
+                                            console.log(`[voice/live] ⚠️ Detected nested 'args' object from LLM, flattening...`);
+                                            args = rawArgs.args;
+                                        }
+
+                                        console.log(`[voice/live] 🔧 Processing tool call: "${toolName}"`, JSON.stringify(fc));
                                         console.log(`[voice/live] ✅ Handling actionSkill tool call: agent="${agentId}", skill="${skillId}", args:`, args);
 
                                         // Check if we're in the right agent context
