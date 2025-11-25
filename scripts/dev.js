@@ -21,8 +21,9 @@ const services = [
 	{ name: 'website', filter: 'website', port: 4200 },
 	{ name: 'wallet', filter: 'wallet', port: 4201 },
 	{ name: 'app', filter: 'app', port: 4202 },
-	{ name: 'api', filter: 'api', port: 4204 },
 	{ name: 'sync', filter: 'sync', port: 4203 },
+	{ name: 'api', filter: 'api', port: 4204 },
+	{ name: 'game', filter: 'game', port: 4205 },
 ];
 
 // Asset sync watcher (not a service, but runs alongside)
