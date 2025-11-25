@@ -78,6 +78,15 @@
 				domains.push('localhost:4204');
 			}
 			
+			if (env.PUBLIC_DOMAIN_GAME) {
+				domains.push(env.PUBLIC_DOMAIN_GAME);
+			} else if (isProduction) {
+				const hostname = window.location.hostname;
+				domains.push(hostname.startsWith('game.') ? hostname : `game.${hostname.replace(/^www\./, '')}`);
+			} else {
+				domains.push('localhost:4205');
+			}
+			
 			const trustedOrigins = domains.map(domain => {
 				// Remove protocol if present
 				const cleanDomain = domain.replace(/^https?:\/\//, '');
@@ -137,18 +146,16 @@
 		return `${protocol}://${appDomain}/me`;
 	}
 
-	// Reactive check: if already signed in on root route, redirect to app or callback
+	// Reactive check: if already signed in on root route, redirect to callback or stay
 	// Only redirect from root route (/), not from other routes like /profile
 	$effect(() => {
 		if ($session.data?.user && $page.url.pathname === '/') {
 			const callback = getCallbackUrl();
 			if (callback) {
-				// Redirect to the callback URL (e.g., app.hominio.me/me)
+				// Redirect to the callback URL (respects origin - game, app, etc.)
 				window.location.href = callback;
-			} else {
-				// If no callback, redirect to app service
-				window.location.href = getAppUrl();
 			}
+			// If no callback, stay on wallet service (don't hardcode redirect to app)
 		}
 	});
 
@@ -156,8 +163,8 @@
 		signingIn = true;
 		try {
 			const callback = getCallbackUrl();
-			// Use callback URL if provided, otherwise redirect to app service after sign-in
-			const callbackURL = callback || (browser ? getAppUrl() : '');
+			// Use callback URL if provided, otherwise use wallet service itself (no hardcoded redirect)
+			const callbackURL = callback || (browser ? window.location.origin : '');
 			await authClient.signIn.social({
 				provider: 'google',
 				callbackURL,

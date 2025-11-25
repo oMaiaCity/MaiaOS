@@ -33,6 +33,7 @@ const cwd = process.cwd();
 const isAppService = cwd.includes('app') || existsSync(resolve(cwd, 'src-tauri'));
 const isWalletService = cwd.includes('wallet');
 const isWebsiteService = cwd.includes('website');
+const isGameService = cwd.includes('game');
 
 const serviceStaticDirs = isDockerContext
 	? [
@@ -45,6 +46,7 @@ const serviceStaticDirs = isDockerContext
 		...(isAppService || !isDockerContext ? [resolve(monorepoRoot, 'services/app/static/brand')] : []),
 		...(isWalletService || !isDockerContext ? [resolve(monorepoRoot, 'services/wallet/static/brand')] : []),
 		...(isWebsiteService || !isDockerContext ? [resolve(monorepoRoot, 'services/website/static/brand')] : []),
+		...(isGameService || !isDockerContext ? [resolve(monorepoRoot, 'services/game/static/brand')] : []),
 	].filter(Boolean);
 
 /**

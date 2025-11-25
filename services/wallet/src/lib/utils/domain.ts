@@ -47,6 +47,14 @@ export function getDomainApi(): string {
 }
 
 /**
+ * Get the game service domain from environment variable
+ * Defaults to localhost:4205 for development
+ */
+export function getDomainGame(): string {
+  return publicEnv.PUBLIC_DOMAIN_GAME || 'localhost:4205';
+}
+
+/**
  * Get full URL for a domain (adds protocol)
  */
 function getDomainUrl(domain: string): string {
@@ -75,6 +83,7 @@ export function getTrustedOrigins(): string[] {
     getDomainUrl(getDomainWallet()),
     getDomainUrl(getDomainSync()),
     getDomainUrl(getDomainApi()),
+    getDomainUrl(getDomainGame()),
   ];
   
   return origins;
