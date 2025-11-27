@@ -27,3 +27,9 @@ export { buildSystemInstruction } from './system-instruction-builder.js';
 // Export tool schema builder
 export { buildActionSkillArgsSchema } from './tool-schema-builder.js';
 
+// Export UI components
+export { default as MenuView } from './components/MenuView.svelte';
+export { default as WellnessView } from './components/WellnessView.svelte';
+export { default as CalendarView } from './components/CalendarView.svelte';
+export { default as CalendarEntryView } from './components/CalendarEntryView.svelte';
+

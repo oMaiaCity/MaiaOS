@@ -7,11 +7,16 @@
 	"exports": {
 		".": "./src/index.js",
 		"./vibes": "./lib/vibes",
-		"./functions": "./lib/functions"
+		"./functions": "./lib/functions",
+		"./components/MenuView.svelte": "./src/components/MenuView.svelte",
+		"./components/WellnessView.svelte": "./src/components/WellnessView.svelte",
+		"./components/CalendarView.svelte": "./src/components/CalendarView.svelte",
+		"./components/CalendarEntryView.svelte": "./src/components/CalendarEntryView.svelte"
 	},
 	"peerDependencies": {
 		"svelte": "^5.0.0",
-		"@hominio/zero": "workspace:*"
+		"@hominio/zero": "workspace:*",
+		"@hominio/brand": "workspace:*"
 	},
 	"files": [
 		"src",

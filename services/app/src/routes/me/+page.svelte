@@ -107,14 +107,20 @@
 			setTimeout(resolve, 400);
 		});
 		
-		// Step 4: Ensure new item is directly below collapsed previous item, starting at top
+		// Step 4: Ensure new item is strictly aligned to top
 		await tick();
+		// Wait a bit more for any internal layout changes/animations
+		await new Promise(resolve => setTimeout(resolve, 100));
+		
 		const newRect = newItemEl.getBoundingClientRect();
 		const newItemTop = newRect.top + window.scrollY;
-		const finalScroll = newItemTop - 100; // 100px padding from top
+		
+		// Calculate target scroll position (top of item with padding)
+		// We use a fixed padding (e.g. 100px) to leave room for header/context
+		const targetScrollPosition = newItemTop - 100;
 		
 		window.scrollTo({ 
-			top: Math.max(0, finalScroll), 
+			top: Math.max(0, targetScrollPosition), 
 			behavior: 'smooth' 
 		});
 	}
@@ -302,7 +308,7 @@
 <div class="relative min-h-screen bg-glass-gradient px-4 pt-[env(safe-area-inset-top)] pb-[calc(6rem+env(safe-area-inset-bottom))] flex flex-col" bind:this={streamContainer}>
 	
 	<!-- Activity Stream -->
-	<div class="flex-1 w-full max-w-3xl mx-auto flex flex-col gap-4 min-h-[50vh] md:px-6 lg:px-8" class:justify-end={activities.length > 0}>
+	<div class="flex-1 w-full max-w-3xl mx-auto flex flex-col gap-2 min-h-[50vh] md:px-6 lg:px-8 justify-start">
 		{#if activities.length === 0}
 			{#if vibesLoading}
 				<div class="flex flex-col items-center justify-center py-20 text-slate-400/50">

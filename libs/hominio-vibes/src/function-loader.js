@@ -13,11 +13,11 @@ import * as editCalendarEntryModule from '../lib/functions/edit-calendar-entry.j
 import * as deleteCalendarEntryModule from '../lib/functions/delete-calendar-entry.js';
 import * as viewCalendarModule from '../lib/functions/view-calendar.js';
 
-// Import UI components from brand package
-import MenuView from '@hominio/brand/vibes/MenuView.svelte';
-import WellnessView from '@hominio/brand/vibes/WellnessView.svelte';
-import CalendarView from '@hominio/brand/vibes/CalendarView.svelte';
-import CalendarEntryView from '@hominio/brand/vibes/CalendarEntryView.svelte';
+// Import UI components from local components
+import MenuView from './components/MenuView.svelte';
+import WellnessView from './components/WellnessView.svelte';
+import CalendarView from './components/CalendarView.svelte';
+import CalendarEntryView from './components/CalendarEntryView.svelte';
 
 const functionModules = {
 	'show-menu': showMenuModule,
@@ -52,7 +52,7 @@ export async function loadFunction(functionId) {
 			throw new Error(`Function ${functionId} missing schema export`);
 		}
 		
-		// For show-menu, show-wellness, and calendar functions, use components from brand package
+		// For show-menu, show-wellness, and calendar functions, use components from vibes package
 		let uiComponentLoader = module.uiComponent;
 		if (functionId === 'show-menu') {
 			uiComponentLoader = () => Promise.resolve({ default: MenuView });

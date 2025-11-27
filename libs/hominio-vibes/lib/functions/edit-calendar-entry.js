@@ -142,8 +142,10 @@ export async function handler(args, context) {
 
 /**
  * UI Component - dynamically loaded Svelte component
+ * Note: UI component loading is handled by function-loader.js
+ * This export is kept for compatibility but is overridden by function-loader.js
  */
-export const uiComponent = () => import('./create-calendar-entry-ui.svelte');
+export const uiComponent = () => Promise.resolve({ default: null });
 
 /**
  * Schema for validation

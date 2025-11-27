@@ -51,6 +51,7 @@
       "name": "@hominio/vibes",
       "version": "0.14.0",
       "peerDependencies": {
+        "@hominio/brand": "workspace:*",
         "@hominio/zero": "workspace:*",
         "svelte": "^5.0.0",
       },

@@ -107,8 +107,10 @@ export async function handler(args, context) {
 
 /**
  * UI Component - dynamically loaded Svelte component
+ * Note: UI component loading is handled by function-loader.js
+ * This export is kept for compatibility but is overridden by function-loader.js
  */
-export const uiComponent = () => import('./show-wellness-ui.svelte');
+export const uiComponent = () => Promise.resolve({ default: null });
 
 /**
  * Generate wellness context string for LLM from agent config data

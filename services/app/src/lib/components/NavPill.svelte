@@ -402,6 +402,14 @@
 			}
 		}
 	});
+
+	// Cleanup voice call service on unmount
+	$effect(() => {
+		return () => {
+			console.log('[NavPill] Cleaning up voice call service');
+			voiceCall.cleanup();
+		};
+	});
 </script>
 
 <NavPill 

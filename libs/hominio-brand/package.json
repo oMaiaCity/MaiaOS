@@ -11,10 +11,6 @@
 		"./components": "./src/components/index.js",
 		"./tokens": "./src/tokens/index.js",
 		"./utilities": "./src/utilities/index.js",
-		"./vibes/MenuView.svelte": "./src/components/vibes/MenuView.svelte",
-		"./vibes/WellnessView.svelte": "./src/components/vibes/WellnessView.svelte",
-		"./vibes/CalendarView.svelte": "./src/components/vibes/CalendarView.svelte",
-		"./vibes/CalendarEntryView.svelte": "./src/components/vibes/CalendarEntryView.svelte",
 		"./legal/privacy-policy": "./src/legal/privacy-policy/+page.svelte",
 		"./legal/legal-notice": "./src/legal/legal-notice/+page.svelte",
 		"./legal/social-media-privacy-policy": "./src/legal/social-media-privacy-policy/+page.svelte"

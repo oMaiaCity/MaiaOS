@@ -43,27 +43,10 @@
 	}
 </script>
 
-<style>
-	:global(.pricing-box) {
-		width: 100px !important;
-		min-width: 100px !important;
-		max-width: 100px !important;
-		background-color: var(--color-secondary-500) !important;
-		color: var(--color-secondary-50) !important;
-	}
-	
-	@media (min-width: 640px) {
-		:global(.pricing-box) {
-			width: 140px !important;
-			min-width: 140px !important;
-			max-width: 140px !important;
-		}
-	}
-</style>
 
 <div>
 	<div class="flex items-center justify-center mb-6">
-		<h2 class="text-xl sm:text-2xl font-bold text-slate-900 text-center">Speisekarte</h2>
+		<h2 class="text-xl sm:text-2xl font-bold text-primary-800 text-center">Speisekarte</h2>
 	</div>
 	
 	{#if category === 'all'}
@@ -71,17 +54,17 @@
 		{#each categories as cat}
 			{#if menu[cat.id] && menu[cat.id].length > 0}
 				<div class="mb-8">
-					<h3 class="mb-4 text-lg sm:text-xl font-bold text-slate-800 text-center">
+					<h3 class="mb-4 text-lg sm:text-xl font-bold text-primary-700 text-center">
 						{cat.name}
 					</h3>
 					<div class="grid grid-cols-1 gap-3 sm:gap-4">
 						{#each menu[cat.id] as item}
 							<GlassCard lifted={true} class="p-0 overflow-hidden flex items-stretch">
 								<div class="flex-1 p-3 sm:p-4 min-w-0 flex-shrink">
-									<h4 class="text-sm sm:text-base font-semibold text-slate-900 mb-1 sm:mb-2">{item.name}</h4>
-									<p class="text-xs sm:text-sm text-slate-600">{item.description}</p>
+									<h4 class="text-sm sm:text-base font-semibold text-primary-800 mb-1 sm:mb-2">{item.name}</h4>
+									<p class="text-xs sm:text-sm text-primary-600">{item.description}</p>
 								</div>
-								<div class="pricing-box px-3 sm:px-6 py-3 sm:py-4 flex flex-col items-end justify-center flex-shrink-0 box-border">
+								<div class="w-[100px] sm:w-[140px] min-w-[100px] sm:min-w-[140px] max-w-[100px] sm:max-w-[140px] bg-secondary-500 text-secondary-50 px-3 sm:px-6 py-3 sm:py-4 flex flex-col items-end justify-center flex-shrink-0 box-border">
 									<div class="text-base sm:text-2xl font-bold whitespace-nowrap text-right leading-tight w-full overflow-hidden">{formatPrice(item.price)}</div>
 									{#if item.type}
 										<div class="text-xs sm:text-sm uppercase tracking-wide mt-0.5 sm:mt-1 text-right leading-tight w-full overflow-hidden">{item.type}</div>
@@ -97,17 +80,17 @@
 		<!-- Show single category -->
 		{#if menu[category] && menu[category].length > 0}
 			<div>
-				<h3 class="mb-4 text-lg sm:text-xl font-bold text-slate-800 text-center">
+				<h3 class="mb-4 text-lg sm:text-xl font-bold text-primary-700 text-center">
 					{categories.find(c => c.id === category)?.name || category}
 				</h3>
 				<div class="grid grid-cols-1 gap-3 sm:gap-4">
 					{#each menu[category] as item}
 						<GlassCard lifted={true} class="p-0 overflow-hidden flex items-stretch">
 							<div class="flex-1 p-3 sm:p-4 min-w-0 flex-shrink">
-								<h4 class="text-sm sm:text-base font-semibold text-slate-900 mb-1 sm:mb-2">{item.name}</h4>
-								<p class="text-xs sm:text-sm text-slate-600">{item.description}</p>
+								<h4 class="text-sm sm:text-base font-semibold text-primary-800 mb-1 sm:mb-2">{item.name}</h4>
+								<p class="text-xs sm:text-sm text-primary-600">{item.description}</p>
 							</div>
-							<div class="pricing-box bg-secondary-500 text-secondary-50 px-3 sm:px-6 py-3 sm:py-4 flex flex-col items-end justify-center flex-shrink-0 box-border">
+							<div class="w-[100px] sm:w-[140px] min-w-[100px] sm:min-w-[140px] max-w-[100px] sm:max-w-[140px] bg-secondary-500 text-secondary-50 px-3 sm:px-6 py-3 sm:py-4 flex flex-col items-end justify-center flex-shrink-0 box-border">
 								<div class="text-base sm:text-2xl font-bold whitespace-nowrap text-right leading-tight w-full overflow-hidden">{formatPrice(item.price)}</div>
 								{#if item.type}
 									<div class="text-xs sm:text-sm uppercase tracking-wide mt-0.5 sm:mt-1 text-right leading-tight w-full overflow-hidden">{item.type}</div>
@@ -118,7 +101,7 @@
 				</div>
 			</div>
 		{:else}
-			<div class="text-center py-8 text-slate-500">
+			<div class="text-center py-8 text-primary-500">
 				Keine Artikel in dieser Kategorie gefunden.
 			</div>
 		{/if}

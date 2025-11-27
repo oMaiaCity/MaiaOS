@@ -20,9 +20,3 @@ export { default as TextWrap } from './TextWrap.svelte';
 export { default as SnakeGame } from './SnakeGame.svelte';
 export { default as ErrorPage } from './ErrorPage.svelte';
 
-// Vibe action components
-export { default as MenuView } from './vibes/MenuView.svelte';
-export { default as WellnessView } from './vibes/WellnessView.svelte';
-export { default as CalendarView } from './vibes/CalendarView.svelte';
-export { default as CalendarEntryView } from './vibes/CalendarEntryView.svelte';
-

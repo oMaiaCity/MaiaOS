@@ -56,7 +56,7 @@
     }
 </script>
 
-<div class="mb-4 transition-all duration-300 w-full">
+<div class="transition-all duration-300 w-full" class:flex={!isSkill} class:justify-center={!isSkill}>
     {#if isSkill && skillId}
         <GlassCard class="overflow-hidden border-l-4 border-l-emerald-400" lifted={true}>
             <!-- Header / Collapsed View -->
@@ -119,18 +119,19 @@
         </GlassCard>
     {:else if isQuery}
         <!-- Compact System Log for Context Loading -->
-        <div class="flex items-center justify-between p-3 mb-2 rounded-lg bg-slate-100/80 border border-slate-200/50 backdrop-blur-sm mx-4 opacity-80 hover:opacity-100 transition-opacity">
-            <div class="flex items-center gap-2.5">
+        <div class="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white/40 border border-white/50 backdrop-blur-md shadow-sm mx-auto">
+            <div class="flex items-center gap-2">
                 <div class="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]"></div>
-                <span class="text-xs font-medium text-slate-600">Loaded context: <span class="text-slate-800 font-semibold capitalize">{vibeId}</span></span>
+                <span class="text-[11px] font-medium text-slate-600">Context: <span class="text-slate-800 font-bold capitalize">{vibeId}</span></span>
             </div>
-            <div class="text-[10px] text-slate-400 tabular-nums">
+            <div class="w-px h-3 bg-slate-300/50"></div>
+            <div class="text-[10px] text-slate-400 tabular-nums font-medium">
                 {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
         </div>
     {:else}
         <!-- Fallback for unknown tools -->
-        <div class="p-3 mb-2 mx-4 text-xs text-slate-500 bg-slate-50 rounded border border-slate-100">
+        <div class="inline-block px-3 py-1 text-[10px] text-slate-500 bg-slate-100/50 rounded-full border border-slate-200/50 mx-auto">
             Unknown tool: {item.toolName}
         </div>
     {/if}
