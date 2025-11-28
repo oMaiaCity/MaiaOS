@@ -19,28 +19,36 @@ RUN cd /temp/dev && bun install --ignore-scripts
 
 # Build the app
 FROM base AS build
-# Copy node_modules from install stage
+# Copy node_modules from install stage (hoisted to root /app/node_modules)
 COPY --from=install /temp/dev/node_modules /app/node_modules
-# Copy workspace structure (libs for @hominio/auth)
+# Copy workspace structure (libs to /app/libs)
 COPY --from=install /temp/dev/libs /app/libs
-# Copy app service files
-COPY services/app/ .
+# Copy app service files preserving directory structure
+# This ensures relative paths (../../libs) work identically to local dev
+COPY services/app/ /app/services/app/
+
 # Sync brand assets to static folder before build
+# Run from root /app so script finds paths as expected (libs/... -> services/app/...)
 RUN node libs/hominio-brand/scripts/sync-assets.js
+
+# Switch to service directory for build
+WORKDIR /app/services/app
+
 # Run svelte-kit sync before build to generate .svelte-kit directory
 # This is required because jsconfig.json extends ./.svelte-kit/tsconfig.json
 # Use bunx to run svelte-kit sync (Bun's equivalent of npx)
 # Fail hard if sync fails - stale cache can cause hard-to-debug runtime errors
-RUN cd /app && bunx svelte-kit sync
-RUN cd /app && bun run build
+RUN bunx svelte-kit sync
+RUN bun run build
 
 # Production image
 FROM base AS release
-COPY --from=install /temp/dev/node_modules node_modules
-COPY --from=build /app/build build
-COPY --from=build /app/package.json .
+WORKDIR /app/services/app
+COPY --from=install /temp/dev/node_modules /app/node_modules
+COPY --from=build /app/services/app/build build
+COPY --from=build /app/services/app/package.json .
 # Copy libs for runtime (needed for @hominio/auth)
-COPY --from=build /app/libs libs
+COPY --from=build /app/libs /app/libs
 
 # Set environment
 ENV NODE_ENV=production
