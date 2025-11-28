@@ -1,3 +1,21 @@
+# [0.16.0](https://github.com/hominiome/hominio/compare/v0.15.2...v0.16.0) (2025-11-28)
+
+
+### Bug Fixes
+
+* add missing dependencies to wallet service ([f1abf64](https://github.com/hominiome/hominio/commit/f1abf64b488b4808c803c9e88c02586b0a1597bd))
+* ensure svelte-kit sync runs before build in Docker ([979e0c4](https://github.com/hominiome/hominio/commit/979e0c43ff940d6ef6d63b55f4c571a3b61adbec))
+
+
+### Features
+
+* add context injection events to activity stream UI ([4586a6c](https://github.com/hominiome/hominio/commit/4586a6ced18013f58658132ad670af6e3cf907ee))
+
+
+### Reverts
+
+* remove context injection event UI logic ([6a96534](https://github.com/hominiome/hominio/commit/6a965344c4b1eb3f3d8ec23e36a4abf5d076a005))
+
 ## [0.15.2](https://github.com/hominiome/hominio/compare/v0.15.1...v0.15.2) (2025-11-28)
 
 
