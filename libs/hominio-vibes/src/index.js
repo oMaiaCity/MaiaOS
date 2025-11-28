@@ -54,9 +54,6 @@ export {
 	registerContextFormatter
 } from './context-injection-manager.js';
 
-// Export UI components
-export { default as MenuView } from './components/MenuView.svelte';
-export { default as WellnessView } from './components/WellnessView.svelte';
-// Calendar views are now in @hominio/brand/views - re-export for compatibility
-export { CalendarView, CalendarEntryView } from '@hominio/brand/views';
+// Export UI components - re-export from @hominio/brand/views
+export { MenuView, WellnessView, CalendarView, CalendarEntryView } from '@hominio/brand/views';
 
