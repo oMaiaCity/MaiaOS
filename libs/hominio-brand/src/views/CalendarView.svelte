@@ -138,7 +138,7 @@
 <div class="w-full max-w-3xl mx-auto p-4 sm:p-6">
 	<!-- Header -->
 	<div class="mb-12 text-center">
-		<h2 class="text-3xl sm:text-4xl font-extrabold mb-2 bg-gradient-to-br from-secondary-400 to-secondary-500 bg-clip-text text-transparent tracking-tight">
+		<h2 class="text-3xl sm:text-4xl font-extrabold mb-2 bg-gradient-to-br from-[var(--color-secondary-400)] to-[var(--color-secondary-500)] bg-clip-text text-transparent tracking-tight">
 			Dein Kalender
 		</h2>
 	</div>
@@ -151,16 +151,16 @@
 				<div class="w-full relative">
 					<!-- Day Header - Organic, no borders -->
 					<div class="flex items-center justify-between mb-6">
-						<h3 class="text-2xl font-bold {isToday ? 'text-secondary-500' : 'text-slate-800'} m-0 flex items-center gap-3">
+						<h3 class="text-2xl font-bold {isToday ? 'text-[var(--color-secondary-500)]' : 'text-slate-800'} m-0 flex items-center gap-3">
 							{formatDate(dateObj)}
 							{#if isToday}
-								<span class="text-xs bg-gradient-to-r from-secondary-400 to-secondary-500 text-white px-3 py-1 rounded-full font-bold tracking-wider uppercase shadow-sm">
+								<span class="text-xs bg-gradient-to-r from-[var(--color-secondary-400)] to-[var(--color-secondary-500)] text-white px-3 py-1 rounded-full font-bold tracking-wider uppercase shadow-sm">
 									HEUTE
 								</span>
 							{/if}
 						</h3>
 						{#if dayEntries.length > 0}
-							<span class="text-sm text-secondary-600 font-medium bg-gradient-to-r from-secondary-50 to-secondary-100/50 px-4 py-1.5 rounded-full shadow-sm">
+							<span class="text-sm text-[var(--color-secondary-600)] font-medium bg-gradient-to-r from-[#e6f7f9] to-[#cceff380] px-4 py-1.5 rounded-full shadow-sm">
 								{dayEntries.length} {dayEntries.length === 1 ? 'Termin' : 'Termine'}
 							</span>
 						{/if}
@@ -183,7 +183,7 @@
 										<h4 class="text-xl font-bold text-slate-800 mb-3 leading-tight">{entry.title}</h4>
 										
 										<div class="flex items-center gap-3 mb-3">
-											<span class="inline-flex items-center gap-2 text-xs text-secondary-600 bg-gradient-to-r from-secondary-500/10 to-secondary-500/5 px-3 py-1.5 rounded-lg font-semibold">
+											<span class="inline-flex items-center gap-2 text-xs text-[var(--color-secondary-600)] bg-gradient-to-r from-[#2da6b41a] to-[#2da6b40d] px-3 py-1.5 rounded-lg font-semibold">
 												<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 													<circle cx="12" cy="12" r="10"></circle>
 													<polyline points="12 6 12 12 16 14"></polyline>

@@ -89,24 +89,24 @@
 		<GlassCard class="p-0 overflow-hidden border-0 bg-white/80 backdrop-blur-xl shadow-lg shadow-secondary-500/5 rounded-2xl mb-6 animate-slide-up" lifted={true}>
 			<div class="flex flex-row items-stretch">
 				<!-- Time Column - More prominent secondary gradient background -->
-				<div class="flex flex-col items-center justify-center py-8 px-6 bg-gradient-to-br from-secondary-400/15 via-secondary-500/10 to-secondary-600/5 min-w-[100px] border-r border-secondary-200/30">
-					<span class="text-2xl font-extrabold text-secondary-700 leading-none mb-1.5">{formatTime(resolvedEntry.time)}</span>
-					<div class="w-0.5 h-6 bg-gradient-to-b from-secondary-400/50 via-secondary-500/30 to-secondary-600/20 my-2 rounded-full"></div>
-					<span class="text-sm font-semibold text-secondary-600">{calculateEndTime(resolvedEntry.time, resolvedEntry.duration)}</span>
+				<div class="flex flex-col items-center justify-center py-8 px-6 bg-gradient-to-br from-[#45b8c826] via-[#2da6b41a] to-[#2585900d] min-w-[100px] border-r border-[#99dfe74d]">
+					<span class="text-2xl font-extrabold text-[var(--color-secondary-700)] leading-none mb-1.5">{formatTime(resolvedEntry.time)}</span>
+					<div class="w-0.5 h-6 bg-gradient-to-b from-[#45b8c880] via-[#2da6b44d] to-[#25859033] my-2 rounded-full"></div>
+					<span class="text-sm font-semibold text-[var(--color-secondary-600)]">{calculateEndTime(resolvedEntry.time, resolvedEntry.duration)}</span>
 				</div>
 				
 				<!-- Details Column -->
 				<div class="flex-1 py-6 px-6 flex flex-col justify-center">
 					<div class="flex items-start justify-between mb-3 gap-3">
 						<h3 class="text-xl font-bold text-slate-800 m-0 leading-tight flex-1">{resolvedEntry.title}</h3>
-						<span class="text-[0.65rem] bg-gradient-to-r from-secondary-500 to-secondary-600 text-white px-2.5 py-1 rounded-full font-bold tracking-wider uppercase flex-shrink-0 shadow-sm">
+						<span class="text-[0.65rem] bg-gradient-to-r from-[var(--color-secondary-500)] to-[var(--color-secondary-600)] text-white px-2.5 py-1 rounded-full font-bold tracking-wider uppercase flex-shrink-0 shadow-sm">
 							{badgeText}
 						</span>
 					</div>
 					
 					<div class="flex items-center gap-4 mb-2">
 						<span class="text-sm text-slate-600 font-medium">{formatDate(resolvedEntry.date)}</span>
-						<span class="inline-flex items-center gap-1.5 text-xs text-secondary-600 bg-gradient-to-r from-secondary-500/15 to-secondary-500/8 px-2.5 py-1 rounded-md font-semibold">
+						<span class="inline-flex items-center gap-1.5 text-xs text-[var(--color-secondary-600)] bg-gradient-to-r from-[#2da6b426] to-[#2da6b414] px-2.5 py-1 rounded-md font-semibold">
 							<svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 								<circle cx="12" cy="12" r="10"></circle>
 								<polyline points="12 6 12 12 16 14"></polyline>
@@ -124,9 +124,9 @@
 		
 		<!-- Success Indicator - Compact below card -->
 		<div class="text-center">
-			<div class="inline-flex items-center gap-2 text-sm text-secondary-600 font-medium">
-				<div class="w-5 h-5 bg-gradient-to-br from-secondary-400/20 to-secondary-500/15 rounded-full flex items-center justify-center">
-					<svg class="w-3 h-3 text-secondary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+			<div class="inline-flex items-center gap-2 text-sm text-[var(--color-secondary-600)] font-medium">
+				<div class="w-5 h-5 bg-gradient-to-br from-[#45b8c833] to-[#2da6b426] rounded-full flex items-center justify-center">
+					<svg class="w-3 h-3 text-[var(--color-secondary-500)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
 					</svg>
 				</div>
