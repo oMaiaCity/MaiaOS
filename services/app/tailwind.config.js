@@ -6,6 +6,7 @@ export default {
 	content: [
 		'./src/**/*.{html,js,svelte,ts}',
 		'./src-tauri/**/*.{html,js,svelte,ts}',
+		'../../libs/hominio-brand/src/**/*.{html,js,svelte,ts}'
 	],
 };
 
