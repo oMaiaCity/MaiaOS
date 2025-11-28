@@ -17,17 +17,17 @@
     
     
     // State for collapsing - queries default to closed, skills default to expanded
-    // Initialize based on isQuery and isExpanded props
-    // Use $derived to compute initial value reactively
-    const initialExpanded = $derived(isQuery ? false : isExpanded);
-    let expanded = $state(initialExpanded);
+    // Initialize state - will be synced via effect below
+    let expanded = $state(false);
     
     // Profile image state
     let avatarUrl = $state<string | null>(null);
     let avatarLoading = $state(true);
     
+    // Sync expanded state with props and isQuery derived value
     $effect(() => {
-        expanded = isExpanded;
+        // Queries default to closed, skills default to expanded (or isExpanded prop)
+        expanded = isQuery ? false : isExpanded;
     });
 
 	// Load vibe avatar
