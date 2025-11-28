@@ -62,7 +62,9 @@
 							<GlassCard lifted={true} class="flex overflow-hidden items-stretch p-0 rounded-2xl border-0 shadow-lg backdrop-blur-md bg-white/70">
 								<div class="flex flex-col flex-1 flex-shrink justify-center p-4 min-w-0 sm:p-5">
 									<h4 class="mb-1.5 text-base font-bold leading-tight sm:text-lg text-slate-800 sm:mb-2">{item.name}</h4>
-									<p class="text-xs leading-relaxed sm:text-sm text-slate-600">{item.description}</p>
+									{#if item.description}
+										<p class="text-xs leading-relaxed sm:text-sm text-slate-600">{item.description}</p>
+									{/if}
 								</div>
 								<div class="w-[120px] sm:w-[160px] min-w-[120px] sm:min-w-[160px] max-w-[120px] sm:max-w-[160px] bg-secondary-500 border-l-2 border-secondary-400/40 px-4 sm:px-6 py-4 sm:py-5 flex flex-col items-end justify-center flex-shrink-0">
 									<div class="mb-1 text-lg font-extrabold text-right text-white whitespace-nowrap sm:text-2xl">{formatPrice(item.price)}</div>
@@ -88,7 +90,9 @@
 						<GlassCard lifted={true} class="flex overflow-hidden items-stretch p-0 rounded-2xl border-0 shadow-lg backdrop-blur-md bg-white/70">
 							<div class="flex flex-col flex-1 flex-shrink justify-center p-4 min-w-0 sm:p-5">
 								<h4 class="mb-1.5 text-base font-bold leading-tight sm:text-lg text-slate-800 sm:mb-2">{item.name}</h4>
-								<p class="text-xs leading-relaxed sm:text-sm text-slate-600">{item.description}</p>
+								{#if item.description}
+									<p class="text-xs leading-relaxed sm:text-sm text-slate-600">{item.description}</p>
+								{/if}
 							</div>
 							<div class="w-[120px] sm:w-[160px] min-w-[120px] sm:min-w-[160px] max-w-[120px] sm:max-w-[160px] bg-secondary-500 border-l-2 border-secondary-400/40 px-4 sm:px-6 py-4 sm:py-5 flex flex-col items-end justify-center flex-shrink-0">
 								<div class="mb-1 text-lg font-extrabold text-right text-white whitespace-nowrap sm:text-2xl">{formatPrice(item.price)}</div>
