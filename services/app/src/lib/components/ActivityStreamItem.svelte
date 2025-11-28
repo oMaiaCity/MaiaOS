@@ -8,6 +8,7 @@
     // Derived state
 	const isSkill = $derived(item.toolName === 'actionSkill');
 	const isQuery = $derived(item.toolName === 'queryVibeContext' || item.toolName === 'queryDataContext');
+	const isContextInjection = $derived(item.toolName === 'contextInjection');
     
     // Extract skill info
     // args structure might vary slightly based on how it was passed, handling both flat and nested
@@ -16,7 +17,7 @@
     const skillId = $derived(args.skillId);
     
     
-    // State for collapsing - queries default to closed, skills default to expanded
+    // State for collapsing - queries and injections default to closed, skills default to expanded
     // Initialize state - will be synced via effect below
     let expanded = $state(false);
     
@@ -24,10 +25,10 @@
     let avatarUrl = $state<string | null>(null);
     let avatarLoading = $state(true);
     
-    // Sync expanded state with props and isQuery derived value
+    // Sync expanded state with props and derived values
     $effect(() => {
-        // Queries default to closed, skills default to expanded (or isExpanded prop)
-        expanded = isQuery ? false : isExpanded;
+        // Queries and injections default to closed, skills default to expanded (or isExpanded prop)
+        expanded = (isQuery || isContextInjection) ? false : isExpanded;
     });
 
 	// Load vibe avatar
@@ -179,6 +180,77 @@
                                 No context or result data available
                             </div>
                         {/if}
+                    </div>
+                </div>
+            {/if}
+        </GlassCard>
+    {:else if isContextInjection}
+        <!-- Expandable Context Injection Item -->
+        <GlassCard class="overflow-hidden border-l-4 border-l-purple-400" lifted={true}>
+            <!-- Header / Collapsed View -->
+            <button 
+                class="flex justify-between items-center px-4 py-2 w-full text-left border-b transition-colors cursor-pointer border-slate-100/10 hover:bg-slate-50/30"
+                onclick={handleToggle}
+            >
+                <div class="flex gap-3 items-center">
+                    <div class="w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></div>
+                    <div class="flex items-center gap-2">
+                        {#if item.status === 'pending'}
+                            <div class="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></div>
+                        {:else if item.status === 'success'}
+                            <div class="w-1.5 h-1.5 rounded-full bg-green-400"></div>
+                        {:else if item.status === 'error'}
+                            <div class="w-1.5 h-1.5 rounded-full bg-red-400"></div>
+                        {/if}
+                        <span class="text-[11px] font-medium text-slate-600">
+                            Inject: <span class="font-bold text-slate-800">{item.injectionLabel || 'context'}</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="flex gap-3 items-center">
+                    <div class="text-[10px] text-slate-400 tabular-nums font-medium">
+                        {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <div class="transition-transform duration-300 text-slate-400" class:rotate-180={expanded}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
+                </div>
+            </button>
+
+            <!-- Expanded Content - Show Injection Details -->
+            {#if expanded}
+                <div transition:slide={{ duration: 300 }} class="p-4 bg-slate-50/30">
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Injection Details</h4>
+                            <div class="p-3 text-xs rounded border bg-slate-50 border-slate-200 space-y-1">
+                                <div><span class="font-semibold">Type:</span> {item.injectionType || 'unknown'}</div>
+                                <div><span class="font-semibold">Label:</span> {item.injectionLabel || 'unknown'}</div>
+                                <div><span class="font-semibold">Status:</span> <span class:text-green-600={item.status === 'success'} class:text-yellow-600={item.status === 'pending'} class:text-red-600={item.status === 'error'}>{item.status}</span></div>
+                                <div><span class="font-semibold">Turn Complete:</span> {item.turnComplete ? 'true' : 'false'}</div>
+                            </div>
+                        </div>
+                        {#if item.contextString}
+                            <div>
+                                <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Injected Content</h4>
+                                <pre class="overflow-x-auto overflow-y-auto p-3 max-h-96 text-xs whitespace-pre-wrap rounded border bg-slate-50 border-slate-200">{item.contextString}</pre>
+                            </div>
+                        {:else if item.status === 'pending'}
+                            <div class="py-2 text-xs italic text-center text-slate-400">
+                                Waiting for injection to complete...
+                            </div>
+                        {/if}
+                        <div>
+                            <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Full Event Data (JSON)</h4>
+                            <pre class="overflow-x-auto overflow-y-auto p-3 max-h-96 text-xs rounded border bg-slate-50 border-slate-200">{JSON.stringify({
+                                type: item.injectionType,
+                                label: item.injectionLabel,
+                                status: item.status,
+                                turnComplete: item.turnComplete,
+                                timestamp: new Date(item.timestamp).toISOString(),
+                                contextLength: item.contextString?.length || 0
+                            }, null, 2)}</pre>
+                        </div>
                     </div>
                 </div>
             {/if}

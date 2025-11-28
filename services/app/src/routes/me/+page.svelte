@@ -24,6 +24,9 @@
 		error?: string;
 		isExpanded: boolean;
 		contextString?: string; // Ingested context string for queryVibeContext/queryDataContext
+		injectionType?: 'vibe' | 'data' | 'repeated'; // For context injection events
+		injectionLabel?: string; // Label like "vibe context (charles)" or "data context (menu)"
+		turnComplete?: boolean; // Whether the injection marked the turn as complete
 	};
 
 	let activities = $state<ActivityItem[]>([]);
@@ -197,9 +200,113 @@
 
 	// Handle log messages from voice service
 	function handleVoiceLog(message: string, context?: string) {
-		// Log messages are for context injection display
-		// They can be shown in the activity stream if needed
+		// Parse context injection events from log messages
+		// Format: [ContextInjection] timestamp - Injecting vibe context (charles)...
+		// Format: [ContextInjection] timestamp - Injecting data context (menu)...
+		// Format: [ContextInjection] timestamp - Injecting repeated prompt...
+		// Format: [ContextInjection] timestamp - vibe context (charles) injected successfully
+		
+		const injectionMatch = message.match(/\[ContextInjection\].*?Injecting\s+(.+?)(?:\s+\((.+?)\))?\.\.\./);
+		const successMatch = message.match(/\[ContextInjection\].*?(.+?)\s+injected successfully/);
+		
+		if (injectionMatch) {
+			// Starting injection
+			const [, label, identifier] = injectionMatch;
+			let injectionType: 'vibe' | 'data' | 'repeated' | undefined;
+			let injectionLabel = label.trim();
+			
+			if (label.includes('vibe context')) {
+				injectionType = 'vibe';
+				injectionLabel = `vibe context${identifier ? ` (${identifier})` : ''}`;
+			} else if (label.includes('data context')) {
+				injectionType = 'data';
+				injectionLabel = `data context${identifier ? ` (${identifier})` : ''}`;
+			} else if (label.includes('repeated prompt')) {
+				injectionType = 'repeated';
+				injectionLabel = 'repeated prompt';
+			}
+			
+			if (injectionType) {
+				handleContextInjection({
+					type: injectionType,
+					label: injectionLabel,
+					context: context || '',
+					status: 'pending',
+					turnComplete: injectionType !== 'repeated' // repeated prompt has turnComplete=false
+				});
+			}
+		} else if (successMatch && context) {
+			// Injection completed successfully - update existing pending item
+			const [, label] = successMatch;
+			const identifierMatch = label.match(/\((.+?)\)/);
+			const identifier = identifierMatch ? identifierMatch[1] : undefined;
+			
+			// Find and update the most recent pending injection with matching label
+			const pendingInjections = activities
+				.map((item, index) => ({ item, index }))
+				.filter(({ item }) => 
+					item.toolName === 'contextInjection' && 
+					item.status === 'pending' &&
+					(item.injectionLabel?.includes(label.trim()) || 
+					 (identifier && item.injectionLabel?.includes(identifier)))
+				);
+			
+			if (pendingInjections.length > 0) {
+				const { index } = pendingInjections[pendingInjections.length - 1]; // Most recent
+				activities = activities.map((item, i) => {
+					if (i === index) {
+						return {
+							...item,
+							status: 'success' as const,
+							contextString: context
+						};
+					}
+					return item;
+				});
+			}
+		}
+		
 		console.log('[Me] Voice log:', message, context ? `(context: ${context.substring(0, 100)}...)` : '');
+	}
+	
+	// Handle context injection events
+	function handleContextInjection(details: {
+		type: 'vibe' | 'data' | 'repeated';
+		label: string;
+		context: string;
+		status: 'pending' | 'success';
+		turnComplete: boolean;
+	}) {
+		const id = nanoid();
+		const timestamp = Date.now();
+		
+		const newItem: ActivityItem = {
+			id,
+			timestamp,
+			toolName: 'contextInjection',
+			args: {
+				type: details.type,
+				label: details.label
+			},
+			status: details.status,
+			isExpanded: false, // Collapsed by default
+			contextString: details.status === 'success' ? details.context : undefined,
+			injectionType: details.type,
+			injectionLabel: details.label,
+			turnComplete: details.turnComplete
+		};
+		
+		// Collapse previous items
+		activities = activities.map(item => ({
+			...item,
+			isExpanded: false
+		}));
+		
+		// Add new item to bottom
+		activities = [...activities, newItem];
+		
+		// Scroll to position new activity properly
+		scrollToNewActivity(id);
 	}
 
 	function updateActivityStatus(id: string, status: 'success' | 'error', result?: any, error?: string) {
