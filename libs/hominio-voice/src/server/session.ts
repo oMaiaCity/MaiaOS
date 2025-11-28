@@ -194,10 +194,11 @@ export async function createVoiceSessionManager(
 			onLog
 		});
 
-		// Only inject repeated prompt after actionSkill calls (not after query calls)
-		// Query calls (queryVibeContext, queryDataContext) are background operations
-		// that shouldn't trigger AI responses - only actionSkill needs a response
-		if (name === 'actionSkill') {
+		// Inject repeated prompt to continue the conversation flow
+		// After queryDataContext: inject with turnComplete=false to nudge AI to continue with actionSkill
+		// After actionSkill: inject with turnComplete=false to continue the conversation
+		// After queryVibeContext: don't inject (background operation, no follow-up needed)
+		if (name === 'queryDataContext' || name === 'actionSkill') {
 			try {
 				const repeatedPrompt = await buildRepeatedPrompt();
 				await contextInjection.injectRepeatedPrompt(repeatedPrompt);
