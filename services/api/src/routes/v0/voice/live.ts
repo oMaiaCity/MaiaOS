@@ -58,7 +58,7 @@ export const voiceLiveHandler = {
             console.warn("[voice/live] Could not access upgrade request, attempting to authenticate without it");
         }
 
-        // Extract vibeId from query params if present (legacy support)
+        // Extract vibeId from query params if present
         let initialVibeId: string | null = null;
         if (request) {
             const url = new URL(request.url);
@@ -274,6 +274,8 @@ export const voiceLiveHandler = {
                     onmessage: async (message: any) => {
                         // Forward Google messages to client
                         try {
+                            console.log('[voice/live] 📨 Message keys:', Object.keys(message));
+
                             // Check for user transcripts in clientContent
                             if (message.clientContent?.userTurn) {
                                 const userParts = message.clientContent.userTurn.parts || [];
@@ -353,6 +355,11 @@ export const voiceLiveHandler = {
 
                                 // Process each unique function call exactly once
                                 for (const functionCall of functionCalls) {
+                                    console.log(`[voice/live] 🔧 Function call received from Google:`, {
+                                        name: functionCall.name,
+                                        id: functionCall.id,
+                                        args: functionCall.args
+                                    });
 
                                     // Centralized tool call handler
                                     let response: any = { error: "Unknown tool" };
@@ -438,13 +445,15 @@ export const voiceLiveHandler = {
                                     }
 
                                     // Send tool call to frontend (always send, but conditionally include contextString/result)
-                                    ws.send(JSON.stringify({
+                                    const toolCallMessage = {
                                         type: "toolCall",
                                         toolName: functionCall.name,
                                         args: functionCall.args || {},
                                         ...(contextString !== undefined && { contextString }),
                                         ...(resultData !== undefined && { result: resultData })
-                                    }));
+                                    };
+                                    console.log(`[voice/live] 🔧 Sending tool call to frontend:`, toolCallMessage);
+                                    ws.send(JSON.stringify(toolCallMessage));
 
                                     // Send response back to Google
                                     session.sendToolResponse({
@@ -489,10 +498,132 @@ export const voiceLiveHandler = {
                                     data: { setupComplete: message.setupComplete },
                                 }));
                             } else if (message.toolCall) {
-                                // NOTE: Tool calls are already handled via serverContent.modelTurn.parts above
-                                // This path is intentionally empty to prevent duplicate processing
-                                // Tool calls come through serverContent.modelTurn.parts, not as separate toolCall messages
-                                // All tool call handling code has been removed to prevent duplicates
+                                console.log(`[voice/live] 🔧 RECEIVED TOP-LEVEL TOOL CALL:`, JSON.stringify(message.toolCall));
+
+                                const functionCalls = message.toolCall.functionCalls || [];
+
+                                // Process tool calls from top-level message
+                                for (const functionCall of functionCalls) {
+                                    console.log(`[voice/live] 🔧 Function call received from Google (Top-Level):`, {
+                                        name: functionCall.name,
+                                        id: functionCall.id,
+                                        args: functionCall.args
+                                    });
+
+                                    // Centralized tool call handler - logic duplicated for now, should be refactored
+                                    let response: any = { error: "Unknown tool" };
+                                    let contextString: string | undefined = undefined;
+                                    let resultData: any = undefined;
+
+                                    if (functionCall.name === "get_name") {
+                                        response = { name: "hominio" };
+                                    } else if (functionCall.name === "queryDataContext") {
+                                        const { schemaId, params = {} } = functionCall.args || {};
+                                        try {
+                                            const { handleQueryDataContext } = await import('@hominio/vibes');
+                                            const result = await handleQueryDataContext({
+                                                schemaId,
+                                                params,
+                                                injectFn: (content) => {
+                                                    contextString = content.turns || '';
+                                                    session.sendClientContent(content);
+                                                }
+                                            });
+
+                                            response = result.success ? {
+                                                success: true,
+                                                message: result.message || `Loaded ${schemaId} data context`,
+                                                schemaId: schemaId
+                                            } : {
+                                                success: false,
+                                                error: result.error || `Failed to load ${schemaId} data context`
+                                            };
+                                            resultData = result.success ? {
+                                                success: true,
+                                                message: result.message || `Loaded ${schemaId} data context`,
+                                                schemaId: schemaId,
+                                                data: result.data || null
+                                            } : {
+                                                success: false,
+                                                error: result.error || `Failed to load ${schemaId} data context`
+                                            };
+                                        } catch (err) {
+                                            console.error(`[voice/live] Failed to query data context:`, err);
+                                            response = { success: false, error: `Failed to query data context: ${err instanceof Error ? err.message : 'Unknown error'}` };
+                                            resultData = { success: false, error: `Failed to query data context: ${err instanceof Error ? err.message : 'Unknown error'}` };
+                                        }
+                                    } else if (functionCall.name === "queryVibeContext") {
+                                        const vibeId = functionCall.args?.vibeId || 'unknown';
+                                        try {
+                                            if (!activeVibeIds.includes(vibeId)) {
+                                                activeVibeIds.push(vibeId);
+                                            }
+                                            if (!vibeConfigs[vibeId]) {
+                                                vibeConfigs[vibeId] = await loadVibeConfig(vibeId);
+                                            }
+
+                                            const { buildVibeContextString, getVibeTools } = await import('@hominio/vibes');
+                                            contextString = await buildVibeContextString(vibeId);
+                                            await getVibeTools(vibeId);
+
+                                            session.sendClientContent({
+                                                turns: contextString,
+                                                turnComplete: true,
+                                            });
+
+                                            response = {
+                                                success: true,
+                                                message: `Loaded ${vibeId} vibe context`,
+                                                vibeId: vibeId
+                                            };
+                                            resultData = {
+                                                success: true,
+                                                message: `Loaded ${vibeId} vibe context`,
+                                                vibeId: vibeId,
+                                                contextConfig: vibeConfigs[vibeId] || null
+                                            };
+                                        } catch (err) {
+                                            console.error(`[voice/live] Failed to load vibe context:`, err);
+                                            response = { success: false, error: `Failed to load vibe context: ${vibeId}` };
+                                            resultData = { success: false, error: `Failed to load vibe context: ${vibeId}` };
+                                        }
+                                    } else if (functionCall.name === "actionSkill") {
+                                        const { vibeId, skillId } = functionCall.args || {};
+                                        response = { success: true, message: `Executing skill ${skillId} for vibe ${vibeId}`, vibeId, skillId };
+                                        resultData = response;
+                                    }
+
+                                    // Send tool call to frontend
+                                    const toolCallMessage = {
+                                        type: "toolCall",
+                                        toolName: functionCall.name,
+                                        args: functionCall.args || {},
+                                        ...(contextString !== undefined && { contextString }),
+                                        ...(resultData !== undefined && { result: resultData })
+                                    };
+                                    console.log(`[voice/live] 🔧 Sending tool call to frontend:`, toolCallMessage);
+                                    ws.send(JSON.stringify(toolCallMessage));
+
+                                    // Send response back to Google
+                                    session.sendToolResponse({
+                                        functionResponses: [{
+                                            id: functionCall.id,
+                                            name: functionCall.name,
+                                            response: { result: response }
+                                        }]
+                                    });
+
+                                    // Inject repeatedPrompt
+                                    try {
+                                        const repeatedPrompt = await buildRepeatedPrompt();
+                                        session.sendClientContent({
+                                            turns: repeatedPrompt,
+                                            turnComplete: false
+                                        });
+                                    } catch (err) {
+                                        console.error(`[voice/live] Failed to inject repeatedPrompt:`, err);
+                                    }
+                                }
                             }
                         } catch (error) {
                             console.error("[voice/live] Error forwarding message to client:", error);

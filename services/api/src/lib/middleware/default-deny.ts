@@ -24,6 +24,12 @@ export const defaultDenyPlugin = new Elysia({ name: 'defaultDeny' })
       return;
     }
     
+    // Skip voice routes (WebSocket upgrades handled internally or via allow plugin)
+    // This is a failsafe in case the route-level allow() doesn't propagate before this global handler
+    if (path.startsWith('/api/v0/voice/')) {
+      return;
+    }
+    
     // WebSocket upgrades are handled in global onBeforeHandle (before this plugin)
     // This plugin only handles HTTP routes
     

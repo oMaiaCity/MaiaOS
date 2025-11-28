@@ -9,7 +9,7 @@ export type ToolCallHandler = (toolName: string, args: any) => void;
 
 export function createVoiceCallService(options?: { 
 	onToolCall?: ToolCallHandler;
-	initialAgentId?: string; // Agent ID to load context for at conversation start
+	initialVibeId?: string; // Vibe ID to load context for at conversation start
 }) {
 	// Reactive state using Svelte 5 runes
 	let status = $state<ConnectionStatus>('disconnected');
@@ -164,6 +164,17 @@ export function createVoiceCallService(options?: {
 
 		try {
 			const ctx = outputAudioContext;
+			
+			// CRITICAL: Resume audio context if suspended (browsers can suspend contexts)
+			// Non-blocking resume - don't await, just trigger it
+			// This prevents delay while still ensuring audio plays
+			if (ctx.state === 'suspended') {
+				console.log('[VoiceCall] Audio context suspended, resuming (non-blocking)...');
+				ctx.resume().catch(err => {
+					console.error('[VoiceCall] Failed to resume audio context:', err);
+				});
+			}
+			
 			nextStartTime = Math.max(nextStartTime, ctx.currentTime);
 
 			const audioBuffer = await decodeAudioData(
@@ -193,7 +204,7 @@ export function createVoiceCallService(options?: {
 	}
 
 	// Connect to WebSocket
-	async function connect(agentId?: string) {
+	async function connect(vibeId?: string) {
 		if (ws && ws.readyState === WebSocket.OPEN) {
 			console.log('[VoiceCall] Already connected');
 			return;
@@ -204,10 +215,10 @@ export function createVoiceCallService(options?: {
 
 		try {
 			const apiUrl = getApiUrl();
-			// Use provided agentId or fall back to initialAgentId from options
-			const effectiveAgentId = agentId || options?.initialAgentId;
-			const wsUrl = effectiveAgentId 
-				? `${apiUrl}/api/v0/voice/live?agentId=${encodeURIComponent(effectiveAgentId)}`
+			// Use provided vibeId or fall back to initialVibeId from options
+			const effectiveVibeId = vibeId || options?.initialVibeId;
+			const wsUrl = effectiveVibeId 
+				? `${apiUrl}/api/v0/voice/live?vibeId=${encodeURIComponent(effectiveVibeId)}`
 				: `${apiUrl}/api/v0/voice/live`;
 			
 			console.log('[VoiceCall] Connecting to WebSocket:', wsUrl);
@@ -251,6 +262,8 @@ export function createVoiceCallService(options?: {
 							break;
 
 						case 'toolCall':
+							console.log('[VoiceCall] 🔧 Tool call received:', JSON.stringify(message, null, 2));
+							
 							// Tool calls don't interrupt audio playback
 							// Audio continues playing while tool calls are processed
 							// Only update AI state if no audio is currently playing
@@ -275,28 +288,37 @@ export function createVoiceCallService(options?: {
 								toolArgs = message.args || {};
 								contextString = message.contextString;
 								result = message.result;
+								console.log('[VoiceCall] 🔧 Parsed tool call (Format 1):', { toolName, toolArgs });
 							}
 							// Format 2: Function calls array (from Google Live API)
 							else if (message.data?.functionCalls && Array.isArray(message.data.functionCalls) && message.data.functionCalls.length > 0) {
 								const functionCall = message.data.functionCalls[0];
 								toolName = functionCall.name;
 								toolArgs = functionCall.args || {};
+								console.log('[VoiceCall] 🔧 Parsed tool call (Format 2):', { toolName, toolArgs });
 							}
 							// Format 3: Single function call object
 							else if (message.data?.name) {
 								toolName = message.data.name;
 								toolArgs = message.data.args || {};
+								console.log('[VoiceCall] 🔧 Parsed tool call (Format 3):', { toolName, toolArgs });
 							}
 							
 							if (options?.onToolCall && toolName) {
 								// Call handler once with all parameters
 								try {
+									console.log('[VoiceCall] 🔧 Calling tool call handler:', { toolName, toolArgs });
 									options.onToolCall(toolName, toolArgs, contextString, result);
+									console.log('[VoiceCall] 🔧 Tool call handler completed');
 								} catch (toolErr) {
-									console.error('[VoiceCall] Tool call handler error:', toolErr);
+									console.error('[VoiceCall] ❌ Tool call handler error:', toolErr);
 								}
 							} else {
-								console.warn('[VoiceCall] Tool call received but no handler or invalid format:', message);
+								console.warn('[VoiceCall] ⚠️ Tool call received but no handler or invalid format:', {
+									hasHandler: !!options?.onToolCall,
+									toolName,
+									message
+								});
 							}
 							break;
 
@@ -384,13 +406,13 @@ export function createVoiceCallService(options?: {
 	}
 
 	// Start call
-	async function startCall(agentId?: string) {
+	async function startCall(vibeId?: string) {
 		isWaitingForPermission = true;
 		try {
 			await resumeAudioContexts();
-			// Use provided agentId or fall back to initialAgentId from options
-			const effectiveAgentId = agentId || options?.initialAgentId;
-			await connect(effectiveAgentId);
+			// Use provided vibeId or fall back to initialVibeId from options
+			const effectiveVibeId = vibeId || options?.initialVibeId;
+			await connect(effectiveVibeId);
 			isWaitingForPermission = false;
 		} catch (err) {
 			console.error('[VoiceCall] Failed to start call:', err);
@@ -452,4 +474,3 @@ export function createVoiceCallService(options?: {
 		sendTextMessage,
 	};
 }
-

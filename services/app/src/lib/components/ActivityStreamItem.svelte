@@ -12,7 +12,7 @@
     // Extract skill info
     // args structure might vary slightly based on how it was passed, handling both flat and nested
     const args = $derived(item.args || {});
-    const vibeId = $derived(args.vibeId || args.agentId);
+    const vibeId = $derived(args.vibeId);
     const skillId = $derived(args.skillId);
     
     

@@ -18,7 +18,7 @@ import {
  * @param {Object} context - Function context
  * @param {string} context.dataContext - Data context string (includes full calendar state)
  * @param {string} [context.userId] - Current user ID
- * @param {string} context.agentId - Agent ID
+ * @param {string} context.vibeId - Vibe ID
  * @returns {Promise<Object>}
  */
 export async function handler(args, context) {

@@ -16,7 +16,7 @@
 	 * @property {boolean} isWaitingForPermission - Whether waiting for permission
 	 * @property {Function} onStartCall - Start call handler
 	 * @property {Function} onStopCall - Stop call handler
-	 * @property {string|null} agentAvatar - Optional agent avatar image path (shows instead of logo when in agent context)
+	 * @property {string|null} vibeAvatar - Optional vibe avatar image path (shows instead of logo when in vibe context)
 	 */
 	
 	import { LoadingSpinner } from './index.js';
@@ -43,7 +43,7 @@
 		onRequestAccess = () => {},
 		onCloseCapabilityModal = () => {},
 		onCloseSuccessModal = () => {},
-		agentAvatar = null, // Agent avatar image path (e.g., "/brand/agents/charles.png")
+		vibeAvatar = null, // Vibe avatar image path (e.g., "/brand/agents/charles.png")
 		capabilityModalTitle = 'Access required',
 		capabilityModalMessage = 'You need permission to use the voice assistant',
 	} = $props();
@@ -310,11 +310,11 @@
 		<div class="nav-container">
 			<!-- Left: Logo or Agent Avatar (no link) -->
 			<div class="nav-logo-link" aria-label="App logo">
-				{#if agentAvatar}
-					<!-- Show agent avatar when in agent context -->
-					<img src={agentAvatar} alt="Agent" class="nav-logo nav-agent-avatar" />
+				{#if vibeAvatar}
+					<!-- Show vibe avatar when in vibe context -->
+					<img src={vibeAvatar} alt="Vibe" class="nav-logo nav-vibe-avatar" />
 				{:else}
-					<!-- Show default logo when not in agent context -->
+					<!-- Show default logo when not in vibe context -->
 					<img src="/brand/logo_clean.png" alt="Home" class="nav-logo" />
 				{/if}
 			</div>
@@ -517,29 +517,6 @@
 		transform: translateY(-1px);
 	}
 	
-	.close-modal-btn {
-		position: absolute;
-		top: 0.5rem;
-		right: 0.5rem;
-		background: transparent;
-		border: none;
-		color: var(--color-alert-500); /* Alert - purple/magenta */
-		cursor: pointer;
-		padding: 0.25rem;
-		border-radius: 0.25rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: all 0.2s;
-		opacity: 0.9; /* Slightly transparent but still visible */
-	}
-	
-	.close-modal-btn:hover {
-		background-color: var(--color-alert-100); /* Alert 100 with opacity */
-		color: var(--color-alert-600); /* Darker alert on hover */
-		opacity: 1; /* Fully opaque on hover */
-	}
-	
 	.connection-icon {
 		display: flex;
 		align-items: center;
@@ -629,7 +606,7 @@
 		object-fit: cover;
 	}
 	
-	.nav-agent-avatar {
+	.nav-vibe-avatar {
 		/* Agent avatars are already circular images, ensure they display properly */
 		border: 1px solid rgba(255, 255, 255, 0.1);
 	}

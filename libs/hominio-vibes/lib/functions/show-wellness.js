@@ -15,7 +15,7 @@
  * @param {Object[]} [context.rawDataContext] - Raw data context from agent config (for extracting wellness data)
  * @param {Object[]} [context.skillDataContext] - Skill-specific data context (e.g., wellness data for show-wellness skill)
  * @param {string} [context.userId] - Current user ID
- * @param {string} context.agentId - Agent ID
+ * @param {string} context.vibeId - Vibe ID
  * @returns {Promise<Object>}
  */
 export async function handler(args, context) {

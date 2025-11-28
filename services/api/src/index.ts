@@ -1,4 +1,6 @@
 import { Elysia } from "elysia";
+
+// Force reload: 2024-11-28 12:00 PM
 import { zeroRoutes } from "./routes/v0/zero";
 import { voiceRoutes } from "./routes/v0/voice";
 import { projects } from "./routes/v0/projects";
@@ -47,6 +49,5 @@ const app = new Elysia()
   .listen({ port: Number(PORT), hostname: HOST });
 
 console.log(
-  `🦊 API service is running at ${HOST}:${PORT}`
+  `🦊 API service is running at ${HOST}:${PORT} (v0.14.0)`
 );
-

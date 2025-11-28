@@ -217,10 +217,9 @@
 
 	async function processActionSkill(item: ActivityItem) {
 		try {
-			const { vibeId, skillId, agentId, ...restArgs } = item.args;
-			const effectiveVibeId = vibeId || agentId;
+			const { vibeId, skillId, ...restArgs } = item.args;
 			
-			if (!effectiveVibeId || !skillId) {
+			if (!vibeId || !skillId) {
 				throw new Error('Missing vibeId or skillId');
 			}
 
@@ -228,10 +227,10 @@
 			
 			// Execute skill
 			const result = await handleActionSkill(
-				{ vibeId: effectiveVibeId, skillId, args: restArgs },
+				{ vibeId, skillId, args: restArgs },
 				{
 					userId,
-					activeVibeIds: [effectiveVibeId] 
+					activeVibeIds: [vibeId] 
 				}
 			);
 
@@ -355,53 +354,53 @@
 	<div class="flex-1 w-full max-w-3xl mx-auto flex flex-col gap-2 min-h-[50vh] md:px-6 lg:px-8 justify-start">
 		{#if activities.length === 0}
 			{#if vibesLoading}
-				<div class="flex flex-col items-center justify-center py-20 text-slate-400/50">
+				<div class="flex flex-col justify-center items-center py-20 text-slate-400/50">
 					<LoadingSpinner />
-					<p class="text-sm mt-4">Loading available vibes...</p>
+					<p class="mt-4 text-sm">Loading available vibes...</p>
 				</div>
 			{:else if availableVibes.length > 0}
 				<!-- Empty State: Instructions & Available Vibes -->
 				<div class="flex flex-col gap-6 md:gap-8">
 					<!-- Instructions Header -->
-					<div class="text-center space-y-3 md:space-y-4">
-						<h1 class="text-2xl md:text-3xl font-bold tracking-tight text-slate-900/80">Willkommen bei Hominio</h1>
-						<p class="text-sm md:text-base text-slate-600 max-w-2xl mx-auto">
+					<div class="space-y-3 text-center md:space-y-4">
+						<h1 class="text-2xl font-bold tracking-tight md:text-3xl text-slate-900/80">Willkommen bei Hominio</h1>
+						<p class="mx-auto max-w-2xl text-sm md:text-base text-slate-600">
 							Starte einfach zu sprechen, um Hominio zu nutzen. Du kannst natürlich fragen oder direkt Aufgaben stellen.
 						</p>
 						
 						<!-- Examples -->
 						<div class="mt-6 space-y-2">
-							<p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Beispiele:</p>
-							<div class="flex flex-wrap justify-center gap-2 text-xs md:text-sm">
-								<span class="px-3 py-1.5 bg-white/60 backdrop-blur-sm rounded-full text-slate-700 border border-slate-200/50">"Zeig mir das Menü"</span>
-								<span class="px-3 py-1.5 bg-white/60 backdrop-blur-sm rounded-full text-slate-700 border border-slate-200/50">"Erstelle einen Termin morgen um 14 Uhr"</span>
-								<span class="px-3 py-1.5 bg-white/60 backdrop-blur-sm rounded-full text-slate-700 border border-slate-200/50">"Welche Wellness-Angebote gibt es?"</span>
+							<p class="text-xs font-semibold tracking-wide uppercase text-slate-500">Beispiele:</p>
+							<div class="flex flex-wrap gap-2 justify-center text-xs md:text-sm">
+								<span class="px-3 py-1.5 rounded-full border backdrop-blur-sm bg-white/60 text-slate-700 border-slate-200/50">"Zeig mir das Menü"</span>
+								<span class="px-3 py-1.5 rounded-full border backdrop-blur-sm bg-white/60 text-slate-700 border-slate-200/50">"Erstelle einen Termin morgen um 14 Uhr"</span>
+								<span class="px-3 py-1.5 rounded-full border backdrop-blur-sm bg-white/60 text-slate-700 border-slate-200/50">"Welche Wellness-Angebote gibt es?"</span>
 							</div>
 						</div>
 					</div>
 
 					<!-- Available Vibes Grid - Compact -->
 					<div class="space-y-3 md:space-y-4">
-						<p class="text-xs font-semibold text-slate-500 uppercase tracking-wide text-center">Active Vibes</p>
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+						<p class="text-xs font-semibold tracking-wide text-center uppercase text-slate-500">Active Vibes</p>
+						<div class="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
 						{#each availableVibes as vibe (vibe.id)}
 							<GlassCard lifted={true} class="overflow-hidden relative p-3 md:p-4">
 								<!-- Gradient Background -->
-								<div class="absolute inset-0 bg-gradient-to-br from-secondary-400 to-secondary-500 opacity-5"></div>
+								<div class="absolute inset-0 bg-gradient-to-br opacity-5 from-secondary-400 to-secondary-500"></div>
 								
 								<!-- Compact Layout -->
-								<div class="flex relative items-center gap-3">
+								<div class="flex relative gap-3 items-center">
 									<!-- Avatar -->
 									<img 
 										src={vibe.avatar} 
 										alt={vibe.name}
-										class="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover flex-shrink-0"
+										class="object-cover flex-shrink-0 w-10 h-10 rounded-full md:w-12 md:h-12"
 									/>
 									
 									<!-- Content -->
 									<div class="flex-1 min-w-0">
-										<div class="flex items-center gap-2 mb-1">
-											<h3 class="text-sm md:text-base font-bold text-slate-900">
+										<div class="flex gap-2 items-center mb-1">
+											<h3 class="text-sm font-bold md:text-base text-slate-900">
 												{vibe.name}
 											</h3>
 											<span class="text-[10px] md:text-xs px-1.5 py-0.5 rounded-full bg-gradient-to-r from-secondary-400 to-secondary-500 text-white font-semibold">
@@ -419,19 +418,19 @@
 					</div>
 				</div>
 			{:else}
-				<div class="flex flex-col items-center justify-center py-20 text-slate-400/50">
-					<div class="mb-4 p-4 rounded-full bg-white/20 backdrop-blur-sm">
+				<div class="flex flex-col justify-center items-center py-20 text-slate-400/50">
+					<div class="p-4 mb-4 rounded-full backdrop-blur-sm bg-white/20">
 						<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
 					</div>
 					<p class="text-sm">Waiting for activity...</p>
-					<p class="text-xs mt-2">Ask Hominio to do something</p>
+					<p class="mt-2 text-xs">Ask Hominio to do something</p>
 				</div>
 			{/if}
 		{:else}
 			<!-- Header (only shown when activities exist) -->
 			<div class="pt-4 pb-4 text-center">
 				<h1 class="text-2xl font-bold tracking-tight text-slate-900/80">Activity Stream</h1>
-				<p class="text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">Live Stream</p>
+				<p class="mt-1 text-xs font-medium tracking-widest uppercase text-slate-500">Live Stream</p>
 			</div>
 			
             <!-- Render items in chronological order (newest at bottom) -->

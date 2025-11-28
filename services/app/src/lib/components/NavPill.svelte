@@ -8,45 +8,46 @@
 	const authClient = createAuthClient();
 	const session = authClient.useSession();
 
-	// Detect if we're on an agent page and extract agent ID
+	// Detect if we're on a vibe page and extract vibe ID
 	// Matches /me/charles, /me/charles/admin, /me/karl, etc.
-	const currentAgentId = $derived.by(() => {
+	const currentVibeId = $derived.by(() => {
 		const path = $page.url.pathname;
-		// Match /me/{agentId} or /me/{agentId}/... (any sub-route)
+		// Match /me/{vibeId} or /me/{vibeId}/... (any sub-route)
 		const match = path.match(/^\/me\/([^\/]+)/);
-		const agentId = match ? match[1] : undefined;
+		const vibeId = match ? match[1] : undefined;
 		
-		// Return valid agent IDs (charles, karl, etc.)
+		// Return valid vibe IDs (charles, karl, etc.)
 		// Exclude 'admin' if it's a top-level route
-		if (agentId && agentId !== 'admin') {
-			return agentId;
+		if (vibeId && vibeId !== 'admin') {
+			return vibeId;
 		}
 		
 		return undefined;
 	});
 
-	// Load agent config to get avatar when in agent context
-	let agentAvatar = $state<string | null>(null);
+	// Load vibe config to get avatar when in vibe context
+	let vibeAvatar = $state<string | null>(null);
 	
 	$effect(() => {
-		if (currentAgentId) {
-			// Dynamically load agent config to get avatar
+		if (currentVibeId) {
+			// Dynamically load vibe config to get avatar
 			import('@hominio/vibes').then(({ loadVibeConfig }) => {
-				loadVibeConfig(currentAgentId).then((config) => {
-					agentAvatar = config.avatar || null;
+				loadVibeConfig(currentVibeId).then((config) => {
+					vibeAvatar = config.avatar || null;
 				}).catch((err) => {
-					console.warn('[NavPill] Failed to load agent config for avatar:', err);
-					agentAvatar = null;
+					console.warn('[NavPill] Failed to load vibe config for avatar:', err);
+					vibeAvatar = null;
 				});
 			});
 		} else {
-			agentAvatar = null; // Reset to default logo when not in agent context
+			vibeAvatar = null; // Reset to default logo when not in vibe context
 		}
 	});
 
 	// Initialize voice call service with tool call handler
 	const voiceCall = createVoiceCallService({
 		onToolCall: async (toolName: string, args: any, contextString?: string, result?: any) => {
+			console.log('[NavPill] 🔧 Tool call handler called:', { toolName, args, contextString, result });
 			
 			// Dispatch generic toolCall event for activity stream with contextString and result
 			const toolCallEvent = new CustomEvent('toolCall', {
@@ -63,18 +64,21 @@
 			if (toolName === 'queryVibeContext') {
 				// Background query - vibe context queries don't require UI navigation
 				// The context is injected into the conversation automatically
+				console.log('[NavPill] ✅ Query vibe context:', args.vibeId);
 			} else if (toolName === 'queryDataContext') {
 				// Background query - data context queries don't require UI navigation
 				// The context is injected into the conversation automatically
-				console.log('[NavPill] Data context queried:', args.schemaId);
+				console.log('[NavPill] ✅ Data context queried:', args.schemaId);
 			} else if (toolName === 'actionSkill') {
+				console.log('[NavPill] ✅ Action skill called:', { args });
+				
 				// Handle actionSkill tool calls
 				// Dispatch custom event for Charles/Karl page to handle
 				
 				// Extract vibeId and skillId, pass the rest as args (flat structure)
-				// Support legacy agentId parameter
-				const { vibeId, skillId, agentId, ...rawArgs } = args;
-				const effectiveVibeId = vibeId || agentId;
+				const { vibeId, skillId, ...rawArgs } = args;
+				
+				console.log('[NavPill] ✅ Extracted:', { vibeId, skillId, rawArgs });
 				
 				// Handle potential nested args from LLM (hallucination or habit)
 				// If rawArgs has a single property 'args' which is an object, use that instead
@@ -86,13 +90,17 @@
 				
 				const event = new CustomEvent('actionSkill', {
 					detail: {
-						vibeId: effectiveVibeId,
-						agentId: effectiveVibeId, // Legacy support
+						vibeId,
 						skillId,
 						args: skillArgs
 					}
 				});
+				
+				console.log('[NavPill] ✅ Dispatching actionSkill event:', { vibeId, skillId, args: skillArgs });
 				window.dispatchEvent(event);
+				console.log('[NavPill] ✅ actionSkill event dispatched');
+			} else {
+				console.log('[NavPill] ⚠️ Unknown tool name:', toolName);
 			}
 		}
 	});
@@ -263,8 +271,8 @@
 			return;
 		}
 
-		// Pass current agent ID when starting call (reactive)
-		await voiceCall.startCall(currentAgentId);
+		// Pass current vibe ID when starting call (reactive)
+		await voiceCall.startCall(currentVibeId);
 	}
 
 	async function handleRequestAccess() {
@@ -437,7 +445,7 @@
 		capabilityExpired = false;
 	}}
 	onCloseSuccessModal={() => showSuccessModal = false}
-	agentAvatar={agentAvatar}
+	vibeAvatar={vibeAvatar}
 	capabilityModalTitle={capabilityExpired ? 'Voice access expired' : 'Access required'}
 	capabilityModalMessage={capabilityExpired ? 'Your voice access has expired. Please request access again to continue using the voice assistant.' : 'You need permission to use the voice assistant'}
 />
