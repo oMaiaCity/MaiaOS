@@ -3,6 +3,8 @@
  * Voice call service for Google Live API integration
  */
 
+import { dispatchToolCallEvent, type ToolCallEvent } from './tool-handlers.js';
+
 export function createVoiceCallService() {
     let isConnected = $state(false);
     let isRecording = $state(false);
@@ -39,8 +41,8 @@ export function createVoiceCallService() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const host = window.location.hostname === 'localhost' ? 'localhost:4204' : 'api.hominio.me';
             const wsUrl = vibeId 
-                ? `${protocol}//${host}/api/v0/voice/live-next?vibeId=${encodeURIComponent(vibeId)}`
-                : `${protocol}//${host}/api/v0/voice/live-next`;
+                ? `${protocol}//${host}/api/v0/voice/live?vibeId=${encodeURIComponent(vibeId)}`
+                : `${protocol}//${host}/api/v0/voice/live`;
             
             ws = new WebSocket(wsUrl);
             
@@ -88,17 +90,15 @@ export function createVoiceCallService() {
                     }
                     isThinking = true;
                     
-                    // Dispatch toolCall event for activity stream
-                    const toolCallEvent = new CustomEvent('toolCall', {
-                        detail: {
-                            toolName: msg.name,
-                            args: msg.args,
-                            contextString: msg.contextString,
-                            result: msg.result,
-                            timestamp: Date.now()
-                        }
-                    });
-                    window.dispatchEvent(toolCallEvent);
+                    // Dispatch toolCall event for activity stream using shared utility
+                    const toolCallEvent: ToolCallEvent = {
+                        toolName: msg.name as any,
+                        args: msg.args,
+                        contextString: msg.contextString,
+                        result: msg.result,
+                        timestamp: Date.now()
+                    };
+                    dispatchToolCallEvent(toolCallEvent);
                 }
                 if (msg.type === 'toolResult') {
                     log(`✅ Tool Result: ${msg.name} ${JSON.stringify(msg.result)}`);

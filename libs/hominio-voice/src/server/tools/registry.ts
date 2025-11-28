@@ -4,9 +4,8 @@
  */
 
 import { listVibes, loadVibeConfig } from '@hominio/vibes';
-import { buildActionSkillArgsSchema, buildQueryDataContextSchema } from '@hominio/vibes';
+import { buildActionSkillArgsSchema } from '@hominio/vibes';
 import { handleQueryVibeContext } from './query-vibe-context.js';
-import { handleQueryDataContext } from './query-data-context.js';
 import { handleActionSkill } from './action-skill.js';
 
 export interface ToolExecutionContext {
@@ -86,22 +85,6 @@ export class ToolRegistry {
 			]
 		});
 
-		// queryDataContext - dynamic schema
-		try {
-			const queryDataContextSchema = buildQueryDataContextSchema(this.vibeConfigs);
-			tools.push({
-				functionDeclarations: [
-					{
-						name: 'queryDataContext',
-						description: 'Query dynamic data contexts (e.g., menu, wellness, calendar). Use this to load current data before executing actionSkill. This is a background query that doesn\'t trigger UI - it just loads context for you to understand available data.',
-						parameters: queryDataContextSchema
-					}
-				]
-			});
-		} catch (err) {
-			console.warn(`[ToolRegistry] Failed to build queryDataContext schema:`, err);
-		}
-
 		// actionSkill - dynamic schema
 		try {
 			if (this.allSkills.length > 0) {
@@ -151,30 +134,6 @@ export class ToolRegistry {
 								error: result.error || `Failed to load vibe context: ${vibeId}`
 							},
 					contextString: result.contextString, // For logging
-					error: result.error
-				};
-			}
-
-			case 'queryDataContext': {
-				const { schemaId, params = {} } = args || {};
-				const result = await handleQueryDataContext(
-					schemaId,
-					params,
-					context.injectContext
-				);
-
-				return {
-					success: result.success,
-					result: result.success
-						? {
-								success: true,
-								message: `Loaded ${schemaId} data context`,
-								schemaId
-							}
-						: {
-								success: false,
-								error: result.error || `Failed to load ${schemaId} data context`
-							},
 					error: result.error
 				};
 			}

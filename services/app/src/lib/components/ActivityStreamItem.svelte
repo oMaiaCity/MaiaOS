@@ -2,12 +2,13 @@
 	import { UIRenderer, loadVibeConfig } from '@hominio/vibes';
 	import { GlassCard, LoadingSpinner } from '@hominio/brand';
 	import { slide } from 'svelte/transition';
+	import { isQueryTool, isActionSkill } from '@hominio/voice';
 
 	let { item, isExpanded = false, onToggle } = $props();
 
     // Derived state
-	const isSkill = $derived(item.toolName === 'actionSkill');
-	const isQuery = $derived(item.toolName === 'queryVibeContext' || item.toolName === 'queryDataContext');
+	const isSkill = $derived(isActionSkill(item.toolName));
+	const isQuery = $derived(isQueryTool(item.toolName));
     
     // Extract skill info
     // args structure might vary slightly based on how it was passed, handling both flat and nested
@@ -17,17 +18,35 @@
     
     
     // State for collapsing - queries default to closed, skills default to expanded
-    // Initialize state - will be synced via effect below
+    // Initialize from prop, but manage state locally for user interactions
     let expanded = $state(false);
+    let lastPropValue = $state(isExpanded);
     
     // Profile image state
     let avatarUrl = $state<string | null>(null);
     let avatarLoading = $state(true);
     
-    // Sync expanded state with props and isQuery derived value
+    // Initialize expanded state based on tool type and prop
     $effect(() => {
-        // Queries default to closed, skills default to expanded (or isExpanded prop)
-        expanded = isQuery ? false : isExpanded;
+        // Initialize: queries default to closed, skills default to expanded (or isExpanded prop)
+        if (isQuery) {
+            expanded = false;
+        } else {
+            expanded = isExpanded;
+        }
+        lastPropValue = isExpanded;
+    });
+    
+    // Sync expanded state with props only when prop changes externally (not from our toggle)
+    $effect(() => {
+        // Only sync if prop changed externally (not from our toggle)
+        if (isExpanded !== lastPropValue) {
+            lastPropValue = isExpanded;
+            // Queries default to closed, skills default to expanded (or isExpanded prop)
+            if (!isQuery) {
+                expanded = isExpanded;
+            }
+        }
     });
 
 	// Load vibe avatar
@@ -36,7 +55,9 @@
 			avatarLoading = true;
 			loadVibeConfig(vibeId)
 				.then(config => {
-					avatarUrl = config.avatar || null;
+					// Avatar exists in config but not in TypeScript type definition
+					const configWithAvatar = config as any;
+					avatarUrl = configWithAvatar.avatar || null;
 					avatarLoading = false;
 				})
 				.catch(err => {
@@ -51,10 +72,11 @@
 	});
 
     function handleToggle() {
+        expanded = !expanded;
+        lastPropValue = expanded; // Track that we've updated
+        // Always call onToggle if provided to sync parent state
         if (onToggle) {
             onToggle();
-        } else {
-            expanded = !expanded;
         }
     }
 </script>
@@ -132,10 +154,8 @@
             >
                 <div class="flex gap-3 items-center">
                     <div class="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]"></div>
-                    {#if item.toolName === 'queryVibeContext'}
+                    {#if isQuery}
                         <span class="text-[11px] font-medium text-slate-600">Context: <span class="font-bold capitalize text-slate-800">{vibeId}</span></span>
-                    {:else if item.toolName === 'queryDataContext'}
-                        <span class="text-[11px] font-medium text-slate-600">Data: <span class="font-bold capitalize text-slate-800">{args.schemaId || 'unknown'}</span></span>
                     {/if}
                 </div>
                 <div class="flex gap-3 items-center">
@@ -162,7 +182,7 @@
                                 <pre class="overflow-x-auto overflow-y-auto p-3 max-h-96 text-xs whitespace-pre-wrap rounded border bg-slate-50 border-slate-200">{item.contextString}</pre>
                             </div>
                         {/if}
-                        {#if item.toolName === 'queryVibeContext' && item.result?.contextConfig}
+                        {#if isQuery && item.result?.contextConfig}
                             <div>
                                 <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Vibe Config (JSON)</h4>
                                 <pre class="overflow-x-auto overflow-y-auto p-3 max-h-96 text-xs rounded border bg-slate-50 border-slate-200">{JSON.stringify(item.result.contextConfig, null, 2)}</pre>

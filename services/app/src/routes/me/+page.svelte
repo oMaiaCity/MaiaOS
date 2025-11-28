@@ -6,6 +6,7 @@
 	import { handleActionSkill, loadVibeConfig, listVibes } from '@hominio/vibes';
 	import { nanoid } from 'nanoid';
 	import ActivityStreamItem from '$lib/components/ActivityStreamItem.svelte';
+	import { isQueryTool, isActionSkill, parseToolCallEvent, type ToolCallEvent } from '@hominio/voice';
 
 	const authClient = createAuthClient();
 	const session = authClient.useSession();
@@ -23,7 +24,7 @@
 		result?: any;
 		error?: string;
 		isExpanded: boolean;
-		contextString?: string; // Ingested context string for queryVibeContext/queryDataContext
+		contextString?: string; // Ingested context string for queryVibeContext
 	};
 
 	let activities = $state<ActivityItem[]>([]);
@@ -167,7 +168,7 @@
 			toolName,
 			args,
 			status: 'pending',
-			isExpanded: toolName === 'actionSkill', // Expand skills by default, queries closed
+			isExpanded: isActionSkill(toolName), // Expand skills by default, queries closed
 			contextString: contextString || undefined, // Set directly - can be undefined
 			result: result || undefined // Set result if available
 		};
@@ -175,7 +176,7 @@
 
 		// Collapse previous items ONLY if the new one is a UI item (actionSkill)
 		// This prevents background queries (context/data) from closing the active UI
-		if (toolName === 'actionSkill') {
+		if (isActionSkill(toolName)) {
 			activities = activities.map(item => ({
 				...item,
 				isExpanded: false
@@ -187,14 +188,14 @@
 
 		// Scroll to position new activity properly ONLY if it's a UI item
 		// Background queries (context/data) should not trigger scroll/push animations
-		if (toolName === 'actionSkill') {
+		if (isActionSkill(toolName)) {
 			await scrollToNewActivity(id);
 		}
 
 		// Process the tool call
-		if (toolName === 'actionSkill') {
+		if (isActionSkill(toolName)) {
 			await processActionSkill(newItem);
-		} else if (toolName === 'queryVibeContext' || toolName === 'queryDataContext') {
+		} else if (isQueryTool(toolName)) {
 			// Background query - mark as success
 			// contextString is already set on the item, just update status
 			updateActivityStatus(id, 'success');
@@ -325,7 +326,14 @@
 		// Listen for unified toolCall events from voice service
 		const handleToolCallEvent = (event: Event) => {
 			const customEvent = event as CustomEvent;
-			const { toolName, args, contextString, result } = customEvent.detail;
+			const toolCall = parseToolCallEvent(customEvent);
+			
+			if (!toolCall) {
+				console.warn('[Me] Invalid tool call event');
+				return;
+			}
+			
+			const { toolName, args, contextString, result } = toolCall;
 			handleToolCall(toolName, args, contextString, result);
 		};
 
@@ -377,7 +385,7 @@
 	
 	<!-- Activity Stream - Centered on Full Screen Width -->
 	<div class="flex-1 w-full flex flex-col gap-2 min-h-[50vh] px-4 md:px-6 lg:px-8 lg:pr-[calc(300px+1rem)]">
-		<div class="w-full max-w-3xl mx-auto">
+		<div class="mx-auto w-full max-w-3xl">
 		{#if activities.length === 0}
 			{#if vibesLoading}
 				<div class="flex flex-col justify-center items-center py-20 text-slate-400/50">
@@ -463,7 +471,7 @@
 			{#each activities as item, index (item.id)}
 				<div 
 					bind:this={elementRefs[item.id]}
-					class="transition-all duration-500 ease-in-out mb-4"
+					class="mb-4 transition-all duration-500 ease-in-out"
 					class:opacity-0={itemsPushingOut.has(item.id)}
 					class:-translate-y-8={itemsPushingOut.has(item.id)}
 					class:pointer-events-none={itemsPushingOut.has(item.id)}
@@ -481,19 +489,19 @@
 	
 	<!-- Call Logs Sidebar - Fixed Right Aligned -->
 	<aside class="hidden lg:block fixed right-0 top-[env(safe-area-inset-top)] bottom-[calc(6rem+env(safe-area-inset-bottom))] w-[300px] pr-4 pt-4 z-10">
-		<GlassCard class="p-4 h-full flex flex-col">
+		<GlassCard class="flex flex-col p-4 h-full">
 			<div class="mb-3">
-				<h2 class="text-sm font-bold tracking-tight text-slate-900 mb-0.5">Call Logs</h2>
+				<h2 class="mb-0.5 text-sm font-bold tracking-tight text-slate-900">Call Logs</h2>
 				<p class="text-xs text-slate-600">Real-time debugging</p>
 			</div>
 
 			<!-- Logs Display - Light Theme Glass Style -->
-			<div class="flex-1 overflow-hidden rounded-lg border border-slate-200/50 backdrop-blur-sm bg-white/40">
+			<div class="overflow-hidden flex-1 rounded-lg border backdrop-blur-sm border-slate-200/50 bg-white/40">
 				<div class="overflow-y-auto p-3 h-full font-mono text-xs text-slate-700">
 					{#each voice.logs as log}
-						<div class="mb-1 break-words text-slate-600 leading-relaxed">{log}</div>
+						<div class="mb-1 leading-relaxed break-words text-slate-600">{log}</div>
 					{:else}
-						<div class="text-slate-400 text-xs italic">No logs yet. Start a call to see logs.</div>
+						<div class="text-xs italic text-slate-400">No logs yet. Start a call to see logs.</div>
 					{/each}
 				</div>
 			</div>

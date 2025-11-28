@@ -16,3 +16,4 @@ export type { ContextInjectionOptions } from './server/context-injection.js';
 
 // Client-side exports
 export { createVoiceCallService } from './client/service.svelte.js';
+export * from './client/tool-handlers.js';

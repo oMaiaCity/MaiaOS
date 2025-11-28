@@ -1,7 +1,7 @@
 /**
  * Query Data Context Handler
  * Handles queryDataContext tool calls
- * Routes to appropriate store-based handlers and injects context
+ * Routes to appropriate store-based handlers and returns data (no context injection)
  */
 
 import { getSchemaHandler } from './data-context-schema-registry.js';
@@ -13,8 +13,8 @@ import { getCalendarContextString } from '../lib/functions/calendar-store.js';
  * @param {Object} options - Handler options
  * @param {string} options.schemaId - Schema ID (e.g., "menu", "wellness", "calendar")
  * @param {Object} [options.params={}] - Query parameters (schema-specific)
- * @param {Function} options.injectFn - Function to inject context (e.g., session.sendClientContent)
- * @returns {Promise<{success: boolean, message?: string, error?: string}>}
+ * @param {Function} [options.injectFn] - Function to inject context (deprecated - no longer used)
+ * @returns {Promise<{success: boolean, message?: string, error?: string, data?: any}>}
  */
 export async function handleQueryDataContext({ schemaId, params = {}, injectFn }) {
 	try {
@@ -47,16 +47,7 @@ export async function handleQueryDataContext({ schemaId, params = {}, injectFn }
 			data = contextString;
 		}
 		
-		// Inject context into conversation
-		// Use turnComplete: false to keep turn open - queryDataContext is followed by actionSkill
-		// We don't want the AI to respond after context injection, only after actionSkill
-		if (injectFn) {
-			injectFn({
-				turns: contextString,
-				turnComplete: false
-			});
-		}
-		
+		// Return data without injecting context - context injection removed
 		return {
 			success: true,
 			message: `Loaded ${schemaId} data context`,

@@ -29,10 +29,10 @@ export { getWellnessData, wellnessData, wellnessConfig } from '../lib/functions/
 export { buildSystemInstruction } from './system-instruction-builder.js';
 
 // Export call config loader
-export { loadCallConfig, buildRepeatedPrompt, buildInitialSystemInstruction } from './call-config-loader.js';
+export { loadCallConfig, buildInitialSystemInstruction } from './call-config-loader.js';
 
 // Export tool schema builder
-export { buildActionSkillArgsSchema, buildQueryDataContextSchema } from './tool-schema-builder.js';
+export { buildActionSkillArgsSchema } from './tool-schema-builder.js';
 
 // Export data context schema registry
 export { 
@@ -43,9 +43,6 @@ export {
 	registerSchema,
 	getAllSchemasMetadata
 } from './data-context-schema-registry.js';
-
-// Export query data context handler
-export { handleQueryDataContext } from './query-data-context-handler.js';
 
 // Export context injection manager
 export { 

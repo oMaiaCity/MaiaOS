@@ -4,7 +4,7 @@
  */
 
 import { GoogleGenAI, Modality } from '@google/genai';
-import { buildSystemInstruction, buildRepeatedPrompt } from '@hominio/vibes';
+import { buildSystemInstruction } from '@hominio/vibes';
 import { ToolRegistry } from './tools/registry.js';
 import { ContextInjectionService } from './context-injection.js';
 
@@ -63,7 +63,7 @@ export async function createVoiceSessionManager(
 	let systemInstruction = await buildSystemInstruction({
 		activeVibeIds,
 		vibeConfigs,
-		includeRepeatedPrompt: true
+		includeRepeatedPrompt: false
 	});
 
 	// Build tool schemas
@@ -117,12 +117,16 @@ export async function createVoiceSessionManager(
 							onTranscript?.('model', text);
 						}
 
-						// Handle function calls
-						for (const part of parts) {
-							if (part.functionCall) {
-								await handleFunctionCall(part.functionCall);
+					// Handle function calls from parts
+					for (const part of parts) {
+						if (part.functionCall) {
+							// Google GenAI SDK: part.functionCall has { name?, args?, id? } structure
+							if (!part.functionCall.name) {
+								console.error(`[hominio-voice] ⚠️ Function call in part missing name:`, JSON.stringify(part.functionCall, null, 2));
 							}
+							await handleFunctionCall(part.functionCall);
 						}
+					}
 
 						// Handle turn complete
 						if (message.serverContent.turnComplete) {
@@ -143,6 +147,10 @@ export async function createVoiceSessionManager(
 					if (message.toolCall) {
 						const functionCalls = message.toolCall.functionCalls || [];
 						for (const call of functionCalls) {
+							if (!call.name) {
+								console.error(`[hominio-voice] ⚠️ Function call in toolCall missing name:`, JSON.stringify(call, null, 2));
+								console.error(`[hominio-voice] ⚠️ Available keys:`, Object.keys(call));
+							}
 							await handleFunctionCall(call);
 						}
 					}
@@ -170,7 +178,19 @@ export async function createVoiceSessionManager(
 
 	// Function call handler
 	async function handleFunctionCall(functionCall: any) {
-		const { name, args, id } = functionCall;
+		// Google GenAI SDK structure: { name?, args?, id? }
+		// According to docs, name is optional but we require it for tool execution
+		const name = functionCall.name;
+		const args = functionCall.args || {};
+		const id = functionCall.id;
+		
+		if (!name) {
+			console.error(`[hominio-voice] ⚠️ Function call missing name. Full structure:`, JSON.stringify(functionCall, null, 2));
+			console.error(`[hominio-voice] ⚠️ Available keys:`, Object.keys(functionCall));
+			// Don't process function calls without names - they're invalid
+			return;
+		}
+		
 		console.log(`[hominio-voice] 🔧 Function call: ${name}`, JSON.stringify(args));
 
 		// Update active vibes in registry
@@ -182,29 +202,15 @@ export async function createVoiceSessionManager(
 			activeVibeIds,
 			session,
 			injectContext: (content) => {
-				// Context injection with logging
+				// Context injection with logging - only for queryVibeContext
 				if (name === 'queryVibeContext') {
 					contextInjection.injectVibeContext(args?.vibeId || 'unknown', content.turns);
-				} else if (name === 'queryDataContext') {
-					// Respect turnComplete from handler (defaults to false if not provided)
-					contextInjection.injectDataContext(args?.schemaId || 'unknown', content.turns, content.turnComplete ?? false);
 				} else {
 					contextInjection.injectContext(content.turns, content.turnComplete);
 				}
 			},
 			onLog
 		});
-
-		// Inject repeated prompt with fresh date/time after tool calls
-		// This keeps the date/time information current throughout the conversation
-		// The initial system instruction includes it, but we refresh it after tool calls
-		// to ensure the AI always has up-to-date time information
-		try {
-			const repeatedPrompt = await buildRepeatedPrompt();
-			await contextInjection.injectRepeatedPrompt(repeatedPrompt);
-		} catch (err) {
-			console.error('[hominio-voice] Failed to inject repeated prompt:', err);
-		}
 
 		// Notify frontend of tool call
 		onToolCall?.(name, args || {}, toolResult.result, toolResult.contextString);

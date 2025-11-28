@@ -5,7 +5,7 @@
  */
 
 import { listVibes } from './vibe-loader.js';
-import { loadCallConfig, buildRepeatedPrompt, buildInitialSystemInstruction } from './call-config-loader.js';
+import { loadCallConfig } from './call-config-loader.js';
 
 /**
  * Build unified Hominio system instruction
@@ -46,11 +46,7 @@ export async function buildSystemInstruction(options = {}) {
 		}
 	}
 	
-	if (availableSchemas.size > 0) {
-		instruction += `\nVerfügbare Datenkontexte für aktive Vibes: ${Array.from(availableSchemas).join(', ')}\n`;
-		instruction += `\nHINWEIS: Die Tool-Aufruffolge hängt vom Schema-Typ ab. Siehe callPrompt für Details.\n`;
-		instruction += `Nutze queryDataContext mit schemaId, um diese Daten abzurufen (z.B. queryDataContext({ schemaId: "menu" })).\n`;
-	}
+	// Data context schemas removed - queryDataContext tool no longer exists
 
 	// Add active vibe prompts if any
 	if (activeVibeIds.length > 0) {
@@ -64,12 +60,7 @@ export async function buildSystemInstruction(options = {}) {
 		}
 	}
 	
-	// Append repeated prompt if requested (for initial call start)
-	if (includeRepeatedPrompt) {
-		const repeatedPrompt = await buildRepeatedPrompt();
-		instruction += `\n\n${repeatedPrompt}`;
-	}
-	
+	// Repeated prompt removed - no longer used
 	return instruction;
 }
 
@@ -81,7 +72,6 @@ export async function buildSystemInstruction(options = {}) {
  */
 export async function buildVibeContext(vibeConfig, options = {}) {
 	// Use the single vibePrompt field from config - pure, no dynamic additions
-	// AI should use tools (queryDataContext) to get dynamic data when needed
 	// Current date/time is automatically available in context.now
 	let context = `**${vibeConfig.name} Vibe Kontext geladen**\n\n`;
 	

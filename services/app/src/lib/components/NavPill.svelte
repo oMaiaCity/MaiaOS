@@ -5,6 +5,7 @@
     import { NavPill } from '@hominio/brand';
     import { getContext } from 'svelte';
     import type { Capability } from '@hominio/caps';
+    import { isQueryTool, isActionSkill, extractActionSkillArgs, dispatchActionSkillEvent, parseToolCallEvent } from '@hominio/voice';
 
 	const authClient = createAuthClient();
 	const session = authClient.useSession();
@@ -54,46 +55,30 @@
 	$effect(() => {
 		const handleToolCall = (event: Event) => {
 			const customEvent = event as CustomEvent;
-			const { toolName, args, contextString, result } = customEvent.detail;
+			const toolCall = parseToolCallEvent(customEvent);
+			
+			if (!toolCall) {
+				console.warn('[NavPill] Invalid tool call event');
+				return;
+			}
+			
+			const { toolName, args, contextString, result } = toolCall;
 			console.log('[NavPill] 🔧 Tool call received:', { toolName, args, contextString, result });
 
-			if (toolName === 'queryVibeContext') {
+			if (isQueryTool(toolName)) {
 				// Background query - vibe context queries don't require UI navigation
 				// The context is injected into the conversation automatically
 				console.log('[NavPill] ✅ Query vibe context:', args.vibeId);
-			} else if (toolName === 'queryDataContext') {
-				// Background query - data context queries don't require UI navigation
-				// The context is injected into the conversation automatically
-				console.log('[NavPill] ✅ Data context queried:', args.schemaId);
-			} else if (toolName === 'actionSkill') {
+			} else if (isActionSkill(toolName)) {
 				console.log('[NavPill] ✅ Action skill called:', { args });
 				
-				// Handle actionSkill tool calls
-				// Dispatch custom event for Charles/Karl page to handle
+				// Extract and normalize action skill arguments
+				const skillArgs = extractActionSkillArgs(args);
 				
-				// Extract vibeId and skillId, pass the rest as args (flat structure)
-				const { vibeId, skillId, ...rawArgs } = args;
+				console.log('[NavPill] ✅ Extracted:', skillArgs);
 				
-				console.log('[NavPill] ✅ Extracted:', { vibeId, skillId, rawArgs });
-				
-				// Handle potential nested args from LLM (hallucination or habit)
-				// If rawArgs has a single property 'args' which is an object, use that instead
-				let skillArgs = rawArgs;
-				if (Object.keys(rawArgs).length === 1 && rawArgs.args && typeof rawArgs.args === 'object') {
-					console.log('[NavPill] ⚠️ Detected nested args object from LLM, flattening...');
-					skillArgs = rawArgs.args;
-				}
-				
-				const event = new CustomEvent('actionSkill', {
-					detail: {
-						vibeId,
-						skillId,
-						args: skillArgs
-					}
-				});
-				
-				console.log('[NavPill] ✅ Dispatching actionSkill event:', { vibeId, skillId, args: skillArgs });
-				window.dispatchEvent(event);
+				// Dispatch actionSkill event for Charles/Karl page to handle
+				dispatchActionSkillEvent(skillArgs);
 				console.log('[NavPill] ✅ actionSkill event dispatched');
 			} else {
 				console.log('[NavPill] ⚠️ Unknown tool name:', toolName);
