@@ -10,14 +10,23 @@
 
 	/**
 	 * Calendar View Props
+	 * Compatible with UIRenderer which passes data={resultData}
 	 */
 	interface CalendarViewProps {
-		entries: CalendarEntry[];
+		data?: {
+			entries?: CalendarEntry[];
+			entriesByDate?: Record<string, CalendarEntry[]>;
+		};
+		entries?: CalendarEntry[];
 		entriesByDate?: Record<string, CalendarEntry[]>;
 		onClose?: () => void;
 	}
 
-	let { entries = [], entriesByDate = {}, onClose }: CalendarViewProps = $props();
+	let { data, entries, entriesByDate, onClose }: CalendarViewProps = $props();
+	
+	// Support both data prop (from UIRenderer) and flat props (direct usage)
+	const resolvedEntries = $derived(entries || data?.entries || []);
+	const resolvedEntriesByDate = $derived(entriesByDate || data?.entriesByDate || {});
 
 	// Helper to parse YYYY-MM-DD as local date (midnight)
 	function parseLocalYMD(dateStr: string): Date {
@@ -35,13 +44,13 @@
 
 	// Generate dates with appointments (up to next 7 appointments worth of days)
 	const datesWithAppointments = $derived.by(() => {
-		if (!entries || entries.length === 0) return [];
+		if (!resolvedEntries || resolvedEntries.length === 0) return [];
 		
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
 		
 		// Sort entries by date and time
-		const sortedEntries = [...entries].sort((a, b) => {
+		const sortedEntries = [...resolvedEntries].sort((a, b) => {
 			const dateA = parseLocalYMD(a.date);
 			const dateB = parseLocalYMD(b.date);
 			if (dateA.getTime() !== dateB.getTime()) {
@@ -120,9 +129,9 @@
 		const hours = Math.floor(duration / 60);
 		const minutes = duration % 60;
 		if (minutes === 0) {
-			return `${hours} ${hours === 1 ? 'Std' : 'Std'}`;
+			return `${hours} ${hours === 1 ? 'Std' : 'Stunden'}`;
 		}
-		return `${hours} ${hours === 1 ? 'Std' : 'Std'} ${minutes} Min`;
+		return `${hours} ${hours === 1 ? 'Std' : 'Stunden'} ${minutes} Min`;
 	}
 </script>
 
@@ -137,7 +146,7 @@
 	<!-- Appointments View: Only show days with appointments -->
 	<div class="flex flex-col gap-12">
 		{#each datesWithAppointments as { date, dateObj, isToday } (date)}
-			{@const dayEntries = entriesByDate[date] || []}
+			{@const dayEntries = resolvedEntriesByDate[date] || []}
 			{#if dayEntries.length > 0}
 				<div class="w-full relative">
 					<!-- Day Header - Organic, no borders -->
@@ -197,7 +206,7 @@
 	</div>
 	
 	<!-- Empty State (if no entries at all) - Elegant Brand Styling -->
-	{#if entries.length === 0}
+	{#if resolvedEntries.length === 0}
 		<div class="mt-20 flex justify-center">
 			<GlassCard class="p-16 max-w-lg text-center border-0 bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-xl shadow-2xl shadow-secondary-500/10 rounded-3xl">
 				<div class="flex flex-col items-center gap-8">
