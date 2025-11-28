@@ -46,7 +46,7 @@
 
 <div>
 	<div class="flex justify-center items-center mb-8">
-		<h2 class="text-2xl font-extrabold tracking-tight text-center text-transparent bg-clip-text bg-gradient-to-br sm:text-3xl from-[var(--color-secondary-400)] to-[var(--color-secondary-500)]">Speisekarte</h2>
+		<h2 class="text-2xl font-extrabold tracking-tight text-center text-transparent bg-clip-text bg-gradient-to-br sm:text-3xl from-secondary-400 to-secondary-500">Speisekarte</h2>
 	</div>
 	
 	{#if category === 'all'}
@@ -54,7 +54,7 @@
 		{#each categories as cat}
 			{#if menu[cat.id] && menu[cat.id].length > 0}
 				<div class="mb-8">
-					<h3 class="mb-4 text-lg font-bold text-center sm:text-xl text-[var(--color-secondary-500)]">
+					<h3 class="mb-4 text-lg font-bold text-center sm:text-xl text-secondary-500">
 						{cat.name}
 					</h3>
 					<div class="grid grid-cols-1 gap-3 sm:gap-4">
@@ -66,7 +66,7 @@
 										<p class="text-xs leading-relaxed sm:text-sm text-slate-600">{item.description}</p>
 									{/if}
 								</div>
-								<div class="w-[120px] sm:w-[160px] min-w-[120px] sm:min-w-[160px] max-w-[120px] sm:max-w-[160px] bg-secondary-500 border-l-2 border-secondary-400/40 px-4 sm:px-6 py-4 sm:py-5 flex flex-col items-end justify-center flex-shrink-0">
+								<div class="w-[120px] sm:w-[160px] min-w-[120px] sm:min-w-[160px] max-w-[120px] sm:max-w-[160px] bg-secondary-500 px-4 sm:px-6 py-4 sm:py-5 flex flex-col items-end justify-center flex-shrink-0">
 									<div class="mb-1 text-lg font-extrabold text-right text-white whitespace-nowrap sm:text-2xl">{formatPrice(item.price)}</div>
 									{#if item.type}
 										<div class="text-[0.7rem] sm:text-xs uppercase tracking-wider text-white/90 text-right font-semibold">{item.type}</div>
@@ -94,7 +94,7 @@
 									<p class="text-xs leading-relaxed sm:text-sm text-slate-600">{item.description}</p>
 								{/if}
 							</div>
-							<div class="w-[120px] sm:w-[160px] min-w-[120px] sm:min-w-[160px] max-w-[120px] sm:max-w-[160px] bg-[var(--color-secondary-500)] px-4 sm:px-6 py-4 sm:py-5 flex flex-col items-end justify-center flex-shrink-0">
+							<div class="w-[120px] sm:w-[160px] min-w-[120px] sm:min-w-[160px] max-w-[120px] sm:max-w-[160px] bg-secondary-500 px-4 sm:px-6 py-4 sm:py-5 flex flex-col items-end justify-center flex-shrink-0">
 								<div class="mb-1 text-lg font-extrabold text-right text-white whitespace-nowrap sm:text-2xl">{formatPrice(item.price)}</div>
 								{#if item.type}
 									<div class="text-[0.7rem] sm:text-xs uppercase tracking-wider text-white/90 text-right font-semibold">{item.type}</div>

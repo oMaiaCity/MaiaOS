@@ -173,17 +173,23 @@
 		};
 		
 
-		// Collapse previous items
-		activities = activities.map(item => ({
-			...item,
-			isExpanded: false
-		}));
+		// Collapse previous items ONLY if the new one is a UI item (actionSkill)
+		// This prevents background queries (context/data) from closing the active UI
+		if (toolName === 'actionSkill') {
+			activities = activities.map(item => ({
+				...item,
+				isExpanded: false
+			}));
+		}
 
 		// Add new item to bottom
 		activities = [...activities, newItem];
 
-		// Scroll to position new activity properly
-		await scrollToNewActivity(id);
+		// Scroll to position new activity properly ONLY if it's a UI item
+		// Background queries (context/data) should not trigger scroll/push animations
+		if (toolName === 'actionSkill') {
+			await scrollToNewActivity(id);
+		}
 
 		// Process the tool call
 		if (toolName === 'actionSkill') {

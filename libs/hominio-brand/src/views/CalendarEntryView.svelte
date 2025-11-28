@@ -89,10 +89,10 @@
 		<GlassCard class="p-0 overflow-hidden border-0 bg-white/80 backdrop-blur-xl shadow-lg shadow-secondary-500/5 rounded-2xl mb-6 animate-slide-up" lifted={true}>
 			<div class="flex flex-row items-stretch">
 				<!-- Time Column - More prominent secondary gradient background -->
-				<div class="flex flex-col items-center justify-center py-8 px-6 bg-gradient-to-br from-[#45b8c826] via-[#2da6b41a] to-[#2585900d] min-w-[100px] border-r border-[#99dfe74d]">
-					<span class="text-2xl font-extrabold text-[var(--color-secondary-700)] leading-none mb-1.5">{formatTime(resolvedEntry.time)}</span>
-					<div class="w-0.5 h-6 bg-gradient-to-b from-[#45b8c880] via-[#2da6b44d] to-[#25859033] my-2 rounded-full"></div>
-					<span class="text-sm font-semibold text-[var(--color-secondary-600)]">{calculateEndTime(resolvedEntry.time, resolvedEntry.duration)}</span>
+				<div class="flex flex-col items-center justify-center py-8 px-6 bg-gradient-to-br from-secondary-400/15 via-secondary-500/10 to-secondary-600/5 min-w-[100px] border-r border-secondary-200/30">
+					<span class="text-2xl font-extrabold text-secondary-700 leading-none mb-1.5">{formatTime(resolvedEntry.time)}</span>
+					<div class="w-0.5 h-6 bg-gradient-to-b from-secondary-400/50 via-secondary-500/30 to-secondary-600/20 my-2 rounded-full"></div>
+					<span class="text-sm font-semibold text-secondary-600">{calculateEndTime(resolvedEntry.time, resolvedEntry.duration)}</span>
 				</div>
 				
 				<!-- Details Column -->

@@ -46,7 +46,7 @@
 
 <div>
 	<div class="flex justify-center items-center mb-8">
-		<h2 class="text-2xl font-extrabold tracking-tight text-center text-transparent bg-clip-text bg-gradient-to-br sm:text-3xl from-[var(--color-secondary-400)] to-[var(--color-secondary-500)]">Wellness & Spa</h2>
+		<h2 class="text-2xl font-extrabold tracking-tight text-center text-transparent bg-clip-text bg-gradient-to-br sm:text-3xl from-secondary-400 to-secondary-500">Wellness & Spa</h2>
 	</div>
 	
 	{#if category === 'all'}
@@ -54,7 +54,7 @@
 		{#each categories as cat}
 			{#if wellness[cat.id] && wellness[cat.id].length > 0}
 				<div class="mb-8">
-					<h3 class="mb-4 text-lg font-bold text-center sm:text-xl text-[var(--color-secondary-500)]">
+					<h3 class="mb-4 text-lg font-bold text-center sm:text-xl text-secondary-500">
 						{cat.name}
 					</h3>
 					<div class="grid grid-cols-1 gap-3 sm:gap-4">
@@ -63,7 +63,7 @@
 								<div class="flex flex-col flex-1 flex-shrink justify-center p-4 min-w-0 sm:p-5">
 									<h4 class="mb-1.5 text-base font-bold leading-tight sm:text-lg text-slate-800 sm:mb-2">{item.name}</h4>
 									{#if item.description}
-										<p class="text-xs leading-relaxed sm:text-sm text-slate-600 mb-1">{item.description}</p>
+										<p class="mb-1 text-xs leading-relaxed sm:text-sm text-slate-600">{item.description}</p>
 									{/if}
 									{#if item.duration}
 										<p class="text-xs italic sm:text-sm text-slate-500">{item.duration}</p>
@@ -94,13 +94,13 @@
 							<div class="flex flex-col flex-1 flex-shrink justify-center p-4 min-w-0 sm:p-5">
 								<h4 class="mb-1.5 text-base font-bold leading-tight sm:text-lg text-slate-800 sm:mb-2">{item.name}</h4>
 								{#if item.description}
-									<p class="text-xs leading-relaxed sm:text-sm text-slate-600 mb-1">{item.description}</p>
+									<p class="mb-1 text-xs leading-relaxed sm:text-sm text-slate-600">{item.description}</p>
 								{/if}
 								{#if item.duration}
 									<p class="text-xs italic sm:text-sm text-slate-500">{item.duration}</p>
 								{/if}
 							</div>
-							<div class="w-[120px] sm:w-[160px] min-w-[120px] sm:min-w-[160px] max-w-[120px] sm:max-w-[160px] bg-[var(--color-secondary-500)] px-4 sm:px-6 py-4 sm:py-5 flex flex-col items-end justify-center flex-shrink-0">
+							<div class="w-[120px] sm:w-[160px] min-w-[120px] sm:min-w-[160px] max-w-[120px] sm:max-w-[160px] bg-secondary-500 px-4 sm:px-6 py-4 sm:py-5 flex flex-col items-end justify-center flex-shrink-0">
 								<div class="mb-1 text-lg font-extrabold text-right text-white whitespace-nowrap sm:text-2xl">{formatPrice(item.price)}</div>
 								{#if item.type}
 									<div class="text-[0.7rem] sm:text-xs uppercase tracking-wider text-white/90 text-right font-semibold">{item.type}</div>
