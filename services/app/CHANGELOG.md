@@ -1,3 +1,13 @@
+## [0.16.2](https://github.com/hominiome/hominio/compare/v0.16.1...v0.16.2) (2025-11-28)
+
+
+### Bug Fixes
+
+* ensure svelte-kit sync runs before build in Docker ([df6e07f](https://github.com/hominiome/hominio/commit/df6e07fa434bad6ec878e4231246c441a2b7f3bd))
+* exclude edit and delete operations from repeated prompt injection ([9ad754e](https://github.com/hominiome/hominio/commit/9ad754e4b8719b874945e0bba1360761cee87199))
+* use bunx for svelte-kit sync in Docker build ([6a750f6](https://github.com/hominiome/hominio/commit/6a750f673b1c9a67e61084ebe8fab44e6c31fcb1))
+* use npx for svelte-kit sync in Docker build ([a5d2d41](https://github.com/hominiome/hominio/commit/a5d2d419b45ce7987b417b275310f16df4bdfd0b))
+
 ## [0.16.1](https://github.com/hominiome/hominio/compare/v0.16.0...v0.16.1) (2025-11-28)
 
 
