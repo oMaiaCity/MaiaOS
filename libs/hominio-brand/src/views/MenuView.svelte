@@ -3,7 +3,7 @@
 	Displays menu items sorted by categories
 -->
 <script>
-	import { GlassCard, GlassInfoCard } from '@hominio/brand';
+	import GlassCard from '../components/GlassCard.svelte';
 	
 	let { data, onClose } = $props();
 	

@@ -13,11 +13,8 @@ import * as editCalendarEntryModule from '../lib/functions/edit-calendar-entry.j
 import * as deleteCalendarEntryModule from '../lib/functions/delete-calendar-entry.js';
 import * as viewCalendarModule from '../lib/functions/view-calendar.js';
 
-// Import UI components from local components
-import MenuView from './components/MenuView.svelte';
-import WellnessView from './components/WellnessView.svelte';
-// Import calendar views from @hominio/brand (pure views)
-import { CalendarView, CalendarEntryView } from '@hominio/brand/views';
+// Import calendar views and other UI components from @hominio/brand (pure views)
+import { CalendarView, CalendarEntryView, MenuView, WellnessView } from '@hominio/brand/views';
 
 const functionModules = {
 	'show-menu': showMenuModule,
