@@ -226,7 +226,7 @@
                             <div class="p-3 text-xs rounded border bg-slate-50 border-slate-200 space-y-1">
                                 <div><span class="font-semibold">Type:</span> {item.injectionType || 'unknown'}</div>
                                 <div><span class="font-semibold">Label:</span> {item.injectionLabel || 'unknown'}</div>
-                                <div><span class="font-semibold">Status:</span> <span class:text-green-600={item.status === 'success'} class:text-yellow-600={item.status === 'pending'} class:text-red-600={item.status === 'error'}>{item.status}</span></div>
+                                <div><span class="font-semibold">Status:</span> <span class:text-green-600={item.status === 'success'} class:text-yellow-600={item.status === 'pending'} class:text-red-600={item.status === 'error'}>{item.status || 'unknown'}</span></div>
                                 <div><span class="font-semibold">Turn Complete:</span> {item.turnComplete ? 'true' : 'false'}</div>
                             </div>
                         </div>
