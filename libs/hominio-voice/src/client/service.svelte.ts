@@ -103,6 +103,20 @@ export function createVoiceCallService() {
                 if (msg.type === 'toolResult') {
                     log(`✅ Tool Result: ${msg.name} ${JSON.stringify(msg.result)}`);
                 }
+                if (msg.type === 'contextIngest' && msg.event) {
+                    const event = msg.event;
+                    log(`📥 Context Ingest: ${event.type} (${event.ingestMode})`);
+                    if (event.content) {
+                        const preview = event.content.substring(0, 200);
+                        log(`   Content: ${preview}${event.content.length > 200 ? '...' : ''}`);
+                    }
+                    
+                    // Dispatch contextIngest event for activity stream
+                    const contextIngestEvent = new CustomEvent('contextIngest', {
+                        detail: event
+                    });
+                    window.dispatchEvent(contextIngestEvent);
+                }
                 if (msg.type === 'interrupted') {
                     log('🛑 AI Interrupted');
                     isFirstAudioOfTurn = true; // Reset on interruption
@@ -203,6 +217,8 @@ export function createVoiceCallService() {
             console.warn('[VoiceCall] Cannot send text: WebSocket not connected');
             return;
         }
+        
+        log(`Sending text message (turnComplete: ${turnComplete}): ${text.substring(0, 100)}${text.length > 100 ? '...' : ''}`);
         
         ws.send(JSON.stringify({
             type: "text",

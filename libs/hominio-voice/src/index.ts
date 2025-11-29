@@ -11,8 +11,11 @@
 export { createVoiceSessionManager } from './server/session.js';
 export type { VoiceSessionManagerOptions, VoiceSessionManager } from './server/session.js';
 export { ToolRegistry } from './server/tools/registry.js';
-export { ContextInjectionService } from './server/context-injection.js';
-export type { ContextInjectionOptions } from './server/context-injection.js';
+export { ContextIngestService } from './server/context-injection.js';
+export type { ContextIngestOptions, ContextIngestEvent, IngestMode } from './server/context-injection.js';
+// Legacy exports for backward compatibility
+export { ContextIngestService as ContextInjectionService } from './server/context-injection.js';
+export type { ContextIngestOptions as ContextInjectionOptions } from './server/context-injection.js';
 
 // Client-side exports
 export { createVoiceCallService } from './client/service.svelte.js';

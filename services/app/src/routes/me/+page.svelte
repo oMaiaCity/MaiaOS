@@ -18,13 +18,19 @@
 	type ActivityItem = {
 		id: string;
 		timestamp: number;
-		toolName: string;
-		args: any;
+		toolName?: string;
+		args?: any;
 		status: 'pending' | 'success' | 'error';
 		result?: any;
 		error?: string;
 		isExpanded: boolean;
-		contextString?: string; // Ingested context string for queryVibeContext
+		contextString?: string;
+		// Context ingest specific fields
+		type?: 'toolCall' | 'contextIngest';
+		ingestType?: 'toolResponse' | 'vibeContext' | 'actionSkillResult' | 'systemMessage';
+		ingestMode?: 'silent' | 'triggerAnswer';
+		content?: string;
+		metadata?: Record<string, any>;
 	};
 
 	let activities = $state<ActivityItem[]>([]);
@@ -165,6 +171,7 @@
 		const newItem: ActivityItem = {
 			id,
 			timestamp,
+			type: 'toolCall',
 			toolName,
 			args,
 			status: 'pending',
@@ -337,6 +344,30 @@
 			handleToolCall(toolName, args, contextString, result);
 		};
 
+		// Listen for context ingest events from voice service
+		const handleContextIngestEvent = (event: Event) => {
+			const customEvent = event as CustomEvent;
+			const ingestEvent = customEvent.detail;
+			
+			// Create activity item for context ingest
+			const id = nanoid();
+			const newItem: ActivityItem = {
+				id,
+				timestamp: ingestEvent.timestamp || Date.now(),
+				type: 'contextIngest',
+				ingestType: ingestEvent.type,
+				ingestMode: ingestEvent.ingestMode || 'silent',
+				content: ingestEvent.content,
+				metadata: ingestEvent.metadata,
+				toolName: ingestEvent.toolName,
+				status: 'success',
+				isExpanded: false // Context ingests default to collapsed
+			};
+
+			// Add to activities
+			activities = [...activities, newItem];
+		};
+
 		// Listen for log events from voice service
 		const handleVoiceLogEvent = (event: Event) => {
 			const customEvent = event as CustomEvent;
@@ -345,6 +376,7 @@
 		};
 
 		window.addEventListener('toolCall', handleToolCallEvent);
+		window.addEventListener('contextIngest', handleContextIngestEvent);
 		window.addEventListener('voiceLog', handleVoiceLogEvent);
 
 		// Check for pending actionSkill from sessionStorage (legacy support for navigation)
@@ -366,6 +398,7 @@
 
 		return () => {
 			window.removeEventListener('toolCall', handleToolCallEvent);
+			window.removeEventListener('contextIngest', handleContextIngestEvent);
 			window.removeEventListener('voiceLog', handleVoiceLogEvent);
 		};
 	});

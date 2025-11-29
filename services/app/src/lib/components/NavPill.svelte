@@ -345,10 +345,11 @@
 	$effect(() => {
 		const handleContextUpdate = (event: Event) => {
 			const customEvent = event as CustomEvent;
-			const { text } = customEvent.detail;
+			const { text, silent = true } = customEvent.detail; // Default to silent (turnComplete: false)
 			if (text && voiceCall.isConnected) {
-				console.log('[NavPill] Sending context update to voice session');
-				voiceCall.sendTextMessage(`[System] Updated context: ${text}`);
+				console.log('[NavPill] Sending context update to voice session', { silent });
+				// Use turnComplete: false to prevent AI from responding to context updates
+				voiceCall.sendTextMessage(`[System] Updated context: ${text}`, !silent);
 			}
 		};
 

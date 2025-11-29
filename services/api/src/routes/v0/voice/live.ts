@@ -88,6 +88,12 @@ export const voiceLiveHandler = {
                         contextString
                     }));
                 },
+                onContextIngest: (event) => {
+                    ws.send(JSON.stringify({
+                        type: "contextIngest",
+                        event
+                    }));
+                },
                 onAudio: (data, mimeType) => {
                     ws.send(JSON.stringify({
                         type: "audio",
@@ -131,6 +137,11 @@ export const voiceLiveHandler = {
             if (data.type === 'audio' && data.data) {
                 // Forward audio to voice session manager
                 sessionManager.sendAudio(data.data, data.mimeType || "audio/pcm;rate=16000");
+            } else if (data.type === 'text' && data.text) {
+                // Handle text messages (context updates, system messages, etc.)
+                // turnComplete defaults to true, but can be set to false for silent context updates
+                const turnComplete = data.turnComplete !== undefined ? data.turnComplete : true;
+                sessionManager.sendText(data.text, turnComplete);
             }
         } catch (e) {
             console.error("[voice/live] Error parsing message:", e);

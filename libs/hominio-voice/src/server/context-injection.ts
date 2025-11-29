@@ -1,29 +1,44 @@
 /**
- * Context Injection Service
- * Handles context injection with logging and error handling
+ * Context Ingest Service
+ * Centralized service for all context ingestion into LLM conversation
+ * Handles tool responses, vibe queries, action skill results, and system messages
  */
 
-export interface ContextInjectionOptions {
-	session: any; // Google Live API session
-	onLog?: (message: string, context?: string) => void;
+export type IngestMode = 'silent' | 'triggerAnswer';
+
+export interface ContextIngestEvent {
+	type: 'toolResponse' | 'vibeContext' | 'actionSkillResult' | 'systemMessage';
+	toolName?: string;
+	content: string;
+	ingestMode: IngestMode;
+	metadata?: Record<string, any>;
+	timestamp: number;
 }
 
-export class ContextInjectionService {
+export interface ContextIngestOptions {
+	session: any; // Google Live API session
+	onLog?: (message: string, context?: string) => void;
+	onContextIngest?: (event: ContextIngestEvent) => void;
+}
+
+export class ContextIngestService {
 	private session: any;
 	private onLog?: (message: string, context?: string) => void;
+	private onContextIngest?: (event: ContextIngestEvent) => void;
 
-	constructor(options: ContextInjectionOptions) {
+	constructor(options: ContextIngestOptions) {
 		this.session = options.session;
 		this.onLog = options.onLog;
+		this.onContextIngest = options.onContextIngest;
 	}
 
 	private log(message: string, context?: string) {
 		const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
-		const logMessage = `[ContextInjection] ${timestamp} - ${message}`;
+		const logMessage = `[ContextIngest] ${timestamp} - ${message}`;
 		
 		console.log(logMessage);
 		if (context) {
-			console.log(`[ContextInjection] ${timestamp} - Context preview: ${context.substring(0, 200)}${context.length > 200 ? '...' : ''}`);
+			console.log(`[ContextIngest] ${timestamp} - Context preview: ${context.substring(0, 200)}${context.length > 200 ? '...' : ''}`);
 		}
 
 		if (this.onLog) {
@@ -31,14 +46,25 @@ export class ContextInjectionService {
 		}
 	}
 
-	async injectContext(
+	emitEvent(event: ContextIngestEvent) {
+		if (this.onContextIngest) {
+			this.onContextIngest(event);
+		}
+	}
+
+	/**
+	 * Core ingestion method - all context ingestion goes through here
+	 */
+	async ingest(
 		content: string,
-		turnComplete: boolean = true,
-		contextLabel?: string
+		mode: IngestMode = 'silent',
+		label?: string
 	): Promise<boolean> {
 		try {
-			const label = contextLabel || 'context';
-			this.log(`Injecting ${label}...`, content);
+			const turnComplete = mode === 'triggerAnswer';
+			const ingestLabel = label || 'context';
+			
+			this.log(`Ingesting ${ingestLabel} (mode: ${mode})...`, content);
 
 			if (!this.session) {
 				throw new Error('Session not available');
@@ -49,20 +75,142 @@ export class ContextInjectionService {
 				turnComplete
 			});
 
-			this.log(`${label} injected successfully`);
+			this.log(`${ingestLabel} ingested successfully`);
 			return true;
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-			this.log(`Failed to inject context: ${errorMessage}`, content);
-			console.error('[ContextInjection] Error:', err);
+			this.log(`Failed to ingest context: ${errorMessage}`, content);
+			console.error('[ContextIngest] Error:', err);
 			return false;
 		}
 	}
 
+	/**
+	 * Ingest tool response - sends tool result back to Google API
+	 * This is the ONLY way tool results are sent - no additional content ingestion
+	 */
+	async ingestToolResponse(
+		toolName: string,
+		result: any,
+		toolCallId: string,
+		mode: IngestMode = 'silent'
+	): Promise<boolean> {
+		try {
+			// Send tool response via Google API (native tool response - always triggers AI)
+			this.session.sendToolResponse({
+				functionResponses: [
+					{
+						id: toolCallId,
+						name: toolName,
+						response: { result }
+					}
+				]
+			});
+
+			// Emit event for frontend tracking
+			const resultString = JSON.stringify(result);
+			this.emitEvent({
+				type: 'toolResponse',
+				toolName,
+				content: resultString,
+				ingestMode: mode,
+				metadata: { toolCallId, result },
+				timestamp: Date.now()
+			});
+
+			this.log(`Tool response sent for ${toolName}`);
+			return true;
+		} catch (err) {
+			const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+			this.log(`Failed to send tool response: ${errorMessage}`);
+			console.error('[ContextIngest] Error:', err);
+			return false;
+		}
+	}
+
+	/**
+	 * Ingest vibe context - loads and injects vibe context
+	 */
+	async ingestVibeContext(
+		vibeId: string,
+		contextString: string,
+		mode: IngestMode = 'silent'
+	): Promise<boolean> {
+		const success = await this.ingest(contextString, mode, `vibe context (${vibeId})`);
+
+		// Emit event for frontend tracking
+		this.emitEvent({
+			type: 'vibeContext',
+			toolName: 'queryVibeContext',
+			content: contextString,
+			ingestMode: mode,
+			metadata: { vibeId },
+			timestamp: Date.now()
+		});
+
+		return success;
+	}
+
+	/**
+	 * Ingest action skill result - injects action skill execution result
+	 */
+	async ingestActionSkillResult(
+		vibeId: string,
+		skillId: string,
+		result: any,
+		mode: IngestMode = 'silent'
+	): Promise<boolean> {
+		const resultString = typeof result === 'string' ? result : JSON.stringify(result);
+		const success = await this.ingest(resultString, mode, `action skill result (${vibeId}/${skillId})`);
+
+		// Emit event for frontend tracking
+		this.emitEvent({
+			type: 'actionSkillResult',
+			toolName: 'actionSkill',
+			content: resultString,
+			ingestMode: mode,
+			metadata: { vibeId, skillId, result },
+			timestamp: Date.now()
+		});
+
+		return success;
+	}
+
+	/**
+	 * Ingest system message - injects system/background messages
+	 */
+	async ingestSystemMessage(
+		message: string,
+		mode: IngestMode = 'silent'
+	): Promise<boolean> {
+		const success = await this.ingest(message, mode, 'system message');
+
+		// Emit event for frontend tracking
+		this.emitEvent({
+			type: 'systemMessage',
+			content: message,
+			ingestMode: mode,
+			timestamp: Date.now()
+		});
+
+		return success;
+	}
+
+	// Legacy methods for backward compatibility
+	async injectContext(
+		content: string,
+		turnComplete: boolean = false,
+		contextLabel?: string
+	): Promise<boolean> {
+		const mode: IngestMode = turnComplete ? 'triggerAnswer' : 'silent';
+		return this.ingest(content, mode, contextLabel);
+	}
+
 	async injectVibeContext(vibeId: string, contextString: string): Promise<boolean> {
-		// Use turnComplete: true - queryVibeContext is background operation with no follow-up
-		// The AI won't respond after this injection since it's just loading context
-		return this.injectContext(contextString, true, `vibe context (${vibeId})`);
+		return this.ingestVibeContext(vibeId, contextString, 'silent');
+	}
+
+	async injectSilentContext(content: string, contextLabel?: string): Promise<boolean> {
+		return this.ingest(content, 'silent', contextLabel || 'silent context');
 	}
 }
-

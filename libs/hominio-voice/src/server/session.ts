@@ -6,7 +6,7 @@
 import { GoogleGenAI, Modality } from '@google/genai';
 import { buildSystemInstruction } from '@hominio/vibes';
 import { ToolRegistry } from './tools/registry.js';
-import { ContextInjectionService } from './context-injection.js';
+import { ContextIngestService, type ContextIngestEvent } from './context-injection.js';
 
 export interface VoiceSessionManagerOptions {
 	apiKey: string;
@@ -14,6 +14,7 @@ export interface VoiceSessionManagerOptions {
 	initialVibeId?: string;
 	onLog?: (message: string, context?: string) => void;
 	onToolCall?: (toolName: string, args: any, result: any, contextString?: string) => void;
+	onContextIngest?: (event: ContextIngestEvent) => void;
 	onAudio?: (data: string, mimeType?: string) => void;
 	onTranscript?: (role: 'user' | 'model', text: string) => void;
 	onInterrupted?: () => void;
@@ -24,6 +25,8 @@ export interface VoiceSessionManagerOptions {
 export interface VoiceSessionManager {
 	handleGoogleMessage(message: any): void;
 	sendAudio(data: string, mimeType?: string): void;
+	sendText(text: string, turnComplete?: boolean): void;
+	getContextIngest(): ContextIngestService;
 	close(): void;
 }
 
@@ -36,6 +39,7 @@ export async function createVoiceSessionManager(
 		initialVibeId,
 		onLog,
 		onToolCall,
+		onContextIngest,
 		onAudio,
 		onTranscript,
 		onInterrupted,
@@ -170,10 +174,11 @@ export async function createVoiceSessionManager(
 		}
 	});
 
-	// Create context injection service
-	const contextInjection = new ContextInjectionService({
+	// Create context ingest service
+	const contextIngest = new ContextIngestService({
 		session,
-		onLog
+		onLog,
+		onContextIngest
 	});
 
 	// Function call handler
@@ -201,30 +206,19 @@ export async function createVoiceSessionManager(
 			vibeConfigs,
 			activeVibeIds,
 			session,
-			injectContext: (content) => {
-				// Context injection with logging - only for queryVibeContext
-				if (name === 'queryVibeContext') {
-					contextInjection.injectVibeContext(args?.vibeId || 'unknown', content.turns);
-				} else {
-					contextInjection.injectContext(content.turns, content.turnComplete);
-				}
-			},
+			contextIngest,
 			onLog
 		});
 
 		// Notify frontend of tool call
 		onToolCall?.(name, args || {}, toolResult.result, toolResult.contextString);
 
-		// Send response back to Google
-		session.sendToolResponse({
-			functionResponses: [
-				{
-					id,
-					name,
-					response: { result: toolResult.result }
-				}
-			]
-		});
+		// ALWAYS send tool response (required by Google API)
+		// Only native tool responses are sent - no additional content ingestion
+		// Tool responses will trigger AI to continue (this is expected behavior)
+		// The ingestMode parameter is kept for consistency but only affects event tracking
+		const ingestMode: 'silent' | 'triggerAnswer' = 'silent';
+		await contextIngest.ingestToolResponse(name, toolResult.result, id, ingestMode);
 	}
 
 	return {
@@ -239,6 +233,16 @@ export async function createVoiceSessionManager(
 					mimeType
 				}
 			});
+		},
+
+		sendText(text: string, turnComplete: boolean = false) {
+			// Default to silent mode for context updates - set triggerAnswer only for user queries
+			const mode = turnComplete ? 'triggerAnswer' : 'silent';
+			contextIngest.ingestSystemMessage(text, mode);
+		},
+
+		getContextIngest() {
+			return contextIngest;
 		},
 
 		close() {

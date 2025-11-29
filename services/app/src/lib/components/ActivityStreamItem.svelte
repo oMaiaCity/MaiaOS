@@ -7,8 +7,9 @@
 	let { item, isExpanded = false, onToggle } = $props();
 
     // Derived state
-	const isSkill = $derived(isActionSkill(item.toolName));
-	const isQuery = $derived(isQueryTool(item.toolName));
+	const isSkill = $derived(item.toolName ? isActionSkill(item.toolName) : false);
+	const isQuery = $derived(item.toolName ? isQueryTool(item.toolName) : false);
+	const isContextIngest = $derived(item.type === 'contextIngest');
     
     // Extract skill info
     // args structure might vary slightly based on how it was passed, handling both flat and nested
@@ -18,32 +19,31 @@
     
     
     // State for collapsing - queries default to closed, skills default to expanded
-    // Initialize from prop, but manage state locally for user interactions
-    let expanded = $state(false);
+    // Component manages its own state independently after initialization
+    // Initialize based on tool type: queries default to closed, skills default to expanded
+    const initialExpanded = isQuery ? false : isExpanded;
+    let expanded = $state(initialExpanded);
     let lastPropValue = $state(isExpanded);
+    let hasUserToggled = $state(false);
     
     // Profile image state
     let avatarUrl = $state<string | null>(null);
     let avatarLoading = $state(true);
     
-    // Initialize expanded state based on tool type and prop
-    $effect(() => {
-        // Initialize: queries default to closed, skills default to expanded (or isExpanded prop)
-        if (isQuery) {
-            expanded = false;
-        } else {
-            expanded = isExpanded;
-        }
-        lastPropValue = isExpanded;
-    });
-    
     // Sync expanded state with props only when prop changes externally (not from our toggle)
+    // This handles cases like collapsing all items when a new skill is added
     $effect(() => {
-        // Only sync if prop changed externally (not from our toggle)
-        if (isExpanded !== lastPropValue) {
+        // Only sync if prop changed externally AND user hasn't manually toggled this item
+        if (!hasUserToggled && isExpanded !== lastPropValue) {
             lastPropValue = isExpanded;
-            // Queries default to closed, skills default to expanded (or isExpanded prop)
-            if (!isQuery) {
+            // For queries, only sync if explicitly set to false (collapsing all)
+            // For skills, always sync with prop
+            if (isQuery) {
+                // Only collapse queries if prop is explicitly false (external collapse)
+                if (!isExpanded) {
+                    expanded = false;
+                }
+            } else {
                 expanded = isExpanded;
             }
         }
@@ -73,7 +73,9 @@
 
     function handleToggle() {
         expanded = !expanded;
-        lastPropValue = expanded; // Track that we've updated
+        hasUserToggled = true; // Mark that user has manually toggled
+        // Update lastPropValue to prevent effect from resetting our toggle
+        lastPropValue = expanded;
         // Always call onToggle if provided to sync parent state
         if (onToggle) {
             onToggle();
@@ -197,6 +199,69 @@
                         {#if !item.contextString && (!item.result || Object.keys(item.result || {}).length === 0)}
                             <div class="py-2 text-xs italic text-center text-slate-400">
                                 No context or result data available
+                            </div>
+                        {/if}
+                    </div>
+                </div>
+            {/if}
+        </GlassCard>
+    {:else if isContextIngest}
+        <!-- Context Ingest Item -->
+        <GlassCard class="overflow-hidden border-l-4 border-l-purple-400" lifted={true}>
+            <!-- Header / Collapsed View -->
+            <button 
+                class="flex justify-between items-center px-4 py-2 w-full text-left border-b transition-colors cursor-pointer border-slate-100/10 hover:bg-slate-50/30"
+                onclick={handleToggle}
+            >
+                <div class="flex gap-3 items-center">
+                    <div class="w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></div>
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-[11px] font-medium text-slate-600">
+                            {item.ingestType === 'toolResponse' && 'Tool Response'}
+                            {item.ingestType === 'vibeContext' && 'Vibe Context'}
+                            {item.ingestType === 'actionSkillResult' && 'Action Skill Result'}
+                            {item.ingestType === 'systemMessage' && 'System Message'}
+                            {!item.ingestType && 'Context Ingest'}
+                        </span>
+                        {#if item.toolName}
+                            <span class="text-[10px] text-slate-500">{item.toolName}</span>
+                        {/if}
+                    </div>
+                    {#if item.ingestMode}
+                        <span class="text-[9px] px-1.5 py-0.5 rounded-full {item.ingestMode === 'silent' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}">
+                            {item.ingestMode === 'silent' ? 'Silent' : 'Trigger Answer'}
+                        </span>
+                    {/if}
+                </div>
+                <div class="flex gap-3 items-center">
+                    <div class="text-[10px] text-slate-400 tabular-nums font-medium">
+                        {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <div class="transition-transform duration-300 text-slate-400" class:rotate-180={expanded}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
+                </div>
+            </button>
+
+            <!-- Expanded Content -->
+            {#if expanded}
+                <div transition:slide={{ duration: 300 }} class="p-4 bg-slate-50/30">
+                    <div class="space-y-4">
+                        {#if item.metadata}
+                            <div>
+                                <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Metadata</h4>
+                                <pre class="overflow-x-auto p-3 text-xs rounded border bg-slate-50 border-slate-200">{JSON.stringify(item.metadata, null, 2)}</pre>
+                            </div>
+                        {/if}
+                        {#if item.content}
+                            <div>
+                                <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Content</h4>
+                                <pre class="overflow-x-auto overflow-y-auto p-3 max-h-96 text-xs whitespace-pre-wrap rounded border bg-slate-50 border-slate-200">{item.content}</pre>
+                            </div>
+                        {/if}
+                        {#if !item.content && !item.metadata}
+                            <div class="py-2 text-xs italic text-center text-slate-400">
+                                No content available
                             </div>
                         {/if}
                     </div>

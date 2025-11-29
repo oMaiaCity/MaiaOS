@@ -17,7 +17,7 @@ export async function handleQueryVibeContext(
 	vibeId: string,
 	vibeConfigs: Record<string, any>,
 	activeVibeIds: string[],
-	injectFn?: (content: { turns: string; turnComplete: boolean }) => void
+	injectFn?: (content: { turns: string; turnComplete: boolean }) => void | Promise<void>
 ): Promise<QueryVibeContextResult> {
 	try {
 		// Add to active vibes if not already present
@@ -34,10 +34,11 @@ export async function handleQueryVibeContext(
 		const contextString = await buildVibeContextString(vibeId);
 
 		// Inject context via callback
+		// Use turnComplete: false to keep conversation loop open without triggering AI response
 		if (injectFn && contextString) {
-			injectFn({
+			await injectFn({
 				turns: contextString,
-				turnComplete: true
+				turnComplete: false
 			});
 		}
 

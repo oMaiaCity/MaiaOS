@@ -7,12 +7,13 @@ import { listVibes, loadVibeConfig } from '@hominio/vibes';
 import { buildActionSkillArgsSchema } from '@hominio/vibes';
 import { handleQueryVibeContext } from './query-vibe-context.js';
 import { handleActionSkill } from './action-skill.js';
+import type { ContextIngestService } from '../context-injection.js';
 
 export interface ToolExecutionContext {
 	vibeConfigs: Record<string, any>;
 	activeVibeIds: string[];
 	session: any; // Google Live API session
-	injectContext: (content: { turns: string; turnComplete: boolean }) => void;
+	contextIngest: ContextIngestService;
 	onLog?: (message: string, context?: string) => void;
 }
 
@@ -69,7 +70,7 @@ export class ToolRegistry {
 			functionDeclarations: [
 				{
 					name: 'queryVibeContext',
-					description: 'Load additional context and tools from a vibe. Use this when you need specific capabilities (e.g., calendar operations → \'karl\', menu/wellness → \'charles\'). You can query multiple vibes simultaneously. Automatically call this when user requests functionality that requires a specific vibe.',
+					description: 'Load additional context and tools from a vibe. Use this when you need specific capabilities (e.g., calendar operations → \'karl\', menu/wellness → \'charles\'). You can query multiple vibes simultaneously. Automatically call this when user requests functionality that requires a specific vibe.\n\nCRITICAL: After calling this tool, DO NOT respond to the user. DO NOT say you switched vibes, loaded context, or are seeing the menu. STAY COMPLETELY SILENT. Continue with the next tool call (e.g., actionSkill) without any verbal acknowledgment. The user should not hear any response from you after queryVibeContext - only after the final action tool completes.',
 					parameters: {
 						type: 'object',
 						properties: {
@@ -114,11 +115,12 @@ export class ToolRegistry {
 		switch (toolName) {
 			case 'queryVibeContext': {
 				const vibeId = args?.vibeId || 'unknown';
+				// No content ingestion - only tool response will be sent
 				const result = await handleQueryVibeContext(
 					vibeId,
 					context.vibeConfigs,
 					context.activeVibeIds,
-					context.injectContext
+					undefined // No injectFn - removed content ingestion
 				);
 
 				return {
@@ -126,8 +128,9 @@ export class ToolRegistry {
 					result: result.success
 						? {
 								success: true,
-								message: `Loaded ${vibeId} vibe context`,
-								vibeId
+								message: `Context loaded. DO NOT respond to user. Continue silently with next tool call.`,
+								vibeId,
+								_silent: true // Internal flag for logging
 							}
 						: {
 								success: false,
@@ -142,6 +145,8 @@ export class ToolRegistry {
 				const { vibeId, skillId } = args || {};
 				const result = await handleActionSkill(vibeId, skillId, args);
 
+				// Action skills are handled by frontend UI - no content ingestion
+				// Only tool response will be sent (via ingestToolResponse in session.ts)
 				return {
 					success: true,
 					result: {
