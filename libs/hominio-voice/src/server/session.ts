@@ -5,7 +5,7 @@
 
 import { GoogleGenAI, Modality } from '@google/genai';
 import { buildSystemInstruction } from '@hominio/vibes';
-import { ToolRegistry } from './tools/registry.js';
+import { ToolRegistry, type ToolResult } from './tools/registry.js';
 import { ContextIngestService, type ContextIngestEvent } from './context-injection.js';
 
 export interface VoiceSessionManagerOptions {
@@ -203,34 +203,71 @@ export async function createVoiceSessionManager(
 			return;
 		}
 
+		// Validate tool call ID - required for sending response
+		if (!id) {
+			console.error(`[hominio-voice] ⚠️ Function call missing ID. Tool: ${name}. Full structure:`, JSON.stringify(functionCall, null, 2));
+			// Still try to send error response, but log the issue
+			onLog?.(`⚠️ Tool call ${name} missing ID - response may fail`);
+		}
+
 		// Silent - don't log function calls (too verbose)
 
 		// Filter out legacy tools - don't execute or notify frontend
 		if (name === 'queryVibeContext' || name === 'actionSkill' || name === 'delegateIntent') {
 			onLog?.(`⚠️ Legacy tool ${name} is no longer supported.`);
 			// Return error response to AI
-			await contextIngest.ingestToolResponse(name, {
-				error: `Tool ${name} is no longer available. Use queryTodos or createTodo directly.`
-			}, id, 'silent');
+			try {
+				await contextIngest.ingestToolResponse(name, {
+					error: `Tool ${name} is no longer available. Use queryTodos or createTodo directly.`
+				}, id || 'unknown', 'silent');
+			} catch (err) {
+				console.error(`[hominio-voice] Failed to send legacy tool error response:`, err);
+			}
 			return;
 		}
 
-		// Execute tool via registry
-		const toolResult = await toolRegistry.executeTool(name, args || {}, {
-			session,
-			onLog,
-			contextIngest // Pass contextIngest so tools can re-ingest results when done
-		});
+		// Execute tool via registry with proper error handling
+		let toolResult: ToolResult;
+		try {
+			toolResult = await toolRegistry.executeTool(name, args || {}, {
+				session,
+				onLog,
+				contextIngest // Pass contextIngest so tools can re-ingest results when done
+			});
+		} catch (err) {
+			console.error(`[hominio-voice] Error executing tool ${name}:`, err);
+			const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+			toolResult = {
+				success: false,
+				result: { error: errorMessage },
+				error: errorMessage
+			};
+		}
 
 		// Notify frontend of tool call (with result) - this happens AFTER execution
-		onToolCall?.(name, args || {}, toolResult.result, toolResult.contextString);
+		try {
+			onToolCall?.(name, args || {}, toolResult.result, toolResult.contextString);
+		} catch (err) {
+			console.error(`[hominio-voice] Error notifying frontend of tool call:`, err);
+		}
 
 		// ALWAYS send tool response (required by Google API)
-		// Only native tool responses are sent - no additional content ingestion
-		// Tool responses will trigger AI to continue (this is expected behavior)
-		// The ingestMode parameter is kept for consistency but only affects event tracking
-		const ingestMode: 'silent' | 'triggerAnswer' = 'silent';
-		await contextIngest.ingestToolResponse(name, toolResult.result, id, ingestMode);
+		// This is critical - if we don't send a response, the API will hang
+		try {
+			const ingestMode: 'silent' | 'triggerAnswer' = 'silent';
+			await contextIngest.ingestToolResponse(name, toolResult.result, id || 'unknown', ingestMode);
+		} catch (err) {
+			console.error(`[hominio-voice] CRITICAL: Failed to send tool response for ${name}:`, err);
+			// Try to send error response as fallback
+			try {
+				await contextIngest.ingestToolResponse(name, {
+					error: `Failed to process tool: ${err instanceof Error ? err.message : 'Unknown error'}`
+				}, id || 'unknown', 'silent');
+			} catch (fallbackErr) {
+				console.error(`[hominio-voice] CRITICAL: Failed to send fallback error response:`, fallbackErr);
+				onError?.(new Error(`Failed to send tool response for ${name}: ${err instanceof Error ? err.message : String(err)}`));
+			}
+		}
 	}
 
 	return {

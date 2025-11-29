@@ -4,7 +4,7 @@
  * Resets on page refresh (no persistence)
  */
 
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { nanoid } from 'nanoid';
 
 /**
@@ -35,11 +35,8 @@ export const todoConfig = {};
  * @returns {Promise<Todo[]>}
  */
 export async function getTodos() {
-	return new Promise((resolve) => {
-		todos.subscribe((data) => {
-			resolve([...data]);
-		})();
-	});
+	// Get todos synchronously using get()
+	return Promise.resolve([...get(todos)]);
 }
 
 /**
@@ -48,18 +45,26 @@ export async function getTodos() {
  * @returns {Promise<Todo>}
  */
 export async function addTodo(title) {
-	return new Promise((resolve) => {
-		todos.subscribe((currentTodos) => {
-			const newTodo = {
-				id: nanoid(),
-				title: title.trim(),
-				completed: false
-			};
-			const updatedTodos = [...currentTodos, newTodo];
-			todos.set(updatedTodos);
-			resolve(newTodo);
-		})();
-	});
+	try {
+		// Get current todos synchronously
+		const currentTodos = get(todos);
+		
+		// Create new todo
+		const newTodo = {
+			id: nanoid(),
+			title: title.trim(),
+			completed: false
+		};
+		
+		// Update store
+		const updatedTodos = [...currentTodos, newTodo];
+		todos.set(updatedTodos);
+		
+		// Return immediately
+		return newTodo;
+	} catch (error) {
+		throw new Error(`Failed to add todo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+	}
 }
 
 /**
@@ -68,16 +73,17 @@ export async function addTodo(title) {
  * @returns {Promise<Todo | null>}
  */
 export async function toggleTodo(id) {
-	return new Promise((resolve) => {
-		todos.subscribe((currentTodos) => {
-			const updatedTodos = currentTodos.map(todo => 
-				todo.id === id ? { ...todo, completed: !todo.completed } : todo
-			);
-			todos.set(updatedTodos);
-			const updatedTodo = updatedTodos.find(t => t.id === id);
-			resolve(updatedTodo || null);
-		})();
-	});
+	try {
+		const currentTodos = get(todos);
+		const updatedTodos = currentTodos.map(todo => 
+			todo.id === id ? { ...todo, completed: !todo.completed } : todo
+		);
+		todos.set(updatedTodos);
+		const updatedTodo = updatedTodos.find(t => t.id === id);
+		return updatedTodo || null;
+	} catch (error) {
+		throw new Error(`Failed to toggle todo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+	}
 }
 
 /**
@@ -86,13 +92,14 @@ export async function toggleTodo(id) {
  * @returns {Promise<boolean>}
  */
 export async function deleteTodo(id) {
-	return new Promise((resolve) => {
-		todos.subscribe((currentTodos) => {
-			const updatedTodos = currentTodos.filter(todo => todo.id !== id);
-			todos.set(updatedTodos);
-			resolve(true);
-		})();
-	});
+	try {
+		const currentTodos = get(todos);
+		const updatedTodos = currentTodos.filter(todo => todo.id !== id);
+		todos.set(updatedTodos);
+		return true;
+	} catch (error) {
+		throw new Error(`Failed to delete todo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+	}
 }
 
 

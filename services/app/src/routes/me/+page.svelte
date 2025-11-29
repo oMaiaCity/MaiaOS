@@ -175,6 +175,9 @@
 		const id = nanoid();
 		const timestamp = Date.now();
 		
+		// Collapse all existing items before adding new one
+		activities = activities.map(item => ({ ...item, isExpanded: false }));
+		
 		// Create new activity item
 		const newItem: ActivityItem = {
 			id,
@@ -371,7 +374,7 @@
 			<div class="overflow-hidden flex-1 rounded-lg border backdrop-blur-sm border-slate-200/50 bg-white/40">
 				<div class="overflow-y-auto p-3 h-full font-mono text-xs text-slate-700">
 					{#each (voice as any).logs as log}
-						<div class="mb-1 leading-relaxed break-words text-slate-600">{log}</div>
+						<div class="mb-1 leading-relaxed wrap-break-word text-slate-600">{log}</div>
 					{:else}
 						<div class="text-xs italic text-slate-400">No logs yet. Start a call to see logs.</div>
 					{/each}

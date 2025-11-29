@@ -46,6 +46,6 @@
 		<div class="text-sm text-red-600">Error: {error}</div>
 	</div>
 {:else if Component}
-	<svelte:component this={Component} data={resultData} onClose={onClose} />
+	<Component data={resultData} onClose={onClose} />
 {/if}
 

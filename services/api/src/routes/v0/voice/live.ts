@@ -65,9 +65,16 @@ export const voiceLiveHandler = {
         }
 
         try {
+            // Validate API key before attempting connection
+            if (!GOOGLE_AI_API_KEY || GOOGLE_AI_API_KEY.trim().length === 0) {
+                console.error("[voice/live] ❌ GOOGLE_AI_API_KEY is not set or empty");
+                ws.close(1011, "Server configuration error: Google AI API key not configured");
+                return;
+            }
+
             // Create voice session manager from hominio-voice package
             const sessionManager = await createVoiceSessionManager({
-                apiKey: GOOGLE_AI_API_KEY || "",
+                apiKey: GOOGLE_AI_API_KEY,
                 onLog: (message, context) => {
                     ws.send(JSON.stringify({ type: "log", message, context }));
                 },
