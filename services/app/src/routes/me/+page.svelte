@@ -3,10 +3,9 @@
 	import { goto } from '$app/navigation';
 	import { GlassCard, LoadingSpinner } from '@hominio/brand';
 	import { createAuthClient } from '@hominio/auth';
-	import { handleActionSkill, loadVibeConfig, listVibes } from '@hominio/vibes';
 	import { nanoid } from 'nanoid';
 	import ActivityStreamItem from '$lib/components/ActivityStreamItem.svelte';
-	import { isQueryTool, isActionSkill, parseToolCallEvent, type ToolCallEvent } from '@hominio/voice';
+	import { parseToolCallEvent, type ToolCallEvent } from '@hominio/voice';
 
 	const authClient = createAuthClient();
 	const session = authClient.useSession();
@@ -25,11 +24,7 @@
 		error?: string;
 		isExpanded: boolean;
 		contextString?: string;
-		// Context ingest specific fields
-		type?: 'toolCall' | 'contextIngest';
-		ingestType?: 'toolResponse' | 'vibeContext' | 'actionSkillResult' | 'systemMessage';
-		ingestMode?: 'silent' | 'triggerAnswer';
-		content?: string;
+		// Metadata for additional item info
 		metadata?: Record<string, any>;
 	};
 
@@ -37,9 +32,6 @@
 	let streamContainer: HTMLElement;
 	let activityItems: Map<string, HTMLElement> = new Map();
 	
-	// Available vibes for empty state
-	let availableVibes = $state<Array<{id: string, name: string, role: string, description: string, avatar: string, skills: any[]}>>([]);
-	let vibesLoading = $state(true);
 
 	// Track items being pushed out of view
 	let itemsPushingOut = $state<Set<string>>(new Set());
@@ -137,6 +129,17 @@
 	}
 
 	async function handleToolCall(toolName: string, args: any, contextString?: string, result?: any) {
+		// Filter out legacy tools and unknown tools - don't show them at all
+		if (toolName === 'queryVibeContext' || toolName === 'actionSkill' || toolName === 'delegateIntent' || !toolName || toolName === 'unknown') {
+			// Silently ignore legacy/unknown tool calls
+			return;
+		}
+		
+		// Only handle queryTodos and createTodo
+		if (toolName !== 'queryTodos' && toolName !== 'createTodo') {
+			return;
+		}
+		
 		// Check if we already have a pending item for this tool call (by matching toolName + args + timestamp)
 		// This prevents duplicate UI items from the same tool call
 		const now = Date.now();
@@ -154,11 +157,17 @@
 						return { 
 							...item, 
 							contextString: contextString !== undefined ? contextString : item.contextString,
-							result: result !== undefined ? result : item.result
+							result: result !== undefined ? result : item.result,
+							status: result?.success === false ? 'error' : (result?.success ? 'success' : item.status)
 						};
 					}
 					return item;
 				});
+				// Process the updated item to load UI component
+				const updatedItem = activities.find(item => item.id === existingItem.id);
+				if (updatedItem) {
+					await processTodoToolCall(updatedItem);
+				}
 			}
 			return; // Don't create duplicate item
 		}
@@ -166,129 +175,27 @@
 		const id = nanoid();
 		const timestamp = Date.now();
 		
-		
 		// Create new activity item
 		const newItem: ActivityItem = {
 			id,
 			timestamp,
-			type: 'toolCall',
 			toolName,
 			args,
 			status: 'pending',
-			isExpanded: isActionSkill(toolName), // Expand skills by default, queries closed
-			contextString: contextString || undefined, // Set directly - can be undefined
-			result: result || undefined // Set result if available
+			isExpanded: true, // Expand by default to show UI component
+			contextString: contextString || undefined,
+			result: result || undefined
 		};
 		
-
-		// Collapse previous items ONLY if the new one is a UI item (actionSkill)
-		// This prevents background queries (context/data) from closing the active UI
-		if (isActionSkill(toolName)) {
-			activities = activities.map(item => ({
-				...item,
-				isExpanded: false
-			}));
-		}
-
 		// Add new item to bottom
 		activities = [...activities, newItem];
 
-		// Scroll to position new activity properly ONLY if it's a UI item
-		// Background queries (context/data) should not trigger scroll/push animations
-		if (isActionSkill(toolName)) {
-			await scrollToNewActivity(id);
-		}
+		// Scroll to new activity
+		await scrollToNewActivity(id);
 
-		// Process the tool call
-		if (isActionSkill(toolName)) {
-			await processActionSkill(newItem);
-		} else if (isQueryTool(toolName)) {
-			// Background query - mark as success
-			// contextString is already set on the item, just update status
-			updateActivityStatus(id, 'success');
-		} else if (toolName === 'delegateIntent') {
-			// Handle delegateIntent - process KaibanJS events
-			await processDelegateIntent(newItem);
-		}
+		// Process the tool call to load UI component
+		await processTodoToolCall(newItem);
 	}
-
-	async function processDelegateIntent(item: ActivityItem) {
-		try {
-			// The result contains events and task information
-			const result = item.result;
-			if (!result) {
-				updateActivityStatus(item.id, 'error', undefined, 'No result from delegateIntent');
-				return;
-			}
-
-			// Update main item status
-			updateActivityStatus(item.id, result.success ? 'success' : 'error', result);
-
-			// Process events if available
-			if (result.events && Array.isArray(result.events)) {
-				for (const event of result.events) {
-					const eventId = nanoid();
-					const eventItem: ActivityItem = {
-						id: eventId,
-						timestamp: event.timestamp || Date.now(),
-						type: 'toolCall',
-						toolName: event.type === 'toolCall' ? event.data.toolName : undefined,
-						args: event.data,
-						status: event.type === 'state' && event.data.state === 'done' ? 'success' : 'pending',
-						isExpanded: false,
-						metadata: {
-							eventType: event.type,
-							kaiEvent: true
-						}
-					};
-
-					// Add event to activities
-					activities = [...activities, eventItem];
-
-					// Update status based on event type
-					if (event.type === 'state') {
-						const state = event.data.state;
-						updateActivityStatus(eventId, state === 'done' ? 'success' : 'pending');
-					} else if (event.type === 'toolCall') {
-						updateActivityStatus(eventId, 'success', event.data.toolResult);
-					} else if (event.type === 'taskUpdate') {
-						const status = event.data.status;
-						updateActivityStatus(
-							eventId,
-							status === 'DONE' ? 'success' : 'pending',
-							event.data.result
-						);
-					}
-				}
-			}
-
-			// Process tasks if available
-			if (result.tasks && Array.isArray(result.tasks)) {
-				for (const task of result.tasks) {
-					const taskId = nanoid();
-					const taskItem: ActivityItem = {
-						id: taskId,
-						timestamp: Date.now(),
-						type: 'toolCall',
-						toolName: 'kaiTask',
-						args: { taskId: task.id, status: task.status },
-						status: task.status === 'DONE' ? 'success' : 'pending',
-						result: task.result,
-						isExpanded: false,
-						metadata: {
-							kaiTask: true
-						}
-					};
-
-					activities = [...activities, taskItem];
-				}
-			}
-		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-			updateActivityStatus(item.id, 'error', undefined, errorMessage);
-		}
-	}
-
 
 	function updateActivityStatus(id: string, status: 'success' | 'error', result?: any, error?: string) {
 		activities = activities.map(item => {
@@ -313,97 +220,55 @@
 		});
 	}
 
-	async function processActionSkill(item: ActivityItem) {
+	async function processTodoToolCall(item: ActivityItem) {
 		try {
-			const { vibeId, skillId, ...restArgs } = item.args;
+			const { toolName, result: toolResult } = item;
 			
-			if (!vibeId || !skillId) {
-				throw new Error('Missing vibeId or skillId');
+			// If we already have a result from the tool call, use it
+			if (toolResult) {
+				// Result is already processed by the tool handler
+				updateActivityStatus(item.id, toolResult.success === false ? 'error' : 'success', toolResult);
+				return;
 			}
-
-			const userId = $session.data?.user?.id;
 			
-			// Execute skill
-			const result = await handleActionSkill(
-				{ vibeId, skillId, args: restArgs },
-				{
-					userId,
-					activeVibeIds: [vibeId] 
-				}
-			);
-
-			if (result.success) {
-				updateActivityStatus(item.id, 'success', result.data);
+			// Otherwise, call handler directly to get fresh data from store
+			const { loadFunction } = await import('@hominio/vibes');
+			
+			if (toolName === 'queryTodos') {
+				const func = await loadFunction('query-todos');
+				const result = await func.handler({});
 				
-				// Send updated context back to voice session if available
-				if (result.data?.calendarContext || result.data?.menuContext || result.data?.wellnessContext) {
-					const contextText = result.data.calendarContext || result.data.menuContext || result.data.wellnessContext;
-					const updateEvent = new CustomEvent('updateVoiceContext', {
-						detail: { text: contextText }
-					});
-					window.dispatchEvent(updateEvent);
+				if (result.success) {
+					// Even if todos array is empty, this is still success - TodoView will show empty state
+					updateActivityStatus(item.id, 'success', result.data);
+				} else {
+					updateActivityStatus(item.id, 'error', undefined, result.error);
 				}
-			} else {
-				console.error('[Me] Skill execution failed:', result.error);
-				updateActivityStatus(item.id, 'error', undefined, result.error);
+			} else if (toolName === 'createTodo') {
+				const title = item.args?.title;
+				
+				if (!title) {
+					updateActivityStatus(item.id, 'error', undefined, 'Title parameter is required');
+					return;
+				}
+				
+				const func = await loadFunction('create-todo');
+				const result = await func.handler({ title });
+				
+				if (result.success) {
+					updateActivityStatus(item.id, 'success', result.data);
+				} else {
+					updateActivityStatus(item.id, 'error', undefined, result.error);
+				}
 			}
 		} catch (err) {
-			console.error('[Me] Error executing skill:', err);
+			console.error('[Me] Error executing todo tool call:', err);
 			updateActivityStatus(item.id, 'error', undefined, err instanceof Error ? err.message : 'Unknown error');
 		}
 	}
 
-	// Load available vibes for empty state
-	async function loadAvailableVibes() {
-		try {
-			const vibeIds = await listVibes();
-			const vibes = await Promise.all(
-				vibeIds.map(async (id) => {
-					try {
-						const config = await loadVibeConfig(id);
-						// Create short description from skills
-						let shortDesc = config.role;
-						if (config.skills && config.skills.length > 0) {
-							// Map skill IDs to short German descriptions
-							const skillNames: Record<string, string> = {
-								'show-menu': 'Menü',
-								'show-wellness': 'Wellness',
-								'view-calendar': 'Kalender anzeigen',
-								'create-calendar-entry': 'Termine erstellen',
-								'edit-calendar-entry': 'Termine bearbeiten',
-								'delete-calendar-entry': 'Termine löschen'
-							};
-							const descs = config.skills.map(s => skillNames[s.id] || s.name).filter(Boolean);
-							if (descs.length > 0) {
-								shortDesc = descs.join(', ');
-							}
-						}
-						return {
-							id: config.id,
-							name: config.name,
-							role: config.role,
-							description: shortDesc,
-							avatar: config.avatar || '',
-							skills: config.skills || []
-						};
-					} catch (err) {
-						console.warn(`[Me] Failed to load vibe config for ${id}:`, err);
-						return null;
-					}
-				})
-			);
-			availableVibes = vibes.filter(v => v !== null) as Array<{id: string, name: string, role: string, description: string, avatar: string, skills: any[]}>;
-			vibesLoading = false;
-		} catch (err) {
-			console.error('[Me] Failed to load available vibes:', err);
-			vibesLoading = false;
-		}
-	}
 
 	onMount(() => {
-		// Load available vibes
-		loadAvailableVibes();
-
 		// Listen for unified toolCall events from voice service
 		const handleToolCallEvent = (event: Event) => {
 			const customEvent = event as CustomEvent;
@@ -418,61 +283,15 @@
 			handleToolCall(toolName, args, contextString, result);
 		};
 
-		// Listen for context ingest events from voice service
-		const handleContextIngestEvent = (event: Event) => {
-			const customEvent = event as CustomEvent;
-			const ingestEvent = customEvent.detail;
-			
-			// Create activity item for context ingest
-			const id = nanoid();
-			const newItem: ActivityItem = {
-				id,
-				timestamp: ingestEvent.timestamp || Date.now(),
-				type: 'contextIngest',
-				ingestType: ingestEvent.type,
-				ingestMode: ingestEvent.ingestMode || 'silent',
-				content: ingestEvent.content,
-				metadata: ingestEvent.metadata,
-				toolName: ingestEvent.toolName,
-				status: 'success',
-				isExpanded: false // Context ingests default to collapsed
-			};
 
-			// Add to activities
-			activities = [...activities, newItem];
-		};
+		// Track Kai tasks for real-time updates
 
-		// Listen for log events from voice service
-		const handleVoiceLogEvent = (event: Event) => {
-			const customEvent = event as CustomEvent;
-			const { message, context } = customEvent.detail;
-			handleVoiceLog(message, context);
-		};
+
 
 		window.addEventListener('toolCall', handleToolCallEvent);
-		window.addEventListener('contextIngest', handleContextIngestEvent);
-		window.addEventListener('voiceLog', handleVoiceLogEvent);
-
-		// Check for pending actionSkill from sessionStorage (legacy support for navigation)
-		const checkPendingActionSkill = async () => {
-			try {
-				const pendingStr = sessionStorage.getItem('pendingActionSkill');
-				if (pendingStr) {
-					const pending = JSON.parse(pendingStr);
-					sessionStorage.removeItem('pendingActionSkill');
-					handleToolCall('actionSkill', pending);
-				}
-			} catch (err) {
-				console.warn('[Me] Failed to check pending actionSkill:', err);
-			}
-		};
-		
-		checkPendingActionSkill();
 
 		return () => {
 			window.removeEventListener('toolCall', handleToolCallEvent);
-			window.removeEventListener('contextIngest', handleContextIngestEvent);
-			window.removeEventListener('voiceLog', handleVoiceLogEvent);
 		};
 	});
 
@@ -493,79 +312,26 @@
 	<div class="flex-1 w-full flex flex-col gap-2 min-h-[50vh] px-4 md:px-6 lg:px-8 lg:pr-[calc(300px+1rem)]">
 		<div class="mx-auto w-full max-w-3xl">
 		{#if activities.length === 0}
-			{#if vibesLoading}
-				<div class="flex flex-col justify-center items-center py-20 text-slate-400/50">
-					<LoadingSpinner />
-					<p class="mt-4 text-sm">Loading available vibes...</p>
-				</div>
-			{:else if availableVibes.length > 0}
-				<!-- Empty State: Instructions & Available Vibes -->
-				<div class="flex flex-col gap-6 md:gap-8">
-					<!-- Instructions Header -->
-					<div class="space-y-3 text-center md:space-y-4">
-						<h1 class="text-2xl font-bold tracking-tight md:text-3xl text-slate-900/80">Willkommen bei Hominio</h1>
-						<p class="mx-auto max-w-2xl text-sm md:text-base text-slate-600">
-							Starte einfach zu sprechen, um Hominio zu nutzen. Du kannst natürlich fragen oder direkt Aufgaben stellen.
-						</p>
-						
-						<!-- Examples -->
-						<div class="mt-6 space-y-2">
-							<p class="text-xs font-semibold tracking-wide uppercase text-slate-500">Beispiele:</p>
-							<div class="flex flex-wrap gap-2 justify-center text-xs md:text-sm">
-								<span class="px-3 py-1.5 rounded-full border backdrop-blur-sm bg-white/60 text-slate-700 border-slate-200/50">"Zeig mir das Menü"</span>
-								<span class="px-3 py-1.5 rounded-full border backdrop-blur-sm bg-white/60 text-slate-700 border-slate-200/50">"Erstelle einen Termin morgen um 14 Uhr"</span>
-								<span class="px-3 py-1.5 rounded-full border backdrop-blur-sm bg-white/60 text-slate-700 border-slate-200/50">"Welche Wellness-Angebote gibt es?"</span>
-							</div>
-						</div>
-					</div>
-
-					<!-- Available Vibes Grid - Compact -->
-					<div class="space-y-3 md:space-y-4">
-						<p class="text-xs font-semibold tracking-wide text-center uppercase text-slate-500">Active Vibes</p>
-						<div class="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-						{#each availableVibes as vibe (vibe.id)}
-							<GlassCard lifted={true} class="overflow-hidden relative p-3 md:p-4">
-								<!-- Gradient Background -->
-								<div class="absolute inset-0 bg-gradient-to-br opacity-5 from-secondary-400 to-secondary-500"></div>
-								
-								<!-- Compact Layout -->
-								<div class="flex relative gap-3 items-center">
-									<!-- Avatar -->
-									<img 
-										src={vibe.avatar} 
-										alt={vibe.name}
-										class="object-cover flex-shrink-0 w-10 h-10 rounded-full md:w-12 md:h-12"
-									/>
-									
-									<!-- Content -->
-									<div class="flex-1 min-w-0">
-										<div class="flex gap-2 items-center mb-1">
-											<h3 class="text-sm font-bold md:text-base text-slate-900">
-												{vibe.name}
-											</h3>
-											<span class="text-[10px] md:text-xs px-1.5 py-0.5 rounded-full bg-gradient-to-r from-secondary-400 to-secondary-500 text-slate-900 font-semibold">
-												{vibe.role}
-											</span>
-										</div>
-										<p class="text-xs text-slate-600 line-clamp-2">
-											{vibe.description}
-										</p>
-									</div>
-								</div>
-							</GlassCard>
-						{/each}
+			<!-- Empty State: Instructions -->
+			<div class="flex flex-col gap-6 md:gap-8">
+				<!-- Instructions Header -->
+				<div class="space-y-3 text-center md:space-y-4">
+					<h1 class="text-2xl font-bold tracking-tight md:text-3xl text-slate-900/80">Willkommen bei Hominio</h1>
+					<p class="mx-auto max-w-2xl text-sm md:text-base text-slate-600">
+						Starte einfach zu sprechen, um Hominio zu nutzen. Du kannst natürlich fragen oder direkt Aufgaben stellen.
+					</p>
+					
+					<!-- Examples -->
+					<div class="mt-6 space-y-2">
+						<p class="text-xs font-semibold tracking-wide uppercase text-slate-500">Beispiele:</p>
+						<div class="flex flex-wrap gap-2 justify-center text-xs md:text-sm">
+							<span class="px-3 py-1.5 rounded-full border backdrop-blur-sm bg-white/60 text-slate-700 border-slate-200/50">"Zeige mir meine Todos"</span>
+							<span class="px-3 py-1.5 rounded-full border backdrop-blur-sm bg-white/60 text-slate-700 border-slate-200/50">"Erstelle ein Todo 'Einkaufen gehen'"</span>
+							<span class="px-3 py-1.5 rounded-full border backdrop-blur-sm bg-white/60 text-slate-700 border-slate-200/50">"Füge 'Meeting vorbereiten' zur Todo-Liste hinzu"</span>
 						</div>
 					</div>
 				</div>
-			{:else}
-				<div class="flex flex-col justify-center items-center py-20 text-slate-400/50">
-					<div class="p-4 mb-4 rounded-full backdrop-blur-sm bg-white/20">
-						<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-					</div>
-					<p class="text-sm">Waiting for activity...</p>
-					<p class="mt-2 text-xs">Ask Hominio to do something</p>
-				</div>
-			{/if}
+			</div>
 		{:else}
 			<!-- Header (only shown when activities exist) -->
 			<div class="pt-4 pb-4 text-center">
@@ -604,7 +370,7 @@
 			<!-- Logs Display - Light Theme Glass Style -->
 			<div class="overflow-hidden flex-1 rounded-lg border backdrop-blur-sm border-slate-200/50 bg-white/40">
 				<div class="overflow-y-auto p-3 h-full font-mono text-xs text-slate-700">
-					{#each voice.logs as log}
+					{#each (voice as any).logs as log}
 						<div class="mb-1 leading-relaxed break-words text-slate-600">{log}</div>
 					{:else}
 						<div class="text-xs italic text-slate-400">No logs yet. Start a call to see logs.</div>

@@ -19,7 +19,7 @@ if (!GOOGLE_AI_API_KEY) {
 
 export const voiceLiveHandler = {
     async open(ws: any) {
-        console.log("[voice/live] 🔌 Client connected");
+        // Silent connection - don't log (too verbose)
 
         // Handle Auth
         let request: Request | null = null;
@@ -34,7 +34,7 @@ export const voiceLiveHandler = {
         if (request) {
             try {
                 authData = await requireWebSocketAuth(request);
-                console.log(`[voice/live] ✅ Authenticated user: ${authData.sub}`);
+                // Silent auth - don't log (too verbose)
             } catch (error) {
                 console.error("[voice/live] Authentication failed:", error);
                 ws.close(1008, "Authentication failed: Unauthorized");
@@ -58,24 +58,16 @@ export const voiceLiveHandler = {
                     ws.close(1008, "Forbidden: No api:voice capability");
                     return;
                 }
-                console.log(`[voice/live] ✅ Capability check passed`);
+                // Silent capability check - don't log (too verbose)
             } catch (err) {
                 console.error("[voice/live] Capability check error:", err);
             }
-        }
-
-        // Extract initial vibeId from query params
-        let initialVibeId: string | undefined;
-        if (request) {
-            const url = new URL(request.url);
-            initialVibeId = url.searchParams.get('vibeId') || undefined;
         }
 
         try {
             // Create voice session manager from hominio-voice package
             const sessionManager = await createVoiceSessionManager({
                 apiKey: GOOGLE_AI_API_KEY || "",
-                initialVibeId,
                 onLog: (message, context) => {
                     ws.send(JSON.stringify({ type: "log", message, context }));
                 },
@@ -123,7 +115,14 @@ export const voiceLiveHandler = {
 
         } catch (err) {
             console.error("[voice/live] Failed to create voice session:", err);
-            ws.close(1011, "Failed to connect to AI");
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            console.error("[voice/live] Error details:", {
+                message: errorMessage,
+                error: err,
+                apiKeyPresent: !!GOOGLE_AI_API_KEY,
+                apiKeyLength: GOOGLE_AI_API_KEY?.length || 0
+            });
+            ws.close(1011, `Failed to connect to AI: ${errorMessage}`);
         }
     },
 
@@ -149,7 +148,7 @@ export const voiceLiveHandler = {
     },
 
     async close(ws: any) {
-        console.log("[voice/live] 🔌 Client disconnected");
+        // Silent disconnection - don't log (too verbose)
         if (ws.data.sessionManager) {
             ws.data.sessionManager.close();
         }

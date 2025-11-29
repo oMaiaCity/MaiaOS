@@ -37,7 +37,7 @@ export const defaultDenyPlugin = new Elysia({ name: 'defaultDeny' })
     // Routes use allow() plugin which sets store._allowed = true in their beforeHandle
     // Since beforeHandle runs in order, allow() must be listed BEFORE defaultDenyPlugin
     if (!store._allowed) {
-      console.log(`[default-deny] ❌ BLOCKED route ${path} - not explicitly allowed`);
+      // Silent block - don't log blocked routes (too verbose)
       set.status = 403;
       throw new Error(`Forbidden: Access denied by default. Route ${path} must explicitly allow access.`);
     }
@@ -74,14 +74,14 @@ export function requireCapabilityForRoute(resource: Resource, action: Action) {
       const hasAccess = await checkCapability(principal, resource, action);
 
       if (!hasAccess) {
-        console.log(`[default-deny] ❌ BLOCKED route ${path} - no ${action} capability for ${resource.type}:${resource.namespace}${resource.id ? `:${resource.id}` : ''}`);
+        // Silent block - don't log blocked routes (too verbose)
         set.status = 403;
         throw new Error(
           `Forbidden: No ${action} capability for ${resource.type}:${resource.namespace}${resource.id ? `:${resource.id}` : ''}`
         );
       }
       
-      console.log(`[default-deny] ✅ ALLOWED route ${path} - user has ${action} capability`);
+      // Silent allow - don't log allowed routes (too verbose)
     });
 }
 
@@ -94,10 +94,10 @@ export const requireAuth = new Elysia({ name: 'requireAuth' })
     store._allowed = true;
     
     if (!authData) {
-      console.log(`[default-deny] ❌ BLOCKED route ${path} - not authenticated`);
+      // Silent block - don't log blocked routes (too verbose)
       set.status = 401;
       throw new Error('Unauthorized: Authentication required');
     }
     
-    console.log(`[default-deny] ✅ ALLOWED route ${path} - authenticated`);
+    // Silent allow - don't log allowed routes (too verbose)
   });

@@ -26,7 +26,7 @@ export function createVoiceCallService() {
         logs.push(`${new Date().toISOString().split('T')[1].slice(0, -1)} - ${msg}`);
     }
 
-    async function start(vibeId?: string) {
+    async function start() {
         try {
             log('Starting...');
             isFirstAudioOfTurn = true;
@@ -39,9 +39,7 @@ export function createVoiceCallService() {
             // WebSocket Init
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const host = window.location.hostname === 'localhost' ? 'localhost:4204' : 'api.hominio.me';
-            const wsUrl = vibeId
-                ? `${protocol}//${host}/api/v0/voice/live?vibeId=${encodeURIComponent(vibeId)}`
-                : `${protocol}//${host}/api/v0/voice/live`;
+            const wsUrl = `${protocol}//${host}/api/v0/voice/live`;
 
             ws = new WebSocket(wsUrl);
 
@@ -71,6 +69,7 @@ export function createVoiceCallService() {
                         }
                     });
                     window.dispatchEvent(logEvent);
+
                 }
                 if (msg.type === 'transcript') {
                     log(`${msg.role === 'user' ? '👤' : '🤖'} ${msg.text}`);
@@ -147,7 +146,7 @@ export function createVoiceCallService() {
             };
 
             ws.onclose = (event) => {
-                log('WebSocket closed');
+                log(`WebSocket closed (code: ${event.code}, reason: ${event.reason || 'none'})`);
                 isConnected = false;
 
                 if (event.code === 1008 || event.reason?.includes('capability') || event.reason?.includes('Forbidden')) {
@@ -155,7 +154,8 @@ export function createVoiceCallService() {
                 } else if (event.code === 1001 || event.reason?.includes('Unauthorized')) {
                     error = 'Please sign in to use voice assistant.';
                 } else if (event.code !== 1000) {
-                    error = 'Connection error. Please try again.';
+                    error = `Connection error (code: ${event.code}). Please try again.`;
+                    console.error('[VoiceCall] WebSocket closed unexpectedly:', { code: event.code, reason: event.reason });
                 } else {
                     error = null;
                 }

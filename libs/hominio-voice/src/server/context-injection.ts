@@ -1,13 +1,13 @@
 /**
  * Context Ingest Service
- * Centralized service for all context ingestion into LLM conversation
- * Handles tool responses, vibe queries, action skill results, and system messages
+ * Simplified service for tool responses and system messages
+ * Used by delegateIntent tool to send responses back to Google API
  */
 
 export type IngestMode = 'silent' | 'triggerAnswer';
 
 export interface ContextIngestEvent {
-	type: 'toolResponse' | 'vibeContext' | 'actionSkillResult' | 'systemMessage';
+	type: 'toolResponse' | 'systemMessage';
 	toolName?: string;
 	content: string;
 	ingestMode: IngestMode;
@@ -126,53 +126,6 @@ export class ContextIngestService {
 		}
 	}
 
-	/**
-	 * Ingest vibe context - loads and injects vibe context
-	 */
-	async ingestVibeContext(
-		vibeId: string,
-		contextString: string,
-		mode: IngestMode = 'silent'
-	): Promise<boolean> {
-		const success = await this.ingest(contextString, mode, `vibe context (${vibeId})`);
-
-		// Emit event for frontend tracking
-		this.emitEvent({
-			type: 'vibeContext',
-			toolName: 'queryVibeContext',
-			content: contextString,
-			ingestMode: mode,
-			metadata: { vibeId },
-			timestamp: Date.now()
-		});
-
-		return success;
-	}
-
-	/**
-	 * Ingest action skill result - injects action skill execution result
-	 */
-	async ingestActionSkillResult(
-		vibeId: string,
-		skillId: string,
-		result: any,
-		mode: IngestMode = 'silent'
-	): Promise<boolean> {
-		const resultString = typeof result === 'string' ? result : JSON.stringify(result);
-		const success = await this.ingest(resultString, mode, `action skill result (${vibeId}/${skillId})`);
-
-		// Emit event for frontend tracking
-		this.emitEvent({
-			type: 'actionSkillResult',
-			toolName: 'actionSkill',
-			content: resultString,
-			ingestMode: mode,
-			metadata: { vibeId, skillId, result },
-			timestamp: Date.now()
-		});
-
-		return success;
-	}
 
 	/**
 	 * Ingest system message - injects system/background messages
@@ -194,21 +147,4 @@ export class ContextIngestService {
 		return success;
 	}
 
-	// Legacy methods for backward compatibility
-	async injectContext(
-		content: string,
-		turnComplete: boolean = false,
-		contextLabel?: string
-	): Promise<boolean> {
-		const mode: IngestMode = turnComplete ? 'triggerAnswer' : 'silent';
-		return this.ingest(content, mode, contextLabel);
-	}
-
-	async injectVibeContext(vibeId: string, contextString: string): Promise<boolean> {
-		return this.ingestVibeContext(vibeId, contextString, 'silent');
-	}
-
-	async injectSilentContext(content: string, contextLabel?: string): Promise<boolean> {
-		return this.ingest(content, 'silent', contextLabel || 'silent context');
-	}
 }

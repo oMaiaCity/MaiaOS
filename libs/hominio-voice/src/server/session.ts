@@ -11,7 +11,6 @@ import { ContextIngestService, type ContextIngestEvent } from './context-injecti
 export interface VoiceSessionManagerOptions {
 	apiKey: string;
 	model?: string;
-	initialVibeId?: string;
 	onLog?: (message: string, context?: string) => void;
 	onToolCall?: (toolName: string, args: any, result: any, contextString?: string) => void;
 	onContextIngest?: (event: ContextIngestEvent) => void;
@@ -36,7 +35,6 @@ export async function createVoiceSessionManager(
 	const {
 		apiKey,
 		model = 'gemini-2.5-flash-native-audio-preview-09-2025',
-		initialVibeId,
 		onLog,
 		onToolCall,
 		onContextIngest,
@@ -47,31 +45,33 @@ export async function createVoiceSessionManager(
 		onError
 	} = options;
 
+	if (!apiKey || apiKey.trim().length === 0) {
+		throw new Error('Google AI API key is required but not provided');
+	}
+
 	const ai = new GoogleGenAI({ apiKey });
 
 	// Initialize tool registry
 	const toolRegistry = new ToolRegistry();
 	await toolRegistry.initialize();
 
-	// Track active vibes
-	let activeVibeIds: string[] = [];
-	const vibeConfigs = toolRegistry.getVibeConfigs();
-
-	// Load initial vibe if provided
-	if (initialVibeId) {
-		activeVibeIds.push(initialVibeId);
-		toolRegistry.setActiveVibeIds(activeVibeIds);
-	}
-
 	// Build system instruction
-	let systemInstruction = await buildSystemInstruction({
-		activeVibeIds,
-		vibeConfigs,
-		includeRepeatedPrompt: false
-	});
+	let systemInstruction: string;
+	try {
+		systemInstruction = await buildSystemInstruction();
+		if (!systemInstruction || systemInstruction.trim().length === 0) {
+			throw new Error('System instruction is empty');
+		}
+	} catch (err) {
+		console.error('[hominio-voice] Failed to build system instruction:', err);
+		throw new Error(`Failed to build system instruction: ${err instanceof Error ? err.message : String(err)}`);
+	}
 
 	// Build tool schemas
 	const tools = await toolRegistry.buildToolSchemas();
+	if (!tools || tools.length === 0) {
+		console.warn('[hominio-voice] No tools registered');
+	}
 
 	// Create Google Live API session
 	const session = await ai.live.connect({
@@ -92,14 +92,14 @@ export async function createVoiceSessionManager(
 		},
 		callbacks: {
 			onopen: () => {
-				console.log('[hominio-voice] 🤖 Connected to Google Live API');
+				// Silent - don't log (too verbose)
 				onStatus?.('connected');
 			},
 			onmessage: async (message: any) => {
 				try {
 					// Handle user interruption
 					if (message.serverContent?.interrupted) {
-						console.log('[hominio-voice] 🛑 User interrupted AI');
+						// Silent - don't log (too verbose)
 						onInterrupted?.();
 					}
 
@@ -164,11 +164,18 @@ export async function createVoiceSessionManager(
 				}
 			},
 			onclose: () => {
-				console.log('[hominio-voice] 🤖 Disconnected from Google Live API');
+				// Silent - don't log (too verbose)
 				onStatus?.('disconnected');
 			},
 			onerror: (err: any) => {
-				console.error('[hominio-voice] 🤖 Google Error:', err);
+				console.error('[hominio-voice] 🤖 Google Live API Error:', err);
+				const errorMessage = err instanceof Error ? err.message : String(err);
+				console.error('[hominio-voice] Error details:', { 
+					message: errorMessage,
+					error: err,
+					apiKeyPresent: !!apiKey,
+					apiKeyLength: apiKey?.length || 0
+				});
 				onError?.(err instanceof Error ? err : new Error(String(err)));
 			}
 		}
@@ -196,27 +203,23 @@ export async function createVoiceSessionManager(
 			return;
 		}
 
-		console.log(`[hominio-voice] 🔧 Function call: ${name}`, JSON.stringify(args));
+		// Silent - don't log function calls (too verbose)
 
-		// CRITICAL: For delegateIntent, notify frontend IMMEDIATELY with intent BEFORE execution
-		// This allows frontend to create task card with intent visible right away
-		if (name === 'delegateIntent' && args?.intent) {
-			const intent = args.intent;
-
-			// Send early toolCall notification (for frontend placeholder creation)
-			onToolCall?.(name, args || {}, { __earlyNotification: true }, undefined);
+		// Filter out legacy tools - don't execute or notify frontend
+		if (name === 'queryVibeContext' || name === 'actionSkill' || name === 'delegateIntent') {
+			onLog?.(`⚠️ Legacy tool ${name} is no longer supported.`);
+			// Return error response to AI
+			await contextIngest.ingestToolResponse(name, {
+				error: `Tool ${name} is no longer available. Use queryTodos or createTodo directly.`
+			}, id, 'silent');
+			return;
 		}
-
-		// Update active vibes in registry
-		toolRegistry.setActiveVibeIds(activeVibeIds);
 
 		// Execute tool via registry
 		const toolResult = await toolRegistry.executeTool(name, args || {}, {
-			vibeConfigs,
-			activeVibeIds,
 			session,
-			contextIngest,
-			onLog
+			onLog,
+			contextIngest // Pass contextIngest so tools can re-ingest results when done
 		});
 
 		// Notify frontend of tool call (with result) - this happens AFTER execution

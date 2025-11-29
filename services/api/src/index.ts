@@ -4,7 +4,6 @@ import { Elysia } from "elysia";
 import { zeroRoutes } from "./routes/v0/zero";
 import { voiceRoutes } from "./routes/v0/voice";
 import { projects } from "./routes/v0/projects";
-import { handleKaiChat } from "./routes/v0/kai";
 import { authPlugin } from "./lib/middleware/auth";
 import { errorHandlerPlugin } from "./lib/middleware/error-handler";
 import { handleOptions } from "./lib/middleware/cors";
@@ -13,7 +12,7 @@ import { defaultDenyPlugin, allow, requireAuth } from "./lib/middleware/default-
 const PORT = process.env.PORT || 4204;
 const HOST = process.env.HOST || '0.0.0.0';
 
-const app = new Elysia()
+const app = new Elysia({ logger: false })
   // Global error handler
   .use(errorHandlerPlugin)
   // Global auth plugin (extracts authData, doesn't require auth)
@@ -42,13 +41,6 @@ const app = new Elysia()
     app
       .get("/projects", async ({ authData, request }) => {
         return await projects({ request, authData });
-      }, { beforeHandle: [allow] }) // Explicitly allow this route
-      .post("/kai/chat", async ({ authData, body }) => {
-        const { intent } = body as { intent?: string };
-        if (!intent || typeof intent !== "string") {
-          return { success: false, error: "Intent parameter is required and must be a string" };
-        }
-        return await handleKaiChat(intent, authData);
       }, { beforeHandle: [allow] }) // Explicitly allow this route
   )
   // DEFAULT DENY: Lock down all routes by default (MUST be last)

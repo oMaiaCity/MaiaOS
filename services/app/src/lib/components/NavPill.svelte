@@ -5,48 +5,11 @@
     import { NavPill } from '@hominio/brand';
     import { getContext } from 'svelte';
     import type { Capability } from '@hominio/caps';
-    import { isQueryTool, isActionSkill, extractActionSkillArgs, dispatchActionSkillEvent, parseToolCallEvent } from '@hominio/voice';
+    import { parseToolCallEvent } from '@hominio/voice';
 
 	const authClient = createAuthClient();
 	const session = authClient.useSession();
 
-	// Detect if we're on a vibe page and extract vibe ID
-	// Matches /me/charles, /me/charles/admin, /me/karl, etc.
-	const currentVibeId = $derived.by(() => {
-		const path = $page.url.pathname;
-		// Match /me/{vibeId} or /me/{vibeId}/... (any sub-route)
-		const match = path.match(/^\/me\/([^\/]+)/);
-		const vibeId = match ? match[1] : undefined;
-		
-		// Return valid vibe IDs (charles, karl, etc.)
-		// Exclude 'admin' if it's a top-level route
-		if (vibeId && vibeId !== 'admin') {
-			return vibeId;
-		}
-		
-		return undefined;
-	});
-
-	// Load vibe config to get avatar when in vibe context
-	let vibeAvatar = $state<string | null>(null);
-	
-	$effect(() => {
-		if (currentVibeId) {
-			// Dynamically load vibe config to get avatar
-			import('@hominio/vibes').then(({ loadVibeConfig }) => {
-				loadVibeConfig(currentVibeId).then((config) => {
-					// Avatar is in config files but not in TypeScript type definition
-					const configWithAvatar = config as any;
-					vibeAvatar = configWithAvatar.avatar || null;
-				}).catch((err) => {
-					console.warn('[NavPill] Failed to load vibe config for avatar:', err);
-					vibeAvatar = null;
-				});
-			});
-		} else {
-			vibeAvatar = null; // Reset to default logo when not in vibe context
-		}
-	});
 
 	// Get shared voice call service from layout context
 	const voiceCall = getContext('voiceCallService');
@@ -64,20 +27,8 @@
 			
 			const { toolName, args, contextString, result } = toolCall;
 
-			if (isQueryTool(toolName)) {
-				// Background query - vibe context queries don't require UI navigation
-				// The context is injected into the conversation automatically
-			} else if (isActionSkill(toolName)) {
-				
-				// Extract and normalize action skill arguments
-				const skillArgs = extractActionSkillArgs(args);
-				
-				
-				// Dispatch actionSkill event for Charles/Karl page to handle
-				dispatchActionSkillEvent(skillArgs);
-			} else {
-				console.warn('[NavPill] ⚠️ Unknown tool name:', toolName);
-			}
+			// Tool calls are handled in the activity stream (/me page)
+			// NavPill doesn't need to handle them here
 		};
 
 		window.addEventListener('toolCall', handleToolCall);
@@ -250,8 +201,7 @@
 			return;
 		}
 
-		// Pass current vibe ID when starting call (reactive)
-		await voiceCall.start(currentVibeId);
+		await voiceCall.start();
 	}
 
 	async function handleRequestAccess() {
@@ -426,7 +376,6 @@
 		capabilityExpired = false;
 	}}
 	onCloseSuccessModal={() => showSuccessModal = false}
-	vibeAvatar={vibeAvatar}
 	capabilityModalTitle={capabilityExpired ? 'Voice access expired' : 'Access required'}
 	capabilityModalMessage={capabilityExpired ? 'Your voice access has expired. Please request access again to continue using the voice assistant.' : 'You need permission to use the voice assistant'}
 />

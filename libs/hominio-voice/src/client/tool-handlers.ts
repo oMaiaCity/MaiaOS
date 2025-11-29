@@ -3,7 +3,7 @@
  * Utilities for handling tool calls consistently across the frontend
  */
 
-export type ToolName = 'queryVibeContext' | 'actionSkill' | 'delegateIntent';
+export type ToolName = 'delegateIntent';
 
 export interface ToolCallEvent {
 	toolName: ToolName;
@@ -11,60 +11,6 @@ export interface ToolCallEvent {
 	contextString?: string;
 	result?: any;
 	timestamp: number;
-}
-
-export interface ActionSkillArgs {
-	vibeId: string;
-	skillId: string;
-	[key: string]: any; // Additional args
-}
-
-export interface QueryVibeContextArgs {
-	vibeId: string;
-}
-
-/**
- * Check if a tool name is a query tool (background operation)
- */
-export function isQueryTool(toolName: string): toolName is 'queryVibeContext' {
-	return toolName === 'queryVibeContext';
-}
-
-/**
- * Check if a tool name is an action skill (UI operation)
- */
-export function isActionSkill(toolName: string): toolName is 'actionSkill' {
-	return toolName === 'actionSkill';
-}
-
-/**
- * Extract and normalize action skill arguments
- * Handles both flat and nested args structures from LLM
- */
-export function extractActionSkillArgs(args: Record<string, any>): ActionSkillArgs {
-	const { vibeId, skillId, ...restArgs } = args;
-
-	// Handle potential nested args from LLM (hallucination or habit)
-	// If restArgs has a single property 'args' which is an object, use that instead
-	let skillArgs = restArgs;
-	if (Object.keys(restArgs).length === 1 && restArgs.args && typeof restArgs.args === 'object') {
-		skillArgs = restArgs.args;
-	}
-
-	return {
-		vibeId,
-		skillId,
-		...skillArgs
-	};
-}
-
-/**
- * Extract query vibe context arguments
- */
-export function extractQueryVibeContextArgs(args: Record<string, any>): QueryVibeContextArgs {
-	return {
-		vibeId: args.vibeId || 'unknown'
-	};
 }
 
 /**
@@ -95,15 +41,6 @@ export function dispatchToolCallEvent(event: ToolCallEvent) {
 	window.dispatchEvent(customEvent);
 }
 
-/**
- * Dispatch action skill event to window (for legacy support)
- */
-export function dispatchActionSkillEvent(args: ActionSkillArgs) {
-	const event = new CustomEvent('actionSkill', {
-		detail: args
-	});
-	window.dispatchEvent(event);
-}
 
 /**
  * Parse a CustomEvent detail into a ToolCallEvent
