@@ -7,6 +7,7 @@ import { listVibes, loadVibeConfig } from '@hominio/vibes';
 import { buildActionSkillArgsSchema } from '@hominio/vibes';
 import { handleQueryVibeContext } from './query-vibe-context.js';
 import { handleActionSkill } from './action-skill.js';
+import { handleDelegateIntent } from './delegate-intent.js';
 import type { ContextIngestService } from '../context-injection.js';
 
 export interface ToolExecutionContext {
@@ -86,6 +87,26 @@ export class ToolRegistry {
 			]
 		});
 
+		// delegateIntent - static schema
+		tools.push({
+			functionDeclarations: [
+				{
+					name: 'delegateIntent',
+					description: 'Delegate a user intent to the KaibanJS agent execution environment. Use this tool when the user asks about the name (e.g., "Wie heißt du?", "What\'s your name?", "Wie heiße ich?", "What is the name?", "What is the name of the system?") or when a request should be handled by specialized AI agents. The agent will execute the intent using available tools and return the results.\n\nCRITICAL: ALWAYS use delegateIntent when the user asks about the name. Examples: "Wie heißt du?", "What\'s your name?", "Wie heiße ich?", "What is the name?", "What is the name of the system?".',
+					parameters: {
+						type: 'object',
+						properties: {
+							intent: {
+								type: 'string',
+								description: 'The user\'s intent or request to be executed by the KaibanJS agent. For name questions, use the exact user question (e.g., "What is the name of the system?").'
+							}
+						},
+						required: ['intent']
+					}
+				}
+			]
+		});
+
 		// actionSkill - dynamic schema
 		try {
 			if (this.allSkills.length > 0) {
@@ -156,6 +177,11 @@ export class ToolRegistry {
 						skillId
 					}
 				};
+			}
+
+			case 'delegateIntent': {
+				const result = await handleDelegateIntent(args, context);
+				return result;
 			}
 
 			default:

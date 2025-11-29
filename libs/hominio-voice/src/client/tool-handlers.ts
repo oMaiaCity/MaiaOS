@@ -3,7 +3,7 @@
  * Utilities for handling tool calls consistently across the frontend
  */
 
-export type ToolName = 'queryVibeContext' | 'actionSkill';
+export type ToolName = 'queryVibeContext' | 'actionSkill' | 'delegateIntent';
 
 export interface ToolCallEvent {
 	toolName: ToolName;
@@ -43,15 +43,14 @@ export function isActionSkill(toolName: string): toolName is 'actionSkill' {
  */
 export function extractActionSkillArgs(args: Record<string, any>): ActionSkillArgs {
 	const { vibeId, skillId, ...restArgs } = args;
-	
+
 	// Handle potential nested args from LLM (hallucination or habit)
 	// If restArgs has a single property 'args' which is an object, use that instead
 	let skillArgs = restArgs;
 	if (Object.keys(restArgs).length === 1 && restArgs.args && typeof restArgs.args === 'object') {
-		console.log('[ToolHandlers] ⚠️ Detected nested args object from LLM, flattening...');
 		skillArgs = restArgs.args;
 	}
-	
+
 	return {
 		vibeId,
 		skillId,
@@ -112,12 +111,12 @@ export function dispatchActionSkillEvent(args: ActionSkillArgs) {
  */
 export function parseToolCallEvent(event: CustomEvent): ToolCallEvent | null {
 	const { toolName, args, contextString, result, timestamp } = event.detail;
-	
+
 	if (!toolName || !args) {
 		console.warn('[ToolHandlers] Invalid tool call event:', event.detail);
 		return null;
 	}
-	
+
 	return {
 		toolName: toolName as ToolName,
 		args,

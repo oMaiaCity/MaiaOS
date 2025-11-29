@@ -12,6 +12,9 @@
 		"./functions/wellness-store.js": "./lib/functions/wellness-store.js",
 		"./functions/calendar-store.js": "./lib/functions/calendar-store.js"
 	},
+	"dependencies": {
+		"kaibanjs": "^0.14.2"
+	},
 	"peerDependencies": {
 		"svelte": "^5.0.0",
 		"@hominio/zero": "workspace:*",

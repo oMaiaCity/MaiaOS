@@ -7,11 +7,9 @@ import type { RequestHandler } from "./$types";
  * Returns all pending requests for resources owned by the authenticated user
  */
 export const GET: RequestHandler = async ({ request }) => {
-    console.log('[capabilities/requests] GET /api/auth/capabilities/requests called');
     try {
         // Get authenticated session
         const session = await api.getAuthenticatedSession(request);
-        console.log('[capabilities/requests] Session found:', session.user.id);
 
         // Get query params for filtering
         const url = new URL(request.url);

@@ -160,15 +160,10 @@
 		return 'default';
 	});
 	
-	// Debug: Log authentication state changes
-	$effect(() => {
-		console.log('[NavPill] Auth state changed:', { isAuthenticated, user: user?.name, pillState });
-	});
 
 	// Cleanup voice call service on unmount
 	$effect(() => {
 		return () => {
-			console.log('[Wallet Layout] Cleaning up voice call service');
 			voiceCall.cleanup();
 		};
 	});

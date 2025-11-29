@@ -63,25 +63,20 @@
 			}
 			
 			const { toolName, args, contextString, result } = toolCall;
-			console.log('[NavPill] 🔧 Tool call received:', { toolName, args, contextString, result });
 
 			if (isQueryTool(toolName)) {
 				// Background query - vibe context queries don't require UI navigation
 				// The context is injected into the conversation automatically
-				console.log('[NavPill] ✅ Query vibe context:', args.vibeId);
 			} else if (isActionSkill(toolName)) {
-				console.log('[NavPill] ✅ Action skill called:', { args });
 				
 				// Extract and normalize action skill arguments
 				const skillArgs = extractActionSkillArgs(args);
 				
-				console.log('[NavPill] ✅ Extracted:', skillArgs);
 				
 				// Dispatch actionSkill event for Charles/Karl page to handle
 				dispatchActionSkillEvent(skillArgs);
-				console.log('[NavPill] ✅ actionSkill event dispatched');
 			} else {
-				console.log('[NavPill] ⚠️ Unknown tool name:', toolName);
+				console.warn('[NavPill] ⚠️ Unknown tool name:', toolName);
 			}
 		};
 
@@ -107,9 +102,7 @@
 				const { dropped, errors } = await dropAllDatabases();
 				if (errors && errors.length > 0) {
 					console.warn('[NavPill] Some Zero databases could not be dropped:', errors);
-				} else {
-					console.log('[NavPill] ✅ Cleared Zero sync cache on logout');
-				}
+				} 
 			} catch (zeroError) {
 				console.error('[NavPill] Failed to clear Zero cache on logout:', zeroError);
 				// Continue with logout even if cache clearing fails
@@ -313,7 +306,6 @@
 			}
 
 			const data = await response.json();
-			console.log('[NavPill] Capability request created:', data);
 			
 			showCapabilityModal = false;
 			showSuccessModal = true;
@@ -336,10 +328,7 @@
 	const isAuthenticated = $derived(!!$session.data?.user);
 	const user = $derived($session.data?.user);
 	
-	// Debug: Log authentication state changes
-	$effect(() => {
-		console.log('[NavPill] Auth state changed:', { isAuthenticated, user: user?.name });
-	});
+
 
 	// Handle context updates from pages
 	$effect(() => {
@@ -347,7 +336,6 @@
 			const customEvent = event as CustomEvent;
 			const { text, silent = true } = customEvent.detail; // Default to silent (turnComplete: false)
 			if (text && voiceCall.isConnected) {
-				console.log('[NavPill] Sending context update to voice session', { silent });
 				// Use turnComplete: false to prevent AI from responding to context updates
 				voiceCall.sendTextMessage(`[System] Updated context: ${text}`, !silent);
 			}
@@ -385,7 +373,6 @@
 				currentError.includes('Forbidden');
 			
 			if (isCapabilityError) {
-				console.log('[NavPill] Capability error detected:', currentError);
 				// Mark as expired if call was active before (meaning it expired during use)
 				// If wasCallActive is true, it means the call was interrupted by expiration
 				capabilityExpired = wasCallActive;
@@ -405,7 +392,6 @@
 	// Cleanup voice call service on unmount
 	$effect(() => {
 		return () => {
-			console.log('[NavPill] Cleaning up voice call service');
 			voiceCall.cleanup();
 		};
 	});

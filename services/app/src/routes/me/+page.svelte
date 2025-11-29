@@ -206,15 +206,89 @@
 			// Background query - mark as success
 			// contextString is already set on the item, just update status
 			updateActivityStatus(id, 'success');
+		} else if (toolName === 'delegateIntent') {
+			// Handle delegateIntent - process KaibanJS events
+			await processDelegateIntent(newItem);
 		}
 	}
 
-	// Handle log messages from voice service
-	function handleVoiceLog(message: string, context?: string) {
-		// Log messages are for context injection display
-		// They can be shown in the activity stream if needed
-		console.log('[Me] Voice log:', message, context ? `(context: ${context.substring(0, 100)}...)` : '');
+	async function processDelegateIntent(item: ActivityItem) {
+		try {
+			// The result contains events and task information
+			const result = item.result;
+			if (!result) {
+				updateActivityStatus(item.id, 'error', undefined, 'No result from delegateIntent');
+				return;
+			}
+
+			// Update main item status
+			updateActivityStatus(item.id, result.success ? 'success' : 'error', result);
+
+			// Process events if available
+			if (result.events && Array.isArray(result.events)) {
+				for (const event of result.events) {
+					const eventId = nanoid();
+					const eventItem: ActivityItem = {
+						id: eventId,
+						timestamp: event.timestamp || Date.now(),
+						type: 'toolCall',
+						toolName: event.type === 'toolCall' ? event.data.toolName : undefined,
+						args: event.data,
+						status: event.type === 'state' && event.data.state === 'done' ? 'success' : 'pending',
+						isExpanded: false,
+						metadata: {
+							eventType: event.type,
+							kaiEvent: true
+						}
+					};
+
+					// Add event to activities
+					activities = [...activities, eventItem];
+
+					// Update status based on event type
+					if (event.type === 'state') {
+						const state = event.data.state;
+						updateActivityStatus(eventId, state === 'done' ? 'success' : 'pending');
+					} else if (event.type === 'toolCall') {
+						updateActivityStatus(eventId, 'success', event.data.toolResult);
+					} else if (event.type === 'taskUpdate') {
+						const status = event.data.status;
+						updateActivityStatus(
+							eventId,
+							status === 'DONE' ? 'success' : 'pending',
+							event.data.result
+						);
+					}
+				}
+			}
+
+			// Process tasks if available
+			if (result.tasks && Array.isArray(result.tasks)) {
+				for (const task of result.tasks) {
+					const taskId = nanoid();
+					const taskItem: ActivityItem = {
+						id: taskId,
+						timestamp: Date.now(),
+						type: 'toolCall',
+						toolName: 'kaiTask',
+						args: { taskId: task.id, status: task.status },
+						status: task.status === 'DONE' ? 'success' : 'pending',
+						result: task.result,
+						isExpanded: false,
+						metadata: {
+							kaiTask: true
+						}
+					};
+
+					activities = [...activities, taskItem];
+				}
+			}
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+			updateActivityStatus(item.id, 'error', undefined, errorMessage);
+		}
 	}
+
 
 	function updateActivityStatus(id: string, status: 'success' | 'error', result?: any, error?: string) {
 		activities = activities.map(item => {
@@ -386,7 +460,6 @@
 				if (pendingStr) {
 					const pending = JSON.parse(pendingStr);
 					sessionStorage.removeItem('pendingActionSkill');
-					console.log('[Me] Found pending actionSkill:', pending);
 					handleToolCall('actionSkill', pending);
 				}
 			} catch (err) {

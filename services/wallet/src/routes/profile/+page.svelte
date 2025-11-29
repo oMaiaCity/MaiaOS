@@ -88,12 +88,10 @@
 			capabilitiesLoading = true;
 			capabilitiesError = null;
 			
-			console.log('[Profile] Loading capabilities...');
 			const response = await fetch('/api/auth/capabilities', {
 				credentials: 'include',
 			});
 			
-			console.log('[Profile] Capabilities response status:', response.status);
 			
 			if (!response.ok) {
 				const errorText = await response.text();
@@ -102,11 +100,8 @@
 			}
 			
 			const data = await response.json();
-			console.log('[Profile] Capabilities data:', data);
 			capabilities = data.capabilities || [];
 			groupCapabilities = data.groupCapabilities || [];
-			console.log('[Profile] Loaded capabilities count:', capabilities.length);
-			console.log('[Profile] Loaded group capabilities count:', groupCapabilities.length);
 		} catch (err) {
 			console.error('[Profile] Error loading capabilities:', err);
 			capabilitiesError = err instanceof Error ? err.message : 'Failed to load capabilities';
@@ -131,11 +126,11 @@
 	}
 </script>
 
-<div class="min-h-screen bg-glass-gradient p-6 font-sans text-slate-800 antialiased selection:bg-blue-100">
+<div class="p-6 min-h-screen font-sans antialiased bg-glass-gradient text-slate-800 selection:bg-blue-100">
 
-	<div class="relative mx-auto max-w-2xl pt-12">
+	<div class="relative pt-12 mx-auto max-w-2xl">
 		{#if loading || $session.isPending}
-			<div class="flex flex-col items-center justify-center py-24">
+			<div class="flex flex-col justify-center items-center py-24">
 				<LoadingSpinner />
 				<p class="mt-4 text-sm font-medium text-slate-500">Loading profile...</p>
 			</div>
@@ -154,11 +149,11 @@
 			<!-- Liquid Glass Card -->
 			<GlassCard hover={true}>
 				<!-- Custom taller gradient header for floating profile image -->
-				<div class="h-32 w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 opacity-50"></div>
+				<div class="w-full h-32 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 opacity-50"></div>
 				
 				<div class="relative px-8 pb-10">
 					<!-- Profile Image (Floating) -->
-					<div class="-mt-16 mb-6 flex justify-center">
+					<div class="flex justify-center -mt-16 mb-6">
 						<ProfileImage
 							src={$session.data.user.image}
 							name={$session.data.user.name || ''}
@@ -179,21 +174,21 @@
 					<!-- ID Card - Full Width -->
 					<div class="mt-8">
 						<GlassInfoCard>
-							<div class="flex items-center justify-between gap-4">
-								<span class="text-sm font-semibold uppercase tracking-wider text-slate-400">ID</span>
-								<span class="font-mono text-sm text-slate-700 break-all text-right">{$session.data.user.id}</span>
+							<div class="flex gap-4 justify-between items-center">
+								<span class="text-sm font-semibold tracking-wider uppercase text-slate-400">ID</span>
+								<span class="font-mono text-sm text-right break-all text-slate-700">{$session.data.user.id}</span>
 							</div>
 						</GlassInfoCard>
 					</div>
 
 						<!-- Logout Button -->
-						<div class="mt-8 flex justify-center">
-							<GlassButton variant="alert" onclick={handleSignOut} disabled={signingOut} class="items-center gap-2">
+						<div class="flex justify-center mt-8">
+							<GlassButton variant="alert" onclick={handleSignOut} disabled={signingOut} class="gap-2 items-center">
 								{#if signingOut}
-									<div class="h-4 w-4 animate-spin rounded-full border-2 border-red-300 border-t-red-600"></div>
+									<div class="w-4 h-4 rounded-full border-2 border-red-300 animate-spin border-t-red-600"></div>
 									<span>Signing out...</span>
 								{:else}
-									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
 									</svg>
 									<span>Sign Out</span>
@@ -209,7 +204,7 @@
 				<h2 class="mb-6 text-3xl font-bold tracking-tight text-slate-900">My Capabilities</h2>
 				
 				{#if capabilitiesLoading}
-					<div class="flex items-center justify-center py-12">
+					<div class="flex justify-center items-center py-12">
 						<LoadingSpinner />
 						<p class="ml-4 text-sm font-medium text-slate-500">Loading capabilities...</p>
 					</div>
@@ -225,7 +220,7 @@
 						<p class="text-slate-600">No capabilities granted yet.</p>
 					</GlassCard>
 				{:else}
-					<div class="grid gap-3 grid-cols-1">
+					<div class="grid grid-cols-1 gap-3">
 						<!-- Group Capabilities (with collapsible sub-capabilities) -->
 						{#each groupCapabilities as groupCap (groupCap.id)}
 							{@const isExpanded = expandedGroups.has(groupCap.id)}
@@ -233,7 +228,7 @@
 								<div class="capability-header">
 									<!-- Left: Title and Description -->
 									<div class="capability-title-section">
-										<div class="flex items-center gap-2 mb-1">
+										<div class="flex gap-2 items-center mb-1">
 											{#if groupCap.title}
 												<h3 class="capability-title">{groupCap.title}</h3>
 											{/if}
@@ -251,9 +246,9 @@
 									
 									<!-- Right: Metadata -->
 									<div class="capability-metadata">
-										<div class="flex items-center justify-end gap-2">
+										<div class="flex gap-2 justify-end items-center">
 											<p class="font-mono text-xs text-slate-900">group:{groupCap.resource.namespace}</p>
-											<span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Resource</span>
+											<span class="text-xs font-semibold tracking-wider uppercase text-slate-400">Resource</span>
 										</div>
 									</div>
 								</div>
@@ -295,23 +290,23 @@
 									<div class="group-capabilities-list">
 										{#each groupCap.subCapabilities as subCap (subCap.id)}
 											<div class="capability-sub-item">
-												<div class="flex items-center gap-2 mb-1">
+												<div class="flex gap-2 items-center mb-1">
 													{#if subCap.title}
 														<h4 class="text-base font-semibold text-slate-800">{subCap.title}</h4>
 													{/if}
 												</div>
 												{#if subCap.description}
-													<p class="text-sm text-slate-600 mb-2">{subCap.description}</p>
+													<p class="mb-2 text-sm text-slate-600">{subCap.description}</p>
 												{/if}
-												<div class="flex items-center gap-4 text-xs">
-													<div class="flex items-center gap-2">
+												<div class="flex gap-4 items-center text-xs">
+													<div class="flex gap-2 items-center">
 														<p class="font-mono text-slate-700">{formatResource(subCap)}</p>
 														<span class="text-slate-400">Resource</span>
 													</div>
-													<div class="flex items-center gap-2">
+													<div class="flex gap-2 items-center">
 														<div class="flex gap-1">
 															{#each subCap.actions as action}
-																<span class="inline-block rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-800">
+																<span class="inline-block px-1.5 py-0.5 text-xs font-medium text-blue-800 bg-blue-100 rounded-full">
 																	{action}
 																</span>
 															{/each}
@@ -332,12 +327,12 @@
 								<div class="capability-header">
 									<!-- Left: Title and Description -->
 									<div class="capability-title-section">
-										<div class="flex items-center gap-2 mb-1">
+										<div class="flex gap-2 items-center mb-1">
 											{#if capability.title}
 												<h3 class="capability-title">{capability.title}</h3>
 											{/if}
 											{#if capability.metadata?.isGroupCapability}
-												<span class="inline-block rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
+												<span class="inline-block px-2 py-0.5 text-xs font-medium text-purple-800 bg-purple-100 rounded-full">
 													Group: {capability.metadata.groupTitle || capability.metadata.group}
 												</span>
 											{/if}
@@ -355,19 +350,19 @@
 									
 									<!-- Right: All Metadata (value first, then label) -->
 									<div class="capability-metadata">
-										<div class="flex items-center justify-end gap-2">
+										<div class="flex gap-2 justify-end items-center">
 											<p class="font-mono text-xs text-slate-900">{formatResource(capability)}</p>
-											<span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Resource</span>
+											<span class="text-xs font-semibold tracking-wider uppercase text-slate-400">Resource</span>
 										</div>
-										<div class="flex items-center justify-end gap-2">
+										<div class="flex gap-2 justify-end items-center">
 											<div class="flex gap-1">
 												{#each capability.actions as action}
-													<span class="inline-block rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-800">
+													<span class="inline-block px-1.5 py-0.5 text-xs font-medium text-blue-800 bg-blue-100 rounded-full">
 														{action}
 													</span>
 												{/each}
 											</div>
-											<span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Actions</span>
+											<span class="text-xs font-semibold tracking-wider uppercase text-slate-400">Actions</span>
 										</div>
 									</div>
 									

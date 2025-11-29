@@ -35,10 +35,8 @@ export class ContextIngestService {
 	private log(message: string, context?: string) {
 		const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
 		const logMessage = `[ContextIngest] ${timestamp} - ${message}`;
-		
-		console.log(logMessage);
+
 		if (context) {
-			console.log(`[ContextIngest] ${timestamp} - Context preview: ${context.substring(0, 200)}${context.length > 200 ? '...' : ''}`);
 		}
 
 		if (this.onLog) {
@@ -63,7 +61,7 @@ export class ContextIngestService {
 		try {
 			const turnComplete = mode === 'triggerAnswer';
 			const ingestLabel = label || 'context';
-			
+
 			this.log(`Ingesting ${ingestLabel} (mode: ${mode})...`, content);
 
 			if (!this.session) {

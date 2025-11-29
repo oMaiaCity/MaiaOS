@@ -54,3 +54,7 @@ export {
 // Export UI components - re-export from @hominio/brand/views
 export { MenuView, WellnessView, CalendarView, CalendarEntryView } from '@hominio/brand/views';
 
+// Export Kai agent functions
+export { executeKaiAgent } from './kai/agent.js';
+export { GetNameTool } from './kai/getNameTool.js';
+

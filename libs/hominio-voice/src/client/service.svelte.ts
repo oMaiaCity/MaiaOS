@@ -12,7 +12,7 @@ export function createVoiceCallService() {
     let isThinking = $state(false);
     let logs = $state<string[]>([]);
     let error = $state<string | null>(null);
-    
+
     let ws: WebSocket | null = null;
     let audioContext: AudioContext | null = null;
     let stream: MediaStream | null = null;
@@ -23,7 +23,6 @@ export function createVoiceCallService() {
     let isFirstAudioOfTurn = true;
 
     function log(msg: string) {
-        console.log(`[VoiceCall] ${msg}`);
         logs.push(`${new Date().toISOString().split('T')[1].slice(0, -1)} - ${msg}`);
     }
 
@@ -31,7 +30,7 @@ export function createVoiceCallService() {
         try {
             log('Starting...');
             isFirstAudioOfTurn = true;
-            
+
             // Audio Init
             const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
             audioContext = new AudioContextClass({ sampleRate: 24000 }); // Output rate
@@ -40,12 +39,12 @@ export function createVoiceCallService() {
             // WebSocket Init
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const host = window.location.hostname === 'localhost' ? 'localhost:4204' : 'api.hominio.me';
-            const wsUrl = vibeId 
+            const wsUrl = vibeId
                 ? `${protocol}//${host}/api/v0/voice/live?vibeId=${encodeURIComponent(vibeId)}`
                 : `${protocol}//${host}/api/v0/voice/live`;
-            
+
             ws = new WebSocket(wsUrl);
-            
+
             ws.onopen = () => {
                 log('WebSocket connected');
                 isConnected = true;
@@ -62,7 +61,7 @@ export function createVoiceCallService() {
                         logMsg += `\n   Context preview: ${preview}${msg.context.length > 200 ? '...' : ''}`;
                     }
                     log(logMsg);
-                    
+
                     // Dispatch log event for activity stream
                     const logEvent = new CustomEvent('voiceLog', {
                         detail: {
@@ -89,7 +88,7 @@ export function createVoiceCallService() {
                         log(`   Context: ${preview}${msg.contextString.length > 200 ? '...' : ''}`);
                     }
                     isThinking = true;
-                    
+
                     // Dispatch toolCall event for activity stream using shared utility
                     const toolCallEvent: ToolCallEvent = {
                         toolName: msg.name as any,
@@ -110,7 +109,7 @@ export function createVoiceCallService() {
                         const preview = event.content.substring(0, 200);
                         log(`   Content: ${preview}${event.content.length > 200 ? '...' : ''}`);
                     }
-                    
+
                     // Dispatch contextIngest event for activity stream
                     const contextIngestEvent = new CustomEvent('contextIngest', {
                         detail: event
@@ -124,7 +123,7 @@ export function createVoiceCallService() {
                     // Stop all scheduled audio sources immediately
                     if (audioContext) {
                         scheduledSources.forEach(source => {
-                            try { source.stop(); } catch (e) {}
+                            try { source.stop(); } catch (e) { }
                         });
                         scheduledSources.clear();
                         nextStartTime = audioContext.currentTime;
@@ -150,7 +149,7 @@ export function createVoiceCallService() {
             ws.onclose = (event) => {
                 log('WebSocket closed');
                 isConnected = false;
-                
+
                 if (event.code === 1008 || event.reason?.includes('capability') || event.reason?.includes('Forbidden')) {
                     error = 'Access denied. You need permission to use voice assistant.';
                 } else if (event.code === 1001 || event.reason?.includes('Unauthorized')) {
@@ -160,43 +159,45 @@ export function createVoiceCallService() {
                 } else {
                     error = null;
                 }
-                
+
                 stop();
             };
 
             // Mic Init
-            stream = await navigator.mediaDevices.getUserMedia({ audio: {
-                sampleRate: 16000,
-                channelCount: 1,
-                echoCancellation: true
-            }});
-            
+            stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    sampleRate: 16000,
+                    channelCount: 1,
+                    echoCancellation: true
+                }
+            });
+
             // Check if stopped during mic init
             if (!ws || ws.readyState !== WebSocket.OPEN) {
                 log('Connection closed during mic init, aborting');
                 if (stream) stream.getTracks().forEach(t => t.stop());
                 return;
             }
-            
+
             const micContext = new AudioContext({ sampleRate: 16000 });
             input = micContext.createMediaStreamSource(stream);
             processor = micContext.createScriptProcessor(4096, 1, 1);
-            
+
             processor.onaudioprocess = (e) => {
                 if (!ws || ws.readyState !== WebSocket.OPEN) return;
-                
+
                 const inputData = e.inputBuffer.getChannelData(0);
-                
+
                 // Convert Float32 to Int16
                 const int16Data = new Int16Array(inputData.length);
                 for (let i = 0; i < inputData.length; i++) {
                     const s = Math.max(-1, Math.min(1, inputData[i]));
                     int16Data[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
                 }
-                
+
                 // Base64 encode
                 const base64 = btoa(String.fromCharCode(...new Uint8Array(int16Data.buffer)));
-                
+
                 ws.send(JSON.stringify({ type: 'audio', data: base64 }));
             };
 
@@ -217,9 +218,9 @@ export function createVoiceCallService() {
             console.warn('[VoiceCall] Cannot send text: WebSocket not connected');
             return;
         }
-        
+
         log(`Sending text message (turnComplete: ${turnComplete}): ${text.substring(0, 100)}${text.length > 100 ? '...' : ''}`);
-        
+
         ws.send(JSON.stringify({
             type: "text",
             text,
@@ -229,7 +230,7 @@ export function createVoiceCallService() {
 
     async function playAudio(base64: string) {
         if (!audioContext) return;
-        
+
         // Resume if suspended
         if (audioContext.state === 'suspended') {
             await audioContext.resume();
@@ -241,11 +242,11 @@ export function createVoiceCallService() {
         for (let i = 0; i < len; i++) {
             bytes[i] = binaryString.charCodeAt(i);
         }
-        
+
         // Int16 to Float32
         const int16 = new Int16Array(bytes.buffer);
         const float32 = new Float32Array(int16.length);
-        for(let i=0; i<int16.length; i++) {
+        for (let i = 0; i < int16.length; i++) {
             float32[i] = int16[i] / 32768.0;
         }
 
@@ -255,12 +256,12 @@ export function createVoiceCallService() {
         const source = audioContext.createBufferSource();
         source.buffer = buffer;
         source.connect(audioContext.destination);
-        
+
         const startTime = Math.max(audioContext.currentTime, nextStartTime);
         source.start(startTime);
         nextStartTime = startTime + buffer.duration;
         scheduledSources.add(source);
-        
+
         source.onended = () => {
             scheduledSources.delete(source);
             if (audioContext && audioContext.currentTime >= nextStartTime) {
@@ -275,12 +276,12 @@ export function createVoiceCallService() {
         if (stream) stream.getTracks().forEach(t => t.stop());
         if (processor) processor.disconnect();
         if (input) input.disconnect();
-        
-        scheduledSources.forEach(s => { try { s.stop(); } catch (e) {} });
+
+        scheduledSources.forEach(s => { try { s.stop(); } catch (e) { } });
         scheduledSources.clear();
-        
+
         if (audioContext) audioContext.close();
-        
+
         isConnected = false;
         isRecording = false;
         isSpeaking = false;

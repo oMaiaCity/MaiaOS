@@ -57,7 +57,6 @@ export async function injectContextForSkill({ skillId, vibeId, injectFn }) {
 		
 		if (!formatterConfig) {
 			// No context formatter for this skill - that's okay, some skills don't need context injection
-			console.log(`[ContextInjection] No context formatter for skill: ${skillId}`);
 			return;
 		}
 		

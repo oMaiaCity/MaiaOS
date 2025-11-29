@@ -111,7 +111,6 @@
             }
 
             const data = await response.json();
-            console.log("[Admin] Hotel capability added:", data);
             
             // Refresh groups to show the new capability
             await refreshRequests();
@@ -178,7 +177,6 @@
                 };
             });
             
-            console.log('[Admin] Refreshed capabilities:', capabilities.length, capabilities);
         } catch (err) {
             error = err instanceof Error ? err.message : "Unknown error";
             console.error("[Admin] Error fetching data:", err);
@@ -203,13 +201,11 @@
             }
 
             const data = await response.json();
-            console.log("[Admin] Request approved:", data);
             
             // Show success message with expiration info
             if (data.expiresAt) {
                 const expiresDate = new Date(data.expiresAt);
                 const expiresIn = formatExpirationTime(data.expiresAt);
-                console.log(`[Admin] Capability expires: ${expiresDate.toLocaleString()} (in ${expiresIn})`);
             }
 
             // Refresh requests
@@ -293,15 +289,15 @@
     });
 </script>
 
-<div class="min-h-screen bg-glass-gradient pt-6 pb-12">
-    <div class="container mx-auto px-4 max-w-5xl">
+<div class="pt-6 pb-12 min-h-screen bg-glass-gradient">
+    <div class="container px-4 mx-auto max-w-5xl">
         <div class="mb-8">
-            <h1 class="text-4xl font-bold tracking-tight text-slate-900 mb-2">Admin Dashboard</h1>
+            <h1 class="mb-2 text-4xl font-bold tracking-tight text-slate-900">Admin Dashboard</h1>
             <p class="text-slate-600">Manage capability requests and granted capabilities</p>
         </div>
 
         <!-- Tab Navigation -->
-        <div class="mb-6 flex gap-2 border-b border-slate-200">
+        <div class="flex gap-2 mb-6 border-b border-slate-200">
             <button
                 onclick={() => activeTab = 'pending'}
                 class="tab-button"
@@ -345,7 +341,7 @@
 
         {#if activeTab === 'pending'}
             {#if loading && requests.length === 0}
-                <div class="flex items-center justify-center py-12">
+                <div class="flex justify-center items-center py-12">
                     <LoadingSpinner />
                     <p class="ml-4 text-sm font-medium text-slate-500">Loading requests...</p>
                 </div>
@@ -393,19 +389,19 @@
                             
                             <!-- Right: Metadata -->
                             <div class="admin-request-metadata">
-                                <div class="flex items-center justify-end gap-2">
+                                <div class="flex gap-2 justify-end items-center">
                                     <p class="font-mono text-xs text-slate-900">{formatResource(request.resource)}</p>
-                                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Resource</span>
+                                    <span class="text-xs font-semibold tracking-wider uppercase text-slate-400">Resource</span>
                                 </div>
-                                <div class="flex items-center justify-end gap-2">
+                                <div class="flex gap-2 justify-end items-center">
                                     <div class="flex gap-1">
                                         {#each request.actions as action}
-                                            <span class="inline-block rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-800">
+                                            <span class="inline-block px-1.5 py-0.5 text-xs font-medium text-blue-800 bg-blue-100 rounded-full">
                                                 {action}
                                             </span>
                                         {/each}
                                     </div>
-                                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Actions</span>
+                                    <span class="text-xs font-semibold tracking-wider uppercase text-slate-400">Actions</span>
                                 </div>
                             </div>
                             
@@ -428,7 +424,7 @@
                                     disabled={loading}
                                     class="admin-action-button approve"
                                 >
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                     </svg>
                                 </GlassButton>
@@ -438,7 +434,7 @@
                                     disabled={loading}
                                     class="admin-action-button reject"
                                 >
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </GlassButton>
@@ -450,7 +446,7 @@
             {/if}
         {:else if activeTab === 'granted'}
             {#if loading && capabilities.length === 0}
-                <div class="flex items-center justify-center py-12">
+                <div class="flex justify-center items-center py-12">
                     <LoadingSpinner />
                     <p class="ml-4 text-sm font-medium text-slate-500">Loading capabilities...</p>
                 </div>
@@ -484,12 +480,12 @@
                                 
                                 <!-- Middle: Title and Description -->
                                 <div class="admin-capability-title-section">
-                                    <div class="flex items-center gap-2 mb-1">
+                                    <div class="flex gap-2 items-center mb-1">
                                         {#if capability.title}
                                             <h3 class="admin-capability-title">{capability.title}</h3>
                                         {/if}
                                         {#if capability.metadata?.isGroupCapability}
-                                            <span class="inline-block rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
+                                            <span class="inline-block px-2 py-0.5 text-xs font-medium text-purple-800 bg-purple-100 rounded-full">
                                                 Group: {capability.metadata.groupTitle || capability.metadata.group}
                                             </span>
                                         {/if}
@@ -507,19 +503,19 @@
                                 
                                 <!-- Right: All Metadata -->
                                 <div class="admin-capability-metadata">
-                                    <div class="flex items-center justify-end gap-2">
+                                    <div class="flex gap-2 justify-end items-center">
                                         <p class="font-mono text-xs text-slate-900">{formatResource(capability.resource)}</p>
-                                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Resource</span>
+                                        <span class="text-xs font-semibold tracking-wider uppercase text-slate-400">Resource</span>
                                     </div>
-                                    <div class="flex items-center justify-end gap-2">
+                                    <div class="flex gap-2 justify-end items-center">
                                         <div class="flex gap-1">
                                             {#each capability.actions as action}
-                                                <span class="inline-block rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-800">
+                                                <span class="inline-block px-1.5 py-0.5 text-xs font-medium text-blue-800 bg-blue-100 rounded-full">
                                                     {action}
                                                 </span>
                                             {/each}
                                         </div>
-                                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Actions</span>
+                                        <span class="text-xs font-semibold tracking-wider uppercase text-slate-400">Actions</span>
                                     </div>
                                 </div>
                                 
@@ -545,7 +541,7 @@
                                         disabled={loading}
                                         class="admin-revoke-button"
                                     >
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
                                     </GlassButton>
@@ -557,7 +553,7 @@
             {/if}
         {:else if activeTab === 'groups'}
             {#if loading && capabilityGroups.length === 0}
-                <div class="flex items-center justify-center py-12">
+                <div class="flex justify-center items-center py-12">
                     <LoadingSpinner />
                     <p class="ml-4 text-sm font-medium text-slate-500">Loading groups...</p>
                 </div>
@@ -570,17 +566,17 @@
                     {#each capabilityGroups as group (group.id)}
                         <GlassCard class="p-6">
                             <div class="mb-4">
-                                <div class="flex items-start justify-between mb-2">
+                                <div class="flex justify-between items-start mb-2">
                                     <div>
-                                        <h3 class="text-xl font-bold text-slate-900 mb-1">{group.title}</h3>
+                                        <h3 class="mb-1 text-xl font-bold text-slate-900">{group.title}</h3>
                                         <p class="text-sm text-slate-600">{group.description || 'No description'}</p>
-                                        <p class="text-xs text-slate-500 mt-1">Group: {group.name}</p>
+                                        <p class="mt-1 text-xs text-slate-500">Group: {group.name}</p>
                                     </div>
                                     {#if group.name === 'hominio-explorer'}
                                         <button
                                             onclick={() => addHotelCapability(group.id)}
                                             disabled={loading}
-                                            class="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                            class="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg transition-colors hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             Add Hotel Capability
                                         </button>
@@ -588,23 +584,23 @@
                                 </div>
                             </div>
                             
-                            <div class="border-t border-slate-200 pt-4">
-                                <h4 class="text-sm font-semibold text-slate-700 mb-3">Sub-capabilities ({group.members.length})</h4>
+                            <div class="pt-4 border-t border-slate-200">
+                                <h4 class="mb-3 text-sm font-semibold text-slate-700">Sub-capabilities ({group.members.length})</h4>
                                 {#if group.members.length === 0}
                                     <p class="text-sm text-slate-500">No capabilities in this group yet.</p>
                                 {:else}
                                     <div class="space-y-2">
                                         {#each group.members as member (member.id)}
-                                            <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                            <div class="flex justify-between items-center p-3 rounded-lg bg-slate-50">
                                                 <div>
                                                     <p class="text-sm font-medium text-slate-900">{member.title || 'Untitled Capability'}</p>
-                                                    <p class="text-xs text-slate-600 font-mono">
+                                                    <p class="font-mono text-xs text-slate-600">
                                                         {member.resource_type}:{member.resource_namespace}{member.resource_id ? `:${member.resource_id}` : ''}
                                                     </p>
                                                 </div>
                                                 <div class="flex gap-1">
                                                     {#each member.actions as action}
-                                                        <span class="inline-block rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                                                        <span class="inline-block px-2 py-0.5 text-xs font-medium text-blue-800 bg-blue-100 rounded-full">
                                                             {action}
                                                         </span>
                                                     {/each}

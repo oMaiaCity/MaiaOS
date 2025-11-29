@@ -121,16 +121,16 @@ export async function createVoiceSessionManager(
 							onTranscript?.('model', text);
 						}
 
-					// Handle function calls from parts
-					for (const part of parts) {
-						if (part.functionCall) {
-							// Google GenAI SDK: part.functionCall has { name?, args?, id? } structure
-							if (!part.functionCall.name) {
-								console.error(`[hominio-voice] ⚠️ Function call in part missing name:`, JSON.stringify(part.functionCall, null, 2));
+						// Handle function calls from parts
+						for (const part of parts) {
+							if (part.functionCall) {
+								// Google GenAI SDK: part.functionCall has { name?, args?, id? } structure
+								if (!part.functionCall.name) {
+									console.error(`[hominio-voice] ⚠️ Function call in part missing name:`, JSON.stringify(part.functionCall, null, 2));
+								}
+								await handleFunctionCall(part.functionCall);
 							}
-							await handleFunctionCall(part.functionCall);
 						}
-					}
 
 						// Handle turn complete
 						if (message.serverContent.turnComplete) {
@@ -188,15 +188,24 @@ export async function createVoiceSessionManager(
 		const name = functionCall.name;
 		const args = functionCall.args || {};
 		const id = functionCall.id;
-		
+
 		if (!name) {
 			console.error(`[hominio-voice] ⚠️ Function call missing name. Full structure:`, JSON.stringify(functionCall, null, 2));
 			console.error(`[hominio-voice] ⚠️ Available keys:`, Object.keys(functionCall));
 			// Don't process function calls without names - they're invalid
 			return;
 		}
-		
+
 		console.log(`[hominio-voice] 🔧 Function call: ${name}`, JSON.stringify(args));
+
+		// CRITICAL: For delegateIntent, notify frontend IMMEDIATELY with intent BEFORE execution
+		// This allows frontend to create task card with intent visible right away
+		if (name === 'delegateIntent' && args?.intent) {
+			const intent = args.intent;
+
+			// Send early toolCall notification (for frontend placeholder creation)
+			onToolCall?.(name, args || {}, { __earlyNotification: true }, undefined);
+		}
 
 		// Update active vibes in registry
 		toolRegistry.setActiveVibeIds(activeVibeIds);
@@ -210,7 +219,7 @@ export async function createVoiceSessionManager(
 			onLog
 		});
 
-		// Notify frontend of tool call
+		// Notify frontend of tool call (with result) - this happens AFTER execution
 		onToolCall?.(name, args || {}, toolResult.result, toolResult.contextString);
 
 		// ALWAYS send tool response (required by Google API)

@@ -35,21 +35,11 @@ export async function push({ request }: { request: Request }) {
     try {
         // Debug: Log cookie headers to diagnose forwarding issues
         const cookieHeader = request.headers.get('cookie');
-        console.log('[push] Cookie header:', cookieHeader ? 'present' : 'missing', cookieHeader?.substring(0, 50) || '');
-        console.log('[push] Request origin:', request.headers.get('origin'));
-        console.log('[push] Request referer:', request.headers.get('referer'));
+
 
         // Extract auth data from cookies using centralized auth context
         // This delegates cookie verification to wallet service (no DB access)
         const authData = await extractAuthData(request);
-
-        // Log for debugging (without sensitive cookie data)
-        if (authData) {
-            console.log('[push] ✅ Authenticated user:', authData.sub, 'isAdmin:', authData.isAdmin);
-        } else {
-            console.log('[push] ❌ Anonymous request - NO AUTH DATA');
-            console.log('[push] Available cookies:', cookieHeader ? cookieHeader.split(';').map(c => c.split('=')[0].trim()) : 'none');
-        }
 
         // Create client mutators (will be reused by server mutators)
         const clientMutators = createMutators(authData);

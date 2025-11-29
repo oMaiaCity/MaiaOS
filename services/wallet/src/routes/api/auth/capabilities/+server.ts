@@ -8,7 +8,6 @@ import type { RequestHandler } from "./$types";
  * Returns all capabilities granted to the authenticated user
  */
 export const GET: RequestHandler = async ({ request }) => {
-    console.log('[capabilities] GET /api/auth/capabilities called');
     
     // Validate origin for CORS
     const origin = request.headers.get("origin");
@@ -22,7 +21,6 @@ export const GET: RequestHandler = async ({ request }) => {
     try {
         // Get authenticated session
         const session = await api.getAuthenticatedSession(request);
-        console.log('[capabilities] Session found:', session.user.id);
 
         // Extract principal
         const principal = `user:${session.user.id}` as const;

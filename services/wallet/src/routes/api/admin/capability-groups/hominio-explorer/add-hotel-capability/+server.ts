@@ -81,7 +81,6 @@ export const POST: RequestHandler = async ({ request }) => {
 
     if (existingCapability) {
       capabilityId = existingCapability.id;
-      console.log("[Admin] Using existing capability:", capabilityId);
     } else {
       // Create the capability for the group
       const capabilityResult = await db
@@ -109,7 +108,6 @@ export const POST: RequestHandler = async ({ request }) => {
         .executeTakeFirstOrThrow();
 
       capabilityId = capabilityResult.id;
-      console.log("[Admin] Created capability:", capabilityId);
     }
 
     // Link capability to group (if not already linked)
@@ -121,8 +119,8 @@ export const POST: RequestHandler = async ({ request }) => {
       .executeTakeFirst();
 
     if (existingLink) {
-      return json({ 
-        success: true, 
+      return json({
+        success: true,
         message: "Capability already linked to group",
         capabilityId,
         groupId: group.id
@@ -139,8 +137,8 @@ export const POST: RequestHandler = async ({ request }) => {
       })
       .execute();
 
-    return json({ 
-      success: true, 
+    return json({
+      success: true,
       message: "Successfully added 'read all hotels' capability to Hominio Explorer group",
       capabilityId,
       groupId: group.id,

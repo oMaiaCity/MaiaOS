@@ -9,6 +9,9 @@
     // Derived state
 	const isSkill = $derived(item.toolName ? isActionSkill(item.toolName) : false);
 	const isQuery = $derived(item.toolName ? isQueryTool(item.toolName) : false);
+	const isDelegateIntent = $derived(item.toolName === 'delegateIntent');
+	const isKaiTask = $derived(item.type === 'kaiTask');
+	const isKaiEvent = $derived(item.type === 'kaiEvent');
 	const isContextIngest = $derived(item.type === 'contextIngest');
     
     // Extract skill info
@@ -201,6 +204,208 @@
                                 No context or result data available
                             </div>
                         {/if}
+                    </div>
+                </div>
+            {/if}
+        </GlassCard>
+    {:else if isDelegateIntent}
+        <!-- Kai Agent Delegate Intent Item -->
+        <GlassCard class="overflow-hidden border-l-4 border-l-indigo-400" lifted={true}>
+            <!-- Header / Collapsed View -->
+            <button 
+                class="flex justify-between items-center p-4 w-full text-left border-b transition-colors cursor-pointer border-slate-100/10 hover:bg-slate-50/30"
+                onclick={handleToggle}
+            >
+                <div class="flex gap-3 items-center">
+                    <div class="flex justify-center items-center w-8 h-8 text-indigo-600 bg-indigo-100 rounded-full shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path d="m4.93 19.07 4.24-4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="M14.83 9.17 19.07 4.93"/><path d="M14.83 9.17 19.07 4.93"/><path d="M4.93 19.07 9.17 14.83"/><path d="M9.17 14.83 4.93 19.07"/><path d="M14.83 9.17 9.17 14.83"/><path d="M9.17 14.83 14.83 9.17"/><circle cx="12" cy="12" r="10"/></svg>
+                    </div>
+                    <div>
+                        <div class="text-sm font-semibold tracking-wide text-slate-800">Kai Agent</div>
+                        <div class="text-xs text-slate-500">{args.intent || 'Processing intent...'}</div>
+                    </div>
+                </div>
+                <div class="flex gap-3 items-center">
+                    <div class="text-xs tabular-nums text-slate-400">
+                        {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <div class="transition-transform duration-300 text-slate-400" class:rotate-180={expanded}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
+                </div>
+            </button>
+
+            <!-- Expanded Content -->
+            {#if expanded}
+                <div transition:slide={{ duration: 300 }} class="p-4 bg-slate-50/30">
+                    <div class="space-y-4">
+                        {#if item.status === 'pending'}
+                            <div class="flex justify-center items-center p-4">
+                                <LoadingSpinner />
+                                <span class="ml-2 text-sm text-slate-500">Kai is working...</span>
+                            </div>
+                        {:else if item.status === 'error'}
+                            <div class="p-4 text-red-500 bg-red-50/50 rounded">
+                                <p class="font-bold text-sm">Error executing intent</p>
+                                <p class="text-xs opacity-80">{item.error}</p>
+                            </div>
+                        {:else if item.result}
+                            {#if item.result.message}
+                                <div>
+                                    <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Message</h4>
+                                    <div class="p-3 text-sm bg-white rounded border border-slate-200">
+                                        {item.result.message}
+                                    </div>
+                                </div>
+                            {/if}
+                            <div>
+                                <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Full Result JSON</h4>
+                                <pre class="overflow-x-auto overflow-y-auto p-3 max-h-96 text-xs rounded border bg-slate-50 border-slate-200">{JSON.stringify(item.result, null, 2)}</pre>
+                            </div>
+                        {/if}
+                        
+                        {#if args.intent}
+                            <div>
+                                <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Original Intent</h4>
+                                <div class="p-2 text-xs text-slate-600 bg-slate-100 rounded">
+                                    "{args.intent}"
+                                </div>
+                            </div>
+                        {/if}
+                        
+                        <div>
+                            <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Full Item Data</h4>
+                            <pre class="overflow-x-auto overflow-y-auto p-3 max-h-96 text-xs rounded border bg-slate-50 border-slate-200">{JSON.stringify(item, null, 2)}</pre>
+                        </div>
+                    </div>
+                </div>
+            {/if}
+        </GlassCard>
+    {:else if isKaiTask}
+        <!-- Kai Task Item -->
+        <GlassCard class="overflow-hidden border-l-4 border-l-cyan-400" lifted={true}>
+             <button 
+                class="flex justify-between items-center p-3 w-full text-left border-b transition-colors cursor-pointer border-slate-100/10 hover:bg-slate-50/30"
+                onclick={handleToggle}
+            >
+                <div class="flex gap-3 items-center">
+                    <div class="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]"></div>
+                    <div class="flex flex-col">
+                        <span class="text-[11px] font-medium text-slate-600">Kai Task</span>
+                         <span class="text-[10px] text-slate-500">Task {args.taskId}</span>
+                    </div>
+                     <span class="ml-2 text-[9px] px-1.5 py-0.5 rounded-full {args.status === 'DONE' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">
+                        {args.status}
+                    </span>
+                </div>
+                <div class="flex gap-3 items-center">
+                     <div class="text-[10px] text-slate-400 tabular-nums font-medium">
+                        {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                     <div class="transition-transform duration-300 text-slate-400" class:rotate-180={expanded}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
+                </div>
+            </button>
+             {#if expanded}
+                <div transition:slide={{ duration: 300 }} class="p-4 bg-slate-50/30">
+                    <div class="space-y-4">
+                        {#if item.result}
+                            <div>
+                                <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Task Result</h4>
+                                <pre class="overflow-x-auto overflow-y-auto p-3 max-h-96 text-xs rounded border bg-slate-50 border-slate-200">{JSON.stringify(item.result, null, 2)}</pre>
+                            </div>
+                        {/if}
+                        <div>
+                            <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Full Task Data</h4>
+                            <pre class="overflow-x-auto overflow-y-auto p-3 max-h-96 text-xs rounded border bg-slate-50 border-slate-200">{JSON.stringify(item, null, 2)}</pre>
+                        </div>
+                    </div>
+                </div>
+            {/if}
+        </GlassCard>
+    {:else if isKaiEvent}
+         <!-- Kai Event Item (State Change / Tool Call) -->
+        <GlassCard class="overflow-hidden border-l-4 border-l-violet-300" lifted={true}>
+             <button 
+                class="flex justify-between items-center p-3 w-full text-left border-b transition-colors cursor-pointer border-slate-100/10 hover:bg-slate-50/30"
+                onclick={handleToggle}
+            >
+                <div class="flex gap-3 items-center">
+                    <div class="w-1.5 h-1.5 rounded-full bg-violet-300 shadow-[0_0_8px_rgba(167,139,250,0.6)]"></div>
+                    <div class="flex flex-col">
+                        <span class="text-[11px] font-medium text-slate-600">
+                            {item.eventType === 'state' ? 'Agent State' : item.eventType === 'toolCall' ? 'Tool Execution' : 'Kai Event'}
+                        </span>
+                        {#if item.eventType === 'state'}
+                             <span class="text-[10px] text-slate-500 capitalize">{args.state}</span>
+                        {:else if item.eventType === 'toolCall'}
+                             <span class="text-[10px] text-slate-500">{item.toolName}</span>
+                        {/if}
+                    </div>
+                </div>
+                 <div class="flex gap-3 items-center">
+                     <div class="text-[10px] text-slate-400 tabular-nums font-medium">
+                        {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                     <div class="transition-transform duration-300 text-slate-400" class:rotate-180={expanded}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
+                </div>
+            </button>
+            {#if expanded}
+                <div transition:slide={{ duration: 300 }} class="p-4 bg-slate-50/30">
+                    <div class="space-y-4">
+                        {#if item.eventType === 'toolCall'}
+                            {#if args.toolArgs}
+                                <div>
+                                    <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Tool Args</h4>
+                                    <pre class="overflow-x-auto overflow-y-auto p-3 max-h-96 text-xs rounded border bg-slate-50 border-slate-200">{JSON.stringify(args.toolArgs, null, 2)}</pre>
+                                </div>
+                            {/if}
+                            {#if args.toolResult}
+                                <div>
+                                    <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Tool Result</h4>
+                                    <pre class="overflow-x-auto overflow-y-auto p-3 max-h-96 text-xs rounded border bg-slate-50 border-slate-200">{JSON.stringify(args.toolResult, null, 2)}</pre>
+                                </div>
+                            {/if}
+                        {:else if item.eventType === 'state'}
+                            {#if args.state}
+                                <div>
+                                    <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">State</h4>
+                                    <div class="p-2 text-xs text-slate-600 bg-slate-100 rounded capitalize">{args.state}</div>
+                                </div>
+                            {/if}
+                            {#if args.taskId}
+                                <div>
+                                    <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Task ID</h4>
+                                    <div class="p-2 text-xs text-slate-600 bg-slate-100 rounded font-mono">{args.taskId}</div>
+                                </div>
+                            {/if}
+                        {:else if item.eventType === 'taskUpdate'}
+                            {#if args.status}
+                                <div>
+                                    <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Task Status</h4>
+                                    <div class="p-2 text-xs text-slate-600 bg-slate-100 rounded">{args.status}</div>
+                                </div>
+                            {/if}
+                            {#if args.result}
+                                <div>
+                                    <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Task Result</h4>
+                                    <pre class="overflow-x-auto overflow-y-auto p-3 max-h-96 text-xs rounded border bg-slate-50 border-slate-200">{JSON.stringify(args.result, null, 2)}</pre>
+                                </div>
+                            {/if}
+                        {/if}
+                        
+                        <div>
+                            <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Event Args</h4>
+                            <pre class="overflow-x-auto overflow-y-auto p-3 max-h-96 text-xs rounded border bg-slate-50 border-slate-200">{JSON.stringify(args, null, 2)}</pre>
+                        </div>
+                        
+                        <div>
+                            <h4 class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-700">Full Event Data</h4>
+                            <pre class="overflow-x-auto overflow-y-auto p-3 max-h-96 text-xs rounded border bg-slate-50 border-slate-200">{JSON.stringify(item, null, 2)}</pre>
+                        </div>
                     </div>
                 </div>
             {/if}
