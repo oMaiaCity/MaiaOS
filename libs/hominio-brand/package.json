@@ -7,7 +7,6 @@
 	"exports": {
 		".": "./src/index.js",
 		"./app.css": "./src/app.css",
-		"./tailwind.config.js": "./tailwind.config.js",
 		"./components": "./src/components/index.js",
 		"./views": "./src/views/index.js",
 		"./views/types": "./src/views/types.ts",
@@ -28,10 +27,6 @@
 	},
 	"files": [
 		"src",
-		"tailwind.config.js",
 		"scripts"
-	],
-	"dependencies": {
-		"@tailwindcss/container-queries": "^0.1.1"
-	}
+	]
 }

@@ -1,3 +1,2 @@
 @import '@hominio/brand/app.css';
-@source "../../../libs/hominio-brand/src";
 @plugin '@tailwindcss/typography';
