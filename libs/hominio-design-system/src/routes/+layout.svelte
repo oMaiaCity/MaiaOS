@@ -16,6 +16,7 @@
         {
             category: 'Atoms',
             items: [
+                { name: 'Badge', href: '/atoms/badge' },
                 { name: 'Call Button', href: '/atoms/call-button' },
                 { name: 'Card', href: '/atoms/card' },
                 { name: 'Glass Icon Button', href: '/atoms/glass-icon-button' },

@@ -33,6 +33,7 @@
         {#each brand500sRows as row}
             <div class={css({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '6' })}>
                 {#each row as name}
+                    {@const hexValue = token(`colors.${name.toLowerCase()}.500`)}
                     <div class={css({ display: 'flex', flexDirection: 'column', gap: '2' })}>
                         <div 
                             class={css({ 
@@ -41,15 +42,18 @@
                                 rounded: 'card', 
                                 shadow: 'md', 
                                 display: 'flex', 
-                                alignItems: 'flex-end', 
+                                flexDirection: 'column',
+                                alignItems: 'center', 
                                 justifyContent: 'center', 
                                 p: '4',
                                 transition: 'transform 0.2s', 
-                                _hover: { transform: 'scale(1.05)' }
+                                _hover: { transform: 'scale(1.05)' },
+                                gap: '1'
                             })}
-                            style="background-color: {token(`colors.${name.toLowerCase()}.500`)}"
+                            style="background-color: {hexValue}"
                         >
                             <span class={css({ fontSize: 'sm', fontWeight: 'bold', color: name === 'Slate' ? 'slate.900' : 'white' })}>{name}</span>
+                            <span class={css({ fontSize: '[10px]', fontFamily: 'mono', color: name === 'Slate' ? 'slate.900' : 'white', opacity: '0.9' })}>{hexValue}</span>
                         </div>
                         <div class={css({ textAlign: 'center' })}>
                             <span class={css({ fontSize: 'xs' })}>500</span>
@@ -65,6 +69,8 @@
             <h2 class={css({ fontSize: 'xl', fontWeight: 'semibold' })}>{name}</h2>
             <div class={css({ gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', display: 'grid', gap: '4' })}>
                 {#each shades as shade}
+                    {@const hexValue = token(`colors.${name.toLowerCase()}.${shade}`)}
+                    {@const isDark = parseInt(shade) > 500}
                     <div class={css({ display: 'flex', flexDirection: 'column', gap: '2' })}>
                         <div 
                             class={css({ 
@@ -73,24 +79,29 @@
                                 rounded: 'main', 
                                 shadow: 'sm', 
                                 display: 'flex', 
-                                alignItems: 'flex-end', 
-                                justifyContent: 'flex-start', 
-                                p: '3', 
+                                flexDirection: 'column',
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                p: '2', 
                                 transition: 'transform 0.2s', 
                                 cursor: 'pointer', 
                                 _hover: { transform: 'scale(1.05)' },
-                                group: true
+                                gap: '0.5'
                             })}
-                            style="background-color: {token(`colors.${name.toLowerCase()}.${shade}`)}"
+                            style="background-color: {hexValue}"
                         >
                             <span class={css({ 
                                 fontSize: 'xs', 
-                                fontWeight: 'medium', 
-                                opacity: '0', 
-                                transition: 'opacity 0.2s',
-                                _groupHover: { opacity: '100' },
-                                color: parseInt(shade) > 500 ? 'white' : 'slate.900'
+                                fontWeight: 'semibold', 
+                                color: isDark ? 'white' : 'slate.900'
                             })}>{shade}</span>
+                            <span class={css({ 
+                                fontSize: '[9px]', 
+                                fontFamily: 'mono',
+                                color: isDark ? 'white' : 'slate.900',
+                                opacity: '0.85',
+                                userSelect: 'all'
+                            })}>{hexValue}</span>
                         </div>
                         <div class={css({ display: 'flex', flexDirection: 'column', px: '1' })}>
                             <span class={css({ fontSize: 'xs', fontWeight: 'medium' })}>{shade}</span>
