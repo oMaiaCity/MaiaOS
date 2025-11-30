@@ -13,6 +13,7 @@
 		"dev:app": "bun --env-file=.env --filter app dev",
 		"dev:sync": "bun --env-file=.env --filter sync dev",
 		"dev:api": "bun --env-file=.env --filter api dev",
+		"dev:ds": "bun --env-file=.env --filter hominio-design-system dev",
 		"dev:all": "bun --env-file=.env --filter website dev & bun --env-file=.env --filter wallet dev & bun --env-file=.env --filter app dev & bun --env-file=.env --filter sync dev & bun --env-file=.env --filter api dev",
 		"build": "bun --filter app build",
 		"build:website": "bun --filter website build",

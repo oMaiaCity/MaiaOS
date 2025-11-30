@@ -23,6 +23,7 @@ const services = [
 	{ name: 'app', filter: 'app', port: 4202 },
 	{ name: 'sync', filter: 'sync', port: 4203 },
 	{ name: 'api', filter: 'api', port: 4204 },
+	{ name: 'design-system', filter: 'hominio-design-system', port: 5173 },
 ];
 
 // Asset sync watcher (not a service, but runs alongside)

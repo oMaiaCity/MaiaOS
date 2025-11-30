@@ -33,6 +33,7 @@ const cwd = process.cwd();
 const isAppService = cwd.includes('app') || existsSync(resolve(cwd, 'src-tauri'));
 const isWalletService = cwd.includes('wallet');
 const isWebsiteService = cwd.includes('website');
+const isDesignSystem = cwd.includes('hominio-design-system');
 
 const serviceStaticDirs = isDockerContext
 	? [
@@ -45,6 +46,7 @@ const serviceStaticDirs = isDockerContext
 		...(isAppService || !isDockerContext ? [resolve(monorepoRoot, 'services/app/static/brand')] : []),
 		...(isWalletService || !isDockerContext ? [resolve(monorepoRoot, 'services/wallet/static/brand')] : []),
 		...(isWebsiteService || !isDockerContext ? [resolve(monorepoRoot, 'services/website/static/brand')] : []),
+		...(isDesignSystem || !isDockerContext ? [resolve(monorepoRoot, 'libs/hominio-design-system/static/brand')] : []),
 	].filter(Boolean);
 
 /**

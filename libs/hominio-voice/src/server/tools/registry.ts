@@ -49,7 +49,7 @@ export class ToolRegistry {
 							title: {
 								oneOf: [
 									{
-										type: 'string',
+								type: 'string',
 										description: 'The title of a single todo item to create.'
 									},
 									{

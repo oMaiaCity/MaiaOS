@@ -50,15 +50,15 @@ export async function addTodo(title) {
 		const currentTodos = get(todos);
 		
 		// Create new todo
-		const newTodo = {
-			id: nanoid(),
-			title: title.trim(),
-			completed: false
-		};
+			const newTodo = {
+				id: nanoid(),
+				title: title.trim(),
+				completed: false
+			};
 		
 		// Update store
-		const updatedTodos = [...currentTodos, newTodo];
-		todos.set(updatedTodos);
+			const updatedTodos = [...currentTodos, newTodo];
+			todos.set(updatedTodos);
 		
 		// Return immediately
 		return newTodo;
@@ -87,7 +87,7 @@ export async function editTodo(id, updates) {
 				};
 			}
 			return todo;
-		});
+	});
 		todos.set(updatedTodos);
 		const updatedTodo = updatedTodos.find(t => t.id === id);
 		return updatedTodo || null;
@@ -104,11 +104,11 @@ export async function editTodo(id, updates) {
 export async function toggleTodo(id) {
 	try {
 		const currentTodos = get(todos);
-		const updatedTodos = currentTodos.map(todo => 
-			todo.id === id ? { ...todo, completed: !todo.completed } : todo
-		);
-		todos.set(updatedTodos);
-		const updatedTodo = updatedTodos.find(t => t.id === id);
+			const updatedTodos = currentTodos.map(todo => 
+				todo.id === id ? { ...todo, completed: !todo.completed } : todo
+			);
+			todos.set(updatedTodos);
+			const updatedTodo = updatedTodos.find(t => t.id === id);
 		return updatedTodo || null;
 	} catch (error) {
 		throw new Error(`Failed to toggle todo: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -123,8 +123,8 @@ export async function toggleTodo(id) {
 export async function deleteTodo(id) {
 	try {
 		const currentTodos = get(todos);
-		const updatedTodos = currentTodos.filter(todo => todo.id !== id);
-		todos.set(updatedTodos);
+			const updatedTodos = currentTodos.filter(todo => todo.id !== id);
+			todos.set(updatedTodos);
 		return true;
 	} catch (error) {
 		throw new Error(`Failed to delete todo: ${error instanceof Error ? error.message : 'Unknown error'}`);

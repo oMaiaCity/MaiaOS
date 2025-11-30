@@ -416,25 +416,25 @@
 	
 	<!-- Call Logs Sidebar - Fixed Right Aligned -->
 	{#if !logsCollapsed}
-		<aside class="hidden lg:block fixed right-0 top-[env(safe-area-inset-top)] bottom-[calc(6rem+env(safe-area-inset-bottom))] w-[300px] pr-4 pt-4 z-10">
-			<GlassCard class="flex flex-col p-4 h-full">
-				<div class="mb-3">
-					<h2 class="mb-0.5 text-sm font-bold tracking-tight text-slate-900">Call Logs</h2>
-					<p class="text-xs text-slate-600">Real-time debugging</p>
-				</div>
+	<aside class="hidden lg:block fixed right-0 top-[env(safe-area-inset-top)] bottom-[calc(6rem+env(safe-area-inset-bottom))] w-[300px] pr-4 pt-4 z-10">
+		<GlassCard class="flex flex-col p-4 h-full">
+			<div class="mb-3">
+				<h2 class="mb-0.5 text-sm font-bold tracking-tight text-slate-900">Call Logs</h2>
+				<p class="text-xs text-slate-600">Real-time debugging</p>
+			</div>
 
-				<!-- Logs Display - Light Theme Glass Style -->
-				<div class="overflow-hidden flex-1 rounded-lg border backdrop-blur-sm border-slate-200/50 bg-white/40">
-					<div class="overflow-y-auto p-3 h-full font-mono text-xs text-slate-700">
-						{#each (voice as any).logs as log}
+			<!-- Logs Display - Light Theme Glass Style -->
+			<div class="overflow-hidden flex-1 rounded-lg border backdrop-blur-sm border-slate-200/50 bg-white/40">
+				<div class="overflow-y-auto p-3 h-full font-mono text-xs text-slate-700">
+					{#each (voice as any).logs as log}
 							<div class="mb-1 leading-relaxed wrap-break-word text-slate-600">{log}</div>
-						{:else}
-							<div class="text-xs italic text-slate-400">No logs yet. Start a call to see logs.</div>
-						{/each}
-					</div>
+					{:else}
+						<div class="text-xs italic text-slate-400">No logs yet. Start a call to see logs.</div>
+					{/each}
 				</div>
-			</GlassCard>
-		</aside>
+			</div>
+		</GlassCard>
+	</aside>
 	{/if}
 	
 	<!-- Global Logs Toggle Button - Fixed Bottom Right (same level as NavPill) -->

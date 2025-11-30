@@ -59,7 +59,7 @@
                                 Edit: {Array.isArray(args.id) ? `${args.id.length} todo(s)` : 'todo'}
                             {:else if isQueryTodos}
                                 Show all todos
-                            {:else}
+                    {:else}
                                 {item.toolName}
                             {/if}
                         </div>

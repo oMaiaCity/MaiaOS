@@ -1,0 +1,8 @@
+/* Import Shrikhand from static assets (synced by sync-assets.js) */
+@font-face {
+	font-family: 'Shrikhand';
+	src: url('/brand/fonts/Shrikhand/Shrikhand-Regular.ttf') format('truetype');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}

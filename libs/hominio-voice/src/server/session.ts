@@ -217,8 +217,8 @@ export async function createVoiceSessionManager(
 			onLog?.(`⚠️ Legacy tool ${name} is no longer supported.`);
 			// Return error response to AI
 			try {
-				await contextIngest.ingestToolResponse(name, {
-					error: `Tool ${name} is no longer available. Use queryTodos or createTodo directly.`
+			await contextIngest.ingestToolResponse(name, {
+				error: `Tool ${name} is no longer available. Use queryTodos or createTodo directly.`
 				}, id || 'unknown', 'silent');
 			} catch (err) {
 				console.error(`[hominio-voice] Failed to send legacy tool error response:`, err);
@@ -230,10 +230,10 @@ export async function createVoiceSessionManager(
 		let toolResult: ToolResult;
 		try {
 			toolResult = await toolRegistry.executeTool(name, args || {}, {
-				session,
-				onLog,
-				contextIngest // Pass contextIngest so tools can re-ingest results when done
-			});
+			session,
+			onLog,
+			contextIngest // Pass contextIngest so tools can re-ingest results when done
+		});
 		} catch (err) {
 			console.error(`[hominio-voice] Error executing tool ${name}:`, err);
 			const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -246,7 +246,7 @@ export async function createVoiceSessionManager(
 
 		// Notify frontend of tool call (with result) - this happens AFTER execution
 		try {
-			onToolCall?.(name, args || {}, toolResult.result, toolResult.contextString);
+		onToolCall?.(name, args || {}, toolResult.result, toolResult.contextString);
 		} catch (err) {
 			console.error(`[hominio-voice] Error notifying frontend of tool call:`, err);
 		}
@@ -254,7 +254,7 @@ export async function createVoiceSessionManager(
 		// ALWAYS send tool response (required by Google API)
 		// This is critical - if we don't send a response, the API will hang
 		try {
-			const ingestMode: 'silent' | 'triggerAnswer' = 'silent';
+		const ingestMode: 'silent' | 'triggerAnswer' = 'silent';
 			await contextIngest.ingestToolResponse(name, toolResult.result, id || 'unknown', ingestMode);
 		} catch (err) {
 			console.error(`[hominio-voice] CRITICAL: Failed to send tool response for ${name}:`, err);
