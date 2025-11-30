@@ -17,6 +17,7 @@
             category: 'Atoms',
             items: [
                 { name: 'Badge', href: '/atoms/badge' },
+                { name: 'Button', href: '/atoms/button' },
                 { name: 'Call Button', href: '/atoms/call-button' },
                 { name: 'Card', href: '/atoms/card' },
                 { name: 'Glass Icon Button', href: '/atoms/glass-icon-button' },
@@ -29,6 +30,12 @@
             category: 'Components',
             items: [
                 { name: 'Nav Pill', href: '/components/nav-pill' }
+            ]
+        },
+        {
+            category: 'Apps',
+            items: [
+                { name: 'Todo App (Composite)', href: '/todo-app' }
             ]
         }
     ];
