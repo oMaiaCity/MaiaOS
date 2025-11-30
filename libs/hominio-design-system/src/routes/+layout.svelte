@@ -35,7 +35,7 @@
     const containerStyle = css({
         display: 'flex',
         h: '100vh',
-        bg: 'light.50',
+        bg: 'slate.50',
         overflow: 'hidden',
         fontFamily: 'sans'
         // Color inherits from global body typography (primary.500)
@@ -45,7 +45,7 @@
         w: '64',
         bg: 'white',
         borderRightWidth: '1px',
-        borderColor: 'light.200',
+        borderColor: 'slate.200',
         display: 'flex',
         flexDirection: 'column'
     });
@@ -53,7 +53,7 @@
     const sidebarHeader = css({
         p: '6',
         borderBottomWidth: '1px',
-        borderColor: 'light.100'
+        borderColor: 'slate.100'
     });
 
     const sidebarNav = css({
@@ -81,18 +81,18 @@
         py: '2',
         fontSize: 'sm',
         fontWeight: 'medium',
-        rounded: 'md',
+        rounded: 'full', // Fully rounded
         transition: 'colors 150ms'
     });
 
     const activeLink = css({
-        bg: 'light.50',
-        color: 'primary.700'
+        bg: 'primary.500',
+        color: 'primary.50'
     });
 
     const inactiveLink = css({
         // Color inherits from global typography (primary.500)
-        _hover: { bg: 'primary.50', color: 'primary.700' }
+        _hover: { bg: 'accent.500', color: 'accent.900' }
     });
 </script>
 
@@ -128,13 +128,13 @@
             {/each}
         </nav>
 
-        <div class={css({ p: '4', borderTopWidth: '1px', borderColor: 'light.100', fontSize: 'xs', textAlign: 'center' })}>
+        <div class={css({ p: '4', borderTopWidth: '1px', borderColor: 'slate.100', fontSize: 'xs', textAlign: 'center' })}>
             v0.0.1
         </div>
     </aside>
 
     <!-- Main Content -->
-    <main class={css({ flex: '1', overflowY: 'auto', position: 'relative', bg: 'light.50' })}>
+    <main class={css({ flex: '1', overflowY: 'auto', position: 'relative', bg: 'slate.50' })}>
         <div class={css({ position: 'relative', zIndex: '10', p: '8', maxWidth: '7xl', mx: 'auto' })}>
             <slot />
         </div>

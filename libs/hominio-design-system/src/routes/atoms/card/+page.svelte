@@ -5,7 +5,7 @@
 </script>
 
 <div class={css({ spaceY: '12' })}>
-    <div class={css({ borderBottomWidth: '1px', borderColor: 'light.200', pb: '6' })}>
+    <div class={css({ borderBottomWidth: '1px', borderColor: 'slate.200', pb: '6' })}>
         <h1 class={css({ fontFamily: 'title', fontSize: '4xl', mb: '2' })}>Card</h1>
         <p>Generic card wrapper component for content containers.</p>
     </div>
@@ -15,11 +15,11 @@
         position: 'relative', 
         minH: '400px', 
         w: 'full', 
-        bg: 'light.300', 
+        bg: 'slate.300', 
         rounded: 'xl', 
         overflow: 'hidden', 
         borderWidth: '1px', 
-        borderColor: 'light.200', 
+        borderColor: 'slate.200', 
         shadow: 'inner', 
         display: 'flex', 
         alignItems: 'center', 
@@ -51,7 +51,7 @@
         '& h3': { fontSize: 'xl', fontWeight: 'bold', mt: '6', mb: '3' },
         '& p': { mb: '4' },
         '& ul': { listStyleType: 'disc', pl: '5', spaceY: '1' },
-        '& code': { bg: 'light.100', px: '1', py: '0.5', rounded: 'sm', fontSize: 'sm' }
+        '& code': { bg: 'slate.100', px: '1', py: '0.5', rounded: 'sm', fontSize: 'sm' }
     })}>
         <h3>Usage</h3>
         <p>
@@ -62,7 +62,7 @@
         <ul>
             <li><strong>padding:</strong> Padding size (default: '6')</li>
             <li><strong>rounded:</strong> Border radius token (default: 'card')</li>
-            <li><strong>bg:</strong> Background color (default: 'light.50')</li>
+            <li><strong>bg:</strong> Background color (default: 'slate.50')</li>
             <li><strong>shadow:</strong> Box shadow size (default: 'none' for liquid glass)</li>
             <li><strong>border:</strong> Show border (default: true)</li>
             <li><strong>borderColor:</strong> Border color (default: 'glass.border.default')</li>

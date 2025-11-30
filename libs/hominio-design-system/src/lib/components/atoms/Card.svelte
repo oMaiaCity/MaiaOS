@@ -3,7 +3,7 @@
 
 	export let padding = '6';
 	export let rounded = 'card';
-	export let bg = 'light.50'; // Default background
+	export let bg = 'slate.50'; // Default background
 	export let shadow = 'none'; // No shadow for liquid glass effect
 	export let border = true;
 	export let borderColor = 'glass.border.default'; // Use semantic glass border token

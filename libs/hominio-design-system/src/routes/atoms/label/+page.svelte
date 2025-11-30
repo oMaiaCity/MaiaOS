@@ -5,7 +5,7 @@
 </script>
 
 <div class={css({ spaceY: '12' })}>
-    <div class={css({ borderBottomWidth: '1px', borderColor: 'light.200', pb: '6' })}>
+    <div class={css({ borderBottomWidth: '1px', borderColor: 'slate.200', pb: '6' })}>
         <h1 class={css({ fontFamily: 'title', fontSize: '4xl', mb: '2' })}>Label</h1>
         <p>Reusable label component for descriptions and metadata. Inherits primary.500 color from global typography.</p>
     </div>
@@ -13,13 +13,13 @@
     <!-- Preview -->
     <div class={css({ 
         position: 'relative', 
-        bg: 'light.300', 
+        bg: 'slate.300', 
         rounded: 'xl', 
         p: '12',
         minH: '96',
         overflow: 'hidden',
         borderWidth: '1px',
-        borderColor: 'light.200',
+        borderColor: 'slate.200',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

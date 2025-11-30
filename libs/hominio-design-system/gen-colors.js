@@ -1,27 +1,43 @@
 import chroma from 'chroma-js';
 
 const colors = {
-    primary: '#0C2B4E',
-    secondary: '#51CACF',
-    success: '#AAC478',
-    warning: '#DEAC5B',
-    alert: '#C97769',
-    info: '#7DD3C6', // Pastel turquoise (lighter, softer turquoise)
-    accent: '#F4D03F', // Yellow
-    light: '#E8F0F5', // Light bluish base (used for UI elements like borders, backgrounds)
-    dark: '#1A1A1A'   // Standard dark
+    primary: '#12234a',
+    secondary: '#47C8CA',
+    success: '#508F49',
+    warning: '#CD8629',
+    alert: '#c64d32',
+    info: '#4F928F',
+    accent: '#eece5b',
+    slate: '#E8F0F5' // Slate bluish base (used for UI elements like borders, backgrounds)
+};
+
+// Configure spread for each color (brighten/darken amounts)
+// Higher values = wider spread between lightest and darkest
+const colorSpreadConfig = {
+    primary: { brighten: 4.5, darken: 4.5 },    // Wide spread for primary
+    secondary: { brighten: 4.0, darken: 4.0 },  // Wide spread for secondary
+    success: { brighten: 2.5, darken: 2.5 },
+    warning: { brighten: 2.5, darken: 2.5 },
+    alert: { brighten: 2.5, darken: 2.5 },
+    info: { brighten: 2.5, darken: 2.5 },
+    accent: { brighten: 4.0, darken: 4.0 },    // Wide spread for accent
+    slate: { brighten: 4.0, darken: 4.0 },     // Wide spread for slate
+    // slate has special handling, so no config needed
 };
 
 const generateScale = (hex, name) => {
-    // Special handling for 'light' to ensure cream/white to ochre
-    if (name === 'light') {
-        return generateLightScale(hex);
+    // Special handling for 'slate' to ensure cream/white to ochre
+    if (name === 'slate') {
+        return generateSlateScale(hex);
     }
 
+    // Get spread configuration (defaults to 2.5 if not specified)
+    const config = colorSpreadConfig[name] || { brighten: 2.5, darken: 2.5 };
+    
     const scaleGenerator = chroma.scale([
-        chroma(hex).brighten(2.5), // 50
-        hex,                       // 500
-        chroma(hex).darken(2.5)    // 950
+        chroma(hex).brighten(config.brighten), // 50 - lighter
+        hex,                                  // 500 - base
+        chroma(hex).darken(config.darken)     // 950 - darker
     ]).domain([0, 500, 1000]).mode('lch');
     
     const steps = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
@@ -37,7 +53,7 @@ const generateScale = (hex, name) => {
     return palette;
 };
 
-const generateLightScale = (baseHex) => {
+const generateSlateScale = (baseHex) => {
     // 50: Almost white (very subtle bluish tint)
     // 100-400: Very light, gradual progression
     // 500: Base light blue

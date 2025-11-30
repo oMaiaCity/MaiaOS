@@ -13,7 +13,7 @@
 </script>
 
 <div class={css({ spaceY: '12' })}>
-    <div class={css({ borderBottomWidth: '1px', borderColor: 'light.200', pb: '6' })}>
+    <div class={css({ borderBottomWidth: '1px', borderColor: 'slate.200', pb: '6' })}>
         <h1 class={css({ fontFamily: 'title', fontSize: '4xl', mb: '2' })}>Lucide Icons</h1>
         <p>Icon library using Lucide via Iconify. Currently available icons.</p>
     </div>
@@ -22,9 +22,9 @@
         position: 'relative',
         p: '6', 
         borderWidth: '1px', 
-        borderColor: 'light.200', 
+        borderColor: 'slate.200', 
         rounded: 'xl', 
-        bg: 'light.300',
+        bg: 'slate.300',
         overflow: 'hidden',
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
@@ -43,8 +43,8 @@
                 gap: '2',
                 p: '4',
                 rounded: 'md',
-                bg: 'light.50',
-                _hover: { bg: 'light.100' }
+                bg: 'slate.50',
+                _hover: { bg: 'slate.100' }
             })}>
                 <Icon icon={iconItem.icon} class={css({ fontSize: '2xl', color: 'primary.500' })} />
                 <Label size="sm">{iconItem.name}</Label>
@@ -60,7 +60,7 @@
         '& h3': { fontSize: 'xl', fontWeight: 'bold', mt: '6', mb: '3' },
         '& p': { mb: '4' },
         '& ul': { listStyleType: 'disc', pl: '5', spaceY: '1' },
-        '& code': { bg: 'light.100', px: '1', py: '0.5', rounded: 'sm', fontSize: 'sm' }
+        '& code': { bg: 'slate.100', px: '1', py: '0.5', rounded: 'sm', fontSize: 'sm' }
     })}>
         <h3>Usage</h3>
         <p>
@@ -68,7 +68,7 @@
         </p>
         
         <h3>Example</h3>
-        <pre class={css({ bg: 'light.100', p: '4', rounded: 'md', overflow: 'auto' })}>
+        <pre class={css({ bg: 'slate.100', p: '4', rounded: 'md', overflow: 'auto' })}>
             <code>{`<script>
   import Icon from '@iconify/svelte';
 </script>

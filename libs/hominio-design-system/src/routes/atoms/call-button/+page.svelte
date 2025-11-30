@@ -8,7 +8,7 @@
 </script>
 
 <div class={css({ spaceY: '12' })}>
-    <div class={css({ borderBottomWidth: '1px', borderColor: 'light.200', pb: '6' })}>
+    <div class={css({ borderBottomWidth: '1px', borderColor: 'slate.200', pb: '6' })}>
         <h1 class={css({ fontFamily: 'title', fontSize: '4xl', mb: '2' })}>Call Button</h1>
         <p>Primary call action button with active/inactive states.</p>
     </div>
@@ -18,11 +18,11 @@
         position: 'relative', 
         h: '500px', 
         w: 'full', 
-        bg: 'light.300', 
+        bg: 'slate.300', 
         rounded: 'xl', 
         overflow: 'hidden', 
         borderWidth: '1px', 
-        borderColor: 'light.200', 
+        borderColor: 'slate.200', 
         shadow: 'inner', 
         display: 'flex', 
         flexDirection: 'column',
@@ -33,7 +33,7 @@
         <!-- Background Pattern -->
         <PreviewBackground opacity="0.5" />
         
-        <!-- Top Row: Inactive and Active -->
+        <!-- Inactive and Active States -->
         <div class={css({ display: 'flex', gap: '12', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: '10' })}>
             <div class={css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2' })}>
                 <CallButton state="inactive" onClick={() => {}} />
@@ -45,29 +45,6 @@
                 <Label>Active</Label>
             </div>
         </div>
-        
-        <!-- Second Row: Connecting, Listening, Speaking, Thinking -->
-        <div class={css({ display: 'flex', gap: '8', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', position: 'relative', zIndex: '10' })}>
-            <div class={css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2' })}>
-                <CallButton state="connecting" onClick={() => {}} />
-                <Label>Connecting</Label>
-            </div>
-            
-            <div class={css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2' })}>
-                <CallButton state="listening" onClick={() => {}} />
-                <Label>Listening</Label>
-            </div>
-            
-            <div class={css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2' })}>
-                <CallButton state="speaking" onClick={() => {}} />
-                <Label>Speaking</Label>
-            </div>
-            
-            <div class={css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2' })}>
-                <CallButton state="thinking" onClick={() => {}} />
-                <Label>Thinking</Label>
-            </div>
-        </div>
     </div>
 
     <div class={css({ 
@@ -75,7 +52,7 @@
         '& h3': { fontSize: 'xl', fontWeight: 'bold', mt: '6', mb: '3' },
         '& p': { mb: '4' },
         '& ul': { listStyleType: 'disc', pl: '5', spaceY: '1' },
-        '& code': { bg: 'light.100', px: '1', py: '0.5', rounded: 'sm', fontSize: 'sm' }
+        '& code': { bg: 'slate.100', px: '1', py: '0.5', rounded: 'sm', fontSize: 'sm' }
     })}>
         <h3>Usage</h3>
         <p>
@@ -84,12 +61,8 @@
         
         <h3>States</h3>
         <ul>
-            <li><strong>Inactive:</strong> Secondary 500 (Teal) - Ready to start call</li>
-            <li><strong>Active:</strong> Alert 500 (Red) - Call active, mic off</li>
-            <li><strong>Connecting:</strong> Warning 500 (Orange/Yellow) - Establishing connection</li>
-            <li><strong>Listening:</strong> Secondary 500 (Teal) - Listening for user input</li>
-            <li><strong>Speaking:</strong> Accent 500 (Yellow) - Active call, user speaking</li>
-            <li><strong>Thinking:</strong> Success 500 (Green) - AI processing/thinking</li>
+            <li><strong>Inactive:</strong> Secondary 500 (Teal) - Ready to start call, icon color: secondary.800</li>
+            <li><strong>Active:</strong> Accent 500 (Yellow) - Call active, mic off, icon color: accent.900</li>
         </ul>
         
         <h3>Features</h3>

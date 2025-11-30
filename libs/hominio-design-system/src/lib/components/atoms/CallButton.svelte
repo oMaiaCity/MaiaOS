@@ -2,7 +2,7 @@
 	import Icon from '@iconify/svelte';
 	import { css, cx } from 'styled-system/css';
 
-	export let state = 'inactive'; // 'inactive' | 'connecting' | 'listening' | 'speaking' | 'thinking' | 'active'
+	export let state = 'inactive'; // 'inactive' | 'active'
 	export let onClick = () => {};
 
 	// Backward compatibility: support isActive prop
@@ -24,7 +24,6 @@
 		my: '-2',
 		borderWidth: '2px',
 		borderColor: 'white/20',
-		color: 'white',
 		cursor: 'pointer',
 		zIndex: '10',
 		_hover: { transform: 'scale(1.05)' },
@@ -36,25 +35,9 @@
 			bg: 'secondary.500',
 			boxShadow: '0 0 20px rgba(45,166,180,0.6)'
 		}),
-		connecting: css({
-			bg: 'warning.500',
-			boxShadow: '0 0 20px rgba(222,172,91,0.6)'
-		}),
-		listening: css({
-			bg: 'secondary.500',
-			boxShadow: '0 0 20px rgba(45,166,180,0.6)'
-		}),
-		speaking: css({
-			bg: 'accent.500',
-			boxShadow: '0 0 20px rgba(244,208,63,0.6)'
-		}),
-		thinking: css({
-			bg: 'success.500',
-			boxShadow: '0 0 20px rgba(170,196,120,0.6)'
-		}),
 		active: css({
-			bg: 'alert.500',
-			boxShadow: '0 0 20px rgba(201,119,105,0.6)'
+			bg: 'accent.500',
+			boxShadow: '0 0 20px rgba(238, 206, 91, 0.6)'
 		})
 	};
 
@@ -62,14 +45,6 @@
 		switch (currentState) {
 			case 'active':
 				return 'lucide:mic-off';
-			case 'connecting':
-				return 'lucide:mic';
-			case 'listening':
-				return 'lucide:mic';
-			case 'speaking':
-				return 'lucide:mic';
-			case 'thinking':
-				return 'lucide:mic';
 			default:
 				return 'lucide:mic';
 		}
@@ -78,19 +53,11 @@
 	const getIconColor = (currentState) => {
 		switch (currentState) {
 			case 'inactive':
-				return 'secondary.800'; // Darker shade of secondary.500
-			case 'connecting':
-				return 'warning.800'; // Darker shade of warning.500
-			case 'listening':
-				return 'secondary.800'; // Darker shade of secondary.500
-			case 'speaking':
-				return 'accent.800'; // Darker shade of accent.500
-			case 'thinking':
-				return 'success.800'; // Darker shade of success.500
+				return 'secondary.900'; // Darker shade of secondary.500
 			case 'active':
-				return 'alert.800'; // Darker shade of alert.500
+				return 'accent.900'; // Dark shade for active state (accent.900) on yellow
 			default:
-				return 'secondary.800';
+				return 'primary.800';
 		}
 	};
 
@@ -98,24 +65,44 @@
 		switch (currentState) {
 			case 'active':
 				return 'End Call';
-			case 'connecting':
-				return 'Connecting';
-			case 'listening':
-				return 'Listening';
-			case 'speaking':
-				return 'Speaking';
-			case 'thinking':
-				return 'Thinking';
 			default:
 				return 'Start Call';
 		}
+	};
+
+	// Icon wrapper style
+	const iconWrapperStyle = css({ 
+		fontSize: '4xl', 
+		display: 'flex', 
+		alignItems: 'center', 
+		justifyContent: 'center'
+	});
+
+	// Static icon color styles - Panda CSS needs to see these statically
+	const iconColorStyles = {
+		inactive: css({ 
+			color: 'secondary.900',
+			'& svg': {
+				color: 'secondary.900',
+				fill: 'currentColor',
+				stroke: 'currentColor'
+			}
+		}),
+		active: css({ 
+			color: 'accent.900',
+			'& svg': {
+				color: 'accent.900',
+				fill: 'currentColor',
+				stroke: 'currentColor'
+			}
+		})
 	};
 </script>
 
 <!-- 
     Call Button Atom
     - Fully rounded circle (rounded-full aspect-square)
-    - Multiple states: inactive, connecting, listening, speaking, thinking, active
+    - Two states: inactive, active
     - Color-coded by state with glow shadow effect
 -->
 <button 
@@ -123,7 +110,7 @@
     on:click={onClick}
     aria-label={getAriaLabel(state)}
 >
-	<div class={css({ fontSize: '4xl', color: getIconColor(state) })}>
-		<Icon icon={getIcon(state)} />
+	<div class={iconWrapperStyle}>
+		<Icon icon={getIcon(state)} class={iconColorStyles[state]} />
 	</div>
 </button>
