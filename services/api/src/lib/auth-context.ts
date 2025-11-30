@@ -58,14 +58,6 @@ export async function extractAuthData(
         // Wallet service validates origin and returns auth data
         const authData = await verifyCookie(cookieHeader, origin || undefined);
 
-        // Log for debugging
-        if (authData) {
-            console.log(
-                `[auth-context] Authenticated user: ${authData.sub}, isAdmin: ${authData.isAdmin}`
-            );
-        } else {
-            console.log("[auth-context] Anonymous request (no valid session)");
-        }
 
         return authData;
     } catch (error) {

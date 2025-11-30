@@ -32,6 +32,8 @@
 	let streamContainer: HTMLElement;
 	let activityItems: Map<string, HTMLElement> = new Map();
 	
+	// Call Logs collapsed state (default: collapsed)
+	let logsCollapsed = $state(true);
 
 	// Track items being pushed out of view
 	let itemsPushingOut = $state<Set<string>>(new Set());
@@ -135,8 +137,8 @@
 			return;
 		}
 		
-		// Only handle queryTodos and createTodo
-		if (toolName !== 'queryTodos' && toolName !== 'createTodo') {
+		// Only handle queryTodos, createTodo, and editTodo
+		if (toolName !== 'queryTodos' && toolName !== 'createTodo' && toolName !== 'editTodo') {
 			return;
 		}
 		
@@ -229,8 +231,31 @@
 			
 			// If we already have a result from the tool call, use it
 			if (toolResult) {
-				// Result is already processed by the tool handler
-				updateActivityStatus(item.id, toolResult.success === false ? 'error' : 'success', toolResult);
+				// Result structure from server (via WebSocket):
+				// toolResult is already the data object: { todos: [...], changes: [...] }
+				// Result structure from direct handler call:
+				// { success: boolean, data: { todos: [...], changes: [...] }, error?: string }
+				
+				let resultData;
+				if (toolResult.success !== undefined) {
+					// This is a direct handler result with { success, data, error }
+					resultData = toolResult.data || toolResult;
+				} else if (toolResult.result !== undefined && toolResult.success === undefined) {
+					// Wrapped result: { result: { ... } }
+					resultData = toolResult.result;
+				} else {
+					// Already the data object itself (from server WebSocket)
+					resultData = toolResult;
+				}
+				
+				// Ensure changes are preserved for editTodo - check all possible locations
+				if (toolName === 'editTodo' && resultData && !resultData.changes) {
+					// Try to get changes from various possible locations
+					resultData.changes = toolResult.changes || toolResult.data?.changes || toolResult.result?.changes;
+				}
+				
+				const status = (toolResult.success === false || (toolResult.success === undefined && toolResult.error)) ? 'error' : 'success';
+				updateActivityStatus(item.id, status, resultData);
 				return;
 			}
 			
@@ -257,6 +282,22 @@
 				
 				const func = await loadFunction('create-todo');
 				const result = await func.handler({ title });
+				
+				if (result.success) {
+					updateActivityStatus(item.id, 'success', result.data);
+				} else {
+					updateActivityStatus(item.id, 'error', undefined, result.error);
+				}
+			} else if (toolName === 'editTodo') {
+				const { id, title, completed } = item.args || {};
+				
+				if (!id) {
+					updateActivityStatus(item.id, 'error', undefined, 'ID parameter is required');
+					return;
+				}
+				
+				const func = await loadFunction('edit-todo');
+				const result = await func.handler({ id, title, completed });
 				
 				if (result.success) {
 					updateActivityStatus(item.id, 'success', result.data);
@@ -300,11 +341,22 @@
 
 
     function toggleItem(id: string) {
+        // Find the clicked item to check its current state
+        const clickedItem = activities.find(item => item.id === id);
+        if (!clickedItem) return;
+        
+        const willBeExpanded = !clickedItem.isExpanded; // New state after toggle
+        
+        // Update all items: toggle clicked item, collapse others if expanding
         activities = activities.map(item => {
             if (item.id === id) {
-                return { ...item, isExpanded: !item.isExpanded };
+                // Toggle the clicked item
+                return { ...item, isExpanded: willBeExpanded };
+            } else {
+                // If expanding the clicked item, collapse all others
+                // If collapsing the clicked item, leave others unchanged
+                return { ...item, isExpanded: willBeExpanded ? false : item.isExpanded };
             }
-            return item;
         });
     }
 </script>
@@ -312,7 +364,7 @@
 <div class="relative min-h-screen bg-glass-gradient pt-[env(safe-area-inset-top)] pb-[calc(6rem+env(safe-area-inset-bottom))] flex flex-col" bind:this={streamContainer}>
 	
 	<!-- Activity Stream - Centered on Full Screen Width -->
-	<div class="flex-1 w-full flex flex-col gap-2 min-h-[50vh] px-4 md:px-6 lg:px-8 lg:pr-[calc(300px+1rem)]">
+	<div class="flex-1 w-full flex flex-col gap-2 min-h-[50vh] px-4 md:px-6 lg:px-8 transition-all duration-300" class:lg:pr-[calc(300px+1rem)]={!logsCollapsed}>
 		<div class="mx-auto w-full max-w-3xl">
 		{#if activities.length === 0}
 			<!-- Empty State: Instructions -->
@@ -363,25 +415,51 @@
 	</div>
 	
 	<!-- Call Logs Sidebar - Fixed Right Aligned -->
-	<aside class="hidden lg:block fixed right-0 top-[env(safe-area-inset-top)] bottom-[calc(6rem+env(safe-area-inset-bottom))] w-[300px] pr-4 pt-4 z-10">
-		<GlassCard class="flex flex-col p-4 h-full">
-			<div class="mb-3">
-				<h2 class="mb-0.5 text-sm font-bold tracking-tight text-slate-900">Call Logs</h2>
-				<p class="text-xs text-slate-600">Real-time debugging</p>
-			</div>
-
-			<!-- Logs Display - Light Theme Glass Style -->
-			<div class="overflow-hidden flex-1 rounded-lg border backdrop-blur-sm border-slate-200/50 bg-white/40">
-				<div class="overflow-y-auto p-3 h-full font-mono text-xs text-slate-700">
-					{#each (voice as any).logs as log}
-						<div class="mb-1 leading-relaxed wrap-break-word text-slate-600">{log}</div>
-					{:else}
-						<div class="text-xs italic text-slate-400">No logs yet. Start a call to see logs.</div>
-					{/each}
+	{#if !logsCollapsed}
+		<aside class="hidden lg:block fixed right-0 top-[env(safe-area-inset-top)] bottom-[calc(6rem+env(safe-area-inset-bottom))] w-[300px] pr-4 pt-4 z-10">
+			<GlassCard class="flex flex-col p-4 h-full">
+				<div class="mb-3">
+					<h2 class="mb-0.5 text-sm font-bold tracking-tight text-slate-900">Call Logs</h2>
+					<p class="text-xs text-slate-600">Real-time debugging</p>
 				</div>
-			</div>
-		</GlassCard>
-	</aside>
+
+				<!-- Logs Display - Light Theme Glass Style -->
+				<div class="overflow-hidden flex-1 rounded-lg border backdrop-blur-sm border-slate-200/50 bg-white/40">
+					<div class="overflow-y-auto p-3 h-full font-mono text-xs text-slate-700">
+						{#each (voice as any).logs as log}
+							<div class="mb-1 leading-relaxed wrap-break-word text-slate-600">{log}</div>
+						{:else}
+							<div class="text-xs italic text-slate-400">No logs yet. Start a call to see logs.</div>
+						{/each}
+					</div>
+				</div>
+			</GlassCard>
+		</aside>
+	{/if}
+	
+	<!-- Global Logs Toggle Button - Fixed Bottom Right (same level as NavPill) -->
+	<button
+		onclick={() => logsCollapsed = !logsCollapsed}
+		class="hidden lg:flex fixed bottom-0 right-0 z-[1001] mb-[max(env(safe-area-inset-bottom),0.5rem)] mr-4 items-center justify-center w-12 h-12 rounded-full border backdrop-blur-sm transition-all bg-white/80 hover:bg-white/90 border-slate-200/50 shadow-lg hover:shadow-xl"
+		aria-label={logsCollapsed ? 'Show logs' : 'Hide logs'}
+		title={logsCollapsed ? 'Show logs' : 'Hide logs'}
+	>
+		<svg 
+			xmlns="http://www.w3.org/2000/svg" 
+			width="20" 
+			height="20" 
+			viewBox="0 0 24 24" 
+			fill="none" 
+			stroke="currentColor" 
+			stroke-width="2" 
+			stroke-linecap="round" 
+			stroke-linejoin="round"
+			class="transition-transform duration-200 text-slate-600"
+			class:rotate-180={logsCollapsed}
+		>
+			<path d="m6 9 6 6 6-6"/>
+		</svg>
+	</button>
     
     <!-- Spacer for bottom nav -->
     <div class="h-12"></div>

@@ -68,6 +68,35 @@ export async function addTodo(title) {
 }
 
 /**
+ * Edit a todo item
+ * @param {string} id - Todo ID
+ * @param {Object} updates - Fields to update
+ * @param {string} [updates.title] - New title
+ * @param {boolean} [updates.completed] - New completion status
+ * @returns {Promise<Todo | null>}
+ */
+export async function editTodo(id, updates) {
+	try {
+		const currentTodos = get(todos);
+		const updatedTodos = currentTodos.map(todo => {
+			if (todo.id === id) {
+				return {
+					...todo,
+					...(updates.title !== undefined && { title: updates.title.trim() }),
+					...(updates.completed !== undefined && { completed: updates.completed })
+				};
+			}
+			return todo;
+		});
+		todos.set(updatedTodos);
+		const updatedTodo = updatedTodos.find(t => t.id === id);
+		return updatedTodo || null;
+	} catch (error) {
+		throw new Error(`Failed to edit todo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+	}
+}
+
+/**
  * Toggle todo completion status
  * @param {string} id - Todo ID
  * @returns {Promise<Todo | null>}

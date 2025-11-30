@@ -157,6 +157,23 @@ export const colors = {
 			light: '#34d399', // Same as 400
 			dark: '#064e3b', // Same as 900
 		},
+		// Alert - Purple/Magenta Brand Color
+		alert: {
+			50: '#faf5f8',
+			100: '#f5ebf1',
+			200: '#ebd7e3',
+			300: '#dbb8cd',
+			400: '#c28ab1',
+			500: '#a3376a', // Center color
+			600: '#8d2d59',
+			700: '#77264a',
+			800: '#611f3b',
+			900: '#4b182c',
+			950: '#2d0c1a',
+			base: '#a3376a', // Same as 500
+			light: '#c28ab1', // Same as 400
+			dark: '#4b182c', // Same as 900
+		},
 	},
 };
 

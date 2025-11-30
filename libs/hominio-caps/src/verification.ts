@@ -84,28 +84,11 @@ export async function checkCapability(
     query = query.where('device_id', '=', resource.device_id);
   }
 
-  // Debug logging
-  console.log(`[checkCapability] 🔍 Querying capabilities:`, {
-    principal,
-    resource: `${resource.type}:${resource.namespace}${resource.id ? `:${resource.id}` : ''}`,
-    action,
-    hasResourceId: !!resource.id
-  });
+
 
   const capabilities = await query.execute();
-  
-  console.log(`[checkCapability] 📊 Found ${capabilities.length} matching capabilities`);
-  
-  if (capabilities.length > 0) {
-    console.log(`[checkCapability] 📋 Capabilities:`, capabilities.map(c => ({
-      id: c.id,
-      principal: c.principal,
-      resource_type: c.resource_type,
-      resource_namespace: c.resource_namespace,
-      resource_id: c.resource_id,
-      actions: c.actions
-    })));
-  }
+
+
 
   // Check if any capability allows the action
   for (const cap of capabilities) {
@@ -186,7 +169,6 @@ export async function checkCapability(
               }
             }
           }
-          console.log(`[checkCapability] ✅ Access granted via group capability: ${groupName}`);
           return true; // Group capability found and valid
         }
       }

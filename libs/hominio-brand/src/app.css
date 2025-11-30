@@ -160,6 +160,47 @@
 	transform: translateY(0);
 }
 
+/* GlassCard background color variants - using !important to override base class */
+.glass-card.glass-card-bg-alert,
+.glass-card-lifted.glass-card-bg-alert {
+	background-color: var(--color-alert-100) !important;
+}
+
+.glass-card.glass-card-bg-alert:hover,
+.glass-card-lifted.glass-card-bg-alert:hover {
+	background-color: var(--color-alert-100) !important;
+}
+
+.glass-card.glass-card-bg-success,
+.glass-card-lifted.glass-card-bg-success {
+	background-color: var(--color-success-50) !important;
+}
+
+.glass-card.glass-card-bg-success:hover,
+.glass-card-lifted.glass-card-bg-success:hover {
+	background-color: var(--color-success-50) !important;
+}
+
+.glass-card.glass-card-bg-warning,
+.glass-card-lifted.glass-card-bg-warning {
+	background-color: var(--color-warning-100) !important;
+}
+
+.glass-card.glass-card-bg-warning:hover,
+.glass-card-lifted.glass-card-bg-warning:hover {
+	background-color: var(--color-warning-100) !important;
+}
+
+.glass-card.glass-card-bg-accent,
+.glass-card-lifted.glass-card-bg-accent {
+	background-color: var(--color-accent-100) !important;
+}
+
+.glass-card.glass-card-bg-accent:hover,
+.glass-card-lifted.glass-card-bg-accent:hover {
+	background-color: var(--color-accent-100) !important;
+}
+
 .glass-button {
 	border-radius: 9999px; /* rounded-full - fully rounded */
 	border: 1px solid rgba(255, 255, 255, 0.9);

@@ -11,11 +11,24 @@ export async function handleCreateTodo(
 ): Promise<ToolResult> {
 	const { title } = args || {};
 	
-	if (!title || typeof title !== "string" || title.trim().length === 0) {
+	// Validate title - accept both string and array
+	if (!title) {
 		return {
 			success: false,
-			result: { error: "Title parameter is required and must be a non-empty string" },
-			error: "Title parameter is required and must be a non-empty string"
+			result: { error: "Title parameter is required and must be a non-empty string or array of strings" },
+			error: "Title parameter is required and must be a non-empty string or array of strings"
+		};
+	}
+	
+	// Check if it's a valid string or array
+	const isValidString = typeof title === "string" && title.trim().length > 0;
+	const isValidArray = Array.isArray(title) && title.length > 0 && title.every(t => typeof t === "string" && t.trim().length > 0);
+	
+	if (!isValidString && !isValidArray) {
+		return {
+			success: false,
+			result: { error: "Title parameter must be a non-empty string or array of non-empty strings" },
+			error: "Title parameter must be a non-empty string or array of non-empty strings"
 		};
 	}
 	
@@ -32,10 +45,16 @@ export async function handleCreateTodo(
 		
 		const result = await Promise.race([handlerPromise, timeoutPromise]) as any;
 		
+		// Generate appropriate success message
+		const isBatch = Array.isArray(title);
+		const successMessage = isBatch 
+			? `Created ${result.data?.createdCount || 0} todo(s) successfully`
+			: `Todo "${title}" created successfully`;
+		
 		return {
 			success: result.success || false,
 			result: result.data || result,
-			contextString: result.success ? `Todo "${title}" created successfully` : undefined,
+			contextString: result.success ? successMessage : undefined,
 			error: result.error
 		};
 	} catch (error) {

@@ -8,13 +8,15 @@
 // Vite will resolve these correctly when the package is imported
 import * as queryTodosModule from '../lib/functions/query-todos.js';
 import * as createTodoModule from '../lib/functions/create-todo.js';
+import * as editTodoModule from '../lib/functions/edit-todo.js';
 
 // Import UI components from @hominio/brand (pure views)
 import { TodoView } from '@hominio/brand/views';
 
 const functionModules = {
 	'query-todos': queryTodosModule,
-	'create-todo': createTodoModule
+	'create-todo': createTodoModule,
+	'edit-todo': editTodoModule
 };
 
 /**
@@ -36,7 +38,7 @@ export async function loadFunction(functionId) {
 		}
 		
 		// For todo functions, use TodoView component from @hominio/brand
-		const uiComponentLoader = (functionId === 'query-todos' || functionId === 'create-todo')
+		const uiComponentLoader = (functionId === 'query-todos' || functionId === 'create-todo' || functionId === 'edit-todo')
 			? () => Promise.resolve({ default: TodoView })
 			: () => Promise.resolve({ default: null });
 		
