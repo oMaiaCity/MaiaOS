@@ -25,22 +25,32 @@
         ...rest
     }));
 
+    // Map size to one smaller text size for badges
+    const textSizeMap = {
+        xs: 'xs', // Keep xs as is (smallest)
+        sm: 'xs',  // sm -> xs
+        md: 'sm',  // md -> sm
+        lg: 'md'   // lg -> md
+    };
+
+    let textSize = $derived(textSizeMap[size] || 'xs');
+
     const sizeStyles = {
-        xs: css({ fontSize: 'xs', px: '2', py: '0.5', minH: '5' }),
-        sm: css({ fontSize: 'sm', px: '2.5', py: '1', minH: '6' }),
-        md: css({ fontSize: 'md', px: '3', py: '1.5', minH: '7' }),
-        lg: css({ fontSize: 'lg', px: '4', py: '2', minH: '8' })
+        xs: css({ fontSize: textSize, px: '2', py: '0.5', minH: '5' }),
+        sm: css({ fontSize: textSize, px: '2.5', py: '1', minH: '6' }),
+        md: css({ fontSize: textSize, px: '3', py: '1.5', minH: '7' }),
+        lg: css({ fontSize: textSize, px: '4', py: '2', minH: '8' })
     };
 
     const variantStyles = {
-        primary: css({ bg: 'primary.100', color: 'primary.700', borderColor: 'primary.200' }),
-        secondary: css({ bg: 'secondary.100', color: 'secondary.800', borderColor: 'secondary.200' }),
-        accent: css({ bg: 'accent.100', color: 'accent.800', borderColor: 'accent.200' }),
-        success: css({ bg: 'success.100', color: 'success.800', borderColor: 'success.200' }),
-        warning: css({ bg: 'warning.100', color: 'warning.800', borderColor: 'warning.200' }),
-        alert: css({ bg: 'alert.100', color: 'alert.800', borderColor: 'alert.200' }),
-        info: css({ bg: 'info.100', color: 'info.800', borderColor: 'info.200' }),
-        slate: css({ bg: 'slate.100', color: 'slate.700', borderColor: 'slate.200' })
+        primary: css({ bg: 'primary.300', color: 'primary.700', borderColor: 'primary.400' }),
+        secondary: css({ bg: 'secondary.300', color: 'secondary.800', borderColor: 'secondary.400' }),
+        accent: css({ bg: 'accent.300', color: 'accent.800', borderColor: 'accent.400' }),
+        success: css({ bg: 'success.300', color: 'success.800', borderColor: 'success.400' }),
+        warning: css({ bg: 'warning.300', color: 'warning.800', borderColor: 'warning.400' }),
+        alert: css({ bg: 'alert.300', color: 'alert.800', borderColor: 'alert.400' }),
+        info: css({ bg: 'info.300', color: 'info.800', borderColor: 'info.400' }),
+        slate: css({ bg: 'slate.300', color: 'slate.700', borderColor: 'slate.400' })
     };
 
     const roundedStyles = {
@@ -73,7 +83,7 @@
         className
     )}
     role={onClick ? 'button' : undefined}
-    tabindex={onClick ? 0 : undefined}
+    {...(onClick ? { tabindex: 0 } : {})}
     onclick={handleClick}
     onkeydown={handleKeydown}
 >

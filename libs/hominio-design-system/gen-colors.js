@@ -1,28 +1,27 @@
 import chroma from 'chroma-js';
 
 const colors = {
-    primary: '#12234a',
-    secondary: '#47C8CA',
-    success: '#508F49',
-    warning: '#CD8629',
-    alert: '#c64d32',
-    info: '#4F928F',
-    accent: '#eece5b',
+    primary: '#002455',
+    secondary: '#008E89',
+    accent: '#FF9F00',
+    success: '#9FC87E',
+    warning: '#F4631E',
+    alert: '#CB0404',
+    info: '#309898',
     slate: '#E8F0F5' // Slate bluish base (used for UI elements like borders, backgrounds)
 };
 
 // Configure spread for each color (brighten/darken amounts)
-// Higher values = wider spread between lightest and darkest
+// Reduced spread for info, alert, success, and warning for more subtle color variations
 const colorSpreadConfig = {
-    primary: { brighten: 4.5, darken: 4.5 },    // Wide spread for primary
-    secondary: { brighten: 4.0, darken: 4.0 },  // Wide spread for secondary
-    success: { brighten: 2.5, darken: 2.5 },
-    warning: { brighten: 2.5, darken: 2.5 },
-    alert: { brighten: 2.5, darken: 2.5 },
-    info: { brighten: 2.5, darken: 2.5 },
-    accent: { brighten: 4.0, darken: 4.0 },    // Wide spread for accent
-    slate: { brighten: 4.0, darken: 4.0 },     // Wide spread for slate
-    // slate has special handling, so no config needed
+    primary: { brighten: 4.5, darken: 4.5 },
+    secondary: { brighten: 4.5, darken: 4.5 },
+    success: { brighten: 3.0, darken: 3.0 },
+    warning: { brighten: 3.0, darken: 3.0 },
+    alert: { brighten: 3.0, darken: 3.0 },
+    info: { brighten: 3.0, darken: 3.0 },
+    accent: { brighten: 4.5, darken: 4.5 },
+    slate: { brighten: 4.0, darken: 4.0 },     // Slate has special handling, so config is optional
 };
 
 const generateScale = (hex, name) => {

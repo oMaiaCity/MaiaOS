@@ -41,15 +41,16 @@
     });
 
     // Variant Styles
+    // Text colors are lighter/darker shades of the same bg color, similar to badges
     const variantStyles = {
         primary: css({ bg: 'primary.500', color: 'primary.50', borderColor: 'primary.600', _hover: { bg: 'primary.600' } }),
-        secondary: css({ bg: 'secondary.500', color: 'white', borderColor: 'secondary.600', _hover: { bg: 'secondary.600' } }),
+        secondary: css({ bg: 'secondary.500', color: 'secondary.50', borderColor: 'secondary.600', _hover: { bg: 'secondary.600' } }),
         accent: css({ bg: 'accent.500', color: 'accent.900', borderColor: 'accent.600', _hover: { bg: 'accent.600' } }),
-        success: css({ bg: 'success.500', color: 'white', borderColor: 'success.600', _hover: { bg: 'success.600' } }),
-        warning: css({ bg: 'warning.500', color: 'white', borderColor: 'warning.600', _hover: { bg: 'warning.600' } }),
-        alert: css({ bg: 'alert.500', color: 'white', borderColor: 'alert.600', _hover: { bg: 'alert.600' } }),
-        info: css({ bg: 'info.500', color: 'white', borderColor: 'info.600', _hover: { bg: 'info.600' } }),
-        slate: css({ bg: 'slate.100', color: 'slate.900', borderColor: 'slate.200', _hover: { bg: 'slate.200' } }),
+        success: css({ bg: 'success.500', color: 'success.50', borderColor: 'success.600', _hover: { bg: 'success.600' } }),
+        warning: css({ bg: 'warning.500', color: 'warning.50', borderColor: 'warning.600', _hover: { bg: 'warning.600' } }),
+        alert: css({ bg: 'alert.500', color: 'alert.50', borderColor: 'alert.600', _hover: { bg: 'alert.600' } }),
+        info: css({ bg: 'info.500', color: 'info.50', borderColor: 'info.600', _hover: { bg: 'info.600' } }),
+        slate: css({ bg: 'slate.200', color: 'slate.800', borderColor: 'slate.300', _hover: { bg: 'slate.300' } }),
         glass: css({ 
             bg: 'white/20', 
             backdropFilter: 'blur(12px)', 
@@ -121,9 +122,9 @@
         {/if}
         
         {#if typeof children === 'function'}
-            <span>{@render children()}</span>
+            {@render children()}
         {:else if children}
-            <span>{children}</span>
+            {children}
         {/if}
 
         {#if icon && iconPosition === 'right'}
