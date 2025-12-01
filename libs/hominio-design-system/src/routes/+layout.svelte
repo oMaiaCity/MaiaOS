@@ -33,9 +33,9 @@
             ]
         },
         {
-            category: 'Apps',
+            category: 'Views',
             items: [
-                { name: 'Todo App (Composite)', href: '/todo-app' }
+                { name: 'todo-view', href: '/todo-app' }
             ]
         }
     ];

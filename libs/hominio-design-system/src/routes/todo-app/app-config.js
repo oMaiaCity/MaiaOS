@@ -1,7 +1,7 @@
 import { todoServices } from '../../lib/stores/todo-services.js';
 
 export const appConfig = {
-    id: "todo-app-root",
+    id: "todo-view-root",
     type: "Composite",
     layout: { 
         type: "flex", 
@@ -19,7 +19,7 @@ export const appConfig = {
             type: "Leaf",
             component: "Label",
             style: { size: "3xl", weight: "bold", color: "primary.600" },
-            data: { children: "Composite Todo App" }
+            data: { children: "todo-view" }
         },
         
         // Add Todo Section (State Machine for Input)
