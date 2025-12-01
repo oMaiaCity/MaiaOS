@@ -1,16 +1,16 @@
-import Label from '../components/atoms/Label.svelte';
-import Badge from '../components/atoms/Badge.svelte';
-import CallButton from '../components/atoms/CallButton.svelte';
-import GlassIconButton from '../components/atoms/GlassIconButton.svelte';
-import LeafInput from '../components/atoms/LeafInput.svelte';
-import Button from '../components/atoms/Button.svelte';
+import Label from '../components/leafs/Label.svelte';
+import Badge from '../components/leafs/Badge.svelte';
+import CallButton from '../components/leafs/CallButton.svelte';
+import GlassIconButton from '../components/leafs/GlassIconButton.svelte';
+import Input from '../components/leafs/Input.svelte';
+import Button from '../components/leafs/Button.svelte';
 
 export const componentRegistry = {
     Label,
     Badge,
     CallButton,
     IconButton: GlassIconButton,
-    Input: LeafInput,
+    Input,
     Button // Generic Button
 };
 

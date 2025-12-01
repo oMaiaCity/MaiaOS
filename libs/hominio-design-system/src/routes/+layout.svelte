@@ -14,22 +14,22 @@
             ]
         },
         {
-            category: 'Atoms',
+            category: 'Leafs',
             items: [
-                { name: 'Badge', href: '/atoms/badge' },
-                { name: 'Button', href: '/atoms/button' },
-                { name: 'Call Button', href: '/atoms/call-button' },
-                { name: 'Card', href: '/atoms/card' },
-                { name: 'Glass Icon Button', href: '/atoms/glass-icon-button' },
-                { name: 'Label', href: '/atoms/label' },
-                { name: 'Profile Avatar', href: '/atoms/profile-avatar' },
-                { name: 'Iconify Icons', href: '/atoms/iconify-icons' }
+                { name: 'Badge', href: '/leafs/badge' },
+                { name: 'Button', href: '/leafs/button' },
+                { name: 'Call Button', href: '/leafs/call-button' },
+                { name: 'Card', href: '/leafs/card' },
+                { name: 'Glass Icon Button', href: '/leafs/glass-icon-button' },
+                { name: 'Label', href: '/leafs/label' },
+                { name: 'Profile Avatar', href: '/leafs/profile-avatar' },
+                { name: 'Iconify Icons', href: '/leafs/iconify-icons' }
             ]
         },
         {
-            category: 'Components',
+            category: 'Compositions',
             items: [
-                { name: 'Nav Pill', href: '/components/nav-pill' }
+                { name: 'Nav Pill', href: '/compositions/nav-pill' }
             ]
         },
         {
