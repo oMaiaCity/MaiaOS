@@ -1,11 +1,13 @@
 <script>
     import { css, cx } from 'styled-system/css';
+    import Icon from '@iconify/svelte';
 
     // Svelte 5 Runes
     let { 
         variant = 'primary', 
         size = 'sm', 
         rounded = 'full', 
+        icon,
         onClick,
         class: className,
         children, // Destructure to exclude but not use directly in rest
@@ -19,7 +21,6 @@
         fontWeight: 'semibold',
         whiteSpace: 'nowrap',
         transition: 'all 200ms',
-        borderWidth: '1px',
         lineHeight: '1',
         ...(onClick ? { cursor: 'pointer', _hover: { opacity: 0.8 } } : {}),
         ...rest
@@ -43,14 +44,14 @@
     };
 
     const variantStyles = {
-        primary: css({ bg: 'primary.300', color: 'primary.700', borderColor: 'primary.400' }),
-        secondary: css({ bg: 'secondary.300', color: 'secondary.800', borderColor: 'secondary.400' }),
-        accent: css({ bg: 'accent.300', color: 'accent.800', borderColor: 'accent.400' }),
-        success: css({ bg: 'success.300', color: 'success.800', borderColor: 'success.400' }),
-        warning: css({ bg: 'warning.300', color: 'warning.800', borderColor: 'warning.400' }),
-        alert: css({ bg: 'alert.300', color: 'alert.800', borderColor: 'alert.400' }),
-        info: css({ bg: 'info.300', color: 'info.800', borderColor: 'info.400' }),
-        slate: css({ bg: 'slate.300', color: 'slate.700', borderColor: 'slate.400' })
+        primary: css({ bg: 'primary.500', color: 'primary.50' }),
+        secondary: css({ bg: 'secondary.500', color: 'secondary.50' }),
+        accent: css({ bg: 'accent.500', color: 'accent.900' }),
+        success: css({ bg: 'success.500', color: 'success.50' }),
+        warning: css({ bg: 'warning.500', color: 'warning.50' }),
+        alert: css({ bg: 'alert.500', color: 'alert.50' }),
+        info: css({ bg: 'info.500', color: 'info.50' }),
+        slate: css({ bg: 'slate.500', color: 'slate.50' })
     };
 
     const roundedStyles = {
@@ -87,6 +88,9 @@
     onclick={handleClick}
     onkeydown={handleKeydown}
 >
+    {#if icon}
+        <Icon icon={icon} class={css({ mr: '1.5', fontSize: '1.1em' })} />
+    {/if}
     {#if typeof children === 'function'}
         {@render children()}
     {:else if children}

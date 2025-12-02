@@ -61,14 +61,14 @@
         
         <h3>States</h3>
         <ul>
-            <li><strong>Inactive:</strong> Secondary 500 (Teal) - Ready to start call, icon color: secondary.800</li>
-            <li><strong>Active:</strong> Accent 500 (Yellow) - Call active, mic off, icon color: accent.900</li>
+            <li><strong>Inactive:</strong> Accent 500 (Yellow/Orange) - Ready to start call, icon color: accent.900</li>
+            <li><strong>Active:</strong> Alert 500 (Red) - Call active, end call, icon color: alert.900</li>
         </ul>
         
         <h3>Features</h3>
         <ul>
             <li><strong>Size:</strong> 20x20 (w-20 h-20)</li>
-            <li><strong>Icon:</strong> Lucide mic icon (all states except active) / Lucide mic-off icon (active state)</li>
+            <li><strong>Icon:</strong> Lucide mic icon (inactive state) / Lucide x icon (active state)</li>
             <li><strong>Glow Effect:</strong> Box shadow with color-matched glow for each state</li>
             <li><strong>Overlap:</strong> Uses negative margin (my: -2) to overlap NavPill edges</li>
             <li><strong>Backward Compatible:</strong> Still supports <code>isActive</code> prop for legacy usage</li>

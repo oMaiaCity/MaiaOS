@@ -34,19 +34,19 @@
 
 	const stateStyles = {
 		inactive: css({
-			bg: 'secondary.500',
-			boxShadow: '0 0 20px rgba(45,166,180,0.6)'
+			bg: 'accent.500',
+			boxShadow: '0 0 20px rgba(255, 159, 0, 0.6)'
 		}),
 		active: css({
-			bg: 'accent.500',
-			boxShadow: '0 0 20px rgba(238, 206, 91, 0.6)'
+			bg: 'alert.500',
+			boxShadow: '0 0 20px rgba(203, 4, 4, 0.6)'
 		})
 	};
 
 	const getIcon = (currentState) => {
 		switch (currentState) {
 			case 'active':
-				return 'lucide:mic-off';
+				return 'lucide:x';
 			default:
 				return 'lucide:mic';
 		}
@@ -72,17 +72,17 @@
 	// Static icon color styles - Panda CSS needs to see these statically
 	const iconColorStyles = {
 		inactive: css({ 
-			color: 'secondary.900',
+			color: 'accent.900',
 			'& svg': {
-				color: 'secondary.900',
+				color: 'accent.900',
 				fill: 'currentColor',
 				stroke: 'currentColor'
 			}
 		}),
 		active: css({ 
-			color: 'accent.900',
+			color: 'alert.900',
 			'& svg': {
-				color: 'accent.900',
+				color: 'alert.900',
 				fill: 'currentColor',
 				stroke: 'currentColor'
 			}

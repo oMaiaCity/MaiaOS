@@ -125,6 +125,12 @@
                     <Badge variant="accent" size="md">Featured</Badge>
                     <Badge variant="slate" size="lg">Default</Badge>
                 </div>
+
+                <div class={css({ display: 'flex', gap: '3', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' })}>
+                    <Badge variant="primary" icon="lucide:check">Verified</Badge>
+                    <Badge variant="secondary" icon="lucide:star">Pro</Badge>
+                    <Badge variant="alert" icon="lucide:alert-circle">Failed</Badge>
+                </div>
             </div>
         </div>
     </div>
@@ -142,6 +148,7 @@
             <li><strong>variant:</strong> Color variant - 'primary' | 'secondary' | 'accent' | 'success' | 'warning' | 'alert' | 'info' | 'slate' (default: 'primary')</li>
             <li><strong>size:</strong> Size - 'xs' | 'sm' | 'md' | 'lg' (default: 'sm')</li>
             <li><strong>rounded:</strong> Border radius - 'xs' | 'sm' | 'md' | 'lg' | 'full' (default: 'full')</li>
+            <li><strong>icon:</strong> Iconify icon name (e.g., 'lucide:check')</li>
             <li><strong>children:</strong> Badge text content</li>
         </ul>
         
@@ -153,6 +160,7 @@
 
 <Badge variant="success">Active</Badge>
 <Badge variant="alert" size="sm">Error</Badge>
+<Badge variant="primary" icon="lucide:check">Verified</Badge>
 <Badge variant="primary" rounded="md">Custom</Badge>`}</code>
         </pre>
     </div>

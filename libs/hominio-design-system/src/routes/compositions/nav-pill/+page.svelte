@@ -50,7 +50,7 @@
 		<ul>
 			<li><strong>Liquid Glass Effect:</strong> Uses backdrop blur and translucent backgrounds.</li>
 			<li><strong>Responsive:</strong> Adapts to safe areas on mobile devices.</li>
-			<li><strong>Stateful:</strong> The call button toggles between "Start Call" and "End Call" states with appropriate visual feedback (Secondary vs Alert colors).</li>
+			<li><strong>Stateful:</strong> The call button toggles between "Start Call" and "End Call" states with appropriate visual feedback (Accent vs Alert colors).</li>
 		</ul>
 	</div>
 </div>
