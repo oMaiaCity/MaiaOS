@@ -22,7 +22,7 @@
 >
   <jazz-inspector></jazz-inspector>
   <Header {appName} />
-  <main class="max-w-2xl mx-auto px-3 mt-16 flex flex-col gap-8">
+  <main class="max-w-2xl mx-auto px-3 mt-16 flex flex-col gap-8 min-h-screen">
     {@render children?.()}
   </main>
 </JazzSvelteProvider>

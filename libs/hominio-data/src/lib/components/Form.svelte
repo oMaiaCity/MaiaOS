@@ -5,44 +5,39 @@
   const account = new AccountCoState(JazzAccount, {
     resolve: {
       root: {
-        human: {
-          content: {
-            avatar: {
-              content: true,
-            },
-          },
+        o: {
+          humans: true,
         },
       },
     },
   });
   const me = $derived(account.current);
 
-  const name = $derived(
+  const firstHuman = $derived(
     me.$isLoaded && 
-    me.root.human.$isLoaded && 
-    me.root.human.content?.$isLoaded &&
-    me.root.human.content.avatar?.$isLoaded &&
-    me.root.human.content.avatar.content?.$isLoaded &&
-    me.root.human.content.avatar.content.$jazz.has("name")
-      ? me.root.human.content.avatar.content.name || ""
+    me.root.o?.humans?.$isLoaded && 
+    me.root.o.humans.length > 0
+      ? me.root.o.humans[0]
+      : null
+  );
+
+  const name = $derived(
+    firstHuman?.$isLoaded && firstHuman.$jazz.has("name")
+      ? firstHuman.name || ""
       : ""
   );
 
   function handleNameChange(event: Event & { currentTarget: HTMLInputElement }) {
     if (
-      me.$isLoaded && 
-      me.root.human.$isLoaded && 
-      me.root.human.content?.$isLoaded &&
-      me.root.human.content.avatar?.$isLoaded &&
-      me.root.human.content.avatar.content?.$isLoaded &&
+      firstHuman?.$isLoaded &&
       event.currentTarget.value !== undefined
     ) {
-      me.root.human.content.avatar.content.$jazz.set("name", event.currentTarget.value);
+      firstHuman.$jazz.set("name", event.currentTarget.value);
     }
   }
 </script>
 
-{#if me.$isLoaded && me.root.human.$isLoaded && me.root.human.content?.$isLoaded}
+{#if firstHuman?.$isLoaded}
   <div class="grid gap-4 border p-8 border-stone-200">
     <div class="flex items-center gap-3">
       <label for="name" class="sm:w-32"> Name </label>
