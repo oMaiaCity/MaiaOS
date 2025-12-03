@@ -5,6 +5,11 @@
 
 import { Group, co, z } from "jazz-tools";
 
+// WeakMap to track which CoValues have had their label subscription set up
+// This avoids storing metadata directly on Proxy objects, which can cause errors during cleanup
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const labelSubscriptionMap = new WeakMap<any, { unsubscribe: () => void }>();
+
 /** Helper function to set up reactive @label computation for any CoValue with name field */
 export function setupReactiveLabel(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -15,8 +20,7 @@ export function setupReactiveLabel(
   }
 
   // Check if subscription is already set up to avoid duplicate subscriptions
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if ((coValue as any)._labelSubscriptionSet) {
+  if (labelSubscriptionMap.has(coValue)) {
     // Still update initial label in case it's missing
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const currentName = coValue.$jazz.has("name") ? (coValue as any).name.trim() : "";
@@ -49,10 +53,8 @@ export function setupReactiveLabel(
   });
 
   // Mark that subscription is set up to avoid duplicate subscriptions
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (coValue as any)._labelSubscriptionSet = true;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (coValue as any)._labelUnsubscribe = unsubscribe;
+  // Store unsubscribe function in WeakMap instead of on the Proxy object
+  labelSubscriptionMap.set(coValue, { unsubscribe });
 }
 
 
