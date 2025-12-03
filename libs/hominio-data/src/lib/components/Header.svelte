@@ -7,7 +7,9 @@
 
   let { appName } = $props();
 
-  const { logOut } = new AccountCoState(JazzAccount);
+  const accountState = new AccountCoState(JazzAccount);
+  const { logOut } = accountState;
+  const jazzAccount = $derived(accountState.current);
 
   const { current, state } = $derived(
     usePasskeyAuth({
@@ -22,6 +24,16 @@
   const betterAuthUser = $derived($session.data?.user);
   const isBetterAuthSignedIn = $derived(!!betterAuthUser);
   const isBetterAuthPending = $derived($session.isPending);
+  
+  // Get first 8 characters of Jazz account ID
+  const jazzAccountId = $derived(
+    jazzAccount?.$isLoaded ? jazzAccount.$jazz.id.slice(0, 8) : null
+  );
+  
+  // Get first 8 characters of Better Auth user ID
+  const betterAuthAccountId = $derived(
+    betterAuthUser?.id ? betterAuthUser.id.slice(0, 8) : null
+  );
 
   let signingOut = $state(false);
 
@@ -54,7 +66,9 @@
   <nav class="flex justify-between items-center py-4 px-4 border-b border-slate-200">
     <div class="flex items-center gap-4">
       {#if isAuthenticated}
-        <span class="text-sm text-slate-600">Jazz: Logged in</span>
+        <span class="text-sm text-slate-600">
+          Jazz: {jazzAccountId || "Logged in"}
+        </span>
       {:else}
         <span class="text-sm text-slate-500">Jazz: Not authenticated</span>
       {/if}
@@ -63,7 +77,7 @@
         <span class="text-sm text-slate-500">Better Auth: Loading...</span>
       {:else if isBetterAuthSignedIn}
         <span class="text-sm text-slate-600">
-          Better Auth: {betterAuthUser?.name || betterAuthUser?.email || "Logged in"}
+          Better Auth: {betterAuthAccountId || (betterAuthUser?.name || betterAuthUser?.email || "Logged in")}
         </span>
       {:else}
         <span class="text-sm text-slate-500">Better Auth: Not signed in</span>
