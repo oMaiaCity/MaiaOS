@@ -3,7 +3,16 @@
   import { AccountCoState } from "jazz-tools/svelte";
   import { createCoop, removeCoop } from "$lib/groups";
   import CoValueDisplay from "$lib/components/CoValueDisplay.svelte";
+  import { authClient } from "$lib/auth-client";
 
+  // Better Auth session
+  const session = authClient.useSession();
+  const betterAuthUser = $derived($session.data?.user);
+  const isBetterAuthSignedIn = $derived(!!betterAuthUser);
+  const isBetterAuthPending = $derived($session.isPending);
+
+  // Load Jazz account - Better Auth Jazz plugin automatically sets up the account
+  // AccountCoState will use the current account from the Jazz provider
   const account = new AccountCoState(JazzAccount, {
     resolve: {
       root: {
@@ -27,7 +36,26 @@
   );
 </script>
 
-{#if me.$isLoaded}
+{#if isBetterAuthPending}
+  <div class="max-w-4xl mx-auto space-y-6 pb-20">
+    <div class="text-center pt-8 pb-4">
+      <p class="text-slate-500">Loading...</p>
+    </div>
+  </div>
+{:else if !isBetterAuthSignedIn}
+  <div class="max-w-4xl mx-auto space-y-6 pb-20">
+    <div class="text-center pt-8 pb-4">
+      <h1 class="text-4xl font-bold text-slate-700 mb-4">Welcome</h1>
+      <p class="text-slate-500 mb-6">Please sign in to access your data.</p>
+    </div>
+  </div>
+{:else if !me.$isLoaded}
+  <div class="max-w-4xl mx-auto space-y-6 pb-20">
+    <div class="text-center pt-8 pb-4">
+      <p class="text-slate-500">Loading your account...</p>
+    </div>
+  </div>
+{:else if me.$isLoaded}
   <div class="max-w-4xl mx-auto space-y-6 pb-20">
     <!-- Welcome Section -->
     <header class="text-center pt-8 pb-4">
@@ -40,6 +68,8 @@
           {(me.root?.o?.humans?.[0] &&
             me.root.o.humans[0]?.$isLoaded &&
             me.root.o.humans[0].name) ||
+            betterAuthUser?.name ||
+            betterAuthUser?.email?.split("@")[0] ||
             "Traveler"}
         </span>
       </h1>

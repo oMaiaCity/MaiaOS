@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { env } from "$env/dynamic/private";
 import { env as publicEnv } from "$env/dynamic/public";
 import { JazzBetterAuthDatabaseAdapter } from "jazz-tools/better-auth/database-adapter";
+import { jazzPlugin } from "jazz-tools/better-auth/auth/server";
 import { apiKey } from "../apiKey";
 
 // Get environment variables using SvelteKit's native env syntax
@@ -22,6 +23,9 @@ if (!JAZZ_WORKER_ACCOUNT || !JAZZ_WORKER_SECRET) {
 
 // Better Auth configuration with Jazz native storage adapter
 export const auth = betterAuth({
+  plugins: [
+    jazzPlugin(),
+  ],
   database: JazzBetterAuthDatabaseAdapter({
     syncServer: `wss://cloud.jazz.tools/?key=${apiKey}`,
     accountID: JAZZ_WORKER_ACCOUNT,
@@ -40,5 +44,6 @@ export const auth = betterAuth({
       },
     }
     : {}),
+
 });
 

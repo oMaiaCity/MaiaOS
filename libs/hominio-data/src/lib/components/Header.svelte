@@ -1,23 +1,8 @@
 <script lang="ts">
-  import { JazzAccount } from "$lib/schema";
-  import { usePasskeyAuth } from "jazz-tools/svelte";
-  import { AccountCoState } from "jazz-tools/svelte";
   import { authClient } from "$lib/auth-client";
   import { browser } from "$app/environment";
 
   let { appName } = $props();
-
-  const accountState = new AccountCoState(JazzAccount);
-  const { logOut } = accountState;
-  const jazzAccount = $derived(accountState.current);
-
-  const { current, state } = $derived(
-    usePasskeyAuth({
-      appName,
-    }),
-  );
-
-  const isAuthenticated = $derived(state === "signedIn");
 
   // Better Auth session
   const session = authClient.useSession();
@@ -25,14 +10,15 @@
   const isBetterAuthSignedIn = $derived(!!betterAuthUser);
   const isBetterAuthPending = $derived($session.isPending);
   
-  // Get first 8 characters of Jazz account ID
+  // Get Jazz account ID from Better Auth user (set by jazzPlugin)
+  // The jazzPlugin stores the Jazz account ID in the accountID field
+  // Falls back to first 8 chars of Better Auth user ID if accountID not available
   const jazzAccountId = $derived(
-    jazzAccount?.$isLoaded ? jazzAccount.$jazz.id.slice(0, 8) : null
-  );
-  
-  // Get first 8 characters of Better Auth user ID
-  const betterAuthAccountId = $derived(
-    betterAuthUser?.id ? betterAuthUser.id.slice(0, 8) : null
+    (betterAuthUser as any)?.accountID 
+      ? String((betterAuthUser as any).accountID).slice(0, 8) 
+      : betterAuthUser?.id 
+        ? betterAuthUser.id.slice(0, 8) 
+        : null
   );
 
   let signingOut = $state(false);
@@ -65,55 +51,18 @@
 <header>
   <nav class="flex justify-between items-center py-4 px-4 border-b border-slate-200">
     <div class="flex items-center gap-4">
-      {#if isAuthenticated}
-        <span class="text-sm text-slate-600">
-          Jazz: {jazzAccountId || "Logged in"}
-        </span>
-      {:else}
-        <span class="text-sm text-slate-500">Jazz: Not authenticated</span>
-      {/if}
-
       {#if isBetterAuthPending}
-        <span class="text-sm text-slate-500">Better Auth: Loading...</span>
+        <span class="text-sm text-slate-500">Loading...</span>
       {:else if isBetterAuthSignedIn}
         <span class="text-sm text-slate-600">
-          Better Auth: {betterAuthAccountId || (betterAuthUser?.name || betterAuthUser?.email || "Logged in")}
+          Account: {jazzAccountId || (betterAuthUser?.name || betterAuthUser?.email || "Logged in")}
         </span>
       {:else}
-        <span class="text-sm text-slate-500">Better Auth: Not signed in</span>
+        <span class="text-sm text-slate-500">Not signed in</span>
       {/if}
     </div>
 
     <div class="flex gap-2 items-center">
-      <!-- Jazz Auth Controls -->
-      {#if isAuthenticated}
-        <button
-          type="button"
-          onclick={logOut}
-          class="bg-stone-100 hover:bg-stone-200 py-1.5 px-3 text-sm rounded-md transition-colors"
-        >
-          Jazz: Log out
-        </button>
-      {:else}
-        <div class="flex gap-2">
-          <button
-            type="button"
-            class="bg-stone-100 hover:bg-stone-200 py-1.5 px-3 text-sm rounded-md transition-colors"
-            onclick={() => current.signUp("")}
-          >
-            Jazz: Sign up
-          </button>
-          <button
-            type="button"
-            class="bg-stone-100 hover:bg-stone-200 py-1.5 px-3 text-sm rounded-md transition-colors"
-            onclick={() => current.logIn()}
-          >
-            Jazz: Log in
-          </button>
-        </div>
-      {/if}
-
-      <!-- Better Auth Controls -->
       {#if isBetterAuthSignedIn}
         <button
           type="button"
@@ -137,7 +86,7 @@
                 d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
               />
             </svg>
-            Better Auth: Sign out
+            Sign out
           {/if}
         </button>
       {:else if !isBetterAuthPending}

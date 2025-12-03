@@ -15,7 +15,8 @@
     "format-and-lint:fix": "pnpm run format --write && pnpm run lint --fix",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "migrate:auth": "bunx @better-auth/cli migrate --config auth.migrate.ts --yes"
+    "migrate:auth": "bunx @better-auth/cli migrate --config auth.migrate.ts --yes",
+    "clear:auth-db": "bun run scripts/clear-auth-db.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.50.1",
