@@ -1,8 +1,7 @@
 <script lang="ts">
   import { JazzAccount } from "$lib/schema";
-  import { AccountCoState } from "jazz-tools/svelte";
+  import { AccountCoState, Image } from "jazz-tools/svelte";
   import { authClient } from "$lib/auth-client";
-  import { migrateAddAvatarToHumans } from "$lib/migrations/20241220_add-avatar-to-humans.js";
 
   // Better Auth session
   const session = authClient.useSession();
@@ -29,10 +28,6 @@
   // Use an array instead of Set for better reactivity in Svelte 5
   let expandedCoValues = $state<string[]>([]);
   let selectedCoValue: any = $state(null);
-
-  // Migration state
-  let isMigrating = $state(false);
-  let migrationStatus = $state<string | null>(null);
 
   // Helper function to check if a CoValue is expanded
   function isCoValueExpanded(coValueId: string): boolean {
@@ -96,7 +91,7 @@
                       id: item.$jazz?.id || "unknown",
                       isLoaded: item.$isLoaded || false,
                       preview: item.$isLoaded
-                        ? item.name || item["@label"] || item.$jazz?.id?.slice(0, 8) || "CoValue"
+                        ? item["@label"] || item.$jazz?.id?.slice(0, 8) || "CoValue"
                         : "Loading...",
                       // Store the full item reference for detailed display
                       item: item,
@@ -126,37 +121,130 @@
             const nestedProperties: Record<string, any> = {};
             if (value.$isLoaded) {
               try {
-                // Try to get keys from the nested CoMap
-                const nestedKeys = Object.keys(value).filter(
-                  (k) => !k.startsWith("$") && k !== "constructor",
-                );
-                
-                // If no keys found, try $jazz.keys()
-                if (nestedKeys.length === 0 && value.$jazz && typeof value.$jazz.keys === "function") {
-                  nestedKeys.push(...Array.from(value.$jazz.keys()));
+                // Get keys from CoMap - prefer $jazz.keys() as it's more reliable for CoMaps
+                let nestedKeys: string[] = [];
+                if (value.$jazz && typeof value.$jazz.keys === "function") {
+                  nestedKeys = Array.from(value.$jazz.keys());
+                  console.log(
+                    `[Data Explorer] Extracted keys from ${key} using $jazz.keys():`,
+                    nestedKeys,
+                  );
+                } else {
+                  // Fallback to Object.keys() if $jazz.keys() not available
+                  nestedKeys = Object.keys(value).filter(
+                    (k) => !k.startsWith("$") && k !== "constructor",
+                  );
+                  console.log(
+                    `[Data Explorer] Extracted keys from ${key} using Object.keys():`,
+                    nestedKeys,
+                  );
+                }
+
+                // Special handling for avatar CoMap - ensure image property is checked even if optional
+                if (
+                  key === "avatar" &&
+                  value.$jazz &&
+                  typeof (value.$jazz as any).has === "function"
+                ) {
+                  // Check if image property exists (even if not in keys list yet)
+                  if ((value.$jazz as any).has("image")) {
+                    if (!nestedKeys.includes("image")) {
+                      console.log(
+                        `[Data Explorer] Adding 'image' to keys for avatar (exists but not in keys list)`,
+                      );
+                      nestedKeys.push("image");
+                    }
+                  }
                 }
 
                 // Extract nested properties
                 for (const nestedKey of nestedKeys) {
                   try {
+                    // Skip property existence check for now - just try to access it directly
+                    // The has() check was causing Proxy errors for ImageDefinition properties
+                    // Since we already have the keys from $jazz.keys() or Object.keys(), we know they exist
+
+                    console.log(`[Data Explorer] Accessing property ${nestedKey} from ${key}`);
                     const nestedValue = value[nestedKey];
+                    console.log(`[Data Explorer] Property ${nestedKey} value:`, nestedValue);
+
+                    // If the value is undefined/null, skip it
+                    if (nestedValue === undefined || nestedValue === null) {
+                      console.log(
+                        `[Data Explorer] Property ${nestedKey} is undefined/null, skipping`,
+                      );
+                      continue;
+                    }
+
                     // Handle nested CoValues recursively
-                    if (nestedValue && typeof nestedValue === "object" && "$jazz" in nestedValue) {
-                      nestedProperties[nestedKey] = {
-                        type: "CoValue",
-                        id: nestedValue.$jazz?.id || "unknown",
-                        isLoaded: nestedValue.$isLoaded || false,
-                        value: nestedValue.$isLoaded ? String(nestedValue) : "Loading...",
-                      };
+                    // Check for $jazz property directly instead of using 'in' operator to avoid Proxy errors
+                    if (nestedValue && typeof nestedValue === "object" && nestedValue.$jazz) {
+                      console.log(
+                        `[Data Explorer] Property ${nestedKey} is a CoValue, ID:`,
+                        nestedValue.$jazz?.id,
+                      );
+                      
+                      // Check if it's an ImageDefinition
+                      // ImageDefinition has properties like original, placeholderDataURL, originalSize
+                      // We check by accessing properties directly (without using has() or 'in' operator) to avoid Proxy errors
+                      let isImageDefinition = false;
+                      try {
+                        if (nestedValue.$isLoaded) {
+                          // Try to access ImageDefinition-specific properties directly
+                          // ImageDefinition always has these properties when loaded
+                          const hasOriginal = (nestedValue as any).original !== undefined;
+                          const hasPlaceholder = (nestedValue as any).placeholderDataURL !== undefined;
+                          const hasOriginalSize = (nestedValue as any).originalSize !== undefined;
+                          
+                          // ImageDefinition has at least original and originalSize
+                          isImageDefinition = hasOriginal || hasOriginalSize;
+                          
+                          console.log(
+                            `[Data Explorer] Property ${nestedKey} isImageDefinition:`,
+                            isImageDefinition,
+                            `(hasOriginal: ${hasOriginal}, hasPlaceholder: ${hasPlaceholder}, hasOriginalSize: ${hasOriginalSize})`,
+                          );
+                        }
+                      } catch (e) {
+                        console.warn(
+                          `[Data Explorer] Error checking ImageDefinition for ${nestedKey}:`,
+                          e,
+                        );
+                      }
+                      
+                      if (isImageDefinition) {
+                        nestedProperties[nestedKey] = {
+                          type: "ImageDefinition",
+                          id: nestedValue.$jazz?.id || "unknown",
+                          isLoaded: nestedValue.$isLoaded || false,
+                          imageDefinition: nestedValue, // Store reference for Image component
+                        };
+                      } else {
+                        nestedProperties[nestedKey] = {
+                          type: "CoValue",
+                          id: nestedValue.$jazz?.id || "unknown",
+                          isLoaded: nestedValue.$isLoaded || false,
+                          value: nestedValue.$isLoaded ? String(nestedValue) : "Loading...",
+                        };
+                      }
                     } else {
                       nestedProperties[nestedKey] = nestedValue;
                     }
-                  } catch {
-                    // Skip inaccessible properties
+                  } catch (error) {
+                    // Log error for debugging but skip inaccessible properties
+                    console.warn(
+                      `[Data Explorer] Error accessing nested property ${nestedKey}:`,
+                      error,
+                    );
                   }
                 }
+
+                console.log(
+                  `[Data Explorer] Final nested properties for ${key}:`,
+                  Object.keys(nestedProperties),
+                );
               } catch (e) {
-                console.warn(`Error extracting nested properties from ${key}:`, e);
+                console.warn(`[Data Explorer] Error extracting nested properties from ${key}:`, e);
               }
             }
 
@@ -193,32 +281,6 @@
         keys: keys,
       },
     };
-  }
-
-  // Function to manually trigger migration
-  async function triggerMigration() {
-    if (!me.$isLoaded || isMigrating) {
-      return;
-    }
-
-    isMigrating = true;
-    migrationStatus = "Running migration...";
-
-    try {
-      // Use me directly as it's the loaded account instance
-      await migrateAddAvatarToHumans(me);
-      migrationStatus = "Migration completed successfully!";
-      
-      // Clear status after 3 seconds
-      setTimeout(() => {
-        migrationStatus = null;
-      }, 3000);
-    } catch (error) {
-      console.error("Migration error:", error);
-      migrationStatus = `Error: ${error instanceof Error ? error.message : String(error)}`;
-    } finally {
-      isMigrating = false;
-    }
   }
 
   // Function to handle CoValue click
@@ -379,7 +441,7 @@
                       isLoaded: item.$isLoaded || false,
                       // Try to get a string representation
                       preview: item.$isLoaded
-                        ? item.name || item["@label"] || item.$jazz?.id?.slice(0, 8) || "CoValue"
+                        ? item["@label"] || item.$jazz?.id?.slice(0, 8) || "CoValue"
                         : "Loading...",
                       // Store the full item reference for detailed display
                       item: item,
@@ -409,37 +471,130 @@
             const nestedProperties: Record<string, any> = {};
             if (value.$isLoaded) {
               try {
-                // Try to get keys from the nested CoMap
-                const nestedKeys = Object.keys(value).filter(
-                  (k) => !k.startsWith("$") && k !== "constructor",
-                );
-                
-                // If no keys found, try $jazz.keys()
-                if (nestedKeys.length === 0 && value.$jazz && typeof value.$jazz.keys === "function") {
-                  nestedKeys.push(...Array.from(value.$jazz.keys()));
+                // Get keys from CoMap - prefer $jazz.keys() as it's more reliable for CoMaps
+                let nestedKeys: string[] = [];
+                if (value.$jazz && typeof value.$jazz.keys === "function") {
+                  nestedKeys = Array.from(value.$jazz.keys());
+                  console.log(
+                    `[Data Explorer] Extracted keys from ${key} using $jazz.keys():`,
+                    nestedKeys,
+                  );
+                } else {
+                  // Fallback to Object.keys() if $jazz.keys() not available
+                  nestedKeys = Object.keys(value).filter(
+                    (k) => !k.startsWith("$") && k !== "constructor",
+                  );
+                  console.log(
+                    `[Data Explorer] Extracted keys from ${key} using Object.keys():`,
+                    nestedKeys,
+                  );
+                }
+
+                // Special handling for avatar CoMap - ensure image property is checked even if optional
+                if (
+                  key === "avatar" &&
+                  value.$jazz &&
+                  typeof (value.$jazz as any).has === "function"
+                ) {
+                  // Check if image property exists (even if not in keys list yet)
+                  if ((value.$jazz as any).has("image")) {
+                    if (!nestedKeys.includes("image")) {
+                      console.log(
+                        `[Data Explorer] Adding 'image' to keys for avatar (exists but not in keys list)`,
+                      );
+                      nestedKeys.push("image");
+                    }
+                  }
                 }
 
                 // Extract nested properties
                 for (const nestedKey of nestedKeys) {
                   try {
+                    // Skip property existence check for now - just try to access it directly
+                    // The has() check was causing Proxy errors for ImageDefinition properties
+                    // Since we already have the keys from $jazz.keys() or Object.keys(), we know they exist
+
+                    console.log(`[Data Explorer] Accessing property ${nestedKey} from ${key}`);
                     const nestedValue = value[nestedKey];
+                    console.log(`[Data Explorer] Property ${nestedKey} value:`, nestedValue);
+
+                    // If the value is undefined/null, skip it
+                    if (nestedValue === undefined || nestedValue === null) {
+                      console.log(
+                        `[Data Explorer] Property ${nestedKey} is undefined/null, skipping`,
+                      );
+                      continue;
+                    }
+
                     // Handle nested CoValues recursively
-                    if (nestedValue && typeof nestedValue === "object" && "$jazz" in nestedValue) {
-                      nestedProperties[nestedKey] = {
-                        type: "CoValue",
-                        id: nestedValue.$jazz?.id || "unknown",
-                        isLoaded: nestedValue.$isLoaded || false,
-                        value: nestedValue.$isLoaded ? String(nestedValue) : "Loading...",
-                      };
+                    // Check for $jazz property directly instead of using 'in' operator to avoid Proxy errors
+                    if (nestedValue && typeof nestedValue === "object" && nestedValue.$jazz) {
+                      console.log(
+                        `[Data Explorer] Property ${nestedKey} is a CoValue, ID:`,
+                        nestedValue.$jazz?.id,
+                      );
+                      
+                      // Check if it's an ImageDefinition
+                      // ImageDefinition has properties like original, placeholderDataURL, originalSize
+                      // We check by accessing properties directly (without using has() or 'in' operator) to avoid Proxy errors
+                      let isImageDefinition = false;
+                      try {
+                        if (nestedValue.$isLoaded) {
+                          // Try to access ImageDefinition-specific properties directly
+                          // ImageDefinition always has these properties when loaded
+                          const hasOriginal = (nestedValue as any).original !== undefined;
+                          const hasPlaceholder = (nestedValue as any).placeholderDataURL !== undefined;
+                          const hasOriginalSize = (nestedValue as any).originalSize !== undefined;
+                          
+                          // ImageDefinition has at least original and originalSize
+                          isImageDefinition = hasOriginal || hasOriginalSize;
+                          
+                          console.log(
+                            `[Data Explorer] Property ${nestedKey} isImageDefinition:`,
+                            isImageDefinition,
+                            `(hasOriginal: ${hasOriginal}, hasPlaceholder: ${hasPlaceholder}, hasOriginalSize: ${hasOriginalSize})`,
+                          );
+                        }
+                      } catch (e) {
+                        console.warn(
+                          `[Data Explorer] Error checking ImageDefinition for ${nestedKey}:`,
+                          e,
+                        );
+                      }
+                      
+                      if (isImageDefinition) {
+                        nestedProperties[nestedKey] = {
+                          type: "ImageDefinition",
+                          id: nestedValue.$jazz?.id || "unknown",
+                          isLoaded: nestedValue.$isLoaded || false,
+                          imageDefinition: nestedValue, // Store reference for Image component
+                        };
+                      } else {
+                        nestedProperties[nestedKey] = {
+                          type: "CoValue",
+                          id: nestedValue.$jazz?.id || "unknown",
+                          isLoaded: nestedValue.$isLoaded || false,
+                          value: nestedValue.$isLoaded ? String(nestedValue) : "Loading...",
+                        };
+                      }
                     } else {
                       nestedProperties[nestedKey] = nestedValue;
                     }
-                  } catch {
-                    // Skip inaccessible properties
+                  } catch (error) {
+                    // Log error for debugging but skip inaccessible properties
+                    console.warn(
+                      `[Data Explorer] Error accessing nested property ${nestedKey}:`,
+                      error,
+                    );
                   }
                 }
+
+                console.log(
+                  `[Data Explorer] Final nested properties for ${key}:`,
+                  Object.keys(nestedProperties),
+                );
               } catch (e) {
-                console.warn(`Error extracting nested properties from ${key}:`, e);
+                console.warn(`[Data Explorer] Error extracting nested properties from ${key}:`, e);
               }
             }
 
@@ -501,57 +656,12 @@
   {:else if me.$isLoaded}
     <!-- Header -->
     <header class="text-center pt-8 pb-4">
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex-1"></div>
-        <div class="flex-1 text-center">
-          <h1
-            class="text-4xl font-bold bg-clip-text text-transparent bg-linear-to-br from-slate-700 to-slate-800 tracking-tight"
-          >
-            Data Explorer
-          </h1>
-          <p class="mt-2 text-sm text-slate-500">Explore your Jazz account profile and root data</p>
-        </div>
-        <div class="flex-1 flex justify-end">
-          <button
-            type="button"
-            onclick={triggerMigration}
-            disabled={isMigrating || !me.$isLoaded}
-            class="px-4 py-2 rounded-full bg-[#002455] hover:bg-[#002455] disabled:opacity-50 border border-[#001a3d] text-white text-xs font-semibold transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
-            title="Manually trigger data migrations"
-          >
-            {#if isMigrating}
-              <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-              Running...
-            {:else}
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-              Run Migrations
-            {/if}
-          </button>
-        </div>
-      </div>
-      {#if migrationStatus}
-        <div
-          class="mt-4 px-4 py-2 rounded-lg {migrationStatus.startsWith('Error')
-            ? 'bg-red-50 border border-red-200 text-red-700'
-            : 'bg-green-50 border border-green-200 text-green-700'}"
-        >
-          <p class="text-sm font-medium">{migrationStatus}</p>
-        </div>
-      {/if}
+      <h1
+        class="text-4xl font-bold bg-clip-text text-transparent bg-linear-to-br from-slate-700 to-slate-800 tracking-tight"
+      >
+        Data Explorer
+      </h1>
+      <p class="mt-2 text-sm text-slate-500">Explore your Jazz account profile and root data</p>
     </header>
 
     <!-- Profile Section -->
@@ -734,7 +844,12 @@
       <section>
         <div class="flex items-center justify-between mb-4 px-2">
           <h2 class="text-lg font-semibold text-slate-700 flex items-center gap-2">
-            <svg class="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              class="w-5 h-5 text-slate-700"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -751,7 +866,9 @@
           <div class="grid gap-3">
             {#each Object.entries(betterAuthUser) as [key, value]}
               {#if value !== null && value !== undefined}
-                <div class="flex items-start gap-3 py-2 border-b border-slate-200/50 last:border-b-0">
+                <div
+                  class="flex items-start gap-3 py-2 border-b border-slate-200/50 last:border-b-0"
+                >
                   <span
                     class="text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[120px] shrink-0"
                   >
@@ -773,7 +890,8 @@
                           2,
                         )}</pre>
                     {:else}
-                      <span class="text-sm text-slate-700 break-all break-words">{String(value)}</span
+                      <span class="text-sm text-slate-700 break-all break-words"
+                        >{String(value)}</span
                       >
                     {/if}
                   </div>
@@ -936,29 +1054,107 @@
                                                                   >CoMap</span
                                                                 >
                                                                 {#if propValue.properties && Object.keys(propValue.properties).length > 0}
-                                                                  <div class="ml-3 mt-1 space-y-1 border-l-2 border-purple-200 pl-2">
+                                                                  <div
+                                                                    class="ml-3 mt-1 space-y-1 border-l-2 border-purple-200 pl-2"
+                                                                  >
                                                                     {#each Object.entries(propValue.properties) as [nestedKey, nestedValue]}
                                                                       <div class="text-xs">
-                                                                        <span class="font-semibold text-slate-600">{nestedKey}:</span>
-                                                                        <span class="ml-2 text-slate-700 break-all break-words">
-                                                                          {#if typeof nestedValue === "object" && nestedValue !== null && "type" in nestedValue}
-                                                                            {#if nestedValue.type === "CoValue"}
-                                                                              <span class="text-xs bg-purple-50 px-1 py-0.5 rounded text-purple-600">CoValue</span>
-                                                                              <span class="ml-1 font-mono text-xs text-slate-400">({nestedValue.id?.slice(0, 8)}...)</span>
+                                                                        <div
+                                                                          class="flex items-center gap-2"
+                                                                        >
+                                                                          <span
+                                                                            class="font-semibold text-slate-600"
+                                                                            >{nestedKey}:</span
+                                                                          >
+                                                                          <div
+                                                                            class="flex-1 flex items-center gap-2"
+                                                                          >
+                                                                            {#if typeof nestedValue === "object" && nestedValue !== null && "type" in nestedValue}
+                                                                              {#if nestedValue.type === "ImageDefinition"}
+                                                                                {#if nestedValue.isLoaded && nestedValue.imageDefinition}
+                                                                                  <div
+                                                                                    class="flex items-center gap-2"
+                                                                                  >
+                                                                                    <div
+                                                                                      class="w-6 h-6 rounded overflow-hidden border border-slate-300 flex-shrink-0"
+                                                                                    >
+                                                                                      <Image
+                                                                                        imageId={nestedValue
+                                                                                          .imageDefinition
+                                                                                          .$jazz.id}
+                                                                                        width={24}
+                                                                                        height={24}
+                                                                                        alt={nestedKey}
+                                                                                        class="object-cover w-full h-full"
+                                                                                        loading="lazy"
+                                                                                      />
+                                                                                    </div>
+                                                                                    <span
+                                                                                      class="text-xs bg-green-100 px-1.5 py-0.5 rounded text-green-700"
+                                                                                      >ImageDefinition</span
+                                                                                    >
+                                                                                    <span
+                                                                                      class="ml-1 font-mono text-xs text-slate-400"
+                                                                                      >({nestedValue.id?.slice(
+                                                                                        0,
+                                                                                        8,
+                                                                                      )}...)</span
+                                                                                    >
+                                                                                  </div>
+                                                                                {:else}
+                                                                                  <span
+                                                                                    class="text-xs bg-green-100 px-1.5 py-0.5 rounded text-green-700"
+                                                                                    >ImageDefinition</span
+                                                                                  >
+                                                                                  <span
+                                                                                    class="ml-1 text-xs text-slate-400"
+                                                                                    >(Loading...)</span
+                                                                                  >
+                                                                                {/if}
+                                                                              {:else if nestedValue.type === "CoValue"}
+                                                                                <span
+                                                                                  class="text-xs bg-purple-50 px-1 py-0.5 rounded text-purple-600"
+                                                                                  >CoValue</span
+                                                                                >
+                                                                                <span
+                                                                                  class="ml-1 font-mono text-xs text-slate-400"
+                                                                                  >({nestedValue.id?.slice(
+                                                                                    0,
+                                                                                    8,
+                                                                                  )}...)</span
+                                                                                >
+                                                                              {:else}
+                                                                                <span
+                                                                                  class="text-slate-700 break-all break-words"
+                                                                                  >{JSON.stringify(
+                                                                                    nestedValue,
+                                                                                  )}</span
+                                                                                >
+                                                                              {/if}
+                                                                            {:else if typeof nestedValue === "string"}
+                                                                              <span
+                                                                                class="text-slate-700 break-all break-words"
+                                                                                >{nestedValue ||
+                                                                                  "(empty)"}</span
+                                                                              >
                                                                             {:else}
-                                                                              {JSON.stringify(nestedValue)}
+                                                                              <span
+                                                                                class="text-slate-700 break-all break-words"
+                                                                                >{String(
+                                                                                  nestedValue,
+                                                                                )}</span
+                                                                              >
                                                                             {/if}
-                                                                          {:else if typeof nestedValue === "string"}
-                                                                            {nestedValue || "(empty)"}
-                                                                          {:else}
-                                                                            {String(nestedValue)}
-                                                                          {/if}
-                                                                        </span>
+                                                                          </div>
+                                                                        </div>
                                                                       </div>
                                                                     {/each}
                                                                   </div>
                                                                 {:else}
-                                                                  <span class="ml-2 text-xs text-slate-400 italic">(empty)</span>
+                                                                  <span
+                                                                    class="ml-2 text-xs text-slate-400 italic"
+                                                                    >(empty)</span
+                                                                  >
                                                                 {/if}
                                                               </div>
                                                             {:else if propValue.type === "CoValue"}
@@ -1098,21 +1294,67 @@
                                 <div class="ml-4 space-y-1 border-l-2 border-purple-200 pl-3">
                                   {#each Object.entries(value.properties) as [propKey, propValue]}
                                     <div class="text-xs">
-                                      <span class="font-semibold text-slate-600">{propKey}:</span>
-                                      <span class="ml-2 text-slate-700 break-all break-words">
-                                        {#if typeof propValue === "object" && propValue !== null && "type" in propValue}
-                                          {#if propValue.type === "CoValue"}
-                                            <span class="text-xs bg-purple-50 px-1 py-0.5 rounded text-purple-600">CoValue</span>
-                                            <span class="ml-1 font-mono text-xs text-slate-400">({propValue.id?.slice(0, 8)}...)</span>
+                                      <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-slate-600">{propKey}:</span>
+                                        <div class="flex-1 flex items-center gap-2">
+                                          {#if typeof propValue === "object" && propValue !== null && "type" in propValue}
+                                            {#if propValue.type === "ImageDefinition"}
+                                              {#if propValue.isLoaded && propValue.imageDefinition}
+                                                <div class="flex items-center gap-2">
+                                                  <div
+                                                    class="w-6 h-6 rounded overflow-hidden border border-slate-300 flex-shrink-0"
+                                                  >
+                                                    <Image
+                                                      imageId={propValue.imageDefinition.$jazz.id}
+                                                      width={24}
+                                                      height={24}
+                                                      alt={propKey}
+                                                      class="object-cover w-full h-full"
+                                                      loading="lazy"
+                                                    />
+                                                  </div>
+                                                  <span
+                                                    class="text-xs bg-green-100 px-1.5 py-0.5 rounded text-green-700"
+                                                    >ImageDefinition</span
+                                                  >
+                                                  <span
+                                                    class="ml-1 font-mono text-xs text-slate-400"
+                                                    >({propValue.id?.slice(0, 8)}...)</span
+                                                  >
+                                                </div>
+                                              {:else}
+                                                <span
+                                                  class="text-xs bg-green-100 px-1.5 py-0.5 rounded text-green-700"
+                                                  >ImageDefinition</span
+                                                >
+                                                <span class="ml-1 text-xs text-slate-400"
+                                                  >(Loading...)</span
+                                                >
+                                              {/if}
+                                            {:else if propValue.type === "CoValue"}
+                                              <span
+                                                class="text-xs bg-purple-50 px-1 py-0.5 rounded text-purple-600"
+                                                >CoValue</span
+                                              >
+                                              <span class="ml-1 font-mono text-xs text-slate-400"
+                                                >({propValue.id?.slice(0, 8)}...)</span
+                                              >
+                                            {:else}
+                                              <span class="text-slate-700 break-all break-words"
+                                                >{JSON.stringify(propValue)}</span
+                                              >
+                                            {/if}
+                                          {:else if typeof propValue === "string"}
+                                            <span class="text-slate-700 break-all break-words"
+                                              >{propValue || "(empty)"}</span
+                                            >
                                           {:else}
-                                            {JSON.stringify(propValue)}
+                                            <span class="text-slate-700 break-all break-words"
+                                              >{String(propValue)}</span
+                                            >
                                           {/if}
-                                        {:else if typeof propValue === "string"}
-                                          {propValue || "(empty)"}
-                                        {:else}
-                                          {String(propValue)}
-                                        {/if}
-                                      </span>
+                                        </div>
+                                      </div>
                                     </div>
                                   {/each}
                                 </div>

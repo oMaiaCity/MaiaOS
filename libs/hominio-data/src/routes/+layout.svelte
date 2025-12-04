@@ -4,6 +4,7 @@
   import "../app.css";
   import Header from "$lib/components/Header.svelte";
   import JazzAuthSetup from "$lib/components/JazzAuthSetup.svelte";
+  import GoogleDataSync from "$lib/components/GoogleDataSync.svelte";
   import "jazz-tools/inspector/register-custom-element";
   import { JazzAccount } from "$lib/schema";
 
@@ -19,6 +20,7 @@
 >
   <div class="min-h-screen bg-gray-100">
     <JazzAuthSetup />
+    <GoogleDataSync />
     <jazz-inspector></jazz-inspector>
     <Header {appName} />
     <main

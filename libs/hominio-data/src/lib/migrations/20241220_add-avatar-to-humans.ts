@@ -4,6 +4,8 @@
  * Description: Adds avatar sub-object (firstName, lastName, image) to all existing Human CoValues
  */
 
+import { loadAccountHumans } from "./migration-helpers.js";
+
 /**
  * Migrates existing humans to include the avatar property
  * @param account - The Jazz account being migrated
@@ -14,86 +16,18 @@ export async function migrateAddAvatarToHumans(
 ): Promise<void> {
     console.log("[Migration] Starting migrateAddAvatarToHumans");
     try {
-        // Load root with humans - ensure everything is fully loaded
-        const loadedAccount = await account.$jazz.ensureLoaded({
-            resolve: {
-                root: {
-                    o: {
-                        humans: true // This loads the list
-                    }
-                }
-            },
-        });
-
-        if (!loadedAccount.root || !loadedAccount.root.$jazz.has("o")) {
-            console.log("[Migration] No root or o found, skipping migration");
-            return; // No root or o, nothing to migrate
-        }
-
-        const root = loadedAccount.root;
-        const rootWithO = await root.$jazz.ensureLoaded({
-            resolve: { o: { humans: true } },
-        });
-
-        if (!rootWithO.o || !rootWithO.o.$jazz.has("humans")) {
-            console.log("[Migration] No humans list found, skipping migration");
-            return; // No humans list, nothing to migrate
-        }
-
-        const humans = rootWithO.o.humans;
-        if (!humans) {
-            console.log("[Migration] Humans list is null, skipping migration");
-            return; // No humans list, nothing to migrate
-        }
-
-        // Ensure humans list is fully loaded and synced
-        if (!humans.$isLoaded) {
-            await humans.$jazz.waitForSync();
-        }
-
-        // Wait for humans list to fully sync
-        await humans.$jazz.waitForSync();
-
-        // Get all humans as an array
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let humansArray: any[];
-        try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            humansArray = Array.from(humans) as any[];
-            console.log(`[Migration] Found ${humansArray.length} humans to check`);
-        } catch (e) {
-            console.warn("[Migration] Could not convert humans to array:", e);
+        // Load humans using shared helper
+        const humansArray = await loadAccountHumans(account);
+        if (!humansArray || humansArray.length === 0) {
+            console.log("[Migration] No humans found, skipping migration");
             return;
         }
+
+        console.log(`[Migration] Found ${humansArray.length} humans to check`);
 
         let migratedCount = 0;
         let skippedCount = 0;
         let alreadyHasAvatarCount = 0;
-
-        // Wait for all humans to load - try multiple times
-        let allLoaded = false;
-        for (let attempt = 0; attempt < 5 && !allLoaded; attempt++) {
-            allLoaded = true;
-            for (const human of humansArray) {
-                if (human && !human.$isLoaded) {
-                    allLoaded = false;
-                    break;
-                }
-            }
-            if (!allLoaded) {
-                console.log(`[Migration] Waiting for humans to load (attempt ${attempt + 1}/5)...`);
-                await new Promise((resolve) => setTimeout(resolve, 200));
-                // Refresh the array in case new items loaded
-                try {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    humansArray = Array.from(humans) as any[];
-                } catch (e) {
-                    console.warn("[Migration] Error refreshing humans array:", e);
-                }
-            }
-        }
-
-        console.log(`[Migration] After waiting: ${humansArray.filter((h) => h?.$isLoaded).length}/${humansArray.length} humans loaded`);
 
         for (const human of humansArray) {
             if (!human) continue;
@@ -111,11 +45,10 @@ export async function migrateAddAvatarToHumans(
                     // Check if avatar property is missing
                     if (!human.$jazz.has("avatar")) {
                         console.log(`[Migration] Adding avatar to human: ${human.$jazz.id}`);
-                        // Add avatar property with empty values
+                        // Add avatar property with empty values (image will be ImageDefinition, not set initially)
                         human.$jazz.set("avatar", {
                             firstName: "",
                             lastName: "",
-                            image: "",
                         });
                         migratedCount++;
                         // Note: Changes are persisted automatically by Jazz

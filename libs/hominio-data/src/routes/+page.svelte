@@ -4,6 +4,7 @@
   import { createCoop, removeCoop } from "$lib/groups";
   import CoValueDisplay from "$lib/components/CoValueDisplay.svelte";
   import { authClient } from "$lib/auth-client";
+  import { Image } from "jazz-tools/svelte";
 
   // Better Auth session
   const session = authClient.useSession();
@@ -34,6 +35,17 @@
   const coops = $derived(
     me.$isLoaded && me.root.o?.coops?.$isLoaded ? Array.from(me.root.o.coops) : [],
   );
+
+  // Get first human's avatar image for display
+  const firstHumanAvatarImage = $derived(
+    me.$isLoaded &&
+      me.root.o?.humans?.[0]?.$isLoaded &&
+      me.root.o.humans[0].$jazz.has("avatar") &&
+      (me.root.o.humans[0].avatar as any)?.image &&
+      (me.root.o.humans[0].avatar as any).image.$isLoaded
+      ? (me.root.o.humans[0].avatar as any).image
+      : null
+  );
 </script>
 
 <div class="w-full space-y-6 pb-20">
@@ -53,6 +65,20 @@
   {:else if me.$isLoaded}
     <!-- Welcome Section -->
     <header class="text-center pt-8 pb-4">
+      <!-- Profile Image -->
+      {#if firstHumanAvatarImage}
+        <div class="flex justify-center mb-6">
+          <div class="relative w-64 h-64 rounded-full overflow-hidden border-4 border-white shadow-[0_0_12px_rgba(0,0,0,0.1)]">
+            <Image
+              imageId={firstHumanAvatarImage.$jazz.id}
+              width={256}
+              height={256}
+              alt="Profile"
+              class="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      {/if}
       <h1
         class="text-4xl font-bold bg-clip-text text-transparent bg-linear-to-br from-slate-700 to-slate-800 tracking-tight"
       >
@@ -61,9 +87,7 @@
         >
           {(me.root?.o?.humans?.[0] &&
             me.root.o.humans[0]?.$isLoaded &&
-            me.root.o.humans[0].name) ||
-            betterAuthUser?.name ||
-            betterAuthUser?.email?.split("@")[0] ||
+            me.root.o.humans[0]["@label"]) ||
             "Traveler"}
         </span>
       </h1>

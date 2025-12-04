@@ -14,39 +14,73 @@
   const me = $derived(account.current);
 
   const firstHuman = $derived(
-    me.$isLoaded && 
-    me.root.o?.humans?.$isLoaded && 
-    me.root.o.humans.length > 0
+    me.$isLoaded && me.root.o?.humans?.$isLoaded && me.root.o.humans.length > 0
       ? me.root.o.humans[0]
-      : null
+      : null,
   );
 
-  const name = $derived(
-    firstHuman?.$isLoaded && firstHuman.$jazz.has("name")
-      ? firstHuman.name || ""
-      : ""
+  // Get avatar values
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const avatar = $derived(
+    firstHuman?.$isLoaded && firstHuman.$jazz.has("avatar") ? (firstHuman.avatar as any) : null,
   );
 
-  function handleNameChange(event: Event & { currentTarget: HTMLInputElement }) {
+  const firstName = $derived(avatar?.firstName?.trim() || "");
+  const lastName = $derived(avatar?.lastName?.trim() || "");
+
+  function handleFirstNameChange(event: Event & { currentTarget: HTMLInputElement }) {
     if (
       firstHuman?.$isLoaded &&
+      firstHuman.$jazz.has("avatar") &&
       event.currentTarget.value !== undefined
     ) {
-      firstHuman.$jazz.set("name", event.currentTarget.value);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const currentAvatar = firstHuman.avatar as any;
+      firstHuman.$jazz.set("avatar", {
+        firstName: event.currentTarget.value,
+        lastName: currentAvatar?.lastName || "",
+        image: currentAvatar?.image || "",
+      });
+    }
+  }
+
+  function handleLastNameChange(event: Event & { currentTarget: HTMLInputElement }) {
+    if (
+      firstHuman?.$isLoaded &&
+      firstHuman.$jazz.has("avatar") &&
+      event.currentTarget.value !== undefined
+    ) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const currentAvatar = firstHuman.avatar as any;
+      firstHuman.$jazz.set("avatar", {
+        firstName: currentAvatar?.firstName || "",
+        lastName: event.currentTarget.value,
+        image: currentAvatar?.image || "",
+      });
     }
   }
 </script>
 
-{#if firstHuman?.$isLoaded}
+{#if firstHuman?.$isLoaded && firstHuman.$jazz.has("avatar")}
   <div class="grid gap-4 border p-8 border-stone-200">
     <div class="flex items-center gap-3">
-      <label for="name" class="sm:w-32"> Name </label>
+      <label for="firstName" class="sm:w-32"> First Name </label>
       <input
         type="text"
-        id="name"
+        id="firstName"
         class="bg-gray-100 border border-slate-300 rounded-full shadow-xs py-1 px-2 flex-1"
-        value={name}
-        oninput={handleNameChange}
+        value={firstName}
+        oninput={handleFirstNameChange}
+      />
+    </div>
+    <div class="flex items-center gap-3">
+      <label for="lastName" class="sm:w-32"> Last Name </label>
+      <input
+        type="text"
+        id="lastName"
+        class="bg-gray-100 border border-slate-300 rounded-full shadow-xs py-1 px-2 flex-1"
+        value={lastName}
+        oninput={handleLastNameChange}
       />
     </div>
   </div>

@@ -5,13 +5,18 @@
 
 import { co, z } from "jazz-tools";
 import { migrateAddAvatarToHumans } from "./migrations/20241220_add-avatar-to-humans.js";
+import { migrateRemoveNameFromHumans } from "./migrations/20241220_remove-name-from-humans.js";
+import { migrateSyncGoogleNameToAvatar } from "./migrations/20241220_sync-google-name-to-avatar.js";
+import { migrateSyncGoogleImageToAvatar } from "./migrations/20241220_sync-google-image-to-avatar.js";
 
 // WeakMap to track which CoValues have had their label subscription set up
 // This avoids storing metadata directly on Proxy objects, which can cause errors during cleanup
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const labelSubscriptionMap = new WeakMap<any, { unsubscribe: () => void }>();
 
-/** Helper function to set up reactive @label computation for any CoValue with name field */
+/** Helper function to set up reactive @label computation for Human CoValues
+ * Computes label from avatar.firstName + avatar.lastName, falls back to ID
+ */
 export function setupReactiveLabel(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   coValue: any
@@ -20,33 +25,46 @@ export function setupReactiveLabel(
     return;
   }
 
+  // Only set up for Human CoValues (check for avatar property)
+  if (!coValue.$jazz.has("avatar")) {
+    return;
+  }
+
+  // Helper to compute label from avatar
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const computeLabelFromAvatar = (human: any): string => {
+    if (!human.$jazz.has("avatar")) {
+      return human.$jazz.id;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const avatar = human.avatar as any;
+    const firstName = avatar?.firstName?.trim() || "";
+    const lastName = avatar?.lastName?.trim() || "";
+    const fullName = `${firstName} ${lastName}`.trim();
+    return fullName || human.$jazz.id;
+  };
+
   // Check if subscription is already set up to avoid duplicate subscriptions
   if (labelSubscriptionMap.has(coValue)) {
     // Still update initial label in case it's missing
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const currentName = coValue.$jazz.has("name") ? (coValue as any).name.trim() : "";
-    const computedLabel = currentName || coValue.$jazz.id;
+    const computedLabel = computeLabelFromAvatar(coValue);
     if (!coValue.$jazz.has("@label") || coValue["@label"] !== computedLabel) {
       coValue.$jazz.set("@label", computedLabel);
     }
     return;
   }
 
-  // Compute initial @label
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const initialName = coValue.$jazz.has("name") ? (coValue as any).name.trim() : "";
-  coValue.$jazz.set("@label", initialName || coValue.$jazz.id);
+  // Compute initial @label from avatar
+  const initialLabel = computeLabelFromAvatar(coValue);
+  coValue.$jazz.set("@label", initialLabel);
 
-  // Set up subscription to update @label when name changes
+  // Set up subscription to update @label when avatar changes
   // Subscribe to the CoValue to watch for any changes
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const unsubscribe = (coValue.$jazz as any).subscribe({}, (updated: any) => {
-    if (updated && updated.$isLoaded) {
-      // Check if name field changed
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const name = updated.$jazz.has("name") ? (updated as any).name.trim() : "";
-      const computedLabel = name || updated.$jazz.id;
-      // Always update @label to keep it in sync with name
+    if (updated && updated.$isLoaded && updated.$jazz.has("avatar")) {
+      const computedLabel = computeLabelFromAvatar(updated);
+      // Always update @label to keep it in sync with avatar
       if (!updated.$jazz.has("@label") || updated["@label"] !== computedLabel) {
         updated.$jazz.set("@label", computedLabel);
       }
@@ -66,14 +84,13 @@ export const AccountProfile = co.profile();
 export const Avatar = co.map({
   firstName: z.string(),
   lastName: z.string(),
-  image: z.string(), // URL or path to avatar image
+  image: co.image().optional(), // ImageDefinition for avatar image (optional)
 });
 
-/** Human schema - CoValue with @schema, name, @label, and avatar properties */
+/** Human schema - CoValue with @schema, @label, and avatar properties */
 export const Human = co.map({
   "@schema": z.literal("human"),
-  name: z.string(), // User-editable name (single source of truth)
-  "@label": z.string(), // Reactively computed from name (or falls back to ID)
+  "@label": z.string(), // Reactively computed from avatar.firstName + avatar.lastName (or falls back to ID)
   avatar: Avatar, // Avatar sub-object with firstName, lastName, and image
 });
 
@@ -106,12 +123,10 @@ export const JazzAccount = co
     if (!account.$jazz.has("root")) {
       const human = Human.create({
         "@schema": "human",
-        name: "",
         "@label": "",
         avatar: {
           firstName: "",
           lastName: "",
-          image: "",
         },
       });
       await human.$jazz.waitForSync();
@@ -135,12 +150,10 @@ export const JazzAccount = co
     if (!loadedAccount.root) {
       const human = Human.create({
         "@schema": "human",
-        name: "",
         "@label": "",
         avatar: {
           firstName: "",
           lastName: "",
-          image: "",
         },
       });
       await human.$jazz.waitForSync();
@@ -162,12 +175,10 @@ export const JazzAccount = co
     if (!root.$jazz.has("o")) {
       const human = Human.create({
         "@schema": "human",
-        name: "",
         "@label": "",
         avatar: {
           firstName: "",
           lastName: "",
-          image: "",
         },
       });
       await human.$jazz.waitForSync();
@@ -195,12 +206,10 @@ export const JazzAccount = co
     if (!rootWithO.o.$jazz.has("humans")) {
       const human = Human.create({
         "@schema": "human",
-        name: "",
         "@label": "",
         avatar: {
           firstName: "",
           lastName: "",
-          image: "",
         },
       });
       await human.$jazz.waitForSync();
@@ -211,7 +220,12 @@ export const JazzAccount = co
     } else {
       // Run data migrations for existing humans
       console.log("[Schema Migration] Running data migrations for existing humans");
+
+      // Add avatar property if missing
       await migrateAddAvatarToHumans(account);
+
+      // Remove name property (it will be ignored since not in schema, but document it)
+      await migrateRemoveNameFromHumans(account);
 
       // Ensure all existing humans have reactive labels set up
       const humans = rootWithO.o.humans;
@@ -224,3 +238,26 @@ export const JazzAccount = co
       }
     }
   });
+
+/**
+ * Centralized function to sync Google profile data to human avatars
+ * Called from client-side layout when BetterAuth user data is available
+ * 
+ * @param account - The Jazz account to sync data for
+ * @param betterAuthUser - BetterAuth user object with name and image properties
+ */
+export async function syncGoogleDataToAvatars(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  account: any,
+  betterAuthUser?: { name?: string | null; image?: string | null } | null
+): Promise<void> {
+  if (!betterAuthUser) {
+    return;
+  }
+
+  // Sync name and image in parallel
+  await Promise.all([
+    betterAuthUser.name ? migrateSyncGoogleNameToAvatar(account, betterAuthUser.name) : Promise.resolve(),
+    betterAuthUser.image ? migrateSyncGoogleImageToAvatar(account, betterAuthUser.image) : Promise.resolve(),
+  ]);
+}

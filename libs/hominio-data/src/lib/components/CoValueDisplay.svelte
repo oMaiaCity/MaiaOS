@@ -25,15 +25,13 @@
     }
   });
 
-  // Compute label reactively from name for display (fallback to @label or ID)
+  // Compute label reactively from @label for display (fallback to ID)
   const displayLabel = $derived(
-    coValue?.$isLoaded && coValue.$jazz.has("name") && coValue.name.trim()
-      ? coValue.name.trim()
-      : coValue?.$isLoaded && coValue.$jazz.has("@label")
-        ? coValue["@label"]
-        : coValue?.$isLoaded
-          ? coValue.$jazz.id
-          : "",
+    coValue?.$isLoaded && coValue.$jazz.has("@label")
+      ? coValue["@label"]
+      : coValue?.$isLoaded
+        ? coValue.$jazz.id
+        : "",
   );
 
   const groupInfo = $derived(
