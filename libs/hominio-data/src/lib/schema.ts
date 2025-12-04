@@ -3,7 +3,7 @@
  * https://jazz.tools/docs/svelte/schemas/covalues
  */
 
-import { Group, co, z } from "jazz-tools";
+import { co, z } from "jazz-tools";
 
 // WeakMap to track which CoValues have had their label subscription set up
 // This avoids storing metadata directly on Proxy objects, which can cause errors during cleanup
@@ -91,10 +91,10 @@ export const JazzAccount = co
   })
   .withMigration(async (account) => {
     /** The account migration is run on account creation and on every log-in.
-     *  You can use it to set up the account root and any other initial CoValues you need.
+     *  Sets up the account root with initial structure: root.o.humans and root.o.coops
      */
+    // Check if root exists (without loading nested structures)
     if (!account.$jazz.has("root")) {
-      // Create Human CoValue - Jazz automatically creates a Group as owner
       const human = Human.create({
         "@schema": "human",
         name: "",
@@ -102,222 +102,90 @@ export const JazzAccount = co
       });
       await human.$jazz.waitForSync();
 
-      // Get the auto-created group and ensure account is admin
-      const humanGroup = human.$jazz.owner as Group;
-      if (humanGroup && "addMember" in humanGroup) {
-        try {
-          humanGroup.addMember(account, "admin");
-          await humanGroup.$jazz.waitForSync();
-        } catch {
-          // Account might already be a member, ignore
-        }
-      }
-
-      // Set up reactive @label computation for human
       setupReactiveLabel(human);
 
       account.$jazz.set("root", {
         o: {
           humans: [human],
-          coops: [], // Initialize empty list for coops
+          coops: [],
         },
       });
-    } else {
-      // Migration for existing accounts
-      // First, load root without resolving nested fields to avoid errors
-      const loadedAccount = await account.$jazz.ensureLoaded({
-        resolve: { root: true },
+      return;
+    }
+
+    // Load root (without nested structures first)
+    const loadedAccount = await account.$jazz.ensureLoaded({
+      resolve: { root: true },
+    });
+
+    if (!loadedAccount.root) {
+      const human = Human.create({
+        "@schema": "human",
+        name: "",
+        "@label": "",
       });
+      await human.$jazz.waitForSync();
 
-      // Ensure root exists
-      if (!loadedAccount.root) {
-        // Root doesn't exist - create it with human
-        // Create Human CoValue - Jazz automatically creates a Group as owner
-        const human = Human.create({
-          "@schema": "human",
-          name: "",
-          "@label": "",
-        });
-        await human.$jazz.waitForSync();
+      setupReactiveLabel(human);
 
-        // Get the auto-created group and ensure account is admin
-        const humanGroup = human.$jazz.owner as Group;
-        if (humanGroup && "addMember" in humanGroup) {
-          try {
-            humanGroup.addMember(account, "admin");
-            await humanGroup.$jazz.waitForSync();
-          } catch {
-            // Account might already be a member, ignore
-          }
-        }
-
-        setupReactiveLabel(human);
-
-        account.$jazz.set("root", {
-          o: {
-            humans: [human],
-            coops: [],
-          },
-        });
-        return; // Exit early since we just created everything
-      }
-
-      const rootCoMap = loadedAccount.root;
-
-      // Check if root has old structure (root.human) or new structure (root.o)
-      // Use type assertion to check for old structure since it's not in the type system
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rootAny = rootCoMap as any;
-      const hasOldStructure = rootAny.$jazz && rootAny.$jazz.has && rootAny.$jazz.has("human");
-      const hasNewStructure = rootCoMap.$jazz.has("o");
-
-      // Migrate from old structure to new structure
-      if (hasOldStructure && !hasNewStructure) {
-        // Try to get the old human if it exists
-        let humanToMigrate = null;
-        try {
-          // Load the old human
-          const oldRootLoaded = await rootCoMap.$jazz.ensureLoaded({
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            resolve: { human: true } as any,
-          });
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const oldHuman = (oldRootLoaded as any).human;
-          if (oldHuman && oldHuman.$isLoaded) {
-            // Ensure fields are set correctly
-            if (!oldHuman.$jazz.has("@schema")) {
-              oldHuman.$jazz.set("@schema", "human");
-            }
-            if (!oldHuman.$jazz.has("name")) {
-              oldHuman.$jazz.set("name", "");
-            }
-            const currentName = oldHuman.$jazz.has("name") ? oldHuman.name.trim() : "";
-            const computedLabel = currentName || oldHuman.$jazz.id;
-            if (!oldHuman.$jazz.has("@label") || oldHuman["@label"] !== computedLabel) {
-              oldHuman.$jazz.set("@label", computedLabel);
-            }
-            // Set up reactive label AFTER ensuring fields exist
-            setupReactiveLabel(oldHuman);
-            humanToMigrate = oldHuman;
-          }
-        } catch {
-          // Old human doesn't exist or can't be loaded, will create new one
-        }
-
-        if (!humanToMigrate) {
-          // Create new human if old one doesn't exist
-          const newHuman = Human.create({
-            "@schema": "human",
-            name: "",
-            "@label": "",
-          });
-          await newHuman.$jazz.waitForSync();
-
-          const humanGroup = newHuman.$jazz.owner as Group;
-          if (humanGroup && "addMember" in humanGroup) {
-            try {
-              humanGroup.addMember(account, "admin");
-              await humanGroup.$jazz.waitForSync();
-            } catch {
-              // Account might already be a member, ignore
-            }
-          }
-
-          setupReactiveLabel(newHuman);
-          humanToMigrate = newHuman;
-        }
-
-        // Create new structure with migrated human
-        rootCoMap.$jazz.set("o", {
-          humans: [humanToMigrate],
-          coops: [],
-        });
-      }
-
-      // Ensure o exists (in case it was never created)
-      if (!rootCoMap.$jazz.has("o")) {
-        // Create new human if none exists
-        const human = Human.create({
-          "@schema": "human",
-          name: "",
-          "@label": "",
-        });
-        await human.$jazz.waitForSync();
-
-        const humanGroup = human.$jazz.owner as Group;
-        if (humanGroup && "addMember" in humanGroup) {
-          try {
-            humanGroup.addMember(account, "admin");
-            await humanGroup.$jazz.waitForSync();
-          } catch {
-            // Account might already be a member, ignore
-          }
-        }
-
-        setupReactiveLabel(human);
-
-        rootCoMap.$jazz.set("o", {
+      account.$jazz.set("root", {
+        o: {
           humans: [human],
           coops: [],
-        });
-      }
-
-      // Ensure o is loaded
-      const rootWithO = await rootCoMap.$jazz.ensureLoaded({
-        resolve: { o: { humans: true, coops: true } },
+        },
       });
+      return;
+    }
 
-      const root = rootWithO;
+    const root = loadedAccount.root;
 
-      // Ensure coops field exists
-      if (root.o && root.o.$isLoaded && !root.o.$jazz.has("coops")) {
-        root.o.$jazz.set("coops", []);
-      }
+    // Ensure o exists (check without loading nested structures)
+    if (!root.$jazz.has("o")) {
+      const human = Human.create({
+        "@schema": "human",
+        name: "",
+        "@label": "",
+      });
+      await human.$jazz.waitForSync();
 
-      // Handle humans list creation/migration
-      if (root.o && root.o.$isLoaded && !root.o.$jazz.has("humans")) {
-        // Create Human CoValue - Jazz automatically creates a Group as owner
-        const human = Human.create({
-          "@schema": "human",
-          name: "",
-          "@label": "",
-        });
-        await human.$jazz.waitForSync();
+      setupReactiveLabel(human);
 
-        // Get the auto-created group and ensure account is admin
-        const humanGroup = human.$jazz.owner as Group;
-        if (humanGroup && "addMember" in humanGroup) {
-          try {
-            humanGroup.addMember(account, "admin");
-            await humanGroup.$jazz.waitForSync();
-          } catch {
-            // Account might already be a member, ignore
-          }
-        }
+      root.$jazz.set("o", {
+        humans: [human],
+        coops: [],
+      });
+      return;
+    }
 
-        // Set up reactive @label computation for human
-        setupReactiveLabel(human);
+    // Now load o and its nested structures
+    const rootWithO = await root.$jazz.ensureLoaded({
+      resolve: { o: { humans: true, coops: true } },
+    });
 
-        root.o.$jazz.set("humans", [human]);
-      } else if (root.o && root.o.$isLoaded) {
-        // Ensure all humans in the list have correct setup
-        const humans = root.o.humans;
-        if (humans && humans.$isLoaded) {
-          for (const human of Array.from(humans)) {
-            if (human.$isLoaded) {
-              if (!human.$jazz.has("@schema")) {
-                human.$jazz.set("@schema", "human");
-              }
-              if (!human.$jazz.has("name")) {
-                human.$jazz.set("name", "");
-              }
-              const currentName = human.$jazz.has("name") ? human.name.trim() : "";
-              const computedLabel = currentName || human.$jazz.id;
-              if (!human.$jazz.has("@label") || human["@label"] !== computedLabel) {
-                human.$jazz.set("@label", computedLabel);
-              }
-              setupReactiveLabel(human);
-            }
+    // Ensure coops list exists
+    if (!rootWithO.o.$jazz.has("coops")) {
+      rootWithO.o.$jazz.set("coops", []);
+    }
+
+    // Ensure humans list exists and has at least one human
+    if (!rootWithO.o.$jazz.has("humans")) {
+      const human = Human.create({
+        "@schema": "human",
+        name: "",
+        "@label": "",
+      });
+      await human.$jazz.waitForSync();
+
+      setupReactiveLabel(human);
+
+      rootWithO.o.$jazz.set("humans", [human]);
+    } else {
+      // Ensure all existing humans have reactive labels set up
+      const humans = rootWithO.o.humans;
+      if (humans && humans.$isLoaded) {
+        for (const human of Array.from(humans)) {
+          if (human.$isLoaded) {
+            setupReactiveLabel(human);
           }
         }
       }

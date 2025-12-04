@@ -19,16 +19,6 @@ export async function createCoop(account: co.loaded<typeof JazzAccount>): Promis
     });
     await coop.$jazz.waitForSync();
 
-    // Get the auto-created group and ensure account is admin
-    const ownerGroup = coop.$jazz.owner as Group;
-    if (ownerGroup && "addMember" in ownerGroup) {
-        try {
-            ownerGroup.addMember(account, "admin");
-            await ownerGroup.$jazz.waitForSync();
-        } catch {
-            // Account might already be a member, ignore
-        }
-    }
 
     // Set up reactive @label computation
     const { setupReactiveLabel } = await import("./schema.js");
