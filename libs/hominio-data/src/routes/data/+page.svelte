@@ -2,6 +2,7 @@
   import { JazzAccount } from "$lib/schema";
   import { AccountCoState } from "jazz-tools/svelte";
   import { authClient } from "$lib/auth-client";
+  import { migrateAddAvatarToHumans } from "$lib/migrations/20241220_add-avatar-to-humans.js";
 
   // Better Auth session
   const session = authClient.useSession();
@@ -15,7 +16,10 @@
     resolve: {
       profile: true, // Resolve profile to access all its properties
       root: {
-        o: true, // Resolve root.o to access all its properties
+        o: {
+          humans: true, // Resolve humans list
+          coops: true, // Resolve coops list
+        },
       },
     },
   });
@@ -25,6 +29,10 @@
   // Use an array instead of Set for better reactivity in Svelte 5
   let expandedCoValues = $state<string[]>([]);
   let selectedCoValue: any = $state(null);
+
+  // Migration state
+  let isMigrating = $state(false);
+  let migrationStatus = $state<string | null>(null);
 
   // Helper function to check if a CoValue is expanded
   function isCoValueExpanded(coValueId: string): boolean {
@@ -114,11 +122,49 @@
               items: items,
             };
           } else {
-            // CoMap or other CoValue
+            // CoMap or other CoValue - extract nested properties
+            const nestedProperties: Record<string, any> = {};
+            if (value.$isLoaded) {
+              try {
+                // Try to get keys from the nested CoMap
+                const nestedKeys = Object.keys(value).filter(
+                  (k) => !k.startsWith("$") && k !== "constructor",
+                );
+                
+                // If no keys found, try $jazz.keys()
+                if (nestedKeys.length === 0 && value.$jazz && typeof value.$jazz.keys === "function") {
+                  nestedKeys.push(...Array.from(value.$jazz.keys()));
+                }
+
+                // Extract nested properties
+                for (const nestedKey of nestedKeys) {
+                  try {
+                    const nestedValue = value[nestedKey];
+                    // Handle nested CoValues recursively
+                    if (nestedValue && typeof nestedValue === "object" && "$jazz" in nestedValue) {
+                      nestedProperties[nestedKey] = {
+                        type: "CoValue",
+                        id: nestedValue.$jazz?.id || "unknown",
+                        isLoaded: nestedValue.$isLoaded || false,
+                        value: nestedValue.$isLoaded ? String(nestedValue) : "Loading...",
+                      };
+                    } else {
+                      nestedProperties[nestedKey] = nestedValue;
+                    }
+                  } catch {
+                    // Skip inaccessible properties
+                  }
+                }
+              } catch (e) {
+                console.warn(`Error extracting nested properties from ${key}:`, e);
+              }
+            }
+
             data[key] = {
-              type: "CoValue",
+              type: "CoMap",
               id: value.$jazz?.id || "unknown",
               isLoaded: value.$isLoaded || false,
+              properties: nestedProperties,
               value: value.$isLoaded ? String(value) : "Loading...",
             };
           }
@@ -147,6 +193,32 @@
         keys: keys,
       },
     };
+  }
+
+  // Function to manually trigger migration
+  async function triggerMigration() {
+    if (!me.$isLoaded || isMigrating) {
+      return;
+    }
+
+    isMigrating = true;
+    migrationStatus = "Running migration...";
+
+    try {
+      // Use me directly as it's the loaded account instance
+      await migrateAddAvatarToHumans(me);
+      migrationStatus = "Migration completed successfully!";
+      
+      // Clear status after 3 seconds
+      setTimeout(() => {
+        migrationStatus = null;
+      }, 3000);
+    } catch (error) {
+      console.error("Migration error:", error);
+      migrationStatus = `Error: ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isMigrating = false;
+    }
   }
 
   // Function to handle CoValue click
@@ -333,30 +405,52 @@
               items: items,
             };
           } else {
-            // It's a CoMap or other CoValue
+            // It's a CoMap or other CoValue - extract nested properties
+            const nestedProperties: Record<string, any> = {};
+            if (value.$isLoaded) {
+              try {
+                // Try to get keys from the nested CoMap
+                const nestedKeys = Object.keys(value).filter(
+                  (k) => !k.startsWith("$") && k !== "constructor",
+                );
+                
+                // If no keys found, try $jazz.keys()
+                if (nestedKeys.length === 0 && value.$jazz && typeof value.$jazz.keys === "function") {
+                  nestedKeys.push(...Array.from(value.$jazz.keys()));
+                }
+
+                // Extract nested properties
+                for (const nestedKey of nestedKeys) {
+                  try {
+                    const nestedValue = value[nestedKey];
+                    // Handle nested CoValues recursively
+                    if (nestedValue && typeof nestedValue === "object" && "$jazz" in nestedValue) {
+                      nestedProperties[nestedKey] = {
+                        type: "CoValue",
+                        id: nestedValue.$jazz?.id || "unknown",
+                        isLoaded: nestedValue.$isLoaded || false,
+                        value: nestedValue.$isLoaded ? String(nestedValue) : "Loading...",
+                      };
+                    } else {
+                      nestedProperties[nestedKey] = nestedValue;
+                    }
+                  } catch {
+                    // Skip inaccessible properties
+                  }
+                }
+              } catch (e) {
+                console.warn(`Error extracting nested properties from ${key}:`, e);
+              }
+            }
+
             data[key] = {
-              type: "CoValue",
+              type: "CoMap",
               id: value.$jazz?.id || "unknown",
               isLoaded: value.$isLoaded || false,
               // Try to get a string representation
               value: value.$isLoaded ? String(value) : "Loading...",
-              // Try to extract properties if it's a CoMap
-              properties:
-                value.$isLoaded && typeof value === "object" && !Array.isArray(value)
-                  ? Object.keys(value)
-                      .filter((k) => !k.startsWith("$") && k !== "constructor")
-                      .reduce(
-                        (acc, k) => {
-                          try {
-                            acc[k] = value[k];
-                          } catch {
-                            // Skip inaccessible properties
-                          }
-                          return acc;
-                        },
-                        {} as Record<string, any>,
-                      )
-                  : undefined,
+              // Extract properties if it's a CoMap
+              properties: nestedProperties,
             };
           }
         } else if (value !== undefined && value !== null) {
@@ -407,12 +501,57 @@
   {:else if me.$isLoaded}
     <!-- Header -->
     <header class="text-center pt-8 pb-4">
-      <h1
-        class="text-4xl font-bold bg-clip-text text-transparent bg-linear-to-br from-slate-700 to-slate-800 tracking-tight"
-      >
-        Data Explorer
-      </h1>
-      <p class="mt-2 text-sm text-slate-500">Explore your Jazz account profile and root data</p>
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex-1"></div>
+        <div class="flex-1 text-center">
+          <h1
+            class="text-4xl font-bold bg-clip-text text-transparent bg-linear-to-br from-slate-700 to-slate-800 tracking-tight"
+          >
+            Data Explorer
+          </h1>
+          <p class="mt-2 text-sm text-slate-500">Explore your Jazz account profile and root data</p>
+        </div>
+        <div class="flex-1 flex justify-end">
+          <button
+            type="button"
+            onclick={triggerMigration}
+            disabled={isMigrating || !me.$isLoaded}
+            class="px-4 py-2 rounded-full bg-[#002455] hover:bg-[#002455] disabled:opacity-50 border border-[#001a3d] text-white text-xs font-semibold transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
+            title="Manually trigger data migrations"
+          >
+            {#if isMigrating}
+              <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Running...
+            {:else}
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Run Migrations
+            {/if}
+          </button>
+        </div>
+      </div>
+      {#if migrationStatus}
+        <div
+          class="mt-4 px-4 py-2 rounded-lg {migrationStatus.startsWith('Error')
+            ? 'bg-red-50 border border-red-200 text-red-700'
+            : 'bg-green-50 border border-green-200 text-green-700'}"
+        >
+          <p class="text-sm font-medium">{migrationStatus}</p>
+        </div>
+      {/if}
     </header>
 
     <!-- Profile Section -->
@@ -590,6 +729,62 @@
       {/if}
     </section>
 
+    <!-- BetterAuth User Profile Properties -->
+    {#if betterAuthUser}
+      <section>
+        <div class="flex items-center justify-between mb-4 px-2">
+          <h2 class="text-lg font-semibold text-slate-700 flex items-center gap-2">
+            <svg class="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
+            Google Profile Data
+          </h2>
+        </div>
+        <div
+          class="rounded-3xl border border-white bg-slate-50/40 backdrop-blur-sm shadow-[0_0_6px_rgba(0,0,0,0.03)] p-6"
+        >
+          <div class="grid gap-3">
+            {#each Object.entries(betterAuthUser) as [key, value]}
+              {#if value !== null && value !== undefined}
+                <div class="flex items-start gap-3 py-2 border-b border-slate-200/50 last:border-b-0">
+                  <span
+                    class="text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[120px] shrink-0"
+                  >
+                    {key}:
+                  </span>
+                  <div class="flex-1 min-w-0">
+                    {#if typeof value === "object" && value !== null && !Array.isArray(value)}
+                      <pre
+                        class="text-xs font-mono text-slate-700 bg-slate-200/50 p-2 rounded overflow-x-auto break-all break-words">{JSON.stringify(
+                          value,
+                          null,
+                          2,
+                        )}</pre>
+                    {:else if Array.isArray(value)}
+                      <pre
+                        class="text-xs font-mono text-slate-700 bg-slate-200/50 p-2 rounded overflow-x-auto break-all break-words">{JSON.stringify(
+                          value,
+                          null,
+                          2,
+                        )}</pre>
+                    {:else}
+                      <span class="text-sm text-slate-700 break-all break-words">{String(value)}</span
+                      >
+                    {/if}
+                  </div>
+                </div>
+              {/if}
+            {/each}
+          </div>
+        </div>
+      </section>
+    {/if}
+
     <!-- Root.O CoValues Section -->
     <section>
       <div class="flex items-center justify-between mb-4 px-2">
@@ -734,6 +929,38 @@
                                                               <span class="ml-2 text-slate-500"
                                                                 >({propValue.length} items)</span
                                                               >
+                                                            {:else if propValue.type === "CoMap"}
+                                                              <div class="space-y-1 mt-1">
+                                                                <span
+                                                                  class="text-xs bg-purple-100 px-1.5 py-0.5 rounded text-purple-700"
+                                                                  >CoMap</span
+                                                                >
+                                                                {#if propValue.properties && Object.keys(propValue.properties).length > 0}
+                                                                  <div class="ml-3 mt-1 space-y-1 border-l-2 border-purple-200 pl-2">
+                                                                    {#each Object.entries(propValue.properties) as [nestedKey, nestedValue]}
+                                                                      <div class="text-xs">
+                                                                        <span class="font-semibold text-slate-600">{nestedKey}:</span>
+                                                                        <span class="ml-2 text-slate-700 break-all break-words">
+                                                                          {#if typeof nestedValue === "object" && nestedValue !== null && "type" in nestedValue}
+                                                                            {#if nestedValue.type === "CoValue"}
+                                                                              <span class="text-xs bg-purple-50 px-1 py-0.5 rounded text-purple-600">CoValue</span>
+                                                                              <span class="ml-1 font-mono text-xs text-slate-400">({nestedValue.id?.slice(0, 8)}...)</span>
+                                                                            {:else}
+                                                                              {JSON.stringify(nestedValue)}
+                                                                            {/if}
+                                                                          {:else if typeof nestedValue === "string"}
+                                                                            {nestedValue || "(empty)"}
+                                                                          {:else}
+                                                                            {String(nestedValue)}
+                                                                          {/if}
+                                                                        </span>
+                                                                      </div>
+                                                                    {/each}
+                                                                  </div>
+                                                                {:else}
+                                                                  <span class="ml-2 text-xs text-slate-400 italic">(empty)</span>
+                                                                {/if}
+                                                              </div>
                                                             {:else if propValue.type === "CoValue"}
                                                               <span
                                                                 class="text-xs bg-purple-100 px-1.5 py-0.5 rounded text-purple-700"
@@ -847,8 +1074,54 @@
                                 <div class="ml-4 text-sm text-slate-400 italic">Empty list</div>
                               {/if}
                             </div>
+                          {:else if value.type === "CoMap"}
+                            <!-- CoMap display with nested properties -->
+                            <div class="space-y-2">
+                              <div class="flex items-center gap-2">
+                                <span
+                                  class="font-mono text-xs bg-purple-100 px-2 py-0.5 rounded text-purple-700"
+                                >
+                                  CoMap
+                                </span>
+                                {#if value.id}
+                                  <span class="ml-2 font-mono text-xs text-slate-500"
+                                    >ID: {value.id.slice(0, 8)}...</span
+                                  >
+                                {/if}
+                                {#if value.isLoaded !== undefined}
+                                  <span class="text-xs text-slate-400">
+                                    {value.isLoaded ? "✓ Loaded" : "⏳ Loading..."}
+                                  </span>
+                                {/if}
+                              </div>
+                              {#if value.properties && Object.keys(value.properties).length > 0}
+                                <div class="ml-4 space-y-1 border-l-2 border-purple-200 pl-3">
+                                  {#each Object.entries(value.properties) as [propKey, propValue]}
+                                    <div class="text-xs">
+                                      <span class="font-semibold text-slate-600">{propKey}:</span>
+                                      <span class="ml-2 text-slate-700 break-all break-words">
+                                        {#if typeof propValue === "object" && propValue !== null && "type" in propValue}
+                                          {#if propValue.type === "CoValue"}
+                                            <span class="text-xs bg-purple-50 px-1 py-0.5 rounded text-purple-600">CoValue</span>
+                                            <span class="ml-1 font-mono text-xs text-slate-400">({propValue.id?.slice(0, 8)}...)</span>
+                                          {:else}
+                                            {JSON.stringify(propValue)}
+                                          {/if}
+                                        {:else if typeof propValue === "string"}
+                                          {propValue || "(empty)"}
+                                        {:else}
+                                          {String(propValue)}
+                                        {/if}
+                                      </span>
+                                    </div>
+                                  {/each}
+                                </div>
+                              {:else if value.value !== undefined}
+                                <div class="text-sm text-slate-600 italic ml-4">{value.value}</div>
+                              {/if}
+                            </div>
                           {:else if value.type === "CoValue"}
-                            <!-- CoMap or other CoValue display -->
+                            <!-- CoValue display -->
                             <div class="space-y-2">
                               <div class="flex items-center gap-2">
                                 <span
@@ -869,20 +1142,6 @@
                               </div>
                               {#if value.value !== undefined}
                                 <div class="text-sm text-slate-600 italic ml-4">{value.value}</div>
-                              {/if}
-                              {#if value.properties && Object.keys(value.properties).length > 0}
-                                <div class="ml-4 space-y-1 border-l-2 border-slate-200 pl-3">
-                                  {#each Object.entries(value.properties) as [propKey, propValue]}
-                                    <div class="text-xs">
-                                      <span class="font-semibold text-slate-600">{propKey}:</span>
-                                      <span class="ml-2 text-slate-500">
-                                        {typeof propValue === "string"
-                                          ? propValue
-                                          : JSON.stringify(propValue)}
-                                      </span>
-                                    </div>
-                                  {/each}
-                                </div>
                               {/if}
                             </div>
                           {/if}

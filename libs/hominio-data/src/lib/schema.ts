@@ -4,6 +4,7 @@
  */
 
 import { co, z } from "jazz-tools";
+import { migrateAddAvatarToHumans } from "./migrations/20241220_add-avatar-to-humans.js";
 
 // WeakMap to track which CoValues have had their label subscription set up
 // This avoids storing metadata directly on Proxy objects, which can cause errors during cleanup
@@ -61,11 +62,19 @@ export function setupReactiveLabel(
 /** Custom profile schema (no custom fields, using default) */
 export const AccountProfile = co.profile();
 
-/** Human schema - simple CoValue with @schema, name, and @label properties */
+/** Avatar schema - reusable CoMap for avatar information */
+export const Avatar = co.map({
+  firstName: z.string(),
+  lastName: z.string(),
+  image: z.string(), // URL or path to avatar image
+});
+
+/** Human schema - CoValue with @schema, name, @label, and avatar properties */
 export const Human = co.map({
   "@schema": z.literal("human"),
   name: z.string(), // User-editable name (single source of truth)
   "@label": z.string(), // Reactively computed from name (or falls back to ID)
+  avatar: Avatar, // Avatar sub-object with firstName, lastName, and image
 });
 
 /** Coop schema - CoValue with @schema, name, and @label properties */
@@ -99,6 +108,11 @@ export const JazzAccount = co
         "@schema": "human",
         name: "",
         "@label": "",
+        avatar: {
+          firstName: "",
+          lastName: "",
+          image: "",
+        },
       });
       await human.$jazz.waitForSync();
 
@@ -123,6 +137,11 @@ export const JazzAccount = co
         "@schema": "human",
         name: "",
         "@label": "",
+        avatar: {
+          firstName: "",
+          lastName: "",
+          image: "",
+        },
       });
       await human.$jazz.waitForSync();
 
@@ -145,6 +164,11 @@ export const JazzAccount = co
         "@schema": "human",
         name: "",
         "@label": "",
+        avatar: {
+          firstName: "",
+          lastName: "",
+          image: "",
+        },
       });
       await human.$jazz.waitForSync();
 
@@ -173,6 +197,11 @@ export const JazzAccount = co
         "@schema": "human",
         name: "",
         "@label": "",
+        avatar: {
+          firstName: "",
+          lastName: "",
+          image: "",
+        },
       });
       await human.$jazz.waitForSync();
 
@@ -180,6 +209,10 @@ export const JazzAccount = co
 
       rootWithO.o.$jazz.set("humans", [human]);
     } else {
+      // Run data migrations for existing humans
+      console.log("[Schema Migration] Running data migrations for existing humans");
+      await migrateAddAvatarToHumans(account);
+
       // Ensure all existing humans have reactive labels set up
       const humans = rootWithO.o.humans;
       if (humans && humans.$isLoaded) {
