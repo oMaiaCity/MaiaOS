@@ -3,6 +3,7 @@
   import { AccountCoState, Image } from "jazz-tools/svelte";
   import { authClient } from "$lib/auth-client";
   import { getCoValueGroupInfo } from "$lib/groups";
+  import JazzMetadata from "$lib/components/JazzMetadata.svelte";
 
   // Better Auth session
   const session = authClient.useSession();
@@ -29,39 +30,6 @@
   // Use an array instead of Set for better reactivity in Svelte 5
   let expandedCoValues = $state<string[]>([]);
   let selectedCoValue: any = $state(null);
-
-  // Function to remove a parent group member from a CoValue's owner group
-  async function removeParentGroupMember(coValue: any, parentGroupId: string) {
-    if (!coValue || !coValue.$isLoaded || !me || !me.$isLoaded) {
-      console.error("[Remove Parent Group] CoValue or account not loaded");
-      return;
-    }
-
-    try {
-      // Get the CoValue's owner group
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const ownerGroup = coValue.$jazz.owner as any;
-      if (!ownerGroup) {
-        console.error("[Remove Parent Group] CoValue doesn't have an owner group");
-        return;
-      }
-
-      // Load the parent group to remove
-      const { Group } = await import("jazz-tools");
-      const parentGroup = await Group.load(parentGroupId);
-      if (!parentGroup || !parentGroup.$isLoaded) {
-        console.error("[Remove Parent Group] Could not load parent group");
-        return;
-      }
-
-      // Remove the parent group from the owner group
-      ownerGroup.removeMember(parentGroup);
-      await ownerGroup.$jazz.waitForSync();
-      console.log(`[Remove Parent Group] Removed parent group ${parentGroupId} from owner group`);
-    } catch (error) {
-      console.error("[Remove Parent Group] Error removing parent group:", error);
-    }
-  }
 
   // Function to delete a capability
   async function deleteCapability(capability: any, capabilitiesList: any) {
@@ -943,76 +911,9 @@
           </div>
 
           <!-- Jazz Metadata -->
-          <div>
-            <h3 class="text-sm font-semibold text-slate-600 mb-3 uppercase tracking-wider">
-              Jazz Metadata
-            </h3>
-            <div class="space-y-3">
-              <div class="border-b border-slate-200/50 pb-3">
-                <div class="flex items-start gap-3">
-                  <span
-                    class="text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[120px] shrink-0"
-                  >
-                    Profile ID:
-                  </span>
-                  <span
-                    class="text-sm font-mono text-slate-700 break-all break-words flex-1 min-w-0"
-                    >{profileData().jazzMetadata.id || "N/A"}</span
-                  >
-                </div>
-              </div>
-              <div class="border-b border-slate-200/50 pb-3">
-                <div class="flex items-start gap-3">
-                  <span
-                    class="text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[120px]"
-                  >
-                    Owner:
-                  </span>
-                  <div class="flex-1">
-                    {#if profileData().jazzMetadata.ownerInfo}
-                      <div class="space-y-1">
-                        <span class="text-sm text-slate-700">
-                          {profileData().jazzMetadata.ownerInfo.type}
-                        </span>
-                        <div class="text-xs font-mono text-slate-500">
-                          ID: {profileData().jazzMetadata.ownerInfo.id.slice(0, 8)}...
-                        </div>
-                      </div>
-                    {:else if profileData().jazzMetadata.owner}
-                      <span class="text-sm text-slate-700">
-                        {String(profileData().jazzMetadata.owner)}
-                      </span>
-                    {:else}
-                      <span class="text-sm text-slate-400 italic">N/A</span>
-                    {/if}
-                  </div>
-                </div>
-              </div>
-              <div class="border-b border-slate-200/50 pb-3">
-                <div class="flex items-start gap-3">
-                  <span
-                    class="text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[120px]"
-                  >
-                    Keys:
-                  </span>
-                  <div class="flex-1">
-                    {#if profileData().jazzMetadata.keys.length > 0}
-                      <div class="flex flex-wrap gap-2">
-                        {#each profileData().jazzMetadata.keys as key}
-                          <span
-                            class="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-700"
-                            >{key}</span
-                          >
-                        {/each}
-                      </div>
-                    {:else}
-                      <span class="text-sm text-slate-400 italic">No keys</span>
-                    {/if}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          {#if me.profile}
+            <JazzMetadata coValue={me.profile} showKeys={true} />
+          {/if}
         </div>
       {:else if me.$isLoaded && me.profile && !me.profile.$isLoaded}
         <div
@@ -1379,89 +1280,9 @@
                                                                     >(empty)</span
                                                                   >
                                                                 {/if}
-                                                                {#if propValue.jazzMetadata}
-                                                                  {@const nestedMetadata = propValue.jazzMetadata}
-                                                                  <div class="ml-3 mt-2 pt-2 border-t border-purple-200">
-                                                                    <h5 class="text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
-                                                                      Jazz Metadata
-                                                                    </h5>
-                                                                    <div class="space-y-1 text-xs">
-                                                                      {#if nestedMetadata.id}
-                                                                        <div>
-                                                                          <span class="font-semibold text-slate-600">ID:</span>
-                                                                          <span class="ml-2 font-mono text-slate-500">{nestedMetadata.id}</span>
-                                                                        </div>
-                                                                      {/if}
-                                                                      {#if nestedMetadata.ownerInfo}
-                                                                        <div>
-                                                                          <span class="font-semibold text-slate-600">Owner:</span>
-                                                                          <span class="ml-2 text-slate-500">{nestedMetadata.ownerInfo.type}</span>
-                                                                          <span class="ml-2 font-mono text-xs text-slate-400">({nestedMetadata.ownerInfo.id.slice(0, 8)}...)</span>
-                                                                        </div>
-                                                                      {/if}
-                                                                      {#if nestedMetadata.groupInfo}
-                                                                        {@const groupInfo = nestedMetadata.groupInfo}
-                                                                        {#if groupInfo.accountMembers.length > 0 || groupInfo.groupMembers.length > 0}
-                                                                          <div class="mt-2 pt-2 border-t border-slate-200">
-                                                                            <h6 class="text-xs font-semibold text-slate-500 mb-1">Group Members</h6>
-                                                                            {#if groupInfo.accountMembers.length > 0}
-                                                                              <div class="mb-2 ml-2">
-                                                                                <span class="text-xs text-slate-500">Account Members:</span>
-                                                                                <div class="space-y-0.5 ml-2 mt-0.5">
-                                                                                  {#each groupInfo.accountMembers as member}
-                                                                                    <div class="text-xs text-slate-600">
-                                                                                      <span class="font-mono">{member.id.slice(0, 8)}...</span>
-                                                                                      <span class="ml-2 text-slate-500">({member.role})</span>
-                                                                                    </div>
-                                                                                  {/each}
-                                                                                </div>
-                                                                              </div>
-                                                                            {/if}
-                                                                            {#if groupInfo.groupMembers.length > 0}
-                                                                              <div class="ml-2">
-                                                                                <span class="text-xs text-slate-500">Parent Groups:</span>
-                                                                                <div class="space-y-0.5 ml-2 mt-0.5">
-                                                                                  {#each groupInfo.groupMembers as groupMember}
-                                                                                    <div class="flex items-center gap-2">
-                                                                                      <div class="text-xs text-slate-600 flex-1">
-                                                                                        <span class="font-mono">{groupMember.id.slice(0, 8)}...</span>
-                                                                                        <span class="ml-2 text-slate-500">({groupMember.role})</span>
-                                                                                      </div>
-                                                                                      <button
-                                                                                        type="button"
-                                                                                        class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors shrink-0"
-                                                                                        onclick={() => {
-                                                                                          // Get the avatar CoValue from the stored reference
-                                                                                          const avatarCoValue = propValue.coValue;
-                                                                                          if (avatarCoValue) {
-                                                                                            removeParentGroupMember(avatarCoValue, groupMember.id);
-                                                                                          }
-                                                                                        }}
-                                                                                        title="Remove parent group"
-                                                                                      >
-                                                                                        <svg
-                                                                                          class="w-3 h-3"
-                                                                                          fill="none"
-                                                                                          stroke="currentColor"
-                                                                                          viewBox="0 0 24 24"
-                                                                                        >
-                                                                                          <path
-                                                                                            stroke-linecap="round"
-                                                                                            stroke-linejoin="round"
-                                                                                            stroke-width="2"
-                                                                                            d="M6 18L18 6M6 6l12 12"
-                                                                                          />
-                                                                                        </svg>
-                                                                                      </button>
-                                                                                    </div>
-                                                                                  {/each}
-                                                                                </div>
-                                                                              </div>
-                                                                            {/if}
-                                                                          </div>
-                                                                        {/if}
-                                                                      {/if}
-                                                                    </div>
+                                                                {#if propValue.coValue}
+                                                                  <div class="ml-3 mt-2">
+                                                                    <JazzMetadata coValue={propValue.coValue} showKeys={false} />
                                                                   </div>
                                                                 {/if}
                                                               </div>
@@ -1502,115 +1323,7 @@
                                               </div>
                                             {/if}
                                             <!-- Jazz Metadata -->
-                                            <div>
-                                              <h4
-                                                class="text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wider"
-                                              >
-                                                Jazz Metadata
-                                              </h4>
-                                              <div class="space-y-1 text-xs">
-                                                <div>
-                                                  <span class="font-semibold text-slate-600"
-                                                    >ID:</span
-                                                  >
-                                                  <span
-                                                    class="ml-2 font-mono text-slate-500 break-all break-words"
-                                                    >{coValueProps.jazzMetadata.id}</span
-                                                  >
-                                                </div>
-                                                {#if coValueProps.jazzMetadata.ownerInfo}
-                                                  <div>
-                                                    <span class="font-semibold text-slate-600"
-                                                      >Owner:</span
-                                                    >
-                                                    <span class="ml-2 text-slate-500"
-                                                      >{coValueProps.jazzMetadata.ownerInfo
-                                                        .type}</span
-                                                    >
-                                                    <span
-                                                      class="ml-2 font-mono text-xs text-slate-400"
-                                                      >({coValueProps.jazzMetadata.ownerInfo.id.slice(
-                                                        0,
-                                                        8,
-                                                      )}...)</span
-                                                    >
-                                                  </div>
-                                                {/if}
-                                                {#if coValueProps.jazzMetadata.keys.length > 0}
-                                                  <div>
-                                                    <span class="font-semibold text-slate-600"
-                                                      >Keys:</span
-                                                    >
-                                                    <div class="flex flex-wrap gap-1 mt-1">
-                                                      {#each coValueProps.jazzMetadata.keys as key}
-                                                        <span
-                                                          class="text-xs font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600"
-                                                          >{key}</span
-                                                        >
-                                                      {/each}
-                                                    </div>
-                                                  </div>
-                                                {/if}
-                                                {#if coValueProps.jazzMetadata.groupInfo}
-                                                  {@const groupInfo = coValueProps.jazzMetadata.groupInfo}
-                                                  {#if groupInfo.accountMembers.length > 0 || groupInfo.groupMembers.length > 0}
-                                                    <div class="mt-4 pt-4 border-t border-slate-200">
-                                                      <h5 class="text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wider">
-                                                        Group Members
-                                                      </h5>
-                                                      {#if groupInfo.accountMembers.length > 0}
-                                                        <div class="mb-3">
-                                                          <span class="text-xs font-semibold text-slate-500 mb-1 block">Account Members:</span>
-                                                          <div class="space-y-1 ml-2">
-                                                            {#each groupInfo.accountMembers as member}
-                                                              <div class="text-xs text-slate-600">
-                                                                <span class="font-mono">{member.id.slice(0, 8)}...</span>
-                                                                <span class="ml-2 text-slate-500">({member.role})</span>
-                                                              </div>
-                                                            {/each}
-                                                          </div>
-                                                        </div>
-                                                      {/if}
-                                                      {#if groupInfo.groupMembers.length > 0}
-                                                        <div>
-                                                          <span class="text-xs font-semibold text-slate-500 mb-1 block">Parent Groups:</span>
-                                                          <div class="space-y-1 ml-2">
-                                                            {#each groupInfo.groupMembers as groupMember}
-                                                              <div class="flex items-center gap-2">
-                                                                <div class="text-xs text-slate-600 flex-1">
-                                                                  <span class="font-mono">{groupMember.id.slice(0, 8)}...</span>
-                                                                  <span class="ml-2 text-slate-500">({groupMember.role})</span>
-                                                                </div>
-                                                                <button
-                                                                  type="button"
-                                                                  class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors shrink-0"
-                                                                  onclick={() => removeParentGroupMember(item.item, groupMember.id)}
-                                                                  title="Remove parent group"
-                                                                >
-                                                                  <svg
-                                                                    class="w-3 h-3"
-                                                                    fill="none"
-                                                                    stroke="currentColor"
-                                                                    viewBox="0 0 24 24"
-                                                                  >
-                                                                    <path
-                                                                      stroke-linecap="round"
-                                                                      stroke-linejoin="round"
-                                                                      stroke-width="2"
-                                                                      d="M6 18L18 6M6 6l12 12"
-                                                                    />
-                                                                  </svg>
-                                                                </button>
-                                                              </div>
-                                                            {/each}
-                                                          </div>
-                                                        </div>
-                                                      {/if}
-                                                    </div>
-                                                  {/if}
-                                                {/if}
-                                              </div>
-                                            </div>
+                                            <JazzMetadata coValue={item.item} showKeys={true} />
                                           </div>
                                         {/if}
                                       </div>
@@ -1780,76 +1493,9 @@
           </div>
 
           <!-- Jazz Metadata -->
-          <div>
-            <h3 class="text-sm font-semibold text-slate-600 mb-3 uppercase tracking-wider">
-              Jazz Metadata
-            </h3>
-            <div class="space-y-3">
-              <div class="border-b border-slate-200/50 pb-3">
-                <div class="flex items-start gap-3">
-                  <span
-                    class="text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[120px] shrink-0"
-                  >
-                    Root.O ID:
-                  </span>
-                  <span
-                    class="text-sm font-mono text-slate-700 break-all break-words flex-1 min-w-0"
-                    >{rootOData().jazzMetadata.id || "N/A"}</span
-                  >
-                </div>
-              </div>
-              <div class="border-b border-slate-200/50 pb-3">
-                <div class="flex items-start gap-3">
-                  <span
-                    class="text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[120px]"
-                  >
-                    Owner:
-                  </span>
-                  <div class="flex-1">
-                    {#if rootOData().jazzMetadata.ownerInfo}
-                      <div class="space-y-1">
-                        <span class="text-sm text-slate-700">
-                          {rootOData().jazzMetadata.ownerInfo.type}
-                        </span>
-                        <div class="text-xs font-mono text-slate-500">
-                          ID: {rootOData().jazzMetadata.ownerInfo.id.slice(0, 8)}...
-                        </div>
-                      </div>
-                    {:else if rootOData().jazzMetadata.owner}
-                      <span class="text-sm text-slate-700">
-                        {String(rootOData().jazzMetadata.owner)}
-                      </span>
-                    {:else}
-                      <span class="text-sm text-slate-400 italic">N/A</span>
-                    {/if}
-                  </div>
-                </div>
-              </div>
-              <div class="border-b border-slate-200/50 pb-3">
-                <div class="flex items-start gap-3">
-                  <span
-                    class="text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[120px]"
-                  >
-                    Keys:
-                  </span>
-                  <div class="flex-1">
-                    {#if rootOData().jazzMetadata.keys.length > 0}
-                      <div class="flex flex-wrap gap-2">
-                        {#each rootOData().jazzMetadata.keys as key}
-                          <span
-                            class="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-700"
-                            >{key}</span
-                          >
-                        {/each}
-                      </div>
-                    {:else}
-                      <span class="text-sm text-slate-400 italic">No keys</span>
-                    {/if}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          {#if me.root?.o}
+            <JazzMetadata coValue={me.root.o} showKeys={true} />
+          {/if}
         </div>
       {:else if me.$isLoaded && me.root?.o && !me.root.o.$isLoaded}
         <div
