@@ -7,9 +7,20 @@
   import GoogleDataSync from "$lib/components/GoogleDataSync.svelte";
   import "jazz-tools/inspector/register-custom-element";
   import { JazzAccount } from "$lib/schema";
+  import { page } from "$app/stores";
 
   let { children } = $props();
-  let appName = "Hominio";
+
+  // Route-specific title and description
+  const routeInfo = $derived.by(() => {
+    const pathname = $page.url.pathname;
+    if (pathname === "/") {
+      return { title: "Hominio", description: "Own the destiny of your life" };
+    } else if (pathname === "/data") {
+      return { title: "Data Explorer", description: "Travel through your data universe" };
+    }
+    return { title: null, description: null };
+  });
 </script>
 
 <JazzSvelteProvider
@@ -22,9 +33,9 @@
     <JazzAuthSetup />
     <GoogleDataSync />
     <jazz-inspector></jazz-inspector>
-    <Header {appName} />
+    <Header title={routeInfo.title} description={routeInfo.description} />
     <main
-      class="min-w-[896px] max-w-full mx-auto px-3 mt-16 flex flex-col gap-8 min-h-screen overflow-x-hidden"
+      class="min-w-[896px] max-w-full mx-auto px-3 pt-20 flex flex-col gap-8 min-h-screen overflow-x-hidden"
     >
       <div class="w-full max-w-4xl mx-auto">
         {@render children?.()}

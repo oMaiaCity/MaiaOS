@@ -1,9 +1,11 @@
 <script lang="ts">
   import { JazzAccount } from "$lib/schema";
-  import { AccountCoState, Image } from "jazz-tools/svelte";
+  import { AccountCoState } from "jazz-tools/svelte";
   import { authClient } from "$lib/auth-client";
   import { getCoValueGroupInfo } from "$lib/groups";
-  import JazzMetadata from "$lib/components/JazzMetadata.svelte";
+  import RootDataDisplay from "$lib/components/RootDataDisplay.svelte";
+  import MetadataSidebar from "$lib/components/MetadataSidebar.svelte";
+  import CoValueContextDisplay from "$lib/components/CoValueContextDisplay.svelte";
 
   // Better Auth session
   const session = authClient.useSession();
@@ -23,15 +25,67 @@
   });
   const me = $derived(account.current);
 
-  // Track expanded/selected CoValue instances
-  // Use an array instead of Set for better reactivity in Svelte 5
-  let expandedCoValues = $state<string[]>([]);
-  let selectedCoValue: any = $state(null);
+  // Navigation context type
+  type NavigationContext =
+    | { type: "root" }
+    | { type: "colist"; coValue: any; label: string; parentKey?: string }
+    | { type: "covalue"; coValue: any; label: string; parentContext?: NavigationContext };
 
-  // Helper function to check if a CoValue is expanded
-  function isCoValueExpanded(coValueId: string): boolean {
-    return expandedCoValues.includes(coValueId);
+  // Navigation stack - tracks the path through CoValues
+  let navigationStack = $state<NavigationContext[]>([{ type: "root" }]);
+
+  // Current context is the last item in the stack
+  const currentContext = $derived(navigationStack[navigationStack.length - 1]);
+
+  // Helper function to get display label for a CoValue
+  function getCoValueLabel(coValue: any, fallbackKey?: string): string {
+    if (!coValue || !coValue.$isLoaded) {
+      return fallbackKey || "Loading...";
+    }
+    // Try to get @label, but handle cases where has() might not be available
+    try {
+      if (coValue.$jazz && typeof coValue.$jazz.has === "function" && coValue.$jazz.has("@label")) {
+        return coValue["@label"];
+      }
+    } catch (e) {
+      // Ignore errors - fall through to fallback
+    }
+    // Use fallback key if provided, otherwise use ID
+    if (fallbackKey) {
+      return fallbackKey;
+    }
+    try {
+      return coValue.$jazz?.id?.slice(0, 8) + "..." || "CoValue";
+    } catch (e) {
+      return "CoValue";
+    }
   }
+
+  // Navigate to a CoValue (push new context)
+  function navigateToCoValue(coValue: any, label?: string, fallbackKey?: string) {
+    const displayLabel = label || getCoValueLabel(coValue, fallbackKey);
+    navigationStack = [...navigationStack, { type: "covalue", coValue, label: displayLabel }];
+  }
+
+  // Navigate to a CoList (push new context)
+  function navigateToCoList(coList: any, label: string, parentKey?: string) {
+    navigationStack = [...navigationStack, { type: "colist", coValue: coList, label, parentKey }];
+  }
+
+  // Navigate back one level
+  function navigateBack() {
+    if (navigationStack.length > 1) {
+      navigationStack = navigationStack.slice(0, -1);
+    }
+  }
+
+  // Get current CoValue for metadata sidebar
+  const selectedCoValue = $derived(() => {
+    if (currentContext.type === "covalue" || currentContext.type === "colist") {
+      return currentContext.coValue;
+    }
+    return null;
+  });
 
   // Function to extract all properties from a CoValue instance
   function extractCoValueProperties(coValue: any): {
@@ -51,6 +105,22 @@
     if (!coValue || !coValue.$jazz) {
       return null;
     }
+
+    // Check if this CoValue itself is an ImageDefinition
+    // This is important because properties like original, 512x512, 256x256 are FileStreams
+    const isImageDefinition = (() => {
+      try {
+        if (coValue.$isLoaded) {
+          const hasOriginalSize = (coValue as any).originalSize !== undefined;
+          const hasPlaceholder = (coValue as any).placeholderDataURL !== undefined;
+          const hasOriginal = (coValue as any).original !== undefined;
+          return hasOriginalSize || (hasPlaceholder && hasOriginal);
+        }
+      } catch (e) {
+        // Ignore errors
+      }
+      return false;
+    })();
 
     const data: Record<string, any> = {};
     let keys: string[] = [];
@@ -75,6 +145,46 @@
           continue;
         }
 
+        // If this CoValue is an ImageDefinition, certain properties are ALWAYS FileStreams
+        // Check this BEFORE handling as a nested CoValue
+        if (isImageDefinition && (key === "original" || /^\d+x\d+$/.test(key))) {
+          // Properties like original, 512x512, 256x256 in ImageDefinition are FileStreams
+          if (value && typeof value === "object" && value.$jazz) {
+            try {
+              let fileStreamId = "unknown";
+              let mimeType = "unknown";
+              let size = 0;
+              try {
+                fileStreamId = value.$jazz?.id || "unknown";
+                if (typeof (value as any).getMimeType === "function") {
+                  mimeType = (value as any).getMimeType() || "unknown";
+                }
+                if (typeof (value as any).getSize === "function") {
+                  size = (value as any).getSize() || 0;
+                }
+              } catch (e) {
+                console.warn(`[Data Explorer] Error accessing FileStream metadata for ${key}:`, e);
+              }
+
+              data[key] = {
+                type: "FileStream",
+                id: fileStreamId,
+                isLoaded: value.$isLoaded || false,
+                mimeType,
+                size,
+                fileStream: value, // Store reference
+                coValue: value, // Store reference for navigation
+              };
+              console.log(
+                `[Data Explorer] Property ${key} extracted as FileStream (from ImageDefinition)`,
+              );
+              continue; // Skip to next property
+            } catch (e) {
+              console.warn(`[Data Explorer] Error extracting FileStream ${key}:`, e);
+            }
+          }
+        }
+
         // Handle different value types
         if (value && typeof value === "object" && "$jazz" in value) {
           // It's a nested CoValue
@@ -88,14 +198,16 @@
               const listArray = Array.from(value);
               items.push(
                 ...listArray.map((item, index) => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const itemAny = item as any;
                   if (item && typeof item === "object" && "$jazz" in item) {
                     return {
                       index,
                       type: "CoValue",
-                      id: item.$jazz?.id || "unknown",
-                      isLoaded: item.$isLoaded || false,
-                      preview: item.$isLoaded
-                        ? item["@label"] || item.$jazz?.id?.slice(0, 8) || "CoValue"
+                      id: itemAny.$jazz?.id || "unknown",
+                      isLoaded: itemAny.$isLoaded || false,
+                      preview: itemAny.$isLoaded
+                        ? itemAny["@label"] || itemAny.$jazz?.id?.slice(0, 8) || "CoValue"
                         : "Loading...",
                       // Store the full item reference for detailed display
                       item: item,
@@ -119,6 +231,7 @@
               isLoaded: value.$isLoaded || false,
               length: items.length,
               items: items,
+              coValue: value, // Store reference to the CoList CoValue for operations
             };
           } else {
             // CoMap or other CoValue - extract nested properties
@@ -144,20 +257,25 @@
                   );
                 }
 
-                // Special handling for avatar CoMap - ensure image property is checked even if optional
-                if (
-                  key === "avatar" &&
-                  value.$jazz &&
-                  typeof (value.$jazz as any).has === "function"
-                ) {
-                  // Check if image property exists (even if not in keys list yet)
-                  if ((value.$jazz as any).has("image")) {
-                    if (!nestedKeys.includes("image")) {
+                // Special handling for avatar CoMap - try to access image property directly
+                // Don't use has() as it causes Proxy errors for ImageDefinition
+                if (key === "avatar") {
+                  try {
+                    // Try to access image directly - if it exists, add to keys
+                    const imageValue = (value as any).image;
+                    if (
+                      imageValue !== undefined &&
+                      imageValue !== null &&
+                      !nestedKeys.includes("image")
+                    ) {
                       console.log(
                         `[Data Explorer] Adding 'image' to keys for avatar (exists but not in keys list)`,
                       );
                       nestedKeys.push("image");
                     }
+                  } catch (e) {
+                    // Ignore errors when accessing image property
+                    console.log(`[Data Explorer] Could not access image property for avatar:`, e);
                   }
                 }
 
@@ -188,18 +306,95 @@
                         nestedValue.$jazz?.id,
                       );
 
-                      // Check if it's an ImageDefinition
+                      // Check if the nested value (value) is an ImageDefinition
+                      // This is the parent of nestedKey properties like original, 512x512, etc.
+                      const parentIsImageDefinition = (() => {
+                        try {
+                          // Check if parent value (value) has ImageDefinition properties
+                          const hasOriginalSize = (value as any).originalSize !== undefined;
+                          const hasPlaceholder = (value as any).placeholderDataURL !== undefined;
+                          const hasOriginal = (value as any).original !== undefined;
+                          // ImageDefinition always has originalSize when loaded
+                          return hasOriginalSize || (hasPlaceholder && hasOriginal);
+                        } catch (e) {
+                          return false;
+                        }
+                      })();
+
+                      // Check if it's a FileStream (binary data) - check this FIRST before ImageDefinition
+                      // FileStreams have methods like getChunks, toBlob, getMimeType, getSize, isBinaryStreamEnded
+                      // IMPORTANT: Check even if not loaded, as FileStreams inside ImageDefinition might not be loaded yet
+                      let isFileStream = false;
+                      try {
+                        // If parent is ImageDefinition, certain properties are ALWAYS FileStreams
+                        if (parentIsImageDefinition) {
+                          // Properties inside ImageDefinition that are FileStreams:
+                          // - "original" (always a FileStream according to docs)
+                          // - Numeric patterns like "512x512", "256x256" (progressive loading variants - also FileStreams)
+                          if (nestedKey === "original" || /^\d+x\d+$/.test(nestedKey)) {
+                            isFileStream = true;
+                            console.log(
+                              `[Data Explorer] Property ${nestedKey} detected as FileStream (inside ImageDefinition - always FileStream per docs)`,
+                            );
+                          }
+                        }
+
+                        // Also check for FileStream-specific methods (check even if not loaded - methods might be on prototype)
+                        if (!isFileStream) {
+                          const hasGetChunks = typeof (nestedValue as any).getChunks === "function";
+                          const hasToBlob = typeof (nestedValue as any).toBlob === "function";
+                          const hasGetMimeType =
+                            typeof (nestedValue as any).getMimeType === "function";
+                          const hasGetSize = typeof (nestedValue as any).getSize === "function";
+                          const hasIsBinaryStreamEnded =
+                            typeof (nestedValue as any).isBinaryStreamEnded === "function";
+
+                          // FileStream has at least getChunks and toBlob
+                          isFileStream = hasGetChunks || hasToBlob || hasIsBinaryStreamEnded;
+                        }
+
+                        console.log(
+                          `[Data Explorer] Property ${nestedKey} isFileStream:`,
+                          isFileStream,
+                          `(parentIsImageDefinition: ${parentIsImageDefinition})`,
+                        );
+                      } catch (e) {
+                        console.warn(
+                          `[Data Explorer] Error checking FileStream for ${nestedKey}:`,
+                          e,
+                        );
+                      }
+
+                      // Check if it's an ImageDefinition (only if not a FileStream)
                       // ImageDefinition has properties like original, placeholderDataURL, originalSize
                       // We check by accessing properties directly (without using has() or 'in' operator) to avoid Proxy errors
+                      // IMPORTANT: Wrap each property access in try-catch to prevent Proxy errors
                       let isImageDefinition = false;
                       try {
-                        if (nestedValue.$isLoaded) {
+                        if (nestedValue.$isLoaded && !isFileStream) {
                           // Try to access ImageDefinition-specific properties directly
-                          // ImageDefinition always has these properties when loaded
-                          const hasOriginal = (nestedValue as any).original !== undefined;
-                          const hasPlaceholder =
-                            (nestedValue as any).placeholderDataURL !== undefined;
-                          const hasOriginalSize = (nestedValue as any).originalSize !== undefined;
+                          // Wrap each check in try-catch to avoid Proxy errors
+                          let hasOriginal = false;
+                          let hasPlaceholder = false;
+                          let hasOriginalSize = false;
+
+                          try {
+                            hasOriginal = (nestedValue as any).original !== undefined;
+                          } catch (e) {
+                            // Ignore Proxy errors when checking for original
+                          }
+
+                          try {
+                            hasPlaceholder = (nestedValue as any).placeholderDataURL !== undefined;
+                          } catch (e) {
+                            // Ignore Proxy errors when checking for placeholderDataURL
+                          }
+
+                          try {
+                            hasOriginalSize = (nestedValue as any).originalSize !== undefined;
+                          } catch (e) {
+                            // Ignore Proxy errors when checking for originalSize
+                          }
 
                           // ImageDefinition has at least original and originalSize
                           isImageDefinition = hasOriginal || hasOriginalSize;
@@ -217,19 +412,104 @@
                         );
                       }
 
-                      if (isImageDefinition) {
+                      if (isFileStream) {
+                        // Safely extract ID and metadata for FileStream
+                        let fileStreamId = "unknown";
+                        let mimeType = "unknown";
+                        let size = 0;
+                        try {
+                          fileStreamId = nestedValue.$jazz?.id || "unknown";
+                          if (typeof (nestedValue as any).getMimeType === "function") {
+                            mimeType = (nestedValue as any).getMimeType() || "unknown";
+                          }
+                          if (typeof (nestedValue as any).getSize === "function") {
+                            size = (nestedValue as any).getSize() || 0;
+                          }
+                        } catch (e) {
+                          console.warn(
+                            `[Data Explorer] Error accessing FileStream metadata for ${nestedKey}:`,
+                            e,
+                          );
+                        }
+
                         nestedProperties[nestedKey] = {
-                          type: "ImageDefinition",
-                          id: nestedValue.$jazz?.id || "unknown",
+                          type: "FileStream",
+                          id: fileStreamId,
                           isLoaded: nestedValue.$isLoaded || false,
-                          imageDefinition: nestedValue, // Store reference for Image component
+                          mimeType,
+                          size,
+                          fileStream: nestedValue, // Store reference
+                          coValue: nestedValue, // Store reference for navigation
                         };
+                      } else if (isImageDefinition) {
+                        // Safely extract ID without triggering Proxy errors
+                        // Try multiple methods to get the ID
+                        let imageId = "unknown";
+                        try {
+                          // Method 1: Try $jazz.id directly
+                          imageId = nestedValue.$jazz?.id || "unknown";
+                        } catch (e) {
+                          // Method 2: Try accessing id property directly
+                          try {
+                            imageId = (nestedValue as any).id || "unknown";
+                          } catch (e2) {
+                            // Method 3: Try to get ID from the CoValue reference itself
+                            try {
+                              if (nestedValue.$jazz) {
+                                imageId = nestedValue.$jazz.id || "unknown";
+                              }
+                            } catch (e3) {
+                              console.warn(
+                                `[Data Explorer] All ID extraction methods failed for ImageDefinition ${nestedKey}:`,
+                                e3,
+                              );
+                            }
+                          }
+                        }
+
+                        // If we still don't have a valid ID, try to extract it from the imageDefinition reference
+                        if (imageId === "unknown" && nestedValue.$isLoaded) {
+                          try {
+                            // Store the nestedValue itself - PropertyValue can extract ID from it
+                            nestedProperties[nestedKey] = {
+                              type: "ImageDefinition",
+                              id: imageId, // May be "unknown" but we'll try to use the reference
+                              isLoaded: nestedValue.$isLoaded || false,
+                              imageDefinition: nestedValue, // Store reference for Image component
+                              coValue: nestedValue, // Store reference for navigation
+                              // Store the raw value so PropertyValue can try to extract ID
+                              rawValue: nestedValue,
+                            };
+                          } catch (e) {
+                            console.warn(
+                              `[Data Explorer] Error storing ImageDefinition ${nestedKey}:`,
+                              e,
+                            );
+                            // Fallback: store as generic CoValue
+                            nestedProperties[nestedKey] = {
+                              type: "CoValue",
+                              id: "unknown",
+                              isLoaded: nestedValue.$isLoaded || false,
+                              value: "ImageDefinition (ID extraction failed)",
+                              coValue: nestedValue,
+                            };
+                          }
+                        } else {
+                          nestedProperties[nestedKey] = {
+                            type: "ImageDefinition",
+                            id: imageId,
+                            isLoaded: nestedValue.$isLoaded || false,
+                            imageDefinition: nestedValue, // Store reference for Image component
+                            coValue: nestedValue, // Store reference for navigation
+                          };
+                        }
                       } else {
                         nestedProperties[nestedKey] = {
                           type: "CoValue",
                           id: nestedValue.$jazz?.id || "unknown",
                           isLoaded: nestedValue.$isLoaded || false,
                           value: nestedValue.$isLoaded ? String(nestedValue) : "Loading...",
+                          coValue: nestedValue, // Store reference for navigation
                         };
                       }
                     } else {
@@ -315,110 +595,6 @@
     };
   }
 
-  // Function to handle CoValue click
-  function handleCoValueClick(coValue: any, coValueId: string, event?: Event) {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    console.log("CoValue clicked:", coValueId, "Current expanded:", expandedCoValues);
-
-    // Check if already expanded
-    const index = expandedCoValues.indexOf(coValueId);
-
-    if (index > -1) {
-      // Collapse - remove from array
-      expandedCoValues = expandedCoValues.filter((id) => id !== coValueId);
-      if (selectedCoValue?.$jazz?.id === coValueId) {
-        selectedCoValue = null;
-      }
-      console.log("Collapsing:", coValueId);
-    } else {
-      // Expand - add to array
-      expandedCoValues = [...expandedCoValues, coValueId];
-      selectedCoValue = coValue;
-      console.log("Expanding:", coValueId);
-    }
-
-    console.log("New expanded array:", expandedCoValues);
-  }
-
-  // Get profile data - extract all available properties
-  const profileData = $derived(() => {
-    if (!me.$isLoaded || !me.profile?.$isLoaded) {
-      return null;
-    }
-
-    const profile = me.profile;
-    const data: Record<string, any> = {};
-
-    // Get all properties from the profile object
-    // Profile is a CoMap, which behaves like a regular object
-    // Try to get keys using Object.keys() (CoMaps are enumerable)
-    let keys: string[] = [];
-    try {
-      // Try using Object.keys first (most reliable for CoMaps)
-      keys = Object.keys(profile).filter((key) => key !== "$jazz" && key !== "$isLoaded");
-
-      // If that doesn't work or returns empty, try $jazz.keys() if available
-      if (keys.length === 0 && profile.$jazz && typeof profile.$jazz.keys === "function") {
-        keys = Array.from(profile.$jazz.keys());
-      }
-    } catch (e) {
-      console.warn("Error getting profile keys:", e);
-    }
-
-    // Iterate over all keys and extract values
-    for (const key of keys) {
-      try {
-        const value = profile[key];
-
-        // Skip internal Jazz properties
-        if (key.startsWith("$") || key === "constructor") {
-          continue;
-        }
-
-        // Handle different value types
-        if (value && typeof value === "object" && "$jazz" in value) {
-          // It's a CoValue - store its ID and type info
-          data[key] = {
-            type: "CoValue",
-            id: value.$jazz?.id || "unknown",
-            isLoaded: value.$isLoaded || false,
-            // If it's loaded, try to get string representation
-            value: value.$isLoaded ? String(value) : "Loading...",
-          };
-        } else if (value !== undefined && value !== null) {
-          data[key] = value;
-        }
-      } catch (e) {
-        data[key] = `[Error accessing: ${String(e)}]`;
-      }
-    }
-
-    // Also include Jazz metadata
-    return {
-      properties: data,
-      jazzMetadata: {
-        id: profile.$jazz?.id,
-        owner: profile.$jazz?.owner,
-        // Get owner info if it's a Group
-        ownerInfo:
-          profile.$jazz?.owner &&
-          typeof profile.$jazz.owner === "object" &&
-          "$jazz" in profile.$jazz.owner
-            ? {
-                type: "Group",
-                id: profile.$jazz.owner.$jazz?.id || "unknown",
-              }
-            : null,
-        // Get all keys that exist
-        keys: keys,
-      },
-    };
-  });
-
   // Get root data - extract all available CoValues
   const rootData = $derived(() => {
     if (!me.$isLoaded || !me.root?.$isLoaded) {
@@ -435,8 +611,10 @@
       keys = Object.keys(root).filter((key) => key !== "$jazz" && key !== "$isLoaded");
 
       // If that doesn't work or returns empty, try $jazz.keys() if available
-      if (keys.length === 0 && root.$jazz && typeof root.$jazz.keys === "function") {
-        keys = Array.from(root.$jazz.keys());
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (keys.length === 0 && root.$jazz && typeof (root.$jazz as any).keys === "function") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        keys = Array.from((root.$jazz as any).keys());
       }
     } catch (e) {
       console.warn("Error getting root keys:", e);
@@ -445,7 +623,8 @@
     // Iterate over all keys and extract values
     for (const key of keys) {
       try {
-        const value = root[key];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const value = (root as any)[key];
 
         // Skip internal Jazz properties
         if (key.startsWith("$") || key === "constructor") {
@@ -465,15 +644,17 @@
               const listArray = Array.from(value);
               items.push(
                 ...listArray.map((item, index) => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const itemAny = item as any;
                   if (item && typeof item === "object" && "$jazz" in item) {
                     return {
                       index,
                       type: "CoValue",
-                      id: item.$jazz?.id || "unknown",
-                      isLoaded: item.$isLoaded || false,
+                      id: itemAny.$jazz?.id || "unknown",
+                      isLoaded: itemAny.$isLoaded || false,
                       // Try to get a string representation
-                      preview: item.$isLoaded
-                        ? item["@label"] || item.$jazz?.id?.slice(0, 8) || "CoValue"
+                      preview: itemAny.$isLoaded
+                        ? itemAny["@label"] || itemAny.$jazz?.id?.slice(0, 8) || "CoValue"
                         : "Loading...",
                       // Store the full item reference for detailed display
                       item: item,
@@ -522,20 +703,25 @@
                   );
                 }
 
-                // Special handling for avatar CoMap - ensure image property is checked even if optional
-                if (
-                  key === "avatar" &&
-                  value.$jazz &&
-                  typeof (value.$jazz as any).has === "function"
-                ) {
-                  // Check if image property exists (even if not in keys list yet)
-                  if ((value.$jazz as any).has("image")) {
-                    if (!nestedKeys.includes("image")) {
+                // Special handling for avatar CoMap - try to access image property directly
+                // Don't use has() as it causes Proxy errors for ImageDefinition
+                if (key === "avatar") {
+                  try {
+                    // Try to access image directly - if it exists, add to keys
+                    const imageValue = (value as any).image;
+                    if (
+                      imageValue !== undefined &&
+                      imageValue !== null &&
+                      !nestedKeys.includes("image")
+                    ) {
                       console.log(
                         `[Data Explorer] Adding 'image' to keys for avatar (exists but not in keys list)`,
                       );
                       nestedKeys.push("image");
                     }
+                  } catch (e) {
+                    // Ignore errors when accessing image property
+                    console.log(`[Data Explorer] Could not access image property for avatar:`, e);
                   }
                 }
 
@@ -566,18 +752,95 @@
                         nestedValue.$jazz?.id,
                       );
 
-                      // Check if it's an ImageDefinition
+                      // Check if the nested value (value) is an ImageDefinition
+                      // This is the parent of nestedKey properties like original, 512x512, etc.
+                      const parentIsImageDefinition = (() => {
+                        try {
+                          // Check if parent value (value) has ImageDefinition properties
+                          const hasOriginalSize = (value as any).originalSize !== undefined;
+                          const hasPlaceholder = (value as any).placeholderDataURL !== undefined;
+                          const hasOriginal = (value as any).original !== undefined;
+                          // ImageDefinition always has originalSize when loaded
+                          return hasOriginalSize || (hasPlaceholder && hasOriginal);
+                        } catch (e) {
+                          return false;
+                        }
+                      })();
+
+                      // Check if it's a FileStream (binary data) - check this FIRST before ImageDefinition
+                      // FileStreams have methods like getChunks, toBlob, getMimeType, getSize, isBinaryStreamEnded
+                      // IMPORTANT: Check even if not loaded, as FileStreams inside ImageDefinition might not be loaded yet
+                      let isFileStream = false;
+                      try {
+                        // If parent is ImageDefinition, certain properties are ALWAYS FileStreams
+                        if (parentIsImageDefinition) {
+                          // Properties inside ImageDefinition that are FileStreams:
+                          // - "original" (always a FileStream according to docs)
+                          // - Numeric patterns like "512x512", "256x256" (progressive loading variants - also FileStreams)
+                          if (nestedKey === "original" || /^\d+x\d+$/.test(nestedKey)) {
+                            isFileStream = true;
+                            console.log(
+                              `[Data Explorer] Property ${nestedKey} detected as FileStream (inside ImageDefinition - always FileStream per docs)`,
+                            );
+                          }
+                        }
+
+                        // Also check for FileStream-specific methods (check even if not loaded - methods might be on prototype)
+                        if (!isFileStream) {
+                          const hasGetChunks = typeof (nestedValue as any).getChunks === "function";
+                          const hasToBlob = typeof (nestedValue as any).toBlob === "function";
+                          const hasGetMimeType =
+                            typeof (nestedValue as any).getMimeType === "function";
+                          const hasGetSize = typeof (nestedValue as any).getSize === "function";
+                          const hasIsBinaryStreamEnded =
+                            typeof (nestedValue as any).isBinaryStreamEnded === "function";
+
+                          // FileStream has at least getChunks and toBlob
+                          isFileStream = hasGetChunks || hasToBlob || hasIsBinaryStreamEnded;
+                        }
+
+                        console.log(
+                          `[Data Explorer] Property ${nestedKey} isFileStream:`,
+                          isFileStream,
+                          `(parentIsImageDefinition: ${parentIsImageDefinition})`,
+                        );
+                      } catch (e) {
+                        console.warn(
+                          `[Data Explorer] Error checking FileStream for ${nestedKey}:`,
+                          e,
+                        );
+                      }
+
+                      // Check if it's an ImageDefinition (only if not a FileStream)
                       // ImageDefinition has properties like original, placeholderDataURL, originalSize
                       // We check by accessing properties directly (without using has() or 'in' operator) to avoid Proxy errors
+                      // IMPORTANT: Wrap each property access in try-catch to prevent Proxy errors
                       let isImageDefinition = false;
                       try {
-                        if (nestedValue.$isLoaded) {
+                        if (nestedValue.$isLoaded && !isFileStream) {
                           // Try to access ImageDefinition-specific properties directly
-                          // ImageDefinition always has these properties when loaded
-                          const hasOriginal = (nestedValue as any).original !== undefined;
-                          const hasPlaceholder =
-                            (nestedValue as any).placeholderDataURL !== undefined;
-                          const hasOriginalSize = (nestedValue as any).originalSize !== undefined;
+                          // Wrap each check in try-catch to avoid Proxy errors
+                          let hasOriginal = false;
+                          let hasPlaceholder = false;
+                          let hasOriginalSize = false;
+
+                          try {
+                            hasOriginal = (nestedValue as any).original !== undefined;
+                          } catch (e) {
+                            // Ignore Proxy errors when checking for original
+                          }
+
+                          try {
+                            hasPlaceholder = (nestedValue as any).placeholderDataURL !== undefined;
+                          } catch (e) {
+                            // Ignore Proxy errors when checking for placeholderDataURL
+                          }
+
+                          try {
+                            hasOriginalSize = (nestedValue as any).originalSize !== undefined;
+                          } catch (e) {
+                            // Ignore Proxy errors when checking for originalSize
+                          }
 
                           // ImageDefinition has at least original and originalSize
                           isImageDefinition = hasOriginal || hasOriginalSize;
@@ -595,19 +858,104 @@
                         );
                       }
 
-                      if (isImageDefinition) {
+                      if (isFileStream) {
+                        // Safely extract ID and metadata for FileStream
+                        let fileStreamId = "unknown";
+                        let mimeType = "unknown";
+                        let size = 0;
+                        try {
+                          fileStreamId = nestedValue.$jazz?.id || "unknown";
+                          if (typeof (nestedValue as any).getMimeType === "function") {
+                            mimeType = (nestedValue as any).getMimeType() || "unknown";
+                          }
+                          if (typeof (nestedValue as any).getSize === "function") {
+                            size = (nestedValue as any).getSize() || 0;
+                          }
+                        } catch (e) {
+                          console.warn(
+                            `[Data Explorer] Error accessing FileStream metadata for ${nestedKey}:`,
+                            e,
+                          );
+                        }
+
                         nestedProperties[nestedKey] = {
-                          type: "ImageDefinition",
-                          id: nestedValue.$jazz?.id || "unknown",
+                          type: "FileStream",
+                          id: fileStreamId,
                           isLoaded: nestedValue.$isLoaded || false,
-                          imageDefinition: nestedValue, // Store reference for Image component
+                          mimeType,
+                          size,
+                          fileStream: nestedValue, // Store reference
+                          coValue: nestedValue, // Store reference for navigation
                         };
+                      } else if (isImageDefinition) {
+                        // Safely extract ID without triggering Proxy errors
+                        // Try multiple methods to get the ID
+                        let imageId = "unknown";
+                        try {
+                          // Method 1: Try $jazz.id directly
+                          imageId = nestedValue.$jazz?.id || "unknown";
+                        } catch (e) {
+                          // Method 2: Try accessing id property directly
+                          try {
+                            imageId = (nestedValue as any).id || "unknown";
+                          } catch (e2) {
+                            // Method 3: Try to get ID from the CoValue reference itself
+                            try {
+                              if (nestedValue.$jazz) {
+                                imageId = nestedValue.$jazz.id || "unknown";
+                              }
+                            } catch (e3) {
+                              console.warn(
+                                `[Data Explorer] All ID extraction methods failed for ImageDefinition ${nestedKey}:`,
+                                e3,
+                              );
+                            }
+                          }
+                        }
+
+                        // If we still don't have a valid ID, try to extract it from the imageDefinition reference
+                        if (imageId === "unknown" && nestedValue.$isLoaded) {
+                          try {
+                            // Store the nestedValue itself - PropertyValue can extract ID from it
+                            nestedProperties[nestedKey] = {
+                              type: "ImageDefinition",
+                              id: imageId, // May be "unknown" but we'll try to use the reference
+                              isLoaded: nestedValue.$isLoaded || false,
+                              imageDefinition: nestedValue, // Store reference for Image component
+                              coValue: nestedValue, // Store reference for navigation
+                              // Store the raw value so PropertyValue can try to extract ID
+                              rawValue: nestedValue,
+                            };
+                          } catch (e) {
+                            console.warn(
+                              `[Data Explorer] Error storing ImageDefinition ${nestedKey}:`,
+                              e,
+                            );
+                            // Fallback: store as generic CoValue
+                            nestedProperties[nestedKey] = {
+                              type: "CoValue",
+                              id: "unknown",
+                              isLoaded: nestedValue.$isLoaded || false,
+                              value: "ImageDefinition (ID extraction failed)",
+                              coValue: nestedValue,
+                            };
+                          }
+                        } else {
+                          nestedProperties[nestedKey] = {
+                            type: "ImageDefinition",
+                            id: imageId,
+                            isLoaded: nestedValue.$isLoaded || false,
+                            imageDefinition: nestedValue, // Store reference for Image component
+                            coValue: nestedValue, // Store reference for navigation
+                          };
+                        }
                       } else {
                         nestedProperties[nestedKey] = {
                           type: "CoValue",
                           id: nestedValue.$jazz?.id || "unknown",
                           isLoaded: nestedValue.$isLoaded || false,
                           value: nestedValue.$isLoaded ? String(nestedValue) : "Loading...",
+                          coValue: nestedValue, // Store reference for navigation
                         };
                       }
                     } else {
@@ -688,7 +1036,7 @@
   });
 </script>
 
-<div class="w-full space-y-6 pb-20">
+<div class="w-full pb-20">
   {#if isBetterAuthPending}
     <div class="text-center pt-8 pb-4">
       <p class="text-slate-500">Loading...</p>
@@ -703,674 +1051,124 @@
       <p class="text-slate-500">Loading your account...</p>
     </div>
   {:else if me.$isLoaded}
-    <!-- Header -->
-    <header class="text-center pt-8 pb-4">
-      <h1
-        class="text-4xl font-bold bg-clip-text text-transparent bg-linear-to-br from-slate-700 to-slate-800 tracking-tight"
-      >
-        Data Explorer
-      </h1>
-      <p class="mt-2 text-sm text-slate-500">Explore your Jazz account profile and root data</p>
-    </header>
-
-    <!-- Profile Section -->
-    <section>
-      <div class="flex items-center justify-between mb-4 px-2">
-        <h2 class="text-lg font-semibold text-slate-700 flex items-center gap-2">
-          <svg class="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-            />
-          </svg>
-          Profile Data
-        </h2>
-      </div>
-
-      {#if profileData()}
-        <div
-          class="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-slate-100/90 border border-white shadow-[0_0_8px_rgba(0,0,0,0.03)] p-6"
-        >
-          <!-- Glossy gradient overlay -->
-          <div
-            class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
-          ></div>
-          <div class="relative">
-            <!-- Profile Properties -->
-            <div class="mb-6">
-              <h3 class="text-sm font-bold text-slate-600 mb-4 uppercase tracking-wider">
-                Properties
-              </h3>
-              {#if Object.keys(profileData().properties).length > 0}
-                <div class="space-y-3">
-                  {#each Object.entries(profileData().properties) as [key, value]}
-                    <div
-                      class="bg-slate-200/50 rounded-2xl p-4 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm last:mb-0"
-                    >
-                      <div class="flex items-start gap-3">
-                        <span
-                          class="text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[120px] shrink-0"
-                        >
-                          {key}:
-                        </span>
-                        <div class="flex-1 min-w-0">
-                          {#if typeof value === "object" && value !== null && "type" in value}
-                            <!-- CoValue type -->
-                            <div class="space-y-1">
-                              <div class="text-sm text-slate-700">
-                                <span class="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded"
-                                  >{value.type}</span
-                                >
-                                {#if value.id}
-                                  <span class="ml-2 font-mono text-xs text-slate-500"
-                                    >ID: {value.id.slice(0, 8)}...</span
-                                  >
-                                {/if}
-                              </div>
-                              {#if value.value !== undefined}
-                                <div class="text-sm text-slate-600 italic break-all break-words">
-                                  {value.value}
-                                </div>
-                              {/if}
-                              {#if value.isLoaded !== undefined}
-                                <div class="text-xs text-slate-400">
-                                  {value.isLoaded ? "✓ Loaded" : "⏳ Loading..."}
-                                </div>
-                              {/if}
-                            </div>
-                          {:else if typeof value === "string"}
-                            <span class="text-sm text-slate-700 break-all break-words"
-                              >{value || "(empty)"}</span
-                            >
-                          {:else if typeof value === "number" || typeof value === "boolean"}
-                            <span class="text-sm font-mono text-slate-700">{String(value)}</span>
-                          {:else if value === null}
-                            <span class="text-sm text-slate-400 italic">null</span>
-                          {:else if value === undefined}
-                            <span class="text-sm text-slate-400 italic">undefined</span>
-                          {:else}
-                            <pre
-                              class="text-xs text-slate-600 bg-slate-100/50 p-2 rounded overflow-x-auto">{JSON.stringify(
-                                value,
-                                null,
-                                2,
-                              )}</pre>
-                          {/if}
-                        </div>
-                      </div>
-                    </div>
-                  {/each}
-                </div>
-              {:else}
-                <p class="text-sm text-slate-500 italic">No properties found</p>
+    <!-- Full Width Container Wrapper -->
+    <div class="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+      <!-- Main Layout: Content + Right Aside -->
+      <div class="flex gap-6 items-start pl-3 pr-0">
+        <!-- Main Content -->
+        <div class="flex-1 min-w-0 space-y-6">
+          <!-- AppRoot CoValues Section -->
+          <section>
+            <div class="flex items-center justify-between mb-4 px-2">
+              <h2 class="text-lg font-semibold text-slate-700 flex items-center gap-2">
+                {#if currentContext.type === "root"}
+                  <!-- Show AppRoot with folder icon -->
+                  <svg
+                    class="w-5 h-5 text-slate-700"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                    />
+                  </svg>
+                  <span>AppRoot</span>
+                {:else if currentContext.type === "colist"}
+                  <!-- Show CoList name with list icon -->
+                  <svg
+                    class="w-5 h-5 text-slate-700"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                    />
+                  </svg>
+                  <span>{currentContext.label}</span>
+                {:else if currentContext.type === "covalue"}
+                  <!-- Show CoValue name with tag icon -->
+                  <svg
+                    class="w-5 h-5 text-slate-700"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                    />
+                  </svg>
+                  <span>{currentContext.label}</span>
+                {/if}
+              </h2>
+              {#if navigationStack.length > 1}
+                <button
+                  type="button"
+                  onclick={navigateBack}
+                  class="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+                >
+                  ← Back
+                </button>
               {/if}
             </div>
 
-            <!-- Jazz Metadata -->
-            {#if me.profile}
-              <JazzMetadata coValue={me.profile} showKeys={true} />
-            {/if}
-          </div>
-        </div>
-      {:else if me.$isLoaded && me.profile && !me.profile.$isLoaded}
-        <div
-          class="p-8 rounded-3xl border border-dashed border-white bg-slate-50/40 text-center backdrop-blur-sm shadow-[0_0_6px_rgba(0,0,0,0.03)]"
-        >
-          <p class="text-sm text-slate-500">Loading profile...</p>
-        </div>
-      {:else}
-        <div
-          class="p-8 rounded-3xl border border-dashed border-white bg-slate-50/40 text-center backdrop-blur-sm shadow-[0_0_6px_rgba(0,0,0,0.03)]"
-        >
-          <p class="text-sm text-slate-500">Profile not available</p>
-        </div>
-      {/if}
-    </section>
-
-    <!-- AppRoot CoValues Section -->
-    <section>
-      <div class="flex items-center justify-between mb-4 px-2">
-        <h2 class="text-lg font-semibold text-slate-700 flex items-center gap-2">
-          <svg class="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-            />
-          </svg>
-          AppRoot
-        </h2>
-      </div>
-
-      {#if rootData()}
-        <div
-          class="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-slate-100/90 border border-white shadow-[0_0_8px_rgba(0,0,0,0.03)] p-6"
-        >
-          <!-- Glossy gradient overlay -->
-          <div
-            class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
-          ></div>
-          <div class="relative">
-            <!-- AppRoot Properties -->
-            <div class="mb-6">
-              <h3 class="text-sm font-bold text-slate-600 mb-4 uppercase tracking-wider">
-                CoValues
-              </h3>
-              {#if Object.keys(rootData().properties).length > 0}
-                <div class="space-y-4">
-                  {#each Object.entries(rootData().properties) as [key, value]}
-                    <div
-                      class="bg-slate-200/50 rounded-2xl p-4 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
-                    >
-                      <div class="flex items-start gap-3 mb-3">
-                        <span
-                          class="text-sm font-semibold text-slate-700 uppercase tracking-wider min-w-[120px] shrink-0"
-                        >
-                          {key}:
-                        </span>
-                        <div class="flex-1 min-w-0">
-                          {#if typeof value === "object" && value !== null && "type" in value}
-                            {#if value.type === "CoList"}
-                              <!-- CoList display -->
-                              <div class="space-y-2">
-                                <div class="flex items-center gap-2">
-                                  <span
-                                    class="font-mono text-xs bg-blue-100 px-2 py-0.5 rounded text-blue-700"
-                                  >
-                                    CoList
-                                  </span>
-                                  <span class="text-xs text-slate-500">
-                                    ({value.length}
-                                    {value.length === 1 ? "item" : "items"})
-                                  </span>
-                                  {#if value.id}
-                                    <span class="ml-2 font-mono text-xs text-slate-400">
-                                      ID: {value.id.slice(0, 8)}...
-                                    </span>
-                                  {/if}
-                                  {#if value.isLoaded !== undefined}
-                                    <span class="text-xs text-slate-400">
-                                      {value.isLoaded ? "✓ Loaded" : "⏳ Loading..."}
-                                    </span>
-                                  {/if}
-                                </div>
-                                {#if value.items && value.items.length > 0}
-                                  <div class="space-y-4 mt-4">
-                                    {#each value.items as item}
-                                      {#if item.type === "CoValue" && item.item}
-                                        {@const coValueId = item.id}
-                                        {@const isExpanded = isCoValueExpanded(coValueId)}
-                                        {@const coValueProps = item.item.$isLoaded
-                                          ? extractCoValueProperties(item.item)
-                                          : null}
-                                        {@const displayLabel =
-                                          item.item.$isLoaded && item.item.$jazz.has("@label")
-                                            ? item.item["@label"]
-                                            : item.item.$isLoaded
-                                              ? item.item.$jazz.id
-                                              : item.preview}
-                                        {@const schema =
-                                          item.item.$isLoaded && item.item.$jazz.has("@schema")
-                                            ? item.item["@schema"]
-                                            : "CoValue"}
-                                        <div
-                                          class="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-slate-100/90 border border-white shadow-[0_0_8px_rgba(0,0,0,0.03)] p-5"
-                                        >
-                                          <!-- Glossy gradient overlay -->
-                                          <div
-                                            class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
-                                          ></div>
-
-                                          <div class="relative space-y-4">
-                                            <!-- Header -->
-                                            <div class="flex justify-between items-start gap-4">
-                                              <div class="min-w-0 flex-1">
-                                                <div class="flex items-baseline gap-2 flex-wrap">
-                                                  <h3
-                                                    class="text-base font-bold text-slate-700 leading-tight truncate"
-                                                  >
-                                                    {displayLabel}
-                                                  </h3>
-                                                  <span
-                                                    class="px-2 py-0.5 rounded-full bg-slate-50/60 border border-white text-[10px] font-bold uppercase tracking-wider text-slate-500"
-                                                  >
-                                                    {schema}
-                                                  </span>
-                                                </div>
-                                                <div
-                                                  class="text-[10px] font-mono text-slate-400 mt-1 truncate opacity-70"
-                                                >
-                                                  ID: {item.id.slice(0, 8)}...
-                                                  {#if item.isLoaded !== undefined}
-                                                    <span class="ml-2"
-                                                      >{item.isLoaded
-                                                        ? "✓ Loaded"
-                                                        : "⏳ Loading..."}</span
-                                                    >
-                                                  {/if}
-                                                </div>
-                                              </div>
-                                              <button
-                                                type="button"
-                                                class="shrink-0 p-1.5 rounded-lg hover:bg-slate-200/50 transition-colors"
-                                                onclick={(e) =>
-                                                  handleCoValueClick(item.item, coValueId, e)}
-                                                title={isExpanded ? "Collapse" : "Expand"}
-                                                aria-label={isExpanded ? "Collapse" : "Expand"}
-                                              >
-                                                <svg
-                                                  class="w-4 h-4 text-slate-400 transition-transform {isExpanded
-                                                    ? 'rotate-90'
-                                                    : ''}"
-                                                  fill="none"
-                                                  stroke="currentColor"
-                                                  viewBox="0 0 24 24"
-                                                >
-                                                  <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    stroke-width="2"
-                                                    d="M9 5l7 7-7 7"
-                                                  />
-                                                </svg>
-                                              </button>
-                                            </div>
-
-                                            {#if isExpanded && coValueProps}
-                                              <!-- Properties Section -->
-                                              <div
-                                                class="bg-slate-200/50 rounded-2xl p-4 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm space-y-4"
-                                              >
-                                                <!-- Properties -->
-                                                {#if Object.keys(coValueProps.properties).length > 0}
-                                                  <div class="space-y-3 text-sm">
-                                                    {#each Object.entries(coValueProps.properties) as [propKey, propValue]}
-                                                      <div
-                                                        class="flex justify-between items-center pt-2 border-t border-white/50 first:pt-0 first:border-t-0"
-                                                      >
-                                                        <span
-                                                          class="text-xs font-medium text-slate-500 uppercase tracking-wide"
-                                                        >
-                                                          {propKey}
-                                                        </span>
-                                                        <div class="flex-1 text-right ml-4 min-w-0">
-                                                          {#if typeof propValue === "object" && propValue !== null && "type" in propValue}
-                                                            {#if propValue.type === "CoList"}
-                                                              <span
-                                                                class="text-xs bg-blue-100 px-1.5 py-0.5 rounded text-blue-700"
-                                                                >CoList</span
-                                                              >
-                                                              <span class="ml-2 text-slate-500"
-                                                                >({propValue.length} items)</span
-                                                              >
-                                                            {:else if propValue.type === "CoMap"}
-                                                              <div class="space-y-2 mt-1">
-                                                                <div
-                                                                  class="flex items-center gap-2"
-                                                                >
-                                                                  <span
-                                                                    class="text-xs bg-purple-100 px-1.5 py-0.5 rounded text-purple-700"
-                                                                    >CoMap</span
-                                                                  >
-                                                                  {#if propValue.id}
-                                                                    <span
-                                                                      class="font-mono text-xs text-slate-400"
-                                                                      >({propValue.id.slice(
-                                                                        0,
-                                                                        8,
-                                                                      )}...)</span
-                                                                    >
-                                                                  {/if}
-                                                                </div>
-                                                                {#if propValue.properties && Object.keys(propValue.properties).length > 0}
-                                                                  <div
-                                                                    class="ml-3 mt-1 space-y-1 border-l-2 border-purple-200 pl-2"
-                                                                  >
-                                                                    {#each Object.entries(propValue.properties) as [nestedKey, nestedValue]}
-                                                                      <div class="text-xs">
-                                                                        <div
-                                                                          class="flex items-center gap-2"
-                                                                        >
-                                                                          <span
-                                                                            class="font-semibold text-slate-600"
-                                                                            >{nestedKey}:</span
-                                                                          >
-                                                                          <div
-                                                                            class="flex-1 flex items-center gap-2"
-                                                                          >
-                                                                            {#if typeof nestedValue === "object" && nestedValue !== null && "type" in nestedValue}
-                                                                              {#if nestedValue.type === "ImageDefinition"}
-                                                                                {#if nestedValue.isLoaded && nestedValue.imageDefinition}
-                                                                                  <div
-                                                                                    class="flex items-center gap-2"
-                                                                                  >
-                                                                                    <div
-                                                                                      class="w-6 h-6 rounded overflow-hidden border border-slate-300 flex-shrink-0"
-                                                                                    >
-                                                                                      <Image
-                                                                                        imageId={nestedValue
-                                                                                          .imageDefinition
-                                                                                          .$jazz.id}
-                                                                                        width={24}
-                                                                                        height={24}
-                                                                                        alt={nestedKey}
-                                                                                        class="object-cover w-full h-full"
-                                                                                        loading="lazy"
-                                                                                      />
-                                                                                    </div>
-                                                                                    <span
-                                                                                      class="text-xs bg-green-100 px-1.5 py-0.5 rounded text-green-700"
-                                                                                      >ImageDefinition</span
-                                                                                    >
-                                                                                    <span
-                                                                                      class="ml-1 font-mono text-xs text-slate-400"
-                                                                                      >({nestedValue.id?.slice(
-                                                                                        0,
-                                                                                        8,
-                                                                                      )}...)</span
-                                                                                    >
-                                                                                  </div>
-                                                                                {:else}
-                                                                                  <span
-                                                                                    class="text-xs bg-green-100 px-1.5 py-0.5 rounded text-green-700"
-                                                                                    >ImageDefinition</span
-                                                                                  >
-                                                                                  <span
-                                                                                    class="ml-1 text-xs text-slate-400"
-                                                                                    >(Loading...)</span
-                                                                                  >
-                                                                                {/if}
-                                                                              {:else if nestedValue.type === "CoValue"}
-                                                                                <span
-                                                                                  class="text-xs bg-purple-50 px-1 py-0.5 rounded text-purple-600"
-                                                                                  >CoValue</span
-                                                                                >
-                                                                                <span
-                                                                                  class="ml-1 font-mono text-xs text-slate-400"
-                                                                                  >({nestedValue.id?.slice(
-                                                                                    0,
-                                                                                    8,
-                                                                                  )}...)</span
-                                                                                >
-                                                                              {:else}
-                                                                                <span
-                                                                                  class="text-slate-700 break-all break-words"
-                                                                                  >{JSON.stringify(
-                                                                                    nestedValue,
-                                                                                  )}</span
-                                                                                >
-                                                                              {/if}
-                                                                            {:else if typeof nestedValue === "string"}
-                                                                              <span
-                                                                                class="text-slate-700 break-all break-words"
-                                                                                >{nestedValue ||
-                                                                                  "(empty)"}</span
-                                                                              >
-                                                                            {:else}
-                                                                              <span
-                                                                                class="text-slate-700 break-all break-words"
-                                                                                >{String(
-                                                                                  nestedValue,
-                                                                                )}</span
-                                                                              >
-                                                                            {/if}
-                                                                          </div>
-                                                                        </div>
-                                                                      </div>
-                                                                    {/each}
-                                                                  </div>
-                                                                {:else}
-                                                                  <span
-                                                                    class="ml-2 text-xs text-slate-400 italic"
-                                                                    >(empty)</span
-                                                                  >
-                                                                {/if}
-                                                                {#if propValue.coValue}
-                                                                  <div class="ml-3 mt-2">
-                                                                    <JazzMetadata
-                                                                      coValue={propValue.coValue}
-                                                                      showKeys={false}
-                                                                    />
-                                                                  </div>
-                                                                {/if}
-                                                              </div>
-                                                            {:else if propValue.type === "CoValue"}
-                                                              <span
-                                                                class="text-xs bg-purple-100 px-1.5 py-0.5 rounded text-purple-700"
-                                                                >CoValue</span
-                                                              >
-                                                              <span
-                                                                class="ml-2 font-mono text-xs text-slate-400"
-                                                                >({propValue.id.slice(
-                                                                  0,
-                                                                  8,
-                                                                )}...)</span
-                                                              >
-                                                            {/if}
-                                                          {:else if typeof propValue === "string"}
-                                                            <span
-                                                              class="text-slate-700 break-all break-words"
-                                                              >{propValue}</span
-                                                            >
-                                                          {:else if typeof propValue === "number" || typeof propValue === "boolean"}
-                                                            <span
-                                                              class="font-mono text-slate-700 break-all break-words"
-                                                              >{String(propValue)}</span
-                                                            >
-                                                          {:else}
-                                                            <span
-                                                              class="text-slate-500 break-all break-words"
-                                                              >{JSON.stringify(propValue)}</span
-                                                            >
-                                                          {/if}
-                                                        </div>
-                                                      </div>
-                                                    {/each}
-                                                  </div>
-                                                {/if}
-                                              </div>
-                                            {/if}
-                                          </div>
-                                        </div>
-
-                                        <!-- Metadata card shown separately below -->
-                                        <!-- Metadata card shown separately below -->
-                                        <div class="mt-4">
-                                          <JazzMetadata coValue={item.item} showKeys={true} />
-                                        </div>
-                                      {:else}
-                                        <div class="text-sm">
-                                          <div class="flex items-center gap-2">
-                                            <span
-                                              class="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600"
-                                            >
-                                              [{item.index}]
-                                            </span>
-                                            <span class="text-slate-700">
-                                              {typeof item.value === "string"
-                                                ? item.value
-                                                : JSON.stringify(item.value)}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      {/if}
-                                    {/each}
-                                  </div>
-                                {:else}
-                                  <div class="ml-4 text-sm text-slate-400 italic">Empty list</div>
-                                {/if}
-                              </div>
-                            {:else if value.type === "CoMap"}
-                              <!-- CoMap display with nested properties -->
-                              <div class="space-y-2">
-                                <div class="flex items-center gap-2">
-                                  <span
-                                    class="font-mono text-xs bg-purple-100 px-2 py-0.5 rounded text-purple-700"
-                                  >
-                                    CoMap
-                                  </span>
-                                  {#if value.id}
-                                    <span class="ml-2 font-mono text-xs text-slate-500"
-                                      >ID: {value.id.slice(0, 8)}...</span
-                                    >
-                                  {/if}
-                                  {#if value.isLoaded !== undefined}
-                                    <span class="text-xs text-slate-400">
-                                      {value.isLoaded ? "✓ Loaded" : "⏳ Loading..."}
-                                    </span>
-                                  {/if}
-                                </div>
-                                {#if value.properties && Object.keys(value.properties).length > 0}
-                                  <div class="ml-4 space-y-1 border-l-2 border-purple-200 pl-3">
-                                    {#each Object.entries(value.properties) as [propKey, propValue]}
-                                      <div class="text-xs">
-                                        <div class="flex items-center gap-2">
-                                          <span class="font-semibold text-slate-600"
-                                            >{propKey}:</span
-                                          >
-                                          <div class="flex-1 flex items-center gap-2">
-                                            {#if typeof propValue === "object" && propValue !== null && "type" in propValue}
-                                              {#if propValue.type === "ImageDefinition"}
-                                                {#if propValue.isLoaded && propValue.imageDefinition}
-                                                  <div class="flex items-center gap-2">
-                                                    <div
-                                                      class="w-6 h-6 rounded overflow-hidden border border-slate-300 flex-shrink-0"
-                                                    >
-                                                      <Image
-                                                        imageId={propValue.imageDefinition.$jazz.id}
-                                                        width={24}
-                                                        height={24}
-                                                        alt={propKey}
-                                                        class="object-cover w-full h-full"
-                                                        loading="lazy"
-                                                      />
-                                                    </div>
-                                                    <span
-                                                      class="text-xs bg-green-100 px-1.5 py-0.5 rounded text-green-700"
-                                                      >ImageDefinition</span
-                                                    >
-                                                    <span
-                                                      class="ml-1 font-mono text-xs text-slate-400"
-                                                      >({propValue.id?.slice(0, 8)}...)</span
-                                                    >
-                                                  </div>
-                                                {:else}
-                                                  <span
-                                                    class="text-xs bg-green-100 px-1.5 py-0.5 rounded text-green-700"
-                                                    >ImageDefinition</span
-                                                  >
-                                                  <span class="ml-1 text-xs text-slate-400"
-                                                    >(Loading...)</span
-                                                  >
-                                                {/if}
-                                              {:else if propValue.type === "CoValue"}
-                                                <span
-                                                  class="text-xs bg-purple-50 px-1 py-0.5 rounded text-purple-600"
-                                                  >CoValue</span
-                                                >
-                                                <span class="ml-1 font-mono text-xs text-slate-400"
-                                                  >({propValue.id?.slice(0, 8)}...)</span
-                                                >
-                                              {:else}
-                                                <span class="text-slate-700 break-all break-words"
-                                                  >{JSON.stringify(propValue)}</span
-                                                >
-                                              {/if}
-                                            {:else if typeof propValue === "string"}
-                                              <span class="text-slate-700 break-all break-words"
-                                                >{propValue || "(empty)"}</span
-                                              >
-                                            {:else}
-                                              <span class="text-slate-700 break-all break-words"
-                                                >{String(propValue)}</span
-                                              >
-                                            {/if}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    {/each}
-                                  </div>
-                                {:else if value.value !== undefined}
-                                  <div class="text-sm text-slate-600 italic ml-4">
-                                    {value.value}
-                                  </div>
-                                {/if}
-                              </div>
-                            {:else if value.type === "CoValue"}
-                              <!-- CoValue display -->
-                              <div class="space-y-2">
-                                <div class="flex items-center gap-2">
-                                  <span
-                                    class="font-mono text-xs bg-purple-100 px-2 py-0.5 rounded text-purple-700"
-                                  >
-                                    CoValue
-                                  </span>
-                                  {#if value.id}
-                                    <span class="ml-2 font-mono text-xs text-slate-500"
-                                      >ID: {value.id.slice(0, 8)}...</span
-                                    >
-                                  {/if}
-                                  {#if value.isLoaded !== undefined}
-                                    <span class="text-xs text-slate-400">
-                                      {value.isLoaded ? "✓ Loaded" : "⏳ Loading..."}
-                                    </span>
-                                  {/if}
-                                </div>
-                                {#if value.value !== undefined}
-                                  <div class="text-sm text-slate-600 italic ml-4">
-                                    {value.value}
-                                  </div>
-                                {/if}
-                              </div>
-                            {/if}
-                          {:else if typeof value === "string"}
-                            <span class="text-sm text-slate-700">{value || "(empty)"}</span>
-                          {:else if typeof value === "number" || typeof value === "boolean"}
-                            <span class="text-sm font-mono text-slate-700">{String(value)}</span>
-                          {:else if value === null}
-                            <span class="text-sm text-slate-400 italic">null</span>
-                          {:else if value === undefined}
-                            <span class="text-sm text-slate-400 italic">undefined</span>
-                          {:else}
-                            <pre
-                              class="text-xs text-slate-600 bg-slate-100/50 p-2 rounded overflow-x-auto">{JSON.stringify(
-                                value,
-                                null,
-                                2,
-                              )}</pre>
-                          {/if}
-                        </div>
-                      </div>
+            {#if currentContext.type === "root"}
+              <!-- Show AppRoot grid view -->
+              <div
+                class="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-slate-100/90 border border-white shadow-[0_0_8px_rgba(0,0,0,0.03)] p-6"
+              >
+                <!-- Glossy gradient overlay -->
+                <div
+                  class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
+                ></div>
+                <div class="relative">
+                  {#if rootData()}
+                    <RootDataDisplay
+                      rootData={rootData()}
+                      rootCoValue={me.root}
+                      {extractCoValueProperties}
+                      onSelect={(coValue: any) => {
+                        navigateToCoValue(coValue);
+                      }}
+                      onCoListClick={(coList: any, label: string, parentKey?: string) => {
+                        navigateToCoList(coList, label, parentKey);
+                      }}
+                    />
+                  {:else if me.$isLoaded && me.root && !me.root.$isLoaded}
+                    <div class="text-center py-8">
+                      <p class="text-sm text-slate-500">Loading root...</p>
                     </div>
-                  {/each}
+                  {:else}
+                    <div class="text-center py-8">
+                      <p class="text-sm text-slate-500">Root not available</p>
+                    </div>
+                  {/if}
                 </div>
-              {:else}
-                <p class="text-sm text-slate-500 italic">No CoValues found</p>
-              {/if}
-            </div>
-
-            <!-- Jazz Metadata -->
-            {#if me.root}
-              <JazzMetadata coValue={me.root} showKeys={true} />
+              </div>
+            {:else if currentContext.type === "colist" || currentContext.type === "covalue"}
+              <!-- Show CoValue context view -->
+              <CoValueContextDisplay
+                coValue={currentContext.coValue}
+                {extractCoValueProperties}
+                onNavigate={navigateToCoValue}
+              />
             {/if}
-          </div>
+          </section>
         </div>
-      {:else if me.$isLoaded && me.root && !me.root.$isLoaded}
-        <div
-          class="p-8 rounded-3xl border border-dashed border-white bg-slate-50/40 text-center backdrop-blur-sm shadow-[0_0_6px_rgba(0,0,0,0.03)]"
-        >
-          <p class="text-sm text-slate-500">Loading root...</p>
-        </div>
-      {:else}
-        <div
-          class="p-8 rounded-3xl border border-dashed border-white bg-slate-50/40 text-center backdrop-blur-sm shadow-[0_0_6px_rgba(0,0,0,0.03)]"
-        >
-          <p class="text-sm text-slate-500">Root not available</p>
-        </div>
-      {/if}
-    </section>
+
+        <!-- Right Aside: Metadata for Selected CoValue -->
+        <MetadataSidebar selectedCoValue={selectedCoValue()} />
+      </div>
+    </div>
   {/if}
 </div>

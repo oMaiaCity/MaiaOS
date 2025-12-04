@@ -199,9 +199,4 @@
       {/if}
     </div>
   </div>
-
-  <!-- Metadata card shown separately below -->
-  <div class="mt-4">
-    <JazzMetadata {coValue} showKeys={true} />
-  </div>
 {/if}

@@ -11,7 +11,7 @@
   const account = new AccountCoState(JazzAccount, {
     resolve: {
       root: {
-        humans: true,
+          humans: true,
       },
     },
   });

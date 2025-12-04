@@ -15,7 +15,7 @@
   const account = new AccountCoState(JazzAccount, {
     resolve: {
       root: {
-        humans: true,
+          humans: true,
       },
     },
   });
@@ -75,7 +75,7 @@
         class="text-4xl font-bold bg-clip-text text-transparent bg-linear-to-br from-slate-700 to-slate-800 tracking-tight"
       >
         Welcome Back, <span
-          class="text-transparent bg-clip-text bg-linear-to-r from-slate-600 to-slate-800"
+          class="text-transparent bg-clip-text bg-linear-to-r from-[#002455] to-[#001a3d]"
         >
           {(me.root?.humans?.[0] && me.root.humans[0]?.$isLoaded && me.root.humans[0]["@label"]) ||
             "Traveler"}

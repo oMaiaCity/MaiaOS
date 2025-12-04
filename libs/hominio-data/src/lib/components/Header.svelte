@@ -2,8 +2,10 @@
   import { authClient } from "$lib/auth-client";
   import { browser } from "$app/environment";
   import { page } from "$app/stores";
+  import { JazzAccount } from "$lib/schema";
+  import { AccountCoState, Image } from "jazz-tools/svelte";
 
-  let { appName } = $props();
+  let { title, description } = $props();
 
   // Better Auth session
   const session = authClient.useSession();
@@ -11,18 +13,56 @@
   const isBetterAuthSignedIn = $derived(!!betterAuthUser);
   const isBetterAuthPending = $derived($session.isPending);
 
-  // Get Jazz account ID from Better Auth user (set by jazzPlugin)
-  // The jazzPlugin stores the Jazz account ID in the accountID field
-  // Falls back to first 8 chars of Better Auth user ID if accountID not available
-  const jazzAccountId = $derived(
-    (betterAuthUser as any)?.accountID
-      ? String((betterAuthUser as any).accountID).slice(0, 8)
-      : betterAuthUser?.id
-        ? betterAuthUser.id.slice(0, 8)
+  // Load Jazz account to access human avatar data
+  const account = new AccountCoState(JazzAccount, {
+    resolve: {
+      root: {
+        humans: true,
+      },
+    },
+  });
+  const me = $derived(account.current);
+
+  // Get first human's avatar data
+  const firstHuman = $derived(
+    me.$isLoaded && me.root?.humans?.$isLoaded && me.root.humans.length > 0
+      ? me.root.humans[0]
         : null,
   );
 
+  // Get avatar values
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const avatar = $derived(
+    firstHuman?.$isLoaded && firstHuman.$jazz.has("avatar") ? (firstHuman.avatar as any) : null,
+  );
+
+  const firstName = $derived(avatar?.firstName?.trim() || "");
+  const lastName = $derived(avatar?.lastName?.trim() || "");
+
+  // Get avatar image
+  const avatarImage = $derived(
+    avatar?.image && avatar.image.$isLoaded && avatar.image.$jazz?.id ? avatar.image : null,
+  );
+
   let signingOut = $state(false);
+  let dropdownOpen = $state(false);
+  let dropdownRef: HTMLDivElement | null = $state(null);
+
+  // Close dropdown when clicking outside
+  if (browser) {
+    $effect(() => {
+      if (!dropdownOpen) return;
+
+      function handleClickOutside(event: MouseEvent) {
+        if (dropdownRef && !dropdownRef.contains(event.target as Node)) {
+          dropdownOpen = false;
+        }
+      }
+
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    });
+  }
 
   async function handleGoogleSignIn() {
     if (!browser) return;
@@ -49,15 +89,30 @@
   }
 </script>
 
-<header>
-  <nav class="flex justify-between items-center py-4 px-4 border-b border-slate-200">
-    <div class="flex items-center gap-4">
-      <!-- Navigation Links -->
-      <div class="flex items-center gap-3">
+<header class="fixed top-0 left-0 right-0 z-50">
+  <nav
+    class="bg-gray-200 relative flex justify-between items-center py-4 px-4 border-b border-slate-200"
+  >
+    <!-- Left: Route Title and Description -->
+    <div class="flex items-center gap-6 flex-shrink-0">
+      {#if title || description}
+        <div class="flex flex-col">
+          {#if title}
+            <h1 class="text-lg font-bold text-slate-900 leading-tight">{title}</h1>
+          {/if}
+          {#if description}
+            <p class="text-xs text-slate-500 mt-0.5">{description}</p>
+          {/if}
+        </div>
+      {/if}
+    </div>
+
+    <!-- Center: Navigation Links -->
+    <div class="flex items-center gap-3 absolute left-1/2 -translate-x-1/2">
         <a
           href="/"
-          class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url
-            .pathname === '/'
+        class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url.pathname ===
+        '/'
             ? 'bg-slate-100 text-slate-900'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
         >
@@ -65,8 +120,8 @@
         </a>
         <a
           href="/data"
-          class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url
-            .pathname === '/data'
+        class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url.pathname ===
+        '/data'
             ? 'bg-slate-100 text-slate-900'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
         >
@@ -74,24 +129,101 @@
         </a>
       </div>
 
+    <!-- Right: Account Metadata -->
+    <div class="flex gap-2 items-center flex-shrink-0">
       {#if isBetterAuthPending}
         <span class="text-sm text-slate-500">Loading...</span>
-      {:else if isBetterAuthSignedIn}
-        <span class="text-sm text-slate-600">
-          Account: {jazzAccountId || betterAuthUser?.name || betterAuthUser?.email || "Logged in"}
-        </span>
+      {:else if isBetterAuthSignedIn && me.$isLoaded && firstHuman?.$isLoaded && avatar}
+        <!-- User Avatar and Name with Dropdown -->
+        <div class="relative" bind:this={dropdownRef}>
+          <button
+            type="button"
+            onclick={(e) => {
+              e.stopPropagation();
+              dropdownOpen = !dropdownOpen;
+            }}
+            class="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          >
+            <!-- Name and Email (left, right-aligned) -->
+            <div class="flex flex-col text-right">
+              {#if firstName || lastName}
+                <div class="text-sm font-medium text-slate-900 leading-tight">
+                  {firstName}
+                  {lastName}
+                </div>
       {:else}
-        <span class="text-sm text-slate-500">Not signed in</span>
+                <div class="text-sm font-medium text-slate-900 leading-tight">
+                  {betterAuthUser?.email || "User"}
+                </div>
+              {/if}
+              {#if betterAuthUser?.email}
+                <div class="text-xs text-slate-500 leading-tight truncate max-w-[150px]">
+                  {betterAuthUser.email}
+                </div>
       {/if}
     </div>
+            <!-- Avatar Image (right) -->
+            {#if avatarImage}
+              <div
+                class="w-10 h-10 rounded-full overflow-hidden border-2 border-slate-200 flex-shrink-0"
+              >
+                <Image
+                  imageId={avatarImage.$jazz.id}
+                  width={40}
+                  height={40}
+                  alt="Profile"
+                  class="w-full h-full object-cover"
+                />
+              </div>
+            {:else}
+              <div
+                class="w-10 h-10 rounded-full bg-slate-200 border-2 border-slate-200 flex items-center justify-center flex-shrink-0"
+              >
+                <svg
+                  class="w-6 h-6 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </div>
+            {/if}
+            <!-- Dropdown Arrow -->
+            <svg
+              class="w-4 h-4 text-slate-400 transition-transform {dropdownOpen ? 'rotate-180' : ''}"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
 
-    <div class="flex gap-2 items-center">
-      {#if isBetterAuthSignedIn}
+          <!-- Dropdown Menu -->
+          {#if dropdownOpen}
+            <div
+              class="absolute right-0 top-full w-48 rounded-lg bg-white border border-slate-200 shadow-lg z-50"
+            >
+              <div class="py-1">
         <button
           type="button"
-          onclick={handleBetterAuthSignOut}
+                  onclick={() => {
+                    dropdownOpen = false;
+                    handleBetterAuthSignOut();
+                  }}
           disabled={signingOut}
-          class="bg-[#002455] hover:bg-[#002455] disabled:opacity-50 border border-[#001a3d] text-white py-1.5 px-3 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
+                  class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50 flex items-center gap-2"
         >
           {#if signingOut}
             <span>Signing out...</span>
@@ -107,6 +239,14 @@
             Sign out
           {/if}
         </button>
+              </div>
+            </div>
+          {/if}
+        </div>
+      {:else if isBetterAuthSignedIn}
+        <span class="text-sm text-slate-600">
+          {betterAuthUser?.email || "Logged in"}
+        </span>
       {:else if !isBetterAuthPending}
         <button
           type="button"
@@ -133,6 +273,8 @@
           </svg>
           Sign in with Google
         </button>
+      {:else}
+        <span class="text-sm text-slate-500">Not signed in</span>
       {/if}
     </div>
   </nav>

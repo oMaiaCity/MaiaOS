@@ -19,7 +19,7 @@ export async function loadAccountHumans(
         const loadedAccount = await account.$jazz.ensureLoaded({
             resolve: {
                 root: {
-                    humans: true // This loads the list
+                        humans: true // This loads the list
                 }
             },
         });
@@ -30,7 +30,7 @@ export async function loadAccountHumans(
         }
 
         const root = loadedAccount.root;
-        
+
         // Verify that root was actually loaded (not just a broken reference)
         if (!root.$jazz.has("humans")) {
             console.log("[Migration Helper] No humans list found");
