@@ -8,9 +8,6 @@
 
   let { coValue, showKeys = false }: Props = $props();
 
-  // Track expanded state
-  let isExpanded = $state(false);
-
   // Extract Jazz metadata
   const metadata = $derived(() => {
     if (!coValue || !coValue.$jazz) {
@@ -94,137 +91,140 @@
 </script>
 
 {#if metadata()}
-  <div class="bg-slate-50 rounded-lg border border-slate-200 p-3">
-    <!-- Header with toggle button -->
-    <button
-      type="button"
-      class="w-full flex items-center justify-between text-left"
-      onclick={() => (isExpanded = !isExpanded)}
-    >
-      <h4 class="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-        Jazz Metadata
-      </h4>
-      <svg
-        class="w-4 h-4 text-slate-400 transition-transform {isExpanded ? 'rotate-180' : ''}"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M19 9l-7 7-7-7"
-        />
-      </svg>
-    </button>
+  <div
+    class="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-slate-100/90 border border-white shadow-[0_0_8px_rgba(0,0,0,0.03)] p-5"
+  >
+    <!-- Glossy gradient overlay -->
+    <div
+      class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
+    ></div>
 
-    <!-- Expanded content -->
-    {#if isExpanded}
-      <div class="mt-3 space-y-3 pt-3 border-t border-slate-200">
-        <!-- ID -->
-        <div>
-          <span class="text-xs font-semibold text-slate-600">ID:</span>
-          <span class="ml-2 font-mono text-xs text-slate-500 break-all break-words">
-            {metadata()!.id}
-          </span>
-        </div>
-
-        <!-- Owner -->
-        {#if metadata()!.ownerInfo}
-          <div>
-            <span class="text-xs font-semibold text-slate-600">Owner:</span>
-            <span class="ml-2 text-xs text-slate-500">{metadata()!.ownerInfo.type}</span>
-            <span class="ml-2 font-mono text-xs text-slate-400">
-              ({metadata()!.ownerInfo.id.slice(0, 8)}...)
-            </span>
-          </div>
-        {:else if metadata()!.owner}
-          <div>
-            <span class="text-xs font-semibold text-slate-600">Owner:</span>
-            <span class="ml-2 text-xs text-slate-700">{String(metadata()!.owner)}</span>
-          </div>
-        {/if}
-
-        <!-- Keys (optional) -->
-        {#if showKeys && metadata()!.keys.length > 0}
-          <div>
-            <span class="text-xs font-semibold text-slate-600">Keys:</span>
-            <div class="flex flex-wrap gap-1 mt-1">
-              {#each metadata()!.keys as key}
-                <span class="text-xs font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">
-                  {key}
-                </span>
-              {/each}
+    <div class="relative">
+      <!-- Metadata content always visible -->
+      <div class="space-y-4">
+          <!-- ID -->
+          <div
+            class="bg-slate-200/50 rounded-2xl p-4 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
+          >
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">ID</span>
+              <span class="font-mono text-xs text-slate-600 break-all break-words text-right">
+                {metadata()!.id}
+              </span>
             </div>
           </div>
-        {/if}
 
-        <!-- Group Members -->
-        {#if metadata()!.groupInfo &&
-          (metadata()!.groupInfo.accountMembers.length > 0 ||
-            metadata()!.groupInfo.groupMembers.length > 0)}
-          {@const groupInfo = metadata()!.groupInfo}
-          <div class="pt-2 border-t border-slate-200">
-            <h5 class="text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wider">
-              Group Members
-            </h5>
+          <!-- Owner -->
+          {#if metadata()!.ownerInfo}
+            <div
+              class="bg-slate-200/50 rounded-2xl p-4 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
+            >
+              <div class="flex justify-between items-center">
+                <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">Owner</span>
+                <div class="text-right">
+                  <span class="text-xs text-slate-600">{metadata()!.ownerInfo.type}</span>
+                  <span class="ml-2 font-mono text-xs text-slate-400">
+                    ({metadata()!.ownerInfo.id.slice(0, 8)}...)
+                  </span>
+                </div>
+              </div>
+            </div>
+          {:else if metadata()!.owner}
+            <div
+              class="bg-slate-200/50 rounded-2xl p-4 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
+            >
+              <div class="flex justify-between items-center">
+                <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">Owner</span>
+                <span class="text-xs text-slate-600">{String(metadata()!.owner)}</span>
+              </div>
+            </div>
+          {/if}
 
-            <!-- Account Members -->
-            {#if groupInfo.accountMembers.length > 0}
-              <div class="mb-3">
-                <span class="text-xs font-semibold text-slate-500 mb-1 block">Account Members:</span>
-                <div class="space-y-1 ml-2">
+          <!-- Keys (optional) -->
+          {#if showKeys && metadata()!.keys.length > 0}
+            <div
+              class="bg-slate-200/50 rounded-2xl p-4 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
+            >
+              <div class="space-y-2">
+                <span class="text-xs font-medium text-slate-500 uppercase tracking-wide block">Keys</span>
+                <div class="flex flex-wrap gap-1.5">
+                  {#each metadata()!.keys as key}
+                    <span class="text-xs font-mono bg-slate-50/60 px-2 py-0.5 rounded-md border border-white text-slate-600">
+                      {key}
+                    </span>
+                  {/each}
+                </div>
+              </div>
+            </div>
+          {/if}
+
+          <!-- Group Members -->
+          {#if metadata()!.groupInfo &&
+            (metadata()!.groupInfo.accountMembers.length > 0 ||
+              metadata()!.groupInfo.groupMembers.length > 0)}
+            {@const groupInfo = metadata()!.groupInfo}
+            <div
+              class="bg-slate-200/50 rounded-2xl p-4 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
+            >
+              <h5 class="text-xs font-bold text-slate-600 mb-3 uppercase tracking-wider">
+                Group Members
+              </h5>
+
+              <!-- Account Members -->
+              {#if groupInfo.accountMembers.length > 0}
+                <div class="mb-3 space-y-1.5">
+                  <span class="text-xs font-medium text-slate-500 mb-2 block">Account Members:</span>
                   {#each groupInfo.accountMembers as member}
-                    <div class="text-xs text-slate-600">
-                      <span class="font-mono">{member.id.slice(0, 8)}...</span>
-                      <span class="ml-2 text-slate-500">({member.role})</span>
+                    <div class="flex items-center justify-between p-1.5 rounded-lg">
+                      <span class="font-mono text-xs text-slate-600">{member.id.slice(0, 8)}...</span>
+                      <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-slate-100/50 text-slate-700 border border-slate-200/50">
+                        {member.role}
+                      </span>
                     </div>
                   {/each}
                 </div>
-              </div>
-            {/if}
+              {/if}
 
-            <!-- Parent Groups -->
-            {#if groupInfo.groupMembers.length > 0}
-              <div>
-                <span class="text-xs font-semibold text-slate-500 mb-1 block">Parent Groups:</span>
-                <div class="space-y-1 ml-2">
+              <!-- Parent Groups -->
+              {#if groupInfo.groupMembers.length > 0}
+                <div class="pt-3 border-t border-white/50 space-y-1.5">
+                  <span class="text-xs font-medium text-slate-500 mb-2 block">Parent Groups:</span>
                   {#each groupInfo.groupMembers as groupMember}
-                    <div class="flex items-center gap-2">
-                      <div class="text-xs text-slate-600 flex-1">
-                        <span class="font-mono">{groupMember.id.slice(0, 8)}...</span>
-                        <span class="ml-2 text-slate-500">({groupMember.role})</span>
-                      </div>
-                      <button
-                        type="button"
-                        class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors shrink-0"
-                        onclick={() => removeParentGroupMember(groupMember.id)}
-                        title="Remove parent group"
-                      >
-                        <svg
-                          class="w-3 h-3"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                    <div class="flex items-center justify-between p-1.5 rounded-lg">
+                      <span class="font-mono text-xs text-slate-600">{groupMember.id.slice(0, 8)}...</span>
+                      <div class="flex items-center gap-2">
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-green-100/50 text-green-600 border border-green-100/50">
+                          {groupMember.role}
+                        </span>
+                        <button
+                          type="button"
+                          class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors shrink-0"
+                          onclick={() => removeParentGroupMember(groupMember.id)}
+                          title="Remove parent group"
                         >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
+                          <svg
+                            class="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   {/each}
                 </div>
-              </div>
-            {/if}
-          </div>
-        {/if}
+              {/if}
+            </div>
+          {/if}
       </div>
-    {/if}
+    </div>
   </div>
 {/if}
 

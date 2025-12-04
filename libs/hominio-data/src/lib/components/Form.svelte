@@ -5,17 +5,15 @@
   const account = new AccountCoState(JazzAccount, {
     resolve: {
       root: {
-        o: {
-          humans: true,
-        },
+        humans: true,
       },
     },
   });
   const me = $derived(account.current);
 
   const firstHuman = $derived(
-    me.$isLoaded && me.root.o?.humans?.$isLoaded && me.root.o.humans.length > 0
-      ? me.root.o.humans[0]
+    me.$isLoaded && me.root?.humans?.$isLoaded && me.root.humans.length > 0
+      ? me.root.humans[0]
       : null,
   );
 

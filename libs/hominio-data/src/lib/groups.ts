@@ -1,63 +1,8 @@
 /**
- * Coop Management API
+ * Group utilities for CoValues
  */
 
-import { Group, co } from "jazz-tools";
-import type { JazzAccount } from "./schema.js";
-import { Coop } from "./schema.js";
-
-/**
- * Create a new Coop CoValue (Jazz auto-creates a Group as owner)
- */
-export async function createCoop(account: co.loaded<typeof JazzAccount>): Promise<co.loaded<typeof Coop>> {
-    // Create Coop CoValue - Jazz automatically creates a Group as owner
-    // The account will be added as admin to the auto-created group
-    const coop = Coop.create({
-        "@schema": "coop",
-        name: "New Coop",
-        "@label": "",
-    });
-    await coop.$jazz.waitForSync();
-
-
-    // Set up reactive @label computation
-    const { setupReactiveLabel } = await import("./schema.js");
-    setupReactiveLabel(coop);
-
-    const root = await account.$jazz.ensureLoaded({ resolve: { root: { o: { coops: true } } } });
-    if (!root.root || !root.root.o) {
-        throw new Error("Failed to load account root.o");
-    }
-
-    const currentCoops = root.root.o.$jazz.has("coops") && root.root.o.coops?.$isLoaded
-        ? Array.from(root.root.o.coops)
-        : [];
-
-    root.root.o.$jazz.set("coops", [...currentCoops, coop]);
-    await root.root.o.$jazz.waitForSync();
-
-    return coop;
-}
-
-/**
- * Remove a coop from persisted list
- */
-export async function removeCoop(account: co.loaded<typeof JazzAccount>, coop: co.loaded<typeof Coop>): Promise<void> {
-    const root = await account.$jazz.ensureLoaded({ resolve: { root: { o: { coops: true } } } });
-    if (!root.root || !root.root.o) {
-        throw new Error("Failed to load account root.o");
-    }
-
-    const currentCoops = root.root.o.$jazz.has("coops") && root.root.o.coops?.$isLoaded
-        ? Array.from(root.root.o.coops)
-        : [];
-
-    root.root.o.$jazz.set("coops", currentCoops.filter((c) => {
-        if (!c.$isLoaded) return true;
-        return c.$jazz.id !== coop.$jazz.id;
-    }));
-    await root.root.o.$jazz.waitForSync();
-}
+import { Group } from "jazz-tools";
 
 /**
  * Get group information for any CoValue
@@ -99,4 +44,62 @@ export function getCoValueGroupInfo(coValue: any) {
         accountMembers,
         groupMembers,
     };
+}
+
+/**
+ * Check if a group has access to a co-value
+ * Returns true if the co-value is owned by the group or by a parent group
+ * 
+ * @param coValue - The co-value to check
+ * @param group - The group to check access for
+ * @param includeParentGroups - If true, also checks parent groups (default: true)
+ * @returns true if the group has access, false otherwise
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function groupHasAccessToCoValue(coValue: any, group: Group, includeParentGroups = true): boolean {
+    if (!coValue || !coValue.$jazz || !group || !group.$jazz) {
+        return false;
+    }
+
+    const owner = coValue.$jazz.owner;
+    if (!owner || !("$jazz" in owner)) {
+        return false;
+    }
+
+    const ownerGroup = owner as Group;
+    const groupId = group.$jazz.id;
+    const ownerGroupId = ownerGroup.$jazz.id;
+
+    // Direct ownership
+    if (ownerGroupId === groupId) {
+        return true;
+    }
+
+    // Check parent groups if requested
+    if (includeParentGroups && ownerGroup.getParentGroups) {
+        const parentGroups = ownerGroup.getParentGroups();
+        return parentGroups.some((parent: Group) => parent.$jazz.id === groupId);
+    }
+
+    return false;
+}
+
+/**
+ * Filter a list/array of co-values to only those owned by or accessible to a group
+ * 
+ * @param coValues - Array or list of co-values to filter
+ * @param group - The group to filter by
+ * @param includeParentGroups - If true, also includes co-values owned by parent groups (default: true)
+ * @returns Array of co-values that the group has access to
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function filterCoValuesByGroupAccess(coValues: any[] | { [Symbol.iterator](): Iterator<any> }, group: Group, includeParentGroups = true): any[] {
+    const coValuesArray = Array.isArray(coValues) ? coValues : Array.from(coValues);
+    
+    return coValuesArray.filter((coValue) => {
+        if (!coValue || !coValue.$isLoaded) {
+            return false;
+        }
+        return groupHasAccessToCoValue(coValue, group, includeParentGroups);
+    });
 }

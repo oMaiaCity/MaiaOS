@@ -17,10 +17,7 @@
     resolve: {
       profile: true, // Resolve profile to access all its properties
       root: {
-        o: {
-          humans: true, // Resolve humans list
-          coops: true, // Resolve coops list
-        },
+        humans: true, // Resolve humans list
       },
     },
   });
@@ -30,116 +27,6 @@
   // Use an array instead of Set for better reactivity in Svelte 5
   let expandedCoValues = $state<string[]>([]);
   let selectedCoValue: any = $state(null);
-
-  // Function to delete a capability
-  async function deleteCapability(capability: any, capabilitiesList: any) {
-    if (!capability || !capability.$isLoaded || !me || !me.$isLoaded) {
-      console.error("[Delete Capability] Capability or account not loaded");
-      return;
-    }
-
-    try {
-      // Get capability group ID
-      const capabilityGroupId = capability.capabilityGroup;
-      if (!capabilityGroupId) {
-        console.error("[Delete Capability] Capability doesn't have capabilityGroup");
-        return;
-      }
-
-      // Find which avatar's owner group has this capability group as a member
-      // We need to check all humans' avatars
-      const root = await me.$jazz.ensureLoaded({
-        resolve: { root: { o: { humans: true } } },
-      });
-
-      if (!root.root || !root.root.o || !root.root.o.humans) {
-        console.error("[Delete Capability] Could not load humans");
-        return;
-      }
-
-      const humans = Array.from(root.root.o.humans);
-      let avatarOwnerGroup: any = null;
-
-      // Load the capability group first
-      const { Group } = await import("jazz-tools");
-      const capabilityGroup = await Group.load(capabilityGroupId);
-      if (!capabilityGroup || !capabilityGroup.$isLoaded) {
-        console.error("[Delete Capability] Could not load capability group");
-        return;
-      }
-
-      // Find the avatar owner group that has this capability group as a member
-      // Check parent groups of avatar owner groups
-      for (const human of humans) {
-        if (!human || !human.$isLoaded || !human.$jazz.has("avatar")) {
-          continue;
-        }
-
-        const humanWithAvatar = await human.$jazz.ensureLoaded({
-          resolve: { avatar: true },
-        });
-        const avatar = humanWithAvatar.avatar;
-        if (!avatar || !avatar.$isLoaded) {
-          continue;
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const ownerGroup = avatar.$jazz.owner as any;
-        if (ownerGroup) {
-          // Check if capability group is a parent group (member) of the avatar owner group
-          try {
-            const parentGroups = ownerGroup.getParentGroups ? ownerGroup.getParentGroups() : [];
-            const hasCapabilityGroup = parentGroups.some(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (parent: any) => parent.$jazz?.id === capabilityGroupId
-            );
-
-            if (hasCapabilityGroup) {
-              avatarOwnerGroup = ownerGroup;
-              break;
-            }
-          } catch (e) {
-            console.warn("[Delete Capability] Error checking parent groups:", e);
-          }
-        }
-      }
-
-      // Remove capability group from avatar's owner group if found
-      if (avatarOwnerGroup) {
-        try {
-          avatarOwnerGroup.removeMember(capabilityGroup);
-          await avatarOwnerGroup.$jazz.waitForSync();
-          console.log(`[Delete Capability] Removed capability group from avatar owner group`);
-        } catch (error) {
-          console.error("[Delete Capability] Error removing capability group:", error);
-        }
-      } else {
-        console.warn("[Delete Capability] Could not find avatar owner group with this capability");
-      }
-
-      // Remove capability from capabilities list
-      const currentCapabilities = Array.from(capabilitiesList).filter(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (cap: any) => cap && cap.$jazz && cap.$jazz.id
-      );
-      const updatedCapabilities = currentCapabilities.filter(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (cap: any) => cap.$jazz.id !== capability.$jazz.id
-      );
-
-      const rootWithCapabilities = await me.$jazz.ensureLoaded({
-        resolve: { root: { o: { capabilities: true } } },
-      });
-
-      if (rootWithCapabilities.root && rootWithCapabilities.root.o) {
-        rootWithCapabilities.root.o.$jazz.set("capabilities", updatedCapabilities);
-        await rootWithCapabilities.root.o.$jazz.waitForSync();
-        console.log(`[Delete Capability] Removed capability from list`);
-      }
-    } catch (error) {
-      console.error("[Delete Capability] Error deleting capability:", error);
-    }
-  }
 
   // Helper function to check if a CoValue is expanded
   function isCoValueExpanded(coValueId: string): boolean {
@@ -373,7 +260,10 @@
                     const metadata = extractCoValueProperties(value);
                     return metadata?.jazzMetadata || null;
                   } catch (error) {
-                    console.warn(`[Data Explorer] Error extracting metadata for nested CoMap ${key}:`, error);
+                    console.warn(
+                      `[Data Explorer] Error extracting metadata for nested CoMap ${key}:`,
+                      error,
+                    );
                     return null;
                   }
                 })()
@@ -529,33 +419,33 @@
     };
   });
 
-  // Get root.o data - extract all available CoValues
-  const rootOData = $derived(() => {
-    if (!me.$isLoaded || !me.root?.o?.$isLoaded) {
+  // Get root data - extract all available CoValues
+  const rootData = $derived(() => {
+    if (!me.$isLoaded || !me.root?.$isLoaded) {
       return null;
     }
 
-    const rootO = me.root.o;
+    const root = me.root;
     const data: Record<string, any> = {};
 
-    // Get all properties from root.o (which is a CoMap)
+    // Get all properties from root (which is a CoMap)
     let keys: string[] = [];
     try {
       // Try using Object.keys first (most reliable for CoMaps)
-      keys = Object.keys(rootO).filter((key) => key !== "$jazz" && key !== "$isLoaded");
+      keys = Object.keys(root).filter((key) => key !== "$jazz" && key !== "$isLoaded");
 
       // If that doesn't work or returns empty, try $jazz.keys() if available
-      if (keys.length === 0 && rootO.$jazz && typeof rootO.$jazz.keys === "function") {
-        keys = Array.from(rootO.$jazz.keys());
+      if (keys.length === 0 && root.$jazz && typeof root.$jazz.keys === "function") {
+        keys = Array.from(root.$jazz.keys());
       }
     } catch (e) {
-      console.warn("Error getting root.o keys:", e);
+      console.warn("Error getting root keys:", e);
     }
 
     // Iterate over all keys and extract values
     for (const key of keys) {
       try {
-        const value = rootO[key];
+        const value = root[key];
 
         // Skip internal Jazz properties
         if (key.startsWith("$") || key === "constructor") {
@@ -748,7 +638,10 @@
                     const metadata = extractCoValueProperties(value);
                     return metadata?.jazzMetadata || null;
                   } catch (error) {
-                    console.warn(`[Data Explorer] Error extracting metadata for nested CoMap ${key}:`, error);
+                    console.warn(
+                      `[Data Explorer] Error extracting metadata for nested CoMap ${key}:`,
+                      error,
+                    );
                     return null;
                   }
                 })()
@@ -778,16 +671,14 @@
     return {
       properties: data,
       jazzMetadata: {
-        id: rootO.$jazz?.id,
-        owner: rootO.$jazz?.owner,
+        id: root.$jazz?.id,
+        owner: root.$jazz?.owner,
         // Get owner info if it's a Group
         ownerInfo:
-          rootO.$jazz?.owner &&
-          typeof rootO.$jazz.owner === "object" &&
-          "$jazz" in rootO.$jazz.owner
+          root.$jazz?.owner && typeof root.$jazz.owner === "object" && "$jazz" in root.$jazz.owner
             ? {
                 type: "Group",
-                id: rootO.$jazz.owner.$jazz?.id || "unknown",
+                id: root.$jazz.owner.$jazz?.id || "unknown",
               }
             : null,
         // Get all keys that exist
@@ -840,80 +731,88 @@
 
       {#if profileData()}
         <div
-          class="rounded-3xl border border-white bg-slate-50/40 backdrop-blur-sm shadow-[0_0_6px_rgba(0,0,0,0.03)] p-6"
+          class="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-slate-100/90 border border-white shadow-[0_0_8px_rgba(0,0,0,0.03)] p-6"
         >
-          <!-- Profile Properties -->
-          <div class="mb-6">
-            <h3 class="text-sm font-semibold text-slate-600 mb-3 uppercase tracking-wider">
-              Properties
-            </h3>
-            {#if Object.keys(profileData().properties).length > 0}
-              <div class="space-y-3">
-                {#each Object.entries(profileData().properties) as [key, value]}
-                  <div class="border-b border-slate-200/50 pb-3 last:border-b-0 last:pb-0">
-                    <div class="flex items-start gap-3">
-                      <span
-                        class="text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[120px] shrink-0"
-                      >
-                        {key}:
-                      </span>
-                      <div class="flex-1 min-w-0">
-                        {#if typeof value === "object" && value !== null && "type" in value}
-                          <!-- CoValue type -->
-                          <div class="space-y-1">
-                            <div class="text-sm text-slate-700">
-                              <span class="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded"
-                                >{value.type}</span
-                              >
-                              {#if value.id}
-                                <span class="ml-2 font-mono text-xs text-slate-500"
-                                  >ID: {value.id.slice(0, 8)}...</span
+          <!-- Glossy gradient overlay -->
+          <div
+            class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
+          ></div>
+          <div class="relative">
+            <!-- Profile Properties -->
+            <div class="mb-6">
+              <h3 class="text-sm font-bold text-slate-600 mb-4 uppercase tracking-wider">
+                Properties
+              </h3>
+              {#if Object.keys(profileData().properties).length > 0}
+                <div class="space-y-3">
+                  {#each Object.entries(profileData().properties) as [key, value]}
+                    <div
+                      class="bg-slate-200/50 rounded-2xl p-4 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm last:mb-0"
+                    >
+                      <div class="flex items-start gap-3">
+                        <span
+                          class="text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[120px] shrink-0"
+                        >
+                          {key}:
+                        </span>
+                        <div class="flex-1 min-w-0">
+                          {#if typeof value === "object" && value !== null && "type" in value}
+                            <!-- CoValue type -->
+                            <div class="space-y-1">
+                              <div class="text-sm text-slate-700">
+                                <span class="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded"
+                                  >{value.type}</span
                                 >
+                                {#if value.id}
+                                  <span class="ml-2 font-mono text-xs text-slate-500"
+                                    >ID: {value.id.slice(0, 8)}...</span
+                                  >
+                                {/if}
+                              </div>
+                              {#if value.value !== undefined}
+                                <div class="text-sm text-slate-600 italic break-all break-words">
+                                  {value.value}
+                                </div>
+                              {/if}
+                              {#if value.isLoaded !== undefined}
+                                <div class="text-xs text-slate-400">
+                                  {value.isLoaded ? "✓ Loaded" : "⏳ Loading..."}
+                                </div>
                               {/if}
                             </div>
-                            {#if value.value !== undefined}
-                              <div class="text-sm text-slate-600 italic break-all break-words">
-                                {value.value}
-                              </div>
-                            {/if}
-                            {#if value.isLoaded !== undefined}
-                              <div class="text-xs text-slate-400">
-                                {value.isLoaded ? "✓ Loaded" : "⏳ Loading..."}
-                              </div>
-                            {/if}
-                          </div>
-                        {:else if typeof value === "string"}
-                          <span class="text-sm text-slate-700 break-all break-words"
-                            >{value || "(empty)"}</span
-                          >
-                        {:else if typeof value === "number" || typeof value === "boolean"}
-                          <span class="text-sm font-mono text-slate-700">{String(value)}</span>
-                        {:else if value === null}
-                          <span class="text-sm text-slate-400 italic">null</span>
-                        {:else if value === undefined}
-                          <span class="text-sm text-slate-400 italic">undefined</span>
-                        {:else}
-                          <pre
-                            class="text-xs text-slate-600 bg-slate-100/50 p-2 rounded overflow-x-auto">{JSON.stringify(
-                              value,
-                              null,
-                              2,
-                            )}</pre>
-                        {/if}
+                          {:else if typeof value === "string"}
+                            <span class="text-sm text-slate-700 break-all break-words"
+                              >{value || "(empty)"}</span
+                            >
+                          {:else if typeof value === "number" || typeof value === "boolean"}
+                            <span class="text-sm font-mono text-slate-700">{String(value)}</span>
+                          {:else if value === null}
+                            <span class="text-sm text-slate-400 italic">null</span>
+                          {:else if value === undefined}
+                            <span class="text-sm text-slate-400 italic">undefined</span>
+                          {:else}
+                            <pre
+                              class="text-xs text-slate-600 bg-slate-100/50 p-2 rounded overflow-x-auto">{JSON.stringify(
+                                value,
+                                null,
+                                2,
+                              )}</pre>
+                          {/if}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                {/each}
-              </div>
-            {:else}
-              <p class="text-sm text-slate-500 italic">No properties found</p>
+                  {/each}
+                </div>
+              {:else}
+                <p class="text-sm text-slate-500 italic">No properties found</p>
+              {/if}
+            </div>
+
+            <!-- Jazz Metadata -->
+            {#if me.profile}
+              <JazzMetadata coValue={me.profile} showKeys={true} />
             {/if}
           </div>
-
-          <!-- Jazz Metadata -->
-          {#if me.profile}
-            <JazzMetadata coValue={me.profile} showKeys={true} />
-          {/if}
         </div>
       {:else if me.$isLoaded && me.profile && !me.profile.$isLoaded}
         <div
@@ -930,71 +829,7 @@
       {/if}
     </section>
 
-    <!-- BetterAuth User Profile Properties -->
-    {#if betterAuthUser}
-      <section>
-        <div class="flex items-center justify-between mb-4 px-2">
-          <h2 class="text-lg font-semibold text-slate-700 flex items-center gap-2">
-            <svg
-              class="w-5 h-5 text-slate-700"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
-            Google Profile Data
-          </h2>
-        </div>
-        <div
-          class="rounded-3xl border border-white bg-slate-50/40 backdrop-blur-sm shadow-[0_0_6px_rgba(0,0,0,0.03)] p-6"
-        >
-          <div class="grid gap-3">
-            {#each Object.entries(betterAuthUser) as [key, value]}
-              {#if value !== null && value !== undefined}
-                <div
-                  class="flex items-start gap-3 py-2 border-b border-slate-200/50 last:border-b-0"
-                >
-                  <span
-                    class="text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[120px] shrink-0"
-                  >
-                    {key}:
-                  </span>
-                  <div class="flex-1 min-w-0">
-                    {#if typeof value === "object" && value !== null && !Array.isArray(value)}
-                      <pre
-                        class="text-xs font-mono text-slate-700 bg-slate-200/50 p-2 rounded overflow-x-auto break-all break-words">{JSON.stringify(
-                          value,
-                          null,
-                          2,
-                        )}</pre>
-                    {:else if Array.isArray(value)}
-                      <pre
-                        class="text-xs font-mono text-slate-700 bg-slate-200/50 p-2 rounded overflow-x-auto break-all break-words">{JSON.stringify(
-                          value,
-                          null,
-                          2,
-                        )}</pre>
-                    {:else}
-                      <span class="text-sm text-slate-700 break-all break-words"
-                        >{String(value)}</span
-                      >
-                    {/if}
-                  </div>
-                </div>
-              {/if}
-            {/each}
-          </div>
-        </div>
-      </section>
-    {/if}
-
-    <!-- Root.O CoValues Section -->
+    <!-- AppRoot CoValues Section -->
     <section>
       <div class="flex items-center justify-between mb-4 px-2">
         <h2 class="text-lg font-semibold text-slate-700 flex items-center gap-2">
@@ -1006,154 +841,162 @@
               d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
             />
           </svg>
-          Root.O CoValues
+          AppRoot
         </h2>
       </div>
 
-      {#if rootOData()}
+      {#if rootData()}
         <div
-          class="rounded-3xl border border-white bg-slate-50/40 backdrop-blur-sm shadow-[0_0_6px_rgba(0,0,0,0.03)] p-6"
+          class="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-slate-100/90 border border-white shadow-[0_0_8px_rgba(0,0,0,0.03)] p-6"
         >
-          <!-- Root.O Properties -->
-          <div class="mb-6">
-            <h3 class="text-sm font-semibold text-slate-600 mb-3 uppercase tracking-wider">
-              CoValues
-            </h3>
-            {#if Object.keys(rootOData().properties).length > 0}
-              <div class="space-y-4">
-                {#each Object.entries(rootOData().properties) as [key, value]}
-                  <div class="border border-slate-200/50 rounded-lg p-4 bg-slate-200/50">
-                    <div class="flex items-start gap-3 mb-3">
-                      <span
-                        class="text-sm font-semibold text-slate-700 uppercase tracking-wider min-w-[120px] shrink-0"
-                      >
-                        {key}:
-                      </span>
-                      <div class="flex-1 min-w-0">
-                        {#if typeof value === "object" && value !== null && "type" in value}
-                          {#if value.type === "CoList"}
-                            <!-- CoList display -->
-                            <div class="space-y-2">
-                              <div class="flex items-center gap-2">
-                                <span
-                                  class="font-mono text-xs bg-blue-100 px-2 py-0.5 rounded text-blue-700"
-                                >
-                                  CoList
-                                </span>
-                                <span class="text-xs text-slate-500">
-                                  ({value.length}
-                                  {value.length === 1 ? "item" : "items"})
-                                </span>
-                                {#if value.id}
-                                  <span class="ml-2 font-mono text-xs text-slate-400">
-                                    ID: {value.id.slice(0, 8)}...
+          <!-- Glossy gradient overlay -->
+          <div
+            class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
+          ></div>
+          <div class="relative">
+            <!-- AppRoot Properties -->
+            <div class="mb-6">
+              <h3 class="text-sm font-bold text-slate-600 mb-4 uppercase tracking-wider">
+                CoValues
+              </h3>
+              {#if Object.keys(rootData().properties).length > 0}
+                <div class="space-y-4">
+                  {#each Object.entries(rootData().properties) as [key, value]}
+                    <div
+                      class="bg-slate-200/50 rounded-2xl p-4 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
+                    >
+                      <div class="flex items-start gap-3 mb-3">
+                        <span
+                          class="text-sm font-semibold text-slate-700 uppercase tracking-wider min-w-[120px] shrink-0"
+                        >
+                          {key}:
+                        </span>
+                        <div class="flex-1 min-w-0">
+                          {#if typeof value === "object" && value !== null && "type" in value}
+                            {#if value.type === "CoList"}
+                              <!-- CoList display -->
+                              <div class="space-y-2">
+                                <div class="flex items-center gap-2">
+                                  <span
+                                    class="font-mono text-xs bg-blue-100 px-2 py-0.5 rounded text-blue-700"
+                                  >
+                                    CoList
                                   </span>
-                                {/if}
-                                {#if value.isLoaded !== undefined}
-                                  <span class="text-xs text-slate-400">
-                                    {value.isLoaded ? "✓ Loaded" : "⏳ Loading..."}
+                                  <span class="text-xs text-slate-500">
+                                    ({value.length}
+                                    {value.length === 1 ? "item" : "items"})
                                   </span>
-                                {/if}
-                              </div>
-                              {#if value.items && value.items.length > 0}
-                                <div class="ml-4 space-y-2 border-l-2 border-slate-200 pl-3">
-                                  {#each value.items as item}
-                                    {#if item.type === "CoValue" && item.item}
-                                      {@const coValueId = item.id}
-                                      {@const isExpanded = isCoValueExpanded(coValueId)}
-                                      {@const coValueProps = item.item.$isLoaded
-                                        ? extractCoValueProperties(item.item)
-                                        : null}
-                                      {@const isCapability = key === "capabilities" && item.item.$isLoaded && item.item["@schema"] === "capability"}
-                                      <div class="text-sm">
-                                        <div class="flex items-center gap-2">
-                                          <button
-                                            type="button"
-                                            class="flex-1 text-left flex items-center gap-2 p-2 rounded cursor-pointer min-w-0"
-                                            onclick={(e) =>
-                                              handleCoValueClick(item.item, coValueId, e)}
-                                          >
-                                            <span
-                                              class="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600"
-                                            >
-                                              [{item.index}]
-                                            </span>
-                                            <span
-                                              class="text-slate-700 flex-1 break-all break-words min-w-0"
-                                              >{item.preview}</span
-                                            >
-                                            <span
-                                              class="font-mono text-xs text-slate-400 break-all break-words shrink-0"
-                                            >
-                                              ({item.id.slice(0, 8)}...)
-                                            </span>
-                                            {#if item.isLoaded !== undefined}
-                                              <span class="text-xs text-slate-400 shrink-0">
-                                                {item.isLoaded ? "✓" : "⏳"}
-                                              </span>
-                                            {/if}
-                                            <svg
-                                              class="w-4 h-4 text-slate-400 transition-transform {isExpanded
-                                                ? 'rotate-90'
-                                                : ''}"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              viewBox="0 0 24 24"
-                                            >
-                                              <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M9 5l7 7-7 7"
-                                              />
-                                            </svg>
-                                          </button>
-                                          {#if isCapability}
-                                            <button
-                                              type="button"
-                                              class="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors shrink-0"
-                                              onclick={() => deleteCapability(item.item, value)}
-                                              title="Delete capability"
-                                            >
-                                              <svg
-                                                class="w-4 h-4"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                              >
-                                                <path
-                                                  stroke-linecap="round"
-                                                  stroke-linejoin="round"
-                                                  stroke-width="2"
-                                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                                />
-                                              </svg>
-                                            </button>
-                                          {/if}
-                                        </div>
-                                        {#if isExpanded && coValueProps}
+                                  {#if value.id}
+                                    <span class="ml-2 font-mono text-xs text-slate-400">
+                                      ID: {value.id.slice(0, 8)}...
+                                    </span>
+                                  {/if}
+                                  {#if value.isLoaded !== undefined}
+                                    <span class="text-xs text-slate-400">
+                                      {value.isLoaded ? "✓ Loaded" : "⏳ Loading..."}
+                                    </span>
+                                  {/if}
+                                </div>
+                                {#if value.items && value.items.length > 0}
+                                  <div class="space-y-4 mt-4">
+                                    {#each value.items as item}
+                                      {#if item.type === "CoValue" && item.item}
+                                        {@const coValueId = item.id}
+                                        {@const isExpanded = isCoValueExpanded(coValueId)}
+                                        {@const coValueProps = item.item.$isLoaded
+                                          ? extractCoValueProperties(item.item)
+                                          : null}
+                                        {@const displayLabel =
+                                          item.item.$isLoaded && item.item.$jazz.has("@label")
+                                            ? item.item["@label"]
+                                            : item.item.$isLoaded
+                                              ? item.item.$jazz.id
+                                              : item.preview}
+                                        {@const schema =
+                                          item.item.$isLoaded && item.item.$jazz.has("@schema")
+                                            ? item.item["@schema"]
+                                            : "CoValue"}
+                                        <div
+                                          class="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-slate-100/90 border border-white shadow-[0_0_8px_rgba(0,0,0,0.03)] p-5"
+                                        >
+                                          <!-- Glossy gradient overlay -->
                                           <div
-                                            class="ml-6 mt-2 p-4 bg-slate-200/50 rounded-lg border border-slate-200 space-y-4"
-                                          >
-                                            <!-- Properties -->
-                                            {#if Object.keys(coValueProps.properties).length > 0}
-                                              <div>
-                                                <h4
-                                                  class="text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wider"
+                                            class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
+                                          ></div>
+
+                                          <div class="relative space-y-4">
+                                            <!-- Header -->
+                                            <div class="flex justify-between items-start gap-4">
+                                              <div class="min-w-0 flex-1">
+                                                <div class="flex items-baseline gap-2 flex-wrap">
+                                                  <h3
+                                                    class="text-base font-bold text-slate-700 leading-tight truncate"
+                                                  >
+                                                    {displayLabel}
+                                                  </h3>
+                                                  <span
+                                                    class="px-2 py-0.5 rounded-full bg-slate-50/60 border border-white text-[10px] font-bold uppercase tracking-wider text-slate-500"
+                                                  >
+                                                    {schema}
+                                                  </span>
+                                                </div>
+                                                <div
+                                                  class="text-[10px] font-mono text-slate-400 mt-1 truncate opacity-70"
                                                 >
-                                                  Properties
-                                                </h4>
-                                                <div class="space-y-2">
-                                                  {#each Object.entries(coValueProps.properties) as [propKey, propValue]}
-                                                    <div
-                                                      class="text-xs border-b border-slate-100 pb-1"
+                                                  ID: {item.id.slice(0, 8)}...
+                                                  {#if item.isLoaded !== undefined}
+                                                    <span class="ml-2"
+                                                      >{item.isLoaded
+                                                        ? "✓ Loaded"
+                                                        : "⏳ Loading..."}</span
                                                     >
-                                                      <div class="flex items-start gap-2">
+                                                  {/if}
+                                                </div>
+                                              </div>
+                                              <button
+                                                type="button"
+                                                class="shrink-0 p-1.5 rounded-lg hover:bg-slate-200/50 transition-colors"
+                                                onclick={(e) =>
+                                                  handleCoValueClick(item.item, coValueId, e)}
+                                                title={isExpanded ? "Collapse" : "Expand"}
+                                                aria-label={isExpanded ? "Collapse" : "Expand"}
+                                              >
+                                                <svg
+                                                  class="w-4 h-4 text-slate-400 transition-transform {isExpanded
+                                                    ? 'rotate-90'
+                                                    : ''}"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  viewBox="0 0 24 24"
+                                                >
+                                                  <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M9 5l7 7-7 7"
+                                                  />
+                                                </svg>
+                                              </button>
+                                            </div>
+
+                                            {#if isExpanded && coValueProps}
+                                              <!-- Properties Section -->
+                                              <div
+                                                class="bg-slate-200/50 rounded-2xl p-4 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm space-y-4"
+                                              >
+                                                <!-- Properties -->
+                                                {#if Object.keys(coValueProps.properties).length > 0}
+                                                  <div class="space-y-3 text-sm">
+                                                    {#each Object.entries(coValueProps.properties) as [propKey, propValue]}
+                                                      <div
+                                                        class="flex justify-between items-center pt-2 border-t border-white/50 first:pt-0 first:border-t-0"
+                                                      >
                                                         <span
-                                                          class="font-semibold text-slate-600 min-w-[100px]"
-                                                          >{propKey}:</span
+                                                          class="text-xs font-medium text-slate-500 uppercase tracking-wide"
                                                         >
-                                                        <div class="flex-1">
+                                                          {propKey}
+                                                        </span>
+                                                        <div class="flex-1 text-right ml-4 min-w-0">
                                                           {#if typeof propValue === "object" && propValue !== null && "type" in propValue}
                                                             {#if propValue.type === "CoList"}
                                                               <span
@@ -1165,7 +1008,9 @@
                                                               >
                                                             {:else if propValue.type === "CoMap"}
                                                               <div class="space-y-2 mt-1">
-                                                                <div class="flex items-center gap-2">
+                                                                <div
+                                                                  class="flex items-center gap-2"
+                                                                >
                                                                   <span
                                                                     class="text-xs bg-purple-100 px-1.5 py-0.5 rounded text-purple-700"
                                                                     >CoMap</span
@@ -1173,7 +1018,10 @@
                                                                   {#if propValue.id}
                                                                     <span
                                                                       class="font-mono text-xs text-slate-400"
-                                                                      >({propValue.id.slice(0, 8)}...)</span
+                                                                      >({propValue.id.slice(
+                                                                        0,
+                                                                        8,
+                                                                      )}...)</span
                                                                     >
                                                                   {/if}
                                                                 </div>
@@ -1282,7 +1130,10 @@
                                                                 {/if}
                                                                 {#if propValue.coValue}
                                                                   <div class="ml-3 mt-2">
-                                                                    <JazzMetadata coValue={propValue.coValue} showKeys={false} />
+                                                                    <JazzMetadata
+                                                                      coValue={propValue.coValue}
+                                                                      showKeys={false}
+                                                                    />
                                                                   </div>
                                                                 {/if}
                                                               </div>
@@ -1317,197 +1168,207 @@
                                                           {/if}
                                                         </div>
                                                       </div>
-                                                    </div>
-                                                  {/each}
-                                                </div>
+                                                    {/each}
+                                                  </div>
+                                                {/if}
                                               </div>
                                             {/if}
-                                            <!-- Jazz Metadata -->
-                                            <JazzMetadata coValue={item.item} showKeys={true} />
                                           </div>
-                                        {/if}
-                                      </div>
-                                    {:else}
-                                      <div class="text-sm">
-                                        <div class="flex items-center gap-2">
-                                          <span
-                                            class="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600"
-                                          >
-                                            [{item.index}]
-                                          </span>
-                                          <span class="text-slate-700">
-                                            {typeof item.value === "string"
-                                              ? item.value
-                                              : JSON.stringify(item.value)}
-                                          </span>
                                         </div>
-                                      </div>
-                                    {/if}
-                                  {/each}
-                                </div>
-                              {:else}
-                                <div class="ml-4 text-sm text-slate-400 italic">Empty list</div>
-                              {/if}
-                            </div>
-                          {:else if value.type === "CoMap"}
-                            <!-- CoMap display with nested properties -->
-                            <div class="space-y-2">
-                              <div class="flex items-center gap-2">
-                                <span
-                                  class="font-mono text-xs bg-purple-100 px-2 py-0.5 rounded text-purple-700"
-                                >
-                                  CoMap
-                                </span>
-                                {#if value.id}
-                                  <span class="ml-2 font-mono text-xs text-slate-500"
-                                    >ID: {value.id.slice(0, 8)}...</span
-                                  >
-                                {/if}
-                                {#if value.isLoaded !== undefined}
-                                  <span class="text-xs text-slate-400">
-                                    {value.isLoaded ? "✓ Loaded" : "⏳ Loading..."}
-                                  </span>
+
+                                        <!-- Metadata card shown separately below -->
+                                        <!-- Metadata card shown separately below -->
+                                        <div class="mt-4">
+                                          <JazzMetadata coValue={item.item} showKeys={true} />
+                                        </div>
+                                      {:else}
+                                        <div class="text-sm">
+                                          <div class="flex items-center gap-2">
+                                            <span
+                                              class="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600"
+                                            >
+                                              [{item.index}]
+                                            </span>
+                                            <span class="text-slate-700">
+                                              {typeof item.value === "string"
+                                                ? item.value
+                                                : JSON.stringify(item.value)}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      {/if}
+                                    {/each}
+                                  </div>
+                                {:else}
+                                  <div class="ml-4 text-sm text-slate-400 italic">Empty list</div>
                                 {/if}
                               </div>
-                              {#if value.properties && Object.keys(value.properties).length > 0}
-                                <div class="ml-4 space-y-1 border-l-2 border-purple-200 pl-3">
-                                  {#each Object.entries(value.properties) as [propKey, propValue]}
-                                    <div class="text-xs">
-                                      <div class="flex items-center gap-2">
-                                        <span class="font-semibold text-slate-600">{propKey}:</span>
-                                        <div class="flex-1 flex items-center gap-2">
-                                          {#if typeof propValue === "object" && propValue !== null && "type" in propValue}
-                                            {#if propValue.type === "ImageDefinition"}
-                                              {#if propValue.isLoaded && propValue.imageDefinition}
-                                                <div class="flex items-center gap-2">
-                                                  <div
-                                                    class="w-6 h-6 rounded overflow-hidden border border-slate-300 flex-shrink-0"
-                                                  >
-                                                    <Image
-                                                      imageId={propValue.imageDefinition.$jazz.id}
-                                                      width={24}
-                                                      height={24}
-                                                      alt={propKey}
-                                                      class="object-cover w-full h-full"
-                                                      loading="lazy"
-                                                    />
+                            {:else if value.type === "CoMap"}
+                              <!-- CoMap display with nested properties -->
+                              <div class="space-y-2">
+                                <div class="flex items-center gap-2">
+                                  <span
+                                    class="font-mono text-xs bg-purple-100 px-2 py-0.5 rounded text-purple-700"
+                                  >
+                                    CoMap
+                                  </span>
+                                  {#if value.id}
+                                    <span class="ml-2 font-mono text-xs text-slate-500"
+                                      >ID: {value.id.slice(0, 8)}...</span
+                                    >
+                                  {/if}
+                                  {#if value.isLoaded !== undefined}
+                                    <span class="text-xs text-slate-400">
+                                      {value.isLoaded ? "✓ Loaded" : "⏳ Loading..."}
+                                    </span>
+                                  {/if}
+                                </div>
+                                {#if value.properties && Object.keys(value.properties).length > 0}
+                                  <div class="ml-4 space-y-1 border-l-2 border-purple-200 pl-3">
+                                    {#each Object.entries(value.properties) as [propKey, propValue]}
+                                      <div class="text-xs">
+                                        <div class="flex items-center gap-2">
+                                          <span class="font-semibold text-slate-600"
+                                            >{propKey}:</span
+                                          >
+                                          <div class="flex-1 flex items-center gap-2">
+                                            {#if typeof propValue === "object" && propValue !== null && "type" in propValue}
+                                              {#if propValue.type === "ImageDefinition"}
+                                                {#if propValue.isLoaded && propValue.imageDefinition}
+                                                  <div class="flex items-center gap-2">
+                                                    <div
+                                                      class="w-6 h-6 rounded overflow-hidden border border-slate-300 flex-shrink-0"
+                                                    >
+                                                      <Image
+                                                        imageId={propValue.imageDefinition.$jazz.id}
+                                                        width={24}
+                                                        height={24}
+                                                        alt={propKey}
+                                                        class="object-cover w-full h-full"
+                                                        loading="lazy"
+                                                      />
+                                                    </div>
+                                                    <span
+                                                      class="text-xs bg-green-100 px-1.5 py-0.5 rounded text-green-700"
+                                                      >ImageDefinition</span
+                                                    >
+                                                    <span
+                                                      class="ml-1 font-mono text-xs text-slate-400"
+                                                      >({propValue.id?.slice(0, 8)}...)</span
+                                                    >
                                                   </div>
+                                                {:else}
                                                   <span
                                                     class="text-xs bg-green-100 px-1.5 py-0.5 rounded text-green-700"
                                                     >ImageDefinition</span
                                                   >
-                                                  <span
-                                                    class="ml-1 font-mono text-xs text-slate-400"
-                                                    >({propValue.id?.slice(0, 8)}...)</span
+                                                  <span class="ml-1 text-xs text-slate-400"
+                                                    >(Loading...)</span
                                                   >
-                                                </div>
-                                              {:else}
+                                                {/if}
+                                              {:else if propValue.type === "CoValue"}
                                                 <span
-                                                  class="text-xs bg-green-100 px-1.5 py-0.5 rounded text-green-700"
-                                                  >ImageDefinition</span
+                                                  class="text-xs bg-purple-50 px-1 py-0.5 rounded text-purple-600"
+                                                  >CoValue</span
                                                 >
-                                                <span class="ml-1 text-xs text-slate-400"
-                                                  >(Loading...)</span
+                                                <span class="ml-1 font-mono text-xs text-slate-400"
+                                                  >({propValue.id?.slice(0, 8)}...)</span
+                                                >
+                                              {:else}
+                                                <span class="text-slate-700 break-all break-words"
+                                                  >{JSON.stringify(propValue)}</span
                                                 >
                                               {/if}
-                                            {:else if propValue.type === "CoValue"}
-                                              <span
-                                                class="text-xs bg-purple-50 px-1 py-0.5 rounded text-purple-600"
-                                                >CoValue</span
-                                              >
-                                              <span class="ml-1 font-mono text-xs text-slate-400"
-                                                >({propValue.id?.slice(0, 8)}...)</span
+                                            {:else if typeof propValue === "string"}
+                                              <span class="text-slate-700 break-all break-words"
+                                                >{propValue || "(empty)"}</span
                                               >
                                             {:else}
                                               <span class="text-slate-700 break-all break-words"
-                                                >{JSON.stringify(propValue)}</span
+                                                >{String(propValue)}</span
                                               >
                                             {/if}
-                                          {:else if typeof propValue === "string"}
-                                            <span class="text-slate-700 break-all break-words"
-                                              >{propValue || "(empty)"}</span
-                                            >
-                                          {:else}
-                                            <span class="text-slate-700 break-all break-words"
-                                              >{String(propValue)}</span
-                                            >
-                                          {/if}
+                                          </div>
                                         </div>
                                       </div>
-                                    </div>
-                                  {/each}
-                                </div>
-                              {:else if value.value !== undefined}
-                                <div class="text-sm text-slate-600 italic ml-4">{value.value}</div>
-                              {/if}
-                            </div>
-                          {:else if value.type === "CoValue"}
-                            <!-- CoValue display -->
-                            <div class="space-y-2">
-                              <div class="flex items-center gap-2">
-                                <span
-                                  class="font-mono text-xs bg-purple-100 px-2 py-0.5 rounded text-purple-700"
-                                >
-                                  CoValue
-                                </span>
-                                {#if value.id}
-                                  <span class="ml-2 font-mono text-xs text-slate-500"
-                                    >ID: {value.id.slice(0, 8)}...</span
-                                  >
-                                {/if}
-                                {#if value.isLoaded !== undefined}
-                                  <span class="text-xs text-slate-400">
-                                    {value.isLoaded ? "✓ Loaded" : "⏳ Loading..."}
-                                  </span>
+                                    {/each}
+                                  </div>
+                                {:else if value.value !== undefined}
+                                  <div class="text-sm text-slate-600 italic ml-4">
+                                    {value.value}
+                                  </div>
                                 {/if}
                               </div>
-                              {#if value.value !== undefined}
-                                <div class="text-sm text-slate-600 italic ml-4">{value.value}</div>
-                              {/if}
-                            </div>
+                            {:else if value.type === "CoValue"}
+                              <!-- CoValue display -->
+                              <div class="space-y-2">
+                                <div class="flex items-center gap-2">
+                                  <span
+                                    class="font-mono text-xs bg-purple-100 px-2 py-0.5 rounded text-purple-700"
+                                  >
+                                    CoValue
+                                  </span>
+                                  {#if value.id}
+                                    <span class="ml-2 font-mono text-xs text-slate-500"
+                                      >ID: {value.id.slice(0, 8)}...</span
+                                    >
+                                  {/if}
+                                  {#if value.isLoaded !== undefined}
+                                    <span class="text-xs text-slate-400">
+                                      {value.isLoaded ? "✓ Loaded" : "⏳ Loading..."}
+                                    </span>
+                                  {/if}
+                                </div>
+                                {#if value.value !== undefined}
+                                  <div class="text-sm text-slate-600 italic ml-4">
+                                    {value.value}
+                                  </div>
+                                {/if}
+                              </div>
+                            {/if}
+                          {:else if typeof value === "string"}
+                            <span class="text-sm text-slate-700">{value || "(empty)"}</span>
+                          {:else if typeof value === "number" || typeof value === "boolean"}
+                            <span class="text-sm font-mono text-slate-700">{String(value)}</span>
+                          {:else if value === null}
+                            <span class="text-sm text-slate-400 italic">null</span>
+                          {:else if value === undefined}
+                            <span class="text-sm text-slate-400 italic">undefined</span>
+                          {:else}
+                            <pre
+                              class="text-xs text-slate-600 bg-slate-100/50 p-2 rounded overflow-x-auto">{JSON.stringify(
+                                value,
+                                null,
+                                2,
+                              )}</pre>
                           {/if}
-                        {:else if typeof value === "string"}
-                          <span class="text-sm text-slate-700">{value || "(empty)"}</span>
-                        {:else if typeof value === "number" || typeof value === "boolean"}
-                          <span class="text-sm font-mono text-slate-700">{String(value)}</span>
-                        {:else if value === null}
-                          <span class="text-sm text-slate-400 italic">null</span>
-                        {:else if value === undefined}
-                          <span class="text-sm text-slate-400 italic">undefined</span>
-                        {:else}
-                          <pre
-                            class="text-xs text-slate-600 bg-slate-100/50 p-2 rounded overflow-x-auto">{JSON.stringify(
-                              value,
-                              null,
-                              2,
-                            )}</pre>
-                        {/if}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                {/each}
-              </div>
-            {:else}
-              <p class="text-sm text-slate-500 italic">No CoValues found</p>
+                  {/each}
+                </div>
+              {:else}
+                <p class="text-sm text-slate-500 italic">No CoValues found</p>
+              {/if}
+            </div>
+
+            <!-- Jazz Metadata -->
+            {#if me.root}
+              <JazzMetadata coValue={me.root} showKeys={true} />
             {/if}
           </div>
-
-          <!-- Jazz Metadata -->
-          {#if me.root?.o}
-            <JazzMetadata coValue={me.root.o} showKeys={true} />
-          {/if}
         </div>
-      {:else if me.$isLoaded && me.root?.o && !me.root.o.$isLoaded}
+      {:else if me.$isLoaded && me.root && !me.root.$isLoaded}
         <div
           class="p-8 rounded-3xl border border-dashed border-white bg-slate-50/40 text-center backdrop-blur-sm shadow-[0_0_6px_rgba(0,0,0,0.03)]"
         >
-          <p class="text-sm text-slate-500">Loading root.o...</p>
+          <p class="text-sm text-slate-500">Loading root...</p>
         </div>
       {:else}
         <div
           class="p-8 rounded-3xl border border-dashed border-white bg-slate-50/40 text-center backdrop-blur-sm shadow-[0_0_6px_rgba(0,0,0,0.03)]"
         >
-          <p class="text-sm text-slate-500">Root.O not available</p>
+          <p class="text-sm text-slate-500">Root not available</p>
         </div>
       {/if}
     </section>

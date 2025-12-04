@@ -3,6 +3,7 @@
   import { getCoValueGroupInfo } from "../groups.js";
   import { CoState } from "jazz-tools/svelte";
   import { setupReactiveLabel } from "../schema.js";
+  import JazzMetadata from "./JazzMetadata.svelte";
 
   interface Props {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -197,5 +198,10 @@
         </div>
       {/if}
     </div>
+  </div>
+
+  <!-- Metadata card shown separately below -->
+  <div class="mt-4">
+    <JazzMetadata {coValue} showKeys={true} />
   </div>
 {/if}

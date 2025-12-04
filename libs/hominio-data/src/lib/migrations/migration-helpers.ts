@@ -4,7 +4,7 @@
  */
 
 /**
- * Loads account root.o.humans and returns them as an array
+ * Loads account root.humans and returns them as an array
  * Handles all the common loading, waiting, and error checking logic
  * 
  * @param account - The Jazz account to load humans from
@@ -19,29 +19,25 @@ export async function loadAccountHumans(
         const loadedAccount = await account.$jazz.ensureLoaded({
             resolve: {
                 root: {
-                    o: {
-                        humans: true // This loads the list
-                    }
+                    humans: true // This loads the list
                 }
             },
         });
 
-        if (!loadedAccount.root || !loadedAccount.root.$jazz.has("o")) {
-            console.log("[Migration Helper] No root or o found");
+        if (!loadedAccount.root || !loadedAccount.root.$isLoaded) {
+            console.log("[Migration Helper] No root found");
             return null;
         }
 
         const root = loadedAccount.root;
-        const rootWithO = await root.$jazz.ensureLoaded({
-            resolve: { o: { humans: true } },
-        });
-
-        if (!rootWithO.o || !rootWithO.o.$jazz.has("humans")) {
+        
+        // Verify that root was actually loaded (not just a broken reference)
+        if (!root.$jazz.has("humans")) {
             console.log("[Migration Helper] No humans list found");
             return null;
         }
 
-        const humans = rootWithO.o.humans;
+        const humans = root.humans;
         if (!humans) {
             console.log("[Migration Helper] Humans list is null");
             return null;

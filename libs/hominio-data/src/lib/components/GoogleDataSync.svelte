@@ -11,9 +11,7 @@
   const account = new AccountCoState(JazzAccount, {
     resolve: {
       root: {
-        o: {
-          humans: true,
-        },
+        humans: true,
       },
     },
   });
@@ -27,8 +25,8 @@
       !googleDataSynced &&
       me.$isLoaded &&
       betterAuthUser &&
-      me.root.o?.humans?.$isLoaded &&
-      me.root.o.humans.length > 0
+      me.root?.humans?.$isLoaded &&
+      me.root.humans.length > 0
     ) {
       syncGoogleDataToAvatars(me, betterAuthUser)
         .then(() => {
