@@ -2,6 +2,7 @@
   import { JazzAccount } from "$lib/schema";
   import { AccountCoState, Image } from "jazz-tools/svelte";
   import { authClient } from "$lib/auth-client";
+  import { getCoValueGroupInfo } from "$lib/groups";
 
   // Better Auth session
   const session = authClient.useSession();
@@ -29,6 +30,149 @@
   let expandedCoValues = $state<string[]>([]);
   let selectedCoValue: any = $state(null);
 
+  // Function to remove a parent group member from a CoValue's owner group
+  async function removeParentGroupMember(coValue: any, parentGroupId: string) {
+    if (!coValue || !coValue.$isLoaded || !me || !me.$isLoaded) {
+      console.error("[Remove Parent Group] CoValue or account not loaded");
+      return;
+    }
+
+    try {
+      // Get the CoValue's owner group
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ownerGroup = coValue.$jazz.owner as any;
+      if (!ownerGroup) {
+        console.error("[Remove Parent Group] CoValue doesn't have an owner group");
+        return;
+      }
+
+      // Load the parent group to remove
+      const { Group } = await import("jazz-tools");
+      const parentGroup = await Group.load(parentGroupId);
+      if (!parentGroup || !parentGroup.$isLoaded) {
+        console.error("[Remove Parent Group] Could not load parent group");
+        return;
+      }
+
+      // Remove the parent group from the owner group
+      ownerGroup.removeMember(parentGroup);
+      await ownerGroup.$jazz.waitForSync();
+      console.log(`[Remove Parent Group] Removed parent group ${parentGroupId} from owner group`);
+    } catch (error) {
+      console.error("[Remove Parent Group] Error removing parent group:", error);
+    }
+  }
+
+  // Function to delete a capability
+  async function deleteCapability(capability: any, capabilitiesList: any) {
+    if (!capability || !capability.$isLoaded || !me || !me.$isLoaded) {
+      console.error("[Delete Capability] Capability or account not loaded");
+      return;
+    }
+
+    try {
+      // Get capability group ID
+      const capabilityGroupId = capability.capabilityGroup;
+      if (!capabilityGroupId) {
+        console.error("[Delete Capability] Capability doesn't have capabilityGroup");
+        return;
+      }
+
+      // Find which avatar's owner group has this capability group as a member
+      // We need to check all humans' avatars
+      const root = await me.$jazz.ensureLoaded({
+        resolve: { root: { o: { humans: true } } },
+      });
+
+      if (!root.root || !root.root.o || !root.root.o.humans) {
+        console.error("[Delete Capability] Could not load humans");
+        return;
+      }
+
+      const humans = Array.from(root.root.o.humans);
+      let avatarOwnerGroup: any = null;
+
+      // Load the capability group first
+      const { Group } = await import("jazz-tools");
+      const capabilityGroup = await Group.load(capabilityGroupId);
+      if (!capabilityGroup || !capabilityGroup.$isLoaded) {
+        console.error("[Delete Capability] Could not load capability group");
+        return;
+      }
+
+      // Find the avatar owner group that has this capability group as a member
+      // Check parent groups of avatar owner groups
+      for (const human of humans) {
+        if (!human || !human.$isLoaded || !human.$jazz.has("avatar")) {
+          continue;
+        }
+
+        const humanWithAvatar = await human.$jazz.ensureLoaded({
+          resolve: { avatar: true },
+        });
+        const avatar = humanWithAvatar.avatar;
+        if (!avatar || !avatar.$isLoaded) {
+          continue;
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ownerGroup = avatar.$jazz.owner as any;
+        if (ownerGroup) {
+          // Check if capability group is a parent group (member) of the avatar owner group
+          try {
+            const parentGroups = ownerGroup.getParentGroups ? ownerGroup.getParentGroups() : [];
+            const hasCapabilityGroup = parentGroups.some(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (parent: any) => parent.$jazz?.id === capabilityGroupId
+            );
+
+            if (hasCapabilityGroup) {
+              avatarOwnerGroup = ownerGroup;
+              break;
+            }
+          } catch (e) {
+            console.warn("[Delete Capability] Error checking parent groups:", e);
+          }
+        }
+      }
+
+      // Remove capability group from avatar's owner group if found
+      if (avatarOwnerGroup) {
+        try {
+          avatarOwnerGroup.removeMember(capabilityGroup);
+          await avatarOwnerGroup.$jazz.waitForSync();
+          console.log(`[Delete Capability] Removed capability group from avatar owner group`);
+        } catch (error) {
+          console.error("[Delete Capability] Error removing capability group:", error);
+        }
+      } else {
+        console.warn("[Delete Capability] Could not find avatar owner group with this capability");
+      }
+
+      // Remove capability from capabilities list
+      const currentCapabilities = Array.from(capabilitiesList).filter(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (cap: any) => cap && cap.$jazz && cap.$jazz.id
+      );
+      const updatedCapabilities = currentCapabilities.filter(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (cap: any) => cap.$jazz.id !== capability.$jazz.id
+      );
+
+      const rootWithCapabilities = await me.$jazz.ensureLoaded({
+        resolve: { root: { o: { capabilities: true } } },
+      });
+
+      if (rootWithCapabilities.root && rootWithCapabilities.root.o) {
+        rootWithCapabilities.root.o.$jazz.set("capabilities", updatedCapabilities);
+        await rootWithCapabilities.root.o.$jazz.waitForSync();
+        console.log(`[Delete Capability] Removed capability from list`);
+      }
+    } catch (error) {
+      console.error("[Delete Capability] Error deleting capability:", error);
+    }
+  }
+
   // Helper function to check if a CoValue is expanded
   function isCoValueExpanded(coValueId: string): boolean {
     return expandedCoValues.includes(coValueId);
@@ -42,6 +186,11 @@
       owner: any;
       ownerInfo: any;
       keys: string[];
+      groupInfo?: {
+        groupId: string | null;
+        accountMembers: Array<{ id: string; role: string; type: "account" }>;
+        groupMembers: Array<{ id: string; role: string; type: "group" }>;
+      } | null;
     };
   } | null {
     if (!coValue || !coValue.$jazz) {
@@ -183,7 +332,7 @@
                         `[Data Explorer] Property ${nestedKey} is a CoValue, ID:`,
                         nestedValue.$jazz?.id,
                       );
-                      
+
                       // Check if it's an ImageDefinition
                       // ImageDefinition has properties like original, placeholderDataURL, originalSize
                       // We check by accessing properties directly (without using has() or 'in' operator) to avoid Proxy errors
@@ -193,12 +342,13 @@
                           // Try to access ImageDefinition-specific properties directly
                           // ImageDefinition always has these properties when loaded
                           const hasOriginal = (nestedValue as any).original !== undefined;
-                          const hasPlaceholder = (nestedValue as any).placeholderDataURL !== undefined;
+                          const hasPlaceholder =
+                            (nestedValue as any).placeholderDataURL !== undefined;
                           const hasOriginalSize = (nestedValue as any).originalSize !== undefined;
-                          
+
                           // ImageDefinition has at least original and originalSize
                           isImageDefinition = hasOriginal || hasOriginalSize;
-                          
+
                           console.log(
                             `[Data Explorer] Property ${nestedKey} isImageDefinition:`,
                             isImageDefinition,
@@ -211,7 +361,7 @@
                           e,
                         );
                       }
-                      
+
                       if (isImageDefinition) {
                         nestedProperties[nestedKey] = {
                           type: "ImageDefinition",
@@ -248,12 +398,27 @@
               }
             }
 
+            // Extract Jazz metadata for nested CoMap (like avatar)
+            const nestedCoMapMetadata = value.$isLoaded
+              ? (() => {
+                  try {
+                    const metadata = extractCoValueProperties(value);
+                    return metadata?.jazzMetadata || null;
+                  } catch (error) {
+                    console.warn(`[Data Explorer] Error extracting metadata for nested CoMap ${key}:`, error);
+                    return null;
+                  }
+                })()
+              : null;
+
             data[key] = {
               type: "CoMap",
               id: value.$jazz?.id || "unknown",
               isLoaded: value.$isLoaded || false,
               properties: nestedProperties,
               value: value.$isLoaded ? String(value) : "Loading...",
+              jazzMetadata: nestedCoMapMetadata,
+              coValue: value, // Store reference to the CoValue for operations
             };
           }
         } else if (value !== undefined && value !== null) {
@@ -279,6 +444,15 @@
               }
             : null,
         keys: keys,
+        // Get group info (members and parent groups) if this is a CoValue with an owner group
+        groupInfo: (() => {
+          try {
+            return getCoValueGroupInfo(coValue);
+          } catch (error) {
+            console.warn("Error getting group info:", error);
+            return null;
+          }
+        })(),
       },
     };
   }
@@ -533,7 +707,7 @@
                         `[Data Explorer] Property ${nestedKey} is a CoValue, ID:`,
                         nestedValue.$jazz?.id,
                       );
-                      
+
                       // Check if it's an ImageDefinition
                       // ImageDefinition has properties like original, placeholderDataURL, originalSize
                       // We check by accessing properties directly (without using has() or 'in' operator) to avoid Proxy errors
@@ -543,12 +717,13 @@
                           // Try to access ImageDefinition-specific properties directly
                           // ImageDefinition always has these properties when loaded
                           const hasOriginal = (nestedValue as any).original !== undefined;
-                          const hasPlaceholder = (nestedValue as any).placeholderDataURL !== undefined;
+                          const hasPlaceholder =
+                            (nestedValue as any).placeholderDataURL !== undefined;
                           const hasOriginalSize = (nestedValue as any).originalSize !== undefined;
-                          
+
                           // ImageDefinition has at least original and originalSize
                           isImageDefinition = hasOriginal || hasOriginalSize;
-                          
+
                           console.log(
                             `[Data Explorer] Property ${nestedKey} isImageDefinition:`,
                             isImageDefinition,
@@ -561,7 +736,7 @@
                           e,
                         );
                       }
-                      
+
                       if (isImageDefinition) {
                         nestedProperties[nestedKey] = {
                           type: "ImageDefinition",
@@ -598,6 +773,19 @@
               }
             }
 
+            // Extract Jazz metadata for nested CoMap (like avatar)
+            const nestedCoMapMetadata = value.$isLoaded
+              ? (() => {
+                  try {
+                    const metadata = extractCoValueProperties(value);
+                    return metadata?.jazzMetadata || null;
+                  } catch (error) {
+                    console.warn(`[Data Explorer] Error extracting metadata for nested CoMap ${key}:`, error);
+                    return null;
+                  }
+                })()
+              : null;
+
             data[key] = {
               type: "CoMap",
               id: value.$jazz?.id || "unknown",
@@ -606,6 +794,8 @@
               value: value.$isLoaded ? String(value) : "Loading...",
               // Extract properties if it's a CoMap
               properties: nestedProperties,
+              jazzMetadata: nestedCoMapMetadata,
+              coValue: value, // Store reference to the CoValue for operations
             };
           }
         } else if (value !== undefined && value !== null) {
@@ -973,48 +1163,73 @@
                                       {@const coValueProps = item.item.$isLoaded
                                         ? extractCoValueProperties(item.item)
                                         : null}
+                                      {@const isCapability = key === "capabilities" && item.item.$isLoaded && item.item["@schema"] === "capability"}
                                       <div class="text-sm">
-                                        <button
-                                          type="button"
-                                          class="w-full text-left flex items-center gap-2 p-2 rounded cursor-pointer min-w-0"
-                                          onclick={(e) =>
-                                            handleCoValueClick(item.item, coValueId, e)}
-                                        >
-                                          <span
-                                            class="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600"
+                                        <div class="flex items-center gap-2">
+                                          <button
+                                            type="button"
+                                            class="flex-1 text-left flex items-center gap-2 p-2 rounded cursor-pointer min-w-0"
+                                            onclick={(e) =>
+                                              handleCoValueClick(item.item, coValueId, e)}
                                           >
-                                            [{item.index}]
-                                          </span>
-                                          <span
-                                            class="text-slate-700 flex-1 break-all break-words min-w-0"
-                                            >{item.preview}</span
-                                          >
-                                          <span
-                                            class="font-mono text-xs text-slate-400 break-all break-words shrink-0"
-                                          >
-                                            ({item.id.slice(0, 8)}...)
-                                          </span>
-                                          {#if item.isLoaded !== undefined}
-                                            <span class="text-xs text-slate-400 shrink-0">
-                                              {item.isLoaded ? "✓" : "⏳"}
+                                            <span
+                                              class="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600"
+                                            >
+                                              [{item.index}]
                                             </span>
+                                            <span
+                                              class="text-slate-700 flex-1 break-all break-words min-w-0"
+                                              >{item.preview}</span
+                                            >
+                                            <span
+                                              class="font-mono text-xs text-slate-400 break-all break-words shrink-0"
+                                            >
+                                              ({item.id.slice(0, 8)}...)
+                                            </span>
+                                            {#if item.isLoaded !== undefined}
+                                              <span class="text-xs text-slate-400 shrink-0">
+                                                {item.isLoaded ? "✓" : "⏳"}
+                                              </span>
+                                            {/if}
+                                            <svg
+                                              class="w-4 h-4 text-slate-400 transition-transform {isExpanded
+                                                ? 'rotate-90'
+                                                : ''}"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M9 5l7 7-7 7"
+                                              />
+                                            </svg>
+                                          </button>
+                                          {#if isCapability}
+                                            <button
+                                              type="button"
+                                              class="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors shrink-0"
+                                              onclick={() => deleteCapability(item.item, value)}
+                                              title="Delete capability"
+                                            >
+                                              <svg
+                                                class="w-4 h-4"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                              >
+                                                <path
+                                                  stroke-linecap="round"
+                                                  stroke-linejoin="round"
+                                                  stroke-width="2"
+                                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                />
+                                              </svg>
+                                            </button>
                                           {/if}
-                                          <svg
-                                            class="w-4 h-4 text-slate-400 transition-transform {isExpanded
-                                              ? 'rotate-90'
-                                              : ''}"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                          >
-                                            <path
-                                              stroke-linecap="round"
-                                              stroke-linejoin="round"
-                                              stroke-width="2"
-                                              d="M9 5l7 7-7 7"
-                                            />
-                                          </svg>
-                                        </button>
+                                        </div>
                                         {#if isExpanded && coValueProps}
                                           <div
                                             class="ml-6 mt-2 p-4 bg-slate-200/50 rounded-lg border border-slate-200 space-y-4"
@@ -1048,11 +1263,19 @@
                                                                 >({propValue.length} items)</span
                                                               >
                                                             {:else if propValue.type === "CoMap"}
-                                                              <div class="space-y-1 mt-1">
-                                                                <span
-                                                                  class="text-xs bg-purple-100 px-1.5 py-0.5 rounded text-purple-700"
-                                                                  >CoMap</span
-                                                                >
+                                                              <div class="space-y-2 mt-1">
+                                                                <div class="flex items-center gap-2">
+                                                                  <span
+                                                                    class="text-xs bg-purple-100 px-1.5 py-0.5 rounded text-purple-700"
+                                                                    >CoMap</span
+                                                                  >
+                                                                  {#if propValue.id}
+                                                                    <span
+                                                                      class="font-mono text-xs text-slate-400"
+                                                                      >({propValue.id.slice(0, 8)}...)</span
+                                                                    >
+                                                                  {/if}
+                                                                </div>
                                                                 {#if propValue.properties && Object.keys(propValue.properties).length > 0}
                                                                   <div
                                                                     class="ml-3 mt-1 space-y-1 border-l-2 border-purple-200 pl-2"
@@ -1156,6 +1379,91 @@
                                                                     >(empty)</span
                                                                   >
                                                                 {/if}
+                                                                {#if propValue.jazzMetadata}
+                                                                  {@const nestedMetadata = propValue.jazzMetadata}
+                                                                  <div class="ml-3 mt-2 pt-2 border-t border-purple-200">
+                                                                    <h5 class="text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+                                                                      Jazz Metadata
+                                                                    </h5>
+                                                                    <div class="space-y-1 text-xs">
+                                                                      {#if nestedMetadata.id}
+                                                                        <div>
+                                                                          <span class="font-semibold text-slate-600">ID:</span>
+                                                                          <span class="ml-2 font-mono text-slate-500">{nestedMetadata.id}</span>
+                                                                        </div>
+                                                                      {/if}
+                                                                      {#if nestedMetadata.ownerInfo}
+                                                                        <div>
+                                                                          <span class="font-semibold text-slate-600">Owner:</span>
+                                                                          <span class="ml-2 text-slate-500">{nestedMetadata.ownerInfo.type}</span>
+                                                                          <span class="ml-2 font-mono text-xs text-slate-400">({nestedMetadata.ownerInfo.id.slice(0, 8)}...)</span>
+                                                                        </div>
+                                                                      {/if}
+                                                                      {#if nestedMetadata.groupInfo}
+                                                                        {@const groupInfo = nestedMetadata.groupInfo}
+                                                                        {#if groupInfo.accountMembers.length > 0 || groupInfo.groupMembers.length > 0}
+                                                                          <div class="mt-2 pt-2 border-t border-slate-200">
+                                                                            <h6 class="text-xs font-semibold text-slate-500 mb-1">Group Members</h6>
+                                                                            {#if groupInfo.accountMembers.length > 0}
+                                                                              <div class="mb-2 ml-2">
+                                                                                <span class="text-xs text-slate-500">Account Members:</span>
+                                                                                <div class="space-y-0.5 ml-2 mt-0.5">
+                                                                                  {#each groupInfo.accountMembers as member}
+                                                                                    <div class="text-xs text-slate-600">
+                                                                                      <span class="font-mono">{member.id.slice(0, 8)}...</span>
+                                                                                      <span class="ml-2 text-slate-500">({member.role})</span>
+                                                                                    </div>
+                                                                                  {/each}
+                                                                                </div>
+                                                                              </div>
+                                                                            {/if}
+                                                                            {#if groupInfo.groupMembers.length > 0}
+                                                                              <div class="ml-2">
+                                                                                <span class="text-xs text-slate-500">Parent Groups:</span>
+                                                                                <div class="space-y-0.5 ml-2 mt-0.5">
+                                                                                  {#each groupInfo.groupMembers as groupMember}
+                                                                                    <div class="flex items-center gap-2">
+                                                                                      <div class="text-xs text-slate-600 flex-1">
+                                                                                        <span class="font-mono">{groupMember.id.slice(0, 8)}...</span>
+                                                                                        <span class="ml-2 text-slate-500">({groupMember.role})</span>
+                                                                                      </div>
+                                                                                      <button
+                                                                                        type="button"
+                                                                                        class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors shrink-0"
+                                                                                        onclick={() => {
+                                                                                          // Get the avatar CoValue from the stored reference
+                                                                                          const avatarCoValue = propValue.coValue;
+                                                                                          if (avatarCoValue) {
+                                                                                            removeParentGroupMember(avatarCoValue, groupMember.id);
+                                                                                          }
+                                                                                        }}
+                                                                                        title="Remove parent group"
+                                                                                      >
+                                                                                        <svg
+                                                                                          class="w-3 h-3"
+                                                                                          fill="none"
+                                                                                          stroke="currentColor"
+                                                                                          viewBox="0 0 24 24"
+                                                                                        >
+                                                                                          <path
+                                                                                            stroke-linecap="round"
+                                                                                            stroke-linejoin="round"
+                                                                                            stroke-width="2"
+                                                                                            d="M6 18L18 6M6 6l12 12"
+                                                                                          />
+                                                                                        </svg>
+                                                                                      </button>
+                                                                                    </div>
+                                                                                  {/each}
+                                                                                </div>
+                                                                              </div>
+                                                                            {/if}
+                                                                          </div>
+                                                                        {/if}
+                                                                      {/if}
+                                                                    </div>
+                                                                  </div>
+                                                                {/if}
                                                               </div>
                                                             {:else if propValue.type === "CoValue"}
                                                               <span
@@ -1242,6 +1550,64 @@
                                                       {/each}
                                                     </div>
                                                   </div>
+                                                {/if}
+                                                {#if coValueProps.jazzMetadata.groupInfo}
+                                                  {@const groupInfo = coValueProps.jazzMetadata.groupInfo}
+                                                  {#if groupInfo.accountMembers.length > 0 || groupInfo.groupMembers.length > 0}
+                                                    <div class="mt-4 pt-4 border-t border-slate-200">
+                                                      <h5 class="text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wider">
+                                                        Group Members
+                                                      </h5>
+                                                      {#if groupInfo.accountMembers.length > 0}
+                                                        <div class="mb-3">
+                                                          <span class="text-xs font-semibold text-slate-500 mb-1 block">Account Members:</span>
+                                                          <div class="space-y-1 ml-2">
+                                                            {#each groupInfo.accountMembers as member}
+                                                              <div class="text-xs text-slate-600">
+                                                                <span class="font-mono">{member.id.slice(0, 8)}...</span>
+                                                                <span class="ml-2 text-slate-500">({member.role})</span>
+                                                              </div>
+                                                            {/each}
+                                                          </div>
+                                                        </div>
+                                                      {/if}
+                                                      {#if groupInfo.groupMembers.length > 0}
+                                                        <div>
+                                                          <span class="text-xs font-semibold text-slate-500 mb-1 block">Parent Groups:</span>
+                                                          <div class="space-y-1 ml-2">
+                                                            {#each groupInfo.groupMembers as groupMember}
+                                                              <div class="flex items-center gap-2">
+                                                                <div class="text-xs text-slate-600 flex-1">
+                                                                  <span class="font-mono">{groupMember.id.slice(0, 8)}...</span>
+                                                                  <span class="ml-2 text-slate-500">({groupMember.role})</span>
+                                                                </div>
+                                                                <button
+                                                                  type="button"
+                                                                  class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors shrink-0"
+                                                                  onclick={() => removeParentGroupMember(item.item, groupMember.id)}
+                                                                  title="Remove parent group"
+                                                                >
+                                                                  <svg
+                                                                    class="w-3 h-3"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    viewBox="0 0 24 24"
+                                                                  >
+                                                                    <path
+                                                                      stroke-linecap="round"
+                                                                      stroke-linejoin="round"
+                                                                      stroke-width="2"
+                                                                      d="M6 18L18 6M6 6l12 12"
+                                                                    />
+                                                                  </svg>
+                                                                </button>
+                                                              </div>
+                                                            {/each}
+                                                          </div>
+                                                        </div>
+                                                      {/if}
+                                                    </div>
+                                                  {/if}
                                                 {/if}
                                               </div>
                                             </div>
