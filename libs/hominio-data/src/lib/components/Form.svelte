@@ -44,7 +44,7 @@
       <input
         type="text"
         id="name"
-        class="border border-stone-300 rounded shadow-xs py-1 px-2 flex-1"
+        class="bg-gray-100 border border-slate-300 rounded-full shadow-xs py-1 px-2 flex-1"
         value={name}
         oninput={handleNameChange}
       />

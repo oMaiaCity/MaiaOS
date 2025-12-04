@@ -1,6 +1,7 @@
 <script lang="ts">
   import { authClient } from "$lib/auth-client";
   import { browser } from "$app/environment";
+  import { page } from "$app/stores";
 
   let { appName } = $props();
 
@@ -9,23 +10,23 @@
   const betterAuthUser = $derived($session.data?.user);
   const isBetterAuthSignedIn = $derived(!!betterAuthUser);
   const isBetterAuthPending = $derived($session.isPending);
-  
+
   // Get Jazz account ID from Better Auth user (set by jazzPlugin)
   // The jazzPlugin stores the Jazz account ID in the accountID field
   // Falls back to first 8 chars of Better Auth user ID if accountID not available
   const jazzAccountId = $derived(
-    (betterAuthUser as any)?.accountID 
-      ? String((betterAuthUser as any).accountID).slice(0, 8) 
-      : betterAuthUser?.id 
-        ? betterAuthUser.id.slice(0, 8) 
-        : null
+    (betterAuthUser as any)?.accountID
+      ? String((betterAuthUser as any).accountID).slice(0, 8)
+      : betterAuthUser?.id
+        ? betterAuthUser.id.slice(0, 8)
+        : null,
   );
 
   let signingOut = $state(false);
 
   async function handleGoogleSignIn() {
     if (!browser) return;
-    
+
     try {
       const callbackURL = window.location.href;
       await authClient.signIn.social({
@@ -51,11 +52,33 @@
 <header>
   <nav class="flex justify-between items-center py-4 px-4 border-b border-slate-200">
     <div class="flex items-center gap-4">
+      <!-- Navigation Links -->
+      <div class="flex items-center gap-3">
+        <a
+          href="/"
+          class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url
+            .pathname === '/'
+            ? 'bg-slate-100 text-slate-900'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+        >
+          Home
+        </a>
+        <a
+          href="/data"
+          class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url
+            .pathname === '/data'
+            ? 'bg-slate-100 text-slate-900'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+        >
+          Data
+        </a>
+      </div>
+
       {#if isBetterAuthPending}
         <span class="text-sm text-slate-500">Loading...</span>
       {:else if isBetterAuthSignedIn}
         <span class="text-sm text-slate-600">
-          Account: {jazzAccountId || (betterAuthUser?.name || betterAuthUser?.email || "Logged in")}
+          Account: {jazzAccountId || betterAuthUser?.name || betterAuthUser?.email || "Logged in"}
         </span>
       {:else}
         <span class="text-sm text-slate-500">Not signed in</span>
@@ -68,17 +91,12 @@
           type="button"
           onclick={handleBetterAuthSignOut}
           disabled={signingOut}
-          class="bg-blue-100 hover:bg-blue-200 disabled:opacity-50 py-1.5 px-3 text-sm rounded-md transition-colors flex items-center gap-2"
+          class="bg-[#002455] hover:bg-[#002455] disabled:opacity-50 border border-[#001a3d] text-white py-1.5 px-3 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
         >
           {#if signingOut}
             <span>Signing out...</span>
           {:else}
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -93,7 +111,7 @@
         <button
           type="button"
           onclick={handleGoogleSignIn}
-          class="bg-white hover:bg-gray-50 border border-gray-300 py-1.5 px-4 text-sm rounded-md transition-colors flex items-center gap-2 shadow-sm"
+          class="bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
         >
           <svg class="w-4 h-4" viewBox="0 0 24 24">
             <path

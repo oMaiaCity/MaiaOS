@@ -77,7 +77,7 @@ export const Coop = co.map({
 
 /** The account root is an app-specific per-user private `CoMap`
  *  where you can store top-level objects for that user */
-export const AccountRoot = co.map({
+export const AppRoot = co.map({
   o: co.map({
     humans: co.list(Human), // List of Human CoValues (each auto-creates a Group via $jazz.owner)
     coops: co.list(Coop), // List of Coop CoValues (each auto-creates a Group via $jazz.owner)
@@ -86,7 +86,7 @@ export const AccountRoot = co.map({
 
 export const JazzAccount = co
   .account({
-    root: AccountRoot,
+    root: AppRoot,
     profile: AccountProfile,
   })
   .withMigration(async (account) => {
