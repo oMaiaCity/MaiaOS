@@ -186,7 +186,12 @@
     />
 
     <!-- TYPE -->
-    <PropertyItem propKey="TYPE" propValue={metadata()!.coValueType} />
+    <PropertyItem
+      propKey="TYPE"
+      propValue={metadata()!.coValueType}
+      hideBadge={false}
+      hideValue={true}
+    />
 
     <!-- GROUP -->
     {#if metadata()?.ownerInfo}

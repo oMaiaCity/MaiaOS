@@ -23,6 +23,7 @@
     showCopyButton?: boolean; // Show copy button for string values
     copyValue?: string; // Value to copy (if different from displayValue)
     hideBadge?: boolean; // Hide the type badge
+    hideValue?: boolean; // Hide the value text (only show badge)
     variant?: "default" | "members"; // Display variant
     membersData?: MembersData; // For members variant
   }
@@ -34,6 +35,7 @@
     showCopyButton = false,
     copyValue,
     hideBadge = false,
+    hideValue = false,
     variant = "default",
     membersData,
   }: Props = $props();
@@ -41,13 +43,19 @@
   // Copy button state
   let copied = $state(false);
 
+  // Known CoValue type names that should use their own badge style
+  const knownCoValueTypes = ["Image", "FileStream", "CoMap", "CoList", "CoValue"];
+
   // Extract display value and type
   const displayInfo = $derived(() => {
     // Handle primitive values
     if (typeof propValue !== "object" || propValue === null) {
+      const stringValue = String(propValue || "");
+      // Check if the string value is a known CoValue type name
+      const isKnownType = knownCoValueTypes.includes(stringValue);
       return {
-        displayValue: String(propValue || ""),
-        type: typeof propValue,
+        displayValue: stringValue,
+        type: isKnownType ? stringValue : typeof propValue,
         isCoValue: false,
         coValue: null,
         showImagePreview: false,
@@ -280,41 +288,43 @@
           </div>
         {:else}
           <!-- Primitive or non-navigable value: Allow wrapping for long strings -->
-          {#if displayInfo().type === "object"}
-            <!-- Object: Use monospace font and preserve formatting -->
-            <pre
-              class="text-xs text-slate-600 break-all break-words whitespace-pre-wrap word-break break-word font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
-              style="word-break: break-all; overflow-wrap: anywhere;">
-            {displayInfo().displayValue}
-          </pre>
-          {:else if displayInfo().type === "array" && displayInfo().arrayItems}
-            <!-- Array: Display items individually without brackets -->
-            {@const arrayItems = displayInfo().arrayItems!}
-            <div class="flex flex-wrap items-center gap-1">
-              {#each arrayItems as item, index}
-                <span
-                  class="text-xs text-slate-600 bg-slate-50/50 px-2 py-0.5 rounded border border-slate-200"
-                >
-                  {String(item)}
-                </span>
-                {#if index < arrayItems.length - 1}
-                  <span class="text-slate-400">,</span>
-                {/if}
-              {/each}
-            </div>
-          {:else}
-            <!-- Primitive values: Regular text with wrapping -->
-            {@const isIdLike =
-              typeof displayInfo().displayValue === "string" &&
-              displayInfo().displayValue.startsWith("co_")}
-            <span
-              class="text-xs text-slate-600 break-all break-words whitespace-pre-wrap word-break break-word {isIdLike
-                ? 'font-mono'
-                : ''}"
-              style="word-break: break-all; overflow-wrap: anywhere;"
-            >
+          {#if !hideValue}
+            {#if displayInfo().type === "object"}
+              <!-- Object: Use monospace font and preserve formatting -->
+              <pre
+                class="text-xs text-slate-600 break-all break-words whitespace-pre-wrap word-break break-word font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
+                style="word-break: break-all; overflow-wrap: anywhere;">
               {displayInfo().displayValue}
-            </span>
+            </pre>
+            {:else if displayInfo().type === "array" && displayInfo().arrayItems}
+              <!-- Array: Display items individually without brackets -->
+              {@const arrayItems = displayInfo().arrayItems!}
+              <div class="flex flex-wrap items-center gap-1">
+                {#each arrayItems as item, index}
+                  <span
+                    class="text-xs text-slate-600 bg-slate-50/50 px-2 py-0.5 rounded border border-slate-200"
+                  >
+                    {String(item)}
+                  </span>
+                  {#if index < arrayItems.length - 1}
+                    <span class="text-slate-400">,</span>
+                  {/if}
+                {/each}
+              </div>
+            {:else}
+              <!-- Primitive values: Regular text with wrapping -->
+              {@const isIdLike =
+                typeof displayInfo().displayValue === "string" &&
+                displayInfo().displayValue.startsWith("co_")}
+              <span
+                class="text-xs text-slate-600 break-all break-words whitespace-pre-wrap word-break break-word {isIdLike
+                  ? 'font-mono'
+                  : ''}"
+                style="word-break: break-all; overflow-wrap: anywhere;"
+              >
+                {displayInfo().displayValue}
+              </span>
+            {/if}
           {/if}
         {/if}
 
@@ -498,41 +508,43 @@
             </div>
           {:else}
             <!-- Primitive or non-navigable value: Allow wrapping for long strings -->
-            {#if displayInfo().type === "object"}
-              <!-- Object: Use monospace font and preserve formatting -->
-              <pre
-                class="text-xs text-slate-600 break-all break-words whitespace-pre-wrap word-break break-word font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
-                style="word-break: break-all; overflow-wrap: anywhere;">
-                {displayInfo().displayValue}
-              </pre>
-            {:else if displayInfo().type === "array" && displayInfo().arrayItems}
-              <!-- Array: Display items individually without brackets -->
-              {@const arrayItems = displayInfo().arrayItems!}
-              <div class="flex flex-wrap items-center gap-1">
-                {#each arrayItems as item, index}
-                  <span
-                    class="text-xs text-slate-600 bg-slate-50/50 px-2 py-0.5 rounded border border-slate-200"
-                  >
-                    {String(item)}
-                  </span>
-                  {#if index < arrayItems.length - 1}
-                    <span class="text-slate-400">,</span>
-                  {/if}
-                {/each}
-              </div>
-            {:else}
-              <!-- Primitive values: Regular text with wrapping -->
-              {@const isIdLike =
-                typeof displayInfo().displayValue === "string" &&
-                displayInfo().displayValue.startsWith("co_")}
-              <span
-                class="text-xs text-slate-600 break-all break-words whitespace-pre-wrap word-break break-word {isIdLike
-                  ? 'font-mono'
-                  : ''}"
-                style="word-break: break-all; overflow-wrap: anywhere;"
-              >
-                {displayInfo().displayValue}
-              </span>
+            {#if !hideValue}
+              {#if displayInfo().type === "object"}
+                <!-- Object: Use monospace font and preserve formatting -->
+                <pre
+                  class="text-xs text-slate-600 break-all break-words whitespace-pre-wrap word-break break-word font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
+                  style="word-break: break-all; overflow-wrap: anywhere;">
+                  {displayInfo().displayValue}
+                </pre>
+              {:else if displayInfo().type === "array" && displayInfo().arrayItems}
+                <!-- Array: Display items individually without brackets -->
+                {@const arrayItems = displayInfo().arrayItems!}
+                <div class="flex flex-wrap items-center gap-1">
+                  {#each arrayItems as item, index}
+                    <span
+                      class="text-xs text-slate-600 bg-slate-50/50 px-2 py-0.5 rounded border border-slate-200"
+                    >
+                      {String(item)}
+                    </span>
+                    {#if index < arrayItems.length - 1}
+                      <span class="text-slate-400">,</span>
+                    {/if}
+                  {/each}
+                </div>
+              {:else}
+                <!-- Primitive values: Regular text with wrapping -->
+                {@const isIdLike =
+                  typeof displayInfo().displayValue === "string" &&
+                  displayInfo().displayValue.startsWith("co_")}
+                <span
+                  class="text-xs text-slate-600 break-all break-words whitespace-pre-wrap word-break break-word {isIdLike
+                    ? 'font-mono'
+                    : ''}"
+                  style="word-break: break-all; overflow-wrap: anywhere;"
+                >
+                  {displayInfo().displayValue}
+                </span>
+              {/if}
             {/if}
           {/if}
 
