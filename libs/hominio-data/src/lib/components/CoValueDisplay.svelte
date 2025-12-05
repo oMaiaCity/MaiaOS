@@ -2,7 +2,6 @@
   import { Group, Account, co } from "jazz-tools";
   import { getCoValueGroupInfo } from "../groups.js";
   import { CoState } from "jazz-tools/svelte";
-  import { setupReactiveLabel } from "../schema.js";
   import JazzMetadata from "./JazzMetadata.svelte";
   import Card from "./Card.svelte";
   import Badge from "./Badge.svelte";
@@ -15,20 +14,8 @@
 
   let { coValue, coValueType }: Props = $props();
 
-  // Ensure reactive label is set up once when coValue is loaded
-  let labelSetupDone = false;
-  $effect(() => {
-    if (coValue?.$isLoaded && !labelSetupDone) {
-      setupReactiveLabel(coValue);
-      labelSetupDone = true;
-    }
-    // Reset flag if coValue changes
-    if (!coValue?.$isLoaded) {
-      labelSetupDone = false;
-    }
-  });
-
   // Compute label reactively from @label for display (fallback to ID)
+  // Computed fields are automatically set up by the migration system
   const displayLabel = $derived(
     coValue?.$isLoaded && coValue.$jazz.has("@label")
       ? coValue["@label"]

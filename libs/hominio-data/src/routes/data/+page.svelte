@@ -3,6 +3,7 @@
   import { AccountCoState } from "jazz-tools/svelte";
   import { authClient } from "$lib/auth-client";
   import { getCoValueGroupInfo } from "$lib/groups";
+  import { setupComputedFieldsForCoValue } from "$lib/computed-fields";
   import RootDataDisplay from "$lib/components/RootDataDisplay.svelte";
   import MetadataSidebar from "$lib/components/MetadataSidebar.svelte";
   import CoValueContextDisplay from "$lib/components/CoValueContextDisplay.svelte";
@@ -21,11 +22,29 @@
     resolve: {
       profile: true, // Resolve profile to access all its properties
       root: {
-        humans: true, // Resolve humans list
+        humans: {
+          avatar: true,
+        },
       },
     },
   });
   const me = $derived(account.current);
+
+  // Set up computed fields for humans when they're loaded
+  // This ensures @label is computed even if migration didn't run or human was created before computed fields were added
+  $effect(() => {
+    if (me.$isLoaded && me.root?.humans?.$isLoaded) {
+      const humans = me.root.humans;
+      for (const human of Array.from(humans)) {
+        if (human?.$isLoaded) {
+          // Ensure avatar is loaded before setting up computed fields
+          if (human.$jazz.has("avatar")) {
+            setupComputedFieldsForCoValue(human);
+          }
+        }
+      }
+    }
+  });
 
   // Navigation context type
   type NavigationContext =

@@ -7,73 +7,28 @@ import { co, z } from "jazz-tools";
 import { migrateSyncGoogleNameToAvatar } from "./migrations/20241220_sync-google-name-to-avatar.js";
 import { migrateSyncGoogleImageToAvatar } from "./migrations/20241220_sync-google-image-to-avatar.js";
 import { migrateSyncGoogleEmailToContact } from "./migrations/20241220_sync-google-email-to-contact.js";
+import { registerComputedField, setupComputedFieldsForCoValue } from "./computed-fields.js";
 
-// WeakMap to track which CoValues have had their label subscription set up
-// This avoids storing metadata directly on Proxy objects, which can cause errors during cleanup
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const labelSubscriptionMap = new WeakMap<any, { unsubscribe: () => void }>();
-
-/** Helper function to set up reactive @label computation for Human CoValues
- * Computes label from avatar.firstName + avatar.lastName, falls back to ID
- */
-export function setupReactiveLabel(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  coValue: any
-) {
-  if (!coValue || !coValue.$isLoaded) {
-    return;
-  }
-
-  // Only set up for Human CoValues (check for avatar property)
-  if (!coValue.$jazz.has("avatar")) {
-    return;
-  }
-
-  // Helper to compute label from avatar
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const computeLabelFromAvatar = (human: any): string => {
-    if (!human.$jazz.has("avatar")) {
-      return human.$jazz.id;
+// Register computed field definitions
+// @label is computed from avatar.firstName + avatar.lastName, falls back to ID
+registerComputedField({
+  targetField: "@label",
+  sourceFields: ["avatar.firstName", "avatar.lastName"],
+  computeFn: (human) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const humanAny = human as any;
+    if (!humanAny.$jazz.has("avatar")) {
+      return humanAny.$jazz.id;
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const avatar = human.avatar as any;
+    const avatar = humanAny.avatar as any;
     const firstName = avatar?.firstName?.trim() || "";
     const lastName = avatar?.lastName?.trim() || "";
     const fullName = `${firstName} ${lastName}`.trim();
-    return fullName || human.$jazz.id;
-  };
-
-  // Check if subscription is already set up to avoid duplicate subscriptions
-  if (labelSubscriptionMap.has(coValue)) {
-    // Still update initial label in case it's missing
-    const computedLabel = computeLabelFromAvatar(coValue);
-    if (!coValue.$jazz.has("@label") || coValue["@label"] !== computedLabel) {
-      coValue.$jazz.set("@label", computedLabel);
-    }
-    return;
-  }
-
-  // Compute initial @label from avatar
-  const initialLabel = computeLabelFromAvatar(coValue);
-  coValue.$jazz.set("@label", initialLabel);
-
-  // Set up subscription to update @label when avatar changes
-  // Subscribe to the CoValue to watch for any changes
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const unsubscribe = (coValue.$jazz as any).subscribe({}, (updated: any) => {
-    if (updated && updated.$isLoaded && updated.$jazz.has("avatar")) {
-      const computedLabel = computeLabelFromAvatar(updated);
-      // Always update @label to keep it in sync with avatar
-      if (!updated.$jazz.has("@label") || updated["@label"] !== computedLabel) {
-        updated.$jazz.set("@label", computedLabel);
-      }
-    }
-  });
-
-  // Mark that subscription is set up to avoid duplicate subscriptions
-  // Store unsubscribe function in WeakMap instead of on the Proxy object
-  labelSubscriptionMap.set(coValue, { unsubscribe });
-}
+    return fullName || humanAny.$jazz.id;
+  },
+  schemaType: "human",
+});
 
 /** Avatar schema - reusable CoMap for avatar information */
 export const Avatar = co.map({
@@ -128,7 +83,11 @@ export const JazzAccount = co
       });
       await human.$jazz.waitForSync();
 
-      setupReactiveLabel(human);
+      // Ensure avatar is loaded before setting up computed fields
+      await human.$jazz.ensureLoaded({
+        resolve: { avatar: true },
+      });
+      setupComputedFieldsForCoValue(human);
 
       account.$jazz.set("root", {
         humans: [human],
@@ -155,7 +114,11 @@ export const JazzAccount = co
       });
       await human.$jazz.waitForSync();
 
-      setupReactiveLabel(human);
+      // Ensure avatar is loaded before setting up computed fields
+      await human.$jazz.ensureLoaded({
+        resolve: { avatar: true },
+      });
+      setupComputedFieldsForCoValue(human);
 
       account.$jazz.set("root", {
         humans: [human],
@@ -194,7 +157,11 @@ export const JazzAccount = co
       });
       await human.$jazz.waitForSync();
 
-      setupReactiveLabel(human);
+      // Ensure avatar is loaded before setting up computed fields
+      await human.$jazz.ensureLoaded({
+        resolve: { avatar: true },
+      });
+      setupComputedFieldsForCoValue(human);
 
       account.$jazz.set("root", {
         humans: [human],
@@ -217,16 +184,32 @@ export const JazzAccount = co
       });
       await human.$jazz.waitForSync();
 
-      setupReactiveLabel(human);
+      // Ensure avatar is loaded before setting up computed fields
+      await human.$jazz.ensureLoaded({
+        resolve: { avatar: true },
+      });
+      setupComputedFieldsForCoValue(human);
 
       rootWithHumans.$jazz.set("humans", [human]);
     } else {
-      // Ensure all existing humans have reactive labels set up and contact field
+      // Ensure all existing humans have computed fields set up and contact field
       const humans = rootWithHumans.humans;
       if (humans && humans.$isLoaded) {
         for (const human of Array.from(humans)) {
           if (human.$isLoaded) {
-            setupReactiveLabel(human);
+            // Ensure avatar is loaded before setting up computed fields
+            try {
+              await human.$jazz.ensureLoaded({
+                resolve: { avatar: true },
+              });
+              setupComputedFieldsForCoValue(human);
+            } catch (error) {
+              console.warn("[Schema Migration] Failed to load human avatar for computed fields setup:", error);
+              // Still try to set up computed fields even if avatar loading fails
+              if (human.$isLoaded) {
+                setupComputedFieldsForCoValue(human);
+              }
+            }
 
             // Ensure contact field exists (for existing humans created before contact was added)
             if (!human.$jazz.has("contact")) {

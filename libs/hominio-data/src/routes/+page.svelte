@@ -2,6 +2,7 @@
   import { JazzAccount } from "$lib/schema";
   import { AccountCoState, Image } from "jazz-tools/svelte";
   import { authClient } from "$lib/auth-client";
+  import { setupComputedFieldsForCoValue } from "$lib/computed-fields";
 
   // Better Auth session
   const session = authClient.useSession();
@@ -14,11 +15,29 @@
   const account = new AccountCoState(JazzAccount, {
     resolve: {
       root: {
-          humans: true,
+          humans: {
+            avatar: true,
+          },
       },
     },
   });
   const me = $derived(account.current);
+
+  // Set up computed fields for humans when they're loaded
+  // This ensures @label is computed even if migration didn't run or human was created before computed fields were added
+  $effect(() => {
+    if (me.$isLoaded && me.root?.humans?.$isLoaded) {
+      const humans = me.root.humans;
+      for (const human of Array.from(humans)) {
+        if (human?.$isLoaded) {
+          // Ensure avatar is loaded before setting up computed fields
+          if (human.$jazz.has("avatar")) {
+            setupComputedFieldsForCoValue(human);
+          }
+        }
+      }
+    }
+  });
 
   // Get first human's avatar image for display
   const firstHumanAvatarImage = $derived(
@@ -38,10 +57,20 @@
       <p class="text-slate-500">Loading...</p>
     </div>
   {:else if !isBetterAuthSignedIn}
-    <div class="text-center pt-8 pb-4">
-      <h1 class="text-4xl font-bold text-slate-700 mb-4">Welcome</h1>
-      <p class="text-slate-500 mb-6">Please sign in to access your data.</p>
-    </div>
+    <!-- Landing Page Header -->
+    <header class="text-center pt-32 pb-20">
+      <h1
+        class="text-6xl md:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 tracking-tight mb-6"
+      >
+        Hominio
+      </h1>
+      <p class="text-xl md:text-2xl text-slate-600 font-medium mb-4 max-w-2xl mx-auto">
+        Your personal voice assistant
+      </p>
+      <p class="text-lg md:text-xl text-slate-500 max-w-xl mx-auto leading-relaxed">
+        Own your data. Control your privacy. Experience AI that truly works for you.
+      </p>
+    </header>
   {:else if !me.$isLoaded}
     <div class="text-center pt-8 pb-4">
       <p class="text-slate-500">Loading your account...</p>
