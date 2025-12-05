@@ -4,8 +4,3 @@
 </script>
 
 <Composite config={appConfig} />
-
-
-
-
-
