@@ -29,17 +29,13 @@
   }}
   AccountSchema={JazzAccount}
 >
-  <div class="min-h-screen bg-gray-100">
+  <div class="min-h-screen bg-gray-100 flex flex-col">
     <JazzAuthSetup />
     <GoogleDataSync />
     <jazz-inspector></jazz-inspector>
     <Header title={routeInfo.title} description={routeInfo.description} />
-    <main
-      class="min-w-[896px] max-w-full mx-auto px-3 pt-20 flex flex-col gap-8 min-h-screen overflow-x-hidden"
-    >
-      <div class="w-full max-w-4xl mx-auto">
-        {@render children?.()}
-      </div>
+    <main class="flex-1 w-full overflow-x-hidden">
+      {@render children?.()}
     </main>
   </div>
 </JazzSvelteProvider>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Image } from "jazz-tools/svelte";
   import PropertyValue from "./PropertyValue.svelte";
+  import Badge from "./Badge.svelte";
 
   interface Props {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,7 +74,7 @@
         >
           <div class="w-8 h-8 rounded overflow-hidden border border-slate-300 shrink-0">
             <Image
-              imageId={imageId}
+              {imageId}
               width={32}
               height={32}
               alt={propKey}
@@ -81,9 +82,14 @@
               loading="lazy"
             />
           </div>
-          <span class="text-xs bg-green-100 px-1.5 py-0.5 rounded text-green-700">Image</span>
+          <Badge type="Image" variant="compact">Image</Badge>
           <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5l7 7-7 7"
+            />
           </svg>
         </button>
       {:else}
@@ -91,7 +97,7 @@
         <div class="flex items-center justify-end gap-2">
           <div class="w-8 h-8 rounded overflow-hidden border border-slate-300 shrink-0">
             <Image
-              imageId={imageId}
+              {imageId}
               width={32}
               height={32}
               alt={propKey}
@@ -99,11 +105,11 @@
               loading="lazy"
             />
           </div>
-          <span class="text-xs bg-green-100 px-1.5 py-0.5 rounded text-green-700">Image</span>
+          <Badge type="Image" variant="compact">Image</Badge>
         </div>
       {/if}
     {:else}
-      <span class="text-xs bg-green-100 px-1.5 py-0.5 rounded text-green-700">Loading...</span>
+      <Badge type="loading" variant="compact">Loading...</Badge>
     {/if}
   {:else if value.type === "FileStream"}
     <!-- FileStream: Show metadata and make navigable -->
@@ -119,7 +125,7 @@
           }}
           class="inline-flex items-center gap-2 hover:opacity-80 transition-opacity"
         >
-          <span class="text-xs bg-orange-100 px-1.5 py-0.5 rounded text-orange-700">FileStream</span>
+          <Badge type="FileStream" variant="compact">FileStream</Badge>
           {#if value.mimeType && value.mimeType !== "unknown"}
             <span class="text-xs text-slate-600">{value.mimeType}</span>
           {/if}
@@ -129,13 +135,18 @@
             </span>
           {/if}
           <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5l7 7-7 7"
+            />
           </svg>
         </button>
       {:else}
         <!-- Non-navigable FileStream -->
         <div class="inline-flex items-center gap-2">
-          <span class="text-xs bg-orange-100 px-1.5 py-0.5 rounded text-orange-700">FileStream</span>
+          <Badge type="FileStream" variant="compact">FileStream</Badge>
           {#if value.mimeType && value.mimeType !== "unknown"}
             <span class="text-xs text-slate-600">{value.mimeType}</span>
           {/if}
@@ -147,7 +158,7 @@
         </div>
       {/if}
     {:else}
-      <span class="text-xs bg-orange-100 px-1.5 py-0.5 rounded text-orange-700">Loading...</span>
+      <Badge type="loading" variant="compact">Loading...</Badge>
     {/if}
   {:else if value.type === "CoMap"}
     <!-- CoMap: Always navigable if it has a coValue reference -->
@@ -176,11 +187,23 @@
           <div class="relative p-4">
             <!-- Header -->
             <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">{propKey}</span>
+              <span class="text-xs font-bold text-slate-600 uppercase tracking-wider"
+                >{propKey}</span
+              >
               <div class="flex items-center gap-2">
-                <span class="text-xs bg-purple-100 px-2 py-0.5 rounded text-purple-700">CoMap</span>
-                <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                <Badge type="CoMap" variant="compact">CoMap</Badge>
+                <svg
+                  class="w-3 h-3 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  />
                 </svg>
               </div>
             </div>
@@ -223,7 +246,7 @@
       <!-- Non-navigable CoMap (no coValue reference) -->
       <div class="space-y-2 mt-1">
         <div class="flex items-center gap-2">
-          <span class="text-xs bg-purple-100 px-1.5 py-0.5 rounded text-purple-700">CoMap</span>
+          <Badge type="CoMap" variant="compact">CoMap</Badge>
           {#if value.id}
             <span class="font-mono text-xs text-slate-400">({value.id.slice(0, 8)}...)</span>
           {/if}
@@ -255,85 +278,68 @@
   {:else if value.type === "CoList"}
     <!-- CoList: Navigable if it has a coValue reference -->
     {#if value.coValue && onSelect}
-        <button
-          type="button"
-          onclick={() => {
-            if (value.coValue && onSelect) {
-              onSelect(value.coValue, propKey);
-            }
-          }}
-          class="inline-flex items-center gap-2 text-xs bg-blue-100 px-2 py-1 rounded text-blue-700 hover:bg-blue-200 transition-colors"
-        >
-        <span>CoList</span>
+      <button
+        type="button"
+        onclick={() => {
+          if (value.coValue && onSelect) {
+            onSelect(value.coValue, propKey);
+          }
+        }}
+        class="inline-flex items-center gap-2 hover:opacity-80 transition-opacity"
+      >
+        <Badge type="CoList">CoList</Badge>
         <span>({value.length} items)</span>
         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
       </button>
     {:else}
-      <span class="text-xs bg-blue-100 px-1.5 py-0.5 rounded text-blue-700">CoList</span>
+      <Badge type="CoList" variant="compact">CoList</Badge>
       <span class="ml-2 text-slate-500">({value.length} items)</span>
     {/if}
   {:else if value.type === "CoValue"}
     <!-- CoValue: Always navigable -->
     {#if value.coValue && onSelect}
-        <button
-          type="button"
-          onclick={() => {
-            if (value.coValue && onSelect) {
-              onSelect(value.coValue, propKey);
-            }
-          }}
-          class="inline-flex items-center gap-2 text-xs bg-purple-100 px-2 py-1 rounded text-purple-700 hover:bg-purple-200 transition-colors"
-        >
-        <span>CoValue</span>
+      <button
+        type="button"
+        onclick={() => {
+          if (value.coValue && onSelect) {
+            onSelect(value.coValue, propKey);
+          }
+        }}
+        class="inline-flex items-center gap-2 hover:opacity-80 transition-opacity"
+      >
+        <Badge type="CoValue" variant="compact">CoValue</Badge>
         <span class="font-mono">({value.id.slice(0, 8)}...)</span>
         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
       </button>
     {:else}
-      <span class="text-xs bg-purple-100 px-1.5 py-0.5 rounded text-purple-700">CoValue</span>
+      <Badge type="CoValue" variant="compact">CoValue</Badge>
       <span class="ml-2 font-mono text-xs text-slate-400">({value.id.slice(0, 8)}...)</span>
     {/if}
   {:else}
-    <span class="text-xs text-slate-700 break-all break-words">{JSON.stringify(value)}</span>
+    <span class="text-xs text-slate-600 break-all break-words">{JSON.stringify(value)}</span>
   {/if}
-        {:else if typeof value === "string"}
-          <div class="flex items-center gap-2 justify-end">
-            <span class="text-xs text-slate-700 break-all break-words">{value || "(empty)"}</span>
-            <span
-              class="px-2 py-0.5 rounded-full bg-slate-50/80 border border-white text-[10px] font-bold uppercase tracking-wider text-slate-500 shrink-0"
-            >
-              string
-            </span>
-          </div>
-        {:else if typeof value === "number"}
-          <div class="flex items-center gap-2 justify-end">
-            <span class="text-xs text-slate-700 break-all break-words">{String(value)}</span>
-            <span
-              class="px-2 py-0.5 rounded-full bg-slate-50/80 border border-white text-[10px] font-bold uppercase tracking-wider text-slate-500 shrink-0"
-            >
-              number
-            </span>
-          </div>
-        {:else if typeof value === "boolean"}
-          <div class="flex items-center gap-2 justify-end">
-            <span class="text-xs text-slate-700 break-all break-words">{String(value)}</span>
-            <span
-              class="px-2 py-0.5 rounded-full bg-slate-50/80 border border-white text-[10px] font-bold uppercase tracking-wider text-slate-500 shrink-0"
-            >
-              boolean
-            </span>
-          </div>
-        {:else}
-          <div class="flex items-center gap-2 justify-end">
-            <span class="text-xs text-slate-700 break-all break-words">{JSON.stringify(value)}</span>
-            <span
-              class="px-2 py-0.5 rounded-full bg-slate-50/80 border border-white text-[10px] font-bold uppercase tracking-wider text-slate-500 shrink-0"
-            >
-              {typeof value}
-            </span>
-          </div>
-        {/if}
-
+{:else if typeof value === "string"}
+  <div class="flex items-center gap-2 justify-end">
+    <span class="text-xs text-slate-600 break-all break-words">{value || "(empty)"}</span>
+    <Badge type="string">{typeof value === "string" ? "string" : typeof value}</Badge>
+  </div>
+{:else if typeof value === "number"}
+  <div class="flex items-center gap-2 justify-end">
+    <span class="text-xs text-slate-600 break-all break-words">{String(value)}</span>
+    <Badge type="number">number</Badge>
+  </div>
+{:else if typeof value === "boolean"}
+  <div class="flex items-center gap-2 justify-end">
+    <span class="text-xs text-slate-600 break-all break-words">{String(value)}</span>
+    <Badge type="boolean">boolean</Badge>
+  </div>
+{:else}
+  <div class="flex items-center gap-2 justify-end">
+    <span class="text-xs text-slate-600 break-all break-words">{JSON.stringify(value)}</span>
+    <Badge type={typeof value}>{typeof value}</Badge>
+  </div>
+{/if}

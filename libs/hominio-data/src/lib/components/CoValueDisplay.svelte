@@ -4,6 +4,8 @@
   import { CoState } from "jazz-tools/svelte";
   import { setupReactiveLabel } from "../schema.js";
   import JazzMetadata from "./JazzMetadata.svelte";
+  import Card from "./Card.svelte";
+  import Badge from "./Badge.svelte";
 
   interface Props {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,15 +54,8 @@
 </script>
 
 {#if coValue?.$isLoaded}
-  <div
-    class="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-slate-100/90 border border-white shadow-[0_0_8px_rgba(0,0,0,0.03)] p-5 min-w-[500px]"
-  >
-    <!-- Glossy gradient overlay -->
-    <div
-      class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
-    ></div>
-
-    <div class="relative space-y-5">
+  <Card padding="p-5" class="min-w-[500px]">
+    <div class="space-y-5">
       <!-- Header -->
       <div class="flex justify-between items-start gap-4">
         <div class="min-w-0 flex-1">
@@ -68,11 +63,7 @@
             <h3 class="text-lg font-bold text-slate-700 leading-tight truncate">
               {displayLabel}
             </h3>
-            <span
-              class="px-2 py-0.5 rounded-full bg-slate-50/60 border border-white text-[10px] font-bold uppercase tracking-wider text-slate-500"
-            >
-              {coValueType}
-            </span>
+            <Badge type={coValueType}>{coValueType}</Badge>
           </div>
           <div
             class="text-[10px] font-mono text-slate-400 mt-1 truncate opacity-70 hover:opacity-100 transition-opacity"
@@ -156,11 +147,7 @@
                         {member.id}
                       </span>
                     </div>
-                    <span
-                      class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-slate-100/50 text-slate-700 border border-slate-200/50"
-                    >
-                      {member.role}
-                    </span>
+                    <Badge type={member.role.toLowerCase()} variant="role">{member.role}</Badge>
                   </div>
                 {/each}
               </div>
@@ -181,11 +168,7 @@
                         {member.id}
                       </span>
                     </div>
-                    <span
-                      class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-green-100/50 text-green-600 border border-green-100/50"
-                    >
-                      {member.role}
-                    </span>
+                    <Badge type={member.role.toLowerCase()} variant="role" class="bg-green-100/50 text-green-600 border-green-100/50">{member.role}</Badge>
                   </div>
                 {/each}
               </div>
@@ -198,5 +181,5 @@
         </div>
       {/if}
     </div>
-  </div>
+  </Card>
 {/if}

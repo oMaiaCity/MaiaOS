@@ -6,6 +6,8 @@
   import RootDataDisplay from "$lib/components/RootDataDisplay.svelte";
   import MetadataSidebar from "$lib/components/MetadataSidebar.svelte";
   import CoValueContextDisplay from "$lib/components/CoValueContextDisplay.svelte";
+  import Card from "$lib/components/Card.svelte";
+  import Button from "$lib/components/Button.svelte";
 
   // Better Auth session
   const session = authClient.useSession();
@@ -1036,7 +1038,7 @@
   });
 </script>
 
-<div class="w-full pb-20">
+<div class="w-full max-w-7xl mx-auto px-6 pt-24 pb-20">
   {#if isBetterAuthPending}
     <div class="text-center pt-8 pb-4">
       <p class="text-slate-500">Loading...</p>
@@ -1051,122 +1053,134 @@
       <p class="text-slate-500">Loading your account...</p>
     </div>
   {:else if me.$isLoaded}
-    <!-- Full Width Container Wrapper -->
-    <div class="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
-      <!-- Main Layout: Content + Right Aside -->
-      <div class="flex gap-6 items-start pl-3 pr-0">
-        <!-- Main Content -->
-        <div class="flex-1 min-w-0 space-y-6">
-          <!-- AppRoot CoValues Section -->
-          <section>
-            <div class="flex items-center justify-between mb-4 px-2">
-              <h2 class="text-lg font-semibold text-slate-700 flex items-center gap-2">
-                {#if currentContext.type === "root"}
-                  <!-- Show AppRoot with folder icon -->
-                  <svg
-                    class="w-5 h-5 text-slate-700"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                    />
-                  </svg>
-                  <span>AppRoot</span>
-                {:else if currentContext.type === "colist"}
-                  <!-- Show CoList name with list icon -->
-                  <svg
-                    class="w-5 h-5 text-slate-700"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-                    />
-                  </svg>
-                  <span>{currentContext.label}</span>
-                {:else if currentContext.type === "covalue"}
-                  <!-- Show CoValue name with tag icon -->
-                  <svg
-                    class="w-5 h-5 text-slate-700"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                    />
-                  </svg>
-                  <span>{currentContext.label}</span>
-                {/if}
-              </h2>
-              {#if navigationStack.length > 1}
-                <button
-                  type="button"
-                  onclick={navigateBack}
-                  class="text-sm text-slate-500 hover:text-slate-700 transition-colors"
-                >
-                  ← Back
-                </button>
+    <!-- Title Row: Always visible, aligned -->
+    <div class="flex items-center justify-between mb-4 px-4">
+      <div class="flex-1">
+        <h2 class="text-lg font-semibold text-slate-700 flex items-center gap-2">
+          {#if currentContext.type === "root"}
+            <!-- Show AppRoot with folder icon -->
+            <svg
+              class="w-5 h-5 text-slate-700"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+              />
+            </svg>
+            <span>AppRoot</span>
+          {:else if currentContext.type === "colist"}
+            <!-- Show CoList name with list icon -->
+            <svg
+              class="w-5 h-5 text-slate-700"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+              />
+            </svg>
+            <span>{currentContext.label}</span>
+          {:else if currentContext.type === "covalue"}
+            <!-- Show CoValue name with tag icon -->
+            <svg
+              class="w-5 h-5 text-slate-700"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+              />
+            </svg>
+            <span>{currentContext.label}</span>
+          {/if}
+          {#if navigationStack.length > 1}
+            <div class="ml-auto mr-6">
+              <Button variant="ghost" size="md" onclick={navigateBack}>
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                <span>Back</span>
+              </Button>
+            </div>
+          {/if}
+        </h2>
+      </div>
+      <div class="w-80 shrink-0">
+        <h2 class="text-lg font-semibold text-slate-700 flex items-center justify-end gap-2">
+          <span>Metadata</span>
+          <svg class="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        </h2>
+      </div>
+    </div>
+
+    <!-- Two-column layout: Main + Aside -->
+    <div class="flex gap-6 items-start">
+      <!-- Main Content -->
+      <div class="flex-1 min-w-0 space-y-6">
+        {#if currentContext.type === "root"}
+          <!-- Show AppRoot grid view -->
+          <Card>
+            <div>
+              {#if rootData()}
+                <RootDataDisplay
+                  rootData={rootData()}
+                  rootCoValue={me.root}
+                  {extractCoValueProperties}
+                  onSelect={(coValue: any) => {
+                    navigateToCoValue(coValue);
+                  }}
+                  onCoListClick={(coList: any, label: string, parentKey?: string) => {
+                    navigateToCoList(coList, label, parentKey);
+                  }}
+                />
+              {:else if me.$isLoaded && me.root && !me.root.$isLoaded}
+                <div class="text-center py-8">
+                  <p class="text-sm text-slate-500">Loading root...</p>
+                </div>
+              {:else}
+                <div class="text-center py-8">
+                  <p class="text-sm text-slate-500">Root not available</p>
+                </div>
               {/if}
             </div>
+          </Card>
+        {:else if currentContext.type === "colist" || currentContext.type === "covalue"}
+          <!-- Show CoValue context view -->
+          <CoValueContextDisplay
+            coValue={currentContext.coValue}
+            {extractCoValueProperties}
+            onNavigate={navigateToCoValue}
+          />
+        {/if}
+      </div>
 
-            {#if currentContext.type === "root"}
-              <!-- Show AppRoot grid view -->
-              <div
-                class="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-slate-100/90 border border-white shadow-[0_0_8px_rgba(0,0,0,0.03)] p-6"
-              >
-                <!-- Glossy gradient overlay -->
-                <div
-                  class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
-                ></div>
-                <div class="relative">
-                  {#if rootData()}
-                    <RootDataDisplay
-                      rootData={rootData()}
-                      rootCoValue={me.root}
-                      {extractCoValueProperties}
-                      onSelect={(coValue: any) => {
-                        navigateToCoValue(coValue);
-                      }}
-                      onCoListClick={(coList: any, label: string, parentKey?: string) => {
-                        navigateToCoList(coList, label, parentKey);
-                      }}
-                    />
-                  {:else if me.$isLoaded && me.root && !me.root.$isLoaded}
-                    <div class="text-center py-8">
-                      <p class="text-sm text-slate-500">Loading root...</p>
-                    </div>
-                  {:else}
-                    <div class="text-center py-8">
-                      <p class="text-sm text-slate-500">Root not available</p>
-                    </div>
-                  {/if}
-                </div>
-              </div>
-            {:else if currentContext.type === "colist" || currentContext.type === "covalue"}
-              <!-- Show CoValue context view -->
-              <CoValueContextDisplay
-                coValue={currentContext.coValue}
-                {extractCoValueProperties}
-                onNavigate={navigateToCoValue}
-              />
-            {/if}
-          </section>
-        </div>
-
-        <!-- Right Aside: Metadata for Selected CoValue -->
+      <!-- Right Aside: Metadata for Selected CoValue -->
+      <div class="w-80 shrink-0">
         <MetadataSidebar selectedCoValue={selectedCoValue()} />
       </div>
     </div>

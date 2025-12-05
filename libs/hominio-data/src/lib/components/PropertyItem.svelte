@@ -1,5 +1,18 @@
 <script lang="ts">
   import { Image } from "jazz-tools/svelte";
+  import Badge from "./Badge.svelte";
+  import { HOVERABLE_STYLE } from "$lib/utils/styles";
+
+  interface Member {
+    id: string;
+    role: string;
+  }
+
+  interface MembersData {
+    accountMembers: Member[];
+    groupMembers: Member[];
+    onRemoveGroupMember?: (groupId: string) => void;
+  }
 
   interface Props {
     propKey: string;
@@ -7,9 +20,26 @@
     propValue: any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onSelect?: (coValue: any, fallbackKey?: string) => void;
+    showCopyButton?: boolean; // Show copy button for string values
+    copyValue?: string; // Value to copy (if different from displayValue)
+    hideBadge?: boolean; // Hide the type badge
+    variant?: "default" | "members"; // Display variant
+    membersData?: MembersData; // For members variant
   }
 
-  let { propKey, propValue, onSelect }: Props = $props();
+  let {
+    propKey,
+    propValue,
+    onSelect,
+    showCopyButton = false,
+    copyValue,
+    hideBadge = false,
+    variant = "default",
+    membersData,
+  }: Props = $props();
+
+  // Copy button state
+  let copied = $state(false);
 
   // Extract display value and type
   const displayInfo = $derived(() => {
@@ -151,142 +181,418 @@
     };
   });
 
-  // Get type badge color based on type
-  function getTypeBadgeClass(type: string): string {
-    const baseClass = "px-2 py-0.5 rounded-full border border-white text-[10px] font-bold uppercase tracking-wider shrink-0";
-    switch (type.toLowerCase()) {
-      case "string":
-        return `${baseClass} bg-blue-50 text-blue-700`;
-      case "number":
-        return `${baseClass} bg-purple-50 text-purple-700`;
-      case "boolean":
-        return `${baseClass} bg-green-50 text-green-700`;
-      case "image":
-        return `${baseClass} bg-green-100 text-green-700`;
-      case "filestream":
-        return `${baseClass} bg-orange-100 text-orange-700`;
-      case "comap":
-        return `${baseClass} bg-purple-100 text-purple-700`;
-      case "colist":
-        return `${baseClass} bg-blue-100 text-blue-700`;
-      case "covalue":
-        return `${baseClass} bg-purple-100 text-purple-700`;
-      case "object":
-        return `${baseClass} bg-amber-50 text-amber-700`;
-      case "array":
-        return `${baseClass} bg-cyan-50 text-cyan-700`;
-      default:
-        return `${baseClass} bg-slate-50/80 text-slate-500`;
-    }
-  }
+  // Check if this property is clickable (has a CoValue that can be navigated to)
+  const isClickable = $derived(
+    variant !== "members" &&
+      displayInfo().isCoValue &&
+      displayInfo().coValue &&
+      onSelect !== undefined,
+  );
 </script>
 
-<div class="flex items-start gap-3">
-  <!-- Left: Prop Key -->
-  <span
-    class="text-sm font-semibold text-slate-700 uppercase tracking-wider min-w-[120px] shrink-0 pt-0.5 break-all break-words whitespace-pre-wrap word-break break-word"
-    style="word-break: break-all; overflow-wrap: anywhere;"
+{#if isClickable}
+  <!-- Clickable PropertyItem: Whole card is clickable -->
+  <button
+    type="button"
+    onclick={() => {
+      if (displayInfo().coValue && onSelect) {
+        onSelect(displayInfo().coValue, propKey);
+      }
+    }}
+    class="w-full text-left bg-slate-100 rounded-2xl p-3 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm {HOVERABLE_STYLE}"
   >
-    {propKey}:
-  </span>
+    <!-- Default Variant (clickable props are never members variant) -->
+    <div class="flex justify-between items-center gap-2">
+      <!-- Left: Prop Key -->
+      <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">
+        {propKey}
+      </span>
 
-  <!-- Middle: Value (left-aligned) -->
-  <div class="flex-1 min-w-0">
-    {#if displayInfo().showImagePreview && displayInfo().imageId}
-      <!-- ImageDefinition: Show preview -->
-      {#if displayInfo().coValue && onSelect}
-        <button
-          type="button"
-          onclick={() => {
-            if (displayInfo().coValue && onSelect) {
-              onSelect(displayInfo().coValue, propKey);
-            }
-          }}
-          class="inline-flex items-center gap-2 hover:opacity-80 transition-opacity"
-        >
-          <div class="w-8 h-8 rounded overflow-hidden border border-slate-300 shrink-0">
-            <Image
-              imageId={displayInfo().imageId}
-              width={32}
-              height={32}
-              alt={propKey}
-              class="object-cover w-full h-full"
-              loading="lazy"
-            />
+      <!-- Right: Value and Type Badge -->
+      <div class="flex items-center gap-2 flex-1 justify-end min-w-0">
+        {#if displayInfo().showImagePreview && displayInfo().imageId}
+          <!-- ImageDefinition: Show preview -->
+          {#if displayInfo().coValue && onSelect}
+            <div class="inline-flex items-center gap-2">
+              <div class="w-8 h-8 rounded overflow-hidden border border-slate-300 shrink-0">
+                <Image
+                  imageId={displayInfo().imageId}
+                  width={32}
+                  height={32}
+                  alt={propKey}
+                  class="object-cover w-full h-full"
+                  loading="lazy"
+                />
+              </div>
+              <span class="text-xs text-slate-600 font-mono break-all"
+                >{displayInfo().displayValue.slice(0, 8)}...</span
+              >
+              <svg
+                class="w-3 h-3 text-slate-400 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
+          {:else}
+            <div class="inline-flex items-center gap-2">
+              <div class="w-8 h-8 rounded overflow-hidden border border-slate-300 shrink-0">
+                <Image
+                  imageId={displayInfo().imageId}
+                  width={32}
+                  height={32}
+                  alt={propKey}
+                  class="object-cover w-full h-full"
+                  loading="lazy"
+                />
+              </div>
+              <span class="text-xs text-slate-600 font-mono break-all"
+                >{displayInfo().displayValue.slice(0, 8)}...</span
+              >
+            </div>
+          {/if}
+        {:else if displayInfo().isCoValue && displayInfo().coValue && onSelect}
+          <!-- CoValue: Show ID (card is already clickable) -->
+          <div class="inline-flex items-center gap-2 text-left">
+            <span class="text-xs text-slate-600 font-mono break-all"
+              >{displayInfo().displayValue.slice(0, 12)}...</span
+            >
+            <svg
+              class="w-3 h-3 text-slate-400 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
           </div>
-          <span class="text-xs text-slate-700 font-mono break-all">{displayInfo().displayValue.slice(0, 8)}...</span>
-          <svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      {:else}
-        <div class="inline-flex items-center gap-2">
-          <div class="w-8 h-8 rounded overflow-hidden border border-slate-300 shrink-0">
-            <Image
-              imageId={displayInfo().imageId}
-              width={32}
-              height={32}
-              alt={propKey}
-              class="object-cover w-full h-full"
-              loading="lazy"
-            />
-          </div>
-          <span class="text-xs text-slate-700 font-mono break-all">{displayInfo().displayValue.slice(0, 8)}...</span>
-        </div>
-      {/if}
-    {:else if displayInfo().isCoValue && displayInfo().coValue && onSelect}
-      <!-- CoValue: Show ID and make clickable -->
-      <button
-        type="button"
-        onclick={() => {
-          if (displayInfo().coValue && onSelect) {
-            onSelect(displayInfo().coValue, propKey);
-          }
-        }}
-        class="inline-flex items-center gap-2 hover:opacity-80 transition-opacity text-left"
-      >
-        <span class="text-sm text-slate-700 font-mono break-all">{displayInfo().displayValue.slice(0, 12)}...</span>
-        <svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
-    {:else}
-      <!-- Primitive or non-navigable value: Allow wrapping for long strings -->
-      {#if displayInfo().type === "object"}
-        <!-- Object: Use monospace font and preserve formatting -->
-        <pre
-          class="text-xs text-slate-700 break-all break-words whitespace-pre-wrap word-break break-word font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
-          style="word-break: break-all; overflow-wrap: anywhere;"
-        >
-          {displayInfo().displayValue}
-        </pre>
-      {:else if displayInfo().type === "array" && displayInfo().arrayItems}
-        <!-- Array: Display items individually without brackets -->
-        <div class="flex flex-wrap items-center gap-1">
-          {#each displayInfo().arrayItems as item, index}
-            <span class="text-sm text-slate-700 bg-slate-50/50 px-2 py-0.5 rounded border border-slate-200">
-              {String(item)}
+        {:else}
+          <!-- Primitive or non-navigable value: Allow wrapping for long strings -->
+          {#if displayInfo().type === "object"}
+            <!-- Object: Use monospace font and preserve formatting -->
+            <pre
+              class="text-xs text-slate-600 break-all break-words whitespace-pre-wrap word-break break-word font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
+              style="word-break: break-all; overflow-wrap: anywhere;">
+            {displayInfo().displayValue}
+          </pre>
+          {:else if displayInfo().type === "array" && displayInfo().arrayItems}
+            <!-- Array: Display items individually without brackets -->
+            {@const arrayItems = displayInfo().arrayItems!}
+            <div class="flex flex-wrap items-center gap-1">
+              {#each arrayItems as item, index}
+                <span
+                  class="text-xs text-slate-600 bg-slate-50/50 px-2 py-0.5 rounded border border-slate-200"
+                >
+                  {String(item)}
+                </span>
+                {#if index < arrayItems.length - 1}
+                  <span class="text-slate-400">,</span>
+                {/if}
+              {/each}
+            </div>
+          {:else}
+            <!-- Primitive values: Regular text with wrapping -->
+            {@const isIdLike =
+              typeof displayInfo().displayValue === "string" &&
+              displayInfo().displayValue.startsWith("co_")}
+            <span
+              class="text-xs text-slate-600 break-all break-words whitespace-pre-wrap word-break break-word {isIdLike
+                ? 'font-mono'
+                : ''}"
+              style="word-break: break-all; overflow-wrap: anywhere;"
+            >
+              {displayInfo().displayValue}
             </span>
-            {#if index < displayInfo().arrayItems.length - 1}
-              <span class="text-slate-400">,</span>
+          {/if}
+        {/if}
+
+        <!-- Copy Button (if enabled and value is string) -->
+        {#if showCopyButton && typeof displayInfo().displayValue === "string"}
+          <button
+            type="button"
+            onclick={(e) => {
+              e.stopPropagation();
+              (async () => {
+                try {
+                  const valueToCopy = copyValue || displayInfo().displayValue;
+                  await navigator.clipboard.writeText(valueToCopy);
+                  copied = true;
+                  setTimeout(() => {
+                    copied = false;
+                  }, 2000);
+                } catch (err) {
+                  console.error("Failed to copy:", err);
+                }
+              })();
+            }}
+            class="shrink-0 p-1 hover:bg-slate-300/50 rounded transition-colors relative"
+            aria-label="Copy value"
+          >
+            {#if copied}
+              <svg
+                class="w-4 h-4 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            {:else}
+              <svg
+                class="w-4 h-4 text-slate-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
+              </svg>
             {/if}
+          </button>
+        {/if}
+
+        <!-- Type Badge (right-aligned) -->
+        {#if !hideBadge}
+          <Badge type={displayInfo().type}>{displayInfo().type}</Badge>
+        {/if}
+      </div>
+    </div>
+  </button>
+{:else}
+  <!-- Non-clickable PropertyItem: Regular div -->
+  <div
+    class="bg-slate-100 rounded-2xl {variant === 'members'
+      ? 'p-4'
+      : 'p-3'} border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
+  >
+    {#if variant === "members" && membersData}
+      <!-- Members Variant -->
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">{propKey}</span>
+        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+          />
+        </svg>
+      </div>
+
+      <!-- Accounts -->
+      {#if membersData.accountMembers.length > 0}
+        <div class="mb-3 space-y-1.5 mt-2">
+          <span class="text-[10px] font-medium text-slate-500 uppercase tracking-wide"
+            >ACCOUNTS</span
+          >
+          {#each membersData.accountMembers as member}
+            <div class="flex items-center justify-between p-1.5 rounded-lg">
+              <span class="font-mono text-xs text-slate-600">{member.id.slice(0, 8)}...</span>
+              <Badge type={member.role.toLowerCase()} variant="role">{member.role}</Badge>
+            </div>
           {/each}
         </div>
-      {:else}
-        <!-- Primitive values: Regular text with wrapping -->
-        <span
-          class="text-sm text-slate-700 break-all break-words whitespace-pre-wrap word-break break-word"
-          style="word-break: break-all; overflow-wrap: anywhere;"
-        >
-          {displayInfo().displayValue}
-        </span>
       {/if}
+
+      <!-- Groups -->
+      {#if membersData.groupMembers.length > 0}
+        <div class="pt-3 border-t border-white/50 space-y-1.5 mt-2">
+          <span class="text-[10px] font-medium text-slate-500 uppercase tracking-wide">GROUPS</span>
+          {#each membersData.groupMembers as groupMember}
+            <div class="flex items-center justify-between p-1.5 rounded-lg">
+              <span class="font-mono text-xs text-slate-600">{groupMember.id.slice(0, 8)}...</span>
+              <div class="flex items-center gap-2">
+                <Badge type={groupMember.role.toLowerCase()} variant="role"
+                  >{groupMember.role}</Badge
+                >
+                {#if membersData.onRemoveGroupMember}
+                  <button
+                    type="button"
+                    class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors shrink-0"
+                    onclick={() => membersData!.onRemoveGroupMember!(groupMember.id)}
+                    title="Remove parent group"
+                    aria-label="Remove parent group"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                {/if}
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
+    {:else}
+      <!-- Default Variant -->
+      <div class="flex justify-between items-center gap-2">
+        <!-- Left: Prop Key -->
+        <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">
+          {propKey}
+        </span>
+
+        <!-- Right: Value and Type Badge -->
+        <div class="flex items-center gap-2 flex-1 justify-end min-w-0">
+          {#if displayInfo().showImagePreview && displayInfo().imageId}
+            <!-- ImageDefinition: Show preview -->
+            <div class="inline-flex items-center gap-2">
+              <div class="w-8 h-8 rounded overflow-hidden border border-slate-300 shrink-0">
+                <Image
+                  imageId={displayInfo().imageId}
+                  width={32}
+                  height={32}
+                  alt={propKey}
+                  class="object-cover w-full h-full"
+                  loading="lazy"
+                />
+              </div>
+              <span class="text-xs text-slate-600 font-mono break-all"
+                >{displayInfo().displayValue.slice(0, 8)}...</span
+              >
+            </div>
+          {:else if displayInfo().isCoValue && displayInfo().coValue && onSelect}
+            <!-- CoValue: Show ID -->
+            <div class="inline-flex items-center gap-2 text-left">
+              <span class="text-xs text-slate-600 font-mono break-all"
+                >{displayInfo().displayValue.slice(0, 12)}...</span
+              >
+              <svg
+                class="w-3 h-3 text-slate-400 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
+          {:else}
+            <!-- Primitive or non-navigable value: Allow wrapping for long strings -->
+            {#if displayInfo().type === "object"}
+              <!-- Object: Use monospace font and preserve formatting -->
+              <pre
+                class="text-xs text-slate-600 break-all break-words whitespace-pre-wrap word-break break-word font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
+                style="word-break: break-all; overflow-wrap: anywhere;">
+                {displayInfo().displayValue}
+              </pre>
+            {:else if displayInfo().type === "array" && displayInfo().arrayItems}
+              <!-- Array: Display items individually without brackets -->
+              {@const arrayItems = displayInfo().arrayItems!}
+              <div class="flex flex-wrap items-center gap-1">
+                {#each arrayItems as item, index}
+                  <span
+                    class="text-xs text-slate-600 bg-slate-50/50 px-2 py-0.5 rounded border border-slate-200"
+                  >
+                    {String(item)}
+                  </span>
+                  {#if index < arrayItems.length - 1}
+                    <span class="text-slate-400">,</span>
+                  {/if}
+                {/each}
+              </div>
+            {:else}
+              <!-- Primitive values: Regular text with wrapping -->
+              {@const isIdLike =
+                typeof displayInfo().displayValue === "string" &&
+                displayInfo().displayValue.startsWith("co_")}
+              <span
+                class="text-xs text-slate-600 break-all break-words whitespace-pre-wrap word-break break-word {isIdLike
+                  ? 'font-mono'
+                  : ''}"
+                style="word-break: break-all; overflow-wrap: anywhere;"
+              >
+                {displayInfo().displayValue}
+              </span>
+            {/if}
+          {/if}
+
+          <!-- Copy Button (if enabled and value is string) -->
+          {#if showCopyButton && typeof displayInfo().displayValue === "string"}
+            <button
+              type="button"
+              onclick={async () => {
+                try {
+                  const valueToCopy = copyValue || displayInfo().displayValue;
+                  await navigator.clipboard.writeText(valueToCopy);
+                  copied = true;
+                  setTimeout(() => {
+                    copied = false;
+                  }, 2000);
+                } catch (e) {
+                  console.error("Failed to copy:", e);
+                }
+              }}
+              class="shrink-0 p-1 hover:bg-slate-300/50 rounded transition-colors relative"
+              aria-label="Copy value"
+            >
+              {#if copied}
+                <svg
+                  class="w-4 h-4 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              {:else}
+                <svg
+                  class="w-4 h-4 text-slate-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
+                </svg>
+              {/if}
+            </button>
+          {/if}
+
+          <!-- Type Badge (right-aligned) -->
+          {#if !hideBadge}
+            <Badge type={displayInfo().type}>{displayInfo().type}</Badge>
+          {/if}
+        </div>
+      </div>
     {/if}
   </div>
-
-  <!-- Right: Type Badge (right-aligned) -->
-  <span class="{getTypeBadgeClass(displayInfo().type)} shrink-0 pt-0.5">
-    {displayInfo().type}
-  </span>
-</div>
-
+{/if}

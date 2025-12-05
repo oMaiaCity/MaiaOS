@@ -1,6 +1,9 @@
 <script lang="ts">
   import PropertyItem from "./PropertyItem.svelte";
   import { Image } from "jazz-tools/svelte";
+  import Card from "./Card.svelte";
+  import Badge from "./Badge.svelte";
+  import { HOVERABLE_STYLE } from "$lib/utils/styles";
 
   interface Props {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,8 +44,7 @@
       // Check for FileStream-specific methods
       const hasGetChunks = typeof (coValue as any).getChunks === "function";
       const hasToBlob = typeof (coValue as any).toBlob === "function";
-      const hasIsBinaryStreamEnded =
-        typeof (coValue as any).isBinaryStreamEnded === "function";
+      const hasIsBinaryStreamEnded = typeof (coValue as any).isBinaryStreamEnded === "function";
       return hasGetChunks || hasToBlob || hasIsBinaryStreamEnded;
     } catch (e) {
       return false;
@@ -129,18 +131,12 @@
 </script>
 
 {#if !coValue || !coValue.$isLoaded}
-  <div
-    class="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-slate-100/90 border border-white shadow-[0_0_8px_rgba(0,0,0,0.03)] p-6"
-  >
-    <!-- Glossy gradient overlay -->
-    <div
-      class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
-    ></div>
-    <div class="relative text-center">
+  <Card>
+    <div class="text-center">
       <p class="text-sm text-slate-500">Loading...</p>
     </div>
-  </div>
-  {:else if isFileStream()}
+  </Card>
+{:else if isFileStream()}
   <!-- FileStream: Show metadata and properties -->
   {@const fileStream = coValue}
   {@const chunks = (() => {
@@ -150,233 +146,205 @@
       return null;
     }
   })()}
-  <div
-    class="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-slate-100/90 border border-white shadow-[0_0_8px_rgba(0,0,0,0.03)] p-6"
-  >
-    <!-- Glossy gradient overlay -->
-    <div
-      class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
-    ></div>
-    <div class="relative space-y-4">
+  <Card>
+    <div class="space-y-4">
       <div
         class="bg-slate-200/50 rounded-2xl p-4 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
       >
-      <div class="flex items-center gap-2 mb-3">
-        <span class="text-xs bg-orange-100 px-2 py-0.5 rounded text-orange-700">FileStream</span>
-        {#if chunks}
-          {#if chunks.mimeType}
-            <span class="text-xs text-slate-600">{chunks.mimeType}</span>
-          {/if}
-          {#if chunks.totalSizeBytes}
-            <span class="text-xs text-slate-500">
-              ({Math.round(chunks.totalSizeBytes / 1024)}KB)
-            </span>
-          {/if}
-          {#if chunks.fileName}
-            <span class="text-xs text-slate-600">{chunks.fileName}</span>
-          {/if}
-          {#if chunks.finished}
-            <span class="text-xs bg-green-100 px-2 py-0.5 rounded text-green-700">Complete</span>
+        <div class="flex items-center gap-2 mb-3">
+          <Badge type="FileStream" variant="compact">FileStream</Badge>
+          {#if chunks}
+            {#if chunks.mimeType}
+              <span class="text-xs text-slate-600">{chunks.mimeType}</span>
+            {/if}
+            {#if chunks.totalSizeBytes}
+              <span class="text-xs text-slate-500">
+                ({Math.round(chunks.totalSizeBytes / 1024)}KB)
+              </span>
+            {/if}
+            {#if chunks.fileName}
+              <span class="text-xs text-slate-600">{chunks.fileName}</span>
+            {/if}
+            {#if chunks.finished}
+              <Badge type="complete" variant="compact">Complete</Badge>
+            {:else}
+              <Badge type="uploading" variant="compact">Uploading...</Badge>
+            {/if}
           {:else}
-            <span class="text-xs bg-yellow-100 px-2 py-0.5 rounded text-yellow-700">Uploading...</span>
+            <span class="text-xs text-slate-500">Loading metadata...</span>
           {/if}
-        {:else}
-          <span class="text-xs text-slate-500">Loading metadata...</span>
-        {/if}
-      </div>
-      {#if chunks && chunks.chunks && chunks.chunks.length > 0}
-        <div class="mt-3">
-          <div class="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-            Chunks: {chunks.chunks.length}
-          </div>
-          <div class="space-y-1">
-            {#each chunks.chunks as chunk, index}
-              <div class="text-xs text-slate-600">
-                Chunk {index + 1}: {chunk.length} bytes
-              </div>
-            {/each}
-          </div>
         </div>
-      {/if}
+        {#if chunks && chunks.chunks && chunks.chunks.length > 0}
+          <div class="mt-3">
+            <div class="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+              Chunks: {chunks.chunks.length}
+            </div>
+            <div class="space-y-1">
+              {#each chunks.chunks as chunk, index}
+                <div class="text-xs text-slate-600">
+                  Chunk {index + 1}: {chunk.length} bytes
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
       </div>
     </div>
-  </div>
-  {:else if isCoList()}
+  </Card>
+{:else if isCoList()}
   <!-- CoList: Show as styled metadata cards with @label and CoValue type -->
-  <div
-    class="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-slate-100/90 border border-white shadow-[0_0_8px_rgba(0,0,0,0.03)] p-6"
-  >
-    <!-- Glossy gradient overlay -->
-    <div
-      class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
-    ></div>
-    <div class="relative">
+  <Card>
+    <div>
       {#if coListItems().length > 0}
         <div class="space-y-3">
-      {#each coListItems() as item}
-        {#if item.type === "CoValue" && item.item}
-          {@const displayLabel = item.item.$isLoaded && item.item.$jazz.has("@label")
-            ? item.item["@label"]
-            : item.item.$isLoaded
-              ? item.item.$jazz.id.slice(0, 8) + "..."
-              : item.preview || "Loading..."}
-          {@const schema = item.item.$isLoaded && item.item.$jazz.has("@schema")
-            ? item.item["@schema"]
-            : "CoValue"}
-          <button
-            type="button"
-            onclick={() => handleCoValueSelect(item.item)}
-            class="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-slate-200/50 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] hover:border-slate-300 transition-all w-full text-left p-4"
-          >
-            <!-- Glossy gradient overlay -->
-            <div
-              class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
-            ></div>
-            <div class="relative flex items-center justify-between gap-3">
-              <span class="text-sm font-semibold text-slate-700">{displayLabel}</span>
-              <span
-                class="px-2 py-0.5 rounded-full bg-slate-50/80 border border-white text-[10px] font-bold uppercase tracking-wider text-slate-500 shrink-0"
+          {#each coListItems() as item}
+            {#if item.type === "CoValue" && item.item}
+              {@const displayLabel =
+                item.item.$isLoaded && item.item.$jazz.has("@label")
+                  ? item.item["@label"]
+                  : item.item.$isLoaded
+                    ? item.item.$jazz.id.slice(0, 8) + "..."
+                    : item.preview || "Loading..."}
+              {@const schema =
+                item.item.$isLoaded && item.item.$jazz.has("@schema")
+                  ? item.item["@schema"]
+                  : "CoValue"}
+              <button
+                type="button"
+                onclick={() => handleCoValueSelect(item.item)}
+                class="relative overflow-hidden rounded-2xl bg-slate-100 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] {HOVERABLE_STYLE} w-full text-left p-4"
               >
-                {schema}
-              </span>
-            </div>
-          </button>
-        {:else}
-          <div
-            class="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-slate-200/50 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] p-4"
-          >
-            <!-- Glossy gradient overlay -->
-            <div
-              class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
-            ></div>
-            <div class="relative text-sm text-slate-600">
-              {typeof item.value === "string" ? item.value : JSON.stringify(item.value)}
-            </div>
-          </div>
-        {/if}
-        {/each}
+                <!-- Glossy gradient overlay -->
+                <div class="absolute inset-0 pointer-events-none"></div>
+                <div class="relative flex items-center justify-between gap-3">
+                  <span class="text-sm font-semibold text-slate-700">{displayLabel}</span>
+                  <Badge type={schema}>{schema}</Badge>
+                </div>
+              </button>
+            {:else}
+              <div
+                class="relative overflow-hidden rounded-2xl bg-slate-100 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] p-4"
+              >
+                <!-- Glossy gradient overlay -->
+                <div
+                  class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
+                ></div>
+                <div class="relative text-sm text-slate-600">
+                  {typeof item.value === "string" ? item.value : JSON.stringify(item.value)}
+                </div>
+              </div>
+            {/if}
+          {/each}
         </div>
       {:else}
         <p class="text-sm text-slate-400 italic">Empty list</p>
       {/if}
     </div>
-  </div>
+  </Card>
 {:else if properties}
   <!-- CoValue properties: Wrap in card like metadata sidebar -->
-  <div
-    class="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-slate-100/90 border border-white shadow-[0_0_8px_rgba(0,0,0,0.03)] p-6"
-  >
-    <!-- Glossy gradient overlay -->
-    <div
-      class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
-    ></div>
-    <div class="relative space-y-4">
-    {#each Object.entries(properties.properties).filter(([propKey]) => {
-      // Skip image property if we're viewing avatar and have direct access
-      // We'll render it separately using direct access (like CoListGridCard does)
-      if (propKey === "image" && avatarImageDirect()) {
-        return false;
-      }
-      return true;
-    }) as [propKey, propValue]}
-      {#if typeof propValue === "object" && propValue !== null && "type" in propValue}
-        {#if propValue.type === "CoList"}
-          <!-- CoList: Show as styled metadata cards with @label and CoValue type -->
-          {#if propValue.items && propValue.items.length > 0}
-            <div class="space-y-3">
-              {#each propValue.items as item}
-                {#if item.type === "CoValue" && item.item}
-                  {@const displayLabel = item.item.$isLoaded && item.item.$jazz.has("@label")
-                    ? item.item["@label"]
-                    : item.item.$isLoaded
-                      ? item.item.$jazz.id.slice(0, 8) + "..."
-                      : item.preview || "Loading..."}
-                  {@const schema = item.item.$isLoaded && item.item.$jazz.has("@schema")
-                    ? item.item["@schema"]
-                    : "CoValue"}
-                  <button
-                    type="button"
-                    onclick={() => handleCoValueSelect(item.item)}
-                    class="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-slate-200/50 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] hover:border-slate-300 transition-all w-full text-left p-4"
-                  >
-                    <!-- Glossy gradient overlay -->
+  <Card>
+    <div class="space-y-4">
+      {#each Object.entries(properties.properties).filter(([propKey]) => {
+        // Skip image property if we're viewing avatar and have direct access
+        // We'll render it separately using direct access (like CoListGridCard does)
+        if (propKey === "image" && avatarImageDirect()) {
+          return false;
+        }
+        return true;
+      }) as [propKey, propValue]}
+        {#if typeof propValue === "object" && propValue !== null && "type" in propValue}
+          {#if propValue.type === "CoList"}
+            <!-- CoList: Show as styled metadata cards with @label and CoValue type -->
+            {@const coListProp = propValue as { type: string; items?: any[] }}
+            {#if coListProp.items && coListProp.items.length > 0}
+              <div class="space-y-3">
+                {#each coListProp.items as item}
+                  {#if item.type === "CoValue" && item.item}
+                    {@const displayLabel =
+                      item.item.$isLoaded && item.item.$jazz.has("@label")
+                        ? item.item["@label"]
+                        : item.item.$isLoaded
+                          ? item.item.$jazz.id.slice(0, 8) + "..."
+                          : item.preview || "Loading..."}
+                    {@const schema =
+                      item.item.$isLoaded && item.item.$jazz.has("@schema")
+                        ? item.item["@schema"]
+                        : "CoValue"}
+                    <button
+                      type="button"
+                      onclick={() => handleCoValueSelect(item.item)}
+                      class="relative overflow-hidden rounded-2xl bg-slate-100 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] {HOVERABLE_STYLE} w-full text-left p-4"
+                    >
+                      <!-- Glossy gradient overlay -->
+                      <div
+                        class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
+                      ></div>
+                      <div class="relative flex items-center justify-between gap-3">
+                        <span class="text-sm font-semibold text-slate-700">{displayLabel}</span>
+                        <Badge type={schema}>{schema}</Badge>
+                      </div>
+                    </button>
+                  {:else}
                     <div
-                      class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
-                    ></div>
-                    <div class="relative flex items-center justify-between gap-3">
-                      <span class="text-sm font-semibold text-slate-700">{displayLabel}</span>
-                      <span
-                        class="px-2 py-0.5 rounded-full bg-slate-50/80 border border-white text-[10px] font-bold uppercase tracking-wider text-slate-500 shrink-0"
-                      >
-                        {schema}
-                      </span>
+                      class="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-slate-200/50 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] p-4"
+                    >
+                      <!-- Glossy gradient overlay -->
+                      <div
+                        class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
+                      ></div>
+                      <div class="relative text-sm text-slate-600">
+                        {typeof item.value === "string" ? item.value : JSON.stringify(item.value)}
+                      </div>
                     </div>
-                  </button>
-                {:else}
-                  <div
-                    class="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-slate-200/50 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] p-4"
-                  >
-                    <!-- Glossy gradient overlay -->
-                    <div
-                      class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
-                    ></div>
-                    <div class="relative text-sm text-slate-600">
-                      {typeof item.value === "string" ? item.value : JSON.stringify(item.value)}
-                    </div>
-                  </div>
-                {/if}
-              {/each}
-            </div>
+                  {/if}
+                {/each}
+              </div>
+            {:else}
+              <p class="text-sm text-slate-400 italic">Empty list</p>
+            {/if}
           {:else}
-            <p class="text-sm text-slate-400 italic">Empty list</p>
+            <!-- All other property types: Use standardized PropertyItem component -->
+            <PropertyItem
+              {propKey}
+              {propValue}
+              onSelect={(coValue, fallbackKey) =>
+                handleCoValueSelect(coValue, fallbackKey || propKey)}
+            />
           {/if}
         {:else}
-          <!-- All other property types: Use standardized PropertyItem component -->
+          <!-- Primitive values: Use standardized PropertyItem component -->
           <PropertyItem
             {propKey}
-            propValue={propValue}
-            onSelect={(coValue, fallbackKey) => handleCoValueSelect(coValue, fallbackKey || propKey)}
+            {propValue}
+            onSelect={(coValue, fallbackKey) =>
+              handleCoValueSelect(coValue, fallbackKey || propKey)}
           />
         {/if}
-      {:else}
-        <!-- Primitive values: Use standardized PropertyItem component -->
+      {/each}
+
+      <!-- Render image property directly from avatar (like CoListGridCard does) -->
+      {#if avatarImageDirect()}
+        {@const img = avatarImageDirect()}
+        {@const imagePropValue = {
+          type: "ImageDefinition",
+          id: img.$jazz?.id || "unknown",
+          isLoaded: img.$isLoaded || false,
+          coValue: img,
+          imageDefinition: img,
+        }}
         <PropertyItem
-          {propKey}
-          propValue={propValue}
-          onSelect={(coValue, fallbackKey) => handleCoValueSelect(coValue, fallbackKey || propKey)}
+          propKey="image"
+          propValue={imagePropValue}
+          onSelect={(coValue, fallbackKey) => handleCoValueSelect(coValue, fallbackKey || "image")}
         />
       {/if}
-    {/each}
-    
-    <!-- Render image property directly from avatar (like CoListGridCard does) -->
-    {#if avatarImageDirect()}
-      {@const img = avatarImageDirect()}
-      {@const imagePropValue = {
-        type: "ImageDefinition",
-        id: img.$jazz?.id || "unknown",
-        isLoaded: img.$isLoaded || false,
-        coValue: img,
-        imageDefinition: img,
-      }}
-      <PropertyItem
-        propKey="image"
-        propValue={imagePropValue}
-        onSelect={(coValue, fallbackKey) => handleCoValueSelect(coValue, fallbackKey || "image")}
-      />
-    {/if}
     </div>
-  </div>
+  </Card>
 {:else}
-  <div
-    class="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-slate-100/90 border border-white shadow-[0_0_8px_rgba(0,0,0,0.03)] p-6"
-  >
-    <!-- Glossy gradient overlay -->
-    <div
-      class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
-    ></div>
-    <div class="relative text-center py-8">
+  <Card>
+    <div class="text-center py-8">
       <p class="text-sm text-slate-500">No properties available</p>
     </div>
-  </div>
+  </Card>
 {/if}
-

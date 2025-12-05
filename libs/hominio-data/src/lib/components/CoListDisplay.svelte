@@ -34,19 +34,18 @@
           <CoValueCard
             {item}
             {extractCoValueProperties}
-            isExpanded={isCoValueExpanded(item.id)}
             isSelected={selectedCoValue?.$jazz?.id === item.item.$jazz.id}
             {onSelect}
-            onToggleExpand={handleCoValueClick}
-            {selectedCoValue}
           />
         {:else}
-          <div class="text-sm">
+          <div
+            class="px-4 py-3 rounded-2xl bg-slate-100 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)]"
+          >
             <div class="flex items-center gap-2">
-              <span class="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600">
+              <span class="font-mono text-xs text-slate-500">
                 [{item.index}]
               </span>
-              <span class="text-slate-700">
+              <span class="text-xs text-slate-600 break-all break-words">
                 {typeof item.value === "string" ? item.value : JSON.stringify(item.value)}
               </span>
             </div>
@@ -58,4 +57,3 @@
     <div class="ml-4 text-sm text-slate-400 italic">Empty list</div>
   {/if}
 </div>
-

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { getCoValueGroupInfo } from "$lib/groups";
+  import PropertyItem from "./PropertyItem.svelte";
 
   interface Props {
     coValue: any; // CoValue to display metadata for
@@ -7,10 +8,6 @@
   }
 
   let { coValue, showKeys = false }: Props = $props();
-
-  // Copy feedback state
-  let copiedCoValue = $state(false);
-  let copiedGroup = $state(false);
 
   // Extract Jazz metadata
   const metadata = $derived(() => {
@@ -178,309 +175,55 @@
 </script>
 
 {#if metadata()}
-  <div
-    class="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-slate-100/90 border border-white shadow-[0_0_8px_rgba(0,0,0,0.03)] p-5"
-  >
-    <!-- Glossy gradient overlay -->
-    <div
-      class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
-    ></div>
+  <div class="space-y-3">
+    <!-- ID -->
+    <PropertyItem
+      propKey="ID"
+      propValue={metadata()!.id.slice(0, 16) + "..."}
+      showCopyButton={true}
+      copyValue={metadata()!.id}
+      hideBadge={true}
+    />
 
-    <div class="relative">
-      <!-- Metadata content always visible -->
-      <div class="space-y-3">
-        <!-- ID -->
-        <div
-          class="bg-slate-200/50 rounded-2xl p-3 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
-        >
-          <div class="flex justify-between items-center gap-2">
-            <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">ID</span>
-            <div class="flex items-center gap-2 flex-1 justify-end min-w-0">
-              <span class="font-mono text-xs text-slate-600 truncate">
-                {metadata()!.id.slice(0, 16)}...
-              </span>
-              <button
-                type="button"
-                onclick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(metadata()!.id);
-                    copiedCoValue = true;
-                    setTimeout(() => {
-                      copiedCoValue = false;
-                    }, 2000);
-                  } catch (e) {
-                    console.error("Failed to copy:", e);
-                  }
-                }}
-                class="shrink-0 p-1 hover:bg-slate-300/50 rounded transition-colors relative"
-                aria-label="Copy full ID"
-              >
-                {#if copiedCoValue}
-                  <svg
-                    class="w-4 h-4 text-green-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                {:else}
-                  <svg
-                    class="w-4 h-4 text-slate-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                    />
-                  </svg>
-                {/if}
-              </button>
-            </div>
-          </div>
-        </div>
+    <!-- TYPE -->
+    <PropertyItem propKey="TYPE" propValue={metadata()!.coValueType} />
 
-        <!-- TYPE -->
-        <div
-          class="bg-slate-200/50 rounded-2xl p-3 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
-        >
-          <div class="flex justify-between items-center">
-            <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">TYPE</span>
-            <span
-              class="px-2 py-0.5 rounded-full bg-slate-50/80 border border-white text-[10px] font-bold uppercase tracking-wider text-slate-500 shrink-0"
-            >
-              {metadata()!.coValueType}
-            </span>
-          </div>
-        </div>
+    <!-- GROUP -->
+    {#if metadata()?.ownerInfo}
+      <PropertyItem
+        propKey="GROUP"
+        propValue={metadata()!.ownerInfo!.id.slice(0, 16) + "..."}
+        showCopyButton={true}
+        copyValue={metadata()!.ownerInfo!.id}
+        hideBadge={true}
+      />
+    {:else if metadata()!.owner}
+      {@const ownerId = String(metadata()!.owner)}
+      <PropertyItem
+        propKey="GROUP"
+        propValue={ownerId.slice(0, 16) + "..."}
+        showCopyButton={true}
+        copyValue={ownerId}
+        hideBadge={true}
+      />
+    {/if}
 
-        <!-- GROUP -->
-        {#if metadata()?.ownerInfo}
-          {@const groupId = metadata()!.ownerInfo!.id}
-          <div
-            class="bg-slate-200/50 rounded-2xl p-3 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
-          >
-            <div class="flex justify-between items-center gap-2">
-              <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">GROUP</span>
-              <div class="flex items-center gap-2 flex-1 justify-end min-w-0">
-                <span class="font-mono text-xs text-slate-600 truncate">
-                  {groupId.slice(0, 16)}...
-                </span>
-                <button
-                  type="button"
-                  onclick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(groupId);
-                      copiedGroup = true;
-                      setTimeout(() => {
-                        copiedGroup = false;
-                      }, 2000);
-                    } catch (e) {
-                      console.error("Failed to copy:", e);
-                    }
-                  }}
-                  class="shrink-0 p-1 hover:bg-slate-300/50 rounded transition-colors relative"
-                  aria-label="Copy full ID"
-                >
-                  {#if copiedGroup}
-                    <svg
-                      class="w-4 h-4 text-green-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  {:else}
-                    <svg
-                      class="w-4 h-4 text-slate-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                      />
-                    </svg>
-                  {/if}
-                </button>
-              </div>
-            </div>
-          </div>
-        {:else if metadata()!.owner}
-          {@const ownerId = String(metadata()!.owner)}
-          <div
-            class="bg-slate-200/50 rounded-2xl p-3 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
-          >
-            <div class="flex justify-between items-center gap-2">
-              <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">GROUP</span>
-              <div class="flex items-center gap-2 flex-1 justify-end min-w-0">
-                <span class="font-mono text-xs text-slate-600 truncate">
-                  {ownerId.slice(0, 16)}...
-                </span>
-                <button
-                  type="button"
-                  onclick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(ownerId);
-                      copiedGroup = true;
-                      setTimeout(() => {
-                        copiedGroup = false;
-                      }, 2000);
-                    } catch (e) {
-                      console.error("Failed to copy:", e);
-                    }
-                  }}
-                  class="shrink-0 p-1 hover:bg-slate-300/50 rounded transition-colors relative"
-                  aria-label="Copy full ID"
-                >
-                  {#if copiedGroup}
-                    <svg
-                      class="w-4 h-4 text-green-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  {:else}
-                    <svg
-                      class="w-4 h-4 text-slate-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                      />
-                    </svg>
-                  {/if}
-                </button>
-              </div>
-            </div>
-          </div>
-        {/if}
-
-        <!-- Members -->
-        {#if metadata()?.groupInfo}
-          {@const groupInfoData = metadata()!.groupInfo}
-          {#if groupInfoData && groupInfoData.accountMembers && groupInfoData.groupMembers && (groupInfoData.accountMembers.length > 0 || groupInfoData.groupMembers.length > 0)}
-            {@const groupInfo = groupInfoData}
-            <div
-              class="bg-slate-200/50 rounded-2xl p-4 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-medium text-slate-500 uppercase tracking-wide"
-                  >MEMBERS</span
-                >
-                <svg
-                  class="w-4 h-4 text-slate-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                  />
-                </svg>
-              </div>
-
-              <!-- Accounts -->
-              {#if groupInfo.accountMembers.length > 0}
-                <div class="mb-3 space-y-1.5 mt-2">
-                  <span class="text-[10px] font-medium text-slate-500 uppercase tracking-wide"
-                    >ACCOUNTS</span
-                  >
-                  {#each groupInfo.accountMembers as member}
-                    <div class="flex items-center justify-between p-1.5 rounded-lg">
-                      <span class="font-mono text-xs text-slate-600"
-                        >{member.id.slice(0, 8)}...</span
-                      >
-                      <span
-                        class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-slate-100/50 text-slate-700 border border-slate-200/50"
-                      >
-                        {member.role}
-                      </span>
-                    </div>
-                  {/each}
-                </div>
-              {/if}
-
-              <!-- Groups -->
-              {#if groupInfo.groupMembers.length > 0}
-                <div class="pt-3 border-t border-white/50 space-y-1.5 mt-2">
-                  <span class="text-[10px] font-medium text-slate-500 uppercase tracking-wide"
-                    >GROUPS</span
-                  >
-                  {#each groupInfo.groupMembers as groupMember}
-                    <div class="flex items-center justify-between p-1.5 rounded-lg">
-                      <span class="font-mono text-xs text-slate-600"
-                        >{groupMember.id.slice(0, 8)}...</span
-                      >
-                      <div class="flex items-center gap-2">
-                        <span
-                          class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-green-100/50 text-green-600 border border-green-100/50"
-                        >
-                          {groupMember.role}
-                        </span>
-                        <button
-                          type="button"
-                          class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors shrink-0"
-                          onclick={() => removeParentGroupMember(groupMember.id)}
-                          title="Remove parent group"
-                          aria-label="Remove parent group"
-                        >
-                          <svg
-                            class="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  {/each}
-                </div>
-              {/if}
-            </div>
-          {/if}
-        {/if}
-      </div>
-    </div>
+    <!-- Members -->
+    {#if metadata()?.groupInfo}
+      {@const groupInfoData = metadata()!.groupInfo}
+      {#if groupInfoData && groupInfoData.accountMembers && groupInfoData.groupMembers && (groupInfoData.accountMembers.length > 0 || groupInfoData.groupMembers.length > 0)}
+        <PropertyItem
+          propKey="MEMBERS"
+          propValue={null}
+          variant="members"
+          membersData={{
+            accountMembers: groupInfoData.accountMembers,
+            groupMembers: groupInfoData.groupMembers,
+            onRemoveGroupMember: removeParentGroupMember,
+          }}
+          hideBadge={true}
+        />
+      {/if}
+    {/if}
   </div>
 {/if}
