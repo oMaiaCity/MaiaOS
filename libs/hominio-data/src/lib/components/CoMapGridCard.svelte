@@ -14,21 +14,25 @@
   let { value, key, isSelected, onClick }: Props = $props();
 
   // Get display name from profile.name or @label
-  const displayName = $derived(() => {
-    if (value.coValue && value.coValue.$isLoaded) {
+  let displayName = $state(key.charAt(0).toUpperCase() + key.slice(1));
+  
+  $effect(() => {
+    if (value?.coValue && value.coValue.$isLoaded) {
       try {
         // Try profile.name first (for profile CoMap)
-        if (value.coValue.$jazz.has("name")) {
+        if (value.coValue.$jazz && typeof value.coValue.$jazz.has === "function" && value.coValue.$jazz.has("name")) {
           const name = value.coValue.name;
-          if (name && name.trim()) {
-            return name;
+          if (name && typeof name === "string" && name.trim()) {
+            displayName = name;
+            return;
           }
         }
         // Try @label
-        if (value.coValue.$jazz.has("@label")) {
+        if (value.coValue.$jazz && typeof value.coValue.$jazz.has === "function" && value.coValue.$jazz.has("@label")) {
           const label = value.coValue["@label"];
-          if (label && label.trim()) {
-            return label;
+          if (label && typeof label === "string" && label.trim()) {
+            displayName = label;
+            return;
           }
         }
       } catch (e) {
@@ -36,7 +40,7 @@
       }
     }
     // Fallback to key
-    return key.charAt(0).toUpperCase() + key.slice(1);
+    displayName = key.charAt(0).toUpperCase() + key.slice(1);
   });
 </script>
 
@@ -60,7 +64,6 @@
     <div class="flex-1 flex flex-col items-center justify-center gap-3">
       <div class="text-center">
         <div class="text-sm font-medium text-slate-600">{displayName}</div>
-        <div class="text-xs text-slate-400 italic mt-1">Click to view</div>
       </div>
     </div>
 

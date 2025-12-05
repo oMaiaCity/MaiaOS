@@ -5,9 +5,11 @@
   interface Props {
     coValue: any; // CoValue to display metadata for
     showKeys?: boolean; // Whether to show the keys section
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    currentAccount?: any; // Current Jazz account for profile resolution
   }
 
-  let { coValue, showKeys = false }: Props = $props();
+  let { coValue, showKeys = false, currentAccount }: Props = $props();
 
   // Extract Jazz metadata
   const metadata = $derived(() => {
@@ -226,6 +228,7 @@
             groupMembers: groupInfoData.groupMembers,
             onRemoveGroupMember: removeParentGroupMember,
           }}
+          {currentAccount}
           hideBadge={true}
         />
       {/if}

@@ -14,39 +14,30 @@
   // AccountCoState will use the current account from the Jazz provider
   const account = new AccountCoState(JazzAccount, {
     resolve: {
+      profile: true,
       root: {
-          humans: {
-            avatar: true,
-          },
+        contact: true,
       },
     },
   });
   const me = $derived(account.current);
 
-  // Set up computed fields for humans when they're loaded
-  // This ensures @label is computed even if migration didn't run or human was created before computed fields were added
+  // Set up computed fields for profile when it's loaded
+  // This ensures name is computed from firstName + lastName
   $effect(() => {
-    if (me.$isLoaded && me.root?.humans?.$isLoaded) {
-      const humans = me.root.humans;
-      for (const human of Array.from(humans)) {
-        if (human?.$isLoaded) {
-          // Ensure avatar is loaded before setting up computed fields
-          if (human.$jazz.has("avatar")) {
-            setupComputedFieldsForCoValue(human);
-          }
-        }
-      }
+    if (me.$isLoaded && me.profile?.$isLoaded) {
+      setupComputedFieldsForCoValue(me.profile);
     }
   });
 
-  // Get first human's avatar image for display
-  const firstHumanAvatarImage = $derived(
+  // Get profile image for display
+  const profileImage = $derived(
     me.$isLoaded &&
-      me.root?.humans?.[0]?.$isLoaded &&
-      me.root.humans[0].$jazz.has("avatar") &&
-      (me.root.humans[0].avatar as any)?.image &&
-      (me.root.humans[0].avatar as any).image.$isLoaded
-      ? (me.root.humans[0].avatar as any).image
+      me.profile?.$isLoaded &&
+      (me.profile as any).$jazz.has("image") &&
+      (me.profile as any).image &&
+      (me.profile as any).image.$isLoaded
+      ? (me.profile as any).image
       : null,
   );
 </script>
@@ -79,13 +70,13 @@
     <!-- Welcome Section -->
     <header class="text-center pt-24 pb-4">
       <!-- Profile Image -->
-      {#if firstHumanAvatarImage}
+      {#if profileImage}
         <div class="flex justify-center mb-6">
           <div
             class="relative w-48 h-48 rounded-full overflow-hidden border-4 border-white shadow-[0_0_12px_rgba(0,0,0,0.1)]"
           >
             <Image
-              imageId={firstHumanAvatarImage.$jazz.id}
+              imageId={profileImage.$jazz.id}
               width={192}
               height={192}
               alt="Profile"
@@ -100,7 +91,7 @@
         Welcome Back, <span
           class="text-transparent bg-clip-text bg-linear-to-r from-[#002455] to-[#001a3d]"
         >
-          {(me.root?.humans?.[0] && me.root.humans[0]?.$isLoaded && me.root.humans[0]["@label"]) ||
+          {(me.profile && (me.profile as any).$isLoaded && (me.profile as any).name) ||
             "Traveler"}
         </span>
       </h1>

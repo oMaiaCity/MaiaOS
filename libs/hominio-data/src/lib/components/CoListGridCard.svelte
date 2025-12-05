@@ -32,9 +32,6 @@
 
     <!-- Preview Content -->
     <div class="flex-1 flex flex-col items-center justify-center gap-3">
-      <div class="text-center">
-        <div class="text-sm text-slate-400 italic">Click to view</div>
-      </div>
     </div>
 
     <!-- Footer -->

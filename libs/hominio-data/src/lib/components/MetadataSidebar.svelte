@@ -5,16 +5,18 @@
   interface Props {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     selectedCoValue?: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    currentAccount?: any; // Current Jazz account for profile resolution
   }
 
-  let { selectedCoValue }: Props = $props();
+  let { selectedCoValue, currentAccount }: Props = $props();
 </script>
 
 <aside class="sticky top-6">
   {#if selectedCoValue && selectedCoValue.$isLoaded}
     <!-- Metadata content wrapped in Card -->
     <Card>
-      <JazzMetadata coValue={selectedCoValue} showKeys={true} />
+      <JazzMetadata coValue={selectedCoValue} showKeys={true} {currentAccount} />
     </Card>
   {:else}
     <!-- Empty state wrapped in Card -->

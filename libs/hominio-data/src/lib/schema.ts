@@ -3,60 +3,51 @@
  * https://jazz.tools/docs/svelte/schemas/covalues
  */
 
-import { co, z } from "jazz-tools";
-import { migrateSyncGoogleNameToAvatar } from "./migrations/20241220_sync-google-name-to-avatar.js";
-import { migrateSyncGoogleImageToAvatar } from "./migrations/20241220_sync-google-image-to-avatar.js";
+import { co, z, Group } from "jazz-tools";
+import { migrateSyncGoogleNameToProfile } from "./migrations/20241220_sync-google-name-to-profile.js";
+import { migrateSyncGoogleImageToProfile } from "./migrations/20241220_sync-google-image-to-profile.js";
 import { migrateSyncGoogleEmailToContact } from "./migrations/20241220_sync-google-email-to-contact.js";
 import { registerComputedField, setupComputedFieldsForCoValue } from "./computed-fields.js";
 
-// Register computed field definitions
-// @label is computed from avatar.firstName + avatar.lastName, falls back to ID
+// Register computed field for profile.name
+// name is computed from firstName + lastName, falls back to empty string
 registerComputedField({
-  targetField: "@label",
-  sourceFields: ["avatar.firstName", "avatar.lastName"],
-  computeFn: (human) => {
+  targetField: "name",
+  sourceFields: ["firstName", "lastName"],
+  computeFn: (profile) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const humanAny = human as any;
-    if (!humanAny.$jazz.has("avatar")) {
-      return humanAny.$jazz.id;
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const avatar = humanAny.avatar as any;
-    const firstName = avatar?.firstName?.trim() || "";
-    const lastName = avatar?.lastName?.trim() || "";
+    const profileAny = profile as any;
+    const firstName = profileAny?.firstName?.trim() || "";
+    const lastName = profileAny?.lastName?.trim() || "";
     const fullName = `${firstName} ${lastName}`.trim();
-    return fullName || humanAny.$jazz.id;
+    return fullName || "";
   },
-  schemaType: "human",
 });
 
-/** Avatar schema - reusable CoMap for avatar information */
-export const Avatar = co.map({
+/** Capability schema - wrapper for Group reference */
+export const Capability = co.map({
+  "@schema": z.literal("capability"),
+  group: Group, // Reference to a Group CoValue
+});
+
+/** Custom profile schema with firstName, lastName, image, and computed name */
+export const AccountProfile = co.profile({
   firstName: z.string(),
   lastName: z.string(),
   image: co.image().optional(), // ImageDefinition for avatar image (optional)
+  name: z.string(), // Computed from firstName + lastName
 });
 
-/** Contact schema - reusable CoMap for contact information */
+/** Contact schema - simple CoMap for email */
 export const Contact = co.map({
   email: z.string(),
 });
 
-/** Human schema - CoValue with @schema, @label, avatar, and contact properties */
-export const Human = co.map({
-  "@schema": z.literal("human"),
-  "@label": z.string(), // Reactively computed from avatar.firstName + avatar.lastName (or falls back to ID)
-  avatar: Avatar, // Avatar sub-object with firstName, lastName, and image
-  contact: Contact, // Contact sub-object with email
-});
-
-/** Custom profile schema (no custom fields, using default) */
-export const AccountProfile = co.profile();
-
 /** The account root is an app-specific per-user private `CoMap`
  *  where you can store top-level objects for that user */
 export const AppRoot = co.map({
-  humans: co.list(Human), // List of Human CoValues (each auto-creates a Group via $jazz.owner)
+  contact: Contact, // Simple contact CoMap with email
+  capabilities: co.list(Capability), // List of Capability CoValues (each contains a Group reference)
 });
 
 export const JazzAccount = co
@@ -66,31 +57,88 @@ export const JazzAccount = co
   })
   .withMigration(async (account) => {
     /** The account migration is run on account creation and on every log-in.
-     *  Sets up the account root with initial structure: root.humans
+     *  Sets up the account root with initial structure: root.contact
+     *  Ensures profile fields are initialized
      */
-    // Check if root exists (without loading nested structures)
-    if (!account.$jazz.has("root")) {
-      const human = Human.create({
-        "@schema": "human",
-        "@label": "",
-        avatar: {
+    // Ensure profile is initialized with default values and "everyone" reader permission
+    if (!account.$jazz.has("profile")) {
+      // Create a Group with "everyone" as "reader" for public profile access
+      const profileGroup = Group.create();
+      profileGroup.addMember("everyone", "reader");
+      await profileGroup.$jazz.waitForSync();
+
+      // Create profile with the group that has everyone reader permission
+      const profile = AccountProfile.create(
+        {
           firstName: "",
           lastName: "",
+          name: "",
         },
-        contact: {
-          email: "",
-        },
+        profileGroup,
+      );
+      await profile.$jazz.waitForSync();
+      account.$jazz.set("profile", profile);
+    } else {
+      // Ensure profile fields exist (for existing accounts)
+      const profile = await account.$jazz.ensureLoaded({
+        resolve: { profile: true },
       });
-      await human.$jazz.waitForSync();
+      if (profile.profile && profile.profile.$isLoaded) {
+        const profileAny = profile.profile as any;
 
-      // Ensure avatar is loaded before setting up computed fields
-      await human.$jazz.ensureLoaded({
-        resolve: { avatar: true },
+        // Ensure profile has "everyone" reader permission
+        const profileOwner = profileAny.$jazz?.owner;
+        if (profileOwner && typeof profileOwner === "object" && "$jazz" in profileOwner) {
+          const ownerGroup = profileOwner as any;
+          // Check if "everyone" role exists, if not add it
+          try {
+            const everyoneRole = ownerGroup.roleOf ? ownerGroup.roleOf("everyone") : null;
+            if (!everyoneRole || everyoneRole !== "reader") {
+              // Add everyone as reader if not already set
+              if (typeof ownerGroup.addMember === "function") {
+                ownerGroup.addMember("everyone", "reader");
+                await ownerGroup.$jazz.waitForSync();
+              }
+            }
+          } catch (e) {
+            console.warn("[Schema Migration] Error checking/setting everyone role on profile group:", e);
+          }
+        }
+
+        if (!profileAny.$jazz.has("firstName")) {
+          profileAny.$jazz.set("firstName", "");
+        }
+        if (!profileAny.$jazz.has("lastName")) {
+          profileAny.$jazz.set("lastName", "");
+        }
+        if (!profileAny.$jazz.has("name")) {
+          profileAny.$jazz.set("name", "");
+        }
+        // Set up computed fields for profile
+        setupComputedFieldsForCoValue(profile.profile);
+      }
+    }
+
+    // Check if root exists (without loading nested structures)
+    if (!account.$jazz.has("root")) {
+      // Create contact CoMap
+      const contact = Contact.create({
+        email: "",
       });
-      setupComputedFieldsForCoValue(human);
+      await contact.$jazz.waitForSync();
+
+      // Create default group for capabilities
+      const defaultGroup = Group.create();
+      await defaultGroup.$jazz.waitForSync();
+      const defaultCapability = Capability.create({
+        "@schema": "capability",
+        group: defaultGroup,
+      });
+      await defaultCapability.$jazz.waitForSync();
 
       account.$jazz.set("root", {
-        humans: [human],
+        contact: contact,
+        capabilities: [defaultCapability],
       });
       return;
     }
@@ -101,136 +149,116 @@ export const JazzAccount = co
     });
 
     if (!loadedAccount.root) {
-      const human = Human.create({
-        "@schema": "human",
-        "@label": "",
-        avatar: {
-          firstName: "",
-          lastName: "",
-        },
-        contact: {
-          email: "",
-        },
+      // Create contact CoMap
+      const contact = Contact.create({
+        email: "",
       });
-      await human.$jazz.waitForSync();
+      await contact.$jazz.waitForSync();
 
-      // Ensure avatar is loaded before setting up computed fields
-      await human.$jazz.ensureLoaded({
-        resolve: { avatar: true },
+      // Create default group for capabilities
+      const defaultGroup = Group.create();
+      await defaultGroup.$jazz.waitForSync();
+      const defaultCapability = Capability.create({
+        "@schema": "capability",
+        group: defaultGroup,
       });
-      setupComputedFieldsForCoValue(human);
+      await defaultCapability.$jazz.waitForSync();
 
       account.$jazz.set("root", {
-        humans: [human],
+        contact: contact,
+        capabilities: [defaultCapability],
       });
       return;
     }
 
     const root = loadedAccount.root;
 
-    // Try to load humans list
+    // Try to load root with contact and capabilities
     // If the reference is broken (points to non-existent CoValue), recreate it
-    let rootWithHumans;
+    let rootWithData;
     try {
-      rootWithHumans = await root.$jazz.ensureLoaded({
-        resolve: { humans: true },
+      rootWithData = await root.$jazz.ensureLoaded({
+        resolve: { contact: true, capabilities: true },
       });
 
       // Verify that root was actually loaded (not just a broken reference)
-      if (!rootWithHumans || !rootWithHumans.$isLoaded) {
+      if (!rootWithData || !rootWithData.$isLoaded) {
         throw new Error("root failed to load - broken reference");
       }
     } catch (error) {
       // If loading failed (broken reference), recreate root
       console.warn("[Schema Migration] root reference is broken, recreating:", error);
 
-      const human = Human.create({
-        "@schema": "human",
-        "@label": "",
-        avatar: {
-          firstName: "",
-          lastName: "",
-        },
-        contact: {
-          email: "",
-        },
+      // Create contact CoMap
+      const contact = Contact.create({
+        email: "",
       });
-      await human.$jazz.waitForSync();
+      await contact.$jazz.waitForSync();
 
-      // Ensure avatar is loaded before setting up computed fields
-      await human.$jazz.ensureLoaded({
-        resolve: { avatar: true },
+      // Create default group for capabilities
+      const defaultGroup = Group.create();
+      await defaultGroup.$jazz.waitForSync();
+      const defaultCapability = Capability.create({
+        "@schema": "capability",
+        group: defaultGroup,
       });
-      setupComputedFieldsForCoValue(human);
+      await defaultCapability.$jazz.waitForSync();
 
       account.$jazz.set("root", {
-        humans: [human],
+        contact: contact,
+        capabilities: [defaultCapability],
       });
       return;
     }
 
-    // Ensure humans list exists and has at least one human
-    if (!rootWithHumans.$jazz.has("humans")) {
-      const human = Human.create({
-        "@schema": "human",
-        "@label": "",
-        avatar: {
-          firstName: "",
-          lastName: "",
-        },
-        contact: {
-          email: "",
-        },
+    // Ensure contact exists
+    if (!rootWithData.$jazz.has("contact")) {
+      const contact = Contact.create({
+        email: "",
       });
-      await human.$jazz.waitForSync();
+      await contact.$jazz.waitForSync();
+      rootWithData.$jazz.set("contact", contact);
+    }
 
-      // Ensure avatar is loaded before setting up computed fields
-      await human.$jazz.ensureLoaded({
-        resolve: { avatar: true },
+    // Ensure capabilities list exists and has at least one default group
+    if (!rootWithData.$jazz.has("capabilities")) {
+      const defaultGroup = Group.create();
+      await defaultGroup.$jazz.waitForSync();
+      const defaultCapability = Capability.create({
+        "@schema": "capability",
+        group: defaultGroup,
       });
-      setupComputedFieldsForCoValue(human);
-
-      rootWithHumans.$jazz.set("humans", [human]);
+      await defaultCapability.$jazz.waitForSync();
+      rootWithData.$jazz.set("capabilities", [defaultCapability]);
     } else {
-      // Ensure all existing humans have computed fields set up and contact field
-      const humans = rootWithHumans.humans;
-      if (humans && humans.$isLoaded) {
-        for (const human of Array.from(humans)) {
-          if (human.$isLoaded) {
-            // Ensure avatar is loaded before setting up computed fields
-            try {
-              await human.$jazz.ensureLoaded({
-                resolve: { avatar: true },
-              });
-              setupComputedFieldsForCoValue(human);
-            } catch (error) {
-              console.warn("[Schema Migration] Failed to load human avatar for computed fields setup:", error);
-              // Still try to set up computed fields even if avatar loading fails
-              if (human.$isLoaded) {
-                setupComputedFieldsForCoValue(human);
-              }
-            }
-
-            // Ensure contact field exists (for existing humans created before contact was added)
-            if (!human.$jazz.has("contact")) {
-              human.$jazz.set("contact", {
-                email: "",
-              });
-            }
-          }
-        }
+      // Ensure capabilities list is loaded
+      try {
+        await rootWithData.$jazz.ensureLoaded({
+          resolve: { capabilities: true },
+        });
+      } catch (error) {
+        console.warn("[Schema Migration] Failed to load capabilities list:", error);
+        // If loading failed, create a new default capability
+        const defaultGroup = Group.create();
+        await defaultGroup.$jazz.waitForSync();
+        const defaultCapability = Capability.create({
+          "@schema": "capability",
+          group: defaultGroup,
+        });
+        await defaultCapability.$jazz.waitForSync();
+        rootWithData.$jazz.set("capabilities", [defaultCapability]);
       }
     }
   });
 
 /**
- * Centralized function to sync Google profile data to human avatars and contact
+ * Centralized function to sync Google profile data to profile and contact
  * Called from client-side layout when BetterAuth user data is available
  * 
  * @param account - The Jazz account to sync data for
  * @param betterAuthUser - BetterAuth user object with name, image, and email properties
  */
-export async function syncGoogleDataToAvatars(
+export async function syncGoogleDataToProfile(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   account: any,
   betterAuthUser?: { name?: string | null; image?: string | null; email?: string | null } | null
@@ -241,8 +269,8 @@ export async function syncGoogleDataToAvatars(
 
   // Sync name, image, and email in parallel
   await Promise.all([
-    betterAuthUser.name ? migrateSyncGoogleNameToAvatar(account, betterAuthUser.name) : Promise.resolve(),
-    betterAuthUser.image ? migrateSyncGoogleImageToAvatar(account, betterAuthUser.image) : Promise.resolve(),
+    betterAuthUser.name ? migrateSyncGoogleNameToProfile(account, betterAuthUser.name) : Promise.resolve(),
+    betterAuthUser.image ? migrateSyncGoogleImageToProfile(account, betterAuthUser.image) : Promise.resolve(),
     betterAuthUser.email ? migrateSyncGoogleEmailToContact(account, betterAuthUser.email) : Promise.resolve(),
   ]);
 }

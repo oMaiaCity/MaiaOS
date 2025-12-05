@@ -48,6 +48,8 @@
       
       // Role types
       case "admin":
+        return { bg: "bg-yellow-100/50", text: "text-yellow-700" };
+      case "reader":
         return { bg: "bg-red-100/50", text: "text-red-700" };
       
       // Default

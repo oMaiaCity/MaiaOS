@@ -7,8 +7,11 @@
   import RootDataDisplay from "$lib/components/RootDataDisplay.svelte";
   import MetadataSidebar from "$lib/components/MetadataSidebar.svelte";
   import CoValueContextDisplay from "$lib/components/CoValueContextDisplay.svelte";
+  import GroupContextView from "$lib/components/GroupContextView.svelte";
   import Card from "$lib/components/Card.svelte";
   import Button from "$lib/components/Button.svelte";
+  import { Group } from "jazz-tools";
+  import { CoState } from "jazz-tools/svelte";
 
   // Better Auth session
   const session = authClient.useSession();
@@ -22,27 +25,18 @@
     resolve: {
       profile: true, // Resolve profile to access all its properties
       root: {
-        humans: {
-          avatar: true,
-        },
+        contact: true, // Resolve contact CoMap
+        capabilities: true,
       },
     },
   });
   const me = $derived(account.current);
 
-  // Set up computed fields for humans when they're loaded
-  // This ensures @label is computed even if migration didn't run or human was created before computed fields were added
+  // Set up computed fields for profile when it's loaded
+  // This ensures name is computed from firstName + lastName
   $effect(() => {
-    if (me.$isLoaded && me.root?.humans?.$isLoaded) {
-      const humans = me.root.humans;
-      for (const human of Array.from(humans)) {
-        if (human?.$isLoaded) {
-          // Ensure avatar is loaded before setting up computed fields
-          if (human.$jazz.has("avatar")) {
-            setupComputedFieldsForCoValue(human);
-          }
-        }
-      }
+    if (me.$isLoaded && me.profile?.$isLoaded) {
+      setupComputedFieldsForCoValue(me.profile);
     }
   });
 
@@ -50,7 +44,8 @@
   type NavigationContext =
     | { type: "root" }
     | { type: "colist"; coValue: any; label: string; parentKey?: string }
-    | { type: "covalue"; coValue: any; label: string; parentContext?: NavigationContext };
+    | { type: "covalue"; coValue: any; label: string; parentContext?: NavigationContext }
+    | { type: "group"; coValue: any; label: string };
 
   // Navigation stack - tracks the path through CoValues
   let navigationStack = $state<NavigationContext[]>([{ type: "root" }]);
@@ -82,8 +77,91 @@
     }
   }
 
+  // Helper function to check if a co-value is a Group
+  function isGroup(coValue: any): boolean {
+    if (!coValue || !coValue.$isLoaded) return false;
+    try {
+      // Check for Group-specific properties
+      return (
+        "members" in coValue ||
+        typeof (coValue as any).getMemberKeys === "function" ||
+        typeof (coValue as Group).getParentGroups === "function" ||
+        typeof (coValue as Group).myRole === "function"
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Helper function to extract Group from Capability
+  async function extractGroupFromCapability(capability: any): Promise<any> {
+    if (!capability) return null;
+    try {
+      // Ensure capability is loaded
+      if (!capability.$isLoaded && capability.$jazz?.ensureLoaded) {
+        await capability.$jazz.ensureLoaded({ resolve: { group: true } });
+      }
+
+      if (!capability.$isLoaded) return null;
+
+      // Check if it's a Capability schema with a group field
+      if (capability.$jazz?.has && capability.$jazz.has("group")) {
+        let group = capability.group;
+
+        // If group is just an ID (CoID), we need to load it
+        if (typeof group === "string") {
+          // It's a CoID, need to load the Group
+          const { CoState } = await import("jazz-tools/svelte");
+          const groupState = new CoState(Group, group);
+          group = groupState.current;
+        }
+
+        // Ensure group is loaded
+        if (group && !group.$isLoaded && group.$jazz?.ensureLoaded) {
+          await group.$jazz.ensureLoaded();
+        }
+        return group;
+      }
+      // If it's already a Group, return it
+      if (isGroup(capability)) {
+        // Ensure it's loaded
+        if (!capability.$isLoaded && capability.$jazz?.ensureLoaded) {
+          await capability.$jazz.ensureLoaded();
+        }
+        return capability;
+      }
+      return null;
+    } catch (e) {
+      console.warn("Error extracting group from capability:", e);
+      return null;
+    }
+  }
+
   // Navigate to a CoValue (push new context)
-  function navigateToCoValue(coValue: any, label?: string, fallbackKey?: string) {
+  async function navigateToCoValue(coValue: any, label?: string, fallbackKey?: string) {
+    // Check if it's a Capability - extract the Group
+    const group = await extractGroupFromCapability(coValue);
+    if (group) {
+      const displayLabel = label || getCoValueLabel(group, fallbackKey || "Group");
+      navigationStack = [
+        ...navigationStack,
+        { type: "group", coValue: group, label: displayLabel },
+      ];
+      return;
+    }
+
+    // Check if it's a Group
+    if (isGroup(coValue)) {
+      // Ensure Group is loaded
+      if (!coValue.$isLoaded && coValue.$jazz?.ensureLoaded) {
+        await coValue.$jazz.ensureLoaded();
+      }
+      const displayLabel = label || getCoValueLabel(coValue, fallbackKey || "Group");
+      navigationStack = [...navigationStack, { type: "group", coValue, label: displayLabel }];
+      return;
+    }
+
+    // Otherwise, treat as regular CoValue
     const displayLabel = label || getCoValueLabel(coValue, fallbackKey);
     navigationStack = [...navigationStack, { type: "covalue", coValue, label: displayLabel }];
   }
@@ -100,11 +178,16 @@
     }
   }
 
-  // Get current CoValue for metadata sidebar
+  // Get current CoValue for metadata sidebar (exclude groups - they have their own view)
   const selectedCoValue = $derived(() => {
+    if (currentContext.type === "root") {
+      // Show AppRoot metadata when viewing root
+      return me.$isLoaded && me.root ? me.root : null;
+    }
     if (currentContext.type === "covalue" || currentContext.type === "colist") {
       return currentContext.coValue;
     }
+    // Groups don't show metadata sidebar
     return null;
   });
 
@@ -1036,6 +1119,50 @@
       }
     }
 
+    // Add Profile to the data if it exists
+    if (me.profile && (me.profile as any).$isLoaded) {
+      try {
+        const profile = me.profile as any;
+        const profileProperties: Record<string, any> = {};
+
+        // Extract profile properties
+        let profileKeys: string[] = [];
+        if (profile.$jazz && typeof profile.$jazz.keys === "function") {
+          profileKeys = Array.from(profile.$jazz.keys());
+        } else {
+          profileKeys = Object.keys(profile).filter(
+            (key) => key !== "$jazz" && key !== "$isLoaded",
+          );
+        }
+
+        for (const key of profileKeys) {
+          if (key.startsWith("$") || key === "constructor") continue;
+          try {
+            const value = profile[key];
+            if (value !== undefined && value !== null) {
+              profileProperties[key] = value;
+            }
+          } catch (e) {
+            // Ignore errors
+          }
+        }
+
+        // Extract profile metadata
+        const profileMetadata = extractCoValueProperties(profile);
+
+        data["profile"] = {
+          type: "CoMap",
+          id: profile.$jazz?.id || "unknown",
+          isLoaded: profile.$isLoaded || false,
+          properties: profileProperties,
+          jazzMetadata: profileMetadata?.jazzMetadata || null,
+          coValue: profile, // Store reference for navigation
+        };
+      } catch (e) {
+        console.warn("Error adding profile to rootData:", e);
+      }
+    }
+
     // Also include Jazz metadata
     return {
       properties: data,
@@ -1091,7 +1218,7 @@
                 d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
               />
             </svg>
-            <span>AppRoot</span>
+            <span>My Data</span>
           {:else if currentContext.type === "colist"}
             <!-- Show CoList name with list icon -->
             <svg
@@ -1105,6 +1232,22 @@
                 stroke-linejoin="round"
                 stroke-width="2"
                 d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+              />
+            </svg>
+            <span>{currentContext.label}</span>
+          {:else if currentContext.type === "group"}
+            <!-- Show Group name with users icon -->
+            <svg
+              class="w-5 h-5 text-slate-700"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
               />
             </svg>
             <span>{currentContext.label}</span>
@@ -1142,19 +1285,26 @@
           {/if}
         </h2>
       </div>
-      <div class="w-80 shrink-0">
-        <h2 class="text-lg font-semibold text-slate-700 flex items-center justify-end gap-2">
-          <span>Metadata</span>
-          <svg class="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        </h2>
-      </div>
+      {#if currentContext.type !== "group"}
+        <div class="w-80 shrink-0">
+          <h2 class="text-lg font-semibold text-slate-700 flex items-center justify-end gap-2">
+            <span>Metadata</span>
+            <svg
+              class="w-5 h-5 text-slate-700"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </h2>
+        </div>
+      {/if}
     </div>
 
     <!-- Two-column layout: Main + Aside -->
@@ -1188,6 +1338,9 @@
               {/if}
             </div>
           </Card>
+        {:else if currentContext.type === "group"}
+          <!-- Show Group context view -->
+          <GroupContextView group={currentContext.coValue} onNavigate={navigateToCoValue} />
         {:else if currentContext.type === "colist" || currentContext.type === "covalue"}
           <!-- Show CoValue context view -->
           <CoValueContextDisplay
@@ -1198,10 +1351,12 @@
         {/if}
       </div>
 
-      <!-- Right Aside: Metadata for Selected CoValue -->
-      <div class="w-80 shrink-0">
-        <MetadataSidebar selectedCoValue={selectedCoValue()} />
-      </div>
+      <!-- Right Aside: Metadata for Selected CoValue (hidden for groups) -->
+      {#if currentContext.type !== "group"}
+        <div class="w-80 shrink-0">
+          <MetadataSidebar selectedCoValue={selectedCoValue()} currentAccount={me} />
+        </div>
+      {/if}
     </div>
   {/if}
 </div>

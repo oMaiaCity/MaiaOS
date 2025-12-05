@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { JazzAccount, syncGoogleDataToAvatars } from "$lib/schema";
+  import { JazzAccount, syncGoogleDataToProfile } from "$lib/schema";
   import { AccountCoState } from "jazz-tools/svelte";
   import { authClient } from "$lib/auth-client";
 
@@ -10,8 +10,9 @@
   // Load Jazz account for migrations (this runs inside JazzSvelteProvider)
   const account = new AccountCoState(JazzAccount, {
     resolve: {
+      profile: true,
       root: {
-          humans: true,
+        contact: true,
       },
     },
   });
@@ -25,15 +26,15 @@
       !googleDataSynced &&
       me.$isLoaded &&
       betterAuthUser &&
-      me.root?.humans?.$isLoaded &&
-      me.root.humans.length > 0
+      me.profile?.$isLoaded &&
+      me.root?.contact?.$isLoaded
     ) {
-      syncGoogleDataToAvatars(me, betterAuthUser)
+      syncGoogleDataToProfile(me, betterAuthUser)
         .then(() => {
           googleDataSynced = true;
         })
         .catch((error) => {
-          console.error("Error syncing Google data to avatar:", error);
+          console.error("Error syncing Google data to profile:", error);
           googleDataSynced = true; // Mark as synced even on error to prevent retries
         });
     }

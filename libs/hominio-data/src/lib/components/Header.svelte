@@ -13,35 +13,25 @@
   const isBetterAuthSignedIn = $derived(!!betterAuthUser);
   const isBetterAuthPending = $derived($session.isPending);
 
-  // Load Jazz account to access human avatar data
+  // Load Jazz account to access profile data
   const account = new AccountCoState(JazzAccount, {
     resolve: {
-      root: {
-        humans: true,
-      },
+      profile: true,
     },
   });
   const me = $derived(account.current);
 
-  // Get first human's avatar data
-  const firstHuman = $derived(
-    me.$isLoaded && me.root?.humans?.$isLoaded && me.root.humans.length > 0
-      ? me.root.humans[0]
-        : null,
+  // Get profile data
+  const profile = $derived(
+    me.$isLoaded && me.profile?.$isLoaded ? (me.profile as any) : null,
   );
 
-  // Get avatar values
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const avatar = $derived(
-    firstHuman?.$isLoaded && firstHuman.$jazz.has("avatar") ? (firstHuman.avatar as any) : null,
-  );
+  const firstName = $derived(profile?.firstName?.trim() || "");
+  const lastName = $derived(profile?.lastName?.trim() || "");
 
-  const firstName = $derived(avatar?.firstName?.trim() || "");
-  const lastName = $derived(avatar?.lastName?.trim() || "");
-
-  // Get avatar image
+  // Get profile image
   const avatarImage = $derived(
-    avatar?.image && avatar.image.$isLoaded && avatar.image.$jazz?.id ? avatar.image : null,
+    profile?.image && profile.image.$isLoaded && profile.image.$jazz?.id ? profile.image : null,
   );
 
   let signingOut = $state(false);
@@ -133,7 +123,7 @@
     <div class="flex gap-2 items-center flex-shrink-0">
       {#if isBetterAuthPending}
         <span class="text-sm text-slate-500">Loading...</span>
-      {:else if isBetterAuthSignedIn && me.$isLoaded && firstHuman?.$isLoaded && avatar}
+      {:else if isBetterAuthSignedIn && me.$isLoaded && profile}
         <!-- User Avatar and Name with Dropdown -->
         <div class="relative" bind:this={dropdownRef}>
           <button

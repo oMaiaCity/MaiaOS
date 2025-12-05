@@ -2,6 +2,7 @@
   import { Image } from "jazz-tools/svelte";
   import Badge from "./Badge.svelte";
   import { HOVERABLE_STYLE } from "$lib/utils/styles";
+  import { resolveProfile } from "$lib/profile-resolver";
 
   interface Member {
     id: string;
@@ -26,6 +27,8 @@
     hideValue?: boolean; // Hide the value text (only show badge)
     variant?: "default" | "members"; // Display variant
     membersData?: MembersData; // For members variant
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    currentAccount?: any; // Current Jazz account for profile resolution
   }
 
   let {
@@ -38,6 +41,7 @@
     hideValue = false,
     variant = "default",
     membersData,
+    currentAccount,
   }: Props = $props();
 
   // Copy button state
@@ -45,6 +49,18 @@
 
   // Known CoValue type names that should use their own badge style
   const knownCoValueTypes = ["Image", "FileStream", "CoMap", "CoList", "CoValue"];
+
+  // Sort account members: "everyone" first, then others
+  const sortedAccountMembers = $derived(() => {
+    if (!membersData?.accountMembers) return [];
+    const members = [...membersData.accountMembers];
+    // Sort: "everyone" first, then others
+    return members.sort((a, b) => {
+      if (a.id === "everyone") return -1;
+      if (b.id === "everyone") return 1;
+      return 0;
+    });
+  });
 
   // Extract display value and type
   const displayInfo = $derived(() => {
@@ -399,13 +415,15 @@
     {#if variant === "members" && membersData}
       <!-- Members Variant -->
       <div class="flex items-center justify-between mb-2">
-        <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">{propKey}</span>
+        <span class="text-xs font-medium text-slate-500 uppercase tracking-wide"
+          >{propKey === "MEMBERS" ? "Capabilities" : propKey}</span
+        >
         <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
           />
         </svg>
       </div>
@@ -413,12 +431,58 @@
       <!-- Accounts -->
       {#if membersData.accountMembers.length > 0}
         <div class="mb-3 space-y-1.5 mt-2">
-          <span class="text-[10px] font-medium text-slate-500 uppercase tracking-wide"
-            >ACCOUNTS</span
-          >
-          {#each membersData.accountMembers as member}
-            <div class="flex items-center justify-between p-1.5 rounded-lg">
-              <span class="font-mono text-xs text-slate-600">{member.id.slice(0, 8)}...</span>
+          {#each sortedAccountMembers() as member}
+            {@const profileInfo = resolveProfile(member.id, currentAccount)}
+            {@const isEveryoneReader =
+              member.id === "everyone" && member.role.toLowerCase() === "reader"}
+            {@const isAdmin = member.role.toLowerCase() === "admin"}
+            <div
+              class="flex items-center justify-between p-1.5 rounded-2xl border {isEveryoneReader
+                ? 'border-red-300 bg-red-50/50'
+                : isAdmin
+                  ? 'border-yellow-200 bg-yellow-50/50'
+                  : 'border-white'}"
+            >
+              <div class="flex items-center gap-2 flex-1 min-w-0">
+                {#if profileInfo && profileInfo.image}
+                  <!-- Profile Image -->
+                  <div
+                    class="w-6 h-6 rounded-full overflow-hidden border border-slate-300 shrink-0"
+                  >
+                    <Image
+                      imageId={profileInfo.image.$jazz.id}
+                      width={24}
+                      height={24}
+                      alt={profileInfo.name || member.id}
+                      class="object-cover w-full h-full"
+                      loading="lazy"
+                    />
+                  </div>
+                {/if}
+                <div class="flex flex-col min-w-0 flex-1">
+                  {#if profileInfo && profileInfo.name && member.id !== "everyone"}
+                    <!-- Show name if resolvable (but not for "everyone") -->
+                    <span
+                      class="font-mono text-xs {isAdmin
+                        ? 'text-yellow-700'
+                        : 'text-slate-700'} truncate">{profileInfo.name}</span
+                    >
+                  {:else}
+                    <!-- Show full ID for "everyone", truncated for others -->
+                    <span
+                      class="font-mono text-xs {isEveryoneReader
+                        ? 'text-red-700'
+                        : isAdmin
+                          ? 'text-yellow-600'
+                          : 'text-slate-600'} truncate"
+                    >
+                      {member.id === "everyone"
+                        ? member.id.charAt(0).toUpperCase() + member.id.slice(1)
+                        : member.id.slice(0, 8) + "..."}
+                    </span>
+                  {/if}
+                </div>
+              </div>
               <Badge type={member.role.toLowerCase()} variant="role">{member.role}</Badge>
             </div>
           {/each}
@@ -427,34 +491,37 @@
 
       <!-- Groups -->
       {#if membersData.groupMembers.length > 0}
-        <div class="pt-3 border-t border-white/50 space-y-1.5 mt-2">
+        <div class="space-y-1.5 mt-1">
           <span class="text-[10px] font-medium text-slate-500 uppercase tracking-wide">GROUPS</span>
           {#each membersData.groupMembers as groupMember}
-            <div class="flex items-center justify-between p-1.5 rounded-lg">
-              <span class="font-mono text-xs text-slate-600">{groupMember.id.slice(0, 8)}...</span>
-              <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2">
+              <div
+                class="flex items-center justify-between flex-1 p-1.5 rounded-2xl border border-white"
+              >
+                <span class="font-mono text-xs text-slate-600">{groupMember.id.slice(0, 8)}...</span
+                >
                 <Badge type={groupMember.role.toLowerCase()} variant="role"
                   >{groupMember.role}</Badge
                 >
-                {#if membersData.onRemoveGroupMember}
-                  <button
-                    type="button"
-                    class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors shrink-0"
-                    onclick={() => membersData!.onRemoveGroupMember!(groupMember.id)}
-                    title="Remove parent group"
-                    aria-label="Remove parent group"
-                  >
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                {/if}
               </div>
+              {#if membersData.onRemoveGroupMember}
+                <button
+                  type="button"
+                  class="p-1 text-red-600 hover:text-red-700 bg-red-100 border border-red-300 rounded-full transition-colors shrink-0"
+                  onclick={() => membersData!.onRemoveGroupMember!(groupMember.id)}
+                  title="Remove parent group"
+                  aria-label="Remove parent group"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              {/if}
             </div>
           {/each}
         </div>

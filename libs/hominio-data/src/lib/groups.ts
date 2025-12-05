@@ -31,6 +31,75 @@ export function getCoValueGroupInfo(coValue: any) {
         })
         .filter((m) => m.role && m.role !== "revoked");
 
+    // Check for "everyone" role and add it to accountMembers if it exists
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ownerGroupAny = ownerGroup as any;
+        let everyoneRole: string | null = null;
+
+        // Try multiple methods to get the "everyone" role
+        // Method 1: Try roleOf("everyone")
+        if (typeof ownerGroupAny.roleOf === "function") {
+            try {
+                const role = ownerGroupAny.roleOf("everyone");
+                if (role && typeof role === "string" && role !== "revoked") {
+                    everyoneRole = role;
+                }
+            } catch {
+                // Ignore
+            }
+        }
+
+        // Method 2: Try get("everyone") directly on the Group
+        if (!everyoneRole) {
+            try {
+                if (typeof ownerGroupAny.get === "function") {
+                    const value = ownerGroupAny.get("everyone");
+                    if (value && typeof value === "string" && value !== "revoked") {
+                        everyoneRole = value;
+                    }
+                }
+            } catch {
+                // Ignore
+            }
+        }
+
+        // Method 3: Try direct property access
+        if (!everyoneRole && ownerGroupAny.everyone !== undefined) {
+            const value = ownerGroupAny.everyone;
+            if (value && typeof value === "string" && value !== "revoked") {
+                everyoneRole = value;
+            }
+        }
+
+        // Method 4: Try getRoleOf("everyone")
+        if (!everyoneRole && typeof ownerGroupAny.getRoleOf === "function") {
+            try {
+                const role = ownerGroupAny.getRoleOf("everyone");
+                if (role && typeof role === "string" && role !== "revoked") {
+                    everyoneRole = role;
+                }
+            } catch {
+                // Ignore
+            }
+        }
+
+        // Add "everyone" to accountMembers if found
+        if (everyoneRole) {
+            // Check if "everyone" is already in the list (shouldn't be, but just in case)
+            const everyoneExists = accountMembers.some((m) => m.id === "everyone");
+            if (!everyoneExists) {
+                accountMembers.push({
+                    id: "everyone",
+                    role: everyoneRole,
+                    type: "account" as const,
+                });
+            }
+        }
+    } catch (error) {
+        console.warn("[getCoValueGroupInfo] Error checking everyone role:", error);
+    }
+
     const parentGroups = ownerGroup.getParentGroups ? ownerGroup.getParentGroups() : [];
     const groupMembers = parentGroups.map((g) => {
         const memberId = g.$jazz.id;
@@ -95,7 +164,7 @@ export function groupHasAccessToCoValue(coValue: any, group: Group, includeParen
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function filterCoValuesByGroupAccess(coValues: any[] | { [Symbol.iterator](): Iterator<any> }, group: Group, includeParentGroups = true): any[] {
     const coValuesArray = Array.isArray(coValues) ? coValues : Array.from(coValues);
-    
+
     return coValuesArray.filter((coValue) => {
         if (!coValue || !coValue.$isLoaded) {
             return false;
