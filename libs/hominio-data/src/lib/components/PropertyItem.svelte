@@ -308,7 +308,7 @@
             {#if displayInfo().type === "object"}
               <!-- Object: Use monospace font and preserve formatting -->
               <pre
-                class="text-xs text-slate-600 break-all break-words whitespace-pre-wrap word-break break-word font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
+                class="text-xs text-slate-600 whitespace-pre-wrap font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
                 style="word-break: break-all; overflow-wrap: anywhere;">
               {displayInfo().displayValue}
             </pre>
@@ -332,11 +332,14 @@
               {@const isIdLike =
                 typeof displayInfo().displayValue === "string" &&
                 displayInfo().displayValue.startsWith("co_")}
+              {@const isAlreadyTruncated =
+                typeof displayInfo().displayValue === "string" &&
+                displayInfo().displayValue.endsWith("...")}
               <span
-                class="text-xs text-slate-600 break-all break-words whitespace-pre-wrap word-break break-word {isIdLike
-                  ? 'font-mono'
-                  : ''}"
-                style="word-break: break-all; overflow-wrap: anywhere;"
+                class="text-xs text-slate-600 {isIdLike ? 'font-mono' : ''} {isAlreadyTruncated
+                  ? 'truncate'
+                  : 'break-all'}"
+                style={isAlreadyTruncated ? "" : "word-break: break-all; overflow-wrap: anywhere;"}
               >
                 {displayInfo().displayValue}
               </span>
@@ -579,7 +582,7 @@
               {#if displayInfo().type === "object"}
                 <!-- Object: Use monospace font and preserve formatting -->
                 <pre
-                  class="text-xs text-slate-600 break-all break-words whitespace-pre-wrap word-break break-word font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
+                  class="text-xs text-slate-600 whitespace-pre-wrap font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
                   style="word-break: break-all; overflow-wrap: anywhere;">
                   {displayInfo().displayValue}
                 </pre>
@@ -603,11 +606,16 @@
                 {@const isIdLike =
                   typeof displayInfo().displayValue === "string" &&
                   displayInfo().displayValue.startsWith("co_")}
+                {@const isAlreadyTruncated =
+                  typeof displayInfo().displayValue === "string" &&
+                  displayInfo().displayValue.endsWith("...")}
                 <span
-                  class="text-xs text-slate-600 break-all break-words whitespace-pre-wrap word-break break-word {isIdLike
-                    ? 'font-mono'
-                    : ''}"
-                  style="word-break: break-all; overflow-wrap: anywhere;"
+                  class="text-xs text-slate-600 {isIdLike ? 'font-mono' : ''} {isAlreadyTruncated
+                    ? 'truncate'
+                    : 'break-all'}"
+                  style={isAlreadyTruncated
+                    ? ""
+                    : "word-break: break-all; overflow-wrap: anywhere;"}
                 >
                   {displayInfo().displayValue}
                 </span>

@@ -8,8 +8,7 @@
   import MetadataSidebar from "$lib/components/MetadataSidebar.svelte";
   import CoValueContextDisplay from "$lib/components/CoValueContextDisplay.svelte";
   import GroupContextView from "$lib/components/GroupContextView.svelte";
-  import Card from "$lib/components/Card.svelte";
-  import Button from "$lib/components/Button.svelte";
+  import DataLayout from "$lib/components/DataLayout.svelte";
   import { Group } from "jazz-tools";
   import { CoState } from "jazz-tools/svelte";
 
@@ -1199,164 +1198,54 @@
       <p class="text-slate-500">Loading your account...</p>
     </div>
   {:else if me.$isLoaded}
-    <!-- Title Row: Always visible, aligned -->
-    <div class="flex items-center justify-between mb-4 px-4">
-      <div class="flex-1">
-        <h2 class="text-lg font-semibold text-slate-700 flex items-center gap-2">
-          {#if currentContext.type === "root"}
-            <!-- Show AppRoot with folder icon -->
-            <svg
-              class="w-5 h-5 text-slate-700"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-              />
-            </svg>
-            <span>My Data</span>
-          {:else if currentContext.type === "colist"}
-            <!-- Show CoList name with list icon -->
-            <svg
-              class="w-5 h-5 text-slate-700"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-              />
-            </svg>
-            <span>{currentContext.label}</span>
-          {:else if currentContext.type === "group"}
-            <!-- Show Group name with users icon -->
-            <svg
-              class="w-5 h-5 text-slate-700"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-              />
-            </svg>
-            <span>{currentContext.label}</span>
-          {:else if currentContext.type === "covalue"}
-            <!-- Show CoValue name with tag icon -->
-            <svg
-              class="w-5 h-5 text-slate-700"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-              />
-            </svg>
-            <span>{currentContext.label}</span>
-          {/if}
-          {#if navigationStack.length > 1}
-            <div class="ml-auto mr-6">
-              <Button variant="ghost" size="md" onclick={navigateBack}>
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-                <span>Back</span>
-              </Button>
-            </div>
-          {/if}
-        </h2>
-      </div>
-      {#if currentContext.type !== "group"}
-        <div class="w-80 shrink-0">
-          <h2 class="text-lg font-semibold text-slate-700 flex items-center justify-end gap-2">
-            <span>Metadata</span>
-            <svg
-              class="w-5 h-5 text-slate-700"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </h2>
-        </div>
-      {/if}
-    </div>
+    {@const leftTitle = currentContext.type === "root" ? "My Data" : currentContext.label}
 
-    <!-- Two-column layout: Main + Aside -->
-    <div class="flex gap-6 items-start">
-      <!-- Main Content -->
-      <div class="flex-1 min-w-0 space-y-6">
+    <DataLayout
+      {leftTitle}
+      leftIconType={currentContext.type}
+      rightTitle={currentContext.type !== "group" ? "Metadata" : undefined}
+      showRightIcon={currentContext.type !== "group"}
+      showBack={navigationStack.length > 1}
+      onBack={navigateBack}
+    >
+      {#snippet main()}
         {#if currentContext.type === "root"}
-          <!-- Show AppRoot grid view -->
-          <Card>
-            <div>
-              {#if rootData()}
-                <RootDataDisplay
-                  rootData={rootData()}
-                  rootCoValue={me.root}
-                  {extractCoValueProperties}
-                  onSelect={(coValue: any) => {
-                    navigateToCoValue(coValue);
-                  }}
-                  onCoListClick={(coList: any, label: string, parentKey?: string) => {
-                    navigateToCoList(coList, label, parentKey);
-                  }}
-                />
-              {:else if me.$isLoaded && me.root && !me.root.$isLoaded}
-                <div class="text-center py-8">
-                  <p class="text-sm text-slate-500">Loading root...</p>
-                </div>
-              {:else}
-                <div class="text-center py-8">
-                  <p class="text-sm text-slate-500">Root not available</p>
-                </div>
-              {/if}
+          {#if rootData()}
+            <RootDataDisplay
+              rootData={rootData()}
+              rootCoValue={me.root}
+              {extractCoValueProperties}
+              onSelect={(coValue: any) => {
+                navigateToCoValue(coValue);
+              }}
+              onCoListClick={(coList: any, label: string, parentKey?: string) => {
+                navigateToCoList(coList, label, parentKey);
+              }}
+            />
+          {:else if me.$isLoaded && me.root && !me.root.$isLoaded}
+            <div class="text-center py-8">
+              <p class="text-sm text-slate-500">Loading root...</p>
             </div>
-          </Card>
+          {:else}
+            <div class="text-center py-8">
+              <p class="text-sm text-slate-500">Root not available</p>
+            </div>
+          {/if}
         {:else if currentContext.type === "group"}
-          <!-- Show Group context view -->
           <GroupContextView group={currentContext.coValue} onNavigate={navigateToCoValue} />
         {:else if currentContext.type === "colist" || currentContext.type === "covalue"}
-          <!-- Show CoValue context view -->
           <CoValueContextDisplay
             coValue={currentContext.coValue}
             {extractCoValueProperties}
             onNavigate={navigateToCoValue}
           />
         {/if}
-      </div>
-
-      <!-- Right Aside: Metadata for Selected CoValue (hidden for groups) -->
-      {#if currentContext.type !== "group"}
-        <div class="w-80 shrink-0">
+      {/snippet}
+      {#snippet aside()}
+        {#if currentContext.type !== "group"}
           <MetadataSidebar selectedCoValue={selectedCoValue()} currentAccount={me} />
-        </div>
-      {/if}
-    </div>
+        {/if}
+      {/snippet}
+    </DataLayout>
   {/if}
 </div>

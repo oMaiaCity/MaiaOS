@@ -738,11 +738,9 @@
 </script>
 
 {#if !group || !group.$isLoaded}
-  <Card>
-    <div class="text-center">
-      <p class="text-sm text-slate-500">Loading group...</p>
-    </div>
-  </Card>
+  <div class="text-center">
+    <p class="text-sm text-slate-500">Loading group...</p>
+  </div>
 {:else}
   <div class="space-y-6">
     <!-- Group ID - Always show this -->

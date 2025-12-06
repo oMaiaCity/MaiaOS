@@ -1,7 +1,6 @@
 <script lang="ts">
   import PropertyItem from "./PropertyItem.svelte";
   import { Image } from "jazz-tools/svelte";
-  import Card from "./Card.svelte";
   import Badge from "./Badge.svelte";
   import { HOVERABLE_STYLE } from "$lib/utils/styles";
 
@@ -131,11 +130,9 @@
 </script>
 
 {#if !coValue || !coValue.$isLoaded}
-  <Card>
-    <div class="text-center">
-      <p class="text-sm text-slate-500">Loading...</p>
-    </div>
-  </Card>
+  <div class="text-center">
+    <p class="text-sm text-slate-500">Loading...</p>
+  </div>
 {:else if isFileStream()}
   <!-- FileStream: Show metadata and properties -->
   {@const fileStream = coValue}
@@ -146,7 +143,7 @@
       return null;
     }
   })()}
-  <Card>
+  <div>
     <div class="space-y-4">
       <div
         class="bg-slate-200/50 rounded-2xl p-4 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
@@ -190,10 +187,10 @@
         {/if}
       </div>
     </div>
-  </Card>
+  </div>
 {:else if isCoList()}
   <!-- CoList: Show as styled metadata cards with @label and CoValue type -->
-  <Card>
+  <div>
     <div>
       {#if coListItems().length > 0}
         <div class="space-y-3">
@@ -240,10 +237,10 @@
         <p class="text-sm text-slate-400 italic">Empty list</p>
       {/if}
     </div>
-  </Card>
+  </div>
 {:else if properties}
-  <!-- CoValue properties: Wrap in card like metadata sidebar -->
-  <Card>
+  <!-- CoValue properties (Card wrapper handled by DataLayout) -->
+  <div>
     <div class="space-y-4">
       {#each Object.entries(properties.properties).filter(([propKey]) => {
         // Skip image property if we're viewing avatar and have direct access
@@ -340,11 +337,9 @@
         />
       {/if}
     </div>
-  </Card>
+  </div>
 {:else}
-  <Card>
-    <div class="text-center py-8">
-      <p class="text-sm text-slate-500">No properties available</p>
-    </div>
-  </Card>
+  <div class="text-center py-8">
+    <p class="text-sm text-slate-500">No properties available</p>
+  </div>
 {/if}
