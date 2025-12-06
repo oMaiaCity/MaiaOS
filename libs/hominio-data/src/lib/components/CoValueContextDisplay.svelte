@@ -305,6 +305,7 @@
             <PropertyItem
               {propKey}
               {propValue}
+              {coValue}
               onSelect={(coValue, fallbackKey) =>
                 handleCoValueSelect(coValue, fallbackKey || propKey)}
             />
@@ -314,6 +315,7 @@
           <PropertyItem
             {propKey}
             {propValue}
+            {coValue}
             onSelect={(coValue, fallbackKey) =>
               handleCoValueSelect(coValue, fallbackKey || propKey)}
           />
@@ -333,6 +335,7 @@
         <PropertyItem
           propKey="image"
           propValue={imagePropValue}
+          {coValue}
           onSelect={(coValue, fallbackKey) => handleCoValueSelect(coValue, fallbackKey || "image")}
         />
       {/if}

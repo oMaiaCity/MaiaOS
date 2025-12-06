@@ -52,6 +52,10 @@
       case "reader":
         return { bg: "bg-red-100/50", text: "text-red-700" };
       
+      // Special types
+      case "computed":
+        return { bg: "bg-slate-100", text: "text-slate-700" };
+      
       // Default
       default:
         return { bg: "bg-slate-50/80", text: "text-slate-500" };

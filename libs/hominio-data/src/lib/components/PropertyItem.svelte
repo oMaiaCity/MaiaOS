@@ -3,6 +3,7 @@
   import Badge from "./Badge.svelte";
   import { HOVERABLE_STYLE } from "$lib/utils/styles";
   import { resolveProfile } from "$lib/profile-resolver";
+  import { isComputedField } from "$lib/computed-fields";
 
   interface Member {
     id: string;
@@ -29,6 +30,8 @@
     membersData?: MembersData; // For members variant
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     currentAccount?: any; // Current Jazz account for profile resolution
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    coValue?: any; // CoValue to check if field is computed
   }
 
   let {
@@ -42,6 +45,7 @@
     variant = "default",
     membersData,
     currentAccount,
+    coValue,
   }: Props = $props();
 
   // Copy button state
@@ -49,6 +53,16 @@
 
   // Known CoValue type names that should use their own badge style
   const knownCoValueTypes = ["Image", "FileStream", "CoMap", "CoList", "CoValue"];
+
+  // Check if this field is computed
+  const isComputed = $derived.by(() => {
+    if (!coValue || !propKey) return false;
+    try {
+      return isComputedField(coValue, propKey);
+    } catch (e) {
+      return false;
+    }
+  });
 
   // Sort account members: "everyone" first, then others
   const sortedAccountMembers = $derived(() => {
@@ -228,9 +242,14 @@
     <!-- Default Variant (clickable props are never members variant) -->
     <div class="flex justify-between items-center gap-2">
       <!-- Left: Prop Key -->
-      <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">
-        {propKey}
-      </span>
+      <div class="flex items-center gap-1.5">
+        <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">
+          {propKey}
+        </span>
+        {#if isComputed}
+          <Badge type="computed">computed</Badge>
+        {/if}
+      </div>
 
       <!-- Right: Value and Type Badge -->
       <div class="flex items-center gap-2 flex-1 justify-end min-w-0">
@@ -533,9 +552,14 @@
       <!-- Default Variant -->
       <div class="flex justify-between items-center gap-2">
         <!-- Left: Prop Key -->
-        <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">
-          {propKey}
-        </span>
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">
+            {propKey}
+          </span>
+          {#if isComputed}
+            <Badge type="computed">computed</Badge>
+          {/if}
+        </div>
 
         <!-- Right: Value and Type Badge -->
         <div class="flex items-center gap-2 flex-1 justify-end min-w-0">

@@ -890,13 +890,21 @@
               />
               {#if profile.$jazz?.has && typeof profile.$jazz.has === "function"}
                 {#if profile.$jazz.has("name")}
-                  <PropertyItem propKey="Name" propValue={profile.name || "Not set"} />
+                  <PropertyItem
+                    propKey="Name"
+                    propValue={profile.name || "Not set"}
+                    coValue={profile}
+                  />
                 {/if}
                 {#if profile.$jazz.has("email")}
-                  <PropertyItem propKey="Email" propValue={profile.email || "Not set"} />
+                  <PropertyItem
+                    propKey="Email"
+                    propValue={profile.email || "Not set"}
+                    coValue={profile}
+                  />
                 {/if}
                 {#if profile.$jazz.has("avatar")}
-                  <PropertyItem propKey="Has Avatar" propValue="Yes" />
+                  <PropertyItem propKey="Has Avatar" propValue="Yes" coValue={profile} />
                 {/if}
               {/if}
               {#if onNavigate}

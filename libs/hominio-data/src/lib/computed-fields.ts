@@ -134,6 +134,19 @@ export function registerComputedField(def: ComputedFieldDef): void {
 }
 
 /**
+ * Check if a field is computed for a given CoValue
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function isComputedField(coValue: any, fieldName: string): boolean {
+  if (!coValue || !coValue.$isLoaded) {
+    return false;
+  }
+  
+  const setupFields = computedFieldsSetupMap.get(coValue);
+  return setupFields ? setupFields.has(fieldName) : false;
+}
+
+/**
  * Get a nested field value from a CoValue using dot notation
  * (e.g., "avatar.firstName" -> coValue.avatar.firstName)
  */
