@@ -24,13 +24,14 @@
   });
 </script>
 
+<Favicon />
+
 <JazzSvelteProvider
   sync={{
     peer: `wss://cloud.jazz.tools/?key=${apiKey}`,
   }}
   AccountSchema={JazzAccount}
 >
-  <Favicon />
   <div class="min-h-screen bg-gray-100 flex flex-col">
     <JazzAuthSetup />
     <GoogleDataSync />

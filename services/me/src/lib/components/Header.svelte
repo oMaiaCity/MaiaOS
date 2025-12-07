@@ -83,8 +83,16 @@
   <nav
     class="bg-gray-200 relative flex justify-between items-center py-4 px-4 border-b border-slate-200"
   >
-    <!-- Left: Route Title and Description -->
-    <div class="flex items-center gap-6 flex-shrink-0">
+    <!-- Left: Logo and Route Title/Description -->
+    <div class="flex items-center gap-4 flex-shrink-0">
+      <!-- Logo -->
+      <a href="/" class="flex-shrink-0">
+        <img
+          src="/brand/logo_clean.png"
+          alt="Hominio"
+          class="h-10 w-auto"
+        />
+      </a>
       {#if title || description}
         <div class="flex flex-col">
           {#if title}
