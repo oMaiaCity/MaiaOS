@@ -8,7 +8,7 @@
   import "jazz-tools/inspector/register-custom-element";
   import { JazzAccount } from "@hominio/data";
   import { page } from "$app/stores";
-  import { Footer } from "@hominio/brand";
+  import { Footer, Favicon } from "@hominio/brand";
 
   let { children } = $props();
 
@@ -30,6 +30,7 @@
   }}
   AccountSchema={JazzAccount}
 >
+  <Favicon />
   <div class="min-h-screen bg-gray-100 flex flex-col">
     <JazzAuthSetup />
     <GoogleDataSync />
