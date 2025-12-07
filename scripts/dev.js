@@ -18,20 +18,22 @@ const processes = [];
 
 // Service configuration
 const services = [
-	{ name: 'website', filter: 'website', port: 4200 },
-	{ name: 'wallet', filter: 'wallet', port: 4201 },
-	{ name: 'app', filter: 'app', port: 4202 },
-	{ name: 'sync', filter: 'sync', port: 4203 },
-	{ name: 'api', filter: 'api', port: 4204 },
-	{ name: 'design-system', filter: 'hominio-design-system', port: 5173 },
+	{ name: 'me', filter: 'me', port: 4200 },
+	// Temporarily disabled - only running me service
+	// { name: 'wallet', filter: 'wallet', port: 4201 },
+	// { name: 'app', filter: 'app', port: 4202 },
+	// { name: 'sync', filter: 'sync', port: 4203 },
+	// { name: 'api', filter: 'api', port: 4204 },
+	// { name: 'design-system', filter: 'hominio-design-system', port: 5173 },
 ];
 
 // Asset sync watcher (not a service, but runs alongside)
-const assetSyncProcess = {
-	name: 'brand-assets',
-	script: 'node',
-	args: ['libs/hominio-brand/scripts/sync-assets.js', '--watch'],
-};
+// Temporarily disabled - only running me service
+// const assetSyncProcess = {
+// 	name: 'brand-assets',
+// 	script: 'node',
+// 	args: ['libs/hominio-brand/scripts/sync-assets.js', '--watch'],
+// };
 
 /**
  * Start a service as a child process
@@ -106,7 +108,8 @@ function startAssetSync() {
  * Kill processes by port (fallback cleanup)
  */
 function killPorts() {
-	const ports = [4200, 4201, 4202, 4203, 4204, 4848, 4849];
+	// Only kill port for me service (4200)
+	const ports = [4200]; // Temporarily disabled: 4201, 4202, 4203, 4204, 4848, 4849
 	ports.forEach((port) => {
 		try {
 			const pids = execSync(`lsof -ti:${port}`, { encoding: 'utf8', stdio: 'pipe' }).trim();
@@ -174,7 +177,7 @@ function shutdown(exitCode = 0) {
 		});
 
 		// Final cleanup: kill any processes still holding our ports
-		console.log('[Cleanup] Killing any remaining processes on ports 4200-4204, 4848-4849 (Zero)...');
+		console.log('[Cleanup] Killing any remaining processes on port 4200 (me service)...');
 		killPorts();
 
 		// Exit after cleanup
@@ -224,7 +227,8 @@ function main() {
 	setupSignalHandlers();
 
 	// Start asset sync watcher first
-	startAssetSync();
+	// Temporarily disabled - only running me service
+	// startAssetSync();
 
 	// Start all services
 	services.forEach((service) => {

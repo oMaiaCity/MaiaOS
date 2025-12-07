@@ -32,19 +32,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
+      # Temporarily disabled - only deploying me service
       # Trigger wallet deployment after successful release
       # Get the tag that was just created and trigger deploy workflow
-      - name: Trigger wallet deployment
-        if: success()
-        run: |
-          # Fetch tags to get the latest one semantic-release just created
-          git fetch origin --tags --force
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          
-          if [ -n "$LATEST_TAG" ]; then
-            echo "🚀 Latest release tag: $LATEST_TAG"
-            echo "📋 Wallet deployment will be triggered by tag push"
-            echo "   (Tags pushed by semantic-release trigger deploy-wallet workflow)"
-          else
-            echo "⚠️  No tag found - deployment may not trigger"
-          fi
+      # - name: Trigger wallet deployment
+      #   if: success()
+      #   run: |
+      #     # Fetch tags to get the latest one semantic-release just created
+      #     git fetch origin --tags --force
+      #     LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+      #     
+      #     if [ -n "$LATEST_TAG" ]; then
+      #       echo "🚀 Latest release tag: $LATEST_TAG"
+      #       echo "📋 Wallet deployment will be triggered by tag push"
+      #       echo "   (Tags pushed by semantic-release trigger deploy-wallet workflow)"
+      #     else
+      #       echo "⚠️  No tag found - deployment may not trigger"
+      #     fi

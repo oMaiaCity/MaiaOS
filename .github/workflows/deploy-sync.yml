@@ -1,19 +1,24 @@
 name: Deploy Sync Service
 
+# Temporarily disabled - only deploying me service
+# on:
+#   workflow_run:
+#     workflows: ['Release']
+#     types:
+#       - completed
+#     branches:
+#       - main
+#   workflow_dispatch: # Allow manual trigger
 on:
-  workflow_run:
-    workflows: ['Release']
-    types:
-      - completed
-    branches:
-      - main
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch: # Only allow manual trigger for now
 
 jobs:
   deploy-sync:
     name: Deploy Sync Service
     runs-on: ubuntu-latest
-    if: (github.event_name == 'workflow_dispatch') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    # Temporarily disabled - only deploying me service
+    # if: (github.event_name == 'workflow_dispatch') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    if: github.event_name == 'workflow_dispatch' # Only manual trigger for now
     environment: PRODUCTION
     # FLY_API_TOKEN is an organization-wide secret (accessible regardless of environment)
     # All other secrets are from the PRODUCTION environment

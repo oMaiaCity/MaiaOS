@@ -1,46 +1,75 @@
-# Jazz Svelte starter with Tailwind and Passkey Auth
+# @hominio/data
 
-A minimal starter template for building apps with **[Jazz](https://jazz.tools)**, Svelte, TailwindCSS, and Passkey Auth.
+Shared Jazz data schemas, utilities, computed fields system, migrations, and group utilities for the Hominio monorepo.
 
-## Creating an app
+## Overview
 
-Create a new Jazz app.
+This package contains all Jazz-related data functionality that can be shared across multiple services:
 
-```bash
-npx create-jazz-app@latest
+- **Schemas**: Account, Profile, Contact, AppRoot, and Capability schemas
+- **Computed Fields**: Generic system for computed fields on CoValues
+- **Groups**: Utilities for working with Jazz Groups and CoValue access
+- **Profile Resolver**: Functions for resolving user profile information
+- **Migrations**: Data migration functions for syncing external data (e.g., Google profile)
+
+## Installation
+
+This package is part of the Hominio monorepo and uses workspace dependencies:
+
+```json
+{
+  "dependencies": {
+    "@hominio/data": "workspace:*"
+  }
+}
 ```
 
-## Running locally
+## Usage
 
-Install dependencies:
-
-```bash
-npm i
-# or
-yarn
+```typescript
+import { 
+  JazzAccount, 
+  AccountProfile, 
+  Contact, 
+  AppRoot, 
+  Capability,
+  syncGoogleDataToProfile,
+  registerComputedField,
+  setupComputedFieldsForCoValue,
+  isComputedField,
+  getCoValueGroupInfo,
+  groupHasAccessToCoValue,
+  filterCoValuesByGroupAccess,
+  resolveProfile,
+  migrateSyncGoogleNameToProfile,
+  migrateSyncGoogleImageToProfile,
+  migrateSyncGoogleEmailToContact
+} from "@hominio/data";
 ```
 
-Then, run the development server:
+## Structure
 
-```bash
-npm run dev
-# or
-yarn dev
+```
+src/
+├── index.ts              # Main exports
+├── schema.ts             # Jazz schemas and account migration
+├── functions/            # Utility functions
+│   ├── computed-fields.ts
+│   ├── groups.ts
+│   ├── profile-resolver.ts
+│   └── jazz-utils.ts (framework-specific, kept in services)
+└── migrations/           # Data migration functions
+    ├── 20241220_sync-google-name-to-profile.ts
+    ├── 20241220_sync-google-image-to-profile.ts
+    └── 20241220_sync-google-email-to-contact.ts
 ```
 
-Open [http://localhost:5173](http://localhost:5173) with your browser to see the result.
+## Dependencies
 
-## Learning Jazz
+- `jazz-tools` (peer dependency) - Required by consumers
 
-You can start by playing with the form, adding a new field in [./src/lib/schema.ts](./src/lib/schema.ts),
-and seeing how easy it is to structure your data, and perform basic operations.
+## Version Management
 
-## Questions / problems / feedback
+This package shares the same version as the monorepo, managed centrally via `scripts/sync-version.js`.
 
-If you have feedback, let us know on [Discord](https://discord.gg/utDMjHYg42) or open an issue or PR to fix something that seems wrong.
 
-## Configuration: sync server
-
-By default, the Svelte starter app uses [Jazz Cloud](https://jazz.tools/cloud) (`wss://cloud.jazz.tools`) - so cross-device use, invites and collaboration should just work.
-
-You can also run a local sync server by running `npx jazz-run sync`, and setting the `sync` parameter of `JazzSvelteProvider` in [./src/routes/+layout.svelte](./src/routes/+layout.svelte) to `{ peer: "ws://localhost:4200" }`.
