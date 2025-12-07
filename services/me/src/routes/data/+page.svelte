@@ -2,11 +2,14 @@
   import { JazzAccount, getCoValueGroupInfo, setupComputedFieldsForCoValue } from "@hominio/data";
   import { AccountCoState } from "jazz-tools/svelte";
   import { authClient } from "$lib/auth-client";
-  import RootDataDisplay from "$lib/components/RootDataDisplay.svelte";
-  import MetadataSidebar from "$lib/components/MetadataSidebar.svelte";
-  import CoValueContextDisplay from "$lib/components/CoValueContextDisplay.svelte";
-  import GroupContextView from "$lib/components/GroupContextView.svelte";
-  import DataLayout from "$lib/components/DataLayout.svelte";
+  import {
+    RootDataDisplay,
+    MetadataSidebar,
+    CoValueContextDisplay,
+    GroupContextView,
+    DataLayout,
+  } from "$lib/components/next/components";
+  import { extractCoValueProperties, extractRootData } from "$lib/components/next/logic";
   import { Group } from "jazz-tools";
   import { CoState } from "jazz-tools/svelte";
 
@@ -188,8 +191,10 @@
     return null;
   });
 
-  // Function to extract all properties from a CoValue instance
-  function extractCoValueProperties(coValue: any): {
+  // Use the extracted logic function
+  // Note: The inline function below is kept for backward compatibility during migration
+  // TODO: Remove this and use the imported extractCoValueProperties from next/logic
+  function extractCoValuePropertiesInline(coValue: any): {
     properties: Record<string, any>;
     jazzMetadata: {
       id: string;
@@ -1212,7 +1217,7 @@
             <RootDataDisplay
               rootData={rootData()}
               rootCoValue={me.root}
-              {extractCoValueProperties}
+              extractCoValueProperties={extractCoValuePropertiesInline}
               onSelect={(coValue: any) => {
                 navigateToCoValue(coValue);
               }}
@@ -1232,11 +1237,7 @@
         {:else if currentContext.type === "group"}
           <GroupContextView group={currentContext.coValue} onNavigate={navigateToCoValue} />
         {:else if currentContext.type === "colist" || currentContext.type === "covalue"}
-          <CoValueContextDisplay
-            coValue={currentContext.coValue}
-            {extractCoValueProperties}
-            onNavigate={navigateToCoValue}
-          />
+          <CoValueContextDisplay coValue={currentContext.coValue} onNavigate={navigateToCoValue} />
         {/if}
       {/snippet}
       {#snippet aside()}

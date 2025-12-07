@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./lib/theme/app.css";
 
 html,
 body {
