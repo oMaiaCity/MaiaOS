@@ -2,44 +2,40 @@
 	import { browser } from '$app/environment';
 	import { env as publicEnv } from '$env/dynamic/public';
 
-	// Get website domain URL for legal links
-	function getWebsiteUrl(): string {
+	// Get base URL for legal links
+	// Uses relative URLs by default, or can use PUBLIC_DOMAIN_WEBSITE if set
+	function getBaseUrl(): string {
 		if (!browser) return '';
 		
-		const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.startsWith('127.0.0.1');
-		let websiteDomain = publicEnv.PUBLIC_DOMAIN_WEBSITE;
-		
-		if (!websiteDomain) {
-			if (isProduction) {
-				const hostname = window.location.hostname;
-				// Remove subdomain prefixes (app., wallet., etc.) to get base domain
-				websiteDomain = hostname.replace(/^(app|wallet|api|sync)\./, '');
-				// If no subdomain was removed, use as-is
-				if (websiteDomain === hostname) {
-					websiteDomain = hostname.replace(/^www\./, '');
-				}
-			} else {
-				websiteDomain = 'localhost:4200';
-			}
+		// If PUBLIC_DOMAIN_WEBSITE is set, use it (for cross-service linking)
+		if (publicEnv.PUBLIC_DOMAIN_WEBSITE) {
+			const websiteDomain = publicEnv.PUBLIC_DOMAIN_WEBSITE.replace(/^https?:\/\//, '');
+			const protocol = websiteDomain.startsWith('localhost') || websiteDomain.startsWith('127.0.0.1') ? 'http' : 'https';
+			return `${protocol}://${websiteDomain}`;
 		}
 		
-		websiteDomain = websiteDomain.replace(/^https?:\/\//, '');
-		const protocol = websiteDomain.startsWith('localhost') || websiteDomain.startsWith('127.0.0.1') ? 'http' : 'https';
-		return `${protocol}://${websiteDomain}`;
+		// Otherwise, use relative URLs (works for any service)
+		return '';
 	}
 
-	const websiteUrl = $derived.by(() => getWebsiteUrl());
+	const baseUrl = $derived.by(() => getBaseUrl());
+	
+	// Use relative URLs if no base URL is set, otherwise use absolute URLs
+	const homeUrl = $derived(baseUrl || '/');
+	const legalNoticeUrl = $derived(baseUrl ? `${baseUrl}/legal-notice` : '/legal-notice');
+	const privacyPolicyUrl = $derived(baseUrl ? `${baseUrl}/privacy-policy` : '/privacy-policy');
+	const socialMediaPolicyUrl = $derived(baseUrl ? `${baseUrl}/social-media-privacy-policy` : '/social-media-privacy-policy');
 </script>
 
 <div class="footer-wrapper">
   <div class="footer">
-    <a href={websiteUrl} class="footer-link">Home</a>
+    <a href={homeUrl} class="footer-link">Home</a>
     <span class="footer-separator">·</span>
-    <a href={`${websiteUrl}/legal-notice`} class="footer-link">Site Notice</a>
+    <a href={legalNoticeUrl} class="footer-link">Site Notice</a>
     <span class="footer-separator">·</span>
-    <a href={`${websiteUrl}/privacy-policy`} class="footer-link">Privacy Policy</a>
+    <a href={privacyPolicyUrl} class="footer-link">Privacy Policy</a>
     <span class="footer-separator">·</span>
-    <a href={`${websiteUrl}/social-media-privacy-policy`} class="footer-link"
+    <a href={socialMediaPolicyUrl} class="footer-link"
       >Social Media Policy</a
     >
   </div>

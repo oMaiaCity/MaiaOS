@@ -8,6 +8,7 @@
   import "jazz-tools/inspector/register-custom-element";
   import { JazzAccount } from "@hominio/data";
   import { page } from "$app/stores";
+  import { Footer } from "@hominio/brand";
 
   let { children } = $props();
 
@@ -37,5 +38,6 @@
     <main class="flex-1 w-full overflow-x-hidden">
       {@render children?.()}
     </main>
+    <Footer />
   </div>
 </JazzSvelteProvider>
