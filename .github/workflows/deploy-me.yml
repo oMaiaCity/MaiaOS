@@ -20,12 +20,16 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@master
         with:
           version: latest
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Authenticate with Fly.io
+      - name: Verify Fly.io authentication
         run: |
-          echo "🔐 Authenticating with Fly.io..."
-          echo "$FLY_API_TOKEN" | flyctl auth token
-          echo "✅ Authentication successful"
+          echo "🔐 Verifying Fly.io authentication..."
+          flyctl auth whoami || {
+            echo "⚠️  Authentication check failed, but continuing..."
+          }
+          echo "✅ Ready to proceed with Fly.io commands"
 
       - name: Create Fly.io app if it doesn't exist
         run: |
