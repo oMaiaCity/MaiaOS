@@ -44,10 +44,10 @@ RUN node scripts/sync-assets.js
 
 # Run svelte-kit sync before build to generate .svelte-kit directory
 # This is required because jsconfig.json extends ./.svelte-kit/tsconfig.json
-# Run from workspace root so Bun can properly resolve workspace dependencies
-WORKDIR /app
-RUN bun --filter me run svelte-kit sync
-RUN bun --filter me run build
+# Change to service directory and run directly (workspace dependencies are already resolved)
+WORKDIR /app/services/me
+RUN bun run svelte-kit sync
+RUN bun run build
 
 # Production image
 FROM base AS release
