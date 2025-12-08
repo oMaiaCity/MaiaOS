@@ -34,12 +34,12 @@ Services use assets the normal way - no special imports needed:
 
 ### Sync Once (Manual)
 ```bash
-node libs/hominio-brand/scripts/sync-assets.js
+node scripts/sync-assets.js
 ```
 
 ### Watch Mode (Automatic during dev)
 ```bash
-node libs/hominio-brand/scripts/sync-assets.js --watch
+node scripts/sync-assets.js --watch
 ```
 
 The watch mode runs automatically when you use `bun dev` 🎉
@@ -56,7 +56,7 @@ The watch mode runs automatically when you use `bun dev` 🎉
    - Hot reload works! ♻️
 
 3. **If dev server is not running:**
-   - Run sync manually: `node libs/hominio-brand/scripts/sync-assets.js`
+   - Run sync manually: `node scripts/sync-assets.js`
 
 4. **Use in any service:**
    ```svelte

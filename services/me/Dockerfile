@@ -46,8 +46,9 @@ RUN node scripts/sync-assets.js
 # This is required because jsconfig.json extends ./.svelte-kit/tsconfig.json
 # Change to service directory and run directly (workspace dependencies are already resolved)
 WORKDIR /app/services/me
-RUN bun run svelte-kit sync
-RUN bun run build
+RUN bunx svelte-kit sync
+# Run vite build directly (svelte-kit sync already done above, build script uses pnpm which isn't available)
+RUN bunx vite build
 
 # Production image
 FROM base AS release

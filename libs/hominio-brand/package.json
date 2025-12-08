@@ -26,7 +26,6 @@
 		"sync-assets:watch": "node ../../scripts/sync-assets.js --watch"
 	},
 	"files": [
-		"src",
-		"scripts"
+		"src"
 	]
 }
