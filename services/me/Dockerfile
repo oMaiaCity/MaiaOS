@@ -37,9 +37,9 @@ WORKDIR /app/services/me
 
 # Run svelte-kit sync before build to generate .svelte-kit directory
 # This is required because jsconfig.json extends ./.svelte-kit/tsconfig.json
-# Use bun to run svelte-kit sync via node_modules (workspace dependencies are installed)
+# Use bun to run svelte-kit sync directly (bun resolves workspace dependencies automatically)
 # Fail hard if sync fails - stale cache can cause hard-to-debug runtime errors
-RUN cd /app/services/me && bun node_modules/.bin/svelte-kit sync || bunx svelte-kit sync
+RUN cd /app/services/me && bun run svelte-kit sync
 RUN bun run build
 
 # Production image
