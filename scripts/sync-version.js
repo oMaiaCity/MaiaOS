@@ -4,6 +4,9 @@
  * Syncs version across:
  * - All services package.json files (excluding app, wallet, website, zero, sync)
  * - All libs package.json files
+ * 
+ * Note: Tauri/platform-specific files (Cargo.toml, tauri.conf.json, iOS files) are NOT synced
+ * as the app service is kept for reference only and not actively maintained.
  */
 
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'fs';
@@ -17,7 +20,7 @@ const rootDir = join(__dirname, '..');
 // Get version from command line or from services/me/package.json (source of truth)
 const newVersion = process.argv[2] || JSON.parse(readFileSync(join(rootDir, 'services', 'me', 'package.json'), 'utf-8')).version;
 
-console.log(`🔄 Syncing version ${newVersion} across all services, libraries, and platforms...`);
+console.log(`🔄 Syncing version ${newVersion} across all services and libraries...`);
 
 // Services to exclude from version sync
 const EXCLUDED_SERVICES = ['app', 'wallet', 'website', 'zero', 'sync'];
@@ -70,7 +73,8 @@ for (const packagePath of libPackages) {
 	console.log(`✅ Updated ${packagePath.replace(rootDir + '/', '')}`);
 }
 
-// 3. App service files removed - app service is excluded from version sync
+// Note: Tauri/platform-specific files (Cargo.toml, tauri.conf.json, iOS Info.plist, project.yml)
+// are NOT synced as the app service is kept for reference only
 
-console.log(`\n✨ Version ${newVersion} synced successfully across all services, libraries, and platforms!`);
+console.log(`\n✨ Version ${newVersion} synced successfully across all services and libraries!`);
 
