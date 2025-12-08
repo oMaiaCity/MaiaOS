@@ -43,12 +43,11 @@ COPY scripts/sync-assets.js /app/scripts/sync-assets.js
 RUN node scripts/sync-assets.js
 
 # Build the app (same simple pattern as wallet service)
-# Switch to service directory  
+# Switch to service directory
 WORKDIR /app/services/me
-# Run vite build directly - vite handles svelte-kit sync automatically during build
-# Wallet service pattern: cd /app && bun run build (which was just vite build)
-# Since me service build script uses pnpm, run vite build directly
-RUN bunx vite build
+# Run build using bun run (same as wallet service: cd /app && bun run build)
+# Use build:docker script which is just vite build (vite handles sync automatically)
+RUN cd /app && bun run --filter me build:docker
 
 # Production image
 FROM base AS release
