@@ -21,12 +21,12 @@
 	
 	// Use CSS utility classes from app.css for consistency
 	// Both glass-card and glass-card-lifted have hover effects built-in
-	const baseClass = lifted ? 'glass-card-lifted' : 'glass-card';
+	const baseClass = $derived(lifted ? 'glass-card-lifted' : 'glass-card');
 	
 	// Add bgColor class if provided
-	const bgColorClass = bgColor ? `glass-card-bg-${bgColor}` : '';
+	const bgColorClass = $derived(bgColor ? `glass-card-bg-${bgColor}` : '');
 	
-	const classes = `${baseClass} ${bgColorClass} ${className}`.trim();
+	const classes = $derived(`${baseClass} ${bgColorClass} ${className}`.trim());
 </script>
 
 <div class={classes} {...restProps}>

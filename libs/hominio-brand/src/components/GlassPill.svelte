@@ -13,7 +13,7 @@
 	
 	// Use CSS utility class from app.css
 	const baseClass = 'glass-pill-nav';
-	const classes = `${baseClass} ${className}`.trim();
+	const classes = $derived(`${baseClass} ${className}`.trim());
 </script>
 
 <nav class={classes} {...restProps}>

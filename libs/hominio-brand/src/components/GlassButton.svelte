@@ -24,15 +24,15 @@
 	
 	// Use CSS utility classes from app.css for consistency
 	const baseClass = 'glass-button';
-	const variantClass = variant === 'navy'
+	const variantClass = $derived(variant === 'navy'
 		? 'glass-button-navy'
 		: variant === 'danger'
 			? 'glass-button-danger'
 			: variant === 'alert'
 				? 'glass-button-alert'
-				: '';
+				: '');
 	
-	const classes = `${baseClass} ${variantClass} ${className}`.trim();
+	const classes = $derived(`${baseClass} ${variantClass} ${className}`.trim());
 </script>
 
 <button class={classes} type={type} disabled={disabled} onclick={onclick} {...restProps}>

@@ -14,9 +14,9 @@
 	} = $props();
 	
 	const baseClasses = 'rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm transition-all';
-	const hoverClasses = hover ? 'hover:bg-white/10 hover:border-white/20' : '';
+	const hoverClasses = $derived(hover ? 'hover:bg-white/10 hover:border-white/20' : '');
 	
-	const classes = `${baseClasses} ${hoverClasses} ${className}`.trim();
+	const classes = $derived(`${baseClasses} ${hoverClasses} ${className}`.trim());
 </script>
 
 <div class={classes} {...restProps}>

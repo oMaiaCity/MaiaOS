@@ -13,7 +13,7 @@
 	
 	// Use CSS utility class from app.css
 	const baseClass = 'glass-info-card';
-	const classes = `${baseClass} ${className}`.trim();
+	const classes = $derived(`${baseClass} ${className}`.trim());
 </script>
 
 <div class={classes} {...restProps}>

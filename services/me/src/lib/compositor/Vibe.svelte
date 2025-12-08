@@ -25,21 +25,23 @@
   let dataStore: ReturnType<typeof createDataStore> | null = $state(null);
   let resolvedConfig: ReturnType<typeof loadActionsFromRegistry> | null = $state(null);
 
-  if (browser) {
-    // Load actions from skill registry based on skill IDs in config
-    const loadedConfig = loadActionsFromRegistry(config.stateMachine);
+  $effect(() => {
+    if (browser) {
+      // Load actions from skill registry based on skill IDs in config
+      const loadedConfig = loadActionsFromRegistry(config.stateMachine);
 
-    // Merge any explicit actions (override registry)
-    if (config.actions) {
-      loadedConfig.actions = {
-        ...loadedConfig.actions,
-        ...config.actions,
-      };
+      // Merge any explicit actions (override registry)
+      if (config.actions) {
+        loadedConfig.actions = {
+          ...loadedConfig.actions,
+          ...config.actions,
+        };
+      }
+
+      resolvedConfig = loadedConfig;
+      dataStore = createDataStore(loadedConfig);
     }
-
-    resolvedConfig = loadedConfig;
-    dataStore = createDataStore(loadedConfig);
-  }
+  });
 
   // ========== REACTIVE DATA ACCESS ==========
   // Single unified reactive interface - everything is just data
