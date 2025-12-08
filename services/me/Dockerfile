@@ -5,8 +5,9 @@ WORKDIR /app
 # Install dependencies
 FROM base AS install
 RUN mkdir -p /temp/dev
-# Copy root package.json and lockfile for monorepo workspace resolution
-COPY package.json bun.lock* /temp/dev/
+# Copy root package.json for monorepo workspace resolution
+# Note: bun.lockb is not committed to repo - Bun will generate it during install
+COPY package.json /temp/dev/
 # Copy all workspace package.json files (required for proper workspace resolution)
 COPY services/me/package.json /temp/dev/services/me/
 COPY libs/hominio-brand/package.json /temp/dev/libs/hominio-brand/
@@ -19,9 +20,9 @@ COPY libs/hominio-data/ /temp/dev/libs/hominio-data/
 
 # Build the app
 FROM base AS build
-# Copy root package.json and lockfile (required for workspace resolution)
+# Copy root package.json (required for workspace resolution)
+# Note: bun.lockb is not needed in build stage - dependencies are already installed
 COPY --from=install /temp/dev/package.json /app/package.json
-COPY --from=install /temp/dev/bun.lockb /app/bun.lockb
 # Copy node_modules from install stage (hoisted to root /app/node_modules)
 COPY --from=install /temp/dev/node_modules /app/node_modules
 # Copy workspace package.json files (required for Bun workspace resolution)
