@@ -20,11 +20,14 @@
 
   let { node, data, config, onEvent }: Props = $props();
 
-  if (!node.composite) {
-    throw new Error("Composite component requires a node with composite property");
-  }
+  // Use $derived to maintain reactivity when accessing node properties
+  const composite = $derived(node.composite);
 
-  const composite = node.composite;
+  $effect(() => {
+    if (!composite) {
+      throw new Error("Composite component requires a node with composite property");
+    }
+  });
 
   // Compute container styles
   const containerStyle = $derived(() => {

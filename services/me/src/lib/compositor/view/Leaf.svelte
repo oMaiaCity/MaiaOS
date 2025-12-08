@@ -22,10 +22,13 @@
 
   // Allow leaf without dataPath for buttons and custom types
   // Buttons and some custom types don't need dataPath
-  if (!node.dataPath && !node.type) {
-    // Only warn if neither dataPath nor type is present
-    console.warn("Leaf component should have either dataPath or type:", node.slot);
-  }
+  // Use $effect to maintain reactivity when accessing node properties
+  $effect(() => {
+    if (!node.dataPath && !node.type) {
+      // Only warn if neither dataPath nor type is present
+      console.warn("Leaf component should have either dataPath or type:", node.slot);
+    }
+  });
 
   // Resolve data value - ensure reactivity by accessing data properties
   const value = $derived.by(() => {
