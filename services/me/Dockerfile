@@ -13,7 +13,10 @@ COPY services/me/package.json /temp/dev/services/me/
 COPY libs/hominio-brand/package.json /temp/dev/libs/hominio-brand/
 COPY libs/hominio-data/package.json /temp/dev/libs/hominio-data/
 # Install dependencies with workspace resolution
+# Force fresh install by removing lockfiles to avoid resolution issues
+RUN rm -f bun.lock*
 RUN cd /temp/dev && bun install --ignore-scripts
+
 # Copy workspace source files after install (to preserve workspace structure)
 COPY libs/hominio-brand/ /temp/dev/libs/hominio-brand/
 COPY libs/hominio-data/ /temp/dev/libs/hominio-data/
@@ -36,6 +39,9 @@ RUN node scripts/sync-assets.js
 
 # Switch to service directory for build (same as app service)
 WORKDIR /app/services/me
+
+# Debug: List package content to verify build artifacts
+RUN echo "Checking vite-plugin-svelte content:" && ls -R /app/node_modules/@sveltejs/vite-plugin-svelte/
 
 # Link node_modules to service directory to ensure resolution works
 # This fixes "Cannot find module" error when running svelte-kit sync
