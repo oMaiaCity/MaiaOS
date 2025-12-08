@@ -7,20 +7,32 @@ FROM base AS install
 RUN mkdir -p /temp/dev
 # Copy root package.json and lockfile for monorepo workspace resolution
 COPY package.json bun.lock* /temp/dev/
-# Copy workspace package.json files and source
+# Copy all workspace package.json files (required for proper workspace resolution)
 COPY services/me/package.json /temp/dev/services/me/
+COPY libs/hominio-brand/package.json /temp/dev/libs/hominio-brand/
+COPY libs/hominio-data/package.json /temp/dev/libs/hominio-data/
+# Install dependencies with workspace resolution
+RUN cd /temp/dev && bun install --ignore-scripts
+# Copy workspace source files after install (to preserve workspace structure)
 COPY libs/hominio-brand/ /temp/dev/libs/hominio-brand/
 COPY libs/hominio-data/ /temp/dev/libs/hominio-data/
-RUN cd /temp/dev && bun install --ignore-scripts
 
 # Build the app
 FROM base AS build
+# Copy root package.json and lockfile (required for workspace resolution)
+COPY --from=install /temp/dev/package.json /app/package.json
+COPY --from=install /temp/dev/bun.lockb /app/bun.lockb
 # Copy node_modules from install stage (hoisted to root /app/node_modules)
 COPY --from=install /temp/dev/node_modules /app/node_modules
-# Copy workspace structure (libs to /app/libs)
+# Copy workspace package.json files (required for Bun workspace resolution)
+# Create directories first to ensure proper structure
+RUN mkdir -p /app/services/me /app/libs/hominio-brand /app/libs/hominio-data
+COPY --from=install /temp/dev/services/me/package.json /app/services/me/package.json
+COPY --from=install /temp/dev/libs/hominio-brand/package.json /app/libs/hominio-brand/package.json
+COPY --from=install /temp/dev/libs/hominio-data/package.json /app/libs/hominio-data/package.json
+# Copy workspace structure (libs to /app/libs) - must match workspace config
 COPY --from=install /temp/dev/libs /app/libs
 # Copy me service files preserving directory structure
-# This ensures relative paths (../../libs) work identically to local dev
 COPY services/me/ /app/services/me/
 # Copy sync-assets script to scripts folder
 COPY scripts/sync-assets.js /app/scripts/sync-assets.js
@@ -29,18 +41,12 @@ COPY scripts/sync-assets.js /app/scripts/sync-assets.js
 # Run from root /app so script finds paths as expected (libs/... -> services/me/...)
 RUN node scripts/sync-assets.js
 
-# Ensure workspace structure is correct - copy root package.json for workspace resolution
-COPY --from=install /temp/dev/package.json /app/package.json
-
-# Switch to service directory for build
-WORKDIR /app/services/me
-
 # Run svelte-kit sync before build to generate .svelte-kit directory
 # This is required because jsconfig.json extends ./.svelte-kit/tsconfig.json
-# Use bun to run svelte-kit sync directly (bun resolves workspace dependencies automatically)
-# Fail hard if sync fails - stale cache can cause hard-to-debug runtime errors
-RUN cd /app/services/me && bun run svelte-kit sync
-RUN bun run build
+# Run from workspace root so Bun can properly resolve workspace dependencies
+WORKDIR /app
+RUN bun --filter me run svelte-kit sync
+RUN bun --filter me run build
 
 # Production image
 FROM base AS release
