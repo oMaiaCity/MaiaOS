@@ -1,6 +1,6 @@
 {
 	"name": "@hominio/data",
-	"version": "0.0.179",
+	"version": "1.0.0",
 	"type": "module",
 	"main": "src/index.ts",
 	"exports": {
@@ -10,5 +10,3 @@
 		"jazz-tools": "^0.19.7"
 	}
 }
-
-
