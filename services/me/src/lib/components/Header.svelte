@@ -125,6 +125,15 @@
         >
           Data
         </a>
+        <a
+          href="/compositor"
+        class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url.pathname ===
+        '/compositor'
+            ? 'bg-slate-100 text-slate-900'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+        >
+          Compositor
+        </a>
       </div>
 
     <!-- Right: Account Metadata -->

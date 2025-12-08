@@ -13,6 +13,58 @@
   --color-brand-900: #001225;
   --color-brand-950: #000a1a;
 
+  /* Semantic Colors - Alert (Rose) */
+  --color-alert-50: #fff1f2;
+  --color-alert-100: #ffe4e6;
+  --color-alert-200: #fecdd3;
+  --color-alert-300: #fda4af;
+  --color-alert-400: #fb7185;
+  --color-alert-500: #f43f5e;
+  --color-alert-600: #e11d48;
+  --color-alert-700: #be123c;
+  --color-alert-800: #9f1239;
+  --color-alert-900: #881337;
+  --color-alert-950: #4c0519;
+
+  /* Semantic Colors - Success (Emerald) */
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-200: #a7f3d0;
+  --color-success-300: #6ee7b7;
+  --color-success-400: #34d399;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  --color-success-800: #065f46;
+  --color-success-900: #064e3b;
+  --color-success-950: #022c22;
+
+  /* Semantic Colors - Info (Indigo) */
+  --color-info-50: #eef2ff;
+  --color-info-100: #e0e7ff;
+  --color-info-200: #c7d2fe;
+  --color-info-300: #a5b4fc;
+  --color-info-400: #818cf8;
+  --color-info-500: #6366f1;
+  --color-info-600: #4f46e5;
+  --color-info-700: #4338ca;
+  --color-info-800: #3730a3;
+  --color-info-900: #312e81;
+  --color-info-950: #1e1b4b;
+
+  /* Semantic Colors - Warning (Amber) */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
+  --color-warning-950: #451a03;
+
   /* Button Colors */
   --color-button-primary-bg: #001a42;
   --color-button-primary-border: #001a42;
@@ -263,6 +315,74 @@
 
 .badge-default-color {
   @apply bg-[var(--color-badge-default-bg)] text-[var(--color-badge-default-text)];
+}
+
+/* Semantic Badge Colors */
+.badge-alert {
+  @apply bg-[var(--color-alert-100)] text-[var(--color-alert-700)];
+}
+
+.badge-success {
+  @apply bg-[var(--color-success-100)] text-[var(--color-success-700)];
+}
+
+.badge-info {
+  @apply bg-[var(--color-info-100)] text-[var(--color-info-700)];
+}
+
+.badge-warning {
+  @apply bg-[var(--color-warning-100)] text-[var(--color-warning-700)];
+}
+
+/* Semantic Background Colors */
+.bg-alert {
+  @apply bg-[var(--color-alert-50)];
+}
+
+.bg-success {
+  @apply bg-[var(--color-success-50)];
+}
+
+.bg-info {
+  @apply bg-[var(--color-info-50)];
+}
+
+.bg-warning {
+  @apply bg-[var(--color-warning-50)];
+}
+
+/* Semantic Text Colors */
+.text-alert {
+  @apply text-[var(--color-alert-700)];
+}
+
+.text-success {
+  @apply text-[var(--color-success-700)];
+}
+
+.text-info {
+  @apply text-[var(--color-info-700)];
+}
+
+.text-warning {
+  @apply text-[var(--color-warning-700)];
+}
+
+/* Semantic Border Colors */
+.border-alert {
+  @apply border-[var(--color-alert-300)];
+}
+
+.border-success {
+  @apply border-[var(--color-success-300)];
+}
+
+.border-info {
+  @apply border-[var(--color-info-300)];
+}
+
+.border-warning {
+  @apply border-[var(--color-warning-300)];
 }
 
 /* Hoverable Utility */
