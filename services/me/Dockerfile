@@ -42,8 +42,6 @@ COPY scripts/sync-assets.js /app/scripts/sync-assets.js
 RUN node scripts/sync-assets.js
 
 # Build the app (same simple pattern as wallet service)
-# Run svelte-kit sync first to generate .svelte-kit/tsconfig.json (required for tsconfig.json)
-RUN cd /app && bunx svelte-kit sync
 # Run build from root (same as wallet: cd /app && bun run build)
 RUN cd /app && bun run build:docker
 
