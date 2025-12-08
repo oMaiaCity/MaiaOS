@@ -44,12 +44,11 @@ RUN node scripts/sync-assets.js
 
 # Run svelte-kit sync before build to generate .svelte-kit directory
 # This is required because jsconfig.json extends ./.svelte-kit/tsconfig.json
-# Change to service directory and run directly (workspace dependencies are already resolved)
+# Switch to service directory and use bun run with package.json script
 WORKDIR /app/services/me
-# Run svelte-kit sync from node_modules/.bin (bunx can't resolve svelte-kit as it's part of @sveltejs/kit)
-RUN /app/node_modules/.bin/svelte-kit sync
-# Run vite build directly (svelte-kit sync already done above, build script uses pnpm which isn't available)
-RUN /app/node_modules/.bin/vite build
+# Use bun run with build:docker script (runs svelte-kit sync + vite build)
+# This works because bun run resolves scripts from package.json and finds binaries in node_modules
+RUN bun run build:docker
 
 # Production image
 FROM base AS release
