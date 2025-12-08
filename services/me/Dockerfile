@@ -37,15 +37,14 @@ RUN node scripts/sync-assets.js
 # Switch to service directory for build (same as app service)
 WORKDIR /app/services/me
 
-# Debug: List node_modules to verify dependencies
-RUN echo "Checking node_modules:" && ls -F /app/node_modules/ && \
-    echo "Checking @sveltejs:" && ls -F /app/node_modules/@sveltejs/ && \
-    echo "Checking vite-plugin-svelte:" && ls -F /app/node_modules/@sveltejs/vite-plugin-svelte/ || echo "vite-plugin-svelte not found!"
+# Link node_modules to service directory to ensure resolution works
+# This fixes "Cannot find module" error when running svelte-kit sync
+RUN ln -s /app/node_modules /app/services/me/node_modules
 
 # Run svelte-kit sync before build to generate .svelte-kit directory
 # This is required because tsconfig.json extends ./.svelte-kit/tsconfig.json
 # Use bunx to run svelte-kit sync (Bun's equivalent of npx)
-RUN bunx svelte-kit sync || (echo "Sync failed!" && exit 1)
+RUN bunx svelte-kit sync
 RUN bun run build
 
 # Production image
