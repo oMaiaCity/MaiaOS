@@ -43,7 +43,8 @@ RUN node scripts/sync-assets.js
 
 # Build the app (same simple pattern as wallet service)
 # Run build from root (same as wallet: cd /app && bun run build)
-RUN cd /app && bun run build:docker
+# Add verbose output to see actual error
+RUN cd /app && bun run build:docker 2>&1 || (echo "Build failed, checking vite..." && which vite && vite --version && exit 1)
 
 # Production image
 FROM base AS release
