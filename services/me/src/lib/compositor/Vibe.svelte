@@ -1,14 +1,14 @@
 <script lang="ts">
   import { browser } from "$app/environment";
-  import { createDataStore } from "./dataStore";
+  import { createDataStore, type Data } from "./dataStore";
   import { loadActionsFromRegistry } from "./skillLoader";
   import { registerAllSkills } from "./skills";
-  import type { CompositorConfig } from "./types";
-  import RenderView from "./ui-slots/RenderView.svelte";
+  import type { VibeConfig } from "./types";
+  import ViewRenderer from "./view/ViewRenderer.svelte";
 
   // ========== PROPS ==========
   interface Props {
-    config: CompositorConfig;
+    config: VibeConfig;
   }
 
   let { config }: Props = $props();
@@ -42,7 +42,7 @@
 
   // ========== REACTIVE DATA ACCESS ==========
   // Single unified reactive interface - everything is just data
-  const data = $derived(dataStore ? $dataStore : (config.stateMachine.data || {}));
+  const data = $derived(dataStore ? $dataStore : config.stateMachine.data || {}) as Data;
 
   // ========== UI CLASSES ==========
   const containerClass = $derived(
@@ -62,20 +62,23 @@
 </script>
 
 {#if browser && dataStore}
-  <!-- UI Slot-based rendering - fully generic and config-driven -->
-  <RenderView
-    config={{
-      slots: config.view.slots,
-      layout: {
-        container: containerClass,
-        wrapper: "max-w-4xl mx-auto py-8",
-        card: cardClass,
-      },
-    }}
-    layoutConfig={config.layout}
-    {data}
-    onEvent={handleSlotEvent}
-  />
+  <!-- Unified View Renderer - Composite/Leaf pattern -->
+  <div class={containerClass}>
+    <div class="max-w-4xl mx-auto py-8">
+      <div class={cardClass}>
+        {#if dataStore}
+          <ViewRenderer
+            node={{
+              slot: "root",
+              composite: config.view.composite,
+            }}
+            {data}
+            onEvent={handleSlotEvent}
+          />
+        {/if}
+      </div>
+    </div>
+  </div>
 {:else}
   <!-- SSR fallback -->
   <div class="min-h-screen bg-gray-100 pt-20 px-4 flex items-center justify-center">

@@ -1,18 +1,19 @@
 /**
- * Compositor Types - Generic, reusable config interface
+ * Vibe Types - Generic, reusable config interface
  * Single unified data interface - no distinction between states, context, or data types
+ * Uses Composite/Leaf pattern for view structure
  */
 
 import type { StateMachineConfig } from "./dataStore";
-import type { UISlotMapping, UISlotConfig } from "./ui-slots/types";
-import type { LayoutConfig } from "./layout/types";
+import type { ViewConfig } from "./view/types";
 
 /**
- * Generic Compositor Config Interface
+ * Generic Vibe Config Interface
  * Fully generic - works with any data structure
  * Skills are loaded from registry via skill IDs
+ * Uses Composite/Leaf pattern: composites contain children, leaves contain dataPath
  */
-export interface CompositorConfig {
+export interface VibeConfig {
     /**
      * State machine configuration with unified data
      * Actions are referenced by skill ID (loaded from registry)
@@ -27,7 +28,7 @@ export interface CompositorConfig {
 
     /**
      * Optional UI customization
-     * @deprecated Use layout.container styles instead
+     * @deprecated Use view.composite.container styles instead
      */
     ui?: {
         containerClass?: string;
@@ -36,14 +37,13 @@ export interface CompositorConfig {
 
     /**
      * View configuration - REQUIRED
-     * Maps data sources to UI slots generically
+     * Unified Composite/Leaf structure - no separate layout/slots
      */
-    view: UISlotConfig;
-
-    /**
-     * Optional layout configuration
-     * Defines the layout structure using CSS Grid/Flexbox
-     * If not provided, uses default hardcoded layout
-     */
-    layout?: LayoutConfig;
+    view: ViewConfig;
 }
+
+/**
+ * @deprecated Use VibeConfig instead
+ * Kept for backward compatibility during migration
+ */
+export type CompositorConfig = VibeConfig;

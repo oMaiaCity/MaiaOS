@@ -1,53 +1,12 @@
 /**
  * UI Slot Types - Generic mapping system for data sources to UI slots
  * Fully generic and universal - works with any data structure
+ * 
+ * @deprecated Use types from view/types.ts instead
  */
 
-/**
- * Event Mapping - Maps UI interactions to state machine events
- * Fully generic - works with any event/action names
- */
-export interface SlotEventMapping {
-  /**
-   * Event to trigger on form submit
-   */
-  onSubmit?: string | { event: string; payload?: (data: unknown) => unknown };
-
-  /**
-   * Event to trigger on input change
-   */
-  onInput?: string | { event: string; payload?: (data: unknown) => unknown };
-
-  /**
-   * Event to trigger on change (checkbox, select, etc.)
-   */
-  onChange?: string | { event: string; payload?: (data: unknown) => unknown };
-
-  /**
-   * Event to trigger on click
-   */
-  onClick?: string | { event: string; payload?: (data: unknown) => unknown };
-
-  /**
-   * Event to trigger on toggle (for checkboxes in lists)
-   */
-  onToggle?: string | { event: string; payload?: (data: unknown) => unknown };
-
-  /**
-   * Event to trigger on delete/remove
-   */
-  onDelete?: string | { event: string; payload?: (data: unknown) => unknown };
-
-  /**
-   * Event to trigger on clear
-   */
-  onClear?: string | { event: string; payload?: (data: unknown) => unknown };
-
-  /**
-   * Event to trigger on drop (for drag and drop)
-   */
-  onDrop?: string | { event: string; payload?: (data: unknown) => unknown };
-}
+// Re-export SlotEventMapping from view/types.ts for backward compatibility
+export type { SlotEventMapping } from "../view/types";
 
 /**
  * UI Slot Mapping - Maps data paths to UI slots
