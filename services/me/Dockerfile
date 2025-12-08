@@ -24,31 +24,25 @@ FROM base AS build
 COPY --from=install /temp/dev/node_modules /app/node_modules
 # Copy workspace structure (libs to /app/libs)
 COPY --from=install /temp/dev/libs /app/libs
-# Copy me service files preserving directory structure
-# This ensures relative paths (../../libs) work identically to local dev
-COPY services/me/ /app/services/me/
+# Copy me service files to root (same as wallet service pattern)
+COPY services/me/ .
 # Copy sync-assets script to scripts folder
 COPY scripts/sync-assets.js /app/scripts/sync-assets.js
 
 # Sync brand assets to static folder before build
-# Run from root /app so script finds paths as expected (libs/... -> services/me/...)
 RUN node scripts/sync-assets.js
 
-# Switch to service directory for build
-WORKDIR /app/services/me
-
-# Run build
-# Note: svelte-kit sync is skipped because tsconfig.json is hardcoded
+# Run build from /app (same as wallet service)
+# node_modules is at /app/node_modules, so bun run resolves correctly
 RUN bun run build
 
 # Production image
 FROM base AS release
-WORKDIR /app/services/me
-COPY --from=install /temp/dev/node_modules /app/node_modules
-COPY --from=build /app/services/me/build build
-COPY --from=build /app/services/me/package.json .
-# Copy libs for runtime
-COPY --from=build /app/libs /app/libs
+COPY --from=install /temp/dev/node_modules node_modules
+COPY --from=build /app/build build
+COPY --from=build /app/package.json .
+# Copy libs for runtime (needed for @hominio/brand, @hominio/data)
+COPY --from=build /app/libs libs
 
 # Set environment
 ENV NODE_ENV=production

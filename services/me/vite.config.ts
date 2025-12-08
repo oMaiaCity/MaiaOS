@@ -7,15 +7,15 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
   plugins: [sveltekit()],
-  // Load env vars from monorepo root
-  envDir: resolve(__dirname, "../.."),
+  // Load env vars from monorepo root (Docker: . is /app, local: services/me)
+  envDir: resolve(__dirname, process.env.NODE_ENV === "production" ? "." : "../.."),
   envPrefix: ["PUBLIC_"],
   resolve: {
     // Ensure proper module resolution in monorepo
     preserveSymlinks: false,
     alias: {
-      // Ensure workspace packages resolve correctly during build
-      "@hominio/brand": resolve(__dirname, "../../libs/hominio-brand/src"),
+      // Docker: /app/libs/hominio-brand/src, local: ../../libs/hominio-brand/src
+      "@hominio/brand": resolve(__dirname, process.env.NODE_ENV === "production" ? "./libs/hominio-brand/src" : "../../libs/hominio-brand/src"),
     },
   },
   server: {
