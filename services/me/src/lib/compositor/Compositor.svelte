@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { browser } from "$app/environment";
   import { createDataStore } from "./dataStore";
   import { loadActionsFromRegistry } from "./skillLoader";
   import { registerAllSkills } from "./skills";
@@ -14,25 +15,34 @@
 
   // ========== SKILL REGISTRY SETUP ==========
   // Register all available skills (can be called once globally)
-  registerAllSkills();
-
-  // ========== UNIFIED DATA STORE SETUP ==========
-  // Load actions from skill registry based on skill IDs in config
-  const resolvedConfig = loadActionsFromRegistry(config.stateMachine);
-
-  // Merge any explicit actions (override registry)
-  if (config.actions) {
-    resolvedConfig.actions = {
-      ...resolvedConfig.actions,
-      ...config.actions,
-    };
+  // Only register in browser to avoid SSR issues
+  if (browser) {
+    registerAllSkills();
   }
 
-  const dataStore = createDataStore(resolvedConfig);
+  // ========== UNIFIED DATA STORE SETUP ==========
+  // Only initialize in browser to avoid SSR issues
+  let dataStore: ReturnType<typeof createDataStore> | null = $state(null);
+  let resolvedConfig: ReturnType<typeof loadActionsFromRegistry> | null = $state(null);
+
+  if (browser) {
+    // Load actions from skill registry based on skill IDs in config
+    resolvedConfig = loadActionsFromRegistry(config.stateMachine);
+
+    // Merge any explicit actions (override registry)
+    if (config.actions) {
+      resolvedConfig.actions = {
+        ...resolvedConfig.actions,
+        ...config.actions,
+      };
+    }
+
+    dataStore = createDataStore(resolvedConfig);
+  }
 
   // ========== REACTIVE DATA ACCESS ==========
   // Single unified reactive interface - everything is just data
-  const data = $derived($dataStore);
+  const data = $derived(dataStore ? $dataStore : (config.stateMachine.data || {}));
 
   // ========== UI CLASSES ==========
   const containerClass = $derived(
@@ -45,20 +55,30 @@
 
   // Event handler for UI slots
   const handleSlotEvent = (event: string, payload?: unknown) => {
-    dataStore.send(event, payload);
+    if (dataStore) {
+      dataStore.send(event, payload);
+    }
   };
 </script>
 
-<!-- UI Slot-based rendering - fully generic and config-driven -->
-<RenderView
-  config={{
-    slots: config.uiSlots.slots,
-    layout: {
-      container: containerClass,
-      wrapper: "max-w-4xl mx-auto py-8",
-      card: cardClass,
-    },
-  }}
-  {data}
-  onEvent={handleSlotEvent}
-/>
+{#if browser && dataStore}
+  <!-- UI Slot-based rendering - fully generic and config-driven -->
+  <RenderView
+    config={{
+      slots: config.view.slots,
+      layout: {
+        container: containerClass,
+        wrapper: "max-w-4xl mx-auto py-8",
+        card: cardClass,
+      },
+    }}
+    layoutConfig={config.layout}
+    {data}
+    onEvent={handleSlotEvent}
+  />
+{:else}
+  <!-- SSR fallback -->
+  <div class="min-h-screen bg-gray-100 pt-20 px-4 flex items-center justify-center">
+    <div class="text-slate-600">Loading...</div>
+  </div>
+{/if}

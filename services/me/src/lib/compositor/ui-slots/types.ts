@@ -88,7 +88,8 @@ export interface UISlotConfig {
   slots: UISlotMapping[];
 
   /**
-   * Optional layout configuration
+   * Optional layout configuration (legacy - for backward compatibility)
+   * Use CompositorConfig.layout instead for new layouts
    */
   layout?: {
     container?: string;

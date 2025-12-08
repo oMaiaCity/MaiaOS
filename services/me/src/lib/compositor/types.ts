@@ -5,6 +5,7 @@
 
 import type { StateMachineConfig } from "./dataStore";
 import type { UISlotMapping, UISlotConfig } from "./ui-slots/types";
+import type { LayoutConfig } from "./layout/types";
 
 /**
  * Generic Compositor Config Interface
@@ -26,6 +27,7 @@ export interface CompositorConfig {
 
     /**
      * Optional UI customization
+     * @deprecated Use layout.container styles instead
      */
     ui?: {
         containerClass?: string;
@@ -33,8 +35,15 @@ export interface CompositorConfig {
     };
 
     /**
-     * UI slot configuration - REQUIRED
+     * View configuration - REQUIRED
      * Maps data sources to UI slots generically
      */
-    uiSlots: UISlotConfig;
+    view: UISlotConfig;
+
+    /**
+     * Optional layout configuration
+     * Defines the layout structure using CSS Grid/Flexbox
+     * If not provided, uses default hardcoded layout
+     */
+    layout?: LayoutConfig;
 }

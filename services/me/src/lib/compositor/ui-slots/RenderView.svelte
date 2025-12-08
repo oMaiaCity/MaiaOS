@@ -3,19 +3,23 @@
   Renders UI based on slot configuration - fully generic and universal
 -->
 <script lang="ts">
+  import { browser } from "$app/environment";
   import { HOVERABLE_STYLE } from "$lib/utils/styles";
   import { resolveUISlots, getSlotValue } from "./resolver";
   import { renderSlot, getSlotsByPattern } from "./renderer";
   import type { UISlotConfig } from "./types";
   import type { Data } from "../dataStore";
+  import type { LayoutConfig } from "../layout/types";
+  import LayoutEngine from "../layout/LayoutEngine.svelte";
 
   interface Props {
     config: UISlotConfig;
+    layoutConfig?: LayoutConfig;
     data: Data;
     onEvent?: (event: string, payload?: unknown) => void;
   }
 
-  let { config, data, onEvent }: Props = $props();
+  let { config, layoutConfig, data, onEvent }: Props = $props();
 
   // Resolve all slots with data values
   const resolvedSlots = $derived(resolveUISlots(data, config.slots));
@@ -129,13 +133,44 @@
 
   // Get isLoading state
   const isLoading = $derived((data.isLoading as boolean) || false);
+
+  // Get view mode (for kanban/list toggle)
+  const viewMode = $derived((data.viewMode as string) || "list");
 </script>
 
-<!-- Render slots based on configuration -->
-<!-- Outer container wrapper (hardcoded for now) -->
-<div class={config.layout?.container || ""}>
-  <div class={config.layout?.wrapper || "max-w-4xl mx-auto py-8"}>
-    <div class={config.layout?.card || ""}>
+{#if !browser}
+  <!-- SSR fallback -->
+  <div class="min-h-screen bg-gray-100 pt-20 px-4 flex items-center justify-center">
+    <div class="text-slate-600">Loading...</div>
+  </div>
+{:else if layoutConfig}
+  <!-- Use Layout Engine for rendering -->
+  <div class={config.layout?.container || ""}>
+    <div class={config.layout?.wrapper || "max-w-4xl mx-auto py-8"}>
+      <div class={config.layout?.card || ""}>
+        <LayoutEngine
+          config={layoutConfig}
+          {resolvedSlots}
+          renderSlot={render}
+          getSlotValue={getValue}
+          {hasSlot}
+          getSlotMapping={getSlotMapping}
+          {triggerEvent}
+          {getListItems}
+          {isLoading}
+          {viewMode}
+          {onEvent}
+        />
+      </div>
+    </div>
+  </div>
+{:else}
+  <!-- Fallback: Default hardcoded layout -->
+  <!-- Render slots based on configuration -->
+  <!-- Outer container wrapper (hardcoded for now) -->
+  <div class={config.layout?.container || ""}>
+    <div class={config.layout?.wrapper || "max-w-4xl mx-auto py-8"}>
+      <div class={config.layout?.card || ""}>
       <!-- Title Slot -->
       {#if getValue("title")}
         <div class="text-center mb-6">
@@ -263,3 +298,4 @@
     </div>
   </div>
 </div>
+{/if}

@@ -42,8 +42,8 @@ export const todoUISlotConfig: CompositorConfig = {
     cardClass:
       "relative overflow-hidden rounded-3xl bg-slate-50 border border-white shadow-card-default p-6",
   },
-  // UI Slot Configuration - Generic mapping of data to UI slots
-  uiSlots: {
+  // View Configuration - Generic mapping of data to UI slots
+  view: {
     slots: [
       // Simple text slots
       { slot: "title", dataPath: "data.title", type: "text" },
@@ -87,7 +87,7 @@ export const productUISlotConfig: CompositorConfig = {
     },
     actions: {},
   },
-  uiSlots: {
+  view: {
     slots: [
       { slot: "title", dataPath: "data.title", type: "text" },
       { slot: "list", dataPath: "data.products", type: "list" },

@@ -168,6 +168,31 @@ const clearInputSkill: Skill = {
   },
 };
 
+const toggleViewSkill: Skill = {
+  metadata: {
+    id: "@ui/toggleView",
+    name: "Toggle View",
+    description: "Toggles between list and kanban view modes",
+    category: "ui",
+  },
+  execute: (data: Data) => {
+    const currentView = (data.viewMode as string) || "list";
+    data.viewMode = currentView === "list" ? "kanban" : "list";
+  },
+};
+
+const clearTodosSkill: Skill = {
+  metadata: {
+    id: "@todo/clearTodos",
+    name: "Clear Todos",
+    description: "Clears all todos from the list",
+    category: "todo",
+  },
+  execute: (data: Data) => {
+    data.todos = [];
+  },
+};
+
 // ========== SKILL EXPORTS ==========
 
 /**
@@ -179,7 +204,9 @@ export const todoSkills: Record<string, Skill> = {
   "@todo/addTodo": addTodoSkill,
   "@todo/toggleTodo": toggleTodoSkill,
   "@todo/removeTodo": removeTodoSkill,
+  "@todo/clearTodos": clearTodosSkill,
   "@ui/updateInput": updateInputSkill,
   "@ui/clearInput": clearInputSkill,
+  "@ui/toggleView": toggleViewSkill,
 };
 
