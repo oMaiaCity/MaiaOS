@@ -29,6 +29,8 @@ RUN node scripts/sync-assets.js
 
 # Run build from monorepo root with filter (preserves workspace context)
 WORKDIR /app/services/me
+# Generate SvelteKit config before build
+RUN bunx svelte-kit sync
 RUN bun run build
 
 # Production image
