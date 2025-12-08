@@ -3,22 +3,25 @@
  * Single unified data interface - no distinction between states, context, or data types
  */
 
-import type { StateMachineConfig, Action } from "./dataStore";
+import type { StateMachineConfig } from "./dataStore";
 
 /**
  * Generic Compositor Config Interface
  * Fully generic - works with any data structure
+ * Skills are loaded from registry via skill IDs
  */
 export interface CompositorConfig {
     /**
      * State machine configuration with unified data
+     * Actions are referenced by skill ID (loaded from registry)
      */
     stateMachine: StateMachineConfig;
 
     /**
-     * Actions that operate on unified data
+     * Optional: Explicit actions (overrides registry)
+     * Usually not needed if using skill registry
      */
-    actions: Record<string, Action>;
+    actions?: Record<string, StateMachineConfig["actions"] extends Record<string, infer T> ? T : never>;
 
     /**
      * Optional UI customization

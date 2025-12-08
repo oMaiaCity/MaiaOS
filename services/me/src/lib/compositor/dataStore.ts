@@ -16,11 +16,13 @@ export type Data = Record<string, unknown>;
 
 /**
  * Action function - operates on unified data
+ * Can be loaded from tool registry
  */
-export type Action = (data: Data, payload?: unknown) => void;
+export type Action = (data: Data, payload?: unknown) => void | Promise<void>;
 
 /**
  * State Machine Config - simplified, unified
+ * Actions are referenced by tool ID (loaded from registry)
  */
 export interface StateMachineConfig {
     initial: string;
@@ -33,6 +35,10 @@ export interface StateMachineConfig {
         }
     >;
     data?: Data;
+    /**
+     * Actions can be provided directly or loaded from tool registry
+     * If using tool registry, actions should be referenced by tool ID in state config
+     */
     actions?: Record<string, Action>;
 }
 

@@ -2,10 +2,10 @@
  * Todo Compositor Configuration
  * 100% JSON-config-based - all data management defined here
  * Uses unified data interface - no distinction between states, context, or data types
+ * Skills are referenced by ID and loaded from registry
  */
 
 import type { CompositorConfig } from "./types";
-import { createCompositorActions } from "./actions";
 
 export const todoCompositorConfig: CompositorConfig = {
   stateMachine: {
@@ -28,24 +28,24 @@ export const todoCompositorConfig: CompositorConfig = {
         on: {
           ADD_TODO: {
             target: "adding",
-            actions: ["validateTodo", "addTodo"],
+            actions: ["@todo/validateTodo", "@todo/addTodo"],
           },
           TOGGLE_TODO: {
             target: "idle",
-            actions: ["toggleTodo"],
+            actions: ["@todo/toggleTodo"],
           },
           REMOVE_TODO: {
             target: "idle",
-            actions: ["removeTodo"],
+            actions: ["@todo/removeTodo"],
           },
           UPDATE_INPUT: {
             target: "idle",
-            actions: ["updateInput"],
+            actions: ["@ui/updateInput"],
           },
         },
       },
       adding: {
-        entry: ["clearInput"],
+        entry: ["@ui/clearInput"],
         on: {
           SUCCESS: "idle",
           ERROR: "error",
@@ -60,7 +60,6 @@ export const todoCompositorConfig: CompositorConfig = {
     },
     actions: {},
   },
-  actions: createCompositorActions(),
   ui: {
     containerClass: "min-h-screen bg-gray-100 pt-20 px-4",
     cardClass:

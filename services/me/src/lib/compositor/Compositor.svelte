@@ -1,7 +1,8 @@
 <script lang="ts">
   import { HOVERABLE_STYLE } from "$lib/utils/styles";
   import { createDataStore } from "./dataStore";
-  import { mergeActionsIntoConfig } from "./actions";
+  import { loadActionsFromRegistry } from "./skillLoader";
+  import { registerAllSkills } from "./skills";
   import type { CompositorConfig } from "./types";
 
   // ========== PROPS ==========
@@ -11,9 +12,23 @@
 
   let { config }: Props = $props();
 
+  // ========== SKILL REGISTRY SETUP ==========
+  // Register all available skills (can be called once globally)
+  registerAllSkills();
+
   // ========== UNIFIED DATA STORE SETUP ==========
-  const mergedConfig = mergeActionsIntoConfig(config.stateMachine, config.actions);
-  const dataStore = createDataStore(mergedConfig);
+  // Load actions from skill registry based on skill IDs in config
+  const resolvedConfig = loadActionsFromRegistry(config.stateMachine);
+
+  // Merge any explicit actions (override registry)
+  if (config.actions) {
+    resolvedConfig.actions = {
+      ...resolvedConfig.actions,
+      ...config.actions,
+    };
+  }
+
+  const dataStore = createDataStore(resolvedConfig);
 
   // ========== REACTIVE DATA ACCESS ==========
   // Single unified reactive interface - everything is just data
