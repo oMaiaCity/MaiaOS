@@ -17,7 +17,7 @@
 		? 'border-4 border-white/30 border-t-cyan-400'
 		: 'border-4 border-slate-200 border-t-slate-800';
 	
-	const classes = `${size} animate-spin rounded-full ${variantClasses} ${className}`.trim();
+	const classes = $derived(`${size} animate-spin rounded-full ${variantClasses} ${className}`.trim());
 </script>
 
 <div class={classes}></div>

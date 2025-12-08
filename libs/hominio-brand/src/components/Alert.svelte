@@ -15,11 +15,11 @@
 	
 	const baseClasses = 'rounded-2xl p-6 backdrop-blur-md';
 	
-	const typeClasses = type === 'error'
+	const typeClasses = $derived(type === 'error'
 		? 'border border-red-100 bg-red-50/50 text-red-600'
-		: 'border border-yellow-100 bg-yellow-50/50 text-yellow-600';
+		: 'border border-yellow-100 bg-yellow-50/50 text-yellow-600');
 	
-	const classes = `${baseClasses} ${typeClasses} ${className}`.trim();
+	const classes = $derived(`${baseClasses} ${typeClasses} ${className}`.trim());
 </script>
 
 <div class={classes} {...restProps}>

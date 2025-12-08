@@ -6,17 +6,14 @@ WORKDIR /app
 FROM base AS install
 RUN mkdir -p /temp/dev
 # Copy root package.json and lockfile for monorepo workspace resolution
-# Lockfile helps bunx resolve packages correctly (same as app service)
 COPY package.json bun.lock* /temp/dev/
-# Copy all workspace package.json files (required for proper workspace resolution)
+# Copy me service package.json
 COPY services/me/package.json /temp/dev/services/me/
-COPY libs/hominio-brand/package.json /temp/dev/libs/hominio-brand/
-COPY libs/hominio-data/package.json /temp/dev/libs/hominio-data/
-# Install dependencies with workspace resolution
-RUN cd /temp/dev && bun install --ignore-scripts
-# Copy workspace source files after install (to preserve workspace structure)
+# Copy full libs BEFORE install (Bun needs full workspace structure, same as wallet service)
 COPY libs/hominio-brand/ /temp/dev/libs/hominio-brand/
 COPY libs/hominio-data/ /temp/dev/libs/hominio-data/
+# Install dependencies with workspace resolution
+RUN cd /temp/dev && bun install --ignore-scripts
 
 # Build the app
 FROM base AS build
@@ -33,8 +30,7 @@ COPY scripts/sync-assets.js /app/scripts/sync-assets.js
 RUN node scripts/sync-assets.js
 
 # Run build from /app (same as wallet service)
-# Use direct path to vite binary to avoid PATH issues
-RUN ./node_modules/.bin/vite build
+RUN cd /app && bun run build
 
 # Production image
 FROM base AS release
