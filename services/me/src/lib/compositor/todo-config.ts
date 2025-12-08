@@ -65,4 +65,44 @@ export const todoCompositorConfig: CompositorConfig = {
     cardClass:
       "relative overflow-hidden rounded-3xl bg-slate-50 border border-white shadow-card-default p-6",
   },
+  // UI Slot Configuration - Generic mapping of data to UI slots
+  uiSlots: {
+    slots: [
+      { slot: "title", dataPath: "data.title", type: "text" },
+      { slot: "description", dataPath: "data.description", type: "text" },
+      { slot: "list", dataPath: "data.todos", type: "list" },
+      { slot: "list.item.text", dataPath: "data.todos.text", type: "text" },
+      { slot: "list.item.completed", dataPath: "data.todos.completed", type: "text" },
+      {
+        slot: "list.item.id",
+        dataPath: "data.todos.id",
+        type: "text",
+        events: {
+          onToggle: "TOGGLE_TODO",
+          onDelete: "REMOVE_TODO",
+        },
+      },
+      {
+        slot: "input.value",
+        dataPath: "data.newTodoText",
+        type: "input",
+        config: {
+          placeholder: "Add a new todo...",
+          submitLabel: "Add",
+        },
+        events: {
+          onSubmit: "ADD_TODO",
+          onInput: "UPDATE_INPUT",
+        },
+      },
+      {
+        slot: "error",
+        dataPath: "data.error",
+        type: "text",
+        events: {
+          onClear: "CLEAR_ERROR",
+        },
+      },
+    ],
+  },
 };

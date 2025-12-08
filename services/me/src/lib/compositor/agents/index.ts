@@ -18,9 +18,9 @@ import { registerAgentsFromConfig } from "./registry";
  * This can be called on app initialization
  */
 export function registerAllAgents(): void {
-  registerAgentsFromConfig({
-    "@Tom": tomAgentConfig,
-    // Add more agent registrations here as they're created
-  });
+    registerAgentsFromConfig({
+        "@Tom": tomAgentConfig,
+        // Add more agent registrations here as they're created
+    });
 }
 

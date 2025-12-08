@@ -4,6 +4,7 @@
  */
 
 import type { StateMachineConfig } from "./dataStore";
+import type { UISlotMapping, UISlotConfig } from "./ui-slots/types";
 
 /**
  * Generic Compositor Config Interface
@@ -30,4 +31,10 @@ export interface CompositorConfig {
         containerClass?: string;
         cardClass?: string;
     };
+
+    /**
+     * UI slot configuration - REQUIRED
+     * Maps data sources to UI slots generically
+     */
+    uiSlots: UISlotConfig;
 }
