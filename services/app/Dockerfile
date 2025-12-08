@@ -11,9 +11,6 @@ COPY package.json bun.lock* /temp/dev/
 COPY services/app/package.json /temp/dev/services/app/
 COPY libs/hominio-vibes/ /temp/dev/libs/hominio-vibes/
 COPY libs/hominio-voice/ /temp/dev/libs/hominio-voice/
-COPY libs/hominio-auth/ /temp/dev/libs/hominio-auth/
-COPY libs/hominio-zero/ /temp/dev/libs/hominio-zero/
-COPY libs/hominio-caps/ /temp/dev/libs/hominio-caps/
 COPY libs/hominio-brand/ /temp/dev/libs/hominio-brand/
 RUN cd /temp/dev && bun install --ignore-scripts
 
@@ -49,7 +46,7 @@ WORKDIR /app/services/app
 COPY --from=install /temp/dev/node_modules /app/node_modules
 COPY --from=build /app/services/app/build build
 COPY --from=build /app/services/app/package.json .
-# Copy libs for runtime (needed for @hominio/auth)
+# Copy libs for runtime
 COPY --from=build /app/libs /app/libs
 
 # Set environment

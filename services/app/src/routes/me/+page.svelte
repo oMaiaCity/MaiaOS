@@ -2,7 +2,8 @@
 	import { onMount, tick, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { GlassCard, LoadingSpinner } from '@hominio/brand';
-	import { createAuthClient } from '@hominio/auth';
+	// TODO: @hominio/auth package is deprecated and removed
+	// import { createAuthClient } from '@hominio/auth';
 	import { nanoid } from 'nanoid';
 	import ActivityStreamItem from '$lib/components/ActivityStreamItem.svelte';
 	import { parseToolCallEvent, type ToolCallEvent } from '@hominio/voice';

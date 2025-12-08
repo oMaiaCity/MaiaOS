@@ -12,10 +12,9 @@
 
 import { watch } from 'fs';
 import { copyFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'fs';
-import { resolve, join, relative, dirname } from 'path';
+import { resolve, join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 // Paths - script is now in scripts/ folder, so monorepo root is one level up
@@ -31,9 +30,7 @@ const isDockerContext = existsSync(resolve(monorepoRoot, 'package.json')) &&
 // Get current working directory to detect which service we're building
 const cwd = process.cwd();
 const isAppService = cwd.includes('app') || existsSync(resolve(cwd, 'src-tauri'));
-const isWalletService = cwd.includes('wallet');
 const isMeService = cwd.includes('services/me') || (cwd.includes('me') && !cwd.includes('website'));
-const isDesignSystem = cwd.includes('hominio-design-system');
 
 const serviceStaticDirs = isDockerContext
 	? [
@@ -44,9 +41,7 @@ const serviceStaticDirs = isDockerContext
 		// Normal monorepo context: sync to detected service(s) only
 		// When running from monorepo root (!isDockerContext), include all services
 		...(isAppService || !isDockerContext ? [resolve(monorepoRoot, 'services/app/static/brand')] : []),
-		...(isWalletService || !isDockerContext ? [resolve(monorepoRoot, 'services/wallet/static/brand')] : []),
 		...(isMeService || !isDockerContext ? [resolve(monorepoRoot, 'services/me/static/brand')] : []),
-		...(isDesignSystem || !isDockerContext ? [resolve(monorepoRoot, 'libs/hominio-design-system/static/brand')] : []),
 	].filter(Boolean);
 
 /**

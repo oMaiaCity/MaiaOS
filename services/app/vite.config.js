@@ -19,11 +19,8 @@ export default defineConfig({
             // Ensure workspace packages resolve correctly during build
             '@hominio/vibes': resolve(__dirname, '../../libs/hominio-vibes/src'),
             '@hominio/voice': resolve(__dirname, '../../libs/hominio-voice/src'),
-            '@hominio/auth': resolve(__dirname, '../../libs/hominio-auth/src'),
             '@hominio/brand': resolve(__dirname, '../../libs/hominio-brand/src'),
-            '@hominio/brand/views': resolve(__dirname, '../../libs/hominio-brand/src/views'),
-            '@hominio/caps': resolve(__dirname, '../../libs/hominio-caps/src'),
-            '@hominio/zero': resolve(__dirname, '../../libs/hominio-zero/src')
+            '@hominio/brand/views': resolve(__dirname, '../../libs/hominio-brand/src/views')
         }
     },
     server: {

@@ -15,7 +15,6 @@
 	"dependencies": {},
 	"peerDependencies": {
 		"svelte": "^5.0.0",
-		"@hominio/zero": "workspace:*",
 		"@hominio/brand": "workspace:*"
 	},
 	"files": [

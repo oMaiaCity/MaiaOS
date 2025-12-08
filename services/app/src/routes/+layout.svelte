@@ -3,10 +3,12 @@
 	import { LoadingSpinner, Favicon, Footer } from '@hominio/brand';
 	import NavPill from '$lib/components/NavPill.svelte';
 	import { page } from '$app/stores';
-	import { createAuthClient } from '@hominio/auth';
+	// TODO: @hominio/auth and @hominio/zero packages are deprecated and removed
+	// Need to re-implement auth/zero functionality or remove it entirely
+	// import { createAuthClient } from '@hominio/auth';
 	import { Zero } from '@rocicorp/zero';
 	import { nanoid } from 'nanoid';
-	import { schema, createMutators } from '@hominio/zero';
+	// import { schema, createMutators } from '@hominio/zero';
 	import { onMount, setContext } from 'svelte';
 	import { browser } from '$app/environment';
 	import { env as publicEnv } from '$env/dynamic/public';
@@ -14,11 +16,13 @@
 
 	let { children } = $props();
 
+	// TODO: Auth functionality disabled - @hominio/auth package removed
 	// Use BetterAuth's reactive session hook (client-side only)
 	// This uses nano-store and automatically updates when auth state changes
 	// See: https://www.better-auth.com/docs/integrations/svelte-kit
-	const authClient = createAuthClient();
-	const session = authClient.useSession();
+	// const authClient = createAuthClient();
+	// const session = authClient.useSession();
+	const session = { isPending: $state(false), data: { user: null } };
 
 	// Shared voice call service (used by NavPill and /me route)
 	const voiceCallService = createVoiceCallService();
@@ -92,12 +96,13 @@
 
 				const apiUrl = getApiUrl();
 
+				// TODO: Zero schema and mutators disabled - @hominio/zero package removed
 				zero = new Zero({
 					server: zeroServerUrl,
-					schema,
+					// schema,
 					userID: userId,
 					// Register custom mutators for writes
-					mutators: createMutators(undefined), // AuthData passed to mutators at runtime
+					// mutators: createMutators(undefined), // AuthData passed to mutators at runtime
 					// Configure synced queries endpoint (uses cookie-based auth)
 					getQueriesURL: browser ? `${apiUrl}/api/v0/zero/get-queries` : undefined,
 					// Configure custom mutators endpoint (uses cookie-based auth)

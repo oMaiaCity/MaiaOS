@@ -29,10 +29,7 @@
 	"dependencies": {
 		"@hominio/voice": "workspace:*",
 		"@hominio/vibes": "workspace:*",
-		"@hominio/auth": "workspace:*",
 		"@hominio/brand": "workspace:*",
-		"@hominio/caps": "workspace:*",
-		"@hominio/zero": "workspace:*",
 		"@rocicorp/zero": "^0.24.0",
 		"nanoid": "^5.0.0",
 		"zod": "^3.23.8"

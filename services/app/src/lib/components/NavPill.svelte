@@ -1,14 +1,19 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { page } from '$app/stores';
-    import { createAuthClient } from '@hominio/auth';
+    // TODO: @hominio/auth and @hominio/caps packages are deprecated and removed
+    // import { createAuthClient } from '@hominio/auth';
     import { NavPill } from '@hominio/brand';
     import { getContext } from 'svelte';
-    import type { Capability } from '@hominio/caps';
+    // import type { Capability } from '@hominio/caps';
+    type Capability = any; // Temporary type until @hominio/caps is re-implemented
     import { parseToolCallEvent } from '@hominio/voice';
 
-	const authClient = createAuthClient();
-	const session = authClient.useSession();
+	// TODO: Auth functionality disabled - @hominio/auth package removed
+	// const authClient = createAuthClient();
+	// const session = authClient.useSession();
+	const session = { isPending: $state(false), data: { user: null } };
+	const authClient = { signOut: async () => {}, useSession: () => session };
 
 
 	// Get shared voice call service from layout context
