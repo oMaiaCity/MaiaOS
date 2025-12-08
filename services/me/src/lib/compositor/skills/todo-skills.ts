@@ -62,10 +62,21 @@ const addTodoSkill: Skill = {
       return;
     }
 
+    // Generate random endDate between now and 7 days
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const randomTime = now.getTime() + Math.random() * (sevenDaysFromNow.getTime() - now.getTime());
+    const endDate = new Date(randomTime);
+    
+    // Generate random duration between 1 and 8 hours (in minutes)
+    const duration = Math.floor(Math.random() * 8 * 60) + 60; // 60 to 480 minutes
+
     const newTodo = {
       id: Date.now().toString(),
       text: text.trim(),
       status: "todo",
+      endDate: endDate.toISOString(),
+      duration: duration, // duration in minutes
     };
 
     const todos = (data.todos as Array<unknown>) || [];
@@ -207,16 +218,29 @@ const clearInputSkill: Skill = {
   },
 };
 
-const toggleViewSkill: Skill = {
+const setViewSkill: Skill = {
   metadata: {
-    id: "@ui/toggleView",
-    name: "Toggle View",
-    description: "Toggles between list and kanban view modes",
+    id: "@ui/setView",
+    name: "Set View",
+    description: "Sets the view mode (list, kanban, timeline, config)",
     category: "ui",
+    parameters: {
+      type: "object",
+      properties: {
+        viewMode: {
+          type: "string",
+          description: "The view mode to set (list, kanban, timeline, config)",
+          required: true,
+        },
+      },
+      required: ["viewMode"],
+    },
   },
-  execute: (data: Data) => {
-    const currentView = (data.viewMode as string) || "list";
-    data.viewMode = currentView === "list" ? "kanban" : "list";
+  execute: (data: Data, payload?: unknown) => {
+    const viewMode = (payload as { viewMode?: string })?.viewMode;
+    if (viewMode && ["list", "kanban", "timeline", "config"].includes(viewMode)) {
+      data.viewMode = viewMode;
+    }
   },
 };
 
@@ -229,6 +253,50 @@ const clearTodosSkill: Skill = {
   },
   execute: (data: Data) => {
     data.todos = [];
+  },
+};
+
+const openModalSkill: Skill = {
+  metadata: {
+    id: "@ui/openModal",
+    name: "Open Modal",
+    description: "Opens a modal with the selected todo details",
+    category: "ui",
+    parameters: {
+      type: "object",
+      properties: {
+        todoId: {
+          type: "string",
+          description: "The ID of the todo to display in the modal",
+          required: true,
+        },
+      },
+      required: ["todoId"],
+    },
+  },
+  execute: (data: Data, payload?: unknown) => {
+    const todoId = (payload as { todoId?: string })?.todoId;
+    if (!todoId) return;
+
+    const todos = (data.todos as Array<{ id: string }>) || [];
+    const todo = todos.find((t) => t.id === todoId);
+    if (todo) {
+      data.selectedTodo = todo;
+      data.showModal = true;
+    }
+  },
+};
+
+const closeModalSkill: Skill = {
+  metadata: {
+    id: "@ui/closeModal",
+    name: "Close Modal",
+    description: "Closes the modal",
+    category: "ui",
+  },
+  execute: (data: Data) => {
+    data.showModal = false;
+    data.selectedTodo = null;
   },
 };
 
@@ -247,6 +315,8 @@ export const todoSkills: Record<string, Skill> = {
   "@todo/clearTodos": clearTodosSkill,
   "@ui/updateInput": updateInputSkill,
   "@ui/clearInput": clearInputSkill,
-  "@ui/toggleView": toggleViewSkill,
+  "@ui/setView": setViewSkill,
+  "@ui/openModal": openModalSkill,
+  "@ui/closeModal": closeModalSkill,
 };
 

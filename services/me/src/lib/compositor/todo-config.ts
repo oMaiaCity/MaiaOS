@@ -16,14 +16,34 @@ export const todoVibeConfig: VibeConfig = {
       title: "Hello Earth",
       description: "Welcome to the Vibe!",
       todos: [
-        { id: "1", text: "Learn Svelte stores", status: "todo" },
-        { id: "2", text: "Build vibe page", status: "done" },
-        { id: "3", text: "Add todo list feature", status: "in-progress" },
+        {
+          id: "1",
+          text: "Learn Svelte stores",
+          status: "todo",
+          endDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+          duration: 120,
+        },
+        {
+          id: "2",
+          text: "Build vibe page",
+          status: "done",
+          endDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
+          duration: 180,
+        },
+        {
+          id: "3",
+          text: "Add todo list feature",
+          status: "in-progress",
+          endDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+          duration: 240,
+        },
       ],
       newTodoText: "",
       isLoading: false,
       error: null,
-      viewMode: "list", // "list" | "kanban"
+      viewMode: "list", // "list" | "kanban" | "timeline"
+      showModal: false,
+      selectedTodo: null,
     },
     states: {
       idle: {
@@ -48,13 +68,21 @@ export const todoVibeConfig: VibeConfig = {
             target: "idle",
             actions: ["@todo/updateStatus"],
           },
-          TOGGLE_VIEW: {
+          SET_VIEW: {
             target: "idle",
-            actions: ["@ui/toggleView"],
+            actions: ["@ui/setView"],
           },
           CLEAR_TODOS: {
             target: "idle",
             actions: ["@todo/clearTodos"],
+          },
+          OPEN_MODAL: {
+            target: "idle",
+            actions: ["@ui/openModal"],
+          },
+          CLOSE_MODAL: {
+            target: "idle",
+            actions: ["@ui/closeModal"],
           },
         },
       },
@@ -126,23 +154,75 @@ export const todoVibeConfig: VibeConfig = {
                   height: "auto",
                 },
               },
-              // View Toggle Leaf
+              // View Buttons Composite
               {
-                slot: "viewToggle",
-                dataPath: "data.viewMode",
-                type: "button",
-                config: {
-                  label: "Switch View",
-                  options: {
-                    list: "Switch to List View",
-                    kanban: "Switch to Kanban View",
+                slot: "viewButtons",
+                composite: {
+                  type: "flex",
+                  flex: {
+                    direction: "row",
+                    justify: "center",
+                    align: "center",
+                    gap: "0.5rem",
+                    wrap: "nowrap",
                   },
-                },
-                events: {
-                  onClick: "TOGGLE_VIEW",
-                },
-                size: {
-                  height: "auto",
+                  container: {
+                    padding: "0 0 1rem 0",
+                  },
+                  children: [
+                    {
+                      slot: "viewButton.list",
+                      type: "button",
+                      config: {
+                        label: "List",
+                      },
+                      events: {
+                        onClick: {
+                          event: "SET_VIEW",
+                          payload: () => ({ viewMode: "list" }),
+                        },
+                      },
+                    },
+                    {
+                      slot: "viewButton.kanban",
+                      type: "button",
+                      config: {
+                        label: "Kanban",
+                      },
+                      events: {
+                        onClick: {
+                          event: "SET_VIEW",
+                          payload: () => ({ viewMode: "kanban" }),
+                        },
+                      },
+                    },
+                    {
+                      slot: "viewButton.timeline",
+                      type: "button",
+                      config: {
+                        label: "Timeline",
+                      },
+                      events: {
+                        onClick: {
+                          event: "SET_VIEW",
+                          payload: () => ({ viewMode: "timeline" }),
+                        },
+                      },
+                    },
+                    {
+                      slot: "viewButton.config",
+                      type: "button",
+                      config: {
+                        label: "Config",
+                      },
+                      events: {
+                        onClick: {
+                          event: "SET_VIEW",
+                          payload: () => ({ viewMode: "config" }),
+                        },
+                      },
+                    },
+                  ],
                 },
               },
             ],
@@ -239,6 +319,7 @@ export const todoVibeConfig: VibeConfig = {
                   onToggle: "TOGGLE_TODO",
                   onDelete: "REMOVE_TODO",
                   onDrop: "UPDATE_TODO_STATUS",
+                  onClick: "OPEN_MODAL",
                 },
                 flex: {
                   grow: 1,
@@ -249,6 +330,12 @@ export const todoVibeConfig: VibeConfig = {
               },
             ],
           },
+        },
+        // Modal Leaf - Popup modal for todo details
+        {
+          slot: "modal",
+          type: "custom",
+          dataPath: "data.showModal",
         },
       ],
     },

@@ -63,9 +63,9 @@
 
 {#if browser && dataStore}
   <!-- Unified View Renderer - Composite/Leaf pattern -->
-  <div class={containerClass}>
-    <div class="max-w-4xl mx-auto py-8">
-      <div class={cardClass}>
+  <div class={containerClass} style="height: 100%;">
+    <div class="max-w-4xl mx-auto py-8" style="height: 100%;">
+      <div class={cardClass} style="height: 100%; display: flex; flex-direction: column;">
         {#if dataStore}
           <ViewRenderer
             node={{
@@ -73,6 +73,7 @@
               composite: config.view.composite,
             }}
             {data}
+            {config}
             onEvent={handleSlotEvent}
           />
         {/if}

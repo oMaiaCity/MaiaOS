@@ -6,16 +6,19 @@
 <script lang="ts">
   import type { ViewNode } from "./types";
   import type { Data } from "../dataStore";
+  import type { VibeConfig } from "../types";
   import Composite from "./Composite.svelte";
   import Leaf from "./Leaf.svelte";
+  import ViewRenderer from "./ViewRenderer.svelte";
 
   interface Props {
     node: ViewNode;
     data: Data;
+    config?: VibeConfig;
     onEvent?: (event: string, payload?: unknown) => void;
   }
 
-  let { node, data, onEvent }: Props = $props();
+  let { node, data, config, onEvent }: Props = $props();
 
   if (!node.composite) {
     throw new Error("Composite component requires a node with composite property");
@@ -112,8 +115,14 @@
   const getChildStyle = (child: ViewNode): Record<string, string> => {
     const style: Record<string, string> = {};
 
-    // Default: fill parent width
-    style.width = "100%";
+    // Default: fill parent width (unless in flex row container and child is a button)
+    // Buttons in flex row should only take space they need, not 100% width
+    const isFlexRow = composite.type === "flex" && composite.flex?.direction === "row";
+    const isButton = child.type === "button";
+    
+    if (!(isFlexRow && isButton)) {
+      style.width = "100%";
+    }
     // Don't set height: 100% by default - let content determine its own height
     // Only set height if explicitly specified in child.size or when flex-grow is used
 
@@ -228,17 +237,17 @@
   {#each composite.children as child}
     {@const childStyle = getChildStyle(child)}
     <div
-      class={`${child.composite?.container?.containerType ? `@container ${child.composite?.container?.containerName || ''}` : ''} ${!child.composite && child.dataPath ? 'contents' : ''}`}
+      class={`${child.composite?.container?.containerType ? `@container ${child.composite?.container?.containerName || ''}` : ''} ${!child.composite && (child.dataPath || child.type === "button") ? 'contents' : ''}`}
       style={Object.entries(childStyle)
         .map(([key, value]) => `${key}: ${value}`)
         .join("; ")}
     >
       {#if child.composite}
         <!-- Composite child - recursively render -->
-        <Composite node={child} {data} {onEvent} />
-      {:else if child.dataPath}
-        <!-- Leaf child - render content -->
-        <Leaf node={child} {data} {onEvent} />
+        <Composite node={child} {data} {config} {onEvent} />
+      {:else if child.dataPath || child.type}
+        <!-- Leaf child - render content (buttons and other types may not need dataPath) -->
+        <Leaf node={child} {data} {config} {onEvent} />
       {/if}
     </div>
   {/each}
