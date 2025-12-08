@@ -20,40 +20,36 @@ COPY libs/hominio-data/ /temp/dev/libs/hominio-data/
 
 # Build the app
 FROM base AS build
-# Copy root package.json (required for workspace resolution)
-# Note: bun.lockb is not needed in build stage - dependencies are already installed
-COPY --from=install /temp/dev/package.json /app/package.json
 # Copy node_modules from install stage (hoisted to root /app/node_modules)
 COPY --from=install /temp/dev/node_modules /app/node_modules
-# Copy workspace package.json files (required for Bun workspace resolution)
-# Create directories first to ensure proper structure
-RUN mkdir -p /app/libs/hominio-brand /app/libs/hominio-data
-COPY --from=install /temp/dev/libs/hominio-brand/package.json /app/libs/hominio-brand/package.json
-COPY --from=install /temp/dev/libs/hominio-data/package.json /app/libs/hominio-data/package.json
-# Copy workspace structure (libs to /app/libs) - must match workspace config
+# Copy workspace structure (libs to /app/libs)
 COPY --from=install /temp/dev/libs /app/libs
-# Copy me service files to root (same as wallet service pattern)
-# This ensures vite.config.ts can resolve vite from /app/node_modules
-COPY services/me/ /app/
+# Copy me service files preserving directory structure (same as app service)
+# This ensures relative paths (../../libs) work identically to local dev
+COPY services/me/ /app/services/me/
 # Copy sync-assets script to scripts folder
 COPY scripts/sync-assets.js /app/scripts/sync-assets.js
 
 # Sync brand assets to static folder before build
+# Run from root /app so script finds paths as expected (libs/... -> services/me/...)
 RUN node scripts/sync-assets.js
 
-# Build the app (same simple pattern as wallet service)
-# Set NODE_ENV for vite config path resolution
-ENV NODE_ENV=production
-# Run build using bun run (same as wallet: cd /app && bun run build)
-RUN cd /app && bun run build
+# Switch to service directory for build (same as app service)
+WORKDIR /app/services/me
+
+# Run svelte-kit sync before build to generate .svelte-kit directory
+# This is required because tsconfig.json extends ./.svelte-kit/tsconfig.json
+# Use bunx to run svelte-kit sync (Bun's equivalent of npx)
+RUN bunx svelte-kit sync
+RUN bun run build
 
 # Production image
 FROM base AS release
-WORKDIR /app
+WORKDIR /app/services/me
 COPY --from=install /temp/dev/node_modules /app/node_modules
-COPY --from=build /app/build build
-COPY --from=build /app/package.json .
-# Copy libs for runtime (needed for @hominio/brand, @hominio/data)
+COPY --from=build /app/services/me/build build
+COPY --from=build /app/services/me/package.json .
+# Copy libs for runtime
 COPY --from=build /app/libs /app/libs
 
 # Set environment
