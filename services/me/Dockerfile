@@ -17,26 +17,25 @@ RUN cd /temp/dev && bun install --ignore-scripts
 
 # Build the app
 FROM base AS build
-# Copy node_modules from install stage (hoisted to root /app/node_modules)
-COPY --from=install /temp/dev/node_modules /app/node_modules
-# Copy workspace structure (libs to /app/libs)
-COPY --from=install /temp/dev/libs /app/libs
-# Copy me service files to root (same as wallet service pattern)
-COPY services/me/ .
+# Copy the entire workspace structure from install stage (preserves workspace)
+COPY --from=install /temp/dev /app
+# Copy me service source files (overwrite package.json copy from install)
+COPY services/me/ /app/services/me/
 # Copy sync-assets script to scripts folder
 COPY scripts/sync-assets.js /app/scripts/sync-assets.js
 
 # Sync brand assets to static folder before build
 RUN node scripts/sync-assets.js
 
-# Run build from /app (same as wallet service)
-RUN cd /app && bun run build
+# Run build from monorepo root with filter (preserves workspace context)
+WORKDIR /app/services/me
+RUN bun run build
 
 # Production image
 FROM base AS release
 COPY --from=install /temp/dev/node_modules node_modules
-COPY --from=build /app/build build
-COPY --from=build /app/package.json .
+COPY --from=build /app/services/me/build build
+COPY --from=build /app/services/me/package.json .
 # Copy libs for runtime (needed for @hominio/brand, @hominio/data)
 COPY --from=build /app/libs libs
 
