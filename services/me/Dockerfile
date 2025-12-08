@@ -5,9 +5,9 @@ WORKDIR /app
 # Install dependencies
 FROM base AS install
 RUN mkdir -p /temp/dev
-# Copy root package.json for monorepo workspace resolution
-# Note: bun.lockb is not committed to repo - Bun will generate it during install
-COPY package.json /temp/dev/
+# Copy root package.json and lockfile for monorepo workspace resolution
+# Lockfile helps bunx resolve packages correctly (same as app service)
+COPY package.json bun.lock* /temp/dev/
 # Copy all workspace package.json files (required for proper workspace resolution)
 COPY services/me/package.json /temp/dev/services/me/
 COPY libs/hominio-brand/package.json /temp/dev/libs/hominio-brand/
@@ -42,13 +42,12 @@ COPY scripts/sync-assets.js /app/scripts/sync-assets.js
 # Run from root /app so script finds paths as expected (libs/... -> services/me/...)
 RUN node scripts/sync-assets.js
 
-# Run svelte-kit sync before build to generate .svelte-kit directory
-# This is required because jsconfig.json extends ./.svelte-kit/tsconfig.json
-# Switch to service directory (same pattern as app service)
+# Build the app (same simple pattern as wallet service)
+# Switch to service directory  
 WORKDIR /app/services/me
-# Use bunx to run svelte-kit sync (same as app service - bunx resolves binaries correctly)
-RUN bunx svelte-kit sync
-# Use bunx to run vite build (vite is a standalone package, bunx resolves it)
+# Run vite build directly - vite handles svelte-kit sync automatically during build
+# Wallet service pattern: cd /app && bun run build (which was just vite build)
+# Since me service build script uses pnpm, run vite build directly
 RUN bunx vite build
 
 # Production image
