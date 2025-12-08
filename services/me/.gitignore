@@ -24,3 +24,4 @@ vite.config.ts.timestamp-*
 sqlite.db
 sqlite.db-shm
 sqlite.db-wal
+node_modules

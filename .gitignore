@@ -46,3 +46,4 @@ vite.config.ts.timestamp-*
 # Brand assets (synced from libs/hominio-brand/src/assets/)
 **/static/brand/
 **/public/brand/
+**/node_modules

@@ -7,14 +7,14 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
   plugins: [sveltekit()],
-  // Load env vars from monorepo root (same as app service)
+  // Load env vars from monorepo root
   envDir: resolve(__dirname, "../.."),
   envPrefix: ["PUBLIC_"],
   resolve: {
     // Ensure proper module resolution in monorepo
     preserveSymlinks: false,
     alias: {
-      // Ensure workspace packages resolve correctly during build (same as app service)
+      // Ensure workspace packages resolve correctly during build
       "@hominio/brand": resolve(__dirname, "../../libs/hominio-brand/src"),
     },
   },
