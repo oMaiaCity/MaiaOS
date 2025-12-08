@@ -33,8 +33,8 @@ COPY scripts/sync-assets.js /app/scripts/sync-assets.js
 RUN node scripts/sync-assets.js
 
 # Run build from /app (same as wallet service)
-# node_modules is at /app/node_modules, so bun run resolves correctly
-RUN bun run build
+# Use direct path to vite binary to avoid PATH issues
+RUN ./node_modules/.bin/vite build
 
 # Production image
 FROM base AS release
