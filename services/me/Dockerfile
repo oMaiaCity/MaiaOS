@@ -27,34 +27,30 @@ COPY --from=install /temp/dev/package.json /app/package.json
 COPY --from=install /temp/dev/node_modules /app/node_modules
 # Copy workspace package.json files (required for Bun workspace resolution)
 # Create directories first to ensure proper structure
-RUN mkdir -p /app/services/me /app/libs/hominio-brand /app/libs/hominio-data
-COPY --from=install /temp/dev/services/me/package.json /app/services/me/package.json
+RUN mkdir -p /app/libs/hominio-brand /app/libs/hominio-data
 COPY --from=install /temp/dev/libs/hominio-brand/package.json /app/libs/hominio-brand/package.json
 COPY --from=install /temp/dev/libs/hominio-data/package.json /app/libs/hominio-data/package.json
 # Copy workspace structure (libs to /app/libs) - must match workspace config
 COPY --from=install /temp/dev/libs /app/libs
-# Copy me service files preserving directory structure
-COPY services/me/ /app/services/me/
+# Copy me service files to root (same as wallet service pattern)
+# This ensures vite.config.ts can resolve vite from /app/node_modules
+COPY services/me/ /app/
 # Copy sync-assets script to scripts folder
 COPY scripts/sync-assets.js /app/scripts/sync-assets.js
 
 # Sync brand assets to static folder before build
-# Run from root /app so script finds paths as expected (libs/... -> services/me/...)
 RUN node scripts/sync-assets.js
 
 # Build the app (same simple pattern as wallet service)
-# Switch to service directory
-WORKDIR /app/services/me
-# Run build using bun run (same as wallet service: cd /app && bun run build)
-# Use build:docker script which is just vite build (vite handles sync automatically)
-RUN cd /app && bun run --filter me build:docker
+# Run build from root (same as wallet: cd /app && bun run build)
+RUN cd /app && bun run build:docker
 
 # Production image
 FROM base AS release
-WORKDIR /app/services/me
+WORKDIR /app
 COPY --from=install /temp/dev/node_modules /app/node_modules
-COPY --from=build /app/services/me/build build
-COPY --from=build /app/services/me/package.json .
+COPY --from=build /app/build build
+COPY --from=build /app/package.json .
 # Copy libs for runtime (needed for @hominio/brand, @hominio/data)
 COPY --from=build /app/libs /app/libs
 
