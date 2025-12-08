@@ -21,6 +21,12 @@ jobs:
         with:
           version: latest
 
+      - name: Authenticate with Fly.io
+        run: |
+          echo "🔐 Authenticating with Fly.io..."
+          echo "$FLY_API_TOKEN" | flyctl auth token
+          echo "✅ Authentication successful"
+
       - name: Create Fly.io app if it doesn't exist
         run: |
           # Check if app exists, create if it doesn't
