@@ -14,7 +14,9 @@
     renderSlot: (slotId: string) => unknown;
     getSlotValue: (slotId: string) => unknown;
     hasSlot: (slotId: string) => boolean;
-    getSlotMapping?: (slotId: string) => { events?: Record<string, unknown>; config?: Record<string, unknown> } | undefined;
+    getSlotMapping?: (
+      slotId: string,
+    ) => { events?: Record<string, unknown>; config?: Record<string, unknown> } | undefined;
     triggerEvent?: (
       slotId: string,
       interaction: string,
@@ -220,7 +222,7 @@
 </script>
 
 <div
-  class={config.container?.class || ""}
+  class={`@container ${config.container?.class || ""}`}
   style={Object.entries(containerStyle())
     .map(([key, value]) => `${key}: ${value}`)
     .join("; ")}
@@ -230,7 +232,12 @@
     {@const isVirtualSlot = slot.layout !== undefined}
     {@const slotExists = hasSlot(slot.slot) || isVirtualSlot}
     {#if slotExists}
-      <div style={Object.entries(slotStyle).map(([key, value]) => `${key}: ${value}`).join("; ")}>
+      <div
+        class={slot.layout ? "@container" : ""}
+        style={Object.entries(slotStyle)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join("; ")}
+      >
         {#if slot.layout}
           <!-- Composite: Render nested layout (virtual slot) -->
           <svelte:self
@@ -265,4 +272,3 @@
     {/if}
   {/each}
 </div>
-

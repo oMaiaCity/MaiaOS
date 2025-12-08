@@ -42,6 +42,11 @@ export interface SlotEventMapping {
    * Event to trigger on clear
    */
   onClear?: string | { event: string; payload?: (data: unknown) => unknown };
+
+  /**
+   * Event to trigger on drop (for drag and drop)
+   */
+  onDrop?: string | { event: string; payload?: (data: unknown) => unknown };
 }
 
 /**

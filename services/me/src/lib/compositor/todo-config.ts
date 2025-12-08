@@ -15,9 +15,9 @@ export const todoCompositorConfig: CompositorConfig = {
       title: "Hello Earth",
       description: "Welcome to the Compositor!",
       todos: [
-        { id: "1", text: "Learn Svelte stores", completed: false },
-        { id: "2", text: "Build compositor page", completed: true },
-        { id: "3", text: "Add todo list feature", completed: false },
+        { id: "1", text: "Learn Svelte stores", status: "todo" },
+        { id: "2", text: "Build compositor page", status: "done" },
+        { id: "3", text: "Add todo list feature", status: "in-progress" },
       ],
       newTodoText: "",
       isLoading: false,
@@ -42,6 +42,10 @@ export const todoCompositorConfig: CompositorConfig = {
           UPDATE_INPUT: {
             target: "idle",
             actions: ["@ui/updateInput"],
+          },
+          UPDATE_TODO_STATUS: {
+            target: "idle",
+            actions: ["@todo/updateStatus"],
           },
           TOGGLE_VIEW: {
             target: "idle",
@@ -69,18 +73,33 @@ export const todoCompositorConfig: CompositorConfig = {
     },
     actions: {},
   },
-  // @deprecated - Use layout.container styles instead
-  ui: {
-    containerClass: "min-h-screen bg-gray-100 pt-20 px-4",
-    cardClass:
-      "relative overflow-hidden rounded-3xl bg-slate-50 border border-white shadow-card-default p-6",
-  },
+
   // View Configuration - Generic mapping of data to UI slots
   view: {
     slots: [
       { slot: "title", dataPath: "data.title", type: "text" },
       { slot: "description", dataPath: "data.description", type: "text" },
-      { slot: "list", dataPath: "data.todos", type: "list" },
+      {
+        slot: "list",
+        dataPath: "data.todos",
+        type: "list",
+        config: {
+          textProperty: "text",
+          statusProperty: "status",
+          deleteLabel: "Delete",
+          emptyStateMessage: "Kanban view requires kanbanColumns configuration",
+          statusBadge: {
+            todo: { label: "Todo", color: "bg-slate-100 text-slate-700" },
+            "in-progress": { label: "In Progress", color: "bg-blue-100 text-blue-700" },
+            done: { label: "Done", color: "bg-green-100 text-green-700" },
+          },
+          kanbanColumns: [
+            { label: "Todo", status: "todo", filter: (item: Record<string, unknown>) => item.status === "todo" },
+            { label: "In Progress", status: "in-progress", filter: (item: Record<string, unknown>) => item.status === "in-progress" },
+            { label: "Done", status: "done", filter: (item: Record<string, unknown>) => item.status === "done" },
+          ],
+        },
+      },
       { slot: "list.item.text", dataPath: "data.todos.text", type: "text" },
       { slot: "list.item.completed", dataPath: "data.todos.completed", type: "text" },
       {
@@ -90,6 +109,7 @@ export const todoCompositorConfig: CompositorConfig = {
         events: {
           onToggle: "TOGGLE_TODO",
           onDelete: "REMOVE_TODO",
+          onDrop: "UPDATE_TODO_STATUS",
         },
       },
       {
@@ -99,6 +119,10 @@ export const todoCompositorConfig: CompositorConfig = {
         config: {
           placeholder: "Add a new todo...",
           submitLabel: "Add",
+          loadingLabel: "Adding...",
+          inputType: "text",
+          listSlotId: "list",
+          clearSlotId: "clearTodos",
         },
         events: {
           onSubmit: "ADD_TODO",
@@ -125,6 +149,13 @@ export const todoCompositorConfig: CompositorConfig = {
         slot: "viewToggle",
         dataPath: "data.viewMode",
         type: "button",
+        config: {
+          label: "Switch View",
+          options: {
+            list: "Switch to List View",
+            kanban: "Switch to Kanban View",
+          },
+        },
         events: {
           onClick: "TOGGLE_VIEW",
         },

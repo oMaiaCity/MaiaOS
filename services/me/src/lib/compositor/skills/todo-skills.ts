@@ -65,7 +65,7 @@ const addTodoSkill: Skill = {
     const newTodo = {
       id: Date.now().toString(),
       text: text.trim(),
-      completed: false,
+      status: "todo",
     };
 
     const todos = (data.todos as Array<unknown>) || [];
@@ -78,7 +78,7 @@ const toggleTodoSkill: Skill = {
   metadata: {
     id: "@todo/toggleTodo",
     name: "Toggle Todo",
-    description: "Toggles the completion status of a todo item",
+    description: "Toggles the completion status of a todo item (todo <-> done)",
     category: "todo",
     parameters: {
       type: "object",
@@ -96,9 +96,48 @@ const toggleTodoSkill: Skill = {
     const todoId = (payload as { todoId?: string })?.todoId;
     if (!todoId) return;
 
-    const todos = (data.todos as Array<{ id: string; completed: boolean }>) || [];
+    const todos = (data.todos as Array<{ id: string; status?: string }>) || [];
+    data.todos = todos.map((todo) => {
+      if (todo.id === todoId) {
+        const currentStatus = todo.status || "todo";
+        const newStatus = currentStatus === "done" ? "todo" : "done";
+        return { ...todo, status: newStatus };
+      }
+      return todo;
+    });
+  },
+};
+
+const updateTodoStatusSkill: Skill = {
+  metadata: {
+    id: "@todo/updateStatus",
+    name: "Update Todo Status",
+    description: "Updates the status of a todo item (todo, in-progress, done)",
+    category: "todo",
+    parameters: {
+      type: "object",
+      properties: {
+        todoId: {
+          type: "string",
+          description: "The ID of the todo to update",
+          required: true,
+        },
+        status: {
+          type: "string",
+          description: "The new status (todo, in-progress, done)",
+          required: true,
+        },
+      },
+      required: ["todoId", "status"],
+    },
+  },
+  execute: (data: Data, payload?: unknown) => {
+    const { todoId, status } = (payload as { todoId?: string; status?: string }) || {};
+    if (!todoId || !status) return;
+
+    const todos = (data.todos as Array<{ id: string; status?: string }>) || [];
     data.todos = todos.map((todo) =>
-      todo.id === todoId ? { ...todo, completed: !todo.completed } : todo,
+      todo.id === todoId ? { ...todo, status } : todo,
     );
   },
 };
@@ -203,6 +242,7 @@ export const todoSkills: Record<string, Skill> = {
   "@todo/validateTodo": validateTodoSkill,
   "@todo/addTodo": addTodoSkill,
   "@todo/toggleTodo": toggleTodoSkill,
+  "@todo/updateStatus": updateTodoStatusSkill,
   "@todo/removeTodo": removeTodoSkill,
   "@todo/clearTodos": clearTodosSkill,
   "@ui/updateInput": updateInputSkill,

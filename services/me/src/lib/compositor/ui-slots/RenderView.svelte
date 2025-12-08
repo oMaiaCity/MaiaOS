@@ -61,7 +61,8 @@
       | "onClick"
       | "onToggle"
       | "onDelete"
-      | "onClear",
+      | "onClear"
+      | "onDrop",
     itemData?: Record<string, unknown>,
     additionalPayload?: Record<string, unknown>,
   ) => {
@@ -79,7 +80,7 @@
       if (interaction === "onSubmit" || interaction === "onInput") {
         const inputData = render(slotId) as Record<string, unknown>;
         payload = { text: inputData.value || "", ...additionalPayload };
-      } else if (interaction === "onToggle" || interaction === "onDelete") {
+      } else if (interaction === "onToggle" || interaction === "onDelete" || interaction === "onDrop") {
         payload = { todoId: itemData?.id, ...additionalPayload };
       } else {
         payload = additionalPayload;
@@ -93,7 +94,7 @@
         if (interaction === "onSubmit" || interaction === "onInput") {
           const inputData = render(slotId) as Record<string, unknown>;
           payload = { text: inputData.value || "", ...additionalPayload };
-        } else if (interaction === "onToggle" || interaction === "onDelete") {
+        } else if (interaction === "onToggle" || interaction === "onDelete" || interaction === "onDrop") {
           payload = { todoId: itemData?.id, ...additionalPayload };
         } else {
           payload = additionalPayload;

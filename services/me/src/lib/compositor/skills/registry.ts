@@ -11,10 +11,15 @@ class SkillRegistryImpl implements ISkillRegistry {
 
   /**
    * Register a skill
+   * @param overwrite - If false, skip registration if skill already exists (default: false)
    */
-  register(skill: Skill): void {
+  register(skill: Skill, overwrite: boolean = false): void {
     if (this.skills.has(skill.metadata.id)) {
-      console.warn(`Skill '${skill.metadata.id}' is already registered. Overwriting.`);
+      if (overwrite) {
+        this.skills.set(skill.metadata.id, skill);
+      }
+      // Skip registration if already exists and overwrite is false
+      return;
     }
     this.skills.set(skill.metadata.id, skill);
   }
