@@ -1,0 +1,117 @@
+name: Deploy Me
+
+on:
+  push:
+    branches: [next]
+  workflow_run:
+    workflows: ["Release"]
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  deploy-me:
+    name: Deploy Me Service
+    runs-on: ubuntu-latest
+    if: (github.event_name == 'workflow_dispatch') || (github.event_name == 'push' && github.ref == 'refs/heads/next') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    environment: Next
+    # FLY_API_KEY is from the Next environment
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Create Fly.io app if it doesn't exist
+        run: |
+          # Check if app exists, create if it doesn't
+          if ! flyctl apps list | grep -q "next-hominio-me"; then
+            echo "📦 Creating Fly.io app: next-hominio-me..."
+            flyctl apps create next-hominio-me --org personal || {
+              echo "⚠️  Failed to create app. It may already exist or you need to specify a different org."
+              echo "   Continuing with deployment - app may need to be created manually."
+            }
+            
+            # Set primary region
+            flyctl regions set fra --app next-hominio-me || true
+          else
+            echo "✅ App next-hominio-me already exists"
+          fi
+          
+          # Always ensure IP addresses are allocated (idempotent - safe to run multiple times)
+          echo "🌐 Ensuring IP addresses are allocated..."
+          # Check if IPv4 exists, allocate if missing
+          if ! flyctl ips list --app next-hominio-me | grep -q "v4"; then
+            echo "   Allocating IPv4 address..."
+            flyctl ips allocate-v4 --app next-hominio-me --shared || true
+          else
+            echo "   IPv4 address already allocated"
+          fi
+          
+          # Check if IPv6 exists, allocate if missing
+          if ! flyctl ips list --app next-hominio-me | grep -q "v6"; then
+            echo "   Allocating IPv6 address..."
+            flyctl ips allocate-v6 --app next-hominio-me || true
+          else
+            echo "   IPv6 address already allocated"
+          fi
+
+      - name: Configure custom domain (next.hominio.me)
+        run: |
+          echo "🌐 Configuring custom domain: next.hominio.me"
+          # Add the custom domain to Fly.io (idempotent - safe to run multiple times)
+          flyctl certs create next.hominio.me --app next-hominio-me || {
+            echo "⚠️  Certificate may already exist or domain already configured"
+            echo "   Checking certificate status..."
+            flyctl certs list --app next-hominio-me || true
+          }
+          
+          echo ""
+          echo "📋 DNS Configuration Required:"
+          echo "   Add a CNAME record in your DNS provider:"
+          echo "   Type: CNAME"
+          echo "   Name: next"
+          echo "   Value: next-hominio-me.fly.dev"
+          echo "   TTL: 300 (or your preferred TTL)"
+          echo ""
+          echo "   After DNS propagates, Fly.io will automatically provision Let's Encrypt certificate."
+
+      - name: Set Fly.io secrets for me service
+        run: |
+          # Set all required environment variables from GitHub secrets (Next environment)
+          flyctl secrets set \
+            PUBLIC_DOMAIN_ME="${{ secrets.PUBLIC_DOMAIN_ME }}" \
+            GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+            GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
+            BETTER_AUTH_SECRET="${{ secrets.BETTER_AUTH_SECRET }}" \
+            PUBLIC_JAZZ_API_KEY="${{ secrets.PUBLIC_JAZZ_API_KEY }}" \
+            JAZZ_WORKER_ACCOUNT="${{ secrets.JAZZ_WORKER_ACCOUNT }}" \
+            JAZZ_WORKER_SECRET="${{ secrets.JAZZ_WORKER_SECRET }}" \
+            NODE_ENV="production" \
+            --app next-hominio-me
+
+          echo "✅ Me service secrets set. Verifying..."
+          flyctl secrets list --app next-hominio-me
+
+      - name: Deploy me service
+        run: |
+          # Build from monorepo root to properly resolve workspace dependencies
+          flyctl deploy --remote-only --app next-hominio-me --config services/me/fly.toml --dockerfile services/me/Dockerfile
+
+      - name: Check deployment status
+        run: |
+          flyctl status --app next-hominio-me
+          echo "📋 Recent logs:"
+          flyctl logs --app next-hominio-me --no-tail | tail -50
+          
+      - name: Verify SSL certificate status
+        run: |
+          echo "🔒 Checking SSL certificate status for next.hominio.me..."
+          flyctl certs check next.hominio.me --app next-hominio-me || {
+            echo "⚠️  Certificate not yet issued. This is normal if DNS hasn't propagated yet."
+            echo "   Certificate will be automatically provisioned once DNS CNAME record is configured."
+          }
+

@@ -22,7 +22,7 @@ let assetSyncProcess = null;
 function startAssetSync() {
 	console.log('[brand-assets] Starting asset sync watcher...\n');
 
-	assetSyncProcess = spawn('node', ['libs/hominio-brand/scripts/sync-assets.js', '--watch'], {
+	assetSyncProcess = spawn('node', ['scripts/sync-assets.js', '--watch'], {
 		cwd: rootDir,
 		stdio: 'inherit',
 		shell: false,
@@ -50,7 +50,7 @@ function startAssetSync() {
 function startService() {
 	console.log('[me] Starting on port 4200...\n');
 
-	childProcess = spawn('bun', ['--env-file=.env', '--filter', 'me', 'dev'], {
+	childProcess = spawn('bun', ['--env-file=../../.env', '--filter', 'me', 'dev'], {
 		cwd: rootDir,
 		stdio: 'inherit',
 		shell: false,

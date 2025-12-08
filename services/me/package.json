@@ -15,7 +15,7 @@
 		"format-and-lint:fix": "pnpm run format --write && pnpm run lint --fix"
 	},
 	"devDependencies": {
-		"@sveltejs/adapter-auto": "^6.0.1",
+		"@sveltejs/adapter-node": "^5.4.0",
 		"@sveltejs/kit": "^2.36.1",
 		"@sveltejs/vite-plugin-svelte": "^5.1.1",
 		"@types/eslint": "^9.6.0",

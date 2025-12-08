@@ -366,7 +366,7 @@
               : String(item[statusProperty]) === 'in-progress'
                 ? 'bg-blue-500'
                 : 'bg-slate-400'}"
-          />
+          ></div>
           <!-- Timeline content -->
           <div
             class="px-4 py-3 rounded-2xl bg-slate-100 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] {HOVERABLE_STYLE}"
@@ -591,7 +591,7 @@
   <!-- Config View - Shows stringified Vibe config -->
   <div class="space-y-4">
     <div class="bg-slate-900 rounded-2xl p-6 overflow-auto max-h-[calc(100vh-400px)]">
-      <pre class="text-xs text-slate-300 font-mono whitespace-pre-wrap break-words"><code
+      <pre class="text-xs text-slate-300 font-mono whitespace-pre-wrap wrap-break-word"><code
           >{JSON.stringify(config, null, 2)}</code
         ></pre>
     </div>
@@ -600,16 +600,34 @@
   <!-- Modal Component -->
   {#if showModal}
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Modal"
+      tabindex="-1"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onclick={(e) => {
         if (e.target === e.currentTarget) {
           onEvent?.("CLOSE_MODAL");
         }
       }}
+      onkeydown={(e) => {
+        if (e.key === "Escape") {
+          onEvent?.("CLOSE_MODAL");
+        }
+      }}
     >
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
       <div
         class="relative w-full max-w-2xl mx-4 bg-white rounded-3xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto"
         onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => {
+          if (e.key === "Escape") {
+            onEvent?.("CLOSE_MODAL");
+          }
+        }}
+        role="dialog"
+        aria-modal="true"
+        tabindex="-1"
       >
         <!-- Close button -->
         <button

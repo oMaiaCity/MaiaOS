@@ -2,12 +2,8 @@
 /**
  * Centralized version sync script for monorepo
  * Syncs version across:
- * - All services package.json files
+ * - All services package.json files (excluding app, wallet, website, zero, sync)
  * - All libs package.json files
- * - services/app/src-tauri/Cargo.toml
- * - services/app/src-tauri/tauri.conf.json
- * - services/app/src-tauri/gen/apple/app_iOS/Info.plist (iOS)
- * - services/app/src-tauri/gen/apple/project.yml (iOS)
  */
 
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'fs';
@@ -18,17 +14,24 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const rootDir = join(__dirname, '..');
 
-// Get version from command line or from services/app/package.json (source of truth)
-const newVersion = process.argv[2] || JSON.parse(readFileSync(join(rootDir, 'services', 'app', 'package.json'), 'utf-8')).version;
+// Get version from command line or from services/me/package.json (source of truth)
+const newVersion = process.argv[2] || JSON.parse(readFileSync(join(rootDir, 'services', 'me', 'package.json'), 'utf-8')).version;
 
 console.log(`🔄 Syncing version ${newVersion} across all services, libraries, and platforms...`);
 
+// Services to exclude from version sync
+const EXCLUDED_SERVICES = ['app', 'wallet', 'website', 'zero', 'sync'];
+
 // Helper to find all package.json files in a directory
-function findPackageJsonFiles(dir) {
+function findPackageJsonFiles(dir, excludeList = []) {
 	const files = [];
 	try {
 		const entries = readdirSync(dir);
 		for (const entry of entries) {
+			// Skip excluded services
+			if (excludeList.includes(entry)) {
+				continue;
+			}
 			const fullPath = join(dir, entry);
 			const stat = statSync(fullPath);
 			if (stat.isDirectory()) {
@@ -47,9 +50,9 @@ function findPackageJsonFiles(dir) {
 	return files;
 }
 
-// 1. Update all services/*/package.json
+// 1. Update all services/*/package.json (excluding app, wallet, website, zero, sync)
 const servicesDir = join(rootDir, 'services');
-const servicePackages = findPackageJsonFiles(servicesDir);
+const servicePackages = findPackageJsonFiles(servicesDir, EXCLUDED_SERVICES);
 for (const packagePath of servicePackages) {
 	const packageJson = JSON.parse(readFileSync(packagePath, 'utf-8'));
 	packageJson.version = newVersion;
@@ -67,69 +70,7 @@ for (const packagePath of libPackages) {
 	console.log(`✅ Updated ${packagePath.replace(rootDir + '/', '')}`);
 }
 
-// 3. Update Cargo.toml (only for app service)
-const cargoTomlPath = join(rootDir, 'services', 'app', 'src-tauri', 'Cargo.toml');
-try {
-	let cargoToml = readFileSync(cargoTomlPath, 'utf-8');
-	cargoToml = cargoToml.replace(/^version = ".*"$/m, `version = "${newVersion}"`);
-	writeFileSync(cargoTomlPath, cargoToml);
-	console.log('✅ Updated services/app/src-tauri/Cargo.toml');
-} catch (error) {
-	console.log('⚠️  Cargo.toml not found (skipping)');
-}
-
-// 4. Update tauri.conf.json (only for app service)
-const tauriConfPath = join(rootDir, 'services', 'app', 'src-tauri', 'tauri.conf.json');
-try {
-	const tauriConf = JSON.parse(readFileSync(tauriConfPath, 'utf-8'));
-	tauriConf.version = newVersion;
-	writeFileSync(tauriConfPath, JSON.stringify(tauriConf, null, 2) + '\n');
-	console.log('✅ Updated services/app/src-tauri/tauri.conf.json');
-} catch (error) {
-	console.log('⚠️  tauri.conf.json not found (skipping)');
-}
-
-// 5. Update iOS Info.plist (if exists)
-// NOTE: iOS files are NOT committed by semantic-release (they don't exist in CI)
-// They will be generated with correct version during Tauri build
-// Only update if running locally and files exist
-const iosInfoPlistPath = join(rootDir, 'services', 'app', 'src-tauri', 'gen', 'apple', 'app_iOS', 'Info.plist');
-try {
-	let infoPlist = readFileSync(iosInfoPlistPath, 'utf-8');
-	infoPlist = infoPlist.replace(
-		/<key>CFBundleShortVersionString<\/key>\s*<string>.*<\/string>/,
-		`<key>CFBundleShortVersionString</key>\n\t<string>${newVersion}</string>`
-	);
-	infoPlist = infoPlist.replace(
-		/<key>CFBundleVersion<\/key>\s*<string>.*<\/string>/,
-		`<key>CFBundleVersion</key>\n\t<string>${newVersion}</string>`
-	);
-	writeFileSync(iosInfoPlistPath, infoPlist);
-	console.log('✅ Updated services/app/src-tauri/gen/apple/app_iOS/Info.plist (local only, not committed)');
-} catch (error) {
-	console.log('⚠️  iOS Info.plist not found (will be generated on build)');
-}
-
-// 6. Update iOS project.yml (if exists)
-// NOTE: iOS files are NOT committed by semantic-release (they don't exist in CI)
-// They will be generated with correct version during Tauri build
-// Only update if running locally and files exist
-const projectYmlPath = join(rootDir, 'services', 'app', 'src-tauri', 'gen', 'apple', 'project.yml');
-try {
-	let projectYml = readFileSync(projectYmlPath, 'utf-8');
-	projectYml = projectYml.replace(
-		/CFBundleShortVersionString:\s*.*/g,
-		`CFBundleShortVersionString: ${newVersion}`
-	);
-	projectYml = projectYml.replace(
-		/CFBundleVersion:\s*".*"/g,
-		`CFBundleVersion: "${newVersion}"`
-	);
-	writeFileSync(projectYmlPath, projectYml);
-	console.log('✅ Updated services/app/src-tauri/gen/apple/project.yml (local only, not committed)');
-} catch (error) {
-	console.log('⚠️  iOS project.yml not found (will be generated on build)');
-}
+// 3. App service files removed - app service is excluded from version sync
 
 console.log(`\n✨ Version ${newVersion} synced successfully across all services, libraries, and platforms!`);
 

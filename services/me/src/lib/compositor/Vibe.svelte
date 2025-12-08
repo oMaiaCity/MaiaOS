@@ -27,17 +27,18 @@
 
   if (browser) {
     // Load actions from skill registry based on skill IDs in config
-    resolvedConfig = loadActionsFromRegistry(config.stateMachine);
+    const loadedConfig = loadActionsFromRegistry(config.stateMachine);
 
     // Merge any explicit actions (override registry)
     if (config.actions) {
-      resolvedConfig.actions = {
-        ...resolvedConfig.actions,
+      loadedConfig.actions = {
+        ...loadedConfig.actions,
         ...config.actions,
       };
     }
 
-    dataStore = createDataStore(resolvedConfig);
+    resolvedConfig = loadedConfig;
+    dataStore = createDataStore(loadedConfig);
   }
 
   // ========== REACTIVE DATA ACCESS ==========

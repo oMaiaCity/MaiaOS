@@ -10,12 +10,12 @@ import type { VibeConfig } from "./types";
 
 export const todoVibeConfig: VibeConfig = {
   stateMachine: {
-    initial: "idle",
+  initial: "idle",
     // Unified data - everything is just data, no distinction
     data: {
-      title: "Hello Earth",
+    title: "Hello Earth",
       description: "Welcome to the Vibe!",
-      todos: [
+    todos: [
         {
           id: "1",
           text: "Learn Svelte stores",
@@ -37,31 +37,31 @@ export const todoVibeConfig: VibeConfig = {
           endDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
           duration: 240,
         },
-      ],
-      newTodoText: "",
-      isLoading: false,
-      error: null,
+    ],
+    newTodoText: "",
+    isLoading: false,
+    error: null,
       viewMode: "list", // "list" | "kanban" | "timeline"
       showModal: false,
       selectedTodo: null,
-    },
-    states: {
-      idle: {
-        on: {
-          ADD_TODO: {
-            target: "adding",
+  },
+  states: {
+    idle: {
+      on: {
+        ADD_TODO: {
+          target: "adding",
             actions: ["@todo/validateTodo", "@todo/addTodo"],
-          },
-          TOGGLE_TODO: {
-            target: "idle",
+        },
+        TOGGLE_TODO: {
+          target: "idle",
             actions: ["@todo/toggleTodo"],
-          },
-          REMOVE_TODO: {
-            target: "idle",
+        },
+        REMOVE_TODO: {
+          target: "idle",
             actions: ["@todo/removeTodo"],
-          },
-          UPDATE_INPUT: {
-            target: "idle",
+        },
+        UPDATE_INPUT: {
+          target: "idle",
             actions: ["@ui/updateInput"],
           },
           UPDATE_TODO_STATUS: {
@@ -83,24 +83,24 @@ export const todoVibeConfig: VibeConfig = {
           CLOSE_MODAL: {
             target: "idle",
             actions: ["@ui/closeModal"],
-          },
-        },
-      },
-      adding: {
-        entry: ["@ui/clearInput"],
-        on: {
-          SUCCESS: "idle",
-          ERROR: "error",
-        },
-      },
-      error: {
-        on: {
-          RETRY: "idle",
-          CLEAR_ERROR: "idle",
         },
       },
     },
-    actions: {},
+    adding: {
+        entry: ["@ui/clearInput"],
+      on: {
+        SUCCESS: "idle",
+        ERROR: "error",
+      },
+    },
+    error: {
+      on: {
+        RETRY: "idle",
+        CLEAR_ERROR: "idle",
+      },
+    },
+  },
+  actions: {},
   },
 
   // Unified View Configuration - Composite/Leaf pattern
