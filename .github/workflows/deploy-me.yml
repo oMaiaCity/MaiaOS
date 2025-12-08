@@ -3,19 +3,13 @@ name: Deploy Me
 on:
   push:
     branches: [next]
-  workflow_run:
-    workflows: ["Release"]
-    types:
-      - completed
-    branches:
-      - main
   workflow_dispatch: # Allow manual trigger
 
 jobs:
   deploy-me:
     name: Deploy Me Service
     runs-on: ubuntu-latest
-    if: (github.event_name == 'workflow_dispatch') || (github.event_name == 'push' && github.ref == 'refs/heads/next') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    if: (github.event_name == 'workflow_dispatch') || (github.event_name == 'push' && github.ref == 'refs/heads/next')
     environment: Next
     # FLY_API_KEY is from the Next environment
     env:
