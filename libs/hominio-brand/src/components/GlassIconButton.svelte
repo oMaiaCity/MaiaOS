@@ -27,10 +27,10 @@
 	
 	// Use CSS utility class from app.css
 	const baseClass = 'glass-icon-button';
-	const variantClass = variant === 'danger' ? 'glass-icon-button-danger' : '';
-	const disabledClass = disabled ? 'cursor-not-allowed opacity-60' : '';
+	const variantClass = $derived(variant === 'danger' ? 'glass-icon-button-danger' : '');
+	const disabledClass = $derived(disabled ? 'cursor-not-allowed opacity-60' : '');
 	
-	const classes = `${baseClass} ${variantClass} ${sizeClasses[size]} text-slate-600 hover:text-slate-900 ${disabledClass} ${className}`.trim();
+	const classes = $derived(`${baseClass} ${variantClass} ${sizeClasses[size]} text-slate-600 hover:text-slate-900 ${disabledClass} ${className}`.trim());
 </script>
 
 <button class={classes} type={type} disabled={disabled} onclick={onclick} {...restProps}>

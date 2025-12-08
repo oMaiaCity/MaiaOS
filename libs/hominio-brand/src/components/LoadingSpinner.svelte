@@ -13,9 +13,9 @@
 		class: className = '',
 	} = $props();
 	
-	const variantClasses = variant === 'white'
+	const variantClasses = $derived(variant === 'white'
 		? 'border-4 border-white/30 border-t-cyan-400'
-		: 'border-4 border-slate-200 border-t-slate-800';
+		: 'border-4 border-slate-200 border-t-slate-800');
 	
 	const classes = $derived(`${size} animate-spin rounded-full ${variantClasses} ${className}`.trim());
 </script>

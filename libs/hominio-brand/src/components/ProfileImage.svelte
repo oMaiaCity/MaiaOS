@@ -34,11 +34,11 @@
 		xl: 'text-6xl',
 	};
 	
-	const frameClasses = `relative rounded-full p-1 bg-white/80 shadow-lg backdrop-blur-sm ${sizeClasses[size]}`;
-	const imageClasses = `${sizeClasses[size]} rounded-full object-cover`;
-	const fallbackClasses = `flex ${sizeClasses[size]} items-center justify-center rounded-full bg-gradient-to-br from-slate-100 to-slate-200 font-medium text-slate-500 ${textSizeClasses[size]}`;
+	const frameClasses = $derived(`relative rounded-full p-1 bg-white/80 shadow-lg backdrop-blur-sm ${sizeClasses[size]}`);
+	const imageClasses = $derived(`${sizeClasses[size]} rounded-full object-cover`);
+	const fallbackClasses = $derived(`flex ${sizeClasses[size]} items-center justify-center rounded-full bg-gradient-to-br from-slate-100 to-slate-200 font-medium text-slate-500 ${textSizeClasses[size]}`);
 	
-	const initial = (name || email || 'U')[0].toUpperCase();
+	const initial = $derived((name || email || 'U')[0].toUpperCase());
 </script>
 
 <div class={frameClasses}>
