@@ -42,10 +42,10 @@ COPY scripts/sync-assets.js /app/scripts/sync-assets.js
 RUN node scripts/sync-assets.js
 
 # Build the app (same simple pattern as wallet service)
-# Run build from root (same as wallet: cd /app && bun run build)
 # Set NODE_ENV for vite config path resolution
 ENV NODE_ENV=production
-RUN cd /app && bun run build:docker
+# Run vite build directly with full output to see actual error
+RUN cd /app && bunx vite build 2>&1 | tee /tmp/build.log || (cat /tmp/build.log && exit 1)
 
 # Production image
 FROM base AS release
