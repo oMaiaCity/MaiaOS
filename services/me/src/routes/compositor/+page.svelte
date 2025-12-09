@@ -1,6 +1,6 @@
 <script lang="ts">
   import Vibe from "$lib/compositor/Vibe.svelte";
-  import { todoVibeConfig } from "$lib/compositor/todo-config";
+  import { todoVibeConfig } from "$lib/vibes/todo/config";
   import { browser } from "$app/environment";
 </script>
 

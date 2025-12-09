@@ -6,11 +6,32 @@
 import type { Data } from "../dataStore";
 
 /**
+ * Format a date string (ISO format) to a readable format
+ */
+function formatDate(dateString: string | undefined): string {
+  if (!dateString) return "";
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return dateString;
+  }
+}
+
+/**
  * Resolve a data path to a value
  * Supports dot notation: "data.title", "data.todos.0.text", etc.
+ * Also supports date formatting: "item.endDate|date" formats the date
  */
 export function resolveDataPath(data: Data, path: string): unknown {
-  const parts = path.split(".");
+  // Check for formatting pipe (e.g., "item.endDate|date")
+  const [dataPath, format] = path.split("|");
+  
+  const parts = dataPath.split(".");
   
   // Remove "data" prefix if present (data.title -> title)
   const dataParts = parts[0] === "data" ? parts.slice(1) : parts;
@@ -32,6 +53,11 @@ export function resolveDataPath(data: Data, path: string): unknown {
     } else {
       return undefined;
     }
+  }
+  
+  // Apply formatting if specified
+  if (format === "date" && typeof current === "string") {
+    return formatDate(current);
   }
   
   return current;

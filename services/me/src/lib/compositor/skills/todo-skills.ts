@@ -108,14 +108,19 @@ const toggleTodoSkill: Skill = {
     if (!todoId) return;
 
     const todos = (data.todos as Array<{ id: string; status?: string }>) || [];
+    // Create a new array with updated todo to ensure reactivity
     data.todos = todos.map((todo) => {
       if (todo.id === todoId) {
         const currentStatus = todo.status || "todo";
         const newStatus = currentStatus === "done" ? "todo" : "done";
+        // Create a completely new object to ensure Svelte detects the change
         return { ...todo, status: newStatus };
       }
+      // Return existing todo as-is
       return todo;
     });
+    // Force a new array reference to ensure reactivity
+    data.todos = [...data.todos];
   },
 };
 
@@ -238,7 +243,7 @@ const setViewSkill: Skill = {
   },
   execute: (data: Data, payload?: unknown) => {
     const viewMode = (payload as { viewMode?: string })?.viewMode;
-    if (viewMode && ["list", "kanban", "timeline", "config"].includes(viewMode)) {
+    if (viewMode && ["list", "kanban", "timeline"].includes(viewMode)) {
       data.viewMode = viewMode;
     }
   },

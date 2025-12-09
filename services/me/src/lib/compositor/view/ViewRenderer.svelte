@@ -23,11 +23,11 @@
 {#if node.composite}
   <!-- Composite node - render as layout container -->
   <Composite {node} {data} {config} {onEvent} />
-{:else if node.dataPath}
-  <!-- Leaf node - render as content -->
+{:else if node.leaf}
+  <!-- Leaf node - render as content using JSON-driven leaf definition -->
   <Leaf {node} {data} {config} {onEvent} />
 {:else}
   <!-- Invalid node - neither composite nor leaf -->
-  <div class="text-red-500 text-sm">Invalid view node: must have either composite or dataPath</div>
+  <div class="text-red-500 text-sm">Invalid view node: must have either composite or leaf</div>
 {/if}
 

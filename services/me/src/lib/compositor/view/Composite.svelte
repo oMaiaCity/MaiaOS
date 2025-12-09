@@ -240,7 +240,7 @@
   {#each composite.children as child}
     {@const childStyle = getChildStyle(child)}
     <div
-      class={`${child.composite?.container?.containerType ? `@container ${child.composite?.container?.containerName || ''}` : ''} ${!child.composite && (child.dataPath || child.type === "button") ? 'contents' : ''}`}
+      class={`${child.composite?.container?.containerType ? `@container ${child.composite?.container?.containerName || ''}` : ''} ${!child.composite && child.leaf ? 'contents' : ''}`}
       style={Object.entries(childStyle)
         .map(([key, value]) => `${key}: ${value}`)
         .join("; ")}
@@ -248,9 +248,12 @@
       {#if child.composite}
         <!-- Composite child - recursively render -->
         <Composite node={child} {data} {config} {onEvent} />
-      {:else if child.dataPath || child.type}
-        <!-- Leaf child - render content (buttons and other types may not need dataPath) -->
+      {:else if child.leaf}
+        <!-- Leaf child - render content using JSON-driven leaf definition -->
         <Leaf node={child} {data} {config} {onEvent} />
+      {:else}
+        <!-- Invalid node - must have composite or leaf -->
+        <div class="text-red-500 text-sm">Invalid node: must have either composite or leaf</div>
       {/if}
     </div>
   {/each}

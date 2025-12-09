@@ -39,6 +39,20 @@
       }
 
       resolvedConfig = loadedConfig;
+
+      // Add configJson to initial data (for config view) - avoid circular dependency
+      // Stringify the full config including stateMachine and view
+      if (loadedConfig.data) {
+        loadedConfig.data.configJson = JSON.stringify(
+          {
+            stateMachine: config.stateMachine,
+            view: config.view,
+          },
+          null,
+          2,
+        );
+      }
+
       dataStore = createDataStore(loadedConfig);
     }
   });

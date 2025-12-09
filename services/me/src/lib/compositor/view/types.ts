@@ -3,6 +3,8 @@
  * Standardized naming: composite (layout node) and leaf (content node)
  */
 
+import type { LeafNode } from "./leaf-types";
+
 /**
  * Event Mapping - Maps UI interactions to state machine events
  * Fully generic - works with any event/action names
@@ -156,12 +158,9 @@ export interface ViewNode {
 
   /**
    * LEAF properties (mutually exclusive with composite)
-   * If present, this is a leaf node (content node)
+   * If present, this is a leaf node (content node) - JSON-driven UI definition
    */
-  dataPath?: string;
-  type?: "text" | "list" | "input" | "button" | "card" | "custom";
-  config?: Record<string, unknown>;
-  events?: SlotEventMapping;
+  leaf?: LeafNode;
 
   /**
    * Layout positioning (when this node is a child of a composite)

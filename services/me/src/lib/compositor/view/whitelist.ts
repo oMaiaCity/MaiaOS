@@ -1,0 +1,471 @@
+/**
+ * Security Whitelist - Strict validation for untrusted JSON configs
+ * Prevents XSS, script injection, and other security vulnerabilities
+ */
+
+import type { LeafNode } from "./leaf-types";
+
+/**
+ * Validation result
+ */
+export interface ValidationResult {
+  valid: boolean;
+  errors?: string[];
+}
+
+/**
+ * Allowed HTML tags
+ * Special tags: "icon" - renders Iconify icons
+ */
+const ALLOWED_TAGS = new Set([
+  "div",
+  "span",
+  "button",
+  "input",
+  "form",
+  "ul",
+  "ol",
+  "li",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "p",
+  "label",
+  "a",
+  "svg",
+  "path",
+  "pre",
+  "code",
+  "section",
+  "article",
+  "header",
+  "footer",
+  "nav",
+  "main",
+  "aside",
+  "img",
+  "br",
+  "hr",
+  "icon", // Special tag for Iconify icons
+]);
+
+/**
+ * Allowed attributes per tag
+ */
+const ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
+  // Universal attributes (allowed on all tags)
+  _universal: new Set([
+    "class",
+    "id",
+    "role",
+    "tabindex",
+    "aria-label",
+    "aria-labelledby",
+    "aria-describedby",
+    "aria-hidden",
+    "aria-expanded",
+    "aria-selected",
+    "aria-checked",
+    "aria-disabled",
+    "aria-modal",
+    "aria-live",
+    "data-*", // Allow all data-* attributes
+  ]),
+
+  div: new Set(["draggable"]), // Allow draggable for drag and drop functionality
+  button: new Set(["type", "disabled", "aria-label", "title", "form", "formaction", "formmethod"]),
+  input: new Set([
+    "type",
+    "placeholder",
+    "value",
+    "disabled",
+    "readonly",
+    "required",
+    "min",
+    "max",
+    "step",
+    "pattern",
+    "aria-label",
+    "aria-describedby",
+  ]),
+  form: new Set(["action", "method", "enctype", "novalidate"]),
+  a: new Set(["href", "target", "rel", "download", "aria-label"]),
+  img: new Set(["src", "alt", "width", "height", "loading", "aria-label"]),
+  label: new Set(["for", "aria-label"]),
+  svg: new Set([
+    "fill",
+    "viewbox", // SVG viewBox attribute (normalized to lowercase)
+    "xmlns",
+    "width",
+    "height",
+    "stroke",
+    "stroke-width",
+    "stroke-linecap",
+    "stroke-linejoin",
+    "class",
+  ]),
+  path: new Set([
+    "d",
+    "fill",
+    "stroke",
+    "stroke-width",
+    "stroke-linecap",
+    "stroke-linejoin",
+    "stroke-dasharray",
+    "stroke-dashoffset",
+    "class",
+  ]),
+};
+
+/**
+ * Tailwind class patterns (regex)
+ * Only allow safe Tailwind utilities
+ */
+const TAILWIND_PATTERNS = [
+  // Spacing
+  /^(p|m|px|py|pt|pb|pl|pr|mt|mb|ml|mr)-(\d+|auto|0\.5)$/, // Allow fractional spacing like py-0.5
+  /^gap-(\d+|auto)$/,
+  /^space-[xy]-(\d+|auto)$/,
+
+  // Layout
+  /^(flex|grid|block|inline|inline-block|hidden|contents)$/,
+  /^flex-(row|col|wrap|nowrap|grow|shrink|1|auto|none)$/, // flex-1, flex-auto, flex-none
+  /^(shrink|grow)-(0|1)$/, // shrink-0, shrink-1, grow-0, grow-1
+  /^grid-cols-(\d+|auto|min|max|subgrid)$/,
+  /^grid-rows-(\d+|auto|min|max|subgrid)$/,
+  /^col-span-(\d+|auto|full)$/,
+  /^row-span-(\d+|auto|full)$/,
+  // Flexbox alignment
+  /^items-(start|end|center|baseline|stretch)$/,
+  /^justify-(start|end|center|between|around|evenly)$/,
+  /^content-(start|end|center|between|around|evenly)$/,
+  /^self-(start|end|center|baseline|stretch|auto)$/,
+
+  // Sizing
+  /^(w|h|min-w|min-h|max-w|max-h)-(full|screen|auto|\d+|px|rem|em|%|2xl|xl|lg|md|sm|xs)$/,
+  /^(w|h|min-w|min-h|max-w|max-h)-(\d+)\/(\d+)$/,
+  /^(mx|my|mt|mb|ml|mr)-(\d+|auto)$/, // Margin utilities like mx-4, mt-2
+  /^(mx|my)-auto$/, // Margin auto like mx-auto
+
+  // Colors
+  /^(bg|text|border)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(\d+)$/,
+  /^(bg|text|border)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)-(\d+)\/(\d+)$/, // Opacity modifiers like bg-red-100/50
+  /^(bg|text|border)-(white|black|transparent|current)$/,
+  /^(bg|text|border)-(white|black|transparent|current)\/(\d+)$/, // Opacity modifiers like bg-black/50
+  /^border$/, // Standalone border
+  /^border-(\d+|\[.*\])$/, // border-2, border-[...]
+  /^border-(l|r|t|b)-(\d+|\[.*\])$/, // border-l-2, border-r-2, border-t-2, border-b-2
+  // Gradients
+  /^(bg|text|border)-(gradient|linear)-to-(r|l|t|b|tr|tl|br|bl)$/,
+  /^(from|via|to)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(\d+)$/,
+  /^(from|via|to)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)-(\d+)\/(\d+)$/, // Opacity modifiers like to-red-100/50
+  /^(from|via|to)-(white|black|transparent|current)$/,
+
+  // Typography
+  /^text-(xs|sm|base|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl|8xl|9xl)$/,
+  /^text-(left|center|right|justify)$/, // Text alignment
+  /^font-(thin|extralight|light|normal|medium|semibold|bold|extrabold|black)$/,
+  /^leading-(none|tight|snug|normal|relaxed|loose)$/,
+  /^tracking-(tighter|tight|normal|wide|wider|widest)$/,
+  /^(italic|not-italic|uppercase|lowercase|capitalize|normal-case)$/,
+  /^(underline|line-through|no-underline)$/,
+
+  // Effects
+  /^shadow(-(sm|md|lg|xl|2xl|inner|none)|-button-primary|-button-primary-hover)$/,
+  /^shadow-\[.*\]$/, // Allow arbitrary shadow values like shadow-[0_0_4px_rgba(0,0,0,0.02)]
+  /^rounded(-(none|sm|md|lg|xl|2xl|3xl|full|\d+))?$/,
+  /^rounded-\[.*\]$/, // Allow arbitrary rounded values
+  /^opacity-(\d+|0)$/,
+  /^backdrop-blur(-(sm|md|lg|xl|2xl|3xl|none))?$/,
+
+  // Transitions
+  /^transition(-(all|colors|opacity|shadow|transform))?$/,
+  /^duration-(\d+|75|100|150|200|300|500|700|1000)$/,
+  /^ease-(linear|in|out|in-out)$/,
+
+  // Positioning
+  /^(static|fixed|absolute|relative|sticky)$/,
+  /^(top|right|bottom|left|inset|inset-x|inset-y)-(\d+|auto|full|screen|0)$/,
+  /^-(top|right|bottom|left)-(\d+|auto|full|screen|0)$/, // Negative positioning: -left-2, -top-4, etc.
+  /^z-(\d+|auto|0|10|20|30|40|50)$/,
+  // Cursor
+  /^cursor-(pointer|not-allowed|wait|text|move|help|crosshair|default|grab|grabbing)$/,
+  // Pointer events
+  /^pointer-events-(none|auto)$/,
+  // Ring (focus rings)
+  /^ring(-(\d+|offset-\d+))?$/,
+  /^ring-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)-(\d+)$/,
+  /^ring-\[.*\]$/, // Arbitrary ring colors like ring-[#001a42]
+  /^ring-offset-(\d+)$/,
+  /^ring-offset-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)-(\d+)$/,
+  // Outline
+  /^outline-(none|0|1|2|4|8)$/,
+  // Scale (transform)
+  /^scale-(\d+|\[.*\])$/,
+
+  // Display
+  /^(inline|block|inline-block|flex|inline-flex|grid|inline-grid|table|inline-table|contents|list-item|hidden)$/,
+
+  // Overflow
+  /^overflow(-(x|y))?-(auto|hidden|clip|visible|scroll)$/,
+
+  // Arbitrary values (safe patterns) - must be checked AFTER specific patterns
+  /^(bg|text|border|shadow|rounded|w|h|min-w|min-h|max-w|max-h|p|m|px|py|pt|pb|pl|pr|mt|mb|ml|mr|mx|my|gap|space-[xy]|top|right|bottom|left|z|ring|scale)-\[.*\]$/, // Specific arbitrary value patterns with property prefix
+  /^\[.*\]$/, // Allow standalone arbitrary values like [0_0_4px_rgba(0,0,0,0.02)]
+
+  // Custom patterns (for specific use cases)
+  /^hover:(.+)$/, // Allow hover: prefix
+  /^active:(.+)$/, // Allow active: prefix
+  /^focus:(.+)$/, // Allow focus: prefix
+  /^disabled:(.+)$/, // Allow disabled: prefix
+  /^placeholder:(.+)$/, // Allow placeholder: prefix
+];
+
+/**
+ * Blocked patterns (security risks)
+ */
+const BLOCKED_PATTERNS = [
+  /javascript:/i,
+  /on\w+\s*=/i, // onclick=, onerror=, etc.
+  /<script/i,
+  /data:text\/html/i,
+  /vbscript:/i,
+  /expression\s*\(/i, // CSS expression()
+];
+
+/**
+ * Check if a tag is allowed
+ */
+export function isAllowedTag(tag: string): boolean {
+  return ALLOWED_TAGS.has(tag.toLowerCase());
+}
+
+/**
+ * Check if an attribute is allowed for a tag
+ */
+export function isAllowedAttribute(tag: string, attr: string): boolean {
+  const tagLower = tag.toLowerCase();
+  const attrLower = attr.toLowerCase();
+
+  // Check universal attributes
+  if (ALLOWED_ATTRIBUTES._universal.has(attrLower)) {
+    return true;
+  }
+
+  // Check data-* attributes (universal)
+  if (attrLower.startsWith("data-")) {
+    return true;
+  }
+
+  // Check aria-* attributes (universal)
+  if (attrLower.startsWith("aria-")) {
+    return true;
+  }
+
+  // Check tag-specific attributes
+  const tagAttrs = ALLOWED_ATTRIBUTES[tagLower];
+  if (tagAttrs && tagAttrs.has(attrLower)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Sanitize attribute value
+ */
+export function sanitizeAttributeValue(
+  tag: string,
+  attr: string,
+  value: unknown,
+): string {
+  const strValue = String(value);
+
+  // Block dangerous patterns
+  for (const pattern of BLOCKED_PATTERNS) {
+    if (pattern.test(strValue)) {
+      console.warn(`Blocked dangerous attribute value: ${attr}="${strValue}"`);
+      return "";
+    }
+  }
+
+  // Special validation for href
+  if (attr === "href" && tag === "a") {
+    // Only allow http, https, mailto, tel, or relative paths
+    if (!/^(https?:\/\/|mailto:|tel:|\/|#|\.)/.test(strValue)) {
+      console.warn(`Blocked unsafe href: ${strValue}`);
+      return "#";
+    }
+  }
+
+  // Special validation for src (images)
+  if (attr === "src" && tag === "img") {
+    // Only allow http, https, or data:image
+    if (!/^(https?:\/\/|data:image\/)/.test(strValue)) {
+      console.warn(`Blocked unsafe src: ${strValue}`);
+      return "";
+    }
+  }
+
+  return strValue;
+}
+
+/**
+ * Sanitize Tailwind classes
+ */
+export function sanitizeClasses(classes: string[]): string[] {
+  const sanitized: string[] = [];
+
+  for (const cls of classes) {
+    const trimmed = cls.trim();
+    if (!trimmed) continue;
+
+    // Check if class matches any allowed pattern
+    let allowed = false;
+
+    // First check for prefix classes (hover:, focus:, etc.) - extract base class
+    const prefixMatch = trimmed.match(/^(hover|focus|active|disabled|placeholder):(.+)$/);
+    const baseClass = prefixMatch ? prefixMatch[2] : trimmed;
+
+    // Check base class against patterns
+    for (const pattern of TAILWIND_PATTERNS) {
+      if (pattern.test(baseClass)) {
+        allowed = true;
+        break;
+      }
+    }
+
+    // Also allow common utility classes that might not match patterns exactly
+    // (like bg-linear-to-r which should be bg-gradient-to-r, but we'll be lenient)
+    if (!allowed) {
+      // Allow common patterns that are safe
+      const safePatterns = [
+        /^(bg|text|border)-(linear|gradient)-to-(r|l|t|b|tr|tl|br|bl)$/,
+        /^(from|via|to)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(\d+)$/,
+      ];
+      for (const pattern of safePatterns) {
+        if (pattern.test(baseClass)) {
+          allowed = true;
+          break;
+        }
+      }
+    }
+
+    if (allowed) {
+      sanitized.push(trimmed);
+    } else {
+      console.warn(`Blocked unsafe Tailwind class: ${trimmed}`);
+    }
+  }
+
+  return sanitized;
+}
+
+/**
+ * Validate a leaf node recursively
+ */
+export function validateLeaf(node: LeafNode, path = "root"): ValidationResult {
+  const errors: string[] = [];
+
+  // Validate tag
+  if (!node.tag || typeof node.tag !== "string") {
+    errors.push(`${path}: Missing or invalid tag`);
+    return { valid: false, errors };
+  }
+
+  // Special handling for "icon" tag - it's a special tag for Iconify icons
+  if (node.tag === "icon") {
+    // Validate icon configuration
+    if (!node.icon || typeof node.icon !== "object") {
+      errors.push(`${path}: Icon tag must have an 'icon' configuration object`);
+    } else {
+      if (!node.icon.name || typeof node.icon.name !== "string") {
+        errors.push(`${path}: Icon configuration must have a 'name' string property`);
+      }
+      // icon.classes is optional
+    }
+  } else if (!isAllowedTag(node.tag)) {
+    errors.push(`${path}: Tag '${node.tag}' is not allowed`);
+  }
+
+  // Validate attributes
+  if (node.attributes) {
+    for (const [attr, value] of Object.entries(node.attributes)) {
+      if (!isAllowedAttribute(node.tag, attr)) {
+        errors.push(`${path}: Attribute '${attr}' is not allowed on tag '${node.tag}'`);
+      } else {
+        // Sanitize attribute value
+        const sanitized = sanitizeAttributeValue(node.tag, attr, value);
+        if (sanitized !== String(value)) {
+          errors.push(`${path}: Attribute '${attr}' has unsafe value`);
+        }
+      }
+    }
+  }
+
+  // Validate classes
+  if (node.classes) {
+    if (!Array.isArray(node.classes)) {
+      errors.push(`${path}: Classes must be an array`);
+    } else {
+      const sanitized = sanitizeClasses(node.classes);
+      if (sanitized.length !== node.classes.length) {
+        errors.push(`${path}: Some classes were blocked`);
+      }
+    }
+  }
+
+  // Validate bindings
+  if (node.bindings) {
+    if (node.bindings.foreach) {
+      if (!node.bindings.foreach.items || typeof node.bindings.foreach.items !== "string") {
+        errors.push(`${path}: foreach.items must be a string data path`);
+      }
+      if (!node.bindings.foreach.leaf) {
+        errors.push(`${path}: foreach.leaf is required`);
+      } else {
+        // Recursively validate nested leaf
+        const nestedResult = validateLeaf(node.bindings.foreach.leaf, `${path}.foreach.leaf`);
+        if (!nestedResult.valid) {
+          errors.push(...(nestedResult.errors || []));
+        }
+      }
+    }
+  }
+
+  // Validate events
+  if (node.events) {
+    for (const [eventName, eventConfig] of Object.entries(node.events)) {
+      if (!eventConfig || typeof eventConfig !== "object") {
+        errors.push(`${path}: Event '${eventName}' must be an EventConfig object`);
+        continue;
+      }
+
+      if (!eventConfig.event || typeof eventConfig.event !== "string") {
+        errors.push(`${path}: Event '${eventName}' must have an 'event' string property`);
+      }
+    }
+  }
+
+  // Recursively validate children
+  if (node.children) {
+    node.children.forEach((child, index) => {
+      if (typeof child === "object") {
+        const childResult = validateLeaf(child, `${path}.children[${index}]`);
+        if (!childResult.valid) {
+          errors.push(...(childResult.errors || []));
+        }
+      }
+      // String children are always safe
+    });
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors: errors.length > 0 ? errors : undefined,
+  };
+}
+
