@@ -1,5 +1,5 @@
 <script>
-	import TextWrap from '../../components/TextWrap.svelte';
+	import TextWrap from '../TextWrap.svelte';
 </script>
 
 <TextWrap>
@@ -69,4 +69,3 @@
 	</p>
 	<p>The languages available for contact are: German, English.</p>
 </TextWrap>
-

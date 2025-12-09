@@ -11,10 +11,7 @@
 		"./views": "./src/views/index.js",
 		"./views/types": "./src/views/types.ts",
 		"./tokens": "./src/tokens/index.js",
-		"./utilities": "./src/utilities/index.js",
-		"./legal/privacy-policy": "./src/legal/privacy-policy/+page.svelte",
-		"./legal/legal-notice": "./src/legal/legal-notice/+page.svelte",
-		"./legal/social-media-privacy-policy": "./src/legal/social-media-privacy-policy/+page.svelte"
+		"./utilities": "./src/utilities/index.js"
 	},
 	"peerDependencies": {
 		"svelte": "^5.0.0",

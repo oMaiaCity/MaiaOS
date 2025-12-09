@@ -1,6 +1,5 @@
 <script>
-	import LegalNotice from '@hominio/brand/legal/legal-notice/+page.svelte';
+  import { LegalNotice } from "@hominio/brand/components";
 </script>
 
 <LegalNotice />
-

@@ -1,6 +1,5 @@
 <script>
-	import SocialMediaPrivacyPolicy from '@hominio/brand/legal/social-media-privacy-policy/+page.svelte';
+  import { SocialMediaPrivacyPolicy } from "@hominio/brand/components";
 </script>
 
 <SocialMediaPrivacyPolicy />
-

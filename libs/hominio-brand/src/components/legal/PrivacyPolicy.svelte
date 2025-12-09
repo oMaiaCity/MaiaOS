@@ -1,5 +1,5 @@
 <script>
-	import TextWrap from '../../components/TextWrap.svelte';
+	import TextWrap from '../TextWrap.svelte';
 </script>
 
 <TextWrap>

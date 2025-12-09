@@ -11,3 +11,8 @@ export { default as TextWrap } from './TextWrap.svelte';
 
 export { default as LoadingSpinner } from './LoadingSpinner.svelte';
 
+// Legal components
+export { default as LegalNotice } from './legal/LegalNotice.svelte';
+export { default as PrivacyPolicy } from './legal/PrivacyPolicy.svelte';
+export { default as SocialMediaPrivacyPolicy } from './legal/SocialMediaPrivacyPolicy.svelte';
+
