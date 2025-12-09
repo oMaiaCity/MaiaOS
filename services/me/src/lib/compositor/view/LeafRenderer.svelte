@@ -34,48 +34,51 @@
       // Evaluate JavaScript expression in the context of data
       try {
         // Extract item from data if it exists (for foreach contexts)
-        // Access data.item directly to ensure reactivity - Svelte will track changes
-        // If item doesn't exist, create an empty object so expressions don't error
         const item = "item" in data && data.item ? (data.item as Record<string, unknown>) : {};
-        // Access item.status directly to ensure reactivity tracking
-        // This ensures Svelte tracks changes to nested properties
-        const _ = item.status;
+
+        // Access all item properties to ensure reactivity tracking
+        // This ensures Svelte tracks changes to any nested properties
+        if (item && typeof item === "object") {
+          Object.keys(item).forEach((key) => {
+            const _ = item[key];
+          });
+        }
 
         // Check if expression references 'data.' - if so, we need to provide data context
         if (path.includes("data.")) {
-          // Access data properties to ensure reactivity
+          // Dynamically extract all data properties and create variables
           const dataObj = data as Record<string, unknown>;
-          const viewMode = dataObj.viewMode;
-          const newTodoText = dataObj.newTodoText;
-          const showModal = dataObj.showModal;
-          const error = dataObj.error;
+          const dataKeys: string[] = [];
+          const dataValues: unknown[] = [];
 
-          // Replace 'data.' with direct variable access in the expression
-          // e.g., "data.viewMode === 'list'" becomes "viewMode === 'list'"
-          // Handle property access like "data.newTodoText.length" -> "newTodoText.length"
+          // Extract all data.* references from the expression
+          const dataPropertyMatches = path.matchAll(/data\.(\w+)/g);
+          const seenProperties = new Set<string>();
+
+          for (const match of dataPropertyMatches) {
+            const propName = match[1];
+            if (!seenProperties.has(propName)) {
+              seenProperties.add(propName);
+              dataKeys.push(propName);
+              // Access the property to ensure reactivity
+              dataValues.push(dataObj[propName]);
+            }
+          }
+
+          // Replace 'data.property' with just 'property' in the expression
           let expression = path;
-          // Replace data.property with just property (handles both simple and chained access)
-          expression = expression.replace(/data\.viewMode/g, "viewMode");
-          expression = expression.replace(/data\.newTodoText/g, "newTodoText");
-          expression = expression.replace(/data\.showModal/g, "showModal");
-          expression = expression.replace(/data\.error/g, "error");
+          dataKeys.forEach((key) => {
+            expression = expression.replace(new RegExp(`data\\.${key}`, "g"), key);
+          });
 
           // Use Function constructor for safer evaluation than eval
-          // The expression can access the data properties directly as variables
-          const func = new Function(
-            "viewMode",
-            "newTodoText",
-            "showModal",
-            "error",
-            "item",
-            `return ${expression}`,
-          );
-          const result = func(viewMode, newTodoText, showModal, error, item);
+          // Dynamically create function with all referenced data properties
+          const func = new Function(...dataKeys, "item", `return ${expression}`);
+          const result = func(...dataValues, item);
           return result;
         } else {
           // Expression only references 'item' (for foreach contexts)
           // Use Function constructor for safer evaluation than eval
-          // The expression can access 'item' directly
           const func = new Function("item", `return ${path}`);
           const result = func(item);
           return result;
@@ -102,12 +105,15 @@
       const contextData = itemData ? { ...data, item: itemData } : data;
       const resolvedValue = resolveDataPath(contextData, payload);
 
-      // If the payload path looks like it's an ID (ends with .id), wrap it in an object
-      // This handles cases where skills expect { todoId: "..." } but config passes "item.id"
-      if (payload.endsWith(".id") || payload.endsWith("Id")) {
-        // Extract the property name from the event context if possible
-        // For now, default to "todoId" for todo-related events
-        return { todoId: resolvedValue };
+      // Standardize: Always wrap ID paths as { id: ... }
+      // This handles cases where config passes "item.id" and skills expect { id: "..." }
+      if (payload.endsWith(".id") || payload.match(/\.\w+Id$/)) {
+        return { id: resolvedValue };
+      }
+
+      // If payload is just "item.id" (without the .id check above), wrap it
+      if (payload === "item.id" || payload === "data.item.id") {
+        return { id: resolvedValue };
       }
 
       return resolvedValue;
@@ -137,6 +143,7 @@
       itemData ||
       ("item" in data && data.item ? (data.item as Record<string, unknown>) : undefined);
     const payload = resolvePayload(eventConfig.payload, contextItemData);
+
     onEvent(eventConfig.event, payload);
   }
 
@@ -156,12 +163,15 @@
   });
   const visibleValue = $derived.by(() => {
     if (!leaf.bindings?.visible) return undefined;
-    // Access data and item.status directly to ensure reactivity
+    // Access data to ensure reactivity
     const _ = data;
-    // If we're in a foreach context, access item.status to trigger reactivity
-    if ("item" in data && data.item) {
+    // If we're in a foreach context, access all item properties to trigger reactivity
+    if ("item" in data && data.item && typeof data.item === "object") {
       const item = data.item as Record<string, unknown>;
-      const __ = item.status; // Access status to ensure reactivity
+      // Access all properties to ensure reactivity tracking for any property changes
+      Object.keys(item).forEach((key) => {
+        const __ = item[key];
+      });
     }
     return resolveValue(leaf.bindings.visible);
   });
@@ -171,22 +181,23 @@
 
     // Access data to ensure reactivity
     const _ = data;
-    // If the path is "data.todos" or "todos", access it directly for better reactivity
-    if (leaf.bindings.foreach.items === "data.todos" || leaf.bindings.foreach.items === "todos") {
-      const todos = (data.todos as unknown[]) || [];
-      // Access the array length and each item's status to ensure reactivity
-      const __ = todos.length;
-      todos.forEach((todo) => {
-        if (todo && typeof todo === "object" && "status" in todo) {
-          const ___ = (todo as Record<string, unknown>).status;
-        }
-      });
-      return todos;
-    }
 
+    // Resolve the items path generically
     const items = resolveValue(leaf.bindings.foreach.items);
+
     // Ensure we return an array (even if empty) or undefined
     if (Array.isArray(items)) {
+      // Access array length and iterate through items to ensure reactivity
+      // This ensures Svelte tracks changes to the array and individual items
+      const __ = items.length;
+      items.forEach((item) => {
+        if (item && typeof item === "object") {
+          // Access all properties of each item to ensure reactivity
+          Object.keys(item).forEach((key) => {
+            const ___ = (item as Record<string, unknown>)[key];
+          });
+        }
+      });
       return items;
     }
     return undefined;
@@ -281,20 +292,16 @@
         ? (e: DragEvent) => {
             e.preventDefault();
             e.stopPropagation(); // Prevent bubbling to parent drop zones
-            // Get the todoId from dataTransfer (set during dragstart)
-            const todoId = e.dataTransfer?.getData("text/plain");
-            // Get the status from the drop event payload
+            // Get the dragged item ID from dataTransfer (set during dragstart)
+            const draggedId = e.dataTransfer?.getData("text/plain");
+            // Get the drop payload (may contain status, category, or any other properties)
             const dropPayload = resolvePayload(leaf.events!.drop!.payload);
-            if (
-              todoId &&
-              dropPayload &&
-              typeof dropPayload === "object" &&
-              "status" in dropPayload
-            ) {
-              // Combine todoId and status
+
+            if (draggedId && dropPayload && typeof dropPayload === "object") {
+              // Combine dragged ID with drop payload - always use "id" as the key
               handleEvent({
                 ...leaf.events!.drop!,
-                payload: { todoId, status: dropPayload.status },
+                payload: { id: draggedId, ...dropPayload },
               });
             } else {
               handleEvent(leaf.events!.drop!);
@@ -304,8 +311,11 @@
     >
       {#each foreachItems as item, index (typeof item === "object" && item !== null && keyProp in item ? String((item as Record)[keyProp]) : index)}
         {@const itemData = typeof item === "object" && item !== null ? item : {}}
-        <!-- Access item.status to ensure reactivity when status changes -->
-        {@const _ = (itemData as Record).status}
+        <!-- Access all item properties to ensure reactivity when any property changes -->
+        {@const itemRecord = itemData as Record}
+        {#if itemRecord}
+          {@const _ = Object.keys(itemRecord).map((key) => (itemRecord as Record)[key])}
+        {/if}
         <LeafRenderer leaf={foreachConfig.leaf} data={{ ...data, item: itemData }} {onEvent} />
       {/each}
     </svelte:element>
@@ -354,12 +364,17 @@
       ? (e: DragEvent) => {
           if (e.dataTransfer) {
             e.dataTransfer.effectAllowed = "move";
-            // Store the todoId in dataTransfer for drop event
+            // Store the item ID in dataTransfer for drop event
             // Extract itemData from data if in foreach context
             const contextItemData = "item" in data && data.item ? (data.item as Record) : undefined;
             const payload = resolvePayload(leaf.events!.dragstart!.payload, contextItemData);
-            if (payload && typeof payload === "object" && "todoId" in payload) {
-              e.dataTransfer.setData("text/plain", String(payload.todoId));
+
+            if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+              // Always use "id" property - standardized across the stack
+              const payloadObj = payload as Record;
+              if ("id" in payloadObj) {
+                e.dataTransfer.setData("text/plain", String(payloadObj.id));
+              }
             } else if (typeof payload === "string") {
               e.dataTransfer.setData("text/plain", payload);
             }
@@ -382,15 +397,32 @@
       ? (e: DragEvent) => {
           e.preventDefault();
           e.stopPropagation(); // Prevent bubbling to parent drop zones
-          // Get the todoId from dataTransfer (set during dragstart)
-          const todoId = e.dataTransfer?.getData("text/plain");
-          // Get the status from the drop event payload
+          // Get the dragged item ID from dataTransfer (set during dragstart)
+          const draggedId = e.dataTransfer?.getData("text/plain");
+          // Get the drop payload (may contain status, category, or any other properties)
           const dropPayload = resolvePayload(leaf.events!.drop!.payload);
-          if (todoId && dropPayload && typeof dropPayload === "object" && "status" in dropPayload) {
-            // Combine todoId and status
+
+          if (draggedId && dropPayload && typeof dropPayload === "object") {
+            // Merge dragged ID with drop payload properties
+            // Extract the ID property name from the dragstart payload if available
+            const dragStartPayload = resolvePayload(leaf.events!.dragstart?.payload);
+            let idKey = "id"; // Default key
+
+            // Try to infer the ID key from the dragstart payload
+            if (dragStartPayload && typeof dragStartPayload === "object") {
+              // Look for common ID property names
+              const possibleIdKeys = Object.keys(dragStartPayload).filter(
+                (key) => key.toLowerCase().endsWith("id") || key === "id",
+              );
+              if (possibleIdKeys.length > 0) {
+                idKey = possibleIdKeys[0];
+              }
+            }
+
+            // Combine dragged ID with drop payload
             handleEvent({
               ...leaf.events!.drop!,
-              payload: { todoId, status: dropPayload.status },
+              payload: { [idKey]: draggedId, ...dropPayload },
             });
           } else {
             handleEvent(leaf.events!.drop!);
@@ -481,12 +513,17 @@
       ? (e: DragEvent) => {
           if (e.dataTransfer) {
             e.dataTransfer.effectAllowed = "move";
-            // Store the todoId in dataTransfer for drop event
+            // Store the item ID in dataTransfer for drop event
             // Extract itemData from data if in foreach context
             const contextItemData = "item" in data && data.item ? (data.item as Record) : undefined;
             const payload = resolvePayload(leaf.events!.dragstart!.payload, contextItemData);
-            if (payload && typeof payload === "object" && "todoId" in payload) {
-              e.dataTransfer.setData("text/plain", String(payload.todoId));
+
+            if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+              // Always use "id" property - standardized across the stack
+              const payloadObj = payload as Record;
+              if ("id" in payloadObj) {
+                e.dataTransfer.setData("text/plain", String(payloadObj.id));
+              }
             } else if (typeof payload === "string") {
               e.dataTransfer.setData("text/plain", payload);
             }
@@ -509,15 +546,32 @@
       ? (e: DragEvent) => {
           e.preventDefault();
           e.stopPropagation(); // Prevent bubbling to parent drop zones
-          // Get the todoId from dataTransfer (set during dragstart)
-          const todoId = e.dataTransfer?.getData("text/plain");
-          // Get the status from the drop event payload
+          // Get the dragged item ID from dataTransfer (set during dragstart)
+          const draggedId = e.dataTransfer?.getData("text/plain");
+          // Get the drop payload (may contain status, category, or any other properties)
           const dropPayload = resolvePayload(leaf.events!.drop!.payload);
-          if (todoId && dropPayload && typeof dropPayload === "object" && "status" in dropPayload) {
-            // Combine todoId and status
+
+          if (draggedId && dropPayload && typeof dropPayload === "object") {
+            // Merge dragged ID with drop payload properties
+            // Extract the ID property name from the dragstart payload if available
+            const dragStartPayload = resolvePayload(leaf.events!.dragstart?.payload);
+            let idKey = "id"; // Default key
+
+            // Try to infer the ID key from the dragstart payload
+            if (dragStartPayload && typeof dragStartPayload === "object") {
+              // Look for common ID property names
+              const possibleIdKeys = Object.keys(dragStartPayload).filter(
+                (key) => key.toLowerCase().endsWith("id") || key === "id",
+              );
+              if (possibleIdKeys.length > 0) {
+                idKey = possibleIdKeys[0];
+              }
+            }
+
+            // Combine dragged ID with drop payload
             handleEvent({
               ...leaf.events!.drop!,
-              payload: { todoId, status: dropPayload.status },
+              payload: { [idKey]: draggedId, ...dropPayload },
             });
           } else {
             handleEvent(leaf.events!.drop!);

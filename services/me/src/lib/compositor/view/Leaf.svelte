@@ -37,7 +37,7 @@
   <div class="text-slate-600">Loading...</div>
 {:else if node.leaf && validation.valid}
   <LeafRenderer leaf={node.leaf} {data} {onEvent} />
-{:else}
+    {:else}
   <div class="text-red-500 p-4 rounded bg-red-50">
     Invalid leaf configuration: {validation.errors?.join(", ")}
   </div>

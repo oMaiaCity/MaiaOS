@@ -94,23 +94,23 @@ const toggleTodoSkill: Skill = {
     parameters: {
       type: "object",
       properties: {
-        todoId: {
+        id: {
           type: "string",
           description: "The ID of the todo to toggle",
           required: true,
         },
       },
-      required: ["todoId"],
+      required: ["id"],
     },
   },
   execute: (data: Data, payload?: unknown) => {
-    const todoId = (payload as { todoId?: string })?.todoId;
-    if (!todoId) return;
+    const id = (payload as { id?: string })?.id;
+    if (!id) return;
 
     const todos = (data.todos as Array<{ id: string; status?: string }>) || [];
     // Create a new array with updated todo to ensure reactivity
     data.todos = todos.map((todo) => {
-      if (todo.id === todoId) {
+      if (todo.id === id) {
         const currentStatus = todo.status || "todo";
         const newStatus = currentStatus === "done" ? "todo" : "done";
         // Create a completely new object to ensure Svelte detects the change
@@ -133,7 +133,7 @@ const updateTodoStatusSkill: Skill = {
     parameters: {
       type: "object",
       properties: {
-        todoId: {
+        id: {
           type: "string",
           description: "The ID of the todo to update",
           required: true,
@@ -144,16 +144,16 @@ const updateTodoStatusSkill: Skill = {
           required: true,
         },
       },
-      required: ["todoId", "status"],
+      required: ["id", "status"],
     },
   },
   execute: (data: Data, payload?: unknown) => {
-    const { todoId, status } = (payload as { todoId?: string; status?: string }) || {};
-    if (!todoId || !status) return;
+    const { id, status } = (payload as { id?: string; status?: string }) || {};
+    if (!id || !status) return;
 
     const todos = (data.todos as Array<{ id: string; status?: string }>) || [];
     data.todos = todos.map((todo) =>
-      todo.id === todoId ? { ...todo, status } : todo,
+      todo.id === id ? { ...todo, status } : todo,
     );
   },
 };
@@ -167,21 +167,21 @@ const removeTodoSkill: Skill = {
     parameters: {
       type: "object",
       properties: {
-        todoId: {
+        id: {
           type: "string",
           description: "The ID of the todo to remove",
           required: true,
         },
       },
-      required: ["todoId"],
+      required: ["id"],
     },
   },
   execute: (data: Data, payload?: unknown) => {
-    const todoId = (payload as { todoId?: string })?.todoId;
-    if (!todoId) return;
+    const id = (payload as { id?: string })?.id;
+    if (!id) return;
 
     const todos = (data.todos as Array<{ id: string }>) || [];
-    data.todos = todos.filter((todo) => todo.id !== todoId);
+    data.todos = todos.filter((todo) => todo.id !== id);
   },
 };
 
@@ -270,21 +270,21 @@ const openModalSkill: Skill = {
     parameters: {
       type: "object",
       properties: {
-        todoId: {
+        id: {
           type: "string",
           description: "The ID of the todo to display in the modal",
           required: true,
         },
       },
-      required: ["todoId"],
+      required: ["id"],
     },
   },
   execute: (data: Data, payload?: unknown) => {
-    const todoId = (payload as { todoId?: string })?.todoId;
-    if (!todoId) return;
+    const id = (payload as { id?: string })?.id;
+    if (!id) return;
 
     const todos = (data.todos as Array<{ id: string }>) || [];
-    const todo = todos.find((t) => t.id === todoId);
+    const todo = todos.find((t) => t.id === id);
     if (todo) {
       data.selectedTodo = todo;
       data.showModal = true;
