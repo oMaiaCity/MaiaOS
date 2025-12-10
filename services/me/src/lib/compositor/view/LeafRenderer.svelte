@@ -22,14 +22,21 @@
 
   // Resolve data path to value or evaluate expression
   function resolveValue(path: string): unknown {
-    // Check if it's an expression (contains operators like ===, !==, etc.)
+    // Check if it's an expression (contains operators like ===, !==, !, ||, &&, typeof, etc.)
     if (
       path.includes("===") ||
       path.includes("!==") ||
       path.includes("==") ||
       path.includes("!=") ||
       path.includes(">") ||
-      path.includes("<")
+      path.includes("<") ||
+      path.includes("||") ||
+      path.includes("&&") ||
+      path.includes("typeof") ||
+      path.startsWith("!") ||
+      (path.includes("!") && path.match(/\s*!\s*data\./)) || // Handle !data.property patterns
+      path.includes("String(") || // Handle String() function calls
+      path.includes(".trim()") // Handle .trim() method calls
     ) {
       // Evaluate JavaScript expression in the context of data
       try {
@@ -73,15 +80,94 @@
 
           // Use Function constructor for safer evaluation than eval
           // Dynamically create function with all referenced data properties
-          const func = new Function(...dataKeys, "item", `return ${expression}`);
-          const result = func(...dataValues, item);
+          // Include String and Number as global functions for expressions
+          const func = new Function(
+            ...dataKeys,
+            "item",
+            "String",
+            "Number",
+            `return ${expression}`,
+          );
+          const result = func(...dataValues, item, String, Number);
+          // Debug logging for disabled state
+          if (path.includes("selectedRecipient") || path.includes("sendAmount")) {
+            const valuesObj = Object.fromEntries(dataKeys.map((k, i) => [k, dataValues[i]]));
+            console.log(
+              `[Disabled Expression] Expression: ${expression}, Result:`,
+              result,
+              "Values:",
+              JSON.stringify(valuesObj, null, 2),
+            );
+          }
           return result;
         } else {
-          // Expression only references 'item' (for foreach contexts)
-          // Use Function constructor for safer evaluation than eval
-          const func = new Function("item", `return ${path}`);
-          const result = func(item);
-          return result;
+          // Expression doesn't reference 'data.' - check if it references properties directly
+          // Extract property names from the expression (e.g., "selectedRecipient", "sendAmount")
+          const dataObj = data as Record<string, unknown>;
+          const propertyMatches = path.matchAll(/\b(\w+)\b/g);
+          const seenProperties = new Set<string>();
+          const dataKeys: string[] = [];
+          const dataValues: unknown[] = [];
+
+          for (const match of propertyMatches) {
+            const propName = match[1];
+            // Skip JavaScript keywords and functions
+            // Skip JavaScript keywords and functions
+            if (
+              propName === "item" ||
+              propName === "String" ||
+              propName === "Number" ||
+              propName === "typeof" ||
+              propName === "isNaN" ||
+              propName === "trim" ||
+              propName === "return" ||
+              propName === "true" ||
+              propName === "false" ||
+              propName === "null" ||
+              propName === "undefined" ||
+              propName === "void" ||
+              propName === "new"
+            ) {
+              continue;
+            }
+            // Check if this property exists in data
+            if (propName in dataObj && !seenProperties.has(propName)) {
+              seenProperties.add(propName);
+              dataKeys.push(propName);
+              // Access the property to ensure reactivity
+              dataValues.push(dataObj[propName]);
+            }
+          }
+
+          // If we found data properties, use them; otherwise fall back to item-only evaluation
+          if (dataKeys.length > 0) {
+            const func = new Function(
+              ...dataKeys,
+              "item",
+              "String",
+              "Number",
+              "isNaN",
+              `return ${path}`,
+            );
+            const result = func(...dataValues, item, String, Number, isNaN);
+            // Debug logging for disabled state
+            if (path.includes("selectedRecipient") || path.includes("sendAmount")) {
+              const valuesObj = Object.fromEntries(dataKeys.map((k, i) => [k, dataValues[i]]));
+              console.log(
+                `[Disabled Expression] Expression: ${path}, Result:`,
+                result,
+                "Values:",
+                JSON.stringify(valuesObj, null, 2),
+              );
+            }
+            return result;
+          } else {
+            // Expression only references 'item' (for foreach contexts)
+            // Use Function constructor for safer evaluation than eval
+            const func = new Function("item", "String", "Number", "isNaN", `return ${path}`);
+            const result = func(item, String, Number, isNaN);
+            return result;
+          }
         }
       } catch (error) {
         console.warn(`Failed to evaluate expression "${path}":`, error);
@@ -147,8 +233,22 @@
     onEvent(eventConfig.event, payload);
   }
 
-  // Get sanitized classes
-  const classes = $derived(leaf.classes ? sanitizeClasses(leaf.classes).join(" ") : "");
+  // Get sanitized classes - resolve dynamic class values
+  const classes = $derived.by(() => {
+    if (!leaf.classes) return "";
+
+    // Resolve dynamic classes (e.g., classes that reference data/item)
+    const resolvedClasses = leaf.classes.map((cls) => {
+      if (typeof cls === "string" && (cls.includes("item.") || cls.includes("data."))) {
+        // Try to resolve as data path or expression
+        const resolved = resolveValue(cls);
+        return typeof resolved === "string" ? resolved : cls;
+      }
+      return cls;
+    });
+
+    return sanitizeClasses(resolvedClasses).join(" ");
+  });
 
   // Resolve bindings - ensure we access data to trigger reactivity
   const boundValue = $derived.by(() => {
@@ -163,19 +263,44 @@
   });
   const visibleValue = $derived.by(() => {
     if (!leaf.bindings?.visible) return undefined;
-    // Access data to ensure reactivity
+    // Access data to ensure reactivity - explicitly access showSendModal for visibility
     const _ = data;
+    const dataObj = data as Record<string, unknown>;
+    const __ = dataObj.showSendModal; // Explicitly access showSendModal for reactivity
     // If we're in a foreach context, access all item properties to trigger reactivity
     if ("item" in data && data.item && typeof data.item === "object") {
       const item = data.item as Record<string, unknown>;
       // Access all properties to ensure reactivity tracking for any property changes
       Object.keys(item).forEach((key) => {
-        const __ = item[key];
+        const ___ = item[key];
       });
     }
     return resolveValue(leaf.bindings.visible);
   });
   const isVisible = $derived(visibleValue === undefined ? true : Boolean(visibleValue));
+
+  const disabledValue = $derived.by(() => {
+    if (!leaf.bindings?.disabled) return undefined;
+    // Access data to ensure reactivity - explicitly access selectedRecipient and sendAmount
+    // Force reactivity by accessing these properties directly and storing them
+    const dataObj = data as Record<string, unknown>;
+    const selectedRecipient = dataObj.selectedRecipient;
+    const sendAmount = dataObj.sendAmount;
+    // Access the values to ensure Svelte tracks them - this is critical for reactivity
+    const _ = selectedRecipient;
+    const __ = sendAmount;
+    // If we're in a foreach context, access all item properties to trigger reactivity
+    if ("item" in data && data.item && typeof data.item === "object") {
+      const item = data.item as Record<string, unknown>;
+      // Access all properties to ensure reactivity tracking
+      Object.keys(item).forEach((key) => {
+        const ___ = item[key];
+      });
+    }
+    // Evaluate the expression with current data values
+    return resolveValue(leaf.bindings.disabled);
+  });
+  const isDisabled = $derived(disabledValue === undefined ? false : Boolean(disabledValue));
   const foreachItems = $derived.by(() => {
     if (!leaf.bindings?.foreach) return undefined;
 
@@ -245,16 +370,68 @@
   });
 
   const attributes = $derived.by(() => {
-    const attrs: Record<string, string | boolean | number> = { ...leaf.attributes };
+    const attrs: Record<string, string | boolean | number | ((e: Event) => void)> = {
+      ...leaf.attributes,
+    };
 
     // Bind value for inputs - use reactive value
+    // CRITICAL: If there's an input event handler, set initial value but don't make it reactive
+    // This allows the browser to manage the input naturally while the handler updates data
     if (leaf.tag === "input" && leaf.bindings?.value) {
-      // Access data to ensure reactivity
-      const _ = data;
-      // Get the current input value (which is already reactive)
-      const value = inputValue;
-      // Always set value, even if empty string
-      attrs.value = value !== undefined ? String(value) : "";
+      if (!leaf.events?.input) {
+        // No input handler: use reactive value binding
+        const _ = data;
+        const value = inputValue;
+        attrs.value = value !== undefined ? String(value) : "";
+      } else {
+        // Has input handler: only set initial value (non-reactive)
+        // The input handler will manage updates
+        const value = inputValue;
+        if (value !== undefined && value !== "") {
+          attrs.value = String(value);
+        }
+      }
+    }
+
+    // Bind disabled state from bindings (reactive)
+    if (leaf.bindings?.disabled !== undefined) {
+      attrs.disabled = isDisabled;
+    }
+
+    // CRITICAL: Add input event handler to attrs so it gets properly attached
+    if (leaf.events?.input) {
+      const eventConfig = leaf.events.input;
+      attrs.oninput = (e: Event) => {
+        console.log(
+          "[LeafRenderer] oninput fired on element:",
+          leaf.tag,
+          "event:",
+          eventConfig.event,
+        );
+        const target = e.target as HTMLInputElement;
+        // Determine payload key based on event name
+        const payloadKey =
+          eventConfig.event === "UPDATE_SEND_AMOUNT"
+            ? "amount"
+            : eventConfig.event === "UPDATE_SEND_DESCRIPTION"
+              ? "description"
+              : "text";
+        // Always send the input value in the payload
+        const payload: Record<string, unknown> = eventConfig.payload
+          ? {
+              ...(typeof eventConfig.payload === "object" && !Array.isArray(eventConfig.payload)
+                ? (eventConfig.payload as Record<string, unknown>)
+                : {}),
+              [payloadKey]: target.value,
+            }
+          : { [payloadKey]: target.value };
+
+        console.log("[Input Event]", eventConfig.event, "fired with payload:", payload);
+
+        if (onEvent) {
+          onEvent(eventConfig.event, payload);
+        }
+      };
     }
 
     return attrs;
@@ -336,23 +513,6 @@
       }
       handleEvent(leaf.events.click);
     }}
-    oninput={leaf.events?.input
-      ? (e: Event) => {
-          const target = e.target as HTMLInputElement;
-          const eventConfig = leaf.events!.input!;
-          const payload = eventConfig.payload
-            ? {
-                ...(typeof eventConfig.payload === "object" && !Array.isArray(eventConfig.payload)
-                  ? eventConfig.payload
-                  : {}),
-                text: target.value,
-              }
-            : { text: target.value };
-          if (onEvent) {
-            onEvent(eventConfig.event, payload);
-          }
-        }
-      : undefined}
     onchange={leaf.events?.change ? () => handleEvent(leaf.events!.change!) : undefined}
     onsubmit={leaf.events?.submit
       ? (e: Event) => {
@@ -443,9 +603,30 @@
   />
 {:else if leaf.tag === "icon" && leaf.icon}
   <!-- Iconify icon rendering -->
+  {@const iconName =
+    typeof leaf.icon.name === "string" &&
+    (leaf.icon.name.includes("item.") || leaf.icon.name.includes("data."))
+      ? String(resolveValue(leaf.icon.name))
+      : leaf.icon.name}
+  {@const iconClasses = leaf.icon.classes
+    ? leaf.icon.classes.map((cls) => {
+        // Resolve dynamic classes (e.g., "item.categoryColor")
+        if (typeof cls === "string" && (cls.includes("item.") || cls.includes("data."))) {
+          return String(resolveValue(cls));
+        }
+        return cls;
+      })
+    : []}
+  {@const iconColor = leaf.icon.color
+    ? leaf.icon.color.includes("item.") || leaf.icon.color.includes("data.")
+      ? String(resolveValue(leaf.icon.color))
+      : leaf.icon.color
+    : undefined}
+  {@const iconStyle = iconColor ? `color: ${iconColor}` : undefined}
   <Icon
-    icon={leaf.icon.name}
-    class={leaf.icon.classes ? sanitizeClasses(leaf.icon.classes).join(" ") : "w-4 h-4"}
+    icon={iconName}
+    class={iconClasses.length > 0 ? sanitizeClasses(iconClasses).join(" ") : "w-4 h-4"}
+    style={iconStyle}
     {...attributes}
   />
 {:else}
@@ -478,9 +659,9 @@
       // But if the button is inside a modal backdrop, stop propagation after handling
       handleEvent(leaf.events.click);
 
-      // If this is a button inside a modal backdrop, stop propagation after handling
-      // This prevents the backdrop click from also firing
-      if (leaf.tag === "button" && leaf.events.click.event === "CLOSE_MODAL") {
+      // Stop propagation for all buttons to prevent event bubbling issues
+      // This is especially important for buttons inside modals
+      if (leaf.tag === "button") {
         e.stopPropagation();
       }
     }}
@@ -488,15 +669,29 @@
       ? (e: Event) => {
           const target = e.target as HTMLInputElement;
           const eventConfig = leaf.events!.input!;
-          // Always send the input value in the payload
-          const payload = eventConfig.payload
+          const payloadKey =
+            eventConfig.event === "UPDATE_SEND_AMOUNT"
+              ? "amount"
+              : eventConfig.event === "UPDATE_SEND_DESCRIPTION"
+                ? "description"
+                : "text";
+          const payload: Record = eventConfig.payload
             ? {
                 ...(typeof eventConfig.payload === "object" && !Array.isArray(eventConfig.payload)
-                  ? eventConfig.payload
+                  ? (eventConfig.payload as Record)
                   : {}),
-                text: target.value,
+                [payloadKey]: target.value,
               }
-            : { text: target.value };
+            : { [payloadKey]: target.value };
+
+          if (eventConfig.event === "UPDATE_SEND_AMOUNT") {
+            console.log(
+              "[Input Event] UPDATE_SEND_AMOUNT fired, value:",
+              target.value,
+              "payload:",
+              payload,
+            );
+          }
           if (onEvent) {
             onEvent(eventConfig.event, payload);
           }

@@ -6,9 +6,11 @@
 export * from "./types";
 export * from "./registry";
 export * from "./todo-skills";
+export * from "./wallet-skills";
 
 // Import all skill modules
 import { todoSkills } from "./todo-skills";
+import { walletSkills } from "./wallet-skills";
 import { registerSkillsFromConfig } from "./registry";
 
 // ========== AUTO-REGISTER ALL SKILLS ==========
@@ -27,6 +29,7 @@ export function registerAllSkills(): void {
   }
   
   registerSkillsFromConfig(todoSkills);
+  registerSkillsFromConfig(walletSkills);
   // Add more skill registrations here as they're created
   
   skillsRegistered = true;

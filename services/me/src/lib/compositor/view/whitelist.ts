@@ -154,10 +154,12 @@ const TAILWIND_PATTERNS = [
   /^(bg|text|border)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(\d+)$/,
   /^(bg|text|border)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)-(\d+)\/(\d+)$/, // Opacity modifiers like bg-red-100/50
   /^(bg|text|border)-(white|black|transparent|current)$/,
+  /^(bg|text|border)-(alert|success|warning|info)$/, // Semantic color classes like text-alert, text-success
   /^(bg|text|border)-(white|black|transparent|current)\/(\d+)$/, // Opacity modifiers like bg-black/50
   /^border$/, // Standalone border
   /^border-(\d+|\[.*\])$/, // border-2, border-[...]
   /^border-(l|r|t|b)-(\d+|\[.*\])$/, // border-l-2, border-r-2, border-t-2, border-b-2
+  /^border-(l|r|t|b)$/, // border-l, border-r, border-t, border-b (without number)
   // Gradients
   /^(bg|text|border)-(gradient|linear)-to-(r|l|t|b|tr|tl|br|bl)$/,
   /^(from|via|to)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(\d+)$/,
@@ -179,6 +181,7 @@ const TAILWIND_PATTERNS = [
   /^rounded(-(none|sm|md|lg|xl|2xl|3xl|full|\d+))?$/,
   /^rounded-\[.*\]$/, // Allow arbitrary rounded values
   /^opacity-(\d+|0)$/,
+  /^bg-opacity-(\d+|0)$/, // bg-opacity-50, bg-opacity-75, etc.
   /^backdrop-blur(-(sm|md|lg|xl|2xl|3xl|none))?$/,
 
   // Transitions
@@ -188,9 +191,14 @@ const TAILWIND_PATTERNS = [
 
   // Positioning
   /^(static|fixed|absolute|relative|sticky)$/,
-  /^(top|right|bottom|left|inset|inset-x|inset-y)-(\d+|auto|full|screen|0)$/,
-  /^-(top|right|bottom|left)-(\d+|auto|full|screen|0)$/, // Negative positioning: -left-2, -top-4, etc.
+  /^(top|right|bottom|left|inset|inset-x|inset-y)-(\d+|auto|full|screen|0|1\/2|1\/3|2\/3|1\/4|3\/4)$/, // Support fractional values like top-1/2
+  /^-(top|right|bottom|left)-(\d+|auto|full|screen|0|1\/2|1\/3|2\/3|1\/4|3\/4)$/, // Negative positioning with fractions: -left-1/2, -top-1/2, etc.
   /^z-(\d+|auto|0|10|20|30|40|50)$/,
+  // Transform
+  /^translate-[xy]-(\d+|full|1\/2|1\/3|2\/3|1\/4|3\/4|\[.*\])$/, // translate-x-1/2, translate-y-full
+  /^-translate-[xy]-(\d+|full|1\/2|1\/3|2\/3|1\/4|3\/4|\[.*\])$/, // -translate-x-1/2, -translate-y-1/2
+  /^translate-(\d+|full|1\/2|1\/3|2\/3|1\/4|3\/4|\[.*\])$/, // translate-1/2
+  /^-translate-(\d+|full|1\/2|1\/3|2\/3|1\/4|3\/4|\[.*\])$/, // -translate-1/2
   // Cursor
   /^cursor-(pointer|not-allowed|wait|text|move|help|crosshair|default|grab|grabbing)$/,
   // Pointer events

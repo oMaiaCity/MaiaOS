@@ -45,6 +45,12 @@ export interface LeafBindings {
   visible?: string;
 
   /**
+   * Data path or expression for disabled state (boolean)
+   * Example: "data.selectedRecipient === null"
+   */
+  disabled?: string;
+
+  /**
    * List rendering configuration
    */
   foreach?: {
@@ -81,6 +87,18 @@ export interface IconConfig {
    * Optional icon classes (defaults to "w-4 h-4")
    */
   classes?: string[];
+  
+  /**
+   * Optional icon color (can be a data path like "item.categoryColor")
+   * Example: "#001a42" or "item.categoryColor"
+   */
+  color?: string;
+  
+  /**
+   * Optional icon style (for dynamic styles)
+   * Example: "color: item.categoryColor"
+   */
+  style?: string;
 }
 
 /**
