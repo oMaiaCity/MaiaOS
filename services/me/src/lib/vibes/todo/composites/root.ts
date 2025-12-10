@@ -11,13 +11,13 @@ import { contentComposite } from "./content";
 export const rootComposite: CompositeConfig = {
   type: "stack", // Stack layout (flex column)
   container: {
-    class: "h-full flex flex-col",
+    class: "h-full flex flex-col max-w-4xl mx-auto",
     padding: "1.5rem",
     borderRadius: "1.5rem",
     background: "rgb(248 250 252)", // slate-50
     border: "1px solid white",
   },
-  height: "calc(100vh - 5rem)", // Full height minus padding
+  height: "100%",
   children: [
     // Header Composite - Fixed header containing title, description, viewToggle
     {

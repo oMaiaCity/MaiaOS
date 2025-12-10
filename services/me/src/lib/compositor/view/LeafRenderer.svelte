@@ -5,6 +5,7 @@
 -->
 <script lang="ts">
   import { browser } from "$app/environment";
+  import { goto } from "$app/navigation";
   import Icon from "@iconify/svelte";
   import type { LeafNode } from "./leaf-types";
   import type { Data } from "../dataStore";
@@ -374,6 +375,9 @@
       ...leaf.attributes,
     };
 
+    // Don't resolve href here - we'll do it in the template to ensure consistency
+    // This prevents conflicts between the resolved href in attributes and the click handler
+
     // Bind value for inputs - use reactive value
     // CRITICAL: If there's an input event handler, set initial value but don't make it reactive
     // This allows the browser to manage the input naturally while the handler updates data
@@ -631,14 +635,37 @@
   />
 {:else}
   <!-- Regular element rendering -->
+  {@const baseHref =
+    leaf.tag === "a" && leaf.attributes?.href && typeof leaf.attributes.href === "string"
+      ? leaf.attributes.href
+      : undefined}
+  {@const resolvedHref =
+    baseHref && baseHref.endsWith("=") && "item" in data && data.item
+      ? baseHref + String((data.item as Record).id || "")
+      : baseHref}
+  {@const isInternalLink = leaf.tag === "a" && resolvedHref && resolvedHref.startsWith("/")}
+  {@const finalAttributes =
+    leaf.tag === "a" && resolvedHref
+      ? { ...attributes, href: isInternalLink ? "#" : resolvedHref }
+      : attributes}
   <svelte:element
     this={leaf.tag}
     class={classes}
-    {...attributes}
+    {...finalAttributes}
     onclick={(e: MouseEvent) => {
-      // Stop propagation for elements without click events (like modal content)
-      if (!leaf.events?.click) {
+      // Handle anchor tags with client-side navigation (SvelteKit)
+      // CRITICAL: This must be checked FIRST and ALWAYS prevent default for internal links
+      if (leaf.tag === "a" && resolvedHref && resolvedHref.startsWith("/")) {
+        e.preventDefault();
         e.stopPropagation();
+        goto(resolvedHref, { noScroll: true });
+        return;
+      }
+
+      // Handle click events - allow clicks to bubble up to parent if no click handler
+      if (!leaf.events?.click) {
+        // Don't stop propagation - let clicks bubble up to parent elements
+        // This allows parent elements (like vibe cards) to handle clicks on child elements
         return;
       }
 
@@ -654,13 +681,12 @@
         return;
       }
 
-      // For buttons, ensure clicks work even when clicking child elements (like SVG)
-      // Don't stop propagation - let the click bubble up to the button
-      // But if the button is inside a modal backdrop, stop propagation after handling
+      // Handle the click event
       handleEvent(leaf.events.click);
 
-      // Stop propagation for all buttons to prevent event bubbling issues
+      // Only stop propagation for buttons to prevent event bubbling issues
       // This is especially important for buttons inside modals
+      // For other elements (like divs with click handlers), let clicks bubble naturally
       if (leaf.tag === "button") {
         e.stopPropagation();
       }

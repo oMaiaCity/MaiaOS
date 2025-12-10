@@ -12,8 +12,11 @@ import { backdropLeaf } from "../leafs";
 export const rootComposite: CompositeConfig = {
     type: "stack",
     container: {
-        class: "h-full flex flex-col relative",
-        background: "rgb(248 250 252)"
+        class: "h-full flex flex-col relative max-w-4xl mx-auto",
+        padding: "1.5rem",
+        borderRadius: "1.5rem",
+        background: "rgb(248 250 252)",
+        border: "1px solid white",
     },
     height: "100%",
     children: [

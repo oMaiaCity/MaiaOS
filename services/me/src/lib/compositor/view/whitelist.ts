@@ -153,9 +153,9 @@ const TAILWIND_PATTERNS = [
   // Colors
   /^(bg|text|border)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(\d+)$/,
   /^(bg|text|border)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)-(\d+)\/(\d+)$/, // Opacity modifiers like bg-red-100/50
-  /^(bg|text|border)-(white|black|transparent|current)$/,
+  /^(bg|text|border)-(white|black|transparent|current|inherit)$/,
   /^(bg|text|border)-(alert|success|warning|info)$/, // Semantic color classes like text-alert, text-success
-  /^(bg|text|border)-(white|black|transparent|current)\/(\d+)$/, // Opacity modifiers like bg-black/50
+  /^(bg|text|border)-(white|black|transparent|current|inherit)\/(\d+)$/, // Opacity modifiers like bg-black/50
   /^border$/, // Standalone border
   /^border-(\d+|\[.*\])$/, // border-2, border-[...]
   /^border-(l|r|t|b)-(\d+|\[.*\])$/, // border-l-2, border-r-2, border-t-2, border-b-2

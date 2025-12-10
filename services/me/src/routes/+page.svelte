@@ -90,8 +90,7 @@
         Welcome Back, <span
           class="text-transparent bg-clip-text bg-linear-to-r from-[#002455] to-[#001a3d]"
         >
-          {(me.profile && (me.profile as any).$isLoaded && (me.profile as any).name) ||
-            "Traveler"}
+          {(me.profile && (me.profile as any).$isLoaded && (me.profile as any).name) || "Traveler"}
         </span>
       </h1>
       <div

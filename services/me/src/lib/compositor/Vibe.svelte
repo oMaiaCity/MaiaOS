@@ -9,9 +9,10 @@
   // ========== PROPS ==========
   interface Props {
     config: VibeConfig;
+    onEvent?: (event: string, payload?: unknown) => void;
   }
 
-  let { config }: Props = $props();
+  let { config, onEvent }: Props = $props();
 
   // ========== SKILL REGISTRY SETUP ==========
   // Register all available skills (can be called once globally)
@@ -61,17 +62,14 @@
   // Single unified reactive interface - everything is just data
   const data = $derived(dataStore ? $dataStore : config.stateMachine.data || {}) as Data;
 
-  // ========== UI CLASSES ==========
-  const containerClass = $derived(
-    config.ui?.containerClass || "min-h-screen bg-gray-100 pt-20 px-4",
-  );
-  const cardClass = $derived(
-    config.ui?.cardClass ||
-      "relative overflow-hidden rounded-3xl bg-slate-50 border border-white shadow-card-default p-6",
-  );
-
   // Event handler for UI slots
   const handleSlotEvent = (event: string, payload?: unknown) => {
+    // Call optional external event handler first (for navigation, etc.)
+    if (onEvent) {
+      onEvent(event, payload);
+    }
+
+    // Then send to data store
     if (dataStore) {
       dataStore.send(event, payload);
     }
@@ -80,22 +78,17 @@
 
 {#if browser && dataStore}
   <!-- Unified View Renderer - Composite/Leaf pattern -->
-  <div class={containerClass} style="height: 100%;">
-    <div class="max-w-4xl mx-auto py-8" style="height: 100%;">
-      <div class={cardClass} style="height: 100%; display: flex; flex-direction: column;">
-        {#if dataStore}
-          <ViewRenderer
-            node={{
-              slot: "root",
-              composite: config.view.composite,
-            }}
-            {data}
-            {config}
-            onEvent={handleSlotEvent}
-          />
-        {/if}
-      </div>
-    </div>
+  <!-- All styling comes from the root composite configuration - only dimensions are set here -->
+  <div class="w-full h-full">
+    <ViewRenderer
+      node={{
+        slot: "root",
+        composite: config.view.composite,
+      }}
+      {data}
+      {config}
+      onEvent={handleSlotEvent}
+    />
   </div>
 {:else}
   <!-- SSR fallback -->

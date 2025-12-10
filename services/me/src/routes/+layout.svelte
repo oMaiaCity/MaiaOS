@@ -19,6 +19,8 @@
       return { title: "Hominio", description: "Own the destiny of your life" };
     } else if (pathname === "/data") {
       return { title: "Data Explorer", description: "Travel through your data universe" };
+    } else if (pathname.startsWith("/vibes")) {
+      return { title: "Vibes", description: "Explore and manage your vibes" };
     }
     return { title: null, description: null };
   });
@@ -37,7 +39,7 @@
     <GoogleDataSync />
     <jazz-inspector></jazz-inspector>
     <Header title={routeInfo.title} description={routeInfo.description} />
-    <main class="flex-1 w-full overflow-x-hidden">
+    <main class="flex-1 w-full h-full overflow-x-hidden">
       {@render children?.()}
     </main>
     <Footer />
