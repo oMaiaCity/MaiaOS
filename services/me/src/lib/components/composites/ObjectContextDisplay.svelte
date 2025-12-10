@@ -29,10 +29,8 @@
         <span class="text-xs text-slate-600">{label}</span>
       </div>
       <pre
-        class="text-xs text-slate-700 whitespace-pre-wrap font-mono bg-slate-50/80 p-4 rounded-lg border border-slate-200 max-w-full overflow-x-auto"
-        style="word-break: break-all; overflow-wrap: anywhere;">
-        {jsonString()}
-      </pre>
+        class="text-xs text-slate-700 whitespace-pre font-mono bg-slate-50/80 p-4 rounded-lg border border-slate-200 max-w-full overflow-x-auto overflow-y-auto"
+        style="max-height: 600px;">{jsonString()}</pre>
     </div>
   </div>
 </div>

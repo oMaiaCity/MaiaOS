@@ -12,3 +12,4 @@ export const walletVibeConfig: VibeConfig = {
   view: walletView,
 };
 
+

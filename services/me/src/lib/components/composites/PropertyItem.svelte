@@ -197,10 +197,8 @@
         {:else if !hideValue}
           {#if displayInfo.type === "object"}
             <pre
-              class="text-xs text-slate-600 whitespace-pre-wrap font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
-              style="word-break: break-all; overflow-wrap: anywhere;">
-                {displayInfo.displayValue}
-              </pre>
+              class="text-xs text-slate-600 whitespace-pre font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto overflow-y-auto"
+              style="max-height: 400px;">{displayInfo.displayValue}</pre>
           {:else if displayInfo.type === "array" && displayInfo.arrayItems}
             {@const arrayItems = displayInfo.arrayItems!}
             <div class="flex flex-wrap items-center gap-1">
@@ -453,10 +451,8 @@
           {:else if !hideValue}
             {#if displayInfo.type === "object"}
               <pre
-                class="text-xs text-slate-600 whitespace-pre-wrap font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
-                style="word-break: break-all; overflow-wrap: anywhere;">
-                  {displayInfo.displayValue}
-                </pre>
+                class="text-xs text-slate-600 whitespace-pre font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto overflow-y-auto"
+                style="max-height: 400px;">{displayInfo.displayValue}</pre>
             {:else if displayInfo.type === "array" && displayInfo.arrayItems}
               {@const arrayItems = displayInfo.arrayItems!}
               <div class="flex flex-wrap items-center gap-1">
