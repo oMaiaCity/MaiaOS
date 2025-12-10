@@ -8,11 +8,10 @@
     CoValueContextDisplay,
     GroupContextView,
     DataLayout,
-  } from "$lib/components/next/components";
-  import ObjectContextDisplay from "$lib/components/next/components/composites/ObjectContextDisplay.svelte";
-  import { extractCoValueProperties, extractRootData } from "$lib/components/next/logic";
+  } from "$lib/components";
+  import ObjectContextDisplay from "$lib/components/composites/ObjectContextDisplay.svelte";
+  import { extractCoValueProperties, extractRootData } from "$lib/logic";
   import { Group } from "jazz-tools";
-  import { CoState } from "jazz-tools/svelte";
 
   // Better Auth session
   const session = authClient.useSession();
@@ -208,7 +207,7 @@
 
   // Use the extracted logic function
   // Note: The inline function below is kept for backward compatibility during migration
-  // TODO: Remove this and use the imported extractCoValueProperties from next/logic
+  // TODO: Remove this and use the imported extractCoValueProperties from lib/logic
   function extractCoValuePropertiesInline(coValue: any): {
     properties: Record<string, any>;
     jazzMetadata: {
