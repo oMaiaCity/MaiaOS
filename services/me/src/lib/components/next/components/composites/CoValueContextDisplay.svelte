@@ -13,9 +13,11 @@
     coValue: any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onNavigate: (coValue: any, label?: string) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onObjectNavigate?: (object: any, label: string, parentCoValue: any, parentKey: string) => void;
   }
 
-  let { coValue, onNavigate }: Props = $props();
+  let { coValue, onNavigate, onObjectNavigate }: Props = $props();
 
   // Ensure CoValue is loaded
   $effect(() => {
@@ -226,6 +228,11 @@
               {coValue}
               onSelect={(coValue, fallbackKey) =>
                 handleCoValueSelect(coValue, fallbackKey || propKey)}
+              onObjectSelect={onObjectNavigate
+                ? (object, label, parentCoValue, parentKey) => {
+                    onObjectNavigate(object, label, parentCoValue, parentKey);
+                  }
+                : undefined}
             />
           {/if}
         {:else}
@@ -235,6 +242,11 @@
             {coValue}
             onSelect={(coValue, fallbackKey) =>
               handleCoValueSelect(coValue, fallbackKey || propKey)}
+            onObjectSelect={onObjectNavigate
+              ? (object, label, parentCoValue, parentKey) => {
+                  onObjectNavigate(object, label, parentCoValue, parentKey);
+                }
+              : undefined}
           />
         {/if}
       {/each}

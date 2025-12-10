@@ -1,5 +1,5 @@
 // Schemas
-export { JazzAccount, AccountProfile, Contact, AppRoot, Capability, syncGoogleDataToProfile } from './schema';
+export { JazzAccount, AccountProfile, Contact, AppRoot, Capability, SchemaDefinition, Schemata, syncGoogleDataToProfile } from './schema';
 
 // Computed Fields
 export { registerComputedField, setupComputedFieldsForCoValue, isComputedField } from './functions/computed-fields';

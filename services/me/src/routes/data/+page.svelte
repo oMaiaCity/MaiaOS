@@ -9,6 +9,7 @@
     GroupContextView,
     DataLayout,
   } from "$lib/components/next/components";
+  import ObjectContextDisplay from "$lib/components/next/components/composites/ObjectContextDisplay.svelte";
   import { extractCoValueProperties, extractRootData } from "$lib/components/next/logic";
   import { Group } from "jazz-tools";
   import { CoState } from "jazz-tools/svelte";
@@ -45,7 +46,8 @@
     | { type: "root" }
     | { type: "colist"; coValue: any; label: string; parentKey?: string }
     | { type: "covalue"; coValue: any; label: string; parentContext?: NavigationContext }
-    | { type: "group"; coValue: any; label: string };
+    | { type: "group"; coValue: any; label: string }
+    | { type: "object"; object: any; label: string; parentCoValue: any; parentKey: string };
 
   // Navigation stack - tracks the path through CoValues
   let navigationStack = $state<NavigationContext[]>([{ type: "root" }]);
@@ -171,6 +173,14 @@
     navigationStack = [...navigationStack, { type: "colist", coValue: coList, label, parentKey }];
   }
 
+  // Navigate to an object (push new context)
+  function navigateToObject(object: any, label: string, parentCoValue: any, parentKey: string) {
+    navigationStack = [
+      ...navigationStack,
+      { type: "object", object, label, parentCoValue, parentKey },
+    ];
+  }
+
   // Navigate back one level
   function navigateBack() {
     if (navigationStack.length > 1) {
@@ -179,6 +189,7 @@
   }
 
   // Get current CoValue for metadata sidebar (exclude groups - they have their own view)
+  // For objects, show parent CoValue metadata
   const selectedCoValue = $derived(() => {
     if (currentContext.type === "root") {
       // Show AppRoot metadata when viewing root
@@ -186,6 +197,10 @@
     }
     if (currentContext.type === "covalue" || currentContext.type === "colist") {
       return currentContext.coValue;
+    }
+    if (currentContext.type === "object") {
+      // For objects, show parent CoValue metadata
+      return currentContext.parentCoValue;
     }
     // Groups don't show metadata sidebar
     return null;
@@ -1237,7 +1252,13 @@
         {:else if currentContext.type === "group"}
           <GroupContextView group={currentContext.coValue} onNavigate={navigateToCoValue} />
         {:else if currentContext.type === "colist" || currentContext.type === "covalue"}
-          <CoValueContextDisplay coValue={currentContext.coValue} onNavigate={navigateToCoValue} />
+          <CoValueContextDisplay
+            coValue={currentContext.coValue}
+            onNavigate={navigateToCoValue}
+            onObjectNavigate={navigateToObject}
+          />
+        {:else if currentContext.type === "object"}
+          <ObjectContextDisplay object={currentContext.object} label={currentContext.label} />
         {/if}
       {/snippet}
       {#snippet aside()}

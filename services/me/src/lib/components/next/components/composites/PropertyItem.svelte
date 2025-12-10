@@ -22,6 +22,8 @@
     propValue: any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onSelect?: (coValue: any, fallbackKey?: string) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onObjectSelect?: (object: any, label: string, parentCoValue: any, parentKey: string) => void;
     showCopyButton?: boolean;
     copyValue?: string;
     hideBadge?: boolean;
@@ -38,6 +40,7 @@
     propKey,
     propValue,
     onSelect,
+    onObjectSelect,
     showCopyButton = false,
     copyValue,
     hideBadge = false,
@@ -72,9 +75,13 @@
   const displayInfo = $derived(getDisplayValue(propValue));
   const isClickable = $derived(
     variant !== "members" &&
-      displayInfo.isCoValue &&
-      displayInfo.coValue &&
-      onSelect !== undefined,
+      ((displayInfo.isCoValue && displayInfo.coValue && onSelect !== undefined) ||
+        (displayInfo.type === "object" &&
+          typeof propValue === "object" &&
+          propValue !== null &&
+          !("$jazz" in propValue) &&
+          onObjectSelect !== undefined &&
+          coValue !== undefined)),
   );
 
   async function handleCopy() {
@@ -96,7 +103,18 @@
   <button
     type="button"
     onclick={() => {
-      if (displayInfo.coValue && onSelect) {
+      if (
+        displayInfo.type === "object" &&
+        typeof propValue === "object" &&
+        propValue !== null &&
+        !("$jazz" in propValue) &&
+        onObjectSelect &&
+        coValue
+      ) {
+        // Handle object navigation
+        onObjectSelect(propValue, propKey, coValue, propKey);
+      } else if (displayInfo.coValue && onSelect) {
+        // Handle CoValue navigation
         onSelect(displayInfo.coValue, propKey);
       }
     }}
@@ -126,8 +144,18 @@
             <span class="text-xs text-slate-600 font-mono break-all"
               >{displayInfo.displayValue.slice(0, 8)}...</span
             >
-            <svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            <svg
+              class="w-3 h-3 text-slate-400 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
             </svg>
           </div>
         {:else if displayInfo.isCoValue && displayInfo.coValue && onSelect}
@@ -135,49 +163,73 @@
             <span class="text-xs text-slate-600 font-mono break-all"
               >{displayInfo.displayValue.slice(0, 12)}...</span
             >
-            <svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            <svg
+              class="w-3 h-3 text-slate-400 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
             </svg>
           </div>
-        {:else}
-          {#if !hideValue}
-            {#if displayInfo.type === "object"}
-              <pre
-                class="text-xs text-slate-600 whitespace-pre-wrap font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
-                style="word-break: break-all; overflow-wrap: anywhere;"
-              >
+        {:else if displayInfo.type === "object" && typeof propValue === "object" && propValue !== null && !("$jazz" in propValue) && onObjectSelect && coValue}
+          <div class="inline-flex items-center gap-2 text-left">
+            <span class="text-xs text-slate-600 font-mono break-all">Object</span>
+            <svg
+              class="w-3 h-3 text-slate-400 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </div>
+        {:else if !hideValue}
+          {#if displayInfo.type === "object"}
+            <pre
+              class="text-xs text-slate-600 whitespace-pre-wrap font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
+              style="word-break: break-all; overflow-wrap: anywhere;">
                 {displayInfo.displayValue}
               </pre>
-            {:else if displayInfo.type === "array" && displayInfo.arrayItems}
-              {@const arrayItems = displayInfo.arrayItems!}
-              <div class="flex flex-wrap items-center gap-1">
-                {#each arrayItems as item, index}
-                  <span
-                    class="text-xs text-slate-600 bg-slate-50/50 px-2 py-0.5 rounded border border-slate-200"
-                  >
-                    {String(item)}
-                  </span>
-                  {#if index < arrayItems.length - 1}
-                    <span class="text-slate-400">,</span>
-                  {/if}
-                {/each}
-              </div>
-            {:else}
-              {@const isIdLike =
-                typeof displayInfo.displayValue === "string" &&
-                displayInfo.displayValue.startsWith("co_")}
-              {@const isAlreadyTruncated =
-                typeof displayInfo.displayValue === "string" &&
-                displayInfo.displayValue.endsWith("...")}
-              <span
-                class="text-xs text-slate-600 {isIdLike ? 'font-mono' : ''} {isAlreadyTruncated
-                  ? 'truncate'
-                  : 'break-all'}"
-                style={isAlreadyTruncated ? "" : "word-break: break-all; overflow-wrap: anywhere;"}
-              >
-                {displayInfo.displayValue}
-              </span>
-            {/if}
+          {:else if displayInfo.type === "array" && displayInfo.arrayItems}
+            {@const arrayItems = displayInfo.arrayItems!}
+            <div class="flex flex-wrap items-center gap-1">
+              {#each arrayItems as item, index}
+                <span
+                  class="text-xs text-slate-600 bg-slate-50/50 px-2 py-0.5 rounded border border-slate-200"
+                >
+                  {String(item)}
+                </span>
+                {#if index < arrayItems.length - 1}
+                  <span class="text-slate-400">,</span>
+                {/if}
+              {/each}
+            </div>
+          {:else}
+            {@const isIdLike =
+              typeof displayInfo.displayValue === "string" &&
+              displayInfo.displayValue.startsWith("co_")}
+            {@const isAlreadyTruncated =
+              typeof displayInfo.displayValue === "string" &&
+              displayInfo.displayValue.endsWith("...")}
+            <span
+              class="text-xs text-slate-600 {isIdLike ? 'font-mono' : ''} {isAlreadyTruncated
+                ? 'truncate'
+                : 'break-all'}"
+              style={isAlreadyTruncated ? "" : "word-break: break-all; overflow-wrap: anywhere;"}
+            >
+              {displayInfo.displayValue}
+            </span>
           {/if}
         {/if}
 
@@ -200,11 +252,26 @@
             aria-label="Copy value"
           >
             {#if copied}
-              <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              <svg
+                class="w-4 h-4 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             {:else}
-              <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                class="w-4 h-4 text-slate-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -217,7 +284,7 @@
         {/if}
 
         {#if !hideBadge}
-            <Badge type={displayInfo.type}>{displayInfo.type}</Badge>
+          <Badge type={displayInfo.type}>{displayInfo.type}</Badge>
         {/if}
       </div>
     </div>
@@ -309,8 +376,11 @@
               <div
                 class="flex items-center justify-between flex-1 p-1.5 rounded-2xl border border-white"
               >
-                <span class="font-mono text-xs text-slate-600">{groupMember.id.slice(0, 8)}...</span>
-                <Badge type={groupMember.role.toLowerCase()} variant="role">{groupMember.role}</Badge>
+                <span class="font-mono text-xs text-slate-600">{groupMember.id.slice(0, 8)}...</span
+                >
+                <Badge type={groupMember.role.toLowerCase()} variant="role"
+                  >{groupMember.role}</Badge
+                >
               </div>
               {#if membersData.onRemoveGroupMember}
                 <button
@@ -366,51 +436,56 @@
               <span class="text-xs text-slate-600 font-mono break-all"
                 >{displayInfo.displayValue.slice(0, 12)}...</span
               >
-              <svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              <svg
+                class="w-3 h-3 text-slate-400 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </div>
-          {:else}
-            {#if !hideValue}
-              {#if displayInfo.type === "object"}
-                <pre
-                  class="text-xs text-slate-600 whitespace-pre-wrap font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
-                  style="word-break: break-all; overflow-wrap: anywhere;"
-                >
+          {:else if !hideValue}
+            {#if displayInfo.type === "object"}
+              <pre
+                class="text-xs text-slate-600 whitespace-pre-wrap font-mono bg-slate-50/50 p-2 rounded border border-slate-200 max-w-full overflow-x-auto"
+                style="word-break: break-all; overflow-wrap: anywhere;">
                   {displayInfo.displayValue}
                 </pre>
-              {:else if displayInfo.type === "array" && displayInfo.arrayItems}
-                {@const arrayItems = displayInfo.arrayItems!}
-                <div class="flex flex-wrap items-center gap-1">
-                  {#each arrayItems as item, index}
-                    <span
-                      class="text-xs text-slate-600 bg-slate-50/50 px-2 py-0.5 rounded border border-slate-200"
-                    >
-                      {String(item)}
-                    </span>
-                    {#if index < arrayItems.length - 1}
-                      <span class="text-slate-400">,</span>
-                    {/if}
-                  {/each}
-                </div>
-              {:else}
-                {@const isIdLike =
-                  typeof displayInfo.displayValue === "string" &&
-                  displayInfo.displayValue.startsWith("co_")}
-                {@const isAlreadyTruncated =
-                  typeof displayInfo.displayValue === "string" &&
-                  displayInfo.displayValue.endsWith("...")}
-                <span
-                  class="text-xs text-slate-600 {isIdLike ? 'font-mono' : ''} {isAlreadyTruncated
-                    ? 'truncate'
-                    : 'break-all'}"
-                  style={isAlreadyTruncated
-                    ? ""
-                    : "word-break: break-all; overflow-wrap: anywhere;"}
-                >
-                  {displayInfo.displayValue}
-                </span>
-              {/if}
+            {:else if displayInfo.type === "array" && displayInfo.arrayItems}
+              {@const arrayItems = displayInfo.arrayItems!}
+              <div class="flex flex-wrap items-center gap-1">
+                {#each arrayItems as item, index}
+                  <span
+                    class="text-xs text-slate-600 bg-slate-50/50 px-2 py-0.5 rounded border border-slate-200"
+                  >
+                    {String(item)}
+                  </span>
+                  {#if index < arrayItems.length - 1}
+                    <span class="text-slate-400">,</span>
+                  {/if}
+                {/each}
+              </div>
+            {:else}
+              {@const isIdLike =
+                typeof displayInfo.displayValue === "string" &&
+                displayInfo.displayValue.startsWith("co_")}
+              {@const isAlreadyTruncated =
+                typeof displayInfo.displayValue === "string" &&
+                displayInfo.displayValue.endsWith("...")}
+              <span
+                class="text-xs text-slate-600 {isIdLike ? 'font-mono' : ''} {isAlreadyTruncated
+                  ? 'truncate'
+                  : 'break-all'}"
+                style={isAlreadyTruncated ? "" : "word-break: break-all; overflow-wrap: anywhere;"}
+              >
+                {displayInfo.displayValue}
+              </span>
             {/if}
           {/if}
 
@@ -422,11 +497,26 @@
               aria-label="Copy value"
             >
               {#if copied}
-                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                <svg
+                  class="w-4 h-4 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               {:else}
-                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  class="w-4 h-4 text-slate-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
@@ -446,4 +536,3 @@
     {/if}
   </div>
 {/if}
-
