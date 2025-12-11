@@ -11,6 +11,7 @@
   } from "$lib/components";
   import ObjectContextDisplay from "$lib/components/composites/ObjectContextDisplay.svelte";
   import { extractCoValueProperties, extractRootData } from "$lib/logic";
+import { loadCoValueProperties } from "$lib/utilities/coValueLoader";
   import { Group } from "jazz-tools";
 
   // Better Auth session
@@ -164,59 +165,8 @@
     }
 
     // Otherwise, treat as regular CoValue
-    // Use Jazz's native loading approach (like the inspector)
-    if (coValue.$jazz?.ensureLoaded) {
-      try {
-        // First ensure the CoValue itself is loaded
-        if (!coValue.$isLoaded) {
-          await coValue.$jazz.ensureLoaded();
-        }
-
-        // Get the Jazz node for explicit CoValue loading by ID
-        const node = coValue.$jazz?.raw?.core?.node;
-        
-        if (node) {
-          // Get JSON snapshot to find which properties are CoValue references
-          const snapshot = coValue.$jazz.raw.toJSON();
-          
-          if (snapshot && typeof snapshot === "object") {
-            // Load each CoValue property explicitly by ID (like Jazz inspector does)
-            const loadPromises: Promise<any>[] = [];
-            
-            for (const [key, value] of Object.entries(snapshot)) {
-              // If the value is a CoID string, load that CoValue explicitly
-              if (typeof value === "string" && value.startsWith("co_")) {
-                console.log(`[Data Explorer] Loading CoValue property ${key} with ID: ${value}`);
-                loadPromises.push(
-                  node.load(value as any).then((loadedCoValue: any) => {
-                    console.log(`[Data Explorer] Loaded ${key}:`, loadedCoValue, "Type:", loadedCoValue?.type);
-                    // Store the loaded CoValue back on the parent (this makes coValue[key] work)
-                    if (loadedCoValue && loadedCoValue !== "unavailable") {
-                      // The loaded CoValue should now be accessible via coValue[key]
-                      return { key, loadedCoValue };
-                    }
-                    return null;
-                  }).catch((e: any) => {
-                    console.warn(`[Data Explorer] Failed to load ${key}:`, e);
-                    return null;
-                  })
-                );
-              }
-            }
-            
-            // Wait for all CoValue properties to load
-            if (loadPromises.length > 0) {
-              await Promise.all(loadPromises);
-              console.log(`[Data Explorer] Loaded ${loadPromises.length} CoValue properties`);
-            }
-          }
-        } else {
-          console.warn("[Data Explorer] No Jazz node available for explicit loading");
-        }
-      } catch (e) {
-        console.warn("Error ensuring CoValue loaded:", e);
-      }
-    }
+    // Use centralized loading utility (matches Jazz inspector approach)
+    await loadCoValueProperties(coValue);
 
     const displayLabel = label || getCoValueLabel(coValue, fallbackKey);
     navigationStack = [...navigationStack, { type: "covalue", coValue, label: displayLabel }];

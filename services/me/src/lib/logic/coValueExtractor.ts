@@ -218,15 +218,11 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
             // Try to access the actual property from the CoValue
             const propertyValue = coValue[key];
             
-            console.log(`[CoValue Extractor] Key: ${key}, PropertyValue:`, propertyValue, "Has $jazz:", !!propertyValue?.$jazz, "Native type:", propertyValue?.$jazz?.raw?.type);
-            
             if (propertyValue && typeof propertyValue === "object" && propertyValue.$jazz) {
               actualCoValue = propertyValue;
 
-              // Use Jazz's native type detection from the raw CoValue
+              // Use Jazz's native type detection from the raw CoValue (like Jazz inspector)
               const nativeType = propertyValue.$jazz?.raw?.type;
-              
-              console.log(`[CoValue Extractor] Detected native type for ${key}:`, nativeType);
 
               if (nativeType === "colist") {
                 detectedType = "CoList";
@@ -258,13 +254,8 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
                   detectedType = "CoValue";
                 }
               }
-              
-              console.log(`[CoValue Extractor] Final detected type for ${key}:`, detectedType);
-            } else {
-              console.warn(`[CoValue Extractor] Could not access property ${key} as CoValue:`, propertyValue);
             }
           } catch (e) {
-            console.error(`[CoValue Extractor] Error accessing property ${key}:`, e);
             // If we can't access the property, fall back to generic CoValue
           }
 

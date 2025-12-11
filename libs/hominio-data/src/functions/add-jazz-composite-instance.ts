@@ -198,12 +198,12 @@ export async function addJazzCompositeInstance(account: any): Promise<any> {
   );
   await entityInstance.$jazz.waitForSync();
 
-  // NO additional ensureLoaded needed here - all CoValues use the same owner group
-  // so they're accessible from the parent entity
-
   // Add entity instance to entities list
   entitiesList.$jazz.push(entityInstance);
   await account.$jazz.ensureLoaded({ resolve: { root: true } });
+  
+  // Note: The entity's nested CoValue properties are already created and linked
+  // They will be loaded when navigating to the entity in the data explorer
 
   return entityInstance;
 }
