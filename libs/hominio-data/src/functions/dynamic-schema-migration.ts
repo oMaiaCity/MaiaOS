@@ -242,26 +242,32 @@ export async function ensureSchema(
   const extractedSchemas = extractNestedCoValueSchemas(jsonSchema);
 
   // Step 2: Create SchemaDefinition entries for each extracted nested schema
+  // Store mapping of refPath -> SchemaDefinition CoValue ID
+  const nestedSchemaIdMap: Record<string, string> = {};
+  
   for (const [refPath, nestedCoMapSchema] of Object.entries(extractedSchemas)) {
     // Generate a name for this nested schema (e.g., "JazzComposite/NestedCoMap")
     const nestedSchemaName = `${schemaName}/${refPath.split('/').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('/')}`;
 
     // Check if this nested schema already exists
-    let nestedSchemaExists = false;
+    let existingNestedSchema: any = null;
     if (dataList.$isLoaded) {
       const dataArray = Array.from(dataList);
       for (const schema of dataArray) {
         if (schema && typeof schema === "object" && "$jazz" in schema) {
           const schemaLoaded = await (schema as any).$jazz.ensureLoaded();
           if (schemaLoaded.$isLoaded && (schemaLoaded as any).name === nestedSchemaName) {
-            nestedSchemaExists = true;
+            existingNestedSchema = schemaLoaded;
             break;
           }
         }
       }
     }
 
-    if (!nestedSchemaExists) {
+    if (existingNestedSchema) {
+      // Store the existing schema's ID
+      nestedSchemaIdMap[refPath] = existingNestedSchema.$jazz.id;
+    } else {
       // Create a group for the nested schema's entities list
       const nestedEntitiesGroup = Group.create();
       await nestedEntitiesGroup.$jazz.waitForSync();
@@ -291,13 +297,16 @@ export async function ensureSchema(
 
       // Add to data list
       dataList.$jazz.push(nestedSchemaDefinition);
+      
+      // Store the new schema's CoValue ID
+      nestedSchemaIdMap[refPath] = nestedSchemaDefinition.$jazz.id;
     }
   }
 
   await root.$jazz.waitForSync();
 
-  // Step 3: Create a modified JSON Schema with $ref for nested schemas
-  const modifiedJsonSchema = replaceNestedSchemasWithRefs(jsonSchema, schemaName);
+  // Step 3: Create a modified JSON Schema with $ref (CoValue IDs) for nested schemas
+  const modifiedJsonSchema = replaceNestedSchemasWithRefs(jsonSchema, schemaName, nestedSchemaIdMap, "");
 
   // Step 4: Convert JSON Schema to co.map() shape - this creates the typed CoMap schema with direct links
   const entityShape = jsonSchemaToCoMapShape(jsonSchema);
@@ -427,13 +436,19 @@ function getRequiredFromPath(jsonSchema: any, path: string): string[] {
 }
 
 /**
- * Replace nested o-map definitions in JSON Schema with $ref to created schemas
+ * Replace nested o-map definitions in JSON Schema with $ref (CoValue IDs) to created schemas
  * Handles nested structures recursively
+ * 
+ * @param jsonSchema - The JSON Schema to process
+ * @param schemaName - Base schema name (not used when we have idMap)
+ * @param schemaIdMap - Map of refPath -> SchemaDefinition CoValue ID
+ * @param parentPath - Current path in the schema tree (for recursion)
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function replaceNestedSchemasWithRefs(
   jsonSchema: any,
   schemaName: string,
+  schemaIdMap: Record<string, string> = {},
   parentPath: string = ""
 ): any {
   if (!jsonSchema.properties) {
@@ -451,34 +466,34 @@ function replaceNestedSchemasWithRefs(
     const currentPath = parentPath ? `${parentPath}/${key}` : key;
 
     if (type === "o-map" && prop.properties) {
-      // For nested o-map, replace with $ref to the nested schema
-      const nestedSchemaName = `${schemaName}/${currentPath.split('/').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('/')}`;
+      // For nested o-map, replace with $ref to the nested schema's CoValue ID
+      const schemaId = schemaIdMap[currentPath];
       modifiedSchema.properties[key] = {
         type: "o-map",
-        $ref: nestedSchemaName,
+        $ref: schemaId || currentPath, // Use CoValue ID if available, fallback to path
         description: prop.description,
       };
     } else if (type === "o-list" && prop.items?.type === "o-map" && prop.items.properties) {
-      // For o-list of o-map, replace items with $ref
+      // For o-list of o-map, replace items with $ref to CoValue ID
       const itemPath = `${currentPath}/items`;
-      const nestedSchemaName = `${schemaName}/${itemPath.split('/').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('/')}`;
+      const schemaId = schemaIdMap[itemPath];
       modifiedSchema.properties[key] = {
         type: "o-list",
         items: {
           type: "o-map",
-          $ref: nestedSchemaName,
+          $ref: schemaId || itemPath, // Use CoValue ID if available, fallback to path
         },
         description: prop.description,
       };
     } else if (type === "o-feed" && prop.items?.type === "o-map" && prop.items.properties) {
-      // For o-feed of o-map, replace items with $ref
+      // For o-feed of o-map, replace items with $ref to CoValue ID
       const itemPath = `${currentPath}/items`;
-      const nestedSchemaName = `${schemaName}/${itemPath.split('/').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('/')}`;
+      const schemaId = schemaIdMap[itemPath];
       modifiedSchema.properties[key] = {
         type: "o-feed",
         items: {
           type: "o-map",
-          $ref: nestedSchemaName,
+          $ref: schemaId || itemPath, // Use CoValue ID if available, fallback to path
         },
         description: prop.description,
       };
