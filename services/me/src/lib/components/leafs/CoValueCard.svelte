@@ -17,7 +17,7 @@
     // Check if item.item is a CoMap (has $jazz.has method) before accessing it
     if (item.item?.$isLoaded && item.item.$jazz?.has && typeof item.item.$jazz.has === "function") {
       if (item.item.$jazz.has("@label")) {
-        return item.item["@label"];
+      return item.item["@label"];
       }
     }
     if (item.item?.$isLoaded) {

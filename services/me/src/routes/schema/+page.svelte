@@ -1,6 +1,12 @@
 <script lang="ts">
-  import { JazzAccount, addRandomCarInstance, resetData } from "@hominio/data";
+  import {
+    JazzAccount,
+    addRandomCarInstance,
+    addJazzCompositeInstance,
+    resetData,
+  } from "@hominio/data";
   import { AccountCoState } from "jazz-tools/svelte";
+  import { toast } from "$lib/stores/toast.js";
 
   // Load account with data (list of SchemaDefinitions)
   const account = new AccountCoState(JazzAccount, {
@@ -27,10 +33,31 @@
         });
       }
 
-      alert("Car added successfully! Check the data explorer to see it.");
+      toast.success("Car added successfully! Check the data explorer to see it.");
     } catch (error) {
       console.error("Error adding car:", error);
-      alert("Error adding car. Check console for details.");
+      toast.error("Error adding car. Check console for details.");
+    }
+  }
+
+  // Handle adding JazzComposite (automatically creates schema if needed)
+  async function handleAddJazzComposite() {
+    if (!me.$isLoaded) return;
+
+    try {
+      await addJazzCompositeInstance(me);
+
+      // Reload root to ensure data field is visible
+      if (me.root?.$isLoaded) {
+        await me.root.$jazz.ensureLoaded({
+          resolve: { data: true },
+        });
+      }
+
+      toast.success("JazzComposite added successfully! Check the data explorer to see it.");
+    } catch (error) {
+      console.error("Error adding JazzComposite:", error);
+      toast.error("Error adding JazzComposite. Check console for details.");
     }
   }
 
@@ -38,14 +65,12 @@
   async function handleResetData() {
     if (!me.$isLoaded) return;
 
-    if (confirm("Are you sure you want to reset/clear the data list? This cannot be undone.")) {
-      try {
-        await resetData(me);
-        alert("Data list reset successfully!");
-      } catch (error) {
-        console.error("Error resetting data:", error);
-        alert("Error resetting data. Check console for details.");
-      }
+    try {
+      await resetData(me);
+      toast.success("Data list reset successfully!");
+    } catch (error) {
+      console.error("Error resetting data:", error);
+      toast.error("Error resetting data. Check console for details.");
     }
   }
 </script>
@@ -61,6 +86,12 @@
         class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
       >
         Add Car
+      </button>
+      <button
+        onclick={() => handleAddJazzComposite()}
+        class="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
+      >
+        Add JazzComposite
       </button>
       <button
         onclick={() => handleResetData()}
@@ -102,7 +133,9 @@
       {:else}
         <div class="p-4 border rounded-lg bg-white shadow-sm text-center">
           <p class="text-sm text-slate-600 mb-2">No schemas yet</p>
-          <p class="text-xs text-slate-400">Click "Add Car Schema" to create your first schema</p>
+          <p class="text-xs text-slate-400">
+            Click "Add Car" or "Add JazzComposite" to create your first schema
+          </p>
         </div>
       {/if}
     {:else}

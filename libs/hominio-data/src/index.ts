@@ -7,6 +7,10 @@ export { ensureSchema, createEntity } from './functions/dynamic-schema-migration
 // Manual Migrations (legacy - now uses generic utilities)
 export { migrateAddCars, addRandomCarInstance, resetData, CarJsonSchema } from './migrations/manual-add-cars';
 
+// Jazz Composite Example
+export { addJazzCompositeInstance } from './functions/add-jazz-composite-instance';
+export { JazzCompositeJsonSchema } from './schemas/jazz-composite-schema';
+
 // Computed Fields
 export { registerComputedField, setupComputedFieldsForCoValue, isComputedField } from './functions/computed-fields';
 export type { ComputedFieldDef } from './functions/computed-fields';

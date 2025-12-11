@@ -101,25 +101,25 @@
 
     <!-- Center: Navigation Links -->
     <div class="flex items-center gap-3 absolute left-1/2 -translate-x-1/2">
-      <a
-        href="/"
+        <a
+          href="/"
         class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url.pathname ===
         '/'
-          ? 'bg-slate-100 text-slate-900'
-          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-      >
-        Home
-      </a>
-      <a
-        href="/data"
+            ? 'bg-slate-100 text-slate-900'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+        >
+          Home
+        </a>
+        <a
+          href="/data"
         class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url.pathname ===
         '/data'
-          ? 'bg-slate-100 text-slate-900'
-          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-      >
-        Data
-      </a>
-      <a
+            ? 'bg-slate-100 text-slate-900'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+        >
+          Data
+        </a>
+        <a
         href="/vibes"
         class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url.pathname.startsWith(
           '/vibes',
@@ -133,12 +133,12 @@
         href="/schema"
         class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url.pathname ===
         '/schema'
-          ? 'bg-slate-100 text-slate-900'
-          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-      >
+            ? 'bg-slate-100 text-slate-900'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+        >
         Schema
-      </a>
-    </div>
+        </a>
+      </div>
 
     <!-- Right: Account Metadata -->
     <div class="flex gap-2 items-center flex-shrink-0">
@@ -162,7 +162,7 @@
                   {firstName}
                   {lastName}
                 </div>
-              {:else}
+      {:else}
                 <div class="text-sm font-medium text-slate-900 leading-tight">
                   {betterAuthUser?.email || "User"}
                 </div>
@@ -171,8 +171,8 @@
                 <div class="text-xs text-slate-500 leading-tight truncate max-w-[150px]">
                   {betterAuthUser.email}
                 </div>
-              {/if}
-            </div>
+      {/if}
+    </div>
             <!-- Avatar Image (right) -->
             {#if avatarImage}
               <div
@@ -227,29 +227,29 @@
               class="absolute right-0 top-full w-48 rounded-lg bg-white border border-slate-200 shadow-lg z-50"
             >
               <div class="py-1">
-                <button
-                  type="button"
+        <button
+          type="button"
                   onclick={() => {
                     dropdownOpen = false;
                     handleBetterAuthSignOut();
                   }}
-                  disabled={signingOut}
+          disabled={signingOut}
                   class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50 flex items-center gap-2"
-                >
-                  {#if signingOut}
-                    <span>Signing out...</span>
-                  {:else}
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                      />
-                    </svg>
-                    Sign out
-                  {/if}
-                </button>
+        >
+          {#if signingOut}
+            <span>Signing out...</span>
+          {:else}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
+            Sign out
+          {/if}
+        </button>
               </div>
             </div>
           {/if}

@@ -83,6 +83,7 @@
           typeof propValue === "object" &&
           propValue !== null &&
           !("$jazz" in propValue) &&
+          !("type" in propValue) &&
           onObjectSelect !== undefined &&
           coValue !== undefined)),
   );
@@ -114,7 +115,7 @@
         onObjectSelect &&
         coValue
       ) {
-        // Handle object navigation
+        // Handle object navigation - propValue is the plain object itself
         onObjectSelect(propValue, propKey, coValue, propKey);
       } else if (displayInfo.coValue && onSelect) {
         // Handle CoValue navigation
@@ -183,6 +184,7 @@
         {:else if displayInfo.type === "object" && typeof propValue === "object" && propValue !== null && !("$jazz" in propValue) && onObjectSelect && coValue}
           <div class="inline-flex items-center gap-2 text-left">
             <span class="text-xs text-slate-600 font-mono break-all">Object</span>
+            <span class="text-xs text-slate-500">({Object.keys(propValue || {}).length} keys)</span>
             <svg
               class="w-3 h-3 text-slate-400 shrink-0"
               fill="none"

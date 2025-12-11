@@ -210,27 +210,41 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
         // Handle different value types
         // Note: In JSON snapshot, CoValue references are CoIDs (strings), not CoValue objects
         if (typeof value === "string" && value.startsWith("co_")) {
-          // It's a CoID reference - but we need to check if it's actually a CoList
-          // by accessing the actual property on the CoValue (not just the snapshot)
+          // It's a CoID reference - try to access the actual CoValue object from the parent
           let actualCoValue: any = null;
-          let isActuallyCoList = false;
+          let detectedType: string = "CoValue";
 
           try {
             // Try to access the actual property from the CoValue
             const propertyValue = coValue[key];
             if (propertyValue && typeof propertyValue === "object" && propertyValue.$jazz) {
               actualCoValue = propertyValue;
-              // Check if it's a CoList by checking if it's iterable and has CoList-like properties
-              isActuallyCoList = isCoList(propertyValue);
+
+              // Detect the actual type of the CoValue
+              if (isCoList(propertyValue)) {
+                detectedType = "CoList";
+              } else if (isCoMap(propertyValue)) {
+                detectedType = "CoMap";
+              } else if (isImageDefinition(propertyValue)) {
+                detectedType = "ImageDefinition";
+              } else if (isFileStream(propertyValue)) {
+                detectedType = "FileStream";
+              } else {
+                // Check if it's a CoFeed (has perAccount, perSession, etc.)
+                if (propertyValue.perAccount || propertyValue.perSession || propertyValue.byMe) {
+                  detectedType = "CoFeed";
+                } else {
+                  detectedType = "CoValue";
+                }
+              }
             }
           } catch (e) {
             // If we can't access the property, fall back to generic CoValue
           }
 
-          if (isActuallyCoList && actualCoValue) {
-            // It's a CoList! Just mark it as navigable (don't expand items inline)
+          // Store with detected type and actual CoValue for navigation
+          if (detectedType === "CoList" && actualCoValue) {
             let length = 0;
-            
             if (actualCoValue.$isLoaded) {
               try {
                 length = Array.from(actualCoValue).length;
@@ -238,7 +252,6 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
                 // If we can't get length, default to 0
               }
             }
-
             data[key] = {
               type: "CoList",
               id: value,
@@ -247,14 +260,30 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
               coValue: actualCoValue, // Store the actual CoList for navigation
               coValueId: value,
             };
-          } else {
-            // Generic CoValue reference
+          } else if (detectedType === "CoMap" && actualCoValue) {
             data[key] = {
-              type: "CoValue",
+              type: "CoMap",
               id: value,
-              isLoaded: false,
+              isLoaded: actualCoValue.$isLoaded || false,
+              coValue: actualCoValue, // Store the actual CoMap for navigation
               coValueId: value,
-              coValue: actualCoValue, // Store if we have it
+            };
+          } else if (detectedType === "CoFeed" && actualCoValue) {
+            data[key] = {
+              type: "CoFeed",
+              id: value,
+              isLoaded: actualCoValue.$isLoaded || false,
+              coValue: actualCoValue, // Store the actual CoFeed for navigation
+              coValueId: value,
+            };
+          } else {
+            // Generic CoValue reference (or we couldn't access the actual object)
+            data[key] = {
+              type: detectedType,
+              id: value,
+              isLoaded: actualCoValue ? actualCoValue.$isLoaded || false : false,
+              coValueId: value,
+              coValue: actualCoValue, // Store if we have it (makes it navigatable)
             };
           }
         } else if (value && typeof value === "object" && Array.isArray(value)) {
@@ -287,17 +316,10 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
             data[key] = value;
           }
         } else if (value && typeof value === "object" && !Array.isArray(value)) {
-          // Nested JSON object from snapshot - recursively extract properties
-          // Note: In JSON snapshot, nested CoMaps are plain JSON objects, not CoID strings
-          const nestedProperties = extractNestedProperties(value, key);
-          data[key] = {
-            type: "CoMap",
-            id: "unknown",
-            isLoaded: false,
-            properties: nestedProperties,
-            value: JSON.stringify(value),
-            rawValue: value, // Store raw value for navigation (especially for SchemaDefinition.definition)
-          };
+          // Nested JSON object from snapshot - this is a passthrough object (plain object)
+          // Store it the same way as SchemaDefinition.definition - as plain object directly
+          // This makes ALL passthrough objects navigatable consistently
+          data[key] = value;
         } else {
           // Primitive value (string, number, boolean, etc.)
           data[key] = value;

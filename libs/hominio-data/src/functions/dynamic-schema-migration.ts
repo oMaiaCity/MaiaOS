@@ -10,7 +10,139 @@ import { SchemaDefinition } from "../schema.js";
 import { jsonSchemaToZod } from "./json-schema-to-zod.js";
 
 /**
+ * Extracts nested CoValue schemas (o-map) from JSON Schema recursively
+ * Creates separate Jazz schemas for each nested o-map for direct linking
+ * Returns a map of $ref identifiers -> Jazz schema definitions
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractNestedCoValueSchemas(
+  jsonSchema: any,
+  parentPath: string = "",
+  extracted: Record<string, any> = {}
+): Record<string, any> {
+  if (!jsonSchema.properties) {
+    return extracted;
+  }
+
+  for (const [key, propertySchema] of Object.entries(jsonSchema.properties)) {
+    const prop = propertySchema as any;
+    const type = prop.type;
+    const currentPath = parentPath ? `${parentPath}/${key}` : key;
+
+    // Extract nested o-map definitions
+    if (type === "o-map" && prop.properties) {
+      // Recursively extract nested schemas within this o-map
+      extractNestedCoValueSchemas(prop, currentPath, extracted);
+
+      // Create the schema for this CoMap
+      const nestedShape: Record<string, any> = {};
+      const nestedRequired = prop.required || [];
+
+      for (const [nestedKey, nestedProp] of Object.entries(prop.properties)) {
+        const nestedIsOptional = !nestedRequired.includes(nestedKey);
+        nestedShape[nestedKey] = jsonSchemaToZod(nestedProp as any, nestedIsOptional, extracted);
+      }
+
+      // Store the extracted schema with a $ref identifier
+      extracted[currentPath] = co.map(nestedShape);
+    }
+    // Extract o-list items that are o-map
+    else if (type === "o-list" && prop.items?.type === "o-map" && prop.items.properties) {
+      const itemPath = `${currentPath}/items`;
+      
+      // Recursively extract nested schemas within the item o-map
+      extractNestedCoValueSchemas(prop.items, itemPath, extracted);
+
+      // Create the schema for the item CoMap
+      const itemShape: Record<string, any> = {};
+      const itemRequired = prop.items.required || [];
+
+      for (const [itemKey, itemProp] of Object.entries(prop.items.properties)) {
+        const itemIsOptional = !itemRequired.includes(itemKey);
+        itemShape[itemKey] = jsonSchemaToZod(itemProp as any, itemIsOptional, extracted);
+      }
+
+      // Store the extracted schema
+      extracted[itemPath] = co.map(itemShape);
+    }
+    // Extract o-feed items that are o-map
+    else if (type === "o-feed" && prop.items?.type === "o-map" && prop.items.properties) {
+      const itemPath = `${currentPath}/items`;
+      
+      // Recursively extract nested schemas within the item o-map
+      extractNestedCoValueSchemas(prop.items, itemPath, extracted);
+
+      // Create the schema for the item CoMap
+      const itemShape: Record<string, any> = {};
+      const itemRequired = prop.items.required || [];
+
+      for (const [itemKey, itemProp] of Object.entries(prop.items.properties)) {
+        const itemIsOptional = !itemRequired.includes(itemKey);
+        itemShape[itemKey] = jsonSchemaToZod(itemProp as any, itemIsOptional, extracted);
+      }
+
+      // Store the extracted schema
+      extracted[itemPath] = co.map(itemShape);
+    }
+  }
+
+  return extracted;
+}
+
+/**
+ * Adds $ref properties to nested o-map definitions in JSON Schema
+ * This marks them for direct linking instead of inline embedding
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function addReferencesToSchema(jsonSchema: any, parentPath: string = ""): any {
+  if (!jsonSchema.properties) {
+    return jsonSchema;
+  }
+
+  const modifiedSchema = { ...jsonSchema, properties: {} };
+
+  for (const [key, propertySchema] of Object.entries(jsonSchema.properties)) {
+    const prop = propertySchema as any;
+    const type = prop.type;
+    const currentPath = parentPath ? `${parentPath}/${key}` : key;
+
+    if (type === "o-map" && prop.properties) {
+      // Add $ref for direct linking
+      modifiedSchema.properties[key] = {
+        ...addReferencesToSchema(prop, currentPath),
+        $ref: currentPath,
+      };
+    } else if (type === "o-list" && prop.items?.type === "o-map" && prop.items.properties) {
+      // Add $ref to items for direct linking
+      const itemPath = `${currentPath}/items`;
+      modifiedSchema.properties[key] = {
+        ...prop,
+        items: {
+          ...addReferencesToSchema(prop.items, itemPath),
+          $ref: itemPath,
+        },
+      };
+    } else if (type === "o-feed" && prop.items?.type === "o-map" && prop.items.properties) {
+      // Add $ref to items for direct linking
+      const itemPath = `${currentPath}/items`;
+      modifiedSchema.properties[key] = {
+        ...prop,
+        items: {
+          ...addReferencesToSchema(prop.items, itemPath),
+          $ref: itemPath,
+        },
+      };
+    } else {
+      modifiedSchema.properties[key] = prop;
+    }
+  }
+
+  return modifiedSchema;
+}
+
+/**
  * Converts JSON Schema to a co.map() shape object
+ * Extracts nested CoValue schemas for direct linking
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonSchemaToCoMapShape(jsonSchema: any): Record<string, any> {
@@ -22,9 +154,19 @@ function jsonSchemaToCoMapShape(jsonSchema: any): Record<string, any> {
     return {};
   }
 
+  // Step 1: Extract all nested CoValue schemas
+  const extractedSchemas = extractNestedCoValueSchemas(jsonSchema);
+
+  // Step 2: Add $ref properties to the schema
+  const schemaWithRefs = addReferencesToSchema(jsonSchema);
+
+  // Step 3: Convert to co.map shape using extracted schemas for direct linking
   const shape: Record<string, any> = {};
-  for (const [key, value] of Object.entries(jsonSchema.properties)) {
-    shape[key] = jsonSchemaToZod(value as any);
+  const required = schemaWithRefs.required || [];
+
+  for (const [key, value] of Object.entries(schemaWithRefs.properties)) {
+    const isOptional = !required.includes(key);
+    shape[key] = jsonSchemaToZod(value as any, isOptional, extractedSchemas);
   }
 
   return shape;
@@ -178,3 +320,4 @@ export async function createEntity(
 
   return entityInstance;
 }
+

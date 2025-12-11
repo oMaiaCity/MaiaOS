@@ -126,6 +126,23 @@ export function getDisplayValue(propValue: any): DisplayInfo {
         coValue: propValue.coValue,
         showImagePreview: false,
       };
+    } else if (propValue.type === "object" && propValue.rawValue) {
+      // Passthrough object - should be navigatable via onObjectSelect
+      return {
+        displayValue: "Object",
+        type: "object",
+        isCoValue: false,
+        coValue: null,
+        showImagePreview: false,
+      };
+    } else if (propValue.type === "CoFeed") {
+      return {
+        displayValue: propValue.id || "unknown",
+        type: "CoFeed",
+        isCoValue: true,
+        coValue: propValue.coValue,
+        showImagePreview: false,
+      };
     } else {
       return {
         displayValue: String(propValue),

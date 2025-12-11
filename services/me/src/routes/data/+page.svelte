@@ -164,6 +164,16 @@
     }
 
     // Otherwise, treat as regular CoValue
+    // Ensure the CoValue itself is loaded so its properties (CoValue references) are accessible
+    if (!coValue.$isLoaded && coValue.$jazz?.ensureLoaded) {
+      try {
+        // Load the CoValue itself - this makes stored CoValue references accessible via coValue[key]
+        await coValue.$jazz.ensureLoaded();
+      } catch (e) {
+        console.warn("Error ensuring CoValue loaded:", e);
+      }
+    }
+
     const displayLabel = label || getCoValueLabel(coValue, fallbackKey);
     navigationStack = [...navigationStack, { type: "covalue", coValue, label: displayLabel }];
   }
