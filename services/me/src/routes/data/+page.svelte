@@ -165,17 +165,11 @@
     }
 
     // Otherwise, treat as regular CoValue
-    // Navigate immediately, then load properties incrementally in background
+    // Use centralized loading utility (matches Jazz inspector approach)
+    await loadCoValueProperties(coValue);
+
     const displayLabel = label || getCoValueLabel(coValue, fallbackKey);
     navigationStack = [...navigationStack, { type: "covalue", coValue, label: displayLabel }];
-    
-    // Start loading properties incrementally (don't wait)
-    // Each property will trigger a re-extraction when it finishes loading
-    loadCoValueProperties(coValue, (key, loadedCoValue) => {
-      // When a property finishes loading, trigger reactivity by updating navigation stack
-      // This causes the component to re-render and re-extract properties
-      navigationStack = [...navigationStack];
-    });
   }
 
   // Navigate to a CoList (push new context)
