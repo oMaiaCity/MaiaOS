@@ -1,5 +1,5 @@
 // Schemas
-export { JazzAccount, AccountProfile, Contact, AppRoot, Capability, SchemaDefinition, Schemata, syncGoogleDataToProfile } from './schema';
+export { JazzAccount, AccountProfile, Contact, AppRoot, Capability, SchemaDefinition, syncGoogleDataToProfile } from './schema';
 
 // Manual Migrations
 export { migrateAddCars, addRandomCarInstance, resetData } from './migrations/manual-add-cars';

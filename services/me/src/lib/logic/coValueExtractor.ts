@@ -210,13 +210,53 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
         // Handle different value types
         // Note: In JSON snapshot, CoValue references are CoIDs (strings), not CoValue objects
         if (typeof value === "string" && value.startsWith("co_")) {
-          // It's a CoID reference - treat as CoValue reference
-          data[key] = {
-            type: "CoValue",
-            id: value,
-            isLoaded: false,
-            coValueId: value,
-          };
+          // It's a CoID reference - but we need to check if it's actually a CoList
+          // by accessing the actual property on the CoValue (not just the snapshot)
+          let actualCoValue: any = null;
+          let isActuallyCoList = false;
+
+          try {
+            // Try to access the actual property from the CoValue
+            const propertyValue = coValue[key];
+            if (propertyValue && typeof propertyValue === "object" && propertyValue.$jazz) {
+              actualCoValue = propertyValue;
+              // Check if it's a CoList by checking if it's iterable and has CoList-like properties
+              isActuallyCoList = isCoList(propertyValue);
+            }
+          } catch (e) {
+            // If we can't access the property, fall back to generic CoValue
+          }
+
+          if (isActuallyCoList && actualCoValue) {
+            // It's a CoList! Just mark it as navigable (don't expand items inline)
+            let length = 0;
+            
+            if (actualCoValue.$isLoaded) {
+              try {
+                length = Array.from(actualCoValue).length;
+              } catch (e) {
+                // If we can't get length, default to 0
+              }
+            }
+
+            data[key] = {
+              type: "CoList",
+              id: value,
+              isLoaded: actualCoValue.$isLoaded || false,
+              length: length,
+              coValue: actualCoValue, // Store the actual CoList for navigation
+              coValueId: value,
+            };
+          } else {
+            // Generic CoValue reference
+            data[key] = {
+              type: "CoValue",
+              id: value,
+              isLoaded: false,
+              coValueId: value,
+              coValue: actualCoValue, // Store if we have it
+            };
+          }
         } else if (value && typeof value === "object" && Array.isArray(value)) {
           // Check if it's a CoList (array of CoIDs) or a primitive array
           // CoLists in JSON snapshot are arrays of CoID strings

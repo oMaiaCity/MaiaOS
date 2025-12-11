@@ -27,6 +27,7 @@
       root: {
         contact: true, // Resolve contact CoMap
         capabilities: true,
+        data: true, // Resolve data (list of SchemaDefinitions with entities)
       },
     },
   });

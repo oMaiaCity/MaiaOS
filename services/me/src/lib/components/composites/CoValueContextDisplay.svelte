@@ -194,33 +194,13 @@
       }) as [propKey, propValue]}
         {#if typeof propValue === "object" && propValue !== null && "type" in propValue}
           {#if propValue.type === "CoList"}
-            {@const coListProp = propValue as { type: string; items?: any[] }}
-            {#if coListProp.items && coListProp.items.length > 0}
-              <div class="space-y-3">
-                {#each coListProp.items as item}
-                  {#if item.type === "CoValue" && item.item}
-                    <CoValueCard
-                      {item}
-                      isSelected={false}
-                      onSelect={(coValue) => handleCoValueSelect(coValue)}
-                    />
-                  {:else}
-                    <div
-                      class="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-slate-200/50 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] p-4"
-                    >
-                      <div
-                        class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
-                      ></div>
-                      <div class="relative text-sm text-slate-600">
-                        {typeof item.value === "string" ? item.value : JSON.stringify(item.value)}
-                      </div>
-                    </div>
-                  {/if}
-                {/each}
-              </div>
-            {:else}
-              <p class="text-sm text-slate-400 italic">Empty list</p>
-            {/if}
+            <!-- CoList properties should be navigable, not expanded inline -->
+            <PropertyItem
+              {propKey}
+              {propValue}
+              onSelect={(coValue, fallbackKey) =>
+                handleCoValueSelect(coValue, fallbackKey || propKey)}
+            />
           {:else}
             <PropertyItem
               {propKey}

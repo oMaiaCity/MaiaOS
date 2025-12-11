@@ -43,23 +43,20 @@ export const Contact = co.map({
   email: z.string(),
 });
 
-/** SchemaDefinition schema - stores JSON Schema definitions as CoMaps */
+/** SchemaDefinition schema - stores JSON Schema definitions as CoMaps with their entity instances */
 export const SchemaDefinition = co.map({
   "@schema": z.literal("schema-definition"),
   name: z.string(),
   definition: z.object({}).passthrough(), // JSON Schema object (flexible structure - allows any properties)
+  entities: co.list(co.map({})), // Generic entities list - stores instances of this schema
 });
-
-/** Schemata type - list of SchemaDefinition CoValues */
-export const Schemata = co.list(SchemaDefinition);
 
 /** The account root is an app-specific per-user private `CoMap`
  *  where you can store top-level objects for that user */
 export const AppRoot = co.map({
   contact: Contact, // Simple contact CoMap with email
   capabilities: co.list(Capability), // List of Capability CoValues (each contains a Group reference)
-  schemata: co.list(SchemaDefinition), // List of schema definitions stored as CoValues
-  data: co.optional(co.list(co.list(co.map({})))), // Optional - list of schema-specific lists
+  data: co.optional(co.list(SchemaDefinition)), // Optional - list of SchemaDefinitions (each containing schema + entities)
 });
 
 export const JazzAccount = co
@@ -148,33 +145,9 @@ export const JazzAccount = co
       });
       await defaultCapability.$jazz.waitForSync();
 
-      // Create schemata group and initialize with HelloEarth schema
-      const schemataGroup = Group.create();
-      await schemataGroup.$jazz.waitForSync();
-      const helloEarthSchema = SchemaDefinition.create(
-        {
-          "@schema": "schema-definition",
-          name: "HelloEarth",
-          definition: {
-            type: "object",
-            properties: {
-              name: {
-                type: "string",
-              },
-            },
-            required: ["name"],
-          },
-        },
-        schemataGroup,
-      );
-      await helloEarthSchema.$jazz.waitForSync();
-      const schemataList = co.list(SchemaDefinition).create([helloEarthSchema], schemataGroup);
-      await schemataList.$jazz.waitForSync();
-
       account.$jazz.set("root", {
         contact: contact,
         capabilities: [defaultCapability],
-        schemata: schemataList,
       });
       return;
     }
@@ -200,33 +173,9 @@ export const JazzAccount = co
       });
       await defaultCapability.$jazz.waitForSync();
 
-      // Create schemata group and initialize with HelloEarth schema
-      const schemataGroup = Group.create();
-      await schemataGroup.$jazz.waitForSync();
-      const helloEarthSchema = SchemaDefinition.create(
-        {
-          "@schema": "schema-definition",
-          name: "HelloEarth",
-          definition: {
-            type: "object",
-            properties: {
-              name: {
-                type: "string",
-              },
-            },
-            required: ["name"],
-          },
-        },
-        schemataGroup,
-      );
-      await helloEarthSchema.$jazz.waitForSync();
-      const schemataList = co.list(SchemaDefinition).create([helloEarthSchema], schemataGroup);
-      await schemataList.$jazz.waitForSync();
-
       account.$jazz.set("root", {
         contact: contact,
         capabilities: [defaultCapability],
-        schemata: schemataList,
       });
       return;
     }
@@ -264,33 +213,9 @@ export const JazzAccount = co
       });
       await defaultCapability.$jazz.waitForSync();
 
-      // Create schemata group and initialize with HelloEarth schema
-      const schemataGroup = Group.create();
-      await schemataGroup.$jazz.waitForSync();
-      const helloEarthSchema = SchemaDefinition.create(
-        {
-          "@schema": "schema-definition",
-          name: "HelloEarth",
-          definition: {
-            type: "object",
-            properties: {
-              name: {
-                type: "string",
-              },
-            },
-            required: ["name"],
-          },
-        },
-        schemataGroup,
-      );
-      await helloEarthSchema.$jazz.waitForSync();
-      const schemataList = co.list(SchemaDefinition).create([helloEarthSchema], schemataGroup);
-      await schemataList.$jazz.waitForSync();
-
       account.$jazz.set("root", {
         contact: contact,
         capabilities: [defaultCapability],
-        schemata: schemataList,
       });
       return;
     }
@@ -334,128 +259,24 @@ export const JazzAccount = co
       }
     }
 
-    // Ensure schemata list exists and initialize with HelloEarth schema
-    if (!rootWithData.$jazz.has("schemata")) {
-      // Create a group for schemata
-      const schemataGroup = Group.create();
-      await schemataGroup.$jazz.waitForSync();
+    // Ensure data list exists (empty by default - schemas created manually via UI)
+    if (!rootWithData.$jazz.has("data")) {
+      // Create a group for data list
+      const dataGroup = Group.create();
+      await dataGroup.$jazz.waitForSync();
 
-      // Create HelloEarth schema definition with simple JSON Schema
-      const helloEarthSchema = SchemaDefinition.create(
-        {
-          "@schema": "schema-definition",
-          name: "HelloEarth",
-          definition: {
-            type: "object",
-            properties: {
-              name: {
-                type: "string",
-              },
-            },
-            required: ["name"],
-          },
-        },
-        schemataGroup,
-      );
-      await helloEarthSchema.$jazz.waitForSync();
-
-      // Create schemata list with HelloEarth
-      const schemataList = co.list(SchemaDefinition).create([helloEarthSchema], schemataGroup);
-      await schemataList.$jazz.waitForSync();
-      rootWithData.$jazz.set("schemata", schemataList);
+      // Create empty data list (list of SchemaDefinitions)
+      const dataList = co.list(SchemaDefinition).create([], dataGroup);
+      await dataList.$jazz.waitForSync();
+      rootWithData.$jazz.set("data", dataList);
     } else {
-      // Ensure schemata list is loaded
+      // Ensure data list is loaded
       try {
-        const schemataLoaded = await rootWithData.$jazz.ensureLoaded({
-          resolve: { schemata: true },
+        await rootWithData.$jazz.ensureLoaded({
+          resolve: { data: true },
         });
-
-        // Check if HelloEarth schema already exists
-        if (schemataLoaded.schemata && schemataLoaded.schemata.$isLoaded) {
-          const schemataList = schemataLoaded.schemata as any;
-
-          // Check if HelloEarth already exists by iterating the CoList
-          let helloEarthExists = false;
-          try {
-            // CoLists are iterable, convert to array
-            const schemataArray = Array.from(schemataList);
-            for (const schema of schemataArray) {
-              if (schema && typeof schema === "object" && "$jazz" in schema) {
-                // Ensure schema is loaded before checking name
-                const schemaLoaded = await (schema as any).$jazz.ensureLoaded({});
-                if (schemaLoaded.$isLoaded) {
-                  const schemaAny = schemaLoaded as any;
-                  if (schemaAny.name === "HelloEarth") {
-                    helloEarthExists = true;
-                    break;
-                  }
-                }
-              }
-            }
-          } catch (error) {
-            console.warn("[Schema Migration] Error iterating schemata list:", error);
-          }
-
-          // If HelloEarth doesn't exist, add it
-          if (!helloEarthExists) {
-            // Get the owner group from the schemata list
-            const schemataOwner = schemataList.$jazz?.owner;
-            if (schemataOwner && typeof schemataOwner === "object" && "$jazz" in schemataOwner) {
-              const ownerGroup = schemataOwner as any;
-
-              // Create HelloEarth schema definition
-              const helloEarthSchema = SchemaDefinition.create(
-                {
-                  "@schema": "schema-definition",
-                  name: "HelloEarth",
-                  definition: {
-                    type: "object",
-                    properties: {
-                      name: {
-                        type: "string",
-                      },
-                    },
-                    required: ["name"],
-                  },
-                },
-                ownerGroup,
-              );
-              await helloEarthSchema.$jazz.waitForSync();
-
-              // Add HelloEarth to the existing schemata list
-              schemataList.push(helloEarthSchema);
-            } else {
-              console.warn("[Schema Migration] Could not determine schemata owner group, skipping HelloEarth initialization");
-            }
-          }
-        }
       } catch (error) {
-        console.warn("[Schema Migration] Failed to load schemata list:", error);
-        // If loading failed, create a new schemata list with HelloEarth
-        const schemataGroup = Group.create();
-        await schemataGroup.$jazz.waitForSync();
-
-        const helloEarthSchema = SchemaDefinition.create(
-          {
-            "@schema": "schema-definition",
-            name: "HelloEarth",
-            definition: {
-              type: "object",
-              properties: {
-                name: {
-                  type: "string",
-                },
-              },
-              required: ["name"],
-            },
-          },
-          schemataGroup,
-        );
-        await helloEarthSchema.$jazz.waitForSync();
-
-        const schemataList = co.list(SchemaDefinition).create([helloEarthSchema], schemataGroup);
-        await schemataList.$jazz.waitForSync();
-        rootWithData.$jazz.set("schemata", schemataList);
+        console.warn("[Schema Migration] Failed to load data list:", error);
       }
     }
 

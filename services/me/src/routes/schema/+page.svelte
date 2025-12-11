@@ -2,11 +2,11 @@
   import { JazzAccount, migrateAddCars, addRandomCarInstance, resetData } from "@hominio/data";
   import { AccountCoState } from "jazz-tools/svelte";
 
-  // Load account with schemata
+  // Load account with data (list of SchemaDefinitions)
   const account = new AccountCoState(JazzAccount, {
     resolve: {
       root: {
-        schemata: true,
+        data: true,
       },
     },
   });
@@ -27,7 +27,7 @@
         });
       }
 
-      alert("Cars list added successfully! Refresh the data explorer to see it.");
+      alert("Car schema added successfully! Check the schema list below.");
     } catch (error) {
       console.error("Error adding Cars:", error);
       alert("Error adding Cars. Check console for details.");
@@ -48,7 +48,7 @@
         });
       }
 
-      alert("Random car instance added successfully! Refresh the data explorer to see it.");
+      alert("Random car instance added successfully! Check the data explorer to see it.");
     } catch (error) {
       console.error("Error adding random car:", error);
       alert("Error adding random car. Check console for details.");
@@ -72,22 +72,22 @@
 </script>
 
 <div class="flex h-full mt-24">
-  <!-- Main area: Schemata list -->
+  <!-- Main area: Schema list -->
   <main class="flex-1 p-4 bg-gray-50">
-    <h2 class="font-bold mb-4 text-lg">Schemata</h2>
+    <h2 class="font-bold mb-4 text-lg">Schemas</h2>
 
     <div class="mb-4 flex gap-2">
       <button
         onclick={() => handleAddCars()}
         class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
       >
-        Add Cars
+        Add Car Schema
       </button>
       <button
         onclick={() => handleAddRandomCar()}
         class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
       >
-        Add Random Car
+        Add Random Car Instance
       </button>
       <button
         onclick={() => handleResetData()}
@@ -97,27 +97,43 @@
       </button>
     </div>
 
-    {#if me.$isLoaded && me.root?.schemata?.$isLoaded}
-      {@const schemataArray = Array.from(me.root.schemata)}
-      <div class="space-y-2">
-        {#each schemataArray as schema}
-          {@const schemaLoaded = schema.$isLoaded ? schema : null}
-          {#if schemaLoaded}
-            <div class="p-3 border rounded-lg bg-white shadow-sm">
-              <div class="font-medium text-sm">{schemaLoaded.name}</div>
-              <pre class="text-xs bg-slate-50 p-2 rounded border mt-2 overflow-x-auto">
-                {JSON.stringify(schemaLoaded.definition, null, 2)}
-              </pre>
-            </div>
-          {:else}
-            <div class="p-3 border rounded-lg bg-slate-50">
-              <span class="text-sm text-slate-400">Loading...</span>
-            </div>
-          {/if}
-        {/each}
-      </div>
+    {#if me.$isLoaded && me.root?.data?.$isLoaded}
+      {@const dataArray = Array.from(me.root.data)}
+      {#if dataArray.length > 0}
+        <div class="space-y-2">
+          {#each dataArray as schema}
+            {@const schemaLoaded = schema.$isLoaded ? schema : null}
+            {#if schemaLoaded}
+              {@const entitiesCount = schemaLoaded.entities?.$isLoaded
+                ? Array.from(schemaLoaded.entities).length
+                : 0}
+              <div class="p-3 border rounded-lg bg-white shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="font-medium text-sm">{schemaLoaded.name}</div>
+                  <div class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                    {entitiesCount}
+                    {entitiesCount === 1 ? "entity" : "entities"}
+                  </div>
+                </div>
+                <pre class="text-xs bg-slate-50 p-2 rounded border overflow-x-auto">
+                  {JSON.stringify(schemaLoaded.definition, null, 2)}
+                </pre>
+              </div>
+            {:else}
+              <div class="p-3 border rounded-lg bg-slate-50">
+                <span class="text-sm text-slate-400">Loading...</span>
+              </div>
+            {/if}
+          {/each}
+        </div>
+      {:else}
+        <div class="p-4 border rounded-lg bg-white shadow-sm text-center">
+          <p class="text-sm text-slate-600 mb-2">No schemas yet</p>
+          <p class="text-xs text-slate-400">Click "Add Car Schema" to create your first schema</p>
+        </div>
+      {/if}
     {:else}
-      <p class="text-sm text-slate-400">Loading schemata...</p>
+      <p class="text-sm text-slate-400">Loading schemas...</p>
     {/if}
   </main>
 </div>

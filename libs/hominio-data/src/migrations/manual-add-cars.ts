@@ -7,6 +7,7 @@
 
 import { co, Group } from "jazz-tools";
 import { jsonSchemaToZod } from "../functions/json-schema-to-zod.js";
+import { SchemaDefinition } from "../schema.js";
 
 // JSON Schema definition for Car
 const CarJsonSchema = {
@@ -47,8 +48,8 @@ function jsonSchemaToCoMapShape(jsonSchema: any): Record<string, any> {
 }
 
 /**
- * Manually adds a Cars list to the root if it doesn't exist
- * Converts JSON Schema to Jazz Zod schema dynamically
+ * Manually adds a Car SchemaDefinition to root.data if it doesn't exist
+ * The SchemaDefinition contains the JSON Schema definition and an empty entities list
  * 
  * @param account - The Jazz account
  */
@@ -67,19 +68,9 @@ export async function migrateAddCars(
 
   const root = loadedAccount.root;
 
-  // Ensure data list exists (list of schema-specific lists)
+  // Ensure data list exists (list of SchemaDefinitions)
   if (!root.$jazz.has("data")) {
-    // Create a group for the data list
-    const dataGroup = Group.create();
-    await dataGroup.$jazz.waitForSync();
-
-    // Create empty data list (list of lists)
-    const dataList = co.list(co.list(co.map({}))).create([], dataGroup);
-    await dataList.$jazz.waitForSync();
-
-    // Add data list to root
-    root.$jazz.set("data", dataList);
-    await root.$jazz.waitForSync();
+    throw new Error("Data list does not exist - run account migration first");
   }
 
   // Load data list
@@ -89,29 +80,22 @@ export async function migrateAddCars(
   const dataList = rootWithData.data;
 
   if (!dataList) {
-    throw new Error("Data list could not be created or loaded");
+    throw new Error("Data list could not be loaded");
   }
 
-  // Check if Cars list already exists in data list
-  if (dataList && dataList.$isLoaded) {
+  // Check if Car SchemaDefinition already exists
+  if (dataList.$isLoaded) {
     const dataArray = Array.from(dataList);
-    // If we already have lists, we could check if Cars list exists
-    // For now, we'll just create a new Cars list
+    for (const schema of dataArray) {
+      if (schema && typeof schema === "object" && "$jazz" in schema) {
+        const schemaLoaded = await (schema as any).$jazz.ensureLoaded({});
+        if (schemaLoaded.$isLoaded && (schemaLoaded as any).name === "Car") {
+          console.log("Car schema already exists");
+          return; // Car schema already exists
+        }
+      }
+    }
   }
-
-  // Convert JSON Schema to co.map() shape
-  const carShape = jsonSchemaToCoMapShape(CarJsonSchema);
-
-  // Create CoMap schema from shape
-  const CarCoMapSchema = co.map(carShape);
-
-  // Create a group for the Cars list
-  const carsGroup = Group.create();
-  await carsGroup.$jazz.waitForSync();
-
-  // Create empty Cars list (list of Car instances)
-  const carsList = co.list(CarCoMapSchema).create([], carsGroup);
-  await carsList.$jazz.waitForSync();
 
   // Get the owner group from the data list
   const dataOwner = (dataList as any).$jazz?.owner;
@@ -119,16 +103,36 @@ export async function migrateAddCars(
     throw new Error("Cannot determine data list owner");
   }
 
-  // Add Cars list to data list (nested structure)
-  dataList.$jazz.push(carsList);
+  // Convert JSON Schema to co.map() shape - this creates the typed Car CoMap schema
+  const carShape = jsonSchemaToCoMapShape(CarJsonSchema);
+  const CarCoMapSchema = co.map(carShape);
 
-  // Wait for sync to complete
+  // Create a group for the Car entities list
+  const entitiesGroup = Group.create();
+  await entitiesGroup.$jazz.waitForSync();
+
+  // Create Car SchemaDefinition with JSON Schema and typed entities list
+  const carSchema = SchemaDefinition.create(
+    {
+      "@schema": "schema-definition",
+      name: "Car",
+      definition: CarJsonSchema,
+      entities: co.list(CarCoMapSchema).create([], entitiesGroup), // Typed with actual Car schema!
+    },
+    dataOwner
+  );
+  await carSchema.$jazz.waitForSync();
+
+  // Add Car SchemaDefinition to data list
+  dataList.$jazz.push(carSchema);
   await root.$jazz.waitForSync();
+
+  console.log("Car schema created successfully");
 }
 
 /**
- * Adds a random Car instance to the Cars list
- * Creates the Cars list if it doesn't exist
+ * Adds a random Car instance to the Car SchemaDefinition's entities list
+ * Creates the Car SchemaDefinition if it doesn't exist
  * 
  * @param account - The Jazz account
  */
@@ -147,19 +151,9 @@ export async function addRandomCarInstance(
 
   const root = loadedAccount.root;
 
-  // Ensure data list exists (list of schema-specific lists)
+  // Ensure data list exists
   if (!root.$jazz.has("data")) {
-    // Create a group for the data list
-    const dataGroup = Group.create();
-    await dataGroup.$jazz.waitForSync();
-
-    // Create empty data list (list of lists)
-    const dataList = co.list(co.list(co.map({}))).create([], dataGroup);
-    await dataList.$jazz.waitForSync();
-
-    // Add data list to root
-    root.$jazz.set("data", dataList);
-    await root.$jazz.waitForSync();
+    throw new Error("Data list does not exist - run account migration first");
   }
 
   // Load data list
@@ -169,40 +163,66 @@ export async function addRandomCarInstance(
   const dataList = rootWithData.data;
 
   if (!dataList) {
-    throw new Error("Data list could not be created or loaded");
+    throw new Error("Data list could not be loaded");
+  }
+
+  // Find Car SchemaDefinition
+  let carSchema: any = null;
+
+  if (dataList.$isLoaded) {
+    const dataArray = Array.from(dataList);
+    for (const schema of dataArray) {
+      if (schema && typeof schema === "object" && "$jazz" in schema) {
+        const schemaLoaded = await (schema as any).$jazz.ensureLoaded({
+          resolve: { entities: true },
+        });
+        if (schemaLoaded.$isLoaded && (schemaLoaded as any).name === "Car") {
+          carSchema = schemaLoaded;
+          break;
+        }
+      }
+    }
+  }
+
+  // If Car schema doesn't exist, create it first
+  if (!carSchema) {
+    await migrateAddCars(account);
+
+    // Re-load data list and find Car schema
+    const reloadedRoot = await root.$jazz.ensureLoaded({
+      resolve: { data: true },
+    });
+    const reloadedDataList = reloadedRoot.data;
+
+    if (reloadedDataList?.$isLoaded) {
+      const dataArray = Array.from(reloadedDataList);
+      for (const schema of dataArray) {
+        if (schema && typeof schema === "object" && "$jazz" in schema) {
+          const schemaLoaded = await (schema as any).$jazz.ensureLoaded({
+            resolve: { entities: true },
+          });
+          if (schemaLoaded.$isLoaded && (schemaLoaded as any).name === "Car") {
+            carSchema = schemaLoaded;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!carSchema) {
+      throw new Error("Could not create or find Car schema");
+    }
+  }
+
+  // Get the entities list from the Car schema
+  const entitiesList = carSchema.entities;
+  if (!entitiesList) {
+    throw new Error("Car schema does not have entities list");
   }
 
   // Convert JSON Schema to co.map() shape
   const carShape = jsonSchemaToCoMapShape(CarJsonSchema);
   const CarCoMapSchema = co.map(carShape);
-
-  // Find or create Cars list
-  let carsList: any = null;
-
-  if (dataList.$isLoaded) {
-    const dataArray = Array.from(dataList);
-    // Check if Cars list already exists (first item should be Cars list)
-    if (dataArray.length > 0) {
-      carsList = dataArray[0];
-      // Ensure it's loaded
-      if (!carsList.$isLoaded) {
-        await carsList.$jazz.ensureLoaded();
-      }
-    }
-  }
-
-  // If Cars list doesn't exist, create it
-  if (!carsList) {
-    const carsGroup = Group.create();
-    await carsGroup.$jazz.waitForSync();
-
-    carsList = co.list(CarCoMapSchema).create([], carsGroup);
-    await carsList.$jazz.waitForSync();
-
-    // Add Cars list to data list
-    dataList.$jazz.push(carsList);
-    await root.$jazz.waitForSync();
-  }
 
   // Generate random car data
   const carNames = [
@@ -234,9 +254,11 @@ export async function addRandomCarInstance(
   const randomName = carNames[Math.floor(Math.random() * carNames.length)];
   const randomColor = carColors[Math.floor(Math.random() * carColors.length)];
 
-  // Create a group for the Car instance
-  const carGroup = Group.create();
-  await carGroup.$jazz.waitForSync();
+  // Get the owner group from the entities list
+  const entitiesOwner = (entitiesList as any).$jazz?.owner;
+  if (!entitiesOwner) {
+    throw new Error("Cannot determine entities list owner");
+  }
 
   // Create Car instance with properties
   const carInstance = CarCoMapSchema.create(
@@ -244,19 +266,20 @@ export async function addRandomCarInstance(
       name: randomName,
       color: randomColor,
     },
-    carGroup
+    entitiesOwner
   );
   await carInstance.$jazz.waitForSync();
 
-  // Verify properties are accessible (they should be accessible via direct property access)
-  // Note: Properties set via create() should be accessible immediately after waitForSync()
+  // Verify properties are accessible
   if (!carInstance.$isLoaded) {
     await carInstance.$jazz.ensureLoaded({ resolve: {} });
   }
 
-  // Add Car instance to Cars list
-  carsList.$jazz.push(carInstance);
+  // Add Car instance to entities list
+  entitiesList.$jazz.push(carInstance);
   await root.$jazz.waitForSync();
+
+  console.log(`Added car: ${randomName} (${randomColor})`);
 }
 
 /**
