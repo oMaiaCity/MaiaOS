@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { JazzAccount, migrateAddCars, addRandomCarInstance, resetData } from "@hominio/data";
+  import { JazzAccount, addRandomCarInstance, resetData } from "@hominio/data";
   import { AccountCoState } from "jazz-tools/svelte";
 
   // Load account with data (list of SchemaDefinitions)
@@ -13,29 +13,8 @@
 
   const me = $derived(account.current);
 
-  // Handle manual migration trigger
-  async function handleAddCars() {
-    if (!me.$isLoaded) return;
-
-    try {
-      await migrateAddCars(me);
-
-      // Reload root to ensure data field is visible
-      if (me.root?.$isLoaded) {
-        await me.root.$jazz.ensureLoaded({
-          resolve: { data: true },
-        });
-      }
-
-      alert("Car schema added successfully! Check the schema list below.");
-    } catch (error) {
-      console.error("Error adding Cars:", error);
-      alert("Error adding Cars. Check console for details.");
-    }
-  }
-
-  // Handle adding random car instance
-  async function handleAddRandomCar() {
+  // Handle adding a car (automatically creates schema if needed)
+  async function handleAddCar() {
     if (!me.$isLoaded) return;
 
     try {
@@ -48,10 +27,10 @@
         });
       }
 
-      alert("Random car instance added successfully! Check the data explorer to see it.");
+      alert("Car added successfully! Check the data explorer to see it.");
     } catch (error) {
-      console.error("Error adding random car:", error);
-      alert("Error adding random car. Check console for details.");
+      console.error("Error adding car:", error);
+      alert("Error adding car. Check console for details.");
     }
   }
 
@@ -78,16 +57,10 @@
 
     <div class="mb-4 flex gap-2">
       <button
-        onclick={() => handleAddCars()}
+        onclick={() => handleAddCar()}
         class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
       >
-        Add Car Schema
-      </button>
-      <button
-        onclick={() => handleAddRandomCar()}
-        class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-      >
-        Add Random Car Instance
+        Add Car
       </button>
       <button
         onclick={() => handleResetData()}

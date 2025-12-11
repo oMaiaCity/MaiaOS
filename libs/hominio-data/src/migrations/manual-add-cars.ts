@@ -1,16 +1,14 @@
 /**
- * Manual migration to add Cars list to root
- * This migration runs only when manually triggered, not automatically
+ * Car entity management using dynamic schema migration
  * 
- * Uses JSON Schema definition and converts it to Jazz Zod schema dynamically
+ * Uses the generic dynamic schema migration utility to automatically
+ * ensure the Car schema exists and create car instances
  */
 
-import { co, Group } from "jazz-tools";
-import { jsonSchemaToZod } from "../functions/json-schema-to-zod.js";
-import { SchemaDefinition } from "../schema.js";
+import { createEntity, ensureSchema } from "../functions/dynamic-schema-migration.js";
 
 // JSON Schema definition for Car
-const CarJsonSchema = {
+export const CarJsonSchema = {
   type: "object",
   properties: {
     name: {
@@ -23,33 +21,35 @@ const CarJsonSchema = {
   required: ["name", "color"],
 };
 
+// Random data generators for cars
+const CAR_NAMES = [
+  "Tesla Model 3",
+  "Toyota Camry",
+  "Honda Civic",
+  "Ford Mustang",
+  "BMW 3 Series",
+  "Mercedes-Benz C-Class",
+  "Audi A4",
+  "Volkswagen Golf",
+  "Nissan Altima",
+  "Chevrolet Malibu",
+];
+
+const CAR_COLORS = [
+  "Red",
+  "Blue",
+  "Green",
+  "Black",
+  "White",
+  "Silver",
+  "Gray",
+  "Yellow",
+  "Orange",
+  "Purple",
+];
+
 /**
- * Converts JSON Schema to a co.map() shape object
- * 
- * @param jsonSchema - JSON Schema object definition
- * @returns Shape object for co.map()
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function jsonSchemaToCoMapShape(jsonSchema: any): Record<string, any> {
-  if (!jsonSchema || jsonSchema.type !== "object") {
-    throw new Error("JSON Schema must be an object type");
-  }
-
-  if (!jsonSchema.properties) {
-    return {};
-  }
-
-  const shape: Record<string, any> = {};
-  for (const [key, value] of Object.entries(jsonSchema.properties)) {
-    shape[key] = jsonSchemaToZod(value as any);
-  }
-
-  return shape;
-}
-
-/**
- * Manually adds a Car SchemaDefinition to root.data if it doesn't exist
- * The SchemaDefinition contains the JSON Schema definition and an empty entities list
+ * Ensures Car schema exists (legacy function - now uses generic utility)
  * 
  * @param account - The Jazz account
  */
@@ -57,233 +57,41 @@ export async function migrateAddCars(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   account: any
 ): Promise<void> {
-  // Load root
-  const loadedAccount = await account.$jazz.ensureLoaded({
-    resolve: { root: true },
-  });
-
-  if (!loadedAccount.root) {
-    throw new Error("Root does not exist");
-  }
-
-  const root = loadedAccount.root;
-
-  // Ensure data list exists (list of SchemaDefinitions)
-  if (!root.$jazz.has("data")) {
-    throw new Error("Data list does not exist - run account migration first");
-  }
-
-  // Load data list
-  const rootWithData = await root.$jazz.ensureLoaded({
-    resolve: { data: true },
-  });
-  const dataList = rootWithData.data;
-
-  if (!dataList) {
-    throw new Error("Data list could not be loaded");
-  }
-
-  // Check if Car SchemaDefinition already exists
-  if (dataList.$isLoaded) {
-    const dataArray = Array.from(dataList);
-    for (const schema of dataArray) {
-      if (schema && typeof schema === "object" && "$jazz" in schema) {
-        const schemaLoaded = await (schema as any).$jazz.ensureLoaded({});
-        if (schemaLoaded.$isLoaded && (schemaLoaded as any).name === "Car") {
-          console.log("Car schema already exists");
-          return; // Car schema already exists
-        }
-      }
-    }
-  }
-
-  // Get the owner group from the data list
-  const dataOwner = (dataList as any).$jazz?.owner;
-  if (!dataOwner) {
-    throw new Error("Cannot determine data list owner");
-  }
-
-  // Convert JSON Schema to co.map() shape - this creates the typed Car CoMap schema
-  const carShape = jsonSchemaToCoMapShape(CarJsonSchema);
-  const CarCoMapSchema = co.map(carShape);
-
-  // Create a group for the Car entities list
-  const entitiesGroup = Group.create();
-  await entitiesGroup.$jazz.waitForSync();
-
-  // Create Car SchemaDefinition with JSON Schema and typed entities list
-  const carSchema = SchemaDefinition.create(
-    {
-      "@schema": "schema-definition",
-      name: "Car",
-      definition: CarJsonSchema,
-      entities: co.list(CarCoMapSchema).create([], entitiesGroup), // Typed with actual Car schema!
-    },
-    dataOwner
-  );
-  await carSchema.$jazz.waitForSync();
-
-  // Add Car SchemaDefinition to data list
-  dataList.$jazz.push(carSchema);
-  await root.$jazz.waitForSync();
-
-  console.log("Car schema created successfully");
+  await ensureSchema(account, "Car", CarJsonSchema);
 }
 
 /**
- * Adds a random Car instance to the Car SchemaDefinition's entities list
- * Creates the Car SchemaDefinition if it doesn't exist
+ * Creates a random Car instance
+ * Automatically ensures the Car schema exists first
  * 
  * @param account - The Jazz account
  */
 export async function addRandomCarInstance(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   account: any
-): Promise<void> {
-  // Load root
-  const loadedAccount = await account.$jazz.ensureLoaded({
-    resolve: { root: true },
-  });
-
-  if (!loadedAccount.root) {
-    throw new Error("Root does not exist");
-  }
-
-  const root = loadedAccount.root;
-
-  // Ensure data list exists
-  if (!root.$jazz.has("data")) {
-    throw new Error("Data list does not exist - run account migration first");
-  }
-
-  // Load data list
-  const rootWithData = await root.$jazz.ensureLoaded({
-    resolve: { data: true },
-  });
-  const dataList = rootWithData.data;
-
-  if (!dataList) {
-    throw new Error("Data list could not be loaded");
-  }
-
-  // Find Car SchemaDefinition
-  let carSchema: any = null;
-
-  if (dataList.$isLoaded) {
-    const dataArray = Array.from(dataList);
-    for (const schema of dataArray) {
-      if (schema && typeof schema === "object" && "$jazz" in schema) {
-        const schemaLoaded = await (schema as any).$jazz.ensureLoaded({
-          resolve: { entities: true },
-        });
-        if (schemaLoaded.$isLoaded && (schemaLoaded as any).name === "Car") {
-          carSchema = schemaLoaded;
-          break;
-        }
-      }
-    }
-  }
-
-  // If Car schema doesn't exist, create it first
-  if (!carSchema) {
-    await migrateAddCars(account);
-
-    // Re-load data list and find Car schema
-    const reloadedRoot = await root.$jazz.ensureLoaded({
-      resolve: { data: true },
-    });
-    const reloadedDataList = reloadedRoot.data;
-
-    if (reloadedDataList?.$isLoaded) {
-      const dataArray = Array.from(reloadedDataList);
-      for (const schema of dataArray) {
-        if (schema && typeof schema === "object" && "$jazz" in schema) {
-          const schemaLoaded = await (schema as any).$jazz.ensureLoaded({
-            resolve: { entities: true },
-          });
-          if (schemaLoaded.$isLoaded && (schemaLoaded as any).name === "Car") {
-            carSchema = schemaLoaded;
-            break;
-          }
-        }
-      }
-    }
-
-    if (!carSchema) {
-      throw new Error("Could not create or find Car schema");
-    }
-  }
-
-  // Get the entities list from the Car schema
-  const entitiesList = carSchema.entities;
-  if (!entitiesList) {
-    throw new Error("Car schema does not have entities list");
-  }
-
-  // Convert JSON Schema to co.map() shape
-  const carShape = jsonSchemaToCoMapShape(CarJsonSchema);
-  const CarCoMapSchema = co.map(carShape);
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any> {
   // Generate random car data
-  const carNames = [
-    "Tesla Model 3",
-    "Toyota Camry",
-    "Honda Civic",
-    "Ford Mustang",
-    "BMW 3 Series",
-    "Mercedes-Benz C-Class",
-    "Audi A4",
-    "Volkswagen Golf",
-    "Nissan Altima",
-    "Chevrolet Malibu",
-  ];
+  const randomName = CAR_NAMES[Math.floor(Math.random() * CAR_NAMES.length)];
+  const randomColor = CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)];
 
-  const carColors = [
-    "Red",
-    "Blue",
-    "Green",
-    "Black",
-    "White",
-    "Silver",
-    "Gray",
-    "Yellow",
-    "Orange",
-    "Purple",
-  ];
-
-  const randomName = carNames[Math.floor(Math.random() * carNames.length)];
-  const randomColor = carColors[Math.floor(Math.random() * carColors.length)];
-
-  // Get the owner group from the entities list
-  const entitiesOwner = (entitiesList as any).$jazz?.owner;
-  if (!entitiesOwner) {
-    throw new Error("Cannot determine entities list owner");
-  }
-
-  // Create Car instance with properties
-  const carInstance = CarCoMapSchema.create(
+  // Use generic createEntity utility - automatically ensures schema exists!
+  const carInstance = await createEntity(
+    account,
+    "Car",
+    CarJsonSchema,
     {
       name: randomName,
       color: randomColor,
-    },
-    entitiesOwner
+    }
   );
-  await carInstance.$jazz.waitForSync();
 
-  // Verify properties are accessible
-  if (!carInstance.$isLoaded) {
-    await carInstance.$jazz.ensureLoaded({ resolve: {} });
-  }
-
-  // Add Car instance to entities list
-  entitiesList.$jazz.push(carInstance);
-  await root.$jazz.waitForSync();
-
-  console.log(`Added car: ${randomName} (${randomColor})`);
+  return carInstance;
 }
 
 /**
- * Resets/clears the data list from root
+ * Clears all items from the data list (removes all schemas and their entities)
+ * Keeps the data list structure intact
  * 
  * @param account - The Jazz account
  */
@@ -302,10 +110,25 @@ export async function resetData(
 
   const root = loadedAccount.root;
 
-  // Check if data list exists and delete it
+  // Check if data list exists
   if (root.$jazz.has("data")) {
-    root.$jazz.delete("data");
-    await root.$jazz.waitForSync();
+    // Load data list
+    const rootWithData = await root.$jazz.ensureLoaded({
+      resolve: { data: true },
+    });
+    const dataList = rootWithData.data;
+
+    if (dataList && dataList.$isLoaded) {
+      // Get current length
+      const currentLength = Array.from(dataList).length;
+
+      // Remove all items by splicing from the end (safer than iterating forward)
+      for (let i = currentLength - 1; i >= 0; i--) {
+        dataList.$jazz.splice(i, 1);
+      }
+
+      await root.$jazz.waitForSync();
+    }
   }
 }
 

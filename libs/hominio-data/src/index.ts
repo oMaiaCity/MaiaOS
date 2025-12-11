@@ -1,8 +1,11 @@
 // Schemas
 export { JazzAccount, AccountProfile, Contact, AppRoot, Capability, SchemaDefinition, syncGoogleDataToProfile } from './schema';
 
-// Manual Migrations
-export { migrateAddCars, addRandomCarInstance, resetData } from './migrations/manual-add-cars';
+// Dynamic Schema Migration
+export { ensureSchema, createEntity } from './functions/dynamic-schema-migration';
+
+// Manual Migrations (legacy - now uses generic utilities)
+export { migrateAddCars, addRandomCarInstance, resetData, CarJsonSchema } from './migrations/manual-add-cars';
 
 // Computed Fields
 export { registerComputedField, setupComputedFieldsForCoValue, isComputedField } from './functions/computed-fields';
