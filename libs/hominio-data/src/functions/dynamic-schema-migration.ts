@@ -240,12 +240,12 @@ export async function ensureSchema(
 
   // Step 1: Extract all nested CoValue schemas  
   const extractedSchemas = extractNestedCoValueSchemas(jsonSchema);
-  
+
   // Step 2: Create SchemaDefinition entries for each extracted nested schema
   for (const [refPath, nestedCoMapSchema] of Object.entries(extractedSchemas)) {
     // Generate a name for this nested schema (e.g., "JazzComposite/NestedCoMap")
     const nestedSchemaName = `${schemaName}/${refPath.split('/').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('/')}`;
-    
+
     // Check if this nested schema already exists
     let nestedSchemaExists = false;
     if (dataList.$isLoaded) {
@@ -260,7 +260,7 @@ export async function ensureSchema(
         }
       }
     }
-    
+
     if (!nestedSchemaExists) {
       // Create a group for the nested schema's entities list
       const nestedEntitiesGroup = Group.create();
@@ -296,20 +296,23 @@ export async function ensureSchema(
 
   await root.$jazz.waitForSync();
 
-  // Step 3: Convert JSON Schema to co.map() shape - this creates the typed CoMap schema with direct links
+  // Step 3: Create a modified JSON Schema with $ref for nested schemas
+  const modifiedJsonSchema = replaceNestedSchemasWithRefs(jsonSchema, schemaName);
+
+  // Step 4: Convert JSON Schema to co.map() shape - this creates the typed CoMap schema with direct links
   const entityShape = jsonSchemaToCoMapShape(jsonSchema);
   const EntityCoMapSchema = co.map(entityShape);
 
-  // Step 4: Create a group for the main schema's entities list
+  // Step 5: Create a group for the main schema's entities list
   const entitiesGroup = Group.create();
   await entitiesGroup.$jazz.waitForSync();
 
-  // Step 5: Create SchemaDefinition with JSON Schema and typed entities list
+  // Step 6: Create SchemaDefinition with modified JSON Schema (using $ref) and typed entities list
   const newSchema = SchemaDefinition.create(
     {
       "@schema": "schema-definition",
       name: schemaName,
-      definition: jsonSchema,
+      definition: modifiedJsonSchema, // Use modified schema with $ref
       entities: co.list(EntityCoMapSchema).create([], entitiesGroup), // Typed with actual schema!
     },
     dataOwner
@@ -421,5 +424,70 @@ function getRequiredFromPath(jsonSchema: any, path: string): string[] {
   }
 
   return current?.required || [];
+}
+
+/**
+ * Replace nested o-map definitions in JSON Schema with $ref to created schemas
+ * Handles nested structures recursively
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function replaceNestedSchemasWithRefs(
+  jsonSchema: any,
+  schemaName: string,
+  parentPath: string = ""
+): any {
+  if (!jsonSchema.properties) {
+    return jsonSchema;
+  }
+
+  const modifiedSchema = {
+    ...jsonSchema,
+    properties: {} as any,
+  };
+
+  for (const [key, propertySchema] of Object.entries(jsonSchema.properties)) {
+    const prop = propertySchema as any;
+    const type = prop.type;
+    const currentPath = parentPath ? `${parentPath}/${key}` : key;
+
+    if (type === "o-map" && prop.properties) {
+      // For nested o-map, replace with $ref to the nested schema
+      const nestedSchemaName = `${schemaName}/${currentPath.split('/').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('/')}`;
+      modifiedSchema.properties[key] = {
+        type: "o-map",
+        $ref: nestedSchemaName,
+        description: prop.description,
+      };
+    } else if (type === "o-list" && prop.items?.type === "o-map" && prop.items.properties) {
+      // For o-list of o-map, replace items with $ref
+      const itemPath = `${currentPath}/items`;
+      const nestedSchemaName = `${schemaName}/${itemPath.split('/').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('/')}`;
+      modifiedSchema.properties[key] = {
+        type: "o-list",
+        items: {
+          type: "o-map",
+          $ref: nestedSchemaName,
+        },
+        description: prop.description,
+      };
+    } else if (type === "o-feed" && prop.items?.type === "o-map" && prop.items.properties) {
+      // For o-feed of o-map, replace items with $ref
+      const itemPath = `${currentPath}/items`;
+      const nestedSchemaName = `${schemaName}/${itemPath.split('/').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('/')}`;
+      modifiedSchema.properties[key] = {
+        type: "o-feed",
+        items: {
+          type: "o-map",
+          $ref: nestedSchemaName,
+        },
+        description: prop.description,
+      };
+    } else {
+      // Keep as is
+      modifiedSchema.properties[key] = prop;
+    }
+  }
+
+  return modifiedSchema;
 }
 

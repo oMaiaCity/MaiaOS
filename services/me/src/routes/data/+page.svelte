@@ -164,11 +164,29 @@
     }
 
     // Otherwise, treat as regular CoValue
-    // Ensure the CoValue itself is loaded so its properties (CoValue references) are accessible
+    // Ensure the CoValue and its DIRECT nested CoValue properties are loaded (one level only)
     if (!coValue.$isLoaded && coValue.$jazz?.ensureLoaded) {
       try {
-        // Load the CoValue itself - this makes stored CoValue references accessible via coValue[key]
+        // First load the CoValue to get its structure
         await coValue.$jazz.ensureLoaded();
+
+        // Now get the JSON snapshot to find nested CoValue properties
+        const snapshot = coValue.$jazz.raw.toJSON();
+        if (snapshot && typeof snapshot === "object") {
+          // Build a resolve object for all direct CoValue properties
+          const resolveObj: Record<string, boolean> = {};
+          for (const [key, value] of Object.entries(snapshot)) {
+            // If the value is a CoID string, it's a CoValue reference - load it (but not deeply)
+            if (typeof value === "string" && value.startsWith("co_")) {
+              resolveObj[key] = false; // false = load the CoValue but don't recurse
+            }
+          }
+
+          // If we found any CoValue properties, resolve them
+          if (Object.keys(resolveObj).length > 0) {
+            await coValue.$jazz.ensureLoaded({ resolve: resolveObj });
+          }
+        }
       } catch (e) {
         console.warn("Error ensuring CoValue loaded:", e);
       }
