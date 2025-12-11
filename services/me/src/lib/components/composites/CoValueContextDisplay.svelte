@@ -18,11 +18,24 @@
   }
 
   let { coValue, onNavigate, onObjectNavigate }: Props = $props();
+  
+  // Track property loading state to trigger re-extraction
+  let propertyLoadTrigger = $state(0);
 
-  // Ensure CoValue is loaded
+  // Ensure CoValue is loaded and start loading properties incrementally
   $effect(() => {
     if (coValue && !coValue.$isLoaded && coValue.$jazz?.ensureLoaded) {
       ensureLoaded(coValue).catch((e) => console.warn("Error loading CoValue:", e));
+    }
+    
+    // Start incremental property loading
+    if (coValue && coValue.$isLoaded && coValue.$jazz) {
+      import("../../utilities/coValueLoader.js").then(({ loadCoValueProperties }) => {
+        loadCoValueProperties(coValue, (key, loadedCoValue) => {
+          // Trigger reactivity to re-extract properties
+          propertyLoadTrigger++;
+        });
+      });
     }
   });
 
@@ -62,11 +75,15 @@
     }
   });
 
-  const properties = $derived(
-    coValue && coValue.$isLoaded && !isCoListValue() && !isFileStreamValue()
+  // Re-extract properties when propertyLoadTrigger changes (properties finish loading)
+  const properties = $derived(() => {
+    // Access propertyLoadTrigger to make this reactive
+    void propertyLoadTrigger;
+    
+    return coValue && coValue.$isLoaded && !isCoListValue() && !isFileStreamValue()
       ? extractCoValueProperties(coValue)
-      : null,
-  );
+      : null;
+  });
 
   // Get image property directly from avatar CoValue
   const avatarImageDirect = $derived(() => {

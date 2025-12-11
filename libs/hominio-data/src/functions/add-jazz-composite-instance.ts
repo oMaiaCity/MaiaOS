@@ -201,7 +201,7 @@ export async function addJazzCompositeInstance(account: any): Promise<any> {
   // Add entity instance to entities list
   entitiesList.$jazz.push(entityInstance);
   await account.$jazz.ensureLoaded({ resolve: { root: true } });
-  
+
   // Note: The entity's nested CoValue properties are already created and linked
   // They will be loaded when navigating to the entity in the data explorer
 

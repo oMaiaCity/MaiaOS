@@ -76,6 +76,7 @@
   });
 
   const displayInfo = $derived(getDisplayValue(propValue));
+  const isLoading = $derived(propValue?.isLoading === true);
   const isClickable = $derived(
     variant !== "members" &&
       ((displayInfo.isCoValue && displayInfo.coValue && onSelect !== undefined) ||
@@ -133,7 +134,12 @@
       </div>
 
       <div class="flex items-center gap-2 flex-1 justify-end min-w-0">
-        {#if displayInfo.showImagePreview && displayInfo.imageId}
+        {#if isLoading}
+          <div class="inline-flex items-center gap-1.5">
+            <div class="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
+            <Badge type="loading">Loading...</Badge>
+          </div>
+        {:else if displayInfo.showImagePreview && displayInfo.imageId}
           <div class="inline-flex items-center gap-2">
             <div class="w-8 h-8 rounded overflow-hidden border border-slate-300 shrink-0">
               <Image

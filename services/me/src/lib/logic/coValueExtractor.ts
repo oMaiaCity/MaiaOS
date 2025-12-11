@@ -213,11 +213,12 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
           // It's a CoID reference - try to access the actual CoValue object from the parent
           let actualCoValue: any = null;
           let detectedType: string = "CoValue";
+          let isLoading = false;
 
           try {
             // Try to access the actual property from the CoValue
             const propertyValue = coValue[key];
-            
+
             if (propertyValue && typeof propertyValue === "object" && propertyValue.$jazz) {
               actualCoValue = propertyValue;
 
@@ -254,12 +255,30 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
                   detectedType = "CoValue";
                 }
               }
+            } else {
+              // Property is not yet loaded - mark as loading
+              isLoading = true;
             }
           } catch (e) {
-            // If we can't access the property, fall back to generic CoValue
+            // If we can't access the property, it's likely still loading
+            isLoading = true;
           }
 
           // Store with detected type and actual CoValue for navigation
+          // If loading, store with isLoading flag
+          if (isLoading) {
+            // Property is still loading - store with loading state
+            data[key] = {
+              type: "CoValue",
+              id: value,
+              isLoaded: false,
+              isLoading: true,
+              coValueId: value,
+            };
+            continue; // Skip to next property
+          }
+          
+          // Property is loaded - store with detected type
           if (detectedType === "CoList" && actualCoValue) {
             let length = 0;
             if (actualCoValue.$isLoaded) {
