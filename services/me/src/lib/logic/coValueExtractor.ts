@@ -157,10 +157,10 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
           // to access FileStream methods like getMimeType() and getSize()
           // Try to access the property directly from the CoValue (not snapshot)
           let fileStreamCoValue: any = null;
-              let mimeType = "unknown";
-              let size = 0;
+          let mimeType = "unknown";
+          let size = 0;
 
-              try {
+          try {
             // Access the actual CoValue object directly (not from JSON snapshot)
             const fileStreamValue = coValue[key];
             if (fileStreamValue && typeof fileStreamValue === "object" && fileStreamValue.$jazz) {
@@ -171,11 +171,11 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
                 try {
                   if (typeof (fileStreamCoValue as any).getMimeType === "function") {
                     mimeType = (fileStreamCoValue as any).getMimeType() || "unknown";
-                }
+                  }
                   if (typeof (fileStreamCoValue as any).getSize === "function") {
                     size = (fileStreamCoValue as any).getSize() || 0;
-                }
-              } catch (e) {
+                  }
+                } catch (e) {
                   // FileStream methods might not be available yet
                 }
               }
@@ -187,16 +187,16 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
           // Use CoID from snapshot if we don't have the CoValue object
           const fileStreamId = fileStreamCoValue?.$jazz?.id || (typeof value === "string" && value.startsWith("co_") ? value : "unknown");
 
-              data[key] = {
-                type: "FileStream",
-                id: fileStreamId,
+          data[key] = {
+            type: "FileStream",
+            id: fileStreamId,
             isLoaded: fileStreamCoValue ? fileStreamCoValue.$isLoaded : false,
-                mimeType,
-                size,
+            mimeType,
+            size,
             coValueId: fileStreamId,
             coValue: fileStreamCoValue, // Store actual CoValue for FileStream methods
-              };
-              continue;
+          };
+          continue;
         }
 
         // Handle ImageDefinition originalSize array
@@ -217,18 +217,39 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
           try {
             // Try to access the actual property from the CoValue
             const propertyValue = coValue[key];
+            
+            console.log(`[CoValue Extractor] Key: ${key}, PropertyValue:`, propertyValue, "Has $jazz:", !!propertyValue?.$jazz, "Native type:", propertyValue?.$jazz?.raw?.type);
+            
             if (propertyValue && typeof propertyValue === "object" && propertyValue.$jazz) {
               actualCoValue = propertyValue;
 
-              // Detect the actual type of the CoValue
-              if (isCoList(propertyValue)) {
+              // Use Jazz's native type detection from the raw CoValue
+              const nativeType = propertyValue.$jazz?.raw?.type;
+              
+              console.log(`[CoValue Extractor] Detected native type for ${key}:`, nativeType);
+
+              if (nativeType === "colist") {
                 detectedType = "CoList";
-              } else if (isCoMap(propertyValue)) {
-                detectedType = "CoMap";
-              } else if (isImageDefinition(propertyValue)) {
-                detectedType = "ImageDefinition";
-              } else if (isFileStream(propertyValue)) {
-                detectedType = "FileStream";
+              } else if (nativeType === "comap") {
+                // Check if it's a special CoMap type
+                if (isImageDefinition(propertyValue)) {
+                  detectedType = "ImageDefinition";
+                } else {
+                  detectedType = "CoMap";
+                }
+              } else if (nativeType === "costream") {
+                // CoStream can be FileStream, CoPlainText, CoRichText
+                if (isFileStream(propertyValue)) {
+                  detectedType = "FileStream";
+                } else {
+                  // Check for text types
+                  const snapshot = propertyValue.$jazz?.raw?.toJSON?.();
+                  if (snapshot && typeof snapshot === "string") {
+                    detectedType = "CoPlainText";
+                  } else {
+                    detectedType = "CoStream";
+                  }
+                }
               } else {
                 // Check if it's a CoFeed (has perAccount, perSession, etc.)
                 if (propertyValue.perAccount || propertyValue.perSession || propertyValue.byMe) {
@@ -237,8 +258,13 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
                   detectedType = "CoValue";
                 }
               }
+              
+              console.log(`[CoValue Extractor] Final detected type for ${key}:`, detectedType);
+            } else {
+              console.warn(`[CoValue Extractor] Could not access property ${key} as CoValue:`, propertyValue);
             }
           } catch (e) {
+            console.error(`[CoValue Extractor] Error accessing property ${key}:`, e);
             // If we can't access the property, fall back to generic CoValue
           }
 
@@ -294,13 +320,13 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
           if (isCoList) {
             // CoList - array of CoIDs
             const items: any[] = value.map((item, index) => {
-                    return {
-                      index,
-                      type: "CoValue",
+              return {
+                index,
+                type: "CoValue",
                 id: item,
                 isLoaded: false,
                 coValueId: item,
-                    };
+              };
             });
 
             data[key] = {
@@ -338,12 +364,12 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
         owner: coValue.$jazz?.owner,
         ownerInfo:
           coValue.$jazz?.owner &&
-          typeof coValue.$jazz.owner === "object" &&
-          "$jazz" in coValue.$jazz.owner
+            typeof coValue.$jazz.owner === "object" &&
+            "$jazz" in coValue.$jazz.owner
             ? {
-                type: "Group",
-                id: coValue.$jazz.owner.$jazz?.id || "unknown",
-              }
+              type: "Group",
+              id: coValue.$jazz.owner.$jazz?.id || "unknown",
+            }
             : null,
         keys: keys,
         groupInfo: (() => {
@@ -400,12 +426,12 @@ function extractNestedProperties(value: any, parentKey: string): Record<string, 
                 type: "object",
                 value: nestedValue,
               };
-    } else {
+            } else {
               nestedProperties[nestedKey] = nestedValue;
             }
           } catch (error) {
             console.warn(`Error accessing nested property ${nestedKey}:`, error);
-    }
+          }
         }
       }
     } catch (e) {
@@ -424,7 +450,7 @@ function extractNestedProperties(value: any, parentKey: string): Record<string, 
           continue;
         }
 
-          nestedProperties[nestedKey] = nestedValue;
+        nestedProperties[nestedKey] = nestedValue;
       } catch (error) {
         console.warn(`Error accessing nested property ${nestedKey}:`, error);
       }
@@ -456,13 +482,13 @@ export function extractRootData(root: any): Record<string, any> {
 
     const keys = Object.keys(jsonSnapshot).filter((key) => key !== "$jazz" && key !== "$isLoaded");
 
-  for (const key of keys) {
-    try {
+    for (const key of keys) {
+      try {
         const value = jsonSnapshot[key];
 
-      if (key.startsWith("$") || key === "constructor") {
-        continue;
-      }
+        if (key.startsWith("$") || key === "constructor") {
+          continue;
+        }
 
         if (typeof value === "string" && value.startsWith("co_")) {
           // CoID reference
@@ -476,20 +502,20 @@ export function extractRootData(root: any): Record<string, any> {
           // CoList
           const items: any[] = value.map((item, index) => {
             if (typeof item === "string" && item.startsWith("co_")) {
-                  return {
-                    index,
-                    type: "CoValue",
+              return {
+                index,
+                type: "CoValue",
                 id: item,
                 isLoaded: false,
                 coValueId: item,
-                  };
-                } else {
-                  return {
-                    index,
-                    type: "primitive",
-                    value: item,
-                  };
-                }
+              };
+            } else {
+              return {
+                index,
+                type: "primitive",
+                value: item,
+              };
+            }
           });
 
           data[key] = {
@@ -499,12 +525,12 @@ export function extractRootData(root: any): Record<string, any> {
             length: items.length,
             items: items,
           };
-      } else if (value !== undefined && value !== null) {
-        data[key] = value;
+        } else if (value !== undefined && value !== null) {
+          data[key] = value;
+        }
+      } catch (e) {
+        data[key] = `[Error accessing: ${String(e)}]`;
       }
-    } catch (e) {
-      data[key] = `[Error accessing: ${String(e)}]`;
-    }
     }
   } catch (e) {
     console.warn("Error getting root keys:", e);
