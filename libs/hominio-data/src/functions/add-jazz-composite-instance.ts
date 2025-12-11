@@ -97,9 +97,8 @@ export async function addJazzCompositeInstance(account: any): Promise<any> {
   coFeed.$jazz.push("Feed item 2");
   await coFeed.$jazz.waitForSync();
 
-  // Create CoPlainText and CoRichText
+  // Create CoPlainText and CoRichText (these are created synchronously, no waitForSync needed)
   const coPlainText = co.plainText().create("This is plain text content.", { owner: entitiesOwner });
-
   const coRichText = co.richText().create("<p>This is <b>rich text</b> content.</p>", { owner: entitiesOwner });
 
   // Create nested structure CoMap

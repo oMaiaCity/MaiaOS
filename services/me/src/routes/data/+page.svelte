@@ -178,7 +178,7 @@
           // Build a resolve object for all direct CoValue properties
           const resolveObj: Record<string, true> = {};
           let hasCoValueProps = false;
-          
+
           for (const [key, value] of Object.entries(snapshot)) {
             // If the value is a CoID string, it's a CoValue reference - we want to load it
             if (typeof value === "string" && value.startsWith("co_")) {
