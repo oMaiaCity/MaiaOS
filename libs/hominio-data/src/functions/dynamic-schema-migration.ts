@@ -244,7 +244,7 @@ export async function ensureSchema(
   // Step 2: Create SchemaDefinition entries for each extracted nested schema
   // Store mapping of refPath -> SchemaDefinition CoValue ID
   const nestedSchemaIdMap: Record<string, string> = {};
-  
+
   for (const [refPath, nestedCoMapSchema] of Object.entries(extractedSchemas)) {
     // Generate a name for this nested schema (e.g., "JazzComposite/NestedCoMap")
     const nestedSchemaName = `${schemaName}/${refPath.split('/').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('/')}`;
@@ -297,7 +297,7 @@ export async function ensureSchema(
 
       // Add to data list
       dataList.$jazz.push(nestedSchemaDefinition);
-      
+
       // Store the new schema's CoValue ID
       nestedSchemaIdMap[refPath] = nestedSchemaDefinition.$jazz.id;
     }
