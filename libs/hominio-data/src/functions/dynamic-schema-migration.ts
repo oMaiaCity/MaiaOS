@@ -49,7 +49,7 @@ function extractNestedCoValueSchemas(
     // Extract o-list items that are o-map
     else if (type === "o-list" && prop.items?.type === "o-map" && prop.items.properties) {
       const itemPath = `${currentPath}/items`;
-      
+
       // Recursively extract nested schemas within the item o-map
       extractNestedCoValueSchemas(prop.items, itemPath, extracted);
 
@@ -68,7 +68,7 @@ function extractNestedCoValueSchemas(
     // Extract o-feed items that are o-map
     else if (type === "o-feed" && prop.items?.type === "o-map" && prop.items.properties) {
       const itemPath = `${currentPath}/items`;
-      
+
       // Recursively extract nested schemas within the item o-map
       extractNestedCoValueSchemas(prop.items, itemPath, extracted);
 
@@ -230,7 +230,7 @@ export async function ensureSchema(
     }
   }
 
-  // Schema doesn't exist, create it
+  // Schema doesn't exist, create it AND all nested schemas
 
   // Get the owner group from the data list
   const dataOwner = (dataList as any).$jazz?.owner;
@@ -238,15 +238,73 @@ export async function ensureSchema(
     throw new Error("Cannot determine data list owner");
   }
 
-  // Convert JSON Schema to co.map() shape - this creates the typed CoMap schema
+  // Step 1: Extract all nested CoValue schemas  
+  const extractedSchemas = extractNestedCoValueSchemas(jsonSchema);
+  
+  // Step 2: Create SchemaDefinition entries for each extracted nested schema
+  for (const [refPath, nestedCoMapSchema] of Object.entries(extractedSchemas)) {
+    // Generate a name for this nested schema (e.g., "JazzComposite/NestedCoMap")
+    const nestedSchemaName = `${schemaName}/${refPath.split('/').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('/')}`;
+    
+    // Check if this nested schema already exists
+    let nestedSchemaExists = false;
+    if (dataList.$isLoaded) {
+      const dataArray = Array.from(dataList);
+      for (const schema of dataArray) {
+        if (schema && typeof schema === "object" && "$jazz" in schema) {
+          const schemaLoaded = await (schema as any).$jazz.ensureLoaded();
+          if (schemaLoaded.$isLoaded && (schemaLoaded as any).name === nestedSchemaName) {
+            nestedSchemaExists = true;
+            break;
+          }
+        }
+      }
+    }
+    
+    if (!nestedSchemaExists) {
+      // Create a group for the nested schema's entities list
+      const nestedEntitiesGroup = Group.create();
+      await nestedEntitiesGroup.$jazz.waitForSync();
+
+      // Get properties from the JSON Schema at this path
+      const nestedProperties = getPropertiesFromPath(jsonSchema, refPath);
+      const nestedRequired = getRequiredFromPath(jsonSchema, refPath);
+
+      // Create JSON Schema definition for this nested schema
+      const nestedJsonSchema = {
+        type: "object",
+        properties: nestedProperties,
+        required: nestedRequired,
+      };
+
+      // Create SchemaDefinition for the nested schema
+      const nestedSchemaDefinition = SchemaDefinition.create(
+        {
+          "@schema": "schema-definition",
+          name: nestedSchemaName,
+          definition: nestedJsonSchema,
+          entities: co.list(nestedCoMapSchema).create([], nestedEntitiesGroup),
+        },
+        dataOwner
+      );
+      await nestedSchemaDefinition.$jazz.waitForSync();
+
+      // Add to data list
+      dataList.$jazz.push(nestedSchemaDefinition);
+    }
+  }
+
+  await root.$jazz.waitForSync();
+
+  // Step 3: Convert JSON Schema to co.map() shape - this creates the typed CoMap schema with direct links
   const entityShape = jsonSchemaToCoMapShape(jsonSchema);
   const EntityCoMapSchema = co.map(entityShape);
 
-  // Create a group for the entities list
+  // Step 4: Create a group for the main schema's entities list
   const entitiesGroup = Group.create();
   await entitiesGroup.$jazz.waitForSync();
 
-  // Create SchemaDefinition with JSON Schema and typed entities list
+  // Step 5: Create SchemaDefinition with JSON Schema and typed entities list
   const newSchema = SchemaDefinition.create(
     {
       "@schema": "schema-definition",
@@ -319,5 +377,49 @@ export async function createEntity(
   await account.$jazz.ensureLoaded({ resolve: { root: true } }); // Ensure root is synced
 
   return entityInstance;
+}
+
+/**
+ * Helper to get properties from a JSON Schema at a specific path
+ * Path format: "nestedCoMap" or "coListOfCoMaps/items"
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getPropertiesFromPath(jsonSchema: any, path: string): any {
+  const parts = path.split('/');
+  let current = jsonSchema.properties;
+
+  for (const part of parts) {
+    if (part === "items") {
+      current = current?.items?.properties;
+    } else {
+      current = current?.[part];
+      if (current?.type === "o-map") {
+        current = current?.properties;
+      } else if (current?.type === "o-list" || current?.type === "o-feed") {
+        current = current?.items?.properties;
+      }
+    }
+  }
+
+  return current || {};
+}
+
+/**
+ * Helper to get required fields from a JSON Schema at a specific path
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getRequiredFromPath(jsonSchema: any, path: string): string[] {
+  const parts = path.split('/');
+  let current = jsonSchema;
+
+  for (const part of parts) {
+    if (part === "items") {
+      current = current?.items;
+    } else {
+      current = current?.properties?.[part];
+    }
+  }
+
+  return current?.required || [];
 }
 
