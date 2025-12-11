@@ -59,6 +59,7 @@ export const AppRoot = co.map({
   contact: Contact, // Simple contact CoMap with email
   capabilities: co.list(Capability), // List of Capability CoValues (each contains a Group reference)
   schemata: co.list(SchemaDefinition), // List of schema definitions stored as CoValues
+  data: co.optional(co.list(co.list(co.map({})))), // Optional - list of schema-specific lists
 });
 
 export const JazzAccount = co
@@ -263,9 +264,33 @@ export const JazzAccount = co
       });
       await defaultCapability.$jazz.waitForSync();
 
+      // Create schemata group and initialize with HelloEarth schema
+      const schemataGroup = Group.create();
+      await schemataGroup.$jazz.waitForSync();
+      const helloEarthSchema = SchemaDefinition.create(
+        {
+          "@schema": "schema-definition",
+          name: "HelloEarth",
+          definition: {
+            type: "object",
+            properties: {
+              name: {
+                type: "string",
+              },
+            },
+            required: ["name"],
+          },
+        },
+        schemataGroup,
+      );
+      await helloEarthSchema.$jazz.waitForSync();
+      const schemataList = co.list(SchemaDefinition).create([helloEarthSchema], schemataGroup);
+      await schemataList.$jazz.waitForSync();
+
       account.$jazz.set("root", {
         contact: contact,
         capabilities: [defaultCapability],
+        schemata: schemataList,
       });
       return;
     }
@@ -357,7 +382,7 @@ export const JazzAccount = co
             for (const schema of schemataArray) {
               if (schema && typeof schema === "object" && "$jazz" in schema) {
                 // Ensure schema is loaded before checking name
-                const schemaLoaded = await schema.$jazz.ensureLoaded({});
+                const schemaLoaded = await (schema as any).$jazz.ensureLoaded({});
                 if (schemaLoaded.$isLoaded) {
                   const schemaAny = schemaLoaded as any;
                   if (schemaAny.name === "HelloEarth") {
@@ -433,6 +458,7 @@ export const JazzAccount = co
         rootWithData.$jazz.set("schemata", schemataList);
       }
     }
+
   });
 
 /**
@@ -458,5 +484,6 @@ export async function syncGoogleDataToProfile(
     betterAuthUser.email ? migrateSyncGoogleEmailToContact(account, betterAuthUser.email) : Promise.resolve(),
   ]);
 }
+
 
 

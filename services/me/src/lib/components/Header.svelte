@@ -129,6 +129,15 @@
       >
         Vibes
       </a>
+      <a
+        href="/schema"
+        class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url.pathname ===
+        '/schema'
+          ? 'bg-slate-100 text-slate-900'
+          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+      >
+        Schema
+      </a>
     </div>
 
     <!-- Right: Account Metadata -->

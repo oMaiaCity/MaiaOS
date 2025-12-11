@@ -13,6 +13,10 @@ export interface BadgeColors {
  * Returns CSS class names that use theme variables
  */
 export function getBadgeColors(typeName: string): BadgeColors {
+  // Handle undefined, null, or non-string values
+  if (!typeName || typeof typeName !== "string") {
+    return { bg: "badge-default-color", text: "" };
+  }
   const normalized = typeName.toLowerCase();
 
   switch (normalized) {

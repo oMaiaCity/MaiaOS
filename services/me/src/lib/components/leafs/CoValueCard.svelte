@@ -1,6 +1,7 @@
 <script lang="ts">
   import Badge from "./Badge.svelte";
   import { getDisplayLabel } from "../../utilities/coValueFormatter.js";
+  import { isCoList } from "../../utilities/coValueDetector.js";
 
   interface Props {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -13,20 +14,55 @@
   let { item, isSelected, onSelect }: Props = $props();
 
   const displayLabel = $derived(() => {
-    if (item.item.$isLoaded && item.item.$jazz.has("@label")) {
-      return item.item["@label"];
+    // Check if item.item is a CoMap (has $jazz.has method) before accessing it
+    if (item.item?.$isLoaded && item.item.$jazz?.has && typeof item.item.$jazz.has === "function") {
+      if (item.item.$jazz.has("@label")) {
+        return item.item["@label"];
+      }
     }
-    if (item.item.$isLoaded) {
+    if (item.item?.$isLoaded) {
       return getDisplayLabel(item.item);
     }
     return item.preview || "Loading...";
   });
 
-  const schema = $derived(
-    item.item.$isLoaded && item.item.$jazz.has("@schema")
-      ? item.item["@schema"]
-      : "CoValue",
-  );
+  const schema = $derived.by(() => {
+    // Check if item.item is a CoMap (has $jazz.has method) before accessing it
+    // CoLists don't have $jazz.has, only CoMaps do
+    if (!item.item?.$isLoaded) {
+      return isCoList(item.item) ? "CoList" : "CoValue";
+    }
+
+    // Only CoMaps have $jazz.has method
+    if (item.item.$jazz?.has && typeof item.item.$jazz.has === "function") {
+      if (item.item.$jazz.has("@schema")) {
+        const schemaRef = item.item["@schema"];
+
+        // If @schema is a CoValue reference (like SchemaDefinition), extract its name
+        if (schemaRef && typeof schemaRef === "object" && "$jazz" in schemaRef) {
+          // If it's loaded, try to get the name
+          if (schemaRef.$isLoaded && schemaRef.name) {
+            return schemaRef.name;
+          }
+          // If not loaded, return a generic type
+          return "Schema";
+        }
+
+        // If it's already a string, return it
+        if (typeof schemaRef === "string") {
+          return schemaRef;
+        }
+      }
+    }
+
+    // If it's a CoList, return "CoList"
+    if (isCoList(item.item)) {
+      return "CoList";
+    }
+
+    // Fallback
+    return "CoValue";
+  });
 </script>
 
 <button
@@ -53,4 +89,3 @@
     </div>
   </div>
 </button>
-

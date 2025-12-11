@@ -41,10 +41,32 @@ export interface ExtractedCoValueProperties {
 
 /**
  * Extract all properties from a CoValue instance
- * Uses state machine for loading state management
+ * Simplified to use $jazz.raw.toJSON() like the Jazz inspector
  */
 export function extractCoValueProperties(coValue: any): ExtractedCoValueProperties | null {
   if (!coValue || !coValue.$jazz) {
+    return null;
+  }
+
+  // Ensure CoValue is loaded before extracting properties
+  if (!coValue.$isLoaded) {
+    console.warn("[CoValue Extractor] CoValue not loaded, cannot extract properties");
+    return null;
+  }
+
+  // CRITICAL: Use $jazz.raw.toJSON() to get all properties (like Jazz inspector does)
+  // The inspector uses value.toJSON() where value is a RawCoValue
+  // In our case, coValue is a Jazz proxy, so we need to access $jazz.raw first
+  // This is the ONLY reliable way to get all properties, including dynamically created ones
+  let jsonSnapshot: Record<string, any> | null = null;
+  try {
+    if (!coValue.$jazz?.raw || typeof coValue.$jazz.raw.toJSON !== "function") {
+      console.warn("[CoValue Extractor] CoValue does not have $jazz.raw.toJSON() method");
+      return null;
+    }
+    jsonSnapshot = coValue.$jazz.raw.toJSON() as Record<string, any>;
+  } catch (e) {
+    console.warn("[CoValue Extractor] Error calling $jazz.raw.toJSON():", e);
     return null;
   }
 
@@ -75,129 +97,169 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
 
   try {
     const isImageDef = isImageDefinition(coValue);
+    // Check if this is a SchemaDefinition (has @schema field with value "schema-definition")
+    const isSchemaDefinition = jsonSnapshot["@schema"] === "schema-definition";
     const data: Record<string, any> = {};
-    let keys: string[] = [];
 
-    // Get all keys from the CoValue
-    try {
-      keys = Object.keys(coValue).filter((key) => key !== "$jazz" && key !== "$isLoaded");
-      if (keys.length === 0 && coValue.$jazz && typeof coValue.$jazz.keys === "function") {
-        keys = Array.from(coValue.$jazz.keys());
-      }
-    } catch (e) {
-      console.warn("Error getting CoValue keys:", e);
+    // Extract keys from JSON snapshot (this includes all properties!)
+    // The snapshot from $jazz.raw.toJSON() contains ALL properties, including dynamically created ones
+    let keys = Object.keys(jsonSnapshot).filter((key) => !key.startsWith("$") && key !== "constructor");
+
+    // SPECIAL CASE: For ImageDefinition, filter to only include ImageDefinition-specific properties
+    // This prevents mixing in properties from parent objects
+    if (isImageDef) {
+      const imageDefProperties = [
+        "originalSize",
+        "placeholderDataURL",
+        "original",
+        // Dimension-based FileStreams (e.g., "512x512", "256x256")
+      ];
+      // Filter keys to only include ImageDefinition properties and dimension-based FileStreams
+      keys = keys.filter((key) => {
+        // Include known ImageDefinition properties
+        if (imageDefProperties.includes(key)) return true;
+        // Include dimension-based FileStreams (pattern: "512x512", "256x256", etc.)
+        if (/^\d+x\d+$/.test(key)) return true;
+        // Exclude everything else (like LASTNAME, INBOX, etc.)
+        return false;
+      });
     }
 
-    // Extract all properties
+    // Extract all properties from snapshot
     for (const key of keys) {
       try {
-        const value = coValue[key];
-
         if (key.startsWith("$") || key === "constructor") {
           continue;
         }
 
-        // Handle ImageDefinition FileStream properties
-        if (isImageDef && (key === "original" || /^\d+x\d+$/.test(key))) {
-          if (value && typeof value === "object" && value.$jazz) {
-            try {
-              let fileStreamId = "unknown";
-              let mimeType = "unknown";
-              let size = 0;
-              try {
-                fileStreamId = value.$jazz?.id || "unknown";
-                if (typeof (value as any).getMimeType === "function") {
-                  mimeType = (value as any).getMimeType() || "unknown";
-                }
-                if (typeof (value as any).getSize === "function") {
-                  size = (value as any).getSize() || 0;
-                }
-              } catch (e) {
-                console.warn(`Error accessing FileStream metadata for ${key}:`, e);
-              }
+        // Get value from JSON snapshot (like Jazz inspector does!)
+        const value = jsonSnapshot[key];
 
-              data[key] = {
-                type: "FileStream",
-                id: fileStreamId,
-                isLoaded: value.$isLoaded || false,
-                mimeType,
-                size,
-                fileStream: value,
-                coValue: value,
-              };
-              continue;
-            } catch (e) {
-              console.warn(`Error extracting FileStream ${key}:`, e);
-            }
+        // Skip if value is undefined or null
+        if (value === undefined || value === null) {
+          continue;
+        }
+
+        // SPECIAL CASE: SchemaDefinition's "definition" property
+        // This is a JSON Schema object (plain object) that should be navigable
+        // Store it as the plain object itself so PropertyItem can detect it as an object
+        if (isSchemaDefinition && key === "definition") {
+          if (value && typeof value === "object" && !Array.isArray(value)) {
+            // Store as plain object - PropertyItem will detect it as type "object" and enable navigation
+            data[key] = value;
+            continue;
           }
         }
 
-        // Handle different value types
-        if (value && typeof value === "object" && "$jazz" in value) {
-          if (isCoList(value)) {
-            // CoList
-            const items: any[] = [];
-            try {
-              const listArray = Array.from(value);
-              items.push(
-                ...listArray.map((item, index) => {
-                  const itemAny = item as any;
-                  if (item && typeof item === "object" && "$jazz" in item) {
-                    return {
-                      index,
-                      type: "CoValue",
-                      id: itemAny.$jazz?.id || "unknown",
-                      isLoaded: itemAny.$isLoaded || false,
-                      preview: getDisplayLabel(itemAny) || "Loading...",
-                      item: item,
-                    };
-                  } else {
-                    return {
-                      index,
-                      type: "primitive",
-                      value: item,
-                    };
+        // Handle ImageDefinition FileStream properties
+        if (isImageDef && (key === "original" || /^\d+x\d+$/.test(key))) {
+          // CRITICAL: For FileStreams, we need the actual CoValue object (not just CoID from snapshot)
+          // to access FileStream methods like getMimeType() and getSize()
+          // Try to access the property directly from the CoValue (not snapshot)
+          let fileStreamCoValue: any = null;
+          let mimeType = "unknown";
+          let size = 0;
+
+          try {
+            // Access the actual CoValue object directly (not from JSON snapshot)
+            const fileStreamValue = coValue[key];
+            if (fileStreamValue && typeof fileStreamValue === "object" && fileStreamValue.$jazz) {
+              fileStreamCoValue = fileStreamValue;
+
+              // Try to get FileStream metadata if loaded
+              if (fileStreamCoValue.$isLoaded) {
+                try {
+                  if (typeof (fileStreamCoValue as any).getMimeType === "function") {
+                    mimeType = (fileStreamCoValue as any).getMimeType() || "unknown";
                   }
-                }),
-              );
-            } catch (e) {
-              items.push({ error: `Error iterating list: ${String(e)}` });
+                  if (typeof (fileStreamCoValue as any).getSize === "function") {
+                    size = (fileStreamCoValue as any).getSize() || 0;
+                  }
+                } catch (e) {
+                  // FileStream methods might not be available yet
+                }
+              }
             }
+          } catch (e) {
+            // If direct access fails, fall back to CoID from snapshot
+          }
+
+          // Use CoID from snapshot if we don't have the CoValue object
+          const fileStreamId = fileStreamCoValue?.$jazz?.id || (typeof value === "string" && value.startsWith("co_") ? value : "unknown");
+
+          data[key] = {
+            type: "FileStream",
+            id: fileStreamId,
+            isLoaded: fileStreamCoValue ? fileStreamCoValue.$isLoaded : false,
+            mimeType,
+            size,
+            coValueId: fileStreamId,
+            coValue: fileStreamCoValue, // Store actual CoValue for FileStream methods
+          };
+          continue;
+        }
+
+        // Handle ImageDefinition originalSize array
+        if (isImageDef && key === "originalSize" && Array.isArray(value)) {
+          // originalSize is [width, height] - display as array
+          // Store as primitive array so PropertyItem can display it correctly
+          data[key] = value; // Store as plain array - PropertyItem will detect it as type "array"
+          continue;
+        }
+
+        // Handle different value types
+        // Note: In JSON snapshot, CoValue references are CoIDs (strings), not CoValue objects
+        if (typeof value === "string" && value.startsWith("co_")) {
+          // It's a CoID reference - treat as CoValue reference
+          data[key] = {
+            type: "CoValue",
+            id: value,
+            isLoaded: false,
+            coValueId: value,
+          };
+        } else if (value && typeof value === "object" && Array.isArray(value)) {
+          // Check if it's a CoList (array of CoIDs) or a primitive array
+          // CoLists in JSON snapshot are arrays of CoID strings
+          const isCoList = value.length > 0 && value.every((item) => typeof item === "string" && item.startsWith("co_"));
+
+          if (isCoList) {
+            // CoList - array of CoIDs
+            const items: any[] = value.map((item, index) => {
+              return {
+                index,
+                type: "CoValue",
+                id: item,
+                isLoaded: false,
+                coValueId: item,
+              };
+            });
 
             data[key] = {
               type: "CoList",
-              id: value.$jazz?.id || "unknown",
-              isLoaded: value.$isLoaded || false,
+              id: "unknown", // CoList ID not available in snapshot
+              isLoaded: false,
               length: items.length,
               items: items,
-              coValue: value,
             };
           } else {
-            // CoMap or other CoValue - extract nested properties
-            const nestedProperties = extractNestedProperties(value, key);
-            const nestedCoMapMetadata = value.$isLoaded
-              ? (() => {
-                  try {
-                    const metadata = extractCoValueProperties(value);
-                    return metadata?.jazzMetadata || null;
-                  } catch (error) {
-                    console.warn(`Error extracting metadata for nested CoMap ${key}:`, error);
-                    return null;
-                  }
-                })()
-              : null;
-
-            data[key] = {
-              type: "CoMap",
-              id: value.$jazz?.id || "unknown",
-              isLoaded: value.$isLoaded || false,
-              properties: nestedProperties,
-              value: value.$isLoaded ? String(value) : "Loading...",
-              jazzMetadata: nestedCoMapMetadata,
-              coValue: value,
-            };
+            // Primitive array (like originalSize: [512, 512])
+            // Store as plain array - PropertyItem will detect it as type "array"
+            data[key] = value;
           }
-        } else if (value !== undefined && value !== null) {
+        } else if (value && typeof value === "object" && !Array.isArray(value)) {
+          // Nested JSON object from snapshot - recursively extract properties
+          // Note: In JSON snapshot, nested CoMaps are plain JSON objects, not CoID strings
+          const nestedProperties = extractNestedProperties(value, key);
+          data[key] = {
+            type: "CoMap",
+            id: "unknown",
+            isLoaded: false,
+            properties: nestedProperties,
+            value: JSON.stringify(value),
+            rawValue: value, // Store raw value for navigation (especially for SchemaDefinition.definition)
+          };
+        } else {
+          // Primitive value (string, number, boolean, etc.)
           data[key] = value;
         }
       } catch (e) {
@@ -214,12 +276,12 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
         owner: coValue.$jazz?.owner,
         ownerInfo:
           coValue.$jazz?.owner &&
-          typeof coValue.$jazz.owner === "object" &&
-          "$jazz" in coValue.$jazz.owner
+            typeof coValue.$jazz.owner === "object" &&
+            "$jazz" in coValue.$jazz.owner
             ? {
-                type: "Group",
-                id: coValue.$jazz.owner.$jazz?.id || "unknown",
-              }
+              type: "Group",
+              id: coValue.$jazz.owner.$jazz?.id || "unknown",
+            }
             : null,
         keys: keys,
         groupInfo: (() => {
@@ -241,120 +303,70 @@ export function extractCoValueProperties(coValue: any): ExtractedCoValueProperti
 
 /**
  * Extract nested properties from a CoMap
+ * Simplified to use $jazz.raw.toJSON() like the Jazz inspector
+ * Note: This handles nested JSON objects from the snapshot, not CoValue references
  */
 function extractNestedProperties(value: any, parentKey: string): Record<string, any> {
   const nestedProperties: Record<string, any> = {};
 
-  if (!value.$isLoaded) {
-    return nestedProperties;
-  }
+  // If value is a CoValue object (has $jazz), use its raw.toJSON()
+  if (value && typeof value === "object" && value.$jazz && value.$isLoaded) {
+    try {
+      if (value.$jazz?.raw && typeof value.$jazz.raw.toJSON === "function") {
+        const nestedSnapshot = value.$jazz.raw.toJSON() as Record<string, any>;
+        const nestedKeys = Object.keys(nestedSnapshot).filter(
+          (k) => !k.startsWith("$") && k !== "constructor"
+        );
 
-  try {
-    let nestedKeys: string[] = [];
-    if (value.$jazz && typeof value.$jazz.keys === "function") {
-      nestedKeys = Array.from(value.$jazz.keys());
-    } else {
-      nestedKeys = Object.keys(value).filter(
-        (k) => !k.startsWith("$") && k !== "constructor",
-      );
-    }
+        for (const nestedKey of nestedKeys) {
+          try {
+            const nestedValue = nestedSnapshot[nestedKey];
+            if (nestedValue === undefined || nestedValue === null) {
+              continue;
+            }
 
-    // Special handling for avatar CoMap
-    if (parentKey === "avatar") {
-      try {
-        const imageValue = (value as any).image;
-        if (imageValue !== undefined && imageValue !== null && !nestedKeys.includes("image")) {
-          nestedKeys.push("image");
+            // Handle nested values (CoIDs, primitives, nested objects)
+            if (typeof nestedValue === "string" && nestedValue.startsWith("co_")) {
+              nestedProperties[nestedKey] = {
+                type: "CoValue",
+                id: nestedValue,
+                isLoaded: false,
+                coValueId: nestedValue,
+              };
+            } else if (nestedValue && typeof nestedValue === "object" && !Array.isArray(nestedValue)) {
+              nestedProperties[nestedKey] = {
+                type: "object",
+                value: nestedValue,
+              };
+            } else {
+              nestedProperties[nestedKey] = nestedValue;
+            }
+          } catch (error) {
+            console.warn(`Error accessing nested property ${nestedKey}:`, error);
+          }
         }
-      } catch (e) {
-        // Ignore errors
       }
+    } catch (e) {
+      console.warn(`Error extracting nested properties from ${parentKey}:`, e);
     }
+  } else if (value && typeof value === "object" && !Array.isArray(value) && !value.$jazz) {
+    // It's a plain JSON object from the snapshot
+    const nestedKeys = Object.keys(value).filter(
+      (k) => !k.startsWith("$") && k !== "constructor"
+    );
 
-    // Extract nested properties
     for (const nestedKey of nestedKeys) {
       try {
         const nestedValue = value[nestedKey];
-
         if (nestedValue === undefined || nestedValue === null) {
           continue;
         }
 
-        if (nestedValue && typeof nestedValue === "object" && nestedValue.$jazz) {
-          const parentIsImageDef = isImageDefinition(value);
-          let isFileStreamValue = false;
-
-          // Check if it's a FileStream
-          if (parentIsImageDef && (nestedKey === "original" || /^\d+x\d+$/.test(nestedKey))) {
-            isFileStreamValue = true;
-          } else {
-            isFileStreamValue = isFileStream(nestedValue);
-          }
-
-          if (isFileStreamValue) {
-            let fileStreamId = "unknown";
-            let mimeType = "unknown";
-            let size = 0;
-            try {
-              fileStreamId = nestedValue.$jazz?.id || "unknown";
-              if (typeof (nestedValue as any).getMimeType === "function") {
-                mimeType = (nestedValue as any).getMimeType() || "unknown";
-              }
-              if (typeof (nestedValue as any).getSize === "function") {
-                size = (nestedValue as any).getSize() || 0;
-              }
-            } catch (e) {
-              console.warn(`Error accessing FileStream metadata for ${nestedKey}:`, e);
-            }
-
-            nestedProperties[nestedKey] = {
-              type: "FileStream",
-              id: fileStreamId,
-              isLoaded: nestedValue.$isLoaded || false,
-              mimeType,
-              size,
-              fileStream: nestedValue,
-              coValue: nestedValue,
-            };
-          } else if (isImageDefinition(nestedValue)) {
-            let imageId = "unknown";
-            try {
-              imageId = nestedValue.$jazz?.id || "unknown";
-            } catch (e) {
-              // Try alternative methods
-              try {
-                imageId = (nestedValue as any).id || "unknown";
-              } catch (e2) {
-                // Ignore
-              }
-            }
-
-            nestedProperties[nestedKey] = {
-              type: "ImageDefinition",
-              id: imageId,
-              isLoaded: nestedValue.$isLoaded || false,
-              imageDefinition: nestedValue,
-              coValue: nestedValue,
-              rawValue: nestedValue,
-            };
-          } else {
-            nestedProperties[nestedKey] = {
-              type: "CoValue",
-              id: nestedValue.$jazz?.id || "unknown",
-              isLoaded: nestedValue.$isLoaded || false,
-              value: nestedValue.$isLoaded ? String(nestedValue) : "Loading...",
-              coValue: nestedValue,
-            };
-          }
-        } else {
-          nestedProperties[nestedKey] = nestedValue;
-        }
+        nestedProperties[nestedKey] = nestedValue;
       } catch (error) {
         console.warn(`Error accessing nested property ${nestedKey}:`, error);
       }
     }
-  } catch (e) {
-    console.warn(`Error extracting nested properties from ${parentKey}:`, e);
   }
 
   return nestedProperties;
@@ -362,85 +374,79 @@ function extractNestedProperties(value: any, parentKey: string): Record<string, 
 
 /**
  * Extract root data (for root CoMap)
+ * Simplified to use $jazz.raw.toJSON() like the Jazz inspector
  */
 export function extractRootData(root: any): Record<string, any> {
   const data: Record<string, any> = {};
-  let keys: string[] = [];
+
+  if (!root || !root.$jazz || !root.$isLoaded) {
+    return data;
+  }
 
   try {
-    keys = Object.keys(root).filter((key) => key !== "$jazz" && key !== "$isLoaded");
-    if (keys.length === 0 && root.$jazz && typeof root.$jazz.keys === "function") {
-      keys = Array.from(root.$jazz.keys());
+    // Use $jazz.raw.toJSON() to get all properties
+    let jsonSnapshot: Record<string, any> | null = null;
+    if (root.$jazz?.raw && typeof root.$jazz.raw.toJSON === "function") {
+      jsonSnapshot = root.$jazz.raw.toJSON() as Record<string, any>;
+    } else {
+      return data;
+    }
+
+    const keys = Object.keys(jsonSnapshot).filter((key) => key !== "$jazz" && key !== "$isLoaded");
+
+    for (const key of keys) {
+      try {
+        const value = jsonSnapshot[key];
+
+        if (key.startsWith("$") || key === "constructor") {
+          continue;
+        }
+
+        if (typeof value === "string" && value.startsWith("co_")) {
+          // CoID reference
+          data[key] = {
+            type: "CoValue",
+            id: value,
+            isLoaded: false,
+            coValueId: value,
+          };
+        } else if (value && typeof value === "object" && Array.isArray(value)) {
+          // CoList
+          const items: any[] = value.map((item, index) => {
+            if (typeof item === "string" && item.startsWith("co_")) {
+              return {
+                index,
+                type: "CoValue",
+                id: item,
+                isLoaded: false,
+                coValueId: item,
+              };
+            } else {
+              return {
+                index,
+                type: "primitive",
+                value: item,
+              };
+            }
+          });
+
+          data[key] = {
+            type: "CoList",
+            id: "unknown",
+            isLoaded: false,
+            length: items.length,
+            items: items,
+          };
+        } else if (value !== undefined && value !== null) {
+          data[key] = value;
+        }
+      } catch (e) {
+        data[key] = `[Error accessing: ${String(e)}]`;
+      }
     }
   } catch (e) {
     console.warn("Error getting root keys:", e);
   }
 
-  for (const key of keys) {
-    try {
-      const value = (root as any)[key];
-
-      if (key.startsWith("$") || key === "constructor") {
-        continue;
-      }
-
-      if (value && typeof value === "object" && "$jazz" in value) {
-        if (isCoList(value)) {
-          const items: any[] = [];
-          try {
-            const listArray = Array.from(value);
-            items.push(
-              ...listArray.map((item, index) => {
-                const itemAny = item as any;
-                if (item && typeof item === "object" && "$jazz" in item) {
-                  return {
-                    index,
-                    type: "CoValue",
-                    id: itemAny.$jazz?.id || "unknown",
-                    isLoaded: itemAny.$isLoaded || false,
-                    preview: getDisplayLabel(itemAny) || "Loading...",
-                    item: item,
-                  };
-                } else {
-                  return {
-                    index,
-                    type: "primitive",
-                    value: item,
-                  };
-                }
-              }),
-            );
-          } catch (e) {
-            items.push({ error: `Error iterating list: ${String(e)}` });
-          }
-
-          data[key] = {
-            type: "CoList",
-            id: value.$jazz?.id || "unknown",
-            isLoaded: value.$isLoaded || false,
-            length: items.length,
-            items: items,
-            coValue: value,
-          };
-        } else {
-          // CoMap
-          const nestedProperties = extractNestedProperties(value, key);
-          data[key] = {
-            type: "CoMap",
-            id: value.$jazz?.id || "unknown",
-            isLoaded: value.$isLoaded || false,
-            properties: nestedProperties,
-            coValue: value,
-          };
-        }
-      } else if (value !== undefined && value !== null) {
-        data[key] = value;
-      }
-    } catch (e) {
-      data[key] = `[Error accessing: ${String(e)}]`;
-    }
-  }
-
   return data;
 }
-

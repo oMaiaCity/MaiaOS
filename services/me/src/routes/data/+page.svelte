@@ -295,9 +295,7 @@
                 fileStream: value, // Store reference
                 coValue: value, // Store reference for navigation
               };
-              console.log(
-                `[Data Explorer] Property ${key} extracted as FileStream (from ImageDefinition)`,
-              );
+
               continue; // Skip to next property
             } catch (e) {
               console.warn(`[Data Explorer] Error extracting FileStream ${key}:`, e);
@@ -362,18 +360,10 @@
                 let nestedKeys: string[] = [];
                 if (value.$jazz && typeof value.$jazz.keys === "function") {
                   nestedKeys = Array.from(value.$jazz.keys());
-                  console.log(
-                    `[Data Explorer] Extracted keys from ${key} using $jazz.keys():`,
-                    nestedKeys,
-                  );
                 } else {
                   // Fallback to Object.keys() if $jazz.keys() not available
                   nestedKeys = Object.keys(value).filter(
                     (k) => !k.startsWith("$") && k !== "constructor",
-                  );
-                  console.log(
-                    `[Data Explorer] Extracted keys from ${key} using Object.keys():`,
-                    nestedKeys,
                   );
                 }
 
@@ -388,14 +378,11 @@
                       imageValue !== null &&
                       !nestedKeys.includes("image")
                     ) {
-                      console.log(
-                        `[Data Explorer] Adding 'image' to keys for avatar (exists but not in keys list)`,
-                      );
                       nestedKeys.push("image");
                     }
                   } catch (e) {
                     // Ignore errors when accessing image property
-                    console.log(`[Data Explorer] Could not access image property for avatar:`, e);
+                    console.warn(`[Data Explorer] Could not access image property for avatar:`, e);
                   }
                 }
 
@@ -406,26 +393,16 @@
                     // The has() check was causing Proxy errors for ImageDefinition properties
                     // Since we already have the keys from $jazz.keys() or Object.keys(), we know they exist
 
-                    console.log(`[Data Explorer] Accessing property ${nestedKey} from ${key}`);
                     const nestedValue = value[nestedKey];
-                    console.log(`[Data Explorer] Property ${nestedKey} value:`, nestedValue);
 
                     // If the value is undefined/null, skip it
                     if (nestedValue === undefined || nestedValue === null) {
-                      console.log(
-                        `[Data Explorer] Property ${nestedKey} is undefined/null, skipping`,
-                      );
                       continue;
                     }
 
                     // Handle nested CoValues recursively
                     // Check for $jazz property directly instead of using 'in' operator to avoid Proxy errors
                     if (nestedValue && typeof nestedValue === "object" && nestedValue.$jazz) {
-                      console.log(
-                        `[Data Explorer] Property ${nestedKey} is a CoValue, ID:`,
-                        nestedValue.$jazz?.id,
-                      );
-
                       // Check if the nested value (value) is an ImageDefinition
                       // This is the parent of nestedKey properties like original, 512x512, etc.
                       const parentIsImageDefinition = (() => {
@@ -453,9 +430,6 @@
                           // - Numeric patterns like "512x512", "256x256" (progressive loading variants - also FileStreams)
                           if (nestedKey === "original" || /^\d+x\d+$/.test(nestedKey)) {
                             isFileStream = true;
-                            console.log(
-                              `[Data Explorer] Property ${nestedKey} detected as FileStream (inside ImageDefinition - always FileStream per docs)`,
-                            );
                           }
                         }
 
@@ -472,12 +446,6 @@
                           // FileStream has at least getChunks and toBlob
                           isFileStream = hasGetChunks || hasToBlob || hasIsBinaryStreamEnded;
                         }
-
-                        console.log(
-                          `[Data Explorer] Property ${nestedKey} isFileStream:`,
-                          isFileStream,
-                          `(parentIsImageDefinition: ${parentIsImageDefinition})`,
-                        );
                       } catch (e) {
                         console.warn(
                           `[Data Explorer] Error checking FileStream for ${nestedKey}:`,
@@ -518,12 +486,6 @@
 
                           // ImageDefinition has at least original and originalSize
                           isImageDefinition = hasOriginal || hasOriginalSize;
-
-                          console.log(
-                            `[Data Explorer] Property ${nestedKey} isImageDefinition:`,
-                            isImageDefinition,
-                            `(hasOriginal: ${hasOriginal}, hasPlaceholder: ${hasPlaceholder}, hasOriginalSize: ${hasOriginalSize})`,
-                          );
                         }
                       } catch (e) {
                         console.warn(
@@ -643,11 +605,6 @@
                     );
                   }
                 }
-
-                console.log(
-                  `[Data Explorer] Final nested properties for ${key}:`,
-                  Object.keys(nestedProperties),
-                );
               } catch (e) {
                 console.warn(`[Data Explorer] Error extracting nested properties from ${key}:`, e);
               }
@@ -808,18 +765,10 @@
                 let nestedKeys: string[] = [];
                 if (value.$jazz && typeof value.$jazz.keys === "function") {
                   nestedKeys = Array.from(value.$jazz.keys());
-                  console.log(
-                    `[Data Explorer] Extracted keys from ${key} using $jazz.keys():`,
-                    nestedKeys,
-                  );
                 } else {
                   // Fallback to Object.keys() if $jazz.keys() not available
                   nestedKeys = Object.keys(value).filter(
                     (k) => !k.startsWith("$") && k !== "constructor",
-                  );
-                  console.log(
-                    `[Data Explorer] Extracted keys from ${key} using Object.keys():`,
-                    nestedKeys,
                   );
                 }
 
@@ -834,14 +783,11 @@
                       imageValue !== null &&
                       !nestedKeys.includes("image")
                     ) {
-                      console.log(
-                        `[Data Explorer] Adding 'image' to keys for avatar (exists but not in keys list)`,
-                      );
                       nestedKeys.push("image");
                     }
                   } catch (e) {
                     // Ignore errors when accessing image property
-                    console.log(`[Data Explorer] Could not access image property for avatar:`, e);
+                    console.warn(`[Data Explorer] Could not access image property for avatar:`, e);
                   }
                 }
 
@@ -852,26 +798,16 @@
                     // The has() check was causing Proxy errors for ImageDefinition properties
                     // Since we already have the keys from $jazz.keys() or Object.keys(), we know they exist
 
-                    console.log(`[Data Explorer] Accessing property ${nestedKey} from ${key}`);
                     const nestedValue = value[nestedKey];
-                    console.log(`[Data Explorer] Property ${nestedKey} value:`, nestedValue);
 
                     // If the value is undefined/null, skip it
                     if (nestedValue === undefined || nestedValue === null) {
-                      console.log(
-                        `[Data Explorer] Property ${nestedKey} is undefined/null, skipping`,
-                      );
                       continue;
                     }
 
                     // Handle nested CoValues recursively
                     // Check for $jazz property directly instead of using 'in' operator to avoid Proxy errors
                     if (nestedValue && typeof nestedValue === "object" && nestedValue.$jazz) {
-                      console.log(
-                        `[Data Explorer] Property ${nestedKey} is a CoValue, ID:`,
-                        nestedValue.$jazz?.id,
-                      );
-
                       // Check if the nested value (value) is an ImageDefinition
                       // This is the parent of nestedKey properties like original, 512x512, etc.
                       const parentIsImageDefinition = (() => {
@@ -899,9 +835,6 @@
                           // - Numeric patterns like "512x512", "256x256" (progressive loading variants - also FileStreams)
                           if (nestedKey === "original" || /^\d+x\d+$/.test(nestedKey)) {
                             isFileStream = true;
-                            console.log(
-                              `[Data Explorer] Property ${nestedKey} detected as FileStream (inside ImageDefinition - always FileStream per docs)`,
-                            );
                           }
                         }
 
@@ -918,12 +851,6 @@
                           // FileStream has at least getChunks and toBlob
                           isFileStream = hasGetChunks || hasToBlob || hasIsBinaryStreamEnded;
                         }
-
-                        console.log(
-                          `[Data Explorer] Property ${nestedKey} isFileStream:`,
-                          isFileStream,
-                          `(parentIsImageDefinition: ${parentIsImageDefinition})`,
-                        );
                       } catch (e) {
                         console.warn(
                           `[Data Explorer] Error checking FileStream for ${nestedKey}:`,
@@ -964,12 +891,6 @@
 
                           // ImageDefinition has at least original and originalSize
                           isImageDefinition = hasOriginal || hasOriginalSize;
-
-                          console.log(
-                            `[Data Explorer] Property ${nestedKey} isImageDefinition:`,
-                            isImageDefinition,
-                            `(hasOriginal: ${hasOriginal}, hasPlaceholder: ${hasPlaceholder}, hasOriginalSize: ${hasOriginalSize})`,
-                          );
                         }
                       } catch (e) {
                         console.warn(
@@ -1089,11 +1010,6 @@
                     );
                   }
                 }
-
-                console.log(
-                  `[Data Explorer] Final nested properties for ${key}:`,
-                  Object.keys(nestedProperties),
-                );
               } catch (e) {
                 console.warn(`[Data Explorer] Error extracting nested properties from ${key}:`, e);
               }

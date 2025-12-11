@@ -27,6 +27,14 @@ export function isCoMap(value: any): boolean {
   if (isCoList(value)) return false; // CoList is not a CoMap
 
   try {
+    // First check: has $jazz and it's not a string/primitive
+    if (!value.$jazz) return false;
+
+    // Check if it's a string CoValue (these are not CoMaps)
+    if (typeof value === "string" || (value.$jazz && typeof value.valueOf === "function" && typeof value.valueOf() === "string")) {
+      return false;
+    }
+
     const hasKeysMethod = value.$jazz && typeof value.$jazz.keys === "function";
     const isNotArray = !Array.isArray(value);
     const hasNoLength = value.length === undefined;
@@ -36,10 +44,14 @@ export function isCoMap(value: any): boolean {
     }
 
     // Fallback: check if it has properties via Object.keys
+    // Also check if it has $jazz.set method (indicates it's a CoMap)
     if (isNotArray && hasNoLength) {
+      const hasSetMethod = value.$jazz && typeof value.$jazz.set === "function";
       const objKeys = Object.keys(value).filter(
         (k) => !k.startsWith("$") && k !== "constructor",
       );
+      // If it has $jazz.set, it's likely a CoMap even if no keys yet
+      if (hasSetMethod) return true;
       return objKeys.length > 0;
     }
 

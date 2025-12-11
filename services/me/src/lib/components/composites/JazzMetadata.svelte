@@ -21,7 +21,9 @@
 
     const id = coValue.$jazz?.id || "unknown";
     const owner = coValue.$jazz?.owner;
-    const coValueType = coValue.$isLoaded ? detectCoValueType(coValue) : "CoValue";
+    const detectedType = coValue.$isLoaded ? detectCoValueType(coValue) : "CoValue";
+    // Map ImageDefinition to "image" for display badge
+    const coValueType: string = detectedType === "ImageDefinition" ? "image" : detectedType;
 
     let ownerInfo: { type: string; id: string } | null = null;
     if (owner && typeof owner === "object" && "$jazz" in owner) {
@@ -103,6 +105,7 @@
       propValue={metadata()!.coValueType}
       hideBadge={false}
       hideValue={true}
+      badgeType={metadata()!.coValueType}
     />
 
     {#if metadata()?.ownerInfo}
@@ -126,10 +129,7 @@
 
     {#if metadata()?.groupInfo}
       {@const groupInfoData = metadata()!.groupInfo}
-      {#if groupInfoData &&
-        groupInfoData.accountMembers &&
-        groupInfoData.groupMembers &&
-        (groupInfoData.accountMembers.length > 0 || groupInfoData.groupMembers.length > 0)}
+      {#if groupInfoData && groupInfoData.accountMembers && groupInfoData.groupMembers && (groupInfoData.accountMembers.length > 0 || groupInfoData.groupMembers.length > 0)}
         <PropertyItem
           propKey="MEMBERS"
           propValue={null}
@@ -146,4 +146,3 @@
     {/if}
   </div>
 {/if}
-

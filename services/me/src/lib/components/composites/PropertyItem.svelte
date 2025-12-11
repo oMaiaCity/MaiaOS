@@ -34,6 +34,8 @@
     currentAccount?: any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     coValue?: any;
+    // Force a specific badge type (overrides getDisplayValue type detection)
+    badgeType?: string;
   }
 
   let {
@@ -49,6 +51,7 @@
     membersData,
     currentAccount,
     coValue,
+    badgeType,
   }: Props = $props();
 
   let copied = $state(false);
@@ -282,7 +285,7 @@
         {/if}
 
         {#if !hideBadge}
-          <Badge type={displayInfo.type}>{displayInfo.type}</Badge>
+          <Badge type={badgeType || displayInfo.type}>{badgeType || displayInfo.type}</Badge>
         {/if}
       </div>
     </div>
@@ -525,7 +528,7 @@
           {/if}
 
           {#if !hideBadge}
-            <Badge type={displayInfo.type}>{displayInfo.type}</Badge>
+            <Badge type={badgeType || displayInfo.type}>{badgeType || displayInfo.type}</Badge>
           {/if}
         </div>
       </div>

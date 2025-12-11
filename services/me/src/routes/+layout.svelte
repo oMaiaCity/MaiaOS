@@ -21,6 +21,8 @@
       return { title: "Data Explorer", description: "Travel through your data universe" };
     } else if (pathname.startsWith("/vibes")) {
       return { title: "Vibes", description: "Explore and manage your vibes" };
+    } else if (pathname === "/schema") {
+      return { title: "Schema Manager", description: "Manage runtime schemata and data instances" };
     }
     return { title: null, description: null };
   });
