@@ -164,33 +164,54 @@
     }
 
     // Otherwise, treat as regular CoValue
-    // Ensure the CoValue and its DIRECT nested CoValue properties are loaded (one level only)
+    // Use Jazz's native loading approach (like the inspector)
     if (coValue.$jazz?.ensureLoaded) {
       try {
-        // First load the CoValue itself to get its structure
+        // First ensure the CoValue itself is loaded
         if (!coValue.$isLoaded) {
           await coValue.$jazz.ensureLoaded();
         }
 
-        // Now get the JSON snapshot to find which properties are CoValue references
-        const snapshot = coValue.$jazz.raw.toJSON();
-        if (snapshot && typeof snapshot === "object") {
-          // Build a resolve object for all direct CoValue properties
-          const resolveObj: Record<string, true> = {};
-          let hasCoValueProps = false;
-
-          for (const [key, value] of Object.entries(snapshot)) {
-            // If the value is a CoID string, it's a CoValue reference - we want to load it
-            if (typeof value === "string" && value.startsWith("co_")) {
-              resolveObj[key] = true; // Load this CoValue so coValue[key] returns the actual CoValue object
-              hasCoValueProps = true;
+        // Get the Jazz node for explicit CoValue loading by ID
+        const node = coValue.$jazz?.raw?.core?.node;
+        
+        if (node) {
+          // Get JSON snapshot to find which properties are CoValue references
+          const snapshot = coValue.$jazz.raw.toJSON();
+          
+          if (snapshot && typeof snapshot === "object") {
+            // Load each CoValue property explicitly by ID (like Jazz inspector does)
+            const loadPromises: Promise<any>[] = [];
+            
+            for (const [key, value] of Object.entries(snapshot)) {
+              // If the value is a CoID string, load that CoValue explicitly
+              if (typeof value === "string" && value.startsWith("co_")) {
+                console.log(`[Data Explorer] Loading CoValue property ${key} with ID: ${value}`);
+                loadPromises.push(
+                  node.load(value as any).then((loadedCoValue: any) => {
+                    console.log(`[Data Explorer] Loaded ${key}:`, loadedCoValue, "Type:", loadedCoValue?.type);
+                    // Store the loaded CoValue back on the parent (this makes coValue[key] work)
+                    if (loadedCoValue && loadedCoValue !== "unavailable") {
+                      // The loaded CoValue should now be accessible via coValue[key]
+                      return { key, loadedCoValue };
+                    }
+                    return null;
+                  }).catch((e: any) => {
+                    console.warn(`[Data Explorer] Failed to load ${key}:`, e);
+                    return null;
+                  })
+                );
+              }
+            }
+            
+            // Wait for all CoValue properties to load
+            if (loadPromises.length > 0) {
+              await Promise.all(loadPromises);
+              console.log(`[Data Explorer] Loaded ${loadPromises.length} CoValue properties`);
             }
           }
-
-          // If we found any CoValue properties, explicitly load them
-          if (hasCoValueProps) {
-            await coValue.$jazz.ensureLoaded({ resolve: resolveObj });
-          }
+        } else {
+          console.warn("[Data Explorer] No Jazz node available for explicit loading");
         }
       } catch (e) {
         console.warn("Error ensuring CoValue loaded:", e);
