@@ -24,6 +24,8 @@
       return { title: "Vibes", description: "Explore and manage your vibes" };
     } else if (pathname === "/schema") {
       return { title: "Schema Manager", description: "Manage runtime schemata and data instances" };
+    } else if (pathname === "/context") {
+      return { title: "Context", description: "Raw JSON snapshots from root context" };
     }
     return { title: null, description: null };
   });

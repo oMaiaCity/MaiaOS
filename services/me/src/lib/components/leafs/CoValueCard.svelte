@@ -1,7 +1,7 @@
 <script lang="ts">
   import Badge from "./Badge.svelte";
-  import { getDisplayLabel } from "../../utilities/coValueFormatter.js";
-  import { isCoList } from "../../utilities/coValueDetector.js";
+  import { getDisplayLabel, formatCoValueId } from "../../utilities/coValueFormatter.js";
+  import { getSchemaName } from "../../utilities/coValueType.js";
 
   interface Props {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -13,56 +13,83 @@
 
   let { item, isSelected, onSelect }: Props = $props();
 
+  // Extract plain values from item (avoid Svelte reactive functions)
+  // Access properties directly and ensure they're plain values, not functions
+  const itemType = $derived(() => {
+    try {
+      // Access item directly, not through reactive chain
+      const currentItem = item;
+      if (!currentItem) return "CoValue";
+
+      const type = currentItem.type;
+      // Ensure it's a plain string, not a function
+      if (typeof type === "string" && type !== "primitive") {
+        return type;
+      }
+      // Fallback to schema detection for non-list contexts
+      if (currentItem.item) {
+        return getSchemaName(currentItem.item);
+      }
+      return "CoValue";
+    } catch (e) {
+      return "CoValue";
+    }
+  });
+
+  const itemId = $derived(() => {
+    try {
+      // Access item directly, not through reactive chain
+      const currentItem = item;
+      if (!currentItem) return null;
+
+      const id = currentItem.id;
+      // Ensure it's a plain string, not a function
+      if (typeof id === "string" && id.startsWith("co_")) {
+        return id;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const itemIndex = $derived(() => {
+    try {
+      // Access item directly, not through reactive chain
+      const currentItem = item;
+      if (!currentItem) return null;
+
+      const idx = currentItem.index;
+      // Ensure it's a number, not a function
+      if (typeof idx === "number" && !isNaN(idx)) {
+        return idx;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  // Get Co-ID for display (use as display label for now)
+  const coId = $derived(() => {
+    const id = itemId();
+    if (id) {
+      return formatCoValueId(id, 12);
+    }
+    return null;
+  });
+
+  // Use Co-ID as display label for now
   const displayLabel = $derived(() => {
-    // Check if item.item is a CoMap (has $jazz.has method) before accessing it
-    if (item.item?.$isLoaded && item.item.$jazz?.has && typeof item.item.$jazz.has === "function") {
-      if (item.item.$jazz.has("@label")) {
-      return item.item["@label"];
-      }
-    }
-    if (item.item?.$isLoaded) {
-      return getDisplayLabel(item.item);
-    }
-    return item.preview || "Loading...";
+    const id = coId();
+    return id || "Loading...";
   });
 
-  const schema = $derived.by(() => {
-    // Check if item.item is a CoMap (has $jazz.has method) before accessing it
-    // CoLists don't have $jazz.has, only CoMaps do
-    if (!item.item?.$isLoaded) {
-      return isCoList(item.item) ? "CoList" : "CoValue";
-    }
+  // Get the exact CoValue type
+  const coValueType = $derived(() => itemType());
 
-    // Only CoMaps have $jazz.has method
-    if (item.item.$jazz?.has && typeof item.item.$jazz.has === "function") {
-      if (item.item.$jazz.has("@schema")) {
-        const schemaRef = item.item["@schema"];
-
-        // If @schema is a CoValue reference (like SchemaDefinition), extract its name
-        if (schemaRef && typeof schemaRef === "object" && "$jazz" in schemaRef) {
-          // If it's loaded, try to get the name
-          if (schemaRef.$isLoaded && schemaRef.name) {
-            return schemaRef.name;
-          }
-          // If not loaded, return a generic type
-          return "Schema";
-        }
-
-        // If it's already a string, return it
-        if (typeof schemaRef === "string") {
-          return schemaRef;
-        }
-      }
-    }
-
-    // If it's a CoList, return "CoList"
-    if (isCoList(item.item)) {
-      return "CoList";
-    }
-
-    // Fallback
-    return "CoValue";
-  });
+  // Get index if available
+  const index = $derived(() => itemIndex());
 </script>
 
 <button
@@ -76,14 +103,18 @@
 >
   <div class="flex items-center justify-between gap-3">
     <div class="min-w-0 flex-1">
-      <div class="flex items-center gap-2">
-        <span class="text-xs font-semibold text-slate-600 truncate">{displayLabel()}</span>
-        <Badge type={schema}>{schema}</Badge>
+      <div class="flex items-center gap-2 flex-wrap">
+        {#if index() !== null && index() !== undefined}
+          <span class="text-xs font-mono text-slate-400">[{index()}]</span>
+        {/if}
+        <span class="text-xs font-semibold text-slate-600 truncate font-mono">{displayLabel()}</span
+        >
       </div>
     </div>
-    <!-- Navigation indicator -->
-    <div class="shrink-0 text-slate-400">
-      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Type badge and navigation indicator - right aligned -->
+    <div class="flex items-center gap-2 shrink-0">
+      <Badge type={coValueType()}>{coValueType()}</Badge>
+      <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
       </svg>
     </div>

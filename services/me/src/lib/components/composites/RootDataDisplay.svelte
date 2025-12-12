@@ -8,20 +8,12 @@
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rootCoValue?: any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    extractCoValueProperties: (coValue: any) => any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onSelect: (coValue: any) => void;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onCoListClick?: (coList: any, label: string, parentKey?: string) => void;
   }
 
-  let {
-    rootData,
-    rootCoValue,
-    extractCoValueProperties,
-    onSelect,
-    onCoListClick,
-  }: Props = $props();
+  let { rootData, rootCoValue, onSelect, onCoListClick }: Props = $props();
 
   function handleCoListClick(key: string, value: any) {
     if (onCoListClick) {
@@ -44,13 +36,15 @@
 </script>
 
 {#if Object.keys(rootData.properties).length > 0}
-  {@const sortedEntries = Object.entries(rootData.properties).sort(([keyA, valueA], [keyB, valueB]) => {
-    if (keyA === "profile") return -1;
-    if (keyB === "profile") return 1;
-    if (valueA?.type === "CoList" && valueB?.type === "CoMap") return -1;
-    if (valueA?.type === "CoMap" && valueB?.type === "CoList") return 1;
-    return 0;
-  })}
+  {@const sortedEntries = Object.entries(rootData.properties).sort(
+    ([keyA, valueA], [keyB, valueB]) => {
+      if (keyA === "profile") return -1;
+      if (keyB === "profile") return 1;
+      if (valueA?.type === "CoList" && valueB?.type === "CoMap") return -1;
+      if (valueA?.type === "CoMap" && valueB?.type === "CoList") return 1;
+      return 0;
+    },
+  )}
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
     {#each sortedEntries as [key, value]}
       {#if typeof value === "object" && value !== null && "type" in value}
@@ -75,4 +69,3 @@
 {:else}
   <p class="text-sm text-slate-500 italic">No CoValues found</p>
 {/if}
-

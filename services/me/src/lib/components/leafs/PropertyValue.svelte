@@ -3,7 +3,7 @@
   import Badge from "./Badge.svelte";
   import { getDisplayValue } from "../../utilities/propertyUtilities.js";
   import { formatCoValueId } from "../../utilities/coValueFormatter.js";
-  
+
   // Component reference for recursive rendering (Svelte 5 - use component directly)
   import PropertyValueComponent from "./PropertyValue.svelte";
 
@@ -20,9 +20,7 @@
   let { value, propKey, selectedCoValue, onSelect }: Props = $props();
 
   const displayInfo = $derived(getDisplayValue(value));
-  const isSelected = $derived(
-    selectedCoValue?.$jazz?.id === displayInfo.coValue?.$jazz?.id,
-  );
+  const isSelected = $derived(selectedCoValue?.$jazz?.id === displayInfo.coValue?.$jazz?.id);
 </script>
 
 {#if typeof value === "object" && value !== null && "type" in value}
@@ -137,13 +135,22 @@
             ? 'border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.3)]'
             : 'border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] hover:border-slate-300'}"
         >
-          <div class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"></div>
+          <div
+            class="absolute inset-0 bg-linear-to-br from-white/60 via-white/20 to-transparent pointer-events-none"
+          ></div>
           <div class="relative p-4">
             <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">{propKey}</span>
+              <span class="text-xs font-bold text-slate-600 uppercase tracking-wider"
+                >{propKey}</span
+              >
               <div class="flex items-center gap-2">
                 <Badge type="CoMap" variant="compact">CoMap</Badge>
-                <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  class="w-3 h-3 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
@@ -161,7 +168,9 @@
                   <div
                     class="flex justify-between items-center pt-2 border-t border-white/50 first:pt-0 first:border-t-0"
                   >
-                    <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">{nestedKey}</span>
+                    <span class="text-xs font-medium text-slate-500 uppercase tracking-wide"
+                      >{nestedKey}</span
+                    >
                     <div class="flex-1 text-right ml-4 min-w-0">
                       <PropertyValueRecursive
                         value={nestedValue}
@@ -215,6 +224,48 @@
       <Badge type="CoList" variant="compact">CoList</Badge>
       <span class="ml-2 text-slate-500">({value.length} items)</span>
     {/if}
+  {:else if value.type === "CoFeed"}
+    {#if value.coValue && onSelect}
+      <button
+        type="button"
+        onclick={() => {
+          if (value.coValue && onSelect) {
+            onSelect(value.coValue, propKey);
+          }
+        }}
+        class="inline-flex items-center gap-2 hover:opacity-80 transition-opacity"
+      >
+        <Badge type="CoFeed" variant="compact">CoFeed</Badge>
+        <span class="font-mono">({formatCoValueId(value.id, 8)})</span>
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    {:else}
+      <Badge type="CoFeed" variant="compact">CoFeed</Badge>
+      <span class="ml-2 font-mono text-xs text-slate-400">({formatCoValueId(value.id, 8)})</span>
+    {/if}
+  {:else if value.type === "CoPlainText" || value.type === "CoRichText"}
+    {#if value.coValue && onSelect}
+      <button
+        type="button"
+        onclick={() => {
+          if (value.coValue && onSelect) {
+            onSelect(value.coValue, propKey);
+          }
+        }}
+        class="inline-flex items-center gap-2 hover:opacity-80 transition-opacity"
+      >
+        <Badge type={value.type} variant="compact">{value.type}</Badge>
+        <span class="font-mono">({formatCoValueId(value.id, 8)})</span>
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    {:else}
+      <Badge type={value.type} variant="compact">{value.type}</Badge>
+      <span class="ml-2 font-mono text-xs text-slate-400">({formatCoValueId(value.id, 8)})</span>
+    {/if}
   {:else if value.type === "CoValue"}
     {#if value.coValue && onSelect}
       <button
@@ -260,4 +311,3 @@
     <Badge type={typeof value}>{typeof value}</Badge>
   </div>
 {/if}
-

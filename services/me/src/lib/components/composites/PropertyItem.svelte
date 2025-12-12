@@ -1,9 +1,17 @@
 <script lang="ts">
+  import type { LocalNode } from "cojson";
   import { Image } from "jazz-tools/svelte";
   import Badge from "../leafs/Badge.svelte";
   import PropertyValue from "../leafs/PropertyValue.svelte";
+  import CoMapPreview from "../leafs/CoMapPreview.svelte";
+  import ValueRenderer from "../leafs/ValueRenderer.svelte";
   import { getDisplayValue } from "../../utilities/propertyUtilities.js";
   import { resolveProfile, isComputedField } from "@hominio/data";
+  import {
+    useResolvedCoValue,
+    getNodeFromCoValue,
+    type ResolvedCoValueResult,
+  } from "../../utilities/useResolvedCoValue.js";
 
   interface Member {
     id: string;
@@ -34,6 +42,8 @@
     currentAccount?: any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     coValue?: any;
+    // Optional node for resolution
+    node?: LocalNode;
     // Force a specific badge type (overrides getDisplayValue type detection)
     badgeType?: string;
   }
@@ -51,10 +61,14 @@
     membersData,
     currentAccount,
     coValue,
+    node: propNode,
     badgeType,
   }: Props = $props();
 
   let copied = $state(false);
+
+  // Get node from prop or derive from coValue
+  const node = $derived(propNode || (coValue ? getNodeFromCoValue(coValue) : undefined));
 
   const isComputed = $derived.by(() => {
     if (!coValue || !propKey) return false;
@@ -76,9 +90,36 @@
   });
 
   const displayInfo = $derived(getDisplayValue(propValue));
+
+  // Resolve child if it's a CoValue ID (for Badge type)
+  // Use $effect to subscribe to the store reactively
+  let childResolved = $state<ResolvedCoValueResult | undefined>(undefined);
+
+  $effect(() => {
+    // Access derived values to track them as dependencies
+    const info = displayInfo;
+    const currentNode = node;
+
+    if (info.isCoValue && info.coValueId && currentNode) {
+      const store = useResolvedCoValue(info.coValueId, currentNode);
+      const unsubscribe = store.subscribe((value: ResolvedCoValueResult) => {
+        childResolved = value;
+      });
+      return unsubscribe;
+    } else {
+      childResolved = undefined;
+    }
+  });
+
+  const resolvedType = $derived(
+    childResolved?.extendedType || childResolved?.type || displayInfo.type,
+  );
+
   const isClickable = $derived(
     variant !== "members" &&
-      ((displayInfo.isCoValue && displayInfo.coValue && onSelect !== undefined) ||
+      ((displayInfo.isCoValue &&
+        (displayInfo.coValue || displayInfo.coValueId) &&
+        onSelect !== undefined) ||
         (displayInfo.type === "object" &&
           typeof propValue === "object" &&
           propValue !== null &&
@@ -117,9 +158,9 @@
       ) {
         // Handle object navigation - propValue is the plain object itself
         onObjectSelect(propValue, propKey, coValue, propKey);
-      } else if (displayInfo.coValue && onSelect) {
+      } else if ((displayInfo.coValue || displayInfo.coValueId) && onSelect) {
         // Handle CoValue navigation
-        onSelect(displayInfo.coValue, propKey);
+        onSelect(displayInfo.coValue || displayInfo.coValueId, propKey);
       }
     }}
     class="w-full text-left bg-slate-100 rounded-2xl p-3 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm hoverable"
@@ -287,7 +328,7 @@
         {/if}
 
         {#if !hideBadge}
-          <Badge type={badgeType || displayInfo.type}>{badgeType || displayInfo.type}</Badge>
+          <Badge type={badgeType || resolvedType}>{badgeType || resolvedType}</Badge>
         {/if}
       </div>
     </div>
@@ -300,33 +341,19 @@
       : 'p-3'} border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
   >
     {#if variant === "members" && membersData}
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-xs font-medium text-slate-500 uppercase tracking-wide"
-          >{propKey === "MEMBERS" ? "Capabilities" : propKey}</span
-        >
-        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-          />
-        </svg>
-      </div>
-
       {#if membersData.accountMembers.length > 0}
-        <div class="mb-3 space-y-1.5 mt-2">
+        <div class="space-y-3">
           {#each sortedAccountMembers() as member}
             {@const profileInfo = resolveProfile(member.id, currentAccount)}
             {@const isEveryoneReader =
               member.id === "everyone" && member.role.toLowerCase() === "reader"}
             {@const isAdmin = member.role.toLowerCase() === "admin"}
             <div
-              class="flex items-center justify-between p-1.5 rounded-2xl border {isEveryoneReader
+              class="flex items-center justify-between bg-slate-100 rounded-2xl p-3 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm {isEveryoneReader
                 ? 'border-red-300 bg-red-50/50'
                 : isAdmin
                   ? 'border-yellow-200 bg-yellow-50/50'
-                  : 'border-white'}"
+                  : ''}"
             >
               <div class="flex items-center gap-2 flex-1 min-w-0">
                 {#if profileInfo && profileInfo.image}
@@ -434,11 +461,15 @@
                 >{displayInfo.displayValue.slice(0, 8)}...</span
               >
             </div>
-          {:else if displayInfo.isCoValue && displayInfo.coValue && onSelect}
+          {:else if displayInfo.isCoValue && (displayInfo.coValueId || displayInfo.coValue) && onSelect}
             <div class="inline-flex items-center gap-2 text-left">
-              <span class="text-xs text-slate-600 font-mono break-all"
-                >{displayInfo.displayValue.slice(0, 12)}...</span
-              >
+              {#if displayInfo.coValueId && node}
+                <CoMapPreview coId={displayInfo.coValueId} {node} limit={3} />
+              {:else}
+                <span class="text-xs text-slate-600 font-mono break-all"
+                  >{displayInfo.displayValue.slice(0, 12)}...</span
+                >
+              {/if}
               <svg
                 class="w-3 h-3 text-slate-400 shrink-0"
                 fill="none"
@@ -530,7 +561,7 @@
           {/if}
 
           {#if !hideBadge}
-            <Badge type={badgeType || displayInfo.type}>{badgeType || displayInfo.type}</Badge>
+            <Badge type={badgeType || resolvedType}>{badgeType || resolvedType}</Badge>
           {/if}
         </div>
       </div>

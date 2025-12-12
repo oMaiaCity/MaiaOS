@@ -1,72 +1,82 @@
 <script lang="ts">
+  import type { LocalNode } from "cojson";
   import PropertyItem from "./PropertyItem.svelte";
   import { Image } from "jazz-tools/svelte";
   import Badge from "../leafs/Badge.svelte";
   import CoValueCard from "../leafs/CoValueCard.svelte";
-  import { extractCoValueProperties } from "../../logic/coValueExtractor.js";
-  import { isCoList, isFileStream } from "../../utilities/coValueDetector.js";
-  import { ensureLoaded } from "../../logic/coValueLoader.js";
+  import {
+    extractCoValueProperties,
+    extractCoListItems,
+  } from "../../utilities/coValueExtractor.js";
+  import { isCoList, isFileStream } from "../../utilities/coValueType.js";
+  import { ensureLoaded } from "../../utilities/coValueLoader.js";
   import { getDisplayLabel } from "../../utilities/coValueFormatter.js";
+  import { useResolvedCoValue, getNodeFromCoValue } from "../../utilities/useResolvedCoValue.js";
 
   interface Props {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     coValue: any;
+    // Optional node for resolving string IDs
+    node?: LocalNode;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onNavigate: (coValue: any, label?: string) => void;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onObjectNavigate?: (object: any, label: string, parentCoValue: any, parentKey: string) => void;
   }
 
-  let { coValue, onNavigate, onObjectNavigate }: Props = $props();
+  let { coValue, node: propNode, onNavigate, onObjectNavigate }: Props = $props();
 
-  // Ensure CoValue is loaded
+  // Ensure CoValue is loaded (but don't pre-load nested properties)
   $effect(() => {
-    if (coValue && !coValue.$isLoaded && coValue.$jazz?.ensureLoaded) {
+    if (
+      typeof coValue !== "string" &&
+      coValue &&
+      coValue.$jazz &&
+      !coValue.$isLoaded &&
+      coValue.$jazz?.ensureLoaded
+    ) {
       ensureLoaded(coValue).catch((e) => console.warn("Error loading CoValue:", e));
     }
   });
 
-  const isCoListValue = $derived(() => isCoList(coValue));
-  const isFileStreamValue = $derived(() => isFileStream(coValue));
+  // Get node for resolving CoValues
+  const node = $derived(() => propNode || getNodeFromCoValue(coValue));
 
-  // Extract CoList items if it's a CoList
-  const coListItems = $derived(() => {
-    if (!isCoListValue() || !coValue.$isLoaded) return [];
-    try {
-      const items: any[] = [];
-      const listArray = Array.from(coValue);
-      items.push(
-        ...listArray.map((item, index) => {
-          const itemAny = item as any;
-          if (item && typeof item === "object" && "$jazz" in item) {
-            return {
-              index,
-              type: "CoValue",
-              id: itemAny.$jazz?.id || "unknown",
-              isLoaded: itemAny.$isLoaded || false,
-              preview: getDisplayLabel(itemAny) || "Loading...",
-              item: item,
-            };
-          } else {
-            return {
-              index,
-              type: "primitive",
-              value: item,
-            };
-          }
-        }),
-      );
-      return items;
-    } catch (e) {
-      return [];
-    }
+  // Get CoValue ID
+  const coValueId = $derived(() => (typeof coValue === "string" ? coValue : coValue?.$jazz?.id));
+
+  // Resolve CoValue using inspector-style approach
+  // Create store once and update it reactively when inputs change
+  const resolvedStore = $derived.by(() => {
+    const id = coValueId();
+    const n = node();
+    return useResolvedCoValue(id, n);
+  });
+  const resolved = $derived($resolvedStore);
+
+  const isCoListValue = $derived(() => {
+    if (!resolved.type) return false;
+    return resolved.type === "colist";
   });
 
-  const properties = $derived(
-    coValue && coValue.$isLoaded && !isCoListValue() && !isFileStreamValue()
-      ? extractCoValueProperties(coValue)
-      : null,
-  );
+  const isFileStreamValue = $derived(() => {
+    if (!resolved.type) return false;
+    return resolved.extendedType === "file" || isFileStream(coValue);
+  });
+
+  // Extract CoList items - use centralized utility
+  const coListItems = $derived(() => {
+    if (!isCoListValue() || !coValue?.$isLoaded) return [];
+    return extractCoListItems(coValue);
+  });
+
+  // Extract properties from snapshot (no async loading needed)
+  const properties = $derived(() => {
+    if (!coValue || !coValue.$isLoaded || isCoListValue() || isFileStreamValue()) {
+      return null;
+    }
+    return extractCoValueProperties(coValue);
+  });
 
   // Get image property directly from avatar CoValue
   const avatarImageDirect = $derived(() => {
@@ -159,18 +169,21 @@
     {#if coListItems().length > 0}
       <div class="space-y-3">
         {#each coListItems() as item}
-          {#if item.type === "CoValue" && item.item}
+          {#if item.coValue || item.item}
+            <!-- CoValue item - use CoValueCard for navigation, shows exact type -->
             <CoValueCard
               {item}
               isSelected={false}
               onSelect={(coValue) => handleCoValueSelect(coValue)}
             />
           {:else}
+            <!-- Primitive item - display as non-clickable -->
             <div
               class="px-4 py-3 rounded-2xl bg-slate-100 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)]"
             >
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 flex-wrap">
                 <span class="font-mono text-xs text-slate-500">[{item.index}]</span>
+                <Badge type="primitive" variant="compact">Primitive</Badge>
                 <span class="text-xs text-slate-600 break-all wrap-break-word">
                   {typeof item.value === "string" ? item.value : JSON.stringify(item.value)}
                 </span>
@@ -183,10 +196,10 @@
       <div class="ml-4 text-sm text-slate-400 italic">Empty list</div>
     {/if}
   </div>
-{:else if properties}
+{:else if properties()}
   <div>
     <div class="space-y-4">
-      {#each Object.entries(properties.properties).filter(([propKey]) => {
+      {#each Object.entries(properties()?.properties ?? {}).filter(([propKey]) => {
         if (propKey === "image" && avatarImageDirect()) {
           return false;
         }
@@ -206,6 +219,7 @@
               {propKey}
               {propValue}
               {coValue}
+              node={node()}
               onSelect={(coValue, fallbackKey) =>
                 handleCoValueSelect(coValue, fallbackKey || propKey)}
               onObjectSelect={onObjectNavigate
@@ -220,6 +234,7 @@
             {propKey}
             {propValue}
             {coValue}
+            node={node()}
             onSelect={(coValue, fallbackKey) =>
               handleCoValueSelect(coValue, fallbackKey || propKey)}
             onObjectSelect={onObjectNavigate
@@ -244,6 +259,7 @@
           propKey="image"
           propValue={imagePropValue}
           {coValue}
+          node={node()}
           onSelect={(coValue, fallbackKey) => handleCoValueSelect(coValue, fallbackKey || "image")}
         />
       {/if}

@@ -10,8 +10,8 @@
     getMemberKeys,
     getAllMemberKeys,
     getEveryoneRole,
-  } from "../../logic/groupInfo.js";
-  import { ensureLoaded } from "../../logic/coValueLoader.js";
+  } from "../../utilities/groupInfo.js";
+  import { ensureLoaded } from "../../utilities/coValueLoader.js";
   import { formatCoValueId } from "../../utilities/coValueFormatter.js";
 
   interface Props {
@@ -283,7 +283,9 @@
                           <span class="text-xs font-mono text-slate-600">
                             {member.id === "everyone" ? "everyone" : formatCoValueId(member.id, 16)}
                           </span>
-                          <Badge type={member.role.toLowerCase()} variant="role">{member.role}</Badge>
+                          <Badge type={member.role.toLowerCase()} variant="role"
+                            >{member.role}</Badge
+                          >
                         </div>
                       {/each}
                     </div>
@@ -328,7 +330,9 @@
                           <span class="text-xs font-mono text-slate-600">
                             {member.id === "everyone" ? "everyone" : formatCoValueId(member.id, 16)}
                           </span>
-                          <Badge type={member.role.toLowerCase()} variant="role">{member.role}</Badge>
+                          <Badge type={member.role.toLowerCase()} variant="role"
+                            >{member.role}</Badge
+                          >
                         </div>
                       {/each}
                     </div>
@@ -406,7 +410,9 @@
                 showCopyButton={!!profileRef()?.$jazz?.id}
                 copyValue={profileRef()?.$jazz?.id}
               />
-              <p class="text-xs text-slate-400 italic">Profile reference found (not a CoValue object)</p>
+              <p class="text-xs text-slate-400 italic">
+                Profile reference found (not a CoValue object)
+              </p>
             </div>
           {/if}
         </div>
@@ -419,7 +425,9 @@
           <h3 class="text-lg font-semibold text-slate-700">References</h3>
           <PropertyItem
             propKey="Root"
-            propValue={typeof rootRef() === "string" ? formatCoValueId(rootRef() as string, 16) : "none"}
+            propValue={typeof rootRef() === "string"
+              ? formatCoValueId(rootRef() as string, 16)
+              : "none"}
           />
         </div>
       </Card>
@@ -459,4 +467,3 @@
     {/if}
   </div>
 {/if}
-

@@ -21,6 +21,32 @@ export { getCoValueGroupInfo, groupHasAccessToCoValue, filterCoValuesByGroupAcce
 // Profile Resolver
 export { resolveProfile } from './functions/profile-resolver';
 
+// CoValue Resolver (Generic utility)
+export {
+  resolveCoValue,
+  resolveCoValues,
+  isBrowserImage,
+  isGroup,
+  type CoJsonType,
+  type ExtendedCoJsonType,
+  type ResolvedCoValueResult,
+  type ResolvedGroup,
+  type ResolvedAccount,
+} from './utilities/resolve-covalue';
+
+// CoValue Navigation (Generic utility)
+export {
+  navigateToCoValueContext,
+  isCoID,
+  type CoValueContext,
+} from './utilities/navigate-covalue';
+
+// Group Members Extraction (Generic utility)
+export {
+  extractGroupMembers,
+  type GroupMembersInfo,
+} from './utilities/load-group-members';
+
 // Migrations
 export { migrateSyncGoogleNameToProfile } from './migrations/20241220_sync-google-name-to-profile';
 export { migrateSyncGoogleImageToProfile } from './migrations/20241220_sync-google-image-to-profile';

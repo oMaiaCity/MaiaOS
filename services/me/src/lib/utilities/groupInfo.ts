@@ -3,8 +3,6 @@
  * Extracts group members, parent/child groups, and role information
  */
 
-import { createMachine, StateMachine, commonStates, commonEvents } from './stateMachine.js';
-
 export interface GroupMember {
   id: string;
   role: string;
@@ -317,35 +315,5 @@ export function getGroupInfo(group: any): GroupInfo {
   };
 }
 
-/**
- * Create a group info state machine
- */
-export function createGroupInfoLoader(group: any): StateMachine {
-  return createMachine(
-    {
-      initial: group?.$isLoaded ? commonStates.loaded : commonStates.idle,
-      states: {
-        [commonStates.idle]: {
-          on: {
-            [commonEvents.LOAD]: commonStates.loading,
-          },
-        },
-        [commonStates.loading]: {
-          invoke: async (context) => {
-            if (context.group && !context.group.$isLoaded && context.group.$jazz?.ensureLoaded) {
-              await context.group.$jazz.ensureLoaded();
-            }
-          },
-          on: {
-            [commonEvents.DONE]: commonStates.loaded,
-            [commonEvents.ERROR]: commonStates.error,
-          },
-        },
-        [commonStates.loaded]: {},
-        [commonStates.error]: {},
-      },
-    },
-    { group },
-  );
-}
+// createGroupInfoLoader removed - not used
 

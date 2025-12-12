@@ -21,6 +21,8 @@ export function getBadgeColors(typeName: string): BadgeColors {
 
   switch (normalized) {
     // Primitive types
+    case "primitive":
+      return { bg: "badge-string", text: "" }; // Use string badge style for primitives
     case "string":
       return { bg: "badge-string", text: "" };
     case "number":
@@ -42,6 +44,12 @@ export function getBadgeColors(typeName: string): BadgeColors {
       return { bg: "badge-comap", text: "" };
     case "colist":
       return { bg: "badge-colist", text: "" };
+    case "cofeed":
+      return { bg: "bg-orange-100", text: "text-orange-800" };
+    case "coplaintext":
+      return { bg: "bg-teal-100", text: "text-teal-800" };
+    case "corichtext":
+      return { bg: "bg-cyan-100", text: "text-cyan-800" };
     case "covalue":
       return { bg: "badge-covalue", text: "" };
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import PropertyItem from "./PropertyItem.svelte";
   import { getCoValueGroupInfo } from "@hominio/data";
-  import { detectCoValueType } from "../../utilities/coValueDetector.js";
+  import { getCoValueType } from "../../utilities/coValueType.js";
   import { formatCoValueId } from "../../utilities/coValueFormatter.js";
 
   interface Props {
@@ -21,7 +21,7 @@
 
     const id = coValue.$jazz?.id || "unknown";
     const owner = coValue.$jazz?.owner;
-    const detectedType = coValue.$isLoaded ? detectCoValueType(coValue) : "CoValue";
+    const detectedType = coValue.$isLoaded ? getCoValueType(coValue) : "CoValue";
     // Map ImageDefinition to "image" for display badge
     const coValueType: string = detectedType === "ImageDefinition" ? "image" : detectedType;
 

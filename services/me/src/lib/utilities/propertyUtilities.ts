@@ -7,6 +7,7 @@ export interface DisplayInfo {
   type: string;
   isCoValue: boolean;
   coValue: any | null;
+  coValueId?: string;
   showImagePreview: boolean;
   imageId?: string;
   isArray?: boolean;
@@ -46,10 +47,25 @@ export function getDisplayValue(propValue: any): DisplayInfo {
   // Handle plain objects (not CoValues)
   if (!("$jazz" in propValue) && !("type" in propValue)) {
     try {
-      const keys = Object.keys(propValue).filter((k) => !k.startsWith("$"));
+      // Filter out functions and Svelte internal properties
+      const keys = Object.keys(propValue).filter((k) => {
+        if (k.startsWith("$")) return false;
+        const val = propValue[k];
+        if (typeof val === "function") return false;
+        return true;
+      });
       if (keys.length > 0) {
+        // Create a clean object without functions for display
+        const cleanObj: Record<string, any> = {};
+        for (const k of keys) {
+          const val = propValue[k];
+          // Skip functions and Svelte reactive primitives
+          if (typeof val !== "function" && !k.startsWith("$")) {
+            cleanObj[k] = val;
+          }
+        }
         return {
-          displayValue: JSON.stringify(propValue, null, 2),
+          displayValue: JSON.stringify(cleanObj, null, 2),
           type: "object",
           isCoValue: false,
           coValue: null,
@@ -91,6 +107,7 @@ export function getDisplayValue(propValue: any): DisplayInfo {
         type: "Image",
         isCoValue: true,
         coValue: propValue.coValue || propValue.imageDefinition || propValue.rawValue,
+        coValueId: imageId,
         showImagePreview: isImageLoaded && imageId !== "unknown",
         imageId,
       };
@@ -100,6 +117,7 @@ export function getDisplayValue(propValue: any): DisplayInfo {
         type: "FileStream",
         isCoValue: true,
         coValue: propValue.coValue || propValue.fileStream,
+        coValueId: propValue.coValueId || propValue.id,
         showImagePreview: false,
       };
     } else if (propValue.type === "CoMap") {
@@ -108,6 +126,7 @@ export function getDisplayValue(propValue: any): DisplayInfo {
         type: "CoMap",
         isCoValue: true,
         coValue: propValue.coValue,
+        coValueId: propValue.coValueId || propValue.id,
         showImagePreview: false,
       };
     } else if (propValue.type === "CoList") {
@@ -141,6 +160,16 @@ export function getDisplayValue(propValue: any): DisplayInfo {
         type: "CoFeed",
         isCoValue: true,
         coValue: propValue.coValue,
+        coValueId: propValue.id || propValue.coValueId,
+        showImagePreview: false,
+      };
+    } else if (propValue.type === "CoPlainText" || propValue.type === "CoRichText") {
+      return {
+        displayValue: propValue.id || "unknown",
+        type: propValue.type,
+        isCoValue: true,
+        coValue: propValue.coValue,
+        coValueId: propValue.id || propValue.coValueId,
         showImagePreview: false,
       };
     } else {

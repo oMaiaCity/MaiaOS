@@ -289,6 +289,18 @@
   @apply bg-[var(--color-badge-colist-bg)] text-[var(--color-badge-colist-text)];
 }
 
+.badge-cofeed {
+  @apply bg-[var(--color-badge-cofeed-bg)] text-[var(--color-badge-cofeed-text)];
+}
+
+.badge-coplaintext {
+  @apply bg-[var(--color-badge-coplaintext-bg)] text-[var(--color-badge-coplaintext-text)];
+}
+
+.badge-corichtext {
+  @apply bg-[var(--color-badge-corichtext-bg)] text-[var(--color-badge-corichtext-text)];
+}
+
 .badge-covalue {
   @apply bg-[var(--color-badge-covalue-bg)] text-[var(--color-badge-covalue-text)];
 }
