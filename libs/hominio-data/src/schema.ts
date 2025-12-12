@@ -71,21 +71,13 @@ export const Contact = co.map({
 	email: z.string(),
 })
 
-/** SchemaDefinition schema - stores JSON Schema definitions as CoMaps with their entity instances */
-export const SchemaDefinition = co.map({
-	'@schema': co.map({}).optional(), // Reference to SchemaDefinition CoValue (meta-schema references itself, entities reference their schema)
-	name: z.string(),
-	definition: z.object({}).passthrough(), // JSON Schema object (flexible structure - allows any properties)
-	entities: co.list(co.map({})), // Generic entities list - stores instances of this schema
-	'@label': z.string().optional(), // Computed display label for this schema
-})
-
 /** The account root is an app-specific per-user private `CoMap`
  *  where you can store top-level objects for that user */
 export const AppRoot = co.map({
 	contact: Contact, // Simple contact CoMap with email
 	capabilities: co.list(Capability), // List of Capability CoValues (each contains a Group reference)
-	data: co.optional(co.list(SchemaDefinition)), // Optional - list of SchemaDefinitions (each containing schema + entities)
+	schemata: co.optional(co.list(co.map({}))), // Optional - list of SchemaDefinitions (created dynamically)
+	entities: co.optional(co.list(co.map({}))), // Optional - list of Entity instances (created dynamically)
 })
 
 export const JazzAccount = co
@@ -138,7 +130,7 @@ export const JazzAccount = co
 								await ownerGroup.$jazz.waitForSync()
 							}
 						}
-					} catch (_e) {}
+					} catch (_e) { }
 				}
 
 				if (!profileAny.$jazz.has('firstName')) {
@@ -282,29 +274,72 @@ export const JazzAccount = co
 			}
 		}
 
-		// Remove old schemata property if it exists (migrated to data)
-		if (rootWithData.$jazz.has('schemata')) {
-			rootWithData.$jazz.delete('schemata')
+		// Migrate existing data to schemata (backward compatibility)
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const rootAny = rootWithData as any
+		if (rootAny.$jazz.has('data') && !rootWithData.$jazz.has('schemata')) {
+			// Load data list using raw access
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const rootWithDataLoaded = await rootAny.$jazz.ensureLoaded({
+				resolve: { data: true },
+			})
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const dataList = (rootWithDataLoaded as any).data
+
+			if (dataList) {
+				// Copy data list to schemata
+				rootWithData.$jazz.set('schemata', dataList)
+				await rootWithData.$jazz.waitForSync()
+				// Delete legacy data property after migration
+				rootAny.$jazz.delete('data')
+				await rootWithData.$jazz.waitForSync()
+			}
+		}
+
+		// Prevent data from being recreated - delete it if it exists (should have been migrated)
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		if ((rootWithData as any).$jazz.has('data')) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			(rootWithData as any).$jazz.delete('data')
 			await rootWithData.$jazz.waitForSync()
 		}
 
-		// Ensure data list exists (empty by default - schemas created manually via UI)
-		if (!rootWithData.$jazz.has('data')) {
-			// Create a group for data list
-			const dataGroup = Group.create()
-			await dataGroup.$jazz.waitForSync()
+		// Ensure schemata list exists (empty by default - schemas created manually via UI)
+		if (!rootWithData.$jazz.has('schemata')) {
+			// Create a group for schemata list
+			const schemataGroup = Group.create()
+			await schemataGroup.$jazz.waitForSync()
 
-			// Create empty data list (list of SchemaDefinitions)
-			const dataList = co.list(SchemaDefinition).create([], dataGroup)
-			await dataList.$jazz.waitForSync()
-			rootWithData.$jazz.set('data', dataList)
+			// Create empty schemata list (generic co.map({}) - schemas created dynamically)
+			const schemataList = co.list(co.map({})).create([], schemataGroup)
+			await schemataList.$jazz.waitForSync()
+			rootWithData.$jazz.set('schemata', schemataList)
 		} else {
-			// Ensure data list is loaded
+			// Ensure schemata list is loaded
 			try {
 				await rootWithData.$jazz.ensureLoaded({
-					resolve: { data: true },
+					resolve: { schemata: true },
 				})
-			} catch (_error) {}
+			} catch (_error) { }
+		}
+
+		// Ensure entities list exists (empty by default - entities created via createEntity)
+		if (!rootWithData.$jazz.has('entities')) {
+			// Create a group for entities list
+			const entitiesGroup = Group.create()
+			await entitiesGroup.$jazz.waitForSync()
+
+			// Create empty entities list (generic co.map({}) - entities created dynamically)
+			const entitiesList = co.list(co.map({})).create([], entitiesGroup)
+			await entitiesList.$jazz.waitForSync()
+			rootWithData.$jazz.set('entities', entitiesList)
+		} else {
+			// Ensure entities list is loaded
+			try {
+				await rootWithData.$jazz.ensureLoaded({
+					resolve: { entities: true },
+				})
+			} catch (_error) { }
 		}
 
 	})

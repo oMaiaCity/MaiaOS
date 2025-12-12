@@ -1,12 +1,12 @@
 /**
  * Dynamic Schema Migration Utility
  *
- * Automatically ensures a schema exists in root.data and creates entity instances
+ * Automatically ensures a schema exists in root.schemata and creates entity instances
  * Works with any JSON Schema definition
  */
 
-import { co, Group } from 'jazz-tools'
-import { SchemaDefinition } from '../schema.js'
+import { co, Group, z } from 'jazz-tools'
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { jsonSchemaToZod } from './json-schema-to-zod.js'
 
 /**
@@ -218,7 +218,7 @@ function addReferencesToSchema(jsonSchema: any, parentPath: string = ''): any {
  * Extracts nested CoValue schemas for direct linking
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function jsonSchemaToCoMapShape(jsonSchema: any): Record<string, any> {
+export function jsonSchemaToCoMapShape(jsonSchema: any): Record<string, any> {
 	if (!jsonSchema || jsonSchema.type !== 'object') {
 		throw new Error('JSON Schema must be an object type')
 	}
@@ -257,7 +257,7 @@ const SchemaMetaSchema = {
 		},
 		'@schema': {
 			type: 'o-map',
-			description: 'Reference to SchemaDefinition CoValue (meta-schema references itself, entities reference their schema definition)',
+			description: 'Reference to SchemaDefinition CoValue (meta-schema references itself)',
 		},
 		name: {
 			type: 'string',
@@ -268,16 +268,69 @@ const SchemaMetaSchema = {
 			description: 'JSON Schema definition object',
 			additionalProperties: true,
 		},
-		entities: {
-			type: 'o-list',
-			description: 'List of entity instances of this schema',
-			items: {
-				type: 'o-map',
-				description: 'Entity instance (structure defined by definition property)',
-			},
-		},
 	},
-	required: ['name', 'definition', 'entities'],
+	required: ['name', 'definition'],
+}
+
+/**
+ * Gets or creates the SchemaDefinition CoMap schema dynamically
+ * This creates a co.map() schema based on the meta-schema JSON Schema
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getSchemaDefinitionCoMap(metaSchemaJson: any): any {
+	const schemaDefinitionShape = jsonSchemaToCoMapShape(metaSchemaJson)
+	return co.map(schemaDefinitionShape)
+}
+
+/**
+ * Gets or creates the Entity CoMap schema dynamically
+ * This creates a co.map() schema based on the Entity JSON Schema
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getEntityCoMap(): any {
+	const entitySchemaJson = {
+		type: 'object',
+		properties: {
+			'@schema': { type: 'o-map' },
+			'@label': { type: 'string' },
+			name: { type: 'string' },
+			type: { type: 'string' },
+			primitive: { type: 'string' },
+		},
+		required: ['type'],
+	}
+	const entityShape = jsonSchemaToCoMapShape(entitySchemaJson)
+	return co.map(entityShape)
+}
+
+/**
+ * Gets the LocalNode from an account or a CoValue
+ * Tries multiple methods to get the node
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getNode(accountOrCoValue: any): any {
+	try {
+		// Method 1: Try from account's raw
+		const raw = (accountOrCoValue as any).$jazz?.raw
+		if (raw?.core?.node) {
+			return raw.core.node
+		}
+
+		// Method 2: Try from account's core directly
+		if ((accountOrCoValue as any).core?.node) {
+			return (accountOrCoValue as any).core.node
+		}
+
+		// Method 3: Try from a CoValue's core
+		const coValueRaw = (accountOrCoValue as any).$jazz?.raw
+		if (coValueRaw?.core?.node) {
+			return coValueRaw.core.node
+		}
+
+		return null
+	} catch (_e) {
+		return null
+	}
 }
 
 /**
@@ -301,77 +354,128 @@ async function ensureMetaSchema(account: any): Promise<any> {
 
 	const root = loadedAccount.root
 
-	// Ensure data list exists
-	if (!root.$jazz.has('data')) {
-		throw new Error('Data list does not exist - run account migration first')
+	// Ensure schemata list exists
+	if (!root.$jazz.has('schemata')) {
+		throw new Error('Schemata list does not exist - run account migration first')
 	}
 
-	// Load data list
-	const rootWithData = await root.$jazz.ensureLoaded({
-		resolve: { data: true },
+	// Load schemata list
+	const rootWithSchemata = await root.$jazz.ensureLoaded({
+		resolve: { schemata: true },
 	})
-	const dataList = rootWithData.data
+	const schemataList = rootWithSchemata.schemata
 
-	if (!dataList) {
-		throw new Error('Data list could not be loaded')
+	if (!schemataList) {
+		throw new Error('Schemata list could not be loaded')
 	}
 
 	// Check if meta-schema already exists
-	if (dataList.$isLoaded) {
-		const dataArray = Array.from(dataList)
-		for (const schema of dataArray) {
+	// Ensure schemata list is fully loaded before checking and wait for sync
+	await schemataList.$jazz.ensureLoaded()
+	await root.$jazz.waitForSync()
+
+	// Get node to load CoValues by ID (like resolveCoValue does)
+	// Try account first, then root as fallback
+	let node = getNode(account)
+	if (!node && root) {
+		node = getNode(root)
+	}
+	if (!node) {
+		throw new Error('Cannot get LocalNode from account or root')
+	}
+
+	if (schemataList.$isLoaded) {
+		const schemataArray = Array.from(schemataList)
+		console.log(`[ensureMetaSchema] Checking ${schemataArray.length} schemas for "Schema"`)
+		for (const schema of schemataArray) {
 			if (schema && typeof schema === 'object' && '$jazz' in schema) {
-				const schemaLoaded = await (schema as any).$jazz.ensureLoaded()
-				if (schemaLoaded.$isLoaded && (schemaLoaded as any).name === 'Schema') {
-					// Meta-schema exists, return it
-					return schemaLoaded
+				try {
+					// Get the CoValue ID from the list item
+					const schemaId = (schema as any).$jazz?.id
+					if (!schemaId) {
+						continue
+					}
+
+					// Load the actual CoValue from the node (like resolveCoValue does)
+					// This ensures we get the full CoValue with all properties, not just a reference
+					const loadedValue = await node.load(schemaId as any)
+					if (loadedValue === 'unavailable') {
+						continue
+					}
+
+					// Get snapshot using toJSON() - same as resolveCoValue does
+					const snapshot = loadedValue.toJSON()
+					if (!snapshot || typeof snapshot !== 'object' || snapshot === null) {
+						continue
+					}
+
+					// Read name from snapshot (like ListView/Context do)
+					const schemaNameValue = (snapshot as any).name as string | undefined
+
+					console.log(`[ensureMetaSchema] Found schema - name: "${schemaNameValue}", ID: ${schemaId}`)
+
+					// Check if name matches 'Schema' (case-sensitive exact match)
+					if (typeof schemaNameValue === 'string' && schemaNameValue === 'Schema') {
+						console.log(`[ensureMetaSchema] Meta-schema "Schema" already exists, returning existing`)
+						// Return the schema from the list (it's already wrapped), not the raw loadedValue
+						// The schema from Array.from(schemataList) is the wrapped CoValue we need
+						return schema
+					}
+				} catch (error) {
+					console.error(`[ensureMetaSchema] Error loading schema:`, error)
+					// Skip this schema if there's an error loading it
+					continue
 				}
 			}
 		}
 	}
+	console.log(`[ensureMetaSchema] Meta-schema "Schema" not found, creating new`)
 
 	// Meta-schema doesn't exist, create it directly (without calling ensureSchema to avoid recursion)
-	const dataOwner = (dataList as any).$jazz?.owner
-	if (!dataOwner) {
-		throw new Error('Cannot determine data list owner')
+	const schemataOwner = (schemataList as any).$jazz?.owner
+	if (!schemataOwner) {
+		throw new Error('Cannot determine schemata list owner')
 	}
 
 	// Add @label and @schema to meta-schema JSON Schema
 	const metaSchemaWithLabel = addLabelToSchema(SchemaMetaSchema)
 
-	// Convert JSON Schema to co.map() shape
-	const metaEntityShape = jsonSchemaToCoMapShape(metaSchemaWithLabel)
-	const MetaEntityCoMapSchema = co.map(metaEntityShape)
+	// Get SchemaDefinition CoMap schema dynamically
+	const SchemaDefinitionCoMap = getSchemaDefinitionCoMap(metaSchemaWithLabel)
 
-	// Create a group for the meta-schema's entities list
-	const metaEntitiesGroup = Group.create()
-	await metaEntitiesGroup.$jazz.waitForSync()
-
-	// Create meta-schema SchemaDefinition
-	const metaSchema = SchemaDefinition.create(
+	// Create meta-schema SchemaDefinition dynamically (no entities list - entities stored in root.entities)
+	const metaSchema = SchemaDefinitionCoMap.create(
 		{
 			name: 'Schema',
 			definition: metaSchemaWithLabel,
-			entities: co.list(MetaEntityCoMapSchema).create([], metaEntitiesGroup),
 		},
-		dataOwner,
+		schemataOwner,
 	)
 	await metaSchema.$jazz.waitForSync()
+
+	// Explicitly set name property using $jazz.set to ensure it's stored
+	// This is a workaround in case the dynamic schema creation doesn't properly set it
+	metaSchema.$jazz.set('name', 'Schema')
+	await metaSchema.$jazz.waitForSync()
+
+	// Verify name was set
+	const verifyName = metaSchema.name
+	console.log(`[ensureMetaSchema] Created meta-schema, name after set: "${verifyName}", ID: ${metaSchema.$jazz.id}`)
 
 	// Set system properties (@label and @schema) - meta-schema references itself
 	const { setSystemProps } = await import('../functions/set-system-props.js')
 	await setSystemProps(metaSchema, metaSchema)
 
-	// Add meta-schema to data list
-	dataList.$jazz.push(metaSchema)
+	// Add meta-schema to schemata list
+	schemataList.$jazz.push(metaSchema)
 	await root.$jazz.waitForSync()
 
-	// Return the meta-schema (with entities resolved)
-	return await metaSchema.$jazz.ensureLoaded({ resolve: { entities: true } })
+	// Return the meta-schema
+	return await metaSchema.$jazz.ensureLoaded({ resolve: {} })
 }
 
 /**
- * Ensures a schema exists in root.data, creates it if needed
+ * Ensures a schema exists in root.schemata, creates it if needed
  * Automatically ensures the meta-schema exists first
  *
  * @param account - The Jazz account
@@ -394,64 +498,107 @@ export async function ensureSchema(
 
 	// Add @label to the schema automatically
 	const jsonSchemaWithLabel = addLabelToSchema(jsonSchema)
-	// Load root
-	const loadedAccount = await account.$jazz.ensureLoaded({
-		resolve: { root: true },
+
+	// Reload root and schemata list to ensure we have the latest state
+	const freshRoot = await account.$jazz.ensureLoaded({
+		resolve: { root: { schemata: true } },
 	})
 
-	if (!loadedAccount.root) {
+	if (!freshRoot.root) {
 		throw new Error('Root does not exist')
 	}
 
-	const root = loadedAccount.root
+	const root = freshRoot.root
 
-	// Ensure data list exists
-	if (!root.$jazz.has('data')) {
-		throw new Error('Data list does not exist - run account migration first')
+	// Ensure schemata list exists
+	if (!root.$jazz.has('schemata')) {
+		throw new Error('Schemata list does not exist - run account migration first')
 	}
 
-	// Load data list
-	const rootWithData = await root.$jazz.ensureLoaded({
-		resolve: { data: true },
-	})
-	const dataList = rootWithData.data
+	const schemataList = root.schemata
+	if (!schemataList) {
+		throw new Error('Schemata list could not be loaded')
+	}
 
-	if (!dataList) {
-		throw new Error('Data list could not be loaded')
+	await schemataList.$jazz.ensureLoaded()
+	await root.$jazz.waitForSync()
+
+	// Get node to load CoValues by ID (like resolveCoValue does)
+	// Try account first, then root as fallback
+	let node = getNode(account)
+	if (!node && root) {
+		node = getNode(root)
+	}
+	if (!node) {
+		throw new Error('Cannot get LocalNode from account or root')
 	}
 
 	// Check if schema already exists
-	if (dataList.$isLoaded) {
-		const dataArray = Array.from(dataList)
-		for (const schema of dataArray) {
+	if (schemataList.$isLoaded) {
+		const schemataArray = Array.from(schemataList)
+		console.log(`[ensureSchema] Checking ${schemataArray.length} schemas for "${schemaName}"`)
+		for (const schema of schemataArray) {
 			if (schema && typeof schema === 'object' && '$jazz' in schema) {
-				const schemaLoaded = await (schema as any).$jazz.ensureLoaded({
-					resolve: { entities: true },
-				})
-				if (schemaLoaded.$isLoaded && (schemaLoaded as any).name === schemaName) {
-					// Schema exists, return it
-					return schemaLoaded
+				try {
+					// Get the CoValue ID from the list item
+					const schemaId = (schema as any).$jazz?.id
+					if (!schemaId) {
+						continue
+					}
+
+					// Load the actual CoValue from the node (like resolveCoValue does)
+					// This ensures we get the full CoValue with all properties, not just a reference
+					const loadedValue = await node.load(schemaId as any)
+					if (loadedValue === 'unavailable') {
+						continue
+					}
+
+					// Get snapshot using toJSON() - same as resolveCoValue does
+					const snapshot = loadedValue.toJSON()
+					if (!snapshot || typeof snapshot !== 'object' || snapshot === null) {
+						continue
+					}
+
+					// Read name from snapshot (like ListView/Context do)
+					const schemaNameValue = (snapshot as any).name as string | undefined
+
+					console.log(`[ensureSchema] Found schema - name: "${schemaNameValue}", ID: ${schemaId}`)
+
+					// Check if name matches (case-sensitive exact match)
+					if (typeof schemaNameValue === 'string' && schemaNameValue === schemaName) {
+						console.log(`[ensureSchema] Schema "${schemaName}" already exists, returning existing`)
+						// Return the schema from the list (it's already wrapped), not the raw loadedValue
+						// The schema from Array.from(schemataList) is the wrapped CoValue we need
+						return schema
+					}
+				} catch (error) {
+					console.error(`[ensureSchema] Error loading schema:`, error)
+					// Skip this schema if there's an error loading it
+					continue
 				}
 			}
 		}
 	}
+	console.log(`[ensureSchema] Schema "${schemaName}" not found, creating new`)
 
 	// Schema doesn't exist, create it AND all nested schemas
 
-	// Get the owner group from the data list
-	const dataOwner = (dataList as any).$jazz?.owner
-	if (!dataOwner) {
-		throw new Error('Cannot determine data list owner')
+	// Get the owner group from the schemata list
+	const schemataOwner = (schemataList as any).$jazz?.owner
+	if (!schemataOwner) {
+		throw new Error('Cannot determine schemata list owner')
 	}
 
 	// Step 1: Extract all nested CoValue schemas (use schema with @label)
+	// For Entity schema, there are no nested schemas, so this should return empty
 	const extractedSchemas = extractNestedCoValueSchemas(jsonSchemaWithLabel)
+	console.log(`[ensureSchema] Extracted ${Object.keys(extractedSchemas).length} nested schemas for "${schemaName}"`)
 
 	// Step 2: Create SchemaDefinition entries for each extracted nested schema
 	// Store mapping of refPath -> SchemaDefinition CoValue ID
 	const nestedSchemaIdMap: Record<string, string> = {}
 
-	for (const [refPath, nestedCoMapSchema] of Object.entries(extractedSchemas)) {
+	for (const [refPath] of Object.entries(extractedSchemas)) {
 		// Generate a name for this nested schema (e.g., "JazzComposite/NestedCoMap")
 		const nestedSchemaName = `${schemaName}/${refPath
 			.split('/')
@@ -460,9 +607,9 @@ export async function ensureSchema(
 
 		// Check if this nested schema already exists
 		let existingNestedSchema: any = null
-		if (dataList.$isLoaded) {
-			const dataArray = Array.from(dataList)
-			for (const schema of dataArray) {
+		if (schemataList.$isLoaded) {
+			const schemataArray = Array.from(schemataList)
+			for (const schema of schemataArray) {
 				if (schema && typeof schema === 'object' && '$jazz' in schema) {
 					const schemaLoaded = await (schema as any).$jazz.ensureLoaded()
 					if (schemaLoaded.$isLoaded && (schemaLoaded as any).name === nestedSchemaName) {
@@ -506,24 +653,27 @@ export async function ensureSchema(
 				required: nestedRequired,
 			}
 
-			// Create SchemaDefinition for the nested schema
-			const nestedSchemaDefinition = SchemaDefinition.create(
+			// Get SchemaDefinition CoMap schema dynamically
+			const metaSchemaForNested = await ensureMetaSchema(account)
+			const metaSchemaLoaded = await metaSchemaForNested.$jazz.ensureLoaded({ resolve: {} })
+			const SchemaDefinitionCoMap = getSchemaDefinitionCoMap(metaSchemaLoaded.definition)
+
+			// Create SchemaDefinition for the nested schema (no entities list - entities stored in root.entities)
+			const nestedSchemaDefinition = SchemaDefinitionCoMap.create(
 				{
 					name: nestedSchemaName,
 					definition: nestedJsonSchema,
-					entities: co.list(nestedCoMapSchema).create([], nestedEntitiesGroup),
 				},
-				dataOwner,
+				schemataOwner,
 			)
 			await nestedSchemaDefinition.$jazz.waitForSync()
 
 			// Set system properties (@label and @schema) - nested schema references meta-schema
 			const { setSystemProps } = await import('../functions/set-system-props.js')
-			const metaSchema = await ensureMetaSchema(account)
-			await setSystemProps(nestedSchemaDefinition, metaSchema)
+			await setSystemProps(nestedSchemaDefinition, metaSchemaForNested)
 
-			// Add to data list
-			dataList.$jazz.push(nestedSchemaDefinition)
+			// Add to schemata list
+			schemataList.$jazz.push(nestedSchemaDefinition)
 
 			// Store the new schema's CoValue ID
 			nestedSchemaIdMap[refPath] = nestedSchemaDefinition.$jazz.id
@@ -540,47 +690,75 @@ export async function ensureSchema(
 		'',
 	)
 
-	// Step 4: Convert JSON Schema to co.map() shape - this creates the typed CoMap schema with direct links (use schema with @label)
-	const entityShape = jsonSchemaToCoMapShape(jsonSchemaWithLabel)
-	const EntityCoMapSchema = co.map(entityShape)
+	// Step 4: Get SchemaDefinition CoMap schema dynamically
+	// Meta-schema was already ensured at the start of this function, so get it from the list
+	const metaSchema = await ensureMetaSchema(account)
+	const metaSchemaLoaded = await metaSchema.$jazz.ensureLoaded({ resolve: {} })
 
-	// Step 5: Create a group for the main schema's entities list
-	const entitiesGroup = Group.create()
-	await entitiesGroup.$jazz.waitForSync()
+	// Get definition - it might be stored as a CoValue reference, so get the actual JSON Schema
+	let metaSchemaDefinition = metaSchemaLoaded.definition
+	// If definition is a CoValue reference (has $jazz), get its snapshot
+	if (metaSchemaDefinition && typeof metaSchemaDefinition === 'object' && '$jazz' in metaSchemaDefinition) {
+		const defLoaded = await (metaSchemaDefinition as any).$jazz.ensureLoaded({ resolve: {} })
+		metaSchemaDefinition = defLoaded.toJSON ? defLoaded.toJSON() : metaSchemaDefinition
+	}
+	// If definition is still not a plain object, try toJSON on the metaSchema itself
+	if (!metaSchemaDefinition || typeof metaSchemaDefinition !== 'object' || metaSchemaDefinition.type !== 'object') {
+		const metaSnapshot = metaSchemaLoaded.toJSON ? metaSchemaLoaded.toJSON() : {}
+		if (metaSnapshot && typeof metaSnapshot === 'object' && 'definition' in metaSnapshot) {
+			metaSchemaDefinition = (metaSnapshot as any).definition
+		}
+	}
 
-	// Step 6: Create SchemaDefinition with modified JSON Schema (using $ref) and typed entities list
-	const newSchema = SchemaDefinition.create(
+	// Fallback: use the SchemaMetaSchema directly if we can't get it from the loaded schema
+	if (!metaSchemaDefinition || typeof metaSchemaDefinition !== 'object' || metaSchemaDefinition.type !== 'object') {
+		console.log('[ensureSchema] Using SchemaMetaSchema directly as fallback')
+		metaSchemaDefinition = addLabelToSchema(SchemaMetaSchema)
+	}
+
+	const SchemaDefinitionCoMap = getSchemaDefinitionCoMap(metaSchemaDefinition)
+
+	// Create SchemaDefinition with modified JSON Schema (using $ref) - no entities list (entities stored in root.entities)
+	const newSchema = SchemaDefinitionCoMap.create(
 		{
 			name: schemaName,
 			definition: modifiedJsonSchema, // Use modified schema with $ref
-			entities: co.list(EntityCoMapSchema).create([], entitiesGroup), // Typed with actual schema!
 		},
-		dataOwner,
+		schemataOwner,
 	)
 	await newSchema.$jazz.waitForSync()
 
+	// Explicitly set name property using $jazz.set to ensure it's stored
+	// This is a workaround in case the dynamic schema creation doesn't properly set it
+	newSchema.$jazz.set('name', schemaName)
+	await newSchema.$jazz.waitForSync()
+
+	// Verify name was set
+	const verifyName = newSchema.name
+	console.log(`[ensureSchema] Created schema "${schemaName}", name after set: "${verifyName}", ID: ${newSchema.$jazz.id}`)
+
 	// Set system properties (@label and @schema) - schema references meta-schema
 	const { setSystemProps } = await import('../functions/set-system-props.js')
-	const metaSchema = await ensureMetaSchema(account)
 	await setSystemProps(newSchema, metaSchema)
 
-	// Add SchemaDefinition to data list
-	dataList.$jazz.push(newSchema)
+	// Add SchemaDefinition to schemata list
+	schemataList.$jazz.push(newSchema)
 	await root.$jazz.waitForSync()
 
-	// Return the newly created schema (with entities resolved)
-	return await newSchema.$jazz.ensureLoaded({ resolve: { entities: true } })
+	// Return the newly created schema
+	return await newSchema.$jazz.ensureLoaded({ resolve: {} })
 }
 
 /**
  * Creates an entity instance for a given schema
  * Automatically ensures the schema exists first
+ * Creates Entity instance and adds it to root.entities
  *
  * @param account - The Jazz account
  * @param schemaName - Name of the schema (e.g., "Car")
  * @param jsonSchema - JSON Schema definition
- * @param entityData - Data for the entity instance
- * @returns The created entity instance
+ * @param entityData - Data for the entity instance (name will be extracted if present)
+ * @returns The created Entity instance
  */
 export async function createEntity(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -592,21 +770,34 @@ export async function createEntity(
 	entityData: any,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> {
-	// Ensure schema exists (creates if needed) - this adds @label automatically
-	const schema = await ensureSchema(account, schemaName, jsonSchema)
+	// Ensure schema exists (creates if needed)
+	await ensureSchema(account, schemaName, jsonSchema)
 
-	// Get the entities list
-	const entitiesList = schema.entities
-	if (!entitiesList) {
-		throw new Error(`Schema ${schemaName} does not have entities list`)
+	// Load root and ensure entities list exists
+	const loadedAccount = await account.$jazz.ensureLoaded({
+		resolve: { root: true },
+	})
+
+	if (!loadedAccount.root) {
+		throw new Error('Root does not exist')
 	}
 
-	// Add @label to jsonSchema for entity creation (ensureSchema already did this, but we need it here too)
-	const jsonSchemaWithLabel = addLabelToSchema(jsonSchema)
+	const root = loadedAccount.root
 
-	// Convert JSON Schema to co.map() shape (use schema with @label)
-	const entityShape = jsonSchemaToCoMapShape(jsonSchemaWithLabel)
-	const EntityCoMapSchema = co.map(entityShape)
+	// Ensure entities list exists
+	if (!root.$jazz.has('entities')) {
+		throw new Error('Entities list does not exist - run account migration first')
+	}
+
+	// Load entities list
+	const rootWithEntities = await root.$jazz.ensureLoaded({
+		resolve: { entities: true },
+	})
+	const entitiesList = rootWithEntities.entities
+
+	if (!entitiesList) {
+		throw new Error('Entities list could not be loaded')
+	}
 
 	// Get the owner group from the entities list
 	const entitiesOwner = (entitiesList as any).$jazz?.owner
@@ -614,22 +805,44 @@ export async function createEntity(
 		throw new Error('Cannot determine entities list owner')
 	}
 
-	// Create entity instance
-	const entityInstance = EntityCoMapSchema.create(entityData, entitiesOwner)
+	// Extract name from entityData if present
+	const entityName = entityData?.name || entityData?.text || undefined
+
+	// Ensure Entity schema exists and get it for @schema reference
+	const entitySchemaJson = {
+		type: 'object',
+		properties: {
+			'@schema': { type: 'o-map' },
+			'@label': { type: 'string' },
+			name: { type: 'string' },
+			type: { type: 'string' },
+			primitive: { type: 'string' },
+		},
+		required: ['type'],
+	}
+	const entitySchemaDefinition = await ensureSchema(account, 'Entity', entitySchemaJson)
+
+	// Get Entity CoMap schema dynamically
+	const EntityCoMap = getEntityCoMap()
+
+	// Create Entity instance
+	const entityInstance = EntityCoMap.create(
+		{
+			name: entityName,
+			type: schemaName,
+			primitive: undefined, // Not set for now - can store CoValue ID or primitive value later
+		},
+		entitiesOwner,
+	)
 	await entityInstance.$jazz.waitForSync()
 
-	// Verify properties are accessible
-	if (!entityInstance.$isLoaded) {
-		await entityInstance.$jazz.ensureLoaded({ resolve: {} })
-	}
-
-	// Set system properties (@label and @schema) - entity references its schema definition
+	// Set system properties (@label and @schema) - entity references Entity schema definition
 	const { setSystemProps } = await import('../functions/set-system-props.js')
-	await setSystemProps(entityInstance, schema)
+	await setSystemProps(entityInstance, entitySchemaDefinition)
 
-	// Add entity instance to entities list
+	// Add entity instance to root.entities list
 	entitiesList.$jazz.push(entityInstance)
-	await account.$jazz.ensureLoaded({ resolve: { root: true } }) // Ensure root is synced
+	await root.$jazz.waitForSync()
 
 	return entityInstance
 }
@@ -679,7 +892,7 @@ function getRequiredFromPath(jsonSchema: any, path: string): string[] {
 }
 
 /**
- * Finds a nested schema by name from root.data
+ * Finds a nested schema by name from root.schemata
  *
  * @param account - The Jazz account
  * @param schemaName - Full schema name (e.g., "JazzComposite/NestedCoMap")
@@ -697,26 +910,26 @@ export async function findNestedSchema(account: any, schemaName: string): Promis
 
 	const root = loadedAccount.root
 
-	// Ensure data list exists
-	if (!root.$jazz.has('data')) {
+	// Ensure schemata list exists
+	if (!root.$jazz.has('schemata')) {
 		return null
 	}
 
-	// Load data list
-	const rootWithData = await root.$jazz.ensureLoaded({
-		resolve: { data: true },
+	// Load schemata list
+	const rootWithSchemata = await root.$jazz.ensureLoaded({
+		resolve: { schemata: true },
 	})
-	const dataList = rootWithData.data
+	const schemataList = rootWithSchemata.schemata
 
-	if (!dataList) {
+	if (!schemataList) {
 		return null
 	}
 
 	// Search for schema by name
-	if (dataList.$isLoaded) {
-		const dataArray = Array.from(dataList)
+	if (schemataList.$isLoaded) {
+		const schemataArray = Array.from(schemataList)
 
-		for (const schema of dataArray) {
+		for (const schema of schemataArray) {
 			if (schema && typeof schema === 'object' && '$jazz' in schema) {
 				const schemaLoaded = await (schema as any).$jazz.ensureLoaded({
 					resolve: { entities: true },

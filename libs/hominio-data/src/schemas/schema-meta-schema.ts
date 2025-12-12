@@ -23,15 +23,7 @@ export const SchemaMetaSchema = {
 			description: 'JSON Schema definition object',
 			additionalProperties: true,
 		},
-		entities: {
-			type: 'o-list',
-			description: 'List of entity instances of this schema',
-			items: {
-				type: 'o-map',
-				description: 'Entity instance (structure defined by definition property)',
-			},
-		},
 	},
-	required: ['name', 'definition', 'entities'],
+	required: ['name', 'definition'],
 }
 

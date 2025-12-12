@@ -28,7 +28,6 @@ export { migrateSyncGoogleNameToProfile } from './migrations/20241220_sync-googl
 // Manual Migrations (legacy - now uses generic utilities)
 export {
 	addRandomCarInstance,
-	CarJsonSchema,
 	migrateAddCars,
 	resetData,
 } from './migrations/manual-add-cars'
@@ -38,7 +37,6 @@ export {
 	Capability,
 	Contact,
 	JazzAccount,
-	SchemaDefinition,
 	syncGoogleDataToProfile,
 } from './schema'
 export { JazzCompositeJsonSchema } from './schemas/jazz-composite-schema'

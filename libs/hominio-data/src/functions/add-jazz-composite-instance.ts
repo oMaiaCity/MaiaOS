@@ -5,51 +5,8 @@
 
 import { co, z } from 'jazz-tools'
 import { JazzCompositeJsonSchema } from '../schemas/jazz-composite-schema.js'
-import { ensureSchema, findNestedSchema } from './dynamic-schema-migration.js'
-import { jsonSchemaToZod } from './json-schema-to-zod.js'
-import { setupComputedFieldsForCoValue } from './computed-fields.js'
-
-/**
- * Helper to generate nested schema name from refPath
- * Matches the logic in ensureSchema: `${schemaName}/${refPath.split('/').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('/')}`
- */
-function getNestedSchemaName(schemaName: string, refPath: string): string {
-	const capitalizedPath = refPath
-		.split('/')
-		.map((s: string) => s.charAt(0).toUpperCase() + s.slice(1))
-		.join('/')
-	return `${schemaName}/${capitalizedPath}`
-}
-
-/**
- * Helper to add a CoValue instance to its nested schema's entities list
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function addToNestedSchemaEntities(
-	account: any,
-	schemaName: string,
-	refPath: string,
-	coValueInstance: any,
-): Promise<void> {
-	const nestedSchemaName = getNestedSchemaName(schemaName, refPath)
-
-	// Ensure root is synced before finding nested schema
-	await account.$jazz.ensureLoaded({ resolve: { root: true } })
-
-	const nestedSchema = await findNestedSchema(account, nestedSchemaName)
-
-	if (!nestedSchema) {
-		return
-	}
-
-	const nestedEntitiesList = nestedSchema.entities
-	if (!nestedEntitiesList) {
-		return
-	}
-
-	nestedEntitiesList.$jazz.push(coValueInstance)
-	await nestedEntitiesList.$jazz.waitForSync()
-}
+import { ensureSchema, jsonSchemaToCoMapShape } from './dynamic-schema-migration.js'
+import { setSystemProps } from './set-system-props.js'
 
 /**
  * Creates a hardcoded JazzComposite instance with example values for all types
@@ -62,22 +19,34 @@ export async function addJazzCompositeInstance(account: any): Promise<any> {
 	// Ensure schema exists (creates if needed)
 	const schema = await ensureSchema(account, 'JazzComposite', JazzCompositeJsonSchema)
 
-	// Get the entities list
-	const entitiesList = schema.entities
+	// Load root and get entities list
+	const loadedAccount = await account.$jazz.ensureLoaded({
+		resolve: { root: true },
+	})
+
+	if (!loadedAccount.root) {
+		throw new Error('Root does not exist')
+	}
+
+	const root = loadedAccount.root
+
+	// Ensure entities list exists
+	if (!root.$jazz.has('entities')) {
+		throw new Error('Entities list does not exist - run account migration first')
+	}
+
+	// Load entities list
+	const rootWithEntities = await root.$jazz.ensureLoaded({
+		resolve: { entities: true },
+	})
+	const entitiesList = rootWithEntities.entities
+
 	if (!entitiesList) {
-		throw new Error('JazzComposite schema does not have entities list')
+		throw new Error('Entities list could not be loaded')
 	}
 
 	// Convert JSON Schema to co.map() shape
-	const shape: Record<string, any> = {}
-	const required = JazzCompositeJsonSchema.required || []
-
-	for (const [key, value] of Object.entries(JazzCompositeJsonSchema.properties)) {
-		const isOptional = !required.includes(key)
-		shape[key] = jsonSchemaToZod(value as any, isOptional)
-	}
-
-	const entityShape = co.map(shape)
+	const entityShape = co.map(jsonSchemaToCoMapShape(JazzCompositeJsonSchema))
 
 	// Get the owner group from the entities list
 	// Use this SAME group for ALL nested CoValues to ensure they're accessible
@@ -103,8 +72,7 @@ export async function addJazzCompositeInstance(account: any): Promise<any> {
 			{ owner: entitiesOwner },
 		)
 	await nestedCoMap.$jazz.waitForSync()
-	// Add to nested schema's entities list
-	await addToNestedSchemaEntities(account, 'JazzComposite', 'nestedCoMap', nestedCoMap)
+	// Note: Nested CoValues are automatically linked via their properties
 
 	// Create CoList instances
 	const coListOfStrings = co
@@ -123,8 +91,7 @@ export async function addJazzCompositeInstance(account: any): Promise<any> {
 		})
 		.create({ itemName: 'Item 1', itemValue: 10 }, { owner: entitiesOwner })
 	await item1.$jazz.waitForSync()
-	// Add item1 to nested schema's entities list
-	await addToNestedSchemaEntities(account, 'JazzComposite', 'coListOfCoMaps/items', item1)
+	// Note: Nested CoValues are automatically linked via their properties
 
 	const item2 = co
 		.map({
@@ -133,8 +100,7 @@ export async function addJazzCompositeInstance(account: any): Promise<any> {
 		})
 		.create({ itemName: 'Item 2', itemValue: 20 }, { owner: entitiesOwner })
 	await item2.$jazz.waitForSync()
-	// Add item2 to nested schema's entities list
-	await addToNestedSchemaEntities(account, 'JazzComposite', 'coListOfCoMaps/items', item2)
+	// Note: Nested CoValues are automatically linked via their properties
 
 	const coListOfCoMaps = co
 		.list(
@@ -176,8 +142,7 @@ export async function addJazzCompositeInstance(account: any): Promise<any> {
 		})
 		.create({ deepString: 'Deep nested string' }, { owner: entitiesOwner })
 	await innerCoMap.$jazz.waitForSync()
-	// Add innerCoMap to nested schema's entities list
-	await addToNestedSchemaEntities(account, 'JazzComposite', 'nestedStructure/innerCoMap', innerCoMap)
+	// Note: Nested CoValues are automatically linked via their properties
 
 	const nestedStructure = co
 		.map({
@@ -196,8 +161,7 @@ export async function addJazzCompositeInstance(account: any): Promise<any> {
 			{ owner: entitiesOwner },
 		)
 	await nestedStructure.$jazz.waitForSync()
-	// Add nestedStructure to nested schema's entities list
-	await addToNestedSchemaEntities(account, 'JazzComposite', 'nestedStructure', nestedStructure)
+	// Note: Nested CoValues are automatically linked via their properties
 
 	// Create optional CoMap
 	const optionalCoMap = co
@@ -206,8 +170,7 @@ export async function addJazzCompositeInstance(account: any): Promise<any> {
 		})
 		.create({ optionalField: 'Optional CoMap field' }, { owner: entitiesOwner })
 	await optionalCoMap.$jazz.waitForSync()
-	// Add optionalCoMap to nested schema's entities list
-	await addToNestedSchemaEntities(account, 'JazzComposite', 'optionalCoMap', optionalCoMap)
+	// Note: Nested CoValues are automatically linked via their properties
 
 	// Create optional CoList
 	const optionalCoList = co
@@ -275,9 +238,41 @@ export async function addJazzCompositeInstance(account: any): Promise<any> {
 	const { setSystemProps } = await import('./set-system-props.js')
 	await setSystemProps(entityInstance, schema)
 
-	// Add entity instance to entities list
-	entitiesList.$jazz.push(entityInstance)
-	await account.$jazz.ensureLoaded({ resolve: { root: true } })
+	// Ensure Entity schema exists
+	const entitySchemaJson = {
+		type: 'object',
+		properties: {
+			'@schema': { type: 'o-map' },
+			'@label': { type: 'string' },
+			name: { type: 'string' },
+			type: { type: 'string' },
+			primitive: { type: 'string' },
+		},
+		required: ['type'],
+	}
+	const entitySchemaDefinition = await ensureSchema(account, 'Entity', entitySchemaJson)
+
+	// Get Entity CoMap schema dynamically
+	const entityMetadataShape = jsonSchemaToCoMapShape(entitySchemaJson)
+	const EntityCoMap = co.map(entityMetadataShape)
+
+	// Create Entity instance
+	const entityMetadata = EntityCoMap.create(
+		{
+			name: 'JazzComposite Instance', // Could extract from entityInstance if it has a name field
+			type: 'JazzComposite',
+			primitive: entityInstance.$jazz.id, // Store CoValue ID as string reference
+		},
+		entitiesOwner,
+	)
+	await entityMetadata.$jazz.waitForSync()
+
+	// Set system properties for Entity
+	await setSystemProps(entityMetadata, entitySchemaDefinition)
+
+	// Add Entity instance to root.entities list
+	entitiesList.$jazz.push(entityMetadata)
+	await root.$jazz.waitForSync()
 
 	// Note: The entity's nested CoValue properties are already created and linked
 	// They will be loaded when navigating to the entity in the data explorer

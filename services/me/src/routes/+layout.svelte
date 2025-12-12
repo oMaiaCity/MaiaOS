@@ -20,15 +20,10 @@
       return { title: "Hominio", description: "Own the destiny of your life" };
     } else if (pathname.startsWith("/vibes")) {
       return { title: "Vibes", description: "Explore and manage your vibes" };
-    } else if (pathname === "/schema") {
+    } else if (pathname === "/db") {
       return {
-        title: "Schema Manager",
-        description: "Manage runtime schemata and data instances",
-      };
-    } else if (pathname === "/context") {
-      return {
-        title: "Context",
-        description: "Raw JSON snapshots from root context",
+        title: "DB",
+        description: "Database explorer and management",
       };
     }
     return { title: null, description: null };

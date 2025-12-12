@@ -123,22 +123,13 @@
         Vibes
       </a>
       <a
-        href="/schema"
+        href="/db"
         class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page
-          .url.pathname === '/schema'
+          .url.pathname === '/db'
           ? 'bg-slate-100 text-slate-900'
           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
       >
-        Schema
-      </a>
-      <a
-        href="/context"
-        class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page
-          .url.pathname === '/context'
-          ? 'bg-slate-100 text-slate-900'
-          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-      >
-        Context
+        DB
       </a>
     </div>
 
