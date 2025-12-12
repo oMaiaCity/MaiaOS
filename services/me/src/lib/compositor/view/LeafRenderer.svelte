@@ -419,12 +419,6 @@
     if (leaf.events?.input) {
       const eventConfig = leaf.events.input;
       attrs.oninput = (e: Event) => {
-        console.log(
-          "[LeafRenderer] oninput fired on element:",
-          leaf.tag,
-          "event:",
-          eventConfig.event,
-        );
         const target = e.target as HTMLInputElement;
         // Determine payload key based on event name
         const payloadKey =
@@ -443,13 +437,6 @@
               [payloadKey]: target.value,
             }
           : { [payloadKey]: target.value };
-
-        console.log(
-          "[Input Event]",
-          eventConfig.event,
-          "fired with payload:",
-          payload,
-        );
 
         if (onEvent) {
           onEvent(eventConfig.event, payload);
@@ -777,14 +764,6 @@
               }
             : { [payloadKey]: target.value };
 
-          if (eventConfig.event === "UPDATE_SEND_AMOUNT") {
-            console.log(
-              "[Input Event] UPDATE_SEND_AMOUNT fired, value:",
-              target.value,
-              "payload:",
-              payload,
-            );
-          }
           if (onEvent) {
             onEvent(eventConfig.event, payload);
           }
