@@ -452,40 +452,11 @@ function getRequiredFromPath(jsonSchema: any, path: string): string[] {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function findNestedSchema(account: any, schemaName: string): Promise<any | null> {
-	// #region agent log
-	fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			location: 'dynamic-schema-migration.ts:findNestedSchema:entry',
-			message: 'Finding nested schema',
-			data: { schemaName },
-			timestamp: Date.now(),
-			sessionId: 'debug-session',
-			hypothesisId: 'A',
-		}),
-	}).catch(() => {})
-	// #endregion
-
 	const loadedAccount = await account.$jazz.ensureLoaded({
 		resolve: { root: true },
 	})
 
 	if (!loadedAccount.root) {
-		// #region agent log
-		fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				location: 'dynamic-schema-migration.ts:findNestedSchema:no-root',
-				message: 'Root does not exist',
-				data: { schemaName },
-				timestamp: Date.now(),
-				sessionId: 'debug-session',
-				hypothesisId: 'A',
-			}),
-		}).catch(() => {})
-		// #endregion
 		return null
 	}
 
@@ -493,20 +464,6 @@ export async function findNestedSchema(account: any, schemaName: string): Promis
 
 	// Ensure data list exists
 	if (!root.$jazz.has('data')) {
-		// #region agent log
-		fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				location: 'dynamic-schema-migration.ts:findNestedSchema:no-data',
-				message: 'Data list does not exist',
-				data: { schemaName },
-				timestamp: Date.now(),
-				sessionId: 'debug-session',
-				hypothesisId: 'A',
-			}),
-		}).catch(() => {})
-		// #endregion
 		return null
 	}
 
@@ -517,40 +474,12 @@ export async function findNestedSchema(account: any, schemaName: string): Promis
 	const dataList = rootWithData.data
 
 	if (!dataList) {
-		// #region agent log
-		fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				location: 'dynamic-schema-migration.ts:findNestedSchema:no-data-list',
-				message: 'Data list could not be loaded',
-				data: { schemaName },
-				timestamp: Date.now(),
-				sessionId: 'debug-session',
-				hypothesisId: 'A',
-			}),
-		}).catch(() => {})
-		// #endregion
 		return null
 	}
 
 	// Search for schema by name
 	if (dataList.$isLoaded) {
 		const dataArray = Array.from(dataList)
-		// #region agent log
-		fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				location: 'dynamic-schema-migration.ts:findNestedSchema:searching',
-				message: 'Searching data list',
-				data: { schemaName, dataListLength: dataArray.length },
-				timestamp: Date.now(),
-				sessionId: 'debug-session',
-				hypothesisId: 'A',
-			}),
-		}).catch(() => {})
-		// #endregion
 
 		for (const schema of dataArray) {
 			if (schema && typeof schema === 'object' && '$jazz' in schema) {
@@ -558,40 +487,12 @@ export async function findNestedSchema(account: any, schemaName: string): Promis
 					resolve: { entities: true },
 				})
 				if (schemaLoaded.$isLoaded && (schemaLoaded as any).name === schemaName) {
-					// #region agent log
-					fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({
-							location: 'dynamic-schema-migration.ts:findNestedSchema:found',
-							message: 'Found nested schema',
-							data: { schemaName, schemaId: schemaLoaded.$jazz.id },
-							timestamp: Date.now(),
-							sessionId: 'debug-session',
-							hypothesisId: 'A',
-						}),
-					}).catch(() => {})
-					// #endregion
 					return schemaLoaded
 				}
 			}
 		}
 	}
 
-	// #region agent log
-	fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			location: 'dynamic-schema-migration.ts:findNestedSchema:not-found',
-			message: 'Nested schema not found',
-			data: { schemaName },
-			timestamp: Date.now(),
-			sessionId: 'debug-session',
-			hypothesisId: 'A',
-		}),
-	}).catch(() => {})
-	// #endregion
 	return null
 }
 
