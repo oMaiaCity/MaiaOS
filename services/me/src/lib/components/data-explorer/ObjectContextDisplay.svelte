@@ -22,8 +22,8 @@
 <div class="w-full">
   <!-- Header (matching Context component for alignment) -->
   <div class="mb-6">
-    <div class="flex items-center gap-3 mb-2">
-      <h2 class="text-lg font-semibold text-slate-700">{label}</h2>
+    <div class="flex items-center gap-3">
+      <h2 class="text-lg font-semibold text-slate-700 m-0">{label}</h2>
       <Badge type="object">Object</Badge>
     </div>
   </div>

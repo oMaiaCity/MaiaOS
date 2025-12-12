@@ -60,7 +60,7 @@
 <div class="w-full">
   <!-- Header -->
   <div class="mb-6">
-    <div class="flex items-center gap-3 mb-2">
+    <div class="flex items-center gap-3">
       {#if onBack}
         <button
           type="button"
@@ -83,7 +83,7 @@
           </svg>
         </button>
       {/if}
-      <h2 class="text-lg font-semibold text-slate-700">
+      <h2 class="text-lg font-semibold text-slate-700 m-0">
         {context.coValueId.slice(0, 12)}...
       </h2>
       <Badge type={displayType}>{displayType}</Badge>
@@ -129,7 +129,7 @@
         parentCoValue={context.resolved.snapshot}
       />
     {:else if currentView === "table"}
-      <!-- Table View - table layout with list item styling -->
+      <!-- Table View - proper table layout with list item styling -->
       <div class="space-y-3">
         <table class="w-full border-collapse">
           <thead>
@@ -153,16 +153,37 @@
           </thead>
           <tbody>
             {#each entries as [key, value]}
-              {@const isCoID = typeof value === "string" && value.startsWith("co_")}
+              {@const isCoID =
+                typeof value === "string" && value.startsWith("co_")}
               {@const child = isCoID
                 ? context.directChildren.find((c) => c.key === key)
                 : null}
               {@const isClickable = isCoID && onNavigate !== undefined}
               <tr>
-                <td
-                  colspan="3"
-                  class="p-0 pb-3"
-                >
+                <td class="p-0 pb-3 pr-3">
+                  <span
+                    class="text-xs font-medium text-slate-500 uppercase tracking-wide"
+                    >{key}</span
+                  >
+                </td>
+                <td class="p-0 pb-3 pr-3">
+                  {#if isCoID && child?.resolved}
+                    <Badge
+                      type={child.resolved.extendedType ||
+                        child.resolved.type ||
+                        "CoValue"}
+                    >
+                      {child.resolved.extendedType ||
+                        child.resolved.type ||
+                        "CoValue"}
+                    </Badge>
+                  {:else if isCoID}
+                    <Badge type="CoValue">CoValue</Badge>
+                  {:else}
+                    <Badge type={typeof value}>{typeof value}</Badge>
+                  {/if}
+                </td>
+                <td class="p-0 pb-3">
                   {#if isClickable}
                     <button
                       type="button"
@@ -173,135 +194,77 @@
                         }
                       }}
                     >
-                      <div class="flex justify-between items-center gap-2">
-                        <!-- Left side: Prop Key -->
-                        <div class="flex items-center gap-1.5 shrink-0 min-w-0">
+                      <div class="flex items-center gap-2 min-w-0">
+                        {#if isCoID}
                           <span
-                            class="text-xs font-medium text-slate-500 uppercase tracking-wide truncate"
-                            >{key}</span
+                            class="text-xs font-mono text-slate-600 hover:underline"
+                            >{value}</span
                           >
-                        </div>
-
-                        <!-- Right side: Type Badge and Value -->
-                        <div class="flex items-center gap-2 flex-1 justify-end min-w-0">
-                          {#if isCoID}
-                            <div
-                              class="inline-flex items-center gap-2 text-left min-w-0"
-                            >
-                              <span
-                                class="text-xs font-mono text-slate-600 hover:underline"
-                                >{value}</span
-                              >
-                              <svg
-                                class="w-3 h-3 text-slate-400 shrink-0"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2"
-                                  d="M9 5l7 7-7 7"
-                                />
-                              </svg>
-                            </div>
-                          {:else}
-                            <span class="text-xs text-slate-600 break-all min-w-0">
-                              {typeof value === "object" &&
-                              value !== null &&
-                              !Array.isArray(value)
-                                ? JSON.stringify(value).slice(0, 50) +
-                                  (JSON.stringify(value).length > 50 ? "..." : "")
-                                : Array.isArray(value)
-                                  ? `[${value.length} items]`
-                                  : String(value).slice(0, 50)}
-                            </span>
-                          {/if}
-
-                          {#if isCoID && child?.resolved}
-                            <Badge
-                              type={child.resolved.extendedType ||
-                                child.resolved.type ||
-                                "CoValue"}
-                            >
-                              {child.resolved.extendedType ||
-                                child.resolved.type ||
-                                "CoValue"}
-                            </Badge>
-                          {:else if isCoID}
-                            <Badge type="CoValue">CoValue</Badge>
-                          {:else}
-                            <Badge type={typeof value}>{typeof value}</Badge>
-                          {/if}
-                        </div>
+                          <svg
+                            class="w-3 h-3 text-slate-400 shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        {:else}
+                          <span class="text-xs text-slate-600 break-all min-w-0">
+                            {typeof value === "object" &&
+                            value !== null &&
+                            !Array.isArray(value)
+                              ? JSON.stringify(value).slice(0, 50) +
+                                (JSON.stringify(value).length > 50
+                                  ? "..."
+                                  : "")
+                              : Array.isArray(value)
+                                ? `[${value.length} items]`
+                                : String(value).slice(0, 50)}
+                          </span>
+                        {/if}
                       </div>
                     </button>
                   {:else}
                     <div
                       class="w-full bg-slate-100 rounded-2xl p-3 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm"
                     >
-                      <div class="flex justify-between items-center gap-2">
-                        <!-- Left side: Prop Key -->
-                        <div class="flex items-center gap-1.5 shrink-0 min-w-0">
-                          <span
-                            class="text-xs font-medium text-slate-500 uppercase tracking-wide truncate"
-                            >{key}</span
+                      <div class="flex items-center gap-2 min-w-0">
+                        {#if isCoID}
+                          <span class="text-xs font-mono text-slate-600"
+                            >{value}</span
                           >
-                        </div>
-
-                        <!-- Right side: Type Badge and Value -->
-                        <div class="flex items-center gap-2 flex-1 justify-end min-w-0">
-                          {#if isCoID}
-                            <div
-                              class="inline-flex items-center gap-2 text-left min-w-0"
-                            >
-                              <span class="text-xs font-mono text-slate-600"
-                                >{value}</span
-                              >
-                              <svg
-                                class="w-3 h-3 text-slate-400 shrink-0"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2"
-                                  d="M9 5l7 7-7 7"
-                                />
-                              </svg>
-                            </div>
-                          {:else}
-                            <span class="text-xs text-slate-600 break-all min-w-0">
-                              {typeof value === "object" &&
-                              value !== null &&
-                              !Array.isArray(value)
-                                ? JSON.stringify(value).slice(0, 50) +
-                                  (JSON.stringify(value).length > 50 ? "..." : "")
-                                : Array.isArray(value)
-                                  ? `[${value.length} items]`
-                                  : String(value).slice(0, 50)}
-                            </span>
-                          {/if}
-
-                          {#if isCoID && child?.resolved}
-                            <Badge
-                              type={child.resolved.extendedType ||
-                                child.resolved.type ||
-                                "CoValue"}
-                            >
-                              {child.resolved.extendedType ||
-                                child.resolved.type ||
-                                "CoValue"}
-                            </Badge>
-                          {:else if isCoID}
-                            <Badge type="CoValue">CoValue</Badge>
-                          {:else}
-                            <Badge type={typeof value}>{typeof value}</Badge>
-                          {/if}
-                        </div>
+                          <svg
+                            class="w-3 h-3 text-slate-400 shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        {:else}
+                          <span class="text-xs text-slate-600 break-all min-w-0">
+                            {typeof value === "object" &&
+                            value !== null &&
+                            !Array.isArray(value)
+                              ? JSON.stringify(value).slice(0, 50) +
+                                (JSON.stringify(value).length > 50
+                                  ? "..."
+                                  : "")
+                              : Array.isArray(value)
+                                ? `[${value.length} items]`
+                                : String(value).slice(0, 50)}
+                          </span>
+                        {/if}
                       </div>
                     </div>
                   {/if}
