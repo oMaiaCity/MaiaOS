@@ -3,13 +3,13 @@
  * Import and register agents here
  */
 
-export * from "./types";
-export * from "./registry";
-export * from "./tom";
+export * from './registry'
+export * from './tom'
+export * from './types'
 
+import { registerAgentsFromConfig } from './registry'
 // Import all agent modules
-import { tomAgentConfig } from "./tom";
-import { registerAgentsFromConfig } from "./registry";
+import { tomAgentConfig } from './tom'
 
 // ========== AUTO-REGISTER ALL AGENTS ==========
 
@@ -18,9 +18,8 @@ import { registerAgentsFromConfig } from "./registry";
  * This can be called on app initialization
  */
 export function registerAllAgents(): void {
-    registerAgentsFromConfig({
-        "@Tom": tomAgentConfig,
-        // Add more agent registrations here as they're created
-    });
+	registerAgentsFromConfig({
+		'@Tom': tomAgentConfig,
+		// Add more agent registrations here as they're created
+	})
 }
-

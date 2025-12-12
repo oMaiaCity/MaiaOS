@@ -4,82 +4,77 @@
  * Used by delegateIntent tool to send responses back to Google API
  */
 
-export type IngestMode = 'silent' | 'triggerAnswer';
+export type IngestMode = 'silent' | 'triggerAnswer'
 
 export interface ContextIngestEvent {
-	type: 'toolResponse' | 'systemMessage';
-	toolName?: string;
-	content: string;
-	ingestMode: IngestMode;
-	metadata?: Record<string, any>;
-	timestamp: number;
+	type: 'toolResponse' | 'systemMessage'
+	toolName?: string
+	content: string
+	ingestMode: IngestMode
+	metadata?: Record<string, any>
+	timestamp: number
 }
 
 export interface ContextIngestOptions {
-	session: any; // Google Live API session
-	onLog?: (message: string, context?: string) => void;
-	onContextIngest?: (event: ContextIngestEvent) => void;
+	session: any // Google Live API session
+	onLog?: (message: string, context?: string) => void
+	onContextIngest?: (event: ContextIngestEvent) => void
 }
 
 export class ContextIngestService {
-	private session: any;
-	private onLog?: (message: string, context?: string) => void;
-	private onContextIngest?: (event: ContextIngestEvent) => void;
+	private session: any
+	private onLog?: (message: string, context?: string) => void
+	private onContextIngest?: (event: ContextIngestEvent) => void
 
 	constructor(options: ContextIngestOptions) {
-		this.session = options.session;
-		this.onLog = options.onLog;
-		this.onContextIngest = options.onContextIngest;
+		this.session = options.session
+		this.onLog = options.onLog
+		this.onContextIngest = options.onContextIngest
 	}
 
 	private log(message: string, context?: string) {
-		const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
-		const logMessage = `[ContextIngest] ${timestamp} - ${message}`;
+		const timestamp = new Date().toISOString().split('T')[1].slice(0, -1)
+		const logMessage = `[ContextIngest] ${timestamp} - ${message}`
 
 		if (context) {
 		}
 
 		if (this.onLog) {
-			this.onLog(logMessage, context);
+			this.onLog(logMessage, context)
 		}
 	}
 
 	emitEvent(event: ContextIngestEvent) {
 		if (this.onContextIngest) {
-			this.onContextIngest(event);
+			this.onContextIngest(event)
 		}
 	}
 
 	/**
 	 * Core ingestion method - all context ingestion goes through here
 	 */
-	async ingest(
-		content: string,
-		mode: IngestMode = 'silent',
-		label?: string
-	): Promise<boolean> {
+	async ingest(content: string, mode: IngestMode = 'silent', label?: string): Promise<boolean> {
 		try {
-			const turnComplete = mode === 'triggerAnswer';
-			const ingestLabel = label || 'context';
+			const turnComplete = mode === 'triggerAnswer'
+			const ingestLabel = label || 'context'
 
-			this.log(`Ingesting ${ingestLabel} (mode: ${mode})...`, content);
+			this.log(`Ingesting ${ingestLabel} (mode: ${mode})...`, content)
 
 			if (!this.session) {
-				throw new Error('Session not available');
+				throw new Error('Session not available')
 			}
 
 			this.session.sendClientContent({
 				turns: content,
-				turnComplete
-			});
+				turnComplete,
+			})
 
-			this.log(`${ingestLabel} ingested successfully`);
-			return true;
+			this.log(`${ingestLabel} ingested successfully`)
+			return true
 		} catch (err) {
-			const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-			this.log(`Failed to ingest context: ${errorMessage}`, content);
-			console.error('[ContextIngest] Error:', err);
-			return false;
+			const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+			this.log(`Failed to ingest context: ${errorMessage}`, content)
+			return false
 		}
 	}
 
@@ -91,7 +86,7 @@ export class ContextIngestService {
 		toolName: string,
 		result: any,
 		toolCallId: string,
-		mode: IngestMode = 'silent'
+		mode: IngestMode = 'silent',
 	): Promise<boolean> {
 		try {
 			// Send tool response via Google API (native tool response - always triggers AI)
@@ -100,51 +95,45 @@ export class ContextIngestService {
 					{
 						id: toolCallId,
 						name: toolName,
-						response: { result }
-					}
-				]
-			});
+						response: { result },
+					},
+				],
+			})
 
 			// Emit event for frontend tracking
-			const resultString = JSON.stringify(result);
+			const resultString = JSON.stringify(result)
 			this.emitEvent({
 				type: 'toolResponse',
 				toolName,
 				content: resultString,
 				ingestMode: mode,
 				metadata: { toolCallId, result },
-				timestamp: Date.now()
-			});
+				timestamp: Date.now(),
+			})
 
-			this.log(`Tool response sent for ${toolName}`);
-			return true;
+			this.log(`Tool response sent for ${toolName}`)
+			return true
 		} catch (err) {
-			const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-			this.log(`Failed to send tool response: ${errorMessage}`);
-			console.error('[ContextIngest] Error:', err);
-			return false;
+			const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+			this.log(`Failed to send tool response: ${errorMessage}`)
+			return false
 		}
 	}
-
 
 	/**
 	 * Ingest system message - injects system/background messages
 	 */
-	async ingestSystemMessage(
-		message: string,
-		mode: IngestMode = 'silent'
-	): Promise<boolean> {
-		const success = await this.ingest(message, mode, 'system message');
+	async ingestSystemMessage(message: string, mode: IngestMode = 'silent'): Promise<boolean> {
+		const success = await this.ingest(message, mode, 'system message')
 
 		// Emit event for frontend tracking
 		this.emitEvent({
 			type: 'systemMessage',
 			content: message,
 			ingestMode: mode,
-			timestamp: Date.now()
-		});
+			timestamp: Date.now(),
+		})
 
-		return success;
+		return success
 	}
-
 }

@@ -4,20 +4,19 @@
  * Browser-compatible: Uses relative imports from package root
  */
 
+// Import UI components from @hominio/brand (pure views)
+import { TodoView } from '@hominio/brand/views'
+import * as createTodoModule from '../lib/functions/create-todo.js'
+import * as editTodoModule from '../lib/functions/edit-todo.js'
 // Import all functions statically - use relative path from this file
 // Vite will resolve these correctly when the package is imported
-import * as queryTodosModule from '../lib/functions/query-todos.js';
-import * as createTodoModule from '../lib/functions/create-todo.js';
-import * as editTodoModule from '../lib/functions/edit-todo.js';
-
-// Import UI components from @hominio/brand (pure views)
-import { TodoView } from '@hominio/brand/views';
+import * as queryTodosModule from '../lib/functions/query-todos.js'
 
 const functionModules = {
 	'query-todos': queryTodosModule,
 	'create-todo': createTodoModule,
-	'edit-todo': editTodoModule
-};
+	'edit-todo': editTodoModule,
+}
 
 /**
  * Load function implementation by ID
@@ -26,28 +25,28 @@ const functionModules = {
  */
 export async function loadFunction(functionId) {
 	try {
-		const module = functionModules[functionId];
-		
+		const module = functionModules[functionId]
+
 		if (!module) {
-			throw new Error(`Function not found: ${functionId}`);
+			throw new Error(`Function not found: ${functionId}`)
 		}
-		
+
 		// Validate required exports
 		if (!module.handler || typeof module.handler !== 'function') {
-			throw new Error(`Function ${functionId} missing handler export`);
+			throw new Error(`Function ${functionId} missing handler export`)
 		}
-		
+
 		// For todo functions, use TodoView component from @hominio/brand
-		const uiComponentLoader = (functionId === 'query-todos' || functionId === 'create-todo' || functionId === 'edit-todo')
-			? () => Promise.resolve({ default: TodoView })
-			: () => Promise.resolve({ default: null });
-		
+		const uiComponentLoader =
+			functionId === 'query-todos' || functionId === 'create-todo' || functionId === 'edit-todo'
+				? () => Promise.resolve({ default: TodoView })
+				: () => Promise.resolve({ default: null })
+
 		return {
 			handler: module.handler,
-			uiComponent: uiComponentLoader
-		};
+			uiComponent: uiComponentLoader,
+		}
 	} catch (error) {
-		throw new Error(`Failed to load function ${functionId}: ${error.message}`);
+		throw new Error(`Failed to load function ${functionId}: ${error.message}`)
 	}
 }
-

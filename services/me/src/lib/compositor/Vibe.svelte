@@ -12,7 +12,7 @@
     onEvent?: (event: string, payload?: unknown) => void;
   }
 
-  let { config, onEvent }: Props = $props();
+  const { config, onEvent }: Props = $props();
 
   // ========== SKILL REGISTRY SETUP ==========
   // Register all available skills (can be called once globally)
@@ -24,7 +24,8 @@
   // ========== UNIFIED DATA STORE SETUP ==========
   // Only initialize in browser to avoid SSR issues
   let dataStore: ReturnType<typeof createDataStore> | null = $state(null);
-  let resolvedConfig: ReturnType<typeof loadActionsFromRegistry> | null = $state(null);
+  let _resolvedConfig: ReturnType<typeof loadActionsFromRegistry> | null =
+    $state(null);
 
   $effect(() => {
     if (browser) {
@@ -39,7 +40,7 @@
         };
       }
 
-      resolvedConfig = loadedConfig;
+      _resolvedConfig = loadedConfig;
 
       // Add configJson to initial data (for config view) - avoid circular dependency
       // Stringify the full config including stateMachine and view
@@ -60,7 +61,9 @@
 
   // ========== REACTIVE DATA ACCESS ==========
   // Single unified reactive interface - everything is just data
-  const data = $derived(dataStore ? $dataStore : config.stateMachine.data || {}) as Data;
+  const data = $derived(
+    dataStore ? $dataStore : config.stateMachine.data || {},
+  ) as Data;
 
   // Event handler for UI slots
   const handleSlotEvent = (event: string, payload?: unknown) => {
@@ -92,7 +95,9 @@
   </div>
 {:else}
   <!-- SSR fallback -->
-  <div class="min-h-screen bg-gray-100 pt-20 px-4 flex items-center justify-center">
+  <div
+    class="min-h-screen bg-gray-100 pt-20 px-4 flex items-center justify-center"
+  >
     <div class="text-slate-600">Loading...</div>
   </div>
 {/if}

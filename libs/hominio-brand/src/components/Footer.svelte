@@ -1,30 +1,45 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
-	import { env as publicEnv } from '$env/dynamic/public';
+  import { browser } from "$app/environment";
+  import { env as publicEnv } from "$env/dynamic/public";
 
-	// Get base URL for legal links
-	// Uses relative URLs by default, or can use PUBLIC_DOMAIN_WEBSITE if set
-	function getBaseUrl(): string {
-		if (!browser) return '';
-		
-		// If PUBLIC_DOMAIN_WEBSITE is set, use it (for cross-service linking)
-		if (publicEnv.PUBLIC_DOMAIN_WEBSITE) {
-			const websiteDomain = publicEnv.PUBLIC_DOMAIN_WEBSITE.replace(/^https?:\/\//, '');
-			const protocol = websiteDomain.startsWith('localhost') || websiteDomain.startsWith('127.0.0.1') ? 'http' : 'https';
-			return `${protocol}://${websiteDomain}`;
-		}
-		
-		// Otherwise, use relative URLs (works for any service)
-		return '';
-	}
+  // Get base URL for legal links
+  // Uses relative URLs by default, or can use PUBLIC_DOMAIN_WEBSITE if set
+  function getBaseUrl(): string {
+    if (!browser) return "";
 
-	const baseUrl = $derived.by(() => getBaseUrl());
-	
-	// Use relative URLs if no base URL is set, otherwise use absolute URLs
-	const homeUrl = $derived(baseUrl || '/');
-	const legalNoticeUrl = $derived(baseUrl ? `${baseUrl}/legal-notice` : '/legal-notice');
-	const privacyPolicyUrl = $derived(baseUrl ? `${baseUrl}/privacy-policy` : '/privacy-policy');
-	const socialMediaPolicyUrl = $derived(baseUrl ? `${baseUrl}/social-media-privacy-policy` : '/social-media-privacy-policy');
+    // If PUBLIC_DOMAIN_WEBSITE is set, use it (for cross-service linking)
+    if (publicEnv.PUBLIC_DOMAIN_WEBSITE) {
+      const websiteDomain = publicEnv.PUBLIC_DOMAIN_WEBSITE.replace(
+        /^https?:\/\//,
+        "",
+      );
+      const protocol =
+        websiteDomain.startsWith("localhost") ||
+        websiteDomain.startsWith("127.0.0.1")
+          ? "http"
+          : "https";
+      return `${protocol}://${websiteDomain}`;
+    }
+
+    // Otherwise, use relative URLs (works for any service)
+    return "";
+  }
+
+  const baseUrl = $derived.by(() => getBaseUrl());
+
+  // Use relative URLs if no base URL is set, otherwise use absolute URLs
+  const homeUrl = $derived(baseUrl || "/");
+  const legalNoticeUrl = $derived(
+    baseUrl ? `${baseUrl}/legal-notice` : "/legal-notice",
+  );
+  const privacyPolicyUrl = $derived(
+    baseUrl ? `${baseUrl}/privacy-policy` : "/privacy-policy",
+  );
+  const socialMediaPolicyUrl = $derived(
+    baseUrl
+      ? `${baseUrl}/social-media-privacy-policy`
+      : "/social-media-privacy-policy",
+  );
 </script>
 
 <div class="footer-wrapper">
@@ -35,9 +50,7 @@
     <span class="footer-separator">·</span>
     <a href={privacyPolicyUrl} class="footer-link">Privacy Policy</a>
     <span class="footer-separator">·</span>
-    <a href={socialMediaPolicyUrl} class="footer-link"
-      >Social Media Policy</a
-    >
+    <a href={socialMediaPolicyUrl} class="footer-link">Social Media Policy</a>
   </div>
   <div class="footer-spacer"></div>
 </div>

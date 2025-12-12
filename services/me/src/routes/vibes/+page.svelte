@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { browser } from "$app/environment";
-  import { page } from "$app/stores";
   import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
+  import { browser } from "$app/environment";
   import Vibe from "$lib/compositor/Vibe.svelte";
-  import { vibesVibeConfig } from "$lib/vibes/vibes/config";
   import { todoVibeConfig } from "$lib/vibes/todo/config";
+  import { vibesVibeConfig } from "$lib/vibes/vibes/config";
   import { walletVibeConfig } from "$lib/vibes/wallet/config";
 
   // Get vibe ID from route params (reactive)
@@ -37,7 +37,9 @@
     <Vibe config={currentConfig} onEvent={handleVibeEvent} />
   </div>
 {:else}
-  <div class="min-h-screen bg-gray-100 pt-20 px-4 flex items-center justify-center">
+  <div
+    class="min-h-screen bg-gray-100 pt-20 px-4 flex items-center justify-center"
+  >
     <div class="text-slate-600">Loading...</div>
   </div>
 {/if}

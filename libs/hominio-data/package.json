@@ -8,5 +8,10 @@
 	},
 	"peerDependencies": {
 		"jazz-tools": "^0.19.7"
+	},
+	"scripts": {
+		"format": "bunx biome format --write .",
+		"lint": "bunx biome lint .",
+		"check": "bunx biome check ."
 	}
 }

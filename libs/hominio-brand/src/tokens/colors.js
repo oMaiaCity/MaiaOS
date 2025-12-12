@@ -175,5 +175,4 @@ export const colors = {
 			dark: '#4b182c', // Same as 900
 		},
 	},
-};
-
+}

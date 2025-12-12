@@ -3,16 +3,24 @@
    * Data Explorer Badge Component
    * Matches legacy badge styling: fully rounded with white border
    */
-  import { getBadgeColors, getBadgeVariantClasses } from "../../utilities/badgeUtilities.js";
+  import {
+    getBadgeColors,
+    getBadgeVariantClasses,
+  } from "$lib/utils/badgeUtilities";
 
   interface Props {
     type?: string;
-    variant?: "default" | "compact";
+    variant?: "default" | "compact" | "role";
     class?: string;
     children: import("svelte").Snippet;
   }
 
-  let { type = "", variant = "default", class: className = "", children }: Props = $props();
+  const {
+    type = "",
+    variant = "default",
+    class: className = "",
+    children,
+  }: Props = $props();
 
   const badgeType = $derived(type || "");
   const colors = $derived(getBadgeColors(badgeType));
@@ -29,8 +37,3 @@
 <span class={badgeClasses}>
   {@render children()}
 </span>
-
-
-
-
-

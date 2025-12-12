@@ -20,7 +20,10 @@
 	},
 	"scripts": {
 		"sync-assets": "node ../../scripts/sync-assets.js",
-		"sync-assets:watch": "node ../../scripts/sync-assets.js --watch"
+		"sync-assets:watch": "node ../../scripts/sync-assets.js --watch",
+		"format": "bunx biome format --write .",
+		"lint": "bunx biome lint .",
+		"check": "bunx biome check ."
 	},
 	"files": [
 		"src"

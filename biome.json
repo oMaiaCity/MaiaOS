@@ -1,0 +1,140 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.3.8/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"includes": [
+			"**",
+			"!**/node_modules",
+			"!**/build",
+			"!**/dist",
+			"!**/.svelte-kit",
+			"!**/gen",
+			"!**/*.generated.*",
+			"!**/bun.lock",
+			"!**/package-lock.json",
+			"!**/yarn.lock"
+		]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"indentWidth": 1,
+		"lineWidth": 100,
+		"lineEnding": "lf",
+		"formatWithErrors": false
+	},
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"correctness": {
+				"noUnusedVariables": "error",
+				"noUnusedImports": "error",
+				"noUnusedPrivateClassMembers": "error"
+			},
+			"suspicious": {
+				"noConsole": {
+					"level": "warn",
+					"options": {
+						"allow": [
+							"log"
+						]
+					}
+				}
+			}
+		}
+	},
+	"javascript": {
+		"formatter": {
+			"semicolons": "asNeeded",
+			"trailingCommas": "all",
+			"quoteStyle": "single",
+			"arrowParentheses": "always",
+			"bracketSameLine": false,
+			"bracketSpacing": true,
+			"jsxQuoteStyle": "double",
+			"quoteProperties": "asNeeded"
+		}
+	},
+	"json": {
+		"formatter": {
+			"trailingCommas": "none"
+		},
+		"parser": {
+			"allowComments": true
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
+	"html": {
+		"experimentalFullSupportEnabled": true,
+		"formatter": {
+			"indentScriptAndStyle": true
+		}
+	},
+	"overrides": [
+		{
+			"includes": [
+				"**/*.svelte",
+				"**/*.astro",
+				"**/*.vue"
+			],
+			"linter": {
+				"rules": {
+					"style": {
+						"useConst": "off",
+						"useImportType": "off"
+					},
+					"correctness": {
+						"noUnusedVariables": "off",
+						"noUnusedImports": "off"
+					},
+					"suspicious": {
+						"noExplicitAny": "warn"
+					}
+				}
+			},
+			"javascript": {
+				"parser": {
+					"unsafeParameterDecoratorsEnabled": true
+				}
+			}
+		},
+		{
+			"includes": [
+				"**/*.svelte"
+			],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noUnusedVariables": "off",
+						"noUnusedImports": "off"
+					},
+					"suspicious": {
+						"noExplicitAny": "warn"
+					},
+					"style": {
+						"noParameterAssign": "off"
+					}
+				}
+			},
+			"formatter": {
+				"enabled": true
+			}
+		}
+	]
+}

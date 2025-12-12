@@ -1,7 +1,7 @@
 <script lang="ts">
+  import type { ResolvedCoValueResult } from "@hominio/data";
   import type { LocalNode } from "cojson";
   import Badge from "./Badge.svelte";
-  import type { ResolvedCoValueResult } from "@hominio/data";
 
   interface Props {
     propKey: string;
@@ -9,12 +9,38 @@
     node?: LocalNode;
     resolvedType?: ResolvedCoValueResult; // Optional resolved type info
     onNavigate?: (coValueId: string, label?: string) => void;
+    onObjectNavigate?: (
+      object: any,
+      label: string,
+      parentCoValue: any,
+      parentKey: string,
+    ) => void;
+    parentCoValue?: any; // Parent CoValue context for object navigation
   }
 
-  let { propKey, propValue, node, resolvedType, onNavigate }: Props = $props();
+  const {
+    propKey,
+    propValue,
+    node,
+    resolvedType,
+    onNavigate,
+    onObjectNavigate,
+    parentCoValue,
+  }: Props = $props();
 
   // Check if value is a CoID
-  const isCoID = $derived(typeof propValue === "string" && propValue.startsWith("co_"));
+  const isCoID = $derived(
+    typeof propValue === "string" && propValue.startsWith("co_"),
+  );
+
+  // Check if value is a navigable object (object, not null, not array, not CoID)
+  const isObject = $derived(
+    typeof propValue === "object" &&
+      propValue !== null &&
+      !Array.isArray(propValue) &&
+      !isCoID &&
+      onObjectNavigate !== undefined,
+  );
 
   // Determine display type - use resolved type if available
   const getDisplayType = (value: any): string => {
@@ -33,7 +59,9 @@
   };
 
   const displayType = $derived(getDisplayType(propValue));
-  const isClickable = $derived(isCoID && onNavigate !== undefined);
+  const isClickable = $derived(
+    (isCoID && onNavigate !== undefined) || isObject,
+  );
 
   // Loading state: CoID but not yet resolved
   const isLoading = $derived(isCoID && !resolvedType);
@@ -47,15 +75,21 @@
     : 'cursor-default'}"
   onclick={() => {
     // Prevent navigation during loading
-    if (isClickable && !isLoading && typeof propValue === "string") {
-      onNavigate?.(propValue, propKey);
+    if (isLoading) return;
+
+    if (isCoID && typeof propValue === "string" && onNavigate) {
+      onNavigate(propValue, propKey);
+    } else if (isObject && onObjectNavigate) {
+      // For objects, parentCoValue is optional - we can use the object itself or undefined
+      onObjectNavigate(propValue, propKey, parentCoValue || propValue, propKey);
     }
   }}
 >
   <div class="flex justify-between items-center gap-2">
     <!-- Left side: Prop Key -->
     <div class="flex items-center gap-1.5 flex-shrink-0 min-w-0">
-      <span class="text-xs font-medium text-slate-500 uppercase tracking-wide truncate"
+      <span
+        class="text-xs font-medium text-slate-500 uppercase tracking-wide truncate"
         >{propKey}</span
       >
     </div>
@@ -86,8 +120,31 @@
             </div>
           {:else}
             <!-- CoID as clickable text -->
-            <span class="text-xs font-mono text-slate-600 hover:underline">{propValue}</span>
+            <span class="text-xs font-mono text-slate-600 hover:underline"
+              >{propValue}</span
+            >
           {/if}
+          <svg
+            class="w-3 h-3 text-slate-400 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </div>
+      {:else if isObject}
+        <!-- Object value display - clickable -->
+        <div class="inline-flex items-center gap-2 text-left min-w-0">
+          <span class="text-xs text-slate-600 break-all min-w-0">
+            {JSON.stringify(propValue).slice(0, 50) +
+              (JSON.stringify(propValue).length > 50 ? "..." : "")}
+          </span>
           <svg
             class="w-3 h-3 text-slate-400 shrink-0"
             fill="none"
@@ -105,10 +162,14 @@
       {:else}
         <!-- Primitive value display -->
         <span class="text-xs text-slate-600 break-all min-w-0">
-          {typeof propValue === "object" && propValue !== null
+          {typeof propValue === "object" &&
+          propValue !== null &&
+          !Array.isArray(propValue)
             ? JSON.stringify(propValue).slice(0, 50) +
               (JSON.stringify(propValue).length > 50 ? "..." : "")
-            : String(propValue)}
+            : Array.isArray(propValue)
+              ? `[${propValue.length} items]`
+              : String(propValue)}
         </span>
       {/if}
 

@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { authClient } from "$lib/auth-client";
-  import { browser } from "$app/environment";
-  import { page } from "$app/stores";
   import { JazzAccount } from "@hominio/data";
   import { AccountCoState, Image } from "jazz-tools/svelte";
+  import { browser } from "$app/environment";
+  import { page } from "$app/stores";
+  import { authClient } from "$lib/auth-client";
 
-  let { title, description } = $props();
+  const { title, description } = $props();
 
   // Better Auth session
   const session = authClient.useSession();
@@ -22,14 +22,16 @@
   const me = $derived(account.current);
 
   // Get profile data
-  const profile = $derived(me.$isLoaded && me.profile?.$isLoaded ? (me.profile as any) : null);
+  const profile = $derived(
+    me.$isLoaded && me.profile?.$isLoaded ? (me.profile as any) : null,
+  );
 
   const firstName = $derived(profile?.firstName?.trim() || "");
   const lastName = $derived(profile?.lastName?.trim() || "");
 
   // Get profile image
   const avatarImage = $derived(
-    profile?.image && profile.image.$isLoaded && profile.image.$jazz?.id ? profile.image : null,
+    profile?.image?.$isLoaded && profile.image.$jazz?.id ? profile.image : null,
   );
 
   let signingOut = $state(false);
@@ -61,17 +63,14 @@
         provider: "google",
         callbackURL,
       });
-    } catch (error) {
-      console.error("Google sign-in error:", error);
-    }
+    } catch (_error) {}
   }
 
   async function handleBetterAuthSignOut() {
     signingOut = true;
     try {
       await authClient.signOut();
-    } catch (error) {
-      console.error("Sign out error:", error);
+    } catch (_error) {
       signingOut = false;
     }
   }
@@ -90,7 +89,9 @@
       {#if title || description}
         <div class="flex flex-col">
           {#if title}
-            <h1 class="text-lg font-bold text-slate-900 leading-tight">{title}</h1>
+            <h1 class="text-lg font-bold text-slate-900 leading-tight">
+              {title}
+            </h1>
           {/if}
           {#if description}
             <p class="text-xs text-slate-500 mt-0.5">{description}</p>
@@ -103,22 +104,14 @@
     <div class="flex items-center gap-3 absolute left-1/2 -translate-x-1/2">
       <a
         href="/"
-        class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url.pathname ===
-        '/'
+        class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page
+          .url.pathname === '/'
           ? 'bg-slate-100 text-slate-900'
           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
       >
         Home
       </a>
-      <a
-        href="/data"
-        class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url.pathname ===
-        '/data'
-          ? 'bg-slate-100 text-slate-900'
-          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-      >
-        Data
-      </a>
+
       <a
         href="/vibes"
         class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url.pathname.startsWith(
@@ -131,8 +124,8 @@
       </a>
       <a
         href="/schema"
-        class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url.pathname ===
-        '/schema'
+        class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page
+          .url.pathname === '/schema'
           ? 'bg-slate-100 text-slate-900'
           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
       >
@@ -140,8 +133,8 @@
       </a>
       <a
         href="/context"
-        class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page.url.pathname ===
-        '/context'
+        class="text-sm font-medium px-3 py-1.5 rounded-md transition-colors {$page
+          .url.pathname === '/context'
           ? 'bg-slate-100 text-slate-900'
           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
       >
@@ -177,7 +170,9 @@
                 </div>
               {/if}
               {#if betterAuthUser?.email}
-                <div class="text-xs text-slate-500 leading-tight truncate max-w-[150px]">
+                <div
+                  class="text-xs text-slate-500 leading-tight truncate max-w-[150px]"
+                >
                   {betterAuthUser.email}
                 </div>
               {/if}
@@ -216,7 +211,9 @@
             {/if}
             <!-- Dropdown Arrow -->
             <svg
-              class="w-4 h-4 text-slate-400 transition-transform {dropdownOpen ? 'rotate-180' : ''}"
+              class="w-4 h-4 text-slate-400 transition-transform {dropdownOpen
+                ? 'rotate-180'
+                : ''}"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -248,7 +245,12 @@
                   {#if signingOut}
                     <span>Signing out...</span>
                   {:else}
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path
                         stroke-linecap="round"
                         stroke-linejoin="round"

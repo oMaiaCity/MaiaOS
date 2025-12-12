@@ -4,7 +4,7 @@
  * Resets on page refresh (no persistence)
  */
 
-import { writable } from 'svelte/store';
+import { writable } from 'svelte/store'
 
 /**
  * Menu item structure
@@ -39,125 +39,125 @@ const SEED_MENU_DATA = {
 	appetizers: [
 		{
 			id: 1,
-			name: "Caesar Salat",
-			description: "Frischer Römersalat mit Caesar-Dressing",
-			price: 11.90,
-			type: "Portion"
+			name: 'Caesar Salat',
+			description: 'Frischer Römersalat mit Caesar-Dressing',
+			price: 11.9,
+			type: 'Portion',
 		},
 		{
 			id: 2,
-			name: "Bruschetta",
-			description: "Geröstetes Brot mit Tomaten und Basilikum",
-			price: 9.20,
-			type: "Portion"
+			name: 'Bruschetta',
+			description: 'Geröstetes Brot mit Tomaten und Basilikum',
+			price: 9.2,
+			type: 'Portion',
 		},
 		{
 			id: 3,
-			name: "Tagesuppe",
-			description: "Tägliche Auswahl des Küchenchefs",
-			price: 8.30,
-			type: "Schüssel"
-		}
+			name: 'Tagesuppe',
+			description: 'Tägliche Auswahl des Küchenchefs',
+			price: 8.3,
+			type: 'Schüssel',
+		},
 	],
 	mains: [
 		{
 			id: 4,
-			name: "Gegrillter Lachs",
-			description: "Atlantischer Lachs mit Zitronenbuttersauce",
-			price: 23.00,
-			type: "Portion"
+			name: 'Gegrillter Lachs',
+			description: 'Atlantischer Lachs mit Zitronenbuttersauce',
+			price: 23.0,
+			type: 'Portion',
 		},
 		{
 			id: 5,
-			name: "Ribeye Steak",
-			description: "340g Ribeye-Steak mit geröstetem Gemüse",
-			price: 30.40,
-			type: "Portion"
+			name: 'Ribeye Steak',
+			description: '340g Ribeye-Steak mit geröstetem Gemüse',
+			price: 30.4,
+			type: 'Portion',
 		},
 		{
 			id: 6,
-			name: "Vegetarische Pasta",
-			description: "Frische Pasta mit saisonalem Gemüse",
-			price: 17.50,
-			type: "Portion"
+			name: 'Vegetarische Pasta',
+			description: 'Frische Pasta mit saisonalem Gemüse',
+			price: 17.5,
+			type: 'Portion',
 		},
 		{
 			id: 7,
-			name: "Hähnchen-Risotto",
-			description: "Cremiges Risotto mit gegrilltem Hähnchen",
-			price: 21.20,
-			type: "Portion"
-		}
+			name: 'Hähnchen-Risotto',
+			description: 'Cremiges Risotto mit gegrilltem Hähnchen',
+			price: 21.2,
+			type: 'Portion',
+		},
 	],
 	desserts: [
 		{
 			id: 8,
-			name: "Schokoladen-Lava-Kuchen",
-			description: "Warmer Schokoladenkuchen mit Vanilleeis",
-			price: 10.10,
-			type: "Portion"
+			name: 'Schokoladen-Lava-Kuchen',
+			description: 'Warmer Schokoladenkuchen mit Vanilleeis',
+			price: 10.1,
+			type: 'Portion',
 		},
 		{
 			id: 9,
-			name: "Tiramisu",
-			description: "Klassisches italienisches Dessert",
-			price: 9.20,
-			type: "Portion"
+			name: 'Tiramisu',
+			description: 'Klassisches italienisches Dessert',
+			price: 9.2,
+			type: 'Portion',
 		},
 		{
 			id: 10,
-			name: "Käsekuchen",
-			description: "New York Style Käsekuchen",
-			price: 9.20,
-			type: "Stück"
-		}
+			name: 'Käsekuchen',
+			description: 'New York Style Käsekuchen',
+			price: 9.2,
+			type: 'Stück',
+		},
 	],
 	drinks: [
 		{
 			id: 11,
-			name: "Weinauswahl",
-			description: "Hauswein rot oder weiß",
-			price: 8.30,
-			type: "Glas"
+			name: 'Weinauswahl',
+			description: 'Hauswein rot oder weiß',
+			price: 8.3,
+			type: 'Glas',
 		},
 		{
 			id: 12,
-			name: "Craft Beer",
-			description: "Auswahl lokaler Craft-Biere",
-			price: 6.40,
-			type: "Flasche"
+			name: 'Craft Beer',
+			description: 'Auswahl lokaler Craft-Biere',
+			price: 6.4,
+			type: 'Flasche',
 		},
 		{
 			id: 13,
-			name: "Frischer Saft",
-			description: "Orange, Apfel oder Cranberry",
-			price: 4.60,
-			type: "Glas"
+			name: 'Frischer Saft',
+			description: 'Orange, Apfel oder Cranberry',
+			price: 4.6,
+			type: 'Glas',
 		},
 		{
 			id: 14,
-			name: "Kaffee & Tee",
-			description: "Espresso, Cappuccino oder Teeauswahl",
-			price: 3.70,
-			type: "Tasse"
-		}
-	]
-};
+			name: 'Kaffee & Tee',
+			description: 'Espresso, Cappuccino oder Teeauswahl',
+			price: 3.7,
+			type: 'Tasse',
+		},
+	],
+}
 
 // Minimal default configuration (formatter function has its own defaults)
-const DEFAULT_MENU_CONFIG = {};
+const DEFAULT_MENU_CONFIG = {}
 
 /**
  * Menu data store
  * @type {import('svelte/store').Writable<MenuData>}
  */
-export const menuData = writable(SEED_MENU_DATA);
+export const menuData = writable(SEED_MENU_DATA)
 
 /**
  * Menu configuration store
  * @type {import('svelte/store').Writable<MenuConfig>}
  */
-export const menuConfig = writable(DEFAULT_MENU_CONFIG);
+export const menuConfig = writable(DEFAULT_MENU_CONFIG)
 
 /**
  * Get all menu data
@@ -166,9 +166,9 @@ export const menuConfig = writable(DEFAULT_MENU_CONFIG);
 export async function getMenuData() {
 	return new Promise((resolve) => {
 		menuData.subscribe((data) => {
-			resolve({ ...data });
-		})();
-	});
+			resolve({ ...data })
+		})()
+	})
 }
 
 /**
@@ -178,9 +178,9 @@ export async function getMenuData() {
 export async function getMenuConfig() {
 	return new Promise((resolve) => {
 		menuConfig.subscribe((config) => {
-			resolve({ ...config });
-		})();
-	});
+			resolve({ ...config })
+		})()
+	})
 }
 
 /**
@@ -191,9 +191,9 @@ export async function getMenuConfig() {
 export async function getMenuItemsByCategory(category) {
 	return new Promise((resolve) => {
 		menuData.subscribe((data) => {
-			resolve([...(data[category] || [])]);
-		})();
-	});
+			resolve([...(data[category] || [])])
+		})()
+	})
 }
 
 /**
@@ -203,6 +203,7 @@ export async function getMenuItemsByCategory(category) {
  * @returns {Promise<string>}
  */
 export async function getMenuContextString() {
-	throw new Error('getMenuContextString from menu-store.js is deprecated. Use getMenuContextString from show-menu.js with contextConfig from skill config.');
+	throw new Error(
+		'getMenuContextString from menu-store.js is deprecated. Use getMenuContextString from show-menu.js with contextConfig from skill config.',
+	)
 }
-

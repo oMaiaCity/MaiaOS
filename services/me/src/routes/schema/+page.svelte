@@ -1,8 +1,8 @@
 <script lang="ts">
   import {
-    JazzAccount,
-    addRandomCarInstance,
     addJazzCompositeInstance,
+    addRandomCarInstance,
+    JazzAccount,
     resetData,
   } from "@hominio/data";
   import { AccountCoState } from "jazz-tools/svelte";
@@ -33,9 +33,10 @@
         });
       }
 
-      toast.success("Car added successfully! Check the data explorer to see it.");
-    } catch (error) {
-      console.error("Error adding car:", error);
+      toast.success(
+        "Car added successfully! Check the data explorer to see it.",
+      );
+    } catch (_error) {
       toast.error("Error adding car. Check console for details.");
     }
   }
@@ -54,9 +55,10 @@
         });
       }
 
-      toast.success("JazzComposite added successfully! Check the data explorer to see it.");
-    } catch (error) {
-      console.error("Error adding JazzComposite:", error);
+      toast.success(
+        "JazzComposite added successfully! Check the data explorer to see it.",
+      );
+    } catch (_error) {
       toast.error("Error adding JazzComposite. Check console for details.");
     }
   }
@@ -68,8 +70,7 @@
     try {
       await resetData(me);
       toast.success("Data list reset successfully!");
-    } catch (error) {
-      console.error("Error resetting data:", error);
+    } catch (_error) {
       toast.error("Error resetting data. Check console for details.");
     }
   }
@@ -114,12 +115,15 @@
               <div class="p-3 border rounded-lg bg-white shadow-sm">
                 <div class="flex items-center justify-between mb-2">
                   <div class="font-medium text-sm">{schemaLoaded.name}</div>
-                  <div class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                  <div
+                    class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded"
+                  >
                     {entitiesCount}
                     {entitiesCount === 1 ? "entity" : "entities"}
                   </div>
                 </div>
-                <pre class="text-xs bg-slate-50 p-2 rounded border overflow-x-auto">
+                <pre
+                  class="text-xs bg-slate-50 p-2 rounded border overflow-x-auto">
                   {JSON.stringify(schemaLoaded.definition, null, 2)}
                 </pre>
               </div>

@@ -9,24 +9,23 @@
  * @param {Object} args - Function arguments (none required)
  * @returns {Promise<Object>}
  */
-export async function handler(args) {
+export async function handler(_args) {
 	// Get todos from store (single source of truth)
 	try {
-		const { getTodos } = await import('./todo-store.js');
-		const todosList = await getTodos();
-		
+		const { getTodos } = await import('./todo-store.js')
+		const todosList = await getTodos()
+
 		return {
 			success: true,
 			data: {
 				todos: todosList,
-				timestamp: new Date().toISOString()
-			}
-		};
+				timestamp: new Date().toISOString(),
+			},
+		}
 	} catch (error) {
 		return {
 			success: false,
-			error: `Failed to load todos: ${error instanceof Error ? error.message : 'Unknown error'}`
-		};
+			error: `Failed to load todos: ${error instanceof Error ? error.message : 'Unknown error'}`,
+		}
 	}
 }
-

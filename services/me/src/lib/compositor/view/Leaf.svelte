@@ -4,32 +4,31 @@
   Uses JSON-driven leaf definitions
 -->
 <script lang="ts">
-  import { browser } from "$app/environment";
-  import LeafRenderer from "./LeafRenderer.svelte";
-  import { validateLeaf } from "./whitelist";
-  import type { ViewNode } from "./types";
-  import type { Data } from "../dataStore";
-  import type { VibeConfig } from "../types";
+import type { Data } from '../dataStore'
+import type { VibeConfig } from '../types'
+import type { ViewNode } from './types'
+import { browser } from '$app/environment'
+import { validateLeaf } from './whitelist'
+import LeafRenderer from './LeafRenderer.svelte'
 
-  interface Props {
-    node: ViewNode;
-    data: Data;
-    config?: VibeConfig;
-    onEvent?: (event: string, payload?: unknown) => void;
-  }
+interface Props {
+	node: ViewNode
+	data: Data
+	config?: VibeConfig
+	onEvent?: (event: string, payload?: unknown) => void
+}
 
-  let { node, data, config, onEvent }: Props = $props();
+const { node, data, config, onEvent }: Props = $props()
 
-  // Validate leaf
-  const validation = $derived(
-    node.leaf ? validateLeaf(node.leaf) : { valid: false, errors: ["No leaf definition"] },
-  );
+// Validate leaf
+const validation = $derived(
+	node.leaf ? validateLeaf(node.leaf) : { valid: false, errors: ['No leaf definition'] },
+)
 
-  $effect(() => {
-    if (!validation.valid) {
-      console.error("Invalid leaf:", validation.errors);
-    }
-  });
+$effect(() => {
+	if (!validation.valid) {
+	}
+})
 </script>
 
 {#if !browser}

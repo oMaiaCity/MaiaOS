@@ -33,11 +33,9 @@
         .then(() => {
           googleDataSynced = true;
         })
-        .catch((error) => {
-          console.error("Error syncing Google data to profile:", error);
+        .catch((_error) => {
           googleDataSynced = true; // Mark as synced even on error to prevent retries
         });
     }
   });
 </script>
-

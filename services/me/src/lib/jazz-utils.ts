@@ -1,11 +1,14 @@
-import { getJazzContext as getJazzContextFromSvelte, getAuthSecretStorage as getAuthSecretStorageFromSvelte } from "jazz-tools/svelte";
+import {
+	getAuthSecretStorage as getAuthSecretStorageFromSvelte,
+	getJazzContext as getJazzContextFromSvelte,
+} from 'jazz-tools/svelte'
 
 /**
  * Get JazzContext from JazzSvelteProvider
  * This is used by the Better Auth Jazz plugin
  */
 export function getJazzContext() {
-  return getJazzContextFromSvelte();
+	return getJazzContextFromSvelte()
 }
 
 /**
@@ -14,6 +17,5 @@ export function getJazzContext() {
  * Uses the AuthSecretStorage from JazzSvelteProvider
  */
 export function getAuthStorage() {
-  return getAuthSecretStorageFromSvelte();
+	return getAuthSecretStorageFromSvelte()
 }
-

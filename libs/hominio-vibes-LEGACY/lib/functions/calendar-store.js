@@ -4,7 +4,7 @@
  * Resets on page refresh (no persistence)
  */
 
-import { writable } from 'svelte/store';
+import { writable } from 'svelte/store'
 
 /**
  * Calendar entry structure
@@ -22,14 +22,14 @@ import { writable } from 'svelte/store';
  * @returns {string}
  */
 function generateId() {
-	return `entry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+	return `entry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 }
 
 /**
  * Calendar entries store
  * @type {import('svelte/store').Writable<CalendarEntry[]>}
  */
-export const calendarEntries = writable([]);
+export const calendarEntries = writable([])
 
 /**
  * Get all calendar entries
@@ -38,9 +38,9 @@ export const calendarEntries = writable([]);
 export async function getEntries() {
 	return new Promise((resolve) => {
 		calendarEntries.subscribe((entries) => {
-			resolve([...entries]);
-		})();
-	});
+			resolve([...entries])
+		})()
+	})
 }
 
 /**
@@ -53,13 +53,13 @@ export async function addEntry(entryData) {
 		calendarEntries.update((entries) => {
 			const newEntry = {
 				id: generateId(),
-				...entryData
-			};
-			const updated = [...entries, newEntry];
-			resolve(newEntry);
-			return updated;
-		});
-	});
+				...entryData,
+			}
+			const updated = [...entries, newEntry]
+			resolve(newEntry)
+			return updated
+		})
+	})
 }
 
 /**
@@ -71,17 +71,17 @@ export async function addEntry(entryData) {
 export async function updateEntry(id, updates) {
 	return new Promise((resolve) => {
 		calendarEntries.update((entries) => {
-			const index = entries.findIndex((e) => e.id === id);
+			const index = entries.findIndex((e) => e.id === id)
 			if (index === -1) {
-				resolve(null);
-				return entries;
+				resolve(null)
+				return entries
 			}
-			const updated = [...entries];
-			updated[index] = { ...updated[index], ...updates };
-			resolve(updated[index]);
-			return updated;
-		});
-	});
+			const updated = [...entries]
+			updated[index] = { ...updated[index], ...updates }
+			resolve(updated[index])
+			return updated
+		})
+	})
 }
 
 /**
@@ -92,16 +92,16 @@ export async function updateEntry(id, updates) {
 export async function deleteEntry(id) {
 	return new Promise((resolve) => {
 		calendarEntries.update((entries) => {
-			const index = entries.findIndex((e) => e.id === id);
+			const index = entries.findIndex((e) => e.id === id)
 			if (index === -1) {
-				resolve(false);
-				return entries;
+				resolve(false)
+				return entries
 			}
-			const updated = entries.filter((e) => e.id !== id);
-			resolve(true);
-			return updated;
-		});
-	});
+			const updated = entries.filter((e) => e.id !== id)
+			resolve(true)
+			return updated
+		})
+	})
 }
 
 /**
@@ -112,28 +112,28 @@ export async function deleteEntry(id) {
 export async function getWeekEntries(startDate) {
 	return new Promise((resolve) => {
 		calendarEntries.subscribe((entries) => {
-			const start = startDate ? new Date(startDate) : new Date();
-			start.setHours(0, 0, 0, 0);
-			
-			const end = new Date(start);
-			end.setDate(end.getDate() + 7);
-			
+			const start = startDate ? new Date(startDate) : new Date()
+			start.setHours(0, 0, 0, 0)
+
+			const end = new Date(start)
+			end.setDate(end.getDate() + 7)
+
 			const weekEntries = entries.filter((entry) => {
-				const entryDate = new Date(entry.date);
-				entryDate.setHours(0, 0, 0, 0);
-				return entryDate >= start && entryDate < end;
-			});
-			
+				const entryDate = new Date(entry.date)
+				entryDate.setHours(0, 0, 0, 0)
+				return entryDate >= start && entryDate < end
+			})
+
 			// Sort by date, then by time
 			weekEntries.sort((a, b) => {
-				const dateCompare = a.date.localeCompare(b.date);
-				if (dateCompare !== 0) return dateCompare;
-				return a.time.localeCompare(b.time);
-			});
-			
-			resolve(weekEntries);
-		})();
-	});
+				const dateCompare = a.date.localeCompare(b.date)
+				if (dateCompare !== 0) return dateCompare
+				return a.time.localeCompare(b.time)
+			})
+
+			resolve(weekEntries)
+		})()
+	})
 }
 
 /**
@@ -144,10 +144,10 @@ export async function getWeekEntries(startDate) {
 export async function getEntryById(id) {
 	return new Promise((resolve) => {
 		calendarEntries.subscribe((entries) => {
-			const entry = entries.find((e) => e.id === id);
-			resolve(entry || null);
-		})();
-	});
+			const entry = entries.find((e) => e.id === id)
+			resolve(entry || null)
+		})()
+	})
 }
 
 /**
@@ -155,22 +155,22 @@ export async function getEntryById(id) {
  * @returns {Promise<string>}
  */
 export async function getCalendarContextString() {
-	const entries = await getEntries();
-	
+	const entries = await getEntries()
+
 	// Get current date in YYYY-MM-DD format
-	const now = new Date();
-	const currentDate = now.toISOString().split('T')[0];
+	const now = new Date()
+	const currentDate = now.toISOString().split('T')[0]
 	const currentDateFormatted = now.toLocaleDateString('de-DE', {
 		weekday: 'long',
 		year: 'numeric',
 		month: 'long',
-		day: 'numeric'
-	});
+		day: 'numeric',
+	})
 	const currentTime = now.toLocaleTimeString('de-DE', {
 		hour: '2-digit',
-		minute: '2-digit'
-	});
-	
+		minute: '2-digit',
+	})
+
 	const lines = [
 		`AKTUELLES DATUM UND ZEIT:`,
 		`- Datum: ${currentDateFormatted} (${currentDate})`,
@@ -180,28 +180,28 @@ export async function getCalendarContextString() {
 		'',
 		`Gesamt: ${entries.length} ${entries.length === 1 ? 'Termin' : 'Termine'}`,
 		'',
-		'Termine:'
-	];
-	
+		'Termine:',
+	]
+
 	entries.forEach((entry) => {
 		const date = new Date(entry.date).toLocaleDateString('de-DE', {
 			weekday: 'long',
 			year: 'numeric',
 			month: 'long',
-			day: 'numeric'
-		});
-		const endTime = calculateEndTime(entry.time, entry.duration);
+			day: 'numeric',
+		})
+		const endTime = calculateEndTime(entry.time, entry.duration)
 		lines.push(
 			`- ID: ${entry.id}`,
 			`  Titel: ${entry.title}`,
 			`  Datum: ${date} (${entry.date})`,
 			`  Zeit: ${entry.time} - ${endTime} (Dauer: ${entry.duration} Minuten)`,
 			entry.description ? `  Beschreibung: ${entry.description}` : '',
-			''
-		);
-	});
-	
-	return lines.join('\n');
+			'',
+		)
+	})
+
+	return lines.join('\n')
 }
 
 /**
@@ -211,11 +211,10 @@ export async function getCalendarContextString() {
  * @returns {string} End time (HH:MM)
  */
 function calculateEndTime(startTime, duration) {
-	const [hours, minutes] = startTime.split(':').map(Number);
-	const startMinutes = hours * 60 + minutes;
-	const endMinutes = startMinutes + duration;
-	const endHours = Math.floor(endMinutes / 60) % 24;
-	const endMins = endMinutes % 60;
-	return `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
+	const [hours, minutes] = startTime.split(':').map(Number)
+	const startMinutes = hours * 60 + minutes
+	const endMinutes = startMinutes + duration
+	const endHours = Math.floor(endMinutes / 60) % 24
+	const endMins = endMinutes % 60
+	return `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`
 }
-

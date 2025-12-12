@@ -4,12 +4,11 @@
   Uses Composite/Leaf pattern - recursively renders children
 -->
 <script lang="ts">
-  import type { ViewNode } from "./types";
   import type { Data } from "../dataStore";
   import type { VibeConfig } from "../types";
+  import type { ViewNode } from "./types";
   import Composite from "./Composite.svelte";
   import Leaf from "./Leaf.svelte";
-  import ViewRenderer from "./ViewRenderer.svelte";
 
   interface Props {
     node: ViewNode;
@@ -18,19 +17,24 @@
     onEvent?: (event: string, payload?: unknown) => void;
   }
 
-  let { node, data, config, onEvent }: Props = $props();
+  const { node, data, config, onEvent }: Props = $props();
 
   // Use $derived to maintain reactivity when accessing node properties
   const composite = $derived(node.composite);
 
   $effect(() => {
     if (!composite) {
-      throw new Error("Composite component requires a node with composite property");
+      throw new Error(
+        "Composite component requires a node with composite property",
+      );
     }
   });
 
   // Compute container styles
   const containerStyle = $derived(() => {
+    if (!composite) {
+      return {};
+    }
     const style: Record<string, string> = {
       ...composite.container?.style,
     };
@@ -118,11 +122,16 @@
   const getChildStyle = (child: ViewNode): Record<string, string> => {
     const style: Record<string, string> = {};
 
+    if (!composite) {
+      return style;
+    }
+
     // Default: fill parent width (unless in flex row container and child is a button)
     // Buttons in flex row should only take space they need, not 100% width
-    const isFlexRow = composite.type === "flex" && composite.flex?.direction === "row";
-    const isButton = child.type === "button";
-    
+    const isFlexRow =
+      composite.type === "flex" && composite.flex?.direction === "row";
+    const isButton = (child as any).type === "button";
+
     if (!(isFlexRow && isButton)) {
       style.width = "100%";
     }
@@ -231,31 +240,34 @@
   };
 </script>
 
-<div
-  class={`${composite.container?.class || ""} ${composite.container?.containerType ? `@container ${composite.container?.containerName || ''}` : ''}`}
-  style={Object.entries(containerStyle())
-    .map(([key, value]) => `${key}: ${value}`)
-    .join("; ")}
->
-  {#each composite.children as child}
-    {@const childStyle = getChildStyle(child)}
-    <div
-      class={`${child.composite?.container?.containerType ? `@container ${child.composite?.container?.containerName || ''}` : ''} ${!child.composite && child.leaf ? 'contents' : ''}`}
-      style={Object.entries(childStyle)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join("; ")}
-    >
-      {#if child.composite}
-        <!-- Composite child - recursively render -->
-        <Composite node={child} {data} {config} {onEvent} />
-      {:else if child.leaf}
-        <!-- Leaf child - render content using JSON-driven leaf definition -->
-        <Leaf node={child} {data} {config} {onEvent} />
-      {:else}
-        <!-- Invalid node - must have composite or leaf -->
-        <div class="text-red-500 text-sm">Invalid node: must have either composite or leaf</div>
-      {/if}
-    </div>
-  {/each}
-</div>
-
+{#if composite}
+  <div
+    class={`${composite.container?.class || ""} ${composite.container?.containerType ? `@container ${composite.container?.containerName || ""}` : ""}`}
+    style={Object.entries(containerStyle)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join("; ")}
+  >
+    {#each composite.children as child}
+      {@const childStyle = getChildStyle(child)}
+      <div
+        class={`${child.composite?.container?.containerType ? `@container ${child.composite?.container?.containerName || ""}` : ""} ${!child.composite && child.leaf ? "contents" : ""}`}
+        style={Object.entries(childStyle)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join("; ")}
+      >
+        {#if child.composite}
+          <!-- Composite child - recursively render -->
+          <Composite node={child} {data} {config} {onEvent} />
+        {:else if child.leaf}
+          <!-- Leaf child - render content using JSON-driven leaf definition -->
+          <Leaf node={child} {data} {config} {onEvent} />
+        {:else}
+          <!-- Invalid node - must have composite or leaf -->
+          <div class="text-red-500 text-sm">
+            Invalid node: must have either composite or leaf
+          </div>
+        {/if}
+      </div>
+    {/each}
+  </div>
+{/if}

@@ -1,13 +1,15 @@
 <script lang="ts">
   import type { CoValueContext } from "@hominio/data";
-  import { getCoValueGroupInfo, resolveProfile } from "@hominio/data";
-  import type { LocalNode, CoID, RawCoValue } from "cojson";
-  import PropertyItem from "../composites/PropertyItem.svelte";
-  import Badge from "../leafs/Badge.svelte";
-  import { formatCoValueId } from "../../utilities/coValueFormatter.js";
-  import { CoState } from "jazz-tools/svelte";
+  import {
+    getCoValueGroupInfo,
+    resolveProfile,
+    formatCoValueId,
+  } from "@hominio/data";
+  import type { LocalNode } from "cojson";
   import { CoMap } from "jazz-tools";
-  import { Image } from "jazz-tools/svelte";
+  import { CoState, Image } from "jazz-tools/svelte";
+  import Badge from "./Badge.svelte";
+  import PropertyItem from "./PropertyItem.svelte";
 
   interface Props {
     context: CoValueContext;
@@ -15,19 +17,21 @@
     currentAccount?: any; // Current Jazz account for profile resolution
   }
 
-  let { context, node, currentAccount }: Props = $props();
+  const { context, node, currentAccount }: Props = $props();
 
   // Tab state: "members" (default) or "info"
   let activeTab = $state<"members" | "info">("members");
 
   // Get display type
-  const displayType = $derived(context.resolved.extendedType || context.resolved.type || "CoValue");
+  const displayType = $derived(
+    context.resolved.extendedType || context.resolved.type || "CoValue",
+  );
 
   // Get group ID from resolved context
   const groupId = $derived(context.resolved.groupId);
 
   // Sort account members: "everyone" always first, then others
-  const sortedAccountMembers = $derived(() => {
+  const sortedAccountMembers = $derived.by(() => {
     if (!groupInfo?.accountMembers) return [];
     const members = [...groupInfo.accountMembers];
     return members.sort((a, b) => {
@@ -109,7 +113,7 @@
       const info = getCoValueGroupInfo(coValue);
       console.log("[MetadataSidebar] Group info:", info);
 
-      if (info && info.groupId) {
+      if (info?.groupId) {
         const newGroupInfo = {
           accountMembers: info.accountMembers || [],
           groupMembers: info.groupMembers || [],
@@ -118,20 +122,23 @@
         // Only update if different (prevent unnecessary rerenders)
         const hasChanged =
           !groupInfo ||
-          groupInfo.accountMembers.length !== newGroupInfo.accountMembers.length ||
+          groupInfo.accountMembers.length !==
+            newGroupInfo.accountMembers.length ||
           groupInfo.groupMembers.length !== newGroupInfo.groupMembers.length;
 
         if (hasChanged) {
           groupInfo = newGroupInfo;
-          console.log("[MetadataSidebar] ✅ Loaded group members:", groupInfo);
+          console.log(
+            "[MetadataSidebar] ✅ Loaded group members:",
+            $state.snapshot(groupInfo),
+          );
         }
       } else {
         if (groupInfo !== null) {
           groupInfo = null;
         }
       }
-    } catch (e) {
-      console.error("[MetadataSidebar] Error extracting group info:", e);
+    } catch (_e) {
       if (groupInfo !== null) {
         groupInfo = null;
       }
@@ -171,11 +178,12 @@
     {#if activeTab === "members"}
       {#if groupInfo}
         {@const hasMembers =
-          groupInfo.accountMembers.length > 0 || groupInfo.groupMembers.length > 0}
+          groupInfo.accountMembers.length > 0 ||
+          groupInfo.groupMembers.length > 0}
         {#if hasMembers}
           <!-- Members directly in card container (no PropertyItem wrapper) -->
           <div class="space-y-3">
-            {#each sortedAccountMembers() as member}
+            {#each sortedAccountMembers as member}
               {@const profileInfo = resolveProfile(member.id, currentAccount)}
               {@const isEveryone = member.id === "everyone"}
               {@const isAdmin = member.role.toLowerCase() === "admin"}
@@ -217,13 +225,16 @@
                             : 'text-slate-600'} truncate"
                       >
                         {isEveryone
-                          ? member.id.charAt(0).toUpperCase() + member.id.slice(1)
+                          ? member.id.charAt(0).toUpperCase() +
+                            member.id.slice(1)
                           : member.id.slice(0, 8) + "..."}
                       </span>
                     {/if}
                   </div>
                 </div>
-                <Badge type={member.role.toLowerCase()} variant="role">{member.role}</Badge>
+                <Badge type={member.role.toLowerCase()} variant="role"
+                  >{member.role}</Badge
+                >
               </div>
             {/each}
           </div>

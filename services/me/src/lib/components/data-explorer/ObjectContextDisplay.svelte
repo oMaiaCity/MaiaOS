@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Badge from "../leafs/Badge.svelte";
+  import Badge from "./Badge.svelte";
 
   interface Props {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -7,13 +7,13 @@
     label: string;
   }
 
-  let { object, label }: Props = $props();
+  const { object, label }: Props = $props();
 
   // Stringify the object with proper formatting
-  const jsonString = $derived(() => {
+  const jsonString = $derived.by(() => {
     try {
       return JSON.stringify(object, null, 2);
-    } catch (e) {
+    } catch (_e) {
       return String(object);
     }
   });
@@ -30,7 +30,7 @@
       </div>
       <pre
         class="text-xs text-slate-700 whitespace-pre font-mono bg-slate-50/80 p-4 rounded-lg border border-slate-200 max-w-full overflow-x-auto overflow-y-auto"
-        style="max-height: 600px;">{jsonString()}</pre>
+        style="max-height: 600px;">{jsonString}</pre>
     </div>
   </div>
 </div>

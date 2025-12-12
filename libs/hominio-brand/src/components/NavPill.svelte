@@ -1,121 +1,122 @@
 <script>
-	/**
-	 * NavPill - Global navigation pill component
-	 * Layout: Logo/Avatar (left) | Call Button (center) | User (right)
-	 * When logged out: Shows Google sign-in button
-	 * 
-	 * @typedef {Object} Props
-	 * @property {Function} onHome - Home button click handler
-	 * @property {Function} onSignOut - Sign out handler (optional)
-	 * @property {Function} onGoogleSignIn - Google sign-in handler
-	 * @property {boolean} isAuthenticated - Whether user is authenticated
-	 * @property {boolean} signingOut - Whether sign out is in progress
-	 * @property {Object} user - User object with name and image
-	 * @property {boolean} isCallActive - Whether voice call is active
-	 * @property {boolean} isConnecting - Whether call is connecting
-	 * @property {boolean} isWaitingForPermission - Whether waiting for permission
-	 * @property {Function} onStartCall - Start call handler
-	 * @property {Function} onStopCall - Stop call handler
-	 * @property {string|null} vibeAvatar - Optional vibe avatar image path (shows instead of logo when in vibe context)
-	 */
-	
-	import { LoadingSpinner } from './index.js';
-	
-	let { 
-		onHome,
-		onSignOut,
-		onGoogleSignIn,
-		isAuthenticated = false,
-		signingOut = false,
-		user = null,
-		isCallActive = false,
-		isConnecting = false,
-		isWaitingForPermission = false,
-		aiState = 'idle', // 'listening' | 'thinking' | 'speaking' | 'idle'
-		onStartCall,
-		onStopCall,
-		pillState = 'default', // 'default' | 'cta' | 'hidden'
-		ctaText = 'Sign up to waitlist now',
-		ctaHref = null,
-		showLoginButton = true, // Show login icon button in CTA state
-		showCapabilityModal = false,
-		showSuccessModal = false,
-		onRequestAccess = () => {},
-		onCloseCapabilityModal = () => {},
-		onCloseSuccessModal = () => {},
-		vibeAvatar = null, // Vibe avatar image path (e.g., "/brand/agents/charles.png")
-		capabilityModalTitle = 'Access required',
-		capabilityModalMessage = 'You need permission to use the voice assistant',
-	} = $props();
-	
-	let userImageFailed = $state(false);
-	
-	// Helper to get wallet service URL (with optional path)
-	function getWalletUrl(path = '') {
-		if (typeof window === 'undefined') return '/';
-		
-		const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.startsWith('127.0.0.1');
-		let walletDomain = 'localhost:4201'; // Default for dev
-		
-		if (isProduction) {
-			const hostname = window.location.hostname;
-			if (hostname.startsWith('app.')) {
-				walletDomain = hostname.replace('app.', 'wallet.');
-			} else if (hostname.startsWith('website.')) {
-				walletDomain = hostname.replace('website.', 'wallet.');
-			} else {
-				walletDomain = `wallet.${hostname.replace(/^www\./, '')}`;
-			}
+/**
+ * NavPill - Global navigation pill component
+ * Layout: Logo/Avatar (left) | Call Button (center) | User (right)
+ * When logged out: Shows Google sign-in button
+ *
+ * @typedef {Object} Props
+ * @property {Function} onHome - Home button click handler
+ * @property {Function} onSignOut - Sign out handler (optional)
+ * @property {Function} onGoogleSignIn - Google sign-in handler
+ * @property {boolean} isAuthenticated - Whether user is authenticated
+ * @property {boolean} signingOut - Whether sign out is in progress
+ * @property {Object} user - User object with name and image
+ * @property {boolean} isCallActive - Whether voice call is active
+ * @property {boolean} isConnecting - Whether call is connecting
+ * @property {boolean} isWaitingForPermission - Whether waiting for permission
+ * @property {Function} onStartCall - Start call handler
+ * @property {Function} onStopCall - Stop call handler
+ * @property {string|null} vibeAvatar - Optional vibe avatar image path (shows instead of logo when in vibe context)
+ */
+
+const {
+	onHome,
+	onSignOut,
+	onGoogleSignIn,
+	isAuthenticated = false,
+	signingOut = false,
+	user = null,
+	isCallActive = false,
+	isConnecting = false,
+	isWaitingForPermission = false,
+	aiState = 'idle', // 'listening' | 'thinking' | 'speaking' | 'idle'
+	onStartCall,
+	onStopCall,
+	pillState = 'default', // 'default' | 'cta' | 'hidden'
+	ctaText = 'Sign up to waitlist now',
+	ctaHref = null,
+	showLoginButton = true, // Show login icon button in CTA state
+	showCapabilityModal = false,
+	showSuccessModal = false,
+	onRequestAccess = () => {},
+	onCloseCapabilityModal = () => {},
+	onCloseSuccessModal = () => {},
+	vibeAvatar = null, // Vibe avatar image path (e.g., "/brand/agents/charles.png")
+	capabilityModalTitle = 'Access required',
+	capabilityModalMessage = 'You need permission to use the voice assistant',
+} = $props()
+
+const _userImageFailed = $state(false)
+
+// Helper to get wallet service URL (with optional path)
+function _getWalletUrl(path = '') {
+	if (typeof window === 'undefined') return '/'
+
+	const isProduction =
+		window.location.hostname !== 'localhost' && !window.location.hostname.startsWith('127.0.0.1')
+	let walletDomain = 'localhost:4201' // Default for dev
+
+	if (isProduction) {
+		const hostname = window.location.hostname
+		if (hostname.startsWith('app.')) {
+			walletDomain = hostname.replace('app.', 'wallet.')
+		} else if (hostname.startsWith('website.')) {
+			walletDomain = hostname.replace('website.', 'wallet.')
+		} else {
+			walletDomain = `wallet.${hostname.replace(/^www\./, '')}`
 		}
-		
-		const protocol = walletDomain.startsWith('localhost') || walletDomain.startsWith('127.0.0.1') ? 'http' : 'https';
-		return `${protocol}://${walletDomain}${path}`;
 	}
-	
-	// Helper to get app service URL
-	function getAppUrl() {
-		if (typeof window === 'undefined') return '/';
-		
-		const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.startsWith('127.0.0.1');
-		
-		if (isProduction) {
-			const hostname = window.location.hostname;
-			
-			// If already on app domain (even if doubled like app.app.hominio.me), return relative path
-			// This prevents doubling the domain when clicking the logo
-			if (hostname.includes('.app.') || hostname.startsWith('app.')) {
-				return '/';
-			}
-			
-			// If on wallet or website, redirect to app
-			if (hostname.startsWith('wallet.')) {
-				const rootDomain = hostname.replace('wallet.', '');
-				// Ensure we don't double the app prefix
-				if (rootDomain.startsWith('app.')) {
-					return `https://${rootDomain}`;
-				}
-				return `https://app.${rootDomain}`;
-			} else if (hostname.startsWith('website.')) {
-				const rootDomain = hostname.replace('website.', '');
-				// Ensure we don't double the app prefix
-				if (rootDomain.startsWith('app.')) {
-					return `https://${rootDomain}`;
-				}
-				return `https://app.${rootDomain}`;
-			} else {
-				// Extract root domain (remove www. if present)
-				const rootDomain = hostname.replace(/^www\./, '');
-				// Only add app. prefix if not already present (check for app. anywhere)
-				if (!rootDomain.includes('.app.') && !rootDomain.startsWith('app.')) {
-					return `https://app.${rootDomain}`;
-				}
-				return '/';
-			}
+
+	const protocol =
+		walletDomain.startsWith('localhost') || walletDomain.startsWith('127.0.0.1') ? 'http' : 'https'
+	return `${protocol}://${walletDomain}${path}`
+}
+
+// Helper to get app service URL
+function _getAppUrl() {
+	if (typeof window === 'undefined') return '/'
+
+	const isProduction =
+		window.location.hostname !== 'localhost' && !window.location.hostname.startsWith('127.0.0.1')
+
+	if (isProduction) {
+		const hostname = window.location.hostname
+
+		// If already on app domain (even if doubled like app.app.hominio.me), return relative path
+		// This prevents doubling the domain when clicking the logo
+		if (hostname.includes('.app.') || hostname.startsWith('app.')) {
+			return '/'
 		}
-		
-		// Development: return relative path
-		return '/';
+
+		// If on wallet or website, redirect to app
+		if (hostname.startsWith('wallet.')) {
+			const rootDomain = hostname.replace('wallet.', '')
+			// Ensure we don't double the app prefix
+			if (rootDomain.startsWith('app.')) {
+				return `https://${rootDomain}`
+			}
+			return `https://app.${rootDomain}`
+		} else if (hostname.startsWith('website.')) {
+			const rootDomain = hostname.replace('website.', '')
+			// Ensure we don't double the app prefix
+			if (rootDomain.startsWith('app.')) {
+				return `https://${rootDomain}`
+			}
+			return `https://app.${rootDomain}`
+		} else {
+			// Extract root domain (remove www. if present)
+			const rootDomain = hostname.replace(/^www\./, '')
+			// Only add app. prefix if not already present (check for app. anywhere)
+			if (!rootDomain.includes('.app.') && !rootDomain.startsWith('app.')) {
+				return `https://app.${rootDomain}`
+			}
+			return '/'
+		}
 	}
+
+	// Development: return relative path
+	return '/'
+}
 </script>
 
 {#if pillState === 'hidden'}

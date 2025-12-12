@@ -2,4 +2,4 @@
  * Vibes Vibe Leaf Components
  */
 
-export { vibeCardLeaf } from "./vibeCard";
+export { vibeCardLeaf } from './vibeCard'

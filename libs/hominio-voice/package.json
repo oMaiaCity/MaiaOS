@@ -17,5 +17,10 @@
 	},
 	"files": [
 		"src"
-	]
+	],
+	"scripts": {
+		"format": "bunx biome format --write .",
+		"lint": "bunx biome lint .",
+		"check": "bunx biome check ."
+	}
 }

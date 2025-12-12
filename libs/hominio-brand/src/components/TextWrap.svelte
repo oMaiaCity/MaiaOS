@@ -1,14 +1,10 @@
 <script>
-	/**
-	 * TextWrap - Wrapper component for text content with consistent styling
-	 * Used for legal pages, documentation, etc.
-	 */
-	
-	let { 
-		children,
-		class: className = '',
-		...restProps
-	} = $props();
+/**
+ * TextWrap - Wrapper component for text content with consistent styling
+ * Used for legal pages, documentation, etc.
+ */
+
+const { children, class: className = '', ...restProps } = $props()
 </script>
 
 <div class="text-wrap-container">

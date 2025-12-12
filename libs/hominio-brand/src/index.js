@@ -4,12 +4,8 @@
  */
 
 // Export components
-export * from './components/index.js';
-
-
-// Export utilities
-export * from './utilities/index.js';
-
+export * from './components/index.js'
 // Export tokens
-export * from './tokens/index.js';
-
+export * from './tokens/index.js'
+// Export utilities
+export * from './utilities/index.js'

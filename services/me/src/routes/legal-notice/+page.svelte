@@ -1,5 +1,5 @@
-<script>
-  import { LegalNotice } from "@hominio/brand/components";
+<script lang="ts">
+  import { LegalNotice } from "@hominio/brand";
 </script>
 
 <LegalNotice />

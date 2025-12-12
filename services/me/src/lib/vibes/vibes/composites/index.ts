@@ -2,5 +2,5 @@
  * Vibes Vibe Composite Components
  */
 
-export { rootComposite } from "./root";
-export { vibeGridComposite } from "./vibeGrid";
+export { rootComposite } from './root'
+export { vibeGridComposite } from './vibeGrid'

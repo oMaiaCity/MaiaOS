@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { toast } from "../stores/toast.js";
   import type { Toast } from "../stores/toast.js";
+  import { toast } from "../stores/toast.js";
 
   let toasts: Toast[] = [];
 
@@ -16,7 +16,6 @@
         return "bg-red-500 text-white border-red-600";
       case "warning":
         return "bg-yellow-500 text-white border-yellow-600";
-      case "info":
       default:
         return "bg-blue-500 text-white border-blue-600";
     }
@@ -38,7 +37,12 @@
           class="text-white/80 hover:text-white transition-colors shrink-0"
           aria-label="Close"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -68,4 +72,3 @@
     animation: fade-in 0.3s ease-out;
   }
 </style>
-

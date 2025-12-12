@@ -54,11 +54,16 @@
       >
         Hominio
       </h1>
-      <p class="text-xl md:text-2xl text-slate-600 font-medium mb-4 max-w-2xl mx-auto">
+      <p
+        class="text-xl md:text-2xl text-slate-600 font-medium mb-4 max-w-2xl mx-auto"
+      >
         Your personal voice assistant
       </p>
-      <p class="text-lg md:text-xl text-slate-500 max-w-xl mx-auto leading-relaxed">
-        Own your data. Control your privacy. Experience AI that truly works for you.
+      <p
+        class="text-lg md:text-xl text-slate-500 max-w-xl mx-auto leading-relaxed"
+      >
+        Own your data. Control your privacy. Experience AI that truly works for
+        you.
       </p>
     </header>
   {:else if !me.$isLoaded}
@@ -90,7 +95,10 @@
         Welcome Back, <span
           class="text-transparent bg-clip-text bg-linear-to-r from-[#002455] to-[#001a3d]"
         >
-          {(me.profile && (me.profile as any).$isLoaded && (me.profile as any).name) || "Traveler"}
+          {(me.profile &&
+            (me.profile as any).$isLoaded &&
+            (me.profile as any).name) ||
+            "Traveler"}
         </span>
       </h1>
       <div

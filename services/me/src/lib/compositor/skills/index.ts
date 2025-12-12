@@ -3,20 +3,20 @@
  * Import and register skills here
  */
 
-export * from "./types";
-export * from "./registry";
-export * from "./todo-skills";
-export * from "./wallet-skills";
+export * from './registry'
+export * from './todo-skills'
+export * from './types'
+export * from './wallet-skills'
 
+import { registerSkillsFromConfig } from './registry'
 // Import all skill modules
-import { todoSkills } from "./todo-skills";
-import { walletSkills } from "./wallet-skills";
-import { vibesSkills } from "./vibes-skills";
-import { registerSkillsFromConfig } from "./registry";
+import { todoSkills } from './todo-skills'
+import { vibesSkills } from './vibes-skills'
+import { walletSkills } from './wallet-skills'
 
 // ========== AUTO-REGISTER ALL SKILLS ==========
 
-let skillsRegistered = false;
+let skillsRegistered = false
 
 /**
  * Register all available skills
@@ -24,16 +24,15 @@ let skillsRegistered = false;
  * Safe to call multiple times - will only register once
  */
 export function registerAllSkills(): void {
-  // Skip if already registered (prevents double registration during HMR)
-  if (skillsRegistered) {
-    return;
-  }
+	// Skip if already registered (prevents double registration during HMR)
+	if (skillsRegistered) {
+		return
+	}
 
-  registerSkillsFromConfig(todoSkills);
-  registerSkillsFromConfig(walletSkills);
-  registerSkillsFromConfig(vibesSkills);
-  // Add more skill registrations here as they're created
+	registerSkillsFromConfig(todoSkills)
+	registerSkillsFromConfig(walletSkills)
+	registerSkillsFromConfig(vibesSkills)
+	// Add more skill registrations here as they're created
 
-  skillsRegistered = true;
+	skillsRegistered = true
 }
-

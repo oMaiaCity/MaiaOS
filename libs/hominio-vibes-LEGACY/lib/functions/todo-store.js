@@ -4,8 +4,8 @@
  * Resets on page refresh (no persistence)
  */
 
-import { writable, get } from 'svelte/store';
-import { nanoid } from 'nanoid';
+import { nanoid } from 'nanoid'
+import { get, writable } from 'svelte/store'
 
 /**
  * Todo item structure
@@ -16,19 +16,19 @@ import { nanoid } from 'nanoid';
  */
 
 // Seed data (empty array initially)
-const SEED_TODOS = [];
+const SEED_TODOS = []
 
 /**
  * Todo data store
  * @type {import('svelte/store').Writable<Todo[]>}
  */
-export const todos = writable(SEED_TODOS);
+export const todos = writable(SEED_TODOS)
 
 /**
  * Todo configuration
  * @type {Object}
  */
-export const todoConfig = {};
+export const todoConfig = {}
 
 /**
  * Get all todos
@@ -36,7 +36,7 @@ export const todoConfig = {};
  */
 export async function getTodos() {
 	// Get todos synchronously using get()
-	return Promise.resolve([...get(todos)]);
+	return Promise.resolve([...get(todos)])
 }
 
 /**
@@ -47,23 +47,23 @@ export async function getTodos() {
 export async function addTodo(title) {
 	try {
 		// Get current todos synchronously
-		const currentTodos = get(todos);
-		
+		const currentTodos = get(todos)
+
 		// Create new todo
-			const newTodo = {
-				id: nanoid(),
-				title: title.trim(),
-				completed: false
-			};
-		
+		const newTodo = {
+			id: nanoid(),
+			title: title.trim(),
+			completed: false,
+		}
+
 		// Update store
-			const updatedTodos = [...currentTodos, newTodo];
-			todos.set(updatedTodos);
-		
+		const updatedTodos = [...currentTodos, newTodo]
+		todos.set(updatedTodos)
+
 		// Return immediately
-		return newTodo;
+		return newTodo
 	} catch (error) {
-		throw new Error(`Failed to add todo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+		throw new Error(`Failed to add todo: ${error instanceof Error ? error.message : 'Unknown error'}`)
 	}
 }
 
@@ -77,22 +77,24 @@ export async function addTodo(title) {
  */
 export async function editTodo(id, updates) {
 	try {
-		const currentTodos = get(todos);
-		const updatedTodos = currentTodos.map(todo => {
+		const currentTodos = get(todos)
+		const updatedTodos = currentTodos.map((todo) => {
 			if (todo.id === id) {
 				return {
 					...todo,
 					...(updates.title !== undefined && { title: updates.title.trim() }),
-					...(updates.completed !== undefined && { completed: updates.completed })
-				};
+					...(updates.completed !== undefined && { completed: updates.completed }),
+				}
 			}
-			return todo;
-	});
-		todos.set(updatedTodos);
-		const updatedTodo = updatedTodos.find(t => t.id === id);
-		return updatedTodo || null;
+			return todo
+		})
+		todos.set(updatedTodos)
+		const updatedTodo = updatedTodos.find((t) => t.id === id)
+		return updatedTodo || null
 	} catch (error) {
-		throw new Error(`Failed to edit todo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+		throw new Error(
+			`Failed to edit todo: ${error instanceof Error ? error.message : 'Unknown error'}`,
+		)
 	}
 }
 
@@ -103,15 +105,17 @@ export async function editTodo(id, updates) {
  */
 export async function toggleTodo(id) {
 	try {
-		const currentTodos = get(todos);
-			const updatedTodos = currentTodos.map(todo => 
-				todo.id === id ? { ...todo, completed: !todo.completed } : todo
-			);
-			todos.set(updatedTodos);
-			const updatedTodo = updatedTodos.find(t => t.id === id);
-		return updatedTodo || null;
+		const currentTodos = get(todos)
+		const updatedTodos = currentTodos.map((todo) =>
+			todo.id === id ? { ...todo, completed: !todo.completed } : todo,
+		)
+		todos.set(updatedTodos)
+		const updatedTodo = updatedTodos.find((t) => t.id === id)
+		return updatedTodo || null
 	} catch (error) {
-		throw new Error(`Failed to toggle todo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+		throw new Error(
+			`Failed to toggle todo: ${error instanceof Error ? error.message : 'Unknown error'}`,
+		)
 	}
 }
 
@@ -122,13 +126,13 @@ export async function toggleTodo(id) {
  */
 export async function deleteTodo(id) {
 	try {
-		const currentTodos = get(todos);
-			const updatedTodos = currentTodos.filter(todo => todo.id !== id);
-			todos.set(updatedTodos);
-		return true;
+		const currentTodos = get(todos)
+		const updatedTodos = currentTodos.filter((todo) => todo.id !== id)
+		todos.set(updatedTodos)
+		return true
 	} catch (error) {
-		throw new Error(`Failed to delete todo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+		throw new Error(
+			`Failed to delete todo: ${error instanceof Error ? error.message : 'Unknown error'}`,
+		)
 	}
 }
-
-

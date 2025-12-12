@@ -2,18 +2,17 @@
  * Todo List Leaf Component
  */
 
-import type { LeafNode } from "../../../compositor/view/leaf-types";
-import { todoItemLeaf } from "./todoItem";
+import type { LeafNode } from '../../../compositor/view/leaf-types'
+import { todoItemLeaf } from './todoItem'
 
 export const todoListLeaf: LeafNode = {
-  tag: "div",
-  classes: ["min-h-[100px]"],
-  bindings: {
-    foreach: {
-      items: "data.todos",
-      key: "id",
-      leaf: todoItemLeaf,
-    },
-  },
-};
-
+	tag: 'div',
+	classes: ['min-h-[100px]'],
+	bindings: {
+		foreach: {
+			items: 'data.todos',
+			key: 'id',
+			leaf: todoItemLeaf,
+		},
+	},
+}

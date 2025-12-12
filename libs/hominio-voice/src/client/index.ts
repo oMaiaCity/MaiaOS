@@ -3,4 +3,4 @@
  * Client-side voice call service
  */
 
-export { createVoiceCallService } from './service.svelte.js';
+export { createVoiceCallService } from './service.svelte.js'

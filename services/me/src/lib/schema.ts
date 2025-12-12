@@ -3,4 +3,4 @@
  * All schemas, functions, and migrations are now in @hominio/data
  */
 
-export * from "@hominio/data";
+export * from '@hominio/data'

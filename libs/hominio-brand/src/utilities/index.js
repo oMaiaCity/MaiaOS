@@ -3,4 +3,4 @@
  * Central export for utility functions
  */
 
-export * from './classes.js';
+export * from './classes.js'

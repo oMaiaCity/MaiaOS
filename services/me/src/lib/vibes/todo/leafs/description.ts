@@ -2,17 +2,16 @@
  * Description Leaf Component
  */
 
-import type { LeafNode } from "../../../compositor/view/leaf-types";
+import type { LeafNode } from '../../../compositor/view/leaf-types'
 
 export const descriptionLeaf: LeafNode = {
-  tag: "div",
-  classes: ["text-center", "mb-4"],
-  children: [
-    {
-      tag: "p",
-      classes: ["text-slate-600"],
-      bindings: { text: "data.description" },
-    },
-  ],
-};
-
+	tag: 'div',
+	classes: ['text-center', 'mb-4'],
+	children: [
+		{
+			tag: 'p',
+			classes: ['text-slate-600'],
+			bindings: { text: 'data.description' },
+		},
+	],
+}

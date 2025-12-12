@@ -3,8 +3,7 @@
  * Exports all composite configurations for easy importing
  */
 
-export { headerComposite } from "./header";
-export { inputSectionComposite } from "./inputSection";
-export { contentComposite } from "./content";
-export { rootComposite } from "./root";
-
+export { contentComposite } from './content'
+export { headerComposite } from './header'
+export { inputSectionComposite } from './inputSection'
+export { rootComposite } from './root'

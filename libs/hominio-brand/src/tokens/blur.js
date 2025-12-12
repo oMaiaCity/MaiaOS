@@ -11,5 +11,4 @@ export const blur = {
 	decorative: {
 		'3xl': '64px', // blur-3xl for blobs
 	},
-};
-
+}

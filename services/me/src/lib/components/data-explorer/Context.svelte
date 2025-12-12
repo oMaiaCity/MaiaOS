@@ -1,28 +1,60 @@
 <script lang="ts">
-  import type { LocalNode } from "cojson";
   import type { CoValueContext } from "@hominio/data";
-  import ListView from "./ListView.svelte";
+  import type { LocalNode } from "cojson";
   import Badge from "./Badge.svelte";
+  import ListView from "./ListView.svelte";
 
   interface Props {
     context: CoValueContext;
     node?: LocalNode;
     onNavigate?: (coValueId: string, label?: string) => void;
+    onObjectNavigate?: (
+      object: any,
+      label: string,
+      parentCoValue: any,
+      parentKey: string,
+    ) => void;
     onBack?: () => void;
     view?: "list" | "table" | "grid";
   }
 
-  let { context, node, onNavigate, onBack, view = "list" }: Props = $props();
+  const {
+    context,
+    node,
+    onNavigate,
+    onObjectNavigate,
+    onBack,
+    view = "list",
+  }: Props = $props();
 
-  const displayType = $derived(context.resolved.extendedType || context.resolved.type || "CoValue");
+  const displayType = $derived(
+    context.resolved.extendedType || context.resolved.type || "CoValue",
+  );
 
   // Derive snapshot and properties (fixes @const error)
   const snapshot = $derived(context.resolved.snapshot);
   const properties = $derived(
-    snapshot && typeof snapshot === "object" && snapshot !== "unavailable" ? snapshot : {},
+    snapshot &&
+      typeof snapshot === "object" &&
+      snapshot !== null &&
+      snapshot !== "unavailable"
+      ? snapshot
+      : {},
   );
 
-  let currentView = $state<"list" | "table">(view);
+  // Derive entries array for table view
+  const entries = $derived(Object.entries(properties));
+
+  // Initialize with default, then sync with prop
+  let currentView = $state<"list" | "table">("list");
+
+  // Sync view prop changes reactively
+  $effect(() => {
+    const viewValue = view;
+    if (viewValue === "list" || viewValue === "table") {
+      currentView = viewValue;
+    }
+  });
 </script>
 
 <div class="w-full">
@@ -36,7 +68,12 @@
           class="p-2 hover:bg-slate-200 rounded-lg transition-colors"
           aria-label="Back"
         >
-          <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            class="w-5 h-5 text-slate-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -83,7 +120,14 @@
   <div class="card p-6">
     <!-- Content Views -->
     {#if currentView === "list"}
-      <ListView {properties} {node} directChildren={context.directChildren} {onNavigate} />
+      <ListView
+        {properties}
+        {node}
+        directChildren={context.directChildren}
+        {onNavigate}
+        {onObjectNavigate}
+        parentCoValue={context.resolved.snapshot}
+      />
     {:else if currentView === "table"}
       <!-- Table View -->
       <div class="overflow-x-auto border border-slate-300 rounded-lg">
@@ -108,15 +152,27 @@
             </tr>
           </thead>
           <tbody>
-            {#each Object.entries(properties) as [key, value]}
+            {#each entries as [key, value]}
               {#if typeof value === "string" && value.startsWith("co_")}
-                {@const child = context.directChildren.find((c) => c.key === key)}
-                <tr class="border-b border-slate-200 hover:bg-slate-50 transition-colors">
-                  <td class="p-3 text-sm font-medium text-slate-700 font-mono">{key}</td>
+                {@const child = context.directChildren.find(
+                  (c) => c.key === key,
+                )}
+                <tr
+                  class="border-b border-slate-200 hover:bg-slate-50 transition-colors"
+                >
+                  <td class="p-3 text-sm font-medium text-slate-700 font-mono"
+                    >{key}</td
+                  >
                   <td class="p-3">
                     {#if child?.resolved}
-                      <Badge type={child.resolved.extendedType || child.resolved.type || "CoValue"}>
-                        {child.resolved.extendedType || child.resolved.type || "CoValue"}
+                      <Badge
+                        type={child.resolved.extendedType ||
+                          child.resolved.type ||
+                          "CoValue"}
+                      >
+                        {child.resolved.extendedType ||
+                          child.resolved.type ||
+                          "CoValue"}
                       </Badge>
                     {:else}
                       <Badge type="CoValue">CoValue</Badge>
@@ -132,13 +188,19 @@
                         {value}
                       </button>
                     {:else}
-                      <span class="text-xs font-mono text-slate-600">{value}</span>
+                      <span class="text-xs font-mono text-slate-600"
+                        >{value}</span
+                      >
                     {/if}
                   </td>
                 </tr>
               {:else}
-                <tr class="border-b border-slate-200 hover:bg-slate-50 transition-colors">
-                  <td class="p-3 text-sm font-medium text-slate-700 font-mono">{key}</td>
+                <tr
+                  class="border-b border-slate-200 hover:bg-slate-50 transition-colors"
+                >
+                  <td class="p-3 text-sm font-medium text-slate-700 font-mono"
+                    >{key}</td
+                  >
                   <td class="p-3">
                     <Badge type={typeof value}>{typeof value}</Badge>
                   </td>

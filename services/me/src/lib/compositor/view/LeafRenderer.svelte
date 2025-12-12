@@ -4,14 +4,12 @@
   Handles data bindings, events, and list rendering
 -->
 <script lang="ts">
-  import { browser } from "$app/environment";
-  import { goto } from "$app/navigation";
-  import Icon from "@iconify/svelte";
-  import type { LeafNode } from "./leaf-types";
   import type { Data } from "../dataStore";
+  import type { LeafNode } from "./leaf-types";
   import { resolveDataPath } from "./resolver";
   import { sanitizeClasses } from "./whitelist";
   import LeafRenderer from "./LeafRenderer.svelte";
+  import Icon from "@iconify/svelte";
 
   interface Props {
     leaf: LeafNode;
@@ -19,7 +17,7 @@
     onEvent?: (event: string, payload?: unknown) => void;
   }
 
-  let { leaf, data, onEvent }: Props = $props();
+  const { leaf, data, onEvent }: Props = $props();
 
   // Resolve data path to value or evaluate expression
   function resolveValue(path: string): unknown {
@@ -42,7 +40,10 @@
       // Evaluate JavaScript expression in the context of data
       try {
         // Extract item from data if it exists (for foreach contexts)
-        const item = "item" in data && data.item ? (data.item as Record<string, unknown>) : {};
+        const item =
+          "item" in data && data.item
+            ? (data.item as Record<string, unknown>)
+            : {};
 
         // Access all item properties to ensure reactivity tracking
         // This ensures Svelte tracks changes to any nested properties
@@ -76,7 +77,10 @@
           // Replace 'data.property' with just 'property' in the expression
           let expression = path;
           dataKeys.forEach((key) => {
-            expression = expression.replace(new RegExp(`data\\.${key}`, "g"), key);
+            expression = expression.replace(
+              new RegExp(`data\\.${key}`, "g"),
+              key,
+            );
           });
 
           // Use Function constructor for safer evaluation than eval
@@ -91,8 +95,13 @@
           );
           const result = func(...dataValues, item, String, Number);
           // Debug logging for disabled state
-          if (path.includes("selectedRecipient") || path.includes("sendAmount")) {
-            const valuesObj = Object.fromEntries(dataKeys.map((k, i) => [k, dataValues[i]]));
+          if (
+            path.includes("selectedRecipient") ||
+            path.includes("sendAmount")
+          ) {
+            const valuesObj = Object.fromEntries(
+              dataKeys.map((k, i) => [k, dataValues[i]]),
+            );
             console.log(
               `[Disabled Expression] Expression: ${expression}, Result:`,
               result,
@@ -150,10 +159,21 @@
               "isNaN",
               `return ${path}`,
             );
-            const result = func(...dataValues, item, String, Number, isNaN);
+            const result = func(
+              ...dataValues,
+              item,
+              String,
+              Number,
+              Number.isNaN,
+            );
             // Debug logging for disabled state
-            if (path.includes("selectedRecipient") || path.includes("sendAmount")) {
-              const valuesObj = Object.fromEntries(dataKeys.map((k, i) => [k, dataValues[i]]));
+            if (
+              path.includes("selectedRecipient") ||
+              path.includes("sendAmount")
+            ) {
+              const valuesObj = Object.fromEntries(
+                dataKeys.map((k, i) => [k, dataValues[i]]),
+              );
               console.log(
                 `[Disabled Expression] Expression: ${path}, Result:`,
                 result,
@@ -165,13 +185,18 @@
           } else {
             // Expression only references 'item' (for foreach contexts)
             // Use Function constructor for safer evaluation than eval
-            const func = new Function("item", "String", "Number", "isNaN", `return ${path}`);
-            const result = func(item, String, Number, isNaN);
+            const func = new Function(
+              "item",
+              "String",
+              "Number",
+              "isNaN",
+              `return ${path}`,
+            );
+            const result = func(item, String, Number, Number.isNaN);
             return result;
           }
         }
-      } catch (error) {
-        console.warn(`Failed to evaluate expression "${path}":`, error);
+      } catch (_error) {
         return false;
       }
     }
@@ -181,7 +206,11 @@
 
   // Resolve payload (can be data path string or object)
   function resolvePayload(
-    payload: Record<string, unknown> | string | ((data: unknown) => unknown) | undefined,
+    payload:
+      | Record<string, unknown>
+      | string
+      | ((data: unknown) => unknown)
+      | undefined,
     itemData?: Record<string, unknown>,
   ): unknown {
     if (!payload) return undefined;
@@ -228,7 +257,9 @@
     // If itemData is not provided but we're in a foreach context, extract it from data
     const contextItemData =
       itemData ||
-      ("item" in data && data.item ? (data.item as Record<string, unknown>) : undefined);
+      ("item" in data && data.item
+        ? (data.item as Record<string, unknown>)
+        : undefined);
     const payload = resolvePayload(eventConfig.payload, contextItemData);
 
     onEvent(eventConfig.event, payload);
@@ -240,7 +271,10 @@
 
     // Resolve dynamic classes (e.g., classes that reference data/item)
     const resolvedClasses = leaf.classes.map((cls) => {
-      if (typeof cls === "string" && (cls.includes("item.") || cls.includes("data."))) {
+      if (
+        typeof cls === "string" &&
+        (cls.includes("item.") || cls.includes("data."))
+      ) {
         // Try to resolve as data path or expression
         const resolved = resolveValue(cls);
         return typeof resolved === "string" ? resolved : cls;
@@ -252,7 +286,7 @@
   });
 
   // Resolve bindings - ensure we access data to trigger reactivity
-  const boundValue = $derived.by(() => {
+  const _boundValue = $derived.by(() => {
     if (!leaf.bindings?.value) return undefined;
     const _ = data; // Access data to ensure reactivity
     return resolveValue(leaf.bindings.value);
@@ -278,7 +312,9 @@
     }
     return resolveValue(leaf.bindings.visible);
   });
-  const isVisible = $derived(visibleValue === undefined ? true : Boolean(visibleValue));
+  const isVisible = $derived(
+    visibleValue === undefined ? true : Boolean(visibleValue),
+  );
 
   const disabledValue = $derived.by(() => {
     if (!leaf.bindings?.disabled) return undefined;
@@ -301,7 +337,9 @@
     // Evaluate the expression with current data values
     return resolveValue(leaf.bindings.disabled);
   });
-  const isDisabled = $derived(disabledValue === undefined ? false : Boolean(disabledValue));
+  const isDisabled = $derived(
+    disabledValue === undefined ? false : Boolean(disabledValue),
+  );
   const foreachItems = $derived.by(() => {
     if (!leaf.bindings?.foreach) return undefined;
 
@@ -356,7 +394,9 @@
     // Directly access the property from data to ensure Svelte tracks it
     const dataPath = leaf.bindings.value;
     // Remove "data." prefix if present (e.g., "data.newTodoText" -> "newTodoText")
-    const propName = dataPath.startsWith("data.") ? dataPath.slice(5) : dataPath;
+    const propName = dataPath.startsWith("data.")
+      ? dataPath.slice(5)
+      : dataPath;
 
     // Access the entire data object first to ensure reactivity
     const currentData = data;
@@ -371,7 +411,10 @@
   });
 
   const attributes = $derived.by(() => {
-    const attrs: Record<string, string | boolean | number | ((e: Event) => void)> = {
+    const attrs: Record<
+      string,
+      string | boolean | number | ((e: Event) => void)
+    > = {
       ...leaf.attributes,
     };
 
@@ -423,14 +466,20 @@
         // Always send the input value in the payload
         const payload: Record<string, unknown> = eventConfig.payload
           ? {
-              ...(typeof eventConfig.payload === "object" && !Array.isArray(eventConfig.payload)
+              ...(typeof eventConfig.payload === "object" &&
+              !Array.isArray(eventConfig.payload)
                 ? (eventConfig.payload as Record<string, unknown>)
                 : {}),
               [payloadKey]: target.value,
             }
           : { [payloadKey]: target.value };
 
-        console.log("[Input Event]", eventConfig.event, "fired with payload:", payload);
+        console.log(
+          "[Input Event]",
+          eventConfig.event,
+          "fired with payload:",
+          payload,
+        );
 
         if (onEvent) {
           onEvent(eventConfig.event, payload);
@@ -453,7 +502,9 @@
   {@const keyProp = foreachConfig.key || "_index"}
   {#if isVoidElement}
     <!-- Void elements cannot be containers for foreach -->
-    <div class="text-red-500">Error: Cannot use void element '{leaf.tag}' as foreach container</div>
+    <div class="text-red-500">
+      Error: Cannot use void element '{leaf.tag}' as foreach container
+    </div>
   {:else}
     <svelte:element
       this={leaf.tag}
@@ -491,13 +542,20 @@
         : undefined}
     >
       {#each foreachItems as item, index (typeof item === "object" && item !== null && keyProp in item ? String((item as Record)[keyProp]) : index)}
-        {@const itemData = typeof item === "object" && item !== null ? item : {}}
+        {@const itemData =
+          typeof item === "object" && item !== null ? item : {}}
         <!-- Access all item properties to ensure reactivity when any property changes -->
         {@const itemRecord = itemData as Record}
         {#if itemRecord}
-          {@const _ = Object.keys(itemRecord).map((key) => (itemRecord as Record)[key])}
+          {@const _ = Object.keys(itemRecord).map(
+            (key) => (itemRecord as Record)[key],
+          )}
         {/if}
-        <LeafRenderer leaf={foreachConfig.leaf} data={{ ...data, item: itemData }} {onEvent} />
+        <LeafRenderer
+          leaf={foreachConfig.leaf}
+          data={{ ...data, item: itemData }}
+          {onEvent}
+        />
       {/each}
     </svelte:element>
   {/if}
@@ -512,12 +570,18 @@
         e.stopPropagation();
         return;
       }
-      if (leaf.tag === "div" && classes.includes("fixed") && e.target !== e.currentTarget) {
+      if (
+        leaf.tag === "div" &&
+        classes.includes("fixed") &&
+        e.target !== e.currentTarget
+      ) {
         return;
       }
       handleEvent(leaf.events.click);
     }}
-    onchange={leaf.events?.change ? () => handleEvent(leaf.events!.change!) : undefined}
+    onchange={leaf.events?.change
+      ? () => handleEvent(leaf.events!.change!)
+      : undefined}
     onsubmit={leaf.events?.submit
       ? (e: Event) => {
           e.preventDefault();
@@ -530,10 +594,18 @@
             e.dataTransfer.effectAllowed = "move";
             // Store the item ID in dataTransfer for drop event
             // Extract itemData from data if in foreach context
-            const contextItemData = "item" in data && data.item ? (data.item as Record) : undefined;
-            const payload = resolvePayload(leaf.events!.dragstart!.payload, contextItemData);
+            const contextItemData =
+              "item" in data && data.item ? (data.item as Record) : undefined;
+            const payload = resolvePayload(
+              leaf.events!.dragstart!.payload,
+              contextItemData,
+            );
 
-            if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+            if (
+              payload &&
+              typeof payload === "object" &&
+              !Array.isArray(payload)
+            ) {
               // Always use "id" property - standardized across the stack
               const payloadObj = payload as Record;
               if ("id" in payloadObj) {
@@ -556,7 +628,9 @@
           // Don't call handleEvent on dragover - just allow the drop
         }
       : undefined}
-    ondragleave={leaf.events?.dragleave ? () => handleEvent(leaf.events!.dragleave!) : undefined}
+    ondragleave={leaf.events?.dragleave
+      ? () => handleEvent(leaf.events!.dragleave!)
+      : undefined}
     ondrop={leaf.events?.drop
       ? (e: DragEvent) => {
           e.preventDefault();
@@ -569,7 +643,9 @@
           if (draggedId && dropPayload && typeof dropPayload === "object") {
             // Merge dragged ID with drop payload properties
             // Extract the ID property name from the dragstart payload if available
-            const dragStartPayload = resolvePayload(leaf.events!.dragstart?.payload);
+            const dragStartPayload = resolvePayload(
+              leaf.events!.dragstart?.payload,
+            );
             let idKey = "id"; // Default key
 
             // Try to infer the ID key from the dragstart payload
@@ -593,7 +669,9 @@
           }
         }
       : undefined}
-    ondragend={leaf.events?.dragend ? () => handleEvent(leaf.events!.dragend!) : undefined}
+    ondragend={leaf.events?.dragend
+      ? () => handleEvent(leaf.events!.dragend!)
+      : undefined}
     onkeydown={leaf.events?.keydown
       ? (e: KeyboardEvent) => {
           if (e.key === "Escape") {
@@ -601,9 +679,15 @@
           }
         }
       : undefined}
-    onkeyup={leaf.events?.keyup ? () => handleEvent(leaf.events!.keyup!) : undefined}
-    onfocus={leaf.events?.focus ? () => handleEvent(leaf.events!.focus!) : undefined}
-    onblur={leaf.events?.blur ? () => handleEvent(leaf.events!.blur!) : undefined}
+    onkeyup={leaf.events?.keyup
+      ? () => handleEvent(leaf.events!.keyup!)
+      : undefined}
+    onfocus={leaf.events?.focus
+      ? () => handleEvent(leaf.events!.focus!)
+      : undefined}
+    onblur={leaf.events?.blur
+      ? () => handleEvent(leaf.events!.blur!)
+      : undefined}
   />
 {:else if leaf.tag === "icon" && leaf.icon}
   <!-- Iconify icon rendering -->
@@ -615,7 +699,10 @@
   {@const iconClasses = leaf.icon.classes
     ? leaf.icon.classes.map((cls) => {
         // Resolve dynamic classes (e.g., "item.categoryColor")
-        if (typeof cls === "string" && (cls.includes("item.") || cls.includes("data."))) {
+        if (
+          typeof cls === "string" &&
+          (cls.includes("item.") || cls.includes("data."))
+        ) {
           return String(resolveValue(cls));
         }
         return cls;
@@ -629,21 +716,26 @@
   {@const iconStyle = iconColor ? `color: ${iconColor}` : undefined}
   <Icon
     icon={iconName}
-    class={iconClasses.length > 0 ? sanitizeClasses(iconClasses).join(" ") : "w-4 h-4"}
+    class={iconClasses.length > 0
+      ? sanitizeClasses(iconClasses).join(" ")
+      : "w-4 h-4"}
     style={iconStyle}
     {...attributes}
   />
 {:else}
   <!-- Regular element rendering -->
   {@const baseHref =
-    leaf.tag === "a" && leaf.attributes?.href && typeof leaf.attributes.href === "string"
+    leaf.tag === "a" &&
+    leaf.attributes?.href &&
+    typeof leaf.attributes.href === "string"
       ? leaf.attributes.href
       : undefined}
   {@const resolvedHref =
     baseHref && baseHref.endsWith("=") && "item" in data && data.item
       ? baseHref + String((data.item as Record).id || "")
       : baseHref}
-  {@const isInternalLink = leaf.tag === "a" && resolvedHref && resolvedHref.startsWith("/")}
+  {@const isInternalLink =
+    leaf.tag === "a" && resolvedHref && resolvedHref.startsWith("/")}
   {@const finalAttributes =
     leaf.tag === "a" && resolvedHref
       ? { ...attributes, href: isInternalLink ? "#" : resolvedHref }
@@ -670,7 +762,11 @@
       }
 
       // For modal backdrop (fixed div), only trigger if clicking the backdrop itself
-      if (leaf.tag === "div" && classes.includes("fixed") && e.target !== e.currentTarget) {
+      if (
+        leaf.tag === "div" &&
+        classes.includes("fixed") &&
+        e.target !== e.currentTarget
+      ) {
         // Clicked inside modal content - don't close
         return;
       }
@@ -703,7 +799,8 @@
                 : "text";
           const payload: Record = eventConfig.payload
             ? {
-                ...(typeof eventConfig.payload === "object" && !Array.isArray(eventConfig.payload)
+                ...(typeof eventConfig.payload === "object" &&
+                !Array.isArray(eventConfig.payload)
                   ? (eventConfig.payload as Record)
                   : {}),
                 [payloadKey]: target.value,
@@ -723,7 +820,9 @@
           }
         }
       : undefined}
-    onchange={leaf.events?.change ? () => handleEvent(leaf.events!.change!) : undefined}
+    onchange={leaf.events?.change
+      ? () => handleEvent(leaf.events!.change!)
+      : undefined}
     onsubmit={leaf.events?.submit
       ? (e: Event) => {
           e.preventDefault();
@@ -736,10 +835,18 @@
             e.dataTransfer.effectAllowed = "move";
             // Store the item ID in dataTransfer for drop event
             // Extract itemData from data if in foreach context
-            const contextItemData = "item" in data && data.item ? (data.item as Record) : undefined;
-            const payload = resolvePayload(leaf.events!.dragstart!.payload, contextItemData);
+            const contextItemData =
+              "item" in data && data.item ? (data.item as Record) : undefined;
+            const payload = resolvePayload(
+              leaf.events!.dragstart!.payload,
+              contextItemData,
+            );
 
-            if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+            if (
+              payload &&
+              typeof payload === "object" &&
+              !Array.isArray(payload)
+            ) {
               // Always use "id" property - standardized across the stack
               const payloadObj = payload as Record;
               if ("id" in payloadObj) {
@@ -762,7 +869,9 @@
           // Don't call handleEvent on dragover - just allow the drop
         }
       : undefined}
-    ondragleave={leaf.events?.dragleave ? () => handleEvent(leaf.events!.dragleave!) : undefined}
+    ondragleave={leaf.events?.dragleave
+      ? () => handleEvent(leaf.events!.dragleave!)
+      : undefined}
     ondrop={leaf.events?.drop
       ? (e: DragEvent) => {
           e.preventDefault();
@@ -775,7 +884,9 @@
           if (draggedId && dropPayload && typeof dropPayload === "object") {
             // Merge dragged ID with drop payload properties
             // Extract the ID property name from the dragstart payload if available
-            const dragStartPayload = resolvePayload(leaf.events!.dragstart?.payload);
+            const dragStartPayload = resolvePayload(
+              leaf.events!.dragstart?.payload,
+            );
             let idKey = "id"; // Default key
 
             // Try to infer the ID key from the dragstart payload
@@ -799,7 +910,9 @@
           }
         }
       : undefined}
-    ondragend={leaf.events?.dragend ? () => handleEvent(leaf.events!.dragend!) : undefined}
+    ondragend={leaf.events?.dragend
+      ? () => handleEvent(leaf.events!.dragend!)
+      : undefined}
     onkeydown={leaf.events?.keydown
       ? (e: KeyboardEvent) => {
           if (e.key === "Escape") {
@@ -807,9 +920,15 @@
           }
         }
       : undefined}
-    onkeyup={leaf.events?.keyup ? () => handleEvent(leaf.events!.keyup!) : undefined}
-    onfocus={leaf.events?.focus ? () => handleEvent(leaf.events!.focus!) : undefined}
-    onblur={leaf.events?.blur ? () => handleEvent(leaf.events!.blur!) : undefined}
+    onkeyup={leaf.events?.keyup
+      ? () => handleEvent(leaf.events!.keyup!)
+      : undefined}
+    onfocus={leaf.events?.focus
+      ? () => handleEvent(leaf.events!.focus!)
+      : undefined}
+    onblur={leaf.events?.blur
+      ? () => handleEvent(leaf.events!.blur!)
+      : undefined}
   >
     {#if !isVoidElement}
       {#if boundText !== undefined}
