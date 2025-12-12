@@ -416,6 +416,8 @@
                   context={metadataContext}
                   node={node()}
                   {currentAccount}
+                  onNavigate={(coValueId, label) =>
+                    navigateToCoValue(coValueId as CoID, label)}
                 />
               </aside>
             </div>

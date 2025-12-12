@@ -73,7 +73,7 @@ export const Contact = co.map({
 
 /** SchemaDefinition schema - stores JSON Schema definitions as CoMaps with their entity instances */
 export const SchemaDefinition = co.map({
-	'@schema': z.string().optional(), // Set to "Schema" for schema CoValues via setSystemProps
+	'@schema': co.map({}).optional(), // Reference to SchemaDefinition CoValue (meta-schema references itself, entities reference their schema)
 	name: z.string(),
 	definition: z.object({}).passthrough(), // JSON Schema object (flexible structure - allows any properties)
 	entities: co.list(co.map({})), // Generic entities list - stores instances of this schema

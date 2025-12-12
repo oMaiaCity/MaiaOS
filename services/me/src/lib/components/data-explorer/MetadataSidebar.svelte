@@ -15,9 +15,10 @@
     context: CoValueContext;
     node?: LocalNode;
     currentAccount?: any; // Current Jazz account for profile resolution
+    onNavigate?: (coValueId: string, label?: string) => void; // Navigation handler for CoValue references
   }
 
-  const { context, node, currentAccount }: Props = $props();
+  const { context, node, currentAccount, onNavigate }: Props = $props();
 
   // Tab state: "members" (default) or "info"
   let activeTab = $state<"members" | "info">("members");
@@ -256,17 +257,69 @@
           <PropertyItem
             propKey="@LABEL"
             propValue={snapshot['@label'] || ''}
-            hideBadge={false}
-            badgeType="string"
+            hideBadge={true}
           />
         {/if}
         {#if snapshot && '@schema' in snapshot}
-          <PropertyItem
-            propKey="@SCHEMA"
-            propValue={snapshot['@schema'] || ''}
-            hideBadge={false}
-            badgeType="string"
-          />
+          {@const schemaRef = snapshot['@schema']}
+          {@const isSchemaCoValueObject = schemaRef && typeof schemaRef === 'object' && '$jazz' in schemaRef}
+          {@const isSchemaCoID = typeof schemaRef === 'string' && schemaRef.startsWith('co_')}
+          {@const schemaId = isSchemaCoValueObject && schemaRef.$jazz?.id ? schemaRef.$jazz.id : (isSchemaCoID ? schemaRef : undefined)}
+          
+          <!-- Find schema in directChildren to get resolved info -->
+          {@const schemaChild = schemaId ? context.directChildren.find((c) => c.coValueId === schemaId) : null}
+          {@const schemaResolved = schemaChild?.resolved}
+          {@const schemaName = schemaResolved?.snapshot && typeof schemaResolved.snapshot === 'object' && 'name' in schemaResolved.snapshot ? schemaResolved.snapshot.name : (isSchemaCoValueObject && schemaRef.$isLoaded && schemaRef.name ? schemaRef.name : (typeof schemaRef === 'string' && !schemaRef.startsWith('co_') ? schemaRef : 'Schema'))}
+          
+          {@const isClickable = !!schemaId && onNavigate !== undefined}
+          
+          {#if isClickable}
+            <!-- Clickable schema reference -->
+            <button
+              type="button"
+              onclick={() => {
+                if (schemaId && onNavigate) {
+                  onNavigate(schemaId, schemaName);
+                }
+              }}
+              class="w-full text-left cursor-pointer group"
+              title={`Navigate to schema: ${schemaName}`}
+            >
+              <div class="relative">
+                <PropertyItem
+                  propKey="@SCHEMA"
+                  propValue={schemaName}
+                  hideBadge={true}
+                  showCopyButton={true}
+                  copyValue={schemaId}
+                  hoverable={true}
+                />
+                <!-- Arrow icon indicator -->
+                <svg
+                  class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-hover:text-slate-600 transition-colors pointer-events-none"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </div>
+            </button>
+          {:else}
+            <!-- Non-clickable schema (no navigation handler or old string format) -->
+            <PropertyItem
+              propKey="@SCHEMA"
+              propValue={schemaName}
+              hideBadge={true}
+              showCopyButton={!!schemaId}
+              copyValue={schemaId}
+            />
+          {/if}
         {/if}
 
         <PropertyItem

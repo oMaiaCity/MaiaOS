@@ -67,12 +67,28 @@ class ComputedFieldRegistry {
 			return []
 		}
 
-		// Get schema type if available
-		const schemaType = coValue.$jazz.has('@schema') ? coValue['@schema'] : undefined
+		// Get schema type if available - handle both CoValue references and string values (for backward compatibility)
+		let schemaType: string | undefined = undefined
+		if (coValue.$jazz.has('@schema')) {
+			const schemaRef = coValue['@schema']
+			// Check if it's a CoValue reference (has $jazz property) or a string
+			if (schemaRef && typeof schemaRef === 'object' && '$jazz' in schemaRef) {
+				// It's a CoValue reference - get the schema name synchronously if loaded
+				// Note: If not loaded, we'll skip schemaType filtering (applies to all)
+				if (schemaRef.$isLoaded && schemaRef.name) {
+					schemaType = schemaRef.name
+				}
+				// If not loaded, schemaType remains undefined and all definitions are considered
+			} else if (typeof schemaRef === 'string') {
+				// Backward compatibility: old string format
+				schemaType = schemaRef
+			}
+		}
 
 		return this.definitions.filter((def) => {
 			// If schemaType is specified, only apply to matching schemas
-			if (def.schemaType && def.schemaType !== schemaType) {
+			// If schemaType is undefined (schema not loaded yet), apply all definitions
+			if (def.schemaType && schemaType && def.schemaType !== schemaType) {
 				return false
 			}
 			

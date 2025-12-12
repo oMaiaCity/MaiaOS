@@ -39,8 +39,8 @@ function addLabelToSchema(jsonSchema: any): any {
 	// Add @schema if it doesn't exist (but don't add it to required array)
 	if (!modifiedSchema.properties['@schema']) {
 		modifiedSchema.properties['@schema'] = {
-			type: 'string',
-			description: 'Schema type identifier (e.g., "Schema" for schemas, schema name for entities)',
+			type: 'o-map',
+			description: 'Reference to SchemaDefinition CoValue (meta-schema references itself, entities reference their schema definition)',
 		}
 		// Note: @schema is NOT added to required array since it's set via setSystemProps
 	}
@@ -256,8 +256,8 @@ const SchemaMetaSchema = {
 			description: 'Computed display label for this schema',
 		},
 		'@schema': {
-			type: 'string',
-			description: 'Schema type identifier (e.g., "Schema" for schemas, schema name for entities)',
+			type: 'o-map',
+			description: 'Reference to SchemaDefinition CoValue (meta-schema references itself, entities reference their schema definition)',
 		},
 		name: {
 			type: 'string',
@@ -358,9 +358,9 @@ async function ensureMetaSchema(account: any): Promise<any> {
 	)
 	await metaSchema.$jazz.waitForSync()
 
-	// Set system properties (@label and @schema)
+	// Set system properties (@label and @schema) - meta-schema references itself
 	const { setSystemProps } = await import('../functions/set-system-props.js')
-	await setSystemProps(metaSchema, 'Schema')
+	await setSystemProps(metaSchema, metaSchema)
 
 	// Add meta-schema to data list
 	dataList.$jazz.push(metaSchema)
@@ -494,8 +494,8 @@ export async function ensureSchema(
 			}
 			if (!nestedProperties['@schema']) {
 				nestedProperties['@schema'] = {
-					type: 'string',
-					description: 'Schema type identifier',
+					type: 'o-map',
+					description: 'Reference to SchemaDefinition CoValue',
 				}
 			}
 
@@ -517,9 +517,10 @@ export async function ensureSchema(
 			)
 			await nestedSchemaDefinition.$jazz.waitForSync()
 
-			// Set system properties (@label and @schema)
+			// Set system properties (@label and @schema) - nested schema references meta-schema
 			const { setSystemProps } = await import('../functions/set-system-props.js')
-			await setSystemProps(nestedSchemaDefinition, 'Schema')
+			const metaSchema = await ensureMetaSchema(account)
+			await setSystemProps(nestedSchemaDefinition, metaSchema)
 
 			// Add to data list
 			dataList.$jazz.push(nestedSchemaDefinition)
@@ -558,9 +559,10 @@ export async function ensureSchema(
 	)
 	await newSchema.$jazz.waitForSync()
 
-	// Set system properties (@label and @schema)
+	// Set system properties (@label and @schema) - schema references meta-schema
 	const { setSystemProps } = await import('../functions/set-system-props.js')
-	await setSystemProps(newSchema, 'Schema')
+	const metaSchema = await ensureMetaSchema(account)
+	await setSystemProps(newSchema, metaSchema)
 
 	// Add SchemaDefinition to data list
 	dataList.$jazz.push(newSchema)
@@ -621,9 +623,9 @@ export async function createEntity(
 		await entityInstance.$jazz.ensureLoaded({ resolve: {} })
 	}
 
-	// Set system properties (@label and @schema) - @schema should be the schema name
+	// Set system properties (@label and @schema) - entity references its schema definition
 	const { setSystemProps } = await import('../functions/set-system-props.js')
-	await setSystemProps(entityInstance, schemaName)
+	await setSystemProps(entityInstance, schema)
 
 	// Add entity instance to entities list
 	entitiesList.$jazz.push(entityInstance)

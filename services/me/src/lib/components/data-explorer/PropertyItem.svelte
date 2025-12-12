@@ -9,6 +9,7 @@
     hideBadge?: boolean;
     hideValue?: boolean;
     badgeType?: string;
+    hoverable?: boolean; // If true, border changes on parent hover
   }
 
   const {
@@ -19,6 +20,7 @@
     hideBadge = false,
     hideValue = false,
     badgeType,
+    hoverable = false,
   }: Props = $props();
 
   async function copyToClipboard() {
@@ -37,7 +39,7 @@
   }
 </script>
 
-<div class="flex justify-between items-center gap-2 bg-slate-100 rounded-2xl p-3 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm">
+<div class="flex justify-between items-center gap-2 bg-slate-100 rounded-2xl p-3 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm {hoverable ? 'group-hover:border-slate-300 transition-colors' : ''}">
   <!-- Left side: Prop Key -->
   <div class="flex items-center gap-1.5 flex-shrink-0 min-w-0">
     <span class="text-xs font-medium text-slate-500 uppercase tracking-wide truncate"
