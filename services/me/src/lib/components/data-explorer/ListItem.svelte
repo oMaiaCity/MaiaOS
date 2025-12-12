@@ -71,7 +71,7 @@
   type="button"
   class="w-full text-left bg-slate-100 rounded-2xl p-3 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm hoverable {isClickable &&
   !isLoading
-    ? 'cursor-pointer hover:bg-slate-200'
+    ? 'cursor-pointer hover:border-slate-300'
     : 'cursor-default'}"
   onclick={() => {
     // Prevent navigation during loading

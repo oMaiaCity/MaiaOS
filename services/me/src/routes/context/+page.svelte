@@ -391,28 +391,26 @@
           {#if metadataContext}
             <div class="w-80 shrink-0">
               <aside class="sticky top-6">
-                <!-- Metadata Title (outside card, like legacy) - matching main content header spacing exactly -->
+                <!-- Metadata Title (matching main content header spacing exactly) -->
                 <div class="mb-6">
-                  <div class="mb-2">
-                    <h2
-                      class="text-lg font-semibold text-slate-700 flex items-center justify-end gap-2 m-0"
+                  <h2
+                    class="text-lg font-semibold text-slate-700 flex items-center justify-end gap-2 m-0"
+                  >
+                    <span>Metadata</span>
+                    <svg
+                      class="w-5 h-5 text-slate-700"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      <span>Metadata</span>
-                      <svg
-                        class="w-5 h-5 text-slate-700"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                    </h2>
-                  </div>
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </h2>
                 </div>
                 <MetadataSidebar
                   context={metadataContext}
