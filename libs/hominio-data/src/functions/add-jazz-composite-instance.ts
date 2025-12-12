@@ -30,37 +30,7 @@ async function addToNestedSchemaEntities(
 	refPath: string,
 	coValueInstance: any,
 ): Promise<void> {
-	// #region agent log
-	fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			location: 'add-jazz-composite-instance.ts:addToNestedSchemaEntities:entry',
-			message: 'Adding to nested schema entities',
-			data: { schemaName, refPath, coValueId: coValueInstance?.$jazz?.id },
-			timestamp: Date.now(),
-			sessionId: 'debug-session',
-			hypothesisId: 'B',
-		}),
-	}).catch(() => {})
-	// #endregion
-
 	const nestedSchemaName = getNestedSchemaName(schemaName, refPath)
-
-	// #region agent log
-	fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			location: 'add-jazz-composite-instance.ts:addToNestedSchemaEntities:before-find',
-			message: 'About to find nested schema',
-			data: { nestedSchemaName, refPath },
-			timestamp: Date.now(),
-			sessionId: 'debug-session',
-			hypothesisId: 'B',
-		}),
-	}).catch(() => {})
-	// #endregion
 
 	// Ensure root is synced before finding nested schema
 	await account.$jazz.ensureLoaded({ resolve: { root: true } })
@@ -68,80 +38,16 @@ async function addToNestedSchemaEntities(
 	const nestedSchema = await findNestedSchema(account, nestedSchemaName)
 
 	if (!nestedSchema) {
-		// #region agent log
-		fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				location: 'add-jazz-composite-instance.ts:addToNestedSchemaEntities:not-found',
-				message: 'Nested schema not found',
-				data: { nestedSchemaName, refPath },
-				timestamp: Date.now(),
-				sessionId: 'debug-session',
-				hypothesisId: 'B',
-			}),
-		}).catch(() => {})
 		return
 	}
 
 	const nestedEntitiesList = nestedSchema.entities
 	if (!nestedEntitiesList) {
-		// #region agent log
-		fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				location: 'add-jazz-composite-instance.ts:addToNestedSchemaEntities:no-entities',
-				message: 'Nested schema has no entities list',
-				data: { nestedSchemaName },
-				timestamp: Date.now(),
-				sessionId: 'debug-session',
-				hypothesisId: 'B',
-			}),
-		}).catch(() => {})
 		return
 	}
 
-	// #region agent log
-	fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			location: 'add-jazz-composite-instance.ts:addToNestedSchemaEntities:before-push',
-			message: 'Before pushing to entities',
-			data: {
-				nestedSchemaName,
-				coValueId: coValueInstance.$jazz.id,
-				entitiesListLength: Array.from(nestedEntitiesList).length,
-			},
-			timestamp: Date.now(),
-			sessionId: 'debug-session',
-			hypothesisId: 'B',
-		}),
-	}).catch(() => {})
-	// #endregion
-
 	nestedEntitiesList.$jazz.push(coValueInstance)
 	await nestedEntitiesList.$jazz.waitForSync()
-
-	// #region agent log
-	fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			location: 'add-jazz-composite-instance.ts:addToNestedSchemaEntities:after-push',
-			message: 'After pushing to entities',
-			data: {
-				nestedSchemaName,
-				coValueId: coValueInstance.$jazz.id,
-				entitiesListLength: Array.from(nestedEntitiesList).length,
-			},
-			timestamp: Date.now(),
-			sessionId: 'debug-session',
-			hypothesisId: 'B',
-		}),
-	}).catch(() => {})
-	// #endregion
 }
 
 /**
@@ -367,24 +273,6 @@ export async function addJazzCompositeInstance(account: any): Promise<any> {
 	// Add entity instance to entities list
 	entitiesList.$jazz.push(entityInstance)
 	await account.$jazz.ensureLoaded({ resolve: { root: true } })
-
-	// #region agent log
-	fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			location: 'add-jazz-composite-instance.ts:addJazzCompositeInstance:before-return',
-			message: 'Before returning instance',
-			data: {
-				entityInstanceId: entityInstance?.$jazz?.id,
-				mainEntitiesCount: Array.from(entitiesList).length,
-			},
-			timestamp: Date.now(),
-			sessionId: 'debug-session',
-			hypothesisId: 'C',
-		}),
-	}).catch(() => {})
-	// #endregion
 
 	// Note: The entity's nested CoValue properties are already created and linked
 	// They will be loaded when navigating to the entity in the data explorer

@@ -214,14 +214,14 @@
                             />
                           </svg>
                         {:else}
-                          <span class="text-xs text-slate-600 break-all min-w-0">
+                          <span
+                            class="text-xs text-slate-600 break-all min-w-0"
+                          >
                             {typeof value === "object" &&
                             value !== null &&
                             !Array.isArray(value)
                               ? JSON.stringify(value).slice(0, 50) +
-                                (JSON.stringify(value).length > 50
-                                  ? "..."
-                                  : "")
+                                (JSON.stringify(value).length > 50 ? "..." : "")
                               : Array.isArray(value)
                                 ? `[${value.length} items]`
                                 : String(value).slice(0, 50)}
@@ -252,14 +252,14 @@
                             />
                           </svg>
                         {:else}
-                          <span class="text-xs text-slate-600 break-all min-w-0">
+                          <span
+                            class="text-xs text-slate-600 break-all min-w-0"
+                          >
                             {typeof value === "object" &&
                             value !== null &&
                             !Array.isArray(value)
                               ? JSON.stringify(value).slice(0, 50) +
-                                (JSON.stringify(value).length > 50
-                                  ? "..."
-                                  : "")
+                                (JSON.stringify(value).length > 50 ? "..." : "")
                               : Array.isArray(value)
                                 ? `[${value.length} items]`
                                 : String(value).slice(0, 50)}
