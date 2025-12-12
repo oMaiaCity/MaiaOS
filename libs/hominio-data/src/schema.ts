@@ -27,6 +27,31 @@ registerComputedField({
 	},
 })
 
+// Register computed field for @label
+// @label is computed from name field, or falls back to truncated ID
+// This applies to all CoValues that have a @label field
+registerComputedField({
+	targetField: '@label',
+	sourceFields: ['name'],
+	computeFn: (coValue) => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const coValueAny = coValue as any
+		// Try name field first
+		if (coValueAny?.name && typeof coValueAny.name === 'string' && coValueAny.name.trim()) {
+			return coValueAny.name.trim()
+		}
+		// Fallback to truncated ID
+		if (coValueAny?.$jazz?.id) {
+			const id = coValueAny.$jazz.id as string
+			if (id.length > 8) {
+				return `${id.slice(0, 8)}...`
+			}
+			return id
+		}
+		return ''
+	},
+})
+
 /** Capability schema - wrapper for Group reference */
 export const Capability = co.map({
 	'@schema': z.literal('capability'),

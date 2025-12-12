@@ -10,6 +10,65 @@ import { SchemaDefinition } from '../schema.js'
 import { jsonSchemaToZod } from './json-schema-to-zod.js'
 
 /**
+ * Adds @label property to a JSON Schema if it doesn't already exist
+ * @label is a computed field that provides a display name for CoValues
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function addLabelToSchema(jsonSchema: any): any {
+	if (!jsonSchema || jsonSchema.type !== 'object') {
+		return jsonSchema
+	}
+
+	const modifiedSchema = { ...jsonSchema }
+
+	// Ensure properties object exists
+	if (!modifiedSchema.properties) {
+		modifiedSchema.properties = {}
+	} else {
+		modifiedSchema.properties = { ...modifiedSchema.properties }
+	}
+
+	// Add @label if it doesn't exist
+	if (!modifiedSchema.properties['@label']) {
+		modifiedSchema.properties['@label'] = {
+			type: 'string',
+			description: 'Computed display label for this CoValue',
+		}
+	}
+
+	// Recursively add @label to nested o-map schemas
+	for (const [key, propertySchema] of Object.entries(modifiedSchema.properties)) {
+		const prop = propertySchema as any
+		const type = prop.type
+
+		if (type === 'o-map' && prop.properties) {
+			modifiedSchema.properties[key] = {
+				...prop,
+				properties: addLabelToSchema({ type: 'object', properties: prop.properties }).properties,
+			}
+		} else if (type === 'o-list' && prop.items?.type === 'o-map' && prop.items.properties) {
+			modifiedSchema.properties[key] = {
+				...prop,
+				items: {
+					...prop.items,
+					properties: addLabelToSchema({ type: 'object', properties: prop.items.properties }).properties,
+				},
+			}
+		} else if (type === 'o-feed' && prop.items?.type === 'o-map' && prop.items.properties) {
+			modifiedSchema.properties[key] = {
+				...prop,
+				items: {
+					...prop.items,
+					properties: addLabelToSchema({ type: 'object', properties: prop.items.properties }).properties,
+				},
+			}
+		}
+	}
+
+	return modifiedSchema
+}
+
+/**
  * Extracts nested CoValue schemas (o-map) from JSON Schema recursively
  * Creates separate Jazz schemas for each nested o-map for direct linking
  * Returns a map of $ref identifiers -> Jazz schema definitions
@@ -188,6 +247,8 @@ export async function ensureSchema(
 	jsonSchema: any,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> {
+	// Add @label to the schema automatically
+	const jsonSchemaWithLabel = addLabelToSchema(jsonSchema)
 	// Load root
 	const loadedAccount = await account.$jazz.ensureLoaded({
 		resolve: { root: true },
@@ -238,8 +299,8 @@ export async function ensureSchema(
 		throw new Error('Cannot determine data list owner')
 	}
 
-	// Step 1: Extract all nested CoValue schemas
-	const extractedSchemas = extractNestedCoValueSchemas(jsonSchema)
+	// Step 1: Extract all nested CoValue schemas (use schema with @label)
+	const extractedSchemas = extractNestedCoValueSchemas(jsonSchemaWithLabel)
 
 	// Step 2: Create SchemaDefinition entries for each extracted nested schema
 	// Store mapping of refPath -> SchemaDefinition CoValue ID
@@ -275,9 +336,17 @@ export async function ensureSchema(
 			const nestedEntitiesGroup = Group.create()
 			await nestedEntitiesGroup.$jazz.waitForSync()
 
-			// Get properties from the JSON Schema at this path
-			const nestedProperties = getPropertiesFromPath(jsonSchema, refPath)
-			const nestedRequired = getRequiredFromPath(jsonSchema, refPath)
+			// Get properties from the JSON Schema at this path (use schema with @label)
+			const nestedProperties = getPropertiesFromPath(jsonSchemaWithLabel, refPath)
+			const nestedRequired = getRequiredFromPath(jsonSchemaWithLabel, refPath)
+
+			// Ensure @label is in nested properties (should already be there from addLabelToSchema)
+			if (!nestedProperties['@label']) {
+				nestedProperties['@label'] = {
+					type: 'string',
+					description: 'Computed display label for this CoValue',
+				}
+			}
 
 			// Create JSON Schema definition for this nested schema
 			const nestedJsonSchema = {
@@ -308,16 +377,16 @@ export async function ensureSchema(
 
 	await root.$jazz.waitForSync()
 
-	// Step 3: Create a modified JSON Schema with $ref (CoValue IDs) for nested schemas
+	// Step 3: Create a modified JSON Schema with $ref (CoValue IDs) for nested schemas (use schema with @label)
 	const modifiedJsonSchema = replaceNestedSchemasWithRefs(
-		jsonSchema,
+		jsonSchemaWithLabel,
 		schemaName,
 		nestedSchemaIdMap,
 		'',
 	)
 
-	// Step 4: Convert JSON Schema to co.map() shape - this creates the typed CoMap schema with direct links
-	const entityShape = jsonSchemaToCoMapShape(jsonSchema)
+	// Step 4: Convert JSON Schema to co.map() shape - this creates the typed CoMap schema with direct links (use schema with @label)
+	const entityShape = jsonSchemaToCoMapShape(jsonSchemaWithLabel)
 	const EntityCoMapSchema = co.map(entityShape)
 
 	// Step 5: Create a group for the main schema's entities list
@@ -364,7 +433,7 @@ export async function createEntity(
 	entityData: any,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> {
-	// Ensure schema exists (creates if needed)
+	// Ensure schema exists (creates if needed) - this adds @label automatically
 	const schema = await ensureSchema(account, schemaName, jsonSchema)
 
 	// Get the entities list
@@ -373,8 +442,11 @@ export async function createEntity(
 		throw new Error(`Schema ${schemaName} does not have entities list`)
 	}
 
-	// Convert JSON Schema to co.map() shape
-	const entityShape = jsonSchemaToCoMapShape(jsonSchema)
+	// Add @label to jsonSchema for entity creation (ensureSchema already did this, but we need it here too)
+	const jsonSchemaWithLabel = addLabelToSchema(jsonSchema)
+
+	// Convert JSON Schema to co.map() shape (use schema with @label)
+	const entityShape = jsonSchemaToCoMapShape(jsonSchemaWithLabel)
 	const EntityCoMapSchema = co.map(entityShape)
 
 	// Get the owner group from the entities list
@@ -383,14 +455,22 @@ export async function createEntity(
 		throw new Error('Cannot determine entities list owner')
 	}
 
-	// Create entity instance
-	const entityInstance = EntityCoMapSchema.create(entityData, entitiesOwner)
+	// Create entity instance (ensure @label is initialized)
+	const entityDataWithLabel = { ...entityData }
+	if (!('@label' in entityDataWithLabel)) {
+		entityDataWithLabel['@label'] = ''
+	}
+	const entityInstance = EntityCoMapSchema.create(entityDataWithLabel, entitiesOwner)
 	await entityInstance.$jazz.waitForSync()
 
 	// Verify properties are accessible
 	if (!entityInstance.$isLoaded) {
 		await entityInstance.$jazz.ensureLoaded({ resolve: {} })
 	}
+
+	// Set up computed fields for @label (imported from computed-fields)
+	const { setupComputedFieldsForCoValue } = await import('../functions/computed-fields.js')
+	setupComputedFieldsForCoValue(entityInstance)
 
 	// Add entity instance to entities list
 	entitiesList.$jazz.push(entityInstance)

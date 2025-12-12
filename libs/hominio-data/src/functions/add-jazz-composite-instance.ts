@@ -7,6 +7,7 @@ import { co, z } from 'jazz-tools'
 import { JazzCompositeJsonSchema } from '../schemas/jazz-composite-schema.js'
 import { ensureSchema, findNestedSchema } from './dynamic-schema-migration.js'
 import { jsonSchemaToZod } from './json-schema-to-zod.js'
+import { setupComputedFieldsForCoValue } from './computed-fields.js'
 
 /**
  * Helper to generate nested schema name from refPath
@@ -269,6 +270,9 @@ export async function addJazzCompositeInstance(account: any): Promise<any> {
 		{ owner: entitiesOwner },
 	)
 	await entityInstance.$jazz.waitForSync()
+
+	// Set up computed fields for @label
+	setupComputedFieldsForCoValue(entityInstance)
 
 	// Add entity instance to entities list
 	entitiesList.$jazz.push(entityInstance)
