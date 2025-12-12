@@ -94,21 +94,6 @@
             `return ${expression}`,
           );
           const result = func(...dataValues, item, String, Number);
-          // Debug logging for disabled state
-          if (
-            path.includes("selectedRecipient") ||
-            path.includes("sendAmount")
-          ) {
-            const valuesObj = Object.fromEntries(
-              dataKeys.map((k, i) => [k, dataValues[i]]),
-            );
-            console.log(
-              `[Disabled Expression] Expression: ${expression}, Result:`,
-              result,
-              "Values:",
-              JSON.stringify(valuesObj, null, 2),
-            );
-          }
           return result;
         } else {
           // Expression doesn't reference 'data.' - check if it references properties directly
@@ -166,21 +151,6 @@
               Number,
               Number.isNaN,
             );
-            // Debug logging for disabled state
-            if (
-              path.includes("selectedRecipient") ||
-              path.includes("sendAmount")
-            ) {
-              const valuesObj = Object.fromEntries(
-                dataKeys.map((k, i) => [k, dataValues[i]]),
-              );
-              console.log(
-                `[Disabled Expression] Expression: ${path}, Result:`,
-                result,
-                "Values:",
-                JSON.stringify(valuesObj, null, 2),
-              );
-            }
             return result;
           } else {
             // Expression only references 'item' (for foreach contexts)
