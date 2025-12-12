@@ -111,7 +111,6 @@
     // This is synchronous - getCoValueGroupInfo will handle the owner Group
     try {
       const info = getCoValueGroupInfo(coValue);
-      console.log("[MetadataSidebar] Group info:", info);
 
       if (info?.groupId) {
         const newGroupInfo = {
@@ -128,10 +127,6 @@
 
         if (hasChanged) {
           groupInfo = newGroupInfo;
-          console.log(
-            "[MetadataSidebar] ✅ Loaded group members:",
-            $state.snapshot(groupInfo),
-          );
         }
       } else {
         if (groupInfo !== null) {
