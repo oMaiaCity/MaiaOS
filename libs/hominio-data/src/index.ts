@@ -11,6 +11,8 @@ export {
 } from './functions/computed-fields'
 // Dynamic Schema Migration
 export { createEntity, ensureSchema } from './functions/dynamic-schema-migration'
+// System Properties
+export { setSystemProps } from './functions/set-system-props'
 // Groups
 export {
 	filterCoValuesByGroupAccess,

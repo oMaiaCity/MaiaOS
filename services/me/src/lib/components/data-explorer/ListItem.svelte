@@ -28,9 +28,14 @@
     parentCoValue,
   }: Props = $props();
 
-  // Check if value is a CoID
+  // Check if this is a computed field (fields starting with @ are computed)
+  const isComputedField = $derived(propKey.startsWith("@"));
+  
+  // Check if value is a CoID (but not if it's a computed field)
   const isCoID = $derived(
-    typeof propValue === "string" && propValue.startsWith("co_"),
+    !isComputedField &&
+    typeof propValue === "string" &&
+    propValue.startsWith("co_"),
   );
 
   // Check if value is a navigable object (object, not null, not array, not CoID)
@@ -44,6 +49,10 @@
 
   // Determine display type - use resolved type if available
   const getDisplayType = (value: any): string => {
+    // Computed fields are always strings
+    if (isComputedField) {
+      return "string";
+    }
     if (isCoID && resolvedType) {
       return resolvedType.extendedType || resolvedType.type || "CoValue";
     }
@@ -65,6 +74,11 @@
 
   // Loading state: CoID but not yet resolved
   const isLoading = $derived(isCoID && !resolvedType);
+
+  // Check if this is a CoList type
+  const isCoList = $derived(
+    resolvedType?.type === 'colist' || resolvedType?.extendedType === 'CoList' || displayType === 'COLIST',
+  );
 </script>
 
 <button
@@ -119,10 +133,13 @@
               >
             </div>
           {:else}
-            <!-- CoID as clickable text -->
-            <span class="text-xs font-mono text-slate-600 hover:underline"
-              >{propValue}</span
-            >
+            <!-- CoID as clickable text - use @label if available, otherwise use ID (hide ID for CoList) -->
+            {#if !isCoList}
+              {@const displayLabel = resolvedType?.snapshot && typeof resolvedType.snapshot === 'object' && '@label' in resolvedType.snapshot && resolvedType.snapshot['@label'] ? resolvedType.snapshot['@label'] : propValue}
+              <span class="text-xs font-mono text-slate-600 hover:underline"
+                >{displayLabel}</span
+              >
+            {/if}
           {/if}
           <svg
             class="w-3 h-3 text-slate-400 shrink-0"
@@ -139,12 +156,8 @@
           </svg>
         </div>
       {:else if isObject}
-        <!-- Object value display - clickable -->
+        <!-- Object value display - clickable (just arrow, no preview) -->
         <div class="inline-flex items-center gap-2 text-left min-w-0">
-          <span class="text-xs text-slate-600 break-all min-w-0">
-            {JSON.stringify(propValue).slice(0, 50) +
-              (JSON.stringify(propValue).length > 50 ? "..." : "")}
-          </span>
           <svg
             class="w-3 h-3 text-slate-400 shrink-0"
             fill="none"

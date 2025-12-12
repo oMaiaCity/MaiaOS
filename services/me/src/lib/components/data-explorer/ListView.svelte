@@ -26,7 +26,12 @@
     parentCoValue,
   }: Props = $props();
 
-  const entries = $derived(Object.entries(properties));
+  // Filter out @label and @schema from main view (they're shown in metadata sidebar)
+  const entries = $derived(
+    Object.entries(properties).filter(
+      ([key]) => key !== "@label" && key !== "@schema",
+    ),
+  );
 </script>
 
 <div class="space-y-3">

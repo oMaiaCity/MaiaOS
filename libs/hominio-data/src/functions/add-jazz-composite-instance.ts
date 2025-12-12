@@ -271,8 +271,9 @@ export async function addJazzCompositeInstance(account: any): Promise<any> {
 	)
 	await entityInstance.$jazz.waitForSync()
 
-	// Set up computed fields for @label
-	setupComputedFieldsForCoValue(entityInstance)
+	// Set system properties (@label and @schema) - @schema should be the schema name
+	const { setSystemProps } = await import('./set-system-props.js')
+	await setSystemProps(entityInstance, 'JazzComposite')
 
 	// Add entity instance to entities list
 	entitiesList.$jazz.push(entityInstance)

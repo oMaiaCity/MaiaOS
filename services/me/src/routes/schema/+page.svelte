@@ -123,7 +123,7 @@
                   </div>
                 </div>
                 <pre
-                  class="text-xs bg-slate-50 p-2 rounded border overflow-x-auto">
+                  class="text-xs text-slate-800 bg-slate-50 p-2 rounded border overflow-x-auto font-mono">
                   {JSON.stringify(schemaLoaded.definition, null, 2)}
                 </pre>
               </div>

@@ -75,6 +75,18 @@ class ComputedFieldRegistry {
 			if (def.schemaType && def.schemaType !== schemaType) {
 				return false
 			}
+			
+			// Special case: For 'name' computed field (profile.name), only apply if source fields exist
+			// This prevents it from being applied to entities like Car that have a 'name' field but not firstName/lastName
+			if (def.targetField === 'name' && def.sourceFields.includes('firstName') && def.sourceFields.includes('lastName')) {
+				// Only apply if the CoValue has firstName and lastName fields (indicating it's a profile)
+				const hasFirstName = coValue.$jazz.has('firstName')
+				const hasLastName = coValue.$jazz.has('lastName')
+				if (!hasFirstName || !hasLastName) {
+					return false // Don't apply name computed field to non-profile CoValues
+				}
+			}
+			
 			return true
 		})
 	}

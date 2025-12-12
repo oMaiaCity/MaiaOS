@@ -10,8 +10,9 @@ import { SchemaDefinition } from '../schema.js'
 import { jsonSchemaToZod } from './json-schema-to-zod.js'
 
 /**
- * Adds @label property to a JSON Schema if it doesn't already exist
+ * Adds @label and @schema properties to a JSON Schema if they don't already exist
  * @label is a computed field that provides a display name for CoValues
+ * @schema identifies the schema type (set via setSystemProps)
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function addLabelToSchema(jsonSchema: any): any {
@@ -19,21 +20,29 @@ function addLabelToSchema(jsonSchema: any): any {
 		return jsonSchema
 	}
 
-	const modifiedSchema = { ...jsonSchema }
-
-	// Ensure properties object exists
-	if (!modifiedSchema.properties) {
-		modifiedSchema.properties = {}
-	} else {
-		modifiedSchema.properties = { ...modifiedSchema.properties }
+	// Preserve all schema properties including required array
+	const modifiedSchema = {
+		...jsonSchema,
+		properties: jsonSchema.properties ? { ...jsonSchema.properties } : {},
+		required: jsonSchema.required ? [...jsonSchema.required] : undefined,
 	}
 
-	// Add @label if it doesn't exist
+	// Add @label if it doesn't exist (but don't add it to required array)
 	if (!modifiedSchema.properties['@label']) {
 		modifiedSchema.properties['@label'] = {
 			type: 'string',
 			description: 'Computed display label for this CoValue',
 		}
+		// Note: @label is NOT added to required array since it's computed
+	}
+
+	// Add @schema if it doesn't exist (but don't add it to required array)
+	if (!modifiedSchema.properties['@schema']) {
+		modifiedSchema.properties['@schema'] = {
+			type: 'string',
+			description: 'Schema type identifier (e.g., "Schema" for schemas, schema name for entities)',
+		}
+		// Note: @schema is NOT added to required array since it's set via setSystemProps
 	}
 
 	// Recursively add @label to nested o-map schemas
@@ -158,7 +167,12 @@ function addReferencesToSchema(jsonSchema: any, parentPath: string = ''): any {
 		return jsonSchema
 	}
 
-	const modifiedSchema = { ...jsonSchema, properties: {} }
+	// Preserve all schema properties including required array
+	const modifiedSchema = {
+		...jsonSchema,
+		properties: {},
+		required: jsonSchema.required ? [...jsonSchema.required] : undefined,
+	}
 
 	for (const [key, propertySchema] of Object.entries(jsonSchema.properties)) {
 		const prop = propertySchema as any
@@ -232,7 +246,133 @@ function jsonSchemaToCoMapShape(jsonSchema: any): Record<string, any> {
 }
 
 /**
+ * Meta-schema JSON Schema: Defines the schema for SchemaDefinition itself
+ */
+const SchemaMetaSchema = {
+	type: 'object',
+	properties: {
+		'@label': {
+			type: 'string',
+			description: 'Computed display label for this schema',
+		},
+		'@schema': {
+			type: 'string',
+			description: 'Schema type identifier (e.g., "Schema" for schemas, schema name for entities)',
+		},
+		name: {
+			type: 'string',
+			description: 'Name of the schema (e.g., "Car", "JazzComposite")',
+		},
+		definition: {
+			type: 'object',
+			description: 'JSON Schema definition object',
+			additionalProperties: true,
+		},
+		entities: {
+			type: 'o-list',
+			description: 'List of entity instances of this schema',
+			items: {
+				type: 'o-map',
+				description: 'Entity instance (structure defined by definition property)',
+			},
+		},
+	},
+	required: ['name', 'definition', 'entities'],
+}
+
+/**
+ * Ensures the meta-schema "Schema" exists (defines the schema for SchemaDefinition itself)
+ * This is called before creating any other schema to ensure the meta-schema is available
+ *
+ * @param account - The Jazz account
+ * @returns The meta-schema SchemaDefinition CoValue
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function ensureMetaSchema(account: any): Promise<any> {
+	// Use ensureSchema recursively, but with a guard to prevent infinite recursion
+	// We'll check if meta-schema exists first, and if not, create it directly
+	const loadedAccount = await account.$jazz.ensureLoaded({
+		resolve: { root: true },
+	})
+
+	if (!loadedAccount.root) {
+		throw new Error('Root does not exist')
+	}
+
+	const root = loadedAccount.root
+
+	// Ensure data list exists
+	if (!root.$jazz.has('data')) {
+		throw new Error('Data list does not exist - run account migration first')
+	}
+
+	// Load data list
+	const rootWithData = await root.$jazz.ensureLoaded({
+		resolve: { data: true },
+	})
+	const dataList = rootWithData.data
+
+	if (!dataList) {
+		throw new Error('Data list could not be loaded')
+	}
+
+	// Check if meta-schema already exists
+	if (dataList.$isLoaded) {
+		const dataArray = Array.from(dataList)
+		for (const schema of dataArray) {
+			if (schema && typeof schema === 'object' && '$jazz' in schema) {
+				const schemaLoaded = await (schema as any).$jazz.ensureLoaded()
+				if (schemaLoaded.$isLoaded && (schemaLoaded as any).name === 'Schema') {
+					// Meta-schema exists, return it
+					return schemaLoaded
+				}
+			}
+		}
+	}
+
+	// Meta-schema doesn't exist, create it directly (without calling ensureSchema to avoid recursion)
+	const dataOwner = (dataList as any).$jazz?.owner
+	if (!dataOwner) {
+		throw new Error('Cannot determine data list owner')
+	}
+
+	// Add @label and @schema to meta-schema JSON Schema
+	const metaSchemaWithLabel = addLabelToSchema(SchemaMetaSchema)
+
+	// Convert JSON Schema to co.map() shape
+	const metaEntityShape = jsonSchemaToCoMapShape(metaSchemaWithLabel)
+	const MetaEntityCoMapSchema = co.map(metaEntityShape)
+
+	// Create a group for the meta-schema's entities list
+	const metaEntitiesGroup = Group.create()
+	await metaEntitiesGroup.$jazz.waitForSync()
+
+	// Create meta-schema SchemaDefinition
+	const metaSchema = SchemaDefinition.create(
+		{
+			name: 'Schema',
+			definition: metaSchemaWithLabel,
+			entities: co.list(MetaEntityCoMapSchema).create([], metaEntitiesGroup),
+		},
+		dataOwner,
+	)
+	await metaSchema.$jazz.waitForSync()
+
+	// Set system properties (@label and @schema)
+	const { setSystemProps } = await import('../functions/set-system-props.js')
+	await setSystemProps(metaSchema, 'Schema')
+
+	// Add meta-schema to data list
+	dataList.$jazz.push(metaSchema)
+	await root.$jazz.waitForSync()
+
+	// Return the meta-schema (with entities resolved)
+	return await metaSchema.$jazz.ensureLoaded({ resolve: { entities: true } })
+}
+
+/**
  * Ensures a schema exists in root.data, creates it if needed
+ * Automatically ensures the meta-schema exists first
  *
  * @param account - The Jazz account
  * @param schemaName - Name of the schema (e.g., "Car")
@@ -247,6 +387,11 @@ export async function ensureSchema(
 	jsonSchema: any,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> {
+	// Ensure meta-schema exists first (unless we're creating the meta-schema itself)
+	if (schemaName !== 'Schema') {
+		await ensureMetaSchema(account)
+	}
+
 	// Add @label to the schema automatically
 	const jsonSchemaWithLabel = addLabelToSchema(jsonSchema)
 	// Load root
@@ -336,15 +481,21 @@ export async function ensureSchema(
 			const nestedEntitiesGroup = Group.create()
 			await nestedEntitiesGroup.$jazz.waitForSync()
 
-			// Get properties from the JSON Schema at this path (use schema with @label)
+			// Get properties from the JSON Schema at this path (use schema with @label and @schema)
 			const nestedProperties = getPropertiesFromPath(jsonSchemaWithLabel, refPath)
 			const nestedRequired = getRequiredFromPath(jsonSchemaWithLabel, refPath)
 
-			// Ensure @label is in nested properties (should already be there from addLabelToSchema)
+			// Ensure @label and @schema are in nested properties (should already be there from addLabelToSchema)
 			if (!nestedProperties['@label']) {
 				nestedProperties['@label'] = {
 					type: 'string',
 					description: 'Computed display label for this CoValue',
+				}
+			}
+			if (!nestedProperties['@schema']) {
+				nestedProperties['@schema'] = {
+					type: 'string',
+					description: 'Schema type identifier',
 				}
 			}
 
@@ -358,7 +509,6 @@ export async function ensureSchema(
 			// Create SchemaDefinition for the nested schema
 			const nestedSchemaDefinition = SchemaDefinition.create(
 				{
-					'@schema': 'schema-definition',
 					name: nestedSchemaName,
 					definition: nestedJsonSchema,
 					entities: co.list(nestedCoMapSchema).create([], nestedEntitiesGroup),
@@ -366,6 +516,10 @@ export async function ensureSchema(
 				dataOwner,
 			)
 			await nestedSchemaDefinition.$jazz.waitForSync()
+
+			// Set system properties (@label and @schema)
+			const { setSystemProps } = await import('../functions/set-system-props.js')
+			await setSystemProps(nestedSchemaDefinition, 'Schema')
 
 			// Add to data list
 			dataList.$jazz.push(nestedSchemaDefinition)
@@ -396,7 +550,6 @@ export async function ensureSchema(
 	// Step 6: Create SchemaDefinition with modified JSON Schema (using $ref) and typed entities list
 	const newSchema = SchemaDefinition.create(
 		{
-			'@schema': 'schema-definition',
 			name: schemaName,
 			definition: modifiedJsonSchema, // Use modified schema with $ref
 			entities: co.list(EntityCoMapSchema).create([], entitiesGroup), // Typed with actual schema!
@@ -404,6 +557,10 @@ export async function ensureSchema(
 		dataOwner,
 	)
 	await newSchema.$jazz.waitForSync()
+
+	// Set system properties (@label and @schema)
+	const { setSystemProps } = await import('../functions/set-system-props.js')
+	await setSystemProps(newSchema, 'Schema')
 
 	// Add SchemaDefinition to data list
 	dataList.$jazz.push(newSchema)
@@ -455,12 +612,8 @@ export async function createEntity(
 		throw new Error('Cannot determine entities list owner')
 	}
 
-	// Create entity instance (ensure @label is initialized)
-	const entityDataWithLabel = { ...entityData }
-	if (!('@label' in entityDataWithLabel)) {
-		entityDataWithLabel['@label'] = ''
-	}
-	const entityInstance = EntityCoMapSchema.create(entityDataWithLabel, entitiesOwner)
+	// Create entity instance
+	const entityInstance = EntityCoMapSchema.create(entityData, entitiesOwner)
 	await entityInstance.$jazz.waitForSync()
 
 	// Verify properties are accessible
@@ -468,9 +621,9 @@ export async function createEntity(
 		await entityInstance.$jazz.ensureLoaded({ resolve: {} })
 	}
 
-	// Set up computed fields for @label (imported from computed-fields)
-	const { setupComputedFieldsForCoValue } = await import('../functions/computed-fields.js')
-	setupComputedFieldsForCoValue(entityInstance)
+	// Set system properties (@label and @schema) - @schema should be the schema name
+	const { setSystemProps } = await import('../functions/set-system-props.js')
+	await setSystemProps(entityInstance, schemaName)
 
 	// Add entity instance to entities list
 	entitiesList.$jazz.push(entityInstance)

@@ -30,6 +30,16 @@
   // Get group ID from resolved context
   const groupId = $derived(context.resolved.groupId);
 
+  // Get snapshot for accessing @label and @schema
+  const snapshot = $derived(
+    context.resolved.snapshot &&
+      typeof context.resolved.snapshot === 'object' &&
+      context.resolved.snapshot !== null &&
+      context.resolved.snapshot !== 'unavailable'
+      ? context.resolved.snapshot
+      : null,
+  );
+
   // Sort account members: "everyone" always first, then others
   const sortedAccountMembers = $derived.by(() => {
     if (!groupInfo?.accountMembers) return [];
@@ -241,6 +251,24 @@
       {/if}
     {:else if activeTab === "info"}
       <div class="space-y-3">
+        <!-- @label and @schema at the top -->
+        {#if snapshot && '@label' in snapshot}
+          <PropertyItem
+            propKey="@LABEL"
+            propValue={snapshot['@label'] || ''}
+            hideBadge={false}
+            badgeType="string"
+          />
+        {/if}
+        {#if snapshot && '@schema' in snapshot}
+          <PropertyItem
+            propKey="@SCHEMA"
+            propValue={snapshot['@schema'] || ''}
+            hideBadge={false}
+            badgeType="string"
+          />
+        {/if}
+
         <PropertyItem
           propKey="ID"
           propValue={formatCoValueId(context.coValueId, 16)}

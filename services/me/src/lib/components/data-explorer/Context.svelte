@@ -42,8 +42,10 @@
       : {},
   );
 
-  // Derive entries array for table view
-  const entries = $derived(Object.entries(properties));
+  // Filter out @label and @schema from main view (they're shown in metadata sidebar)
+  const entries = $derived(
+    Object.entries(properties).filter(([key]) => key !== '@label' && key !== '@schema'),
+  );
 
   // Initialize with default, then sync with prop
   let currentView = $state<"list" | "table">("list");
@@ -153,12 +155,23 @@
           </thead>
           <tbody>
             {#each entries as [key, value]}
+              {@const isComputedField = key.startsWith("@")}
               {@const isCoID =
-                typeof value === "string" && value.startsWith("co_")}
+                !isComputedField &&
+                typeof value === "string" &&
+                value.startsWith("co_")}
+              {@const isObject =
+                !isComputedField &&
+                !isCoID &&
+                typeof value === "object" &&
+                value !== null &&
+                !Array.isArray(value) &&
+                onObjectNavigate !== undefined}
               {@const child = isCoID
                 ? context.directChildren.find((c) => c.key === key)
                 : null}
-              {@const isClickable = isCoID && onNavigate !== undefined}
+              {@const isClickable = (isCoID && onNavigate !== undefined) || isObject}
+              {@const isCoList = child?.resolved?.type === 'colist' || child?.resolved?.extendedType === 'CoList'}
               <tr>
                 <td class="p-0 pb-3 pr-3">
                   <span
@@ -179,6 +192,8 @@
                     </Badge>
                   {:else if isCoID}
                     <Badge type="CoValue">CoValue</Badge>
+                  {:else if isObject}
+                    <Badge type="object">Object</Badge>
                   {:else}
                     <Badge type={typeof value}>{typeof value}</Badge>
                   {/if}
@@ -189,17 +204,37 @@
                       type="button"
                       class="w-full text-left bg-slate-100 rounded-2xl p-3 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm cursor-pointer hover:border-slate-300"
                       onclick={() => {
-                        if (typeof value === "string" && onNavigate) {
+                        if (isCoID && typeof value === "string" && onNavigate) {
                           onNavigate(value, key);
+                        } else if (isObject && onObjectNavigate) {
+                          onObjectNavigate(value, key, context.resolved.snapshot, key);
                         }
                       }}
                     >
                       <div class="flex items-center gap-2 min-w-0">
                         {#if isCoID}
-                          <span
-                            class="text-xs font-mono text-slate-600 hover:underline"
-                            >{value}</span
+                          {#if !isCoList}
+                            {@const displayLabel = child?.resolved?.snapshot && typeof child.resolved.snapshot === 'object' && '@label' in child.resolved.snapshot && child.resolved.snapshot['@label'] ? child.resolved.snapshot['@label'] : value}
+                            <span
+                              class="text-xs font-mono text-slate-600 hover:underline"
+                              >{displayLabel}</span
+                            >
+                          {/if}
+                          <svg
+                            class="w-3 h-3 text-slate-400 shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
                           >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        {:else if isObject}
+                          <!-- Object: just arrow, no preview -->
                           <svg
                             class="w-3 h-3 text-slate-400 shrink-0"
                             fill="none"
@@ -217,14 +252,9 @@
                           <span
                             class="text-xs text-slate-600 break-all min-w-0"
                           >
-                            {typeof value === "object" &&
-                            value !== null &&
-                            !Array.isArray(value)
-                              ? JSON.stringify(value).slice(0, 50) +
-                                (JSON.stringify(value).length > 50 ? "..." : "")
-                              : Array.isArray(value)
-                                ? `[${value.length} items]`
-                                : String(value).slice(0, 50)}
+                            {Array.isArray(value)
+                              ? `[${value.length} items]`
+                              : String(value).slice(0, 50)}
                           </span>
                         {/if}
                       </div>
@@ -235,9 +265,27 @@
                     >
                       <div class="flex items-center gap-2 min-w-0">
                         {#if isCoID}
-                          <span class="text-xs font-mono text-slate-600"
-                            >{value}</span
+                          {#if !isCoList}
+                            {@const displayLabel = child?.resolved?.snapshot && typeof child.resolved.snapshot === 'object' && '@label' in child.resolved.snapshot && child.resolved.snapshot['@label'] ? child.resolved.snapshot['@label'] : value}
+                            <span class="text-xs font-mono text-slate-600"
+                              >{displayLabel}</span
+                            >
+                          {/if}
+                          <svg
+                            class="w-3 h-3 text-slate-400 shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
                           >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        {:else if isObject}
+                          <!-- Object: just arrow, no preview -->
                           <svg
                             class="w-3 h-3 text-slate-400 shrink-0"
                             fill="none"
@@ -255,14 +303,9 @@
                           <span
                             class="text-xs text-slate-600 break-all min-w-0"
                           >
-                            {typeof value === "object" &&
-                            value !== null &&
-                            !Array.isArray(value)
-                              ? JSON.stringify(value).slice(0, 50) +
-                                (JSON.stringify(value).length > 50 ? "..." : "")
-                              : Array.isArray(value)
-                                ? `[${value.length} items]`
-                                : String(value).slice(0, 50)}
+                            {Array.isArray(value)
+                              ? `[${value.length} items]`
+                              : String(value).slice(0, 50)}
                           </span>
                         {/if}
                       </div>

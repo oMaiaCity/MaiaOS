@@ -73,10 +73,11 @@ export const Contact = co.map({
 
 /** SchemaDefinition schema - stores JSON Schema definitions as CoMaps with their entity instances */
 export const SchemaDefinition = co.map({
-	'@schema': z.literal('schema-definition'),
+	'@schema': z.string().optional(), // Set to "Schema" for schema CoValues via setSystemProps
 	name: z.string(),
 	definition: z.object({}).passthrough(), // JSON Schema object (flexible structure - allows any properties)
 	entities: co.list(co.map({})), // Generic entities list - stores instances of this schema
+	'@label': z.string().optional(), // Computed display label for this schema
 })
 
 /** The account root is an app-specific per-user private `CoMap`
@@ -281,6 +282,12 @@ export const JazzAccount = co
 			}
 		}
 
+		// Remove old schemata property if it exists (migrated to data)
+		if (rootWithData.$jazz.has('schemata')) {
+			rootWithData.$jazz.delete('schemata')
+			await rootWithData.$jazz.waitForSync()
+		}
+
 		// Ensure data list exists (empty by default - schemas created manually via UI)
 		if (!rootWithData.$jazz.has('data')) {
 			// Create a group for data list
@@ -299,6 +306,7 @@ export const JazzAccount = co
 				})
 			} catch (_error) {}
 		}
+
 	})
 
 /**
