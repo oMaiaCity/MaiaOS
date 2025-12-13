@@ -9,6 +9,8 @@
 
   interface Props {
     context: CoValueContext;
+    coValueState?: CoState<typeof CoMap>;
+    propertyPath?: string[]; // Optional property path for accessing nested properties
     node?: LocalNode;
     onNavigate?: (coValueId: string, label?: string) => void;
     onObjectNavigate?: (
@@ -23,6 +25,8 @@
 
   const {
     context,
+    coValueState,
+    propertyPath,
     node,
     onNavigate,
     onObjectNavigate,
@@ -34,16 +38,47 @@
     context.resolved.extendedType || context.resolved.type || "CoValue",
   );
 
-  // Derive snapshot and properties (fixes @const error)
-  const snapshot = $derived(context.resolved.snapshot);
-  const properties = $derived(
-    snapshot &&
-      typeof snapshot === "object" &&
-      snapshot !== null &&
-      snapshot !== "unavailable"
-      ? snapshot
-      : {},
-  );
+  // Get properties reactively - regenerate snapshot from live CoValue
+  // This ensures reactivity when the CoValue changes
+  const properties = $derived.by(() => {
+    // Use CoState if available for full reactivity
+    if (coValueState) {
+      let coValue = coValueState.current;
+      
+      // If not loaded, return empty
+      if (!coValue.$isLoaded) {
+        return {};
+      }
+      
+      // Navigate to nested property if propertyPath is provided
+      if (propertyPath && propertyPath.length > 0) {
+        // Access nested property from root (e.g., root.schemata)
+        for (const key of propertyPath) {
+          coValue = (coValue as any)[key];
+          if (!coValue || !coValue.$isLoaded) {
+            return {};
+          }
+        }
+      }
+      
+      // Regenerate snapshot from live CoValue (reactive!)
+      // toJSON() is called on the live CoValue, so it picks up changes
+      const snapshot = coValue.$jazz.raw.toJSON();
+      if (!snapshot || typeof snapshot !== 'object') {
+        return {};
+      }
+      
+      return snapshot as Record<string, any>;
+    }
+    
+    // Fallback to context snapshot (backward compatibility)
+    const snapshot = context.resolved.snapshot;
+    if (!snapshot || typeof snapshot !== 'object' || snapshot === 'unavailable') {
+      return {};
+    }
+    
+    return snapshot;
+  });
 
   // Filter out @label and @schema from main view (they're shown in metadata sidebar)
   const entries = $derived(
@@ -54,14 +89,14 @@
   // Store schema CoState instances to avoid recreating them
   let schemaCoValueStates = $state<Map<CoID<RawCoValue>, CoState<typeof CoMap>>>(new Map());
   
-  // Extract schema ID from snapshot
+  // Extract schema ID from snapshot (reactive via CoState)
   const schemaId = $derived(() => {
+    const snapshot = context.resolved.snapshot;
     if (!snapshot || typeof snapshot !== 'object') return null;
     
     const schemaRef = snapshot['@schema'];
     if (!schemaRef) return null;
     
-    // Extract schema ID
     return typeof schemaRef === 'string' && schemaRef.startsWith('co_')
       ? schemaRef as CoID<RawCoValue>
       : (schemaRef && typeof schemaRef === 'object' && '$jazz' in schemaRef)
@@ -77,10 +112,13 @@
       return;
     }
     
-    // Get or create CoState for schema
+    // Get or create CoState for schema with resolve query
     if (!schemaCoValueStates.has(id)) {
       try {
-        const schemaCoValueState = createCoValueState(id);
+        // Load schema deeply to access its definition property
+        const schemaCoValueState = new CoState(CoMap, id, {
+          resolve: true, // Load schema and its direct properties (like definition)
+        });
         schemaCoValueStates.set(id, schemaCoValueState);
       } catch (_e) {
         // Ignore errors
@@ -215,7 +253,7 @@
         directChildren={context.directChildren}
         {onNavigate}
         {onObjectNavigate}
-        parentCoValue={context.resolved.snapshot}
+        parentCoValue={coValueState ? coValueState.current : null}
         schemaDefinition={schemaDefinition}
       />
     {:else if currentView === "table"}
@@ -299,7 +337,7 @@
                         if (isCoID && typeof value === "string" && onNavigate) {
                           onNavigate(value, key);
                         } else if (isObject && onObjectNavigate) {
-                          onObjectNavigate(value, key, context.resolved.snapshot, key);
+                          onObjectNavigate(value, key, coValueState ? coValueState.current : null, key);
                         }
                       }}
                     >

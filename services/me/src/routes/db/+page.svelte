@@ -24,10 +24,15 @@
   const isBetterAuthSignedIn = $derived(!!betterAuthUser);
   const isBetterAuthPending = $derived($session.isPending);
 
-  // Load Jazz account
+  // Load Jazz account with deep resolve query for reactive CoLists
   const account = new AccountCoState(JazzAccount, {
     resolve: {
-      root: true, // Resolve root
+      root: {
+        // Load root's CoLists deeply so they react to new items
+        schemata: { $each: true }, // Load all schema items + subscribe to changes
+        entities: { $each: true }, // Load all entity items + subscribe to changes
+        capabilities: true, // Load capabilities list
+      },
     },
   });
   const me = $derived(account.current);
@@ -46,8 +51,13 @@
   });
 
   // Navigation stack - tracks the path through CoValues and objects
-  // Stores CoIDs only - CoState instances are created reactively
+  // Uses property paths for reactive navigation within the root
   type NavigationItem =
+    | {
+        type: "root-property"; // Direct property of root (like schemata, entities)
+        label: string;
+        propertyPath: string[]; // Path from root, e.g., ["schemata"] or ["entities"]
+      }
     | {
         type: "covalue";
         label: string;
@@ -63,37 +73,42 @@
       };
   let navigationStack = $state<NavigationItem[]>([]);
 
-  // Map of CoValue IDs to their CoState instances (created reactively)
+  // GLOBAL CoState Registry: ONE CoState instance per unique CoID (singleton pattern)
+  // This ensures all references to the same CoValue share the same reactive subscription
   let coValueStates = $state<Map<CoID<RawCoValue>, CoState<typeof CoMap>>>(
     new Map(),
   );
 
-  // Create CoState instances reactively for all CoValues in navigation stack
-  // Note: We use CoMap as a generic schema - CoState will handle CoLists correctly
+  // Create or reuse CoState instances reactively for all CoValues in navigation stack
+  // KEY: We REUSE existing CoStates to share subscriptions across the app
   $effect(() => {
     const newStates = new Map<CoID<RawCoValue>, CoState<typeof CoMap>>();
 
     for (const item of navigationStack) {
       if (item.type === "covalue") {
-        // Get or create CoState for this CoValue
+        // Check if CoState already exists (SINGLETON PATTERN)
         let coValueState = coValueStates.get(item.coValueId);
         if (!coValueState) {
           try {
-            // Create new CoState (must be in $effect to access context)
-            // CoState with CoMap works for both CoMaps and CoLists
-            coValueState = new CoState(CoMap, item.coValueId);
-            newStates.set(item.coValueId, coValueState);
-          } catch (_e) {
-            // Skip if CoState creation fails (e.g., CoValue not accessible)
+            // Create new CoState ONLY if it doesn't exist
+            // Use universal resolve query that works for all CoValue types
+            // [] subscribes to array changes (works for CoLists and is ignored for CoMaps)
+            coValueState = new CoState(CoMap, item.coValueId, []);
+          } catch (e) {
+            console.error(
+              "[Navigation] Failed to create CoState for:",
+              item.coValueId,
+              e,
+            );
             continue;
           }
-        } else {
-          newStates.set(item.coValueId, coValueState);
         }
+        // Store in new map (reuse existing or new)
+        newStates.set(item.coValueId, coValueState);
       }
     }
 
-    // Update the map (only if changed to avoid infinite loops)
+    // Only update if there are actual changes (prevent infinite loop!)
     if (
       newStates.size !== coValueStates.size ||
       Array.from(newStates.keys()).some((id) => !coValueStates.has(id))
@@ -103,9 +118,55 @@
   });
 
   // Current context is derived reactively from CoState (reactive updates)
-  const currentContext = $derived(() => {
+  const currentContext = $derived.by(() => {
     if (navigationStack.length === 0) return null;
+
     const lastItem = navigationStack[navigationStack.length - 1];
+
+    // Handle root properties (like schemata, entities) - access directly from root
+    if (
+      lastItem.type === "root-property" &&
+      me.$isLoaded &&
+      me.root.$isLoaded
+    ) {
+      const propertyPath = lastItem.propertyPath;
+      let current: any = me.root;
+
+      // Navigate to the property
+      for (const key of propertyPath) {
+        current = current[key];
+        if (!current) return null;
+      }
+
+      // Get CoID from the property
+      const coValueId = current.$jazz?.id;
+      if (!coValueId) return null;
+
+      // Derive context from the LIVE property reference (reactive!)
+      // This reuses the root's subscription, ensuring reactivity
+      const rawValue = current.$jazz.raw;
+      const type = rawValue.type as
+        | "comap"
+        | "costream"
+        | "colist"
+        | "coplaintext";
+      const snapshot = rawValue.toJSON() as Record<string, any>;
+
+      return {
+        coValueId,
+        resolved: {
+          value: rawValue,
+          snapshot,
+          type,
+          extendedType: undefined,
+          id: coValueId,
+          groupId: undefined,
+          headerMeta: undefined,
+        },
+        directChildren: [],
+      };
+    }
+
     if (lastItem.type === "covalue") {
       // Get CoState from map (created reactively in $effect)
       const coValueState = coValueStates.get(lastItem.coValueId);
@@ -119,7 +180,7 @@
   });
 
   // Current object context (for object navigation)
-  const currentObjectContext = $derived(() => {
+  const currentObjectContext = $derived.by(() => {
     if (navigationStack.length === 0) return null;
     const lastItem = navigationStack[navigationStack.length - 1];
     if (lastItem.type === "object") {
@@ -154,7 +215,37 @@
   function navigateToCoValue(coValueId: CoID<RawCoValue>, label?: string) {
     const newLabel = label || `${coValueId.slice(0, 8)}...`;
 
-    // Update navigation stack immediately (CoState will be created reactively in $effect)
+    // UNIVERSAL ID-BASED NAVIGATION with smart property-path detection
+    // Check if this CoValue is already loaded via root (reuse root's subscription)
+    if (me.$isLoaded && me.root.$isLoaded) {
+      // Check ALL root properties (not just from root navigation)
+      const rootProperties = [
+        "schemata",
+        "entities",
+        "capabilities",
+        "contact",
+      ];
+      const matchingProperty = rootProperties.find((prop) => {
+        const propValue = (me.root as any)[prop];
+        return propValue && propValue.$jazz?.id === coValueId;
+      });
+
+      if (matchingProperty) {
+        // This CoValue is a root property - use property-path to reuse root's subscription
+        navigationStack = [
+          ...navigationStack,
+          {
+            type: "root-property",
+            label: newLabel,
+            propertyPath: [matchingProperty],
+          },
+        ];
+        return;
+      }
+    }
+
+    // For all other CoValues: Use ID-based navigation with singleton CoState registry
+    // The singleton ensures we don't create duplicate subscriptions for the same ID
     navigationStack = [
       ...navigationStack,
       { type: "covalue", label: newLabel, coValueId },
@@ -169,7 +260,7 @@
     parentKey: string,
   ) {
     // Store the current context as parent context for metadata display
-    const parentContext = currentContext();
+    const parentContext = currentContext;
     if (!parentContext) {
       return;
     }
@@ -209,21 +300,8 @@
 
     try {
       await resetData(me);
-
-      // Reload root to ensure changes are visible
-      if (me.root?.$isLoaded) {
-        await me.root.$jazz.ensureLoaded({
-          resolve: { schemata: true, entities: true },
-        });
-        await me.root.$jazz.waitForSync();
-      }
-
-      // Reload the current context to reflect the reset (CoState will update reactively)
-      // Clear CoState cache to force reload
-      coValueStates.clear();
-      // Navigation stack will trigger $effect to recreate CoStates
-
-      // Data reset successfully
+      // Mutations are reactive - CoState will automatically update
+      // No need to manually clear cache or reload
     } catch (_error) {
       console.error("Error resetting data:", _error);
     }
@@ -235,20 +313,8 @@
 
     try {
       await createHumanLeafType(me);
-
-      // Reload root to ensure schemata field is visible
-      if (me.root?.$isLoaded) {
-        await me.root.$jazz.ensureLoaded({
-          resolve: { schemata: true },
-        });
-        await me.root.$jazz.waitForSync();
-      }
-
-      // Reload the current context (CoState will update reactively)
-      // Clear CoState cache to force reload - $effect will recreate them
-      coValueStates.clear();
-
-      // Human LeafType created
+      // Mutations are reactive - CoState will automatically update
+      // No need to manually clear cache or reload
     } catch (error) {
       console.error("Error creating Human LeafType:", error);
     }
@@ -260,20 +326,8 @@
 
     try {
       await createTodoLeafType(me);
-
-      // Reload root to ensure schemata field is visible
-      if (me.root?.$isLoaded) {
-        await me.root.$jazz.ensureLoaded({
-          resolve: { schemata: true },
-        });
-        await me.root.$jazz.waitForSync();
-      }
-
-      // Reload the current context (CoState will update reactively)
-      // Clear CoState cache to force reload - $effect will recreate them
-      coValueStates.clear();
-
-      // Todo LeafType created
+      // Mutations are reactive - CoState will automatically update
+      // No need to manually clear cache or reload
     } catch (error) {
       console.error("Error creating Todo LeafType:", error);
     }
@@ -290,20 +344,8 @@
         email: "sam@example.com",
         dateOfBirth: new Date("1990-01-15"),
       });
-
-      // Reload root to ensure entities field is visible
-      if (me.root?.$isLoaded) {
-        await me.root.$jazz.ensureLoaded({
-          resolve: { entities: true },
-        });
-        await me.root.$jazz.waitForSync();
-      }
-
-      // Reload the current context (CoState will update reactively)
-      // Clear CoState cache to force reload - $effect will recreate them
-      coValueStates.clear();
-
-      // Sam Human Leaf created
+      // Mutations are reactive - CoState will automatically update
+      // No need to manually clear cache or reload
     } catch (error) {
       console.error("Error creating Sam Human Leaf:", error);
     }
@@ -321,20 +363,8 @@
         priority: "medium",
         dueDate: new Date("2025-12-31"),
       });
-
-      // Reload root to ensure entities field is visible
-      if (me.root?.$isLoaded) {
-        await me.root.$jazz.ensureLoaded({
-          resolve: { entities: true },
-        });
-        await me.root.$jazz.waitForSync();
-      }
-
-      // Reload the current context (CoState will update reactively)
-      // Clear CoState cache to force reload - $effect will recreate them
-      coValueStates.clear();
-
-      // 'eat banana' Todo Leaf created
+      // Mutations are reactive - CoState will automatically update
+      // No need to manually clear cache or reload
     } catch (error) {
       console.error("Error creating 'eat banana' Todo Leaf:", error);
     }
@@ -346,20 +376,8 @@
 
     try {
       await createAssignedToCompositeType(me);
-
-      // Reload root to ensure schemata field is visible
-      if (me.root?.$isLoaded) {
-        await me.root.$jazz.ensureLoaded({
-          resolve: { schemata: true },
-        });
-        await me.root.$jazz.waitForSync();
-      }
-
-      // Reload the current context (CoState will update reactively)
-      // Clear CoState cache to force reload - $effect will recreate them
-      coValueStates.clear();
-
-      // 'assigned' CompositeType created
+      // Mutations are reactive - CoState will automatically update
+      // No need to manually clear cache or reload
     } catch (error) {
       console.error("Error creating 'assigned' CompositeType:", error);
     }
@@ -392,20 +410,8 @@
         x1: todoEntity,
         x2: humanEntity,
       });
-
-      // Reload root to ensure entities field is visible
-      if (me.root?.$isLoaded) {
-        await me.root.$jazz.ensureLoaded({
-          resolve: { entities: true },
-        });
-        await me.root.$jazz.waitForSync();
-      }
-
-      // Reload the current context (CoState will update reactively)
-      // Clear CoState cache to force reload - $effect will recreate them
-      coValueStates.clear();
-
-      // 'assigned' Composite created
+      // Mutations are reactive - CoState will automatically update
+      // No need to manually clear cache or reload
     } catch (error) {
       console.error("Error creating 'assigned' Composite:", error);
     }
@@ -429,6 +435,10 @@
   {:else if !currentContext}
     <div class="text-center pt-8 pb-4">
       <p class="text-slate-500">No context available</p>
+    </div>
+  {:else if currentContext && currentContext.resolved.snapshot === undefined}
+    <div class="text-center pt-8 pb-4">
+      <p class="text-slate-500">Loading...</p>
     </div>
   {:else}
     <div>
@@ -466,15 +476,32 @@
       <div class="flex gap-6 items-start">
         <!-- Main Content -->
         <div class="flex-1 min-w-0">
-          {#if currentObjectContext()}
+          {#if currentObjectContext}
             <!-- Object context view -->
-            {@const objCtx = currentObjectContext()!}
-            <ObjectContextDisplay object={objCtx.object} label={objCtx.label} />
-          {:else if currentContext()}
+            <ObjectContextDisplay
+              object={currentObjectContext.object}
+              label={currentObjectContext.label}
+            />
+          {:else if currentContext}
             <!-- CoValue context view -->
-            {@const ctx = currentContext()!}
+            {@const lastItem =
+              navigationStack.length > 0
+                ? navigationStack[navigationStack.length - 1]
+                : null}
+            {@const ctxCoValueState =
+              lastItem && lastItem.type === "covalue"
+                ? coValueStates.get(lastItem.coValueId)
+                : lastItem && lastItem.type === "root-property"
+                  ? account // Use root's CoState for root properties (reactive!)
+                  : undefined}
+            {@const ctxPropertyPath =
+              lastItem && lastItem.type === "root-property"
+                ? ["root", ...lastItem.propertyPath]
+                : undefined}
             <Context
-              context={ctx}
+              context={currentContext}
+              coValueState={ctxCoValueState}
+              propertyPath={ctxPropertyPath}
               node={node()}
               onNavigate={(coValueId, label) =>
                 navigateToCoValue(coValueId as CoID, label)}
@@ -491,10 +518,9 @@
         </div>
 
         <!-- Right Aside: Metadata (show for CoValue contexts and objects - use parent context for objects) -->
-        {#if currentContext() || currentObjectContext()}
-          {@const ctx = currentContext()}
-          {@const objCtx = currentObjectContext()}
-          {@const metadataContext = ctx || objCtx?.parentContext}
+        {#if currentContext || currentObjectContext}
+          {@const metadataContext =
+            currentContext || currentObjectContext?.parentContext}
           {#if metadataContext}
             <div class="w-80 shrink-0">
               <aside class="sticky top-6">

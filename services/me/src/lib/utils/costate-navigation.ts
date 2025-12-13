@@ -13,11 +13,15 @@ import type { CoValueContext, ResolvedCoValueResult } from '@hominio/db'
 /**
  * Create a CoState for a CoValue (reactive)
  * Returns the CoState instance - components should derive resolved info reactively
+ * 
+ * @param coValueId - The ID of the CoValue to load
+ * @param resolveQuery - Optional resolve query for deep loading (defaults to shallow)
  */
 export function createCoValueState(
 	coValueId: CoID<RawCoValue>,
+	resolveQuery?: any,
 ): CoState<typeof CoMap> {
-	return new CoState(CoMap, coValueId)
+	return new CoState(CoMap, coValueId, resolveQuery ? { resolve: resolveQuery } : undefined)
 }
 
 /**
@@ -128,107 +132,28 @@ export function deriveContextFromCoState(
 		resolved?: ResolvedCoValueResult
 	}> = []
 
-	// Extract children reactively from CoValue properties (not snapshot)
-	if (coValue.$isLoaded) {
-		const rawValue = coValue.$jazz.raw
-		const type = rawValue.type as 'comap' | 'costream' | 'colist' | 'coplaintext'
-		
-		// Handle CoList differently - iterate over array indices
-		if (type === 'colist') {
-			// CoList - iterate over array-like structure
-			if (Array.isArray(coValue)) {
-				coValue.forEach((item, index) => {
-					if (item && typeof item === 'object' && '$jazz' in item) {
-						const itemRef = item as any
-						if (itemRef.$jazz?.id) {
-							directChildren.push({
-								key: `[${index}]`,
-								coValueId: itemRef.$jazz.id,
-							})
-						}
-					} else if (typeof item === 'string' && item.startsWith('co_')) {
-						directChildren.push({
-							key: `[${index}]`,
-							coValueId: item as CoID<RawCoValue>,
-						})
-					}
-				})
-			}
-		} else if (type === 'comap') {
-			// CoMap - iterate through properties
-			// Use Object.keys to safely get enumerable properties
-			try {
-				const keys = Object.keys(coValue).filter(key => !key.startsWith('$') && !key.startsWith('@'))
-				
-				for (const key of keys) {
-					const value = (coValue as any)[key]
+	// Extract children from snapshot (for metadata only)
+	// The snapshot is reactive because rawValue comes from coValueState.current
+	if (resolved.snapshot && typeof resolved.snapshot === 'object' && resolved.snapshot !== 'unavailable') {
+		for (const [key, value] of Object.entries(resolved.snapshot)) {
+			if (key.startsWith('$')) continue;
 
-					// Check if value is a CoValue reference (has $jazz.id)
-					if (value && typeof value === 'object' && '$jazz' in value) {
-						const coValueRef = value as any
-						if (coValueRef.$jazz?.id) {
+			if (typeof value === 'string' && value.startsWith('co_')) {
+				directChildren.push({
+					key,
+					coValueId: value as CoID<RawCoValue>,
+				});
+			} else if (Array.isArray(value) && value.length > 0) {
+				const allCoIDs = value.every((item) => typeof item === 'string' && item.startsWith('co_'));
+				if (allCoIDs) {
+					value.forEach((coId, index) => {
+						if (typeof coId === 'string' && coId.startsWith('co_')) {
 							directChildren.push({
-								key,
-								coValueId: coValueRef.$jazz.id,
-								// Don't resolve children eagerly - lazy loading for performance
-							})
+								key: `${key}[${index}]`,
+								coValueId: coId as CoID<RawCoValue>,
+							});
 						}
-					}
-					// Check if value is a CoList
-					else if (value && typeof value === 'object' && Array.isArray(value)) {
-						// CoList - check if items are CoValue references
-						value.forEach((item, index) => {
-							if (item && typeof item === 'object' && '$jazz' in item) {
-								const itemRef = item as any
-								if (itemRef.$jazz?.id) {
-									directChildren.push({
-										key: `${key}[${index}]`,
-										coValueId: itemRef.$jazz.id,
-									})
-								}
-							} else if (typeof item === 'string' && item.startsWith('co_')) {
-								directChildren.push({
-									key: `${key}[${index}]`,
-									coValueId: item as CoID<RawCoValue>,
-								})
-							}
-						})
-					}
-					// Check if value is a string CoID (fallback for snapshot-based data)
-					else if (typeof value === 'string' && value.startsWith('co_')) {
-						directChildren.push({
-							key,
-							coValueId: value as CoID<RawCoValue>,
-						})
-					}
-				}
-			} catch (_e) {
-				// Fall through to snapshot-based extraction if iteration fails
-			}
-		}
-	} else {
-		// Fallback to snapshot-based extraction if not loaded
-		if (resolved.snapshot && typeof resolved.snapshot === 'object' && resolved.snapshot !== 'unavailable') {
-			for (const [key, value] of Object.entries(resolved.snapshot)) {
-				if (key.startsWith('$')) continue
-
-				if (typeof value === 'string' && value.startsWith('co_')) {
-					directChildren.push({
-						key,
-						coValueId: value as CoID<RawCoValue>,
-					})
-				} else if (Array.isArray(value) && value.length > 0) {
-					const allCoIDs = value.every((item) => typeof item === 'string' && item.startsWith('co_'))
-					if (allCoIDs) {
-						value.forEach((coId, index) => {
-							if (typeof coId === 'string' && coId.startsWith('co_')) {
-								directChildren.push({
-									key: `${key}[${index}]`,
-									coValueId: coId as CoID<RawCoValue>,
-								})
-							}
-						})
-					}
+					});
 				}
 			}
 		}

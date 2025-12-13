@@ -31,15 +31,17 @@
   // Get group ID from resolved context
   const groupId = $derived(context.resolved.groupId);
 
-  // Get snapshot for accessing @label and @schema
-  const snapshot = $derived(
-    context.resolved.snapshot &&
-      typeof context.resolved.snapshot === 'object' &&
-      context.resolved.snapshot !== null &&
-      context.resolved.snapshot !== 'unavailable'
-      ? context.resolved.snapshot
-      : null,
-  );
+  // Get @label and @schema from snapshot (reactive via CoState)
+  const labelAndSchema = $derived(() => {
+    const snapshot = context.resolved.snapshot;
+    if (!snapshot || typeof snapshot !== 'object' || snapshot === 'unavailable') {
+      return { '@label': undefined, '@schema': undefined };
+    }
+    return {
+      '@label': snapshot['@label'],
+      '@schema': snapshot['@schema'],
+    };
+  });
 
   // Sort account members: "everyone" always first, then others
   const sortedAccountMembers = $derived.by(() => {
@@ -83,9 +85,12 @@
       return;
     }
 
-    // Use CoState to load the CoValue (same as legacy /data route)
+    // Use CoState to load the CoValue with resolve query
     // This gives us a properly wrapped CoValue with $isLoaded and $jazz.owner
-    coValueState = new CoState(CoMap, currentCoValueId);
+    // resolve: true loads the CoValue itself and direct references
+    coValueState = new CoState(CoMap, currentCoValueId, {
+      resolve: true,
+    });
   });
 
   // Get current CoValue from CoState (auto-subscribes)
@@ -253,15 +258,15 @@
     {:else if activeTab === "info"}
       <div class="space-y-3">
         <!-- @label and @schema at the top -->
-        {#if snapshot && '@label' in snapshot}
+        {#if labelAndSchema()['@label']}
           <PropertyItem
             propKey="@LABEL"
-            propValue={snapshot['@label'] || ''}
+            propValue={labelAndSchema()['@label'] || ''}
             hideBadge={true}
           />
         {/if}
-        {#if snapshot && '@schema' in snapshot}
-          {@const schemaRef = snapshot['@schema']}
+        {#if labelAndSchema()['@schema']}
+          {@const schemaRef = labelAndSchema()['@schema']}
           {@const isSchemaCoValueObject = schemaRef && typeof schemaRef === 'object' && '$jazz' in schemaRef}
           {@const isSchemaCoID = typeof schemaRef === 'string' && schemaRef.startsWith('co_')}
           {@const schemaId = isSchemaCoValueObject && schemaRef.$jazz?.id ? schemaRef.$jazz.id : (isSchemaCoID ? schemaRef : undefined)}
