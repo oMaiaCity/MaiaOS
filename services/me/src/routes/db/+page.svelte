@@ -286,12 +286,36 @@
   }
 
   // Navigate to a specific item in the breadcrumb (reactive - CoState handles updates)
+  // Instead of resetting the stack, append the item to continue the navigation history
   function navigateToBreadcrumb(index: number) {
     const target = navigationStack[index];
     if (!target) return;
 
-    // Update stack immediately (contexts are derived reactively from CoState)
-    navigationStack = navigationStack.slice(0, index + 1);
+    // Append the target item to the stack (continue history instead of resetting)
+    if (target.type === "covalue") {
+      navigateToCoValue(target.coValueId, target.label);
+    } else if (target.type === "object") {
+      navigateToObject(
+        target.object,
+        target.label,
+        target.parentCoValue,
+        target.parentKey,
+      );
+    } else if (target.type === "root-property") {
+      // For root properties, we need to navigate via the property path
+      // Get the actual CoValue from the root
+      if (me.$isLoaded && me.root.$isLoaded) {
+        let current: any = me.root;
+        for (const key of target.propertyPath) {
+          current = current[key];
+          if (!current) return;
+        }
+        const coValueId = current.$jazz?.id;
+        if (coValueId) {
+          navigateToCoValue(coValueId, target.label);
+        }
+      }
+    }
   }
 
   // Handle reset data
@@ -442,38 +466,59 @@
     </div>
   {:else if currentContext || currentObjectContext}
     <div>
-      <!-- Breadcrumb Navigation -->
-      <div class="flex items-center gap-2 mb-6">
-        {#if navigationStack.length > 1}
-          <button
-            type="button"
-            onclick={navigateBack}
-            class="text-sm text-slate-600 hover:text-slate-900 px-2 py-1 rounded hover:bg-slate-100"
-          >
-            ← Back
-          </button>
-          <span class="text-slate-400">|</span>
-        {/if}
-        {#each navigationStack as item, index}
-          {#if index < navigationStack.length - 1}
-            <button
-              type="button"
-              onclick={() => navigateToBreadcrumb(index)}
-              class="text-sm text-slate-600 hover:text-slate-900 px-2 py-1 rounded hover:bg-slate-100"
-            >
-              {item.label}
-            </button>
-            <span class="text-slate-400">/</span>
-          {:else}
-            <span class="text-sm font-semibold text-slate-900"
-              >{item.label}</span
-            >
-          {/if}
-        {/each}
-      </div>
-
-      <!-- Two-column layout: Main + Metadata -->
+      <!-- Three-column layout: Navigation Stack + Main + Metadata -->
       <div class="flex gap-6 items-start">
+        <!-- Left Aside: Navigation Stack -->
+        {#if navigationStack.length > 0}
+          <div class="w-24 shrink-0">
+            <aside class="sticky top-6">
+              <!-- Back Button -->
+              {#if navigationStack.length > 1}
+                <button
+                  type="button"
+                  onclick={navigateBack}
+                  class="w-full mb-3 bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-2 text-xs rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-1"
+                >
+                  <svg
+                    class="w-3 h-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                  Back
+                </button>
+              {/if}
+
+              <!-- Navigation History (newest at top) -->
+              <div class="space-y-1">
+                <div class="text-[10px] font-semibold text-slate-500 uppercase mb-2 px-2">
+                  Nav
+                </div>
+                {#each [...navigationStack].reverse() as item, reverseIndex}
+                  {@const index = navigationStack.length - 1 - reverseIndex}
+                  {@const isActive = index === navigationStack.length - 1}
+                  <button
+                    type="button"
+                    onclick={() => navigateToBreadcrumb(index)}
+                    class="w-full text-left px-2 py-1.5 rounded text-xs transition-colors {isActive
+                      ? 'bg-slate-100 text-slate-900 font-medium border border-slate-300'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'}"
+                  >
+                    <div class="truncate">{item.label}</div>
+                  </button>
+                {/each}
+              </div>
+            </aside>
+          </div>
+        {/if}
+
         <!-- Main Content -->
         <div class="flex-1 min-w-0">
           {#if currentObjectContext}
