@@ -14,6 +14,10 @@ export const SchemaMetaSchema = {
 			type: 'string',
 			description: 'Schema type identifier (e.g., "Schema" for schemas, schema name for entities)',
 		},
+		type: {
+			type: 'string',
+			description: 'Content type of the schema (e.g., "Leaf" for LeafTypes, "Composite" for CompositeTypes)',
+		},
 		name: {
 			type: 'string',
 			description: 'Name of the schema (e.g., "Car", "JazzComposite")',

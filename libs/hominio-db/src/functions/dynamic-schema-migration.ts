@@ -259,6 +259,10 @@ const SchemaMetaSchema = {
 			type: 'o-map',
 			description: 'Reference to SchemaDefinition CoValue (meta-schema references itself)',
 		},
+		type: {
+			type: 'string',
+			description: 'Content type of the schema (e.g., "Leaf" for LeafTypes, "Composite" for CompositeTypes)',
+		},
 		name: {
 			type: 'string',
 			description: 'Name of the schema (e.g., "Car", "JazzComposite")',
@@ -458,9 +462,14 @@ async function ensureMetaSchema(account: any): Promise<any> {
 	metaSchema.$jazz.set('name', 'Schema')
 	await metaSchema.$jazz.waitForSync()
 
-	// Verify name was set
+	// Set the type property to "MetaSchema" for the meta-schema itself
+	metaSchema.$jazz.set('type', 'MetaSchema')
+	await metaSchema.$jazz.waitForSync()
+
+	// Verify name and type were set
 	const verifyName = metaSchema.name
-	console.log(`[ensureMetaSchema] Created meta-schema, name after set: "${verifyName}", ID: ${metaSchema.$jazz.id}`)
+	const verifyType = metaSchema.type
+	console.log(`[ensureMetaSchema] Created meta-schema, name after set: "${verifyName}", type: "${verifyType}", ID: ${metaSchema.$jazz.id}`)
 
 	// Set system properties (@label and @schema) - meta-schema references itself
 	const { setSystemProps } = await import('../functions/set-system-props.js')

@@ -40,6 +40,14 @@ export {
 	syncGoogleDataToProfile,
 } from './schema'
 export { JazzCompositeJsonSchema } from './schemas/jazz-composite-schema'
+// Data LeafTypes
+export { createHumanLeafType, createTodoLeafType } from './core/data/leaf-type-manager'
+// Data Leafs
+export { createHumanLeaf, createTodoLeaf } from './core/data/leaf-manager'
+// Data CompositeTypes
+export { createAssignedToCompositeType } from './core/data/composite-type-manager'
+// Data Composites
+export { createAssignedToComposite } from './core/data/composite-manager'
 
 // CoValue Formatting (Generic utility)
 export {

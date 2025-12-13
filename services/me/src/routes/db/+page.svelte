@@ -7,6 +7,8 @@
     addJazzCompositeInstance,
     addRandomCarInstance,
     resetData,
+    createHumanLeafType,
+    createTodoLeafType,
   } from "@hominio/db";
   import type { CoID, RawCoValue } from "cojson";
   import { AccountCoState } from "jazz-tools/svelte";
@@ -335,7 +337,10 @@
         const updatedStack = [...navigationStack];
         const lastIndex = updatedStack.length - 1;
         if (updatedStack[lastIndex]?.type === "covalue") {
-          updatedStack[lastIndex] = { ...updatedStack[lastIndex], context: refreshedContext };
+          updatedStack[lastIndex] = {
+            ...updatedStack[lastIndex],
+            context: refreshedContext,
+          };
         }
         navigationStack = updatedStack;
       }
@@ -375,7 +380,10 @@
         const updatedStack = [...navigationStack];
         const lastIndex = updatedStack.length - 1;
         if (updatedStack[lastIndex]?.type === "covalue") {
-          updatedStack[lastIndex] = { ...updatedStack[lastIndex], context: refreshedContext };
+          updatedStack[lastIndex] = {
+            ...updatedStack[lastIndex],
+            context: refreshedContext,
+          };
         }
         navigationStack = updatedStack;
       }
@@ -415,7 +423,10 @@
         const updatedStack = [...navigationStack];
         const lastIndex = updatedStack.length - 1;
         if (updatedStack[lastIndex]?.type === "covalue") {
-          updatedStack[lastIndex] = { ...updatedStack[lastIndex], context: refreshedContext };
+          updatedStack[lastIndex] = {
+            ...updatedStack[lastIndex],
+            context: refreshedContext,
+          };
         }
         navigationStack = updatedStack;
       }
@@ -423,6 +434,88 @@
       toast.success("Data reset successfully!");
     } catch (_error) {
       toast.error("Error resetting data. Check console for details.");
+    }
+  }
+
+  // Handle creating Human LeafType
+  async function handleCreateHumanLeafType() {
+    if (!me.$isLoaded) return;
+
+    try {
+      await createHumanLeafType(me);
+
+      // Reload root to ensure schemata field is visible
+      if (me.root?.$isLoaded) {
+        await me.root.$jazz.ensureLoaded({
+          resolve: { schemata: true },
+        });
+        await me.root.$jazz.waitForSync();
+      }
+
+      // Reload the current context
+      const currentNode = node();
+      const currentCtx = currentContext();
+      if (currentNode && currentCtx) {
+        const refreshedContext = await navigateToCoValueContext(
+          currentCtx.coValueId,
+          currentNode,
+        );
+        const updatedStack = [...navigationStack];
+        const lastIndex = updatedStack.length - 1;
+        if (updatedStack[lastIndex]?.type === "covalue") {
+          updatedStack[lastIndex] = {
+            ...updatedStack[lastIndex],
+            context: refreshedContext,
+          };
+        }
+        navigationStack = updatedStack;
+      }
+
+      toast.success("Human LeafType created! Check schemata to see it.");
+    } catch (error) {
+      console.error("Error creating Human LeafType:", error);
+      toast.error("Error creating Human LeafType. Check console for details.");
+    }
+  }
+
+  // Handle creating Todo LeafType
+  async function handleCreateTodoLeafType() {
+    if (!me.$isLoaded) return;
+
+    try {
+      await createTodoLeafType(me);
+
+      // Reload root to ensure schemata field is visible
+      if (me.root?.$isLoaded) {
+        await me.root.$jazz.ensureLoaded({
+          resolve: { schemata: true },
+        });
+        await me.root.$jazz.waitForSync();
+      }
+
+      // Reload the current context
+      const currentNode = node();
+      const currentCtx = currentContext();
+      if (currentNode && currentCtx) {
+        const refreshedContext = await navigateToCoValueContext(
+          currentCtx.coValueId,
+          currentNode,
+        );
+        const updatedStack = [...navigationStack];
+        const lastIndex = updatedStack.length - 1;
+        if (updatedStack[lastIndex]?.type === "covalue") {
+          updatedStack[lastIndex] = {
+            ...updatedStack[lastIndex],
+            context: refreshedContext,
+          };
+        }
+        navigationStack = updatedStack;
+      }
+
+      toast.success("Todo LeafType created! Check schemata to see it.");
+    } catch (error) {
+      console.error("Error creating Todo LeafType:", error);
+      toast.error("Error creating Todo LeafType. Check console for details.");
     }
   }
 </script>
@@ -541,10 +634,35 @@
                   onNavigate={(coValueId, label) =>
                     navigateToCoValue(coValueId as CoID, label)}
                 />
-                
+
                 <!-- Action Buttons -->
                 <div class="mt-6 pt-6 border-t border-slate-200">
                   <div class="flex flex-col gap-2">
+                    <!-- Milestone 1: LeafTypes -->
+                    <div
+                      class="text-xs font-semibold text-slate-500 uppercase mb-1"
+                    >
+                      Milestone 1: LeafTypes
+                    </div>
+                    <button
+                      onclick={() => handleCreateHumanLeafType()}
+                      class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                    >
+                      Create Human LeafType
+                    </button>
+                    <button
+                      onclick={() => handleCreateTodoLeafType()}
+                      class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                    >
+                      Create Todo LeafType
+                    </button>
+
+                    <!-- Existing Actions -->
+                    <div
+                      class="text-xs font-semibold text-slate-500 uppercase mb-1 mt-4"
+                    >
+                      Existing
+                    </div>
                     <button
                       onclick={() => handleAddCar()}
                       class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"

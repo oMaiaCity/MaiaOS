@@ -331,7 +331,7 @@
         />
 
         <PropertyItem
-          propKey="TYPE"
+          propKey="CONTENT TYPE"
           propValue={displayType}
           hideBadge={false}
           hideValue={true}
