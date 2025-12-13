@@ -559,12 +559,6 @@
                 <!-- Action Buttons -->
                 <div class="mt-6 pt-6 border-t border-slate-200">
                   <div class="flex flex-col gap-2">
-                    <!-- Milestone 2: Leafs -->
-                    <div
-                      class="text-xs font-semibold text-slate-500 uppercase mb-1 mt-4"
-                    >
-                      Milestone 2: Leafs
-                    </div>
                     <button
                       onclick={() => handleCreateSamHuman()}
                       class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
@@ -577,26 +571,12 @@
                     >
                       Create "eat banana" (Todo)
                     </button>
-
-                    <!-- Milestone 4: Composites -->
-                    <div
-                      class="text-xs font-semibold text-slate-500 uppercase mb-1 mt-4"
-                    >
-                      Milestone 4: Composites
-                    </div>
                     <button
                       onclick={() => handleCreateAssignedToComposite()}
                       class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                     >
                       Create "assigned" Composite
                     </button>
-
-                    <!-- Existing Actions -->
-                    <div
-                      class="text-xs font-semibold text-slate-500 uppercase mb-1 mt-4"
-                    >
-                      Existing
-                    </div>
                     <button
                       onclick={() => handleResetData()}
                       class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
