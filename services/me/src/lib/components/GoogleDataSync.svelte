@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { JazzAccount, syncGoogleDataToProfile } from "@hominio/data";
+  import { JazzAccount, syncGoogleDataToProfile } from "@hominio/db";
   import { AccountCoState } from "jazz-tools/svelte";
   import { authClient } from "$lib/auth-client";
 

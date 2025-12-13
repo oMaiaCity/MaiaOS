@@ -1,6 +1,6 @@
 /**
- * Re-export from @hominio/data package for backward compatibility
- * All schemas, functions, and migrations are now in @hominio/data
+ * Re-export from @hominio/db package for backward compatibility
+ * All schemas, functions, and migrations are now in @hominio/db
  */
 
-export * from '@hominio/data'
+export * from '@hominio/db'

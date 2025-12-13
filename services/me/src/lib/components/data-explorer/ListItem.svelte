@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ResolvedCoValueResult } from "@hominio/data";
+  import type { ResolvedCoValueResult } from "@hominio/db";
   import type { LocalNode } from "cojson";
   import Badge from "./Badge.svelte";
 

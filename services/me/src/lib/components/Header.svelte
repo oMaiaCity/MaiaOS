@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { JazzAccount } from "@hominio/data";
+  import { JazzAccount } from "@hominio/db";
   import { AccountCoState, Image } from "jazz-tools/svelte";
   import { browser } from "$app/environment";
   import { page } from "$app/stores";

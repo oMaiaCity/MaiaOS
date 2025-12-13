@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { CoValueContext } from "@hominio/data";
+  import type { CoValueContext } from "@hominio/db";
   import type { LocalNode } from "cojson";
   import ListItem from "./ListItem.svelte";
 

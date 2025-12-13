@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { JazzAccount, setupComputedFieldsForCoValue } from "@hominio/data";
+  import { JazzAccount, setupComputedFieldsForCoValue } from "@hominio/db";
   import { AccountCoState, Image } from "jazz-tools/svelte";
   import { authClient } from "$lib/auth-client";
 

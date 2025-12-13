@@ -2,7 +2,7 @@
   import "../app.css";
   import "jazz-tools/inspector/register-custom-element";
   import { Favicon, Footer } from "@hominio/brand";
-  import { JazzAccount } from "@hominio/data";
+  import { JazzAccount } from "@hominio/db";
   import { JazzSvelteProvider } from "jazz-tools/svelte";
   import { page } from "$app/stores";
   import { PUBLIC_JAZZ_API_KEY as apiKey } from "$env/static/public";

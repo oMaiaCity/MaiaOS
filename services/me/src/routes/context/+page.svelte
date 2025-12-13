@@ -7,7 +7,7 @@
     addJazzCompositeInstance,
     addRandomCarInstance,
     resetData,
-  } from "@hominio/data";
+  } from "@hominio/db";
   import type { CoID, RawCoValue } from "cojson";
   import { AccountCoState } from "jazz-tools/svelte";
   import { authClient } from "$lib/auth-client";

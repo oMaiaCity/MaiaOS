@@ -1,10 +1,10 @@
 <script lang="ts">
-  import type { CoValueContext } from "@hominio/data";
+  import type { CoValueContext } from "@hominio/db";
   import {
     getCoValueGroupInfo,
     resolveProfile,
     formatCoValueId,
-  } from "@hominio/data";
+  } from "@hominio/db";
   import type { LocalNode } from "cojson";
   import { CoMap } from "jazz-tools";
   import { CoState, Image } from "jazz-tools/svelte";

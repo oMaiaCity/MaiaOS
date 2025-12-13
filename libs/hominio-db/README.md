@@ -1,4 +1,4 @@
-# @hominio/data
+# @hominio/db
 
 Shared Jazz data schemas, utilities, computed fields system, migrations, and group utilities for the Hominio monorepo.
 
@@ -19,7 +19,7 @@ This package is part of the Hominio monorepo and uses workspace dependencies:
 ```json
 {
   "dependencies": {
-    "@hominio/data": "workspace:*"
+    "@hominio/db": "workspace:*"
   }
 }
 ```
@@ -44,7 +44,7 @@ import {
   migrateSyncGoogleNameToProfile,
   migrateSyncGoogleImageToProfile,
   migrateSyncGoogleEmailToContact
-} from "@hominio/data";
+} from "@hominio/db";
 ```
 
 ## Structure

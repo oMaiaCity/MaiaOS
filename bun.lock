@@ -25,12 +25,16 @@
         "tailwindcss": "^4.0.0",
       },
     },
-    "libs/hominio-data": {
-      "name": "@hominio/data",
+    "libs/hominio-db": {
+      "name": "@hominio/db",
       "version": "0.17.0",
       "peerDependencies": {
         "jazz-tools": "^0.19.7",
       },
+    },
+    "libs/hominio-language": {
+      "name": "@hominio/language",
+      "version": "0.17.0",
     },
     "libs/hominio-vibes-LEGACY": {
       "name": "@hominio/vibes",
@@ -57,7 +61,7 @@
       "dependencies": {
         "@better-auth/cli": "^1.4.5",
         "@hominio/brand": "workspace:*",
-        "@hominio/data": "workspace:*",
+        "@hominio/db": "workspace:*",
         "@iconify/svelte": "^5.1.0",
         "better-auth": "^1.4.5",
         "jazz-tools": "^0.19.7",
@@ -289,7 +293,9 @@
 
     "@hominio/brand": ["@hominio/brand@workspace:libs/hominio-brand"],
 
-    "@hominio/data": ["@hominio/data@workspace:libs/hominio-data"],
+    "@hominio/db": ["@hominio/db@workspace:libs/hominio-db"],
+
+    "@hominio/language": ["@hominio/language@workspace:libs/hominio-language"],
 
     "@hominio/vibes": ["@hominio/vibes@workspace:libs/hominio-vibes-LEGACY"],
 
