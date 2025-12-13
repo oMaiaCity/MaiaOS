@@ -1,0 +1,3642 @@
+[
+  {
+    "word": "a'orne",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is maple of species/variety $x_2$."
+  },
+  {
+    "word": "abniena",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Guaraní in aspect $x_2$."
+  },
+  {
+    "word": "aftobuso",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a bus/coach for carrying passengers $x_2$, propelled by $x_3$"
+  },
+  {
+    "word": "agbakate",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an avocado (fruit or tree) of species/variety $x_2$."
+  },
+  {
+    "word": "aierne",
+    "type": "fu'ivla",
+    "definition": "$x_1$ Armenian in aspect $x_2$"
+  },
+  {
+    "word": "aizdo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is woad of species/variety $x_2$."
+  },
+  {
+    "word": "akmela",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a toothache plant/spotflower/paracress of species/variety $x_2$."
+  },
+  {
+    "word": "aksiptrina",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a hawk of species/type $x_2$"
+  },
+  {
+    "word": "alba'aka",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is basil of species/variety $x_2$."
+  },
+  {
+    "word": "alfabeta",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an alphabet used to write $x_2$."
+  },
+  {
+    "word": "alminiu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of/contains/is made of aluminium."
+  },
+  {
+    "word": "alpaka",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an alpaca of breed $x_2$"
+  },
+  {
+    "word": "altamru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a date (fruit or tree) of species/variety $x_2$."
+  },
+  {
+    "word": "alzaitu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an olive of species/variety $x_2$."
+  },
+  {
+    "word": "amgidala",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an amygdala in organism $x_2$, with function $x_3$."
+  },
+  {
+    "word": "amnio",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the amnion of $x_2$"
+  },
+  {
+    "word": "amniota",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an amniote of class/order/family $x_2$"
+  },
+  {
+    "word": "ampigravle",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is celery."
+  },
+  {
+    "word": "amsake",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is made of/contains/is an amount of amazake from $x_2$"
+  },
+  {
+    "word": "amtisti",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of/contains/is made of amethyst from source $x_2$."
+  },
+  {
+    "word": "amxari",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Amharic in aspect $x_2$."
+  },
+  {
+    "word": "andiroba",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is carap of species/variety $x_2$."
+  },
+  {
+    "word": "angeli",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an angel."
+  },
+  {
+    "word": "angila",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an eel of species $x_2$."
+  },
+  {
+    "word": "anji",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a Chinese hanzi / Japanese kanji (logogram) with meaning $x_2$ and radical $x_3$."
+  },
+  {
+    "word": "anmonia",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of / contains / is made of ammonia."
+  },
+  {
+    "word": "ansoptera",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a dragonfly of species $x_2$."
+  },
+  {
+    "word": "antilope",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an antelope of species $x_2$."
+  },
+  {
+    "word": "arce",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a maple (Acer) of species/variety $x_2$"
+  },
+  {
+    "word": "arda",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a heron of species $x_2$."
+  },
+  {
+    "word": "armoraki",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is horseradish of variety $x_2$."
+  },
+  {
+    "word": "arnika",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of arnica/wolfsbane of species/strain $x_2$"
+  },
+  {
+    "word": "arxivo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an archive containing $x_2$"
+  },
+  {
+    "word": "arxokuna",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a raccoon of species $x_2$"
+  },
+  {
+    "word": "atkuila",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an eagle of species/breed $x_2$."
+  },
+  {
+    "word": "aufklerunge",
+    "type": "fu'ivla",
+    "definition": "$x_1$ (process/concept) is enlightenment in the sense of philosophy $x_2$"
+  },
+  {
+    "word": "avgusto",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is August in year $x_2$ on calendar $x_3$"
+  },
+  {
+    "word": "axlte",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an axolotl of species/breed $x_2$"
+  },
+  {
+    "word": "bajriga",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a budgerigar (Melopsittacus undulatus) of breed $x_2$"
+  },
+  {
+    "word": "baknrzebu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a zebu/Bos indicus of species/subspecies $x_2$"
+  },
+  {
+    "word": "banbu'enu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''ben'' (Bengali)."
+  },
+  {
+    "word": "bancumunu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''cmn'' (Mandarin Chinese)."
+  },
+  {
+    "word": "bandu'e'u",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''deu'' (German)."
+  },
+  {
+    "word": "banfuru'a",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''fra'' (French)."
+  },
+  {
+    "word": "bangaru'a",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''ara'' (Arabic)."
+  },
+  {
+    "word": "bangarubu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''arb'' (Standard Arabic)."
+  },
+  {
+    "word": "bangenugu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''eng'' (English)."
+  },
+  {
+    "word": "bangepu'o",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''epo'' (Esperanto)."
+  },
+  {
+    "word": "banginudu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''ind'' (Indonesian)."
+  },
+  {
+    "word": "bangitu'a",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''ita'' (Italian)."
+  },
+  {
+    "word": "bangrfarsi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Farsi language used by $x_2$ to express/communicate $x_3$ (si'o/du'u, not quote)."
+  },
+  {
+    "word": "bangrislenska",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Icelandic language used by $x_2$."
+  },
+  {
+    "word": "bangrlietuva",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Lithuanian language used by $x_2$."
+  },
+  {
+    "word": "bangrnaidjiria",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Nigerian English language used by $x_2$ to express/communicate $x_3$ (si'o/du'u, not quote)."
+  },
+  {
+    "word": "bangrnorgo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Norwegian language used by $x_2$ of form (bokmål, nynorsk, högnorsk) $x_3$."
+  },
+  {
+    "word": "bangrpolska",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Polish language used by $x_2$ to express/communicate $x_3$ (si'o/du'u, not quote)."
+  },
+  {
+    "word": "bangrsfe'enska",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Swedish language used by $x_2$."
+  },
+  {
+    "word": "bangrsu'omi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Finnish language used by $x_2$."
+  },
+  {
+    "word": "bangrtai",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the (Central) Thai/Siamese language used by $x_2$."
+  },
+  {
+    "word": "bangrtalia",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Italian language used by $x_2$ to express/communicate $x_3$ (si'o/du'u, not quote)."
+  },
+  {
+    "word": "bangrtcosena",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Korean language of North Korea used by $x_2$ to express/communicate $x_3$ (si'o/du'u, not quote)."
+  },
+  {
+    "word": "bangrturkie",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Turkish language used by $x_2$ to express/communicate $x_3$ (si'o/du'u, not quote)."
+  },
+  {
+    "word": "bangrvietnama",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Vietnamese language used by $x_2$ to express/communicate $x_3$ (si'o/du'u, not quote)."
+  },
+  {
+    "word": "bangrxangu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Korean language used by $x_2$ to express/communicate $x_3$ (si'o/du'u, not quote)."
+  },
+  {
+    "word": "bangrxanguke",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Korean language of South Korea used by $x_2$ to express/communicate $x_3$ (si'o/du'u, not quote)."
+  },
+  {
+    "word": "bangrxirana",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Iranian Farsi language used by $x_2$ to express/communicate $x_3$ (si'o/du'u, not quote)."
+  },
+  {
+    "word": "bangukuru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''ukr'' (Ukrainian)."
+  },
+  {
+    "word": "bangurudu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''urd'' (Urdu)."
+  },
+  {
+    "word": "banje'u'e",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''yue'' (Yue Chinese)."
+  },
+  {
+    "word": "banjubu'o",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''jbo'' (Lojban)."
+  },
+  {
+    "word": "banjupunu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''jpn'' (Japanese)."
+  },
+  {
+    "word": "banku'anu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''kan'' (Kannada)."
+  },
+  {
+    "word": "banku'oru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''kor'' (Korean)."
+  },
+  {
+    "word": "banpu'olu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''pol'' (Polish)."
+  },
+  {
+    "word": "banpu'oru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''por'' (Portuguese)."
+  },
+  {
+    "word": "banru'usu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''rus'' (Russian)."
+  },
+  {
+    "word": "bansupu'a",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''spa'' (Spanish)."
+  },
+  {
+    "word": "banve'u'u",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''wuu'' (Wu Chinese)."
+  },
+  {
+    "word": "banxe'inu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''hin'' (Hindi)."
+  },
+  {
+    "word": "baurgusuve",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the language with ISO 639-3 code ''gsw'' (Swiss German)."
+  },
+  {
+    "word": "berbere",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is berbere (Ethiopian spice mixture) of type/containing $x_2$"
+  },
+  {
+    "word": "berberi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ has beriberi with symptoms $x_2$"
+  },
+  {
+    "word": "berberida",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is barberry of species $x_2$"
+  },
+  {
+    "word": "berbero",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Berber in aspect $x_2$"
+  },
+  {
+    "word": "bergamia",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a bergamot orange of variety/cultivar $x_2$"
+  },
+  {
+    "word": "birjrsasafra",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is made of/contains/is a amount of root beer with flavor/ingredients including $x_2$."
+  },
+  {
+    "word": "birkoku",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an apricot of variety $x_2$."
+  },
+  {
+    "word": "bliardo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a billiard/pool/cue sport game characterized by $x_2$"
+  },
+  {
+    "word": "bolgaro",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Bulgarian in aspect $x_2$."
+  },
+  {
+    "word": "bongretmoida",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a ethmoid bone (os ethmoidale) performing function $x_2$ in body of $b_3$."
+  },
+  {
+    "word": "bongrlakrima",
+    "type": "fu'ivla",
+    "definition": "$b_1$ is a/the lacrimal bone (os lacrimale) performing function $b_2$ in body of $b_3$."
+  },
+  {
+    "word": "bongrpalati",
+    "type": "fu'ivla",
+    "definition": "$b_1$ is a/the palate bone performing function $b_2$ in body of $b_3$."
+  },
+  {
+    "word": "brauzero",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a web browser for retrieving/presenting/traversing information $x_2$"
+  },
+  {
+    "word": "braxiura",
+    "type": "fu'ivla",
+    "definition": "$j_1$ is a crab of species/section $j_2$."
+  },
+  {
+    "word": "bre'one",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Breton in aspect $x_2$."
+  },
+  {
+    "word": "breveto",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a patent on invention $x_2$ by inventor $x_3$ valid in jurisdiction $x_4$ for time interval $x_5$."
+  },
+  {
+    "word": "bromeli",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a bromeliad/pineapple of species $x_2$."
+  },
+  {
+    "word": "bukprgingamu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an amount of gingham"
+  },
+  {
+    "word": "cadnfroide",
+    "type": "fu'ivla",
+    "definition": "$x_1$ feels Schadenfreude/pleasure derived from unfortunate/luckless event $x_2$."
+  },
+  {
+    "word": "campania",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a champagne made from grapes $x_2$."
+  },
+  {
+    "word": "catnrpepiskopo",
+    "type": "fu'ivla",
+    "definition": "$j_1$ is the bishop/archbishop of $j_2$ of religion $l_1$."
+  },
+  {
+    "word": "caurma",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of shawarma containing $x_2$"
+  },
+  {
+    "word": "caxmati",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a game of chess between $x_2$ (white) and $x_3$ (black)."
+  },
+  {
+    "word": "cekrpolo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a polo shirt of material $x_2$."
+  },
+  {
+    "word": "cenrini",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a/the kidney [body-part] of $x_2$"
+  },
+  {
+    "word": "centero",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is in the center of $x_2$"
+  },
+  {
+    "word": "ciblrmoru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is myrrh from tree species $x_2$."
+  },
+  {
+    "word": "cibrfiorso",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a/the triforce/Power of the Gods/Golden Triangle consisting of magic triangles $x_2$."
+  },
+  {
+    "word": "cidjrburito",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a burrito/Mexican dish of ingredients wrapped in a tortilla including ingredients $x_2$."
+  },
+  {
+    "word": "cidjrkusku",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of couscous of ingredients including $x_2$"
+  },
+  {
+    "word": "cidjrpitsa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a pizza with topping/ingredients $x_2$."
+  },
+  {
+    "word": "cidjrxametsa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is chometz."
+  },
+  {
+    "word": "cindrlanata",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a woolly-leaved oak (Quercus lanata) of species/strain $x_2$."
+  },
+  {
+    "word": "cionmau",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a panda of genus/species $x_2$."
+  },
+  {
+    "word": "cipnrbuteo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a buzzard of species/type $x_2$"
+  },
+  {
+    "word": "cipnrdodo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a dodo of species $x_2$."
+  },
+  {
+    "word": "cipnrdromai",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an emu of variety/species $x_2$."
+  },
+  {
+    "word": "cipnrfalko",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a falcon (genus 'falco')."
+  },
+  {
+    "word": "cipnrfasani",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a pheasant/partridge/quail/peafowl of species/type $x_2$"
+  },
+  {
+    "word": "cipnrkanario",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a canary."
+  },
+  {
+    "word": "cipnrkorvo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a crow/raven of species $x_2$."
+  },
+  {
+    "word": "cipnrkuku",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a cuckoo of species $x_2$."
+  },
+  {
+    "word": "cipnrlaridei",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a gull of species $x_2$"
+  },
+  {
+    "word": "cipnrlori",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a lory/lorikeet of species $x_2$."
+  },
+  {
+    "word": "cipnrpika",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a European magpie of subspecies $x_1$."
+  },
+  {
+    "word": "cipnrsikonia",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a stork of species/type $x_2$"
+  },
+  {
+    "word": "cipnrxuazine",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a hoatzin of breed $x_2$."
+  },
+  {
+    "word": "cirlnrokforte",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of Roquefort cheese of variety $x_2$."
+  },
+  {
+    "word": "cirlrbri",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of Brie cheese of variety $x_2$."
+  },
+  {
+    "word": "cirlrceda",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of Cheddar cheese of variety $x_2$."
+  },
+  {
+    "word": "cirlredame",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of Edam/Edammer cheese of variety  $x_2$."
+  },
+  {
+    "word": "cirlrfeta",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of Feta cheese of variety $x_2$."
+  },
+  {
+    "word": "cirlrgorgonzola",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of Gorgonzola cheese of variety  $x_2$."
+  },
+  {
+    "word": "cirlrkamumberti",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of Camembert cheese of variety  $x_2$."
+  },
+  {
+    "word": "cirlrmozarela",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of Mozzarella cheese of variety  $x_2$."
+  },
+  {
+    "word": "cirlrpanira",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of Paneer cheese of variety  $x_2$."
+  },
+  {
+    "word": "cirlrparmaregio",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of Parmesan/ cheese from (or similar to that from) the region of Parma and Reggio Emilia, of variety $x_2$."
+  },
+  {
+    "word": "cirlrpreste",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of Prästost cheese of variety $x_2$."
+  },
+  {
+    "word": "cirlrstilto",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of Stilton cheese of variety  $x_2$."
+  },
+  {
+    "word": "cirlrxalumi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of Halloumi cheese of variety $x_2$."
+  },
+  {
+    "word": "cirlrxauda",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of Gouda cheese of variety $x_2$."
+  },
+  {
+    "word": "cistrxaioliano",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the minor key of tonic $x_2$ of/with type/notes $x_3$."
+  },
+  {
+    "word": "cistrxioniano",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the major key of tonic $x_2$ of/with type/notes $x_3$."
+  },
+  {
+    "word": "ckinoje",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a muskellunge of species/breed $x_2$"
+  },
+  {
+    "word": "ckiptare",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Albanian (Balkan) in aspect $x_2$."
+  },
+  {
+    "word": "cmacnrekursi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a recursive function with arguments $x_2$"
+  },
+  {
+    "word": "cmiai",
+    "type": "fu'ivla",
+    "definition": "$x_1$ (set) performs a miai ritual (a custom in which unattached individuals are introduced to each other to consider the possibility of marriage)"
+  },
+  {
+    "word": "cpipika",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a bird of species Pica Pica / Eurasian(Common) Magpie"
+  },
+  {
+    "word": "crenzue",
+    "type": "fu'ivla",
+    "definition": "$x_1$ practices/exercises/drills/trains in/for action/event/performance $x_2$"
+  },
+  {
+    "word": "danseke",
+    "type": "fu'ivla",
+    "definition": "$x1$ pertains to Denmark/Danish culture/nationality/language is aspect $x2$"
+  },
+  {
+    "word": "dapsodi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an armadillo of species/breed $x_2$."
+  },
+  {
+    "word": "datnrzbaselpla",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a makefile designed to produce output files / data / event $x_2$ from rules $x_3$."
+  },
+  {
+    "word": "de'emni",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is denim of material $x_2$."
+  },
+  {
+    "word": "decmbero",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is December in year $x_2$ on calendar $x_3$"
+  },
+  {
+    "word": "delfinu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a dolphin of species/breed $x_2$."
+  },
+  {
+    "word": "dembrciceri",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a garbanzo/chickpea of species/variety $x_2$."
+  },
+  {
+    "word": "detrgregori",
+    "type": "fu'ivla",
+    "definition": "$x_{1}$ is the date [day,{week},{month},year] of event/state $x_{2}$, at location $x_{3}$, by the Gregorian calendar."
+  },
+  {
+    "word": "dinkrnite",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a rivet of type $x_2$ made of $x_3$"
+  },
+  {
+    "word": "dinsauru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a dinosaur of type $x_2$ living in era $x_3$."
+  },
+  {
+    "word": "dja'aza",
+    "type": "fu'ivla",
+    "definition": "$d_1$ is jazz music performed at/by $z_2$ (event) with characteristics $z_3$."
+  },
+  {
+    "word": "djarspageti",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of spaghetti (long, thin cylindrical pasta)."
+  },
+  {
+    "word": "djaule",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is $g_2$ joule(s) of energy (default is 1) by standard $g_3$."
+  },
+  {
+    "word": "djekuole",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quoll of species $x_2$"
+  },
+  {
+    "word": "djoguro",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of yogurt made from $x_2$ milk by process $x_3$."
+  },
+  {
+    "word": "dorkada",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a gazelle of species $x_2$."
+  },
+  {
+    "word": "dragana",
+    "type": "fu'ivla",
+    "definition": "$x_1$ (female) is precious to $x_2$"
+  },
+  {
+    "word": "driomedeida",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an albatross [member of the family Diomedeidae] of species/breed $x_2$"
+  },
+  {
+    "word": "dromaiu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an emu/Dromaius of species/subspecies $x_2$"
+  },
+  {
+    "word": "durkuli",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a douroucouli of species $x_2$."
+  },
+  {
+    "word": "dzizani",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is tares of species/variety $x_2$."
+  },
+  {
+    "word": "enge",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an architect/designer/engineer of $x_2$"
+  },
+  {
+    "word": "enri",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is $g_2$ henry/henries of inductance (default is 1) by standard $g_3$."
+  },
+  {
+    "word": "enrio",
+    "type": "fu'ivla",
+    "definition": "$x_1$ has enryo (Japanese term) in actions $x_2$; $x_1$ acts egoistically to retain their own freedom, prevent their own embarassment and at the same time acts altruistically by avoiding social involvement without hurting others; $x_1$ socially restrains themselves under the pressure of group solidarity and conformity in order not to hurt other's feelings; $x_1$ is polite"
+  },
+  {
+    "word": "enzima",
+    "type": "fu'ivla",
+    "definition": "$x_1$ in an enzyme that catalyzes chemical reactions $x_2$."
+  },
+  {
+    "word": "ermine",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a stoat/ermine of subspecies $x_2$."
+  },
+  {
+    "word": "ernace",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a hedgehog of species $x_2$."
+  },
+  {
+    "word": "ersokso",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a pike of species/breed $x_2$"
+  },
+  {
+    "word": "ertso",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is $g_2$ hertz of frequency (default is 1) by standard $g_3$."
+  },
+  {
+    "word": "esporte",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a type of sports practiced by $x_2$; $x_1$ is related to sports; $x_2$ is a sportsman/sportswoman"
+  },
+  {
+    "word": "estre",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an ester derived from acid $x_2$ and alcohol $x_3$"
+  },
+  {
+    "word": "estrema",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is $x_2$ dunams in area by standard $x_3$"
+  },
+  {
+    "word": "etreo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is ethereal/the ether;"
+  },
+  {
+    "word": "falkoni",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a falcon (genus 'falco')."
+  },
+  {
+    "word": "fi'ikca",
+    "type": "fu'ivla",
+    "definition": "$x_{1}$ takes a fika [social institution]/coffee break together with $x_{2}$ consuming food/beverage $x_{3}$."
+  },
+  {
+    "word": "fikrfantasi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a fictional work of fantasy about plot/theme/subject $x_2$ by author $x_3$."
+  },
+  {
+    "word": "filcina",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a fern of family/genus/species $x_2$."
+  },
+  {
+    "word": "finprtruto",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a trout of species/breed $x_2$"
+  },
+  {
+    "word": "finprvandeli",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a candirú of species/variety $x_2$."
+  },
+  {
+    "word": "finprxipoglosu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a halibut of species $x_2$."
+  },
+  {
+    "word": "fiorso",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an aspect of / a part of The Force connecting / within $x_2$"
+  },
+  {
+    "word": "flanrdizi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a dizi."
+  },
+  {
+    "word": "flaume",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a plum of variety $x_2$."
+  },
+  {
+    "word": "flundero",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a flounder of species $x_2$."
+  },
+  {
+    "word": "foldota",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a pangolin of species/breed $x_2$."
+  },
+  {
+    "word": "fragari",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a strawberry of species/breed $x_2$."
+  },
+  {
+    "word": "fraksino",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an ash of species/variety $x_2$."
+  },
+  {
+    "word": "fraktali",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a fractal with properties $x_2$"
+  },
+  {
+    "word": "frambesi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a blackberry/raspberry/bramble of species $x_2$."
+  },
+  {
+    "word": "frangula",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a buckthorn of species/variety $x_2$."
+  },
+  {
+    "word": "frebuari",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is February in year $x_2$ on calendar $x_3$"
+  },
+  {
+    "word": "frufengalu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a bandersnatch of species $x_2$"
+  },
+  {
+    "word": "furfuru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is dandruff in/on $x_2$ caused by $x_3$."
+  },
+  {
+    "word": "gamguata",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a kumquat of species/variety $x_2$."
+  },
+  {
+    "word": "gejrdauko",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a carrot of variety $x_2$."
+  },
+  {
+    "word": "genjrdauko",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a carrot; $x_1$ is a root [body-part] of plant/species $x_2$ of genus Daucus"
+  },
+  {
+    "word": "glangala",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is galangal of variety $x_2$."
+  },
+  {
+    "word": "glauka",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an owl of species $x_2$."
+  },
+  {
+    "word": "glefino",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a haddock of subspecies $x_2$"
+  },
+  {
+    "word": "gleua",
+    "type": "fu'ivla",
+    "definition": "$x_1$ gives $x_2$ (li) fucks about $x_3$."
+  },
+  {
+    "word": "gombesa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a gombessa (coelacanth) of species $x_2$."
+  },
+  {
+    "word": "granate",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a pomegranate (fruit of Punica granatum) of variety $x_2$"
+  },
+  {
+    "word": "gredile",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a grill/grid/graticle consisting of lines $x_2$"
+  },
+  {
+    "word": "grutratemoia",
+    "type": "fu'ivla",
+    "definition": "$l_1$ is an atemoya/pineapple sugar apple/anón/chirimorinon/achta (Annona × atemoya) of species/strain $l_2$."
+  },
+  {
+    "word": "grutraxuakatlu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an avocado (fruit; Persea americana) of type $x_2$."
+  },
+  {
+    "word": "grutrgranate",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a pomegranate (fruit of Punica granatum) of variety $x_2$"
+  },
+  {
+    "word": "grutrmiristika",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a mace (aril of the seed of a nutmeg tree (genus Myristica)) of species/strain $x_2$."
+  },
+  {
+    "word": "grutrxananase",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a pineapple of species/variety $x_2$."
+  },
+  {
+    "word": "gugde'aru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 AR (Argentina) for people $x_2$."
+  },
+  {
+    "word": "gugde'e'u",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 EU (European Union) for people $x_2$."
+  },
+  {
+    "word": "gugde'egu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 EG (Egypt) for people $x_2$."
+  },
+  {
+    "word": "gugde'esu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 ES (Spain) for people $x_2$."
+  },
+  {
+    "word": "gugde'idu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 ID (Indonesia) for people $x_2$."
+  },
+  {
+    "word": "gugde'ike",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 IQ (Iraq) for people $x_2$."
+  },
+  {
+    "word": "gugde'ilu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 IL (Israel) for people $x_2$."
+  },
+  {
+    "word": "gugde'inu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 IN (India) for people $x_2$."
+  },
+  {
+    "word": "gugde'iru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 IR (Iran, Islamic Republic Of) for people $x_2$."
+  },
+  {
+    "word": "gugde'itu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 IT (Italy) for people $x_2$."
+  },
+  {
+    "word": "gugde'u'a",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 UA (Ukraine) for people $x_2$."
+  },
+  {
+    "word": "gugde'usu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 US (United States) for people $x_2$."
+  },
+  {
+    "word": "gugdebudu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 ''BD'' (Bangladesh) for people $x_2$."
+  },
+  {
+    "word": "gugdeburu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 BR (Brazil) for people $x_2$."
+  },
+  {
+    "word": "gugdecu'a",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 CA (Canada) for people $x_2$."
+  },
+  {
+    "word": "gugdecunu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 CN (China) for people $x_2$."
+  },
+  {
+    "word": "gugdecuxe",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 ''CH'' (Switzerland) for people $x_2$."
+  },
+  {
+    "word": "gugdedu'e",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 DE (Germany) for people $x_2$."
+  },
+  {
+    "word": "gugdefuru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 FR (France) for people $x_2$."
+  },
+  {
+    "word": "gugdegubu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 GB (United Kingdom) for people $x_2$."
+  },
+  {
+    "word": "gugdeguru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 GR (Greece) for people $x_2$."
+  },
+  {
+    "word": "gugdejupu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 JP (Japan) for people $x_2$."
+  },
+  {
+    "word": "gugdekupu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 KP (Korea, Democratic People'S Republic Of) for people $x_2$."
+  },
+  {
+    "word": "gugdekuru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 KR (Korea, Republic Of) for people $x_2$."
+  },
+  {
+    "word": "gugdemuxu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 MX (Mexico) for people $x_2$."
+  },
+  {
+    "word": "gugdenugu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 NG (Nigeria) for people $x_2$."
+  },
+  {
+    "word": "gugdepuku",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 ''PK'' (Pakistan) for people $x_2$."
+  },
+  {
+    "word": "gugdepulu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 PL (Poland) for people $x_2$."
+  },
+  {
+    "word": "gugderu'u",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 RU (Russian Federation) for people $x_2$."
+  },
+  {
+    "word": "gugdesu'u",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 SU (USSR) for people $x_2$."
+  },
+  {
+    "word": "gugdeturu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 TR (Turkey) for people $x_2$."
+  },
+  {
+    "word": "gugdetuve",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 TW (Taiwan) for people $x_2$."
+  },
+  {
+    "word": "gugdezu'a",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the country with the code ISO-3166 ZA (South Africa) for people $x_2$."
+  },
+  {
+    "word": "gugdrgogurio",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Korea."
+  },
+  {
+    "word": "gugdrnaidjiria",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Nigeria."
+  },
+  {
+    "word": "gugdrnorge",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is Norway."
+  },
+  {
+    "word": "gugdrpolska",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Poland."
+  },
+  {
+    "word": "gugdrtcosena",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is North Korea."
+  },
+  {
+    "word": "gugdrturkie",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Turkey"
+  },
+  {
+    "word": "gugdrvietnama",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Vietnam"
+  },
+  {
+    "word": "gugdrxanguke",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is South Korea."
+  },
+  {
+    "word": "gugdrxelvo",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is Switzerland."
+  },
+  {
+    "word": "gugdrxirana",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Iran."
+  },
+  {
+    "word": "gurnrtefi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is teff of variety $x_2$."
+  },
+  {
+    "word": "guzmrkukurbita",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a squash/pumpkin of species/strain $x_2$."
+  },
+  {
+    "word": "iedra",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is ivy of species/variety $x_2$."
+  },
+  {
+    "word": "iklki",
+    "type": "fu'ivla",
+    "definition": "$x_1$ clicks (press and release) button/switch $x_2$ to cause $x_3$ (nu)."
+  },
+  {
+    "word": "io'imbe",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is yohimbe of variety $x_2$."
+  },
+  {
+    "word": "ionti",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an ion of radical/(atom of element)$x_2$ with $x_3$ charges"
+  },
+  {
+    "word": "ipka",
+    "type": "fu'ivla",
+    "definition": "$x_1$ hiccups"
+  },
+  {
+    "word": "iptsa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a pizza with topping/ingredients $x_2$."
+  },
+  {
+    "word": "irci",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an IRC user on channel $x_2$ in network $x_3$."
+  },
+  {
+    "word": "itkuile",
+    "type": "fu'ivla",
+    "definition": "$x_1$ pertains to Ithkuil/Illaksh language in aspect $x_2$"
+  },
+  {
+    "word": "itlgu'e",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Italy."
+  },
+  {
+    "word": "itlo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ pertains to Italy/Italian culture/nationality/dialect in aspect $x_2$."
+  },
+  {
+    "word": "jatnrpapa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a pope of religion/patriarchy $x_2$."
+  },
+  {
+    "word": "jbarjuniperu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a juniper berry of juniper plant/species $x_2$ (genus Juniperus)."
+  },
+  {
+    "word": "jbarnrubusi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a berry (fruit/plant) of genus Rubus and species $x_2$"
+  },
+  {
+    "word": "jbatata",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is sweet potato of species $x_2$"
+  },
+  {
+    "word": "jboia",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a boa of species $x_2$."
+  },
+  {
+    "word": "jbonobo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a bonobo of species/breed $x_2$."
+  },
+  {
+    "word": "jbopomofo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a jbopomofo orthography (bopomofo orthography adapted for lojban)"
+  },
+  {
+    "word": "jerjelino",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is sesame of species/variety $x_2$."
+  },
+  {
+    "word": "jgitrgitara",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is guitar with plectrum $x_2$."
+  },
+  {
+    "word": "jgitrnikelarpa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a nyckelharpa [traditional swedish string instrument] with bow $x_2$."
+  },
+  {
+    "word": "jgitrpipa",
+    "type": "fu'ivla",
+    "definition": "x$_1$ is a pipa."
+  },
+  {
+    "word": "jgitrsita",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is sitar with plectrum $x_2$."
+  },
+  {
+    "word": "jgitrviolino",
+    "type": "fu'ivla",
+    "definition": "x$_1$ is violin/fiddle/ with bow $x_2$."
+  },
+  {
+    "word": "jgitrxu",
+    "type": "fu'ivla",
+    "definition": "x$_1$ is an erhu with bow $x_2$."
+  },
+  {
+    "word": "jglandi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a walnut of species $x_2$."
+  },
+  {
+    "word": "jinmrberilo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is beryllium."
+  },
+  {
+    "word": "jinmrniobi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is niobium."
+  },
+  {
+    "word": "jinmrplati",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is platinum."
+  },
+  {
+    "word": "jinmrtitani",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is titanium (metal)."
+  },
+  {
+    "word": "jinmrtuli",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is thulium."
+  },
+  {
+    "word": "jinmrxafni",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is hafnium."
+  },
+  {
+    "word": "junkace",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a rush of species $x_2$."
+  },
+  {
+    "word": "junpero",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a juniper/cedar of species/variety $x_2$."
+  },
+  {
+    "word": "juprtai",
+    "type": "fu'ivla",
+    "definition": "$x_1$ cooks/prepares Thai food $x_2$ by recipe/method $x_3$ (process)"
+  },
+  {
+    "word": "kalmari",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a squid/cuttlefish of species $x_2$."
+  },
+  {
+    "word": "kamfora",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is made of/contains/is a quantity of camphor (chemical compound)"
+  },
+  {
+    "word": "kamxada",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a fellow man/compatriot/mate/comrade of $x_2$, being united in $x_3$ (ka)"
+  },
+  {
+    "word": "kandiru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a candirú of species/variety $x_2$."
+  },
+  {
+    "word": "kanguru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a kangaroo of species/breed $x_2$."
+  },
+  {
+    "word": "kapsiku",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a chili/bell pepper (Capsicum) of species/variety $x_2$."
+  },
+  {
+    "word": "karkade",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is hibiscus of species/variety $x_2$."
+  },
+  {
+    "word": "karkaju",
+    "type": "fu'ivla",
+    "definition": "$k_1$ is a wolverine of variety $k_2$."
+  },
+  {
+    "word": "karnavali",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a carnival devoted to $x_2$"
+  },
+  {
+    "word": "kartamo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is safflower of species/variety $x_2$."
+  },
+  {
+    "word": "kartuli",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Georgian (Caucasus) in aspect $x_2$."
+  },
+  {
+    "word": "karvana",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a caravan consisting of $x_2$ traveling across/through $x_3$"
+  },
+  {
+    "word": "katkana",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a katakana (Japanese syllabary) of sound $x_2$."
+  },
+  {
+    "word": "kaurdata",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a salamander of family/genus/species $x_2$."
+  },
+  {
+    "word": "kelcrkroke",
+    "type": "fu'ivla",
+    "definition": "$x_1$ plays croquet against $x_2$ in competition $x_3$ for prize/title $x_4$."
+  },
+  {
+    "word": "kelvrfarenxaito",
+    "type": "fu'ivla",
+    "definition": "$x_{1}$ is $x_{2}$ degrees Fahrenheit in temperature by standard $x_{3}$."
+  },
+  {
+    "word": "kernelo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a kernel/nucleus/'nut' of $x_2$; $x_1$ is central"
+  },
+  {
+    "word": "ketlete",
+    "type": "fu'ivla",
+    "definition": "$x_1$ has a body mass index of $x_2$ by standard $x_3$."
+  },
+  {
+    "word": "klanrbeli",
+    "type": "fu'ivla",
+    "definition": "$x_1$ measures $x_2$ bels on scale $x_3$ (si'o)."
+  },
+  {
+    "word": "klanrdjuli",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is $g_2$ joule(s) of energy (default is 1) by standard $g_3$."
+  },
+  {
+    "word": "klanrfaradi",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is $g_2$ farad(s) of capacitance (default is 1) by standard $g_3$."
+  },
+  {
+    "word": "klanrniut,ni",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is $g_2$ newton (s) of force (default is 1) by standard $g_3$."
+  },
+  {
+    "word": "klanrpaskali",
+    "type": "fu'ivla",
+    "definition": "$x_{1}$ is $x_{2}$ pascal(s) of pressure (default is 1) by standard $x_{3}$."
+  },
+  {
+    "word": "klanrtesla",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is $g_2$ tesla(s) of magnetic field B (default is 1) by standard $g_3$."
+  },
+  {
+    "word": "klanrvolta",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is $g_2$ volt(s) of electromotive force (default is 1) by standard $g_3$."
+  },
+  {
+    "word": "klanrxenri",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is $g_2$ henry/henries of inductance (default is 1) by standard $g_3$."
+  },
+  {
+    "word": "klanrxertsi",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is $g_2$ hertz of frequency (default is 1) by standard $g_3$."
+  },
+  {
+    "word": "klanrxomi",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is $g_2$ ohm(s) of electrical impedance/resistance (default is 1) by standard $g_3$."
+  },
+  {
+    "word": "klanrxuati",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is $g_2$ watt(s) of power (default is 1) by standard $g_3$."
+  },
+  {
+    "word": "klanrzimenzi",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is $g_2$ siemens of electrical conductance (default is 1) by standard $g_3$."
+  },
+  {
+    "word": "klaunji",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is blackseed/nigella of species/variety $x_2$"
+  },
+  {
+    "word": "ko'otli",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a coyote of subspecies/breed $x_2$."
+  },
+  {
+    "word": "koblrsinapi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is mustard of species/variety $x_2$."
+  },
+  {
+    "word": "koinka",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a cognac distilled from grapes $x_2$."
+  },
+  {
+    "word": "kokcinela",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a ladybug/ladybird/lady beetle of genus/species $x_2$."
+  },
+  {
+    "word": "kolbasa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a sausage made of $x_2$."
+  },
+  {
+    "word": "kolmba",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a pigeon/dove of genus/species $x_2$."
+  },
+  {
+    "word": "konceto",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is concerto number $x_2$ in key $x_3$ composed by $x_4$ performed by/at $x_5$( event)."
+  },
+  {
+    "word": "kondomo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a condom of $x_2$ size for $x_3$ sex and $x_4$ material"
+  },
+  {
+    "word": "konfuzi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ pertains to the Confucist culture/religion/ethos in aspect $x_2$"
+  },
+  {
+    "word": "konjaku",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is konjac of species/variety $x_2$."
+  },
+  {
+    "word": "kotledona",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a cotyledon of seed $x_2$ of plant $x_3$."
+  },
+  {
+    "word": "krambola",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a starfruit/carambola of variety $x_2$."
+  },
+  {
+    "word": "krataigo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a hawthorn of species/variety $x_2$."
+  },
+  {
+    "word": "kriketi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ plays cricket against $x_2$ in competition $x_3$ for prize/title $x_4$."
+  },
+  {
+    "word": "krilami",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a krill of genus/species $x_2$"
+  },
+  {
+    "word": "kriofla",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a clove bud/tree of species/variety $x_2$."
+  },
+  {
+    "word": "kro'oke",
+    "type": "fu'ivla",
+    "definition": "$x_1$ croquets $x_2$'s ball."
+  },
+  {
+    "word": "krokete",
+    "type": "fu'ivla",
+    "definition": "$x_1$ plays croquet against $x_2$ in competition $x_3$ for prize/title $x_4$."
+  },
+  {
+    "word": "krokodilo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a crocodile (family Crocodylidae) of breed $x_2$"
+  },
+  {
+    "word": "krotofaga",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an ani of species $x_2$."
+  },
+  {
+    "word": "ku'urdi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Kurdish culture/nationality/language in aspect $x_2$."
+  },
+  {
+    "word": "ku'urjuniperu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a juniper (genus Juniperus) of species/strain $x_2$ with cones $x_3$."
+  },
+  {
+    "word": "ku'urkupresu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a cypress (genus Cupressus) of species/strain $x_2$ with cones$x_3$."
+  },
+  {
+    "word": "ku'urpicea",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a spruce (genus Picea) of species/strain $x_2$ with cones $x_3$."
+  },
+  {
+    "word": "ku'urpinu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a pine (genus Pinus) of species/strain $x_2$ with cones $x_3$."
+  },
+  {
+    "word": "ku'ursekuoia",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a sequoia (genus Sequoia) of species/strain $x_2$ with cones $x_3$."
+  },
+  {
+    "word": "ku'urtuja",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a thuja/arborvitae (genus Thuja) of species/strain $x_2$ with cones $x_3$."
+  },
+  {
+    "word": "kuarka",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quark with flavor $x_2$."
+  },
+  {
+    "word": "kuinke",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Seri culture/language in aspect $x_2$"
+  },
+  {
+    "word": "kulnrani",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Iranian culture in aspect $x_2$."
+  },
+  {
+    "word": "kulnrfarsi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Persian/Farsi culture in aspect $x_2$."
+  },
+  {
+    "word": "kulnrlietuva",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Lithuanian culture in aspect $x_2$."
+  },
+  {
+    "word": "kulnrnorge",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Norwegian/pertains to Norwegian culture in aspect $x_2$."
+  },
+  {
+    "word": "kulnrnorgo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Norwegian culture in aspect $x_2$."
+  },
+  {
+    "word": "kulnrsfe'enska",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Swedish culture in aspect $x_2$."
+  },
+  {
+    "word": "kulnrtai",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Thai culture in aspect $x_2$."
+  },
+  {
+    "word": "kulnrturkie",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Turkish/pertains to Turkish culture in aspect $x_2$."
+  },
+  {
+    "word": "kulnrturko",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Turkic/pertains to Turkic culture in aspect $x_2$"
+  },
+  {
+    "word": "kulnrxirani",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Iranian culture in aspect $x_2$."
+  },
+  {
+    "word": "kumtrguanako",
+    "type": "fu'ivla",
+    "definition": "$x_{1}$ is a guanaco of breed $x_{2}$."
+  },
+  {
+    "word": "kumtrlama",
+    "type": "fu'ivla",
+    "definition": "$x_{1}$ is a llama of breed $x_{2}$."
+  },
+  {
+    "word": "kumtrvalpaka",
+    "type": "fu'ivla",
+    "definition": "$x_{1}$ is an alpaca of breed $x_{2}$."
+  },
+  {
+    "word": "kumtrvikunia",
+    "type": "fu'ivla",
+    "definition": "$x_{1}$ is a vicuna of breed $x_{2}$."
+  },
+  {
+    "word": "kunrlazuli",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is/contains/is made from lapis lazuli of type/grade $x_2$ mined from location $x_3$."
+  },
+  {
+    "word": "kunrmarmaro",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is/contains/is made from marble of type $x_2$ mined from location $x_3$."
+  },
+  {
+    "word": "kunrxalabastre",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is/contains/is made from alabaster of type $x_2$ mined from location $x_3$."
+  },
+  {
+    "word": "kurkuli",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a weevil of genus/species $x_2$."
+  },
+  {
+    "word": "kurkuma",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is turmeric of species/variety $x_2$."
+  },
+  {
+    "word": "kusnkusu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of couscous of ingredients including $x_2$"
+  },
+  {
+    "word": "lakrkamfora",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is quantity of camphor from source $x_2$."
+  },
+  {
+    "word": "lakrkomifora",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of myrrh (an aromatic oleoresin) from tree $x_2$ (genus Commiphora)."
+  },
+  {
+    "word": "lartodektu",
+    "type": "fu'ivla",
+    "definition": "$l_1$ is a widow spider of species $l_2$."
+  },
+  {
+    "word": "latrbirmani",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a Birman cat with characteristics (colour etc)/[of breed] $x_2$."
+  },
+  {
+    "word": "latrnorgo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a Norwegian Forest Cat with characteristics/of breed $x_2$."
+  },
+  {
+    "word": "latrtai",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a Siamese cat with characteristics (colour etc)/[of breed] $x_2$."
+  },
+  {
+    "word": "lektoni",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an electron in quantum state $x_2$"
+  },
+  {
+    "word": "lerldjamo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a jamo in syllable $x_2$ in writing system $x_3$ (default Hangul)"
+  },
+  {
+    "word": "lijdrba'a,i",
+    "type": "fu'ivla",
+    "definition": "$l_1$ is the Bahai religion with beliefs/practices/tenets including $l_3$"
+  },
+  {
+    "word": "lijdrdjaina",
+    "type": "fu'ivla",
+    "definition": "$l_1$ is the Jain religion with beliefs/practices/tenets including $l_3$"
+  },
+  {
+    "word": "lindari",
+    "type": "fu'ivla",
+    "definition": "$x_1$ measures $x_2$ lindars in social context $x_3$."
+  },
+  {
+    "word": "linlani",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a lily-of-the-valley / may-lily (Convallaria) of species/strain $x_2$"
+  },
+  {
+    "word": "liunko",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a lynx (Felis lynx)"
+  },
+  {
+    "word": "lorvera",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of aloe vera of species/strain $x_2$"
+  },
+  {
+    "word": "lumbrinki",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an earthworm of species $x_2$."
+  },
+  {
+    "word": "luodna",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a capelin of species/subspecies $x_2$"
+  },
+  {
+    "word": "ma'agni",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a mahogany of species $x_2$."
+  },
+  {
+    "word": "mabrnfuru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a ferret."
+  },
+  {
+    "word": "makpapi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a poppy of species $x_2$"
+  },
+  {
+    "word": "malgaci",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Malagasy in aspect $x_2$."
+  },
+  {
+    "word": "malminiata",
+    "type": "fu'ivla",
+    "definition": "$m_1$ is a black widow spider of variety $m_2$."
+  },
+  {
+    "word": "mandala",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a mandala"
+  },
+  {
+    "word": "mandioka",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is manioc of species/variety $x_2$."
+  },
+  {
+    "word": "marbela",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is dodder of species/variety $x_2$ parasitic on $x_3$."
+  },
+  {
+    "word": "margosa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is neem/margosa/azedarac of species/variety $x_2$."
+  },
+  {
+    "word": "markuja",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a passionfruit/passionflower of species/variety $x_2$."
+  },
+  {
+    "word": "marlari",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is malaria caused by Plasmodium species $x_2$."
+  },
+  {
+    "word": "marmota",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a marmot/woodchuck/groundhog of species $x_2$."
+  },
+  {
+    "word": "marsipane",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is/contains marzipan of type/brand $x_2$"
+  },
+  {
+    "word": "matnrmiristika",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a is a quantity of nutmeg butter from source $x_2$."
+  },
+  {
+    "word": "me'andi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is henna of species/variety $x_2$."
+  },
+  {
+    "word": "melpsita",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a budgerigar (Melopsittacus undulatus) of breed $x_2$."
+  },
+  {
+    "word": "mentapiperita",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of peppermint of species/strain $x_2$"
+  },
+  {
+    "word": "merfiti",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a skunk of genus/species $x_2$."
+  },
+  {
+    "word": "merlanu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a whiting of species $x_2$."
+  },
+  {
+    "word": "mernta",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of mint (member of the genus Mentha) of species/strain $x_2$"
+  },
+  {
+    "word": "mianma",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Burmese in aspect $x_2$."
+  },
+  {
+    "word": "miksini",
+    "type": "fu'ivla",
+    "definition": "$m_1$ is a hagfish of species $m_2$."
+  },
+  {
+    "word": "miptera",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a bug of species $x_2$."
+  },
+  {
+    "word": "mlaluka",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a paperbark/tea tree of species/variety $x_2$."
+  },
+  {
+    "word": "mlibdena",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is molybdenum."
+  },
+  {
+    "word": "mlongena",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is eggplant of variety $x_2$."
+  },
+  {
+    "word": "mraigo",
+    "type": "fu'ivla",
+    "definition": "$m_1$ is Welsh in aspect $m_2$."
+  },
+  {
+    "word": "mudrjuniperu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of/is made of/contains juniper wood/lumber of type $x_2$."
+  },
+  {
+    "word": "mudrpinu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of/is made of/contains pine wood/lumber of type $x_2$."
+  },
+  {
+    "word": "mustlei",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a weasel of species/variety $x_2$."
+  },
+  {
+    "word": "namcixu",
+    "type": "fu'ivla",
+    "definition": "For mo'e $x_4$ x in $x_1$ there exist mo'e $x_5$ y in $x_2$ such that x me'au $x_3$ y; for mo'e $x_6$ y in $x_2$ there exist mo'e $x_7$ x in $x_1$ such that x me'au $x_3$ y."
+  },
+  {
+    "word": "namcrgogolo",
+    "type": "fu'ivla",
+    "definition": "$x_{1}$ is a googol [$10^{100}$] of $x_{2}$ in dimension/aspect $x_{3}$ (default units)."
+  },
+  {
+    "word": "namcrgogolplexu",
+    "type": "fu'ivla",
+    "definition": "$x_{1}$ is a googolplex [$10^{googol}$] of $x_{2}$ in dimension/aspect $x_{3}$ (default units)."
+  },
+  {
+    "word": "nanbrkrepa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a crêpe of composition $x_2$."
+  },
+  {
+    "word": "nanbrmatsa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a matzo made from grain $x_2$."
+  },
+  {
+    "word": "nargile",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a nargileh/hookah for smoking $x_2$."
+  },
+  {
+    "word": "nargrkaju",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a cashew of species $x_2$."
+  },
+  {
+    "word": "nargrkaria",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is pecan/hickory of species/variety $x_2$."
+  },
+  {
+    "word": "nargrpistaco",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a pistachio of species $x_2$."
+  },
+  {
+    "word": "nerfopi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a lobster of species $x_2$."
+  },
+  {
+    "word": "niengatu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Nheengatu/Tupi/Lingua Geral in aspect $x_2$."
+  },
+  {
+    "word": "nimfaia",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a water-lily (Nymphaea) of species/strain $x_2$"
+  },
+  {
+    "word": "nimrnlatifolia",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a Persian lime [fruit/tree etc.] of cultivar $x_2$."
+  },
+  {
+    "word": "nimrnlimone",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a lemon [fruit/tree etc.] of cultivar $x_2$."
+  },
+  {
+    "word": "nimrnxaurantifolia",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a key lime [fruit/tree, etc.] of cultivar $x_2$."
+  },
+  {
+    "word": "nirndendriti",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a dendrite of nerve $x_2$ receiving impulses $x_3$."
+  },
+  {
+    "word": "niutni",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is $g_2$ newton (s) of force (default is 1) by standard $g_3$."
+  },
+  {
+    "word": "noljedai",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a Jedi of power / level / rank $x_2$"
+  },
+  {
+    "word": "normano",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Norman culture/nationality/language in aspect $x_2$."
+  },
+  {
+    "word": "norvokovidru",
+    "type": "fu'ivla",
+    "definition": "$x_{1}$ is a norovirus of species/breed/defining property $x_{2}$ capable of infecting [at] $x_{3}$."
+  },
+  {
+    "word": "nurtoni",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a neutron in quantum state $x_2$."
+  },
+  {
+    "word": "odbenu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a walrus of breed $x_2$."
+  },
+  {
+    "word": "odnata",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a dragonfly/damselfly (order Odonata) of species $x_2$."
+  },
+  {
+    "word": "oktopoda",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an octopus of species $x_2$"
+  },
+  {
+    "word": "omle",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an omelette containing $x_2$"
+  },
+  {
+    "word": "omso",
+    "type": "fu'ivla",
+    "definition": "$g_1$ is $g_2$ ohm(s) of electrical impedance/resistance (default is 1) by standard $g_3$."
+  },
+  {
+    "word": "onckire",
+    "type": "fu'ivla",
+    "definition": "$x_1$ wears 'on' (Japanese term) on $x_2$ due to $x_3$; $x_1$ is thankful/feels obligation/owes to $x_2$ due to $x_3$; $x_2$ is kind/grants favor/offers 'on' to $x_1$ in $x_3$; $x_1$ has unpayable debt to $x_2$ for $x_3$; $x_2$ is an 'onjin' (benefactor, Japanese term)"
+  },
+  {
+    "word": "ondatra",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a muskrat of species $x_2$"
+  },
+  {
+    "word": "onskide",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a woodlouse/sowbug of family/genus $x_2$"
+  },
+  {
+    "word": "orka",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an orca/killer whale (Orcinus orca) of breed $x_2$"
+  },
+  {
+    "word": "orko",
+    "type": "fu'ivla",
+    "definition": "$x_{1}$ is an orch [mythical human-like creature] of tribe/breed $x_{2}$."
+  },
+  {
+    "word": "ortodoksi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is orthodox/has correct opinion in aspect $x_2$"
+  },
+  {
+    "word": "orvanxi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is broomrape of species $x_2$."
+  },
+  {
+    "word": "ostreda",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an oyster of species $x_2$."
+  },
+  {
+    "word": "oxtapodi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an octopus of species $x_2$."
+  },
+  {
+    "word": "palsita",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a Sith / Dark Jedi of power / level / rank $x_2$"
+  },
+  {
+    "word": "parcicize",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is 1337/leet in aspect/property $x_2$ (ka) by standard $x_3$."
+  },
+  {
+    "word": "pasrtunika",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a tunic of material $x_2$."
+  },
+  {
+    "word": "paxrmari",
+    "type": "fu'ivla",
+    "definition": "$p_1$ is a double boiler/bain-marie containing $p_2$ made of $p_3$"
+  },
+  {
+    "word": "pelmeni",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a piece/pieces of dumplings/ravioli/pelmeni/dim sum (Hongkong/Xianggang cuisine) containing $x_2$"
+  },
+  {
+    "word": "pemcrlimriki",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a limerick about subject/theme $x_2$ by author $x_3$."
+  },
+  {
+    "word": "pemcrsoneto",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a sonnet about subject/theme $x_2$ by author $x_3$."
+  },
+  {
+    "word": "pemcrxaiku",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a haiku about subject/theme $x_2$ by author $x_3$."
+  },
+  {
+    "word": "persika",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a peach of variety $x_2$"
+  },
+  {
+    "word": "persimo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a persimmon/ebony of species/variety $x_2$."
+  },
+  {
+    "word": "pervu'ui",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Peruvian culture/nationality in aspect $x_2$."
+  },
+  {
+    "word": "pinpedi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a seal/sea lion/otary/walrus of genus/species $x_2$."
+  },
+  {
+    "word": "pipnrpiano",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a piano."
+  },
+  {
+    "word": "plantago",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a plantain (small plant with flower spike) of species $x_2$."
+  },
+  {
+    "word": "plargoni",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a geranium of species/variety $x_2$."
+  },
+  {
+    "word": "platano",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a sycamore (Platanus) of species $x_2$."
+  },
+  {
+    "word": "platesa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a plaice of species $x_2$."
+  },
+  {
+    "word": "po'olska",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Polish culture/nationality/language in aspect $x_2$."
+  },
+  {
+    "word": "pokme'oni",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a Pokémon/Pocket Monster of species $x_2$."
+  },
+  {
+    "word": "polgosu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a halibut of species $x_2$."
+  },
+  {
+    "word": "prama'eru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is amai to $x_2$ in aspect x3 (Japanese term); $x_1$ does amaeru; $x_1$ plays baby / catered by / protected by / undulged by $x_2$; $x_1$ depends and presumes upon $x_2$'s benevolence; $x_2$ is a rabbi/counsellor to $x_1$ without contractual/conditional relationship; $x_2$ helps $x_1$ cope with x3 (e.g. emotional,social, economic life's challenges)"
+  },
+  {
+    "word": "prokioni",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a racoon of species/breed $x_2$."
+  },
+  {
+    "word": "protoni",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a proton in quantum state $x_2$."
+  },
+  {
+    "word": "ragrmalpigi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a Malpighian tubule [excretory organ] of insect $x_2$."
+  },
+  {
+    "word": "rambutane",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a rambutan (Nephelium lappaceum) of breed $x_2$"
+  },
+  {
+    "word": "ramdana",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Ramadan/Ramazan of year $x_2$."
+  },
+  {
+    "word": "rangutano",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an orangutan of variety $x_2$."
+  },
+  {
+    "word": "ranmrdrakono",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a dragon of species/breed $x_2$ in mythos $x_3$ of culture $x_4$"
+  },
+  {
+    "word": "ratmacu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a mouse/rat (family \tMuridae) of species/breed $x_2$"
+  },
+  {
+    "word": "ravboni",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a/the rabbi of/in community $x_2$."
+  },
+  {
+    "word": "remnkimi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Coptic in aspect $x_2$"
+  },
+  {
+    "word": "resrvarano",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a monitor lizard of species/variety $x_2$."
+  },
+  {
+    "word": "ricrceraso",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a cherry tree of species $x_2$."
+  },
+  {
+    "word": "ricrcinamomu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a cinnamon tree (genus Cinnamomum) of species/cultivar $x_2$."
+  },
+  {
+    "word": "ricrkanela",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a white/wild cinnamon (genus Canella) of species/strain $x_2$."
+  },
+  {
+    "word": "ricrlauru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a laurel (genus Laurus) of species/cultivar $x_2$."
+  },
+  {
+    "word": "ricrmiristika",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a nutmeg tree (genus Myristica) of species/cultivar $x_2$."
+  },
+  {
+    "word": "ricrprunu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a plum/peach/cherry/apricot/sloe tree of species/variety $x_2$."
+  },
+  {
+    "word": "rolsixu",
+    "type": "fu'ivla",
+    "definition": "For every x in $x_1$, there exists a y in $x_2$ such that x me'au $x_3$ y; For every y in $x_2$ there exists an x in $x_1$ such that x me'au $x_3$ y."
+  },
+  {
+    "word": "ru'urcunuje",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is measured in currency with code ISO-4217  ''CNY'' (China, Yuan Renminbi) as $x_2$ (number)."
+  },
+  {
+    "word": "ru'urcuxefu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is measured in currency with code ISO-4217  ''CHF'' (Switzerland, Francs) as $x_2$ (number)."
+  },
+  {
+    "word": "ru'urgubupu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is measured in currency with code ISO-4217  ''GBP'' (United Kingdom, Pounds) as $x_2$ (number)."
+  },
+  {
+    "word": "ru'urjupuje",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is measured in currency with code ISO-4217  ''JPY'' (Japan, Yen) as $x_2$ (number)."
+  },
+  {
+    "word": "rupne'uru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is measured in currency with code ISO-4217  ''EUR'' (Euro Member Countries, Euro) as $x_2$ (number)."
+  },
+  {
+    "word": "rupnusudu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is measured in currency with code ISO-4217  ''USD'' (United States of America, Dollars) as $x_2$ (number)."
+  },
+  {
+    "word": "rutnretikula",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a custard-apple (Annona reticula) of species/strain $x_2$."
+  },
+  {
+    "word": "rutrceraso",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a cherry of species $x_2$."
+  },
+  {
+    "word": "rutrcerimoia",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a cherimoya (Annona cherimoya) of species/strain $x_2$."
+  },
+  {
+    "word": "rutrglabra",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a pond-apple, alligator-apple, swamp apple, Corkwood/Bobwood/monkey-apple (Annona glabra) of species/strain $x_2$."
+  },
+  {
+    "word": "rutrkoko",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a coconut of variety/cultivar $x_2$"
+  },
+  {
+    "word": "rutrmalpigi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an acerola of species/variety $x_2$."
+  },
+  {
+    "word": "rutrmango",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a mango [fruit] of species/variety $x_2$."
+  },
+  {
+    "word": "rutrmonstera",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a  ceriman/monster fruit/monsterio delicio/monstereo/Mexican breadfruit/windowleaf/balazo/banana pineapple (Monstera deliciosa) of species/strain $x_2$."
+  },
+  {
+    "word": "rutrmurikata",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a  Brazilian pawpaw/soursop/prickly custard apple/soursapi (Annona muricata) of species/strain $x_2$."
+  },
+  {
+    "word": "rutrpaupau",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a papaya [Carica papaya] fruit of species/variety $x_2$"
+  },
+  {
+    "word": "rutrprunu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a plum/peach/cherry/apricot/sloe of species/variety $x_2$."
+  },
+  {
+    "word": "rutrskuamosa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a  sugar-apple (Annona squamosa) of species/strain $x_2$."
+  },
+  {
+    "word": "sailce",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a willow of species $x_2$."
+  },
+  {
+    "word": "salmone",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a salmon/trout of species $x_2$."
+  },
+  {
+    "word": "samcrkasava",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is cassava of species/variety $x_2$."
+  },
+  {
+    "word": "samcrniame",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a yam (Dioscorea) of species/variety $x_2$."
+  },
+  {
+    "word": "samcrtaro",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is taro of species/variety $x_2$."
+  },
+  {
+    "word": "samrkompli",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a file compiled from sources / resources $x_2$ by compiler $x_3$."
+  },
+  {
+    "word": "samrla'a",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is (a file) linked from intermediate files/data/libraries $x_2$ by linker $x_3$; $x_3$ links $x_2$ into $x_1$."
+  },
+  {
+    "word": "samrsekiurceli",
+    "type": "fu'ivla",
+    "definition": "$x_1$ connects to/has remote shell session on $x_2$ over ssh to perform action(s) $x_3$ (ka of $x_1$) with credentials $x_4$."
+  },
+  {
+    "word": "samrxra",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an image file representing $x_2$ in format $x_3$ and attributes (e.g. size) $x_4$ (ka)."
+  },
+  {
+    "word": "sansrmustardo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is mustard for use on $x_2$ made with $x_3$."
+  },
+  {
+    "word": "sargueia",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an opossum of species $x_2$"
+  },
+  {
+    "word": "sarxeva",
+    "type": "fu'ivla",
+    "definition": "$x_1$(set) acts unanimously/on the basis of unanimous group consensus in doing $x_2$ (activity); $x_1$ are in harmony in doing $x_2$; $x_1$ (set) acts in the interest of harmony and smooth functioning in doing $x_2$; $x_1$ acts without searching for good or bad members of $x_1$; $x_1$ consists of members that have a shared goal of group/non-individual success; $x_1$ shows cooperative behavior/trust/sharing and the necessary social subordination of members of $x_1$"
+  },
+  {
+    "word": "saskrcereme",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is cherology/phonology of sign language $x_2$."
+  },
+  {
+    "word": "saskrkuarka",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quark with flavor $x_2$."
+  },
+  {
+    "word": "selterselxeliumadbro",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a lujvo using ridiculous SE-string $x_2$, irritating $x_3$, authored by crazy (probably xorxo) lojbanist $x_4$"
+  },
+  {
+    "word": "senvrxinsepcni",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a dream within dream $x_2$ within dream $x_3$ ... within dream $x_n$."
+  },
+  {
+    "word": "serlaximorfa",
+    "type": "fu'ivla",
+    "definition": "$s_1$ is a shark of species $s_2$."
+  },
+  {
+    "word": "sfaile",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a file consisting of/containing information $x_2$ of attributes/type/size $x_3$"
+  },
+  {
+    "word": "sfe'ero",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Swedish culture/nationality/language in aspect $x_2$"
+  },
+  {
+    "word": "sifnaptera",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a flea of species $x_2$."
+  },
+  {
+    "word": "simfoni",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is symphony number $x_2$ key $x_3$ composed by $x_4$ performed by/at $x_5$ (event)."
+  },
+  {
+    "word": "simsimu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is sesame of species/variety $x_2$."
+  },
+  {
+    "word": "skalduna",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Basque in aspect $x_2$"
+  },
+  {
+    "word": "skomberu",
+    "type": "fu'ivla",
+    "definition": "$s_1$ is a mackerel of species $s_2$."
+  },
+  {
+    "word": "skorbuti",
+    "type": "fu'ivla",
+    "definition": "$x_1$ has scurvy with symptoms $x_2$."
+  },
+  {
+    "word": "slamrmiristika",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of/contains/is made of myristic acid."
+  },
+  {
+    "word": "slovino",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Slovenian/Slovene in aspect $x_2$."
+  },
+  {
+    "word": "slunrjepsoni",
+    "type": "fu'ivla",
+    "definition": "$s_1$ is a Jepson's onion (Allium jepsonii) of variety/strain $s_2$."
+  },
+  {
+    "word": "slunrkurati",
+    "type": "fu'ivla",
+    "definition": "$s_1$ is a Kurrat/Egyptian leek (Allium ampeloprasum) of variety/strain $s_2$."
+  },
+  {
+    "word": "smacrkobaiu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a guinea pig of species $x_2$."
+  },
+  {
+    "word": "smanralenopiteku",
+    "type": "fu'ivla",
+    "definition": "$x_1$  is an Allen's swamp monkey (genus Allenopithecus) of species/breed $x_2$."
+  },
+  {
+    "word": "smanrbonobo",
+    "type": "fu'ivla",
+    "definition": "$x_1$  is a bonobo ape (Pan paniscus) of breed $x_2$."
+  },
+  {
+    "word": "smanrcebu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a  gracile capuchin monkey (genus Cebus) of species/strain $x_2$."
+  },
+  {
+    "word": "smanrgorila",
+    "type": "fu'ivla",
+    "definition": "$x_1$  is a gorilla ape (genus Gorilla) of species/breed $x_2$."
+  },
+  {
+    "word": "smanrmandrilu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a mandrill/drill (genus Mandrillus) of species/strain $x_2$."
+  },
+  {
+    "word": "smanroranguta",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an orangutang (genus Pongo) of species/strain $x_2$."
+  },
+  {
+    "word": "smanrpapio",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a baboon (genus Papio) of species/strain $x_2$."
+  },
+  {
+    "word": "smanrsaimiri",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a squirrel monkey (genus Saimiri) of species/strain $x_2$."
+  },
+  {
+    "word": "smanrsapaju",
+    "type": "fu'ivla",
+    "definition": "$x_1$  is a robust capuchin monkey (genus Sapuja) of species/breed $x_2$."
+  },
+  {
+    "word": "smanrtcimpazi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a  chimpanzee (Pan troglodytes) of breed $x_2$."
+  },
+  {
+    "word": "snapisa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is mustard of species/breed $x_2$."
+  },
+  {
+    "word": "snidari'a",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a jellyfish/jelly/sea jelly/member of phylum Cnidaria of species/breed $x_2$."
+  },
+  {
+    "word": "sodnrkali",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is potassium (K)."
+  },
+  {
+    "word": "sorpeka",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a bus/coach for carrying passengers $x_2$, propelled by $x_3$"
+  },
+  {
+    "word": "spageti",
+    "type": "fu'ivla",
+    "definition": "$x_1$ - is spaghetti made out of/containing $x_2$."
+  },
+  {
+    "word": "spalato",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is rooibos of species $x_2$"
+  },
+  {
+    "word": "sparagusa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of asparagus of species/strain $x_2$"
+  },
+  {
+    "word": "sparakoru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a calamus/sweet flag (genus Acorus) of species/strain $x_2$."
+  },
+  {
+    "word": "sparalisma",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a water-plantain (genus Alisma) of species/strain $x_2$."
+  },
+  {
+    "word": "sparanona",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an annona (genus Annona) of species/strain $x_2$."
+  },
+  {
+    "word": "sparasparagu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an  asparagus plant (genus Asparagus) of species/strain $x_2$."
+  },
+  {
+    "word": "sparbutomu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a flowering/grass rush (genus Butomus) of species/strain $x_2$."
+  },
+  {
+    "word": "sparceratofilu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a hornwort (genus Ceratophyllum) of species/strain $x_2$."
+  },
+  {
+    "word": "sparcikimi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a Japanese star anise (Illicium anisatum) of strain $x_2$."
+  },
+  {
+    "word": "spardracena",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a dracaena (genus Dracaena) of species/strain $x_2$."
+  },
+  {
+    "word": "sparekuisetu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a  horsetail/snake grass/puzzlegrass (genus Equisetum) of species/strain $x_2$."
+  },
+  {
+    "word": "sparepipremnu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a centipede tongavine/pothos/devil's ivy (genus Epipremnum) of species/strain/cultivar $x_2$."
+  },
+  {
+    "word": "sparilici",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a anise tree (genus Illicium) of species/strain $x_2$."
+  },
+  {
+    "word": "sparipeastru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an amaryllis (genus Hippeastrum) of species/strain $x_2$."
+  },
+  {
+    "word": "sparipuri",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a mare's tail (genus Hippuris) of species/strain $x_2$."
+  },
+  {
+    "word": "sparkamasia",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a Camas/Quamash/Indian hyacinth/Wild hyacinth (genus Camassia) of species/strain $x_2$."
+  },
+  {
+    "word": "sparle'opoldia",
+    "type": "fu'ivla",
+    "definition": "$x_1$  is a Grape Hyacinth (genus Leopoldia) of species/variety $x_2$."
+  },
+  {
+    "word": "sparmuskari",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a Grape Hyacinth/Baby's breath (genus Muscari) of species/strain $x_2$."
+  },
+  {
+    "word": "sparnarcisu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a  daffodil/narcissus/jonquil (genus Narcissus) of species/strain $x_2$."
+  },
+  {
+    "word": "sparnimfea",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a water lily (genus Nymphaea) of species/strain $x_2$."
+  },
+  {
+    "word": "sparnpotamogeto",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a pondweed (genus Potamogeton) of species/strain $x_2$."
+  },
+  {
+    "word": "sparnskila",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a scilla (genus Scilla) of species/strain $x_2$."
+  },
+  {
+    "word": "sparntrigloki",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an arrow grass (genus Triglochin) of species/strain $x_2$."
+  },
+  {
+    "word": "sparnufa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a water lily/pond-lily (genus Nuphar) of species/strain $x_2$."
+  },
+  {
+    "word": "sparpersea",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a persea (genus Persea; default Persea americana) of species/strain $x_2$."
+  },
+  {
+    "word": "sparpipera",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a peppar plant/vine (genus Piper) of species/strain $x_2$."
+  },
+  {
+    "word": "sparpoligonatu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a Solomon's Seal (genus Polygonatum) of species/strain $x_2$."
+  },
+  {
+    "word": "sparpolipodi",
+    "type": "fu'ivla",
+    "definition": "$l_1$ is a polypody/rockcap fern (genus Polypodium) of species/strain $l_2$."
+  },
+  {
+    "word": "sparsagitaria",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a sagittaria (genus Sagittaria) of species/strain $x_2$."
+  },
+  {
+    "word": "sparspatifilu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a spath/peace lily (genus Spathiphyllum) of species/strain/cultivar $x_2$."
+  },
+  {
+    "word": "sparxiacintu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a hyacinth (genus Hyacinthus) of species/strain $x_2$."
+  },
+  {
+    "word": "spatnrafanu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a radish (plant) of variety $x_2$"
+  },
+  {
+    "word": "spatrbasiliko",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is basil of variety $x_2$."
+  },
+  {
+    "word": "spatrdauko",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Queen Anne's lace of species $x_2$."
+  },
+  {
+    "word": "spatrkamomili",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a camomile plant of species/strain/cultivar $x_2$."
+  },
+  {
+    "word": "spatrleoxari",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a water chestnut (plant) of species/variety $x_2$."
+  },
+  {
+    "word": "spatrmonstera",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a monstera (genus Monstera) of species/strain $x_2$."
+  },
+  {
+    "word": "spatrnakardiace",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a cashew/mango/poison ivy/sumac of genus/species $x_2$; $x_1$ belongs to the Anacardiaceae."
+  },
+  {
+    "word": "spatrpiperi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is pepper (''Piper'') of species/variety $x_2$."
+  },
+  {
+    "word": "spatrxamameli",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of witch-hazel/hamamelis/winterbloom of species/strain $x_2$"
+  },
+  {
+    "word": "spatrxapio",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a celery plant of species/variety $x_2$."
+  },
+  {
+    "word": "spe'ato",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Esperanto culture/nationality/language in aspect $x_2$."
+  },
+  {
+    "word": "sperlanu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a smelt of species $x_2$."
+  },
+  {
+    "word": "spitaki",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a parrot of species/breed $x_2$."
+  },
+  {
+    "word": "spranto",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Esperanto language/culture/community in aspect $x_2$."
+  },
+  {
+    "word": "srasrnrupia",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a blade/expanse of ditch grass (genus Ruppia) of species/strain $x_2$."
+  },
+  {
+    "word": "srasrzostera",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a blade/expanse of marine eelgrass (genus Zostera) of species/strain $x_2$."
+  },
+  {
+    "word": "stagnrafanu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a radish (root/bulb) of variety $x_2$"
+  },
+  {
+    "word": "stagrasparagu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an asparagus, the edible $x_2$ portion of plant $x_3$ (genus Asparagus)."
+  },
+  {
+    "word": "stagrleoxari",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a water chestnut (corm) of variety $x_2$."
+  },
+  {
+    "word": "stakrportcelanu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of porcelain of composition $x_2$ in form $x_3$"
+  },
+  {
+    "word": "stepmania",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Stepmania"
+  },
+  {
+    "word": "straixe",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Austrian in aspect $x_2$"
+  },
+  {
+    "word": "strutione",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an ostrich of subspecies $x_2$."
+  },
+  {
+    "word": "suomne",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Finnish in aspect $x_2$"
+  },
+  {
+    "word": "tabrntromba",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a trumpet."
+  },
+  {
+    "word": "tafrcemize",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a chemise/shift/smock of material $x_2$."
+  },
+  {
+    "word": "tafrjerzi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a jersey of material $x_2$."
+  },
+  {
+    "word": "tafrkardiga",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a cardigan of material $x_2$."
+  },
+  {
+    "word": "taifnu",
+    "type": "fu'ivla",
+    "definition": "$b_1=c_1$ is a typhoon/hurricane/cyclone moving from direction $b_2$ at speed $b_3$ rotating around centre /eye $c_2$ with rotational  direction $c_3$."
+  },
+  {
+    "word": "takside",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a badger of species $x_2$"
+  },
+  {
+    "word": "tarksako",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is dandelion of species $x_2$."
+  },
+  {
+    "word": "tarsire",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a tarsier of species $x_2$."
+  },
+  {
+    "word": "taxfrbikini",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a bikin/two piece skimpy woman's garment of material $x_2$ consisting of top $x_3$ and bottom $x_4$"
+  },
+  {
+    "word": "tca'anka",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a jackfruit (Artocarpus heterophyllus) of breed $x_2$"
+  },
+  {
+    "word": "tcaika",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a gull/sea-gull (genus Larus) oof species/variety $x_2$"
+  },
+  {
+    "word": "tcakali",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a jackal of species/breed $x_2$."
+  },
+  {
+    "word": "tcandana",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is sandalwood of species/variety $x_2$."
+  },
+  {
+    "word": "tce'exo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Czech in aspect $x_2$."
+  },
+  {
+    "word": "tcempedake",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a cempedak (Artocarpus champeden) of breed $x_2$"
+  },
+  {
+    "word": "tcikonia",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a stork of species/type $x_2$"
+  },
+  {
+    "word": "tcimbolo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a guppy/molly of species $x_2$"
+  },
+  {
+    "word": "tcimpazi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a chimpanzee of species/subspecies $x_2$."
+  },
+  {
+    "word": "te'ekno",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a form of techno music performed/created by $x_2$ with characteristics $x_3$."
+  },
+  {
+    "word": "tilnipa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a linden of species $x_2$"
+  },
+  {
+    "word": "tirlasino",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a thylacine of species/breed $x_2$."
+  },
+  {
+    "word": "tirxrpardu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a leopard of species/breed $x_2$ with coat markings $x_2$."
+  },
+  {
+    "word": "tirxrponka",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a jaguar of species/breed with coat markings $x_2$."
+  },
+  {
+    "word": "tokpona",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Toki Pona culture/nationality/language in aspect $x_2$"
+  },
+  {
+    "word": "toldrpleksipi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a monarch butterfly of subspecies $x_2$."
+  },
+  {
+    "word": "tolvutu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is rabid with symptoms $x_2$."
+  },
+  {
+    "word": "torceli",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is $x_2$ torrs by standard $x_3$."
+  },
+  {
+    "word": "tricnrarekake",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a palm tree, species/strain $x_2$."
+  },
+  {
+    "word": "tricrkorilu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a hazel (Corylus) of species/type $x_2$"
+  },
+  {
+    "word": "tricrsiringa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a lilac (genus Syringa) of species/cultivar $x_2$."
+  },
+  {
+    "word": "trigonela",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is fenugreek of species/variety $x_2$."
+  },
+  {
+    "word": "trixexo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a manatee of species $x_2$."
+  },
+  {
+    "word": "trixexu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a manatee of species $x_2$."
+  },
+  {
+    "word": "tromizona",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a lamprey of genus/species $x_2$."
+  },
+  {
+    "word": "tropaiolo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a nasturtium of species $x_2$."
+  },
+  {
+    "word": "trueno",
+    "type": "fu'ivla",
+    "definition": "$t_1$ is a privet of species $t_2$."
+  },
+  {
+    "word": "tsakura",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a cherry blossom species/strain $x_2$."
+  },
+  {
+    "word": "tsalagi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Cherokee culture/nationality/language in aspect $x_2$."
+  },
+  {
+    "word": "tsaprcinamomu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of cinnamon spice causing flavor/effect $x_2$ (event/property)."
+  },
+  {
+    "word": "tsaprguinense",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of Guinea/Ashanti/Benin Pepper/ false Cubeb causing flavor/effect $x_2$ (event/property)."
+  },
+  {
+    "word": "tsaprilici",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a star aniseed/(Chinese) star anise (Illicium verum) causing flavor/effect $x_2$."
+  },
+  {
+    "word": "tsaprkanela",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of cinnamon bark/wild cinnamon/white cinnamon causing flavor/effect $x_2$."
+  },
+  {
+    "word": "tsaprkubeba",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of cubeb/tailed pepper (Piper cubeba) causing flavor/effect $x_2$ (event/property)."
+  },
+  {
+    "word": "tsaprlauru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of laurel leaf (Laurus nobilis) causing flavor/effect $x_2$ (event/property)."
+  },
+  {
+    "word": "tsaprnigru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of black peppar  (Piper nigrum) causing flavor/effect $x_2$, of type $x_3$."
+  },
+  {
+    "word": "tsaprpipali",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of long peppar (Piper longum) causing flavor/effect $x_2$ (event/property)."
+  },
+  {
+    "word": "tsaprpipera",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of pepper (genus Piper) causing flavor/effect $x_2$ (event/property)."
+  },
+  {
+    "word": "tsaprpiperi",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is pepper (genus ''Piper'') with flavor $x_2$."
+  },
+  {
+    "word": "tsesebe",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a sassaby/topi/korrigum/damalisk of species/breed $x_2$."
+  },
+  {
+    "word": "tsirkuso",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a circus group/band/performer(s) performing $x_2$ (abstraction)"
+  },
+  {
+    "word": "tsirmiristika",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a nutmeg seed (genus Myristica) of species/strain $x_2$ causing flavor/effect $x_3$ (event/property).."
+  },
+  {
+    "word": "tsukini",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a zucchini squash (L. cucurbita pepo)."
+  },
+  {
+    "word": "tsunami",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a tsunami caused by $x_2$."
+  },
+  {
+    "word": "tu'urki",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Turkish culture/nationality/language in aspect $x_2$."
+  },
+  {
+    "word": "tuitsku",
+    "type": "fu'ivla",
+    "definition": "$x_1$ tweets/posts tweet $x_2$ (text/sedu'u/mass with pictures/etc.) with tags $x_3$ and addressee $x_4$."
+  },
+  {
+    "word": "u'imla",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a lolcat/picture of animal $x_2$ with humorous caption $x_3$."
+  },
+  {
+    "word": "u'ivla",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a word meaning $x_2$ in language $x_3$ and silly/funny/clever for reason $x_4$ (usually etymological)."
+  },
+  {
+    "word": "uebre",
+    "type": "fu'ivla",
+    "definition": "$x_1$ pertains to the world wide web in aspect $x_2$."
+  },
+  {
+    "word": "uigru",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Uyghur in aspect $x_2$"
+  },
+  {
+    "word": "uiski",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is whisk(e)y distilled from $x_2$."
+  },
+  {
+    "word": "uitki",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a wiki/collaborative web site with subject/theme/content $x_2$."
+  },
+  {
+    "word": "uitkipedia",
+    "type": "fu'ivla",
+    "definition": "$x_1$ pertains to Wikipedia in aspect $x_2$."
+  },
+  {
+    "word": "ulmu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an elm of species/variety $x_2$."
+  },
+  {
+    "word": "urci",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is poison ivy/oak/sumac / lacquer tree of species $x_2$."
+  },
+  {
+    "word": "urli",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the URL/address of web page/resource/file $x_2$."
+  },
+  {
+    "word": "vandula",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is lavender of species/variety $x_2$."
+  },
+  {
+    "word": "varnila",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is vanilla."
+  },
+  {
+    "word": "violbasu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a double bass / contrabass"
+  },
+  {
+    "word": "violna",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a viola"
+  },
+  {
+    "word": "violni",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a violin"
+  },
+  {
+    "word": "violtcelo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a cello"
+  },
+  {
+    "word": "visnda",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a bison of species $x_2$"
+  },
+  {
+    "word": "vlalikei",
+    "type": "fu'ivla",
+    "definition": "$x_1$ [mass/sequence] plays the Lojban word chaining game (vlalinkei) with ruleset $x_2$ and winner $x_3$ with resulting sentence $x_4$ against world champion $x_6$ for fabulous cash prize $x_7$ and endorsement deal(s) $x_8$ groupies $x_9$ (except they probably go earlier), played at time $x_10$ at location $x_11$ and honorific title $x_12$ breaking record(s) $x_13$ with mindless spectators $x_14$ taking time $x_15$ [amount] containing most frequently used word $x_16$ (zo) and not using perfectly good words $x_17$ (zo) displaying new strategy/trick $x_18$ supervised by $x_19$ with referee $x_20$ and used message transmission system $x_21$ time limit per move $x_22$ shortest move of the game $x_23$ broadcast on TV network(s) $x_24$ with Neilson ratings $x_25$ supplanting previously most watched show $x_26$ winning new fans  $x_27$ who formerly played $x_28$ which is inferior for reasons $x_29$ by standard $x_30$ with banned words $x_31$ with words winning additional points $x_32$ with climax of suspense $x_33$ and best comeback $x_34$"
+  },
+  {
+    "word": "vo'otka",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a vodka distilled from $x_2$."
+  },
+  {
+    "word": "vombatu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a wombat (family Vombatidae) of species/breed $x_2$"
+  },
+  {
+    "word": "vonpaso",
+    "type": "fu'ivla",
+    "definition": "$x_1$ swindles $x_2$ into state/event $x_3$ by promising $x_4$; $x_1$ commits 419/advance fee fraud."
+  },
+  {
+    "word": "vraike",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is kelp of genus/species $x_2$"
+  },
+  {
+    "word": "xa'anze",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Hanseatic/pertains to the Hanseatic League in aspect $x_2$"
+  },
+  {
+    "word": "xa'anzu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects Han Chinese [Mandarin, Cantonese, Wu, etc.] culture/nationality/language in aspect $x_2$."
+  },
+  {
+    "word": "xagrnklarineto",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a clarinet with reed $x_2$."
+  },
+  {
+    "word": "xagrnsaksofono",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a saxophone with reed $x_2$."
+  },
+  {
+    "word": "xalsixa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ pertains to the Sikh culture/religion/ethos in aspect $x_2$"
+  },
+  {
+    "word": "xancrcereme",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a chereme/phoneme in character-set of sign language $x_2$, characterized by tab (elements of location) $x_3$, dez (hand shape) $x_4$, sig (motion) $x_5$, ori (orientation) $x_6$ and facial expression/mouthing $x_7$."
+  },
+  {
+    "word": "xangulu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a hangul (Korean alphabet) of sound $x_2$."
+  },
+  {
+    "word": "xantrmamontu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a mammoth (genus Mammuthus) of species/strain $x_2$."
+  },
+  {
+    "word": "xantrmamutu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a mastodon (genus Mammut) of species/strain $x_2$."
+  },
+  {
+    "word": "xantrstegodono",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a stegodon (genus Stegodon) of species/strain $x_2$."
+  },
+  {
+    "word": "xarcufu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an artichoke of species/variety $x_2$."
+  },
+  {
+    "word": "xarjrngiri",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a warthog of species $x_2$"
+  },
+  {
+    "word": "xelveto",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Swiss in aspect $x_2$."
+  },
+  {
+    "word": "xilbate",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a gibbon of species $x_2$."
+  },
+  {
+    "word": "xilbati",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a gibbon of species $x_2$."
+  },
+  {
+    "word": "xiptamu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a hippopotamus of species/breed $x_2$."
+  },
+  {
+    "word": "xirgana",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a hiragana (Japanese syllabary) of sound $x_2$."
+  },
+  {
+    "word": "xomxeci",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an ocotillo of species $x_2$"
+  },
+  {
+    "word": "xonxoli",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is sesame of species/variety $x_2$."
+  },
+  {
+    "word": "xorjina",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a saddlebag/pair of saddlebags to use on animal/vehicle $x_2$."
+  },
+  {
+    "word": "xrisrbiblia",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is the Christian Bible of Christian denomination $x_2$"
+  },
+  {
+    "word": "xrulnranunkulu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of ranunculus/buttercup/spearwort/water crowfoot of species/strain $x_2$"
+  },
+  {
+    "word": "xrulrlavandula",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of lavender of species/strain $x_2$"
+  },
+  {
+    "word": "xukmranoni",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is an instance of annonin (individual or mass) with purity $x_2$."
+  },
+  {
+    "word": "xumrkonkreto",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a quantity of concrete made from ingredients $x_2$."
+  },
+  {
+    "word": "xusxusu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is vetiver of species/variety $x_2$."
+  },
+  {
+    "word": "zalgosu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a spiny anteater of species $x_2$."
+  },
+  {
+    "word": "zdiraxa",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a chinaberry of variety $x_2$."
+  },
+  {
+    "word": "zduriane",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a durian (Durio zibethinus) of breed $x_2$"
+  },
+  {
+    "word": "zermbeto",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is zerumbet/shell ginger of species/variety $x_2$."
+  },
+  {
+    "word": "zgirkamnamstaili",
+    "type": "fu'ivla",
+    "definition": "$x_1$ reflects/pertains to Gangnam Style music/choreography/phenomenon in aspect $x_2$."
+  },
+  {
+    "word": "zgirpopu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a form of pop music performed by $x_2$ with characteristics $x_3$."
+  },
+  {
+    "word": "zgoptera",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is a damselfly of species $x_2$."
+  },
+  {
+    "word": "zigzagi",
+    "type": "fu'ivla",
+    "definition": "$z_1$ is a line with the shape of a zigzag."
+  },
+  {
+    "word": "zimbabu",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is Zimbabwean in aspect $x_2$."
+  },
+  {
+    "word": "zingibero",
+    "type": "fu'ivla",
+    "definition": "$x_1$ is ginger of species $x_2$."
+  },
+  {
+    "word": "zu'erxiolo",
+    "type": "fu'ivla",
+    "definition": "$x_1$ does $x_2$ (ka) because YOLO."
+  }
+]

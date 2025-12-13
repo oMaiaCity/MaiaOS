@@ -1,0 +1,2562 @@
+[
+  {
+    "word": "a'acu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: attentive - inattentive - avoiding."
+  },
+  {
+    "word": "a'anai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: attentive - inattentive - avoiding."
+  },
+  {
+    "word": "a'enai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: alertness - exhaustion."
+  },
+  {
+    "word": "a'icu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: effort - no special effort - repose."
+  },
+  {
+    "word": "a'inai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: effort - no special effort - repose."
+  },
+  {
+    "word": "a'onai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: hope - despair."
+  },
+  {
+    "word": "a'ucu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: interest - disinterest - repulsion."
+  },
+  {
+    "word": "a'unai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: interest - disinterest - repulsion."
+  },
+  {
+    "word": "abu",
+    "type": "cmavo cluster",
+    "definition": "letteral for a."
+  },
+  {
+    "word": "aicu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: intent - indecision - rejection/refusal."
+  },
+  {
+    "word": "ainai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: intent - indecision - rejection/refusal."
+  },
+  {
+    "word": "aucu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: desire - indifference - reluctance."
+  },
+  {
+    "word": "aunai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: desire - indifference - reluctance."
+  },
+  {
+    "word": "ba'acu'i",
+    "type": "cmavo cluster",
+    "definition": "evidential: I expect - I experience - I remember."
+  },
+  {
+    "word": "ba'anai",
+    "type": "cmavo cluster",
+    "definition": "evidential: I expect - I experience - I remember."
+  },
+  {
+    "word": "ba'ucu'i",
+    "type": "cmavo cluster",
+    "definition": "discursive: exaggeration - accuracy - understatement."
+  },
+  {
+    "word": "ba'unai",
+    "type": "cmavo cluster",
+    "definition": "discursive: exaggeration - accuracy - understatement."
+  },
+  {
+    "word": "baba",
+    "type": "cmavo cluster",
+    "definition": "time tense: will be going to; (tense/modal)."
+  },
+  {
+    "word": "baca'a",
+    "type": "cmavo cluster",
+    "definition": "time tense: future actuality; modal aspect."
+  },
+  {
+    "word": "baca'o",
+    "type": "cmavo cluster",
+    "definition": "time tense: will be then; (tense/modal)."
+  },
+  {
+    "word": "bapu",
+    "type": "cmavo cluster",
+    "definition": "time tense: will have been; (tense/modal)."
+  },
+  {
+    "word": "be'ucu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal modifier: lack/need - presence/satisfaction - satiation."
+  },
+  {
+    "word": "be'unai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal modifier: lack/need - presence/satisfaction - satiation."
+  },
+  {
+    "word": "bi'unai",
+    "type": "cmavo cluster",
+    "definition": "discursive: newly introduced information - previously introduced information."
+  },
+  {
+    "word": "biki'o",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 8,000 expressed with comma."
+  },
+  {
+    "word": "bimei",
+    "type": "cmavo cluster",
+    "definition": "quantifier selbri: convert 8 to cardinal selbri; $x_{1}$ is a set with the octet of members $x_{2}$."
+  },
+  {
+    "word": "bimoi",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert 8 to ordinal selbri; $x_{1}$ is eighth among $x_{2}$ ordered by rule $x_{3}$."
+  },
+  {
+    "word": "bino",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 80 [eighty]."
+  },
+  {
+    "word": "binono",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 800 [eight hundred]."
+  },
+  {
+    "word": "binonovo",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 8004, without comma."
+  },
+  {
+    "word": "bu'ocu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal contour: start emotion - continue emotion - end emotion."
+  },
+  {
+    "word": "bu'onai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal contour: start emotion - continue emotion - end emotion."
+  },
+  {
+    "word": "ca ma",
+    "type": "cmavo cluster",
+    "definition": "sumti question asking for a time/date/event; simultaneous with what?."
+  },
+  {
+    "word": "caba'o",
+    "type": "cmavo cluster",
+    "definition": "time tense: has been, is now in the aftermath of; (tense/modal)."
+  },
+  {
+    "word": "caca'a",
+    "type": "cmavo cluster",
+    "definition": "time tense: present actuality; modal aspect."
+  },
+  {
+    "word": "caca'o",
+    "type": "cmavo cluster",
+    "definition": "time tense: is now/simultaneously, is now in the middle of; (tense/modal)."
+  },
+  {
+    "word": "cajeba",
+    "type": "cmavo cluster",
+    "definition": "time tense: during and after; (tense/modal)."
+  },
+  {
+    "word": "caku",
+    "type": "cmavo cluster",
+    "definition": "Now. At the present time."
+  },
+  {
+    "word": "capu'o",
+    "type": "cmavo cluster",
+    "definition": "time tense: is going to, is now just about to, is now anticipating; (tense/modal)."
+  },
+  {
+    "word": "ci'iroi",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: occurs infinite times, eternally; objective tense; defaults as time."
+  },
+  {
+    "word": "ciki'o",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 3,000 expressed with comma."
+  },
+  {
+    "word": "cimei",
+    "type": "cmavo cluster",
+    "definition": "quantifier selbri: convert 3 to cardinal selbri; $x_{1}$ is a set with the trio of members $x_{2}$."
+  },
+  {
+    "word": "cimoi",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert 3 to ordinal selbri; $x_{1}$ is third among $x_{2}$ ordered by rule $x_{3}$."
+  },
+  {
+    "word": "cino",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 30 [thirty]."
+  },
+  {
+    "word": "cinono",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 300 [three hundred]."
+  },
+  {
+    "word": "ciroi",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: thrice; objectively quantified tense; defaults as time tense."
+  },
+  {
+    "word": "coico'o",
+    "type": "cmavo cluster",
+    "definition": "vocative: greetings in passing."
+  },
+  {
+    "word": "cu'u ko'a",
+    "type": "cmavo cluster",
+    "definition": "tagged sumti: can be used for embedded: it-1 said, \"...\", with editorial unquote and insert."
+  },
+  {
+    "word": "da'amoi",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: converts all-but-(1) to ordinal selbri; $x_{1}$ is penultimate among $x_{2}$ by rule $x_{3}$."
+  },
+  {
+    "word": "da'aremoi",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: converts all-but-2 to ordinal selbri; $x_{1}$ is antepenult. among $x_{2}$ by rule $x_{3}$."
+  },
+  {
+    "word": "da'inai",
+    "type": "cmavo cluster",
+    "definition": "discursive: supposing - in fact."
+  },
+  {
+    "word": "denpa bu",
+    "type": "cmavo cluster",
+    "definition": "letteral: Lojban \".\" character."
+  },
+  {
+    "word": "di'inai",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: irregularly/aperiodically; tense/modal; defaults as time tense."
+  },
+  {
+    "word": "do'anai",
+    "type": "cmavo cluster",
+    "definition": "discursive: generously - parsimoniously."
+  },
+  {
+    "word": "doido'u",
+    "type": "cmavo cluster",
+    "definition": "generic vocative address to intended listener;."
+  },
+  {
+    "word": "du'emei",
+    "type": "cmavo cluster",
+    "definition": "quantifier selbri: convert too many to cardinal selbri; $x_{1}$ is a set with too many members $x_{2}$."
+  },
+  {
+    "word": "du'eroi",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: too many times objective tense, defaults as time tense."
+  },
+  {
+    "word": "e'anai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: permission - prohibition."
+  },
+  {
+    "word": "e'enai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: competence - incompetence/inability."
+  },
+  {
+    "word": "e'icu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: feeling constraint - independence - challenge/resistance against constraint."
+  },
+  {
+    "word": "e'inai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: feeling constraint - independence - challenge/resistance against constraint."
+  },
+  {
+    "word": "e'onai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: request - negative request."
+  },
+  {
+    "word": "e'ucu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: suggestion - abandon suggest - warning."
+  },
+  {
+    "word": "e'unai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: suggestion - abandon suggest - warning."
+  },
+  {
+    "word": "ebu",
+    "type": "cmavo cluster",
+    "definition": "letteral for e."
+  },
+  {
+    "word": "einai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: obligation - freedom."
+  },
+  {
+    "word": "enai",
+    "type": "cmavo cluster",
+    "definition": "logical connective: sumti afterthought x but not y."
+  },
+  {
+    "word": "fe'eba'o",
+    "type": "cmavo cluster",
+    "definition": "location event contour tense: perfective in space; beyond the place of ..."
+  },
+  {
+    "word": "fe'eca'o",
+    "type": "cmavo cluster",
+    "definition": "location event contour tense: continuative in space; throughout the place of ..."
+  },
+  {
+    "word": "fe'eco'a",
+    "type": "cmavo cluster",
+    "definition": "location event contour tense: initiative in space; on this edge of ..."
+  },
+  {
+    "word": "fe'eco'i",
+    "type": "cmavo cluster",
+    "definition": "location event contour tense: achievative in space; at the point of ..."
+  },
+  {
+    "word": "fe'emo'u",
+    "type": "cmavo cluster",
+    "definition": "location event contour tense: completive in space; at the far end of ..."
+  },
+  {
+    "word": "fe'enoroi",
+    "type": "cmavo cluster",
+    "definition": "location tense interval modifier: never in space; objectively quantified tense."
+  },
+  {
+    "word": "fe'epu'o",
+    "type": "cmavo cluster",
+    "definition": "location event contour tense: anticipative in space; up to the edge of ..."
+  },
+  {
+    "word": "fe'eroroi",
+    "type": "cmavo cluster",
+    "definition": "location tense interval modifier: always in space; objectively quantified tense."
+  },
+  {
+    "word": "fe'eza'o",
+    "type": "cmavo cluster",
+    "definition": "location event contour tense: superfective in space; continuing too far beyond ..."
+  },
+  {
+    "word": "fi'inai",
+    "type": "cmavo cluster",
+    "definition": "vocative: hospitality - inhospitality."
+  },
+  {
+    "word": "fi'ure",
+    "type": "cmavo cluster",
+    "definition": "half."
+  },
+  {
+    "word": "fu'inai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal modifier: easy - difficult."
+  },
+  {
+    "word": "ga'icu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal modifier/honorific: hauteur - equal rank - meekness; used with one of equal rank."
+  },
+  {
+    "word": "ga'inai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal modifier/honorific: hauteur - equal rank - meekness; used with one of higher rank."
+  },
+  {
+    "word": "ganai",
+    "type": "cmavo cluster",
+    "definition": "logical connective: forethought all but tanru-internal conditional/only if (with gi)."
+  },
+  {
+    "word": "gi'enai",
+    "type": "cmavo cluster",
+    "definition": "logical connective: bridi-tail afterthought x but not y."
+  },
+  {
+    "word": "gi'onai",
+    "type": "cmavo cluster",
+    "definition": "logical connective: bridi-tail afterthought exclusive or; Latin 'aut'."
+  },
+  {
+    "word": "go'ira'o",
+    "type": "cmavo cluster",
+    "definition": "pro-bridi: preceding bridi; repeats claim as true, updating for speaker/listener change."
+  },
+  {
+    "word": "gonai",
+    "type": "cmavo cluster",
+    "definition": "logical connective: forethought all but tanru-internal exclusive or (with gi); Latin 'aut'."
+  },
+  {
+    "word": "gu'anai",
+    "type": "cmavo cluster",
+    "definition": "logical connective: tanru-internal forethought conditional/only if (with gi)."
+  },
+  {
+    "word": "gu'onai",
+    "type": "cmavo cluster",
+    "definition": "logical connective: tanru-internal forethought exclusive or (with gi); Latin 'aut'."
+  },
+  {
+    "word": "i'anai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: acceptance - blame."
+  },
+  {
+    "word": "i'ecu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: approval - non-approval - disapproval."
+  },
+  {
+    "word": "i'enai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: approval - non-approval - disapproval."
+  },
+  {
+    "word": "i'inai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: togetherness - privacy."
+  },
+  {
+    "word": "i'onai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: appreciation - envy."
+  },
+  {
+    "word": "i'unai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: familiarity - mystery."
+  },
+  {
+    "word": "iacu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: belief - skepticism - disbelief."
+  },
+  {
+    "word": "ianai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: belief - skepticism - disbelief."
+  },
+  {
+    "word": "ibu",
+    "type": "cmavo cluster",
+    "definition": "letteral for i."
+  },
+  {
+    "word": "ienai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: agreement - disagreement."
+  },
+  {
+    "word": "iinai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: fear - security."
+  },
+  {
+    "word": "ija",
+    "type": "cmavo cluster",
+    "definition": "logical connective: sentence afterthought or."
+  },
+  {
+    "word": "ijanai",
+    "type": "cmavo cluster",
+    "definition": "logical connective: sentence afterthought: (preceding sentence) if this sentence."
+  },
+  {
+    "word": "ije",
+    "type": "cmavo cluster",
+    "definition": "logical connective: sentence afterthought and."
+  },
+  {
+    "word": "ije'i",
+    "type": "cmavo cluster",
+    "definition": "logical connective: sentence afterthought conn question."
+  },
+  {
+    "word": "ijenai",
+    "type": "cmavo cluster",
+    "definition": "logical connective: sentence afterthought x but not y."
+  },
+  {
+    "word": "ijo",
+    "type": "cmavo cluster",
+    "definition": "logical connective: sentence afterthought biconditional/iff/if-and-only-if."
+  },
+  {
+    "word": "ijonai",
+    "type": "cmavo cluster",
+    "definition": "logical connective: sentence afterthought exclusive or; Latin 'aut'."
+  },
+  {
+    "word": "iju",
+    "type": "cmavo cluster",
+    "definition": "logical connective: sentence afterthought whether-or-not."
+  },
+  {
+    "word": "inaja",
+    "type": "cmavo cluster",
+    "definition": "logical connective: sentence afterthought conditional/only if."
+  },
+  {
+    "word": "ionai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: respect - disrespect."
+  },
+  {
+    "word": "iucu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: love - no love lost - hatred."
+  },
+  {
+    "word": "iunai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: love - no love lost - hatred."
+  },
+  {
+    "word": "ja'aru'e",
+    "type": "cmavo cluster",
+    "definition": "weak bridi affirmation; barely; almost not at all."
+  },
+  {
+    "word": "ja'enai",
+    "type": "cmavo cluster",
+    "definition": "jalge modal, 1st place (event causal)             nevertheless result ..."
+  },
+  {
+    "word": "jaica",
+    "type": "cmavo cluster",
+    "definition": "convert time tense (tagged) place to 1st place; 1st place moves to extra place (fai)."
+  },
+  {
+    "word": "jaigau",
+    "type": "cmavo cluster",
+    "definition": "makes $x_{1}$ the agent of a bridi; old 1st place moves to extra place (fai)."
+  },
+  {
+    "word": "jaivi",
+    "type": "cmavo cluster",
+    "definition": "convert location tense (tagged) place to 1st place; 1st place moves to extra place (fai)."
+  },
+  {
+    "word": "je'abo",
+    "type": "cmavo cluster",
+    "definition": "negation sumti qualifier: that which indeed is."
+  },
+  {
+    "word": "je'enai",
+    "type": "cmavo cluster",
+    "definition": "vocative: roger (ack) - negative acknowledge; I didn't hear you."
+  },
+  {
+    "word": "je'unai",
+    "type": "cmavo cluster",
+    "definition": "discursive: truth - falsity."
+  },
+  {
+    "word": "jenai",
+    "type": "cmavo cluster",
+    "definition": "logical connective: tanru-internal afterthought x but not y."
+  },
+  {
+    "word": "ji'ima'u",
+    "type": "cmavo cluster",
+    "definition": "rounded up (appended after string of digits indicating a rounded value)."
+  },
+  {
+    "word": "ji'ini'u",
+    "type": "cmavo cluster",
+    "definition": "rounded down (appended after string of digits indicating a rounded value)."
+  },
+  {
+    "word": "joibu",
+    "type": "cmavo cluster",
+    "definition": "letteral: ampersand character; especially used in standing for a mixed connective."
+  },
+  {
+    "word": "jonai",
+    "type": "cmavo cluster",
+    "definition": "logical connective: tanru-internal afterthought exclusive or; Latin 'aut'."
+  },
+  {
+    "word": "ju'aku'i",
+    "type": "cmavo cluster",
+    "definition": "evidential: although, even though, while, whilst"
+  },
+  {
+    "word": "ju'icu'i",
+    "type": "cmavo cluster",
+    "definition": "vocative: attention - at ease - ignore me."
+  },
+  {
+    "word": "ju'inai",
+    "type": "cmavo cluster",
+    "definition": "vocative: attention - at ease - ignore me."
+  },
+  {
+    "word": "ju'ocai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal modifier: intense certainty."
+  },
+  {
+    "word": "ju'ocu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal modifier: certainty - uncertainty - impossibility."
+  },
+  {
+    "word": "ju'onai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal modifier: certainty - uncertainty - impossibility."
+  },
+  {
+    "word": "ju'opei",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: certainty question."
+  },
+  {
+    "word": "ke'unai",
+    "type": "cmavo cluster",
+    "definition": "discursive: repeating - continuing."
+  },
+  {
+    "word": "ki'anai",
+    "type": "cmavo cluster",
+    "definition": "non-question: understanding of something said."
+  },
+  {
+    "word": "ki'enai",
+    "type": "cmavo cluster",
+    "definition": "vocative: thanks - no thanks to you."
+  },
+  {
+    "word": "ki'u ma",
+    "type": "cmavo cluster",
+    "definition": "sumti question asking for a rational explanation/justification; why?."
+  },
+  {
+    "word": "ki'unai",
+    "type": "cmavo cluster",
+    "definition": "krinu modal, 1st place                            despite reason ..."
+  },
+  {
+    "word": "ku'inai",
+    "type": "cmavo cluster",
+    "definition": "discursive: hence/therefore."
+  },
+  {
+    "word": "la'anai",
+    "type": "cmavo cluster",
+    "definition": "discursive: probability - improbability."
+  },
+  {
+    "word": "la'edi'u",
+    "type": "cmavo cluster",
+    "definition": "pro-sumti: the referent of the last utterance; the state described: \"IT was fun\"."
+  },
+  {
+    "word": "la'u ma",
+    "type": "cmavo cluster",
+    "definition": "sumti question asking for a quantity; how many?."
+  },
+  {
+    "word": "le go'i",
+    "type": "cmavo cluster",
+    "definition": "description pro-sumti: reuses the value of the $x_{1}$ of the previous bridi."
+  },
+  {
+    "word": "le jaica",
+    "type": "cmavo cluster",
+    "definition": "description: marks description extracting the time tense place of the description bridi."
+  },
+  {
+    "word": "le jaigau",
+    "type": "cmavo cluster",
+    "definition": "description: marks description extracting the agentive place of the description selbri."
+  },
+  {
+    "word": "le jaivi",
+    "type": "cmavo cluster",
+    "definition": "description: marks description extracting the location place of the description bridi."
+  },
+  {
+    "word": "le sego'i",
+    "type": "cmavo cluster",
+    "definition": "description pro-sumti: reuses the value of the $x_{2}$ of the previous bridi."
+  },
+  {
+    "word": "le tego'i",
+    "type": "cmavo cluster",
+    "definition": "description pro-sumti: reuses the value of the $x_{3}$ of the previous bridi."
+  },
+  {
+    "word": "le vego'i",
+    "type": "cmavo cluster",
+    "definition": "description pro-sumti: reuses the value of the $x_{4}$ of the previous bridi."
+  },
+  {
+    "word": "le xego'i",
+    "type": "cmavo cluster",
+    "definition": "description pro-sumti: reuses the value of the $x_{5}$ of the previous bridi."
+  },
+  {
+    "word": "le'ocu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal modifier: aggressive - passive - defensive."
+  },
+  {
+    "word": "le'onai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal modifier: aggressive - passive - defensive."
+  },
+  {
+    "word": "ledo",
+    "type": "cmavo cluster",
+    "definition": "possessive/associative descriptor: the one(s) described as, of yours."
+  },
+  {
+    "word": "leko'a",
+    "type": "cmavo cluster",
+    "definition": "possessive/associative descriptor: the one(s) described as, of it-1's."
+  },
+  {
+    "word": "lemi",
+    "type": "cmavo cluster",
+    "definition": "possessive/associative descriptor: the one(s) described as, of mine."
+  },
+  {
+    "word": "leta",
+    "type": "cmavo cluster",
+    "definition": "possessive/associative descriptor: nearby demonstrative possessive; cannot use for 'THAT ...'."
+  },
+  {
+    "word": "leti",
+    "type": "cmavo cluster",
+    "definition": "possessive/associative descriptor: immediate demonstrative possessive; cannot use for 'THIS ...'."
+  },
+  {
+    "word": "letu",
+    "type": "cmavo cluster",
+    "definition": "possessive/associative descriptor: distant demonstrative possessive."
+  },
+  {
+    "word": "leva",
+    "type": "cmavo cluster",
+    "definition": "located descriptor: descriptive that-there (non-demonstrative)."
+  },
+  {
+    "word": "levi",
+    "type": "cmavo cluster",
+    "definition": "located descriptor: descriptive this-here (non-demonstrative)."
+  },
+  {
+    "word": "levu",
+    "type": "cmavo cluster",
+    "definition": "located descriptor: descriptive that-yonder (non-demonstrative)."
+  },
+  {
+    "word": "li'anai",
+    "type": "cmavo cluster",
+    "definition": "discursive: clearly - obscurely."
+  },
+  {
+    "word": "me'e ma",
+    "type": "cmavo cluster",
+    "definition": "sumti question asking for a name; who?; requires quoted name as an answer."
+  },
+  {
+    "word": "medomoi",
+    "type": "cmavo cluster",
+    "definition": "$x_1$ is yours among $x_2$ by rule/relationship $x_3$; $x_1$ is your $x_2$ by rule/relationship $x_3$."
+  },
+  {
+    "word": "memimoi",
+    "type": "cmavo cluster",
+    "definition": "$x_1$ is mine among $x_2$ by rule/relationship $x_3$; $x_1$ is my $x_2$ by rule/relationship $x_3$."
+  },
+  {
+    "word": "mi'enai",
+    "type": "cmavo cluster",
+    "definition": "self vocative: self-introduction - denial of identity; denies identity of speaker."
+  },
+  {
+    "word": "mo'aroi",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: too few times; objective tense; defaults as time tense."
+  },
+  {
+    "word": "mo'ibe'a",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: northwardly; to the north directional space motion."
+  },
+  {
+    "word": "mo'ibu'u",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: moving to coincide directional space motion."
+  },
+  {
+    "word": "mo'ica'u",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: forward directional space motion."
+  },
+  {
+    "word": "mo'idu'a",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: eastwardly; to the east directional space motion."
+  },
+  {
+    "word": "mo'ifa'a",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: arriving at; arriving at a point directional space motion."
+  },
+  {
+    "word": "mo'iga'u",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: upwardly; upwards directional space motion."
+  },
+  {
+    "word": "mo'ine'a",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: approximating; moving around the neighborhood of ... space motion."
+  },
+  {
+    "word": "mo'ine'i",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: moving into directional space motion."
+  },
+  {
+    "word": "mo'ine'u",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: southwardly; to the south directional space motion."
+  },
+  {
+    "word": "mo'ini'a",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: downwardly; downwards directional space motion."
+  },
+  {
+    "word": "mo'ipa'o",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: passing through directional space motion."
+  },
+  {
+    "word": "mo'ire'o",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: along; along a path directional space motion."
+  },
+  {
+    "word": "mo'iri'u",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: rightwardly; to the right directional space motion."
+  },
+  {
+    "word": "mo'iru'u",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: orbiting; surrounding/annular directional space motion."
+  },
+  {
+    "word": "mo'ite'e",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: moving along the border directional space motion."
+  },
+  {
+    "word": "mo'iti'a",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: rearwardsly; rearwards directional space motion."
+  },
+  {
+    "word": "mo'ito'o",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: moving away from a point directional space motion."
+  },
+  {
+    "word": "mo'ivu'a",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: westwardly; to the west directional space motion."
+  },
+  {
+    "word": "mo'ize'o",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: outwardsly; outward directional space motion."
+  },
+  {
+    "word": "mo'izo'a",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: passing by a site directional space motion."
+  },
+  {
+    "word": "mo'izo'i",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: approaching directional space motion."
+  },
+  {
+    "word": "mo'izu'a",
+    "type": "cmavo cluster",
+    "definition": "space motion tense: leftwardsly; to the left directional space motion."
+  },
+  {
+    "word": "mu'acu'i",
+    "type": "cmavo cluster",
+    "definition": "discursive: for example - omitting - end examples."
+  },
+  {
+    "word": "mu'anai",
+    "type": "cmavo cluster",
+    "definition": "discursive: for example - omitting - end examples."
+  },
+  {
+    "word": "mu'i ma",
+    "type": "cmavo cluster",
+    "definition": "sumti question asking for a motive; why?."
+  },
+  {
+    "word": "mu'inai",
+    "type": "cmavo cluster",
+    "definition": "mukti modal, 1st place                            despite motive ..."
+  },
+  {
+    "word": "mu'onai",
+    "type": "cmavo cluster",
+    "definition": "vocative: over (response OK) - more to come."
+  },
+  {
+    "word": "muki'o",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 5,000 expressed with comma."
+  },
+  {
+    "word": "mumei",
+    "type": "cmavo cluster",
+    "definition": "quantifier selbri: convert 5 to cardinal selbri; $x_{1}$ is a set with the quintet of members $x_{2}$."
+  },
+  {
+    "word": "mumoi",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert 5 to ordinal selbri; $x_{1}$ is fifth among $x_{2}$ ordered by rule $x_{3}$."
+  },
+  {
+    "word": "muno",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 50 [fifty]."
+  },
+  {
+    "word": "munono",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 500 [five hundred]."
+  },
+  {
+    "word": "na'ebo",
+    "type": "cmavo cluster",
+    "definition": "negation sumti qualifier: something other than."
+  },
+  {
+    "word": "na'efa'a",
+    "type": "cmavo cluster",
+    "definition": "space direction: not towards specified point, contrary negation; direction modal."
+  },
+  {
+    "word": "na'epu'i",
+    "type": "cmavo cluster",
+    "definition": "modal aspect: has never, and perhaps cannot; other-than-demonstrated-ability."
+  },
+  {
+    "word": "na'onai",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: atypically; subjective tense/modal; defaults as time tense."
+  },
+  {
+    "word": "na.a",
+    "type": "cmavo cluster",
+    "definition": "logical connective: sumti afterthought conditional/only if."
+  },
+  {
+    "word": "nagi'a",
+    "type": "cmavo cluster",
+    "definition": "logical connective: bridi-tail afterthought conditional/only if."
+  },
+  {
+    "word": "nago'i",
+    "type": "cmavo cluster",
+    "definition": "selbri: repeats preceding bridi while denying it as false; pro-assign values are unchanged."
+  },
+  {
+    "word": "naja",
+    "type": "cmavo cluster",
+    "definition": "logical connective: tanru-internal afterthought conditional/only if."
+  },
+  {
+    "word": "naru'e",
+    "type": "cmavo cluster",
+    "definition": "weak bridi negation; almost, but not quite."
+  },
+  {
+    "word": "ni'i ma",
+    "type": "cmavo cluster",
+    "definition": "sumti question asking for a logical proof; why?."
+  },
+  {
+    "word": "ni'inai",
+    "type": "cmavo cluster",
+    "definition": "nibli modal, 1st place                            despite logic ..."
+  },
+  {
+    "word": "no'ebo",
+    "type": "cmavo cluster",
+    "definition": "negation sumti qualifier: the neutral form/value of."
+  },
+  {
+    "word": "noda",
+    "type": "cmavo cluster",
+    "definition": "logically quantified sumti: nothing at all (unless restricted)."
+  },
+  {
+    "word": "nomo'o",
+    "type": "cmavo cluster",
+    "definition": "discursive utterance ordinal: zeroth section/chapter ordinal; foreword."
+  },
+  {
+    "word": "noroi",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: never; objectively quantified tense; defaults as time tense."
+  },
+  {
+    "word": "nu'ecu'i",
+    "type": "cmavo cluster",
+    "definition": "vocative: promise - promise release - un-promise."
+  },
+  {
+    "word": "nu'enai",
+    "type": "cmavo cluster",
+    "definition": "vocative: promise - promise release - un-promise."
+  },
+  {
+    "word": "o'acu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: pride - modesty/humility - shame."
+  },
+  {
+    "word": "o'anai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: pride - modesty/humility - shame."
+  },
+  {
+    "word": "o'enai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: closeness - distance."
+  },
+  {
+    "word": "o'inai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: caution - rashness."
+  },
+  {
+    "word": "o'ocu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: patience - mere tolerance - anger."
+  },
+  {
+    "word": "o'onai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: patience - mere tolerance - anger."
+  },
+  {
+    "word": "o'ucu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: relaxation - composure - stress."
+  },
+  {
+    "word": "o'unai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: relaxation - composure - stress."
+  },
+  {
+    "word": "obu",
+    "type": "cmavo cluster",
+    "definition": "letteral for o."
+  },
+  {
+    "word": "oinai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: complaint - pleasure."
+  },
+  {
+    "word": "oire'e",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: spiritual/religious complaint."
+  },
+  {
+    "word": "oiro'a",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: social complaint."
+  },
+  {
+    "word": "oiro'e",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: mental complaint (puzzlement, excess mental work)."
+  },
+  {
+    "word": "oiro'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: emotional complaint."
+  },
+  {
+    "word": "oiro'o",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: physical complaint."
+  },
+  {
+    "word": "oiro'u",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: sexual complaint."
+  },
+  {
+    "word": "onai",
+    "type": "cmavo cluster",
+    "definition": "logical connective: sumti afterthought exclusive or; Latin 'aut'."
+  },
+  {
+    "word": "pa'aku",
+    "type": "cmavo cluster",
+    "definition": "sumti: explicitly marks respective use as in \"THEY read THEIR (respective) books\"."
+  },
+  {
+    "word": "pa'aseva'u",
+    "type": "cmavo cluster",
+    "definition": "among (with a share for each)"
+  },
+  {
+    "word": "pa'enai",
+    "type": "cmavo cluster",
+    "definition": "discursive: justice - prejudice."
+  },
+  {
+    "word": "pabi",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 18 [eighteen]."
+  },
+  {
+    "word": "paci",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 13 [thirteen]."
+  },
+  {
+    "word": "paki'o",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 1,000 expressed with comma."
+  },
+  {
+    "word": "pamai",
+    "type": "cmavo cluster",
+    "definition": "discursive: first utterance ordinal."
+  },
+  {
+    "word": "pamei",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert 1 to cardinal selbri; $x_{1}$ is a set with single/sole/only member $x_{2}$."
+  },
+  {
+    "word": "pamo'o",
+    "type": "cmavo cluster",
+    "definition": "discursive utterance ordinal: first section/chapter ordinal."
+  },
+  {
+    "word": "pamoi",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert 1 to ordinal selbri; $x_{1}$ is first among $x_{2}$ ordered by rule $x_{3}$."
+  },
+  {
+    "word": "pamu",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 15 [fifteen]."
+  },
+  {
+    "word": "pano",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 10 [ten]."
+  },
+  {
+    "word": "panoki'oki'o",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 10,000,000 [ten millions](Western numbering system/1,00,00,000 [100 lakhs](Indian numbering system)."
+  },
+  {
+    "word": "panomei",
+    "type": "cmavo cluster",
+    "definition": "quantifier selbri: convert 10 to cardinal selbri; $x_{1}$ is a set with the decade of members $x_{2}$."
+  },
+  {
+    "word": "panomoi",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert 10 to ordinal selbri; $x_{1}$ is tenth among $x_{2}$ ordered by rule $x_{3}$."
+  },
+  {
+    "word": "panono",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 100 [one hundred]."
+  },
+  {
+    "word": "panonoki'o",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 100,000 [hundred thousand](Western numbering system)/[one lakh](Indian numbering system).."
+  },
+  {
+    "word": "panonomei",
+    "type": "cmavo cluster",
+    "definition": "quantifier selbri: convert 100 to cardinal selbri; $x_{1}$ is a set with the century of members $x_{2}$."
+  },
+  {
+    "word": "papa",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 11 [eleven]."
+  },
+  {
+    "word": "pare",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 12 [twelve]."
+  },
+  {
+    "word": "paremei",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert 12 to cardinal selbri; $x_{1}$ is a set with a dozen members $x_{2}$."
+  },
+  {
+    "word": "paroi",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: once; objectively quantified tense; defaults as time tense."
+  },
+  {
+    "word": "paso",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 19 [nineteen]."
+  },
+  {
+    "word": "paunai",
+    "type": "cmavo cluster",
+    "definition": "discursive: unreal/rhetorical question follows."
+  },
+  {
+    "word": "pavo",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 14 [fourteen]."
+  },
+  {
+    "word": "paxa",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 16 [sixteen]."
+  },
+  {
+    "word": "paze",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 17 [seventeen]."
+  },
+  {
+    "word": "pidu'e",
+    "type": "cmavo cluster",
+    "definition": "number: too much of."
+  },
+  {
+    "word": "piji'i",
+    "type": "cmavo cluster",
+    "definition": "number: approximately all of."
+  },
+  {
+    "word": "pimo'a",
+    "type": "cmavo cluster",
+    "definition": "number: too little of."
+  },
+  {
+    "word": "pimu",
+    "type": "cmavo cluster",
+    "definition": "half."
+  },
+  {
+    "word": "pimucu'o",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert .5 to probability selbri; event $x_{1}$ has a 50/50 chance under cond. $x_{2}$."
+  },
+  {
+    "word": "piresi'e",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert .2 = 1/5 to portion selbri; $x_{1}$ is 1/5 of mass/totality $x_{2}$."
+  },
+  {
+    "word": "piro",
+    "type": "cmavo cluster",
+    "definition": "number: all of."
+  },
+  {
+    "word": "pirosi'e",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: converts all-of to portion selbri; $x_{1}$ is the whole portion of mass $x_{2}$."
+  },
+  {
+    "word": "piso'a",
+    "type": "cmavo cluster",
+    "definition": "number: almost all of."
+  },
+  {
+    "word": "piso'i",
+    "type": "cmavo cluster",
+    "definition": "number: much of."
+  },
+  {
+    "word": "piso'iroi",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: often; objectively quantified tense; defaults as time tense."
+  },
+  {
+    "word": "piso'u",
+    "type": "cmavo cluster",
+    "definition": "number: a little of."
+  },
+  {
+    "word": "piso'uroi",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: rarely; objectively quantified tense; defaults as time tense."
+  },
+  {
+    "word": "pisu'o",
+    "type": "cmavo cluster",
+    "definition": "number: at least some of."
+  },
+  {
+    "word": "puba",
+    "type": "cmavo cluster",
+    "definition": "time tense: was going to; (tense/modal)."
+  },
+  {
+    "word": "puca'a",
+    "type": "cmavo cluster",
+    "definition": "time tense: past actuality; modal aspect."
+  },
+  {
+    "word": "puca'o",
+    "type": "cmavo cluster",
+    "definition": "time tense: was then; (tense/modal)."
+  },
+  {
+    "word": "pujeba",
+    "type": "cmavo cluster",
+    "definition": "time tense: before and after; (tense/modal)."
+  },
+  {
+    "word": "pujeca",
+    "type": "cmavo cluster",
+    "definition": "time tense: before and during; (tense/modal)."
+  },
+  {
+    "word": "pupu",
+    "type": "cmavo cluster",
+    "definition": "time tense: had earlier been; (tense/modal)."
+  },
+  {
+    "word": "puza",
+    "type": "cmavo cluster",
+    "definition": "time tense: a medium time before; (tense/modal)."
+  },
+  {
+    "word": "puze'a",
+    "type": "cmavo cluster",
+    "definition": "time tense: for a medium length interval some time in the past; (tense/modal)."
+  },
+  {
+    "word": "puze'i",
+    "type": "cmavo cluster",
+    "definition": "time tense: for a short interval some time in the past; (tense/modal)."
+  },
+  {
+    "word": "puze'u",
+    "type": "cmavo cluster",
+    "definition": "time tense: for a long interval some time in the past; (tense/modal)."
+  },
+  {
+    "word": "puzi",
+    "type": "cmavo cluster",
+    "definition": "time tense: a short time before; (tense/modal)."
+  },
+  {
+    "word": "puzu",
+    "type": "cmavo cluster",
+    "definition": "time tense: a long time before; (tense/modal)."
+  },
+  {
+    "word": "ra'ucu'i",
+    "type": "cmavo cluster",
+    "definition": "discursive: chiefly - equally - incidentally."
+  },
+  {
+    "word": "ra'unai",
+    "type": "cmavo cluster",
+    "definition": "discursive: chiefly - equally - incidentally."
+  },
+  {
+    "word": "raumei",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: converts enough to cardinal; $x_{1}$ is a set with members $x_{2}$, enough by std. $x_{3}$."
+  },
+  {
+    "word": "raumoi",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: converts enough to ordinal; $x_{1}$ is enoughth among $x_{2}$, order rule $x_{3}$."
+  },
+  {
+    "word": "re'enai",
+    "type": "cmavo cluster",
+    "definition": "emotion category/modifier: spiritual/worship - sacrilege."
+  },
+  {
+    "word": "re'inai",
+    "type": "cmavo cluster",
+    "definition": "vocative: ready to receive - not ready to receive."
+  },
+  {
+    "word": "reki'o",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 2,000 expressed with comma."
+  },
+  {
+    "word": "remai",
+    "type": "cmavo cluster",
+    "definition": "discursive: second utterance ordinal."
+  },
+  {
+    "word": "remei",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert 2 to cardinal selbri; $x_{1}$ is a set with the pair of members $x_{2}$."
+  },
+  {
+    "word": "remoi",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert 2 to ordinal selbri; $x_{1}$ is second among $x_{2}$ ordered by rule $x_{3}$."
+  },
+  {
+    "word": "reno",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 20 [twenty]."
+  },
+  {
+    "word": "renomei",
+    "type": "cmavo cluster",
+    "definition": "quantifier selbri: convert 20 to cardinal selbri; $x_{1}$ is a set with the score of members $x_{2}$."
+  },
+  {
+    "word": "renono",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 200 [two hundred]."
+  },
+  {
+    "word": "reroi",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: twice; objectively quantified tense; defaults as time tense."
+  },
+  {
+    "word": "ri'a ma",
+    "type": "cmavo cluster",
+    "definition": "sumti question asking for a physical cause; why?."
+  },
+  {
+    "word": "ri'anai",
+    "type": "cmavo cluster",
+    "definition": "rinka modal, 1st place (phys./mental)             despite cause ..."
+  },
+  {
+    "word": "ri'enai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal modifier: release of emotion - emotion restraint."
+  },
+  {
+    "word": "ro'anai",
+    "type": "cmavo cluster",
+    "definition": "emotion category/modifier: social - antisocial."
+  },
+  {
+    "word": "ro'enai",
+    "type": "cmavo cluster",
+    "definition": "emotion category/modifier: mental - mindless."
+  },
+  {
+    "word": "ro'inai",
+    "type": "cmavo cluster",
+    "definition": "emotion category/modifier: emotional - denying emotion."
+  },
+  {
+    "word": "ro'onai",
+    "type": "cmavo cluster",
+    "definition": "emotion category/modifier: physical - denying physical."
+  },
+  {
+    "word": "ro'unai",
+    "type": "cmavo cluster",
+    "definition": "emotion category/modifier: sexual - sexual abstinence."
+  },
+  {
+    "word": "roda",
+    "type": "cmavo cluster",
+    "definition": "logically quantified universal sumti: everything (unless restricted)."
+  },
+  {
+    "word": "romai",
+    "type": "cmavo cluster",
+    "definition": "discursive utterance ordinal: finally; last utterance ordinal."
+  },
+  {
+    "word": "romoi",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: is final among; convert all to ordinal selbri; $x_{1}$ is last among $x_{2}$, rule $x_{3}$."
+  },
+  {
+    "word": "roroi",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: always; objectively quantified tense; defaults as time tense."
+  },
+  {
+    "word": "ru'inai",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: occasional/intermittent/discontinuous; defaults as time tense."
+  },
+  {
+    "word": "sa'enai",
+    "type": "cmavo cluster",
+    "definition": "discursive: precisely speaking - loosely speaking."
+  },
+  {
+    "word": "sa'unai",
+    "type": "cmavo cluster",
+    "definition": "discursive: simply - elaborating."
+  },
+  {
+    "word": "se'anai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal modifier: self-sufficiency - dependency."
+  },
+  {
+    "word": "se'inai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal modifier: self-oriented - other-oriented."
+  },
+  {
+    "word": "seba'i",
+    "type": "cmavo cluster",
+    "definition": "basti modal, 2nd place                            instead of ..."
+  },
+  {
+    "word": "sebai",
+    "type": "cmavo cluster",
+    "definition": "bapli modal, 2nd place (forcing result)           compelling event ..."
+  },
+  {
+    "word": "sebau",
+    "type": "cmavo cluster",
+    "definition": "bangu modal, 2nd place (speakers)                 in language of speakers ..."
+  },
+  {
+    "word": "sebe'i",
+    "type": "cmavo cluster",
+    "definition": "benji modal, 2nd place (message/cargo)            transmitting ..."
+  },
+  {
+    "word": "seca'i",
+    "type": "cmavo cluster",
+    "definition": "catni modal, 2nd place                            authoritatively; with authority over ..."
+  },
+  {
+    "word": "secau",
+    "type": "cmavo cluster",
+    "definition": "claxu modal, 2nd place (lacking)                  without ..."
+  },
+  {
+    "word": "seci'e",
+    "type": "cmavo cluster",
+    "definition": "ciste modal, 2nd place                            with system function ..."
+  },
+  {
+    "word": "seci'o",
+    "type": "cmavo cluster",
+    "definition": "cinmo modal, 2nd place (shows attitude)           emotionally; emoting ..."
+  },
+  {
+    "word": "seci'u",
+    "type": "cmavo cluster",
+    "definition": "ckilu modal, 2nd place used in scalar negation    on scale measuring ..."
+  },
+  {
+    "word": "secu'u",
+    "type": "cmavo cluster",
+    "definition": "cusku modal, 2nd place (saying)                   expressively; expressing ..."
+  },
+  {
+    "word": "sede'i",
+    "type": "cmavo cluster",
+    "definition": "detri modal, 2nd place (for letters)              on the same date as ... ; label with event."
+  },
+  {
+    "word": "sedi'o",
+    "type": "cmavo cluster",
+    "definition": "diklo modal, 2nd place                            locally; at specific locus ..."
+  },
+  {
+    "word": "sedu'i",
+    "type": "cmavo cluster",
+    "definition": "dunli modal, 2nd place (same as 1st);             equal to ... [same as 1st place modal]."
+  },
+  {
+    "word": "sedu'o",
+    "type": "cmavo cluster",
+    "definition": "djuno modal, 2nd place                            knowingly; knowing facts ..."
+  },
+  {
+    "word": "sedu'u",
+    "type": "cmavo cluster",
+    "definition": "compound abstractor: sentence/equation abstract; $x_{1}$ is text expressing [bridi] which is $x_{2}$."
+  },
+  {
+    "word": "sefa'e",
+    "type": "cmavo cluster",
+    "definition": "fatne modal, 2nd place (same as 1st);             backwards; in reversal of ..."
+  },
+  {
+    "word": "sefi'e",
+    "type": "cmavo cluster",
+    "definition": "finti modal, 2nd place                            creatively; creating work ..."
+  },
+  {
+    "word": "sega'a",
+    "type": "cmavo cluster",
+    "definition": "zgana modal, 2nd place                            observing ..."
+  },
+  {
+    "word": "segau",
+    "type": "cmavo cluster",
+    "definition": "gasnu modal, 2nd place actor/agent case complement; actively; as active agent in doing ..."
+  },
+  {
+    "word": "seja'e",
+    "type": "cmavo cluster",
+    "definition": "jalge modal, 2nd place (event causal)             results because of ..."
+  },
+  {
+    "word": "seja'enai",
+    "type": "cmavo cluster",
+    "definition": "jalge modal, 2nd place (event causal)             results despite ..."
+  },
+  {
+    "word": "seja'i",
+    "type": "cmavo cluster",
+    "definition": "javni modal, 2nd place                            orderly; by rule prescribing ..."
+  },
+  {
+    "word": "seji'e",
+    "type": "cmavo cluster",
+    "definition": "jimte modal, 2nd place                            limitedly; as a limit of ..."
+  },
+  {
+    "word": "seji'o",
+    "type": "cmavo cluster",
+    "definition": "jitro modal, 2nd place                            controlledly; controlling/guiding aspects ..."
+  },
+  {
+    "word": "seji'u",
+    "type": "cmavo cluster",
+    "definition": "jicmu modal, 2nd place (from basis)               supporting ...; as a basis for ..."
+  },
+  {
+    "word": "seka'a",
+    "type": "cmavo cluster",
+    "definition": "klama modal, 2nd place                            with destination ..."
+  },
+  {
+    "word": "seka'i",
+    "type": "cmavo cluster",
+    "definition": "krati modal, 2nd place                            representingly; on behalf of ..."
+  },
+  {
+    "word": "sekai",
+    "type": "cmavo cluster",
+    "definition": "ckaji modal, 2nd place (quality)                  characterized by ...; with property ..."
+  },
+  {
+    "word": "sekai ma",
+    "type": "cmavo cluster",
+    "definition": "sumti question asking for a characteristic property/quality; which?."
+  },
+  {
+    "word": "seki'i",
+    "type": "cmavo cluster",
+    "definition": "ckini modal, 2nd place (same as 1st)              related to ..."
+  },
+  {
+    "word": "seki'u",
+    "type": "cmavo cluster",
+    "definition": "krinu modal, 2nd place                            reason therefore ..."
+  },
+  {
+    "word": "seki'unai",
+    "type": "cmavo cluster",
+    "definition": "krinu modal, 2nd place                            reason nevertheless ..."
+  },
+  {
+    "word": "sekoi",
+    "type": "cmavo cluster",
+    "definition": "korbi modal, 2nd place (bounding)                 as boundary of ..."
+  },
+  {
+    "word": "seku'u",
+    "type": "cmavo cluster",
+    "definition": "kulnu modal, 2nd place (people)                   in culture of ..."
+  },
+  {
+    "word": "sela'u",
+    "type": "cmavo cluster",
+    "definition": "klani modal, 2nd place                            in quantity ...; measured as ..."
+  },
+  {
+    "word": "sele'a",
+    "type": "cmavo cluster",
+    "definition": "klesi modal, 2nd place                            as a category of/within ..."
+  },
+  {
+    "word": "seli'e",
+    "type": "cmavo cluster",
+    "definition": "lidne modal, 2nd place                            preceding ...;leading ... ; non-time sequence."
+  },
+  {
+    "word": "sema'e",
+    "type": "cmavo cluster",
+    "definition": "marji modal, 2nd place                            made of material/composition ..."
+  },
+  {
+    "word": "sema'i",
+    "type": "cmavo cluster",
+    "definition": "manri modal, 2nd place (of reference)             as a reference standard for observing ..."
+  },
+  {
+    "word": "semau",
+    "type": "cmavo cluster",
+    "definition": "zmadu modal, 2nd place (relative!)                more than ...; usually a sumti modifier."
+  },
+  {
+    "word": "semaunai",
+    "type": "cmavo cluster",
+    "definition": "zmadu modal, 2nd place (relative!)                not more than ...; usually a sumti modifier."
+  },
+  {
+    "word": "seme'a",
+    "type": "cmavo cluster",
+    "definition": "mleca modal, 2nd place (relative!)                less than ...; usually a sumti modifier."
+  },
+  {
+    "word": "seme'anai",
+    "type": "cmavo cluster",
+    "definition": "mleca modal, 2nd place (relative!)                not less than ...; usually a sumti modifier."
+  },
+  {
+    "word": "seme'e",
+    "type": "cmavo cluster",
+    "definition": "cmene modal, 2nd place (the named one)            as a name for ..."
+  },
+  {
+    "word": "semu'i",
+    "type": "cmavo cluster",
+    "definition": "mukti modal, 2nd place                            motive therefore ...; motivating action ..."
+  },
+  {
+    "word": "semu'inai",
+    "type": "cmavo cluster",
+    "definition": "mukti modal, 2nd place                            motive nevertheless ..."
+  },
+  {
+    "word": "semu'u",
+    "type": "cmavo cluster",
+    "definition": "mupli modal, 2nd place                            as an example of property ..."
+  },
+  {
+    "word": "seni'i",
+    "type": "cmavo cluster",
+    "definition": "nibli modal, 2nd place                            entails therefore ..."
+  },
+  {
+    "word": "seni'inai",
+    "type": "cmavo cluster",
+    "definition": "nibli modal, 2nd place                            entails nevertheless ..."
+  },
+  {
+    "word": "sepa'a",
+    "type": "cmavo cluster",
+    "definition": "panra modal, 2nd place                            similarly; similar to ..."
+  },
+  {
+    "word": "sepa'u",
+    "type": "cmavo cluster",
+    "definition": "pagbu modal, 2nd place (whole)                    partially; as a part of ..."
+  },
+  {
+    "word": "sepi'o",
+    "type": "cmavo cluster",
+    "definition": "pilno modal, 2nd place (instrumental) tool/machine/apparatus/acting entity;  using (tool) ..."
+  },
+  {
+    "word": "sepo'i",
+    "type": "cmavo cluster",
+    "definition": "porsi modal, 2nd place                            sequentially; sequenced by rules ..."
+  },
+  {
+    "word": "sepu'a",
+    "type": "cmavo cluster",
+    "definition": "pluka modal, 2nd place (for)                   pleasingly; pleasing ...; in order to please ..."
+  },
+  {
+    "word": "sepu'e",
+    "type": "cmavo cluster",
+    "definition": "pruce modal, 2nd place (inputs)                   processing from inputs ..."
+  },
+  {
+    "word": "sera'a",
+    "type": "cmavo cluster",
+    "definition": "srana modal, 2nd place (pertaining to)            relevantly; concerning ... (less specific)."
+  },
+  {
+    "word": "sera'i",
+    "type": "cmavo cluster",
+    "definition": "krasi modal, 2nd place                            originally; as an origin/starting point of ..."
+  },
+  {
+    "word": "serai",
+    "type": "cmavo cluster",
+    "definition": "traji modal, 2nd place (property)                 -est; most extremely; superlative in ..."
+  },
+  {
+    "word": "seri'a",
+    "type": "cmavo cluster",
+    "definition": "rinka modal, 2nd place (phys./mental)             causal therefore ..."
+  },
+  {
+    "word": "seri'anai",
+    "type": "cmavo cluster",
+    "definition": "rinka modal, 2nd place (phys./mental)             causal nevertheless ..."
+  },
+  {
+    "word": "seri'i",
+    "type": "cmavo cluster",
+    "definition": "lifri modal, 2nd place                            experiencing ...; undergoing ..."
+  },
+  {
+    "word": "sesau",
+    "type": "cmavo cluster",
+    "definition": "sarcu modal, 2nd place (process)                  necessarily; necessary for ..."
+  },
+  {
+    "word": "sesi'u",
+    "type": "cmavo cluster",
+    "definition": "sidju modal, 2nd place                            assisting ... (in doing/maintaining something)."
+  },
+  {
+    "word": "seta'i",
+    "type": "cmavo cluster",
+    "definition": "tadji modal, 2nd place                            methodically; as a method for doing ..."
+  },
+  {
+    "word": "setai",
+    "type": "cmavo cluster",
+    "definition": "tamsmi modal, 2nd place                           similarly; resembling ... (in ideal form)."
+  },
+  {
+    "word": "seti'i",
+    "type": "cmavo cluster",
+    "definition": "stidi modal, 2nd place                            suggestively; suggesting (idea/action) ..."
+  },
+  {
+    "word": "seti'u",
+    "type": "cmavo cluster",
+    "definition": "tcika modal, 2nd place (for letters)              at the same time as ... ; label with event."
+  },
+  {
+    "word": "setu'i",
+    "type": "cmavo cluster",
+    "definition": "stuzi modal, 2nd place                            as a location of ..."
+  },
+  {
+    "word": "seva'ai",
+    "type": "cmavo cluster",
+    "definition": "zvati modal; 2nd place (with temporary location...)"
+  },
+  {
+    "word": "seva'o",
+    "type": "cmavo cluster",
+    "definition": "vanbi modal, 2nd place (environment)              as conditions/environment of/for ..."
+  },
+  {
+    "word": "seva'u",
+    "type": "cmavo cluster",
+    "definition": "xamgu modal, 2nd place beneficiary case tag       for the benefit of...; with beneficiary ..."
+  },
+  {
+    "word": "sezau",
+    "type": "cmavo cluster",
+    "definition": "zanru modal, 2nd place                            approvingly; approving ..."
+  },
+  {
+    "word": "sezu'e",
+    "type": "cmavo cluster",
+    "definition": "zukte modal, 2nd place                            purposefully; goalfully acting at ..."
+  },
+  {
+    "word": "slaka bu",
+    "type": "cmavo cluster",
+    "definition": "letteral: Lojban \",\" character."
+  },
+  {
+    "word": "so'eroi",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: usually; objectively quantified tense; defaults as time tense."
+  },
+  {
+    "word": "so'imei",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert many to cardinal; $x_{1}$ is a set with many members $x_{2}$ of total set $x_{3}$."
+  },
+  {
+    "word": "so'iroi",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: many times; objective tense; defaults as time tense."
+  },
+  {
+    "word": "so'uroi",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: a few times; objective tense; defaults as time tense."
+  },
+  {
+    "word": "soki'o",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 9,000 expressed with comma."
+  },
+  {
+    "word": "somoi",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert 9 to ordinal selbri; $x_{1}$ is ninth among $x_{2}$ ordered by rule $x_{3}$."
+  },
+  {
+    "word": "sono",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 90 [ninety]."
+  },
+  {
+    "word": "sonono",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 900 [nine hundred]."
+  },
+  {
+    "word": "sosoce'i",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 99% (number)."
+  },
+  {
+    "word": "sozepimu",
+    "type": "cmavo cluster",
+    "definition": "number/quantity:  97.5."
+  },
+  {
+    "word": "su'anai",
+    "type": "cmavo cluster",
+    "definition": "evidential: I generalize - I particularize; discursive: abstractly - concretely."
+  },
+  {
+    "word": "su'oremei",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert at least 2 to cardinal selbri; $x_{1}$ is a set with plural membership $x_{2}$."
+  },
+  {
+    "word": "su'oremoi",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert at least 2 to ordinal selbri; $x_{1}$ is at-least-2nd among $x_{2}$ by rule $x_{3}$."
+  },
+  {
+    "word": "ta'enai",
+    "type": "cmavo cluster",
+    "definition": "tense interval modifier: non-habitually; subjective tense/modal; defaults as time tense."
+  },
+  {
+    "word": "ta'i ma",
+    "type": "cmavo cluster",
+    "definition": "sumti question asking for a method; how?."
+  },
+  {
+    "word": "ta'onai",
+    "type": "cmavo cluster",
+    "definition": "discursive: by the way - returning to main point."
+  },
+  {
+    "word": "ta'unai",
+    "type": "cmavo cluster",
+    "definition": "discursive: making a tanru - expanding the tanru."
+  },
+  {
+    "word": "tebau",
+    "type": "cmavo cluster",
+    "definition": "bangu modal, 3rd place (expression)               language expressing ..."
+  },
+  {
+    "word": "tebe'i",
+    "type": "cmavo cluster",
+    "definition": "benji modal, 3rd place (source)                   sent to receiver ..."
+  },
+  {
+    "word": "teca'i",
+    "type": "cmavo cluster",
+    "definition": "catni modal, 3rd place                            authoritatively; with basis of authority ..."
+  },
+  {
+    "word": "teci'e",
+    "type": "cmavo cluster",
+    "definition": "ciste modal, 3rd place                            of system components ..."
+  },
+  {
+    "word": "teci'o",
+    "type": "cmavo cluster",
+    "definition": "cinmo modal, 3rd place (attitude about)           emotionally; emoting about ..."
+  },
+  {
+    "word": "tecu'u",
+    "type": "cmavo cluster",
+    "definition": "cusku modal, 3rd place (3rd party hearsay)        as told to ..."
+  },
+  {
+    "word": "tede'i",
+    "type": "cmavo cluster",
+    "definition": "detri modal, 3rd place                            on a date measured at location ..."
+  },
+  {
+    "word": "tedi'o",
+    "type": "cmavo cluster",
+    "definition": "diklo modal, 3rd place                            locally; at specific locus within range ..."
+  },
+  {
+    "word": "tedu'i",
+    "type": "cmavo cluster",
+    "definition": "dunli modal, 3rd place                            equally; equal in property ..."
+  },
+  {
+    "word": "tedu'o",
+    "type": "cmavo cluster",
+    "definition": "djuno modal, 3rd place                            knowingly; knowing about ..."
+  },
+  {
+    "word": "tefi'e",
+    "type": "cmavo cluster",
+    "definition": "finti modal, 3rd place                            creatively; created for purpose ..."
+  },
+  {
+    "word": "tega'a",
+    "type": "cmavo cluster",
+    "definition": "zgana modal, 3rd place                            observed by means ..."
+  },
+  {
+    "word": "teja'i",
+    "type": "cmavo cluster",
+    "definition": "javni modal, 3rd place                            orderly; by rule within system ..."
+  },
+  {
+    "word": "teji'e",
+    "type": "cmavo cluster",
+    "definition": "jimte modal, 3rd place                            limitedly; limited in property/domain ..."
+  },
+  {
+    "word": "teji'o",
+    "type": "cmavo cluster",
+    "definition": "jitro modal, 3rd place                            controlledly; controlling event ..."
+  },
+  {
+    "word": "teka'a",
+    "type": "cmavo cluster",
+    "definition": "klama modal, 3rd place                            with origin ..."
+  },
+  {
+    "word": "teka'i",
+    "type": "cmavo cluster",
+    "definition": "krati modal, 2nd place                            representingly; representing in matter..."
+  },
+  {
+    "word": "teki'i",
+    "type": "cmavo cluster",
+    "definition": "ckini modal, 3rd place                            with relation ..."
+  },
+  {
+    "word": "tekoi",
+    "type": "cmavo cluster",
+    "definition": "korbi modal, 3rd place (bounding)                 bordering ..."
+  },
+  {
+    "word": "tela'u",
+    "type": "cmavo cluster",
+    "definition": "klani modal, 3rd place                            quantity measured on scale ..."
+  },
+  {
+    "word": "tele'a",
+    "type": "cmavo cluster",
+    "definition": "klesi modal, 3rd place (category)                 defined by quality ..."
+  },
+  {
+    "word": "teli'e",
+    "type": "cmavo cluster",
+    "definition": "lidne modal, 3rd place                            ordered within sequence ...; non-time sequence."
+  },
+  {
+    "word": "tema'e",
+    "type": "cmavo cluster",
+    "definition": "marji modal, 3rd place                            in material form ..."
+  },
+  {
+    "word": "tema'i",
+    "type": "cmavo cluster",
+    "definition": "manri modal, 3rd place (of reference)             observed/measured with/by rules ..."
+  },
+  {
+    "word": "temau",
+    "type": "cmavo cluster",
+    "definition": "zmadu modal, 3rd place (relative!)                more than/exceeding in property ..."
+  },
+  {
+    "word": "teme'a",
+    "type": "cmavo cluster",
+    "definition": "mleca modal, 3rd place (relative!)                less than in property ..."
+  },
+  {
+    "word": "teme'e",
+    "type": "cmavo cluster",
+    "definition": "cmene modal, 3rd place                            as a name used by ..."
+  },
+  {
+    "word": "temu'i",
+    "type": "cmavo cluster",
+    "definition": "mukti modal, 3rd place                            motivated/motivating per the volition of ..."
+  },
+  {
+    "word": "temu'u",
+    "type": "cmavo cluster",
+    "definition": "mupli modal, 3rd place                            as an example out of the set of ..."
+  },
+  {
+    "word": "teni'i",
+    "type": "cmavo cluster",
+    "definition": "nibli modal, 3rd place                            entailment under logic system ..."
+  },
+  {
+    "word": "tepa'a",
+    "type": "cmavo cluster",
+    "definition": "panra modal, 3rd place (property)                 contrastingly; contrasting in property ..."
+  },
+  {
+    "word": "tepi'o",
+    "type": "cmavo cluster",
+    "definition": "pilno modal, 3rd place (instrumental)             a tool usage for purpose ..."
+  },
+  {
+    "word": "tepo'i",
+    "type": "cmavo cluster",
+    "definition": "porsi modal, 3rd place                            sequentially; as an order on set of items ..."
+  },
+  {
+    "word": "tepu'a",
+    "type": "cmavo cluster",
+    "definition": "pluka modal, 3rd place                          pleasingly; being pleasing under conditions ..."
+  },
+  {
+    "word": "tepu'e",
+    "type": "cmavo cluster",
+    "definition": "pruce modal, 3rd place (outputs)                  processing into outputs ..."
+  },
+  {
+    "word": "terai",
+    "type": "cmavo cluster",
+    "definition": "traji modal, 3rd place (superlative)              -est; most extremely; at extreme ..."
+  },
+  {
+    "word": "teri'a",
+    "type": "cmavo cluster",
+    "definition": "rinka modal, 3d place (phys./mental)             causally under conditions ..."
+  },
+  {
+    "word": "tesau",
+    "type": "cmavo cluster",
+    "definition": "sarcu modal, 3rd place (conditions 2)             necessarily; necessarily under ..."
+  },
+  {
+    "word": "tesi'u",
+    "type": "cmavo cluster",
+    "definition": "sidju modal, 3rd place                            assisting in doing/maintaining/achieving ..."
+  },
+  {
+    "word": "teta'i",
+    "type": "cmavo cluster",
+    "definition": "tadji modal, 3rd place                       methodically doing (something) under conditions ..."
+  },
+  {
+    "word": "tetai",
+    "type": "cmavo cluster",
+    "definition": "tamsmi modal, 3rd place                           similarly; sharing common ideal form ..."
+  },
+  {
+    "word": "teti'i",
+    "type": "cmavo cluster",
+    "definition": "stidi modal, 3rd place                            suggestively; suggested to ..."
+  },
+  {
+    "word": "teti'u",
+    "type": "cmavo cluster",
+    "definition": "tcika modal, 3rd place (for letters)              as a time on day ..."
+  },
+  {
+    "word": "teva'u",
+    "type": "cmavo cluster",
+    "definition": "xamgu modal, 3rd place                            good/beneficial by standard ..."
+  },
+  {
+    "word": "tezu'e",
+    "type": "cmavo cluster",
+    "definition": "zukte modal, 3rd place                            purposefully; (as an action) with goal ..."
+  },
+  {
+    "word": "to'ebo",
+    "type": "cmavo cluster",
+    "definition": "negation sumti qualifier: the opposite of."
+  },
+  {
+    "word": "to'unai",
+    "type": "cmavo cluster",
+    "definition": "discursive: in brief - in detail."
+  },
+  {
+    "word": "u'anai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: gain - loss."
+  },
+  {
+    "word": "u'enai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: wonder - commonplace."
+  },
+  {
+    "word": "u'inai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: amusement - weariness."
+  },
+  {
+    "word": "u'ocu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: courage - timidity - cowardice."
+  },
+  {
+    "word": "u'onai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: courage - timidity - cowardice."
+  },
+  {
+    "word": "u'ucu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: repentance - lack of regret - innocence."
+  },
+  {
+    "word": "u'unai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: repentance - lack of regret - innocence."
+  },
+  {
+    "word": "uanai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: discovery - confusion/searching."
+  },
+  {
+    "word": "ubu",
+    "type": "cmavo cluster",
+    "definition": "letteral for u."
+  },
+  {
+    "word": "uecu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: surprise - not really surprised - expectation axis."
+  },
+  {
+    "word": "uenai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: surprise - expectation."
+  },
+  {
+    "word": "uepei",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: surprise question."
+  },
+  {
+    "word": "uibu",
+    "type": "cmavo cluster",
+    "definition": "letteral: happiness symbol (letteral)."
+  },
+  {
+    "word": "uinai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: happiness - unhappiness."
+  },
+  {
+    "word": "uonai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: completion - incompleteness."
+  },
+  {
+    "word": "uunai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal: pity - cruelty."
+  },
+  {
+    "word": "va'inai",
+    "type": "cmavo cluster",
+    "definition": "discursive: in other words - in the same words."
+  },
+  {
+    "word": "vebe'i",
+    "type": "cmavo cluster",
+    "definition": "benji modal, 4th place                            transmit origin ..."
+  },
+  {
+    "word": "veci'e",
+    "type": "cmavo cluster",
+    "definition": "ciste modal, 4th place                            as a system with synergy in ..."
+  },
+  {
+    "word": "vecu'u",
+    "type": "cmavo cluster",
+    "definition": "cusku modal, 4th place                            in expression medium ..."
+  },
+  {
+    "word": "vede'i",
+    "type": "cmavo cluster",
+    "definition": "detri modal, 4th place                            on a date according to calendar ..."
+  },
+  {
+    "word": "vedu'o",
+    "type": "cmavo cluster",
+    "definition": "djuno modal, 4th place                            under epistemology ..."
+  },
+  {
+    "word": "vefi'e",
+    "type": "cmavo cluster",
+    "definition": "finti modal, 4th place                            creatively; created from ideas/elements ..."
+  },
+  {
+    "word": "vega'a",
+    "type": "cmavo cluster",
+    "definition": "zgana modal, 4th place (under conditions)         observed under observing conditions ..."
+  },
+  {
+    "word": "veka'a",
+    "type": "cmavo cluster",
+    "definition": "klama modal, 4th place                            via route ..."
+  },
+  {
+    "word": "vemau",
+    "type": "cmavo cluster",
+    "definition": "zmadu modal, 4th place (relative!)                more than/exceeding by amount ..."
+  },
+  {
+    "word": "veme'a",
+    "type": "cmavo cluster",
+    "definition": "mleca modal, 4th place (relative!)                less than by amount ..."
+  },
+  {
+    "word": "vepa'a",
+    "type": "cmavo cluster",
+    "definition": "panra modal, 4nd place (standard/geometry)        similarly; similar by standard ..."
+  },
+  {
+    "word": "vepu'e",
+    "type": "cmavo cluster",
+    "definition": "pruce modal, 4th place (set of stages)            passing through processing stages ..."
+  },
+  {
+    "word": "verai",
+    "type": "cmavo cluster",
+    "definition": "traji modal, 4th place (set)                      -est; most extremely; superlative among ..."
+  },
+  {
+    "word": "vetai",
+    "type": "cmavo cluster",
+    "definition": "tamsmi modal, 4th place                           similarly; sharing ideal form in property ..."
+  },
+  {
+    "word": "veti'u",
+    "type": "cmavo cluster",
+    "definition": "tcika modal, 4th place (for letters)              as a time at location ..."
+  },
+  {
+    "word": "vi ma",
+    "type": "cmavo cluster",
+    "definition": "sumti question asking for a location: at/near what?."
+  },
+  {
+    "word": "voki'o",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 4,000 expressed with comma."
+  },
+  {
+    "word": "vomoi",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert 4 to ordinal selbri; $x_{1}$ is fourth among $x_{2}$ ordered by rule $x_{3}$."
+  },
+  {
+    "word": "vono",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 40 [forty]."
+  },
+  {
+    "word": "vonono",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 400 [four hundred]."
+  },
+  {
+    "word": "vu'enai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal modifier: virtue - sin."
+  },
+  {
+    "word": "xaki'o",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 6,000 expressed with comma."
+  },
+  {
+    "word": "xamoi",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert 6 to ordinal selbri; $x_{1}$ is sixth among $x_{2}$ ordered by rule $x_{3}$."
+  },
+  {
+    "word": "xano",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 60 [sixty]."
+  },
+  {
+    "word": "xanono",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 600 [six hundred]."
+  },
+  {
+    "word": "xavoki'o",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 64,000 expressed with comma."
+  },
+  {
+    "word": "xebe'i",
+    "type": "cmavo cluster",
+    "definition": "benji modal, 5th place (medium)                   transmitted via ..."
+  },
+  {
+    "word": "xeka'a",
+    "type": "cmavo cluster",
+    "definition": "klama modal, 5th place                            by transport mode ..."
+  },
+  {
+    "word": "ybu",
+    "type": "cmavo cluster",
+    "definition": "letteral for y."
+  },
+  {
+    "word": "za'umai",
+    "type": "cmavo cluster",
+    "definition": "discursive: further utterance ordinal"
+  },
+  {
+    "word": "za'ure'u",
+    "type": "cmavo cluster",
+    "definition": "again; in addition to the first time; for the (> 1)th time"
+  },
+  {
+    "word": "ze'aba",
+    "type": "cmavo cluster",
+    "definition": "time tense: a medium time interval offset towards the future; (tense/modal)."
+  },
+  {
+    "word": "ze'aca",
+    "type": "cmavo cluster",
+    "definition": "time tense: a medium time interval spanning the present; (tense/modal)."
+  },
+  {
+    "word": "ze'apu",
+    "type": "cmavo cluster",
+    "definition": "time tense: a medium time interval offset towards the past; (tense/modal)."
+  },
+  {
+    "word": "zeki'o",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 7,000 expressed with comma."
+  },
+  {
+    "word": "zemoi",
+    "type": "cmavo cluster",
+    "definition": "quantified selbri: convert 7 to ordinal selbri; $x_{1}$ is seventh among $x_{2}$ ordered by rule $x_{3}$."
+  },
+  {
+    "word": "zeno",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 70 [seventy]."
+  },
+  {
+    "word": "zenono",
+    "type": "cmavo cluster",
+    "definition": "number/quantity: 700 [seven hundred]."
+  },
+  {
+    "word": "zo'obu",
+    "type": "cmavo cluster",
+    "definition": "letteral: humor symbol, \":-)\" and its related forms expressing humor (letteral)."
+  },
+  {
+    "word": "zo'ocu'i",
+    "type": "cmavo cluster",
+    "definition": "attitudinal modifier: humorously - dully - seriously."
+  },
+  {
+    "word": "zo'onai",
+    "type": "cmavo cluster",
+    "definition": "attitudinal modifier: humorously - dully - seriously."
+  },
+  {
+    "word": "zu'unai",
+    "type": "cmavo cluster",
+    "definition": "discursive: on the one hand - on the other hand."
+  }
+]

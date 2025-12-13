@@ -1,0 +1,15 @@
+{
+	"name": "@hominio/language",
+	"version": "0.17.0",
+	"type": "module",
+	"main": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"format": "bunx biome format --write .",
+		"lint": "bunx biome lint .",
+		"check": "bunx biome check ."
+	}
+}
+
