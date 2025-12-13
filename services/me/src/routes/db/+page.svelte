@@ -13,11 +13,13 @@
     createAssignedToComposite,
   } from "@hominio/db";
   import type { CoID, RawCoValue } from "cojson";
-  import { AccountCoState } from "jazz-tools/svelte";
+  import { AccountCoState, CoState } from "jazz-tools/svelte";
+  import { CoMap } from "jazz-tools";
   import { authClient } from "$lib/auth-client";
   import { toast } from "$lib/stores/toast.js";
   import ObjectContextDisplay from "$lib/components/data-explorer/ObjectContextDisplay.svelte";
   import { Context, MetadataSidebar } from "$lib/components/data-explorer";
+  import { deriveContextFromCoState } from "$lib/utils/costate-navigation";
 
   // Better Auth session
   const session = authClient.useSession();
@@ -47,12 +49,12 @@
   });
 
   // Navigation stack - tracks the path through CoValues and objects
+  // Stores CoIDs only - CoState instances are created reactively
   type NavigationItem =
     | {
         type: "covalue";
         label: string;
         coValueId: CoID<RawCoValue>;
-        context: CoValueContext;
       }
     | {
         type: "object";
@@ -64,12 +66,56 @@
       };
   let navigationStack = $state<NavigationItem[]>([]);
 
-  // Current context is derived from the last item in the stack (like legacy)
+  // Map of CoValue IDs to their CoState instances (created reactively)
+  let coValueStates = $state<Map<CoID<RawCoValue>, CoState<typeof CoMap>>>(
+    new Map(),
+  );
+
+  // Create CoState instances reactively for all CoValues in navigation stack
+  // Note: We use CoMap as a generic schema - CoState will handle CoLists correctly
+  $effect(() => {
+    const newStates = new Map<CoID<RawCoValue>, CoState<typeof CoMap>>();
+
+    for (const item of navigationStack) {
+      if (item.type === "covalue") {
+        // Get or create CoState for this CoValue
+        let coValueState = coValueStates.get(item.coValueId);
+        if (!coValueState) {
+          try {
+            // Create new CoState (must be in $effect to access context)
+            // CoState with CoMap works for both CoMaps and CoLists
+            coValueState = new CoState(CoMap, item.coValueId);
+            newStates.set(item.coValueId, coValueState);
+          } catch (_e) {
+            // Skip if CoState creation fails (e.g., CoValue not accessible)
+            continue;
+          }
+        } else {
+          newStates.set(item.coValueId, coValueState);
+        }
+      }
+    }
+
+    // Update the map (only if changed to avoid infinite loops)
+    if (
+      newStates.size !== coValueStates.size ||
+      Array.from(newStates.keys()).some((id) => !coValueStates.has(id))
+    ) {
+      coValueStates = newStates;
+    }
+  });
+
+  // Current context is derived reactively from CoState (reactive updates)
   const currentContext = $derived(() => {
     if (navigationStack.length === 0) return null;
     const lastItem = navigationStack[navigationStack.length - 1];
     if (lastItem.type === "covalue") {
-      return lastItem.context;
+      // Get CoState from map (created reactively in $effect)
+      const coValueState = coValueStates.get(lastItem.coValueId);
+      if (!coValueState) return null;
+
+      // Derive context reactively from CoState
+      return deriveContextFromCoState(coValueState, lastItem.coValueId);
     }
     // For objects, return null (we'll handle rendering separately)
     return null;
@@ -87,133 +133,35 @@
 
   let isLoading = $state(false);
 
-  // Initialize with root context
+  // Initialize with root context using CoState (reactive)
   $effect(() => {
-    const currentNode = node();
     const rootId =
       me.$isLoaded && me.root?.$isLoaded ? me.root.$jazz?.id : undefined;
-    if (!currentNode || !rootId || navigationStack.length > 0) return; // Load root context
-    (async () => {
-      isLoading = true;
-      try {
-        const context = await navigateToCoValueContext(rootId, currentNode);
+    if (!rootId || navigationStack.length > 0) return; // Load root context
 
-        // Add profile to root context if available (using resolveCoValue utility, same as navigateToCoValueContext)
-        // Extract profile ID from me.profile (handle both CoID string and CoValue object)
-        let profileId: string | undefined;
-        if (me.$isLoaded && me.profile) {
-          const profile: any = me.profile as any;
-          if (
-            typeof profile === "string" &&
-            (profile as string).startsWith("co_")
-          ) {
-            profileId = profile as string;
-          } else if (
-            typeof profile === "object" &&
-            profile &&
-            "$jazz" in profile &&
-            profile.$jazz?.id
-          ) {
-            profileId = profile.$jazz.id;
-          }
-        }
+    isLoading = true;
 
-        if (profileId && currentNode) {
-          // Check if profile is already in directChildren
-          const hasProfile = context.directChildren.some(
-            (c) => c.coValueId === profileId,
-          );
-          if (
-            !hasProfile &&
-            context.resolved.snapshot &&
-            typeof context.resolved.snapshot === "object"
-          ) {
-            // Add profile to snapshot
-            (context.resolved.snapshot as any).profile = profileId;
-
-            // Add profile immediately (without resolved) - will show loading state until resolved
-            context.directChildren.push({
-              key: "profile",
-              coValueId: profileId,
-            });
-
-            // Resolve profile using resolveCoValue utility (same as navigateToCoValueContext does)
-            // This is async but we add it immediately and resolve in background
-            (async () => {
-              try {
-                const profileResolved = await resolveCoValue(
-                  profileId,
-                  currentNode,
-                );
-                // Update the context with resolved profile - trigger reactivity
-                const profileChildIndex = context.directChildren.findIndex(
-                  (c) => c.coValueId === profileId,
-                );
-                if (profileChildIndex !== -1) {
-                  // Create new array to trigger reactivity
-                  const updatedChildren = [...context.directChildren];
-                  updatedChildren[profileChildIndex] = {
-                    ...updatedChildren[profileChildIndex],
-                    resolved: profileResolved,
-                  };
-                  context.directChildren = updatedChildren;
-                  // Update context in navigation stack to trigger reactivity
-                  if (
-                    navigationStack.length > 0 &&
-                    navigationStack[0]?.type === "covalue"
-                  ) {
-                    navigationStack = [
-                      { ...navigationStack[0], context: { ...context } },
-                    ];
-                  }
-                }
-              } catch (_e) {}
-            })();
-          }
-        }
-
-        navigationStack = [
-          { type: "covalue", label: "DB", coValueId: rootId, context },
-        ];
-      } catch (_e) {
-      } finally {
-        isLoading = false;
-      }
-    })();
-  });
-
-  // Navigate to a CoValue (non-blocking - update UI immediately)
-  async function navigateToCoValue(
-    coValueId: CoID<RawCoValue>,
-    label?: string,
-  ) {
-    const currentNode = node();
-    if (!currentNode) return;
-
-    // Update navigation stack immediately (non-blocking UI)
-    const newLabel = label || `${coValueId.slice(0, 8)}...`;
-    // Add placeholder context (will be updated when loaded)
+    // Add root to navigation stack (CoState will be created reactively)
     navigationStack = [
-      ...navigationStack,
-      { type: "covalue", label: newLabel, coValueId, context: null as any },
+      {
+        type: "covalue",
+        label: "DB",
+        coValueId: rootId,
+      },
     ];
 
-    // Load context in background (non-blocking)
-    (async () => {
-      try {
-        const context = await navigateToCoValueContext(coValueId, currentNode);
-        // Update the context in the navigation stack
-        const updatedStack = [...navigationStack];
-        const lastIndex = updatedStack.length - 1;
-        if (updatedStack[lastIndex]?.type === "covalue") {
-          updatedStack[lastIndex] = { ...updatedStack[lastIndex], context };
-        }
-        navigationStack = updatedStack;
-      } catch (_e) {
-        // Revert navigation stack on error
-        navigationStack = navigationStack.slice(0, -1);
-      }
-    })();
+    isLoading = false;
+  });
+
+  // Navigate to a CoValue using CoState (reactive - updates automatically)
+  function navigateToCoValue(coValueId: CoID<RawCoValue>, label?: string) {
+    const newLabel = label || `${coValueId.slice(0, 8)}...`;
+
+    // Update navigation stack immediately (CoState will be created reactively in $effect)
+    navigationStack = [
+      ...navigationStack,
+      { type: "covalue", label: newLabel, coValueId },
+    ];
   }
 
   // Navigate to an object (push new context)
@@ -241,75 +189,21 @@
     ];
   }
 
-  // Navigate back (non-blocking)
-  async function navigateBack() {
+  // Navigate back (reactive - CoState handles updates automatically)
+  function navigateBack() {
     if (navigationStack.length <= 1) return;
 
-    const currentNode = node();
-    if (!currentNode) return;
-
-    // Update stack immediately
+    // Update stack immediately (contexts are derived reactively from CoState)
     navigationStack = navigationStack.slice(0, -1);
-    const previous = navigationStack[navigationStack.length - 1];
-
-    // Load previous context in background (if it's a covalue and doesn't have context yet)
-    if (previous.type === "covalue" && !previous.context) {
-      (async () => {
-        try {
-          const context = await navigateToCoValueContext(
-            previous.coValueId,
-            currentNode,
-          );
-          // Update the context in the navigation stack
-          const updatedStack = [...navigationStack];
-          const lastIndex = updatedStack.length - 1;
-          if (updatedStack[lastIndex]?.type === "covalue") {
-            updatedStack[lastIndex] = { ...updatedStack[lastIndex], context };
-          }
-          navigationStack = updatedStack;
-        } catch (_e) {}
-      })();
-    }
   }
 
-  // Navigate to a specific item in the breadcrumb (non-blocking)
-  async function navigateToBreadcrumb(index: number) {
-    const currentNode = node();
-    if (!currentNode) return;
-
+  // Navigate to a specific item in the breadcrumb (reactive - CoState handles updates)
+  function navigateToBreadcrumb(index: number) {
     const target = navigationStack[index];
     if (!target) return;
 
-    // Update stack immediately
+    // Update stack immediately (contexts are derived reactively from CoState)
     navigationStack = navigationStack.slice(0, index + 1);
-
-    // Load context in background
-    if (target.type === "covalue") {
-      (async () => {
-        try {
-          const context = await navigateToCoValueContext(
-            target.coValueId,
-            currentNode,
-          );
-          // Update the context in the navigation stack
-          const updatedStack = [...navigationStack];
-          const targetIndex = updatedStack.findIndex(
-            (item) =>
-              item.type === "covalue" && item.coValueId === target.coValueId,
-          );
-          if (
-            targetIndex !== -1 &&
-            updatedStack[targetIndex]?.type === "covalue"
-          ) {
-            updatedStack[targetIndex] = {
-              ...updatedStack[targetIndex],
-              context,
-            };
-          }
-          navigationStack = updatedStack;
-        } catch (_e) {}
-      })();
-    }
   }
 
   // Handle reset data
@@ -327,25 +221,10 @@
         await me.root.$jazz.waitForSync();
       }
 
-      // Reload the current context to reflect the reset
-      const currentNode = node();
-      const currentCtx = currentContext();
-      if (currentNode && currentCtx) {
-        const refreshedContext = await navigateToCoValueContext(
-          currentCtx.coValueId,
-          currentNode,
-        );
-        // Update the context in the navigation stack
-        const updatedStack = [...navigationStack];
-        const lastIndex = updatedStack.length - 1;
-        if (updatedStack[lastIndex]?.type === "covalue") {
-          updatedStack[lastIndex] = {
-            ...updatedStack[lastIndex],
-            context: refreshedContext,
-          };
-        }
-        navigationStack = updatedStack;
-      }
+      // Reload the current context to reflect the reset (CoState will update reactively)
+      // Clear CoState cache to force reload
+      coValueStates.clear();
+      // Navigation stack will trigger $effect to recreate CoStates
 
       toast.success("Data reset successfully!");
     } catch (_error) {
@@ -368,24 +247,9 @@
         await me.root.$jazz.waitForSync();
       }
 
-      // Reload the current context
-      const currentNode = node();
-      const currentCtx = currentContext();
-      if (currentNode && currentCtx) {
-        const refreshedContext = await navigateToCoValueContext(
-          currentCtx.coValueId,
-          currentNode,
-        );
-        const updatedStack = [...navigationStack];
-        const lastIndex = updatedStack.length - 1;
-        if (updatedStack[lastIndex]?.type === "covalue") {
-          updatedStack[lastIndex] = {
-            ...updatedStack[lastIndex],
-            context: refreshedContext,
-          };
-        }
-        navigationStack = updatedStack;
-      }
+      // Reload the current context (CoState will update reactively)
+      // Clear CoState cache to force reload - $effect will recreate them
+      coValueStates.clear();
 
       toast.success("Human LeafType created! Check schemata to see it.");
     } catch (error) {
@@ -409,24 +273,9 @@
         await me.root.$jazz.waitForSync();
       }
 
-      // Reload the current context
-      const currentNode = node();
-      const currentCtx = currentContext();
-      if (currentNode && currentCtx) {
-        const refreshedContext = await navigateToCoValueContext(
-          currentCtx.coValueId,
-          currentNode,
-        );
-        const updatedStack = [...navigationStack];
-        const lastIndex = updatedStack.length - 1;
-        if (updatedStack[lastIndex]?.type === "covalue") {
-          updatedStack[lastIndex] = {
-            ...updatedStack[lastIndex],
-            context: refreshedContext,
-          };
-        }
-        navigationStack = updatedStack;
-      }
+      // Reload the current context (CoState will update reactively)
+      // Clear CoState cache to force reload - $effect will recreate them
+      coValueStates.clear();
 
       toast.success("Todo LeafType created! Check schemata to see it.");
     } catch (error) {
@@ -455,24 +304,9 @@
         await me.root.$jazz.waitForSync();
       }
 
-      // Reload the current context
-      const currentNode = node();
-      const currentCtx = currentContext();
-      if (currentNode && currentCtx) {
-        const refreshedContext = await navigateToCoValueContext(
-          currentCtx.coValueId,
-          currentNode,
-        );
-        const updatedStack = [...navigationStack];
-        const lastIndex = updatedStack.length - 1;
-        if (updatedStack[lastIndex]?.type === "covalue") {
-          updatedStack[lastIndex] = {
-            ...updatedStack[lastIndex],
-            context: refreshedContext,
-          };
-        }
-        navigationStack = updatedStack;
-      }
+      // Reload the current context (CoState will update reactively)
+      // Clear CoState cache to force reload - $effect will recreate them
+      coValueStates.clear();
 
       toast.success("Sam Human Leaf created! Check entities to see it.");
     } catch (error) {
@@ -502,24 +336,9 @@
         await me.root.$jazz.waitForSync();
       }
 
-      // Reload the current context
-      const currentNode = node();
-      const currentCtx = currentContext();
-      if (currentNode && currentCtx) {
-        const refreshedContext = await navigateToCoValueContext(
-          currentCtx.coValueId,
-          currentNode,
-        );
-        const updatedStack = [...navigationStack];
-        const lastIndex = updatedStack.length - 1;
-        if (updatedStack[lastIndex]?.type === "covalue") {
-          updatedStack[lastIndex] = {
-            ...updatedStack[lastIndex],
-            context: refreshedContext,
-          };
-        }
-        navigationStack = updatedStack;
-      }
+      // Reload the current context (CoState will update reactively)
+      // Clear CoState cache to force reload - $effect will recreate them
+      coValueStates.clear();
 
       toast.success(
         "'eat banana' Todo Leaf created! Check entities to see it.",
@@ -547,26 +366,13 @@
         await me.root.$jazz.waitForSync();
       }
 
-      // Reload the current context
-      const currentNode = node();
-      const currentCtx = currentContext();
-      if (currentNode && currentCtx) {
-        const refreshedContext = await navigateToCoValueContext(
-          currentCtx.coValueId,
-          currentNode,
-        );
-        const updatedStack = [...navigationStack];
-        const lastIndex = updatedStack.length - 1;
-        if (updatedStack[lastIndex]?.type === "covalue") {
-          updatedStack[lastIndex] = {
-            ...updatedStack[lastIndex],
-            context: refreshedContext,
-          };
-        }
-        navigationStack = updatedStack;
-      }
+      // Reload the current context (CoState will update reactively)
+      // Clear CoState cache to force reload - $effect will recreate them
+      coValueStates.clear();
 
-      toast.success("'assigned' CompositeType created! Check schemata to see it.");
+      toast.success(
+        "'assigned' CompositeType created! Check schemata to see it.",
+      );
     } catch (error) {
       console.error("Error creating 'assigned' CompositeType:", error);
       toast.error(
@@ -611,28 +417,11 @@
         await me.root.$jazz.waitForSync();
       }
 
-      // Reload the current context
-      const currentNode = node();
-      const currentCtx = currentContext();
-      if (currentNode && currentCtx) {
-        const refreshedContext = await navigateToCoValueContext(
-          currentCtx.coValueId,
-          currentNode,
-        );
-        const updatedStack = [...navigationStack];
-        const lastIndex = updatedStack.length - 1;
-        if (updatedStack[lastIndex]?.type === "covalue") {
-          updatedStack[lastIndex] = {
-            ...updatedStack[lastIndex],
-            context: refreshedContext,
-          };
-        }
-        navigationStack = updatedStack;
-      }
+      // Reload the current context (CoState will update reactively)
+      // Clear CoState cache to force reload - $effect will recreate them
+      coValueStates.clear();
 
-      toast.success(
-        "'assigned' Composite created! Check entities to see it.",
-      );
+      toast.success("'assigned' Composite created! Check entities to see it.");
     } catch (error) {
       console.error("Error creating 'assigned' Composite:", error);
       toast.error(

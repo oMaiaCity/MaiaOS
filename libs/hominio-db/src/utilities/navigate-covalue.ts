@@ -23,6 +23,9 @@ export interface CoValueContext {
  * Navigate to a CoValue context
  * Loads the CoValue and resolves its direct children (CoIDs in snapshot)
  * but does NOT load nested CoValues deeply
+ * 
+ * NOTE: For Svelte apps, prefer using CoState-based navigation for reactive updates.
+ * This function uses snapshot-based loading for framework-agnostic compatibility.
  */
 export async function navigateToCoValueContext(
 	coValueId: CoID<RawCoValue>,
@@ -76,26 +79,13 @@ export async function navigateToCoValueContext(
 		}
 	}
 
-	// Optionally resolve direct children (but not their children)
-	// This gives us type information for display
-	const childrenWithResolved = await Promise.all(
-		directChildren.map(async (child) => {
-			try {
-				const childResolved = await resolveCoValue(child.coValueId, node)
-				return {
-					...child,
-					resolved: childResolved,
-				}
-			} catch (_e) {
-				return child
-			}
-		}),
-	)
+	// Don't resolve children eagerly - lazy loading for performance
+	// Children will be resolved when explicitly accessed in the UI
 
 	return {
 		coValueId,
 		resolved,
-		directChildren: childrenWithResolved,
+		directChildren,
 	}
 }
 

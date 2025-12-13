@@ -1,7 +1,10 @@
 <script lang="ts">
   import type { ResolvedCoValueResult } from "@hominio/db";
-  import type { LocalNode } from "cojson";
+  import type { LocalNode, CoID, RawCoValue } from "cojson";
+  import { CoMap } from "jazz-tools";
+  import { CoState } from "jazz-tools/svelte";
   import Badge from "./Badge.svelte";
+  import { createCoValueState, deriveResolvedFromCoState } from "$lib/utils/costate-navigation";
 
   interface Props {
     propKey: string;
@@ -116,8 +119,8 @@
     if (isComputedField) {
       return "string";
     }
-    if (isCoID && resolvedType) {
-      return resolvedType.extendedType || resolvedType.type || "CoValue";
+    if (isCoID && effectiveResolvedType) {
+      return effectiveResolvedType.extendedType || effectiveResolvedType.type || "CoValue";
     }
     if (typeof value === "string" && value.startsWith("co_")) {
       return "CoValue";
@@ -197,11 +200,34 @@
   );
 
   // Loading state: CoID but not yet resolved
-  const isLoading = $derived(isCoID && !resolvedType);
+  // If we have a CoID but no resolvedType, try to resolve it reactively with CoState
+  let childCoValueState = $state<CoState<typeof CoMap> | null>(null);
+  
+  $effect(() => {
+    if (isCoID && typeof propValue === 'string' && propValue.startsWith('co_') && !resolvedType) {
+      // Create CoState for lazy resolution
+      childCoValueState = createCoValueState(propValue as CoID<RawCoValue>);
+    } else {
+      childCoValueState = null;
+    }
+  });
+  
+  // Derive resolved type from CoState if available
+  const resolvedTypeFromCoState = $derived(() => {
+    if (childCoValueState && typeof propValue === 'string' && propValue.startsWith('co_')) {
+      return deriveResolvedFromCoState(childCoValueState, propValue as CoID<RawCoValue>);
+    }
+    return null;
+  });
+  
+  // Use resolvedType prop if available, otherwise use CoState-derived type
+  const effectiveResolvedType = $derived(resolvedType || resolvedTypeFromCoState());
+  
+  const isLoading = $derived(isCoID && !effectiveResolvedType);
 
   // Check if this is a CoList type
   const isCoList = $derived(
-    resolvedType?.type === 'colist' || resolvedType?.extendedType === 'CoList' || displayType === 'COLIST',
+    effectiveResolvedType?.type === 'colist' || effectiveResolvedType?.extendedType === 'CoList' || displayType === 'COLIST',
   );
 </script>
 
@@ -259,7 +285,7 @@
           {:else}
             <!-- CoID as clickable text - use @label if available, otherwise use ID (hide ID for CoList) -->
             {#if !isCoList}
-              {@const displayLabel = resolvedType?.snapshot && typeof resolvedType.snapshot === 'object' && '@label' in resolvedType.snapshot && resolvedType.snapshot['@label'] ? resolvedType.snapshot['@label'] : propValue}
+              {@const displayLabel = effectiveResolvedType?.snapshot && typeof effectiveResolvedType.snapshot === 'object' && '@label' in effectiveResolvedType.snapshot && effectiveResolvedType.snapshot['@label'] ? effectiveResolvedType.snapshot['@label'] : propValue}
               <span class="text-xs font-mono text-slate-600 hover:underline"
                 >{displayLabel}</span
               >

@@ -1,8 +1,11 @@
 <script lang="ts">
   import type { CoValueContext } from "@hominio/db";
   import type { LocalNode } from "cojson";
+  import { CoMap } from "jazz-tools";
+  import { CoState } from "jazz-tools/svelte";
   import Badge from "./Badge.svelte";
   import ListView from "./ListView.svelte";
+  import { createCoValueState, deriveResolvedFromCoState } from "$lib/utils/costate-navigation";
 
   interface Props {
     context: CoValueContext;
@@ -47,14 +50,14 @@
     Object.entries(properties).filter(([key]) => key !== '@label' && key !== '@schema'),
   );
 
-  // Get schema definition from snapshot's @schema field using reactive Jazz resolution
+  // Get schema definition using CoState (reactive)
   const schemaDefinition = $derived(() => {
     if (!snapshot || typeof snapshot !== 'object') return null;
     
     const schemaRef = snapshot['@schema'];
     if (!schemaRef) return null;
     
-    // Find schema in directChildren
+    // Extract schema ID
     const schemaId = typeof schemaRef === 'string' && schemaRef.startsWith('co_')
       ? schemaRef
       : (schemaRef && typeof schemaRef === 'object' && '$jazz' in schemaRef)
@@ -63,65 +66,36 @@
     
     if (!schemaId) return null;
     
-    const schemaChild = context.directChildren?.find((c) => c.coValueId === schemaId);
-    if (!schemaChild) return null;
+    // Use CoState to load schema reactively
+    const schemaCoValueState = createCoValueState(schemaId);
+    const schemaCoValue = schemaCoValueState.current;
     
-    // Try accessing from CoValue directly first (reactive - most reliable for passthrough objects)
-    const schemaCoValue = schemaChild?.resolved?.value;
-    if (schemaCoValue && typeof schemaCoValue === 'object') {
-      try {
-        // Access definition directly from CoValue (reactive access)
-        const definition = (schemaCoValue as any).definition;
-        console.log('[Context] Found definition in CoValue:', {
-          definition,
-          definitionType: typeof definition,
-          isObject: definition && typeof definition === 'object',
-          definitionKeys: definition && typeof definition === 'object' ? Object.keys(definition) : null,
-          hasProperties: definition?.properties !== undefined,
-          propertiesType: typeof definition?.properties,
-          propertiesKeys: definition?.properties && typeof definition?.properties === 'object' ? Object.keys(definition.properties) : null,
-          // Try to access properties directly
-          priorityEnum: definition?.properties?.priority?.enum,
-          statusEnum: definition?.properties?.status?.enum
-        });
-        
-        // Check if definition has properties (even if it's a passthrough object)
-        if (definition && typeof definition === 'object') {
-          // For passthrough objects, properties might be accessible directly
-          if (definition.properties && typeof definition.properties === 'object') {
-            return definition;
-          }
-          // If properties is missing, try to reconstruct from the definition object itself
-          // Passthrough objects might store properties at the top level
-          if ('type' in definition && definition.type === 'object' && 'properties' in definition) {
-            return definition;
-          }
+    if (!schemaCoValue.$isLoaded) return null;
+    
+    try {
+      // Access definition directly from CoValue (reactive access)
+      const definition = (schemaCoValue as any).definition;
+      
+      // Check if definition has properties
+      if (definition && typeof definition === 'object') {
+        // For passthrough objects, properties might be accessible directly
+        if (definition.properties && typeof definition.properties === 'object') {
+          return definition;
         }
-      } catch (e) {
-        console.log('[Context] Error accessing definition from CoValue:', e);
-        // If direct access fails, fall through to snapshot access
+        // If properties is missing, try to reconstruct from the definition object itself
+        if ('type' in definition && definition.type === 'object' && 'properties' in definition) {
+          return definition;
+        }
       }
+    } catch (_e) {
+      // If direct access fails, try snapshot access
     }
     
-    // Fallback: try snapshot access
+    // Fallback: try snapshot access from resolved context
+    const schemaChild = context.directChildren?.find((c) => c.coValueId === schemaId);
     const schemaSnapshot = schemaChild?.resolved?.snapshot;
     if (schemaSnapshot && typeof schemaSnapshot === 'object' && 'definition' in schemaSnapshot) {
       const definition = schemaSnapshot.definition;
-      console.log('[Context] Found definition in snapshot:', {
-        definition,
-        definitionType: typeof definition,
-        isObject: definition && typeof definition === 'object',
-        definitionKeys: definition && typeof definition === 'object' ? Object.keys(definition) : null,
-        hasProperties: definition?.properties !== undefined,
-        propertiesType: typeof definition?.properties,
-        propertiesKeys: definition?.properties && typeof definition?.properties === 'object' ? Object.keys(definition.properties) : null,
-        // Try to access properties directly
-        priorityEnum: definition?.properties?.priority?.enum,
-        statusEnum: definition?.properties?.status?.enum,
-        // Check if definition is the JSON Schema object itself
-        definitionString: JSON.stringify(definition, null, 2).slice(0, 500)
-      });
-      // Passthrough objects should be serialized as plain objects in snapshots
       if (definition && typeof definition === 'object' && definition.properties && typeof definition.properties === 'object') {
         return definition;
       }
@@ -130,43 +104,7 @@
     return null;
   });
   
-  // Debug: Log schema definition changes
-  $effect(() => {
-    // Access schemaDefinition value reactively (it's a $derived(), so access it)
-    const schemaDefValue = schemaDefinition;
-    if (schemaDefValue) {
-      try {
-        let definitionString: string | null = null;
-        try {
-          definitionString = JSON.stringify(schemaDefValue, null, 2);
-        } catch (e) {
-          // JSON.stringify might fail for circular references or functions
-          definitionString = String(schemaDefValue);
-        }
-        console.log('[Context] Schema definition found:', {
-          schemaDefinition: schemaDefValue,
-          schemaDefinitionType: typeof schemaDefinition,
-          schemaDefinitionValueType: typeof schemaDefValue,
-          schemaDefinitionKeys: schemaDefValue && typeof schemaDefValue === 'object' ? Object.keys(schemaDefValue) : null,
-          hasProperties: !!schemaDefValue.properties,
-          propertiesType: typeof schemaDefValue.properties,
-          propertyKeys: schemaDefValue.properties && typeof schemaDefValue.properties === 'object' ? Object.keys(schemaDefValue.properties) : null,
-          priorityEnum: schemaDefValue.properties?.priority?.enum,
-          statusEnum: schemaDefValue.properties?.status?.enum,
-          // Try to see the full structure
-          definitionString: definitionString && typeof definitionString === 'string' ? definitionString.slice(0, 1000) : null
-        });
-      } catch (e) {
-        console.log('[Context] Error logging schema definition:', e, {
-          schemaDefinition: schemaDefValue,
-          schemaDefinitionType: typeof schemaDefinition,
-          schemaDefinitionValueType: typeof schemaDefValue
-        });
-      }
-    } else {
-      console.log('[Context] Schema definition is null');
-    }
-  });
+  // Schema definition is now reactive via CoState - no need for debug logging
 
   // Initialize with default, then sync with prop
   let currentView = $state<"list" | "table">("list");
