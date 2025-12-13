@@ -2,8 +2,6 @@
   import {
     type CoValueContext,
     JazzAccount,
-    navigateToCoValueContext,
-    resolveCoValue,
     resetData,
     createHumanLeafType,
     createTodoLeafType,

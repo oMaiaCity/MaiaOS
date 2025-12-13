@@ -58,11 +58,10 @@ export {
 	extractGroupMembers,
 	type GroupMembersInfo,
 } from './utilities/load-group-members'
-// CoValue Navigation (Generic utility)
+// CoValue Navigation (Types and utilities)
 export {
 	type CoValueContext,
 	isCoID,
-	navigateToCoValueContext,
 } from './utilities/navigate-covalue'
 // CoValue Resolver (Generic utility)
 export {
