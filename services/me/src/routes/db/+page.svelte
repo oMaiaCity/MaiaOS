@@ -472,48 +472,72 @@
         {#if navigationStack.length > 0}
           <div class="w-24 shrink-0">
             <aside class="sticky top-6">
-              <!-- Back Button -->
-              {#if navigationStack.length > 1}
+              <!-- Tab (matching main area style, centered) -->
+              <div
+                class="flex items-end justify-center gap-1 mb-0 -mb-px relative z-10"
+              >
                 <button
                   type="button"
-                  onclick={navigateBack}
-                  class="w-full mb-3 bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-2 text-xs rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-1"
+                  class="text-xs font-medium uppercase tracking-wide px-3 py-1.5 rounded-t-lg transition-colors border border-b-0 bg-[var(--color-card-bg)] border-[var(--color-card-border)] text-slate-700"
+                  style="border-bottom: none;"
+                  disabled
                 >
-                  <svg
-                    class="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M15 19l-7-7 7-7"
-                    />
-                  </svg>
-                  Back
-                </button>
-              {/if}
-
-              <!-- Navigation History (newest at top) -->
-              <div class="space-y-1">
-                <div class="text-[10px] font-semibold text-slate-500 uppercase mb-2 px-2">
                   Nav
+                </button>
+              </div>
+
+              <!-- Card Container (matching main area) -->
+              <div class="card">
+                <!-- Internal Header with Back Button -->
+                {#if navigationStack.length > 1}
+                  <div class="px-3 py-2 border-b border-slate-200">
+                    <button
+                      type="button"
+                      onclick={navigateBack}
+                      class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1 px-2 text-[10px] rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-1"
+                    >
+                      <svg
+                        class="w-2.5 h-2.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 19l-7-7 7-7"
+                        />
+                      </svg>
+                      Back
+                    </button>
+                  </div>
+                {/if}
+
+                <!-- Content Area with Navigation History (styled like list items) -->
+                <div class="p-1.5 space-y-0.5">
+                  {#each [...navigationStack]
+                    .reverse()
+                    .map( (item, reverseIndex) => ({ item, originalIndex: navigationStack.length - 1 - reverseIndex }), )
+                    .filter((entry, idx, arr) => {
+                      // Filter out consecutive duplicates (same label as previous item)
+                      if (idx === 0) return true;
+                      return entry.item.label !== arr[idx - 1].item.label;
+                    }) as navEntry}
+                    {@const isActive =
+                      navEntry.originalIndex === navigationStack.length - 1}
+                    <button
+                      type="button"
+                      onclick={() =>
+                        navigateToBreadcrumb(navEntry.originalIndex)}
+                      class="w-full text-left px-1.5 py-1 rounded-xl text-[10px] transition-colors border {isActive
+                        ? 'bg-slate-100 text-slate-900 font-medium border-slate-200 shadow-[0_0_4px_rgba(0,0,0,0.02)]'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:border-slate-200'}"
+                    >
+                      <div class="truncate">{navEntry.item.label}</div>
+                    </button>
+                  {/each}
                 </div>
-                {#each [...navigationStack].reverse() as item, reverseIndex}
-                  {@const index = navigationStack.length - 1 - reverseIndex}
-                  {@const isActive = index === navigationStack.length - 1}
-                  <button
-                    type="button"
-                    onclick={() => navigateToBreadcrumb(index)}
-                    class="w-full text-left px-2 py-1.5 rounded text-xs transition-colors {isActive
-                      ? 'bg-slate-100 text-slate-900 font-medium border border-slate-300'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'}"
-                  >
-                    <div class="truncate">{item.label}</div>
-                  </button>
-                {/each}
               </div>
             </aside>
           </div>
@@ -569,27 +593,6 @@
           {#if metadataContext}
             <div class="w-80 shrink-0">
               <aside class="sticky top-6">
-                <!-- Metadata Title (matching main content header spacing exactly) -->
-                <div class="mb-6">
-                  <h2
-                    class="text-lg font-semibold text-slate-700 flex items-center justify-end gap-2 m-0"
-                  >
-                    <span>Metadata</span>
-                    <svg
-                      class="w-5 h-5 text-slate-700"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </h2>
-                </div>
                 <MetadataSidebar
                   context={metadataContext}
                   node={node()}

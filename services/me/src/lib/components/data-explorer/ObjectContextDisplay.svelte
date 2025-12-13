@@ -20,15 +20,7 @@
 </script>
 
 <div class="w-full">
-  <!-- Header (matching Context component for alignment) -->
-  <div class="mb-6">
-    <div class="flex items-center gap-3">
-      <h2 class="text-lg font-semibold text-slate-700 m-0">{label}</h2>
-      <Badge type="object">Object</Badge>
-    </div>
-  </div>
-
-  <!-- View Switcher Tabs (matching Context component for alignment) -->
+  <!-- View Switcher Tabs (outside card, attached to top) -->
   <div class="flex items-end gap-1 mb-0 -mb-px relative z-10 pl-4">
     <button
       type="button"
@@ -41,11 +33,22 @@
   </div>
 
   <!-- Card Container (matching Context component) -->
-  <div class="card p-6">
-    <div class="space-y-3">
-      <pre
-        class="text-xs text-slate-700 whitespace-pre font-mono bg-slate-50/80 p-4 rounded-lg border border-slate-200 max-w-full overflow-x-auto overflow-y-auto"
-        style="max-height: 600px;">{jsonString}</pre>
+  <div class="card">
+    <!-- Internal Header -->
+    <div class="px-6 py-4 border-b border-slate-200">
+      <div class="flex items-center gap-3">
+        <h2 class="text-lg font-semibold text-slate-700 m-0">{label}</h2>
+        <Badge type="object">Object</Badge>
+      </div>
+    </div>
+
+    <!-- Content Area -->
+    <div class="p-6">
+      <div class="space-y-3">
+        <pre
+          class="text-xs text-slate-700 whitespace-pre font-mono bg-slate-50/80 p-4 rounded-lg border border-slate-200 max-w-full overflow-x-auto overflow-y-auto"
+          style="max-height: 600px;">{jsonString}</pre>
+      </div>
     </div>
   </div>
 </div>

@@ -172,6 +172,19 @@
   
   // Schema definition is now reactive via CoState - no need for debug logging
 
+  // Get display label for the CoValue - use @label if available, otherwise use CoID
+  const displayLabel = $derived(() => {
+    const snapshot = context.resolved.snapshot;
+    if (snapshot && typeof snapshot === 'object' && '@label' in snapshot) {
+      const label = snapshot['@label'];
+      if (typeof label === 'string' && label.trim()) {
+        return label;
+      }
+    }
+    // Fallback to CoValue ID (truncated)
+    return `${context.coValueId.slice(0, 12)}...`;
+  });
+
   // Initialize with default, then sync with prop
   let currentView = $state<"list" | "table">("list");
 
@@ -185,38 +198,6 @@
 </script>
 
 <div class="w-full">
-  <!-- Header -->
-  <div class="mb-6">
-    <div class="flex items-center gap-3">
-      {#if onBack}
-        <button
-          type="button"
-          onclick={onBack}
-          class="p-2 hover:bg-slate-200 rounded-lg transition-colors"
-          aria-label="Back"
-        >
-          <svg
-            class="w-5 h-5 text-slate-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </button>
-      {/if}
-      <h2 class="text-lg font-semibold text-slate-700 m-0">
-        {context.coValueId.slice(0, 12)}...
-      </h2>
-      <Badge type={displayType}>{displayType}</Badge>
-    </div>
-  </div>
-
   <!-- View Switcher Tabs (outside card, attached to top with less rounded corners like listitems) -->
   <div class="flex items-end gap-1 mb-0 -mb-px relative z-10 pl-4">
     <button
@@ -244,7 +225,19 @@
   </div>
 
   <!-- Glass Card Container (matches legacy Card component) -->
-  <div class="card p-6">
+  <div class="card">
+    <!-- Internal Header -->
+    <div class="px-6 py-4 border-b border-slate-200">
+      <div class="flex items-center gap-3">
+        <h2 class="text-lg font-semibold text-slate-700 m-0">
+          {displayLabel()}
+        </h2>
+        <Badge type={displayType}>{displayType}</Badge>
+      </div>
+    </div>
+
+    <!-- Content Area -->
+    <div class="p-6">
     <!-- Content Views -->
     {#if currentView === "list"}
       <ListView
@@ -321,7 +314,7 @@
               <tr>
                 <td class="p-0 pb-3 pr-3">
                   <span
-                    class="text-xs font-medium text-slate-500 uppercase tracking-wide"
+                    class="text-xs font-medium text-slate-500 uppercase tracking-wide truncate"
                     >{key}</span
                   >
                 </td>
@@ -346,7 +339,7 @@
                           {#if !isCoList}
                             {@const displayLabel = child?.resolved?.snapshot && typeof child.resolved.snapshot === 'object' && '@label' in child.resolved.snapshot && child.resolved.snapshot['@label'] ? child.resolved.snapshot['@label'] : value}
                             <span
-                              class="text-xs font-mono text-slate-600 hover:underline"
+                              class="text-xs text-slate-600 hover:underline"
                               >{displayLabel}</span
                             >
                           {/if}
@@ -397,7 +390,7 @@
                         {#if isCoID}
                           {#if !isCoList}
                             {@const displayLabel = child?.resolved?.snapshot && typeof child.resolved.snapshot === 'object' && '@label' in child.resolved.snapshot && child.resolved.snapshot['@label'] ? child.resolved.snapshot['@label'] : value}
-                            <span class="text-xs font-mono text-slate-600"
+                            <span class="text-xs text-slate-600"
                               >{displayLabel}</span
                             >
                           {/if}
@@ -448,5 +441,6 @@
         </table>
       </div>
     {/if}
+    </div>
   </div>
 </div>
