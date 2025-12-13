@@ -29,6 +29,8 @@ export function getBadgeColors(typeName: string): BadgeColors {
 			return { bg: 'badge-number', text: '' }
 		case 'boolean':
 			return { bg: 'badge-boolean', text: '' }
+		case 'date':
+			return { bg: 'badge-date', text: '' } // Dedicated date badge style
 		case 'array':
 			return { bg: 'badge-array', text: '' }
 		case 'object':

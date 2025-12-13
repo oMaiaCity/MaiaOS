@@ -5,10 +5,11 @@
     navigateToCoValueContext,
     resolveCoValue,
     addJazzCompositeInstance,
-    addRandomCarInstance,
     resetData,
     createHumanLeafType,
     createTodoLeafType,
+    createHumanLeaf,
+    createTodoLeaf,
   } from "@hominio/db";
   import type { CoID, RawCoValue } from "cojson";
   import { AccountCoState } from "jazz-tools/svelte";
@@ -310,49 +311,6 @@
     }
   }
 
-  // Handle adding a car (automatically creates schema if needed)
-  async function handleAddCar() {
-    if (!me.$isLoaded) return;
-
-    try {
-      await addRandomCarInstance(me);
-
-      // Reload root to ensure entities and schemata fields are visible
-      if (me.root?.$isLoaded) {
-        await me.root.$jazz.ensureLoaded({
-          resolve: { schemata: true, entities: true },
-        });
-        await me.root.$jazz.waitForSync();
-      }
-
-      // Reload the current context to show new entities
-      const currentNode = node();
-      const currentCtx = currentContext();
-      if (currentNode && currentCtx) {
-        const refreshedContext = await navigateToCoValueContext(
-          currentCtx.coValueId,
-          currentNode,
-        );
-        // Update the context in the navigation stack
-        const updatedStack = [...navigationStack];
-        const lastIndex = updatedStack.length - 1;
-        if (updatedStack[lastIndex]?.type === "covalue") {
-          updatedStack[lastIndex] = {
-            ...updatedStack[lastIndex],
-            context: refreshedContext,
-          };
-        }
-        navigationStack = updatedStack;
-      }
-
-      toast.success(
-        "Car added successfully! Check the data explorer to see it.",
-      );
-    } catch (_error) {
-      toast.error("Error adding car. Check console for details.");
-    }
-  }
-
   // Handle adding JazzComposite (automatically creates schema if needed)
   async function handleAddJazzComposite() {
     if (!me.$isLoaded) return;
@@ -518,6 +476,102 @@
       toast.error("Error creating Todo LeafType. Check console for details.");
     }
   }
+
+  // Handle creating Sam Human Leaf
+  async function handleCreateSamHuman() {
+    if (!me.$isLoaded) return;
+
+    try {
+      await createHumanLeaf(me, {
+        id: "human_sam",
+        name: "Sam",
+        email: "sam@example.com",
+        dateOfBirth: new Date("1990-01-15"),
+      });
+
+      // Reload root to ensure entities field is visible
+      if (me.root?.$isLoaded) {
+        await me.root.$jazz.ensureLoaded({
+          resolve: { entities: true },
+        });
+        await me.root.$jazz.waitForSync();
+      }
+
+      // Reload the current context
+      const currentNode = node();
+      const currentCtx = currentContext();
+      if (currentNode && currentCtx) {
+        const refreshedContext = await navigateToCoValueContext(
+          currentCtx.coValueId,
+          currentNode,
+        );
+        const updatedStack = [...navigationStack];
+        const lastIndex = updatedStack.length - 1;
+        if (updatedStack[lastIndex]?.type === "covalue") {
+          updatedStack[lastIndex] = {
+            ...updatedStack[lastIndex],
+            context: refreshedContext,
+          };
+        }
+        navigationStack = updatedStack;
+      }
+
+      toast.success("Sam Human Leaf created! Check entities to see it.");
+    } catch (error) {
+      console.error("Error creating Sam Human Leaf:", error);
+      toast.error("Error creating Sam Human Leaf. Check console for details.");
+    }
+  }
+
+  // Handle creating "eat banana" Todo Leaf
+  async function handleCreateEatBananaTodo() {
+    if (!me.$isLoaded) return;
+
+    try {
+      await createTodoLeaf(me, {
+        id: "todo_eat_banana",
+        name: "eat banana",
+        status: "todo",
+        dueDate: new Date("2025-12-31"),
+      });
+
+      // Reload root to ensure entities field is visible
+      if (me.root?.$isLoaded) {
+        await me.root.$jazz.ensureLoaded({
+          resolve: { entities: true },
+        });
+        await me.root.$jazz.waitForSync();
+      }
+
+      // Reload the current context
+      const currentNode = node();
+      const currentCtx = currentContext();
+      if (currentNode && currentCtx) {
+        const refreshedContext = await navigateToCoValueContext(
+          currentCtx.coValueId,
+          currentNode,
+        );
+        const updatedStack = [...navigationStack];
+        const lastIndex = updatedStack.length - 1;
+        if (updatedStack[lastIndex]?.type === "covalue") {
+          updatedStack[lastIndex] = {
+            ...updatedStack[lastIndex],
+            context: refreshedContext,
+          };
+        }
+        navigationStack = updatedStack;
+      }
+
+      toast.success(
+        "'eat banana' Todo Leaf created! Check entities to see it.",
+      );
+    } catch (error) {
+      console.error("Error creating 'eat banana' Todo Leaf:", error);
+      toast.error(
+        "Error creating 'eat banana' Todo Leaf. Check console for details.",
+      );
+    }
+  }
 </script>
 
 <div class="w-full max-w-7xl mx-auto px-6 pt-24 pb-20">
@@ -657,18 +711,31 @@
                       Create Todo LeafType
                     </button>
 
+                    <!-- Milestone 2: Leafs -->
+                    <div
+                      class="text-xs font-semibold text-slate-500 uppercase mb-1 mt-4"
+                    >
+                      Milestone 2: Leafs
+                    </div>
+                    <button
+                      onclick={() => handleCreateSamHuman()}
+                      class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                    >
+                      Create Sam (Human)
+                    </button>
+                    <button
+                      onclick={() => handleCreateEatBananaTodo()}
+                      class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                    >
+                      Create "eat banana" (Todo)
+                    </button>
+
                     <!-- Existing Actions -->
                     <div
                       class="text-xs font-semibold text-slate-500 uppercase mb-1 mt-4"
                     >
                       Existing
                     </div>
-                    <button
-                      onclick={() => handleAddCar()}
-                      class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
-                    >
-                      Add Car
-                    </button>
                     <button
                       onclick={() => handleAddJazzComposite()}
                       class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"

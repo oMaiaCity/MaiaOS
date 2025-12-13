@@ -59,10 +59,18 @@
     if (typeof value === "string" && value.startsWith("co_")) {
       return "CoValue";
     }
+    // Check for Date objects (before string check, since Date can be serialized)
+    if (value instanceof Date) return "date";
+    // Check for Date strings (ISO format) - dates are serialized to ISO strings in JSON snapshots
+    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
+      return "date";
+    }
     if (typeof value === "string") return "string";
     if (typeof value === "number") return "number";
     if (typeof value === "boolean") return "boolean";
     if (Array.isArray(value)) return "array";
+    // Handle null - show as "object" (JavaScript quirk: typeof null === "object")
+    if (value === null) return "object";
     if (typeof value === "object" && value !== null) return "object";
     return typeof value;
   };
@@ -175,14 +183,20 @@
       {:else}
         <!-- Primitive value display -->
         <span class="text-xs text-slate-600 break-all min-w-0">
-          {typeof propValue === "object" &&
-          propValue !== null &&
-          !Array.isArray(propValue)
-            ? JSON.stringify(propValue).slice(0, 50) +
-              (JSON.stringify(propValue).length > 50 ? "..." : "")
-            : Array.isArray(propValue)
-              ? `[${propValue.length} items]`
-              : String(propValue)}
+          {propValue instanceof Date
+            ? propValue.toLocaleDateString() + " " + propValue.toLocaleTimeString()
+            : typeof propValue === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(propValue)
+              ? new Date(propValue).toLocaleDateString() + " " + new Date(propValue).toLocaleTimeString()
+              : typeof propValue === "object" &&
+                propValue !== null &&
+                !Array.isArray(propValue)
+                ? JSON.stringify(propValue).slice(0, 50) +
+                  (JSON.stringify(propValue).length > 50 ? "..." : "")
+                : Array.isArray(propValue)
+                  ? `[${propValue.length} items]`
+                  : propValue === null
+                    ? "null"
+                    : String(propValue)}
         </span>
       {/if}
 

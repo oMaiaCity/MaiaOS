@@ -19,7 +19,7 @@ export async function setSystemProps(coValue: any, schemaCoValue: any): Promise<
 	}
 
 	// Ensure schemaCoValue is loaded
-	if (schemaCoValue && !schemaCoValue.$isLoaded) {
+	if (schemaCoValue && schemaCoValue.$jazz && !schemaCoValue.$isLoaded) {
 		await schemaCoValue.$jazz.ensureLoaded({ resolve: {} })
 	}
 

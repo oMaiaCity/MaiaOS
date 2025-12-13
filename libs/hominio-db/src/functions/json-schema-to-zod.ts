@@ -127,6 +127,7 @@ export function jsonSchemaToZod(
 				break
 			case 'date':
 			case 'date-time':
+				// Jazz CoMaps support z.date() - dates are stored as Date objects
 				schema = z.date()
 				break
 			case 'array':

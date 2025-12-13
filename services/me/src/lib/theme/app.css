@@ -89,6 +89,8 @@
 	--color-badge-number-text: #6b21a8;
 	--color-badge-boolean-bg: #dcfce7;
 	--color-badge-boolean-text: #166534;
+	--color-badge-date-bg: #cffafe;
+	--color-badge-date-text: #155e75;
 	--color-badge-array-bg: #cffafe;
 	--color-badge-array-text: #155e75;
 	--color-badge-object-bg: #fef3c7;
@@ -238,6 +240,10 @@
 
 .badge-boolean {
 	@apply bg-[var(--color-badge-boolean-bg)] text-[var(--color-badge-boolean-text)];
+}
+
+.badge-date {
+	@apply bg-[var(--color-badge-date-bg)] text-[var(--color-badge-date-text)];
 }
 
 .badge-array {

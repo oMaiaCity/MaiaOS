@@ -15,7 +15,7 @@ import { jsonSchemaToZod } from './json-schema-to-zod.js'
  * @schema identifies the schema type (set via setSystemProps)
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function addLabelToSchema(jsonSchema: any): any {
+export function addLabelToSchema(jsonSchema: any): any {
 	if (!jsonSchema || jsonSchema.type !== 'object') {
 		return jsonSchema
 	}
@@ -576,8 +576,11 @@ export async function ensureSchema(
 					// Check if name matches (case-sensitive exact match)
 					if (typeof schemaNameValue === 'string' && schemaNameValue === schemaName) {
 						console.log(`[ensureSchema] Schema "${schemaName}" already exists, returning existing`)
-						// Return the schema from the list (it's already wrapped), not the raw loadedValue
+						// Return the schema from the list (it's already wrapped), but ensure it's loaded first
 						// The schema from Array.from(schemataList) is the wrapped CoValue we need
+						if (schema && typeof schema === 'object' && '$jazz' in schema) {
+							return await (schema as any).$jazz.ensureLoaded({ resolve: {} })
+						}
 						return schema
 					}
 				} catch (error) {

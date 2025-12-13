@@ -6,8 +6,7 @@
  */
 
 import { co } from 'jazz-tools'
-import { ensureSchema } from '../../functions/dynamic-schema-migration.js'
-import { jsonSchemaToCoMapShape } from '../../functions/dynamic-schema-migration.js'
+import { ensureSchema, jsonSchemaToCoMapShape, addLabelToSchema } from '../../functions/dynamic-schema-migration.js'
 import { setSystemProps } from '../../functions/set-system-props.js'
 import { humanLeafTypeSchema, todoLeafTypeSchema } from '../../schemas/data/leaf-types.js'
 
@@ -22,7 +21,7 @@ export async function createHumanLeaf(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	account: any,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	data: { id: string; name: string; email?: string; dateOfBirth?: string },
+	data: { id: string; name: string; email?: string; dateOfBirth?: Date },
 ): Promise<any> {
 	console.log('[createHumanLeaf] Creating Human Leaf:', data.name)
 
@@ -61,8 +60,9 @@ export async function createHumanLeaf(
 		throw new Error('Cannot determine entities list owner')
 	}
 
-	// Get Human CoMap schema dynamically
-	const humanShape = jsonSchemaToCoMapShape(humanLeafTypeSchema)
+	// Add @label and @schema to Human schema before creating CoMap
+	const humanSchemaWithSystemProps = addLabelToSchema(humanLeafTypeSchema)
+	const humanShape = jsonSchemaToCoMapShape(humanSchemaWithSystemProps)
 	const HumanCoMap = co.map(humanShape)
 
 	// Create Human Leaf Entity with actual data
@@ -98,14 +98,14 @@ export async function createTodoLeaf(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	account: any,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	data: {
+		data: {
 		id: string
 		name: string
 		description?: string
 		priority?: 'low' | 'medium' | 'high' | 'urgent'
 		status?: 'todo' | 'in_progress' | 'done' | 'blocked'
-		dueDate?: string
-		completedAt?: string
+		dueDate?: Date
+		completedAt?: Date
 	},
 ): Promise<any> {
 	console.log('[createTodoLeaf] Creating Todo Leaf:', data.name)
@@ -145,8 +145,9 @@ export async function createTodoLeaf(
 		throw new Error('Cannot determine entities list owner')
 	}
 
-	// Get Todo CoMap schema dynamically
-	const todoShape = jsonSchemaToCoMapShape(todoLeafTypeSchema)
+	// Add @label and @schema to Todo schema before creating CoMap
+	const todoSchemaWithSystemProps = addLabelToSchema(todoLeafTypeSchema)
+	const todoShape = jsonSchemaToCoMapShape(todoSchemaWithSystemProps)
 	const TodoCoMap = co.map(todoShape)
 
 	// Create Todo Leaf Entity with actual data
