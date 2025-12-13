@@ -9,7 +9,6 @@
   import GoogleDataSync from "$lib/components/GoogleDataSync.svelte";
   import Header from "$lib/components/Header.svelte";
   import JazzAuthSetup from "$lib/components/JazzAuthSetup.svelte";
-  import Toast from "$lib/components/Toast.svelte";
 
   const { children } = $props();
 
@@ -43,7 +42,6 @@
     <GoogleDataSync />
     <jazz-inspector></jazz-inspector>
     <Header title={routeInfo.title} description={routeInfo.description} />
-    <Toast />
     <main class="flex-1 w-full h-full overflow-x-hidden">
       {@render children?.()}
     </main>

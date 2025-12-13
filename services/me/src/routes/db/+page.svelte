@@ -14,7 +14,6 @@
   import { AccountCoState, CoState } from "jazz-tools/svelte";
   import { CoMap } from "jazz-tools";
   import { authClient } from "$lib/auth-client";
-  import { toast } from "$lib/stores/toast.js";
   import ObjectContextDisplay from "$lib/components/data-explorer/ObjectContextDisplay.svelte";
   import { Context, MetadataSidebar } from "$lib/components/data-explorer";
   import { deriveContextFromCoState } from "$lib/utils/costate-navigation";
@@ -224,9 +223,9 @@
       coValueStates.clear();
       // Navigation stack will trigger $effect to recreate CoStates
 
-      toast.success("Data reset successfully!");
+      // Data reset successfully
     } catch (_error) {
-      toast.error("Error resetting data. Check console for details.");
+      console.error("Error resetting data:", _error);
     }
   }
 
@@ -249,10 +248,9 @@
       // Clear CoState cache to force reload - $effect will recreate them
       coValueStates.clear();
 
-      toast.success("Human LeafType created! Check schemata to see it.");
+      // Human LeafType created
     } catch (error) {
       console.error("Error creating Human LeafType:", error);
-      toast.error("Error creating Human LeafType. Check console for details.");
     }
   }
 
@@ -275,10 +273,9 @@
       // Clear CoState cache to force reload - $effect will recreate them
       coValueStates.clear();
 
-      toast.success("Todo LeafType created! Check schemata to see it.");
+      // Todo LeafType created
     } catch (error) {
       console.error("Error creating Todo LeafType:", error);
-      toast.error("Error creating Todo LeafType. Check console for details.");
     }
   }
 
@@ -306,10 +303,9 @@
       // Clear CoState cache to force reload - $effect will recreate them
       coValueStates.clear();
 
-      toast.success("Sam Human Leaf created! Check entities to see it.");
+      // Sam Human Leaf created
     } catch (error) {
       console.error("Error creating Sam Human Leaf:", error);
-      toast.error("Error creating Sam Human Leaf. Check console for details.");
     }
   }
 
@@ -338,14 +334,9 @@
       // Clear CoState cache to force reload - $effect will recreate them
       coValueStates.clear();
 
-      toast.success(
-        "'eat banana' Todo Leaf created! Check entities to see it.",
-      );
+      // 'eat banana' Todo Leaf created
     } catch (error) {
       console.error("Error creating 'eat banana' Todo Leaf:", error);
-      toast.error(
-        "Error creating 'eat banana' Todo Leaf. Check console for details.",
-      );
     }
   }
 
@@ -368,14 +359,9 @@
       // Clear CoState cache to force reload - $effect will recreate them
       coValueStates.clear();
 
-      toast.success(
-        "'assigned' CompositeType created! Check schemata to see it.",
-      );
+      // 'assigned' CompositeType created
     } catch (error) {
       console.error("Error creating 'assigned' CompositeType:", error);
-      toast.error(
-        "Error creating 'assigned' CompositeType. Check console for details.",
-      );
     }
   }
 
@@ -419,12 +405,9 @@
       // Clear CoState cache to force reload - $effect will recreate them
       coValueStates.clear();
 
-      toast.success("'assigned' Composite created! Check entities to see it.");
+      // 'assigned' Composite created
     } catch (error) {
       console.error("Error creating 'assigned' Composite:", error);
-      toast.error(
-        "Error creating 'assigned' Composite. Check console for details.",
-      );
     }
   }
 </script>
