@@ -4,12 +4,13 @@
     JazzAccount,
     navigateToCoValueContext,
     resolveCoValue,
-    addJazzCompositeInstance,
     resetData,
     createHumanLeafType,
     createTodoLeafType,
     createHumanLeaf,
     createTodoLeaf,
+    createAssignedToCompositeType,
+    createAssignedToComposite,
   } from "@hominio/db";
   import type { CoID, RawCoValue } from "cojson";
   import { AccountCoState } from "jazz-tools/svelte";
@@ -311,49 +312,6 @@
     }
   }
 
-  // Handle adding JazzComposite (automatically creates schema if needed)
-  async function handleAddJazzComposite() {
-    if (!me.$isLoaded) return;
-
-    try {
-      await addJazzCompositeInstance(me);
-
-      // Reload root to ensure entities and schemata fields are visible
-      if (me.root?.$isLoaded) {
-        await me.root.$jazz.ensureLoaded({
-          resolve: { schemata: true, entities: true },
-        });
-        await me.root.$jazz.waitForSync();
-      }
-
-      // Reload the current context to show new entities
-      const currentNode = node();
-      const currentCtx = currentContext();
-      if (currentNode && currentCtx) {
-        const refreshedContext = await navigateToCoValueContext(
-          currentCtx.coValueId,
-          currentNode,
-        );
-        // Update the context in the navigation stack
-        const updatedStack = [...navigationStack];
-        const lastIndex = updatedStack.length - 1;
-        if (updatedStack[lastIndex]?.type === "covalue") {
-          updatedStack[lastIndex] = {
-            ...updatedStack[lastIndex],
-            context: refreshedContext,
-          };
-        }
-        navigationStack = updatedStack;
-      }
-
-      toast.success(
-        "JazzComposite added successfully! Check the data explorer to see it.",
-      );
-    } catch (_error) {
-      toast.error("Error adding JazzComposite. Check console for details.");
-    }
-  }
-
   // Handle reset data
   async function handleResetData() {
     if (!me.$isLoaded) return;
@@ -573,6 +531,115 @@
       );
     }
   }
+
+  // Handle creating "assigned" CompositeType
+  async function handleCreateAssignedToCompositeType() {
+    if (!me.$isLoaded) return;
+
+    try {
+      await createAssignedToCompositeType(me);
+
+      // Reload root to ensure schemata field is visible
+      if (me.root?.$isLoaded) {
+        await me.root.$jazz.ensureLoaded({
+          resolve: { schemata: true },
+        });
+        await me.root.$jazz.waitForSync();
+      }
+
+      // Reload the current context
+      const currentNode = node();
+      const currentCtx = currentContext();
+      if (currentNode && currentCtx) {
+        const refreshedContext = await navigateToCoValueContext(
+          currentCtx.coValueId,
+          currentNode,
+        );
+        const updatedStack = [...navigationStack];
+        const lastIndex = updatedStack.length - 1;
+        if (updatedStack[lastIndex]?.type === "covalue") {
+          updatedStack[lastIndex] = {
+            ...updatedStack[lastIndex],
+            context: refreshedContext,
+          };
+        }
+        navigationStack = updatedStack;
+      }
+
+      toast.success("'assigned' CompositeType created! Check schemata to see it.");
+    } catch (error) {
+      console.error("Error creating 'assigned' CompositeType:", error);
+      toast.error(
+        "Error creating 'assigned' CompositeType. Check console for details.",
+      );
+    }
+  }
+
+  // Handle creating "assigned" Composite instance
+  async function handleCreateAssignedToComposite() {
+    if (!me.$isLoaded) return;
+
+    try {
+      // First, ensure the CompositeType exists
+      await createAssignedToCompositeType(me);
+
+      // Create new Todo and Human entities for testing (simplified - no lookup needed)
+      const todoEntity = await createTodoLeaf(me, {
+        id: "todo_test_assigned",
+        name: "test todo for assigned relation",
+        status: "todo",
+        priority: "medium",
+      });
+
+      const humanEntity = await createHumanLeaf(me, {
+        id: "human_test_assigned",
+        name: "Test Human",
+        email: "test@example.com",
+      });
+
+      // Create Composite instance relating Todo to Human
+      await createAssignedToComposite(me, {
+        x1: todoEntity,
+        x2: humanEntity,
+      });
+
+      // Reload root to ensure entities field is visible
+      if (me.root?.$isLoaded) {
+        await me.root.$jazz.ensureLoaded({
+          resolve: { entities: true },
+        });
+        await me.root.$jazz.waitForSync();
+      }
+
+      // Reload the current context
+      const currentNode = node();
+      const currentCtx = currentContext();
+      if (currentNode && currentCtx) {
+        const refreshedContext = await navigateToCoValueContext(
+          currentCtx.coValueId,
+          currentNode,
+        );
+        const updatedStack = [...navigationStack];
+        const lastIndex = updatedStack.length - 1;
+        if (updatedStack[lastIndex]?.type === "covalue") {
+          updatedStack[lastIndex] = {
+            ...updatedStack[lastIndex],
+            context: refreshedContext,
+          };
+        }
+        navigationStack = updatedStack;
+      }
+
+      toast.success(
+        "'assigned' Composite created! Check entities to see it.",
+      );
+    } catch (error) {
+      console.error("Error creating 'assigned' Composite:", error);
+      toast.error(
+        "Error creating 'assigned' Composite. Check console for details.",
+      );
+    }
+  }
 </script>
 
 <div class="w-full max-w-7xl mx-auto px-6 pt-24 pb-20">
@@ -731,18 +798,38 @@
                       Create "eat banana" (Todo)
                     </button>
 
+                    <!-- Milestone 3: CompositeTypes -->
+                    <div
+                      class="text-xs font-semibold text-slate-500 uppercase mb-1 mt-4"
+                    >
+                      Milestone 3: CompositeTypes
+                    </div>
+                    <button
+                      onclick={() => handleCreateAssignedToCompositeType()}
+                      class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                    >
+                      Create "assigned" CompositeType
+                    </button>
+
+                    <!-- Milestone 4: Composites -->
+                    <div
+                      class="text-xs font-semibold text-slate-500 uppercase mb-1 mt-4"
+                    >
+                      Milestone 4: Composites
+                    </div>
+                    <button
+                      onclick={() => handleCreateAssignedToComposite()}
+                      class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                    >
+                      Create "assigned" Composite
+                    </button>
+
                     <!-- Existing Actions -->
                     <div
                       class="text-xs font-semibold text-slate-500 uppercase mb-1 mt-4"
                     >
                       Existing
                     </div>
-                    <button
-                      onclick={() => handleAddJazzComposite()}
-                      class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
-                    >
-                      Add JazzComposite
-                    </button>
                     <button
                       onclick={() => handleResetData()}
                       class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"

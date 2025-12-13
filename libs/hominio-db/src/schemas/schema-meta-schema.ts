@@ -20,7 +20,27 @@ export const SchemaMetaSchema = {
 		},
 		name: {
 			type: 'string',
-			description: 'Name of the schema (e.g., "Car", "JazzComposite")',
+			description: 'Name of the schema (e.g., "Car", "Human", "Todo", "ASSIGNED_TO")',
+		},
+		x1: {
+			type: 'string',
+			description: 'x1 position description (for CompositeTypes)',
+		},
+		x2: {
+			type: 'string',
+			description: 'x2 position description (for CompositeTypes)',
+		},
+		x3: {
+			type: 'string',
+			description: 'x3 position description (for CompositeTypes)',
+		},
+		x4: {
+			type: 'string',
+			description: 'x4 position description (for CompositeTypes)',
+		},
+		x5: {
+			type: 'string',
+			description: 'x5 position description (for CompositeTypes)',
 		},
 		definition: {
 			type: 'object',

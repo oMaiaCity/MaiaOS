@@ -1,7 +1,5 @@
 // Schemas
 
-// Jazz Composite Example
-export { addJazzCompositeInstance } from './functions/add-jazz-composite-instance'
 export type { ComputedFieldDef } from './functions/computed-fields'
 // Computed Fields
 export {
@@ -39,7 +37,6 @@ export {
 	JazzAccount,
 	syncGoogleDataToProfile,
 } from './schema'
-export { JazzCompositeJsonSchema } from './schemas/jazz-composite-schema'
 // Data LeafTypes
 export { createHumanLeafType, createTodoLeafType } from './core/data/leaf-type-manager'
 // Data Leafs

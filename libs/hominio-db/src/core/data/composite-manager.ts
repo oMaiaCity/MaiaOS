@@ -3,12 +3,13 @@
  * 
  * Functions for creating Composite Entity instances
  * Composites are Entity co-values that reference their CompositeType SchemaDefinition via @schema
- * and have bindings that reference Leaf Entities via CoRefs
+ * and have relations that reference Leaf/Composite Entities via CoRefs
  */
 
 import { co } from 'jazz-tools'
 import { ensureSchema } from '../../functions/dynamic-schema-migration.js'
 import { jsonSchemaToCoMapShape } from '../../functions/dynamic-schema-migration.js'
+import { addLabelToSchema } from '../../functions/dynamic-schema-migration.js'
 import { setSystemProps } from '../../functions/set-system-props.js'
 import { assignedToCompositeTypeSchema } from '../../schemas/data/composite-types.js'
 
@@ -16,19 +17,19 @@ import { assignedToCompositeTypeSchema } from '../../schemas/data/composite-type
  * Creates an ASSIGNED_TO Composite Entity instance
  * 
  * @param account - The Jazz account
- * @param bindings - Composite bindings (x1: Todo Leaf, x2: Human Leaf, x3-x5: optional)
+ * @param relation - Composite relation (x1: Todo Leaf/Composite, x2: Human Leaf/Composite, x3-x5: optional)
  * @returns The created ASSIGNED_TO Composite Entity co-value
  */
 export async function createAssignedToComposite(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	account: any,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	bindings: {
-		x1: any // CoRef to Todo Leaf Entity
-		x2: any // CoRef to Human Leaf Entity
-		x3?: any // CoRef to Human Leaf Entity (who assigned, optional)
-		x4?: any // CoRef to Date Leaf Entity (when assigned, optional)
-		x5?: any // CoRef to Date Leaf Entity (when accepted, optional)
+	relation: {
+		x1: any // Leaf or Composite Entity CoValue
+		x2: any // Leaf or Composite Entity CoValue
+		x3?: any // Leaf or Composite Entity CoValue (optional)
+		x4?: any // Leaf or Composite Entity CoValue (optional)
+		x5?: any // Leaf or Composite Entity CoValue (optional)
 	},
 ): Promise<any> {
 	console.log('[createAssignedToComposite] Creating ASSIGNED_TO Composite...')
@@ -68,38 +69,20 @@ export async function createAssignedToComposite(
 		throw new Error('Cannot determine entities list owner')
 	}
 
-	// Define Composite JSON Schema (bindings is an o-map with x1-x5 as o-map references)
-	const compositeSchema = {
-		type: 'object',
-		properties: {
-			bindings: {
-				type: 'o-map',
-				properties: {
-					x1: { type: 'o-map' }, // CoRef to Leaf Entity
-					x2: { type: 'o-map' }, // CoRef to Leaf Entity
-					x3: { type: 'o-map', optional: true },
-					x4: { type: 'o-map', optional: true },
-					x5: { type: 'o-map', optional: true },
-				},
-			},
-		},
-		required: ['bindings'],
-	}
-
-	// Get Composite CoMap schema dynamically
-	const compositeShape = jsonSchemaToCoMapShape(compositeSchema)
+	// Add @label and @schema to Composite schema before creating CoMap
+	// assignedToCompositeTypeSchema already defines x1-x5 directly (flattened structure)
+	const compositeSchemaWithSystemProps = addLabelToSchema(assignedToCompositeTypeSchema)
+	const compositeShape = jsonSchemaToCoMapShape(compositeSchemaWithSystemProps)
 	const CompositeCoMap = co.map(compositeShape)
 
-	// Create Composite Entity with bindings
+	// Create Composite Entity with x1-x5 directly (flattened structure)
 	const composite = CompositeCoMap.create(
 		{
-			bindings: {
-				x1: bindings.x1,
-				x2: bindings.x2,
-				x3: bindings.x3,
-				x4: bindings.x4,
-				x5: bindings.x5,
-			},
+			x1: relation.x1,
+			x2: relation.x2,
+			x3: relation.x3,
+			x4: relation.x4,
+			x5: relation.x5,
 		},
 		entitiesOwner,
 	)

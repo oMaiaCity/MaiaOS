@@ -19,55 +19,60 @@ export async function createAssignedToCompositeType(
 ): Promise<any> {
 	console.log('[createAssignedToCompositeType] Creating ASSIGNED_TO CompositeType...')
 
-	// Define the relation structure with x1-x5 positions
-	const relationData = {
-		x1: {
-			leafTypes: ['Todo'],
-			required: true,
-			description: 'The Todo being assigned',
-		},
-		x2: {
-			leafTypes: ['Human'],
-			required: true,
-			description: 'The Human assigned to',
-		},
-		x3: {
-			leafTypes: ['Human'],
-			required: false,
-			description: 'Who assigned this',
-		},
-		x4: {
-			leafTypes: ['Date'],
-			required: false,
-			description: 'Assignment timestamp',
-		},
-		x5: {
-			leafTypes: ['Date'],
-			required: false,
-			description: 'Acceptance timestamp',
-		},
-	}
-
-	// Create the full schema data
-	const schemaData = {
-		name: 'ASSIGNED_TO',
-		definition: 'x1 (Todo) is assigned to x2 (Human) by x3 at time x4 accepted at x5',
-		relation: relationData,
-	}
-
 	// Create CompositeType SchemaDefinition
+	// assignedToCompositeTypeSchema defines what Composite instances have (relation with x1-x5)
 	const assignedToType = await ensureSchema(account, 'ASSIGNED_TO', assignedToCompositeTypeSchema)
 
-	// Set the relation data on the schema (since relation is a passthrough object, we can set it directly)
-	// Note: The schema definition is stored in the definition property, but we need to set the actual relation data
-	// Actually, wait - ensureSchema creates a SchemaDefinition with the JSON schema in the definition property
-	// But we want the actual relation data stored. Let me check how this should work...
+	// Ensure the SchemaDefinition is fully loaded
+	await assignedToType.$jazz.ensureLoaded()
+	
+	// Set the type property to "Composite" on the SchemaDefinition itself (like LeafTypes do)
+	// Wrap in try-catch in case the existing SchemaDefinition was created with an older meta-schema
+	try {
+		assignedToType.$jazz.set('type', 'Composite')
+		await assignedToType.$jazz.waitForSync()
+	} catch (error) {
+		console.warn('[createAssignedToCompositeType] Could not set type property. SchemaDefinition may have been created with older meta-schema:', error)
+		// Continue - the SchemaDefinition will work without type set
+	}
+	
+	// Set x1-x5 position descriptions directly on the SchemaDefinition (flattened structure)
+	try {
+		assignedToType.$jazz.set('x1', 'The Todo being assigned')
+		await assignedToType.$jazz.waitForSync()
+	} catch (error) {
+		console.warn('[createAssignedToCompositeType] Could not set x1 property:', error)
+	}
+	
+	try {
+		assignedToType.$jazz.set('x2', 'The Human assigned to')
+		await assignedToType.$jazz.waitForSync()
+	} catch (error) {
+		console.warn('[createAssignedToCompositeType] Could not set x2 property:', error)
+	}
+	
+	try {
+		assignedToType.$jazz.set('x3', 'Who assigned this')
+		await assignedToType.$jazz.waitForSync()
+	} catch (error) {
+		console.warn('[createAssignedToCompositeType] Could not set x3 property:', error)
+	}
+	
+	try {
+		assignedToType.$jazz.set('x4', 'Assignment timestamp')
+		await assignedToType.$jazz.waitForSync()
+	} catch (error) {
+		console.warn('[createAssignedToCompositeType] Could not set x4 property:', error)
+	}
+	
+	try {
+		assignedToType.$jazz.set('x5', 'Acceptance timestamp')
+		await assignedToType.$jazz.waitForSync()
+	} catch (error) {
+		console.warn('[createAssignedToCompositeType] Could not set x5 property:', error)
+	}
 
-	// Actually, I think the relation structure is part of the schema definition itself
-	// The actual Composite instances will have bindings that reference Leafs
-	// So we just need to ensure the schema exists with the correct structure
-
-	console.log('[createAssignedToCompositeType] ASSIGNED_TO CompositeType created, ID:', assignedToType?.$jazz?.id)
+	console.log('[createAssignedToCompositeType] ASSIGNED_TO CompositeType created, ID:', assignedToType?.$jazz?.id, 'type:', assignedToType.type)
 	return assignedToType
 }
 
