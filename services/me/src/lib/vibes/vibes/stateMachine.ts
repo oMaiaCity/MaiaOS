@@ -19,6 +19,11 @@ export const vibesStateMachine: StateMachineConfig = {
 				name: 'Wallet',
 				description: 'Wallet management vibe',
 			},
+			{
+				id: 'layout',
+				name: 'Layout',
+				description: 'Layout testing ground',
+			},
 		],
 		selectedVibeId: null as string | null,
 	},

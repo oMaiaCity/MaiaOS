@@ -3,7 +3,6 @@
  * Exports all leaf components for easy importing
  */
 
-export { descriptionLeaf } from './description'
 export { errorLeaf } from './error'
 export { inputFormLeaf } from './inputForm'
 export { kanbanViewLeaf } from './kanbanView'

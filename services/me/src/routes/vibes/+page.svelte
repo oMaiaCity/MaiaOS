@@ -6,6 +6,7 @@
   import { todoVibeConfig } from "$lib/vibes/todo/config";
   import { vibesVibeConfig } from "$lib/vibes/vibes/config";
   import { walletVibeConfig } from "$lib/vibes/wallet/config";
+  import { layoutVibeConfig } from "$lib/vibes/layout/config";
 
   // Get vibe ID from route params (reactive)
   const vibeId = $derived($page.url.searchParams.get("id"));
@@ -14,6 +15,7 @@
   const vibeConfigs: Record<string, typeof vibesVibeConfig> = {
     todo: todoVibeConfig,
     wallet: walletVibeConfig,
+    layout: layoutVibeConfig,
   };
 
   // Determine which config to use (reactive to route changes)
@@ -33,7 +35,7 @@
 </script>
 
 {#if browser}
-  <div class="h-full w-full">
+  <div class="h-full w-full p-8">
     <Vibe config={currentConfig} onEvent={handleVibeEvent} />
   </div>
 {:else}

@@ -397,7 +397,7 @@
   }
 </script>
 
-<div class="w-full h-full overflow-y-auto max-w-7xl mx-auto px-6 py-6">
+<div class="w-full h-full overflow-y-auto max-w-7xl mx-auto p-8">
   {#if isBetterAuthPending}
     <div class="text-center pt-8 pb-4">
       <p class="text-slate-500">Loading...</p>

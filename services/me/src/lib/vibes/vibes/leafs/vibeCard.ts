@@ -9,7 +9,7 @@ import type { LeafNode } from '../../../compositor/view/leaf-types'
 export const vibeCardLeaf: LeafNode = {
 	tag: 'div',
 	classes: [
-		'p-6',
+		'p-4',
 		'bg-slate-100',
 		'rounded-2xl',
 		'border',
@@ -21,7 +21,7 @@ export const vibeCardLeaf: LeafNode = {
 		'cursor-pointer',
 		'flex',
 		'flex-col',
-		'gap-2',
+		'gap-1.5',
 	],
 	events: {
 		click: {
@@ -32,14 +32,14 @@ export const vibeCardLeaf: LeafNode = {
 	children: [
 		{
 			tag: 'h3',
-			classes: ['text-lg', 'font-semibold', 'text-slate-700'],
+			classes: ['text-base', 'font-semibold', 'text-slate-700', 'leading-tight'],
 			bindings: {
 				text: 'item.name',
 			},
 		},
 		{
 			tag: 'p',
-			classes: ['text-sm', 'text-slate-600'],
+			classes: ['text-xs', 'text-slate-600', 'leading-relaxed'],
 			bindings: {
 				text: 'item.description',
 			},

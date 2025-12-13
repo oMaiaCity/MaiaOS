@@ -9,8 +9,7 @@ export const todoStateMachine: StateMachineConfig = {
 	initial: 'idle',
 	// Unified data - everything is just data, no distinction
 	data: {
-		title: 'Hello Earth',
-		description: 'Welcome to the Vibe!',
+		title: 'Todos',
 		todos: [
 			{
 				id: '1',

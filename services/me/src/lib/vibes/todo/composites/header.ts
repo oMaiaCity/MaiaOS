@@ -3,7 +3,7 @@
  */
 
 import type { CompositeConfig } from '../../../compositor/view/types'
-import { descriptionLeaf, titleLeaf } from '../leafs'
+import { titleLeaf } from '../leafs'
 import {
 	viewButtonKanban,
 	viewButtonKanbanActive,
@@ -27,13 +27,7 @@ export const headerComposite: CompositeConfig = {
 				height: 'auto',
 			},
 		},
-		{
-			slot: 'description',
-			leaf: descriptionLeaf,
-			size: {
-				height: 'auto',
-			},
-		},
+
 		{
 			slot: 'viewButtons',
 			composite: {

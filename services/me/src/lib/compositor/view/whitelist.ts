@@ -126,9 +126,9 @@ const ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
  */
 const TAILWIND_PATTERNS = [
 	// Spacing
-	/^(p|m|px|py|pt|pb|pl|pr|mt|mb|ml|mr)-(\d+|auto|0\.5)$/, // Allow fractional spacing like py-0.5
-	/^gap-(\d+|auto)$/,
-	/^space-[xy]-(\d+|auto)$/,
+	/^(p|m|px|py|pt|pb|pl|pr|mt|mb|ml|mr)-(\d+(\.\d+)?|auto)$/, // Allow fractional spacing like py-0.5, p-1.5, etc.
+	/^gap-(\d+(\.\d+)?|auto)$/, // Allow fractional gap like gap-1.5, gap-2.5, etc.
+	/^space-[xy]-(\d+(\.\d+)?|auto)$/, // Allow fractional space like space-x-1.5
 
 	// Layout
 	/^(flex|grid|block|inline|inline-block|hidden|contents)$/,

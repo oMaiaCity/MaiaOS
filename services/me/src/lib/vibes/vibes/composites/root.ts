@@ -1,6 +1,6 @@
 /**
  * Root Composite Configuration
- * Grid layout showing available vibes
+ * Grid layout showing available vibes with DB-style card container
  */
 
 import type { CompositeConfig } from '../../../compositor/view/types'
@@ -9,46 +9,129 @@ import { vibeGridComposite } from './vibeGrid'
 export const rootComposite: CompositeConfig = {
 	type: 'stack',
 	container: {
-		class: 'h-full flex flex-col max-w-4xl mx-auto',
-		padding: '1.5rem',
-		borderRadius: '1.5rem',
-		background: 'rgb(248 250 252)',
-		border: '1px solid white',
+		class: 'h-full w-full max-w-6xl mx-auto flex flex-col',
+		padding: '1.5rem 1.5rem',
 	},
 	children: [
 		{
-			slot: 'header',
-			composite: {
-				type: 'flex',
-				flex: {
-					direction: 'row',
-					justify: 'space-between',
-					align: 'center',
-				},
-				container: {
-					padding: '0 0 1.5rem 0',
-				},
-				children: [
-					{
-						slot: 'title',
-						leaf: {
-							tag: 'h1',
-							classes: ['text-3xl', 'font-bold', 'text-slate-900'],
-							children: ['Vibes'],
-						},
-					},
-				],
-			},
-		},
-		{
-			slot: 'grid',
+			slot: 'cardContainer',
 			flex: {
 				grow: 1,
 				shrink: 1,
 				basis: '0',
 			},
-			overflow: 'auto',
-			composite: vibeGridComposite,
+			composite: {
+				type: 'stack',
+				container: {
+					class: 'card h-full',
+				},
+				overflow: 'hidden',
+				children: [
+					// Internal Header (inside card)
+					{
+						slot: 'header',
+						composite: {
+							type: 'flex',
+							flex: {
+								direction: 'row',
+								justify: 'space-between',
+								align: 'center',
+							},
+							container: {
+								class: 'px-6 py-4 border-b border-slate-200',
+							},
+							children: [
+								{
+									slot: 'title',
+									leaf: {
+										tag: 'h2',
+										classes: ['text-lg', 'font-semibold', 'text-slate-700', 'm-0'],
+										children: ['Vibes'],
+									},
+								},
+							],
+						},
+					},
+				// Content Area (scrollable grid)
+				{
+					slot: 'content',
+					flex: {
+						grow: 1,
+						shrink: 1,
+						basis: '0',
+					},
+					overflow: 'auto',
+					composite: {
+						type: 'grid',
+						grid: {
+							columns: 'repeat(auto-fill, minmax(280px, 1fr))',
+							gap: '0.75rem',
+						},
+						container: {
+							class: 'p-6 w-full',
+						},
+						children: [
+							{
+								slot: 'vibeCards',
+								leaf: {
+									tag: 'div',
+									style: {
+										display: 'contents',
+									},
+									bindings: {
+										foreach: {
+											items: 'data.availableVibes',
+											key: 'id',
+											leaf: {
+												tag: 'div',
+												classes: [
+													'p-4',
+													'bg-slate-100',
+													'rounded-2xl',
+													'border',
+													'border-white',
+													'shadow-[0_0_4px_rgba(0,0,0,0.02)]',
+													'backdrop-blur-sm',
+													'hover:border-slate-300',
+													'transition-all',
+													'cursor-pointer',
+													'flex',
+													'flex-col',
+													'gap-1.5',
+												],
+												events: {
+													click: {
+														event: 'SELECT_VIBE',
+														payload: 'item.id',
+													},
+												},
+												children: [
+													{
+														tag: 'h3',
+														classes: ['text-base', 'font-semibold', 'text-slate-700', 'leading-tight'],
+														bindings: {
+															text: 'item.name',
+														},
+													},
+													{
+														tag: 'p',
+														classes: ['text-xs', 'text-slate-600', 'leading-relaxed'],
+														bindings: {
+															text: 'item.description',
+														},
+													},
+												],
+											},
+										},
+									},
+								},
+							},
+						],
+					},
+				},
+				],
+			},
 		},
 	],
 }
+

@@ -53,8 +53,10 @@ export interface SlotEventMapping {
 
 /**
  * Layout Type - Defines the layout strategy
+ * Semantic types: 'list' (vertical scrollable), 'row' (horizontal wrapping)
+ * Low-level types: 'flex', 'stack', 'grid', 'overlay' (for advanced use)
  */
-export type LayoutType = 'grid' | 'flex' | 'stack' | 'overlay'
+export type LayoutType = 'grid' | 'flex' | 'stack' | 'overlay' | 'list' | 'row'
 
 /**
  * Overflow Behavior
@@ -131,6 +133,12 @@ export interface Size {
  */
 export interface CompositeConfig {
 	type: LayoutType
+	// Semantic layout properties (for list/row/grid)
+	spacing?: number // Gap in rem (default: 1rem for list/row, 0.75rem for grid)
+	alignment?: 'start' | 'center' | 'end' | 'stretch' // Default: 'start'
+	columns?: number // For grid only - number of columns (generates repeat(N, 1fr))
+	wrap?: boolean // For row only - whether to wrap (default: true)
+	// Low-level properties (backward compatible)
 	grid?: GridTemplate
 	flex?: FlexProperties
 	container?: ContainerStyles
@@ -179,6 +187,11 @@ export interface ViewNode {
 	position?: Position
 	size?: Size
 	overflow?: OverflowBehavior
+	/**
+	 * Visibility binding - data path or expression that determines if this node should be visible
+	 * Example: "data.selectedLayout === 'list'"
+	 */
+	visible?: string
 }
 
 /**

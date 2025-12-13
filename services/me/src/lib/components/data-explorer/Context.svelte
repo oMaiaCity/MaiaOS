@@ -138,21 +138,21 @@
     
     if (!schemaCoValue.$isLoaded) return null;
     
-    try {
-      // Access definition directly from CoValue (reactive access)
-      const definition = (schemaCoValue as any).definition;
+      try {
+        // Access definition directly from CoValue (reactive access)
+        const definition = (schemaCoValue as any).definition;
       
       // Check if definition has properties
-      if (definition && typeof definition === 'object') {
-        // For passthrough objects, properties might be accessible directly
-        if (definition.properties && typeof definition.properties === 'object') {
-          return definition;
+        if (definition && typeof definition === 'object') {
+          // For passthrough objects, properties might be accessible directly
+          if (definition.properties && typeof definition.properties === 'object') {
+            return definition;
+          }
+          // If properties is missing, try to reconstruct from the definition object itself
+          if ('type' in definition && definition.type === 'object' && 'properties' in definition) {
+            return definition;
+          }
         }
-        // If properties is missing, try to reconstruct from the definition object itself
-        if ('type' in definition && definition.type === 'object' && 'properties' in definition) {
-          return definition;
-        }
-      }
     } catch (_e) {
       // If direct access fails, try snapshot access
     }

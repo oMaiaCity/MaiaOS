@@ -269,16 +269,19 @@
   });
   const visibleValue = $derived.by(() => {
     if (!leaf.bindings?.visible) return undefined;
-    // Access data to ensure reactivity - explicitly access showSendModal for visibility
+    // Access data to ensure reactivity
     const _ = data;
     const dataObj = data as Record<string, unknown>;
-    const __ = dataObj.showSendModal; // Explicitly access showSendModal for reactivity
+    // Explicitly access common visibility properties for reactivity
+    const __ = dataObj.showSendModal;
+    const ___ = dataObj.selectedLayout;
+    const ____ = dataObj.viewMode;
     // If we're in a foreach context, access all item properties to trigger reactivity
     if ("item" in data && data.item && typeof data.item === "object") {
       const item = data.item as Record<string, unknown>;
       // Access all properties to ensure reactivity tracking for any property changes
       Object.keys(item).forEach((key) => {
-        const ___ = item[key];
+        const _____ = item[key];
       });
     }
     return resolveValue(leaf.bindings.visible);
