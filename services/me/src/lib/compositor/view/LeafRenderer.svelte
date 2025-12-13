@@ -10,6 +10,7 @@
   import { sanitizeClasses } from "./whitelist";
   import LeafRenderer from "./LeafRenderer.svelte";
   import Icon from "@iconify/svelte";
+  import { browser } from "$app/environment";
 
   interface Props {
     leaf: LeafNode;

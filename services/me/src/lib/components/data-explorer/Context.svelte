@@ -47,6 +47,127 @@
     Object.entries(properties).filter(([key]) => key !== '@label' && key !== '@schema'),
   );
 
+  // Get schema definition from snapshot's @schema field using reactive Jazz resolution
+  const schemaDefinition = $derived(() => {
+    if (!snapshot || typeof snapshot !== 'object') return null;
+    
+    const schemaRef = snapshot['@schema'];
+    if (!schemaRef) return null;
+    
+    // Find schema in directChildren
+    const schemaId = typeof schemaRef === 'string' && schemaRef.startsWith('co_')
+      ? schemaRef
+      : (schemaRef && typeof schemaRef === 'object' && '$jazz' in schemaRef)
+        ? schemaRef.$jazz?.id
+        : null;
+    
+    if (!schemaId) return null;
+    
+    const schemaChild = context.directChildren?.find((c) => c.coValueId === schemaId);
+    if (!schemaChild) return null;
+    
+    // Try accessing from CoValue directly first (reactive - most reliable for passthrough objects)
+    const schemaCoValue = schemaChild?.resolved?.value;
+    if (schemaCoValue && typeof schemaCoValue === 'object') {
+      try {
+        // Access definition directly from CoValue (reactive access)
+        const definition = (schemaCoValue as any).definition;
+        console.log('[Context] Found definition in CoValue:', {
+          definition,
+          definitionType: typeof definition,
+          isObject: definition && typeof definition === 'object',
+          definitionKeys: definition && typeof definition === 'object' ? Object.keys(definition) : null,
+          hasProperties: definition?.properties !== undefined,
+          propertiesType: typeof definition?.properties,
+          propertiesKeys: definition?.properties && typeof definition?.properties === 'object' ? Object.keys(definition.properties) : null,
+          // Try to access properties directly
+          priorityEnum: definition?.properties?.priority?.enum,
+          statusEnum: definition?.properties?.status?.enum
+        });
+        
+        // Check if definition has properties (even if it's a passthrough object)
+        if (definition && typeof definition === 'object') {
+          // For passthrough objects, properties might be accessible directly
+          if (definition.properties && typeof definition.properties === 'object') {
+            return definition;
+          }
+          // If properties is missing, try to reconstruct from the definition object itself
+          // Passthrough objects might store properties at the top level
+          if ('type' in definition && definition.type === 'object' && 'properties' in definition) {
+            return definition;
+          }
+        }
+      } catch (e) {
+        console.log('[Context] Error accessing definition from CoValue:', e);
+        // If direct access fails, fall through to snapshot access
+      }
+    }
+    
+    // Fallback: try snapshot access
+    const schemaSnapshot = schemaChild?.resolved?.snapshot;
+    if (schemaSnapshot && typeof schemaSnapshot === 'object' && 'definition' in schemaSnapshot) {
+      const definition = schemaSnapshot.definition;
+      console.log('[Context] Found definition in snapshot:', {
+        definition,
+        definitionType: typeof definition,
+        isObject: definition && typeof definition === 'object',
+        definitionKeys: definition && typeof definition === 'object' ? Object.keys(definition) : null,
+        hasProperties: definition?.properties !== undefined,
+        propertiesType: typeof definition?.properties,
+        propertiesKeys: definition?.properties && typeof definition?.properties === 'object' ? Object.keys(definition.properties) : null,
+        // Try to access properties directly
+        priorityEnum: definition?.properties?.priority?.enum,
+        statusEnum: definition?.properties?.status?.enum,
+        // Check if definition is the JSON Schema object itself
+        definitionString: JSON.stringify(definition, null, 2).slice(0, 500)
+      });
+      // Passthrough objects should be serialized as plain objects in snapshots
+      if (definition && typeof definition === 'object' && definition.properties && typeof definition.properties === 'object') {
+        return definition;
+      }
+    }
+    
+    return null;
+  });
+  
+  // Debug: Log schema definition changes
+  $effect(() => {
+    // Access schemaDefinition value reactively (it's a $derived(), so access it)
+    const schemaDefValue = schemaDefinition;
+    if (schemaDefValue) {
+      try {
+        let definitionString: string | null = null;
+        try {
+          definitionString = JSON.stringify(schemaDefValue, null, 2);
+        } catch (e) {
+          // JSON.stringify might fail for circular references or functions
+          definitionString = String(schemaDefValue);
+        }
+        console.log('[Context] Schema definition found:', {
+          schemaDefinition: schemaDefValue,
+          schemaDefinitionType: typeof schemaDefinition,
+          schemaDefinitionValueType: typeof schemaDefValue,
+          schemaDefinitionKeys: schemaDefValue && typeof schemaDefValue === 'object' ? Object.keys(schemaDefValue) : null,
+          hasProperties: !!schemaDefValue.properties,
+          propertiesType: typeof schemaDefValue.properties,
+          propertyKeys: schemaDefValue.properties && typeof schemaDefValue.properties === 'object' ? Object.keys(schemaDefValue.properties) : null,
+          priorityEnum: schemaDefValue.properties?.priority?.enum,
+          statusEnum: schemaDefValue.properties?.status?.enum,
+          // Try to see the full structure
+          definitionString: definitionString && typeof definitionString === 'string' ? definitionString.slice(0, 1000) : null
+        });
+      } catch (e) {
+        console.log('[Context] Error logging schema definition:', e, {
+          schemaDefinition: schemaDefValue,
+          schemaDefinitionType: typeof schemaDefinition,
+          schemaDefinitionValueType: typeof schemaDefValue
+        });
+      }
+    } else {
+      console.log('[Context] Schema definition is null');
+    }
+  });
+
   // Initialize with default, then sync with prop
   let currentView = $state<"list" | "table">("list");
 
@@ -129,6 +250,7 @@
         {onNavigate}
         {onObjectNavigate}
         parentCoValue={context.resolved.snapshot}
+        schemaDefinition={schemaDefinition}
       />
     {:else if currentView === "table"}
       <!-- Table View - proper table layout with list item styling -->
@@ -172,6 +294,26 @@
                 : null}
               {@const isClickable = (isCoID && onNavigate !== undefined) || isObject}
               {@const isCoList = child?.resolved?.type === 'colist' || child?.resolved?.extendedType === 'CoList'}
+              
+              <!-- Get property type from schema definition -->
+              {@const propSchema = schemaDefinition?.properties?.[key]}
+              {@const schemaType = propSchema?.enum && Array.isArray(propSchema.enum)
+                ? "enum"
+                : propSchema?.type === 'date' || propSchema?.type === 'date-time'
+                  ? "date"
+                  : propSchema?.type || null}
+              {@const displayType = isComputedField
+                ? "string"
+                : isCoID && child?.resolved
+                  ? (child.resolved.extendedType || child.resolved.type || "CoValue")
+                  : isCoID
+                    ? "CoValue"
+                    : isObject
+                      ? "object"
+                      : schemaType || (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value))
+                        ? "date"
+                        : typeof value}
+              
               <tr>
                 <td class="p-0 pb-3 pr-3">
                   <span
@@ -180,23 +322,7 @@
                   >
                 </td>
                 <td class="p-0 pb-3 pr-3">
-                  {#if isCoID && child?.resolved}
-                    <Badge
-                      type={child.resolved.extendedType ||
-                        child.resolved.type ||
-                        "CoValue"}
-                    >
-                      {child.resolved.extendedType ||
-                        child.resolved.type ||
-                        "CoValue"}
-                    </Badge>
-                  {:else if isCoID}
-                    <Badge type="CoValue">CoValue</Badge>
-                  {:else if isObject}
-                    <Badge type="object">Object</Badge>
-                  {:else}
-                    <Badge type={typeof value}>{typeof value}</Badge>
-                  {/if}
+                  <Badge type={displayType}>{displayType}</Badge>
                 </td>
                 <td class="p-0 pb-3">
                   {#if isClickable}

@@ -16,6 +16,7 @@
       parentKey: string,
     ) => void;
     parentCoValue?: any; // Parent CoValue context for object navigation
+    schemaDefinition?: any; // Schema definition JSON Schema object
   }
 
   const {
@@ -26,6 +27,7 @@
     onNavigate,
     onObjectNavigate,
     parentCoValue,
+    schemaDefinition,
   }: Props = $props();
 
   // Check if this is a computed field (fields starting with @ are computed)
@@ -47,7 +49,68 @@
       onObjectNavigate !== undefined,
   );
 
-  // Determine display type - use resolved type if available
+  // Get property schema from schema definition
+  // schemaDefinition prop might be a $derived() function - we need to access it reactively
+  // In Svelte 5, props are reactive, so accessing schemaDefinition here will trigger reactivity
+  const propertySchema = $derived(() => {
+    // Access the prop value - if it's a function (from $derived), we need to call it
+    // But props should already be unwrapped, so this should be the actual value
+    let schemaDefValue: any = schemaDefinition;
+    
+    // If schemaDefinition is still a function (shouldn't happen, but handle it)
+    if (typeof schemaDefValue === 'function') {
+      try {
+        schemaDefValue = schemaDefValue();
+      } catch (_e) {
+        return null;
+      }
+    }
+    
+    if (!schemaDefValue || typeof schemaDefValue !== 'object') return null;
+    if (!schemaDefValue.properties || typeof schemaDefValue.properties !== 'object') return null;
+    return schemaDefValue.properties[propKey] || null;
+  });
+  
+  // Debug: Log property schema changes for priority and status
+  $effect(() => {
+    if (propKey === 'priority' || propKey === 'status') {
+      try {
+        // Access the actual values reactively - propertySchema is a $derived(), so access it
+        const propSchemaValue = propertySchema;
+        
+        // Access schemaDefinition prop - unwrap if it's a function
+        let schemaDefValue: any = schemaDefinition;
+        if (typeof schemaDefValue === 'function') {
+          try {
+            schemaDefValue = schemaDefValue();
+          } catch (_e) {
+            schemaDefValue = null;
+          }
+        }
+        
+        // Log the actual propertySchema object directly
+        console.log(`[ListItem] ${propKey} - propertySchema direct:`, propSchemaValue);
+        console.log(`[ListItem] ${propKey} - propertySchema.enum:`, propSchemaValue?.enum);
+        console.log(`[ListItem] ${propKey} - propertySchema.type:`, propSchemaValue?.type);
+        console.log(`[ListItem] ${propKey} - typeof propertySchema:`, typeof propSchemaValue);
+        console.log(`[ListItem] ${propKey} - propertySchema keys:`, propSchemaValue && typeof propSchemaValue === 'object' ? Object.keys(propSchemaValue) : 'not an object');
+        
+        // Log the schema definition
+        console.log(`[ListItem] ${propKey} - schemaDefinition (unwrapped):`, schemaDefValue);
+        console.log(`[ListItem] ${propKey} - schemaDefinition.properties:`, schemaDefValue?.properties);
+        console.log(`[ListItem] ${propKey} - schemaDefinition.properties.${propKey}:`, schemaDefValue?.properties?.[propKey]);
+        
+        // Try to get the property schema directly from schemaDefinition
+        const directPropSchema = schemaDefValue?.properties?.[propKey];
+        console.log(`[ListItem] ${propKey} - directPropSchema:`, directPropSchema);
+        console.log(`[ListItem] ${propKey} - directPropSchema.enum:`, directPropSchema?.enum);
+      } catch (e) {
+        console.log(`[ListItem] Error logging ${propKey} propertySchema:`, e);
+      }
+    }
+  });
+
+  // Determine display type - use schema definition when available, fallback to runtime detection
   const getDisplayType = (value: any): string => {
     // Computed fields are always strings
     if (isComputedField) {
@@ -59,12 +122,65 @@
     if (typeof value === "string" && value.startsWith("co_")) {
       return "CoValue";
     }
-    // Check for Date objects (before string check, since Date can be serialized)
+    
+    // Check for Date objects first (before schema check, since Date can be serialized)
     if (value instanceof Date) return "date";
     // Check for Date strings (ISO format) - dates are serialized to ISO strings in JSON snapshots
     if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
       return "date";
     }
+    
+    // Use schema definition type if available (most reliable)
+    // Access schemaDefinition prop directly and get property schema from it
+    // This avoids the $derived() unwrapping issue
+    let schemaDefValue: any = schemaDefinition;
+    if (typeof schemaDefValue === 'function') {
+      try {
+        schemaDefValue = schemaDefValue();
+      } catch (_e) {
+        schemaDefValue = null;
+      }
+    }
+    
+    if (schemaDefValue && typeof schemaDefValue === 'object' && schemaDefValue.properties && typeof schemaDefValue.properties === 'object') {
+      const propSchema = schemaDefValue.properties[propKey];
+      if (propSchema && typeof propSchema === 'object' && !Array.isArray(propSchema) && propSchema !== null) {
+        // Check for enum first (enum takes precedence)
+        if (propSchema.enum && Array.isArray(propSchema.enum) && propSchema.enum.length > 0) {
+          // Only show as enum if value is actually a string (not null)
+          if (value === null) return "object";
+          if (typeof value === "string") {
+            return "enum";
+          }
+          // For non-string values, fall through to runtime detection
+        }
+        
+        // Check type from schema
+        const type = propSchema.type;
+        if (type === 'date' || type === 'date-time') {
+          // If schema says date but value is null, still show as date type
+          if (value === null) return "date";
+          return "date";
+        }
+        if (type === 'string') {
+          return "string";
+        }
+        if (type === 'number' || type === 'integer') {
+          return "number";
+        }
+        if (type === 'boolean') {
+          return "boolean";
+        }
+        if (type === 'array') {
+          return "array";
+        }
+        if (type === 'object') {
+          return "object";
+        }
+      }
+    }
+    
+    // Fallback to runtime type detection if schema definition not available
     if (typeof value === "string") return "string";
     if (typeof value === "number") return "number";
     if (typeof value === "boolean") return "boolean";

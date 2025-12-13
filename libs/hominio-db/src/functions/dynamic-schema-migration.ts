@@ -744,6 +744,20 @@ export async function ensureSchema(
 	// This is a workaround in case the dynamic schema creation doesn't properly set it
 	newSchema.$jazz.set('name', schemaName)
 	await newSchema.$jazz.waitForSync()
+	
+	// Explicitly set definition property using $jazz.set to ensure passthrough object is stored correctly
+	// Passthrough objects need to be explicitly set to ensure nested properties are serialized
+	newSchema.$jazz.set('definition', modifiedJsonSchema)
+	await newSchema.$jazz.waitForSync()
+	
+	// Verify definition was set correctly
+	const verifyDefinition = newSchema.definition
+	console.log(`[ensureSchema] Created schema "${schemaName}", definition after set:`, {
+		hasDefinition: !!verifyDefinition,
+		definitionType: typeof verifyDefinition,
+		hasProperties: !!verifyDefinition?.properties,
+		propertyKeys: verifyDefinition?.properties ? Object.keys(verifyDefinition.properties) : null
+	})
 
 	// Verify name was set
 	const verifyName = newSchema.name

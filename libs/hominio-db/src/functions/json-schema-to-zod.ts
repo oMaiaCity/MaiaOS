@@ -27,9 +27,12 @@ export function jsonSchemaToZod(
 	const type = propertySchema.type
 	let schema: any
 
-	// Handle enum/literal types
+	// Handle enum/literal types FIRST (before type check)
+	// Enums take precedence over type when both are present
 	if (propertySchema.enum && Array.isArray(propertySchema.enum)) {
-		schema = z.literal(propertySchema.enum)
+		// Jazz supports both z.literal([...]) and z.enum([...]) for enums
+		// Use z.enum() for better validation and error messages
+		schema = z.enum(propertySchema.enum as [string, ...string[]])
 	}
 	// Handle Jazz CoValue types (o- prefix)
 	else if (type?.startsWith('o-')) {

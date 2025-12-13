@@ -532,6 +532,7 @@
         id: "todo_eat_banana",
         name: "eat banana",
         status: "todo",
+        priority: "medium",
         dueDate: new Date("2025-12-31"),
       });
 

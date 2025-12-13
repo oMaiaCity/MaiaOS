@@ -91,6 +91,8 @@
 	--color-badge-boolean-text: #166534;
 	--color-badge-date-bg: #cffafe;
 	--color-badge-date-text: #155e75;
+	--color-badge-enum-bg: #e0e7ff;
+	--color-badge-enum-text: #3730a3;
 	--color-badge-array-bg: #cffafe;
 	--color-badge-array-text: #155e75;
 	--color-badge-object-bg: #fef3c7;
@@ -244,6 +246,10 @@
 
 .badge-date {
 	@apply bg-[var(--color-badge-date-bg)] text-[var(--color-badge-date-text)];
+}
+
+.badge-enum {
+	@apply bg-[var(--color-badge-enum-bg)] text-[var(--color-badge-enum-text)];
 }
 
 .badge-array {
