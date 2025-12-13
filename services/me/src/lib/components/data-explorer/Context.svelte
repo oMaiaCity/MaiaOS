@@ -1,11 +1,11 @@
 <script lang="ts">
   import type { CoValueContext } from "@hominio/db";
-  import type { LocalNode } from "cojson";
+  import type { LocalNode, CoID, RawCoValue } from "cojson";
   import { CoMap } from "jazz-tools";
   import { CoState } from "jazz-tools/svelte";
   import Badge from "./Badge.svelte";
   import ListView from "./ListView.svelte";
-  import { createCoValueState, deriveResolvedFromCoState } from "$lib/utils/costate-navigation";
+  import { createCoValueState } from "$lib/utils/costate-navigation";
 
   interface Props {
     context: CoValueContext;
@@ -51,23 +51,51 @@
   );
 
   // Get schema definition using CoState (reactive)
-  const schemaDefinition = $derived(() => {
+  // Store schema CoState instances to avoid recreating them
+  let schemaCoValueStates = $state<Map<CoID<RawCoValue>, CoState<typeof CoMap>>>(new Map());
+  
+  // Extract schema ID from snapshot
+  const schemaId = $derived(() => {
     if (!snapshot || typeof snapshot !== 'object') return null;
     
     const schemaRef = snapshot['@schema'];
     if (!schemaRef) return null;
     
     // Extract schema ID
-    const schemaId = typeof schemaRef === 'string' && schemaRef.startsWith('co_')
-      ? schemaRef
+    return typeof schemaRef === 'string' && schemaRef.startsWith('co_')
+      ? schemaRef as CoID<RawCoValue>
       : (schemaRef && typeof schemaRef === 'object' && '$jazz' in schemaRef)
-        ? schemaRef.$jazz?.id
+        ? schemaRef.$jazz?.id as CoID<RawCoValue>
         : null;
+  });
+  
+  // Create CoState for schema reactively
+  $effect(() => {
+    const id = schemaId();
+    if (!id) {
+      schemaCoValueStates.clear();
+      return;
+    }
     
-    if (!schemaId) return null;
+    // Get or create CoState for schema
+    if (!schemaCoValueStates.has(id)) {
+      try {
+        const schemaCoValueState = createCoValueState(id);
+        schemaCoValueStates.set(id, schemaCoValueState);
+      } catch (_e) {
+        // Ignore errors
+      }
+    }
+  });
+  
+  // Get schema definition reactively from CoState
+  const schemaDefinition = $derived(() => {
+    const id = schemaId();
+    if (!id) return null;
     
-    // Use CoState to load schema reactively
-    const schemaCoValueState = createCoValueState(schemaId);
+    const schemaCoValueState = schemaCoValueStates.get(id);
+    if (!schemaCoValueState) return null;
+    
     const schemaCoValue = schemaCoValueState.current;
     
     if (!schemaCoValue.$isLoaded) return null;
@@ -92,7 +120,7 @@
     }
     
     // Fallback: try snapshot access from resolved context
-    const schemaChild = context.directChildren?.find((c) => c.coValueId === schemaId);
+    const schemaChild = context.directChildren?.find((c) => c.coValueId === id);
     const schemaSnapshot = schemaChild?.resolved?.snapshot;
     if (schemaSnapshot && typeof schemaSnapshot === 'object' && 'definition' in schemaSnapshot) {
       const definition = schemaSnapshot.definition;
@@ -235,7 +263,7 @@
               
               <!-- Get property type from schema definition -->
               {@const propSchema = schemaDefinition?.properties?.[key]}
-              {@const schemaType = propSchema?.enum && Array.isArray(propSchema.enum)
+              {@const schemaType = propSchema?.enum && Array.isArray(propSchema.enum) && propSchema.enum.length > 0 && typeof value === "string" && value !== null
                 ? "enum"
                 : propSchema?.type === 'date' || propSchema?.type === 'date-time'
                   ? "date"
