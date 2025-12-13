@@ -3,11 +3,8 @@
     type CoValueContext,
     JazzAccount,
     resetData,
-    createHumanLeafType,
-    createTodoLeafType,
     createHumanLeaf,
     createTodoLeaf,
-    createAssignedToCompositeType,
     createAssignedToComposite,
   } from "@hominio/db";
   import type { CoID, RawCoValue } from "cojson";
@@ -331,32 +328,6 @@
     }
   }
 
-  // Handle creating Human LeafType
-  async function handleCreateHumanLeafType() {
-    if (!me.$isLoaded) return;
-
-    try {
-      await createHumanLeafType(me);
-      // Mutations are reactive - CoState will automatically update
-      // No need to manually clear cache or reload
-    } catch (error) {
-      console.error("Error creating Human LeafType:", error);
-    }
-  }
-
-  // Handle creating Todo LeafType
-  async function handleCreateTodoLeafType() {
-    if (!me.$isLoaded) return;
-
-    try {
-      await createTodoLeafType(me);
-      // Mutations are reactive - CoState will automatically update
-      // No need to manually clear cache or reload
-    } catch (error) {
-      console.error("Error creating Todo LeafType:", error);
-    }
-  }
-
   // Handle creating Sam Human Leaf
   async function handleCreateSamHuman() {
     if (!me.$isLoaded) return;
@@ -384,7 +355,6 @@
         id: "todo_eat_banana",
         name: "eat banana",
         status: "todo",
-        priority: "medium",
         dueDate: new Date("2025-12-31"),
       });
       // Mutations are reactive - CoState will automatically update
@@ -394,33 +364,18 @@
     }
   }
 
-  // Handle creating "assigned" CompositeType
-  async function handleCreateAssignedToCompositeType() {
-    if (!me.$isLoaded) return;
-
-    try {
-      await createAssignedToCompositeType(me);
-      // Mutations are reactive - CoState will automatically update
-      // No need to manually clear cache or reload
-    } catch (error) {
-      console.error("Error creating 'assigned' CompositeType:", error);
-    }
-  }
-
   // Handle creating "assigned" Composite instance
   async function handleCreateAssignedToComposite() {
     if (!me.$isLoaded) return;
 
     try {
-      // First, ensure the CompositeType exists
-      await createAssignedToCompositeType(me);
-
       // Create new Todo and Human entities for testing (simplified - no lookup needed)
+      // Note: CompositeType is auto-created via ensureSchema() in createAssignedToComposite
       const todoEntity = await createTodoLeaf(me, {
         id: "todo_test_assigned",
         name: "test todo for assigned relation",
         status: "todo",
-        priority: "medium",
+        dueDate: new Date("2025-12-31"),
       });
 
       const humanEntity = await createHumanLeaf(me, {
@@ -604,25 +559,6 @@
                 <!-- Action Buttons -->
                 <div class="mt-6 pt-6 border-t border-slate-200">
                   <div class="flex flex-col gap-2">
-                    <!-- Milestone 1: LeafTypes -->
-                    <div
-                      class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                    >
-                      Milestone 1: LeafTypes
-                    </div>
-                    <button
-                      onclick={() => handleCreateHumanLeafType()}
-                      class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
-                    >
-                      Create Human LeafType
-                    </button>
-                    <button
-                      onclick={() => handleCreateTodoLeafType()}
-                      class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
-                    >
-                      Create Todo LeafType
-                    </button>
-
                     <!-- Milestone 2: Leafs -->
                     <div
                       class="text-xs font-semibold text-slate-500 uppercase mb-1 mt-4"
@@ -640,19 +576,6 @@
                       class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                     >
                       Create "eat banana" (Todo)
-                    </button>
-
-                    <!-- Milestone 3: CompositeTypes -->
-                    <div
-                      class="text-xs font-semibold text-slate-500 uppercase mb-1 mt-4"
-                    >
-                      Milestone 3: CompositeTypes
-                    </div>
-                    <button
-                      onclick={() => handleCreateAssignedToCompositeType()}
-                      class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
-                    >
-                      Create "assigned" CompositeType
                     </button>
 
                     <!-- Milestone 4: Composites -->

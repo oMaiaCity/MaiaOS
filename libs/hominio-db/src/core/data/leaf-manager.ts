@@ -91,7 +91,7 @@ export async function createHumanLeaf(
  * Creates a Todo Leaf Entity instance
  * 
  * @param account - The Jazz account
- * @param data - Todo Leaf data (id, name, description, priority, status, dueDate, completedAt)
+ * @param data - Todo Leaf data (id, name, description, status, dueDate)
  * @returns The created Todo Leaf Entity co-value
  */
 export async function createTodoLeaf(
@@ -102,10 +102,8 @@ export async function createTodoLeaf(
 		id: string
 		name: string
 		description?: string
-		priority?: 'low' | 'medium' | 'high' | 'urgent'
 		status?: 'todo' | 'in_progress' | 'done' | 'blocked'
 		dueDate?: Date
-		completedAt?: Date
 	},
 ): Promise<any> {
 	console.log('[createTodoLeaf] Creating Todo Leaf:', data.name)
@@ -155,10 +153,8 @@ export async function createTodoLeaf(
 		{
 			name: data.name,
 			description: data.description,
-			priority: data.priority,
 			status: data.status,
 			dueDate: data.dueDate,
-			completedAt: data.completedAt,
 		},
 		entitiesOwner,
 	)

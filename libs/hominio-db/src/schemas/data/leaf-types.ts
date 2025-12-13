@@ -24,16 +24,11 @@ export const todoLeafTypeSchema: any = {
 		type: { type: 'string', required: true }, // "Leaf" for LeafTypes
 		name: { type: 'string', required: true },
 		description: { type: 'string' },
-		priority: {
-			type: 'string',
-			enum: ['low', 'medium', 'high', 'urgent'],
-		},
 		status: {
 			type: 'string',
 			enum: ['todo', 'in_progress', 'done', 'blocked'],
 		},
 		dueDate: { type: 'date' },
-		completedAt: { type: 'date' },
 	},
 	required: ['type', 'name'],
 }
