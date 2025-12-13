@@ -428,11 +428,11 @@
       <h1 class="text-4xl font-bold text-slate-700 mb-4">Welcome</h1>
       <p class="text-slate-500 mb-6">Please sign in to access your data.</p>
     </div>
-  {:else if !currentContext && isLoading}
+  {:else if !currentContext && !currentObjectContext && isLoading}
     <div class="text-center pt-8 pb-4">
       <p class="text-slate-500">Loading context...</p>
     </div>
-  {:else if !currentContext}
+  {:else if !currentContext && !currentObjectContext}
     <div class="text-center pt-8 pb-4">
       <p class="text-slate-500">No context available</p>
     </div>
@@ -440,7 +440,7 @@
     <div class="text-center pt-8 pb-4">
       <p class="text-slate-500">Loading...</p>
     </div>
-  {:else}
+  {:else if currentContext || currentObjectContext}
     <div>
       <!-- Breadcrumb Navigation -->
       <div class="flex items-center gap-2 mb-6">
