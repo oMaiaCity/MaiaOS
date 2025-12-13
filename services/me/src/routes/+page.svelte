@@ -41,14 +41,14 @@
   );
 </script>
 
-<div class="w-full max-w-4xl mx-auto px-6 pt-8 pb-20 space-y-6">
+<div class="w-full h-full overflow-y-auto max-w-4xl mx-auto px-6 py-6 space-y-6">
   {#if isBetterAuthPending}
     <div class="text-center pt-8 pb-4">
       <p class="text-slate-500">Loading...</p>
     </div>
   {:else if !isBetterAuthSignedIn}
     <!-- Landing Page Header -->
-    <header class="text-center pt-32 pb-20">
+    <header class="text-center pb-20">
       <h1
         class="text-6xl md:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 tracking-tight mb-6"
       >
@@ -72,7 +72,7 @@
     </div>
   {:else if me.$isLoaded}
     <!-- Welcome Section -->
-    <header class="text-center pt-24 pb-4">
+    <header class="text-center pb-4">
       <!-- Profile Image -->
       {#if profileImage}
         <div class="flex justify-center mb-6">

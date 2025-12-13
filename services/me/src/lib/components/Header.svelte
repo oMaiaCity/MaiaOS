@@ -76,9 +76,9 @@
   }
 </script>
 
-<header class="fixed top-0 left-0 right-0 z-50">
+<header class="sticky top-0 z-50 bg-gray-200">
   <nav
-    class="bg-gray-200 relative flex justify-between items-center py-4 px-4 border-b border-slate-200"
+    class="relative flex justify-between items-center py-4 px-4 border-b border-slate-200"
   >
     <!-- Left: Logo and Route Title/Description -->
     <div class="flex items-center gap-4 flex-shrink-0">

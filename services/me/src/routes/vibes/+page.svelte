@@ -33,13 +33,11 @@
 </script>
 
 {#if browser}
-  <div class="h-screen w-screen">
+  <div class="h-full w-full">
     <Vibe config={currentConfig} onEvent={handleVibeEvent} />
   </div>
 {:else}
-  <div
-    class="min-h-screen bg-gray-100 pt-20 px-4 flex items-center justify-center"
-  >
+  <div class="h-full bg-gray-100 pt-20 px-4 flex items-center justify-center">
     <div class="text-slate-600">Loading...</div>
   </div>
 {/if}

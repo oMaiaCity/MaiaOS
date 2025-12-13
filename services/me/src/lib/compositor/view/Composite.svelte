@@ -39,6 +39,23 @@
       ...composite.container?.style,
     };
 
+    // System-level defaults for root composites (slot === "root")
+    // These defaults ensure any vibe fills its parent container automatically
+    // Config values can override these defaults if needed
+    if (node.slot === "root") {
+      // Apply system defaults only if not already specified in config
+      // Fill parent container completely (works universally in any container)
+      if (!composite.height) {
+        style.height = "100%";
+      }
+      if (!composite.width) {
+        style.width = "100%";
+      }
+      if (!composite.overflow) {
+        style.overflow = "hidden";
+      }
+    }
+
     // Layout-specific styles
     if (composite.type === "grid" && composite.grid) {
       if (composite.grid.columns) {

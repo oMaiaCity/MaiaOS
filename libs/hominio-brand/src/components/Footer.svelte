@@ -60,22 +60,23 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-    max-width: 800px;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    max-width: 100%;
     margin-left: auto;
     margin-right: auto;
+    flex-shrink: 0;
   }
 
   .footer {
-    margin-top: 3rem;
-    padding-top: 2rem;
-    padding-bottom: 2rem;
-    border-top: 1px solid #e5e7eb;
+    margin-top: 0;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-top: none;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
     flex-wrap: wrap;
     width: 100%;
     max-width: 100%;
@@ -83,7 +84,7 @@
   }
 
   .footer-link {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     color: #6b7280;
     text-decoration: none;
     transition: color 0.2s;
@@ -97,11 +98,11 @@
 
   .footer-separator {
     color: #d1d5db;
-    font-size: 0.875rem;
+    font-size: 0.75rem;
   }
 
   .footer-spacer {
-    height: 6rem; /* 6rem whitespace for overscroll above navbar */
+    height: 0;
     width: 100%;
     background: transparent;
     flex-shrink: 0;
@@ -109,23 +110,22 @@
 
   @media (max-width: 768px) {
     .footer-wrapper {
-      padding-left: 1rem;
-      padding-right: 1rem;
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
     }
 
     .footer {
-      margin-top: 2rem;
-      padding-top: 1.5rem;
-      padding-bottom: 1.5rem;
-      gap: 0.5rem;
+      padding-top: 0.375rem;
+      padding-bottom: 0.375rem;
+      gap: 0.375rem;
     }
 
     .footer-link {
-      font-size: 0.75rem;
+      font-size: 0.625rem;
     }
 
     .footer-separator {
-      font-size: 0.75rem;
+      font-size: 0.625rem;
     }
   }
 </style>

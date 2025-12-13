@@ -18,7 +18,6 @@ export const rootComposite: CompositeConfig = {
 		background: 'rgb(248 250 252)',
 		border: '1px solid white',
 	},
-	height: '100%',
 	children: [
 		// Balance section
 		{

@@ -10,13 +10,14 @@ export const vibeCardLeaf: LeafNode = {
 	tag: 'div',
 	classes: [
 		'p-6',
-		'bg-white',
-		'rounded-xl',
+		'bg-slate-100',
+		'rounded-2xl',
 		'border',
-		'border-slate-200',
-		'shadow-sm',
-		'hover:shadow-md',
-		'transition-shadow',
+		'border-white',
+		'shadow-[0_0_4px_rgba(0,0,0,0.02)]',
+		'backdrop-blur-sm',
+		'hover:border-slate-300',
+		'transition-all',
 		'cursor-pointer',
 		'flex',
 		'flex-col',
@@ -31,7 +32,7 @@ export const vibeCardLeaf: LeafNode = {
 	children: [
 		{
 			tag: 'h3',
-			classes: ['text-xl', 'font-semibold', 'text-slate-900'],
+			classes: ['text-lg', 'font-semibold', 'text-slate-700'],
 			bindings: {
 				text: 'item.name',
 			},
