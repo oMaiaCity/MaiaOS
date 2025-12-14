@@ -141,23 +141,47 @@ export interface Size {
 }
 
 /**
+ * Container Layout Type - Explicit layout type for composite containers
+ * 
+ * - 'grid': Structural grid container (gets h-full w-full overflow-hidden grid @container)
+ * - 'flex': Structural flex container (gets h-full w-full overflow-hidden flex @container)
+ * - 'content': Content container (no structural defaults, flows naturally, gets @container)
+ * 
+ * All composites automatically get @container for Tailwind container query support.
+ * Leaves can use @md:, @lg: etc. instead of media queries.
+ */
+export type ContainerLayoutType = 'grid' | 'flex' | 'content'
+
+/**
  * Composite Configuration - Pure container node with children
  * 
  * Pure Tailwind approach: All styling via container.class (Tailwind classes)
  * Composite is a simple container div - no layout generation logic
+ * 
+ * All composites automatically get @container for container query support.
  */
 export interface CompositeConfig {
-	container?: {
+	container: {
+		/**
+		 * Explicit container layout type (REQUIRED)
+		 * - 'grid': Structural grid container with defaults + @container
+		 * - 'flex': Structural flex container with defaults + @container
+		 * - 'content': Content container, no structural defaults + @container
+		 * 
+		 * Defaults applied based on layout type:
+		 * - grid: h-full w-full overflow-hidden grid @container
+		 * - flex: h-full w-full overflow-hidden flex @container
+		 * - content: @container only
+		 */
+		layout: ContainerLayoutType
+		
 		/**
 		 * Tailwind CSS classes (space-separated string)
-		 * Example: "flex flex-col gap-4 p-6 bg-white rounded-lg"
+		 * Defaults applied based on layout type
+		 * All composites automatically get @container for container query support
+		 * Example: "grid-cols-1 gap-4" (grid/flex/@container added automatically)
 		 */
 		class?: string
-		/**
-		 * Inline styles (use sparingly, prefer Tailwind classes)
-		 * Only use for dynamic values, CSS variables, or complex calculations
-		 */
-		style?: Record<string, string>
 	}
 	children: ViewNode[] // Can contain composites or leaves
 }

@@ -8,23 +8,23 @@ import { todoItemLeaf } from './todoItem'
 
 export const timelineViewLeaf: LeafNode = {
 	tag: 'div',
-	classes: 'flex flex-col gap-4 min-h-[100px]',
+	classes: 'flex flex-col gap-4 h-full min-h-0',
 	children: [
 		{
 			tag: 'div',
-			classes: 'text-sm font-semibold text-slate-700 mb-2 px-2',
+			classes: 'text-sm font-semibold text-slate-700 mb-2 px-2 flex-shrink-0',
 			children: ['Timeline View'],
 		},
 		{
 			tag: 'div',
-			classes: 'flex flex-col gap-3',
+			classes: 'flex flex-col gap-3 px-2 flex-1 min-h-0 overflow-y-auto',
 			bindings: {
 				foreach: {
 					items: 'data.todos',
 					key: 'id',
 					leaf: {
 						tag: 'div',
-						classes: 'border-l-2 border-slate-300 pl-4 relative mb-4',
+						classes: 'border-l-2 border-slate-300 pl-4 relative mb-4 ml-2',
 						children: [
 							{
 								tag: 'div',

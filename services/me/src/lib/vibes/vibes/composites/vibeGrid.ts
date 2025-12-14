@@ -8,7 +8,10 @@ import { vibeCardLeaf } from '../leafs'
 
 export const vibeGridComposite: CompositeConfig = {
 	container: {
-		class: 'w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-0',
+		layout: 'content',
+		// Content layout: no structural defaults (h-full w-full overflow-hidden), just @container
+		// Explicitly set h-auto (grow with content) and overflow-visible (show all content)
+		class: 'w-full h-auto overflow-visible grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-0',
 	},
 	children: [
 		{

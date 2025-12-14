@@ -27,6 +27,11 @@
         "Composite component requires a node with composite property",
       );
     }
+    if (!composite.container?.layout) {
+      throw new Error(
+        "Composite container.layout is REQUIRED. Use 'grid', 'flex', or 'content'",
+      );
+    }
   });
 
   // Helper to evaluate visibility (reactive to data changes)
@@ -71,21 +76,76 @@
     }
   };
 
-  // Get container classes - pure Tailwind from container.class
+  // Get container classes - apply defaults based on explicit layout type
+  // All composites get @container for Tailwind container query support
   const containerClasses = $derived.by(() => {
-    if (!composite) return "";
-    return composite.container?.class || "";
+    if (!composite?.container) return "";
+    const layout = composite.container.layout;
+    const userClasses = composite.container.class || "";
+    
+    // Split classes for accurate detection
+    const classList = userClasses.split(/\s+/).filter(Boolean);
+    
+    // Check what's already set in user classes
+    const hasHeight = classList.some(c => c.startsWith("h-") || c.startsWith("min-h-") || c.startsWith("max-h-"));
+    const hasWidth = classList.some(c => c.startsWith("w-") || c.startsWith("min-w-") || c.startsWith("max-w-"));
+    const hasOverflow = classList.some(c => c.startsWith("overflow-"));
+    const hasGrid = classList.includes("grid");
+    const hasFlex = classList.includes("flex") || classList.some(c => c.startsWith("flex-"));
+    const hasContainer = classList.includes("@container");
+    
+    // Don't add h-full if using flex-grow (flex handles height)
+    const usesFlexGrow = classList.includes("flex-grow") || classList.includes("flex-1");
+    
+    let finalClasses = userClasses;
+    
+    // Apply defaults based on explicit layout type
+    if (layout === 'grid') {
+      // Structural grid container: h-full w-full overflow-hidden grid @container
+      if (!hasHeight && !usesFlexGrow) {
+        finalClasses = `h-full ${finalClasses}`;
+      }
+      if (!hasWidth) {
+        finalClasses = `w-full ${finalClasses}`;
+      }
+      if (!hasOverflow) {
+        finalClasses = `overflow-hidden ${finalClasses}`;
+      }
+      if (!hasGrid) {
+        finalClasses = `grid ${finalClasses}`;
+      }
+    } else if (layout === 'flex') {
+      // Structural flex container: h-full w-full overflow-hidden flex @container
+      if (!hasHeight && !usesFlexGrow) {
+        finalClasses = `h-full ${finalClasses}`;
+      }
+      if (!hasWidth) {
+        finalClasses = `w-full ${finalClasses}`;
+      }
+      if (!hasOverflow) {
+        finalClasses = `overflow-hidden ${finalClasses}`;
+      }
+      if (!hasFlex) {
+        finalClasses = `flex ${finalClasses}`;
+      }
+    } else if (layout === 'content') {
+      // Content container: @container only (no structural defaults)
+      // No structural defaults, just container query support
+    }
+    
+    // ALWAYS add @container for container query support (unless already present)
+    if (!hasContainer) {
+      finalClasses = `@container ${finalClasses}`;
+    }
+    
+    return finalClasses.trim();
   });
 
-  // Get inline styles if provided
-  const containerStyles = $derived.by(() => {
-    if (!composite?.container?.style) return undefined;
-    return composite.container.style;
-  });
+
 </script>
 
 {#if composite}
-  <div class={containerClasses} style={containerStyles}>
+  <div class={containerClasses}>
     {#each composite.children as child}
       {@const isVisible = !child.visible || evaluateVisibility(child.visible)}
       {#if isVisible}

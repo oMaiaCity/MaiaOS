@@ -7,7 +7,7 @@ import { todoItemLeaf } from './todoItem'
 
 export const todoListLeaf: LeafNode = {
 	tag: 'div',
-	classes: 'min-h-[100px]',
+	classes: 'flex flex-col gap-2 h-full overflow-y-auto',
 	bindings: {
 		foreach: {
 			items: 'data.todos',

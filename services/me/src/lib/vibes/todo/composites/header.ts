@@ -15,6 +15,7 @@ import {
 
 export const headerComposite: CompositeConfig = {
 	container: {
+		layout: 'content',
 		class: 'p-0 bg-transparent',
 	},
 	children: [
@@ -30,7 +31,8 @@ export const headerComposite: CompositeConfig = {
 			slot: 'viewButtons',
 			composite: {
 				container: {
-					class: 'pb-4 flex flex-row justify-center items-center gap-2 flex-nowrap',
+					layout: 'flex',
+					class: 'pb-4 flex-row justify-center items-center gap-4 flex-nowrap',
 				},
 				children: [
 					{

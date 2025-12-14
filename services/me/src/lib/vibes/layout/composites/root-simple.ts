@@ -15,14 +15,16 @@ import {
 
 export const rootComposite: CompositeConfig = {
     container: {
-        class: 'h-full w-full max-w-6xl mx-auto flex flex-col p-6',
+        layout: 'flex',
+        class: 'max-w-6xl mx-auto flex-col p-6',
     },
     children: [
         {
             slot: 'cardContainer',
             composite: {
                 container: {
-                    class: 'card h-full p-6 flex-grow flex-shrink flex-basis-0 min-h-0 overflow-hidden',
+                    layout: 'flex',
+                    class: 'card p-6 flex-grow flex-shrink flex-basis-0 min-h-0 flex-col',
                 },
                 children: [
                     // Tab Bar - Horizontal row

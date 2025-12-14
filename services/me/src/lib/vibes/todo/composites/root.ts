@@ -10,14 +10,16 @@ import { inputSectionComposite } from './inputSection'
 
 export const rootComposite: CompositeConfig = {
 	container: {
-		class: 'h-full w-full max-w-6xl mx-auto flex flex-col p-6',
+		layout: 'grid',
+		class: 'max-w-6xl mx-auto grid-cols-1 p-6',
 	},
 	children: [
 		{
 			slot: 'cardContainer',
 			composite: {
 				container: {
-					class: 'card h-full p-6 flex-grow flex-shrink flex-basis-0 min-h-0 overflow-hidden',
+					layout: 'grid',
+					class: 'card p-6 grid-cols-1 grid-rows-[auto_auto_1fr]',
 				},
 				children: [
 					// Header Composite - Fixed header containing title and viewToggle
@@ -27,7 +29,7 @@ export const rootComposite: CompositeConfig = {
 							...headerComposite,
 							container: {
 								...headerComposite.container,
-								class: headerComposite.container?.class ? `${headerComposite.container.class} sticky top-0 z-10 h-auto min-h-[120px]` : 'sticky top-0 z-10 h-auto min-h-[120px]',
+								class: `${headerComposite.container.class} sticky top-0 z-10 h-auto min-h-[120px]`,
 							},
 						},
 					},
@@ -38,7 +40,7 @@ export const rootComposite: CompositeConfig = {
 							...inputSectionComposite,
 							container: {
 								...inputSectionComposite.container,
-								class: inputSectionComposite.container?.class ? `${inputSectionComposite.container.class} sticky top-0 z-9 h-auto` : 'sticky top-0 z-9 h-auto',
+								class: `${inputSectionComposite.container.class} sticky top-0 z-9 h-auto`,
 							},
 						},
 					},
@@ -49,7 +51,7 @@ export const rootComposite: CompositeConfig = {
 							...contentComposite,
 							container: {
 								...contentComposite.container,
-								class: contentComposite.container?.class ? `${contentComposite.container.class} flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto` : 'flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto',
+								class: contentComposite.container.class,
 							},
 						},
 					},

@@ -25,21 +25,21 @@ const kanbanTodoItemLeaf: LeafNode = {
 
 export const kanbanViewLeaf: LeafNode = {
 	tag: 'div',
-	classes: 'grid grid-cols-3 gap-4 min-h-[100px]',
+	classes: 'grid grid-cols-3 gap-4 h-full min-h-0',
 	children: [
 		// Todo column
 		{
 			tag: 'div',
-			classes: 'flex flex-col gap-2',
+			classes: 'flex flex-col gap-2 h-full min-h-0',
 			children: [
 				{
 					tag: 'h3',
-					classes: 'text-sm font-semibold text-slate-700 mb-2 px-2',
+					classes: 'text-sm font-semibold text-slate-700 mb-2 px-2 flex-shrink-0',
 					children: ['Todo'],
 				},
 				{
 					tag: 'div',
-					classes: 'flex flex-col gap-2 min-h-[200px] bg-slate-50 rounded-lg p-2',
+					classes: 'flex flex-col gap-2 bg-slate-50 rounded-lg p-2 flex-1 min-h-0 overflow-y-auto',
 					attributes: {
 						'data-status': 'todo',
 					},
@@ -87,16 +87,16 @@ export const kanbanViewLeaf: LeafNode = {
 		// In-progress column
 		{
 			tag: 'div',
-			classes: 'flex flex-col gap-2',
+			classes: 'flex flex-col gap-2 h-full min-h-0',
 			children: [
 				{
 					tag: 'h3',
-					classes: 'text-sm font-semibold text-blue-700 mb-2 px-2',
+					classes: 'text-sm font-semibold text-blue-700 mb-2 px-2 flex-shrink-0',
 					children: ['In Progress'],
 				},
 				{
 					tag: 'div',
-					classes: 'flex flex-col gap-2 min-h-[200px] bg-blue-50 rounded-lg p-2',
+					classes: 'flex flex-col gap-2 bg-blue-50 rounded-lg p-2 flex-1 min-h-0 overflow-y-auto',
 					attributes: {
 						'data-status': 'in-progress',
 					},
@@ -144,16 +144,16 @@ export const kanbanViewLeaf: LeafNode = {
 		// Done column
 		{
 			tag: 'div',
-			classes: 'flex flex-col gap-2',
+			classes: 'flex flex-col gap-2 h-full min-h-0',
 			children: [
 				{
 					tag: 'h3',
-					classes: 'text-sm font-semibold text-green-700 mb-2 px-2',
+					classes: 'text-sm font-semibold text-green-700 mb-2 px-2 flex-shrink-0',
 					children: ['Done'],
 				},
 				{
 					tag: 'div',
-					classes: 'flex flex-col gap-2 min-h-[200px] bg-green-50 rounded-lg p-2',
+					classes: 'flex flex-col gap-2 bg-green-50 rounded-lg p-2 flex-1 min-h-0 overflow-y-auto',
 					attributes: {
 						'data-status': 'done',
 					},

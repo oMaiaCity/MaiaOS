@@ -8,7 +8,10 @@ import { kanbanViewLeaf, timelineViewLeaf, todoListLeaf } from '../leafs'
 
 export const contentComposite: CompositeConfig = {
 	container: {
-		class: 'pt-6',
+		layout: 'grid',
+		// Defaults handle: h-full w-full overflow-hidden grid @container
+		// Only need to specify columns/rows and spacing
+		class: 'pt-6 grid-cols-1 min-h-0',
 	},
 	children: [
 		// List view
@@ -16,7 +19,7 @@ export const contentComposite: CompositeConfig = {
 			slot: 'list',
 			leaf: {
 				...todoListLeaf,
-				classes: todoListLeaf.classes ? `${todoListLeaf.classes} flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto` : 'flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto',
+				classes: todoListLeaf.classes ? `${todoListLeaf.classes} h-full` : 'h-full',
 				bindings: {
 					...todoListLeaf.bindings,
 					visible: "data.viewMode === 'list'",
@@ -28,7 +31,6 @@ export const contentComposite: CompositeConfig = {
 			slot: 'kanban',
 			leaf: {
 				...kanbanViewLeaf,
-				classes: kanbanViewLeaf.classes ? `${kanbanViewLeaf.classes} flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto` : 'flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto',
 				bindings: {
 					...kanbanViewLeaf.bindings,
 					visible: "data.viewMode === 'kanban'",
@@ -40,7 +42,6 @@ export const contentComposite: CompositeConfig = {
 			slot: 'timeline',
 			leaf: {
 				...timelineViewLeaf,
-				classes: timelineViewLeaf.classes ? `${timelineViewLeaf.classes} flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto` : 'flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto',
 				bindings: {
 					...timelineViewLeaf.bindings,
 					visible: "data.viewMode === 'timeline'",

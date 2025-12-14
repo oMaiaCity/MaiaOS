@@ -7,6 +7,7 @@ import { errorLeaf, inputFormLeaf } from '../leafs'
 
 export const inputSectionComposite: CompositeConfig = {
 	container: {
+		layout: 'content',
 		class: 'pt-6 bg-slate-50',
 	},
 	children: [

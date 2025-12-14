@@ -92,16 +92,32 @@ A **Composite** is a pure container node that:
 - Contains child nodes (other composites or leaves)
 - Pure composition: Only handles slot management and recursive rendering
 - All styling via `container.class` (Tailwind classes) - no layout generation logic
+- **Explicit layout types**: Must specify `layout: 'grid' | 'flex' | 'content'`
+- **Automatic container queries**: All composites automatically get `@container` for Tailwind container query support
 
 ```typescript
 interface CompositeConfig {
-  container?: {
-    class?: string; // Tailwind classes (space-separated string)
-    style?: Record<string, string>; // Inline styles (use sparingly)
+  container: {
+    /**
+     * Explicit container layout type (REQUIRED)
+     * - 'grid': Structural grid container (gets h-full w-full overflow-hidden grid @container)
+     * - 'flex': Structural flex container (gets h-full w-full overflow-hidden flex @container)
+     * - 'content': Content container (no structural defaults, flows naturally, gets @container)
+     */
+    layout: 'grid' | 'flex' | 'content'
+    
+    /**
+     * Tailwind CSS classes (space-separated string)
+     * Defaults applied based on layout type
+     * All composites automatically get @container for container query support
+     */
+    class?: string
   };
   children: ViewNode[];
 }
 ```
+
+**Important**: The `style` property has been removed. All styling must use Tailwind classes via `container.class`.
 
 ### Leaf
 
@@ -241,7 +257,8 @@ const toggleTodoSkill: Skill = {
 ```typescript
 const rootComposite: CompositeConfig = {
   container: {
-    class: "h-full w-full max-w-6xl mx-auto flex flex-col p-6",
+    layout: 'flex', // Explicit layout type (REQUIRED)
+    class: "max-w-6xl mx-auto flex-col p-6", // h-full w-full overflow-hidden flex added automatically
   },
   children: [
     { slot: "header", composite: headerComposite },
@@ -250,12 +267,13 @@ const rootComposite: CompositeConfig = {
 };
 ```
 
-#### 2. Flex Layout
+#### 2. Flex Layout (Horizontal)
 
 ```typescript
 const headerComposite: CompositeConfig = {
   container: {
-    class: "flex flex-row justify-between items-center gap-4 p-0 bg-transparent",
+    layout: 'flex', // Explicit layout type (REQUIRED)
+    class: "flex-row justify-between items-center gap-4 p-0 bg-transparent", // h-full w-full overflow-hidden flex added automatically
   },
   children: [
     { slot: "title", leaf: titleLeaf },
@@ -264,14 +282,15 @@ const headerComposite: CompositeConfig = {
 };
 ```
 
-**Note**: All layout logic is handled via Tailwind classes in `container.class`. Composite is a pure container div.
+**Note**: All layout logic is handled via Tailwind classes in `container.class`. Composite is a pure container div. The `layout` property determines which structural defaults are applied.
 
 #### 3. Grid Layout
 
 ```typescript
 const kanbanComposite: CompositeConfig = {
   container: {
-    class: "w-full grid grid-cols-3 gap-4 min-h-[100px]",
+    layout: 'grid', // Explicit layout type (REQUIRED)
+    class: "grid-cols-3 gap-4 min-h-[100px]", // h-full w-full overflow-hidden grid added automatically
   },
   children: [
     { slot: "todoColumn", composite: todoColumnComposite },
@@ -283,18 +302,50 @@ const kanbanComposite: CompositeConfig = {
 
 **Note**: For arbitrary grid template columns, use Tailwind arbitrary values: `class: "[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] gap-[0.75rem]"`
 
-#### 4. Overlay Layout (for modals)
+#### 4. Content Container (No Structural Defaults)
+
+```typescript
+const contentComposite: CompositeConfig = {
+  container: {
+    layout: 'content', // Explicit layout type (REQUIRED)
+    class: "pt-6 bg-slate-50", // Only @container added automatically, no structural defaults
+  },
+  children: [
+    { slot: "list", leaf: todoListLeaf },
+  ],
+};
+```
+
+**Note**: Use `layout: 'content'` when you want a container that flows naturally without structural constraints. Perfect for content blocks within structural containers.
+
+#### 5. Overlay Layout (for modals)
 
 ```typescript
 const modalComposite: CompositeConfig = {
   container: {
-    class: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center",
+    layout: 'flex', // Explicit layout type (REQUIRED)
+    class: "fixed inset-0 bg-black bg-opacity-50 items-center justify-center", // h-full w-full overflow-hidden flex added automatically
   },
   children: [
     { slot: "modalContent", leaf: modalContentLeaf },
   ],
 };
 ```
+
+### Layout Type Defaults
+
+The `layout` property determines which structural defaults are automatically applied:
+
+- **`layout: 'grid'`**: Adds `h-full w-full overflow-hidden grid @container`
+- **`layout: 'flex'`**: Adds `h-full w-full overflow-hidden flex @container`
+- **`layout: 'content'`**: Adds only `@container` (no structural defaults)
+
+**Smart Defaults**: The system intelligently avoids adding defaults if you've already specified them:
+- Won't add `h-full` if you use `flex-grow` or `flex-1`
+- Won't add `overflow-hidden` if you've specified `overflow-auto`, `overflow-scroll`, or `overflow-visible`
+- Won't duplicate `grid` or `flex` if already present
+
+**Container Queries**: All composites automatically get `@container` for Tailwind container query support. Use `@md:`, `@lg:`, etc. in your leaf components instead of media queries.
 
 ### Child Styling (Pure Tailwind)
 
@@ -725,15 +776,25 @@ export const todoListLeaf: LeafNode = {
 ### 3. Use Composites for Layout, Leafs for Content
 
 ```typescript
-// ✅ Good - Clear separation
+// ✅ Good - Clear separation with explicit layout
 const headerComposite: CompositeConfig = {
   container: {
-    class: "flex flex-row justify-between items-center p-0 bg-transparent", // Pure Tailwind
+    layout: 'flex', // Explicit layout type (REQUIRED)
+    class: "flex-row justify-between items-center gap-4 p-0 bg-transparent", // Pure Tailwind
   },
   children: [
     { slot: "title", leaf: titleLeaf },
     { slot: "buttons", leaf: buttonsLeaf },
   ],
+};
+
+// ❌ Bad - Missing layout property
+const headerComposite: CompositeConfig = {
+  container: {
+    class: "flex flex-row justify-between items-center p-0 bg-transparent",
+    // Missing required layout property!
+  },
+  children: [/* ... */],
 };
 
 // ❌ Bad - Mixing concerns
@@ -743,7 +804,11 @@ const headerLeaf: LeafNode = {
 };
 ```
 
-**Important**: `Composite.svelte` is a pure composition engine - it only handles slot management and recursive rendering. All styling must be in `container.class` (composites) or `leaf.classes` (leafs).
+**Important**: 
+- `Composite.svelte` is a pure composition engine - it only handles slot management and recursive rendering.
+- All styling must be in `container.class` (composites) or `leaf.classes` (leafs).
+- **Always specify `layout`**: Use `'grid'` for structural grid layouts, `'flex'` for structural flex layouts, and `'content'` for content containers that flow naturally.
+- **Don't duplicate defaults**: The system automatically adds `h-full w-full overflow-hidden grid/flex @container` based on layout type, so you don't need to specify these unless you want to override them.
 
 ### 4. Leverage Data Bindings
 
@@ -784,7 +849,45 @@ const toggleTodoSkill: Skill = {
 // (Not possible in pure JSON, but avoid complex expressions)
 ```
 
-### 6. Organize by Feature
+### 6. Choose the Right Layout Type
+
+Always explicitly specify the layout type based on your container's purpose:
+
+```typescript
+// ✅ Good - Structural grid container
+const rootComposite: CompositeConfig = {
+  container: {
+    layout: 'grid', // Structural container that fills space
+    class: "grid-cols-1 gap-4",
+  },
+  // ...
+};
+
+// ✅ Good - Structural flex container
+const headerComposite: CompositeConfig = {
+  container: {
+    layout: 'flex', // Structural container that fills space
+    class: "flex-row justify-center gap-4",
+  },
+  // ...
+};
+
+// ✅ Good - Content container (flows naturally)
+const contentBlockComposite: CompositeConfig = {
+  container: {
+    layout: 'content', // Content block, no structural constraints
+    class: "p-6 bg-white rounded-lg",
+  },
+  // ...
+};
+```
+
+**Guidelines:**
+- Use `'grid'` for 2D structural layouts (e.g., main app container, kanban board)
+- Use `'flex'` for 1D structural layouts (e.g., header with buttons, vertical stack)
+- Use `'content'` for content blocks that should flow naturally (e.g., text blocks, cards within a grid)
+
+### 7. Organize by Feature
 
 Group related composites and leafs together:
 
@@ -838,15 +941,31 @@ interface VibeConfig {
 
 ```typescript
 interface CompositeConfig {
-  container?: {
-    class?: string; // Tailwind classes (space-separated string)
-    style?: Record<string, string>; // Inline styles (use sparingly)
+  container: {
+    /**
+     * Explicit container layout type (REQUIRED)
+     * - 'grid': Structural grid container (gets h-full w-full overflow-hidden grid @container)
+     * - 'flex': Structural flex container (gets h-full w-full overflow-hidden flex @container)
+     * - 'content': Content container (no structural defaults, flows naturally, gets @container)
+     */
+    layout: 'grid' | 'flex' | 'content'
+    
+    /**
+     * Tailwind CSS classes (space-separated string)
+     * Defaults applied based on layout type
+     * All composites automatically get @container for container query support
+     */
+    class?: string
   };
   children: ViewNode[];
 }
 ```
 
-**Note**: Composite is a pure container div. All layout logic is handled via Tailwind classes in `container.class`. No layout generation or type system.
+**Note**: 
+- Composite is a pure container div. All layout logic is handled via Tailwind classes in `container.class`.
+- The `layout` property is **REQUIRED** and determines which structural defaults are applied.
+- The `style` property has been removed - all styling must use Tailwind classes.
+- All composites automatically get `@container` for Tailwind container query support.
 
 ### LeafNode
 
@@ -942,6 +1061,9 @@ bindings: {
 5. **Classes validation error**: Ensure `classes` is a string: `classes: "px-4 py-2"`
 6. **Layout not working**: All styling must be in `leaf.classes` or `composite.container.class` using Tailwind classes
 7. **Build fails with env vars**: Use `$env/dynamic/public` instead of `$env/static/public` for runtime environment variables
+8. **Composite missing layout property**: All composites must specify `container.layout: 'grid' | 'flex' | 'content'`. This is required and will throw an error if missing.
+9. **Unexpected structural defaults**: If you don't want `h-full w-full overflow-hidden`, use `layout: 'content'` instead of `'grid'` or `'flex'`.
+10. **Container queries not working**: Ensure your composite has a `layout` property (all composites automatically get `@container`). Use `@md:`, `@lg:`, etc. in leaf components instead of media queries.
 
 ---
 
@@ -962,6 +1084,9 @@ The Vibe/Composition/Leaf architecture provides a powerful, generic system for b
 - **Pure Composition**: `Composite.svelte` handles only slot management and recursive rendering
 - **String-based Classes**: All `classes` properties are space-separated strings, never arrays
 - **Delegated Styling**: Styling lives in `leaf.classes` and `composite.container.class`, not in wrapper divs
+- **Explicit Layout Types**: All composites must specify `layout: 'grid' | 'flex' | 'content'` for clarity and consistency
+- **Container Query Support**: All composites automatically get `@container` for Tailwind container query support
+- **Smart Defaults**: Structural defaults (`h-full w-full overflow-hidden grid/flex`) are applied automatically based on layout type, with intelligent overrides
 
 For examples, see `services/me/src/lib/vibes/todo/`.
 
