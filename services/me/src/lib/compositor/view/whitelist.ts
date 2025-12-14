@@ -131,9 +131,12 @@ const TAILWIND_PATTERNS = [
 	/^space-[xy]-(\d+(\.\d+)?|auto)$/, // Allow fractional space like space-x-1.5
 
 	// Layout
-	/^(flex|grid|block|inline|inline-block|hidden|contents)$/,
+	/^(flex|grid|block|inline|inline-block|inline-flex|hidden|contents)$/,
+	/^@container$/, // Tailwind container query directive
 	/^flex-(row|col|wrap|nowrap|grow|shrink|1|auto|none)$/, // flex-1, flex-auto, flex-none
 	/^(shrink|grow)-(0|1)$/, // shrink-0, shrink-1, grow-0, grow-1
+	/^min-w-0$/, // min-w-0 utility
+	/^shrink-0$/, // shrink-0 utility (alternative to shrink-0)
 	/^flex-(shrink|grow)-(\d+)$/, // flex-shrink-0, flex-shrink-1, flex-grow-0, flex-grow-1, etc.
 	/^flex-grow$/, // flex-grow (standalone)
 	/^flex-shrink$/, // flex-shrink (standalone)
@@ -165,6 +168,7 @@ const TAILWIND_PATTERNS = [
 	/^(bg|text|border)-(white|black|transparent|current|inherit)$/,
 	/^(bg|text|border)-(alert|success|warning|info)$/, // Semantic color classes like text-alert, text-success
 	/^(bg|text|border)-(white|black|transparent|current|inherit)\/(\d+)$/, // Opacity modifiers like bg-black/50
+	/^(bg|text|border)-\[.*\]$/, // Arbitrary colors like bg-[#001a42], text-[#e6ecf7], border-[#001a42]
 	/^border$/, // Standalone border
 	/^border-(\d+|\[.*\])$/, // border-2, border-[...]
 	/^border-(l|r|t|b)-(\d+|\[.*\])$/, // border-l-2, border-r-2, border-t-2, border-b-2
@@ -177,12 +181,14 @@ const TAILWIND_PATTERNS = [
 
 	// Typography
 	/^text-(xs|sm|base|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl|8xl|9xl)$/,
+	/^text-\[.*\]$/, // Arbitrary text sizes like text-[10px], text-[#e6ecf7]
 	/^text-(left|center|right|justify)$/, // Text alignment
 	/^font-(thin|extralight|light|normal|medium|semibold|bold|extrabold|black)$/,
 	/^leading-(none|tight|snug|normal|relaxed|loose)$/,
 	/^tracking-(tighter|tight|normal|wide|wider|widest)$/,
 	/^(italic|not-italic|uppercase|lowercase|capitalize|normal-case)$/,
 	/^(underline|line-through|no-underline)$/,
+	/^truncate(-none)?$/, // truncate, truncate-none
 
 	// Effects
 	/^shadow(-(sm|md|lg|xl|2xl|inner|none)|-button-primary|-button-primary-hover)$/,
@@ -213,10 +219,10 @@ const TAILWIND_PATTERNS = [
 	// Pointer events
 	/^pointer-events-(none|auto)$/,
 	// Ring (focus rings)
-	/^ring(-(\d+|offset-\d+))?$/,
+	/^ring(-(\d+|offset-\d+(\.\d+)?))?$/, // Allow fractional ring offsets like ring-offset-0.5
 	/^ring-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)-(\d+)$/,
 	/^ring-\[.*\]$/, // Arbitrary ring colors like ring-[#001a42]
-	/^ring-offset-(\d+)$/,
+	/^ring-offset-(\d+(\.\d+)?)$/, // Allow fractional ring offsets like ring-offset-0.5
 	/^ring-offset-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)-(\d+)$/,
 	// Outline
 	/^outline-(none|0|1|2|4|8)$/,
@@ -225,6 +231,8 @@ const TAILWIND_PATTERNS = [
 
 	// Display
 	/^(inline|block|inline-block|flex|inline-flex|grid|inline-grid|table|inline-table|contents|list-item|hidden)$/,
+	/^min-w-0$/, // min-w-0 utility
+	/^shrink-0$/, // shrink-0 utility
 
 	// Overflow
 	/^overflow(-(x|y))?-(auto|hidden|clip|visible|scroll)$/,
@@ -251,6 +259,53 @@ const BLOCKED_PATTERNS = [
 	/data:text\/html/i,
 	/vbscript:/i,
 	/expression\s*\(/i, // CSS expression()
+]
+
+/**
+ * Container query prefixes (allowed)
+ * These are Tailwind container query breakpoints: @3xs, @2xs, @xs, @sm, @md, @lg, @xl, @2xl, @3xl, @4xl, @5xl, @6xl, @7xl
+ */
+const CONTAINER_QUERY_PREFIXES = [
+	'@3xs',
+	'@2xs',
+	'@xs',
+	'@sm',
+	'@md',
+	'@lg',
+	'@xl',
+	'@2xl',
+	'@3xl',
+	'@4xl',
+	'@5xl',
+	'@6xl',
+	'@7xl',
+]
+
+/**
+ * Media query prefixes (blocked - we only use container queries)
+ * These are Tailwind media query breakpoints: sm, md, lg, xl, 2xl, etc.
+ */
+const MEDIA_QUERY_PREFIXES = [
+	'sm',
+	'md',
+	'lg',
+	'xl',
+	'2xl',
+	'3xl',
+	'4xl',
+	'5xl',
+	'6xl',
+	'7xl',
+	'min-sm',
+	'min-md',
+	'min-lg',
+	'min-xl',
+	'min-2xl',
+	'max-sm',
+	'max-md',
+	'max-lg',
+	'max-xl',
+	'max-2xl',
 ]
 
 /**
@@ -324,10 +379,14 @@ export function sanitizeAttributeValue(tag: string, attr: string, value: unknown
 }
 
 /**
- * Sanitize Tailwind classes
+ * Sanitize Tailwind classes - returns both sanitized classes and blocked classes
  */
-export function sanitizeClasses(classes: string[]): string[] {
+export function sanitizeClasses(classes: string[]): {
+	sanitized: string[]
+	blocked: string[]
+} {
 	const sanitized: string[] = []
+	const blocked: string[] = []
 
 	for (const cls of classes) {
 		const trimmed = cls.trim()
@@ -335,10 +394,59 @@ export function sanitizeClasses(classes: string[]): string[] {
 
 		// Check if class matches any allowed pattern
 		let allowed = false
+		let remainingClass = trimmed
+		let baseClass = trimmed
+		let blockReason: string | null = null
 
-		// First check for prefix classes (hover:, focus:, etc.) - extract base class
-		const prefixMatch = trimmed.match(/^(hover|focus|active|disabled|placeholder):(.+)$/)
-		const baseClass = prefixMatch ? prefixMatch[2] : trimmed
+		// Extract all prefixes and validate them
+		// Handle nested prefixes like: @sm:hover:bg-blue-500
+		let prefixValid = true
+		while (remainingClass.includes(':')) {
+			const colonIndex = remainingClass.indexOf(':')
+			const prefix = remainingClass.substring(0, colonIndex)
+			const rest = remainingClass.substring(colonIndex + 1)
+
+			// Check if it's a container query prefix (@3xs, @2xs, @xs, @sm, etc.)
+			if (prefix.startsWith('@')) {
+				if (!CONTAINER_QUERY_PREFIXES.includes(prefix)) {
+					// Unknown container query prefix - BLOCK IT (unless it's @container which is handled as base class)
+					prefixValid = false
+					blockReason = `Unknown container query prefix: ${prefix}`
+					break
+				}
+				// Valid container query prefix, continue processing rest
+				remainingClass = rest
+				continue
+			}
+
+			// Check if it's a blocked media query prefix (sm, md, lg, etc.)
+			if (MEDIA_QUERY_PREFIXES.includes(prefix)) {
+				// Media query prefix detected - BLOCK IT
+				prefixValid = false
+				blockReason = `Media query prefix not allowed (use container queries instead): ${prefix}`
+				break
+			}
+
+			// Check if it's an allowed pseudo-class prefix (hover, focus, etc.)
+			if (['hover', 'focus', 'active', 'disabled', 'placeholder'].includes(prefix)) {
+				// Valid pseudo-class prefix, continue processing rest
+				remainingClass = rest
+				continue
+			}
+
+			// Unknown prefix - might be part of the base class (like text-xs)
+			// Stop extracting prefixes and treat remaining as base class
+			break
+		}
+
+		// If we blocked it due to invalid prefix, skip
+		if (!prefixValid) {
+			blocked.push(trimmed + (blockReason ? ` (${blockReason})` : ''))
+			continue
+		}
+
+		// Base class is what remains after extracting all prefixes
+		baseClass = remainingClass
 
 		// Check base class against patterns
 		for (const pattern of TAILWIND_PATTERNS) {
@@ -367,10 +475,11 @@ export function sanitizeClasses(classes: string[]): string[] {
 		if (allowed) {
 			sanitized.push(trimmed)
 		} else {
+			blocked.push(trimmed + ` (no matching pattern for: ${baseClass})`)
 		}
 	}
 
-	return sanitized
+	return { sanitized, blocked }
 }
 
 /**
@@ -401,9 +510,9 @@ export function validateLeaf(node: LeafNode, path = 'root'): ValidationResult {
 				} else {
 					// Split string by spaces and sanitize
 					const iconClassArray = node.icon.classes.split(/\s+/).filter(Boolean)
-					const sanitized = sanitizeClasses(iconClassArray)
-					if (sanitized.length !== iconClassArray.length) {
-						errors.push(`${path}: Some icon classes were blocked`)
+					const { sanitized, blocked } = sanitizeClasses(iconClassArray)
+					if (blocked.length > 0) {
+						errors.push(`${path}: Some icon classes were blocked: ${blocked.join(', ')}`)
 					}
 				}
 			}
@@ -434,9 +543,9 @@ export function validateLeaf(node: LeafNode, path = 'root'): ValidationResult {
 		} else {
 			// Split string by spaces and sanitize
 			const classArray = node.classes.split(/\s+/).filter(Boolean)
-			const sanitized = sanitizeClasses(classArray)
-			if (sanitized.length !== classArray.length) {
-				errors.push(`${path}: Some classes were blocked`)
+			const { sanitized, blocked } = sanitizeClasses(classArray)
+			if (blocked.length > 0) {
+				errors.push(`${path}: Some classes were blocked: ${blocked.join(', ')}`)
 			}
 		}
 	}

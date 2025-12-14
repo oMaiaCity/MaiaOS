@@ -1,15 +1,22 @@
 /**
  * View Buttons Leaf Components
  * Each button has active and inactive variants for styling
+ * Responsive using container queries - adapts from 256px to 1280px+
  */
 
 import type { LeafNode } from '../../../compositor/view/leaf-types'
+
+// Shared button classes - Active state
+const activeButtonClasses = 'px-1.5 py-0.5 @xs:px-2 @xs:py-1 @sm:px-3 @sm:py-1.5 @md:px-4 @md:py-2 rounded-full border border-[#001a42] bg-[#001a42] text-[#e6ecf7] transition-all duration-300 font-medium text-[10px] @xs:text-xs @sm:text-sm shadow-sm'
+
+// Shared button classes - Inactive state
+const inactiveButtonClasses = 'px-1.5 py-0.5 @xs:px-2 @xs:py-1 @sm:px-3 @sm:py-1.5 @md:px-4 @md:py-2 rounded-full border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 transition-all duration-300 font-medium text-[10px] @xs:text-xs @sm:text-sm'
 
 // List button - Active state
 export const viewButtonListActive: LeafNode = {
 	tag: 'button',
 	attributes: { type: 'button' },
-	classes: 'px-4 py-2 rounded-full border border-[#001a42] bg-[#001a42] text-[#e6ecf7] transition-all duration-300 font-medium text-sm shadow-sm',
+	classes: activeButtonClasses,
 	bindings: {
 		visible: "data.viewMode === 'list'",
 	},
@@ -26,7 +33,7 @@ export const viewButtonListActive: LeafNode = {
 export const viewButtonList: LeafNode = {
 	tag: 'button',
 	attributes: { type: 'button' },
-	classes: 'px-4 py-2 rounded-full border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 transition-all duration-300 font-medium text-sm',
+	classes: inactiveButtonClasses,
 	bindings: {
 		visible: "data.viewMode !== 'list'",
 	},
@@ -43,7 +50,7 @@ export const viewButtonList: LeafNode = {
 export const viewButtonKanbanActive: LeafNode = {
 	tag: 'button',
 	attributes: { type: 'button' },
-	classes: 'px-4 py-2 rounded-full border border-[#001a42] bg-[#001a42] text-[#e6ecf7] transition-all duration-300 font-medium text-sm shadow-sm',
+	classes: activeButtonClasses,
 	bindings: {
 		visible: "data.viewMode === 'kanban'",
 	},
@@ -60,7 +67,7 @@ export const viewButtonKanbanActive: LeafNode = {
 export const viewButtonKanban: LeafNode = {
 	tag: 'button',
 	attributes: { type: 'button' },
-	classes: 'px-4 py-2 rounded-full border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 transition-all duration-300 font-medium text-sm',
+	classes: inactiveButtonClasses,
 	bindings: {
 		visible: "data.viewMode !== 'kanban'",
 	},
@@ -77,7 +84,7 @@ export const viewButtonKanban: LeafNode = {
 export const viewButtonTimelineActive: LeafNode = {
 	tag: 'button',
 	attributes: { type: 'button' },
-	classes: 'px-4 py-2 rounded-full border border-[#001a42] bg-[#001a42] text-[#e6ecf7] transition-all duration-300 font-medium text-sm shadow-sm',
+	classes: activeButtonClasses,
 	bindings: {
 		visible: "data.viewMode === 'timeline'",
 	},
@@ -94,7 +101,7 @@ export const viewButtonTimelineActive: LeafNode = {
 export const viewButtonTimeline: LeafNode = {
 	tag: 'button',
 	attributes: { type: 'button' },
-	classes: 'px-4 py-2 rounded-full border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 transition-all duration-300 font-medium text-sm',
+	classes: inactiveButtonClasses,
 	bindings: {
 		visible: "data.viewMode !== 'timeline'",
 	},

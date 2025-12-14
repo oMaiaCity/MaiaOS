@@ -254,7 +254,7 @@
       return cls;
     });
 
-    return sanitizeClasses(resolvedClasses).join(" ");
+    return sanitizeClasses(resolvedClasses).sanitized.join(" ");
   });
 
   // Resolve bindings - ensure we access data to trigger reactivity
@@ -682,7 +682,7 @@
   <Icon
     icon={iconName}
     class={iconClasses.length > 0
-      ? sanitizeClasses(iconClasses).join(" ")
+      ? sanitizeClasses(iconClasses).sanitized.join(" ")
       : "w-4 h-4"}
     style={iconStyle}
     {...attributes}

@@ -45,6 +45,7 @@ The Vibe/Composition/Leaf architecture is a three-layer system for building reac
 5. **Modular**: Composable composites and reusable leaf nodes
 6. **Pure Tailwind**: All styling via Tailwind classes (strings), no inline styles
 7. **Pure Composition**: `Composite.svelte` handles only slot management and recursive rendering
+8. **Container-Query Based**: Leaves adapt to their parent composite container size using container queries (`@md:`, `@lg:`, etc.), not viewport media queries
 
 ---
 
@@ -347,6 +348,193 @@ The `layout` property determines which structural defaults are automatically app
 
 **Container Queries**: All composites automatically get `@container` for Tailwind container query support. Use `@md:`, `@lg:`, etc. in your leaf components instead of media queries.
 
+---
+
+## 📦 Container Queries: Responsive Design Based on Container Size
+
+### Philosophy: Composites Provide Space, Leaves Adapt
+
+The architecture follows a clear separation of concerns:
+
+- **Composites**: Provide the room and space (structural containers)
+- **Leaves**: Work with the full room and space given, adjusting themselves based on available space
+
+This means:
+- Each leaf manages its own positioning and sizing based on its parent composite container
+- If a leaf is inside a larger container (e.g., full-width card), it can display more content, larger fonts, more spacing
+- If a leaf is inside a small container (e.g., 10rem × 6rem sidebar), it can hide elements, use tiny fonts, compact spacing, etc.
+- **Use container queries (`@md:`, `@lg:`, etc.) instead of media queries** - leaves adapt to their container, not the viewport
+
+### Container Size Reference
+
+By default, Tailwind includes container sizes ranging from 16rem (256px) to 80rem (1280px):
+
+| Variant | Minimum width | CSS |
+|---------|--------------|-----|
+| `@3xs` | 16rem (256px) | `@container (width >= 16rem) { … }` |
+| `@2xs` | 18rem (288px) | `@container (width >= 18rem) { … }` |
+| `@xs` | 20rem (320px) | `@container (width >= 20rem) { … }` |
+| `@sm` | 24rem (384px) | `@container (width >= 24rem) { … }` |
+| `@md` | 28rem (448px) | `@container (width >= 28rem) { … }` |
+| `@lg` | 32rem (512px) | `@container (width >= 32rem) { … }` |
+| `@xl` | 36rem (576px) | `@container (width >= 36rem) { … }` |
+| `@2xl` | 42rem (672px) | `@container (width >= 42rem) { … }` |
+| `@3xl` | 48rem (768px) | `@container (width >= 48rem) { … }` |
+| `@4xl` | 56rem (896px) | `@container (width >= 56rem) { … }` |
+| `@5xl` | 64rem (1024px) | `@container (width >= 64rem) { … }` |
+| `@6xl` | 72rem (1152px) | `@container (width >= 72rem) { … }` |
+| `@7xl` | 80rem (1280px) | `@container (width >= 80rem) { … }` |
+
+### Example: Adaptive Button Leaf
+
+```typescript
+// Button that adapts to container size
+const adaptiveButtonLeaf: LeafNode = {
+  tag: "button",
+  attributes: { type: "button" },
+  classes: `
+    px-2 py-1 text-xs
+    @xs:px-3 @xs:py-1.5 @xs:text-sm
+    @sm:px-4 @sm:py-2 @sm:text-base
+    @md:px-6 @md:py-3 @md:text-lg
+    bg-blue-500 text-white rounded
+  `.trim().replace(/\s+/g, ' '), // Clean up whitespace
+  children: ["Click Me"],
+  events: {
+    click: {
+      event: "BUTTON_CLICKED",
+    },
+  },
+};
+```
+
+**Behavior:**
+- **Small container (< 20rem)**: Tiny button with `px-2 py-1 text-xs`
+- **XS container (≥ 20rem)**: Small button with `px-3 py-1.5 text-sm`
+- **SM container (≥ 24rem)**: Medium button with `px-4 py-2 text-base`
+- **MD container (≥ 28rem)**: Large button with `px-6 py-3 text-lg`
+
+### Example: Adaptive Card with Conditional Content
+
+```typescript
+// Card that shows/hides content based on container size
+const adaptiveCardLeaf: LeafNode = {
+  tag: "div",
+  classes: "bg-white rounded-lg p-2 @sm:p-4 @md:p-6",
+  children: [
+    {
+      tag: "h2",
+      classes: "text-sm @sm:text-base @md:text-xl font-bold mb-1 @sm:mb-2 @md:mb-4",
+      children: ["Card Title"],
+    },
+    {
+      tag: "p",
+      classes: "text-xs @sm:text-sm @md:text-base text-slate-600 hidden @sm:block",
+      children: ["This description only shows in containers ≥ 24rem (sm)"],
+    },
+    {
+      tag: "div",
+      classes: "flex flex-col @md:flex-row gap-2 @md:gap-4",
+      children: [
+        {
+          tag: "button",
+          classes: "px-2 py-1 @md:px-4 @md:py-2 text-xs @md:text-base",
+          children: ["Action 1"],
+        },
+        {
+          tag: "button",
+          classes: "px-2 py-1 @md:px-4 @md:py-2 text-xs @md:text-base",
+          children: ["Action 2"],
+        },
+      ],
+    },
+  ],
+};
+```
+
+**Behavior:**
+- **Small container (< 24rem)**: Compact card, no description, vertical button layout
+- **SM container (≥ 24rem)**: Description appears, still vertical buttons
+- **MD container (≥ 28rem)**: Larger padding, horizontal button layout, larger text
+
+### Example: Adaptive Grid Layout
+
+```typescript
+// Grid that adapts columns based on container size
+const adaptiveGridLeaf: LeafNode = {
+  tag: "div",
+  classes: `
+    grid grid-cols-1 gap-2
+    @xs:grid-cols-2 @xs:gap-3
+    @sm:grid-cols-2 @sm:gap-4
+    @md:grid-cols-3 @md:gap-4
+    @lg:grid-cols-4 @lg:gap-6
+  `.trim().replace(/\s+/g, ' '),
+  children: [
+    // Grid items...
+  ],
+};
+```
+
+**Behavior:**
+- **Small container (< 20rem)**: 1 column, small gap
+- **XS container (≥ 20rem)**: 2 columns, medium gap
+- **SM container (≥ 24rem)**: 2 columns, larger gap
+- **MD container (≥ 28rem)**: 3 columns
+- **LG container (≥ 32rem)**: 4 columns, large gap
+
+### Best Practices for Container Queries
+
+1. **Always use container queries in leaves, not media queries**
+   ```typescript
+   // ✅ Good - Adapts to container
+   classes: "text-sm @md:text-lg"
+   
+   // ❌ Bad - Adapts to viewport (not what we want)
+   classes: "text-sm md:text-lg"
+   ```
+
+2. **Start with mobile-first (smallest) styles, then scale up**
+   ```typescript
+   // ✅ Good - Mobile-first approach
+   classes: "px-2 @sm:px-4 @md:px-6"
+   
+   // ❌ Bad - Desktop-first (harder to maintain)
+   classes: "@md:px-6 @sm:px-4 px-2"
+   ```
+
+3. **Hide/show content based on container size**
+   ```typescript
+   // Hide in small containers, show in larger ones
+   classes: "hidden @md:block"
+   
+   // Show in small containers, hide in larger ones
+   classes: "block @md:hidden"
+   ```
+
+4. **Adjust spacing, typography, and layout together**
+   ```typescript
+   classes: `
+     p-2 text-xs gap-2
+     @sm:p-4 @sm:text-sm @sm:gap-4
+     @md:p-6 @md:text-base @md:gap-6
+   `.trim().replace(/\s+/g, ' ')
+   ```
+
+5. **Test with different container sizes**
+   - Use browser DevTools to resize the container (not the viewport)
+   - Test with containers ranging from 16rem to 80rem+
+   - Ensure content remains readable and usable at all sizes
+
+### Why Container Queries Over Media Queries?
+
+- **Reusability**: Same leaf works in different contexts (sidebar, modal, full-width card)
+- **Component-based**: Each component adapts to its own space, not global viewport
+- **Better UX**: Content adapts to actual available space, not screen size
+- **Easier maintenance**: Changes to one container don't affect others
+
+---
+
 ### Child Styling (Pure Tailwind)
 
 All styling must be in `leaf.classes` or `composite.container.class` using Tailwind classes.
@@ -392,21 +580,23 @@ All styling must be in `leaf.classes` or `composite.container.class` using Tailw
 
 Leaf nodes define UI elements entirely in JSON. They support:
 
+**Key Principle**: Each leaf manages its own positioning and sizing based on its parent composite container. Use container queries (`@md:`, `@lg:`, etc.) to make leaves adapt to the available space. See the [Container Queries](#-container-queries-responsive-design-based-on-container-size) section for details.
+
 ### Basic Elements
 
 ```typescript
-// Simple text
+// Simple text (with container query adaptation)
 const titleLeaf: LeafNode = {
   tag: "h1",
-  classes: "text-2xl font-bold text-slate-900", // String, not array
+  classes: "text-lg @sm:text-xl @md:text-2xl font-bold text-slate-900", // Adapts to container size
   children: ["My Todo App"],
 };
 
-// Button
+// Button (with container query adaptation)
 const buttonLeaf: LeafNode = {
   tag: "button",
   attributes: { type: "button" },
-  classes: "px-4 py-2 bg-blue-500 text-white rounded", // String, not array
+  classes: "px-3 py-1.5 @sm:px-4 @sm:py-2 @md:px-6 @md:py-3 bg-blue-500 text-white rounded text-sm @sm:text-base", // Adapts to container size
   events: {
     click: {
       event: "ADD_TODO",
@@ -417,7 +607,9 @@ const buttonLeaf: LeafNode = {
 };
 ```
 
-**CRITICAL**: Always use space-separated strings for `classes`.
+**CRITICAL**: 
+- Always use space-separated strings for `classes`.
+- Use container queries (`@md:`, `@lg:`, etc.) instead of media queries (`md:`, `lg:`, etc.) so leaves adapt to their container, not the viewport.
 
 ### Data Bindings
 
@@ -887,7 +1079,34 @@ const contentBlockComposite: CompositeConfig = {
 - Use `'flex'` for 1D structural layouts (e.g., header with buttons, vertical stack)
 - Use `'content'` for content blocks that should flow naturally (e.g., text blocks, cards within a grid)
 
-### 7. Organize by Feature
+### 7. Use Container Queries in Leaves
+
+Always use container queries (`@md:`, `@lg:`, etc.) instead of media queries (`md:`, `lg:`, etc.) so leaves adapt to their container size, not the viewport:
+
+```typescript
+// ✅ Good - Adapts to container
+const adaptiveLeaf: LeafNode = {
+  tag: "div",
+  classes: "p-2 text-xs @sm:p-4 @sm:text-sm @md:p-6 @md:text-base",
+  // ...
+};
+
+// ❌ Bad - Adapts to viewport (not what we want)
+const viewportLeaf: LeafNode = {
+  tag: "div",
+  classes: "p-2 text-xs sm:p-4 sm:text-sm md:p-6 md:text-base",
+  // ...
+};
+```
+
+**Why?**
+- Leaves should adapt to the space provided by their parent composite
+- Same leaf can work in different contexts (sidebar, modal, full-width card)
+- Better component reusability and maintainability
+
+See the [Container Queries](#-container-queries-responsive-design-based-on-container-size) section for detailed examples and container size reference.
+
+### 8. Organize by Feature
 
 Group related composites and leafs together:
 
@@ -1078,6 +1297,7 @@ The Vibe/Composition/Leaf architecture provides a powerful, generic system for b
 - ✅ Reactive (Svelte-powered)
 - ✅ Modular (composable components)
 - ✅ Pure Tailwind (no inline styles, all styling via classes)
+- ✅ Container-query responsive (leaves adapt to container size, not viewport)
 
 **Architecture Principles:**
 - **Pure Tailwind**: All styling via Tailwind classes (strings), no inline styles
@@ -1087,6 +1307,7 @@ The Vibe/Composition/Leaf architecture provides a powerful, generic system for b
 - **Explicit Layout Types**: All composites must specify `layout: 'grid' | 'flex' | 'content'` for clarity and consistency
 - **Container Query Support**: All composites automatically get `@container` for Tailwind container query support
 - **Smart Defaults**: Structural defaults (`h-full w-full overflow-hidden grid/flex`) are applied automatically based on layout type, with intelligent overrides
+- **Container-Responsive Leaves**: Leaves adapt to their parent composite container size using container queries (`@md:`, `@lg:`, etc.), enabling true component-based responsive design
 
 For examples, see `services/me/src/lib/vibes/todo/`.
 
