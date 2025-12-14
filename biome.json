@@ -52,6 +52,11 @@
 						]
 					}
 				}
+			},
+			"style": {
+				"noUnknownAtRules": {
+					"level": "off"
+				}
 			}
 		}
 	},
@@ -69,6 +74,7 @@
 	},
 	"json": {
 		"formatter": {
+			"enabled": true,
 			"trailingCommas": "none"
 		},
 		"parser": {
@@ -84,6 +90,27 @@
 		"experimentalFullSupportEnabled": true,
 		"formatter": {
 			"indentScriptAndStyle": true
+		}
+	},
+	"typescript": {
+		"formatter": {
+			"semicolons": "asNeeded",
+			"trailingCommas": "all",
+			"quoteStyle": "single",
+			"arrowParentheses": "always",
+			"bracketSameLine": false,
+			"bracketSpacing": true,
+			"jsxQuoteStyle": "double",
+			"quoteProperties": "asNeeded"
+		}
+	},
+	"markdown": {
+		"formatter": {
+			"enabled": true,
+			"indentStyle": "tab",
+			"indentWidth": 1,
+			"lineWidth": 100,
+			"lineEnding": "lf"
 		}
 	},
 	"overrides": [
