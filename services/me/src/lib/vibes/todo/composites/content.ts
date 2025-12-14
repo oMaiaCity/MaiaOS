@@ -9,7 +9,7 @@ import { kanbanViewLeaf, timelineViewLeaf, todoListLeaf } from '../leafs'
 export const contentComposite: CompositeConfig = {
 	type: 'stack',
 	container: {
-		padding: '1.5rem 0 0 0',
+		class: 'pt-6',
 	},
 	children: [
 		// List view
@@ -17,51 +17,36 @@ export const contentComposite: CompositeConfig = {
 			slot: 'list',
 			leaf: {
 				...todoListLeaf,
+				classes: todoListLeaf.classes ? `${todoListLeaf.classes} flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto` : 'flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto',
 				bindings: {
 					...todoListLeaf.bindings,
 					visible: "data.viewMode === 'list'",
 				},
 			},
-			flex: {
-				grow: 1,
-				shrink: 1,
-				basis: '0',
-			},
-			overflow: 'auto',
 		},
 		// Kanban view
 		{
 			slot: 'kanban',
 			leaf: {
 				...kanbanViewLeaf,
+				classes: kanbanViewLeaf.classes ? `${kanbanViewLeaf.classes} flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto` : 'flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto',
 				bindings: {
 					...kanbanViewLeaf.bindings,
 					visible: "data.viewMode === 'kanban'",
 				},
 			},
-			flex: {
-				grow: 1,
-				shrink: 1,
-				basis: '0',
-			},
-			overflow: 'auto',
 		},
 		// Timeline view
 		{
 			slot: 'timeline',
 			leaf: {
 				...timelineViewLeaf,
+				classes: timelineViewLeaf.classes ? `${timelineViewLeaf.classes} flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto` : 'flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto',
 				bindings: {
 					...timelineViewLeaf.bindings,
 					visible: "data.viewMode === 'timeline'",
 				},
 			},
-			flex: {
-				grow: 1,
-				shrink: 1,
-				basis: '0',
-			},
-			overflow: 'auto',
 		},
 	],
 }

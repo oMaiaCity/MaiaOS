@@ -16,30 +16,23 @@ import {
 export const rootComposite: CompositeConfig = {
     type: 'stack',
     container: {
-        class: 'h-full w-full max-w-6xl mx-auto flex flex-col',
-        padding: '1.5rem 1.5rem',
+        class: 'h-full w-full max-w-6xl mx-auto flex flex-col p-6',
     },
     children: [
         {
             slot: 'cardContainer',
-            flex: {
-                grow: 1,
-                shrink: 1,
-                basis: '0',
-            },
             composite: {
                 type: 'stack',
                 container: {
-                    class: 'card h-full p-6',
+                    class: 'card h-full p-6 flex-grow flex-shrink flex-basis-0 min-h-0 overflow-hidden',
                 },
-                overflow: 'hidden',
                 children: [
                     // Tab Bar - Horizontal row
                     {
                         slot: 'tabBar',
                         leaf: {
                             tag: 'div',
-                            classes: ['flex', 'flex-row', 'gap-2', 'pb-4'],
+                            classes: 'flex flex-row gap-2 pb-4',
                             children: [
                                 {
                                     tag: 'button',
@@ -137,285 +130,146 @@ export const rootComposite: CompositeConfig = {
                     // Content Area - Using Leaf Nodes with Tailwind
                     {
                         slot: 'content',
-                        flex: {
-                            grow: 1,
-                            shrink: 1,
-                            basis: '0',
-                        },
-                        size: {
-                            minHeight: '0',
-                        },
-                        overflow: 'hidden',
                         leaf: {
                             tag: 'div',
-                            classes: ['w-full', 'h-full', 'relative', 'overflow-hidden'],
+                            classes: 'w-full h-full relative overflow-hidden flex-grow flex-shrink flex-basis-0 min-h-0',
                             children: [
                                 // List View - Tailwind flex column
                                 {
                                     tag: 'div',
-                                    classes: [
-                                        'absolute',
-                                        'inset-0',
-                                        'w-full',
-                                        'h-full',
-                                        'flex',
-                                        'flex-col',
-                                        'gap-6',
-                                        'overflow-auto',
-                                        'p-4',
-                                    ],
+                                    classes: 'absolute inset-0 w-full h-full flex flex-col gap-6 overflow-auto p-4',
                                     bindings: {
                                         visible: "data.selectedLayout === 'list'",
                                     },
                                     children: [
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-red-100',
-                                                'border',
-                                                'border-red-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-red-100 border border-red-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-red-700', 'font-medium'],
+                                                    classes: 'text-red-700 font-medium',
                                                     children: ['Item 1'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-blue-100',
-                                                'border',
-                                                'border-blue-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-blue-100 border border-blue-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-blue-700', 'font-medium'],
+                                                    classes: 'text-blue-700 font-medium',
                                                     children: ['Item 2'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-green-100',
-                                                'border',
-                                                'border-green-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-green-100 border border-green-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-green-700', 'font-medium'],
+                                                    classes: 'text-green-700 font-medium',
                                                     children: ['Item 3'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-yellow-100',
-                                                'border',
-                                                'border-yellow-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-yellow-100 border border-yellow-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-yellow-700', 'font-medium'],
+                                                    classes: 'text-yellow-700 font-medium',
                                                     children: ['Item 4'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-purple-100',
-                                                'border',
-                                                'border-purple-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-purple-100 border border-purple-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-purple-700', 'font-medium'],
+                                                    classes: 'text-purple-700 font-medium',
                                                     children: ['Item 5'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-pink-100',
-                                                'border',
-                                                'border-pink-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-pink-100 border border-pink-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-pink-700', 'font-medium'],
+                                                    classes: 'text-pink-700 font-medium',
                                                     children: ['Item 6'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-orange-100',
-                                                'border',
-                                                'border-orange-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-orange-100 border border-orange-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-orange-700', 'font-medium'],
+                                                    classes: 'text-orange-700 font-medium',
                                                     children: ['Item 7'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-indigo-100',
-                                                'border',
-                                                'border-indigo-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-indigo-100 border border-indigo-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-indigo-700', 'font-medium'],
+                                                    classes: 'text-indigo-700 font-medium',
                                                     children: ['Item 8'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-teal-100',
-                                                'border',
-                                                'border-teal-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-teal-100 border border-teal-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-teal-700', 'font-medium'],
+                                                    classes: 'text-teal-700 font-medium',
                                                     children: ['Item 9'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-cyan-100',
-                                                'border',
-                                                'border-cyan-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-cyan-100 border border-cyan-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-cyan-700', 'font-medium'],
+                                                    classes: 'text-cyan-700 font-medium',
                                                     children: ['Item 10'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-emerald-100',
-                                                'border',
-                                                'border-emerald-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-emerald-100 border border-emerald-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-emerald-700', 'font-medium'],
+                                                    classes: 'text-emerald-700 font-medium',
                                                     children: ['Item 11'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-violet-100',
-                                                'border',
-                                                'border-violet-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-violet-100 border border-violet-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-violet-700', 'font-medium'],
+                                                    classes: 'text-violet-700 font-medium',
                                                     children: ['Item 12'],
                                                 },
                                             ],
@@ -428,295 +282,139 @@ export const rootComposite: CompositeConfig = {
                                 // Single horizontal row with horizontal scrolling (no wrapping)
                                 {
                                     tag: 'div',
-                                    classes: [
-                                        'absolute',
-                                        'inset-0',
-                                        'w-full',
-                                        'h-full',
-                                        'flex',
-                                        'flex-row',
-                                        'flex-nowrap',
-                                        'gap-6',
-                                        'overflow-x-auto',
-                                        'overflow-y-hidden',
-                                        'p-4',
-                                    ],
+                                    classes: 'absolute inset-0 w-full h-full flex flex-row flex-nowrap gap-6 overflow-x-auto overflow-y-hidden p-4',
                                     bindings: {
                                         visible: "data.selectedLayout === 'row'",
                                     },
                                     children: [
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-red-100',
-                                                'border',
-                                                'border-red-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-w-[200px]',
-                                                'flex-shrink-0',
-                                                'h-[150px]', // Height prop: customize per row item
-                                            ],
+                                            classes: 'bg-red-100 border border-red-300 rounded-2xl p-4 flex items-center justify-center min-w-[200px] flex-shrink-0 h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-red-700', 'font-medium'],
+                                                    classes: 'text-red-700 font-medium',
                                                     children: ['Item 1'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-blue-100',
-                                                'border',
-                                                'border-blue-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-w-[200px]',
-                                                'flex-shrink-0',
-                                                'h-[150px]', // Height prop: customize per row item
-                                            ],
+                                            classes: 'bg-blue-100 border border-blue-300 rounded-2xl p-4 flex items-center justify-center min-w-[200px] flex-shrink-0 h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-blue-700', 'font-medium'],
+                                                    classes: 'text-blue-700 font-medium',
                                                     children: ['Item 2'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-green-100',
-                                                'border',
-                                                'border-green-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-w-[200px]',
-                                                'flex-shrink-0',
-                                                'h-[150px]', // Height prop: customize per row item
-                                            ],
+                                            classes: 'bg-green-100 border border-green-300 rounded-2xl p-4 flex items-center justify-center min-w-[200px] flex-shrink-0 h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-green-700', 'font-medium'],
+                                                    classes: 'text-green-700 font-medium',
                                                     children: ['Item 3'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-yellow-100',
-                                                'border',
-                                                'border-yellow-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-w-[200px]',
-                                                'flex-shrink-0',
-                                                'h-[150px]', // Height prop: customize per row item
-                                            ],
+                                            classes: 'bg-yellow-100 border border-yellow-300 rounded-2xl p-4 flex items-center justify-center min-w-[200px] flex-shrink-0 h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-yellow-700', 'font-medium'],
+                                                    classes: 'text-yellow-700 font-medium',
                                                     children: ['Item 4'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-purple-100',
-                                                'border',
-                                                'border-purple-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-w-[200px]',
-                                                'flex-shrink-0',
-                                                'h-[150px]', // Height prop: customize per row item
-                                            ],
+                                            classes: 'bg-purple-100 border border-purple-300 rounded-2xl p-4 flex items-center justify-center min-w-[200px] flex-shrink-0 h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-purple-700', 'font-medium'],
+                                                    classes: 'text-purple-700 font-medium',
                                                     children: ['Item 5'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-pink-100',
-                                                'border',
-                                                'border-pink-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-w-[200px]',
-                                                'flex-shrink-0',
-                                                'h-[150px]', // Height prop: customize per row item
-                                            ],
+                                            classes: 'bg-pink-100 border border-pink-300 rounded-2xl p-4 flex items-center justify-center min-w-[200px] flex-shrink-0 h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-pink-700', 'font-medium'],
+                                                    classes: 'text-pink-700 font-medium',
                                                     children: ['Item 6'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-orange-100',
-                                                'border',
-                                                'border-orange-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-w-[200px]',
-                                                'flex-shrink-0',
-                                                'h-[150px]', // Height prop: customize per row item
-                                            ],
+                                            classes: 'bg-orange-100 border border-orange-300 rounded-2xl p-4 flex items-center justify-center min-w-[200px] flex-shrink-0 h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-orange-700', 'font-medium'],
+                                                    classes: 'text-orange-700 font-medium',
                                                     children: ['Item 7'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-indigo-100',
-                                                'border',
-                                                'border-indigo-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-w-[200px]',
-                                                'flex-shrink-0',
-                                                'h-[150px]', // Height prop: customize per row item
-                                            ],
+                                            classes: 'bg-indigo-100 border border-indigo-300 rounded-2xl p-4 flex items-center justify-center min-w-[200px] flex-shrink-0 h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-indigo-700', 'font-medium'],
+                                                    classes: 'text-indigo-700 font-medium',
                                                     children: ['Item 8'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-teal-100',
-                                                'border',
-                                                'border-teal-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-w-[200px]',
-                                                'flex-shrink-0',
-                                                'h-[150px]', // Height prop: customize per row item
-                                            ],
+                                            classes: 'bg-teal-100 border border-teal-300 rounded-2xl p-4 flex items-center justify-center min-w-[200px] flex-shrink-0 h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-teal-700', 'font-medium'],
+                                                    classes: 'text-teal-700 font-medium',
                                                     children: ['Item 9'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-cyan-100',
-                                                'border',
-                                                'border-cyan-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-w-[200px]',
-                                                'flex-shrink-0',
-                                                'h-[150px]', // Height prop: customize per row item
-                                            ],
+                                            classes: 'bg-cyan-100 border border-cyan-300 rounded-2xl p-4 flex items-center justify-center min-w-[200px] flex-shrink-0 h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-cyan-700', 'font-medium'],
+                                                    classes: 'text-cyan-700 font-medium',
                                                     children: ['Item 10'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-emerald-100',
-                                                'border',
-                                                'border-emerald-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-w-[200px]',
-                                                'flex-shrink-0',
-                                                'h-[150px]', // Height prop: customize per row item
-                                            ],
+                                            classes: 'bg-emerald-100 border border-emerald-300 rounded-2xl p-4 flex items-center justify-center min-w-[200px] flex-shrink-0 h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-emerald-700', 'font-medium'],
+                                                    classes: 'text-emerald-700 font-medium',
                                                     children: ['Item 11'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-violet-100',
-                                                'border',
-                                                'border-violet-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-w-[200px]',
-                                                'flex-shrink-0',
-                                                'h-[150px]', // Height prop: customize per row item
-                                            ],
+                                            classes: 'bg-violet-100 border border-violet-300 rounded-2xl p-4 flex items-center justify-center min-w-[200px] flex-shrink-0 h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-violet-700', 'font-medium'],
+                                                    classes: 'text-violet-700 font-medium',
                                                     children: ['Item 12'],
                                                 },
                                             ],
@@ -727,270 +425,139 @@ export const rootComposite: CompositeConfig = {
                                 // Vertical scrolling by default (overflow-y-auto)
                                 {
                                     tag: 'div',
-                                    classes: [
-                                        'absolute',
-                                        'inset-0',
-                                        'w-full',
-                                        'h-full',
-                                        'grid',
-                                        'grid-cols-3',
-                                        'gap-6',
-                                        'overflow-y-auto',
-                                        'overflow-x-hidden',
-                                        'p-4',
-                                    ],
+                                    classes: 'absolute inset-0 w-full h-full grid grid-cols-3 gap-6 overflow-y-auto overflow-x-hidden p-4',
                                     bindings: {
                                         visible: "data.selectedLayout === 'grid'",
                                     },
                                     children: [
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-red-100',
-                                                'border',
-                                                'border-red-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-red-100 border border-red-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-red-700', 'font-medium'],
+                                                    classes: 'text-red-700 font-medium',
                                                     children: ['Item 1'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-blue-100',
-                                                'border',
-                                                'border-blue-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-blue-100 border border-blue-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-blue-700', 'font-medium'],
+                                                    classes: 'text-blue-700 font-medium',
                                                     children: ['Item 2'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-green-100',
-                                                'border',
-                                                'border-green-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-green-100 border border-green-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-green-700', 'font-medium'],
+                                                    classes: 'text-green-700 font-medium',
                                                     children: ['Item 3'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-yellow-100',
-                                                'border',
-                                                'border-yellow-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-yellow-100 border border-yellow-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-yellow-700', 'font-medium'],
+                                                    classes: 'text-yellow-700 font-medium',
                                                     children: ['Item 4'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-purple-100',
-                                                'border',
-                                                'border-purple-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-purple-100 border border-purple-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-purple-700', 'font-medium'],
+                                                    classes: 'text-purple-700 font-medium',
                                                     children: ['Item 5'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-pink-100',
-                                                'border',
-                                                'border-pink-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-pink-100 border border-pink-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-pink-700', 'font-medium'],
+                                                    classes: 'text-pink-700 font-medium',
                                                     children: ['Item 6'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-orange-100',
-                                                'border',
-                                                'border-orange-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-orange-100 border border-orange-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-orange-700', 'font-medium'],
+                                                    classes: 'text-orange-700 font-medium',
                                                     children: ['Item 7'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-indigo-100',
-                                                'border',
-                                                'border-indigo-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-indigo-100 border border-indigo-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-indigo-700', 'font-medium'],
+                                                    classes: 'text-indigo-700 font-medium',
                                                     children: ['Item 8'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-teal-100',
-                                                'border',
-                                                'border-teal-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-teal-100 border border-teal-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-teal-700', 'font-medium'],
+                                                    classes: 'text-teal-700 font-medium',
                                                     children: ['Item 9'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-cyan-100',
-                                                'border',
-                                                'border-cyan-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-cyan-100 border border-cyan-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-cyan-700', 'font-medium'],
+                                                    classes: 'text-cyan-700 font-medium',
                                                     children: ['Item 10'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-emerald-100',
-                                                'border',
-                                                'border-emerald-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-emerald-100 border border-emerald-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-emerald-700', 'font-medium'],
+                                                    classes: 'text-emerald-700 font-medium',
                                                     children: ['Item 11'],
                                                 },
                                             ],
                                         },
                                         {
                                             tag: 'div',
-                                            classes: [
-                                                'bg-violet-100',
-                                                'border',
-                                                'border-violet-300',
-                                                'rounded-2xl',
-                                                'p-4',
-                                                'flex',
-                                                'items-center',
-                                                'justify-center',
-                                                'min-h-[150px]',
-                                            ],
+                                            classes: 'bg-violet-100 border border-violet-300 rounded-2xl p-4 flex items-center justify-center min-h-[150px]',
                                             children: [
                                                 {
                                                     tag: 'span',
-                                                    classes: ['text-violet-700', 'font-medium'],
+                                                    classes: 'text-violet-700 font-medium',
                                                     children: ['Item 12'],
                                                 },
                                             ],

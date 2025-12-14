@@ -8,21 +8,7 @@ import type { LeafNode } from '../../../compositor/view/leaf-types'
 
 export const vibeCardLeaf: LeafNode = {
 	tag: 'div',
-	classes: [
-		'p-4',
-		'bg-slate-100',
-		'rounded-2xl',
-		'border',
-		'border-white',
-		'shadow-[0_0_4px_rgba(0,0,0,0.02)]',
-		'backdrop-blur-sm',
-		'hover:border-slate-300',
-		'transition-all',
-		'cursor-pointer',
-		'flex',
-		'flex-col',
-		'gap-1.5',
-	],
+	classes: 'p-4 bg-slate-100 rounded-2xl border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm hover:border-slate-300 transition-all cursor-pointer flex flex-col gap-1.5',
 	events: {
 		click: {
 			event: 'SELECT_VIBE',
@@ -32,14 +18,14 @@ export const vibeCardLeaf: LeafNode = {
 	children: [
 		{
 			tag: 'h3',
-			classes: ['text-base', 'font-semibold', 'text-slate-700', 'leading-tight'],
+			classes: 'text-base font-semibold text-slate-700 leading-tight',
 			bindings: {
 				text: 'item.name',
 			},
 		},
 		{
 			tag: 'p',
-			classes: ['text-xs', 'text-slate-600', 'leading-relaxed'],
+			classes: 'text-xs text-slate-600 leading-relaxed',
 			bindings: {
 				text: 'item.description',
 			},

@@ -240,8 +240,9 @@
   const classes = $derived.by(() => {
     if (!leaf.classes) return "";
 
-    // Resolve dynamic classes (e.g., classes that reference data/item)
-    const resolvedClasses = leaf.classes.map((cls) => {
+    // Split classes string by spaces and resolve dynamic classes (e.g., classes that reference data/item)
+    const classArray = leaf.classes.split(/\s+/).filter(Boolean);
+    const resolvedClasses = classArray.map((cls) => {
       if (
         typeof cls === "string" &&
         (cls.includes("item.") || cls.includes("data."))
@@ -658,16 +659,19 @@
       ? String(resolveValue(leaf.icon.name))
       : leaf.icon.name}
   {@const iconClasses = leaf.icon.classes
-    ? leaf.icon.classes.map((cls) => {
-        // Resolve dynamic classes (e.g., "item.categoryColor")
-        if (
-          typeof cls === "string" &&
-          (cls.includes("item.") || cls.includes("data."))
-        ) {
-          return String(resolveValue(cls));
-        }
-        return cls;
-      })
+    ? leaf.icon.classes
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((cls) => {
+          // Resolve dynamic classes (e.g., "item.categoryColor")
+          if (
+            typeof cls === "string" &&
+            (cls.includes("item.") || cls.includes("data."))
+          ) {
+            return String(resolveValue(cls));
+          }
+          return cls;
+        })
     : []}
   {@const iconColor = leaf.icon.color
     ? leaf.icon.color.includes("item.") || leaf.icon.color.includes("data.")

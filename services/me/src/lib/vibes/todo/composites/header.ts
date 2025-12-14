@@ -16,15 +16,14 @@ import {
 export const headerComposite: CompositeConfig = {
 	type: 'stack',
 	container: {
-		padding: '0',
-		background: 'transparent',
+		class: 'p-0 bg-transparent',
 	},
 	children: [
 		{
 			slot: 'title',
-			leaf: titleLeaf,
-			size: {
-				height: 'auto',
+			leaf: {
+				...titleLeaf,
+				classes: titleLeaf.classes ? `${titleLeaf.classes} h-auto` : 'h-auto',
 			},
 		},
 
@@ -40,7 +39,7 @@ export const headerComposite: CompositeConfig = {
 					wrap: 'nowrap',
 				},
 				container: {
-					padding: '0 0 1rem 0',
+					class: 'pb-4',
 				},
 				children: [
 					{

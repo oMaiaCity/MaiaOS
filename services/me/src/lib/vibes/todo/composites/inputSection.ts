@@ -8,22 +8,21 @@ import { errorLeaf, inputFormLeaf } from '../leafs'
 export const inputSectionComposite: CompositeConfig = {
 	type: 'stack',
 	container: {
-		padding: '1.5rem 0 0 0',
-		background: 'rgb(248 250 252)', // slate-50 - match container background
+		class: 'pt-6 bg-slate-50',
 	},
 	children: [
 		{
 			slot: 'input.value',
-			leaf: inputFormLeaf,
-			size: {
-				height: 'auto',
+			leaf: {
+				...inputFormLeaf,
+				classes: inputFormLeaf.classes ? `${inputFormLeaf.classes} h-auto` : 'h-auto',
 			},
 		},
 		{
 			slot: 'error',
-			leaf: errorLeaf,
-			size: {
-				height: 'auto',
+			leaf: {
+				...errorLeaf,
+				classes: errorLeaf.classes ? `${errorLeaf.classes} h-auto` : 'h-auto',
 			},
 		},
 	],

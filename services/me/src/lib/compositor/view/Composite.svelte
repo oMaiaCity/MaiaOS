@@ -1,15 +1,14 @@
 <!--
   Composite Component
   Renders composite nodes (layout containers) with children
-  Uses Composite/Leaf pattern - recursively renders children
+  Uses Composite/Leaf pattern - delegates styling to Tailwind classes and LeafRenderer
 -->
 <script lang="ts">
   import type { Data } from "../dataStore";
   import type { VibeConfig } from "../types";
-  import type { ViewNode } from "./types";
-  import Composite from "./Composite.svelte";
-  import Leaf from "./Leaf.svelte";
-  import { normalizeLayoutConfig } from "./layout-normalizer";
+  import type { ViewNode, CompositeConfig } from "./types";
+  import ViewRenderer from "./ViewRenderer.svelte";
+  import { getLayoutClasses } from "./layout-classes";
   import { resolveDataPath } from "./resolver";
 
   interface Props {
@@ -32,139 +31,9 @@
     }
   });
 
-  // Normalize semantic layouts to underlying flex/grid configs
-  const normalizedConfig = $derived(
-    composite ? normalizeLayoutConfig(composite) : null,
-  );
-
-  // Debug: Log when we have semantic layouts
-  $effect(() => {
-    if (
-      composite &&
-      (composite.type === "list" ||
-        composite.type === "row" ||
-        composite.type === "grid")
-    ) {
-      console.log(`[Composite] Semantic layout detected:`, {
-        type: composite.type,
-        childrenCount: composite.children?.length || 0,
-        normalizedType: normalizedConfig?.type,
-        firstChild: composite.children?.[0]?.slot,
-      });
-    }
-  });
-
-  // Check if parent is a grid container (use normalized type)
-  const isGridContainer = $derived(normalizedConfig?.type === "grid");
-
-  // Compute container styles
-  const containerStyle = $derived(() => {
-    if (!composite || !normalizedConfig) {
-      return {};
-    }
-    const style: Record<string, string> = {
-      ...composite.container?.style,
-    };
-
-    // System-level defaults for root composites (slot === "root")
-    // Root slots ALWAYS get 100% width and height (hardcoded, cannot override)
-    if (node.slot === "root") {
-      style.width = "100%";
-      style.height = "100%";
-      if (!composite.overflow) {
-        style.overflow = "hidden";
-      }
-    }
-
-    // Layout-specific styles (use normalized config)
-    if (normalizedConfig.type === "grid" && normalizedConfig.grid) {
-      if (normalizedConfig.grid.columns) {
-        style["grid-template-columns"] = normalizedConfig.grid.columns;
-      }
-      if (normalizedConfig.grid.rows) {
-        style["grid-template-rows"] = normalizedConfig.grid.rows;
-      }
-      if (normalizedConfig.grid.gap) {
-        style.gap = normalizedConfig.grid.gap;
-      }
-      if (normalizedConfig.grid.areas) {
-        if (typeof normalizedConfig.grid.areas === "object") {
-          const areaEntries = Object.entries(normalizedConfig.grid.areas);
-          const areaStrings = areaEntries.map(([name, area]) => {
-            if (typeof area === "string") {
-              return area;
-            }
-            return name;
-          });
-          style["grid-template-areas"] = areaStrings.join(" ");
-        } else {
-          style["grid-template-areas"] = String(normalizedConfig.grid.areas);
-        }
-      }
-      style.display = "grid";
-    } else if (normalizedConfig.type === "flex" && normalizedConfig.flex) {
-      style.display = "flex";
-      if (normalizedConfig.flex.direction) {
-        style["flex-direction"] = normalizedConfig.flex.direction;
-      }
-      if (normalizedConfig.flex.justify) {
-        style["justify-content"] = normalizedConfig.flex.justify;
-      }
-      if (normalizedConfig.flex.align) {
-        style["align-items"] = normalizedConfig.flex.align;
-      }
-      if (normalizedConfig.flex.gap) {
-        style.gap = normalizedConfig.flex.gap;
-      }
-      if (normalizedConfig.flex.wrap) {
-        style["flex-wrap"] = normalizedConfig.flex.wrap;
-      }
-    } else if (normalizedConfig.type === "stack") {
-      style.display = "flex";
-      style["flex-direction"] = "column";
-    } else if (normalizedConfig.type === "overlay") {
-      style.position = "relative";
-    }
-
-    // Apply overflow from normalized config (for semantic layouts)
-    if (normalizedConfig.overflow) {
-      style.overflow = normalizedConfig.overflow;
-    }
-
-    // Container properties
-    if (composite.container?.padding) {
-      style.padding = composite.container.padding;
-    }
-    if (composite.container?.margin) {
-      style.margin = composite.container.margin;
-    }
-    if (composite.container?.background) {
-      style.background = composite.container.background;
-    }
-    if (composite.container?.border) {
-      style.border = composite.container.border;
-    }
-    if (composite.container?.borderRadius) {
-      style["border-radius"] = composite.container.borderRadius;
-    }
-    // Overflow from config (only if not set by normalized config)
-    if (composite.overflow && !normalizedConfig.overflow) {
-      style.overflow = composite.overflow;
-    }
-    if (composite.height) {
-      style.height = composite.height;
-    }
-    if (composite.width) {
-      style.width = composite.width;
-    }
-
-    return style;
-  });
-
   // Helper to evaluate visibility (reactive to data changes)
   const evaluateVisibility = (path: string | undefined): boolean => {
     if (!path) return true;
-    // Access data to ensure reactivity - explicitly access selectedLayout
     const currentData = data;
     const dataObj = currentData as Record<string, unknown>;
     // Explicitly access selectedLayout and viewMode for reactivity tracking
@@ -204,210 +73,120 @@
     }
   };
 
-  // Compute child node styles
-  const getChildStyle = (child: ViewNode): Record<string, string> => {
-    const style: Record<string, string> = {};
+  // Build container classes - pure Tailwind, no inline styles
+  const containerClasses = $derived.by(() => {
+    if (!composite) return [];
 
-    if (!composite || !normalizedConfig) {
-      return style;
+    const classes: string[] = [];
+
+    // Add user-provided classes
+    if (composite.container?.class) {
+      classes.push(...composite.container.class.split(" ").filter(Boolean));
     }
 
-    // Default: fill parent width (unless in flex row container and child is a button)
-    // Buttons in flex row should only take space they need, not 100% width
-    const isFlexRow =
-      normalizedConfig.type === "flex" &&
-      normalizedConfig.flex?.direction === "row";
-    const isButton = child.leaf?.tag === "button";
+    // Add layout classes based on type
+    const layoutClasses = getLayoutClasses(composite.type, composite);
+    classes.push(...layoutClasses);
 
-    if (!(isFlexRow && isButton)) {
-      style.width = "100%";
-    }
-    // Don't set height: 100% by default - let content determine its own height
-    // Only set height if explicitly specified in child.size or when flex-grow is used
-
-    // Grid-specific
-    if (normalizedConfig.type === "grid" && child.grid) {
-      if (child.grid.column) {
-        style["grid-column"] = child.grid.column;
-      }
-      if (child.grid.row) {
-        style["grid-row"] = child.grid.row;
-      }
-      if (child.grid.area) {
-        style["grid-area"] = child.grid.area;
+    // System-level defaults for root composites (slot === "root")
+    if (node.slot === "root") {
+      classes.push("w-full", "h-full");
+      if (!composite.overflow) {
+        classes.push("overflow-hidden");
       }
     }
 
-    // Flex-specific
-    if (normalizedConfig.type === "flex" && child.flex) {
-      if (child.flex.grow !== undefined) {
-        style["flex-grow"] = String(child.flex.grow);
+    // Convert container properties to Tailwind classes
+    if (composite.container?.padding) {
+      // Parse padding value and convert to Tailwind class
+      const padding = composite.container.padding;
+      if (padding.includes(" ")) {
+        // Multiple values - use arbitrary value
+        classes.push(`p-[${padding}]`);
+      } else {
+        // Single value - try to match Tailwind spacing scale
+        classes.push(`p-[${padding}]`);
       }
-      if (child.flex.shrink !== undefined) {
-        style["flex-shrink"] = String(child.flex.shrink);
+    }
+    if (composite.container?.margin) {
+      const margin = composite.container.margin;
+      classes.push(`m-[${margin}]`);
+    }
+    if (composite.container?.background) {
+      const bg = composite.container.background;
+      classes.push(`bg-[${bg}]`);
+    }
+    if (composite.container?.border) {
+      // Border is complex - use arbitrary value
+      const border = composite.container.border;
+      classes.push(`border-[${border}]`);
+    }
+    if (composite.container?.borderRadius) {
+      const radius = composite.container.borderRadius;
+      classes.push(`rounded-[${radius}]`);
+    }
+
+    // Add width/height if specified
+    if (composite.width) {
+      if (composite.width === "100%") {
+        classes.push("w-full");
+      } else if (composite.width === "auto") {
+        classes.push("w-auto");
+      } else {
+        classes.push(`w-[${composite.width}]`);
       }
-      if (child.flex.basis) {
-        style["flex-basis"] = child.flex.basis;
-      }
-      if (child.flex.order !== undefined) {
-        style.order = String(child.flex.order);
+    }
+    if (composite.height) {
+      if (composite.height === "100%") {
+        classes.push("h-full");
+      } else if (composite.height === "auto") {
+        classes.push("h-auto");
+      } else {
+        classes.push(`h-[${composite.height}]`);
       }
     }
 
-    // Stack-specific (flex column)
-    if (normalizedConfig.type === "stack" && child.flex) {
-      if (child.flex.grow !== undefined) {
-        style["flex-grow"] = String(child.flex.grow);
-        // For flex-grow items, set min-height to 0 to allow proper flex behavior
-        if (child.flex.grow > 0) {
-          style["min-height"] = "0";
-        }
-      }
-      if (child.flex.shrink !== undefined) {
-        style["flex-shrink"] = String(child.flex.shrink);
-      }
-      if (child.flex.basis) {
-        style["flex-basis"] = child.flex.basis;
-      }
-      if (child.flex.order !== undefined) {
-        style.order = String(child.flex.order);
-      }
-    }
-
-    // Flex-specific (for flex containers)
-    if (composite.type === "flex" && child.flex) {
-      if (child.flex.grow !== undefined) {
-        style["flex-grow"] = String(child.flex.grow);
-        // For flex-grow items, set min-height to 0 to allow proper flex behavior
-        if (child.flex.grow > 0) {
-          style["min-height"] = "0";
-        }
-      }
-      if (child.flex.shrink !== undefined) {
-        style["flex-shrink"] = String(child.flex.shrink);
-      }
-      if (child.flex.basis) {
-        style["flex-basis"] = child.flex.basis;
-      }
-      if (child.flex.order !== undefined) {
-        style.order = String(child.flex.order);
+    // Handle grid-template-areas - convert to Tailwind arbitrary value
+    // Use Tailwind's [property:value] syntax for arbitrary CSS properties
+    if (composite.type === "grid" && composite.grid?.areas) {
+      if (typeof composite.grid.areas === "object") {
+        const areaEntries = Object.entries(composite.grid.areas);
+        const areaStrings = areaEntries.map(([name, area]) => {
+          if (typeof area === "string") {
+            return area;
+          }
+          return name;
+        });
+        const areasValue = areaStrings.join(" ");
+        // Escape quotes in the value for Tailwind arbitrary syntax
+        const escapedValue = areasValue.replace(/"/g, '\\"');
+        classes.push(`[grid-template-areas:${escapedValue}]`);
+      } else {
+        const escapedValue = String(composite.grid.areas).replace(/"/g, '\\"');
+        classes.push(`[grid-template-areas:${escapedValue}]`);
       }
     }
 
-    // Position
-    if (child.position) {
-      if (child.position.type) {
-        style.position = child.position.type;
-      }
-      if (child.position.top) {
-        style.top = child.position.top;
-      }
-      if (child.position.right) {
-        style.right = child.position.right;
-      }
-      if (child.position.bottom) {
-        style.bottom = child.position.bottom;
-      }
-      if (child.position.left) {
-        style.left = child.position.left;
-      }
-      if (child.position.zIndex !== undefined) {
-        style["z-index"] = String(child.position.zIndex);
+    // Add container query classes if specified
+    if (composite.container?.containerType) {
+      classes.push("@container");
+      if (composite.container.containerName) {
+        classes.push(composite.container.containerName);
       }
     }
 
-    // Size
-    if (child.size) {
-      if (child.size.width) {
-        style.width = child.size.width;
-      }
-      if (child.size.height) {
-        style.height = child.size.height;
-      }
-      if (child.size.minWidth) {
-        style["min-width"] = child.size.minWidth;
-      }
-      if (child.size.maxWidth) {
-        style["max-width"] = child.size.maxWidth;
-      }
-      if (child.size.minHeight) {
-        style["min-height"] = child.size.minHeight;
-      }
-      if (child.size.maxHeight) {
-        style["max-height"] = child.size.maxHeight;
-      }
-    }
-
-    // Overflow - critical for scrolling
-    if (child.overflow) {
-      style.overflow = child.overflow;
-      // If overflow is set and flex-grow is used, ensure height is constrained
-      if (child.flex?.grow !== undefined && child.flex.grow > 0) {
-        style.height = "100%";
-      }
-    }
-
-    return style;
-  };
+    return classes.filter(Boolean);
+  });
 </script>
 
 {#if composite}
-  <div
-    class={`${composite.container?.class || ""} ${composite.container?.containerType ? `@container ${composite.container?.containerName || ""}` : ""}`}
-    style={Object.entries(containerStyle)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join("; ")}
-  >
+  {@const classes = containerClasses}
+  <div class={classes.join(" ")}>
     {#each composite.children as child}
-      {@const childStyle = getChildStyle(child)}
-      {@const isLeafChild = !child.composite && child.leaf}
-      {@const hasForeach = isLeafChild && child.leaf?.bindings?.foreach}
-      {@const needsContents = isGridContainer && hasForeach}
-      {@const wrapperStyle = needsContents
-        ? { ...childStyle, display: "contents" }
-        : childStyle}
-      {@const isVisible =
-        !child.visible ||
-        (() => {
-          if (!child.visible) return true;
-          // Access data to ensure reactivity
-          const _ = data;
-          const dataObj = data as Record;
-          const __ = dataObj.selectedLayout;
-          const ___ = dataObj.viewMode;
-          const result = evaluateVisibility(child.visible);
-          // Debug logging
-          if (child.slot?.includes("View")) {
-            console.log(`[Composite] Visibility check for ${child.slot}:`, {
-              visibleExpr: child.visible,
-              selectedLayout: String(__),
-              result: String(result),
-              hasComposite: !!child.composite,
-              childrenCount: child.composite?.children?.length || 0,
-            });
-          }
-          return result;
-        })()}
+      {@const isVisible = !child.visible || evaluateVisibility(child.visible)}
       {#if isVisible}
-        <div
-          class={`${child.composite?.container?.containerType ? `@container ${child.composite?.container?.containerName || ""}` : ""}`}
-          style={Object.entries(wrapperStyle)
-            .map(([key, value]) => `${key}: ${value}`)
-            .join("; ")}
-        >
-          {#if child.composite}
-            <!-- Composite child - recursively render -->
-            <Composite node={child} {data} {config} {onEvent} />
-          {:else if child.leaf}
-            <!-- Leaf child - render content using JSON-driven leaf definition -->
-            <Leaf node={child} {data} {config} {onEvent} />
-          {:else}
-            <!-- Invalid node - must have composite or leaf -->
-            <div class="text-red-500 text-sm">
-              Invalid node: must have either composite or leaf
-            </div>
-          {/if}
-        </div>
+        <!-- Pure slot management and composition - all styling in leaf.classes and composite.container.class -->
+        <ViewRenderer node={child} {data} {config} {onEvent} />
       {/if}
     {/each}
   </div>

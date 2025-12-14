@@ -15,12 +15,12 @@ export const Leaves = {
 	button: (
 		label: string,
 		event: string,
-		classes?: string[],
+		classes?: string,
 		payload?: Record<string, unknown> | string,
 	): LeafNode => ({
 		tag: 'button',
 		attributes: { type: 'button' },
-		classes: classes || ['px-4', 'py-2', 'bg-blue-500', 'text-white', 'rounded'],
+		classes: classes || 'px-4 py-2 bg-blue-500 text-white rounded',
 		events: { click: { event, payload } },
 		children: [label],
 	}),
@@ -32,11 +32,11 @@ export const Leaves = {
 		binding: string,
 		placeholder: string,
 		inputEvent?: string,
-		classes?: string[],
+		classes?: string,
 	): LeafNode => ({
 		tag: 'input',
 		attributes: { type: 'text', placeholder },
-		classes: classes || ['px-4', 'py-2', 'border', 'rounded'],
+		classes: classes || 'px-4 py-2 border rounded',
 		bindings: { value: binding },
 		events: inputEvent ? { input: { event: inputEvent } } : undefined,
 	}),
@@ -44,7 +44,7 @@ export const Leaves = {
 	/**
 	 * Create a text leaf
 	 */
-	text: (binding: string, tag = 'span', classes?: string[]): LeafNode => ({
+	text: (binding: string, tag = 'span', classes?: string): LeafNode => ({
 		tag,
 		classes,
 		bindings: { text: binding },
@@ -71,9 +71,9 @@ export const Leaves = {
 	/**
 	 * Create a form leaf
 	 */
-	form: (submitEvent: string, children: LeafNode[], classes?: string[]): LeafNode => ({
+	form: (submitEvent: string, children: LeafNode[], classes?: string): LeafNode => ({
 		tag: 'form',
-		classes: classes || [],
+		classes: classes || '',
 		events: { submit: { event: submitEvent } },
 		children,
 	}),
@@ -81,18 +81,18 @@ export const Leaves = {
 	/**
 	 * Create a container div leaf
 	 */
-	container: (children: (LeafNode | string)[], classes?: string[]): LeafNode => ({
+	container: (children: (LeafNode | string)[], classes?: string): LeafNode => ({
 		tag: 'div',
-		classes: classes || [],
+		classes: classes || '',
 		children,
 	}),
 
 	/**
 	 * Create a heading leaf
 	 */
-	heading: (level: 1 | 2 | 3 | 4 | 5 | 6, binding: string, classes?: string[]): LeafNode => ({
+	heading: (level: 1 | 2 | 3 | 4 | 5 | 6, binding: string, classes?: string): LeafNode => ({
 		tag: `h${level}`,
-		classes: classes || [],
+		classes: classes || '',
 		bindings: { text: binding },
 	}),
 }

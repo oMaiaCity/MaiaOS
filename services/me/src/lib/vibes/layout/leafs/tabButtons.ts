@@ -9,18 +9,7 @@ import type { LeafNode } from '../../../compositor/view/leaf-types'
 export const tabButtonListActive: LeafNode = {
 	tag: 'button',
 	attributes: { type: 'button' },
-	classes: [
-		'px-4',
-		'py-2',
-		'rounded-lg',
-		'text-sm',
-		'font-medium',
-		'transition-colors',
-		'border',
-		'bg-blue-500',
-		'text-white',
-		'border-blue-600',
-	],
+	classes: 'px-4 py-2 rounded-lg text-sm font-medium transition-colors border bg-blue-500 text-white border-blue-600',
 	bindings: {
 		visible: "data.selectedLayout === 'list'",
 	},
@@ -37,19 +26,7 @@ export const tabButtonListActive: LeafNode = {
 export const tabButtonList: LeafNode = {
 	tag: 'button',
 	attributes: { type: 'button' },
-	classes: [
-		'px-4',
-		'py-2',
-		'rounded-lg',
-		'text-sm',
-		'font-medium',
-		'transition-colors',
-		'border',
-		'bg-slate-100',
-		'text-slate-700',
-		'border-slate-300',
-		'hover:bg-slate-200',
-	],
+	classes: 'px-4 py-2 rounded-lg text-sm font-medium transition-colors border bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200',
 	bindings: {
 		visible: "data.selectedLayout !== 'list'",
 		text: '"List"',
@@ -66,18 +43,7 @@ export const tabButtonList: LeafNode = {
 export const tabButtonRowActive: LeafNode = {
 	tag: 'button',
 	attributes: { type: 'button' },
-	classes: [
-		'px-4',
-		'py-2',
-		'rounded-lg',
-		'text-sm',
-		'font-medium',
-		'transition-colors',
-		'border',
-		'bg-blue-500',
-		'text-white',
-		'border-blue-600',
-	],
+	classes: 'px-4 py-2 rounded-lg text-sm font-medium transition-colors border bg-blue-500 text-white border-blue-600',
 	bindings: {
 		visible: "data.selectedLayout === 'row'",
 	},
@@ -94,19 +60,7 @@ export const tabButtonRowActive: LeafNode = {
 export const tabButtonRow: LeafNode = {
 	tag: 'button',
 	attributes: { type: 'button' },
-	classes: [
-		'px-4',
-		'py-2',
-		'rounded-lg',
-		'text-sm',
-		'font-medium',
-		'transition-colors',
-		'border',
-		'bg-slate-100',
-		'text-slate-700',
-		'border-slate-300',
-		'hover:bg-slate-200',
-	],
+	classes: 'px-4 py-2 rounded-lg text-sm font-medium transition-colors border bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200',
 	bindings: {
 		visible: "data.selectedLayout !== 'row'",
 		text: '"Row"',
@@ -123,18 +77,7 @@ export const tabButtonRow: LeafNode = {
 export const tabButtonGridActive: LeafNode = {
 	tag: 'button',
 	attributes: { type: 'button' },
-	classes: [
-		'px-4',
-		'py-2',
-		'rounded-lg',
-		'text-sm',
-		'font-medium',
-		'transition-colors',
-		'border',
-		'bg-blue-500',
-		'text-white',
-		'border-blue-600',
-	],
+	classes: 'px-4 py-2 rounded-lg text-sm font-medium transition-colors border bg-blue-500 text-white border-blue-600',
 	bindings: {
 		visible: "data.selectedLayout === 'grid'",
 	},
@@ -151,19 +94,7 @@ export const tabButtonGridActive: LeafNode = {
 export const tabButtonGrid: LeafNode = {
 	tag: 'button',
 	attributes: { type: 'button' },
-	classes: [
-		'px-4',
-		'py-2',
-		'rounded-lg',
-		'text-sm',
-		'font-medium',
-		'transition-colors',
-		'border',
-		'bg-slate-100',
-		'text-slate-700',
-		'border-slate-300',
-		'hover:bg-slate-200',
-	],
+	classes: 'px-4 py-2 rounded-lg text-sm font-medium transition-colors border bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200',
 	bindings: {
 		visible: "data.selectedLayout !== 'grid'",
 		text: '"Grid"',

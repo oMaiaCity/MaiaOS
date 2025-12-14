@@ -6,31 +6,14 @@ import type { LeafNode } from '../../../compositor/view/leaf-types'
 
 export const errorLeaf: LeafNode = {
 	tag: 'div',
-	classes: [
-		'mb-4',
-		'px-4',
-		'py-3',
-		'rounded-2xl',
-		'bg-gradient-to-r',
-		'from-red-50',
-		'to-red-100/50',
-		'border',
-		'border-red-200/60',
-		'shadow-[0_2px_8px_rgba(239,68,68,0.1)]',
-		'text-red-800',
-		'text-sm',
-		'flex',
-		'items-center',
-		'justify-between',
-		'gap-3',
-	],
+	classes: 'mb-4 px-4 py-3 rounded-2xl bg-gradient-to-r from-red-50 to-red-100/50 border border-red-200/60 shadow-[0_2px_8px_rgba(239,68,68,0.1)] text-red-800 text-sm flex items-center justify-between gap-3',
 	bindings: {
 		visible: 'data.error',
 	},
 	children: [
 		{
 			tag: 'div',
-			classes: ['flex', 'items-center', 'gap-2', 'flex-1'],
+			classes: 'flex items-center gap-2 flex-1',
 			children: [
 				{
 					tag: 'svg',
@@ -54,7 +37,7 @@ export const errorLeaf: LeafNode = {
 				},
 				{
 					tag: 'span',
-					classes: ['font-medium'],
+					classes: 'font-medium',
 					bindings: { text: 'data.error' },
 				},
 			],

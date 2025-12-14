@@ -135,10 +135,18 @@ const TAILWIND_PATTERNS = [
 	/^flex-(row|col|wrap|nowrap|grow|shrink|1|auto|none)$/, // flex-1, flex-auto, flex-none
 	/^(shrink|grow)-(0|1)$/, // shrink-0, shrink-1, grow-0, grow-1
 	/^flex-(shrink|grow)-(\d+)$/, // flex-shrink-0, flex-shrink-1, flex-grow-0, flex-grow-1, etc.
+	/^flex-grow$/, // flex-grow (standalone)
+	/^flex-shrink$/, // flex-shrink (standalone)
+	/^flex-basis-(\d+|auto|full|0)$/, // flex-basis-0, flex-basis-auto, etc.
 	/^grid-cols-(\d+|auto|min|max|subgrid)$/,
 	/^grid-rows-(\d+|auto|min|max|subgrid)$/,
 	/^col-span-(\d+|auto|full)$/,
 	/^row-span-(\d+|auto|full)$/,
+	/^\[grid-column:.*\]$/, // [grid-column:...] for grid-column arbitrary value
+	/^\[grid-row:.*\]$/, // [grid-row:...] for grid-row arbitrary value
+	/^\[grid-area:.*\]$/, // [grid-area:...] for grid-area arbitrary value
+	/^\[grid-template-areas:.*\]$/, // [grid-template-areas:...] for grid-template-areas arbitrary value
+	/^\[grid-template-columns:.*\]$/, // [grid-template-columns:...] for grid-template-columns arbitrary value
 	// Flexbox alignment
 	/^items-(start|end|center|baseline|stretch)$/,
 	/^justify-(start|end|center|between|around|evenly)$/,
@@ -194,7 +202,7 @@ const TAILWIND_PATTERNS = [
 	/^(static|fixed|absolute|relative|sticky)$/,
 	/^(top|right|bottom|left|inset|inset-x|inset-y)-(\d+|auto|full|screen|0|1\/2|1\/3|2\/3|1\/4|3\/4)$/, // Support fractional values like top-1/2
 	/^-(top|right|bottom|left)-(\d+|auto|full|screen|0|1\/2|1\/3|2\/3|1\/4|3\/4)$/, // Negative positioning with fractions: -left-1/2, -top-1/2, etc.
-	/^z-(\d+|auto|0|10|20|30|40|50)$/,
+	/^z-(\d+|auto|0|9|10|20|30|40|50)$/, // Added z-9 support
 	// Transform
 	/^translate-[xy]-(\d+|full|1\/2|1\/3|2\/3|1\/4|3\/4|\[.*\])$/, // translate-x-1/2, translate-y-full
 	/^-translate-[xy]-(\d+|full|1\/2|1\/3|2\/3|1\/4|3\/4|\[.*\])$/, // -translate-x-1/2, -translate-y-1/2
@@ -386,7 +394,19 @@ export function validateLeaf(node: LeafNode, path = 'root'): ValidationResult {
 			if (!node.icon.name || typeof node.icon.name !== 'string') {
 				errors.push(`${path}: Icon configuration must have a 'name' string property`)
 			}
-			// icon.classes is optional
+			// Validate icon.classes (must be a string if provided)
+			if (node.icon.classes !== undefined) {
+				if (typeof node.icon.classes !== 'string') {
+					errors.push(`${path}: Icon classes must be a string (space-separated)`)
+				} else {
+					// Split string by spaces and sanitize
+					const iconClassArray = node.icon.classes.split(/\s+/).filter(Boolean)
+					const sanitized = sanitizeClasses(iconClassArray)
+					if (sanitized.length !== iconClassArray.length) {
+						errors.push(`${path}: Some icon classes were blocked`)
+					}
+				}
+			}
 		}
 	} else if (!isAllowedTag(node.tag)) {
 		errors.push(`${path}: Tag '${node.tag}' is not allowed`)
@@ -407,13 +427,15 @@ export function validateLeaf(node: LeafNode, path = 'root'): ValidationResult {
 		}
 	}
 
-	// Validate classes
+	// Validate classes (must be a string, space-separated)
 	if (node.classes) {
-		if (!Array.isArray(node.classes)) {
-			errors.push(`${path}: Classes must be an array`)
+		if (typeof node.classes !== 'string') {
+			errors.push(`${path}: Classes must be a string (space-separated)`)
 		} else {
-			const sanitized = sanitizeClasses(node.classes)
-			if (sanitized.length !== node.classes.length) {
+			// Split string by spaces and sanitize
+			const classArray = node.classes.split(/\s+/).filter(Boolean)
+			const sanitized = sanitizeClasses(classArray)
+			if (sanitized.length !== classArray.length) {
 				errors.push(`${path}: Some classes were blocked`)
 			}
 		}

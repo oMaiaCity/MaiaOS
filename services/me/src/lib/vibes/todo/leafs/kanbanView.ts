@@ -25,21 +25,21 @@ const kanbanTodoItemLeaf: LeafNode = {
 
 export const kanbanViewLeaf: LeafNode = {
 	tag: 'div',
-	classes: ['grid', 'grid-cols-3', 'gap-4', 'min-h-[100px]'],
+	classes: 'grid grid-cols-3 gap-4 min-h-[100px]',
 	children: [
 		// Todo column
 		{
 			tag: 'div',
-			classes: ['flex', 'flex-col', 'gap-2'],
+			classes: 'flex flex-col gap-2',
 			children: [
 				{
 					tag: 'h3',
-					classes: ['text-sm', 'font-semibold', 'text-slate-700', 'mb-2', 'px-2'],
+					classes: 'text-sm font-semibold text-slate-700 mb-2 px-2',
 					children: ['Todo'],
 				},
 				{
 					tag: 'div',
-					classes: ['flex', 'flex-col', 'gap-2', 'min-h-[200px]', 'bg-slate-50', 'rounded-lg', 'p-2'],
+					classes: 'flex flex-col gap-2 min-h-[200px] bg-slate-50 rounded-lg p-2',
 					attributes: {
 						'data-status': 'todo',
 					},
@@ -65,11 +65,7 @@ export const kanbanViewLeaf: LeafNode = {
 								children: [
 									{
 										...kanbanTodoItemLeaf,
-										classes: [
-											...(kanbanTodoItemLeaf.classes || []),
-											'mb-0', // Remove margin since gap handles spacing
-											'cursor-move', // Show drag cursor
-										],
+										classes: kanbanTodoItemLeaf.classes ? `${kanbanTodoItemLeaf.classes} mb-0 cursor-move` : 'mb-0 cursor-move',
 										attributes: {
 											draggable: true,
 										},
@@ -91,16 +87,16 @@ export const kanbanViewLeaf: LeafNode = {
 		// In-progress column
 		{
 			tag: 'div',
-			classes: ['flex', 'flex-col', 'gap-2'],
+			classes: 'flex flex-col gap-2',
 			children: [
 				{
 					tag: 'h3',
-					classes: ['text-sm', 'font-semibold', 'text-blue-700', 'mb-2', 'px-2'],
+					classes: 'text-sm font-semibold text-blue-700 mb-2 px-2',
 					children: ['In Progress'],
 				},
 				{
 					tag: 'div',
-					classes: ['flex', 'flex-col', 'gap-2', 'min-h-[200px]', 'bg-blue-50', 'rounded-lg', 'p-2'],
+					classes: 'flex flex-col gap-2 min-h-[200px] bg-blue-50 rounded-lg p-2',
 					attributes: {
 						'data-status': 'in-progress',
 					},
@@ -126,7 +122,7 @@ export const kanbanViewLeaf: LeafNode = {
 								children: [
 									{
 										...kanbanTodoItemLeaf,
-										classes: [...(kanbanTodoItemLeaf.classes || []), 'mb-0', 'cursor-move'],
+										classes: kanbanTodoItemLeaf.classes ? `${kanbanTodoItemLeaf.classes} mb-0 cursor-move` : 'mb-0 cursor-move',
 										attributes: {
 											draggable: true,
 										},
@@ -148,16 +144,16 @@ export const kanbanViewLeaf: LeafNode = {
 		// Done column
 		{
 			tag: 'div',
-			classes: ['flex', 'flex-col', 'gap-2'],
+			classes: 'flex flex-col gap-2',
 			children: [
 				{
 					tag: 'h3',
-					classes: ['text-sm', 'font-semibold', 'text-green-700', 'mb-2', 'px-2'],
+					classes: 'text-sm font-semibold text-green-700 mb-2 px-2',
 					children: ['Done'],
 				},
 				{
 					tag: 'div',
-					classes: ['flex', 'flex-col', 'gap-2', 'min-h-[200px]', 'bg-green-50', 'rounded-lg', 'p-2'],
+					classes: 'flex flex-col gap-2 min-h-[200px] bg-green-50 rounded-lg p-2',
 					attributes: {
 						'data-status': 'done',
 					},
@@ -183,7 +179,7 @@ export const kanbanViewLeaf: LeafNode = {
 								children: [
 									{
 										...kanbanTodoItemLeaf,
-										classes: [...(kanbanTodoItemLeaf.classes || []), 'mb-0', 'cursor-move'],
+										classes: kanbanTodoItemLeaf.classes ? `${kanbanTodoItemLeaf.classes} mb-0 cursor-move` : 'mb-0 cursor-move',
 										attributes: {
 											draggable: true,
 										},

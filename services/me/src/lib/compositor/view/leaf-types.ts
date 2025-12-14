@@ -85,8 +85,9 @@ export interface IconConfig {
 
 	/**
 	 * Optional icon classes (defaults to "w-4 h-4")
+	 * Space-separated string of Tailwind classes
 	 */
-	classes?: string[]
+	classes?: string
 
 	/**
 	 * Optional icon color (can be a data path like "item.categoryColor")
@@ -121,9 +122,10 @@ export interface LeafNode {
 
 	/**
 	 * Tailwind CSS classes
-	 * Example: ["px-4", "py-2", "bg-blue-500", "text-white"]
+	 * Space-separated string of Tailwind classes
+	 * Example: "px-4 py-2 bg-blue-500 text-white"
 	 */
-	classes?: string[]
+	classes?: string
 
 	/**
 	 * Child nodes or text content

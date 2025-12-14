@@ -19,22 +19,11 @@ export function createTestBoxes(): ViewNode[] {
 		slot: `box${index + 1}`,
 		leaf: {
 			tag: 'div',
-			classes: [
-				color.bg,
-				'border',
-				color.border,
-				'rounded-2xl',
-				'p-4',
-				'flex',
-				'items-center',
-				'justify-center',
-				'min-h-[150px]',
-				'min-w-[200px]', // For row layout
-			],
+			classes: `${color.bg} border ${color.border} rounded-2xl p-4 flex items-center justify-center min-h-[150px] min-w-[200px]`,
 			children: [
 				{
 					tag: 'span',
-					classes: [color.text, 'font-medium'],
+					classes: `${color.text} font-medium`,
 					children: [color.label],
 				},
 			],
