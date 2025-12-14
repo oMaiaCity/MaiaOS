@@ -7,7 +7,6 @@ import type { CompositeConfig } from '../../../compositor/view/types'
 import { kanbanViewLeaf, timelineViewLeaf, todoListLeaf } from '../leafs'
 
 export const contentComposite: CompositeConfig = {
-	type: 'stack',
 	container: {
 		class: 'pt-6',
 	},

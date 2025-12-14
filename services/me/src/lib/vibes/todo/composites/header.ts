@@ -14,7 +14,6 @@ import {
 } from '../leafs/viewButtons'
 
 export const headerComposite: CompositeConfig = {
-	type: 'stack',
 	container: {
 		class: 'p-0 bg-transparent',
 	},
@@ -30,16 +29,8 @@ export const headerComposite: CompositeConfig = {
 		{
 			slot: 'viewButtons',
 			composite: {
-				type: 'flex',
-				flex: {
-					direction: 'row',
-					justify: 'center',
-					align: 'center',
-					gap: '0.5rem',
-					wrap: 'nowrap',
-				},
 				container: {
-					class: 'pb-4',
+					class: 'pb-4 flex flex-row justify-center items-center gap-2 flex-nowrap',
 				},
 				children: [
 					{

@@ -9,7 +9,6 @@ import { headerComposite } from './header'
 import { inputSectionComposite } from './inputSection'
 
 export const rootComposite: CompositeConfig = {
-	type: 'stack', // Stack layout (flex column)
 	container: {
 		class: 'h-full w-full max-w-6xl mx-auto flex flex-col p-6',
 	},
@@ -17,7 +16,6 @@ export const rootComposite: CompositeConfig = {
 		{
 			slot: 'cardContainer',
 			composite: {
-				type: 'stack',
 				container: {
 					class: 'card h-full p-6 flex-grow flex-shrink flex-basis-0 min-h-0 overflow-hidden',
 				},

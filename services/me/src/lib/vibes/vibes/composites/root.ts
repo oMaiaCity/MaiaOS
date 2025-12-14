@@ -7,7 +7,6 @@ import type { CompositeConfig } from '../../../compositor/view/types'
 import { vibeGridComposite } from './vibeGrid'
 
 export const rootComposite: CompositeConfig = {
-	type: 'stack',
 	container: {
 		class: 'h-full w-full max-w-6xl mx-auto flex flex-col p-6',
 	},
@@ -15,7 +14,6 @@ export const rootComposite: CompositeConfig = {
 		{
 			slot: 'cardContainer',
 			composite: {
-				type: 'stack',
 				container: {
 					class: 'card h-full flex-grow flex-shrink flex-basis-0 min-h-0 overflow-hidden',
 				},
@@ -24,14 +22,8 @@ export const rootComposite: CompositeConfig = {
 					{
 						slot: 'header',
 						composite: {
-							type: 'flex',
-							flex: {
-								direction: 'row',
-								justify: 'space-between',
-								align: 'center',
-							},
 							container: {
-								class: 'px-6 py-4 border-b border-slate-200',
+								class: 'px-6 py-4 border-b border-slate-200 flex flex-row justify-between items-center',
 							},
 							children: [
 								{
@@ -49,9 +41,8 @@ export const rootComposite: CompositeConfig = {
 					{
 						slot: 'content',
 						composite: {
-							type: 'grid',
 							container: {
-								class: 'p-6 w-full flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] gap-[0.75rem]',
+								class: 'p-6 w-full flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto grid [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] gap-[0.75rem]',
 							},
 							children: [
 								{

@@ -141,27 +141,25 @@ export interface Size {
 }
 
 /**
- * Composite Configuration - Layout node with children
+ * Composite Configuration - Pure container node with children
  * 
- * Styling approach: Use container.class for Tailwind classes (recommended)
- * For complex layouts, use semantic types (list, row, grid) with spacing/alignment
- * Low-level flex/grid properties are supported for backward compatibility
+ * Pure Tailwind approach: All styling via container.class (Tailwind classes)
+ * Composite is a simple container div - no layout generation logic
  */
 export interface CompositeConfig {
-	type: LayoutType
-	// Semantic layout properties (for list/row/grid)
-	spacing?: number // Gap in rem (default: 1rem for list/row, 0.75rem for grid)
-	alignment?: 'start' | 'center' | 'end' | 'stretch' // Default: 'start'
-	columns?: number // For grid only - number of columns (generates repeat(N, 1fr))
-	wrap?: boolean // For row only - whether to wrap (default: true)
-	// Low-level properties (backward compatible, prefer container.class)
-	grid?: GridTemplate
-	flex?: FlexProperties
-	container?: ContainerStyles
+	container?: {
+		/**
+		 * Tailwind CSS classes (space-separated string)
+		 * Example: "flex flex-col gap-4 p-6 bg-white rounded-lg"
+		 */
+		class?: string
+		/**
+		 * Inline styles (use sparingly, prefer Tailwind classes)
+		 * Only use for dynamic values, CSS variables, or complex calculations
+		 */
+		style?: Record<string, string>
+	}
 	children: ViewNode[] // Can contain composites or leaves
-	height?: string
-	width?: string
-	overflow?: OverflowBehavior
 }
 
 /**

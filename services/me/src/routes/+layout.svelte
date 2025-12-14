@@ -5,12 +5,15 @@
   import { JazzAccount } from "@hominio/db";
   import { JazzSvelteProvider } from "jazz-tools/svelte";
   import { page } from "$app/stores";
-  import { PUBLIC_JAZZ_API_KEY as apiKey } from "$env/static/public";
+  import { env } from "$env/dynamic/public";
   import GoogleDataSync from "$lib/components/GoogleDataSync.svelte";
   import Header from "$lib/components/Header.svelte";
   import JazzAuthSetup from "$lib/components/JazzAuthSetup.svelte";
 
   const { children } = $props();
+
+  // Get API key from dynamic public env (available at runtime)
+  const apiKey = env.PUBLIC_JAZZ_API_KEY;
 
   // Route-specific title and description
   const routeInfo = $derived.by(() => {

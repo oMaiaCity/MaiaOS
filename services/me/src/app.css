@@ -1,9 +1,399 @@
 @import "tailwindcss";
-@import "./lib/theme/app.css";
 
 html,
 body {
 	min-height: 100vh;
 	overflow-x: hidden;
 	width: 100%;
+}
+
+/* Theme Configuration - Pure Tailwind 4 CSS (No Config.js) */
+@theme {
+	/* Brand Colors - Primary (Navy Blue) */
+	--color-brand-50: #e6ecf7;
+	--color-brand-100: #c4d4ed;
+	--color-brand-200: #8aa8d8;
+	--color-brand-300: #5c86c9;
+	--color-brand-400: #2e64b9;
+	--color-brand-500: #0042aa;
+	--color-brand-600: #003486;
+	--color-brand-700: #002662;
+	--color-brand-800: #001a42;
+	--color-brand-900: #001225;
+	--color-brand-950: #000a1a;
+
+	/* Semantic Colors - Alert (Rose) */
+	--color-alert-50: #fff1f2;
+	--color-alert-100: #ffe4e6;
+	--color-alert-200: #fecdd3;
+	--color-alert-300: #fda4af;
+	--color-alert-400: #fb7185;
+	--color-alert-500: #f43f5e;
+	--color-alert-600: #e11d48;
+	--color-alert-700: #be123c;
+	--color-alert-800: #9f1239;
+	--color-alert-900: #881337;
+	--color-alert-950: #4c0519;
+
+	/* Semantic Colors - Success (Emerald) */
+	--color-success-50: #ecfdf5;
+	--color-success-100: #d1fae5;
+	--color-success-200: #a7f3d0;
+	--color-success-300: #6ee7b7;
+	--color-success-400: #34d399;
+	--color-success-500: #10b981;
+	--color-success-600: #059669;
+	--color-success-700: #047857;
+	--color-success-800: #065f46;
+	--color-success-900: #064e3b;
+	--color-success-950: #022c22;
+
+	/* Semantic Colors - Info (Indigo) */
+	--color-info-50: #eef2ff;
+	--color-info-100: #e0e7ff;
+	--color-info-200: #c7d2fe;
+	--color-info-300: #a5b4fc;
+	--color-info-400: #818cf8;
+	--color-info-500: #6366f1;
+	--color-info-600: #4f46e5;
+	--color-info-700: #4338ca;
+	--color-info-800: #3730a3;
+	--color-info-900: #312e81;
+	--color-info-950: #1e1b4b;
+
+	/* Semantic Colors - Warning (Amber) */
+	--color-warning-50: #fffbeb;
+	--color-warning-100: #fef3c7;
+	--color-warning-200: #fde68a;
+	--color-warning-300: #fcd34d;
+	--color-warning-400: #fbbf24;
+	--color-warning-500: #f59e0b;
+	--color-warning-600: #d97706;
+	--color-warning-700: #b45309;
+	--color-warning-800: #92400e;
+	--color-warning-900: #78350f;
+	--color-warning-950: #451a03;
+
+	/* Button Colors */
+	--color-button-primary-bg: #001a42;
+	--color-button-primary-border: #001a42;
+	--color-button-primary-text: #e6ecf7;
+	--color-button-primary-hover-bg: #002662;
+	--color-button-primary-hover-border: #002662;
+	--color-button-secondary-bg: #f1f5f9;
+	--color-button-secondary-border: #ffffff;
+	--color-button-secondary-text: #334155;
+	--color-button-secondary-hover-bg: #e2e8f0;
+	--color-button-secondary-hover-border: #cbd5e1;
+	--color-button-ghost-bg: rgba(255, 255, 255, 0.5);
+	--color-button-ghost-border: #ffffff;
+	--color-button-ghost-text: #475569;
+	--color-button-ghost-hover-text: #334155;
+	--color-button-ghost-hover-bg: rgba(255, 255, 255, 0.7);
+
+	/* Badge Colors - Primitive Types */
+	--color-badge-string-bg: #dbeafe;
+	--color-badge-string-text: #1e40af;
+	--color-badge-number-bg: #f3e8ff;
+	--color-badge-number-text: #6b21a8;
+	--color-badge-boolean-bg: #dcfce7;
+	--color-badge-boolean-text: #166534;
+	--color-badge-date-bg: #cffafe;
+	--color-badge-date-text: #155e75;
+	--color-badge-enum-bg: #e0e7ff;
+	--color-badge-enum-text: #3730a3;
+	--color-badge-array-bg: #cffafe;
+	--color-badge-array-text: #155e75;
+	--color-badge-object-bg: #fef3c7;
+	--color-badge-object-text: #92400e;
+
+	/* Badge Colors - CoValue Types */
+	--color-badge-image-bg: #dcfce7;
+	--color-badge-image-text: #166534;
+	--color-badge-filestream-bg: #fed7aa;
+	--color-badge-filestream-text: #9a3412;
+	--color-badge-comap-bg: #e9d5ff;
+	--color-badge-comap-text: #6b21a8;
+	--color-badge-colist-bg: #dbeafe;
+	--color-badge-colist-text: #1e40af;
+	--color-badge-covalue-bg: #e9d5ff;
+	--color-badge-covalue-text: #6b21a8;
+
+	/* Badge Colors - Status Types */
+	--color-badge-complete-bg: #dcfce7;
+	--color-badge-complete-text: #166534;
+	--color-badge-loading-bg: #fef9c3;
+	--color-badge-loading-text: #854d0e;
+	--color-badge-computed-bg: #f1f5f9;
+	--color-badge-computed-text: #334155;
+
+	/* Badge Colors - Role Types */
+	--color-badge-admin-bg: rgba(254, 249, 195, 0.5);
+	--color-badge-admin-text: #854d0e;
+	--color-badge-reader-bg: rgba(254, 226, 226, 0.5);
+	--color-badge-reader-text: #991b1b;
+	--color-badge-default-bg: rgba(248, 250, 252, 0.8);
+	--color-badge-default-text: #64748b;
+
+	/* Card Tokens */
+	--color-card-bg: #f8fafc;
+	--color-card-border: rgba(255, 255, 255, 1);
+	--color-card-hover-border: #cbd5e1;
+	--color-card-selected-border: #64748b;
+	--shadow-card-default: 0 0 8px rgba(0, 0, 0, 0.03);
+	--shadow-card-hover: 0 0 12px rgba(0, 26, 66, 0.3);
+	--shadow-card-selected: 0 0 12px rgba(0, 26, 66, 0.3);
+	--shadow-card-subtle: 0 0 4px rgba(0, 0, 0, 0.02);
+	--shadow-card-sm: 0 0 2px rgba(0, 0, 0, 0.01);
+
+	/* Button Shadows */
+	--shadow-button-primary: 0 0 6px rgba(0, 0, 0, 0.15);
+	--shadow-button-primary-hover: 0 0 8px rgba(0, 0, 0, 0.2);
+	--shadow-button-secondary: 0 0 4px rgba(0, 0, 0, 0.02);
+
+	/* Border Radius */
+	--radius-card: 1.5rem;
+	--radius-card-sm: 0.75rem;
+	--radius-button: 9999px;
+	--radius-badge: 9999px;
+	--radius-badge-compact: 0.25rem;
+
+	/* Spacing */
+	--spacing-card-padding-sm: 1rem;
+	--spacing-card-padding-md: 1.25rem;
+	--spacing-card-padding-lg: 1.5rem;
+	--spacing-button-padding-sm-x: 0.75rem;
+	--spacing-button-padding-sm-y: 0.25rem;
+	--spacing-button-padding-md-x: 1rem;
+	--spacing-button-padding-md-y: 0.375rem;
+	--spacing-button-padding-lg-x: 1.5rem;
+	--spacing-button-padding-lg-y: 0.5rem;
+	--spacing-badge-padding-default-x: 0.5rem;
+	--spacing-badge-padding-default-y: 0.125rem;
+	--spacing-badge-padding-compact-x: 0.375rem;
+	--spacing-badge-padding-compact-y: 0.125rem;
+	--spacing-badge-padding-role-x: 0.375rem;
+	--spacing-badge-padding-role-y: 0.125rem;
+}
+
+/* Reusable CSS Classes */
+
+/* Card Classes */
+.card {
+	@apply relative overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-card-bg)] border border-[var(--color-card-border)] shadow-[var(--shadow-card-default)];
+}
+
+.card-hoverable {
+	@apply transition-all cursor-pointer;
+	@apply hover:border-[var(--color-card-hover-border)] hover:shadow-[var(--shadow-card-hover)];
+}
+
+.card-selected {
+	@apply border-[var(--color-card-selected-border)] shadow-[var(--shadow-card-selected)];
+}
+
+.card-sm {
+	@apply rounded-[var(--radius-card-sm)] shadow-[var(--shadow-card-subtle)];
+}
+
+/* Button Classes */
+.button-primary {
+	@apply inline-flex items-center justify-center gap-2 rounded-[var(--radius-button)] font-medium transition-all duration-300 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
+	@apply bg-[var(--color-button-primary-bg)] border border-[var(--color-button-primary-border)] text-[var(--color-button-primary-text)] shadow-[var(--shadow-button-primary)];
+	@apply hover:bg-[var(--color-button-primary-hover-bg)] hover:border-[var(--color-button-primary-hover-border)] hover:shadow-[var(--shadow-button-primary-hover)] hover:scale-[1.02] active:scale-[0.98];
+}
+
+.button-secondary {
+	@apply inline-flex items-center justify-center gap-2 rounded-[var(--radius-button)] font-medium transition-all duration-300 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
+	@apply bg-[var(--color-button-secondary-bg)] border border-[var(--color-button-secondary-border)] text-[var(--color-button-secondary-text)] shadow-[var(--shadow-button-secondary)];
+	@apply hover:bg-[var(--color-button-secondary-hover-bg)] hover:border-[var(--color-button-secondary-hover-border)];
+}
+
+.button-ghost {
+	@apply inline-flex items-center justify-center gap-2 rounded-[var(--radius-button)] font-medium transition-all duration-300 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
+	@apply bg-[var(--color-button-ghost-bg)] border border-[var(--color-button-ghost-border)] text-[var(--color-button-ghost-text)];
+	@apply hover:text-[var(--color-button-ghost-hover-text)] hover:bg-[var(--color-button-ghost-hover-bg)];
+}
+
+.button-sm {
+	@apply py-[var(--spacing-button-padding-sm-y)] px-[var(--spacing-button-padding-sm-x)] text-xs;
+}
+
+.button-md {
+	@apply py-[var(--spacing-button-padding-md-y)] px-[var(--spacing-button-padding-md-x)] text-sm;
+}
+
+.button-lg {
+	@apply py-[var(--spacing-button-padding-lg-y)] px-[var(--spacing-button-padding-lg-x)] text-base;
+}
+
+/* Badge Classes */
+.badge-default {
+	@apply border border-white shrink-0 rounded-[var(--radius-badge)] px-[var(--spacing-badge-padding-default-x)] py-[var(--spacing-badge-padding-default-y)] text-[10px] font-bold uppercase tracking-wider;
+}
+
+.badge-compact {
+	@apply border border-white shrink-0 rounded-[var(--radius-badge-compact)] px-[var(--spacing-badge-padding-compact-x)] py-[var(--spacing-badge-padding-compact-y)] text-xs;
+}
+
+.badge-role {
+	@apply border border-white shrink-0 rounded-[var(--radius-badge)] px-[var(--spacing-badge-padding-role-x)] py-[var(--spacing-badge-padding-role-y)] text-[9px] font-bold uppercase tracking-wide;
+}
+
+/* Badge Type Colors */
+.badge-string {
+	@apply bg-[var(--color-badge-string-bg)] text-[var(--color-badge-string-text)];
+}
+
+.badge-number {
+	@apply bg-[var(--color-badge-number-bg)] text-[var(--color-badge-number-text)];
+}
+
+.badge-boolean {
+	@apply bg-[var(--color-badge-boolean-bg)] text-[var(--color-badge-boolean-text)];
+}
+
+.badge-date {
+	@apply bg-[var(--color-badge-date-bg)] text-[var(--color-badge-date-text)];
+}
+
+.badge-enum {
+	@apply bg-[var(--color-badge-enum-bg)] text-[var(--color-badge-enum-text)];
+}
+
+.badge-array {
+	@apply bg-[var(--color-badge-array-bg)] text-[var(--color-badge-array-text)];
+}
+
+.badge-object {
+	@apply bg-[var(--color-badge-object-bg)] text-[var(--color-badge-object-text)];
+}
+
+.badge-image {
+	@apply bg-[var(--color-badge-image-bg)] text-[var(--color-badge-image-text)];
+}
+
+.badge-filestream {
+	@apply bg-[var(--color-badge-filestream-bg)] text-[var(--color-badge-filestream-text)];
+}
+
+.badge-comap {
+	@apply bg-[var(--color-badge-comap-bg)] text-[var(--color-badge-comap-text)];
+}
+
+.badge-colist {
+	@apply bg-[var(--color-badge-colist-bg)] text-[var(--color-badge-colist-text)];
+}
+
+.badge-cofeed {
+	@apply bg-[var(--color-badge-cofeed-bg)] text-[var(--color-badge-cofeed-text)];
+}
+
+.badge-coplaintext {
+	@apply bg-[var(--color-badge-coplaintext-bg)] text-[var(--color-badge-coplaintext-text)];
+}
+
+.badge-corichtext {
+	@apply bg-[var(--color-badge-corichtext-bg)] text-[var(--color-badge-corichtext-text)];
+}
+
+.badge-covalue {
+	@apply bg-[var(--color-badge-covalue-bg)] text-[var(--color-badge-covalue-text)];
+}
+
+.badge-complete {
+	@apply bg-[var(--color-badge-complete-bg)] text-[var(--color-badge-complete-text)];
+}
+
+.badge-loading {
+	@apply bg-[var(--color-badge-loading-bg)] text-[var(--color-badge-loading-text)];
+}
+
+.badge-computed {
+	@apply bg-[var(--color-badge-computed-bg)] text-[var(--color-badge-computed-text)];
+}
+
+.badge-admin {
+	@apply bg-[var(--color-badge-admin-bg)] text-[var(--color-badge-admin-text)];
+}
+
+.badge-reader {
+	@apply bg-[var(--color-badge-reader-bg)] text-[var(--color-badge-reader-text)];
+}
+
+.badge-default-color {
+	@apply bg-[var(--color-badge-default-bg)] text-[var(--color-badge-default-text)];
+}
+
+/* Semantic Badge Colors */
+.badge-alert {
+	@apply bg-[var(--color-alert-100)] text-[var(--color-alert-700)];
+}
+
+.badge-success {
+	@apply bg-[var(--color-success-100)] text-[var(--color-success-700)];
+}
+
+.badge-info {
+	@apply bg-[var(--color-info-100)] text-[var(--color-info-700)];
+}
+
+.badge-warning {
+	@apply bg-[var(--color-warning-100)] text-[var(--color-warning-700)];
+}
+
+/* Semantic Background Colors */
+.bg-alert {
+	@apply bg-[var(--color-alert-50)];
+}
+
+.bg-success {
+	@apply bg-[var(--color-success-50)];
+}
+
+.bg-info {
+	@apply bg-[var(--color-info-50)];
+}
+
+.bg-warning {
+	@apply bg-[var(--color-warning-50)];
+}
+
+/* Semantic Text Colors */
+.text-alert {
+	@apply text-[var(--color-alert-700)];
+}
+
+.text-success {
+	@apply text-[var(--color-success-700)];
+}
+
+.text-info {
+	@apply text-[var(--color-info-700)];
+}
+
+.text-warning {
+	@apply text-[var(--color-warning-700)];
+}
+
+/* Semantic Border Colors */
+.border-alert {
+	@apply border-[var(--color-alert-300)];
+}
+
+.border-success {
+	@apply border-[var(--color-success-300)];
+}
+
+.border-info {
+	@apply border-[var(--color-info-300)];
+}
+
+.border-warning {
+	@apply border-[var(--color-warning-300)];
+}
+
+/* Hoverable Utility */
+.hoverable {
+	@apply transition-all cursor-pointer hover:border-slate-300;
 }

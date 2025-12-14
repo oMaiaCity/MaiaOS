@@ -7,7 +7,6 @@ import type { CompositeConfig } from '../../../compositor/view/types'
 import { vibeCardLeaf } from '../leafs'
 
 export const vibeGridComposite: CompositeConfig = {
-	type: 'stack', // Use stack type to avoid inline display styles
 	container: {
 		class: 'w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-0',
 	},

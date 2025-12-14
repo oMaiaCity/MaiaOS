@@ -6,7 +6,6 @@ import type { CompositeConfig } from '../../../compositor/view/types'
 import { errorLeaf, inputFormLeaf } from '../leafs'
 
 export const inputSectionComposite: CompositeConfig = {
-	type: 'stack',
 	container: {
 		class: 'pt-6 bg-slate-50',
 	},

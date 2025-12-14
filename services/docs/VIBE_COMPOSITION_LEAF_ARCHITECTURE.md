@@ -43,6 +43,29 @@ The Vibe/Composition/Leaf architecture is a three-layer system for building reac
 3. **Security-First**: Whitelist-based validation for untrusted AI-generated configs
 4. **Reactive**: Built on Svelte's reactivity system
 5. **Modular**: Composable composites and reusable leaf nodes
+6. **Pure Tailwind**: All styling via Tailwind classes (strings), no inline styles
+7. **Pure Composition**: `Composite.svelte` handles only slot management and recursive rendering
+
+---
+
+## 🎨 Pure Tailwind Architecture
+
+### Design Philosophy
+
+The composite engine follows a **pure Tailwind approach** where:
+
+1. **All styling is in Tailwind classes** - No inline styles, no custom style parsing
+2. **Classes are strings** - Space-separated strings, never arrays
+3. **Composite is pure composition** - `Composite.svelte` only handles slot management and recursive rendering
+4. **Styling is delegated** - Styling lives in `leaf.classes` and `composite.container.class`
+
+### Why Pure Tailwind?
+
+- **Consistency**: All styling follows the same pattern
+- **Security**: Tailwind classes are validated via whitelist
+- **Performance**: No runtime style computation
+- **Simplicity**: No wrapper divs or complex style logic in components
+- **Maintainability**: All styling visible in config files
 
 ---
 
@@ -65,17 +88,17 @@ interface VibeConfig {
 
 ### Composite
 
-A **Composite** is a layout container node that:
-- Defines layout strategy (grid, flex, stack, overlay)
+A **Composite** is a pure container node that:
 - Contains child nodes (other composites or leaves)
-- Handles positioning and styling of children
+- Pure composition: Only handles slot management and recursive rendering
+- All styling via `container.class` (Tailwind classes) - no layout generation logic
 
 ```typescript
 interface CompositeConfig {
-  type: "grid" | "flex" | "stack" | "overlay";
-  grid?: GridTemplate;
-  flex?: FlexProperties;
-  container?: ContainerStyles;
+  container?: {
+    class?: string; // Tailwind classes (space-separated string)
+    style?: Record<string, string>; // Inline styles (use sparingly)
+  };
   children: ViewNode[];
 }
 ```
@@ -87,13 +110,15 @@ A **Leaf** is a content node that:
 - Handles data bindings (`value`, `text`, `visible`, `foreach`)
 - Maps DOM events to state machine events
 - Is fully JSON-driven (no hardcoded component logic)
+- **Pure Tailwind styling**: All styling via `classes` string (space-separated)
 
 ```typescript
 interface LeafNode {
   tag: string; // HTML tag or "icon"
   attributes?: Record<string, string | boolean | number>;
-  classes?: string[]; // Tailwind CSS classes
+  classes?: string; // Tailwind CSS classes (space-separated string)
   children?: (LeafNode | string)[];
+  icon?: IconConfig; // For icon tag
   bindings?: LeafBindings;
   events?: {
     click?: EventConfig;
@@ -101,7 +126,17 @@ interface LeafNode {
     // ... other DOM events
   };
 }
+
+interface IconConfig {
+  name: string; // Iconify icon name (e.g., "solar:check-circle-bold")
+  classes?: string; // Tailwind classes (space-separated string, NOT array)
+  color?: string; // Optional color
+}
 ```
+
+**CRITICAL**: `classes` must always be a **string** (space-separated), never an array.
+
+Example: `classes: "px-4 py-2 bg-blue-500 text-white rounded"`
 
 ---
 
@@ -199,16 +234,14 @@ const toggleTodoSkill: Skill = {
 
 ## 🎨 View Structure
 
-### Composite Layout Types
+### Composite Examples
 
 #### 1. Stack Layout (Flex Column)
 
 ```typescript
 const rootComposite: CompositeConfig = {
-  type: "stack",
   container: {
-    padding: "1.5rem",
-    background: "rgb(248 250 252)",
+    class: "h-full w-full max-w-6xl mx-auto flex flex-col p-6",
   },
   children: [
     { slot: "header", composite: headerComposite },
@@ -221,12 +254,8 @@ const rootComposite: CompositeConfig = {
 
 ```typescript
 const headerComposite: CompositeConfig = {
-  type: "flex",
-  flex: {
-    direction: "row",
-    justify: "space-between",
-    align: "center",
-    gap: "1rem",
+  container: {
+    class: "flex flex-row justify-between items-center gap-4 p-0 bg-transparent",
   },
   children: [
     { slot: "title", leaf: titleLeaf },
@@ -235,14 +264,14 @@ const headerComposite: CompositeConfig = {
 };
 ```
 
+**Note**: All layout logic is handled via Tailwind classes in `container.class`. Composite is a pure container div.
+
 #### 3. Grid Layout
 
 ```typescript
 const kanbanComposite: CompositeConfig = {
-  type: "grid",
-  grid: {
-    columns: "repeat(3, 1fr)",
-    gap: "1rem",
+  container: {
+    class: "w-full grid grid-cols-3 gap-4 min-h-[100px]",
   },
   children: [
     { slot: "todoColumn", composite: todoColumnComposite },
@@ -252,11 +281,12 @@ const kanbanComposite: CompositeConfig = {
 };
 ```
 
+**Note**: For arbitrary grid template columns, use Tailwind arbitrary values: `class: "[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] gap-[0.75rem]"`
+
 #### 4. Overlay Layout (for modals)
 
 ```typescript
 const modalComposite: CompositeConfig = {
-  type: "overlay",
   container: {
     class: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center",
   },
@@ -266,25 +296,44 @@ const modalComposite: CompositeConfig = {
 };
 ```
 
-### Child Positioning
+### Child Styling (Pure Tailwind)
 
-Children can be positioned within their parent composite:
+All styling must be in `leaf.classes` or `composite.container.class` using Tailwind classes.
+
+**For leaf nodes**, add classes directly to `leaf.classes`:
 
 ```typescript
 {
   slot: "header",
-  position: {
-    type: "sticky",
-    top: "0",
-    zIndex: 10,
+  leaf: {
+    ...titleLeaf,
+    classes: titleLeaf.classes ? `${titleLeaf.classes} sticky top-0 z-10 h-auto` : "sticky top-0 z-10 h-auto",
   },
-  flex: {
-    grow: 0,
-    shrink: 0,
-  },
-  composite: headerComposite,
 }
 ```
+
+**For composite nodes**, add classes to `composite.container.class`:
+
+```typescript
+{
+  slot: "content",
+  composite: {
+    ...contentComposite,
+    container: {
+      ...contentComposite.container,
+      class: contentComposite.container?.class 
+        ? `${contentComposite.container.class} flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto`
+        : "flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto",
+    },
+  },
+}
+```
+
+**Common Tailwind classes for layout:**
+- Flex: `flex-grow`, `flex-shrink`, `flex-basis-0`, `min-h-0`
+- Overflow: `overflow-auto`, `overflow-hidden`, `overflow-x-auto`, `overflow-y-auto`
+- Position: `sticky`, `top-0`, `z-10`
+- Size: `h-auto`, `min-h-[120px]`, `w-full`
 
 ---
 
@@ -298,7 +347,7 @@ Leaf nodes define UI elements entirely in JSON. They support:
 // Simple text
 const titleLeaf: LeafNode = {
   tag: "h1",
-  classes: ["text-2xl", "font-bold", "text-slate-900"],
+  classes: "text-2xl font-bold text-slate-900", // String, not array
   children: ["My Todo App"],
 };
 
@@ -306,7 +355,7 @@ const titleLeaf: LeafNode = {
 const buttonLeaf: LeafNode = {
   tag: "button",
   attributes: { type: "button" },
-  classes: ["px-4", "py-2", "bg-blue-500", "text-white", "rounded"],
+  classes: "px-4 py-2 bg-blue-500 text-white rounded", // String, not array
   events: {
     click: {
       event: "ADD_TODO",
@@ -317,6 +366,8 @@ const buttonLeaf: LeafNode = {
 };
 ```
 
+**CRITICAL**: Always use space-separated strings for `classes`.
+
 ### Data Bindings
 
 #### Value Binding (for inputs)
@@ -325,7 +376,7 @@ const buttonLeaf: LeafNode = {
 const inputLeaf: LeafNode = {
   tag: "input",
   attributes: { type: "text", placeholder: "Add a new todo..." },
-  classes: ["px-4", "py-2", "border", "rounded"],
+  classes: "px-4 py-2 border rounded", // String, not array
   bindings: {
     value: "data.newTodoText", // Binds to data.newTodoText
   },
@@ -343,7 +394,7 @@ const inputLeaf: LeafNode = {
 ```typescript
 const textLeaf: LeafNode = {
   tag: "span",
-  classes: ["text-slate-700"],
+  classes: "text-slate-700", // String, not array
   bindings: {
     text: "data.title", // Displays data.title
   },
@@ -355,7 +406,7 @@ const textLeaf: LeafNode = {
 ```typescript
 const errorLeaf: LeafNode = {
   tag: "div",
-  classes: ["text-red-500", "text-sm"],
+  classes: "text-red-500 text-sm", // String, not array
   bindings: {
     visible: "data.error !== null", // Only visible when error exists
     text: "data.error",
@@ -368,7 +419,7 @@ const errorLeaf: LeafNode = {
 ```typescript
 const todoListLeaf: LeafNode = {
   tag: "div",
-  classes: ["flex", "flex-col", "gap-2"],
+  classes: "flex flex-col gap-2", // String, not array
   bindings: {
     foreach: {
       items: "data.todos", // Array to iterate over
@@ -376,7 +427,7 @@ const todoListLeaf: LeafNode = {
       leaf: {
         // Template for each item
         tag: "div",
-        classes: ["px-4", "py-2", "bg-white", "rounded"],
+        classes: "px-4 py-2 bg-white rounded", // String, not array
         children: [
           {
             tag: "span",
@@ -429,13 +480,13 @@ const todoItemLeaf: LeafNode = {
 ```typescript
 const iconButtonLeaf: LeafNode = {
   tag: "button",
-  classes: ["p-2", "rounded-full", "hover:bg-slate-100"],
+  classes: "p-2 rounded-full hover:bg-slate-100", // String, not array
   children: [
     {
       tag: "icon",
       icon: {
         name: "mingcute:check-2-line", // Iconify icon name
-        classes: ["w-5", "h-5", "text-green-500"],
+        classes: "w-5 h-5 text-green-500", // String, not array
       },
     },
   ],
@@ -505,7 +556,7 @@ const dropZoneLeaf: LeafNode = {
 ```typescript
 const dateLeaf: LeafNode = {
   tag: "span",
-  classes: ["text-xs", "text-slate-500"],
+  classes: "text-xs text-slate-500", // String, not array
   bindings: {
     text: "item.endDate|date", // Pipe syntax for formatting
   },
@@ -676,7 +727,9 @@ export const todoListLeaf: LeafNode = {
 ```typescript
 // ✅ Good - Clear separation
 const headerComposite: CompositeConfig = {
-  type: "flex",
+  container: {
+    class: "flex flex-row justify-between items-center p-0 bg-transparent", // Pure Tailwind
+  },
   children: [
     { slot: "title", leaf: titleLeaf },
     { slot: "buttons", leaf: buttonsLeaf },
@@ -689,6 +742,8 @@ const headerLeaf: LeafNode = {
   // Complex layout logic mixed with content
 };
 ```
+
+**Important**: `Composite.svelte` is a pure composition engine - it only handles slot management and recursive rendering. All styling must be in `container.class` (composites) or `leaf.classes` (leafs).
 
 ### 4. Leverage Data Bindings
 
@@ -783,16 +838,15 @@ interface VibeConfig {
 
 ```typescript
 interface CompositeConfig {
-  type: "grid" | "flex" | "stack" | "overlay";
-  grid?: GridTemplate;
-  flex?: FlexProperties;
-  container?: ContainerStyles;
+  container?: {
+    class?: string; // Tailwind classes (space-separated string)
+    style?: Record<string, string>; // Inline styles (use sparingly)
+  };
   children: ViewNode[];
-  height?: string;
-  width?: string;
-  overflow?: OverflowBehavior;
 }
 ```
+
+**Note**: Composite is a pure container div. All layout logic is handled via Tailwind classes in `container.class`. No layout generation or type system.
 
 ### LeafNode
 
@@ -800,7 +854,7 @@ interface CompositeConfig {
 interface LeafNode {
   tag: string;
   attributes?: Record<string, string | boolean | number>;
-  classes?: string[];
+  classes?: string; // Tailwind classes (space-separated string)
   children?: (LeafNode | string)[];
   icon?: IconConfig;
   bindings?: LeafBindings;
@@ -815,7 +869,17 @@ interface LeafNode {
     // ... more events
   };
 }
+
+interface IconConfig {
+  name: string; // Iconify icon name (e.g., "solar:check-circle-bold")
+  classes?: string; // Tailwind classes (space-separated string)
+  color?: string; // Optional color
+}
 ```
+
+**CRITICAL**: `classes` must always be a **string** (space-separated).
+
+Example: `classes: "px-4 py-2 bg-blue-500 text-white rounded"`
 
 ### LeafBindings
 
@@ -875,6 +939,9 @@ bindings: {
 2. **Drag and drop not working**: Ensure `draggable: true` attribute and proper event handlers
 3. **List not updating**: Verify array reference is updated in skill (create new array)
 4. **Expression not evaluating**: Check syntax (use `===` not `==`, access `data.property` not `property`)
+5. **Classes validation error**: Ensure `classes` is a string: `classes: "px-4 py-2"`
+6. **Layout not working**: All styling must be in `leaf.classes` or `composite.container.class` using Tailwind classes
+7. **Build fails with env vars**: Use `$env/dynamic/public` instead of `$env/static/public` for runtime environment variables
 
 ---
 
@@ -888,6 +955,13 @@ The Vibe/Composition/Leaf architecture provides a powerful, generic system for b
 - ✅ Secure (whitelist-based validation)
 - ✅ Reactive (Svelte-powered)
 - ✅ Modular (composable components)
+- ✅ Pure Tailwind (no inline styles, all styling via classes)
+
+**Architecture Principles:**
+- **Pure Tailwind**: All styling via Tailwind classes (strings), no inline styles
+- **Pure Composition**: `Composite.svelte` handles only slot management and recursive rendering
+- **String-based Classes**: All `classes` properties are space-separated strings, never arrays
+- **Delegated Styling**: Styling lives in `leaf.classes` and `composite.container.class`, not in wrapper divs
 
 For examples, see `services/me/src/lib/vibes/todo/`.
 
