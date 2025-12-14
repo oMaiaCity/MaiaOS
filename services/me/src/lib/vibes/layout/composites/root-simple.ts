@@ -231,9 +231,201 @@ export const rootComposite: CompositeConfig = {
                                                 },
                                             ],
                                         },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-yellow-100',
+                                                'border',
+                                                'border-yellow-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-yellow-700', 'font-medium'],
+                                                    children: ['Item 4'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-purple-100',
+                                                'border',
+                                                'border-purple-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-purple-700', 'font-medium'],
+                                                    children: ['Item 5'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-pink-100',
+                                                'border',
+                                                'border-pink-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-pink-700', 'font-medium'],
+                                                    children: ['Item 6'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-orange-100',
+                                                'border',
+                                                'border-orange-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-orange-700', 'font-medium'],
+                                                    children: ['Item 7'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-indigo-100',
+                                                'border',
+                                                'border-indigo-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-indigo-700', 'font-medium'],
+                                                    children: ['Item 8'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-teal-100',
+                                                'border',
+                                                'border-teal-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-teal-700', 'font-medium'],
+                                                    children: ['Item 9'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-cyan-100',
+                                                'border',
+                                                'border-cyan-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-cyan-700', 'font-medium'],
+                                                    children: ['Item 10'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-emerald-100',
+                                                'border',
+                                                'border-emerald-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-emerald-700', 'font-medium'],
+                                                    children: ['Item 11'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-violet-100',
+                                                'border',
+                                                'border-violet-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-violet-700', 'font-medium'],
+                                                    children: ['Item 12'],
+                                                },
+                                            ],
+                                        },
                                     ],
                                 },
-                                // Row View - Tailwind flex row wrap
+                                // Row View - Optimized with configurable height prop
+                                // Each row item has a height prop using Tailwind classes (default: h-[150px])
+                                // To customize: change 'h-[150px]' to 'h-[200px]', 'h-auto', 'h-full', etc.
+                                // Single horizontal row with horizontal scrolling (no wrapping)
                                 {
                                     tag: 'div',
                                     classes: [
@@ -243,9 +435,10 @@ export const rootComposite: CompositeConfig = {
                                         'h-full',
                                         'flex',
                                         'flex-row',
-                                        'flex-wrap',
+                                        'flex-nowrap',
                                         'gap-6',
-                                        'overflow-auto',
+                                        'overflow-x-auto',
+                                        'overflow-y-hidden',
                                         'p-4',
                                     ],
                                     bindings: {
@@ -263,8 +456,9 @@ export const rootComposite: CompositeConfig = {
                                                 'flex',
                                                 'items-center',
                                                 'justify-center',
-                                                'min-h-[150px]',
                                                 'min-w-[200px]',
+                                                'flex-shrink-0',
+                                                'h-[150px]', // Height prop: customize per row item
                                             ],
                                             children: [
                                                 {
@@ -285,8 +479,9 @@ export const rootComposite: CompositeConfig = {
                                                 'flex',
                                                 'items-center',
                                                 'justify-center',
-                                                'min-h-[150px]',
                                                 'min-w-[200px]',
+                                                'flex-shrink-0',
+                                                'h-[150px]', // Height prop: customize per row item
                                             ],
                                             children: [
                                                 {
@@ -307,8 +502,9 @@ export const rootComposite: CompositeConfig = {
                                                 'flex',
                                                 'items-center',
                                                 'justify-center',
-                                                'min-h-[150px]',
                                                 'min-w-[200px]',
+                                                'flex-shrink-0',
+                                                'h-[150px]', // Height prop: customize per row item
                                             ],
                                             children: [
                                                 {
@@ -318,9 +514,217 @@ export const rootComposite: CompositeConfig = {
                                                 },
                                             ],
                                         },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-yellow-100',
+                                                'border',
+                                                'border-yellow-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-w-[200px]',
+                                                'flex-shrink-0',
+                                                'h-[150px]', // Height prop: customize per row item
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-yellow-700', 'font-medium'],
+                                                    children: ['Item 4'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-purple-100',
+                                                'border',
+                                                'border-purple-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-w-[200px]',
+                                                'flex-shrink-0',
+                                                'h-[150px]', // Height prop: customize per row item
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-purple-700', 'font-medium'],
+                                                    children: ['Item 5'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-pink-100',
+                                                'border',
+                                                'border-pink-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-w-[200px]',
+                                                'flex-shrink-0',
+                                                'h-[150px]', // Height prop: customize per row item
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-pink-700', 'font-medium'],
+                                                    children: ['Item 6'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-orange-100',
+                                                'border',
+                                                'border-orange-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-w-[200px]',
+                                                'flex-shrink-0',
+                                                'h-[150px]', // Height prop: customize per row item
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-orange-700', 'font-medium'],
+                                                    children: ['Item 7'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-indigo-100',
+                                                'border',
+                                                'border-indigo-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-w-[200px]',
+                                                'flex-shrink-0',
+                                                'h-[150px]', // Height prop: customize per row item
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-indigo-700', 'font-medium'],
+                                                    children: ['Item 8'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-teal-100',
+                                                'border',
+                                                'border-teal-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-w-[200px]',
+                                                'flex-shrink-0',
+                                                'h-[150px]', // Height prop: customize per row item
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-teal-700', 'font-medium'],
+                                                    children: ['Item 9'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-cyan-100',
+                                                'border',
+                                                'border-cyan-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-w-[200px]',
+                                                'flex-shrink-0',
+                                                'h-[150px]', // Height prop: customize per row item
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-cyan-700', 'font-medium'],
+                                                    children: ['Item 10'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-emerald-100',
+                                                'border',
+                                                'border-emerald-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-w-[200px]',
+                                                'flex-shrink-0',
+                                                'h-[150px]', // Height prop: customize per row item
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-emerald-700', 'font-medium'],
+                                                    children: ['Item 11'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-violet-100',
+                                                'border',
+                                                'border-violet-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-w-[200px]',
+                                                'flex-shrink-0',
+                                                'h-[150px]', // Height prop: customize per row item
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-violet-700', 'font-medium'],
+                                                    children: ['Item 12'],
+                                                },
+                                            ],
+                                        },
                                     ],
                                 },
                                 // Grid View - Tailwind grid
+                                // Vertical scrolling by default (overflow-y-auto)
                                 {
                                     tag: 'div',
                                     classes: [
@@ -331,7 +735,8 @@ export const rootComposite: CompositeConfig = {
                                         'grid',
                                         'grid-cols-3',
                                         'gap-6',
-                                        'overflow-auto',
+                                        'overflow-y-auto',
+                                        'overflow-x-hidden',
                                         'p-4',
                                     ],
                                     bindings: {
@@ -398,6 +803,195 @@ export const rootComposite: CompositeConfig = {
                                                     tag: 'span',
                                                     classes: ['text-green-700', 'font-medium'],
                                                     children: ['Item 3'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-yellow-100',
+                                                'border',
+                                                'border-yellow-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-yellow-700', 'font-medium'],
+                                                    children: ['Item 4'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-purple-100',
+                                                'border',
+                                                'border-purple-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-purple-700', 'font-medium'],
+                                                    children: ['Item 5'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-pink-100',
+                                                'border',
+                                                'border-pink-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-pink-700', 'font-medium'],
+                                                    children: ['Item 6'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-orange-100',
+                                                'border',
+                                                'border-orange-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-orange-700', 'font-medium'],
+                                                    children: ['Item 7'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-indigo-100',
+                                                'border',
+                                                'border-indigo-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-indigo-700', 'font-medium'],
+                                                    children: ['Item 8'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-teal-100',
+                                                'border',
+                                                'border-teal-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-teal-700', 'font-medium'],
+                                                    children: ['Item 9'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-cyan-100',
+                                                'border',
+                                                'border-cyan-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-cyan-700', 'font-medium'],
+                                                    children: ['Item 10'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-emerald-100',
+                                                'border',
+                                                'border-emerald-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-emerald-700', 'font-medium'],
+                                                    children: ['Item 11'],
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            tag: 'div',
+                                            classes: [
+                                                'bg-violet-100',
+                                                'border',
+                                                'border-violet-300',
+                                                'rounded-2xl',
+                                                'p-4',
+                                                'flex',
+                                                'items-center',
+                                                'justify-center',
+                                                'min-h-[150px]',
+                                            ],
+                                            children: [
+                                                {
+                                                    tag: 'span',
+                                                    classes: ['text-violet-700', 'font-medium'],
+                                                    children: ['Item 12'],
                                                 },
                                             ],
                                         },

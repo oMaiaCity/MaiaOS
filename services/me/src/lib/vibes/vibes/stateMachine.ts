@@ -15,11 +15,6 @@ export const vibesStateMachine: StateMachineConfig = {
 				description: 'Task management vibe',
 			},
 			{
-				id: 'wallet',
-				name: 'Wallet',
-				description: 'Wallet management vibe',
-			},
-			{
 				id: 'layout',
 				name: 'Layout',
 				description: 'Layout testing ground',

@@ -5,7 +5,6 @@
   import Vibe from "$lib/compositor/Vibe.svelte";
   import { todoVibeConfig } from "$lib/vibes/todo/config";
   import { vibesVibeConfig } from "$lib/vibes/vibes/config";
-  import { walletVibeConfig } from "$lib/vibes/wallet/config";
   import { layoutVibeConfig } from "$lib/vibes/layout/config";
 
   // Get vibe ID from route params (reactive)
@@ -14,7 +13,6 @@
   // Available vibe configs
   const vibeConfigs: Record<string, typeof vibesVibeConfig> = {
     todo: todoVibeConfig,
-    wallet: walletVibeConfig,
     layout: layoutVibeConfig,
   };
 

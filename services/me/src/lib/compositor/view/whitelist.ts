@@ -134,6 +134,7 @@ const TAILWIND_PATTERNS = [
 	/^(flex|grid|block|inline|inline-block|hidden|contents)$/,
 	/^flex-(row|col|wrap|nowrap|grow|shrink|1|auto|none)$/, // flex-1, flex-auto, flex-none
 	/^(shrink|grow)-(0|1)$/, // shrink-0, shrink-1, grow-0, grow-1
+	/^flex-(shrink|grow)-(\d+)$/, // flex-shrink-0, flex-shrink-1, flex-grow-0, flex-grow-1, etc.
 	/^grid-cols-(\d+|auto|min|max|subgrid)$/,
 	/^grid-rows-(\d+|auto|min|max|subgrid)$/,
 	/^col-span-(\d+|auto|full)$/,

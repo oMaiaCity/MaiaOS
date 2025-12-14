@@ -6,13 +6,11 @@
 export * from './registry'
 export * from './todo-skills'
 export * from './types'
-export * from './wallet-skills'
 
 import { registerSkillsFromConfig } from './registry'
 // Import all skill modules
 import { todoSkills } from './todo-skills'
 import { vibesSkills } from './vibes-skills'
-import { walletSkills } from './wallet-skills'
 
 // ========== AUTO-REGISTER ALL SKILLS ==========
 
@@ -30,7 +28,6 @@ export function registerAllSkills(): void {
 	}
 
 	registerSkillsFromConfig(todoSkills)
-	registerSkillsFromConfig(walletSkills)
 	registerSkillsFromConfig(vibesSkills)
 	// Add more skill registrations here as they're created
 
