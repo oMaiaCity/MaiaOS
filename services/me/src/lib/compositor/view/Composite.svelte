@@ -115,10 +115,10 @@
         finalClasses = `grid ${finalClasses}`;
       }
     } else if (layout === 'flex') {
-      // Structural flex container: h-full w-full overflow-hidden flex @container
-      if (!hasHeight && !usesFlexGrow) {
-        finalClasses = `h-full ${finalClasses}`;
-      }
+      // Flex container: w-full overflow-hidden flex @container
+      // Note: h-full NOT added by default - flex containers should size naturally
+      // Grid containers get h-full because they're structural layout containers
+      // Flex containers are often used for content (button groups, nav bars) that should size to content
       if (!hasWidth) {
         finalClasses = `w-full ${finalClasses}`;
       }

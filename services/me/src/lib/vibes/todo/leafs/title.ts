@@ -12,7 +12,7 @@ export const titleLeaf: LeafNode = {
 		{
 			tag: 'h1',
 			classes: 'text-xs @xs:text-sm @sm:text-lg @md:text-xl @lg:text-2xl @xl:text-3xl font-bold text-slate-900 mb-0.5 @xs:mb-1 @sm:mb-1.5 @md:mb-2',
-			bindings: { text: 'data.title' },
+			bindings: { text: 'data.queries.title' },
 		},
 	],
 }

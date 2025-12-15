@@ -28,12 +28,21 @@ const validateTodoSkill: Skill = {
 		},
 	},
 	execute: (data: Data, payload?: unknown) => {
-		const text = (payload as { text?: string })?.text || (data.newTodoText as string) || ''
+		// Ensure data.queries and data.view exist
+		if (!data.queries) data.queries = {}
+		if (!data.view) data.view = {}
+		
+		const view = data.view as Data
+		const text = (payload as { text?: string })?.text || (view.newTodoText as string) || ''
 		if (!text.trim()) {
-			data.error = 'Todo text cannot be empty'
+			view.error = 'Todo text cannot be empty'
+			// Create new object reference to ensure reactivity
+			data.view = { ...view }
 			return
 		}
-		data.error = null
+		view.error = null
+		// Create new object reference to ensure reactivity
+		data.view = { ...view }
 	},
 }
 
@@ -56,9 +65,16 @@ const addTodoSkill: Skill = {
 		},
 	},
 	execute: (data: Data, payload?: unknown) => {
-		const text = (payload as { text?: string })?.text || (data.newTodoText as string) || ''
+		// Ensure data.queries and data.view exist
+		if (!data.queries) data.queries = {}
+		if (!data.view) data.view = {}
+		
+		const queries = data.queries as Data
+		const view = data.view as Data
+		
+		const text = (payload as { text?: string })?.text || (view.newTodoText as string) || ''
 		if (!text.trim()) {
-			data.error = 'Todo text cannot be empty'
+			view.error = 'Todo text cannot be empty'
 			return
 		}
 
@@ -79,9 +95,13 @@ const addTodoSkill: Skill = {
 			duration: duration, // duration in minutes
 		}
 
-		const todos = (data.todos as Array<unknown>) || []
-		data.todos = [...todos, newTodo]
-		data.error = null
+		if (!queries.todos) queries.todos = []
+		const todos = (queries.todos as Array<unknown>) || []
+		queries.todos = [...todos, newTodo]
+		view.error = null
+		// Create new object references to ensure reactivity
+		data.queries = { ...queries }
+		data.view = { ...view }
 	},
 }
 
@@ -104,12 +124,17 @@ const toggleTodoSkill: Skill = {
 		},
 	},
 	execute: (data: Data, payload?: unknown) => {
+		// Ensure data.queries exists
+		if (!data.queries) data.queries = {}
+		
+		const queries = data.queries as Data
 		const id = (payload as { id?: string })?.id
 		if (!id) return
 
-		const todos = (data.todos as Array<{ id: string; status?: string }>) || []
+		if (!queries.todos) queries.todos = []
+		const todos = (queries.todos as Array<{ id: string; status?: string }>) || []
 		// Create a new array with updated todo to ensure reactivity
-		data.todos = todos.map((todo) => {
+		queries.todos = todos.map((todo) => {
 			if (todo.id === id) {
 				const currentStatus = todo.status || 'todo'
 				const newStatus = currentStatus === 'done' ? 'todo' : 'done'
@@ -120,7 +145,9 @@ const toggleTodoSkill: Skill = {
 			return todo
 		})
 		// Force a new array reference to ensure reactivity
-		data.todos = [...data.todos]
+		queries.todos = [...(queries.todos as Array<unknown>)]
+		// Create new object reference to ensure reactivity
+		data.queries = { ...queries }
 	},
 }
 
@@ -148,11 +175,18 @@ const updateTodoStatusSkill: Skill = {
 		},
 	},
 	execute: (data: Data, payload?: unknown) => {
+		// Ensure data.queries exists
+		if (!data.queries) data.queries = {}
+		
+		const queries = data.queries as Data
 		const { id, status } = (payload as { id?: string; status?: string }) || {}
 		if (!id || !status) return
 
-		const todos = (data.todos as Array<{ id: string; status?: string }>) || []
-		data.todos = todos.map((todo) => (todo.id === id ? { ...todo, status } : todo))
+		if (!queries.todos) queries.todos = []
+		const todos = (queries.todos as Array<{ id: string; status?: string }>) || []
+		queries.todos = todos.map((todo) => (todo.id === id ? { ...todo, status } : todo))
+		// Create new object reference to ensure reactivity
+		data.queries = { ...queries }
 	},
 }
 
@@ -175,11 +209,16 @@ const removeTodoSkill: Skill = {
 		},
 	},
 	execute: (data: Data, payload?: unknown) => {
+		// Ensure data.queries exists
+		if (!data.queries) data.queries = {}
+		
+		const queries = data.queries as Data
 		const id = (payload as { id?: string })?.id
 		if (!id) return
 
-		const todos = (data.todos as Array<{ id: string }>) || []
-		data.todos = todos.filter((todo) => todo.id !== id)
+		if (!queries.todos) queries.todos = []
+		const todos = (queries.todos as Array<{ id: string }>) || []
+		queries.todos = todos.filter((todo) => todo.id !== id)
 	},
 }
 
@@ -202,9 +241,16 @@ const updateInputSkill: Skill = {
 		},
 	},
 	execute: (data: Data, payload?: unknown) => {
+		// Ensure data.view exists
+		if (!data.view) data.view = {}
+		
 		const text = (payload as { text?: string })?.text
 		if (text !== undefined) {
-			data.newTodoText = text
+			// Create new view object with updated text
+			data.view = {
+				...(data.view as Data),
+				newTodoText: text,
+			}
 		}
 	},
 }
@@ -217,7 +263,16 @@ const clearInputSkill: Skill = {
 		category: 'ui',
 	},
 	execute: (data: Data) => {
-		data.newTodoText = ''
+		// Ensure data.view exists and create new reference
+		if (!data.view) {
+			data.view = { newTodoText: '' }
+		} else {
+			// Create new view object with cleared input
+			data.view = {
+				...(data.view as Data),
+				newTodoText: '',
+			}
+		}
 	},
 }
 
@@ -240,9 +295,15 @@ const setViewSkill: Skill = {
 		},
 	},
 	execute: (data: Data, payload?: unknown) => {
+		// Ensure data.view exists
+		if (!data.view) data.view = {}
+		
+		const view = data.view as Data
 		const viewMode = (payload as { viewMode?: string })?.viewMode
 		if (viewMode && ['list', 'kanban', 'timeline'].includes(viewMode)) {
-			data.viewMode = viewMode
+			view.viewMode = viewMode
+			// Create new object reference to ensure reactivity
+			data.view = { ...view }
 		}
 	},
 }
@@ -255,7 +316,13 @@ const clearTodosSkill: Skill = {
 		category: 'todo',
 	},
 	execute: (data: Data) => {
-		data.todos = []
+		// Ensure data.queries exists
+		if (!data.queries) data.queries = {}
+		
+		const queries = data.queries as Data
+		queries.todos = []
+		// Create new object reference to ensure reactivity
+		data.queries = { ...queries }
 	},
 }
 
@@ -278,14 +345,21 @@ const openModalSkill: Skill = {
 		},
 	},
 	execute: (data: Data, payload?: unknown) => {
+		// Ensure data.queries and data.view exist
+		if (!data.queries) data.queries = {}
+		if (!data.view) data.view = {}
+		
+		const queries = data.queries as Data
+		const view = data.view as Data
 		const id = (payload as { id?: string })?.id
 		if (!id) return
 
-		const todos = (data.todos as Array<{ id: string }>) || []
+		if (!queries.todos) queries.todos = []
+		const todos = (queries.todos as Array<{ id: string }>) || []
 		const todo = todos.find((t) => t.id === id)
 		if (todo) {
-			data.selectedTodo = todo
-			data.showModal = true
+			view.selectedTodo = todo
+			view.showModal = true
 		}
 	},
 }
@@ -298,8 +372,14 @@ const closeModalSkill: Skill = {
 		category: 'ui',
 	},
 	execute: (data: Data) => {
-		data.showModal = false
-		data.selectedTodo = null
+		// Ensure data.view exists
+		if (!data.view) data.view = {}
+		
+		const view = data.view as Data
+		view.showModal = false
+		view.selectedTodo = null
+		// Create new object reference to ensure reactivity
+		data.view = { ...view }
 	},
 }
 

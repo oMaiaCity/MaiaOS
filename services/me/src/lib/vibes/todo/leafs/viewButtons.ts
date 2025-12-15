@@ -18,7 +18,7 @@ export const viewButtonListActive: LeafNode = {
 	attributes: { type: 'button' },
 	classes: activeButtonClasses,
 	bindings: {
-		visible: "data.viewMode === 'list'",
+		visible: "data.view.viewMode === 'list'",
 	},
 	events: {
 		click: {
@@ -35,7 +35,7 @@ export const viewButtonList: LeafNode = {
 	attributes: { type: 'button' },
 	classes: inactiveButtonClasses,
 	bindings: {
-		visible: "data.viewMode !== 'list'",
+		visible: "data.view.viewMode !== 'list'",
 	},
 	events: {
 		click: {
@@ -52,7 +52,7 @@ export const viewButtonKanbanActive: LeafNode = {
 	attributes: { type: 'button' },
 	classes: activeButtonClasses,
 	bindings: {
-		visible: "data.viewMode === 'kanban'",
+		visible: "data.view.viewMode === 'kanban'",
 	},
 	events: {
 		click: {
@@ -69,7 +69,7 @@ export const viewButtonKanban: LeafNode = {
 	attributes: { type: 'button' },
 	classes: inactiveButtonClasses,
 	bindings: {
-		visible: "data.viewMode !== 'kanban'",
+		visible: "data.view.viewMode !== 'kanban'",
 	},
 	events: {
 		click: {
@@ -86,7 +86,7 @@ export const viewButtonTimelineActive: LeafNode = {
 	attributes: { type: 'button' },
 	classes: activeButtonClasses,
 	bindings: {
-		visible: "data.viewMode === 'timeline'",
+		visible: "data.view.viewMode === 'timeline'",
 	},
 	events: {
 		click: {
@@ -103,7 +103,7 @@ export const viewButtonTimeline: LeafNode = {
 	attributes: { type: 'button' },
 	classes: inactiveButtonClasses,
 	bindings: {
-		visible: "data.viewMode !== 'timeline'",
+		visible: "data.view.viewMode !== 'timeline'",
 	},
 	events: {
 		click: {

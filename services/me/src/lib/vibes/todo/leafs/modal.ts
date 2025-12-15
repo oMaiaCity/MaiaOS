@@ -9,7 +9,7 @@ export const modalLeaf: LeafNode = {
 	tag: 'div',
 	classes: 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm',
 	bindings: {
-		visible: 'data.showModal',
+		visible: 'data.view.showModal',
 	},
 	events: {
 		click: {
@@ -48,7 +48,7 @@ export const modalLeaf: LeafNode = {
 						{
 							tag: 'h2',
 							classes: 'text-2xl font-bold text-slate-900',
-							bindings: { text: 'data.selectedTodo.text' },
+							bindings: { text: 'data.view.selectedTodo.text' },
 						},
 						{
 							tag: 'div',
@@ -67,24 +67,24 @@ export const modalLeaf: LeafNode = {
 											tag: 'span',
 											classes: 'px-2 py-0.5 text-xs font-medium rounded-full border border-white shrink-0 bg-slate-100 text-slate-700',
 											bindings: {
-												visible: "data.selectedTodo.status === 'todo'",
-												text: 'data.selectedTodo.status',
+												visible: "data.view.selectedTodo.status === 'todo'",
+												text: 'data.view.selectedTodo.status',
 											},
 										},
 										{
 											tag: 'span',
 											classes: 'px-2 py-0.5 text-xs font-medium rounded-full border border-white shrink-0 bg-blue-100 text-blue-700',
 											bindings: {
-												visible: "data.selectedTodo.status === 'in-progress'",
-												text: 'data.selectedTodo.status',
+												visible: "data.view.selectedTodo.status === 'in-progress'",
+												text: 'data.view.selectedTodo.status',
 											},
 										},
 										{
 											tag: 'span',
 											classes: 'px-2 py-0.5 text-xs font-medium rounded-full border border-white shrink-0 bg-green-100 text-green-700',
 											bindings: {
-												visible: "data.selectedTodo.status === 'done'",
-												text: 'data.selectedTodo.status',
+												visible: "data.view.selectedTodo.status === 'done'",
+												text: 'data.view.selectedTodo.status',
 											},
 										},
 									],
@@ -102,7 +102,7 @@ export const modalLeaf: LeafNode = {
 											tag: 'span',
 											classes: 'text-sm text-slate-700',
 											bindings: {
-												text: 'data.selectedTodo.endDate|date',
+												text: 'data.view.selectedTodo.endDate|date',
 											},
 										},
 									],
@@ -123,7 +123,7 @@ export const modalLeaf: LeafNode = {
 												{
 													tag: 'span',
 													bindings: {
-														text: 'data.selectedTodo.duration',
+														text: 'data.view.selectedTodo.duration',
 													},
 												},
 												' minutes',

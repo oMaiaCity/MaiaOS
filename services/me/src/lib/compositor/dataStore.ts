@@ -146,8 +146,23 @@ class UnifiedDataStore {
 			if (action) {
 				try {
 					action(this._data, payload)
-					// Create new data object to trigger reactivity
-					this._data = { ...this._data }
+					// Create new data object with deep copy of nested objects to trigger reactivity
+					// This ensures nested changes (like data.view.newTodoText) are detected
+					const newData: Data = { ...this._data }
+					
+					// Deep copy nested objects if they exist and are objects
+					const queries = this._data.queries
+					if (queries && typeof queries === 'object' && !Array.isArray(queries)) {
+						const queriesObj = queries as Record<string, unknown>
+						newData.queries = { ...queriesObj }
+					}
+					const view = this._data.view
+					if (view && typeof view === 'object' && !Array.isArray(view)) {
+						const viewObj = view as Record<string, unknown>
+						newData.view = { ...viewObj }
+					}
+					
+					this._data = newData
 					this.notifySubscribers()
 				} catch (_error) {}
 			} else {

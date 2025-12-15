@@ -20,7 +20,7 @@ export const timelineViewLeaf: LeafNode = {
 			classes: 'flex flex-col gap-3 px-2 flex-1 min-h-0 overflow-y-auto',
 			bindings: {
 				foreach: {
-					items: 'data.todos',
+					items: 'data.queries.todos',
 					key: 'id',
 					leaf: {
 						tag: 'div',

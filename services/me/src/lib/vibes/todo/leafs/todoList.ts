@@ -11,7 +11,7 @@ export const todoListLeaf: LeafNode = {
 	classes: 'flex flex-col gap-0.5 @xs:gap-1 @sm:gap-1.5 @md:gap-2 h-full overflow-y-auto',
 	bindings: {
 		foreach: {
-			items: 'data.todos',
+			items: 'data.queries.todos',
 			key: 'id',
 			leaf: todoItemLeaf,
 		},

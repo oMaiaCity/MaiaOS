@@ -55,7 +55,7 @@ export const kanbanViewLeaf: LeafNode = {
 					},
 					bindings: {
 						foreach: {
-							items: 'data.todos',
+							items: 'data.queries.todos',
 							key: 'id',
 							leaf: {
 								tag: 'div',
@@ -112,7 +112,7 @@ export const kanbanViewLeaf: LeafNode = {
 					},
 					bindings: {
 						foreach: {
-							items: 'data.todos',
+							items: 'data.queries.todos',
 							key: 'id',
 							leaf: {
 								tag: 'div',
@@ -169,7 +169,7 @@ export const kanbanViewLeaf: LeafNode = {
 					},
 					bindings: {
 						foreach: {
-							items: 'data.todos',
+							items: 'data.queries.todos',
 							key: 'id',
 							leaf: {
 								tag: 'div',

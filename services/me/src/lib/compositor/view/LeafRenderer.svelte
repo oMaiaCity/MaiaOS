@@ -366,23 +366,16 @@
   const inputValue = $derived.by(() => {
     if (leaf.tag !== "input" || !leaf.bindings?.value) return undefined;
 
-    // Directly access the property from data to ensure Svelte tracks it
+    // Use resolveValue to properly handle nested paths like "data.view.newTodoText"
+    // This ensures we can access nested properties correctly
     const dataPath = leaf.bindings.value;
-    // Remove "data." prefix if present (e.g., "data.newTodoText" -> "newTodoText")
-    const propName = dataPath.startsWith("data.")
-      ? dataPath.slice(5)
-      : dataPath;
-
-    // Access the entire data object first to ensure reactivity
-    const currentData = data;
-    // Then access the specific property
-    // This ensures Svelte tracks changes to the property
-    if (propName in currentData) {
-      const value = (currentData as Record<string, unknown>)[propName];
-      // Return the value, ensuring empty strings are preserved
-      return value;
-    }
-    return undefined;
+    const _ = data; // Access data to ensure reactivity
+    
+    // Use resolveValue to handle both top-level and nested paths
+    const value = resolveValue(dataPath);
+    
+    // Return the value, ensuring empty strings are preserved
+    return value !== undefined ? value : undefined;
   });
 
   const attributes = $derived.by(() => {
@@ -406,10 +399,10 @@
         const value = inputValue;
         attrs.value = value !== undefined ? String(value) : "";
       } else {
-        // Has input handler: only set initial value (non-reactive)
-        // The input handler will manage updates
+        // Has input handler: set value (including empty string to allow clearing)
+        // The input handler will manage updates, but we need to sync empty values too
         const value = inputValue;
-        if (value !== undefined && value !== "") {
+        if (value !== undefined) {
           attrs.value = String(value);
         }
       }
@@ -527,20 +520,22 @@
     this={leaf.tag}
     class={classes}
     {...attributes}
-    onclick={(e: MouseEvent) => {
-      if (!leaf.events?.click) {
-        e.stopPropagation();
-        return;
-      }
-      if (
-        leaf.tag === "div" &&
-        classes.includes("fixed") &&
-        e.target !== e.currentTarget
-      ) {
-        return;
-      }
-      handleEvent(leaf.events.click);
-    }}
+    onclick={leaf.tag === "input" || leaf.tag === "textarea"
+      ? undefined // Don't attach onclick handler for inputs/textareas - let browser handle focus naturally
+      : (e: MouseEvent) => {
+          if (!leaf.events?.click) {
+            e.stopPropagation();
+            return;
+          }
+          if (
+            leaf.tag === "div" &&
+            classes.includes("fixed") &&
+            e.target !== e.currentTarget
+          ) {
+            return;
+          }
+          handleEvent(leaf.events.click);
+        }}
     onchange={leaf.events?.change
       ? () => handleEvent(leaf.events!.change!)
       : undefined}
@@ -709,49 +704,51 @@
     this={leaf.tag}
     class={classes}
     {...finalAttributes}
-    onclick={(e: MouseEvent) => {
-      // Handle anchor tags with client-side navigation (SvelteKit)
-      // CRITICAL: This must be checked FIRST and ALWAYS prevent default for internal links
-      if (leaf.tag === "a" && resolvedHref && resolvedHref.startsWith("/")) {
-        e.preventDefault();
-        e.stopPropagation();
-        goto(resolvedHref, { noScroll: true });
-        return;
-      }
+    onclick={leaf.tag === "input" || leaf.tag === "textarea"
+      ? undefined // Don't attach onclick handler for inputs/textareas - let browser handle focus naturally
+      : (e: MouseEvent) => {
+          // Handle anchor tags with client-side navigation (SvelteKit)
+          // CRITICAL: This must be checked FIRST and ALWAYS prevent default for internal links
+          if (leaf.tag === "a" && resolvedHref && resolvedHref.startsWith("/")) {
+            e.preventDefault();
+            e.stopPropagation();
+            goto(resolvedHref, { noScroll: true });
+            return;
+          }
 
-      // Handle click events - allow clicks to bubble up to parent if no click handler
-      if (!leaf.events?.click) {
-        // Don't stop propagation - let clicks bubble up to parent elements
-        // This allows parent elements (like vibe cards) to handle clicks on child elements
-        return;
-      }
+          // Handle click events - allow clicks to bubble up to parent if no click handler
+          if (!leaf.events?.click) {
+            // Don't stop propagation - let clicks bubble up to parent elements
+            // This allows parent elements (like vibe cards) to handle clicks on child elements
+            return;
+          }
 
-      // For modal backdrop (fixed div), only trigger if clicking the backdrop itself
-      if (
-        leaf.tag === "div" &&
-        classes.includes("fixed") &&
-        e.target !== e.currentTarget
-      ) {
-        // Clicked inside modal content - don't close
-        return;
-      }
+          // For modal backdrop (fixed div), only trigger if clicking the backdrop itself
+          if (
+            leaf.tag === "div" &&
+            classes.includes("fixed") &&
+            e.target !== e.currentTarget
+          ) {
+            // Clicked inside modal content - don't close
+            return;
+          }
 
-      // For empty event strings, just stop propagation (used for modal content)
-      if (leaf.events.click.event === "") {
-        e.stopPropagation();
-        return;
-      }
+          // For empty event strings, just stop propagation (used for modal content)
+          if (leaf.events.click.event === "") {
+            e.stopPropagation();
+            return;
+          }
 
-      // Handle the click event
-      handleEvent(leaf.events.click);
+          // Handle the click event
+          handleEvent(leaf.events.click);
 
-      // Only stop propagation for buttons to prevent event bubbling issues
-      // This is especially important for buttons inside modals
-      // For other elements (like divs with click handlers), let clicks bubble naturally
-      if (leaf.tag === "button") {
-        e.stopPropagation();
-      }
-    }}
+          // Only stop propagation for buttons to prevent event bubbling issues
+          // This is especially important for buttons inside modals
+          // For other elements (like divs with click handlers), let clicks bubble naturally
+          if (leaf.tag === "button") {
+            e.stopPropagation();
+          }
+        }}
     oninput={leaf.events?.input
       ? (e: Event) => {
           const target = e.target as HTMLInputElement;
@@ -783,7 +780,50 @@
     onsubmit={leaf.events?.submit
       ? (e: Event) => {
           e.preventDefault();
-          handleEvent(leaf.events!.submit!);
+          
+          // For forms, read input value, dispatch submit event, then clear
+          if (leaf.tag === "form" && leaf.children) {
+            // Find input child with value binding
+            const inputChild = leaf.children.find(
+              (child) =>
+                typeof child === "object" &&
+                child.tag === "input" &&
+                child.bindings?.value
+            );
+            
+            if (inputChild && typeof inputChild === "object" && inputChild.bindings?.value) {
+              // Read current input value from data
+              const inputValue = resolveValue(inputChild.bindings.value);
+              const textValue = inputValue ? String(inputValue).trim() : "";
+              
+              // Don't submit if empty
+              if (!textValue) {
+                return;
+              }
+              
+              // Dispatch submit event with value
+              const submitEvent = leaf.events!.submit!;
+              const payload = {
+                ...(typeof submitEvent.payload === "object" ? submitEvent.payload : {}),
+                text: textValue,
+              };
+              
+              if (onEvent) {
+                onEvent(submitEvent.event, payload);
+                
+                // Clear the input by dispatching UPDATE_INPUT with empty text
+                if (inputChild.events?.input) {
+                  onEvent(inputChild.events.input.event, { text: "" });
+                }
+              }
+            } else {
+              // No input child found, handle normally
+              handleEvent(leaf.events!.submit!);
+            }
+          } else {
+            // Not a form, handle normally
+            handleEvent(leaf.events!.submit!);
+          }
         }
       : undefined}
     ondragstart={leaf.events?.dragstart

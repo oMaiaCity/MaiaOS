@@ -397,3 +397,10 @@ body {
 .hoverable {
 	@apply transition-all cursor-pointer hover:border-slate-300;
 }
+
+/* Fix placeholder blocking clicks - allow clicks to pass through to input */
+input::placeholder,
+textarea::placeholder {
+	pointer-events: none !important;
+	user-select: none !important;
+}

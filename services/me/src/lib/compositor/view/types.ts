@@ -144,7 +144,7 @@ export interface Size {
  * Container Layout Type - Explicit layout type for composite containers
  * 
  * - 'grid': Structural grid container (gets h-full w-full overflow-hidden grid @container)
- * - 'flex': Structural flex container (gets h-full w-full overflow-hidden flex @container)
+ * - 'flex': Flex container (gets w-full overflow-hidden flex @container, NO h-full - sizes naturally)
  * - 'content': Content container (no structural defaults, flows naturally, gets @container)
  * 
  * All composites automatically get @container for Tailwind container query support.
@@ -170,7 +170,7 @@ export interface CompositeConfig {
 		 * 
 		 * Defaults applied based on layout type:
 		 * - grid: h-full w-full overflow-hidden grid @container
-		 * - flex: h-full w-full overflow-hidden flex @container
+		 * - flex: w-full overflow-hidden flex @container (NO h-full - sizes naturally)
 		 * - content: @container only
 		 */
 		layout: ContainerLayoutType

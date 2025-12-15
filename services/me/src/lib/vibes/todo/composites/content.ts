@@ -22,7 +22,7 @@ export const contentComposite: CompositeConfig = {
 				classes: todoListLeaf.classes ? `${todoListLeaf.classes} h-full` : 'h-full',
 				bindings: {
 					...todoListLeaf.bindings,
-					visible: "data.viewMode === 'list'",
+					visible: "data.view.viewMode === 'list'",
 				},
 			},
 		},
@@ -33,7 +33,7 @@ export const contentComposite: CompositeConfig = {
 				...kanbanViewLeaf,
 				bindings: {
 					...kanbanViewLeaf.bindings,
-					visible: "data.viewMode === 'kanban'",
+					visible: "data.view.viewMode === 'kanban'",
 				},
 			},
 		},
@@ -44,7 +44,7 @@ export const contentComposite: CompositeConfig = {
 				...timelineViewLeaf,
 				bindings: {
 					...timelineViewLeaf.bindings,
-					visible: "data.viewMode === 'timeline'",
+					visible: "data.view.viewMode === 'timeline'",
 				},
 			},
 		},
