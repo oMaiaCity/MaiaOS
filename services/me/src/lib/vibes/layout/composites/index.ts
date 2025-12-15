@@ -3,5 +3,5 @@
  */
 
 // export { rootComposite } from './root'
-export { rootComposite } from './root-simple' // Using simplified version
+export { rootComposite } from './root'
 

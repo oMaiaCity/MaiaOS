@@ -1,12 +1,12 @@
 <script lang="ts">
   import { browser } from "$app/environment";
-  import { createDataStore, type Data } from "./dataStore";
-  import { loadActionsFromRegistry } from "./skillLoader";
-  import { registerAllSkills } from "./skills";
-  import type { VibeConfig } from "./types";
-  import type { ViewNode } from "./view/types";
-  import Composite from "./view/Composite.svelte";
-  import Leaf from "./view/Leaf.svelte";
+  import { createDataStore, type Data } from "../dataStore";
+  import { loadActionsFromRegistry } from "../skillLoader";
+  import { registerAllSkills } from "../skills";
+  import type { VibeConfig } from "../types";
+  import type { ViewNode } from "./types";
+  import Composite from "./Composite.svelte";
+  import Leaf from "./Leaf.svelte";
 
   // ========== PROPS ==========
   interface Props {

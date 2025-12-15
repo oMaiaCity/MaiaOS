@@ -25,12 +25,12 @@ const kanbanTodoItemLeaf: LeafNode = {
 
 export const kanbanViewLeaf: LeafNode = {
 	tag: 'div',
-	classes: 'grid grid-cols-3 gap-4 h-full min-h-0',
+	classes: 'grid grid-cols-3 gap-4 h-full min-h-0 border border-slate-200 rounded-lg p-2',
 	children: [
 		// Todo column
 		{
 			tag: 'div',
-			classes: 'flex flex-col gap-2 h-full min-h-0',
+			classes: 'flex flex-col gap-2 h-full min-h-0 border border-slate-200 rounded-lg p-2',
 			children: [
 				{
 					tag: 'h3',
@@ -39,7 +39,7 @@ export const kanbanViewLeaf: LeafNode = {
 				},
 				{
 					tag: 'div',
-					classes: 'flex flex-col gap-2 bg-slate-50 rounded-lg p-2 flex-1 min-h-0 overflow-y-auto',
+					classes: 'flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto',
 					attributes: {
 						'data-status': 'todo',
 					},
@@ -87,7 +87,7 @@ export const kanbanViewLeaf: LeafNode = {
 		// In-progress column
 		{
 			tag: 'div',
-			classes: 'flex flex-col gap-2 h-full min-h-0',
+			classes: 'flex flex-col gap-2 h-full min-h-0 border border-slate-200 rounded-lg p-2',
 			children: [
 				{
 					tag: 'h3',
@@ -96,7 +96,7 @@ export const kanbanViewLeaf: LeafNode = {
 				},
 				{
 					tag: 'div',
-					classes: 'flex flex-col gap-2 bg-blue-50 rounded-lg p-2 flex-1 min-h-0 overflow-y-auto',
+					classes: 'flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto',
 					attributes: {
 						'data-status': 'in-progress',
 					},
@@ -144,7 +144,7 @@ export const kanbanViewLeaf: LeafNode = {
 		// Done column
 		{
 			tag: 'div',
-			classes: 'flex flex-col gap-2 h-full min-h-0',
+			classes: 'flex flex-col gap-2 h-full min-h-0 border border-slate-200 rounded-lg p-2',
 			children: [
 				{
 					tag: 'h3',
@@ -153,7 +153,7 @@ export const kanbanViewLeaf: LeafNode = {
 				},
 				{
 					tag: 'div',
-					classes: 'flex flex-col gap-2 bg-green-50 rounded-lg p-2 flex-1 min-h-0 overflow-y-auto',
+					classes: 'flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto',
 					attributes: {
 						'data-status': 'done',
 					},

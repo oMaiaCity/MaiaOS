@@ -7,8 +7,11 @@
   import type { Data } from "../dataStore";
   import type { VibeConfig } from "../types";
   import type { ViewNode } from "./types";
-  import ViewRenderer from "./ViewRenderer.svelte";
+  import Leaf from "./Leaf.svelte";
   import { resolveDataPath } from "./resolver";
+  
+  // Recursive component reference (Svelte allows this)
+  import CompositeRecursive from "./Composite.svelte";
 
   interface Props {
     node: ViewNode;
@@ -92,7 +95,6 @@
     const hasOverflow = classList.some(c => c.startsWith("overflow-"));
     const hasGrid = classList.includes("grid");
     const hasFlex = classList.includes("flex"); // Only check for "flex" display class, not flex-* utilities
-    const hasContainer = classList.includes("@container");
     
     // Don't add h-full if using flex-grow (flex handles height)
     const usesFlexGrow = classList.includes("flex-grow") || classList.includes("flex-1");
@@ -133,10 +135,7 @@
       // No structural defaults, just container query support
     }
     
-    // ALWAYS add @container for container query support (unless already present)
-    if (!hasContainer) {
       finalClasses = `@container ${finalClasses}`;
-    }
     
     return finalClasses.trim();
   });
@@ -149,7 +148,18 @@
     {#each composite.children as child}
       {@const isVisible = !child.visible || evaluateVisibility(child.visible)}
       {#if isVisible}
-        <ViewRenderer node={child} {data} {config} {onEvent} />
+        {#if child.composite}
+          <!-- Composite node - render as layout container -->
+          <CompositeRecursive node={child} {data} {config} {onEvent} />
+        {:else if child.leaf}
+          <!-- Leaf node - render as content using JSON-driven leaf definition -->
+          <Leaf node={child} {data} {config} {onEvent} />
+        {:else}
+          <!-- Invalid node - neither composite nor leaf -->
+          <div class="text-red-500 text-sm">
+            Invalid view node: must have either composite or leaf
+          </div>
+        {/if}
       {/if}
     {/each}
   </div>

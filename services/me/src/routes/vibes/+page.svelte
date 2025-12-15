@@ -2,7 +2,7 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { browser } from "$app/environment";
-  import Vibe from "$lib/compositor/Vibe.svelte";
+  import Vibe from "$lib/compositor/view/Vibe.svelte";
   import { todoVibeConfig } from "$lib/vibes/todo/config";
   import { vibesVibeConfig } from "$lib/vibes/vibes/config";
   import { layoutVibeConfig } from "$lib/vibes/layout/config";
@@ -33,7 +33,7 @@
 </script>
 
 {#if browser}
-  <div class="h-full w-full p-8">
+  <div class="h-full w-full">
     <Vibe config={currentConfig} onEvent={handleVibeEvent} />
   </div>
 {:else}
