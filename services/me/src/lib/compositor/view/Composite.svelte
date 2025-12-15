@@ -37,14 +37,68 @@
     }
   });
 
+  // Helper to extract and access properties from expressions for reactivity tracking
+  function ensureReactivityForExpression(expression: string) {
+    const dataObj = data as Record<string, unknown>;
+    const accessedProperties = new Set<string>();
+
+    // Extract properties referenced as "data.property" or nested paths like "data.view.viewMode"
+    const dataPropertyMatches = expression.matchAll(/data\.(\w+)(?:\.(\w+))*/g);
+    for (const match of dataPropertyMatches) {
+      const topLevelProp = match[1];
+      if (!accessedProperties.has(topLevelProp) && topLevelProp in dataObj) {
+        accessedProperties.add(topLevelProp);
+        // Access the top-level property to ensure reactivity
+        const _ = dataObj[topLevelProp];
+        // Also access nested properties if they exist
+        const nestedProp = match[2];
+        if (nestedProp) {
+          const topLevelValue = dataObj[topLevelProp];
+          if (
+            topLevelValue &&
+            typeof topLevelValue === "object" &&
+            nestedProp in topLevelValue
+          ) {
+            const _nested = (topLevelValue as Record<string, unknown>)[
+              nestedProp
+            ];
+          }
+        }
+      }
+    }
+
+    // Extract direct property references (not keywords)
+    const propertyMatches = expression.matchAll(/\b(\w+)\b/g);
+    const keywords = new Set([
+      "true",
+      "false",
+      "null",
+      "undefined",
+      "typeof",
+      "data",
+    ]);
+
+    for (const match of propertyMatches) {
+      const propName = match[1];
+      if (
+        !keywords.has(propName) &&
+        !accessedProperties.has(propName) &&
+        propName in dataObj
+      ) {
+        accessedProperties.add(propName);
+        // Access the property to ensure reactivity
+        const _ = dataObj[propName];
+      }
+    }
+  }
+
   // Helper to evaluate visibility (reactive to data changes)
   const evaluateVisibility = (path: string | undefined): boolean => {
     if (!path) return true;
     const currentData = data;
     const dataObj = currentData as Record<string, unknown>;
-    // Explicitly access selectedLayout and viewMode for reactivity tracking
-    const _ = dataObj.selectedLayout;
-    const __ = dataObj.viewMode;
+    // Dynamically extract and access properties from the expression for reactivity
+    ensureReactivityForExpression(path);
     try {
       // Check if it's an expression
       if (

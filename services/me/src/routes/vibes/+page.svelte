@@ -5,7 +5,6 @@
   import Vibe from "$lib/compositor/view/Vibe.svelte";
   import { todoVibeConfig } from "$lib/vibes/todo/config";
   import { vibesVibeConfig } from "$lib/vibes/vibes/config";
-  import { layoutVibeConfig } from "$lib/vibes/layout/config";
 
   // Get vibe ID from route params (reactive)
   const vibeId = $derived($page.url.searchParams.get("id"));
@@ -13,7 +12,6 @@
   // Available vibe configs
   const vibeConfigs: Record<string, typeof vibesVibeConfig> = {
     todo: todoVibeConfig,
-    layout: layoutVibeConfig,
   };
 
   // Determine which config to use (reactive to route changes)

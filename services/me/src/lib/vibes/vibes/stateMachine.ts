@@ -14,11 +14,6 @@ export const vibesStateMachine: StateMachineConfig = {
 				name: 'Todo',
 				description: 'Task management vibe',
 			},
-			{
-				id: 'layout',
-				name: 'Layout',
-				description: 'Layout testing ground',
-			},
 		],
 		selectedVibeId: null as string | null,
 	},

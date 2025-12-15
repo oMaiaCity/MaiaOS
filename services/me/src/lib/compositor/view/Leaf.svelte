@@ -277,6 +277,63 @@
     return sanitizeClasses(resolvedClasses).sanitized.join(" ");
   });
 
+  // Helper function to extract and access properties from expressions for reactivity tracking
+  function ensureReactivityForExpression(expression: string) {
+    const dataObj = data as Record<string, unknown>;
+    const accessedProperties = new Set<string>();
+
+    // Extract properties referenced as "data.property"
+    const dataPropertyMatches = expression.matchAll(/data\.(\w+)/g);
+    for (const match of dataPropertyMatches) {
+      const propName = match[1];
+      if (!accessedProperties.has(propName) && propName in dataObj) {
+        accessedProperties.add(propName);
+        // Access the property to ensure reactivity
+        const _ = dataObj[propName];
+      }
+    }
+
+    // Extract direct property references (not keywords)
+    const propertyMatches = expression.matchAll(/\b(\w+)\b/g);
+    const keywords = new Set([
+      "item",
+      "String",
+      "Number",
+      "typeof",
+      "isNaN",
+      "trim",
+      "return",
+      "true",
+      "false",
+      "null",
+      "undefined",
+      "void",
+      "new",
+      "data",
+    ]);
+
+    for (const match of propertyMatches) {
+      const propName = match[1];
+      if (
+        !keywords.has(propName) &&
+        !accessedProperties.has(propName) &&
+        propName in dataObj
+      ) {
+        accessedProperties.add(propName);
+        // Access the property to ensure reactivity
+        const _ = dataObj[propName];
+      }
+    }
+
+    // If we're in a foreach context, access all item properties to trigger reactivity
+    if ("item" in data && data.item && typeof data.item === "object") {
+      const item = data.item as Record<string, unknown>;
+      Object.keys(item).forEach((key) => {
+        const _ = item[key];
+      });
+    }
+  }
+
   // Resolve bindings - ensure we access data to trigger reactivity
   const _boundValue = $derived.by(() => {
     if (!leaf.bindings?.value) return undefined;
@@ -292,19 +349,8 @@
     if (!leaf.bindings?.visible) return undefined;
     // Access data to ensure reactivity
     const _ = data;
-    const dataObj = data as Record<string, unknown>;
-    // Explicitly access common visibility properties for reactivity
-    const __ = dataObj.showSendModal;
-    const ___ = dataObj.selectedLayout;
-    const ____ = dataObj.viewMode;
-    // If we're in a foreach context, access all item properties to trigger reactivity
-    if ("item" in data && data.item && typeof data.item === "object") {
-      const item = data.item as Record<string, unknown>;
-      // Access all properties to ensure reactivity tracking for any property changes
-      Object.keys(item).forEach((key) => {
-        const _____ = item[key];
-      });
-    }
+    // Dynamically extract and access properties from the expression for reactivity
+    ensureReactivityForExpression(leaf.bindings.visible);
     return resolveValue(leaf.bindings.visible);
   });
   const isVisible = $derived(
@@ -313,22 +359,10 @@
 
   const disabledValue = $derived.by(() => {
     if (!leaf.bindings?.disabled) return undefined;
-    // Access data to ensure reactivity - explicitly access selectedRecipient and sendAmount
-    // Force reactivity by accessing these properties directly and storing them
-    const dataObj = data as Record<string, unknown>;
-    const selectedRecipient = dataObj.selectedRecipient;
-    const sendAmount = dataObj.sendAmount;
-    // Access the values to ensure Svelte tracks them - this is critical for reactivity
-    const _ = selectedRecipient;
-    const __ = sendAmount;
-    // If we're in a foreach context, access all item properties to trigger reactivity
-    if ("item" in data && data.item && typeof data.item === "object") {
-      const item = data.item as Record<string, unknown>;
-      // Access all properties to ensure reactivity tracking
-      Object.keys(item).forEach((key) => {
-        const ___ = item[key];
-      });
-    }
+    // Access data to ensure reactivity
+    const _ = data;
+    // Dynamically extract and access properties from the expression for reactivity
+    ensureReactivityForExpression(leaf.bindings.disabled);
     // Evaluate the expression with current data values
     return resolveValue(leaf.bindings.disabled);
   });
@@ -386,7 +420,7 @@
   const inputValue = $derived.by(() => {
     if (leaf.tag !== "input" || !leaf.bindings?.value) return undefined;
 
-    // Use resolveValue to properly handle nested paths like "data.view.newTodoText"
+    // Use resolveValue to properly handle nested paths (e.g., "data.view.someProperty")
     // This ensures we can access nested properties correctly
     const dataPath = leaf.bindings.value;
     const _ = data; // Access data to ensure reactivity
@@ -438,13 +472,9 @@
       const eventConfig = leaf.events.input;
       attrs.oninput = (e: Event) => {
         const target = e.target as HTMLInputElement;
-        // Determine payload key based on event name
-        const payloadKey =
-          eventConfig.event === "UPDATE_SEND_AMOUNT"
-            ? "amount"
-            : eventConfig.event === "UPDATE_SEND_DESCRIPTION"
-              ? "description"
-              : "text";
+        // Use generic default key "text" for input values
+        // Payload can override this if it specifies a different key
+        const payloadKey = "text";
         // Always send the input value in the payload
         const payload: Record<string, unknown> = eventConfig.payload
           ? {
@@ -778,12 +808,9 @@
       ? (e: Event) => {
           const target = e.target as HTMLInputElement;
           const eventConfig = leaf.events!.input!;
-          const payloadKey =
-            eventConfig.event === "UPDATE_SEND_AMOUNT"
-              ? "amount"
-              : eventConfig.event === "UPDATE_SEND_DESCRIPTION"
-                ? "description"
-                : "text";
+          // Use generic default key "text" for input values
+          // Payload can override this if it specifies a different key
+          const payloadKey = "text";
           const payload: Record = eventConfig.payload
             ? {
                 ...(typeof eventConfig.payload === "object" &&
