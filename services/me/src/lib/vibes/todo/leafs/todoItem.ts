@@ -6,6 +6,7 @@
 import type { LeafNode } from '../../../compositor/view/leaf-types'
 
 export const todoItemLeaf: LeafNode = {
+	id: 'todo.leaf.todoItem',
 	tag: 'div',
 	classes: 'flex items-center gap-1 @xs:gap-1.5 @sm:gap-2 @md:gap-3 px-1.5 py-1 @xs:px-2 @xs:py-1.5 @sm:px-3 @sm:py-2 @md:px-4 @md:py-3 rounded-lg @sm:rounded-xl @md:rounded-2xl bg-slate-100 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)]',
 	children: [

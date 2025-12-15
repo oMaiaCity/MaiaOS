@@ -14,6 +14,7 @@ import {
 } from '../leafs/viewButtons'
 
 export const headerComposite: CompositeConfig = {
+	id: 'todo.composite.header',
 	container: {
 		layout: 'content',
 		class: 'w-full p-0 bg-transparent',

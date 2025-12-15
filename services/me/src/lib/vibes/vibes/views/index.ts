@@ -7,5 +7,6 @@ import type { ViewConfig } from '../../../compositor/view/types'
 import { rootComposite } from '../composites'
 
 export const vibesView: ViewConfig = {
+	id: 'vibes.view.root',
 	composite: rootComposite,
 }

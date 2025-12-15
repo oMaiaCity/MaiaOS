@@ -6,6 +6,7 @@
 import type { LeafNode } from '../../../compositor/view/leaf-types'
 
 export const titleLeaf: LeafNode = {
+	id: 'todo.leaf.title',
 	tag: 'div',
 	classes: 'text-center mb-2 @xs:mb-2 @sm:mb-2 @md:mb-3',
 	children: [

@@ -13,11 +13,13 @@ import type { CompositeConfig } from '../../compositor/view/types'
  * @param children - The children to place inside the card
  * @param cardLayout - Layout for the card container ('grid' or 'flex'), defaults to 'grid'
  * @param cardClasses - Additional classes for the card container
+ * @param id - Optional unique identifier for this composite config
  */
 export function createRootCard(
 	children: CompositeConfig['children'],
 	cardLayout: 'grid' | 'flex' = 'grid',
-	cardClasses: string = ''
+	cardClasses: string = '',
+	id?: string
 ): CompositeConfig {
 	const outerLayout = cardLayout === 'flex' ? 'flex' : 'grid'
 	const outerClasses = cardLayout === 'flex' 
@@ -29,6 +31,7 @@ export function createRootCard(
 		: 'card p-2 @xs:p-3 @sm:p-4 @md:p-6 grid-cols-1 grid-rows-[auto_auto_1fr]'
 	
 	return {
+		...(id && { id }),
 		container: {
 			layout: outerLayout,
 			class: outerClasses,
@@ -47,5 +50,6 @@ export function createRootCard(
 		],
 	}
 }
+
 
 

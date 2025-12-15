@@ -5,6 +5,7 @@
 import type { LeafNode } from '../../../compositor/view/leaf-types'
 
 export const errorLeaf: LeafNode = {
+	id: 'todo.leaf.error',
 	tag: 'div',
 	classes: 'mb-4 px-4 py-3 rounded-2xl bg-gradient-to-r from-red-50 to-red-100/50 border border-red-200/60 shadow-[0_2px_8px_rgba(239,68,68,0.1)] text-red-800 text-sm flex items-center justify-between gap-3',
 	bindings: {

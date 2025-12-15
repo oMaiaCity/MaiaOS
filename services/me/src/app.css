@@ -404,3 +404,44 @@ textarea::placeholder {
 	pointer-events: none !important;
 	user-select: none !important;
 }
+
+/* Writing Mode & Text Orientation Utilities */
+.direction-rtl {
+    direction: rtl;
+}
+
+.direction-ltr {
+    direction: ltr;
+}
+
+.text-sideways {
+    text-orientation: sideways;
+}
+
+.text-upright {
+    text-orientation: upright;
+}
+
+.text-mixed {
+    text-orientation: mixed;
+}
+
+.text-sideways-right {
+    text-orientation: sideways-right;
+}
+
+.text-glyph {
+    text-orientation: use-glyph-orientation;
+}
+
+.writing-vertical-lr {
+    writing-mode: vertical-lr;
+}
+
+.writing-vertical-rl {
+    writing-mode: vertical-rl;
+}
+
+.writing-horizontal-tb {
+    writing-mode: horizontal-tb;
+}

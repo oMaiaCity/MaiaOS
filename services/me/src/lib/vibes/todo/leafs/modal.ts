@@ -6,6 +6,7 @@
 import type { LeafNode } from '../../../compositor/view/leaf-types'
 
 export const modalLeaf: LeafNode = {
+	id: 'todo.leaf.modal',
 	tag: 'div',
 	classes: 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm',
 	bindings: {

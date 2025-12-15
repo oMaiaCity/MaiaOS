@@ -161,6 +161,12 @@ export type ContainerLayoutType = 'grid' | 'flex' | 'content'
  * All composites automatically get @container for container query support.
  */
 export interface CompositeConfig {
+	/**
+	 * Unique identifier for this composite config
+	 * Used for database storage and ID-based referencing
+	 * Format: "{vibe}.composite.{name}" (e.g., "todo.composite.root")
+	 */
+	id?: string
 	container: {
 		/**
 		 * Explicit container layout type (REQUIRED)
@@ -203,10 +209,26 @@ export interface ViewNode {
 	composite?: CompositeConfig
 
 	/**
+	 * Composite ID reference - references a composite config by ID
+	 * Used for dynamic config swapping via state machine actions
+	 * Format: "{vibe}.composite.{name}" (e.g., "todo.composite.content.list")
+	 * The composite will be resolved from the composite registry
+	 */
+	compositeId?: string
+
+	/**
 	 * LEAF properties (mutually exclusive with composite)
 	 * If present, this is a leaf node (content node) - JSON-driven UI definition
 	 */
 	leaf?: LeafNode
+
+	/**
+	 * Leaf ID reference - references a leaf config by ID
+	 * Used for dynamic config swapping via state machine actions
+	 * Format: "{vibe}.leaf.{name}" (e.g., "todo.leaf.todoList")
+	 * The leaf will be resolved from the view node registry
+	 */
+	leafId?: string
 
 	/**
 	 * Layout positioning (when this node is a child of a composite)
@@ -236,6 +258,12 @@ export interface ViewNode {
  * View Configuration - Root view structure
  */
 export interface ViewConfig {
+	/**
+	 * Unique identifier for this view config
+	 * Used for database storage and ID-based referencing
+	 * Format: "{vibe}.view.{name}" (e.g., "todo.view.root")
+	 */
+	id?: string
 	/**
 	 * Root composite node containing all children
 	 */

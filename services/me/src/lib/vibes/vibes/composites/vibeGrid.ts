@@ -7,6 +7,7 @@ import type { CompositeConfig } from '../../../compositor/view/types'
 import { vibeCardLeaf } from '../leafs'
 
 export const vibeGridComposite: CompositeConfig = {
+	id: 'vibes.composite.vibeGrid',
 	container: {
 		layout: 'content',
 		// Content layout: no structural defaults (h-full w-full overflow-hidden), just @container

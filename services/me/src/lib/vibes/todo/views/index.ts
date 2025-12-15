@@ -8,6 +8,7 @@ import { rootComposite } from '../composites'
 import { modalLeaf } from '../leafs'
 
 export const todoView: ViewConfig = {
+	id: 'todo.view.root',
 	composite: {
 		...rootComposite,
 		children: [

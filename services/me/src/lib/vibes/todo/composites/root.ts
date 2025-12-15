@@ -4,11 +4,16 @@
  */
 
 import { createRootCard } from '../../shared/rootCard'
-import { contentComposite } from './content'
 import { headerComposite } from './header'
 import { inputSectionComposite } from './inputSection'
+import {
+	listContentComposite,
+	kanbanContentComposite,
+	timelineContentComposite,
+} from './index'
 
-export const rootComposite = createRootCard([
+export const rootComposite = createRootCard(
+	[
 	// Header Composite - Fixed header containing title and viewToggle
 	{
 		slot: 'header',
@@ -31,15 +36,14 @@ export const rootComposite = createRootCard([
 			},
 		},
 	},
-	// Content Composite - Scrollable content area containing list
+	// Content Composite - Dynamically swapped based on state
+	// Uses compositeId to reference the active content composite from registry
 	{
 		slot: 'content',
-		composite: {
-			...contentComposite,
-			container: {
-				...contentComposite.container,
-				class: contentComposite.container.class,
-			},
-		},
+		compositeId: 'data.view.contentCompositeId', // Resolved from state
 	},
-])
+],
+	'grid',
+	'',
+	'todo.composite.root'
+)

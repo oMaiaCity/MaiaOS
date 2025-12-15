@@ -6,6 +6,11 @@
 export { errorLeaf } from './error'
 export { inputFormLeaf } from './inputForm'
 export { kanbanViewLeaf } from './kanbanView'
+export {
+	defaultKanbanColumns,
+	generateKanbanColumnLeafs,
+	type KanbanColumnConfig,
+} from './kanbanColumn'
 export { modalLeaf } from './modal'
 export { timelineViewLeaf } from './timelineView'
 export { titleLeaf } from './title'

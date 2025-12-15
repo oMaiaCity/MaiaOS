@@ -14,6 +14,7 @@ const inactiveButtonClasses = 'px-1.5 py-0.5 @xs:px-2 @xs:py-1 @sm:px-3 @sm:py-1
 
 // List button - Active state
 export const viewButtonListActive: LeafNode = {
+	id: 'todo.leaf.viewButtonListActive',
 	tag: 'button',
 	attributes: { type: 'button' },
 	classes: activeButtonClasses,
@@ -31,6 +32,7 @@ export const viewButtonListActive: LeafNode = {
 
 // List button - Inactive state
 export const viewButtonList: LeafNode = {
+	id: 'todo.leaf.viewButtonList',
 	tag: 'button',
 	attributes: { type: 'button' },
 	classes: inactiveButtonClasses,
@@ -48,6 +50,7 @@ export const viewButtonList: LeafNode = {
 
 // Kanban button - Active state
 export const viewButtonKanbanActive: LeafNode = {
+	id: 'todo.leaf.viewButtonKanbanActive',
 	tag: 'button',
 	attributes: { type: 'button' },
 	classes: activeButtonClasses,
@@ -65,6 +68,7 @@ export const viewButtonKanbanActive: LeafNode = {
 
 // Kanban button - Inactive state
 export const viewButtonKanban: LeafNode = {
+	id: 'todo.leaf.viewButtonKanban',
 	tag: 'button',
 	attributes: { type: 'button' },
 	classes: inactiveButtonClasses,
@@ -82,6 +86,7 @@ export const viewButtonKanban: LeafNode = {
 
 // Timeline button - Active state
 export const viewButtonTimelineActive: LeafNode = {
+	id: 'todo.leaf.viewButtonTimelineActive',
 	tag: 'button',
 	attributes: { type: 'button' },
 	classes: activeButtonClasses,
@@ -99,6 +104,7 @@ export const viewButtonTimelineActive: LeafNode = {
 
 // Timeline button - Inactive state
 export const viewButtonTimeline: LeafNode = {
+	id: 'todo.leaf.viewButtonTimeline',
 	tag: 'button',
 	attributes: { type: 'button' },
 	classes: inactiveButtonClasses,

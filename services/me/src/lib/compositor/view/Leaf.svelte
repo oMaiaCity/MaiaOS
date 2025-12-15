@@ -12,6 +12,7 @@
   import { validateLeaf } from "./whitelist";
   import { resolveDataPath } from "./resolver";
   import { sanitizeClasses } from "./whitelist";
+  import { viewNodeRegistry } from "./view-node-registry";
   import Icon from "@iconify/svelte";
   import { goto } from "$app/navigation";
 
@@ -27,19 +28,112 @@
   // Recursive component reference (Svelte allows this)
   import LeafRecursive from "./Leaf.svelte";
 
+  // Track drag-over state for visual feedback
+  let isDragOver = $state(false);
+
+  // Resolve leaf - either inline or by ID from registry
+  const leaf = $derived.by(() => {
+    // Access data to ensure reactivity tracking
+    const _ = data;
+    
+    // If leafId is provided, resolve from registry
+    if (node.leafId) {
+      let leafId: string | undefined;
+      
+      // Check if leafId is a data path (starts with "data.") or direct ID
+      if (node.leafId.startsWith('data.')) {
+        // Access nested properties for reactivity (e.g., data.view.contentLeafId or data.view.kanbanColumnIds.todo)
+        const view = data.view as Record<string, unknown> | undefined;
+        if (view) {
+          const _view = view; // Access view to ensure reactivity
+          // Extract all path parts after "data.view" for nested property access
+          const pathParts = node.leafId.split('.');
+          if (pathParts.length > 2 && pathParts[0] === 'data' && pathParts[1] === 'view') {
+            // Access nested properties for reactivity (e.g., kanbanColumnIds.todo)
+            let current: unknown = view;
+            for (let i = 2; i < pathParts.length; i++) {
+              const part = pathParts[i];
+              if (current && typeof current === 'object' && part in current) {
+                current = (current as Record<string, unknown>)[part];
+                const _ = current; // Access for reactivity
+              }
+            }
+          } else {
+            // Simple path (e.g., data.view.contentLeafId)
+            const propName = pathParts[pathParts.length - 1];
+            if (propName && propName in view) {
+              const _prop = view[propName]; // Access property for reactivity
+            }
+          }
+        }
+        
+        // Resolve leafId from data (e.g., "data.view.contentLeafId" or "data.view.kanbanColumnIds.todo")
+        // Generic path resolution - works for any data path structure
+        leafId = resolveDataPath(data, node.leafId) as string | undefined;
+        
+      } else {
+        // Direct ID (e.g., "todo.leaf.todoList")
+        leafId = node.leafId;
+      }
+      
+      if (leafId && typeof leafId === 'string') {
+        const resolvedLeaf = viewNodeRegistry.getLeaf(leafId);
+        if (resolvedLeaf) {
+          return resolvedLeaf;
+        }
+        // Debug: Log the resolution attempt (only in development)
+        if (typeof window !== 'undefined' && import.meta.env?.DEV) {
+          const allLeaves = viewNodeRegistry.getAllLeaves();
+          const leafIds = allLeaves.map(l => l.id).filter(Boolean);
+          console.error(`[Leaf] Leaf not found in registry: ${leafId}`, {
+            nodeLeafId: node.leafId,
+            resolvedLeafId: leafId,
+            totalLeaves: leafIds.length,
+            allRegisteredIds: leafIds,
+            matchingIds: leafIds.filter(id => id?.includes('kanbanColumn')),
+          });
+        }
+      } else if (node.leafId && typeof window !== 'undefined' && import.meta.env?.DEV) {
+        // leafId resolution failed
+        console.error(`[Leaf] Failed to resolve leafId: ${node.leafId}`, {
+          nodeLeafId: node.leafId,
+          resolvedLeafId: leafId,
+          isDataPath: node.leafId.startsWith('data.'),
+          dataView: data.view,
+        });
+      }
+    }
+    // Otherwise use inline leaf
+    return node.leaf;
+  });
+
   // Validate leaf
   const validation = $derived(
-    node.leaf ? validateLeaf(node.leaf) : { valid: false, errors: ["No leaf definition"] },
+    leaf ? validateLeaf(leaf) : { valid: false, errors: ["No leaf definition"] },
   );
 
   $effect(() => {
     if (!validation.valid) {
+      // If leafId was provided but not resolved, show detailed warning
+      if (node.leafId) {
+        const allLeaves = viewNodeRegistry.getAllLeaves();
+        const leafIds = allLeaves.map(l => l.id).filter(Boolean);
+        
+        console.warn(
+          `Leaf component: leafId "${node.leafId}" not resolved.`,
+          {
+            nodeLeafId: node.leafId,
+            resolvedLeaf: leaf,
+            totalRegisteredLeaves: leafIds.length,
+            allRegisteredIds: leafIds,
+            dataView: data.view,
+          }
+        );
+        return;
+      }
       // Validation errors are handled in template
     }
   });
-
-  // Extract leaf from node for rendering
-  const leaf = $derived(node.leaf!);
 
   // Resolve data path to value or evaluate expression
   function resolveValue(path: string): unknown {
@@ -499,7 +593,7 @@
 {#if !browser}
   <!-- SSR fallback -->
   <div class="text-slate-600">Loading...</div>
-{:else if !node.leaf || !validation.valid}
+{:else if !leaf || !validation.valid}
   <div class="text-red-500 p-4 rounded bg-red-50">
     Invalid leaf configuration: {validation.errors?.join(", ")}
   </div>
@@ -517,8 +611,21 @@
   {:else}
     <svelte:element
       this={leaf.tag}
-      class={classes}
+      class={`${classes} ${leaf.attributes?.['data-dropzone'] === 'true' && isDragOver ? 'bg-blue-50 border-blue-300 border-2' : ''}`}
       {...attributes}
+      ondragenter={leaf.events?.dragenter
+        ? (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.dataTransfer) {
+              e.dataTransfer.dropEffect = "move";
+            }
+            isDragOver = true;
+            if (leaf.events?.dragenter) {
+              handleEvent(leaf.events.dragenter);
+            }
+          }
+        : undefined}
       ondragover={leaf.events?.dragover
         ? (e: DragEvent) => {
             e.preventDefault();
@@ -529,10 +636,24 @@
             // Don't call handleEvent on dragover - just allow the drop
           }
         : undefined}
+      ondragleave={leaf.events?.dragleave
+        ? (e: DragEvent) => {
+            // Only remove drag-over state if we're actually leaving the element
+            // (not just moving to a child element)
+            const rect = (e.currentTarget as HTMLElement)?.getBoundingClientRect();
+            if (rect && (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom)) {
+              isDragOver = false;
+            }
+            if (leaf.events?.dragleave) {
+              handleEvent(leaf.events.dragleave);
+            }
+          }
+        : undefined}
       ondrop={leaf.events?.drop
         ? (e: DragEvent) => {
             e.preventDefault();
             e.stopPropagation(); // Prevent bubbling to parent drop zones
+            isDragOver = false; // Reset drag-over state
             // Get the dragged item ID from dataTransfer (set during dragstart)
             const draggedId = e.dataTransfer?.getData("text/plain");
             // Get the drop payload (may contain status, category, or any other properties)
@@ -573,8 +694,8 @@
   <!-- Void element rendering - no children allowed -->
   <svelte:element
     this={leaf.tag}
-    class={classes}
-    {...attributes}
+      class={`${classes} ${leaf.attributes?.['data-dropzone'] === 'true' && isDragOver ? 'bg-blue-50 border-blue-300 border-2' : ''}`}
+      {...attributes}
     onclick={leaf.tag === "input" || leaf.tag === "textarea"
       ? undefined // Don't attach onclick handler for inputs/textareas - let browser handle focus naturally
       : (e: MouseEvent) => {
@@ -757,7 +878,7 @@
       : attributes}
   <svelte:element
     this={leaf.tag}
-    class={classes}
+    class={`${classes} ${leaf.attributes?.['data-dropzone'] === 'true' && isDragOver ? 'bg-blue-50 border-blue-300 border-2' : ''}`}
     {...finalAttributes}
     onclick={leaf.tag === "input" || leaf.tag === "textarea"
       ? undefined // Don't attach onclick handler for inputs/textareas - let browser handle focus naturally

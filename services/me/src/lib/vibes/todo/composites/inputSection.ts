@@ -6,6 +6,7 @@ import type { CompositeConfig } from '../../../compositor/view/types'
 import { errorLeaf, inputFormLeaf } from '../leafs'
 
 export const inputSectionComposite: CompositeConfig = {
+	id: 'todo.composite.inputSection',
 	container: {
 		layout: 'content',
 		class: ' bg-slate-50',

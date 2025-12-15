@@ -6,6 +6,7 @@
 import type { LeafNode } from '../../../compositor/view/leaf-types'
 
 export const inputFormLeaf: LeafNode = {
+	id: 'todo.leaf.inputForm',
 	tag: 'form',
 	classes: 'mb-1 @xs:mb-2 @sm:mb-3 @md:mb-4 flex flex-col @sm:flex-row gap-1 @xs:gap-1.5 @sm:gap-2 items-stretch @sm:items-center',
 	events: {

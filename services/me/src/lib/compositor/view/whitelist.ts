@@ -189,6 +189,14 @@ const TAILWIND_PATTERNS = [
 	/^(italic|not-italic|uppercase|lowercase|capitalize|normal-case)$/,
 	/^(underline|line-through|no-underline)$/,
 	/^truncate(-none)?$/, // truncate, truncate-none
+	/^whitespace-(normal|nowrap|pre|pre-line|pre-wrap|break-spaces)$/, // whitespace utilities
+	// Writing mode (vertical text)
+	/^writing-(vertical-rl|vertical-lr|horizontal-tb)$/,
+	/^\[text-orientation:.*\]$/, // Allow text-orientation arbitrary values
+	// Text orientation (custom classes)
+	/^text-(sideways|upright|mixed|sideways-right|glyph)$/,
+	// Direction (custom classes)
+	/^direction-(rtl|ltr)$/,
 
 	// Effects
 	/^shadow(-(sm|md|lg|xl|2xl|inner|none)|-button-primary|-button-primary-hover)$/,
@@ -218,6 +226,8 @@ const TAILWIND_PATTERNS = [
 	/^cursor-(pointer|not-allowed|wait|text|move|help|crosshair|default|grab|grabbing)$/,
 	// Pointer events
 	/^pointer-events-(none|auto)$/,
+	// User Select
+	/^select-(none|text|all|auto)$/,
 	// Ring (focus rings)
 	/^ring(-(\d+|offset-\d+(\.\d+)?))?$/, // Allow fractional ring offsets like ring-offset-0.5
 	/^ring-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)-(\d+)$/,
@@ -228,6 +238,11 @@ const TAILWIND_PATTERNS = [
 	/^outline-(none|0|1|2|4|8)$/,
 	// Scale (transform)
 	/^scale-(\d+|\[.*\])$/,
+	// Rotate (transform)
+	/^rotate-(\d+|\[.*\])$/,
+	/^-rotate-(\d+|\[.*\])$/,
+	// Transform origin
+	/^origin-(center|top|top-right|right|bottom-right|bottom|bottom-left|left|top-left)$/,
 
 	// Display
 	/^(inline|block|inline-block|flex|inline-flex|grid|inline-grid|table|inline-table|contents|list-item|hidden)$/,

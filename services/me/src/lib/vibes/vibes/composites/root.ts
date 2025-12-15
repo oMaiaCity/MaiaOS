@@ -6,7 +6,8 @@
 import { createRootCard } from '../../shared/rootCard'
 import { vibeGridComposite } from './vibeGrid'
 
-export const rootComposite = createRootCard([
+export const rootComposite = createRootCard(
+	[
 	// Internal Header (inside card)
 	{
 		slot: 'header',
@@ -80,5 +81,9 @@ export const rootComposite = createRootCard([
 			],
 		},
 	},
-], 'flex')
+],
+	'flex',
+	'',
+	'vibes.composite.root'
+)
 

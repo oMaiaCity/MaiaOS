@@ -9,6 +9,7 @@
   import type { ViewNode } from "./types";
   import Leaf from "./Leaf.svelte";
   import { resolveDataPath } from "./resolver";
+  import { viewNodeRegistry } from "./view-node-registry";
   
   // Recursive component reference (Svelte allows this)
   import CompositeRecursive from "./Composite.svelte";
@@ -22,12 +23,55 @@
 
   const { node, data, config, onEvent }: Props = $props();
 
-  const composite = $derived(node.composite);
+  // Resolve composite - either inline or by ID from registry
+  const composite = $derived.by(() => {
+    // Access data to ensure reactivity tracking
+    const _ = data;
+    
+    // If compositeId is provided, resolve from registry
+    if (node.compositeId) {
+      let compositeId: string | undefined;
+      
+      // Check if compositeId is a data path (starts with "data.") or direct ID
+      if (node.compositeId.startsWith('data.')) {
+        // Access nested properties for reactivity (e.g., data.view.contentCompositeId)
+        const view = data.view as Record<string, unknown> | undefined;
+        if (view) {
+          const _view = view; // Access view to ensure reactivity
+          const contentCompositeId = view.contentCompositeId;
+          const _contentCompositeId = contentCompositeId; // Access contentCompositeId for reactivity
+        }
+        
+        // Resolve compositeId from data (e.g., "data.view.contentCompositeId")
+        compositeId = resolveDataPath(data, node.compositeId) as string | undefined;
+      } else {
+        // Direct ID (e.g., "todo.composite.content.list")
+        compositeId = node.compositeId;
+      }
+      
+      if (compositeId && typeof compositeId === 'string') {
+        const resolvedComposite = viewNodeRegistry.getComposite(compositeId);
+        if (resolvedComposite) {
+          return resolvedComposite;
+        }
+        console.warn(`Composite not found in registry: ${compositeId}`);
+      }
+    }
+    // Otherwise use inline composite
+    return node.composite;
+  });
 
   $effect(() => {
     if (!composite) {
+      // If compositeId was provided but not resolved, show warning instead of error
+      if (node.compositeId) {
+        console.warn(
+          `Composite component: compositeId "${node.compositeId}" not resolved. Node must have either composite property or valid compositeId.`,
+        );
+        return;
+      }
       throw new Error(
-        "Composite component requires a node with composite property",
+        "Composite component requires a node with composite property or valid compositeId",
       );
     }
     if (!composite.container?.layout) {
@@ -202,16 +246,18 @@
     {#each composite.children as child}
       {@const isVisible = !child.visible || evaluateVisibility(child.visible)}
       {#if isVisible}
-        {#if child.composite}
+        {#if child.composite || child.compositeId}
           <!-- Composite node - render as layout container -->
+          <!-- compositeId will be resolved by CompositeRecursive -->
           <CompositeRecursive node={child} {data} {config} {onEvent} />
-        {:else if child.leaf}
+        {:else if child.leaf || child.leafId}
           <!-- Leaf node - render as content using JSON-driven leaf definition -->
+          <!-- leafId will be resolved by Leaf component -->
           <Leaf node={child} {data} {config} {onEvent} />
         {:else}
           <!-- Invalid node - neither composite nor leaf -->
           <div class="text-red-500 text-sm">
-            Invalid view node: must have either composite or leaf
+            Invalid view node: must have either composite, compositeId, leaf, or leafId
           </div>
         {/if}
       {/if}

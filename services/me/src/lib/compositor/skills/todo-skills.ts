@@ -276,18 +276,75 @@ const clearInputSkill: Skill = {
 	},
 }
 
+const swapViewNodeSkill: Skill = {
+	metadata: {
+		id: '@ui/swapViewNode',
+		name: 'Swap View Node',
+		description: 'Swaps any view node config (composite or leaf) by ID. Generic universal action for config swapping.',
+		category: 'ui',
+		parameters: {
+			type: 'object',
+			properties: {
+				nodeId: {
+					type: 'string',
+					description: 'The ID of the view node (composite or leaf) to swap to',
+					required: true,
+				},
+				targetPath: {
+					type: 'string',
+					description: 'The data path where the node ID should be stored (e.g., "view.contentNodeId")',
+					required: true,
+				},
+				nodeType: {
+					type: 'string',
+					description: 'Optional type hint: "composite" or "leaf" (auto-detected if omitted)',
+					required: false,
+				},
+			},
+			required: ['nodeId', 'targetPath'],
+		},
+	},
+	execute: (data: Data, payload?: unknown) => {
+		const { nodeId, targetPath, nodeType } = (payload as { nodeId?: string; targetPath?: string; nodeType?: 'composite' | 'leaf' }) || {}
+		
+		if (!nodeId || !targetPath) return
+		
+		const pathParts = targetPath.split('.')
+		
+		// Navigate to the target object
+		let target: Data = data
+		for (let i = 0; i < pathParts.length - 1; i++) {
+			const part = pathParts[i]
+			if (!target[part]) {
+				target[part] = {}
+			}
+			target = target[part] as Data
+		}
+		
+		// Set the node ID
+		const finalKey = pathParts[pathParts.length - 1]
+		target[finalKey] = nodeId
+		
+		// Create new object reference to ensure reactivity
+		// Deep copy nested objects to ensure reactivity
+		if (data.view) {
+			data.view = { ...(data.view as Data) }
+		}
+	},
+}
+
 const setViewSkill: Skill = {
 	metadata: {
 		id: '@ui/setView',
 		name: 'Set View',
-		description: 'Sets the view mode (list, kanban, timeline, config)',
+		description: 'Sets the view mode and swaps the content composite (list, kanban, timeline)',
 		category: 'ui',
 		parameters: {
 			type: 'object',
 			properties: {
 				viewMode: {
 					type: 'string',
-					description: 'The view mode to set (list, kanban, timeline, config)',
+					description: 'The view mode to set (list, kanban, timeline)',
 					required: true,
 				},
 			},
@@ -300,7 +357,24 @@ const setViewSkill: Skill = {
 		
 		const view = data.view as Data
 		const viewMode = (payload as { viewMode?: string })?.viewMode
-		if (viewMode && ['list', 'kanban', 'timeline'].includes(viewMode)) {
+		if (!viewMode || !['list', 'kanban', 'timeline'].includes(viewMode)) return
+		
+		// Map viewMode to composite ID
+		const compositeIdMap: Record<string, string> = {
+			list: 'todo.composite.content.list',
+			kanban: 'todo.composite.content.kanban',
+			timeline: 'todo.composite.content.timeline',
+		}
+		
+		const compositeId = compositeIdMap[viewMode]
+		if (compositeId) {
+			// Use the generic swapViewNode action internally
+			swapViewNodeSkill.execute(data, {
+				nodeId: compositeId,
+				targetPath: 'view.contentCompositeId',
+				nodeType: 'composite',
+			})
+			// Also update viewMode for button visibility
 			view.viewMode = viewMode
 			// Create new object reference to ensure reactivity
 			data.view = { ...view }
@@ -398,6 +472,7 @@ export const todoSkills: Record<string, Skill> = {
 	'@todo/clearTodos': clearTodosSkill,
 	'@ui/updateInput': updateInputSkill,
 	'@ui/clearInput': clearInputSkill,
+	'@ui/swapViewNode': swapViewNodeSkill,
 	'@ui/setView': setViewSkill,
 	'@ui/openModal': openModalSkill,
 	'@ui/closeModal': closeModalSkill,

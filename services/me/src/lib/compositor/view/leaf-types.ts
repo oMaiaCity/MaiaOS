@@ -108,6 +108,12 @@ export interface IconConfig {
  */
 export interface LeafNode {
 	/**
+	 * Unique identifier for this leaf config
+	 * Used for database storage and ID-based referencing
+	 * Format: "{vibe}.leaf.{name}" (e.g., "todo.leaf.todoList")
+	 */
+	id?: string
+	/**
 	 * HTML tag name
 	 * Examples: "div", "button", "input", "form", "ul", "li", etc.
 	 * Special: "icon" - renders an Iconify icon
@@ -154,6 +160,7 @@ export interface LeafNode {
 		change?: EventConfig
 		submit?: EventConfig
 		dragstart?: EventConfig
+		dragenter?: EventConfig
 		dragover?: EventConfig
 		dragleave?: EventConfig
 		drop?: EventConfig

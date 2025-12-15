@@ -7,6 +7,7 @@ import type { LeafNode } from '../../../compositor/view/leaf-types'
 import { todoItemLeaf } from './todoItem'
 
 export const timelineViewLeaf: LeafNode = {
+	id: 'todo.leaf.timelineView',
 	tag: 'div',
 	classes: 'flex flex-col gap-4 h-full min-h-0',
 	children: [

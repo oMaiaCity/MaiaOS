@@ -646,6 +646,8 @@ const textLeaf: LeafNode = {
 
 #### Visibility Binding
 
+**Important**: Use `visible` binding only for conditional content display (e.g., error messages, optional UI elements). For view switching or major UI state changes, use `swapViewNode` instead (see [Dynamic View Node Swapping](#dynamic-view-node-swapping)).
+
 ```typescript
 const errorLeaf: LeafNode = {
   tag: "div",
@@ -656,6 +658,16 @@ const errorLeaf: LeafNode = {
   },
 };
 ```
+
+**When NOT to use visibility binding:**
+- ❌ View mode switching (list/kanban/timeline) - Use `swapViewNode` instead
+- ❌ Collapsible sections - Use `swapViewNode` to swap between expanded/collapsed configs
+- ❌ Major UI state changes - Use `swapViewNode` to swap entire configs
+
+**When to use visibility binding:**
+- ✅ Conditional error messages
+- ✅ Optional UI hints or tooltips
+- ✅ Simple show/hide based on boolean state
 
 #### Foreach Binding (List Rendering)
 
@@ -804,6 +816,346 @@ const dateLeaf: LeafNode = {
     text: "item.endDate|date", // Pipe syntax for formatting
   },
 };
+```
+
+### Dynamic View Node Swapping
+
+**CRITICAL**: For view switching, collapsible sections, or any major UI state changes, use `swapViewNode` instead of visibility hacks. This ensures clean, maintainable code and proper reactivity.
+
+#### View Node Registry
+
+All view nodes (composites and leaves) must be registered with unique IDs in the `viewNodeRegistry`:
+
+```typescript
+import { viewNodeRegistry } from '../../compositor/view/view-node-registry'
+
+// Register composites and leaves
+viewNodeRegistry.registerAll([
+  listContentComposite,
+  kanbanContentComposite,
+  timelineContentComposite,
+  expandedColumnLeaf,
+  collapsedColumnLeaf,
+  // ... more nodes
+])
+```
+
+#### Using compositeId and leafId
+
+Reference registered nodes by ID using `compositeId` or `leafId`:
+
+```typescript
+// Reference a composite by ID
+const rootComposite: CompositeConfig = {
+  container: {
+    layout: 'grid',
+    class: 'grid-cols-1',
+  },
+  children: [
+    {
+      slot: 'content',
+      compositeId: 'data.view.contentCompositeId', // Resolved from state
+    },
+  ],
+}
+
+// Reference a leaf by ID
+const kanbanContentComposite: CompositeConfig = {
+  container: {
+    layout: 'grid',
+    class: 'grid-cols-3 gap-4',
+  },
+  children: [
+    {
+      slot: 'todo-column',
+      leafId: 'data.view.kanbanColumnIds.todo', // Resolved from state
+    },
+    {
+      slot: 'in-progress-column',
+      leafId: 'data.view.kanbanColumnIds.in-progress',
+    },
+    {
+      slot: 'done-column',
+      leafId: 'data.view.kanbanColumnIds.done',
+    },
+  ],
+}
+```
+
+#### swapViewNode Action
+
+Use the `@ui/swapViewNode` skill to dynamically swap view nodes:
+
+```typescript
+// State machine action
+const swapViewNodeSkill: Skill = {
+  metadata: {
+    id: '@ui/swapViewNode',
+    name: 'Swap View Node',
+    description: 'Swaps any view node config (composite or leaf) by ID',
+    parameters: {
+      type: 'object',
+      properties: {
+        nodeId: { type: 'string', required: true },
+        targetPath: { type: 'string', required: true },
+        nodeType: { type: 'string', required: false },
+      },
+    },
+  },
+  execute: (data: Data, payload?: unknown) => {
+    const { nodeId, targetPath } = (payload as { nodeId?: string; targetPath?: string }) || {}
+    if (!nodeId || !targetPath) return
+    
+    // Update the target path with the new node ID
+    const pathParts = targetPath.split('.')
+    let target: Data = data
+    for (let i = 0; i < pathParts.length - 1; i++) {
+      const part = pathParts[i]
+      if (!target[part]) {
+        target[part] = {}
+      }
+      target = target[part] as Data
+    }
+    target[pathParts[pathParts.length - 1]] = nodeId
+    
+    // Ensure reactivity
+    if (data.view) {
+      data.view = { ...(data.view as Data) }
+    }
+  },
+}
+```
+
+#### Example: View Mode Switching
+
+```typescript
+// State machine
+const todoStateMachine: StateMachineConfig = {
+  initial: 'idle',
+  data: {
+    view: {
+      viewMode: 'list',
+      contentCompositeId: 'todo.composite.content.list', // Active content composite
+    },
+  },
+  states: {
+    idle: {
+      on: {
+        SET_VIEW: {
+          target: 'idle',
+          actions: ['@ui/setView'], // Uses swapViewNode internally
+        },
+      },
+    },
+  },
+}
+
+// setView skill (uses swapViewNode internally)
+const setViewSkill: Skill = {
+  metadata: {
+    id: '@ui/setView',
+    name: 'Set View',
+    description: 'Sets the view mode and swaps the content composite',
+  },
+  execute: (data: Data, payload?: unknown) => {
+    const viewMode = (payload as { viewMode?: string })?.viewMode
+    if (!viewMode) return
+    
+    const compositeIdMap: Record<string, string> = {
+      list: 'todo.composite.content.list',
+      kanban: 'todo.composite.content.kanban',
+      timeline: 'todo.composite.content.timeline',
+    }
+    
+    const compositeId = compositeIdMap[viewMode]
+    if (compositeId) {
+      // Use swapViewNode to swap the composite
+      swapViewNodeSkill.execute(data, {
+        nodeId: compositeId,
+        targetPath: 'view.contentCompositeId',
+        nodeType: 'composite',
+      })
+      // Update viewMode for button visibility
+      const view = data.view as Data
+      view.viewMode = viewMode
+      data.view = { ...view }
+    }
+  },
+}
+
+// View button leaf
+const viewButtonLeaf: LeafNode = {
+  tag: 'button',
+  classes: 'px-4 py-2 rounded',
+  events: {
+    click: {
+      event: 'SET_VIEW',
+      payload: { viewMode: 'kanban' },
+    },
+  },
+  children: ['Kanban'],
+}
+```
+
+#### Example: Collapsible Sections
+
+```typescript
+// Expanded column leaf
+const expandedColumnLeaf: LeafNode = {
+  id: 'todo.leaf.kanbanColumn.todo.expanded',
+  tag: 'div',
+  classes: 'flex flex-col gap-2 h-full border rounded-lg p-2',
+  children: [
+    {
+      tag: 'div',
+      classes: 'flex items-center justify-between',
+      children: [
+        { tag: 'h3', classes: 'text-sm font-semibold', children: ['Todo'] },
+        {
+          tag: 'button',
+          classes: 'p-1 rounded hover:bg-slate-100',
+          events: {
+            click: {
+              event: 'SWAP_VIEW_NODE',
+              payload: (data: unknown) => {
+                const view = (data as Record<string, unknown>).view as Record<string, unknown>
+                const currentId = view.kanbanColumnIds?.todo as string
+                const isExpanded = currentId?.includes('.expanded')
+                return {
+                  nodeId: isExpanded
+                    ? 'todo.leaf.kanbanColumn.todo.collapsed'
+                    : 'todo.leaf.kanbanColumn.todo.expanded',
+                  targetPath: 'view.kanbanColumnIds.todo',
+                  nodeType: 'leaf',
+                }
+              },
+            },
+          },
+          children: [
+            {
+              tag: 'icon',
+              icon: { name: 'mdi:chevron-down', classes: 'w-4 h-4' },
+            },
+          ],
+        },
+      ],
+    },
+    // ... column content
+  ],
+}
+
+// Collapsed column leaf (thin vertical column)
+const collapsedColumnLeaf: LeafNode = {
+  id: 'todo.leaf.kanbanColumn.todo.collapsed',
+  tag: 'div',
+  classes: 'flex flex-col items-center justify-between h-full w-12 border rounded-lg p-2',
+  children: [
+    {
+      tag: 'div',
+      classes: 'flex flex-col items-center gap-2',
+      children: [
+        {
+          tag: 'h3',
+          classes: 'text-sm font-semibold writing-vertical-rl',
+          children: ['Todo'],
+        },
+        {
+          tag: 'button',
+          classes: 'p-1 rounded hover:bg-slate-100',
+          events: {
+            click: {
+              event: 'SWAP_VIEW_NODE',
+              payload: (data: unknown) => {
+                // Toggle back to expanded
+                return {
+                  nodeId: 'todo.leaf.kanbanColumn.todo.expanded',
+                  targetPath: 'view.kanbanColumnIds.todo',
+                  nodeType: 'leaf',
+                }
+              },
+            },
+          },
+          children: [
+            {
+              tag: 'icon',
+              icon: { name: 'mdi:chevron-left', classes: 'w-4 h-4' },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      tag: 'div',
+      classes: 'text-lg font-bold',
+      bindings: {
+        text: 'data.queries.todos.filter(t => t.status === "todo").length',
+      },
+    },
+  ],
+}
+
+// State machine
+const todoStateMachine: StateMachineConfig = {
+  initial: 'idle',
+  data: {
+    view: {
+      kanbanColumnIds: {
+        todo: 'todo.leaf.kanbanColumn.todo.expanded',
+        'in-progress': 'todo.leaf.kanbanColumn.in-progress.expanded',
+        done: 'todo.leaf.kanbanColumn.done.expanded',
+      },
+    },
+  },
+  states: {
+    idle: {
+      on: {
+        SWAP_VIEW_NODE: {
+          target: 'idle',
+          actions: ['@ui/swapViewNode'],
+        },
+      },
+    },
+  },
+}
+```
+
+**Key Benefits of swapViewNode:**
+- ✅ Clean separation: Each state has its own config
+- ✅ Better performance: No hidden DOM elements
+- ✅ Easier maintenance: Configs are explicit and testable
+- ✅ Fully generic: Works for any view node type
+- ✅ Database-ready: Configs can be stored and loaded dynamically
+
+**Anti-Pattern: Visibility Hacks**
+
+```typescript
+// ❌ BAD - Using visibility to hide/show different views
+const contentComposite: CompositeConfig = {
+  container: { layout: 'grid' },
+  children: [
+    {
+      slot: 'list',
+      leaf: listLeaf,
+      visible: 'data.view.viewMode === "list"', // Visibility hack
+    },
+    {
+      slot: 'kanban',
+      leaf: kanbanLeaf,
+      visible: 'data.view.viewMode === "kanban"', // Visibility hack
+    },
+  ],
+}
+
+// ✅ GOOD - Using swapViewNode to swap entire configs
+const rootComposite: CompositeConfig = {
+  container: { layout: 'grid' },
+  children: [
+    {
+      slot: 'content',
+      compositeId: 'data.view.contentCompositeId', // Swapped dynamically
+    },
+  ],
+}
 ```
 
 ---
@@ -1283,6 +1635,9 @@ bindings: {
 8. **Composite missing layout property**: All composites must specify `container.layout: 'grid' | 'flex' | 'content'`. This is required and will throw an error if missing.
 9. **Unexpected structural defaults**: If you don't want `h-full w-full overflow-hidden`, use `layout: 'content'` instead of `'grid'` or `'flex'`.
 10. **Container queries not working**: Ensure your composite has a `layout` property (all composites automatically get `@container`). Use `@md:`, `@lg:`, etc. in leaf components instead of media queries.
+11. **View switching not working**: Use `swapViewNode` instead of visibility hacks. Register all view nodes with unique IDs and reference them via `compositeId` or `leafId`.
+12. **Invalid leaf configuration with leafId**: Ensure the leaf is registered in `viewNodeRegistry` before the component tries to use it. Check that `resolveDataPath` correctly resolves the path to a valid leaf ID.
+13. **Style attribute not allowed**: Never use inline `style` attributes. Use Tailwind classes instead (e.g., `writing-vertical-rl` for vertical text).
 
 ---
 
@@ -1308,6 +1663,7 @@ The Vibe/Composition/Leaf architecture provides a powerful, generic system for b
 - **Container Query Support**: All composites automatically get `@container` for Tailwind container query support
 - **Smart Defaults**: Structural defaults (`h-full w-full overflow-hidden grid/flex`) are applied automatically based on layout type, with intelligent overrides
 - **Container-Responsive Leaves**: Leaves adapt to their parent composite container size using container queries (`@md:`, `@lg:`, etc.), enabling true component-based responsive design
+- **Dynamic View Node Swapping**: Use `swapViewNode` for view switching and collapsible sections instead of visibility hacks. All view nodes must be registered with unique IDs in `viewNodeRegistry` and referenced via `compositeId` or `leafId`.
 
 For examples, see `services/me/src/lib/vibes/todo/`.
 

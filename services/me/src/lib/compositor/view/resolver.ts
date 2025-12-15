@@ -48,8 +48,17 @@ export function resolveDataPath(data: Data, path: string): unknown {
 		if (arrayIndexMatch && Array.isArray(current)) {
 			const index = parseInt(arrayIndexMatch[1], 10)
 			current = current[index]
-		} else if (typeof current === 'object' && part in current) {
-			current = (current as Record<string, unknown>)[part]
+		} else if (typeof current === 'object' && current !== null) {
+			// Use bracket notation to handle property names with hyphens or special characters
+			// This works for both regular properties and properties with hyphens (e.g., "in-progress")
+			const currentObj = current as Record<string, unknown>
+			// Always use bracket notation to access properties (handles hyphens and special chars)
+			if (part in currentObj) {
+				current = currentObj[part]
+			} else {
+				// Property doesn't exist
+				return undefined
+			}
 		} else {
 			return undefined
 		}

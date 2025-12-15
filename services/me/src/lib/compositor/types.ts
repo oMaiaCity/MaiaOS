@@ -26,14 +26,6 @@ export interface VibeConfig {
 	 */
 	actions?: Record<string, StateMachineConfig['actions'] extends Record<string, infer T> ? T : never>
 
-	/**
-	 * Optional UI customization
-	 * @deprecated Use view.composite.container styles instead
-	 */
-	ui?: {
-		containerClass?: string
-		cardClass?: string
-	}
 
 	/**
 	 * View configuration - REQUIRED
@@ -41,9 +33,3 @@ export interface VibeConfig {
 	 */
 	view: ViewConfig
 }
-
-/**
- * @deprecated Use VibeConfig instead
- * Kept for backward compatibility during migration
- */
-export type CompositorConfig = VibeConfig
