@@ -6,6 +6,7 @@
 
 import type { Data } from '../dataStore'
 import type { Skill } from './types'
+import { createTodoEntity, updateTodoEntity, deleteTodoEntity } from '@hominio/db'
 
 // ========== SKILL IMPLEMENTATIONS ==========
 
@@ -64,7 +65,7 @@ const addTodoSkill: Skill = {
 			required: ['text'],
 		},
 	},
-	execute: (data: Data, payload?: unknown) => {
+	execute: async (data: Data, payload?: unknown) => {
 		// Ensure data.queries and data.view exist
 		if (!data.queries) data.queries = {}
 		if (!data.view) data.view = {}
@@ -87,21 +88,44 @@ const addTodoSkill: Skill = {
 		// Generate random duration between 1 and 8 hours (in minutes)
 		const duration = Math.floor(Math.random() * 8 * 60) + 60 // 60 to 480 minutes
 
-		const newTodo = {
-			id: Date.now().toString(),
-			text: text.trim(),
-			status: 'todo',
-			endDate: endDate.toISOString(),
-			duration: duration, // duration in minutes
-		}
+		// Check if Jazz is available
+		const jazzAccount = data._jazzAccount as any
+		if (jazzAccount && jazzAccount.$isLoaded) {
+			// Use Jazz to create entity
+			try {
+				await createTodoEntity(jazzAccount, {
+					text: text.trim(),
+					status: 'todo',
+					endDate: endDate.toISOString(),
+					duration,
+				})
+				// Clear input after successful creation
+				view.newTodoText = ''
+				view.error = null
+				data.view = { ...view }
+				// Subscription will update data.queries.todos automatically
+			} catch (_error) {
+				view.error = 'Failed to create todo'
+				data.view = { ...view }
+			}
+		} else {
+			// Fallback to in-memory mode
+			const newTodo = {
+				id: Date.now().toString(),
+				text: text.trim(),
+				status: 'todo',
+				endDate: endDate.toISOString(),
+				duration: duration, // duration in minutes
+			}
 
-		if (!queries.todos) queries.todos = []
-		const todos = (queries.todos as Array<unknown>) || []
-		queries.todos = [...todos, newTodo]
-		view.error = null
-		// Create new object references to ensure reactivity
-		data.queries = { ...queries }
-		data.view = { ...view }
+			if (!queries.todos) queries.todos = []
+			const todos = (queries.todos as Array<unknown>) || []
+			queries.todos = [...todos, newTodo]
+			view.error = null
+			// Create new object references to ensure reactivity
+			data.queries = { ...queries }
+			data.view = { ...view }
+		}
 	},
 }
 
@@ -123,31 +147,97 @@ const toggleTodoSkill: Skill = {
 			required: ['id'],
 		},
 	},
-	execute: (data: Data, payload?: unknown) => {
+	execute: async (data: Data, payload?: unknown) => {
+		
 		// Ensure data.queries exists
 		if (!data.queries) data.queries = {}
 		
 		const queries = data.queries as Data
 		const id = (payload as { id?: string })?.id
+		
+		
 		if (!id) return
 
-		if (!queries.todos) queries.todos = []
-		const todos = (queries.todos as Array<{ id: string; status?: string }>) || []
-		// Create a new array with updated todo to ensure reactivity
-		queries.todos = todos.map((todo) => {
-			if (todo.id === id) {
-				const currentStatus = todo.status || 'todo'
+		// Check if Jazz is available
+		const jazzQueryManager = data._jazzQueryManager as any
+		const jazzAccount = data._jazzAccount as any
+		if (jazzQueryManager && jazzAccount) {
+			// Use Jazz to update entity
+			try {
+				// Get CoValue from entityMap first (this one was created with the correct shape)
+				let coValue = jazzQueryManager.getCoValueById(id)
+				
+				
+				// If not found in cache, try to load it directly from the account/node
+				if (!coValue) {
+					const node = (jazzAccount as any).$jazz?.raw?.core?.node || (jazzAccount as any).$jazz?.raw?.node
+					if (node) {
+						const loadedCoValue = await node.load(id as any)
+						if (loadedCoValue !== 'unavailable') {
+							coValue = loadedCoValue
+						}
+					}
+				}
+				
+				if (!coValue) {
+					throw new Error(`CoValue not found for ID: ${id}`)
+				}
+
+				// Ensure CoValue is fully loaded with all properties
+				await coValue.$jazz.ensureLoaded({
+					resolve: { 
+						text: true,
+						status: true,
+						endDate: true,
+						duration: true,
+					},
+				})
+
+
+				// Get current status from CoValue (try direct access or snapshot)
+				let currentStatus = coValue.status
+				if (!currentStatus) {
+					try {
+						const snapshot = coValue.$jazz?.raw?.toJSON?.() || coValue.toJSON?.()
+						if (snapshot && typeof snapshot === 'object') {
+							currentStatus = snapshot.status
+						}
+					} catch (_e) {
+						// Fallback to default
+					}
+				}
+				currentStatus = currentStatus || 'todo'
 				const newStatus = currentStatus === 'done' ? 'todo' : 'done'
-				// Create a completely new object to ensure Svelte detects the change
-				return { ...todo, status: newStatus }
+				
+				
+				// Update using updateTodoEntity
+				await updateTodoEntity(coValue, { status: newStatus })
+				
+				
+				// Subscription will update data.queries.todos automatically
+			} catch (error) {
+				throw error // Re-throw to surface the error
 			}
-			// Return existing todo as-is
-			return todo
-		})
-		// Force a new array reference to ensure reactivity
-		queries.todos = [...(queries.todos as Array<unknown>)]
-		// Create new object reference to ensure reactivity
-		data.queries = { ...queries }
+		} else {
+			// Fallback to in-memory mode
+			if (!queries.todos) queries.todos = []
+			const todos = (queries.todos as Array<{ id: string; status?: string }>) || []
+			// Create a new array with updated todo to ensure reactivity
+			queries.todos = todos.map((todo) => {
+				if (todo.id === id) {
+					const currentStatus = todo.status || 'todo'
+					const newStatus = currentStatus === 'done' ? 'todo' : 'done'
+					// Create a completely new object to ensure Svelte detects the change
+					return { ...todo, status: newStatus }
+				}
+				// Return existing todo as-is
+				return todo
+			})
+			// Force a new array reference to ensure reactivity
+			queries.todos = [...(queries.todos as Array<unknown>)]
+			// Create new object reference to ensure reactivity
+			data.queries = { ...queries }
+		}
 	},
 }
 
@@ -174,7 +264,7 @@ const updateTodoStatusSkill: Skill = {
 			required: ['id', 'status'],
 		},
 	},
-	execute: (data: Data, payload?: unknown) => {
+	execute: async (data: Data, payload?: unknown) => {
 		// Ensure data.queries exists
 		if (!data.queries) data.queries = {}
 		
@@ -182,11 +272,27 @@ const updateTodoStatusSkill: Skill = {
 		const { id, status } = (payload as { id?: string; status?: string }) || {}
 		if (!id || !status) return
 
-		if (!queries.todos) queries.todos = []
-		const todos = (queries.todos as Array<{ id: string; status?: string }>) || []
-		queries.todos = todos.map((todo) => (todo.id === id ? { ...todo, status } : todo))
-		// Create new object reference to ensure reactivity
-		data.queries = { ...queries }
+		// Check if Jazz is available
+		const jazzQueryManager = data._jazzQueryManager as any
+		if (jazzQueryManager) {
+			// Use Jazz to update entity
+			try {
+				const coValue = jazzQueryManager.getCoValueById(id)
+				if (coValue) {
+					await updateTodoEntity(coValue, { status: status })
+					// Subscription will update data.queries.todos automatically
+				}
+			} catch (_error) {
+				// Update failed - silently fail
+			}
+		} else {
+			// Fallback to in-memory mode
+			if (!queries.todos) queries.todos = []
+			const todos = (queries.todos as Array<{ id: string; status?: string }>) || []
+			queries.todos = todos.map((todo) => (todo.id === id ? { ...todo, status } : todo))
+			// Create new object reference to ensure reactivity
+			data.queries = { ...queries }
+		}
 	},
 }
 
@@ -208,7 +314,7 @@ const removeTodoSkill: Skill = {
 			required: ['id'],
 		},
 	},
-	execute: (data: Data, payload?: unknown) => {
+	execute: async (data: Data, payload?: unknown) => {
 		// Ensure data.queries exists
 		if (!data.queries) data.queries = {}
 		
@@ -216,9 +322,23 @@ const removeTodoSkill: Skill = {
 		const id = (payload as { id?: string })?.id
 		if (!id) return
 
-		if (!queries.todos) queries.todos = []
-		const todos = (queries.todos as Array<{ id: string }>) || []
-		queries.todos = todos.filter((todo) => todo.id !== id)
+		// Check if Jazz is available
+		const jazzAccount = data._jazzAccount as any
+		if (jazzAccount) {
+			// Use Jazz to delete entity
+			try {
+				await deleteTodoEntity(jazzAccount, id)
+				// Subscription will update data.queries.todos automatically
+			} catch (_error) {
+				// Delete failed - silently fail
+			}
+		} else {
+			// Fallback to in-memory mode
+			if (!queries.todos) queries.todos = []
+			const todos = (queries.todos as Array<{ id: string }>) || []
+			queries.todos = todos.filter((todo) => todo.id !== id)
+			data.queries = { ...queries }
+		}
 	},
 }
 
@@ -389,14 +509,39 @@ const clearTodosSkill: Skill = {
 		description: 'Clears all todos from the list',
 		category: 'todo',
 	},
-	execute: (data: Data) => {
+	execute: async (data: Data) => {
 		// Ensure data.queries exists
 		if (!data.queries) data.queries = {}
 		
 		const queries = data.queries as Data
-		queries.todos = []
-		// Create new object reference to ensure reactivity
-		data.queries = { ...queries }
+		
+		// Check if Jazz is available
+		const jazzQueryManager = data._jazzQueryManager as any
+		const jazzAccount = data._jazzAccount as any
+		if (jazzQueryManager && jazzAccount) {
+			// Use Jazz to delete all todo entities
+			try {
+				const todos = (queries.todos as Array<{ id?: string }>) || []
+				// Delete all todos from Jazz
+				for (const todo of todos) {
+					if (todo.id) {
+						try {
+							await deleteTodoEntity(jazzAccount, todo.id)
+						} catch (_error) {
+							// Delete failed - continue with next todo
+						}
+					}
+				}
+				// Subscription will update data.queries.todos automatically
+			} catch (_error) {
+				// Clear failed - silently fail
+			}
+		} else {
+			// Fallback to in-memory mode
+			queries.todos = []
+			// Create new object reference to ensure reactivity
+			data.queries = { ...queries }
+		}
 	},
 }
 

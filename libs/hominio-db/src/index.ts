@@ -8,7 +8,7 @@ export {
 	setupComputedFieldsForCoValue,
 } from './functions/computed-fields'
 // Dynamic Schema Migration
-export { createEntity, ensureSchema } from './functions/dynamic-schema-migration'
+export { createEntity, ensureSchema, findNestedSchema } from './functions/dynamic-schema-migration'
 // System Properties
 export { setSystemProps } from './functions/set-system-props'
 // Groups
@@ -45,6 +45,8 @@ export { createHumanLeaf, createTodoLeaf } from './core/data/leaf-manager'
 export { createAssignedToCompositeType } from './core/data/composite-type-manager'
 // Data Composites
 export { createAssignedToComposite } from './core/data/composite-manager'
+// Todo Manager
+export { createTodoEntity, updateTodoEntity, deleteTodoEntity, type TodoEntityData } from './core/data/todo-manager'
 
 // CoValue Formatting (Generic utility)
 export {

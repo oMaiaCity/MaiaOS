@@ -1,22 +1,15 @@
 <script lang="ts">
-  import { JazzAccount, syncGoogleDataToProfile } from "@hominio/db";
-  import { AccountCoState } from "jazz-tools/svelte";
+  import { syncGoogleDataToProfile } from "@hominio/db";
   import { authClient } from "$lib/auth-client";
+  import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
 
   // Better Auth session
   const session = authClient.useSession();
   const betterAuthUser = $derived($session.data?.user);
 
-  // Load Jazz account for migrations (this runs inside JazzSvelteProvider)
-  const account = new AccountCoState(JazzAccount, {
-    resolve: {
-      profile: true,
-      root: {
-        contact: true,
-      },
-    },
-  });
-  const me = $derived(account.current);
+  // Get global Jazz account from context
+  const account = getJazzAccountContext();
+  const me = $derived(account ? account.current : null);
 
   // Centralized migration trigger - runs once when account loads
   // All migration logic is managed in schema.ts
@@ -24,6 +17,7 @@
   $effect(() => {
     if (
       !googleDataSynced &&
+      me &&
       me.$isLoaded &&
       betterAuthUser &&
       me.profile?.$isLoaded &&

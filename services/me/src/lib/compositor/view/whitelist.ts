@@ -170,6 +170,7 @@ const TAILWIND_PATTERNS = [
 	/^(bg|text|border)-(white|black|transparent|current|inherit)\/(\d+)$/, // Opacity modifiers like bg-black/50
 	/^(bg|text|border)-\[.*\]$/, // Arbitrary colors like bg-[#001a42], text-[#e6ecf7], border-[#001a42]
 	/^border$/, // Standalone border
+	/^border-none$/, // border-none utility
 	/^border-(\d+|\[.*\])$/, // border-2, border-[...]
 	/^border-(l|r|t|b)-(\d+|\[.*\])$/, // border-l-2, border-r-2, border-t-2, border-b-2
 	/^border-(l|r|t|b)$/, // border-l, border-r, border-t, border-b (without number)

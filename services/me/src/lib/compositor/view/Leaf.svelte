@@ -811,6 +811,31 @@
             handleEvent(leaf.events!.keydown!);
           }
         }
+      : leaf.tag === 'input' && leaf.events?.blur
+      ? (e: KeyboardEvent) => {
+          // For input elements with blur handler, trigger update on Enter or Tab
+          if (e.key === "Enter") {
+            e.preventDefault();
+            // Blur the input to trigger the blur event handler
+            if (e.target instanceof HTMLInputElement) {
+              e.target.blur();
+            }
+          } else if (e.key === "Tab") {
+            // For Tab, trigger the blur event handler before focus moves
+            // This ensures the value is saved when Tab is pressed
+            if (e.target instanceof HTMLInputElement && onEvent) {
+              const eventConfig = leaf.events!.blur!
+              const inputValue = e.target.value
+              // Merge input value into payload if payload exists
+              const payload = resolvePayload(eventConfig.payload, itemData)
+              const finalPayload = typeof payload === 'object' && payload !== null && !Array.isArray(payload)
+                ? { ...payload, text: inputValue }
+                : { text: inputValue }
+              onEvent(eventConfig.event, finalPayload)
+              // Don't prevent default - let Tab work normally to move focus
+            }
+          }
+        }
       : undefined}
     onkeyup={leaf.events?.keyup
       ? () => handleEvent(leaf.events!.keyup!)
@@ -819,7 +844,23 @@
       ? () => handleEvent(leaf.events!.focus!)
       : undefined}
     onblur={leaf.events?.blur
-      ? () => handleEvent(leaf.events!.blur!)
+      ? (e: FocusEvent) => {
+          const eventConfig = leaf.events!.blur!
+          // For input elements, read the value from the event target
+          if (leaf.tag === 'input' && e.target instanceof HTMLInputElement) {
+            const inputValue = e.target.value
+            // Merge input value into payload if payload exists
+            const payload = resolvePayload(eventConfig.payload, itemData)
+            const finalPayload = typeof payload === 'object' && payload !== null && !Array.isArray(payload)
+              ? { ...payload, text: inputValue }
+              : { text: inputValue }
+            if (onEvent) {
+              onEvent(eventConfig.event, finalPayload)
+            }
+          } else {
+            handleEvent(eventConfig)
+          }
+        }
       : undefined}
   />
 {:else if leaf.tag === "icon" && leaf.icon}
@@ -1089,6 +1130,31 @@
             handleEvent(leaf.events!.keydown!);
           }
         }
+      : leaf.tag === 'input' && leaf.events?.blur
+      ? (e: KeyboardEvent) => {
+          // For input elements with blur handler, trigger update on Enter or Tab
+          if (e.key === "Enter") {
+            e.preventDefault();
+            // Blur the input to trigger the blur event handler
+            if (e.target instanceof HTMLInputElement) {
+              e.target.blur();
+            }
+          } else if (e.key === "Tab") {
+            // For Tab, trigger the blur event handler before focus moves
+            // This ensures the value is saved when Tab is pressed
+            if (e.target instanceof HTMLInputElement && onEvent) {
+              const eventConfig = leaf.events!.blur!
+              const inputValue = e.target.value
+              // Merge input value into payload if payload exists
+              const payload = resolvePayload(eventConfig.payload, itemData)
+              const finalPayload = typeof payload === 'object' && payload !== null && !Array.isArray(payload)
+                ? { ...payload, text: inputValue }
+                : { text: inputValue }
+              onEvent(eventConfig.event, finalPayload)
+              // Don't prevent default - let Tab work normally to move focus
+            }
+          }
+        }
       : undefined}
     onkeyup={leaf.events?.keyup
       ? () => handleEvent(leaf.events!.keyup!)
@@ -1097,7 +1163,23 @@
       ? () => handleEvent(leaf.events!.focus!)
       : undefined}
     onblur={leaf.events?.blur
-      ? () => handleEvent(leaf.events!.blur!)
+      ? (e: FocusEvent) => {
+          const eventConfig = leaf.events!.blur!
+          // For input elements, read the value from the event target
+          if (leaf.tag === 'input' && e.target instanceof HTMLInputElement) {
+            const inputValue = e.target.value
+            // Merge input value into payload if payload exists
+            const payload = resolvePayload(eventConfig.payload, itemData)
+            const finalPayload = typeof payload === 'object' && payload !== null && !Array.isArray(payload)
+              ? { ...payload, text: inputValue }
+              : { text: inputValue }
+            if (onEvent) {
+              onEvent(eventConfig.event, finalPayload)
+            }
+          } else {
+            handleEvent(eventConfig)
+          }
+        }
       : undefined}
   >
     {#if !isVoidElement}

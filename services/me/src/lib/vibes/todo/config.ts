@@ -38,11 +38,6 @@ import {
 // Generate kanban column leafs dynamically from column definitions
 const kanbanColumnLeafs = generateKanbanColumnLeafs(defaultKanbanColumns)
 
-// Debug: Log generated leaf IDs
-if (typeof window !== 'undefined' && import.meta.env?.DEV) {
-	console.log('Generated kanban column leafs:', kanbanColumnLeafs.map(l => l.id))
-}
-
 // Update kanban content composite with dynamic children
 kanbanContentComposite.children = generateKanbanContentChildren(defaultKanbanColumns)
 import { todoStateMachine } from './stateMachine'

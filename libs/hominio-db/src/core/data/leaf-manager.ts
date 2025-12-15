@@ -23,7 +23,6 @@ export async function createHumanLeaf(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	data: { id: string; name: string; email?: string; dateOfBirth?: Date },
 ): Promise<any> {
-	console.log('[createHumanLeaf] Creating Human Leaf:', data.name)
 
 	// Ensure Human LeafType schema exists
 	const humanLeafType = await ensureSchema(account, 'Human', humanLeafTypeSchema)
@@ -83,7 +82,6 @@ export async function createHumanLeaf(
 	entitiesList.$jazz.push(humanLeaf)
 	await root.$jazz.waitForSync()
 
-	console.log('[createHumanLeaf] Human Leaf created, ID:', humanLeaf.$jazz.id)
 	return humanLeaf
 }
 
@@ -91,23 +89,22 @@ export async function createHumanLeaf(
  * Creates a Todo Leaf Entity instance
  * 
  * @param account - The Jazz account
- * @param data - Todo Leaf data (id, name, description, status, dueDate)
+ * @param data - Todo Leaf data (id, text, description, status, endDate, duration)
  * @returns The created Todo Leaf Entity co-value
  */
 export async function createTodoLeaf(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	account: any,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		data: {
+	data: {
 		id: string
-		name: string
+		text: string
 		description?: string
-		status?: 'todo' | 'in_progress' | 'done' | 'blocked'
-		dueDate?: Date
+		status?: string // Plain string (e.g., 'todo', 'in-progress', 'done')
+		endDate?: string // ISO string
+		duration?: number // minutes
 	},
 ): Promise<any> {
-	console.log('[createTodoLeaf] Creating Todo Leaf:', data.name)
-
 	// Ensure Todo LeafType schema exists
 	const todoLeafType = await ensureSchema(account, 'Todo', todoLeafTypeSchema)
 
@@ -151,10 +148,11 @@ export async function createTodoLeaf(
 	// Create Todo Leaf Entity with actual data
 	const todoLeaf = TodoCoMap.create(
 		{
-			name: data.name,
+			text: data.text,
 			description: data.description,
-			status: data.status,
-			dueDate: data.dueDate,
+			status: data.status || 'todo',
+			endDate: data.endDate,
+			duration: data.duration,
 		},
 		entitiesOwner,
 	)
@@ -167,7 +165,6 @@ export async function createTodoLeaf(
 	entitiesList.$jazz.push(todoLeaf)
 	await root.$jazz.waitForSync()
 
-	console.log('[createTodoLeaf] Todo Leaf created, ID:', todoLeaf.$jazz.id)
 	return todoLeaf
 }
 

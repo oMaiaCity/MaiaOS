@@ -12,9 +12,10 @@
   interface Props {
     config: VibeConfig;
     onEvent?: (event: string, payload?: unknown) => void;
+    account?: any; // Optional Jazz account for database integration
   }
 
-  const { config, onEvent }: Props = $props();
+  const { config, onEvent, account }: Props = $props();
 
   // ========== SKILL REGISTRY SETUP ==========
   // Register all available skills (can be called once globally)
@@ -28,36 +29,123 @@
   let dataStore: ReturnType<typeof createDataStore> | null = $state(null);
   let _resolvedConfig: ReturnType<typeof loadActionsFromRegistry> | null =
     $state(null);
+  let _lastConfigId = $state<string | null>(null);
+
+  // Track account - use the account prop directly (should be account.current from parent)
+  const accountReady = $derived(account && (account as any).$isLoaded ? account : null);
+
+  // Create a unique ID for the config to detect changes
+  const configId = $derived(JSON.stringify(config.stateMachine));
 
   $effect(() => {
     if (browser) {
-      // Load actions from skill registry based on skill IDs in config
-      const loadedConfig = loadActionsFromRegistry(config.stateMachine);
+      // Check if config changed - if so, recreate dataStore
+      const configChanged = _lastConfigId !== configId;
+      
+      if (!dataStore || configChanged) {
+        // Load actions from skill registry based on skill IDs in config
+        const loadedConfig = loadActionsFromRegistry(config.stateMachine);
 
-      // Merge any explicit actions (override registry)
-      if (config.actions) {
-        loadedConfig.actions = {
-          ...loadedConfig.actions,
-          ...config.actions,
-        };
+        // Merge any explicit actions (override registry)
+        if (config.actions) {
+          loadedConfig.actions = {
+            ...loadedConfig.actions,
+            ...config.actions,
+          };
+        }
+
+        _resolvedConfig = loadedConfig;
+
+        // Add configJson to initial data (for config view) - avoid circular dependency
+        // Stringify the full config including stateMachine and view
+        if (loadedConfig.data) {
+          loadedConfig.data.configJson = JSON.stringify(
+            {
+              stateMachine: config.stateMachine,
+              view: config.view,
+            },
+            null,
+            2,
+          );
+        }
+
+        // Create or recreate dataStore when config changes
+        dataStore = createDataStore(loadedConfig, accountReady || undefined);
+        _lastConfigId = configId;
       }
+    }
+  });
 
-      _resolvedConfig = loadedConfig;
+  // Separate effect to add Jazz integration when account becomes available
+  // Reset jazzInitialized when config changes to allow re-initialization
+  let jazzInitialized = $state(false);
+  let lastJazzConfigId = $state<string | null>(null);
+  
+  $effect(() => {
+    // Reset jazz initialization if config changed
+    if (lastJazzConfigId !== configId) {
+      jazzInitialized = false;
+      lastJazzConfigId = configId;
+    }
+  });
 
-      // Add configJson to initial data (for config view) - avoid circular dependency
-      // Stringify the full config including stateMachine and view
-      if (loadedConfig.data) {
-        loadedConfig.data.configJson = JSON.stringify(
-          {
-            stateMachine: config.stateMachine,
-            view: config.view,
-          },
-          null,
-          2,
-        );
+  $effect(() => {
+    if (browser && dataStore && accountReady && !jazzInitialized) {
+      // Account just became available - initialize Jazz integration
+      jazzInitialized = true;
+      const initializeJazz = async () => {
+        try {
+          // Ensure account is fully loaded
+          await (accountReady as any).$jazz.ensureLoaded({
+            resolve: { root: { entities: true, schemata: true } },
+          });
+
+          // Store account reference in data for skills to access
+          dataStore!.update((data) => {
+            return { ...data, _jazzAccount: accountReady }
+          })
+
+          // Import JazzQueryManager dynamically to avoid circular dependencies
+          const { JazzQueryManager } = await import('../jazz-query-manager.js')
+          const queryManager = new JazzQueryManager(accountReady)
+          dataStore!.jazzQueryManager = queryManager
+
+          // Store queryManager reference in data for skills to access
+          dataStore!.update((data) => {
+            return { ...data, _jazzQueryManager: queryManager }
+          })
+
+          // Query todos and update data.queries.todos
+          const todos = await queryManager.queryEntitiesBySchema(
+            'Todo',
+            queryManager.coValueToTodoPlainObject.bind(queryManager) as (coValue: any) => Record<string, unknown>,
+          )
+
+          // Update data.queries.todos
+          dataStore!.update((data) => {
+            const newData = { ...data }
+            if (!newData.queries) {
+              newData.queries = {}
+            }
+            const queries = { ...(newData.queries as Record<string, unknown>) }
+            queries.todos = todos
+            queries.title = queries.title || 'Todos'
+            newData.queries = queries
+            return newData
+          })
+
+          // Set up reactive subscriptions
+          queryManager.subscribeToEntities(
+            'Todo',
+            'todos',
+            dataStore!,
+            queryManager.coValueToTodoPlainObject.bind(queryManager) as (coValue: any) => Record<string, unknown>,
+          )
+        } catch (_error) {
+          // Jazz initialization failed - silently fail
+        }
       }
-
-      dataStore = createDataStore(loadedConfig);
+      initializeJazz();
     }
   });
 

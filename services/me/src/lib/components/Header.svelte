@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { JazzAccount } from "@hominio/db";
-  import { AccountCoState, Image } from "jazz-tools/svelte";
+  import { Image } from "jazz-tools/svelte";
   import { browser } from "$app/environment";
   import { page } from "$app/stores";
   import { authClient } from "$lib/auth-client";
+  import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
 
   const { title, description } = $props();
 
@@ -13,17 +13,13 @@
   const isBetterAuthSignedIn = $derived(!!betterAuthUser);
   const isBetterAuthPending = $derived($session.isPending);
 
-  // Load Jazz account to access profile data
-  const account = new AccountCoState(JazzAccount, {
-    resolve: {
-      profile: true,
-    },
-  });
-  const me = $derived(account.current);
+  // Get global Jazz account from context
+  const account = getJazzAccountContext();
+  const me = $derived(account ? account.current : null);
 
   // Get profile data
   const profile = $derived(
-    me.$isLoaded && me.profile?.$isLoaded ? (me.profile as any) : null,
+    me && me.$isLoaded && me.profile?.$isLoaded ? (me.profile as any) : null,
   );
 
   const firstName = $derived(profile?.firstName?.trim() || "");
@@ -137,7 +133,7 @@
     <div class="flex gap-2 items-center flex-shrink-0">
       {#if isBetterAuthPending}
         <span class="text-sm text-slate-500">Loading...</span>
-      {:else if isBetterAuthSignedIn && me.$isLoaded && profile}
+      {:else if isBetterAuthSignedIn && me && me.$isLoaded && profile}
         <!-- User Avatar and Name with Dropdown -->
         <div class="relative" bind:this={dropdownRef}>
           <button

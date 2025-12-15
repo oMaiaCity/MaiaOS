@@ -289,7 +289,8 @@
               {@const child = isCoID
                 ? context.directChildren.find((c) => c.key === key)
                 : null}
-              {@const isClickable = (isCoID && onNavigate !== undefined) || isObject}
+              {@const isEditableString = typeof value === "string" && !isComputedField && coValueState}
+              {@const isClickable = ((isCoID && onNavigate !== undefined) || isObject) && !isEditableString}
               {@const isCoList = child?.resolved?.type === 'colist' || child?.resolved?.extendedType === 'CoList'}
               
               <!-- Get property type from schema definition -->
@@ -372,13 +373,52 @@
                             />
                           </svg>
                         {:else}
-                          <span
-                            class="text-xs text-slate-600 break-all min-w-0"
-                          >
-                            {Array.isArray(value)
-                              ? `[${value.length} items]`
-                              : String(value).slice(0, 50)}
-                          </span>
+                          {#if typeof value === "string" && !isComputedField && coValueState}
+                            <!-- Editable string input -->
+                            <input
+                              type="text"
+                              value={value}
+                              class="text-xs text-slate-600 bg-transparent border-none outline-none focus:outline-none focus:ring-0 px-0 w-full min-w-0"
+                              onclick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                              }}
+                              onmousedown={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                              }}
+                              onfocus={(e) => {
+                                e.stopPropagation();
+                              }}
+                              onblur={(e) => {
+                                const newValue = (e.target as HTMLInputElement).value;
+                                if (newValue !== value && coValueState?.current) {
+                                  try {
+                                    coValueState.current.$jazz.set(key, newValue);
+                                    coValueState.current.$jazz.waitForSync();
+                                  } catch (err) {
+                                    console.error(`Failed to update ${key}:`, err);
+                                    // Reset to original value on error
+                                    (e.target as HTMLInputElement).value = value;
+                                  }
+                                }
+                              }}
+                              onkeydown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  (e.target as HTMLInputElement).blur();
+                                }
+                              }}
+                            />
+                          {:else}
+                            <span
+                              class="text-xs text-slate-600 break-all min-w-0"
+                            >
+                              {Array.isArray(value)
+                                ? `[${value.length} items]`
+                                : String(value).slice(0, 50)}
+                            </span>
+                          {/if}
                         {/if}
                       </div>
                     </button>
@@ -423,13 +463,82 @@
                             />
                           </svg>
                         {:else}
-                          <span
-                            class="text-xs text-slate-600 break-all min-w-0"
-                          >
-                            {Array.isArray(value)
-                              ? `[${value.length} items]`
-                              : String(value).slice(0, 50)}
-                          </span>
+                          {#if typeof value === "string" && !isComputedField && coValueState}
+                            <!-- Editable string input -->
+                            {@const isEditable = typeof value === "string" && !isComputedField && !!coValueState}
+                            <!-- #region agent log -->
+                            {(() => {
+                              if (typeof globalThis !== 'undefined' && 'fetch' in globalThis) {
+                                (globalThis as any).fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Context.svelte:428',message:'Rendering editable input',data:{key:key,valueType:typeof value,isComputedField:isComputedField,hasCoValueState:!!coValueState,coValueLoaded:coValueState?.current?.$isLoaded},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                              }
+                              return '';
+                            })()}
+                            <!-- #endregion -->
+                            <input
+                              type="text"
+                              value={value}
+                              class="text-xs text-slate-600 bg-transparent border-none outline-none focus:outline-none focus:ring-0 px-0 w-full min-w-0"
+                              onfocus={() => {
+                                // #region agent log
+                                if (typeof globalThis !== 'undefined' && 'fetch' in globalThis) {
+                                  (globalThis as any).fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Context.svelte:445',message:'Input focused',data:{key:key,value:value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                                }
+                                // #endregion
+                              }}
+                              onblur={(e) => {
+                                // #region agent log
+                                if (typeof globalThis !== 'undefined' && 'fetch' in globalThis) {
+                                  (globalThis as any).fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Context.svelte:451',message:'Input blurred',data:{key:key,oldValue:value,newValue:(e.target as HTMLInputElement).value,hasCoValueState:!!coValueState,coValueLoaded:coValueState?.current?.$isLoaded},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                                }
+                                // #endregion
+                                const newValue = (e.target as HTMLInputElement).value;
+                                if (newValue !== value && coValueState?.current) {
+                                  try {
+                                    // #region agent log
+                                    if (typeof globalThis !== 'undefined' && 'fetch' in globalThis) {
+                                      (globalThis as any).fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Context.svelte:458',message:'About to update CoValue',data:{key:key,newValue:newValue,coValueId:coValueState.current.$jazz?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                                    }
+                                    // #endregion
+                                    coValueState.current.$jazz.set(key, newValue);
+                                    coValueState.current.$jazz.waitForSync();
+                                    // #region agent log
+                                    if (typeof globalThis !== 'undefined' && 'fetch' in globalThis) {
+                                      (globalThis as any).fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Context.svelte:462',message:'CoValue update succeeded',data:{key:key,newValue:newValue},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                                    }
+                                    // #endregion
+                                  } catch (err) {
+                                    // #region agent log
+                                    if (typeof globalThis !== 'undefined' && 'fetch' in globalThis) {
+                                      (globalThis as any).fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Context.svelte:468',message:'CoValue update failed',data:{key:key,error:err instanceof Error ? err.message : String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                                    }
+                                    // #endregion
+                                    console.error(`Failed to update ${key}:`, err);
+                                    // Reset to original value on error
+                                    (e.target as HTMLInputElement).value = value;
+                                  }
+                                }
+                              }}
+                              onkeydown={(e) => {
+                                // #region agent log
+                                if (typeof globalThis !== 'undefined' && 'fetch' in globalThis) {
+                                  (globalThis as any).fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Context.svelte:477',message:'Keydown event',data:{key:key,eventKey:e.key},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                                }
+                                // #endregion
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  (e.target as HTMLInputElement).blur();
+                                }
+                              }}
+                            />
+                          {:else}
+                            <span
+                              class="text-xs text-slate-600 break-all min-w-0"
+                            >
+                              {Array.isArray(value)
+                                ? `[${value.length} items]`
+                                : String(value).slice(0, 50)}
+                            </span>
+                          {/if}
                         {/if}
                       </div>
                     </div>

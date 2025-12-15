@@ -1,16 +1,16 @@
 <script lang="ts">
   import {
     type CoValueContext,
-    JazzAccount,
     resetData,
     createHumanLeaf,
     createTodoLeaf,
     createAssignedToComposite,
   } from "@hominio/db";
   import type { CoID, RawCoValue } from "cojson";
-  import { AccountCoState, CoState } from "jazz-tools/svelte";
+  import { CoState } from "jazz-tools/svelte";
   import { CoMap } from "jazz-tools";
   import { authClient } from "$lib/auth-client";
+  import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
   import ObjectContextDisplay from "$lib/components/data-explorer/ObjectContextDisplay.svelte";
   import { Context, MetadataSidebar } from "$lib/components/data-explorer";
   import { deriveContextFromCoState } from "$lib/utils/costate-navigation";
@@ -21,18 +21,9 @@
   const isBetterAuthSignedIn = $derived(!!betterAuthUser);
   const isBetterAuthPending = $derived($session.isPending);
 
-  // Load Jazz account with deep resolve query for reactive CoLists
-  const account = new AccountCoState(JazzAccount, {
-    resolve: {
-      root: {
-        // Load root's CoLists deeply so they react to new items
-        schemata: { $each: true }, // Load all schema items + subscribe to changes
-        entities: { $each: true }, // Load all entity items + subscribe to changes
-        capabilities: true, // Load capabilities list
-      },
-    },
-  });
-  const me = $derived(account.current);
+  // Get global Jazz account from context
+  const account = getJazzAccountContext();
+  const me = $derived(account ? account.current : null);
   const currentAccount = $derived(me);
 
   // Get node for resolving CoValues
@@ -116,7 +107,7 @@
 
   // Current context is derived reactively from CoState (reactive updates)
   const currentContext = $derived.by(() => {
-    if (navigationStack.length === 0) return null;
+    if (navigationStack.length === 0 || !me) return null;
 
     const lastItem = navigationStack[navigationStack.length - 1];
 
@@ -124,7 +115,7 @@
     if (
       lastItem.type === "root-property" &&
       me.$isLoaded &&
-      me.root.$isLoaded
+      me.root?.$isLoaded
     ) {
       const propertyPath = lastItem.propertyPath;
       let current: any = me.root;
@@ -190,6 +181,7 @@
 
   // Initialize with root context using CoState (reactive)
   $effect(() => {
+    if (!me) return;
     const rootId =
       me.$isLoaded && me.root?.$isLoaded ? me.root.$jazz?.id : undefined;
     if (!rootId || navigationStack.length > 0) return; // Load root context
@@ -214,7 +206,7 @@
 
     // UNIVERSAL ID-BASED NAVIGATION with smart property-path detection
     // Check if this CoValue is already loaded via root (reuse root's subscription)
-    if (me.$isLoaded && me.root.$isLoaded) {
+    if (me && me.$isLoaded && me.root?.$isLoaded) {
       // Check ALL root properties (not just from root navigation)
       const rootProperties = [
         "schemata",
@@ -301,7 +293,7 @@
     } else if (target.type === "root-property") {
       // For root properties, we need to navigate via the property path
       // Get the actual CoValue from the root
-      if (me.$isLoaded && me.root.$isLoaded) {
+      if (me && me.$isLoaded && me.root?.$isLoaded) {
         let current: any = me.root;
         for (const key of target.propertyPath) {
           current = current[key];
@@ -317,7 +309,7 @@
 
   // Handle reset data
   async function handleResetData() {
-    if (!me.$isLoaded) return;
+    if (!me || !me.$isLoaded) return;
 
     try {
       await resetData(me);
@@ -330,7 +322,7 @@
 
   // Handle creating Sam Human Leaf
   async function handleCreateSamHuman() {
-    if (!me.$isLoaded) return;
+    if (!me || !me.$isLoaded) return;
 
     try {
       await createHumanLeaf(me, {
@@ -348,34 +340,36 @@
 
   // Handle creating "eat banana" Todo Leaf
   async function handleCreateEatBananaTodo() {
-    if (!me.$isLoaded) return;
+    if (!me || !me.$isLoaded) return;
 
     try {
       await createTodoLeaf(me, {
         id: "todo_eat_banana",
-        name: "eat banana",
+        text: "eat banana",
         status: "todo",
-        dueDate: new Date("2025-12-31"),
+        endDate: new Date("2025-12-31").toISOString(),
+        duration: 15,
       });
       // Mutations are reactive - CoState will automatically update
       // No need to manually clear cache or reload
-    } catch (error) {
-      console.error("Error creating 'eat banana' Todo Leaf:", error);
+    } catch (_error) {
+      // Creation failed - silently fail
     }
   }
 
   // Handle creating "assigned" Composite instance
   async function handleCreateAssignedToComposite() {
-    if (!me.$isLoaded) return;
+    if (!me || !me.$isLoaded) return;
 
     try {
       // Create new Todo and Human entities for testing (simplified - no lookup needed)
       // Note: CompositeType is auto-created via ensureSchema() in createAssignedToComposite
       const todoEntity = await createTodoLeaf(me, {
         id: "todo_test_assigned",
-        name: "test todo for assigned relation",
+        text: "test todo for assigned relation",
         status: "todo",
-        dueDate: new Date("2025-12-31"),
+        endDate: new Date("2025-12-31").toISOString(),
+        duration: 30,
       });
 
       const humanEntity = await createHumanLeaf(me, {

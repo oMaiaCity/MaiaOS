@@ -975,13 +975,54 @@ export async function findNestedSchema(account: any, schemaName: string): Promis
 	if (schemataList.$isLoaded) {
 		const schemataArray = Array.from(schemataList)
 
+		// Get node to load CoValues by ID (like ensureSchema does)
+		let node = getNode(account)
+		if (!node) {
+			const root = loadedAccount.root
+			if (root) {
+				node = getNode(root)
+			}
+		}
+		if (!node) {
+			return null
+		}
+
 		for (const schema of schemataArray) {
 			if (schema && typeof schema === 'object' && '$jazz' in schema) {
-				const schemaLoaded = await (schema as any).$jazz.ensureLoaded({
-					resolve: { entities: true },
-				})
-				if (schemaLoaded.$isLoaded && (schemaLoaded as any).name === schemaName) {
-					return schemaLoaded
+				try {
+					// Get the CoValue ID from the list item
+					const schemaId = (schema as any).$jazz?.id
+					if (!schemaId) {
+						continue
+					}
+
+					// Load the actual CoValue from the node (like ensureSchema does)
+					// This ensures we get the full CoValue with all properties
+					const loadedValue = await node.load(schemaId as any)
+					if (loadedValue === 'unavailable') {
+						continue
+					}
+
+					// Get snapshot using toJSON() - same as ensureSchema does
+					const snapshot = loadedValue.toJSON()
+					if (!snapshot || typeof snapshot !== 'object' || snapshot === null) {
+						continue
+					}
+
+					// Read name from snapshot (like ensureSchema does)
+					const schemaNameValue = (snapshot as any).name as string | undefined
+
+					// Check if name matches (case-sensitive exact match)
+					if (typeof schemaNameValue === 'string' && schemaNameValue === schemaName) {
+						// Return the schema from the list (it's already wrapped)
+						const schemaLoaded = await (schema as any).$jazz.ensureLoaded({
+							resolve: {},
+						})
+						return schemaLoaded
+					}
+				} catch (_error) {
+					// Skip this schema if there's an error loading it
+					continue
 				}
 			}
 		}

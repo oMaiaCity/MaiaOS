@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { JazzAccount, setupComputedFieldsForCoValue } from "@hominio/db";
-  import { AccountCoState, Image } from "jazz-tools/svelte";
+  import { setupComputedFieldsForCoValue } from "@hominio/db";
+  import { Image } from "jazz-tools/svelte";
   import { authClient } from "$lib/auth-client";
+  import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
 
   // Better Auth session
   const session = authClient.useSession();
@@ -9,29 +10,22 @@
   const isBetterAuthSignedIn = $derived(!!betterAuthUser);
   const isBetterAuthPending = $derived($session.isPending);
 
-  // Load Jazz account - Better Auth Jazz plugin automatically sets up the account
-  // AccountCoState will use the current account from the Jazz provider
-  const account = new AccountCoState(JazzAccount, {
-    resolve: {
-      profile: true,
-      root: {
-        contact: true,
-      },
-    },
-  });
-  const me = $derived(account.current);
+  // Get global Jazz account from context
+  const account = getJazzAccountContext();
+  const me = $derived(account ? account.current : null);
 
   // Set up computed fields for profile when it's loaded
   // This ensures name is computed from firstName + lastName
   $effect(() => {
-    if (me.$isLoaded && me.profile?.$isLoaded) {
+    if (me && me.$isLoaded && me.profile?.$isLoaded) {
       setupComputedFieldsForCoValue(me.profile);
     }
   });
 
   // Get profile image for display
   const profileImage = $derived(
-    me.$isLoaded &&
+    me &&
+      me.$isLoaded &&
       me.profile?.$isLoaded &&
       (me.profile as any).$jazz.has("image") &&
       (me.profile as any).image &&
@@ -66,11 +60,11 @@
         you.
       </p>
     </header>
-  {:else if !me.$isLoaded}
+  {:else if !me || !me.$isLoaded}
     <div class="text-center pt-8 pb-4">
       <p class="text-slate-500">Loading your account...</p>
     </div>
-  {:else if me.$isLoaded}
+  {:else if me && me.$isLoaded}
     <!-- Welcome Section -->
     <header class="text-center pb-4">
       <!-- Profile Image -->

@@ -9,6 +9,7 @@
   import GoogleDataSync from "$lib/components/GoogleDataSync.svelte";
   import Header from "$lib/components/Header.svelte";
   import JazzAuthSetup from "$lib/components/JazzAuthSetup.svelte";
+  import JazzAccountProvider from "$lib/components/JazzAccountProvider.svelte";
 
   const { children } = $props();
 
@@ -40,14 +41,16 @@
   }}
   AccountSchema={JazzAccount}
 >
-  <div class="h-screen bg-gray-100 flex flex-col">
-    <JazzAuthSetup />
-    <GoogleDataSync />
-    <jazz-inspector></jazz-inspector>
-    <Header title={routeInfo.title} description={routeInfo.description} />
-    <main class="flex-1 w-full h-full overflow-hidden">
-      {@render children?.()}
-    </main>
-    <Footer />
-  </div>
+  <JazzAccountProvider>
+    <div class="h-screen bg-gray-100 flex flex-col">
+      <JazzAuthSetup />
+      <GoogleDataSync />
+      <jazz-inspector></jazz-inspector>
+      <Header title={routeInfo.title} description={routeInfo.description} />
+      <main class="flex-1 w-full h-full overflow-hidden">
+        {@render children?.()}
+      </main>
+      <Footer />
+    </div>
+  </JazzAccountProvider>
 </JazzSvelteProvider>

@@ -50,6 +50,7 @@ export interface DataStore extends Writable<Data> {
 	update: (updater: (data: Data) => Data) => void
 	reset: () => void
 	getState: () => string
+	jazzQueryManager?: any // JazzQueryManager instance (optional)
 }
 
 // ========== STATE MACHINE CLASS ==========
@@ -101,22 +102,27 @@ class UnifiedDataStore {
 			return
 		}
 
-		// Execute exit actions
+		// Execute exit actions (fire and forget for async)
 		if (currentStateConfig.exit) {
-			this.executeActions(currentStateConfig.exit, payload)
+			this.executeActions(currentStateConfig.exit, payload).catch((error) => {
+				console.error('[DataStore] Error in exit actions:', error)
+			})
 		}
 
 		const nextStateConfig = currentStateConfig.on[event]
 		const target = typeof nextStateConfig === 'string' ? nextStateConfig : nextStateConfig.target
 		const actions = typeof nextStateConfig === 'object' ? nextStateConfig.actions : undefined
 
-		this.transition(target, actions, payload)
+		// Execute transition asynchronously (fire and forget for async actions)
+		this.transition(target, actions, payload).catch((error) => {
+			console.error('[DataStore] Error in transition:', error)
+		})
 	}
 
 	/**
 	 * Transition to a new state
 	 */
-	private transition(nextStateVal: string, actions?: string[], payload?: unknown): void {
+	private async transition(nextStateVal: string, actions?: string[], payload?: unknown): Promise<void> {
 		// Update state
 		this._state = nextStateVal
 		this._data = { ...this._data, _state: nextStateVal }
@@ -124,12 +130,12 @@ class UnifiedDataStore {
 		// Execute entry actions
 		const nextStateConfig = this.config.states[nextStateVal]
 		if (nextStateConfig?.entry) {
-			this.executeActions(nextStateConfig.entry, payload)
+			await this.executeActions(nextStateConfig.entry, payload)
 		}
 
 		// Execute transition actions
 		if (actions) {
-			this.executeActions(actions, payload)
+			await this.executeActions(actions, payload)
 		}
 
 		this.notifySubscribers()
@@ -138,14 +144,18 @@ class UnifiedDataStore {
 	/**
 	 * Execute actions on unified data
 	 */
-	private executeActions(actionNames: string[], payload?: unknown): void {
+	private async executeActions(actionNames: string[], payload?: unknown): Promise<void> {
 		if (!this.config.actions) return
 
-		actionNames.forEach((actionName) => {
+		for (const actionName of actionNames) {
 			const action = this.config.actions?.[actionName]
 			if (action) {
 				try {
-					action(this._data, payload)
+					const result = action(this._data, payload)
+					// If action returns a Promise, await it
+					if (result instanceof Promise) {
+						await result
+					}
 					// Create new data object with deep copy of nested objects to trigger reactivity
 					// This ensures nested changes (like data.view.newTodoText) are detected
 					const newData: Data = { ...this._data }
@@ -165,9 +175,8 @@ class UnifiedDataStore {
 					this._data = newData
 					this.notifySubscribers()
 				} catch (_error) {}
-			} else {
 			}
-		})
+		}
 	}
 
 	/**
@@ -205,8 +214,13 @@ class UnifiedDataStore {
 
 /**
  * Create unified reactive data store
+ * @param config - State machine configuration
+ * @param jazzAccount - Optional Jazz account for database integration
  */
-export function createDataStore(config: StateMachineConfig): DataStore {
+export function createDataStore(
+	config: StateMachineConfig,
+	jazzAccount?: any,
+): DataStore {
 	const store = new UnifiedDataStore(config)
 	const writableStore = writable(store.data)
 
@@ -215,7 +229,7 @@ export function createDataStore(config: StateMachineConfig): DataStore {
 		writableStore.set(data)
 	})
 
-	return {
+	const dataStore: DataStore = {
 		...writableStore,
 		send: (event: string, payload?: unknown) => {
 			store.send(event, payload)
@@ -228,4 +242,59 @@ export function createDataStore(config: StateMachineConfig): DataStore {
 		},
 		getState: () => store.state,
 	}
+
+	// Initialize Jazz integration if account is provided and loaded
+	// Note: If account is not loaded yet, Vibe.svelte will handle initialization separately
+	if (jazzAccount && (jazzAccount as any).$isLoaded) {
+		// Account is already loaded - initialize immediately
+		;(async () => {
+			try {
+				// Store account reference in data for skills to access
+				dataStore.update((data) => {
+					return { ...data, _jazzAccount: jazzAccount }
+				})
+
+				// Import JazzQueryManager dynamically to avoid circular dependencies
+				const { JazzQueryManager } = await import('./jazz-query-manager.js')
+				const queryManager = new JazzQueryManager(jazzAccount)
+				dataStore.jazzQueryManager = queryManager
+
+				// Store queryManager reference in data for skills to access
+				dataStore.update((data) => {
+					return { ...data, _jazzQueryManager: queryManager }
+				})
+
+				// Query todos and update data.queries.todos
+				const todos = await queryManager.queryEntitiesBySchema(
+					'Todo',
+					queryManager.coValueToTodoPlainObject.bind(queryManager) as (coValue: any) => Record<string, unknown>,
+				)
+
+				// Update data.queries.todos - ensure we preserve existing queries structure
+				dataStore.update((data) => {
+					const newData = { ...data }
+					if (!newData.queries) {
+						newData.queries = {}
+					}
+					const queries = { ...(newData.queries as Record<string, unknown>) }
+					queries.todos = todos
+					queries.title = queries.title || 'Todos' // Preserve title if it exists
+					newData.queries = queries
+					return newData
+				})
+
+				// Set up reactive subscriptions
+				queryManager.subscribeToEntities(
+					'Todo',
+					'todos',
+					dataStore,
+					queryManager.coValueToTodoPlainObject.bind(queryManager) as (coValue: any) => Record<string, unknown>,
+				)
+			} catch (_error) {
+				// Jazz initialization failed - silently fail
+			}
+		})()
+	}
+
+	return dataStore
 }
