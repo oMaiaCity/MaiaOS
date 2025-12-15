@@ -16,7 +16,7 @@ import {
 export const headerComposite: CompositeConfig = {
 	container: {
 		layout: 'content',
-		class: 'p-0 bg-transparent',
+		class: 'w-full p-0 bg-transparent',
 	},
 	children: [
 		{
@@ -32,7 +32,7 @@ export const headerComposite: CompositeConfig = {
 			composite: {
 				container: {
 					layout: 'flex',
-					class: 'pb-4 flex-row justify-center items-center gap-4 flex-nowrap',
+					class: 'w-full pb-2 flex-row justify-center items-center gap-1 @xs:gap-2 @sm:gap-3 flex-nowrap',
 				},
 				children: [
 					{

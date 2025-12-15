@@ -11,7 +11,7 @@ export const contentComposite: CompositeConfig = {
 		layout: 'grid',
 		// Defaults handle: h-full w-full overflow-hidden grid @container
 		// Only need to specify columns/rows and spacing
-		class: 'pt-6 grid-cols-1 min-h-0',
+		class: 'pt-2 grid-cols-1 min-h-0',
 	},
 	children: [
 		// List view

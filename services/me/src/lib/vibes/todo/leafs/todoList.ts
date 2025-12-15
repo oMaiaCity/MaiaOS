@@ -8,7 +8,7 @@ import { todoItemLeaf } from './todoItem'
 
 export const todoListLeaf: LeafNode = {
 	tag: 'div',
-	classes: 'flex flex-col gap-0.5 @xs:gap-1 @sm:gap-1.5 @md:gap-2 h-full overflow-y-auto',
+	classes: 'flex flex-col gap-0.5 @xs:gap-0.5 @sm:gap-1 @md:gap-1 h-full overflow-y-auto',
 	bindings: {
 		foreach: {
 			items: 'data.queries.todos',

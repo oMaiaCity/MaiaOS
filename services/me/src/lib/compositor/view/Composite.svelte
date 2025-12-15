@@ -91,7 +91,7 @@
     const hasWidth = classList.some(c => c.startsWith("w-") || c.startsWith("min-w-") || c.startsWith("max-w-"));
     const hasOverflow = classList.some(c => c.startsWith("overflow-"));
     const hasGrid = classList.includes("grid");
-    const hasFlex = classList.includes("flex") || classList.some(c => c.startsWith("flex-"));
+    const hasFlex = classList.includes("flex"); // Only check for "flex" display class, not flex-* utilities
     const hasContainer = classList.includes("@container");
     
     // Don't add h-full if using flex-grow (flex handles height)

@@ -7,7 +7,7 @@ import type { LeafNode } from '../../../compositor/view/leaf-types'
 
 export const titleLeaf: LeafNode = {
 	tag: 'div',
-	classes: 'text-center mb-1 @xs:mb-2 @sm:mb-3 @md:mb-4',
+	classes: 'text-center mb-2 @xs:mb-2 @sm:mb-2 @md:mb-3',
 	children: [
 		{
 			tag: 'h1',
