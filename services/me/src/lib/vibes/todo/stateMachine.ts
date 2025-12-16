@@ -3,7 +3,7 @@
  * Defines all states, transitions, and initial data
  */
 
-import type { StateMachineConfig } from '../../compositor/dataStore'
+import type { Data, StateMachineConfig } from '../../compositor/dataStore'
 import { defaultKanbanColumns } from './leafs/kanbanColumn'
 
 // Initialize kanban column IDs from column definitions
@@ -100,5 +100,111 @@ export const todoStateMachine: StateMachineConfig = {
 			},
 		},
 	},
-	actions: {},
+	actions: {
+		// Wrapper actions for schema-specific logic (Todo)
+		// These wrap generic entity skills with Todo-specific data transformation
+		'@entity/createEntity': async (data: Data, payload?: unknown) => {
+			const payloadData = payload as {
+				schemaName?: string
+				entityData?: Record<string, unknown>
+				text?: string
+			} || {}
+
+			const schemaName = payloadData.schemaName || 'Todo'
+			
+			// Build entityData based on schema
+			let entityData: Record<string, unknown> = payloadData.entityData || {}
+
+			if (schemaName === 'Todo') {
+				// Todo-specific: Extract text from view.newTodoText if not provided
+				let text = payloadData.text
+				if (!text && data.view) {
+					text = (data.view as any).newTodoText as string || ''
+				}
+
+				if (!text || !text.trim()) {
+					if (!data.view) data.view = {}
+					const view = data.view as Data
+					view.error = 'Todo text cannot be empty'
+					data.view = { ...view }
+					return
+				}
+
+				// Generate random endDate between now and 7 days
+				const now = new Date()
+				const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+				const randomTime = now.getTime() + Math.random() * (sevenDaysFromNow.getTime() - now.getTime())
+				const endDate = new Date(randomTime)
+
+				// Generate random duration between 1 and 8 hours (in minutes)
+				const duration = Math.floor(Math.random() * 8 * 60) + 60
+
+				entityData = {
+					text: text.trim(),
+					status: 'todo',
+					endDate: endDate.toISOString(),
+					duration,
+				}
+
+				// Clear input after successful creation
+				if (!data.view) data.view = {}
+				const view = data.view as Data
+				view.newTodoText = ''
+				view.error = null
+				data.view = { ...view }
+			} else if (schemaName === 'Human' && !payloadData.entityData) {
+				// Human-specific: Generate random human data if not provided
+				const firstNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry', 'Ivy', 'Jack', 'Kate', 'Liam', 'Mia', 'Noah', 'Olivia', 'Paul', 'Quinn', 'Ruby', 'Sam', 'Tina']
+				const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee']
+				
+				const firstName = firstNames[Math.floor(Math.random() * firstNames.length)]
+				const lastName = lastNames[Math.floor(Math.random() * lastNames.length)]
+				const name = `${firstName} ${lastName}`
+				
+				const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`
+				
+				const now = new Date()
+				const yearsAgo = Math.floor(Math.random() * (80 - 18 + 1)) + 18
+				const dateOfBirth = new Date(now.getFullYear() - yearsAgo, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1)
+
+				entityData = {
+					name,
+					email,
+					dateOfBirth, // Pass Date object
+				}
+			}
+
+			// Call the generic skill with built entityData
+			const { entitySkills } = await import('../../compositor/skills/entity-skills.js')
+			const createEntitySkill = entitySkills['@entity/createEntity']
+			if (createEntitySkill) {
+				await createEntitySkill.execute(data, {
+					schemaName,
+					entityData,
+				})
+			}
+		},
+		'@entity/toggleStatus': async (data: Data, payload?: unknown) => {
+			const payloadData = payload as {
+				id?: string
+				statusField?: string
+				value1?: string
+				value2?: string
+			} || {}
+
+			// Todo-specific defaults
+			const finalPayload = {
+				...payloadData,
+				value1: payloadData.value1 || 'todo',
+				value2: payloadData.value2 || 'done',
+			}
+
+			// Call the generic skill
+			const { entitySkills } = await import('../../compositor/skills/entity-skills.js')
+			const toggleStatusSkill = entitySkills['@entity/toggleStatus']
+			if (toggleStatusSkill) {
+				await toggleStatusSkill.execute(data, finalPayload)
+			}
+		},
+	},
 }

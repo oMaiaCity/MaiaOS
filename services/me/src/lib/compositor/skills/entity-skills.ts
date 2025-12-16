@@ -31,144 +31,78 @@ const createEntitySkill: Skill = {
 				},
 				entityData: {
 					type: 'object',
-					description: 'The entity data to create',
-					required: true,
+					description: 'The entity data to create (required if dataPath not provided)',
+					required: false,
+				},
+				dataPath: {
+					type: 'string',
+					description: 'Optional: Data path to read value from (e.g., "view.newTodoText")',
+					required: false,
+				},
+				buildEntityData: {
+					type: 'function',
+					description: 'Optional: Function to build entityData from dataPath value',
+					required: false,
+				},
+				clearFieldPath: {
+					type: 'string',
+					description: 'Optional: Field path to clear after successful creation',
+					required: false,
 				},
 			},
-			required: ['schemaName', 'entityData'],
+			required: ['schemaName'],
 		},
 	},
 	execute: async (data: Data, payload?: unknown) => {
-		console.log('[createEntity] ENTRY - payload:', payload)
-		
-		// Get schemaName from payload (required)
+		// Universal payload interface - works for any schema
 		const payloadData = (payload as {
 			schemaName?: string
 			entityData?: Record<string, unknown>
-			text?: string // For Todo schema - text can be passed directly
+			// Optional: field path to read entityData from (e.g., "view.newTodoText" -> extract and build entityData)
+			dataPath?: string
+			// Optional: callback to build entityData from data path value
+			buildEntityData?: (value: unknown) => Record<string, unknown>
+			// Optional: field path to clear after successful creation
+			clearFieldPath?: string
 		}) || {}
+
 		const schemaName = payloadData.schemaName
 
-		console.log('[createEntity] schemaName:', schemaName, 'payloadData:', payloadData)
-
 		if (!schemaName) {
-			console.error('[createEntity] ERROR: schemaName is required in payload')
 			throw new Error('schemaName is required in payload')
 		}
 
-		// Build entityData - handle schema-specific logic
+		// Build entityData - fully generic approach
 		let entityData: Record<string, unknown> = payloadData.entityData || {}
 
-		console.log('[createEntity] Initial entityData:', entityData, 'schemaName:', schemaName)
-
-		// Human-specific: If schemaName is 'Human' and no entityData provided, generate random human
-		if (schemaName === 'Human' && !payloadData.entityData) {
-			console.log('[createEntity] Generating random Human data...')
-			// Generate random first and last names
-			const firstNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry', 'Ivy', 'Jack', 'Kate', 'Liam', 'Mia', 'Noah', 'Olivia', 'Paul', 'Quinn', 'Ruby', 'Sam', 'Tina']
-			const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee']
-			
-			const firstName = firstNames[Math.floor(Math.random() * firstNames.length)]
-			const lastName = lastNames[Math.floor(Math.random() * lastNames.length)]
-			const name = `${firstName} ${lastName}`
-			
-			// Generate random email
-			const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`
-			
-			// Generate random date of birth (between 18-80 years ago)
-			const now = new Date()
-			const yearsAgo = Math.floor(Math.random() * (80 - 18 + 1)) + 18
-			const dateOfBirth = new Date(now.getFullYear() - yearsAgo, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1)
-
-			entityData = {
-				name,
-				email,
-				dateOfBirth: dateOfBirth, // Pass Date object - Zod z.date() expects Date, not string
+		// If entityData not provided but dataPath is, try to extract from data path
+		if (!entityData || Object.keys(entityData).length === 0) {
+			if (payloadData.dataPath && payloadData.buildEntityData) {
+				// Navigate to data path
+				const pathParts = payloadData.dataPath.split('.')
+				let target: unknown = data
+				for (const part of pathParts) {
+					if (target && typeof target === 'object' && part in target) {
+						target = (target as Record<string, unknown>)[part]
+					} else {
+						target = null
+						break
+					}
+				}
+				// Build entityData using provided callback
+				if (target !== null && target !== undefined) {
+					entityData = payloadData.buildEntityData(target)
+				}
 			}
-			console.log('[createEntity] Generated Human entityData:', entityData)
 		}
-		// Todo-specific: If schemaName is 'Todo' and text is provided, build entityData
-		else if (schemaName === 'Todo' && payloadData.text) {
-			const text = payloadData.text.trim()
-			if (!text) {
-				if (!data.view) data.view = {}
-				const view = data.view as Data
-				view.error = 'Todo text cannot be empty'
-				data.view = { ...view }
-				return
-			}
-
-			// Generate random endDate between now and 7 days
-			const now = new Date()
-			const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-			const randomTime = now.getTime() + Math.random() * (sevenDaysFromNow.getTime() - now.getTime())
-			const endDate = new Date(randomTime)
-
-			// Generate random duration between 1 and 8 hours (in minutes)
-			const duration = Math.floor(Math.random() * 8 * 60) + 60
-
-			entityData = {
-				text,
-				status: 'todo',
-				endDate: endDate.toISOString(),
-				duration,
-			}
-
-			// Clear input after successful creation
-			if (!data.view) data.view = {}
-			const view = data.view as Data
-			view.newTodoText = ''
-			view.error = null
-			data.view = { ...view }
-		} else if (schemaName === 'Todo' && !payloadData.entityData) {
-			// Try to get text from view.newTodoText
-			if (!data.view) data.view = {}
-			const view = data.view as Data
-			const text = (view.newTodoText as string) || ''
-			if (!text.trim()) {
-				view.error = 'Todo text cannot be empty'
-				data.view = { ...view }
-				return
-			}
-
-			// Generate random endDate between now and 7 days
-			const now = new Date()
-			const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-			const randomTime = now.getTime() + Math.random() * (sevenDaysFromNow.getTime() - now.getTime())
-			const endDate = new Date(randomTime)
-
-			// Generate random duration between 1 and 8 hours (in minutes)
-			const duration = Math.floor(Math.random() * 8 * 60) + 60
-
-			entityData = {
-				text: text.trim(),
-				status: 'todo',
-				endDate: endDate.toISOString(),
-				duration,
-			}
-
-			// Clear input after successful creation
-			view.newTodoText = ''
-			view.error = null
-			data.view = { ...view }
-		}
-
-		console.log('[createEntity] Final entityData before validation:', entityData)
 
 		if (!entityData || Object.keys(entityData).length === 0) {
-			console.error('[createEntity] ERROR: entityData is required')
-			throw new Error('entityData is required')
+			throw new Error('entityData is required (provide entityData directly or use dataPath + buildEntityData)')
 		}
 
 		// Check if Jazz is available - fail fast if not
 		const jazzAccount = data._jazzAccount as any
-		console.log('[createEntity] Jazz account check:', {
-			hasJazzAccount: !!jazzAccount,
-			isLoaded: jazzAccount?.$isLoaded,
-		})
-
 		if (!jazzAccount || !jazzAccount.$isLoaded) {
-			console.error('[createEntity] ERROR: Jazz account not available')
 			if (!data.view) data.view = {}
 			const view = data.view as Data
 			view.error = 'Jazz account not available'
@@ -178,12 +112,31 @@ const createEntitySkill: Skill = {
 
 		// Use generic CREATE function
 		try {
-			console.log('[createEntity] Calling createEntityGeneric with:', { schemaName, entityData })
 			const result = await createEntityGeneric(jazzAccount, schemaName, entityData)
-			console.log('[createEntity] SUCCESS - Created entity:', result?.$jazz?.id)
+			
+			// Clear field if clearFieldPath is provided
+			if (payloadData.clearFieldPath) {
+				const pathParts = payloadData.clearFieldPath.split('.')
+				let target: Data = data
+				for (let i = 0; i < pathParts.length - 1; i++) {
+					const part = pathParts[i]
+					if (!target[part]) {
+						target[part] = {}
+					}
+					target = target[part] as Data
+				}
+				const finalKey = pathParts[pathParts.length - 1]
+				target[finalKey] = ''
+				
+				// Clear error
+				if (!data.view) data.view = {}
+				const view = data.view as Data
+				view.error = null
+				data.view = { ...view }
+			}
+			
 			// Subscription will update data.queries automatically
 		} catch (error) {
-			console.error('[createEntity] ERROR in createEntityGeneric:', error)
 			if (!data.view) data.view = {}
 			const view = data.view as Data
 			view.error = `Failed to create ${schemaName} entity: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -355,13 +308,13 @@ const toggleEntityStatusSkill: Skill = {
 				},
 				value1: {
 					type: 'string',
-					description: 'First status value (default: "todo")',
-					required: false,
+					description: 'First status value (required - no defaults)',
+					required: true,
 				},
 				value2: {
 					type: 'string',
-					description: 'Second status value (default: "done")',
-					required: false,
+					description: 'Second status value (required - no defaults)',
+					required: true,
 				},
 			},
 			required: ['id'],
@@ -376,17 +329,18 @@ const toggleEntityStatusSkill: Skill = {
 		} = (payload as {
 			id?: string
 			statusField?: string
-			value1?: string
-			value2?: string
+			value1?: string // Required - no defaults, must be provided
+			value2?: string // Required - no defaults, must be provided
 		}) || {}
 
 		if (!id) {
 			throw new Error('id is required')
 		}
 
-		// Set default toggle values (schema-specific logic can be added later if needed)
-		const finalValue1 = value1 || 'todo'
-		const finalValue2 = value2 || 'done'
+		// Require both toggle values - no hardcoded defaults
+		if (!value1 || !value2) {
+			throw new Error('value1 and value2 are required for toggle operation (no default values)')
+		}
 
 		// Schema is automatically detected from the entity's @schema property in updateEntityGeneric
 
@@ -431,11 +385,12 @@ const toggleEntityStatusSkill: Skill = {
 						currentStatus = (snapshot as any)[statusField]
 					}
 				} catch (_e) {
-					// Fallback to default
+					// Fallback to value1 if status field doesn't exist
+					currentStatus = value1
 				}
 			}
-			currentStatus = currentStatus || finalValue1
-			const newStatus = currentStatus === finalValue2 ? finalValue1 : finalValue2
+			// Toggle between value1 and value2
+			const newStatus = currentStatus === value2 ? value1 : value2
 
 			// Update using generic UPDATE function
 			await updateEntityGeneric(jazzAccount, coValue, { [statusField]: newStatus })
@@ -538,21 +493,44 @@ const updateInputSkill: Skill = {
 					description: 'The new input text value',
 					required: true,
 				},
+				fieldPath: {
+					type: 'string',
+					description: 'Data path to update (default: "view.newTodoText")',
+					required: false,
+				},
 			},
 			required: ['text'],
 		},
 	},
 	execute: (data: Data, payload?: unknown) => {
-		// Ensure data.view exists
-		if (!data.view) data.view = {}
+		const payloadData = (payload as {
+			text?: string
+			fieldPath?: string // Data path to update (e.g., "view.newTodoText")
+		}) || {}
 
-		const text = (payload as { text?: string })?.text
-		if (text !== undefined) {
-			// Create new view object with updated text
-			data.view = {
-				...(data.view as Data),
-				newTodoText: text,
+		const text = payloadData.text
+		const fieldPath = payloadData.fieldPath || 'view.newTodoText' // Default for backward compatibility
+
+		if (text === undefined) return
+
+		// Navigate to the target field
+		const pathParts = fieldPath.split('.')
+		let target: Data = data
+		for (let i = 0; i < pathParts.length - 1; i++) {
+			const part = pathParts[i]
+			if (!target[part]) {
+				target[part] = {}
 			}
+			target = target[part] as Data
+		}
+
+		// Set the field value
+		const finalKey = pathParts[pathParts.length - 1]
+		target[finalKey] = text
+
+		// Create new object reference to ensure reactivity
+		if (data.view) {
+			data.view = { ...(data.view as Data) }
 		}
 	},
 }
@@ -563,17 +541,42 @@ const clearInputSkill: Skill = {
 		name: 'Clear Input',
 		description: 'Clears the input field',
 		category: 'ui',
+		parameters: {
+			type: 'object',
+			properties: {
+				fieldPath: {
+					type: 'string',
+					description: 'Data path to clear (default: "view.newTodoText")',
+					required: false,
+				},
+			},
+		},
 	},
-	execute: (data: Data) => {
-		// Ensure data.view exists and create new reference
-		if (!data.view) {
-			data.view = { newTodoText: '' }
-		} else {
-			// Create new view object with cleared input
-			data.view = {
-				...(data.view as Data),
-				newTodoText: '',
+	execute: (data: Data, payload?: unknown) => {
+		const payloadData = (payload as {
+			fieldPath?: string // Data path to clear (e.g., "view.newTodoText")
+		}) || {}
+
+		const fieldPath = payloadData.fieldPath || 'view.newTodoText' // Default for backward compatibility
+
+		// Navigate to the target field
+		const pathParts = fieldPath.split('.')
+		let target: Data = data
+		for (let i = 0; i < pathParts.length - 1; i++) {
+			const part = pathParts[i]
+			if (!target[part]) {
+				target[part] = {}
 			}
+			target = target[part] as Data
+		}
+
+		// Clear the field
+		const finalKey = pathParts[pathParts.length - 1]
+		target[finalKey] = ''
+
+		// Create new object reference to ensure reactivity
+		if (data.view) {
+			data.view = { ...(data.view as Data) }
 		}
 	},
 }
@@ -702,6 +705,16 @@ const openModalSkill: Skill = {
 					description: 'The ID of the entity to display in the modal',
 					required: true,
 				},
+				queryKey: {
+					type: 'string',
+					description: 'Query key to search (default: "todos")',
+					required: false,
+				},
+				entityField: {
+					type: 'string',
+					description: 'Field name in view to store entity (default: "selectedTodo")',
+					required: false,
+				},
 			},
 			required: ['id'],
 		},
@@ -711,19 +724,30 @@ const openModalSkill: Skill = {
 		if (!data.queries) data.queries = {}
 		if (!data.view) data.view = {}
 
-		const queries = data.queries as Data
-		const view = data.view as Data
-		const id = (payload as { id?: string })?.id
+		const payloadData = (payload as {
+			id?: string
+			queryKey?: string // Query key to search (e.g., "todos", "humans")
+			entityField?: string // Field name in view to store entity (e.g., "selectedTodo", "selectedHuman")
+		}) || {}
+
+		const id = payloadData.id
+		const queryKey = payloadData.queryKey || 'todos' // Default for backward compatibility
+		const entityField = payloadData.entityField || 'selectedTodo' // Default for backward compatibility
+
 		if (!id) return
 
-		// Try to find entity in todos (for backward compatibility)
-		// In future, this could be made more generic
-		if (queries.todos) {
-			const todos = (queries.todos as Array<{ id: string }>) || []
-			const entity = todos.find((t) => t.id === id)
+		const queries = data.queries as Data
+		const view = data.view as Data
+
+		// Search for entity in the specified query
+		if (queries[queryKey]) {
+			const entities = (queries[queryKey] as Array<{ id: string }>) || []
+			const entity = entities.find((e) => e.id === id)
 			if (entity) {
-				view.selectedTodo = entity
+				(view as any)[entityField] = entity
 				view.showModal = true
+				// Create new object reference to ensure reactivity
+				data.view = { ...view }
 			}
 		}
 	},
@@ -735,14 +759,30 @@ const closeModalSkill: Skill = {
 		name: 'Close Modal',
 		description: 'Closes the modal',
 		category: 'ui',
+		parameters: {
+			type: 'object',
+			properties: {
+				entityField: {
+					type: 'string',
+					description: 'Field name in view to clear (default: "selectedTodo")',
+					required: false,
+				},
+			},
+		},
 	},
-	execute: (data: Data) => {
+	execute: (data: Data, payload?: unknown) => {
 		// Ensure data.view exists
 		if (!data.view) data.view = {}
 
+		const payloadData = (payload as {
+			entityField?: string // Field name in view to clear (e.g., "selectedTodo", "selectedHuman")
+		}) || {}
+
+		const entityField = payloadData.entityField || 'selectedTodo' // Default for backward compatibility
+
 		const view = data.view as Data
-		view.showModal = false
-		view.selectedTodo = null
+		;(view as any).showModal = false
+		;(view as any)[entityField] = null
 		// Create new object reference to ensure reactivity
 		data.view = { ...view }
 	},
@@ -769,16 +809,24 @@ const validateEntityInputSkill: Skill = {
 					description: 'Data path to input field (default: "view.newTodoText")',
 					required: false,
 				},
+				errorMessage: {
+					type: 'string',
+					description: 'Custom error message (default: "Input text cannot be empty")',
+					required: false,
+				},
 			},
 		},
 	},
 	execute: (data: Data, payload?: unknown) => {
 		if (!data.view) data.view = {}
 		const view = data.view as Data
-		const { text, inputPath = 'view.newTodoText' } = (payload as {
+		const payloadData = (payload as {
 			text?: string
-			inputPath?: string
+			inputPath?: string // Data path to input field (e.g., "view.newTodoText")
+			errorMessage?: string // Custom error message
 		}) || {}
+
+		const { text, inputPath = 'view.newTodoText', errorMessage = 'Input text cannot be empty' } = payloadData
 
 		// Get text from payload or data path
 		let inputText = text
@@ -797,7 +845,7 @@ const validateEntityInputSkill: Skill = {
 		}
 
 		if (!inputText || !inputText.trim()) {
-			view.error = 'Input text cannot be empty'
+			view.error = errorMessage
 			data.view = { ...view }
 			return
 		}
