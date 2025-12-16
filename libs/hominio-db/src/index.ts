@@ -23,12 +23,8 @@ export { migrateSyncGoogleEmailToContact } from './migrations/20241220_sync-goog
 export { migrateSyncGoogleImageToProfile } from './migrations/20241220_sync-google-image-to-profile'
 // Migrations
 export { migrateSyncGoogleNameToProfile } from './migrations/20241220_sync-google-name-to-profile'
-// Manual Migrations (legacy - now uses generic utilities)
-export {
-	addRandomCarInstance,
-	migrateAddCars,
-	resetData,
-} from './migrations/manual-add-cars'
+// Data Reset Utility
+export { resetData } from './utilities/reset-data'
 export {
 	AccountProfile,
 	AppRoot,
