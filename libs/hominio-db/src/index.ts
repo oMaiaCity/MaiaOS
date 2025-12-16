@@ -9,6 +9,21 @@ export {
 } from './functions/computed-fields'
 // Dynamic Schema Migration
 export { createEntity, ensureSchema, findNestedSchema } from './functions/dynamic-schema-migration'
+// Generic CRUD Functions
+export {
+	createEntityGeneric,
+	updateEntityGeneric,
+	deleteEntityGeneric,
+	queryEntitiesGeneric,
+	getCoMapSchemaForSchemaName,
+} from './functions/generic-crud'
+// Schema Registry
+export {
+	getJsonSchema,
+	registerJsonSchema,
+	hasSchema,
+	getRegisteredSchemaNames,
+} from './schemas/schema-registry'
 // System Properties
 export { setSystemProps } from './functions/set-system-props'
 // Groups
@@ -36,11 +51,22 @@ export {
 // Data LeafTypes
 export { createHumanLeafType, createTodoLeafType } from './core/data/leaf-type-manager'
 // Data Leafs
-export { createHumanLeaf, createTodoLeaf } from './core/data/leaf-manager'
+export {
+	createHumanLeaf,
+	createTodoLeaf,
+	updateHumanLeaf,
+	deleteHumanLeaf,
+	updateTodoLeaf,
+	deleteTodoLeaf,
+} from './core/data/leaf-manager'
 // Data CompositeTypes
 export { createAssignedToCompositeType } from './core/data/composite-type-manager'
 // Data Composites
-export { createAssignedToComposite } from './core/data/composite-manager'
+export {
+	createAssignedToComposite,
+	updateAssignedToComposite,
+	deleteAssignedToComposite,
+} from './core/data/composite-manager'
 // Todo Manager
 export { createTodoEntity, updateTodoEntity, deleteTodoEntity, type TodoEntityData } from './core/data/todo-manager'
 

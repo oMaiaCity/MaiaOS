@@ -4,17 +4,18 @@
  * Functions for creating Composite Entity instances
  * Composites are Entity co-values that reference their CompositeType SchemaDefinition via @schema
  * and have relations that reference Leaf/Composite Entities via CoRefs
+ * Uses generic CRUD functions internally for runtime type safety
  */
 
-import { co } from 'jazz-tools'
-import { ensureSchema } from '../../functions/dynamic-schema-migration.js'
-import { jsonSchemaToCoMapShape } from '../../functions/dynamic-schema-migration.js'
-import { addLabelToSchema } from '../../functions/dynamic-schema-migration.js'
-import { setSystemProps } from '../../functions/set-system-props.js'
-import { assignedToCompositeTypeSchema } from '../../schemas/data/composite-types.js'
+import {
+	createEntityGeneric,
+	updateEntityGeneric,
+	deleteEntityGeneric,
+} from '../../functions/generic-crud.js'
 
 /**
  * Creates an ASSIGNED_TO Composite Entity instance
+ * Uses generic CREATE function internally for runtime type safety
  * 
  * @param account - The Jazz account
  * @param relation - Composite relation (x1: Todo Leaf/Composite, x2: Human Leaf/Composite, x3-x5: optional)
@@ -34,68 +35,74 @@ export async function createAssignedToComposite(
 ): Promise<any> {
 	console.log('[createAssignedToComposite] Creating ASSIGNED_TO Composite...')
 
-	// Ensure ASSIGNED_TO CompositeType schema exists
-	const assignedToType = await ensureSchema(account, 'ASSIGNED_TO', assignedToCompositeTypeSchema)
-
-	// Load root and ensure entities list exists
-	const loadedAccount = await account.$jazz.ensureLoaded({
-		resolve: { root: true },
+	// Use generic CREATE function - ensures schema exists, validates with Zod, sets system props
+	const composite = await createEntityGeneric(account, 'ASSIGNED_TO', {
+		x1: relation.x1,
+		x2: relation.x2,
+		x3: relation.x3,
+		x4: relation.x4,
+		x5: relation.x5,
 	})
-
-	if (!loadedAccount.root) {
-		throw new Error('Root does not exist')
-	}
-
-	const root = loadedAccount.root
-
-	// Ensure entities list exists
-	if (!root.$jazz.has('entities')) {
-		throw new Error('Entities list does not exist - run account migration first')
-	}
-
-	// Load entities list
-	const rootWithEntities = await root.$jazz.ensureLoaded({
-		resolve: { entities: true },
-	})
-	const entitiesList = rootWithEntities.entities
-
-	if (!entitiesList) {
-		throw new Error('Entities list could not be loaded')
-	}
-
-	// Get the owner group from the entities list
-	const entitiesOwner = (entitiesList as any).$jazz?.owner
-	if (!entitiesOwner) {
-		throw new Error('Cannot determine entities list owner')
-	}
-
-	// Add @label and @schema to Composite schema before creating CoMap
-	// assignedToCompositeTypeSchema already defines x1-x5 directly (flattened structure)
-	const compositeSchemaWithSystemProps = addLabelToSchema(assignedToCompositeTypeSchema)
-	const compositeShape = jsonSchemaToCoMapShape(compositeSchemaWithSystemProps)
-	const CompositeCoMap = co.map(compositeShape)
-
-	// Create Composite Entity with x1-x5 directly (flattened structure)
-	const composite = CompositeCoMap.create(
-		{
-			x1: relation.x1,
-			x2: relation.x2,
-			x3: relation.x3,
-			x4: relation.x4,
-			x5: relation.x5,
-		},
-		entitiesOwner,
-	)
-	await composite.$jazz.waitForSync()
-
-	// Set system properties - Composite references ASSIGNED_TO CompositeType SchemaDefinition
-	await setSystemProps(composite, assignedToType)
-
-	// Add Composite to root.entities list
-	entitiesList.$jazz.push(composite)
-	await root.$jazz.waitForSync()
 
 	console.log('[createAssignedToComposite] ASSIGNED_TO Composite created, ID:', composite.$jazz.id)
 	return composite
+}
+
+/**
+ * Updates an ASSIGNED_TO Composite Entity instance
+ * Uses generic UPDATE function internally for runtime type safety
+ * 
+ * @param coValue - The ASSIGNED_TO CoValue to update
+ * @param data - Partial ASSIGNED_TO data to update (x1-x5)
+ * @param account - Optional Jazz account (will try to extract from coValue if not provided)
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function updateAssignedToComposite(
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	coValue: any,
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	data: Partial<{
+		x1?: any
+		x2?: any
+		x3?: any
+		x4?: any
+		x5?: any
+	}>,
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	account?: any,
+): Promise<void> {
+	if (!coValue || !coValue.$isLoaded) {
+		throw new Error('CoValue is not loaded')
+	}
+
+	// Get account from parameter or try to extract from coValue
+	let resolvedAccount = account
+	
+	if (!resolvedAccount) {
+		const raw = (coValue as any).$jazz?.raw
+		if (raw?.core?.node?.account) {
+			resolvedAccount = raw.core.node.account
+		} else if (raw?.account) {
+			resolvedAccount = raw.account
+		}
+	}
+
+	if (!resolvedAccount) {
+		throw new Error('Cannot determine account from CoValue. Please pass account as parameter.')
+	}
+
+	await updateEntityGeneric(resolvedAccount, coValue, data)
+}
+
+/**
+ * Deletes an ASSIGNED_TO Composite Entity instance
+ * Uses generic DELETE function internally
+ * 
+ * @param account - The Jazz account
+ * @param entityId - ID of the ASSIGNED_TO entity to delete
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function deleteAssignedToComposite(account: any, entityId: string): Promise<void> {
+	await deleteEntityGeneric(account, entityId)
 }
 

@@ -38,15 +38,19 @@ export const todoStateMachine: StateMachineConfig = {
 			on: {
 				ADD_TODO: {
 					target: 'idle',
-					actions: ['@todo/validateTodo', '@todo/addTodo'],
+					actions: ['@entity/validateInput', '@entity/createEntity'],
+				},
+				CREATE_HUMAN: {
+					target: 'idle',
+					actions: ['@entity/createEntity'],
 				},
 				TOGGLE_TODO: {
 					target: 'idle',
-					actions: ['@todo/toggleTodo'],
+					actions: ['@entity/toggleStatus'],
 				},
 				REMOVE_TODO: {
 					target: 'idle',
-					actions: ['@todo/removeTodo'],
+					actions: ['@entity/deleteEntity'],
 				},
 				UPDATE_INPUT: {
 					target: 'idle',
@@ -54,7 +58,7 @@ export const todoStateMachine: StateMachineConfig = {
 				},
 				UPDATE_TODO_STATUS: {
 					target: 'idle',
-					actions: ['@todo/updateStatus'],
+					actions: ['@entity/updateEntity'],
 				},
 				SET_VIEW: {
 					target: 'idle',
@@ -62,7 +66,7 @@ export const todoStateMachine: StateMachineConfig = {
 				},
 				CLEAR_TODOS: {
 					target: 'idle',
-					actions: ['@todo/clearTodos'],
+					actions: ['@entity/clearEntities'],
 				},
 				OPEN_MODAL: {
 					target: 'idle',

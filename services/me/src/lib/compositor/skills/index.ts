@@ -4,12 +4,12 @@
  */
 
 export * from './registry'
-export * from './todo-skills'
+export * from './entity-skills'
 export * from './types'
 
 import { registerSkillsFromConfig } from './registry'
 // Import all skill modules
-import { todoSkills } from './todo-skills'
+import { entitySkills } from './entity-skills'
 import { vibesSkills } from './vibes-skills'
 
 // ========== AUTO-REGISTER ALL SKILLS ==========
@@ -27,7 +27,7 @@ export function registerAllSkills(): void {
 		return
 	}
 
-	registerSkillsFromConfig(todoSkills)
+	registerSkillsFromConfig(entitySkills)
 	registerSkillsFromConfig(vibesSkills)
 	// Add more skill registrations here as they're created
 

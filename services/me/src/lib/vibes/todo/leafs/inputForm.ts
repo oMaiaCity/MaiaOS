@@ -12,7 +12,9 @@ export const inputFormLeaf: LeafNode = {
 	events: {
 		submit: {
 			event: 'ADD_TODO',
-			// Will be triggered by submit button click
+			payload: {
+				schemaName: 'Todo',
+			},
 		},
 	},
 	children: [

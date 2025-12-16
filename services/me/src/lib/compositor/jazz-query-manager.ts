@@ -5,7 +5,7 @@
  */
 
 import type { Data } from './dataStore'
-import { findNestedSchema } from '@hominio/db'
+import { findNestedSchema, queryEntitiesGeneric } from '@hominio/db'
 
 /**
  * Plain object representation of a Todo (matches UI schema)
@@ -33,6 +33,7 @@ export class JazzQueryManager {
 
 	/**
 	 * Query entities by schema name and convert to plain objects
+	 * Uses generic queryEntitiesGeneric internally, but preserves entityMap tracking for subscriptions
 	 */
 	async queryEntitiesBySchema<T extends Record<string, unknown>>(
 		schemaName: string,
@@ -43,139 +44,14 @@ export class JazzQueryManager {
 		}
 
 		try {
-			// Load account root and entities list
-			const loadedAccount = await this.account.$jazz.ensureLoaded({
-				resolve: { root: { entities: true, schemata: true } },
-			})
-
-			if (!loadedAccount.root) {
-				return []
-			}
-
-			const root = loadedAccount.root
-
-			if (!root.$jazz.has('entities')) {
-				return []
-			}
-
-			const entitiesList = root.entities
-			if (!entitiesList) {
-				return []
-			}
-
-			// Ensure entities list is loaded
-			await entitiesList.$jazz.ensureLoaded()
-			const entityArray = Array.from(entitiesList)
-
-			// Find the schema CoValue for this schema name
-			const schemaCoValue = await findNestedSchema(this.account, schemaName)
-			if (!schemaCoValue) {
-				return []
-			}
-
-			const targetSchemaId = schemaCoValue.$jazz?.id
-			if (!targetSchemaId) {
-				return []
-			}
-
-			// Filter entities by schema
-			const entities: T[] = []
-
-			for (let i = 0; i < entityArray.length; i++) {
-				const entity = entityArray[i]
-				if (!entity || typeof entity !== 'object' || !('$jazz' in entity)) {
-					continue
-				}
-
-				// Ensure entity is loaded with @schema resolved
-				const loadedEntity = await (entity as any).$jazz.ensureLoaded({
-					resolve: { '@schema': true },
-				})
-
-				if (!loadedEntity.$isLoaded) {
-					continue
-				}
-
-				// Check if entity has @schema property set
-				const hasSchemaProperty = (loadedEntity as any).$jazz?.has('@schema')
-				
-				if (!hasSchemaProperty) {
-					continue
-				}
-
-				// Get @schema - it's stored as a CoValue reference, need to resolve it
-				// Try accessing via property first (might be already resolved)
-				let entitySchema = (loadedEntity as any)['@schema']
-				
-				// If not accessible directly, try to get the raw value and load it via node
-				if (!entitySchema || typeof entitySchema !== 'object' || !('$jazz' in entitySchema)) {
-					// Get the raw CoValue to access the node
-					const rawEntity = (loadedEntity as any).$jazz?.raw
-					if (!rawEntity) {
-						continue
-					}
-
-					// Get node from account or entity
-					const node = rawEntity.core?.node || (this.account as any).$jazz?.raw?.core?.node
-					if (!node) {
-						continue
-					}
-
-					// Get @schema ID from the entity's snapshot
-					const entitySnapshot = rawEntity.toJSON() as any
-					const schemaId = entitySnapshot?.['@schema']
-					
-					if (!schemaId || typeof schemaId !== 'string') {
-						continue
-					}
-
-					// Load the schema CoValue by ID
-					try {
-						const loadedSchemaValue = await node.load(schemaId as any)
-						if (loadedSchemaValue === 'unavailable') {
-							continue
-						}
-						entitySchema = loadedSchemaValue
-					} catch (_error) {
-						continue
-					}
-				}
-
-				// Now entitySchema should be a CoValue - get its ID
-				let schemaId: string | undefined
-				if (entitySchema && typeof entitySchema === 'object' && '$jazz' in entitySchema) {
-					schemaId = (entitySchema as any).$jazz?.id
-				} else if (entitySchema && typeof entitySchema === 'object' && 'id' in entitySchema) {
-					// Might be a raw CoValue with id property
-					schemaId = (entitySchema as any).id
-				}
-
-				if (!schemaId) {
-					continue
-				}
-
-				if (schemaId === targetSchemaId) {
-					// Ensure entity is fully loaded with all properties before converting
-					const fullyLoadedEntity = await (loadedEntity as any).$jazz.ensureLoaded({
-						resolve: {
-							text: true,
-							status: true,
-							endDate: true,
-							duration: true,
-						},
-					})
-					
-					
-					// This entity matches the schema - convert to plain object
-					const plainObject = converter(fullyLoadedEntity)
-					entities.push(plainObject)
-
-					// Store fully loaded CoValue reference for later updates (not the partially loaded one)
-					if (plainObject.id && typeof plainObject.id === 'string') {
-						this.entityMap.set(plainObject.id, fullyLoadedEntity)
-					}
-				}
-			}
+			// Use generic query function internally - pass entityMap for CoValue tracking
+			// This preserves the entityMap needed for reactive subscriptions
+			const entities = await queryEntitiesGeneric<T>(
+				this.account,
+				schemaName,
+				converter,
+				this.entityMap, // Pass entityMap so CoValues are tracked for subscriptions
+			)
 
 			return entities
 		} catch (error) {
