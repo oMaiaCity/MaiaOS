@@ -1,23 +1,24 @@
 /**
  * Timeline Content Composite Configuration
- * Displays todos in timeline view
+ * Displays todos in timeline view with header and content sections
  */
 
 import type { CompositeConfig } from '../../../compositor/view/types'
-import { timelineViewLeaf } from '../leafs'
 
 export const timelineContentComposite: CompositeConfig = {
 	id: 'todo.composite.content.timeline',
 	container: {
-		layout: 'grid',
-		// Defaults handle: h-full w-full overflow-hidden grid @container
-		// Only need to specify columns/rows and spacing
-		class: 'pt-2 grid-cols-1 min-h-0',
+		layout: 'flex',
+		class: 'flex flex-col gap-4 h-full min-h-0',
 	},
 	children: [
 		{
-			slot: 'timeline',
-			leaf: timelineViewLeaf,
+			slot: 'header',
+			leafId: 'todo.leaf.timelineHeader',
+		},
+		{
+			slot: 'content',
+			leafId: 'todo.leaf.timelineList',
 		},
 	],
 }

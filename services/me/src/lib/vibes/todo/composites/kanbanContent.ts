@@ -14,7 +14,7 @@ export function generateKanbanContentChildren(
 ): CompositeConfig['children'] {
 	return columns.map((column) => ({
 		slot: `${column.key}-column`,
-		leafId: `data.view.kanbanColumnIds.${column.key}`,
+		compositeId: `data.view.kanbanColumnIds.${column.key}`, // Now references composites instead of leaves
 	}))
 }
 
@@ -31,15 +31,15 @@ export const kanbanContentComposite: CompositeConfig = {
 		// These will be dynamically generated, but we need static fallback for initial render
 		{
 			slot: 'todo-column',
-			leafId: 'data.view.kanbanColumnIds.todo',
+			compositeId: 'data.view.kanbanColumnIds.todo',
 		},
 		{
 			slot: 'in-progress-column',
-			leafId: 'data.view.kanbanColumnIds.in-progress',
+			compositeId: 'data.view.kanbanColumnIds.in-progress',
 		},
 		{
 			slot: 'done-column',
-			leafId: 'data.view.kanbanColumnIds.done',
+			compositeId: 'data.view.kanbanColumnIds.done',
 		},
 	],
 }

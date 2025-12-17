@@ -1,6 +1,7 @@
 /**
  * Todo List Leaf Component
  * Responsive using container queries - adapts from 256px to 1280px+
+ * Displays todos in a scrollable list using foreach binding
  */
 
 import type { LeafNode } from '../../../compositor/view/leaf-types'
@@ -14,7 +15,7 @@ export const todoListLeaf: LeafNode = {
 		foreach: {
 			items: 'data.queries.todos',
 			key: 'id',
-			leaf: todoItemLeaf,
+			leaf: todoItemLeaf, // Reference todoItemLeaf - will be resolved
 		},
 	},
 }

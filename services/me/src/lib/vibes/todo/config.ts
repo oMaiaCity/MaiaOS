@@ -16,13 +16,18 @@ import {
 import { generateKanbanContentChildren } from './composites/kanbanContent'
 import {
 	defaultKanbanColumns,
+	generateKanbanColumnComposites,
 	generateKanbanColumnLeafs,
-} from './leafs/kanbanColumn'
+} from './composites/kanbanColumn'
 import {
 	errorLeaf,
 	inputFormLeaf,
-	modalLeaf,
-	timelineViewLeaf,
+	modalCloseButtonLeaf,
+	modalContentLeaf,
+	modalTitleLeaf,
+	modalWrapperLeaf,
+	timelineHeaderLeaf,
+	timelineListLeaf,
 	titleLeaf,
 	todoItemLeaf,
 	todoListLeaf,
@@ -33,11 +38,13 @@ import {
 	viewButtonTimeline,
 	viewButtonTimelineActive,
 } from './leafs'
+import { modalComposite } from './composites/modal'
 
-// Generate kanban column leafs dynamically from column definitions
+// Generate kanban column composites and leafs dynamically from column definitions
+const kanbanColumnComposites = generateKanbanColumnComposites(defaultKanbanColumns)
 const kanbanColumnLeafs = generateKanbanColumnLeafs(defaultKanbanColumns)
 
-// Update kanban content composite with dynamic children
+// Update kanban content composite with dynamic children (now references composites)
 kanbanContentComposite.children = generateKanbanContentChildren(defaultKanbanColumns)
 import { todoStateMachine } from './stateMachine'
 import { todoView } from './views'
@@ -53,15 +60,21 @@ if (typeof window !== 'undefined') {
 		listContentComposite,
 		kanbanContentComposite,
 		timelineContentComposite,
+		modalComposite,
+		...kanbanColumnComposites, // Dynamically generated column composites
 		// Leaves
 		errorLeaf,
 		inputFormLeaf,
-		...kanbanColumnLeafs, // Dynamically generated column leafs
-		modalLeaf,
-		timelineViewLeaf,
+		modalWrapperLeaf,
+		modalCloseButtonLeaf,
+		modalTitleLeaf,
+		modalContentLeaf,
+		timelineHeaderLeaf,
+		timelineListLeaf,
 		titleLeaf,
 		todoItemLeaf,
 		todoListLeaf,
+		...kanbanColumnLeafs, // Dynamically generated column leafs (headers, content, count)
 		viewButtonKanban,
 		viewButtonKanbanActive,
 		viewButtonList,

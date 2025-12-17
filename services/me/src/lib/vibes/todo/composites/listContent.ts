@@ -4,7 +4,6 @@
  */
 
 import type { CompositeConfig } from '../../../compositor/view/types'
-import { todoListLeaf } from '../leafs'
 
 export const listContentComposite: CompositeConfig = {
 	id: 'todo.composite.content.list',
@@ -17,10 +16,7 @@ export const listContentComposite: CompositeConfig = {
 	children: [
 		{
 			slot: 'list',
-			leaf: {
-				...todoListLeaf,
-				classes: todoListLeaf.classes ? `${todoListLeaf.classes} h-full` : 'h-full',
-			},
+			leafId: 'todo.leaf.todoList',
 		},
 	],
 }

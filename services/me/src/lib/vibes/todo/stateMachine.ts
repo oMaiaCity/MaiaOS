@@ -4,12 +4,12 @@
  */
 
 import type { Data, StateMachineConfig } from '../../compositor/dataStore'
-import { defaultKanbanColumns } from './leafs/kanbanColumn'
+import { defaultKanbanColumns } from './composites/kanbanColumn'
 
 // Initialize kanban column IDs from column definitions
 const initialKanbanColumnIds: Record<string, string> = {}
 for (const column of defaultKanbanColumns) {
-	initialKanbanColumnIds[column.key] = `todo.leaf.kanbanColumn.${column.key}.expanded`
+	initialKanbanColumnIds[column.key] = `todo.composite.kanbanColumn.${column.key}.expanded`
 }
 
 export const todoStateMachine: StateMachineConfig = {

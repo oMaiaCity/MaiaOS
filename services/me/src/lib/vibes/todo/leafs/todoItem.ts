@@ -8,13 +8,13 @@ import type { LeafNode } from '../../../compositor/view/leaf-types'
 export const todoItemLeaf: LeafNode = {
 	id: 'todo.leaf.todoItem',
 	tag: 'div',
-	classes: 'flex items-center gap-1 @xs:gap-1.5 @sm:gap-2 @md:gap-3 px-1.5 py-1 @xs:px-2 @xs:py-1.5 @sm:px-3 @sm:py-2 @md:px-4 @md:py-3 rounded-lg @sm:rounded-xl @md:rounded-2xl bg-slate-100 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)]',
+	classes: 'flex items-center gap-1.5 @xs:gap-2 @sm:gap-2 @md:gap-3 px-2 py-1.5 @xs:px-2.5 @xs:py-2 @sm:px-3 @sm:py-2 @md:px-4 @md:py-3 rounded-lg @sm:rounded-xl @md:rounded-2xl bg-slate-100 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)]',
 	children: [
 		// Unchecked checkbox button
 		{
 			tag: 'button',
 			attributes: { type: 'button' },
-			classes: 'w-4 h-4 @xs:w-5 @xs:h-5 @sm:w-6 @sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-1 @sm:focus:ring-2 focus:ring-[#001a42] focus:ring-offset-0.5 @sm:focus:ring-offset-1 cursor-pointer border-slate-300 bg-slate-100 hover:border-slate-400 hover:bg-slate-200 shrink-0',
+			classes: 'w-5 h-5 @xs:w-5 @xs:h-5 @sm:w-6 @sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-1 @sm:focus:ring-2 focus:ring-[#001a42] focus:ring-offset-0.5 @sm:focus:ring-offset-1 cursor-pointer border-slate-300 bg-slate-100 hover:border-slate-400 hover:bg-slate-200 shrink-0',
 			bindings: {
 				visible: "item.status !== 'done'",
 			},
@@ -29,7 +29,7 @@ export const todoItemLeaf: LeafNode = {
 					tag: 'icon',
 					icon: {
 						name: 'solar:circle-bold',
-						classes: 'w-2 h-2 @xs:w-3 @xs:h-3 @sm:w-4 @sm:h-4 text-slate-600 pointer-events-none',
+						classes: 'w-3 h-3 @xs:w-3 @xs:h-3 @sm:w-4 @sm:h-4 text-slate-600 pointer-events-none',
 					},
 				},
 			],
@@ -38,7 +38,7 @@ export const todoItemLeaf: LeafNode = {
 		{
 			tag: 'button',
 			attributes: { type: 'button' },
-			classes: 'w-4 h-4 @xs:w-5 @xs:h-5 @sm:w-6 @sm:h-6 rounded-full border-2 border-green-500 bg-green-100 flex items-center justify-center transition-all duration-200 hover:border-green-600 hover:bg-green-200 focus:outline-none focus:ring-1 @sm:focus:ring-2 focus:ring-[#001a42] focus:ring-offset-0.5 @sm:focus:ring-offset-1 cursor-pointer relative shrink-0',
+			classes: 'w-5 h-5 @xs:w-5 @xs:h-5 @sm:w-6 @sm:h-6 rounded-full border-2 border-green-500 bg-green-100 flex items-center justify-center transition-all duration-200 hover:border-green-600 hover:bg-green-200 focus:outline-none focus:ring-1 @sm:focus:ring-2 focus:ring-[#001a42] focus:ring-offset-0.5 @sm:focus:ring-offset-1 cursor-pointer relative shrink-0',
 			bindings: {
 				visible: "item.status === 'done'",
 			},
@@ -53,7 +53,7 @@ export const todoItemLeaf: LeafNode = {
 					tag: 'icon',
 					icon: {
 						name: 'mingcute:check-2-line',
-						classes: 'w-2 h-2 @xs:w-3 @xs:h-3 @sm:w-4 @sm:h-4 text-green-500 pointer-events-none',
+						classes: 'w-3 h-3 @xs:w-3 @xs:h-3 @sm:w-4 @sm:h-4 text-green-500 pointer-events-none',
 					},
 				},
 			],
@@ -62,7 +62,7 @@ export const todoItemLeaf: LeafNode = {
 		{
 			tag: 'input',
 			attributes: { type: 'text' },
-			classes: 'flex-1 text-[10px] @xs:text-xs @sm:text-sm font-medium transition-all duration-200 line-through text-slate-400 min-w-0 bg-transparent border-none outline-none focus:outline-none focus:ring-0 px-0',
+			classes: 'flex-1 text-xs @xs:text-xs @sm:text-sm font-medium transition-all duration-200 line-through text-slate-400 min-w-0 bg-transparent border-none outline-none focus:outline-none focus:ring-0 px-0',
 			bindings: {
 				value: 'item.name',
 				visible: "item.status === 'done'",
@@ -81,7 +81,7 @@ export const todoItemLeaf: LeafNode = {
 		{
 			tag: 'input',
 			attributes: { type: 'text' },
-			classes: 'flex-1 text-[10px] @xs:text-xs @sm:text-sm text-slate-700 font-medium transition-all duration-200 min-w-0 bg-transparent border-none outline-none focus:outline-none focus:ring-0 px-0',
+			classes: 'flex-1 text-xs @xs:text-xs @sm:text-sm text-slate-700 font-medium transition-all duration-200 min-w-0 bg-transparent border-none outline-none focus:outline-none focus:ring-0 px-0',
 			bindings: {
 				value: 'item.name',
 				visible: "item.status !== 'done'",
@@ -140,7 +140,7 @@ export const todoItemLeaf: LeafNode = {
 		{
 			tag: 'button',
 			attributes: { type: 'button' },
-			classes: 'px-1 py-0.5 @xs:px-1.5 @xs:py-1 @sm:px-2 @sm:py-1 text-[10px] @xs:text-xs @sm:text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded-full transition-all duration-200 w-4 h-4 @xs:w-5 @xs:h-5 @sm:w-6 @sm:h-6 flex items-center justify-center shrink-0',
+			classes: 'px-1 py-0.5 @xs:px-1.5 @xs:py-1 @sm:px-2 @sm:py-1 text-xs @xs:text-xs @sm:text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded-full transition-all duration-200 w-5 h-5 @xs:w-5 @xs:h-5 @sm:w-6 @sm:h-6 flex items-center justify-center shrink-0',
 			events: {
 				click: {
 					event: 'REMOVE_TODO',

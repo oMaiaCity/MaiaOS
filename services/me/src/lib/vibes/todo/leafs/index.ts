@@ -5,13 +5,12 @@
 
 export { errorLeaf } from './error'
 export { inputFormLeaf } from './inputForm'
-export {
-	defaultKanbanColumns,
-	generateKanbanColumnLeafs,
-	type KanbanColumnConfig,
-} from './kanbanColumn'
-export { modalLeaf } from './modal'
-export { timelineViewLeaf } from './timelineView'
+export { modalWrapperLeaf } from './modalWrapper'
+export { modalCloseButtonLeaf } from './modalCloseButton'
+export { modalTitleLeaf } from './modalTitle'
+export { modalContentLeaf } from './modalContent'
+export { timelineHeaderLeaf } from './timelineHeader'
+export { timelineListLeaf } from './timelineList'
 export { titleLeaf } from './title'
 export { todoItemLeaf } from './todoItem'
 export { todoListLeaf } from './todoList'

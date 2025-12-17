@@ -1,11 +1,10 @@
 /**
  * View Configuration
- * Main view that combines root composite and modal leaf
+ * Main view that combines root composite and modal
  */
 
 import type { ViewConfig } from '../../../compositor/view/types'
 import { rootComposite } from '../composites'
-import { modalLeaf } from '../leafs'
 
 export const todoView: ViewConfig = {
 	id: 'todo.view.root',
@@ -13,10 +12,11 @@ export const todoView: ViewConfig = {
 		...rootComposite,
 		children: [
 			...rootComposite.children,
-			// Modal Leaf - Popup modal for todo details
+			// Modal - Popup modal for todo details
+			// Uses leafId reference for the modal wrapper (handles backdrop + content)
 			{
 				slot: 'modal',
-				leaf: modalLeaf,
+				leafId: 'todo.leaf.modalWrapper',
 			},
 		],
 	},
