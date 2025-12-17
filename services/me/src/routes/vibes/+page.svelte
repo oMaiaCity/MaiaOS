@@ -5,6 +5,7 @@
   import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
   import Vibe from "$lib/compositor/view/Vibe.svelte";
   import { todoVibeConfig } from "$lib/vibes/todo/config";
+  import { humansVibeConfig } from "$lib/vibes/humans/config";
   import { vibesVibeConfig } from "$lib/vibes/vibes/config";
 
   // Get global Jazz account from context (AccountCoState instance)
@@ -16,6 +17,7 @@
   // Available vibe configs
   const vibeConfigs: Record<string, typeof vibesVibeConfig> = {
     todo: todoVibeConfig,
+    humans: humansVibeConfig,
   };
 
   // Determine which config to use (reactive to route changes)

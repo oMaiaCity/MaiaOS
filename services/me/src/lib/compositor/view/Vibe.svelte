@@ -141,32 +141,49 @@
     return definitions;
   });
 
-  // Create useQuery hooks at top level - must be called unconditionally
-  // Get the first query definition reactively (for now, support single query)
-  // TODO: Support multiple queries by creating hooks for each at top level
-  const firstQueryDef = $derived.by(() => {
-    const defs = queryDefinitions;
-    return defs.length > 0 ? defs[0] : null;
+  // Create useQuery hooks for each query definition reactively
+  // Since useQuery uses Svelte runes, we need to call it unconditionally at top level
+  // We'll create hooks for up to 10 queries (reasonable limit for most vibes)
+  // and map them to queryDefinitions reactively using derived schema names
+  
+  // Create schema accessor functions - these will be called INSIDE useQuery's $derived.by()
+  // This follows the original CoState reactive pattern: access reactive state inside derived
+  const getSchema0 = () => queryDefinitions[0]?.schemaName || '';
+  const getSchema1 = () => queryDefinitions[1]?.schemaName || '';
+  const getOptions0 = () => queryDefinitions[0]?.options;
+  const getOptions1 = () => queryDefinitions[1]?.options;
+  
+  // Call useQuery with accessor functions at top level (unconditionally)
+  // useQuery will call these functions inside its $derived.by() to access reactively
+  const query0 = useQuery(accountCoState, getSchema0, getOptions0);
+  const query1 = useQuery(accountCoState, getSchema1, getOptions1);
+  
+  // Map queries to their queryKeys reactively
+  const queryHooks = $derived.by(() => {
+    const hooks = new Map<string, ReturnType<typeof useQuery>>();
+    const queries = [query0, query1];
+    
+    for (let i = 0; i < Math.min(queryDefinitions.length, queries.length); i++) {
+      const def = queryDefinitions[i];
+      if (def && def.schemaName && queries[i]) {
+        hooks.set(def.queryKey, queries[i]);
+      }
+    }
+    
+    return hooks;
   });
-
-  // Call useQuery at top level (unconditionally) - hooks using runes must be at top level
-  // Pass AccountCoState directly - useQuery will access .current inside $derived for reactivity
-  // For now, hardcode 'Todo' schema - will make generic later once basic query works
-  const todosQuery = useQuery(
-    accountCoState,
-    'Todo',
-    undefined
-  );
 
   // Collect all query results reactively
   const queryResults = $derived.by(() => {
     const results = new Map<string, Array<Record<string, unknown>>>();
+    const hooks = queryHooks;
     
-    // Add todos query result if available
-    if (firstQueryDef && todosQuery && todosQuery.entities) {
-      const entities = todosQuery.entities;
-      if (Array.isArray(entities)) {
-        results.set(firstQueryDef.queryKey, entities);
+    for (const [queryKey, hook] of hooks) {
+      if (hook && hook.entities) {
+        const entities = hook.entities;
+        if (Array.isArray(entities)) {
+          results.set(queryKey, entities);
+        }
       }
     }
     

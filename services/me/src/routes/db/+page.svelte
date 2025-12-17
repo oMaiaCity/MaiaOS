@@ -320,25 +320,6 @@
     }
   }
 
-  // Handle creating Sam Human Leaf
-  async function handleCreateSamHuman() {
-    if (!me || !me.$isLoaded) return;
-
-    try {
-      await createHumanLeaf(me, {
-        id: "human_sam",
-        name: "Sam",
-        email: "sam@example.com",
-        dateOfBirth: new Date("1990-01-15"),
-      });
-      // Mutations are reactive - CoState will automatically update
-      // No need to manually clear cache or reload
-    } catch (error) {
-      console.error("Error creating Sam Human Leaf:", error);
-    }
-  }
-
-
   // Handle creating "assigned" Composite instance
   async function handleCreateAssignedToComposite() {
     if (!me || !me.$isLoaded) return;
@@ -535,12 +516,6 @@
                 <!-- Action Buttons -->
                 <div class="mt-6 pt-6 border-t border-slate-200">
                   <div class="flex flex-col gap-2">
-                    <button
-                      onclick={() => handleCreateSamHuman()}
-                      class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
-                    >
-                      Create Sam (Human)
-                    </button>
                     <button
                       onclick={() => handleCreateAssignedToComposite()}
                       class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"

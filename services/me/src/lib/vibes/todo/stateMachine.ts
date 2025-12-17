@@ -42,10 +42,6 @@ export const todoStateMachine: StateMachineConfig = {
 					target: 'idle',
 					actions: ['@entity/validateInput', '@entity/createEntity'],
 				},
-				CREATE_HUMAN: {
-					target: 'idle',
-					actions: ['@entity/createEntity'],
-				},
 				TOGGLE_TODO: {
 					target: 'idle',
 					actions: ['@entity/toggleStatus'],
@@ -158,26 +154,6 @@ export const todoStateMachine: StateMachineConfig = {
 				view.newTodoText = ''
 				view.error = null
 				data.view = { ...view }
-			} else if (schemaName === 'Human' && !payloadData.entityData) {
-				// Human-specific: Generate random human data if not provided
-				const firstNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry', 'Ivy', 'Jack', 'Kate', 'Liam', 'Mia', 'Noah', 'Olivia', 'Paul', 'Quinn', 'Ruby', 'Sam', 'Tina']
-				const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee']
-				
-				const firstName = firstNames[Math.floor(Math.random() * firstNames.length)]
-				const lastName = lastNames[Math.floor(Math.random() * lastNames.length)]
-				const name = `${firstName} ${lastName}`
-				
-				const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`
-				
-				const now = new Date()
-				const yearsAgo = Math.floor(Math.random() * (80 - 18 + 1)) + 18
-				const dateOfBirth = new Date(now.getFullYear() - yearsAgo, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1)
-
-				entityData = {
-					name,
-					email,
-					dateOfBirth, // Pass Date object
-				}
 			}
 
 			// Call the generic skill with built entityData
