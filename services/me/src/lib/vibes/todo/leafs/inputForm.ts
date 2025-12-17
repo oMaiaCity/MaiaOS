@@ -22,7 +22,9 @@ export const inputFormLeaf: LeafNode = {
 			tag: 'input',
 			attributes: {
 				type: 'text',
+				name: 'new-todo-input',
 				placeholder: 'Add a new todo...',
+				autocomplete: 'off',
 			},
 			classes: 'flex-1 px-2 py-1 @xs:px-3 @xs:py-1.5 @sm:px-4 @sm:py-2 rounded-xl @sm:rounded-2xl bg-slate-100 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] focus:outline-none focus:ring-1 @sm:focus:ring-2 focus:ring-slate-500 focus:border-slate-300 transition-all text-[10px] @xs:text-xs @sm:text-sm @md:text-base text-slate-900 placeholder:text-slate-400',
 			bindings: { value: 'data.view.newTodoText' },

@@ -595,10 +595,9 @@
       } else {
         // Has input handler: set value (including empty string to allow clearing)
         // The input handler will manage updates, but we need to sync empty values too
+        // ALWAYS set the value (even if empty string) to override browser autocomplete
         const value = inputValue;
-        if (value !== undefined) {
-          attrs.value = String(value);
-        }
+        attrs.value = value !== undefined ? String(value) : "";
       }
     }
 

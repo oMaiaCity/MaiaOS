@@ -79,6 +79,7 @@ const ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
 	button: new Set(['type', 'disabled', 'aria-label', 'title', 'form', 'formaction', 'formmethod']),
 	input: new Set([
 		'type',
+		'name',
 		'placeholder',
 		'value',
 		'disabled',
@@ -88,6 +89,7 @@ const ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
 		'max',
 		'step',
 		'pattern',
+		'autocomplete',
 		'aria-label',
 		'aria-describedby',
 	]),
