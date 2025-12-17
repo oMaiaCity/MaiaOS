@@ -182,41 +182,17 @@
     effectiveResolvedType?.type === 'colist' || effectiveResolvedType?.extendedType === 'CoList' || displayType === 'COLIST',
   );
 
-  // Check if this field is editable (string type, not computed, has parentCoValue)
-  const isEditableString = $derived(
-    typeof propValue === "string" &&
-    !isComputedField &&
-    !isCoID &&
-    !isObject &&
-    parentCoValue &&
-    parentCoValue.$isLoaded &&
-    parentCoValue.$jazz
-  );
-
-  // Local state for input value (to prevent overwriting while typing)
-  let inputValue = $state<string>("");
-  let isInputFocused = $state(false);
-
-  // Sync inputValue with propValue when not focused
-  $effect(() => {
-    if (!isInputFocused) {
-      inputValue = typeof propValue === "string" ? propValue : "";
-    }
-  });
 </script>
 
 <button
   type="button"
-  class="w-full text-left bg-slate-100 rounded-2xl p-3 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm hoverable {isClickable &&
+  class="w-full text-left bg-slate-100 rounded-2xl p-3 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm {isClickable &&
   !isLoading
-    ? 'cursor-pointer hover:border-slate-300'
+    ? 'hoverable'
     : 'cursor-default'}"
   onclick={() => {
     // Prevent navigation during loading
     if (isLoading) return;
-    
-    // Don't navigate if this is an editable string field (let the input handle clicks)
-    if (isEditableString) return;
 
     if (isCoID && typeof propValue === "string" && onNavigate) {
       onNavigate(propValue, propKey);
@@ -238,7 +214,7 @@
     <!-- Right side: Value and Badge -->
     <div class="flex items-center gap-2 flex-1 justify-end min-w-0">
       {#if isCoID && node}
-        <div class="inline-flex items-center gap-2 text-left min-w-0">
+        <div class="inline-flex items-center gap-2 text-right min-w-0">
           {#if isLoading}
             <!-- Loading indicator -->
             <div class="flex items-center gap-1 text-xs text-slate-500">
@@ -284,7 +260,7 @@
         </div>
       {:else if isObject}
         <!-- Object value display - clickable (just arrow, no preview) -->
-        <div class="inline-flex items-center gap-2 text-left min-w-0">
+        <div class="inline-flex items-center gap-2 text-right min-w-0">
           <svg
             class="w-3 h-3 text-slate-400 shrink-0"
             fill="none"
@@ -300,51 +276,8 @@
           </svg>
         </div>
       {:else}
-        {#if isEditableString}
-          <!-- Editable string input -->
-          <input
-            type="text"
-            bind:value={inputValue}
-            class="text-xs text-slate-600 bg-transparent border-none outline-none focus:outline-none focus:ring-0 px-0 w-full min-w-0"
-            onclick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-            }}
-            onmousedown={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-            }}
-            onfocus={(e) => {
-              e.stopPropagation();
-              isInputFocused = true;
-            }}
-            onblur={(e) => {
-              isInputFocused = false;
-              const newValue = inputValue;
-              if (newValue !== propValue && parentCoValue && parentCoValue.$isLoaded) {
-                try {
-                  parentCoValue.$jazz.set(propKey, newValue);
-                  parentCoValue.$jazz.waitForSync();
-                } catch (err) {
-                  console.error(`Failed to update ${propKey}:`, err);
-                  // Reset to original value on error
-                  inputValue = typeof propValue === "string" ? propValue : "";
-                }
-              } else {
-                // Reset to propValue if no change was made
-                inputValue = typeof propValue === "string" ? propValue : "";
-              }
-            }}
-            onkeydown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                (e.target as HTMLInputElement).blur();
-              }
-            }}
-          />
-        {:else}
-          <!-- Primitive value display -->
-          <span class="text-xs text-slate-600 break-all min-w-0">
+        <!-- Primitive value display -->
+        <span class="text-xs text-slate-600 break-all min-w-0 text-right">
             {propValue instanceof Date
               ? propValue.toLocaleDateString() + " " + propValue.toLocaleTimeString()
               : typeof propValue === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(propValue)
@@ -359,8 +292,7 @@
                     : propValue === null
                       ? "null"
                       : String(propValue)}
-          </span>
-        {/if}
+        </span>
       {/if}
 
       <Badge type={displayType}>{displayType}</Badge>

@@ -28,9 +28,9 @@
     schemaDefinition: schemaDefinitionProp,
   }: Props = $props();
 
-  // Show all properties including @label and @schema
+  // Show all properties except system properties starting with "@" (shown in metadata sidebar)
   const entries = $derived(
-    Object.entries(properties),
+    Object.entries(properties).filter(([key]) => !key.startsWith('@')),
   );
 
   // Use schema definition from prop if provided, otherwise compute from parentCoValue
