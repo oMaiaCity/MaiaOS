@@ -5,6 +5,7 @@
  */
 
 import { type Writable, writable } from 'svelte/store'
+import type { QueryOptions } from './jazz-query-manager'
 
 // ========== TYPES ==========
 
@@ -247,54 +248,103 @@ export function createDataStore(
 	// Note: If account is not loaded yet, Vibe.svelte will handle initialization separately
 	if (jazzAccount && (jazzAccount as any).$isLoaded) {
 		// Account is already loaded - initialize immediately
-		;(async () => {
-			try {
-				// Store account reference in data for skills to access
-				dataStore.update((data) => {
-					return { ...data, _jazzAccount: jazzAccount }
-				})
+		initializeQueries(dataStore, config, jazzAccount).catch((_error) => {
+			// Jazz initialization failed - silently fail
+		})
+	}
 
-				// Import JazzQueryManager dynamically to avoid circular dependencies
-				const { JazzQueryManager } = await import('./jazz-query-manager.js')
-				const queryManager = new JazzQueryManager(jazzAccount)
-				dataStore.jazzQueryManager = queryManager
+	return dataStore
+}
 
-				// Store queryManager reference in data for skills to access
-				dataStore.update((data) => {
-					return { ...data, _jazzQueryManager: queryManager }
-				})
+/**
+ * Initialize queries from config.data.queries
+ * Reads query definitions and sets up Jazz queries with subscriptions
+ */
+export async function initializeQueries(
+	dataStore: DataStore,
+	config: StateMachineConfig,
+	jazzAccount: any,
+): Promise<void> {
+	try {
+		// Store account reference in data for skills to access
+		dataStore.update((data) => {
+			return { ...data, _jazzAccount: jazzAccount }
+		})
 
-				// Query todos and update data.queries.todos
-				const todos = await queryManager.queryEntitiesBySchema(
-					'Todo',
-					queryManager.coValueToTodoPlainObject.bind(queryManager) as (coValue: any) => Record<string, unknown>,
+		// Import JazzQueryManager dynamically to avoid circular dependencies
+		const { JazzQueryManager } = await import('./jazz-query-manager.js')
+		const queryManager = new JazzQueryManager(jazzAccount)
+		dataStore.jazzQueryManager = queryManager
+
+		// Store queryManager reference in data for skills to access
+		dataStore.update((data) => {
+			return { ...data, _jazzQueryManager: queryManager }
+		})
+
+		// Read query definitions from config.data.queries
+		const queries = config.data?.queries
+		if (!queries || typeof queries !== 'object' || Array.isArray(queries)) {
+			return
+		}
+
+		const queriesObj = queries as Record<string, unknown>
+
+		// Initialize each query definition
+		for (const [queryKey, queryValue] of Object.entries(queriesObj)) {
+			// Check if this is a query definition (object with schemaName)
+			if (
+				queryValue &&
+				typeof queryValue === 'object' &&
+				!Array.isArray(queryValue) &&
+				'schemaName' in queryValue
+			) {
+				const queryConfig = queryValue as { schemaName: string } & QueryOptions
+				const schemaName = queryConfig.schemaName
+
+				if (!schemaName || typeof schemaName !== 'string') {
+					continue
+				}
+
+				// Extract query options (filter, sort, limit, offset)
+				const queryOptions: QueryOptions = {}
+				if (queryConfig.filter) queryOptions.filter = queryConfig.filter
+				if (queryConfig.sort) queryOptions.sort = queryConfig.sort
+				if (queryConfig.limit !== undefined) queryOptions.limit = queryConfig.limit
+				if (queryConfig.offset !== undefined) queryOptions.offset = queryConfig.offset
+
+				// Query entities
+				const entities = await queryManager.queryEntitiesBySchema(
+					schemaName,
+					queryManager.coValueToPlainObject.bind(queryManager) as (coValue: any) => Record<string, unknown>,
 				)
 
-				// Update data.queries.todos - ensure we preserve existing queries structure
+				// Apply query options (filter, sort, limit, offset)
+				const filteredEntities = queryManager.applyQueryOptions(entities, queryOptions)
+
+				// Update data.queries[queryKey] with results (replacing the query config object)
 				dataStore.update((data) => {
 					const newData = { ...data }
 					if (!newData.queries) {
 						newData.queries = {}
 					}
 					const queries = { ...(newData.queries as Record<string, unknown>) }
-					queries.todos = todos
-					queries.title = queries.title || 'Todos' // Preserve title if it exists
+					queries[queryKey] = filteredEntities
 					newData.queries = queries
 					return newData
 				})
 
-				// Set up reactive subscriptions
+				// Set up reactive subscriptions with query options
 				queryManager.subscribeToEntities(
-					'Todo',
-					'todos',
+					schemaName,
+					queryKey,
 					dataStore,
-					queryManager.coValueToTodoPlainObject.bind(queryManager) as (coValue: any) => Record<string, unknown>,
+					queryManager.coValueToPlainObject.bind(queryManager) as (coValue: any) => Record<string, unknown>,
+					queryOptions,
 				)
-			} catch (_error) {
-				// Jazz initialization failed - silently fail
 			}
-		})()
+			// Non-query properties (like 'title') are preserved as-is
+		}
+	} catch (_error) {
+		// Initialization failed - silently fail
 	}
-
-	return dataStore
 }

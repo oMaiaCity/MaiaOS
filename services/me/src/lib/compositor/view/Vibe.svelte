@@ -90,8 +90,9 @@
   });
 
   $effect(() => {
-    if (browser && dataStore && accountReady && !jazzInitialized) {
-      // Account just became available - initialize Jazz integration
+    if (browser && dataStore && accountReady && !jazzInitialized && _resolvedConfig) {
+      // Account just became available - trigger query initialization in DataStore
+      // DataStore will handle all query initialization based on config.data.queries
       jazzInitialized = true;
       const initializeJazz = async () => {
         try {
@@ -100,51 +101,18 @@
             resolve: { root: { entities: true, schemata: true } },
           });
 
-          // Store account reference in data for skills to access
-          dataStore!.update((data) => {
-            return { ...data, _jazzAccount: accountReady }
-          })
-
-          // Import JazzQueryManager dynamically to avoid circular dependencies
-          const { JazzQueryManager } = await import('../jazz-query-manager.js')
-          const queryManager = new JazzQueryManager(accountReady)
-          dataStore!.jazzQueryManager = queryManager
-
-          // Store queryManager reference in data for skills to access
-          dataStore!.update((data) => {
-            return { ...data, _jazzQueryManager: queryManager }
-          })
-
-          // Query todos and update data.queries.todos
-          const todos = await queryManager.queryEntitiesBySchema(
-            'Todo',
-            queryManager.coValueToTodoPlainObject.bind(queryManager) as (coValue: any) => Record<string, unknown>,
-          )
-
-          // Update data.queries.todos
-          dataStore!.update((data) => {
-            const newData = { ...data }
-            if (!newData.queries) {
-              newData.queries = {}
-            }
-            const queries = { ...(newData.queries as Record<string, unknown>) }
-            queries.todos = todos
-            queries.title = queries.title || 'Todos'
-            newData.queries = queries
-            return newData
-          })
-
-          // Set up reactive subscriptions
-          queryManager.subscribeToEntities(
-            'Todo',
-            'todos',
-            dataStore!,
-            queryManager.coValueToTodoPlainObject.bind(queryManager) as (coValue: any) => Record<string, unknown>,
-          )
+          // Only initialize if queryManager doesn't exist yet
+          if (!dataStore.jazzQueryManager) {
+            // Import and call initializeQueries function
+            const { initializeQueries } = await import('../dataStore.js');
+            await initializeQueries(dataStore, _resolvedConfig, accountReady);
+          }
         } catch (_error) {
-          // Jazz initialization failed - silently fail
+          // Jazz initialization failed - reset flag to retry
+          jazzInitialized = false;
         }
-      }
+      };
+
       initializeJazz();
     }
   });

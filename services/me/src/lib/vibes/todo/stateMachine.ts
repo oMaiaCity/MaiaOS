@@ -17,8 +17,10 @@ export const todoStateMachine: StateMachineConfig = {
 	// Split data into queries (database/user data) and view (app/view state)
 	data: {
 		queries: {
-			title: 'Todos',
-			todos: [], // Empty array - populated by Jazz when account is available
+			title: 'Todos', // non-query property
+			todos: {
+				schemaName: 'Todo',
+			},
 		},
 		view: {
 			newTodoText: '',
