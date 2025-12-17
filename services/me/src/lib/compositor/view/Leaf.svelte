@@ -325,6 +325,52 @@
       return payload(itemData || data);
     }
 
+    // Object payload - recursively resolve values
+    if (typeof payload === "object" && payload !== null && !Array.isArray(payload)) {
+      const contextData = itemData ? { ...data, item: itemData } : data;
+      const resolved: Record<string, unknown> = {};
+      
+      // Known data path root prefixes - only resolve strings that start with these
+      // This is explicit and unambiguous - no guessing or heuristics
+      const DATA_PATH_ROOTS = ['data.', 'item.', 'queries.', 'view.'];
+      
+      /**
+       * Check if a string is an explicit data path reference
+       * Rules:
+       * 1. Must start with a known data path root (data., item., queries., view.)
+       * 2. Must contain at least one dot after the root (ensures it's a path, not just a prefix match)
+       * 3. This is explicit - no ambiguity, no guessing
+       */
+      function isExplicitDataPath(str: string): boolean {
+        for (const root of DATA_PATH_ROOTS) {
+          if (str.startsWith(root)) {
+            // Must have at least one more character after the root (the dot is part of root)
+            // e.g., "item.id" is valid, "item." alone would be invalid (but shouldn't happen)
+            return str.length > root.length;
+          }
+        }
+        return false;
+      }
+      
+      for (const [key, value] of Object.entries(payload)) {
+        if (typeof value === "string") {
+          if (isExplicitDataPath(value)) {
+            // Explicit data path - resolve it
+            const resolvedValue = resolveDataPath(contextData, value);
+            resolved[key] = resolvedValue;
+          } else {
+            // Literal string - keep as-is (no resolution)
+            resolved[key] = value;
+          }
+        } else {
+          // Keep non-string values as-is
+          resolved[key] = value;
+        }
+      }
+      
+      return resolved;
+    }
+
     // Static object - return as-is
     return payload;
   }
@@ -827,7 +873,11 @@
               const eventConfig = leaf.events!.blur!
               const inputValue = e.target.value
               // Merge input value into payload if payload exists
-              const payload = resolvePayload(eventConfig.payload, itemData)
+              // Extract itemData from data.item if available (for foreach contexts)
+              const contextItemData = ("item" in data && data.item
+                ? (data.item as Record<string, unknown>)
+                : undefined)
+              const payload = resolvePayload(eventConfig.payload, contextItemData)
               const finalPayload = typeof payload === 'object' && payload !== null && !Array.isArray(payload)
                 ? { ...payload, text: inputValue }
                 : { text: inputValue }
@@ -849,8 +899,12 @@
           // For input elements, read the value from the event target
           if (leaf.tag === 'input' && e.target instanceof HTMLInputElement) {
             const inputValue = e.target.value
+            // Extract itemData from data.item if available (for foreach contexts)
+            const contextItemData = ("item" in data && data.item
+              ? (data.item as Record<string, unknown>)
+              : undefined)
             // Merge input value into payload if payload exists
-            const payload = resolvePayload(eventConfig.payload, itemData)
+            const payload = resolvePayload(eventConfig.payload, contextItemData)
             const finalPayload = typeof payload === 'object' && payload !== null && !Array.isArray(payload)
               ? { ...payload, text: inputValue }
               : { text: inputValue }
@@ -1146,7 +1200,11 @@
               const eventConfig = leaf.events!.blur!
               const inputValue = e.target.value
               // Merge input value into payload if payload exists
-              const payload = resolvePayload(eventConfig.payload, itemData)
+              // Extract itemData from data.item if available (for foreach contexts)
+              const contextItemData = ("item" in data && data.item
+                ? (data.item as Record<string, unknown>)
+                : undefined)
+              const payload = resolvePayload(eventConfig.payload, contextItemData)
               const finalPayload = typeof payload === 'object' && payload !== null && !Array.isArray(payload)
                 ? { ...payload, text: inputValue }
                 : { text: inputValue }
@@ -1168,8 +1226,12 @@
           // For input elements, read the value from the event target
           if (leaf.tag === 'input' && e.target instanceof HTMLInputElement) {
             const inputValue = e.target.value
+            // Extract itemData from data.item if available (for foreach contexts)
+            const contextItemData = ("item" in data && data.item
+              ? (data.item as Record<string, unknown>)
+              : undefined)
             // Merge input value into payload if payload exists
-            const payload = resolvePayload(eventConfig.payload, itemData)
+            const payload = resolvePayload(eventConfig.payload, contextItemData)
             const finalPayload = typeof payload === 'object' && payload !== null && !Array.isArray(payload)
               ? { ...payload, text: inputValue }
               : { text: inputValue }

@@ -180,6 +180,28 @@
   const isCoList = $derived(
     effectiveResolvedType?.type === 'colist' || effectiveResolvedType?.extendedType === 'CoList' || displayType === 'COLIST',
   );
+
+  // Check if this field is editable (string type, not computed, has parentCoValue)
+  const isEditableString = $derived(
+    typeof propValue === "string" &&
+    !isComputedField &&
+    !isCoID &&
+    !isObject &&
+    parentCoValue &&
+    parentCoValue.$isLoaded &&
+    parentCoValue.$jazz
+  );
+
+  // Local state for input value (to prevent overwriting while typing)
+  let inputValue = $state<string>("");
+  let isInputFocused = $state(false);
+
+  // Sync inputValue with propValue when not focused
+  $effect(() => {
+    if (!isInputFocused) {
+      inputValue = typeof propValue === "string" ? propValue : "";
+    }
+  });
 </script>
 
 <button
@@ -191,6 +213,9 @@
   onclick={() => {
     // Prevent navigation during loading
     if (isLoading) return;
+    
+    // Don't navigate if this is an editable string field (let the input handle clicks)
+    if (isEditableString) return;
 
     if (isCoID && typeof propValue === "string" && onNavigate) {
       onNavigate(propValue, propKey);
@@ -274,23 +299,67 @@
           </svg>
         </div>
       {:else}
-        <!-- Primitive value display -->
-        <span class="text-xs text-slate-600 break-all min-w-0">
-          {propValue instanceof Date
-            ? propValue.toLocaleDateString() + " " + propValue.toLocaleTimeString()
-            : typeof propValue === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(propValue)
-              ? new Date(propValue).toLocaleDateString() + " " + new Date(propValue).toLocaleTimeString()
-              : typeof propValue === "object" &&
-                propValue !== null &&
-                !Array.isArray(propValue)
-                ? JSON.stringify(propValue).slice(0, 50) +
-                  (JSON.stringify(propValue).length > 50 ? "..." : "")
-                : Array.isArray(propValue)
-                  ? `[${propValue.length} items]`
-                  : propValue === null
-                    ? "null"
-                    : String(propValue)}
-        </span>
+        {#if isEditableString}
+          <!-- Editable string input -->
+          <input
+            type="text"
+            bind:value={inputValue}
+            class="text-xs text-slate-600 bg-transparent border-none outline-none focus:outline-none focus:ring-0 px-0 w-full min-w-0"
+            onclick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
+            onmousedown={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
+            onfocus={(e) => {
+              e.stopPropagation();
+              isInputFocused = true;
+            }}
+            onblur={(e) => {
+              isInputFocused = false;
+              const newValue = inputValue;
+              if (newValue !== propValue && parentCoValue && parentCoValue.$isLoaded) {
+                try {
+                  parentCoValue.$jazz.set(propKey, newValue);
+                  parentCoValue.$jazz.waitForSync();
+                } catch (err) {
+                  console.error(`Failed to update ${propKey}:`, err);
+                  // Reset to original value on error
+                  inputValue = typeof propValue === "string" ? propValue : "";
+                }
+              } else {
+                // Reset to propValue if no change was made
+                inputValue = typeof propValue === "string" ? propValue : "";
+              }
+            }}
+            onkeydown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+          />
+        {:else}
+          <!-- Primitive value display -->
+          <span class="text-xs text-slate-600 break-all min-w-0">
+            {propValue instanceof Date
+              ? propValue.toLocaleDateString() + " " + propValue.toLocaleTimeString()
+              : typeof propValue === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(propValue)
+                ? new Date(propValue).toLocaleDateString() + " " + new Date(propValue).toLocaleTimeString()
+                : typeof propValue === "object" &&
+                  propValue !== null &&
+                  !Array.isArray(propValue)
+                  ? JSON.stringify(propValue).slice(0, 50) +
+                    (JSON.stringify(propValue).length > 50 ? "..." : "")
+                  : Array.isArray(propValue)
+                    ? `[${propValue.length} items]`
+                    : propValue === null
+                      ? "null"
+                      : String(propValue)}
+          </span>
+        {/if}
       {/if}
 
       <Badge type={displayType}>{displayType}</Badge>

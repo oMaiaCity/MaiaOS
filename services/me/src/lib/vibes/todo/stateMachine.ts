@@ -62,6 +62,10 @@ export const todoStateMachine: StateMachineConfig = {
 					target: 'idle',
 					actions: ['@entity/updateEntity'],
 				},
+				UPDATE_TODO_TEXT: {
+					target: 'idle',
+					actions: ['@entity/updateEntity'],
+				},
 				SET_VIEW: {
 					target: 'idle',
 					actions: ['@ui/setView'],

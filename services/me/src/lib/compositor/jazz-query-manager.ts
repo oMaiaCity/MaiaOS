@@ -382,6 +382,14 @@ export class JazzQueryManager {
 
 				// Subscribe to entities list changes
 				const listUnsubscribe = (entitiesList as any).$jazz.subscribe({}, async () => {
+					// Capture current entities before async re-query to avoid temporary empty state
+					let currentEntities: unknown[] = []
+					dataStore.update((data) => {
+						const queries = data.queries as Record<string, unknown> | undefined
+						currentEntities = (queries?.[queryKey] as unknown[]) || []
+						return data // Don't modify, just read
+					})
+					
 					// Re-query entities when list changes
 					let entities = await this.queryEntitiesBySchema(schemaName, converter)
 					
@@ -390,17 +398,23 @@ export class JazzQueryManager {
 						entities = this.applyQueryOptions(entities, queryOptions) as typeof entities
 					}
 					
-					// Update data.queries reactively
-					dataStore.update((data) => {
-						const newData = { ...data }
-						if (!newData.queries) {
-							newData.queries = {}
-						}
-						const queries = { ...(newData.queries as Record<string, unknown>) }
-						queries[queryKey] = entities
-						newData.queries = queries
-						return newData
-					})
+					// If query returned empty but we had entities before, preserve current state
+					// This prevents temporary empty states during async operations or race conditions
+					// Only update if we got results OR if we had no results before (initial load)
+					if (entities.length > 0 || currentEntities.length === 0) {
+						// Update data.queries reactively
+						dataStore.update((data) => {
+							const newData = { ...data }
+							if (!newData.queries) {
+								newData.queries = {}
+							}
+							const queries = { ...(newData.queries as Record<string, unknown>) }
+							queries[queryKey] = entities
+							newData.queries = queries
+							return newData
+						})
+					}
+					// If query returned empty but we had entities, don't update (preserve current state)
 				})
 
 				// Subscribe to individual entity changes
@@ -425,6 +439,14 @@ export class JazzQueryManager {
 						const coValue = entityId ? this.entityMap.get(entityId) : undefined
 						if (coValue) {
 							const entityUnsub = (coValue as any).$jazz.subscribe({}, async () => {
+								// Capture current entities before async re-query to avoid temporary empty state
+								let currentEntities: unknown[] = []
+								dataStore.update((data) => {
+									const queries = data.queries as Record<string, unknown> | undefined
+									currentEntities = (queries?.[queryKey] as unknown[]) || []
+									return data // Don't modify, just read
+								})
+								
 								// Re-query all entities when one changes
 								let updatedEntities = await this.queryEntitiesBySchema(
 									schemaName,
@@ -436,16 +458,22 @@ export class JazzQueryManager {
 									updatedEntities = this.applyQueryOptions(updatedEntities, queryOptions) as typeof updatedEntities
 								}
 								
-								dataStore.update((data) => {
-									const newData = { ...data }
-									if (!newData.queries) {
-										newData.queries = {}
-									}
-									const queries = { ...(newData.queries as Record<string, unknown>) }
-									queries[queryKey] = updatedEntities
-									newData.queries = queries
-									return newData
-								})
+								// If query returned empty but we had entities before, preserve current state
+								// This prevents temporary empty states during async operations or race conditions
+								// Only update if we got results OR if we had no results before (initial load)
+								if (updatedEntities.length > 0 || currentEntities.length === 0) {
+									dataStore.update((data) => {
+										const newData = { ...data }
+										if (!newData.queries) {
+											newData.queries = {}
+										}
+										const queries = { ...(newData.queries as Record<string, unknown>) }
+										queries[queryKey] = updatedEntities
+										newData.queries = queries
+										return newData
+									})
+								}
+								// If query returned empty but we had entities, don't update (preserve current state)
 							})
 							entityUnsubscribes.push(entityUnsub)
 						}
