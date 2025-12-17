@@ -78,6 +78,7 @@ export const AppRoot = co.map({
 	capabilities: co.list(Capability), // List of Capability CoValues (each contains a Group reference)
 	schemata: co.optional(co.list(co.map({}))), // Optional - list of SchemaDefinitions (created dynamically)
 	entities: co.optional(co.list(co.map({}))), // Optional - list of Entity instances (created dynamically)
+	relations: co.optional(co.list(co.map({}))), // Optional - list of Relation instances (created dynamically)
 })
 
 export const JazzAccount = co
@@ -338,6 +339,25 @@ export const JazzAccount = co
 			try {
 				await rootWithData.$jazz.ensureLoaded({
 					resolve: { entities: true },
+				})
+			} catch (_error) { }
+		}
+
+		// Ensure relations list exists (empty by default - relations created via createRelation)
+		if (!rootWithData.$jazz.has('relations')) {
+			// Create a group for relations list
+			const relationsGroup = Group.create()
+			await relationsGroup.$jazz.waitForSync()
+
+			// Create empty relations list (generic co.map({}) - relations created dynamically)
+			const relationsList = co.list(co.map({})).create([], relationsGroup)
+			await relationsList.$jazz.waitForSync()
+			rootWithData.$jazz.set('relations', relationsList)
+		} else {
+			// Ensure relations list is loaded
+			try {
+				await rootWithData.$jazz.ensureLoaded({
+					resolve: { relations: true },
 				})
 			} catch (_error) { }
 		}

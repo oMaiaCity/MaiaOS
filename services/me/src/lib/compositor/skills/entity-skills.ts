@@ -1,6 +1,6 @@
 /**
  * Entity Skills - Generic CRUD operations for any entity type
- * Works with any schema (Todo, Human, ASSIGNED_TO, etc.)
+ * Works with any schema (Todo, Human, AssignedTo, etc.)
  * Each skill is self-contained and can be called independently
  * Future-ready for LLM skill calls
  */
@@ -26,7 +26,7 @@ const createEntitySkill: Skill = {
 			properties: {
 				schemaName: {
 					type: 'string',
-					description: 'The schema name (e.g., "Todo", "Human", "ASSIGNED_TO")',
+					description: 'The schema name (e.g., "Todo", "Human", "AssignedTo")',
 					required: true,
 				},
 				entityData: {

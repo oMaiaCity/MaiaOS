@@ -7,21 +7,21 @@
  * This registry maps schema names to their JSON Schema definitions.
  */
 
-import { humanLeafTypeSchema, todoLeafTypeSchema } from './data/leaf-types.js'
-import { assignedToCompositeTypeSchema } from './data/composite-types.js'
+import { humanEntityTypeSchema, todoEntityTypeSchema } from './data/entity-types.js'
+import { assignedToRelationTypeSchema } from './data/relation-types.js'
 
 // Registry mapping schema names to JSON Schema definitions
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const schemaRegistry: Record<string, any> = {
-	Human: humanLeafTypeSchema,
-	Todo: todoLeafTypeSchema,
-	ASSIGNED_TO: assignedToCompositeTypeSchema,
+	Human: humanEntityTypeSchema,
+	Todo: todoEntityTypeSchema,
+	AssignedTo: assignedToRelationTypeSchema,
 }
 
 /**
  * Get JSON Schema for a schema name
  * 
- * @param schemaName - Name of the schema (e.g., "Human", "Todo", "ASSIGNED_TO")
+ * @param schemaName - Name of the schema (e.g., "Human", "Todo", "AssignedTo")
  * @returns JSON Schema definition or null if not found
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

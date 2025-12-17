@@ -28,11 +28,9 @@
     schemaDefinition: schemaDefinitionProp,
   }: Props = $props();
 
-  // Filter out @label and @schema from main view (they're shown in metadata sidebar)
+  // Show all properties including @label and @schema
   const entries = $derived(
-    Object.entries(properties).filter(
-      ([key]) => key !== "@label" && key !== "@schema",
-    ),
+    Object.entries(properties),
   );
 
   // Use schema definition from prop if provided, otherwise compute from parentCoValue

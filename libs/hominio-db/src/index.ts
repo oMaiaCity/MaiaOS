@@ -38,8 +38,6 @@ export { migrateSyncGoogleEmailToContact } from './migrations/20241220_sync-goog
 export { migrateSyncGoogleImageToProfile } from './migrations/20241220_sync-google-image-to-profile'
 // Migrations
 export { migrateSyncGoogleNameToProfile } from './migrations/20241220_sync-google-name-to-profile'
-// Data Reset Utility
-export { resetData } from './utilities/reset-data'
 export {
 	AccountProfile,
 	AppRoot,
@@ -48,27 +46,13 @@ export {
 	JazzAccount,
 	syncGoogleDataToProfile,
 } from './schema'
-// Data LeafTypes
-export { createHumanLeafType, createTodoLeafType } from './core/data/leaf-type-manager'
-// Data Leafs
+// Generic CRUD Functions for Relations
 export {
-	createHumanLeaf,
-	createTodoLeaf,
-	updateHumanLeaf,
-	deleteHumanLeaf,
-	updateTodoLeaf,
-	deleteTodoLeaf,
-} from './core/data/leaf-manager'
-// Data CompositeTypes
-export { createAssignedToCompositeType } from './core/data/composite-type-manager'
-// Data Composites
-export {
-	createAssignedToComposite,
-	updateAssignedToComposite,
-	deleteAssignedToComposite,
-} from './core/data/composite-manager'
-// Todo Manager
-export { createTodoEntity, updateTodoEntity, deleteTodoEntity, type TodoEntityData } from './core/data/todo-manager'
+	createRelationGeneric,
+	updateRelationGeneric,
+	deleteRelationGeneric,
+	getCoMapSchemaForRelationSchemaName,
+} from './functions/generic-crud-relations'
 
 // CoValue Formatting (Generic utility)
 export {

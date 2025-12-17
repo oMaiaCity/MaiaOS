@@ -1,15 +1,15 @@
 /**
- * LeafType JSON Schema Definitions
+ * EntityType JSON Schema Definitions
  * 
- * Defines JSON schemas for LeafTypes (Human and Todo)
+ * Defines JSON schemas for EntityTypes (Human and Todo)
  * These schemas are used with ensureSchema() to create SchemaDefinition co-values
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const humanLeafTypeSchema: any = {
+export const humanEntityTypeSchema: any = {
 	type: 'object',
 	properties: {
-		type: { type: 'string', required: true }, // "Leaf" for LeafTypes
+		type: { type: 'string', required: true }, // "Entity" for EntityTypes
 		name: { type: 'string', required: true },
 		email: { type: 'string' },
 		dateOfBirth: { type: 'date' },
@@ -18,10 +18,10 @@ export const humanLeafTypeSchema: any = {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const todoLeafTypeSchema: any = {
+export const todoEntityTypeSchema: any = {
 	type: 'object',
 	properties: {
-		type: { type: 'string', required: true }, // "Leaf" for LeafTypes
+		type: { type: 'string', required: true }, // "Entity" for EntityTypes
 		name: { type: 'string', required: true }, // Todo name content (matches UI schema)
 		description: { type: 'string' }, // Optional description
 		status: { type: 'string' }, // Plain string field (e.g., 'todo', 'in-progress', 'done')
@@ -30,4 +30,3 @@ export const todoLeafTypeSchema: any = {
 	},
 	required: ['type', 'name'],
 }
-

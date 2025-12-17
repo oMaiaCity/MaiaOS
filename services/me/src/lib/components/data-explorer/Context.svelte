@@ -80,9 +80,9 @@
     return snapshot;
   });
 
-  // Filter out @label and @schema from main view (they're shown in metadata sidebar)
+  // Show all properties including @label and @schema in main view
   const entries = $derived(
-    Object.entries(properties).filter(([key]) => key !== '@label' && key !== '@schema'),
+    Object.entries(properties),
   );
 
   // Get schema definition using CoState (reactive)

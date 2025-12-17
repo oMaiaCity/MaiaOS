@@ -4,12 +4,14 @@
     getCoValueGroupInfo,
     resolveProfile,
     formatCoValueId,
+    setupComputedFieldsForCoValue,
   } from "@hominio/db";
-  import type { LocalNode } from "cojson";
+  import type { LocalNode, CoID, RawCoValue } from "cojson";
   import { CoMap } from "jazz-tools";
   import { CoState, Image } from "jazz-tools/svelte";
   import Badge from "./Badge.svelte";
   import PropertyItem from "./PropertyItem.svelte";
+  import { createCoValueState, deriveResolvedFromCoState } from "$lib/utils/costate-navigation";
 
   interface Props {
     context: CoValueContext;
@@ -65,6 +67,70 @@
   // This gives us a fully wrapped CoValue with $isLoaded and $jazz.owner
   let coValueState = $state<CoState<typeof CoMap> | null>(null);
   let lastCoValueId = $state<string | undefined>(undefined);
+  
+  // Extract schema ID from @schema reference
+  const schemaId = $derived.by(() => {
+    const schemaRef = labelAndSchema()['@schema'];
+    if (!schemaRef) {
+      return undefined;
+    }
+    
+    // Extract schema ID
+    if (typeof schemaRef === 'string' && schemaRef.startsWith('co_')) {
+      return schemaRef;
+    } else if (schemaRef && typeof schemaRef === 'object' && '$jazz' in schemaRef) {
+      return schemaRef.$jazz?.id;
+    }
+    
+    return undefined;
+  });
+
+  // EXACT SAME PATTERN AS ListItem (lines 156-176)
+  // Create CoState for lazy resolution of @schema CoValue
+  let schemaCoValueState = $state<CoState<typeof CoMap> | null>(null);
+  
+  $effect(() => {
+    const currentSchemaId = schemaId;
+    if (currentSchemaId && typeof currentSchemaId === 'string' && currentSchemaId.startsWith('co_')) {
+      // Check if we already have it resolved in directChildren
+      const schemaChild = context.directChildren?.find((c) => c.coValueId === currentSchemaId);
+      if (!schemaChild?.resolved) {
+        // Create CoState for lazy resolution (EXACT same as ListItem line 161)
+        schemaCoValueState = createCoValueState(currentSchemaId as CoID<RawCoValue>);
+      } else {
+        schemaCoValueState = null;
+      }
+    } else {
+      schemaCoValueState = null;
+    }
+  });
+  
+  // Derive resolved type from CoState (EXACT same as ListItem lines 168-173)
+  const resolvedSchemaFromCoState = $derived(() => {
+    const currentSchemaId = schemaId;
+    if (schemaCoValueState && currentSchemaId && typeof currentSchemaId === 'string' && currentSchemaId.startsWith('co_')) {
+      return deriveResolvedFromCoState(schemaCoValueState, currentSchemaId as CoID<RawCoValue>);
+    }
+    return null;
+  });
+  
+  // Use directChildren if available, otherwise use CoState (EXACT same as ListItem line 176)
+  const effectiveResolvedSchema = $derived.by(() => {
+    const currentSchemaId = schemaId;
+    if (!currentSchemaId) return null;
+    
+    const schemaChild = context.directChildren?.find((c) => c.coValueId === currentSchemaId);
+    return schemaChild?.resolved || resolvedSchemaFromCoState();
+  });
+  
+  // Extract @label from resolved schema (EXACT same as ListItem line 265)
+  const schemaLabel = $derived.by(() => {
+    const resolved = effectiveResolvedSchema;
+    if (resolved?.snapshot && typeof resolved.snapshot === 'object' && '@label' in resolved.snapshot && resolved.snapshot['@label']) {
+      return resolved.snapshot['@label'] as string;
+    }
+    return 'Schema';
+  });
 
   // Create CoState when coValueId changes (prevent infinite loop by tracking last ID)
   $effect(() => {
@@ -87,9 +153,11 @@
 
     // Use CoState to load the CoValue with resolve query
     // This gives us a properly wrapped CoValue with $isLoaded and $jazz.owner
-    // resolve: true loads the CoValue itself and direct references
+    // Resolve @schema deeply to access its @label
     coValueState = new CoState(CoMap, currentCoValueId, {
-      resolve: true,
+      resolve: {
+        '@schema': { '@label': true },
+      },
     });
   });
 
@@ -266,37 +334,28 @@
           />
         {/if}
         {#if labelAndSchema()['@schema']}
-          {@const schemaRef = labelAndSchema()['@schema']}
-          {@const isSchemaCoValueObject = schemaRef && typeof schemaRef === 'object' && '$jazz' in schemaRef}
-          {@const isSchemaCoID = typeof schemaRef === 'string' && schemaRef.startsWith('co_')}
-          {@const schemaId = isSchemaCoValueObject && schemaRef.$jazz?.id ? schemaRef.$jazz.id : (isSchemaCoID ? schemaRef : undefined)}
-          
-          <!-- Find schema in directChildren to get resolved info -->
-          {@const schemaChild = schemaId ? context.directChildren.find((c) => c.coValueId === schemaId) : null}
-          {@const schemaResolved = schemaChild?.resolved}
-          {@const schemaName = schemaResolved?.snapshot && typeof schemaResolved.snapshot === 'object' && 'name' in schemaResolved.snapshot ? schemaResolved.snapshot.name : (isSchemaCoValueObject && schemaRef.$isLoaded && schemaRef.name ? schemaRef.name : (typeof schemaRef === 'string' && !schemaRef.startsWith('co_') ? schemaRef : 'Schema'))}
-          
-          {@const isClickable = !!schemaId && onNavigate !== undefined}
+          {@const currentSchemaId = schemaId}
+          {@const isClickable = !!currentSchemaId && onNavigate !== undefined}
           
           {#if isClickable}
             <!-- Clickable schema reference -->
             <button
               type="button"
               onclick={() => {
-                if (schemaId && onNavigate) {
-                  onNavigate(schemaId, schemaName);
+                if (currentSchemaId && onNavigate) {
+                  onNavigate(currentSchemaId, schemaLabel);
                 }
               }}
               class="w-full text-left cursor-pointer group"
-              title={`Navigate to schema: ${schemaName}`}
+              title={`Navigate to schema: ${schemaLabel}`}
             >
               <div class="relative">
                 <PropertyItem
                   propKey="@SCHEMA"
-                  propValue={schemaName}
+                  propValue={schemaLabel}
                   hideBadge={true}
                   showCopyButton={true}
-                  copyValue={schemaId}
+                  copyValue={currentSchemaId}
                   hoverable={true}
                 />
                 <!-- Arrow icon indicator -->
@@ -319,10 +378,10 @@
             <!-- Non-clickable schema (no navigation handler or old string format) -->
             <PropertyItem
               propKey="@SCHEMA"
-              propValue={schemaName}
+              propValue={schemaLabel}
               hideBadge={true}
-              showCopyButton={!!schemaId}
-              copyValue={schemaId}
+              showCopyButton={!!currentSchemaId}
+              copyValue={currentSchemaId}
             />
           {/if}
         {/if}

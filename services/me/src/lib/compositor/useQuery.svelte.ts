@@ -289,8 +289,14 @@ export function useQuery(
 		for (const schema of schemata) {
 			if (!schema?.$isLoaded) continue
 			
-			// Access schema name via snapshot
+			// Access schema name and type via snapshot
 			const schemaSnapshot = schema.$jazz?.raw?.toJSON()
+			
+			// Skip Relation schema types - only query Entity types for now
+			if (schemaSnapshot?.type === 'Relation') {
+				continue
+			}
+			
 			if (schemaSnapshot?.name === currentSchemaName) {
 				targetSchemaId = schema.$jazz?.id
 				break

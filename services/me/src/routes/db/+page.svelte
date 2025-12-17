@@ -1,11 +1,9 @@
 <script lang="ts">
+  import { browser } from "$app/environment";
   import {
     type CoValueContext,
-    resetData,
-    createHumanLeaf,
-    createTodoLeaf,
-    createAssignedToComposite,
   } from "@hominio/db";
+  import { executeSkill, registerAllSkills } from "$lib/compositor/skills";
   import type { CoID, RawCoValue } from "cojson";
   import { CoState } from "jazz-tools/svelte";
   import { CoMap } from "jazz-tools";
@@ -14,6 +12,11 @@
   import ObjectContextDisplay from "$lib/components/data-explorer/ObjectContextDisplay.svelte";
   import { Context, MetadataSidebar } from "$lib/components/data-explorer";
   import { deriveContextFromCoState } from "$lib/utils/costate-navigation";
+
+  // Register all skills on page load (only in browser to avoid SSR issues)
+  if (browser) {
+    registerAllSkills();
+  }
 
   // Better Auth session
   const session = authClient.useSession();
@@ -309,10 +312,10 @@
 
   // Handle reset data
   async function handleResetData() {
-    if (!me || !me.$isLoaded) return;
+    if (!account || !me || !me.$isLoaded) return;
 
     try {
-      await resetData(me);
+      await executeSkill('@database/resetDatabase', account);
       // Mutations are reactive - CoState will automatically update
       // No need to manually clear cache or reload
     } catch (_error) {
@@ -320,36 +323,80 @@
     }
   }
 
-  // Handle creating "assigned" Composite instance
+  // Handle creating "assigned" Relation instance
   async function handleCreateAssignedToComposite() {
-    if (!me || !me.$isLoaded) return;
+    if (!account || !me || !me.$isLoaded) return;
 
     try {
-      // Create new Todo and Human entities for testing (simplified - no lookup needed)
-      // Note: CompositeType is auto-created via ensureSchema() in createAssignedToComposite
-      const todoEntity = await createTodoLeaf(me, {
-        id: "todo_test_assigned",
-        name: "test todo for assigned relation",
-        status: "todo",
-        endDate: new Date("2025-12-31").toISOString(),
-        duration: 30,
+      // Ensure root is loaded
+      const root = me.root;
+      if (!root?.$isLoaded) {
+        await me.$jazz.ensureLoaded({ resolve: { root: true } });
+      }
+
+      // Create new Todo and Human entities for testing
+      await executeSkill('@entity/createEntity', account, {
+        schemaName: 'Todo',
+        entityData: {
+          name: "test todo for assigned relation",
+          status: "todo",
+          endDate: new Date("2025-12-31").toISOString(),
+          duration: 30,
+        },
       });
 
-      const humanEntity = await createHumanLeaf(me, {
-        id: "human_test_assigned",
-        name: "Test Human",
-        email: "test@example.com",
+      await executeSkill('@entity/createEntity', account, {
+        schemaName: 'Human',
+        entityData: {
+          name: "Test Human",
+          email: "test@example.com",
+        },
       });
 
-      // Create Composite instance relating Todo to Human
-      await createAssignedToComposite(me, {
-        x1: todoEntity,
-        x2: humanEntity,
+      // Wait a bit for entities to sync, then find them
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Reload root to get latest entities
+      const reloadedRoot = await me.root.$jazz.ensureLoaded({
+        resolve: { entities: true },
       });
+
+      if (!reloadedRoot.entities?.$isLoaded) {
+        throw new Error('Entities list not loaded');
+      }
+
+      let todoEntity: any = null;
+      let humanEntity: any = null;
+
+      for (const entity of reloadedRoot.entities) {
+        if (!entity?.$isLoaded) continue;
+        const snapshot = entity.$jazz?.raw?.toJSON();
+        if (snapshot?.name === "test todo for assigned relation") {
+          todoEntity = entity;
+        } else if (snapshot?.name === "Test Human") {
+          humanEntity = entity;
+        }
+      }
+
+      if (!todoEntity || !humanEntity) {
+        throw new Error('Could not find created entities');
+      }
+
+      // Create Relation instance relating Todo to Human
+      await executeSkill('@relation/createRelation', account, {
+        schemaName: 'AssignedTo',
+        relationData: {
+          x1: todoEntity,
+          x2: humanEntity,
+        },
+      });
+
+      console.log('Relation created successfully!');
       // Mutations are reactive - CoState will automatically update
       // No need to manually clear cache or reload
     } catch (error) {
-      console.error("Error creating 'assigned' Composite:", error);
+      console.error("Error creating 'assigned' Relation:", error);
+      alert(`Error: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 </script>
@@ -520,7 +567,7 @@
                       onclick={() => handleCreateAssignedToComposite()}
                       class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                     >
-                      Create "assigned" Composite
+                      Create "assigned" Relation
                     </button>
                     <button
                       onclick={() => handleResetData()}

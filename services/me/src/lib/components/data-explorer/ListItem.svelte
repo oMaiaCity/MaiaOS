@@ -33,8 +33,9 @@
     schemaDefinition,
   }: Props = $props();
 
-  // Check if this is a computed field (fields starting with @ are computed)
-  const isComputedField = $derived(propKey.startsWith("@"));
+  // Check if this is a computed field
+  // @label is computed (string), but @schema is a CoValue reference (not computed)
+  const isComputedField = $derived(propKey === "@label");
   
   // Check if value is a CoID (but not if it's a computed field)
   const isCoID = $derived(
@@ -68,7 +69,7 @@
   
   // Determine display type - use schema definition when available, fallback to runtime detection
   const getDisplayType = (value: any): string => {
-    // Computed fields are always strings
+    // @label is a computed string field
     if (isComputedField) {
       return "string";
     }

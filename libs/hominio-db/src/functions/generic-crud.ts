@@ -48,7 +48,7 @@ function getNode(accountOrCoValue: any): any {
  * Retrieves JSON Schema from registry, converts to Zod shape, returns wrapped CoMap schema
  * 
  * @param account - The Jazz account
- * @param schemaName - Name of the schema (e.g., "Human", "Todo", "ASSIGNED_TO")
+ * @param schemaName - Name of the schema (e.g., "Human", "Todo", "AssignedTo")
  * @returns Object with schema wrapper and schema definition CoValue
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -83,7 +83,7 @@ export async function getCoMapSchemaForSchemaName(
  * Generic CREATE function - works for any schema type
  * 
  * @param account - The Jazz account
- * @param schemaName - Name of the schema (e.g., "Human", "Todo", "ASSIGNED_TO")
+ * @param schemaName - Name of the schema (e.g., "Human", "Todo", "AssignedTo")
  * @param entityData - Data for the entity instance
  * @returns The created entity CoValue
  */
