@@ -304,18 +304,24 @@ export async function deleteEntityGeneric(account: any, entityId: string): Promi
 	await entitiesList.$jazz.ensureLoaded()
 
 	// Find entity with matching ID
+	// Try multiple ID access patterns for robustness
 	let foundIndex = -1
 	const entityArray = Array.from(entitiesList)
 	for (let i = 0; i < entityArray.length; i++) {
 		const entity = entityArray[i] as any
-		if (entity && entity.$jazz && entity.$jazz.id === entityId) {
+		if (!entity || !entity.$isLoaded) continue
+		
+		// Try multiple ID access patterns (direct property first, then $jazz)
+		const currentEntityId = entity.id || entity.$jazz?.id
+		
+		if (currentEntityId === entityId) {
 			foundIndex = i
 			break
 		}
 	}
 
 	if (foundIndex === -1) {
-		throw new Error(`Entity with ID ${entityId} not found`)
+		throw new Error(`Entity with ID ${entityId} not found in ${entityArray.length} entities`)
 	}
 
 	// Remove entity from list using Jazz CoList remove method (by index)

@@ -5,7 +5,6 @@
  */
 
 import { type Writable, writable } from 'svelte/store'
-import type { QueryOptions } from './jazz-query-manager'
 
 // ========== TYPES ==========
 
@@ -51,7 +50,6 @@ export interface DataStore extends Writable<Data> {
 	update: (updater: (data: Data) => Data) => void
 	reset: () => void
 	getState: () => string
-	jazzQueryManager?: any // JazzQueryManager instance (optional)
 }
 
 // ========== STATE MACHINE CLASS ==========
@@ -244,107 +242,5 @@ export function createDataStore(
 		getState: () => store.state,
 	}
 
-	// Initialize Jazz integration if account is provided and loaded
-	// Note: If account is not loaded yet, Vibe.svelte will handle initialization separately
-	if (jazzAccount && (jazzAccount as any).$isLoaded) {
-		// Account is already loaded - initialize immediately
-		initializeQueries(dataStore, config, jazzAccount).catch((_error) => {
-			// Jazz initialization failed - silently fail
-		})
-	}
-
 	return dataStore
-}
-
-/**
- * Initialize queries from config.data.queries
- * Reads query definitions and sets up Jazz queries with subscriptions
- */
-export async function initializeQueries(
-	dataStore: DataStore,
-	config: StateMachineConfig,
-	jazzAccount: any,
-): Promise<void> {
-	try {
-		// Store account reference in data for skills to access
-		dataStore.update((data) => {
-			return { ...data, _jazzAccount: jazzAccount }
-		})
-
-		// Import JazzQueryManager dynamically to avoid circular dependencies
-		const { JazzQueryManager } = await import('./jazz-query-manager.js')
-		const queryManager = new JazzQueryManager(jazzAccount)
-		dataStore.jazzQueryManager = queryManager
-
-		// Store queryManager reference in data for skills to access
-		dataStore.update((data) => {
-			return { ...data, _jazzQueryManager: queryManager }
-		})
-
-		// Read query definitions from config.data.queries
-		const queries = config.data?.queries
-		if (!queries || typeof queries !== 'object' || Array.isArray(queries)) {
-			return
-		}
-
-		const queriesObj = queries as Record<string, unknown>
-
-		// Initialize each query definition
-		for (const [queryKey, queryValue] of Object.entries(queriesObj)) {
-			// Check if this is a query definition (object with schemaName)
-			if (
-				queryValue &&
-				typeof queryValue === 'object' &&
-				!Array.isArray(queryValue) &&
-				'schemaName' in queryValue
-			) {
-				const queryConfig = queryValue as { schemaName: string } & QueryOptions
-				const schemaName = queryConfig.schemaName
-
-				if (!schemaName || typeof schemaName !== 'string') {
-					continue
-				}
-
-				// Extract query options (filter, sort, limit, offset)
-				const queryOptions: QueryOptions = {}
-				if (queryConfig.filter) queryOptions.filter = queryConfig.filter
-				if (queryConfig.sort) queryOptions.sort = queryConfig.sort
-				if (queryConfig.limit !== undefined) queryOptions.limit = queryConfig.limit
-				if (queryConfig.offset !== undefined) queryOptions.offset = queryConfig.offset
-
-				// Query entities
-				const entities = await queryManager.queryEntitiesBySchema(
-					schemaName,
-					queryManager.coValueToPlainObject.bind(queryManager) as (coValue: any) => Record<string, unknown>,
-				)
-
-				// Apply query options (filter, sort, limit, offset)
-				const filteredEntities = queryManager.applyQueryOptions(entities, queryOptions)
-
-				// Update data.queries[queryKey] with results (replacing the query config object)
-				dataStore.update((data) => {
-					const newData = { ...data }
-					if (!newData.queries) {
-						newData.queries = {}
-					}
-					const queries = { ...(newData.queries as Record<string, unknown>) }
-					queries[queryKey] = filteredEntities
-					newData.queries = queries
-					return newData
-				})
-
-				// Set up reactive subscriptions with query options
-				queryManager.subscribeToEntities(
-					schemaName,
-					queryKey,
-					dataStore,
-					queryManager.coValueToPlainObject.bind(queryManager) as (coValue: any) => Record<string, unknown>,
-					queryOptions,
-				)
-			}
-			// Non-query properties (like 'title') are preserved as-is
-		}
-	} catch (_error) {
-		// Initialization failed - silently fail
-	}
 }

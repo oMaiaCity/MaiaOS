@@ -7,9 +7,8 @@
   import { todoVibeConfig } from "$lib/vibes/todo/config";
   import { vibesVibeConfig } from "$lib/vibes/vibes/config";
 
-  // Get global Jazz account from context
-  const account = getJazzAccountContext();
-  const me = $derived(account ? account.current : null);
+  // Get global Jazz account from context (AccountCoState instance)
+  const accountCoState = getJazzAccountContext();
 
   // Get vibe ID from route params (reactive)
   const vibeId = $derived($page.url.searchParams.get("id"));
@@ -37,7 +36,7 @@
 
 {#if browser}
   <div class="h-full w-full">
-    <Vibe config={currentConfig} onEvent={handleVibeEvent} account={me && me.$isLoaded ? me : undefined} />
+    <Vibe config={currentConfig} onEvent={handleVibeEvent} accountCoState={accountCoState} />
   </div>
 {:else}
   <div class="h-full bg-gray-100 pt-20 px-4 flex items-center justify-center">

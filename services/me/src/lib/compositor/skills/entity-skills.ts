@@ -100,12 +100,22 @@ const createEntitySkill: Skill = {
 			throw new Error('entityData is required (provide entityData directly or use dataPath + buildEntityData)')
 		}
 
-		// Check if Jazz is available - fail fast if not
-		const jazzAccount = data._jazzAccount as any
+		// Check if Jazz AccountCoState is available - fail fast if not (clean CoState pattern)
+		const accountCoState = data._jazzAccountCoState as any
+		if (!accountCoState) {
+			if (!data.view) data.view = {}
+			const view = data.view as Data
+			view.error = 'Jazz AccountCoState not available'
+			data.view = { ...view }
+			return
+		}
+
+		// Get the current account from CoState
+		const jazzAccount = accountCoState.current
 		if (!jazzAccount || !jazzAccount.$isLoaded) {
 			if (!data.view) data.view = {}
 			const view = data.view as Data
-			view.error = 'Jazz account not available'
+			view.error = 'Jazz account not loaded'
 			data.view = { ...view }
 			return
 		}
@@ -204,43 +214,82 @@ const updateEntitySkill: Skill = {
 			throw new Error('updates are required (provide updates object or individual fields like status)')
 		}
 
-		// Check if Jazz is available - fail fast if not
-		const jazzQueryManager = data._jazzQueryManager as any
-		const jazzAccount = data._jazzAccount as any
-		if (!jazzQueryManager || !jazzAccount || !jazzAccount.$isLoaded) {
-			throw new Error('Jazz account or query manager not available')
+		// Check if Jazz AccountCoState is available - fail fast if not (clean CoState pattern)
+		const accountCoState = data._jazzAccountCoState as any
+		if (!accountCoState) {
+			throw new Error('Jazz AccountCoState not available')
+		}
+
+		// Get the current account from CoState
+		const jazzAccount = accountCoState.current
+		if (!jazzAccount || !jazzAccount.$isLoaded) {
+			throw new Error('Jazz account not loaded')
 		}
 
 		// Use Jazz to update entity
 		try {
-			// Get CoValue from entityMap first
-			let coValue = jazzQueryManager.getCoValueById(id)
+			// #region agent log
+			fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'updateEntity:start',message:'Update entity starting',data:{id,updates:finalUpdates,hasAccount:!!jazzAccount,accountLoaded:jazzAccount?.$isLoaded},timestamp:Date.now(),sessionId:'debug-session',runId:'update',hypothesisId:'R'})}).catch(()=>{});
+			// #endregion
+			
+			// Find entity in already-loaded root.entities (clean CoState pattern - no manual loading)
+			const root = jazzAccount.root
+			if (!root?.$isLoaded) {
+				// #region agent log
+				fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'updateEntity:root-not-loaded',message:'Root not loaded',data:{id,hasRoot:!!root},timestamp:Date.now(),sessionId:'debug-session',runId:'update',hypothesisId:'R'})}).catch(()=>{});
+				// #endregion
+				throw new Error('Account root not loaded')
+			}
 
-			// If not found in cache, try to load it directly from the account/node
-			if (!coValue) {
-				const node = (jazzAccount as any).$jazz?.raw?.core?.node || (jazzAccount as any).$jazz?.raw?.node
-				if (node) {
-					const loadedCoValue = await node.load(id as any)
-					if (loadedCoValue !== 'unavailable') {
-						coValue = loadedCoValue
-					}
+			const entitiesList = root.entities
+			if (!entitiesList?.$isLoaded) {
+				// #region agent log
+				fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'updateEntity:entities-not-loaded',message:'Entities list not loaded',data:{id,hasEntities:!!entitiesList},timestamp:Date.now(),sessionId:'debug-session',runId:'update',hypothesisId:'R'})}).catch(()=>{});
+				// #endregion
+				throw new Error('Entities list not loaded')
+			}
+
+			// Find the entity by ID in the already-loaded list
+			// Try multiple ID access patterns for robustness
+			let coValue: any = null
+			const entityIds: string[] = [] // For debug logging
+			
+			for (const entity of entitiesList) {
+				if (!entity?.$isLoaded) continue
+				
+				// Try multiple ID access patterns (direct property first, then $jazz)
+				const entityId = entity.id || entity.$jazz?.id
+				entityIds.push(entityId || 'unknown')
+				
+				if (entityId === id) {
+					coValue = entity
+					break
 				}
 			}
 
 			if (!coValue) {
-				throw new Error(`CoValue not found for ID: ${id}`)
+				// #region agent log
+				fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'updateEntity:covalue-not-found',message:'CoValue not found in entities list',data:{id,entitiesCount:entitiesList.length,entityIds:entityIds.slice(0,5),targetId:id},timestamp:Date.now(),sessionId:'debug-session',runId:'update',hypothesisId:'S'})}).catch(()=>{});
+				// #endregion
+				throw new Error(`Entity not found for ID: ${id}`)
 			}
 
-			// Ensure CoValue is fully loaded
-			await coValue.$jazz.ensureLoaded({
-				resolve: {},
-			})
+			// #region agent log
+			fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'updateEntity:covalue-found',message:'CoValue found successfully',data:{id,isLoaded:coValue.$isLoaded},timestamp:Date.now(),sessionId:'debug-session',runId:'update',hypothesisId:'R'})}).catch(()=>{});
+			// #endregion
 
 			// Update using generic UPDATE function
 			await updateEntityGeneric(jazzAccount, coValue, finalUpdates)
 
+			// #region agent log
+			fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'updateEntity:success',message:'Update completed successfully',data:{id,updates:finalUpdates},timestamp:Date.now(),sessionId:'debug-session',runId:'update',hypothesisId:'P'})}).catch(()=>{});
+			// #endregion
+
 			// Subscription will update data.queries automatically
 		} catch (error) {
+			// #region agent log
+			fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'updateEntity:error',message:'Update failed with error',data:{id,error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'update',hypothesisId:'P'})}).catch(()=>{});
+			// #endregion
 			throw error // Re-throw to surface the error
 		}
 	},
@@ -271,10 +320,16 @@ const deleteEntitySkill: Skill = {
 			throw new Error('id is required')
 		}
 
-		// Check if Jazz is available - fail fast if not
-		const jazzAccount = data._jazzAccount as any
+		// Check if Jazz AccountCoState is available - fail fast if not (clean CoState pattern)
+		const accountCoState = data._jazzAccountCoState as any
+		if (!accountCoState) {
+			throw new Error('Jazz AccountCoState not available')
+		}
+
+		// Get the current account from CoState
+		const jazzAccount = accountCoState.current
 		if (!jazzAccount || !jazzAccount.$isLoaded) {
-			throw new Error('Jazz account not available')
+			throw new Error('Jazz account not loaded')
 		}
 
 		// Use generic DELETE function
@@ -344,37 +399,65 @@ const toggleEntityStatusSkill: Skill = {
 
 		// Schema is automatically detected from the entity's @schema property in updateEntityGeneric
 
-		// Check if Jazz is available - fail fast if not
-		const jazzQueryManager = data._jazzQueryManager as any
-		const jazzAccount = data._jazzAccount as any
-		if (!jazzQueryManager || !jazzAccount || !jazzAccount.$isLoaded) {
-			throw new Error('Jazz account or query manager not available')
+		// Check if Jazz AccountCoState is available - fail fast if not (clean CoState pattern)
+		const accountCoState = data._jazzAccountCoState as any
+		if (!accountCoState) {
+			throw new Error('Jazz AccountCoState not available')
+		}
+
+		// Get the current account from CoState
+		const jazzAccount = accountCoState.current
+		if (!jazzAccount || !jazzAccount.$isLoaded) {
+			throw new Error('Jazz account not loaded')
 		}
 
 		// Use Jazz to update entity
 		try {
-			// Get CoValue from entityMap first
-			let coValue = jazzQueryManager.getCoValueById(id)
+			// #region agent log
+			fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'toggleStatus:start',message:'Toggle status starting',data:{id,statusField,value1,value2,hasAccount:!!jazzAccount,accountLoaded:jazzAccount?.$isLoaded},timestamp:Date.now(),sessionId:'debug-session',runId:'toggle',hypothesisId:'R'})}).catch(()=>{});
+			// #endregion
+			
+			// Find entity in already-loaded root.entities (clean CoState pattern - no manual loading)
+			const root = jazzAccount.root
+			if (!root?.$isLoaded) {
+				// #region agent log
+				fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'toggleStatus:root-not-loaded',message:'Root not loaded',data:{id,hasRoot:!!root},timestamp:Date.now(),sessionId:'debug-session',runId:'toggle',hypothesisId:'R'})}).catch(()=>{});
+				// #endregion
+				throw new Error('Account root not loaded')
+			}
 
-			// If not found in cache, try to load it directly from the account/node
-			if (!coValue) {
-				const node = (jazzAccount as any).$jazz?.raw?.core?.node || (jazzAccount as any).$jazz?.raw?.node
-				if (node) {
-					const loadedCoValue = await node.load(id as any)
-					if (loadedCoValue !== 'unavailable') {
-						coValue = loadedCoValue
-					}
+			const entitiesList = root.entities
+			if (!entitiesList?.$isLoaded) {
+				// #region agent log
+				fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'toggleStatus:entities-not-loaded',message:'Entities list not loaded',data:{id,hasEntities:!!entitiesList},timestamp:Date.now(),sessionId:'debug-session',runId:'toggle',hypothesisId:'R'})}).catch(()=>{});
+				// #endregion
+				throw new Error('Entities list not loaded')
+			}
+
+			// Find the entity by ID in the already-loaded list
+			// Try multiple ID access patterns for robustness
+			let coValue: any = null
+			const entityIds: string[] = [] // For debug logging
+			
+			for (const entity of entitiesList) {
+				if (!entity?.$isLoaded) continue
+				
+				// Try multiple ID access patterns (direct property first, then $jazz)
+				const entityId = entity.id || entity.$jazz?.id
+				entityIds.push(entityId || 'unknown')
+				
+				if (entityId === id) {
+					coValue = entity
+					break
 				}
 			}
 
 			if (!coValue) {
-				throw new Error(`CoValue not found for ID: ${id}`)
+				// #region agent log
+				fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'toggleStatus:covalue-not-found',message:'CoValue not found in entities list',data:{id,entitiesCount:entitiesList.length,entityIds:entityIds.slice(0,5),targetId:id},timestamp:Date.now(),sessionId:'debug-session',runId:'toggle',hypothesisId:'S'})}).catch(()=>{});
+				// #endregion
+				throw new Error(`Entity not found for ID: ${id}`)
 			}
-
-			// Ensure CoValue is fully loaded
-			await coValue.$jazz.ensureLoaded({
-				resolve: {},
-			})
 
 			// Get current status from CoValue (try direct access or snapshot)
 			let currentStatus = (coValue as any)[statusField]
@@ -392,11 +475,22 @@ const toggleEntityStatusSkill: Skill = {
 			// Toggle between value1 and value2
 			const newStatus = currentStatus === value2 ? value1 : value2
 
+			// #region agent log
+			fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'toggleStatus:status-determined',message:'Status toggle determined',data:{id,currentStatus,newStatus,statusField},timestamp:Date.now(),sessionId:'debug-session',runId:'toggle',hypothesisId:'Q'})}).catch(()=>{});
+			// #endregion
+
 			// Update using generic UPDATE function
 			await updateEntityGeneric(jazzAccount, coValue, { [statusField]: newStatus })
 
+			// #region agent log
+			fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'toggleStatus:success',message:'Toggle completed successfully',data:{id,newStatus,statusField},timestamp:Date.now(),sessionId:'debug-session',runId:'toggle',hypothesisId:'Q'})}).catch(()=>{});
+			// #endregion
+
 			// Subscription will update data.queries automatically
 		} catch (error) {
+			// #region agent log
+			fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'toggleStatus:error',message:'Toggle failed with error',data:{id,error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'toggle',hypothesisId:'Q'})}).catch(()=>{});
+			// #endregion
 			throw error // Re-throw to surface the error
 		}
 	},
@@ -449,11 +543,16 @@ const clearEntitiesSkill: Skill = {
 
 		const queries = data.queries as Data
 
-		// Check if Jazz is available - fail fast if not
-		const jazzQueryManager = data._jazzQueryManager as any
-		const jazzAccount = data._jazzAccount as any
-		if (!jazzQueryManager || !jazzAccount || !jazzAccount.$isLoaded) {
-			throw new Error('Jazz account or query manager not available')
+		// Check if Jazz AccountCoState is available - fail fast if not (clean CoState pattern)
+		const accountCoState = data._jazzAccountCoState as any
+		if (!accountCoState) {
+			throw new Error('Jazz AccountCoState not available')
+		}
+
+		// Get the current account from CoState
+		const jazzAccount = accountCoState.current
+		if (!jazzAccount || !jazzAccount.$isLoaded) {
+			throw new Error('Jazz account not loaded')
 		}
 
 		// Use generic DELETE function to delete all entities

@@ -7,15 +7,16 @@
   import type { ViewNode } from "./types";
   import Composite from "./Composite.svelte";
   import Leaf from "./Leaf.svelte";
+  import { useQuery, type QueryOptions } from "../useQuery.svelte";
 
   // ========== PROPS ==========
   interface Props {
     config: VibeConfig;
     onEvent?: (event: string, payload?: unknown) => void;
-    account?: any; // Optional Jazz account for database integration
+    accountCoState?: any; // AccountCoState instance for database integration
   }
 
-  const { config, onEvent, account }: Props = $props();
+  const { config, onEvent, accountCoState }: Props = $props();
 
   // ========== SKILL REGISTRY SETUP ==========
   // Register all available skills (can be called once globally)
@@ -31,8 +32,23 @@
     $state(null);
   let _lastConfigId = $state<string | null>(null);
 
-  // Track account - use the account prop directly (should be account.current from parent)
-  const accountReady = $derived(account && (account as any).$isLoaded ? account : null);
+  // Unwrap AccountCoState inside component to establish reactivity
+  // Access .current inside $derived to create reactive subscription
+  const accountReady = $derived(
+    accountCoState && accountCoState.current?.$isLoaded 
+      ? accountCoState.current 
+      : null
+  );
+
+  // Store account reference in dataStore for skills to access
+  // Store the AccountCoState in dataStore for skills to use (clean CoState pattern)
+  $effect(() => {
+    if (browser && dataStore && accountCoState) {
+      dataStore.update((data) => {
+        return { ...data, _jazzAccountCoState: accountCoState };
+      });
+    }
+  });
 
   // Create a unique ID for the config to detect changes
   const configId = $derived(JSON.stringify(config.stateMachine));
@@ -89,32 +105,103 @@
     }
   });
 
-  $effect(() => {
-    if (browser && dataStore && accountReady && !jazzInitialized && _resolvedConfig) {
-      // Account just became available - trigger query initialization in DataStore
-      // DataStore will handle all query initialization based on config.data.queries
-      jazzInitialized = true;
-      const initializeJazz = async () => {
-        try {
-          // Ensure account is fully loaded
-          await (accountReady as any).$jazz.ensureLoaded({
-            resolve: { root: { entities: true, schemata: true } },
-          });
-
-          // Only initialize if queryManager doesn't exist yet
-          if (!dataStore.jazzQueryManager) {
-            // Import and call initializeQueries function
-            const { initializeQueries } = await import('../dataStore.js');
-            await initializeQueries(dataStore, _resolvedConfig, accountReady);
-          }
-        } catch (_error) {
-          // Jazz initialization failed - reset flag to retry
-          jazzInitialized = false;
-        }
-      };
-
-      initializeJazz();
+  // Use useQuery hooks for each query definition in config.data.queries
+  // Read query definitions from config
+  const queryDefinitions = $derived.by(() => {
+    if (!_resolvedConfig?.data?.queries) {
+      return [];
     }
+    const queries = _resolvedConfig.data.queries as Record<string, unknown>;
+    const definitions: Array<{ queryKey: string; schemaName: string; options?: QueryOptions }> = [];
+    
+    for (const [queryKey, queryValue] of Object.entries(queries)) {
+      // Check if this is a query definition (object with schemaName)
+      if (
+        queryValue &&
+        typeof queryValue === 'object' &&
+        !Array.isArray(queryValue) &&
+        'schemaName' in queryValue
+      ) {
+        const queryConfig = queryValue as { schemaName: string } & QueryOptions;
+        const schemaName = queryConfig.schemaName;
+        
+        if (schemaName && typeof schemaName === 'string') {
+          // Extract query options
+          const options: QueryOptions = {};
+          if (queryConfig.filter) options.filter = queryConfig.filter;
+          if (queryConfig.sort) options.sort = queryConfig.sort;
+          if (queryConfig.limit !== undefined) options.limit = queryConfig.limit;
+          if (queryConfig.offset !== undefined) options.offset = queryConfig.offset;
+          
+          definitions.push({ queryKey, schemaName, options });
+        }
+      }
+    }
+    
+    return definitions;
+  });
+
+  // Create useQuery hooks at top level - must be called unconditionally
+  // Get the first query definition reactively (for now, support single query)
+  // TODO: Support multiple queries by creating hooks for each at top level
+  const firstQueryDef = $derived.by(() => {
+    const defs = queryDefinitions;
+    return defs.length > 0 ? defs[0] : null;
+  });
+
+  // Call useQuery at top level (unconditionally) - hooks using runes must be at top level
+  // Pass AccountCoState directly - useQuery will access .current inside $derived for reactivity
+  // For now, hardcode 'Todo' schema - will make generic later once basic query works
+  const todosQuery = useQuery(
+    accountCoState,
+    'Todo',
+    undefined
+  );
+
+  // Collect all query results reactively
+  const queryResults = $derived.by(() => {
+    const results = new Map<string, Array<Record<string, unknown>>>();
+    
+    // Add todos query result if available
+    if (firstQueryDef && todosQuery && todosQuery.entities) {
+      const entities = todosQuery.entities;
+      if (Array.isArray(entities)) {
+        results.set(firstQueryDef.queryKey, entities);
+      }
+    }
+    
+    return results;
+  });
+
+  // Update dataStore.queries reactively when query results change
+  $effect(() => {
+    if (!browser || !dataStore) {
+      return;
+    }
+    
+    const results = queryResults;
+    
+    if (results.size === 0) {
+      return;
+    }
+    
+    // Update dataStore with query results
+    dataStore.update((data) => {
+      const newData = { ...data };
+      if (!newData.queries) {
+        newData.queries = {};
+      }
+      
+      const queries = { ...(newData.queries as Record<string, unknown>) };
+      
+      // Update each query result
+      for (const [queryKey, entities] of results) {
+        queries[queryKey] = entities;
+      }
+      
+      newData.queries = queries;
+      return newData;
+    });
   });
 
   // ========== REACTIVE DATA ACCESS ==========
