@@ -5,7 +5,6 @@
   import { CoState } from "jazz-tools/svelte";
   import Badge from "./Badge.svelte";
   import ListView from "./ListView.svelte";
-  import { createCoValueState } from "$lib/utils/costate-navigation";
 
   interface Props {
     context: CoValueContext;
@@ -378,8 +377,7 @@
                               {Array.isArray(value)
                                 ? `[${value.length} items]`
                                 : String(value).slice(0, 50)}
-                            </span>
-                          {/if}
+                          </span>
                         {/if}
                       </div>
                     </button>
