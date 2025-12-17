@@ -7,30 +7,6 @@
 import type { CompositeConfig } from '../../../compositor/view/types'
 
 /**
- * Create kanban content composite with dynamic columns
- * Columns are generated from data.view.kanbanColumns array
- */
-export function createKanbanContentComposite(
-	columnCount: number = 3,
-): CompositeConfig {
-	return {
-		id: 'todo.composite.content.kanban',
-		container: {
-			layout: 'grid',
-			// Defaults handle: h-full w-full overflow-hidden grid @container
-			// Dynamically set grid columns based on column count
-			class: `pt-2 grid-cols-${columnCount} gap-4 min-h-0 border border-slate-200 rounded-lg p-2`,
-		},
-		children: [
-			// Columns are dynamically generated - this will be populated at runtime
-			// For now, we'll use a foreach binding to generate columns from data.view.kanbanColumns
-			// But since composites don't support foreach, we'll need to generate them statically
-			// The actual column configs come from data.view.kanbanColumns
-		],
-	}
-}
-
-/**
  * Generate kanban content composite children from column configs
  */
 export function generateKanbanContentChildren(

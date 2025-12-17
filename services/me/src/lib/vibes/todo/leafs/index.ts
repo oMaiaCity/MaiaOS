@@ -5,7 +5,6 @@
 
 export { errorLeaf } from './error'
 export { inputFormLeaf } from './inputForm'
-export { kanbanViewLeaf } from './kanbanView'
 export {
 	defaultKanbanColumns,
 	generateKanbanColumnLeafs,

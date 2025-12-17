@@ -21,7 +21,6 @@ import {
 import {
 	errorLeaf,
 	inputFormLeaf,
-	kanbanViewLeaf,
 	modalLeaf,
 	timelineViewLeaf,
 	titleLeaf,
@@ -57,7 +56,6 @@ if (typeof window !== 'undefined') {
 		// Leaves
 		errorLeaf,
 		inputFormLeaf,
-		kanbanViewLeaf,
 		...kanbanColumnLeafs, // Dynamically generated column leafs
 		modalLeaf,
 		timelineViewLeaf,
