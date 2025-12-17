@@ -5,17 +5,19 @@
 
   const { children } = $props();
 
-  // Create global Jazz account with full resolve query for all routes
+  // Create global Jazz account with minimal resolve query for fast initial load
   // This component is rendered inside JazzSvelteProvider, so AccountCoState can access the context
   // Create synchronously (not in effect) so it's available immediately
+  // 
+  // PERFORMANCE: Only load what's needed for initial render (profile for header)
+  // Entities and schemata are loaded lazily when routes that need them are accessed
+  // The useQuery hook and other components handle lazy loading gracefully
   const globalAccount = new AccountCoState(JazzAccount, {
     resolve: {
       root: {
-        entities: { $each: true }, // Load all entities for todos
-        schemata: { $each: true }, // Load all schemas for schema matching
-        capabilities: true, // Load capabilities list
+        // Only load root structure, not nested lists (entities/schemata loaded on-demand)
       },
-      profile: true, // Load profile for header
+      profile: true, // Load profile for header (required for initial render)
     },
   });
 

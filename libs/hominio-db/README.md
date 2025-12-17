@@ -6,7 +6,7 @@ Shared Jazz data schemas, utilities, computed fields system, migrations, and gro
 
 This package contains all Jazz-related data functionality that can be shared across multiple services:
 
-- **Schemas**: Account, Profile, Contact, AppRoot, and Capability schemas
+- **Schemas**: Account, Profile, Contact, and AppRoot schemas
 - **Computed Fields**: Generic system for computed fields on CoValues
 - **Groups**: Utilities for working with Jazz Groups and CoValue access
 - **Profile Resolver**: Functions for resolving user profile information
@@ -32,7 +32,6 @@ import {
   AccountProfile, 
   Contact, 
   AppRoot, 
-  Capability,
   syncGoogleDataToProfile,
   registerComputedField,
   setupComputedFieldsForCoValue,

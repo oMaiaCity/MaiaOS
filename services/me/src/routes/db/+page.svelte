@@ -214,7 +214,6 @@
       const rootProperties = [
         "schemata",
         "entities",
-        "capabilities",
         "contact",
       ];
       const matchingProperty = rootProperties.find((prop) => {

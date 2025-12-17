@@ -52,12 +52,6 @@ registerComputedField({
 	},
 })
 
-/** Capability schema - wrapper for Group reference */
-export const Capability = co.map({
-	'@schema': z.literal('capability'),
-	group: Group, // Reference to a Group CoValue
-})
-
 /** Custom profile schema with firstName, lastName, image, and computed name */
 export const AccountProfile = co.profile({
 	firstName: z.string(),
@@ -75,7 +69,6 @@ export const Contact = co.map({
  *  where you can store top-level objects for that user */
 export const AppRoot = co.map({
 	contact: Contact, // Simple contact CoMap with email
-	capabilities: co.list(Capability), // List of Capability CoValues (each contains a Group reference)
 	schemata: co.optional(co.list(co.map({}))), // Optional - list of SchemaDefinitions (created dynamically)
 	entities: co.optional(co.list(co.map({}))), // Optional - list of Entity instances (created dynamically)
 	relations: co.optional(co.list(co.map({}))), // Optional - list of Relation instances (created dynamically)
@@ -156,18 +149,8 @@ export const JazzAccount = co
 			})
 			await contact.$jazz.waitForSync()
 
-			// Create default group for capabilities
-			const defaultGroup = Group.create()
-			await defaultGroup.$jazz.waitForSync()
-			const defaultCapability = Capability.create({
-				'@schema': 'capability',
-				group: defaultGroup,
-			})
-			await defaultCapability.$jazz.waitForSync()
-
 			account.$jazz.set('root', {
 				contact: contact,
-				capabilities: [defaultCapability],
 			})
 			return
 		}
@@ -184,30 +167,20 @@ export const JazzAccount = co
 			})
 			await contact.$jazz.waitForSync()
 
-			// Create default group for capabilities
-			const defaultGroup = Group.create()
-			await defaultGroup.$jazz.waitForSync()
-			const defaultCapability = Capability.create({
-				'@schema': 'capability',
-				group: defaultGroup,
-			})
-			await defaultCapability.$jazz.waitForSync()
-
 			account.$jazz.set('root', {
 				contact: contact,
-				capabilities: [defaultCapability],
 			})
 			return
 		}
 
 		const root = loadedAccount.root
 
-		// Try to load root with contact and capabilities
+		// Try to load root with contact
 		// If the reference is broken (points to non-existent CoValue), recreate it
 		let rootWithData
 		try {
 			rootWithData = await root.$jazz.ensureLoaded({
-				resolve: { contact: true, capabilities: true },
+				resolve: { contact: true },
 			})
 
 			// Verify that root was actually loaded (not just a broken reference)
@@ -221,18 +194,8 @@ export const JazzAccount = co
 			})
 			await contact.$jazz.waitForSync()
 
-			// Create default group for capabilities
-			const defaultGroup = Group.create()
-			await defaultGroup.$jazz.waitForSync()
-			const defaultCapability = Capability.create({
-				'@schema': 'capability',
-				group: defaultGroup,
-			})
-			await defaultCapability.$jazz.waitForSync()
-
 			account.$jazz.set('root', {
 				contact: contact,
-				capabilities: [defaultCapability],
 			})
 			return
 		}
@@ -246,38 +209,15 @@ export const JazzAccount = co
 			rootWithData.$jazz.set('contact', contact)
 		}
 
-		// Ensure capabilities list exists and has at least one default group
-		if (!rootWithData.$jazz.has('capabilities')) {
-			const defaultGroup = Group.create()
-			await defaultGroup.$jazz.waitForSync()
-			const defaultCapability = Capability.create({
-				'@schema': 'capability',
-				group: defaultGroup,
-			})
-			await defaultCapability.$jazz.waitForSync()
-			rootWithData.$jazz.set('capabilities', [defaultCapability])
-		} else {
-			// Ensure capabilities list is loaded
-			try {
-				await rootWithData.$jazz.ensureLoaded({
-					resolve: { capabilities: true },
-				})
-			} catch (_error) {
-				// If loading failed, create a new default capability
-				const defaultGroup = Group.create()
-				await defaultGroup.$jazz.waitForSync()
-				const defaultCapability = Capability.create({
-					'@schema': 'capability',
-					group: defaultGroup,
-				})
-				await defaultCapability.$jazz.waitForSync()
-				rootWithData.$jazz.set('capabilities', [defaultCapability])
-			}
+		// Remove capabilities if they exist (migration: capabilities system removed)
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const rootAny = rootWithData as any
+		if (rootAny.$jazz.has('capabilities')) {
+			rootAny.$jazz.delete('capabilities')
+			await rootWithData.$jazz.waitForSync()
 		}
 
 		// Migrate existing data to schemata (backward compatibility)
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const rootAny = rootWithData as any
 		if (rootAny.$jazz.has('data') && !rootWithData.$jazz.has('schemata')) {
 			// Load data list using raw access
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any

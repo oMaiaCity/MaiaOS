@@ -41,7 +41,6 @@ export { migrateSyncGoogleNameToProfile } from './migrations/20241220_sync-googl
 export {
 	AccountProfile,
 	AppRoot,
-	Capability,
 	Contact,
 	JazzAccount,
 	syncGoogleDataToProfile,

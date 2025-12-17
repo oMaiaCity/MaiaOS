@@ -25,6 +25,33 @@
     vibeId && vibeConfigs[vibeId] ? vibeConfigs[vibeId] : vibesVibeConfig,
   );
 
+  // Lazy load entities and schemata when this route is accessed
+  // This ensures data is available for useQuery hooks
+  $effect(() => {
+    if (!browser || !accountCoState) return;
+    
+    const account = accountCoState.current;
+    if (!account?.$isLoaded) return;
+    
+    const root = account.root;
+    if (!root?.$isLoaded) return;
+    
+    // Trigger lazy loading of entities and schemata by accessing them
+    // CoState will automatically load them when accessed
+    // We access them in an effect so they load when the route is visited
+    if (root.entities && !root.entities.$isLoaded) {
+      root.entities.$jazz.ensureLoaded().catch(() => {
+        // Ignore errors - useQuery handles missing data gracefully
+      });
+    }
+    
+    if (root.schemata && !root.schemata.$isLoaded) {
+      root.schemata.$jazz.ensureLoaded().catch(() => {
+        // Ignore errors - useQuery handles missing data gracefully
+      });
+    }
+  });
+
   // Handle SELECT_VIBE events for navigation via route params
   function handleVibeEvent(event: string, payload?: unknown) {
     if (event === "SELECT_VIBE" && payload) {
