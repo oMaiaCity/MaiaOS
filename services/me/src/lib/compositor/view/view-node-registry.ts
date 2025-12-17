@@ -36,11 +36,25 @@ class ViewNodeRegistryImpl {
 	 * Register a composite or leaf (auto-detects type)
 	 */
 	register(node: CompositeConfig | LeafNode): void {
-		if ('container' in node && 'children' in node) {
-			// It's a CompositeConfig
+		const hasContainer = 'container' in node
+		const hasChildren = 'children' in node
+		const hasSchema = '@schema' in node
+		const hasTag = 'tag' in node
+		const nodeId = (node as CompositeConfig | LeafNode).id || ''
+		
+		// Check if it's a composite:
+		// - Has container property (regular composite)
+		// - OR has @schema AND children property (composite schema instance)
+		// - OR has @schema AND ID contains ".composite." (composite schema instance)
+		// - OR ID contains ".composite." (fallback for schema instances)
+		const isCompositeById = nodeId.includes('.composite.')
+		const isLeafById = nodeId.includes('.leaf.')
+		
+		if (hasContainer || (hasSchema && (hasChildren || isCompositeById)) || isCompositeById) {
+			// It's a CompositeConfig (either regular or schema instance)
 			this.registerComposite(node as CompositeConfig)
-		} else if ('tag' in node) {
-			// It's a LeafNode
+		} else if (hasTag || (hasSchema && isLeafById) || isLeafById) {
+			// It's a LeafNode (either regular or schema instance)
 			this.registerLeaf(node as LeafNode)
 		} else {
 			console.warn('Unknown node type, cannot register:', node)

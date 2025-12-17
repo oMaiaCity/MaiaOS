@@ -16,7 +16,8 @@ export const SchemaMetaSchema = {
 		},
 		type: {
 			type: 'string',
-			description: 'Content type of the schema (e.g., "Entity" for EntityTypes, "Relation" for RelationTypes)',
+			enum: ['Entity', 'Relation', 'Leaf', 'Composite'],
+			description: 'Content type of the schema (e.g., "Entity" for EntityTypes, "Relation" for RelationTypes, "Leaf" for LeafTypes, "Composite" for CompositeTypes)',
 		},
 		name: {
 			type: 'string',

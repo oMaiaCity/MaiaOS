@@ -55,8 +55,13 @@ export const timelineListLeaf: LeafNode = {
 								],
 							},
 							{
-								...todoItemLeaf,
+								// Spread todoItemLeaf but remove id to avoid conflicts in foreach
+								tag: todoItemLeaf.tag || 'div',
+								attributes: todoItemLeaf.attributes,
 								classes: todoItemLeaf.classes ? `${todoItemLeaf.classes} mb-0` : 'mb-0',
+								children: todoItemLeaf.children,
+								bindings: todoItemLeaf.bindings,
+								events: todoItemLeaf.events,
 							},
 						],
 					},

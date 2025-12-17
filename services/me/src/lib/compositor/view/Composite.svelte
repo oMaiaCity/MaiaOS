@@ -6,10 +6,11 @@
 <script lang="ts">
   import type { Data } from "../dataStore";
   import type { VibeConfig } from "../types";
-  import type { ViewNode } from "./types";
+  import type { ViewNode, CompositeConfig } from "./types";
   import Leaf from "./Leaf.svelte";
   import { resolveDataPath } from "./resolver";
   import { viewNodeRegistry } from "./view-node-registry";
+  import { resolveSchemaLeaf, resolveSchemaComposite } from "./schema-resolver";
   
   // Recursive component reference (Svelte allows this)
   import CompositeRecursive from "./Composite.svelte";
@@ -27,6 +28,8 @@
   const composite = $derived.by(() => {
     // Access data to ensure reactivity tracking
     const _ = data;
+    
+    let resolvedComposite: CompositeConfig | undefined;
     
     // If compositeId is provided, resolve from registry
     if (node.compositeId) {
@@ -50,15 +53,77 @@
       }
       
       if (compositeId && typeof compositeId === 'string') {
-        const resolvedComposite = viewNodeRegistry.getComposite(compositeId);
-        if (resolvedComposite) {
-          return resolvedComposite;
+        resolvedComposite = viewNodeRegistry.getComposite(compositeId);
+        if (!resolvedComposite) {
+          console.warn(`Composite not found in registry: ${compositeId}`);
         }
-        console.warn(`Composite not found in registry: ${compositeId}`);
       }
+    } else {
+      // Otherwise use inline composite
+      resolvedComposite = node.composite;
     }
-    // Otherwise use inline composite
-    return node.composite;
+    
+    // If resolved composite has @schema, resolve it to a regular composite (pre-render schema resolution)
+    if (resolvedComposite && resolvedComposite['@schema']) {
+      return resolveSchemaComposite(resolvedComposite);
+    }
+    
+    return resolvedComposite;
+  });
+
+  // Resolve schema instances in children before rendering
+  const resolvedChildren = $derived.by(() => {
+    if (!composite?.children) return [];
+    return composite.children.map((child: ViewNode) => {
+      // If child has a leaf with @schema, resolve it to a regular leaf
+      if (child.leaf && child.leaf['@schema']) {
+        return {
+          ...child,
+          leaf: resolveSchemaLeaf(child.leaf)
+        };
+      }
+      // If child has a leafId that points to a leaf with @schema, resolve it
+      if (child.leafId) {
+        const leafFromRegistry = viewNodeRegistry.getLeaf(child.leafId);
+        if (leafFromRegistry && leafFromRegistry['@schema']) {
+          return {
+            ...child,
+            leaf: resolveSchemaLeaf(leafFromRegistry)
+          };
+        }
+      }
+      // If child has a composite with @schema, resolve it to a regular composite
+      if (child.composite && child.composite['@schema']) {
+        return {
+          ...child,
+          composite: resolveSchemaComposite(child.composite)
+        };
+      }
+      // If child has a compositeId, resolve it from registry (only for direct IDs, not data paths)
+      if (child.compositeId && !child.compositeId.startsWith('data.')) {
+        const compositeFromRegistry = viewNodeRegistry.getComposite(child.compositeId);
+        if (compositeFromRegistry) {
+          // If it's a schema instance, resolve it first
+          if (compositeFromRegistry['@schema']) {
+            const resolved = resolveSchemaComposite(compositeFromRegistry);
+            return {
+              ...child,
+              composite: resolved,
+              // Remove compositeId since we've resolved it to composite
+              compositeId: undefined,
+            };
+          } else {
+            // Regular composite - keep compositeId for CompositeRecursive to resolve
+            // CompositeRecursive will handle the resolution
+            return child;
+          }
+        } else if (typeof window !== 'undefined' && import.meta.env?.DEV) {
+          console.warn(`[Composite] Composite not found in registry for compositeId: ${child.compositeId}`);
+        }
+      }
+      // If compositeId is a data path (starts with "data."), let CompositeRecursive handle it
+      return child;
+    });
   });
 
   $effect(() => {
@@ -74,10 +139,17 @@
         "Composite component requires a node with composite property or valid compositeId",
       );
     }
-    if (!composite.container?.layout) {
+    // Container is optional when @schema is present (will be resolved from schema)
+    // But after resolution, container should always be present
+    // Skip validation if @schema is present (it will be resolved before rendering)
+    if (!composite.container?.layout && !composite['@schema']) {
       throw new Error(
         "Composite container.layout is REQUIRED. Use 'grid', 'flex', or 'content'",
       );
+    }
+    // After schema resolution, container should always be present
+    if (!composite.container?.layout && composite['@schema']) {
+      console.error('Composite with @schema missing container after resolution:', composite);
     }
   });
 
@@ -243,7 +315,7 @@
 
 {#if composite}
   <div class={containerClasses}>
-    {#each composite.children as child}
+    {#each resolvedChildren as child}
       {@const isVisible = !child.visible || evaluateVisibility(child.visible)}
       {#if isVisible}
         {#if child.composite || child.compositeId}
@@ -252,8 +324,9 @@
           <CompositeRecursive node={child} {data} {config} {onEvent} />
         {:else if child.leaf || child.leafId}
           <!-- Leaf node - render as content using JSON-driven leaf definition -->
-          <!-- leafId will be resolved by Leaf component -->
-          <Leaf node={child} {data} {config} {onEvent} />
+          <!-- If child was pre-resolved with schema, use the resolved leaf, otherwise let Leaf component resolve -->
+          {@const childNode = child.leaf ? { ...child, leaf: child.leaf } : child}
+          <Leaf node={childNode} {data} {config} {onEvent} />
         {:else}
           <!-- Invalid node - neither composite nor leaf -->
           <div class="text-red-500 text-sm">

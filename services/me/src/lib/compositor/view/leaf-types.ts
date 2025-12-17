@@ -117,8 +117,9 @@ export interface LeafNode {
 	 * HTML tag name
 	 * Examples: "div", "button", "input", "form", "ul", "li", etc.
 	 * Special: "icon" - renders an Iconify icon
+	 * Optional when @schema is provided (tag comes from schema definition)
 	 */
-	tag: string
+	tag?: string
 
 	/**
 	 * HTML attributes
@@ -170,4 +171,21 @@ export interface LeafNode {
 		focus?: EventConfig
 		blur?: EventConfig
 	}
+
+	/**
+	 * @schema - Reference to schema definition
+	 * When present, this leaf is an instance created from a Schema
+	 * The schema must have type: "Leaf" or "Composite"
+	 * Currently: string schema name (e.g., "design-system.title")
+	 * Future: CoValue reference to SchemaDefinition CoValue
+	 */
+	'@schema'?: string | any
+
+	/**
+	 * Schema parameters - Concrete values for schema placeholders
+	 * Maps parameter names to data paths from queries/view
+	 * Example: { text: "data.queries.title", visible: "data.view.showTitle" }
+	 * These override the default values defined in the schema's parameterSchema JSON Schema
+	 */
+	parameters?: Record<string, string>
 }

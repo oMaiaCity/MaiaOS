@@ -1,30 +1,24 @@
 /**
  * Input Section Composite Configuration
+ * Uses design-system.inputSection schema
  */
 
 import type { CompositeConfig } from '../../../compositor/view/types'
-import { errorLeaf, inputFormLeaf } from '../leafs'
 
 export const inputSectionComposite: CompositeConfig = {
 	id: 'todo.composite.inputSection',
-	container: {
-		layout: 'content',
-		class: ' bg-slate-50',
+	'@schema': 'design-system.inputSection',
+	parameters: {
+		valuePath: 'data.view.newTodoText',
+		inputEvent: 'UPDATE_INPUT',
+		submitEvent: 'ADD_TODO',
+		submitPayload: JSON.stringify({ schemaName: 'Todo' }),
+		inputName: 'new-todo-input',
+		placeholder: 'Add a new todo...',
+		buttonText: 'Add',
+		buttonVisible: 'true',
+		buttonDisabled: '!data.view.newTodoText || data.view.newTodoText.trim().length === 0',
+		errorVisible: 'data.view.error',
+		errorText: 'data.view.error',
 	},
-	children: [
-		{
-			slot: 'input.value',
-			leaf: {
-				...inputFormLeaf,
-				classes: inputFormLeaf.classes ? `${inputFormLeaf.classes} h-auto` : 'h-auto',
-			},
-		},
-		{
-			slot: 'error',
-			leaf: {
-				...errorLeaf,
-				classes: errorLeaf.classes ? `${errorLeaf.classes} h-auto` : 'h-auto',
-			},
-		},
-	],
 }

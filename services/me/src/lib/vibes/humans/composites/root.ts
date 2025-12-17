@@ -1,22 +1,29 @@
 /**
  * Root Composite Configuration
  * Main container that holds all sections
+ * Uses design-system.rootCard schema
  */
 
-import { createRootCard } from '../../shared/rootCard'
+import type { CompositeConfig } from '../../../compositor/view/types'
 import { headerComposite } from './header'
 import { listContentComposite } from './listContent'
 
-export const rootComposite = createRootCard(
-	[
+export const rootComposite: CompositeConfig = {
+	id: 'humans.composite.root',
+	'@schema': 'design-system.rootCard',
+	parameters: {
+		cardLayout: 'grid',
+		cardClasses: '',
+	},
+	children: [
 		// Header Composite - Fixed header containing title
 		{
 			slot: 'header',
 			composite: {
 				...headerComposite,
 				container: {
-					...headerComposite.container,
-					class: `${headerComposite.container.class} sticky top-0 z-10 h-auto`,
+					layout: headerComposite.container?.layout || 'content',
+					class: `${headerComposite.container?.class || ''} sticky top-0 z-10 h-auto`,
 				},
 			},
 		},
@@ -26,8 +33,5 @@ export const rootComposite = createRootCard(
 			composite: listContentComposite,
 		},
 	],
-	'grid',
-	'',
-	'humans.composite.root'
-)
+}
 

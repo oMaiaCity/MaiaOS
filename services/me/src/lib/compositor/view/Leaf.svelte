@@ -13,6 +13,7 @@
   import { resolveDataPath } from "./resolver";
   import { sanitizeClasses } from "./whitelist";
   import { viewNodeRegistry } from "./view-node-registry";
+  import { resolveSchemaLeaf } from "./schema-resolver";
   import Icon from "@iconify/svelte";
   import { goto } from "$app/navigation";
 
@@ -79,6 +80,10 @@
       if (leafId && typeof leafId === 'string') {
         const resolvedLeaf = viewNodeRegistry.getLeaf(leafId);
         if (resolvedLeaf) {
+          // If resolved leaf has @schema, resolve it to a regular leaf (pre-render schema resolution)
+          if (resolvedLeaf['@schema']) {
+            return resolveSchemaLeaf(resolvedLeaf);
+          }
           return resolvedLeaf;
         }
         // Debug: Log the resolution attempt (only in development)
@@ -104,7 +109,14 @@
       }
     }
     // Otherwise use inline leaf
-    return node.leaf;
+    const resolvedLeaf = node.leaf;
+    
+    // If resolved leaf has @schema, resolve it to a regular leaf (pre-render schema resolution)
+    if (resolvedLeaf && resolvedLeaf['@schema']) {
+      return resolveSchemaLeaf(resolvedLeaf);
+    }
+    
+    return resolvedLeaf;
   });
 
   // Validate leaf
@@ -398,7 +410,7 @@
 
   // Get sanitized classes - resolve dynamic class values
   const classes = $derived.by(() => {
-    if (!leaf.classes) return "";
+    if (!leaf || !leaf.classes) return "";
 
     // Split classes string by spaces and resolve dynamic classes (e.g., classes that reference data/item)
     const classArray = leaf.classes.split(/\s+/).filter(Boolean);
@@ -553,12 +565,12 @@
     "wbr",
   ]);
 
-  const isVoidElement = $derived(VOID_ELEMENTS.has(leaf.tag));
+  const isVoidElement = $derived(leaf && leaf.tag ? VOID_ELEMENTS.has(leaf.tag) : false);
 
   // Build attributes object - reactive to ensure updates
   // For inputs, directly access the data property to ensure Svelte tracks changes
   const inputValue = $derived.by(() => {
-    if (leaf.tag !== "input" || !leaf.bindings?.value) return undefined;
+    if (!leaf || leaf.tag !== "input" || !leaf.bindings?.value) return undefined;
 
     // Use resolveValue to properly handle nested paths (e.g., "data.view.someProperty")
     // This ensures we can access nested properties correctly
@@ -727,7 +739,7 @@
           )}
         {/if}
         <LeafRecursive
-          node={{ slot: "item", leaf: foreachConfig.leaf }}
+          node={{ slot: "item", leaf: foreachConfig.leaf ? (foreachConfig.leaf['@schema'] ? resolveSchemaLeaf(foreachConfig.leaf) : foreachConfig.leaf) : undefined }}
           data={{ ...data, item: itemData }}
           {config}
           {onEvent}

@@ -7,7 +7,6 @@
  */
 
 import type { LeafNode } from '../../../compositor/view/leaf-types'
-import { modalCloseButtonLeaf } from './modalCloseButton'
 import { modalTitleLeaf } from './modalTitle'
 import { modalContentLeaf } from './modalContent'
 
@@ -30,7 +29,12 @@ export const modalWrapperLeaf: LeafNode = {
 			// Click propagation is handled by Leaf.svelte - it checks if target === currentTarget
 			// for fixed divs, so clicks inside this div won't trigger the backdrop's CLOSE_MODAL event
 			children: [
-				modalCloseButtonLeaf,
+				{
+					'@schema': 'design-system.modalCloseButton',
+					parameters: {
+						event: 'CLOSE_MODAL',
+					},
+				},
 				modalTitleLeaf,
 				modalContentLeaf,
 			],

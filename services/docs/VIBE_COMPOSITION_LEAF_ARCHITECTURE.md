@@ -8,44 +8,77 @@ This document provides comprehensive documentation for the Vibe/Composition/Leaf
 
 ## 📐 Architecture Overview
 
-The Vibe/Composition/Leaf architecture is a three-layer system for building reactive, data-driven UIs:
+The Vibe/Composition/Leaf architecture is a multi-layer system for building reactive, data-driven UIs with reusable design system components:
 
 ```
-┌─────────────────────────────────────────┐
-│           VIBE (Top Level)             │
-│  - State Machine Configuration         │
-│  - View Configuration                  │
-│  - Skills Registry                      │
-└──────────────┬──────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│           VIBE (Application Layer)                  │
+│  - State Machine Configuration                      │
+│  - View Configuration                               │
+│  - Skills Registry                                  │
+└──────────────┬──────────────────────────────────────┘
                │
                ▼
-┌─────────────────────────────────────────┐
-│        COMPOSITE (Layout Layer)          │
-│  - Grid/Flex/Stack/Overlay layouts      │
-│  - Container styles                     │
-│  - Child positioning                    │
-└──────────────┬──────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│        SCHEMA (Design System Layer)                 │
+│  - Reusable UI Component Definitions                │
+│  - Parameter Schemas (Full JSON Schema)             │
+│  - Leaf Schemas (Buttons, Inputs, Headers)          │
+│  - Composite Schemas (Cards, Modals, Layouts)       │
+└──────────────┬──────────────────────────────────────┘
                │
                ▼
-┌─────────────────────────────────────────┐
-│          LEAF (Content Layer)           │
-│  - JSON-driven UI definitions           │
-│  - Data bindings                        │
-│  - Event handlers                       │
-│  - Fully generic, no hardcoded logic    │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│        COMPOSITE (Layout Layer)                      │
+│  - Grid/Flex/Content layouts                        │
+│  - Container styles                                 │
+│  - Child positioning                                │
+│  - Schema Instances (@schema + parameters)          │
+└──────────────┬──────────────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────────────┐
+│          LEAF (Content Layer)                       │
+│  - JSON-driven UI definitions                       │
+│  - Data bindings                                    │
+│  - Event handlers                                   │
+│  - Schema Instances (@schema + parameters)          │
+│  - Fully generic, no hardcoded logic                │
+└──────────────┬──────────────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────────────┐
+│        PRE-RENDER LAYER (Schema Resolution)         │
+│  - Resolves @schema references to definitions       │
+│  - Validates & merges parameters with defaults      │
+│  - Replaces placeholders ({{paramName}})            │
+│  - Outputs pure LeafNode/CompositeConfig            │
+└──────────────┬──────────────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────────────┐
+│        RENDER ENGINE (Svelte Components)            │
+│  - Leaf.svelte (renders LeafNode)                   │
+│  - Composite.svelte (renders CompositeConfig)       │
+│  - Schema-agnostic (never sees @schema)             │
+│  - Pure reactivity & DOM generation                 │
+└─────────────────────────────────────────────────────┘
 ```
 
 ### Key Principles
 
 1. **100% JSON-Driven**: UI structure and behavior defined entirely in JSON
-2. **Fully Generic**: No hardcoded entity-specific logic (e.g., no `todoId`, just `id`)
-3. **Security-First**: Whitelist-based validation for untrusted AI-generated configs
-4. **Reactive**: Built on Svelte's reactivity system
-5. **Modular**: Composable composites and reusable leaf nodes
-6. **Pure Tailwind**: All styling via Tailwind classes (strings), no inline styles
-7. **Pure Composition**: `Composite.svelte` handles only slot management and recursive rendering
-8. **Container-Query Based**: Leaves adapt to their parent composite container size using container queries (`@md:`, `@lg:`, etc.), not viewport media queries
+2. **Schema-Driven Design System**: Reusable UI components defined as schemas with parameterized data paths
+3. **Full JSON Schema Compliance**: Parameter contracts use full JSON Schema specification (type, properties, required, default, description, etc.)
+4. **Separation of Concerns**: Schema Definitions → Schema Instances → Pre-Render Resolution → Render Engine
+5. **Fully Generic**: No hardcoded entity-specific logic (e.g., no `todoId`, just `id`)
+6. **Security-First**: Whitelist-based validation for untrusted AI-generated configs
+7. **Reactive**: Built on Svelte's reactivity system
+8. **Modular**: Composable composites and reusable leaf nodes
+9. **Pure Tailwind**: All styling via Tailwind classes (strings), no inline styles
+10. **Pure Composition**: `Composite.svelte` handles only slot management and recursive rendering
+11. **Container-Query Based**: Leaves adapt to their parent composite container size using container queries (`@md:`, `@lg:`, etc.), not viewport media queries
+12. **Pre-Render Schema Resolution**: Schemas are resolved before rendering - render engine is schema-agnostic
 
 ---
 
@@ -67,6 +100,364 @@ The composite engine follows a **pure Tailwind approach** where:
 - **Performance**: No runtime style computation
 - **Simplicity**: No wrapper divs or complex style logic in components
 - **Maintainability**: All styling visible in config files
+
+---
+
+## 🎨 Schema-Driven Design System Architecture
+
+### Overview
+
+The Schema-Driven Design System enables true component reusability by separating **generic UI component definitions** (Schemas) from **specific data-bound instances** (Schema Instances). This architecture allows you to:
+
+- Define reusable UI components once with parameterized placeholders
+- Create multiple instances with different data paths and configurations
+- Maintain a centralized design system that can be loaded from a database (future: CoValue-based)
+- Ensure full JSON Schema compliance for parameter validation
+
+### Architecture Layers
+
+```
+┌────────────────────────────────────────────────────────┐
+│  1. SCHEMA DEFINITIONS (Design System Registry)        │
+│     - Stored in hardcoded registry (future: CoValues)  │
+│     - Contains: definition + parameterSchema           │
+│     - Types: "Leaf" or "Composite"                     │
+│     - Examples: design-system.title,                   │
+│                 design-system.header,                  │
+│                 design-system.inputForm                │
+└────────────────────┬───────────────────────────────────┘
+                     │
+                     ▼
+┌────────────────────────────────────────────────────────┐
+│  2. SCHEMA INSTANCES (Vibe Configurations)             │
+│     - References schema via @schema property           │
+│     - Provides concrete values via parameters          │
+│     - Example: { "@schema": "design-system.title",    │
+│                  "parameters": { "text": "data...." } }│
+└────────────────────┬───────────────────────────────────┘
+                     │
+                     ▼
+┌────────────────────────────────────────────────────────┐
+│  3. PRE-RENDER LAYER (schema-resolver.ts)              │
+│     - Loads schema definition from registry            │
+│     - Validates parameters against JSON Schema         │
+│     - Merges defaults from parameterSchema             │
+│     - Replaces placeholders: {{param}} → value         │
+│     - Outputs pure LeafNode or CompositeConfig         │
+└────────────────────┬───────────────────────────────────┘
+                     │
+                     ▼
+┌────────────────────────────────────────────────────────┐
+│  4. RENDER ENGINE (Leaf.svelte, Composite.svelte)      │
+│     - Schema-agnostic (never sees @schema)             │
+│     - Receives pure LeafNode/CompositeConfig           │
+│     - Handles bindings, events, reactivity             │
+│     - Renders to DOM                                   │
+└────────────────────────────────────────────────────────┘
+```
+
+### Schema Definition Structure
+
+A schema definition includes:
+1. **type**: `"Leaf"` or `"Composite"` (extends schema meta-schema)
+2. **name**: Unique schema identifier (e.g., `"design-system.title"`)
+3. **definition**: The LeafNode or CompositeConfig structure with placeholders
+4. **parameterSchema**: Full JSON Schema for parameter validation
+
+```typescript
+// Example: Title Leaf Schema
+export const titleSchemaDefinition: any = {
+  type: 'Leaf',
+  name: 'design-system.title',
+  
+  // LeafNode structure with placeholders
+  definition: {
+    tag: 'div',
+    classes: 'text-center mb-3 flex items-center justify-center gap-3',
+    children: [
+      {
+        tag: 'h1',
+        classes: 'text-3xl font-bold text-slate-900',
+        bindings: { 
+          text: '{{text}}' // Placeholder - replaced at resolution time
+        },
+      },
+    ],
+  },
+  
+  // Full JSON Schema for parameters
+  parameterSchema: {
+    type: 'object',
+    properties: {
+      text: {
+        type: 'string',
+        description: 'Data path to title text (e.g., "data.queries.title")',
+        default: 'data.queries.title',
+      },
+    },
+    required: ['text'],
+    additionalProperties: false,
+  },
+}
+```
+
+### Schema Instance Usage
+
+Create instances by referencing the schema and providing parameters:
+
+```typescript
+// In your vibe configuration
+export const titleLeaf: LeafNode = {
+  id: 'todo.leaf.title',
+  '@schema': 'design-system.title', // Reference to schema
+  parameters: {
+    text: 'data.queries.title', // Concrete data path
+  },
+}
+
+// After pre-render resolution, this becomes:
+// {
+//   id: 'todo.leaf.title',
+//   tag: 'div',
+//   classes: 'text-center mb-3 flex items-center justify-center gap-3',
+//   children: [
+//     {
+//       tag: 'h1',
+//       classes: 'text-3xl font-bold text-slate-900',
+//       bindings: { text: 'data.queries.title' }, // Placeholder replaced!
+//     },
+//   ],
+// }
+```
+
+### Composite Schemas
+
+Composites can also be schemas, enabling reusable layout patterns:
+
+```typescript
+// Example: Header Composite Schema
+export const headerSchemaDefinition: any = {
+  type: 'Composite',
+  name: 'design-system.header',
+  
+  definition: {
+    container: {
+      layout: 'content',
+      class: 'w-full p-0 bg-transparent sticky top-0 z-10',
+    },
+    children: [
+      {
+        slot: 'title',
+        leaf: {
+          '@schema': 'design-system.title', // Nested schema reference
+          parameters: {
+            text: '{{titleText}}', // Nested placeholder
+          },
+        },
+      },
+      {
+        slot: 'viewButtons',
+        leaf: {
+          '@schema': 'design-system.viewButtons',
+          parameters: {
+            viewModePath: '{{viewModePath}}',
+            setViewEvent: '{{setViewEvent}}',
+          },
+        },
+      },
+    ],
+  },
+  
+  parameterSchema: {
+    type: 'object',
+    properties: {
+      titleText: {
+        type: 'string',
+        description: 'Data path to title text',
+        default: 'data.queries.title',
+      },
+      viewModePath: {
+        type: 'string',
+        description: 'Data path to view mode',
+        default: 'data.view.viewMode',
+      },
+      setViewEvent: {
+        type: 'string',
+        description: 'Event name for view changes',
+        default: 'SET_VIEW',
+      },
+    },
+    required: [],
+    additionalProperties: false,
+  },
+}
+
+// Usage in vibe config
+export const headerComposite: CompositeConfig = {
+  id: 'todo.composite.header',
+  '@schema': 'design-system.header',
+  parameters: {
+    titleText: 'data.queries.title',
+    setViewEvent: 'SET_VIEW',
+  },
+}
+```
+
+### Nested Schema Resolution
+
+The pre-render layer correctly handles nested schema references:
+
+1. **Outer schema resolved first**: `design-system.header` → CompositeConfig
+2. **Nested schemas preserved**: Children with `@schema` kept intact
+3. **Composite.svelte resolves nested**: Passes nested schemas through `resolveSchemaLeaf`
+4. **Clean separation**: Each layer only resolves its own level
+
+```typescript
+// schema-resolver.ts - Only strips @schema at top level
+function replacePlaceholders(obj: any, isTopLevel = true): any {
+  if (obj && typeof obj === 'object') {
+    const result: any = {}
+    for (const [key, value] of Object.entries(obj)) {
+      // Only skip @schema and parameters at TOP LEVEL
+      // Preserve them in nested children for later resolution
+      if (isTopLevel && (key === '@schema' || key === 'parameters')) {
+        continue
+      }
+      result[key] = replacePlaceholders(value, false)
+    }
+    return result
+  }
+  return obj
+}
+```
+
+### Full JSON Schema Compliance
+
+Parameter schemas must be **full JSON Schema** compliant:
+
+```typescript
+// ✅ CORRECT - Full JSON Schema
+parameterSchema: {
+  type: 'object',
+  properties: {
+    text: {
+      type: 'string',
+      description: 'Data path to title text',
+      default: 'data.queries.title',
+    },
+    visible: {
+      type: 'string',
+      description: 'Data path for visibility',
+      default: 'data.view.showTitle',
+    },
+  },
+  required: ['text'],
+  additionalProperties: false,
+}
+
+// ❌ WRONG - Not JSON Schema compliant
+_templateSchema: { // Wrong property name
+  text: {
+    type: 'string',
+    required: true, // Wrong location - should be in parent 'required' array
+  }
+}
+```
+
+### Design System Registry
+
+Schemas are registered in a centralized hardcoded registry (future: CoValue-based):
+
+```typescript
+// libs/hominio-db/src/schemas/schema-registry.ts
+import { leafTypeSchemas } from './data/leaf-types.js'
+import { compositeTypeSchemas } from './data/composite-types.js'
+
+const schemaRegistry: Record<string, any> = {
+  // Entity schemas
+  Human: humanEntityTypeSchema,
+  Todo: todoEntityTypeSchema,
+  
+  // Design system schemas
+  ...leafTypeSchemas,      // All leaf schemas
+  ...compositeTypeSchemas, // All composite schemas
+}
+```
+
+```typescript
+// services/me/src/lib/vibes/design-system/index.ts
+import { registerJsonSchema } from '@hominio/db'
+import { titleSchemaDefinition, headerSchemaDefinition, ... } from './schemas'
+
+export function registerDesignSystemSchemas() {
+  // Leaf schemas
+  registerJsonSchema('design-system.title', titleSchemaDefinition)
+  registerJsonSchema('design-system.error', errorSchemaDefinition)
+  registerJsonSchema('design-system.inputForm', inputFormSchemaDefinition)
+  
+  // Composite schemas
+  registerJsonSchema('design-system.header', headerSchemaDefinition)
+  registerJsonSchema('design-system.modal', modalSchemaDefinition)
+  registerJsonSchema('design-system.rootCard', rootCardSchemaDefinition)
+}
+
+// Auto-register on import (side effect)
+registerDesignSystemSchemas()
+```
+
+### Schema Types Extended
+
+The schema type system now includes `"Leaf"` and `"Composite"`:
+
+```typescript
+// libs/hominio-db/src/schemas/schema-meta-schema.ts
+export const SchemaMetaSchema = {
+  type: 'object',
+  properties: {
+    type: {
+      type: 'string',
+      enum: ['Entity', 'Relation', 'Leaf', 'Composite'], // Extended!
+    },
+    name: { type: 'string' },
+    definition: { type: 'object' },
+    parameterSchema: { type: 'object' }, // Full JSON Schema
+  },
+  required: ['name', 'definition', 'type'],
+}
+```
+
+### Future: CoValue-Based Schemas
+
+Currently, schemas are hardcoded in the registry. The future architecture will store them as CoValues:
+
+```typescript
+// Future: Schema stored as CoValue
+const titleSchema = await ensureSchema(me, {
+  type: 'Leaf',
+  name: 'design-system.title',
+  definition: { /* LeafNode */ },
+  parameterSchema: { /* JSON Schema */ },
+})
+
+// Future: Instance references CoValue
+export const titleLeaf: LeafNode = {
+  id: 'todo.leaf.title',
+  '@schema': titleSchema.id, // CoValue reference
+  parameters: {
+    text: 'data.queries.title',
+  },
+}
+```
+
+### Benefits of Schema-Driven Architecture
+
+1. **True Reusability**: Define once, use everywhere with different data
+2. **Type Safety**: Full JSON Schema validation for parameters
+3. **Centralized Design System**: All UI components in one registry
+4. **Database-Ready**: Can load entire design system from database
+5. **AI-Friendly**: Schemas can be generated by AI with full validation
+6. **Maintainability**: Update schema definition once, affects all instances
+7. **Testability**: Schema definitions can be unit tested independently
 
 ---
 
@@ -95,12 +486,20 @@ A **Composite** is a pure container node that:
 - All styling via `container.class` (Tailwind classes) - no layout generation logic
 - **Explicit layout types**: Must specify `layout: 'grid' | 'flex' | 'content'`
 - **Automatic container queries**: All composites automatically get `@container` for Tailwind container query support
+- **Can be schema instances**: Reference design system schemas via `@schema` + `parameters`
 
 ```typescript
 interface CompositeConfig {
-  container: {
+  id?: string; // Unique identifier for registry
+  
+  // Schema instance properties
+  '@schema'?: string; // Schema name (e.g., "design-system.header")
+  parameters?: Record<string, string>; // Concrete values for schema placeholders
+  
+  // Container (optional when @schema present, resolved from schema definition)
+  container?: {
     /**
-     * Explicit container layout type (REQUIRED)
+     * Explicit container layout type (REQUIRED if @schema not provided)
      * - 'grid': Structural grid container (gets h-full w-full overflow-hidden grid @container)
      * - 'flex': Structural flex container (gets h-full w-full overflow-hidden flex @container)
      * - 'content': Content container (no structural defaults, flows naturally, gets @container)
@@ -114,7 +513,7 @@ interface CompositeConfig {
      */
     class?: string
   };
-  children: ViewNode[];
+  children?: ViewNode[];
 }
 ```
 
@@ -128,10 +527,12 @@ A **Leaf** is a content node that:
 - Maps DOM events to state machine events
 - Is fully JSON-driven (no hardcoded component logic)
 - **Pure Tailwind styling**: All styling via `classes` string (space-separated)
+- **Can be schema instances**: Reference design system schemas via `@schema` + `parameters`
 
 ```typescript
 interface LeafNode {
-  tag: string; // HTML tag or "icon"
+  id?: string; // Unique identifier for registry
+  tag?: string; // HTML tag or "icon" (optional when @schema present)
   attributes?: Record<string, string | boolean | number>;
   classes?: string; // Tailwind CSS classes (space-separated string)
   children?: (LeafNode | string)[];
@@ -142,6 +543,10 @@ interface LeafNode {
     input?: EventConfig;
     // ... other DOM events
   };
+  
+  // Schema instance properties
+  '@schema'?: string; // Schema name (e.g., "design-system.title")
+  parameters?: Record<string, string>; // Concrete values for schema placeholders
 }
 
 interface IconConfig {
@@ -319,7 +724,56 @@ const contentComposite: CompositeConfig = {
 
 **Note**: Use `layout: 'content'` when you want a container that flows naturally without structural constraints. Perfect for content blocks within structural containers.
 
-#### 5. Overlay Layout (for modals)
+#### 5. Schema Instance (Reusable Design System Component)
+
+```typescript
+// Use a design system schema for reusable components
+const headerComposite: CompositeConfig = {
+  id: 'todo.composite.header',
+  '@schema': 'design-system.header', // Reference to schema definition
+  parameters: {
+    titleText: 'data.queries.title',       // Concrete data path
+    viewModePath: 'data.view.viewMode',    // Concrete data path
+    setViewEvent: 'SET_VIEW',               // Concrete event name
+  },
+}
+
+// After pre-render resolution, this becomes a full CompositeConfig:
+// {
+//   id: 'todo.composite.header',
+//   container: {
+//     layout: 'content',
+//     class: 'w-full p-0 bg-transparent sticky top-0 z-10',
+//   },
+//   children: [
+//     {
+//       slot: 'title',
+//       leaf: {
+//         tag: 'div',
+//         classes: 'text-center mb-3...',
+//         children: [
+//           {
+//             tag: 'h1',
+//             bindings: { text: 'data.queries.title' }, // Placeholder replaced!
+//           },
+//         ],
+//       },
+//     },
+//     {
+//       slot: 'viewButtons',
+//       leaf: { /* ... resolved viewButtons leaf */ },
+//     },
+//   ],
+// }
+```
+
+**Benefits of Schema Instances:**
+- **Reusability**: Same schema, different data bindings
+- **Maintainability**: Update schema once, affects all instances
+- **Type Safety**: Parameters validated via JSON Schema
+- **Database-Ready**: Can load from database (future)
+
+#### 6. Overlay Layout (for modals)
 
 ```typescript
 const modalComposite: CompositeConfig = {
@@ -1458,7 +1912,88 @@ const viewportLeaf: LeafNode = {
 
 See the [Container Queries](#-container-queries-responsive-design-based-on-container-size) section for detailed examples and container size reference.
 
-### 8. Organize by Feature
+### 8. Create Schema Definitions for Reusable Components
+
+When you have a component that needs to be used in multiple places with different data, create a schema:
+
+```typescript
+// ✅ Good - Reusable schema definition
+export const buttonSchemaDefinition: any = {
+  type: 'Leaf',
+  name: 'design-system.button',
+  definition: {
+    tag: 'button',
+    attributes: { type: 'button' },
+    classes: 'px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600',
+    events: {
+      click: {
+        event: '{{clickEvent}}', // Parameterized
+      },
+    },
+    children: ['{{buttonText}}'], // Parameterized
+  },
+  parameterSchema: {
+    type: 'object',
+    properties: {
+      clickEvent: {
+        type: 'string',
+        description: 'Event name to trigger on click',
+      },
+      buttonText: {
+        type: 'string',
+        description: 'Text to display on button',
+        default: 'Click Me',
+      },
+    },
+    required: ['clickEvent'],
+    additionalProperties: false,
+  },
+}
+
+// Register schema
+registerJsonSchema('design-system.button', buttonSchemaDefinition)
+
+// Use schema in multiple places with different data
+const submitButton: LeafNode = {
+  id: 'form.button.submit',
+  '@schema': 'design-system.button',
+  parameters: {
+    clickEvent: 'SUBMIT_FORM',
+    buttonText: 'Submit',
+  },
+}
+
+const cancelButton: LeafNode = {
+  id: 'form.button.cancel',
+  '@schema': 'design-system.button',
+  parameters: {
+    clickEvent: 'CANCEL',
+    buttonText: 'Cancel',
+  },
+}
+
+// ❌ Bad - Duplicating button definition everywhere
+const submitButton: LeafNode = {
+  tag: 'button',
+  classes: 'px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600',
+  events: { click: { event: 'SUBMIT_FORM' } },
+  children: ['Submit'],
+}
+// ... repeat for every button
+```
+
+**When to create a schema:**
+- Component used in 3+ places with different data
+- Want to update styling/behavior across all instances
+- Building a design system for your app
+- Component will be loaded from database (future)
+
+**When NOT to create a schema:**
+- One-off components specific to a single vibe
+- Complex, highly customized components
+- During rapid prototyping (create schemas later)
+
+### 9. Organize by Feature
 
 Group related composites and leafs together:
 
@@ -1471,6 +2006,229 @@ vibes/todo/
     ├── todoItem.ts      # Todo item UI
     └── todoList.ts      # Todo list UI
 ```
+
+---
+
+## 📝 Tutorial: Creating a New Schema
+
+### Step 1: Define the Schema
+
+Create a new file in `services/me/src/lib/vibes/design-system/schemas/`:
+
+```typescript
+// services/me/src/lib/vibes/design-system/schemas/alert.schema.ts
+
+export const alertSchemaDefinition: any = {
+  type: 'Leaf',
+  name: 'design-system.alert',
+  
+  // LeafNode structure with placeholders
+  definition: {
+    tag: 'div',
+    classes: 'p-4 rounded-lg border flex items-center gap-3 {{colorClasses}}',
+    bindings: {
+      visible: '{{visible}}', // Placeholder for visibility
+    },
+    children: [
+      {
+        tag: 'icon',
+        icon: {
+          name: '{{iconName}}', // Placeholder for icon
+          classes: 'w-5 h-5',
+        },
+      },
+      {
+        tag: 'div',
+        classes: 'flex-1',
+        children: [
+          {
+            tag: 'h4',
+            classes: 'font-semibold mb-1',
+            bindings: {
+              text: '{{titlePath}}', // Placeholder for title data path
+            },
+          },
+          {
+            tag: 'p',
+            classes: 'text-sm',
+            bindings: {
+              text: '{{messagePath}}', // Placeholder for message data path
+            },
+          },
+        ],
+      },
+    ],
+  },
+  
+  // Full JSON Schema for parameters
+  parameterSchema: {
+    type: 'object',
+    properties: {
+      visible: {
+        type: 'string',
+        description: 'Data path or expression for visibility (e.g., "data.view.showAlert")',
+        default: 'true',
+      },
+      titlePath: {
+        type: 'string',
+        description: 'Data path to alert title',
+      },
+      messagePath: {
+        type: 'string',
+        description: 'Data path to alert message',
+      },
+      iconName: {
+        type: 'string',
+        description: 'Iconify icon name',
+        default: 'mdi:information',
+      },
+      colorClasses: {
+        type: 'string',
+        description: 'Tailwind color classes for alert variant',
+        default: 'bg-blue-50 border-blue-200 text-blue-800',
+      },
+    },
+    required: ['titlePath', 'messagePath'],
+    additionalProperties: false,
+  },
+}
+```
+
+### Step 2: Export and Register the Schema
+
+```typescript
+// services/me/src/lib/vibes/design-system/schemas/index.ts
+export { alertSchemaDefinition } from './alert.schema'
+
+// services/me/src/lib/vibes/design-system/index.ts
+import { alertSchemaDefinition } from './schemas'
+
+export function registerDesignSystemSchemas() {
+  // ... existing schemas
+  registerJsonSchema('design-system.alert', alertSchemaDefinition)
+}
+```
+
+### Step 3: Add to Schema Registry
+
+```typescript
+// libs/hominio-db/src/schemas/data/leaf-types.ts
+import { alertSchemaDefinition } from '../../../../services/me/src/lib/vibes/design-system/schemas/alert.schema'
+
+export const leafTypeSchemas: Record<string, any> = {
+  // ... existing schemas
+  'design-system.alert': alertSchemaDefinition,
+}
+```
+
+### Step 4: Create Schema Instances
+
+Now use the schema in your vibe with different data paths:
+
+```typescript
+// Success alert
+export const successAlertLeaf: LeafNode = {
+  id: 'todo.leaf.alert.success',
+  '@schema': 'design-system.alert',
+  parameters: {
+    visible: 'data.view.showSuccessAlert',
+    titlePath: 'data.view.successTitle',
+    messagePath: 'data.view.successMessage',
+    iconName: 'mdi:check-circle',
+    colorClasses: 'bg-green-50 border-green-200 text-green-800',
+  },
+}
+
+// Error alert
+export const errorAlertLeaf: LeafNode = {
+  id: 'todo.leaf.alert.error',
+  '@schema': 'design-system.alert',
+  parameters: {
+    visible: 'data.view.showErrorAlert',
+    titlePath: 'data.view.errorTitle',
+    messagePath: 'data.view.errorMessage',
+    iconName: 'mdi:alert-circle',
+    colorClasses: 'bg-red-50 border-red-200 text-red-800',
+  },
+}
+
+// Warning alert
+export const warningAlertLeaf: LeafNode = {
+  id: 'todo.leaf.alert.warning',
+  '@schema': 'design-system.alert',
+  parameters: {
+    visible: 'data.view.showWarningAlert',
+    titlePath: 'data.view.warningTitle',
+    messagePath: 'data.view.warningMessage',
+    iconName: 'mdi:alert',
+    colorClasses: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+  },
+}
+```
+
+### Step 5: Use in Your View
+
+```typescript
+// Add to your composite
+const rootComposite: CompositeConfig = {
+  container: {
+    layout: 'grid',
+    class: 'grid-cols-1 gap-4',
+  },
+  children: [
+    {
+      slot: 'successAlert',
+      leafId: 'todo.leaf.alert.success',
+    },
+    {
+      slot: 'errorAlert',
+      leafId: 'todo.leaf.alert.error',
+    },
+    // ... other children
+  ],
+}
+```
+
+### Step 6: Update State Machine
+
+```typescript
+// Initialize alert data in state machine
+const todoStateMachine: StateMachineConfig = {
+  initial: 'idle',
+  data: {
+    view: {
+      showSuccessAlert: false,
+      successTitle: '',
+      successMessage: '',
+      showErrorAlert: false,
+      errorTitle: '',
+      errorMessage: '',
+    },
+  },
+  states: {
+    idle: {
+      on: {
+        SHOW_SUCCESS: {
+          target: 'idle',
+          actions: ['@ui/showSuccessAlert'],
+        },
+        SHOW_ERROR: {
+          target: 'idle',
+          actions: ['@ui/showErrorAlert'],
+        },
+      },
+    },
+  },
+}
+```
+
+### Benefits Achieved
+
+1. **Single Source of Truth**: Update alert styling once, affects all instances
+2. **Type Safety**: Parameters validated via JSON Schema
+3. **Consistency**: All alerts share the same structure
+4. **Flexibility**: Each instance can have different data paths and styling
+5. **Maintainability**: Easy to add new alert types without duplication
 
 ---
 
@@ -1638,6 +2396,12 @@ bindings: {
 11. **View switching not working**: Use `swapViewNode` instead of visibility hacks. Register all view nodes with unique IDs and reference them via `compositeId` or `leafId`.
 12. **Invalid leaf configuration with leafId**: Ensure the leaf is registered in `viewNodeRegistry` before the component tries to use it. Check that `resolveDataPath` correctly resolves the path to a valid leaf ID.
 13. **Style attribute not allowed**: Never use inline `style` attributes. Use Tailwind classes instead (e.g., `writing-vertical-rl` for vertical text).
+14. **Schema not found**: Ensure the schema is registered in the design system registry before creating instances. Call `registerDesignSystemSchemas()` in your vibe config.
+15. **Unknown parameter error**: Parameter names in schema instances must match the `parameterSchema` definition. Check that all parameters are defined in the schema's `parameterSchema.properties`.
+16. **Nested schema not resolving**: The pre-render layer only resolves the top level. Nested schemas in children are preserved and resolved by `Composite.svelte` or `Leaf.svelte`. This is by design for clean separation.
+17. **Parameters not replacing placeholders**: Ensure placeholders use double curly braces: `{{paramName}}`, not single braces or other formats.
+18. **Schema missing definition**: All schemas must have a `definition` property containing the LeafNode or CompositeConfig structure.
+19. **additionalProperties validation**: If `parameterSchema.additionalProperties: false`, you cannot pass parameters not defined in `properties`. Remove extra parameters or add them to the schema.
 
 ---
 
@@ -1647,14 +2411,20 @@ The Vibe/Composition/Leaf architecture provides a powerful, generic system for b
 
 **Key Benefits:**
 - ✅ 100% JSON-driven (AI-friendly)
+- ✅ Schema-driven design system (true component reusability)
+- ✅ Full JSON Schema compliance (parameter validation)
 - ✅ Fully generic (no hardcoded logic)
 - ✅ Secure (whitelist-based validation)
 - ✅ Reactive (Svelte-powered)
 - ✅ Modular (composable components)
 - ✅ Pure Tailwind (no inline styles, all styling via classes)
 - ✅ Container-query responsive (leaves adapt to container size, not viewport)
+- ✅ Database-ready (schemas can be loaded dynamically)
 
 **Architecture Principles:**
+- **Schema-Driven**: Reusable UI components defined as schemas with parameterized data paths
+- **Separation of Concerns**: Schema Definitions → Schema Instances → Pre-Render Resolution → Render Engine
+- **JSON Schema Compliance**: All parameter contracts use full JSON Schema specification
 - **Pure Tailwind**: All styling via Tailwind classes (strings), no inline styles
 - **Pure Composition**: `Composite.svelte` handles only slot management and recursive rendering
 - **String-based Classes**: All `classes` properties are space-separated strings, never arrays
@@ -1664,6 +2434,7 @@ The Vibe/Composition/Leaf architecture provides a powerful, generic system for b
 - **Smart Defaults**: Structural defaults (`h-full w-full overflow-hidden grid/flex`) are applied automatically based on layout type, with intelligent overrides
 - **Container-Responsive Leaves**: Leaves adapt to their parent composite container size using container queries (`@md:`, `@lg:`, etc.), enabling true component-based responsive design
 - **Dynamic View Node Swapping**: Use `swapViewNode` for view switching and collapsible sections instead of visibility hacks. All view nodes must be registered with unique IDs in `viewNodeRegistry` and referenced via `compositeId` or `leafId`.
+- **Pre-Render Schema Resolution**: Schemas are resolved before rendering - render engine never sees `@schema` or `parameters` properties, ensuring clean separation and proper nested schema handling.
 
 For examples, see `services/me/src/lib/vibes/todo/`.
 

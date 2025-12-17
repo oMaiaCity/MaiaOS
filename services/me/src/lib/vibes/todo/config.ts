@@ -5,6 +5,9 @@
 
 import type { VibeConfig } from '../../compositor/types'
 import { viewNodeRegistry } from '../../compositor/view/view-node-registry'
+// Register design system schemas (must be imported before using schema instances)
+// Side-effect import - schemas auto-register on import
+import '../design-system/index.js'
 import {
 	rootComposite,
 	headerComposite,
@@ -20,23 +23,14 @@ import {
 	generateKanbanColumnLeafs,
 } from './composites/kanbanColumn'
 import {
-	errorLeaf,
-	inputFormLeaf,
 	modalCloseButtonLeaf,
 	modalContentLeaf,
 	modalTitleLeaf,
 	modalWrapperLeaf,
 	timelineHeaderLeaf,
 	timelineListLeaf,
-	titleLeaf,
 	todoItemLeaf,
 	todoListLeaf,
-	viewButtonKanban,
-	viewButtonKanbanActive,
-	viewButtonList,
-	viewButtonListActive,
-	viewButtonTimeline,
-	viewButtonTimelineActive,
 } from './leafs'
 import { modalComposite } from './composites/modal'
 
@@ -62,25 +56,16 @@ if (typeof window !== 'undefined') {
 		timelineContentComposite,
 		modalComposite,
 		...kanbanColumnComposites, // Dynamically generated column composites
-		// Leaves
-		errorLeaf,
-		inputFormLeaf,
+		// Leaves (some now use schema instances, but still registered for ID-based resolution)
 		modalWrapperLeaf,
-		modalCloseButtonLeaf,
+		modalCloseButtonLeaf, // Uses design-system.modalCloseButton schema
 		modalTitleLeaf,
 		modalContentLeaf,
-		timelineHeaderLeaf,
+		timelineHeaderLeaf, // Uses design-system.timelineHeader schema
 		timelineListLeaf,
-		titleLeaf,
 		todoItemLeaf,
 		todoListLeaf,
 		...kanbanColumnLeafs, // Dynamically generated column leafs (headers, content, count)
-		viewButtonKanban,
-		viewButtonKanbanActive,
-		viewButtonList,
-		viewButtonListActive,
-		viewButtonTimeline,
-		viewButtonTimelineActive,
 	])
 }
 

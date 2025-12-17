@@ -506,7 +506,13 @@ export function sanitizeClasses(classes: string[]): {
 export function validateLeaf(node: LeafNode, path = 'root'): ValidationResult {
 	const errors: string[] = []
 
-	// Validate tag
+	// If node has @schema, it will be resolved before validation
+	// So we skip validation here - the resolved leaf will be validated instead
+	if (node['@schema']) {
+		return { valid: true }
+	}
+
+	// Validate tag (required for regular leaves)
 	if (!node.tag || typeof node.tag !== 'string') {
 		errors.push(`${path}: Missing or invalid tag`)
 		return { valid: false, errors }

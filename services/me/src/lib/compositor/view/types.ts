@@ -167,9 +167,29 @@ export interface CompositeConfig {
 	 * Format: "{vibe}.composite.{name}" (e.g., "todo.composite.root")
 	 */
 	id?: string
-	container: {
+	
+	/**
+	 * @schema - Reference to schema definition
+	 * When present, this composite is an instance created from a Schema
+	 * The schema must have type: "Composite"
+	 * Currently: string schema name (e.g., "design-system.header")
+	 * Future: CoValue reference to SchemaDefinition CoValue
+	 */
+	'@schema'?: string
+	
+	/**
+	 * Schema parameters - Concrete values for schema placeholders
+	 * Maps parameter names to data paths from queries/view
+	 */
+	parameters?: Record<string, string>
+	
+	/**
+	 * Container configuration
+	 * Optional if @schema is provided (container will be resolved from schema definition)
+	 */
+	container?: {
 		/**
-		 * Explicit container layout type (REQUIRED)
+		 * Explicit container layout type (REQUIRED if @schema not provided)
 		 * - 'grid': Structural grid container with defaults + @container
 		 * - 'flex': Structural flex container with defaults + @container
 		 * - 'content': Content container, no structural defaults + @container
@@ -189,7 +209,7 @@ export interface CompositeConfig {
 		 */
 		class?: string
 	}
-	children: ViewNode[] // Can contain composites or leaves
+	children?: ViewNode[] // Can contain composites or leaves
 }
 
 /**

@@ -1,24 +1,16 @@
 /**
  * Leaf Components Index
  * Exports all leaf components for easy importing
+ * 
+ * Note: Some leafs now use design system schemas (modalCloseButton, timelineHeader)
+ * They are still exported here for registry registration, but their definitions use @schema + parameters
  */
 
-export { errorLeaf } from './error'
-export { inputFormLeaf } from './inputForm'
 export { modalWrapperLeaf } from './modalWrapper'
-export { modalCloseButtonLeaf } from './modalCloseButton'
+export { modalCloseButtonLeaf } from './modalCloseButton' // Uses design-system.modalCloseButton schema
 export { modalTitleLeaf } from './modalTitle'
 export { modalContentLeaf } from './modalContent'
-export { timelineHeaderLeaf } from './timelineHeader'
+export { timelineHeaderLeaf } from './timelineHeader' // Uses design-system.timelineHeader schema
 export { timelineListLeaf } from './timelineList'
-export { titleLeaf } from './title'
 export { todoItemLeaf } from './todoItem'
 export { todoListLeaf } from './todoList'
-export {
-	viewButtonKanban,
-	viewButtonKanbanActive,
-	viewButtonList,
-	viewButtonListActive,
-	viewButtonTimeline,
-	viewButtonTimelineActive,
-} from './viewButtons'
