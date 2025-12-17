@@ -113,7 +113,7 @@ export const todoStateMachine: StateMachineConfig = {
 			const payloadData = payload as {
 				schemaName?: string
 				entityData?: Record<string, unknown>
-				text?: string
+				name?: string
 			} || {}
 
 			const schemaName = payloadData.schemaName || 'Todo'
@@ -122,16 +122,16 @@ export const todoStateMachine: StateMachineConfig = {
 			let entityData: Record<string, unknown> = payloadData.entityData || {}
 
 			if (schemaName === 'Todo') {
-				// Todo-specific: Extract text from view.newTodoText if not provided
-				let text = payloadData.text
-				if (!text && data.view) {
-					text = (data.view as any).newTodoText as string || ''
+				// Todo-specific: Extract name from view.newTodoText if not provided
+				let name = payloadData.name
+				if (!name && data.view) {
+					name = (data.view as any).newTodoText as string || ''
 				}
 
-				if (!text || !text.trim()) {
+				if (!name || !name.trim()) {
 					if (!data.view) data.view = {}
 					const view = data.view as Data
-					view.error = 'Todo text cannot be empty'
+					view.error = 'Todo name cannot be empty'
 					data.view = { ...view }
 					return
 				}
@@ -146,7 +146,7 @@ export const todoStateMachine: StateMachineConfig = {
 				const duration = Math.floor(Math.random() * 8 * 60) + 60
 
 				entityData = {
-					text: text.trim(),
+					name: name.trim(),
 					status: 'todo',
 					endDate: endDate.toISOString(),
 					duration,

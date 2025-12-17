@@ -58,13 +58,13 @@ export const todoItemLeaf: LeafNode = {
 				},
 			],
 		},
-		// Todo text input for done status
+		// Todo name input for done status
 		{
 			tag: 'input',
 			attributes: { type: 'text' },
 			classes: 'flex-1 text-[10px] @xs:text-xs @sm:text-sm font-medium transition-all duration-200 line-through text-slate-400 min-w-0 bg-transparent border-none outline-none focus:outline-none focus:ring-0 px-0',
 			bindings: {
-				value: 'item.text',
+				value: 'item.name',
 				visible: "item.status === 'done'",
 			},
 			events: {
@@ -72,18 +72,18 @@ export const todoItemLeaf: LeafNode = {
 					event: 'UPDATE_TODO_TEXT',
 					payload: {
 						id: 'item.id',
-						text: 'text',
+						name: 'name',
 					},
 				},
 			},
 		},
-		// Todo text input for todo status
+		// Todo name input for todo status
 		{
 			tag: 'input',
 			attributes: { type: 'text' },
 			classes: 'flex-1 text-[10px] @xs:text-xs @sm:text-sm text-slate-700 font-medium transition-all duration-200 min-w-0 bg-transparent border-none outline-none focus:outline-none focus:ring-0 px-0',
 			bindings: {
-				value: 'item.text',
+				value: 'item.name',
 				visible: "item.status !== 'done'",
 			},
 			events: {
@@ -91,7 +91,7 @@ export const todoItemLeaf: LeafNode = {
 					event: 'UPDATE_TODO_TEXT',
 					payload: {
 						id: 'item.id',
-						text: 'text',
+						name: 'name',
 					},
 				},
 			},

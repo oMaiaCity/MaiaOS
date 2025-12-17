@@ -22,12 +22,12 @@ export const todoLeafTypeSchema: any = {
 	type: 'object',
 	properties: {
 		type: { type: 'string', required: true }, // "Leaf" for LeafTypes
-		text: { type: 'string', required: true }, // Todo text content (matches UI schema)
+		name: { type: 'string', required: true }, // Todo name content (matches UI schema)
 		description: { type: 'string' }, // Optional description
 		status: { type: 'string' }, // Plain string field (e.g., 'todo', 'in-progress', 'done')
 		endDate: { type: 'string' }, // ISO string date (matches UI schema)
 		duration: { type: 'number' }, // Duration in minutes (matches UI schema)
 	},
-	required: ['type', 'text'],
+	required: ['type', 'name'],
 }
 

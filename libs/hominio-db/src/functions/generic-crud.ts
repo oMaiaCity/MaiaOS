@@ -467,11 +467,10 @@ export async function queryEntitiesGeneric<T extends Record<string, unknown>>(
 				// Ensure entity is fully loaded before converting
 				const fullyLoadedEntity = await (loadedEntity as any).$jazz.ensureLoaded({
 					resolve: {
-						text: true,
+						name: true,
 						status: true,
 						endDate: true,
 						duration: true,
-						name: true,
 						email: true,
 						dateOfBirth: true,
 						x1: true,

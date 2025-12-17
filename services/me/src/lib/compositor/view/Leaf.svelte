@@ -878,9 +878,23 @@
                 ? (data.item as Record<string, unknown>)
                 : undefined)
               const payload = resolvePayload(eventConfig.payload, contextItemData)
+              
+              // Determine the field name from the payload
+              // If payload has a field with a literal string value (like 'name' or 'text'), use that as the field name
+              let fieldName = 'name' // Default to 'name' for Todo entities
+              if (typeof payload === 'object' && payload !== null && !Array.isArray(payload)) {
+                // Look for a field that has a literal string value matching common field names
+                for (const [key, value] of Object.entries(payload)) {
+                  if (key !== 'id' && typeof value === 'string' && (value === 'name' || value === 'text')) {
+                    fieldName = value
+                    break
+                  }
+                }
+              }
+              
               const finalPayload = typeof payload === 'object' && payload !== null && !Array.isArray(payload)
-                ? { ...payload, text: inputValue }
-                : { text: inputValue }
+                ? { ...payload, [fieldName]: inputValue }
+                : { [fieldName]: inputValue }
               onEvent(eventConfig.event, finalPayload)
               // Don't prevent default - let Tab work normally to move focus
             }
@@ -905,9 +919,44 @@
               : undefined)
             // Merge input value into payload if payload exists
             const payload = resolvePayload(eventConfig.payload, contextItemData)
+            
+            // Extract field name from input binding (e.g., "item.name" -> "name", "data.view.newTodoText" -> "newTodoText")
+            // This is generic and works for any field name
+            let fieldName: string | undefined = undefined
+            if (leaf.bindings?.value && typeof leaf.bindings.value === 'string') {
+              const bindingPath = leaf.bindings.value
+              // Extract the last part of the path (field name)
+              const parts = bindingPath.split('.')
+              if (parts.length > 0) {
+                fieldName = parts[parts.length - 1]
+              }
+            }
+            
+            // Fallback: If no binding, try to extract from payload
+            // Look for a field in payload that has a literal string value (not a data path)
+            if (!fieldName && typeof payload === 'object' && payload !== null && !Array.isArray(payload)) {
+              for (const [key, value] of Object.entries(payload)) {
+                // If value is a literal string (not a data path), use the key as field name
+                // Skip 'id' as it's always a data path
+                if (key !== 'id' && typeof value === 'string' && !value.includes('.') && !value.startsWith('data.') && !value.startsWith('item.')) {
+                  // Check if the value matches the key (like name: 'name') - that's the field name
+                  if (value === key) {
+                    fieldName = value
+                    break
+                  }
+                }
+              }
+            }
+            
+            // If still no field name, we can't determine it - skip update
+            if (!fieldName) {
+              console.warn('[Leaf] Could not determine field name for input update', { binding: leaf.bindings?.value, payload })
+              return
+            }
+            
             const finalPayload = typeof payload === 'object' && payload !== null && !Array.isArray(payload)
-              ? { ...payload, text: inputValue }
-              : { text: inputValue }
+              ? { ...payload, [fieldName]: inputValue }
+              : { [fieldName]: inputValue }
             if (onEvent) {
               onEvent(eventConfig.event, finalPayload)
             }
@@ -1205,9 +1254,23 @@
                 ? (data.item as Record<string, unknown>)
                 : undefined)
               const payload = resolvePayload(eventConfig.payload, contextItemData)
+              
+              // Determine the field name from the payload
+              // If payload has a field with a literal string value (like 'name' or 'text'), use that as the field name
+              let fieldName = 'name' // Default to 'name' for Todo entities
+              if (typeof payload === 'object' && payload !== null && !Array.isArray(payload)) {
+                // Look for a field that has a literal string value matching common field names
+                for (const [key, value] of Object.entries(payload)) {
+                  if (key !== 'id' && typeof value === 'string' && (value === 'name' || value === 'text')) {
+                    fieldName = value
+                    break
+                  }
+                }
+              }
+              
               const finalPayload = typeof payload === 'object' && payload !== null && !Array.isArray(payload)
-                ? { ...payload, text: inputValue }
-                : { text: inputValue }
+                ? { ...payload, [fieldName]: inputValue }
+                : { [fieldName]: inputValue }
               onEvent(eventConfig.event, finalPayload)
               // Don't prevent default - let Tab work normally to move focus
             }
@@ -1232,9 +1295,44 @@
               : undefined)
             // Merge input value into payload if payload exists
             const payload = resolvePayload(eventConfig.payload, contextItemData)
+            
+            // Extract field name from input binding (e.g., "item.name" -> "name", "data.view.newTodoText" -> "newTodoText")
+            // This is generic and works for any field name
+            let fieldName: string | undefined = undefined
+            if (leaf.bindings?.value && typeof leaf.bindings.value === 'string') {
+              const bindingPath = leaf.bindings.value
+              // Extract the last part of the path (field name)
+              const parts = bindingPath.split('.')
+              if (parts.length > 0) {
+                fieldName = parts[parts.length - 1]
+              }
+            }
+            
+            // Fallback: If no binding, try to extract from payload
+            // Look for a field in payload that has a literal string value (not a data path)
+            if (!fieldName && typeof payload === 'object' && payload !== null && !Array.isArray(payload)) {
+              for (const [key, value] of Object.entries(payload)) {
+                // If value is a literal string (not a data path), use the key as field name
+                // Skip 'id' as it's always a data path
+                if (key !== 'id' && typeof value === 'string' && !value.includes('.') && !value.startsWith('data.') && !value.startsWith('item.')) {
+                  // Check if the value matches the key (like name: 'name') - that's the field name
+                  if (value === key) {
+                    fieldName = value
+                    break
+                  }
+                }
+              }
+            }
+            
+            // If still no field name, we can't determine it - skip update
+            if (!fieldName) {
+              console.warn('[Leaf] Could not determine field name for input update', { binding: leaf.bindings?.value, payload })
+              return
+            }
+            
             const finalPayload = typeof payload === 'object' && payload !== null && !Array.isArray(payload)
-              ? { ...payload, text: inputValue }
-              : { text: inputValue }
+              ? { ...payload, [fieldName]: inputValue }
+              : { [fieldName]: inputValue }
             if (onEvent) {
               onEvent(eventConfig.event, finalPayload)
             }

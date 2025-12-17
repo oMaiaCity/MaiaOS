@@ -338,24 +338,6 @@
     }
   }
 
-  // Handle creating "eat banana" Todo Leaf
-  async function handleCreateEatBananaTodo() {
-    if (!me || !me.$isLoaded) return;
-
-    try {
-      await createTodoLeaf(me, {
-        id: "todo_eat_banana",
-        text: "eat banana",
-        status: "todo",
-        endDate: new Date("2025-12-31").toISOString(),
-        duration: 15,
-      });
-      // Mutations are reactive - CoState will automatically update
-      // No need to manually clear cache or reload
-    } catch (_error) {
-      // Creation failed - silently fail
-    }
-  }
 
   // Handle creating "assigned" Composite instance
   async function handleCreateAssignedToComposite() {
@@ -366,7 +348,7 @@
       // Note: CompositeType is auto-created via ensureSchema() in createAssignedToComposite
       const todoEntity = await createTodoLeaf(me, {
         id: "todo_test_assigned",
-        text: "test todo for assigned relation",
+        name: "test todo for assigned relation",
         status: "todo",
         endDate: new Date("2025-12-31").toISOString(),
         duration: 30,
@@ -558,12 +540,6 @@
                       class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                     >
                       Create Sam (Human)
-                    </button>
-                    <button
-                      onclick={() => handleCreateEatBananaTodo()}
-                      class="w-full bg-[#002455] hover:bg-[#002455] border border-[#001a3d] text-white py-1.5 px-4 text-sm rounded-full transition-all duration-300 shadow-[0_0_6px_rgba(0,0,0,0.15)] hover:shadow-[0_0_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
-                    >
-                      Create "eat banana" (Todo)
                     </button>
                     <button
                       onclick={() => handleCreateAssignedToComposite()}

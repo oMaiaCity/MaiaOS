@@ -39,7 +39,7 @@ export async function createHumanLeaf(
  * Uses generic CREATE function internally for runtime type safety
  * 
  * @param account - The Jazz account
- * @param data - Todo Leaf data (id, text, description, status, endDate, duration)
+ * @param data - Todo Leaf data (id, name, description, status, endDate, duration)
  * @returns The created Todo Leaf Entity co-value
  */
 export async function createTodoLeaf(
@@ -48,7 +48,7 @@ export async function createTodoLeaf(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	data: {
 		id: string
-		text: string
+		name: string
 		description?: string
 		status?: string // Plain string (e.g., 'todo', 'in-progress', 'done')
 		endDate?: string // ISO string
@@ -57,7 +57,7 @@ export async function createTodoLeaf(
 ): Promise<any> {
 	// Use generic CREATE function - ensures schema exists, validates with Zod, sets system props
 	return createEntityGeneric(account, 'Todo', {
-		text: data.text,
+		name: data.name,
 		description: data.description,
 		status: data.status || 'todo',
 		endDate: data.endDate,

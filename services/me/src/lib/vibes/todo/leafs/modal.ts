@@ -49,7 +49,7 @@ export const modalLeaf: LeafNode = {
 						{
 							tag: 'h2',
 							classes: 'text-2xl font-bold text-slate-900',
-							bindings: { text: 'data.view.selectedTodo.text' },
+							bindings: { text: 'data.view.selectedTodo.name' },
 						},
 						{
 							tag: 'div',

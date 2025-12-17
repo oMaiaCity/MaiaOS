@@ -13,7 +13,7 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface TodoEntityData {
 	id?: string // Optional - not used by createTodoEntity, but may be present for updates
-	text: string
+	name: string
 	description?: string
 	status?: string // Changed from enum to plain string
 	endDate?: string // ISO string
@@ -41,7 +41,7 @@ export async function createTodoEntity(
 
 	// Use generic CREATE function - ensures schema exists, validates with Zod, sets system props
 	return createEntityGeneric(account, 'Todo', {
-		text: data.text,
+		name: data.name,
 		status: data.status || 'todo',
 		endDate: data.endDate,
 		duration: data.duration,
@@ -106,7 +106,7 @@ export async function updateTodoEntity(
 
 	// Use generic UPDATE function - wraps with schema, validates with Zod
 	await updateEntityGeneric(resolvedAccount, coValue, {
-		text: data.text,
+		name: data.name,
 		status: data.status,
 		endDate: data.endDate,
 		duration: data.duration,
