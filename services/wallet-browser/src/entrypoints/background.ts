@@ -157,6 +157,20 @@ export default defineBackground(() => {
         });
       return true;
     }
+    
+    // Handle auth success (close auth tab)
+    if (message.type === 'auth-success') {
+      console.log('[Background] Auth success, closing auth tab');
+      if (_sender.tab?.id) {
+        browser.tabs.remove(_sender.tab.id).catch((error) => {
+          console.error('[Background] Error closing auth tab:', error);
+        });
+      }
+      // Notify sidepanel to refresh auth state
+      browser.runtime.sendMessage({ type: 'auth-state-changed' }).catch(() => {});
+      sendResponse({ success: true });
+      return false;
+    }
   });
   
   /**

@@ -127,15 +127,6 @@
     box-sizing: border-box;
   }
 
-  .title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #f1f5f9;
-    margin-bottom: 1.5rem;
-    text-align: center;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  }
-
   .loading {
     text-align: center;
     color: #94a3b8;
@@ -255,5 +246,14 @@
     background: linear-gradient(135deg, #3557c7 0%, #5280d8 100%);
     transform: translateY(-1px);
     box-shadow: 0 4px 16px rgba(65, 105, 225, 0.4);
+  }
+
+  .title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   }
 </style>

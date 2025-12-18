@@ -1,9 +1,19 @@
 import { defineConfig } from 'wxt';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
   srcDir: 'src',
   modules: ['@wxt-dev/module-svelte'],
+  // Load env vars from monorepo root (where PUBLIC_JAZZ_API_KEY is stored)
+  envDir: resolve(__dirname, '../..'),
+  // Configure Vite to expose PUBLIC_ prefixed env vars (like me service)
+  vite: () => ({
+    envPrefix: ['PUBLIC_', 'VITE_'],
+  }),
   webExt: {
     disabled: true, // Don't auto-open browser in dev mode
   },
