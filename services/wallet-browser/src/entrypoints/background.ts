@@ -23,6 +23,11 @@ export default defineBackground(() => {
 
   // Listen for messages
   browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    // Handle microphone permission granted message from permission page
+    if (message.type === 'microphone-permission-granted') {
+      // Just acknowledge - the sidepanel will handle the actual permission check
+      return true
+    }
     // Handle signing requests from web pages
     if (message.type === 'signing-request') {
       const { requestId, message: requestMessage } = message;
@@ -170,6 +175,56 @@ export default defineBackground(() => {
       browser.runtime.sendMessage({ type: 'auth-state-changed' }).catch(() => {});
       sendResponse({ success: true });
       return false;
+    }
+    
+    // Handle navigate home tool (from wallet UI)
+    if (message.type === 'navigate-home') {
+      console.log('[Background] Received navigate-home request');
+      
+      browser.tabs.create({
+        url: 'http://localhost:4200',
+        active: true,
+      })
+        .then((tab) => {
+          sendResponse({ 
+            success: true, 
+            tabId: tab.id,
+            url: 'http://localhost:4200',
+          });
+        })
+        .catch((error) => {
+          console.error('[Background] Error navigating to home:', error);
+          sendResponse({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        });
+      return true; // Keep channel open for async response
+    }
+
+    // Handle microphone permission tab creation
+    if (message.type === 'open-microphone-permission-tab') {
+      console.log('[Background] Received open-microphone-permission-tab request');
+      const permissionPageUrl = browser.runtime.getURL('/mic-permission.html');
+      browser.tabs.create({
+        url: permissionPageUrl,
+        active: true,
+      })
+        .then((tab) => {
+          sendResponse({
+            success: true,
+            tabId: tab.id,
+            url: permissionPageUrl,
+          });
+        })
+        .catch((error) => {
+          console.error('[Background] Error creating microphone permission tab:', error);
+          sendResponse({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        });
+      return true; // Keep channel open for async response
     }
   });
   

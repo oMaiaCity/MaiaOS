@@ -1,5 +1,6 @@
 <script lang="ts">
   import { setupComputedFieldsForCoValue } from "@hominio/db";
+  import type { Provider } from "@hominio/provider";
   import { Image } from "jazz-tools/svelte";
   import { authClient } from "$lib/auth-client";
   import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
@@ -42,7 +43,7 @@
     console.log('[Hominio Page] typeof chrome:', typeof chrome);
     
     // Wait a bit for provider to be injected (in case content script is still loading)
-    let provider = (window as any).hominio || (window as any).hominioProvider;
+    let provider: Provider | undefined = (window as any).hominio || (window as any).hominioProvider;
     
     // Retry a few times if provider not found immediately
     if (!provider) {

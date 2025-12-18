@@ -4,13 +4,14 @@
  */
 
 import { GoogleGenAI, Modality } from '@google/genai'
-import { buildSystemInstruction } from '@hominio/vibes'
 import { type ContextIngestEvent, ContextIngestService } from './context-injection.js'
 import { ToolRegistry, type ToolResult } from './tools/registry.js'
 
 export interface VoiceSessionManagerOptions {
 	apiKey: string
 	model?: string
+	systemInstruction?: string // Optional: custom system instruction (defaults to simple prompt)
+	enableTools?: boolean // Optional: enable tools (defaults to false for simple conversation)
 	onLog?: (message: string, context?: string) => void
 	onToolCall?: (toolName: string, args: any, result: any, contextString?: string) => void
 	onContextIngest?: (event: ContextIngestEvent) => void
@@ -35,6 +36,8 @@ export async function createVoiceSessionManager(
 	const {
 		apiKey,
 		model = 'gemini-2.5-flash-native-audio-preview-09-2025',
+		systemInstruction: customSystemInstruction,
+		enableTools = false,
 		onLog,
 		onToolCall,
 		onContextIngest,
@@ -51,26 +54,26 @@ export async function createVoiceSessionManager(
 
 	const ai = new GoogleGenAI({ apiKey })
 
-	// Initialize tool registry
-	const toolRegistry = new ToolRegistry()
-	await toolRegistry.initialize()
+	// Use custom system instruction or default simple one
+	const systemInstruction =
+		customSystemInstruction ||
+		'You are a helpful AI assistant. Help users with their questions and tasks. Be conversational and friendly.'
 
-	// Build system instruction
-	let systemInstruction: string
-	try {
-		systemInstruction = await buildSystemInstruction()
-		if (!systemInstruction || systemInstruction.trim().length === 0) {
-			throw new Error('System instruction is empty')
+	// Initialize tools only if enabled
+	let toolRegistry: ToolRegistry | null = null
+	let tools: any[] = []
+	if (enableTools) {
+		try {
+			toolRegistry = new ToolRegistry()
+			await toolRegistry.initialize()
+			tools = await toolRegistry.buildToolSchemas()
+		} catch (err) {
+			onLog?.(
+				`Warning: Failed to initialize tools: ${err instanceof Error ? err.message : String(err)}. Continuing without tools.`,
+			)
+			tools = []
+			toolRegistry = null
 		}
-	} catch (err) {
-		throw new Error(
-			`Failed to build system instruction: ${err instanceof Error ? err.message : String(err)}`,
-		)
-	}
-
-	// Build tool schemas
-	const tools = await toolRegistry.buildToolSchemas()
-	if (!tools || tools.length === 0) {
 	}
 
 	// Create Google Live API session
@@ -218,20 +221,29 @@ export async function createVoiceSessionManager(
 			return
 		}
 
-		// Execute tool via registry with proper error handling
+		// Execute tool via registry with proper error handling (only if tools are enabled)
 		let toolResult: ToolResult
-		try {
-			toolResult = await toolRegistry.executeTool(name, args || {}, {
-				session,
-				onLog,
-				contextIngest, // Pass contextIngest so tools can re-ingest results when done
-			})
-		} catch (err) {
-			const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+		if (!toolRegistry) {
+			// Tools not enabled - return error
 			toolResult = {
 				success: false,
-				result: { error: errorMessage },
-				error: errorMessage,
+				result: { error: 'Tools are not enabled for this session' },
+				error: 'Tools are not enabled for this session',
+			}
+		} else {
+			try {
+				toolResult = await toolRegistry.executeTool(name, args || {}, {
+					session,
+					onLog,
+					contextIngest, // Pass contextIngest so tools can re-ingest results when done
+				})
+			} catch (err) {
+				const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+				toolResult = {
+					success: false,
+					result: { error: errorMessage },
+					error: errorMessage,
+				}
 			}
 		}
 

@@ -20,6 +20,7 @@ export default defineContentScript({
       
       // Inject script file (not inline) to avoid CSP issues
       // Use a script tag with src pointing to the extension's inject-provider.js file
+      // The script is copied from @hominio/provider package during build
       const script = document.createElement('script');
       script.src = browser.runtime.getURL('inject-provider.js' as any);
       script.type = 'text/javascript';

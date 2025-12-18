@@ -5,16 +5,19 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "wxt",
-    "dev:firefox": "wxt -b firefox",
-    "build": "wxt build",
-    "build:firefox": "wxt build -b firefox",
+    "dev": "npm run copy-provider && wxt",
+    "dev:firefox": "npm run copy-provider && wxt -b firefox",
+    "build": "npm run copy-provider && wxt build",
+    "build:firefox": "npm run copy-provider && wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "postinstall": "wxt prepare"
+    "postinstall": "wxt prepare",
+    "copy-provider": "cp ../../libs/hominio-provider/public/inject-provider.js public/inject-provider.js"
   },
   "dependencies": {
+    "@hominio/provider": "workspace:*",
+    "@hominio/voice": "workspace:*",
     "jazz-tools": "^0.19.13"
   },
   "devDependencies": {

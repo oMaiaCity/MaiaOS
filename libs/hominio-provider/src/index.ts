@@ -1,7 +1,7 @@
 /**
- * Hominio Provider Interface
- * Similar to MetaMask's window.ethereum
- * Injected into web pages to enable signing requests
+ * Hominio Provider Package
+ * Provides the interface and utilities for the Hominio wallet provider
+ * that gets injected into web pages
  */
 
 export interface SigningRequest {
@@ -13,14 +13,16 @@ export interface SigningRequest {
 export interface Provider {
   isHominio: boolean;
   requestSigning: (message: string) => Promise<{ approved: boolean; signature?: string }>;
+  openWallet?: () => Promise<void>;
   on: (event: 'accountsChanged' | 'chainChanged', callback: () => void) => void;
   removeListener: (event: string, callback: () => void) => void;
 }
 
 /**
  * Create the Hominio provider object that gets injected into web pages
+ * This is used in the extension's content script context
  */
-export function createHominioProvider(): Provider {
+export function createHominioProvider(extensionId: string): Provider {
   return {
     isHominio: true,
     
@@ -54,11 +56,23 @@ export function createHominioProvider(): Provider {
     },
     
     /**
+     * Open the wallet (if available)
+     */
+    async openWallet(): Promise<void> {
+      try {
+        await browser.runtime.sendMessage({ type: 'open-wallet' });
+      } catch (error) {
+        console.error('[Hominio Provider] Error opening wallet:', error);
+        throw error;
+      }
+    },
+    
+    /**
      * Event listeners (for future use)
      */
     on(event: 'accountsChanged' | 'chainChanged', callback: () => void) {
       // Placeholder for future event handling
-      console.log('Event listener registered:', event);
+      console.log('[Hominio Provider] Event listener registered:', event);
     },
     
     /**
@@ -66,8 +80,15 @@ export function createHominioProvider(): Provider {
      */
     removeListener(event: string, callback: () => void) {
       // Placeholder for future event handling
-      console.log('Event listener removed:', event);
+      console.log('[Hominio Provider] Event listener removed:', event);
     },
   };
+}
+
+/**
+ * Type guard to check if an object is a Hominio provider
+ */
+export function isHominioProvider(obj: any): obj is Provider {
+  return obj && typeof obj === 'object' && obj.isHominio === true;
 }
 

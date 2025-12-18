@@ -1,4 +1,6 @@
 <script lang="ts">
+  import VoiceCall from '../../lib/components/VoiceCall.svelte';
+
   interface PendingRequest {
     requestId: string;
     message: string;
@@ -7,6 +9,7 @@
 
   let pendingRequests = $state<PendingRequest[]>([]);
   let isLoading = $state(false);
+  let activeTab = $state<'requests' | 'voice'>('requests');
 
   // Load pending requests on mount
   async function loadPendingRequests() {
@@ -49,6 +52,20 @@
     }
   }
 
+  // Navigate to home page
+  async function navigateHome() {
+    try {
+      const response = await browser.runtime.sendMessage({ type: 'navigate-home' });
+      if (response?.success) {
+        console.log('Successfully navigated to home:', response.url);
+      } else {
+        console.error('Failed to navigate to home:', response?.error);
+      }
+    } catch (error) {
+      console.error('Error navigating to home:', error);
+    }
+  }
+
   // Load on mount and listen for updates
   $effect(() => {
     loadPendingRequests();
@@ -70,37 +87,63 @@
 
 <div class="popup-container">
   <main>
-    <h1 class="title">Hominio Wallet</h1>
+    <div class="header">
+      <h1 class="title">Hominio Wallet</h1>
+      <button class="btn-home" onclick={navigateHome} title="Open Home (localhost:4200)">
+        Home
+      </button>
+    </div>
 
-    {#if isLoading}
-      <p class="loading">Loading...</p>
-    {:else if pendingRequests.length === 0}
-      <div class="empty-state">
-        <p class="empty-text">No pending requests</p>
-        <p class="empty-subtext">Signing requests from web pages will appear here</p>
-      </div>
-    {:else}
-      <div class="requests-list">
-        {#each pendingRequests as request (request.requestId)}
-          <div class="request-card">
-            <div class="request-header">
-              <span class="request-label">Signing Request</span>
-              <span class="request-time">{new Date(request.timestamp).toLocaleTimeString()}</span>
+    <div class="tabs">
+      <button 
+        class="tab-btn" 
+        class:active={activeTab === 'requests'}
+        onclick={() => activeTab = 'requests'}
+      >
+        Requests
+      </button>
+      <button 
+        class="tab-btn" 
+        class:active={activeTab === 'voice'}
+        onclick={() => activeTab = 'voice'}
+      >
+        Voice
+      </button>
+    </div>
+
+    {#if activeTab === 'requests'}
+      {#if isLoading}
+        <p class="loading">Loading...</p>
+      {:else if pendingRequests.length === 0}
+        <div class="empty-state">
+          <p class="empty-text">No pending requests</p>
+          <p class="empty-subtext">Signing requests from web pages will appear here</p>
+        </div>
+      {:else}
+        <div class="requests-list">
+          {#each pendingRequests as request (request.requestId)}
+            <div class="request-card">
+              <div class="request-header">
+                <span class="request-label">Signing Request</span>
+                <span class="request-time">{new Date(request.timestamp).toLocaleTimeString()}</span>
+              </div>
+              <div class="request-message">
+                {request.message}
+              </div>
+              <div class="request-actions">
+                <button class="btn-reject" onclick={() => rejectRequest(request.requestId)}>
+                  Reject
+                </button>
+                <button class="btn-approve" onclick={() => approveRequest(request.requestId)}>
+                  Approve
+                </button>
+              </div>
             </div>
-            <div class="request-message">
-              {request.message}
-            </div>
-            <div class="request-actions">
-              <button class="btn-reject" onclick={() => rejectRequest(request.requestId)}>
-                Reject
-              </button>
-              <button class="btn-approve" onclick={() => approveRequest(request.requestId)}>
-                Approve
-              </button>
-            </div>
-          </div>
-        {/each}
-      </div>
+          {/each}
+        </div>
+      {/if}
+    {:else if activeTab === 'voice'}
+      <VoiceCall />
     {/if}
   </main>
 </div>
@@ -248,12 +291,74 @@
     box-shadow: 0 4px 16px rgba(65, 105, 225, 0.4);
   }
 
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+  }
+
   .title {
     font-size: 1.5rem;
     font-weight: 600;
     color: #f1f5f9;
-    margin-bottom: 1.5rem;
-    text-align: center;
+    margin: 0;
+    text-align: left;
+    flex: 1;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-home {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: linear-gradient(135deg, #4169e1 0%, #6495ed 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(65, 105, 225, 0.3);
+    white-space: nowrap;
+  }
+
+  .btn-home:hover {
+    background: linear-gradient(135deg, #3557c7 0%, #5280d8 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(65, 105, 225, 0.4);
+  }
+
+  .btn-home:active {
+    transform: translateY(0);
+  }
+
+  .tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(100, 149, 237, 0.2);
+  }
+
+  .tab-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+
+  .tab-btn:hover {
+    color: #cbd5e1;
+  }
+
+  .tab-btn.active {
+    color: #6495ed;
+    border-bottom-color: #6495ed;
   }
 </style>

@@ -21,6 +21,7 @@ declare module "wxt/browser" {
     | "/brand/logo_clean.png"
     | "/content-scripts/content.js"
     | "/inject-provider.js"
+    | "/mic-permission.html"
     | "/sidepanel.html"
     | "/wallet-window.html"
   type HtmlPublicPath = Extract<PublicPath, `${string}.html`>

@@ -16,6 +16,7 @@ const rootDir = resolve(__dirname, '..')
 let childProcess = null
 let assetSyncProcess = null
 let walletProcess = null
+let voiceCallProcess = null
 
 /**
  * Start the asset sync watcher
@@ -96,6 +97,32 @@ function startWallet() {
 }
 
 /**
+ * Start the voice call service
+ */
+function startVoiceCall() {
+	console.log('[voice-call] Starting voice call service...\n')
+
+	voiceCallProcess = spawn('bun', ['--env-file=.env', '--filter', 'voice-call', 'dev'], {
+		cwd: rootDir,
+		stdio: 'inherit',
+		shell: false,
+		env: { ...process.env },
+	})
+
+	// Handle process errors (non-fatal - voice-call is optional)
+	voiceCallProcess.on('error', (_error) => {
+		// Don't exit - voice-call is optional
+	})
+
+	// Handle process exit (non-fatal)
+	voiceCallProcess.on('exit', (code) => {
+		if (code !== 0 && code !== null) {
+			// Don't exit - voice-call is optional
+		}
+	})
+}
+
+/**
  * Setup signal handlers for graceful shutdown
  */
 function setupSignalHandlers() {
@@ -107,6 +134,9 @@ function setupSignalHandlers() {
 		}
 		if (walletProcess && !walletProcess.killed) {
 			walletProcess.kill('SIGTERM')
+		}
+		if (voiceCallProcess && !voiceCallProcess.killed) {
+			voiceCallProcess.kill('SIGTERM')
 		}
 		if (childProcess && !childProcess.killed) {
 			childProcess.kill('SIGTERM')
@@ -123,6 +153,9 @@ function setupSignalHandlers() {
 		if (walletProcess && !walletProcess.killed) {
 			walletProcess.kill('SIGTERM')
 		}
+		if (voiceCallProcess && !voiceCallProcess.killed) {
+			voiceCallProcess.kill('SIGTERM')
+		}
 		if (childProcess && !childProcess.killed) {
 			childProcess.kill('SIGTERM')
 		}
@@ -134,13 +167,16 @@ function setupSignalHandlers() {
  * Main execution
  */
 function main() {
-	console.log('[Dev] Starting me service and wallet extension...\n')
+	console.log('[Dev] Starting me service, wallet extension, and voice call service...\n')
 	console.log('Press Ctrl+C to stop\n')
 
 	setupSignalHandlers()
 
 	// Start asset sync watcher first
 	startAssetSync()
+
+	// Start voice call service
+	startVoiceCall()
 
 	// Start wallet extension dev server
 	startWallet()
