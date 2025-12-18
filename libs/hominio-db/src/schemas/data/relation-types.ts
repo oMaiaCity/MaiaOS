@@ -36,3 +36,5 @@ export const assignedToRelationTypeSchema: any = {
 	required: ['x1', 'x2'], // Only x1 and x2 are required
 }
 
+
+

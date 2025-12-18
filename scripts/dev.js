@@ -15,6 +15,7 @@ const rootDir = resolve(__dirname, '..')
 // Track child processes
 let childProcess = null
 let assetSyncProcess = null
+let walletProcess = null
 
 /**
  * Start the asset sync watcher
@@ -69,6 +70,32 @@ function startService() {
 }
 
 /**
+ * Start the wallet extension dev server
+ */
+function startWallet() {
+	console.log('[wallet] Starting wallet extension dev server...\n')
+
+	walletProcess = spawn('bun', ['--filter', 'wallet-browser', 'dev'], {
+		cwd: rootDir,
+		stdio: 'inherit',
+		shell: false,
+		env: { ...process.env },
+	})
+
+	// Handle process errors (non-fatal - wallet is optional)
+	walletProcess.on('error', (_error) => {
+		// Don't exit - wallet is optional
+	})
+
+	// Handle process exit (non-fatal)
+	walletProcess.on('exit', (code) => {
+		if (code !== 0 && code !== null) {
+			// Don't exit - wallet is optional
+		}
+	})
+}
+
+/**
  * Setup signal handlers for graceful shutdown
  */
 function setupSignalHandlers() {
@@ -77,6 +104,9 @@ function setupSignalHandlers() {
 		console.log('\n[Dev] Shutting down...')
 		if (assetSyncProcess && !assetSyncProcess.killed) {
 			assetSyncProcess.kill('SIGTERM')
+		}
+		if (walletProcess && !walletProcess.killed) {
+			walletProcess.kill('SIGTERM')
 		}
 		if (childProcess && !childProcess.killed) {
 			childProcess.kill('SIGTERM')
@@ -90,6 +120,9 @@ function setupSignalHandlers() {
 		if (assetSyncProcess && !assetSyncProcess.killed) {
 			assetSyncProcess.kill('SIGTERM')
 		}
+		if (walletProcess && !walletProcess.killed) {
+			walletProcess.kill('SIGTERM')
+		}
 		if (childProcess && !childProcess.killed) {
 			childProcess.kill('SIGTERM')
 		}
@@ -101,13 +134,16 @@ function setupSignalHandlers() {
  * Main execution
  */
 function main() {
-	console.log('[Dev] Starting me service...\n')
+	console.log('[Dev] Starting me service and wallet extension...\n')
 	console.log('Press Ctrl+C to stop\n')
 
 	setupSignalHandlers()
 
 	// Start asset sync watcher first
 	startAssetSync()
+
+	// Start wallet extension dev server
+	startWallet()
 
 	// Start me service
 	startService()

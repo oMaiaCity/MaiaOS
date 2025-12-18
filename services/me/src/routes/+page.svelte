@@ -33,6 +33,67 @@
       ? (me.profile as any).image
       : null,
   );
+
+  // Handle signing request button click
+  async function handleSigningRequest() {
+    console.log('[Hominio Page] Button clicked, checking for provider...');
+    console.log('[Hominio Page] window.hominio:', (window as any).hominio);
+    console.log('[Hominio Page] window.hominioProvider:', (window as any).hominioProvider);
+    console.log('[Hominio Page] typeof chrome:', typeof chrome);
+    
+    // Wait a bit for provider to be injected (in case content script is still loading)
+    let provider = (window as any).hominio || (window as any).hominioProvider;
+    
+    // Retry a few times if provider not found immediately
+    if (!provider) {
+      console.log('[Hominio Page] Provider not found, retrying...');
+      for (let i = 0; i < 10; i++) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        provider = (window as any).hominio || (window as any).hominioProvider;
+        if (provider) {
+          console.log('[Hominio Page] Provider found after retry:', i + 1);
+          break;
+        }
+      }
+    }
+    
+    if (!provider) {
+      console.error('[Hominio Page] Provider not found after all retries. Available:', {
+        hominio: (window as any).hominio,
+        hominioProvider: (window as any).hominioProvider,
+        chrome: typeof chrome !== 'undefined',
+        chromeRuntime: typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined',
+        windowKeys: Object.keys(window).filter(k => k.toLowerCase().includes('hominio')),
+      });
+      alert('Hominio Wallet extension not found. Please install the Hominio Wallet browser extension.\n\nCheck the browser console for debugging information.');
+      return;
+    }
+    
+    console.log('[Hominio Page] Provider found:', provider);
+    
+    try {
+      // First, open the wallet sidepanel
+      if (provider.openWallet) {
+        await provider.openWallet();
+      }
+      
+      // Small delay to ensure sidepanel opens
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Request signing of a simple message
+      const message = `Sign this message to authenticate with Hominio\n\nTimestamp: ${new Date().toISOString()}`;
+      const result = await provider.requestSigning(message);
+      
+      if (result.approved) {
+        alert(`Request approved!\nSignature: ${result.signature}`);
+      } else {
+        alert('Request rejected by user');
+      }
+    } catch (error) {
+      console.error('Error requesting signature:', error);
+      alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
 </script>
 
 <div class="w-full h-full overflow-y-auto max-w-4xl mx-auto px-6 py-6 space-y-6">
@@ -59,6 +120,16 @@
         Own your data. Control your privacy. Experience AI that truly works for
         you.
       </p>
+      
+      <!-- Signing Request Button -->
+      <div class="mt-8 flex justify-center">
+        <button
+          onclick={handleSigningRequest}
+          class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm"
+        >
+          Request Signature
+        </button>
+      </div>
     </header>
   {:else if !me || !me.$isLoaded}
     <div class="text-center pt-8 pb-4">
@@ -100,6 +171,16 @@
       >
         <span class="text-xs font-medium text-slate-500">Account ID: </span>
         <span class="ml-2 font-mono text-xs text-slate-400">{me.$jazz.id}</span>
+      </div>
+      
+      <!-- Signing Request Button -->
+      <div class="mt-6 flex justify-center">
+        <button
+          onclick={handleSigningRequest}
+          class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm"
+        >
+          Request Signature
+        </button>
       </div>
     </header>
   {/if}

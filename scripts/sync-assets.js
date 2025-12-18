@@ -29,6 +29,7 @@ const isDockerContext =
 // Get current working directory to detect which service we're building
 const cwd = process.cwd()
 const isMeService = cwd.includes('services/me') || (cwd.includes('me') && !cwd.includes('website'))
+const isWalletService = cwd.includes('services/wallet-browser') || cwd.includes('wallet-browser')
 
 const serviceStaticDirs = isDockerContext
 	? [
@@ -39,6 +40,7 @@ const serviceStaticDirs = isDockerContext
 			// Normal monorepo context: sync to detected service(s) only
 			// When running from monorepo root (!isDockerContext), include all services
 			...(isMeService || !isDockerContext ? [resolve(monorepoRoot, 'services/me/static/brand')] : []),
+			...(isWalletService || !isDockerContext ? [resolve(monorepoRoot, 'services/wallet-browser/public/brand')] : []),
 		].filter(Boolean)
 
 /**

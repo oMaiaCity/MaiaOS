@@ -177,3 +177,5 @@ export const relationsSkills = {
 	'@relation/deleteRelation': deleteRelationSkill,
 }
 
+
+
