@@ -10,7 +10,7 @@ export const titleSchemaDefinition: any = {
 	definition: {
 		tag: 'div',
 		classes: 'text-center mb-2 @xs:mb-2 @sm:mb-2 @md:mb-3 flex flex-col @sm:flex-row items-center justify-center gap-2 @xs:gap-2 @sm:gap-3',
-		children: [
+		elements: [
 			{
 				tag: 'h1',
 				classes: 'text-xs @xs:text-sm @sm:text-lg @md:text-xl @lg:text-2xl @xl:text-3xl font-bold text-slate-900 mb-0 @sm:mb-0',

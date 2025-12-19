@@ -6,11 +6,7 @@
  * They are still exported here for registry registration, but their definitions use @schema + parameters
  */
 
-export { modalWrapperLeaf } from './modalWrapper'
 export { modalCloseButtonLeaf } from './modalCloseButton' // Uses design-system.modalCloseButton schema
 export { modalTitleLeaf } from './modalTitle'
-export { modalContentLeaf } from './modalContent'
 export { timelineHeaderLeaf } from './timelineHeader' // Uses design-system.timelineHeader schema
 export { timelineListLeaf } from './timelineList'
-export { todoItemLeaf } from './todoItem'
-export { todoListLeaf } from './todoList'

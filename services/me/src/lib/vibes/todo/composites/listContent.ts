@@ -1,23 +1,21 @@
 /**
  * List Content Composite Configuration
- * Displays todos in list view
+ * Displays todos in list view using foreach binding
  */
 
 import type { CompositeConfig } from '../../../compositor/view/types'
+import { todoItemComposite } from './todoItem'
 
 export const listContentComposite: CompositeConfig = {
 	id: 'todo.composite.content.list',
 	container: {
-		layout: 'grid',
-		// Defaults handle: h-full w-full overflow-hidden grid @container
-		// Only need to specify columns/rows and spacing
-		class: 'pt-2 grid-cols-1 min-h-0',
+		layout: 'flex',
+		class: 'pt-2 flex flex-col gap-0.5 @xs:gap-0.5 @sm:gap-1 @md:gap-1 h-full overflow-y-auto min-h-0',
 	},
-	children: [
-		{
-			slot: 'list',
-			leafId: 'todo.leaf.todoList',
-		},
-	],
+	foreach: {
+		items: 'data.queries.todos',
+		key: 'id',
+		composite: todoItemComposite,
+	},
 }
 

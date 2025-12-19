@@ -40,7 +40,7 @@ export function resolveSchemaLeaf(leaf: LeafNode): LeafNode {
 			...leaf,
 			tag: 'div',
 			classes: leaf.classes || '',
-			children: [`Schema not found: ${schemaName}`],
+			elements: [`Schema not found: ${schemaName}`],
 		}
 	}
 
@@ -55,7 +55,7 @@ export function resolveSchemaLeaf(leaf: LeafNode): LeafNode {
 			...leaf,
 			tag: 'div',
 			classes: leaf.classes || '',
-			children: [`Schema missing definition: ${schemaName}`],
+			elements: [`Schema missing definition: ${schemaName}`],
 		}
 	}
 

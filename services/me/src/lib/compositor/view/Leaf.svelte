@@ -1110,9 +1110,9 @@
           e.preventDefault();
 
           // For forms, read input value, dispatch submit event, then clear
-          if (leaf.tag === "form" && leaf.children) {
+          if (leaf.tag === "form" && leaf.elements) {
             // Find input child with value binding
-            const inputChild = leaf.children.find(
+            const inputChild = leaf.elements.find(
               (child) =>
                 typeof child === "object" &&
                 child.tag === "input" &&
@@ -1357,9 +1357,9 @@
       {#if boundText !== undefined}
         <!-- Bound text content -->
         {String(boundText)}
-      {:else if leaf.children && leaf.children.length > 0}
-        <!-- Render children -->
-        {#each leaf.children as child}
+      {:else if leaf.elements && leaf.elements.length > 0}
+        <!-- Render elements -->
+        {#each leaf.elements as child}
           {#if typeof child === "string"}
             {child}
           {:else}

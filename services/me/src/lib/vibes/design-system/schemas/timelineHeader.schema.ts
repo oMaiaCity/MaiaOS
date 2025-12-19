@@ -10,7 +10,7 @@ export const timelineHeaderSchemaDefinition: any = {
 	definition: {
 		tag: 'div',
 		classes: 'text-sm font-semibold text-slate-700 mb-2 px-2 flex-shrink-0',
-		children: ['{{text}}'],
+		elements: ['{{text}}'],
 	},
 	parameterSchema: {
 		type: 'object',

@@ -13,11 +13,11 @@ export const errorSchemaDefinition: any = {
 		bindings: {
 			visible: '{{visible}}',
 		},
-		children: [
+		elements: [
 			{
 				tag: 'div',
 				classes: 'flex items-center gap-2 flex-1',
-				children: [
+				elements: [
 					{
 						tag: 'svg',
 						attributes: {
@@ -26,7 +26,7 @@ export const errorSchemaDefinition: any = {
 							viewBox: '0 0 24 24',
 							stroke: 'currentColor',
 						},
-						children: [
+						elements: [
 							{
 								tag: 'path',
 								attributes: {

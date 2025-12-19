@@ -28,7 +28,7 @@ export const modalSchemaDefinition: any = {
 			},
 			{
 				slot: 'content',
-				leafId: '{{contentLeafId}}',
+				compositeId: '{{contentCompositeId}}',
 			},
 		],
 	},
@@ -44,12 +44,12 @@ export const modalSchemaDefinition: any = {
 				type: 'string',
 				description: 'Leaf ID for modal title (e.g., "todo.leaf.modalTitle")',
 			},
-			contentLeafId: {
+			contentCompositeId: {
 				type: 'string',
-				description: 'Leaf ID for modal content (e.g., "todo.leaf.modalContent")',
+				description: 'Composite ID for modal content (e.g., "todo.composite.modalContent")',
 			},
 		},
-		required: ['titleLeafId', 'contentLeafId'],
+		required: ['titleLeafId', 'contentCompositeId'],
 		additionalProperties: false,
 	},
 }

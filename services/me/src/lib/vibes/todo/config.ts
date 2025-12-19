@@ -15,6 +15,11 @@ import {
 	listContentComposite,
 	kanbanContentComposite,
 	timelineContentComposite,
+	timelineItemComposite,
+	modalComposite,
+	modalWrapperComposite,
+	modalContentComposite,
+	todoItemComposite,
 } from './composites'
 import { generateKanbanContentChildren } from './composites/kanbanContent'
 import {
@@ -24,15 +29,10 @@ import {
 } from './composites/kanbanColumn'
 import {
 	modalCloseButtonLeaf,
-	modalContentLeaf,
 	modalTitleLeaf,
-	modalWrapperLeaf,
 	timelineHeaderLeaf,
 	timelineListLeaf,
-	todoItemLeaf,
-	todoListLeaf,
 } from './leafs'
-import { modalComposite } from './composites/modal'
 
 // Generate kanban column composites and leafs dynamically from column definitions
 const kanbanColumnComposites = generateKanbanColumnComposites(defaultKanbanColumns)
@@ -54,17 +54,17 @@ if (typeof window !== 'undefined') {
 		listContentComposite,
 		kanbanContentComposite,
 		timelineContentComposite,
+		timelineItemComposite,
 		modalComposite,
+		modalWrapperComposite,
+		modalContentComposite,
+		todoItemComposite,
 		...kanbanColumnComposites, // Dynamically generated column composites
 		// Leaves (some now use schema instances, but still registered for ID-based resolution)
-		modalWrapperLeaf,
 		modalCloseButtonLeaf, // Uses design-system.modalCloseButton schema
 		modalTitleLeaf,
-		modalContentLeaf,
 		timelineHeaderLeaf, // Uses design-system.timelineHeader schema
 		timelineListLeaf,
-		todoItemLeaf,
-		todoListLeaf,
 		...kanbanColumnLeafs, // Dynamically generated column leafs (headers, content, count)
 	])
 }

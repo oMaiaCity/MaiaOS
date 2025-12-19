@@ -8,8 +8,7 @@ import { viewNodeRegistry } from '../../compositor/view/view-node-registry'
 // Register design system schemas (must be imported before using schema instances)
 // Side-effect import - schemas auto-register on import
 import '../design-system/index.js'
-import { rootComposite, vibeGridComposite } from './composites'
-import { vibeCardLeaf } from './leafs'
+import { rootComposite, vibeGridComposite, vibeCardComposite } from './composites'
 import { vibesStateMachine } from './stateMachine'
 import { vibesView } from './views'
 
@@ -20,8 +19,7 @@ if (typeof window !== 'undefined') {
 		// Composites
 		rootComposite,
 		vibeGridComposite,
-		// Leaves
-		vibeCardLeaf,
+		vibeCardComposite,
 	])
 }
 

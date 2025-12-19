@@ -25,7 +25,7 @@ export const headerSchemaDefinition: any = {
 			},
 			{
 				slot: 'viewButtons',
-				leaf: {
+				composite: {
 					'@schema': 'design-system.viewButtons',
 					parameters: {
 						viewModePath: '{{viewModePath}}',

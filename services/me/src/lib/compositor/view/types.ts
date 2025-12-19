@@ -4,6 +4,7 @@
  */
 
 import type { LeafNode } from './leaf-types'
+import type { EventConfig } from './leaf-types'
 
 /**
  * Event Mapping - Maps UI interactions to state machine events
@@ -208,8 +209,95 @@ export interface CompositeConfig {
 		 * Example: "grid-cols-1 gap-4" (grid/flex/@container added automatically)
 		 */
 		class?: string
+		
+		/**
+		 * Optional HTML tag override (defaults to 'div')
+		 * Example: 'form' for form composites
+		 */
+		tag?: string
 	}
-	children?: ViewNode[] // Can contain composites or leaves
+	
+	/**
+	 * Child nodes - can contain composites or leaves
+	 * Mutually exclusive with foreach (use one or the other)
+	 */
+	children?: ViewNode[]
+	
+	/**
+	 * Foreach binding - iterates over items and renders template
+	 * Mutually exclusive with children (use one or the other)
+	 */
+	foreach?: {
+		/**
+		 * Data path to array
+		 * Example: "data.queries.humans"
+		 */
+		items: string
+		
+		/**
+		 * Key property for tracking items (defaults to index)
+		 * Example: "id"
+		 */
+		key?: string
+		
+		/**
+		 * Composite template for each item
+		 * Use this when iterating over composites
+		 */
+		composite?: CompositeConfig
+		
+		/**
+		 * Leaf template for each item
+		 * Use this when iterating over leaves
+		 */
+		leaf?: LeafNode
+	}
+	
+	/**
+	 * Event handlers on container element
+	 * Maps DOM events to state machine events
+	 */
+	events?: {
+		click?: EventConfig
+		input?: EventConfig
+		change?: EventConfig
+		submit?: EventConfig
+		dragstart?: EventConfig
+		dragenter?: EventConfig
+		dragover?: EventConfig
+		dragleave?: EventConfig
+		drop?: EventConfig
+		dragend?: EventConfig
+		keydown?: EventConfig
+		keyup?: EventConfig
+		focus?: EventConfig
+		blur?: EventConfig
+	}
+	
+	/**
+	 * Composite Bindings - Data binding configuration (similar to LeafBindings)
+	 * Supports visibility, disabled, and other bindings
+	 */
+	bindings?: {
+		/**
+		 * Data path for conditional rendering (boolean)
+		 * Example: "item.status === 'done'"
+		 */
+		visible?: string
+		
+		/**
+		 * Data path or expression for disabled state (boolean)
+		 * Example: "data.isLoading"
+		 */
+		disabled?: string
+	}
+	
+	/**
+	 * @deprecated Use bindings.visible instead
+	 * Visibility binding - data path or expression that determines if this composite should be visible
+	 * Example: "item.status === 'done'"
+	 */
+	visible?: string
 }
 
 /**

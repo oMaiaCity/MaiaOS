@@ -16,7 +16,7 @@ export const modalCloseButtonSchemaDefinition: any = {
 				event: '{{event}}',
 			},
 		},
-		children: [
+		elements: [
 			{
 				tag: 'icon',
 				icon: {

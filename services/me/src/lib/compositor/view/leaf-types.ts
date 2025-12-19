@@ -135,10 +135,11 @@ export interface LeafNode {
 	classes?: string
 
 	/**
-	 * Child nodes or text content
-	 * Can be nested LeafNodes or plain strings
+	 * HTML elements or text content (part of this single LeafNode definition)
+	 * Can be nested HTML element definitions or plain strings
+	 * Note: These are HTML elements, not separate LeafNode definitions (use composites for composition)
 	 */
-	children?: (LeafNode | string)[]
+	elements?: (LeafNode | string)[]
 
 	/**
 	 * Iconify icon configuration

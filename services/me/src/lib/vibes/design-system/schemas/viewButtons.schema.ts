@@ -1,105 +1,125 @@
 /**
- * View Buttons Schema Definition
+ * View Buttons Composite Schema Definition
  * Reusable view toggle buttons with parameterized view mode path and event
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const viewButtonsSchemaDefinition: any = {
-	type: 'Leaf',
+	type: 'Composite',
 	name: 'design-system.viewButtons',
 	definition: {
-		tag: 'div',
-		classes: 'w-full pb-2 flex flex-row justify-center items-center gap-1 @xs:gap-2 @sm:gap-3 flex-nowrap',
+		container: {
+			layout: 'flex',
+			class: 'w-full pb-2 flex flex-row justify-center items-center gap-1 @xs:gap-2 @sm:gap-3 flex-nowrap',
+		},
 		children: [
 			{
-				tag: 'button',
-				attributes: { type: 'button' },
-				classes: '{{activeButtonClasses}}',
-				bindings: {
-					visible: "{{viewModePath}} === 'list'",
-				},
-				events: {
-					click: {
-						event: '{{setViewEvent}}',
-						payload: { viewMode: 'list' },
+				slot: 'listActive',
+				leaf: {
+					tag: 'button',
+					attributes: { type: 'button' },
+					classes: '{{activeButtonClasses}}',
+					bindings: {
+						visible: "{{viewModePath}} === 'list'",
 					},
+					events: {
+						click: {
+							event: '{{setViewEvent}}',
+							payload: { viewMode: 'list' },
+						},
+					},
+					elements: ['List'],
 				},
-				children: ['List'],
 			},
 			{
-				tag: 'button',
-				attributes: { type: 'button' },
-				classes: '{{inactiveButtonClasses}}',
-				bindings: {
-					visible: "{{viewModePath}} !== 'list'",
-				},
-				events: {
-					click: {
-						event: '{{setViewEvent}}',
-						payload: { viewMode: 'list' },
+				slot: 'listInactive',
+				leaf: {
+					tag: 'button',
+					attributes: { type: 'button' },
+					classes: '{{inactiveButtonClasses}}',
+					bindings: {
+						visible: "{{viewModePath}} !== 'list'",
 					},
+					events: {
+						click: {
+							event: '{{setViewEvent}}',
+							payload: { viewMode: 'list' },
+						},
+					},
+					elements: ['List'],
 				},
-				children: ['List'],
 			},
 			{
-				tag: 'button',
-				attributes: { type: 'button' },
-				classes: '{{activeButtonClasses}}',
-				bindings: {
-					visible: "{{viewModePath}} === 'kanban'",
-				},
-				events: {
-					click: {
-						event: '{{setViewEvent}}',
-						payload: { viewMode: 'kanban' },
+				slot: 'kanbanActive',
+				leaf: {
+					tag: 'button',
+					attributes: { type: 'button' },
+					classes: '{{activeButtonClasses}}',
+					bindings: {
+						visible: "{{viewModePath}} === 'kanban'",
 					},
+					events: {
+						click: {
+							event: '{{setViewEvent}}',
+							payload: { viewMode: 'kanban' },
+						},
+					},
+					elements: ['Kanban'],
 				},
-				children: ['Kanban'],
 			},
 			{
-				tag: 'button',
-				attributes: { type: 'button' },
-				classes: '{{inactiveButtonClasses}}',
-				bindings: {
-					visible: "{{viewModePath}} !== 'kanban'",
-				},
-				events: {
-					click: {
-						event: '{{setViewEvent}}',
-						payload: { viewMode: 'kanban' },
+				slot: 'kanbanInactive',
+				leaf: {
+					tag: 'button',
+					attributes: { type: 'button' },
+					classes: '{{inactiveButtonClasses}}',
+					bindings: {
+						visible: "{{viewModePath}} !== 'kanban'",
 					},
+					events: {
+						click: {
+							event: '{{setViewEvent}}',
+							payload: { viewMode: 'kanban' },
+						},
+					},
+					elements: ['Kanban'],
 				},
-				children: ['Kanban'],
 			},
 			{
-				tag: 'button',
-				attributes: { type: 'button' },
-				classes: '{{activeButtonClasses}}',
-				bindings: {
-					visible: "{{viewModePath}} === 'timeline'",
-				},
-				events: {
-					click: {
-						event: '{{setViewEvent}}',
-						payload: { viewMode: 'timeline' },
+				slot: 'timelineActive',
+				leaf: {
+					tag: 'button',
+					attributes: { type: 'button' },
+					classes: '{{activeButtonClasses}}',
+					bindings: {
+						visible: "{{viewModePath}} === 'timeline'",
 					},
+					events: {
+						click: {
+							event: '{{setViewEvent}}',
+							payload: { viewMode: 'timeline' },
+						},
+					},
+					elements: ['Timeline'],
 				},
-				children: ['Timeline'],
 			},
 			{
-				tag: 'button',
-				attributes: { type: 'button' },
-				classes: '{{inactiveButtonClasses}}',
-				bindings: {
-					visible: "{{viewModePath}} !== 'timeline'",
-				},
-				events: {
-					click: {
-						event: '{{setViewEvent}}',
-						payload: { viewMode: 'timeline' },
+				slot: 'timelineInactive',
+				leaf: {
+					tag: 'button',
+					attributes: { type: 'button' },
+					classes: '{{inactiveButtonClasses}}',
+					bindings: {
+						visible: "{{viewModePath}} !== 'timeline'",
 					},
+					events: {
+						click: {
+							event: '{{setViewEvent}}',
+							payload: { viewMode: 'timeline' },
+						},
+					},
+					elements: ['Timeline'],
 				},
-				children: ['Timeline'],
 			},
 		],
 	},

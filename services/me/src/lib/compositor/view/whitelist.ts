@@ -606,16 +606,16 @@ export function validateLeaf(node: LeafNode, path = 'root'): ValidationResult {
 		}
 	}
 
-	// Recursively validate children
-	if (node.children) {
-		node.children.forEach((child, index) => {
-			if (typeof child === 'object') {
-				const childResult = validateLeaf(child, `${path}.children[${index}]`)
-				if (!childResult.valid) {
-					errors.push(...(childResult.errors || []))
+	// Recursively validate elements (HTML nesting within leaf)
+	if (node.elements) {
+		node.elements.forEach((element, index) => {
+			if (typeof element === 'object') {
+				const elementResult = validateLeaf(element, `${path}.elements[${index}]`)
+				if (!elementResult.valid) {
+					errors.push(...(elementResult.errors || []))
 				}
 			}
-			// String children are always safe
+			// String elements are always safe
 		})
 	}
 

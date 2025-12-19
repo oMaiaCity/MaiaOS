@@ -12,10 +12,9 @@ import {
 	rootComposite,
 	headerComposite,
 	listContentComposite,
+	humanItemComposite,
 } from './composites'
 import {
-	humanItemLeaf,
-	humanListLeaf,
 	titleLeaf,
 } from './leafs'
 import { humansStateMachine } from './stateMachine'
@@ -29,9 +28,8 @@ if (typeof window !== 'undefined') {
 		rootComposite,
 		headerComposite,
 		listContentComposite,
+		humanItemComposite,
 		// Leaves
-		humanItemLeaf,
-		humanListLeaf,
 		titleLeaf,
 	])
 }

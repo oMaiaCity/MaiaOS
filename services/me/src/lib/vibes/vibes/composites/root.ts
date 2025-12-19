@@ -5,6 +5,7 @@
  */
 
 import type { CompositeConfig } from '../../../compositor/view/types'
+import { vibeCardComposite } from './vibeCard'
 
 export const rootComposite: CompositeConfig = {
 	id: 'vibes.composite.root',
@@ -28,7 +29,7 @@ export const rootComposite: CompositeConfig = {
 						leaf: {
 							tag: 'h2',
 							classes: 'text-lg font-semibold text-slate-700 m-0',
-							children: ['Vibes'],
+							elements: ['Vibes'],
 						},
 					},
 				],
@@ -42,49 +43,14 @@ export const rootComposite: CompositeConfig = {
 					layout: 'content',
 					// Content layout: no structural defaults, just @container
 					// flex-grow handles height, overflow-auto for scrolling
-					class: 'p-6 w-full flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto grid [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] gap-[0.75rem]',
+					// Use display: contents to make children direct grid items
+					class: 'p-6 w-full flex-grow flex-shrink flex-basis-0 min-h-0 overflow-auto grid [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] gap-[0.75rem] contents',
 				},
-				children: [
-					{
-						slot: 'vibeCards',
-						leaf: {
-							tag: 'div',
-							classes: 'contents',
-							bindings: {
-								foreach: {
-									items: 'data.availableVibes',
-									key: 'id',
-									leaf: {
-										tag: 'div',
-										classes: 'p-4 bg-slate-100 rounded-2xl border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] backdrop-blur-sm hover:border-slate-300 transition-all cursor-pointer flex flex-col gap-1.5',
-										events: {
-											click: {
-												event: 'SELECT_VIBE',
-												payload: 'item.id',
-											},
-										},
-										children: [
-											{
-												tag: 'h3',
-												classes: 'text-base font-semibold text-slate-700 leading-tight',
-												bindings: {
-													text: 'item.name',
-												},
-											},
-											{
-												tag: 'p',
-												classes: 'text-xs text-slate-600 leading-relaxed',
-												bindings: {
-													text: 'item.description',
-												},
-											},
-										],
-									},
-								},
-							},
-						},
-					},
-				],
+				foreach: {
+					items: 'data.availableVibes',
+					key: 'id',
+					composite: vibeCardComposite,
+				},
 			},
 		},
 	],

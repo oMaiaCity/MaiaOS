@@ -15,7 +15,7 @@ export const inputSectionSchemaDefinition: any = {
 		children: [
 			{
 				slot: 'input.value',
-				leaf: {
+				composite: {
 					'@schema': 'design-system.inputForm',
 					parameters: {
 						valuePath: '{{valuePath}}',
@@ -28,7 +28,11 @@ export const inputSectionSchemaDefinition: any = {
 						buttonVisible: '{{buttonVisible}}',
 						buttonDisabled: '{{buttonDisabled}}',
 					},
-					classes: 'h-auto',
+					container: {
+						layout: 'flex',
+						tag: 'form',
+						class: 'h-auto',
+					},
 				},
 			},
 			{

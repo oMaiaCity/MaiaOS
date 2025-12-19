@@ -158,12 +158,3 @@ export function getChildGridClasses(child: ViewNode, parentConfig: CompositeConf
 	return classes.filter(Boolean)
 }
 
-/**
- * @deprecated This function is no longer used - all styles are converted to Tailwind classes
- * Kept for backward compatibility but returns empty object
- */
-// biome-ignore lint/correctness/noUnusedVariables: Kept for backward compatibility
-export function getChildInlineStyles(_child: ViewNode, _parentConfig: CompositeConfig): Record<string, string> {
-	// All styles are now converted to Tailwind classes in getChildClasses and getChildGridClasses
-	return {}
-}

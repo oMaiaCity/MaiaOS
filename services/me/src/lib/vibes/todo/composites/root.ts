@@ -31,10 +31,11 @@ export const rootComposite: CompositeConfig = {
 			compositeId: 'data.view.contentCompositeId', // Resolved from state
 		},
 		// Modal - Popup modal for todo details
-		// Uses leafId reference for the modal wrapper (handles backdrop + content)
+		// Uses compositeId reference for the modal wrapper (handles backdrop + content)
 		{
 			slot: 'modal',
-			leafId: 'todo.leaf.modalWrapper',
+			compositeId: 'todo.composite.modalWrapper',
+			visible: 'data.view.showModal',
 		},
 	],
 }

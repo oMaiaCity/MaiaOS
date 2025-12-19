@@ -60,3 +60,4 @@ interface Provider {
 
 For the wallet-browser extension, the `inject-provider.js` script needs to be copied to `services/wallet-browser/public/inject-provider.js` during build. This is currently done manually, but could be automated with a build script.
 
+

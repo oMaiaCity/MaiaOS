@@ -22,7 +22,7 @@ export const Leaves = {
 		attributes: { type: 'button' },
 		classes: classes || 'px-4 py-2 bg-blue-500 text-white rounded',
 		events: { click: { event, payload } },
-		children: [label],
+		elements: [label],
 	}),
 
 	/**
@@ -51,16 +51,6 @@ export const Leaves = {
 	}),
 
 	/**
-	 * Create a list leaf
-	 */
-	list: (items: string, itemLeaf: LeafNode, key = 'id'): LeafNode => ({
-		tag: 'ul',
-		bindings: {
-			foreach: { items, leaf: itemLeaf, key },
-		},
-	}),
-
-	/**
 	 * Create a conditional leaf (visible based on data path)
 	 */
 	conditional: (condition: string, leaf: LeafNode): LeafNode => ({
@@ -69,22 +59,12 @@ export const Leaves = {
 	}),
 
 	/**
-	 * Create a form leaf
+	 * Create a container div leaf (for HTML nesting only, not composition)
 	 */
-	form: (submitEvent: string, children: LeafNode[], classes?: string): LeafNode => ({
-		tag: 'form',
-		classes: classes || '',
-		events: { submit: { event: submitEvent } },
-		children,
-	}),
-
-	/**
-	 * Create a container div leaf
-	 */
-	container: (children: (LeafNode | string)[], classes?: string): LeafNode => ({
+	container: (elements: (LeafNode | string)[], classes?: string): LeafNode => ({
 		tag: 'div',
 		classes: classes || '',
-		children,
+		elements,
 	}),
 
 	/**
