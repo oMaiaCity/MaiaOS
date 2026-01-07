@@ -900,4 +900,3 @@ function _getAppUrl() {
 		}
 	}
 </style>
-

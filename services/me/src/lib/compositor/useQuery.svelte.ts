@@ -239,7 +239,7 @@ function matchesSingleCondition(
  * @returns Reactive object with entities array, loading state
  */
 export function useQuery(
-	accountCoState: any,
+	accountCoState: any | (() => any),
 	schemaName: string | (() => string),
 	queryOptions?: QueryOptions | (() => QueryOptions | undefined),
 ): {
@@ -251,6 +251,8 @@ export function useQuery(
 	// Access account.current inside $derived.by() to establish reactive subscriptions
 	// When entities are added/updated/deleted, CoState triggers re-evaluation automatically
 	const entities = $derived.by(() => {
+		// Access accountCoState reactively - call function if provided, otherwise use static value
+		const currentAccountCoState = typeof accountCoState === 'function' ? accountCoState() : accountCoState;
 		// Access schemaName reactively - call function if provided, otherwise use static value
 		const currentSchemaName = typeof schemaName === 'function' ? schemaName() : schemaName;
 		const currentOptions = typeof queryOptions === 'function' ? queryOptions() : queryOptions;
@@ -259,12 +261,12 @@ export function useQuery(
 			return []
 		}
 		
-		if (!accountCoState) {
+		if (!currentAccountCoState) {
 			return []
 		}
 		
 		// Access .current to get live CoValue (establishes reactivity)
-		const account = accountCoState.current
+		const account = currentAccountCoState.current
 		if (!account?.$isLoaded) {
 			return []
 		}

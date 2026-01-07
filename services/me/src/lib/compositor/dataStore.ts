@@ -97,8 +97,11 @@ class UnifiedDataStore {
 	send(event: string, payload?: unknown): void {
 		const currentStateConfig = this.config.states[this._state]
 
+		console.log('[DataStore] send:', { event, state: this._state, hasHandler: !!currentStateConfig?.on?.[event], payload });
+
 		if (!currentStateConfig?.on?.[event]) {
-			return
+			console.warn('[DataStore] No handler for event:', event, 'in state:', this._state);
+			return;
 		}
 
 		// Execute exit actions (fire and forget for async)
@@ -144,11 +147,17 @@ class UnifiedDataStore {
 	 * Execute actions on unified data
 	 */
 	private async executeActions(actionNames: string[], payload?: unknown): Promise<void> {
-		if (!this.config.actions) return
+		if (!this.config.actions) {
+			console.warn('[DataStore] executeActions: no actions config');
+			return;
+		}
+
+		console.log('[DataStore] executeActions:', actionNames, 'payload:', payload);
 
 		for (const actionName of actionNames) {
 			const action = this.config.actions?.[actionName]
 			if (action) {
+				console.log('[DataStore] Executing action:', actionName);
 				try {
 					const result = action(this._data, payload)
 					// If action returns a Promise, await it
@@ -201,10 +210,15 @@ class UnifiedDataStore {
 	 * Reset to initial state
 	 */
 	reset(): void {
+		const accountCoState = this._data._jazzAccountCoState
 		this._state = this.config.initial
 		this._data = this.config.data
 			? { ...this.config.data, _state: this.config.initial }
 			: { _state: this.config.initial }
+		// Preserve _jazzAccountCoState
+		if (accountCoState) {
+			this._data._jazzAccountCoState = accountCoState
+		}
 		this.notifySubscribers()
 	}
 }
@@ -218,9 +232,15 @@ class UnifiedDataStore {
  */
 export function createDataStore(
 	config: StateMachineConfig,
-	jazzAccount?: any,
+	accountCoState?: any,
 ): DataStore {
-	const store = new UnifiedDataStore(config)
+	// Add _jazzAccountCoState to initial data if provided
+	const initialData = config.data ? { ...config.data } : {}
+	if (accountCoState) {
+		initialData._jazzAccountCoState = accountCoState
+	}
+	
+	const store = new UnifiedDataStore({ ...config, data: initialData })
 	const writableStore = writable(store.data)
 
 	// Subscribe to store changes

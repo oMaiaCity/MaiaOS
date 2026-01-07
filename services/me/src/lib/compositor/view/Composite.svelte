@@ -15,6 +15,9 @@
   // Recursive component reference (Svelte allows this)
   import CompositeRecursive from "./Composite.svelte";
 
+  // For actor-based rendering
+  import ActorRendererRecursive from "../actors/ActorRendererRecursive.svelte";
+
   interface Props {
     node: ViewNode;
     data: Data;
@@ -23,6 +26,10 @@
   }
 
   const { node, data, config, onEvent }: Props = $props();
+  
+  // Extract childActors and accountCoState from data (passed by ActorRenderer)
+  const childActors = $derived((data as any).childActors || null);
+  const accountCoState = $derived((data as any).accountCoState || null);
 
   // Drag-over state for drop zone visual feedback
   let isDragOver = $state(false);
@@ -550,7 +557,7 @@
 </script>
 
   {#if composite}
-  {@const containerAttributes = composite.container?.attributes || {}}
+  {@const containerAttributes = (composite.container as any)?.attributes || {}}
   {@const hasDropzone = containerAttributes['data-dropzone'] === 'true'}
   <svelte:element
     this={containerTag}
@@ -742,6 +749,17 @@
             data={{ ...data, item: itemData }}
             {config}
             {onEvent}
+          />
+        {/if}
+      {/each}
+    {:else if childActors && childActors.length > 0}
+      <!-- Actor-based rendering (NEW: Jazz-native ID-based) -->
+      {#each childActors as childActor}
+        {@const childActorId = childActor?.$jazz?.id}
+        {#if childActorId}
+          <ActorRendererRecursive 
+            actorId={childActorId}
+            {accountCoState}
           />
         {/if}
       {/each}

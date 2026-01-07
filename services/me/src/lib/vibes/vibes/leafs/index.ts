@@ -1,3 +1,0 @@
-/**
- * Vibes Vibe Leaf Components
- */

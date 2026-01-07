@@ -40,10 +40,14 @@ export { migrateSyncGoogleImageToProfile } from './migrations/20241220_sync-goog
 export { migrateSyncGoogleNameToProfile } from './migrations/20241220_sync-google-name-to-profile'
 export {
 	AccountProfile,
+	Actor,
+	ActorList,
+	ActorMessage,
 	AppRoot,
 	Contact,
 	JazzAccount,
 	syncGoogleDataToProfile,
+	VibesRegistry,
 } from './schema'
 // Generic CRUD Functions for Relations
 export {

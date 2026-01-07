@@ -65,6 +65,55 @@ export const Contact = co.map({
 	email: z.string(),
 })
 
+/** Actor Message schema - messages stored in actor's inbox (CoFeed) */
+export const ActorMessage = co.map({
+	type: z.string(), // 'CREATE_HUMAN', 'SELECT_VIBE', 'CLICK', etc.
+	payload: z.object({}).passthrough(), // Event data
+	from: z.string().optional(), // Sender actor ID
+	timestamp: z.number(), // Unix timestamp
+})
+
+/** Actor schema - every UI node (composite and leaf) is an independent actor with message-passing */
+export const Actor = co.map({
+	// State machine
+	currentState: z.string(),
+	states: z.object({}).passthrough(), // { idle: { on: { EVENT: { target: 'state', actions: [] } } } }
+	
+	// Context data (any JSON)
+	context: z.object({}).passthrough(),
+	
+	// View - can be composite container OR leaf element (optional for service actors)
+	view: z.object({}).passthrough().optional(), // { container: {...} } OR { tag: 'div', classes: '...', ... }
+	
+	// Dependencies - map of names to CoValue IDs
+	dependencies: z.record(z.string(), z.string()),
+	
+	// Message inbox - append-only CoFeed for receiving messages
+	inbox: co.feed(ActorMessage),
+	
+	// Subscriptions - list of actor IDs to publish messages to
+	subscriptions: co.list(z.string()),
+	
+	// Children - list of child actor IDs (ID-based parent-child relationships)
+	children: co.list(z.string()),
+	
+	// Role - optional label for debugging/categorization (e.g., 'header', 'button')
+	role: z.string().optional(),
+	
+	// Position - deprecated, use children array order instead
+	position: z.number().optional(),
+})
+
+/** Actor registry - list of all actor instances */
+export const ActorList = co.list(Actor)
+
+/** Vibes registry schema - generic CoMap for storing root actor IDs */
+export const VibesRegistry = co.map({
+	vibes: z.string().optional(),
+	humans: z.string().optional(),
+	designTemplates: z.string().optional(),
+})
+
 /** The account root is an app-specific per-user private `CoMap`
  *  where you can store top-level objects for that user */
 export const AppRoot = co.map({
@@ -72,6 +121,8 @@ export const AppRoot = co.map({
 	schemata: co.optional(co.list(co.map({}))), // Optional - list of SchemaDefinitions (created dynamically)
 	entities: co.optional(co.list(co.map({}))), // Optional - list of Entity instances (created dynamically)
 	relations: co.optional(co.list(co.map({}))), // Optional - list of Relation instances (created dynamically)
+	actors: co.optional(ActorList), // Optional - list of Actor instances (UI components)
+	vibes: co.optional(VibesRegistry), // Optional - registry of vibe root actor IDs (flexible passthrough schema)
 })
 
 export const JazzAccount = co
@@ -143,6 +194,7 @@ export const JazzAccount = co
 
 		// Check if root exists (without loading nested structures)
 		if (!account.$jazz.has('root')) {
+			console.log('[Migration] Creating initial account root')
 			// Create contact CoMap
 			const contact = Contact.create({
 				email: '',
@@ -152,65 +204,37 @@ export const JazzAccount = co
 			account.$jazz.set('root', {
 				contact: contact,
 			})
-			return
+			await account.$jazz.waitForSync()
 		}
 
-		// Load root (without nested structures first)
+		// Load root
 		const loadedAccount = await account.$jazz.ensureLoaded({
 			resolve: { root: true },
 		})
 
 		if (!loadedAccount.root) {
-			// Create contact CoMap
-			const contact = Contact.create({
-				email: '',
-			})
-			await contact.$jazz.waitForSync()
-
-			account.$jazz.set('root', {
-				contact: contact,
-			})
+			console.error('[Migration] Root missing after creation attempt')
 			return
 		}
 
 		const root = loadedAccount.root
 
-		// Try to load root with contact
-		// If the reference is broken (points to non-existent CoValue), recreate it
+		// Ensure root and basic contact are loaded
 		let rootWithData
 		try {
 			rootWithData = await root.$jazz.ensureLoaded({
 				resolve: { contact: true },
 			})
 
-			// Verify that root was actually loaded (not just a broken reference)
+			// Verify that root was actually loaded
 			if (!rootWithData || !rootWithData.$isLoaded) {
-				throw new Error('root failed to load - broken reference')
+				throw new Error('root failed to load')
 			}
-		} catch (_error) {
-			// Create contact CoMap
-			const contact = Contact.create({
-				email: '',
-			})
-			await contact.$jazz.waitForSync()
-
-			account.$jazz.set('root', {
-				contact: contact,
-			})
+		} catch (error) {
+			console.error('[Migration] Error loading root data:', error)
 			return
 		}
 
-		// Ensure contact exists
-		if (!rootWithData.$jazz.has('contact')) {
-			const contact = Contact.create({
-				email: '',
-			})
-			await contact.$jazz.waitForSync()
-			rootWithData.$jazz.set('contact', contact)
-		}
-
-		// Remove capabilities if they exist (migration: capabilities system removed)
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const rootAny = rootWithData as any
 		if (rootAny.$jazz.has('capabilities')) {
 			rootAny.$jazz.delete('capabilities')
@@ -302,6 +326,78 @@ export const JazzAccount = co
 			} catch (_error) { }
 		}
 
+		// Ensure actors list exists (empty by default - actors created via createActors)
+		if (!rootWithData.$jazz.has('actors')) {
+			// Create a group for actors list
+			const actorsGroup = Group.create()
+			await actorsGroup.$jazz.waitForSync()
+
+			// Create empty actors list
+			const actorsList = ActorList.create([], actorsGroup)
+			await actorsList.$jazz.waitForSync()
+			rootWithData.$jazz.set('actors', actorsList)
+		} else {
+			// Ensure actors list is loaded
+			try {
+				await rootWithData.$jazz.ensureLoaded({
+					resolve: { actors: true },
+				})
+			} catch (_error) { }
+		}
+
+		// Delete any legacy vibesRegistry property (old schema)
+		if (rootAny.$jazz.has('vibesRegistry')) {
+			console.log('[Migration] Deleting legacy vibesRegistry property')
+			rootAny.$jazz.delete('vibesRegistry')
+			await rootWithData.$jazz.waitForSync()
+		}
+
+		// Ensure root.vibes is a proper VibesRegistry CoMap (SINGLE SOURCE OF TRUTH)
+		// If it exists but is broken (e.g., a string ID from old migration), delete and recreate
+		let needsVibesRecreation = false
+		
+		if (rootWithData.$jazz.has('vibes')) {
+			try {
+				// Try to load it and verify it's a proper CoMap
+				const rootWithVibes = await rootWithData.$jazz.ensureLoaded({
+					resolve: { vibes: true },
+				})
+				const existingVibes = rootWithVibes.vibes
+				
+				// Check if it's a proper CoMap with $jazz.get method
+				if (!existingVibes || typeof existingVibes === 'string' || typeof existingVibes.$jazz?.get !== 'function') {
+					console.log('[Migration] root.vibes exists but is broken (not a proper CoMap), will recreate')
+					needsVibesRecreation = true
+					rootAny.$jazz.delete('vibes')
+					await rootWithData.$jazz.waitForSync()
+				} else {
+					console.log('[Migration] root.vibes exists and is valid')
+				}
+			} catch (error) {
+				console.log('[Migration] Error loading root.vibes, will recreate:', error)
+				needsVibesRecreation = true
+				rootAny.$jazz.delete('vibes')
+				await rootWithData.$jazz.waitForSync()
+			}
+		} else {
+			needsVibesRecreation = true
+		}
+		
+		if (needsVibesRecreation) {
+			console.log('[Migration] Creating fresh vibes registry (VibesRegistry CoMap)')
+			const registryGroup = Group.create()
+			registryGroup.addMember('everyone', 'reader')
+			await registryGroup.$jazz.waitForSync()
+			
+			const vibesRegistry = VibesRegistry.create({}, registryGroup)
+			await vibesRegistry.$jazz.waitForSync()
+			
+			rootWithData.$jazz.set('vibes', vibesRegistry)
+			await rootWithData.$jazz.waitForSync()
+			console.log('[Migration] Fresh vibes registry created:', vibesRegistry.$jazz.id)
+		}
+
+		console.log('[Migration] Account migration completed successfully')
 	})
 
 /**

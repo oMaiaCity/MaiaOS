@@ -1,12 +1,13 @@
-/**
- * Todo Vibe Configuration
- * Main config file that pulls together all sub-configs
+/*
+ * TODOS VIBE - COMMENTED OUT FOR PHASE 2 REFACTORING
+ * This vibe will be ported to actor architecture in a separate phase
+ * after humans and vibes vibes are complete and tested.
  */
 
+// Original config commented out - will be reimplemented as actors in phase 2
+/*
 import type { VibeConfig } from '../../compositor/types'
 import { viewNodeRegistry } from '../../compositor/view/view-node-registry'
-// Register design system schemas (must be imported before using schema instances)
-// Side-effect import - schemas auto-register on import
 import '../design-system/index.js'
 import {
 	rootComposite,
@@ -34,20 +35,15 @@ import {
 	timelineListLeaf,
 } from './leafs'
 
-// Generate kanban column composites and leafs dynamically from column definitions
 const kanbanColumnComposites = generateKanbanColumnComposites(defaultKanbanColumns)
 const kanbanColumnLeafs = generateKanbanColumnLeafs(defaultKanbanColumns)
 
-// Update kanban content composite with dynamic children (now references composites)
 kanbanContentComposite.children = generateKanbanContentChildren(defaultKanbanColumns)
 import { todoStateMachine } from './stateMachine'
 import { todoView } from './views'
 
-// Register all view node configs (composites AND leaves) in the registry for ID-based resolution
 if (typeof window !== 'undefined') {
-	// Only register in browser to avoid SSR issues
 	viewNodeRegistry.registerAll([
-		// Composites
 		rootComposite,
 		headerComposite,
 		inputSectionComposite,
@@ -59,13 +55,12 @@ if (typeof window !== 'undefined') {
 		modalWrapperComposite,
 		modalContentComposite,
 		todoItemComposite,
-		...kanbanColumnComposites, // Dynamically generated column composites
-		// Leaves (some now use schema instances, but still registered for ID-based resolution)
-		modalCloseButtonLeaf, // Uses design-system.modalCloseButton schema
+		...kanbanColumnComposites,
+		modalCloseButtonLeaf,
 		modalTitleLeaf,
-		timelineHeaderLeaf, // Uses design-system.timelineHeader schema
+		timelineHeaderLeaf,
 		timelineListLeaf,
-		...kanbanColumnLeafs, // Dynamically generated column leafs (headers, content, count)
+		...kanbanColumnLeafs,
 	])
 }
 
@@ -73,3 +68,5 @@ export const todoVibeConfig: VibeConfig = {
 	stateMachine: todoStateMachine,
 	view: todoView,
 }
+*/// Placeholder export to prevent import errors
+export const todoVibeConfig = null as any

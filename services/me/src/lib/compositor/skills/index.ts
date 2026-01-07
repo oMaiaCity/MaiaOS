@@ -11,6 +11,7 @@ export { executeSkill } from './executor'
 import { registerSkillsFromConfig } from './registry'
 // Import all skill modules
 import { entitySkills } from './entity-skills'
+import { humanSkills } from './human-skills'
 import { vibesSkills } from './vibes-skills'
 import { schemaSkills } from './schema-skills'
 import { relationsSkills } from './relations-skills'
@@ -32,6 +33,7 @@ export function registerAllSkills(): void {
 	}
 
 	registerSkillsFromConfig(entitySkills)
+	registerSkillsFromConfig(humanSkills)
 	registerSkillsFromConfig(vibesSkills)
 	registerSkillsFromConfig(schemaSkills)
 	registerSkillsFromConfig(relationsSkills)

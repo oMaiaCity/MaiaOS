@@ -33,10 +33,23 @@ export function resolveDataPath(data: Data, path: string): unknown {
 
 	const parts = dataPath.split('.')
 
-	// Remove "data" prefix if present (data.title -> title)
-	const dataParts = parts[0] === 'data' ? parts.slice(1) : parts
-
-	let current: unknown = data
+	// Remove "data" or "item" prefix if present
+	// "data.title" -> ["title"]
+	// "item.name" -> ["name"] (and access data.item.name)
+	let dataParts: string[];
+	let current: unknown;
+	
+	if (parts[0] === 'data') {
+		dataParts = parts.slice(1);
+		current = data;
+	} else if (parts[0] === 'item') {
+		dataParts = parts.slice(1);
+		// Access data.item if it exists
+		current = (data as Record<string, unknown>).item || data;
+	} else {
+		dataParts = parts;
+		current = data;
+	}
 
 	for (const part of dataParts) {
 		if (current === null || current === undefined) {
