@@ -10,6 +10,17 @@ import { co, Group, z } from 'jazz-tools'
 import { jsonSchemaToZod } from './json-schema-to-zod.js'
 import { SchemaMetaSchema } from '../schemas/schema-meta-schema.js'
 
+// ============================================
+// CREATION LOCKS TO PREVENT RACE CONDITIONS
+// ============================================
+
+/**
+ * In-memory locks to prevent concurrent schema creation
+ * Key: schema name, Value: Promise
+ * NOTE: We don't cache schemas - Jazz handles that with its local-first architecture
+ */
+const schemaCreationLocks = new Map<string, Promise<any>>();
+
 /**
  * Adds @label and @schema properties to a JSON Schema if they don't already exist
  * @label is a computed field that provides a display name for CoValues
@@ -316,37 +327,45 @@ function getNode(accountOrCoValue: any): any {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function ensureMetaSchema(account: any): Promise<any> {
-	// Use ensureSchema recursively, but with a guard to prevent infinite recursion
-	// We'll check if meta-schema exists first, and if not, create it directly
-	const loadedAccount = await account.$jazz.ensureLoaded({
-		resolve: { root: true },
-	})
-
-	if (!loadedAccount.root) {
-		throw new Error('Root does not exist')
+	const schemaName = 'Schema';
+	
+	// Check if creation is already in progress (prevent race conditions)
+	if (schemaCreationLocks.has(schemaName)) {
+		console.log(`[ensureMetaSchema] ⏳ Waiting for ongoing creation of "${schemaName}"`);
+		return schemaCreationLocks.get(schemaName);
 	}
+	
+	// Create lock for this schema
+	const creationPromise = (async () => {
+		try {
+			const loadedAccount = await account.$jazz.ensureLoaded({
+				resolve: { root: true },
+			})
 
-	const root = loadedAccount.root
+			if (!loadedAccount.root) {
+				throw new Error('Root does not exist')
+			}
 
-	// Ensure schemata list exists
-	if (!root.$jazz.has('schemata')) {
-		throw new Error('Schemata list does not exist - run account migration first')
-	}
+			const root = loadedAccount.root
 
-	// Load schemata list
-	const rootWithSchemata = await root.$jazz.ensureLoaded({
-		resolve: { schemata: true },
-	})
-	const schemataList = rootWithSchemata.schemata
+			// Ensure schemata list exists
+			if (!root.$jazz.has('schemata')) {
+				throw new Error('Schemata list does not exist - run account migration first')
+			}
 
-	if (!schemataList) {
-		throw new Error('Schemata list could not be loaded')
-	}
+			// Load schemata list
+			const rootWithSchemata = await root.$jazz.ensureLoaded({
+				resolve: { schemata: true },
+			})
+			const schemataList = rootWithSchemata.schemata
 
-	// Check if meta-schema already exists
-	// Ensure schemata list is fully loaded before checking and wait for sync
-	await schemataList.$jazz.ensureLoaded()
-	await root.$jazz.waitForSync()
+			if (!schemataList) {
+				throw new Error('Schemata list could not be loaded')
+			}
+
+			// Check if meta-schema already exists
+			// ⚡ LOCAL-FIRST: Jazz loads from local cache instantly
+			await schemataList.$jazz.ensureLoaded()
 
 	// Get node to load CoValues by ID (like resolveCoValue does)
 	// Try account first, then root as fallback
@@ -388,13 +407,14 @@ async function ensureMetaSchema(account: any): Promise<any> {
 
 					console.log(`[ensureMetaSchema] Found schema - name: "${schemaNameValue}", ID: ${schemaId}`)
 
-					// Check if name matches 'Schema' (case-sensitive exact match)
-					if (typeof schemaNameValue === 'string' && schemaNameValue === 'Schema') {
-						console.log(`[ensureMetaSchema] Meta-schema "Schema" already exists, returning existing`)
-						// Return the schema from the list (it's already wrapped), not the raw loadedValue
-						// The schema from Array.from(schemataList) is the wrapped CoValue we need
-						return schema
-					}
+				// Check if name matches 'Schema' (case-sensitive exact match)
+				if (typeof schemaNameValue === 'string' && schemaNameValue === 'Schema') {
+					console.log(`[ensureMetaSchema] Meta-schema "Schema" already exists, returning existing`)
+					// Return the schema from the list (it's already wrapped), not the raw loadedValue
+					// The schema from Array.from(schemataList) is the wrapped CoValue we need
+					// ⚡ Jazz handles caching internally with its local-first architecture
+					return schema
+				}
 				} catch (error) {
 					console.error(`[ensureMetaSchema] Error loading schema:`, error)
 					// Skip this schema if there's an error loading it
@@ -425,16 +445,15 @@ async function ensureMetaSchema(account: any): Promise<any> {
 		},
 		schemataOwner,
 	)
-	await metaSchema.$jazz.waitForSync()
+	// ⚡ LOCAL-FIRST: No waitForSync - creation is instant, sync happens in background
 
 	// Explicitly set name property using $jazz.set to ensure it's stored
-	// This is a workaround in case the dynamic schema creation doesn't properly set it
 	metaSchema.$jazz.set('name', 'Schema')
-	await metaSchema.$jazz.waitForSync()
+	// ⚡ LOCAL-FIRST: No waitForSync
 
 	// Set the type property to "MetaSchema" for the meta-schema itself
 	metaSchema.$jazz.set('type', 'MetaSchema')
-	await metaSchema.$jazz.waitForSync()
+	// ⚡ LOCAL-FIRST: No waitForSync
 
 	// Verify name and type were set
 	const verifyName = metaSchema.name
@@ -447,10 +466,20 @@ async function ensureMetaSchema(account: any): Promise<any> {
 
 	// Add meta-schema to schemata list
 	schemataList.$jazz.push(metaSchema)
-	await root.$jazz.waitForSync()
+	// ⚡ LOCAL-FIRST: No waitForSync - push is instant, sync happens in background
 
 	// Return the meta-schema
+	console.log(`[ensureMetaSchema] ⚡ Meta-schema created instantly (local-first)`);
 	return await metaSchema.$jazz.ensureLoaded({ resolve: {} })
+		} finally {
+			// Remove lock when done
+			schemaCreationLocks.delete(schemaName);
+		}
+	})();
+	
+	// Store lock and return promise
+	schemaCreationLocks.set(schemaName, creationPromise);
+	return creationPromise;
 }
 
 /**
@@ -470,13 +499,22 @@ export async function ensureSchema(
 	jsonSchema: any,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> {
-	// Ensure meta-schema exists first (unless we're creating the meta-schema itself)
-	if (schemaName !== 'Schema') {
-		await ensureMetaSchema(account)
+	// Check if creation is already in progress (prevent race conditions)
+	if (schemaCreationLocks.has(schemaName)) {
+		console.log(`[ensureSchema] ⏳ Waiting for ongoing creation of "${schemaName}"`);
+		return schemaCreationLocks.get(schemaName);
 	}
+	
+	// Create lock for this schema
+	const creationPromise = (async () => {
+		try {
+			// Ensure meta-schema exists first (unless we're creating the meta-schema itself)
+			if (schemaName !== 'Schema') {
+				await ensureMetaSchema(account)
+			}
 
-	// Add @label to the schema automatically
-	const jsonSchemaWithLabel = addLabelToSchema(jsonSchema)
+			// Add @label to the schema automatically
+			const jsonSchemaWithLabel = addLabelToSchema(jsonSchema)
 
 	// Reload root and schemata list to ensure we have the latest state
 	const freshRoot = await account.$jazz.ensureLoaded({
@@ -500,7 +538,7 @@ export async function ensureSchema(
 	}
 
 	await schemataList.$jazz.ensureLoaded()
-	await root.$jazz.waitForSync()
+	// ⚡ LOCAL-FIRST: No waitForSync - Jazz loads from local cache instantly
 
 	// Get node to load CoValues by ID (like resolveCoValue does)
 	// Try account first, then root as fallback
@@ -606,9 +644,9 @@ export async function ensureSchema(
 			// Store the existing schema's ID
 			nestedSchemaIdMap[refPath] = existingNestedSchema.$jazz.id
 		} else {
-			// Create a group for the nested schema's entities list
-			const nestedEntitiesGroup = Group.create()
-			await nestedEntitiesGroup.$jazz.waitForSync()
+		// Create a group for the nested schema's entities list
+		const nestedEntitiesGroup = Group.create()
+		// ⚡ LOCAL-FIRST: No waitForSync - group creation is instant
 
 			// Get properties from the JSON Schema at this path (use schema with @label and @schema)
 			const nestedProperties = getPropertiesFromPath(jsonSchemaWithLabel, refPath)
@@ -646,9 +684,9 @@ export async function ensureSchema(
 					name: nestedSchemaName,
 					definition: nestedJsonSchema,
 				},
-				schemataOwner,
-			)
-			await nestedSchemaDefinition.$jazz.waitForSync()
+			schemataOwner,
+		)
+		// ⚡ LOCAL-FIRST: No waitForSync - schema creation is instant
 
 			// Set system properties (@label and @schema) - nested schema references meta-schema
 			const { setSystemProps } = await import('../functions/set-system-props.js')
@@ -662,7 +700,7 @@ export async function ensureSchema(
 		}
 	}
 
-	await root.$jazz.waitForSync()
+	// ⚡ LOCAL-FIRST: No waitForSync - all operations are instant locally
 
 	// Step 3: Create a modified JSON Schema with $ref (CoValue IDs) for nested schemas (use schema with @label)
 	const modifiedJsonSchema = replaceNestedSchemasWithRefs(
@@ -708,17 +746,17 @@ export async function ensureSchema(
 		},
 		schemataOwner,
 	)
-	await newSchema.$jazz.waitForSync()
+	// ⚡ LOCAL-FIRST: No waitForSync - schema creation is instant
 
 	// Explicitly set name property using $jazz.set to ensure it's stored
 	// This is a workaround in case the dynamic schema creation doesn't properly set it
 	newSchema.$jazz.set('name', schemaName)
-	await newSchema.$jazz.waitForSync()
+	// ⚡ LOCAL-FIRST: No waitForSync - property set is instant
 	
 	// Explicitly set definition property using $jazz.set to ensure passthrough object is stored correctly
 	// Passthrough objects need to be explicitly set to ensure nested properties are serialized
 	newSchema.$jazz.set('definition', modifiedJsonSchema)
-	await newSchema.$jazz.waitForSync()
+	// ⚡ LOCAL-FIRST: No waitForSync - property set is instant
 	
 	// Verify definition was set correctly
 	const verifyDefinition = newSchema.definition
@@ -739,10 +777,20 @@ export async function ensureSchema(
 
 	// Add SchemaDefinition to schemata list
 	schemataList.$jazz.push(newSchema)
-	await root.$jazz.waitForSync()
+	// ⚡ LOCAL-FIRST: No waitForSync - push is instant, sync happens in background
 
 	// Return the newly created schema
+	console.log(`[ensureSchema] ⚡ Schema "${schemaName}" created instantly (local-first)`);
 	return await newSchema.$jazz.ensureLoaded({ resolve: {} })
+		} finally {
+			// Remove lock when done
+			schemaCreationLocks.delete(schemaName);
+		}
+	})();
+	
+	// Store lock and return promise
+	schemaCreationLocks.set(schemaName, creationPromise);
+	return creationPromise;
 }
 
 /**
@@ -830,7 +878,7 @@ export async function createEntity(
 		},
 		entitiesOwner,
 	)
-	await entityInstance.$jazz.waitForSync()
+	// ⚡ LOCAL-FIRST: No waitForSync - entity creation is instant
 
 	// Set system properties (@label and @schema) - entity references Entity schema definition
 	const { setSystemProps } = await import('../functions/set-system-props.js')
@@ -838,7 +886,7 @@ export async function createEntity(
 
 	// Add entity instance to root.entities list
 	entitiesList.$jazz.push(entityInstance)
-	await root.$jazz.waitForSync()
+	// ⚡ LOCAL-FIRST: No waitForSync - push is instant, sync happens in background
 
 	return entityInstance
 }

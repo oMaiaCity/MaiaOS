@@ -64,112 +64,113 @@ export async function createHumansActors(account: any) {
 
 		console.log('[createHumansActors] Creating new actors...');
 
-		// Ensure actors list exists
-		let actorsList;
-		if (!root.$jazz.has('actors')) {
-			const actorsGroup = Group.create();
-			actorsGroup.addMember('everyone', 'reader');
-			await actorsGroup.$jazz.waitForSync();
-			actorsList = ActorList.create([], actorsGroup);
-			await actorsList.$jazz.waitForSync();
-			root.$jazz.set('actors', actorsList);
-			await root.$jazz.waitForSync();
-		} else {
-			const rootWithActors = await root.$jazz.ensureLoaded({
-				resolve: { actors: true },
-			});
-			actorsList = rootWithActors.actors;
-			if (!actorsList?.$isLoaded) {
-				throw new Error('Actors list found but failed to load');
-			}
+	// Ensure actors list exists (OPTIMISTIC - no blocking!)
+	let actorsList;
+	if (!root.$jazz.has('actors')) {
+		const actorsGroup = Group.create();
+		actorsGroup.addMember('everyone', 'reader');
+		// NO WAIT! Jazz syncs in background
+		actorsList = ActorList.create([], actorsGroup);
+		// NO WAIT! Use immediately
+		root.$jazz.set('actors', actorsList);
+		// NO WAIT! Local-first = instant
+	} else {
+		// Direct access - no ensureLoaded needed
+		actorsList = root.actors;
+		if (!actorsList) {
+			throw new Error('Actors list not found');
 		}
+	}
 
-		const group = Group.create();
-		group.addMember('everyone', 'reader');
-		await group.$jazz.waitForSync();
+	// Create group for actors (OPTIMISTIC - no blocking!)
+	const group = Group.create();
+	group.addMember('everyone', 'reader');
+	// NO WAIT! Jazz syncs in background
 
 		// ============================================
 		// BOTTOM-UP CREATION: LEAFS → COMPOSITES → ROOT
 		// ============================================
 
-		// STEP 1: Create leaf actors (title, create button)
-		const headerTitleActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
-			context: {},
-			view: createTitleLeaf({ text: 'Humans', tag: 'h2' }),
-			dependencies: {},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: [],
-			children: co.list(z.string()).create([]),
-			role: 'humans-header-title',
-		}, group);
+	// STEP 1: Create leaf actors (title, create button)
+	const headerTitleActor = Actor.create({
+		currentState: 'idle',
+		states: { idle: {} },
+		context: { visible: true },
+		view: createTitleLeaf({ text: 'Humans', tag: 'h2' }),
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [],
+		children: co.list(z.string()).create([]),
+		role: 'humans-header-title',
+	}, group);
 
-		// Create button will send messages to root
-		let rootActorId: string = '';
-
-		const createButtonActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
-			context: {},
-			view: createButtonLeaf({
-				text: 'Create Human',
-				event: 'CREATE_HUMAN',
-				payload: {},
-				variant: 'primary'
-			}),
-			dependencies: {},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: [], // Will be set after root is created
-			children: co.list(z.string()).create([]),
-			role: 'humans-create-button',
-		}, group);
-
-		await Promise.all([
-			headerTitleActor.$jazz.waitForSync(),
-			createButtonActor.$jazz.waitForSync(),
-		]);
-
-		// STEP 2: Create composite actors (header, list)
-		const headerActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
-			context: {},
-			view: createHeaderComposite(),
-			dependencies: {},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: [],
-			children: co.list(z.string()).create([headerTitleActor.$jazz.id, createButtonActor.$jazz.id]),
-			role: 'humans-header',
-		}, group);
-
-		// List actor with inline foreach template - contains queries and dependencies
-		// ARCHITECTURAL PRINCIPLE: Each actor handles its own events (no bubbling!)
-		const listActor = Actor.create({
-			currentState: 'idle',
-			states: { 
-				idle: {
-					on: {
-						REMOVE_HUMAN: { target: 'idle', actions: ['@entity/deleteEntity'] }
-					}
+	// Create button - TRUE COLOCATION: handles its own @human/createRandom action
+	const createButtonActor = Actor.create({
+		currentState: 'idle',
+		states: { 
+			idle: {
+				on: {
+					'@human/createRandom': { target: 'idle', actions: ['@human/createRandom'] }
 				}
-			},
-			context: {
-				queries: {
-					humans: {
-						schemaName: 'Human',
-						items: [] // Will be populated by ActorRenderer from entities
-					}
+			}
+		},
+		context: { visible: true },
+		view: createButtonLeaf({
+			text: 'Create Human',
+			event: '@human/createRandom',
+			payload: {},
+			variant: 'primary'
+		}),
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [], // Will subscribe to itself after creation
+		children: co.list(z.string()).create([]),
+		role: 'humans-create-button',
+	}, group);
+
+	// NO WAIT! Actors created locally, use immediately
+	
+	// STEP 2: Create composite actors (header, list)
+	const headerActor = Actor.create({
+		currentState: 'idle',
+		states: { idle: {} },
+		context: { visible: true },
+		view: createHeaderComposite(),
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [],
+		children: co.list(z.string()).create([headerTitleActor.$jazz.id, createButtonActor.$jazz.id]),
+		role: 'humans-header',
+	}, group);
+
+	// List actor with inline foreach template - contains queries and dependencies
+	// ARCHITECTURAL PRINCIPLE: Each actor handles its own events (no bubbling!)
+	const listActor = Actor.create({
+		currentState: 'idle',
+		states: { 
+			idle: {
+				on: {
+					REMOVE_HUMAN: { target: 'idle', actions: ['@entity/deleteEntity'] }
 				}
-			},
+			}
+		},
+		context: {
+			visible: true,
+			queries: {
+				humans: {
+					schemaName: 'Human',
+					items: [] // Will be populated by ActorRenderer from entities
+				}
+			}
+		},
 			view: {
 				container: {
 					layout: 'flex',
 					class: 'p-2 @xs:p-3 @sm:p-4 @md:p-6 flex-col gap-1.5 @xs:gap-2 @sm:gap-3 overflow-auto'
 				},
-				foreach: {
-					items: 'queries.humans.items', // Data path resolved by Composite.svelte
-					key: 'id',
+			foreach: {
+				items: 'context.queries.humans.items', // CLEAN ARCHITECTURE: Always use context.* prefix
+				key: 'id',
 					composite: {
 						// Inline template for each human item (matches legacy humanItemLeaf styling)
 						container: {
@@ -229,102 +230,60 @@ export async function createHumansActors(account: any) {
 			role: 'humans-list',
 		}, group);
 
-		await Promise.all([
-			headerActor.$jazz.waitForSync(),
-			listActor.$jazz.waitForSync(),
-		]);
+	// NO WAIT! Actors created locally, use immediately
 
-		// STEP 3: Create card wrapper actor (inner card container)
-		const cardWrapperActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
-			context: {},
-			view: {
-				container: {
-					layout: 'flex',
-					class: 'card p-2 @xs:p-3 @sm:p-4 @md:p-6 flex-col gap-4'
-				}
-			},
-			dependencies: {},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: [],
-			children: co.list(z.string()).create([headerActor.$jazz.id, listActor.$jazz.id]),
-			role: 'humans-card-wrapper',
-		}, group);
+	// STEP 3: Create root actor - SINGLE ACTOR with nested divs via elements[]
+	// TRUE COLOCATION: Root actor is minimal (no actions), just a container
+	const humansRootActor = Actor.create({
+		currentState: 'idle',
+		states: { idle: {} }, // Empty state machine - no actions here!
+		context: { visible: true },
+		view: createRootCardComposite({ 
+			cardLayout: 'flex', 
+			cardClasses: 'card p-2 @xs:p-3 @sm:p-4 @md:p-6 flex-col gap-4' 
+		}),
+		dependencies: {
+			entities: root.entities.$jazz.id
+		},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [], // No subscriptions needed - root doesn't handle events
+		children: co.list(z.string()).create([headerActor.$jazz.id, listActor.$jazz.id]),
+		role: 'humans-root',
+	}, group);
 
-		await cardWrapperActor.$jazz.waitForSync();
+	// NO WAIT! Root actor created locally, use immediately
 
-		// STEP 4: Create root actor with outer container styling and action handlers
-		// Use skill IDs (strings) so skillLoader can resolve them from registry
-		const humansRootActor = Actor.create({
-			currentState: 'idle',
-			states: {
-				idle: {
-					on: {
-						CREATE_HUMAN: { target: 'idle', actions: ['@human/createRandom'] }
-					},
-				},
-			},
-			context: {},
-			view: {
-				container: {
-					layout: 'grid',
-					class: 'max-w-6xl mx-auto grid-cols-1 p-2 @xs:p-3 @sm:p-4 @md:p-6'
-				}
-			},
-			dependencies: {
-				entities: root.entities.$jazz.id
-			},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: [],
-			children: co.list(z.string()).create([cardWrapperActor.$jazz.id]),
-			role: 'humans-root',
-		}, group);
-
-		await humansRootActor.$jazz.waitForSync();
-		rootActorId = humansRootActor.$jazz.id;
-
-		// STEP 5: Update subscriptions - CLEAN ARCHITECTURE FOR LIST/LIST ITEMS
-		// Each actor subscribes to itself - no event bubbling!
-		// This ensures each actor handles its own events within its own state machine.
-		createButtonActor.subscriptions.$jazz.push(rootActorId); // Button sends CREATE_HUMAN to root
-		listActor.subscriptions.$jazz.push(listActor.$jazz.id); // List handles its own REMOVE_HUMAN events
-		humansRootActor.subscriptions.$jazz.push(rootActorId); // Root handles its own events
+	// STEP 4: Update subscriptions - TRUE COLOCATION
+	// Each actor subscribes to itself - no event bubbling!
+	createButtonActor.subscriptions.$jazz.push(createButtonActor.$jazz.id); // Button handles its own CREATE_HUMAN
+	listActor.subscriptions.$jazz.push(listActor.$jazz.id); // List handles its own REMOVE_HUMAN events
 		
-		await Promise.all([
-			createButtonActor.$jazz.waitForSync(),
-			listActor.$jazz.waitForSync(),
-			humansRootActor.$jazz.waitForSync(),
-		]);
+	// NO WAIT! Subscriptions updated locally, sync happens in background
 
-		// DEBUG: Verify subscriptions
-		console.log('[createHumansActors] Subscriptions setup:', {
-			createButton: Array.from(createButtonActor.subscriptions || []),
-			listActor: Array.from(listActor.subscriptions || []),
-			rootActor: Array.from(humansRootActor.subscriptions || []),
-			listActorId: listActor.$jazz.id,
-			rootActorId: rootActorId,
-		});
+	// DEBUG: Verify subscriptions
+	console.log('[createHumansActors] Subscriptions setup:', {
+		createButton: Array.from(createButtonActor.subscriptions || []),
+		listActor: Array.from(listActor.subscriptions || []),
+		createButtonId: createButtonActor.$jazz.id,
+		listActorId: listActor.$jazz.id,
+	});
 
-		// Add all actors to global actors list
-		actorsList.$jazz.push(headerTitleActor);
-		actorsList.$jazz.push(createButtonActor);
-		actorsList.$jazz.push(headerActor);
-		actorsList.$jazz.push(listActor);
-		actorsList.$jazz.push(humansRootActor);
+	// Add all actors to global actors list
+	actorsList.$jazz.push(headerTitleActor);
+	actorsList.$jazz.push(createButtonActor);
+	actorsList.$jazz.push(headerActor);
+	actorsList.$jazz.push(listActor);
+	actorsList.$jazz.push(humansRootActor);
 
-		await actorsList.$jazz.waitForSync();
-		console.log('[createHumansActors] All actors created and synced');
+	// NO WAIT! Actors list updated locally, sync happens in background
+	console.log('[createHumansActors] ⚡ All actors created instantly (local-first)');
 
-		// Register root actor in vibes registry
-		const loadedRootWithVibes = await root.$jazz.ensureLoaded({
-			resolve: { vibes: true },
-		});
-		loadedRootWithVibes.vibes.$jazz.set('humans', rootActorId);
-		await loadedRootWithVibes.vibes.$jazz.waitForSync();
-		console.log('[createHumansActors] ✅ Registered humans root:', rootActorId);
-		
-		return rootActorId;
+	// Register root actor in vibes registry (OPTIMISTIC - no blocking!)
+	root.vibes.$jazz.set('humans', humansRootActor.$jazz.id);
+	// NO WAIT! Registry updated locally, sync happens in background
+	console.log('[createHumansActors] ✅ Registered humans root:', humansRootActor.$jazz.id);
+	
+	return humansRootActor.$jazz.id;
 	} finally {
 		locks.humans = false;
 	}

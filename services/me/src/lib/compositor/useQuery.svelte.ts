@@ -112,8 +112,9 @@ function coValueToPlainObject(coValue: any): Record<string, unknown> {
 
 /**
  * Apply query options (filter, sort, limit, offset) to entities
+ * Works with both plain objects and Jazz CoValue entities
  */
-function applyQueryOptions<T extends Record<string, unknown>>(
+function applyQueryOptions<T>(
 	entities: T[],
 	options?: QueryOptions,
 ): T[] {
@@ -121,15 +122,20 @@ function applyQueryOptions<T extends Record<string, unknown>>(
 
 	// Apply filters
 	if (options?.filter) {
-		result = result.filter((entity) => matchesFilter(entity, options.filter!))
+		result = result.filter((entity) => {
+			// Convert to plain object for filtering if it's a CoValue
+			const plainEntity = (entity as any)?.$jazz ? coValueToPlainObject(entity as any) : entity as Record<string, unknown>;
+			return matchesFilter(plainEntity, options.filter!);
+		})
 	}
 
 	// Apply sorting
 	if (options?.sort) {
 		const { field, order = 'asc' } = options.sort
 		result = result.sort((a, b) => {
-			const aVal = a[field]
-			const bVal = b[field]
+			// Access field directly or via property (works for both CoValues and plain objects)
+			const aVal = (a as any)[field]
+			const bVal = (b as any)[field]
 			
 			if (aVal === bVal) return 0
 			if (aVal == null) return 1
@@ -225,25 +231,25 @@ function matchesSingleCondition(
 // ========== USE QUERY HOOK ==========
 
 /**
- * Reactive query hook using CoState for subscriptions + queryEntitiesGeneric for query logic
+ * Reactive query hook using CoState for subscriptions
  * 
- * This is the proper "CoState native way":
+ * JAZZ-NATIVE ARCHITECTURE:
  * 1. Use CoState to subscribe to account.root.entities (reactive list subscription)
- * 2. When list changes, call queryEntitiesGeneric to query/filter entities (proven logic)
- * 3. Apply additional query options (filter, sort, limit, offset)
- * 4. Return reactive entities array
+ * 2. Return direct Jazz CoState entity references (NO local copies)
+ * 3. Apply query options (filter, sort, limit, offset) on Jazz entities directly
+ * 4. Views access entity properties directly from Jazz CoValues
  * 
  * @param account - Jazz account (or account.current)
  * @param schemaName - Schema name to query (e.g., "Todo")
  * @param queryOptions - Optional filter/sort/limit/offset options
- * @returns Reactive object with entities array, loading state
+ * @returns Reactive object with Jazz entity references (not copies)
  */
 export function useQuery(
 	accountCoState: any | (() => any),
 	schemaName: string | (() => string),
 	queryOptions?: QueryOptions | (() => QueryOptions | undefined),
 ): {
-	entities: Array<Record<string, unknown>>
+	entities: Array<any> // Jazz CoValue entities (not plain objects)
 	isLoading: boolean
 	loadingState: 'loading' | 'loaded' | 'unauthorized' | 'unavailable'
 } {
@@ -310,6 +316,7 @@ export function useQuery(
 		}
 		
 		// Step 2: Filter entities by comparing @schema IDs
+		// Use coValueToPlainObject (WORKING VERSION) to convert Jazz entities to plain objects
 		const results: Array<Record<string, unknown>> = []
 		
 		for (const entity of entitiesList) {
@@ -326,10 +333,12 @@ export function useQuery(
 			}
 			
 			if (entitySchemaId === targetSchemaId) {
+				// Use the working coValueToPlainObject function
 				results.push(coValueToPlainObject(entity))
 			}
 		}
 		
+		// Apply query options on plain objects
 		return applyQueryOptions(results, currentOptions)
 	})
 	

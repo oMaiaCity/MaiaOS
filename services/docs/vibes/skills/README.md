@@ -34,7 +34,12 @@ interface SkillMetadata {
   parameters?: ParametersSchema // JSON Schema for params
 }
 
-type SkillFunction = (data: Data, payload?: unknown) => void | Promise<void>
+// NEW SIGNATURE: Skills receive actor reference directly (not dataStore)
+type SkillFunction = (
+  actor: any,            // The actor that triggered this skill
+  payload?: unknown,     // Event payload
+  accountCoState?: any   // Jazz account CoState
+) => void | Promise<void>
 ```
 
 ### Example Skill
@@ -55,18 +60,32 @@ const createEntitySkill: Skill = {
       required: ['schemaName', 'entityData'],
     },
   },
-  execute: async (data: Data, payload?: unknown) => {
-    const { schemaName, entityData } = payload as { schemaName: string; entityData: Record<string, unknown> }
+  execute: async (actor: any, payload?: unknown, accountCoState?: any) => {
+    const { schemaName, entityData } = payload as { 
+      schemaName: string
+      entityData: Record<string, unknown> 
+    }
     
-    // Get Jazz account from data
-    const account = data._jazzAccountCoState?.current
-    if (!account?.$isLoaded) throw new Error('Account not loaded')
+    // Get Jazz account from CoState (passed directly to skill)
+    const jazzAccount = accountCoState?.current
+    if (!jazzAccount || !jazzAccount.$isLoaded) {
+      throw new Error('Jazz account not loaded')
+    }
     
     // Create entity using generic function
-    await createEntityGeneric(account, schemaName, entityData)
+    const entity = await createEntityGeneric(jazzAccount, schemaName, entityData)
+    await entity.$jazz.waitForSync()
+    
+    console.log('[createEntitySkill] ✅ Created entity:', entity.$jazz.id)
   },
 }
 ```
+
+**Key Changes from Old Pattern**:
+- **Direct actor reference**: Skills receive `actor` instead of `data` object
+- **Explicit accountCoState**: Passed as third parameter (no more `data._jazzAccountCoState`)
+- **No dataStore**: Skills don't update local state - they mutate Jazz CoValues directly
+- **Reactive queries**: UI subscribes to Jazz data via `useQuery`, not skill updates
 
 ---
 
@@ -247,26 +266,58 @@ async function createProject() {
 }
 ```
 
-### From ActorRenderer
+### From ActorRenderer (Automatic Skill Execution)
 
-The `ActorRenderer` automatically loads skills from the registry:
+The `ActorRenderer` automatically calls skills when processing messages:
 
 ```typescript
-// In createVibesActors.ts
+// 1. Actor declares state machine with skill actions
 const actor = Actor.create({
+  currentState: 'idle',
   states: {
     idle: {
       on: {
-        CREATE_ITEM: { target: 'idle', actions: ['@entity/createEntity'] }
+        CREATE_ITEM: { target: 'idle', actions: ['@entity/createEntity'] },
+        DELETE_ITEM: { target: 'idle', actions: ['@entity/deleteEntity'] },
       }
     }
   },
   // ...
 }, group)
 
-// ActorRenderer loads the skill and executes it
+// 2. ActorRenderer processes messages and calls skills
+// (from ActorRenderer.svelte)
+$effect(() => {
+  // ... message collection from CoFeed inbox ...
+  
+  for (const message of allMessages) {
+    const messageId = message.$jazz?.id
+    if (!messageId || processedMessageIds.has(messageId)) {
+      continue
+    }
+    
+    // Call skill directly with actor reference
+    const skill = getSkill(message.type)
+    if (skill) {
+      skill.execute(actor, message.payload, accountCoState)
+    }
+    
+    // Mark as consumed
+    processedMessageIds.add(messageId)
+  }
+})
+
 // No additional wiring needed!
+// Skills are called automatically when messages arrive
 ```
+
+**How It Works**:
+1. **Message arrives** in actor's inbox (CoFeed)
+2. **ActorRenderer detects** via reactive `$effect`
+3. **Skill loaded** from registry via `getSkill(message.type)`
+4. **Skill executed** with `(actor, payload, accountCoState)`
+5. **Skill mutates** Jazz CoValues directly
+6. **UI updates** reactively via `useQuery` subscriptions
 
 ---
 
@@ -276,7 +327,7 @@ const actor = Actor.create({
 
 ```typescript
 // mySkills.ts
-import type { Skill, Data } from '$lib/compositor/skills'
+import type { Skill } from '$lib/compositor/skills'
 
 const sendEmailSkill: Skill = {
   metadata: {
@@ -294,18 +345,23 @@ const sendEmailSkill: Skill = {
       required: ['to', 'subject', 'body'],
     },
   },
-  execute: async (data: Data, payload?: unknown) => {
-    const { to, subject, body } = payload as { to: string; subject: string; body: string }
+  execute: async (actor: any, payload?: unknown, accountCoState?: any) => {
+    const { to, subject, body } = payload as { 
+      to: string
+      subject: string
+      body: string 
+    }
+    
+    console.log('[sendEmailSkill] Sending email to:', to)
     
     // Your email sending logic
     await sendEmail({ to, subject, body })
     
-    // Update UI state if needed
-    if (!data.view) data.view = {}
-    const view = data.view as Data
-    view.emailSent = true
-    view.emailStatus = 'Email sent successfully!'
-    data.view = { ...view }
+    console.log('[sendEmailSkill] ✅ Email sent successfully')
+    
+    // NO UI state updates here!
+    // Skills mutate Jazz CoValues directly
+    // UI subscribes reactively via useQuery
   },
 }
 
@@ -313,6 +369,11 @@ export const mySkills: Record<string, Skill> = {
   '@myapp/sendEmail': sendEmailSkill,
 }
 ```
+
+**Key Changes**:
+- **New signature**: `(actor, payload, accountCoState)` instead of `(data, payload)`
+- **No UI updates**: Skills don't update local state - they mutate Jazz CoValues
+- **Reactive UI**: UI subscribes to Jazz data via `useQuery`, updates automatically
 
 ### Step 2: Register Your Skills
 

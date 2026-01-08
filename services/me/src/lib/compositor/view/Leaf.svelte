@@ -1,10 +1,10 @@
 <!--
   Leaf Component
+  JAZZ-NATIVE ARCHITECTURE
   Validates and renders leaf nodes recursively
-  Uses JSON-driven leaf definitions
+  Data is derived from actor.context (no dataStore copies)
 -->
 <script lang="ts">
-  import type { Data } from "../dataStore";
   import type { VibeConfig } from "../types";
   import type { ViewNode } from "./types";
   import type { LeafNode } from "./leaf-types";
@@ -19,7 +19,7 @@
 
   interface Props {
     node: ViewNode;
-    data: Data;
+    data: Record<string, any>; // Jazz-native data from actor.context
     config?: VibeConfig;
     onEvent?: (event: string, payload?: unknown) => void;
   }
@@ -931,15 +931,17 @@
             // Merge input value into payload if payload exists
             const payload = resolvePayload(eventConfig.payload, contextItemData)
             
-            // Extract field name from input binding (e.g., "item.name" -> "name", "data.view.newTodoText" -> "newTodoText")
+            // Extract field name from input binding (e.g., "item.name" -> "name", "context.newTodoText" -> "newTodoText")
             // This is generic and works for any field name
             let fieldName: string | undefined = undefined
             if (leaf.bindings?.value && typeof leaf.bindings.value === 'string') {
               const bindingPath = leaf.bindings.value
+              console.log('[Leaf] Input event - binding path:', bindingPath, 'inputValue:', inputValue)
               // Extract the last part of the path (field name)
               const parts = bindingPath.split('.')
               if (parts.length > 0) {
                 fieldName = parts[parts.length - 1]
+                console.log('[Leaf] Input event - extracted field name:', fieldName)
               }
             }
             
@@ -968,6 +970,7 @@
             const finalPayload = typeof payload === 'object' && payload !== null && !Array.isArray(payload)
               ? { ...payload, [fieldName]: inputValue }
               : { [fieldName]: inputValue }
+            console.log('[Leaf] Input event - final payload:', finalPayload)
             if (onEvent) {
               onEvent(eventConfig.event, finalPayload)
             }
@@ -1084,9 +1087,20 @@
       ? (e: Event) => {
           const target = e.target as HTMLInputElement;
           const eventConfig = leaf.events!.input!;
-          // Use generic default key "text" for input values
-          // Payload can override this if it specifies a different key
-          const payloadKey = "text";
+          
+          // Extract field name from binding path (e.g., "context.newTodoText" -> "newTodoText")
+          let payloadKey = "text"; // fallback only if no binding found
+          if (leaf.bindings?.value && typeof leaf.bindings.value === 'string') {
+            const bindingPath = leaf.bindings.value;
+            console.log('[Leaf oninput] bindingPath:', bindingPath);
+            const parts = bindingPath.split('.');
+            if (parts.length > 0) {
+              payloadKey = parts[parts.length - 1];
+              console.log('[Leaf oninput] extracted payloadKey:', payloadKey);
+            }
+          }
+          console.log('[Leaf oninput] Final payload:', { [payloadKey]: target.value });
+          
           const payload: Record = eventConfig.payload
             ? {
                 ...(typeof eventConfig.payload === "object" &&
@@ -1307,15 +1321,17 @@
             // Merge input value into payload if payload exists
             const payload = resolvePayload(eventConfig.payload, contextItemData)
             
-            // Extract field name from input binding (e.g., "item.name" -> "name", "data.view.newTodoText" -> "newTodoText")
+            // Extract field name from input binding (e.g., "item.name" -> "name", "context.newTodoText" -> "newTodoText")
             // This is generic and works for any field name
             let fieldName: string | undefined = undefined
             if (leaf.bindings?.value && typeof leaf.bindings.value === 'string') {
               const bindingPath = leaf.bindings.value
+              console.log('[Leaf] Input event - binding path:', bindingPath, 'inputValue:', inputValue)
               // Extract the last part of the path (field name)
               const parts = bindingPath.split('.')
               if (parts.length > 0) {
                 fieldName = parts[parts.length - 1]
+                console.log('[Leaf] Input event - extracted field name:', fieldName)
               }
             }
             
@@ -1344,6 +1360,7 @@
             const finalPayload = typeof payload === 'object' && payload !== null && !Array.isArray(payload)
               ? { ...payload, [fieldName]: inputValue }
               : { [fieldName]: inputValue }
+            console.log('[Leaf] Input event - final payload:', finalPayload)
             if (onEvent) {
               onEvent(eventConfig.event, finalPayload)
             }

@@ -136,24 +136,22 @@ export async function createEntityGeneric(
 	const entity = CoMapSchema.create(entityData, entitiesOwner)
 	// eslint-disable-next-line no-console
 	console.log('[createEntityGeneric] Entity created, ID:', entity?.$jazz?.id)
-	await entity.$jazz.waitForSync()
-	// eslint-disable-next-line no-console
-	console.log('[createEntityGeneric] Entity synced')
-
-	// Set system properties (@label, @schema)
+	// NO WAIT! Jazz creates locally instantly, syncs in background
+	
+	// Set system properties (@label, @schema) - NO WAIT!
 	// eslint-disable-next-line no-console
 	console.log('[createEntityGeneric] Setting system properties...')
 	await setSystemProps(entity, schemaDefinition)
 	// eslint-disable-next-line no-console
 	console.log('[createEntityGeneric] System properties set')
 
-	// Add to entities list
+	// Add to entities list - NO WAIT! Local-first!
 	// eslint-disable-next-line no-console
 	console.log('[createEntityGeneric] Adding entity to entities list...')
 	entitiesList.$jazz.push(entity)
-	await entitiesList.$jazz.waitForSync()
+	// NO WAIT! Jazz syncs in background, UI updates via CoState subscriptions
 	// eslint-disable-next-line no-console
-	console.log('[createEntityGeneric] Entity added to list and synced')
+	console.log('[createEntityGeneric] ⚡ Entity added instantly (local-first)')
 
 	// eslint-disable-next-line no-console
 	console.log('[createEntityGeneric] SUCCESS - Returning entity:', entity?.$jazz?.id)
@@ -270,7 +268,8 @@ export async function updateEntityGeneric(
 		}
 	}
 
-	await wrappedCoValue.$jazz.waitForSync()
+	// NO WAIT! Jazz updates locally instantly, syncs in background
+	// UI updates reactively via CoState subscriptions
 }
 
 /**
@@ -326,7 +325,8 @@ export async function deleteEntityGeneric(account: any, entityId: string): Promi
 
 	// Remove entity from list using Jazz CoList remove method (by index)
 	entitiesList.$jazz.remove(foundIndex)
-	await entitiesList.$jazz.waitForSync()
+	// NO WAIT! Jazz removes locally instantly, syncs in background
+	// UI updates reactively via CoState subscriptions
 }
 
 /**

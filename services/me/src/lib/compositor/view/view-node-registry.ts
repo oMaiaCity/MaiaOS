@@ -3,7 +3,7 @@
  * Enables ID-based view node resolution for dynamic config swapping
  */
 
-import type { CompositeConfig } from './types'
+import type { CompositeNode } from './types'
 import type { LeafNode } from './leaf-types'
 
 class ViewNodeRegistryImpl {
@@ -13,7 +13,7 @@ class ViewNodeRegistryImpl {
 	/**
 	 * Register a composite config by ID
 	 */
-	registerComposite(composite: CompositeConfig): void {
+	registerComposite(composite: CompositeNode): void {
 		if (!composite.id) {
 			console.warn('Composite config missing ID, cannot register:', composite)
 			return
@@ -35,7 +35,7 @@ class ViewNodeRegistryImpl {
 	/**
 	 * Register a composite or leaf (auto-detects type)
 	 */
-	register(node: CompositeConfig | LeafNode): void {
+	register(node: CompositeNode | LeafNode): void {
 		const hasContainer = 'container' in node
 		const hasChildren = 'children' in node
 		const hasSchema = '@schema' in node
@@ -64,7 +64,7 @@ class ViewNodeRegistryImpl {
 	/**
 	 * Register multiple composites at once
 	 */
-	registerAllComposites(composites: CompositeConfig[]): void {
+	registerAllComposites(composites: CompositeNode[]): void {
 		composites.forEach((composite) => this.registerComposite(composite))
 	}
 
@@ -85,7 +85,7 @@ class ViewNodeRegistryImpl {
 	/**
 	 * Get a composite by ID
 	 */
-	getComposite(id: string): CompositeConfig | undefined {
+	getComposite(id: string): CompositeNode | undefined {
 		return this.composites.get(id)
 	}
 
@@ -100,7 +100,7 @@ class ViewNodeRegistryImpl {
 	 * Get a view node by ID (auto-detects type)
 	 * Returns the node if found, or undefined
 	 */
-	get(id: string): CompositeConfig | LeafNode | undefined {
+	get(id: string): CompositeNode | LeafNode | undefined {
 		return this.composites.get(id) || this.leaves.get(id)
 	}
 
@@ -128,7 +128,7 @@ class ViewNodeRegistryImpl {
 	/**
 	 * Get all registered composites
 	 */
-	getAllComposites(): CompositeConfig[] {
+	getAllComposites(): CompositeNode[] {
 		return Array.from(this.composites.values())
 	}
 

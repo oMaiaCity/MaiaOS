@@ -64,32 +64,67 @@ export async function createHumansActors(account: any) {
     // ...
   }, group)
   
+  // List actor with Jazz-native queries
   const listActor = Actor.create({
     currentState: 'idle',
     states: {
       idle: {
         on: {
-          DELETE_ITEM: { target: 'idle', actions: ['@entity/deleteEntity'] }
+          REMOVE_HUMAN: { target: 'idle', actions: ['@entity/deleteEntity'] }
         }
       }
     },
     context: {
+      visible: true,  // Actor visibility (default: false, must set true to render)
       queries: {
-        humans: { schemaName: 'Human', items: [] }
+        humans: {
+          schemaName: 'Human',  // Declares what data we need
+          items: []             // Populated by useQuery in ActorRenderer
+        }
       }
     },
     view: {
       container: { layout: 'flex', class: 'flex-col gap-2' },
       foreach: {
-        items: 'queries.humans.items',
-        key: 'id',
-        composite: { /* item template */ }
+        items: 'queries.humans.items',  // Data path resolved by Composite.svelte
+        key: 'id',                      // Track by ID
+        composite: {
+          // Inline template for each item
+          container: { layout: 'flex', class: 'flex-row items-center gap-2' },
+          children: [
+            {
+              slot: 'name',
+              leaf: { 
+                tag: 'div', 
+                bindings: { text: 'item.name' }  // Direct property access
+              }
+            },
+            {
+              slot: 'delete',
+              leaf: {
+                tag: 'button',
+                elements: ['✕'],
+                events: { 
+                  click: { 
+                    event: 'REMOVE_HUMAN', 
+                    payload: { id: 'item.id' }  // Resolved by ActorRenderer
+                  } 
+                }
+              }
+            }
+          ]
+        }
       }
     },
     dependencies: { entities: root.entities.$jazz.id },
+    inbox: co.feed(ActorMessage).create([]),
+    subscriptions: co.list(z.string()).create([]),  // Will subscribe to itself
+    children: co.list(z.string()).create([]),
     role: 'humans-list',
-    // ...
   }, group)
+  
+  // List subscribes to itself - true colocation!
+  listActor.subscriptions.$jazz.push(listActor.$jazz.id)
   
   // STEP 3: Create root actor
   const rootActor = Actor.create({

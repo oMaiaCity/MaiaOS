@@ -6,7 +6,7 @@
  */
 
 import type { LeafNode } from './leaf-types'
-import type { CompositeConfig } from './types'
+import type { CompositeNode } from './types'
 import { getJsonSchema } from '@hominio/db'
 
 /**
@@ -170,7 +170,7 @@ function extractSchemaName(schemaRef: any): string {
  * 
  * Note: Currently uses hardcoded registry only - no CoValue creation yet
  */
-export function resolveSchemaComposite(composite: CompositeConfig): CompositeConfig {
+export function resolveSchemaComposite(composite: CompositeNode): CompositeNode {
 	// If no @schema, it's already a regular composite - return as-is
 	if (!composite['@schema']) return composite
 
@@ -223,7 +223,7 @@ export function resolveSchemaComposite(composite: CompositeConfig): CompositeCon
 	return resolveCompositeSchema(definition, finalParams, composite)
 }
 
-function resolveCompositeSchema(definition: CompositeConfig, parameters: Record<string, string>, originalComposite: CompositeConfig): CompositeConfig {
+function resolveCompositeSchema(definition: CompositeNode, parameters: Record<string, string>, originalComposite: CompositeNode): CompositeNode {
 	// Deep clone definition
 	const resolved = JSON.parse(JSON.stringify(definition))
 

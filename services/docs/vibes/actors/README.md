@@ -231,47 +231,112 @@ const childActors = Array.from(rootActor.children)
   .filter(a => a?.$isLoaded)
 ```
 
-### 3. Message Processing
+### 3. Message Processing (CoFeed Consumption Pattern)
 
-Actors process messages via their state machine:
+Actors process messages from their CoFeed inbox using a **proper consumption pattern**:
 
 ```typescript
-// 1. Message sent to inbox
+// 1. Message sent to inbox (append-only CoFeed)
 targetActor.inbox.$jazz.push(ActorMessage.create({ type: 'CLICK', payload: {} }))
 
-// 2. ActorRenderer detects new message (reactive)
+// 2. ActorRenderer processes ALL unprocessed messages
+let processedMessageIds = $state<Set<string>>(new Set())
+
 $effect(() => {
-  if (latestInboxMessage) {
-    dataStore.send(latestInboxMessage.type, latestInboxMessage.payload)
+  if (!actor?.$isLoaded || !browser) return
+  const inbox = actor.inbox
+  if (!inbox?.$isLoaded) return
+  
+  // Collect ALL messages from inbox (byMe + perAccount)
+  const allMessages: any[] = []
+  // ... collect messages ...
+  
+  // Sort by timestamp
+  allMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+  
+  // Process each unprocessed message ONCE
+  for (const message of allMessages) {
+    const messageId = message.$jazz?.id
+    if (!messageId || processedMessageIds.has(messageId)) {
+      continue // Already processed
+    }
+    
+    // 3. Call skill directly with actor reference
+    const skill = getSkill(message.type)
+    if (skill) {
+      skill.execute(actor, message.payload, accountCoState)
+    }
+    
+    // 4. Mark as consumed (append-only, never delete!)
+    processedMessageIds.add(messageId)
   }
 })
-
-// 3. State machine processes event
-states.idle.on.CLICK => actions: ['@ui/doSomething']
-
-// 4. Skill executes
-skillRegistry.get('@ui/doSomething').execute(data, payload)
 ```
 
-### 4. Rendering
+**Key Points**:
+- **Append-only**: Messages are never deleted from CoFeed
+- **Consumption tracking**: `processedMessageIds` prevents duplicate processing
+- **Proper queue handling**: Process ALL unprocessed messages, not just latest
+- **Direct skill execution**: No intermediate dataStore, skills receive actor directly
 
-The `ActorRenderer` delegates rendering to `Composite.svelte` or `Leaf.svelte`:
+### 4. Rendering (Jazz-Native Data Flow)
+
+The `ActorRenderer` resolves queries and delegates rendering to `Composite.svelte` or `Leaf.svelte`:
 
 ```typescript
+// Extract schemaName from actor.context.queries
+const schemaName = $derived.by(() => {
+  const queries = actor.context?.queries
+  const firstQuery = Object.values(queries || {})[0] as any
+  return firstQuery?.schemaName || ''
+})
+
+// Use Jazz-native useQuery for reactive data subscription
+const queryResult = useQuery(() => accountCoState, () => schemaName, undefined)
+
+// Populate queries reactively (derived, doesn't mutate Jazz context)
+const resolvedContextWithQueries = $derived.by(() => {
+  const queries = actor.context?.queries || {}
+  const resolvedQueries: Record<string, any> = {}
+  
+  for (const [queryKey, queryConfig] of Object.entries(queries)) {
+    resolvedQueries[queryKey] = {
+      ...queryConfig,
+      items: queryResult.entities, // Plain objects from Jazz CoValues
+    }
+  }
+  
+  return { ...actor.context, queries: resolvedQueries }
+})
+
+// Render with resolved data
 {#if viewType === 'composite'}
   <Composite 
     node={{ slot: 'root', composite: actor.view }}
-    data={{ ...data, childActors, accountCoState }}
+    actor={actor}
+    queries={resolvedContextWithQueries.queries}
     onEvent={handleEvent}
+    childActors={childActors}
+    item={item}
+    accountCoState={accountCoState}
   />
 {:else if viewType === 'leaf'}
   <Leaf 
     node={{ slot: 'root', leaf: actor.view }}
-    data={data}
+    actor={actor}
+    queries={resolvedContextWithQueries.queries}
     onEvent={handleEvent}
+    item={item}
+    accountCoState={accountCoState}
   />
 {/if}
 ```
+
+**Key Points**:
+- **useQuery**: Direct CoState subscription to Jazz entities
+- **Plain objects**: Entities converted for easy UI consumption
+- **Reactive**: Automatic re-render when Jazz data changes
+- **No mutations**: Derived context doesn't mutate Jazz CoValues
 
 ---
 
@@ -302,51 +367,111 @@ const childActorCoStates = $derived.by(() => {
 })
 ```
 
-#### Inbox Subscription
+#### Inbox Subscription (Proper CoFeed Consumption)
 
 ```typescript
-// Watch inbox for new messages
-const latestInboxMessage = $derived.by(() => {
-  if (!actor?.$isLoaded) return null
-  const inbox = actor.inbox
-  if (!inbox?.$isLoaded) return null
-  
-  const byMeMessage = inbox.byMe?.value
-  if (byMeMessage?.$isLoaded) return byMeMessage
-  
-  return null
-})
+// Track processed message IDs (append-only pattern)
+let processedMessageIds = $state<Set<string>>(new Set())
 
-// Process messages
+// Process ALL unprocessed messages in inbox
 $effect(() => {
-  if (!latestInboxMessage?.$isLoaded || !dataStore) return
-  dataStore.send(latestInboxMessage.type, latestInboxMessage.payload)
+  if (!actor?.$isLoaded || !browser) return
+  const inbox = actor.inbox
+  if (!inbox?.$isLoaded) return
+  
+  // Collect ALL messages from CoFeed (byMe + perAccount)
+  const allMessages: any[] = []
+  
+  // Get byMe message
+  const byMeMessage = inbox.byMe?.value
+  if (byMeMessage?.$isLoaded) {
+    allMessages.push(byMeMessage)
+  }
+  
+  // Get perAccount messages (array)
+  if (inbox.perAccount?.length) {
+    for (const msg of inbox.perAccount) {
+      if (msg?.$isLoaded) {
+        allMessages.push(msg)
+      }
+    }
+  }
+  
+  // Sort by timestamp to process in order
+  allMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+  
+  // Process each unprocessed message ONCE
+  for (const message of allMessages) {
+    const messageId = message.$jazz?.id
+    if (!messageId || processedMessageIds.has(messageId)) {
+      continue // Skip already processed messages
+    }
+    
+    // Call skill directly (no dataStore intermediary)
+    const skill = getSkill(message.type)
+    if (skill) {
+      skill.execute(actor, message.payload, accountCoState)
+    } else {
+      console.warn('[ActorRenderer] No skill found for:', message.type)
+    }
+    
+    // Mark as consumed (append-only - never delete from CoFeed!)
+    processedMessageIds.add(messageId)
+  }
 })
 ```
 
-#### Event Handling
+**Key Changes from Old Pattern**:
+- **Process ALL messages**: Not just latest, prevents message loss
+- **Proper consumption tracking**: Mark as processed without deleting
+- **Append-only CoFeed**: Respects Jazz CoFeed architecture
+- **Direct skill calls**: `skill.execute(actor, payload, accountCoState)` - no dataStore
+- **Sorted processing**: Messages processed in chronological order
+
+#### Event Handling (Append-Only Message Pushing)
 
 ```typescript
 function handleEvent(event: string, payload?: unknown) {
   if (!browser || !actor?.$isLoaded) return
   
+  // Resolve payload (data paths like 'item.id' → actual values)
   const resolvedPayload = resolvePayload(payload)
   
+  console.log(`[ActorRenderer] ${actor.role} sending event: ${event}, payload:`, resolvedPayload)
+  
+  // Create message
+  const message = ActorMessage.create({
+    type: event,
+    payload: resolvedPayload || {},
+    from: actorId,
+    timestamp: Date.now(),
+  })
+  
+  // Publish to own inbox (for self-subscribed actors)
+  if (actor.inbox?.$isLoaded) {
+    actor.inbox.$jazz.push(message)
+  }
+  
   // Publish to subscribed actors
-  for (const targetActor of subscribedActors) {
-    if (targetActor?.$isLoaded && targetActor.inbox) {
-      targetActor.inbox.$jazz.push(
-        ActorMessage.create({
-          type: event,
-          payload: resolvedPayload || {},
-          from: actorId,
-          timestamp: Date.now(),
-        })
-      )
+  if (actor.subscriptions?.$isLoaded) {
+    for (const subscriberId of actor.subscriptions) {
+      if (subscriberId === actorId) continue // Skip self (already published above)
+      
+      const targetActor = subscribedActors.find(a => a.$jazz?.id === subscriberId)
+      if (targetActor?.$isLoaded && targetActor.inbox?.$isLoaded) {
+        targetActor.inbox.$jazz.push(message)
+        console.log(`[ActorRenderer] → Sent to ${targetActor.role}`)
+      }
     }
   }
 }
 ```
+
+**Key Points**:
+- **Append-only**: All messages persisted in CoFeed (good for collaboration!)
+- **Consumption pattern**: Messages marked as consumed after processing
+- **Self-subscription**: Actor can handle its own events (true colocation)
+- **Explicit subscriptions**: Only send to actors in subscriptions list
 
 ---
 

@@ -154,14 +154,14 @@ export interface Size {
 export type ContainerLayoutType = 'grid' | 'flex' | 'content'
 
 /**
- * Composite Configuration - Pure container node with children
+ * Composite Node - Pure container node with children
  * 
  * Pure Tailwind approach: All styling via container.class (Tailwind classes)
  * Composite is a simple container div - no layout generation logic
  * 
  * All composites automatically get @container for container query support.
  */
-export interface CompositeConfig {
+export interface CompositeNode {
 	/**
 	 * Unique identifier for this composite config
 	 * Used for database storage and ID-based referencing
@@ -215,7 +215,27 @@ export interface CompositeConfig {
 		 * Example: 'form' for form composites
 		 */
 		tag?: string
+		
+		/**
+		 * Optional HTML attributes
+		 * Example: { 'aria-label': 'Main content', 'data-testid': 'root' }
+		 */
+		attributes?: Record<string, string>
 	}
+	
+	/**
+	 * Nested div hierarchies within single actor (NEW)
+	 * Supports flexible layouts with multiple wrapper divs
+	 * Example: outer centering div + inner card div
+	 * Use slot: 'children' to mark where child actors render
+	 */
+	elements?: Array<{
+		tag: string
+		classes?: string
+		attributes?: Record<string, string>
+		elements?: any[] // Recursive nesting
+		slot?: 'children' // Special marker: child actors render here
+	}>
 	
 	/**
 	 * Child nodes - can contain composites or leaves
@@ -244,7 +264,7 @@ export interface CompositeConfig {
 		 * Composite template for each item
 		 * Use this when iterating over composites
 		 */
-		composite?: CompositeConfig
+		composite?: CompositeNode
 		
 		/**
 		 * Leaf template for each item
@@ -252,6 +272,13 @@ export interface CompositeConfig {
 		 */
 		leaf?: LeafNode
 	}
+	
+	/**
+	 * @deprecated Use ID-based children relationships instead
+	 * Container role - identifies which child actors belong to this composite
+	 * Will be removed in future versions
+	 */
+	containerRole?: string
 	
 	/**
 	 * Event handlers on container element
@@ -314,7 +341,7 @@ export interface ViewNode {
 	 * COMPOSITE properties (mutually exclusive with leaf properties)
 	 * If present, this is a composite node (layout container)
 	 */
-	composite?: CompositeConfig
+	composite?: CompositeNode
 
 	/**
 	 * Composite ID reference - references a composite config by ID
@@ -375,5 +402,9 @@ export interface ViewConfig {
 	/**
 	 * Root composite node containing all children
 	 */
-	composite: CompositeConfig
+	composite: CompositeNode
 }
+
+// Type alias for backward compatibility
+/** @deprecated Use CompositeNode instead */
+export type CompositeConfig = CompositeNode

@@ -1,10 +1,14 @@
 /**
  * Human-specific skills
+ * 
+ * JAZZ-NATIVE ARCHITECTURE:
+ * - Skills accept actor: any (Jazz CoMap instance)
+ * - Entity skills mutate entity CoValues directly in root.entities
+ * - All mutations followed by await entity.$jazz.waitForSync()
  */
 
-import type { Data } from '../dataStore'
 import type { Skill } from './types'
-import { createEntityGeneric } from '@hominio/db'
+import { createEntityGeneric, deleteEntityGeneric } from '@hominio/db'
 
 const createRandomHumanSkill: Skill = {
 	metadata: {
@@ -18,16 +22,9 @@ const createRandomHumanSkill: Skill = {
 			required: [],
 		},
 	},
-	execute: async (data: Data, payload?: unknown) => {
-		// Check if Jazz AccountCoState is available
-		const accountCoState = data._jazzAccountCoState as any
-		if (!accountCoState) {
-			console.error('[createRandomHumanSkill] Jazz AccountCoState not available in data:', data)
-			throw new Error('Jazz AccountCoState not available')
-		}
-
+	execute: async (actor: any, payload?: unknown, accountCoState?: any) => {
 		// Get the current account from CoState
-		const jazzAccount = accountCoState.current
+		const jazzAccount = accountCoState?.current
 		if (!jazzAccount || !jazzAccount.$isLoaded) {
 			console.error('[createRandomHumanSkill] Jazz account not loaded')
 			throw new Error('Jazz account not loaded')
@@ -53,12 +50,55 @@ const createRandomHumanSkill: Skill = {
 			dateOfBirth,
 		}
 
+	try {
+		console.log('[createRandomHumanSkill] Creating human with data:', entityData)
+		const human = await createEntityGeneric(jazzAccount, 'Human', entityData)
+		// NO WAIT! Jazz creates locally instantly, syncs in background
+		// CoState subscriptions will update UI automatically
+		console.log('[createRandomHumanSkill] ⚡ Human created instantly (local-first):', name, human.$jazz.id)
+	} catch (error) {
+		console.error('[createRandomHumanSkill] ❌ Failed to create human:', error)
+		throw error
+	}
+	},
+}
+
+const removeHumanSkill: Skill = {
+	metadata: {
+		id: 'REMOVE_HUMAN',
+		name: 'Remove Human',
+		description: 'Deletes a human entity',
+		category: 'human',
+		parameters: {
+			type: 'object',
+			properties: {
+				id: { type: 'string', description: 'ID of the human to delete' },
+			},
+			required: ['id'],
+		},
+	},
+	execute: async (actor: any, payload?: unknown, accountCoState?: any) => {
+		// Get the current account from CoState
+		const jazzAccount = accountCoState?.current
+		if (!jazzAccount || !jazzAccount.$isLoaded) {
+			console.error('[removeHumanSkill] Jazz account not loaded')
+			throw new Error('Jazz account not loaded')
+		}
+
+		// Extract ID from payload
+		const { id } = (payload || {}) as { id?: string }
+		if (!id) {
+			console.error('[removeHumanSkill] No ID provided in payload')
+			throw new Error('Human ID is required')
+		}
+
 		try {
-			console.log('[createRandomHumanSkill] Creating human with data:', entityData)
-			await createEntityGeneric(jazzAccount, 'Human', entityData)
-			console.log('[createRandomHumanSkill] ✅ Successfully created human:', name)
+			console.log('[removeHumanSkill] Deleting human with ID:', id)
+			await deleteEntityGeneric(jazzAccount, id)
+			await jazzAccount.$jazz.waitForSync()
+			console.log('[removeHumanSkill] ✅ Successfully deleted human:', id)
 		} catch (error) {
-			console.error('[createRandomHumanSkill] ❌ Failed to create human:', error)
+			console.error('[removeHumanSkill] ❌ Failed to delete human:', error)
 			throw error
 		}
 	},
@@ -66,4 +106,5 @@ const createRandomHumanSkill: Skill = {
 
 export const humanSkills: Record<string, Skill> = {
 	'@human/createRandom': createRandomHumanSkill,
+	'REMOVE_HUMAN': removeHumanSkill,
 }

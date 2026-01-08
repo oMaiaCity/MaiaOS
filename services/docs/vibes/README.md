@@ -30,20 +30,21 @@ The Hominio Vibes architecture is a revolutionary approach to building user inte
                      ▼
 ┌─────────────────────────────────────────────────────────┐
 │                      ACTOR LAYER                         │
-│  - ActorRenderer (message-passing orchestration)        │
+│  - ActorRenderer (orchestration)                        │
+│  - useQuery Hook (Jazz-native queries)  ⭐ NEW          │
 │  - Actor State Machines (per-component logic)           │
-│  - Jazz-Native Inbox/Subscriptions (messaging)          │
+│  - CoFeed Inbox (append-only messaging)  ⭐ UPGRADED    │
 │  - ID-Based Relationships (explicit hierarchies)        │
 └────────────────────┬────────────────────────────────────┘
                      │
                      ▼
 ┌─────────────────────────────────────────────────────────┐
 │                      SKILLS LAYER                        │
-│  - Skill Registry (centralized action functions)        │
+│  - Direct Skill Execution (no dataStore)  ⭐ UPGRADED   │
 │  - Entity Skills (CRUD operations)                      │
 │  - Relation Skills (graph operations)                   │
 │  - UI Skills (view management)                          │
-│  - Human Skills (domain-specific logic)                 │
+│  - Domain Skills (business logic)                       │
 └────────────────────┬────────────────────────────────────┘
                      │
                      ▼
@@ -51,19 +52,90 @@ The Hominio Vibes architecture is a revolutionary approach to building user inte
 │                       VIEW LAYER                         │
 │  - Composite (layout containers)                        │
 │  - Leaf (content nodes)                                 │
+│  - Data Path Resolution (queries → UI)  ⭐ NEW          │
 │  - JSON-Driven UI Definitions                           │
-│  - Schema-Driven Components                             │
 └────────────────────┬────────────────────────────────────┘
                      │
                      ▼
 ┌─────────────────────────────────────────────────────────┐
 │                    JAZZ DATA LAYER                       │
 │  - CoValues (CoMap, CoList, CoFeed)                     │
-│  - CoState (reactive subscriptions)                     │
+│  - CoState (direct reactive subscriptions)  ⭐ UPGRADED │
 │  - Entity & Relation Schemas                            │
 │  - Real-Time Sync & Collaboration                       │
 └─────────────────────────────────────────────────────────┘
+
+⭐ NEW/UPGRADED: Jazz-Native Architecture
+- Direct CoState subscriptions (no local state)
+- Proper CoFeed consumption (append-only)
+- Skills mutate Jazz directly (UI reacts automatically)
 ```
+
+---
+
+## ⭐ Jazz-Native Architecture (Latest Upgrades)
+
+The architecture has been upgraded to be fully Jazz-native with direct CoState subscriptions:
+
+### 1. **useQuery Hook - Direct CoState Subscriptions**
+
+```typescript
+// Reactive Jazz-native query (no local state!)
+const queryResult = useQuery(() => accountCoState, () => 'Human')
+const humans = queryResult.entities  // Plain objects, updates automatically
+```
+
+**How It Works**:
+- Subscribes directly to `account.root.entities` via CoState
+- Filters by `@schema` ID (Jazz-native filtering)
+- Converts to plain objects for easy UI consumption
+- Automatically updates when Jazz data changes
+
+### 2. **Proper CoFeed Consumption Pattern**
+
+```typescript
+// Append-only message processing
+let processedMessageIds = $state<Set<string>>(new Set())
+
+for (const message of allMessages) {
+  if (processedMessageIds.has(message.$jazz.id)) continue
+  
+  skill.execute(actor, message.payload, accountCoState)
+  processedMessageIds.add(message.$jazz.id)  // Mark as consumed
+}
+```
+
+**Key Benefits**:
+- Messages never deleted (append-only CoFeed)
+- Process ALL messages (no message loss)
+- Consumption tracking prevents duplicates
+
+### 3. **Direct Skill Execution (No DataStore)**
+
+```typescript
+// Skills mutate Jazz CoValues directly
+execute: async (actor, payload, accountCoState) => {
+  const jazzAccount = accountCoState.current
+  await createEntityGeneric(jazzAccount, 'Human', payload.data)
+  // UI reacts automatically via useQuery - no manual updates!
+}
+```
+
+**Key Benefits**:
+- Skills receive actor reference directly
+- Mutate Jazz CoValues (not local state)
+- UI subscribes reactively via useQuery
+- No intermediate dataStore layer
+
+### 4. **Complete Data Flow**
+
+```
+Jazz CoValues → CoState → useQuery → actor.context.queries → View → UI
+      ↑                                                            ↓
+      └────────────── Skills mutate Jazz ←─────────── User Events
+```
+
+See **[ARCHITECTURE_SUMMARY.md](./ARCHITECTURE_SUMMARY.md)** for complete details.
 
 ---
 
@@ -107,6 +179,43 @@ The Hominio Vibes architecture is a revolutionary approach to building user inte
 
 ---
 
+## 💡 Complete Example: Todo Vibe
+
+The Todo vibe demonstrates the actor-based architecture with multiple view modes (list, kanban, timeline), foreach patterns, and complete CRUD operations.
+
+### Actor Hierarchy
+
+```
+todosRootActor (handles SET_VIEW for view mode switching)
+├── headerActor (composite container)
+│   ├── titleActor (leaf: "Todos")
+│   ├── listViewButtonActor (handles SET_VIEW → 'list')
+│   ├── kanbanViewButtonActor (handles SET_VIEW → 'kanban')
+│   ├── timelineViewButtonActor (handles SET_VIEW → 'timeline')
+│   └── clearButtonActor (handles CLEAR_TODOS)
+├── inputSectionActor (handles ADD_TODO, UPDATE_INPUT)
+│   └── addButtonActor (handles ADD_TODO)
+├── listContentActor (handles TOGGLE_TODO, REMOVE_TODO, UPDATE_TODO_TEXT)
+│   └── foreach: todos (inline template per item)
+├── kanbanContentActor (handles same CRUD actions)
+│   └── nested foreach: columns → todos
+└── timelineContentActor (handles same CRUD actions)
+    └── foreach: timeline groups → todos
+```
+
+### Key Patterns Demonstrated
+
+**1. Foreach Pattern for Lists** - Use inline templates instead of creating separate actors per item  
+**2. Nested Foreach** - Kanban columns use nested foreach with filter expressions  
+**3. True Colocation** - Each interactive element has its own actor with state machine  
+**4. Visibility Bindings** - View modes toggle via root context + visibility bindings  
+**5. Responsive Design** - Container query classes (`@xs:`, `@sm:`, `@md:`)  
+**6. Generic Skills** - Reuse `@entity/*` skills for CRUD operations
+
+See [`services/me/src/lib/vibes/todo/actors/createTodosActors.ts`](../../../services/me/src/lib/vibes/todo/actors/createTodosActors.ts) for full implementation.
+
+---
+
 ## 🚀 Quick Start
 
 ### 1. Understand the Core Concepts
@@ -135,21 +244,26 @@ const myActor = Actor.create({
 
 ### 2. Learn Skills
 
-Skills are reusable action functions. See **[Skills](./skills/README.md)**:
+Skills are reusable action functions that mutate Jazz CoValues directly. See **[Skills](./skills/README.md)**:
 
 ```typescript
-// Skills execute business logic
+// Skills execute business logic (NEW SIGNATURE)
 const mySkill: Skill = {
   metadata: {
     id: '@myapp/doSomething',
     name: 'Do Something',
     description: 'Does something useful',
   },
-  execute: async (data: Data, payload?: unknown) => {
-    // Your logic here
+  execute: async (actor: any, payload?: unknown, accountCoState?: any) => {
+    const jazzAccount = accountCoState?.current
+    // Mutate Jazz CoValues directly
+    await createEntityGeneric(jazzAccount, 'MyEntity', payload.data)
+    // UI updates reactively via useQuery - no manual updates needed!
   },
 }
 ```
+
+**Key Change**: Skills now receive `(actor, payload, accountCoState)` instead of `(data, payload)`. They mutate Jazz directly - no intermediate state layer!
 
 ### 3. Build Views
 
@@ -204,23 +318,46 @@ const human = Human.create({ name: 'Alice', email: 'alice@example.com' }, group)
 const actor = Actor.create({ /* ... */ }, group)
 ```
 
-### 2. **Pure Message Passing**
+### 2. **Pure Message Passing (Append-Only CoFeed)**
 
-No prop drilling. Actors communicate via messages pushed to inboxes:
+No prop drilling. Actors communicate via messages pushed to Jazz CoFeed inboxes:
 
 ```typescript
-// Actor sends message
+// Actor sends message (append-only)
 targetActor.inbox.$jazz.push(
-  ActorMessage.create({ type: 'DELETE_ITEM', payload: { id: '123' } })
+  ActorMessage.create({ 
+    type: 'DELETE_ITEM', 
+    payload: { id: '123' },
+    from: actorId,
+    timestamp: Date.now(),
+  })
 )
 
-// Actor receives and processes
+// Actor receives and processes (proper consumption pattern)
+let processedMessageIds = $state<Set<string>>(new Set())
+
 $effect(() => {
-  if (latestInboxMessage) {
-    dataStore.send(latestInboxMessage.type, latestInboxMessage.payload)
+  // Collect ALL unprocessed messages from CoFeed
+  for (const message of allMessages) {
+    const messageId = message.$jazz?.id
+    if (processedMessageIds.has(messageId)) continue
+    
+    // Call skill directly
+    const skill = getSkill(message.type)
+    if (skill) {
+      skill.execute(actor, message.payload, accountCoState)
+    }
+    
+    // Mark as consumed (append-only - never delete!)
+    processedMessageIds.add(messageId)
   }
 })
 ```
+
+**Key Benefits**:
+- **Append-only**: Messages persist for event history
+- **No message loss**: Process ALL messages, not just latest
+- **Collaborative**: Message history syncs across devices
 
 ### 3. **ID-Based Relationships**
 
@@ -252,21 +389,33 @@ const listActor = Actor.create({
 listActor.subscriptions.$jazz.push(listActor.$jazz.id)
 ```
 
-### 5. **Skills for Business Logic**
+### 5. **Skills for Business Logic (Direct Execution)**
 
-All business logic is in reusable skills, not in UI code:
+All business logic is in reusable skills - they mutate Jazz CoValues directly:
 
 ```typescript
 // UI triggers skill via message
 events: { click: { event: 'DELETE_ITEM', payload: { id: 'item.id' } } }
 
-// Skill handles the logic
+// Skill mutates Jazz CoValue directly (NEW PATTERN)
 const deleteSkill: Skill = {
-  execute: async (data, payload) => {
-    await deleteEntityGeneric(account, payload.id)
+  execute: async (actor, payload, accountCoState) => {
+    const jazzAccount = accountCoState?.current
+    await deleteEntityGeneric(jazzAccount, payload.id)
+    // Jazz automatically syncs to all clients
+    // UI updates reactively via useQuery - no manual updates!
   }
 }
+
+// UI subscribes to Jazz data (reactive)
+const queryResult = useQuery(() => accountCoState, () => 'Todo')
+const todos = queryResult.entities  // Automatically updates when skill mutates Jazz
 ```
+
+**Key Benefits**:
+- **Direct mutations**: Skills mutate Jazz, no intermediate state
+- **Reactive UI**: UI subscribes via useQuery, updates automatically
+- **No manual updates**: Jazz reactivity handles everything!
 
 ---
 

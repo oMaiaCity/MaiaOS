@@ -1,12 +1,12 @@
 <!--
   Composite Component
+  JAZZ-NATIVE ARCHITECTURE
   Pure container div - renders children with Tailwind classes from container.class
-  All layout logic is handled via Tailwind classes in container.class
+  Data is derived from actor.context (no dataStore copies)
 -->
 <script lang="ts">
-  import type { Data } from "../dataStore";
   import type { VibeConfig } from "../types";
-  import type { ViewNode, CompositeConfig } from "./types";
+  import type { ViewNode, CompositeNode } from "./types";
   import Leaf from "./Leaf.svelte";
   import { resolveDataPath } from "./resolver";
   import { viewNodeRegistry } from "./view-node-registry";
@@ -20,7 +20,7 @@
 
   interface Props {
     node: ViewNode;
-    data: Data;
+    data: Record<string, any>; // Jazz-native data from actor.context
     config?: VibeConfig;
     onEvent?: (event: string, payload?: unknown) => void;
   }
@@ -39,7 +39,7 @@
     // Access data to ensure reactivity tracking
     const _ = data;
     
-    let resolvedComposite: CompositeConfig | undefined;
+    let resolvedComposite: CompositeNode | undefined;
     
     // If compositeId is provided, resolve from registry
     if (node.compositeId) {
@@ -220,7 +220,7 @@
 
   // Resolve value - matches Leaf.svelte logic exactly
   // This handles expressions with item context properly
-  function resolveValue(path: string, contextData?: Data): unknown {
+  function resolveValue(path: string, contextData?: Record<string, any>): unknown {
     // Access data to ensure reactivity (even when using contextData)
     const _ = data;
     
@@ -423,7 +423,7 @@
     if (typeof payload === "object" && payload !== null && !Array.isArray(payload)) {
       const contextData = itemData ? { ...data, item: itemData } : data;
       const resolved: Record<string, unknown> = {};
-      const DATA_PATH_ROOTS = ['data.', 'item.', 'queries.', 'view.'];
+      const DATA_PATH_ROOTS = ['data.', 'item.', 'queries.', 'view.', 'context.'];
       
       function isExplicitDataPath(str: string): boolean {
         for (const root of DATA_PATH_ROOTS) {
@@ -437,8 +437,11 @@
       for (const [key, value] of Object.entries(payload)) {
         if (typeof value === "string") {
           if (isExplicitDataPath(value)) {
-            resolved[key] = resolveDataPath(contextData, value);
+            const resolvedValue = resolveDataPath(contextData, value);
+            console.log('[Composite.resolvePayload] Resolved data path:', value, '→', resolvedValue, 'from contextData keys:', Object.keys(contextData));
+            resolved[key] = resolvedValue;
           } else {
+            console.log('[Composite.resolvePayload] Treating as literal string:', value);
             resolved[key] = value;
           }
         } else {
@@ -446,6 +449,7 @@
         }
       }
       
+      console.log('[Composite.resolvePayload] Final resolved payload:', resolved);
       return resolved;
     }
 
@@ -470,18 +474,19 @@
     onEvent(eventConfig.event, payload);
   }
 
-  // Resolve foreach items
+  // Resolve foreach items (now works with plain objects from useQuery)
   const foreachItems = $derived.by(() => {
     if (!composite?.foreach) return undefined;
     const _ = data;
     const items = resolveDataPath(data, composite.foreach.items);
     if (Array.isArray(items)) {
-      const __ = items.length;
-      items.forEach((item) => {
-        if (item && typeof item === "object") {
-          Object.keys(item).forEach((key) => {
-            const ___ = (item as Record<string, unknown>)[key];
-          });
+      // Return all items - they're plain objects now, not Jazz entities
+      // Access properties to ensure reactivity tracking
+      items.forEach((item: any) => {
+        if (item && typeof item === 'object') {
+          const __ = item.id;
+          const ___ = item.name;
+          const ____ = item.email;
         }
       });
       return items;
@@ -566,41 +571,22 @@
     onsubmit={composite.events?.submit
       ? (e: Event) => {
           e.preventDefault();
-          // For forms, read input value from form children (similar to Leaf.svelte)
-          if (containerTag === 'form' && composite.children) {
-            // Find input child with value binding
-            const inputChild = composite.children.find(
-              (child) =>
-                child.leaf &&
-                child.leaf.tag === 'input' &&
-                child.leaf.bindings?.value
-            );
-            if (inputChild?.leaf?.bindings?.value) {
-              // Read current input value from data
-              const inputValue = resolveDataPath(data, inputChild.leaf.bindings.value);
-              const textValue = inputValue ? String(inputValue).trim() : '';
-              // Don't submit if empty
-              if (!textValue) {
-                return;
-              }
-              // Dispatch submit event with value
-              const submitEvent = composite.events!.submit!;
-              const payload = resolvePayload(submitEvent.payload);
-              const finalPayload = typeof payload === 'object' && payload !== null && !Array.isArray(payload)
-                ? { ...payload, text: textValue }
-                : { text: textValue };
-              if (onEvent) {
-                onEvent(submitEvent.event, finalPayload);
-                // Clear the input by dispatching UPDATE_INPUT with empty text
-                if (inputChild.leaf.events?.input) {
-                  onEvent(inputChild.leaf.events.input.event, { text: '' });
-                }
-              }
-              return;
-            }
+          console.log('[Composite] Form submit triggered');
+          console.log('[Composite] Data structure:', {
+            hasContext: !!(data as any).context,
+            contextKeys: (data as any).context ? Object.keys((data as any).context) : [],
+            hasChildActors: !!(data as any).childActors,
+            hasItem: !!(data as any).item
+          });
+          console.log('[Composite] Submit event payload config:', composite.events!.submit!.payload);
+          // CLEAN ARCHITECTURE: No event bubbling, just dispatch via onEvent
+          // The onEvent callback will send message to actor's inbox
+          const submitEvent = composite.events!.submit!;
+          const payload = resolvePayload(submitEvent.payload);
+          console.log('[Composite] Dispatching submit event:', submitEvent.event, 'payload:', payload);
+          if (onEvent) {
+            onEvent(submitEvent.event, payload);
           }
-          // Not a form or no input child found, handle normally
-          handleEvent(composite.events!.submit!);
         }
       : undefined}
     onclick={composite.events?.click
@@ -716,7 +702,78 @@
       ? () => handleEvent(composite.events!.blur!)
       : undefined}
   >
-    {#if composite.foreach && foreachItems}
+    {#if composite.elements && composite.elements.length > 0}
+      <!-- NEW: Nested div structure with elements[] -->
+      {#each composite.elements as element}
+        {#if element.slot === 'children'}
+          <!-- This is where child actors render - WRAPPED in element's div -->
+          <svelte:element 
+            this={element.tag || 'div'} 
+            class={element.classes}
+            {...element.attributes || {}}
+          >
+            {#if childActors && childActors.length > 0}
+              {#each childActors as childActor}
+                {@const childActorId = childActor?.$jazz?.id}
+                {#if childActorId}
+                  <ActorRendererRecursive 
+                    actorId={childActorId}
+                    {accountCoState}
+                  />
+                {/if}
+              {/each}
+            {:else if resolvedChildren && resolvedChildren.length > 0}
+              <!-- Fallback: regular children rendering -->
+              {#each resolvedChildren as child}
+                {@const childVisibility = child.visible || (child.composite?.bindings?.visible) || (child.composite?.visible)}
+                {@const isVisible = !childVisibility || evaluateVisibility(childVisibility)}
+                {#if isVisible}
+                  {#if child.composite || child.compositeId}
+                    <CompositeRecursive node={child} {data} {config} {onEvent} />
+                  {:else if child.leaf || child.leafId}
+                    {@const childNode = child.leaf ? { ...child, leaf: child.leaf } : child}
+                    <Leaf node={childNode} {data} {config} {onEvent} />
+                  {/if}
+                {/if}
+              {/each}
+            {/if}
+          </svelte:element>
+        {:else}
+          <!-- Regular nested div element -->
+          <svelte:element 
+            this={element.tag} 
+            class={element.classes}
+            {...element.attributes || {}}
+          >
+            {#if element.elements && element.elements.length > 0}
+              <!-- Recursively render nested elements -->
+              {#each element.elements as nestedEl}
+                {#if nestedEl.slot === 'children'}
+                  <!-- Nested children slot -->
+                  {#if childActors && childActors.length > 0}
+                    {#each childActors as childActor}
+                      {@const childActorId = childActor?.$jazz?.id}
+                      {#if childActorId}
+                        <ActorRendererRecursive 
+                          actorId={childActorId}
+                          {accountCoState}
+                        />
+                      {/if}
+                    {/each}
+                  {/if}
+                {:else}
+                  <svelte:element 
+                    this={nestedEl.tag} 
+                    class={nestedEl.classes}
+                    {...nestedEl.attributes || {}}
+                  />
+                {/if}
+              {/each}
+            {/if}
+          </svelte:element>
+        {/if}
+      {/each}
+    {:else if composite.foreach && foreachItems}
       <!-- Foreach rendering -->
       {@const foreachConfig = composite.foreach}
       {@const keyProp = foreachConfig.key || "_index"}

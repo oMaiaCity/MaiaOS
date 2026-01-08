@@ -1,36 +1,28 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { browser } from "$app/environment";
   import { untrack } from "svelte";
   import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
   import ActorRenderer from "$lib/compositor/actors/ActorRenderer.svelte";
-  import { createHumansActors } from "$lib/vibes/humans/config";
-  import { createVibesActors } from "$lib/vibes/vibes/config";
-  import { createDesignTemplatesActors } from "$lib/vibes/design-templates/config";
+  import { createHumansActors } from "$lib/vibes/humans/actors/createHumansActors";
+  import { createVibesActors } from "$lib/vibes/vibes/actors/createVibesActors";
+  import { createDesignTemplatesActors } from "$lib/vibes/design-templates/actors/createDesignTemplatesActors";
+  import { createTodosActors } from "$lib/vibes/todo/actors/createTodosActors";
   import { CoState } from "jazz-tools/svelte";
   import { Actor } from "@hominio/db";
 
   // Get global Jazz account from context (AccountCoState instance)
   const accountCoState = getJazzAccountContext();
 
-  // Get vibe ID from route params (reactive)
-  const vibeId = $derived($page.url.searchParams.get("vibe"));
+  // Get actor ID from route params (reactive) - falls back to vibe name for backwards compat
+  const actorIdParam = $derived($page.url.searchParams.get("id"));
+  const vibeNameParam = $derived($page.url.searchParams.get("vibe")); // Legacy support
 
   // TRACKING STATE (Internal to this page)
   let rootActorId = $state<string | null>(null);
   let lastProcessedVibe = $state<string | null>(null);
   let isInitializing = false; // Module-level lock for async creation
-  let lastProcessedMessageId = $state<string | null>(null);
-  let pageLoadTime = $state<number | null>(null);
-  
-  // Track page load time to ignore stale messages
-  $effect(() => {
-    if (browser && pageLoadTime === null) {
-      pageLoadTime = Date.now();
-    }
-  });
-
+    
   // 1. LAZY LOADING - Ensure collections are loading
   $effect(() => {
     const account = accountCoState?.current;
@@ -65,7 +57,9 @@
 
   // 3. INITIALIZATION LOOP - Spawns actors if not in registry
   $effect(() => {
-    const currentVibe = vibeId ?? 'vibes';
+    // Prefer actor ID param, fall back to vibe name param
+    const currentActorId = actorIdParam;
+    const currentVibeName = vibeNameParam ?? 'vibes';
     const account = accountCoState?.current;
     
     // REACTIVE DEPENDENCIES (outside untrack)
@@ -74,7 +68,7 @@
     
     const root = account.root;
     if (!root?.$isLoaded) return;
-
+    
     const registry = root.vibes;
     
     // Wait for migration to create the registry
@@ -89,22 +83,33 @@
       return;
     }
 
-    // REACTIVE ACCESS to registry content
-    // VibesRegistry is a co.map({vibes, humans, designTemplates}) with schema properties, not a passthrough map
+    // If we have a direct actor ID from URL, use it directly
+    if (currentActorId && currentActorId.startsWith('co_')) {
+      console.log(`[+page.svelte] ✓ Using direct actor ID from URL: ${currentActorId}`);
+      if (rootActorId !== currentActorId) {
+        rootActorId = currentActorId;
+        lastProcessedVibe = currentVibeName;
+      }
+      return;
+    }
+
+    // REACTIVE ACCESS to registry content (for vibe name lookup)
+    // VibesRegistry is a co.map({vibes, humans, designTemplates, todos}) with schema properties, not a passthrough map
     // So we access the properties directly instead of using $jazz.get()
     const registeredId = (
-      currentVibe === 'vibes' ? registry.vibes :
-      currentVibe === 'humans' ? registry.humans :
-      currentVibe === 'designTemplates' ? registry.designTemplates :
+      currentVibeName === 'vibes' ? registry.vibes :
+      currentVibeName === 'humans' ? registry.humans :
+      currentVibeName === 'designTemplates' ? registry.designTemplates :
+      currentVibeName === 'todos' ? registry.todos :
       undefined
     ) as string | undefined;
     
-    console.log(`[+page.svelte] ✓ Registry ready for ${currentVibe}. registeredId: ${registeredId}, rootActorId: ${rootActorId}, isInitializing: ${isInitializing}`);
+    console.log(`[+page.svelte] ✓ Registry ready for ${currentVibeName}. registeredId: ${registeredId}, rootActorId: ${rootActorId}, isInitializing: ${isInitializing}`);
 
     // If we have a rootActorId but it doesn't match the registry (and we aren't currently creating one)
     // it means the registry was cleared or updated externally - we need to reset our local state.
     if (rootActorId && rootActorId !== registeredId && !isInitializing) {
-      console.log(`[+page.svelte] ⚠️ Registry ID mismatch for ${currentVibe} (registry: ${registeredId}, local: ${rootActorId}). Resetting local state...`);
+      console.log(`[+page.svelte] ⚠️ Registry ID mismatch for ${currentVibeName} (registry: ${registeredId}, local: ${rootActorId}). Resetting local state...`);
       untrack(() => {
         rootActorId = null;
         lastProcessedVibe = null;
@@ -112,8 +117,8 @@
       return;
     }
 
-    // Only proceed if vibeId changed OR if we don't have a rootActorId yet
-    if (lastProcessedVibe === currentVibe && rootActorId) return;
+    // Only proceed if vibe name changed OR if we don't have a rootActorId yet
+    if (lastProcessedVibe === currentVibeName && rootActorId) return;
 
     untrack(async () => {
       if (isInitializing) {
@@ -121,7 +126,7 @@
         return;
       }
       
-      console.log('[+page.svelte] Checking registry for', currentVibe);
+      console.log('[+page.svelte] Checking registry for', currentVibeName);
 
       // Handle missing registry (wait for migration)
       if (!registry) {
@@ -133,87 +138,66 @@
 
       // Check if this vibe is already registered
       if (registeredId && typeof registeredId === 'string' && registeredId.startsWith('co_')) {
-        console.log('[+page.svelte] ✅ Found registered root for', currentVibe, ':', registeredId);
+        console.log('[+page.svelte] ✅ Found registered root for', currentVibeName, ':', registeredId);
         rootActorId = registeredId;
-        lastProcessedVibe = currentVibe;
+        lastProcessedVibe = currentVibeName;
         return;
       }
 
       // Not in registry, start initialization
-      console.log('[+page.svelte] 🚀 Initializing new actors for', currentVibe);
+      console.log('[+page.svelte] 🚀 Initializing new actors for', currentVibeName);
       isInitializing = true;
       rootActorId = null; // Show loading state
 
       try {
         let newRootId: string | undefined;
-        if (currentVibe === 'humans') {
+        if (currentVibeName === 'humans') {
           console.log('[+page.svelte] Calling createHumansActors...');
           newRootId = await createHumansActors(account);
-        } else if (currentVibe === 'designTemplates') {
+        } else if (currentVibeName === 'designTemplates') {
           console.log('[+page.svelte] Calling createDesignTemplatesActors...');
           newRootId = await createDesignTemplatesActors(account);
+        } else if (currentVibeName === 'todos') {
+          console.log('[+page.svelte] Calling createTodosActors...');
+          newRootId = await createTodosActors(account);
         } else {
           console.log('[+page.svelte] Calling createVibesActors...');
           newRootId = await createVibesActors(account);
         }
 
         if (newRootId) {
-          console.log('[+page.svelte] ✅ Created root for', currentVibe, ':', newRootId);
+          console.log('[+page.svelte] ✅ Created root for', currentVibeName, ':', newRootId);
           rootActorId = newRootId;
-          lastProcessedVibe = currentVibe;
+          lastProcessedVibe = currentVibeName;
         } else {
-          console.warn('[+page.svelte] Actor creation returned no ID for', currentVibe);
+          console.warn('[+page.svelte] Actor creation returned no ID for', currentVibeName);
         }
       } catch (error: any) {
         if (!error?.message?.includes('Already creating')) {
-          console.error('[+page.svelte] ❌ Initialization failed for', currentVibe, ':', error);
+          console.error('[+page.svelte] ❌ Initialization failed for', currentVibeName, ':', error);
           lastProcessedVibe = null; // Allow retry
         } else {
-          console.log('[+page.svelte] Concurrency: Already creating', currentVibe);
+          console.log('[+page.svelte] Concurrency: Already creating', currentVibeName);
         }
       } finally {
         isInitializing = false;
-      }
+    }
     });
   });
 
-  // 4. NAVIGATION HANDLER - Watch inbox for SELECT_VIBE
-  const latestRootMessage = $derived.by(() => {
-    if (!rootActor?.$isLoaded) return null;
-    const inbox = rootActor.inbox;
-    if (!inbox?.$isLoaded) return null;
-    return inbox.byMe?.value;
-  });
-
-  $effect(() => {
-    if (!latestRootMessage?.$isLoaded || !browser || !pageLoadTime) return;
-
-    if (latestRootMessage.type === 'SELECT_VIBE') {
-      const messageId = latestRootMessage.$jazz?.id;
-      if (messageId === lastProcessedMessageId) return;
-      
-      const payload = latestRootMessage.payload as any;
-      const messageVibeId = payload?.vibeId;
-      const messageTimestamp = latestRootMessage.timestamp || 0;
-      
-      if (messageVibeId && messageTimestamp > pageLoadTime) {
-        lastProcessedMessageId = messageId;
-        console.log('[+page.svelte] Navigation requested to:', messageVibeId);
-        goto(`/vibes?vibe=${messageVibeId}`, { noScroll: true });
-      }
-    }
-  });
+  // 4. NAVIGATION - Handled by @ui/navigate skill
+  // Skills handle complete navigation flow (actor swap + URL update)
 </script>
 
 {#if browser}
   {#if rootActorId}
-    <div class="h-full w-full">
+  <div class="h-full w-full">
       <ActorRenderer actorId={rootActorId} {accountCoState} />
     </div>
   {:else}
     <div class="h-full bg-gray-100 pt-20 px-4 flex items-center justify-center">
       <div class="text-slate-600">Loading actors...</div>
-    </div>
+  </div>
   {/if}
 {:else}
   <div class="h-full bg-gray-100 pt-20 px-4 flex items-center justify-center">

@@ -106,12 +106,14 @@ const resetDatabaseSkill: Skill = {
 			const vibesRegistry = rootWithVibes.vibes
 
 			if (vibesRegistry?.$isLoaded) {
-				// VibesRegistry has schema properties (vibes, humans)
-				// Set them to undefined to clear them
+				// VibesRegistry has schema properties (vibes, humans, todos, designTemplates)
+				// Set them ALL to undefined to clear them completely
 				vibesRegistry.$jazz.set('vibes', undefined)
 				vibesRegistry.$jazz.set('humans', undefined)
+				vibesRegistry.$jazz.set('todos', undefined)
+				vibesRegistry.$jazz.set('designTemplates', undefined)
 				await root.$jazz.waitForSync()
-				console.log('[resetDatabase] Cleared vibes registry contents')
+				console.log('[resetDatabase] Cleared all vibes registry contents (vibes, humans, todos, designTemplates)')
 			}
 		}
 

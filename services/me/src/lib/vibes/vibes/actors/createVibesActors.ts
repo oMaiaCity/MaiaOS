@@ -63,257 +63,307 @@ export async function createVibesActors(account: any) {
 
 		console.log('[createVibesActors] Creating new actors...');
 
-		// Ensure actors list exists
-		let actorsList;
-		if (!root.$jazz.has('actors')) {
-			const actorsGroup = Group.create();
-			actorsGroup.addMember('everyone', 'reader');
-			await actorsGroup.$jazz.waitForSync();
-			actorsList = ActorList.create([], actorsGroup);
-			await actorsList.$jazz.waitForSync();
-			root.$jazz.set('actors', actorsList);
-			await root.$jazz.waitForSync();
-		} else {
-			const rootWithActors = await root.$jazz.ensureLoaded({
-				resolve: { actors: true },
-			});
-			actorsList = rootWithActors.actors;
-			if (!actorsList?.$isLoaded) {
-				throw new Error('Actors list found but failed to load');
-			}
+	// Ensure actors list exists (OPTIMISTIC - no blocking!)
+	let actorsList;
+	if (!root.$jazz.has('actors')) {
+		const actorsGroup = Group.create();
+		actorsGroup.addMember('everyone', 'reader');
+		// NO WAIT! Jazz syncs in background
+		actorsList = ActorList.create([], actorsGroup);
+		// NO WAIT! Use immediately
+		root.$jazz.set('actors', actorsList);
+		// NO WAIT! Local-first = instant
+	} else {
+		// Direct access - no ensureLoaded needed
+		actorsList = root.actors;
+		if (!actorsList) {
+			throw new Error('Actors list not found');
 		}
+	}
 
-		const group = Group.create();
-		group.addMember('everyone', 'reader');
-		await group.$jazz.waitForSync();
+	// Create group for actors (OPTIMISTIC - no blocking!)
+	const group = Group.create();
+	group.addMember('everyone', 'reader');
+	// NO WAIT! Jazz syncs in background
 
 		// ============================================
 		// BOTTOM-UP CREATION: LEAFS → COMPOSITES → ROOT
 		// ============================================
 
-		// STEP 1: Create leaf actors (titles, descriptions)
-		const headerTitleActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
-			context: {},
-			view: createTitleLeaf({ text: 'Vibes', tag: 'h2' }),
-			dependencies: {},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: [],
-			children: co.list(z.string()).create([]),
-			role: 'vibes-header-title', // For debugging only
-		}, group);
+	// STEP 1: Create leaf actors (titles, descriptions)
+	const headerTitleActor = Actor.create({
+		currentState: 'idle',
+		states: { idle: {} },
+		context: { visible: true },
+		view: createTitleLeaf({ text: 'Vibes', tag: 'h2' }),
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [],
+		children: co.list(z.string()).create([]),
+		role: 'vibes-header-title', // For debugging only
+	}, group);
 
-		const humansTitleActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
-			context: {},
-			view: createTitleLeaf({ text: 'Humans', tag: 'h3', classes: 'text-base font-semibold text-slate-700' }),
-			dependencies: {},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: [],
-			children: co.list(z.string()).create([]),
-			role: 'humans-card-title',
-		}, group);
+	const humansTitleActor = Actor.create({
+		currentState: 'idle',
+		states: { idle: {} },
+		context: { visible: true },
+		view: createTitleLeaf({ text: 'Humans', tag: 'h3', classes: 'text-base font-semibold text-slate-700' }),
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [],
+		children: co.list(z.string()).create([]),
+		role: 'humans-card-title',
+	}, group);
 
-		const humansDescActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
-			context: {},
-			view: {
-				tag: 'p',
-				classes: 'text-xs text-slate-600',
-				elements: ['Human contact management vibe']
-			},
-			dependencies: {},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: [],
-			children: co.list(z.string()).create([]),
-			role: 'humans-card-desc',
-		}, group);
+	const humansDescActor = Actor.create({
+		currentState: 'idle',
+		states: { idle: {} },
+		context: { visible: true },
+		view: {
+			tag: 'p',
+			classes: 'text-xs text-slate-600',
+			elements: ['Human contact management vibe']
+		},
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [],
+		children: co.list(z.string()).create([]),
+		role: 'humans-card-desc',
+	}, group);
 
-		const designTemplatesTitleActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
-			context: {},
-			view: createTitleLeaf({ text: 'Design Templates', tag: 'h3', classes: 'text-base font-semibold text-slate-700' }),
-			dependencies: {},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: [],
-			children: co.list(z.string()).create([]),
-			role: 'design-templates-card-title',
-		}, group);
+	const designTemplatesTitleActor = Actor.create({
+		currentState: 'idle',
+		states: { idle: {} },
+		context: { visible: true },
+		view: createTitleLeaf({ text: 'Design Templates', tag: 'h3', classes: 'text-base font-semibold text-slate-700' }),
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [],
+		children: co.list(z.string()).create([]),
+		role: 'design-templates-card-title',
+	}, group);
 
-		const designTemplatesDescActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
-			context: {},
-			view: {
-				tag: 'p',
-				classes: 'text-xs text-slate-600',
-				elements: ['Reusable UI component templates']
-			},
-			dependencies: {},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: [],
-			children: co.list(z.string()).create([]),
-			role: 'design-templates-card-desc',
-		}, group);
+	const designTemplatesDescActor = Actor.create({
+		currentState: 'idle',
+		states: { idle: {} },
+		context: { visible: true },
+		view: {
+			tag: 'p',
+			classes: 'text-xs text-slate-600',
+			elements: ['Reusable UI component templates']
+		},
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [],
+		children: co.list(z.string()).create([]),
+		role: 'design-templates-card-desc',
+	}, group);
 
-		// Wait for leaf actors to sync
-		await Promise.all([
-			headerTitleActor.$jazz.waitForSync(),
-			humansTitleActor.$jazz.waitForSync(),
-			humansDescActor.$jazz.waitForSync(),
-			designTemplatesTitleActor.$jazz.waitForSync(),
-			designTemplatesDescActor.$jazz.waitForSync(),
-		]);
+	const todosTitleActor = Actor.create({
+		currentState: 'idle',
+		states: { idle: {} },
+		context: { visible: true },
+		view: {
+			tag: 'h3',
+			classes: 'text-base font-semibold text-slate-900',
+			elements: ['Todos']
+		},
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [],
+		children: co.list(z.string()).create([]),
+		role: 'todos-card-title',
+	}, group);
 
-		// STEP 2: Create composite actors (cards, header)
+	const todosDescActor = Actor.create({
+		currentState: 'idle',
+		states: { idle: {} },
+		context: { visible: true },
+		view: {
+			tag: 'p',
+			classes: 'text-xs text-slate-600',
+			elements: ['Task management and todo lists']
+		},
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [],
+		children: co.list(z.string()).create([]),
+		role: 'todos-card-desc',
+	}, group);
+
+	// NO WAIT! All leaf actors created locally, use immediately
+	
+	// STEP 2: Create composite actors (cards, header)
 		// NOTE: rootActorId will be set after root is created
 		let rootActorId: string = '';
 
-		const humansCardActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
-			context: {},
-			view: {
-				container: {
-					layout: 'flex',
-					class: 'card p-4 flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow'
-				},
-				events: {
-					click: {
-						event: 'SELECT_VIBE',
-						payload: { vibeId: 'humans' }
-					}
+	// NAVIGATION CARDS: Use @ui/navigate skill for true colocation
+	const humansCardActor = Actor.create({
+		currentState: 'idle',
+		states: { 
+			idle: {
+				on: {
+					'@ui/navigate': { target: 'idle', actions: ['@ui/navigate'] }
 				}
+			}
+		},
+		context: { visible: true },
+		view: {
+			container: {
+				layout: 'flex',
+				class: 'card p-4 flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow'
 			},
-			dependencies: {},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: [], // Will be set after root is created
-			children: co.list(z.string()).create([humansTitleActor.$jazz.id, humansDescActor.$jazz.id]),
-			role: 'humans-card',
-		}, group);
-
-		const designTemplatesCardActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
-			context: {},
-			view: {
-				container: {
-					layout: 'flex',
-					class: 'card p-4 flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow'
-				},
-				events: {
-					click: {
-						event: 'SELECT_VIBE',
-						payload: { vibeId: 'designTemplates' }
-					}
+			events: {
+				click: {
+					event: '@ui/navigate',
+					payload: { vibeName: 'humans' }
 				}
-			},
-			dependencies: {},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: [], // Will be set after root is created
-			children: co.list(z.string()).create([designTemplatesTitleActor.$jazz.id, designTemplatesDescActor.$jazz.id]),
-			role: 'design-templates-card',
-		}, group);
+			}
+		},
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [], // Subscribe to ROOT actor (set later) for any root-level state updates
+		children: co.list(z.string()).create([humansTitleActor.$jazz.id, humansDescActor.$jazz.id]),
+		role: 'humans-card',
+	}, group);
 
-		const headerActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
-			context: {},
-			view: createHeaderComposite(),
-			dependencies: {},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: [],
-			children: co.list(z.string()).create([headerTitleActor.$jazz.id]),
-			role: 'vibes-header',
-		}, group);
-
-		const gridActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
-			context: {},
-			view: {
-				container: {
-					layout: 'flex',
-					class: 'p-6 flex-col gap-4'
+	const designTemplatesCardActor = Actor.create({
+		currentState: 'idle',
+		states: { 
+			idle: {
+				on: {
+					'@ui/navigate': { target: 'idle', actions: ['@ui/navigate'] }
 				}
+			}
+		},
+		context: { visible: true },
+		view: {
+			container: {
+				layout: 'flex',
+				class: 'card p-4 flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow'
 			},
-			dependencies: {},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: [],
-			children: co.list(z.string()).create([humansCardActor.$jazz.id, designTemplatesCardActor.$jazz.id]),
-			role: 'vibes-grid',
-		}, group);
+			events: {
+				click: {
+					event: '@ui/navigate',
+					payload: { vibeName: 'designTemplates' }
+				}
+			}
+		},
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [], // Subscribe to ROOT actor (set later) for any root-level state updates
+		children: co.list(z.string()).create([designTemplatesTitleActor.$jazz.id, designTemplatesDescActor.$jazz.id]),
+		role: 'design-templates-card',
+	}, group);
 
-		// Wait for composite actors to sync
-		await Promise.all([
-			humansCardActor.$jazz.waitForSync(),
-			designTemplatesCardActor.$jazz.waitForSync(),
-			headerActor.$jazz.waitForSync(),
-			gridActor.$jazz.waitForSync(),
-		]);
-
-		// STEP 3: Create root actor with child IDs
-		const vibesRootActor = Actor.create({
-			currentState: 'idle',
-			states: {
-				idle: {
-					on: { SELECT_VIBE: { target: 'idle', actions: [] } },
-				},
+	const todosCardActor = Actor.create({
+		currentState: 'idle',
+		states: { 
+			idle: {
+				on: {
+					'@ui/navigate': { target: 'idle', actions: ['@ui/navigate'] }
+				}
+			}
+		},
+		context: { visible: true },
+		view: {
+			container: {
+				layout: 'flex',
+				class: 'card p-4 flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow'
 			},
-			context: {},
-			view: createRootCardComposite({ cardLayout: 'flex', cardClasses: 'card p-4 flex-col gap-4' }),
-			dependencies: {},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: [],
-			children: co.list(z.string()).create([headerActor.$jazz.id, gridActor.$jazz.id]),
-			role: 'vibes-root',
-		}, group);
+			events: {
+				click: {
+					event: '@ui/navigate',
+					payload: { vibeName: 'todos' }
+				}
+			}
+		},
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [], // Subscribe to ROOT actor (set later) for any root-level state updates
+		children: co.list(z.string()).create([todosTitleActor.$jazz.id, todosDescActor.$jazz.id]),
+		role: 'todos-card',
+	}, group);
 
-		await vibesRootActor.$jazz.waitForSync();
-		rootActorId = vibesRootActor.$jazz.id;
+	const headerActor = Actor.create({
+		currentState: 'idle',
+		states: { idle: {} },
+		context: { visible: true },
+		view: createHeaderComposite(),
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [],
+		children: co.list(z.string()).create([headerTitleActor.$jazz.id]),
+		role: 'vibes-header',
+	}, group);
 
-		// STEP 4: Update card actors' subscriptions to point to root
-		const humansSubscriptions = humansCardActor.subscriptions;
-		if (humansSubscriptions?.$isLoaded) {
-			humansSubscriptions.$jazz.push(rootActorId);
-		}
-		const designTemplatesSubscriptions = designTemplatesCardActor.subscriptions;
-		if (designTemplatesSubscriptions?.$isLoaded) {
-			designTemplatesSubscriptions.$jazz.push(rootActorId);
-		}
-		await Promise.all([
-			humansCardActor.$jazz.waitForSync(),
-			designTemplatesCardActor.$jazz.waitForSync(),
-		]);
+	const gridActor = Actor.create({
+		currentState: 'idle',
+		states: { idle: {} },
+		context: { visible: true },
+		view: {
+			container: {
+				layout: 'flex',
+				class: 'p-6 flex-col gap-4'
+			}
+		},
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [],
+		children: co.list(z.string()).create([humansCardActor.$jazz.id, todosCardActor.$jazz.id]),
+		role: 'vibes-grid',
+	}, group);
 
-		// Add all actors to global actors list
-		actorsList.$jazz.push(headerTitleActor);
-		actorsList.$jazz.push(humansTitleActor);
-		actorsList.$jazz.push(humansDescActor);
-		actorsList.$jazz.push(designTemplatesTitleActor);
-		actorsList.$jazz.push(designTemplatesDescActor);
-		actorsList.$jazz.push(humansCardActor);
-		actorsList.$jazz.push(designTemplatesCardActor);
-		actorsList.$jazz.push(headerActor);
-		actorsList.$jazz.push(gridActor);
-		actorsList.$jazz.push(vibesRootActor);
+	// NO WAIT! All composite actors created locally, use immediately
 
-		await actorsList.$jazz.waitForSync();
-		console.log('[createVibesActors] All actors created and synced');
+	// STEP 3: Create root actor - MINIMAL (no actions)
+	const vibesRootActor = Actor.create({
+		currentState: 'idle',
+		states: { idle: {} }, // Empty state machine - root is just a container
+		context: { visible: true },
+		view: createRootCardComposite({ cardLayout: 'flex', cardClasses: 'card p-4 flex-col gap-4' }),
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [], // No subscriptions needed
+		children: co.list(z.string()).create([headerActor.$jazz.id, gridActor.$jazz.id]),
+		role: 'vibes-root',
+	}, group);
 
-		// Register root actor in vibes registry
-		const loadedRootWithVibes = await root.$jazz.ensureLoaded({
-			resolve: { vibes: true },
-		});
-		loadedRootWithVibes.vibes.$jazz.set('vibes', rootActorId);
-		await loadedRootWithVibes.vibes.$jazz.waitForSync();
-		console.log('[createVibesActors] ✅ Registered vibes root:', rootActorId);
-		
-		return rootActorId;
+	// NO WAIT! Root actor created locally, use immediately
+
+	// STEP 4: Update card actors' subscriptions - Subscribe to ROOT for root-level state updates
+	// Cards use @ui/navigate skill for true colocation (navigation handled by skill system)
+	const humansSubscriptions = humansCardActor.subscriptions;
+	if (humansSubscriptions?.$isLoaded) {
+		humansSubscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
+	}
+	const todosSubscriptions = todosCardActor.subscriptions;
+	if (todosSubscriptions?.$isLoaded) {
+		todosSubscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
+	}
+	// NO WAIT! Subscriptions updated locally, sync happens in background
+
+	// Add all actors to global actors list
+	actorsList.$jazz.push(headerTitleActor);
+	actorsList.$jazz.push(humansTitleActor);
+	actorsList.$jazz.push(humansDescActor);
+	actorsList.$jazz.push(todosTitleActor);
+	actorsList.$jazz.push(todosDescActor);
+	actorsList.$jazz.push(humansCardActor);
+	actorsList.$jazz.push(todosCardActor);
+	actorsList.$jazz.push(headerActor);
+	actorsList.$jazz.push(gridActor);
+	actorsList.$jazz.push(vibesRootActor);
+
+	// NO WAIT! Actors list updated locally, sync happens in background
+	console.log('[createVibesActors] ⚡ All actors created instantly (local-first)');
+
+	// Register root actor in vibes registry (OPTIMISTIC - no blocking!)
+	root.vibes.$jazz.set('vibes', vibesRootActor.$jazz.id);
+	// NO WAIT! Registry updated locally, sync happens in background
+	console.log('[createVibesActors] ✅ Registered vibes root:', vibesRootActor.$jazz.id);
+	
+	return vibesRootActor.$jazz.id;
 	} finally {
 		locks.vibes = false;
 	}

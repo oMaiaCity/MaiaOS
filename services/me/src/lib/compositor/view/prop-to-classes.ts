@@ -5,7 +5,7 @@
  */
 
 import type { ViewNode } from './types'
-import type { CompositeConfig } from './types'
+import type { CompositeNode } from './types'
 
 /**
  * Convert flex props to Tailwind classes string
@@ -185,7 +185,7 @@ export function childPropsToClasses(child: ViewNode): string {
 /**
  * Convert grid props on CompositeConfig to Tailwind classes string
  */
-export function gridPropsToClasses(grid: CompositeConfig['grid']): string {
+export function gridPropsToClasses(grid: CompositeNode['grid']): string {
 	if (!grid) return ''
 	const classes: string[] = []
 

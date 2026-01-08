@@ -1,12 +1,13 @@
 /**
  * Create Design Templates Actors
- * Showcases all available design templates
+ * Showcase of available design templates
  */
 
 import { Actor, ActorList, ActorMessage } from "@hominio/db";
 import { Group, co, z } from "jazz-tools";
 import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf } from '../index';
 
+// Global lock
 const getGlobalLock = () => {
 	if (typeof window === 'undefined') return { designTemplates: false };
 	if (!(window as any).__actorCreationLocks) {

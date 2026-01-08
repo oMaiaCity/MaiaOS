@@ -1,20 +1,18 @@
 <!--
   ActorRenderer Component
-  Pure Jazz-native message-passing actor renderer
-  NO prop drilling - pure CoState reactivity
+  JAZZ-NATIVE ARCHITECTURE - Pure CoState reactivity
+  Skills called directly on actor, no dataStore
 -->
 <script lang="ts">
   import { browser } from "$app/environment";
   import { CoState } from "jazz-tools/svelte";
   import { Actor, ActorMessage } from "@hominio/db";
-  import { createDataStore } from "../dataStore";
-  import { loadActionsFromRegistry } from "../skillLoader";
-  import { registerAllSkills } from "../skills";
+  import { registerAllSkills, skillRegistry } from "../skills";
   import { resolveDataPath } from "../view/resolver";
   import { useQuery } from "../useQuery.svelte";
-  import ActorRendererRecursive from "./ActorRendererRecursive.svelte";
   import Composite from "../view/Composite.svelte";
   import Leaf from "../view/Leaf.svelte";
+  import { createActorLogger } from "../utilities/logger";
   
   interface Props {
     actorId: string; // Actor's CoValue ID
@@ -24,6 +22,9 @@
   }
   
   const { actorId, accountCoState, itemDependencyId, item: itemProp }: Props = $props();
+  
+  // Create actor-specific logger (will be initialized once actor loads)
+  let logger = $derived.by(() => createActorLogger(actor));
   
   // Register skills once
   if (browser) registerAllSkills();
@@ -41,43 +42,15 @@
   const item = $derived(itemProp);
   
   // ============================================
-  // JAZZ-NATIVE INBOX SUBSCRIPTION
+  // VISIBILITY CHECK (Jazz-native)
   // ============================================
   
-  // Watch inbox reactively - get latest message from ANY account (not just byMe)
-  // Since messages can come from other actors, we need to watch all accounts
-  const latestInboxMessage = $derived.by(() => {
-    if (!actor?.$isLoaded) return null;
-    const inbox = actor.inbox;
-    if (!inbox?.$isLoaded) return null;
-    
-    // Get latest message from current account (byMe)
-    const byMeMessage = inbox.byMe?.value;
-    if (byMeMessage?.$isLoaded) return byMeMessage;
-    
-    // If no byMe message, check all accounts for latest message
-    // Note: This is a fallback - in practice, byMe should work since all actors share the same account
-    // But we check perAccount as a safety net
-    if (inbox.perAccount) {
-      let latest: any = null;
-      let latestTimestamp = 0;
-      
-      for (const accountId in inbox.perAccount) {
-        const accountFeed = inbox.perAccount[accountId];
-        if (accountFeed?.value?.$isLoaded) {
-          const message = accountFeed.value;
-          const timestamp = message.timestamp || 0;
-          if (timestamp > latestTimestamp) {
-            latestTimestamp = timestamp;
-            latest = message;
-          }
-        }
-      }
-      
-      return latest;
-    }
-    
-    return null;
+  // Check actor.context.visible flag (default: false, actors must opt-in to be visible)
+  const isVisible = $derived.by(() => {
+    if (!actor?.$isLoaded) return false;
+    const context = (actor as any).context;
+    // Default is FALSE - actors must explicitly set visible: true to render
+    return context?.visible === true;
   });
   
   // Get schemaName from actor's queries context (useQuery approach from staged changes)
@@ -94,119 +67,150 @@
   // Use useQuery to get filtered entities (handles schema matching via Jazz snapshots)
   const queryResult = useQuery(() => accountCoState, () => schemaName, undefined);
   
-  // Resolve queries from useQuery results
-  const resolvedContext = $derived.by(() => {
+  // Populate actor.context.queries with entities from useQuery
+  // This updates queries reactively as entities change
+  // IMPORTANT: Don't mutate Jazz context here - just read it for data resolution
+  const resolvedContextWithQueries = $derived.by(() => {
     if (!actor?.$isLoaded) return {};
     
-    const context = actor.context || {};
-    const queries = (context as any).queries;
+    const context = (actor as any).context;
+    if (!context || typeof context !== 'object') return context;
     
-    // If no queries, return context as-is
+    const queries = context?.queries;
     if (!queries || typeof queries !== 'object') return context;
     
-    // Populate each query's items array from queryResult
-    const populatedQueries: Record<string, any> = {};
+    // Create a new context object with populated query results
+    // This doesn't mutate the Jazz context, just creates a derived view
+    const resolvedQueries: Record<string, any> = {};
+    
     for (const [queryKey, queryConfig] of Object.entries(queries)) {
       const config = queryConfig as any;
-      if (config?.schemaName) {
-        populatedQueries[queryKey] = {
+      if (config?.schemaName && queryResult.entities) {
+        resolvedQueries[queryKey] = {
           ...config,
-          items: queryResult.entities || [] // Use entities from useQuery
+          items: queryResult.entities, // Plain objects with accessible properties
         };
       } else {
-        populatedQueries[queryKey] = config;
+        resolvedQueries[queryKey] = config;
       }
     }
     
     return {
       ...context,
-      queries: populatedQueries
+      queries: resolvedQueries,
     };
   });
   
-  // Create data store from actor's OWN context
-  const dataStore = $derived.by(() => {
-    if (!actor?.$isLoaded) return null;
-    const config = {
-      initial: actor.currentState || 'idle',
-      states: actor.states || {},
-      data: resolvedContext,
-    };
-    const loadedConfig = loadActionsFromRegistry(config);
-    // Pass accountCoState (not accountCoState.current) so skills can access it
-    return createDataStore(loadedConfig, accountCoState);
-  });
+  // ============================================
+  // MESSAGE CONSUMPTION TRACKING
+  // ============================================
+  // PROPER COFEED PATTERN: Track consumed messages in actor context
+  // CoFeeds are append-only - we can't delete messages
+  // Instead, we track which messages have been consumed to prevent replay
   
-  // Track last processed message to avoid duplicates
-  let lastProcessedMessageId = $state<string | null>(null);
+  // Load consumed message IDs from actor context (persists across reloads)
+  const loadConsumedIds = () => {
+    if (!actor?.$isLoaded) return new Set<string>();
+    const context = actor.context as any;
+    const consumed = context?.consumedMessages || [];
+    return new Set<string>(consumed);
+  };
   
-  // Process messages - Jazz CoState auto-triggers this when inbox updates
+  // Track consumed message IDs in memory (synced with Jazz context)
+  let consumedMessageIds = $state<Set<string>>(new Set());
+  
+  // Load consumed IDs when actor loads
   $effect(() => {
-    if (!latestInboxMessage?.$isLoaded || !browser || !dataStore) return;
-    
-    // Avoid processing the same message twice
-    const messageId = latestInboxMessage.$jazz?.id;
-    if (messageId && messageId === lastProcessedMessageId) {
-      return;
-    }
-    
-    // Process the message
-    console.log('[ActorRenderer] Processing message:', latestInboxMessage.type, latestInboxMessage.payload);
-    dataStore.send(latestInboxMessage.type, latestInboxMessage.payload);
-    
-    // Track this message as processed
-    if (messageId) {
-      lastProcessedMessageId = messageId;
+    if (actor?.$isLoaded) {
+      consumedMessageIds = loadConsumedIds();
     }
   });
   
-  // Data object for view rendering - includes item for foreach templates
-  const data = $derived.by(() => {
-    const storeData = dataStore ? $dataStore : {};
-    const finalData = item ? { ...storeData, item } : storeData;
+  // ============================================
+  // MESSAGE PROCESSING - CALL SKILLS DIRECTLY
+  // ============================================
+  
+  // Process ALL unconsumed messages in the inbox
+  // Call skills directly with actor reference (no dataStore)
+  $effect(() => {
+    if (!actor?.$isLoaded || !browser) return;
+    const inbox = actor.inbox;
+    if (!inbox?.$isLoaded) return;
     
-    // Debug log for list actor
-    if (actor?.$isLoaded && actor.role === 'humans-list') {
-      const queries = (finalData as any)?.queries;
-      console.log('[ActorRenderer] humans-list data:', 
-        'hasQueries=', !!queries,
-        'humanItemsCount=', queries?.humans?.items?.length || 0);
-      if (queries?.humans?.items) {
-        console.log('[ActorRenderer] humanItems=', JSON.stringify(queries.humans.items));
+    // Collect ALL messages from the inbox (byMe and perAccount)
+    const allMessages: any[] = [];
+    
+    // Get byMe messages
+    const byMeMessage = inbox.byMe?.value;
+    if (byMeMessage?.$isLoaded) {
+      allMessages.push(byMeMessage);
+    }
+    
+    // Get perAccount messages
+    if (inbox.perAccount) {
+      for (const accountId in inbox.perAccount) {
+        const accountFeed = inbox.perAccount[accountId];
+        if (accountFeed?.value?.$isLoaded) {
+          allMessages.push(accountFeed.value);
+        }
       }
     }
     
-    return finalData;
+    // Sort messages by timestamp to process in order
+    allMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    
+    // Track newly consumed IDs to batch update context
+    const newlyConsumed: string[] = [];
+    
+    // Process each unconsumed message
+    for (const message of allMessages) {
+      const messageId = message.$jazz?.id;
+      if (!messageId || consumedMessageIds.has(messageId)) {
+        continue; // Skip already consumed messages
+      }
+      
+      // Call skill directly with actor reference (via centralized registry)
+      logger.log('Processing message:', message.type, 'payload:', message.payload);
+      const skill = skillRegistry.get(message.type);
+      if (skill) {
+        skill.execute(actor, message.payload, accountCoState);
+      } else {
+        logger.warn('No skill found for message type:', message.type);
+      }
+      
+      // Mark as consumed (in memory and track for batch update)
+      consumedMessageIds.add(messageId);
+      newlyConsumed.push(messageId);
+    }
+    
+    // Batch update: Persist newly consumed IDs to actor context
+    if (newlyConsumed.length > 0 && actor.$isLoaded) {
+      const context = actor.context as any;
+      const existingConsumed = context?.consumedMessages || [];
+      const updatedConsumed = [...existingConsumed, ...newlyConsumed];
+      
+      // Update actor context with new consumed IDs
+      actor.$jazz.set('context', {
+        ...context,
+        consumedMessages: updatedConsumed,
+      });
+      
+      logger.log(`Marked ${newlyConsumed.length} messages as consumed`);
+    }
   });
   
   // ============================================
-  // JAZZ-NATIVE ACTOR LOADING FOR SUBSCRIPTIONS
-  // ============================================
-  
-  // Load subscribed actors - Jazz CoState handles reactivity!
-  const subscribedActorCoStates = $derived.by(() => {
-    if (!actor?.$isLoaded || !actor.subscriptions?.$isLoaded) return [];
-    return Array.from(actor.subscriptions).map((id: string) => new CoState(Actor, id));
-  });
-  
-  const subscribedActors = $derived(
-    subscribedActorCoStates
-      .map((cs: any) => cs.current)
-      .filter((a: any) => a?.$isLoaded)
-  );
-  
-  // ============================================
-  // MESSAGE PUBLISHING - JAZZ AUTO-SYNCS
+  // MESSAGE PUBLISHING - PUBLISH TO SUBSCRIBED ACTORS
   // ============================================
   
   function resolvePayload(payload: unknown): unknown {
     if (!payload) return undefined;
     
-    const currentData = data;
-    if (!currentData) return payload;
+    const currentContext = actor?.$isLoaded ? resolvedContextWithQueries : null;
+    if (!currentContext) return payload;
     
     if (typeof payload === 'string') {
-      const resolvedValue = resolveDataPath(currentData, payload);
+      const resolvedValue = resolveDataPath(currentContext, payload);
       if (payload.endsWith('.id') || payload.match(/\.\w+Id$/)) {
         return { id: resolvedValue };
       }
@@ -215,7 +219,7 @@
     
     if (typeof payload === 'object' && payload !== null && !Array.isArray(payload)) {
       const resolved: Record<string, unknown> = {};
-      const DATA_PATH_ROOTS = ['data.', 'item.', 'queries.', 'view.'];
+      const DATA_PATH_ROOTS = ['queries.', 'view.', 'item.'];
       
       function isExplicitDataPath(str: string): boolean {
         for (const root of DATA_PATH_ROOTS) {
@@ -228,7 +232,7 @@
       
       for (const [key, value] of Object.entries(payload as Record<string, unknown>)) {
         if (typeof value === 'string' && isExplicitDataPath(value)) {
-          resolved[key] = resolveDataPath(currentData, value);
+          resolved[key] = resolveDataPath(currentContext, value);
         } else {
           resolved[key] = value;
         }
@@ -242,48 +246,41 @@
   function handleEvent(event: string, payload?: unknown) {
     if (!browser || !actor?.$isLoaded) return;
     
-    const resolvedPayload = resolvePayload(payload);
-    console.log(`[ActorRenderer] ${actor.role} sending event: ${event}, payload:`, resolvedPayload);
-    console.log(`[ActorRenderer] → Subscriptions:`, {
-      raw: actor.subscriptions?.$isLoaded ? Array.from(actor.subscriptions) : [],
-      subscribedActorRoles: subscribedActors.map((a: any) => a.$isLoaded ? a.role : 'not-loaded'),
-      subscribedActorIds: subscribedActors.map((a: any) => a.$jazz?.id),
-      thisActorId: actorId,
+    logger.log(`Sending event: ${event}`, 'raw payload:', payload);
+    logger.log('Data structure:', {
+      context: Object.keys(resolvedContextWithQueries),
+      hasChildActors: !!childActors,
+      hasItem: !!item,
+      hasAccountCoState: !!accountCoState
     });
     
-    // Publish to subscribed actors - Jazz syncs automatically!
-    for (const targetActor of subscribedActors) {
-      if (targetActor?.$isLoaded && targetActor.inbox) {
-        console.log(`[ActorRenderer] → Sending to ${targetActor.role} (${targetActor.$jazz?.id})`);
-        targetActor.inbox.$jazz.push(
-          ActorMessage.create({
-            type: event,
-            payload: resolvedPayload || {},
-            from: actorId,
-            timestamp: Date.now(),
-          })
-        );
-        // Jazz syncs this to all subscribers - no manual work!
+    const resolvedPayload = resolvePayload(payload);
+    logger.log('Resolved payload:', resolvedPayload);
+    
+    // Create message and append to inbox (CoFeed append-only pattern)
+    const message = ActorMessage.create({
+      type: event,
+      payload: resolvedPayload || {},
+      from: actorId,
+      timestamp: Date.now(),
+    });
+    
+    // Publish to own inbox (for self-subscribed actors)
+    if (actor.inbox?.$isLoaded) {
+      actor.inbox.$jazz.push(message);
+    }
+    
+    // Publish to subscribed actors (use pre-loaded CoStates)
+    for (const { id: subscriberId, coState } of subscriberCoStates) {
+      if (subscriberId === actorId) continue; // Skip self (already published above)
+      
+      const subscriberActor = coState.current;
+      if (subscriberActor?.$isLoaded && subscriberActor.inbox?.$isLoaded) {
+        logger.log(`→ Sending to ${subscriberActor.role} (${subscriberId.slice(3, 10)}...)`);
+        subscriberActor.inbox.$jazz.push(message);
       }
     }
   }
-  
-  // ============================================
-  // ID-BASED CHILD LOADING
-  // ============================================
-  
-  // Load child actors by ID from actor.children CoList
-  const childActorCoStates = $derived.by(() => {
-    if (!actor?.$isLoaded || !actor.children?.$isLoaded) return [];
-    return Array.from(actor.children).map((id: string) => new CoState(Actor, id));
-  });
-  
-  const childActors = $derived(
-    childActorCoStates
-      .map((cs: any) => cs.current)
-      .filter((a: any) => a?.$isLoaded)
-  );
-  
   
   // ============================================
   // DETERMINE VIEW TYPE FOR RENDERING
@@ -298,22 +295,51 @@
     if (view.tag) return 'leaf';
     return null;
   });
+  
+  // Load child actors (full CoState objects, not just IDs)
+  const childActorCoStates = $derived.by(() => {
+    if (!actor?.$isLoaded || !actor.children?.$isLoaded) return [];
+    const ids = Array.from(actor.children) as string[];
+    return ids.map((id: string) => new CoState(Actor, id));
+  });
+  
+  const childActors = $derived.by(() => {
+    return childActorCoStates
+      .map((cs: any) => cs.current)
+      .filter((a: any) => a?.$isLoaded);
+  });
+  
+  // Pre-load subscriber CoStates (for event publishing)
+  const subscriberCoStates = $derived.by(() => {
+    if (!actor?.$isLoaded || !actor.subscriptions?.$isLoaded) return [];
+    const ids = Array.from(actor.subscriptions) as string[];
+    return ids.map((id: string) => ({
+      id,
+      coState: new CoState(Actor, id)
+    }));
+  });
 </script>
 
-{#if browser && actor?.$isLoaded && viewType}
+{#if browser && actor?.$isLoaded && isVisible && viewType}
   {@const view = actor.view as Record<string, unknown>}
+  {@const dataForViews = { 
+    context: resolvedContextWithQueries, 
+    childActors, 
+    item, 
+    accountCoState 
+  }}
   {#if viewType === 'composite'}
     <!-- Delegate to Composite.svelte for rendering -->
     <Composite 
       node={{ slot: 'root', composite: view }}
-      data={{ ...data, childActors, accountCoState }}
+      data={dataForViews}
       onEvent={handleEvent}
     />
   {:else if viewType === 'leaf'}
     <!-- Delegate to Leaf.svelte for rendering -->
     <Leaf 
       node={{ slot: 'root', leaf: view }}
-      data={data || {}}
+      data={dataForViews}
       onEvent={handleEvent}
     />
   {/if}

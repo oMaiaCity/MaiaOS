@@ -1,9 +1,11 @@
 /**
  * Skill Types - Generic interface for all actions/functions/services
  * Future-ready for LLM skill calls
+ * 
+ * JAZZ-NATIVE ARCHITECTURE:
+ * - Skills now accept actor: any (Jazz CoMap instance, not data: Data)
+ * - accountCoState passed as parameter (not via data._jazzAccountCoState)
  */
-
-import type { Data } from '../dataStore'
 
 /**
  * Skill Metadata - Describes a skill for registry and future LLM integration
@@ -49,9 +51,9 @@ export interface SkillMetadata {
 
 /**
  * Skill Function - The actual implementation
- * All skills operate on unified data interface
+ * Jazz-native architecture: operates on actor CoMap instance directly
  */
-export type SkillFunction = (data: Data, payload?: unknown) => void | Promise<void>
+export type SkillFunction = (actor: any, payload?: unknown, accountCoState?: any) => void | Promise<void>
 
 /**
  * Skill Definition - Complete skill with metadata and function

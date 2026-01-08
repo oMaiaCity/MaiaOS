@@ -202,6 +202,112 @@ if (actor?.$isLoaded) {
 }
 ```
 
+### Jazz-Native Entity Queries (useQuery)
+
+**The `useQuery` hook provides reactive subscriptions to Jazz entities** - no local state, just direct CoState subscriptions:
+
+```typescript
+import { useQuery } from '../compositor/useQuery.svelte'
+
+// Reactive query - subscribes directly to Jazz CoState
+const queryResult = useQuery(
+  () => accountCoState,      // Jazz account (reactive)
+  () => 'Human',             // Schema name to query
+  {                          // Optional query options
+    filter: { status: 'active' },
+    sort: { field: 'name', order: 'asc' },
+    limit: 10
+  }
+)
+
+// Access results - automatically updates when Jazz data changes
+const humans = queryResult.entities  // Plain JavaScript objects
+const isLoading = queryResult.isLoading
+const loadingState = queryResult.loadingState
+```
+
+**How useQuery Works (Jazz-Native Architecture)**:
+
+```typescript
+// 1. Direct CoState subscription to entities
+const entities = $derived.by(() => {
+  const account = accountCoState.current     // CoState.current (reactive)
+  const root = account.root                  // Direct CoValue access
+  const entitiesList = root.entities         // CoList subscription ✅
+  const schemata = root.schemata            // CoList subscription ✅
+  
+  // 2. Find target schema by name
+  let targetSchemaId: string | null = null
+  for (const schema of schemata) {
+    const schemaSnapshot = schema.$jazz?.raw?.toJSON()
+    if (schemaSnapshot?.name === currentSchemaName) {
+      targetSchemaId = schema.$jazz?.id
+      break
+    }
+  }
+  
+  // 3. Filter entities by @schema ID (Jazz-native filtering)
+  const results: any[] = []
+  for (const entity of entitiesList) {
+    const snapshot = entity.$jazz?.raw?.toJSON()
+    if (snapshot?.['@schema'] === targetSchemaId) {
+      // 4. Convert to plain object AFTER subscription
+      results.push(coValueToPlainObject(entity))
+    }
+  }
+  
+  return results
+})
+```
+
+**Key Benefits**:
+- 🔥 **Jazz-native reactivity**: Direct CoState subscriptions
+- 🚀 **Automatic sync**: Changes propagate across all devices
+- 📦 **No local state**: All data comes from Jazz CoValues
+- 🎯 **Plain objects**: UI gets simple objects, no `$isLoaded` checks needed
+- ⚡ **Reactive**: `$derived.by()` re-evaluates when Jazz data changes
+
+**Actor Integration**:
+
+```typescript
+// Actor declares its data needs
+const listActor = Actor.create({
+  context: {
+    queries: {
+      humans: {
+        schemaName: 'Human',  // What data we need
+        items: []             // Populated by useQuery
+      }
+    }
+  },
+  view: {
+    foreach: {
+      items: 'queries.humans.items',  // Data path to array
+      // ...
+    }
+  }
+}, group)
+
+// ActorRenderer resolves queries automatically
+const schemaName = $derived.by(() => {
+  const queries = actor.context?.queries
+  return Object.values(queries)[0]?.schemaName || ''
+})
+
+const queryResult = useQuery(() => accountCoState, () => schemaName)
+
+// Populate context (derived, doesn't mutate Jazz)
+const resolvedContext = $derived.by(() => ({
+  ...actor.context,
+  queries: {
+    humans: {
+      ...actor.context.queries.humans,
+      items: queryResult.entities  // Plain objects
+    }
+  }
+}))
+```
+
 ---
 
 ## 🎨 Actor Integration

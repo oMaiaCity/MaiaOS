@@ -112,6 +112,7 @@ export const VibesRegistry = co.map({
 	vibes: z.string().optional(),
 	humans: z.string().optional(),
 	designTemplates: z.string().optional(),
+	todos: z.string().optional(),
 })
 
 /** The account root is an app-specific per-user private `CoMap`
@@ -358,21 +359,21 @@ export const JazzAccount = co
 		
 		if (rootWithData.$jazz.has('vibes')) {
 			try {
-				// Try to load it and verify it's a proper CoMap
-				const rootWithVibes = await rootWithData.$jazz.ensureLoaded({
-					resolve: { vibes: true },
-				})
-				const existingVibes = rootWithVibes.vibes
-				
-				// Check if it's a proper CoMap with $jazz.get method
-				if (!existingVibes || typeof existingVibes === 'string' || typeof existingVibes.$jazz?.get !== 'function') {
-					console.log('[Migration] root.vibes exists but is broken (not a proper CoMap), will recreate')
-					needsVibesRecreation = true
-					rootAny.$jazz.delete('vibes')
-					await rootWithData.$jazz.waitForSync()
-				} else {
-					console.log('[Migration] root.vibes exists and is valid')
-				}
+			// Try to load it and verify it's a proper CoMap
+			const rootWithVibes = await rootWithData.$jazz.ensureLoaded({
+				resolve: { vibes: true },
+			})
+			const existingVibes = rootWithVibes.vibes
+			
+			// Check if it's a proper CoMap (has $isLoaded property and is not a string)
+			if (!existingVibes || typeof existingVibes === 'string' || !existingVibes.$jazz?.id) {
+				console.log('[Migration] root.vibes exists but is broken (not a proper CoMap), will recreate')
+				needsVibesRecreation = true
+				rootAny.$jazz.delete('vibes')
+				await rootWithData.$jazz.waitForSync()
+			} else {
+				console.log('[Migration] root.vibes exists and is valid')
+			}
 			} catch (error) {
 				console.log('[Migration] Error loading root.vibes, will recreate:', error)
 				needsVibesRecreation = true

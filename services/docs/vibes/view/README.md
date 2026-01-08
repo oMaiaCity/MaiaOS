@@ -238,6 +238,120 @@ const adaptiveGrid: LeafNode = {
 
 ---
 
+## 🔄 Jazz-Native Data Flow
+
+### From CoState to UI (useQuery Architecture)
+
+**The view layer receives data via Jazz-native reactive queries:**
+
+```typescript
+// 1. Actor declares data needs
+const listActor = Actor.create({
+  context: {
+    queries: {
+      humans: {
+        schemaName: 'Human',  // What data we need
+        items: []             // Populated by useQuery
+      }
+    }
+  },
+  view: {
+    container: { layout: 'flex', class: 'flex-col gap-2' },
+    foreach: {
+      items: 'queries.humans.items',  // Data path to query results
+      key: 'id',
+      composite: {
+        children: [
+          {
+            slot: 'name',
+            leaf: { tag: 'div', bindings: { text: 'item.name' } }
+          }
+        ]
+      }
+    }
+  }
+}, group)
+
+// 2. ActorRenderer resolves queries
+const schemaName = $derived.by(() => {
+  const queries = actor.context?.queries
+  return Object.values(queries)[0]?.schemaName || ''
+})
+
+// 3. useQuery subscribes directly to Jazz CoValues
+const queryResult = useQuery(() => accountCoState, () => schemaName)
+
+// 4. Populate context (derived, doesn't mutate Jazz)
+const resolvedContext = $derived.by(() => ({
+  ...actor.context,
+  queries: {
+    humans: {
+      ...actor.context.queries.humans,
+      items: queryResult.entities  // Plain objects for easy UI consumption
+    }
+  }
+}))
+
+// 5. UI renders with plain objects
+<Composite 
+  node={{ slot: 'root', composite: actor.view }}
+  actor={actor}
+  queries={resolvedContext.queries}
+  onEvent={handleEvent}
+/>
+```
+
+**Data Flow Architecture**:
+
+```
+Jazz CoValues (account.root.entities)
+    ↓ (CoState subscription)
+useQuery (reactive $derived.by)
+    ↓ (plain object conversion)
+actor.context.queries (derived)
+    ↓ (data path resolution)
+Composite/Leaf bindings
+    ↓ (reactive render)
+UI Display
+```
+
+**Key Benefits**:
+- **Direct CoState subscriptions**: No local state copying
+- **Reactive**: UI automatically updates when Jazz data changes
+- **Plain objects**: Simple property access in templates (`item.name`)
+- **No $isLoaded checks**: Entities already converted before rendering
+- **Collaborative**: Changes sync across all devices automatically
+
+### Data Path Resolution
+
+View bindings use **data paths** to access nested data:
+
+```typescript
+// Simple property
+bindings: { text: 'item.name' }
+// Resolves to: item.name
+
+// Nested property
+bindings: { text: 'item.profile.avatar' }
+// Resolves to: item.profile.avatar
+
+// Query results
+bindings: { foreach: { items: 'queries.humans.items' } }
+// Resolves to: actor.context.queries.humans.items
+
+// Context data
+bindings: { text: 'context.currentView' }
+// Resolves to: actor.context.currentView
+```
+
+**Resolution Scope** (in order of precedence):
+1. `item` - Current foreach item
+2. `queries` - Query results from useQuery
+3. `context` - Actor context data
+4. `childActors` - Child actor references
+
+---
+
 ## 📋 Data Bindings
 
 ### Value Binding (Inputs)
@@ -248,13 +362,15 @@ const inputLeaf: LeafNode = {
   attributes: { type: 'text', placeholder: 'Enter text...' },
   classes: 'px-4 py-2 border rounded',
   bindings: {
-    value: 'data.newTodoText'  // Two-way binding
+    value: 'context.newTodoText'  // Two-way binding to actor context
   },
   events: {
-    input: { event: 'UPDATE_INPUT', payload: 'data.newTodoText' }
+    input: { event: '@ui/updateInput', payload: { text: 'context.newTodoText' } }
   }
 }
 ```
+
+**Note**: Input values bind to `context` properties, which are managed by the actor's context object.
 
 ### Text Binding
 
@@ -263,7 +379,16 @@ const textLeaf: LeafNode = {
   tag: 'span',
   classes: 'text-slate-700',
   bindings: {
-    text: 'data.title'  // Displays data.title
+    text: 'item.name'  // Direct property access (from foreach item)
+  }
+}
+
+// Or from context
+const titleLeaf: LeafNode = {
+  tag: 'h1',
+  classes: 'text-2xl font-bold',
+  bindings: {
+    text: 'context.title'  // From actor context
   }
 }
 ```
@@ -275,36 +400,89 @@ const errorLeaf: LeafNode = {
   tag: 'div',
   classes: 'text-red-500 text-sm',
   bindings: {
-    visible: 'data.error !== null',  // Only visible when error exists
-    text: 'data.error'
+    visible: 'context.error !== null',  // Only visible when error exists
+    text: 'context.error'
   }
 }
 ```
 
-### Foreach Binding (List Rendering)
+**Note**: Visibility can also be controlled at the actor level via `actor.context.visible` (default: `false`). Actors must explicitly set `visible: true` to render.
+
+### Foreach Binding (Jazz-Native List Rendering)
+
+**Foreach loops render data from Jazz-native queries:**
 
 ```typescript
-const listLeaf: LeafNode = {
-  tag: 'div',
-  classes: 'flex flex-col gap-2',
-  bindings: {
+// In Actor view definition
+const listActor = Actor.create({
+  context: {
+    queries: {
+      todos: {
+        schemaName: 'Todo',  // useQuery subscribes to Jazz entities
+        items: []            // Populated reactively by ActorRenderer
+      }
+    }
+  },
+  view: {
+    container: { layout: 'flex', class: 'flex-col gap-2' },
     foreach: {
-      items: 'data.todos',  // Array to iterate
-      key: 'id',            // Tracking key
-      leaf: {
-        tag: 'div',
-        classes: 'px-4 py-2 bg-white rounded',
-        elements: [
+      items: 'queries.todos.items',  // Data path to query results
+      key: 'id',                     // Tracking key
+      composite: {
+        container: { layout: 'flex', class: 'flex-row items-center gap-2' },
+        children: [
           {
-            tag: 'span',
-            bindings: { text: 'item.text' }  // Access current item
+            slot: 'text',
+            leaf: {
+              tag: 'span',
+              classes: 'flex-1',
+              bindings: { text: 'item.text' }  // Direct property access!
+            }
+          },
+          {
+            slot: 'status',
+            leaf: {
+              tag: 'span',
+              classes: 'text-xs',
+              bindings: { 
+                text: "item.processed ? '✓ Done' : '○ Pending'"  // Expressions work!
+              }
+            }
+          },
+          {
+            slot: 'delete',
+            leaf: {
+              tag: 'button',
+              elements: ['✕'],
+              events: {
+                click: {
+                  event: 'DELETE_TODO',
+                  payload: { id: 'item.id' }  // Resolved to actual ID
+                }
+              }
+            }
           }
         ]
       }
     }
   }
-}
+}, group)
 ```
+
+**How It Works**:
+1. **Actor declares**: `queries.todos.schemaName = 'Todo'`
+2. **useQuery subscribes**: Direct CoState subscription to `account.root.entities`
+3. **Entities filtered**: By matching `@schema` IDs
+4. **Converted to plain objects**: `coValueToPlainObject(entity)`
+5. **Populated**: `queries.todos.items = [...]` (plain objects)
+6. **Foreach iterates**: Over `queries.todos.items`
+7. **Reactive updates**: When Jazz data changes, UI updates automatically
+
+**Key Benefits**:
+- **Direct property access**: `item.text`, `item.processed` (no `$isLoaded` checks!)
+- **Reactive**: Automatically updates when Jazz entities change
+- **Collaborative**: Changes sync across all devices
+- **Simple**: Plain objects, no Jazz internals exposed to UI
 
 ---
 
@@ -332,15 +510,21 @@ const buttonLeaf: LeafNode = {
 const inputLeaf: LeafNode = {
   tag: 'input',
   classes: 'px-4 py-2 border rounded',
-  bindings: { value: 'data.newTodoText' },
+  bindings: { value: 'context.newTodoText' },
   events: {
     input: {
-      event: 'UPDATE_INPUT',
-      payload: 'data.newTodoText'  // Automatically wrapped as { text: value }
+      event: '@ui/updateInput',
+      payload: { text: 'context.newTodoText' }  // Data path resolved by ActorRenderer
     }
   }
 }
 ```
+
+**How It Works**:
+1. User types in input
+2. Event fires: `@ui/updateInput` with payload `{ text: <actual_value> }`
+3. Skill mutates Jazz CoValue or actor context
+4. UI re-renders reactively with new value
 
 ### Form Events
 

@@ -5,7 +5,7 @@
  */
 
 import type { ViewNode } from './types'
-import type { CompositeConfig } from './types'
+import type { CompositeNode } from './types'
 
 /**
  * Convert child ViewNode properties to Tailwind classes
@@ -137,7 +137,7 @@ export function getChildClasses(child: ViewNode, parentType: string): string[] {
  * Convert child ViewNode grid properties to Tailwind classes
  * Must be called separately with parentConfig to access grid type
  */
-export function getChildGridClasses(child: ViewNode, parentConfig: CompositeConfig): string[] {
+export function getChildGridClasses(child: ViewNode, parentConfig: CompositeNode): string[] {
 	const classes: string[] = []
 
 	// Grid-specific properties - convert to Tailwind arbitrary values

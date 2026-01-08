@@ -3,9 +3,14 @@
  * Works with any schema (Todo, Human, AssignedTo, etc.)
  * Each skill is self-contained and can be called independently
  * Future-ready for LLM skill calls
+ * 
+ * JAZZ-NATIVE ARCHITECTURE:
+ * - Skills accept actor: any (Jazz CoMap instance)
+ * - Entity skills mutate entity CoValues directly in root.entities
+ * - UI skills mutate actor.context directly
+ * - All mutations are followed by Jazz sync (await actor.$jazz.waitForSync())
  */
 
-import type { Data } from '../dataStore'
 import type { Skill } from './types'
 import {
 	createEntityGeneric,
@@ -31,38 +36,22 @@ const createEntitySkill: Skill = {
 				},
 				entityData: {
 					type: 'object',
-					description: 'The entity data to create (required if dataPath not provided)',
-					required: false,
-				},
-				dataPath: {
-					type: 'string',
-					description: 'Optional: Data path to read value from (e.g., "view.newTodoText")',
-					required: false,
-				},
-				buildEntityData: {
-					type: 'function',
-					description: 'Optional: Function to build entityData from dataPath value',
-					required: false,
+					description: 'The entity data to create',
+					required: true,
 				},
 				clearFieldPath: {
 					type: 'string',
-					description: 'Optional: Field path to clear after successful creation',
+					description: 'Optional: Field path in actor.context to clear after successful creation',
 					required: false,
 				},
 			},
-			required: ['schemaName'],
+			required: ['schemaName', 'entityData'],
 		},
 	},
-	execute: async (data: Data, payload?: unknown) => {
-		// Universal payload interface - works for any schema
+	execute: async (actor: any, payload?: unknown, accountCoState?: any) => {
 		const payloadData = (payload as {
 			schemaName?: string
 			entityData?: Record<string, unknown>
-			// Optional: field path to read entityData from (e.g., "view.newTodoText" -> extract and build entityData)
-			dataPath?: string
-			// Optional: callback to build entityData from data path value
-			buildEntityData?: (value: unknown) => Record<string, unknown>
-			// Optional: field path to clear after successful creation
 			clearFieldPath?: string
 		}) || {}
 
@@ -72,85 +61,61 @@ const createEntitySkill: Skill = {
 			throw new Error('schemaName is required in payload')
 		}
 
-		// Build entityData - fully generic approach
-		let entityData: Record<string, unknown> = payloadData.entityData || {}
-
-		// If entityData not provided but dataPath is, try to extract from data path
-		if (!entityData || Object.keys(entityData).length === 0) {
-			if (payloadData.dataPath && payloadData.buildEntityData) {
-				// Navigate to data path
-				const pathParts = payloadData.dataPath.split('.')
-				let target: unknown = data
-				for (const part of pathParts) {
-					if (target && typeof target === 'object' && part in target) {
-						target = (target as Record<string, unknown>)[part]
-					} else {
-						target = null
-						break
-					}
-				}
-				// Build entityData using provided callback
-				if (target !== null && target !== undefined) {
-					entityData = payloadData.buildEntityData(target)
-				}
-			}
-		}
+		const entityData: Record<string, unknown> = payloadData.entityData || {}
 
 		if (!entityData || Object.keys(entityData).length === 0) {
-			throw new Error('entityData is required (provide entityData directly or use dataPath + buildEntityData)')
+			throw new Error('entityData is required')
 		}
 
-		// Check if Jazz AccountCoState is available - fail fast if not (clean CoState pattern)
-		const accountCoState = data._jazzAccountCoState as any
+		// Get Jazz account from accountCoState parameter
 		if (!accountCoState) {
-			if (!data.view) data.view = {}
-			const view = data.view as Data
-			view.error = 'Jazz AccountCoState not available'
-			data.view = { ...view }
+			actor.context.error = 'Jazz AccountCoState not available'
+			await actor.$jazz.waitForSync()
 			return
 		}
 
-		// Get the current account from CoState
 		const jazzAccount = accountCoState.current
 		if (!jazzAccount || !jazzAccount.$isLoaded) {
-			if (!data.view) data.view = {}
-			const view = data.view as Data
-			view.error = 'Jazz account not loaded'
-			data.view = { ...view }
+			actor.context.error = 'Jazz account not loaded'
+			await actor.$jazz.waitForSync()
 			return
 		}
 
 		// Use generic CREATE function
+		console.log('[entity-skills] @entity/createEntity - Calling createEntityGeneric:', {
+			schemaName,
+			entityData,
+			hasJazzAccount: !!jazzAccount,
+		});
 		try {
 			const result = await createEntityGeneric(jazzAccount, schemaName, entityData)
+			console.log('[entity-skills] @entity/createEntity - Entity created successfully:', result);
 			
-			// Clear field if clearFieldPath is provided
+			// Clear field in actor.context if clearFieldPath is provided
 			if (payloadData.clearFieldPath) {
 				const pathParts = payloadData.clearFieldPath.split('.')
-				let target: Data = data
+				let target: any = actor.context
 				for (let i = 0; i < pathParts.length - 1; i++) {
 					const part = pathParts[i]
 					if (!target[part]) {
 						target[part] = {}
 					}
-					target = target[part] as Data
+					target = target[part]
 				}
 				const finalKey = pathParts[pathParts.length - 1]
 				target[finalKey] = ''
-				
-				// Clear error
-				if (!data.view) data.view = {}
-				const view = data.view as Data
-				view.error = null
-				data.view = { ...view }
 			}
 			
-			// Subscription will update data.queries automatically
+			// Clear error
+			actor.context.error = null
+			
+			// Sync actor context to Jazz
+			await actor.$jazz.waitForSync()
+			
+			// Entity automatically appears in queries via Jazz reactivity
 		} catch (error) {
-			if (!data.view) data.view = {}
-			const view = data.view as Data
-			view.error = `Failed to create ${schemaName} entity: ${error instanceof Error ? error.message : 'Unknown error'}`
-			data.view = { ...view }
+			actor.context.error = `Failed to create ${schemaName} entity: ${error instanceof Error ? error.message : 'Unknown error'}`
+			await actor.$jazz.waitForSync()
 		}
 	},
 }
@@ -183,7 +148,9 @@ const updateEntitySkill: Skill = {
 			required: ['id'],
 		},
 	},
-	execute: async (data: Data, payload?: unknown) => {
+	execute: async (actor: any, payload?: unknown, accountCoState?: any) => {
+		console.log('[updateEntitySkill] Received payload:', payload);
+		
 		const payloadData = (payload as {
 			id?: string
 			updates?: Record<string, unknown>
@@ -192,8 +159,11 @@ const updateEntitySkill: Skill = {
 		}) || {}
 
 		const { id, updates, status, ...otherFields } = payloadData
+		
+		console.log('[updateEntitySkill] Parsed:', { id, updates, status, otherFields });
 
 		if (!id) {
+			console.error('[updateEntitySkill] No ID provided');
 			throw new Error('id is required')
 		}
 
@@ -209,18 +179,19 @@ const updateEntitySkill: Skill = {
 		if (Object.keys(otherFields).length > 0) {
 			finalUpdates = { ...finalUpdates, ...otherFields }
 		}
+		
+		console.log('[updateEntitySkill] Final updates:', finalUpdates);
 
 		if (!finalUpdates || Object.keys(finalUpdates).length === 0) {
+			console.error('[updateEntitySkill] No updates provided');
 			throw new Error('updates are required (provide updates object or individual fields like status)')
 		}
 
-		// Check if Jazz AccountCoState is available - fail fast if not (clean CoState pattern)
-		const accountCoState = data._jazzAccountCoState as any
+		// Get Jazz account from accountCoState parameter
 		if (!accountCoState) {
 			throw new Error('Jazz AccountCoState not available')
 		}
 
-		// Get the current account from CoState
 		const jazzAccount = accountCoState.current
 		if (!jazzAccount || !jazzAccount.$isLoaded) {
 			throw new Error('Jazz account not loaded')
@@ -279,13 +250,15 @@ const updateEntitySkill: Skill = {
 			// #endregion
 
 			// Update using generic UPDATE function
+			console.log('[updateEntitySkill] Calling updateEntityGeneric with:', { id, finalUpdates });
 			await updateEntityGeneric(jazzAccount, coValue, finalUpdates)
+			console.log('[updateEntitySkill] ✅ Update completed successfully');
 
 			// #region agent log
 			fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'updateEntity:success',message:'Update completed successfully',data:{id,updates:finalUpdates},timestamp:Date.now(),sessionId:'debug-session',runId:'update',hypothesisId:'P'})}).catch(()=>{});
 			// #endregion
 
-			// Subscription will update data.queries automatically
+			// Jazz CoState reactivity updates queries automatically
 		} catch (error) {
 			// #region agent log
 			fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'updateEntity:error',message:'Update failed with error',data:{id,error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'update',hypothesisId:'P'})}).catch(()=>{});
@@ -313,20 +286,18 @@ const deleteEntitySkill: Skill = {
 			required: ['id'],
 		},
 	},
-	execute: async (data: Data, payload?: unknown) => {
+	execute: async (actor: any, payload?: unknown, accountCoState?: any) => {
 		const { id } = (payload as { id?: string }) || {}
 
 		if (!id) {
 			throw new Error('id is required')
 		}
 
-		// Check if Jazz AccountCoState is available - fail fast if not (clean CoState pattern)
-		const accountCoState = data._jazzAccountCoState as any
+		// Get Jazz account from accountCoState parameter
 		if (!accountCoState) {
 			throw new Error('Jazz AccountCoState not available')
 		}
 
-		// Get the current account from CoState
 		const jazzAccount = accountCoState.current
 		if (!jazzAccount || !jazzAccount.$isLoaded) {
 			throw new Error('Jazz account not loaded')
@@ -335,7 +306,7 @@ const deleteEntitySkill: Skill = {
 		// Use generic DELETE function
 		try {
 			await deleteEntityGeneric(jazzAccount, id)
-			// Subscription will update data.queries automatically
+			// Jazz CoState reactivity updates queries automatically
 		} catch (error) {
 			throw error // Re-throw to surface the error
 		}
@@ -375,7 +346,7 @@ const toggleEntityStatusSkill: Skill = {
 			required: ['id'],
 		},
 	},
-	execute: async (data: Data, payload?: unknown) => {
+	execute: async (actor: any, payload?: unknown, accountCoState?: any) => {
 		const {
 			id,
 			statusField = 'status',
@@ -399,13 +370,11 @@ const toggleEntityStatusSkill: Skill = {
 
 		// Schema is automatically detected from the entity's @schema property in updateEntityGeneric
 
-		// Check if Jazz AccountCoState is available - fail fast if not (clean CoState pattern)
-		const accountCoState = data._jazzAccountCoState as any
+		// Get Jazz account from accountCoState parameter
 		if (!accountCoState) {
 			throw new Error('Jazz AccountCoState not available')
 		}
 
-		// Get the current account from CoState
 		const jazzAccount = accountCoState.current
 		if (!jazzAccount || !jazzAccount.$isLoaded) {
 			throw new Error('Jazz account not loaded')
@@ -486,7 +455,7 @@ const toggleEntityStatusSkill: Skill = {
 			fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'toggleStatus:success',message:'Toggle completed successfully',data:{id,newStatus,statusField},timestamp:Date.now(),sessionId:'debug-session',runId:'toggle',hypothesisId:'Q'})}).catch(()=>{});
 			// #endregion
 
-			// Subscription will update data.queries automatically
+			// Jazz CoState reactivity updates queries automatically
 		} catch (error) {
 			// #region agent log
 			fetch('http://127.0.0.1:7242/ingest/0502c68d-2038-4cdc-b211-5f59eeaffa1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'toggleStatus:error',message:'Toggle failed with error',data:{id,error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'toggle',hypothesisId:'Q'})}).catch(()=>{});
@@ -512,14 +481,14 @@ const clearEntitiesSkill: Skill = {
 				},
 				queryKey: {
 					type: 'string',
-					description: 'The query key in data.queries (e.g., "todos", "humans")',
+					description: 'The query key in actor.context.queries (e.g., "todos", "humans")',
 					required: true,
 				},
 			},
 			required: ['schemaName', 'queryKey'],
 		},
 	},
-	execute: async (data: Data, payload?: unknown) => {
+	execute: async (actor: any, payload?: unknown, accountCoState?: any) => {
 		const payloadData = (payload as {
 			schemaName?: string
 			queryKey?: string
@@ -538,18 +507,14 @@ const clearEntitiesSkill: Skill = {
 			queryKey = `${schemaName.toLowerCase()}s` // 'Todo' -> 'todos', 'Human' -> 'humans'
 		}
 
-		// Ensure data.queries exists
-		if (!data.queries) data.queries = {}
+		// Get entities from actor.context.queries
+		const queries = (actor.context.queries as any) || {}
 
-		const queries = data.queries as Data
-
-		// Check if Jazz AccountCoState is available - fail fast if not (clean CoState pattern)
-		const accountCoState = data._jazzAccountCoState as any
+		// Get Jazz account from accountCoState parameter
 		if (!accountCoState) {
 			throw new Error('Jazz AccountCoState not available')
 		}
 
-		// Get the current account from CoState
 		const jazzAccount = accountCoState.current
 		if (!jazzAccount || !jazzAccount.$isLoaded) {
 			throw new Error('Jazz account not loaded')
@@ -557,19 +522,21 @@ const clearEntitiesSkill: Skill = {
 
 		// Use generic DELETE function to delete all entities
 		try {
-			const entities = (queries[queryKey] as Array<{ id?: string }>) || []
+			const queryData = queries[queryKey] || {}
+			const entities = (queryData.items || queryData || []) as Array<any>
 			// Delete all entities from Jazz
 			for (const entity of entities) {
-				if (entity.id) {
+				const entityId = entity.id || entity.$jazz?.id
+				if (entityId) {
 					try {
-						await deleteEntityGeneric(jazzAccount, entity.id)
+						await deleteEntityGeneric(jazzAccount, entityId)
 					} catch (error) {
 						// Log error but continue with next entity
-						console.error(`Failed to delete ${schemaName} entity ${entity.id}:`, error)
+						console.error(`Failed to delete ${schemaName} entity ${entityId}:`, error)
 					}
 				}
 			}
-			// Subscription will update data.queries automatically
+			// Jazz CoState reactivity updates queries automatically
 		} catch (error) {
 			throw error // Re-throw to surface the error
 		}
@@ -582,55 +549,53 @@ const updateInputSkill: Skill = {
 	metadata: {
 		id: '@ui/updateInput',
 		name: 'Update Input',
-		description: 'Updates the input field value',
+		description: 'Updates the input field value in actor.context',
 		category: 'ui',
 		parameters: {
 			type: 'object',
 			properties: {
-				text: {
-					type: 'string',
-					description: 'The new input text value',
-					required: true,
-				},
 				fieldPath: {
 					type: 'string',
-					description: 'Data path to update (default: "view.newTodoText")',
+					description: 'Field path in actor.context to update (e.g., "newTodoText")',
+					required: true,
+				},
+				value: {
+					type: 'string',
+					description: 'The new value (defaults to empty string if not provided)',
 					required: false,
 				},
 			},
-			required: ['text'],
+			required: ['fieldPath'],
 		},
 	},
-	execute: (data: Data, payload?: unknown) => {
+	execute: async (actor: any, payload?: unknown) => {
 		const payloadData = (payload as {
-			text?: string
-			fieldPath?: string // Data path to update (e.g., "view.newTodoText")
+			fieldPath?: string
+			value?: unknown
 		}) || {}
 
-		const text = payloadData.text
-		const fieldPath = payloadData.fieldPath || 'view.newTodoText' // Default for backward compatibility
+		const fieldPath = payloadData.fieldPath
+		const value = payloadData.value !== undefined ? payloadData.value : ''
 
-		if (text === undefined) return
+		if (!fieldPath) return
 
-		// Navigate to the target field
+		// Navigate to the target field in actor.context
 		const pathParts = fieldPath.split('.')
-		let target: Data = data
+		let target: any = actor.context
 		for (let i = 0; i < pathParts.length - 1; i++) {
 			const part = pathParts[i]
 			if (!target[part]) {
 				target[part] = {}
 			}
-			target = target[part] as Data
+			target = target[part]
 		}
 
 		// Set the field value
 		const finalKey = pathParts[pathParts.length - 1]
-		target[finalKey] = text
+		target[finalKey] = value
 
-		// Create new object reference to ensure reactivity
-		if (data.view) {
-			data.view = { ...(data.view as Data) }
-		}
+		// Sync to Jazz
+		await actor.$jazz.waitForSync()
 	},
 }
 
@@ -638,45 +603,46 @@ const clearInputSkill: Skill = {
 	metadata: {
 		id: '@ui/clearInput',
 		name: 'Clear Input',
-		description: 'Clears the input field',
+		description: 'Clears the input field in actor.context',
 		category: 'ui',
 		parameters: {
 			type: 'object',
 			properties: {
 				fieldPath: {
 					type: 'string',
-					description: 'Data path to clear (default: "view.newTodoText")',
-					required: false,
+					description: 'Field path in actor.context to clear',
+					required: true,
 				},
 			},
+			required: ['fieldPath'],
 		},
 	},
-	execute: (data: Data, payload?: unknown) => {
+	execute: async (actor: any, payload?: unknown) => {
 		const payloadData = (payload as {
-			fieldPath?: string // Data path to clear (e.g., "view.newTodoText")
+			fieldPath?: string
 		}) || {}
 
-		const fieldPath = payloadData.fieldPath || 'view.newTodoText' // Default for backward compatibility
+		const fieldPath = payloadData.fieldPath
 
-		// Navigate to the target field
+		if (!fieldPath) return
+
+		// Navigate to the target field in actor.context
 		const pathParts = fieldPath.split('.')
-		let target: Data = data
+		let target: any = actor.context
 		for (let i = 0; i < pathParts.length - 1; i++) {
 			const part = pathParts[i]
 			if (!target[part]) {
 				target[part] = {}
 			}
-			target = target[part] as Data
+			target = target[part]
 		}
 
 		// Clear the field
 		const finalKey = pathParts[pathParts.length - 1]
 		target[finalKey] = ''
 
-		// Create new object reference to ensure reactivity
-		if (data.view) {
-			data.view = { ...(data.view as Data) }
-		}
+		// Sync to Jazz
+		await actor.$jazz.waitForSync()
 	},
 }
 
@@ -684,109 +650,47 @@ const swapViewNodeSkill: Skill = {
 	metadata: {
 		id: '@ui/swapViewNode',
 		name: 'Swap View Node',
-		description: 'Swaps any view node config (composite or leaf) by ID. Generic universal action for config swapping.',
+		description: 'Swaps child actor in ANY composite\'s children array (hierarchy-aware). Adds/removes actor IDs from actor.children.',
 		category: 'ui',
 		parameters: {
 			type: 'object',
 			properties: {
-				nodeId: {
+				removeId: {
 					type: 'string',
-					description: 'The ID of the view node (composite or leaf) to swap to',
-					required: true,
+					description: 'Actor ID to remove from children array',
+					required: false,
 				},
-				targetPath: {
+				addId: {
 					type: 'string',
-					description: 'The data path where the node ID should be stored (e.g., "view.contentNodeId")',
-					required: true,
-				},
-				nodeType: {
-					type: 'string',
-					description: 'Optional type hint: "composite" or "leaf" (auto-detected if omitted)',
+					description: 'Actor ID to add to children array',
 					required: false,
 				},
 			},
-			required: ['nodeId', 'targetPath'],
 		},
 	},
-	execute: (data: Data, payload?: unknown) => {
-		const { nodeId, targetPath, nodeType } = (payload as {
-			nodeId?: string
-			targetPath?: string
-			nodeType?: 'composite' | 'leaf'
+	execute: async (actor: any, payload?: unknown) => {
+		const { removeId, addId } = (payload as {
+			removeId?: string
+			addId?: string
 		}) || {}
 
-		if (!nodeId || !targetPath) return
+		if (!actor.children?.$isLoaded) return
 
-		const pathParts = targetPath.split('.')
-
-		// Navigate to the target object
-		let target: Data = data
-		for (let i = 0; i < pathParts.length - 1; i++) {
-			const part = pathParts[i]
-			if (!target[part]) {
-				target[part] = {}
+		// Remove old child
+		if (removeId) {
+			const index = actor.children.findIndex((id: string) => id === removeId)
+			if (index !== -1) {
+				actor.children.$jazz.splice(index, 1)
 			}
-			target = target[part] as Data
 		}
 
-		// Set the node ID
-		const finalKey = pathParts[pathParts.length - 1]
-		target[finalKey] = nodeId
-
-		// Create new object reference to ensure reactivity
-		// Deep copy nested objects to ensure reactivity
-		if (data.view) {
-			data.view = { ...(data.view as Data) }
-		}
-	},
-}
-
-const setViewSkill: Skill = {
-	metadata: {
-		id: '@ui/setView',
-		name: 'Set View',
-		description: 'Sets the view mode and swaps the content composite (list, kanban, timeline)',
-		category: 'ui',
-		parameters: {
-			type: 'object',
-			properties: {
-				viewMode: {
-					type: 'string',
-					description: 'The view mode to set (list, kanban, timeline)',
-					required: true,
-				},
-			},
-			required: ['viewMode'],
-		},
-	},
-	execute: (data: Data, payload?: unknown) => {
-		// Ensure data.view exists
-		if (!data.view) data.view = {}
-
-		const view = data.view as Data
-		const viewMode = (payload as { viewMode?: string })?.viewMode
-		if (!viewMode || !['list', 'kanban', 'timeline'].includes(viewMode)) return
-
-		// Map viewMode to composite ID
-		const compositeIdMap: Record<string, string> = {
-			list: 'todo.composite.content.list',
-			kanban: 'todo.composite.content.kanban',
-			timeline: 'todo.composite.content.timeline',
+		// Add new child (if not already present)
+		if (addId && !actor.children.includes(addId)) {
+			actor.children.$jazz.push(addId)
 		}
 
-		const compositeId = compositeIdMap[viewMode]
-		if (compositeId) {
-			// Use the generic swapViewNode action internally
-			swapViewNodeSkill.execute(data, {
-				nodeId: compositeId,
-				targetPath: 'view.contentCompositeId',
-				nodeType: 'composite',
-			})
-			// Also update viewMode for button visibility
-			view.viewMode = viewMode
-			// Create new object reference to ensure reactivity
-			data.view = { ...view }
-		}
+		// Sync to Jazz
+		await actor.$jazz.waitForSync()
 	},
 }
 
@@ -809,46 +713,46 @@ const openModalSkill: Skill = {
 					description: 'Query key to search (default: "todos")',
 					required: false,
 				},
-				entityField: {
-					type: 'string',
-					description: 'Field name in view to store entity (default: "selectedTodo")',
-					required: false,
-				},
 			},
 			required: ['id'],
 		},
 	},
-	execute: (data: Data, payload?: unknown) => {
-		// Ensure data.queries and data.view exist
-		if (!data.queries) data.queries = {}
-		if (!data.view) data.view = {}
-
+	execute: async (actor: any, payload?: unknown) => {
 		const payloadData = (payload as {
 			id?: string
-			queryKey?: string // Query key to search (e.g., "todos", "humans")
-			entityField?: string // Field name in view to store entity (e.g., "selectedTodo", "selectedHuman")
+			queryKey?: string
 		}) || {}
 
 		const id = payloadData.id
-		const queryKey = payloadData.queryKey || 'todos' // Default for backward compatibility
-		const entityField = payloadData.entityField || 'selectedTodo' // Default for backward compatibility
+		const queryKey = payloadData.queryKey || 'todos'
 
-		if (!id) return
+		console.log('[openModalSkill] Opening modal:', { id, queryKey })
 
-		const queries = data.queries as Data
-		const view = data.view as Data
-
-		// Search for entity in the specified query
-		if (queries[queryKey]) {
-			const entities = (queries[queryKey] as Array<{ id: string }>) || []
-			const entity = entities.find((e) => e.id === id)
-			if (entity) {
-				(view as any)[entityField] = entity
-				view.showModal = true
-				// Create new object reference to ensure reactivity
-				data.view = { ...view }
-			}
+		if (!id) {
+			console.warn('[openModalSkill] No entity ID provided')
+			return
 		}
+
+		// Find entity in actor.context.queries
+		const entity = actor.context.queries?.[queryKey]?.items?.find((e: any) => {
+			const entityId = e.id || e.$jazz?.id
+			return entityId === id
+		})
+
+		if (!entity) {
+			console.warn('[openModalSkill] Entity not found:', id, 'in query:', queryKey)
+			return
+		}
+
+		// Update actor.context
+		actor.context.showModal = true
+		actor.context.selectedTodo = entity
+		actor.context.visible = true // Make modal visible
+
+		// Sync to Jazz
+		await actor.$jazz.waitForSync()
+
+		console.log('[openModalSkill] Modal opened, selectedTodo:', entity)
 	},
 }
 
@@ -860,32 +764,163 @@ const closeModalSkill: Skill = {
 		category: 'ui',
 		parameters: {
 			type: 'object',
+			properties: {},
+		},
+	},
+	execute: async (actor: any, payload?: unknown) => {
+		console.log('[closeModalSkill] Closing modal')
+
+		// Update actor.context
+		actor.context.showModal = false
+		actor.context.selectedTodo = null
+		actor.context.visible = false // Hide modal
+
+		// Sync to Jazz
+		await actor.$jazz.waitForSync()
+
+		console.log('[closeModalSkill] Modal closed')
+	},
+}
+
+const toggleVisibleSkill: Skill = {
+	metadata: {
+		id: '@ui/toggleVisible',
+		name: 'Toggle Visible',
+		description: 'Toggle actor.context.visible flag',
+		category: 'ui',
+		parameters: {
+			type: 'object',
 			properties: {
-				entityField: {
-					type: 'string',
-					description: 'Field name in view to clear (default: "selectedTodo")',
+				visible: {
+					type: 'boolean',
+					description: 'Explicit visible value (if not provided, toggles current value)',
 					required: false,
 				},
 			},
 		},
 	},
-	execute: (data: Data, payload?: unknown) => {
-		// Ensure data.view exists
-		if (!data.view) data.view = {}
+	execute: async (actor: any, payload?: unknown) => {
+		const { visible } = (payload as { visible?: boolean }) || {}
+		
+		actor.context.visible = visible !== undefined ? visible : !actor.context.visible
 
-		const payloadData = (payload as {
-			entityField?: string // Field name in view to clear (e.g., "selectedTodo", "selectedHuman")
-		}) || {}
-
-		const entityField = payloadData.entityField || 'selectedTodo' // Default for backward compatibility
-
-		const view = data.view as Data
-		;(view as any).showModal = false
-		;(view as any)[entityField] = null
-		// Create new object reference to ensure reactivity
-		data.view = { ...view }
+		await actor.$jazz.waitForSync()
 	},
 }
+
+const navigateSkill: Skill = {
+	metadata: {
+		id: '@ui/navigate',
+		name: 'Navigate to Vibe',
+		description: 'Navigates to a different vibe by updating browser URL. If vibe not in registry, +page.svelte will initialize it.',
+		category: 'ui',
+		parameters: {
+			type: 'object',
+			properties: {
+				targetActorId: {
+					type: 'string',
+					description: 'The CoValue ID of the target vibe actor to navigate to (direct)',
+					required: false,
+				},
+				vibeName: {
+					type: 'string',
+					description: 'The name of the vibe to navigate to - updates URL to trigger page navigation (e.g., "humans", "todos", "vibes")',
+					required: false,
+				},
+			},
+		},
+	},
+	execute: async (actor: any, payload?: unknown, accountCoState?: any) => {
+		const { targetActorId, vibeName } = payload as { targetActorId?: string; vibeName?: string };
+		
+		if (!targetActorId && !vibeName) {
+			throw new Error('Either targetActorId or vibeName is required');
+		}
+
+		// Update browser URL and let +page.svelte handle the rest
+		if (typeof window !== 'undefined' && window.location) {
+			const url = new URL(window.location.href);
+			
+			if (targetActorId) {
+				// Direct actor ID navigation
+				url.searchParams.set('id', targetActorId);
+				url.searchParams.delete('vibe'); // Remove legacy param
+				console.log(`[navigateSkill] Navigating to actor ID: ${targetActorId}`);
+			} else if (vibeName) {
+				// Vibe name navigation - let +page.svelte handle initialization and loading
+				url.searchParams.set('vibe', vibeName);
+				url.searchParams.delete('id'); // Remove direct ID
+				console.log(`[navigateSkill] Navigating to vibe: ${vibeName}`);
+			}
+			
+			window.history.pushState({}, '', url);
+			console.log(`[navigateSkill] Updated URL to: ${url.pathname}${url.search}`);
+			
+			// Trigger a popstate event to notify +page.svelte of the URL change
+			window.dispatchEvent(new PopStateEvent('popstate'));
+		}
+	},
+};
+
+// ========== SET VIEW SKILL (UI) ==========
+
+const setViewSkill: Skill = {
+	metadata: {
+		id: '@ui/setView',
+		name: 'Set View Mode',
+		description: 'Switch between list/kanban/timeline views',
+		category: 'ui',
+		parameters: {
+			type: 'object',
+			properties: {
+				viewMode: {
+					type: 'string',
+					description: 'View mode to switch to: list, kanban, or timeline',
+					required: true,
+				},
+			},
+		},
+	},
+	execute: async (actor: any, payload?: unknown) => {
+		const { viewMode } = (payload as { viewMode?: string }) || {};
+		
+		if (!viewMode || !['list', 'kanban', 'timeline'].includes(viewMode)) {
+			console.warn('[setViewSkill] Invalid viewMode:', viewMode);
+			return;
+		}
+		
+		console.log('[setViewSkill] Switching to view:', viewMode);
+		
+		// Update root actor's currentView
+		if (actor.context) {
+			(actor.context as any).currentView = viewMode;
+		}
+		
+		// Toggle visibility of content actors based on view mode
+		if (actor.children?.$isLoaded) {
+			const { CoState } = await import('jazz-tools/svelte');
+			const { Actor } = await import('@hominio/db');
+			
+			for (const childId of actor.children) {
+				const childCoState = new CoState(Actor, childId);
+				const child = childCoState.current;
+				
+				if (child?.$isLoaded && child.role) {
+					const shouldBeVisible = 
+						(viewMode === 'list' && child.role === 'todos-list-content') ||
+						(viewMode === 'kanban' && child.role === 'todos-kanban-content') ||
+						(viewMode === 'timeline' && child.role === 'todos-timeline-content');
+					
+					if (child.context) {
+						(child.context as any).visible = shouldBeVisible;
+					}
+					
+					console.log(`[setViewSkill] ${child.role} visible:`, shouldBeVisible);
+				}
+			}
+		}
+	},
+};
 
 // ========== VALIDATION SKILL (Generic) ==========
 
@@ -905,7 +940,7 @@ const validateEntityInputSkill: Skill = {
 				},
 				inputPath: {
 					type: 'string',
-					description: 'Data path to input field (default: "view.newTodoText")',
+					description: 'Field path in actor.context to validate',
 					required: false,
 				},
 				errorMessage: {
@@ -916,25 +951,23 @@ const validateEntityInputSkill: Skill = {
 			},
 		},
 	},
-	execute: (data: Data, payload?: unknown) => {
-		if (!data.view) data.view = {}
-		const view = data.view as Data
+	execute: async (actor: any, payload?: unknown) => {
 		const payloadData = (payload as {
 			text?: string
-			inputPath?: string // Data path to input field (e.g., "view.newTodoText")
-			errorMessage?: string // Custom error message
+			inputPath?: string
+			errorMessage?: string
 		}) || {}
 
-		const { text, inputPath = 'view.newTodoText', errorMessage = 'Input text cannot be empty' } = payloadData
+		const { text, inputPath, errorMessage = 'Input text cannot be empty' } = payloadData
 
-		// Get text from payload or data path
+		// Get text from payload or actor.context path
 		let inputText = text
-		if (!inputText) {
+		if (!inputText && inputPath) {
 			const pathParts = inputPath.split('.')
-			let target: unknown = data
+			let target: any = actor.context
 			for (const part of pathParts) {
 				if (target && typeof target === 'object' && part in target) {
-					target = (target as Record<string, unknown>)[part]
+					target = target[part]
 				} else {
 					target = ''
 					break
@@ -944,12 +977,13 @@ const validateEntityInputSkill: Skill = {
 		}
 
 		if (!inputText || !inputText.trim()) {
-			view.error = errorMessage
-			data.view = { ...view }
+			actor.context.error = errorMessage
+			await actor.$jazz.waitForSync()
 			return
 		}
-		view.error = null
-		data.view = { ...view }
+		
+		actor.context.error = null
+		await actor.$jazz.waitForSync()
 	},
 }
 
@@ -958,6 +992,12 @@ const validateEntityInputSkill: Skill = {
 /**
  * All generic entity-related skills
  * Using npm-style scoped names: @scope/skillName
+ * 
+ * JAZZ-NATIVE ARCHITECTURE:
+ * - All skills accept actor: Actor (not data: Data)
+ * - Entity skills mutate entity CoValues in root.entities
+ * - UI skills mutate actor.context directly
+ * - All mutations followed by await actor.$jazz.waitForSync()
  * 
  * Schema Detection:
  * - CREATE: Requires schemaName in payload - entity doesn't exist yet
@@ -975,8 +1015,10 @@ export const entitySkills: Record<string, Skill> = {
 	// UI skills
 	'@ui/updateInput': updateInputSkill,
 	'@ui/clearInput': clearInputSkill,
-	'@ui/swapViewNode': swapViewNodeSkill,
+	'@ui/swapViewNode': swapViewNodeSkill, // NEW: Hierarchy-aware children array manipulation
 	'@ui/setView': setViewSkill,
 	'@ui/openModal': openModalSkill,
 	'@ui/closeModal': closeModalSkill,
+	'@ui/toggleVisible': toggleVisibleSkill, // NEW: Toggle actor visibility
+	'@ui/navigate': navigateSkill, // NEW: Navigate between vibes (complete composite swap)
 }
