@@ -7,7 +7,7 @@
 
 import { Actor, ActorList, ActorMessage, VibesRegistry } from "@hominio/db";
 import { Group, co, z } from "jazz-tools";
-import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf } from '../../design-templates';
+import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf } from '../design-templates';
 
 // Global lock
 const getGlobalLock = () => {
@@ -93,8 +93,6 @@ export async function createHumansActors(account: any) {
 
 	// STEP 1: Create leaf actors (title, create button)
 	const headerTitleActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} },
 		context: { visible: true },
 		view: createTitleLeaf({ text: 'Humans', tag: 'h2' }),
 		dependencies: {},
@@ -106,14 +104,6 @@ export async function createHumansActors(account: any) {
 
 	// Create button - TRUE COLOCATION: handles its own @human/createRandom action
 	const createButtonActor = Actor.create({
-		currentState: 'idle',
-		states: { 
-			idle: {
-				on: {
-					'@human/createRandom': { target: 'idle', actions: ['@human/createRandom'] }
-				}
-			}
-		},
 		context: { visible: true },
 		view: createButtonLeaf({
 			text: 'Create Human',
@@ -132,8 +122,6 @@ export async function createHumansActors(account: any) {
 	
 	// STEP 2: Create composite actors (header, list)
 	const headerActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} },
 		context: { visible: true },
 		view: createHeaderComposite(),
 		dependencies: {},
@@ -146,14 +134,6 @@ export async function createHumansActors(account: any) {
 	// List actor with inline foreach template - contains queries and dependencies
 	// ARCHITECTURAL PRINCIPLE: Each actor handles its own events (no bubbling!)
 	const listActor = Actor.create({
-		currentState: 'idle',
-		states: { 
-			idle: {
-				on: {
-					REMOVE_HUMAN: { target: 'idle', actions: ['@entity/deleteEntity'] }
-				}
-			}
-		},
 		context: {
 			visible: true,
 			queries: {
@@ -235,8 +215,6 @@ export async function createHumansActors(account: any) {
 	// STEP 3: Create root actor - SINGLE ACTOR with nested divs via elements[]
 	// TRUE COLOCATION: Root actor is minimal (no actions), just a container
 	const humansRootActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} }, // Empty state machine - no actions here!
 		context: { visible: true },
 		view: createRootCardComposite({ 
 			cardLayout: 'flex', 

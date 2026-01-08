@@ -7,7 +7,7 @@
 
 import { Actor, ActorList, ActorMessage, VibesRegistry } from "@hominio/db";
 import { Group, co, z } from "jazz-tools";
-import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf, createBadgeLeaf, createInputSectionComposite, createViewSwitcherComposite, createTimelineComposite, createKanbanComposite } from '../../design-templates';
+import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf, createBadgeLeaf, createInputSectionComposite, createViewSwitcherComposite, createTimelineComposite, createKanbanComposite } from '../design-templates';
 
 // Global lock
 const getGlobalLock = () => {
@@ -88,8 +88,6 @@ export async function createTodosActors(account: any) {
 
 	// STEP 1: Create leaf actors (title)
 	const headerTitleActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} },
 		context: { visible: true },
 		view: createTitleLeaf({ text: 'Todos', tag: 'h2' }),
 		dependencies: {},
@@ -102,15 +100,6 @@ export async function createTodosActors(account: any) {
 	// STEP 2: Create composite actors (input section, list, timeline)
 	// Input section actor - TRUE COLOCATION: handles its own @input/updateContext and @todo/create actions
 	const inputSectionActor = Actor.create({
-		currentState: 'idle',
-		states: { 
-			idle: {
-				on: {
-					'@input/updateContext': { target: 'idle', actions: ['@input/updateContext'] },
-					'@todo/create': { target: 'idle', actions: ['@todo/create'] }
-				}
-			}
-		},
 		context: { 
 			visible: true,
 			newTodoText: '', // Match legacy data.view.newTodoText
@@ -137,16 +126,6 @@ export async function createTodosActors(account: any) {
 
 	// List actor with inline foreach template - contains queries and dependencies
 	const listActor = Actor.create({
-		currentState: 'idle',
-		states: { 
-			idle: {
-				on: {
-					'@entity/toggleStatus': { target: 'idle', actions: ['@entity/toggleStatus'] },
-					'@entity/updateEntity': { target: 'idle', actions: ['@entity/updateEntity'] },
-					'@entity/deleteEntity': { target: 'idle', actions: ['@entity/deleteEntity'] },
-				}
-			}
-		},
 		context: {
 			visible: true, // Always visible when rendered
 			queries: {
@@ -284,16 +263,6 @@ export async function createTodosActors(account: any) {
 
 	// Timeline actor - displays todos in timeline format
 	const timelineActor = Actor.create({
-		currentState: 'idle',
-		states: {
-			idle: {
-				on: {
-					'@entity/toggleStatus': { target: 'idle', actions: ['@entity/toggleStatus'] },
-					'@entity/updateEntity': { target: 'idle', actions: ['@entity/updateEntity'] },
-					'@entity/deleteEntity': { target: 'idle', actions: ['@entity/deleteEntity'] },
-				}
-			}
-		},
 		context: {
 			visible: true, // Always visible when rendered
 			queries: {
@@ -319,21 +288,6 @@ export async function createTodosActors(account: any) {
 	// Kanban actor - displays todos in kanban board with drag-and-drop
 	// Uses 3 separate queries with filters for each column
 	const kanbanActor = Actor.create({
-		currentState: 'idle',
-		states: {
-			idle: {
-				on: {
-					'@entity/toggleStatus': { target: 'idle', actions: ['@entity/toggleStatus'] },
-					'@entity/updateEntity': { target: 'idle', actions: ['@entity/updateEntity'] },
-					'@entity/deleteEntity': { target: 'idle', actions: ['@entity/deleteEntity'] },
-					'@todo/dragStart': { target: 'idle', actions: ['@todo/dragStart'] },
-					'@todo/drop': { target: 'idle', actions: ['@todo/drop'] },
-					'@todo/dragEnd': { target: 'idle', actions: ['@todo/dragEnd'] },
-					'@input/updateContext': { target: 'idle', actions: ['@input/updateContext'] },
-					'@ui/preventDefaultOnly': { target: 'idle', actions: [] }, // No-op skill for dragover
-				}
-			}
-		},
 		context: {
 			visible: true,
 			draggedTodoId: null,
@@ -365,14 +319,6 @@ export async function createTodosActors(account: any) {
 	// ✅ Content actor - handles actor swapping for view switching
 	// This is the GENERIC actor-swapping container that replaces visibility toggling
 	const contentActor = Actor.create({
-		currentState: 'idle',
-		states: {
-			idle: {
-				on: {
-					'@view/swapActors': { target: 'idle', actions: ['@view/swapActors'] }
-				}
-			}
-		},
 		context: {
 			visible: true,
 			viewMode: 'list', // Default view mode (for view switcher button styling)
@@ -398,8 +344,6 @@ export async function createTodosActors(account: any) {
 
 	// View switcher actor - reads viewMode directly from contentActor via dependencies
 	const viewSwitcherActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} }, // No actions - just sends events
 		context: { 
 			visible: true
 		},
@@ -422,8 +366,6 @@ export async function createTodosActors(account: any) {
 
 	// Header actor - contains title and view switcher in same row
 	const headerActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} },
 		context: { visible: true },
 		view: createHeaderComposite(),
 		dependencies: {},
@@ -435,8 +377,6 @@ export async function createTodosActors(account: any) {
 
 	// STEP 3: Create root actor (simplified - no view mode management, just a container)
 	const todosRootActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} }, // No actions - just a container
 		context: {
 			visible: true,
 		},

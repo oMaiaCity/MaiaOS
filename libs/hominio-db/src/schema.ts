@@ -75,11 +75,7 @@ export const ActorMessage = co.map({
 
 /** Actor schema - every UI node (composite and leaf) is an independent actor with message-passing */
 export const Actor = co.map({
-	// State machine
-	currentState: z.string(),
-	states: z.object({}).passthrough(), // { idle: { on: { EVENT: { target: 'state', actions: [] } } } }
-	
-	// Context data (any JSON)
+	// Context data (any JSON) - all actor state lives here
 	context: z.object({}).passthrough(),
 	
 	// View - can be composite container OR leaf element (optional for service actors)
@@ -113,6 +109,7 @@ export const VibesRegistry = co.map({
 	humans: z.string().optional(),
 	designTemplates: z.string().optional(),
 	todos: z.string().optional(),
+	explorer: z.string().optional(),
 })
 
 /** The account root is an app-specific per-user private `CoMap`

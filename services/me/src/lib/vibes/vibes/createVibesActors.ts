@@ -7,7 +7,7 @@
 
 import { Actor, ActorList, ActorMessage, VibesRegistry } from "@hominio/db";
 import { Group, co, z } from "jazz-tools";
-import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf } from '../../design-templates';
+import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf } from '../design-templates';
 
 // Global lock that persists across hot reloads
 const getGlobalLock = () => {
@@ -92,8 +92,6 @@ export async function createVibesActors(account: any) {
 
 	// STEP 1: Create leaf actors (titles, descriptions)
 	const headerTitleActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} },
 		context: { visible: true },
 		view: createTitleLeaf({ text: 'Vibes', tag: 'h2' }),
 		dependencies: {},
@@ -104,8 +102,6 @@ export async function createVibesActors(account: any) {
 	}, group);
 
 	const humansTitleActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} },
 		context: { visible: true },
 		view: createTitleLeaf({ text: 'Humans', tag: 'h3', classes: 'text-base font-semibold text-slate-700' }),
 		dependencies: {},
@@ -116,8 +112,6 @@ export async function createVibesActors(account: any) {
 	}, group);
 
 	const humansDescActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} },
 		context: { visible: true },
 		view: {
 			tag: 'p',
@@ -132,8 +126,6 @@ export async function createVibesActors(account: any) {
 	}, group);
 
 	const designTemplatesTitleActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} },
 		context: { visible: true },
 		view: createTitleLeaf({ text: 'Design Templates', tag: 'h3', classes: 'text-base font-semibold text-slate-700' }),
 		dependencies: {},
@@ -144,8 +136,6 @@ export async function createVibesActors(account: any) {
 	}, group);
 
 	const designTemplatesDescActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} },
 		context: { visible: true },
 		view: {
 			tag: 'p',
@@ -160,8 +150,6 @@ export async function createVibesActors(account: any) {
 	}, group);
 
 	const todosTitleActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} },
 		context: { visible: true },
 		view: {
 			tag: 'h3',
@@ -176,8 +164,6 @@ export async function createVibesActors(account: any) {
 	}, group);
 
 	const todosDescActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} },
 		context: { visible: true },
 		view: {
 			tag: 'p',
@@ -191,6 +177,30 @@ export async function createVibesActors(account: any) {
 		role: 'todos-card-desc',
 	}, group);
 
+	const explorerTitleActor = Actor.create({
+		context: { visible: true },
+		view: createTitleLeaf({ text: 'Explorer', tag: 'h3', classes: 'text-base font-semibold text-slate-700' }),
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [],
+		children: co.list(z.string()).create([]),
+		role: 'explorer-card-title',
+	}, group);
+
+	const explorerDescActor = Actor.create({
+		context: { visible: true },
+		view: {
+			tag: 'p',
+			classes: 'text-xs text-slate-600',
+			elements: ['Visualize and debug actor structures and state machines']
+		},
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [],
+		children: co.list(z.string()).create([]),
+		role: 'explorer-card-desc',
+	}, group);
+
 	// NO WAIT! All leaf actors created locally, use immediately
 	
 	// STEP 2: Create composite actors (cards, header)
@@ -199,14 +209,6 @@ export async function createVibesActors(account: any) {
 
 	// NAVIGATION CARDS: Use @ui/navigate skill for true colocation
 	const humansCardActor = Actor.create({
-		currentState: 'idle',
-		states: { 
-			idle: {
-				on: {
-					'@ui/navigate': { target: 'idle', actions: ['@ui/navigate'] }
-				}
-			}
-		},
 		context: { visible: true },
 		view: {
 			container: {
@@ -228,14 +230,6 @@ export async function createVibesActors(account: any) {
 	}, group);
 
 	const designTemplatesCardActor = Actor.create({
-		currentState: 'idle',
-		states: { 
-			idle: {
-				on: {
-					'@ui/navigate': { target: 'idle', actions: ['@ui/navigate'] }
-				}
-			}
-		},
 		context: { visible: true },
 		view: {
 			container: {
@@ -257,14 +251,6 @@ export async function createVibesActors(account: any) {
 	}, group);
 
 	const todosCardActor = Actor.create({
-		currentState: 'idle',
-		states: { 
-			idle: {
-				on: {
-					'@ui/navigate': { target: 'idle', actions: ['@ui/navigate'] }
-				}
-			}
-		},
 		context: { visible: true },
 		view: {
 			container: {
@@ -285,9 +271,28 @@ export async function createVibesActors(account: any) {
 		role: 'todos-card',
 	}, group);
 
+	const explorerCardActor = Actor.create({
+		context: { visible: true },
+		view: {
+			container: {
+				layout: 'flex',
+				class: 'card p-4 flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow'
+			},
+			events: {
+				click: {
+					event: '@ui/navigate',
+					payload: { vibeName: 'explorer' }
+				}
+			}
+		},
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [], // Subscribe to ROOT actor (set later) for any root-level state updates
+		children: co.list(z.string()).create([explorerTitleActor.$jazz.id, explorerDescActor.$jazz.id]),
+		role: 'explorer-card',
+	}, group);
+
 	const headerActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} },
 		context: { visible: true },
 		view: createHeaderComposite(),
 		dependencies: {},
@@ -298,8 +303,6 @@ export async function createVibesActors(account: any) {
 	}, group);
 
 	const gridActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} },
 		context: { visible: true },
 		view: {
 			container: {
@@ -310,7 +313,7 @@ export async function createVibesActors(account: any) {
 		dependencies: {},
 		inbox: co.feed(ActorMessage).create([]),
 		subscriptions: [],
-		children: co.list(z.string()).create([humansCardActor.$jazz.id, todosCardActor.$jazz.id]),
+		children: co.list(z.string()).create([humansCardActor.$jazz.id, todosCardActor.$jazz.id, explorerCardActor.$jazz.id]),
 		role: 'vibes-grid',
 	}, group);
 
@@ -318,8 +321,6 @@ export async function createVibesActors(account: any) {
 
 	// STEP 3: Create root actor - MINIMAL (no actions)
 	const vibesRootActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} }, // Empty state machine - root is just a container
 		context: { visible: true },
 		view: createRootCardComposite({ cardLayout: 'flex', cardClasses: 'card p-4 flex-col gap-4' }),
 		dependencies: {},
@@ -341,6 +342,10 @@ export async function createVibesActors(account: any) {
 	if (todosSubscriptions?.$isLoaded) {
 		todosSubscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
 	}
+	const explorerSubscriptions = explorerCardActor.subscriptions;
+	if (explorerSubscriptions?.$isLoaded) {
+		explorerSubscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
+	}
 	// NO WAIT! Subscriptions updated locally, sync happens in background
 
 	// Add all actors to global actors list
@@ -349,8 +354,11 @@ export async function createVibesActors(account: any) {
 	actorsList.$jazz.push(humansDescActor);
 	actorsList.$jazz.push(todosTitleActor);
 	actorsList.$jazz.push(todosDescActor);
+	actorsList.$jazz.push(explorerTitleActor);
+	actorsList.$jazz.push(explorerDescActor);
 	actorsList.$jazz.push(humansCardActor);
 	actorsList.$jazz.push(todosCardActor);
+	actorsList.$jazz.push(explorerCardActor);
 	actorsList.$jazz.push(headerActor);
 	actorsList.$jazz.push(gridActor);
 	actorsList.$jazz.push(vibesRootActor);

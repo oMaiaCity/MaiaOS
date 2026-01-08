@@ -4,10 +4,12 @@
   import { untrack } from "svelte";
   import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
   import ActorRenderer from "$lib/compositor/actors/ActorRenderer.svelte";
-  import { createHumansActors } from "$lib/vibes/humans/actors/createHumansActors";
-  import { createVibesActors } from "$lib/vibes/vibes/actors/createVibesActors";
+  import { createHumansActors } from "$lib/vibes/humans/createHumansActors";
+  import { createVibesActors } from "$lib/vibes/vibes/createVibesActors";
   import { createDesignTemplatesActors } from "$lib/vibes/design-templates/actors/createDesignTemplatesActors";
-  import { createTodosActors } from "$lib/vibes/todo/actors/createTodosActors";
+  import { createTodosActors } from "$lib/vibes/todo/createTodosActors";
+  import { createExplorerActors } from "$lib/vibes/explorer/createExplorerActors";
+  import ExplorerView from "$lib/vibes/explorer/components/ExplorerView.svelte";
   import { CoState } from "jazz-tools/svelte";
   import { Actor } from "@hominio/db";
 
@@ -101,6 +103,7 @@
       currentVibeName === 'humans' ? registry.humans :
       currentVibeName === 'designTemplates' ? registry.designTemplates :
       currentVibeName === 'todos' ? registry.todos :
+      currentVibeName === 'explorer' ? registry.explorer :
       undefined
     ) as string | undefined;
     
@@ -160,6 +163,9 @@
         } else if (currentVibeName === 'todos') {
           console.log('[+page.svelte] Calling createTodosActors...');
           newRootId = await createTodosActors(account);
+        } else if (currentVibeName === 'explorer') {
+          console.log('[+page.svelte] Calling createExplorerActors...');
+          newRootId = await createExplorerActors(account);
         } else {
           console.log('[+page.svelte] Calling createVibesActors...');
           newRootId = await createVibesActors(account);
@@ -191,13 +197,19 @@
 
 {#if browser}
   {#if rootActorId}
-  <div class="h-full w-full">
-      <ActorRenderer actorId={rootActorId} {accountCoState} />
-    </div>
+    {#if vibeNameParam === 'explorer'}
+      <!-- Explorer vibe uses custom ExplorerView component -->
+      <ExplorerView />
+    {:else}
+      <!-- Other vibes use ActorRenderer -->
+      <div class="h-full w-full">
+        <ActorRenderer actorId={rootActorId} {accountCoState} />
+      </div>
+    {/if}
   {:else}
     <div class="h-full bg-gray-100 pt-20 px-4 flex items-center justify-center">
       <div class="text-slate-600">Loading actors...</div>
-  </div>
+    </div>
   {/if}
 {:else}
   <div class="h-full bg-gray-100 pt-20 px-4 flex items-center justify-center">

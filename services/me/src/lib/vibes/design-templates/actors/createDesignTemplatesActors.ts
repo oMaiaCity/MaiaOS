@@ -72,8 +72,6 @@ export async function createDesignTemplatesActors(account: any) {
 
 		// Create simple showcase
 		const titleActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
 			context: {},
 			view: createTitleLeaf({ text: 'Design Templates', tag: 'h2' }),
 			dependencies: {},
@@ -84,8 +82,6 @@ export async function createDesignTemplatesActors(account: any) {
 		}, group);
 
 		const descActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
 			context: {},
 			view: {
 				tag: 'p',
@@ -100,8 +96,6 @@ export async function createDesignTemplatesActors(account: any) {
 		}, group);
 
 		const exampleButtonActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
 			context: {},
 			view: createButtonLeaf({
 				text: 'Example Button',
@@ -123,8 +117,6 @@ export async function createDesignTemplatesActors(account: any) {
 		]);
 
 		const headerActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
 			context: {},
 			view: createHeaderComposite(),
 			dependencies: {},
@@ -135,8 +127,6 @@ export async function createDesignTemplatesActors(account: any) {
 		}, group);
 
 		const contentActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
 			context: {},
 			view: {
 				container: {
@@ -157,8 +147,6 @@ export async function createDesignTemplatesActors(account: any) {
 		]);
 
 		const rootActor = Actor.create({
-			currentState: 'idle',
-			states: { idle: {} },
 			context: {},
 			view: createRootCardComposite({ cardLayout: 'flex', cardClasses: 'card p-4 flex-col gap-4' }),
 			dependencies: {},
