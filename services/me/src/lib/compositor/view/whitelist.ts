@@ -159,7 +159,7 @@ const TAILWIND_PATTERNS = [
 	/^self-(start|end|center|baseline|stretch|auto)$/,
 
 	// Sizing
-	/^(w|h|min-w|min-h|max-w|max-h)-(full|screen|auto|\d+|px|rem|em|%|2xl|xl|lg|md|sm|xs)$/,
+	/^(w|h|min-w|min-h|max-w|max-h)-(full|screen|auto|fit|\d+(\.\d+)?|px|rem|em|%|2xl|xl|lg|md|sm|xs)$/, // Added 'fit' and fractional values like w-0.5
 	/^(w|h|min-w|min-h|max-w|max-h)-(\d+)\/(\d+)$/,
 	/^(mx|my|mt|mb|ml|mr)-(\d+|auto)$/, // Margin utilities like mx-4, mt-2
 	/^(mx|my)-auto$/, // Margin auto like mx-auto
@@ -176,6 +176,7 @@ const TAILWIND_PATTERNS = [
 	/^border-(\d+|\[.*\])$/, // border-2, border-[...]
 	/^border-(l|r|t|b)-(\d+|\[.*\])$/, // border-l-2, border-r-2, border-t-2, border-b-2
 	/^border-(l|r|t|b)$/, // border-l, border-r, border-t, border-b (without number)
+	/^border-(solid|dashed|dotted|double|none)$/, // border-solid, border-dashed, border-dotted, etc.
 	// Gradients
 	/^(bg|text|border)-(gradient|linear)-to-(r|l|t|b|tr|tl|br|bl)$/,
 	/^(from|via|to)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(\d+)$/,
@@ -254,6 +255,7 @@ const TAILWIND_PATTERNS = [
 
 	// Overflow
 	/^overflow(-(x|y))?-(auto|hidden|clip|visible|scroll)$/,
+	/^scroll-(auto|smooth)$/,
 
 	// Arbitrary values (safe patterns) - must be checked AFTER specific patterns
 	/^(bg|text|border|shadow|rounded|w|h|min-w|min-h|max-w|max-h|p|m|px|py|pt|pb|pl|pr|mt|mb|ml|mr|mx|my|gap|space-[xy]|top|right|bottom|left|z|ring|scale)-\[.*\]$/, // Specific arbitrary value patterns with property prefix

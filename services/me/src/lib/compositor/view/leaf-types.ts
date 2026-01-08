@@ -39,6 +39,12 @@ export interface LeafBindings {
 	text?: string
 
 	/**
+	 * Expression for conditional CSS classes
+	 * Example: "item.status === 'done' ? 'bg-green-100' : 'bg-gray-100'"
+	 */
+	class?: string
+
+	/**
 	 * Data path for conditional rendering (boolean)
 	 * Example: "data.showModal"
 	 */

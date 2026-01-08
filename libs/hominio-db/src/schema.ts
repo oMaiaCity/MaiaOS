@@ -139,9 +139,10 @@ export const JazzAccount = co
 		// Ensure profile is initialized with default values and "everyone" reader permission
 		if (!account.$jazz.has('profile')) {
 			// Create a Group with "everyone" as "reader" for public profile access
-			const profileGroup = Group.create()
-			profileGroup.addMember('everyone', 'reader')
-			await profileGroup.$jazz.waitForSync()
+		const profileGroup = Group.create()
+		profileGroup.addMember('everyone', 'reader')
+		// ⚡ REMOVED: await profileGroup.$jazz.waitForSync()
+		// LOCAL-FIRST: Group creation is instant
 
 			// Create profile with the group that has everyone reader permission
 			const profile = AccountProfile.create(
@@ -150,10 +151,11 @@ export const JazzAccount = co
 					lastName: '',
 					name: '',
 				},
-				profileGroup,
-			)
-			await profile.$jazz.waitForSync()
-			account.$jazz.set('profile', profile)
+			profileGroup,
+		)
+		// ⚡ REMOVED: await profile.$jazz.waitForSync()
+		// LOCAL-FIRST: Profile creation is instant
+		account.$jazz.set('profile', profile)
 		} else {
 			// Ensure profile fields exist (for existing accounts)
 			const profile = await account.$jazz.ensureLoaded({
@@ -171,10 +173,11 @@ export const JazzAccount = co
 						const everyoneRole = ownerGroup.roleOf ? ownerGroup.roleOf('everyone') : null
 						if (!everyoneRole || everyoneRole !== 'reader') {
 							// Add everyone as reader if not already set
-							if (typeof ownerGroup.addMember === 'function') {
-								ownerGroup.addMember('everyone', 'reader')
-								await ownerGroup.$jazz.waitForSync()
-							}
+						if (typeof ownerGroup.addMember === 'function') {
+							ownerGroup.addMember('everyone', 'reader')
+							// ⚡ REMOVED: await ownerGroup.$jazz.waitForSync()
+							// LOCAL-FIRST: Group operations are instant
+						}
 						}
 					} catch (_e) { }
 				}
@@ -198,14 +201,16 @@ export const JazzAccount = co
 			console.log('[Migration] Creating initial account root')
 			// Create contact CoMap
 			const contact = Contact.create({
-				email: '',
-			})
-			await contact.$jazz.waitForSync()
+			email: '',
+		})
+		// ⚡ REMOVED: await contact.$jazz.waitForSync()
+		// LOCAL-FIRST: Contact creation is instant
 
-			account.$jazz.set('root', {
-				contact: contact,
-			})
-			await account.$jazz.waitForSync()
+		account.$jazz.set('root', {
+			contact: contact,
+		})
+		// ⚡ REMOVED: await account.$jazz.waitForSync()
+		// LOCAL-FIRST: Property set is instant
 		}
 
 		// Load root
@@ -236,50 +241,20 @@ export const JazzAccount = co
 			return
 		}
 
-		const rootAny = rootWithData as any
-		if (rootAny.$jazz.has('capabilities')) {
-			rootAny.$jazz.delete('capabilities')
-			await rootWithData.$jazz.waitForSync()
-		}
-
-		// Migrate existing data to schemata (backward compatibility)
-		if (rootAny.$jazz.has('data') && !rootWithData.$jazz.has('schemata')) {
-			// Load data list using raw access
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const rootWithDataLoaded = await rootAny.$jazz.ensureLoaded({
-				resolve: { data: true },
-			})
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const dataList = (rootWithDataLoaded as any).data
-
-			if (dataList) {
-				// Copy data list to schemata
-				rootWithData.$jazz.set('schemata', dataList)
-				await rootWithData.$jazz.waitForSync()
-				// Delete legacy data property after migration
-				rootAny.$jazz.delete('data')
-				await rootWithData.$jazz.waitForSync()
-			}
-		}
-
-		// Prevent data from being recreated - delete it if it exists (should have been migrated)
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		if ((rootWithData as any).$jazz.has('data')) {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			(rootWithData as any).$jazz.delete('data')
-			await rootWithData.$jazz.waitForSync()
-		}
+		// ⚡ CLEAN SLATE: No legacy migrations - fresh system with current data types only
 
 		// Ensure schemata list exists (empty by default - schemas created manually via UI)
 		if (!rootWithData.$jazz.has('schemata')) {
-			// Create a group for schemata list
-			const schemataGroup = Group.create()
-			await schemataGroup.$jazz.waitForSync()
+		// Create a group for schemata list
+		const schemataGroup = Group.create()
+		// ⚡ REMOVED: await schemataGroup.$jazz.waitForSync()
+		// LOCAL-FIRST: Group creation is instant
 
-			// Create empty schemata list (generic co.map({}) - schemas created dynamically)
-			const schemataList = co.list(co.map({})).create([], schemataGroup)
-			await schemataList.$jazz.waitForSync()
-			rootWithData.$jazz.set('schemata', schemataList)
+		// Create empty schemata list (generic co.map({}) - schemas created dynamically)
+		const schemataList = co.list(co.map({})).create([], schemataGroup)
+		// ⚡ REMOVED: await schemataList.$jazz.waitForSync()
+		// LOCAL-FIRST: List creation is instant
+		rootWithData.$jazz.set('schemata', schemataList)
 		} else {
 			// Ensure schemata list is loaded
 			try {
@@ -291,14 +266,16 @@ export const JazzAccount = co
 
 		// Ensure entities list exists (empty by default - entities created via createEntity)
 		if (!rootWithData.$jazz.has('entities')) {
-			// Create a group for entities list
-			const entitiesGroup = Group.create()
-			await entitiesGroup.$jazz.waitForSync()
+		// Create a group for entities list
+		const entitiesGroup = Group.create()
+		// ⚡ REMOVED: await entitiesGroup.$jazz.waitForSync()
+		// LOCAL-FIRST: Group creation is instant
 
-			// Create empty entities list (generic co.map({}) - entities created dynamically)
-			const entitiesList = co.list(co.map({})).create([], entitiesGroup)
-			await entitiesList.$jazz.waitForSync()
-			rootWithData.$jazz.set('entities', entitiesList)
+		// Create empty entities list (generic co.map({}) - entities created dynamically)
+		const entitiesList = co.list(co.map({})).create([], entitiesGroup)
+		// ⚡ REMOVED: await entitiesList.$jazz.waitForSync()
+		// LOCAL-FIRST: List creation is instant
+		rootWithData.$jazz.set('entities', entitiesList)
 		} else {
 			// Ensure entities list is loaded
 			try {
@@ -310,14 +287,16 @@ export const JazzAccount = co
 
 		// Ensure relations list exists (empty by default - relations created via createRelation)
 		if (!rootWithData.$jazz.has('relations')) {
-			// Create a group for relations list
-			const relationsGroup = Group.create()
-			await relationsGroup.$jazz.waitForSync()
+		// Create a group for relations list
+		const relationsGroup = Group.create()
+		// ⚡ REMOVED: await relationsGroup.$jazz.waitForSync()
+		// LOCAL-FIRST: Group creation is instant
 
-			// Create empty relations list (generic co.map({}) - relations created dynamically)
-			const relationsList = co.list(co.map({})).create([], relationsGroup)
-			await relationsList.$jazz.waitForSync()
-			rootWithData.$jazz.set('relations', relationsList)
+		// Create empty relations list (generic co.map({}) - relations created dynamically)
+		const relationsList = co.list(co.map({})).create([], relationsGroup)
+		// ⚡ REMOVED: await relationsList.$jazz.waitForSync()
+		// LOCAL-FIRST: List creation is instant
+		rootWithData.$jazz.set('relations', relationsList)
 		} else {
 			// Ensure relations list is loaded
 			try {
@@ -329,14 +308,16 @@ export const JazzAccount = co
 
 		// Ensure actors list exists (empty by default - actors created via createActors)
 		if (!rootWithData.$jazz.has('actors')) {
-			// Create a group for actors list
-			const actorsGroup = Group.create()
-			await actorsGroup.$jazz.waitForSync()
+		// Create a group for actors list
+		const actorsGroup = Group.create()
+		// ⚡ REMOVED: await actorsGroup.$jazz.waitForSync()
+		// LOCAL-FIRST: Group creation is instant
 
-			// Create empty actors list
-			const actorsList = ActorList.create([], actorsGroup)
-			await actorsList.$jazz.waitForSync()
-			rootWithData.$jazz.set('actors', actorsList)
+		// Create empty actors list
+		const actorsList = ActorList.create([], actorsGroup)
+		// ⚡ REMOVED: await actorsList.$jazz.waitForSync()
+		// LOCAL-FIRST: List creation is instant
+		rootWithData.$jazz.set('actors', actorsList)
 		} else {
 			// Ensure actors list is loaded
 			try {
@@ -346,56 +327,21 @@ export const JazzAccount = co
 			} catch (_error) { }
 		}
 
-		// Delete any legacy vibesRegistry property (old schema)
-		if (rootAny.$jazz.has('vibesRegistry')) {
-			console.log('[Migration] Deleting legacy vibesRegistry property')
-			rootAny.$jazz.delete('vibesRegistry')
-			await rootWithData.$jazz.waitForSync()
-		}
-
-		// Ensure root.vibes is a proper VibesRegistry CoMap (SINGLE SOURCE OF TRUTH)
-		// If it exists but is broken (e.g., a string ID from old migration), delete and recreate
-		let needsVibesRecreation = false
-		
-		if (rootWithData.$jazz.has('vibes')) {
-			try {
-			// Try to load it and verify it's a proper CoMap
-			const rootWithVibes = await rootWithData.$jazz.ensureLoaded({
-				resolve: { vibes: true },
-			})
-			const existingVibes = rootWithVibes.vibes
-			
-			// Check if it's a proper CoMap (has $isLoaded property and is not a string)
-			if (!existingVibes || typeof existingVibes === 'string' || !existingVibes.$jazz?.id) {
-				console.log('[Migration] root.vibes exists but is broken (not a proper CoMap), will recreate')
-				needsVibesRecreation = true
-				rootAny.$jazz.delete('vibes')
-				await rootWithData.$jazz.waitForSync()
-			} else {
-				console.log('[Migration] root.vibes exists and is valid')
-			}
-			} catch (error) {
-				console.log('[Migration] Error loading root.vibes, will recreate:', error)
-				needsVibesRecreation = true
-				rootAny.$jazz.delete('vibes')
-				await rootWithData.$jazz.waitForSync()
-			}
-		} else {
-			needsVibesRecreation = true
-		}
-		
-		if (needsVibesRecreation) {
+		// Ensure root.vibes is a proper VibesRegistry CoMap
+		if (!rootWithData.$jazz.has('vibes')) {
 			console.log('[Migration] Creating fresh vibes registry (VibesRegistry CoMap)')
 			const registryGroup = Group.create()
 			registryGroup.addMember('everyone', 'reader')
-			await registryGroup.$jazz.waitForSync()
+			// ⚡ LOCAL-FIRST: Group creation is instant
 			
 			const vibesRegistry = VibesRegistry.create({}, registryGroup)
-			await vibesRegistry.$jazz.waitForSync()
+			// ⚡ LOCAL-FIRST: Registry creation is instant
 			
 			rootWithData.$jazz.set('vibes', vibesRegistry)
-			await rootWithData.$jazz.waitForSync()
-			console.log('[Migration] Fresh vibes registry created:', vibesRegistry.$jazz.id)
+			// ⚡ LOCAL-FIRST: Property set is instant
+			console.log('[Migration] ⚡ Fresh vibes registry created instantly (local-first):', vibesRegistry.$jazz.id)
+		} else {
+			console.log('[Migration] root.vibes exists and is valid')
 		}
 
 		console.log('[Migration] Account migration completed successfully')

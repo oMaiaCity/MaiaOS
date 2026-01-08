@@ -646,53 +646,8 @@ const clearInputSkill: Skill = {
 	},
 }
 
-const swapViewNodeSkill: Skill = {
-	metadata: {
-		id: '@ui/swapViewNode',
-		name: 'Swap View Node',
-		description: 'Swaps child actor in ANY composite\'s children array (hierarchy-aware). Adds/removes actor IDs from actor.children.',
-		category: 'ui',
-		parameters: {
-			type: 'object',
-			properties: {
-				removeId: {
-					type: 'string',
-					description: 'Actor ID to remove from children array',
-					required: false,
-				},
-				addId: {
-					type: 'string',
-					description: 'Actor ID to add to children array',
-					required: false,
-				},
-			},
-		},
-	},
-	execute: async (actor: any, payload?: unknown) => {
-		const { removeId, addId } = (payload as {
-			removeId?: string
-			addId?: string
-		}) || {}
-
-		if (!actor.children?.$isLoaded) return
-
-		// Remove old child
-		if (removeId) {
-			const index = actor.children.findIndex((id: string) => id === removeId)
-			if (index !== -1) {
-				actor.children.$jazz.splice(index, 1)
-			}
-		}
-
-		// Add new child (if not already present)
-		if (addId && !actor.children.includes(addId)) {
-			actor.children.$jazz.push(addId)
-		}
-
-		// Sync to Jazz
-		await actor.$jazz.waitForSync()
-	},
-}
+// ✅ REMOVED: @ui/swapViewNode - Replaced by @view/swapActors in context-skills.ts
+// The unified swapActors skill handles all actor ID swapping generically
 
 const openModalSkill: Skill = {
 	metadata: {
@@ -862,65 +817,8 @@ const navigateSkill: Skill = {
 	},
 };
 
-// ========== SET VIEW SKILL (UI) ==========
-
-const setViewSkill: Skill = {
-	metadata: {
-		id: '@ui/setView',
-		name: 'Set View Mode',
-		description: 'Switch between list/kanban/timeline views',
-		category: 'ui',
-		parameters: {
-			type: 'object',
-			properties: {
-				viewMode: {
-					type: 'string',
-					description: 'View mode to switch to: list, kanban, or timeline',
-					required: true,
-				},
-			},
-		},
-	},
-	execute: async (actor: any, payload?: unknown) => {
-		const { viewMode } = (payload as { viewMode?: string }) || {};
-		
-		if (!viewMode || !['list', 'kanban', 'timeline'].includes(viewMode)) {
-			console.warn('[setViewSkill] Invalid viewMode:', viewMode);
-			return;
-		}
-		
-		console.log('[setViewSkill] Switching to view:', viewMode);
-		
-		// Update root actor's currentView
-		if (actor.context) {
-			(actor.context as any).currentView = viewMode;
-		}
-		
-		// Toggle visibility of content actors based on view mode
-		if (actor.children?.$isLoaded) {
-			const { CoState } = await import('jazz-tools/svelte');
-			const { Actor } = await import('@hominio/db');
-			
-			for (const childId of actor.children) {
-				const childCoState = new CoState(Actor, childId);
-				const child = childCoState.current;
-				
-				if (child?.$isLoaded && child.role) {
-					const shouldBeVisible = 
-						(viewMode === 'list' && child.role === 'todos-list-content') ||
-						(viewMode === 'kanban' && child.role === 'todos-kanban-content') ||
-						(viewMode === 'timeline' && child.role === 'todos-timeline-content');
-					
-					if (child.context) {
-						(child.context as any).visible = shouldBeVisible;
-					}
-					
-					console.log(`[setViewSkill] ${child.role} visible:`, shouldBeVisible);
-				}
-			}
-		}
-	},
-};
+// ✅ REMOVED: @ui/setView - Replaced by @view/swapActors in context-skills.ts
+// The unified swapActors skill handles view mode switching via actor ID swapping (no visibility toggles)
 
 // ========== VALIDATION SKILL (Generic) ==========
 
@@ -987,6 +885,170 @@ const validateEntityInputSkill: Skill = {
 	},
 }
 
+// ========== DRAG-AND-DROP SKILLS ==========
+
+/**
+ * Drag Start Skill - Stores dragged todo ID in actor context
+ */
+const dragStartSkill: Skill = {
+	metadata: {
+		id: '@todo/dragStart',
+		name: 'Drag Start',
+		description: 'Stores the ID of the todo being dragged',
+		category: 'todo',
+		parameters: {
+			type: 'string',
+			description: 'The ID of the todo being dragged',
+		},
+	},
+	execute: async (actor: any, payload?: unknown) => {
+		// Payload is just the todo ID string (matching original drag-and-drop pattern)
+		const id = typeof payload === 'string' ? payload : (payload as any)?.id
+		const status = (payload as any)?.status
+		
+		if (!id) {
+			console.warn('[dragStartSkill] No todo ID provided, payload:', payload)
+			return
+		}
+		
+		// Store dragged todo info in context AND set isDragging flag
+		const updatedContext = {
+			...actor.context,
+			draggedTodoId: id,
+			draggedTodoStatus: status,
+			isDragging: true, // Show dropzones during drag
+		}
+		
+		actor.$jazz.set('context', updatedContext)
+		console.log('[dragStartSkill] Stored dragged todo:', id, 'isDragging:', true)
+	},
+}
+
+/**
+ * Drop Skill - Updates todo status when dropped on a column
+ * Reads draggedTodoId from context and updates the entity
+ */
+const dropSkill: Skill = {
+	metadata: {
+		id: '@todo/drop',
+		name: 'Drop Todo',
+		description: 'Updates todo status when dropped on a kanban column',
+		category: 'todo',
+		parameters: {
+			type: 'object',
+			properties: {
+				status: {
+					type: 'string',
+					description: 'Target status (todo, in-progress, done)',
+					required: true,
+				},
+			},
+			required: ['status'],
+		},
+	},
+	execute: async (actor: any, payload?: unknown, accountCoState?: any) => {
+		const { status: newStatus } = (payload as { status?: string }) || {}
+		const draggedTodoId = actor.context?.draggedTodoId
+		
+		if (!draggedTodoId) {
+			console.warn('[dropSkill] No dragged todo ID in context')
+			return
+		}
+		
+		if (!newStatus) {
+			console.warn('[dropSkill] No target status provided')
+			return
+		}
+		
+		console.log('[dropSkill] Updating todo', draggedTodoId, 'to status:', newStatus)
+		
+		try {
+			// Get Jazz account from accountCoState parameter (same pattern as updateEntitySkill)
+			if (!accountCoState) {
+				console.error('[dropSkill] Jazz AccountCoState not available')
+				return
+			}
+
+			const jazzAccount = accountCoState.current
+			if (!jazzAccount || !jazzAccount.$isLoaded) {
+				console.error('[dropSkill] Jazz account not loaded')
+				return
+			}
+
+			// Find entity in already-loaded root.entities (same pattern as updateEntitySkill)
+			const root = jazzAccount.root
+			if (!root?.$isLoaded) {
+				console.error('[dropSkill] Root not loaded')
+				return
+			}
+
+			const entitiesList = root.entities
+			if (!entitiesList?.$isLoaded) {
+				console.error('[dropSkill] Entities list not loaded')
+				return
+			}
+
+			// Find the entity by ID in the already-loaded list
+			let coValue: any = null
+			for (const entity of entitiesList) {
+				if (!entity?.$isLoaded) continue
+				const entityId = entity.id || entity.$jazz?.id
+				if (entityId === draggedTodoId) {
+					coValue = entity
+					break
+				}
+			}
+
+			if (!coValue) {
+				console.error('[dropSkill] Entity not found:', draggedTodoId)
+				return
+			}
+
+			// Update the entity using the generic update function
+			await updateEntityGeneric(jazzAccount, coValue, { status: newStatus })
+			
+			console.log('[dropSkill] ⚡ Todo status updated instantly (local-first)')
+			
+			// Clear dragged todo from context and hide dropzones
+			const updatedContext = {
+				...actor.context,
+				draggedTodoId: null,
+				draggedTodoStatus: null,
+				isDragging: false, // Hide dropzones after drop
+			}
+			
+			actor.$jazz.set('context', updatedContext)
+		} catch (error) {
+			console.error('[dropSkill] Failed to update todo status:', error)
+		}
+	},
+}
+
+/**
+ * Drag End Skill - Clears drag state when drag ends (successful or not)
+ */
+const dragEndSkill: Skill = {
+	metadata: {
+		id: '@todo/dragEnd',
+		name: 'Drag End',
+		description: 'Clears drag state when drag operation ends',
+		category: 'todo',
+		parameters: {},
+	},
+	execute: async (actor: any, payload?: unknown) => {
+		// Clear drag state and hide dropzones
+		const updatedContext = {
+			...actor.context,
+			draggedTodoId: null,
+			draggedTodoStatus: null,
+			isDragging: false, // Hide dropzones
+		}
+		
+		actor.$jazz.set('context', updatedContext)
+		console.log('[dragEndSkill] Cleared drag state, isDragging:', false)
+	},
+}
+
 // ========== SKILL EXPORTS ==========
 
 /**
@@ -1012,13 +1074,15 @@ export const entitySkills: Record<string, Skill> = {
 	'@entity/toggleStatus': toggleEntityStatusSkill, // Auto-detects schema from @schema
 	'@entity/clearEntities': clearEntitiesSkill, // Requires schemaName
 	'@entity/validateInput': validateEntityInputSkill,
+	// Drag-and-drop skills
+	'@todo/dragStart': dragStartSkill,
+	'@todo/drop': dropSkill,
+	'@todo/dragEnd': dragEndSkill,
 	// UI skills
 	'@ui/updateInput': updateInputSkill,
 	'@ui/clearInput': clearInputSkill,
-	'@ui/swapViewNode': swapViewNodeSkill, // NEW: Hierarchy-aware children array manipulation
-	'@ui/setView': setViewSkill,
 	'@ui/openModal': openModalSkill,
 	'@ui/closeModal': closeModalSkill,
-	'@ui/toggleVisible': toggleVisibleSkill, // NEW: Toggle actor visibility
-	'@ui/navigate': navigateSkill, // NEW: Navigate between vibes (complete composite swap)
+	'@ui/toggleVisible': toggleVisibleSkill,
+	'@ui/navigate': navigateSkill, // Navigate between vibes
 }

@@ -338,34 +338,43 @@ async function ensureMetaSchema(account: any): Promise<any> {
 	// Create lock for this schema
 	const creationPromise = (async () => {
 		try {
-			const loadedAccount = await account.$jazz.ensureLoaded({
-				resolve: { root: true },
-			})
+			// ⚡ OPTIMIZED: Check if already loaded to avoid unnecessary await
+			let root = account.root
+			if (!root?.$isLoaded) {
+				const loadedAccount = await account.$jazz.ensureLoaded({
+					resolve: { root: true },
+				})
 
-			if (!loadedAccount.root) {
-				throw new Error('Root does not exist')
+				if (!loadedAccount.root) {
+					throw new Error('Root does not exist')
+				}
+
+				root = loadedAccount.root
 			}
-
-			const root = loadedAccount.root
 
 			// Ensure schemata list exists
 			if (!root.$jazz.has('schemata')) {
 				throw new Error('Schemata list does not exist - run account migration first')
 			}
 
-			// Load schemata list
-			const rootWithSchemata = await root.$jazz.ensureLoaded({
-				resolve: { schemata: true },
-			})
-			const schemataList = rootWithSchemata.schemata
+			// ⚡ OPTIMIZED: Check if schemata already loaded
+			let schemataList = root.schemata
+			if (!schemataList?.$isLoaded) {
+				const rootWithSchemata = await root.$jazz.ensureLoaded({
+					resolve: { schemata: true },
+				})
+				schemataList = rootWithSchemata.schemata
+			}
 
 			if (!schemataList) {
 				throw new Error('Schemata list could not be loaded')
 			}
 
-			// Check if meta-schema already exists
+			// ⚡ OPTIMIZED: Only await if not already loaded
+			if (!schemataList.$isLoaded) {
+				await schemataList.$jazz.ensureLoaded()
+			}
 			// ⚡ LOCAL-FIRST: Jazz loads from local cache instantly
-			await schemataList.$jazz.ensureLoaded()
 
 	// Get node to load CoValues by ID (like resolveCoValue does)
 	// Try account first, then root as fallback
@@ -389,32 +398,38 @@ async function ensureMetaSchema(account: any): Promise<any> {
 						continue
 					}
 
-					// Load the actual CoValue from the node (like resolveCoValue does)
-					// This ensures we get the full CoValue with all properties, not just a reference
-					const loadedValue = await node.load(schemaId as any)
-					if (loadedValue === 'unavailable') {
-						continue
+					// ⚡ OPTIMIZED: Check if schema is already loaded before awaiting node.load
+					const schemaObj = schema as any
+					let schemaNameValue: string | undefined
+
+					if (schemaObj.$isLoaded && schemaObj.name) {
+						// ⚡ Already loaded - access synchronously
+						schemaNameValue = schemaObj.name
+						console.log(`[ensureMetaSchema] Found schema (cached) - name: "${schemaNameValue}", ID: ${schemaId}`)
+					} else {
+						// Not loaded yet - load from node
+						const loadedValue = await node.load(schemaId as any)
+						if (loadedValue === 'unavailable') {
+							continue
+						}
+
+						// Get snapshot using toJSON() - same as resolveCoValue does
+						const snapshot = loadedValue.toJSON()
+						if (!snapshot || typeof snapshot !== 'object' || snapshot === null) {
+							continue
+						}
+
+						// Read name from snapshot (like ListView/Context do)
+						schemaNameValue = (snapshot as any).name as string | undefined
+						console.log(`[ensureMetaSchema] Found schema (loaded) - name: "${schemaNameValue}", ID: ${schemaId}`)
 					}
 
-					// Get snapshot using toJSON() - same as resolveCoValue does
-					const snapshot = loadedValue.toJSON()
-					if (!snapshot || typeof snapshot !== 'object' || snapshot === null) {
-						continue
+					// Check if name matches 'Schema' (case-sensitive exact match)
+					if (typeof schemaNameValue === 'string' && schemaNameValue === 'Schema') {
+						console.log(`[ensureMetaSchema] Meta-schema "Schema" already exists, returning existing`)
+						// ⚡ Jazz handles caching internally with its local-first architecture
+						return schemaObj
 					}
-
-					// Read name from snapshot (like ListView/Context do)
-					const schemaNameValue = (snapshot as any).name as string | undefined
-
-					console.log(`[ensureMetaSchema] Found schema - name: "${schemaNameValue}", ID: ${schemaId}`)
-
-				// Check if name matches 'Schema' (case-sensitive exact match)
-				if (typeof schemaNameValue === 'string' && schemaNameValue === 'Schema') {
-					console.log(`[ensureMetaSchema] Meta-schema "Schema" already exists, returning existing`)
-					// Return the schema from the list (it's already wrapped), not the raw loadedValue
-					// The schema from Array.from(schemataList) is the wrapped CoValue we need
-					// ⚡ Jazz handles caching internally with its local-first architecture
-					return schema
-				}
 				} catch (error) {
 					console.error(`[ensureMetaSchema] Error loading schema:`, error)
 					// Skip this schema if there's an error loading it
@@ -516,16 +531,18 @@ export async function ensureSchema(
 			// Add @label to the schema automatically
 			const jsonSchemaWithLabel = addLabelToSchema(jsonSchema)
 
-	// Reload root and schemata list to ensure we have the latest state
-	const freshRoot = await account.$jazz.ensureLoaded({
-		resolve: { root: { schemata: true } },
-	})
-
-	if (!freshRoot.root) {
-		throw new Error('Root does not exist')
+	// ⚡ OPTIMIZED: Check if already loaded to avoid unnecessary await
+	// Only await if data isn't already available locally
+	let root = account.root
+	if (!root?.$isLoaded) {
+		const freshRoot = await account.$jazz.ensureLoaded({
+			resolve: { root: { schemata: true } },
+		})
+		if (!freshRoot.root) {
+			throw new Error('Root does not exist')
+		}
+		root = freshRoot.root
 	}
-
-	const root = freshRoot.root
 
 	// Ensure schemata list exists
 	if (!root.$jazz.has('schemata')) {
@@ -537,7 +554,10 @@ export async function ensureSchema(
 		throw new Error('Schemata list could not be loaded')
 	}
 
-	await schemataList.$jazz.ensureLoaded()
+	// ⚡ OPTIMIZED: Only await if not already loaded
+	if (!schemataList.$isLoaded) {
+		await schemataList.$jazz.ensureLoaded()
+	}
 	// ⚡ LOCAL-FIRST: No waitForSync - Jazz loads from local cache instantly
 
 	// Get node to load CoValues by ID (like resolveCoValue does)
@@ -563,33 +583,42 @@ export async function ensureSchema(
 						continue
 					}
 
-					// Load the actual CoValue from the node (like resolveCoValue does)
-					// This ensures we get the full CoValue with all properties, not just a reference
-					const loadedValue = await node.load(schemaId as any)
-					if (loadedValue === 'unavailable') {
-						continue
+					// ⚡ OPTIMIZED: Check if schema is already loaded before awaiting node.load
+					// If already loaded, we can access properties synchronously
+					const schemaObj = schema as any
+					let schemaNameValue: string | undefined
+
+					if (schemaObj.$isLoaded && schemaObj.name) {
+						// ⚡ Already loaded - access synchronously
+						schemaNameValue = schemaObj.name
+						console.log(`[ensureSchema] Found schema (cached) - name: "${schemaNameValue}", ID: ${schemaId}`)
+					} else {
+						// Not loaded yet - load from node
+						const loadedValue = await node.load(schemaId as any)
+						if (loadedValue === 'unavailable') {
+							continue
+						}
+
+						// Get snapshot using toJSON() - same as resolveCoValue does
+						const snapshot = loadedValue.toJSON()
+						if (!snapshot || typeof snapshot !== 'object' || snapshot === null) {
+							continue
+						}
+
+						// Read name from snapshot (like ListView/Context do)
+						schemaNameValue = (snapshot as any).name as string | undefined
+						console.log(`[ensureSchema] Found schema (loaded) - name: "${schemaNameValue}", ID: ${schemaId}`)
 					}
-
-					// Get snapshot using toJSON() - same as resolveCoValue does
-					const snapshot = loadedValue.toJSON()
-					if (!snapshot || typeof snapshot !== 'object' || snapshot === null) {
-						continue
-					}
-
-					// Read name from snapshot (like ListView/Context do)
-					const schemaNameValue = (snapshot as any).name as string | undefined
-
-					console.log(`[ensureSchema] Found schema - name: "${schemaNameValue}", ID: ${schemaId}`)
 
 					// Check if name matches (case-sensitive exact match)
 					if (typeof schemaNameValue === 'string' && schemaNameValue === schemaName) {
 						console.log(`[ensureSchema] Schema "${schemaName}" already exists, returning existing`)
-						// Return the schema from the list (it's already wrapped), but ensure it's loaded first
-						// The schema from Array.from(schemataList) is the wrapped CoValue we need
-						if (schema && typeof schema === 'object' && '$jazz' in schema) {
-							return await (schema as any).$jazz.ensureLoaded({ resolve: {} })
+						// ⚡ OPTIMIZED: If already loaded, return immediately without await
+						if (schemaObj.$isLoaded) {
+							return schemaObj
 						}
-						return schema
+						// Not loaded - ensure loaded before returning
+						return await schemaObj.$jazz.ensureLoaded({ resolve: {} })
 					}
 				} catch (error) {
 					console.error(`[ensureSchema] Error loading schema:`, error)
@@ -631,10 +660,21 @@ export async function ensureSchema(
 			const schemataArray = Array.from(schemataList)
 			for (const schema of schemataArray) {
 				if (schema && typeof schema === 'object' && '$jazz' in schema) {
-					const schemaLoaded = await (schema as any).$jazz.ensureLoaded()
-					if (schemaLoaded.$isLoaded && (schemaLoaded as any).name === nestedSchemaName) {
-						existingNestedSchema = schemaLoaded
-						break
+					const schemaObj = schema as any
+					// ⚡ OPTIMIZED: Check if already loaded to avoid await
+					if (schemaObj.$isLoaded) {
+						// Already loaded - check synchronously
+						if (schemaObj.name === nestedSchemaName) {
+							existingNestedSchema = schemaObj
+							break
+						}
+					} else {
+						// Not loaded - await loading
+						const schemaLoaded = await schemaObj.$jazz.ensureLoaded()
+						if (schemaLoaded.$isLoaded && schemaLoaded.name === nestedSchemaName) {
+							existingNestedSchema = schemaLoaded
+							break
+						}
 					}
 				}
 			}

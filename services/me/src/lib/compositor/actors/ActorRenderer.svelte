@@ -308,6 +308,24 @@
       .map((cs: any) => cs.current)
       .filter((a: any) => a?.$isLoaded);
   });
+
+  // Resolve dependencies from IDs to actual CoValue objects (for view bindings)
+  const resolvedDependencies = $derived.by(() => {
+    if (!actor?.$isLoaded || !actor.dependencies) return {};
+    
+    const deps: Record<string, any> = {};
+    for (const [key, idOrValue] of Object.entries(actor.dependencies)) {
+      if (typeof idOrValue === 'string' && idOrValue.startsWith('co_')) {
+        // It's a Jazz ID - resolve it to a CoState
+        const coState = new CoState(Actor, idOrValue);
+        deps[key] = coState.current; // Get the loaded actor object
+      } else {
+        // Already resolved or not a Jazz ID
+        deps[key] = idOrValue;
+      }
+    }
+    return deps;
+  });
   
   // Pre-load subscriber CoStates (for event publishing)
   const subscriberCoStates = $derived.by(() => {
@@ -326,7 +344,8 @@
     context: resolvedContextWithQueries, 
     childActors, 
     item, 
-    accountCoState 
+    accountCoState,
+    dependencies: resolvedDependencies // ✅ Expose RESOLVED dependencies (actual objects, not IDs)
   }}
   {#if viewType === 'composite'}
     <!-- Delegate to Composite.svelte for rendering -->

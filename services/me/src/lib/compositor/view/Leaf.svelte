@@ -410,23 +410,40 @@
 
   // Get sanitized classes - resolve dynamic class values
   const classes = $derived.by(() => {
-    if (!leaf || !leaf.classes) return "";
+    let baseClasses = "";
+    let dynamicClasses = "";
 
-    // Split classes string by spaces and resolve dynamic classes (e.g., classes that reference data/item)
-    const classArray = leaf.classes.split(/\s+/).filter(Boolean);
-    const resolvedClasses = classArray.map((cls) => {
-      if (
-        typeof cls === "string" &&
-        (cls.includes("item.") || cls.includes("data."))
-      ) {
-        // Try to resolve as data path or expression
-        const resolved = resolveValue(cls);
-        return typeof resolved === "string" ? resolved : cls;
+    // 1. Process static classes from leaf.classes
+    if (leaf && leaf.classes) {
+      const classArray = leaf.classes.split(/\s+/).filter(Boolean);
+      const resolvedClasses = classArray.map((cls) => {
+        if (
+          typeof cls === "string" &&
+          (cls.includes("item.") || cls.includes("data."))
+        ) {
+          // Try to resolve as data path or expression
+          const resolved = resolveValue(cls);
+          return typeof resolved === "string" ? resolved : cls;
+        }
+        return cls;
+      });
+      baseClasses = sanitizeClasses(resolvedClasses).sanitized.join(" ");
+    }
+
+    // 2. Process dynamic classes from leaf.bindings.class
+    if (leaf && leaf.bindings?.class) {
+      // Access data to ensure reactivity
+      const _ = data;
+      ensureReactivityForExpression(leaf.bindings.class);
+      const resolved = resolveValue(leaf.bindings.class);
+      if (typeof resolved === "string" && resolved.trim()) {
+        const dynamicClassArray = resolved.split(/\s+/).filter(Boolean);
+        dynamicClasses = sanitizeClasses(dynamicClassArray).sanitized.join(" ");
       }
-      return cls;
-    });
+    }
 
-    return sanitizeClasses(resolvedClasses).sanitized.join(" ");
+    // Combine base and dynamic classes
+    return [baseClasses, dynamicClasses].filter(Boolean).join(" ");
   });
 
   // Helper function to extract and access properties from expressions for reactivity tracking
@@ -623,9 +640,17 @@
       const eventConfig = leaf.events.input;
       attrs.oninput = (e: Event) => {
         const target = e.target as HTMLInputElement;
-        // Use generic default key "text" for input values
-        // Payload can override this if it specifies a different key
-        const payloadKey = "text";
+        
+        // Extract field name from binding path (e.g., "context.newTodoText" → "newTodoText")
+        let payloadKey = "text"; // fallback only
+        if (leaf.bindings?.value && typeof leaf.bindings.value === 'string') {
+          const bindingPath = leaf.bindings.value;
+          const parts = bindingPath.split('.');
+          if (parts.length > 0) {
+            payloadKey = parts[parts.length - 1]; // ✅ EXTRACTED
+          }
+        }
+        
         // Always send the input value in the payload
         const payload: Record<string, unknown> = eventConfig.payload
           ? {
@@ -1083,39 +1108,6 @@
             e.stopPropagation();
           }
         }}
-    oninput={leaf.events?.input
-      ? (e: Event) => {
-          const target = e.target as HTMLInputElement;
-          const eventConfig = leaf.events!.input!;
-          
-          // Extract field name from binding path (e.g., "context.newTodoText" -> "newTodoText")
-          let payloadKey = "text"; // fallback only if no binding found
-          if (leaf.bindings?.value && typeof leaf.bindings.value === 'string') {
-            const bindingPath = leaf.bindings.value;
-            console.log('[Leaf oninput] bindingPath:', bindingPath);
-            const parts = bindingPath.split('.');
-            if (parts.length > 0) {
-              payloadKey = parts[parts.length - 1];
-              console.log('[Leaf oninput] extracted payloadKey:', payloadKey);
-            }
-          }
-          console.log('[Leaf oninput] Final payload:', { [payloadKey]: target.value });
-          
-          const payload: Record = eventConfig.payload
-            ? {
-                ...(typeof eventConfig.payload === "object" &&
-                !Array.isArray(eventConfig.payload)
-                  ? (eventConfig.payload as Record)
-                  : {}),
-                [payloadKey]: target.value,
-              }
-            : { [payloadKey]: target.value };
-
-          if (onEvent) {
-            onEvent(eventConfig.event, payload);
-          }
-        }
-      : undefined}
     onchange={leaf.events?.change
       ? () => handleEvent(leaf.events!.change!)
       : undefined}

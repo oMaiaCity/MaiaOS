@@ -624,7 +624,8 @@
               e.dataTransfer.setData("text/plain", payload);
             }
           }
-          // Don't call handleEvent here - we just store the ID
+          // Call handleEvent to notify the actor (e.g., for storing drag state)
+          handleEvent(composite.events!.dragstart!);
         }
       : undefined}
     ondragenter={composite.events?.dragenter

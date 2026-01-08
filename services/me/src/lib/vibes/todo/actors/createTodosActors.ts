@@ -7,7 +7,7 @@
 
 import { Actor, ActorList, ActorMessage, VibesRegistry } from "@hominio/db";
 import { Group, co, z } from "jazz-tools";
-import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf, createBadgeLeaf, createInputSectionComposite } from '../../design-templates';
+import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf, createBadgeLeaf, createInputSectionComposite, createViewSwitcherComposite, createTimelineComposite, createKanbanComposite } from '../../design-templates';
 
 // Global lock
 const getGlobalLock = () => {
@@ -86,7 +86,7 @@ export async function createTodosActors(account: any) {
 		// BOTTOM-UP CREATION: LEAFS → COMPOSITES → ROOT
 		// ============================================
 
-	// STEP 1: Create leaf actors (title, create button)
+	// STEP 1: Create leaf actors (title)
 	const headerTitleActor = Actor.create({
 		currentState: 'idle',
 		states: { idle: {} },
@@ -99,43 +99,7 @@ export async function createTodosActors(account: any) {
 		role: 'todos-header-title',
 	}, group);
 
-	// Create button - TRUE COLOCATION: handles its own @todo/createRandom action
-	const createButtonActor = Actor.create({
-		currentState: 'idle',
-		states: { 
-			idle: {
-				on: {
-					'@todo/createRandom': { target: 'idle', actions: ['@todo/createRandom'] }
-				}
-			}
-		},
-		context: { visible: true },
-		view: createButtonLeaf({
-			text: 'Create Todo',
-			event: '@todo/createRandom',
-			payload: {},
-			variant: 'primary'
-		}),
-		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([]),
-		role: 'todos-create-button',
-	}, group);
-
-	// STEP 2: Create composite actors (header, input section, list)
-	const headerActor = Actor.create({
-		currentState: 'idle',
-		states: { idle: {} },
-		context: { visible: true },
-		view: createHeaderComposite(),
-		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([headerTitleActor.$jazz.id, createButtonActor.$jazz.id]),
-		role: 'todos-header',
-	}, group);
-
+	// STEP 2: Create composite actors (input section, list, timeline)
 	// Input section actor - TRUE COLOCATION: handles its own @input/updateContext and @todo/create actions
 	const inputSectionActor = Actor.create({
 		currentState: 'idle',
@@ -179,12 +143,12 @@ export async function createTodosActors(account: any) {
 				on: {
 					'@entity/toggleStatus': { target: 'idle', actions: ['@entity/toggleStatus'] },
 					'@entity/updateEntity': { target: 'idle', actions: ['@entity/updateEntity'] },
-					'@entity/deleteEntity': { target: 'idle', actions: ['@entity/deleteEntity'] }
+					'@entity/deleteEntity': { target: 'idle', actions: ['@entity/deleteEntity'] },
 				}
 			}
 		},
 		context: {
-			visible: true,
+			visible: true, // Always visible when rendered
 			queries: {
 				todos: {
 					schemaName: 'Todo',
@@ -192,11 +156,11 @@ export async function createTodosActors(account: any) {
 				}
 			}
 		},
-			view: {
-				container: {
-					layout: 'flex',
-					class: 'p-2 @xs:p-3 @sm:p-4 @md:p-6 flex-col gap-1.5 @xs:gap-2 @sm:gap-3 overflow-auto'
-				},
+		view: {
+			container: {
+				layout: 'flex',
+				class: 'p-0 flex-col gap-1.5 @xs:gap-2 @sm:gap-3 overflow-auto min-h-0 flex-1'
+			},
 			foreach: {
 				items: 'context.queries.todos.items', // CLEAN ARCHITECTURE: Always use context.* prefix
 				key: 'id',
@@ -318,35 +282,194 @@ export async function createTodosActors(account: any) {
 			role: 'todos-list',
 		}, group);
 
-	// STEP 3: Create root actor
-	const todosRootActor = Actor.create({
+	// Timeline actor - displays todos in timeline format
+	const timelineActor = Actor.create({
+		currentState: 'idle',
+		states: {
+			idle: {
+				on: {
+					'@entity/toggleStatus': { target: 'idle', actions: ['@entity/toggleStatus'] },
+					'@entity/updateEntity': { target: 'idle', actions: ['@entity/updateEntity'] },
+					'@entity/deleteEntity': { target: 'idle', actions: ['@entity/deleteEntity'] },
+				}
+			}
+		},
+		context: {
+			visible: true, // Always visible when rendered
+			queries: {
+				todos: {
+					schemaName: 'Todo',
+					items: []
+				}
+			}
+		},
+		view: createTimelineComposite({
+			itemsPath: 'context.queries.todos.items',
+			itemKey: 'id'
+		}),
+		dependencies: {
+			entities: root.entities.$jazz.id
+		},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: co.list(z.string()).create([]),
+		children: co.list(z.string()).create([]),
+		role: 'todos-timeline',
+	}, group);
+
+	// Kanban actor - displays todos in kanban board with drag-and-drop
+	// Uses 3 separate queries with filters for each column
+	const kanbanActor = Actor.create({
+		currentState: 'idle',
+		states: {
+			idle: {
+				on: {
+					'@entity/toggleStatus': { target: 'idle', actions: ['@entity/toggleStatus'] },
+					'@entity/updateEntity': { target: 'idle', actions: ['@entity/updateEntity'] },
+					'@entity/deleteEntity': { target: 'idle', actions: ['@entity/deleteEntity'] },
+					'@todo/dragStart': { target: 'idle', actions: ['@todo/dragStart'] },
+					'@todo/drop': { target: 'idle', actions: ['@todo/drop'] },
+					'@todo/dragEnd': { target: 'idle', actions: ['@todo/dragEnd'] },
+					'@input/updateContext': { target: 'idle', actions: ['@input/updateContext'] },
+					'@ui/preventDefaultOnly': { target: 'idle', actions: [] }, // No-op skill for dragover
+				}
+			}
+		},
+		context: {
+			visible: true,
+			draggedTodoId: null,
+			draggedTodoStatus: null,
+			isDragging: false,
+			dragOverColumn_todo: false,
+			dragOverColumn_in_progress: false,
+			dragOverColumn_done: false,
+			queries: {
+				todos: {
+					schemaName: 'Todo',
+					items: []
+				}
+			}
+		},
+		view: createKanbanComposite({
+			itemsPath: 'context.queries.todos.items',
+			itemKey: 'id'
+		}),
+		dependencies: {
+			entities: root.entities.$jazz.id
+		},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: co.list(z.string()).create([]),
+		children: co.list(z.string()).create([]),
+		role: 'todos-kanban',
+	}, group);
+
+	// ✅ Content actor - handles actor swapping for view switching
+	// This is the GENERIC actor-swapping container that replaces visibility toggling
+	const contentActor = Actor.create({
+		currentState: 'idle',
+		states: {
+			idle: {
+				on: {
+					'@view/swapActors': { target: 'idle', actions: ['@view/swapActors'] }
+				}
+			}
+		},
+		context: {
+			visible: true,
+			viewMode: 'list', // Default view mode (for view switcher button styling)
+			// Mapping of viewMode -> actorId (set after actors are created)
+			viewActors: {
+				list: listActor.$jazz.id,
+				timeline: timelineActor.$jazz.id,
+				kanban: kanbanActor.$jazz.id,
+			}
+		},
+		view: {
+			container: {
+				layout: 'flex',
+				class: 'flex-col w-full h-full'
+			}
+		},
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [],
+		children: co.list(z.string()).create([listActor.$jazz.id]), // Default: show list view
+		role: 'todos-content',
+	}, group);
+
+	// View switcher actor - reads viewMode directly from contentActor via dependencies
+	const viewSwitcherActor = Actor.create({
+		currentState: 'idle',
+		states: { idle: {} }, // No actions - just sends events
+		context: { 
+			visible: true
+		},
+		view: createViewSwitcherComposite({
+			views: [
+				{ id: 'list', label: 'List' },
+				{ id: 'timeline', label: 'Timeline' },
+				{ id: 'kanban', label: 'Kanban' }
+			],
+			currentViewPath: 'dependencies.content.context.viewMode' // ✅ Read directly from contentActor's context
+		}),
+		dependencies: {
+			content: contentActor.$jazz.id // ✅ Set at creation time
+		},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [],
+		children: co.list(z.string()).create([]),
+		role: 'todos-view-switcher',
+	}, group);
+
+	// Header actor - contains title and view switcher in same row
+	const headerActor = Actor.create({
 		currentState: 'idle',
 		states: { idle: {} },
 		context: { visible: true },
-		view: createRootCardComposite({ 
-			cardLayout: 'flex', 
-			cardClasses: 'card p-2 @xs:p-3 @sm:p-4 @md:p-6 flex-col gap-4' 
+		view: createHeaderComposite(),
+		dependencies: {},
+		inbox: co.feed(ActorMessage).create([]),
+		subscriptions: [],
+		children: co.list(z.string()).create([headerTitleActor.$jazz.id, viewSwitcherActor.$jazz.id]), // ✅ Title + Switcher in same row
+		role: 'todos-header',
+	}, group);
+
+	// STEP 3: Create root actor (simplified - no view mode management, just a container)
+	const todosRootActor = Actor.create({
+		currentState: 'idle',
+		states: { idle: {} }, // No actions - just a container
+		context: {
+			visible: true,
+		},
+		view: createRootCardComposite({
+			cardLayout: 'flex',
+			cardClasses: 'card p-2 @xs:p-3 @sm:p-4 @md:p-6 flex-col gap-4'
 		}),
 		dependencies: {
 			entities: root.entities.$jazz.id
 		},
 		inbox: co.feed(ActorMessage).create([]),
 		subscriptions: [],
-		children: co.list(z.string()).create([headerActor.$jazz.id, inputSectionActor.$jazz.id, listActor.$jazz.id]),
+		children: co.list(z.string()).create([headerActor.$jazz.id, inputSectionActor.$jazz.id, contentActor.$jazz.id]), // Switcher is now inside header
 		role: 'todos-root',
 	}, group);
 
-	// STEP 4: Update subscriptions - TRUE COLOCATION
-	createButtonActor.subscriptions.$jazz.push(createButtonActor.$jazz.id);
+	// STEP 4: Update subscriptions - TRUE COLOCATION with actor swapping
 	inputSectionActor.subscriptions.$jazz.push(inputSectionActor.$jazz.id);
 	listActor.subscriptions.$jazz.push(listActor.$jazz.id);
+	timelineActor.subscriptions.$jazz.push(timelineActor.$jazz.id);
+	kanbanActor.subscriptions.$jazz.push(kanbanActor.$jazz.id); // ✅ Kanban handles drag-and-drop events
+	viewSwitcherActor.subscriptions.$jazz.push(contentActor.$jazz.id); // ✅ Switcher SENDS events to contentActor
+	contentActor.subscriptions.$jazz.push(contentActor.$jazz.id); // ✅ Content actor handles @view/swapActors
 
 	// Add all actors to global actors list
 	actorsList.$jazz.push(headerTitleActor);
-	actorsList.$jazz.push(createButtonActor);
 	actorsList.$jazz.push(headerActor);
+	actorsList.$jazz.push(viewSwitcherActor);
 	actorsList.$jazz.push(inputSectionActor);
 	actorsList.$jazz.push(listActor);
+	actorsList.$jazz.push(timelineActor);
+	actorsList.$jazz.push(kanbanActor); // ✅ Add kanban actor
+	actorsList.$jazz.push(contentActor); // ✅ Add content actor
 	actorsList.$jazz.push(todosRootActor);
 
 	console.log('[createTodosActors] ⚡ All actors created instantly (local-first)');

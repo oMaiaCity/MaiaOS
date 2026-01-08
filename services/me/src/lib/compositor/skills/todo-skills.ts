@@ -76,84 +76,32 @@ const createTodoSkill: Skill = {
 			const todo = await createEntityGeneric(jazzAccount, 'Todo', entityData);
 			logger.log('⚡ Todo created instantly (local-first):', name, todo.$jazz.id);
 			
-			// Clear input and error in actor's context after successful creation (legacy behavior)
-			if (actor.context) {
-				(actor.context as any).newTodoText = '';
-				(actor.context as any).error = null;
-				logger.log('Cleared input field in actor context');
+			// ✅ Clear input and error using Jazz $jazz.set() for proper reactivity
+			if (actor.context && actor.$jazz) {
+				const currentContext = actor.context as Record<string, unknown>;
+				const updatedContext = {
+					...currentContext,
+					newTodoText: '',
+					error: null,
+				};
+				actor.$jazz.set('context', updatedContext);
+				logger.log('Cleared input field via Jazz $jazz.set()');
 			}
 		} catch (error: any) {
 			logger.error('❌ Failed to create todo:', error);
-			if (actor.context) {
-				(actor.context as any).error = `Failed to create todo: ${error.message}`;
+			if (actor.context && actor.$jazz) {
+				const currentContext = actor.context as Record<string, unknown>;
+				const updatedContext = {
+					...currentContext,
+					error: `Failed to create todo: ${error.message}`,
+				};
+				actor.$jazz.set('context', updatedContext);
 			}
 			throw error;
 		}
 	},
 };
 
-const createRandomTodoSkill: Skill = {
-	metadata: {
-		id: '@todo/createRandom',
-		name: 'Create Random Todo',
-		description: 'Creates a random todo entity with generated data',
-		category: 'todo',
-		parameters: {
-			type: 'object',
-			properties: {},
-			required: [],
-		},
-	},
-	execute: async (actor: any, payload?: unknown, accountCoState?: any) => {
-		const logger = createActorLogger(actor);
-		
-		const jazzAccount = accountCoState?.current
-		if (!jazzAccount || !jazzAccount.$isLoaded) {
-			logger.error('Jazz account not loaded')
-			throw new Error('Jazz account not loaded')
-		}
-
-		// Generate random todo data
-		const tasks = [
-			'Buy groceries',
-			'Write documentation',
-			'Review pull request',
-			'Fix bug in login',
-			'Update dependencies',
-			'Plan sprint meeting',
-			'Refactor components',
-			'Test new feature',
-			'Deploy to staging',
-			'Call client',
-			'Prepare presentation',
-			'Design mockups',
-			'Write unit tests',
-			'Update README',
-			'Optimize performance'
-		];
-		
-		const statuses = ['todo', 'in-progress', 'done'];
-		
-		const name = tasks[Math.floor(Math.random() * tasks.length)];
-		const status = statuses[Math.floor(Math.random() * statuses.length)];
-
-		const entityData = {
-			name,
-			status,
-		};
-
-	try {
-		logger.log('Creating random todo with data:', entityData);
-		const todo = await createEntityGeneric(jazzAccount, 'Todo', entityData);
-		logger.log('⚡ Todo created instantly (local-first):', name, todo.$jazz.id);
-	} catch (error) {
-		logger.error('❌ Failed to create todo:', error);
-		throw error;
-	}
-	},
-};
-
 export const todoSkills: Record<string, Skill> = {
 	'@todo/create': createTodoSkill,
-	'@todo/createRandom': createRandomTodoSkill,
 };

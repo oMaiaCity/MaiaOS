@@ -7,6 +7,9 @@
 export { createRootCardComposite } from './templates/composites/rootCard.template';
 export { createHeaderComposite } from './templates/composites/header.template';
 export { createInputSectionComposite } from './templates/composites/inputSection.template';
+export { createViewSwitcherComposite } from './templates/composites/viewSwitcher.template';
+export { createTimelineComposite } from './templates/composites/timeline.template';
+export { createKanbanComposite, defaultKanbanColumns } from './templates/composites/kanban.template';
 
 // Leaf templates (View-Only)
 export { createTitleLeaf } from './templates/leafs/title.template';
@@ -18,6 +21,9 @@ export { createErrorLeaf } from './templates/leafs/error.template';
 export type { RootCardParams } from './templates/composites/rootCard.template';
 export type { HeaderParams } from './templates/composites/header.template';
 export type { InputSectionParams } from './templates/composites/inputSection.template';
+export type { ViewSwitcherParams } from './templates/composites/viewSwitcher.template';
+export type { TimelineParams } from './templates/composites/timeline.template';
+export type { KanbanParams, KanbanColumn } from './templates/composites/kanban.template';
 export type { TitleParams } from './templates/leafs/title.template';
 export type { ButtonParams } from './templates/leafs/button.template';
 export type { BadgeParams } from './templates/leafs/badge.template';

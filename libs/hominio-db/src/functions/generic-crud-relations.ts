@@ -74,7 +74,8 @@ export async function getCoMapSchemaForRelationSchemaName(
 	// Set the type property to "Relation" on the SchemaDefinition
 	// This distinguishes Relation schemas from Entity schemas
 	schemaDefinition.$jazz.set('type', 'Relation')
-	await schemaDefinition.$jazz.waitForSync()
+	// ⚡ REMOVED: await schemaDefinition.$jazz.waitForSync()
+	// LOCAL-FIRST: Property set is instant, sync happens in background
 
 	// Add system props (@label, @schema) to JSON Schema
 	const jsonSchemaWithSystemProps = addLabelToSchema(jsonSchema)
@@ -134,15 +135,16 @@ export async function createRelationGeneric(
 		console.log('[createRelationGeneric] Creating root.relations CoList...')
 		// Create a group for relations list (required for CoList)
 		const relationsGroup = co.group()
-		await relationsGroup.$jazz.waitForSync()
+		// ⚡ REMOVED: await relationsGroup.$jazz.waitForSync()
 		
 		// Create empty relations list with group owner (matches migration pattern)
 		const relationsList = co.list(co.map({})).create([], relationsGroup)
-		await relationsList.$jazz.waitForSync()
+		// ⚡ REMOVED: await relationsList.$jazz.waitForSync()
 		root.$jazz.set('relations', relationsList)
-		await root.$jazz.waitForSync()
+		// ⚡ REMOVED: await root.$jazz.waitForSync()
+		// LOCAL-FIRST: All operations instant, sync happens in background
 		// eslint-disable-next-line no-console
-		console.log('[createRelationGeneric] root.relations CoList created')
+		console.log('[createRelationGeneric] ⚡ root.relations CoList created instantly (local-first)')
 	}
 
 	// Load relations list
@@ -166,10 +168,9 @@ export async function createRelationGeneric(
 	console.log('[createRelationGeneric] Creating relation with CoMapSchema.create...')
 	const relation = CoMapSchema.create(relationData, relationsOwner)
 	// eslint-disable-next-line no-console
-	console.log('[createRelationGeneric] Relation created, ID:', relation?.$jazz?.id)
-	await relation.$jazz.waitForSync()
-	// eslint-disable-next-line no-console
-	console.log('[createRelationGeneric] Relation synced')
+	console.log('[createRelationGeneric] ⚡ Relation created instantly (local-first), ID:', relation?.$jazz?.id)
+	// ⚡ REMOVED: await relation.$jazz.waitForSync()
+	// LOCAL-FIRST: Creation is instant, sync happens in background
 
 	// Set system properties (@label, @schema)
 	// eslint-disable-next-line no-console
@@ -182,9 +183,10 @@ export async function createRelationGeneric(
 	// eslint-disable-next-line no-console
 	console.log('[createRelationGeneric] Adding relation to relations list...')
 	relationsList.$jazz.push(relation)
-	await relationsList.$jazz.waitForSync()
+	// ⚡ REMOVED: await relationsList.$jazz.waitForSync()
+	// LOCAL-FIRST: Push is instant, sync happens in background
 	// eslint-disable-next-line no-console
-	console.log('[createRelationGeneric] Relation added to list and synced')
+	console.log('[createRelationGeneric] ⚡ Relation added instantly (local-first)')
 
 	// eslint-disable-next-line no-console
 	console.log('[createRelationGeneric] SUCCESS - Returning relation:', relation?.$jazz?.id)
@@ -301,7 +303,8 @@ export async function updateRelationGeneric(
 		}
 	}
 
-	await wrappedCoValue.$jazz.waitForSync()
+	// ⚡ REMOVED: await wrappedCoValue.$jazz.waitForSync()
+	// LOCAL-FIRST: Updates are instant, sync happens in background
 }
 
 /**
@@ -369,6 +372,7 @@ export async function deleteRelationGeneric(account: any, relationId: string): P
 
 	// Remove relation from list using Jazz CoList remove method (by index)
 	relationsList.$jazz.remove(foundIndex)
-	await relationsList.$jazz.waitForSync()
+	// ⚡ REMOVED: await relationsList.$jazz.waitForSync()
+	// LOCAL-FIRST: Remove is instant, sync happens in background
 }
 

@@ -13,12 +13,12 @@ import { setupComputedFieldsForCoValue } from './computed-fields.js'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function setSystemProps(coValue: any, schemaCoValue: any): Promise<void> {
+	// ⚡ OPTIMIZED: Only await if not already loaded
 	if (!coValue || !coValue.$isLoaded) {
-		// Ensure CoValue is loaded
 		await coValue.$jazz.ensureLoaded({ resolve: {} })
 	}
 
-	// Ensure schemaCoValue is loaded
+	// ⚡ OPTIMIZED: Only await if not already loaded
 	if (schemaCoValue && schemaCoValue.$jazz && !schemaCoValue.$isLoaded) {
 		await schemaCoValue.$jazz.ensureLoaded({ resolve: {} })
 	}
@@ -33,7 +33,9 @@ export async function setSystemProps(coValue: any, schemaCoValue: any): Promise<
 		coValue.$jazz.set('@label', '')
 	}
 
-	await coValue.$jazz.waitForSync()
+	// ⚡ REMOVED: await coValue.$jazz.waitForSync()
+	// LOCAL-FIRST: Don't wait for network sync - data is instantly available locally
+	// Sync happens in background automatically
 
 	// Set up computed fields for @label
 	setupComputedFieldsForCoValue(coValue)

@@ -33,7 +33,7 @@ export function createInputSectionComposite(params: InputSectionParams): Composi
           container: {
             layout: 'flex',
             tag: 'form',
-            class: 'mb-1 @xs:mb-2 @sm:mb-3 @md:mb-4 flex flex-col @sm:flex-row gap-1 @xs:gap-1.5 @sm:gap-2 items-stretch @sm:items-center h-auto',
+            class: 'flex flex-col @sm:flex-row gap-1 @xs:gap-1.5 @sm:gap-2 items-stretch @sm:items-center h-auto',
           },
           events: {
             submit: {
@@ -52,7 +52,7 @@ export function createInputSectionComposite(params: InputSectionParams): Composi
                   placeholder: params.placeholder || 'Enter text...',
                   autocomplete: 'off',
                 },
-                classes: 'flex-1 px-2 py-1 @xs:px-3 @xs:py-1.5 @sm:px-4 @sm:py-2 rounded-xl @sm:rounded-2xl bg-slate-100 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] focus:outline-none focus:ring-1 @sm:focus:ring-2 focus:ring-slate-500 focus:border-slate-300 transition-all text-[10px] @xs:text-xs @sm:text-sm @md:text-base text-slate-900 placeholder:text-slate-400',
+                classes: 'flex-1 px-2 py-1 @xs:px-3 @xs:py-1.5 @sm:px-4 @sm:py-2 rounded-xl @sm:rounded-2xl bg-slate-100 border border-slate-200 shadow-[0_0_4px_rgba(0,0,0,0.02)] focus:outline-none focus:border-slate-400 transition-all text-[10px] @xs:text-xs @sm:text-sm @md:text-base text-slate-900 placeholder:text-slate-400',
                 bindings: { value: params.valuePath },
                 events: {
                   input: {
