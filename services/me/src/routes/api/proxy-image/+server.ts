@@ -17,7 +17,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		// Fetch the image on the server (no CORS restrictions)
 		const response = await fetch(imageUrl, {
 			headers: {
-				'User-Agent': 'Mozilla/5.0 (compatible; Hominio/1.0)',
+				'User-Agent': 'Mozilla/5.0 (compatible; MaiaCity/1.0)',
 			},
 		})
 

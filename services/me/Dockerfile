@@ -10,8 +10,8 @@ COPY package.json bun.lock* /temp/dev/
 # Copy me service package.json
 COPY services/me/package.json /temp/dev/services/me/
 # Copy full libs BEFORE install (Bun needs full workspace structure, same as wallet service)
-COPY libs/hominio-brand/ /temp/dev/libs/hominio-brand/
-COPY libs/hominio-db/ /temp/dev/libs/hominio-db/
+COPY libs/maia-brand/ /temp/dev/libs/maia-brand/
+COPY libs/maia-db/ /temp/dev/libs/maia-db/
 # Install dependencies with workspace resolution
 RUN cd /temp/dev && bun install --ignore-scripts
 
@@ -38,7 +38,7 @@ FROM base AS release
 COPY --from=install /temp/dev/node_modules node_modules
 COPY --from=build /app/services/me/build build
 COPY --from=build /app/services/me/package.json .
-# Copy libs for runtime (needed for @hominio/brand, @hominio/db)
+# Copy libs for runtime (needed for @maia/brand, @maia/db)
 COPY --from=build /app/libs libs
 
 # Set environment

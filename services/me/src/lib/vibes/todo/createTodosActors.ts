@@ -5,7 +5,7 @@
  * Bottom-up creation: buttons → header → list → root
  */
 
-import { Actor, ActorList, ActorMessage, VibesRegistry } from "@hominio/db";
+import { Actor, ActorList, ActorMessage, VibesRegistry } from "@maia/db";
 import { Group, co, z } from "jazz-tools";
 import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf, createBadgeLeaf, createInputSectionComposite, createViewSwitcherComposite, createTimelineComposite, createKanbanComposite } from '../design-templates';
 

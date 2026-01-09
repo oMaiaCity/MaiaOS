@@ -19,7 +19,7 @@ export default defineConfig({
 		// Ensure proper module resolution in monorepo
 		preserveSymlinks: false,
 		alias: {
-			'@hominio/brand': resolve(__dirname, `${libsPath}/hominio-brand/src`),
+			'@maia/brand': resolve(__dirname, `${libsPath}/maia-brand/src`),
 		},
 	},
 	server: {

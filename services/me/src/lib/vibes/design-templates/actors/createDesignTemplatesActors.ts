@@ -3,7 +3,7 @@
  * Showcase of available design templates
  */
 
-import { Actor, ActorList, ActorMessage } from "@hominio/db";
+import { Actor, ActorList, ActorMessage } from "@maia/db";
 import { Group, co, z } from "jazz-tools";
 import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf } from '../index';
 

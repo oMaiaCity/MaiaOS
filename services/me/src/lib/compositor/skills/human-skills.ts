@@ -8,7 +8,7 @@
  */
 
 import type { Skill } from './types'
-import { createEntityGeneric, deleteEntityGeneric } from '@hominio/db'
+import { createEntityGeneric, deleteEntityGeneric } from '@maia/db'
 
 const createRandomHumanSkill: Skill = {
 	metadata: {

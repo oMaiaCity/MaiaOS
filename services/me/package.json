@@ -30,9 +30,8 @@
 	},
 	"dependencies": {
 		"@better-auth/cli": "^1.4.5",
-		"@hominio/brand": "workspace:*",
-		"@hominio/db": "workspace:*",
-		"@hominio/provider": "workspace:*",
+		"@maia/brand": "workspace:*",
+		"@maia/db": "workspace:*",
 		"@iconify/svelte": "^5.1.0",
 		"better-auth": "^1.4.5",
 		"jazz-tools": "^0.19.7"

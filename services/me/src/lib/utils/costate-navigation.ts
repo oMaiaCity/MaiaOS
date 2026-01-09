@@ -8,7 +8,7 @@
 import type { CoID, RawCoValue } from 'cojson'
 import { CoMap, CoList } from 'jazz-tools'
 import { CoState } from 'jazz-tools/svelte'
-import type { CoValueContext, ResolvedCoValueResult } from '@hominio/db'
+import type { CoValueContext, ResolvedCoValueResult } from '@maia/db'
 
 /**
  * Create a CoState for a CoValue (reactive)

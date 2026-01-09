@@ -1,5 +1,5 @@
 {
-	"name": "hominio",
+	"name": "MaiaOS",
 	"private": true,
 	"workspaces": [
 		"services/*",

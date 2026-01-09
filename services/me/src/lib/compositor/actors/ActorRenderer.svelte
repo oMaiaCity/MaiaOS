@@ -6,7 +6,7 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import { CoState } from "jazz-tools/svelte";
-  import { Actor, ActorMessage } from "@hominio/db";
+  import { Actor, ActorMessage } from "@maia/db";
   import { registerAllSkills, skillRegistry } from "../skills";
   import { resolveDataPath } from "../view/resolver";
   import { useQuery } from "../useQuery.svelte";

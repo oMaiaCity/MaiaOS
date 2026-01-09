@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { syncGoogleDataToProfile } from "@hominio/db";
+  import { syncGoogleDataToProfile } from "@maia/db";
   import { authClient } from "$lib/auth-client";
   import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
 

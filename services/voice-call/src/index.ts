@@ -6,7 +6,7 @@
  * Port: From PUBLIC_DOMAIN_VOICE env var (default: 4201)
  */
 
-import { createVoiceSessionManager } from '@hominio/voice'
+import { createVoiceSessionManager } from '@maia/voice'
 
 // Read environment variables
 // Bun automatically loads .env from root when using --env-file

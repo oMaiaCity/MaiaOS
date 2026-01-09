@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ResolvedCoValueResult } from "@hominio/db";
+  import type { ResolvedCoValueResult } from "@maia/db";
   import type { LocalNode, CoID, RawCoValue } from "cojson";
   import { CoMap } from "jazz-tools";
   import { CoState } from "jazz-tools/svelte";

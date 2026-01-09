@@ -154,7 +154,7 @@ const latest = inbox.byMe?.value  // Latest from current account
 ```typescript
 <script lang="ts">
   import { CoState } from 'jazz-tools/svelte'
-  import { Actor } from '@hominio/db'
+  import { Actor } from '@maia/db'
   
   const actorId = 'co_z...'
   

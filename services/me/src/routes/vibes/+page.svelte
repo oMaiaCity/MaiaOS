@@ -11,7 +11,7 @@
   import { createExplorerActors } from "$lib/vibes/explorer/createExplorerActors";
   import ExplorerView from "$lib/vibes/explorer/components/ExplorerView.svelte";
   import { CoState } from "jazz-tools/svelte";
-  import { Actor } from "@hominio/db";
+  import { Actor } from "@maia/db";
 
   // Get global Jazz account from context (AccountCoState instance)
   const accountCoState = getJazzAccountContext();

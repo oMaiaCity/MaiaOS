@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { JazzAccount } from "@hominio/db";
+  import { JazzAccount } from "@maia/db";
   import { AccountCoState } from "jazz-tools/svelte";
   import { setJazzAccountContext } from "$lib/contexts/jazz-account-context";
 

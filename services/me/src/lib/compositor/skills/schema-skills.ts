@@ -7,7 +7,7 @@
 
 import type { Data } from '../dataStore'
 import type { Skill } from './types'
-import { ensureSchema } from '@hominio/db'
+import { ensureSchema } from '@maia/db'
 
 // ========== UNIVERSAL SCHEMA CREATION SKILL ==========
 

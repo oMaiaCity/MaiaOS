@@ -3,7 +3,7 @@
  * Recursively traverses the actor tree via children relationships
  */
 
-import { Actor } from "@hominio/db";
+import { Actor } from "@maia/db";
 
 /**
  * Collect all actors for a vibe by recursively traversing from the root actor

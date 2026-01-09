@@ -4,7 +4,7 @@
  */
 
 import type { Skill } from './types';
-import { createEntityGeneric } from '@hominio/db';
+import { createEntityGeneric } from '@maia/db';
 import { createActorLogger } from '../utilities/logger';
 
 const createTodoSkill: Skill = {

@@ -1,10 +1,10 @@
 # Voice Call Service
 
-Simple WebSocket proxy service for Google Live Voice API, designed for the Hominio wallet browser extension.
+Simple WebSocket proxy service for Google Live Voice API, designed for the MaiaCity wallet browser extension.
 
 ## Overview
 
-This service provides a WebSocket endpoint (`/api/v0/voice/live`) that proxies voice calls between the wallet extension client and Google's Live API using the `@hominio/voice` package.
+This service provides a WebSocket endpoint (`/api/v0/voice/live`) that proxies voice calls between the wallet extension client and Google's Live API using the `@maia/voice` package.
 
 ## Architecture
 
@@ -12,7 +12,7 @@ This service provides a WebSocket endpoint (`/api/v0/voice/live`) that proxies v
 Wallet Extension (Sidepanel)
     ↓ WebSocket (ws://localhost:4201/api/v0/voice/live)
 Voice Call Service (Pure Bun)
-    ↓ Google Live API (via @hominio/voice)
+    ↓ Google Live API (via @maia/voice)
 Google GenAI
 ```
 

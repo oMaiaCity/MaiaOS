@@ -1,11 +1,11 @@
 <script lang="ts">
-  import type { CoValueContext } from "@hominio/db";
+  import type { CoValueContext } from "@maia/db";
   import {
     getCoValueGroupInfo,
     resolveProfile,
     formatCoValueId,
     setupComputedFieldsForCoValue,
-  } from "@hominio/db";
+  } from "@maia/db";
   import type { LocalNode, CoID, RawCoValue } from "cojson";
   import { CoMap } from "jazz-tools";
   import { CoState, Image } from "jazz-tools/svelte";

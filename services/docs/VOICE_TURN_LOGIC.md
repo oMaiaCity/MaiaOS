@@ -14,7 +14,7 @@
 
 ## Current Implementation
 
-### Context Injection Service (`libs/hominio-voice/src/server/context-injection.ts`)
+### Context Injection Service (`libs/maia-voice/src/server/context-injection.ts`)
 
 ```typescript
 // Standard context injection
@@ -78,7 +78,7 @@ async injectContext(
    - Currently uses `turnComplete: true` (default)
    - **Should use `turnComplete: false`** to prevent voice response
 
-2. **Query Vibe Context** (`libs/hominio-voice/src/server/tools/query-vibe-context.ts`):
+2. **Query Vibe Context** (`libs/maia-voice/src/server/tools/query-vibe-context.ts`):
    ```typescript
    injectFn({
        turns: contextString,

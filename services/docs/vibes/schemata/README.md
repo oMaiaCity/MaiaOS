@@ -249,7 +249,7 @@ import {
   createEntityGeneric,
   updateEntityGeneric,
   deleteEntityGeneric,
-} from '@hominio/db'
+} from '@maia/db'
 
 // CREATE
 const human = await createEntityGeneric(account, 'Human', {
@@ -279,7 +279,7 @@ import {
   createRelationGeneric,
   updateRelationGeneric,
   deleteRelationGeneric,
-} from '@hominio/db'
+} from '@maia/db'
 
 // CREATE
 const relation = await createRelationGeneric(account, 'AssignedTo', {
@@ -299,7 +299,7 @@ await deleteRelationGeneric(account, relation.$jazz.id)
 ### Schema CRUD
 
 ```typescript
-import { ensureSchema } from '@hominio/db'
+import { ensureSchema } from '@maia/db'
 
 // CREATE/ENSURE
 const schema = await ensureSchema(account, 'Human', {
@@ -386,7 +386,7 @@ const assignedTodos = assignedToHuman.map(relation => {
 ### Registration
 
 ```typescript
-import { registerJsonSchema } from '@hominio/db'
+import { registerJsonSchema } from '@maia/db'
 
 // Register leaf schemas
 registerJsonSchema('design-system.button', buttonSchemaDefinition)

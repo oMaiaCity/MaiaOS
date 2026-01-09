@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Hot-reload-aware asset sync script for @hominio/brand
+ * Hot-reload-aware asset sync script for @maia/brand
  *
- * Syncs assets from libs/hominio-brand/src/assets to service static folders.
+ * Syncs assets from libs/maia-brand/src/assets to service static folders.
  * Runs in watch mode during development for hot reloading.
  *
  * Usage:
@@ -18,7 +18,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
 // Paths - script is now in scripts/ folder, so monorepo root is one level up
 const monorepoRoot = resolve(__dirname, '..')
-const brandAssetsDir = resolve(monorepoRoot, 'libs/hominio-brand/src/assets')
+const brandAssetsDir = resolve(monorepoRoot, 'libs/maia-brand/src/assets')
 
 // Detect if we're in Docker build context (service copied to root) or normal monorepo
 // In Docker: services/app/ . is copied to /app, so static/ is at /app/static/
@@ -29,7 +29,6 @@ const isDockerContext =
 // Get current working directory to detect which service we're building
 const cwd = process.cwd()
 const isMeService = cwd.includes('services/me') || (cwd.includes('me') && !cwd.includes('website'))
-const isWalletService = cwd.includes('services/wallet-browser') || cwd.includes('wallet-browser')
 
 const serviceStaticDirs = isDockerContext
 	? [
@@ -40,7 +39,6 @@ const serviceStaticDirs = isDockerContext
 			// Normal monorepo context: sync to detected service(s) only
 			// When running from monorepo root (!isDockerContext), include all services
 			...(isMeService || !isDockerContext ? [resolve(monorepoRoot, 'services/me/static/brand')] : []),
-			...(isWalletService || !isDockerContext ? [resolve(monorepoRoot, 'services/wallet-browser/public/brand')] : []),
 		].filter(Boolean)
 
 /**

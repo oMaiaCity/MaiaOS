@@ -15,7 +15,6 @@ const rootDir = resolve(__dirname, '..')
 // Track child processes
 let childProcess = null
 let assetSyncProcess = null
-let walletProcess = null
 let voiceCallProcess = null
 
 /**
@@ -71,32 +70,6 @@ function startService() {
 }
 
 /**
- * Start the wallet extension dev server
- */
-function startWallet() {
-	console.log('[wallet] Starting wallet extension dev server...\n')
-
-	walletProcess = spawn('bun', ['--filter', 'wallet-browser', 'dev'], {
-		cwd: rootDir,
-		stdio: 'inherit',
-		shell: false,
-		env: { ...process.env },
-	})
-
-	// Handle process errors (non-fatal - wallet is optional)
-	walletProcess.on('error', (_error) => {
-		// Don't exit - wallet is optional
-	})
-
-	// Handle process exit (non-fatal)
-	walletProcess.on('exit', (code) => {
-		if (code !== 0 && code !== null) {
-			// Don't exit - wallet is optional
-		}
-	})
-}
-
-/**
  * Start the voice call service
  */
 function startVoiceCall() {
@@ -132,9 +105,6 @@ function setupSignalHandlers() {
 		if (assetSyncProcess && !assetSyncProcess.killed) {
 			assetSyncProcess.kill('SIGTERM')
 		}
-		if (walletProcess && !walletProcess.killed) {
-			walletProcess.kill('SIGTERM')
-		}
 		if (voiceCallProcess && !voiceCallProcess.killed) {
 			voiceCallProcess.kill('SIGTERM')
 		}
@@ -150,9 +120,6 @@ function setupSignalHandlers() {
 		if (assetSyncProcess && !assetSyncProcess.killed) {
 			assetSyncProcess.kill('SIGTERM')
 		}
-		if (walletProcess && !walletProcess.killed) {
-			walletProcess.kill('SIGTERM')
-		}
 		if (voiceCallProcess && !voiceCallProcess.killed) {
 			voiceCallProcess.kill('SIGTERM')
 		}
@@ -167,7 +134,7 @@ function setupSignalHandlers() {
  * Main execution
  */
 function main() {
-	console.log('[Dev] Starting me service, wallet extension, and voice call service...\n')
+	console.log('[Dev] Starting me service and voice call service...\n')
 	console.log('Press Ctrl+C to stop\n')
 
 	setupSignalHandlers()
@@ -177,9 +144,6 @@ function main() {
 
 	// Start voice call service
 	startVoiceCall()
-
-	// Start wallet extension dev server
-	startWallet()
 
 	// Start me service
 	startService()

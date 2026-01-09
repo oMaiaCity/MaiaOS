@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { PrivacyPolicy } from "@hominio/brand";
+  import { PrivacyPolicy } from "@maia/brand";
 </script>
 
 <PrivacyPolicy />

@@ -127,7 +127,7 @@ hominio/
 │   ├── website/                 # Landing page (port 4200)
 │   └── wallet/                  # Auth service (port 4201)
 └── libs/
-    └── hominio-db/              # Shared database schemas
+    └── maia-db/              # Shared database schemas
         └── src/
             ├── schema.ts        # Jazz schemas
             └── functions/       # CRUD operations

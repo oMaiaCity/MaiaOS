@@ -2,14 +2,14 @@
 
 ## Overview
 
-Brand assets (logos, images, fonts, etc.) are centrally stored in `libs/hominio-brand/src/assets/` and automatically synced to all service static folders during development.
+Brand assets (logos, images, fonts, etc.) are centrally stored in `libs/maia-brand/src/assets/` and automatically synced to all service static folders during development.
 
 ## How It Works
 
 ### 1. **Single Source of Truth**
 All brand assets live in one place:
 ```
-libs/hominio-brand/src/assets/
+libs/maia-brand/src/assets/
 ├── logo_clean.png
 ├── [future assets...]
 ```
@@ -20,7 +20,7 @@ When you run `bun dev`, a file watcher automatically syncs assets to:
 - `services/wallet/static/brand/`
 - `services/website/static/brand/`
 
-The `brand/` subfolder makes it clear these assets come from the hominio-brand package! 🎨
+The `brand/` subfolder makes it clear these assets come from the maia-brand package! 🎨
 
 ### 3. **SvelteKit Standard Usage**
 Services use assets the normal way - no special imports needed:
@@ -48,7 +48,7 @@ The watch mode runs automatically when you use `bun dev` 🎉
 
 1. **Add to brand package:**
    ```bash
-   cp my-new-asset.png libs/hominio-brand/src/assets/
+   cp my-new-asset.png libs/maia-brand/src/assets/
    ```
 
 2. **If dev server is running:**
@@ -82,7 +82,7 @@ The watch mode runs automatically when you use `bun dev` 🎉
 
 ```
 ┌─────────────────────────────────────┐
-│  libs/hominio-brand/src/assets/     │
+│  libs/maia-brand/src/assets/     │
 │  ├── logo_clean.png (SINGLE SOURCE) │
 │  └── [other assets...]              │
 └─────────────┬───────────────────────┘
@@ -107,5 +107,5 @@ This same pattern works for:
 - Favicons (`favicon.ico`)
 - Any other static assets
 
-Just add them to `libs/hominio-brand/src/assets/` and they'll sync automatically! 🚀
+Just add them to `libs/maia-brand/src/assets/` and they'll sync automatically! 🚀
 

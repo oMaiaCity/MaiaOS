@@ -271,7 +271,7 @@ await root.vibes.$jazz.waitForSync()
 <!-- routes/vibes/+page.svelte -->
 <script lang="ts">
   import { useJazz } from '$lib/hooks/useJazz.svelte'
-  import { Actor } from '@hominio/db'
+  import { Actor } from '@maia/db'
   import { CoState } from 'jazz-tools/svelte'
   
   const account = useJazz()

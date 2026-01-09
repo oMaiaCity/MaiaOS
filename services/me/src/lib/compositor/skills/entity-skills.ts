@@ -16,7 +16,7 @@ import {
 	createEntityGeneric,
 	updateEntityGeneric,
 	deleteEntityGeneric,
-} from '@hominio/db'
+} from '@maia/db'
 
 // ========== GENERIC ENTITY SKILLS ==========
 

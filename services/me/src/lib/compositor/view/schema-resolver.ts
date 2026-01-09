@@ -7,7 +7,7 @@
 
 import type { LeafNode } from './leaf-types'
 import type { CompositeNode } from './types'
-import { getJsonSchema } from '@hominio/db'
+import { getJsonSchema } from '@maia/db'
 
 /**
  * Resolve schema instance to regular LeafNode
@@ -34,7 +34,7 @@ export function resolveSchemaLeaf(leaf: LeafNode): LeafNode {
 	// No CoValue creation - schemas are hardcoded (not stored in Jazz yet)
 	const jsonSchema = getJsonSchema(schemaName)
 	if (!jsonSchema) {
-		console.error(`Schema not found in registry: ${schemaName}. Available schemas:`, Object.keys(require('@hominio/db').getRegisteredSchemaNames?.() || {}))
+		console.error(`Schema not found in registry: ${schemaName}. Available schemas:`, Object.keys(require('@maia/db').getRegisteredSchemaNames?.() || {}))
 		// Return a fallback leaf with tag to avoid "No leaf definition" error
 		return {
 			...leaf,

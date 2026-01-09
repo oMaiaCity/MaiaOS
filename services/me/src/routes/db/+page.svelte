@@ -2,7 +2,7 @@
   import { browser } from "$app/environment";
   import {
     type CoValueContext,
-  } from "@hominio/db";
+  } from "@maia/db";
   import { executeSkill, registerAllSkills } from "$lib/compositor/skills";
   import type { CoID, RawCoValue } from "cojson";
   import { CoState } from "jazz-tools/svelte";

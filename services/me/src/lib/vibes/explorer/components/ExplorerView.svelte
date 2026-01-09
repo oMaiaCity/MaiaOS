@@ -2,7 +2,7 @@
 	import { browser } from "$app/environment";
 	import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
 	import ActorList from "./ActorList.svelte";
-	import type { Actor } from "@hominio/db";
+	import type { Actor } from "@maia/db";
 
 	// Get global Jazz account from context
 	const accountCoState = getJazzAccountContext();

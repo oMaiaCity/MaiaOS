@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Actor } from "@hominio/db";
+	import type { Actor } from "@maia/db";
 	import ActorListItem from "./ActorListItem.svelte";
 
 	interface Props {

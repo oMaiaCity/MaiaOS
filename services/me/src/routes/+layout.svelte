@@ -1,8 +1,8 @@
 <script lang="ts">
   import "../app.css";
   import "jazz-tools/inspector/register-custom-element";
-  import { Favicon, Footer } from "@hominio/brand";
-  import { JazzAccount } from "@hominio/db";
+  import { Favicon, Footer } from "@maia/brand";
+  import { JazzAccount } from "@maia/db";
   import { JazzSvelteProvider } from "jazz-tools/svelte";
   import { page } from "$app/stores";
   import { env } from "$env/dynamic/public";
@@ -20,7 +20,7 @@
   const routeInfo = $derived.by(() => {
     const pathname = $page.url.pathname;
     if (pathname === "/") {
-      return { title: "Hominio", description: "Own the destiny of your life" };
+      return { title: "MaiaCity", description: "Own the destiny of your life" };
     } else if (pathname.startsWith("/vibes")) {
       return { title: "Vibes", description: "Explore and manage your vibes" };
     } else if (pathname === "/db") {

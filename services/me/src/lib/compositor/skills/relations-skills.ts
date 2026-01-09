@@ -11,7 +11,7 @@ import {
 	createRelationGeneric,
 	updateRelationGeneric,
 	deleteRelationGeneric,
-} from '@hominio/db'
+} from '@maia/db'
 
 // ========== GENERIC RELATION SKILLS ==========
 

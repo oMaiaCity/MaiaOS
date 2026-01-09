@@ -80,7 +80,7 @@
     <div class="flex items-center gap-4 flex-shrink-0">
       <!-- Logo -->
       <a href="/" class="flex-shrink-0">
-        <img src="/brand/logo_clean.png" alt="Hominio" class="h-10 w-auto" />
+        <img src="/brand/logo_clean.png" alt="MaiaCity" class="h-10 w-auto" />
       </a>
       {#if title || description}
         <div class="flex flex-col">
