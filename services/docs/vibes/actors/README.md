@@ -6,7 +6,7 @@
 
 ## 🎯 Overview
 
-The Actor Architecture is the foundation of the Hominio Vibes system. Every UI component is an autonomous **Actor** - a self-contained unit with:
+The Actor Architecture is the foundation of the MaiaCity Vibes system. Every UI component is an autonomous **Actor** - a self-contained unit with:
 
 - **Its own state machine** - Local state and transitions
 - **An inbox** - Jazz CoFeed for receiving messages

@@ -10,7 +10,7 @@ Brand assets (logos, images, fonts, etc.) are centrally stored in `libs/maia-bra
 All brand assets live in one place:
 ```
 libs/maia-brand/src/assets/
-├── logo_clean.png
+├── MaiaCity.svg
 ├── [future assets...]
 ```
 
@@ -27,7 +27,7 @@ Services use assets the normal way - no special imports needed:
 
 ```svelte
 <!-- In any service component -->
-<img src="/brand/logo_clean.png" alt="Logo" />
+<img src="/brand/MaiaCity.svg" alt="MaiaCity" />
 ```
 
 ## Scripts
@@ -83,7 +83,7 @@ The watch mode runs automatically when you use `bun dev` 🎉
 ```
 ┌─────────────────────────────────────┐
 │  libs/maia-brand/src/assets/     │
-│  ├── logo_clean.png (SINGLE SOURCE) │
+│  ├── MaiaCity.svg (SINGLE SOURCE) │
 │  └── [other assets...]              │
 └─────────────┬───────────────────────┘
               │

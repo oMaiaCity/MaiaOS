@@ -38,7 +38,7 @@ export function createVoiceCallService() {
 
 			// WebSocket Init
 			const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-			const host = window.location.hostname === 'localhost' ? 'localhost:4204' : 'api.hominio.me'
+			const host = window.location.hostname === 'localhost' ? 'localhost:4204' : 'api.maia.city'
 			const wsUrl = `${protocol}//${host}/api/v0/voice/live`
 
 			ws = new WebSocket(wsUrl)

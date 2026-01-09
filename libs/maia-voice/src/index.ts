@@ -1,5 +1,5 @@
 /**
- * Hominio Voice Package
+ * MaiaCity Voice Package
  * Centralized voice logic for Google Live API integration
  *
  * Exports:

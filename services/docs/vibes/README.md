@@ -1,4 +1,4 @@
-# Hominio Vibes Architecture
+# MaiaCity Vibes Architecture
 
 **A Jazz-Native, Actor-Based UI System for Building Reactive, Collaborative Applications**
 
@@ -6,7 +6,7 @@
 
 ## 🎯 Overview
 
-The Hominio Vibes architecture is a revolutionary approach to building user interfaces that combines:
+The MaiaCity Vibes architecture is a revolutionary approach to building user interfaces that combines:
 
 - **Jazz-Native Reactivity**: Built on Jazz CoValues for real-time, collaborative data synchronization
 - **Actor-Based Architecture**: Each UI component is an autonomous actor with its own state machine and inbox
@@ -496,4 +496,4 @@ See each sub-section for detailed documentation on contributing to specific area
 
 ## 📝 License
 
-This architecture is part of the Hominio project. See the main repository for license information.
+This architecture is part of the MaiaCity project. See the main repository for license information.

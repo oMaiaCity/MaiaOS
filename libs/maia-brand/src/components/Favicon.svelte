@@ -1,6 +1,6 @@
 <!--
 	Favicon Component
-	Universal favicon setup for all Hominio services
+	Universal favicon setup for all MaiaCity services
 	Import and use in root layout: <Favicon />
 -->
 <svelte:head>
@@ -8,7 +8,7 @@
 	<link rel="icon" type="image/svg+xml" href="/brand/favicon/favicon.svg" />
 	<link rel="shortcut icon" href="/brand/favicon/favicon.ico" />
 	<link rel="apple-touch-icon" sizes="180x180" href="/brand/favicon/apple-touch-icon.png" />
-	<meta name="apple-mobile-web-app-title" content="Hominio" />
+	<meta name="apple-mobile-web-app-title" content="MaiaCity" />
 	<link rel="manifest" href="/brand/favicon/site.webmanifest" />
 </svelte:head>
 

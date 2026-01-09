@@ -1,5 +1,5 @@
 /**
- * Hominio Language Library
+ * MaiaCity Language Library
  * 
  * Provides Lojban gismu and dictionary parsing utilities
  */

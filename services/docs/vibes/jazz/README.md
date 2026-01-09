@@ -6,7 +6,7 @@
 
 ## 🎯 Overview
 
-The Hominio Vibes system is built on **Jazz** - a framework for building local-first, collaborative applications. Jazz provides:
+The MaiaCity Vibes system is built on **Jazz** - a framework for building local-first, collaborative applications. Jazz provides:
 
 - **CoValues** - Collaborative data structures (CoMap, CoList, CoFeed)
 - **CoState** - Reactive Svelte subscriptions to CoValues  

@@ -316,7 +316,7 @@ function _getAppUrl() {
 					<img src={vibeAvatar} alt="Vibe" class="nav-logo nav-vibe-avatar" />
 				{:else}
 					<!-- Show default logo when not in vibe context -->
-					<img src="/brand/logo_clean.png" alt="Home" class="nav-logo" />
+					<img src="/brand/MaiaCity.svg" alt="Home" class="nav-logo" />
 				{/if}
 			</div>
 			

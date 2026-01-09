@@ -80,12 +80,12 @@
     <div class="flex items-center gap-4 flex-shrink-0">
       <!-- Logo -->
       <a href="/" class="flex-shrink-0">
-        <img src="/brand/logo_clean.png" alt="MaiaCity" class="h-10 w-auto" />
+        <img src="/brand/MaiaCity.svg" alt="Maia City" class="h-10 w-auto" />
       </a>
       {#if title || description}
         <div class="flex flex-col">
           {#if title}
-            <h1 class="text-lg font-bold text-slate-900 leading-tight">
+            <h1 class="text-lg font-bold text-[#1F4269] leading-tight">
               {title}
             </h1>
           {/if}

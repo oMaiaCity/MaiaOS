@@ -20,7 +20,7 @@
   const routeInfo = $derived.by(() => {
     const pathname = $page.url.pathname;
     if (pathname === "/") {
-      return { title: "MaiaCity", description: "Own the destiny of your life" };
+      return { title: "Maia City", description: "where vision becomes reality" };
     } else if (pathname.startsWith("/vibes")) {
       return { title: "Vibes", description: "Explore and manage your vibes" };
     } else if (pathname === "/db") {

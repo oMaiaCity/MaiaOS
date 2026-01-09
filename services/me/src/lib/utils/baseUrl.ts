@@ -25,7 +25,7 @@ export function getBaseURL(): string | undefined {
 
 /**
  * Get the domain without protocol
- * @returns The domain (e.g., "next.hominio.me" or "localhost:4200")
+ * @returns The domain (e.g., "next.maia.city" or "localhost:4200")
  */
 export function getDomain(): string | undefined {
 	return env.PUBLIC_DOMAIN_ME

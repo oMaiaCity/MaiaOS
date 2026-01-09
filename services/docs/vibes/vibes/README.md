@@ -6,7 +6,7 @@
 
 ## 🎯 Overview
 
-A **Vibe** is a complete, self-contained application built on the Hominio architecture. Vibes combine:
+A **Vibe** is a complete, self-contained application built on the MaiaCity architecture. Vibes combine:
 
 - **Actors** - UI components with state machines
 - **Skills** - Reusable business logic
