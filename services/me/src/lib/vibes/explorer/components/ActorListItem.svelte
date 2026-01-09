@@ -94,7 +94,10 @@
 				type: 'leaf',
 				tag: view.tag as string,
 				classes: (view.classes as string) || '',
-				hasEvents: !!(view.events && Object.keys(view.events as Record<string, unknown>).length > 0)
+				elements: view.elements as any[] || [],
+				bindings: view.bindings as Record<string, unknown> || null,
+				attributes: view.attributes as Record<string, unknown> || null,
+				events: view.events as Record<string, unknown> || null
 			};
 		} else if (view.container) {
 			// Composite node
@@ -103,7 +106,8 @@
 				type: 'composite',
 				layout: container.layout as string || 'unknown',
 				class: container.class as string || '',
-				hasForeach: !!(view.foreach)
+				hasForeach: !!(view.foreach),
+				events: view.events as Record<string, unknown> || null
 			};
 		}
 		return null;
@@ -175,39 +179,6 @@
 		{/if}
 	</div>
 
-	<!-- Metadata: Relationship Counts -->
-	<div class="flex items-center gap-3 flex-wrap">
-		{#if childrenCount > 0}
-			<div class="flex items-center gap-1">
-				<span class="text-xs text-slate-500">Children:</span>
-				<span class="px-1.5 py-0.5 text-xs rounded bg-blue-50 text-blue-700">
-					{childrenCount}
-				</span>
-			</div>
-		{/if}
-		{#if subscriptionsCount > 0}
-			<div class="flex items-center gap-1">
-				<span class="text-xs text-slate-500">Subscriptions:</span>
-				<span class="px-1.5 py-0.5 text-xs rounded bg-green-50 text-green-700">
-					{subscriptionsCount}
-				</span>
-			</div>
-		{/if}
-		{#if dependenciesCount > 0}
-			<div class="flex items-center gap-1">
-				<span class="text-xs text-slate-500">Dependencies:</span>
-				<span class="px-1.5 py-0.5 text-xs rounded bg-purple-50 text-purple-700">
-					{dependenciesCount}
-				</span>
-			</div>
-		{/if}
-		{#if hasQueries}
-			<span class="px-1.5 py-0.5 text-xs rounded bg-orange-50 text-orange-700">
-				has queries
-			</span>
-		{/if}
-	</div>
-
 	<!-- Children Details -->
 	{#if childrenDetails.length > 0}
 		<div class="mt-1 pt-2 border-t border-slate-200">
@@ -255,19 +226,86 @@
 	{#if viewDetails}
 		<div class="mt-1 pt-2 border-t border-slate-200">
 			<div class="text-xs text-slate-500 mb-1">View:</div>
-			<div class="text-xs text-slate-700">
-				{#if viewDetails.type === 'leaf'}
-					<span class="px-1.5 py-0.5 rounded bg-green-50 text-green-700">tag: {viewDetails.tag}</span>
-					{#if viewDetails.hasEvents}
-						<span class="ml-1 px-1.5 py-0.5 rounded bg-yellow-50 text-yellow-700">has events</span>
-					{/if}
-				{:else if viewDetails.type === 'composite'}
-					<span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">layout: {viewDetails.layout}</span>
-					{#if viewDetails.hasForeach}
-						<span class="ml-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-700">foreach</span>
-					{/if}
+			
+			{#if viewDetails.type === 'leaf'}
+				<div class="flex flex-wrap gap-1 mb-2">
+					<span class="px-1.5 py-0.5 rounded bg-green-50 text-green-700 text-xs">tag: {viewDetails.tag}</span>
+				</div>
+				
+				<!-- Leaf Elements -->
+				{#if viewDetails.elements && viewDetails.elements.length > 0}
+					<div class="mb-2">
+						<div class="text-xs text-slate-500 mb-1">Elements:</div>
+						<div class="flex flex-wrap gap-1">
+							{#each viewDetails.elements as element}
+								<span class="px-1.5 py-0.5 text-xs rounded bg-slate-50 text-slate-700 border border-slate-200">
+									{typeof element === 'string' ? element : JSON.stringify(element)}
+								</span>
+							{/each}
+						</div>
+					</div>
 				{/if}
-			</div>
+				
+				<!-- Leaf Bindings -->
+				{#if viewDetails.bindings && Object.keys(viewDetails.bindings).length > 0}
+					<div class="mb-2">
+						<div class="text-xs text-slate-500 mb-1">Bindings:</div>
+						<div class="flex flex-col gap-0.5">
+							{#each Object.entries(viewDetails.bindings) as [key, value]}
+								<div class="text-xs text-slate-700">
+									<span class="font-mono text-slate-600">{key}:</span>
+									<span class="ml-1 text-slate-500">{String(value)}</span>
+								</div>
+							{/each}
+						</div>
+					</div>
+				{/if}
+				
+				<!-- Leaf Attributes -->
+				{#if viewDetails.attributes && Object.keys(viewDetails.attributes).length > 0}
+					<div class="mb-2">
+						<div class="text-xs text-slate-500 mb-1">Attributes:</div>
+						<div class="flex flex-wrap gap-1">
+							{#each Object.entries(viewDetails.attributes) as [key, value]}
+								<span class="px-1.5 py-0.5 text-xs rounded bg-slate-50 text-slate-700 border border-slate-200">
+									{key}={String(value)}
+								</span>
+							{/each}
+						</div>
+					</div>
+				{/if}
+				
+			{:else if viewDetails.type === 'composite'}
+				<div class="flex flex-wrap gap-1 mb-2">
+					<span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-xs">layout: {viewDetails.layout}</span>
+					{#if viewDetails.hasForeach}
+						<span class="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 text-xs">foreach</span>
+					{/if}
+				</div>
+			{/if}
+			
+			<!-- Events (for both leaf and composite) -->
+			{#if viewDetails.events && Object.keys(viewDetails.events).length > 0}
+				<div class="mb-2">
+					<div class="text-xs text-slate-500 mb-1">Events:</div>
+					<div class="flex flex-col gap-1">
+						{#each Object.entries(viewDetails.events) as [eventType, eventConfig]}
+							<div class="text-xs bg-yellow-50 border border-yellow-200 rounded p-1.5">
+								<div class="flex items-center gap-1 mb-0.5">
+									<span class="font-semibold text-yellow-800">{eventType}</span>
+									<span class="text-yellow-600">→</span>
+									<span class="font-mono text-yellow-700">{(eventConfig as any)?.event || 'unknown'}</span>
+								</div>
+								{#if (eventConfig as any)?.payload}
+									<div class="text-yellow-600 ml-1">
+										payload: {JSON.stringify((eventConfig as any).payload)}
+									</div>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
 		</div>
 	{/if}
 
