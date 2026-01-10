@@ -1,5 +1,5 @@
 /**
- * Input Section Composite Template
+ * Input Section Composite Factory
  * Reusable input section with form, input field, submit button, and error message
  * Ported from design-system.inputSection schema
  */

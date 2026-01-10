@@ -1,5 +1,5 @@
 /**
- * Button Leaf Template
+ * Button Leaf Factory
  * Standard button with event handling
  */
 

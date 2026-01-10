@@ -1,5 +1,5 @@
 /**
- * Badge Leaf Template
+ * Badge Leaf Factory
  * Reusable status badge with color variants
  */
 

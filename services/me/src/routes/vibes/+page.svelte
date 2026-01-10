@@ -4,11 +4,9 @@
   import { untrack } from "svelte";
   import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
   import ActorRenderer from "$lib/compositor/actors/ActorRenderer.svelte";
-  import { createHumansActors } from "$lib/vibes/humans/createHumansActors";
-  import { createVibesActors } from "$lib/vibes/vibes/createVibesActors";
-  import { createTodosActors } from "$lib/vibes/todo/createTodosActors";
+  import { getOrCreateVibe, getVibeIfExists } from "$lib/factories/seeder";
   import { CoState } from "jazz-tools/svelte";
-  import { Actor, getVibesRegistry } from "@maia/db";
+  import { Actor } from "@maia/db";
 
   // Get global Jazz account from context (AccountCoState instance)
   const accountCoState = getJazzAccountContext();
@@ -87,17 +85,14 @@
       
       console.log('[+page.svelte] Checking registry for', currentVibeName);
 
-      // Get the VibesRegistry entity (from root.entities) - Jazz handles caching internally
-      const registry = await getVibesRegistry(account);
+      // Check if this vibe already exists
+      const existingRootId = await getVibeIfExists(account, currentVibeName);
       
-      // Check if this vibe is already registered
-      const registeredId = registry[currentVibeName];
-      
-      console.log(`[+page.svelte] ✓ Registry ready for ${currentVibeName}. registeredId: ${registeredId}, rootActorId: ${rootActorId}, isInitializing: ${isInitializing}`);
+      console.log(`[+page.svelte] ✓ Registry ready for ${currentVibeName}. existingRootId: ${existingRootId}, rootActorId: ${rootActorId}, isInitializing: ${isInitializing}`);
 
-      if (registeredId && typeof registeredId === 'string' && registeredId.startsWith('co_')) {
-        console.log('[+page.svelte] ✅ Found registered root for', currentVibeName, ':', registeredId);
-        rootActorId = registeredId;
+      if (existingRootId) {
+        console.log('[+page.svelte] ✅ Found registered root for', currentVibeName, ':', existingRootId);
+        rootActorId = existingRootId;
         lastProcessedVibe = currentVibeName;
         return;
       }
@@ -108,17 +103,8 @@
       rootActorId = null; // Show loading state
 
       try {
-        let newRootId: string | undefined;
-        if (currentVibeName === 'humans') {
-          console.log('[+page.svelte] Calling createHumansActors...');
-          newRootId = await createHumansActors(account);
-        } else if (currentVibeName === 'todos') {
-          console.log('[+page.svelte] Calling createTodosActors...');
-          newRootId = await createTodosActors(account);
-        } else {
-          console.log('[+page.svelte] Calling createVibesActors...');
-          newRootId = await createVibesActors(account);
-        }
+        // Use central seeding manager
+        const newRootId = await getOrCreateVibe(account, currentVibeName);
 
         if (newRootId) {
           console.log('[+page.svelte] ✅ Created root for', currentVibeName, ':', newRootId);

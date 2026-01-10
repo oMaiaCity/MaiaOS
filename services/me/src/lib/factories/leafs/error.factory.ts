@@ -1,5 +1,5 @@
 /**
- * Error Leaf Template
+ * Error Leaf Factory
  * Reusable error message component
  * Ported from design-system.error schema
  */

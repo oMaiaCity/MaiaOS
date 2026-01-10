@@ -1,5 +1,5 @@
 /**
- * Root Card Composite Template
+ * Root Card Composite Factory
  * Single actor with nested div structure:
  * - Outer div: centering wrapper (max-w, mx-auto, padding)
  * - Inner div: card styling (card class, padding, grid layout)

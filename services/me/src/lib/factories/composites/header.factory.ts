@@ -1,5 +1,5 @@
 /**
- * Header Composite Template
+ * Header Composite Factory
  * Standard page header with flex layout
  */
 

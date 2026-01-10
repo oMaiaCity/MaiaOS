@@ -1,5 +1,5 @@
 /**
- * View Switcher Composite Template
+ * View Switcher Composite Factory
  * Button array for switching between different view modes (list, timeline, etc.)
  */
 

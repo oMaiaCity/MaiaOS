@@ -1,5 +1,5 @@
 /**
- * Kanban Composite Template
+ * Kanban Composite Factory
  * Displays items in a kanban board with drag-and-drop columns
  */
 

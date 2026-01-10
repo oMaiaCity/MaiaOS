@@ -1,5 +1,5 @@
 /**
- * Timeline Composite Template
+ * Timeline Composite Factory
  * Displays items in a vertical timeline format with dates and visual connectors
  */
 

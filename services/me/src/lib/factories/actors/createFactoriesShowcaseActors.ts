@@ -1,6 +1,6 @@
 /**
- * Create Design Templates Actors
- * Showcase of available design templates
+ * Create Factories Showcase Actors
+ * Showcase of available view factories
  */
 
 import { Actor, ActorList, ActorMessage } from "@maia/db";
@@ -9,23 +9,23 @@ import { createRootCardComposite, createHeaderComposite, createTitleLeaf, create
 
 // Global lock
 const getGlobalLock = () => {
-	if (typeof window === 'undefined') return { designTemplates: false };
+	if (typeof window === 'undefined') return { factories: false };
 	if (!(window as any).__actorCreationLocks) {
-		(window as any).__actorCreationLocks = { designTemplates: false };
+		(window as any).__actorCreationLocks = { factories: false };
 	}
 	return (window as any).__actorCreationLocks;
 };
 
-export async function createDesignTemplatesActors(account: any) {
+export async function createFactoriesShowcaseActors(account: any) {
 	const locks = getGlobalLock();
 	
-	if (locks.designTemplates) {
-		throw new Error('Already creating design templates actors');
+	if (locks.factories) {
+		throw new Error('Already creating factories showcase actors');
 	}
-	locks.designTemplates = true;
+	locks.factories = true;
 	
 	try {
-		console.log('[createDesignTemplatesActors] Starting...');
+		console.log('[createFactoriesShowcaseActors] Starting...');
 	
 		const loadedAccount = await account.$jazz.ensureLoaded({
 			resolve: { 
@@ -42,10 +42,10 @@ export async function createDesignTemplatesActors(account: any) {
 		});
 		
 		const vibesRegistry = rootWithVibes.vibes;
-		const existingRootId = vibesRegistry.designTemplates as string | undefined;
+		const existingRootId = vibesRegistry.factories as string | undefined;
 		
 		if (existingRootId && typeof existingRootId === 'string' && existingRootId.startsWith('co_')) {
-			console.log('[createDesignTemplatesActors] ✅ Found existing root:', existingRootId);
+			console.log('[createFactoriesShowcaseActors] ✅ Found existing root:', existingRootId);
 			return existingRootId;
 		}
 
@@ -73,12 +73,12 @@ export async function createDesignTemplatesActors(account: any) {
 		// Create simple showcase
 		const titleActor = Actor.create({
 			context: {},
-			view: createTitleLeaf({ text: 'Design Templates', tag: 'h2' }),
+			view: createTitleLeaf({ text: 'View Factories', tag: 'h2' }),
 			dependencies: {},
 			inbox: co.feed(ActorMessage).create([]),
 			subscriptions: [],
 			children: co.list(z.string()).create([]),
-			role: 'design-templates-title',
+			role: 'factories-showcase-title',
 		}, group);
 
 		const descActor = Actor.create({
@@ -86,13 +86,13 @@ export async function createDesignTemplatesActors(account: any) {
 			view: {
 				tag: 'p',
 				classes: 'text-slate-600',
-				elements: ['This page showcases reusable design template factories for creating consistent UI components.']
+				elements: ['This page showcases reusable view factory functions for creating consistent UI components.']
 			},
 			dependencies: {},
 			inbox: co.feed(ActorMessage).create([]),
 			subscriptions: [],
 			children: co.list(z.string()).create([]),
-			role: 'design-templates-desc',
+			role: 'factories-showcase-desc',
 		}, group);
 
 		const exampleButtonActor = Actor.create({
@@ -107,7 +107,7 @@ export async function createDesignTemplatesActors(account: any) {
 			inbox: co.feed(ActorMessage).create([]),
 			subscriptions: [],
 			children: co.list(z.string()).create([]),
-			role: 'design-templates-example-button',
+			role: 'factories-showcase-example-button',
 		}, group);
 
 		await Promise.all([
@@ -123,7 +123,7 @@ export async function createDesignTemplatesActors(account: any) {
 			inbox: co.feed(ActorMessage).create([]),
 			subscriptions: [],
 			children: co.list(z.string()).create([titleActor.$jazz.id]),
-			role: 'design-templates-header',
+			role: 'factories-showcase-header',
 		}, group);
 
 		const contentActor = Actor.create({
@@ -138,7 +138,7 @@ export async function createDesignTemplatesActors(account: any) {
 			inbox: co.feed(ActorMessage).create([]),
 			subscriptions: [],
 			children: co.list(z.string()).create([descActor.$jazz.id, exampleButtonActor.$jazz.id]),
-			role: 'design-templates-content',
+			role: 'factories-showcase-content',
 		}, group);
 
 		await Promise.all([
@@ -153,7 +153,7 @@ export async function createDesignTemplatesActors(account: any) {
 			inbox: co.feed(ActorMessage).create([]),
 			subscriptions: [],
 			children: co.list(z.string()).create([headerActor.$jazz.id, contentActor.$jazz.id]),
-			role: 'design-templates-root',
+			role: 'factories-showcase-root',
 		}, group);
 
 		await rootActor.$jazz.waitForSync();
@@ -171,12 +171,12 @@ export async function createDesignTemplatesActors(account: any) {
 		const loadedRootWithVibes = await root.$jazz.ensureLoaded({
 			resolve: { vibes: true },
 		});
-		loadedRootWithVibes.vibes.$jazz.set('designTemplates', rootActorId);
+		loadedRootWithVibes.vibes.$jazz.set('factories', rootActorId);
 		await loadedRootWithVibes.vibes.$jazz.waitForSync();
-		console.log('[createDesignTemplatesActors] ✅ Registered root:', rootActorId);
+		console.log('[createFactoriesShowcaseActors] ✅ Registered root:', rootActorId);
 		
 		return rootActorId;
 	} finally {
-		locks.designTemplates = false;
+		locks.factories = false;
 	}
 }

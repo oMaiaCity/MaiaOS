@@ -7,7 +7,7 @@
 
 import { createActorEntity, getVibesRegistry } from "@maia/db";
 import { Group } from "jazz-tools";
-import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf, createBadgeLeaf, createInputSectionComposite, createViewSwitcherComposite, createTimelineComposite, createKanbanComposite } from '../design-templates';
+import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf, createBadgeLeaf, createInputSectionComposite, createViewSwitcherComposite, createTimelineComposite, createKanbanComposite } from '$lib/factories';
 
 // Global lock
 const getGlobalLock = () => {

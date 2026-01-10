@@ -1,5 +1,5 @@
 /**
- * Title Leaf Template
+ * Title Leaf Factory
  * Standard title/heading element
  */
 
