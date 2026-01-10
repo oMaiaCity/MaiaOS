@@ -9,33 +9,30 @@
 export const humanEntityTypeSchema: any = {
 	type: 'object',
 	properties: {
-		type: { type: 'string', required: true }, // "Entity" for EntityTypes
 		name: { type: 'string', required: true },
 		email: { type: 'string' },
 		dateOfBirth: { type: 'date' },
 	},
-	required: ['type', 'name'],
+	required: ['name'],
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const todoEntityTypeSchema: any = {
 	type: 'object',
 	properties: {
-		type: { type: 'string', required: true }, // "Entity" for EntityTypes
 		name: { type: 'string', required: true }, // Todo name content (matches UI schema)
 		description: { type: 'string' }, // Optional description
 		status: { type: 'string' }, // Plain string field (e.g., 'todo', 'in-progress', 'done')
 		endDate: { type: 'string' }, // ISO string date (matches UI schema)
 		duration: { type: 'number' }, // Duration in minutes (matches UI schema)
 	},
-	required: ['type', 'name'],
+	required: ['name'],
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const chatMessageEntityTypeSchema: any = {
 	type: 'object',
 	properties: {
-		type: { type: 'string', required: true }, // "Entity" for EntityTypes
 		role: { type: 'string', required: true }, // 'user' | 'assistant' | 'system'
 		content: { type: 'string', required: true }, // Message text
 		conversationId: { type: 'string' }, // Optional: group messages by conversation
@@ -43,5 +40,50 @@ export const chatMessageEntityTypeSchema: any = {
 		timestamp: { type: 'number' }, // Optional: Unix timestamp for sorting
 		metadata: { type: 'object' }, // Optional: additional data (JSON)
 	},
-	required: ['type', 'role', 'content'],
+	required: ['role', 'content'],
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const actorEntityTypeSchema: any = {
+	type: 'object',
+	properties: {
+		context: { type: 'object', passthrough: true }, // Passthrough object - all actor state lives here
+		view: { type: 'object', passthrough: true }, // Optional - composite container OR leaf element
+		dependencies: { type: 'object', additionalProperties: { type: 'string' } }, // Record of string to string (name -> CoValue ID)
+		inbox: { 
+			type: 'o-feed', // Jazz CoFeed type
+			items: { 
+				type: 'o-map', // ActorMessage is a CoMap
+				properties: {
+					event: { type: 'string' },
+					payload: { type: 'object', passthrough: true },
+					timestamp: { type: 'number' },
+					from: { type: 'string' }
+				}
+			}
+		},
+		subscriptions: { 
+			type: 'o-list', // Jazz CoList type
+			items: { type: 'string' } 
+		},
+		children: { 
+			type: 'o-list', // Jazz CoList type
+			items: { type: 'string' } 
+		},
+		role: { type: 'string' }, // Optional label for debugging/categorization
+		position: { type: 'number' }, // Deprecated, optional
+	},
+	required: ['context', 'dependencies', 'inbox', 'subscriptions', 'children'],
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const vibesRegistryEntityTypeSchema: any = {
+	type: 'object',
+	additionalProperties: { type: 'string' }, // Allow dynamic vibe name keys (all string values for actor IDs)
+	properties: {
+		vibes: { type: 'string' }, // Optional - root actor ID for vibes vibe
+		humans: { type: 'string' }, // Optional - root actor ID for humans vibe
+		todos: { type: 'string' }, // Optional - root actor ID for todos vibe
+	},
+	required: [], // No required properties - all vibe registrations are optional
 }

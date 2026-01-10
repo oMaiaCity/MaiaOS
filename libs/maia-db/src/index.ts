@@ -16,6 +16,8 @@ export {
 	deleteEntityGeneric,
 	queryEntitiesGeneric,
 	getCoMapSchemaForSchemaName,
+	createActorEntity,
+	getVibesRegistry,
 } from './functions/generic-crud'
 // Schema Registry
 export {
@@ -41,13 +43,11 @@ export { migrateSyncGoogleNameToProfile } from './migrations/20241220_sync-googl
 export {
 	AccountProfile,
 	Actor,
-	ActorList,
 	ActorMessage,
 	AppRoot,
 	Contact,
 	JazzAccount,
 	syncGoogleDataToProfile,
-	VibesRegistry,
 } from './schema'
 // Generic CRUD Functions for Relations
 export {
@@ -57,6 +57,8 @@ export {
 	getCoMapSchemaForRelationSchemaName,
 } from './functions/generic-crud-relations'
 
+// Data Management Utilities
+export { resetData } from './utilities/reset-data'
 // CoValue Formatting (Generic utility)
 export {
 	formatCoValueId,

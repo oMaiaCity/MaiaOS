@@ -5,8 +5,8 @@
  * Bottom-up creation: leafs → composites → root
  */
 
-import { Actor, ActorList, ActorMessage, VibesRegistry } from "@maia/db";
-import { Group, co, z } from "jazz-tools";
+import { createActorEntity, getVibesRegistry } from "@maia/db";
+import { Group } from "jazz-tools";
 import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf } from '../design-templates';
 
 // Global lock that persists across hot reloads
@@ -30,56 +30,16 @@ export async function createVibesActors(account: any) {
 	try {
 		console.log('[createVibesActors] Starting ID-based actor creation...');
 	
-		// Ensure root is loaded
-		const loadedAccount = await account.$jazz.ensureLoaded({
-			resolve: { 
-				root: {
-					actors: true,
-					vibes: true
-				} 
-			},
-		});
-		if (!loadedAccount.root?.$isLoaded) {
-			throw new Error('Root is not loaded');
-		}
-		const root = loadedAccount.root;
-
-		// Check registry for existing vibes root actor
-		let rootWithVibes = await root.$jazz.ensureLoaded({
-			resolve: { vibes: true },
-		});
-		
-		if (!rootWithVibes.vibes?.$isLoaded) {
-			throw new Error('Vibes registry is not loaded');
-		}
-		
-		const vibesRegistry = rootWithVibes.vibes;
-		const existingVibesRootId = vibesRegistry.vibes as string | undefined;
-		
-		if (existingVibesRootId && typeof existingVibesRootId === 'string' && existingVibesRootId.startsWith('co_')) {
-			console.log('[createVibesActors] ✅ Found existing vibes root:', existingVibesRootId);
-			return existingVibesRootId;
-		}
+	// Get the VibesRegistry entity
+	const vibesRegistry = await getVibesRegistry(account);
+	const existingVibesRootId = vibesRegistry.vibes as string | undefined;
+	
+	if (existingVibesRootId && typeof existingVibesRootId === 'string' && existingVibesRootId.startsWith('co_')) {
+		console.log('[createVibesActors] ✅ Found existing vibes root:', existingVibesRootId);
+		return existingVibesRootId;
+	}
 
 		console.log('[createVibesActors] Creating new actors...');
-
-	// Ensure actors list exists (OPTIMISTIC - no blocking!)
-	let actorsList;
-	if (!root.$jazz.has('actors')) {
-		const actorsGroup = Group.create();
-		actorsGroup.addMember('everyone', 'reader');
-		// NO WAIT! Jazz syncs in background
-		actorsList = ActorList.create([], actorsGroup);
-		// NO WAIT! Use immediately
-		root.$jazz.set('actors', actorsList);
-		// NO WAIT! Local-first = instant
-	} else {
-		// Direct access - no ensureLoaded needed
-		actorsList = root.actors;
-		if (!actorsList) {
-			throw new Error('Actors list not found');
-		}
-	}
 
 	// Create group for actors (OPTIMISTIC - no blocking!)
 	const group = Group.create();
@@ -91,27 +51,21 @@ export async function createVibesActors(account: any) {
 		// ============================================
 
 	// STEP 1: Create leaf actors (titles, descriptions)
-	const headerTitleActor = Actor.create({
+	const headerTitleActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: createTitleLeaf({ text: 'Vibes', tag: 'h2' }),
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([]),
 		role: 'vibes-header-title', // For debugging only
 	}, group);
 
-	const humansTitleActor = Actor.create({
+	const humansTitleActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: createTitleLeaf({ text: 'Humans', tag: 'h3', classes: 'text-base font-semibold text-slate-700' }),
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([]),
 		role: 'humans-card-title',
 	}, group);
 
-	const humansDescActor = Actor.create({
+	const humansDescActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: {
 			tag: 'p',
@@ -119,13 +73,10 @@ export async function createVibesActors(account: any) {
 			elements: ['Human contact management vibe']
 		},
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([]),
 		role: 'humans-card-desc',
 	}, group);
 
-	const todosTitleActor = Actor.create({
+	const todosTitleActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: {
 			tag: 'h3',
@@ -133,13 +84,10 @@ export async function createVibesActors(account: any) {
 			elements: ['Todos']
 		},
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([]),
 		role: 'todos-card-title',
 	}, group);
 
-	const todosDescActor = Actor.create({
+	const todosDescActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: {
 			tag: 'p',
@@ -147,9 +95,6 @@ export async function createVibesActors(account: any) {
 			elements: ['Task management and todo lists']
 		},
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([]),
 		role: 'todos-card-desc',
 	}, group);
 
@@ -160,7 +105,7 @@ export async function createVibesActors(account: any) {
 		let rootActorId: string = '';
 
 	// NAVIGATION CARDS: Use @ui/navigate skill for true colocation
-	const humansCardActor = Actor.create({
+	const humansCardActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: {
 			container: {
@@ -175,13 +120,13 @@ export async function createVibesActors(account: any) {
 			}
 		},
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [], // Subscribe to ROOT actor (set later) for any root-level state updates
-		children: co.list(z.string()).create([humansTitleActor.$jazz.id, humansDescActor.$jazz.id]),
 		role: 'humans-card',
 	}, group);
+	// Set children after creation
+	humansCardActor.children.$jazz.push(humansTitleActor.$jazz.id);
+	humansCardActor.children.$jazz.push(humansDescActor.$jazz.id);
 
-	const todosCardActor = Actor.create({
+	const todosCardActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: {
 			container: {
@@ -196,23 +141,22 @@ export async function createVibesActors(account: any) {
 			}
 		},
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [], // Subscribe to ROOT actor (set later) for any root-level state updates
-		children: co.list(z.string()).create([todosTitleActor.$jazz.id, todosDescActor.$jazz.id]),
 		role: 'todos-card',
 	}, group);
+	// Set children after creation
+	todosCardActor.children.$jazz.push(todosTitleActor.$jazz.id);
+	todosCardActor.children.$jazz.push(todosDescActor.$jazz.id);
 
-	const headerActor = Actor.create({
+	const headerActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: createHeaderComposite(),
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([headerTitleActor.$jazz.id]),
 		role: 'vibes-header',
 	}, group);
+	// Set children after creation
+	headerActor.children.$jazz.push(headerTitleActor.$jazz.id);
 
-	const gridActor = Actor.create({
+	const gridActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: {
 			container: {
@@ -221,59 +165,42 @@ export async function createVibesActors(account: any) {
 			}
 		},
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([
-			humansCardActor.$jazz.id,
-			todosCardActor.$jazz.id
-		]),
 		role: 'vibes-grid',
 	}, group);
+	// Set children after creation
+	gridActor.children.$jazz.push(humansCardActor.$jazz.id);
+	gridActor.children.$jazz.push(todosCardActor.$jazz.id);
 
 	// NO WAIT! All composite actors created locally, use immediately
 
 	// STEP 3: Create root actor - MINIMAL (no actions)
-	const vibesRootActor = Actor.create({
+	const vibesRootActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: createRootCardComposite({ cardLayout: 'flex', cardClasses: 'card p-4 flex-col gap-4' }),
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [], // No subscriptions needed
-		children: co.list(z.string()).create([headerActor.$jazz.id, gridActor.$jazz.id]),
 		role: 'vibes-root',
 	}, group);
+	// Set children after creation
+	vibesRootActor.children.$jazz.push(headerActor.$jazz.id);
+	vibesRootActor.children.$jazz.push(gridActor.$jazz.id);
 
 	// NO WAIT! Root actor created locally, use immediately
 
 	// STEP 4: Update card actors' subscriptions - Subscribe to ROOT for root-level state updates
 	// Cards use @ui/navigate skill for true colocation (navigation handled by skill system)
-	const humansSubscriptions = humansCardActor.subscriptions;
-	if (humansSubscriptions?.$isLoaded) {
-		humansSubscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
-	}
-	const todosSubscriptions = todosCardActor.subscriptions;
-	if (todosSubscriptions?.$isLoaded) {
-		todosSubscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
-	}
+	humansCardActor.subscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
+	todosCardActor.subscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
 	// NO WAIT! Subscriptions updated locally, sync happens in background
 
-	// Add all actors to global actors list
-	actorsList.$jazz.push(headerTitleActor);
-	actorsList.$jazz.push(humansTitleActor);
-	actorsList.$jazz.push(humansDescActor);
-	actorsList.$jazz.push(todosTitleActor);
-	actorsList.$jazz.push(todosDescActor);
-	actorsList.$jazz.push(humansCardActor);
-	actorsList.$jazz.push(todosCardActor);
-	actorsList.$jazz.push(headerActor);
-	actorsList.$jazz.push(gridActor);
-	actorsList.$jazz.push(vibesRootActor);
-
-	// NO WAIT! Actors list updated locally, sync happens in background
+	// Actors are automatically added to root.entities by createActorEntity
 	console.log('[createVibesActors] ⚡ All actors created instantly (local-first)');
 
 	// Register root actor in vibes registry (OPTIMISTIC - no blocking!)
-	root.vibes.$jazz.set('vibes', vibesRootActor.$jazz.id);
+	console.log('[createVibesActors] DEBUG - vibesRegistry keys:', Object.keys(vibesRegistry));
+	console.log('[createVibesActors] DEBUG - vibesRegistry.$jazz.keys():', Array.from((vibesRegistry.$jazz as any).keys?.() || []));
+	console.log('[createVibesActors] DEBUG - vibesRegistry ID:', vibesRegistry.$jazz.id);
+	console.log('[createVibesActors] DEBUG - Attempting to set "vibes" to:', vibesRootActor.$jazz.id);
+	vibesRegistry.$jazz.set('vibes', vibesRootActor.$jazz.id);
 	// NO WAIT! Registry updated locally, sync happens in background
 	console.log('[createVibesActors] ✅ Registered vibes root:', vibesRootActor.$jazz.id);
 	

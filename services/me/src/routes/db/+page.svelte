@@ -316,12 +316,10 @@
     try {
       console.log('[DB Page] Starting database reset...');
       await executeSkill('@database/resetDatabase', account);
-      console.log('[DB Page] Database reset complete, reloading page...');
-      // Reload page to force recreation of vibes with updated code
-      window.location.reload();
+      console.log('[DB Page] ✅ Database reset complete!');
+      console.log('[DB Page] 📋 Reload the page manually to see changes.');
     } catch (error) {
       console.error("[DB Page] Error resetting data:", error);
-      alert(`Reset failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

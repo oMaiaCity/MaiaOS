@@ -28,127 +28,14 @@ const resetDatabaseSkill: Skill = {
 			throw new Error('Account is not loaded')
 		}
 
-		// Load root
-		const loadedAccount = await account.$jazz.ensureLoaded({
-			resolve: { root: true },
-		})
-
-		if (!loadedAccount.root) {
-			throw new Error('Root does not exist')
-		}
-
-		const root = loadedAccount.root
-
-		// Clear schemata list (keep the list structure, just remove items)
-		if (root.$jazz.has('schemata')) {
-			const rootWithSchemata = await root.$jazz.ensureLoaded({
-				resolve: { schemata: true },
-			})
-			const schemataList = rootWithSchemata.schemata
-
-			if (schemataList?.$isLoaded) {
-				const currentLength = Array.from(schemataList).length
-
-				// Remove all items by splicing from the end (safer than iterating forward)
-				for (let i = currentLength - 1; i >= 0; i--) {
-					schemataList.$jazz.splice(i, 1)
-				}
-
-				await root.$jazz.waitForSync()
-			}
-		}
-
-		// Clear entities list (keep the list structure, just remove items)
-		if (root.$jazz.has('entities')) {
-			const rootWithEntities = await root.$jazz.ensureLoaded({
-				resolve: { entities: true },
-			})
-			const entitiesList = rootWithEntities.entities
-
-			if (entitiesList?.$isLoaded) {
-				const currentLength = Array.from(entitiesList).length
-
-				// Remove all items by splicing from the end (safer than iterating forward)
-				for (let i = currentLength - 1; i >= 0; i--) {
-					entitiesList.$jazz.splice(i, 1)
-				}
-
-				await root.$jazz.waitForSync()
-			}
-		}
-
-		// Clear relations list (keep the list structure, just remove items)
-		if (root.$jazz.has('relations')) {
-			const rootWithRelations = await root.$jazz.ensureLoaded({
-				resolve: { relations: true },
-			})
-			const relationsList = rootWithRelations.relations
-
-			if (relationsList?.$isLoaded) {
-				const currentLength = Array.from(relationsList).length
-
-				// Remove all items by splicing from the end (safer than iterating forward)
-				for (let i = currentLength - 1; i >= 0; i--) {
-					relationsList.$jazz.splice(i, 1)
-				}
-
-				await root.$jazz.waitForSync()
-			}
-		}
-
-		// Delete and recreate the entire vibes registry FIRST (before clearing actors)
-		// This prevents pages from trying to load actors that no longer exist
-		// Deleting individual properties doesn't work because they're defined in the schema
-		if (root.$jazz.has('vibes')) {
-			console.log('[resetDatabase] Deleting entire vibes registry...')
-			
-			// Delete the entire vibes registry CoMap
-			root.$jazz.delete('vibes')
-			await root.$jazz.waitForSync()
-			
-			// Recreate an empty vibes registry
-			const { Group } = await import('jazz-tools')
-			const registryGroup = Group.create()
-			registryGroup.addMember('everyone', 'reader')
-			
-			// Import VibesRegistry schema
-			const { VibesRegistry } = await import('@maia/db')
-			const newVibesRegistry = VibesRegistry.create({}, registryGroup)
-			
-			// Set the new empty registry
-			root.$jazz.set('vibes', newVibesRegistry)
-			await root.$jazz.waitForSync()
-			
-			console.log('[resetDatabase] ✅ Recreated empty vibes registry')
-		}
-
-		// Delete legacy vibesRegistry property if it exists (old schema)
-		// This ensures we remove any old/legacy vibesRegistry property
-		if (root.$jazz.has('vibesRegistry')) {
-			root.$jazz.delete('vibesRegistry')
-			await root.$jazz.waitForSync()
-			console.log('[resetDatabase] Deleted legacy vibesRegistry property from root')
-		}
-
-		// Clear actors list AFTER clearing registry
-		// This ensures pages won't try to load actors that no longer exist
-		if (root.$jazz.has('actors')) {
-			const rootWithActors = await root.$jazz.ensureLoaded({
-				resolve: { actors: true },
-			})
-			const actorsList = rootWithActors.actors
-
-			if (actorsList?.$isLoaded) {
-				const currentLength = Array.from(actorsList).length
-
-				// Remove all items by splicing from the end (safer than iterating forward)
-				for (let i = currentLength - 1; i >= 0; i--) {
-					actorsList.$jazz.splice(i, 1)
-				}
-
-				await root.$jazz.waitForSync()
-			}
-		}
+		console.log('[resetDatabase] Starting database reset...');
+		
+		// Use the consolidated reset utility
+		const { resetData } = await import('@maia/db');
+		await resetData(account);
+		
+		console.log('[resetDatabase] ✅ Database reset complete!')
+		console.log('[resetDatabase] After page reload, migration will create fresh VibesRegistry')
 	},
 }
 

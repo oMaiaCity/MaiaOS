@@ -8,10 +8,11 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const console: any
 
-import { co } from 'jazz-tools'
+import { co, Group, z } from 'jazz-tools'
 import { getJsonSchema } from '../schemas/schema-registry.js'
 import { addLabelToSchema, jsonSchemaToCoMapShape, ensureSchema, findNestedSchema } from './dynamic-schema-migration.js'
 import { setSystemProps } from './set-system-props.js'
+import { Actor, ActorMessage } from '../schema.js'
 
 /**
  * Gets the LocalNode from an account or a CoValue
@@ -72,6 +73,17 @@ export async function getCoMapSchemaForSchemaName(
 
 	// Convert to Zod shape
 	const shape = jsonSchemaToCoMapShape(jsonSchemaWithSystemProps)
+	
+	// Debug logging for VibesRegistry
+	if (schemaName === 'VibesRegistry') {
+		console.log('[getCoMapSchemaForSchemaName] VibesRegistry shape:', {
+			shapeKeys: Object.keys(shape),
+			jsonSchemaProperties: Object.keys(jsonSchemaWithSystemProps.properties || {}),
+			hasVibesProperty: 'vibes' in shape,
+			hasHumansProperty: 'humans' in shape,
+			hasTodosProperty: 'todos' in shape,
+		});
+	}
 
 	// Create CoMap schema wrapper
 	const CoMapSchema = co.map(shape)
@@ -506,3 +518,104 @@ export async function queryEntitiesGeneric<T extends Record<string, unknown>>(
 	}
 }
 
+/**
+ * Create an Actor entity with CoFeed/CoList setup
+ * 
+ * This helper function creates an Actor entity in root.entities using the dynamic schema system.
+ * CoFeed/CoList are created automatically by passing empty arrays to CoMapSchema.create().
+ * 
+ * @param account - The Jazz account
+ * @param actorData - Actor data (context, view, dependencies, role, etc.)
+ * @param _group - Optional Group parameter (currently unused - all entities use entitiesOwner for consistency)
+ * @returns The created actor entity CoValue
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function createActorEntity(
+	account: any,
+	actorData: {
+		context: any;
+		view?: any;
+		dependencies: Record<string, string>;
+		role?: string;
+		position?: number;
+	},
+	_group?: any, // Kept for API compatibility, but not used (entities use entitiesOwner)
+): Promise<any> {
+	// Create entity data - pass ARRAYS for CoFeed/CoList, not CoValue objects
+	// CoMapSchema.create() will automatically create the CoFeed/CoList with entitiesOwner
+	const entityData = {
+		type: 'Entity',
+		context: actorData.context,
+		view: actorData.view,
+		dependencies: actorData.dependencies,
+		inbox: [], // Pass empty array - co.feed() will create it with entitiesOwner
+		subscriptions: [], // Pass empty array - co.list() will create it with entitiesOwner
+		children: [], // Pass empty array - co.list() will create it with entitiesOwner
+		role: actorData.role,
+		position: actorData.position,
+	};
+
+	// Use dynamic schema system - createEntityGeneric handles everything
+	const actorEntity = await createEntityGeneric(account, 'Actor', entityData);
+
+	return actorEntity;
+
+}
+
+/**
+ * Get or create the VibesRegistry entity using cached ID from AppRoot
+ * 
+ * @param account - The Jazz account
+ * @returns The VibesRegistry entity CoValue with $jazz API
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getVibesRegistry(account: any): Promise<any> {
+	// Load root with entities to get both cached ID and access to entities list
+	const loadedAccount = await account.$jazz.ensureLoaded({
+		resolve: { root: { vibesRegistryId: true, entities: true } },
+	});
+	
+	const root = loadedAccount.root;
+	const registryId = root?.vibesRegistryId;
+	
+	if (registryId && typeof registryId === 'string' && registryId.startsWith('co_')) {
+		console.log('[getVibesRegistry] Looking for registry with ID:', registryId);
+		
+		// ALWAYS load via CoMapSchema to ensure proper schema wrapper with key awareness
+		// Without the schema wrapper, Jazz doesn't know which keys are allowed!
+		console.log('[getVibesRegistry] Loading registry by ID using schema:', registryId);
+		try {
+			// Get the schema for VibesRegistry to load it properly
+			const schemaResult = await getCoMapSchemaForSchemaName(account, 'VibesRegistry');
+			if (schemaResult?.schema) {
+				// Load using the schema - this applies the schema wrapper that knows about vibes/humans/todos keys
+				const registryCoValue = await schemaResult.schema.load(registryId as any);
+				if (registryCoValue) {
+					console.log('[getVibesRegistry] ✅ Loaded registry via schema with key awareness');
+					console.log('[getVibesRegistry] Allowed keys:', Array.from((registryCoValue.$jazz as any).keys?.() || []));
+					return registryCoValue;
+				}
+			}
+		} catch (error) {
+			console.error('[getVibesRegistry] Error loading registry via schema:', error);
+		}
+	}
+	
+	// Fallback: Create new registry (should only happen if migration hasn't run)
+	console.log('[getVibesRegistry] No cached ID found, creating new VibesRegistry');
+	// Initialize ALL optional properties with actual values (empty string) to ensure Jazz adds them to the CoMap's allowed keys
+	// IMPORTANT: undefined doesn't register keys in Jazz, but concrete values do!
+	const registry = await createEntityGeneric(account, 'VibesRegistry', {
+		vibes: '',
+		humans: '',
+		todos: '',
+	});
+	
+	// Store the ID on AppRoot for future lookups
+	if (root) {
+		root.$jazz.set('vibesRegistryId', registry.$jazz.id);
+		console.log('[getVibesRegistry] ✅ Stored registry ID on AppRoot:', registry.$jazz.id);
+	}
+	
+	return registry;
+}

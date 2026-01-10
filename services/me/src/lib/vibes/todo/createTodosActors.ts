@@ -5,8 +5,8 @@
  * Bottom-up creation: buttons → header → list → root
  */
 
-import { Actor, ActorList, ActorMessage, VibesRegistry } from "@maia/db";
-import { Group, co, z } from "jazz-tools";
+import { createActorEntity, getVibesRegistry } from "@maia/db";
+import { Group } from "jazz-tools";
 import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf, createBadgeLeaf, createInputSectionComposite, createViewSwitcherComposite, createTimelineComposite, createKanbanComposite } from '../design-templates';
 
 // Global lock
@@ -30,31 +30,8 @@ export async function createTodosActors(account: any) {
 	try {
 		console.log('[createTodosActors] Starting ID-based actor creation...');
 	
-		// Ensure root is loaded
-		const loadedAccount = await account.$jazz.ensureLoaded({
-			resolve: { 
-				root: {
-					actors: true,
-					vibes: true,
-					entities: true
-				} 
-			},
-		});
-		if (!loadedAccount.root?.$isLoaded) {
-			throw new Error('Root is not loaded');
-		}
-		const root = loadedAccount.root;
-
-		// Check registry for existing todos root actor
-		let rootWithVibes = await root.$jazz.ensureLoaded({
-			resolve: { vibes: true },
-		});
-		
-		if (!rootWithVibes.vibes?.$isLoaded) {
-			throw new Error('Vibes registry is not loaded');
-		}
-		
-		const vibesRegistry = rootWithVibes.vibes;
+		// Get the VibesRegistry entity
+		const vibesRegistry = await getVibesRegistry(account);
 		const existingTodosRootId = vibesRegistry.todos as string | undefined;
 		
 		if (existingTodosRootId && typeof existingTodosRootId === 'string' && existingTodosRootId.startsWith('co_')) {
@@ -62,21 +39,16 @@ export async function createTodosActors(account: any) {
 			return existingTodosRootId;
 		}
 
-		console.log('[createTodosActors] Creating new actors...');
-
-	// Ensure actors list exists (OPTIMISTIC - no blocking!)
-	let actorsList;
-	if (!root.$jazz.has('actors')) {
-		const actorsGroup = Group.create();
-		actorsGroup.addMember('everyone', 'reader');
-		actorsList = ActorList.create([], actorsGroup);
-		root.$jazz.set('actors', actorsList);
-	} else {
-		actorsList = root.actors;
-		if (!actorsList) {
-			throw new Error('Actors list not found');
+		// Load root to get entities list ID
+		const loadedAccount = await account.$jazz.ensureLoaded({
+			resolve: { root: { entities: true } },
+		});
+		const root = loadedAccount.root;
+		if (!root?.entities) {
+			throw new Error('Root entities list not found');
 		}
-	}
+
+		console.log('[createTodosActors] Creating new actors...');
 
 	// Create group for actors (OPTIMISTIC - no blocking!)
 	const group = Group.create();
@@ -87,19 +59,16 @@ export async function createTodosActors(account: any) {
 		// ============================================
 
 	// STEP 1: Create leaf actors (title)
-	const headerTitleActor = Actor.create({
+	const headerTitleActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: createTitleLeaf({ text: 'Todos', tag: 'h2' }),
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([]),
 		role: 'todos-header-title',
 	}, group);
 
 	// STEP 2: Create composite actors (input section, list, timeline)
 	// Input section actor - TRUE COLOCATION: handles its own @input/updateContext and @todo/create actions
-	const inputSectionActor = Actor.create({
+	const inputSectionActor = await createActorEntity(account, {
 		context: { 
 			visible: true,
 			newTodoText: '', // Match legacy data.view.newTodoText
@@ -118,14 +87,11 @@ export async function createTodosActors(account: any) {
 			errorText: 'context.error'
 		}),
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([]),
 		role: 'todos-input-section',
 	}, group);
 
 	// List actor with inline foreach template - contains queries and dependencies
-	const listActor = Actor.create({
+	const listActor = await createActorEntity(account, {
 		context: {
 			visible: true, // Always visible when rendered
 			queries: {
@@ -252,17 +218,14 @@ export async function createTodosActors(account: any) {
 					}
 				}
 			},
-			dependencies: { 
-				entities: root.entities.$jazz.id
-			},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: co.list(z.string()).create([]),
-			children: co.list(z.string()).create([]),
-			role: 'todos-list',
-		}, group);
+		dependencies: { 
+			entities: root.entities.$jazz.id
+		},
+		role: 'todos-list',
+	}, group);
 
 	// Timeline actor - displays todos in timeline format
-	const timelineActor = Actor.create({
+	const timelineActor = await createActorEntity(account, {
 		context: {
 			visible: true, // Always visible when rendered
 			queries: {
@@ -279,15 +242,12 @@ export async function createTodosActors(account: any) {
 		dependencies: {
 			entities: root.entities.$jazz.id
 		},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: co.list(z.string()).create([]),
-		children: co.list(z.string()).create([]),
 		role: 'todos-timeline',
 	}, group);
 
 	// Kanban actor - displays todos in kanban board with drag-and-drop
 	// Uses 3 separate queries with filters for each column
-	const kanbanActor = Actor.create({
+	const kanbanActor = await createActorEntity(account, {
 		context: {
 			visible: true,
 			draggedTodoId: null,
@@ -310,15 +270,12 @@ export async function createTodosActors(account: any) {
 		dependencies: {
 			entities: root.entities.$jazz.id
 		},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: co.list(z.string()).create([]),
-		children: co.list(z.string()).create([]),
 		role: 'todos-kanban',
 	}, group);
 
 	// ✅ Content actor - handles actor swapping for view switching
 	// This is the GENERIC actor-swapping container that replaces visibility toggling
-	const contentActor = Actor.create({
+	const contentActor = await createActorEntity(account, {
 		context: {
 			visible: true,
 			viewMode: 'list', // Default view mode (for view switcher button styling)
@@ -336,14 +293,13 @@ export async function createTodosActors(account: any) {
 			}
 		},
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([listActor.$jazz.id]), // Default: show list view
 		role: 'todos-content',
 	}, group);
+	// Set children after creation (default: show list view)
+	contentActor.children.$jazz.push(listActor.$jazz.id);
 
 	// View switcher actor - reads viewMode directly from contentActor via dependencies
-	const viewSwitcherActor = Actor.create({
+	const viewSwitcherActor = await createActorEntity(account, {
 		context: { 
 			visible: true
 		},
@@ -358,25 +314,22 @@ export async function createTodosActors(account: any) {
 		dependencies: {
 			content: contentActor.$jazz.id // ✅ Set at creation time
 		},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([]),
 		role: 'todos-view-switcher',
 	}, group);
 
 	// Header actor - contains title and view switcher in same row
-	const headerActor = Actor.create({
+	const headerActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: createHeaderComposite(),
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([headerTitleActor.$jazz.id, viewSwitcherActor.$jazz.id]), // ✅ Title + Switcher in same row
 		role: 'todos-header',
 	}, group);
+	// Set children after creation (Title + Switcher in same row)
+	headerActor.children.$jazz.push(headerTitleActor.$jazz.id);
+	headerActor.children.$jazz.push(viewSwitcherActor.$jazz.id);
 
 	// STEP 3: Create root actor (simplified - no view mode management, just a container)
-	const todosRootActor = Actor.create({
+	const todosRootActor = await createActorEntity(account, {
 		context: {
 			visible: true,
 		},
@@ -387,11 +340,12 @@ export async function createTodosActors(account: any) {
 		dependencies: {
 			entities: root.entities.$jazz.id
 		},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([headerActor.$jazz.id, inputSectionActor.$jazz.id, contentActor.$jazz.id]), // Switcher is now inside header
 		role: 'todos-root',
 	}, group);
+	// Set children after creation (Switcher is now inside header)
+	todosRootActor.children.$jazz.push(headerActor.$jazz.id);
+	todosRootActor.children.$jazz.push(inputSectionActor.$jazz.id);
+	todosRootActor.children.$jazz.push(contentActor.$jazz.id);
 
 	// STEP 4: Update subscriptions - TRUE COLOCATION with actor swapping
 	inputSectionActor.subscriptions.$jazz.push(inputSectionActor.$jazz.id);
@@ -401,21 +355,11 @@ export async function createTodosActors(account: any) {
 	viewSwitcherActor.subscriptions.$jazz.push(contentActor.$jazz.id); // ✅ Switcher SENDS events to contentActor
 	contentActor.subscriptions.$jazz.push(contentActor.$jazz.id); // ✅ Content actor handles @view/swapActors
 
-	// Add all actors to global actors list
-	actorsList.$jazz.push(headerTitleActor);
-	actorsList.$jazz.push(headerActor);
-	actorsList.$jazz.push(viewSwitcherActor);
-	actorsList.$jazz.push(inputSectionActor);
-	actorsList.$jazz.push(listActor);
-	actorsList.$jazz.push(timelineActor);
-	actorsList.$jazz.push(kanbanActor); // ✅ Add kanban actor
-	actorsList.$jazz.push(contentActor); // ✅ Add content actor
-	actorsList.$jazz.push(todosRootActor);
-
+	// Actors are automatically added to root.entities by createActorEntity
 	console.log('[createTodosActors] ⚡ All actors created instantly (local-first)');
 
 	// Register root actor in vibes registry
-	root.vibes.$jazz.set('todos', todosRootActor.$jazz.id);
+	vibesRegistry.$jazz.set('todos', todosRootActor.$jazz.id);
 	console.log('[createTodosActors] ✅ Registered todos root:', todosRootActor.$jazz.id);
 	
 	return todosRootActor.$jazz.id;

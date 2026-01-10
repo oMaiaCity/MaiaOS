@@ -100,25 +100,14 @@ export const Actor = co.map({
 	position: z.number().optional(),
 })
 
-/** Actor registry - list of all actor instances */
-export const ActorList = co.list(Actor)
-
-/** Vibes registry schema - generic CoMap for storing root actor IDs */
-export const VibesRegistry = co.map({
-	vibes: z.string().optional(),
-	humans: z.string().optional(),
-	todos: z.string().optional(),
-})
-
 /** The account root is an app-specific per-user private `CoMap`
  *  where you can store top-level objects for that user */
 export const AppRoot = co.map({
 	contact: Contact, // Simple contact CoMap with email
 	schemata: co.optional(co.list(co.map({}))), // Optional - list of SchemaDefinitions (created dynamically)
-	entities: co.optional(co.list(co.map({}))), // Optional - list of Entity instances (created dynamically)
+	entities: co.optional(co.list(co.map({}))), // Optional - list of Entity instances (created dynamically, includes Actors and VibesRegistry)
 	relations: co.optional(co.list(co.map({}))), // Optional - list of Relation instances (created dynamically)
-	actors: co.optional(ActorList), // Optional - list of Actor instances (UI components)
-	vibes: co.optional(VibesRegistry), // Optional - registry of vibe root actor IDs (flexible passthrough schema)
+	vibesRegistryId: z.string().optional(), // Cached ID of the VibesRegistry entity for fast access
 })
 
 export const JazzAccount = co
@@ -127,6 +116,7 @@ export const JazzAccount = co
 		profile: AccountProfile,
 	})
 	.withMigration(async (account) => {
+		/* eslint-disable no-console */
 		/** The account migration is run on account creation and on every log-in.
 		 *  Sets up the account root with initial structure: root.contact
 		 *  Ensures profile fields are initialized
@@ -301,44 +291,63 @@ export const JazzAccount = co
 			} catch (_error) { }
 		}
 
-		// Ensure actors list exists (empty by default - actors created via createActors)
-		if (!rootWithData.$jazz.has('actors')) {
-		// Create a group for actors list
-		const actorsGroup = Group.create()
-		// ⚡ REMOVED: await actorsGroup.$jazz.waitForSync()
-		// LOCAL-FIRST: Group creation is instant
+	// Actors are now stored in root.entities (no separate actors list needed)
+	// Delete legacy root.actors property if it exists
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	if ((rootWithData.$jazz as any).has('actors')) {
+		// eslint-disable-next-line no-console
+		console.log('[Migration] Deleting legacy root.actors property...')
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(rootWithData.$jazz as any).delete('actors')
+		// ⚡ LOCAL-FIRST: Property deletion is instant
+		// eslint-disable-next-line no-console
+		console.log('[Migration] ⚡ Legacy root.actors deleted (local-first)')
+	}
 
-		// Create empty actors list
-		const actorsList = ActorList.create([], actorsGroup)
-		// ⚡ REMOVED: await actorsList.$jazz.waitForSync()
-		// LOCAL-FIRST: List creation is instant
-		rootWithData.$jazz.set('actors', actorsList)
-		} else {
-			// Ensure actors list is loaded
-			try {
-				await rootWithData.$jazz.ensureLoaded({
-					resolve: { actors: true },
-				})
-			} catch (_error) { }
-		}
+	// Store VibesRegistry ID on AppRoot for fast access (instead of searching through all entities)
+	// Check if vibesRegistryId exists AND is a valid string (not undefined/null)
+	const existingRegistryId = rootWithData.vibesRegistryId;
+	const hasValidRegistryId = existingRegistryId && typeof existingRegistryId === 'string' && existingRegistryId.startsWith('co_');
+	
+	// eslint-disable-next-line no-console
+	console.log('[Migration] Checking VibesRegistry...', {
+		hasProperty: rootWithData.$jazz.has('vibesRegistryId'),
+		currentValue: existingRegistryId,
+		isValid: hasValidRegistryId
+	});
+	
+	if (!hasValidRegistryId) {
+		// eslint-disable-next-line no-console
+		console.log('[Migration] Creating new VibesRegistry entity (old ID was invalid or missing)');
+		const { createEntityGeneric } = await import('./functions/generic-crud.js')
+		// Initialize ALL optional properties with actual values (empty string) to ensure Jazz adds them to the CoMap's allowed keys
+		// IMPORTANT: undefined doesn't register keys in Jazz, but concrete values do!
+		const registry = await createEntityGeneric(account, 'VibesRegistry', {
+			vibes: '',
+			humans: '',
+			todos: '',
+		})
+		// Store the registry ID on AppRoot for fast lookup
+		rootWithData.$jazz.set('vibesRegistryId', registry.$jazz.id)
+		// eslint-disable-next-line no-console
+		console.log('[Migration] ✅ VibesRegistry created and ID stored:', registry.$jazz.id)
+	} else {
+		// eslint-disable-next-line no-console
+		console.log('[Migration] VibesRegistry ID already valid on AppRoot:', existingRegistryId)
+	}
+	
+	// Delete old root.vibes property if it exists (migration cleanup)
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	if ((rootWithData.$jazz as any).has('vibes')) {
+		// eslint-disable-next-line no-console
+		console.log('[Migration] Deleting legacy root.vibes property...')
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(rootWithData.$jazz as any).delete('vibes')
+		// eslint-disable-next-line no-console
+		console.log('[Migration] ✅ Legacy root.vibes property deleted.')
+	}
 
-		// Ensure root.vibes is a proper VibesRegistry CoMap
-		if (!rootWithData.$jazz.has('vibes')) {
-			console.log('[Migration] Creating fresh vibes registry (VibesRegistry CoMap)')
-			const registryGroup = Group.create()
-			registryGroup.addMember('everyone', 'reader')
-			// ⚡ LOCAL-FIRST: Group creation is instant
-			
-			const vibesRegistry = VibesRegistry.create({}, registryGroup)
-			// ⚡ LOCAL-FIRST: Registry creation is instant
-			
-			rootWithData.$jazz.set('vibes', vibesRegistry)
-			// ⚡ LOCAL-FIRST: Property set is instant
-			console.log('[Migration] ⚡ Fresh vibes registry created instantly (local-first):', vibesRegistry.$jazz.id)
-		} else {
-			console.log('[Migration] root.vibes exists and is valid')
-		}
-
+		// eslint-disable-next-line no-console
 		console.log('[Migration] Account migration completed successfully')
 	})
 

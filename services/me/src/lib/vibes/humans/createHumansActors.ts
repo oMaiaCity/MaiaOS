@@ -5,8 +5,8 @@
  * Bottom-up creation: buttons → header → list → root
  */
 
-import { Actor, ActorList, ActorMessage, VibesRegistry } from "@maia/db";
-import { Group, co, z } from "jazz-tools";
+import { createActorEntity, getVibesRegistry } from "@maia/db";
+import { Group } from "jazz-tools";
 import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf } from '../design-templates';
 
 // Global lock
@@ -30,31 +30,8 @@ export async function createHumansActors(account: any) {
 	try {
 		console.log('[createHumansActors] Starting ID-based actor creation...');
 	
-		// Ensure root is loaded
-		const loadedAccount = await account.$jazz.ensureLoaded({
-			resolve: { 
-				root: {
-					actors: true,
-					vibes: true,
-					entities: true
-				} 
-			},
-		});
-		if (!loadedAccount.root?.$isLoaded) {
-			throw new Error('Root is not loaded');
-		}
-		const root = loadedAccount.root;
-
-		// Check registry for existing humans root actor
-		let rootWithVibes = await root.$jazz.ensureLoaded({
-			resolve: { vibes: true },
-		});
-		
-		if (!rootWithVibes.vibes?.$isLoaded) {
-			throw new Error('Vibes registry is not loaded');
-		}
-		
-		const vibesRegistry = rootWithVibes.vibes;
+		// Get the VibesRegistry entity
+		const vibesRegistry = await getVibesRegistry(account);
 		const existingHumansRootId = vibesRegistry.humans as string | undefined;
 		
 		if (existingHumansRootId && typeof existingHumansRootId === 'string' && existingHumansRootId.startsWith('co_')) {
@@ -62,25 +39,16 @@ export async function createHumansActors(account: any) {
 			return existingHumansRootId;
 		}
 
-		console.log('[createHumansActors] Creating new actors...');
-
-	// Ensure actors list exists (OPTIMISTIC - no blocking!)
-	let actorsList;
-	if (!root.$jazz.has('actors')) {
-		const actorsGroup = Group.create();
-		actorsGroup.addMember('everyone', 'reader');
-		// NO WAIT! Jazz syncs in background
-		actorsList = ActorList.create([], actorsGroup);
-		// NO WAIT! Use immediately
-		root.$jazz.set('actors', actorsList);
-		// NO WAIT! Local-first = instant
-	} else {
-		// Direct access - no ensureLoaded needed
-		actorsList = root.actors;
-		if (!actorsList) {
-			throw new Error('Actors list not found');
+		// Load root to get entities list ID
+		const loadedAccount = await account.$jazz.ensureLoaded({
+			resolve: { root: { entities: true } },
+		});
+		const root = loadedAccount.root;
+		if (!root?.entities) {
+			throw new Error('Root entities list not found');
 		}
-	}
+
+		console.log('[createHumansActors] Creating new actors...');
 
 	// Create group for actors (OPTIMISTIC - no blocking!)
 	const group = Group.create();
@@ -92,18 +60,15 @@ export async function createHumansActors(account: any) {
 		// ============================================
 
 	// STEP 1: Create leaf actors (title, create button)
-	const headerTitleActor = Actor.create({
+	const headerTitleActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: createTitleLeaf({ text: 'Humans', tag: 'h2' }),
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([]),
 		role: 'humans-header-title',
 	}, group);
 
 	// Create button - TRUE COLOCATION: handles its own @human/createRandom action
-	const createButtonActor = Actor.create({
+	const createButtonActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: createButtonLeaf({
 			text: 'Create Human',
@@ -112,28 +77,25 @@ export async function createHumansActors(account: any) {
 			variant: 'primary'
 		}),
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [], // Will subscribe to itself after creation
-		children: co.list(z.string()).create([]),
 		role: 'humans-create-button',
 	}, group);
 
 	// NO WAIT! Actors created locally, use immediately
 	
 	// STEP 2: Create composite actors (header, list)
-	const headerActor = Actor.create({
+	const headerActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: createHeaderComposite(),
 		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([headerTitleActor.$jazz.id, createButtonActor.$jazz.id]),
 		role: 'humans-header',
 	}, group);
+	// Set children after creation
+	headerActor.children.$jazz.push(headerTitleActor.$jazz.id);
+	headerActor.children.$jazz.push(createButtonActor.$jazz.id);
 
 	// List actor with inline foreach template - contains queries and dependencies
 	// ARCHITECTURAL PRINCIPLE: Each actor handles its own events (no bubbling!)
-	const listActor = Actor.create({
+	const listActor = await createActorEntity(account, {
 		context: {
 			visible: true,
 			queries: {
@@ -143,11 +105,11 @@ export async function createHumansActors(account: any) {
 				}
 			}
 		},
-			view: {
-				container: {
-					layout: 'flex',
-					class: 'p-2 @xs:p-3 @sm:p-4 @md:p-6 flex-col gap-1.5 @xs:gap-2 @sm:gap-3 overflow-auto'
-				},
+		view: {
+			container: {
+				layout: 'flex',
+				class: 'p-2 @xs:p-3 @sm:p-4 @md:p-6 flex-col gap-1.5 @xs:gap-2 @sm:gap-3 overflow-auto'
+			},
 			foreach: {
 				items: 'context.queries.humans.items', // CLEAN ARCHITECTURE: Always use context.* prefix
 				key: 'id',
@@ -201,20 +163,17 @@ export async function createHumansActors(account: any) {
 					}
 				}
 			},
-			dependencies: { 
-				entities: root.entities.$jazz.id // For queries.humans resolution
-			},
-			inbox: co.feed(ActorMessage).create([]),
-			subscriptions: co.list(z.string()).create([]), // Will subscribe to itself after creation
-			children: co.list(z.string()).create([]),
-			role: 'humans-list',
-		}, group);
+		dependencies: { 
+			entities: root.entities.$jazz.id // For queries.humans resolution
+		},
+		role: 'humans-list',
+	}, group);
 
 	// NO WAIT! Actors created locally, use immediately
 
 	// STEP 3: Create root actor - SINGLE ACTOR with nested divs via elements[]
 	// TRUE COLOCATION: Root actor is minimal (no actions), just a container
-	const humansRootActor = Actor.create({
+	const humansRootActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: createRootCardComposite({ 
 			cardLayout: 'flex', 
@@ -223,11 +182,11 @@ export async function createHumansActors(account: any) {
 		dependencies: {
 			entities: root.entities.$jazz.id
 		},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [], // No subscriptions needed - root doesn't handle events
-		children: co.list(z.string()).create([headerActor.$jazz.id, listActor.$jazz.id]),
 		role: 'humans-root',
 	}, group);
+	// Set children after creation
+	humansRootActor.children.$jazz.push(headerActor.$jazz.id);
+	humansRootActor.children.$jazz.push(listActor.$jazz.id);
 
 	// NO WAIT! Root actor created locally, use immediately
 
@@ -246,18 +205,11 @@ export async function createHumansActors(account: any) {
 		listActorId: listActor.$jazz.id,
 	});
 
-	// Add all actors to global actors list
-	actorsList.$jazz.push(headerTitleActor);
-	actorsList.$jazz.push(createButtonActor);
-	actorsList.$jazz.push(headerActor);
-	actorsList.$jazz.push(listActor);
-	actorsList.$jazz.push(humansRootActor);
-
-	// NO WAIT! Actors list updated locally, sync happens in background
+	// Actors are automatically added to root.entities by createActorEntity
 	console.log('[createHumansActors] ⚡ All actors created instantly (local-first)');
 
 	// Register root actor in vibes registry (OPTIMISTIC - no blocking!)
-	root.vibes.$jazz.set('humans', humansRootActor.$jazz.id);
+	vibesRegistry.$jazz.set('humans', humansRootActor.$jazz.id);
 	// NO WAIT! Registry updated locally, sync happens in background
 	console.log('[createHumansActors] ✅ Registered humans root:', humansRootActor.$jazz.id);
 	

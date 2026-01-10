@@ -8,7 +8,7 @@
   import { createVibesActors } from "$lib/vibes/vibes/createVibesActors";
   import { createTodosActors } from "$lib/vibes/todo/createTodosActors";
   import { CoState } from "jazz-tools/svelte";
-  import { Actor } from "@maia/db";
+  import { Actor, getVibesRegistry } from "@maia/db";
 
   // Get global Jazz account from context (AccountCoState instance)
   const accountCoState = getJazzAccountContext();
@@ -34,8 +34,6 @@
         await account.$jazz.ensureLoaded({ 
           resolve: { 
             root: {
-              actors: true,
-              vibes: true,
               entities: true
             } 
           } 
@@ -67,20 +65,6 @@
     
     const root = account.root;
     if (!root?.$isLoaded) return;
-    
-    const registry = root.vibes;
-    
-    // Wait for migration to create the registry
-    if (!registry) {
-      console.log('[+page.svelte] Waiting for migration to create root.vibes...');
-      return;
-    }
-    
-    // Wait for registry to be fully loaded
-    if (!registry.$isLoaded) {
-      console.log('[+page.svelte] Waiting for root.vibes to load...');
-      return;
-    }
 
     // If we have a direct actor ID from URL, use it directly
     if (currentActorId && currentActorId.startsWith('co_')) {
@@ -89,29 +73,6 @@
         rootActorId = currentActorId;
         lastProcessedVibe = currentVibeName;
       }
-      return;
-    }
-
-    // REACTIVE ACCESS to registry content (for vibe name lookup)
-    // VibesRegistry is a co.map({vibes, humans, todos}) with schema properties, not a passthrough map
-    // So we access the properties directly instead of using $jazz.get()
-    const registeredId = (
-      currentVibeName === 'vibes' ? registry.vibes :
-      currentVibeName === 'humans' ? registry.humans :
-      currentVibeName === 'todos' ? registry.todos :
-      undefined
-    ) as string | undefined;
-    
-    console.log(`[+page.svelte] ✓ Registry ready for ${currentVibeName}. registeredId: ${registeredId}, rootActorId: ${rootActorId}, isInitializing: ${isInitializing}`);
-
-    // If we have a rootActorId but it doesn't match the registry (and we aren't currently creating one)
-    // it means the registry was cleared or updated externally - we need to reset our local state.
-    if (rootActorId && rootActorId !== registeredId && !isInitializing) {
-      console.log(`[+page.svelte] ⚠️ Registry ID mismatch for ${currentVibeName} (registry: ${registeredId}, local: ${rootActorId}). Resetting local state...`);
-      untrack(() => {
-        rootActorId = null;
-        lastProcessedVibe = null;
-      });
       return;
     }
 
@@ -126,15 +87,14 @@
       
       console.log('[+page.svelte] Checking registry for', currentVibeName);
 
-      // Handle missing registry (wait for migration)
-      if (!registry) {
-        console.log('[+page.svelte] Registry missing (root.vibes), waiting for migration...');
-        // Try to trigger loading again if it's missing but should be there
-        account.$jazz.ensureLoaded({ resolve: { root: { vibes: true } } }).catch(() => {});
-        return;
-      }
-
+      // Get the VibesRegistry entity (from root.entities) - Jazz handles caching internally
+      const registry = await getVibesRegistry(account);
+      
       // Check if this vibe is already registered
+      const registeredId = registry[currentVibeName];
+      
+      console.log(`[+page.svelte] ✓ Registry ready for ${currentVibeName}. registeredId: ${registeredId}, rootActorId: ${rootActorId}, isInitializing: ${isInitializing}`);
+
       if (registeredId && typeof registeredId === 'string' && registeredId.startsWith('co_')) {
         console.log('[+page.svelte] ✅ Found registered root for', currentVibeName, ':', registeredId);
         rootActorId = registeredId;

@@ -253,6 +253,14 @@ export function jsonSchemaToCoMapShape(jsonSchema: any): Record<string, any> {
 		const isOptional = !required.includes(key)
 		shape[key] = jsonSchemaToZod(value as any, isOptional, extractedSchemas)
 	}
+	
+	// Debug logging for VibesRegistry
+	if (jsonSchema.properties?.vibes) {
+		console.log('[jsonSchemaToCoMapShape] Creating shape for schema with vibes property');
+		console.log('[jsonSchemaToCoMapShape] Properties:', Object.keys(schemaWithRefs.properties));
+		console.log('[jsonSchemaToCoMapShape] Required:', required);
+		console.log('[jsonSchemaToCoMapShape] Shape keys:', Object.keys(shape));
+	}
 
 	return shape
 }
@@ -264,6 +272,7 @@ export function jsonSchemaToCoMapShape(jsonSchema: any): Record<string, any> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getSchemaDefinitionCoMap(metaSchemaJson: any): any {
 	const schemaDefinitionShape = jsonSchemaToCoMapShape(metaSchemaJson)
+	console.log('[getSchemaDefinitionCoMap] Creating CoMap with shape keys:', Object.keys(schemaDefinitionShape))
 	return co.map(schemaDefinitionShape)
 }
 
@@ -713,10 +722,14 @@ export async function ensureSchema(
 				required: nestedRequired,
 			}
 
-			// Get SchemaDefinition CoMap schema dynamically
-			const metaSchemaForNested = await ensureMetaSchema(account)
-			const metaSchemaLoaded = await metaSchemaForNested.$jazz.ensureLoaded({ resolve: {} })
-			const SchemaDefinitionCoMap = getSchemaDefinitionCoMap(metaSchemaLoaded.definition)
+		// Get SchemaDefinition CoMap schema dynamically
+		const metaSchemaForNested = await ensureMetaSchema(account)
+		const metaSchemaLoaded = await metaSchemaForNested.$jazz.ensureLoaded({ resolve: {} })
+		
+		// Get the actual JSON schema definition (not a CoValue reference)
+		// Use SchemaMetaSchema directly instead of trying to extract from the loaded schema
+		const metaSchemaDefinition = addLabelToSchema(SchemaMetaSchema)
+		const SchemaDefinitionCoMap = getSchemaDefinitionCoMap(metaSchemaDefinition)
 
 			// Create SchemaDefinition for the nested schema (no entities list - entities stored in root.entities)
 			const nestedSchemaDefinition = SchemaDefinitionCoMap.create(
@@ -806,6 +819,11 @@ export async function ensureSchema(
 		hasProperties: !!verifyDefinition?.properties,
 		propertyKeys: verifyDefinition?.properties ? Object.keys(verifyDefinition.properties) : null
 	})
+	
+	// Extra debugging for VibesRegistry
+	if (schemaName === 'VibesRegistry') {
+		console.log('[ensureSchema] VibesRegistry definition:', JSON.stringify(verifyDefinition, null, 2))
+	}
 
 	// Verify name was set
 	const verifyName = newSchema.name
