@@ -42,12 +42,12 @@
   AccountSchema={JazzAccount}
 >
   <JazzAccountProvider>
-    <div class="h-screen bg-gray-100 flex flex-col">
+    <div class="h-screen bg-white flex flex-col">
       <JazzAuthSetup />
       <GoogleDataSync />
       <jazz-inspector></jazz-inspector>
       <Header title={routeInfo.title} description={routeInfo.description} />
-      <main class="flex-1 w-full h-full overflow-hidden">
+      <main class="flex-1 w-full h-full overflow-hidden {$page.url.pathname === '/' ? '' : 'pt-20'}">
         {@render children?.()}
       </main>
       <Footer />
