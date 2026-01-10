@@ -8,7 +8,6 @@
 
 The Actor Architecture is the foundation of the MaiaCity Vibes system. Every UI component is an autonomous **Actor** - a self-contained unit with:
 
-- **Its own state machine** - Local state and transitions
 - **An inbox** - Jazz CoFeed for receiving messages
 - **Subscriptions** - List of actor IDs to send messages to
 - **Children** - Explicit list of child actor IDs (ID-based relationships)
@@ -53,7 +52,7 @@ actorB.inbox.$jazz.push(
 )
 
 // Jazz automatically syncs to all subscribers
-// Actor B processes via its state machine
+// Actor B processes message directly via skill execution
 ```
 
 ### 3. **ID-Based Parent-Child Relationships**
@@ -82,17 +81,18 @@ No event bubbling. Each actor subscribes to itself and processes its own events:
 ```typescript
 // List actor handles DELETE_ITEM for its items
 const listActor = Actor.create({
-  states: {
-    idle: { on: { DELETE_ITEM: { target: 'idle', actions: ['@entity/deleteEntity'] } } }
+  context: {
+    visible: true,
+    queries: { items: { schemaName: 'Item', items: [] } }
   },
-  // ...
+  // ... no state machine needed
 }, group)
 
 // List subscribes to itself
 listActor.subscriptions.$jazz.push(listActor.$jazz.id)
 
 // Delete button sends message to list
-buttonLeaf.events.click = { event: 'DELETE_ITEM', payload: { id: 'item.id' } }
+buttonLeaf.events.click = { event: '@entity/deleteEntity', payload: { id: 'item.id' } }
 ```
 
 ---
@@ -103,12 +103,6 @@ buttonLeaf.events.click = { event: 'DELETE_ITEM', payload: { id: 'item.id' } }
 
 ```typescript
 export const Actor = co.map({
-  // Current state in the state machine
-  currentState: z.string(),
-  
-  // State machine definition
-  states: co.json<ActorStates>(),
-  
   // Local context data (queries, view state, etc.)
   context: co.json<Record<string, unknown>>(),
   
@@ -130,39 +124,6 @@ export const Actor = co.map({
   // Role identifier for debugging
   role: z.string(),
 })
-```
-
-### State Machine Definition
-
-```typescript
-interface ActorStates {
-  [stateName: string]: {
-    on?: Record<string, { target: string; actions?: string[] } | string>
-    entry?: string[]
-    exit?: string[]
-  }
-}
-
-// Example
-const states = {
-  idle: {
-    on: {
-      CREATE_ITEM: { target: 'idle', actions: ['@entity/createEntity'] },
-      DELETE_ITEM: { target: 'idle', actions: ['@entity/deleteEntity'] },
-    }
-  },
-  loading: {
-    on: {
-      SUCCESS: 'idle',
-      ERROR: 'error',
-    }
-  },
-  error: {
-    on: {
-      RETRY: 'loading',
-    }
-  },
-}
 ```
 
 ### Actor Message
@@ -231,16 +192,16 @@ const childActors = Array.from(rootActor.children)
   .filter(a => a?.$isLoaded)
 ```
 
-### 3. Message Processing (CoFeed Consumption Pattern)
+### 3. Message Processing (Direct Skill Execution)
 
-Actors process messages from their CoFeed inbox using a **proper consumption pattern**:
+Actors process messages from their CoFeed inbox using a **proper consumption pattern** with direct skill execution:
 
 ```typescript
 // 1. Message sent to inbox (append-only CoFeed)
-targetActor.inbox.$jazz.push(ActorMessage.create({ type: 'CLICK', payload: {} }))
+targetActor.inbox.$jazz.push(ActorMessage.create({ type: '@entity/deleteEntity', payload: { id: '123' } }))
 
 // 2. ActorRenderer processes ALL unprocessed messages
-let processedMessageIds = $state<Set<string>>(new Set())
+let consumedMessageIds = $state<Set<string>>(new Set())
 
 $effect(() => {
   if (!actor?.$isLoaded || !browser) return
@@ -257,27 +218,27 @@ $effect(() => {
   // Process each unprocessed message ONCE
   for (const message of allMessages) {
     const messageId = message.$jazz?.id
-    if (!messageId || processedMessageIds.has(messageId)) {
+    if (!messageId || consumedMessageIds.has(messageId)) {
       continue // Already processed
     }
     
-    // 3. Call skill directly with actor reference
-    const skill = getSkill(message.type)
+    // Mark as consumed BEFORE execution
+    consumedMessageIds.add(messageId)
+    
+    // 3. Call skill directly based on message type (no state machine checks)
+    const skill = skillRegistry.get(message.type)
     if (skill) {
       skill.execute(actor, message.payload, accountCoState)
     }
-    
-    // 4. Mark as consumed (append-only, never delete!)
-    processedMessageIds.add(messageId)
   }
 })
 ```
 
 **Key Points**:
 - **Append-only**: Messages are never deleted from CoFeed
-- **Consumption tracking**: `processedMessageIds` prevents duplicate processing
+- **Consumption tracking**: `consumedMessageIds` prevents duplicate processing
 - **Proper queue handling**: Process ALL unprocessed messages, not just latest
-- **Direct skill execution**: No intermediate dataStore, skills receive actor directly
+- **Direct skill execution**: Skills execute based on message type alone (no state machine checks)
 
 ### 4. Rendering (Jazz-Native Data Flow)
 
@@ -346,7 +307,7 @@ The `ActorRenderer` is the core orchestrator. It:
 
 1. **Loads the actor** via Jazz CoState
 2. **Subscribes to inbox** reactively
-3. **Processes messages** via state machine
+3. **Processes messages** directly via skills
 4. **Loads child actors** via ID list
 5. **Delegates rendering** to Composite/Leaf
 6. **Handles events** and sends messages
@@ -484,15 +445,8 @@ function handleEvent(event: string, payload?: unknown) {
 ```typescript
 // List actor handles its own events
 const listActor = Actor.create({
-  currentState: 'idle',
-  states: { 
-    idle: {
-      on: {
-        DELETE_ITEM: { target: 'idle', actions: ['@entity/deleteEntity'] }
-      }
-    }
-  },
   context: {
+    visible: true,
     queries: {
       items: { schemaName: 'Item', items: [] }
     }
@@ -500,7 +454,7 @@ const listActor = Actor.create({
   view: {
     container: { layout: 'flex', class: 'flex-col gap-2' },
     foreach: {
-      items: 'queries.items.items',
+      items: 'context.queries.items.items',
       key: 'id',
       composite: {
         // Template for each item
@@ -511,8 +465,8 @@ const listActor = Actor.create({
             slot: 'delete',
             leaf: {
               tag: 'button',
-              events: { click: { event: 'DELETE_ITEM', payload: { id: 'item.id' } } },
-              children: ['✕']
+              events: { click: { event: '@entity/deleteEntity', payload: { id: 'item.id' } } },
+              elements: ['✕']
             }
           }
         ]
@@ -531,44 +485,51 @@ listActor.subscriptions.$jazz.push(listActor.$jazz.id)
 ```
 
 **Key Points**:
-- List actor handles `DELETE_ITEM` event
+- List actor handles `@entity/deleteEntity` event directly (no state machine)
 - List subscribes to itself (no event bubbling)
 - Delete button payload uses data path: `{ id: 'item.id' }`
-- ActorRenderer resolves payload to actual ID
+- ActorRenderer resolves payload to actual ID and executes skill directly
 
 ### Pattern 2: Form with Submit Button
 
 ```typescript
-// Root actor handles form submission
-const formRootActor = Actor.create({
-  states: {
-    idle: { on: { SUBMIT_FORM: { target: 'idle', actions: ['@entity/createEntity'] } } }
+// Input actor handles its own submission
+const inputSectionActor = Actor.create({
+  context: {
+    visible: true,
+    newItemText: '',
+    error: null
   },
+  view: createInputSectionComposite({
+    valuePath: 'context.newItemText',
+    inputEvent: '@input/updateContext',
+    submitEvent: '@entity/createEntity',
+    submitPayload: { name: 'context.newItemText' }
+  }),
+  inbox: co.feed(ActorMessage).create([]),
+  subscriptions: co.list(z.string()).create([]), // Will subscribe to itself
   // ...
 }, group)
 
-// Button sends to root
-const submitButtonActor = Actor.create({
-  view: createButtonLeaf({ text: 'Submit', event: 'SUBMIT_FORM' }),
-  subscriptions: co.list(z.string()).create([formRootActor.$jazz.id]),
-  // ...
-}, group)
+// Input actor subscribes to itself - handles both input changes AND submission!
+inputSectionActor.subscriptions.$jazz.push(inputSectionActor.$jazz.id)
 ```
 
 ### Pattern 3: Header with Actions
 
 ```typescript
-// Header actor handles its own actions
+// Header actor is usually just a container (no event handling needed)
 const headerActor = Actor.create({
-  states: {
-    idle: { on: { TOGGLE_VIEW: { target: 'idle', actions: ['@ui/swapViewNode'] } } }
-  },
-  subscriptions: co.list(z.string()).create([]), // Subscribe to self
+  context: { visible: true },
+  view: createHeaderComposite(),
+  inbox: co.feed(ActorMessage).create([]),
+  subscriptions: co.list(z.string()).create([]),
   children: co.list(z.string()).create([titleActor.$jazz.id, viewButtonActor.$jazz.id]),
   // ...
 }, group)
 
-headerActor.subscriptions.$jazz.push(headerActor.$jazz.id)
+// If header needs to handle events, subscribe to itself
+// headerActor.subscriptions.$jazz.push(headerActor.$jazz.id)
 ```
 
 ---
@@ -609,7 +570,6 @@ console.log('[createActors] Subscriptions setup:', {
 
 - **[Message Passing](./message-passing.md)** - Deep dive into message-passing architecture
 - **[ID-Based Relationships](./id-based-relationships.md)** - Why and how we use IDs
-- **[State Machines](./state-machines.md)** - Actor state machine patterns
 - **[Skills](../skills/README.md)** - Business logic execution
 - **[View Layer](../view/README.md)** - How actors render UI
 
@@ -620,8 +580,11 @@ console.log('[createActors] Subscriptions setup:', {
 ### 1. Each Actor Handles Its Own Events
 
 ```typescript
-// ✅ GOOD: List handles delete
-listActor.states.idle.on.DELETE_ITEM = { target: 'idle', actions: ['@entity/deleteEntity'] }
+// ✅ GOOD: List handles delete (self-subscription)
+const listActor = Actor.create({
+  context: { visible: true, queries: { ... } },
+  // ... no state machine
+}, group)
 listActor.subscriptions.$jazz.push(listActor.$jazz.id)
 
 // ❌ BAD: Bubbling delete to parent

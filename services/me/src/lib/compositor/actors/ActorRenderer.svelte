@@ -169,18 +169,43 @@
         continue; // Skip already consumed messages
       }
       
+      // Mark as consumed BEFORE execution to prevent duplicates
+      consumedMessageIds.add(messageId);
+      newlyConsumed.push(messageId);
+      
       // Call skill directly with actor reference (via centralized registry)
       logger.log('Processing message:', message.type, 'payload:', message.payload);
       const skill = skillRegistry.get(message.type);
       if (skill) {
-        skill.execute(actor, message.payload, accountCoState);
+        // Execute skill and handle async errors
+        try {
+          const result = skill.execute(actor, message.payload, accountCoState);
+          // If it's a promise, handle errors but don't await (fire and forget)
+          if (result && typeof result.then === 'function') {
+            result.catch((error: any) => {
+              logger.error('Skill execution error:', message.type, error);
+              // Try to set error on actor context if possible
+              if (actor.context && actor.$isLoaded) {
+                const updatedContext = { ...(actor.context as Record<string, unknown>) };
+                updatedContext.error = error.message || 'Skill execution failed';
+                updatedContext.isProcessing = false;
+                actor.$jazz.set('context', updatedContext);
+              }
+            });
+          }
+        } catch (error: any) {
+          logger.error('Skill execution error (sync):', message.type, error);
+          // Try to set error on actor context if possible
+          if (actor.context && actor.$isLoaded) {
+            const updatedContext = { ...(actor.context as Record<string, unknown>) };
+            updatedContext.error = error.message || 'Skill execution failed';
+            updatedContext.isProcessing = false;
+            actor.$jazz.set('context', updatedContext);
+          }
+        }
       } else {
         logger.warn('No skill found for message type:', message.type);
       }
-      
-      // Mark as consumed (in memory and track for batch update)
-      consumedMessageIds.add(messageId);
-      newlyConsumed.push(messageId);
     }
     
     // Batch update: Persist newly consumed IDs to actor context

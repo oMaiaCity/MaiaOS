@@ -22,7 +22,7 @@ export function createRootCardComposite(params: RootCardParams = {}): CompositeN
     // Outer container: centering wrapper
     container: {
       layout: 'grid',
-      class: 'max-w-6xl mx-auto grid-cols-1 p-2 @xs:p-3 @sm:p-4 @md:p-6'
+      class: 'max-w-6xl mx-auto grid-cols-1 p-2 @xs:p-3 @sm:p-4 @md:p-6 mb-20'
     },
     // Inner div: card styling
     elements: [

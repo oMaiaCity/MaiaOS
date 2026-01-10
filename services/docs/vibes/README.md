@@ -9,7 +9,7 @@
 The MaiaCity Vibes architecture is a revolutionary approach to building user interfaces that combines:
 
 - **Jazz-Native Reactivity**: Built on Jazz CoValues for real-time, collaborative data synchronization
-- **Actor-Based Architecture**: Each UI component is an autonomous actor with its own state machine and inbox
+- **Actor-Based Architecture**: Each UI component is an autonomous actor with message-passing and inbox
 - **Pure Message Passing**: No prop drilling - actors communicate via Jazz-synced message feeds
 - **ID-Based Relationships**: Explicit parent-child relationships via CoLists of actor IDs
 - **JSON-Driven UI**: Entire UI structure defined in JSON, enabling database-driven interfaces
@@ -32,7 +32,7 @@ The MaiaCity Vibes architecture is a revolutionary approach to building user int
 │                      ACTOR LAYER                         │
 │  - ActorRenderer (orchestration)                        │
 │  - useQuery Hook (Jazz-native queries)  ⭐ NEW          │
-│  - Actor State Machines (per-component logic)           │
+│  - Actor Message Processing (per-component logic)       │
 │  - CoFeed Inbox (append-only messaging)  ⭐ UPGRADED    │
 │  - ID-Based Relationships (explicit hierarchies)        │
 └────────────────────┬────────────────────────────────────┘
@@ -147,7 +147,7 @@ See **[ARCHITECTURE_SUMMARY.md](./ARCHITECTURE_SUMMARY.md)** for complete detail
    - [ActorRenderer](./actors/actor-renderer.md) - Core actor orchestration
    - [Message Passing](./actors/message-passing.md) - Pure message-based communication
    - [ID-Based Relationships](./actors/id-based-relationships.md) - Explicit hierarchies
-   - [State Machines](./actors/state-machines.md) - Per-actor logic
+   - [Message Passing](./actors/message-passing.md) - Per-actor logic
 
 2. **[Skills](./skills/README.md)** - Reusable action functions
    - [Skill Registry](./skills/registry.md) - Centralized skill management
@@ -207,7 +207,7 @@ todosRootActor (handles SET_VIEW for view mode switching)
 
 **1. Foreach Pattern for Lists** - Use inline templates instead of creating separate actors per item  
 **2. Nested Foreach** - Kanban columns use nested foreach with filter expressions  
-**3. True Colocation** - Each interactive element has its own actor with state machine  
+**3. True Colocation** - Each interactive element has its own actor with inbox  
 **4. Visibility Bindings** - View modes toggle via root context + visibility bindings  
 **5. Responsive Design** - Container query classes (`@xs:`, `@sm:`, `@md:`)  
 **6. Generic Skills** - Reuse `@entity/*` skills for CRUD operations
@@ -224,15 +224,13 @@ Start with the **[Actor Architecture](./actors/README.md)** to understand how th
 
 ```typescript
 // Each UI component is an Actor with:
-// - Its own state machine
 // - An inbox for receiving messages
 // - A list of child actor IDs
 // - Subscriptions to other actors
+// - Context for local data
 
 const myActor = Actor.create({
-  currentState: 'idle',
-  states: { idle: { on: { CLICK: { target: 'idle', actions: ['@ui/doSomething'] } } } },
-  context: { /* local data */ },
+  context: { visible: true /* local data */ },
   view: { /* CompositeConfig or LeafNode */ },
   dependencies: { entities: root.entities.$jazz.id },
   inbox: co.feed(ActorMessage).create([]),
@@ -379,10 +377,11 @@ No event bubbling. Each actor processes its own events:
 ```typescript
 // ✅ GOOD: List actor handles its own delete events
 const listActor = Actor.create({
-  states: {
-    idle: { on: { REMOVE_ITEM: { target: 'idle', actions: ['@entity/deleteEntity'] } } }
+  context: {
+    visible: true,
+    queries: { items: { schemaName: 'Item', items: [] } }
   },
-  // ...
+  // ... no state machine needed
 }, group)
 
 // List subscribes to itself
@@ -395,7 +394,7 @@ All business logic is in reusable skills - they mutate Jazz CoValues directly:
 
 ```typescript
 // UI triggers skill via message
-events: { click: { event: 'DELETE_ITEM', payload: { id: 'item.id' } } }
+events: { click: { event: '@entity/deleteEntity', payload: { id: 'item.id' } } }
 
 // Skill mutates Jazz CoValue directly (NEW PATTERN)
 const deleteSkill: Skill = {
@@ -449,11 +448,11 @@ console.log(Array.from(actor.subscriptions)) // ['co_z...']
 Each actor is self-contained with its own logic:
 
 ```typescript
-// Actor state machine is isolated
+// Actor context is isolated
 const actor = Actor.create({
-  currentState: 'idle',
-  states: { /* only this actor's states */ },
-  context: { /* only this actor's data */ },
+  context: { visible: true /* only this actor's data */ },
+  inbox: co.feed(ActorMessage).create([]),
+  subscriptions: co.list(z.string()).create([]),
   // ...
 }, group)
 ```

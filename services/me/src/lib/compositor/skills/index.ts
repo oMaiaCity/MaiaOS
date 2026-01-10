@@ -18,6 +18,7 @@ import { vibesSkills } from './vibes-skills'
 import { schemaSkills } from './schema-skills'
 import { relationsSkills } from './relations-skills'
 import { databaseSkills } from './database-skills'
+import { aiSkills } from './ai-skills'
 
 // ========== AUTO-REGISTER ALL SKILLS ==========
 
@@ -42,6 +43,7 @@ export function registerAllSkills(): void {
 	registerSkillsFromConfig(schemaSkills)
 	registerSkillsFromConfig(relationsSkills)
 	registerSkillsFromConfig(databaseSkills)
+	registerSkillsFromConfig(aiSkills)
 	// Add more skill registrations here as they're created
 
 	skillsRegistered = true

@@ -316,8 +316,6 @@ const resolvedContext = $derived.by(() => ({
 
 ```typescript
 export const Actor = co.map({
-  currentState: z.string(),
-  states: co.json<ActorStates>(),
   context: co.json<Record<string, unknown>>(),
   view: co.json<unknown>(),
   dependencies: co.json<Record<string, string>>(),
@@ -329,9 +327,7 @@ export const Actor = co.map({
 
 // Create actor (Jazz CoValue)
 const actor = Actor.create({
-  currentState: 'idle',
-  states: { idle: {} },
-  context: {},
+  context: { visible: true },
   view: { /* ... */ },
   dependencies: {},
   inbox: co.feed(ActorMessage).create([]),

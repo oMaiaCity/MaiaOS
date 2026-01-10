@@ -47,7 +47,7 @@
       <GoogleDataSync />
       <jazz-inspector></jazz-inspector>
       <Header title={routeInfo.title} description={routeInfo.description} />
-      <main class="flex-1 w-full h-full overflow-hidden {$page.url.pathname === '/' ? '' : 'pt-20'}">
+      <main class="flex-1 w-full min-h-0 overflow-hidden {$page.url.pathname === '/' ? '' : 'pt-20'}">
         {@render children?.()}
       </main>
       <Footer />

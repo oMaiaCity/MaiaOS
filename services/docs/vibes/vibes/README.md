@@ -8,7 +8,7 @@
 
 A **Vibe** is a complete, self-contained application built on the MaiaCity architecture. Vibes combine:
 
-- **Actors** - UI components with state machines
+- **Actors** - UI components with message-passing
 - **Skills** - Reusable business logic
 - **Views** - JSON-driven UI definitions
 - **Schemata** - Data models
@@ -66,14 +66,6 @@ export async function createHumansActors(account: any) {
   
   // List actor with Jazz-native queries
   const listActor = Actor.create({
-    currentState: 'idle',
-    states: {
-      idle: {
-        on: {
-          REMOVE_HUMAN: { target: 'idle', actions: ['@entity/deleteEntity'] }
-        }
-      }
-    },
     context: {
       visible: true,  // Actor visibility (default: false, must set true to render)
       queries: {
@@ -128,14 +120,7 @@ export async function createHumansActors(account: any) {
   
   // STEP 3: Create root actor
   const rootActor = Actor.create({
-    currentState: 'idle',
-    states: {
-      idle: {
-        on: {
-          CREATE_HUMAN: { target: 'idle', actions: ['@human/createRandom'] }
-        }
-      }
-    },
+    context: { visible: true },
     view: {
       container: { layout: 'grid', class: 'max-w-6xl mx-auto grid-cols-1' },
     },
@@ -342,30 +327,19 @@ export async function createHumansActors(account: any) {
 **Create, Read, Update, Delete** for an entity type:
 
 ```typescript
-// Root handles CREATE
-const rootActor = Actor.create({
-  states: {
-    idle: {
-      on: {
-        CREATE_ITEM: { target: 'idle', actions: ['@entity/validateInput', '@entity/createEntity'] }
-      }
-    }
-  },
-  // ...
+// Form handles CREATE (self-subscription)
+const formActor = Actor.create({
+  context: { visible: true, newItemText: '' },
+  // ... no state machine
 }, group)
+formActor.subscriptions.$jazz.push(formActor.$jazz.id)
 
-// List handles DELETE
+// List handles DELETE (self-subscription)
 const listActor = Actor.create({
-  states: {
-    idle: {
-      on: {
-        DELETE_ITEM: { target: 'idle', actions: ['@entity/deleteEntity'] },
-        UPDATE_ITEM: { target: 'idle', actions: ['@entity/updateEntity'] },
-      }
-    }
-  },
-  // ...
+  context: { visible: true, queries: { items: { schemaName: 'Item', items: [] } } },
+  // ... no state machine
 }, group)
+listActor.subscriptions.$jazz.push(listActor.$jazz.id)
 ```
 
 ### Pattern 2: View-Switching Vibe
@@ -376,27 +350,25 @@ const listActor = Actor.create({
 // Root actor with view state
 const rootActor = Actor.create({
   context: {
-    view: {
-      currentView: 'list',
-      contentCompositeId: 'myapp.composite.content.list',
-    }
-  },
-  states: {
-    idle: {
-      on: {
-        SET_VIEW: { target: 'idle', actions: ['@ui/swapViewNode'] }
-      }
+    visible: true,
+    viewMode: 'list',
+    viewActors: {
+      list: listActor.$jazz.id,
+      kanban: kanbanActor.$jazz.id,
+      timeline: timelineActor.$jazz.id
     }
   },
   view: {
     container: { layout: 'grid', class: 'grid-cols-1' },
     children: [
       { slot: 'header', /* view buttons */ },
-      { slot: 'content', compositeId: 'view.contentCompositeId' },  // Dynamic!
+      { slot: 'content', /* dynamic actor swapping */ }
     ]
   },
   // ...
 }, group)
+// Content actor handles @view/swapActors
+contentActor.subscriptions.$jazz.push(contentActor.$jazz.id)
 ```
 
 ### Pattern 3: Master-Detail Vibe
@@ -407,18 +379,9 @@ const rootActor = Actor.create({
 // Root handles OPEN_MODAL
 const rootActor = Actor.create({
   context: {
-    view: {
-      showModal: false,
-      selectedItem: null,
-    }
-  },
-  states: {
-    idle: {
-      on: {
-        OPEN_MODAL: { target: 'idle', actions: ['@ui/openModal'] },
-        CLOSE_MODAL: { target: 'idle', actions: ['@ui/closeModal'] },
-      }
-    }
+    visible: true,
+    showModal: false,
+    selectedItem: null
   },
   view: {
     container: { layout: 'grid' },

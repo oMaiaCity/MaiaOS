@@ -132,8 +132,6 @@ execute: async (actor, payload, accountCoState) => {
 
 ```typescript
 export const Actor = co.map({
-  currentState: z.string(),                        // State machine state
-  states: co.json<ActorStates>(),                  // State machine definition
   context: co.json<Record<string, unknown>>(),     // Queries, view state
   view: co.json<unknown>(),                        // CompositeConfig or LeafNode
   dependencies: co.json<Record<string, string>>(), // CoValue IDs
@@ -342,12 +340,12 @@ buttonActor.subscriptions.$jazz.push(rootActor.$jazz.id)
 // OLD: Local state with dataStore
 const dataStore = createDataStore(account)
 
-// OLD: Skills mutate local state
+// OLD: Skills mutate local state (deprecated)
 execute: (data: Data, payload) => {
   data.todos.push(newTodo)
 }
 
-// OLD: Manual UI updates
+// OLD: Manual UI updates (deprecated)
 dataStore.send('UPDATE_TODOS', todos)
 ```
 
@@ -371,7 +369,7 @@ execute: async (actor, payload, accountCoState) => {
 
 ## 📚 Documentation Index
 
-- **[Actors](./actors/README.md)** - Actor architecture, state machines, message passing
+- **[Actors](./actors/README.md)** - Actor architecture, message passing
 - **[Jazz Integration](./jazz/README.md)** - CoValues, CoState, useQuery, reactivity
 - **[Schemata](./schemata/README.md)** - Type system for entities, relations, UI
 - **[Skills](./skills/README.md)** - Business logic, skill categories, custom skills

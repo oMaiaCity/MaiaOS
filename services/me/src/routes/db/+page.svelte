@@ -314,11 +314,14 @@
     if (!account || !me || !me.$isLoaded) return;
 
     try {
+      console.log('[DB Page] Starting database reset...');
       await executeSkill('@database/resetDatabase', account);
-      // Mutations are reactive - CoState will automatically update
-      // No need to manually clear cache or reload
-    } catch (_error) {
-      console.error("Error resetting data:", _error);
+      console.log('[DB Page] Database reset complete, reloading page...');
+      // Reload page to force recreation of vibes with updated code
+      window.location.reload();
+    } catch (error) {
+      console.error("[DB Page] Error resetting data:", error);
+      alert(`Reset failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

@@ -125,30 +125,6 @@ export async function createVibesActors(account: any) {
 		role: 'humans-card-desc',
 	}, group);
 
-	const designTemplatesTitleActor = Actor.create({
-		context: { visible: true },
-		view: createTitleLeaf({ text: 'Design Templates', tag: 'h3', classes: 'text-base font-semibold text-slate-700' }),
-		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([]),
-		role: 'design-templates-card-title',
-	}, group);
-
-	const designTemplatesDescActor = Actor.create({
-		context: { visible: true },
-		view: {
-			tag: 'p',
-			classes: 'text-xs text-slate-600',
-			elements: ['Reusable UI component templates']
-		},
-		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([]),
-		role: 'design-templates-card-desc',
-	}, group);
-
 	const todosTitleActor = Actor.create({
 		context: { visible: true },
 		view: {
@@ -175,30 +151,6 @@ export async function createVibesActors(account: any) {
 		subscriptions: [],
 		children: co.list(z.string()).create([]),
 		role: 'todos-card-desc',
-	}, group);
-
-	const explorerTitleActor = Actor.create({
-		context: { visible: true },
-		view: createTitleLeaf({ text: 'Explorer', tag: 'h3', classes: 'text-base font-semibold text-slate-700' }),
-		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([]),
-		role: 'explorer-card-title',
-	}, group);
-
-	const explorerDescActor = Actor.create({
-		context: { visible: true },
-		view: {
-			tag: 'p',
-			classes: 'text-xs text-slate-600',
-			elements: ['Visualize and debug actor structures and state machines']
-		},
-		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [],
-		children: co.list(z.string()).create([]),
-		role: 'explorer-card-desc',
 	}, group);
 
 	// NO WAIT! All leaf actors created locally, use immediately
@@ -229,27 +181,6 @@ export async function createVibesActors(account: any) {
 		role: 'humans-card',
 	}, group);
 
-	const designTemplatesCardActor = Actor.create({
-		context: { visible: true },
-		view: {
-			container: {
-				layout: 'flex',
-				class: 'card p-4 flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow'
-			},
-			events: {
-				click: {
-					event: '@ui/navigate',
-					payload: { vibeName: 'designTemplates' }
-				}
-			}
-		},
-		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [], // Subscribe to ROOT actor (set later) for any root-level state updates
-		children: co.list(z.string()).create([designTemplatesTitleActor.$jazz.id, designTemplatesDescActor.$jazz.id]),
-		role: 'design-templates-card',
-	}, group);
-
 	const todosCardActor = Actor.create({
 		context: { visible: true },
 		view: {
@@ -271,27 +202,6 @@ export async function createVibesActors(account: any) {
 		role: 'todos-card',
 	}, group);
 
-	const explorerCardActor = Actor.create({
-		context: { visible: true },
-		view: {
-			container: {
-				layout: 'flex',
-				class: 'card p-4 flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow'
-			},
-			events: {
-				click: {
-					event: '@ui/navigate',
-					payload: { vibeName: 'explorer' }
-				}
-			}
-		},
-		dependencies: {},
-		inbox: co.feed(ActorMessage).create([]),
-		subscriptions: [], // Subscribe to ROOT actor (set later) for any root-level state updates
-		children: co.list(z.string()).create([explorerTitleActor.$jazz.id, explorerDescActor.$jazz.id]),
-		role: 'explorer-card',
-	}, group);
-
 	const headerActor = Actor.create({
 		context: { visible: true },
 		view: createHeaderComposite(),
@@ -306,14 +216,17 @@ export async function createVibesActors(account: any) {
 		context: { visible: true },
 		view: {
 			container: {
-				layout: 'flex',
-				class: 'p-6 flex-col gap-4'
+				layout: 'grid',
+				class: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
 			}
 		},
 		dependencies: {},
 		inbox: co.feed(ActorMessage).create([]),
 		subscriptions: [],
-		children: co.list(z.string()).create([humansCardActor.$jazz.id, todosCardActor.$jazz.id, explorerCardActor.$jazz.id]),
+		children: co.list(z.string()).create([
+			humansCardActor.$jazz.id,
+			todosCardActor.$jazz.id
+		]),
 		role: 'vibes-grid',
 	}, group);
 
@@ -342,10 +255,6 @@ export async function createVibesActors(account: any) {
 	if (todosSubscriptions?.$isLoaded) {
 		todosSubscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
 	}
-	const explorerSubscriptions = explorerCardActor.subscriptions;
-	if (explorerSubscriptions?.$isLoaded) {
-		explorerSubscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
-	}
 	// NO WAIT! Subscriptions updated locally, sync happens in background
 
 	// Add all actors to global actors list
@@ -354,11 +263,8 @@ export async function createVibesActors(account: any) {
 	actorsList.$jazz.push(humansDescActor);
 	actorsList.$jazz.push(todosTitleActor);
 	actorsList.$jazz.push(todosDescActor);
-	actorsList.$jazz.push(explorerTitleActor);
-	actorsList.$jazz.push(explorerDescActor);
 	actorsList.$jazz.push(humansCardActor);
 	actorsList.$jazz.push(todosCardActor);
-	actorsList.$jazz.push(explorerCardActor);
 	actorsList.$jazz.push(headerActor);
 	actorsList.$jazz.push(gridActor);
 	actorsList.$jazz.push(vibesRootActor);

@@ -13,7 +13,7 @@ const resetDatabaseSkill: Skill = {
 	metadata: {
 		id: '@database/resetDatabase',
 		name: 'Reset Database',
-		description: 'Clears all schemata, entities, relations, and actors from the database',
+		description: 'Clears all schemata, entities, relations, actors, and vibes registry from the database',
 		category: 'database',
 		parameters: {
 			type: 'object',
@@ -96,25 +96,30 @@ const resetDatabaseSkill: Skill = {
 			}
 		}
 
-		// Clear vibes registry contents FIRST (before clearing actors)
+		// Delete and recreate the entire vibes registry FIRST (before clearing actors)
 		// This prevents pages from trying to load actors that no longer exist
-		// root.vibes IS the registry CoMap - clear its schema properties
+		// Deleting individual properties doesn't work because they're defined in the schema
 		if (root.$jazz.has('vibes')) {
-			const rootWithVibes = await root.$jazz.ensureLoaded({
-				resolve: { vibes: true },
-			})
-			const vibesRegistry = rootWithVibes.vibes
-
-			if (vibesRegistry?.$isLoaded) {
-				// VibesRegistry has schema properties (vibes, humans, todos, designTemplates)
-				// Set them ALL to undefined to clear them completely
-				vibesRegistry.$jazz.set('vibes', undefined)
-				vibesRegistry.$jazz.set('humans', undefined)
-				vibesRegistry.$jazz.set('todos', undefined)
-				vibesRegistry.$jazz.set('designTemplates', undefined)
-				await root.$jazz.waitForSync()
-				console.log('[resetDatabase] Cleared all vibes registry contents (vibes, humans, todos, designTemplates)')
-			}
+			console.log('[resetDatabase] Deleting entire vibes registry...')
+			
+			// Delete the entire vibes registry CoMap
+			root.$jazz.delete('vibes')
+			await root.$jazz.waitForSync()
+			
+			// Recreate an empty vibes registry
+			const { Group } = await import('jazz-tools')
+			const registryGroup = Group.create()
+			registryGroup.addMember('everyone', 'reader')
+			
+			// Import VibesRegistry schema
+			const { VibesRegistry } = await import('@maia/db')
+			const newVibesRegistry = VibesRegistry.create({}, registryGroup)
+			
+			// Set the new empty registry
+			root.$jazz.set('vibes', newVibesRegistry)
+			await root.$jazz.waitForSync()
+			
+			console.log('[resetDatabase] ✅ Recreated empty vibes registry')
 		}
 
 		// Delete legacy vibesRegistry property if it exists (old schema)

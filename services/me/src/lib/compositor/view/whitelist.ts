@@ -194,6 +194,7 @@ const TAILWIND_PATTERNS = [
 	/^(underline|line-through|no-underline)$/,
 	/^truncate(-none)?$/, // truncate, truncate-none
 	/^whitespace-(normal|nowrap|pre|pre-line|pre-wrap|break-spaces)$/, // whitespace utilities
+	/^break-(words|all|normal)$/, // word-break utilities: break-words, break-all, break-normal
 	// Writing mode (vertical text)
 	/^writing-(vertical-rl|vertical-lr|horizontal-tb)$/,
 	/^\[text-orientation:.*\]$/, // Allow text-orientation arbitrary values

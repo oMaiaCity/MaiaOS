@@ -9,7 +9,7 @@
 The Skills System is a centralized registry of reusable action functions. Skills:
 
 - **Execute business logic** - CRUD operations, validations, UI updates
-- **Are composable** - Mix and match skills in state machines
+- **Are composable** - Mix and match skills in actors
 - **Work across vibes** - Reuse the same skills in different applications
 - **Are LLM-ready** - Metadata enables AI to discover and call skills
 - **Integrate with Jazz** - Access collaborative data via AccountCoState
@@ -104,16 +104,13 @@ CRUD operations for any entity type:
 '@entity/clearEntities'     // Clear all entities of a type
 '@entity/validateInput'     // Validate input
 
-// Example usage in state machine
-states: {
-  idle: {
-    on: {
-      CREATE_ITEM: { target: 'idle', actions: ['@entity/createEntity'] },
-      UPDATE_ITEM: { target: 'idle', actions: ['@entity/updateEntity'] },
-      DELETE_ITEM: { target: 'idle', actions: ['@entity/deleteEntity'] },
-    }
-  }
-}
+// Example usage in actor (direct skill execution)
+const actor = Actor.create({
+  context: { visible: true, queries: { items: { schemaName: 'Item', items: [] } } },
+  // ... no state machine needed
+}, group)
+actor.subscriptions.$jazz.push(actor.$jazz.id)
+// Skills execute directly when messages arrive
 ```
 
 ### Relation Skills
@@ -150,14 +147,12 @@ View management and user interactions:
 '@ui/closeModal'       // Close modal
 
 // Example: View switching
-states: {
-  idle: {
-    on: {
-      SET_VIEW: { target: 'idle', actions: ['@ui/setView'] },
-      OPEN_DETAILS: { target: 'idle', actions: ['@ui/openModal'] },
-    }
-  }
-}
+// Actor handles events directly (no state machine)
+const actor = Actor.create({
+  context: { visible: true, viewMode: 'list' },
+  // ... no state machine needed
+}, group)
+actor.subscriptions.$jazz.push(actor.$jazz.id)
 ```
 
 ### Schema Skills
@@ -192,13 +187,12 @@ Database management:
 '@database/resetDatabase'    // Clear all data
 
 // Example: Reset on development
-states: {
-  idle: {
-    on: {
-      RESET_DB: { target: 'idle', actions: ['@database/resetDatabase'] },
-    }
-  }
-}
+// Actor handles events directly (no state machine)
+const actor = Actor.create({
+  context: { visible: true },
+  // ... no state machine needed
+}, group)
+actor.subscriptions.$jazz.push(actor.$jazz.id)
 ```
 
 ### Domain-Specific Skills
@@ -219,34 +213,34 @@ Custom skills for your application:
 
 ## 🔧 Using Skills
 
-### In State Machines
+### Direct Execution in Actors
 
-Skills are referenced by ID in state machine definitions:
+Skills execute directly when messages arrive at an actor's inbox:
 
 ```typescript
 const myActor = Actor.create({
-  currentState: 'idle',
-  states: {
-    idle: {
-      on: {
-        // Single skill
-        CREATE_ITEM: { target: 'idle', actions: ['@entity/createEntity'] },
-        
-        // Multiple skills (execute in order)
-        SUBMIT_FORM: {
-          target: 'idle',
-          actions: ['@entity/validateInput', '@entity/createEntity', '@ui/clearInput']
-        },
+  context: { visible: true, newItemText: '' },
+  view: {
+    // ... view definition with events
+    events: {
+      click: {
+        event: '@entity/createEntity',
+        payload: { name: 'context.newItemText' }
       }
     }
   },
-  // ...
+  // ... no state machine needed
 }, group)
+
+// Actor subscribes to itself to handle events
+myActor.subscriptions.$jazz.push(myActor.$jazz.id)
+
+// When message arrives, ActorRenderer executes skill directly based on message type
 ```
 
 ### Standalone Execution
 
-Execute skills outside state machines:
+Execute skills programmatically outside actors:
 
 ```typescript
 import { executeSkill } from '$lib/compositor/skills'
@@ -271,33 +265,29 @@ async function createProject() {
 The `ActorRenderer` automatically calls skills when processing messages:
 
 ```typescript
-// 1. Actor declares state machine with skill actions
+// 1. Actor handles events directly (no state machine)
 const actor = Actor.create({
-  currentState: 'idle',
-  states: {
-    idle: {
-      on: {
-        CREATE_ITEM: { target: 'idle', actions: ['@entity/createEntity'] },
-        DELETE_ITEM: { target: 'idle', actions: ['@entity/deleteEntity'] },
-      }
-    }
-  },
-  // ...
+  context: { visible: true, queries: { items: { schemaName: 'Item', items: [] } } },
+  // ... no state machine needed
 }, group)
+actor.subscriptions.$jazz.push(actor.$jazz.id)
 
-// 2. ActorRenderer processes messages and calls skills
+// 2. ActorRenderer processes messages and calls skills directly
 // (from ActorRenderer.svelte)
 $effect(() => {
   // ... message collection from CoFeed inbox ...
   
   for (const message of allMessages) {
     const messageId = message.$jazz?.id
-    if (!messageId || processedMessageIds.has(messageId)) {
+    if (!messageId || consumedMessageIds.has(messageId)) {
       continue
     }
     
-    // Call skill directly with actor reference
-    const skill = getSkill(message.type)
+    // Mark as consumed BEFORE execution
+    consumedMessageIds.add(messageId)
+    
+    // Call skill directly based on message type (no state machine checks)
+    const skill = skillRegistry.get(message.type)
     if (skill) {
       skill.execute(actor, message.payload, accountCoState)
     }
@@ -392,19 +382,23 @@ export function registerAllSkills(): void {
 }
 ```
 
-### Step 3: Use in State Machine
+### Step 3: Use in Actor
 
 ```typescript
 const actor = Actor.create({
-  states: {
-    idle: {
-      on: {
-        SEND_NOTIFICATION: { target: 'idle', actions: ['@myapp/sendEmail'] }
+  context: { visible: true },
+  view: {
+    events: {
+      click: {
+        event: '@myapp/sendEmail',
+        payload: { to: 'user@example.com' }
       }
     }
   },
-  // ...
+  // ... no state machine needed
 }, group)
+actor.subscriptions.$jazz.push(actor.$jazz.id)
+// Skills execute when messages arrive (no state machine needed)
 ```
 
 ---
@@ -471,17 +465,21 @@ const validateInputSkill: Skill = {
   },
 }
 
-// Use in chain
-states: {
-  idle: {
-    on: {
-      CREATE_ITEM: {
-        target: 'idle',
-        actions: ['@entity/validateInput', '@entity/createEntity'] // Validate first!
+// Use in actor (skills execute in order when message arrives)
+const actor = Actor.create({
+  context: { visible: true, newItemText: '' },
+  view: {
+    events: {
+      submit: {
+        event: '@entity/createEntity',
+        payload: { name: 'context.newItemText' }
       }
     }
-  }
-}
+  },
+  // ... no state machine needed
+}, group)
+actor.subscriptions.$jazz.push(actor.$jazz.id)
+// Both skills execute when message arrives (validateInput can be called first in skill itself)
 ```
 
 ### Pattern 3: UI Update Skill
@@ -687,7 +685,7 @@ execute: async (data, payload) => {
 - **[UI Skills](./ui-skills.md)** - View management patterns
 - **[Custom Skills](./custom-skills.md)** - Building domain-specific skills
 - **[Actors](../actors/README.md)** - How actors use skills
-- **[State Machines](../actors/state-machines.md)** - Skill execution flow
+- **[Message Passing](../actors/message-passing.md)** - Skill execution flow
 
 ---
 
@@ -697,7 +695,7 @@ The Skills System provides:
 
 - **Centralized logic** - All business logic in one place
 - **Reusability** - Use same skills across vibes
-- **Composability** - Chain skills in state machines
+- **Composability** - Chain skills via message passing
 - **Type safety** - JSON Schema parameter validation
 - **LLM-ready** - Metadata enables AI discovery
 - **Jazz integration** - Direct access to collaborative data

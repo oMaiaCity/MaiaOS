@@ -7,7 +7,7 @@
  * This registry maps schema names to their JSON Schema definitions.
  */
 
-import { humanEntityTypeSchema, todoEntityTypeSchema } from './data/entity-types.js'
+import { humanEntityTypeSchema, todoEntityTypeSchema, chatMessageEntityTypeSchema } from './data/entity-types.js'
 import { assignedToRelationTypeSchema } from './data/relation-types.js'
 import { leafTypeSchemas } from './data/leaf-types.js'
 import { compositeTypeSchemas } from './data/composite-types.js'
@@ -17,6 +17,7 @@ import { compositeTypeSchemas } from './data/composite-types.js'
 const schemaRegistry: Record<string, any> = {
 	Human: humanEntityTypeSchema,
 	Todo: todoEntityTypeSchema,
+	ChatMessage: chatMessageEntityTypeSchema,
 	AssignedTo: assignedToRelationTypeSchema,
 	// Leaf types (design system components)
 	...leafTypeSchemas,

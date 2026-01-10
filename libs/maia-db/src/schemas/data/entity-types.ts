@@ -30,3 +30,18 @@ export const todoEntityTypeSchema: any = {
 	},
 	required: ['type', 'name'],
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const chatMessageEntityTypeSchema: any = {
+	type: 'object',
+	properties: {
+		type: { type: 'string', required: true }, // "Entity" for EntityTypes
+		role: { type: 'string', required: true }, // 'user' | 'assistant' | 'system'
+		content: { type: 'string', required: true }, // Message text
+		conversationId: { type: 'string' }, // Optional: group messages by conversation
+		model: { type: 'string' }, // Optional: model used (e.g., 'minimax/minimax-m2.1')
+		timestamp: { type: 'number' }, // Optional: Unix timestamp for sorting
+		metadata: { type: 'object' }, // Optional: additional data (JSON)
+	},
+	required: ['type', 'role', 'content'],
+}

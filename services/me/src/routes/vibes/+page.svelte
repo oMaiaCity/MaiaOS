@@ -6,10 +6,7 @@
   import ActorRenderer from "$lib/compositor/actors/ActorRenderer.svelte";
   import { createHumansActors } from "$lib/vibes/humans/createHumansActors";
   import { createVibesActors } from "$lib/vibes/vibes/createVibesActors";
-  import { createDesignTemplatesActors } from "$lib/vibes/design-templates/actors/createDesignTemplatesActors";
   import { createTodosActors } from "$lib/vibes/todo/createTodosActors";
-  import { createExplorerActors } from "$lib/vibes/explorer/createExplorerActors";
-  import ExplorerView from "$lib/vibes/explorer/components/ExplorerView.svelte";
   import { CoState } from "jazz-tools/svelte";
   import { Actor } from "@maia/db";
 
@@ -96,14 +93,12 @@
     }
 
     // REACTIVE ACCESS to registry content (for vibe name lookup)
-    // VibesRegistry is a co.map({vibes, humans, designTemplates, todos}) with schema properties, not a passthrough map
+    // VibesRegistry is a co.map({vibes, humans, todos}) with schema properties, not a passthrough map
     // So we access the properties directly instead of using $jazz.get()
     const registeredId = (
       currentVibeName === 'vibes' ? registry.vibes :
       currentVibeName === 'humans' ? registry.humans :
-      currentVibeName === 'designTemplates' ? registry.designTemplates :
       currentVibeName === 'todos' ? registry.todos :
-      currentVibeName === 'explorer' ? registry.explorer :
       undefined
     ) as string | undefined;
     
@@ -157,15 +152,9 @@
         if (currentVibeName === 'humans') {
           console.log('[+page.svelte] Calling createHumansActors...');
           newRootId = await createHumansActors(account);
-        } else if (currentVibeName === 'designTemplates') {
-          console.log('[+page.svelte] Calling createDesignTemplatesActors...');
-          newRootId = await createDesignTemplatesActors(account);
         } else if (currentVibeName === 'todos') {
           console.log('[+page.svelte] Calling createTodosActors...');
           newRootId = await createTodosActors(account);
-        } else if (currentVibeName === 'explorer') {
-          console.log('[+page.svelte] Calling createExplorerActors...');
-          newRootId = await createExplorerActors(account);
         } else {
           console.log('[+page.svelte] Calling createVibesActors...');
           newRootId = await createVibesActors(account);
@@ -197,15 +186,10 @@
 
 {#if browser}
   {#if rootActorId}
-    {#if vibeNameParam === 'explorer'}
-      <!-- Explorer vibe uses custom ExplorerView component -->
-      <ExplorerView />
-    {:else}
-      <!-- Other vibes use ActorRenderer -->
-      <div class="h-full w-full">
-        <ActorRenderer actorId={rootActorId} {accountCoState} />
-      </div>
-    {/if}
+    <!-- All vibes use ActorRenderer -->
+    <div class="h-full w-full min-h-0 overflow-hidden">
+      <ActorRenderer actorId={rootActorId} {accountCoState} />
+    </div>
   {:else}
     <div class="h-full bg-gray-100 pt-20 px-4 flex items-center justify-center">
       <div class="text-slate-600">Loading actors...</div>

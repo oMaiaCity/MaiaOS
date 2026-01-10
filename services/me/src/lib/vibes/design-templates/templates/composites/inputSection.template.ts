@@ -24,7 +24,7 @@ export function createInputSectionComposite(params: InputSectionParams): Composi
   return {
     container: {
       layout: 'content',
-      class: 'bg-slate-50 sticky top-0 z-9 h-auto',
+      class: 'bg-slate-50 p-4 shrink-0',
     },
     children: [
       {
@@ -33,7 +33,7 @@ export function createInputSectionComposite(params: InputSectionParams): Composi
           container: {
             layout: 'flex',
             tag: 'form',
-            class: 'flex flex-col @sm:flex-row gap-1 @xs:gap-1.5 @sm:gap-2 items-stretch @sm:items-center h-auto',
+            class: 'flex flex-col @sm:flex-row gap-2 @xs:gap-2 @sm:gap-3 items-stretch @sm:items-center',
           },
           events: {
             submit: {
@@ -52,7 +52,7 @@ export function createInputSectionComposite(params: InputSectionParams): Composi
                   placeholder: params.placeholder || 'Enter text...',
                   autocomplete: 'off',
                 },
-                classes: 'flex-1 px-2 py-1 @xs:px-3 @xs:py-1.5 @sm:px-4 @sm:py-2 rounded-xl @sm:rounded-2xl bg-slate-100 border border-slate-200 shadow-[0_0_4px_rgba(0,0,0,0.02)] focus:outline-none focus:border-slate-400 transition-all text-[10px] @xs:text-xs @sm:text-sm @md:text-base text-slate-900 placeholder:text-slate-400',
+                classes: 'flex-1 px-3 py-2.5 @xs:px-4 @xs:py-3 @sm:px-5 @sm:py-3.5 rounded-xl @sm:rounded-2xl bg-slate-100 border border-slate-200 shadow-[0_0_4px_rgba(0,0,0,0.02)] focus:outline-none focus:border-slate-400 transition-all text-xs @xs:text-sm @sm:text-base text-slate-900 placeholder:text-slate-400 min-h-[44px]',
                 bindings: { value: params.valuePath },
                 events: {
                   input: {
@@ -66,7 +66,7 @@ export function createInputSectionComposite(params: InputSectionParams): Composi
               leaf: {
                 tag: 'button',
                 attributes: { type: 'submit' },
-                classes: 'px-2 py-1 @xs:px-3 @xs:py-1.5 @sm:px-4 @sm:py-2 bg-[#001a42] border border-[#001a42] text-[#e6ecf7] rounded-full shadow-button-primary hover:bg-[#002662] hover:border-[#002662] hover:shadow-button-primary-hover hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 font-medium text-[10px] @xs:text-xs @sm:text-sm disabled:opacity-60 disabled:cursor-not-allowed shrink-0',
+                classes: 'px-5 py-2.5 @xs:px-6 @xs:py-3 @sm:px-7 @sm:py-3.5 bg-[#001a42] border border-[#001a42] text-[#e6ecf7] rounded-full shadow-button-primary hover:bg-[#002662] hover:border-[#002662] hover:shadow-button-primary-hover hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 font-medium text-xs @xs:text-sm @sm:text-base disabled:opacity-60 disabled:cursor-not-allowed shrink-0 min-h-[44px]',
                 bindings: {
                   visible: params.buttonVisible || 'true',
                   disabled: params.buttonDisabled,

@@ -142,7 +142,37 @@ export const swapActorsSkill: Skill = {
   }
 };
 
+export const handleKeyDownSkill: Skill = {
+  metadata: {
+    id: '@input/handleKeyDown',
+    name: 'Handle Key Down',
+    description: 'Handles keyboard events, specifically Enter key to submit',
+    category: 'input',
+    parameters: {
+      type: 'object',
+      properties: {
+        key: { type: 'string', description: 'The key that was pressed' },
+        shiftKey: { type: 'boolean', description: 'Whether Shift key was pressed' },
+        inputText: { type: 'string', description: 'Current input text value' },
+      },
+    },
+  },
+  execute: (actor: any, payload?: unknown) => {
+    const logger = createActorLogger(actor);
+    const payloadData = payload as { key?: string; shiftKey?: boolean; inputText?: string } || {};
+    
+    // If Enter is pressed (and not Shift+Enter), trigger form submit
+    if (payloadData.key === 'Enter' && !payloadData.shiftKey && payloadData.inputText?.trim()) {
+      logger.log('Enter key pressed (without Shift), will trigger form submit');
+      // The form submit will be handled by the form's submit event
+      // This skill is called to prevent default behavior (newline insertion)
+      // The actual submit happens via the form's submit event
+    }
+  }
+};
+
 export const contextSkills: Record<string, Skill> = {
   '@input/updateContext': updateContextSkill,
   '@view/swapActors': swapActorsSkill,
+  '@input/handleKeyDown': handleKeyDownSkill,
 };

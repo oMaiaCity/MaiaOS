@@ -107,9 +107,7 @@ export const ActorList = co.list(Actor)
 export const VibesRegistry = co.map({
 	vibes: z.string().optional(),
 	humans: z.string().optional(),
-	designTemplates: z.string().optional(),
 	todos: z.string().optional(),
-	explorer: z.string().optional(),
 })
 
 /** The account root is an app-specific per-user private `CoMap`
