@@ -20,6 +20,7 @@ export default defineConfig({
 		preserveSymlinks: false,
 		alias: {
 			'@maia/brand': resolve(__dirname, `${libsPath}/maia-brand/src`),
+			'@maia/script': resolve(__dirname, `${libsPath}/maia-script/src`),
 		},
 	},
 	server: {

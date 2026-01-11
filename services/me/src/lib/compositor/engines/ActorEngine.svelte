@@ -1,7 +1,7 @@
 <!--
-  ActorRenderer Component
+  ActorEngine Component
   JAZZ-NATIVE ARCHITECTURE - Pure CoState reactivity
-  Skills called directly on actor, no dataStore
+  Engine Pattern: Actor JSON → Rendered DOM + State
 -->
 <script lang="ts">
   import { browser } from "$app/environment";
@@ -10,9 +10,11 @@
   import { registerAllSkills, skillRegistry } from "../skills";
   import { resolveDataPath } from "../view/resolver";
   import { useQuery } from "../useQuery.svelte";
-  import Composite from "../view/Composite.svelte";
-  import Leaf from "../view/Leaf.svelte";
+  import ViewEngine from "./ViewEngine.svelte";
   import { createActorLogger } from "../utilities/logger";
+  
+  // Self-recursion (Svelte 5 supports this natively)
+  import ActorEngine from "./ActorEngine.svelte";
   
   interface Props {
     actorId: string; // Actor's CoValue ID
@@ -334,19 +336,43 @@
       .filter((a: any) => a?.$isLoaded);
   });
 
-  // Resolve dependencies from IDs to actual CoValue objects (for view bindings)
-  const resolvedDependencies = $derived.by(() => {
-    if (!actor?.$isLoaded || !actor.dependencies) return {};
+  // Store CoState instances for dependencies (for reactive access)
+  const dependencyCoStates = $derived.by(() => {
+    if (!actor?.$isLoaded || !actor.dependencies) return new Map<string, any>();
     
-    const deps: Record<string, any> = {};
+    const coStates = new Map<string, any>();
     for (const [key, idOrValue] of Object.entries(actor.dependencies)) {
       if (typeof idOrValue === 'string' && idOrValue.startsWith('co_')) {
-        // It's a Jazz ID - resolve it to a CoState
-        const coState = new CoState(Actor, idOrValue);
-        deps[key] = coState.current; // Get the loaded actor object
+        // Store CoState instance (not .current) for reactive access
+        coStates.set(key, new CoState(Actor, idOrValue));
       } else {
-        // Already resolved or not a Jazz ID
-        deps[key] = idOrValue;
+        // Already resolved or not a Jazz ID - store directly
+        coStates.set(key, idOrValue);
+      }
+    }
+    return coStates;
+  });
+
+  // Resolve dependencies from IDs to actual CoValue objects (for view bindings)
+  // CRITICAL: Access .current here to make it reactive
+  const resolvedDependencies = $derived.by(() => {
+    const deps: Record<string, any> = {};
+    for (const [key, coStateOrValue] of dependencyCoStates.entries()) {
+      if (coStateOrValue?.current !== undefined) {
+        // It's a CoState - access .current reactively
+        const current = coStateOrValue.current;
+        // Access the properties we care about to ensure reactivity
+        if (current?.$isLoaded && current.context) {
+          const _ = current.context; // Access context for reactivity
+          // For contentActor, specifically access viewMode
+          if ((current as any).context?.viewMode !== undefined) {
+            const __ = (current as any).context.viewMode;
+          }
+        }
+        deps[key] = current;
+      } else {
+        // Not a CoState - use directly
+        deps[key] = coStateOrValue;
       }
     }
     return deps;
@@ -372,19 +398,13 @@
     accountCoState,
     dependencies: resolvedDependencies // ✅ Expose RESOLVED dependencies (actual objects, not IDs)
   }}
-  {#if viewType === 'composite'}
-    <!-- Delegate to Composite.svelte for rendering -->
-    <Composite 
-      node={{ slot: 'root', composite: view }}
-      data={dataForViews}
-      onEvent={handleEvent}
-    />
-  {:else if viewType === 'leaf'}
-    <!-- Delegate to Leaf.svelte for rendering -->
-    <Leaf 
-      node={{ slot: 'root', leaf: view }}
-      data={dataForViews}
-      onEvent={handleEvent}
-    />
-  {/if}
+  {@const viewNode = viewType === 'composite' 
+    ? { slot: 'root', composite: view } 
+    : { slot: 'root', leaf: view }}
+  <!-- Delegate to ViewEngine for unified rendering -->
+  <ViewEngine 
+    node={viewNode}
+    data={dataForViews}
+    onEvent={handleEvent}
+  />
 {/if}

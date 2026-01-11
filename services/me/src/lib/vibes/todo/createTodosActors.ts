@@ -7,7 +7,7 @@
 
 import { createActorEntity, getVibesRegistry } from "@maia/db";
 import { Group } from "jazz-tools";
-import { createLeaf, createComposite } from '$lib/factories/runtime/universal-factory';
+import { createLeaf, createComposite } from '$lib/factories/runtime/factory-engine';
 import titleFactory from '$lib/factories/leafs/title.factory.json';
 import headerFactory from '$lib/factories/composites/header.factory.json';
 import rootCardFactory from '$lib/factories/composites/rootCard.factory.json';
@@ -15,7 +15,7 @@ import inputSectionFactory from '$lib/factories/composites/inputSection.factory.
 import timelineFactory from '$lib/factories/composites/timeline.factory.json';
 import kanbanFactory from '$lib/factories/composites/kanban.factory.json';
 import viewSwitcherFactory from '$lib/factories/composites/viewSwitcher.factory.json';
-import { get, eq, or, not, trim, ifThenElse } from '$lib/compositor/dsl/helpers';
+import { get, eq, or, not, trim, ifThenElse } from '@maia/script';
 
 // Global lock
 const getGlobalLock = () => {
@@ -321,7 +321,7 @@ export async function createTodosActors(account: any) {
 	// Set children after creation (default: show list view)
 	contentActor.children.$jazz.push(listActor.$jazz.id);
 
-	// View switcher actor - reads viewMode directly from contentActor via dependencies
+	// View switcher actor - stores viewMode in its own context for styling
 	const viewSwitcherActor = await createActorEntity(account, {
 		context: { 
 			visible: true,
@@ -333,10 +333,10 @@ export async function createTodosActors(account: any) {
 		},
 		view: createComposite(viewSwitcherFactory as any, {
 			viewsPath: 'context.views', // ✅ Path to views array in actor context
-			currentViewPath: 'dependencies.content.context.viewMode' // ✅ Read directly from contentActor's context
+			currentViewPath: 'dependencies.content.context.viewMode' // ✅ Read from contentActor's context
 		}),
 		dependencies: {
-			content: contentActor.$jazz.id // ✅ Set at creation time
+			content: contentActor.$jazz.id // ✅ For reading viewMode and sending events
 		},
 		role: 'todos-view-switcher',
 	}, group);
@@ -377,6 +377,7 @@ export async function createTodosActors(account: any) {
 	timelineActor.subscriptions.$jazz.push(timelineActor.$jazz.id);
 	kanbanActor.subscriptions.$jazz.push(kanbanActor.$jazz.id); // ✅ Kanban handles drag-and-drop events
 	viewSwitcherActor.subscriptions.$jazz.push(contentActor.$jazz.id); // ✅ Switcher SENDS events to contentActor
+	viewSwitcherActor.subscriptions.$jazz.push(viewSwitcherActor.$jazz.id); // ✅ Switcher also subscribes to itself to receive events and update viewMode
 	contentActor.subscriptions.$jazz.push(contentActor.$jazz.id); // ✅ Content actor handles @view/swapActors
 
 	// Actors are automatically added to root.entities by createActorEntity

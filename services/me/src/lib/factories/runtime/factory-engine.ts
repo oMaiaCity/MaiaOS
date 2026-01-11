@@ -1,30 +1,31 @@
 /**
- * Universal Factory Loader
+ * FactoryEngine
  * Single generic interpreter for ALL JSON factory configs
  * Works for composites, leafs, and any view node
  * 
- * SUPPORTS CONDITIONAL FACTORIES (using secure DSL):
- * - $factoryIf: Conditional structures based on parameters (uses DSL evaluation)
- * - $factorySwitch: Multi-way branching for variants (parameter lookup)
+ * SUPPORTS CONDITIONAL FACTORIES (using secure MaiaScript):
+ * - $if: Conditional structures (core MaiaScript, evaluated during factory loading)
+ * - $switch: Multi-way branching (core MaiaScript, evaluated during factory loading)
  * - Parameter-based conditionals are evaluated BEFORE template substitution
  */
 
 import type { CompositeNode, ViewNode } from '$lib/compositor/view/types';
 import type { LeafNode } from '$lib/compositor/view/leaf-types';
-import { safeEvaluate } from '$lib/compositor/dsl';
-import type { DSLExpression } from '$lib/compositor/dsl';
+import { safeEvaluate, isMaiaScriptExpression } from '@maia/script';
+import type { MaiaScriptExpression } from '@maia/script';
 
 /**
- * Conditional factory structure
+ * Conditional factory structure - Phase 8: Unified conditionals
+ * Uses core MaiaScript operations ($if, $switch) evaluated during factory loading
  */
 interface FactoryConditional {
-  $factoryIf?: {
-    test: DSLExpression; // DSL expression evaluated against parameters
+  $if?: {
+    test: MaiaScriptExpression; // Evaluated against parameters during factory loading
     then: any;
     else?: any;
   };
-  $factorySwitch?: {
-    param: string; // Parameter name to switch on (e.g., "variant")
+  $switch?: {
+    on: MaiaScriptExpression; // Evaluated against parameters during factory loading
     cases: Record<string, any>; // Map of value -> factory structure
     default?: any;
   };
@@ -45,34 +46,45 @@ export interface UniversalFactoryDef {
 }
 
 /**
- * Process factory conditionals ($factoryIf, $factorySwitch)
- * Uses SECURE DSL evaluation - no code execution!
+ * Process factory conditionals ($if, $switch) - Phase 8: Unified conditionals
+ * Uses core MaiaScript operations evaluated during factory loading
  */
 function processConditionals(factory: any, params: Record<string, any>, maps?: Record<string, Record<string, any>>): any {
-  // Handle $factoryIf conditional (uses secure DSL evaluation)
-  if (factory.$factoryIf) {
-    const testExpression = factory.$factoryIf.test;
+  // Handle $if conditional (core MaiaScript operation, evaluated during factory loading)
+  if (factory.$if && typeof factory.$if === 'object' && 'test' in factory.$if) {
+    const testExpression = factory.$if.test;
     
-    // Evaluate DSL expression against parameters (SECURE - no code execution!)
-    const result = safeEvaluate(testExpression, params);
+    // Evaluate MaiaScript expression against parameters (SECURE - no code execution!)
+    const result = safeEvaluate(testExpression, { context: params });
     const passes = Boolean(result);
     
-    return passes ? factory.$factoryIf.then : (factory.$factoryIf.else || {});
+    // Recursively process the selected branch (then or else)
+    const selectedBranch = passes ? factory.$if.then : (factory.$if.else || {});
+    return processConditionals(selectedBranch, params, maps);
   }
 
-  // Handle $factorySwitch conditional (parameter lookup only - no evaluation)
-  if (factory.$factorySwitch) {
-    const paramName = factory.$factorySwitch.param;
-    const switchValue = params[paramName];
-    const cases = factory.$factorySwitch.cases;
+  // Handle $switch conditional (core MaiaScript operation, evaluated during factory loading)
+  if (factory.$switch && typeof factory.$switch === 'object' && 'on' in factory.$switch) {
+    const switchExpression = factory.$switch.on;
+    const cases = factory.$switch.cases || {};
+    const defaultExpr = factory.$switch.default;
     
-    // Look up the case (simple key lookup - no evaluation)
-    if (switchValue !== undefined && switchValue !== null && switchValue in cases) {
-      return cases[String(switchValue)];
+    // Evaluate switch expression against parameters
+    const switchValue = safeEvaluate(switchExpression, { context: params });
+    const switchKey = String(switchValue);
+    
+    // Look up the case
+    if (switchKey in cases) {
+      // Recursively process the selected case
+      return processConditionals(cases[switchKey], params, maps);
     }
     
     // Fallback to default
-    return factory.$factorySwitch.default || {};
+    if (defaultExpr !== undefined) {
+      return processConditionals(defaultExpr, params, maps);
+    }
+    
+    return {};
   }
 
   // Handle $map lookup (e.g., variant -> classes)
@@ -105,7 +117,7 @@ function substitute(value: any, params: Record<string, any>): any {
       if (!(key in params)) {
         throw new Error(`Missing parameter: ${key}`);
       }
-      // Return the parameter value directly (preserves DSL objects, numbers, booleans, etc.)
+      // Return the parameter value directly (preserves MaiaScript objects, numbers, booleans, etc.)
       return params[key];
     }
     
@@ -125,6 +137,11 @@ function substitute(value: any, params: Record<string, any>): any {
 
   // Object substitution (recursive)
   if (value !== null && typeof value === 'object') {
+    // Check if it's a MaiaScript expression (should be preserved as-is)
+    if (isMaiaScriptExpression(value)) {
+      return value; // Return MaiaScript expression as-is
+    }
+    
     const result: Record<string, any> = {};
     for (const [key, val] of Object.entries(value)) {
       result[key] = substitute(val, params);
@@ -166,9 +183,9 @@ function prepareParams(
 }
 
 /**
- * Universal Factory Loader
+ * FactoryEngine
  * Works with ANY JSON factory config
- * Supports conditionals ($if, $switch) and maps
+ * Supports conditionals ($if, $switch) - Phase 8: Unified conditionals
  */
 export function createFromFactory<T extends ViewNode = ViewNode>(
   factoryDef: UniversalFactoryDef,

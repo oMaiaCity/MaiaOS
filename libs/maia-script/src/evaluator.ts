@@ -1,9 +1,9 @@
 /**
- * Secure DSL Evaluator
- * Evaluates DSL expressions without code execution
+ * MaiaScript Evaluator
+ * Evaluates MaiaScript expressions without code execution
  */
 
-import type { DSLExpression, EvaluationContext } from './types';
+import type { MaiaScriptExpression, EvaluationContext } from './types';
 
 const MAX_RECURSION_DEPTH = 20;
 
@@ -71,10 +71,10 @@ function formatDate(timestamp: number | undefined | null, format: string): strin
 }
 
 /**
- * Evaluate a DSL expression
+ * Evaluate a MaiaScript expression
  */
 export function evaluate(
-  expr: DSLExpression,
+  expr: MaiaScriptExpression,
   ctx: EvaluationContext,
   depth = 0
 ): unknown {
@@ -185,6 +185,10 @@ export function evaluate(
   if ('$if' in expr) {
     const { test, then, else: elseExpr } = expr.$if;
     const condition = evaluate(test, ctx, depth + 1);
+    // Handle undefined elseExpr (defaults to empty string or null)
+    if (elseExpr === undefined || elseExpr === null) {
+      return condition ? evaluate(then, ctx, depth + 1) : '';
+    }
     return condition
       ? evaluate(then, ctx, depth + 1)
       : evaluate(elseExpr, ctx, depth + 1);
@@ -270,5 +274,5 @@ export function evaluate(
     return Boolean(value);
   }
 
-  throw new Error(`Unknown DSL operation: ${JSON.stringify(expr)}`);
+  throw new Error(`Unknown MaiaScript operation: ${JSON.stringify(expr)}`);
 }

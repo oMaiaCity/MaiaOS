@@ -1,9 +1,9 @@
 /**
- * DSL Helper Functions
- * Type-safe DSL construction for factories
+ * MaiaScript Helper Functions
+ * Type-safe MaiaScript construction for factories
  */
 
-import type { DSLExpression } from './types';
+import type { MaiaScriptExpression } from './types';
 
 /**
  * Data access: { $: "path.to.data" }
@@ -15,49 +15,49 @@ export function get(path: string): { $: string } {
 /**
  * Equality: { $eq: [a, b] }
  */
-export function eq(a: DSLExpression, b: DSLExpression) {
+export function eq(a: MaiaScriptExpression, b: MaiaScriptExpression) {
   return { $eq: [a, b] };
 }
 
 /**
  * Not equal: { $neq: [a, b] }
  */
-export function neq(a: DSLExpression, b: DSLExpression) {
+export function neq(a: MaiaScriptExpression, b: MaiaScriptExpression) {
   return { $neq: [a, b] };
 }
 
 /**
  * Greater than: { $gt: [a, b] }
  */
-export function gt(a: DSLExpression, b: DSLExpression) {
+export function gt(a: MaiaScriptExpression, b: MaiaScriptExpression) {
   return { $gt: [a, b] };
 }
 
 /**
  * Less than: { $lt: [a, b] }
  */
-export function lt(a: DSLExpression, b: DSLExpression) {
+export function lt(a: MaiaScriptExpression, b: MaiaScriptExpression) {
   return { $lt: [a, b] };
 }
 
 /**
  * Logical AND: { $and: [...] }
  */
-export function and(...operands: DSLExpression[]) {
+export function and(...operands: MaiaScriptExpression[]) {
   return { $and: operands };
 }
 
 /**
  * Logical OR: { $or: [...] }
  */
-export function or(...operands: DSLExpression[]) {
+export function or(...operands: MaiaScriptExpression[]) {
   return { $or: operands };
 }
 
 /**
  * Logical NOT: { $not: expr }
  */
-export function not(operand: DSLExpression) {
+export function not(operand: MaiaScriptExpression) {
   return { $not: operand };
 }
 
@@ -65,9 +65,9 @@ export function not(operand: DSLExpression) {
  * If-then-else: { $if: { test, then, else } }
  */
 export function ifThenElse(
-  test: DSLExpression,
-  then: DSLExpression,
-  elseExpr: DSLExpression
+  test: MaiaScriptExpression,
+  then: MaiaScriptExpression,
+  elseExpr: MaiaScriptExpression
 ) {
   return { $if: { test, then, else: elseExpr } };
 }
@@ -76,9 +76,9 @@ export function ifThenElse(
  * Switch: { $switch: { on, cases, default } }
  */
 export function switchCase(
-  on: DSLExpression,
-  cases: Record<string, DSLExpression>,
-  defaultExpr: DSLExpression
+  on: MaiaScriptExpression,
+  cases: Record<string, MaiaScriptExpression>,
+  defaultExpr: MaiaScriptExpression
 ) {
   return { $switch: { on, cases, default: defaultExpr } };
 }
@@ -86,21 +86,21 @@ export function switchCase(
 /**
  * Concatenate strings: { $concat: [...] }
  */
-export function concat(...operands: DSLExpression[]) {
+export function concat(...operands: MaiaScriptExpression[]) {
   return { $concat: operands };
 }
 
 /**
  * Trim string: { $trim: expr }
  */
-export function trim(operand: DSLExpression) {
+export function trim(operand: MaiaScriptExpression) {
   return { $trim: operand };
 }
 
 /**
  * Format date: { $formatDate: [timestamp, format] }
  */
-export function formatDate(timestamp: DSLExpression, format: string) {
+export function formatDate(timestamp: MaiaScriptExpression, format: string) {
   return { $formatDate: [timestamp, format] };
 }
 
@@ -114,6 +114,6 @@ export function now() {
 /**
  * Convert to string: { $string: expr }
  */
-export function toString(operand: DSLExpression) {
+export function toString(operand: MaiaScriptExpression) {
   return { $string: operand };
 }

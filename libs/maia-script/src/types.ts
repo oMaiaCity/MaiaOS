@@ -1,22 +1,22 @@
 /**
- * Secure DSL Types
+ * MaiaScript Types
  * Pure JSON-based expression system with no code execution
  */
 
 /**
- * DSL Expression - Can be a literal value or an operation object
+ * MaiaScript Expression - Can be a literal value or an operation object
  */
-export type DSLExpression =
+export type MaiaScriptExpression =
   | string
   | number
   | boolean
   | null
-  | DSLOperation;
+  | MaiaScriptOperation;
 
 /**
- * All supported DSL operations
+ * All supported MaiaScript operations
  */
-export type DSLOperation =
+export type MaiaScriptOperation =
   | DataAccessOp
   | ComparisonOp
   | LogicalOp
@@ -32,27 +32,27 @@ export interface DataAccessOp {
 
 // Comparison Operations
 export interface EqualOp {
-  $eq: [DSLExpression, DSLExpression];
+  $eq: [MaiaScriptExpression, MaiaScriptExpression];
 }
 
 export interface NotEqualOp {
-  $neq: [DSLExpression, DSLExpression];
+  $neq: [MaiaScriptExpression, MaiaScriptExpression];
 }
 
 export interface GreaterThanOp {
-  $gt: [DSLExpression, DSLExpression];
+  $gt: [MaiaScriptExpression, MaiaScriptExpression];
 }
 
 export interface LessThanOp {
-  $lt: [DSLExpression, DSLExpression];
+  $lt: [MaiaScriptExpression, MaiaScriptExpression];
 }
 
 export interface GreaterThanOrEqualOp {
-  $gte: [DSLExpression, DSLExpression];
+  $gte: [MaiaScriptExpression, MaiaScriptExpression];
 }
 
 export interface LessThanOrEqualOp {
-  $lte: [DSLExpression, DSLExpression];
+  $lte: [MaiaScriptExpression, MaiaScriptExpression];
 }
 
 export type ComparisonOp =
@@ -65,15 +65,15 @@ export type ComparisonOp =
 
 // Logical Operations
 export interface AndOp {
-  $and: DSLExpression[];
+  $and: MaiaScriptExpression[];
 }
 
 export interface OrOp {
-  $or: DSLExpression[];
+  $or: MaiaScriptExpression[];
 }
 
 export interface NotOp {
-  $not: DSLExpression;
+  $not: MaiaScriptExpression;
 }
 
 export type LogicalOp = AndOp | OrOp | NotOp;
@@ -81,17 +81,17 @@ export type LogicalOp = AndOp | OrOp | NotOp;
 // Control Flow
 export interface IfOp {
   $if: {
-    test: DSLExpression;
-    then: DSLExpression;
-    else: DSLExpression;
+    test: MaiaScriptExpression;
+    then: MaiaScriptExpression;
+    else: MaiaScriptExpression;
   };
 }
 
 export interface SwitchOp {
   $switch: {
-    on: DSLExpression;
-    cases: Record<string, DSLExpression>;
-    default: DSLExpression;
+    on: MaiaScriptExpression;
+    cases: Record<string, MaiaScriptExpression>;
+    default: MaiaScriptExpression;
   };
 }
 
@@ -99,23 +99,23 @@ export type ControlFlowOp = IfOp | SwitchOp;
 
 // String Operations
 export interface ConcatOp {
-  $concat: DSLExpression[];
+  $concat: MaiaScriptExpression[];
 }
 
 export interface TrimOp {
-  $trim: DSLExpression;
+  $trim: MaiaScriptExpression;
 }
 
 export interface UppercaseOp {
-  $uppercase: DSLExpression;
+  $uppercase: MaiaScriptExpression;
 }
 
 export interface LowercaseOp {
-  $lowercase: DSLExpression;
+  $lowercase: MaiaScriptExpression;
 }
 
 export interface IncludesOp {
-  $includes: [DSLExpression, DSLExpression];
+  $includes: [MaiaScriptExpression, MaiaScriptExpression];
 }
 
 export type StringOp =
@@ -127,7 +127,7 @@ export type StringOp =
 
 // Date Operations
 export interface FormatDateOp {
-  $formatDate: [DSLExpression, string]; // [timestamp, format]
+  $formatDate: [MaiaScriptExpression, string]; // [timestamp, format]
 }
 
 export interface NowOp {
@@ -138,15 +138,15 @@ export type DateOp = FormatDateOp | NowOp;
 
 // Type Coercion
 export interface StringCoercionOp {
-  $string: DSLExpression;
+  $string: MaiaScriptExpression;
 }
 
 export interface NumberCoercionOp {
-  $number: DSLExpression;
+  $number: MaiaScriptExpression;
 }
 
 export interface BooleanCoercionOp {
-  $boolean: DSLExpression;
+  $boolean: MaiaScriptExpression;
 }
 
 export type CoercionOp =
@@ -180,3 +180,7 @@ export class SecurityError extends Error {
     this.name = 'SecurityError';
   }
 }
+
+// Legacy type alias for backward compatibility during migration
+/** @deprecated Use MaiaScriptExpression instead */
+export type DSLExpression = MaiaScriptExpression;

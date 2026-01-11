@@ -1,9 +1,9 @@
 /**
- * DSL Validator
+ * MaiaScript Validator
  * Validates expressions before evaluation for security
  */
 
-import type { DSLExpression, ValidationResult } from './types';
+import type { MaiaScriptExpression, ValidationResult } from './types';
 
 const MAX_RECURSION_DEPTH = 20;
 const ALLOWED_ROOT_PATHS = new Set(['item', 'context', 'dependencies']);
@@ -56,10 +56,10 @@ function validatePath(path: string): string[] {
 }
 
 /**
- * Validate a DSL expression recursively
+ * Validate a MaiaScript expression recursively
  */
 function validateExpression(
-  expr: DSLExpression,
+  expr: MaiaScriptExpression,
   depth = 0
 ): ValidationResult {
   const errors: string[] = [];
@@ -193,7 +193,7 @@ function validateExpression(
       // Validate case expressions
       if (typeof cases === 'object' && cases !== null) {
         for (const caseExpr of Object.values(cases)) {
-          const result = validateExpression(caseExpr as DSLExpression, depth + 1);
+          const result = validateExpression(caseExpr as MaiaScriptExpression, depth + 1);
           if (!result.valid) {
             errors.push(...result.errors);
           }

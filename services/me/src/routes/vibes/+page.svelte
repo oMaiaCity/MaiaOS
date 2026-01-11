@@ -3,7 +3,7 @@
   import { browser } from "$app/environment";
   import { untrack } from "svelte";
   import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
-  import ActorRenderer from "$lib/compositor/actors/ActorRenderer.svelte";
+  import ActorEngine from "$lib/compositor/engines/ActorEngine.svelte";
   import { getOrCreateVibe, getVibeIfExists } from "$lib/factories/seeder";
   import { CoState } from "jazz-tools/svelte";
   import { Actor } from "@maia/db";
@@ -132,9 +132,9 @@
 
 {#if browser}
   {#if rootActorId}
-    <!-- All vibes use ActorRenderer -->
+    <!-- All vibes use ActorEngine -->
     <div class="h-full w-full min-h-0 overflow-hidden">
-      <ActorRenderer actorId={rootActorId} {accountCoState} />
+      <ActorEngine actorId={rootActorId} {accountCoState} />
     </div>
   {:else}
     <div class="h-full bg-gray-100 pt-20 px-4 flex items-center justify-center">

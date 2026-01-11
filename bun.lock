@@ -36,6 +36,10 @@
       "name": "@maia/language",
       "version": "0.17.0",
     },
+    "libs/maia-script": {
+      "name": "@maia/script",
+      "version": "0.17.0",
+    },
     "libs/maia-voice": {
       "name": "@maia/voice",
       "version": "0.17.0",
@@ -54,6 +58,7 @@
         "@iconify/svelte": "^5.1.0",
         "@maia/brand": "workspace:*",
         "@maia/db": "workspace:*",
+        "@maia/script": "workspace:*",
         "better-auth": "^1.4.5",
         "jazz-tools": "^0.19.7",
       },
@@ -334,6 +339,8 @@
     "@maia/db": ["@maia/db@workspace:libs/maia-db"],
 
     "@maia/language": ["@maia/language@workspace:libs/maia-language"],
+
+    "@maia/script": ["@maia/script@workspace:libs/maia-script"],
 
     "@maia/voice": ["@maia/voice@workspace:libs/maia-voice"],
 

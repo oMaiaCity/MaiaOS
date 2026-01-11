@@ -6,20 +6,20 @@
  * 
  * Usage:
  * ```typescript
- * import { createLeaf, createComposite } from '$lib/factories/runtime/universal-factory';
+ * import { createLeaf, createComposite } from '$lib/factories/runtime/factory-engine';
  * import titleFactory from '$lib/factories/leafs/title.factory.json';
  * const view = createLeaf(titleFactory, { text: 'Hello' });
  * ```
  */
 
-// Universal factory system - THE MAIN API
+// FactoryEngine - THE MAIN API
 export { 
   createFromFactory, 
   createFromFactoryAsync,
   createComposite,
   createLeaf,
   type UniversalFactoryDef 
-} from './runtime/universal-factory';
+} from './runtime/factory-engine';
 
-// DSL helpers for building expressions
-export { get, eq, or, and, not, ifThenElse, trim, formatDate } from '$lib/compositor/dsl/helpers';
+// MaiaScript helpers for building expressions
+export { get, eq, or, and, not, ifThenElse, trim, formatDate } from '@maia/script';

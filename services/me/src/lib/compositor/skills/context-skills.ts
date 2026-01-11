@@ -74,14 +74,27 @@ export const swapActorsSkill: Skill = {
   execute: (actor: any, payload?: unknown) => {
     const logger = createActorLogger(actor);
     
-    if (!actor.children || !actor.$jazz) {
-      logger.warn('Actor missing children or $jazz, cannot swap actors');
-      return;
-    }
-    
     const payloadObj = payload as { targetActorId?: string; viewMode?: string };
     let targetActorId = payloadObj?.targetActorId;
     const viewMode = payloadObj?.viewMode;
+    
+    // Update context.viewMode if provided (for button styling) - do this even if actor has no children
+    if (viewMode && actor.context && actor.$jazz) {
+      const currentContext = actor.context as Record<string, unknown>;
+      if ((currentContext as any).viewMode !== viewMode) {
+        const updatedContext = {
+          ...currentContext,
+          viewMode,
+        };
+        actor.$jazz.set('context', updatedContext);
+        logger.log(`Updated context.viewMode to: ${viewMode}`);
+      }
+    }
+    
+    if (!actor.children || !actor.$jazz) {
+      logger.warn('Actor missing children or $jazz, cannot swap actors (but viewMode was updated)');
+      return;
+    }
     
     // If no direct targetActorId, try to resolve from viewMode mapping
     if (!targetActorId && viewMode && actor.context) {
@@ -101,21 +114,9 @@ export const swapActorsSkill: Skill = {
     const currentChildren = Array.from(actor.children || []);
     logger.log('Current children:', currentChildren);
     
-    // If already showing this actor, do nothing (but still update viewMode)
+    // If already showing this actor, do nothing (viewMode already updated above)
     if (currentChildren.length === 1 && currentChildren[0] === targetActorId) {
       logger.log(`Already showing actor: ${targetActorId}`);
-      // Still update viewMode for button styling
-      if (viewMode && actor.context && actor.$jazz) {
-        const currentContext = actor.context as Record<string, unknown>;
-        if ((currentContext as any).viewMode !== viewMode) {
-          const updatedContext = {
-            ...currentContext,
-            viewMode,
-          };
-          actor.$jazz.set('context', updatedContext);
-          logger.log(`Updated context.viewMode to: ${viewMode}`);
-        }
-      }
       return;
     }
     
@@ -128,17 +129,6 @@ export const swapActorsSkill: Skill = {
     actor.children.$jazz.push(targetActorId);
     
     logger.log(`✅ Swapped to actor: ${targetActorId}`);
-    
-    // Also update context.viewMode if provided (for button styling)
-    if (viewMode && actor.context && actor.$jazz) {
-      const currentContext = actor.context as Record<string, unknown>;
-      const updatedContext = {
-        ...currentContext,
-        viewMode,
-      };
-      actor.$jazz.set('context', updatedContext);
-      logger.log(`Updated context.viewMode to: ${viewMode}`);
-    }
   }
 };
 
