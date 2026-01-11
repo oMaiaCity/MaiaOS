@@ -98,6 +98,18 @@ function processConditionals(factory: any, params: Record<string, any>, maps?: R
 function substitute(value: any, params: Record<string, any>): any {
   // String substitution
   if (typeof value === 'string') {
+    // Check if the entire string is a single parameter substitution (e.g., "{{paramName}}")
+    const singleParamMatch = value.match(/^\{\{(\w+)\}\}$/);
+    if (singleParamMatch) {
+      const key = singleParamMatch[1];
+      if (!(key in params)) {
+        throw new Error(`Missing parameter: ${key}`);
+      }
+      // Return the parameter value directly (preserves DSL objects, numbers, booleans, etc.)
+      return params[key];
+    }
+    
+    // Otherwise, do string replacement (for template strings like "foo {{bar}} baz")
     return value.replace(/\{\{(\w+)\}\}/g, (_, key) => {
       if (!(key in params)) {
         throw new Error(`Missing parameter: ${key}`);

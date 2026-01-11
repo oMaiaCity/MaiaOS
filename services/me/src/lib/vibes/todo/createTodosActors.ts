@@ -94,10 +94,7 @@ export async function createTodosActors(account: any) {
 				not(get('context.newTodoText')),
 				eq({ $trim: get('context.newTodoText') }, '')
 			), // CLEAN ARCHITECTURE: Always use context.* prefix
-			errorVisible: { "$and": [
-				{ "$": "context.error" },
-				{ "$ne": [{ "$": "context.error" }, null] }
-			] },
+			errorVisible: { "$": "context.error" },
 			errorText: 'context.error'
 		}),
 		dependencies: {},
