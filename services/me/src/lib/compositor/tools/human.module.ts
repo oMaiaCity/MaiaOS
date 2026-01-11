@@ -56,9 +56,7 @@ const createRandomTool: Tool = {
 		}
 
 		try {
-			console.log('[human.module] Creating human with data:', entityData)
 			const human = await createEntityGeneric(jazzAccount, 'Human', entityData)
-			console.log('[human.module] ⚡ Human created instantly (local-first):', name, human.$jazz.id)
 		} catch (error) {
 			console.error('[human.module] ❌ Failed to create human:', error)
 			throw error

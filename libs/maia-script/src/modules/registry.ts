@@ -49,14 +49,6 @@ class MaiaScriptModuleRegistry {
         this.capabilities.set(capName, capability)
       }
     }
-    
-    console.log(
-      `[MaiaScript] Registered module: ${module.name} v${module.version}`,
-      {
-        operations: Object.keys(module.operations).length,
-        capabilities: module.capabilities ? Object.keys(module.capabilities).length : 0
-      }
-    )
   }
 
   /**

@@ -254,14 +254,6 @@ export function jsonSchemaToCoMapShape(jsonSchema: any): Record<string, any> {
 		shape[key] = jsonSchemaToZod(value as any, isOptional, extractedSchemas)
 	}
 	
-	// Debug logging for VibesRegistry
-	if (jsonSchema.properties?.vibes) {
-		console.log('[jsonSchemaToCoMapShape] Creating shape for schema with vibes property');
-		console.log('[jsonSchemaToCoMapShape] Properties:', Object.keys(schemaWithRefs.properties));
-		console.log('[jsonSchemaToCoMapShape] Required:', required);
-		console.log('[jsonSchemaToCoMapShape] Shape keys:', Object.keys(shape));
-	}
-
 	return shape
 }
 
@@ -272,7 +264,6 @@ export function jsonSchemaToCoMapShape(jsonSchema: any): Record<string, any> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getSchemaDefinitionCoMap(metaSchemaJson: any): any {
 	const schemaDefinitionShape = jsonSchemaToCoMapShape(metaSchemaJson)
-	console.log('[getSchemaDefinitionCoMap] Creating CoMap with shape keys:', Object.keys(schemaDefinitionShape))
 	return co.map(schemaDefinitionShape)
 }
 
@@ -340,7 +331,6 @@ async function ensureMetaSchema(account: any): Promise<any> {
 	
 	// Check if creation is already in progress (prevent race conditions)
 	if (schemaCreationLocks.has(schemaName)) {
-		console.log(`[ensureMetaSchema] ⏳ Waiting for ongoing creation of "${schemaName}"`);
 		return schemaCreationLocks.get(schemaName);
 	}
 	
@@ -397,7 +387,6 @@ async function ensureMetaSchema(account: any): Promise<any> {
 
 	if (schemataList.$isLoaded) {
 		const schemataArray = Array.from(schemataList)
-		console.log(`[ensureMetaSchema] Checking ${schemataArray.length} schemas for "Schema"`)
 		for (const schema of schemataArray) {
 			if (schema && typeof schema === 'object' && '$jazz' in schema) {
 				try {
@@ -414,7 +403,6 @@ async function ensureMetaSchema(account: any): Promise<any> {
 					if (schemaObj.$isLoaded && schemaObj.name) {
 						// ⚡ Already loaded - access synchronously
 						schemaNameValue = schemaObj.name
-						console.log(`[ensureMetaSchema] Found schema (cached) - name: "${schemaNameValue}", ID: ${schemaId}`)
 					} else {
 						// Not loaded yet - load from node
 						const loadedValue = await node.load(schemaId as any)
@@ -430,12 +418,10 @@ async function ensureMetaSchema(account: any): Promise<any> {
 
 						// Read name from snapshot (like ListView/Context do)
 						schemaNameValue = (snapshot as any).name as string | undefined
-						console.log(`[ensureMetaSchema] Found schema (loaded) - name: "${schemaNameValue}", ID: ${schemaId}`)
 					}
 
 					// Check if name matches 'Schema' (case-sensitive exact match)
 					if (typeof schemaNameValue === 'string' && schemaNameValue === 'Schema') {
-						console.log(`[ensureMetaSchema] Meta-schema "Schema" already exists, returning existing`)
 						// ⚡ Jazz handles caching internally with its local-first architecture
 						return schemaObj
 					}
@@ -447,7 +433,6 @@ async function ensureMetaSchema(account: any): Promise<any> {
 			}
 		}
 	}
-	console.log(`[ensureMetaSchema] Meta-schema "Schema" not found, creating new`)
 
 	// Meta-schema doesn't exist, create it directly (without calling ensureSchema to avoid recursion)
 	const schemataOwner = (schemataList as any).$jazz?.owner
@@ -479,11 +464,6 @@ async function ensureMetaSchema(account: any): Promise<any> {
 	metaSchema.$jazz.set('type', 'MetaSchema')
 	// ⚡ LOCAL-FIRST: No waitForSync
 
-	// Verify name and type were set
-	const verifyName = metaSchema.name
-	const verifyType = metaSchema.type
-	console.log(`[ensureMetaSchema] Created meta-schema, name after set: "${verifyName}", type: "${verifyType}", ID: ${metaSchema.$jazz.id}`)
-
 	// Set system properties (@label and @schema) - meta-schema references itself
 	const { setSystemProps } = await import('../functions/set-system-props.js')
 	await setSystemProps(metaSchema, metaSchema)
@@ -493,7 +473,6 @@ async function ensureMetaSchema(account: any): Promise<any> {
 	// ⚡ LOCAL-FIRST: No waitForSync - push is instant, sync happens in background
 
 	// Return the meta-schema
-	console.log(`[ensureMetaSchema] ⚡ Meta-schema created instantly (local-first)`);
 	return await metaSchema.$jazz.ensureLoaded({ resolve: {} })
 		} finally {
 			// Remove lock when done
@@ -525,7 +504,6 @@ export async function ensureSchema(
 ): Promise<any> {
 	// Check if creation is already in progress (prevent race conditions)
 	if (schemaCreationLocks.has(schemaName)) {
-		console.log(`[ensureSchema] ⏳ Waiting for ongoing creation of "${schemaName}"`);
 		return schemaCreationLocks.get(schemaName);
 	}
 	
@@ -582,7 +560,6 @@ export async function ensureSchema(
 	// Check if schema already exists
 	if (schemataList.$isLoaded) {
 		const schemataArray = Array.from(schemataList)
-		console.log(`[ensureSchema] Checking ${schemataArray.length} schemas for "${schemaName}"`)
 		for (const schema of schemataArray) {
 			if (schema && typeof schema === 'object' && '$jazz' in schema) {
 				try {
@@ -600,7 +577,6 @@ export async function ensureSchema(
 					if (schemaObj.$isLoaded && schemaObj.name) {
 						// ⚡ Already loaded - access synchronously
 						schemaNameValue = schemaObj.name
-						console.log(`[ensureSchema] Found schema (cached) - name: "${schemaNameValue}", ID: ${schemaId}`)
 					} else {
 						// Not loaded yet - load from node
 						const loadedValue = await node.load(schemaId as any)
@@ -616,12 +592,10 @@ export async function ensureSchema(
 
 						// Read name from snapshot (like ListView/Context do)
 						schemaNameValue = (snapshot as any).name as string | undefined
-						console.log(`[ensureSchema] Found schema (loaded) - name: "${schemaNameValue}", ID: ${schemaId}`)
 					}
 
 					// Check if name matches (case-sensitive exact match)
 					if (typeof schemaNameValue === 'string' && schemaNameValue === schemaName) {
-						console.log(`[ensureSchema] Schema "${schemaName}" already exists, returning existing`)
 						// ⚡ OPTIMIZED: If already loaded, return immediately without await
 						if (schemaObj.$isLoaded) {
 							return schemaObj
@@ -637,7 +611,6 @@ export async function ensureSchema(
 			}
 		}
 	}
-	console.log(`[ensureSchema] Schema "${schemaName}" not found, creating new`)
 
 	// Schema doesn't exist, create it AND all nested schemas
 
@@ -650,7 +623,6 @@ export async function ensureSchema(
 	// Step 1: Extract all nested CoValue schemas (use schema with @label)
 	// For Entity schema, there are no nested schemas, so this should return empty
 	const extractedSchemas = extractNestedCoValueSchemas(jsonSchemaWithLabel)
-	console.log(`[ensureSchema] Extracted ${Object.keys(extractedSchemas).length} nested schemas for "${schemaName}"`)
 
 	// Step 2: Create SchemaDefinition entries for each extracted nested schema
 	// Store mapping of refPath -> SchemaDefinition CoValue ID
@@ -785,7 +757,6 @@ export async function ensureSchema(
 
 	// Fallback: use the SchemaMetaSchema directly if we can't get it from the loaded schema
 	if (!metaSchemaDefinition || typeof metaSchemaDefinition !== 'object' || metaSchemaDefinition.type !== 'object') {
-		console.log('[ensureSchema] Using SchemaMetaSchema directly as fallback')
 		metaSchemaDefinition = addLabelToSchema(SchemaMetaSchema)
 	}
 
@@ -811,24 +782,6 @@ export async function ensureSchema(
 	newSchema.$jazz.set('definition', modifiedJsonSchema)
 	// ⚡ LOCAL-FIRST: No waitForSync - property set is instant
 	
-	// Verify definition was set correctly
-	const verifyDefinition = newSchema.definition
-	console.log(`[ensureSchema] Created schema "${schemaName}", definition after set:`, {
-		hasDefinition: !!verifyDefinition,
-		definitionType: typeof verifyDefinition,
-		hasProperties: !!verifyDefinition?.properties,
-		propertyKeys: verifyDefinition?.properties ? Object.keys(verifyDefinition.properties) : null
-	})
-	
-	// Extra debugging for VibesRegistry
-	if (schemaName === 'VibesRegistry') {
-		console.log('[ensureSchema] VibesRegistry definition:', JSON.stringify(verifyDefinition, null, 2))
-	}
-
-	// Verify name was set
-	const verifyName = newSchema.name
-	console.log(`[ensureSchema] Created schema "${schemaName}", name after set: "${verifyName}", ID: ${newSchema.$jazz.id}`)
-
 	// Set system properties (@label and @schema) - schema references meta-schema
 	const { setSystemProps } = await import('../functions/set-system-props.js')
 	await setSystemProps(newSchema, metaSchema)
@@ -838,7 +791,6 @@ export async function ensureSchema(
 	// ⚡ LOCAL-FIRST: No waitForSync - push is instant, sync happens in background
 
 	// Return the newly created schema
-	console.log(`[ensureSchema] ⚡ Schema "${schemaName}" created instantly (local-first)`);
 	return await newSchema.$jazz.ensureLoaded({ resolve: {} })
 		} finally {
 			// Remove lock when done

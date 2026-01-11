@@ -314,12 +314,9 @@
     if (!account || !me || !me.$isLoaded) return;
 
     try {
-      console.log('[DB Page] Starting database reset...');
       // ToolEngine.execute signature: (toolId, actor, payload, accountCoState)
       // For database operations without an actor, pass me as actor and account as accountCoState
       await ToolEngine.execute('@core/resetDatabase', me, undefined, account);
-      console.log('[DB Page] ✅ Database reset complete!');
-      console.log('[DB Page] 📋 Reload the page manually to see changes.');
     } catch (error) {
       console.error("[DB Page] Error resetting data:", error);
     }
@@ -393,7 +390,6 @@
         },
       });
 
-      console.log('Relation created successfully!');
       // Mutations are reactive - CoState will automatically update
       // No need to manually clear cache or reload
     } catch (error) {

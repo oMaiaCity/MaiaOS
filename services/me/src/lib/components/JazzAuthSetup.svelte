@@ -48,13 +48,11 @@ onMount(async () => {
 				accountSecret,
 				provider: 'anonymous', // Will be updated to "better-auth" after sign-in
 			})
-			console.log('Stored anonymous account credentials in authSecretStorage')
 		}
 
 		// Set JazzContext and AuthSecretStorage as per docs
 		authClient.jazz.setJazzContext(jazzContext)
 		authClient.jazz.setAuthSecretStorage(authSecretStorage)
-		console.log('Jazz integration setup complete')
 	} catch (_error) {}
 })
 </script>

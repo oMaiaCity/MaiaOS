@@ -30,20 +30,16 @@ export async function createTodosActors(account: any) {
 	const locks = getGlobalLock();
 	
 	if (locks.todos) {
-		console.log('[createTodosActors] Already creating (global lock), waiting...');
 		throw new Error('Already creating todos actors');
 	}
 	locks.todos = true;
 	
 	try {
-		console.log('[createTodosActors] Starting ID-based actor creation...');
-	
 		// Get the VibesRegistry entity
 		const vibesRegistry = await getVibesRegistry(account);
 		const existingTodosRootId = vibesRegistry.todos as string | undefined;
 		
 		if (existingTodosRootId && typeof existingTodosRootId === 'string' && existingTodosRootId.startsWith('co_')) {
-			console.log('[createTodosActors] ✅ Found existing todos root:', existingTodosRootId);
 			return existingTodosRootId;
 		}
 
@@ -55,8 +51,6 @@ export async function createTodosActors(account: any) {
 		if (!root?.entities) {
 			throw new Error('Root entities list not found');
 		}
-
-		console.log('[createTodosActors] Creating new actors...');
 
 	// Create group for actors (OPTIMISTIC - no blocking!)
 	const group = Group.create();
@@ -403,11 +397,9 @@ export async function createTodosActors(account: any) {
 	contentActor.subscriptions.$jazz.push(contentActor.$jazz.id); // ✅ Content actor handles @context/swapActors
 
 	// Actors are automatically added to root.entities by createActorEntity
-	console.log('[createTodosActors] ⚡ All actors created instantly (local-first)');
 
 	// Register root actor in vibes registry
 	vibesRegistry.$jazz.set('todos', todosRootActor.$jazz.id);
-	console.log('[createTodosActors] ✅ Registered todos root:', todosRootActor.$jazz.id);
 	
 	return todosRootActor.$jazz.id;
 	} finally {

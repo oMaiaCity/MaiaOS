@@ -325,15 +325,12 @@ const navigateTool: Tool = {
 			if (targetActorId) {
 				url.searchParams.set('id', targetActorId);
 				url.searchParams.delete('vibe');
-				console.log(`[navigateTool] Navigating to actor ID: ${targetActorId}`);
 			} else if (vibeName) {
 				url.searchParams.set('vibe', vibeName);
 				url.searchParams.delete('id');
-				console.log(`[navigateTool] Navigating to vibe: ${vibeName}`);
 			}
 			
 			window.history.pushState({}, '', url);
-			console.log(`[navigateTool] Updated URL to: ${url.pathname}${url.search}`);
 			
 			window.dispatchEvent(new PopStateEvent('popstate'));
 		}

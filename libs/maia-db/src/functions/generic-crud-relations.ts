@@ -103,22 +103,13 @@ export async function createRelationGeneric(
 	schemaName: string,
 	relationData: any,
 ): Promise<any> {
-	// eslint-disable-next-line no-console
-	console.log('[createRelationGeneric] ENTRY - schemaName:', schemaName, 'relationData:', relationData)
-
 	// Get CoMap schema wrapper
-	// eslint-disable-next-line no-console
-	console.log('[createRelationGeneric] Getting CoMap schema wrapper...')
 	const { schema: CoMapSchema, schemaDefinition } = await getCoMapSchemaForRelationSchemaName(
 		account,
 		schemaName,
 	)
-	// eslint-disable-next-line no-console
-	console.log('[createRelationGeneric] Got schema wrapper, schemaDefinition ID:', schemaDefinition?.$jazz?.id)
 
 	// Load root and ensure relations list exists
-	// eslint-disable-next-line no-console
-	console.log('[createRelationGeneric] Loading account root and relations list...')
 	const loadedAccount = await account.$jazz.ensureLoaded({
 		resolve: { root: true },
 	})
@@ -131,8 +122,6 @@ export async function createRelationGeneric(
 
 	// Ensure root.relations CoList exists
 	if (!root.$jazz.has('relations')) {
-		// eslint-disable-next-line no-console
-		console.log('[createRelationGeneric] Creating root.relations CoList...')
 		// Create a group for relations list (required for CoList)
 		const relationsGroup = co.group()
 		// ⚡ REMOVED: await relationsGroup.$jazz.waitForSync()
@@ -143,8 +132,6 @@ export async function createRelationGeneric(
 		root.$jazz.set('relations', relationsList)
 		// ⚡ REMOVED: await root.$jazz.waitForSync()
 		// LOCAL-FIRST: All operations instant, sync happens in background
-		// eslint-disable-next-line no-console
-		console.log('[createRelationGeneric] ⚡ root.relations CoList created instantly (local-first)')
 	}
 
 	// Load relations list
@@ -154,42 +141,25 @@ export async function createRelationGeneric(
 
 	const relationsList = rootWithRelations.relations
 	const relationsOwner = (relationsList as any).$jazz?.owner
-	// eslint-disable-next-line no-console
-	console.log('[createRelationGeneric] Relations list owner:', relationsOwner?.$jazz?.id)
 
 	if (!relationsOwner) {
-		// eslint-disable-next-line no-console
 		console.error('[createRelationGeneric] ERROR: Cannot determine relations list owner')
 		throw new Error('Cannot determine relations list owner')
 	}
 
 	// Create relation with Zod validation
-	// eslint-disable-next-line no-console
-	console.log('[createRelationGeneric] Creating relation with CoMapSchema.create...')
 	const relation = CoMapSchema.create(relationData, relationsOwner)
-	// eslint-disable-next-line no-console
-	console.log('[createRelationGeneric] ⚡ Relation created instantly (local-first), ID:', relation?.$jazz?.id)
 	// ⚡ REMOVED: await relation.$jazz.waitForSync()
 	// LOCAL-FIRST: Creation is instant, sync happens in background
 
 	// Set system properties (@label, @schema)
-	// eslint-disable-next-line no-console
-	console.log('[createRelationGeneric] Setting system properties...')
 	await setSystemProps(relation, schemaDefinition)
-	// eslint-disable-next-line no-console
-	console.log('[createRelationGeneric] System properties set')
 
 	// Add to relations list
-	// eslint-disable-next-line no-console
-	console.log('[createRelationGeneric] Adding relation to relations list...')
 	relationsList.$jazz.push(relation)
 	// ⚡ REMOVED: await relationsList.$jazz.waitForSync()
 	// LOCAL-FIRST: Push is instant, sync happens in background
-	// eslint-disable-next-line no-console
-	console.log('[createRelationGeneric] ⚡ Relation added instantly (local-first)')
 
-	// eslint-disable-next-line no-console
-	console.log('[createRelationGeneric] SUCCESS - Returning relation:', relation?.$jazz?.id)
 	return relation
 }
 

@@ -183,7 +183,6 @@ export const JazzAccount = co
 
 		// Check if root exists (without loading nested structures)
 		if (!account.$jazz.has('root')) {
-			console.log('[Migration] Creating initial account root')
 			// Create contact CoMap
 			const contact = Contact.create({
 			email: '',
@@ -295,13 +294,9 @@ export const JazzAccount = co
 	// Delete legacy root.actors property if it exists
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	if ((rootWithData.$jazz as any).has('actors')) {
-		// eslint-disable-next-line no-console
-		console.log('[Migration] Deleting legacy root.actors property...')
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		(rootWithData.$jazz as any).delete('actors')
 		// ⚡ LOCAL-FIRST: Property deletion is instant
-		// eslint-disable-next-line no-console
-		console.log('[Migration] ⚡ Legacy root.actors deleted (local-first)')
 	}
 
 	// Store VibesRegistry ID on AppRoot for fast access (instead of searching through all entities)
@@ -309,16 +304,7 @@ export const JazzAccount = co
 	const existingRegistryId = rootWithData.vibesRegistryId;
 	const hasValidRegistryId = existingRegistryId && typeof existingRegistryId === 'string' && existingRegistryId.startsWith('co_');
 	
-	// eslint-disable-next-line no-console
-	console.log('[Migration] Checking VibesRegistry...', {
-		hasProperty: rootWithData.$jazz.has('vibesRegistryId'),
-		currentValue: existingRegistryId,
-		isValid: hasValidRegistryId
-	});
-	
 	if (!hasValidRegistryId) {
-		// eslint-disable-next-line no-console
-		console.log('[Migration] Creating new VibesRegistry entity (old ID was invalid or missing)');
 		const { createEntityGeneric } = await import('./functions/generic-crud.js')
 		// Initialize ALL optional properties with actual values (empty string) to ensure Jazz adds them to the CoMap's allowed keys
 		// IMPORTANT: undefined doesn't register keys in Jazz, but concrete values do!
@@ -329,26 +315,14 @@ export const JazzAccount = co
 		})
 		// Store the registry ID on AppRoot for fast lookup
 		rootWithData.$jazz.set('vibesRegistryId', registry.$jazz.id)
-		// eslint-disable-next-line no-console
-		console.log('[Migration] ✅ VibesRegistry created and ID stored:', registry.$jazz.id)
-	} else {
-		// eslint-disable-next-line no-console
-		console.log('[Migration] VibesRegistry ID already valid on AppRoot:', existingRegistryId)
 	}
 	
 	// Delete old root.vibes property if it exists (migration cleanup)
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	if ((rootWithData.$jazz as any).has('vibes')) {
-		// eslint-disable-next-line no-console
-		console.log('[Migration] Deleting legacy root.vibes property...')
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		(rootWithData.$jazz as any).delete('vibes')
-		// eslint-disable-next-line no-console
-		console.log('[Migration] ✅ Legacy root.vibes property deleted.')
 	}
-
-		// eslint-disable-next-line no-console
-		console.log('[Migration] Account migration completed successfully')
 	})
 
 /**

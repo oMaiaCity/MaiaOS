@@ -36,7 +36,6 @@
             } 
           } 
         });
-        console.log('[+page.svelte] Collections loaded successfully');
       } catch (err) {
         console.error('[+page.svelte] Lazy loading error:', err);
       }
@@ -66,7 +65,6 @@
 
     // If we have a direct actor ID from URL, use it directly
     if (currentActorId && currentActorId.startsWith('co_')) {
-      console.log(`[+page.svelte] ✓ Using direct actor ID from URL: ${currentActorId}`);
       if (rootActorId !== currentActorId) {
         rootActorId = currentActorId;
         lastProcessedVibe = currentVibeName;
@@ -79,26 +77,19 @@
 
     untrack(async () => {
       if (isInitializing) {
-        console.log('[+page.svelte] Already initializing, skipping...');
         return;
       }
-      
-      console.log('[+page.svelte] Checking registry for', currentVibeName);
 
       // Check if this vibe already exists
       const existingRootId = await getVibeIfExists(account, currentVibeName);
-      
-      console.log(`[+page.svelte] ✓ Registry ready for ${currentVibeName}. existingRootId: ${existingRootId}, rootActorId: ${rootActorId}, isInitializing: ${isInitializing}`);
 
       if (existingRootId) {
-        console.log('[+page.svelte] ✅ Found registered root for', currentVibeName, ':', existingRootId);
         rootActorId = existingRootId;
         lastProcessedVibe = currentVibeName;
         return;
       }
 
       // Not in registry, start initialization
-      console.log('[+page.svelte] 🚀 Initializing new actors for', currentVibeName);
       isInitializing = true;
       rootActorId = null; // Show loading state
 
@@ -107,7 +98,6 @@
         const newRootId = await getOrCreateVibe(account, currentVibeName);
 
         if (newRootId) {
-          console.log('[+page.svelte] ✅ Created root for', currentVibeName, ':', newRootId);
           rootActorId = newRootId;
           lastProcessedVibe = currentVibeName;
         } else {
@@ -117,8 +107,6 @@
         if (!error?.message?.includes('Already creating')) {
           console.error('[+page.svelte] ❌ Initialization failed for', currentVibeName, ':', error);
           lastProcessedVibe = null; // Allow retry
-        } else {
-          console.log('[+page.svelte] Concurrency: Already creating', currentVibeName);
         }
       } finally {
         isInitializing = false;

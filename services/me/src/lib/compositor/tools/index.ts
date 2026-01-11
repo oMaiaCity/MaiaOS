@@ -36,7 +36,6 @@ let modulesRegistered = false
  */
 export function registerOptionalModules(): void {
   if (modulesRegistered) {
-    console.log('[Tools] Optional modules already registered, skipping')
     return
   }
   
@@ -45,7 +44,6 @@ export function registerOptionalModules(): void {
   // Add more optional modules here as needed
   
   modulesRegistered = true
-  console.log('[Tools] ✅ Registered optional modules:', ['ai', 'human'])
 }
 
 /**
@@ -55,8 +53,4 @@ export function registerOptionalModules(): void {
 export function registerAllTools(): void {
   // Core and context are already registered (auto-registration in module files)
   registerOptionalModules()
-  
-  const allTools = toolModuleRegistry.getAllTools()
-  console.log(`[Tools] Total registered tools: ${allTools.length}`)
-  console.log('[Tools] Available tool IDs:', allTools.map(t => t.metadata.id))
 }

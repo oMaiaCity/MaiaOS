@@ -87,14 +87,8 @@ const createEntityTool: Tool = {
 		}
 
 		// Use generic CREATE function
-		console.log('[core.module] @core/createEntity - Calling createEntityGeneric:', {
-			schemaName,
-			entityData,
-			hasJazzAccount: !!jazzAccount,
-		});
 		try {
 			const result = await createEntityGeneric(jazzAccount, schemaName, entityData)
-			console.log('[core.module] @core/createEntity - Entity created successfully:', result);
 			
 			// Clear field and error using Jazz reactivity (create new context object)
 			const currentContext = actor.context as Record<string, unknown>
@@ -159,8 +153,6 @@ const updateEntityTool: Tool = {
 		},
 	},
 	execute: async (actor: any, payload?: unknown, accountCoState?: any) => {
-		console.log('[updateEntityTool] Received payload:', payload);
-		
 		const payloadData = (payload as {
 			id?: string
 			updates?: Record<string, unknown>
@@ -169,8 +161,6 @@ const updateEntityTool: Tool = {
 		}) || {}
 
 		const { id, updates, status, ...otherFields } = payloadData
-		
-		console.log('[updateEntityTool] Parsed:', { id, updates, status, otherFields });
 
 		if (!id) {
 			console.error('[updateEntityTool] No ID provided');
@@ -187,8 +177,6 @@ const updateEntityTool: Tool = {
 		if (Object.keys(otherFields).length > 0) {
 			finalUpdates = { ...finalUpdates, ...otherFields }
 		}
-		
-		console.log('[updateEntityTool] Final updates:', finalUpdates);
 
 		if (!finalUpdates || Object.keys(finalUpdates).length === 0) {
 			console.error('[updateEntityTool] No updates provided');
@@ -232,9 +220,7 @@ const updateEntityTool: Tool = {
 				throw new Error(`Entity not found for ID: ${id}`)
 			}
 
-			console.log('[updateEntityTool] Calling updateEntityGeneric with:', { id, finalUpdates });
 			await updateEntityGeneric(jazzAccount, coValue, finalUpdates)
-			console.log('[updateEntityTool] ✅ Update completed successfully');
 		} catch (error) {
 			throw error
 		}
@@ -720,13 +706,8 @@ const resetDatabaseTool: Tool = {
 			throw new Error('Account is not loaded')
 		}
 
-		console.log('[resetDatabaseTool] Starting database reset...');
-		
 		const { resetData } = await import('@maia/db');
 		await resetData(account);
-		
-		console.log('[resetDatabaseTool] ✅ Database reset complete!')
-		console.log('[resetDatabaseTool] After page reload, migration will create fresh VibesRegistry')
 	},
 }
 

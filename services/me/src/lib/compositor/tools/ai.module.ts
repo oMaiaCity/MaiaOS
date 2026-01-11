@@ -91,7 +91,6 @@ const chatRedPillTool: Tool = {
 		}
 
 		if (actor.context.isProcessing) {
-			console.log('[ai.module] Already processing a request, skipping duplicate')
 			return
 		}
 

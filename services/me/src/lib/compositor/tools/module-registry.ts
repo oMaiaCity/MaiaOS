@@ -24,9 +24,6 @@ class ToolModuleRegistryImpl implements IToolModuleRegistry {
     }
     
     this.modules.set(module.name, module)
-    const toolCount = Object.keys(module.tools).length
-    const type = module.builtin ? 'builtin' : 'optional'
-    console.log(`[ToolModuleRegistry] Registered ${type} module: ${module.name} (${toolCount} tools)`)
   }
   
   /**

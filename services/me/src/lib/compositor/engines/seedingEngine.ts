@@ -9,6 +9,7 @@ import { Group } from "jazz-tools";
 import { createVibesActors } from '$lib/vibes/vibes';
 import { createHumansActors } from '$lib/vibes/humans';
 import { createTodosActors } from '$lib/vibes/todos';
+import { createActorsActors } from '$lib/vibes/actors';
 
 /**
  * Vibe configuration for actor creation
@@ -42,6 +43,12 @@ export const VIBE_REGISTRY: Record<string, VibeConfig> = {
 		label: 'Todos',
 		description: 'Task management and todo lists',
 		createActors: createTodosActors,
+	},
+	actors: {
+		name: 'actors',
+		label: 'Actors',
+		description: 'View all actors in the system',
+		createActors: createActorsActors,
 	},
 };
 
@@ -80,33 +87,26 @@ export async function getOrCreateVibe(account: any, vibeName: string): Promise<s
 
 	// Acquire vibe-specific lock
 	if (locks.vibes[vibeName]) {
-		console.log(`[seeder] Already creating ${vibeName} (global lock), waiting...`);
 		throw new Error(`Already creating ${vibeName} actors`);
 	}
 	locks.vibes[vibeName] = true;
 
 	try {
-		console.log(`[seeder] Checking registry for ${vibeName}...`);
-
 		// Get the VibesRegistry entity
 		const registry = await getVibesRegistry(account);
 		const existingRootId = registry[vibeName];
 
 		// Check if already exists
 		if (existingRootId && typeof existingRootId === 'string' && existingRootId.startsWith('co_')) {
-			console.log(`[seeder] ✅ Found existing ${vibeName} root:`, existingRootId);
 			return existingRootId;
 		}
 
 		// Create new actors
-		console.log(`[seeder] 🚀 Creating new ${vibeName} actors...`);
 		const rootActorId = await vibeConfig.createActors(account);
 
 		if (!rootActorId) {
 			throw new Error(`Failed to create ${vibeName} actors: No root actor ID returned`);
 		}
-
-		console.log(`[seeder] ✅ Created ${vibeName} root:`, rootActorId);
 		return rootActorId;
 	} finally {
 		locks.vibes[vibeName] = false;
@@ -127,14 +127,11 @@ export async function seedVibes(
 
 	// Acquire global seeding lock
 	if (locks.seeding) {
-		console.log('[seeder] Seeding already in progress...');
 		throw new Error('Seeding already in progress');
 	}
 	locks.seeding = true;
 
 	try {
-		console.log('[seeder] 🌱 Starting batch seeding for:', vibeNames);
-
 		const results: Record<string, string> = {};
 		const errors: Record<string, Error> = {};
 
@@ -150,12 +147,6 @@ export async function seedVibes(
 				}
 			})
 		);
-
-		// Report results
-		console.log('[seeder] ✅ Seeding complete:', {
-			success: Object.keys(results),
-			failed: Object.keys(errors),
-		});
 
 		if (Object.keys(errors).length > 0) {
 			console.warn('[seeder] Some vibes failed to seed:', errors);

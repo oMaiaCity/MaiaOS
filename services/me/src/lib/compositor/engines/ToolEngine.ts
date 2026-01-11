@@ -60,17 +60,12 @@ export class ToolEngine {
       throw new Error(`Tool "${toolId}" not found in any registered module`)
     }
     
-    console.log(`[ToolEngine] Executing tool: ${toolId}`)
-    console.log(`[ToolEngine] Raw payload:`, payload)
-    
     // Evaluate payload through MaiaScript DSL (centralized security)
     const evaluatedPayload = this.evaluatePayload(payload, actor)
-    console.log(`[ToolEngine] Evaluated payload:`, evaluatedPayload)
     
     // Execute tool with evaluated payload
     try {
       await tool.execute(actor, evaluatedPayload, accountCoState)
-      console.log(`[ToolEngine] ✅ Tool executed successfully: ${toolId}`)
     } catch (error) {
       console.error(`[ToolEngine] ❌ Error executing tool "${toolId}":`, error)
       throw new Error(`Error executing tool "${toolId}": ${error instanceof Error ? error.message : String(error)}`)
@@ -99,7 +94,6 @@ export class ToolEngine {
     if (isMaiaScriptExpression(payload)) {
       try {
         const result = safeEvaluate(payload, context)
-        console.log(`[ToolEngine] Evaluated MaiaScript expression:`, payload, '→', result)
         return result
       } catch (error) {
         console.error(`[ToolEngine] Failed to evaluate MaiaScript expression:`, payload, error)
@@ -126,7 +120,6 @@ export class ToolEngine {
     if (typeof payload === 'string' && (payload.startsWith('context.') || payload.startsWith('dependencies.'))) {
       try {
         const result = safeEvaluate({ "$": payload }, context)
-        console.log(`[ToolEngine] Resolved string path:`, payload, '→', result)
         return result
       } catch (error) {
         console.error(`[ToolEngine] Failed to resolve string path:`, payload, error)
@@ -148,7 +141,6 @@ export class ToolEngine {
     calls: Array<{ toolId: string; actor: any; payload?: unknown }>,
     accountCoState?: AccountCoState<any>
   ): Promise<void[]> {
-    console.log(`[ToolEngine] Executing batch of ${calls.length} tools`)
     return Promise.all(
       calls.map(call => this.execute(call.toolId, call.actor, call.payload, accountCoState))
     )

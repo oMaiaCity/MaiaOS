@@ -26,20 +26,16 @@ export async function createHumansActors(account: any) {
 	const locks = getGlobalLock();
 	
 	if (locks.humans) {
-		console.log('[createHumansActors] Already creating (global lock), waiting...');
 		throw new Error('Already creating humans actors');
 	}
 	locks.humans = true;
 	
 	try {
-		console.log('[createHumansActors] Starting ID-based actor creation...');
-	
 		// Get the VibesRegistry entity
 		const vibesRegistry = await getVibesRegistry(account);
 		const existingHumansRootId = vibesRegistry.humans as string | undefined;
 		
 		if (existingHumansRootId && typeof existingHumansRootId === 'string' && existingHumansRootId.startsWith('co_')) {
-			console.log('[createHumansActors] ✅ Found existing humans root:', existingHumansRootId);
 			return existingHumansRootId;
 		}
 
@@ -51,8 +47,6 @@ export async function createHumansActors(account: any) {
 		if (!root?.entities) {
 			throw new Error('Root entities list not found');
 		}
-
-		console.log('[createHumansActors] Creating new actors...');
 
 	// Create group for actors (OPTIMISTIC - no blocking!)
 	const group = Group.create();
@@ -217,21 +211,11 @@ export async function createHumansActors(account: any) {
 		
 	// NO WAIT! Subscriptions updated locally, sync happens in background
 
-	// DEBUG: Verify subscriptions
-	console.log('[createHumansActors] Subscriptions setup:', {
-		createButton: Array.from(createButtonActor.subscriptions || []),
-		listActor: Array.from(listActor.subscriptions || []),
-		createButtonId: createButtonActor.$jazz.id,
-		listActorId: listActor.$jazz.id,
-	});
-
 	// Actors are automatically added to root.entities by createActorEntity
-	console.log('[createHumansActors] ⚡ All actors created instantly (local-first)');
 
 	// Register root actor in vibes registry (OPTIMISTIC - no blocking!)
 	vibesRegistry.$jazz.set('humans', humansRootActor.$jazz.id);
 	// NO WAIT! Registry updated locally, sync happens in background
-	console.log('[createHumansActors] ✅ Registered humans root:', humansRootActor.$jazz.id);
 	
 	return humansRootActor.$jazz.id;
 	} finally {

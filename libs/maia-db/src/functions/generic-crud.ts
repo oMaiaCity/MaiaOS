@@ -73,17 +73,6 @@ export async function getCoMapSchemaForSchemaName(
 
 	// Convert to Zod shape
 	const shape = jsonSchemaToCoMapShape(jsonSchemaWithSystemProps)
-	
-	// Debug logging for VibesRegistry
-	if (schemaName === 'VibesRegistry') {
-		console.log('[getCoMapSchemaForSchemaName] VibesRegistry shape:', {
-			shapeKeys: Object.keys(shape),
-			jsonSchemaProperties: Object.keys(jsonSchemaWithSystemProps.properties || {}),
-			hasVibesProperty: 'vibes' in shape,
-			hasHumansProperty: 'humans' in shape,
-			hasTodosProperty: 'todos' in shape,
-		});
-	}
 
 	// Create CoMap schema wrapper
 	const CoMapSchema = co.map(shape)
@@ -105,68 +94,41 @@ export async function createEntityGeneric(
 	schemaName: string,
 	entityData: any,
 ): Promise<any> {
-	// eslint-disable-next-line no-console
-	console.log('[createEntityGeneric] ENTRY - schemaName:', schemaName, 'entityData:', entityData)
-
 	// Get CoMap schema wrapper
-	// eslint-disable-next-line no-console
-	console.log('[createEntityGeneric] Getting CoMap schema wrapper...')
 	const { schema: CoMapSchema, schemaDefinition } = await getCoMapSchemaForSchemaName(
 		account,
 		schemaName,
 	)
-	// eslint-disable-next-line no-console
-	console.log('[createEntityGeneric] Got schema wrapper, schemaDefinition ID:', schemaDefinition?.$jazz?.id)
 
 	// Load root and entities list
-	// eslint-disable-next-line no-console
-	console.log('[createEntityGeneric] Loading account root and entities list...')
 	const loadedAccount = await account.$jazz.ensureLoaded({
 		resolve: { root: { entities: true } },
 	})
 
 	if (!loadedAccount.root?.entities) {
-		// eslint-disable-next-line no-console
 		console.error('[createEntityGeneric] ERROR: Root entities list does not exist')
 		throw new Error('Root entities list does not exist - run account migration first')
 	}
 
 	const entitiesList = loadedAccount.root.entities
 	const entitiesOwner = (entitiesList as any).$jazz?.owner
-	// eslint-disable-next-line no-console
-	console.log('[createEntityGeneric] Entities list owner:', entitiesOwner?.$jazz?.id)
 
 	if (!entitiesOwner) {
-		// eslint-disable-next-line no-console
 		console.error('[createEntityGeneric] ERROR: Cannot determine entities list owner')
 		throw new Error('Cannot determine entities list owner')
 	}
 
 	// Create entity with Zod validation
-	// eslint-disable-next-line no-console
-	console.log('[createEntityGeneric] Creating entity with CoMapSchema.create...')
 	const entity = CoMapSchema.create(entityData, entitiesOwner)
-	// eslint-disable-next-line no-console
-	console.log('[createEntityGeneric] Entity created, ID:', entity?.$jazz?.id)
 	// NO WAIT! Jazz creates locally instantly, syncs in background
 	
 	// Set system properties (@label, @schema) - NO WAIT!
-	// eslint-disable-next-line no-console
-	console.log('[createEntityGeneric] Setting system properties...')
 	await setSystemProps(entity, schemaDefinition)
-	// eslint-disable-next-line no-console
-	console.log('[createEntityGeneric] System properties set')
 
 	// Add to entities list - NO WAIT! Local-first!
-	// eslint-disable-next-line no-console
-	console.log('[createEntityGeneric] Adding entity to entities list...')
 	entitiesList.$jazz.push(entity)
 	// NO WAIT! Jazz syncs in background, UI updates via CoState subscriptions
-	// eslint-disable-next-line no-console
-	console.log('[createEntityGeneric] ⚡ Entity added instantly (local-first)')
 
-	// eslint-disable-next-line no-console
-	console.log('[createEntityGeneric] SUCCESS - Returning entity:', entity?.$jazz?.id)
 	return entity
 }
 
@@ -579,11 +541,8 @@ export async function getVibesRegistry(account: any): Promise<any> {
 	const registryId = root?.vibesRegistryId;
 	
 	if (registryId && typeof registryId === 'string' && registryId.startsWith('co_')) {
-		console.log('[getVibesRegistry] Looking for registry with ID:', registryId);
-		
 		// ALWAYS load via CoMapSchema to ensure proper schema wrapper with key awareness
 		// Without the schema wrapper, Jazz doesn't know which keys are allowed!
-		console.log('[getVibesRegistry] Loading registry by ID using schema:', registryId);
 		try {
 			// Get the schema for VibesRegistry to load it properly
 			const schemaResult = await getCoMapSchemaForSchemaName(account, 'VibesRegistry');
@@ -591,8 +550,6 @@ export async function getVibesRegistry(account: any): Promise<any> {
 				// Load using the schema - this applies the schema wrapper that knows about vibes/humans/todos keys
 				const registryCoValue = await schemaResult.schema.load(registryId as any);
 				if (registryCoValue) {
-					console.log('[getVibesRegistry] ✅ Loaded registry via schema with key awareness');
-					console.log('[getVibesRegistry] Allowed keys:', Array.from((registryCoValue.$jazz as any).keys?.() || []));
 					return registryCoValue;
 				}
 			}
@@ -602,7 +559,6 @@ export async function getVibesRegistry(account: any): Promise<any> {
 	}
 	
 	// Fallback: Create new registry (should only happen if migration hasn't run)
-	console.log('[getVibesRegistry] No cached ID found, creating new VibesRegistry');
 	// Initialize ALL optional properties with actual values (empty string) to ensure Jazz adds them to the CoMap's allowed keys
 	// IMPORTANT: undefined doesn't register keys in Jazz, but concrete values do!
 	const registry = await createEntityGeneric(account, 'VibesRegistry', {
@@ -614,7 +570,6 @@ export async function getVibesRegistry(account: any): Promise<any> {
 	// Store the ID on AppRoot for future lookups
 	if (root) {
 		root.$jazz.set('vibesRegistryId', registry.$jazz.id);
-		console.log('[getVibesRegistry] ✅ Stored registry ID on AppRoot:', registry.$jazz.id);
 	}
 	
 	return registry;
