@@ -94,27 +94,6 @@ export async function createVibesActors(account: any) {
 		role: 'todos-card',
 	}, group);
 
-	const actorsCardActor = await createActorEntity(account, {
-		context: { visible: true },
-		view: {
-			container: {
-				class: 'card p-4 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow overflow-hidden w-full'
-			},
-			events: {
-				click: {
-					event: '@context/navigate',
-					payload: { vibeName: 'actors' }
-				}
-			},
-			elements: [
-				{ tag: 'h3', classes: 'text-base font-semibold text-slate-900', elements: ['🎭 Actors'] },
-				{ tag: 'p', classes: 'text-xs text-slate-600', elements: ['View all actors in the system'] }
-			]
-		},
-		dependencies: {},
-		role: 'actors-card',
-	}, group);
-
 	const headerActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: {
@@ -144,7 +123,6 @@ export async function createVibesActors(account: any) {
 	// Set children after creation
 	gridActor.children.$jazz.push(humansCardActor.$jazz.id);
 	gridActor.children.$jazz.push(todosCardActor.$jazz.id);
-	gridActor.children.$jazz.push(actorsCardActor.$jazz.id);
 
 	// NO WAIT! All composite actors created locally, use immediately
 
@@ -165,7 +143,6 @@ export async function createVibesActors(account: any) {
 	// Cards use @context/navigate tool for true colocation (navigation handled by tool system)
 	humansCardActor.subscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
 	todosCardActor.subscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
-	actorsCardActor.subscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
 	// NO WAIT! Subscriptions updated locally, sync happens in background
 
 	// Actors are automatically added to root.entities by createActorEntity

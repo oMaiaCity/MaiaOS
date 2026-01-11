@@ -68,6 +68,7 @@ export const TAILWIND_PATTERNS = [
   /^text-\[.*\]$/,
   /^text-(left|center|right|justify)$/,
   /^font-(thin|extralight|light|normal|medium|semibold|bold|extrabold|black)$/,
+  /^font-(sans|serif|mono)$/,
   /^leading-(none|tight|snug|normal|relaxed|loose)$/,
   /^tracking-(tighter|tight|normal|wide|wider|widest)$/,
   /^(italic|not-italic|uppercase|lowercase|capitalize|normal-case)$/,

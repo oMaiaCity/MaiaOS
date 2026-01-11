@@ -9,7 +9,6 @@ import { Group } from "jazz-tools";
 import { createVibesActors } from '$lib/vibes/vibes';
 import { createHumansActors } from '$lib/vibes/humans';
 import { createTodosActors } from '$lib/vibes/todos';
-import { createActorsActors } from '$lib/vibes/actors';
 
 /**
  * Vibe configuration for actor creation
@@ -43,12 +42,6 @@ export const VIBE_REGISTRY: Record<string, VibeConfig> = {
 		label: 'Todos',
 		description: 'Task management and todo lists',
 		createActors: createTodosActors,
-	},
-	actors: {
-		name: 'actors',
-		label: 'Actors',
-		description: 'View all actors in the system',
-		createActors: createActorsActors,
 	},
 };
 
