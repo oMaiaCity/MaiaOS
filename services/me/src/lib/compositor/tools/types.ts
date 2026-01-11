@@ -1,37 +1,3 @@
-/**
- * Tool Types - Generic interface for all actions/functions/services
- * Future-ready for LLM tool calls
- * 
- * JAZZ-NATIVE ARCHITECTURE:
- * - Tools now accept actor: any (Jazz CoMap instance, not data: Data)
- * - accountCoState passed as parameter (not via data._jazzAccountCoState)
- * 
- * UNIFIED JSON → ENGINE → OUTPUT PATTERN:
- * - Tools follow same pattern as factories, actors, views
- * - All payloads pass through MaiaScript DSL evaluation
- * - Centralized security via whitelist and sanitization
- * 
- * FUTURE: LLM Tool Call Integration
- * Tools are designed for dual invocation:
- * 1. Actor Events: User clicks button → event triggers tool
- * 2. LLM Tool Calls: AI decides to call tool → ToolEngine.execute()
- * 
- * Example LLM Tool Schema (OpenAI format):
- * {
- *   "name": "create_entity",
- *   "description": "Creates a new entity in the database",
- *   "parameters": {
- *     "type": "object",
- *     "properties": {
- *       "schemaName": { "type": "string", "enum": ["Todo", "Human", "..."] },
- *       "entityData": { "type": "object" }
- *     },
- *     "required": ["schemaName", "entityData"]
- *   }
- * }
- * 
- * The tool metadata matches 1:1 with LLM tool schemas!
- */
 
 /**
  * Tool Metadata - Describes a tool for registry and future LLM integration
@@ -98,4 +64,29 @@ export interface ToolRegistry {
 	get(id: string): Tool | undefined
 	getAll(): Tool[]
 	getByCategory(category: string): Tool[]
+}
+
+// ========== QUERY TYPES ==========
+
+import type { MaiaScriptExpression } from '@maia/script'
+
+/**
+ * Query Configuration Types
+ * MaiaScript-based query configuration for actor.context.queries
+ */
+export interface QueryConfig {
+	/**
+	 * Entity schema name to query (e.g., "Todo", "Human")
+	 */
+	schemaName: string
+
+	/**
+	 * Optional MaiaScript query operations
+	 * Can be a single operation or a $pipe chain
+	 * 
+	 * Examples:
+	 * - Single operation: { "$filter": { "field": "status", "condition": { "$eq": [{ "$": "item.status" }, "todo"] } } }
+	 * - Pipe chain: { "$pipe": [{ "$filter": {...} }, { "$sort": {...} }, { "$paginate": {...} }] }
+	 */
+	operations?: MaiaScriptExpression
 }

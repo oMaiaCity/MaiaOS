@@ -26,6 +26,7 @@
 | **ToolEngine** | Payload evaluation | `{ name: 'context.newTodoText' }` → actual value |
 | **ViewEngine** | Data bindings | `{ text: { $: 'item.name' } }` → rendered text |
 | **factoryEngine** | Conditional templates | `{ $if: {...} }` → resolved structure |
+| **queryEngine** | Query operations | `{ "$filter": {...} }` → filtered entities |
 | **Actor configs** | Dynamic values | `{ endDate: { $toISOString: [...] } }` |
 
 ---
@@ -304,6 +305,31 @@ Contains core operations:
 - Date: `$now`, `$toISOString`
 - Math: `$add`, `$multiply`
 
+### Query Module
+
+**Location**: `libs/maia-script/src/modules/query.module.ts`
+
+Contains query operations for filtering, sorting, and paginating entities:
+- `$filter` - Filter entities by MaiaScript condition
+- `$sort` - Sort entities by field (asc/desc)
+- `$paginate` - Limit and offset entities
+- `$pipe` - Chain query operations together
+
+**Example**:
+```json
+{
+  "operations": {
+    "$pipe": [
+      { "$filter": { "field": "status", "condition": { "$eq": [{ "$": "item.status" }, "todo"] } } },
+      { "$sort": { "field": "createdAt", "order": "desc" } },
+      { "$paginate": { "limit": 10 } }
+    ]
+  }
+}
+```
+
+See [queryEngine Integration](#-queryengine-integration) section for detailed examples.
+
 ### Custom Modules
 
 Create your own module:
@@ -525,6 +551,198 @@ factoryEngine uses MaiaScript for conditional templates.
 
 ---
 
+## 🔍 queryEngine Integration
+
+queryEngine uses MaiaScript for query operations (filtering, sorting, paginating entities).
+
+### Query Configuration
+
+Queries are defined in `actor.context.queries` using `QueryConfig`:
+
+```typescript
+interface QueryConfig {
+  schemaName: string  // Entity schema name (e.g., "Todo")
+  operations?: MaiaScriptExpression  // Optional query operations
+}
+```
+
+### Simple Query (No Operations)
+
+```json
+{
+  "queries": {
+    "todos": {
+      "schemaName": "Todo"
+    }
+  }
+}
+```
+
+Returns all entities of the specified schema.
+
+### Query with Filter Operation
+
+```json
+{
+  "queries": {
+    "activeTodos": {
+      "schemaName": "Todo",
+      "operations": {
+        "$filter": {
+          "field": "status",
+          "condition": { "$eq": [{ "$": "item.status" }, "todo"] }
+        }
+      }
+    }
+  }
+}
+```
+
+Filters entities where `status === "todo"`.
+
+### Query with Multiple Operations ($pipe)
+
+```json
+{
+  "queries": {
+    "recentTodos": {
+      "schemaName": "Todo",
+      "operations": {
+        "$pipe": [
+          {
+            "$filter": {
+              "field": "status",
+              "condition": { "$eq": [{ "$": "item.status" }, "todo"] }
+            }
+          },
+          {
+            "$sort": {
+              "field": "createdAt",
+              "order": "desc"
+            }
+          },
+          {
+            "$paginate": {
+              "limit": 10
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+Chains filter → sort → paginate operations.
+
+### Query Operations
+
+#### `$filter` - Filter entities by condition
+
+```json
+{
+  "$filter": {
+    "field": "status",
+    "condition": { "$eq": [{ "$": "item.status" }, "todo"] }
+  }
+}
+```
+
+The `condition` is a MaiaScript expression evaluated for each entity (with `item` set to the entity).
+
+#### `$sort` - Sort entities by field
+
+```json
+{
+  "$sort": {
+    "field": "createdAt",
+    "order": "desc"  // "asc" or "desc" (default: "asc")
+  }
+}
+```
+
+#### `$paginate` - Limit and offset
+
+```json
+{
+  "$paginate": {
+    "limit": 10,
+    "offset": 0
+  }
+}
+```
+
+#### `$pipe` - Chain operations
+
+```json
+{
+  "$pipe": [
+    { "$filter": {...} },
+    { "$sort": {...} },
+    { "$paginate": {...} }
+  ]
+}
+```
+
+Executes operations in sequence, passing result of each to the next.
+
+### Example: Kanban Board with Filtered Queries
+
+```typescript
+// Actor context with 3 filtered queries (one per column)
+queries: {
+  todos_todo: {
+    schemaName: 'Todo',
+    operations: {
+      "$filter": {
+        "field": "status",
+        "condition": { "$eq": [{ "$": "item.status" }, "todo"] }
+      }
+    }
+  },
+  todos_in_progress: {
+    schemaName: 'Todo',
+    operations: {
+      "$filter": {
+        "field": "status",
+        "condition": { "$eq": [{ "$": "item.status" }, "in-progress"] }
+      }
+    }
+  },
+  todos_done: {
+    schemaName: 'Todo',
+    operations: {
+      "$filter": {
+        "field": "status",
+        "condition": { "$eq": [{ "$": "item.status" }, "done"] }
+      }
+    }
+  }
+}
+```
+
+Each column uses its own filtered query - no UI-level filtering needed!
+
+### Extending Query Operations
+
+Add new operations to `libs/maia-script/src/modules/query.module.ts`:
+
+```typescript
+'$group': {
+  name: '$group',
+  evaluate: (args: any[], ctx: EvaluationContext) => {
+    const config = args[0] as { field: string }
+    const entities = args[1] as Array<Record<string, unknown>>
+    // Grouping logic here
+    return groupedEntities
+  }
+}
+```
+
+All operations are secure (validated via MaiaScript DSL) and reactive (CoState subscriptions).
+
+---
+
 ## 📊 Evaluation Context
 
 MaiaScript expressions are evaluated within a context:
@@ -739,7 +957,7 @@ MaiaScript provides:
 
 - **Security**: Whitelist-based, no code execution, prototype pollution prevention
 - **Expressiveness**: Rich operation set for common use cases
-- **Integration**: Used by ToolEngine, ViewEngine, factoryEngine
+- **Integration**: Used by ToolEngine, ViewEngine, factoryEngine, queryEngine
 - **Extensibility**: Module-based system for custom operations
 - **Performance**: Pure JSON, no parsing, compiled evaluation
 

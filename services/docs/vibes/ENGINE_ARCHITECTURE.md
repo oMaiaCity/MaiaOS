@@ -29,7 +29,7 @@ All engines share this interface:
 | **ToolEngine** | Tool ID + Payload | Executed business logic | Tool execution with DSL evaluation |
 | **ViewEngine** | ViewNode JSON | Rendered HTML elements | Unified Composite + Leaf rendering |
 | **factoryEngine** | Factory JSON + Parameters | Resolved ViewNode | Template expansion with conditionals |
-| **queryEngine** | Schema name + Options | Reactive entity list | Jazz-native reactive queries |
+| **queryEngine** | QueryConfig (schemaName + MaiaScript operations) | Reactive entity list | MaiaScript-based reactive queries |
 | **seedingEngine** | Vibe name | Actor tree (seeded) | Vibe initialization & seeding |
 
 ---
@@ -68,10 +68,11 @@ All engines share this interface:
          ▼                               ▼
 ┌──────────────────────┐          ┌──────────────────────┐
 │    QUERY ENGINE      │          │   FACTORY ENGINE     │
-│  Schema + Options    │          │  Factory + Params    │
+│  QueryConfig         │          │  Factory + Params    │
 │  → Entity List       │          │  → ViewNode          │
 │                      │          │                      │
 │  • CoState subscribe │          │  • Parameter subst.  │
+│  • MaiaScript ops    │          │  • Conditional eval   │
 │  • Schema filtering  │          │  • Conditionals      │
 │  • Query options     │          │  • Template expansion│
 └──────────────────────┘          └──────────────────────┘
@@ -429,25 +430,28 @@ const button = createLeaf(buttonFactory, {
 **File**: `services/me/src/lib/compositor/engines/queryEngine.svelte.ts`
 
 ### Purpose
-Provides Jazz-native reactive entity queries with filtering, sorting, and pagination.
+Provides Jazz-native reactive entity queries using MaiaScript DSL for filtering, sorting, and pagination.
 
 ### Interface
 ```typescript
 function useQuery(
   accountCoState: any | (() => any),
-  schemaName: string | (() => string),
-  queryOptions?: QueryOptions | (() => QueryOptions | undefined)
+  queryConfig: QueryConfig | (() => QueryConfig | undefined)
 ): {
-  entities: Array<any>      // Plain objects (not CoValues)
+  entities: Array<Record<string, unknown>>  // Plain objects (not CoValues)
   isLoading: boolean
   loadingState: 'loading' | 'loaded' | 'unauthorized' | 'unavailable'
+}
+
+interface QueryConfig {
+  schemaName: string  // Entity schema name (e.g., "Todo")
+  operations?: MaiaScriptExpression  // Optional MaiaScript query operations
 }
 ```
 
 ### Input
 - Jazz account CoState
-- Schema name (e.g., `"Todo"`, `"Human"`)
-- Query options (filter, sort, limit, offset)
+- QueryConfig with schemaName and optional MaiaScript operations
 
 ### Output
 - Reactive entity list (plain objects)
@@ -462,6 +466,7 @@ function useQuery(
      const entities = account.root.entities
      // Filter by @schema ID
      // Convert to plain objects
+     // Apply MaiaScript operations if provided
    })
    ```
 
@@ -471,12 +476,13 @@ function useQuery(
    // Match entities where entity['@schema'] === schemaId
    ```
 
-3. **Query Options**
+3. **MaiaScript Query Operations**
    ```typescript
-   // Filter: { status: { eq: 'done' } }
-   // Sort: { field: 'name', order: 'asc' }
-   // Limit: 10
-   // Offset: 20
+   // Operations are MaiaScript expressions (secure, validated)
+   // $filter: Filter entities by condition
+   // $sort: Sort by field
+   // $paginate: Limit and offset
+   // $pipe: Chain operations together
    ```
 
 4. **CoValue Conversion**
@@ -488,35 +494,99 @@ function useQuery(
 
 ### Data Flow
 ```
-Schema Name + Options
+QueryConfig (schemaName + operations)
   → Subscribe to account.root.entities (CoState)
   → Find schema by name
   → Filter entities by @schema ID
-  → Apply query options (filter, sort, limit)
   → Convert to plain objects
+  → Apply MaiaScript operations (if provided)
   → Return reactive result
 ```
 
-### Example
+### Example: Simple Query
 ```typescript
-// In ActorEngine
-const queryResult = useQuery(
-  () => accountCoState,
-  () => 'Todo',
-  { filter: { status: { eq: 'done' } }, sort: { field: 'name', order: 'asc' } }
-)
+// In ActorEngine (inline execution for reactivity)
+const queryConfig: QueryConfig = {
+  schemaName: 'Todo'
+}
+// Returns all Todo entities
+```
 
-// Populate actor context
-const resolvedContext = {
-  ...actor.context,
-  queries: {
-    todos: {
-      schemaName: 'Todo',
-      items: queryResult.entities  // Plain objects, updates automatically
+### Example: Query with MaiaScript Operations
+```typescript
+// In actor.context.queries
+queries: {
+  activeTodos: {
+    schemaName: 'Todo',
+    operations: {
+      "$pipe": [
+        {
+          "$filter": {
+            "field": "status",
+            "condition": { "$eq": [{ "$": "item.status" }, "todo"] }
+          }
+        },
+        {
+          "$sort": {
+            "field": "createdAt",
+            "order": "desc"
+          }
+        },
+        {
+          "$paginate": {
+            "limit": 10
+          }
+        }
+      ]
     }
   }
 }
 ```
+
+### Example: Kanban with Multiple Filtered Queries
+```typescript
+// Actor context with 3 queries (one per column)
+queries: {
+  todos_todo: {
+    schemaName: 'Todo',
+    operations: {
+      "$filter": {
+        "field": "status",
+        "condition": { "$eq": [{ "$": "item.status" }, "todo"] }
+      }
+    }
+  },
+  todos_in_progress: {
+    schemaName: 'Todo',
+    operations: {
+      "$filter": {
+        "field": "status",
+        "condition": { "$eq": [{ "$": "item.status" }, "in-progress"] }
+      }
+    }
+  },
+  todos_done: {
+    schemaName: 'Todo',
+    operations: {
+      "$filter": {
+        "field": "status",
+        "condition": { "$eq": [{ "$": "item.status" }, "done"] }
+      }
+    }
+  }
+}
+```
+
+### Security
+- All query operations validated via MaiaScript DSL
+- No code execution - pure JSON evaluation
+- Whitelist-based operation registry
+- Prototype pollution prevention
+
+### Extensibility
+- Add new operations to `libs/maia-script/src/modules/query.module.ts`
+- Operations auto-register via module system
+- Composable via `$pipe` for complex queries
 
 ---
 

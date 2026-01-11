@@ -108,8 +108,7 @@ export async function createHumansActors(account: any) {
 			visible: true,
 			queries: {
 				humans: {
-					schemaName: 'Human',
-					items: [] // Will be populated by ActorRenderer from entities
+					schemaName: 'Human'
 				}
 			}
 		},

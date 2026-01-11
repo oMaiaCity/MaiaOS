@@ -1,50 +1,19 @@
 /**
- * useQuery Hook - Clean CoState-based reactive query subscription
+ * useQuery Hook - MaiaScript-based reactive query subscription
  * 
  * This follows the data explorer pattern:
  * - Access accountCoState.current inside $derived.by() to establish reactivity
  * - Synchronously filter and convert entities (no async queries)
  * - CoState automatically triggers re-evaluation when entities change
  * - All operations are synchronous for immediate reactivity
+ * - Uses MaiaScript DSL for query operations
  * 
  * Note: This hook is designed to be used in Svelte components with runes ($state, $derived)
  */
 
-// ========== QUERY OPTIONS TYPES ==========
-
-/**
- * Query options for filtering, sorting, and pagination
- */
-export interface QueryOptions {
-	filter?: FilterOptions
-	sort?: SortOptions
-	limit?: number
-	offset?: number
-}
-
-export interface FilterOptions {
-	[field: string]: FilterCondition | FilterCondition[]
-}
-
-export type FilterCondition =
-	| { eq: unknown }
-	| { ne: unknown }
-	| { gt: unknown }
-	| { gte: unknown }
-	| { lt: unknown }
-	| { lte: unknown }
-	| { in: unknown[] }
-	| { nin: unknown[] }
-	| { contains: string }
-	| { startsWith: string }
-	| { endsWith: string }
-	| { and: FilterCondition[] }
-	| { or: FilterCondition[] }
-
-export interface SortOptions {
-	field: string
-	order?: 'asc' | 'desc'
-}
+import { safeEvaluate } from '@maia/script'
+import type { QueryConfig } from '../tools/types'
+import type { EvaluationContext } from '@maia/script'
 
 /**
  * Convert CoValue to plain object (generic, works for any schema)
@@ -111,145 +80,66 @@ function coValueToPlainObject(coValue: any): Record<string, unknown> {
 }
 
 /**
- * Apply query options (filter, sort, limit, offset) to entities
- * Works with both plain objects and Jazz CoValue entities
+ * Execute MaiaScript query operations on entities
  */
-function applyQueryOptions<T>(
-	entities: T[],
-	options?: QueryOptions,
-): T[] {
-	let result = entities
-
-	// Apply filters
-	if (options?.filter) {
-		result = result.filter((entity) => {
-			// Convert to plain object for filtering if it's a CoValue
-			const plainEntity = (entity as any)?.$jazz ? coValueToPlainObject(entity as any) : entity as Record<string, unknown>;
-			return matchesFilter(plainEntity, options.filter!);
-		})
+function executeQueryOperations(
+	entities: Array<Record<string, unknown>>,
+	operations: any,
+	ctx: EvaluationContext
+): Array<Record<string, unknown>> {
+	if (!operations) {
+		// No operations - return all entities
+		return entities
 	}
 
-	// Apply sorting
-	if (options?.sort) {
-		const { field, order = 'asc' } = options.sort
-		result = result.sort((a, b) => {
-			// Access field directly or via property (works for both CoValues and plain objects)
-			const aVal = (a as any)[field]
-			const bVal = (b as any)[field]
-			
-			if (aVal === bVal) return 0
-			if (aVal == null) return 1
-			if (bVal == null) return -1
-			
-			let comparison = 0
-			if (typeof aVal === 'string' && typeof bVal === 'string') {
-				comparison = aVal.localeCompare(bVal)
-			} else if (typeof aVal === 'number' && typeof bVal === 'number') {
-				comparison = aVal - bVal
-			} else {
-				comparison = String(aVal).localeCompare(String(bVal))
-			}
-			
-			return order === 'asc' ? comparison : -comparison
-		})
+	// Check if operations is a $pipe expression
+	if (operations.$pipe && Array.isArray(operations.$pipe)) {
+		// $pipe expects: [operationsArray, entities]
+		const result = safeEvaluate(
+			{ $pipe: [operations.$pipe, entities] },
+			ctx
+		)
+		return Array.isArray(result) ? result : entities
 	}
 
-	// Apply offset
-	if (options?.offset) {
-		result = result.slice(options.offset)
+	// Check if operations is a single operation object (e.g., { "$filter": { ... } })
+	const opKeys = Object.keys(operations)
+	if (opKeys.length === 1 && opKeys[0].startsWith('$')) {
+		const opKey = opKeys[0]
+		const opConfig = operations[opKey]
+		
+		// Execute single operation: operation expects [config, entities]
+		const result = safeEvaluate(
+			{ [opKey]: [opConfig, entities] },
+			ctx
+		)
+		return Array.isArray(result) ? result : entities
 	}
 
-	// Apply limit
-	if (options?.limit) {
-		result = result.slice(0, options.limit)
-	}
-
-	return result
-}
-
-/**
- * Check if entity matches filter conditions
- */
-function matchesFilter(
-	entity: Record<string, unknown>,
-	filter: FilterOptions,
-): boolean {
-	for (const [field, condition] of Object.entries(filter)) {
-		if (Array.isArray(condition)) {
-			// Multiple conditions for same field (AND logic)
-			if (!condition.every((c) => matchesSingleCondition(entity, field, c))) {
-				return false
-			}
-		} else {
-			if (!matchesSingleCondition(entity, field, condition)) {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-/**
- * Check if entity matches a single filter condition
- */
-function matchesSingleCondition(
-	entity: Record<string, unknown>,
-	field: string,
-	condition: FilterCondition,
-): boolean {
-	const value = entity[field]
-
-	if ('eq' in condition) return value === condition.eq
-	if ('ne' in condition) return value !== condition.ne
-	if ('gt' in condition) return value != null && value > condition.gt
-	if ('gte' in condition) return value != null && value >= condition.gte
-	if ('lt' in condition) return value != null && value < condition.lt
-	if ('lte' in condition) return value != null && value <= condition.lte
-	if ('in' in condition) return condition.in.includes(value)
-	if ('nin' in condition) return !condition.nin.includes(value)
-	
-	if ('contains' in condition) {
-		return typeof value === 'string' && value.includes(condition.contains)
-	}
-	if ('startsWith' in condition) {
-		return typeof value === 'string' && value.startsWith(condition.startsWith)
-	}
-	if ('endsWith' in condition) {
-		return typeof value === 'string' && value.endsWith(condition.endsWith)
-	}
-	
-	if ('and' in condition) {
-		return condition.and.every((c) => matchesSingleCondition(entity, field, c))
-	}
-	if ('or' in condition) {
-		return condition.or.some((c) => matchesSingleCondition(entity, field, c))
-	}
-
-	return false
+	// Unknown format - return entities as-is
+	return entities
 }
 
 // ========== USE QUERY HOOK ==========
 
 /**
- * Reactive query hook using CoState for subscriptions
+ * Reactive query hook using CoState for subscriptions with MaiaScript operations
  * 
  * JAZZ-NATIVE ARCHITECTURE:
  * 1. Use CoState to subscribe to account.root.entities (reactive list subscription)
- * 2. Return direct Jazz CoState entity references (NO local copies)
- * 3. Apply query options (filter, sort, limit, offset) on Jazz entities directly
- * 4. Views access entity properties directly from Jazz CoValues
+ * 2. Return plain objects (converted from Jazz CoValues)
+ * 3. Apply MaiaScript query operations (filter, sort, paginate, pipe)
+ * 4. Views access entity properties from plain objects
  * 
- * @param account - Jazz account (or account.current)
- * @param schemaName - Schema name to query (e.g., "Todo")
- * @param queryOptions - Optional filter/sort/limit/offset options
- * @returns Reactive object with Jazz entity references (not copies)
+ * @param accountCoState - Jazz account CoState
+ * @param queryConfig - Query configuration with schemaName and optional MaiaScript operations
+ * @returns Reactive object with plain entity objects
  */
 export function useQuery(
 	accountCoState: any | (() => any),
-	schemaName: string | (() => string),
-	queryOptions?: QueryOptions | (() => QueryOptions | undefined),
+	queryConfig: QueryConfig | (() => QueryConfig | undefined),
 ): {
-	entities: Array<any> // Jazz CoValue entities (not plain objects)
+	entities: Array<Record<string, unknown>>
 	isLoading: boolean
 	loadingState: 'loading' | 'loaded' | 'unauthorized' | 'unavailable'
 } {
@@ -258,12 +148,11 @@ export function useQuery(
 	// When entities are added/updated/deleted, CoState triggers re-evaluation automatically
 	const entities = $derived.by(() => {
 		// Access accountCoState reactively - call function if provided, otherwise use static value
-		const currentAccountCoState = typeof accountCoState === 'function' ? accountCoState() : accountCoState;
-		// Access schemaName reactively - call function if provided, otherwise use static value
-		const currentSchemaName = typeof schemaName === 'function' ? schemaName() : schemaName;
-		const currentOptions = typeof queryOptions === 'function' ? queryOptions() : queryOptions;
+		const currentAccountCoState = typeof accountCoState === 'function' ? accountCoState() : accountCoState
+		// Access queryConfig reactively - call function if provided, otherwise use static value
+		const currentQueryConfig = typeof queryConfig === 'function' ? queryConfig() : queryConfig
 		
-		if (!currentSchemaName) {
+		if (!currentQueryConfig?.schemaName) {
 			return []
 		}
 		
@@ -305,7 +194,7 @@ export function useQuery(
 				continue
 			}
 			
-			if (schemaSnapshot?.name === currentSchemaName) {
+			if (schemaSnapshot?.name === currentQueryConfig.schemaName) {
 				targetSchemaId = schema.$jazz?.id
 				break
 			}
@@ -315,8 +204,7 @@ export function useQuery(
 			return []
 		}
 		
-		// Step 2: Filter entities by comparing @schema IDs
-		// Use coValueToPlainObject (WORKING VERSION) to convert Jazz entities to plain objects
+		// Step 2: Filter entities by comparing @schema IDs and convert to plain objects
 		const results: Array<Record<string, unknown>> = []
 		
 		for (const entity of entitiesList) {
@@ -333,13 +221,24 @@ export function useQuery(
 			}
 			
 			if (entitySchemaId === targetSchemaId) {
-				// Use the working coValueToPlainObject function
+				// Convert to plain object
 				results.push(coValueToPlainObject(entity))
 			}
 		}
 		
-		// Apply query options on plain objects
-		return applyQueryOptions(results, currentOptions)
+		// Step 3: Apply MaiaScript query operations if provided
+		if (currentQueryConfig.operations) {
+			const evalCtx: EvaluationContext = {
+				context: {},
+				dependencies: {},
+				item: {}
+			}
+			
+			return executeQueryOperations(results, currentQueryConfig.operations, evalCtx)
+		}
+		
+		// No operations - return all entities
+		return results
 	})
 	
 	const isLoaded = $derived(

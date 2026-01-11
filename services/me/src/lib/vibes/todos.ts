@@ -111,8 +111,7 @@ export async function createTodosActors(account: any) {
 			visible: true, // Always visible when rendered
 			queries: {
 				todos: {
-					schemaName: 'Todo',
-					items: []
+					schemaName: 'Todo'
 				}
 			}
 		},
@@ -255,8 +254,7 @@ export async function createTodosActors(account: any) {
 			visible: true, // Always visible when rendered
 			queries: {
 				todos: {
-					schemaName: 'Todo',
-					items: []
+					schemaName: 'Todo'
 				}
 			}
 		},
@@ -271,7 +269,7 @@ export async function createTodosActors(account: any) {
 	}, group);
 
 	// Kanban actor - displays todos in kanban board with drag-and-drop
-	// Uses 3 separate queries with filters for each column
+	// Uses 3 separate queries with filters for each column (proper query engine filters)
 	const kanbanActor = await createActorEntity(account, {
 		context: {
 			visible: true,
@@ -282,14 +280,39 @@ export async function createTodosActors(account: any) {
 			dragOverColumn_in_progress: false,
 			dragOverColumn_done: false,
 			queries: {
-				todos: {
+				todos_todo: {
 					schemaName: 'Todo',
-					items: []
+					operations: {
+						"$filter": {
+							"field": "status",
+							"condition": { "$eq": [{ "$": "item.status" }, "todo"] }
+						}
+					}
+				},
+				todos_in_progress: {
+					schemaName: 'Todo',
+					operations: {
+						"$filter": {
+							"field": "status",
+							"condition": { "$eq": [{ "$": "item.status" }, "in-progress"] }
+						}
+					}
+				},
+				todos_done: {
+					schemaName: 'Todo',
+					operations: {
+						"$filter": {
+							"field": "status",
+							"condition": { "$eq": [{ "$": "item.status" }, "done"] }
+						}
+					}
 				}
 			}
 		},
 		view: createComposite(kanbanFactory as any, {
-			itemsPath: 'context.queries.todos.items',
+			itemsPath: 'context.queries.todos_todo.items', // Todo column - filtered query
+			itemsPathInProgress: 'context.queries.todos_in_progress.items', // In Progress column - filtered query
+			itemsPathDone: 'context.queries.todos_done.items', // Done column - filtered query
 			itemKey: 'id'
 		}),
 		dependencies: {

@@ -17,6 +17,9 @@
   // Phase 6-7: Import drag-drop and security modules (auto-register)
   import '@maia/script/modules/dragdrop.module';
   import '@maia/script/modules/security.module';
+  
+  // Query module: Import query operations (auto-registers)
+  import '@maia/script/modules/query.module';
 
   const { children } = $props();
 

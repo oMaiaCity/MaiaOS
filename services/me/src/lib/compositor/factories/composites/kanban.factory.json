@@ -2,6 +2,8 @@
   "$schema": "composite-factory",
   "parameters": {
     "itemsPath": { "type": "string", "required": true },
+    "itemsPathInProgress": { "type": "string", "default": "{{itemsPath}}" },
+    "itemsPathDone": { "type": "string", "default": "{{itemsPath}}" },
     "itemKey": { "type": "string", "default": "id" }
   },
   "factory": {
@@ -27,7 +29,6 @@
                   "items": "{{itemsPath}}", "key": "{{itemKey}}",
                   "composite": {
                     "container": { "class": "flex items-start gap-1.5 @xs:gap-2 @sm:gap-2 px-2 py-1.5 @xs:px-2.5 @xs:py-2 @sm:px-3 @sm:py-2 @md:px-3 @md:py-2.5 rounded-lg @sm:rounded-xl bg-white border border-slate-200 shadow-[0_0_4px_rgba(0,0,0,0.02)] hover:shadow-[0_0_8px_rgba(0,0,0,0.04)] transition-all cursor-move flex-shrink-0 overflow-hidden", "attributes": { "draggable": "true", "data-todo-id": "item.id" } },
-                    "bindings": { "visible": { "$eq": [{ "$": "item.status" }, "todo"] } },
                     "events": { "dragstart": { "event": "@context/dragStart", "payload": { "id": "item.id", "status": "item.status" } }, "dragend": { "event": "@context/dragEnd", "payload": {} } },
                     "children": [
                       { "slot": "checkbox", "leaf": { "tag": "button", "attributes": { "type": "button" }, "classes": "w-4 h-4 @xs:w-5 @xs:h-5 @sm:w-5 @sm:h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-1 @sm:focus:ring-2 focus:ring-[#001a42] focus:ring-offset-0.5 @sm:focus:ring-offset-1 cursor-pointer shrink-0 mt-0.5", "bindings": { "class": { "$if": { "test": { "$eq": [{ "$": "item.status" }, "done"] }, "then": "border-green-500 bg-green-100", "else": { "$if": { "test": { "$eq": [{ "$": "item.status" }, "in-progress"] }, "then": "border-blue-500 bg-blue-100", "else": "border-slate-300 bg-slate-100" } } } } }, "events": { "click": { "event": "@core/toggleStatus", "payload": { "id": "item.id", "value1": "todo", "value2": "done", "statusField": "status" } } }, "elements": [{ "tag": "span", "classes": "text-green-500 font-bold text-xs @xs:text-xs @sm:text-sm", "bindings": { "text": { "$if": { "test": { "$eq": [{ "$": "item.status" }, "done"] }, "then": "✓", "else": { "$if": { "test": { "$eq": [{ "$": "item.status" }, "in-progress"] }, "then": "⋯", "else": "" } } } }, "visible": { "$or": [{ "$eq": [{ "$": "item.status" }, "done"] }, { "$eq": [{ "$": "item.status" }, "in-progress"] }] } } }] } },
@@ -56,10 +57,9 @@
                 "bindings": { "visible": { "$or": [{ "$": "context.isDragging" }, true] } },
                 "events": { "drop": { "event": "@context/drop", "payload": { "status": "in-progress" } }, "dragover": {}, "dragenter": { "event": "@context/update", "payload": { "dragOverColumn_in_progress": true } }, "dragleave": { "event": "@context/update", "payload": { "dragOverColumn_in_progress": false } } },
                 "foreach": {
-                  "items": "{{itemsPath}}", "key": "{{itemKey}}",
+                  "items": "{{itemsPathInProgress}}", "key": "{{itemKey}}",
                   "composite": {
                     "container": { "class": "flex items-start gap-1.5 @xs:gap-2 @sm:gap-2 px-2 py-1.5 @xs:px-2.5 @xs:py-2 @sm:px-3 @sm:py-2 @md:px-3 @md:py-2.5 rounded-lg @sm:rounded-xl bg-white border border-slate-200 shadow-[0_0_4px_rgba(0,0,0,0.02)] hover:shadow-[0_0_8px_rgba(0,0,0,0.04)] transition-all cursor-move flex-shrink-0 overflow-hidden", "attributes": { "draggable": "true", "data-todo-id": "item.id" } },
-                    "bindings": { "visible": { "$eq": [{ "$": "item.status" }, "in-progress"] } },
                     "events": { "dragstart": { "event": "@context/dragStart", "payload": { "id": "item.id", "status": "item.status" } }, "dragend": { "event": "@context/dragEnd", "payload": {} } },
                     "children": [
                       { "slot": "checkbox", "leaf": { "tag": "button", "attributes": { "type": "button" }, "classes": "w-4 h-4 @xs:w-5 @xs:h-5 @sm:w-5 @sm:h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-1 @sm:focus:ring-2 focus:ring-[#001a42] focus:ring-offset-0.5 @sm:focus:ring-offset-1 cursor-pointer shrink-0 mt-0.5", "bindings": { "class": { "$if": { "test": { "$eq": [{ "$": "item.status" }, "done"] }, "then": "border-green-500 bg-green-100", "else": { "$if": { "test": { "$eq": [{ "$": "item.status" }, "in-progress"] }, "then": "border-blue-500 bg-blue-100", "else": "border-slate-300 bg-slate-100" } } } } }, "events": { "click": { "event": "@core/toggleStatus", "payload": { "id": "item.id", "value1": "todo", "value2": "done", "statusField": "status" } } }, "elements": [{ "tag": "span", "classes": "text-green-500 font-bold text-xs @xs:text-xs @sm:text-sm", "bindings": { "text": { "$if": { "test": { "$eq": [{ "$": "item.status" }, "done"] }, "then": "✓", "else": { "$if": { "test": { "$eq": [{ "$": "item.status" }, "in-progress"] }, "then": "⋯", "else": "" } } } }, "visible": { "$or": [{ "$eq": [{ "$": "item.status" }, "done"] }, { "$eq": [{ "$": "item.status" }, "in-progress"] }] } } }] } },
@@ -88,10 +88,9 @@
                 "bindings": { "visible": { "$or": [{ "$": "context.isDragging" }, true] } },
                 "events": { "drop": { "event": "@context/drop", "payload": { "status": "done" } }, "dragover": {}, "dragenter": { "event": "@context/update", "payload": { "dragOverColumn_done": true } }, "dragleave": { "event": "@context/update", "payload": { "dragOverColumn_done": false } } },
                 "foreach": {
-                  "items": "{{itemsPath}}", "key": "{{itemKey}}",
+                  "items": "{{itemsPathDone}}", "key": "{{itemKey}}",
                   "composite": {
                     "container": { "class": "flex items-start gap-1.5 @xs:gap-2 @sm:gap-2 px-2 py-1.5 @xs:px-2.5 @xs:py-2 @sm:px-3 @sm:py-2 @md:px-3 @md:py-2.5 rounded-lg @sm:rounded-xl bg-white border border-slate-200 shadow-[0_0_4px_rgba(0,0,0,0.02)] hover:shadow-[0_0_8px_rgba(0,0,0,0.04)] transition-all cursor-move flex-shrink-0 overflow-hidden", "attributes": { "draggable": "true", "data-todo-id": "item.id" } },
-                    "bindings": { "visible": { "$eq": [{ "$": "item.status" }, "done"] } },
                     "events": { "dragstart": { "event": "@context/dragStart", "payload": { "id": "item.id", "status": "item.status" } }, "dragend": { "event": "@context/dragEnd", "payload": {} } },
                     "children": [
                       { "slot": "checkbox", "leaf": { "tag": "button", "attributes": { "type": "button" }, "classes": "w-4 h-4 @xs:w-5 @xs:h-5 @sm:w-5 @sm:h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-1 @sm:focus:ring-2 focus:ring-[#001a42] focus:ring-offset-0.5 @sm:focus:ring-offset-1 cursor-pointer shrink-0 mt-0.5", "bindings": { "class": { "$if": { "test": { "$eq": [{ "$": "item.status" }, "done"] }, "then": "border-green-500 bg-green-100", "else": { "$if": { "test": { "$eq": [{ "$": "item.status" }, "in-progress"] }, "then": "border-blue-500 bg-blue-100", "else": "border-slate-300 bg-slate-100" } } } } }, "events": { "click": { "event": "@core/toggleStatus", "payload": { "id": "item.id", "value1": "todo", "value2": "done", "statusField": "status" } } }, "elements": [{ "tag": "span", "classes": "text-green-500 font-bold text-xs @xs:text-xs @sm:text-sm", "bindings": { "text": { "$if": { "test": { "$eq": [{ "$": "item.status" }, "done"] }, "then": "✓", "else": { "$if": { "test": { "$eq": [{ "$": "item.status" }, "in-progress"] }, "then": "⋯", "else": "" } } } }, "visible": { "$or": [{ "$eq": [{ "$": "item.status" }, "done"] }, { "$eq": [{ "$": "item.status" }, "in-progress"] }] } } }] } },

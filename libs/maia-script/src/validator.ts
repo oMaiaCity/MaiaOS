@@ -291,6 +291,96 @@ function validateExpression(
       break;
     }
 
+    // Query Operations - Special structure: [config, entities]
+    case '$filter': {
+      const args = (expr as any).$filter;
+      if (!Array.isArray(args) || args.length !== 2) {
+        errors.push('$filter requires exactly 2 arguments: [config, entities]');
+        break;
+      }
+      const [config, entities] = args;
+      // Validate config structure
+      if (typeof config !== 'object' || config === null || Array.isArray(config)) {
+        errors.push('$filter config must be an object');
+        break;
+      }
+      if (typeof config.field !== 'string') {
+        errors.push('$filter config.field must be a string');
+      }
+      if (!config.condition) {
+        errors.push('$filter config.condition is required');
+      } else {
+        // Validate condition as MaiaScript expression
+        const conditionResult = validateExpression(config.condition, depth + 1);
+        if (!conditionResult.valid) {
+          errors.push(...conditionResult.errors);
+        }
+      }
+      // entities is just an array, no validation needed (runtime check)
+      break;
+    }
+
+    case '$sort': {
+      const args = (expr as any).$sort;
+      if (!Array.isArray(args) || args.length !== 2) {
+        errors.push('$sort requires exactly 2 arguments: [config, entities]');
+        break;
+      }
+      const [config] = args;
+      if (typeof config !== 'object' || config === null || Array.isArray(config)) {
+        errors.push('$sort config must be an object');
+        break;
+      }
+      if (typeof config.field !== 'string') {
+        errors.push('$sort config.field must be a string');
+      }
+      if (config.order !== undefined && config.order !== 'asc' && config.order !== 'desc') {
+        errors.push('$sort config.order must be "asc" or "desc"');
+      }
+      break;
+    }
+
+    case '$paginate': {
+      const args = (expr as any).$paginate;
+      if (!Array.isArray(args) || args.length !== 2) {
+        errors.push('$paginate requires exactly 2 arguments: [config, entities]');
+        break;
+      }
+      const [config] = args;
+      if (typeof config !== 'object' || config === null || Array.isArray(config)) {
+        errors.push('$paginate config must be an object');
+        break;
+      }
+      if (config.limit !== undefined && (typeof config.limit !== 'number' || config.limit < 0)) {
+        errors.push('$paginate config.limit must be a non-negative number');
+      }
+      if (config.offset !== undefined && (typeof config.offset !== 'number' || config.offset < 0)) {
+        errors.push('$paginate config.offset must be a non-negative number');
+      }
+      break;
+    }
+
+    case '$pipe': {
+      const args = (expr as any).$pipe;
+      if (!Array.isArray(args) || args.length !== 2) {
+        errors.push('$pipe requires exactly 2 arguments: [operations, entities]');
+        break;
+      }
+      const [operations] = args;
+      if (!Array.isArray(operations)) {
+        errors.push('$pipe first argument must be an array of operations');
+        break;
+      }
+      // Validate each operation in the pipe
+      for (const operation of operations) {
+        const result = validateExpression(operation, depth + 1);
+        if (!result.valid) {
+          errors.push(...result.errors);
+        }
+      }
+      break;
+    }
+
     default:
       // Check if operation exists in registry (fallback for dynamically registered operations)
       if (!maiaScriptModuleRegistry.hasOperation(opKey)) {

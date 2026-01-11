@@ -23,7 +23,8 @@ export type MaiaScriptOperation =
   | ControlFlowOp
   | StringOp
   | DateOp
-  | CoercionOp;
+  | CoercionOp
+  | QueryOp;
 
 // Data Access
 export interface DataAccessOp {
@@ -153,6 +154,34 @@ export type CoercionOp =
   | StringCoercionOp
   | NumberCoercionOp
   | BooleanCoercionOp;
+
+// Query Operations
+export interface FilterOp {
+  $filter: [
+    { field: string; condition: MaiaScriptExpression },
+    Array<Record<string, unknown>>
+  ];
+}
+
+export interface SortOp {
+  $sort: [
+    { field: string; order?: 'asc' | 'desc' },
+    Array<Record<string, unknown>>
+  ];
+}
+
+export interface PaginateOp {
+  $paginate: [
+    { limit?: number; offset?: number },
+    Array<Record<string, unknown>>
+  ];
+}
+
+export interface PipeOp {
+  $pipe: [MaiaScriptExpression[], Array<Record<string, unknown>>];
+}
+
+export type QueryOp = FilterOp | SortOp | PaginateOp | PipeOp;
 
 /**
  * Evaluation context - data available to expressions

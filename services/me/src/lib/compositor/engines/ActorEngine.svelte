@@ -9,7 +9,9 @@
   import { Actor, ActorMessage } from "@maia/db";
   import { registerAllTools, ToolEngine } from "../tools";
   import { resolveDataPath } from "../view/resolver";
-  import { useQuery } from "./queryEngine.svelte";
+  import { safeEvaluate } from '@maia/script';
+  import type { EvaluationContext } from '@maia/script';
+  import type { QueryConfig } from '../tools/types';
   import ViewEngine from "./ViewEngine.svelte";
   import { createActorLogger } from "$lib/utils/logger";
 
@@ -52,23 +54,9 @@
     return context?.visible === true;
   });
   
-  // Get schemaName from actor's queries context (useQuery approach from staged changes)
-  const schemaName = $derived.by(() => {
-    if (!actor?.$isLoaded || !actor.context) return '';
-    const context = actor.context as any;
-    const queries = context.queries;
-    if (!queries || typeof queries !== 'object') return '';
-    // Get first query's schemaName (assumption: one query per actor for now)
-    const firstQuery = Object.values(queries)[0] as any;
-    return firstQuery?.schemaName || '';
-  });
-  
-  // Use useQuery to get filtered entities (handles schema matching via Jazz snapshots)
-  const queryResult = useQuery(() => accountCoState, () => schemaName, undefined);
-  
-  // Populate actor.context.queries with entities from useQuery
-  // This updates queries reactively as entities change
-  // IMPORTANT: Don't mutate Jazz context here - just read it for data resolution
+  // Get queries from actor's context and execute each one
+  // Supports multiple queries per actor using MaiaScript operations
+  // IMPORTANT: Inline query execution to preserve CoState reactivity
   const resolvedContextWithQueries = $derived.by(() => {
     if (!actor?.$isLoaded) return {};
     
@@ -78,20 +66,110 @@
     const queries = context?.queries;
     if (!queries || typeof queries !== 'object') return context;
     
+    // Access accountCoState reactively to establish reactivity chain
+    if (!accountCoState) return context;
+    const account = accountCoState.current;
+    if (!account?.$isLoaded) return context;
+    
+    const root = account.root;
+    if (!root?.$isLoaded) return context;
+    
+    const entitiesList = root.entities;
+    if (!entitiesList?.$isLoaded) return context;
+    
+    const schemata = root.schemata;
+    if (!schemata?.$isLoaded) return context;
+    
     // Create a new context object with populated query results
     // This doesn't mutate the Jazz context, just creates a derived view
     const resolvedQueries: Record<string, any> = {};
     
+    // Execute each query inline (preserves reactivity)
     for (const [queryKey, queryConfig] of Object.entries(queries)) {
       const config = queryConfig as any;
-      if (config?.schemaName && queryResult.entities) {
-        resolvedQueries[queryKey] = {
-          ...config,
-          items: queryResult.entities, // Plain objects with accessible properties
-        };
-      } else {
+      
+      if (!config?.schemaName) {
+        // Invalid query config - keep as-is
         resolvedQueries[queryKey] = config;
+        continue;
       }
+      
+      // Find target schema ID by name (reactive access)
+      let targetSchemaId: string | null = null;
+      for (const schema of schemata) {
+        if (!schema?.$isLoaded) continue;
+        const schemaSnapshot = schema.$jazz?.raw?.toJSON();
+        if (schemaSnapshot?.type === 'Relation') continue;
+        if (schemaSnapshot?.name === config.schemaName) {
+          targetSchemaId = schema.$jazz?.id;
+          break;
+        }
+      }
+      
+      if (!targetSchemaId) {
+        resolvedQueries[queryKey] = { ...config, items: [] };
+        continue;
+      }
+      
+      // Filter entities by schema ID and convert to plain objects
+      const results: Array<Record<string, unknown>> = [];
+      for (const entity of entitiesList) {
+        if (!entity?.$isLoaded) continue;
+        const snapshot = entity.$jazz?.raw?.toJSON();
+        const entitySchemaId = snapshot?.['@schema'];
+        if (entitySchemaId === targetSchemaId) {
+          // Convert to plain object (inline coValueToPlainObject logic)
+          const id = entity.$jazz?.id || '';
+          const result: Record<string, unknown> = { id, _coValueId: id };
+          const jsonSnapshot = entity.$jazz?.raw?.toJSON?.() || entity.toJSON?.();
+          if (jsonSnapshot && typeof jsonSnapshot === 'object') {
+            for (const key in jsonSnapshot) {
+              if (key !== 'id' && key !== '_coValueId' && !key.startsWith('_') && key !== '$jazz') {
+                result[key] = jsonSnapshot[key];
+              }
+            }
+          }
+          results.push(result);
+        }
+      }
+      
+      // Apply MaiaScript operations if provided
+      let finalResults = results;
+      if (config.operations) {
+        const evalCtx: EvaluationContext = { context: {}, dependencies: {}, item: {} };
+        const operations = config.operations as any;
+        
+        // Check if operations is a $pipe expression
+        if (operations.$pipe && Array.isArray(operations.$pipe)) {
+          // $pipe expects: [operationsArray, entities]
+          const result = safeEvaluate(
+            { $pipe: [operations.$pipe, results] } as any,
+            evalCtx
+          );
+          finalResults = Array.isArray(result) ? result : results;
+        } else {
+          // Check if operations is a single operation object
+          const opKeys = Object.keys(operations);
+          if (opKeys.length === 1 && opKeys[0].startsWith('$')) {
+            const opKey = opKeys[0];
+            const opConfig = operations[opKey];
+            
+            // Query operations expect: [config, entities]
+            // Now properly validated and evaluated through MaiaScript DSL
+            const result = safeEvaluate(
+              { [opKey]: [opConfig, results] } as any,
+              evalCtx
+            );
+            finalResults = Array.isArray(result) ? result : results;
+          }
+        }
+      }
+      
+      // Populate query result with items
+      resolvedQueries[queryKey] = {
+        ...config,
+        items: finalResults,
+      };
     }
     
     return {
