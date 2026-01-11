@@ -53,122 +53,74 @@ export async function createVibesActors(account: any) {
 		// BOTTOM-UP CREATION: LEAFS → COMPOSITES → ROOT
 		// ============================================
 
-	// STEP 1: Create leaf actors (titles, descriptions)
-	const headerTitleActor = await createActorEntity(account, {
-		context: { visible: true },
-		view: createLeaf(titleFactory as any, { text: 'Vibes', tag: 'h2' }),
-		dependencies: {},
-		role: 'vibes-header-title', // For debugging only
-	}, group);
-
-	const humansTitleActor = await createActorEntity(account, {
-		context: { visible: true },
-		view: {
-			tag: 'h3',
-			classes: 'text-base font-semibold text-slate-700',
-			elements: ['Humans']
-		},
-		dependencies: {},
-		role: 'humans-card-title',
-	}, group);
-
-	const humansDescActor = await createActorEntity(account, {
-		context: { visible: true },
-		view: {
-			tag: 'p',
-			classes: 'text-xs text-slate-600',
-			elements: ['Human contact management vibe']
-		},
-		dependencies: {},
-		role: 'humans-card-desc',
-	}, group);
-
-	const todosTitleActor = await createActorEntity(account, {
-		context: { visible: true },
-		view: {
-			tag: 'h3',
-			classes: 'text-base font-semibold text-slate-900',
-			elements: ['Todos']
-		},
-		dependencies: {},
-		role: 'todos-card-title',
-	}, group);
-
-	const todosDescActor = await createActorEntity(account, {
-		context: { visible: true },
-		view: {
-			tag: 'p',
-			classes: 'text-xs text-slate-600',
-			elements: ['Task management and todo lists']
-		},
-		dependencies: {},
-		role: 'todos-card-desc',
-	}, group);
-
-	// NO WAIT! All leaf actors created locally, use immediately
-	
-	// STEP 2: Create composite actors (cards, header)
-		// NOTE: rootActorId will be set after root is created
-		let rootActorId: string = '';
-
+	// STEP 1: Create composite actors (cards, header)
+	// ARCHITECTURE: 1 Actor = 1 Composite/Leaf
+	// Simple titles/descriptions are now inline elements[] within parent composites
 	// NAVIGATION CARDS: Use @ui/navigate skill for true colocation
+	// Inline title/description as elements[] (no separate actors needed)
 	const humansCardActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: {
 			container: {
-				layout: 'flex',
-				class: 'card p-4 flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow'
+				class: 'card p-4 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow overflow-hidden w-full'
 			},
 			events: {
 				click: {
 					event: '@ui/navigate',
 					payload: { vibeName: 'humans' }
 				}
-			}
+			},
+			elements: [
+				{ tag: 'h3', classes: 'text-base font-semibold text-slate-700', elements: ['Humans'] },
+				{ tag: 'p', classes: 'text-xs text-slate-600', elements: ['Human contact management vibe'] }
+			]
 		},
 		dependencies: {},
 		role: 'humans-card',
 	}, group);
-	// Set children after creation
-	humansCardActor.children.$jazz.push(humansTitleActor.$jazz.id);
-	humansCardActor.children.$jazz.push(humansDescActor.$jazz.id);
 
 	const todosCardActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: {
 			container: {
-				layout: 'flex',
-				class: 'card p-4 flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow'
+				class: 'card p-4 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow overflow-hidden w-full'
 			},
 			events: {
 				click: {
 					event: '@ui/navigate',
 					payload: { vibeName: 'todos' }
 				}
-			}
+			},
+			elements: [
+				{ tag: 'h3', classes: 'text-base font-semibold text-slate-900', elements: ['Todos'] },
+				{ tag: 'p', classes: 'text-xs text-slate-600', elements: ['Task management and todo lists'] }
+			]
 		},
 		dependencies: {},
 		role: 'todos-card',
 	}, group);
-	// Set children after creation
-	todosCardActor.children.$jazz.push(todosTitleActor.$jazz.id);
-	todosCardActor.children.$jazz.push(todosDescActor.$jazz.id);
 
 	const headerActor = await createActorEntity(account, {
 		context: { visible: true },
-		view: createComposite(headerFactory as any, {}),
+		view: {
+			container: { 
+				class: 'flex px-2 @xs:px-3 @sm:px-4 @md:px-6 py-3 @xs:py-3 @sm:py-4 border-b border-slate-200 flex-col items-center gap-3 h-auto overflow-hidden w-full'
+			},
+			elements: [{
+				tag: 'h2',
+				classes: 'text-2xl @xs:text-3xl @sm:text-4xl @md:text-5xl font-bold text-[#001a42] tracking-tight',
+				elements: ['Vibes']
+			}]
+		},
 		dependencies: {},
 		role: 'vibes-header',
 	}, group);
-	// Set children after creation
-	headerActor.children.$jazz.push(headerTitleActor.$jazz.id);
 
 	const gridActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: {
 			container: {
-				layout: 'grid',
-				class: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
+				class: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full overflow-hidden'
 			}
 		},
 		dependencies: {},

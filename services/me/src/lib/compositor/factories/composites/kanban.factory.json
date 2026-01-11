@@ -6,29 +6,27 @@
   },
   "factory": {
     "container": {
-      "layout": "flex",
-      "class": "flex gap-2 @xs:gap-3 @sm:gap-4 overflow-x-auto overflow-y-hidden min-h-0 flex-1 scroll-smooth"
+      "class": "flex gap-2 @xs:gap-3 @sm:gap-4 overflow-x-auto overflow-y-hidden min-h-0 flex-1 scroll-smooth w-full"
     },
     "children": [
       {
         "slot": "kanban-column-todo",
         "composite": {
           "container": {
-            "layout": "flex",
-            "class": "flex-col gap-2 h-full min-h-0 border border-slate-200 rounded-lg @sm:rounded-xl @md:rounded-2xl p-2 @xs:p-2.5 @sm:p-3 @md:p-4 min-w-[240px] @xs:min-w-[260px] @sm:min-w-[280px] flex-shrink-0 bg-slate-50"
+            "class": "flex flex-col gap-2 h-full min-h-0 border border-slate-200 rounded-lg @sm:rounded-xl @md:rounded-2xl p-2 @xs:p-2.5 @sm:p-3 @md:p-4 min-w-[240px] @xs:min-w-[260px] @sm:min-w-[280px] flex-shrink-0 bg-slate-50 overflow-hidden"
           },
           "children": [
             { "slot": "header", "leaf": { "tag": "h3", "classes": "text-xs @xs:text-sm @sm:text-base font-semibold text-slate-700 mb-2 flex-shrink-0 text-center", "elements": ["Todo"] } },
             {
               "slot": "dropzone",
               "composite": {
-                "container": { "layout": "flex", "class": "flex flex-col gap-1.5 @xs:gap-2 @sm:gap-2.5 flex-1 overflow-y-auto rounded-lg transition-all duration-200 scroll-smooth border-2 border-transparent", "attributes": { "data-status": "todo", "data-dropzone": "true" } },
+                "container": { "class": "flex flex-col gap-1.5 @xs:gap-2 @sm:gap-2.5 flex-1 overflow-y-auto rounded-lg transition-all duration-200 scroll-smooth border-2 border-transparent w-full", "attributes": { "data-status": "todo", "data-dropzone": "true" } },
                 "bindings": { "visible": { "$or": [{ "$": "context.isDragging" }, true] } },
                 "events": { "drop": { "event": "@todo/drop", "payload": { "status": "todo" } }, "dragover": { "event": "@ui/preventDefaultOnly", "payload": {} }, "dragenter": { "event": "@input/updateContext", "payload": { "dragOverColumn_todo": true } }, "dragleave": { "event": "@input/updateContext", "payload": { "dragOverColumn_todo": false } } },
                 "foreach": {
                   "items": "{{itemsPath}}", "key": "{{itemKey}}",
                   "composite": {
-                    "container": { "layout": "flex", "class": "flex items-start gap-1.5 @xs:gap-2 @sm:gap-2 px-2 py-1.5 @xs:px-2.5 @xs:py-2 @sm:px-3 @sm:py-2 @md:px-3 @md:py-2.5 rounded-lg @sm:rounded-xl bg-white border border-slate-200 shadow-[0_0_4px_rgba(0,0,0,0.02)] hover:shadow-[0_0_8px_rgba(0,0,0,0.04)] transition-all cursor-move flex-shrink-0", "attributes": { "draggable": "true", "data-todo-id": "item.id" } },
+                    "container": { "class": "flex items-start gap-1.5 @xs:gap-2 @sm:gap-2 px-2 py-1.5 @xs:px-2.5 @xs:py-2 @sm:px-3 @sm:py-2 @md:px-3 @md:py-2.5 rounded-lg @sm:rounded-xl bg-white border border-slate-200 shadow-[0_0_4px_rgba(0,0,0,0.02)] hover:shadow-[0_0_8px_rgba(0,0,0,0.04)] transition-all cursor-move flex-shrink-0 overflow-hidden", "attributes": { "draggable": "true", "data-todo-id": "item.id" } },
                     "bindings": { "visible": { "$eq": [{ "$": "item.status" }, "todo"] } },
                     "events": { "dragstart": { "event": "@todo/dragStart", "payload": { "id": "item.id", "status": "item.status" } }, "dragend": { "event": "@todo/dragEnd", "payload": {} } },
                     "children": [
@@ -47,21 +45,20 @@
         "slot": "kanban-column-in-progress",
         "composite": {
           "container": {
-            "layout": "flex",
-            "class": "flex-col gap-2 h-full min-h-0 border border-slate-200 rounded-lg @sm:rounded-xl @md:rounded-2xl p-2 @xs:p-2.5 @sm:p-3 @md:p-4 min-w-[240px] @xs:min-w-[260px] @sm:min-w-[280px] flex-shrink-0 bg-slate-50"
+            "class": "flex flex-col gap-2 h-full min-h-0 border border-slate-200 rounded-lg @sm:rounded-xl @md:rounded-2xl p-2 @xs:p-2.5 @sm:p-3 @md:p-4 min-w-[240px] @xs:min-w-[260px] @sm:min-w-[280px] flex-shrink-0 bg-slate-50 overflow-hidden"
           },
           "children": [
             { "slot": "header", "leaf": { "tag": "h3", "classes": "text-xs @xs:text-sm @sm:text-base font-semibold text-blue-700 mb-2 flex-shrink-0 text-center", "elements": ["In Progress"] } },
             {
               "slot": "dropzone",
               "composite": {
-                "container": { "layout": "flex", "class": "flex flex-col gap-1.5 @xs:gap-2 @sm:gap-2.5 flex-1 overflow-y-auto rounded-lg transition-all duration-200 scroll-smooth border-2 border-transparent", "attributes": { "data-status": "in-progress", "data-dropzone": "true" } },
+                "container": { "class": "flex flex-col gap-1.5 @xs:gap-2 @sm:gap-2.5 flex-1 overflow-y-auto rounded-lg transition-all duration-200 scroll-smooth border-2 border-transparent w-full", "attributes": { "data-status": "in-progress", "data-dropzone": "true" } },
                 "bindings": { "visible": { "$or": [{ "$": "context.isDragging" }, true] } },
                 "events": { "drop": { "event": "@todo/drop", "payload": { "status": "in-progress" } }, "dragover": { "event": "@ui/preventDefaultOnly", "payload": {} }, "dragenter": { "event": "@input/updateContext", "payload": { "dragOverColumn_in_progress": true } }, "dragleave": { "event": "@input/updateContext", "payload": { "dragOverColumn_in_progress": false } } },
                 "foreach": {
                   "items": "{{itemsPath}}", "key": "{{itemKey}}",
                   "composite": {
-                    "container": { "layout": "flex", "class": "flex items-start gap-1.5 @xs:gap-2 @sm:gap-2 px-2 py-1.5 @xs:px-2.5 @xs:py-2 @sm:px-3 @sm:py-2 @md:px-3 @md:py-2.5 rounded-lg @sm:rounded-xl bg-white border border-slate-200 shadow-[0_0_4px_rgba(0,0,0,0.02)] hover:shadow-[0_0_8px_rgba(0,0,0,0.04)] transition-all cursor-move flex-shrink-0", "attributes": { "draggable": "true", "data-todo-id": "item.id" } },
+                    "container": { "class": "flex items-start gap-1.5 @xs:gap-2 @sm:gap-2 px-2 py-1.5 @xs:px-2.5 @xs:py-2 @sm:px-3 @sm:py-2 @md:px-3 @md:py-2.5 rounded-lg @sm:rounded-xl bg-white border border-slate-200 shadow-[0_0_4px_rgba(0,0,0,0.02)] hover:shadow-[0_0_8px_rgba(0,0,0,0.04)] transition-all cursor-move flex-shrink-0 overflow-hidden", "attributes": { "draggable": "true", "data-todo-id": "item.id" } },
                     "bindings": { "visible": { "$eq": [{ "$": "item.status" }, "in-progress"] } },
                     "events": { "dragstart": { "event": "@todo/dragStart", "payload": { "id": "item.id", "status": "item.status" } }, "dragend": { "event": "@todo/dragEnd", "payload": {} } },
                     "children": [
@@ -80,21 +77,20 @@
         "slot": "kanban-column-done",
         "composite": {
           "container": {
-            "layout": "flex",
-            "class": "flex-col gap-2 h-full min-h-0 border border-slate-200 rounded-lg @sm:rounded-xl @md:rounded-2xl p-2 @xs:p-2.5 @sm:p-3 @md:p-4 min-w-[240px] @xs:min-w-[260px] @sm:min-w-[280px] flex-shrink-0 bg-slate-50"
+            "class": "flex flex-col gap-2 h-full min-h-0 border border-slate-200 rounded-lg @sm:rounded-xl @md:rounded-2xl p-2 @xs:p-2.5 @sm:p-3 @md:p-4 min-w-[240px] @xs:min-w-[260px] @sm:min-w-[280px] flex-shrink-0 bg-slate-50 overflow-hidden"
           },
           "children": [
             { "slot": "header", "leaf": { "tag": "h3", "classes": "text-xs @xs:text-sm @sm:text-base font-semibold text-green-700 mb-2 flex-shrink-0 text-center", "elements": ["Done"] } },
             {
               "slot": "dropzone",
               "composite": {
-                "container": { "layout": "flex", "class": "flex flex-col gap-1.5 @xs:gap-2 @sm:gap-2.5 flex-1 overflow-y-auto rounded-lg transition-all duration-200 scroll-smooth border-2 border-transparent", "attributes": { "data-status": "done", "data-dropzone": "true" } },
+                "container": { "class": "flex flex-col gap-1.5 @xs:gap-2 @sm:gap-2.5 flex-1 overflow-y-auto rounded-lg transition-all duration-200 scroll-smooth border-2 border-transparent w-full", "attributes": { "data-status": "done", "data-dropzone": "true" } },
                 "bindings": { "visible": { "$or": [{ "$": "context.isDragging" }, true] } },
                 "events": { "drop": { "event": "@todo/drop", "payload": { "status": "done" } }, "dragover": { "event": "@ui/preventDefaultOnly", "payload": {} }, "dragenter": { "event": "@input/updateContext", "payload": { "dragOverColumn_done": true } }, "dragleave": { "event": "@input/updateContext", "payload": { "dragOverColumn_done": false } } },
                 "foreach": {
                   "items": "{{itemsPath}}", "key": "{{itemKey}}",
                   "composite": {
-                    "container": { "layout": "flex", "class": "flex items-start gap-1.5 @xs:gap-2 @sm:gap-2 px-2 py-1.5 @xs:px-2.5 @xs:py-2 @sm:px-3 @sm:py-2 @md:px-3 @md:py-2.5 rounded-lg @sm:rounded-xl bg-white border border-slate-200 shadow-[0_0_4px_rgba(0,0,0,0.02)] hover:shadow-[0_0_8px_rgba(0,0,0,0.04)] transition-all cursor-move flex-shrink-0", "attributes": { "draggable": "true", "data-todo-id": "item.id" } },
+                    "container": { "class": "flex items-start gap-1.5 @xs:gap-2 @sm:gap-2 px-2 py-1.5 @xs:px-2.5 @xs:py-2 @sm:px-3 @sm:py-2 @md:px-3 @md:py-2.5 rounded-lg @sm:rounded-xl bg-white border border-slate-200 shadow-[0_0_4px_rgba(0,0,0,0.02)] hover:shadow-[0_0_8px_rgba(0,0,0,0.04)] transition-all cursor-move flex-shrink-0 overflow-hidden", "attributes": { "draggable": "true", "data-todo-id": "item.id" } },
                     "bindings": { "visible": { "$eq": [{ "$": "item.status" }, "done"] } },
                     "events": { "dragstart": { "event": "@todo/dragStart", "payload": { "id": "item.id", "status": "item.status" } }, "dragend": { "event": "@todo/dragEnd", "payload": {} } },
                     "children": [

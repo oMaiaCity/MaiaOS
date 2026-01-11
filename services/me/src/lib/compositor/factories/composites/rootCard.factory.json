@@ -6,8 +6,7 @@
   },
   "factory": {
     "container": {
-      "layout": "grid",
-      "class": "h-full w-full max-w-6xl mx-auto grid-cols-1 p-2 @xs:p-3 @sm:p-4 @md:p-6"
+      "class": "grid h-full w-full max-w-6xl mx-auto grid-cols-1 p-2 @xs:p-3 @sm:p-4 @md:p-6 overflow-hidden"
     },
     "elements": [
       {

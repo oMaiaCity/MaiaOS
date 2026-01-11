@@ -310,39 +310,9 @@
   // Get container classes (Composite only)
   const containerClasses = $derived.by(() => {
     if (!composite?.container) return "";
-    const layout = composite.container.layout;
     const userClasses = composite.container.class || "";
-    
-    // Split classes for accurate detection
-    const classList = userClasses.split(/\s+/).filter(Boolean);
-    
-    // Check what's already set in user classes
-    const hasHeight = classList.some(c => c.startsWith("h-") || c.startsWith("min-h-") || c.startsWith("max-h-"));
-    const hasWidth = classList.some(c => c.startsWith("w-") || c.startsWith("min-w-") || c.startsWith("max-w-"));
-    const hasOverflow = classList.some(c => c.startsWith("overflow-"));
-    const hasGrid = classList.includes("grid");
-    const hasFlex = classList.includes("flex");
-    
-    // Don't add h-full if using flex-grow (flex handles height)
-    const usesFlexGrow = classList.includes("flex-grow") || classList.includes("flex-1");
-    
-    let finalClasses = userClasses;
-    
-    // Apply defaults based on explicit layout type
-    if (layout === 'grid') {
-      if (!hasHeight && !usesFlexGrow) finalClasses = `h-full ${finalClasses}`;
-      if (!hasWidth) finalClasses = `w-full ${finalClasses}`;
-      if (!hasOverflow) finalClasses = `overflow-hidden ${finalClasses}`;
-      if (!hasGrid) finalClasses = `grid ${finalClasses}`;
-    } else if (layout === 'flex') {
-      if (!hasWidth) finalClasses = `w-full ${finalClasses}`;
-      if (!hasOverflow) finalClasses = `overflow-hidden ${finalClasses}`;
-      if (!hasFlex) finalClasses = `flex ${finalClasses}`;
-    }
-    
-    finalClasses = `@container ${finalClasses}`;
-    
-    return finalClasses.trim();
+    // Only add @container (required for container queries)
+    return `@container ${userClasses}`.trim();
   });
 
   // ============================================
@@ -645,7 +615,17 @@
             {/if}
           </svelte:element>
         {:else}
-          <svelte:element this={element.tag} class={element.classes} {...element.attributes || {}} />
+          <svelte:element this={element.tag} class={element.classes} {...element.attributes || {}}>
+            {#if element.elements && element.elements.length > 0}
+              {#each element.elements as child}
+                {#if typeof child === "string"}
+                  {child}
+                {:else}
+                  <ViewEngine node={{ slot: "child", leaf: child }} {data} {config} {onEvent} />
+                {/if}
+              {/each}
+            {/if}
+          </svelte:element>
         {/if}
       {/each}
     {:else if composite.foreach && foreachItems}

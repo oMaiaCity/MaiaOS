@@ -66,15 +66,9 @@ export async function createTodosActors(account: any) {
 		// BOTTOM-UP CREATION: LEAFS → COMPOSITES → ROOT
 		// ============================================
 
-	// STEP 1: Create leaf actors (title)
-	const headerTitleActor = await createActorEntity(account, {
-		context: { visible: true },
-		view: createLeaf(titleFactory as any, { text: 'Todos', tag: 'h2' }),
-		dependencies: {},
-		role: 'todos-header-title',
-	}, group);
-
-	// STEP 2: Create composite actors (input section, list, timeline)
+	// STEP 1: Create composite actors (input section, list, timeline)
+	// ARCHITECTURE: 1 Actor = 1 Composite/Leaf
+	// Simple title is now inline element in header composite
 	// Input section actor - TRUE COLOCATION: handles its own @input/updateContext and @todo/create actions
 	const inputSectionActor = await createActorEntity(account, {
 		context: { 
@@ -114,16 +108,14 @@ export async function createTodosActors(account: any) {
 		},
 		view: {
 			container: {
-				layout: 'flex',
-				class: 'p-0 flex-col gap-1.5 @xs:gap-2 @sm:gap-3 overflow-auto min-h-0 flex-1'
+				class: 'flex p-0 flex-col gap-1.5 @xs:gap-2 @sm:gap-3 overflow-auto min-h-0 flex-1 w-full'
 			},
 			foreach: {
 				items: 'context.queries.todos.items', // CLEAN ARCHITECTURE: Always use context.* prefix
 				key: 'id',
 					composite: {
 						container: {
-							layout: 'flex',
-							class: 'flex items-center gap-1.5 @xs:gap-2 @sm:gap-2 @md:gap-3 px-2 py-1.5 @xs:px-2.5 @xs:py-2 @sm:px-3 @sm:py-2 @md:px-4 @md:py-3 rounded-lg @sm:rounded-xl @md:rounded-2xl bg-slate-100 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] w-full flex-shrink-0'
+							class: 'flex items-center gap-1.5 @xs:gap-2 @sm:gap-2 @md:gap-3 px-2 py-1.5 @xs:px-2.5 @xs:py-2 @sm:px-3 @sm:py-2 @md:px-4 @md:py-3 rounded-lg @sm:rounded-xl @md:rounded-2xl bg-slate-100 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] w-full flex-shrink-0 overflow-hidden'
 						},
 						children: [
 							{
@@ -311,8 +303,7 @@ export async function createTodosActors(account: any) {
 		},
 		view: {
 			container: {
-				layout: 'flex',
-				class: 'flex-col w-full min-h-0 flex-1 overflow-hidden'
+				class: 'flex flex-col w-full min-h-0 flex-1 overflow-hidden'
 			}
 		},
 		dependencies: {},
@@ -344,12 +335,27 @@ export async function createTodosActors(account: any) {
 	// Header actor - contains title and view switcher in same row
 	const headerActor = await createActorEntity(account, {
 		context: { visible: true },
-		view: createComposite(headerFactory as any, {}),
+		view: {
+			container: { 
+				class: 'flex px-2 @xs:px-3 @sm:px-4 @md:px-6 py-3 @xs:py-3 @sm:py-4 border-b border-slate-200 flex-col items-center gap-3 h-auto overflow-hidden w-full'
+			},
+			elements: [
+				{
+					tag: 'h2',
+					classes: 'text-2xl @xs:text-3xl @sm:text-4xl @md:text-5xl font-bold text-[#001a42] tracking-tight',
+					elements: ['Todos']
+				},
+				{
+					slot: 'children',
+					tag: 'div',
+					classes: 'w-full'
+				}
+			]
+		},
 		dependencies: {},
 		role: 'todos-header',
 	}, group);
-	// Set children after creation (Title + Switcher in same row)
-	headerActor.children.$jazz.push(headerTitleActor.$jazz.id);
+	// Set children after creation (Switcher is still an actor - has events)
 	headerActor.children.$jazz.push(viewSwitcherActor.$jazz.id);
 
 	// STEP 3: Create root actor (simplified - no view mode management, just a container)

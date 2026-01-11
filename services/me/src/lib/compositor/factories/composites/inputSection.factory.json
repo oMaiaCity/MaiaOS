@@ -15,7 +15,6 @@
   },
   "factory": {
     "container": {
-      "layout": "content",
       "class": "bg-slate-50 p-4 shrink-0"
     },
     "children": [
@@ -23,9 +22,8 @@
         "slot": "input.value",
         "composite": {
           "container": {
-            "layout": "flex",
             "tag": "form",
-            "class": "flex flex-col @sm:flex-row gap-2 @xs:gap-2 @sm:gap-3 items-stretch @sm:items-center"
+            "class": "flex flex-col @sm:flex-row gap-2 @xs:gap-2 @sm:gap-3 items-stretch @sm:items-center overflow-hidden w-full"
           },
           "events": {
             "submit": {

@@ -63,14 +63,10 @@ export async function createHumansActors(account: any) {
 		// BOTTOM-UP CREATION: LEAFS → COMPOSITES → ROOT
 		// ============================================
 
-	// STEP 1: Create leaf actors (title, create button)
-	const headerTitleActor = await createActorEntity(account, {
-		context: { visible: true },
-		view: createLeaf(titleFactory as any, { text: 'Humans', tag: 'h2' }),
-		dependencies: {},
-		role: 'humans-header-title',
-	}, group);
-
+	// STEP 1: Create leaf actors (create button only - title is now inline)
+	// ARCHITECTURE: 1 Actor = 1 Composite/Leaf
+	// Simple title is now inline element in header composite
+	
 	// Create button - TRUE COLOCATION: handles its own @human/createRandom action
 	const createButtonActor = await createActorEntity(account, {
 		context: { visible: true },
@@ -88,12 +84,27 @@ export async function createHumansActors(account: any) {
 	// STEP 2: Create composite actors (header, list)
 	const headerActor = await createActorEntity(account, {
 		context: { visible: true },
-		view: createComposite(headerFactory as any, {}),
+		view: {
+			container: { 
+				class: 'flex px-2 @xs:px-3 @sm:px-4 @md:px-6 py-3 @xs:py-3 @sm:py-4 border-b border-slate-200 flex-row justify-between items-center gap-3 h-auto overflow-hidden w-full'
+			},
+			elements: [
+				{
+					tag: 'h2',
+					classes: 'text-2xl @xs:text-3xl @sm:text-4xl @md:text-5xl font-bold text-[#001a42] tracking-tight',
+					elements: ['Humans']
+				},
+				{
+					slot: 'children',
+					tag: 'div',
+					classes: 'flex gap-2'
+				}
+			]
+		},
 		dependencies: {},
 		role: 'humans-header',
 	}, group);
-	// Set children after creation
-	headerActor.children.$jazz.push(headerTitleActor.$jazz.id);
+	// Set children after creation (button is still an actor - has events)
 	headerActor.children.$jazz.push(createButtonActor.$jazz.id);
 
 	// List actor with inline foreach template - contains queries and dependencies
@@ -110,8 +121,7 @@ export async function createHumansActors(account: any) {
 		},
 		view: {
 			container: {
-				layout: 'flex',
-				class: 'p-2 @xs:p-3 @sm:p-4 @md:p-6 flex-col gap-1.5 @xs:gap-2 @sm:gap-3 overflow-auto'
+				class: 'flex p-2 @xs:p-3 @sm:p-4 @md:p-6 flex-col gap-1.5 @xs:gap-2 @sm:gap-3 overflow-auto w-full'
 			},
 			foreach: {
 				items: 'context.queries.humans.items', // CLEAN ARCHITECTURE: Always use context.* prefix
@@ -119,8 +129,7 @@ export async function createHumansActors(account: any) {
 					composite: {
 						// Inline template for each human item (matches legacy humanItemLeaf styling)
 						container: {
-							layout: 'flex',
-							class: 'flex-col @sm:flex-row items-start @sm:items-center gap-1 @xs:gap-1.5 @sm:gap-2 @md:gap-3 px-1.5 py-1 @xs:px-2 @xs:py-1.5 @sm:px-3 @sm:py-2 @md:px-4 @md:py-3 rounded-lg @sm:rounded-xl @md:rounded-2xl bg-slate-100 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)]'
+							class: 'flex flex-col @sm:flex-row items-start @sm:items-center gap-1 @xs:gap-1.5 @sm:gap-2 @md:gap-3 px-1.5 py-1 @xs:px-2 @xs:py-1.5 @sm:px-3 @sm:py-2 @md:px-4 @md:py-3 rounded-lg @sm:rounded-xl @md:rounded-2xl bg-slate-100 border border-white shadow-[0_0_4px_rgba(0,0,0,0.02)] overflow-hidden'
 						},
 						children: [
 							{
