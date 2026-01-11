@@ -1,9 +1,11 @@
 /**
  * MaiaScript Evaluator
  * Evaluates MaiaScript expressions without code execution
+ * Phase 5: Registry-based evaluation
  */
 
 import type { MaiaScriptExpression, EvaluationContext } from './types';
+import { maiaScriptModuleRegistry } from './modules/registry';
 
 const MAX_RECURSION_DEPTH = 20;
 
@@ -96,6 +98,31 @@ export function evaluate(
   if (typeof expr !== 'object' || Array.isArray(expr)) {
     throw new Error(`Invalid expression type: ${typeof expr}`);
   }
+
+  // Phase 5: Try registry first
+  const opKey = Object.keys(expr)[0];
+  const registeredOp = maiaScriptModuleRegistry.getOperation(opKey);
+  
+  if (registeredOp) {
+    // Get the operands/args
+    const operands = (expr as any)[opKey];
+    
+    // Special handling for $if and $switch (pass entire config)
+    if (opKey === '$if' || opKey === '$switch') {
+      return registeredOp.evaluate([operands], ctx);
+    }
+    
+    // For $ operation, pass the path string directly
+    if (opKey === '$') {
+      return registeredOp.evaluate([operands], ctx);
+    }
+    
+    // For other operations, pass operands as array
+    return registeredOp.evaluate(Array.isArray(operands) ? operands : [operands], ctx);
+  }
+
+  // FALLBACK: Existing hardcoded logic (for safety during migration)
+  console.warn(`[MaiaScript] Operation "${opKey}" not found in registry, using fallback`);
 
   // Data access: { $: "item.status" }
   if ('$' in expr) {

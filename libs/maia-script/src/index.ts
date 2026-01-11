@@ -9,7 +9,6 @@ export type {
   MaiaScriptExpression,
   EvaluationContext,
   ValidationResult,
-  SecurityError,
 } from './types';
 export { SecurityError } from './types';
 export {
@@ -92,3 +91,6 @@ export type DSLExpression = MaiaScriptExpression;
 export function isDSLExpression(value: unknown): value is MaiaScriptExpression {
   return isMaiaScriptExpression(value);
 }
+
+// Phase 4: Module System
+export * from './modules'
