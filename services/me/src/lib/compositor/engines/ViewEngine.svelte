@@ -453,6 +453,42 @@
       };
     }
 
+    // Add blur event handler (for inline editing persistence)
+    if (leaf?.events?.blur && leaf.tag === "input") {
+      const eventConfig = leaf.events.blur;
+      attrs.onblur = (e: Event) => {
+        const target = e.target as HTMLInputElement;
+        
+        // Determine payload key from value binding (same logic as oninput)
+        let payloadKey = "text";
+        if (leaf?.bindings?.value && typeof leaf.bindings.value === 'string') {
+          const bindingPath = leaf.bindings.value;
+          const parts = bindingPath.split('.');
+          if (parts.length > 0) {
+            payloadKey = parts[parts.length - 1];
+          }
+        }
+        
+        // Build context with item data for foreach scenarios
+        const itemData = "item" in data && data.item ? (data.item as Record<string, unknown>) : undefined;
+        const contextData = itemData ? { ...data, item: itemData } : data;
+        
+        // Resolve all data paths in payload EXCEPT the field being edited
+        // This resolves 'item.id' → 'co_123' but keeps 'item.name' as a path
+        const resolvedPayload = resolvePayload(eventConfig.payload, contextData);
+        
+        // Override the specific field being edited with current input value
+        // This ensures we use the NEW typed value, not the OLD value from data
+        const finalPayload = typeof resolvedPayload === 'object' && resolvedPayload !== null && !Array.isArray(resolvedPayload)
+          ? { ...(resolvedPayload as Record<string, unknown>), [payloadKey]: target.value }
+          : { [payloadKey]: target.value };
+
+        if (onEvent) {
+          onEvent(eventConfig.event, finalPayload);
+        }
+      };
+    }
+
     return attrs;
   });
 
