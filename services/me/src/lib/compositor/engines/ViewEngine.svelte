@@ -17,6 +17,16 @@
   import { goto } from "$app/navigation";
   import { safeEvaluate, isMaiaScriptExpression } from "@maia/script";
   import type { MaiaScriptExpression } from "@maia/script";
+  
+  // Phase 2: Binding Resolver Module
+  import {
+    resolveBinding,
+    resolveVisibility,
+    resolveClass,
+    resolveText,
+    resolveDisabled,
+    resolveValue
+  } from "../view/binding-resolver";
 
   // For actor-based rendering
   import ActorEngine from "./ActorEngine.svelte";
@@ -336,7 +346,7 @@
 
   const isVoidElement = $derived(leaf && leaf.tag ? VOID_ELEMENTS.has(leaf.tag) : false);
 
-  // Get sanitized classes for Leaf
+  // Get sanitized classes for Leaf (Phase 2: Uses binding-resolver)
   const leafClasses = $derived.by(() => {
     if (nodeType !== 'leaf' || !leaf) return "";
     
@@ -348,7 +358,7 @@
       const classArray = leaf.classes.split(/\s+/).filter(Boolean);
       const resolvedClasses = classArray.map((cls) => {
         if (typeof cls === "string" && (cls.includes("item.") || cls.includes("data."))) {
-          const resolved = resolveValue(cls);
+          const resolved = resolveBinding(cls, data);
           return typeof resolved === "string" ? resolved : cls;
         }
         return cls;
@@ -358,25 +368,8 @@
 
     // 2. Process dynamic classes from leaf.bindings.class
     if (leaf.bindings?.class) {
-      const _ = data;
-      const _context = data.context;
-      const _item = data.item;
-      const _dependencies = data.dependencies;
-      
-      // Access nested dependency properties for reactivity
-      if (_dependencies && typeof _dependencies === 'object') {
-        for (const [key, dep] of Object.entries(_dependencies)) {
-          if (dep && typeof dep === 'object' && 'context' in dep) {
-            const _depContext = (dep as any).context;
-            if (_depContext && typeof _depContext === 'object' && 'viewMode' in _depContext) {
-              const _viewMode = (_depContext as any).viewMode;
-            }
-          }
-        }
-      }
-      
-      const resolved = resolveValue(leaf.bindings.class);
-      if (typeof resolved === "string" && resolved.trim()) {
+      const resolved = resolveClass(leaf.bindings.class, data);
+      if (resolved.trim()) {
         const dynamicClassArray = resolved.split(/\s+/).filter(Boolean);
         dynamicClasses = sanitizeClasses(dynamicClassArray).sanitized.join(" ");
       }
@@ -385,12 +378,10 @@
     return [baseClasses, dynamicClasses].filter(Boolean).join(" ");
   });
 
-  // Build attributes object for Leaf
+  // Build attributes object for Leaf (Phase 2: Uses binding-resolver)
   const inputValue = $derived.by(() => {
     if (!leaf || leaf.tag !== "input" || !leaf.bindings?.value) return undefined;
-    const _ = data;
-    const value = resolveValue(leaf.bindings.value);
-    return value !== undefined ? value : undefined;
+    return resolveValue(leaf.bindings.value, data);
   });
 
   const attributes = $derived.by(() => {
@@ -454,65 +445,12 @@
   // SHARED LOGIC (Both Composite and Leaf)
   // ============================================
   
-  // Resolve value - secure MaiaScript evaluation only
-  function resolveValue(path: string | MaiaScriptExpression, contextData?: Record<string, any>): unknown {
-    const _ = data;
-    const evalData = contextData || data;
-    
-    // MaiaScript expression
-    if (isMaiaScriptExpression(path)) {
-      try {
-        const evalContext: Record<string, unknown> = {};
-        
-        if ("item" in evalData && evalData.item) {
-          const _item = evalData.item;
-          evalContext.item = evalData.item as Record<string, unknown>;
-        }
-        
-        if ("context" in evalData && evalData.context) {
-          const _context = evalData.context;
-          evalContext.context = evalData.context as Record<string, unknown>;
-        }
-        
-        if ("dependencies" in evalData && evalData.dependencies) {
-          const _dependencies = evalData.dependencies;
-          if (typeof _dependencies === 'object' && _dependencies !== null) {
-            for (const [key, dep] of Object.entries(_dependencies)) {
-              if (dep && typeof dep === 'object' && 'context' in dep) {
-                const _depContext = (dep as any).context;
-                if (_depContext && typeof _depContext === 'object') {
-                  for (const contextKey in _depContext) {
-                    const _contextValue = _depContext[contextKey];
-                  }
-                }
-              }
-            }
-          }
-          evalContext.dependencies = evalData.dependencies as Record<string, unknown>;
-        }
-        
-        return safeEvaluate(path, evalContext);
-      } catch (error) {
-        console.warn('[ViewEngine] MaiaScript evaluation error:', error);
-        return undefined;
-      }
-    }
-
-    // Simple string - resolve as data path
-    if (typeof path === 'string') {
-      return resolveDataPath(evalData, path);
-    }
-
-    return undefined;
-  }
-
-  // Helper to evaluate visibility
+  // Helper to evaluate visibility (Phase 2: Uses binding-resolver)
   const evaluateVisibility = (path: string | MaiaScriptExpression | undefined, itemData?: Record<string, unknown>): boolean => {
     if (!path) return true;
     const contextData = itemData ? { ...data, item: itemData } : data;
     try {
-      const value = resolveValue(path, contextData);
-      return value !== undefined && value !== null && value !== false;
+      return resolveVisibility(path, contextData);
     } catch (error) {
       console.warn('Visibility evaluation error:', error, 'path:', path, 'itemData:', itemData);
       return true;
@@ -585,39 +523,27 @@
     onEvent(eventConfig.event, payload);
   }
 
-  // Resolve bindings
+  // Resolve bindings (Phase 2: Uses binding-resolver)
   const boundText = $derived.by(() => {
     if (!leaf?.bindings?.text) return undefined;
-    const _ = data;
-    return resolveValue(leaf.bindings.text);
+    return resolveText(leaf.bindings.text, data);
   });
 
-  const visibleValue = $derived.by(() => {
+  const isVisible = $derived.by(() => {
     const visibilityBinding = leaf?.bindings?.visible || composite?.bindings?.visible;
-    if (!visibilityBinding) return undefined;
-    const _ = data;
-    return resolveValue(visibilityBinding);
+    if (!visibilityBinding) return true;
+    return resolveVisibility(visibilityBinding, data);
   });
 
-  const isVisible = $derived(
-    visibleValue === undefined ? true : Boolean(visibleValue),
-  );
-
-  const disabledValue = $derived.by(() => {
-    if (!leaf?.bindings?.disabled) return undefined;
-    const _ = data;
-    return resolveValue(leaf.bindings.disabled);
+  const isDisabled = $derived.by(() => {
+    if (!leaf?.bindings?.disabled) return false;
+    return resolveDisabled(leaf.bindings.disabled, data);
   });
-
-  const isDisabled = $derived(
-    disabledValue === undefined ? false : Boolean(disabledValue),
-  );
 
   // Leaf foreach
   const leafForeachItems = $derived.by(() => {
     if (nodeType !== 'leaf' || !leaf?.bindings?.foreach) return undefined;
-    const _ = data;
-    const items = resolveValue(leaf.bindings.foreach.items);
+    const items = resolveValue(leaf.bindings.foreach.items, data);
     if (Array.isArray(items)) {
       const __ = items.length;
       items.forEach((item) => {
