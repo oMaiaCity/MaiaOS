@@ -4,6 +4,7 @@
  */
 
 import type { MaiaScriptExpression, ValidationResult } from './types';
+import { maiaScriptModuleRegistry } from './modules/registry';
 
 const MAX_RECURSION_DEPTH = 20;
 const ALLOWED_ROOT_PATHS = new Set(['item', 'context', 'dependencies']);
@@ -258,9 +259,64 @@ function validateExpression(
       // No validation needed
       break;
     }
+    
+    case '$add':
+    case '$subtract':
+    case '$multiply':
+    case '$divide': {
+      const operands = (expr as any)[opKey];
+      if (!Array.isArray(operands) || operands.length !== 2) {
+        errors.push(`${opKey} requires exactly 2 operands`);
+        break;
+      }
+      for (const operand of operands) {
+        const result = validateExpression(operand, depth + 1);
+        if (!result.valid) {
+          errors.push(...result.errors);
+        }
+      }
+      break;
+    }
+    
+    case '$toISOString': {
+      const operands = (expr as any).$toISOString;
+      if (!Array.isArray(operands) || operands.length !== 1) {
+        errors.push('$toISOString requires exactly 1 operand (timestamp)');
+        break;
+      }
+      const result = validateExpression(operands[0], depth + 1);
+      if (!result.valid) {
+        errors.push(...result.errors);
+      }
+      break;
+    }
 
     default:
-      errors.push(`Unknown operation: ${opKey}`);
+      // Check if operation exists in registry (fallback for dynamically registered operations)
+      if (!maiaScriptModuleRegistry.hasOperation(opKey)) {
+        errors.push(`Unknown operation: ${opKey}`);
+      } else {
+        // Operation exists in registry, validate its arguments are valid expressions
+        const args = (expr as any)[opKey];
+        if (Array.isArray(args)) {
+          for (const arg of args) {
+            const result = validateExpression(arg, depth + 1);
+            if (!result.valid) {
+              errors.push(...result.errors);
+            }
+          }
+        } else if (typeof args === 'object' && args !== null) {
+          // For operations with named arguments (like $if, $switch)
+          for (const argValue of Object.values(args)) {
+            if (argValue !== undefined && argValue !== null) {
+              const result = validateExpression(argValue as MaiaScriptExpression, depth + 1);
+              if (!result.valid) {
+                errors.push(...result.errors);
+              }
+            }
+          }
+        }
+      }
   }
 
   return {

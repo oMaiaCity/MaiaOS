@@ -280,6 +280,67 @@ const builtinModule: MaiaScriptModule = {
       }
     },
 
+    // Math Operations
+    '$add': {
+      name: '$add',
+      evaluate: (args: any[], ctx: EvaluationContext) => {
+        const [a, b] = evaluateArgs(args, ctx)
+        if (typeof a === 'number' && typeof b === 'number') {
+          return a + b
+        }
+        return 0
+      }
+    },
+
+    '$subtract': {
+      name: '$subtract',
+      evaluate: (args: any[], ctx: EvaluationContext) => {
+        const [a, b] = evaluateArgs(args, ctx)
+        if (typeof a === 'number' && typeof b === 'number') {
+          return a - b
+        }
+        return 0
+      }
+    },
+
+    '$multiply': {
+      name: '$multiply',
+      evaluate: (args: any[], ctx: EvaluationContext) => {
+        const [a, b] = evaluateArgs(args, ctx)
+        if (typeof a === 'number' && typeof b === 'number') {
+          return a * b
+        }
+        return 1
+      }
+    },
+
+    '$divide': {
+      name: '$divide',
+      evaluate: (args: any[], ctx: EvaluationContext) => {
+        const [a, b] = evaluateArgs(args, ctx)
+        if (typeof a === 'number' && typeof b === 'number' && b !== 0) {
+          return a / b
+        }
+        return 0
+      }
+    },
+
+    // Date Operations (Enhanced)
+    '$toISOString': {
+      name: '$toISOString',
+      evaluate: (args: any[], ctx: EvaluationContext) => {
+        const [timestamp] = evaluateArgs(args, ctx)
+        if (typeof timestamp === 'number') {
+          try {
+            return new Date(timestamp).toISOString()
+          } catch {
+            return ''
+          }
+        }
+        return ''
+      }
+    },
+
     // Coercion Operations
     '$string': {
       name: '$string',

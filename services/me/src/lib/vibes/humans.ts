@@ -173,7 +173,7 @@ export async function createHumansActors(account: any) {
 									elements: ['✕'],
 									events: {
 										click: {
-											event: 'REMOVE_HUMAN',
+											event: '@core/deleteEntity', // ✅ Renamed: Use generic delete tool
 											payload: { id: 'item.id' } // Object with data path - will be resolved to { id: <actual_id> }
 										}
 									}
@@ -213,7 +213,7 @@ export async function createHumansActors(account: any) {
 	// STEP 4: Update subscriptions - TRUE COLOCATION
 	// Each actor subscribes to itself - no event bubbling!
 	createButtonActor.subscriptions.$jazz.push(createButtonActor.$jazz.id); // Button handles its own CREATE_HUMAN
-	listActor.subscriptions.$jazz.push(listActor.$jazz.id); // List handles its own REMOVE_HUMAN events
+	listActor.subscriptions.$jazz.push(listActor.$jazz.id); // List handles its own @core/deleteEntity events
 		
 	// NO WAIT! Subscriptions updated locally, sync happens in background
 

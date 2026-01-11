@@ -20,6 +20,24 @@ Views are:
 
 ---
 
+## 🔧 Implementation: ViewEngine
+
+The View Layer is implemented by **ViewEngine.svelte**, a unified component that:
+
+- **Detects node type**: Auto-detects Composite or Leaf based on structure
+- **Renders HTML elements**: Creates DOM from ViewNode JSON
+- **Resolves data bindings**: Uses MaiaScript DSL for dynamic values
+- **Handles events**: Attaches event listeners and delegates to parent
+- **Self-recursive**: Renders children by recursively calling itself
+
+**Historical Note**: Previously implemented as separate `Composite.svelte` and `Leaf.svelte` components. Now unified into `ViewEngine.svelte` for better maintainability and consistency.
+
+**File**: `services/me/src/lib/compositor/engines/ViewEngine.svelte`
+
+See **[Engine Architecture](../ENGINE_ARCHITECTURE.md#3%EF%B8%8F⃣-viewengine)** for implementation details.
+
+---
+
 ## 📐 Architecture
 
 ### Composite

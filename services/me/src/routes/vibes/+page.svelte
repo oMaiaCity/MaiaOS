@@ -126,7 +126,7 @@
     });
   });
 
-  // 4. NAVIGATION - Handled by @ui/navigate skill
+  // 4. NAVIGATION - Handled by @context/navigate tool
   // Skills handle complete navigation flow (actor swap + URL update)
 </script>
 

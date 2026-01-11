@@ -13,7 +13,8 @@ The MaiaCity Vibes architecture is a revolutionary approach to building user int
 - **Pure Message Passing**: No prop drilling - actors communicate via Jazz-synced message feeds
 - **ID-Based Relationships**: Explicit parent-child relationships via CoLists of actor IDs
 - **JSON-Driven UI**: Entire UI structure defined in JSON, enabling database-driven interfaces
-- **Skill-Based Logic**: Reusable action functions loaded from a central registry
+- **Tool-Based Logic**: Reusable action functions organized into modules, executed via ToolEngine
+- **Engine-Driven**: Unified JSON → Engine → Output pattern across 6 core engines
 - **Schema-Driven Design**: Entities, relations, and UI components defined by schemas
 
 ---
@@ -29,22 +30,23 @@ The MaiaCity Vibes architecture is a revolutionary approach to building user int
                      │
                      ▼
 ┌─────────────────────────────────────────────────────────┐
-│                      ACTOR LAYER                         │
-│  - ActorRenderer (orchestration)                        │
-│  - useQuery Hook (Jazz-native queries)  ⭐ NEW          │
-│  - Actor Message Processing (per-component logic)       │
-│  - CoFeed Inbox (append-only messaging)  ⭐ UPGRADED    │
-│  - ID-Based Relationships (explicit hierarchies)        │
+│                     ENGINE LAYER                         │
+│  - ActorEngine (actor orchestration)  ⭐ UPGRADED       │
+│  - ToolEngine (tool execution + DSL)  ⭐ NEW            │
+│  - ViewEngine (unified rendering)  ⭐ UPGRADED          │
+│  - queryEngine (reactive queries)  ⭐ NEW               │
+│  - factoryEngine (templates)  ⭐ NEW                    │
+│  - seedingEngine (vibe init)  ⭐ NEW                    │
 └────────────────────┬────────────────────────────────────┘
                      │
                      ▼
 ┌─────────────────────────────────────────────────────────┐
-│                      SKILLS LAYER                        │
-│  - Direct Skill Execution (no dataStore)  ⭐ UPGRADED   │
-│  - Entity Skills (CRUD operations)                      │
-│  - Relation Skills (graph operations)                   │
-│  - UI Skills (view management)                          │
-│  - Domain Skills (business logic)                       │
+│                      TOOLS LAYER                         │
+│  - Module-Based Organization  ⭐ UPGRADED               │
+│  - Core Module (@core/*): CRUD operations               │
+│  - Context Module (@context/*): UI state                │
+│  - AI Module (@ai/*): LLM interactions                  │
+│  - Human Module (@human/*): Domain logic                │
 └────────────────────┬────────────────────────────────────┘
                      │
                      ▼
@@ -139,43 +141,90 @@ See **[ARCHITECTURE_SUMMARY.md](./ARCHITECTURE_SUMMARY.md)** for complete detail
 
 ---
 
+## ⭐ Engine Architecture
+
+All components follow the **JSON → Engine → Output** pattern:
+
+```
+JSON Configuration → Engine → Running System
+   ↓                  ↓           ↓
+Actor ID         ActorEngine   Rendered UI
+Tool ID + Payload  ToolEngine    Executed Logic
+ViewNode JSON      ViewEngine    HTML Elements
+Factory + Params   factoryEngine Resolved ViewNode
+Schema + Options   queryEngine   Entity List
+Vibe Name          seedingEngine Actor Tree
+```
+
+### The 6 Engines
+
+| Engine | Purpose |
+|--------|---------|
+| **ActorEngine** | Actor orchestration, message processing, query resolution, view rendering |
+| **ToolEngine** | Tool execution with MaiaScript DSL payload evaluation and security |
+| **ViewEngine** | Unified Composite + Leaf rendering with data bindings |
+| **factoryEngine** | Factory template expansion with conditionals |
+| **queryEngine** | Jazz-native reactive entity queries |
+| **seedingEngine** | Vibe initialization and actor tree creation |
+
+See **[Engine Architecture](./ENGINE_ARCHITECTURE.md)** for complete details.
+
+---
+
 ## 📚 Documentation Structure
 
 ### Core Concepts
 
-1. **[Actors](./actors/README.md)** - Actor-based architecture fundamentals
-   - [ActorRenderer](./actors/actor-renderer.md) - Core actor orchestration
-   - [Message Passing](./actors/message-passing.md) - Pure message-based communication
-   - [ID-Based Relationships](./actors/id-based-relationships.md) - Explicit hierarchies
-   - [Message Passing](./actors/message-passing.md) - Per-actor logic
+1. **[Engine Architecture](./ENGINE_ARCHITECTURE.md)** ⭐ NEW - Complete engine system
+   - JSON → Engine → Output pattern
+   - All 6 engines documented (ActorEngine, ToolEngine, ViewEngine, factoryEngine, queryEngine, seedingEngine)
+   - Data flow through engines
+   - Engine integration patterns
 
-2. **[Skills](./skills/README.md)** - Reusable action functions
-   - [Skill Registry](./skills/registry.md) - Centralized skill management
-   - [Entity Skills](./skills/entity-skills.md) - CRUD operations
-   - [Relation Skills](./skills/relation-skills.md) - Graph operations
-   - [UI Skills](./skills/ui-skills.md) - View management
-   - [Custom Skills](./skills/custom-skills.md) - Creating your own
+2. **[MaiaScript DSL](./MAIASCRIPT_DSL.md)** ⭐ NEW - Expression language
+   - Operations and syntax
+   - Security model (whitelist-based)
+   - Module system
+   - Engine integration
 
-3. **[View Layer](./view/README.md)** - JSON-driven UI
-   - [Composite](./view/composite.md) - Layout containers
-   - [Leaf](./view/leaf.md) - Content nodes
-   - [Schema Resolver](./view/schema-resolver.md) - Template system
-   - [Container Queries](./view/container-queries.md) - Responsive design
+3. **[Factory System](./FACTORY_SYSTEM.md)** ⭐ NEW - Template system
+   - Parameter substitution
+   - Conditional templates
+   - Real-world examples
+   - Best practices
 
-4. **[Jazz Integration](./jazz/README.md)** - Real-time collaborative data
-   - [CoValues](./jazz/covalues.md) - Collaborative data structures
-   - [CoState](./jazz/costate.md) - Reactive subscriptions
-   - [Sync & Persistence](./jazz/sync.md) - Real-time synchronization
+4. **[Actors](./actors/README.md)** - Actor-based architecture
+   - ActorEngine orchestration
+   - Message passing
+   - ID-Based relationships
+   - Query resolution
 
-5. **[Schemata](./schemata/README.md)** - Type system
-   - [Entity Schemas](./schemata/entities.md) - Data entities
-   - [Relation Schemas](./schemata/relations.md) - Graph relations
-   - [Schema Registry](./schemata/registry.md) - Type management
+5. **[Tools System](./skills/README.md)** - Business logic (renamed from Skills)
+   - Tool modules (core, context, ai, human)
+   - ToolEngine execution
+   - MaiaScript DSL integration
+   - Creating custom tools
 
-6. **[Vibes](./vibes/README.md)** - Complete applications
-   - [Vibe Structure](./vibes/structure.md) - How vibes are organized
-   - [Creating Vibes](./vibes/creating.md) - Build your first vibe
-   - [Examples](./vibes/examples.md) - Real-world vibes
+6. **[View Layer](./view/README.md)** - JSON-driven UI
+   - ViewEngine (unified Composite + Leaf)
+   - Data bindings
+   - Foreach patterns
+   - Event handling
+
+7. **[Jazz Integration](./jazz/README.md)** - Real-time collaborative data
+   - CoValues & CoState
+   - queryEngine (reactive queries)
+   - Sync & persistence
+
+8. **[Schemata](./schemata/README.md)** - Type system
+   - Entity schemas
+   - Relation schemas
+   - Schema registry
+
+9. **[Vibes](./vibes/README.md)** - Complete applications
+   - Vibe structure
+   - seedingEngine
+   - Creating vibes
 
 ---
 

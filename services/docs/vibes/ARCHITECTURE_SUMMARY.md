@@ -40,11 +40,8 @@ $effect(() => {
     const messageId = message.$jazz?.id
     if (processedMessageIds.has(messageId)) continue
     
-    // Execute skill
-    const skill = getSkill(message.type)
-    if (skill) {
-      skill.execute(actor, message.payload, accountCoState)
-    }
+    // Execute tool via ToolEngine
+    ToolEngine.execute(message.type, actor, message.payload, accountCoState)
     
     // Mark as consumed (append-only - never delete!)
     processedMessageIds.add(messageId)
@@ -58,34 +55,34 @@ $effect(() => {
 - 📝 **Consumption tracking**: Mark as processed without deleting
 - 🤝 **Collaboration-ready**: Messages persist for event history
 
-### 3. **Direct Skill Execution**
+### 3. **Direct Tool Execution**
 
-Skills receive actor reference directly (no intermediate dataStore):
+Tools receive actor reference directly (no intermediate dataStore):
 
 ```typescript
 // OLD PATTERN (deprecated):
 type SkillFunction = (data: Data, payload?: unknown) => void
 
 // NEW PATTERN (current):
-type SkillFunction = (
-  actor: any,            // Actor that triggered the skill
+type ToolFunction = (
+  actor: any,            // Actor that triggered the tool
   payload?: unknown,     // Event payload
   accountCoState?: any   // Jazz account CoState
 ) => void | Promise<void>
 
-// Example skill
+// Example tool
 execute: async (actor, payload, accountCoState) => {
   const jazzAccount = accountCoState?.current
   await createEntityGeneric(jazzAccount, 'Human', entityData)
-  // Skill mutates Jazz CoValues directly - UI updates reactively
+  // Tool mutates Jazz CoValues directly - UI updates reactively
 }
 ```
 
 **Key Benefits**:
-- 🎯 **Direct actor access**: Skills work with actor reference
+- 🎯 **Direct actor access**: Tools work with actor reference
 - 🚫 **No dataStore**: Eliminates intermediate state layer
-- 🔄 **Reactive UI**: Skills mutate Jazz, UI subscribes via useQuery
-- 🧹 **Clean separation**: Skills = business logic, useQuery = data access
+- 🔄 **Reactive UI**: Tools mutate Jazz, UI subscribes via useQuery
+- 🧹 **Clean separation**: Tools = business logic, useQuery = data access
 
 ---
 
@@ -217,13 +214,30 @@ execute: async (actor, payload, accountCoState) => {
 
 ---
 
+## 🔧 Engine Architecture
+
+All system components follow the **JSON → Engine → Output** pattern:
+
+| Engine | Input | Output | Role |
+|--------|-------|--------|------|
+| **ActorEngine** | Actor ID | Rendered DOM + State | Actor orchestration, message processing |
+| **ToolEngine** | Tool ID + Payload | Executed Logic | Tool execution with DSL evaluation |
+| **ViewEngine** | ViewNode JSON | HTML Elements | Unified Composite + Leaf rendering |
+| **factoryEngine** | Factory + Params | ViewNode | Template expansion |
+| **queryEngine** | Schema + Options | Entity List | Jazz-native reactive queries |
+| **seedingEngine** | Vibe Name | Actor Tree | Vibe initialization |
+
+See **[Engine Architecture](./ENGINE_ARCHITECTURE.md)** for complete details.
+
+---
+
 ## 📦 Key Components
 
-### 1. useQuery Hook
+### 1. queryEngine (useQuery Hook)
 
-**Purpose**: Reactive Jazz entity queries
+**Purpose**: Jazz-native reactive entity queries
 
-**Location**: `services/me/src/lib/compositor/useQuery.svelte.ts`
+**Location**: `services/me/src/lib/compositor/engines/queryEngine.svelte.ts`
 
 **Usage**:
 ```typescript
@@ -234,43 +248,65 @@ const queryResult = useQuery(
 )
 ```
 
-### 2. ActorRenderer
+### 2. ActorEngine
 
 **Purpose**: Orchestrates actor loading, message processing, query resolution, rendering
 
-**Location**: `services/me/src/lib/compositor/actors/ActorRenderer.svelte`
+**Location**: `services/me/src/lib/compositor/engines/ActorEngine.svelte`
 
 **Key Features**:
 - Jazz-native CoState loading
 - Proper CoFeed consumption
-- Direct skill execution
-- Query resolution via useQuery
+- Direct tool execution (via ToolEngine)
+- Query resolution via queryEngine
 
-### 3. Composite & Leaf Components
+### 3. ViewEngine
 
-**Purpose**: Render view definitions
+**Purpose**: Unified Composite + Leaf rendering with data bindings
 
-**Location**: 
-- `services/me/src/lib/compositor/view/Composite.svelte`
-- `services/me/src/lib/compositor/view/Leaf.svelte`
+**Location**: `services/me/src/lib/compositor/engines/ViewEngine.svelte`
 
 **Key Features**:
-- Data path resolution
+- Auto-detects node type (Composite or Leaf)
+- Data path resolution via MaiaScript DSL
 - Event handling
 - Foreach rendering
 - Reactive bindings
+- Self-recursive (renders children)
 
-### 4. Skills Registry
+### 4. ToolEngine
 
-**Purpose**: Centralized business logic
+**Purpose**: Tool execution with MaiaScript DSL payload evaluation
 
-**Location**: `services/me/src/lib/compositor/skills/`
+**Location**: `services/me/src/lib/compositor/engines/ToolEngine.ts`
 
-**Categories**:
-- Entity skills: `@entity/createEntity`, `@entity/deleteEntity`, etc.
-- Relation skills: `@relation/createRelation`, etc.
-- UI skills: `@ui/navigate`, `@ui/updateInput`, etc.
-- Domain skills: `@human/createRandom`, etc.
+**Key Features**:
+- Tool lookup from module registry
+- MaiaScript DSL evaluation (string paths, expressions)
+- Security checks (whitelist-based)
+- Recursive payload evaluation
+
+**Usage**:
+```typescript
+import { ToolEngine } from '$lib/compositor/tools'
+
+// Execute tool with MaiaScript DSL evaluation
+await ToolEngine.execute('@core/createEntity', actor, payload, accountCoState)
+```
+
+### 5. Tool Module Registry
+
+**Purpose**: Centralized tool discovery and management
+
+**Location**: `services/me/src/lib/compositor/tools/module-registry.ts`
+
+**Built-in Modules**:
+- **core**: Generic CRUD, database operations (10 tools)
+- **context**: UI state, context management (9 tools)
+
+**Optional Modules**:
+- **ai**: AI interactions (1 tool)
+- **human**: Domain-specific tools (1 tool)
 
 ---
 
@@ -369,12 +405,15 @@ execute: async (actor, payload, accountCoState) => {
 
 ## 📚 Documentation Index
 
+- **[Engine Architecture](./ENGINE_ARCHITECTURE.md)** ⭐ NEW - Complete engine system documentation
+- **[MaiaScript DSL](./MAIASCRIPT_DSL.md)** ⭐ NEW - Expression language reference
+- **[Factory System](./FACTORY_SYSTEM.md)** ⭐ NEW - Template system deep dive
 - **[Actors](./actors/README.md)** - Actor architecture, message passing
-- **[Jazz Integration](./jazz/README.md)** - CoValues, CoState, useQuery, reactivity
+- **[Jazz Integration](./jazz/README.md)** - CoValues, CoState, queryEngine, reactivity
 - **[Schemata](./schemata/README.md)** - Type system for entities, relations, UI
-- **[Skills](./skills/README.md)** - Business logic, skill categories, custom skills
+- **[Tools System](./skills/README.md)** - Business logic, tool modules, ToolEngine
 - **[Vibes](./vibes/README.md)** - Complete applications, vibe structure
-- **[View Layer](./view/README.md)** - JSON-driven UI, composite/leaf pattern
+- **[View Layer](./view/README.md)** - JSON-driven UI, ViewEngine
 
 ---
 
@@ -384,10 +423,12 @@ The Vibe Composition Leaf Architecture provides:
 
 - **Jazz-Native**: Direct CoState subscriptions, no local state
 - **Reactive**: Automatic UI updates when Jazz data changes
+- **Engine-Driven**: Unified JSON → Engine → Output pattern (6 engines)
 - **Scalable**: Pure message passing, no prop drilling
 - **Debuggable**: Trace messages through actor subscriptions
 - **Collaborative**: Real-time sync across all devices
 - **Clean Code**: Each actor handles its own events
 - **Append-Only**: Proper CoFeed consumption pattern
+- **Secure**: MaiaScript DSL with whitelist-based evaluation
 
-**Core Innovation**: Skills mutate Jazz CoValues directly, UI subscribes reactively via useQuery. No intermediate state layer, no manual UI updates - just pure Jazz reactivity! 🎉
+**Core Innovation**: Tools mutate Jazz CoValues directly, UI subscribes reactively via queryEngine. No intermediate state layer, no manual UI updates - just pure Jazz reactivity powered by engines! 🎉

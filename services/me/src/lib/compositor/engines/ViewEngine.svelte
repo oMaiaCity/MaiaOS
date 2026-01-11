@@ -8,7 +8,6 @@
   import type { VibeConfig } from "$lib/utils/types";
   import type { ViewNode, CompositeNode, LeafNode } from "$lib/utils/types";
   import { browser } from "$app/environment";
-  // Phase 7: Use security module instead of whitelist
   import { validateLeaf, sanitizeClasses } from "@maia/script/modules/security.module";
   import { resolveDataPath } from "../view/resolver";
   import { viewNodeRegistry } from "../view/view-node-registry";
@@ -18,7 +17,6 @@
   import { safeEvaluate, isMaiaScriptExpression } from "@maia/script";
   import type { MaiaScriptExpression } from "@maia/script";
   
-  // Phase 2: Binding Resolver Module
   import {
     resolveBinding,
     resolveVisibility,
@@ -28,7 +26,6 @@
     resolveValue
   } from "../view/binding-resolver";
   
-  // Phase 3: Event Handler Module
   import {
     resolvePayload,
     createEventHandler,
@@ -43,10 +40,7 @@
     createDragEndHandler
   } from "../view/event-handler";
 
-  // For actor-based rendering
   import ActorEngine from "./ActorEngine.svelte";
-  
-  // Self-recursion (Svelte 5 supports this natively)
   import ViewEngine from "./ViewEngine.svelte";
 
   interface Props {

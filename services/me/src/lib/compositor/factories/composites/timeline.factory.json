@@ -96,7 +96,7 @@
                           },
                           "events": {
                             "click": {
-                              "event": "@entity/toggleStatus",
+                              "event": "@core/toggleStatus",
                               "payload": {
                                 "id": "item.id",
                                 "value1": "todo",
@@ -148,7 +148,7 @@
                                 },
                                 "events": {
                                   "blur": {
-                                    "event": "@entity/updateEntity",
+                                    "event": "@core/updateEntity",
                                     "payload": { "id": "item.id", "name": "item.name" }
                                   }
                                 }
@@ -189,7 +189,7 @@
                           "elements": ["✕"],
                           "events": {
                             "click": {
-                              "event": "@entity/deleteEntity",
+                              "event": "@core/deleteEntity",
                               "payload": { "id": "item.id" }
                             }
                           }

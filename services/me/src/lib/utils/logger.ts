@@ -23,7 +23,7 @@ export function createActorLogger(actor: ActorLike | null | undefined) {
 }
 
 /**
- * Create a logger for a specific component/skill with custom prefix
+ * Create a logger for a specific component/tool with custom prefix
  */
 export function createLogger(prefix: string) {
   return {

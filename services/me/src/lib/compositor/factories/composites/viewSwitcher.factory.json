@@ -27,7 +27,7 @@
         },
         "events": {
           "click": {
-            "event": "@view/swapActors",
+            "event": "@context/swapActors",
             "payload": { "viewMode": "item.id" }
           }
         }

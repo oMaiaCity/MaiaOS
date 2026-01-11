@@ -78,9 +78,25 @@ export async function createTodosActors(account: any) {
 		},
 		view: createComposite(inputSectionFactory as any, {
 			valuePath: 'context.newTodoText', // CLEAN ARCHITECTURE: Always use context.* prefix
-			inputEvent: '@input/updateContext', // Generic context update skill
-			submitEvent: '@todo/create',
-			submitPayload: { name: 'context.newTodoText' }, // CLEAN ARCHITECTURE: Always use context.* prefix
+			inputEvent: '@context/update', // ✅ Renamed: Generic context update tool
+			submitEvent: '@core/createEntity', // ✅ Renamed: Generic entity creation tool
+			submitPayload: {
+				schemaName: 'Todo',
+				entityData: {
+					name: 'context.newTodoText', // ✅ String path (ToolEngine resolves via DSL)
+					status: 'todo',
+					endDate: {
+						"$toISOString": [
+							{ "$add": [
+								{ "$now": [] },
+								{ "$multiply": [7, 86400000] } // 7 days * ms per day
+							]}
+						]
+					}, // ✅ MaiaScript DSL expression (no JavaScript!)
+					duration: 60
+				},
+				clearFieldPath: 'newTodoText' // ✅ Clear input after creation
+			}, // CLEAN ARCHITECTURE: Always use context.* prefix
 			inputName: 'new-todo',
 			placeholder: 'Add a new todo...',
 			buttonText: 'Add',
@@ -133,7 +149,7 @@ export async function createTodosActors(account: any) {
 									},
 									events: {
 										click: {
-											event: '@entity/toggleStatus',
+											event: '@core/toggleStatus', // ✅ Renamed: Generic toggle tool
 											payload: { 
 												id: 'item.id',
 												value1: 'todo',
@@ -174,7 +190,7 @@ export async function createTodosActors(account: any) {
 									},
 									events: {
 										blur: {
-											event: '@entity/updateEntity',
+											event: '@core/updateEntity', // ✅ Renamed: Generic update tool
 											payload: { id: 'item.id', name: 'item.name' }
 										}
 									}
@@ -223,7 +239,7 @@ export async function createTodosActors(account: any) {
 									elements: ['✕'],
 									events: {
 										click: {
-											event: '@entity/deleteEntity',
+											event: '@core/deleteEntity', // ✅ Renamed: Generic delete tool
 											payload: { id: 'item.id' }
 										}
 									}
@@ -384,7 +400,7 @@ export async function createTodosActors(account: any) {
 	kanbanActor.subscriptions.$jazz.push(kanbanActor.$jazz.id); // ✅ Kanban handles drag-and-drop events
 	viewSwitcherActor.subscriptions.$jazz.push(contentActor.$jazz.id); // ✅ Switcher SENDS events to contentActor
 	viewSwitcherActor.subscriptions.$jazz.push(viewSwitcherActor.$jazz.id); // ✅ Switcher also subscribes to itself to receive events and update viewMode
-	contentActor.subscriptions.$jazz.push(contentActor.$jazz.id); // ✅ Content actor handles @view/swapActors
+	contentActor.subscriptions.$jazz.push(contentActor.$jazz.id); // ✅ Content actor handles @context/swapActors
 
 	// Actors are automatically added to root.entities by createActorEntity
 	console.log('[createTodosActors] ⚡ All actors created instantly (local-first)');

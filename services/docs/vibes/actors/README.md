@@ -178,14 +178,14 @@ headerActor.subscriptions.$jazz.push(headerActor.$jazz.id) // Header handles own
 
 ### 2. Loading (Top-Down)
 
-The `ActorRenderer` loads actors top-down via Jazz CoState:
+The `ActorEngine` loads actors top-down via Jazz CoState:
 
 ```typescript
 // Load root actor
 const rootActorCoState = new CoState(Actor, rootActorId)
 const rootActor = rootActorCoState.current
 
-// ActorRenderer automatically loads children
+// ActorEngine automatically loads children
 const childActors = Array.from(rootActor.children)
   .map(id => new CoState(Actor, id))
   .map(cs => cs.current)
@@ -200,7 +200,7 @@ Actors process messages from their CoFeed inbox using a **proper consumption pat
 // 1. Message sent to inbox (append-only CoFeed)
 targetActor.inbox.$jazz.push(ActorMessage.create({ type: '@entity/deleteEntity', payload: { id: '123' } }))
 
-// 2. ActorRenderer processes ALL unprocessed messages
+// 2. ActorEngine processes ALL unprocessed messages
 let consumedMessageIds = $state<Set<string>>(new Set())
 
 $effect(() => {
@@ -242,7 +242,7 @@ $effect(() => {
 
 ### 4. Rendering (Jazz-Native Data Flow)
 
-The `ActorRenderer` resolves queries and delegates rendering to `Composite.svelte` or `Leaf.svelte`:
+The `ActorEngine` resolves queries and delegates rendering to `ViewEngine.svelte`:
 
 ```typescript
 // Extract schemaName from actor.context.queries
@@ -301,9 +301,9 @@ const resolvedContextWithQueries = $derived.by(() => {
 
 ---
 
-## 🔌 ActorRenderer
+## 🔌 ActorEngine
 
-The `ActorRenderer` is the core orchestrator. It:
+The `ActorEngine` is the core orchestrator. It:
 
 1. **Loads the actor** via Jazz CoState
 2. **Subscribes to inbox** reactively
@@ -373,7 +373,7 @@ $effect(() => {
     if (skill) {
       skill.execute(actor, message.payload, accountCoState)
     } else {
-      console.warn('[ActorRenderer] No skill found for:', message.type)
+      console.warn('[ActorEngine] No tool found for:', message.type)
     }
     
     // Mark as consumed (append-only - never delete from CoFeed!)
@@ -398,7 +398,7 @@ function handleEvent(event: string, payload?: unknown) {
   // Resolve payload (data paths like 'item.id' → actual values)
   const resolvedPayload = resolvePayload(payload)
   
-  console.log(`[ActorRenderer] ${actor.role} sending event: ${event}, payload:`, resolvedPayload)
+  console.log(`[ActorEngine] ${actor.role} sending event: ${event}, payload:`, resolvedPayload)
   
   // Create message
   const message = ActorMessage.create({
@@ -421,7 +421,7 @@ function handleEvent(event: string, payload?: unknown) {
       const targetActor = subscribedActors.find(a => a.$jazz?.id === subscriberId)
       if (targetActor?.$isLoaded && targetActor.inbox?.$isLoaded) {
         targetActor.inbox.$jazz.push(message)
-        console.log(`[ActorRenderer] → Sent to ${targetActor.role}`)
+        console.log(`[ActorEngine] → Sent to ${targetActor.role}`)
       }
     }
   }
@@ -488,7 +488,7 @@ listActor.subscriptions.$jazz.push(listActor.$jazz.id)
 - List actor handles `@entity/deleteEntity` event directly (no state machine)
 - List subscribes to itself (no event bubbling)
 - Delete button payload uses data path: `{ id: 'item.id' }`
-- ActorRenderer resolves payload to actual ID and executes skill directly
+- ActorEngine resolves payload to actual ID and executes tool directly
 
 ### Pattern 2: Form with Submit Button
 
@@ -539,7 +539,7 @@ const headerActor = Actor.create({
 ### Log Subscriptions
 
 ```typescript
-console.log('[ActorRenderer] Subscriptions:', {
+console.log('[ActorEngine] Subscriptions:', {
   raw: actor.subscriptions ? Array.from(actor.subscriptions) : [],
   subscribedActorRoles: subscribedActors.map(a => a.role),
   subscribedActorIds: subscribedActors.map(a => a.$jazz?.id),
@@ -550,8 +550,8 @@ console.log('[ActorRenderer] Subscriptions:', {
 ### Trace Message Flow
 
 ```typescript
-console.log(`[ActorRenderer] ${actor.role} sending event: ${event}, payload:`, payload)
-console.log(`[ActorRenderer] → Sending to ${targetActor.role} (${targetActor.$jazz?.id})`)
+console.log(`[ActorEngine] ${actor.role} sending event: ${event}, payload:`, payload)
+console.log(`[ActorEngine] → Sending to ${targetActor.role} (${targetActor.$jazz?.id})`)
 ```
 
 ### Verify Actor Setup

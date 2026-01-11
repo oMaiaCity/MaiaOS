@@ -7,7 +7,7 @@
   import { browser } from "$app/environment";
   import { CoState } from "jazz-tools/svelte";
   import { Actor, ActorMessage } from "@maia/db";
-  import { registerAllSkills, skillRegistry } from "../skills";
+  import { registerAllTools, ToolEngine } from "../tools";
   import { resolveDataPath } from "../view/resolver";
   import { useQuery } from "./queryEngine.svelte";
   import ViewEngine from "./ViewEngine.svelte";
@@ -25,8 +25,8 @@
   // Create actor-specific logger (will be initialized once actor loads)
   let logger = $derived.by(() => createActorLogger(actor));
   
-  // Register skills once
-  if (browser) registerAllSkills();
+  // Register tools once
+  if (browser) registerAllTools();
   
   // ============================================
   // JAZZ-NATIVE REACTIVE ACTOR LOADING
@@ -118,6 +118,9 @@
   // Track consumed message IDs in memory (synced with Jazz context)
   let consumedMessageIds = $state<Set<string>>(new Set());
   
+  // Processing guard to prevent infinite loops from $effect re-runs
+  let isProcessing = $state(false);
+  
   // Load consumed IDs when actor loads
   $effect(() => {
     if (actor?.$isLoaded) {
@@ -133,16 +136,22 @@
   // Call skills directly with actor reference (no dataStore)
   $effect(() => {
     if (!actor?.$isLoaded || !browser) return;
+    if (isProcessing) return; // Prevent re-entrance while processing
+    
     const inbox = actor.inbox;
     if (!inbox?.$isLoaded) return;
     
     // Collect ALL messages from the inbox (byMe and perAccount)
-    const allMessages: any[] = [];
+    // Use Map to dedup by message ID (same message may appear in multiple feeds)
+    const messagesMap = new Map<string, any>();
     
     // Get byMe messages
     const byMeMessage = inbox.byMe?.value;
     if (byMeMessage?.$isLoaded) {
-      allMessages.push(byMeMessage);
+      const messageId = byMeMessage.$jazz?.id;
+      if (messageId) {
+        messagesMap.set(messageId, byMeMessage);
+      }
     }
     
     // Get perAccount messages
@@ -150,77 +159,82 @@
       for (const accountId in inbox.perAccount) {
         const accountFeed = inbox.perAccount[accountId];
         if (accountFeed?.value?.$isLoaded) {
-          allMessages.push(accountFeed.value);
+          const messageId = accountFeed.value.$jazz?.id;
+          if (messageId && !messagesMap.has(messageId)) {
+            messagesMap.set(messageId, accountFeed.value);
+          }
         }
       }
     }
     
-    // Sort messages by timestamp to process in order
+    // Convert to array and sort by timestamp
+    const allMessages = Array.from(messagesMap.values());
     allMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    
+    // Filter to only NEW unconsumed messages
+    const unconsumedMessages = allMessages.filter((message) => {
+      const messageId = message.$jazz?.id;
+      return messageId && !consumedMessageIds.has(messageId);
+    });
+    
+    // Skip if no new messages
+    if (unconsumedMessages.length === 0) return;
     
     // Track newly consumed IDs to batch update context
     const newlyConsumed: string[] = [];
     
-    // Process each unconsumed message
-    for (const message of allMessages) {
-      const messageId = message.$jazz?.id;
-      if (!messageId || consumedMessageIds.has(messageId)) {
-        continue; // Skip already consumed messages
-      }
-      
-      // Mark as consumed BEFORE execution to prevent duplicates
-      consumedMessageIds.add(messageId);
-      newlyConsumed.push(messageId);
-      
-      // Call skill directly with actor reference (via centralized registry)
-      logger.log('Processing message:', message.type, 'payload:', message.payload);
-      const skill = skillRegistry.get(message.type);
-      if (skill) {
-        // Execute skill and handle async errors
-        try {
-          const result = skill.execute(actor, message.payload, accountCoState);
-          // If it's a promise, handle errors but don't await (fire and forget)
-          if (result && typeof result.then === 'function') {
-            result.catch((error: any) => {
-              logger.error('Skill execution error:', message.type, error);
-              // Try to set error on actor context if possible
-              if (actor.context && actor.$isLoaded) {
-                const updatedContext = { ...(actor.context as Record<string, unknown>) };
-                updatedContext.error = error.message || 'Skill execution failed';
-                updatedContext.isProcessing = false;
-                actor.$jazz.set('context', updatedContext);
-              }
-            });
-          }
-        } catch (error: any) {
-          logger.error('Skill execution error (sync):', message.type, error);
-          // Try to set error on actor context if possible
-          if (actor.context && actor.$isLoaded) {
-            const updatedContext = { ...(actor.context as Record<string, unknown>) };
-            updatedContext.error = error.message || 'Skill execution failed';
-            updatedContext.isProcessing = false;
-            actor.$jazz.set('context', updatedContext);
+    // Set processing flag to prevent re-entrance
+    isProcessing = true;
+    
+    // Process each unconsumed message SEQUENTIALLY (await each one)
+    // This prevents race conditions where tool execution happens out of order
+    (async () => {
+      try {
+        for (const message of unconsumedMessages) {
+          const messageId = message.$jazz?.id;
+          if (!messageId) continue;
+          
+          // Mark as consumed BEFORE execution to prevent duplicates
+          consumedMessageIds.add(messageId);
+          newlyConsumed.push(messageId);
+          
+          // Execute tool via ToolEngine (unified pattern)
+          logger.log('Processing message:', message.type, 'payload:', message.payload);
+          try {
+            // AWAIT tool execution to ensure sequential processing
+            // This prevents context updates from happening out of order
+            await ToolEngine.execute(message.type, actor, message.payload, accountCoState);
+          } catch (error: any) {
+            logger.error('Tool execution error:', message.type, error);
+            // Try to set error on actor context if possible
+            if (actor.context && actor.$isLoaded) {
+              const updatedContext = { ...(actor.context as Record<string, unknown>) };
+              updatedContext.error = error.message || 'Tool execution failed';
+              updatedContext.isProcessing = false;
+              actor.$jazz.set('context', updatedContext);
+            }
           }
         }
-      } else {
-        logger.warn('No skill found for message type:', message.type);
+        
+        // Batch update: Persist newly consumed IDs to actor context
+        if (newlyConsumed.length > 0 && actor.$isLoaded) {
+          const context = actor.context as any;
+          const existingConsumed = context?.consumedMessages || [];
+          const updatedConsumed = [...existingConsumed, ...newlyConsumed];
+          
+          // Update actor context with new consumed IDs
+          actor.$jazz.set('context', {
+            ...context,
+            consumedMessages: updatedConsumed,
+          });
+          
+          logger.log(`Marked ${newlyConsumed.length} messages as consumed`);
+        }
+      } finally {
+        // Always clear processing flag, even if there was an error
+        isProcessing = false;
       }
-    }
-    
-    // Batch update: Persist newly consumed IDs to actor context
-    if (newlyConsumed.length > 0 && actor.$isLoaded) {
-      const context = actor.context as any;
-      const existingConsumed = context?.consumedMessages || [];
-      const updatedConsumed = [...existingConsumed, ...newlyConsumed];
-      
-      // Update actor context with new consumed IDs
-      actor.$jazz.set('context', {
-        ...context,
-        consumedMessages: updatedConsumed,
-      });
-      
-      logger.log(`Marked ${newlyConsumed.length} messages as consumed`);
-    }
+    })();
   });
   
   // ============================================

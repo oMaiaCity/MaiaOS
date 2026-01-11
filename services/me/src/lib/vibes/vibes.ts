@@ -56,7 +56,7 @@ export async function createVibesActors(account: any) {
 	// STEP 1: Create composite actors (cards, header)
 	// ARCHITECTURE: 1 Actor = 1 Composite/Leaf
 	// Simple titles/descriptions are now inline elements[] within parent composites
-	// NAVIGATION CARDS: Use @ui/navigate skill for true colocation
+	// NAVIGATION CARDS: Use @context/navigate tool for true colocation
 	// Inline title/description as elements[] (no separate actors needed)
 	const humansCardActor = await createActorEntity(account, {
 		context: { visible: true },
@@ -66,7 +66,7 @@ export async function createVibesActors(account: any) {
 			},
 			events: {
 				click: {
-					event: '@ui/navigate',
+					event: '@context/navigate',
 					payload: { vibeName: 'humans' }
 				}
 			},
@@ -87,7 +87,7 @@ export async function createVibesActors(account: any) {
 			},
 			events: {
 				click: {
-					event: '@ui/navigate',
+					event: '@context/navigate',
 					payload: { vibeName: 'todos' }
 				}
 			},
@@ -146,7 +146,7 @@ export async function createVibesActors(account: any) {
 	// NO WAIT! Root actor created locally, use immediately
 
 	// STEP 4: Update card actors' subscriptions - Subscribe to ROOT for root-level state updates
-	// Cards use @ui/navigate skill for true colocation (navigation handled by skill system)
+	// Cards use @context/navigate tool for true colocation (navigation handled by tool system)
 	humansCardActor.subscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
 	todosCardActor.subscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
 	// NO WAIT! Subscriptions updated locally, sync happens in background

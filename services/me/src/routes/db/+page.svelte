@@ -3,7 +3,7 @@
   import {
     type CoValueContext,
   } from "@maia/db";
-  import { executeSkill, registerAllSkills } from "$lib/compositor/skills";
+  import { ToolEngine, registerAllTools } from "$lib/compositor/tools";
   import type { CoID, RawCoValue } from "cojson";
   import { CoState } from "jazz-tools/svelte";
   import { CoMap } from "jazz-tools";
@@ -13,9 +13,9 @@
   import { Context, MetadataSidebar } from "$lib/components/data-explorer";
   import { deriveContextFromCoState } from "$lib/utils/costate-navigation";
 
-  // Register all skills on page load (only in browser to avoid SSR issues)
+  // Register all tools on page load (only in browser to avoid SSR issues)
   if (browser) {
-    registerAllSkills();
+    registerAllTools();
   }
 
   // Better Auth session
@@ -315,7 +315,9 @@
 
     try {
       console.log('[DB Page] Starting database reset...');
-      await executeSkill('@database/resetDatabase', account);
+      // ToolEngine.execute signature: (toolId, actor, payload, accountCoState)
+      // For database operations without an actor, pass me as actor and account as accountCoState
+      await ToolEngine.execute('@core/resetDatabase', me, undefined, account);
       console.log('[DB Page] ✅ Database reset complete!');
       console.log('[DB Page] 📋 Reload the page manually to see changes.');
     } catch (error) {
@@ -335,7 +337,7 @@
       }
 
       // Create new Todo and Human entities for testing
-      await executeSkill('@entity/createEntity', account, {
+      await ToolEngine.execute('@core/createEntity', me, {
         schemaName: 'Todo',
         entityData: {
           name: "test todo for assigned relation",
@@ -343,15 +345,15 @@
           endDate: new Date("2025-12-31").toISOString(),
           duration: 30,
         },
-      });
+      }, account);
 
-      await executeSkill('@entity/createEntity', account, {
+      await ToolEngine.execute('@core/createEntity', me, {
         schemaName: 'Human',
         entityData: {
           name: "Test Human",
           email: "test@example.com",
         },
-      });
+      }, account);
 
       // Wait a bit for entities to sync, then find them
       await new Promise(resolve => setTimeout(resolve, 200));
@@ -383,7 +385,7 @@
       }
 
       // Create Relation instance relating Todo to Human
-      await executeSkill('@relation/createRelation', account, {
+      await ToolEngine.execute('@core/createRelation', me, {
         schemaName: 'AssignedTo',
         relationData: {
           x1: todoEntity,

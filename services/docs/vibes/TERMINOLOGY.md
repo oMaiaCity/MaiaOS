@@ -488,41 +488,157 @@ listModules(): MaiaScriptModule[]
 ## 6. Engine Layer (Execution)
 
 ### **Engine Pattern**
-**Definition:** A component that takes JSON MaiaScript config and transforms it into running entities.
+**Definition:** A component that takes JSON config and transforms it into running entities.
 
 **Role:** JSON → Execution transformer
 
 **Naming Convention:** `*Engine` suffix
 
-**Core Principle:** Anything that takes JSON MaiaScript and outputs entities is an Engine.
+**Core Principle:** Anything that takes JSON and outputs entities is an Engine.
 
-**Examples:**
+**All Engines:**
 
-#### **ActorEngine** (Renamed from "ActorRenderer")
-- **Input:** Actor JSON (with view config + context + skills)
-- **Output:** Rendered DOM + event handlers + reactive state
-- **File:** `services/me/src/lib/compositor/actors/ActorRenderer.svelte` → **Rename to `ActorEngine.svelte`**
+#### **ActorEngine** ✅ Implemented
+- **Input:** Actor ID (Jazz CoValue)
+- **Output:** Rendered DOM + reactive state + message processing
+- **File:** `services/me/src/lib/compositor/engines/ActorEngine.svelte`
+- **Role:** Actor orchestration, query resolution, message processing, view rendering
 
-#### **ViewEngine** (New, unified Composite+Leaf)
+#### **ToolEngine** ✅ Implemented
+- **Input:** Tool ID + Payload (with MaiaScript)
+- **Output:** Executed business logic
+- **File:** `services/me/src/lib/compositor/engines/ToolEngine.ts`
+- **Role:** Tool execution with MaiaScript DSL payload evaluation and security
+
+#### **ViewEngine** ✅ Implemented
 - **Input:** ViewNode JSON (Composite or Leaf)
 - **Output:** Rendered HTML elements + event bindings
-- **File:** `services/me/src/lib/compositor/view/ViewEngine.svelte` (planned)
+- **File:** `services/me/src/lib/compositor/engines/ViewEngine.svelte`
+- **Role:** Unified Composite + Leaf rendering with data bindings
 
-#### **FactoryEngine** (Renamed from "Universal Factory")
+#### **factoryEngine** ✅ Implemented
 - **Input:** Factory JSON + parameters
 - **Output:** Resolved ViewNode (template expansion)
-- **File:** `services/me/src/lib/factories/runtime/universal-factory.ts` → **Rename to `factory-engine.ts`**
+- **File:** `services/me/src/lib/compositor/engines/factoryEngine.ts`
+- **Role:** Factory template expansion with conditionals
 
-#### **MaiaScriptEngine** (Expression Evaluation Engine)
-- **Input:** MaiaScript expression JSON
-- **Output:** Computed value
-- **File:** `services/me/src/lib/compositor/dsl/evaluator.ts`
-- **Note:** Core evaluation engine (MaiaScript JSON → values)
-- **Rename:** Consider exporting as `MaiaScriptEngine` class or namespace for consistency
+#### **queryEngine** ✅ Implemented
+- **Input:** Schema name + query options
+- **Output:** Reactive entity list (plain objects)
+- **File:** `services/me/src/lib/compositor/engines/queryEngine.svelte.ts`
+- **Role:** Jazz-native reactive entity queries
+
+#### **seedingEngine** ✅ Implemented
+- **Input:** Vibe name
+- **Output:** Actor tree (seeded in Jazz)
+- **File:** `services/me/src/lib/compositor/engines/seedingEngine.ts`
+- **Role:** Vibe initialization and actor tree creation
+
+**See:** [Engine Architecture](./ENGINE_ARCHITECTURE.md) for complete documentation.
 
 ---
 
-## 7. Data & Context
+## 7. Tool System (Business Logic)
+
+### **Tool** (Renamed from "Skill")
+**Definition:** Reusable business logic function with metadata and execute function.
+
+**Alternative Names:** Action, Skill (legacy)
+
+**Role:** Executes business logic, mutates Jazz CoValues
+
+**Structure:**
+```typescript
+interface Tool {
+  metadata: ToolMetadata
+  execute: ToolFunction
+}
+
+type ToolFunction = (
+  actor: any,            // Actor reference
+  payload?: unknown,     // Event payload
+  accountCoState?: any   // Jazz account
+) => void | Promise<void>
+```
+
+**Categories:**
+- `@core/*` - Generic CRUD and database operations
+- `@context/*` - UI state and context management
+- `@ai/*` - AI and LLM interactions
+- `@human/*` - Domain-specific convenience tools
+
+**Examples:**
+- `@core/createEntity` - Create any entity
+- `@core/updateEntity` - Update any entity
+- `@context/update` - Update actor context
+- `@context/swapActors` - Swap actor IDs for view switching
+
+**See:** [Tools System](./skills/README.md) for complete documentation.
+
+---
+
+### **Tool Module**
+**Definition:** A pluggable extension that groups related tools together.
+
+**Role:** Tool organization and discovery
+
+**Structure:**
+```typescript
+interface ToolModule {
+  name: string              // Module name (e.g., 'core')
+  version: string           // Version (e.g., '1.0.0')
+  builtin?: boolean         // True for core modules
+  tools: Record<string, Tool>  // Tool registry
+}
+```
+
+**Built-in Modules:**
+- `core` - Generic CRUD and database operations (10 tools)
+- `context` - UI state and context management (9 tools)
+
+**Optional Modules:**
+- `ai` - AI interactions (1 tool)
+- `human` - Domain-specific tools (1 tool)
+
+**Files:**
+- `services/me/src/lib/compositor/tools/core.module.ts`
+- `services/me/src/lib/compositor/tools/context.module.ts`
+- `services/me/src/lib/compositor/tools/ai.module.ts`
+- `services/me/src/lib/compositor/tools/human.module.ts`
+
+---
+
+### **Tool Module Registry**
+**Definition:** Central registry for discovering and loading tool modules.
+
+**Role:** Tool lookup and module management
+
+**API:**
+```typescript
+interface ToolModuleRegistry {
+  register(module: ToolModule): void
+  get(moduleName: string): ToolModule | undefined
+  getAll(): ToolModule[]
+  getTool(toolId: string): Tool | undefined
+}
+```
+
+**Usage:**
+```typescript
+import { toolModuleRegistry } from '$lib/compositor/tools'
+
+// Register custom module
+toolModuleRegistry.register(myAppModule)
+
+// Get tool
+const tool = toolModuleRegistry.getTool('@core/createEntity')
+```
+
+**File:** `services/me/src/lib/compositor/tools/module-registry.ts`
+
+---
+
+## 8. Data & Context
 
 ### **Context**
 **Definition:** Actor's local transient state (UI state, form values, loading flags).
@@ -593,7 +709,7 @@ interface EvaluationContext {
 
 ---
 
-## 8. Binding & Events
+## 9. Binding & Events
 
 ### **Binding**
 **Definition:** Reactive connection from data to UI (one-way: data → UI).
@@ -680,7 +796,7 @@ interface EvaluationContext {
 
 ---
 
-## 9. Security
+## 10. Security
 
 ### **Security Rules** (Renamed from "Whitelist")
 **Definition:** JSON configuration defining allowed tags, classes, and attributes.
@@ -722,7 +838,7 @@ interface EvaluationContext {
 
 ---
 
-## 10. Schema System (Advanced)
+## 11. Schema System (Advanced)
 
 ### **Schema**
 **Definition:** Reusable design system component with type-validated parameters.
@@ -779,28 +895,33 @@ interface EvaluationContext {
 | Term | Layer | Definition |
 |------|-------|------------|
 | **Actor** | Core | Universal atom (UI or service) |
-| **ActorEngine** | Engine | Renders Actors to DOM |
+| **ActorEngine** | Engine | Orchestrates actors, messages, queries, rendering |
 | **Binding** | Data | Reactive data → UI connection |
 | **Binding Resolver** | Module | Evaluates bindings to values |
 | **Composite** | View | Container node with children |
 | **Context** | Data | Actor's local state |
 | **Data Path** | Data | Dot-notation property accessor |
 | **Dependencies** | Data | Child Actors |
-| **MaiaScript** | Core | Secure JSON expression language (DSL) |
-| **MaiaScriptEngine** | Engine | Executes MaiaScript expressions (evaluates JSON → values) |
-| **MaiaScript Expression** | Data | Single MaiaScript computation |
-| **MaiaScript Module** | Module | Pluggable MaiaScript extension |
-| **MaiaScript Operation** | Data | Atomic MaiaScript function |
 | **Event Config** | Data | Event declaration (name + payload) |
 | **Event Handler** | Module | Creates DOM event listeners |
 | **Factory** | Data | JSON template for ViewNodes |
 | **Factory Conditional** | Data | Compile-time template branching |
-| **FactoryEngine** | Engine | Interprets Factory JSON |
+| **factoryEngine** | Engine | Factory template expansion with conditionals |
 | **Item** | Data | Loop variable in `foreach` |
 | **Leaf** | View | Endpoint node (no children) |
+| **MaiaScript** | Core | Secure JSON expression language (DSL) |
+| **MaiaScript Expression** | Data | Single MaiaScript computation |
+| **MaiaScript Module** | Module | Pluggable MaiaScript extension |
+| **MaiaScript Operation** | Data | Atomic MaiaScript function |
 | **Payload** | Data | Event arguments/context |
+| **queryEngine** | Engine | Jazz-native reactive entity queries |
 | **Schema** | Advanced | Design system component |
 | **Security Rules** | Security | Allowed tags/classes/attributes |
+| **seedingEngine** | Engine | Vibe initialization and actor tree creation |
+| **Tool** | Core | Reusable business logic function (renamed from Skill) |
+| **Tool Module** | Module | Group of related tools |
+| **ToolEngine** | Engine | Executes tools with MaiaScript DSL evaluation |
+| **Tool Module Registry** | Module | Central registry for tool discovery |
 | **Vibe** | Core | App experience (orchestrated Actors) |
 | **ViewEngine** | Engine | Unified Composite+Leaf renderer |
 | **ViewNode** | View | Generic tree node (Composite or Leaf) |
@@ -839,7 +960,11 @@ interface EvaluationContext {
 ## References
 
 - [Architecture Summary](./ARCHITECTURE_SUMMARY.md)
+- [Engine Architecture](./ENGINE_ARCHITECTURE.md) ⭐ NEW
+- [MaiaScript DSL](./MAIASCRIPT_DSL.md) ⭐ NEW
+- [Factory System](./FACTORY_SYSTEM.md) ⭐ NEW
 - [Context Architecture](./CONTEXT_ARCHITECTURE.md)
+- [Tools System](./skills/README.md)
 - [Vibes Overview](./vibes/README.md)
 - [Actors Documentation](./actors/README.md)
 - [View System](./view/README.md)
