@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Drag-Drop Capability Rules",
+  "description": "JSON-editable rules for drag-drop capabilities",
+  "version": "1.0.0",
+  "rules": {
+    "allowedDraggableTags": [
+      "div",
+      "section",
+      "article",
+      "li",
+      "span",
+      "button"
+    ],
+    "allowedDropzoneTags": [
+      "div",
+      "section",
+      "article",
+      "ul",
+      "ol"
+    ],
+    "dragVisualFeedback": {
+      "draggableClass": "cursor-move",
+      "draggingClass": "opacity-50",
+      "dragOverClass": "bg-blue-50 border-blue-300"
+    },
+    "dragEffects": {
+      "allowed": ["move", "copy", "link"],
+      "default": "move"
+    }
+  }
+}

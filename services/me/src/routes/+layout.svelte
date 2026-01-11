@@ -13,6 +13,10 @@
   
   // Phase 5: Import builtin MaiaScript module (auto-registers)
   import '@maia/script/modules/builtin.module';
+  
+  // Phase 6-7: Import drag-drop and security modules (auto-register)
+  import '@maia/script/modules/dragdrop.module';
+  import '@maia/script/modules/security.module';
 
   const { children } = $props();
 
