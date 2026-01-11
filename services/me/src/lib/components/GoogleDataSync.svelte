@@ -1,7 +1,7 @@
 <script lang="ts">
   import { syncGoogleDataToProfile } from "@maia/db";
   import { authClient } from "$lib/auth-client";
-  import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
+  import { getJazzAccountContext } from "$lib/utils/jazz-account-context";
 
   // Better Auth session
   const session = authClient.useSession();

@@ -5,7 +5,7 @@
 
 import type { Skill } from './types';
 import { createEntityGeneric } from '@maia/db';
-import { createActorLogger } from '../utilities/logger';
+import { createActorLogger } from '$lib/utils/logger';
 
 const createTodoSkill: Skill = {
 	metadata: {

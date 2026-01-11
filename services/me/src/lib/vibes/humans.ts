@@ -7,11 +7,11 @@
 
 import { createActorEntity, getVibesRegistry } from "@maia/db";
 import { Group } from "jazz-tools";
-import { createLeaf, createComposite } from '$lib/factories/runtime/factory-engine';
-import titleFactory from '$lib/factories/leafs/title.factory.json';
-import headerFactory from '$lib/factories/composites/header.factory.json';
-import rootCardFactory from '$lib/factories/composites/rootCard.factory.json';
-import buttonFactory from '$lib/factories/leafs/button.factory.json';
+import { createLeaf, createComposite } from '$lib/compositor/engines/factoryEngine';
+import titleFactory from '$lib/compositor/factories/leafs/title.factory.json';
+import headerFactory from '$lib/compositor/factories/composites/header.factory.json';
+import rootCardFactory from '$lib/compositor/factories/composites/rootCard.factory.json';
+import buttonFactory from '$lib/compositor/factories/leafs/button.factory.json';
 
 // Global lock
 const getGlobalLock = () => {

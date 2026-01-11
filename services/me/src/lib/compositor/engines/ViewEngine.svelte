@@ -5,13 +5,12 @@
   Self-recursive (no separate wrapper needed)
 -->
 <script lang="ts">
-  import type { VibeConfig } from "../types";
-  import type { ViewNode, CompositeNode, LeafNode } from "../view/types";
+  import type { VibeConfig } from "$lib/utils/types";
+  import type { ViewNode, CompositeNode, LeafNode } from "$lib/utils/types";
   import { browser } from "$app/environment";
   // Phase 7: Use security module instead of whitelist
-  import { validateLeaf } from "@maia/script/modules/security.module";
+  import { validateLeaf, sanitizeClasses } from "@maia/script/modules/security.module";
   import { resolveDataPath } from "../view/resolver";
-  import { sanitizeClasses } from "../view/whitelist";
   import { viewNodeRegistry } from "../view/view-node-registry";
   import { resolveSchemaLeaf, resolveSchemaComposite } from "../view/schema-resolver";
   import Icon from "@iconify/svelte";

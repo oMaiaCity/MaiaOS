@@ -3,7 +3,7 @@
   import { browser } from "$app/environment";
   import { page } from "$app/stores";
   import { authClient } from "$lib/auth-client";
-  import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
+  import { getJazzAccountContext } from "$lib/utils/jazz-account-context";
 
   const { title, description } = $props();
 

@@ -1,5 +1,5 @@
 import type { Skill } from './types';
-import { createActorLogger } from '../utilities/logger';
+import { createActorLogger } from '$lib/utils/logger';
 
 export const updateContextSkill: Skill = {
   metadata: {

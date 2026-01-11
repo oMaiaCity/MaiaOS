@@ -3,7 +3,7 @@ import { Account } from 'jazz-tools'
 import { onMount } from 'svelte'
 import { browser } from '$app/environment'
 import { authClient } from '$lib/auth-client'
-import { getAuthStorage, getJazzContext } from '$lib/jazz-utils'
+	import { getAuthStorage, getJazzContext } from '$lib/utils/jazz-utils'
 
 // Get JazzContext and AuthSecretStorage during component initialization
 // (getContext() can only be called during initialization, not in onMount)

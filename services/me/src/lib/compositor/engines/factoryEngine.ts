@@ -9,8 +9,7 @@
  * - Parameter-based conditionals are evaluated BEFORE template substitution
  */
 
-import type { CompositeNode, ViewNode } from '$lib/compositor/view/types';
-import type { LeafNode } from '$lib/compositor/view/leaf-types';
+import type { CompositeNode, ViewNode, LeafNode } from '$lib/utils/types';
 import { safeEvaluate, isMaiaScriptExpression } from '@maia/script';
 import type { MaiaScriptExpression } from '@maia/script';
 

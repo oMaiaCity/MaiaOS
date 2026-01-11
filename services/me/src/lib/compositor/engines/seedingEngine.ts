@@ -6,9 +6,9 @@
 
 import { createActorEntity, getVibesRegistry } from "@maia/db";
 import { Group } from "jazz-tools";
-import { createVibesActors } from '$lib/vibes/vibes/createVibesActors';
-import { createHumansActors } from '$lib/vibes/humans/createHumansActors';
-import { createTodosActors } from '$lib/vibes/todo/createTodosActors';
+import { createVibesActors } from '$lib/vibes/vibes';
+import { createHumansActors } from '$lib/vibes/humans';
+import { createTodosActors } from '$lib/vibes/todos';
 
 /**
  * Vibe configuration for actor creation

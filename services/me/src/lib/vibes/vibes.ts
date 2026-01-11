@@ -1,16 +1,16 @@
 /**
  * Create Vibes Actors - ID-Based Architecture
- * Uses template factories that return CompositeConfig/LeafNode
+ * Uses template factories that return CompositeNode/LeafNode
  * ID-based parent-child relationships (no role queries)
  * Bottom-up creation: leafs → composites → root
  */
 
 import { createActorEntity, getVibesRegistry } from "@maia/db";
 import { Group } from "jazz-tools";
-import { createLeaf, createComposite } from '$lib/factories/runtime/factory-engine';
-import titleFactory from '$lib/factories/leafs/title.factory.json';
-import headerFactory from '$lib/factories/composites/header.factory.json';
-import rootCardFactory from '$lib/factories/composites/rootCard.factory.json';
+import { createLeaf, createComposite } from '$lib/compositor/engines/factoryEngine';
+import titleFactory from '$lib/compositor/factories/leafs/title.factory.json';
+import headerFactory from '$lib/compositor/factories/composites/header.factory.json';
+import rootCardFactory from '$lib/compositor/factories/composites/rootCard.factory.json';
 
 // Global lock that persists across hot reloads
 const getGlobalLock = () => {

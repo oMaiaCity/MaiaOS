@@ -2,7 +2,7 @@
   import { setupComputedFieldsForCoValue } from "@maia/db";
   import { Image } from "jazz-tools/svelte";
   import { authClient } from "$lib/auth-client";
-  import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
+  import { getJazzAccountContext } from "$lib/utils/jazz-account-context";
 
   // Better Auth session
   const session = authClient.useSession();

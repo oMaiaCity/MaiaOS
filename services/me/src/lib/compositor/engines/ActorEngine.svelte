@@ -9,21 +9,18 @@
   import { Actor, ActorMessage } from "@maia/db";
   import { registerAllSkills, skillRegistry } from "../skills";
   import { resolveDataPath } from "../view/resolver";
-  import { useQuery } from "../useQuery.svelte";
+  import { useQuery } from "./queryEngine.svelte";
   import ViewEngine from "./ViewEngine.svelte";
-  import { createActorLogger } from "../utilities/logger";
-  
-  // Self-recursion (Svelte 5 supports this natively)
-  import ActorEngine from "./ActorEngine.svelte";
+  import { createActorLogger } from "$lib/utils/logger";
+
   
   interface Props {
     actorId: string; // Actor's CoValue ID
     accountCoState?: any; // Global account (for skills)
-    itemDependencyId?: string; // For foreach: CoValue ID of item (deprecated)
     item?: any; // For foreach: actual item object
   }
   
-  const { actorId, accountCoState, itemDependencyId, item: itemProp }: Props = $props();
+  const { actorId, accountCoState, item: itemProp }: Props = $props();
   
   // Create actor-specific logger (will be initialized once actor loads)
   let logger = $derived.by(() => createActorLogger(actor));

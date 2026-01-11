@@ -2,9 +2,9 @@
   import { page } from "$app/stores";
   import { browser } from "$app/environment";
   import { untrack } from "svelte";
-  import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
+  import { getJazzAccountContext } from "$lib/utils/jazz-account-context";
   import ActorEngine from "$lib/compositor/engines/ActorEngine.svelte";
-  import { getOrCreateVibe, getVibeIfExists } from "$lib/factories/seeder";
+  import { getOrCreateVibe, getVibeIfExists } from "$lib/compositor/engines/seedingEngine";
   import { CoState } from "jazz-tools/svelte";
   import { Actor } from "@maia/db";
 

@@ -8,7 +8,7 @@
   import { CoState } from "jazz-tools/svelte";
   import { CoMap } from "jazz-tools";
   import { authClient } from "$lib/auth-client";
-  import { getJazzAccountContext } from "$lib/contexts/jazz-account-context";
+  import { getJazzAccountContext } from "$lib/utils/jazz-account-context";
   import ObjectContextDisplay from "$lib/components/data-explorer/ObjectContextDisplay.svelte";
   import { Context, MetadataSidebar } from "$lib/components/data-explorer";
   import { deriveContextFromCoState } from "$lib/utils/costate-navigation";

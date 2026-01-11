@@ -1,12 +1,11 @@
 /**
  * Schema Resolver - Pre-render layer for schema resolution
  * 
- * Converts schema instances (with @schema + parameters) to regular LeafNodes and CompositeConfigs
+ * Converts schema instances (with @schema + parameters) to regular LeafNodes and CompositeNodes
  * Render engine never sees @schema or parameters - only regular nodes
  */
 
-import type { LeafNode } from './leaf-types'
-import type { CompositeNode } from './types'
+import type { LeafNode, CompositeNode } from '$lib/utils/types'
 import { getJsonSchema } from '@maia/db'
 
 /**
@@ -161,12 +160,12 @@ function extractSchemaName(schemaRef: any): string {
 }
 
 /**
- * Resolve schema instance to regular CompositeConfig
+ * Resolve schema instance to regular CompositeNode
  * This happens BEFORE rendering - render engine never sees @schema
  * 
  * Separation:
  * - Input: Schema instance (has @schema + parameters)
- * - Output: Regular CompositeConfig (no schema info)
+ * - Output: Regular CompositeNode (no schema info)
  * 
  * Note: Currently uses hardcoded registry only - no CoValue creation yet
  */
@@ -195,7 +194,7 @@ export function resolveSchemaComposite(composite: CompositeNode): CompositeNode 
 	}
 
 	// Extract definition and parameterSchema from hardcoded schema
-	const definition = jsonSchema.definition // CompositeConfig structure
+	const definition = jsonSchema.definition // CompositeNode structure
 	const parameterSchema = jsonSchema.parameterSchema // Full JSON Schema
 
 	if (!definition) {
@@ -219,7 +218,7 @@ export function resolveSchemaComposite(composite: CompositeNode): CompositeNode 
 	// Merge defaults from JSON Schema into parameters
 	const finalParams = mergeDefaults(composite.parameters || {}, parameterSchema)
 
-	// Resolve schema with parameters → regular CompositeConfig (no @schema, no parameters)
+	// Resolve schema with parameters → regular CompositeNode (no @schema, no parameters)
 	return resolveCompositeSchema(definition, finalParams, composite)
 }
 

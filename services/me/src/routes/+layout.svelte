@@ -10,7 +10,7 @@
   import Header from "$lib/components/Header.svelte";
   import JazzAuthSetup from "$lib/components/JazzAuthSetup.svelte";
   import JazzAccountProvider from "$lib/components/JazzAccountProvider.svelte";
-  
+
   // Phase 5: Import builtin MaiaScript module (auto-registers)
   import '@maia/script/modules/builtin.module';
   

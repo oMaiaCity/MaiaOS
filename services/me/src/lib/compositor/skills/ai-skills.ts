@@ -10,7 +10,7 @@
 import type { Skill } from './types'
 import { CoState } from 'jazz-tools/svelte'
 import { Actor } from '@maia/db'
-import { createActorLogger } from '../utilities/logger'
+import { createActorLogger } from '$lib/utils/logger'
 
 /**
  * Build conversation history from in-memory messages array

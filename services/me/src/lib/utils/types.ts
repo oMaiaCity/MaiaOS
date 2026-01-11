@@ -1,145 +1,258 @@
 /**
- * View Types - Unified Composite/Leaf pattern
- * Standardized naming: composite (layout node) and leaf (content node)
+ * Compositor Types - Centralized Type Definitions
+ * All types for the compositor system in one place
  */
 
-import type { LeafNode } from './leaf-types'
-import type { EventConfig } from './leaf-types'
+// ============================================
+// CORE ACTOR TYPES
+// ============================================
+
+/**
+ * Actor Configuration
+ * Actors are the basic building blocks that encapsulate state and view
+ */
+export interface ActorConfig {
+	context: Record<string, unknown>
+	view: unknown // CompositeNode or LeafNode - actor owns its view
+	dependencies: Record<string, string> // name -> CoValue ID
+}
+
+// ============================================
+// VIBE TYPES
+// ============================================
+
+/**
+ * Generic Vibe Config Interface
+ * Vibes are fully actor-based with internal state management
+ */
+export interface VibeConfig {
+	/**
+	 * View configuration - REQUIRED
+	 * Unified Composite/Leaf structure - no separate layout/slots
+	 */
+	view: ViewConfig
+}
+
+// ============================================
+// EVENT TYPES
+// ============================================
+
+/**
+ * Event Configuration - Maps UI events to state machine events
+ */
+export interface EventConfig {
+	/**
+	 * State machine event name to trigger
+	 */
+	event: string
+
+	/**
+	 * Payload for the event
+	 * Can be:
+	 * - Static object: { todoId: "123" }
+	 * - Data path string: "item.id" (resolved at runtime)
+	 * - Function result (not serializable, but can be used programmatically)
+	 */
+	payload?: Record<string, unknown> | string | ((data: unknown) => unknown)
+}
 
 /**
  * Event Mapping - Maps UI interactions to state machine events
  * Fully generic - works with any event/action names
  */
 export interface SlotEventMapping {
-	/**
-	 * Event to trigger on form submit
-	 */
 	onSubmit?: string | { event: string; payload?: (data: unknown) => unknown }
-
-	/**
-	 * Event to trigger on input change
-	 */
 	onInput?: string | { event: string; payload?: (data: unknown) => unknown }
-
-	/**
-	 * Event to trigger on change (checkbox, select, etc.)
-	 */
 	onChange?: string | { event: string; payload?: (data: unknown) => unknown }
-
-	/**
-	 * Event to trigger on click
-	 */
 	onClick?: string | { event: string; payload?: (data: unknown) => unknown }
-
-	/**
-	 * Event to trigger on toggle (for checkboxes in lists)
-	 */
 	onToggle?: string | { event: string; payload?: (data: unknown) => unknown }
-
-	/**
-	 * Event to trigger on delete/remove
-	 */
 	onDelete?: string | { event: string; payload?: (data: unknown) => unknown }
-
-	/**
-	 * Event to trigger on clear
-	 */
 	onClear?: string | { event: string; payload?: (data: unknown) => unknown }
-
-	/**
-	 * Event to trigger on drop (for drag and drop)
-	 */
 	onDrop?: string | { event: string; payload?: (data: unknown) => unknown }
 }
 
-/**
- * Layout Type - Defines the layout strategy
- * Semantic types: 'list' (vertical scrollable), 'row' (horizontal wrapping)
- * Low-level types: 'flex', 'stack', 'grid', 'overlay' (for advanced use)
- */
-export type LayoutType = 'grid' | 'flex' | 'stack' | 'overlay' | 'list' | 'row'
+// ============================================
+// LEAF NODE TYPES
+// ============================================
 
 /**
- * Overflow Behavior
+ * Leaf Bindings - Data binding configuration
  */
-export type OverflowBehavior = 'visible' | 'hidden' | 'scroll' | 'auto'
-
-/**
- * Position Type
- */
-export type PositionType = 'static' | 'relative' | 'absolute' | 'fixed' | 'sticky'
-
-/**
- * Grid Template - For CSS Grid layouts
- */
-export interface GridTemplate {
-	columns?: string
-	rows?: string
-	gap?: string
-	areas?: Record<string, string>
-}
-
-/**
- * Flex Properties - For Flexbox layouts
- */
-export interface FlexProperties {
-	direction?: 'row' | 'row-reverse' | 'column' | 'column-reverse'
-	justify?: 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around' | 'space-evenly'
-	align?: 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline'
-	wrap?: 'nowrap' | 'wrap' | 'wrap-reverse'
-	gap?: string
-}
-
-/**
- * Container Styles
- * 
- * Prefer using 'class' with Tailwind classes for styling.
- * Use 'style' for inline styles only when necessary (e.g., dynamic values, CSS variables).
- */
-export interface ContainerStyles {
+export interface LeafBindings {
 	/**
-	 * Tailwind CSS classes (space-separated string)
-	 * Recommended: Use this for all styling instead of computed styles
-	 * Example: "flex flex-col gap-4 p-6 bg-white rounded-lg"
+	 * Data path to bind as value (for inputs, etc.)
+	 * Example: "data.newTodoText"
+	 */
+	value?: string
+
+	/**
+	 * Data path to bind as text content
+	 * Example: "data.title"
+	 */
+	text?: string
+
+	/**
+	 * Expression for conditional CSS classes
+	 * Example: "item.status === 'done' ? 'bg-green-100' : 'bg-gray-100'"
 	 */
 	class?: string
+
 	/**
-	 * Inline styles (use sparingly, prefer Tailwind classes)
-	 * Only use for dynamic values, CSS variables, or complex calculations
+	 * Data path for conditional rendering (boolean)
+	 * Example: "data.showModal"
 	 */
-	style?: Record<string, string>
-	padding?: string
-	margin?: string
-	background?: string
-	border?: string
-	borderRadius?: string
-	containerType?: 'normal' | 'size' | 'inline-size'
-	containerName?: string
+	visible?: string
+
+	/**
+	 * Data path or expression for disabled state (boolean)
+	 * Example: "data.selectedRecipient === null"
+	 */
+	disabled?: string
+
+	/**
+	 * List rendering configuration
+	 */
+	foreach?: {
+		/**
+		 * Data path to array
+		 * Example: "data.todos"
+		 */
+		items: string
+
+		/**
+		 * Leaf template for each item
+		 */
+		leaf: LeafNode
+
+		/**
+		 * Key property for tracking items (defaults to index)
+		 * Example: "id"
+		 */
+		key?: string
+	}
 }
 
 /**
- * Position properties
+ * Icon Configuration for Iconify icons
  */
-export interface Position {
-	type?: PositionType
-	top?: string
-	right?: string
-	bottom?: string
-	left?: string
-	zIndex?: number
+export interface IconConfig {
+	/**
+	 * Iconify icon name (e.g., "solar:check-circle-bold", "solar:circle-bold")
+	 * Format: "collection:icon-name"
+	 */
+	name: string
+
+	/**
+	 * Optional icon classes (defaults to "w-4 h-4")
+	 * Space-separated string of Tailwind classes
+	 */
+	classes?: string
+
+	/**
+	 * Optional icon color (can be a data path like "item.categoryColor")
+	 * Example: "#001a42" or "item.categoryColor"
+	 */
+	color?: string
+
+	/**
+	 * Optional icon style (for dynamic styles)
+	 * Example: "color: item.categoryColor"
+	 */
+	style?: string
 }
 
 /**
- * Size constraints
+ * Leaf Node - JSON-driven UI component definition
+ * Can represent any HTML element with data bindings and events
  */
-export interface Size {
-	width?: string
-	height?: string
-	minWidth?: string
-	maxWidth?: string
-	minHeight?: string
-	maxHeight?: string
+export interface LeafNode {
+	/**
+	 * Unique identifier for this leaf config
+	 * Used for database storage and ID-based referencing
+	 * Format: "{vibe}.leaf.{name}" (e.g., "todo.leaf.todoList")
+	 */
+	id?: string
+	/**
+	 * HTML tag name
+	 * Examples: "div", "button", "input", "form", "ul", "li", etc.
+	 * Special: "icon" - renders an Iconify icon
+	 * Optional when @schema is provided (tag comes from schema definition)
+	 */
+	tag?: string
+
+	/**
+	 * HTML attributes
+	 * Examples: { type: "button", disabled: true, "aria-label": "Submit" }
+	 */
+	attributes?: Record<string, string | boolean | number>
+
+	/**
+	 * Tailwind CSS classes
+	 * Space-separated string of Tailwind classes
+	 * Example: "px-4 py-2 bg-blue-500 text-white"
+	 */
+	classes?: string
+
+	/**
+	 * HTML elements or text content (part of this single LeafNode definition)
+	 * Can be nested HTML element definitions or plain strings
+	 * Note: These are HTML elements, not separate LeafNode definitions (use composites for composition)
+	 */
+	elements?: (LeafNode | string)[]
+
+	/**
+	 * Iconify icon configuration
+	 * When tag is "icon", this specifies which icon to render
+	 */
+	icon?: IconConfig
+
+	/**
+	 * Data bindings
+	 */
+	bindings?: LeafBindings
+
+	/**
+	 * Event handlers
+	 * Maps DOM events to state machine events
+	 */
+	events?: {
+		click?: EventConfig
+		input?: EventConfig
+		change?: EventConfig
+		submit?: EventConfig
+		dragstart?: EventConfig
+		dragenter?: EventConfig
+		dragover?: EventConfig
+		dragleave?: EventConfig
+		drop?: EventConfig
+		dragend?: EventConfig
+		keydown?: EventConfig
+		keyup?: EventConfig
+		focus?: EventConfig
+		blur?: EventConfig
+	}
+
+	/**
+	 * @schema - Reference to schema definition
+	 * When present, this leaf is an instance created from a Schema
+	 * The schema must have type: "Leaf" or "Composite"
+	 * Currently: string schema name (e.g., "design-system.title")
+	 * Future: CoValue reference to SchemaDefinition CoValue
+	 */
+	'@schema'?: string | any
+
+	/**
+	 * Schema parameters - Concrete values for schema placeholders
+	 * Maps parameter names to data paths from queries/view
+	 * Example: { text: "data.queries.title", visible: "data.view.showTitle" }
+	 * These override the default values defined in the schema's parameterSchema JSON Schema
+	 */
+	parameters?: Record<string, string>
 }
+
+// ============================================
+// COMPOSITE NODE TYPES
+// ============================================
 
 /**
  * Container Layout Type - Explicit layout type for composite containers
@@ -274,15 +387,8 @@ export interface CompositeNode {
 	}
 	
 	/**
-	 * @deprecated Use ID-based children relationships instead
-	 * Container role - identifies which child actors belong to this composite
-	 * Will be removed in future versions
-	 */
-	containerRole?: string
-	
-	/**
 	 * Event handlers on container element
-	 * Maps DOM events to state machine events
+	 * Maps DOM events to actor events
 	 */
 	events?: {
 		click?: EventConfig
@@ -318,14 +424,45 @@ export interface CompositeNode {
 		 */
 		disabled?: string
 	}
-	
-	/**
-	 * @deprecated Use bindings.visible instead
-	 * Visibility binding - data path or expression that determines if this composite should be visible
-	 * Example: "item.status === 'done'"
-	 */
-	visible?: string
 }
+
+// ============================================
+// VIEW NODE TYPES
+// ============================================
+
+/**
+ * Layout positioning types
+ */
+export type PositionType = 'static' | 'relative' | 'absolute' | 'fixed' | 'sticky'
+
+/**
+ * Position properties
+ */
+export interface Position {
+	type?: PositionType
+	top?: string
+	right?: string
+	bottom?: string
+	left?: string
+	zIndex?: number
+}
+
+/**
+ * Size constraints
+ */
+export interface Size {
+	width?: string
+	height?: string
+	minWidth?: string
+	maxWidth?: string
+	minHeight?: string
+	maxHeight?: string
+}
+
+/**
+ * Overflow Behavior
+ */
+export type OverflowBehavior = 'visible' | 'hidden' | 'scroll' | 'auto'
 
 /**
  * View Node - Either a Composite (layout) or Leaf (content)
@@ -404,7 +541,3 @@ export interface ViewConfig {
 	 */
 	composite: CompositeNode
 }
-
-// Type alias for backward compatibility
-/** @deprecated Use CompositeNode instead */
-export type CompositeConfig = CompositeNode

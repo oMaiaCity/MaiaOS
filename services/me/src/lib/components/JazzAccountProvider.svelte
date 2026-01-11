@@ -1,7 +1,7 @@
 <script lang="ts">
   import { JazzAccount } from "@maia/db";
   import { AccountCoState } from "jazz-tools/svelte";
-  import { setJazzAccountContext } from "$lib/contexts/jazz-account-context";
+  import { setJazzAccountContext } from "$lib/utils/jazz-account-context";
 
   const { children } = $props();
 

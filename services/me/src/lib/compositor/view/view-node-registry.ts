@@ -3,11 +3,10 @@
  * Enables ID-based view node resolution for dynamic config swapping
  */
 
-import type { CompositeNode } from './types'
-import type { LeafNode } from './leaf-types'
+import type { CompositeNode, LeafNode } from '$lib/utils/types'
 
 class ViewNodeRegistryImpl {
-	private composites: Map<string, CompositeConfig> = new Map()
+	private composites: Map<string, CompositeNode> = new Map()
 	private leaves: Map<string, LeafNode> = new Map()
 
 	/**
@@ -51,8 +50,8 @@ class ViewNodeRegistryImpl {
 		const isLeafById = nodeId.includes('.leaf.')
 		
 		if (hasContainer || (hasSchema && (hasChildren || isCompositeById)) || isCompositeById) {
-			// It's a CompositeConfig (either regular or schema instance)
-			this.registerComposite(node as CompositeConfig)
+			// It's a CompositeNode (either regular or schema instance)
+			this.registerComposite(node as CompositeNode)
 		} else if (hasTag || (hasSchema && isLeafById) || isLeafById) {
 			// It's a LeafNode (either regular or schema instance)
 			this.registerLeaf(node as LeafNode)
@@ -78,7 +77,7 @@ class ViewNodeRegistryImpl {
 	/**
 	 * Register multiple view nodes at once (auto-detects type)
 	 */
-	registerAll(nodes: (CompositeConfig | LeafNode)[]): void {
+	registerAll(nodes: (CompositeNode | LeafNode)[]): void {
 		nodes.forEach((node) => this.register(node))
 	}
 
@@ -142,7 +141,7 @@ class ViewNodeRegistryImpl {
 	/**
 	 * Get all registered view nodes
 	 */
-	getAll(): (CompositeConfig | LeafNode)[] {
+	getAll(): (CompositeNode | LeafNode)[] {
 		return [...this.getAllComposites(), ...this.getAllLeaves()]
 	}
 }
