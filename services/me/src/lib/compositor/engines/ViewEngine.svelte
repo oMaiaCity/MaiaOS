@@ -27,6 +27,21 @@
     resolveDisabled,
     resolveValue
   } from "../view/binding-resolver";
+  
+  // Phase 3: Event Handler Module
+  import {
+    resolvePayload,
+    createEventHandler,
+    createClickHandler,
+    createSubmitHandler,
+    createInputHandler,
+    createDragStartHandler,
+    createDropHandler,
+    createDragOverHandler,
+    createDragEnterHandler,
+    createDragLeaveHandler,
+    createDragEndHandler
+  } from "../view/event-handler";
 
   // For actor-based rendering
   import ActorEngine from "./ActorEngine.svelte";
@@ -457,69 +472,14 @@
     }
   };
 
-  // Resolve payload
-  function resolvePayload(
-    payload: Record<string, unknown> | string | ((data: unknown) => unknown) | undefined,
-    itemData?: Record<string, unknown>,
-  ): unknown {
-    if (!payload) return undefined;
-
-    if (typeof payload === "string") {
-      const contextData = itemData ? { ...data, item: itemData } : data;
-      const resolvedValue = resolveDataPath(contextData, payload);
-      if (payload.endsWith(".id") || payload.match(/\.\w+Id$/)) {
-        return { id: resolvedValue };
-      }
-      if (payload === "item.id" || payload === "data.item.id") {
-        return { id: resolvedValue };
-      }
-      return resolvedValue;
-    }
-
-    if (typeof payload === "function") {
-      return payload(itemData || data);
-    }
-
-    if (typeof payload === "object" && payload !== null && !Array.isArray(payload)) {
-      const contextData = itemData ? { ...data, item: itemData } : data;
-      const resolved: Record<string, unknown> = {};
-      const DATA_PATH_ROOTS = ['data.', 'item.', 'queries.', 'view.', 'context.', 'dependencies.'];
-      
-      function isExplicitDataPath(str: string): boolean {
-        for (const root of DATA_PATH_ROOTS) {
-          if (str.startsWith(root) && str.length > root.length) {
-            return true;
-          }
-        }
-        return false;
-      }
-      
-      for (const [key, value] of Object.entries(payload)) {
-        if (typeof value === "string") {
-          if (isExplicitDataPath(value)) {
-            resolved[key] = resolveDataPath(contextData, value);
-          } else {
-            resolved[key] = value;
-          }
-        } else {
-          resolved[key] = value;
-        }
-      }
-      
-      return resolved;
-    }
-
-    return payload;
-  }
-
-  // Handle event
+  // Handle event (Phase 3: Uses event-handler module)
   function handleEvent(
     eventConfig: { event: string; payload?: Record<string, unknown> | string | ((data: unknown) => unknown) },
     itemData?: Record<string, unknown>,
   ) {
     if (!onEvent) return;
-    const contextItemData = itemData || ("item" in data && data.item ? (data.item as Record<string, unknown>) : undefined);
-    const payload = resolvePayload(eventConfig.payload, contextItemData);
+    const contextData = itemData ? { ...data, item: itemData } : data;
+    const payload = resolvePayload(eventConfig.payload, contextData);
     onEvent(eventConfig.event, payload);
   }
 
