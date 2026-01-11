@@ -1,111 +1,66 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Security Validation Rules",
-  "description": "JSON-editable security rules for MaiaScript views",
-  "version": "1.0.0",
+  "description": "Comprehensive JSON-editable security rules for MaiaScript views (migrated from whitelist.ts)",
+  "version": "2.0.0",
   "rules": {
     "allowedTags": [
-      "div",
-      "span",
-      "p",
-      "h1",
-      "h2",
-      "h3",
-      "h4",
-      "h5",
-      "h6",
-      "ul",
-      "ol",
-      "li",
-      "a",
-      "button",
-      "input",
-      "textarea",
-      "select",
-      "option",
-      "label",
-      "form",
-      "section",
-      "article",
-      "header",
-      "footer",
-      "nav",
-      "main",
-      "aside",
-      "img",
-      "svg",
-      "path",
-      "circle",
-      "rect",
-      "line",
-      "polyline",
-      "polygon"
+      "div", "span", "button", "input", "form", "ul", "ol", "li",
+      "h1", "h2", "h3", "h4", "h5", "h6", "p", "label", "a",
+      "svg", "path", "pre", "code", "section", "article", "header",
+      "footer", "nav", "main", "aside", "img", "br", "hr",
+      "icon"
     ],
-    "allowedAttributes": [
-      "class",
-      "id",
-      "style",
-      "type",
-      "name",
-      "value",
-      "placeholder",
-      "disabled",
-      "readonly",
-      "required",
-      "checked",
-      "draggable",
-      "href",
-      "target",
-      "rel",
-      "src",
-      "alt",
-      "width",
-      "height",
-      "title",
-      "aria-label",
-      "aria-describedby",
-      "role",
-      "tabindex",
-      "viewBox",
-      "fill",
-      "stroke",
-      "stroke-width",
-      "d",
-      "cx",
-      "cy",
-      "r",
-      "x",
-      "y",
-      "x1",
-      "y1",
-      "x2",
-      "y2",
-      "points"
+    "allowedAttributes": {
+      "_universal": [
+        "class", "id", "role", "tabindex",
+        "aria-label", "aria-labelledby", "aria-describedby",
+        "aria-hidden", "aria-expanded", "aria-selected",
+        "aria-checked", "aria-disabled", "aria-modal",
+        "aria-live", "data-*"
+      ],
+      "div": ["draggable"],
+      "button": ["type", "disabled", "aria-label", "title", "form", "formaction", "formmethod"],
+      "input": [
+        "type", "name", "placeholder", "value", "disabled", "readonly",
+        "required", "min", "max", "step", "pattern", "autocomplete",
+        "aria-label", "aria-describedby"
+      ],
+      "form": ["action", "method", "enctype", "novalidate"],
+      "a": ["href", "target", "rel", "download", "aria-label"],
+      "img": ["src", "alt", "width", "height", "loading", "aria-label"],
+      "label": ["for", "aria-label"],
+      "svg": [
+        "fill", "viewbox", "xmlns", "width", "height", "stroke",
+        "stroke-width", "stroke-linecap", "stroke-linejoin", "class"
+      ],
+      "path": [
+        "d", "fill", "stroke", "stroke-width", "stroke-linecap",
+        "stroke-linejoin", "stroke-dasharray", "stroke-dashoffset", "class"
+      ]
+    },
+    "blockedPatterns": [
+      "javascript:",
+      "on\\w+\\s*=",
+      "<script",
+      "data:text/html",
+      "vbscript:",
+      "expression\\s*\\("
     ],
-    "allowedClassPatterns": [
-      "^[a-zA-Z][a-zA-Z0-9-_]*$"
+    "containerQueryPrefixes": [
+      "@3xs", "@2xs", "@xs", "@sm", "@md", "@lg",
+      "@xl", "@2xl", "@3xl", "@4xl", "@5xl", "@6xl", "@7xl"
     ],
-    "forbiddenClasses": [
-      "eval",
-      "script",
-      "constructor",
-      "__proto__",
-      "prototype"
+    "mediaQueryPrefixes": [
+      "sm", "md", "lg", "xl", "2xl", "3xl", "4xl", "5xl", "6xl", "7xl",
+      "min-sm", "min-md", "min-lg", "min-xl", "min-2xl",
+      "max-sm", "max-md", "max-lg", "max-xl", "max-2xl"
     ],
-    "allowedDataPaths": [
-      "item",
-      "context",
-      "dependencies"
-    ],
+    "allowedPseudoClasses": ["hover", "focus", "active", "disabled", "placeholder"],
+    "allowedDataPaths": ["item", "context", "dependencies"],
     "forbiddenDataPaths": [
-      "__proto__",
-      "constructor",
-      "prototype",
-      "window",
-      "document",
-      "global",
-      "process",
-      "require"
+      "__proto__", "constructor", "prototype",
+      "window", "document", "global", "process", "require"
     ]
   }
 }

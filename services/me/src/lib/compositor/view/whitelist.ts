@@ -1,6 +1,14 @@
 /**
- * Security Whitelist - Strict validation for untrusted JSON configs
- * Prevents XSS, script injection, and other security vulnerabilities
+ * Security Whitelist - DEPRECATED
+ * @deprecated Use @maia/script/modules/security.module instead
+ * 
+ * This file is kept for backward compatibility only.
+ * All validation logic has been migrated to the MaiaScript security module.
+ * 
+ * Migration path:
+ * - import { validateLeaf } from '@maia/script/modules/security.module'
+ * - import { isAllowedTag, isAllowedAttribute } from '@maia/script/modules/security.module'
+ * - import { sanitizeClasses } from '@maia/script/modules/security.module'
  */
 
 import type { LeafNode } from './leaf-types'

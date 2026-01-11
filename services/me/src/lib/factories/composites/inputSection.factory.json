@@ -60,7 +60,6 @@
                 "attributes": { "type": "submit" },
                 "classes": "px-5 py-2.5 @xs:px-6 @xs:py-3 @sm:px-7 @sm:py-3.5 bg-[#001a42] border border-[#001a42] text-[#e6ecf7] rounded-full shadow-button-primary hover:bg-[#002662] hover:border-[#002662] hover:shadow-button-primary-hover hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 font-medium text-xs @xs:text-sm @sm:text-base disabled:opacity-60 disabled:cursor-not-allowed shrink-0 min-h-[44px]",
                 "bindings": {
-                  "visible": "{{buttonVisible}}",
                   "disabled": "{{buttonDisabled}}"
                 },
                 "elements": ["{{buttonText}}"]

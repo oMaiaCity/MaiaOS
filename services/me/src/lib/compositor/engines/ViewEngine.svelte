@@ -8,7 +8,8 @@
   import type { VibeConfig } from "../types";
   import type { ViewNode, CompositeNode, LeafNode } from "../view/types";
   import { browser } from "$app/environment";
-  import { validateLeaf } from "../view/whitelist";
+  // Phase 7: Use security module instead of whitelist
+  import { validateLeaf } from "@maia/script/modules/security.module";
   import { resolveDataPath } from "../view/resolver";
   import { sanitizeClasses } from "../view/whitelist";
   import { viewNodeRegistry } from "../view/view-node-registry";
