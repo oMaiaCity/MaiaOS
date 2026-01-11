@@ -7,7 +7,11 @@
 
 import { createActorEntity, getVibesRegistry } from "@maia/db";
 import { Group } from "jazz-tools";
-import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf } from '$lib/factories';
+import { createLeaf, createComposite } from '$lib/factories/runtime/universal-factory';
+import titleFactory from '$lib/factories/leafs/title.factory.json';
+import headerFactory from '$lib/factories/composites/header.factory.json';
+import rootCardFactory from '$lib/factories/composites/rootCard.factory.json';
+import buttonFactory from '$lib/factories/leafs/button.factory.json';
 
 // Global lock
 const getGlobalLock = () => {
@@ -62,7 +66,7 @@ export async function createHumansActors(account: any) {
 	// STEP 1: Create leaf actors (title, create button)
 	const headerTitleActor = await createActorEntity(account, {
 		context: { visible: true },
-		view: createTitleLeaf({ text: 'Humans', tag: 'h2' }),
+		view: createLeaf(titleFactory as any, { text: 'Humans', tag: 'h2' }),
 		dependencies: {},
 		role: 'humans-header-title',
 	}, group);
@@ -70,11 +74,10 @@ export async function createHumansActors(account: any) {
 	// Create button - TRUE COLOCATION: handles its own @human/createRandom action
 	const createButtonActor = await createActorEntity(account, {
 		context: { visible: true },
-		view: createButtonLeaf({
+		view: createLeaf(buttonFactory as any, {
 			text: 'Create Human',
 			event: '@human/createRandom',
-			payload: {},
-			variant: 'primary'
+			payload: {}
 		}),
 		dependencies: {},
 		role: 'humans-create-button',
@@ -85,7 +88,7 @@ export async function createHumansActors(account: any) {
 	// STEP 2: Create composite actors (header, list)
 	const headerActor = await createActorEntity(account, {
 		context: { visible: true },
-		view: createHeaderComposite(),
+		view: createComposite(headerFactory as any, {}),
 		dependencies: {},
 		role: 'humans-header',
 	}, group);
@@ -141,7 +144,15 @@ export async function createHumansActors(account: any) {
 								leaf: {
 									tag: 'div',
 									classes: 'flex-1 min-w-0 text-[9px] @xs:text-[10px] @sm:text-xs text-slate-500 truncate',
-									bindings: { text: "item.dateOfBirth ? new Date(item.dateOfBirth).toLocaleDateString() : ''" }
+									bindings: { 
+										text: {
+											"$if": {
+												"test": { "$": "item.dateOfBirth" },
+												"then": { "$formatDate": [{ "$": "item.dateOfBirth" }, "MMM d, yyyy"] },
+												"else": ""
+											}
+										}
+									}
 								}
 							},
 							{
@@ -175,7 +186,7 @@ export async function createHumansActors(account: any) {
 	// TRUE COLOCATION: Root actor is minimal (no actions), just a container
 	const humansRootActor = await createActorEntity(account, {
 		context: { visible: true },
-		view: createRootCardComposite({ 
+		view: createComposite(rootCardFactory as any, { 
 			cardLayout: 'flex', 
 			cardClasses: 'card p-2 @xs:p-3 @sm:p-4 @md:p-6 flex-col gap-4' 
 		}),

@@ -11,6 +11,8 @@
   import { resolveDataPath } from "./resolver";
   import { viewNodeRegistry } from "./view-node-registry";
   import { resolveSchemaLeaf, resolveSchemaComposite } from "./schema-resolver";
+  import { safeEvaluate, isDSLExpression } from "../dsl";
+  import type { DSLExpression } from "../dsl";
   
   // Recursive component reference (Svelte allows this)
   import CompositeRecursive from "./Composite.svelte";
@@ -163,220 +165,33 @@
     }
   });
 
-  // Helper to extract and access properties from expressions for reactivity tracking
-  function ensureReactivityForExpression(expression: string) {
-    const dataObj = data as Record<string, unknown>;
-    const accessedProperties = new Set<string>();
-
-    // Extract properties referenced as "data.property" or nested paths like "data.view.viewMode"
-    const dataPropertyMatches = expression.matchAll(/data\.(\w+)(?:\.(\w+))*/g);
-    for (const match of dataPropertyMatches) {
-      const topLevelProp = match[1];
-      if (!accessedProperties.has(topLevelProp) && topLevelProp in dataObj) {
-        accessedProperties.add(topLevelProp);
-        // Access the top-level property to ensure reactivity
-        const _ = dataObj[topLevelProp];
-        // Also access nested properties if they exist
-        const nestedProp = match[2];
-        if (nestedProp) {
-          const topLevelValue = dataObj[topLevelProp];
-          if (
-            topLevelValue &&
-            typeof topLevelValue === "object" &&
-            nestedProp in topLevelValue
-          ) {
-            const _nested = (topLevelValue as Record<string, unknown>)[
-              nestedProp
-            ];
-          }
-        }
-      }
-    }
-
-    // Extract direct property references (not keywords)
-    const propertyMatches = expression.matchAll(/\b(\w+)\b/g);
-    const keywords = new Set([
-      "true",
-      "false",
-      "null",
-      "undefined",
-      "typeof",
-      "data",
-    ]);
-
-    for (const match of propertyMatches) {
-      const propName = match[1];
-      if (
-        !keywords.has(propName) &&
-        !accessedProperties.has(propName) &&
-        propName in dataObj
-      ) {
-        accessedProperties.add(propName);
-        // Access the property to ensure reactivity
-        const _ = dataObj[propName];
-      }
-    }
-  }
-
-  // Resolve value - matches Leaf.svelte logic exactly
-  // This handles expressions with item context properly
-  function resolveValue(path: string, contextData?: Record<string, any>): unknown {
+  // Resolve value - secure DSL evaluation only
+  function resolveValue(path: string | DSLExpression, contextData?: Record<string, any>): unknown {
     // Access data to ensure reactivity (even when using contextData)
     const _ = data;
+    const evalData = contextData || data;
     
-    // Check if it's an expression (contains operators like ===, !==, !, ||, &&, typeof, etc.)
-    if (
-      path.includes("===") ||
-      path.includes("!==") ||
-      path.includes("==") ||
-      path.includes("!=") ||
-      path.includes(">") ||
-      path.includes("<") ||
-      path.includes("||") ||
-      path.includes("&&") ||
-      path.includes("typeof") ||
-      path.startsWith("!") ||
-      (path.includes("!") && path.match(/\s*!\s*data\./)) ||
-      path.includes("String(") ||
-      path.includes(".trim()")
-    ) {
-      // Evaluate JavaScript expression in the context of data
+    // DSL expression (secure JSON-based)
+    if (isDSLExpression(path)) {
       try {
-        const evalData = contextData || data;
-        // Extract item from data if it exists (for foreach contexts)
-        const item =
-          "item" in evalData && evalData.item
-            ? (evalData.item as Record<string, unknown>)
-            : {};
-
-        // Access all item properties to ensure reactivity tracking
-        if (item && typeof item === "object") {
-          Object.keys(item).forEach((key) => {
-            const _itemProp = item[key];
-          });
-        }
-
-        // Check if expression references 'data.' - if so, we need to provide data context
-        if (path.includes("data.")) {
-          // Dynamically extract all data properties and create variables
-          const dataObj = evalData as Record<string, unknown>;
-          const dataKeys: string[] = [];
-          const dataValues: unknown[] = [];
-
-          // Extract all data.* references from the expression
-          const dataPropertyMatches = path.matchAll(/data\.(\w+)/g);
-          const seenProperties = new Set<string>();
-
-          for (const match of dataPropertyMatches) {
-            const propName = match[1];
-            if (!seenProperties.has(propName)) {
-              seenProperties.add(propName);
-              dataKeys.push(propName);
-              // Access the property to ensure reactivity
-              dataValues.push(dataObj[propName]);
-            }
-          }
-
-          // Replace 'data.property' with just 'property' in the expression
-          let expression = path;
-          dataKeys.forEach((key) => {
-            expression = expression.replace(
-              new RegExp(`data\\.${key}`, "g"),
-              key,
-            );
-          });
-
-          // Use Function constructor for safer evaluation than eval
-          // Dynamically create function with all referenced data properties
-          // Include String and Number as global functions for expressions
-          // ALWAYS include 'item' as a parameter (even if empty object)
-          const func = new Function(
-            ...dataKeys,
-            "item",
-            "String",
-            "Number",
-            `return ${expression}`,
-          );
-          const result = func(...dataValues, item, String, Number);
-          return result;
-        } else {
-          // Expression doesn't reference 'data.' - check if it references properties directly
-          // Extract property names from the expression (e.g., "selectedRecipient", "sendAmount")
-          const dataObj = evalData as Record<string, unknown>;
-          const propertyMatches = path.matchAll(/\b(\w+)\b/g);
-          const seenProperties = new Set<string>();
-          const dataKeys: string[] = [];
-          const dataValues: unknown[] = [];
-
-          for (const match of propertyMatches) {
-            const propName = match[1];
-            // Skip JavaScript keywords and functions
-            if (
-              propName === "item" ||
-              propName === "String" ||
-              propName === "Number" ||
-              propName === "typeof" ||
-              propName === "isNaN" ||
-              propName === "trim" ||
-              propName === "return" ||
-              propName === "true" ||
-              propName === "false" ||
-              propName === "null" ||
-              propName === "undefined" ||
-              propName === "void" ||
-              propName === "new"
-            ) {
-              continue;
-            }
-            // Check if this property exists in data
-            if (propName in dataObj && !seenProperties.has(propName)) {
-              seenProperties.add(propName);
-              dataKeys.push(propName);
-              // Access the property to ensure reactivity
-              dataValues.push(dataObj[propName]);
-            }
-          }
-
-          // If we found data properties, use them; otherwise fall back to item-only evaluation
-          if (dataKeys.length > 0) {
-            const func = new Function(
-              ...dataKeys,
-              "item",
-              "String",
-              "Number",
-              "isNaN",
-              `return ${path}`,
-            );
-            const result = func(
-              ...dataValues,
-              item,
-              String,
-              Number,
-              Number.isNaN,
-            );
-            return result;
-          } else {
-            // Expression only references 'item' (for foreach contexts)
-            // Use Function constructor for safer evaluation than eval
-            const func = new Function(
-              "item",
-              "String",
-              "Number",
-              "isNaN",
-              `return ${path}`,
-            );
-            const result = func(item, String, Number, Number.isNaN);
-            return result;
-          }
-        }
+        return safeEvaluate(path, {
+          item: "item" in evalData && evalData.item ? (evalData.item as Record<string, unknown>) : undefined,
+          context: "context" in evalData && evalData.context ? (evalData.context as Record<string, unknown>) : undefined,
+          dependencies: "dependencies" in evalData && evalData.dependencies ? (evalData.dependencies as Record<string, unknown>) : undefined,
+        });
       } catch (error) {
-        console.warn("Expression evaluation error:", error, "path:", path, "contextData:", contextData);
+        console.warn('[Composite] DSL evaluation error:', error);
         return undefined;
       }
     }
-    // Not an expression - resolve as data path
-    const evalData = contextData || data;
-    return resolveDataPath(evalData, path);
+
+    // Simple string - resolve as data path
+    if (typeof path === 'string') {
+      return resolveDataPath(evalData, path);
+    }
+
+    // Invalid type
+    return undefined;
   }
 
   // Helper to evaluate visibility (reactive to data changes)

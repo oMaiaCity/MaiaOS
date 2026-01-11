@@ -1,0 +1,38 @@
+{
+  "$schema": "composite-factory",
+  "parameters": {
+    "viewsPath": { "type": "string", "default": "context.views" },
+    "currentViewPath": { "type": "string", "default": "context.viewMode" }
+  },
+  "factory": {
+    "container": {
+      "layout": "flex",
+      "class": "!overflow-visible gap-2 items-center justify-center flex-wrap py-2 h-auto"
+    },
+    "foreach": {
+      "items": "{{viewsPath}}",
+      "key": "id",
+      "leaf": {
+        "tag": "button",
+        "attributes": { "type": "button" },
+        "classes": "px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 border-2 cursor-pointer select-none whitespace-nowrap",
+        "bindings": {
+          "text": "item.label",
+          "class": {
+            "$if": {
+              "test": { "$eq": [{ "$": "{{currentViewPath}}" }, { "$": "item.id" }] },
+              "then": "bg-[#001a42] text-white border-[#001a42] shadow-md hover:bg-[#002662] hover:shadow-lg",
+              "else": "bg-white text-[#001a42] border-[#001a42] shadow-sm hover:bg-[#f8f9fa] hover:border-[#002662] hover:shadow-md"
+            }
+          }
+        },
+        "events": {
+          "click": {
+            "event": "@view/swapActors",
+            "payload": { "viewMode": "item.id" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -7,7 +7,6 @@
 <script lang="ts">
   import type { VibeConfig } from "../types";
   import type { ViewNode } from "./types";
-  import type { LeafNode } from "./leaf-types";
   import { browser } from "$app/environment";
   import { validateLeaf } from "./whitelist";
   import { resolveDataPath } from "./resolver";
@@ -16,6 +15,8 @@
   import { resolveSchemaLeaf } from "./schema-resolver";
   import Icon from "@iconify/svelte";
   import { goto } from "$app/navigation";
+  import { safeEvaluate, isDSLExpression } from "../dsl";
+  import type { DSLExpression } from "../dsl";
 
   interface Props {
     node: ViewNode;
@@ -148,157 +149,28 @@
   });
 
   // Resolve data path to value or evaluate expression
-  function resolveValue(path: string): unknown {
-    // Check if it's an expression (contains operators like ===, !==, !, ||, &&, typeof, etc.)
-    if (
-      path.includes("===") ||
-      path.includes("!==") ||
-      path.includes("==") ||
-      path.includes("!=") ||
-      path.includes(">") ||
-      path.includes("<") ||
-      path.includes("||") ||
-      path.includes("&&") ||
-      path.includes("typeof") ||
-      path.startsWith("!") ||
-      (path.includes("!") && path.match(/\s*!\s*data\./)) || // Handle !data.property patterns
-      path.includes("String(") || // Handle String() function calls
-      path.includes(".trim()") // Handle .trim() method calls
-    ) {
-      // Evaluate JavaScript expression in the context of data
+  function resolveValue(path: string | DSLExpression): unknown {
+    // DSL expression (secure JSON-based)
+    if (isDSLExpression(path)) {
       try {
-        // Extract item from data if it exists (for foreach contexts)
-        const item =
-          "item" in data && data.item
-            ? (data.item as Record<string, unknown>)
-            : {};
-
-        // Access all item properties to ensure reactivity tracking
-        // This ensures Svelte tracks changes to any nested properties
-        if (item && typeof item === "object") {
-          Object.keys(item).forEach((key) => {
-            const _ = item[key];
-          });
-        }
-
-        // Check if expression references 'data.' - if so, we need to provide data context
-        if (path.includes("data.")) {
-          // Dynamically extract all data properties and create variables
-          const dataObj = data as Record<string, unknown>;
-          const dataKeys: string[] = [];
-          const dataValues: unknown[] = [];
-
-          // Extract all data.* references from the expression
-          const dataPropertyMatches = path.matchAll(/data\.(\w+)/g);
-          const seenProperties = new Set<string>();
-
-          for (const match of dataPropertyMatches) {
-            const propName = match[1];
-            if (!seenProperties.has(propName)) {
-              seenProperties.add(propName);
-              dataKeys.push(propName);
-              // Access the property to ensure reactivity
-              dataValues.push(dataObj[propName]);
-            }
-          }
-
-          // Replace 'data.property' with just 'property' in the expression
-          let expression = path;
-          dataKeys.forEach((key) => {
-            expression = expression.replace(
-              new RegExp(`data\\.${key}`, "g"),
-              key,
-            );
-          });
-
-          // Use Function constructor for safer evaluation than eval
-          // Dynamically create function with all referenced data properties
-          // Include String and Number as global functions for expressions
-          const func = new Function(
-            ...dataKeys,
-            "item",
-            "String",
-            "Number",
-            `return ${expression}`,
-          );
-          const result = func(...dataValues, item, String, Number);
-          return result;
-        } else {
-          // Expression doesn't reference 'data.' - check if it references properties directly
-          // Extract property names from the expression (e.g., "selectedRecipient", "sendAmount")
-          const dataObj = data as Record<string, unknown>;
-          const propertyMatches = path.matchAll(/\b(\w+)\b/g);
-          const seenProperties = new Set<string>();
-          const dataKeys: string[] = [];
-          const dataValues: unknown[] = [];
-
-          for (const match of propertyMatches) {
-            const propName = match[1];
-            // Skip JavaScript keywords and functions
-            if (
-              propName === "item" ||
-              propName === "String" ||
-              propName === "Number" ||
-              propName === "typeof" ||
-              propName === "isNaN" ||
-              propName === "trim" ||
-              propName === "return" ||
-              propName === "true" ||
-              propName === "false" ||
-              propName === "null" ||
-              propName === "undefined" ||
-              propName === "void" ||
-              propName === "new"
-            ) {
-              continue;
-            }
-            // Check if this property exists in data
-            if (propName in dataObj && !seenProperties.has(propName)) {
-              seenProperties.add(propName);
-              dataKeys.push(propName);
-              // Access the property to ensure reactivity
-              dataValues.push(dataObj[propName]);
-            }
-          }
-
-          // If we found data properties, use them; otherwise fall back to item-only evaluation
-          if (dataKeys.length > 0) {
-            const func = new Function(
-              ...dataKeys,
-              "item",
-              "String",
-              "Number",
-              "isNaN",
-              `return ${path}`,
-            );
-            const result = func(
-              ...dataValues,
-              item,
-              String,
-              Number,
-              Number.isNaN,
-            );
-            return result;
-          } else {
-            // Expression only references 'item' (for foreach contexts)
-            // Use Function constructor for safer evaluation than eval
-            const func = new Function(
-              "item",
-              "String",
-              "Number",
-              "isNaN",
-              `return ${path}`,
-            );
-            const result = func(item, String, Number, Number.isNaN);
-            return result;
-          }
-        }
-      } catch (_error) {
-        return false;
+        return safeEvaluate(path, {
+          item: "item" in data && data.item ? (data.item as Record<string, unknown>) : undefined,
+          context: "context" in data && data.context ? (data.context as Record<string, unknown>) : undefined,
+          dependencies: "dependencies" in data && data.dependencies ? (data.dependencies as Record<string, unknown>) : undefined,
+        });
+      } catch (error) {
+        console.warn('[Leaf] DSL evaluation error:', error);
+        return undefined;
       }
     }
-    // Otherwise resolve as data path
-    return resolveDataPath(data, path);
+
+    // Simple string - resolve as data path
+    if (typeof path === 'string') {
+      return resolveDataPath(data, path);
+    }
+
+    // Invalid type
+    return undefined;
   }
 
   // Resolve payload (can be data path string or object)
@@ -434,7 +306,6 @@
     if (leaf && leaf.bindings?.class) {
       // Access data to ensure reactivity
       const _ = data;
-      ensureReactivityForExpression(leaf.bindings.class);
       const resolved = resolveValue(leaf.bindings.class);
       if (typeof resolved === "string" && resolved.trim()) {
         const dynamicClassArray = resolved.split(/\s+/).filter(Boolean);
@@ -446,80 +317,21 @@
     return [baseClasses, dynamicClasses].filter(Boolean).join(" ");
   });
 
-  // Helper function to extract and access properties from expressions for reactivity tracking
-  function ensureReactivityForExpression(expression: string) {
-    const dataObj = data as Record<string, unknown>;
-    const accessedProperties = new Set<string>();
-
-    // Extract properties referenced as "data.property"
-    const dataPropertyMatches = expression.matchAll(/data\.(\w+)/g);
-    for (const match of dataPropertyMatches) {
-      const propName = match[1];
-      if (!accessedProperties.has(propName) && propName in dataObj) {
-        accessedProperties.add(propName);
-        // Access the property to ensure reactivity
-        const _ = dataObj[propName];
-      }
-    }
-
-    // Extract direct property references (not keywords)
-    const propertyMatches = expression.matchAll(/\b(\w+)\b/g);
-    const keywords = new Set([
-      "item",
-      "String",
-      "Number",
-      "typeof",
-      "isNaN",
-      "trim",
-      "return",
-      "true",
-      "false",
-      "null",
-      "undefined",
-      "void",
-      "new",
-      "data",
-    ]);
-
-    for (const match of propertyMatches) {
-      const propName = match[1];
-      if (
-        !keywords.has(propName) &&
-        !accessedProperties.has(propName) &&
-        propName in dataObj
-      ) {
-        accessedProperties.add(propName);
-        // Access the property to ensure reactivity
-        const _ = dataObj[propName];
-      }
-    }
-
-    // If we're in a foreach context, access all item properties to trigger reactivity
-    if ("item" in data && data.item && typeof data.item === "object") {
-      const item = data.item as Record<string, unknown>;
-      Object.keys(item).forEach((key) => {
-        const _ = item[key];
-      });
-    }
-  }
-
   // Resolve bindings - ensure we access data to trigger reactivity
   const _boundValue = $derived.by(() => {
-    if (!leaf.bindings?.value) return undefined;
+    if (!leaf?.bindings?.value) return undefined;
     const _ = data; // Access data to ensure reactivity
     return resolveValue(leaf.bindings.value);
   });
   const boundText = $derived.by(() => {
-    if (!leaf.bindings?.text) return undefined;
+    if (!leaf?.bindings?.text) return undefined;
     const _ = data; // Access data to ensure reactivity
     return resolveValue(leaf.bindings.text);
   });
   const visibleValue = $derived.by(() => {
-    if (!leaf.bindings?.visible) return undefined;
+    if (!leaf?.bindings?.visible) return undefined;
     // Access data to ensure reactivity
     const _ = data;
-    // Dynamically extract and access properties from the expression for reactivity
-    ensureReactivityForExpression(leaf.bindings.visible);
     return resolveValue(leaf.bindings.visible);
   });
   const isVisible = $derived(
@@ -527,11 +339,9 @@
   );
 
   const disabledValue = $derived.by(() => {
-    if (!leaf.bindings?.disabled) return undefined;
+    if (!leaf?.bindings?.disabled) return undefined;
     // Access data to ensure reactivity
     const _ = data;
-    // Dynamically extract and access properties from the expression for reactivity
-    ensureReactivityForExpression(leaf.bindings.disabled);
     // Evaluate the expression with current data values
     return resolveValue(leaf.bindings.disabled);
   });
@@ -539,7 +349,7 @@
     disabledValue === undefined ? false : Boolean(disabledValue),
   );
   const foreachItems = $derived.by(() => {
-    if (!leaf.bindings?.foreach) return undefined;
+    if (!leaf?.bindings?.foreach) return undefined;
 
     // Access data to ensure reactivity
     const _ = data;
@@ -606,7 +416,7 @@
       string,
       string | boolean | number | ((e: Event) => void)
     > = {
-      ...leaf.attributes,
+      ...leaf?.attributes,
     };
 
     // Don't resolve href here - we'll do it in the template to ensure consistency
@@ -615,8 +425,8 @@
     // Bind value for inputs - use reactive value
     // CRITICAL: If there's an input event handler, set initial value but don't make it reactive
     // This allows the browser to manage the input naturally while the handler updates data
-    if (leaf.tag === "input" && leaf.bindings?.value) {
-      if (!leaf.events?.input) {
+    if (leaf?.tag === "input" && leaf?.bindings?.value) {
+      if (!leaf?.events?.input) {
         // No input handler: use reactive value binding
         const _ = data;
         const value = inputValue;
@@ -631,19 +441,19 @@
     }
 
     // Bind disabled state from bindings (reactive)
-    if (leaf.bindings?.disabled !== undefined) {
+    if (leaf?.bindings?.disabled !== undefined) {
       attrs.disabled = isDisabled;
     }
 
     // CRITICAL: Add input event handler to attrs so it gets properly attached
-    if (leaf.events?.input) {
+    if (leaf?.events?.input) {
       const eventConfig = leaf.events.input;
       attrs.oninput = (e: Event) => {
         const target = e.target as HTMLInputElement;
         
         // Extract field name from binding path (e.g., "context.newTodoText" → "newTodoText")
         let payloadKey = "text"; // fallback only
-        if (leaf.bindings?.value && typeof leaf.bindings.value === 'string') {
+        if (leaf?.bindings?.value && typeof leaf.bindings.value === 'string') {
           const bindingPath = leaf.bindings.value;
           const parts = bindingPath.split('.');
           if (parts.length > 0) {
@@ -753,14 +563,14 @@
           }
         : undefined}
     >
-      {#each foreachItems as item, index (typeof item === "object" && item !== null && keyProp in item ? String((item as Record)[keyProp]) : index)}
+      {#each foreachItems as item, index (typeof item === "object" && item !== null && keyProp in item ? String((item as Record<string, any>)[keyProp]) : index)}
         {@const itemData =
           typeof item === "object" && item !== null ? item : {}}
         <!-- Access all item properties to ensure reactivity when any property changes -->
-        {@const itemRecord = itemData as Record}
+        {@const itemRecord = itemData as Record<string, any>}
         {#if itemRecord}
           {@const _ = Object.keys(itemRecord).map(
-            (key) => (itemRecord as Record)[key],
+            (key) => (itemRecord as Record<string, any>)[key],
           )}
         {/if}
         <LeafRecursive
@@ -810,7 +620,7 @@
             // Store the item ID in dataTransfer for drop event
             // Extract itemData from data if in foreach context
             const contextItemData =
-              "item" in data && data.item ? (data.item as Record) : undefined;
+              "item" in data && data.item ? (data.item as Record<string, any>) : undefined;
             const payload = resolvePayload(
               leaf.events!.dragstart!.payload,
               contextItemData,
@@ -822,7 +632,7 @@
               !Array.isArray(payload)
             ) {
               // Always use "id" property - standardized across the stack
-              const payloadObj = payload as Record;
+              const payloadObj = payload as Record<string, any>;
               if ("id" in payloadObj) {
                 e.dataTransfer.setData("text/plain", String(payloadObj.id));
               }
@@ -1051,7 +861,7 @@
       : undefined}
   {@const resolvedHref =
     baseHref && baseHref.endsWith("=") && "item" in data && data.item
-      ? baseHref + String((data.item as Record).id || "")
+      ? baseHref + String((data.item as Record<string, any>).id || "")
       : baseHref}
   {@const isInternalLink =
     leaf.tag === "a" && resolvedHref && resolvedHref.startsWith("/")}
@@ -1167,7 +977,7 @@
             // Store the item ID in dataTransfer for drop event
             // Extract itemData from data if in foreach context
             const contextItemData =
-              "item" in data && data.item ? (data.item as Record) : undefined;
+              "item" in data && data.item ? (data.item as Record<string, any>) : undefined;
             const payload = resolvePayload(
               leaf.events!.dragstart!.payload,
               contextItemData,
@@ -1179,7 +989,7 @@
               !Array.isArray(payload)
             ) {
               // Always use "id" property - standardized across the stack
-              const payloadObj = payload as Record;
+              const payloadObj = payload as Record<string, any>;
               if ("id" in payloadObj) {
                 e.dataTransfer.setData("text/plain", String(payloadObj.id));
               }

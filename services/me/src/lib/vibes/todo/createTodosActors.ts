@@ -7,7 +7,15 @@
 
 import { createActorEntity, getVibesRegistry } from "@maia/db";
 import { Group } from "jazz-tools";
-import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf, createBadgeLeaf, createInputSectionComposite, createViewSwitcherComposite, createTimelineComposite, createKanbanComposite } from '$lib/factories';
+import { createLeaf, createComposite } from '$lib/factories/runtime/universal-factory';
+import titleFactory from '$lib/factories/leafs/title.factory.json';
+import headerFactory from '$lib/factories/composites/header.factory.json';
+import rootCardFactory from '$lib/factories/composites/rootCard.factory.json';
+import inputSectionFactory from '$lib/factories/composites/inputSection.factory.json';
+import timelineFactory from '$lib/factories/composites/timeline.factory.json';
+import kanbanFactory from '$lib/factories/composites/kanban.factory.json';
+import viewSwitcherFactory from '$lib/factories/composites/viewSwitcher.factory.json';
+import { get, eq, or, not, trim, ifThenElse } from '$lib/compositor/dsl/helpers';
 
 // Global lock
 const getGlobalLock = () => {
@@ -61,7 +69,7 @@ export async function createTodosActors(account: any) {
 	// STEP 1: Create leaf actors (title)
 	const headerTitleActor = await createActorEntity(account, {
 		context: { visible: true },
-		view: createTitleLeaf({ text: 'Todos', tag: 'h2' }),
+		view: createLeaf(titleFactory as any, { text: 'Todos', tag: 'h2' }),
 		dependencies: {},
 		role: 'todos-header-title',
 	}, group);
@@ -74,7 +82,7 @@ export async function createTodosActors(account: any) {
 			newTodoText: '', // Match legacy data.view.newTodoText
 			error: null
 		},
-		view: createInputSectionComposite({
+		view: createComposite(inputSectionFactory as any, {
 			valuePath: 'context.newTodoText', // CLEAN ARCHITECTURE: Always use context.* prefix
 			inputEvent: '@input/updateContext', // Generic context update skill
 			submitEvent: '@todo/create',
@@ -82,8 +90,14 @@ export async function createTodosActors(account: any) {
 			inputName: 'new-todo',
 			placeholder: 'Add a new todo...',
 			buttonText: 'Add',
-			buttonDisabled: "!context.newTodoText || context.newTodoText.trim() === ''", // CLEAN ARCHITECTURE: Always use context.* prefix
-			errorVisible: "context.error",
+			buttonDisabled: or(
+				not(get('context.newTodoText')),
+				eq({ $trim: get('context.newTodoText') }, '')
+			), // CLEAN ARCHITECTURE: Always use context.* prefix
+			errorVisible: { "$and": [
+				{ "$": "context.error" },
+				{ "$ne": [{ "$": "context.error" }, null] }
+			] },
 			errorText: 'context.error'
 		}),
 		dependencies: {},
@@ -122,7 +136,11 @@ export async function createTodosActors(account: any) {
 									attributes: { type: 'button' },
 									classes: 'w-5 h-5 @xs:w-5 @xs:h-5 @sm:w-6 @sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-1 @sm:focus:ring-2 focus:ring-[#001a42] focus:ring-offset-0.5 @sm:focus:ring-offset-1 cursor-pointer shrink-0',
 									bindings: {
-										class: "item.status === 'done' ? 'border-green-500 bg-green-100' : 'border-slate-300 bg-slate-100'"
+										class: ifThenElse(
+											eq(get('item.status'), 'done'),
+											'border-green-500 bg-green-100',
+											'border-slate-300 bg-slate-100'
+										)
 									},
 									events: {
 										click: {
@@ -140,8 +158,12 @@ export async function createTodosActors(account: any) {
 											tag: 'span',
 											classes: 'text-green-500 font-bold',
 											bindings: {
-												text: "item.status === 'done' ? '✓' : ''",
-												visible: "item.status === 'done'"
+												text: ifThenElse(
+													eq(get('item.status'), 'done'),
+													'✓',
+													''
+												),
+												visible: eq(get('item.status'), 'done')
 											}
 										}
 									]
@@ -155,7 +177,11 @@ export async function createTodosActors(account: any) {
 									classes: 'flex-1 text-xs @xs:text-xs @sm:text-sm font-medium text-slate-700 min-w-0 bg-transparent border-none outline-none focus:outline-none focus:ring-0 px-0',
 									bindings: { 
 										value: 'item.name',
-										class: "item.status === 'done' ? 'line-through text-slate-400' : ''"
+										class: ifThenElse(
+											eq(get('item.status'), 'done'),
+											'line-through text-slate-400',
+											''
+										)
 									},
 									events: {
 										blur: {
@@ -173,7 +199,7 @@ export async function createTodosActors(account: any) {
 									classes: 'px-1 py-0 @xs:px-1.5 @xs:py-0.5 text-[8px] @xs:text-[10px] @sm:text-xs font-medium rounded-full border border-white shrink-0 bg-green-100 text-green-700',
 									bindings: { 
 										text: 'item.status',
-										visible: "item.status === 'done'"
+										visible: eq(get('item.status'), 'done')
 									}
 								}
 							},
@@ -184,7 +210,7 @@ export async function createTodosActors(account: any) {
 									classes: 'px-1 py-0 @xs:px-1.5 @xs:py-0.5 text-[8px] @xs:text-[10px] @sm:text-xs font-medium rounded-full border border-white shrink-0 bg-blue-100 text-blue-700',
 									bindings: { 
 										text: 'item.status',
-										visible: "item.status === 'in-progress'"
+										visible: eq(get('item.status'), 'in-progress')
 									}
 								}
 							},
@@ -195,7 +221,7 @@ export async function createTodosActors(account: any) {
 									classes: 'px-1 py-0 @xs:px-1.5 @xs:py-0.5 text-[8px] @xs:text-[10px] @sm:text-xs font-medium rounded-full border border-white shrink-0 bg-slate-100 text-slate-700',
 									bindings: { 
 										text: 'item.status',
-										visible: "item.status === 'todo'"
+										visible: eq(get('item.status'), 'todo')
 									}
 								}
 							},
@@ -235,7 +261,7 @@ export async function createTodosActors(account: any) {
 				}
 			}
 		},
-		view: createTimelineComposite({
+		view: createComposite(timelineFactory as any, {
 			itemsPath: 'context.queries.todos.items',
 			itemKey: 'id'
 		}),
@@ -263,7 +289,7 @@ export async function createTodosActors(account: any) {
 				}
 			}
 		},
-		view: createKanbanComposite({
+		view: createComposite(kanbanFactory as any, {
 			itemsPath: 'context.queries.todos.items',
 			itemKey: 'id'
 		}),
@@ -289,7 +315,7 @@ export async function createTodosActors(account: any) {
 		view: {
 			container: {
 				layout: 'flex',
-				class: 'flex-col w-full h-full'
+				class: 'flex-col w-full min-h-0 flex-1 overflow-hidden'
 			}
 		},
 		dependencies: {},
@@ -301,14 +327,15 @@ export async function createTodosActors(account: any) {
 	// View switcher actor - reads viewMode directly from contentActor via dependencies
 	const viewSwitcherActor = await createActorEntity(account, {
 		context: { 
-			visible: true
-		},
-		view: createViewSwitcherComposite({
+			visible: true,
 			views: [
 				{ id: 'list', label: 'List' },
 				{ id: 'timeline', label: 'Timeline' },
 				{ id: 'kanban', label: 'Kanban' }
-			],
+			]
+		},
+		view: createComposite(viewSwitcherFactory as any, {
+			viewsPath: 'context.views', // ✅ Path to views array in actor context
 			currentViewPath: 'dependencies.content.context.viewMode' // ✅ Read directly from contentActor's context
 		}),
 		dependencies: {
@@ -320,7 +347,7 @@ export async function createTodosActors(account: any) {
 	// Header actor - contains title and view switcher in same row
 	const headerActor = await createActorEntity(account, {
 		context: { visible: true },
-		view: createHeaderComposite(),
+		view: createComposite(headerFactory as any, {}),
 		dependencies: {},
 		role: 'todos-header',
 	}, group);
@@ -333,9 +360,9 @@ export async function createTodosActors(account: any) {
 		context: {
 			visible: true,
 		},
-		view: createRootCardComposite({
-			cardLayout: 'flex',
-			cardClasses: 'card p-2 @xs:p-3 @sm:p-4 @md:p-6 flex-col gap-4'
+		view: createComposite(rootCardFactory as any, {
+			cardLayout: 'grid',
+			cardClasses: 'card h-full p-2 @xs:p-3 @sm:p-4 @md:p-6 grid grid-cols-1 grid-rows-[auto_auto_1fr] gap-4 min-h-0'
 		}),
 		dependencies: {
 			entities: root.entities.$jazz.id

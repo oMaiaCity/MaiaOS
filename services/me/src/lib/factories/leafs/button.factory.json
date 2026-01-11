@@ -1,0 +1,24 @@
+{
+  "$schema": "leaf-factory",
+  "parameters": {
+    "text": { "type": "string", "required": true },
+    "event": { "type": "string", "required": true },
+    "payload": { "type": "object", "default": {} },
+    "classes": { 
+      "type": "string", 
+      "default": "px-2 py-1 @xs:px-3 @xs:py-1.5 @sm:px-4 @sm:py-2 border rounded-full transition-all duration-300 font-medium text-[10px] @xs:text-xs @sm:text-sm shrink-0 bg-[#001a42] border-[#001a42] text-[#e6ecf7] hover:bg-[#002662] hover:border-[#002662] hover:shadow-button-primary-hover hover:scale-[1.02] active:scale-[0.98] shadow-button-primary" 
+    }
+  },
+  "factory": {
+    "tag": "button",
+    "attributes": { "type": "button" },
+    "classes": "{{classes}}",
+    "events": {
+      "click": {
+        "event": "{{event}}",
+        "payload": "{{payload}}"
+      }
+    },
+    "elements": ["{{text}}"]
+  }
+}

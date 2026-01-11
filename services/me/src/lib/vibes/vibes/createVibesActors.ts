@@ -7,7 +7,10 @@
 
 import { createActorEntity, getVibesRegistry } from "@maia/db";
 import { Group } from "jazz-tools";
-import { createRootCardComposite, createHeaderComposite, createTitleLeaf, createButtonLeaf } from '$lib/factories';
+import { createLeaf, createComposite } from '$lib/factories/runtime/universal-factory';
+import titleFactory from '$lib/factories/leafs/title.factory.json';
+import headerFactory from '$lib/factories/composites/header.factory.json';
+import rootCardFactory from '$lib/factories/composites/rootCard.factory.json';
 
 // Global lock that persists across hot reloads
 const getGlobalLock = () => {
@@ -53,14 +56,18 @@ export async function createVibesActors(account: any) {
 	// STEP 1: Create leaf actors (titles, descriptions)
 	const headerTitleActor = await createActorEntity(account, {
 		context: { visible: true },
-		view: createTitleLeaf({ text: 'Vibes', tag: 'h2' }),
+		view: createLeaf(titleFactory as any, { text: 'Vibes', tag: 'h2' }),
 		dependencies: {},
 		role: 'vibes-header-title', // For debugging only
 	}, group);
 
 	const humansTitleActor = await createActorEntity(account, {
 		context: { visible: true },
-		view: createTitleLeaf({ text: 'Humans', tag: 'h3', classes: 'text-base font-semibold text-slate-700' }),
+		view: {
+			tag: 'h3',
+			classes: 'text-base font-semibold text-slate-700',
+			elements: ['Humans']
+		},
 		dependencies: {},
 		role: 'humans-card-title',
 	}, group);
@@ -149,7 +156,7 @@ export async function createVibesActors(account: any) {
 
 	const headerActor = await createActorEntity(account, {
 		context: { visible: true },
-		view: createHeaderComposite(),
+		view: createComposite(headerFactory as any, {}),
 		dependencies: {},
 		role: 'vibes-header',
 	}, group);
@@ -176,7 +183,7 @@ export async function createVibesActors(account: any) {
 	// STEP 3: Create root actor - MINIMAL (no actions)
 	const vibesRootActor = await createActorEntity(account, {
 		context: { visible: true },
-		view: createRootCardComposite({ cardLayout: 'flex', cardClasses: 'card p-4 flex-col gap-4' }),
+		view: createComposite(rootCardFactory as any, { cardLayout: 'flex', cardClasses: 'card p-4 flex-col gap-4' }),
 		dependencies: {},
 		role: 'vibes-root',
 	}, group);
