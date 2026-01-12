@@ -13,6 +13,9 @@
   // State for actor CoStates (with schema wrapper for proper nested loading)
   let actorCoStates = $state<Array<CoState<typeof Actor>>>([]);
   
+  // Filter state
+  let selectedVibe = $state<string>('all');
+  
   // Query actor IDs and create CoState instances with Actor schema
   $effect(() => {
     const account = accountCoState.current;
@@ -46,6 +49,34 @@
       .filter(actor => actor?.$isLoaded);
   });
   
+  // Extract vibe name from actor role (e.g., "humans-card" -> "humans")
+  function getVibeFromRole(role: string | undefined): string {
+    if (!role) return 'unknown';
+    const parts = role.split('-');
+    return parts[0] || 'unknown';
+  }
+  
+  // Get unique vibes from all actors (sorted alphabetically)
+  const availableVibes = $derived.by(() => {
+    const vibesSet = new Set<string>();
+    actors.forEach((actor: any) => {
+      const snapshot = actor.$jazz?.raw?.toJSON();
+      const vibe = getVibeFromRole(snapshot?.role);
+      vibesSet.add(vibe);
+    });
+    return Array.from(vibesSet).sort();
+  });
+  
+  // Filter actors by selected vibe
+  const filteredActors = $derived.by(() => {
+    if (selectedVibe === 'all') return actors;
+    return actors.filter((actor: any) => {
+      const snapshot = actor.$jazz?.raw?.toJSON();
+      const vibe = getVibeFromRole(snapshot?.role);
+      return vibe === selectedVibe;
+    });
+  });
+  
   // Trigger lazy loading of inbox for each actor by accessing it
   $effect(() => {
     actors.forEach((actor: any) => {
@@ -57,14 +88,16 @@
   });
 
   // Get actor display info (role or ID snippet)
-  function getActorDisplay(actor: any): { label: string; id: string } {
+  function getActorDisplay(actor: any): { label: string; id: string; vibe: string } {
     const snapshot = actor.$jazz?.raw?.toJSON();
     const id = actor.$jazz?.id || 'unknown';
     const role = snapshot?.role;
+    const vibe = getVibeFromRole(role);
     
     return {
       label: role || id.slice(3, 13),
-      id: id
+      id: id,
+      vibe: vibe
     };
   }
 </script>
