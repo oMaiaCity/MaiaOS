@@ -142,17 +142,9 @@ export async function resolveCoValue(
 			extendedType = 'group'
 		}
 	} else if (type === 'costream') {
-		const coStream = detectCoStreamType(value as RawCoStream)
-		if (coStream.type === 'binary') {
-			extendedType = 'file'
-		} else if (coStream.type === 'text') {
-			// Check if it's CoPlainText or CoRichText
-			if (typeof snapshot === 'string') {
-				extendedType = 'CoPlainText'
-			} else {
-				extendedType = 'CoRichText'
-			}
-		}
+		// In our app, ALL costreams are CoFeeds (actor inboxes)
+		// No need for complex detection - just mark as CoFeed
+		extendedType = 'CoFeed'
 	} else if (type === 'coplaintext') {
 		extendedType = 'CoPlainText'
 	} else if (type === 'colist') {

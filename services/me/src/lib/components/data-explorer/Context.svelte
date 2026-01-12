@@ -37,17 +37,212 @@
     const extended = context.resolved.extendedType;
     const type = context.resolved.type;
     
-    // Map raw 'costream' to 'CoFeed' for display
-    if (type === 'costream' && !extended) {
+    // CRITICAL: ALL costreams are CoFeeds in our app (actor inboxes)
+    // Ignore extended type - always show as CoFeed
+    if (type === 'costream') {
       return 'CoFeed';
+    }
+    
+    // Map 'cotext' to 'CoPlainText' for display
+    if (type === 'cotext' && !extended) {
+      return 'CoPlainText';
     }
     
     return extended || type || "CoValue";
   });
 
+  // Check if this is a CoPlainText (special rendering)
+  const isCoPlainText = $derived(displayType === 'CoPlainText' || context.resolved.type === 'cotext');
+  
+  // Check if this is a CoFeed (for message display)
+  // CoFeeds are detected via extendedType, but fallback to raw type check
+  // CRITICAL: Always check raw type to avoid loading costreams as CoMaps
+  const isCoFeed = $derived(
+    displayType === 'CoFeed' || 
+    context.resolved.extendedType === 'CoFeed' ||
+    context.resolved.type === 'costream' // Failsafe: all costreams are treated as CoFeeds
+  );
+  
+  // Load CoFeed using CoState (CoState supports ALL CoValue types, including CoFeeds!)
+  // Sandbox: CoState(Actor, id) → actor.inbox (CoFeed loaded reactively)
+  // DB viewer: CoState(CoMap, coFeedId) → CoFeed loaded directly (CoState is generic!)
+  let coFeedState = $state<CoState<typeof CoMap> | null>(null);
+  
+  $effect(() => {
+    if (!isCoFeed || !context.resolved.id) {
+      coFeedState = null;
+      return;
+    }
+    
+    try {
+      // Create CoState for the CoFeed
+      // ISSUE: CoState needs the exact schema (co.feed(ItemType)), but we don't have it
+      // For now, skip CoState and use node.load() directly
+      coFeedState = null;
+    } catch (error) {
+      console.error('[Context] Failed to create CoState for CoFeed:', error);
+      coFeedState = null;
+    }
+  });
+  
+  // Load CoFeed directly using node.load() since we don't have the schema
+  let coFeedValue = $state<any>(null);
+  
+  $effect(() => {
+    if (!isCoFeed || !context.resolved.id || !node) {
+      coFeedValue = null;
+      return;
+    }
+    
+    const coFeedId = context.resolved.id as CoID<any>;
+    
+    // Load CoFeed using node.load() - returns a Promise
+    (async () => {
+      try {
+        const loadedFeed = await node.load(coFeedId);
+        coFeedValue = loadedFeed;
+      } catch (error) {
+        console.error('[Context] Failed to load CoFeed:', error);
+        coFeedValue = null;
+      }
+    })();
+  });
+  
+  // Extract CoFeed messages (EXACT same approach as sandbox InboxMessages.svelte)
+  const coFeedMessages = $derived.by(() => {
+    if (!isCoFeed || !coFeedValue) return [];
+    
+    const inbox = coFeedValue; // Raw CoFeed loaded via node.load()
+    
+    const messages: any[] = [];
+    
+    // Use perAccount to show messages from ALL accounts (same as sandbox)
+    if (inbox.perAccount) {
+      for (const accountId in inbox.perAccount) {
+        const accountFeed = inbox.perAccount[accountId];
+        
+        if (accountFeed?.all) {
+          for (const entry of accountFeed.all) {
+            if (entry.value?.$isLoaded) {
+              const message = entry.value;
+              messages.push({
+                id: message.$jazz?.id,
+                type: message.type,
+                payload: message.payload,
+                from: message.from,
+                timestamp: message.timestamp,
+                madeAt: entry.madeAt,
+                source: `perAccount[${accountId.slice(3, 10)}]`
+              });
+            }
+          }
+        } else if (accountFeed?.value?.$isLoaded) {
+          const message = accountFeed.value;
+          messages.push({
+            id: message.$jazz?.id,
+            type: message.type,
+            payload: message.payload,
+            from: message.from,
+            timestamp: message.timestamp,
+            source: `perAccount[${accountId.slice(3, 10)}]`
+          });
+        }
+      }
+    }
+    
+    // Fallback: If perAccount is empty, try byMe (same as sandbox)
+    if (messages.length === 0 && inbox.byMe?.all) {
+      for (const entry of inbox.byMe.all) {
+        if (entry.value?.$isLoaded) {
+          const message = entry.value;
+          messages.push({
+            id: message.$jazz?.id,
+            type: message.type,
+            payload: message.payload,
+            from: message.from,
+            timestamp: message.timestamp,
+            madeAt: entry.madeAt,
+            source: 'byMe'
+          });
+        }
+      }
+    } else if (messages.length === 0 && inbox.byMe?.value?.$isLoaded) {
+      const message = inbox.byMe.value;
+      messages.push({
+        id: message.$jazz?.id,
+        type: message.type,
+        payload: message.payload,
+        from: message.from,
+        timestamp: message.timestamp,
+        source: 'byMe'
+      });
+    }
+    
+    // Sort by timestamp (oldest first)
+    return messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+  });
+
   // Get properties reactively - regenerate snapshot from live CoValue
   // This ensures reactivity when the CoValue changes
   const properties = $derived.by(() => {
+    // Special case: CoPlainText should be displayed as text, not properties
+    if (isCoPlainText) {
+      let textContent: string | null = null;
+      
+      // First priority: Get the actual CoPlainText value from context.resolved.value
+      // This is the raw CoPlainText instance, not a CoMap wrapper
+      if (context.resolved.value) {
+        const rawValue = context.resolved.value;
+        // CoPlainText has toString() method
+        if (typeof rawValue.toString === 'function') {
+          try {
+            textContent = rawValue.toString();
+          } catch (e) {
+            // toString() failed
+          }
+        }
+      }
+      
+      // Second priority: Try to get from coValueState if available (for nested properties)
+      if (!textContent && coValueState) {
+        let coValue = coValueState.current;
+        if (coValue?.$isLoaded) {
+          // Navigate to nested property if propertyPath is provided
+          if (propertyPath && propertyPath.length > 0) {
+            for (const key of propertyPath) {
+              coValue = (coValue as any)[key];
+              if (!coValue || !coValue.$isLoaded) {
+                break;
+              }
+            }
+          }
+          
+          // Try to extract text content - CoPlainText has toString() method
+          if (coValue && typeof coValue.toString === 'function') {
+            try {
+              textContent = coValue.toString();
+            } catch (e) {
+              // toString() failed
+            }
+          }
+        }
+      }
+      
+      // Fallback: try to extract text from snapshot (should be a string for CoPlainText)
+      if (!textContent) {
+        const snapshot = context.resolved.snapshot;
+        if (snapshot && typeof snapshot === 'string') {
+          textContent = snapshot;
+        }
+      }
+      
+      if (textContent && textContent !== '[object Object]') {
+        return { _textContent: textContent };
+      }
+      
+      return {};
+    }
+    
     // Use CoState if available for full reactivity
     if (coValueState) {
       let coValue = coValueState.current;
@@ -246,7 +441,69 @@
     <!-- Content Area -->
     <div class="p-6">
     <!-- Content Views -->
-    {#if currentView === "list"}
+    {#if isCoPlainText && properties._textContent !== undefined}
+      <!-- CoPlainText Text Display -->
+      <div class="space-y-3">
+        <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+          <pre class="text-xs font-mono text-slate-700 whitespace-pre-wrap break-words max-h-96 overflow-auto">{properties._textContent}</pre>
+        </div>
+      </div>
+    {:else if isCoFeed}
+      <!-- CoFeed Messages Display -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-semibold text-slate-700">Messages</h3>
+          <span class="text-xs text-slate-500">{coFeedMessages.length} message{coFeedMessages.length !== 1 ? 's' : ''}</span>
+        </div>
+        
+        {#if coFeedMessages.length > 0}
+          <div class="space-y-2">
+            {#each coFeedMessages as message, i}
+              <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <!-- Message Header -->
+                <div class="flex items-start justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-semibold text-slate-700">#{i + 1}</span>
+                    <span class="text-xs px-2 py-0.5 rounded font-mono bg-blue-100 text-blue-700">
+                      {message.type || 'UNKNOWN'}
+                    </span>
+                  </div>
+                  <span class="text-xs text-slate-500">
+                    {message.timestamp ? new Date(message.timestamp).toLocaleString() : 'No timestamp'}
+                  </span>
+                </div>
+                
+                <!-- Message Payload -->
+                {#if message.payload}
+                  <div class="mb-2">
+                    <span class="text-xs text-slate-500">Payload:</span>
+                    <pre class="mt-1 text-xs font-mono text-slate-700 bg-white border border-slate-200 rounded p-2 overflow-x-auto">{JSON.stringify(message.payload, null, 2)}</pre>
+                  </div>
+                {/if}
+                
+                <!-- Message Metadata -->
+                <div class="flex items-center gap-4 text-xs text-slate-500">
+                  {#if message.from}
+                    <div>
+                      <span>From:</span>
+                      <span class="ml-1 font-mono">{message.from?.slice(3, 13)}...</span>
+                    </div>
+                  {/if}
+                  {#if message.source}
+                    <div>
+                      <span>Source:</span>
+                      <span class="ml-1 font-mono">{message.source}</span>
+                    </div>
+                  {/if}
+                </div>
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <p class="text-sm text-slate-500 italic">No messages in feed</p>
+        {/if}
+      </div>
+    {:else if currentView === "list"}
       <ListView
         {properties}
         {node}

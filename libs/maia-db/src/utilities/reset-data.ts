@@ -1,7 +1,7 @@
 /**
  * Utility function to clear all data from the database
  * 
- * Clears all items from the schemata and entities lists
+ * Clears all items from the schemata, entities, and actors lists
  * Also clears Jazz IndexedDB cache to ensure fresh start
  *
  * @param account - The Jazz account
@@ -73,6 +73,27 @@ export async function resetData(
 			// Remove all items by splicing from the end (safer than iterating forward)
 			for (let i = currentLength - 1; i >= 0; i--) {
 				entitiesList.$jazz.splice(i, 1)
+			}
+
+			await root.$jazz.waitForSync()
+		}
+	}
+
+	// 4. Clear actors list (keep the list structure, just remove items)
+	if (root.$jazz.has('actors')) {
+		// Load actors list
+		const rootWithActors = await root.$jazz.ensureLoaded({
+			resolve: { actors: true },
+		})
+		const actorsList = rootWithActors.actors
+
+		if (actorsList?.$isLoaded) {
+			// Get current length
+			const currentLength = Array.from(actorsList).length
+
+			// Remove all items by splicing from the end (safer than iterating forward)
+			for (let i = currentLength - 1; i >= 0; i--) {
+				actorsList.$jazz.splice(i, 1)
 			}
 
 			await root.$jazz.waitForSync()

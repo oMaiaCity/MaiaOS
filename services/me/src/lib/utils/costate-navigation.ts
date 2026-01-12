@@ -78,16 +78,9 @@ export function deriveResolvedFromCoState(
 			extendedType = 'group'
 		}
 	} else if (type === 'costream') {
-		const coStream = detectCoStreamType(rawValue as any)
-		if (coStream.type === 'binary') {
-			extendedType = 'file'
-		} else if (coStream.type === 'text') {
-			if (typeof snapshot === 'string') {
-				extendedType = 'CoPlainText'
-			} else {
-				extendedType = 'CoRichText'
-			}
-		}
+		// In our app, ALL costreams are CoFeeds (actor inboxes)
+		// No need for complex detection - just mark as CoFeed
+		extendedType = 'CoFeed'
 	} else if (type === 'coplaintext') {
 		extendedType = 'CoPlainText'
 	} else if (type === 'colist') {

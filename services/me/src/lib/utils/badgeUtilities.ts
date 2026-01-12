@@ -51,6 +51,7 @@ export function getBadgeColors(typeName: string): BadgeColors {
 		case 'cofeed':
 			return { bg: 'bg-orange-100', text: 'text-orange-800' }
 		case 'coplaintext':
+		case 'cotext':
 			return { bg: 'bg-teal-100', text: 'text-teal-800' }
 		case 'corichtext':
 			return { bg: 'bg-cyan-100', text: 'text-cyan-800' }

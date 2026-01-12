@@ -77,8 +77,9 @@
       const extended = effectiveResolvedType.extendedType;
       const type = effectiveResolvedType.type;
       
-      // Map raw 'costream' to 'CoFeed' for display
-      if (type === 'costream' && !extended) {
+      // CRITICAL: ALL costreams are CoFeeds in our app (actor inboxes)
+      // Ignore extended type detection - just check raw type
+      if (type === 'costream') {
         return 'CoFeed';
       }
       

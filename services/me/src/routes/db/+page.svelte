@@ -82,8 +82,8 @@
         if (!coValueState) {
           try {
             // Create new CoState ONLY if it doesn't exist
-            // Use universal resolve query that works for all CoValue types
-            // [] subscribes to array changes (works for CoLists and is ignored for CoMaps)
+            // CoState works with ALL CoValue types (CoMap, CoList, CoFeed, etc.)
+            // Using CoMap as generic type - CoState handles the actual type internally
             coValueState = new CoState(CoMap, item.coValueId, []);
           } catch (e) {
             console.error(

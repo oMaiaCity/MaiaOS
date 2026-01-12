@@ -87,12 +87,29 @@
     const snapshot = actor.$jazz?.raw?.toJSON();
     const watermark = actor.inboxWatermark;
     
+    // Resolve view CoValue - extract text content if it's a co.plainText()
+    let resolvedView = snapshot?.view;
+    if (resolvedView && typeof resolvedView === 'string' && resolvedView.startsWith('co_')) {
+      // View is a CoValue ID - try to resolve it
+      const viewCoValue = actor.view;
+      if (viewCoValue && typeof viewCoValue === 'object' && viewCoValue.toString) {
+        // Get the text content from co.plainText()
+        resolvedView = viewCoValue.toString();
+        try {
+          // Try to parse as JSON for pretty display
+          resolvedView = JSON.parse(resolvedView);
+        } catch {
+          // Not JSON, keep as string
+        }
+      }
+    }
+    
     return {
       id: actor.$jazz?.id,
       role: snapshot?.role,
-      inboxWatermark: watermark || null, // Explicitly show null if no watermark
+      inboxWatermark: watermark || null, // Keep in JSON as-is
       context: snapshot?.context,
-      view: snapshot?.view,
+      view: resolvedView, // Resolved view content instead of CoValue ID
       dependencies: snapshot?.dependencies,
       subscriptions: Array.from(actor.subscriptions || []),
       children: Array.from(actor.children || []),
@@ -155,12 +172,6 @@
           <p class="text-sm text-slate-500 font-mono truncate">
             {actor.$jazz?.id}
           </p>
-          {#if actorJSON?.inboxWatermark}
-            {@const watermark = actorJSON.inboxWatermark}
-            <span class="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">
-              WM: {watermark}
-            </span>
-          {/if}
         </div>
       </div>
       <button
