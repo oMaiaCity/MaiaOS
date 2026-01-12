@@ -79,7 +79,8 @@ export const Actor = co.map({
 	context: z.object({}).passthrough(),
 	
 	// View - can be composite container OR leaf element (optional for service actors)
-	view: z.object({}).passthrough().optional(), // { container: {...} } OR { tag: 'div', classes: '...', ... }
+	// Stored as collaborative plainText JSON for multi-user editing
+	view: co.plainText().optional(), // JSON string: { container: {...} } OR { tag: 'div', classes: '...', ... }
 	
 	// Dependencies - map of names to CoValue IDs
 	dependencies: z.record(z.string(), z.string()),
@@ -96,8 +97,6 @@ export const Actor = co.map({
 	// Role - optional label for debugging/categorization (e.g., 'header', 'button')
 	role: z.string().optional(),
 	
-	// Position - deprecated, use children array order instead
-	position: z.number().optional(),
 	
 	// Inbox watermark - system property for message consumption tracking
 	// Tracks the highest timestamp of processed messages (O(1) vs O(n) consumed IDs array)
@@ -109,7 +108,8 @@ export const Actor = co.map({
 export const AppRoot = co.map({
 	contact: Contact, // Simple contact CoMap with email
 	schemata: co.optional(co.list(co.map({}))), // Optional - list of SchemaDefinitions (created dynamically)
-	entities: co.optional(co.list(co.map({}))), // Optional - list of Entity instances (created dynamically, includes Actors and VibesRegistry)
+	entities: co.optional(co.list(co.map({}))), // Optional - list of Entity instances (created dynamically, Todo, Human, etc.)
+	actors: co.optional(co.list(co.map({}))), // Optional - list of Actor instances (UI/system actors, separated from data entities)
 	relations: co.optional(co.list(co.map({}))), // Optional - list of Relation instances (created dynamically)
 	vibesRegistryId: z.string().optional(), // Cached ID of the VibesRegistry entity for fast access
 })
@@ -191,14 +191,12 @@ export const JazzAccount = co
 			const contact = Contact.create({
 			email: '',
 		})
-		// ⚡ REMOVED: await contact.$jazz.waitForSync()
-		// LOCAL-FIRST: Contact creation is instant
+	
 
 		account.$jazz.set('root', {
 			contact: contact,
 		})
-		// ⚡ REMOVED: await account.$jazz.waitForSync()
-		// LOCAL-FIRST: Property set is instant
+	
 		}
 
 		// Load root
@@ -229,19 +227,14 @@ export const JazzAccount = co
 			return
 		}
 
-		// ⚡ CLEAN SLATE: No legacy migrations - fresh system with current data types only
 
 		// Ensure schemata list exists (empty by default - schemas created manually via UI)
 		if (!rootWithData.$jazz.has('schemata')) {
 		// Create a group for schemata list
 		const schemataGroup = Group.create()
-		// ⚡ REMOVED: await schemataGroup.$jazz.waitForSync()
-		// LOCAL-FIRST: Group creation is instant
 
 		// Create empty schemata list (generic co.map({}) - schemas created dynamically)
 		const schemataList = co.list(co.map({})).create([], schemataGroup)
-		// ⚡ REMOVED: await schemataList.$jazz.waitForSync()
-		// LOCAL-FIRST: List creation is instant
 		rootWithData.$jazz.set('schemata', schemataList)
 		} else {
 			// Ensure schemata list is loaded
@@ -256,13 +249,9 @@ export const JazzAccount = co
 		if (!rootWithData.$jazz.has('entities')) {
 		// Create a group for entities list
 		const entitiesGroup = Group.create()
-		// ⚡ REMOVED: await entitiesGroup.$jazz.waitForSync()
-		// LOCAL-FIRST: Group creation is instant
 
 		// Create empty entities list (generic co.map({}) - entities created dynamically)
 		const entitiesList = co.list(co.map({})).create([], entitiesGroup)
-		// ⚡ REMOVED: await entitiesList.$jazz.waitForSync()
-		// LOCAL-FIRST: List creation is instant
 		rootWithData.$jazz.set('entities', entitiesList)
 		} else {
 			// Ensure entities list is loaded
@@ -273,17 +262,30 @@ export const JazzAccount = co
 			} catch (_error) { }
 		}
 
+		// Ensure actors list exists (empty by default - actors created via createActorEntity)
+		if (!rootWithData.$jazz.has('actors')) {
+		// Create a group for actors list
+		const actorsGroup = Group.create()
+
+		// Create empty actors list (generic co.map({}) - actors created dynamically)
+		const actorsList = co.list(co.map({})).create([], actorsGroup)
+		rootWithData.$jazz.set('actors', actorsList)
+		} else {
+			// Ensure actors list is loaded
+			try {
+				await rootWithData.$jazz.ensureLoaded({
+					resolve: { actors: true },
+				})
+			} catch (_error) { }
+		}
+
 		// Ensure relations list exists (empty by default - relations created via createRelation)
 		if (!rootWithData.$jazz.has('relations')) {
 		// Create a group for relations list
 		const relationsGroup = Group.create()
-		// ⚡ REMOVED: await relationsGroup.$jazz.waitForSync()
-		// LOCAL-FIRST: Group creation is instant
 
 		// Create empty relations list (generic co.map({}) - relations created dynamically)
 		const relationsList = co.list(co.map({})).create([], relationsGroup)
-		// ⚡ REMOVED: await relationsList.$jazz.waitForSync()
-		// LOCAL-FIRST: List creation is instant
 		rootWithData.$jazz.set('relations', relationsList)
 		} else {
 			// Ensure relations list is loaded
@@ -294,14 +296,8 @@ export const JazzAccount = co
 			} catch (_error) { }
 		}
 
-	// Actors are now stored in root.entities (no separate actors list needed)
-	// Delete legacy root.actors property if it exists
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	if ((rootWithData.$jazz as any).has('actors')) {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(rootWithData.$jazz as any).delete('actors')
-		// ⚡ LOCAL-FIRST: Property deletion is instant
-	}
+	
 
 	// Store VibesRegistry ID on AppRoot for fast access (instead of searching through all entities)
 	// Check if vibesRegistryId exists AND is a valid string (not undefined/null)
@@ -321,12 +317,7 @@ export const JazzAccount = co
 		rootWithData.$jazz.set('vibesRegistryId', registry.$jazz.id)
 	}
 	
-	// Delete old root.vibes property if it exists (migration cleanup)
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	if ((rootWithData.$jazz as any).has('vibes')) {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(rootWithData.$jazz as any).delete('vibes')
-	}
+
 	})
 
 /**

@@ -525,26 +525,67 @@ export async function createActorEntity(
 		role?: string;
 		position?: number;
 	},
-	_group?: any, // Kept for API compatibility, but not used (entities use entitiesOwner)
+	_group?: any, // Kept for API compatibility, but not used (actors use actorsOwner)
 ): Promise<any> {
+	// Convert view object to co.plainText JSON string
+	// View is now stored as collaborative plainText for multi-user editing
+	let viewPlainText: any = undefined;
+	if (actorData.view) {
+		// View is a JSON object from factories - stringify and wrap in co.plainText()
+		const viewJson = JSON.stringify(actorData.view, null, 2);
+		viewPlainText = co.plainText().create(viewJson);
+	}
+	
+	// Load root.actors list (actors are now separated from entities)
+	const loadedAccount = await account.$jazz.ensureLoaded({
+		resolve: { root: { actors: true } },
+	})
+
+	if (!loadedAccount.root?.actors) {
+		console.error('[createActorEntity] ERROR: Root actors list does not exist')
+		throw new Error('Root actors list does not exist - run account migration first')
+	}
+
+	const actorsList = loadedAccount.root.actors
+	const actorsOwner = (actorsList as any).$jazz?.owner
+
+	if (!actorsOwner) {
+		console.error('[createActorEntity] ERROR: Cannot determine actors list owner')
+		throw new Error('Cannot determine actors list owner')
+	}
+
+	// Get Actor CoMap schema
+	const { schema: ActorCoMap, schemaDefinition } = await getCoMapSchemaForSchemaName(
+		account,
+		'Actor',
+	)
+
 	// Create entity data - pass ARRAYS for CoFeed/CoList, not CoValue objects
-	// CoMapSchema.create() will automatically create the CoFeed/CoList with entitiesOwner
+	// CoMapSchema.create() will automatically create the CoFeed/CoList with actorsOwner
 	const entityData = {
 		type: 'Entity',
 		context: actorData.context,
-		view: actorData.view,
+		view: viewPlainText, // Pass co.plainText() instead of JSON object
 		dependencies: actorData.dependencies,
-		inbox: [], // Pass empty array - co.feed() will create it with entitiesOwner
-		subscriptions: [], // Pass empty array - co.list() will create it with entitiesOwner
-		children: [], // Pass empty array - co.list() will create it with entitiesOwner
+		inbox: [], // Pass empty array - co.feed() will create it with actorsOwner
+		subscriptions: [], // Pass empty array - co.list() will create it with actorsOwner
+		children: [], // Pass empty array - co.list() will create it with actorsOwner
 		role: actorData.role,
 		position: actorData.position,
 	};
 
-	// Use dynamic schema system - createEntityGeneric handles everything
-	const actorEntity = await createEntityGeneric(account, 'Actor', entityData);
+	// Create actor with Zod validation
+	const actor = ActorCoMap.create(entityData, actorsOwner)
+	// NO WAIT! Jazz creates locally instantly, syncs in background
+	
+	// Set system properties (@label, @schema) - NO WAIT!
+	await setSystemProps(actor, schemaDefinition)
 
-	return actorEntity;
+	// Add to actors list (not entities) - NO WAIT! Local-first!
+	actorsList.$jazz.push(actor)
+	// NO WAIT! Jazz syncs in background, UI updates via CoState subscriptions
+
+	return actor;
 
 }
 

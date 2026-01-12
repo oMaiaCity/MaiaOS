@@ -49,6 +49,28 @@
   const item = $derived(itemProp);
   
   // ============================================
+  // VIEW PARSING (co.plainText → JSON object)
+  // ============================================
+  
+  // Parse view from plainText JSON string
+  const parsedView = $derived.by(() => {
+    if (!actor?.$isLoaded) return null;
+    
+    if (!actor.view) return null;
+    
+    // Get the text content from co.plainText()
+    const viewText = actor.view.toString();
+    if (!viewText || viewText.trim() === '') return null;
+    
+    try {
+      return JSON.parse(viewText);
+    } catch (error) {
+      logger.error('[ActorEngine] Invalid JSON in view:', error);
+      return null; // Graceful fallback
+    }
+  });
+  
+  // ============================================
   // VISIBILITY CHECK (Jazz-native)
   // ============================================
   
@@ -84,6 +106,9 @@
     const entitiesList = root.entities;
     if (!entitiesList?.$isLoaded) return { ...context };
     
+    const actorsList = root.actors;
+    if (!actorsList?.$isLoaded) return { ...context };
+    
     const schemata = root.schemata;
     if (!schemata?.$isLoaded) return { ...context };
     
@@ -101,7 +126,58 @@
         continue;
       }
       
-      // Find target schema ID by name (reactive access)
+      // Check if querying for actors (special case - no schema filtering needed)
+      if (config.schemaName === 'Actor') {
+        // Query from root.actors directly
+        const results: Array<Record<string, unknown>> = [];
+        for (const actor of actorsList) {
+          if (!actor?.$isLoaded) continue;
+          // Convert to plain object
+          const id = actor.$jazz?.id || '';
+          const result: Record<string, unknown> = { id, _coValueId: id };
+          const jsonSnapshot = actor.$jazz?.raw?.toJSON?.() || actor.toJSON?.();
+          if (jsonSnapshot && typeof jsonSnapshot === 'object') {
+            for (const key in jsonSnapshot) {
+              if (key !== 'id' && key !== '_coValueId' && !key.startsWith('_') && key !== '$jazz') {
+                result[key] = jsonSnapshot[key];
+              }
+            }
+          }
+          results.push(result);
+        }
+        
+        // Apply MaiaScript operations if provided
+        let finalResults = results;
+        if (config.operations) {
+          const evalCtx: EvaluationContext = { context: {}, dependencies: {}, item: {} };
+          const operations = config.operations as any;
+          
+          if (operations.$pipe && Array.isArray(operations.$pipe)) {
+            const result = safeEvaluate(
+              { $pipe: [operations.$pipe, results] } as any,
+              evalCtx
+            );
+            finalResults = Array.isArray(result) ? result : results;
+          } else {
+            const opKeys = Object.keys(operations);
+            if (opKeys.length === 1 && opKeys[0].startsWith('$')) {
+              const opKey = opKeys[0];
+              const opConfig = operations[opKey];
+              const result = safeEvaluate(
+                { [opKey]: [opConfig, results] } as any,
+                evalCtx
+              );
+              finalResults = Array.isArray(result) ? result : results;
+            }
+          }
+        }
+        
+        // Store result and continue to next query
+        resolvedQueries[queryKey] = { ...config, items: finalResults };
+        continue;
+      }
+      
+      // Find target schema ID by name (reactive access) for entity queries
       let targetSchemaId: string | null = null;
       for (const schema of schemata) {
         if (!schema?.$isLoaded) continue;
@@ -421,8 +497,8 @@
   // ============================================
   
   const viewType = $derived.by(() => {
-    if (!actor?.$isLoaded || !actor.view) return null;
-    const view = actor.view as Record<string, unknown>;
+    if (!actor?.$isLoaded || !parsedView) return null;
+    const view = parsedView as Record<string, unknown>;
     // Composite has container property
     if (view.container || (view.foreach as any)?.composite) return 'composite';
     // Leaf has tag property
@@ -517,8 +593,8 @@
   });
 </script>
 
-{#if browser && actor?.$isLoaded && isVisible && viewType}
-  {@const view = actor.view as Record<string, unknown>}
+{#if browser && actor?.$isLoaded && isVisible && viewType && parsedView}
+  {@const view = parsedView as Record<string, unknown>}
   {@const viewNode = viewType === 'composite' 
     ? { slot: 'root', composite: view } 
     : { slot: 'root', leaf: view }}

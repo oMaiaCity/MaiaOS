@@ -48,7 +48,7 @@ export const actorEntityTypeSchema: any = {
 	type: 'object',
 	properties: {
 		context: { type: 'object', passthrough: true }, // Passthrough object - all actor state lives here
-		view: { type: 'object', passthrough: true }, // Optional - composite container OR leaf element
+		view: { type: 'o-text' }, // Optional - co.plainText JSON string for collaborative editing
 		dependencies: { type: 'object', additionalProperties: { type: 'string' } }, // Record of string to string (name -> CoValue ID)
 		inbox: { 
 			type: 'o-feed', // Jazz CoFeed type
@@ -71,7 +71,6 @@ export const actorEntityTypeSchema: any = {
 			items: { type: 'string' } 
 		},
 		role: { type: 'string' }, // Optional label for debugging/categorization
-		position: { type: 'number' }, // Deprecated, optional
 	},
 	required: ['context', 'dependencies', 'inbox', 'subscriptions', 'children'],
 }

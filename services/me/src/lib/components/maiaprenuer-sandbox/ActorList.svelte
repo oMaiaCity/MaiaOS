@@ -21,22 +21,18 @@
       return;
     }
     
-    const entities = account.root?.entities;
-    if (!entities?.$isLoaded) {
+    const actors = account.root?.actors;
+    if (!actors?.$isLoaded) {
       actorCoStates = [];
       return;
     }
     
-    // Get actor IDs from entities (filter for actors with role/view properties)
+    // Get all actor IDs (no filtering needed - all items in root.actors are actors)
     const actorIds: string[] = [];
-    for (const entity of Array.from(entities) as any[]) {
-      if (!entity?.$isLoaded) continue;
-      const snapshot = entity.$jazz?.raw?.toJSON();
-      // Check if entity has actor properties
-      if (snapshot && ('role' in snapshot || 'view' in snapshot)) {
-        const id = entity.$jazz?.id;
-        if (id) actorIds.push(id);
-      }
+    for (const actor of Array.from(actors) as any[]) {
+      if (!actor?.$isLoaded) continue;
+      const id = actor.$jazz?.id;
+      if (id) actorIds.push(id);
     }
     
     // Create CoState instances with Actor schema - this enables proper nested loading

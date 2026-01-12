@@ -32,7 +32,7 @@
         await account.$jazz.ensureLoaded({ 
           resolve: { 
             root: {
-              entities: true
+              actors: true
             } 
           } 
         });

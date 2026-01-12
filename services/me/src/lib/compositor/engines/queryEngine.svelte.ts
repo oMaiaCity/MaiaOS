@@ -171,6 +171,34 @@ export function useQuery(
 			return []
 		}
 		
+		// Check if querying for actors (special case - query from root.actors)
+		if (currentQueryConfig.schemaName === 'Actor') {
+			const actorsList = root.actors
+			if (!actorsList?.$isLoaded) {
+				return []
+			}
+			
+			// Query actors directly (no schema filtering needed)
+			const results: Array<Record<string, unknown>> = []
+			for (const actor of actorsList) {
+				if (!actor?.$isLoaded) continue
+				results.push(coValueToPlainObject(actor))
+			}
+			
+			// Apply MaiaScript operations
+			if (currentQueryConfig.operations) {
+				const evalCtx: EvaluationContext = {
+					context: {},
+					dependencies: {},
+					item: {}
+				}
+				return executeQueryOperations(results, currentQueryConfig.operations, evalCtx)
+			}
+			
+			return results
+		}
+		
+		// Otherwise, query from root.entities
 		const entitiesList = root.entities
 		if (!entitiesList?.$isLoaded) {
 			return []

@@ -43,13 +43,13 @@ export async function createTodosActors(account: any) {
 			return existingTodosRootId;
 		}
 
-		// Load root to get entities list ID
+		// Load root to get actors list ID
 		const loadedAccount = await account.$jazz.ensureLoaded({
-			resolve: { root: { entities: true } },
+			resolve: { root: { actors: true } },
 		});
 		const root = loadedAccount.root;
-		if (!root?.entities) {
-			throw new Error('Root entities list not found');
+		if (!root?.actors) {
+			throw new Error('Root actors list not found');
 		}
 
 	// Create group for actors (OPTIMISTIC - no blocking!)
@@ -243,7 +243,7 @@ export async function createTodosActors(account: any) {
 				}
 			},
 		dependencies: { 
-			entities: root.entities.$jazz.id
+			entities: root.actors.$jazz.id
 		},
 		role: 'todos-list',
 	}, group);
@@ -263,7 +263,7 @@ export async function createTodosActors(account: any) {
 			itemKey: 'id'
 		}),
 		dependencies: {
-			entities: root.entities.$jazz.id
+			entities: root.actors.$jazz.id
 		},
 		role: 'todos-timeline',
 	}, group);
@@ -316,7 +316,7 @@ export async function createTodosActors(account: any) {
 			itemKey: 'id'
 		}),
 		dependencies: {
-			entities: root.entities.$jazz.id
+			entities: root.actors.$jazz.id
 		},
 		role: 'todos-kanban',
 	}, group);
@@ -399,7 +399,7 @@ export async function createTodosActors(account: any) {
 			cardClasses: 'card h-full p-2 @xs:p-3 @sm:p-4 @md:p-6 grid grid-cols-1 grid-rows-[auto_auto_1fr] gap-4 min-h-0'
 		}),
 		dependencies: {
-			entities: root.entities.$jazz.id
+			entities: root.actors.$jazz.id
 		},
 		role: 'todos-root',
 	}, group);
