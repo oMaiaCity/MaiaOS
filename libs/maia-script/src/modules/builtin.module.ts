@@ -120,6 +120,15 @@ const builtinModule: MaiaScriptModule = {
       }
     },
 
+    '$in': {
+      name: '$in',
+      evaluate: (args: any[], ctx: EvaluationContext) => {
+        const [value, array] = evaluateArgs(args, ctx)
+        if (!Array.isArray(array)) return false
+        return array.includes(value)
+      }
+    },
+
     // Logical Operations
     '$and': {
       name: '$and',
@@ -230,6 +239,20 @@ const builtinModule: MaiaScriptModule = {
         return typeof value === 'string'
           ? value.toLowerCase()
           : String(value).toLowerCase()
+      }
+    },
+
+    '$stringify': {
+      name: '$stringify',
+      evaluate: (args: any[], ctx: EvaluationContext) => {
+        const [arg] = args
+        const value = evaluateExpr(arg, ctx)
+        const indent = 2 // Default indentation
+        try {
+          return JSON.stringify(value, null, indent)
+        } catch (error) {
+          return `[Unable to stringify: ${error}]`
+        }
       }
     },
 

@@ -85,8 +85,32 @@ const swapActorsTool: Tool = {
     let targetActorId = payloadObj?.targetActorId;
     const viewMode = payloadObj?.viewMode;
     
-    // Update context.viewMode if provided (for button styling)
-    // This works even if the actor doesn't have children
+    // STEP 1: Update actor's own state (proper actor architecture)
+    // If this actor has context.activeView, update it (for view switcher buttons)
+    if (viewMode && actor.context && actor.$jazz) {
+      const currentContext = actor.context as Record<string, unknown>;
+      if ('activeView' in currentContext && (currentContext as any).activeView !== viewMode) {
+        const updatedContext = {
+          ...currentContext,
+          activeView: viewMode,
+        };
+        actor.$jazz.set('context', updatedContext);
+        logger.log(`Updated context.activeView to: ${viewMode}`);
+      }
+    }
+    
+    // STEP 2: Check if actor has the viewActors mapping (for actual view swapping)
+    const context = actor.context as any;
+    const hasViewActors = context?.viewActors && typeof context.viewActors === 'object';
+    
+    // If this actor doesn't have viewActors, it's just a button actor
+    // The event will be forwarded to subscribers (which should have viewActors)
+    if (!hasViewActors) {
+      // Event forwarded automatically by ActorEngine
+      return;
+    }
+    
+    // Update context.viewMode if provided (for subscribers that need it)
     if (viewMode && actor.context && actor.$jazz) {
       const currentContext = actor.context as Record<string, unknown>;
       if ((currentContext as any).viewMode !== viewMode) {
@@ -99,15 +123,9 @@ const swapActorsTool: Tool = {
       }
     }
     
-    // If actor doesn't have children, this tool was likely called on the wrong actor
-    // (e.g., view switcher instead of content actor). The viewMode update above is
-    // the main purpose, so we can return early without warning.
+    // If actor doesn't have children, can't swap
     if (!actor.children || !actor.$jazz) {
-      // Only log if we had a targetActorId but couldn't use it
-      if (targetActorId) {
-        logger.warn('Actor missing children or $jazz, cannot swap actors (but viewMode was updated)');
-      }
-      // Otherwise, silently return - viewMode update was successful
+      logger.warn('Actor missing children or $jazz, cannot swap actors');
       return;
     }
     

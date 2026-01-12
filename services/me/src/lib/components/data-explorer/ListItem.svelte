@@ -74,7 +74,15 @@
       return "string";
     }
     if (isCoID && effectiveResolvedType) {
-      return effectiveResolvedType.extendedType || effectiveResolvedType.type || "CoValue";
+      const extended = effectiveResolvedType.extendedType;
+      const type = effectiveResolvedType.type;
+      
+      // Map raw 'costream' to 'CoFeed' for display
+      if (type === 'costream' && !extended) {
+        return 'CoFeed';
+      }
+      
+      return extended || type || "CoValue";
     }
     if (typeof value === "string" && value.startsWith("co_")) {
       return "CoValue";

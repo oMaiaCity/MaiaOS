@@ -31,6 +31,12 @@ export function resolveBinding(
       
       if ("context" in data && data.context) {
         const _context = data.context // Track context for reactivity
+        // ✅ Drill into all context properties for deep reactivity
+        if (_context && typeof _context === 'object') {
+          for (const contextKey in _context) {
+            const _contextValue = _context[contextKey] // Track all context properties
+          }
+        }
         evalContext.context = data.context as Record<string, unknown>
       }
       

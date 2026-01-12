@@ -24,11 +24,82 @@
 
   // Tab state: "members" (default) or "info"
   let activeTab = $state<"members" | "info">("members");
+  
+  // Extract messages from CoFeed raw value
+  function extractCoFeedMessages(rawValue: any): any[] {
+    if (!rawValue) return [];
+    
+    const messages: any[] = [];
+    const messagesMap = new Map<string, any>();
+    
+    // CoFeed structure: { byMe: {...}, perAccount: {...}, perSession: {...} }
+    // Extract from byMe (nested by session)
+    if (rawValue.byMe) {
+      const entries = Object.entries(rawValue.byMe);
+      for (const [key, value] of entries) {
+        // Skip metadata keys
+        if (key === 'value' || key === 'ref' || key === 'by' || key === 'madeAt' || key === 'tx') continue;
+        
+        // This is a session ID entry with messages
+        if (typeof value === 'object' && value !== null) {
+          // Iterate through message entries
+          for (const [msgKey, msgValue] of Object.entries(value)) {
+            if (typeof msgValue === 'object' && msgValue !== null && 'id' in msgValue) {
+              const msgId = (msgValue as any).id?.id || msgKey;
+              if (!messagesMap.has(msgId)) {
+                messagesMap.set(msgId, {
+                  ...(msgValue as any),
+                  source: 'byMe'
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Extract from perAccount
+    if (rawValue.perAccount) {
+      for (const [accountId, accountData] of Object.entries(rawValue.perAccount)) {
+        if (typeof accountData === 'object' && accountData !== null) {
+          for (const [sessionId, sessionData] of Object.entries(accountData)) {
+            if (typeof sessionData === 'object' && sessionData !== null) {
+              for (const [msgKey, msgValue] of Object.entries(sessionData)) {
+                if (typeof msgValue === 'object' && msgValue !== null && 'id' in msgValue) {
+                  const msgId = (msgValue as any).id?.id || msgKey;
+                  if (!messagesMap.has(msgId)) {
+                    messagesMap.set(msgId, {
+                      ...(msgValue as any),
+                      source: `perAccount[${accountId.slice(3, 10)}]`
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Convert map to array and sort by timestamp
+    messages.push(...Array.from(messagesMap.values()));
+    messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    
+    return messages;
+  }
 
   // Get display type
-  const displayType = $derived(
-    context.resolved.extendedType || context.resolved.type || "CoValue",
-  );
+  const displayType = $derived.by(() => {
+    const extended = context.resolved.extendedType;
+    const type = context.resolved.type;
+    
+    // Map raw 'costream' to 'CoFeed' for display
+    if (type === 'costream' && !extended) {
+      return 'CoFeed';
+    }
+    
+    return extended || type || "CoValue";
+  });
 
   // Get group ID from resolved context
   const groupId = $derived(context.resolved.groupId);
@@ -153,7 +224,17 @@
 
     // Use CoState to load the CoValue with resolve query
     // This gives us a properly wrapped CoValue with $isLoaded and $jazz.owner
-    // Resolve @schema deeply to access its @label
+    const isCoFeed = displayType === 'CoFeed' || displayType === 'CoStream';
+    
+    if (isCoFeed) {
+      // CoFeeds are NOT CoMaps! They're costreams (different structure)
+      // Don't try to load them as CoMap - it causes "map2.$jazz.raw.get is not a function"
+      // We already have group info from the resolved context
+      coValueState = null;
+      return;
+    }
+    
+    // CoMaps/CoLists can have @schema - resolve it
     coValueState = new CoState(CoMap, currentCoValueId, {
       resolve: {
         '@schema': { '@label': true },
@@ -167,6 +248,44 @@
   // Extract group info when CoValue is loaded (separate effect to prevent loops)
   $effect(() => {
     const coValue = currentCoValue;
+
+    // For CoFeeds, coValueState is null (they're not CoMaps)
+    // Try to get group info from the raw resolved value
+    const isCoFeed = displayType === 'CoFeed' || displayType === 'CoStream';
+    
+    if (isCoFeed) {
+      // For CoFeeds, try to extract group info from raw value
+      if (loadedCoValue !== null) {
+        loadedCoValue = null;
+      }
+      
+      // Try to get group info from the resolved value's group property
+      const rawValue = context.resolved.value;
+      if (rawValue && 'group' in rawValue && rawValue.group) {
+        try {
+          // Wrap the raw value to match getCoValueGroupInfo expectations
+          const wrappedValue = {
+            $jazz: {
+              owner: rawValue.group
+            }
+          };
+          const info = getCoValueGroupInfo(wrappedValue);
+          if (info?.groupId) {
+            groupInfo = {
+              accountMembers: info.accountMembers || [],
+              groupMembers: info.groupMembers || [],
+            };
+            return;
+          }
+        } catch (e) {
+          console.warn('Failed to get group info for CoFeed:', e);
+        }
+      }
+      
+      // No group info available for this CoFeed
+      groupInfo = null;
+      return;
+    }
 
     if (!coValue || !coValue.$isLoaded) {
       // Only clear if we had values before (prevent unnecessary updates)
@@ -410,6 +529,27 @@
             copyValue={groupId}
             hideBadge={true}
           />
+        {/if}
+        
+        <!-- CoFeed Messages Section -->
+        {#if displayType === 'CoFeed' || displayType === 'CoStream'}
+          {@const rawValue = context.resolved.value}
+          {@const messages = extractCoFeedMessages(rawValue)}
+          
+          <div class="mt-4 pt-4 border-t border-slate-200">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-semibold text-slate-700">Messages</h3>
+              <span class="text-xs text-slate-500">{messages.length} message{messages.length !== 1 ? 's' : ''}</span>
+            </div>
+            
+            {#if messages.length > 0}
+              <div class="bg-slate-50 border border-slate-200 rounded p-3 max-h-96 overflow-y-auto">
+                <pre class="text-xs text-slate-700 whitespace-pre-wrap font-mono">{JSON.stringify(messages, null, 2)}</pre>
+              </div>
+            {:else}
+              <p class="text-sm text-slate-500 italic">No messages in feed</p>
+            {/if}
+          </div>
         {/if}
       </div>
     {/if}

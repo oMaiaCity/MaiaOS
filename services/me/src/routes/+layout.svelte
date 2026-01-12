@@ -38,6 +38,11 @@
         title: "DB",
         description: "Database explorer and management",
       };
+    } else if (pathname === "/sandbox") {
+      return {
+        title: "Sandbox",
+        description: "Actor inspector and runtime IDE",
+      };
     }
     return { title: null, description: null };
   });

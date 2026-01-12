@@ -117,3 +117,11 @@ export function now() {
 export function toString(operand: MaiaScriptExpression) {
   return { $string: operand };
 }
+
+/**
+ * Stringify: { $stringify: operand }
+ * Converts any value to JSON string with pretty formatting
+ */
+export function stringify(operand: MaiaScriptExpression, indent?: number) {
+  return { $stringify: operand, indent: indent ?? 2 };
+}

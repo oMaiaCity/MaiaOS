@@ -1,8 +1,7 @@
 {
   "$schema": "composite-factory",
   "parameters": {
-    "viewsPath": { "type": "string", "default": "context.views" },
-    "currentViewPath": { "type": "string", "default": "dependencies.content.context.viewMode" }
+    "viewsPath": { "type": "string", "default": "context.views" }
   },
   "factory": {
     "container": {
@@ -19,7 +18,7 @@
           "text": { "$": "item.label" },
           "class": {
             "$if": {
-              "test": { "$eq": [{ "$": "dependencies.content.context.viewMode" }, { "$": "item.id" }] },
+              "test": { "$eq": [{ "$": "context.activeView" }, { "$": "item.id" }] },
               "then": "!bg-[#001a42] !text-white !border-[#001a42] shadow-md hover:!bg-[#002662] hover:!shadow-lg",
               "else": ""
             }

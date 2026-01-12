@@ -345,10 +345,11 @@ export async function createTodosActors(account: any) {
 	// Set children after creation (default: show list view)
 	contentActor.children.$jazz.push(listActor.$jazz.id);
 
-	// View switcher actor - stores viewMode in its own context for styling
+	// View switcher actor - maintains its OWN active view state (proper actor architecture)
 	const viewSwitcherActor = await createActorEntity(account, {
 		context: { 
 			visible: true,
+			activeView: 'list', // ✅ Own state - which button is active (default: list)
 			views: [
 				{ id: 'list', label: 'List' },
 				{ id: 'timeline', label: 'Timeline' },
@@ -357,11 +358,8 @@ export async function createTodosActors(account: any) {
 		},
 		view: createComposite(viewSwitcherFactory as any, {
 			viewsPath: 'context.views', // ✅ Path to views array in actor context
-			currentViewPath: 'dependencies.content.context.viewMode' // ✅ Read from contentActor's context
 		}),
-		dependencies: {
-			content: contentActor.$jazz.id // ✅ For reading viewMode and sending events
-		},
+		dependencies: {}, // ✅ No dependencies - owns its own state!
 		role: 'todos-view-switcher',
 	}, group);
 
@@ -415,9 +413,8 @@ export async function createTodosActors(account: any) {
 	listActor.subscriptions.$jazz.push(listActor.$jazz.id);
 	timelineActor.subscriptions.$jazz.push(timelineActor.$jazz.id);
 	kanbanActor.subscriptions.$jazz.push(kanbanActor.$jazz.id); // ✅ Kanban handles drag-and-drop events
-	viewSwitcherActor.subscriptions.$jazz.push(contentActor.$jazz.id); // ✅ Switcher SENDS events to contentActor
-	viewSwitcherActor.subscriptions.$jazz.push(viewSwitcherActor.$jazz.id); // ✅ Switcher also subscribes to itself to receive events and update viewMode
-	contentActor.subscriptions.$jazz.push(contentActor.$jazz.id); // ✅ Content actor handles @context/swapActors
+	viewSwitcherActor.subscriptions.$jazz.push(contentActor.$jazz.id); // ✅ Switcher SENDS events to contentActor (which has viewActors mapping)
+	contentActor.subscriptions.$jazz.push(contentActor.$jazz.id); // ✅ Content actor handles @context/swapActors and updates its viewMode
 
 	// Actors are automatically added to root.entities by createActorEntity
 

@@ -57,6 +57,7 @@
       "max-sm", "max-md", "max-lg", "max-xl", "max-2xl"
     ],
     "allowedPseudoClasses": ["hover", "focus", "active", "disabled", "placeholder"],
+    "allowedModifiers": ["!"],
     "allowedDataPaths": ["item", "context", "dependencies"],
     "forbiddenDataPaths": [
       "__proto__", "constructor", "prototype",

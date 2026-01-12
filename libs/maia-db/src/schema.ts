@@ -98,6 +98,10 @@ export const Actor = co.map({
 	
 	// Position - deprecated, use children array order instead
 	position: z.number().optional(),
+	
+	// Inbox watermark - system property for message consumption tracking
+	// Tracks the highest timestamp of processed messages (O(1) vs O(n) consumed IDs array)
+	inboxWatermark: z.number().optional(),
 })
 
 /** The account root is an app-specific per-user private `CoMap`

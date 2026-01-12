@@ -67,24 +67,25 @@
     if (!actor?.$isLoaded) return {};
     
     const context = (actor as any).context;
-    if (!context || typeof context !== 'object') return context;
+    if (!context || typeof context !== 'object') return {};
     
     const queries = context?.queries;
-    if (!queries || typeof queries !== 'object') return context;
+    // CRITICAL: Return new object to ensure Svelte detects changes
+    if (!queries || typeof queries !== 'object') return { ...context };
     
     // Access accountCoState reactively to establish reactivity chain
-    if (!accountCoState) return context;
+    if (!accountCoState) return { ...context };
     const account = accountCoState.current;
-    if (!account?.$isLoaded) return context;
+    if (!account?.$isLoaded) return { ...context };
     
     const root = account.root;
-    if (!root?.$isLoaded) return context;
+    if (!root?.$isLoaded) return { ...context };
     
     const entitiesList = root.entities;
-    if (!entitiesList?.$isLoaded) return context;
+    if (!entitiesList?.$isLoaded) return { ...context };
     
     const schemata = root.schemata;
-    if (!schemata?.$isLoaded) return context;
+    if (!schemata?.$isLoaded) return { ...context };
     
     // Create a new context object with populated query results
     // This doesn't mutate the Jazz context, just creates a derived view
@@ -185,32 +186,21 @@
   });
   
   // ============================================
-  // MESSAGE CONSUMPTION TRACKING
+  // MESSAGE CONSUMPTION TRACKING - WATERMARK PATTERN
   // ============================================
-  // PROPER COFEED PATTERN: Track consumed messages in actor context
-  // CoFeeds are append-only - we can't delete messages
-  // Instead, we track which messages have been consumed to prevent replay
+  // WATERMARK PATTERN: Use timestamp-based high-water mark
+  // CoFeeds are append-only - messages are sorted by timestamp
+  // Track highest timestamp processed to avoid replay (O(1) instead of O(n))
   
-  // Load consumed message IDs from actor context (persists across reloads)
-  const loadConsumedIds = () => {
-    if (!actor?.$isLoaded) return new Set<string>();
-    const context = actor.context as any;
-    const consumed = context?.consumedMessages || [];
-    return new Set<string>(consumed);
-  };
-  
-  // Track consumed message IDs in memory (synced with Jazz context)
-  let consumedMessageIds = $state<Set<string>>(new Set());
+  // Get watermark from actor (timestamp of last processed message)
+  // System property: tracks highest timestamp processed
+  const inboxWatermark = $derived.by(() => {
+    if (!actor?.$isLoaded) return 0;
+    return actor.inboxWatermark || 0;
+  });
   
   // Processing guard to prevent infinite loops from $effect re-runs
   let isProcessing = $state(false);
-  
-  // Load consumed IDs when actor loads
-  $effect(() => {
-    if (actor?.$isLoaded) {
-      consumedMessageIds = loadConsumedIds();
-    }
-  });
   
   // ============================================
   // MESSAGE PROCESSING - CALL SKILLS DIRECTLY
@@ -229,20 +219,55 @@
     // Use Map to dedup by message ID (same message may appear in multiple feeds)
     const messagesMap = new Map<string, any>();
     
-    // Get byMe messages
-    const byMeMessage = inbox.byMe?.value;
-    if (byMeMessage?.$isLoaded) {
-      const messageId = byMeMessage.$jazz?.id;
+    // Debug: Log inbox structure
+    logger.log('[ActorEngine] Inbox structure:', {
+      hasInbox: !!inbox,
+      hasByMe: !!inbox.byMe,
+      byMeHasAll: !!inbox.byMe?.all,
+      byMeHasValue: !!inbox.byMe?.value,
+      byMeKeys: inbox.byMe ? Object.keys(inbox.byMe) : [],
+      hasPerAccount: !!inbox.perAccount,
+      perAccountKeys: inbox.perAccount ? Object.keys(inbox.perAccount) : [],
+    });
+    
+    // CoFeed pattern: inbox.byMe is the account feed with .all property
+    // Iterate through ALL entries from the current account (all sessions)
+    if (inbox.byMe?.all) {
+      logger.log('[ActorEngine] Iterating byMe.all');
+      for (const entry of inbox.byMe.all) {
+        if (entry.value?.$isLoaded) {
+          const messageId = entry.value.$jazz?.id;
+          if (messageId) {
+            messagesMap.set(messageId, entry.value);
+          }
+        }
+      }
+    } else if (inbox.byMe?.value?.$isLoaded) {
+      // Fallback: use .value if .all doesn't exist
+      logger.log('[ActorEngine] Fallback to byMe.value');
+      const messageId = inbox.byMe.value.$jazz?.id;
       if (messageId) {
-        messagesMap.set(messageId, byMeMessage);
+        messagesMap.set(messageId, inbox.byMe.value);
       }
     }
     
-    // Get perAccount messages
+    // Same for perAccount - iterate ALL entries from each account
     if (inbox.perAccount) {
       for (const accountId in inbox.perAccount) {
         const accountFeed = inbox.perAccount[accountId];
-        if (accountFeed?.value?.$isLoaded) {
+        
+        // Try .all first (all entries from this account)
+        if (accountFeed?.all) {
+          for (const entry of accountFeed.all) {
+            if (entry.value?.$isLoaded) {
+              const messageId = entry.value.$jazz?.id;
+              if (messageId && !messagesMap.has(messageId)) {
+                messagesMap.set(messageId, entry.value);
+              }
+            }
+          }
+        } else if (accountFeed?.value?.$isLoaded) {
+          // Fallback: use .value if .all doesn't exist
           const messageId = accountFeed.value.$jazz?.id;
           if (messageId && !messagesMap.has(messageId)) {
             messagesMap.set(messageId, accountFeed.value);
@@ -251,37 +276,28 @@
       }
     }
     
+    logger.log(`[ActorEngine] Found ${messagesMap.size} total messages in inbox`);
+    
     // Convert to array and sort by timestamp
     const allMessages = Array.from(messagesMap.values());
     allMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
     
-    // Filter to only NEW unconsumed messages
-    const unconsumedMessages = allMessages.filter((message) => {
-      const messageId = message.$jazz?.id;
-      return messageId && !consumedMessageIds.has(messageId);
-    });
+    // Filter to only NEW messages (after watermark)
+    const newMessages = allMessages.filter(
+      msg => (msg.timestamp || 0) > inboxWatermark
+    );
     
     // Skip if no new messages
-    if (unconsumedMessages.length === 0) return;
-    
-    // Track newly consumed IDs to batch update context
-    const newlyConsumed: string[] = [];
+    if (newMessages.length === 0) return;
     
     // Set processing flag to prevent re-entrance
     isProcessing = true;
     
-    // Process each unconsumed message SEQUENTIALLY (await each one)
+    // Process each new message SEQUENTIALLY (await each one)
     // This prevents race conditions where tool execution happens out of order
     (async () => {
       try {
-        for (const message of unconsumedMessages) {
-          const messageId = message.$jazz?.id;
-          if (!messageId) continue;
-          
-          // Mark as consumed BEFORE execution to prevent duplicates
-          consumedMessageIds.add(messageId);
-          newlyConsumed.push(messageId);
-          
+        for (const message of newMessages) {
           // Execute tool via ToolEngine (unified pattern)
           logger.log('Processing message:', message.type, 'payload:', message.payload);
           try {
@@ -300,19 +316,15 @@
           }
         }
         
-        // Batch update: Persist newly consumed IDs to actor context
-        if (newlyConsumed.length > 0 && actor.$isLoaded) {
-          const context = actor.context as any;
-          const existingConsumed = context?.consumedMessages || [];
-          const updatedConsumed = [...existingConsumed, ...newlyConsumed];
+        // Update watermark: Persist highest processed timestamp
+        // System property: stored at actor root, not in context
+        if (newMessages.length > 0 && actor.$isLoaded) {
+          const latestTimestamp = newMessages[newMessages.length - 1].timestamp;
           
-          // Update actor context with new consumed IDs
-          actor.$jazz.set('context', {
-            ...context,
-            consumedMessages: updatedConsumed,
-          });
+          // Update actor's watermark (system property)
+          actor.$jazz.set('inboxWatermark', latestTimestamp);
           
-          logger.log(`Marked ${newlyConsumed.length} messages as consumed`);
+          logger.log(`Updated watermark to ${latestTimestamp} (processed ${newMessages.length} messages)`);
         }
       } finally {
         // Always clear processing flag, even if there was an error
@@ -461,21 +473,13 @@
   });
 
   // Resolve dependencies from IDs to actual CoValue objects (for view bindings)
-  // CRITICAL: Access .current here to make it reactive
+  // CRITICAL: Access .current to establish reactive subscription
   const resolvedDependencies = $derived.by(() => {
     const deps: Record<string, any> = {};
     for (const [key, coStateOrValue] of dependencyCoStates.entries()) {
       if (coStateOrValue?.current !== undefined) {
         // It's a CoState - access .current reactively
         const current = coStateOrValue.current;
-        // Access the properties we care about to ensure reactivity
-        if (current?.$isLoaded && current.context) {
-          const _ = current.context; // Access context for reactivity
-          // For contentActor, specifically access viewMode
-          if ((current as any).context?.viewMode !== undefined) {
-            const __ = (current as any).context.viewMode;
-          }
-        }
         deps[key] = current;
       } else {
         // Not a CoState - use directly
@@ -483,6 +487,17 @@
       }
     }
     return deps;
+  });
+  
+  // Data object for ViewEngine - must be derived to ensure reactivity
+  const dataForViews = $derived.by(() => {
+    return {
+      context: resolvedContextWithQueries,
+      childActors,
+      item,
+      accountCoState,
+      dependencies: resolvedDependencies // ✅ Reactively expose dependencies
+    };
   });
   
   // Pre-load subscriber CoStates (for event publishing)
@@ -504,13 +519,6 @@
 
 {#if browser && actor?.$isLoaded && isVisible && viewType}
   {@const view = actor.view as Record<string, unknown>}
-  {@const dataForViews = { 
-    context: resolvedContextWithQueries, 
-    childActors, 
-    item, 
-    accountCoState,
-    dependencies: resolvedDependencies // ✅ Expose RESOLVED dependencies (actual objects, not IDs)
-  }}
   {@const viewNode = viewType === 'composite' 
     ? { slot: 'root', composite: view } 
     : { slot: 'root', leaf: view }}

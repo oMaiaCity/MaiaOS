@@ -127,6 +127,15 @@
       >
         DB
       </a>
+      <a
+        href="/sandbox"
+        class="text-sm font-bold px-4 py-2 rounded-full transition-all {$page
+          .url.pathname === '/sandbox'
+          ? 'bg-[#0A274D]/10 text-[#0A274D]'
+          : 'text-[#0A274D]/60 hover:text-[#0A274D] hover:bg-white/20'}"
+      >
+        Sandbox
+      </a>
     </div>
 
     <!-- Right: Account Metadata -->

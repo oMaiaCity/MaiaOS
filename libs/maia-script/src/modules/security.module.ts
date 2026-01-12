@@ -128,6 +128,11 @@ export function sanitizeClasses(classes: string[]): {
     let baseClass = trimmed
     let blockReason: string | null = null
 
+    // ✅ Handle Tailwind important modifier (!) prefix first
+    if (remainingClass.startsWith('!')) {
+      remainingClass = remainingClass.substring(1) // Remove the ! prefix
+    }
+
     // Extract all prefixes and validate them
     let prefixValid = true
     while (remainingClass.includes(':')) {

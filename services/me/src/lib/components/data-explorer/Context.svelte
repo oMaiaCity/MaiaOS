@@ -33,9 +33,17 @@
     view = "list",
   }: Props = $props();
 
-  const displayType = $derived(
-    context.resolved.extendedType || context.resolved.type || "CoValue",
-  );
+  const displayType = $derived.by(() => {
+    const extended = context.resolved.extendedType;
+    const type = context.resolved.type;
+    
+    // Map raw 'costream' to 'CoFeed' for display
+    if (type === 'costream' && !extended) {
+      return 'CoFeed';
+    }
+    
+    return extended || type || "CoValue";
+  });
 
   // Get properties reactively - regenerate snapshot from live CoValue
   // This ensures reactivity when the CoValue changes

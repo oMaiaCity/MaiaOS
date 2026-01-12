@@ -27,6 +27,7 @@ export {
   formatDate,
   now,
   toString,
+  stringify,
 } from './helpers';
 
 import { evaluate } from './evaluator';

@@ -289,6 +289,17 @@ export function evaluate(
     return String(value);
   }
 
+  // Stringify: $stringify
+  if ('$stringify' in expr) {
+    const value = evaluate((expr as any).$stringify, ctx, depth + 1);
+    const indent = (expr as any).indent ?? 2;
+    try {
+      return JSON.stringify(value, null, indent);
+    } catch (error) {
+      return `[Unable to stringify: ${error}]`;
+    }
+  }
+
   // Coercion: $number
   if ('$number' in expr) {
     const value = evaluate(expr.$number, ctx, depth + 1);

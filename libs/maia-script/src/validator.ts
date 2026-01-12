@@ -119,7 +119,8 @@ function validateExpression(
     case '$gt':
     case '$lt':
     case '$gte':
-    case '$lte': {
+    case '$lte':
+    case '$in': {
       const operands = (expr as any)[opKey];
       if (!Array.isArray(operands) || operands.length !== 2) {
         errors.push(`${opKey} requires exactly 2 operands`);
@@ -155,6 +156,7 @@ function validateExpression(
     case '$uppercase':
     case '$lowercase':
     case '$string':
+    case '$stringify':
     case '$number':
     case '$boolean': {
       const operand = (expr as any)[opKey];
