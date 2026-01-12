@@ -228,6 +228,13 @@ export async function updateEntityGeneric(
 		throw new Error('CoValue ID not available')
 	}
 
+	// Get JSON schema to show expected fields
+	const jsonSchema = getJsonSchema(schemaName)
+	const expectedFields = jsonSchema?.properties ? Object.keys(jsonSchema.properties) : []
+
+	console.log(`[updateEntityGeneric] Schema: ${schemaName}, Updates:`, updates)
+	console.log(`[updateEntityGeneric] Expected fields: [${expectedFields.join(', ')}]`)
+
 	// Wrap CoValue with schema (enables Zod validation on $jazz.set)
 	const wrappedCoValue = await CoMapSchema.load(coValueId)
 
@@ -235,12 +242,29 @@ export async function updateEntityGeneric(
 		throw new Error(`Failed to load CoValue ${coValueId} with ${schemaName} schema`)
 	}
 
-	// Update fields with validation
+	// Update fields - let Zod validation handle invalid fields
+	// This allows granular field updates - only fields that exist in schema will succeed
+	let successCount = 0
+	let failCount = 0
 	for (const [key, value] of Object.entries(updates)) {
 		if (value !== undefined) {
-			wrappedCoValue.$jazz.set(key, value) // ✅ Zod validates here
+			try {
+				wrappedCoValue.$jazz.set(key, value) // ✅ Zod validates here - will throw if field doesn't exist
+				successCount++
+				console.log(`[updateEntityGeneric] ✅ ${key} = ${value}`)
+			} catch (error) {
+				failCount++
+				// Log warning for invalid fields but don't throw - allows partial updates
+				console.warn(
+					`[updateEntityGeneric] ❌ Field "${key}" rejected:`,
+					error instanceof Error ? error.message : String(error),
+					`(Expected: ${expectedFields.join(', ')})`
+				)
+			}
 		}
 	}
+	
+	console.log(`[updateEntityGeneric] Complete: ${successCount} succeeded, ${failCount} failed`)
 
 	// NO WAIT! Jazz updates locally instantly, syncs in background
 	// UI updates reactively via CoState subscriptions

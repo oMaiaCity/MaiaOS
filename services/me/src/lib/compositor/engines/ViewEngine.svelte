@@ -393,23 +393,22 @@
       attrs.oninput = (e: Event) => {
         const target = e.target as HTMLInputElement;
         
-        let payloadKey = "text";
-        if (leaf?.bindings?.value && typeof leaf.bindings.value === 'string') {
-          const bindingPath = leaf.bindings.value;
-          const parts = bindingPath.split('.');
-          if (parts.length > 0) {
-            payloadKey = parts[parts.length - 1];
+        // Build context with item data
+        const itemData = "item" in data && data.item ? (data.item as Record<string, unknown>) : undefined;
+        const contextData = itemData ? { ...data, item: itemData } : data;
+        
+        // Resolve payload and handle @inputValue marker
+        const basePayload = resolvePayload(eventConfig.payload, contextData);
+        const payload = typeof basePayload === 'object' && basePayload !== null && !Array.isArray(basePayload)
+          ? { ...basePayload }
+          : {};
+        
+        // Find any @inputValue markers and replace with actual value
+        for (const [key, value] of Object.entries(payload)) {
+          if (value === '@inputValue') {
+            payload[key] = target.value;
           }
         }
-        
-        const payload: Record<string, unknown> = eventConfig.payload
-          ? {
-              ...(typeof eventConfig.payload === "object" && !Array.isArray(eventConfig.payload)
-                ? (eventConfig.payload as Record<string, unknown>)
-                : {}),
-              [payloadKey]: target.value,
-            }
-          : { [payloadKey]: target.value };
 
         if (onEvent) {
           onEvent(eventConfig.event, payload);
@@ -421,34 +420,15 @@
     if (leaf?.events?.blur && leaf.tag === "input") {
       const eventConfig = leaf.events.blur;
       attrs.onblur = (e: Event) => {
-        const target = e.target as HTMLInputElement;
-        
-        // Determine payload key from value binding (same logic as oninput)
-        let payloadKey = "text";
-        if (leaf?.bindings?.value && typeof leaf.bindings.value === 'string') {
-          const bindingPath = leaf.bindings.value;
-          const parts = bindingPath.split('.');
-          if (parts.length > 0) {
-            payloadKey = parts[parts.length - 1];
-          }
-        }
-        
         // Build context with item data for foreach scenarios
         const itemData = "item" in data && data.item ? (data.item as Record<string, unknown>) : undefined;
         const contextData = itemData ? { ...data, item: itemData } : data;
         
-        // Resolve all data paths in payload EXCEPT the field being edited
-        // This resolves 'item.id' → 'co_123' but keeps 'item.name' as a path
-        const resolvedPayload = resolvePayload(eventConfig.payload, contextData);
-        
-        // Override the specific field being edited with current input value
-        // This ensures we use the NEW typed value, not the OLD value from data
-        const finalPayload = typeof resolvedPayload === 'object' && resolvedPayload !== null && !Array.isArray(resolvedPayload)
-          ? { ...(resolvedPayload as Record<string, unknown>), [payloadKey]: target.value }
-          : { [payloadKey]: target.value };
+        // Pure payload resolution - no overrides, no guessing
+        const payload = resolvePayload(eventConfig.payload, contextData);
 
         if (onEvent) {
-          onEvent(eventConfig.event, finalPayload);
+          onEvent(eventConfig.event, payload);
         }
       };
     }
@@ -719,29 +699,37 @@
     {@const resolvedHref = baseHref && baseHref.endsWith("=") && "item" in data && data.item ? baseHref + String((data.item as Record<string, any>).id || "") : baseHref}
     {@const isInternalLink = leaf.tag === "a" && resolvedHref && resolvedHref.startsWith("/")}
     {@const finalAttributes = leaf.tag === "a" && resolvedHref ? { ...attributes, href: isInternalLink ? "#" : resolvedHref } : attributes}
-    <svelte:element
-      this={leaf.tag}
-      class={`${leafClasses} ${leaf.attributes?.['data-dropzone'] === 'true' && isDragOver ? 'bg-blue-50 border-blue-300 border-2' : ''}`}
-      {...finalAttributes}
-      onclick={leaf.tag === "input" || leaf.tag === "textarea" ? undefined : (e: MouseEvent) => {
-        if (leaf.tag === "a" && resolvedHref && resolvedHref.startsWith("/")) {
-          e.preventDefault();
-          e.stopPropagation();
-          goto(resolvedHref, { noScroll: true });
-          return;
-        }
-        if (!leaf.events?.click) return;
-        if (leaf.tag === "div" && leafClasses.includes("fixed") && e.target !== e.currentTarget) return;
-        if (leaf.events.click.event === "") {
-          e.stopPropagation();
-          return;
-        }
-        handleEvent(leaf.events.click);
-        if (leaf.tag === "button") e.stopPropagation();
-      }}
-      onsubmit={leaf.events?.submit ? (e: Event) => { e.preventDefault(); handleEvent(leaf.events!.submit!); } : undefined}
-    >
-      {#if !isVoidElement}
+    {#if isVoidElement}
+      <!-- Void elements: self-closing tag, no content -->
+      <svelte:element
+        this={leaf.tag}
+        class={`${leafClasses} ${leaf.attributes?.['data-dropzone'] === 'true' && isDragOver ? 'bg-blue-50 border-blue-300 border-2' : ''}`}
+        {...finalAttributes}
+      />
+    {:else}
+      <!-- Non-void elements: can have content -->
+      <svelte:element
+        this={leaf.tag}
+        class={`${leafClasses} ${leaf.attributes?.['data-dropzone'] === 'true' && isDragOver ? 'bg-blue-50 border-blue-300 border-2' : ''}`}
+        {...finalAttributes}
+        onclick={leaf.tag === "input" || leaf.tag === "textarea" ? undefined : (e: MouseEvent) => {
+          if (leaf.tag === "a" && resolvedHref && resolvedHref.startsWith("/")) {
+            e.preventDefault();
+            e.stopPropagation();
+            goto(resolvedHref, { noScroll: true });
+            return;
+          }
+          if (!leaf.events?.click) return;
+          if (leaf.tag === "div" && leafClasses.includes("fixed") && e.target !== e.currentTarget) return;
+          if (leaf.events.click.event === "") {
+            e.stopPropagation();
+            return;
+          }
+          handleEvent(leaf.events.click);
+          if (leaf.tag === "button") e.stopPropagation();
+        }}
+        onsubmit={leaf.events?.submit ? (e: Event) => { e.preventDefault(); handleEvent(leaf.events!.submit!); } : undefined}
+      >
         {#if boundText !== undefined}
           {String(boundText)}
         {:else if leaf.elements && leaf.elements.length > 0}
@@ -753,8 +741,8 @@
             {/if}
           {/each}
         {/if}
-      {/if}
-    </svelte:element>
+      </svelte:element>
+    {/if}
   {/if}
 {:else if nodeType === 'leaf' && !validation.valid}
   <div class="text-red-500 p-4 rounded bg-red-50">

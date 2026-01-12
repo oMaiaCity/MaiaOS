@@ -46,7 +46,8 @@
                 "bindings": { "value": "{{valuePath}}" },
                 "events": {
                   "input": {
-                    "event": "{{inputEvent}}"
+                    "event": "{{inputEvent}}",
+                    "payload": { "newTodoText": "@inputValue" }
                   }
                 }
               }

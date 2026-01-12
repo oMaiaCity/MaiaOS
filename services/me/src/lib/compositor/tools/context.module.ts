@@ -74,17 +74,19 @@ const swapActorsTool: Tool = {
       properties: {
         targetActorId: { type: 'string', description: 'Direct: The actor ID to insert' },
         viewMode: { type: 'string', description: 'Mapped: viewMode to look up in context.viewActors' },
+        targetActor: { type: 'string', description: 'Key in dependencies to find target actor with children' },
       },
     },
   },
-  execute: (actor: any, payload?: unknown) => {
+  execute: (actor: any, payload?: unknown, accountCoState?: any) => {
     const logger = createActorLogger(actor);
     
-    const payloadObj = payload as { targetActorId?: string; viewMode?: string };
+    const payloadObj = payload as { targetActorId?: string; viewMode?: string; targetActor?: string };
     let targetActorId = payloadObj?.targetActorId;
     const viewMode = payloadObj?.viewMode;
     
     // Update context.viewMode if provided (for button styling)
+    // This works even if the actor doesn't have children
     if (viewMode && actor.context && actor.$jazz) {
       const currentContext = actor.context as Record<string, unknown>;
       if ((currentContext as any).viewMode !== viewMode) {
@@ -97,8 +99,15 @@ const swapActorsTool: Tool = {
       }
     }
     
+    // If actor doesn't have children, this tool was likely called on the wrong actor
+    // (e.g., view switcher instead of content actor). The viewMode update above is
+    // the main purpose, so we can return early without warning.
     if (!actor.children || !actor.$jazz) {
-      logger.warn('Actor missing children or $jazz, cannot swap actors (but viewMode was updated)');
+      // Only log if we had a targetActorId but couldn't use it
+      if (targetActorId) {
+        logger.warn('Actor missing children or $jazz, cannot swap actors (but viewMode was updated)');
+      }
+      // Otherwise, silently return - viewMode update was successful
       return;
     }
     
@@ -112,7 +121,12 @@ const swapActorsTool: Tool = {
     }
     
     if (!targetActorId) {
-      logger.warn('No targetActorId provided or resolved from viewMode');
+      // Only warn if we had a viewMode but couldn't resolve it AND the actor has children
+      // If actor doesn't have children, the viewMode update was successful and that's the main purpose
+      if (viewMode && actor.children) {
+        logger.warn('No targetActorId provided or resolved from viewMode');
+      }
+      // Otherwise, silently return - viewMode update was successful
       return;
     }
     
@@ -169,50 +183,42 @@ const updateInputTool: Tool = {
 	metadata: {
 		id: '@context/updateInput',
 		name: 'Update Input',
-		description: 'Updates the input field value in actor.context',
+		description: 'Update input field value in context (for inline editing)',
 		category: 'context',
 		parameters: {
 			type: 'object',
 			properties: {
-				fieldPath: {
+				field: {
 					type: 'string',
-					description: 'Field path in actor.context to update',
+					description: 'Field name (stored as context.editing{Field})',
 					required: true,
 				},
 				value: {
 					type: 'string',
 					description: 'The new value',
-					required: false,
+					required: true,
 				},
 			},
-			required: ['fieldPath'],
+			required: ['field', 'value'],
 		},
 	},
 	execute: async (actor: any, payload?: unknown) => {
-		const payloadData = (payload as {
-			fieldPath?: string
-			value?: unknown
-		}) || {}
-
-		const fieldPath = payloadData.fieldPath
-		const value = payloadData.value !== undefined ? payloadData.value : ''
-
-		if (!fieldPath) return
-
-		const pathParts = fieldPath.split('.')
-		let target: any = actor.context
-		for (let i = 0; i < pathParts.length - 1; i++) {
-			const part = pathParts[i]
-			if (!target[part]) {
-				target[part] = {}
-			}
-			target = target[part]
+		const logger = createActorLogger(actor);
+		const payloadData = payload as { field?: string; value?: string | number | boolean } || {};
+		const { field, value } = payloadData;
+		
+		if (!field) {
+			logger.warn('No field provided to updateInput');
+			return;
 		}
-
-		const finalKey = pathParts[pathParts.length - 1]
-		target[finalKey] = value
-
-		await actor.$jazz.waitForSync()
+		
+		// Store input value in context with "editing{Field}" pattern
+		const contextKey = `editing${field.charAt(0).toUpperCase()}${field.slice(1)}`;
+		actor.context[contextKey] = value;
+		
+		await actor.$jazz.waitForSync();
+		
+		logger.log(`Updated ${contextKey} to:`, value);
 	},
 }
 
@@ -319,7 +325,9 @@ const navigateTool: Tool = {
 			throw new Error('Either targetActorId or vibeName is required');
 		}
 
-		if (typeof window !== 'undefined' && window.location) {
+		// Use SvelteKit navigation instead of history.pushState
+		if (typeof window !== 'undefined') {
+			const { goto } = await import('$app/navigation');
 			const url = new URL(window.location.href);
 			
 			if (targetActorId) {
@@ -330,9 +338,8 @@ const navigateTool: Tool = {
 				url.searchParams.delete('id');
 			}
 			
-			window.history.pushState({}, '', url);
-			
-			window.dispatchEvent(new PopStateEvent('popstate'));
+			// Use SvelteKit's goto with replaceState to avoid adding to history
+			await goto(url.pathname + url.search, { replaceState: true, noScroll: true });
 		}
 	},
 };

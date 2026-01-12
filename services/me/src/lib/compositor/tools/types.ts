@@ -90,3 +90,20 @@ export interface QueryConfig {
 	 */
 	operations?: MaiaScriptExpression
 }
+
+/**
+ * Update Input Payload - For inline editing
+ * Used by @context/updateInput tool to store input values in context
+ */
+export interface UpdateInputPayload {
+	/**
+	 * Field name (will be stored as context.editing{Field})
+	 * Example: "name" → context.editingName
+	 */
+	field: string
+	
+	/**
+	 * The new value to store
+	 */
+	value: string | number | boolean
+}

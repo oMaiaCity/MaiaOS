@@ -147,9 +147,13 @@
                                   }
                                 },
                                 "events": {
+                                  "input": {
+                                    "event": "@context/updateInput",
+                                    "payload": { "field": "name", "value": "@inputValue" }
+                                  },
                                   "blur": {
                                     "event": "@core/updateEntity",
-                                    "payload": { "id": "item.id", "name": "item.name" }
+                                    "payload": { "id": "item.id", "name": "context.editingName" }
                                   }
                                 }
                               }

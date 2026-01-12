@@ -597,11 +597,16 @@ export async function ensureSchema(
 					// Check if name matches (case-sensitive exact match)
 					if (typeof schemaNameValue === 'string' && schemaNameValue === schemaName) {
 						// ⚡ OPTIMIZED: If already loaded, return immediately without await
-						if (schemaObj.$isLoaded) {
+						if (schemaObj.$isLoaded && schemaObj.$jazz?.ensureLoaded) {
 							return schemaObj
 						}
-						// Not loaded - ensure loaded before returning
-						return await schemaObj.$jazz.ensureLoaded({ resolve: {} })
+						// Not loaded - load from node to get full CoValue with ensureLoaded method
+						const loadedValue = await node.load(schemaId as any)
+						if (loadedValue === 'unavailable') {
+							continue
+						}
+						// Return the loaded CoValue which has ensureLoaded method
+						return await loadedValue.$jazz?.ensureLoaded?.({ resolve: {} }) || loadedValue
 					}
 				} catch (error) {
 					console.error(`[ensureSchema] Error loading schema:`, error)

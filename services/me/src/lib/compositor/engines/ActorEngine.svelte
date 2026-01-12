@@ -35,8 +35,14 @@
   // ============================================
   
   // Load actor - Jazz CoState handles reactivity
-  // In Svelte 5, props are reactive. Use $derived.by to ensure CoState is recreated when actorId changes.
-  const actorCoState = $derived.by(() => new CoState(Actor, actorId));
+  // Use $state and $effect to avoid creating effects inside $derived
+  let actorCoState = $state<CoState<typeof Actor>>(new CoState(Actor, actorId));
+  
+  // Update CoState when actorId changes
+  $effect(() => {
+    actorCoState = new CoState(Actor, actorId);
+  });
+  
   const actor = $derived(actorCoState.current);
   
   // Item is passed directly from foreach loop (already loaded)
@@ -413,10 +419,16 @@
   });
   
   // Load child actors (full CoState objects, not just IDs)
-  const childActorCoStates = $derived.by(() => {
-    if (!actor?.$isLoaded || !actor.children?.$isLoaded) return [];
+  // Use $state and $effect to avoid creating effects inside $derived
+  let childActorCoStates = $state<Array<CoState<typeof Actor>>>([]);
+  
+  $effect(() => {
+    if (!actor?.$isLoaded || !actor.children?.$isLoaded) {
+      childActorCoStates = [];
+      return;
+    }
     const ids = Array.from(actor.children) as string[];
-    return ids.map((id: string) => new CoState(Actor, id));
+    childActorCoStates = ids.map((id: string) => new CoState(Actor, id));
   });
   
   const childActors = $derived.by(() => {
@@ -426,8 +438,14 @@
   });
 
   // Store CoState instances for dependencies (for reactive access)
-  const dependencyCoStates = $derived.by(() => {
-    if (!actor?.$isLoaded || !actor.dependencies) return new Map<string, any>();
+  // Use $state and $effect to avoid creating effects inside $derived
+  let dependencyCoStates = $state<Map<string, any>>(new Map());
+  
+  $effect(() => {
+    if (!actor?.$isLoaded || !actor.dependencies) {
+      dependencyCoStates = new Map();
+      return;
+    }
     
     const coStates = new Map<string, any>();
     for (const [key, idOrValue] of Object.entries(actor.dependencies)) {
@@ -439,7 +457,7 @@
         coStates.set(key, idOrValue);
       }
     }
-    return coStates;
+    dependencyCoStates = coStates;
   });
 
   // Resolve dependencies from IDs to actual CoValue objects (for view bindings)
@@ -468,10 +486,16 @@
   });
   
   // Pre-load subscriber CoStates (for event publishing)
-  const subscriberCoStates = $derived.by(() => {
-    if (!actor?.$isLoaded || !actor.subscriptions?.$isLoaded) return [];
+  // Use $state and $effect to avoid creating effects inside $derived
+  let subscriberCoStates = $state<Array<{ id: string; coState: CoState<typeof Actor> }>>([]);
+  
+  $effect(() => {
+    if (!actor?.$isLoaded || !actor.subscriptions?.$isLoaded) {
+      subscriberCoStates = [];
+      return;
+    }
     const ids = Array.from(actor.subscriptions) as string[];
-    return ids.map((id: string) => ({
+    subscriberCoStates = ids.map((id: string) => ({
       id,
       coState: new CoState(Actor, id)
     }));
