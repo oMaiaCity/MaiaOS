@@ -1,0 +1,442 @@
+{
+  "$type": "view",
+  "$id": "co_view_001",
+  "root": {
+    "tag": "div",
+    "class": "stack",
+    "attrs": {
+      "data-view": "$viewMode"
+    },
+    "children": [
+      {
+        "tag": "div",
+        "class": "header-section",
+        "children": [
+          {
+            "tag": "h1",
+            "class": "title",
+            "text": "$title"
+          },
+          {
+            "tag": "div",
+            "class": "view-switcher",
+            "children": [
+              {
+                "tag": "button",
+                "class": "button-view-switch",
+                "attrs": {
+                  "data-view": "list",
+                  "data-active": "$viewMode"
+                },
+                "text": "List",
+                "$on": {
+                  "click": {
+                    "action": "@core/setViewMode",
+                    "payload": {
+                      "viewMode": "list"
+                    }
+                  }
+                }
+              },
+              {
+                "tag": "button",
+                "class": "button-view-switch",
+                "attrs": {
+                  "data-view": "kanban",
+                  "data-active": "$viewMode"
+                },
+                "text": "Kanban",
+                "$on": {
+                  "click": {
+                    "action": "@core/setViewMode",
+                    "payload": {
+                      "viewMode": "kanban"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "class": "form",
+        "children": [
+          {
+            "tag": "input",
+            "class": "input",
+            "attrs": {
+              "type": "text",
+              "placeholder": "$inputPlaceholder"
+            },
+            "value": "$newTodoText",
+            "$on": {
+              "input": {
+                "action": "@context/update",
+                "payload": {
+                  "newTodoText": "@inputValue"
+                }
+              },
+              "keydown": {
+                "action": "@core/createTodo",
+                "payload": {
+                  "text": "$newTodoText"
+                },
+                "key": "Enter"
+              }
+            }
+          },
+          {
+            "tag": "button",
+            "class": "button",
+            "text": "$addButtonText",
+            "$on": {
+              "click": {
+                "action": "@core/createTodo",
+                "payload": {
+                  "text": "$newTodoText"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "class": "list",
+        "$each": {
+          "items": "$todos",
+          "template": {
+            "tag": "div",
+            "class": "card",
+            "attrs": {
+              "data-done": "$item.done"
+            },
+            "children": [
+              {
+                "tag": "span",
+                "class": "body",
+                "text": "$item.text"
+              },
+              {
+                "tag": "button",
+                "class": "button-small",
+                "text": "✓",
+                "$on": {
+                  "click": {
+                    "action": "@core/toggleTodo",
+                    "payload": {
+                      "id": "$item.id"
+                    }
+                  }
+                }
+              },
+              {
+                "tag": "button",
+                "class": "button-small button-danger",
+                "text": "✕",
+                "$on": {
+                  "click": {
+                    "action": "@core/deleteTodo",
+                    "payload": {
+                      "id": "$item.id"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "tag": "div",
+        "class": "kanban",
+        "children": [
+          {
+            "tag": "div",
+            "class": "kanban-column",
+            "attrs": {
+              "data-column": "todo"
+            },
+            "children": [
+              {
+                "tag": "h2",
+                "class": "kanban-column-title",
+                "text": "Todo"
+              },
+              {
+                "tag": "div",
+                "class": "kanban-column-content",
+                "attrs": {
+                  "data-column": "todo"
+                },
+                "$on": {
+                  "dragover": {
+                    "action": "@core/preventDefault",
+                    "payload": {}
+                  },
+                  "dragenter": {
+                    "action": "@dragdrop/dragEnter",
+                    "payload": {
+                      "column": "todo"
+                    }
+                  },
+                  "dragleave": {
+                    "action": "@dragdrop/dragLeave",
+                    "payload": {
+                      "column": "todo"
+                    }
+                  },
+                  "drop": {
+                    "action": "@dragdrop/drop",
+                    "payload": {
+                      "targetColumn": "todo"
+                    }
+                  }
+                },
+                "$each": {
+                  "items": "$todosTodo",
+                  "template": {
+                    "tag": "div",
+                    "class": "card",
+                    "attrs": {
+                      "draggable": "true",
+                      "data-id": "$item.id"
+                    },
+                    "$on": {
+                      "dragstart": {
+                        "action": "@dragdrop/start",
+                        "payload": {
+                          "entityType": "todos",
+                          "id": "$item.id"
+                        }
+                      },
+                      "dragend": {
+                        "action": "@dragdrop/end",
+                        "payload": {}
+                      }
+                    },
+                    "children": [
+                      {
+                        "tag": "span",
+                        "class": "body",
+                        "text": "$item.text"
+                      },
+                      {
+                        "tag": "div",
+                        "class": "card-actions",
+                        "children": [
+                          {
+                            "tag": "button",
+                            "class": "button-small",
+                            "text": "✓",
+                            "$on": {
+                              "click": {
+                                "action": "@core/toggleTodo",
+                                "payload": {
+                                  "id": "$item.id"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "tag": "button",
+                            "class": "button-small button-danger",
+                            "text": "✕",
+                            "$on": {
+                              "click": {
+                                "action": "@core/deleteTodo",
+                                "payload": {
+                                  "id": "$item.id"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "tag": "div",
+            "class": "kanban-column",
+            "attrs": {
+              "data-column": "done"
+            },
+            "children": [
+              {
+                "tag": "h2",
+                "class": "kanban-column-title",
+                "text": "Done"
+              },
+              {
+                "tag": "div",
+                "class": "kanban-column-content",
+                "attrs": {
+                  "data-column": "done"
+                },
+                "$on": {
+                  "dragover": {
+                    "action": "@core/preventDefault",
+                    "payload": {}
+                  },
+                  "dragenter": {
+                    "action": "@dragdrop/dragEnter",
+                    "payload": {
+                      "column": "done"
+                    }
+                  },
+                  "dragleave": {
+                    "action": "@dragdrop/dragLeave",
+                    "payload": {
+                      "column": "done"
+                    }
+                  },
+                  "drop": {
+                    "action": "@dragdrop/drop",
+                    "payload": {
+                      "targetColumn": "done"
+                    }
+                  }
+                },
+                "$each": {
+                  "items": "$todosDone",
+                  "template": {
+                    "tag": "div",
+                    "class": "card",
+                    "attrs": {
+                      "draggable": "true",
+                      "data-id": "$item.id",
+                      "data-done": "true"
+                    },
+                    "$on": {
+                      "dragstart": {
+                        "action": "@dragdrop/start",
+                        "payload": {
+                          "entityType": "todos",
+                          "id": "$item.id"
+                        }
+                      },
+                      "dragend": {
+                        "action": "@dragdrop/end",
+                        "payload": {}
+                      }
+                    },
+                    "children": [
+                      {
+                        "tag": "span",
+                        "class": "body",
+                        "text": "$item.text"
+                      },
+                      {
+                        "tag": "div",
+                        "class": "card-actions",
+                        "children": [
+                          {
+                            "tag": "button",
+                            "class": "button-small",
+                            "text": "↩",
+                            "$on": {
+                              "click": {
+                                "action": "@core/toggleTodo",
+                                "payload": {
+                                  "id": "$item.id"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "tag": "button",
+                            "class": "button-small button-danger",
+                            "text": "✕",
+                            "$on": {
+                              "click": {
+                                "action": "@core/deleteTodo",
+                                "payload": {
+                                  "id": "$item.id"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "tag": "button",
+        "class": "button button-modal-trigger",
+        "text": "Open Modal",
+        "$on": {
+          "click": {
+            "action": "@core/openModal",
+            "payload": {}
+          }
+        }
+      },
+      {
+        "tag": "div",
+        "class": "modal-overlay",
+        "attrs": {
+          "data-open": "$modalOpen"
+        },
+        "$on": {
+          "click": {
+            "action": "@core/closeModal",
+            "payload": {}
+          }
+        },
+        "children": [
+          {
+            "tag": "div",
+            "class": "modal-content",
+            "$on": {
+              "click": {
+                "action": "@core/noop",
+                "payload": {}
+              }
+            },
+            "children": [
+              {
+                "tag": "div",
+                "class": "modal-header",
+                "children": [
+                  {
+                    "tag": "h2",
+                    "class": "modal-title",
+                    "text": "$modalTitle"
+                  },
+                  {
+                    "tag": "button",
+                    "class": "button-modal-close",
+                    "text": "✕",
+                    "$on": {
+                      "click": {
+                        "action": "@core/closeModal",
+                        "payload": {}
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "tag": "div",
+                "class": "modal-body",
+                "text": "$modalContent"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

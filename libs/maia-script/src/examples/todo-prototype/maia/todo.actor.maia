@@ -1,0 +1,20 @@
+{
+  "$type": "actor",
+  "$id": "actor_todo_001",
+  "viewRef": "co_view_001",
+  "brandRef": "co_brand_001",
+  "styleRef": "todo",
+  "context": {
+    "title": "My Todos",
+    "inputPlaceholder": "What needs to be done?",
+    "addButtonText": "Add Todo",
+    "newTodoText": "",
+    "todos": [],
+    "todosTodo": [],
+    "todosDone": [],
+    "modalOpen": false,
+    "modalTitle": "",
+    "modalContent": "",
+    "viewMode": "list"
+  }
+}

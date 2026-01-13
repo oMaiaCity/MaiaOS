@@ -5,3 +5,4 @@
 
 export * from './types'
 export * from './registry'
+export { sanitizeClasses, validateLeaf } from './security.module'

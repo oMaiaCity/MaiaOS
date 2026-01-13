@@ -1,0 +1,20 @@
+{
+  "$type": "actor.style",
+  "tokens": {
+    "colors": {
+      "primary": "#8fa89b",
+      "primaryHover": "#7a9488",
+      "secondary": "#d4a373"
+    }
+  },
+  "components": {
+    "title": {
+      "background": "linear-gradient(to right, #8fa89b, #d4a373)",
+      "-webkit-background-clip": "text",
+      "-webkit-text-fill-color": "transparent"
+    },
+    "button": {
+      "boxShadow": "0 4px 10px rgba(143, 168, 155, 0.1)"
+    }
+  }
+}
