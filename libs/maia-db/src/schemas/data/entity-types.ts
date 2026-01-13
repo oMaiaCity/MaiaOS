@@ -74,15 +74,3 @@ export const actorEntityTypeSchema: any = {
 	},
 	required: ['context', 'dependencies', 'inbox', 'subscriptions', 'children'],
 }
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const vibesRegistryEntityTypeSchema: any = {
-	type: 'object',
-	additionalProperties: { type: 'string' }, // Allow dynamic vibe name keys (all string values for actor IDs)
-	properties: {
-		vibes: { type: 'string' }, // Optional - root actor ID for vibes vibe
-		humans: { type: 'string' }, // Optional - root actor ID for humans vibe
-		todos: { type: 'string' }, // Optional - root actor ID for todos vibe
-	},
-	required: [], // No required properties - all vibe registrations are optional
-}

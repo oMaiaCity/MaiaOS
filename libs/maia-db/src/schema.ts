@@ -73,6 +73,14 @@ export const ActorMessage = co.map({
 	timestamp: z.number(), // Unix timestamp
 })
 
+/** Vibe manifest - metadata for registered vibes */
+export const Vibe = co.map({
+	name: z.string(),              // 'me', 'humans', 'todos'
+	title: z.string(),             // 'Me', 'Human Management'
+	description: z.string(),       // Full description
+	actor: z.string(),             // Root actor ID
+})
+
 /** Actor schema - every UI node (composite and leaf) is an independent actor with message-passing */
 export const Actor = co.map({
 	// Context data (any JSON) - all actor state lives here
@@ -111,7 +119,8 @@ export const AppRoot = co.map({
 	entities: co.optional(co.list(co.map({}))), // Optional - list of Entity instances (created dynamically, Todo, Human, etc.)
 	actors: co.optional(co.list(co.map({}))), // Optional - list of Actor instances (UI/system actors, separated from data entities)
 	relations: co.optional(co.list(co.map({}))), // Optional - list of Relation instances (created dynamically)
-	vibesRegistryId: z.string().optional(), // Cached ID of the VibesRegistry entity for fast access
+	vibes: co.optional(co.list(Vibe)),    // NEW: Direct vibe manifest list
+	genesis: z.string().optional(),       // NEW: Entry point vibe actor ID (points to "me" vibe)
 })
 
 export const JazzAccount = co
@@ -299,23 +308,23 @@ export const JazzAccount = co
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	
 
-	// Store VibesRegistry ID on AppRoot for fast access (instead of searching through all entities)
-	// Check if vibesRegistryId exists AND is a valid string (not undefined/null)
-	const existingRegistryId = rootWithData.vibesRegistryId;
-	const hasValidRegistryId = existingRegistryId && typeof existingRegistryId === 'string' && existingRegistryId.startsWith('co_');
-	
-	if (!hasValidRegistryId) {
-		const { createEntityGeneric } = await import('./functions/generic-crud.js')
-		// Initialize ALL optional properties with actual values (empty string) to ensure Jazz adds them to the CoMap's allowed keys
-		// IMPORTANT: undefined doesn't register keys in Jazz, but concrete values do!
-		const registry = await createEntityGeneric(account, 'VibesRegistry', {
-			vibes: '',
-			humans: '',
-			todos: '',
-		})
-		// Store the registry ID on AppRoot for fast lookup
-		rootWithData.$jazz.set('vibesRegistryId', registry.$jazz.id)
+	// Ensure vibes list exists (empty by default - vibes registered dynamically)
+	if (!rootWithData.$jazz.has('vibes')) {
+		const vibesGroup = Group.create()
+		const vibesList = co.list(Vibe).create([], vibesGroup)
+		rootWithData.$jazz.set('vibes', vibesList)
+	} else {
+		// Ensure vibes list is loaded
+		try {
+			await rootWithData.$jazz.ensureLoaded({
+				resolve: { vibes: true },
+			})
+		} catch (_error) { }
 	}
+
+	// Note: Legacy vibesRegistryId field is no longer in schema
+	// Old accounts may still have it, but it won't be accessible through the schema
+	// It will be ignored and won't cause issues
 	
 
 	})

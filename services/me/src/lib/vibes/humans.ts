@@ -5,7 +5,7 @@
  * Bottom-up creation: buttons → header → list → root
  */
 
-import { createActorEntity, getVibesRegistry } from "@maia/db";
+import { createActorEntity } from "@maia/db";
 import { Group } from "jazz-tools";
 import { createLeaf, createComposite } from '$lib/compositor/engines/factoryEngine';
 import titleFactory from '$lib/compositor/factories/leafs/title.factory.json';
@@ -15,9 +15,9 @@ import buttonFactory from '$lib/compositor/factories/leafs/button.factory.json';
 
 // Global lock
 const getGlobalLock = () => {
-	if (typeof window === 'undefined') return { vibes: false, humans: false };
+	if (typeof window === 'undefined') return { me: false, humans: false };
 	if (!(window as any).__actorCreationLocks) {
-		(window as any).__actorCreationLocks = { vibes: false, humans: false };
+		(window as any).__actorCreationLocks = { me: false, humans: false };
 	}
 	return (window as any).__actorCreationLocks;
 };
@@ -31,14 +31,6 @@ export async function createHumansActors(account: any) {
 	locks.humans = true;
 	
 	try {
-		// Get the VibesRegistry entity
-		const vibesRegistry = await getVibesRegistry(account);
-		const existingHumansRootId = vibesRegistry.humans as string | undefined;
-		
-		if (existingHumansRootId && typeof existingHumansRootId === 'string' && existingHumansRootId.startsWith('co_')) {
-			return existingHumansRootId;
-		}
-
 		// Load root to get actors list ID
 		const loadedAccount = await account.$jazz.ensureLoaded({
 			resolve: { root: { actors: true } },
@@ -211,10 +203,6 @@ export async function createHumansActors(account: any) {
 	// NO WAIT! Subscriptions updated locally, sync happens in background
 
 	// Actors are automatically added to root.entities by createActorEntity
-
-	// Register root actor in vibes registry (OPTIMISTIC - no blocking!)
-	vibesRegistry.$jazz.set('humans', humansRootActor.$jazz.id);
-	// NO WAIT! Registry updated locally, sync happens in background
 	
 	return humansRootActor.$jazz.id;
 	} finally {

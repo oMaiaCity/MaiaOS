@@ -52,18 +52,29 @@
 **Role:** 
 - Groups related Actors together
 - Defines a single "app" within MaiaOS
-- Examples: "Todos" vibe, "Humans" vibe, "Vibes" vibe
+- Examples: "Todos" vibe, "Humans" vibe, "Me" vibe
 
 **Key Characteristics:**
 - Has a root Actor (entry point)
 - Contains multiple child Actors
-- Registered in VibesRegistry (Jazz entity)
+- Registered in `appRoot.vibes` (CoList of Vibe manifests)
 - User switches between Vibes via navigation
+- Entry point vibe defined by `appRoot.genesis` (points to "me" vibe)
+
+**Vibe Manifest Schema:**
+```typescript
+Vibe = co.map({
+  name: z.string(),        // 'me', 'humans', 'todos'
+  title: z.string(),      // 'Me', 'Human Management'
+  description: z.string(), // Full description
+  actor: z.string(),      // Root actor ID
+})
+```
 
 **Files:**
-- `services/me/src/lib/vibes/todo/createTodosActors.ts`
-- `services/me/src/lib/vibes/humans/createHumansActors.ts`
-- `services/me/src/lib/vibes/vibes/createVibesActors.ts`
+- `services/me/src/lib/vibes/me.ts` (creates "me" vibe - personal dashboard/launcher)
+- `services/me/src/lib/vibes/humans.ts`
+- `services/me/src/lib/vibes/todos.ts`
 
 ---
 

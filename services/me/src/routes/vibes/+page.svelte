@@ -53,7 +53,7 @@
   $effect(() => {
     // Prefer actor ID param, fall back to vibe name param
     const currentActorId = actorIdParam;
-    const currentVibeName = vibeNameParam ?? 'vibes';
+    const currentVibeName = vibeNameParam ?? 'me';
     const account = accountCoState?.current;
     
     // REACTIVE DEPENDENCIES (outside untrack)

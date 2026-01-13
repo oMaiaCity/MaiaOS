@@ -1,11 +1,11 @@
 /**
- * Create Vibes Actors - ID-Based Architecture
+ * Create Me Actors - ID-Based Architecture
  * Uses template factories that return CompositeNode/LeafNode
  * ID-based parent-child relationships (no role queries)
  * Bottom-up creation: leafs → composites → root
  */
 
-import { createActorEntity, getVibesRegistry } from "@maia/db";
+import { createActorEntity } from "@maia/db";
 import { Group } from "jazz-tools";
 import { createLeaf, createComposite } from '$lib/compositor/engines/factoryEngine';
 import titleFactory from '$lib/compositor/factories/leafs/title.factory.json';
@@ -14,30 +14,22 @@ import rootCardFactory from '$lib/compositor/factories/composites/rootCard.facto
 
 // Global lock that persists across hot reloads
 const getGlobalLock = () => {
-	if (typeof window === 'undefined') return { vibes: false, humans: false };
+	if (typeof window === 'undefined') return { me: false, humans: false };
 	if (!(window as any).__actorCreationLocks) {
-		(window as any).__actorCreationLocks = { vibes: false, humans: false };
+		(window as any).__actorCreationLocks = { me: false, humans: false };
 	}
 	return (window as any).__actorCreationLocks;
 };
 
-export async function createVibesActors(account: any) {
+export async function createMeActors(account: any) {
 	const locks = getGlobalLock();
 	
-	if (locks.vibes) {
-		throw new Error('Already creating vibes actors');
+	if (locks.me) {
+		throw new Error('Already creating me actors');
 	}
-	locks.vibes = true;
+	locks.me = true;
 	
 	try {
-	// Get the VibesRegistry entity
-	const vibesRegistry = await getVibesRegistry(account);
-	const existingVibesRootId = vibesRegistry.vibes as string | undefined;
-	
-	if (existingVibesRootId && typeof existingVibesRootId === 'string' && existingVibesRootId.startsWith('co_')) {
-		return existingVibesRootId;
-	}
-
 	// Create group for actors (OPTIMISTIC - no blocking!)
 	const group = Group.create();
 	group.addMember('everyone', 'reader');
@@ -103,11 +95,11 @@ export async function createVibesActors(account: any) {
 			elements: [{
 				tag: 'h2',
 				classes: 'text-2xl @xs:text-3xl @sm:text-4xl @md:text-5xl font-bold text-[#001a42] tracking-tight',
-				elements: ['Vibes']
+				elements: ['Me']
 			}]
 		},
 		dependencies: {},
-		role: 'vibes-header',
+		role: 'me-header',
 	}, group);
 
 	const gridActor = await createActorEntity(account, {
@@ -118,7 +110,7 @@ export async function createVibesActors(account: any) {
 			}
 		},
 		dependencies: {},
-		role: 'vibes-grid',
+		role: 'me-grid',
 	}, group);
 	// Set children after creation
 	gridActor.children.$jazz.push(humansCardActor.$jazz.id);
@@ -127,32 +119,28 @@ export async function createVibesActors(account: any) {
 	// NO WAIT! All composite actors created locally, use immediately
 
 	// STEP 3: Create root actor - MINIMAL (no actions)
-	const vibesRootActor = await createActorEntity(account, {
+	const meRootActor = await createActorEntity(account, {
 		context: { visible: true },
 		view: createComposite(rootCardFactory as any, { cardLayout: 'flex', cardClasses: 'card p-4 flex-col gap-4' }),
 		dependencies: {},
-		role: 'vibes-root',
+		role: 'me-root',
 	}, group);
 	// Set children after creation
-	vibesRootActor.children.$jazz.push(headerActor.$jazz.id);
-	vibesRootActor.children.$jazz.push(gridActor.$jazz.id);
+	meRootActor.children.$jazz.push(headerActor.$jazz.id);
+	meRootActor.children.$jazz.push(gridActor.$jazz.id);
 
 	// NO WAIT! Root actor created locally, use immediately
 
 	// STEP 4: Update card actors' subscriptions - Subscribe to ROOT for root-level state updates
 	// Cards use @context/navigate tool for true colocation (navigation handled by tool system)
-	humansCardActor.subscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
-	todosCardActor.subscriptions.$jazz.push(vibesRootActor.$jazz.id); // Send to ROOT, not self
+	humansCardActor.subscriptions.$jazz.push(meRootActor.$jazz.id); // Send to ROOT, not self
+	todosCardActor.subscriptions.$jazz.push(meRootActor.$jazz.id); // Send to ROOT, not self
 	// NO WAIT! Subscriptions updated locally, sync happens in background
 
 	// Actors are automatically added to root.entities by createActorEntity
-
-	// Register root actor in vibes registry (OPTIMISTIC - no blocking!)
-	vibesRegistry.$jazz.set('vibes', vibesRootActor.$jazz.id);
-	// NO WAIT! Registry updated locally, sync happens in background
 	
-	return vibesRootActor.$jazz.id;
+	return meRootActor.$jazz.id;
 	} finally {
-		locks.vibes = false;
+		locks.me = false;
 	}
 }

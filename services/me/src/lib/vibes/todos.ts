@@ -5,7 +5,7 @@
  * Bottom-up creation: buttons → header → list → root
  */
 
-import { createActorEntity, getVibesRegistry } from "@maia/db";
+import { createActorEntity } from "@maia/db";
 import { Group } from "jazz-tools";
 import { createLeaf, createComposite } from '$lib/compositor/engines/factoryEngine';
 import titleFactory from '$lib/compositor/factories/leafs/title.factory.json';
@@ -19,9 +19,9 @@ import { get, eq, or, not, trim, ifThenElse } from '@maia/script';
 
 // Global lock
 const getGlobalLock = () => {
-	if (typeof window === 'undefined') return { vibes: false, humans: false, todos: false };
+	if (typeof window === 'undefined') return { me: false, humans: false, todos: false };
 	if (!(window as any).__actorCreationLocks) {
-		(window as any).__actorCreationLocks = { vibes: false, humans: false, todos: false };
+		(window as any).__actorCreationLocks = { me: false, humans: false, todos: false };
 	}
 	return (window as any).__actorCreationLocks;
 };
@@ -35,14 +35,6 @@ export async function createTodosActors(account: any) {
 	locks.todos = true;
 	
 	try {
-		// Get the VibesRegistry entity
-		const vibesRegistry = await getVibesRegistry(account);
-		const existingTodosRootId = vibesRegistry.todos as string | undefined;
-		
-		if (existingTodosRootId && typeof existingTodosRootId === 'string' && existingTodosRootId.startsWith('co_')) {
-			return existingTodosRootId;
-		}
-
 		// Load root to get actors list ID
 		const loadedAccount = await account.$jazz.ensureLoaded({
 			resolve: { root: { actors: true } },
@@ -417,9 +409,6 @@ export async function createTodosActors(account: any) {
 	contentActor.subscriptions.$jazz.push(contentActor.$jazz.id); // ✅ Content actor handles @context/swapActors and updates its viewMode
 
 	// Actors are automatically added to root.entities by createActorEntity
-
-	// Register root actor in vibes registry
-	vibesRegistry.$jazz.set('todos', todosRootActor.$jazz.id);
 	
 	return todosRootActor.$jazz.id;
 	} finally {

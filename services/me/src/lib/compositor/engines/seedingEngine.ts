@@ -4,9 +4,9 @@
  * Manages vibe registration and provides a unified API for seeding
  */
 
-import { createActorEntity, getVibesRegistry } from "@maia/db";
+import { createActorEntity, Vibe } from "@maia/db";
 import { Group } from "jazz-tools";
-import { createVibesActors } from '$lib/vibes/vibes';
+import { createMeActors } from '$lib/vibes/me';
 import { createHumansActors } from '$lib/vibes/humans';
 import { createTodosActors } from '$lib/vibes/todos';
 
@@ -25,22 +25,22 @@ export interface VibeConfig {
  * Add new vibes here to register them in the system
  */
 export const VIBE_REGISTRY: Record<string, VibeConfig> = {
-	vibes: {
-		name: 'vibes',
-		label: 'Vibes',
-		description: 'Main vibes dashboard',
-		createActors: createVibesActors,
+	me: {
+		name: 'me',
+		label: 'Me',
+		description: 'Personal dashboard and launcher for all vibes',
+		createActors: createMeActors,
 	},
 	humans: {
 		name: 'humans',
-		label: 'Humans',
-		description: 'Human contact management',
+		label: 'Human Management',
+		description: 'Manage contacts, profiles, and human relationships',
 		createActors: createHumansActors,
 	},
 	todos: {
 		name: 'todos',
-		label: 'Todos',
-		description: 'Task management and todo lists',
+		label: 'Task Management',
+		description: 'Create and manage todos with list, timeline, and kanban views',
 		createActors: createTodosActors,
 	},
 };
@@ -61,6 +61,84 @@ const getGlobalLock = () => {
 	}
 	return (window as any).__vibesSeederLocks;
 };
+
+/**
+ * Get vibes list from approot
+ */
+async function getVibesList(account: any): Promise<any> {
+	const loadedAccount = await account.$jazz.ensureLoaded({
+		resolve: { root: { vibes: true } },
+	});
+	
+	if (!loadedAccount.root?.vibes) {
+		throw new Error('Vibes list not found - run account migration first');
+	}
+	
+	return loadedAccount.root.vibes;
+}
+
+/**
+ * Find a vibe manifest by name
+ */
+async function findVibeManifest(account: any, vibeName: string): Promise<any | null> {
+	const vibesList = await getVibesList(account);
+	
+	for (const vibe of vibesList) {
+		if (vibe?.$isLoaded && vibe.name === vibeName) {
+			return vibe;
+		}
+	}
+	
+	return null;
+}
+
+/**
+ * Create or update a vibe manifest
+ */
+async function upsertVibeManifest(
+	account: any,
+	vibeConfig: VibeConfig,
+	rootActorId: string
+): Promise<void> {
+	const loadedAccount = await account.$jazz.ensureLoaded({
+		resolve: { root: { vibes: true } },
+	});
+	
+	const root = loadedAccount.root;
+	const vibesList = root.vibes;
+	
+	if (!vibesList) {
+		throw new Error('Vibes list not found');
+	}
+	
+	// Check if manifest already exists
+	const existingManifest = await findVibeManifest(account, vibeConfig.name);
+	
+	if (existingManifest) {
+		// Update existing manifest
+		existingManifest.$jazz.set('title', vibeConfig.label);
+		existingManifest.$jazz.set('description', vibeConfig.description);
+		existingManifest.$jazz.set('actor', rootActorId);
+	} else {
+		// Create new manifest (import Vibe schema)
+		const vibesOwner = (vibesList as any).$jazz?.owner;
+		
+		const manifest = Vibe.create({
+			name: vibeConfig.name,
+			title: vibeConfig.label,
+			description: vibeConfig.description,
+			actor: rootActorId,
+		}, vibesOwner);
+		
+		// Add to vibes list
+		vibesList.$jazz.push(manifest);
+	}
+	
+	// If this is the "me" vibe, set it as the genesis (entry point)
+	if (vibeConfig.name === 'me') {
+		root.$jazz.set('genesis', rootActorId);
+	}
+}
 
 /**
  * Get or create a vibe's root actor
@@ -85,13 +163,11 @@ export async function getOrCreateVibe(account: any, vibeName: string): Promise<s
 	locks.vibes[vibeName] = true;
 
 	try {
-		// Get the VibesRegistry entity
-		const registry = await getVibesRegistry(account);
-		const existingRootId = registry[vibeName];
-
-		// Check if already exists
-		if (existingRootId && typeof existingRootId === 'string' && existingRootId.startsWith('co_')) {
-			return existingRootId;
+		// Check if vibe manifest exists
+		const existingManifest = await findVibeManifest(account, vibeName);
+		
+		if (existingManifest?.actor) {
+			return existingManifest.actor;
 		}
 
 		// Create new actors
@@ -100,6 +176,10 @@ export async function getOrCreateVibe(account: any, vibeName: string): Promise<s
 		if (!rootActorId) {
 			throw new Error(`Failed to create ${vibeName} actors: No root actor ID returned`);
 		}
+		
+		// Register in vibes list with metadata
+		await upsertVibeManifest(account, vibeConfig, rootActorId);
+		
 		return rootActorId;
 	} finally {
 		locks.vibes[vibeName] = false;
@@ -159,14 +239,8 @@ export async function seedVibes(
  */
 export async function getVibeIfExists(account: any, vibeName: string): Promise<string | null> {
 	try {
-		const registry = await getVibesRegistry(account);
-		const rootId = registry[vibeName];
-		
-		if (rootId && typeof rootId === 'string' && rootId.startsWith('co_')) {
-			return rootId;
-		}
-		
-		return null;
+		const manifest = await findVibeManifest(account, vibeName);
+		return manifest?.actor || null;
 	} catch (error) {
 		console.error(`[seeder] Error checking ${vibeName}:`, error);
 		return null;
@@ -188,4 +262,39 @@ export function listRegisteredVibes(): VibeConfig[] {
  */
 export function isVibeRegistered(vibeName: string): boolean {
 	return vibeName in VIBE_REGISTRY;
+}
+
+/**
+ * Get all vibe manifests with optional filtering
+ */
+export async function getAllVibes(
+	account: any,
+	options?: {
+		search?: string;
+	}
+): Promise<any[]> {
+	const vibesList = await getVibesList(account);
+	let manifests = Array.from(vibesList).filter(v => v?.$isLoaded);
+	
+	if (options?.search) {
+		const query = options.search.toLowerCase();
+		manifests = manifests.filter(v =>
+			v.name?.toLowerCase().includes(query) ||
+			v.title?.toLowerCase().includes(query) ||
+			v.description?.toLowerCase().includes(query)
+		);
+	}
+	
+	return manifests;
+}
+
+/**
+ * Get genesis (entry point) vibe actor ID
+ */
+export async function getGenesisVibe(account: any): Promise<string | null> {
+	const loadedAccount = await account.$jazz.ensureLoaded({
+		resolve: { root: { genesis: true } },
+	});
+	
+	return loadedAccount.root?.genesis || null;
 }

@@ -17,7 +17,6 @@ export {
 	queryEntitiesGeneric,
 	getCoMapSchemaForSchemaName,
 	createActorEntity,
-	getVibesRegistry,
 } from './functions/generic-crud'
 // Schema Registry
 export {
@@ -47,6 +46,7 @@ export {
 	AppRoot,
 	Contact,
 	JazzAccount,
+	Vibe,
 	syncGoogleDataToProfile,
 } from './schema'
 // Generic CRUD Functions for Relations

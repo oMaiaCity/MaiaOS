@@ -1,7 +1,9 @@
 /**
  * Utility function to clear all data from the database
  * 
- * Clears all items from the schemata, entities, and actors lists
+ * Clears all items from the schemata, entities, actors, and vibes lists
+ * Clears genesis field (entry point vibe)
+ * Attempts to remove legacy vibesRegistryId field (if it exists)
  * Also clears Jazz IndexedDB cache to ensure fresh start
  *
  * @param account - The Jazz account
@@ -21,23 +23,7 @@ export async function resetData(
 
 	const root = loadedAccount.root
 
-	// 1. FIRST: Clear cached VibesRegistry ID (BEFORE clearing entities!)
-	const currentValue = root.vibesRegistryId;
-	
-	if (currentValue !== undefined && currentValue !== null) {
-		// Set to undefined (for Zod optional properties, this clears the value)
-		root.$jazz.set('vibesRegistryId', undefined);
-		await root.$jazz.waitForSync();
-		
-		// Verify it's cleared
-		const newValue = root.vibesRegistryId;
-		
-		if (newValue !== undefined && newValue !== null) {
-			console.error('[resetData] ❌ Failed to clear vibesRegistryId! Still has value:', newValue);
-		}
-	}
-
-	// 2. Clear schemata list (keep the list structure, just remove items)
+	// 1. Clear schemata list (keep the list structure, just remove items)
 	if (root.$jazz.has('schemata')) {
 		// Load schemata list
 		const rootWithSchemata = await root.$jazz.ensureLoaded({
@@ -98,6 +84,42 @@ export async function resetData(
 
 			await root.$jazz.waitForSync()
 		}
+	}
+
+	// 5. Clear vibes list (keep the list structure, just remove items)
+	// Same pattern as actors - works perfectly
+	if (root.$jazz.has('vibes')) {
+		// Load vibes list
+		const rootWithVibes = await root.$jazz.ensureLoaded({
+			resolve: { vibes: true },
+		})
+		const vibesList = rootWithVibes.vibes
+
+		if (vibesList?.$isLoaded) {
+			// Get current length
+			const currentLength = Array.from(vibesList).length
+
+			// Remove all items by splicing from the end (safer than iterating forward)
+			for (let i = currentLength - 1; i >= 0; i--) {
+				vibesList.$jazz.splice(i, 1)
+			}
+
+			await root.$jazz.waitForSync()
+		}
+	}
+
+	// 6. Clear genesis field (entry point vibe actor ID)
+	// Use delete() method to remove the field completely
+	if (root.$jazz.has('genesis')) {
+		root.$jazz.delete('genesis')
+		await root.$jazz.waitForSync()
+	}
+
+	// 7. Remove legacy vibesRegistryId field (if it exists)
+	// Use delete() method - works even if field is not in schema
+	if (root.$jazz.has('vibesRegistryId')) {
+		root.$jazz.delete('vibesRegistryId')
+		await root.$jazz.waitForSync()
 	}
 }
 
