@@ -48,8 +48,11 @@
     },
     "creating": {
       "entry": {
-        "tool": "@core/createTodo",
-        "payload": { "text": "$newTodoText" }
+        "tool": "@mutation/create",
+        "payload": { 
+          "schema": "todos",
+          "data": { "text": "$newTodoText", "done": false }
+        }
       },
       "on": {
         "SUCCESS": "idle",
@@ -58,8 +61,12 @@
     },
     "toggling": {
       "entry": {
-        "tool": "@core/toggleTodo",
-        "payload": { "id": "$$id" }
+        "tool": "@mutation/toggle",
+        "payload": { 
+          "schema": "todos",
+          "id": "$$id",
+          "field": "done"
+        }
       },
       "on": {
         "SUCCESS": "idle",
@@ -68,8 +75,11 @@
     },
     "deleting": {
       "entry": {
-        "tool": "@core/deleteTodo",
-        "payload": { "id": "$$id" }
+        "tool": "@mutation/delete",
+        "payload": { 
+          "schema": "todos",
+          "id": "$$id"
+        }
       },
       "on": {
         "SUCCESS": "idle",
@@ -110,7 +120,7 @@
     "dragging": {
       "entry": {
         "tool": "@dragdrop/start",
-        "payload": { "entityType": "$$entityType", "id": "$$id" }
+        "payload": { "schema": "$$schema", "id": "$$id" }
       },
       "on": {
         "DRAG_END": "idle",
@@ -120,7 +130,11 @@
     "dropping": {
       "entry": {
         "tool": "@dragdrop/drop",
-        "payload": { "targetColumn": "$$targetColumn" }
+        "payload": { 
+          "schema": "$$schema",
+          "field": "$$field",
+          "value": "$$value"
+        }
       },
       "on": {
         "SUCCESS": "idle",

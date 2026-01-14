@@ -28,17 +28,8 @@ export class MaiaScriptEvaluator {
     
     if (typeof expression !== 'object') return expression;
 
-    // Check registry for DSL operations first (if registry is available)
-    if (this.registry) {
-      const keys = Object.keys(expression);
-      if (keys.length === 1 && keys[0].startsWith('$')) {
-        const opKey = keys[0];
-        const operation = this.registry.getDSLOperation(opKey);
-        if (operation) {
-          return operation.evaluate(expression[opKey], data, this);
-        }
-      }
-    }
+    // Note: DSL operations are handled directly in this evaluator
+    // Module registry is for tool registration, not DSL operations
 
     // Handle $context operation
     if ('$context' in expression) {

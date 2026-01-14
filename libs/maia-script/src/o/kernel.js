@@ -1,8 +1,9 @@
 /**
- * MaiaScript Kernel - v0.2
+ * MaiaScript Kernel - v0.4
  * 
  * Single entry point for the MaiaScript Operating System
  * Bundles all engines and exposes unified API
+ * Module-based architecture with dynamic loading
  * 
  * Usage:
  *   import { MaiaOS } from './o/kernel.js';
@@ -41,11 +42,11 @@ export class MaiaOS {
   static async boot(config = {}) {
     const os = new MaiaOS();
     
-    console.log('🚀 Booting MaiaOS v0.2...');
-    console.log('📦 Kernel: Single entry point architecture');
+    console.log('🚀 Booting MaiaOS v0.4...');
+    console.log('📦 Kernel: Module-based architecture');
     console.log('🤖 State Machines: AI-compatible actor coordination');
     console.log('📨 Message Passing: Actor-to-actor communication');
-    console.log('🔧 Tools: AI-compatible tool definitions');
+    console.log('🔧 Tools: Dynamic modular loading');
     
     // Initialize module registry
     os.moduleRegistry = new ModuleRegistry();
@@ -54,14 +55,17 @@ export class MaiaOS {
     os.evaluator = new MaiaScriptEvaluator(os.moduleRegistry);
     os.toolEngine = new ToolEngine(os.moduleRegistry);
     
-    // Set tools path (default: ./tools relative to kernel)
-    const toolsPath = config.toolsPath || './tools';
+    // Store toolEngine in registry for module access
+    os.moduleRegistry._toolEngine = os.toolEngine;
+    
+    // Set tools path (default: ../../o/tools relative to examples)
+    const toolsPath = config.toolsPath || '../../o/tools';
     os.toolEngine.setToolsPath(toolsPath);
     
     os.stateEngine = new StateEngine(os.toolEngine, os.evaluator);
     os.styleEngine = new StyleEngine();
     os.styleEngine.clearCache(); // Clear cache on boot for development
-    os.viewEngine = new ViewEngine(os.evaluator);
+    os.viewEngine = new ViewEngine(os.evaluator, null, os.moduleRegistry);
     os.actorEngine = new ActorEngine(
       os.styleEngine,
       os.viewEngine,
@@ -70,13 +74,23 @@ export class MaiaOS {
       os.stateEngine
     );
     
-    // Register system tools if provided
-    if (config.tools && Array.isArray(config.tools)) {
-      console.log('📦 Registering', config.tools.length, 'tools...');
-      await os.toolEngine.registerTools(config.tools);
-      console.log('✅ Registered', os.toolEngine.tools.size, 'tools');
+    // Set actorEngine reference in viewEngine (circular dependency)
+    os.viewEngine.actorEngine = os.actorEngine;
+    
+    // Load modules (default: core and dragdrop)
+    const modules = config.modules || ['core', 'dragdrop'];
+    console.log(`📦 Loading ${modules.length} modules...`);
+    
+    for (const moduleName of modules) {
+      try {
+        await os.moduleRegistry.loadModule(moduleName);
+      } catch (error) {
+        console.error(`Failed to load module "${moduleName}":`, error);
+      }
     }
     
+    console.log(`✅ Loaded ${os.moduleRegistry.listModules().length} modules`);
+    console.log(`✅ Registered ${os.toolEngine.tools.size} tools`);
     console.log('✅ MaiaOS booted successfully');
     
     return os;

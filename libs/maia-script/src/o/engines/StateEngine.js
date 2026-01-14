@@ -347,22 +347,36 @@ export class StateEngine {
   }
 
   /**
-   * Evaluate payload (resolve MaiaScript expressions)
-   * @param {Object} payload - Raw payload from state machine definition
+   * Evaluate payload (resolve MaiaScript expressions) - RECURSIVE
+   * @param {any} payload - Raw payload from state machine definition
    * @param {Object} context - Actor context
    * @param {Object} eventPayload - Event payload (already resolved)
-   * @returns {Object} Evaluated payload
+   * @returns {any} Evaluated payload
    */
   _evaluatePayload(payload, context, eventPayload = {}) {
-    if (!payload || typeof payload !== 'object') {
+    // Handle primitives
+    if (payload === null || typeof payload !== 'object') {
       return payload;
     }
 
+    // Handle arrays
+    if (Array.isArray(payload)) {
+      return payload.map(item => this._evaluatePayload(item, context, eventPayload));
+    }
+
+    // Handle objects recursively
     const evaluated = {};
     for (const [key, value] of Object.entries(payload)) {
       // Use eventPayload as item context (contains already-resolved $$id values)
       const data = { context, item: eventPayload };
-      evaluated[key] = this.evaluator.evaluate(value, data);
+      
+      // If value is an object or array, recursively evaluate it
+      if (value && typeof value === 'object') {
+        evaluated[key] = this._evaluatePayload(value, context, eventPayload);
+      } else {
+        // Otherwise, evaluate as a MaiaScript expression
+        evaluated[key] = this.evaluator.evaluate(value, data);
+      }
     }
     return evaluated;
   }

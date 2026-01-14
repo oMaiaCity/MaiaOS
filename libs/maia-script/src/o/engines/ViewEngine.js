@@ -1,6 +1,6 @@
 /**
  * ViewEngine - Renders .maia view files to Shadow DOM
- * v0.2: Added send() syntax for state machine events
+ * v0.4: Module-based configuration, no hardcoded drag-drop logic
  * Handles: DSL operations, $each loops, $if conditionals, events
  * 
  * Event syntax:
@@ -8,9 +8,10 @@
  * - v0.2: { send: "CREATE_TODO", payload: {...} }
  */
 export class ViewEngine {
-  constructor(evaluator, actorEngine) {
+  constructor(evaluator, actorEngine, moduleRegistry) {
     this.evaluator = evaluator;
     this.actorEngine = actorEngine;
+    this.moduleRegistry = moduleRegistry;
     this.viewCache = new Map();
     
     // Map fake CoMap IDs to actual filenames (simulates Jazz resolution)
@@ -228,15 +229,13 @@ export class ViewEngine {
     
     console.log('🎯 Event triggered:', e.type, 'Element:', element.tagName, 'Send:', eventName);
     
-    // Prevent default for drag-related events (always)
-    if (e.type === 'dragover') {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
-    if (e.type === 'drop') {
-      e.preventDefault();
-      e.stopPropagation();
+    // Query module registry for auto-preventDefault events
+    const dragDropModule = this.moduleRegistry?.getModule('dragdrop');
+    if (dragDropModule && typeof dragDropModule.shouldPreventDefault === 'function') {
+      if (dragDropModule.shouldPreventDefault(e.type)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
     }
     
     // Handle special events that don't go to state machine

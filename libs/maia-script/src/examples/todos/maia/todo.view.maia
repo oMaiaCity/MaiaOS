@@ -154,7 +154,11 @@
                   },
                   "drop": {
                     "send": "DROP",
-                    "payload": { "targetColumn": "todo" }
+                    "payload": { 
+                      "schema": "todos",
+                      "field": "done",
+                      "value": false
+                    }
                   }
                 },
                 "$each": {
@@ -168,7 +172,7 @@
                     "$on": {
                       "dragstart": {
                         "send": "DRAG_START",
-                        "payload": { "entityType": "todos", "id": "$$id" }
+                        "payload": { "schema": "todos", "id": "$$id" }
                       },
                       "dragend": {
                         "send": "DRAG_END"
@@ -235,7 +239,11 @@
                   },
                   "drop": {
                     "send": "DROP",
-                    "payload": { "targetColumn": "done" }
+                    "payload": { 
+                      "schema": "todos",
+                      "field": "done",
+                      "value": true
+                    }
                   }
                 },
                 "$each": {
@@ -250,7 +258,7 @@
                     "$on": {
                       "dragstart": {
                         "send": "DRAG_START",
-                        "payload": { "entityType": "todos", "id": "$$id" }
+                        "payload": { "schema": "todos", "id": "$$id" }
                       },
                       "dragend": {
                         "send": "DRAG_END"

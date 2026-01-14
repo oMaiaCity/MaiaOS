@@ -48,25 +48,10 @@
     
     async function boot() {
       try {
-        // Boot MaiaOS with configuration
+        // Boot MaiaOS with module-based configuration
         const os = await MaiaOS.boot({
           toolsPath: '../../o/tools',
-          tools: [
-          'createTodo',
-          'toggleTodo',
-          'deleteTodo',
-          'setViewMode',
-          'openModal',
-          'closeModal',
-          'dragdropDrop',
-          'dragStart',
-          'dragEnd',
-            'dragEnter',
-            'dragLeave',
-          'contextUpdate',
-          'preventDefault',
-          'noop'
-          ]
+          modules: ['core', 'mutation', 'dragdrop'] // Load core UI, mutation CRUD, and dragdrop modules
         });
         
         // Create Todo Actor

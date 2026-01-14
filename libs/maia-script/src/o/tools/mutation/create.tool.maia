@@ -1,0 +1,20 @@
+{
+  "$type": "tool",
+  "$id": "tool_mutation_create_001",
+  "name": "@mutation/create",
+  "description": "Generic create operation for any schema. Creates a new entity with generated ID and adds it to the schema collection.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "schema": {
+        "type": "string",
+        "description": "The schema/collection name (e.g., 'todos', 'notes', 'contacts')"
+      },
+      "data": {
+        "type": "object",
+        "description": "The entity data to create (without ID, will be auto-generated)"
+      }
+    },
+    "required": ["schema", "data"]
+  }
+}

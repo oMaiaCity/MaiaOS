@@ -1,6 +1,6 @@
 /**
  * ToolEngine - AI-Compatible Tool Execution System
- * v0.2: Loads tool definitions from .tool.maia files
+ * v0.4: Module-based tool system with namespace support
  * 
  * Tool Definition (.tool.maia):
  * - Metadata compatible with LLM tool schemas
@@ -12,18 +12,18 @@
  */
 export class ToolEngine {
   constructor(moduleRegistry) {
-    this.registry = moduleRegistry;
-    this.tools = new Map(); // toolName → { definition, function }
-    this.toolsPath = './tools'; // Default tools directory
+    this.moduleRegistry = moduleRegistry;
+    this.tools = new Map(); // toolRegistryName → { definition, function }
+    this.toolsPath = '../../o/tools'; // Default tools directory (relative to examples)
   }
 
   /**
    * Load a tool definition from .tool.maia file
-   * @param {string} toolName - Tool name (e.g., "createTodo")
+   * @param {string} namespacePath - Namespace path (e.g., "core/createTodo")
    * @returns {Promise<Object>} Tool definition
    */
-  async loadToolDefinition(toolName) {
-    const path = `${this.toolsPath}/${toolName}.tool.maia`;
+  async loadToolDefinition(namespacePath) {
+    const path = `${this.toolsPath}/${namespacePath}.tool.maia`;
     const response = await fetch(path);
     if (!response.ok) {
       throw new Error(`Failed to load tool definition: ${path}`);
@@ -33,33 +33,37 @@ export class ToolEngine {
 
   /**
    * Load a tool function from .tool.js file
-   * @param {string} toolName - Tool name (e.g., "createTodo")
+   * @param {string} namespacePath - Namespace path (e.g., "core/createTodo")
    * @returns {Promise<Object>} Tool function module
    */
-  async loadToolFunction(toolName) {
-    const path = `${this.toolsPath}/${toolName}.tool.js`;
+  async loadToolFunction(namespacePath) {
+    const path = `${this.toolsPath}/${namespacePath}.tool.js`;
     const module = await import(path);
     return module.default || module;
   }
 
   /**
    * Register a tool (loads definition + function)
-   * @param {string} toolName - Tool name (e.g., "createTodo")
+   * @param {string} namespacePath - Namespace path (e.g., "core/createTodo")
+   * @param {string} toolRegistryName - Full registry name (e.g., "@core/createTodo")
    * @returns {Promise<void>}
    */
-  async registerTool(toolName) {
+  async registerTool(namespacePath, toolRegistryName) {
     try {
-      const definition = await this.loadToolDefinition(toolName);
-      const toolFunction = await this.loadToolFunction(toolName);
+      const definition = await this.loadToolDefinition(namespacePath);
+      const toolFunction = await this.loadToolFunction(namespacePath);
       
-      this.tools.set(definition.name, {
+      // Use toolRegistryName as the key (e.g., "@core/createTodo")
+      this.tools.set(toolRegistryName, {
         definition,
-        function: toolFunction
+        function: toolFunction,
+        namespacePath
       });
       
-      console.log(`[ToolEngine] Registered tool: ${definition.name}`);
+      console.log(`[ToolEngine] Registered tool: ${toolRegistryName}`);
     } catch (error) {
-      console.error(`[ToolEngine] Failed to register tool ${toolName}:`, error);
+      console.error(`[ToolEngine] Failed to register tool ${namespacePath}:`, error.message);
+      // Don't throw - allow module loading to continue
     }
   }
 
@@ -74,52 +78,35 @@ export class ToolEngine {
 
   /**
    * Execute a tool action
-   * v0.2: Looks up tools from .tool.maia registry first, falls back to module registry
+   * v0.4: Module-based tool execution
    * @param {string} actionName - e.g., '@core/createTodo'
    * @param {object} actor - Actor instance with context
    * @param {any} payload - Action payload
    * @returns {Promise<void>}
    */
   async execute(actionName, actor, payload) {
-    // Try .tool.maia system first
     const tool = this.tools.get(actionName);
     
-    if (tool) {
-      try {
-        // Validate payload (optional - basic validation)
-        if (tool.definition.parameters) {
-          this._validatePayload(payload, tool.definition.parameters);
-        }
-        
-        // Execute tool function
-        await tool.function.execute(actor, payload);
-        
-        console.log(`[ToolEngine] Executed ${actionName}`);
-      } catch (error) {
-        console.error(`[ToolEngine] Tool execution error (${actionName}):`, error);
-        actor.context.error = error.message || 'Tool execution failed';
-        throw error;
-      }
-      return;
+    if (!tool) {
+      console.warn(`[ToolEngine] Tool not found: ${actionName}`);
+      throw new Error(`Tool not found: ${actionName}`);
     }
     
-    // Fallback: Try module registry (legacy v0.1 support)
-    const legacyTool = this.registry.getToolAction(actionName);
-    
-    if (legacyTool) {
-      try {
-        await legacyTool.execute(actor, payload);
-      } catch (error) {
-        console.error(`[ToolEngine] Legacy tool execution error (${actionName}):`, error);
-        actor.context.error = error.message || 'Tool execution failed';
-        throw error;
+    try {
+      // Validate payload (optional - basic validation)
+      if (tool.definition.parameters) {
+        this._validatePayload(payload, tool.definition.parameters);
       }
-      return;
+      
+      // Execute tool function
+      await tool.function.execute(actor, payload);
+      
+      console.log(`[ToolEngine] Executed ${actionName}`);
+    } catch (error) {
+      console.error(`[ToolEngine] Tool execution error (${actionName}):`, error);
+      actor.context.error = error.message || 'Tool execution failed';
+      throw error;
     }
-    
-    // Tool not found
-    console.warn(`[ToolEngine] Tool not found: ${actionName}`);
-    throw new Error(`Tool not found: ${actionName}`);
   }
 
   /**

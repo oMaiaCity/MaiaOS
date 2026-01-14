@@ -1,0 +1,20 @@
+{
+  "$type": "tool",
+  "$id": "tool_dragdrop_start_001",
+  "name": "@dragdrop/start",
+  "description": "Generic drag start handler. Stores the dragged entity information in context for later use by drop handler.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "schema": {
+        "type": "string",
+        "description": "The schema/collection being dragged (e.g., 'todos', 'tasks', 'cards')"
+      },
+      "id": {
+        "type": "string",
+        "description": "The entity ID being dragged"
+      }
+    },
+    "required": ["schema", "id"]
+  }
+}
