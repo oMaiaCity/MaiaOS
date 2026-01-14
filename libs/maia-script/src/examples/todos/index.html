@@ -55,7 +55,7 @@
         });
         
         // Create Todo Actor
-        const todoActor = await os.createActor('./maia/todo.actor.maia', document.getElementById('actor-todo'));
+        const todoActor = await os.createActor('./todo.actor.maia', document.getElementById('actor-todo'));
         
         // Initialize filtered arrays
         if (todoActor.context.todos) {

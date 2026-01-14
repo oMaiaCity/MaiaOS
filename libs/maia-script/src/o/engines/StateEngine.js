@@ -33,7 +33,7 @@ export class StateEngine {
     }
 
     // Load from file (fake CoMap ID pattern)
-    const path = `./maia/${stateRef}.state.maia`;
+    const path = `./${stateRef}.state.maia`;
     const response = await fetch(path);
     if (!response.ok) {
       throw new Error(`Failed to load state definition: ${path}`);

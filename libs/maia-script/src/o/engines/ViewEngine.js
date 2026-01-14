@@ -47,7 +47,7 @@ export class ViewEngine {
     }
 
     const viewFile = this.resolveViewRef(viewRef);
-    const response = await fetch(`./maia/${viewFile}.view.maia`);
+    const response = await fetch(`./${viewFile}.view.maia`);
     if (!response.ok) {
       throw new Error(`Failed to load view: ${viewRef}`);
     }

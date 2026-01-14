@@ -31,8 +31,26 @@ export class ActorEngine {
   }
 
   /**
+   * Load a .context.maia file
+   * @param {string} ref - Context reference name (e.g., "todo" -> "todo.context.maia")
+   * @returns {Promise<Object>} The parsed context
+   */
+  async loadContext(ref) {
+    const path = `./${ref}.context.maia`;
+    const response = await fetch(path);
+    if (!response.ok) {
+      throw new Error(`Failed to load context: ${path}`);
+    }
+    const contextDef = await response.json();
+    // Return context without metadata
+    const { $type, $id, ...context } = contextDef;
+    return context;
+  }
+
+  /**
    * Create and render an actor
    * v0.2: Added message passing (inbox, subscriptions, watermark)
+   * v0.4: Added contextRef support for separate context files
    * @param {Object} actorConfig - The actor configuration
    * @param {HTMLElement} containerElement - The container to attach to
    */
@@ -48,12 +66,20 @@ export class ActorEngine {
     // Load view
     const viewDef = await this.viewEngine.loadView(actorConfig.viewRef);
     
+    // Load context (either from contextRef or inline context)
+    let context;
+    if (actorConfig.contextRef) {
+      context = await this.loadContext(actorConfig.contextRef);
+    } else {
+      context = actorConfig.context || {};
+    }
+    
     // Store actor state
     const actor = {
       id: actorId,
       config: actorConfig,
       shadowRoot,
-      context: actorConfig.context,
+      context,
       containerElement,
       actorEngine: this, // Reference to ActorEngine for rerender
       // v0.2: Message passing

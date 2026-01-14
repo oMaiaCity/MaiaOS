@@ -296,11 +296,11 @@ export class StyleEngine {
 
     // Resolve brand ref (CoMap ID → filename)
     const brandFile = this.resolveStyleRef(actorConfig.brandRef);
-    const brand = await this.loadStyle(`./maia/${brandFile}.style.maia`);
+    const brand = await this.loadStyle(`./${brandFile}.style.maia`);
     
     // Load actor (overrides only) - optional
     const actor = actorConfig.styleRef 
-      ? await this.loadStyle(`./maia/${this.resolveStyleRef(actorConfig.styleRef)}.style.maia`)
+      ? await this.loadStyle(`./${this.resolveStyleRef(actorConfig.styleRef)}.style.maia`)
       : { tokens: {}, components: {} };
     
     // Deep merge (actor wins on conflicts)
