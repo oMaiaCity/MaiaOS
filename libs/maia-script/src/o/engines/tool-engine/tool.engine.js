@@ -14,7 +14,38 @@ export class ToolEngine {
   constructor(moduleRegistry) {
     this.moduleRegistry = moduleRegistry;
     this.tools = new Map(); // toolRegistryName → { definition, function }
-    this.toolsPath = '../../o/tools'; // Default tools directory (relative to examples)
+    this.toolsPath = '../../tools'; // Default tools directory (relative to tool-engine/)
+  }
+
+  /**
+   * Resolve a relative path
+   * In browser: construct absolute URL relative to current page
+   * In Bun/Node: try to resolve using import.meta.resolve()
+   * @param {string} relativePath - Relative path to resolve
+   * @returns {string} Resolved path (or original if resolution fails)
+   */
+  _resolvePath(relativePath) {
+    // In browser, construct absolute URL relative to current page
+    if (typeof window !== 'undefined') {
+      try {
+        // Use current page URL as base for relative paths
+        return new URL(relativePath, window.location.href).href;
+      } catch (e) {
+        // If URL construction fails, return as-is
+        return relativePath;
+      }
+    }
+    
+    // In Bun/Node, try to resolve relative to current module
+    if (typeof import.meta !== 'undefined' && import.meta.resolve) {
+      try {
+        return import.meta.resolve(relativePath);
+      } catch (e) {
+        // Resolution failed, return original path
+        return relativePath;
+      }
+    }
+    return relativePath;
   }
 
   /**
@@ -23,12 +54,32 @@ export class ToolEngine {
    * @returns {Promise<Object>} Tool definition
    */
   async loadToolDefinition(namespacePath) {
-    const path = `${this.toolsPath}/${namespacePath}.tool.maia`;
-    const response = await fetch(path);
-    if (!response.ok) {
-      throw new Error(`Failed to load tool definition: ${path}`);
+    const relativePath = `${this.toolsPath}/${namespacePath}.tool.maia`;
+    const resolvedPath = this._resolvePath(relativePath);
+    
+    // Try fetch() first (works in browsers and Bun with proper paths)
+    try {
+      const response = await fetch(resolvedPath);
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (e) {
+      // fetch() failed, try Bun.file() if available
+      if (typeof Bun !== 'undefined') {
+        const file = Bun.file(resolvedPath);
+        if (await file.exists()) {
+          return await file.json();
+        }
+        // Try relative path as fallback
+        const file2 = Bun.file(relativePath);
+        if (await file2.exists()) {
+          return await file2.json();
+        }
+      }
+      throw new Error(`Failed to load tool definition: ${resolvedPath} - ${e.message}`);
     }
-    return await response.json();
+    
+    throw new Error(`Failed to load tool definition: ${resolvedPath}`);
   }
 
   /**
@@ -37,8 +88,11 @@ export class ToolEngine {
    * @returns {Promise<Object>} Tool function module
    */
   async loadToolFunction(namespacePath) {
-    const path = `${this.toolsPath}/${namespacePath}.tool.js`;
-    const module = await import(path);
+    const relativePath = `${this.toolsPath}/${namespacePath}.tool.js`;
+    const resolvedPath = this._resolvePath(relativePath);
+    
+    // import() works in both Bun and browsers
+    const module = await import(resolvedPath);
     return module.default || module;
   }
 

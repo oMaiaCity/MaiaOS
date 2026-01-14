@@ -55,6 +55,8 @@ Create a file named `{name}.actor.maia`:
 | `stateRef` | string | Yes | References `{name}.state.maia` file |
 | `viewRef` | string | No | References `{name}.view.maia` file (optional for service actors) |
 | `styleRef` | string | No | References `{name}.style.maia` file |
+| `children` | object | No | Map of slot names to child actor IDs (for composite actors) |
+| `interfaceRef` | string | No | References `{name}.interface.maia` file (message contract) |
 | `inbox` | array | No | Message queue (managed at runtime) |
 | `subscriptions` | array | No | Actors to receive messages from |
 | `inboxWatermark` | number | No | Last processed message index |
@@ -368,12 +370,141 @@ maia/
 }
 ```
 
+## Composing Actors
+
+Actors can be **composed** into larger structures using **composite views** and **slots**.
+
+### Composite vs Leaf Actors
+
+**Leaf Actors** - Terminal components that render UI directly:
+```json
+{
+  "$type": "actor",
+  "viewRef": "todo_input"  // ← Leaf view with root property
+}
+```
+
+**Composite Actors** - Containers that hold child actors:
+```json
+{
+  "$type": "actor",
+  "viewRef": "vibe_root",  // ← Composite view with container property
+  "children": {
+    "header": "actor_header_001",
+    "content": "actor_content_001"
+  }
+}
+```
+
+### Defining Children
+
+Add a `children` map to your actor:
+
+```json
+{
+  "$type": "actor",
+  "$id": "actor_dashboard_001",
+  "children": {
+    "header": "actor_header_001",
+    "sidebar": "actor_sidebar_001",
+    "content": "actor_content_001"
+  }
+}
+```
+
+**Key Points:**
+- `children` maps slot names to actor IDs
+- Child actors are created automatically
+- Parent auto-subscribes to all children
+
+### Composite Views with Slots
+
+Create a composite view with slots:
+
+**`dashboard.view.maia`:**
+```json
+{
+  "$type": "view",
+  "container": {
+    "tag": "div",
+    "class": "dashboard-layout",
+    "slots": {
+      "header": "@header",
+      "sidebar": "@sidebar",
+      "content": "@content"
+    }
+  }
+}
+```
+
+**Slot Syntax:**
+- Use `@slotName` to reference a child actor
+- Slot name must match a key in `children` map
+
+### Actor Interfaces
+
+Define message contracts with `actor.interface.maia`:
+
+**`todo_input.interface.maia`:**
+```json
+{
+  "$type": "actor.interface",
+  "publishes": {
+    "TODO_CREATED": {
+      "payload": { "id": "string", "text": "string" }
+    }
+  },
+  "subscriptions": ["actor_todo_list_001"]
+}
+```
+
+**Interface Properties:**
+- `inbox` - Messages this actor accepts
+- `publishes` - Messages this actor emits
+- `subscriptions` - Actor IDs to send messages to
+
+### Message Passing Between Actors
+
+**Parent → Child:**
+- Parent publishes via `publishMessage()`
+- Message validated against `interface.publishes`
+- Sent to subscribed actors
+
+**Child → Parent:**
+- Child publishes message
+- Parent receives in inbox (if subscribed)
+- Parent's state machine processes
+
+**Example Flow:**
+1. User types in `todo_input` actor
+2. `todo_input` publishes `TODO_CREATED` message
+3. `todo_list` receives message (subscribed)
+4. `todo_list` creates new item
+5. `todo_item` actors render in list
+
+### Best Practices
+
+**✅ DO:**
+- Keep actors small and focused
+- Use clear slot names
+- Define interfaces for all actors
+- Use message passing (not prop drilling)
+
+**❌ DON'T:**
+- Don't create monolithic actors
+- Don't expose context directly
+- Don't skip interface definitions
+- Don't create circular dependencies
+
+**Learn More:** See [Composing Actors](./composing-actors.md) for detailed examples.
+
 ## Next Steps
 
 - Learn about [Skills](./03-skills.md) - AI agent interface
 - Understand [State Machines](./05-state.md) - Actor behavior
 - Explore [Context](./04-context.md) - Runtime data management
 - Create [Views](./07-views.md) - UI representation
+- Compose actors: [Composing Actors](./composing-actors.md) - Building complex UIs
 
 ## Debugging Actors
 

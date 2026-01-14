@@ -1,0 +1,88 @@
+{
+  "$type": "state",
+  "$id": "state_vibe_root_001",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "SWITCH_VIEW": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@context/update",
+              "payload": {
+                "viewMode": "$$viewMode",
+                "currentView": {
+                  "$if": {
+                    "condition": { "$eq": ["$$viewMode", "list"] },
+                    "then": "@list",
+                    "else": "@kanban"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "UPDATE_INPUT": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@context/update",
+              "payload": { "newTodoText": "$$newTodoText" }
+            }
+          ]
+        },
+        "CREATE_TODO": {
+          "target": "creating",
+          "guard": { "$ne": ["$newTodoText", ""] }
+        },
+        "TODO_CREATED": {
+          "target": "idle"
+        },
+        "TODO_COMPLETED": {
+          "target": "idle"
+        },
+        "TODO_DELETED": {
+          "target": "idle"
+        }
+      }
+    },
+    "creating": {
+      "entry": {
+        "tool": "@mutation/create",
+        "payload": { 
+          "schema": "todos",
+          "data": { "text": "$newTodoText", "done": false }
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@context/update",
+              "payload": { "newTodoText": "" }
+            },
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "TODO_CREATED",
+                "payload": {
+                  "id": "$lastCreatedId",
+                  "text": "$lastCreatedText"
+                }
+              }
+            }
+          ]
+        },
+        "ERROR": "error"
+      }
+    },
+    "error": {
+      "on": {
+        "RETRY": "idle",
+        "DISMISS": "idle"
+      }
+    }
+  }
+}

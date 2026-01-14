@@ -272,6 +272,8 @@
       "transition": "all 0.2s ease"
     },
     "kanban": {
+      "display": "flex",
+      "flexDirection": "row",
       "gap": "{spacing.md}",
       "width": "100%",
       "flex": "1",
@@ -338,28 +340,6 @@
     }
   },
   "selectors": {
-    ".stack[data-view=\"list\"] .list": {
-      "display": "flex"
-    },
-    ".stack[data-view=\"list\"] .kanban": {
-      "display": "none"
-    },
-    ".stack[data-view=\"kanban\"] .kanban": {
-      "display": "flex"
-    },
-    ".stack[data-view=\"kanban\"] .list": {
-      "display": "none"
-    },
-    ".stack[data-view=\"list\"] .button-view-switch[data-view=\"list\"]": {
-      "background": "rgba(143, 168, 155, 0.1)",
-      "borderColor": "#8fa89b",
-      "color": "#8fa89b"
-    },
-    ".stack[data-view=\"kanban\"] .button-view-switch[data-view=\"kanban\"]": {
-      "background": "rgba(143, 168, 155, 0.1)",
-      "borderColor": "#8fa89b",
-      "color": "#8fa89b"
-    },
     ".form + .list": {
       "marginTop": "-0.8rem"
     },
@@ -379,6 +359,10 @@
       "cursor": "grabbing",
       "opacity": "0.6"
     },
+    ".kanban .card.dragging": {
+      "opacity": "0.3",
+      "pointerEvents": "none"
+    },
     ".kanban-column-content:empty::before": {
       "content": "'Drop todos here'",
       "display": "flex",
@@ -396,6 +380,18 @@
     ".kanban-column-content:hover": {
       "background": "rgba(143, 168, 155, 0.08)",
       "borderColor": "rgba(143, 168, 155, 0.5)"
+    },
+    ".kanban-column-content.drag-over": {
+      "background": "rgba(143, 168, 155, 0.15)",
+      "borderColor": "{colors.primary}",
+      "borderWidth": "2px",
+      "borderStyle": "dashed"
+    },
+    ".button-view-switch.active": {
+      "background": "{colors.primary}",
+      "color": "white",
+      "borderColor": "{colors.primary}",
+      "fontWeight": "600"
     }
   }
 }

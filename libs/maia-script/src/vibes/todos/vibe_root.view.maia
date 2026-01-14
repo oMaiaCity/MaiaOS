@@ -1,0 +1,100 @@
+{
+  "$type": "view",
+  "$id": "co_view_vibe_root_001",
+  "container": {
+    "tag": "div",
+    "class": "stack",
+    "children": [
+      {
+        "class": "header-section",
+        "children": [
+          {
+            "tag": "h1",
+            "class": "title",
+            "text": "$title"
+          },
+          {
+            "class": "view-switcher",
+            "children": [
+              {
+                "tag": "button",
+                "class": {
+                  "$if": {
+                    "condition": { "$eq": ["$viewMode", "list"] },
+                    "then": "button-view-switch active",
+                    "else": "button-view-switch"
+                  }
+                },
+                "text": "List",
+                "$on": {
+                  "click": {
+                    "send": "SWITCH_VIEW",
+                    "payload": { "viewMode": "list" }
+                  }
+                }
+              },
+              {
+                "tag": "button",
+                "class": {
+                  "$if": {
+                    "condition": { "$eq": ["$viewMode", "kanban"] },
+                    "then": "button-view-switch active",
+                    "else": "button-view-switch"
+                  }
+                },
+                "text": "Kanban",
+                "$on": {
+                  "click": {
+                    "send": "SWITCH_VIEW",
+                    "payload": { "viewMode": "kanban" }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "class": "form",
+        "children": [
+          {
+            "tag": "input",
+            "class": "input",
+            "attrs": {
+              "type": "text",
+              "placeholder": "$inputPlaceholder"
+            },
+            "value": "$newTodoText",
+            "$on": {
+              "input": {
+                "send": "UPDATE_INPUT",
+                "payload": { "newTodoText": "@inputValue" }
+              },
+              "keydown": {
+                "send": "CREATE_TODO",
+                "payload": { "text": "$newTodoText" },
+                "key": "Enter"
+              }
+            }
+          },
+          {
+            "tag": "button",
+            "class": "button",
+            "text": "$addButtonText",
+            "$on": {
+              "click": {
+                "send": "CREATE_TODO",
+                "payload": { "text": "$newTodoText" }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "tag": "main",
+        "class": "content-area",
+        "slot": "$currentView"
+      }
+    ]
+  }
+}

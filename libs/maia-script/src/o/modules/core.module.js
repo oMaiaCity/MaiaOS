@@ -11,11 +11,9 @@ export class CoreModule {
    */
   static async register(registry, toolEngine) {
     const tools = [
-      'setViewMode',
-      'openModal',
-      'closeModal',
       'noop',
-      'preventDefault'
+      'preventDefault',
+      'publishMessage'
     ];
     
     console.log(`[CoreModule] Registering ${tools.length} tools...`);

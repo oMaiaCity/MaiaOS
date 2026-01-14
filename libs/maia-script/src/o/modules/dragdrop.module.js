@@ -10,7 +10,7 @@ export class DragDropModule {
    */
   static config = {
     // Events that should auto-preventDefault
-    autoPreventDefaultEvents: ['dragover', 'drop'],
+    autoPreventDefaultEvents: ['dragover', 'drop', 'dragenter'],
     
     // Visual feedback classes (can be customized)
     visualFeedback: {

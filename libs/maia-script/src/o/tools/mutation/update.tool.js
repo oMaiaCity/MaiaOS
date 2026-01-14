@@ -1,6 +1,7 @@
 /**
  * Generic Update Tool
  * Updates an entity in the specified schema collection
+ * Uses ReactiveStore for persistence and automatic observer notifications
  */
 export default {
   async execute(actor, payload) {
@@ -10,13 +11,15 @@ export default {
       throw new Error('@mutation/update requires schema, id, and data');
     }
     
-    // Find and update entity
-    const collection = actor.context[schema];
-    if (!collection) {
-      throw new Error(`Schema "${schema}" not found in context`);
+    const store = actor.actorEngine.reactiveStore;
+    if (!store) {
+      throw new Error('ReactiveStore not initialized in ActorEngine');
     }
     
+    // Get collection and find entity
+    const collection = store.getCollection(schema);
     const entity = collection.find(item => item.id === id);
+    
     if (!entity) {
       console.warn(`Entity ${id} not found in ${schema}`);
       return;
@@ -25,12 +28,11 @@ export default {
     // Merge update data
     Object.assign(entity, data);
     
-    // Update filtered views if they exist
-    if (schema === 'todos') {
-      actor.context.todosTodo = actor.context.todos.filter(t => !t.done);
-      actor.context.todosDone = actor.context.todos.filter(t => t.done);
-    }
+    // Save to ReactiveStore (triggers observer notifications automatically)
+    store.setCollection(schema, collection);
     
     console.log(`✅ [mutation/update] Updated ${schema}/${id}:`, entity);
+    
+    return entity;
   }
 };

@@ -1,9 +1,14 @@
 /**
  * ActorEngine - Orchestrates actors, views, styles, and actions
  * v0.2: Added message passing (inbox/subscriptions) for AI agent coordination
- * Handles: Actor lifecycle, action registry, context updates, message passing
+ * v0.4: Added ReactiveStore for observable localStorage data management
+ * Handles: Actor lifecycle, action registry, context updates, message passing, reactive data
  * Generic and universal - no domain-specific logic
  */
+
+// Import ReactiveStore
+import { ReactiveStore } from '../ReactiveStore.js';
+
 export class ActorEngine {
   constructor(styleEngine, viewEngine, moduleRegistry, toolEngine, stateEngine = null) {
     this.styleEngine = styleEngine;
@@ -13,8 +18,33 @@ export class ActorEngine {
     this.stateEngine = stateEngine; // StateEngine for state machines (optional)
     this.actors = new Map();
     
+    // Initialize ReactiveStore for observable data management
+    this.reactiveStore = new ReactiveStore('maiaos_data');
+    console.log('[ActorEngine] ReactiveStore initialized');
+    
     // Let ViewEngine know about us for action handling
     this.viewEngine.setActorEngine(this);
+  }
+
+  /**
+   * Resolve actor ID to filename (e.g., "actor_view_switcher_001" -> "view_switcher")
+   * @param {string} actorId - Actor ID
+   * @returns {string} Filename without extension
+   */
+  resolveActorIdToFilename(actorId) {
+    // Remove "actor_" prefix and "_001" suffix
+    // "actor_view_switcher_001" -> "view_switcher"
+    if (actorId.startsWith('actor_')) {
+      const withoutPrefix = actorId.slice(6); // Remove "actor_"
+      // Remove trailing _001, _002, etc.
+      const match = withoutPrefix.match(/^(.+?)_\d+$/);
+      if (match) {
+        return match[1];
+      }
+      return withoutPrefix;
+    }
+    // If not prefixed, assume it's already a filename
+    return actorId;
   }
 
   /**
@@ -48,6 +78,20 @@ export class ActorEngine {
   }
 
   /**
+   * Load a .interface.maia file
+   * @param {string} ref - Interface reference name (e.g., "todo" -> "todo.interface.maia")
+   * @returns {Promise<Object>} The parsed interface definition
+   */
+  async loadInterface(ref) {
+    const path = `./${ref}.interface.maia`;
+    const response = await fetch(path);
+    if (!response.ok) {
+      throw new Error(`Failed to load interface: ${path}`);
+    }
+    return await response.json();
+  }
+
+  /**
    * Create and render an actor
    * v0.2: Added message passing (inbox, subscriptions, watermark)
    * v0.4: Added contextRef support for separate context files
@@ -57,6 +101,8 @@ export class ActorEngine {
   async createActor(actorConfig, containerElement) {
     const actorId = actorConfig.$id;
     
+    console.log(`[ActorEngine] Creating actor: ${actorId}`, { viewRef: actorConfig.viewRef, contextRef: actorConfig.contextRef });
+    
     // Create shadow root
     const shadowRoot = containerElement.attachShadow({ mode: 'open' });
     
@@ -64,7 +110,9 @@ export class ActorEngine {
     const styleSheets = await this.styleEngine.getStyleSheets(actorConfig);
     
     // Load view
+    console.log(`[ActorEngine] Loading view for ${actorId}: ${actorConfig.viewRef}`);
     const viewDef = await this.viewEngine.loadView(actorConfig.viewRef);
+    console.log(`[ActorEngine] View loaded for ${actorId}:`, viewDef ? 'success' : 'FAILED');
     
     // Load context (either from contextRef or inline context)
     let context;
@@ -85,22 +133,88 @@ export class ActorEngine {
       // v0.2: Message passing
       inbox: actorConfig.inbox || [],
       subscriptions: actorConfig.subscriptions || [],
-      inboxWatermark: actorConfig.inboxWatermark || 0
+      inboxWatermark: actorConfig.inboxWatermark || 0,
+      // v0.4: Reactive query observers (for cleanup)
+      _queryObservers: []
     };
     this.actors.set(actorId, actor);
     
     // Load state machine (if stateRef is defined)
+    // IMPORTANT: Await to ensure entry actions (like subscriptions) complete before initial render
     if (this.stateEngine && actorConfig.stateRef) {
       try {
         const stateDef = await this.stateEngine.loadStateDef(actorConfig.stateRef);
-        actor.machine = this.stateEngine.createMachine(stateDef, actor);
+        actor.machine = await this.stateEngine.createMachine(stateDef, actor);
       } catch (error) {
         console.error(`Failed to load state machine for ${actorId}:`, error);
       }
     }
     
+    // Load and validate interface (if interfaceRef is defined)
+    if (actorConfig.interfaceRef) {
+      try {
+        const interfaceDef = await this.loadInterface(actorConfig.interfaceRef);
+        actor.interface = interfaceDef;
+        
+        // Validate interface (non-blocking)
+        await this.toolEngine.execute('@interface/validateInterface', actor, {
+          interfaceDef,
+          actorId
+        });
+      } catch (error) {
+        console.warn(`Failed to load interface for ${actorId}:`, error);
+      }
+    }
+    
+    // Load and create child actors (if children map is defined)
+    // Flat structure: { namekey: actorId }
+    if (actorConfig.children && typeof actorConfig.children === 'object') {
+      actor.children = {};
+      
+      for (const [namekey, childActorId] of Object.entries(actorConfig.children)) {
+        try {
+          // Resolve actor ID to filename
+          const childFilename = this.resolveActorIdToFilename(childActorId);
+          
+          // Load child actor config
+          const childActorConfig = await this.loadActor(`./${childFilename}.actor.maia`);
+          
+          // Ensure child actor ID matches expected ID
+          if (childActorConfig.$id !== childActorId) {
+            console.warn(`[ActorEngine] Child actor ID mismatch: expected ${childActorId}, got ${childActorConfig.$id}`);
+            childActorConfig.$id = childActorId; // Use expected ID
+          }
+          
+          // Create container for child actor (NOT attached to DOM yet - ViewEngine will handle attachment)
+          const childContainer = document.createElement('div');
+          childContainer.dataset.namekey = namekey;
+          childContainer.dataset.childActorId = childActorId;
+          
+          // Create child actor recursively
+          const childActor = await this.createActor(childActorConfig, childContainer);
+          
+          // Store namekey on child actor
+          childActor.namekey = namekey;
+          
+          // Store child actor reference
+          actor.children[namekey] = childActor;
+          
+          // Auto-subscribe parent to child (if not already subscribed)
+          if (!actor.subscriptions.includes(childActorId)) {
+            actor.subscriptions.push(childActorId);
+          }
+          
+          console.log(`✅ Created child actor ${childActorId} (namekey: ${namekey}) for ${actorId}`);
+        } catch (error) {
+          console.error(`Failed to create child actor ${childActorId} (namekey: ${namekey}):`, error);
+        }
+      }
+    }
+    
     // Initial render with actor ID
+    console.log(`[ActorEngine] Rendering actor ${actorId} with view:`, viewDef ? 'present' : 'MISSING');
     this.viewEngine.render(viewDef, actor.context, shadowRoot, styleSheets, actorId);
+    console.log(`[ActorEngine] Render complete for ${actorId}`);
     
     // Start processing messages (if inbox has messages)
     if (actor.inbox.length > 0) {
@@ -246,6 +360,14 @@ export class ActorEngine {
     const actor = this.actors.get(actorId);
     if (actor) {
       actor.shadowRoot.innerHTML = '';
+      
+      // Cleanup query observers (v0.4: Reactive queries)
+      if (actor._queryObservers && actor._queryObservers.length > 0) {
+        console.log(`[ActorEngine] Cleaning up ${actor._queryObservers.length} query observers for ${actorId}`);
+        actor._queryObservers.forEach(unsubscribe => unsubscribe());
+        actor._queryObservers = [];
+      }
+      
       // Destroy state machine if present
       if (actor.machine && this.stateEngine) {
         this.stateEngine.destroyMachine(actor.machine.id);
@@ -259,6 +381,54 @@ export class ActorEngine {
   // ============================================
 
   /**
+   * Validate message against interface schema
+   * @param {Object} message - Message object { type, payload }
+   * @param {Object} interfaceDef - Interface definition
+   * @param {string} direction - 'inbox' or 'publishes'
+   * @param {string} actorId - Actor ID for error reporting
+   * @returns {boolean} True if valid, false otherwise
+   */
+  _validateMessage(message, interfaceDef, direction, actorId) {
+    if (!interfaceDef || !interfaceDef[direction]) {
+      // No interface defined - allow all messages
+      return true;
+    }
+    
+    const messageType = message.type;
+    const messageSchema = interfaceDef[direction][messageType];
+    
+    if (!messageSchema) {
+      console.warn(`[ActorEngine] ${direction} validation failed for ${actorId}: Message type "${messageType}" not defined in interface`);
+      return false;
+    }
+    
+    // Validate payload structure (basic check - can be enhanced)
+    if (messageSchema.payload && message.payload) {
+      const schemaPayload = messageSchema.payload;
+      const messagePayload = message.payload;
+      
+      // Check if payload matches expected structure
+      // This is a simplified validation - full schema validation would use JSON Schema
+      for (const [key, expectedType] of Object.entries(schemaPayload)) {
+        if (expectedType === 'string' && typeof messagePayload[key] !== 'string') {
+          console.warn(`[ActorEngine] ${direction} validation failed for ${actorId}: Payload.${key} should be string, got ${typeof messagePayload[key]}`);
+          return false;
+        }
+        if (expectedType === 'number' && typeof messagePayload[key] !== 'number') {
+          console.warn(`[ActorEngine] ${direction} validation failed for ${actorId}: Payload.${key} should be number, got ${typeof messagePayload[key]}`);
+          return false;
+        }
+        if (expectedType === 'boolean' && typeof messagePayload[key] !== 'boolean') {
+          console.warn(`[ActorEngine] ${direction} validation failed for ${actorId}: Payload.${key} should be boolean, got ${typeof messagePayload[key]}`);
+          return false;
+        }
+      }
+    }
+    
+    return true;
+  }
+
+  /**
    * Send a message to an actor's inbox
    * @param {string} actorId - Target actor ID
    * @param {Object} message - Message object { type, payload, from, timestamp }
@@ -268,6 +438,15 @@ export class ActorEngine {
     if (!actor) {
       console.warn(`Actor not found: ${actorId}`);
       return;
+    }
+
+    // Validate incoming message against interface.inbox
+    if (actor.interface) {
+      const isValid = this._validateMessage(message, actor.interface, 'inbox', actorId);
+      if (!isValid) {
+        console.error(`[ActorEngine] Rejected invalid message ${message.type} to ${actorId}`);
+        return;
+      }
     }
 
     // Add timestamp if not present
@@ -284,6 +463,7 @@ export class ActorEngine {
 
   /**
    * Publish a message to all subscribed actors
+   * Validates message against interface.publishes before sending
    * @param {string} fromActorId - Source actor ID
    * @param {Object} message - Message object { type, payload }
    */
@@ -294,16 +474,40 @@ export class ActorEngine {
       return;
     }
 
+    // Validate outgoing message against interface.publishes
+    if (actor.interface) {
+      const isValid = this._validateMessage(message, actor.interface, 'publishes', fromActorId);
+      if (!isValid) {
+        console.error(`[ActorEngine] Rejected invalid publish ${message.type} from ${fromActorId}`);
+        return;
+      }
+    }
+
     // Add metadata
     message.from = fromActorId;
     message.timestamp = Date.now();
 
     // Send to all subscribed actors
+    let sentCount = 0;
     for (const subscriberId of actor.subscriptions) {
       this.sendMessage(subscriberId, { ...message });
+      sentCount++;
     }
 
-    console.log(`[ActorEngine] Published ${message.type} to ${actor.subscriptions.length} subscribers`);
+    console.log(`[ActorEngine] Published ${message.type} from ${fromActorId} to ${sentCount} subscribers`);
+  }
+
+  /**
+   * Publish a message (alias for publishToSubscriptions)
+   * @param {string} fromActorId - Source actor ID
+   * @param {string} messageType - Message type
+   * @param {Object} payload - Message payload
+   */
+  publishMessage(fromActorId, messageType, payload = {}) {
+    this.publishToSubscriptions(fromActorId, {
+      type: messageType,
+      payload
+    });
   }
 
   /**

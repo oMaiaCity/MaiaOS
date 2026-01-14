@@ -48,9 +48,9 @@ export class StateEngine {
    * Create a state machine instance from definition
    * @param {Object} stateDef - State machine definition from .state.maia
    * @param {Object} actor - Actor instance that owns this machine
-   * @returns {Object} Machine instance
+   * @returns {Promise<Object>} Machine instance
    */
-  createMachine(stateDef, actor) {
+  async createMachine(stateDef, actor) {
     const machineId = `${actor.id}_machine`;
     
     const machine = {
@@ -64,8 +64,14 @@ export class StateEngine {
     
     this.machines.set(machineId, machine);
     
-    // Execute entry actions for initial state
-    this._executeEntry(machine, stateDef.initial);
+    // Mark that this is initial creation (to skip re-render on initial transition)
+    machine._isInitialCreation = true;
+    
+    // Execute entry actions for initial state (await to ensure subscriptions are set up)
+    await this._executeEntry(machine, stateDef.initial);
+    
+    // Clear the flag after entry actions complete
+    machine._isInitialCreation = false;
     
     return machine;
   }
@@ -102,7 +108,7 @@ export class StateEngine {
       return;
     }
 
-    // Execute transition
+    // Execute transition (eventPayload will be set in _executeTransition)
     await this._executeTransition(machine, transition, event, payload);
   }
 
@@ -115,8 +121,13 @@ export class StateEngine {
    * @returns {Promise<void>}
    */
   async _executeTransition(machine, transition, event, payload) {
-    // Store event payload in machine for use during entry/exit actions
-    machine.eventPayload = payload;
+    // For SUCCESS/ERROR events (from tool completion), preserve the original eventPayload
+    // This allows actions in SUCCESS transitions to access the original event data (e.g., $$id)
+    // For other events, update eventPayload with the new payload
+    if (event !== 'SUCCESS' && event !== 'ERROR') {
+      machine.eventPayload = payload;
+    }
+    // For SUCCESS/ERROR, machine.eventPayload already contains the original event data
     
     // Transition can be:
     // 1. String: direct target state
@@ -126,9 +137,9 @@ export class StateEngine {
     const guard = typeof transition === 'object' ? transition.guard : null;
     const actions = typeof transition === 'object' ? transition.actions : null;
 
-    // Evaluate guard (if present)
+    // Evaluate guard (if present) - use current eventPayload
     if (guard) {
-      const guardResult = this._evaluateGuard(guard, machine.context, payload);
+      const guardResult = this._evaluateGuard(guard, machine.context, machine.eventPayload);
       if (!guardResult) {
         console.log(`[StateEngine] Guard failed for ${event}`);
         return;
@@ -138,9 +149,9 @@ export class StateEngine {
     // Execute exit actions for current state
     await this._executeExit(machine, machine.currentState);
 
-    // Execute transition actions
+    // Execute transition actions (use current eventPayload for $$id resolution)
     if (actions) {
-      await this._executeActions(machine, actions, payload);
+      await this._executeActions(machine, actions, machine.eventPayload);
     }
 
     // Record transition in history
@@ -162,15 +173,17 @@ export class StateEngine {
     await this._executeEntry(machine, targetState);
     }
     
-    // Clear event payload after transition completes
-    machine.eventPayload = null;
+    // eventPayload is preserved for SUCCESS/ERROR events (for $$id resolution)
+    // It will be updated when the next non-SUCCESS/ERROR event arrives
     
     // Trigger rerender after state transition completes
     // Skip rerender if:
     // - State didn't actually change (e.g., UPDATE_INPUT: idle → idle)
     // - Entering "dragging" state (DOM recreation would cancel drag)
+    // - This is the initial creation transition (initial render will happen after state machine is created)
     const stateChanged = previousState !== targetState;
-    const shouldRerender = stateChanged && targetState !== 'dragging';
+    const isInitialCreation = machine._isInitialCreation === true;
+    const shouldRerender = stateChanged && targetState !== 'dragging' && !isInitialCreation;
     
     if (machine.actor.actorEngine && shouldRerender) {
       await machine.actor.actorEngine.rerender(machine.actor);
@@ -223,7 +236,14 @@ export class StateEngine {
       // Implicit tool invocation
       await this._invokeTool(machine, entry.tool, entry.payload);
     } else if (Array.isArray(entry)) {
+      // Execute all entry actions
       await this._executeActions(machine, entry);
+      
+      // After all entry actions complete, send SUCCESS if state handles it
+      // This allows loading states to transition to idle after subscriptions are set up
+      if (stateDef.on && stateDef.on.SUCCESS) {
+        await this.send(machine.id, 'SUCCESS', {});
+      }
     }
   }
 
@@ -364,18 +384,34 @@ export class StateEngine {
       return payload.map(item => this._evaluatePayload(item, context, eventPayload));
     }
 
-    // Handle objects recursively
+    // Check if this is a DSL operation (like $if, $eq, etc.)
+    // DSL operations have keys starting with $ and should be evaluated directly
+    const keys = Object.keys(payload);
+    if (keys.length === 1 && keys[0].startsWith('$')) {
+      // This is a DSL operation, evaluate it directly
+      const data = { context, item: eventPayload };
+      return this.evaluator.evaluate(payload, data);
+    }
+
+    // Handle objects recursively (not DSL operations)
     const evaluated = {};
     for (const [key, value] of Object.entries(payload)) {
       // Use eventPayload as item context (contains already-resolved $$id values)
       const data = { context, item: eventPayload };
       
-      // If value is an object or array, recursively evaluate it
+      // If value is an object or array, check if it's a DSL operation first
       if (value && typeof value === 'object') {
-        evaluated[key] = this._evaluatePayload(value, context, eventPayload);
+        // Check if it's a DSL operation (like $if, $eq, etc.)
+        if (this.evaluator.isDSLOperation(value)) {
+          // Evaluate DSL operation directly
+          evaluated[key] = this.evaluator.evaluate(value, data);
+        } else {
+          // Otherwise, recursively evaluate it
+          evaluated[key] = this._evaluatePayload(value, context, eventPayload);
+        }
       } else {
         // Otherwise, evaluate as a MaiaScript expression
-      evaluated[key] = this.evaluator.evaluate(value, data);
+        evaluated[key] = this.evaluator.evaluate(value, data);
       }
     }
     return evaluated;

@@ -51,17 +51,11 @@
         // Boot MaiaOS with module-based configuration
         const os = await MaiaOS.boot({
           toolsPath: '../../o/tools',
-          modules: ['core', 'mutation', 'dragdrop'] // Load core UI, mutation CRUD, and dragdrop modules
+          modules: ['core', 'mutation', 'dragdrop', 'query', 'interface'] // Load core UI, mutation CRUD, dragdrop, reactive queries, and interface modules
         });
         
         // Load Todo Vibe (app manifest)
         const { vibe, actor: todoActor } = await os.loadVibe('./todos.vibe.maia', document.getElementById('actor-todo'));
-        
-        // Initialize filtered arrays
-        if (todoActor.context.todos) {
-          todoActor.context.todosTodo = todoActor.context.todos.filter(t => !t.done);
-          todoActor.context.todosDone = todoActor.context.todos.filter(t => t.done);
-        }
         
         console.log('✅ Vibe loaded:', vibe.name);
         console.log('✅ Todo Actor with State Machine:', todoActor.machine?.currentState);

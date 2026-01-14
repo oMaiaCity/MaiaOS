@@ -41,9 +41,25 @@ export class MaiaScriptEvaluator {
       return this.resolvePath(data.item, expression.$item);
     }
 
+    // Handle $eq operation (equality comparison)
+    if ('$eq' in expression) {
+      const [left, right] = expression.$eq;
+      const leftValue = this.evaluate(left, data);
+      const rightValue = this.evaluate(right, data);
+      return leftValue === rightValue;
+    }
+
+    // Handle $ne operation (inequality comparison)
+    if ('$ne' in expression) {
+      const [left, right] = expression.$ne;
+      const leftValue = this.evaluate(left, data);
+      const rightValue = this.evaluate(right, data);
+      return leftValue !== rightValue;
+    }
+
     // Handle $if operation
     if ('$if' in expression) {
-      // Evaluate condition (supports shortcuts like "$item.done")
+      // Evaluate condition (supports shortcuts like "$item.done" or DSL operations like "$eq")
       let condition = expression.$if.condition;
       if (typeof condition === 'string' && condition.startsWith('$')) {
         condition = this.evaluateShortcut(condition, data);
@@ -129,6 +145,7 @@ export class MaiaScriptEvaluator {
       return true;
     }
     if (typeof expression !== 'object' || expression === null) return false;
-    return '$context' in expression || '$item' in expression || '$if' in expression;
+    return '$context' in expression || '$item' in expression || '$if' in expression || 
+           '$eq' in expression || '$ne' in expression;
   }
 }

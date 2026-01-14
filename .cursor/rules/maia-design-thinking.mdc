@@ -119,12 +119,21 @@ Structure the implementation as **incremental, least invasive, testable, migrate
 **Example Milestone Structure:**
 ```
 Milestone 1: Add base engine structure + tests
+  ├─ Write tests (Red)
+  ├─ Implement (Green)
+  ├─ Clean up legacy & migrate 100%
   └─ Pause for human feedback ✋
 
 Milestone 2: Implement core methods + tests
+  ├─ Write tests (Red)
+  ├─ Implement (Green)
+  ├─ Clean up legacy & migrate 100%
   └─ Pause for human feedback ✋
 
 Milestone 3: Add integration tests + documentation
+  ├─ Write tests (Red)
+  ├─ Implement (Green)
+  ├─ Clean up legacy & migrate 100%
   └─ Pause for human feedback ✋
 ```
 
@@ -142,7 +151,27 @@ For **every** implementation milestone, follow this strict order:
 - Refactor for clarity and maintainability
 - Ensure all tests pass (Green phase)
 
-**Step 3: Human-in-the-Loop Feedback** 👤
+**Step 3: Clean Up Legacy & Migrate 100%** 🧹
+- **ALWAYS migrate 100% fullstack** - no partial migrations
+- Remove ALL legacy code that has been replaced
+- Delete backwards compatibility hacks/shims/wrappers
+- Remove deprecated functions and deprecated API patterns
+- Ensure new architecture is fully adopted everywhere
+- Update ALL call sites to use new patterns
+- Delete unused files, functions, and old implementations
+- Verify no "legacy mode" flags or switches remain
+
+**Critical Cleanup Checklist:**
+- ✅ All old implementations deleted (not commented out)
+- ✅ All backwards compatibility layers removed
+- ✅ All call sites updated to new API/architecture
+- ✅ All tests updated to test new implementation only
+- ✅ No "if (legacy)" or "if (oldMode)" conditionals
+- ✅ All imports/exports updated to new structure
+- ❌ No "TODO: migrate this later" comments
+- ❌ No "keep for backwards compatibility" code
+
+**Step 4: Human-in-the-Loop Feedback** 👤
 - Pause after milestone completion
 - Run all tests to verify nothing broke
 - Present results to human for feedback
@@ -198,11 +227,12 @@ for (const file of files) {
 - All tests passing (green)
 
 **LLM Action**: 
-1. Write tests first
-2. Implement solution to pass tests
-3. Pause for human feedback
-4. Iterate based on feedback
-5. Move to next milestone
+1. Write tests first (Red phase)
+2. Implement solution to pass tests (Green phase)
+3. Clean up ALL legacy code and ensure 100% migration (Refactor phase)
+4. Pause for human feedback
+5. Iterate based on feedback
+6. Move to next milestone
 
 ---
 
@@ -212,7 +242,7 @@ for (const file of files) {
 
 #### Review Process
 
-**1. Verify All Tests Pass** ✅
+**1. Verify All Tests Pass & No Legacy Code Remains** ✅
 
 Before proceeding, ensure:
 - ✅ All new tests pass
@@ -220,6 +250,10 @@ Before proceeding, ensure:
 - ✅ Integration tests pass with real data
 - ✅ No linter errors
 - ✅ Code follows project conventions
+- ✅ ALL legacy code has been deleted (no commented out code)
+- ✅ No backwards compatibility hacks remain
+- ✅ 100% migration to new architecture complete
+- ✅ No "TODO: migrate later" comments exist
 
 **Run full test suite:**
 ```bash
@@ -315,6 +349,12 @@ todos:
 - [ ] Implement core functionality
 - [ ] Ensure tests pass
 
+**Cleanup & Migration:**
+- [ ] Remove ALL legacy code replaced by this milestone
+- [ ] Delete backwards compatibility hacks
+- [ ] Update all call sites to new implementation
+- [ ] Verify 100% migration complete
+
 **Human Checkpoint:** ✋ Pause for feedback
 
 ### Milestone 2: [Name]
@@ -326,6 +366,12 @@ todos:
 - [ ] Integrate with existing systems
 - [ ] Implement feature Z
 - [ ] Ensure tests pass
+
+**Cleanup & Migration:**
+- [ ] Remove ALL legacy code replaced by this milestone
+- [ ] Delete backwards compatibility hacks
+- [ ] Update all call sites to new implementation
+- [ ] Verify 100% migration complete
 
 **Human Checkpoint:** ✋ Pause for feedback
 
@@ -401,9 +447,9 @@ todos:
 4. **Ideate**: "Options: OAuth2, JWT, session-based. Recommendation: OAuth2 for flexibility."
 5. **Prototype**: "Plan: Add auth module, integrate with kernel, create auth middleware, add tests."
 6. **Implement**: 
-   - Milestone 1: Write auth module tests → Implement auth module → Human feedback ✋
-   - Milestone 2: Write integration tests → Implement kernel integration → Human feedback ✋
-   - Milestone 3: Write middleware tests → Implement middleware → Human feedback ✋
+   - Milestone 1: Write auth module tests → Implement auth module → Clean up old auth code → Human feedback ✋
+   - Milestone 2: Write integration tests → Implement kernel integration → Remove legacy patterns → Human feedback ✋
+   - Milestone 3: Write middleware tests → Implement middleware → Delete all backwards compat layers → Human feedback ✋
 7. **Review & Feedback**: "All tests pass ✅ → Human approves → Update docs → Ship! 🚀"
 
 ---

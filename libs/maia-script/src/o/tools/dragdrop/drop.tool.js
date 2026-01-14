@@ -1,6 +1,7 @@
 /**
  * Generic Drop Tool
  * Handles drop event for any schema/collection
+ * Uses @mutation/update to persist changes to ReactiveStore
  */
 export default {
   async execute(actor, payload) {
@@ -13,35 +14,30 @@ export default {
       return;
     }
     
-    // Find the collection
-    const collection = actor.context[schema];
-    if (!collection) {
-      console.error(`[dragdrop/drop] Schema "${schema}" not found in context`);
+    // Use @mutation/update to persist the change to ReactiveStore
+    // This will automatically trigger reactive subscriptions and update filtered arrays
+    const toolEngine = actor.actorEngine?.toolEngine;
+    if (!toolEngine) {
+      console.error('[dragdrop/drop] ToolEngine not available');
       return;
     }
     
-    // Find the entity
-    const entity = collection.find(item => item.id === draggedId);
-    if (!entity) {
-      console.warn(`[dragdrop/drop] Entity ${draggedId} not found in ${schema}`);
-      return;
+    try {
+      // Update the entity using mutation tool (persists to localStorage)
+      await toolEngine.execute('@mutation/update', actor, {
+        schema,
+        id: draggedId,
+        data: { [field]: value }
+      });
+      
+      // Clear drag state (dragOverColumn will be cleared by @dragdrop/end)
+      actor.context.draggedItemId = null;
+      actor.context.draggedEntityType = null;
+      
+      console.log(`✅ [dragdrop/drop] Dropped ${schema}/${draggedId}, set ${field} = ${value}`);
+    } catch (error) {
+      console.error(`[dragdrop/drop] Failed to update ${schema}/${draggedId}:`, error);
+      throw error;
     }
-    
-    // Update the field
-    entity[field] = value;
-    
-    // Update filtered arrays if they exist (e.g., todosTodo, todosDone)
-    // This is schema-specific convention: {schema}{CapitalizedValue}
-    if (schema === 'todos' && field === 'done') {
-      // Special handling for todos - update filtered arrays
-    actor.context.todosTodo = actor.context.todos.filter(t => !t.done);
-    actor.context.todosDone = actor.context.todos.filter(t => t.done);
-    }
-    
-    // Clear drag state
-    actor.context.draggedItemId = null;
-    actor.context.draggedEntityType = null;
-    
-    console.log(`✅ [dragdrop/drop] Dropped ${schema}/${draggedId}, set ${field} = ${value}`);
   }
 };

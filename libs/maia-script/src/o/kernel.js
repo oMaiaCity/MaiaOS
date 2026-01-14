@@ -11,13 +11,13 @@
  */
 
 // Import all engines
-import { ActorEngine } from './engines/ActorEngine.js';
+import { ActorEngine } from './engines/actor-engine/actor.engine.js';
 import { ViewEngine } from './engines/ViewEngine.js';
 import { StyleEngine } from './engines/style-engine/style.engine.js';
 import { StateEngine } from './engines/StateEngine.js';
 import { MaiaScriptEvaluator } from './engines/MaiaScriptEvaluator.js';
 import { ModuleRegistry } from './engines/ModuleRegistry.js';
-import { ToolEngine } from './engines/ToolEngine.js';
+import { ToolEngine } from './engines/tool-engine/tool.engine.js';
 
 /**
  * MaiaOS - Operating System for Actor-based Applications
@@ -58,7 +58,7 @@ export class MaiaOS {
     // Store toolEngine in registry for module access
     os.moduleRegistry._toolEngine = os.toolEngine;
     
-    // Set tools path (default: ../../o/tools relative to examples)
+    // Set tools path (default: ../../o/tools relative to HTML file location)
     const toolsPath = config.toolsPath || '../../o/tools';
     os.toolEngine.setToolsPath(toolsPath);
     
@@ -77,8 +77,8 @@ export class MaiaOS {
     // Set actorEngine reference in viewEngine (circular dependency)
     os.viewEngine.actorEngine = os.actorEngine;
     
-    // Load modules (default: core and dragdrop)
-    const modules = config.modules || ['core', 'dragdrop'];
+    // Load modules (default: core, mutation, dragdrop, query, and interface)
+    const modules = config.modules || ['core', 'mutation', 'dragdrop', 'query', 'interface'];
     console.log(`📦 Loading ${modules.length} modules...`);
     
     for (const moduleName of modules) {

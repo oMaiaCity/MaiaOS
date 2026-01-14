@@ -1,0 +1,30 @@
+{
+  "$type": "actor.interface",
+  "inbox": {
+    "SET_VIEW_MODE": {
+      "payload": { "viewMode": "string" }
+    },
+    "UPDATE_INPUT": {
+      "payload": { "newTodoText": "string" }
+    },
+    "CREATE_TODO": {
+      "payload": { "text": "string" }
+    },
+    "TODO_CREATED": {
+      "payload": { "id": "string", "text": "string" }
+    },
+    "TODO_COMPLETED": {
+      "payload": { "id": "string" }
+    },
+    "TODO_DELETED": {
+      "payload": { "id": "string" }
+    }
+  },
+  "publishes": {
+    "TODO_CREATED": {
+      "payload": { "id": "string", "text": "string" }
+    }
+  },
+  "subscriptions": ["actor_todo_list_001", "actor_kanban_view_001"],
+  "watermark": 0
+}

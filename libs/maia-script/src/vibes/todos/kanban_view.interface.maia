@@ -1,0 +1,37 @@
+{
+  "$type": "actor.interface",
+  "inbox": {
+    "DRAG_START": {
+      "payload": { "schema": "string", "id": "string" }
+    },
+    "DRAG_END": {
+      "payload": {}
+    },
+    "DRAG_OVER": {
+      "payload": {}
+    },
+    "DROP": {
+      "payload": { 
+        "schema": "string",
+        "field": "string",
+        "value": "boolean"
+      }
+    },
+    "TOGGLE_TODO": {
+      "payload": { "id": "string" }
+    },
+    "DELETE_TODO": {
+      "payload": { "id": "string" }
+    },
+    "TODO_CREATED": {
+      "payload": { "id": "string", "text": "string" }
+    }
+  },
+  "publishes": {
+    "TODO_UPDATED": {
+      "payload": { "id": "string" }
+    }
+  },
+  "subscriptions": [],
+  "watermark": 0
+}

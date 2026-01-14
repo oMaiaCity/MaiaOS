@@ -1,0 +1,22 @@
+{
+  "$type": "tool",
+  "$id": "tool_publish_message_001",
+  "name": "@core/publishMessage",
+  "description": "Publishes a message to subscribed actors",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "type": {
+        "type": "string",
+        "description": "Message type",
+        "required": true
+      },
+      "payload": {
+        "type": "object",
+        "description": "Message payload",
+        "required": false
+      }
+    },
+    "required": ["type"]
+  }
+}

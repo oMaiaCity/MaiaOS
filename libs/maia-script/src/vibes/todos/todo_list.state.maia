@@ -1,0 +1,98 @@
+{
+  "$type": "state",
+  "$id": "state_todo_list_001",
+  "initial": "loading",
+  "states": {
+    "loading": {
+      "entry": {
+        "tool": "@query/subscribe",
+        "payload": {
+          "schema": "todos",
+          "target": "todos"
+        }
+      },
+      "on": {
+        "SUCCESS": "idle",
+        "TODO_CREATED": "loading",
+        "TODO_COMPLETED": "loading",
+        "TODO_DELETED": "loading"
+      }
+    },
+    "idle": {
+      "on": {
+        "TODO_CREATED": {
+          "target": "idle"
+        },
+        "TODO_COMPLETED": {
+          "target": "idle"
+        },
+        "TODO_DELETED": {
+          "target": "idle"
+        },
+        "TOGGLE_TODO": {
+          "target": "toggling",
+          "guard": { "$ne": ["$$id", null] }
+        },
+        "DELETE_TODO": {
+          "target": "deleting",
+          "guard": { "$ne": ["$$id", null] }
+        }
+      }
+    },
+    "toggling": {
+      "entry": {
+        "tool": "@mutation/toggle",
+        "payload": { 
+          "schema": "todos",
+          "id": "$$id",
+          "field": "done"
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "TODO_COMPLETED",
+                "payload": { "id": "$$id" }
+              }
+            }
+          ]
+        },
+        "ERROR": "error"
+      }
+    },
+    "deleting": {
+      "entry": {
+        "tool": "@mutation/delete",
+        "payload": { 
+          "schema": "todos",
+          "id": "$$id"
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "TODO_DELETED",
+                "payload": { "id": "$$id" }
+              }
+            }
+          ]
+        },
+        "ERROR": "error"
+      }
+    },
+    "error": {
+      "on": {
+        "RETRY": "idle",
+        "DISMISS": "idle"
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$type": "tool",
+  "$id": "tool_validate_interface_001",
+  "name": "@interface/validate",
+  "description": "Validates actor interface schema against expected format",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "interfaceDef": {
+        "type": "object",
+        "description": "Interface definition to validate",
+        "required": true
+      },
+      "actorId": {
+        "type": "string",
+        "description": "Actor ID for error reporting",
+        "required": true
+      }
+    },
+    "required": ["interfaceDef", "actorId"]
+  }
+}

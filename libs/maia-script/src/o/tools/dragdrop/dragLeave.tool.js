@@ -1,11 +1,23 @@
 export default {
   async execute(actor, payload) {
-    // Remove visual feedback when leaving drop zone
-    console.log(`Drag left column: ${payload.column}`);
+    const { column } = payload;
     
-    // Clear dragOverColumn if it matches
-    if (actor.context.dragOverColumn === payload.column) {
+    if (!column) {
+      console.warn('[dragdrop/dragLeave] No column specified');
+      return;
+    }
+    
+    // Only clear if this is the currently highlighted column
+    // (prevents flickering when dragging over child elements)
+    if (actor.context.dragOverColumn === column) {
       actor.context.dragOverColumn = null;
+      
+      // Trigger re-render to update CSS classes
+      if (actor.actorEngine && actor.id) {
+        actor.actorEngine.rerender(actor);
+      }
+      
+      console.log(`✅ [dragdrop/dragLeave] Cleared highlight for column: ${column}`);
     }
   }
 };

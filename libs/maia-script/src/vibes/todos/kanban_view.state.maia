@@ -1,0 +1,160 @@
+{
+  "$type": "state",
+  "$id": "state_kanban_view_001",
+  "initial": "loading",
+  "states": {
+    "loading": {
+      "entry": [
+        {
+          "tool": "@query/subscribe",
+          "payload": {
+            "schema": "todos",
+            "filter": { "field": "done", "op": "eq", "value": false },
+            "target": "todosTodo"
+          }
+        },
+        {
+          "tool": "@query/subscribe",
+          "payload": {
+            "schema": "todos",
+            "filter": { "field": "done", "op": "eq", "value": true },
+            "target": "todosDone"
+          }
+        }
+      ],
+      "on": {
+        "SUCCESS": "idle",
+        "TODO_CREATED": "loading",
+        "TODO_COMPLETED": "loading",
+        "TODO_DELETED": "loading"
+      }
+    },
+    "idle": {
+      "on": {
+        "DRAG_START": {
+          "target": "dragging"
+        },
+        "DRAG_END": "idle",
+        "DRAG_OVER": "idle",
+        "DRAG_ENTER": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@dragdrop/dragEnter",
+              "payload": { "column": "$$column" }
+            }
+          ]
+        },
+        "DRAG_LEAVE": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@dragdrop/dragLeave",
+              "payload": { "column": "$$column" }
+            }
+          ]
+        },
+        "DROP": {
+          "target": "dropping"
+        },
+        "TOGGLE_TODO": {
+          "target": "toggling",
+          "guard": { "$ne": ["$$id", null] }
+        },
+        "DELETE_TODO": {
+          "target": "deleting",
+          "guard": { "$ne": ["$$id", null] }
+        }
+      }
+    },
+    "dragging": {
+      "entry": {
+        "tool": "@dragdrop/start",
+        "payload": { "schema": "$$schema", "id": "$$id" }
+      },
+      "on": {
+        "DRAG_END": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@dragdrop/end"
+            }
+          ]
+        },
+        "DRAG_ENTER": {
+          "target": "dragging",
+          "actions": [
+            {
+              "tool": "@dragdrop/dragEnter",
+              "payload": { "column": "$$column" }
+            }
+          ]
+        },
+        "DRAG_LEAVE": {
+          "target": "dragging",
+          "actions": [
+            {
+              "tool": "@dragdrop/dragLeave",
+              "payload": { "column": "$$column" }
+            }
+          ]
+        },
+        "DROP": "dropping"
+      }
+    },
+    "dropping": {
+      "entry": {
+        "tool": "@dragdrop/drop",
+        "payload": { 
+          "schema": "$$schema",
+          "field": "$$field",
+          "value": "$$value"
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@dragdrop/end"
+            }
+          ]
+        },
+        "ERROR": "error"
+      }
+    },
+    "toggling": {
+      "entry": {
+        "tool": "@mutation/toggle",
+        "payload": { 
+          "schema": "todos",
+          "id": "$$id",
+          "field": "done"
+        }
+      },
+      "on": {
+        "SUCCESS": "idle",
+        "ERROR": "error"
+      }
+    },
+    "deleting": {
+      "entry": {
+        "tool": "@mutation/delete",
+        "payload": { 
+          "schema": "todos",
+          "id": "$$id"
+        }
+      },
+      "on": {
+        "SUCCESS": "idle",
+        "ERROR": "error"
+      }
+    },
+    "error": {
+      "on": {
+        "RETRY": "idle",
+        "DISMISS": "idle"
+      }
+    }
+  }
+}

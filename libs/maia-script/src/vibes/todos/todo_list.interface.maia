@@ -1,0 +1,30 @@
+{
+  "$type": "actor.interface",
+  "inbox": {
+    "TODO_CREATED": {
+      "payload": { "id": "string", "text": "string" }
+    },
+    "TODO_COMPLETED": {
+      "payload": { "id": "string" }
+    },
+    "TODO_DELETED": {
+      "payload": { "id": "string" }
+    },
+    "TOGGLE_TODO": {
+      "payload": { "id": "string" }
+    },
+    "DELETE_TODO": {
+      "payload": { "id": "string" }
+    }
+  },
+  "publishes": {
+    "TODO_COMPLETED": {
+      "payload": { "id": "string" }
+    },
+    "TODO_DELETED": {
+      "payload": { "id": "string" }
+    }
+  },
+  "subscriptions": ["actor_vibe_root_001"],
+  "watermark": 0
+}

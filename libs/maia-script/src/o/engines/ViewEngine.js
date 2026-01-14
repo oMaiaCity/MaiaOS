@@ -57,6 +57,7 @@ export class ViewEngine {
     return viewDef;
   }
 
+
   /**
    * Render a view definition into a shadow root
    * @param {Object} viewDef - The view definition
@@ -73,20 +74,23 @@ export class ViewEngine {
     // Store actor ID for event handling
     this.currentActorId = actorId;
     
-    // Render root node with actorId context
-    const element = this.renderNode(viewDef.root, { context }, actorId);
+    // Render container (if present) or root node
+    const nodeDef = viewDef.container || viewDef.root;
+    if (!nodeDef) {
+      console.warn(`[ViewEngine] View has no container or root:`, viewDef);
+      return;
+    }
+    
+    const element = this.renderNode(nodeDef, { context }, actorId);
     
     if (element) {
-      // Enable container queries on root element
       element.style.containerType = 'inline-size';
       element.style.containerName = 'actor-root';
-      
-      // Store actor ID on root element for event handling
       element.dataset.actorId = actorId;
-      
       shadowRoot.appendChild(element);
     }
   }
+
 
   /**
    * Render a single node (recursive)
@@ -149,16 +153,142 @@ export class ViewEngine {
       this.attachEvents(element, node.$on, data, actorId);
     }
 
+    // Handle slot property: { slot: "$key" }
+    // If node has slot property, render slot content into the element and return early
+    if (node.slot) {
+      this._renderSlot(node, data, element, actorId);
+      return element;
+    }
+
     // Handle children
     if (node.children && Array.isArray(node.children)) {
       for (const child of node.children) {
-        const childElement = this.renderNode(child, data, actorId);
-        if (childElement) {
-          element.appendChild(childElement);
+        // Handle $if in children array
+        if (child && typeof child === 'object' && child.$if) {
+          const result = this.evaluator.evaluate(child, data);
+          if (result) {
+            const childElement = this.renderNode(result, data, actorId);
+            if (childElement) {
+              element.appendChild(childElement);
+            }
+          }
+        } else {
+          // Normal child node
+          const childElement = this.renderNode(child, data, actorId);
+          if (childElement) {
+            element.appendChild(childElement);
+          }
         }
       }
     }
 
+    return element;
+  }
+
+  /**
+   * Render a slot: resolves context value and attaches child actor or renders plain value
+   * @param {Object} node - Node with slot property: { slot: "$key", tag?, class?, attrs? }
+   * @param {Object} data - The data context { context }
+   * @param {HTMLElement} wrapperElement - The wrapper element (already created by renderNode)
+   * @param {string} actorId - The actor ID
+   */
+  _renderSlot(node, data, wrapperElement, actorId) {
+    const slotKey = node.slot; // e.g., "$currentView"
+    
+    console.log(`[ViewEngine] Rendering slot: ${slotKey}`, { node, actorId, context: data.context });
+    
+    if (!slotKey || !slotKey.startsWith('$')) {
+      console.warn(`[ViewEngine] Slot key must start with $: ${slotKey}`);
+      return;
+    }
+    
+    const contextKey = slotKey.slice(1); // Remove '$'
+    const contextValue = data.context[contextKey]; // e.g., "@list" or "My App"
+    
+    console.log(`[ViewEngine] Slot resolution: ${contextKey} = ${contextValue}`);
+    
+    if (!contextValue) {
+      // No value mapped - wrapper element is already created, just leave it empty
+      console.warn(`[ViewEngine] No context value for slot key: ${contextKey}`, {
+        availableKeys: Object.keys(data.context || {})
+      });
+      return;
+    }
+    
+    // Check if it's an actor reference (starts with @)
+    if (typeof contextValue === 'string' && contextValue.startsWith('@')) {
+      const namekey = contextValue.slice(1); // Remove '@'
+      const actor = this.actorEngine?.getActor(actorId);
+      
+      console.log(`[ViewEngine] Looking up child actor: namekey=${namekey}`, {
+        actorId,
+        actorExists: !!actor,
+        children: actor?.children ? Object.keys(actor.children) : []
+      });
+      
+      const childActor = actor?.children?.[namekey];
+      
+      if (childActor?.containerElement) {
+        console.log(`[ViewEngine] Attaching child actor ${namekey} to slot`);
+        // Attach child actor's container to the wrapper element
+        // Note: If containerElement is already attached elsewhere, we need to move it
+        if (childActor.containerElement.parentNode) {
+          console.log(`[ViewEngine] Moving child actor container from existing parent`);
+          childActor.containerElement.parentNode.removeChild(childActor.containerElement);
+        }
+        wrapperElement.appendChild(childActor.containerElement);
+        console.log(`[ViewEngine] ✅ Child actor attached successfully`);
+      } else {
+        console.warn(`[ViewEngine] Child actor not found for namekey: ${namekey}`, {
+          actorId,
+          availableChildren: actor?.children ? Object.keys(actor.children) : [],
+          contextValue,
+          namekey,
+          childActorExists: !!childActor,
+          containerElementExists: !!childActor?.containerElement
+        });
+      }
+    } else {
+      // Plain value - render as text in wrapper
+      console.log(`[ViewEngine] Rendering plain value: ${contextValue}`);
+      wrapperElement.textContent = String(contextValue);
+    }
+  }
+
+  /**
+   * Create wrapper element for slot (applies tag, class, attrs from node)
+   * @param {Object} node - Node definition with tag, class, attrs
+   * @param {Object} data - The data context
+   * @returns {HTMLElement} The wrapper element
+   */
+  _createSlotWrapper(node, data) {
+    const tag = node.tag || 'div';
+    const element = document.createElement(tag);
+    
+    // Apply class
+    if (node.class) {
+      const classValue = this.evaluator.evaluate(node.class, data);
+      if (classValue) {
+        element.className = classValue;
+      }
+    }
+    
+    // Apply attrs
+    if (node.attrs) {
+      for (const [attrName, attrValue] of Object.entries(node.attrs)) {
+        const resolved = this.evaluator.evaluate(attrValue, data);
+        if (resolved !== undefined && resolved !== null) {
+          const stringValue = typeof resolved === 'boolean' ? String(resolved) : resolved;
+          element.setAttribute(attrName, stringValue);
+        }
+      }
+    }
+    
+    // Handle events (if any)
+    if (node.$on) {
+      this.attachEvents(element, node.$on, data, this.currentActorId);
+    }
+    
     return element;
   }
 
@@ -293,6 +423,10 @@ export class ViewEngine {
       // Handle special @inputValue marker
       if (value === '@inputValue') {
         resolved[key] = element.value || '';
+      }
+      // Handle special @dataColumn marker (extracts data-column attribute)
+      else if (value === '@dataColumn') {
+        resolved[key] = element.dataset.column || element.getAttribute('data-column') || null;
       }
       // Handle string DSL shortcuts (e.g., "$item.id", "$newTodoText")
       else if (typeof value === 'string' && value.startsWith('$')) {

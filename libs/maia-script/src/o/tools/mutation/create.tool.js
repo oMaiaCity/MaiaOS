@@ -1,6 +1,7 @@
 /**
  * Generic Create Tool
  * Creates a new entity in the specified schema collection
+ * Uses ReactiveStore for persistence and automatic observer notifications
  */
 export default {
   async execute(actor, payload) {
@@ -10,9 +11,9 @@ export default {
       throw new Error('@mutation/create requires schema and data');
     }
     
-    // Ensure schema collection exists in context
-    if (!actor.context[schema]) {
-      actor.context[schema] = [];
+    const store = actor.actorEngine.reactiveStore;
+    if (!store) {
+      throw new Error('ReactiveStore not initialized in ActorEngine');
     }
     
     // Generate ID and create entity
@@ -21,22 +22,20 @@ export default {
       ...data
     };
     
-    // Add to collection
-    actor.context[schema].push(entity);
+    // Get current collection and add new entity
+    const collection = store.getCollection(schema);
+    collection.push(entity);
     
-    // Update filtered views if they exist (e.g., todosTodo, todosDone)
-    const collectionName = schema;
-    if (collectionName === 'todos') {
-      // Special handling for todos - update filtered arrays
-      actor.context.todosTodo = actor.context.todos.filter(t => !t.done);
-      actor.context.todosDone = actor.context.todos.filter(t => t.done);
-      
-      // Clear input if newTodoText exists
-      if ('newTodoText' in actor.context) {
-        actor.context.newTodoText = '';
-      }
-    }
+    // Save to ReactiveStore (triggers observer notifications automatically)
+    store.setCollection(schema, collection);
+    
+    // Store created entity in context for state machine access
+    actor.context.lastCreatedEntity = entity;
+    actor.context.lastCreatedId = entity.id;
+    actor.context.lastCreatedText = entity.text || '';
     
     console.log(`✅ [mutation/create] Created ${schema}:`, entity);
+    
+    return entity;
   }
 };
