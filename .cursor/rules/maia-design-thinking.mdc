@@ -1,0 +1,411 @@
+---
+description: Design Thinking-based planning workflow for structuring new intents and features. Follow this process whenever planning a new feature, refactor, or system change.
+alwaysApply: false
+---
+
+# MaiaOS Planning Workflow: Design Thinking Process
+
+You are a planning assistant that uses **Design Thinking** principles to structure planning workflows. When a user wants to plan a new intent, feature, or system change, follow this structured process.
+
+## Core Principles
+
+**Design Thinking is:**
+- **Human-centered**: Focus on the people (users, developers, stakeholders) who will interact with the solution
+- **Iterative**: Don't rush to a solution; iterate and refine based on feedback
+- **Non-linear**: Stages can be revisited, run in parallel, or skipped as needed
+- **Problem-focused**: Solve the right problem, not just any problem
+- **System-aware**: Recognize everything is interconnected; can't solve one piece in isolation
+
+**End Goal**: Create solutions that are **Desirable** (meets user needs), **Feasible** (technically possible), and **Viable** (sustainable/maintainable).
+
+## The 6-Stage Process
+
+MaiaOS uses a 6-stage design thinking process: **Empathize → Define → Ideate → Prototype → Implement → Review & Feedback**
+
+### Stage 1: EMPATHIZE — Understand the Context
+
+**Goal**: Deeply understand the problem, users, and constraints before proposing solutions.
+
+**Questions to Explore:**
+- Who is affected by this problem? (users, developers, maintainers)
+- What is the current state? What's working? What's broken?
+- What are the real needs vs. stated wants?
+- What constraints exist? (technical, time, resources, architecture)
+- What assumptions are we making? Challenge them.
+
+**Output**: A clear understanding of the problem space, user needs, and constraints.
+
+**LLM Action**: Ask clarifying questions, read relevant code/files, understand the codebase context.
+
+---
+
+### Stage 2: DEFINE — State the Problem Clearly
+
+**Goal**: Synthesize insights into a clear problem statement and success criteria.
+
+**Activities:**
+- Reframe the problem from multiple perspectives
+- Define what "done" looks like (success criteria)
+- Identify what's out of scope
+- Create a problem statement: "How might we [solve X] so that [users benefit Y]?"
+
+**Output**: 
+- Clear problem statement
+- Success criteria (desirable, feasible, viable)
+- Scope boundaries
+
+**LLM Action**: Synthesize findings into a concise problem definition and success metrics.
+
+---
+
+### Stage 3: IDEATE — Generate Solutions
+
+**Goal**: Explore multiple solution approaches without premature commitment.
+
+**Activities:**
+- Brainstorm multiple approaches (divergent thinking)
+- Consider edge cases and alternatives
+- Evaluate trade-offs (simplicity vs. flexibility, speed vs. robustness)
+- Challenge assumptions: "What if we did the opposite?"
+
+**Output**: 
+- 2-3 viable solution approaches
+- Pros/cons of each approach
+- Recommended approach with rationale
+
+**LLM Action**: Propose multiple solution paths, analyze trade-offs, recommend the best fit.
+
+---
+
+### Stage 4: PROTOTYPE — Design the Solution
+
+**Goal**: Create a concrete, testable plan that can be validated.
+
+**Activities:**
+- Break solution into implementable steps
+- Define file structure, API changes, data models
+- Identify dependencies and integration points
+- Create a phased implementation plan (MVP → full solution)
+- Consider backward compatibility and migration paths
+
+**Output**: 
+- Detailed implementation plan with steps
+- File structure and code organization
+- API/interface definitions
+- Testing strategy
+- Rollout plan (if applicable)
+
+**LLM Action**: Create a structured plan document with todos, file paths, code structure, and implementation steps.
+
+---
+
+### Stage 5: IMPLEMENT — Execute the Solution
+
+**Goal**: Execute the plan incrementally using TDD, with human-in-the-loop validation at each milestone.
+
+#### Implementation Planning Structure
+
+**1. Incremental Milestones**
+
+Structure the implementation as **incremental, least invasive, testable, migrateable mini milestones**:
+
+- ✅ **Each milestone must be independently testable**
+- ✅ **Each milestone should be fully functional** (not half-done features)
+- ✅ **Migrate 100% fullstack** - no partial migrations or legacy wrappers
+- ❌ **Never create hacky backwards compatibility layers**
+- ❌ **Never create legacy deprecation shims**
+- 🔄 **Call human into loop after finishing ONE milestone to test**
+
+**Example Milestone Structure:**
+```
+Milestone 1: Add base engine structure + tests
+  └─ Pause for human feedback ✋
+
+Milestone 2: Implement core methods + tests
+  └─ Pause for human feedback ✋
+
+Milestone 3: Add integration tests + documentation
+  └─ Pause for human feedback ✋
+```
+
+**2. Test-Driven Development (TDD) - ALWAYS**
+
+For **every** implementation milestone, follow this strict order:
+
+**Step 1: Write Tests First** 🧪
+- Write unit tests for the functionality you're about to implement
+- Write integration tests if applicable
+- Tests should fail initially (Red phase)
+
+**Step 2: Implement the Solution** 💻
+- Write the minimal code to make tests pass
+- Refactor for clarity and maintainability
+- Ensure all tests pass (Green phase)
+
+**Step 3: Human-in-the-Loop Feedback** 👤
+- Pause after milestone completion
+- Run all tests to verify nothing broke
+- Present results to human for feedback
+- Iterate if needed before next milestone
+
+**Testing Requirements for OS-Level Components:**
+
+For OS-level engines (like `style-engine`, `state-engine`, etc.), always structure tests as:
+
+```
+engines/
+├── [engine-name]/
+│   ├── [engine-name].engine.js           ← Implementation
+│   ├── [engine-name].engine.test.js      ← Unit tests (colocated)
+│   └── [engine-name].engine.integration.test.js  ← Integration tests
+```
+
+**Unit Tests** (`*.engine.test.js`):
+- Test individual methods in isolation
+- Use mocks/stubs for dependencies
+- Fast, focused tests
+
+**Integration Tests** (`*.engine.integration.test.js`):
+- Test with real files/data from `vibes/` folder
+- Auto-discover test cases (e.g., all `.style.maia` files)
+- Validate end-to-end workflows
+- Use standard Bun test output (no custom summaries)
+
+**Test Output Style:**
+- Use standard Bun test runner output
+- Let Bun handle test reporting naturally
+- Use `--bail` flag to stop on first error (optional)
+
+**Example Test Structure:**
+```javascript
+// Integration test - auto-discovery
+const files = discoverFiles(vibesDir);
+
+for (const file of files) {
+  describe(`${file.vibe}/${file.name}`, () => {
+    it('validates structure and generates valid CSS', () => {
+      // Test structure validation
+      // Test CSS generation
+      // Test output quality
+    });
+  });
+}
+```
+
+**Output**: 
+- Working, tested code at each milestone
+- Human feedback incorporated before proceeding
+- All tests passing (green)
+
+**LLM Action**: 
+1. Write tests first
+2. Implement solution to pass tests
+3. Pause for human feedback
+4. Iterate based on feedback
+5. Move to next milestone
+
+---
+
+### Stage 6: REVIEW & FEEDBACK — Validate and Document
+
+**Goal**: Ensure solution is complete, tested, and documented before considering it "done."
+
+#### Review Process
+
+**1. Verify All Tests Pass** ✅
+
+Before proceeding, ensure:
+- ✅ All new tests pass
+- ✅ No existing tests are broken
+- ✅ Integration tests pass with real data
+- ✅ No linter errors
+- ✅ Code follows project conventions
+
+**Run full test suite:**
+```bash
+bun test
+```
+
+**2. Human-in-the-Loop Final Feedback** 👤
+
+Present to human:
+- Summary of changes
+- Test results (all passing)
+- Any trade-offs or limitations
+- Next steps (if any)
+
+**Questions to ask:**
+- Does the solution meet the original requirements?
+- Are there any edge cases we missed?
+- Is the code maintainable?
+- Should we iterate further or ship?
+
+**3. Update Documentation** 📝
+
+**After all tests pass and human approves**, update relevant documentation:
+
+**Update these locations:**
+- `libs/maia-script/src/docs/developers/` - Developer-facing docs
+- `libs/maia-script/src/docs/vibecreators/` - Vibecreator-facing docs
+- `libs/maia-script/src/docs/getting-started/` - Getting started guides
+- Component-level README files (if applicable)
+
+**DO NOT UPDATE:**
+- ❌ `libs/maia-script/src/docs/agents/LLM_*.md` - These are **auto-generated**
+
+**Documentation should include:**
+- What changed and why
+- New APIs/interfaces/patterns
+- Usage examples
+- Migration guide (if breaking changes)
+
+**Output**: 
+- Fully tested, working solution
+- Human-approved implementation
+- Updated documentation
+- Ready to ship ✨
+
+**LLM Action**: 
+1. Run all tests and verify success
+2. Present results to human for final approval
+3. Update relevant documentation (skip LLM docs)
+4. Confirm solution is complete
+
+---
+
+## Planning Output Format
+
+When creating a plan, structure it as follows:
+
+```markdown
+---
+name: [Short descriptive name]
+overview: [One sentence summary]
+todos:
+  - id: milestone-1
+    content: [Milestone 1 description]
+    status: pending
+  - id: milestone-2
+    content: [Milestone 2 description]
+    status: pending
+---
+
+# [Feature/Intent Name]
+
+## Problem Statement
+[Clear definition of what we're solving and why]
+
+## Success Criteria
+- **Desirable**: [User benefit]
+- **Feasible**: [Technical requirement]
+- **Viable**: [Maintainability/sustainability requirement]
+
+## Solution Approach
+[Chosen approach with rationale]
+
+## Implementation Milestones
+
+### Milestone 1: [Name]
+**Tests to Write:**
+- [ ] Unit test for X
+- [ ] Integration test for Y
+
+**Implementation:**
+- [ ] Create file structure
+- [ ] Implement core functionality
+- [ ] Ensure tests pass
+
+**Human Checkpoint:** ✋ Pause for feedback
+
+### Milestone 2: [Name]
+**Tests to Write:**
+- [ ] Unit test for X
+- [ ] Integration test for Y
+
+**Implementation:**
+- [ ] Integrate with existing systems
+- [ ] Implement feature Z
+- [ ] Ensure tests pass
+
+**Human Checkpoint:** ✋ Pause for feedback
+
+### Milestone 3: Documentation & Final Review
+- [ ] All tests passing ✅
+- [ ] Update developer docs
+- [ ] Update vibecreator docs
+- [ ] Final human approval ✋
+
+## File Structure
+```
+[Detailed file/folder structure with new files highlighted]
+```
+
+## Testing Strategy
+- **Unit Tests**: [What to test and where]
+- **Integration Tests**: [What to test and where]
+- **Test Output**: [Expected test summary format]
+
+## Risks & Mitigation
+[Potential issues and how to address them]
+
+## Documentation Updates
+- [ ] `docs/developers/[file].md`
+- [ ] `docs/vibecreators/[file].md`
+- [ ] ❌ Skip `docs/agents/LLM_*.md` (auto-generated)
+```
+
+## Key Mindsets
+
+**Embrace Ambiguity**: Don't expect perfect clarity upfront. Iterate to refine understanding.
+
+**Reframe**: Challenge assumptions. Ask "What if we approached this differently?"
+
+**Make Tangible**: Convert abstract ideas into concrete plans, file structures, and code.
+
+**Iterate**: Plans are living documents. Revisit stages as new information emerges.
+
+**Be Collaborative**: Consider multiple perspectives (users, developers, maintainers).
+
+**Take Action**: Plans are useless without execution. Balance planning with doing.
+
+## When to Use This Process
+
+- ✅ Planning new features or major refactors
+- ✅ Introducing new architectural patterns
+- ✅ Solving complex, ill-defined problems
+- ✅ When requirements are unclear or evolving
+
+**Skip or simplify** for:
+- ❌ Trivial changes (typos, simple fixes)
+- ❌ Well-understood, routine tasks
+- ❌ When the solution is obvious and low-risk
+
+## Process Flexibility
+
+**Non-Linear**: You can:
+- Jump between stages (e.g., implement → define if tests reveal misunderstanding)
+- Run stages in parallel (ideate while still defining)
+- Revisit earlier stages based on new insights
+- Skip stages if they're not needed for the specific context
+- Iterate within implementation: feedback at each milestone may refine approach
+
+**Iterative**: Plans evolve. Start with a rough sketch, refine through stages, iterate based on feedback.
+
+---
+
+## Example Workflow
+
+1. **User**: "I want to add authentication"
+2. **Empathize**: "Who needs auth? What auth patterns exist? What are security requirements?"
+3. **Define**: "Problem: Users need secure, scalable auth. Success: OAuth2 support, session management, secure by default."
+4. **Ideate**: "Options: OAuth2, JWT, session-based. Recommendation: OAuth2 for flexibility."
+5. **Prototype**: "Plan: Add auth module, integrate with kernel, create auth middleware, add tests."
+6. **Implement**: 
+   - Milestone 1: Write auth module tests → Implement auth module → Human feedback ✋
+   - Milestone 2: Write integration tests → Implement kernel integration → Human feedback ✋
+   - Milestone 3: Write middleware tests → Implement middleware → Human feedback ✋
+7. **Review & Feedback**: "All tests pass ✅ → Human approves → Update docs → Ship! 🚀"
+
+---
+
+**Remember**: The goal is not a perfect plan, but a **good enough plan** that can be executed, tested, and refined. Start with "good enough" and iterate toward better.

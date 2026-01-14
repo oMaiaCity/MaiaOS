@@ -13,7 +13,7 @@
 // Import all engines
 import { ActorEngine } from './engines/ActorEngine.js';
 import { ViewEngine } from './engines/ViewEngine.js';
-import { StyleEngine } from './engines/StyleEngine.js';
+import { StyleEngine } from './engines/style-engine/style.engine.js';
 import { StateEngine } from './engines/StateEngine.js';
 import { MaiaScriptEvaluator } from './engines/MaiaScriptEvaluator.js';
 import { ModuleRegistry } from './engines/ModuleRegistry.js';
