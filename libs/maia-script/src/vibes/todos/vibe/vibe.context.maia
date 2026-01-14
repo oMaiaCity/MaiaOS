@@ -1,6 +1,6 @@
 {
   "$type": "context",
-  "$id": "context_vibe_root_001",
+  "$id": "context_vibe_001",
   "title": "Todo List",
   "viewMode": "list",
   "currentView": "@list",

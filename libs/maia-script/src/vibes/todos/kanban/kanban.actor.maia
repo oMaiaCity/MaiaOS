@@ -1,0 +1,14 @@
+{
+  "$type": "actor",
+  "$id": "actor_kanban_001",
+  "role": "kanban-view",
+  "contextRef": "kanban/kanban",
+  "viewRef": "kanban/kanban",
+  "stateRef": "kanban/kanban",
+  "interfaceRef": "kanban/kanban",
+  "brandRef": "co_brand_001",
+  "styleRef": "todo",
+  "subscriptions": ["actor_vibe_001"],
+  "inbox": [],
+  "inboxWatermark": 0
+}

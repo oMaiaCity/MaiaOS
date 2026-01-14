@@ -1,6 +1,6 @@
 {
   "$type": "view",
-  "$id": "co_view_vibe_root_001",
+  "$id": "co_view_vibe_001",
   "container": {
     "tag": "div",
     "class": "stack",

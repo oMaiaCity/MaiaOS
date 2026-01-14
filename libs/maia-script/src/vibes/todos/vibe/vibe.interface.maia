@@ -25,6 +25,6 @@
       "payload": { "id": "string", "text": "string" }
     }
   },
-  "subscriptions": ["actor_todo_list_001", "actor_kanban_view_001"],
+  "subscriptions": ["actor_list_001", "actor_kanban_001"],
   "watermark": 0
 }

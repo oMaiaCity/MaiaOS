@@ -1,0 +1,21 @@
+{
+  "$type": "actor",
+  "$id": "actor_vibe_001",
+  "role": "vibe-root",
+  "contextRef": "vibe/vibe",
+  "viewRef": "vibe/vibe",
+  "stateRef": "vibe/vibe",
+  "interfaceRef": "vibe/vibe",
+  "brandRef": "co_brand_001",
+  "styleRef": "todo",
+  "children": {
+    "list": "actor_list_001",
+    "kanban": "actor_kanban_001"
+  },
+  "subscriptions": [
+    "actor_list_001",
+    "actor_kanban_001"
+  ],
+  "inbox": [],
+  "inboxWatermark": 0
+}

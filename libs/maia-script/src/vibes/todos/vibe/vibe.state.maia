@@ -1,6 +1,6 @@
 {
   "$type": "state",
-  "$id": "state_vibe_root_001",
+  "$id": "state_vibe_001",
   "initial": "idle",
   "states": {
     "idle": {

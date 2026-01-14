@@ -1,6 +1,6 @@
 {
   "$type": "view",
-  "$id": "co_view_todo_list_001",
+  "$id": "co_view_list_001",
   "container": {
     "class": "list",
     "$each": {

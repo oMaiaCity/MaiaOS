@@ -7,7 +7,7 @@
  */
 
 // Import ReactiveStore
-import { ReactiveStore } from '../ReactiveStore.js';
+import { ReactiveStore } from '../reactive-store/reactive.store.js';
 
 export class ActorEngine {
   constructor(styleEngine, viewEngine, moduleRegistry, toolEngine, stateEngine = null) {
@@ -28,8 +28,9 @@ export class ActorEngine {
 
   /**
    * Resolve actor ID to filename (e.g., "actor_view_switcher_001" -> "view_switcher")
+   * Handles subfolder structure: "actor_kanban_001" -> "kanban/kanban"
    * @param {string} actorId - Actor ID
-   * @returns {string} Filename without extension
+   * @returns {string} Filename without extension (may include subfolder path)
    */
   resolveActorIdToFilename(actorId) {
     // Remove "actor_" prefix and "_001" suffix
@@ -39,7 +40,18 @@ export class ActorEngine {
       // Remove trailing _001, _002, etc.
       const match = withoutPrefix.match(/^(.+?)_\d+$/);
       if (match) {
-        return match[1];
+        let baseName = match[1];
+        // Handle subfolder structure: if actor is in a subfolder, return "subfolder/subfolder"
+        // For now, check if baseName matches known subfolder patterns
+        // kanban -> kanban/kanban, list -> list/list, vibe -> vibe/vibe, list_item -> list-item/list-item
+        if (baseName === 'kanban' || baseName === 'list' || baseName === 'vibe') {
+          return `${baseName}/${baseName}`;
+        }
+        // Convert underscore to hyphen for list-item
+        if (baseName === 'list_item') {
+          return 'list-item/list-item';
+        }
+        return baseName;
       }
       return withoutPrefix;
     }

@@ -25,6 +25,6 @@
       "payload": { "id": "string" }
     }
   },
-  "subscriptions": ["actor_vibe_root_001"],
+  "subscriptions": ["actor_vibe_001"],
   "watermark": 0
 }

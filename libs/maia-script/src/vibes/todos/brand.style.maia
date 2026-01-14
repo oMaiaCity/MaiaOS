@@ -394,7 +394,7 @@
       "opacity": "0.6"
     },
     ".kanban-column-content:empty::before": {
-      "content": "'Drop todos here'",
+      "content": "'Drop items here'",
       "display": "flex",
       "alignItems": "center",
       "justifyContent": "center",

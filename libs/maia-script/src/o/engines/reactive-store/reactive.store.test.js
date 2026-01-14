@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { ReactiveStore } from './ReactiveStore.js';
+import { ReactiveStore } from './reactive.store.js';
 
 // Mock localStorage for Bun tests
 class LocalStorageMock {

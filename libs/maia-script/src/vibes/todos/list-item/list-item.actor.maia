@@ -1,0 +1,13 @@
+{
+  "$type": "actor",
+  "$id": "actor_list_item_001",
+  "role": "todo-manager",
+  "contextRef": "list-item/list-item",
+  "viewRef": "list-item/list-item",
+  "brandRef": "co_brand_001",
+  "styleRef": "list-item/list-item",
+  "stateRef": "list-item/list-item",
+  "inbox": [],
+  "subscriptions": [],
+  "inboxWatermark": 0
+}

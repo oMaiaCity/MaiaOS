@@ -14,7 +14,7 @@
 import { ActorEngine } from './engines/actor-engine/actor.engine.js';
 import { ViewEngine } from './engines/view-engine/view.engine.js';
 import { StyleEngine } from './engines/style-engine/style.engine.js';
-import { StateEngine } from './engines/StateEngine.js';
+import { StateEngine } from './engines/state-engine/state.engine.js';
 import { MaiaScriptEvaluator } from './engines/MaiaScriptEvaluator.js';
 import { ModuleRegistry } from './engines/ModuleRegistry.js';
 import { ToolEngine } from './engines/tool-engine/tool.engine.js';

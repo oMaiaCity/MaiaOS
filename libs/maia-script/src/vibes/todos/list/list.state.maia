@@ -1,6 +1,6 @@
 {
   "$type": "state",
-  "$id": "state_todo_list_001",
+  "$id": "state_list_001",
   "initial": "loading",
   "states": {
     "loading": {

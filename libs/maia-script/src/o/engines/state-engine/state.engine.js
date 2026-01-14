@@ -138,7 +138,8 @@ export class StateEngine {
     const actions = typeof transition === 'object' ? transition.actions : null;
 
     // Evaluate guard (if present) - use current eventPayload
-    if (guard) {
+    // Check for !== undefined to allow false/0 guards
+    if (guard !== undefined && guard !== null) {
       const guardResult = this._evaluateGuard(guard, machine.context, machine.eventPayload);
       if (!guardResult) {
         console.log(`[StateEngine] Guard failed for ${event}`);
@@ -433,7 +434,7 @@ export class StateEngine {
    * @returns {Object|null} Machine instance
    */
   getMachine(machineId) {
-    return this.machines.get(machineId);
+    return this.machines.get(machineId) || null;
   }
 
   /**

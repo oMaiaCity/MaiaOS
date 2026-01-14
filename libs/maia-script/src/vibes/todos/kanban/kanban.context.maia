@@ -1,6 +1,6 @@
 {
   "$type": "context",
-  "$id": "context_kanban_view_001",
+  "$id": "context_kanban_001",
   "todosTodo": [],
   "todosDone": [],
   "draggedItemId": null,

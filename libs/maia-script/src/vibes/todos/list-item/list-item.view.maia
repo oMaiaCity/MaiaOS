@@ -1,6 +1,6 @@
 {
   "$type": "view",
-  "$id": "co_view_001",
+  "$id": "co_view_list_item_001",
   "root": {
     "class": "stack",
     "attrs": {

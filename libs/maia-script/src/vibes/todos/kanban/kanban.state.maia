@@ -1,6 +1,6 @@
 {
   "$type": "state",
-  "$id": "state_kanban_view_001",
+  "$id": "state_kanban_001",
   "initial": "loading",
   "states": {
     "loading": {
