@@ -187,7 +187,7 @@ libs/maia-script/src/
 │
 └── docs/                       # Documentation
     ├── ARCHITECTURE.md         # This file
-    ├── vibe/                   # User-facing docs
+    ├── vibecreators/           # User-facing docs (for app builders)
     │   ├── 01-kernel.md
     │   ├── 02-actors.md
     │   ├── 03-skills.md
@@ -197,11 +197,14 @@ libs/maia-script/src/
     │   ├── 07-views.md        # UI first
     │   ├── 08-brand.md        # Then styling
     │   └── 09-style.md
-    └── developers/             # Developer docs
-        ├── maiaos.md
-        ├── engines.md
-        ├── tools.md
-        └── dsl.md
+    ├── developers/             # Developer docs (for engine/tool builders)
+    │   ├── maiaos.md
+    │   ├── engines.md
+    │   ├── tools.md
+    │   └── dsl.md
+    └── agents/                 # LLM-optimized docs (auto-generated)
+        ├── LLM_Vibecreator.md  # ARCHITECTURE + vibecreators
+        └── LLM_Developers.md   # ARCHITECTURE + developers
 ```
 
 ## Key Concepts
