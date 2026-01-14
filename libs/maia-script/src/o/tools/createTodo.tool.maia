@@ -1,0 +1,16 @@
+{
+  "$type": "tool",
+  "$id": "tool_createTodo_001",
+  "name": "@core/createTodo",
+  "description": "Creates a new todo item and clears the input field",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string",
+        "description": "The text content of the todo item"
+      }
+    },
+    "required": ["text"]
+  }
+}

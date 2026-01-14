@@ -1,0 +1,10 @@
+{
+  "$type": "tool",
+  "$id": "tool_dragEnd_001",
+  "name": "@dragdrop/end",
+  "description": "Ends a drag operation",
+  "parameters": {
+    "type": "object",
+    "properties": {}
+  }
+}

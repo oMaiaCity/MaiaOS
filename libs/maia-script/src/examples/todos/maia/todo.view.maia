@@ -2,14 +2,12 @@
   "$type": "view",
   "$id": "co_view_001",
   "root": {
-    "tag": "div",
     "class": "stack",
     "attrs": {
       "data-view": "$viewMode"
     },
     "children": [
       {
-        "tag": "div",
         "class": "header-section",
         "children": [
           {
@@ -18,7 +16,6 @@
             "text": "$title"
           },
           {
-            "tag": "div",
             "class": "view-switcher",
             "children": [
               {
@@ -31,10 +28,8 @@
                 "text": "List",
                 "$on": {
                   "click": {
-                    "action": "@core/setViewMode",
-                    "payload": {
-                      "viewMode": "list"
-                    }
+                    "send": "SET_VIEW_MODE",
+                    "payload": { "viewMode": "list" }
                   }
                 }
               },
@@ -48,10 +43,8 @@
                 "text": "Kanban",
                 "$on": {
                   "click": {
-                    "action": "@core/setViewMode",
-                    "payload": {
-                      "viewMode": "kanban"
-                    }
+                    "send": "SET_VIEW_MODE",
+                    "payload": { "viewMode": "kanban" }
                   }
                 }
               }
@@ -60,7 +53,6 @@
         ]
       },
       {
-        "tag": "div",
         "class": "form",
         "children": [
           {
@@ -73,16 +65,12 @@
             "value": "$newTodoText",
             "$on": {
               "input": {
-                "action": "@context/update",
-                "payload": {
-                  "newTodoText": "@inputValue"
-                }
+                "send": "UPDATE_INPUT",
+                "payload": { "newTodoText": "@inputValue" }
               },
               "keydown": {
-                "action": "@core/createTodo",
-                "payload": {
-                  "text": "$newTodoText"
-                },
+                "send": "CREATE_TODO",
+                "payload": { "text": "$newTodoText" },
                 "key": "Enter"
               }
             }
@@ -93,31 +81,27 @@
             "text": "$addButtonText",
             "$on": {
               "click": {
-                "action": "@core/createTodo",
-                "payload": {
-                  "text": "$newTodoText"
-                }
+                "send": "CREATE_TODO",
+                "payload": { "text": "$newTodoText" }
               }
             }
           }
         ]
       },
       {
-        "tag": "div",
         "class": "list",
         "$each": {
           "items": "$todos",
           "template": {
-            "tag": "div",
             "class": "card",
             "attrs": {
-              "data-done": "$item.done"
+              "data-done": "$$done"
             },
             "children": [
               {
                 "tag": "span",
                 "class": "body",
-                "text": "$item.text"
+                "text": "$$text"
               },
               {
                 "tag": "button",
@@ -125,10 +109,8 @@
                 "text": "✓",
                 "$on": {
                   "click": {
-                    "action": "@core/toggleTodo",
-                    "payload": {
-                      "id": "$item.id"
-                    }
+                    "send": "TOGGLE_TODO",
+                    "payload": { "id": "$$id" }
                   }
                 }
               },
@@ -138,10 +120,8 @@
                 "text": "✕",
                 "$on": {
                   "click": {
-                    "action": "@core/deleteTodo",
-                    "payload": {
-                      "id": "$item.id"
-                    }
+                    "send": "DELETE_TODO",
+                    "payload": { "id": "$$id" }
                   }
                 }
               }
@@ -150,11 +130,9 @@
         }
       },
       {
-        "tag": "div",
         "class": "kanban",
         "children": [
           {
-            "tag": "div",
             "class": "kanban-column",
             "attrs": {
               "data-column": "todo"
@@ -166,65 +144,43 @@
                 "text": "Todo"
               },
               {
-                "tag": "div",
                 "class": "kanban-column-content",
                 "attrs": {
                   "data-column": "todo"
                 },
                 "$on": {
                   "dragover": {
-                    "action": "@core/preventDefault",
-                    "payload": {}
-                  },
-                  "dragenter": {
-                    "action": "@dragdrop/dragEnter",
-                    "payload": {
-                      "column": "todo"
-                    }
-                  },
-                  "dragleave": {
-                    "action": "@dragdrop/dragLeave",
-                    "payload": {
-                      "column": "todo"
-                    }
+                    "send": "DRAG_OVER"
                   },
                   "drop": {
-                    "action": "@dragdrop/drop",
-                    "payload": {
-                      "targetColumn": "todo"
-                    }
+                    "send": "DROP",
+                    "payload": { "targetColumn": "todo" }
                   }
                 },
                 "$each": {
                   "items": "$todosTodo",
                   "template": {
-                    "tag": "div",
                     "class": "card",
                     "attrs": {
                       "draggable": "true",
-                      "data-id": "$item.id"
+                      "data-id": "$$id"
                     },
                     "$on": {
                       "dragstart": {
-                        "action": "@dragdrop/start",
-                        "payload": {
-                          "entityType": "todos",
-                          "id": "$item.id"
-                        }
+                        "send": "DRAG_START",
+                        "payload": { "entityType": "todos", "id": "$$id" }
                       },
                       "dragend": {
-                        "action": "@dragdrop/end",
-                        "payload": {}
+                        "send": "DRAG_END"
                       }
                     },
                     "children": [
                       {
                         "tag": "span",
                         "class": "body",
-                        "text": "$item.text"
+                        "text": "$$text"
                       },
                       {
-                        "tag": "div",
                         "class": "card-actions",
                         "children": [
                           {
@@ -233,10 +189,8 @@
                             "text": "✓",
                             "$on": {
                               "click": {
-                                "action": "@core/toggleTodo",
-                                "payload": {
-                                  "id": "$item.id"
-                                }
+                                "send": "TOGGLE_TODO",
+                                "payload": { "id": "$$id" }
                               }
                             }
                           },
@@ -246,10 +200,8 @@
                             "text": "✕",
                             "$on": {
                               "click": {
-                                "action": "@core/deleteTodo",
-                                "payload": {
-                                  "id": "$item.id"
-                                }
+                                "send": "DELETE_TODO",
+                                "payload": { "id": "$$id" }
                               }
                             }
                           }
@@ -262,7 +214,6 @@
             ]
           },
           {
-            "tag": "div",
             "class": "kanban-column",
             "attrs": {
               "data-column": "done"
@@ -274,66 +225,44 @@
                 "text": "Done"
               },
               {
-                "tag": "div",
                 "class": "kanban-column-content",
                 "attrs": {
                   "data-column": "done"
                 },
                 "$on": {
                   "dragover": {
-                    "action": "@core/preventDefault",
-                    "payload": {}
-                  },
-                  "dragenter": {
-                    "action": "@dragdrop/dragEnter",
-                    "payload": {
-                      "column": "done"
-                    }
-                  },
-                  "dragleave": {
-                    "action": "@dragdrop/dragLeave",
-                    "payload": {
-                      "column": "done"
-                    }
+                    "send": "DRAG_OVER"
                   },
                   "drop": {
-                    "action": "@dragdrop/drop",
-                    "payload": {
-                      "targetColumn": "done"
-                    }
+                    "send": "DROP",
+                    "payload": { "targetColumn": "done" }
                   }
                 },
                 "$each": {
                   "items": "$todosDone",
                   "template": {
-                    "tag": "div",
                     "class": "card",
                     "attrs": {
                       "draggable": "true",
-                      "data-id": "$item.id",
+                      "data-id": "$$id",
                       "data-done": "true"
                     },
                     "$on": {
                       "dragstart": {
-                        "action": "@dragdrop/start",
-                        "payload": {
-                          "entityType": "todos",
-                          "id": "$item.id"
-                        }
+                        "send": "DRAG_START",
+                        "payload": { "entityType": "todos", "id": "$$id" }
                       },
                       "dragend": {
-                        "action": "@dragdrop/end",
-                        "payload": {}
+                        "send": "DRAG_END"
                       }
                     },
                     "children": [
                       {
                         "tag": "span",
                         "class": "body",
-                        "text": "$item.text"
+                        "text": "$$text"
                       },
                       {
-                        "tag": "div",
                         "class": "card-actions",
                         "children": [
                           {
@@ -342,10 +271,8 @@
                             "text": "↩",
                             "$on": {
                               "click": {
-                                "action": "@core/toggleTodo",
-                                "payload": {
-                                  "id": "$item.id"
-                                }
+                                "send": "TOGGLE_TODO",
+                                "payload": { "id": "$$id" }
                               }
                             }
                           },
@@ -355,10 +282,8 @@
                             "text": "✕",
                             "$on": {
                               "click": {
-                                "action": "@core/deleteTodo",
-                                "payload": {
-                                  "id": "$item.id"
-                                }
+                                "send": "DELETE_TODO",
+                                "payload": { "id": "$$id" }
                               }
                             }
                           }
@@ -378,36 +303,30 @@
         "text": "Open Modal",
         "$on": {
           "click": {
-            "action": "@core/openModal",
-            "payload": {}
+            "send": "OPEN_MODAL"
           }
         }
       },
       {
-        "tag": "div",
         "class": "modal-overlay",
         "attrs": {
           "data-open": "$modalOpen"
         },
         "$on": {
           "click": {
-            "action": "@core/closeModal",
-            "payload": {}
+            "send": "CLOSE_MODAL"
           }
         },
         "children": [
           {
-            "tag": "div",
             "class": "modal-content",
             "$on": {
               "click": {
-                "action": "@core/noop",
-                "payload": {}
+                "send": "STOP_PROPAGATION"
               }
             },
             "children": [
               {
-                "tag": "div",
                 "class": "modal-header",
                 "children": [
                   {
@@ -421,15 +340,13 @@
                     "text": "✕",
                     "$on": {
                       "click": {
-                        "action": "@core/closeModal",
-                        "payload": {}
+                        "send": "CLOSE_MODAL"
                       }
                     }
                   }
                 ]
               },
               {
-                "tag": "div",
                 "class": "modal-body",
                 "text": "$modalContent"
               }

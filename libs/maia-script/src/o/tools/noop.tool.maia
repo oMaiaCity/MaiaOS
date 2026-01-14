@@ -1,0 +1,10 @@
+{
+  "$type": "tool",
+  "$id": "tool_noop_001",
+  "name": "@core/noop",
+  "description": "No operation tool (does nothing)",
+  "parameters": {
+    "type": "object",
+    "properties": {}
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$type": "tool",
+  "$id": "tool_dragEnter_001",
+  "name": "@dragdrop/dragEnter",
+  "description": "Handles drag enter event for visual feedback when dragging over a drop zone",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "column": {
+        "type": "string",
+        "description": "The column being entered"
+      }
+    },
+    "required": ["column"]
+  }
+}

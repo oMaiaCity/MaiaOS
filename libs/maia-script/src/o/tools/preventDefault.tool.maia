@@ -1,0 +1,10 @@
+{
+  "$type": "tool",
+  "$id": "tool_preventDefault_001",
+  "name": "@core/preventDefault",
+  "description": "Prevents default browser behavior (handled by ViewEngine, no-op tool)",
+  "parameters": {
+    "type": "object",
+    "properties": {}
+  }
+}

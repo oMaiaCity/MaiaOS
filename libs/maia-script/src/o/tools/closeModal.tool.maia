@@ -1,0 +1,10 @@
+{
+  "$type": "tool",
+  "$id": "tool_closeModal_001",
+  "name": "@core/closeModal",
+  "description": "Closes the modal dialog",
+  "parameters": {
+    "type": "object",
+    "properties": {}
+  }
+}

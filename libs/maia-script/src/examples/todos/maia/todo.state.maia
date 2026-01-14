@@ -1,0 +1,137 @@
+{
+  "$type": "state",
+  "$id": "state_todo_001",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "UPDATE_INPUT": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@context/update",
+              "payload": { "newTodoText": "$$newTodoText" }
+            }
+          ]
+        },
+        "CREATE_TODO": {
+          "target": "creating",
+          "guard": { "$ne": ["$newTodoText", ""] }
+        },
+        "TOGGLE_TODO": {
+          "target": "toggling",
+          "guard": { "$ne": ["$$id", null] }
+        },
+        "DELETE_TODO": {
+          "target": "deleting",
+          "guard": { "$ne": ["$$id", null] }
+        },
+        "SET_VIEW_MODE": {
+          "target": "settingViewMode"
+        },
+        "OPEN_MODAL": {
+          "target": "openingModal"
+        },
+        "CLOSE_MODAL": {
+          "target": "closingModal"
+        },
+        "DRAG_START": {
+          "target": "dragging"
+        },
+        "DRAG_END": "idle",
+        "DRAG_OVER": "idle",
+        "DROP": {
+          "target": "dropping"
+        },
+        "STOP_PROPAGATION": "idle"
+      }
+    },
+    "creating": {
+      "entry": {
+        "tool": "@core/createTodo",
+        "payload": { "text": "$newTodoText" }
+      },
+      "on": {
+        "SUCCESS": "idle",
+        "ERROR": "error"
+      }
+    },
+    "toggling": {
+      "entry": {
+        "tool": "@core/toggleTodo",
+        "payload": { "id": "$$id" }
+      },
+      "on": {
+        "SUCCESS": "idle",
+        "ERROR": "error"
+      }
+    },
+    "deleting": {
+      "entry": {
+        "tool": "@core/deleteTodo",
+        "payload": { "id": "$$id" }
+      },
+      "on": {
+        "SUCCESS": "idle",
+        "ERROR": "error"
+      }
+    },
+    "settingViewMode": {
+      "entry": {
+        "tool": "@core/setViewMode",
+        "payload": { "viewMode": "$$viewMode" }
+      },
+      "on": {
+        "SUCCESS": "idle",
+        "ERROR": "error"
+      }
+    },
+    "openingModal": {
+      "entry": {
+        "tool": "@core/openModal",
+        "payload": {}
+      },
+      "on": {
+        "SUCCESS": "idle",
+        "ERROR": "error",
+        "CLOSE_MODAL": "closingModal"
+      }
+    },
+    "closingModal": {
+      "entry": {
+        "tool": "@core/closeModal",
+        "payload": {}
+      },
+      "on": {
+        "SUCCESS": "idle",
+        "ERROR": "error"
+      }
+    },
+    "dragging": {
+      "entry": {
+        "tool": "@dragdrop/start",
+        "payload": { "entityType": "$$entityType", "id": "$$id" }
+      },
+      "on": {
+        "DRAG_END": "idle",
+        "DROP": "dropping"
+      }
+    },
+    "dropping": {
+      "entry": {
+        "tool": "@dragdrop/drop",
+        "payload": { "targetColumn": "$$targetColumn" }
+      },
+      "on": {
+        "SUCCESS": "idle",
+        "ERROR": "error"
+      }
+    },
+    "error": {
+      "on": {
+        "RETRY": "idle",
+        "DISMISS": "idle"
+      }
+    }
+  }
+}

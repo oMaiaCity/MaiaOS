@@ -1,0 +1,16 @@
+{
+  "$type": "tool",
+  "$id": "tool_dragLeave_001",
+  "name": "@dragdrop/dragLeave",
+  "description": "Handles drag leave event to remove visual feedback when leaving a drop zone",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "column": {
+        "type": "string",
+        "description": "The column being left"
+      }
+    },
+    "required": ["column"]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$type": "tool",
+  "$id": "tool_dragdropDrop_001",
+  "name": "@dragdrop/drop",
+  "description": "Handles drop event for drag and drop kanban columns",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "targetColumn": {
+        "type": "string",
+        "enum": ["todo", "done"],
+        "description": "The target column for the drop"
+      }
+    },
+    "required": ["targetColumn"]
+  }
+}

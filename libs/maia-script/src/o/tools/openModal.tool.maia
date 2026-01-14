@@ -1,0 +1,10 @@
+{
+  "$type": "tool",
+  "$id": "tool_openModal_001",
+  "name": "@core/openModal",
+  "description": "Opens a modal dialog",
+  "parameters": {
+    "type": "object",
+    "properties": {}
+  }
+}

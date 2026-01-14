@@ -1,0 +1,16 @@
+{
+  "$type": "tool",
+  "$id": "tool_deleteTodo_001",
+  "name": "@core/deleteTodo",
+  "description": "Deletes a todo item by ID",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "The ID of the todo item to delete"
+      }
+    },
+    "required": ["id"]
+  }
+}

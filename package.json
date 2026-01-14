@@ -6,7 +6,8 @@
 		"libs/*"
 	],
 	"type": "module",
-	"scripts": {
+  "scripts": {
+    "dev:maia": "cd libs/maia-script && bun dev",
 		"dev": "bun scripts/dev.js",
 		"dev:me": "bun --env-file=.env --filter me dev",
 		"dev:voice-call": "bun --env-file=.env --filter voice-call dev",

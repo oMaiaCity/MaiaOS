@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todos</title>
+  <style>
+    /* 
+      HOST CSS - ABSOLUTELY MINIMAL
+      This is outside Shadow DOM and should only handle layout.
+      All styling happens inside Shadow DOM via Constructable Stylesheets.
+    */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #f8f9fa;
+      font-family: system-ui, sans-serif;
+      color: #333;
+      font-size: 14px;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .host-wrapper {
+      width: 100vw;
+      height: 100vh;
+      background: #f8f9fa;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <!-- HOST: Minimal layout wrapper only -->
+  <div class="host-wrapper">
+    <div id="actor-todo"></div>
+  </div>
+  
+  <script type="module">
+    // MaiaOS v0.2 - Kernel Architecture
+    // Single entry point: o/kernel.js
+    // Paths relative to this file: examples/todos/index.html
+    import { MaiaOS } from '../../o/kernel.js';
+    
+    async function boot() {
+      try {
+        // Boot MaiaOS with configuration
+        const os = await MaiaOS.boot({
+          toolsPath: '../../o/tools',
+          tools: [
+          'createTodo',
+          'toggleTodo',
+          'deleteTodo',
+          'setViewMode',
+          'openModal',
+          'closeModal',
+          'dragdropDrop',
+          'dragStart',
+          'dragEnd',
+            'dragEnter',
+            'dragLeave',
+          'contextUpdate',
+          'preventDefault',
+          'noop'
+          ]
+        });
+        
+        // Create Todo Actor
+        const todoActor = await os.createActor('./maia/todo.actor.maia', document.getElementById('actor-todo'));
+        
+        // Initialize filtered arrays
+        if (todoActor.context.todos) {
+          todoActor.context.todosTodo = todoActor.context.todos.filter(t => !t.done);
+          todoActor.context.todosDone = todoActor.context.todos.filter(t => t.done);
+        }
+        
+        console.log('✅ Todo Actor with State Machine:', todoActor.machine?.currentState);
+        console.log('💡 Inspect #shadow-root elements to see complete style isolation');
+        console.log('🎯 Try the todo app - all actions now go through state machine!');
+        
+        // Expose OS globally for debugging
+        window.MaiaOS = os;
+        window.os = os;
+        window.engines = os.getEngines();
+        window.todoActor = todoActor;
+        
+      } catch (error) {
+        console.error('❌ Boot failed:', error);
+        console.error('Stack:', error.stack);
+      }
+    }
+    
+    boot();
+  </script>
+</body>
+</html>

@@ -1,6 +1,11 @@
 /**
  * ViewEngine - Renders .maia view files to Shadow DOM
+ * v0.2: Added send() syntax for state machine events
  * Handles: DSL operations, $each loops, $if conditionals, events
+ * 
+ * Event syntax:
+ * - v0.1: { action: "@core/createTodo", payload: {...} }
+ * - v0.2: { send: "CREATE_TODO", payload: {...} }
  */
 export class ViewEngine {
   constructor(evaluator, actorEngine) {
@@ -194,7 +199,7 @@ export class ViewEngine {
   /**
    * Attach event listeners to an element
    * @param {HTMLElement} element - The target element
-   * @param {Object} events - Event definitions { eventName: { action, payload } }
+   * @param {Object} events - Event definitions { eventName: { send, payload } }
    * @param {Object} data - The data context
    * @param {string} actorId - The actor ID (captured in closure)
    */
@@ -206,26 +211,42 @@ export class ViewEngine {
     }
   }
 
+
   /**
    * Handle an event
+   * v0.2: Supports both action (v0.1) and send (v0.2) syntax
    * @param {Event} e - The DOM event
-   * @param {Object} eventDef - Event definition { action, payload, key? }
+   * @param {Object} eventDef - Event definition { action, payload, key? } or { send, payload, key? }
    * @param {Object} data - The data context
    * @param {HTMLElement} element - The target element
    * @param {string} actorId - The actor ID (from closure)
    */
   handleEvent(e, eventDef, data, element, actorId) {
-    console.log('🎯 Event triggered:', e.type, 'Element:', element.tagName, 'Action:', eventDef.action);
+    // v0.2: JSON-native event syntax
+    const eventName = eventDef.send;
+    let payload = eventDef.payload || {};
     
-    // Prevent default for drag-related events
-    if (e.type === 'dragover' || e.type === 'drop') {
+    console.log('🎯 Event triggered:', e.type, 'Element:', element.tagName, 'Send:', eventName);
+    
+    // Prevent default for drag-related events (always)
+    if (e.type === 'dragover') {
       e.preventDefault();
       e.stopPropagation();
     }
     
-    // Handle preventDefault action (for dragover, drop, etc.)
-    if (eventDef.action === '@core/preventDefault') {
+    if (e.type === 'drop') {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    // Handle special events that don't go to state machine
+    if (eventName === 'DRAG_OVER') {
       return; // Already prevented above
+    }
+    
+    if (eventName === 'STOP_PROPAGATION') {
+      e.stopPropagation();
+      return; // Don't send to state machine
     }
     
     // Check key filter (for keyboard events)
@@ -234,9 +255,6 @@ export class ViewEngine {
       return; // Ignore if key doesn't match
     }
 
-    const action = eventDef.action;
-    let payload = eventDef.payload;
-
     console.log('📦 Raw payload:', payload);
 
     // Resolve payload
@@ -244,11 +262,16 @@ export class ViewEngine {
 
     console.log('📦 Resolved payload:', payload, 'ActorID:', actorId);
 
-    // Dispatch to action handler with actorId from closure
+    // Dispatch event to state machine
     if (this.actorEngine) {
-      this.actorEngine.handleAction(action, payload, actorId);
+      const actor = this.actorEngine.getActor(actorId);
+      if (actor && actor.machine && this.actorEngine.stateEngine) {
+        this.actorEngine.stateEngine.send(actor.machine.id, eventName, payload);
+      } else {
+        console.warn(`Cannot send event ${eventName}: Actor has no state machine`);
+      }
     } else {
-      console.warn('No actorEngine set, cannot handle action:', action);
+      console.warn('No actorEngine set, cannot handle event:', eventName);
     }
   }
 

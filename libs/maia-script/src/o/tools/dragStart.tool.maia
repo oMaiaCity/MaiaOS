@@ -1,0 +1,20 @@
+{
+  "$type": "tool",
+  "$id": "tool_dragStart_001",
+  "name": "@dragdrop/start",
+  "description": "Starts a drag operation and stores the dragged item ID",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "entityType": {
+        "type": "string",
+        "description": "The type of entity being dragged"
+      },
+      "id": {
+        "type": "string",
+        "description": "The ID of the item being dragged"
+      }
+    },
+    "required": ["id"]
+  }
+}

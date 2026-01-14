@@ -1,7 +1,8 @@
 /**
  * MaiaScriptEvaluator - Minimal DSL evaluator for prototype
- * Supports: $context, $item, $if
- * Now registry-aware for extensible DSL operations
+ * v0.2 Syntax: $key (context), $$key (item)
+ * Supports: $context, $item, $if, $$shorthand
+ * Registry-aware for extensible DSL operations
  */
 export class MaiaScriptEvaluator {
   constructor(moduleRegistry = null) {
@@ -20,7 +21,7 @@ export class MaiaScriptEvaluator {
     if (typeof expression === 'boolean') return expression;
     if (expression === null || expression === undefined) return expression;
     
-    // Handle compact shortcut syntax: $contextKey or $item.key
+    // Handle compact shortcut syntax: $key (context) or $$key (item)
     if (typeof expression === 'string' && expression.startsWith('$')) {
       return this.evaluateShortcut(expression, data);
     }
@@ -88,22 +89,31 @@ export class MaiaScriptEvaluator {
   }
 
   /**
-   * Evaluate compact shortcut syntax: $contextKey or $item.key
-   * @param {string} shortcut - The shortcut string (e.g., "$title", "$item.text")
+   * Evaluate compact shortcut syntax: $key or $$key
+   * v0.2 syntax:
+   * - $key → context.key (implicit context)
+   * - $$key → item.key (explicit item with double-dollar)
+   * @param {string} shortcut - The shortcut string (e.g., "$title", "$$text")
    * @param {Object} data - The data context
    * @returns {any} The evaluated result
    */
   evaluateShortcut(shortcut, data) {
-    // Remove leading $
-    const path = shortcut.substring(1);
+    // $$ prefix = item (double-dollar for iteration items)
+    if (shortcut.startsWith('$$')) {
+      const path = shortcut.substring(2); // Remove $$
+      return this.resolvePath(data.item, path);
+    }
     
-    // Check if it's an item path (starts with "item.")
+    // $ prefix = context (single-dollar for context)
+    const path = shortcut.substring(1); // Remove $
+    
+    // Legacy support: Check if path starts with "item." (backwards compatibility)
     if (path.startsWith('item.')) {
       const itemPath = path.substring(5); // Remove "item."
       return this.resolvePath(data.item, itemPath);
     }
     
-    // Otherwise, it's a context path
+    // Default: resolve to context
     return this.resolvePath(data.context, path);
   }
 
