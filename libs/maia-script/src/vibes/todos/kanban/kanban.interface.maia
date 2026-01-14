@@ -1,6 +1,13 @@
 {
   "$type": "actor.interface",
   "inbox": {
+    "SUBSCRIBE_TO_TODOS": {
+      "payload": {
+        "schema": "string",
+        "filter": "object",
+        "target": "string"
+      }
+    },
     "DRAG_START": {
       "payload": { "schema": "string", "id": "string" }
     },
@@ -17,21 +24,30 @@
         "value": "boolean"
       }
     },
-    "TOGGLE_TODO": {
+    "TOGGLE_BUTTON": {
       "payload": { "id": "string" }
     },
-    "DELETE_TODO": {
+    "DELETE_BUTTON": {
       "payload": { "id": "string" }
     },
     "TODO_CREATED": {
       "payload": { "id": "string", "text": "string" }
-    }
-  },
-  "publishes": {
-    "TODO_UPDATED": {
+    },
+    "TODO_COMPLETED": {
+      "payload": { "id": "string" }
+    },
+    "TODO_DELETED": {
       "payload": { "id": "string" }
     }
   },
-  "subscriptions": [],
+  "publishes": {
+    "TOGGLE_BUTTON": {
+      "payload": { "id": "string" }
+    },
+    "DELETE_BUTTON": {
+      "payload": { "id": "string" }
+    }
+  },
+  "subscriptions": ["actor_vibe_001"],
   "watermark": 0
 }

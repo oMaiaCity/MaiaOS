@@ -8,6 +8,8 @@
 
 // Import ReactiveStore
 import { ReactiveStore } from '../reactive-store/reactive.store.js';
+// Import MessageQueue
+import { MessageQueue } from '../message-queue/message.queue.js';
 
 export class ActorEngine {
   constructor(styleEngine, viewEngine, moduleRegistry, toolEngine, stateEngine = null) {
@@ -17,6 +19,8 @@ export class ActorEngine {
     this.toolEngine = toolEngine; // ToolEngine for action dispatch
     this.stateEngine = stateEngine; // StateEngine for state machines (optional)
     this.actors = new Map();
+    this.pendingMessages = new Map(); // Queue messages for actors that don't exist yet
+    this.messageQueues = new Map(); // Resilient message queues per actor
     
     // Initialize ReactiveStore for observable data management
     this.reactiveStore = new ReactiveStore('maiaos_data');
@@ -44,7 +48,7 @@ export class ActorEngine {
         // Handle subfolder structure: if actor is in a subfolder, return "subfolder/subfolder"
         // For now, check if baseName matches known subfolder patterns
         // kanban -> kanban/kanban, list -> list/list, vibe -> vibe/vibe, list_item -> list-item/list-item
-        if (baseName === 'kanban' || baseName === 'list' || baseName === 'vibe') {
+        if (baseName === 'kanban' || baseName === 'list' || baseName === 'vibe' || baseName === 'composite' || baseName === 'service') {
           return `${baseName}/${baseName}`;
         }
         // Convert underscore to hyphen for list-item
@@ -113,8 +117,6 @@ export class ActorEngine {
   async createActor(actorConfig, containerElement) {
     const actorId = actorConfig.$id;
     
-    console.log(`[ActorEngine] Creating actor: ${actorId}`, { viewRef: actorConfig.viewRef, contextRef: actorConfig.contextRef });
-    
     // Create shadow root
     const shadowRoot = containerElement.attachShadow({ mode: 'open' });
     
@@ -122,9 +124,7 @@ export class ActorEngine {
     const styleSheets = await this.styleEngine.getStyleSheets(actorConfig);
     
     // Load view
-    console.log(`[ActorEngine] Loading view for ${actorId}: ${actorConfig.viewRef}`);
     const viewDef = await this.viewEngine.loadView(actorConfig.viewRef);
-    console.log(`[ActorEngine] View loaded for ${actorId}:`, viewDef ? 'success' : 'FAILED');
     
     // Load context (either from contextRef or inline context)
     let context;
@@ -147,7 +147,9 @@ export class ActorEngine {
       subscriptions: actorConfig.subscriptions || [],
       inboxWatermark: actorConfig.inboxWatermark || 0,
       // v0.4: Reactive query observers (for cleanup)
-      _queryObservers: []
+      _queryObservers: [],
+      // Track if initial render has completed (for query subscription re-render logic)
+      _initialRenderComplete: false
     };
     this.actors.set(actorId, actor);
     
@@ -224,9 +226,34 @@ export class ActorEngine {
     }
     
     // Initial render with actor ID
-    console.log(`[ActorEngine] Rendering actor ${actorId} with view:`, viewDef ? 'present' : 'MISSING');
     this.viewEngine.render(viewDef, actor.context, shadowRoot, styleSheets, actorId);
-    console.log(`[ActorEngine] Render complete for ${actorId}`);
+    
+    // Mark initial render as complete (queries that execute after this should trigger re-renders)
+    actor._initialRenderComplete = true;
+    
+    // Ensure message queue exists for this actor
+    if (!this.messageQueues.has(actorId)) {
+      this.messageQueues.set(actorId, new MessageQueue(actorId, this));
+    }
+    const messageQueue = this.messageQueues.get(actorId);
+
+    // Deliver any pending messages that were queued before actor was created
+    if (this.pendingMessages.has(actorId)) {
+      const pending = this.pendingMessages.get(actorId);
+      // Deduplicate messages by ID before delivering
+      const uniqueMessages = new Map();
+      for (const message of pending) {
+        const key = message.id || `${message.type}_${message.timestamp}`;
+        if (!uniqueMessages.has(key)) {
+          uniqueMessages.set(key, message);
+        }
+      }
+      for (const message of uniqueMessages.values()) {
+        // Use resilient queue instead of direct inbox push
+        messageQueue.enqueue(message);
+      }
+      this.pendingMessages.delete(actorId);
+    }
     
     // Start processing messages (if inbox has messages)
     if (actor.inbox.length > 0) {
@@ -283,8 +310,6 @@ export class ActorEngine {
    * @param {Object} actor - The actor instance
    */
   async rerender(actor) {
-    console.log(`🔄 Re-rendering actor: ${actor.id}`);
-    
     // Store focused element info before clearing DOM
     const activeElement = actor.shadowRoot.activeElement;
     const focusInfo = this._captureFocusInfo(activeElement);
@@ -305,8 +330,6 @@ export class ActorEngine {
     if (focusInfo) {
       this._restoreFocus(actor.shadowRoot, focusInfo);
     }
-    
-    console.log(`✅ Re-render complete for: ${actor.id}`);
   }
 
   /**
@@ -317,10 +340,14 @@ export class ActorEngine {
   _captureFocusInfo(element) {
     if (!element || element.tagName === 'BODY') return null;
     
+    // Prefer unique identifier if available (for inputs/textareas)
+    const uniqueId = element.getAttribute('data-actor-input');
+    
     return {
       tagName: element.tagName.toLowerCase(),
       className: element.className,
       type: element.type,
+      uniqueId: uniqueId, // Unique identifier for reliable restoration
       selectionStart: element.selectionStart,
       selectionEnd: element.selectionEnd
     };
@@ -332,9 +359,16 @@ export class ActorEngine {
    * @param {Object} focusInfo - Focus information
    */
   _restoreFocus(shadowRoot, focusInfo) {
-    // Wait for next tick to ensure DOM is ready
-    setTimeout(() => {
-      // Find matching element by tag, class, and type
+    // Try to find element immediately (synchronous)
+    let element = null;
+    
+    // Prefer unique identifier if available (most reliable)
+    if (focusInfo.uniqueId) {
+      element = shadowRoot.querySelector(`[data-actor-input="${focusInfo.uniqueId}"]`);
+    }
+    
+    // Fallback to tag/class/type selector if no unique ID
+    if (!element) {
       let selector = focusInfo.tagName;
       if (focusInfo.className) {
         selector += `.${focusInfo.className.split(' ').join('.')}`;
@@ -342,17 +376,57 @@ export class ActorEngine {
       if (focusInfo.type) {
         selector += `[type="${focusInfo.type}"]`;
       }
-      
-      const element = shadowRoot.querySelector(selector);
-      if (element) {
+      element = shadowRoot.querySelector(selector);
+    }
+    
+    if (element) {
+      // Use requestAnimationFrame for focus restoration to ensure DOM is ready
+      // But try immediately first for better responsiveness
+      try {
         element.focus();
-        
         // Restore cursor position for text inputs
-        if (focusInfo.selectionStart !== undefined) {
-          element.setSelectionRange(focusInfo.selectionStart, focusInfo.selectionEnd);
+        if (focusInfo.selectionStart !== undefined && focusInfo.selectionStart !== null) {
+          try {
+            element.setSelectionRange(focusInfo.selectionStart, focusInfo.selectionEnd);
+          } catch (e) {
+            // Some input types don't support setSelectionRange, ignore
+          }
         }
+      } catch (e) {
+        // If immediate focus fails, try again on next frame
+        requestAnimationFrame(() => {
+          const retryElement = shadowRoot.querySelector(`[data-actor-input="${focusInfo.uniqueId}"]`) ||
+                               shadowRoot.querySelector(`${focusInfo.tagName}${focusInfo.className ? '.' + focusInfo.className.split(' ').join('.') : ''}${focusInfo.type ? `[type="${focusInfo.type}"]` : ''}`);
+          if (retryElement) {
+            retryElement.focus();
+            if (focusInfo.selectionStart !== undefined && focusInfo.selectionStart !== null) {
+              try {
+                retryElement.setSelectionRange(focusInfo.selectionStart, focusInfo.selectionEnd);
+              } catch (e) {
+                // Ignore
+              }
+            }
+          }
+        });
       }
-    }, 0);
+    } else {
+      // Element not found immediately, try again on next frame
+      requestAnimationFrame(() => {
+        const retryElement = focusInfo.uniqueId 
+          ? shadowRoot.querySelector(`[data-actor-input="${focusInfo.uniqueId}"]`)
+          : shadowRoot.querySelector(`${focusInfo.tagName}${focusInfo.className ? '.' + focusInfo.className.split(' ').join('.') : ''}${focusInfo.type ? `[type="${focusInfo.type}"]` : ''}`);
+        if (retryElement) {
+          retryElement.focus();
+          if (focusInfo.selectionStart !== undefined && focusInfo.selectionStart !== null) {
+            try {
+              retryElement.setSelectionRange(focusInfo.selectionStart, focusInfo.selectionEnd);
+            } catch (e) {
+              // Ignore
+            }
+          }
+        }
+      });
+    }
   }
 
   /**
@@ -447,30 +521,36 @@ export class ActorEngine {
    */
   sendMessage(actorId, message) {
     const actor = this.actors.get(actorId);
-    if (!actor) {
-      console.warn(`Actor not found: ${actorId}`);
-      return;
+    
+    // Ensure message queue exists for this actor
+    if (!this.messageQueues.has(actorId)) {
+      this.messageQueues.set(actorId, new MessageQueue(actorId, this));
     }
+    const messageQueue = this.messageQueues.get(actorId);
 
-    // Validate incoming message against interface.inbox
-    if (actor.interface) {
-      const isValid = this._validateMessage(message, actor.interface, 'inbox', actorId);
-      if (!isValid) {
-        console.error(`[ActorEngine] Rejected invalid message ${message.type} to ${actorId}`);
+      if (!actor) {
+        // Actor not created yet - queue message for later
+        // This happens during initialization when vibe publishes before children exist
+        if (!this.pendingMessages.has(actorId)) {
+          this.pendingMessages.set(actorId, []);
+        }
+        // Deduplicate: don't queue the same message twice
+        const pending = this.pendingMessages.get(actorId);
+        const key = message.id || `${message.type}_${message.timestamp}`;
+        const alreadyQueued = pending.some(m => (m.id || `${m.type}_${m.timestamp}`) === key);
+        if (!alreadyQueued) {
+          pending.push(message);
+        }
         return;
       }
-    }
 
     // Add timestamp if not present
     if (!message.timestamp) {
       message.timestamp = Date.now();
     }
 
-    // Append to inbox
-    actor.inbox.push(message);
-
-    // Process new messages
-    this.processMessages(actorId);
+    // Use resilient message queue for delivery
+    messageQueue.enqueue(message);
   }
 
   /**
@@ -498,15 +578,21 @@ export class ActorEngine {
     // Add metadata
     message.from = fromActorId;
     message.timestamp = Date.now();
-
-    // Send to all subscribed actors
-    let sentCount = 0;
-    for (const subscriberId of actor.subscriptions) {
-      this.sendMessage(subscriberId, { ...message });
-      sentCount++;
+    
+    // Generate base message ID if not present
+    if (!message.id) {
+      message.id = `${message.type}_${message.timestamp}_${Math.random().toString(36).substr(2, 9)}`;
     }
 
-    console.log(`[ActorEngine] Published ${message.type} from ${fromActorId} to ${sentCount} subscribers`);
+    // Send to all subscribed actors (each gets a unique copy with same base ID + subscriber suffix)
+    let sentCount = 0;
+    for (const subscriberId of actor.subscriptions) {
+      this.sendMessage(subscriberId, { 
+        ...message,
+        id: `${message.id}_${subscriberId}` // Unique ID per subscriber to allow deduplication
+      });
+      sentCount++;
+    }
   }
 
   /**
@@ -535,15 +621,26 @@ export class ActorEngine {
     }
 
     // Filter messages after watermark (unconsumed messages)
-    const newMessages = actor.inbox.filter(
-      msg => msg.timestamp > actor.inboxWatermark
-    );
+    // Also deduplicate by message ID to prevent processing the same message twice
+    const seenMessageIds = new Set();
+    const newMessages = actor.inbox.filter(msg => {
+      // Skip if already processed (watermark check)
+      if (msg.timestamp <= actor.inboxWatermark) {
+        return false;
+      }
+      // Skip if duplicate (same ID already seen in this batch)
+      if (msg.id && seenMessageIds.has(msg.id)) {
+        return false;
+      }
+      if (msg.id) {
+        seenMessageIds.add(msg.id);
+      }
+      return true;
+    });
 
     if (newMessages.length === 0) {
       return;
     }
-
-    console.log(`[ActorEngine] Processing ${newMessages.length} new messages for ${actorId}`);
 
     // Sort by timestamp (oldest first)
     newMessages.sort((a, b) => a.timestamp - b.timestamp);
@@ -571,8 +668,9 @@ export class ActorEngine {
       }
     }
 
-    // Rerender actor after processing messages
-    await this.rerender(actor);
+    // Don't automatically re-render here - let the state engine handle re-renders
+    // The state engine will only re-render if the state actually changed
+    // This prevents unnecessary re-renders for messages like UPDATE_INPUT that don't change state
   }
 
   /**
@@ -590,7 +688,6 @@ export class ActorEngine {
     // Add actorA to actorB's subscriptions
     if (!actorB.subscriptions.includes(actorIdA)) {
       actorB.subscriptions.push(actorIdA);
-      console.log(`[ActorEngine] ${actorIdA} subscribed to ${actorIdB}`);
     }
   }
 
@@ -610,7 +707,6 @@ export class ActorEngine {
     const index = actorB.subscriptions.indexOf(actorIdA);
     if (index !== -1) {
       actorB.subscriptions.splice(index, 1);
-      console.log(`[ActorEngine] ${actorIdA} unsubscribed from ${actorIdB}`);
     }
   }
 

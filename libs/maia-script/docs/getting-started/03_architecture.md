@@ -268,6 +268,38 @@ libs/maia-script/src/
 
 ## Key Architectural Patterns
 
+### Service Actor / UI Actor Separation
+
+MaiaOS follows a clear separation between **service actors** (orchestration) and **UI actors** (presentation):
+
+**Service Actors:**
+- Orchestrate data queries and mutations
+- Manage application-level state
+- Coordinate between UI actors via messages
+- Typically have minimal or no view (only render child actors)
+
+**UI Actors:**
+- Render user interfaces
+- Handle user interactions
+- Receive query configurations from service actors
+- Send generic UI events to service actors
+
+**Default Vibe Pattern:**
+```
+Vibe Entry Point
+  └── Service Actor (orchestrating, minimal view)
+        └── Composite Actor (first UI actor, shared structure)
+              └── UI Actors (leaf components)
+```
+
+This pattern ensures:
+- ✅ Clear separation of concerns
+- ✅ Scalable through composition
+- ✅ Message-based communication
+- ✅ Consistent architecture across vibes
+
+See [Actors Documentation](../vibecreators/02-actors.md#default-vibe-pattern-service--composite--ui) for details.
+
 ### Schema-Agnostic Design
 
 Tools don't know about specific data types:

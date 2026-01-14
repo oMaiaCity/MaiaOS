@@ -1,0 +1,85 @@
+{
+  "$type": "state",
+  "$id": "state_composite_001",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "SWITCH_VIEW": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@context/update",
+              "payload": {
+                "viewMode": "$$viewMode",
+                "listButtonActive": {
+                  "$eq": ["$$viewMode", "list"]
+                },
+                "kanbanButtonActive": {
+                  "$eq": ["$$viewMode", "kanban"]
+                },
+                "currentView": {
+                  "$if": {
+                    "condition": { "$eq": ["$$viewMode", "list"] },
+                    "then": "@list",
+                    "else": "@kanban"
+                  }
+                }
+              }
+            },
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "SWITCH_VIEW",
+                "payload": { "viewMode": "$$viewMode" },
+                "target": "actor_vibe_001"
+              }
+            }
+          ]
+        },
+        "UPDATE_INPUT": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@context/update",
+              "payload": { "newTodoText": "$$newTodoText" }
+            },
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "UPDATE_INPUT",
+                "payload": { "newTodoText": "$$newTodoText" },
+                "target": "actor_vibe_001"
+              }
+            }
+          ]
+        },
+        "CREATE_BUTTON": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "CREATE_BUTTON",
+                "payload": { "text": "$$text" },
+                "target": "actor_vibe_001"
+              }
+            }
+          ]
+        },
+        "INPUT_CLEARED": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@context/update",
+              "payload": { "newTodoText": "" }
+            }
+          ]
+        },
+        "SUBSCRIBE_TO_TODOS": {
+          "target": "idle"
+        }
+      }
+    }
+  }
+}

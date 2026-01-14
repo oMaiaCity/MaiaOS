@@ -160,6 +160,29 @@ function TodoApp() {
 
 That's the entire actor. Context, state, and view are separate files. No JavaScript. No build. Just JSON.
 
+## Service/UI Actor Architecture
+
+MaiaOS uses a **service actor / UI actor** pattern for building applications:
+
+**Service Actors** (orchestration):
+- Entry point for every vibe
+- Handle business logic and data management
+- Coordinate between UI actors
+- Minimal or no view (only render child actors)
+
+**UI Actors** (presentation):
+- Render user interfaces
+- Handle user interactions
+- Receive data/configurations from service actors
+- Send generic events to service actors
+
+**Default Pattern:**
+```
+Vibe → Service Actor → Composite Actor → UI Actors
+```
+
+This ensures clean separation of concerns and scalable architecture. See [Actors Documentation](../vibecreators/02-actors.md#default-vibe-pattern-service--composite--ui) for details.
+
 ## Key Differentiators
 
 ### vs. Traditional Frameworks (React, Vue, Svelte)

@@ -1,0 +1,12 @@
+{
+  "$type": "context",
+  "$id": "context_composite_001",
+  "title": "Todo List",
+  "inputPlaceholder": "Add a new todo...",
+  "addButtonText": "Add",
+  "viewMode": "list",
+  "currentView": "@list",
+  "listButtonActive": true,
+  "kanbanButtonActive": false,
+  "newTodoText": ""
+}

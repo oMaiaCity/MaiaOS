@@ -1,0 +1,38 @@
+{
+  "$type": "actor.interface",
+  "inbox": {
+    "SWITCH_VIEW": {
+      "payload": { "viewMode": "string" }
+    },
+    "UPDATE_INPUT": {
+      "payload": { "newTodoText": "string" }
+    },
+    "CREATE_BUTTON": {
+      "payload": { "text": "string" }
+    },
+    "INPUT_CLEARED": {
+      "payload": {}
+    },
+    "SUBSCRIBE_TO_TODOS": {
+      "payload": {
+        "schema": "string",
+        "filter": "object",
+        "target": "string",
+        "actorId": "string"
+      }
+    }
+  },
+  "publishes": {
+    "SWITCH_VIEW": {
+      "payload": { "viewMode": "string" }
+    },
+    "UPDATE_INPUT": {
+      "payload": { "newTodoText": "string" }
+    },
+    "CREATE_BUTTON": {
+      "payload": { "text": "string" }
+    }
+  },
+  "subscriptions": ["actor_vibe_001"],
+  "watermark": 0
+}

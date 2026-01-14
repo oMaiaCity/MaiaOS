@@ -1,6 +1,13 @@
 {
   "$type": "actor.interface",
   "inbox": {
+    "SUBSCRIBE_TO_TODOS": {
+      "payload": {
+        "schema": "string",
+        "filter": "object",
+        "target": "string"
+      }
+    },
     "TODO_CREATED": {
       "payload": { "id": "string", "text": "string" }
     },
@@ -10,18 +17,18 @@
     "TODO_DELETED": {
       "payload": { "id": "string" }
     },
-    "TOGGLE_TODO": {
+    "TOGGLE_BUTTON": {
       "payload": { "id": "string" }
     },
-    "DELETE_TODO": {
+    "DELETE_BUTTON": {
       "payload": { "id": "string" }
     }
   },
   "publishes": {
-    "TODO_COMPLETED": {
+    "TOGGLE_BUTTON": {
       "payload": { "id": "string" }
     },
-    "TODO_DELETED": {
+    "DELETE_BUTTON": {
       "payload": { "id": "string" }
     }
   },

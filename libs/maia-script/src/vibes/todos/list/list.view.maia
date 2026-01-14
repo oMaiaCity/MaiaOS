@@ -22,7 +22,7 @@
             "text": "✓",
             "$on": {
               "click": {
-                "send": "TOGGLE_TODO",
+                "send": "TOGGLE_BUTTON",
                 "payload": { "id": "$$id" }
               }
             }
@@ -33,7 +33,7 @@
             "text": "✕",
             "$on": {
               "click": {
-                "send": "DELETE_TODO",
+                "send": "DELETE_BUTTON",
                 "payload": { "id": "$$id" }
               }
             }

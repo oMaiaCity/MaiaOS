@@ -8,7 +8,7 @@ A vibe is a JSON manifest file (`.vibe.maia`) that serves as an "app store listi
 
 **What vibes provide:**
 - App metadata (name, description)
-- Reference to the root actor
+- Reference to the root actor (always a **service actor**)
 - Marketplace/catalog integration
 - Single entry point for loading apps
 
@@ -18,6 +18,20 @@ A vibe is a JSON manifest file (`.vibe.maia`) that serves as an "app store listi
 - Not UI definitions (that's in views)
 
 > **Analogy:** If actors are the "executable," vibes are the "app store listing" that describes and loads them.
+
+### Default Pattern: Service Actor Entry Point
+
+**By default, every vibe loads a service actor** as its entry point. This service actor orchestrates the application and loads UI actors as children.
+
+```
+Vibe → Service Actor → Composite Actor → UI Actors
+```
+
+This pattern ensures:
+- ✅ Clear separation of concerns (service logic vs. UI)
+- ✅ Scalable architecture (add UI actors as needed)
+- ✅ Message-based communication (loose coupling)
+- ✅ Consistent structure across all vibes
 
 ## Vibe Structure
 
@@ -84,22 +98,40 @@ my-app/
 }
 ```
 
-### Step 3: Create Your Root Actor
+### Step 3: Create Your Root Service Actor
 
-The actor referenced in the vibe is your app's entry point:
+The actor referenced in the vibe is your app's entry point - **always a service actor**:
 
-**`myapp.actor.maia`:**
+**`myapp.actor.maia` (Service Actor):**
 ```json
 {
   "$type": "actor",
   "$id": "actor_myapp_001",
   "id": "actor_myapp_001",
+  "role": "service",
   "contextRef": "myapp",
   "stateRef": "myapp",
-  "viewRef": "myapp",
-  "styleRef": "brand"
+  "viewRef": "myapp",      // ← Minimal view (only renders child)
+  "styleRef": "brand",
+  "children": {
+    "composite": "actor_composite_001"  // ← Loads first UI actor
+  }
 }
 ```
+
+**Service Actor View (Minimal):**
+```json
+{
+  "$type": "view",
+  "container": {
+    "tag": "div",
+    "class": "service-container",
+    "$slot": "$composite"  // ← Only renders child actor
+  }
+}
+```
+
+The service actor orchestrates the application and loads UI actors as children. See [Actors](./02-actors.md#default-vibe-pattern-service--composite--ui) for the complete pattern.
 
 ## Loading Vibes
 
@@ -202,11 +234,31 @@ Vibe (App Manifest)
 vibes/todos/
 ├── todos.vibe.maia         # App manifest
 ├── index.html              # App launcher
-├── todo.actor.maia         # Root actor
-├── todo.context.maia       # Runtime state
-├── todo.state.maia         # Behavior (state machine)
-├── todo.view.maia          # UI definition
-└── brand.style.maia        # Design system
+├── vibe/                   # Service actor (entry point)
+│   ├── vibe.actor.maia    # Service actor definition
+│   ├── vibe.context.maia   # Service actor context
+│   ├── vibe.state.maia     # Service actor state machine
+│   ├── vibe.view.maia      # Minimal view (renders child)
+│   └── vibe.interface.maia # Message interface
+├── composite/              # Composite actor (first UI actor)
+│   ├── composite.actor.maia
+│   ├── composite.context.maia
+│   ├── composite.state.maia
+│   ├── composite.view.maia
+│   └── composite.interface.maia
+├── list/                   # UI actor
+│   ├── list.actor.maia
+│   ├── list.context.maia
+│   ├── list.state.maia
+│   ├── list.view.maia
+│   └── list.interface.maia
+├── kanban/                 # UI actor
+│   ├── kanban.actor.maia
+│   ├── kanban.context.maia
+│   ├── kanban.state.maia
+│   ├── kanban.view.maia
+│   └── kanban.interface.maia
+└── brand.style.maia        # Shared design system
 ```
 
 ### Vibe Manifest
@@ -218,9 +270,11 @@ vibes/todos/
   "$id": "vibe_todos_001",
   "name": "Todo List",
   "description": "A complete todo list application with state machines, drag-drop kanban view, and AI-compatible tools. Showcases MaiaOS actor system, message passing, and declarative UI.",
-  "actor": "./todo.actor.maia"
+  "actor": "./vibe/vibe.actor.maia"
 }
 ```
+
+**Note:** The vibe references a **service actor** (`vibe/vibe.actor.maia`) which orchestrates the application and loads UI actors as children.
 
 ### Launcher HTML
 

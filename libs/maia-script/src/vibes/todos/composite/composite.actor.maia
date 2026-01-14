@@ -1,0 +1,20 @@
+{
+  "$type": "actor",
+  "$id": "actor_composite_001",
+  "role": "composite",
+  "contextRef": "composite/composite",
+  "viewRef": "composite/composite",
+  "stateRef": "composite/composite",
+  "interfaceRef": "composite/composite",
+  "brandRef": "co_brand_001",
+  "styleRef": "todo",
+  "children": {
+    "list": "actor_list_001",
+    "kanban": "actor_kanban_001"
+  },
+  "subscriptions": [
+    "actor_vibe_001"
+  ],
+  "inbox": [],
+  "inboxWatermark": 0
+}

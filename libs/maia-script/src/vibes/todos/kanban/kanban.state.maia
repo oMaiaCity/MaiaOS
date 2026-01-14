@@ -1,36 +1,23 @@
 {
   "$type": "state",
   "$id": "state_kanban_001",
-  "initial": "loading",
+  "initial": "idle",
   "states": {
-    "loading": {
-      "entry": [
-        {
-          "tool": "@query/subscribe",
-          "payload": {
-            "schema": "todos",
-            "filter": { "field": "done", "op": "eq", "value": false },
-            "target": "todosTodo"
-          }
-        },
-        {
-          "tool": "@query/subscribe",
-          "payload": {
-            "schema": "todos",
-            "filter": { "field": "done", "op": "eq", "value": true },
-            "target": "todosDone"
-          }
-        }
-      ],
-      "on": {
-        "SUCCESS": "idle",
-        "TODO_CREATED": "loading",
-        "TODO_COMPLETED": "loading",
-        "TODO_DELETED": "loading"
-      }
-    },
     "idle": {
       "on": {
+        "SUBSCRIBE_TO_TODOS": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@query/subscribe",
+              "payload": {
+                "schema": "$$schema",
+                "filter": "$$filter",
+                "target": "$$target"
+              }
+            }
+          ]
+        },
         "DRAG_START": {
           "target": "dragging"
         },
@@ -57,13 +44,40 @@
         "DROP": {
           "target": "dropping"
         },
-        "TOGGLE_TODO": {
-          "target": "toggling",
+        "TOGGLE_BUTTON": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "TOGGLE_BUTTON",
+                "payload": { "id": "$$id" }
+              }
+            }
+          ],
           "guard": { "$ne": ["$$id", null] }
         },
-        "DELETE_TODO": {
-          "target": "deleting",
+        "DELETE_BUTTON": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "DELETE_BUTTON",
+                "payload": { "id": "$$id" }
+              }
+            }
+          ],
           "guard": { "$ne": ["$$id", null] }
+        },
+        "TODO_CREATED": {
+          "target": "idle"
+        },
+        "TODO_COMPLETED": {
+          "target": "idle"
+        },
+        "TODO_DELETED": {
+          "target": "idle"
         }
       }
     },
@@ -120,33 +134,6 @@
             }
           ]
         },
-        "ERROR": "error"
-      }
-    },
-    "toggling": {
-      "entry": {
-        "tool": "@mutation/toggle",
-        "payload": { 
-          "schema": "todos",
-          "id": "$$id",
-          "field": "done"
-        }
-      },
-      "on": {
-        "SUCCESS": "idle",
-        "ERROR": "error"
-      }
-    },
-    "deleting": {
-      "entry": {
-        "tool": "@mutation/delete",
-        "payload": { 
-          "schema": "todos",
-          "id": "$$id"
-        }
-      },
-      "on": {
-        "SUCCESS": "idle",
         "ERROR": "error"
       }
     },

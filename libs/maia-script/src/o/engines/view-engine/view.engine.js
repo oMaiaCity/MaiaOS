@@ -24,6 +24,9 @@ export class ViewEngine {
     this.moduleRegistry = moduleRegistry;
     this.viewCache = new Map();
     
+    // Track input counters per actor for stable IDs across re-renders
+    this.actorInputCounters = new Map();
+    
     // Map fake CoMap IDs to actual filenames (simulates Jazz resolution)
     this.coMapIdToFile = {
       'co_view_001': 'todo',
@@ -77,6 +80,10 @@ export class ViewEngine {
    * @param {string} actorId - The actor ID
    */
   render(viewDef, context, shadowRoot, styleSheets, actorId) {
+    // Reset input counter for this actor at start of render
+    // This ensures inputs get consistent IDs across re-renders (same position = same ID)
+    this.actorInputCounters.set(actorId, 0);
+    
     // Attach stylesheets to shadow root FIRST (before rendering)
     // This ensures styles are available when elements are created
     shadowRoot.adoptedStyleSheets = styleSheets;
@@ -149,10 +156,23 @@ export class ViewEngine {
     // Handle value (for input/textarea elements)
     if (node.value !== undefined) {
       const resolvedValue = this.evaluator.evaluate(node.value, data);
-      if (element.tagName === 'INPUT') {
-        element.value = resolvedValue || '';
-      } else if (element.tagName === 'TEXTAREA') {
-        element.textContent = resolvedValue || '';
+      if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+        if (element.tagName === 'INPUT') {
+          element.value = resolvedValue || '';
+        } else {
+          element.textContent = resolvedValue || '';
+        }
+        
+        // Add stable unique identifier for focus restoration
+        // Use a counter per actor to ensure same input gets same ID across re-renders
+        if (!this.actorInputCounters.has(actorId)) {
+          this.actorInputCounters.set(actorId, 0);
+        }
+        const inputIndex = this.actorInputCounters.get(actorId);
+        this.actorInputCounters.set(actorId, inputIndex + 1);
+        
+        const inputId = `${actorId}_input_${inputIndex}`;
+        element.setAttribute('data-actor-input', inputId);
       }
     }
 

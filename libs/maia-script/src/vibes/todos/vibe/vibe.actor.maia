@@ -1,7 +1,7 @@
 {
   "$type": "actor",
   "$id": "actor_vibe_001",
-  "role": "vibe-root",
+  "role": "vibe",
   "contextRef": "vibe/vibe",
   "viewRef": "vibe/vibe",
   "stateRef": "vibe/vibe",
@@ -9,10 +9,10 @@
   "brandRef": "co_brand_001",
   "styleRef": "todo",
   "children": {
-    "list": "actor_list_001",
-    "kanban": "actor_kanban_001"
+    "composite": "actor_composite_001"
   },
   "subscriptions": [
+    "actor_composite_001",
     "actor_list_001",
     "actor_kanban_001"
   ],

@@ -68,17 +68,80 @@ Create a file named `{name}.actor.maia`:
 
 ## Actor Types
 
-### UI Actors
-Actors with a view component that renders to the DOM:
+MaiaOS distinguishes between two fundamental actor types based on their responsibilities and whether they render UI:
 
+### Service Actors
+
+**Service actors** are orchestrating actors responsible for business logic, data management, and coordination. They typically have **no view** (or a minimal view that only renders child actors).
+
+**Characteristics:**
+- ✅ Orchestrate data queries and mutations
+- ✅ Manage application-level state
+- ✅ Coordinate between UI actors
+- ✅ Handle message routing and business logic
+- ❌ No direct UI rendering (or minimal container view)
+
+**Example: Vibe Service Actor (Default Entry Point)**
 ```json
 {
   "$type": "actor",
-  "id": "actor_todo_001",
-  "stateRef": "todo",
-  "viewRef": "todo",      // ← Has UI
-  "styleRef": "brand",
-  "context": {...}
+  "$id": "actor_vibe_001",
+  "role": "service",
+  "contextRef": "vibe/vibe",
+  "viewRef": "vibe/vibe",      // ← Minimal view (only renders child)
+  "stateRef": "vibe/vibe",
+  "interfaceRef": "vibe/vibe",
+  "children": {
+    "composite": "actor_composite_001"  // ← Loads first UI actor
+  },
+  "subscriptions": [
+    "actor_composite_001",
+    "actor_list_001",
+    "actor_kanban_001"
+  ]
+}
+```
+
+**Service Actor View (Minimal):**
+```json
+{
+  "$type": "view",
+  "container": {
+    "tag": "div",
+    "class": "service-container",
+    "$slot": "$composite"  // ← Only renders child actor
+  }
+}
+```
+
+**Use cases:**
+- **Vibe entry points** (default pattern - every vibe loads a service actor)
+- Data synchronization services
+- Background workers
+- API coordinators
+- Business logic orchestration
+
+### UI Actors
+
+**UI actors** are presentation actors responsible for rendering user interfaces. They receive data/configurations from service actors and handle user interactions.
+
+**Characteristics:**
+- ✅ Render UI components
+- ✅ Handle user interactions
+- ✅ Receive query configurations from service actors
+- ✅ Send generic UI events (e.g., `TOGGLE_BUTTON`, `DELETE_BUTTON`) to service actors
+- ❌ No direct data mutations (delegate to service actors)
+
+**Example: List UI Actor**
+```json
+{
+  "$type": "actor",
+  "$id": "actor_list_001",
+  "role": "ui",
+  "viewRef": "list/list",      // ← Full UI view
+  "stateRef": "list/list",
+  "contextRef": "list/list",
+  "subscriptions": ["actor_vibe_001"]  // ← Subscribes to service actor
 }
 ```
 
@@ -87,27 +150,203 @@ Actors with a view component that renders to the DOM:
 - Note editors
 - Calendar widgets
 - Chat interfaces
+- Form components
+- Navigation components
 
-### Service Actors
-Actors without UI that provide background functionality:
+### Composite Actors
 
+**Composite actors** are a special type of UI actor that compose other UI actors. They provide shared UI structure (e.g., header, form, view switcher) and slot child actors.
+
+**Example: Composite Actor**
 ```json
 {
   "$type": "actor",
-  "id": "actor_sync_service",
-  "stateRef": "sync",
-  "context": {
-    "lastSyncTime": null,
-    "syncStatus": "idle"
+  "$id": "actor_composite_001",
+  "role": "composite-view",
+  "viewRef": "composite/composite",
+  "stateRef": "composite/composite",
+  "children": {
+    "list": "actor_list_001",      // ← Child UI actors
+    "kanban": "actor_kanban_001"
+  },
+  "subscriptions": ["actor_vibe_001"]  // ← Subscribes to service actor
+}
+```
+
+**Composite View:**
+```json
+{
+  "$type": "view",
+  "container": {
+    "tag": "div",
+    "children": [
+      {
+        "tag": "header",
+        "children": [
+          {"tag": "h1", "text": "Todo List"},
+          {"tag": "button", "$on": {"click": {"send": "SWITCH_VIEW"}}}
+        ]
+      },
+      {
+        "tag": "main",
+        "$slot": "$currentView"  // ← Slots child UI actors
+      }
+    ]
   }
 }
 ```
 
-**Use cases:**
-- Data synchronization
-- Background workers
-- Notification services
-- API coordinators
+## Default Vibe Pattern: Service → Composite → UI
+
+**The standard pattern for building vibes:**
+
+```
+Vibe Entry Point
+  └── Service Actor (orchestrating, minimal view)
+        └── Composite Actor (first UI actor, shared structure)
+              └── UI Actors (leaf components)
+```
+
+### Step 1: Vibe Loads Service Actor
+
+Every vibe's entry point is a **service actor** that orchestrates the application:
+
+**`todos.vibe.maia`:**
+```json
+{
+  "$type": "vibe",
+  "$id": "vibe_todos_001",
+  "name": "Todo List",
+  "description": "A todo list application",
+  "actor": "./vibe/vibe.actor.maia"  // ← Service actor
+}
+```
+
+### Step 2: Service Actor Loads Composite
+
+The service actor loads a **composite actor** as its first child:
+
+**`vibe.actor.maia` (Service Actor):**
+```json
+{
+  "$type": "actor",
+  "$id": "actor_vibe_001",
+  "role": "service",
+  "viewRef": "vibe/vibe",      // ← Minimal view
+  "stateRef": "vibe/vibe",     // ← Orchestrates queries/mutations
+  "children": {
+    "composite": "actor_composite_001"  // ← First UI actor
+  }
+}
+```
+
+**Service Actor Responsibilities:**
+- Orchestrate data queries (send `SUBSCRIBE_TO_TODOS` messages to UI actors)
+- Handle mutations (`CREATE_BUTTON`, `TOGGLE_BUTTON`, `DELETE_BUTTON`)
+- Manage application-level state
+- Coordinate between UI actors via messages
+
+### Step 3: Composite Actor Composes UI Actors
+
+The composite actor provides shared UI structure and slots child UI actors:
+
+**`composite.actor.maia`:**
+```json
+{
+  "$type": "actor",
+  "$id": "actor_composite_001",
+  "role": "composite-view",
+  "viewRef": "composite/composite",
+  "children": {
+    "list": "actor_list_001",      // ← UI actors
+    "kanban": "actor_kanban_001"
+  }
+}
+```
+
+**Composite Actor Responsibilities:**
+- Render shared UI (header, form, view switcher)
+- Slot child UI actors based on context
+- Forward UI events to service actor
+- Receive state updates from service actor
+
+### Step 4: UI Actors Render Components
+
+Leaf UI actors render specific components:
+
+**`list.actor.maia`:**
+```json
+{
+  "$type": "actor",
+  "$id": "actor_list_001",
+  "role": "ui",
+  "viewRef": "list/list",
+  "stateRef": "list/list"
+}
+```
+
+**UI Actor Responsibilities:**
+- Execute queries based on configurations from service actor
+- Render UI components
+- Send generic UI events to service actor
+- Receive data updates via messages
+
+### Message Flow Pattern
+
+```
+User clicks button in UI Actor
+  ↓
+UI Actor sends: TOGGLE_BUTTON { id: "123" }
+  ↓
+Service Actor receives message
+  ↓
+Service Actor executes mutation: @mutation/toggle
+  ↓
+Service Actor publishes: TODO_COMPLETED { id: "123" }
+  ↓
+UI Actors receive update and re-render
+```
+
+### Why This Pattern?
+
+✅ **Clear Separation of Concerns**
+- Service actors = Business logic
+- UI actors = Presentation
+
+✅ **Scalable Through Composition**
+- Start simple (service → composite → UI)
+- Add more UI actors as needed
+- Service actor orchestrates everything
+
+✅ **Message-Based Communication**
+- Loose coupling between actors
+- Easy to test and modify
+- AI agents can understand message contracts
+
+✅ **Default Pattern for Vibes**
+- Every vibe follows this structure
+- Consistent architecture
+- Easy to understand and extend
+
+### Scaling Through Composition
+
+**Simple Vibe:**
+```
+Service Actor → Composite Actor → UI Actor
+```
+
+**Complex Vibe:**
+```
+Service Actor
+  └── Composite Actor
+        ├── Header UI Actor
+        ├── Form UI Actor
+        ├── List UI Actor
+        │     └── List Item UI Actor (repeated)
+        └── Footer UI Actor
+```
+
+The service actor orchestrates all of them via messages, maintaining clean separation of concerns.
 
 ## Context (Runtime State)
 
@@ -816,6 +1055,7 @@ vibe_root (composite)
 - Understand [State Machines](./05-state.md) - Actor behavior
 - Explore [Context](./04-context.md) - Runtime data management
 - Create [Views](./07-views.md) - UI representation
+- Review [Best Practices](./10-best-practices.md) - Architecture patterns and scalability
 
 ## Debugging Actors
 
