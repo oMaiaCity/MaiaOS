@@ -145,11 +145,98 @@ export class StyleEngine {
   }
 
   /**
+   * Convert camelCase to kebab-case
+   * @param {string} str - camelCase string
+   * @returns {string} kebab-case string
+   */
+  _toKebabCase(str) {
+    return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+  }
+
+  /**
+   * Compile data-attribute selectors from nested data tree
+   * @param {string} baseSelector - Base selector (e.g., ".kanban-column-content")
+   * @param {Object} dataTree - Nested data tree
+   * @param {Object} tokens - Tokens for interpolation
+   * @param {string} currentPath - Current selector path (for nested data)
+   * @returns {Array} Array of CSS rule strings
+   */
+  _compileDataAttributeSelectors(baseSelector, dataTree, tokens, currentPath = '') {
+    const cssRules = [];
+    
+    if (!dataTree || typeof dataTree !== 'object' || Array.isArray(dataTree)) {
+      return cssRules;
+    }
+    
+    // Process each data key (e.g., "dragOver", "draggedItemId")
+    for (const [dataKey, dataValue] of Object.entries(dataTree)) {
+      if (typeof dataValue !== 'object' || dataValue === null || Array.isArray(dataValue)) {
+        continue;
+      }
+      
+      const kebabDataKey = this._toKebabCase(dataKey);
+      
+      // Process each value for this data key (e.g., "todo", "done", "item-123")
+      for (const [valueKey, styles] of Object.entries(dataValue)) {
+        if (typeof styles !== 'object' || styles === null || Array.isArray(styles)) {
+          continue;
+        }
+        
+        const kebabValueKey = this._toKebabCase(valueKey);
+        const dataAttr = `[data-${kebabDataKey}="${kebabValueKey}"]`;
+        const selector = `${baseSelector}${currentPath}${dataAttr}`;
+        
+        // Separate CSS properties, pseudo-selectors, and nested data
+        const cssProps = {};
+        const pseudoSelectors = {};
+        let nestedData = null;
+        
+        for (const [prop, propValue] of Object.entries(styles)) {
+          if (prop === 'data') {
+            nestedData = propValue;
+          } else if (prop.startsWith(':')) {
+            pseudoSelectors[prop] = propValue;
+          } else {
+            cssProps[prop] = propValue;
+          }
+        }
+        
+        // Generate CSS for this selector
+        if (Object.keys(cssProps).length > 0) {
+          const cssProperties = this.compileModifierStyles(cssProps, tokens);
+          cssRules.push(`${selector} {\n${cssProperties}\n}`);
+        }
+        
+        // Handle pseudo-selectors on this data-attribute selector
+        for (const [pseudo, pseudoStyles] of Object.entries(pseudoSelectors)) {
+          const pseudoSelector = `${selector}${pseudo}`;
+          const cssProperties = this.compileModifierStyles(pseudoStyles, tokens);
+          cssRules.push(`${pseudoSelector} {\n${cssProperties}\n}`);
+        }
+        
+        // Handle nested data (combine selectors - e.g., [data-state="dragging"][data-column="todo"])
+        if (nestedData && typeof nestedData === 'object' && !Array.isArray(nestedData)) {
+          const nestedRules = this._compileDataAttributeSelectors(
+            baseSelector, 
+            nestedData, 
+            tokens, 
+            `${currentPath}${dataAttr}`
+          );
+          cssRules.push(...nestedRules);
+        }
+      }
+    }
+    
+    return cssRules;
+  }
+
+  /**
    * Compile components to CSS classes with support for:
    * - Pseudo-classes (:hover, :focus, etc.)
    * - Attribute selectors ([data-*])
    * - Descendant selectors (parent child)
    * - State-based styling
+   * - Nested data-attribute syntax
    * @param {Object} components - The component definitions
    * @param {Object} tokens - The merged tokens for interpolation
    * @returns {string} CSS class declarations
@@ -165,11 +252,16 @@ export class StyleEngine {
       // Convert camelCase class name to kebab-case
       const kebabClassName = className.replace(/([A-Z])/g, '-$1').toLowerCase();
       
+      // Extract data-attribute tree if present
+      const dataTree = styles.data;
+      const stylesWithoutData = { ...styles };
+      delete stylesWithoutData.data;
+      
       // Separate base styles from modifiers
       const baseStyles = {};
       const modifiers = {};
       
-      for (const [prop, value] of Object.entries(styles)) {
+      for (const [prop, value] of Object.entries(stylesWithoutData)) {
         // Check if it's a modifier (pseudo-class, attribute selector, or nested object)
         const isModifier = prop.startsWith(':') || 
                           prop.startsWith('[') || 
@@ -215,6 +307,12 @@ export class StyleEngine {
         // Recursively compile nested styles
         const cssProperties = this.compileModifierStyles(modifierStyles, tokens);
         cssRules.push(`${selector} {\n${cssProperties}\n}`);
+      }
+      
+      // Compile nested data-attribute selectors
+      if (dataTree && typeof dataTree === 'object' && !Array.isArray(dataTree)) {
+        const dataRules = this._compileDataAttributeSelectors(`.${kebabClassName}`, dataTree, tokens);
+        cssRules.push(...dataRules);
       }
     }
     

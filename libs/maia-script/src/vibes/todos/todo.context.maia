@@ -12,5 +12,8 @@
   "modalTitle": "",
   "modalContent": "",
   "viewMode": "list",
-  "draggedItemId": null
+  "draggedItemId": null,
+  "listButtonActive": true,
+  "kanbanButtonActive": false,
+  "draggedItemIds": {}
 }

@@ -171,10 +171,72 @@ For **every** implementation milestone, follow this strict order:
 - ❌ No "TODO: migrate this later" comments
 - ❌ No "keep for backwards compatibility" code
 
-**Step 4: Human-in-the-Loop Feedback** 👤
+**Step 4: Browser-Based Testing** 🌐
+
+For **frontend features, UI components, or web-based functionality**, use MCP browser tools to test in a real browser environment:
+
+**Browser Testing Checklist:**
+- ✅ Navigate to the application URL (e.g., `http://localhost:4202` for app service)
+- ✅ Take screenshots to verify visual state and UI rendering
+- ✅ Check browser console for errors, warnings, or unexpected logs
+- ✅ Test user interactions (clicks, form submissions, navigation)
+- ✅ Verify network requests are correct (check network tab)
+- ✅ Test responsive behavior (resize browser window if applicable)
+- ✅ Verify accessibility (check for ARIA labels, keyboard navigation)
+
+**Browser Testing Workflow:**
+1. **Start the dev server** (if not already running):
+   ```bash
+   bun dev:app  # or appropriate service command
+   ```
+
+2. **Navigate to the application:**
+   - Use `browser_navigate` to open the app URL
+   - Wait for page load using `browser_wait_for`
+
+3. **Take initial screenshot:**
+   - Use `browser_take_screenshot` to capture the current state
+   - Save screenshots with descriptive names (e.g., `milestone-1-initial-state.png`)
+
+4. **Check browser console:**
+   - Use `browser_console_messages` to check for errors or warnings
+   - Verify no unexpected console errors exist
+   - Document any expected console messages
+
+5. **Test interactions:**
+   - Use `browser_snapshot` to get page structure
+   - Use `browser_click` to interact with elements
+   - Use `browser_type` to fill forms
+   - Use `browser_select_option` for dropdowns
+   - Take screenshots after each major interaction
+
+6. **Verify network requests:**
+   - Use `browser_network_requests` to check API calls
+   - Verify requests are correct (endpoints, payloads, responses)
+   - Check for failed requests or unexpected calls
+
+7. **Document results:**
+   - Save screenshots showing before/after states
+   - Note any console errors or warnings
+   - Document any issues found during browser testing
+
+**When to Use Browser Testing:**
+- ✅ Frontend features (UI components, views, pages)
+- ✅ User interactions (forms, buttons, navigation)
+- ✅ Visual changes (styling, layout, responsive design)
+- ✅ Integration with browser APIs (localStorage, fetch, etc.)
+- ✅ End-to-end user workflows
+
+**When to Skip Browser Testing:**
+- ❌ Pure backend/API changes (unless they affect frontend)
+- ❌ Unit tests for isolated functions
+- ❌ Database schema changes (unless they affect UI)
+- ❌ Configuration-only changes
+
+**Step 5: Human-in-the-Loop Feedback** 👤
 - Pause after milestone completion
-- Run all tests to verify nothing broke
-- Present results to human for feedback
+- Run all tests (unit, integration, and browser) to verify nothing broke
+- Present results (including screenshots and console logs) to human for feedback
 - Iterate if needed before next milestone
 
 **Testing Requirements for OS-Level Components:**
@@ -230,9 +292,11 @@ for (const file of files) {
 1. Write tests first (Red phase)
 2. Implement solution to pass tests (Green phase)
 3. Clean up ALL legacy code and ensure 100% migration (Refactor phase)
-4. Pause for human feedback
-5. Iterate based on feedback
-6. Move to next milestone
+4. Run browser-based tests (for frontend features):
+   - Navigate to app, take screenshots, check console, test interactions
+5. Pause for human feedback
+6. Iterate based on feedback
+7. Move to next milestone
 
 ---
 
@@ -248,6 +312,7 @@ Before proceeding, ensure:
 - ✅ All new tests pass
 - ✅ No existing tests are broken
 - ✅ Integration tests pass with real data
+- ✅ Browser-based tests pass (for frontend features)
 - ✅ No linter errors
 - ✅ Code follows project conventions
 - ✅ ALL legacy code has been deleted (no commented out code)
@@ -259,6 +324,52 @@ Before proceeding, ensure:
 ```bash
 bun test
 ```
+
+**Run Browser-Based Tests** 🌐
+
+For frontend features, perform comprehensive browser testing:
+
+1. **Navigate to the application:**
+   - Use `browser_navigate` to open the app (e.g., `http://localhost:4202`)
+   - Wait for full page load
+
+2. **Take comprehensive screenshots:**
+   - Initial page load state
+   - After all user interactions
+   - Error states (if applicable)
+   - Success states
+   - Different viewport sizes (if responsive design)
+
+3. **Check browser console:**
+   - Use `browser_console_messages` to verify:
+     - ✅ No JavaScript errors
+     - ✅ No unexpected warnings
+     - ✅ Expected console logs are present (if any)
+   - Document any console issues found
+
+4. **Verify network requests:**
+   - Use `browser_network_requests` to check:
+     - ✅ All API calls succeed (status 200-299)
+     - ✅ No failed requests (4xx, 5xx errors)
+     - ✅ Request payloads are correct
+     - ✅ Response data is valid
+
+5. **Test user workflows:**
+   - Navigate through the feature end-to-end
+   - Test all user interactions
+   - Verify data persistence (if applicable)
+   - Test error handling and edge cases
+
+6. **Document browser test results:**
+   - Console log summary (no errors)
+   - Network request summary (all successful)
+   - Any issues or edge cases discovered
+
+**Browser Testing Output:**
+- Screenshots saved with descriptive names
+- Console log summary (errors: 0, warnings: X)
+- Network request summary (successful: X, failed: 0)
+- Feature verification status (✅ working / ❌ issues found)
 
 **2. Human-in-the-Loop Final Feedback** 👤
 
@@ -300,10 +411,13 @@ Present to human:
 - Ready to ship ✨
 
 **LLM Action**: 
-1. Run all tests and verify success
-2. Present results to human for final approval
-3. Update relevant documentation (skip LLM docs)
-4. Confirm solution is complete
+1. Run all tests (unit, integration, browser) and verify success
+2. Perform comprehensive browser testing:
+   - Navigate to app, take screenshots, check console, verify network requests
+   - Document browser test results (screenshots, console logs, network summary)
+3. Present results (including browser test results) to human for final approval
+4. Update relevant documentation (skip LLM docs)
+5. Confirm solution is complete
 
 ---
 
@@ -355,6 +469,13 @@ todos:
 - [ ] Update all call sites to new implementation
 - [ ] Verify 100% migration complete
 
+**Browser Testing** (if frontend feature):
+- [ ] Navigate to app and take initial screenshot
+- [ ] Test user interactions and take screenshots
+- [ ] Check browser console for errors/warnings
+- [ ] Verify network requests are correct
+- [ ] Document browser test results
+
 **Human Checkpoint:** ✋ Pause for feedback
 
 ### Milestone 2: [Name]
@@ -373,10 +494,18 @@ todos:
 - [ ] Update all call sites to new implementation
 - [ ] Verify 100% migration complete
 
+**Browser Testing** (if frontend feature):
+- [ ] Navigate to app and take initial screenshot
+- [ ] Test user interactions and take screenshots
+- [ ] Check browser console for errors/warnings
+- [ ] Verify network requests are correct
+- [ ] Document browser test results
+
 **Human Checkpoint:** ✋ Pause for feedback
 
 ### Milestone 3: Documentation & Final Review
-- [ ] All tests passing ✅
+- [ ] All tests passing ✅ (unit, integration, browser)
+- [ ] Browser testing complete (screenshots, console, network verified)
 - [ ] Update developer docs
 - [ ] Update vibecreator docs
 - [ ] Final human approval ✋
@@ -389,7 +518,9 @@ todos:
 ## Testing Strategy
 - **Unit Tests**: [What to test and where]
 - **Integration Tests**: [What to test and where]
+- **Browser Tests**: [What to test in browser - UI, interactions, console, network]
 - **Test Output**: [Expected test summary format]
+- **Browser Test Output**: [Screenshots, console logs, network requests summary]
 
 ## Risks & Mitigation
 [Potential issues and how to address them]

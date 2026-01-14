@@ -34,22 +34,26 @@ Create a file named `{name}.style.maia`:
   "$type": "style",
   "$id": "style_todo_001",
   
-  "styles": {
-    ".todo-item": {
+  "components": {
+    "todoItem": {
       "display": "flex",
       "alignItems": "center",
       "padding": "var(--spacing-sm)",
       "borderBottom": "1px solid var(--color-border)",
-      "gap": "var(--spacing-sm)"
+      "gap": "var(--spacing-sm)",
+      ":hover": {
+        "backgroundColor": "var(--color-surface)"
+      },
+      "data": {
+        "done": {
+          "true": {
+            "opacity": "0.6",
+            "textDecoration": "line-through"
+          }
+        }
+      }
     },
-    ".todo-item:hover": {
-      "backgroundColor": "var(--color-surface)"
-    },
-    ".todo-item.done": {
-      "opacity": "0.6",
-      "textDecoration": "line-through"
-    },
-    ".delete-btn": {
+    "deleteBtn": {
       "marginLeft": "auto",
       "padding": "var(--spacing-xs)",
       "color": "var(--color-danger)",
@@ -57,14 +61,16 @@ Create a file named `{name}.style.maia`:
       "border": "none",
       "cursor": "pointer",
       "fontSize": "1.5rem",
-      "lineHeight": "1"
-    },
-    ".delete-btn:hover": {
-      "backgroundColor": "rgba(239, 68, 68, 0.1)"
+      "lineHeight": "1",
+      ":hover": {
+        "backgroundColor": "rgba(239, 68, 68, 0.1)"
+      }
     }
   }
 }
 ```
+
+**Note:** Use `components` section (not `styles`) for component definitions with nested data-attribute syntax. Use `selectors` section for advanced CSS selectors.
 
 ## Linking Style to Actors
 
@@ -124,49 +130,84 @@ Inject into Shadow DOM
 }
 ```
 
-### State Styles
+### State Styles (Using Data-Attributes)
+
+**No class-based conditionals!** Use data-attributes instead:
+
 ```json
 {
-  "styles": {
-    ".todo-item": {
-      "transition": "all 0.2s"
-    },
-    ".todo-item.completed": {
-      "opacity": "0.6",
-      "textDecoration": "line-through"
-    },
-    ".todo-item.editing": {
-      "backgroundColor": "var(--color-primary)",
-      "color": "white"
-    },
-    ".todo-item.dragging": {
-      "opacity": "0.5",
-      "cursor": "move"
+  "components": {
+    "todoItem": {
+      "transition": "all 0.2s",
+      "data": {
+        "done": {
+          "true": {
+            "opacity": "0.6",
+            "textDecoration": "line-through"
+          }
+        },
+        "isEditing": {
+          "true": {
+            "backgroundColor": "var(--color-primary)",
+            "color": "white"
+          }
+        },
+        "isDragged": {
+          "true": {
+            "opacity": "0.5",
+            "cursor": "move"
+          }
+        }
+      }
     }
   }
 }
 ```
 
-### Interactive Styles
+**View sets data-attributes:**
 ```json
 {
-  "styles": {
-    ".draggable": {
+  "attrs": {
+    "data": {
+      "done": "$$done",
+      "isEditing": "$editingItemId.$$id",
+      "isDragged": "$draggedItemIds.$$id"
+    }
+  }
+}
+```
+
+**Pattern:** State machine computes → Context stores → View maps → CSS styles
+
+### Interactive Styles (Using Data-Attributes)
+
+```json
+{
+  "components": {
+    "draggable": {
       "cursor": "grab",
-      "transition": "transform 0.2s"
+      "transition": "transform 0.2s",
+      ":active": {
+        "cursor": "grabbing",
+        "transform": "scale(1.05)"
+      }
     },
-    ".draggable:active": {
-      "cursor": "grabbing",
-      "transform": "scale(1.05)"
-    },
-    ".dropzone": {
+    "dropzone": {
       "border": "2px dashed var(--color-border)",
       "minHeight": "100px",
-      "transition": "all 0.2s"
-    },
-    ".dropzone.drag-over": {
-      "borderColor": "var(--color-primary)",
-      "backgroundColor": "rgba(59, 130, 246, 0.05)"
+      "transition": "all 0.2s",
+      "data": {
+        "dragOverColumn": {
+          "todo": {
+            "borderColor": "var(--color-primary)",
+            "backgroundColor": "rgba(59, 130, 246, 0.05)"
+          },
+          "done": {
+            "borderColor": "var(--color-primary)",
+            "backgroundColor": "rgba(59, 130, 246, 0.05)"
+          }
+        }
+      }
     }
   }
 }
@@ -297,24 +338,92 @@ Define local custom properties:
 }
 ```
 
+## Nested Data-Attribute Syntax
+
+For conditional styling, use nested `data` syntax in component definitions:
+
+```json
+{
+  "components": {
+    "card": {
+      "display": "flex",
+      "padding": "var(--spacing-sm)",
+      "data": {
+        "isDragged": {
+          "true": {
+            "opacity": "0.3",
+            "pointerEvents": "none"
+          }
+        },
+        "done": {
+          "true": {
+            "opacity": "0.6",
+            "textDecoration": "line-through"
+          }
+        }
+      }
+    },
+    "kanbanColumnContent": {
+      "border": "2px dashed var(--colors-border)",
+      "data": {
+        "dragOverColumn": {
+          "todo": {
+            "background": "rgba(143, 168, 155, 0.15)",
+            "borderColor": "var(--colors-primary)"
+          },
+          "done": {
+            "background": "rgba(143, 168, 155, 0.15)",
+            "borderColor": "var(--colors-primary)"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**Generated CSS:**
+```css
+.card[data-is-dragged="true"] {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.card[data-done="true"] {
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+
+.kanban-column-content[data-drag-over-column="todo"] {
+  background: rgba(143, 168, 155, 0.15);
+  border-color: var(--colors-primary);
+}
+```
+
+**Pattern:** State machine computes → Context stores → View maps to data-attributes → CSS matches selectors
+
 ## Best Practices
 
 ### ✅ DO:
 
 - **Use brand tokens** - Reference CSS custom properties
-- **Namespace classes** - Use prefixes to avoid conflicts
+- **Use `components` section** - For component definitions with nested data syntax
+- **Use `selectors` section** - For advanced CSS selectors
 - **Keep styles scoped** - Shadow DOM provides isolation
-- **Use semantic names** - `.todo-item` not `.item-123`
+- **Use semantic names** - `todoItem` not `item123`
 - **Leverage transitions** - Smooth state changes
 - **Support responsive** - Use media queries
+- **Use nested data syntax** - For conditional styling via data-attributes
 
 ### ❌ DON'T:
 
+- **Don't use class-based conditionals** - Use data-attributes instead (`.active`, `.dragging`, etc.)
 - **Don't use IDs** - Use classes for styling
 - **Don't use `!important`** - Shadow DOM provides isolation
 - **Don't hardcode colors** - Use brand tokens
 - **Don't create global styles** - Shadow DOM is isolated
 - **Don't use inline styles** - Keep in style files
+- **Don't put conditionals in views** - All conditionals handled by state machine + CSS
 
 ## Example: Complete Todo Style
 
@@ -323,8 +432,8 @@ Define local custom properties:
   "$type": "style",
   "$id": "style_todo_001",
   
-  "styles": {
-    ".todo-app": {
+  "components": {
+    "todoApp": {
       "display": "flex",
       "flexDirection": "column",
       "gap": "var(--spacing-lg)",
@@ -332,51 +441,46 @@ Define local custom properties:
       "maxWidth": "800px",
       "margin": "0 auto"
     },
-    ".header": {
+    "header": {
       "marginBottom": "var(--spacing-lg)"
     },
-    "h1": {
-      "fontSize": "var(--font-size-h1)",
-      "fontWeight": "var(--font-weight-bold)",
-      "color": "var(--color-text)",
-      "marginBottom": "var(--spacing-md)"
-    },
-    ".input-row": {
+    "inputRow": {
       "display": "flex",
       "gap": "var(--spacing-sm)"
     },
-    ".input-row input": {
-      "flex": "1"
-    },
-    ".todos-list": {
+    "todosList": {
       "display": "flex",
       "flexDirection": "column"
     },
-    ".todo-item": {
+    "card": {
       "display": "flex",
       "alignItems": "center",
       "padding": "var(--spacing-sm)",
       "borderBottom": "1px solid var(--color-border)",
       "gap": "var(--spacing-sm)",
-      "transition": "all 0.2s"
+      "transition": "all 0.2s",
+      ":hover": {
+        "backgroundColor": "var(--color-surface)"
+      },
+      "data": {
+        "done": {
+          "true": {
+            "opacity": "0.6"
+          }
+        },
+        "isDragged": {
+          "true": {
+            "opacity": "0.3",
+            "pointerEvents": "none"
+          }
+        }
+      }
     },
-    ".todo-item:hover": {
-      "backgroundColor": "var(--color-surface)"
-    },
-    ".todo-item input[type='checkbox']": {
-      "width": "18px",
-      "height": "18px",
-      "cursor": "pointer"
-    },
-    ".todo-item span": {
+    "body": {
       "flex": "1",
       "color": "var(--color-text)"
     },
-    ".todo-item.done span": {
-      "textDecoration": "line-through",
-      "color": "var(--color-text-muted)"
-    },
-    ".delete-btn": {
+    "buttonSmall": {
       "marginLeft": "auto",
       "padding": "var(--spacing-xs) var(--spacing-sm)",
       "color": "var(--color-danger)",
@@ -385,10 +489,22 @@ Define local custom properties:
       "cursor": "pointer",
       "fontSize": "1.25rem",
       "borderRadius": "var(--border-radius-sm)",
-      "transition": "background-color 0.2s"
+      "transition": "background-color 0.2s",
+      ":hover": {
+        "backgroundColor": "rgba(239, 68, 68, 0.1)"
+      }
+    }
+  },
+  "selectors": {
+    "h1": {
+      "fontSize": "var(--font-size-h1)",
+      "fontWeight": "var(--font-weight-bold)",
+      "color": "var(--color-text)",
+      "marginBottom": "var(--spacing-md)"
     },
-    ".delete-btn:hover": {
-      "backgroundColor": "rgba(239, 68, 68, 0.1)"
+    ".card[data-done=\"true\"] .body": {
+      "textDecoration": "line-through",
+      "color": "var(--color-text-muted)"
     }
   }
 }

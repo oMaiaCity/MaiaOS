@@ -143,6 +143,14 @@
       "[data-done=true] .body": {
         "textDecoration": "line-through",
         "color": "{colors.textSecondary}"
+      },
+      "data": {
+        "isDragged": {
+          "true": {
+            "opacity": "0.3",
+            "pointerEvents": "none"
+          }
+        }
       }
     },
     "body": {
@@ -269,7 +277,17 @@
       "borderRadius": "{radii.sm}",
       "fontSize": "{typography.fontSize.sm}",
       "cursor": "pointer",
-      "transition": "all 0.2s ease"
+      "transition": "all 0.2s ease",
+      "data": {
+        "active": {
+          "true": {
+            "background": "{colors.primary}",
+            "color": "white",
+            "borderColor": "{colors.primary}",
+            "fontWeight": "600"
+          }
+        }
+      }
     },
     "kanban": {
       "display": "flex",
@@ -310,7 +328,23 @@
       "border": "2px dashed {colors.border}",
       "borderRadius": "{radii.md}",
       "background": "rgba(255, 255, 255, 0.2)",
-      "transition": "all 0.2s ease"
+      "transition": "all 0.2s ease",
+      "data": {
+        "dragOverColumn": {
+          "todo": {
+            "background": "rgba(143, 168, 155, 0.15)",
+            "borderColor": "{colors.primary}",
+            "borderWidth": "2px",
+            "borderStyle": "dashed"
+          },
+          "done": {
+            "background": "rgba(143, 168, 155, 0.15)",
+            "borderColor": "{colors.primary}",
+            "borderWidth": "2px",
+            "borderStyle": "dashed"
+          }
+        }
+      }
     },
     "cardActions": {
       "display": "flex",
@@ -359,10 +393,6 @@
       "cursor": "grabbing",
       "opacity": "0.6"
     },
-    ".kanban .card.dragging": {
-      "opacity": "0.3",
-      "pointerEvents": "none"
-    },
     ".kanban-column-content:empty::before": {
       "content": "'Drop todos here'",
       "display": "flex",
@@ -380,18 +410,6 @@
     ".kanban-column-content:hover": {
       "background": "rgba(143, 168, 155, 0.08)",
       "borderColor": "rgba(143, 168, 155, 0.5)"
-    },
-    ".kanban-column-content.drag-over": {
-      "background": "rgba(143, 168, 155, 0.15)",
-      "borderColor": "{colors.primary}",
-      "borderWidth": "2px",
-      "borderStyle": "dashed"
-    },
-    ".button-view-switch.active": {
-      "background": "{colors.primary}",
-      "color": "white",
-      "borderColor": "{colors.primary}",
-      "fontWeight": "600"
     }
   }
 }

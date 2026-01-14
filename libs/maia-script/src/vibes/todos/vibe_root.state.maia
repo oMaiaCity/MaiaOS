@@ -12,6 +12,12 @@
               "tool": "@context/update",
               "payload": {
                 "viewMode": "$$viewMode",
+                "listButtonActive": {
+                  "$eq": ["$$viewMode", "list"]
+                },
+                "kanbanButtonActive": {
+                  "$eq": ["$$viewMode", "kanban"]
+                },
                 "currentView": {
                   "$if": {
                     "condition": { "$eq": ["$$viewMode", "list"] },

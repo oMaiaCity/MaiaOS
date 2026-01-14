@@ -372,80 +372,254 @@ maia/
 
 ## Composing Actors
 
-Actors can be **composed** into larger structures using **composite views** and **slots**.
+**Composition** is combining smaller actors into larger, more complex actors. Think of it like building with LEGO blocks - you combine simple pieces to create complex structures.
 
-### Composite vs Leaf Actors
+### Two Types of Actors
 
-**Leaf Actors** - Terminal components that render UI directly:
+#### Leaf Actors
+
+**Leaf actors** are terminal components - they don't contain other actors. They render UI directly.
+
+**Example: `todo_input.actor.maia`**
 ```json
 {
   "$type": "actor",
-  "viewRef": "todo_input"  // ← Leaf view with root property
+  "$id": "actor_todo_input_001",
+  "viewRef": "todo_input",
+  "stateRef": "todo_input"
 }
 ```
 
-**Composite Actors** - Containers that hold child actors:
+**Leaf View: `todo_input.view.maia`**
 ```json
 {
-  "$type": "actor",
-  "viewRef": "vibe_root",  // ← Composite view with container property
-  "children": {
-    "header": "actor_header_001",
-    "content": "actor_content_001"
+  "$type": "view",
+  "root": {
+    "tag": "div",
+    "children": [
+      {
+        "tag": "input",
+        "attrs": {
+          "value": "$newTodoText"
+        }
+      },
+      {
+        "tag": "button",
+        "text": "Add",
+        "$on": {
+          "click": {
+            "send": "CREATE_TODO"
+          }
+        }
+      }
+    ]
   }
 }
 ```
 
-### Defining Children
+#### Composite Actors
 
-Add a `children` map to your actor:
+**Composite actors** are containers that hold other actors in slots.
 
+**Example: `vibe_root.actor.maia`**
 ```json
 {
   "$type": "actor",
-  "$id": "actor_dashboard_001",
+  "$id": "actor_vibe_root_001",
+  "viewRef": "vibe_root",
   "children": {
-    "header": "actor_header_001",
-    "sidebar": "actor_sidebar_001",
-    "content": "actor_content_001"
+    "header": "actor_view_switcher_001",
+    "input": "actor_todo_input_001",
+    "list": "actor_todo_list_001"
   }
 }
 ```
 
-**Key Points:**
-- `children` maps slot names to actor IDs
-- Child actors are created automatically
-- Parent auto-subscribes to all children
-
-### Composite Views with Slots
-
-Create a composite view with slots:
-
-**`dashboard.view.maia`:**
+**Composite View: `vibe_root.view.maia`**
 ```json
 {
   "$type": "view",
   "container": {
     "tag": "div",
-    "class": "dashboard-layout",
-    "slots": {
-      "header": "@header",
-      "sidebar": "@sidebar",
-      "content": "@content"
+    "attrs": {
+      "class": "app-layout"
+    },
+    "children": [
+      {
+        "tag": "header",
+        "$slot": "$headerView"  // Renders child actor from context.headerView
+      },
+      {
+        "tag": "main",
+        "$slot": "$inputView"   // Renders child actor from context.inputView
+      },
+      {
+        "tag": "section",
+        "$slot": "$listView"    // Renders child actor from context.listView
+      }
+    ]
+  }
+}
+```
+
+### How Slots Work
+
+**Slots** are placeholders where child actors get rendered.
+
+**Syntax:**
+- Use `$slot` with a context value (e.g., `"$slot": "$currentView"`)
+- State machine sets context value to child actor name (e.g., `currentView: "@list"`)
+- ViewEngine resolves `@list` → finds child actor with name `list` in `children` map
+- Attaches child actor's container to the slot element
+
+**Example:**
+```json
+{
+  "$type": "actor",
+  "children": {
+    "header": "actor_header_001",    // ← Child actor ID
+    "list": "actor_todo_list_001"     // ← Child actor ID
+  }
+}
+```
+
+**View with slots:**
+```json
+{
+  "$type": "view",
+  "container": {
+    "tag": "div",
+    "children": [
+      {
+        "tag": "header",
+        "$slot": "$headerView"  // Context value set by state machine
+      },
+      {
+        "tag": "main",
+        "$slot": "$currentView" // Context value set by state machine
+      }
+    ]
+  }
+}
+```
+
+**State machine sets context:**
+```json
+{
+  "states": {
+    "idle": {
+      "entry": {
+        "tool": "@core/updateContext",
+        "payload": {
+          "headerView": "@header",
+          "currentView": "@list"
+        }
+      }
     }
   }
 }
 ```
 
-**Slot Syntax:**
-- Use `@slotName` to reference a child actor
-- Slot name must match a key in `children` map
+### Building a Composable App
 
-### Actor Interfaces
+#### Step 1: Identify Components
 
-Define message contracts with `actor.interface.maia`:
+Break your UI into logical pieces:
+- Header with navigation
+- Input form
+- List of items
+- Footer
 
-**`todo_input.interface.maia`:**
+#### Step 2: Create Leaf Actors
+
+Create one actor for each piece:
+
+**`header.actor.maia`** - Navigation bar
+**`input.actor.maia`** - Form input
+**`list.actor.maia`** - Item list
+**`footer.actor.maia`** - Footer
+
+#### Step 3: Create Composite Root
+
+Create a root actor that composes all pieces:
+
+**`app.actor.maia`**
+```json
+{
+  "$type": "actor",
+  "$id": "actor_app_001",
+  "viewRef": "app",
+  "stateRef": "app",
+  "children": {
+    "header": "actor_header_001",
+    "input": "actor_input_001",
+    "list": "actor_list_001",
+    "footer": "actor_footer_001"
+  }
+}
+```
+
+**`app.view.maia`**
+```json
+{
+  "$type": "view",
+  "container": {
+    "tag": "div",
+    "attrs": {
+      "class": "app"
+    },
+    "children": [
+      {
+        "tag": "header",
+        "$slot": "$headerView"
+      },
+      {
+        "tag": "main",
+        "$slot": "$inputView"
+      },
+      {
+        "tag": "section",
+        "$slot": "$listView"
+      },
+      {
+        "tag": "footer",
+        "$slot": "$footerView"
+      }
+    ]
+  }
+}
+```
+
+**`app.state.maia`** - Sets context values for slots:
+```json
+{
+  "$type": "state",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "entry": {
+        "tool": "@core/updateContext",
+        "payload": {
+          "headerView": "@header",
+          "inputView": "@input",
+          "listView": "@list",
+          "footerView": "@footer"
+        }
+      }
+    }
+  }
+}
+```
+
+### Message Passing Between Actors
+
+Actors communicate via **messages**, not props.
+
+#### Define Interfaces
+
+Create `actor.interface.maia` for each actor:
+
+**`todo_input.interface.maia`**
 ```json
 {
   "$type": "actor.interface",
@@ -458,45 +632,183 @@ Define message contracts with `actor.interface.maia`:
 }
 ```
 
-**Interface Properties:**
-- `inbox` - Messages this actor accepts
-- `publishes` - Messages this actor emits
-- `subscriptions` - Actor IDs to send messages to
+**`todo_list.interface.maia`**
+```json
+{
+  "$type": "actor.interface",
+  "inbox": {
+    "TODO_CREATED": {
+      "payload": { "id": "string", "text": "string" }
+    }
+  }
+}
+```
 
-### Message Passing Between Actors
+#### Publish Messages
 
-**Parent → Child:**
-- Parent publishes via `publishMessage()`
-- Message validated against `interface.publishes`
-- Sent to subscribed actors
+When an event happens, publish a message:
 
-**Child → Parent:**
-- Child publishes message
-- Parent receives in inbox (if subscribed)
-- Parent's state machine processes
+**In state machine:**
+```json
+{
+  "states": {
+    "creating": {
+      "entry": {
+        "tool": "@mutation/create",
+        "payload": { "schema": "todos", "data": {...} }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "TODO_CREATED",
+                "payload": { "id": "$id", "text": "$text" }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
 
-**Example Flow:**
-1. User types in `todo_input` actor
-2. `todo_input` publishes `TODO_CREATED` message
-3. `todo_list` receives message (subscribed)
-4. `todo_list` creates new item
-5. `todo_item` actors render in list
+#### Subscribe to Messages
+
+Parent actors auto-subscribe to children:
+
+```json
+{
+  "$type": "actor",
+  "children": {
+    "input": "actor_todo_input_001"
+  },
+  "subscriptions": ["actor_todo_input_001"]  // ← Auto-added
+}
+```
+
+### Real Example: Todo App
+
+**Structure:**
+```
+vibe_root (composite)
+├── @header (view_switcher - leaf)
+├── @input (todo_input - leaf)
+├── @list (todo_list - composite)
+│   └── @item (todo_item - leaf, repeated)
+└── @kanban (kanban_view - leaf)
+```
+
+**Message Flow:**
+1. User types in `todo_input` → publishes `CREATE_TODO`
+2. `todo_list` receives `CREATE_TODO` → creates item
+3. `todo_item` instances render in list
+4. User clicks complete → `todo_item` publishes `TODO_COMPLETED`
+5. `todo_list` receives → updates state
+6. `vibe_root` receives → orchestrates view
+
+### Common Patterns
+
+#### Layout Container
+```json
+{
+  "$type": "view",
+  "container": {
+    "tag": "div",
+    "children": [
+      {
+        "tag": "header",
+        "$slot": "$headerView"
+      },
+      {
+        "tag": "main",
+        "$slot": "$mainView"
+      },
+      {
+        "tag": "footer",
+        "$slot": "$footerView"
+      }
+    ]
+  }
+}
+```
+
+#### List with Items
+```json
+{
+  "$type": "view",
+  "container": {
+    "tag": "ul",
+    "$each": {
+      "items": "$todos",
+      "template": {
+        "tag": "li",
+        "$slot": "@item"
+      }
+    }
+  }
+}
+```
+
+#### Conditional View Switching
+```json
+{
+  "$type": "view",
+  "container": {
+    "tag": "div",
+    "children": [
+      {
+        "tag": "section",
+        "$slot": "$currentView"  // State machine sets to "@list" or "@kanban"
+      }
+    ]
+  }
+}
+```
+
+**State machine handles switching:**
+```json
+{
+  "states": {
+    "idle": {
+      "on": {
+        "SWITCH_VIEW": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@core/updateContext",
+              "payload": {
+                "currentView": "$viewMode === 'list' ? '@list' : '@kanban'"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
 
 ### Best Practices
 
 **✅ DO:**
 - Keep actors small and focused
-- Use clear slot names
+- Use clear slot names (`@header`, not `@h`)
 - Define interfaces for all actors
-- Use message passing (not prop drilling)
+- Publish messages for important events
+- Keep context internal (don't expose)
+- Use state machine to set slot context values
 
 **❌ DON'T:**
-- Don't create monolithic actors
-- Don't expose context directly
+- Don't create giant monolithic actors
+- Don't use prop drilling
 - Don't skip interface definitions
+- Don't expose context directly
 - Don't create circular dependencies
-
-**Learn More:** See [Composing Actors](./composing-actors.md) for detailed examples.
+- Don't put conditional logic in views (use state machine instead)
 
 ## Next Steps
 
@@ -504,7 +816,6 @@ Define message contracts with `actor.interface.maia`:
 - Understand [State Machines](./05-state.md) - Actor behavior
 - Explore [Context](./04-context.md) - Runtime data management
 - Create [Views](./07-views.md) - UI representation
-- Compose actors: [Composing Actors](./composing-actors.md) - Building complex UIs
 
 ## Debugging Actors
 

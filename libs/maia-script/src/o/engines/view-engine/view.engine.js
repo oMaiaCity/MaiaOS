@@ -1,11 +1,21 @@
 /**
  * ViewEngine - Renders .maia view files to Shadow DOM
- * v0.4: Module-based configuration, no hardcoded drag-drop logic
- * Handles: DSL operations, $each loops, $if conditionals, events
+ * v0.5: Data-attribute mapping, removed $if support, migrated slot to $slot
+ * Handles: DSL operations, $each loops, $slot composition, events
  * 
  * Event syntax:
  * - v0.1: { action: "@core/createTodo", payload: {...} }
  * - v0.2: { send: "CREATE_TODO", payload: {...} }
+ * 
+ * Allowed operations:
+ * - $each: iteration
+ * - $contextKey: variable references ($title, $$id)
+ * - $slot: actor composition
+ * - $on: event handlers
+ * 
+ * Removed:
+ * - $if: DELETED (use data-attributes + CSS instead)
+ * - slot: DELETED (migrated to $slot)
  */
 export class ViewEngine {
   constructor(evaluator, actorEngine, moduleRegistry) {
@@ -108,6 +118,10 @@ export class ViewEngine {
 
     // Handle class attribute
     if (node.class) {
+      // Reject $if in class (removed - use data-attributes + CSS instead)
+      if (typeof node.class === 'object' && node.class.$if) {
+        throw new Error('[ViewEngine] "$if" is no longer supported in class property. Use data-attributes and CSS instead.');
+      }
       const classValue = this.evaluator.evaluate(node.class, data);
       if (classValue) {
         element.className = classValue;
@@ -117,11 +131,17 @@ export class ViewEngine {
     // Handle attrs (other HTML attributes)
     if (node.attrs) {
       for (const [attrName, attrValue] of Object.entries(node.attrs)) {
-        const resolvedValue = this.evaluator.evaluate(attrValue, data);
-        if (resolvedValue !== undefined && resolvedValue !== null) {
-          // Convert boolean to string for data attributes (CSS selectors need strings)
-          const stringValue = typeof resolvedValue === 'boolean' ? String(resolvedValue) : resolvedValue;
-          element.setAttribute(attrName, stringValue);
+        // Special handling for data-attribute mapping
+        if (attrName === 'data') {
+          this._resolveDataAttributes(attrValue, data, element);
+        } else {
+          // Regular attributes
+          const resolvedValue = this.evaluator.evaluate(attrValue, data);
+          if (resolvedValue !== undefined && resolvedValue !== null) {
+            // Convert boolean to string for data attributes (CSS selectors need strings)
+            const stringValue = typeof resolvedValue === 'boolean' ? String(resolvedValue) : resolvedValue;
+            element.setAttribute(attrName, stringValue);
+          }
         }
       }
     }
@@ -153,31 +173,29 @@ export class ViewEngine {
       this.attachEvents(element, node.$on, data, actorId);
     }
 
-    // Handle slot property: { slot: "$key" }
-    // If node has slot property, render slot content into the element and return early
-    if (node.slot) {
+    // Handle $slot property: { $slot: "$key" }
+    // If node has $slot property, render slot content into the element and return early
+    if (node.$slot) {
       this._renderSlot(node, data, element, actorId);
       return element;
+    }
+
+    // Reject old slot syntax (migrated to $slot)
+    if (node.slot) {
+      throw new Error('[ViewEngine] Old "slot" syntax is no longer supported. Use "$slot" instead.');
     }
 
     // Handle children
     if (node.children && Array.isArray(node.children)) {
       for (const child of node.children) {
-        // Handle $if in children array
+        // Reject $if in children (removed - use data-attributes + CSS instead)
         if (child && typeof child === 'object' && child.$if) {
-          const result = this.evaluator.evaluate(child, data);
-          if (result) {
-            const childElement = this.renderNode(result, data, actorId);
-            if (childElement) {
-              element.appendChild(childElement);
-            }
-          }
-        } else {
-          // Normal child node
-          const childElement = this.renderNode(child, data, actorId);
-          if (childElement) {
-            element.appendChild(childElement);
-          }
+          throw new Error('[ViewEngine] "$if" is no longer supported in view templates. Use data-attributes and CSS instead.');
+        }
+        // Normal child node
+        const childElement = this.renderNode(child, data, actorId);
+        if (childElement) {
+          element.appendChild(childElement);
         }
       }
     }
@@ -186,14 +204,93 @@ export class ViewEngine {
   }
 
   /**
+   * Convert camelCase to kebab-case
+   * @param {string} str - camelCase string
+   * @returns {string} kebab-case string
+   */
+  _toKebabCase(str) {
+    return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+  }
+
+  /**
+   * Resolve data-attributes from data spec
+   * @param {string|Object} dataSpec - Data specification: "$contextKey" or { "key": "$value" }
+   * @param {Object} data - The data context { context, item }
+   * @param {HTMLElement} element - The element to set attributes on
+   */
+  _resolveDataAttributes(dataSpec, data, element) {
+    if (typeof dataSpec === 'string') {
+      // String shorthand: "data": "$dragOverColumn"
+      // Special case: if it's an object path like "$draggedItemIds.$$id", resolve item lookup
+      if (dataSpec.includes('.$$')) {
+        // Item lookup syntax: "$draggedItemIds.$$id" -> looks up draggedItemIds[item.id]
+        const [contextKey, itemKey] = dataSpec.split('.');
+        const contextObj = this.evaluator.evaluate(contextKey, data);
+        const itemId = this.evaluator.evaluate(itemKey, data);
+        
+        if (contextObj && typeof contextObj === 'object' && itemId) {
+          const value = contextObj[itemId];
+          if (value !== null && value !== undefined) {
+            // Extract key name from context key (remove $)
+            const key = contextKey.substring(1);
+            const attrName = `data-${this._toKebabCase(key)}`;
+            element.setAttribute(attrName, String(value));
+          }
+        }
+      } else {
+        // Regular context value
+        const value = this.evaluator.evaluate(dataSpec, data);
+        if (value !== null && value !== undefined) {
+          // Extract key name from context key (remove $ or $$)
+          const key = dataSpec.startsWith('$$') 
+            ? dataSpec.substring(2) // Remove $$
+            : dataSpec.substring(1); // Remove $
+          const attrName = `data-${this._toKebabCase(key)}`;
+          element.setAttribute(attrName, String(value));
+        }
+      }
+    } else if (typeof dataSpec === 'object' && dataSpec !== null) {
+      // Object syntax: "data": { "dragOver": "$dragOverColumn", "itemId": "$draggedItemId" }
+      // Special case: if value is an object with $eq, compare context value with item value
+      for (const [key, valueSpec] of Object.entries(dataSpec)) {
+        let value;
+        
+        // Check if this is a comparison: { "isDragged": { "$eq": ["$draggedItemId", "$$id"] } }
+        if (typeof valueSpec === 'object' && valueSpec !== null && valueSpec.$eq) {
+          // This is a comparison - evaluate it
+          const comparisonResult = this.evaluator.evaluate(valueSpec, data);
+          value = comparisonResult ? 'true' : null; // Set to 'true' if match, null if no match
+        } else if (typeof valueSpec === 'string' && valueSpec.includes('.$$')) {
+          // Item lookup syntax: "$draggedItemIds.$$id"
+          const [contextKey, itemKey] = valueSpec.split('.');
+          const contextObj = this.evaluator.evaluate(contextKey, data);
+          const itemId = this.evaluator.evaluate(itemKey, data);
+          
+          if (contextObj && typeof contextObj === 'object' && itemId) {
+            value = contextObj[itemId];
+          }
+        } else {
+          // Regular value evaluation
+          value = this.evaluator.evaluate(valueSpec, data);
+        }
+        
+        if (value !== null && value !== undefined) {
+          const attrName = `data-${this._toKebabCase(key)}`;
+          element.setAttribute(attrName, String(value));
+        }
+      }
+    }
+  }
+
+  /**
    * Render a slot: resolves context value and attaches child actor or renders plain value
-   * @param {Object} node - Node with slot property: { slot: "$key", tag?, class?, attrs? }
+   * @param {Object} node - Node with $slot property: { $slot: "$key", tag?, class?, attrs? }
    * @param {Object} data - The data context { context }
    * @param {HTMLElement} wrapperElement - The wrapper element (already created by renderNode)
    * @param {string} actorId - The actor ID
    */
   _renderSlot(node, data, wrapperElement, actorId) {
-    const slotKey = node.slot; // e.g., "$currentView"
+    const slotKey = node.$slot; // e.g., "$currentView"
     
     console.log(`[ViewEngine] Rendering slot: ${slotKey}`, { node, actorId, context: data.context });
     

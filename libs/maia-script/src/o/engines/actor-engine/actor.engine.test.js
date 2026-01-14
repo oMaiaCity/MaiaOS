@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
 import { ActorEngine } from './actor.engine.js';
 import { StyleEngine } from '../style-engine/style.engine.js';
-import { ViewEngine } from '../ViewEngine.js';
+import { ViewEngine } from '../view-engine/view.engine.js';
 import { ModuleRegistry } from '../ModuleRegistry.js';
 import { ToolEngine } from '../tool-engine/tool.engine.js';
 

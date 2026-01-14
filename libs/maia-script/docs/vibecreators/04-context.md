@@ -57,7 +57,12 @@ Context can be defined inline in the actor file or in a separate `.context.maia`
   
   // Drag-drop state
   "draggedItemId": null,
-  "draggedItemSchema": null
+  "draggedItemSchema": null,
+  "draggedItemIds": {},           // Item lookup object for conditional styling
+  
+  // Computed boolean flags (for conditional styling)
+  "listButtonActive": true,
+  "kanbanButtonActive": false
 }
 ```
 
@@ -142,6 +147,37 @@ Temporary runtime data:
   "loadingState": "idle"
 }
 ```
+
+### 6. Computed Boolean Flags
+State machine computes boolean flags for conditional styling (no `$if` in views!):
+
+```json
+{
+  "listButtonActive": true,        // Computed: viewMode === "list"
+  "kanbanButtonActive": false,     // Computed: viewMode === "kanban"
+  "isModalOpen": false             // Computed: modalState === "open"
+}
+```
+
+**Pattern:** State machine computes → Context stores → View references → CSS styles
+
+### 7. Item Lookup Objects
+For item-specific conditional styling in lists:
+
+```json
+{
+  "draggedItemIds": {              // Object mapping item IDs to boolean states
+    "item-123": true,              // This item is being dragged
+    "item-456": false              // This item is not being dragged
+  },
+  "selectedItemIds": {             // Multiple selections
+    "item-123": true,
+    "item-789": true
+  }
+}
+```
+
+**Pattern:** State machine maintains lookup object → View uses `"$draggedItemIds.$$id"` → ViewEngine looks up value → CSS styles
 
 ## Accessing Context
 
@@ -240,6 +276,8 @@ export default {
 - **Separate concerns** - Collections, UI state, form state
 - **Store serializable data** - No functions, DOM refs, or classes
 - **Use consistent naming** - `todosTodo`, `notesTodo` (pattern: `{schema}Todo`)
+- **Compute boolean flags** - State machine computes, context stores, views reference
+- **Use item lookup objects** - For item-specific conditional styling (e.g., `draggedItemIds`)
 
 ### ❌ DON'T:
 
@@ -248,6 +286,7 @@ export default {
 - **Don't store functions** - Only JSON-serializable data
 - **Don't mix concerns** - Separate data from UI state
 - **Don't use reserved keys** - Avoid `$type`, `$id`, `inbox`, etc.
+- **Don't compute in views** - All computation happens in state machine
 
 ## Context Schema Design
 
@@ -272,7 +311,12 @@ export default {
     
     // Transient drag-drop state
     "draggedItemId": null,          // string | null
-    "draggedItemSchema": null       // string | null
+    "draggedItemSchema": null,      // string | null
+    "draggedItemIds": {},           // { [itemId: string]: boolean } - Item lookup object
+    
+    // Computed boolean flags (for conditional styling)
+    "listButtonActive": boolean,    // Computed by state machine
+    "kanbanButtonActive": boolean   // Computed by state machine
   }
 }
 ```

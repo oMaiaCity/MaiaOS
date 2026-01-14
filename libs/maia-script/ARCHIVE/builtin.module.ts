@@ -6,8 +6,8 @@
 
 import { maiaScriptModuleRegistry } from './registry'
 import type { MaiaScriptModule, EvaluationContext } from './types'
-import { evaluate as evaluateExpr } from '../evaluator'
-import type { MaiaScriptExpression } from '../types'
+import { evaluate as evaluateExpr } from './evaluator'
+import type { MaiaScriptExpression } from './types'
 
 /**
  * Helper to evaluate arguments recursively

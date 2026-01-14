@@ -16,15 +16,10 @@
             "text": "Todo"
           },
           {
-            "class": {
-              "$if": {
-                "condition": { "$eq": ["$dragOverColumn", "todo"] },
-                "then": "kanban-column-content drag-over",
-                "else": "kanban-column-content"
-              }
-            },
+            "class": "kanban-column-content",
             "attrs": {
-              "data-column": "todo"
+              "data-column": "todo",
+              "data": "$dragOverColumn"
             },
             "$on": {
               "dragover": {
@@ -50,16 +45,13 @@
             "$each": {
               "items": "$todosTodo",
               "template": {
-                "class": {
-                  "$if": {
-                    "condition": { "$eq": ["$draggedItemId", "$$id"] },
-                    "then": "card dragging",
-                    "else": "card"
-                  }
-                },
+                "class": "card",
                 "attrs": {
                   "draggable": "true",
-                  "data-id": "$$id"
+                  "data-id": "$$id",
+                  "data": {
+                    "isDragged": "$draggedItemIds.$$id"
+                  }
                 },
                 "$on": {
                   "dragstart": {
@@ -121,15 +113,10 @@
             "text": "Done"
           },
           {
-            "class": {
-              "$if": {
-                "condition": { "$eq": ["$dragOverColumn", "done"] },
-                "then": "kanban-column-content drag-over",
-                "else": "kanban-column-content"
-              }
-            },
+            "class": "kanban-column-content",
             "attrs": {
-              "data-column": "done"
+              "data-column": "done",
+              "data": "$dragOverColumn"
             },
             "$on": {
               "dragover": {
@@ -155,17 +142,14 @@
             "$each": {
               "items": "$todosDone",
               "template": {
-                "class": {
-                  "$if": {
-                    "condition": { "$eq": ["$draggedItemId", "$$id"] },
-                    "then": "card dragging",
-                    "else": "card"
-                  }
-                },
+                "class": "card",
                 "attrs": {
                   "draggable": "true",
                   "data-id": "$$id",
-                  "data-done": "true"
+                  "data-done": "true",
+                  "data": {
+                    "isDragged": "$draggedItemIds.$$id"
+                  }
                 },
                 "$on": {
                   "dragstart": {

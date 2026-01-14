@@ -3,7 +3,7 @@
  * Safe expression evaluation for AI-generated templates
  */
 
-export { evaluate } from './evaluator';
+export { evaluate } from '../evaluator';
 export { validateExpression } from './validator';
 export type {
   MaiaScriptExpression,
@@ -28,9 +28,9 @@ export {
   now,
   toString,
   stringify,
-} from './helpers';
+} from '../helpers';
 
-import { evaluate } from './evaluator';
+import { evaluate } from '../evaluator';
 import { validateExpression } from './validator';
 import { SecurityError } from './types';
 import type { MaiaScriptExpression, EvaluationContext } from './types';

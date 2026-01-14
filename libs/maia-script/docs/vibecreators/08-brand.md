@@ -68,20 +68,14 @@ Create a file named `brand.style.maia`:
     }
   },
   
-  "styles": {
-    ".todo-app": {
+  "components": {
+    "todoApp": {
       "fontFamily": "var(--font-family)",
       "maxWidth": "800px",
       "margin": "0 auto",
       "padding": "var(--spacing-xl)"
     },
-    "h1": {
-      "fontSize": "var(--font-size-h1)",
-      "fontWeight": "var(--font-weight-bold)",
-      "color": "var(--color-text)",
-      "marginBottom": "var(--spacing-lg)"
-    },
-    ".btn": {
+    "button": {
       "padding": "var(--spacing-sm) var(--spacing-md)",
       "borderRadius": "var(--border-radius-md)",
       "border": "none",
@@ -89,24 +83,32 @@ Create a file named `brand.style.maia`:
       "fontWeight": "var(--font-weight-bold)",
       "transition": "all 0.2s"
     },
-    ".btn-primary": {
+    "buttonPrimary": {
       "backgroundColor": "var(--color-primary)",
-      "color": "white"
+      "color": "white",
+      ":hover": {
+        "opacity": "0.9"
+      }
     },
-    ".btn-primary:hover": {
-      "backgroundColor": "#2563eb"
-    },
-    ".input": {
+    "input": {
       "padding": "var(--spacing-sm) var(--spacing-md)",
       "border": "1px solid var(--color-border)",
       "borderRadius": "var(--border-radius-md)",
       "fontSize": "var(--font-size-base)",
-      "width": "100%"
-    },
-    ".input:focus": {
-      "outline": "none",
-      "borderColor": "var(--color-primary)",
-      "boxShadow": "var(--shadow-sm)"
+      "width": "100%",
+      ":focus": {
+        "outline": "none",
+        "borderColor": "var(--color-primary)",
+        "boxShadow": "var(--shadow-sm)"
+      }
+    }
+  },
+  "selectors": {
+    "h1": {
+      "fontSize": "var(--font-size-h1)",
+      "fontWeight": "var(--font-weight-bold)",
+      "color": "var(--color-text)",
+      "marginBottom": "var(--spacing-lg)"
     }
   }
 }
@@ -252,57 +254,111 @@ Reference in styles:
 
 ## Component Styles
 
-Define reusable component styles:
+Define reusable component styles. Use nested `data` syntax for conditional styling:
 
 ```json
 {
-  "styles": {
-    ".btn": {
+  "components": {
+    "button": {
       "padding": "var(--spacing-sm) var(--spacing-md)",
       "borderRadius": "var(--border-radius-md)",
       "border": "none",
       "cursor": "pointer",
       "fontWeight": "var(--font-weight-bold)",
       "transition": "all 0.2s",
-      "fontSize": "var(--font-size-base)"
+      "fontSize": "var(--font-size-base)",
+      ":hover": {
+        "opacity": "0.9"
+      }
     },
-    ".btn-primary": {
-      "backgroundColor": "var(--color-primary)",
-      "color": "white"
+    "buttonViewSwitch": {
+      "padding": "var(--spacing-xs) var(--spacing-md)",
+      "background": "transparent",
+      "color": "var(--colors-textSecondary)",
+      "border": "1px solid var(--colors-border)",
+      "borderRadius": "var(--radii-sm)",
+      "cursor": "pointer",
+      "transition": "all 0.2s ease",
+      "data": {
+        "active": {
+          "true": {
+            "background": "var(--colors-primary)",
+            "color": "white",
+            "borderColor": "var(--colors-primary)",
+            "fontWeight": "600"
+          }
+        }
+      }
     },
-    ".btn-primary:hover": {
-      "backgroundColor": "#2563eb"
+    "card": {
+      "display": "flex",
+      "alignItems": "center",
+      "padding": "var(--spacing-sm) var(--spacing-md)",
+      "background": "var(--colors-surface)",
+      "borderRadius": "0",
+      "border": "1px solid var(--colors-border)",
+      "transition": "all 0.2s ease",
+      "data": {
+        "isDragged": {
+          "true": {
+            "opacity": "0.3",
+            "pointerEvents": "none"
+          }
+        },
+        "done": {
+          "true": {
+            "opacity": "0.6",
+            "background": "rgba(0, 0, 0, 0.02)"
+          }
+        }
+      }
     },
-    ".btn-secondary": {
-      "backgroundColor": "var(--color-secondary)",
-      "color": "white"
+    "kanbanColumnContent": {
+      "display": "flex",
+      "flexDirection": "column",
+      "padding": "var(--spacing-sm)",
+      "border": "2px dashed var(--colors-border)",
+      "borderRadius": "var(--radii-md)",
+      "background": "rgba(255, 255, 255, 0.2)",
+      "transition": "all 0.2s ease",
+      "data": {
+        "dragOverColumn": {
+          "todo": {
+            "background": "rgba(143, 168, 155, 0.15)",
+            "borderColor": "var(--colors-primary)",
+            "borderWidth": "2px",
+            "borderStyle": "dashed"
+          },
+          "done": {
+            "background": "rgba(143, 168, 155, 0.15)",
+            "borderColor": "var(--colors-primary)",
+            "borderWidth": "2px",
+            "borderStyle": "dashed"
+          }
+        }
+      }
     },
-    ".btn-outline": {
-      "backgroundColor": "transparent",
-      "border": "1px solid var(--color-border)",
-      "color": "var(--color-text)"
-    },
-    ".card": {
-      "backgroundColor": "var(--color-surface)",
-      "borderRadius": "var(--border-radius-lg)",
-      "padding": "var(--spacing-lg)",
-      "boxShadow": "var(--shadow-md)"
-    },
-    ".input": {
+    "input": {
       "padding": "var(--spacing-sm) var(--spacing-md)",
       "border": "1px solid var(--color-border)",
       "borderRadius": "var(--border-radius-md)",
       "fontSize": "var(--font-size-base)",
-      "width": "100%"
-    },
-    ".input:focus": {
-      "outline": "none",
-      "borderColor": "var(--color-primary)",
-      "boxShadow": "0 0 0 3px rgba(59, 130, 246, 0.1)"
+      "width": "100%",
+      ":focus": {
+        "outline": "none",
+        "borderColor": "var(--color-primary)",
+        "boxShadow": "0 0 0 3px rgba(59, 130, 246, 0.1)"
+      }
     }
   }
 }
 ```
+
+**Nested Data-Attribute Syntax:**
+- `data.dragOverColumn.todo` → Generates `.kanban-column-content[data-drag-over-column="todo"]`
+- `data.isDragged.true` → Generates `.card[data-is-dragged="true"]`
+- Supports multiple data-attributes and nested combinations
+- Automatically converts camelCase to kebab-case
 
 ## Linking Brand to Actors
 
@@ -381,13 +437,67 @@ Add responsive breakpoints:
 }
 ```
 
+## Nested Data-Attribute Syntax
+
+For conditional styling, use nested `data` syntax in component definitions:
+
+```json
+{
+  "components": {
+    "buttonViewSwitch": {
+      "padding": "var(--spacing-xs) var(--spacing-md)",
+      "background": "transparent",
+      "data": {
+        "active": {
+          "true": {
+            "background": "var(--colors-primary)",
+            "color": "white"
+          }
+        }
+      }
+    },
+    "kanbanColumnContent": {
+      "border": "2px dashed var(--colors-border)",
+      "data": {
+        "dragOverColumn": {
+          "todo": {
+            "background": "rgba(143, 168, 155, 0.15)",
+            "borderColor": "var(--colors-primary)"
+          },
+          "done": {
+            "background": "rgba(143, 168, 155, 0.15)",
+            "borderColor": "var(--colors-primary)"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**Generated CSS:**
+```css
+.button-view-switch[data-active="true"] {
+  background: var(--colors-primary);
+  color: white;
+}
+
+.kanban-column-content[data-drag-over-column="todo"] {
+  background: rgba(143, 168, 155, 0.15);
+  border-color: var(--colors-primary);
+}
+```
+
+**Pattern:** State machine sets context → View maps to data-attributes → CSS matches selectors
+
 ## Best Practices
 
 ### ✅ DO:
 
 - **Use tokens consistently** - Don't hardcode colors/spacing
 - **Keep tokens semantic** - `primary` not `blue`
-- **Define component patterns** - Reusable `.btn`, `.card`, `.input`
+- **Define component patterns** - Reusable components in `components` section
+- **Use nested data syntax** - For conditional styling via data-attributes
 - **Support dark mode** - Add `colorsDark` tokens
 - **Use CSS custom properties** - Easy runtime theming
 - **Document your tokens** - Add comments explaining usage
@@ -399,6 +509,7 @@ Add responsive breakpoints:
 - **Don't mix units** - Use rem/em consistently
 - **Don't duplicate styles** - Extract common patterns
 - **Don't use inline styles** - Define in brand/style files
+- **Don't use class-based conditionals** - Use data-attributes instead (`.active`, `.dragging`, etc.)
 
 ## Example: Complete Brand System
 
@@ -442,27 +553,37 @@ Add responsive breakpoints:
     }
   },
   
-  "styles": {
+  "components": {
+    "button": {
+      "padding": "var(--spacing-sm) var(--spacing-md)",
+      "borderRadius": "var(--border-radius-md)",
+      "border": "none",
+      "cursor": "pointer",
+      "transition": "all 0.2s"
+    },
+    "buttonPrimary": {
+      "backgroundColor": "var(--color-primary)",
+      "color": "white",
+      ":hover": {
+        "opacity": "0.9"
+      }
+    },
+    "input": {
+      "padding": "var(--spacing-sm)",
+      "border": "1px solid var(--color-border)",
+      "borderRadius": "var(--border-radius-md)",
+      ":focus": {
+        "outline": "none",
+        "borderColor": "var(--color-primary)"
+      }
+    }
+  },
+  "selectors": {
     ":host": {
       "fontFamily": "var(--font-family)",
       "fontSize": "var(--font-size)",
       "lineHeight": "var(--line-height)",
       "color": "var(--color-text)"
-    },
-    ".btn": {
-      "padding": "var(--spacing-sm) var(--spacing-md)",
-      "borderRadius": "var(--border-radius-md)",
-      "border": "none",
-      "cursor": "pointer"
-    },
-    ".btn-primary": {
-      "backgroundColor": "var(--color-primary)",
-      "color": "white"
-    },
-    ".input": {
-      "padding": "var(--spacing-sm)",
-      "border": "1px solid var(--color-border)",
-      "borderRadius": "var(--border-radius-md)"
     }
   }
 }

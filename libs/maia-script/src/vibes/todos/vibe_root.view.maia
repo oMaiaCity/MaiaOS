@@ -18,12 +18,10 @@
             "children": [
               {
                 "tag": "button",
-                "class": {
-                  "$if": {
-                    "condition": { "$eq": ["$viewMode", "list"] },
-                    "then": "button-view-switch active",
-                    "else": "button-view-switch"
-                  }
+                "class": "button-view-switch",
+                "attrs": {
+                  "data-view": "list",
+                  "data": "$listButtonActive"
                 },
                 "text": "List",
                 "$on": {
@@ -35,12 +33,10 @@
               },
               {
                 "tag": "button",
-                "class": {
-                  "$if": {
-                    "condition": { "$eq": ["$viewMode", "kanban"] },
-                    "then": "button-view-switch active",
-                    "else": "button-view-switch"
-                  }
+                "class": "button-view-switch",
+                "attrs": {
+                  "data-view": "kanban",
+                  "data": "$kanbanButtonActive"
                 },
                 "text": "Kanban",
                 "$on": {
@@ -93,7 +89,7 @@
       {
         "tag": "main",
         "class": "content-area",
-        "slot": "$currentView"
+        "$slot": "$currentView"
       }
     ]
   }

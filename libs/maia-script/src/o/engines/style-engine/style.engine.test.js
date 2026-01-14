@@ -205,4 +205,148 @@ describe('StyleEngine', () => {
       expect(css).toContain('background: #8fa89b;');
     });
   });
+
+  describe('Nested Data-Attribute Syntax', () => {
+    it('should generate data-attribute selector from nested data syntax', () => {
+      const components = {
+        kanbanColumnContent: {
+          background: 'white',
+          data: {
+            dragOver: {
+              todo: {
+                background: 'red',
+                borderColor: 'blue'
+              }
+            }
+          }
+        }
+      };
+      const tokens = {};
+      
+      const css = engine.compileComponentsToCSS(components, tokens);
+      
+      expect(css).toContain('.kanban-column-content {');
+      expect(css).toContain('background: white;');
+      expect(css).toContain('.kanban-column-content[data-drag-over="todo"] {');
+      expect(css).toContain('background: red;');
+      expect(css).toContain('border-color: blue;');
+    });
+
+    it('should handle multiple data-attribute conditions', () => {
+      const components = {
+        card: {
+          data: {
+            draggedItemId: {
+              'item-123': {
+                opacity: '0.5'
+              },
+              'item-456': {
+                opacity: '0.3'
+              }
+            },
+            dragOver: {
+              todo: {
+                background: 'yellow'
+              }
+            }
+          }
+        }
+      };
+      const tokens = {};
+      
+      const css = engine.compileComponentsToCSS(components, tokens);
+      
+      expect(css).toContain('.card[data-dragged-item-id="item-123"] {');
+      expect(css).toContain('opacity: 0.5;');
+      expect(css).toContain('.card[data-dragged-item-id="item-456"] {');
+      expect(css).toContain('opacity: 0.3;');
+      expect(css).toContain('.card[data-drag-over="todo"] {');
+      expect(css).toContain('background: yellow;');
+    });
+
+    it('should convert camelCase to kebab-case for nested data keys', () => {
+      const components = {
+        component: {
+          data: {
+            dragOverColumn: {
+              todo: {
+                background: 'red'
+              }
+            }
+          }
+        }
+      };
+      const tokens = {};
+      
+      const css = engine.compileComponentsToCSS(components, tokens);
+      
+      expect(css).toContain('.component[data-drag-over-column="todo"] {');
+      expect(css).not.toContain('data-dragOverColumn');
+    });
+
+    it('should combine data-attributes with pseudo-selectors', () => {
+      const components = {
+        button: {
+          background: '#000',
+          ':hover': {
+            background: '#111'
+          },
+          data: {
+            active: {
+              true: {
+                background: '#222',
+                ':hover': {
+                  background: '#333'
+                }
+              }
+            }
+          }
+        }
+      };
+      const tokens = {};
+      
+      const css = engine.compileComponentsToCSS(components, tokens);
+      
+      expect(css).toContain('.button {');
+      expect(css).toContain('.button:hover {');
+      expect(css).toContain('.button[data-active="true"] {');
+      expect(css).toContain('background: #222;');
+      expect(css).toContain('.button[data-active="true"]:hover {');
+      expect(css).toContain('background: #333;');
+    });
+
+    it('should handle deeply nested data structures', () => {
+      const components = {
+        card: {
+          data: {
+            state: {
+              dragging: {
+                opacity: '0.5',
+                data: {
+                  column: {
+                    todo: {
+                      background: 'red'
+                    },
+                    done: {
+                      background: 'blue'
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      };
+      const tokens = {};
+      
+      const css = engine.compileComponentsToCSS(components, tokens);
+      
+      expect(css).toContain('.card[data-state="dragging"] {');
+      expect(css).toContain('opacity: 0.5;');
+      expect(css).toContain('.card[data-state="dragging"][data-column="todo"] {');
+      expect(css).toContain('background: red;');
+      expect(css).toContain('.card[data-state="dragging"][data-column="done"] {');
+      expect(css).toContain('background: blue;');
+    });
+  });
 });
