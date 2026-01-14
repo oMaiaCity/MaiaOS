@@ -1,0 +1,7 @@
+{
+  "$type": "vibe",
+  "$id": "vibe_todos_001",
+  "name": "Todo List",
+  "description": "A complete todo list application with state machines, drag-drop kanban view, and AI-compatible tools. Showcases MaiaOS actor system, message passing, and declarative UI.",
+  "actor": "./todo.actor.maia"
+}

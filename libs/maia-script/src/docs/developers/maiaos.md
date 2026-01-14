@@ -98,6 +98,7 @@ class MaiaOS {
       
       // Public API
       createActor: async (actorPath, container) => {...},
+      loadVibe: async (vibePath, container) => {...},
       getActor: (actorId) => {...},
       sendMessage: (actorId, message) => {...},
       getEngines: () => {...}
@@ -122,6 +123,93 @@ class MaiaOS {
     
     return os;
   }
+}
+```
+
+## Vibes (App Manifests)
+
+### What Are Vibes?
+
+Vibes are marketplace-ready app manifests (`.vibe.maia`) that provide metadata and reference the root actor. They serve as the "app store listing" for MaiaOS applications.
+
+**Structure:**
+```json
+{
+  "$type": "vibe",
+  "$id": "vibe_todos_001",
+  "name": "Todo List",
+  "description": "A complete todo list application...",
+  "actor": "./todo.actor.maia"
+}
+```
+
+### Loading Vibes
+
+```javascript
+// High-level API (recommended)
+const { vibe, actor } = await os.loadVibe(
+  './vibes/todos/todos.vibe.maia',
+  document.getElementById('container')
+);
+
+// Equivalent to:
+// 1. Fetch vibe manifest
+// 2. Validate structure ($type, actor field)
+// 3. Resolve actor path (relative to vibe)
+// 4. Call os.createActor(resolvedPath, container)
+// 5. Return {vibe, actor}
+```
+
+### Implementation
+
+**kernel.js:**
+```javascript
+async loadVibe(vibePath, container) {
+  // Fetch vibe manifest
+  const response = await fetch(vibePath);
+  const vibe = await response.json();
+  
+  // Validate
+  if (vibe.$type !== 'vibe') {
+    throw new Error('Invalid vibe manifest: $type must be "vibe"');
+  }
+  if (!vibe.actor) {
+    throw new Error('Vibe manifest missing "actor" field');
+  }
+  
+  // Resolve actor path relative to vibe location
+  const vibeDir = vibePath.substring(0, vibePath.lastIndexOf('/'));
+  const actorPath = `${vibeDir}/${vibe.actor}`;
+  
+  // Create actor
+  const actor = await this.createActor(actorPath, container);
+  
+  return { vibe, actor };
+}
+```
+
+### Design Rationale
+
+**Why separate vibes from actors?**
+
+1. **Marketplace Integration** - Vibes provide metadata for discovery, search, and installation
+2. **Clean Separation** - Manifest (vibe) vs Implementation (actor)
+3. **Extensibility** - Easy to add icon, screenshots, version, etc. without changing actors
+4. **AI-Friendly** - LLMs can generate vibe manifests as app packaging
+
+**Future Extensions:**
+```json
+{
+  "$type": "vibe",
+  "name": "...",
+  "description": "...",
+  "actor": "...",
+  "icon": "./icon.svg",          // Marketplace icon
+  "screenshots": ["..."],         // Preview images
+  "tags": ["productivity"],       // Search tags
+  "category": "productivity",     // Primary category
+  "license": "MIT",               // License type
+  "repository": "https://..."     // Source URL
 }
 ```
 

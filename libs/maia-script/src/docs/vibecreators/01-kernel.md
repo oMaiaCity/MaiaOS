@@ -94,6 +94,8 @@ Generic drag-and-drop for any schema/field:
 
 ## Creating Actors
 
+### Direct Actor Creation
+
 ```javascript
 // Create a single actor
 const todoActor = await os.createActor(
@@ -108,6 +110,28 @@ const actors = await Promise.all([
   os.createActor('./maia/calendar.actor.maia', document.getElementById('cal'))
 ]);
 ```
+
+### Loading Vibes (Recommended)
+
+**Vibes** are app manifests that provide marketplace metadata and reference the root actor. This is the recommended way to load applications:
+
+```javascript
+// Load a vibe (app manifest)
+const { vibe, actor } = await os.loadVibe(
+  './vibes/todos/todos.vibe.maia',
+  document.getElementById('app')
+);
+
+console.log('Loaded vibe:', vibe.name);        // "Todo List"
+console.log('Description:', vibe.description); // App description
+console.log('Actor:', actor);                  // Created actor instance
+```
+
+**What's the difference?**
+- `createActor()` - Direct actor creation (low-level)
+- `loadVibe()` - Load app via manifest (recommended, marketplace-ready)
+
+**Learn more:** See [Vibes](./00-vibes.md) for complete documentation on app manifests.
 
 ## Accessing the OS
 

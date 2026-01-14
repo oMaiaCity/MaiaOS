@@ -110,6 +110,46 @@ export class MaiaOS {
   }
 
   /**
+   * Load a vibe (app manifest) and create its root actor
+   * @param {string} vibePath - Path to vibe manifest
+   * @param {HTMLElement} container - Container element
+   * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
+   */
+  async loadVibe(vibePath, container) {
+    console.log(`📦 Loading vibe from ${vibePath}...`);
+    
+    // Fetch vibe manifest
+    const response = await fetch(vibePath);
+    if (!response.ok) {
+      throw new Error(`Failed to load vibe: ${vibePath}`);
+    }
+    
+    const vibe = await response.json();
+    
+    // Validate vibe structure
+    if (vibe.$type !== 'vibe') {
+      throw new Error(`Invalid vibe manifest: $type must be "vibe"`);
+    }
+    
+    if (!vibe.actor) {
+      throw new Error(`Vibe manifest missing "actor" field`);
+    }
+    
+    console.log(`✨ Vibe: "${vibe.name}"`);
+    
+    // Resolve actor path relative to vibe location
+    const vibeDir = vibePath.substring(0, vibePath.lastIndexOf('/'));
+    const actorPath = `${vibeDir}/${vibe.actor}`;
+    
+    // Create root actor
+    const actor = await this.createActor(actorPath, container);
+    
+    console.log(`✅ Vibe loaded: ${vibe.name}`);
+    
+    return { vibe, actor };
+  }
+
+  /**
    * Get actor by ID
    * @param {string} actorId - Actor ID
    * @returns {Object|null} Actor instance
