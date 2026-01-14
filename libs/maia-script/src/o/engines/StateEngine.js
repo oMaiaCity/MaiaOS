@@ -159,7 +159,7 @@ export class StateEngine {
 
     // Execute entry actions for new state (only if state actually changed)
     if (previousState !== targetState) {
-      await this._executeEntry(machine, targetState);
+    await this._executeEntry(machine, targetState);
     }
     
     // Clear event payload after transition completes
@@ -328,9 +328,9 @@ export class StateEngine {
       // Tool succeeded - send SUCCESS event (if machine handles it and autoTransition is true)
       // This allows state machines to react to tool completion
       if (autoTransition) {
-        const currentStateDef = machine.definition.states[machine.currentState];
-        if (currentStateDef.on && currentStateDef.on.SUCCESS) {
-          await this.send(machine.id, 'SUCCESS', {});
+      const currentStateDef = machine.definition.states[machine.currentState];
+      if (currentStateDef.on && currentStateDef.on.SUCCESS) {
+        await this.send(machine.id, 'SUCCESS', {});
         }
       }
     } catch (error) {
@@ -338,9 +338,9 @@ export class StateEngine {
       
       // Tool failed - send ERROR event (if machine handles it and autoTransition is true)
       if (autoTransition) {
-        const currentStateDef = machine.definition.states[machine.currentState];
-        if (currentStateDef.on && currentStateDef.on.ERROR) {
-          await this.send(machine.id, 'ERROR', { error: error.message });
+      const currentStateDef = machine.definition.states[machine.currentState];
+      if (currentStateDef.on && currentStateDef.on.ERROR) {
+        await this.send(machine.id, 'ERROR', { error: error.message });
         }
       }
     }
@@ -375,7 +375,7 @@ export class StateEngine {
         evaluated[key] = this._evaluatePayload(value, context, eventPayload);
       } else {
         // Otherwise, evaluate as a MaiaScript expression
-        evaluated[key] = this.evaluator.evaluate(value, data);
+      evaluated[key] = this.evaluator.evaluate(value, data);
       }
     }
     return evaluated;

@@ -92,21 +92,21 @@ export class ToolEngine {
       throw new Error(`Tool not found: ${actionName}`);
     }
     
-    try {
-      // Validate payload (optional - basic validation)
-      if (tool.definition.parameters) {
-        this._validatePayload(payload, tool.definition.parameters);
+      try {
+        // Validate payload (optional - basic validation)
+        if (tool.definition.parameters) {
+          this._validatePayload(payload, tool.definition.parameters);
+        }
+        
+        // Execute tool function
+        await tool.function.execute(actor, payload);
+        
+        console.log(`[ToolEngine] Executed ${actionName}`);
+      } catch (error) {
+        console.error(`[ToolEngine] Tool execution error (${actionName}):`, error);
+        actor.context.error = error.message || 'Tool execution failed';
+        throw error;
       }
-      
-      // Execute tool function
-      await tool.function.execute(actor, payload);
-      
-      console.log(`[ToolEngine] Executed ${actionName}`);
-    } catch (error) {
-      console.error(`[ToolEngine] Tool execution error (${actionName}):`, error);
-      actor.context.error = error.message || 'Tool execution failed';
-      throw error;
-    }
   }
 
   /**

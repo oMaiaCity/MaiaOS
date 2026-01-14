@@ -34,8 +34,8 @@ export default {
     // This is schema-specific convention: {schema}{CapitalizedValue}
     if (schema === 'todos' && field === 'done') {
       // Special handling for todos - update filtered arrays
-      actor.context.todosTodo = actor.context.todos.filter(t => !t.done);
-      actor.context.todosDone = actor.context.todos.filter(t => t.done);
+    actor.context.todosTodo = actor.context.todos.filter(t => !t.done);
+    actor.context.todosDone = actor.context.todos.filter(t => t.done);
     }
     
     // Clear drag state

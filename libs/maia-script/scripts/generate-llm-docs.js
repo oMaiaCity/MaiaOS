@@ -20,7 +20,7 @@ const __dirname = dirname(__filename);
 
 const DOCS_DIR = join(__dirname, '../src/docs');
 const AGENTS_DIR = join(DOCS_DIR, 'agents');
-const ARCHITECTURE_FILE = join(DOCS_DIR, 'ARCHITECTURE.md');
+const GETTING_STARTED_DIR = join(DOCS_DIR, 'getting-started');
 
 /**
  * Read all markdown files from a directory
@@ -82,8 +82,8 @@ async function generate() {
     // Ensure agents directory exists
     await mkdir(AGENTS_DIR, { recursive: true });
     
-    // Read ARCHITECTURE.md (prefix for both)
-    const architecture = await readFile(ARCHITECTURE_FILE, 'utf-8');
+    // Read getting-started docs (prefix for both)
+    const gettingStartedDocs = await readMarkdownFiles(GETTING_STARTED_DIR);
     
     // Read vibecreators docs
     const vibecreatorDocs = await readMarkdownFiles(join(DOCS_DIR, 'vibecreators'));
@@ -93,11 +93,11 @@ async function generate() {
     
     // Generate Vibecreator LLM doc
     const vibecreatorSections = [
-      {
-        title: 'Architecture Overview',
-        source: 'ARCHITECTURE.md',
-        content: architecture.trim()
-      },
+      ...gettingStartedDocs.map(doc => ({
+        title: doc.file.replace('.md', '').replace(/^\d+_/, '').replace(/-/g, ' ').toUpperCase(),
+        source: `getting-started/${doc.file}`,
+        content: doc.content
+      })),
       ...vibecreatorDocs.map(doc => ({
         title: doc.file.replace('.md', '').replace(/^\d+-/, '').replace(/-/g, ' ').toUpperCase(),
         source: `vibecreators/${doc.file}`,
@@ -115,11 +115,11 @@ async function generate() {
     
     // Generate Developer LLM doc
     const developerSections = [
-      {
-        title: 'Architecture Overview',
-        source: 'ARCHITECTURE.md',
-        content: architecture.trim()
-      },
+      ...gettingStartedDocs.map(doc => ({
+        title: doc.file.replace('.md', '').replace(/^\d+_/, '').replace(/-/g, ' ').toUpperCase(),
+        source: `getting-started/${doc.file}`,
+        content: doc.content
+      })),
       ...developerDocs.map(doc => ({
         title: doc.file.replace('.md', '').replace(/-/g, ' ').toUpperCase(),
         source: `developers/${doc.file}`,
@@ -154,7 +154,7 @@ async function watchMode() {
   
   // Watch for changes
   const watchDirs = [
-    DOCS_DIR,
+    GETTING_STARTED_DIR,
     join(DOCS_DIR, 'vibecreators'),
     join(DOCS_DIR, 'developers')
   ];

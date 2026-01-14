@@ -65,8 +65,8 @@ export class ModuleRegistry {
    */
   listModules() {
     return Array.from(this.modules.keys());
-  }
-
+    }
+    
   /**
    * List all module configs
    * @returns {Array<Object>} Array of module configurations
@@ -94,7 +94,7 @@ export class ModuleRegistry {
     if (this.hasModule(moduleName)) {
       console.log(`[ModuleRegistry] Module "${moduleName}" already loaded`);
       return;
-    }
+  }
 
     // Path relative to o/engines/ (where ModuleRegistry.js is located)
     const path = modulePath || `../modules/${moduleName}.module.js`;
@@ -135,7 +135,7 @@ export class ModuleRegistry {
     // Module can implement a query method
     if (typeof module.query === 'function') {
       return module.query(query);
-    }
+  }
 
     // Or expose config directly
     if (module.config && query in module.config) {
