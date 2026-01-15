@@ -8,8 +8,10 @@
 
 - ✅ **Human-readable** - JSON with clear semantics
 - ✅ **AI-compatible** - LLMs can read and generate it
-- ✅ **Schema-validated** - Type-safe definitions
+- ✅ **Schema-validated** - Type-safe definitions validated against JSON Schema
 - ✅ **Expression-rich** - Context references (`$`), item references (`$$`)
+
+All MaiaScript files are automatically validated against JSON schemas when loaded. See [Schema System](./schemas.md) for details.
 
 ## DSL Types
 

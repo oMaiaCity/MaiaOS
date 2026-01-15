@@ -18,6 +18,8 @@ import { StateEngine } from './engines/state-engine/state.engine.js';
 import { MaiaScriptEvaluator } from './engines/MaiaScriptEvaluator.js';
 import { ModuleRegistry } from './engines/ModuleRegistry.js';
 import { ToolEngine } from './engines/tool-engine/tool.engine.js';
+// Import validation helper
+import { validateOrThrow } from '../schemata/validation.helper.js';
 
 /**
  * MaiaOS - Operating System for Actor-based Applications
@@ -126,14 +128,8 @@ export class MaiaOS {
     
     const vibe = await response.json();
     
-    // Validate vibe structure
-    if (vibe.$type !== 'vibe') {
-      throw new Error(`Invalid vibe manifest: $type must be "vibe"`);
-    }
-    
-    if (!vibe.actor) {
-      throw new Error(`Vibe manifest missing "actor" field`);
-    }
+    // Validate vibe structure using schema
+    await validateOrThrow('vibe', vibe, vibePath);
     
     console.log(`✨ Vibe: "${vibe.name}"`);
     

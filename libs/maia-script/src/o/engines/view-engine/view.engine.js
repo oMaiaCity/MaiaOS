@@ -1,3 +1,6 @@
+// Import validation helper
+import { validateOrThrow } from '../../../schemata/validation.helper.js';
+
 /**
  * ViewEngine - Renders .maia view files to Shadow DOM
  * v0.5: Data-attribute mapping, removed $if support, migrated slot to $slot
@@ -60,12 +63,17 @@ export class ViewEngine {
     }
 
     const viewFile = this.resolveViewRef(viewRef);
-    const response = await fetch(`./${viewFile}.view.maia`);
+    const path = `./${viewFile}.view.maia`;
+    const response = await fetch(path);
     if (!response.ok) {
       throw new Error(`Failed to load view: ${viewRef}`);
     }
     
     const viewDef = await response.json();
+    
+    // Validate view data
+    await validateOrThrow('view', viewDef, path);
+    
     this.viewCache.set(viewRef, viewDef);
     return viewDef;
   }

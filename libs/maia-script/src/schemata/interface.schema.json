@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://maiaos.dev/schemas/interface.schema.json",
+  "title": "Actor Interface Definition",
+  "description": "Message interface specification (inbox, publishes, subscriptions)",
+  "type": "object",
+  "required": ["$type"],
+  "properties": {
+    "$type": {
+      "type": "string",
+      "const": "actor.interface"
+    },
+    "inbox": {
+      "type": "object",
+      "description": "Incoming message definitions",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "payload": {
+            "type": "object",
+            "description": "Payload schema",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "description": "Type hint (e.g., 'string', 'number')"
+                },
+                {
+                  "type": "object",
+                  "description": "Nested payload schema"
+                }
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "publishes": {
+      "type": "object",
+      "description": "Outgoing message definitions",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "payload": {
+            "type": "object",
+            "description": "Payload schema",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "description": "Type hint (e.g., 'string', 'number')"
+                },
+                {
+                  "type": "object",
+                  "description": "Nested payload schema"
+                }
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "subscriptions": {
+      "type": "array",
+      "description": "List of actor IDs to subscribe to",
+      "items": {
+        "type": "string"
+      }
+    },
+    "watermark": {
+      "type": "number",
+      "description": "Inbox watermark (last processed message index)",
+      "minimum": 0,
+      "default": 0
+    }
+  }
+}

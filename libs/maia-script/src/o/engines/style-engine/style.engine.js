@@ -1,3 +1,6 @@
+// Import validation helper
+import { validateOrThrow } from '../../../schemata/validation.helper.js';
+
 /**
  * StyleEngine - Compiles .maia style files to CSS with Constructable Stylesheets
  * Handles: Brand design system + Actor overrides, Shadow DOM isolation
@@ -38,7 +41,13 @@ export class StyleEngine {
     if (!response.ok) {
       throw new Error(`Failed to load style: ${path}`);
     }
-    return await response.json();
+    const styleDef = await response.json();
+    
+    // Validate style data (determine type from $type field)
+    const type = styleDef.$type === 'brand.style' ? 'brandStyle' : 'style';
+    await validateOrThrow(type, styleDef, path);
+    
+    return styleDef;
   }
 
   /**

@@ -1,3 +1,6 @@
+// Import validation helper
+import { validateOrThrow } from '../../../schemata/validation.helper.js';
+
 /**
  * StateEngine - XState-like State Machine Interpreter
  * 
@@ -40,6 +43,10 @@ export class StateEngine {
     }
     
     const stateDef = await response.json();
+    
+    // Validate state machine data
+    await validateOrThrow('state', stateDef, path);
+    
     this.stateCache.set(stateRef, stateDef);
     return stateDef;
   }

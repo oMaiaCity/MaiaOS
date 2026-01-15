@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://maiaos.dev/schemas/state.schema.json",
+  "title": "State Machine Definition",
+  "description": "XState-like state machine with states, transitions, guards, and actions",
+  "type": "object",
+  "required": ["$type", "initial", "states"],
+  "properties": {
+    "$type": {
+      "type": "string",
+      "const": "state"
+    },
+    "$id": {
+      "type": "string",
+      "description": "Unique state machine identifier",
+      "pattern": "^state_"
+    },
+    "initial": {
+      "type": "string",
+      "description": "Initial state name"
+    },
+    "states": {
+      "type": "object",
+      "description": "State definitions",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "entry": {
+            "oneOf": [
+              {
+                "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/action"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/action"
+                }
+              }
+            ]
+          },
+          "exit": {
+            "oneOf": [
+              {
+                "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/action"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/action"
+                }
+              }
+            ]
+          },
+          "on": {
+            "type": "object",
+            "description": "Event handlers (transitions)",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "description": "Simple target state"
+                },
+                {
+                  "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/transition"
+                }
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

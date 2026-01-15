@@ -22,11 +22,13 @@ Engines are the **execution machinery** of MaiaOS. They interpret declarative de
 
 ### Core Responsibilities
 
-1. **Interpret Definitions** - Parse and validate DSL
+1. **Interpret Definitions** - Parse and validate DSL using JSON schemas
 2. **Execute Operations** - Perform imperative actions
 3. **Manage State** - Track runtime state (not actor state!)
 4. **Handle Errors** - Graceful failure and recovery
 5. **Emit Events** - Notify other engines (if needed)
+
+All engines automatically validate their input data against JSON schemas when loading definitions. See [Schema System](./schemas.md) for details.
 
 ### Engine Interface Pattern
 

@@ -1,3 +1,6 @@
+// Import validation helper
+import { validateOrThrow } from '../../../schemata/validation.helper.js';
+
 /**
  * ToolEngine - AI-Compatible Tool Execution System
  * v0.4: Module-based tool system with namespace support
@@ -61,7 +64,12 @@ export class ToolEngine {
     try {
       const response = await fetch(resolvedPath);
       if (response.ok) {
-        return await response.json();
+        const toolDef = await response.json();
+        
+        // Validate tool definition
+        await validateOrThrow('tool', toolDef, resolvedPath);
+        
+        return toolDef;
       }
     } catch (e) {
       // fetch() failed, try Bun.file() if available

@@ -10,6 +10,8 @@
 import { ReactiveStore } from '../reactive-store/reactive.store.js';
 // Import MessageQueue
 import { MessageQueue } from '../message-queue/message.queue.js';
+// Import validation helper
+import { validateOrThrow } from '../../../schemata/validation.helper.js';
 
 export class ActorEngine {
   constructor(styleEngine, viewEngine, moduleRegistry, toolEngine, stateEngine = null) {
@@ -73,7 +75,12 @@ export class ActorEngine {
     if (!response.ok) {
       throw new Error(`Failed to load actor: ${path}`);
     }
-    return await response.json();
+    const actor = await response.json();
+    
+    // Validate actor data
+    await validateOrThrow('actor', actor, path);
+    
+    return actor;
   }
 
   /**
@@ -88,6 +95,10 @@ export class ActorEngine {
       throw new Error(`Failed to load context: ${path}`);
     }
     const contextDef = await response.json();
+    
+    // Validate context data
+    await validateOrThrow('context', contextDef, path);
+    
     // Return context without metadata
     const { $type, $id, ...context } = contextDef;
     return context;
@@ -104,7 +115,12 @@ export class ActorEngine {
     if (!response.ok) {
       throw new Error(`Failed to load interface: ${path}`);
     }
-    return await response.json();
+    const interfaceDef = await response.json();
+    
+    // Validate interface data
+    await validateOrThrow('interface', interfaceDef, path);
+    
+    return interfaceDef;
   }
 
   /**

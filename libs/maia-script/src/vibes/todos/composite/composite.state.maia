@@ -58,6 +58,10 @@
           "target": "idle",
           "actions": [
             {
+              "tool": "@context/update",
+              "payload": { "newTodoText": "" }
+            },
+            {
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "CREATE_BUTTON",
