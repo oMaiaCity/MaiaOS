@@ -4,10 +4,10 @@
  * Combines multiple .md files into single context-optimized files
  * 
  * Output:
- * - docs/agents/LLM_Vibecreator.md (ARCHITECTURE + vibecreators docs)
+ * - docs/agents/LLM_Creators.md (ARCHITECTURE + creators docs)
  * - docs/agents/LLM_Developers.md (ARCHITECTURE + developers docs)
  * 
- * Reads from: docs/ (getting-started, vibecreators, developers)
+ * Reads from: docs/ (getting-started, creators, developers)
  * Writes to: docs/agents/ (LLM documentation files)
  * 
  * Runs on file changes in watch mode
@@ -88,33 +88,33 @@ async function generate() {
     // Read getting-started docs (prefix for both)
     const gettingStartedDocs = await readMarkdownFiles(GETTING_STARTED_DIR);
     
-    // Read vibecreators docs
-    const vibecreatorDocs = await readMarkdownFiles(join(DOCS_DIR, 'vibecreators'));
+    // Read creators docs
+    const creatorDocs = await readMarkdownFiles(join(DOCS_DIR, 'creators'));
     
     // Read developers docs
     const developerDocs = await readMarkdownFiles(join(DOCS_DIR, 'developers'));
     
-    // Generate Vibecreator LLM doc
-    const vibecreatorSections = [
+    // Generate Creator LLM doc
+    const creatorSections = [
       ...gettingStartedDocs.map(doc => ({
         title: doc.file.replace('.md', '').replace(/^\d+_/, '').replace(/-/g, ' ').toUpperCase(),
         source: `getting-started/${doc.file}`,
         content: doc.content
       })),
-      ...vibecreatorDocs.map(doc => ({
+      ...creatorDocs.map(doc => ({
         title: doc.file.replace('.md', '').replace(/^\d+-/, '').replace(/-/g, ' ').toUpperCase(),
-        source: `vibecreators/${doc.file}`,
+        source: `creators/${doc.file}`,
         content: doc.content
       }))
     ];
     
-    const vibecreatorLLM = await generateLLMDoc('Vibecreators', vibecreatorSections);
+    const creatorLLM = await generateLLMDoc('Creators', creatorSections);
     await writeFile(
-      join(OUTPUT_AGENTS_DIR, 'LLM_Vibecreator.md'),
-      vibecreatorLLM,
+      join(OUTPUT_AGENTS_DIR, 'LLM_Creators.md'),
+      creatorLLM,
       'utf-8'
     );
-    console.log('✅ Generated LLM_Vibecreator.md');
+    console.log('✅ Generated LLM_Creators.md');
     
     // Generate Developer LLM doc
     const developerSections = [
@@ -158,7 +158,7 @@ async function watchMode() {
   // Watch for changes
   const watchDirs = [
     GETTING_STARTED_DIR,
-    join(DOCS_DIR, 'vibecreators'),
+    join(DOCS_DIR, 'creators'),
     join(DOCS_DIR, 'developers')
   ];
   

@@ -7,7 +7,7 @@
 	],
 	"type": "module",
 	"scripts": {
-    "dev:maia": "cd libs/maia-script && bun dev",
+		"dev:maia": "cd libs/maia-script && bun dev",
 		"dev": "bun scripts/dev.js",
 		"dev:me": "bun --env-file=.env --filter me dev",
 		"dev:voice-call": "bun --env-file=.env --filter voice-call dev",
@@ -33,5 +33,8 @@
 		"@semantic-release/npm": "^13.1.2",
 		"@semantic-release/release-notes-generator": "^14.1.0",
 		"semantic-release": "^25.0.2"
+	},
+	"dependencies": {
+		"jazz-tools": "^0.19.21"
 	}
 }

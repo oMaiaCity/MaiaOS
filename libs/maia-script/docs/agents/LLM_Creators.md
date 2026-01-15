@@ -1,6 +1,6 @@
-# MaiaOS Documentation for Vibecreators
+# MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-01-15T13:05:37.274Z
+**Auto-generated:** 2026-01-15T21:17:24.490Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -1190,7 +1190,7 @@ my-app/
 
 # VIBES
 
-*Source: vibecreators/00-vibes.md*
+*Source: creators/00-vibes.md*
 
 # Vibes (App Manifests)
 
@@ -1612,7 +1612,7 @@ console.log(actor.context);    // Runtime state
 
 # KERNEL
 
-*Source: vibecreators/01-kernel.md*
+*Source: creators/01-kernel.md*
 
 # Kernel Loader (Getting Started)
 
@@ -1848,7 +1848,7 @@ Failed to load actor: ./maia/todo.actor.maia
 
 # ACTORS
 
-*Source: vibecreators/02-actors.md*
+*Source: creators/02-actors.md*
 
 # Actors
 
@@ -2930,7 +2930,7 @@ actor.subscriptions    // Subscribed actors
 
 # SKILLS
 
-*Source: vibecreators/03-skills.md*
+*Source: creators/03-skills.md*
 
 # Skills (AI Agent Interface)
 
@@ -3351,7 +3351,7 @@ Coming in **v0.5**: Full voice integration with automatic skill discovery!
 
 # CONTEXT
 
-*Source: vibecreators/04-context.md*
+*Source: creators/04-context.md*
 
 # Context (Runtime State)
 
@@ -3837,7 +3837,7 @@ validateContext(actor.context, {
 
 # STATE
 
-*Source: vibecreators/05-state.md*
+*Source: creators/05-state.md*
 
 # State Machines
 
@@ -4785,7 +4785,7 @@ actor.machine.definition
 
 # TOOLS
 
-*Source: vibecreators/06-tools.md*
+*Source: creators/06-tools.md*
 
 # Tools
 
@@ -5168,7 +5168,7 @@ console.log(mockActor.context.todos); // [{id: "...", text: "Test", done: false}
 
 # VIEWS
 
-*Source: vibecreators/07-views.md*
+*Source: creators/07-views.md*
 
 # Views (UI Representation)
 
@@ -5925,7 +5925,7 @@ Views support only these operations:
 
 # BRAND
 
-*Source: vibecreators/08-brand.md*
+*Source: creators/08-brand.md*
 
 # Brand (Design System)
 
@@ -6528,7 +6528,7 @@ For conditional styling, use nested `data` syntax in component definitions:
 
 # STYLE
 
-*Source: vibecreators/09-style.md*
+*Source: creators/09-style.md*
 
 # Style (Local Styling)
 
@@ -7069,7 +7069,7 @@ styleElement.textContent += `
 
 # BEST PRACTICES
 
-*Source: vibecreators/10-best-practices.md*
+*Source: creators/10-best-practices.md*
 
 # Best Practices: Actor Architecture
 

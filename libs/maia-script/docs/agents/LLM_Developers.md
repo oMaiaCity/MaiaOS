@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Developers
 
-**Auto-generated:** 2026-01-15T13:05:37.274Z
+**Auto-generated:** 2026-01-15T21:17:24.493Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -1188,239 +1188,618 @@ my-app/
 
 ---
 
-# COMPOSITION
+# 01_MAIAOS
 
-*Source: developers/composition.md*
+*Source: developers/01_maiaos.md*
 
-# Actor Composition (Developer Guide)
+# MaiaOS (Developer Guide)
 
-**For developers** who want to understand how composite/leaf actor patterns work in MaiaOS.
+**For developers** who want to understand and extend the MaiaOS architecture.
 
-## Overview
+## Architecture Overview
 
-MaiaOS supports **composable actor architecture** where actors can be composed hierarchically:
-- **Composite Actors**: Container actors with slots for child actors
-- **Leaf Actors**: Terminal actors that render UI or perform tasks
-- **Pure Message Passing**: All actor-to-actor communication via inbox/subscriptions
+MaiaOS is a **declarative operating system** for building AI-composable applications. It separates concerns into three distinct layers:
 
-## Composite vs Leaf Views
+### 1. Definition Layer (Declarative)
+User-facing configuration files (`.maia`):
+- **Actors** - Component identity and references
+- **State Machines** - Behavior flow
+- **Views** - UI structure
+- **Styles** - Appearance
+- **Skills** - AI agent interface
 
-### Leaf View
+### 2. Execution Layer (Imperative)
+JavaScript engines that interpret definitions:
+- **ActorEngine** - Actor lifecycle management
+- **StateEngine** - State machine interpreter
+- **ViewEngine** - View-to-DOM renderer
+- **ToolEngine** - Tool executor
+- **StyleEngine** - Style compiler
+- **ModuleRegistry** - Dynamic module loader
 
-A **leaf view** has a `root` property and renders directly to DOM:
+### 3. Intelligence Layer (Orchestration)
+AI agent integration:
+- **SkillEngine** - Skill discovery and interpretation (v0.5)
+- **LLM Integration** - Event generation from natural language (v0.5)
 
-```json
-{
-  "$type": "view",
-  "root": {
-    "tag": "div",
-    "text": "$title"
+## Core Philosophy
+
+### Separation of Concerns
+
+```
+┌──────────────┐
+│   Actors     │  ← Pure configuration (JSON)
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│   Engines    │  ← Execution machinery (JavaScript)
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│    Tools     │  ← Imperative actions (JavaScript)
+└──────────────┘
+```
+
+### Zero Logic in Definitions
+
+Actors, views, and state machines are **pure data**:
+- No JavaScript functions
+- No embedded logic
+- Only references and configuration
+
+This enables:
+- ✅ Easy serialization (JSON)
+- ✅ AI generation/modification
+- ✅ Hot reload without code changes
+- ✅ Visual editing tools (future)
+
+## System Initialization
+
+### Boot Sequence
+
+```javascript
+// 1. Initialize kernel
+const os = await MaiaOS.boot({
+  modules: ['core', 'mutation', 'dragdrop']
+});
+
+// Behind the scenes:
+// → ModuleRegistry initialized
+// → Engines initialized (Actor, State, View, Tool, Style)
+// → Modules loaded dynamically
+// → Tools registered
+```
+
+### Kernel Structure
+
+```javascript
+class MaiaOS {
+  static async boot(config) {
+    const os = {
+      // Core registries
+      moduleRegistry: new ModuleRegistry(),
+      actors: new Map(),
+      
+      // Engines
+      actorEngine: null,
+      stateEngine: null,
+      viewEngine: null,
+      toolEngine: null,
+      styleEngine: null,
+      evaluator: null,
+      
+      // Public API
+      createActor: async (actorPath, container) => {...},
+      loadVibe: async (vibePath, container) => {...},
+      getActor: (actorId) => {...},
+      sendMessage: (actorId, message) => {...},
+      getEngines: () => {...}
+    };
+    
+    // Initialize engines
+    os.evaluator = new MaiaScriptEvaluator(os.moduleRegistry);
+    os.toolEngine = new ToolEngine(os.moduleRegistry);
+    os.stateEngine = new StateEngine(os.evaluator, os.toolEngine);
+    os.viewEngine = new ViewEngine(os.evaluator, os.stateEngine);
+    os.styleEngine = new StyleEngine(os.evaluator);
+    os.actorEngine = new ActorEngine(
+      os.stateEngine,
+      os.viewEngine,
+      os.styleEngine
+    );
+    
+    // Load modules
+    for (const moduleName of config.modules) {
+      await os.moduleRegistry.loadModule(moduleName);
+    }
+    
+    return os;
   }
 }
 ```
 
-**Characteristics:**
-- Has `root` property (not `container`)
-- Renders directly to Shadow DOM
-- No slots or child actors
-- Terminal in composition tree
+## Vibes (App Manifests)
 
-### Composite View
+### What Are Vibes?
 
-A **composite view** has a `container` property with slots:
+Vibes are marketplace-ready app manifests (`.vibe.maia`) that provide metadata and reference the root actor. They serve as the "app store listing" for MaiaOS applications.
 
+**Structure:**
 ```json
 {
-  "$type": "view",
-  "container": {
-    "tag": "div",
-    "class": "dashboard",
-    "slots": {
-      "header": "@header",
-      "content": "@content",
-      "sidebar": "@sidebar"
+  "$type": "vibe",
+  "$id": "vibe_todos_001",
+  "name": "Todo List",
+  "description": "A complete todo list application...",
+  "actor": "./todo.actor.maia"
+}
+```
+
+### Loading Vibes
+
+```javascript
+// High-level API (recommended)
+const { vibe, actor } = await os.loadVibe(
+  './vibes/todos/todos.vibe.maia',
+  document.getElementById('container')
+);
+
+// Equivalent to:
+// 1. Fetch vibe manifest
+// 2. Validate structure ($type, actor field)
+// 3. Resolve actor path (relative to vibe)
+// 4. Call os.createActor(resolvedPath, container)
+// 5. Return {vibe, actor}
+```
+
+### Implementation
+
+**kernel.js:**
+```javascript
+async loadVibe(vibePath, container) {
+  // Fetch vibe manifest
+  const response = await fetch(vibePath);
+  const vibe = await response.json();
+  
+  // Validate
+  if (vibe.$type !== 'vibe') {
+    throw new Error('Invalid vibe manifest: $type must be "vibe"');
+  }
+  if (!vibe.actor) {
+    throw new Error('Vibe manifest missing "actor" field');
+  }
+  
+  // Resolve actor path relative to vibe location
+  const vibeDir = vibePath.substring(0, vibePath.lastIndexOf('/'));
+  const actorPath = `${vibeDir}/${vibe.actor}`;
+  
+  // Create actor
+  const actor = await this.createActor(actorPath, container);
+  
+  return { vibe, actor };
+}
+```
+
+### Design Rationale
+
+**Why separate vibes from actors?**
+
+1. **Marketplace Integration** - Vibes provide metadata for discovery, search, and installation
+2. **Clean Separation** - Manifest (vibe) vs Implementation (actor)
+3. **Extensibility** - Easy to add icon, screenshots, version, etc. without changing actors
+4. **AI-Friendly** - LLMs can generate vibe manifests as app packaging
+
+**Future Extensions:**
+```json
+{
+  "$type": "vibe",
+  "name": "...",
+  "description": "...",
+  "actor": "...",
+  "icon": "./icon.svg",          // Marketplace icon
+  "screenshots": ["..."],         // Preview images
+  "tags": ["productivity"],       // Search tags
+  "category": "productivity",     // Primary category
+  "license": "MIT",               // License type
+  "repository": "https://..."     // Source URL
+}
+```
+
+## Actor Lifecycle
+
+### 1. Creation
+
+```javascript
+const actor = await os.createActor(
+  './maia/todo.actor.maia',
+  document.getElementById('container')
+);
+
+// Behind the scenes:
+// 1. Load actor.maia (JSON)
+// 2. Load referenced state.maia
+// 3. Load referenced view.maia (if present)
+// 4. Load referenced style.maia (if present)
+// 5. Initialize state machine
+// 6. Render view to Shadow DOM
+// 7. Apply styles
+// 8. Return actor instance
+```
+
+### 2. Actor Instance Structure
+
+```javascript
+{
+  id: 'actor_todo_001',
+  context: {
+    todos: [],
+    newTodoText: '',
+    // ... runtime state
+  },
+  machine: {
+    id: 'state_todo_001',
+    currentState: 'idle',
+    definition: {...},
+    // ... state machine instance
+  },
+  container: HTMLElement,        // DOM mount point
+  viewDef: {...},                // View definition
+  styleDef: {...},               // Style definition
+  inbox: [],                     // Message queue
+  subscriptions: [],             // Actor subscriptions
+  inboxWatermark: 0,             // Last processed message
+  actorEngine: ActorEngine,      // Reference to engine
+}
+```
+
+### 3. Event Flow
+
+```
+User Interaction (click, input, etc.)
+  ↓
+ViewEngine captures event
+  ↓
+ViewEngine.evaluatePayload() (resolve $ and $$)
+  ↓
+StateEngine.send(machineId, eventName, payload)
+  ↓
+StateEngine finds current state
+  ↓
+StateEngine checks event handlers (on: {...})
+  ↓
+StateEngine evaluates guard (if present)
+  ↓
+Guard passes → Continue
+Guard fails → Ignore event
+  ↓
+StateEngine executes exit actions (if leaving state)
+  ↓
+StateEngine transitions to target state
+  ↓
+StateEngine executes entry actions (tool invocations)
+  ↓
+ToolEngine.execute(toolName, actor, payload)
+  ↓
+Tool mutates actor.context
+  ↓
+Tool succeeds → StateEngine sends SUCCESS event
+Tool fails → StateEngine sends ERROR event
+  ↓
+StateEngine handles SUCCESS/ERROR transition
+  ↓
+ActorEngine.rerender(actor)
+  ↓
+ViewEngine re-renders Shadow DOM
+  ↓
+User sees updated UI
+```
+
+## Engine Architecture
+
+### ActorEngine
+
+**Responsibilities:**
+- Actor creation and registration
+- Actor lifecycle management
+- Re-rendering orchestration
+- Message passing coordination
+
+**Key Methods:**
+```javascript
+class ActorEngine {
+  async createActor(actorPath, container, os)
+  registerActor(actor)
+  getActor(actorId)
+  async rerender(actor)
+  destroyActor(actorId)
+  sendMessage(actorId, message)
+  processMessages(actor)
+}
+```
+
+### StateEngine
+
+**Responsibilities:**
+- State machine interpretation
+- Event handling
+- Guard evaluation
+- Tool invocation
+- Automatic SUCCESS/ERROR events
+
+**Key Methods:**
+```javascript
+class StateEngine {
+  registerMachine(machineId, definition, initialContext)
+  send(machineId, event, payload)
+  getCurrentState(machineId)
+  async transition(machineId, event, payload)
+  _evaluateGuard(guard, context, eventPayload)
+  _evaluatePayload(payload, context, eventPayload)
+  async _invokeTool(tool, actor)
+}
+```
+
+### ViewEngine
+
+**Responsibilities:**
+- View definition to DOM rendering
+- Event listener attachment
+- Payload evaluation
+- Shadow DOM management
+
+**Key Methods:**
+```javascript
+class ViewEngine {
+  render(container, viewDef, actor, actorEngine)
+  _renderElement(elementDef, context, actorEngine, actor)
+  _attachEventListeners(element, events, actor, actorEngine)
+  _evaluatePayload(payload, context, item, element)
+}
+```
+
+### ToolEngine
+
+**Responsibilities:**
+- Tool registration
+- Tool execution
+- Tool definition loading
+- Error handling
+
+**Key Methods:**
+```javascript
+class ToolEngine {
+  async registerTool(toolPath, toolName)
+  async execute(toolName, actor, payload)
+  async loadToolDefinition(toolPath)
+  async loadToolFunction(toolPath)
+}
+```
+
+### StyleEngine
+
+**Responsibilities:**
+- Style compilation
+- Token to CSS custom property conversion
+- CSS injection into Shadow DOM
+
+**Key Methods:**
+```javascript
+class StyleEngine {
+  compile(styleDef)
+  _compileTokens(tokens)
+  _compileStyles(styles)
+}
+```
+
+### ModuleRegistry
+
+**Responsibilities:**
+- Module registration
+- Dynamic module loading
+- Module metadata management
+
+**Key Methods:**
+```javascript
+class ModuleRegistry {
+  registerModule(name, moduleClass, metadata)
+  async loadModule(moduleName, modulePath)
+  getModule(name)
+  hasModule(name)
+  listModules()
+  setToolEngine(toolEngine)
+}
+```
+
+## Module System
+
+### Module Structure
+
+```javascript
+// o/modules/custom.module.js
+export class CustomModule {
+  static async register(registry, toolEngine) {
+    // Register tools
+    await toolEngine.registerTool('custom/doSomething', '@custom/doSomething');
+    await toolEngine.registerTool('custom/doOther', '@custom/doOther');
+    
+    // Register module metadata
+    registry.registerModule('custom', CustomModule, {
+      version: '1.0.0',
+      description: 'Custom functionality module',
+      namespace: '@custom',
+      tools: ['@custom/doSomething', '@custom/doOther']
+    });
+  }
+}
+
+// Export register function (alternative pattern)
+export async function register(registry) {
+  const toolEngine = registry._toolEngine;
+  await CustomModule.register(registry, toolEngine);
+}
+```
+
+### Tool Structure
+
+Two files per tool:
+
+1. **Tool Definition** (`*.tool.maia`) - AI-compatible metadata:
+```json
+{
+  "$type": "tool",
+  "$id": "tool_custom_001",
+  "name": "@custom/doSomething",
+  "description": "Does something useful",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "param1": {"type": "string", "required": true}
     }
   }
 }
 ```
 
-**Characteristics:**
-- Has `container` property (not `root`)
-- Defines slots using `@slotName` syntax
-- Child actors fill slots
-- Can nest composite → composite → leaf
+2. **Tool Function** (`*.tool.js`) - Executable code:
+```javascript
+export default {
+  async execute(actor, payload) {
+    const { param1 } = payload;
+    // Mutate actor.context
+    actor.context.someField = param1;
+    console.log('✅ Did something:', param1);
+  }
+};
+```
 
-## Slot Resolution
+## Extending MaiaOS
 
-Slots use `@slotName` syntax to reference child actors:
+### Adding a New Engine
 
-```json
-{
-  "container": {
-    "slots": {
-      "header": "@header",      // Resolves to children.header actor ID
-      "content": "@content"      // Resolves to children.content actor ID
-    }
+1. Create engine class:
+```javascript
+// o/engines/ThreeJSEngine.js
+export class ThreeJSEngine {
+  constructor(evaluator) {
+    this.evaluator = evaluator;
+    this.scenes = new Map();
+  }
+  
+  createScene(actor, sceneDef) {
+    // Initialize Three.js scene
+  }
+  
+  render(sceneId) {
+    // Render Three.js scene
   }
 }
 ```
 
-**Resolution Process:**
-1. ViewEngine detects `@slotName` reference
-2. Looks up `actor.config.children[slotName]` to get child actor ID
-3. Renders child actor's Shadow DOM root into slot position
-4. Recursively renders nested composites
+2. Register in kernel:
+```javascript
+os.threeEngine = new ThreeJSEngine(os.evaluator);
+```
 
-## Actor Children Map
-
-Actors define children in their `.actor.maia` file:
-
+3. Update actor definition schema:
 ```json
 {
   "$type": "actor",
-  "$id": "actor_dashboard_001",
-  "children": {
-    "header": "actor_header_001",
-    "content": "actor_content_001"
+  "sceneRef": "myScene",  // ← New reference type
+  "viewRef": "myView"
+}
+```
+
+### Adding a New DSL Type
+
+1. Define DSL schema:
+```json
+{
+  "$type": "animation",
+  "$id": "anim_001",
+  "keyframes": {
+    "0%": {"opacity": 0},
+    "100%": {"opacity": 1}
+  },
+  "duration": "300ms",
+  "easing": "ease-out"
+}
+```
+
+2. Create engine/compiler:
+```javascript
+class AnimationEngine {
+  compile(animDef) {
+    // Convert to CSS animations or Web Animations API
   }
 }
 ```
 
-**Key Points:**
-- `children` is a map: `slotName → actorId`
-- Child actors are created recursively before parent renders
-- Parent auto-subscribes to all children
-- Children maintain their own Shadow DOM (isolated)
-
-## ViewEngine Composite Rendering
-
-**Flow:**
-1. `ViewEngine.render()` detects composite vs leaf
-2. Composite: calls `renderComposite()` with container definition
-3. For each slot:
-   - Resolves `@slotName` to child actor ID
-   - Gets child actor instance
-   - Clones child's Shadow DOM root into slot
-4. Leaf: calls `renderNode()` normally
-
-**Code Reference:**
-- `ViewEngine._isCompositeView()` - Detects view type
-- `ViewEngine._resolveSlot()` - Resolves `@slotName` to actor ID
-- `ViewEngine.renderComposite()` - Renders container with slots
-
-## ActorEngine Child Creation
-
-**Flow:**
-1. `ActorEngine.createActor()` checks for `config.children`
-2. For each child:
-   - Resolves actor ID to filename
-   - Loads child actor config
-   - Creates child container element
-   - Recursively calls `createActor()` for child
-   - Stores child reference in `actor.children[slotName]`
-   - Auto-subscribes parent to child
-
-**Code Reference:**
-- `ActorEngine.resolveActorIdToFilename()` - Maps actor ID to file
-- `ActorEngine.createActor()` - Recursive child creation
-
-## Message Passing Between Actors
-
-**Parent → Child:**
-- Parent publishes message via `publishMessage()`
-- Message validated against parent's `interface.publishes`
-- Sent to all actors in parent's `subscriptions` list
-- Child receives in inbox, validated against `interface.inbox`
-
-**Child → Parent:**
-- Child publishes message
-- Parent receives in inbox (if subscribed)
-- Parent's state machine processes message
-
-**Example:**
-```javascript
-// Child actor publishes TODO_CREATED
-actorEngine.publishMessage('actor_todo_input_001', 'TODO_CREATED', {
-  id: 'todo_123',
-  text: 'New todo'
-});
-
-// Parent receives in inbox
-// Parent's state machine processes TODO_CREATED event
+3. Integrate with actors:
+```json
+{
+  "$type": "actor",
+  "animationRef": "fadeIn"
+}
 ```
-
-## Interface Validation
-
-**Outgoing Messages (Publishes):**
-- Validated against `interface.publishes` schema
-- Rejected if message type not defined
-- Rejected if payload structure doesn't match
-
-**Incoming Messages (Inbox):**
-- Validated against `interface.inbox` schema
-- Rejected if message type not defined
-- Rejected if payload structure doesn't match
-
-**Validation Code:**
-- `ActorEngine._validateMessage()` - Validates message against interface
-- `ActorEngine.publishToSubscriptions()` - Validates before publishing
-- `ActorEngine.sendMessage()` - Validates before adding to inbox
-
-## Recursive Composition
-
-Composite actors can contain other composite actors:
-
-```
-vibe_root (composite)
-├── @header (view_switcher - leaf)
-├── @list (todo_list - composite)
-│   └── @item (todo_item - leaf, repeated)
-└── @kanban (kanban_view - leaf)
-```
-
-**Rendering Order:**
-1. Create `vibe_root` actor
-2. Create `view_switcher` child → render leaf
-3. Create `todo_list` child → render composite
-4. Create `todo_item` children → render leaves (repeated)
-5. Create `kanban_view` child → render leaf
-6. Render `vibe_root` composite with all slots filled
 
 ## Best Practices
 
-**✅ DO:**
-- Use composite views for layout containers
-- Use leaf views for terminal UI components
-- Define clear interfaces for message contracts
-- Keep children isolated (own Shadow DOM)
-- Use descriptive slot names
+### ✅ DO:
 
-**❌ DON'T:**
-- Don't expose context directly (use message passing)
-- Don't create circular child dependencies
-- Don't skip interface definitions
-- Don't use prop drilling (use messages)
+- **Keep engines stateless** - State lives in actors
+- **Use dependency injection** - Pass engines/registries as params
+- **Validate inputs** - Check payloads and definitions
+- **Log operations** - Help debugging
+- **Handle errors gracefully** - Don't crash the system
+- **Document public APIs** - Clear JSDoc comments
 
-## Future: Jazz CoMap Integration
+### ❌ DON'T:
 
-When migrating to Jazz-native architecture:
-- Each actor becomes a CoMap
-- `children` map stored in CoMap
-- `inbox` becomes CoFeed
-- `subscriptions` becomes CoList
-- Context dynamically queried (not stored)
+- **Don't store actor state in engines** - Use `actor.context`
+- **Don't mutate definitions** - Treat as immutable
+- **Don't hardcode paths** - Use relative imports
+- **Don't bypass engines** - Use proper APIs
+- **Don't create global singletons** - Pass instances
 
-**Migration Path:**
-- Current: File-based actor definitions
-- Future: CoMap-based actor definitions
-- Interface validation remains the same
-- Message passing becomes CoFeed operations
+## Debugging
+
+```javascript
+// Expose OS globally
+window.os = os;
+window.engines = os.getEngines();
+
+// Inspect actor
+const actor = os.getActor('actor_todo_001');
+console.log(actor.context);
+console.log(actor.machine.currentState);
+
+// Monitor events
+const originalSend = os.stateEngine.send;
+os.stateEngine.send = function(machineId, event, payload) {
+  console.log('Event:', event, payload);
+  return originalSend.call(this, machineId, event, payload);
+};
+
+// Monitor rerenders
+const originalRerender = os.actorEngine.rerender;
+os.actorEngine.rerender = function(actor) {
+  console.log('Rerender:', actor.id);
+  return originalRerender.call(this, actor);
+};
+```
+
+## Next Steps
+
+- Read [Engines Guide](./engines.md) - Creating custom engines
+- Read [Tools Guide](./tools.md) - Creating tool modules
+- Read [DSL Guide](./dsl.md) - Extending DSL types
 
 ---
 
-# DSL
+# 02_DSL
 
-*Source: developers/dsl.md*
+*Source: developers/02_dsl.md*
 
 # DSL Guide (Developer)
 
@@ -2041,9 +2420,464 @@ export class ViewToReact {
 
 ---
 
-# ENGINES
+# 03_SCHEMAS
 
-*Source: developers/engines.md*
+*Source: developers/03_schemas.md*
+
+# JSON Schema System
+
+MaiaOS uses a centralized JSON Schema validation system to ensure all `.maia` files conform to their expected structure. This provides:
+
+- **Runtime validation** - Catch malformed data early
+- **Clear error messages** - Know exactly what's wrong and where
+- **Type safety** - Consistent data structures across the system
+- **Documentation** - Schemas serve as authoritative documentation
+
+## Overview
+
+All schemas are located in `src/schemata/` and use JSON Schema Draft 2020-12. The validation engine uses AJV for fast, cached validation.
+
+## Validation Engine
+
+The `ValidationEngine` class provides a unified API for validating all MaiaOS data types:
+
+```javascript
+import { ValidationEngine, getSchema } from '../schemata/index.js';
+
+const engine = new ValidationEngine();
+
+// Load a schema
+const actorSchema = getSchema('actor');
+engine.loadSchema('actor', actorSchema);
+
+// Validate data
+const result = engine.validate('actor', actorData);
+if (!result.valid) {
+  console.error('Validation errors:', result.errors);
+}
+```
+
+## Using Validation Helper
+
+For most use cases, use the validation helper which automatically loads all schemas:
+
+```javascript
+import { validateOrThrow } from '../schemata/validation.helper.js';
+
+// Validate and throw on error
+try {
+  validateOrThrow('actor', actorData, 'path/to/actor.maia');
+} catch (error) {
+  console.error('Validation failed:', error.message);
+}
+```
+
+## Schema Types
+
+### Actor Schema
+
+Validates actor definitions (`.actor.maia` files).
+
+**Required fields:**
+- `$type`: Must be `"actor"`
+- `$id`: Unique identifier (pattern: `^actor_`)
+
+**Optional fields:**
+- `contextRef`, `stateRef`, `viewRef`, `interfaceRef`, `brandRef`, `styleRef`
+- `children`: Object mapping child names to actor IDs
+- `subscriptions`: Array of actor IDs to receive messages from
+- `inbox`: Array of messages
+- `inboxWatermark`: Number (default: 0)
+
+**Example:**
+```json
+{
+  "$type": "actor",
+  "$id": "actor_todo_001",
+  "contextRef": "todo",
+  "viewRef": "todo",
+  "stateRef": "todo"
+}
+```
+
+### Context Schema
+
+Validates context definitions (`.context.maia` files).
+
+**Required fields:**
+- `$type`: Must be `"context"`
+- `$id`: Unique identifier (pattern: `^context_`)
+
+**Additional properties:** Any additional fields are allowed (flexible structure).
+
+**Example:**
+```json
+{
+  "$type": "context",
+  "$id": "context_todo_001",
+  "todos": [],
+  "newTodoText": ""
+}
+```
+
+### State Schema
+
+Validates state machine definitions (`.state.maia` files).
+
+**Required fields:**
+- `$type`: Must be `"state"`
+- `$id`: Unique identifier (pattern: `^state_`)
+- `initial`: Initial state name
+- `states`: Object mapping state names to state definitions
+
+**State definition properties:**
+- `entry`: Action or array of actions to execute on entry
+- `exit`: Action or array of actions to execute on exit
+- `on`: Object mapping event names to transitions
+
+**Example:**
+```json
+{
+  "$type": "state",
+  "$id": "state_todo_001",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "CREATE_TODO": "creating"
+      }
+    }
+  }
+}
+```
+
+### View Schema
+
+Validates view definitions (`.view.maia` files).
+
+**Required fields:**
+- `$type`: Must be `"view"`
+- `$id`: Unique identifier (pattern: `^co_view_`)
+
+**Properties:**
+- `root`: Root DOM node (for leaf views)
+- `container`: Container node (for composite views)
+
+**View node properties:**
+- `tag`: HTML tag name
+- `class`: CSS class name
+- `text`: Text content (can be expression)
+- `value`: Input value (can be expression)
+- `attrs`: HTML attributes object
+- `children`: Array of child nodes
+- `$on`: Event handlers object
+- `$each`: Loop definition
+- `$slot`: Slot reference (expression)
+
+**Example:**
+```json
+{
+  "$type": "view",
+  "$id": "co_view_todo_001",
+  "root": {
+    "tag": "div",
+    "text": "$title",
+    "children": []
+  }
+}
+```
+
+### Style Schema
+
+Validates style definitions (`.style.maia` files).
+
+**Required fields:**
+- `$type`: Must be `"actor.style"`
+
+**Properties:**
+- `tokens`: Design tokens object
+- `components`: Component-specific styles object
+
+**Example:**
+```json
+{
+  "$type": "actor.style",
+  "tokens": {
+    "colors": {
+      "primary": "#8fa89b"
+    }
+  },
+  "components": {
+    "button": {
+      "background": "{colors.primary}"
+    }
+  }
+}
+```
+
+### Brand Style Schema
+
+Validates brand style definitions (`brand.style.maia` files).
+
+**Required fields:**
+- `$type`: Must be `"brand.style"`
+- `$id`: Unique identifier (pattern: `^co_brand_`)
+
+**Properties:**
+- `tokens`: Design tokens (colors, spacing, typography, radii, shadows)
+- `components`: Component-specific styles
+- `selectors`: CSS selector-based styles
+
+**Example:**
+```json
+{
+  "$type": "brand.style",
+  "$id": "co_brand_001",
+  "tokens": {
+    "colors": {
+      "primary": "#8fa89b"
+    }
+  },
+  "components": {
+    "button": {
+      "background": "{colors.primary}"
+    }
+  }
+}
+```
+
+### Interface Schema
+
+Validates interface definitions (`.interface.maia` files).
+
+**Required fields:**
+- `$type`: Must be `"actor.interface"`
+
+**Properties:**
+- `inbox`: Object mapping message types to payload schemas
+- `publishes`: Object mapping message types to payload schemas
+- `subscriptions`: Array of actor IDs
+- `watermark`: Number (default: 0)
+
+**Example:**
+```json
+{
+  "$type": "actor.interface",
+  "inbox": {
+    "CREATE_TODO": {
+      "payload": {
+        "text": "string"
+      }
+    }
+  },
+  "publishes": {
+    "TODO_CREATED": {
+      "payload": {
+        "id": "string"
+      }
+    }
+  }
+}
+```
+
+### Tool Schema
+
+Validates tool definitions (`.tool.maia` files).
+
+**Required fields:**
+- `$type`: Must be `"tool"`
+- `$id`: Unique identifier (pattern: `^tool_`)
+- `name`: Tool identifier (pattern: `^@`)
+- `description`: Tool description
+- `parameters`: JSON Schema for tool parameters
+
+**Example:**
+```json
+{
+  "$type": "tool",
+  "$id": "tool_create_001",
+  "name": "@mutation/create",
+  "description": "Creates a new entity",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "schema": {
+        "type": "string"
+      },
+      "data": {
+        "type": "object"
+      }
+    },
+    "required": ["schema", "data"]
+  }
+}
+```
+
+### Skill Schema
+
+Validates skill definitions (`.skill.maia` files).
+
+**Required fields:**
+- `$type`: Must be `"skill"`
+- `$id`: Unique identifier (pattern: `^skill_`)
+- `actorType`: Actor type this skill describes
+- `description`: High-level capability summary
+- `stateEvents`: Events the actor can handle
+- `queryableContext`: Context fields AI can read
+
+**Optional fields:**
+- `version`: Skill version
+- `capabilities`: High-level capability categories
+- `bestPractices`: Guidelines for AI agents
+- `commonPatterns`: Reusable interaction sequences
+- `examples`: Usage examples
+
+**Example:**
+```json
+{
+  "$type": "skill",
+  "$id": "skill_todo_001",
+  "actorType": "todo",
+  "description": "Todo list manager",
+  "stateEvents": {
+    "CREATE_TODO": {
+      "description": "Create a new todo",
+      "payload": {
+        "text": {
+          "type": "string",
+          "required": true
+        }
+      }
+    }
+  },
+  "queryableContext": {
+    "todos": {
+      "type": "array",
+      "description": "List of todos"
+    }
+  }
+}
+```
+
+### Vibe Schema
+
+Validates vibe definitions (`.vibe.maia` files).
+
+**Required fields:**
+- `$type`: Must be `"vibe"`
+- `$id`: Unique identifier (pattern: `^vibe_`)
+- `name`: Vibe name
+- `description`: Vibe description
+- `actor`: Path to actor definition file
+
+**Example:**
+```json
+{
+  "$type": "vibe",
+  "$id": "vibe_todos_001",
+  "name": "Todo List",
+  "description": "A todo list application",
+  "actor": "./vibe/vibe.actor.maia"
+}
+```
+
+### Message Schema
+
+Validates messages passed between actors.
+
+**Required fields:**
+- `type`: Message type/event name
+- `timestamp`: Unix timestamp (number, minimum: 0)
+
+**Optional fields:**
+- `payload`: Message payload data (object)
+- `from`: Sender actor ID (string)
+- `id`: Optional message ID for deduplication (string)
+
+**Example:**
+```json
+{
+  "type": "CREATE_TODO",
+  "payload": {
+    "text": "Buy milk"
+  },
+  "from": "actor_user_001",
+  "timestamp": 1234567890
+}
+```
+
+## Common Definitions
+
+The `common.schema.json` file defines shared patterns used across multiple schemas:
+
+- **Expression**: Context reference (`$field`), item reference (`$$field`), or literal value
+- **Guard**: Guard condition for state machine transitions
+- **Action**: Tool invocation or context update
+- **Transition**: State machine transition definition
+- **MessagePayload**: Message payload definition
+
+## Integration
+
+Validation is automatically integrated into all engines:
+
+- **ActorEngine**: Validates actor, context, and interface files on load
+- **StateEngine**: Validates state machine files on load
+- **ViewEngine**: Validates view files on load
+- **StyleEngine**: Validates style files on load
+- **ToolEngine**: Validates tool definition files on load
+- **Kernel**: Validates vibe manifest files on load
+
+## Error Messages
+
+Validation errors include:
+
+- `instancePath`: JSON path to the invalid field (e.g., `/properties/name`)
+- `schemaPath`: JSON path in the schema (e.g., `/properties/name/type`)
+- `keyword`: Validation keyword that failed (e.g., `required`, `type`)
+- `message`: Human-readable error message
+- `params`: Additional error parameters
+
+**Example error:**
+```json
+{
+  "instancePath": "/properties/name",
+  "schemaPath": "#/properties/name/type",
+  "keyword": "type",
+  "message": "must be string",
+  "params": {
+    "type": "string"
+  }
+}
+```
+
+## Performance
+
+- Schemas are compiled once and cached
+- Validation is fast (< 1ms per file typically)
+- Validation only occurs on file load, not at runtime
+
+## Extending Schemas
+
+To add a new schema:
+
+1. Create `src/schemata/newtype.schema.json`
+2. Add schema to `src/schemata/index.js` exports
+3. Update `validation.helper.js` to load the new schema
+4. Add validation calls in the appropriate engine
+
+## Best Practices
+
+1. **Be permissive initially**: Start with schemas that accept current data, tighten later
+2. **Use clear descriptions**: Add `title` and `description` fields for better error messages
+3. **Reuse common definitions**: Extract shared patterns into `common.schema.json`
+4. **Test against real data**: Use integration tests to validate all existing files
+5. **Version schemas**: Include `$schema` field pointing to JSON Schema spec
+
+---
+
+# 04_ENGINES
+
+*Source: developers/04_engines.md*
 
 # Engines Guide (Developer)
 
@@ -2601,618 +3435,239 @@ class AudioEngine {
 
 ---
 
-# MAIAOS
+# 05_COMPOSITION
 
-*Source: developers/maiaos.md*
+*Source: developers/05_composition.md*
 
-# MaiaOS (Developer Guide)
+# Actor Composition (Developer Guide)
 
-**For developers** who want to understand and extend the MaiaOS architecture.
+**For developers** who want to understand how composite/leaf actor patterns work in MaiaOS.
 
-## Architecture Overview
+## Overview
 
-MaiaOS is a **declarative operating system** for building AI-composable applications. It separates concerns into three distinct layers:
+MaiaOS supports **composable actor architecture** where actors can be composed hierarchically:
+- **Composite Actors**: Container actors with slots for child actors
+- **Leaf Actors**: Terminal actors that render UI or perform tasks
+- **Pure Message Passing**: All actor-to-actor communication via inbox/subscriptions
 
-### 1. Definition Layer (Declarative)
-User-facing configuration files (`.maia`):
-- **Actors** - Component identity and references
-- **State Machines** - Behavior flow
-- **Views** - UI structure
-- **Styles** - Appearance
-- **Skills** - AI agent interface
+## Composite vs Leaf Views
 
-### 2. Execution Layer (Imperative)
-JavaScript engines that interpret definitions:
-- **ActorEngine** - Actor lifecycle management
-- **StateEngine** - State machine interpreter
-- **ViewEngine** - View-to-DOM renderer
-- **ToolEngine** - Tool executor
-- **StyleEngine** - Style compiler
-- **ModuleRegistry** - Dynamic module loader
+### Leaf View
 
-### 3. Intelligence Layer (Orchestration)
-AI agent integration:
-- **SkillEngine** - Skill discovery and interpretation (v0.5)
-- **LLM Integration** - Event generation from natural language (v0.5)
+A **leaf view** has a `root` property and renders directly to DOM:
 
-## Core Philosophy
-
-### Separation of Concerns
-
-```
-┌──────────────┐
-│   Actors     │  ← Pure configuration (JSON)
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│   Engines    │  ← Execution machinery (JavaScript)
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│    Tools     │  ← Imperative actions (JavaScript)
-└──────────────┘
+```json
+{
+  "$type": "view",
+  "root": {
+    "tag": "div",
+    "text": "$title"
+  }
+}
 ```
 
-### Zero Logic in Definitions
+**Characteristics:**
+- Has `root` property (not `container`)
+- Renders directly to Shadow DOM
+- No slots or child actors
+- Terminal in composition tree
 
-Actors, views, and state machines are **pure data**:
-- No JavaScript functions
-- No embedded logic
-- Only references and configuration
+### Composite View
 
-This enables:
-- ✅ Easy serialization (JSON)
-- ✅ AI generation/modification
-- ✅ Hot reload without code changes
-- ✅ Visual editing tools (future)
+A **composite view** has a `container` property with slots:
 
-## System Initialization
+```json
+{
+  "$type": "view",
+  "container": {
+    "tag": "div",
+    "class": "dashboard",
+    "slots": {
+      "header": "@header",
+      "content": "@content",
+      "sidebar": "@sidebar"
+    }
+  }
+}
+```
 
-### Boot Sequence
+**Characteristics:**
+- Has `container` property (not `root`)
+- Defines slots using `@slotName` syntax
+- Child actors fill slots
+- Can nest composite → composite → leaf
 
+## Slot Resolution
+
+Slots use `@slotName` syntax to reference child actors:
+
+```json
+{
+  "container": {
+    "slots": {
+      "header": "@header",      // Resolves to children.header actor ID
+      "content": "@content"      // Resolves to children.content actor ID
+    }
+  }
+}
+```
+
+**Resolution Process:**
+1. ViewEngine detects `@slotName` reference
+2. Looks up `actor.config.children[slotName]` to get child actor ID
+3. Renders child actor's Shadow DOM root into slot position
+4. Recursively renders nested composites
+
+## Actor Children Map
+
+Actors define children in their `.actor.maia` file:
+
+```json
+{
+  "$type": "actor",
+  "$id": "actor_dashboard_001",
+  "children": {
+    "header": "actor_header_001",
+    "content": "actor_content_001"
+  }
+}
+```
+
+**Key Points:**
+- `children` is a map: `slotName → actorId`
+- Child actors are created recursively before parent renders
+- Parent auto-subscribes to all children
+- Children maintain their own Shadow DOM (isolated)
+
+## ViewEngine Composite Rendering
+
+**Flow:**
+1. `ViewEngine.render()` detects composite vs leaf
+2. Composite: calls `renderComposite()` with container definition
+3. For each slot:
+   - Resolves `@slotName` to child actor ID
+   - Gets child actor instance
+   - Clones child's Shadow DOM root into slot
+4. Leaf: calls `renderNode()` normally
+
+**Code Reference:**
+- `ViewEngine._isCompositeView()` - Detects view type
+- `ViewEngine._resolveSlot()` - Resolves `@slotName` to actor ID
+- `ViewEngine.renderComposite()` - Renders container with slots
+
+## ActorEngine Child Creation
+
+**Flow:**
+1. `ActorEngine.createActor()` checks for `config.children`
+2. For each child:
+   - Resolves actor ID to filename
+   - Loads child actor config
+   - Creates child container element
+   - Recursively calls `createActor()` for child
+   - Stores child reference in `actor.children[slotName]`
+   - Auto-subscribes parent to child
+
+**Code Reference:**
+- `ActorEngine.resolveActorIdToFilename()` - Maps actor ID to file
+- `ActorEngine.createActor()` - Recursive child creation
+
+## Message Passing Between Actors
+
+**Parent → Child:**
+- Parent publishes message via `publishMessage()`
+- Message validated against parent's `interface.publishes`
+- Sent to all actors in parent's `subscriptions` list
+- Child receives in inbox, validated against `interface.inbox`
+
+**Child → Parent:**
+- Child publishes message
+- Parent receives in inbox (if subscribed)
+- Parent's state machine processes message
+
+**Example:**
 ```javascript
-// 1. Initialize kernel
-const os = await MaiaOS.boot({
-  modules: ['core', 'mutation', 'dragdrop']
+// Child actor publishes TODO_CREATED
+actorEngine.publishMessage('actor_todo_input_001', 'TODO_CREATED', {
+  id: 'todo_123',
+  text: 'New todo'
 });
 
-// Behind the scenes:
-// → ModuleRegistry initialized
-// → Engines initialized (Actor, State, View, Tool, Style)
-// → Modules loaded dynamically
-// → Tools registered
+// Parent receives in inbox
+// Parent's state machine processes TODO_CREATED event
 ```
 
-### Kernel Structure
+## Interface Validation
 
-```javascript
-class MaiaOS {
-  static async boot(config) {
-    const os = {
-      // Core registries
-      moduleRegistry: new ModuleRegistry(),
-      actors: new Map(),
-      
-      // Engines
-      actorEngine: null,
-      stateEngine: null,
-      viewEngine: null,
-      toolEngine: null,
-      styleEngine: null,
-      evaluator: null,
-      
-      // Public API
-      createActor: async (actorPath, container) => {...},
-      loadVibe: async (vibePath, container) => {...},
-      getActor: (actorId) => {...},
-      sendMessage: (actorId, message) => {...},
-      getEngines: () => {...}
-    };
-    
-    // Initialize engines
-    os.evaluator = new MaiaScriptEvaluator(os.moduleRegistry);
-    os.toolEngine = new ToolEngine(os.moduleRegistry);
-    os.stateEngine = new StateEngine(os.evaluator, os.toolEngine);
-    os.viewEngine = new ViewEngine(os.evaluator, os.stateEngine);
-    os.styleEngine = new StyleEngine(os.evaluator);
-    os.actorEngine = new ActorEngine(
-      os.stateEngine,
-      os.viewEngine,
-      os.styleEngine
-    );
-    
-    // Load modules
-    for (const moduleName of config.modules) {
-      await os.moduleRegistry.loadModule(moduleName);
-    }
-    
-    return os;
-  }
-}
-```
+**Outgoing Messages (Publishes):**
+- Validated against `interface.publishes` schema
+- Rejected if message type not defined
+- Rejected if payload structure doesn't match
 
-## Vibes (App Manifests)
+**Incoming Messages (Inbox):**
+- Validated against `interface.inbox` schema
+- Rejected if message type not defined
+- Rejected if payload structure doesn't match
 
-### What Are Vibes?
+**Validation Code:**
+- `ActorEngine._validateMessage()` - Validates message against interface
+- `ActorEngine.publishToSubscriptions()` - Validates before publishing
+- `ActorEngine.sendMessage()` - Validates before adding to inbox
 
-Vibes are marketplace-ready app manifests (`.vibe.maia`) that provide metadata and reference the root actor. They serve as the "app store listing" for MaiaOS applications.
+## Recursive Composition
 
-**Structure:**
-```json
-{
-  "$type": "vibe",
-  "$id": "vibe_todos_001",
-  "name": "Todo List",
-  "description": "A complete todo list application...",
-  "actor": "./todo.actor.maia"
-}
-```
-
-### Loading Vibes
-
-```javascript
-// High-level API (recommended)
-const { vibe, actor } = await os.loadVibe(
-  './vibes/todos/todos.vibe.maia',
-  document.getElementById('container')
-);
-
-// Equivalent to:
-// 1. Fetch vibe manifest
-// 2. Validate structure ($type, actor field)
-// 3. Resolve actor path (relative to vibe)
-// 4. Call os.createActor(resolvedPath, container)
-// 5. Return {vibe, actor}
-```
-
-### Implementation
-
-**kernel.js:**
-```javascript
-async loadVibe(vibePath, container) {
-  // Fetch vibe manifest
-  const response = await fetch(vibePath);
-  const vibe = await response.json();
-  
-  // Validate
-  if (vibe.$type !== 'vibe') {
-    throw new Error('Invalid vibe manifest: $type must be "vibe"');
-  }
-  if (!vibe.actor) {
-    throw new Error('Vibe manifest missing "actor" field');
-  }
-  
-  // Resolve actor path relative to vibe location
-  const vibeDir = vibePath.substring(0, vibePath.lastIndexOf('/'));
-  const actorPath = `${vibeDir}/${vibe.actor}`;
-  
-  // Create actor
-  const actor = await this.createActor(actorPath, container);
-  
-  return { vibe, actor };
-}
-```
-
-### Design Rationale
-
-**Why separate vibes from actors?**
-
-1. **Marketplace Integration** - Vibes provide metadata for discovery, search, and installation
-2. **Clean Separation** - Manifest (vibe) vs Implementation (actor)
-3. **Extensibility** - Easy to add icon, screenshots, version, etc. without changing actors
-4. **AI-Friendly** - LLMs can generate vibe manifests as app packaging
-
-**Future Extensions:**
-```json
-{
-  "$type": "vibe",
-  "name": "...",
-  "description": "...",
-  "actor": "...",
-  "icon": "./icon.svg",          // Marketplace icon
-  "screenshots": ["..."],         // Preview images
-  "tags": ["productivity"],       // Search tags
-  "category": "productivity",     // Primary category
-  "license": "MIT",               // License type
-  "repository": "https://..."     // Source URL
-}
-```
-
-## Actor Lifecycle
-
-### 1. Creation
-
-```javascript
-const actor = await os.createActor(
-  './maia/todo.actor.maia',
-  document.getElementById('container')
-);
-
-// Behind the scenes:
-// 1. Load actor.maia (JSON)
-// 2. Load referenced state.maia
-// 3. Load referenced view.maia (if present)
-// 4. Load referenced style.maia (if present)
-// 5. Initialize state machine
-// 6. Render view to Shadow DOM
-// 7. Apply styles
-// 8. Return actor instance
-```
-
-### 2. Actor Instance Structure
-
-```javascript
-{
-  id: 'actor_todo_001',
-  context: {
-    todos: [],
-    newTodoText: '',
-    // ... runtime state
-  },
-  machine: {
-    id: 'state_todo_001',
-    currentState: 'idle',
-    definition: {...},
-    // ... state machine instance
-  },
-  container: HTMLElement,        // DOM mount point
-  viewDef: {...},                // View definition
-  styleDef: {...},               // Style definition
-  inbox: [],                     // Message queue
-  subscriptions: [],             // Actor subscriptions
-  inboxWatermark: 0,             // Last processed message
-  actorEngine: ActorEngine,      // Reference to engine
-}
-```
-
-### 3. Event Flow
+Composite actors can contain other composite actors:
 
 ```
-User Interaction (click, input, etc.)
-  ↓
-ViewEngine captures event
-  ↓
-ViewEngine.evaluatePayload() (resolve $ and $$)
-  ↓
-StateEngine.send(machineId, eventName, payload)
-  ↓
-StateEngine finds current state
-  ↓
-StateEngine checks event handlers (on: {...})
-  ↓
-StateEngine evaluates guard (if present)
-  ↓
-Guard passes → Continue
-Guard fails → Ignore event
-  ↓
-StateEngine executes exit actions (if leaving state)
-  ↓
-StateEngine transitions to target state
-  ↓
-StateEngine executes entry actions (tool invocations)
-  ↓
-ToolEngine.execute(toolName, actor, payload)
-  ↓
-Tool mutates actor.context
-  ↓
-Tool succeeds → StateEngine sends SUCCESS event
-Tool fails → StateEngine sends ERROR event
-  ↓
-StateEngine handles SUCCESS/ERROR transition
-  ↓
-ActorEngine.rerender(actor)
-  ↓
-ViewEngine re-renders Shadow DOM
-  ↓
-User sees updated UI
+vibe_root (composite)
+├── @header (view_switcher - leaf)
+├── @list (todo_list - composite)
+│   └── @item (todo_item - leaf, repeated)
+└── @kanban (kanban_view - leaf)
 ```
 
-## Engine Architecture
-
-### ActorEngine
-
-**Responsibilities:**
-- Actor creation and registration
-- Actor lifecycle management
-- Re-rendering orchestration
-- Message passing coordination
-
-**Key Methods:**
-```javascript
-class ActorEngine {
-  async createActor(actorPath, container, os)
-  registerActor(actor)
-  getActor(actorId)
-  async rerender(actor)
-  destroyActor(actorId)
-  sendMessage(actorId, message)
-  processMessages(actor)
-}
-```
-
-### StateEngine
-
-**Responsibilities:**
-- State machine interpretation
-- Event handling
-- Guard evaluation
-- Tool invocation
-- Automatic SUCCESS/ERROR events
-
-**Key Methods:**
-```javascript
-class StateEngine {
-  registerMachine(machineId, definition, initialContext)
-  send(machineId, event, payload)
-  getCurrentState(machineId)
-  async transition(machineId, event, payload)
-  _evaluateGuard(guard, context, eventPayload)
-  _evaluatePayload(payload, context, eventPayload)
-  async _invokeTool(tool, actor)
-}
-```
-
-### ViewEngine
-
-**Responsibilities:**
-- View definition to DOM rendering
-- Event listener attachment
-- Payload evaluation
-- Shadow DOM management
-
-**Key Methods:**
-```javascript
-class ViewEngine {
-  render(container, viewDef, actor, actorEngine)
-  _renderElement(elementDef, context, actorEngine, actor)
-  _attachEventListeners(element, events, actor, actorEngine)
-  _evaluatePayload(payload, context, item, element)
-}
-```
-
-### ToolEngine
-
-**Responsibilities:**
-- Tool registration
-- Tool execution
-- Tool definition loading
-- Error handling
-
-**Key Methods:**
-```javascript
-class ToolEngine {
-  async registerTool(toolPath, toolName)
-  async execute(toolName, actor, payload)
-  async loadToolDefinition(toolPath)
-  async loadToolFunction(toolPath)
-}
-```
-
-### StyleEngine
-
-**Responsibilities:**
-- Style compilation
-- Token to CSS custom property conversion
-- CSS injection into Shadow DOM
-
-**Key Methods:**
-```javascript
-class StyleEngine {
-  compile(styleDef)
-  _compileTokens(tokens)
-  _compileStyles(styles)
-}
-```
-
-### ModuleRegistry
-
-**Responsibilities:**
-- Module registration
-- Dynamic module loading
-- Module metadata management
-
-**Key Methods:**
-```javascript
-class ModuleRegistry {
-  registerModule(name, moduleClass, metadata)
-  async loadModule(moduleName, modulePath)
-  getModule(name)
-  hasModule(name)
-  listModules()
-  setToolEngine(toolEngine)
-}
-```
-
-## Module System
-
-### Module Structure
-
-```javascript
-// o/modules/custom.module.js
-export class CustomModule {
-  static async register(registry, toolEngine) {
-    // Register tools
-    await toolEngine.registerTool('custom/doSomething', '@custom/doSomething');
-    await toolEngine.registerTool('custom/doOther', '@custom/doOther');
-    
-    // Register module metadata
-    registry.registerModule('custom', CustomModule, {
-      version: '1.0.0',
-      description: 'Custom functionality module',
-      namespace: '@custom',
-      tools: ['@custom/doSomething', '@custom/doOther']
-    });
-  }
-}
-
-// Export register function (alternative pattern)
-export async function register(registry) {
-  const toolEngine = registry._toolEngine;
-  await CustomModule.register(registry, toolEngine);
-}
-```
-
-### Tool Structure
-
-Two files per tool:
-
-1. **Tool Definition** (`*.tool.maia`) - AI-compatible metadata:
-```json
-{
-  "$type": "tool",
-  "$id": "tool_custom_001",
-  "name": "@custom/doSomething",
-  "description": "Does something useful",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "param1": {"type": "string", "required": true}
-    }
-  }
-}
-```
-
-2. **Tool Function** (`*.tool.js`) - Executable code:
-```javascript
-export default {
-  async execute(actor, payload) {
-    const { param1 } = payload;
-    // Mutate actor.context
-    actor.context.someField = param1;
-    console.log('✅ Did something:', param1);
-  }
-};
-```
-
-## Extending MaiaOS
-
-### Adding a New Engine
-
-1. Create engine class:
-```javascript
-// o/engines/ThreeJSEngine.js
-export class ThreeJSEngine {
-  constructor(evaluator) {
-    this.evaluator = evaluator;
-    this.scenes = new Map();
-  }
-  
-  createScene(actor, sceneDef) {
-    // Initialize Three.js scene
-  }
-  
-  render(sceneId) {
-    // Render Three.js scene
-  }
-}
-```
-
-2. Register in kernel:
-```javascript
-os.threeEngine = new ThreeJSEngine(os.evaluator);
-```
-
-3. Update actor definition schema:
-```json
-{
-  "$type": "actor",
-  "sceneRef": "myScene",  // ← New reference type
-  "viewRef": "myView"
-}
-```
-
-### Adding a New DSL Type
-
-1. Define DSL schema:
-```json
-{
-  "$type": "animation",
-  "$id": "anim_001",
-  "keyframes": {
-    "0%": {"opacity": 0},
-    "100%": {"opacity": 1}
-  },
-  "duration": "300ms",
-  "easing": "ease-out"
-}
-```
-
-2. Create engine/compiler:
-```javascript
-class AnimationEngine {
-  compile(animDef) {
-    // Convert to CSS animations or Web Animations API
-  }
-}
-```
-
-3. Integrate with actors:
-```json
-{
-  "$type": "actor",
-  "animationRef": "fadeIn"
-}
-```
+**Rendering Order:**
+1. Create `vibe_root` actor
+2. Create `view_switcher` child → render leaf
+3. Create `todo_list` child → render composite
+4. Create `todo_item` children → render leaves (repeated)
+5. Create `kanban_view` child → render leaf
+6. Render `vibe_root` composite with all slots filled
 
 ## Best Practices
 
-### ✅ DO:
+**✅ DO:**
+- Use composite views for layout containers
+- Use leaf views for terminal UI components
+- Define clear interfaces for message contracts
+- Keep children isolated (own Shadow DOM)
+- Use descriptive slot names
 
-- **Keep engines stateless** - State lives in actors
-- **Use dependency injection** - Pass engines/registries as params
-- **Validate inputs** - Check payloads and definitions
-- **Log operations** - Help debugging
-- **Handle errors gracefully** - Don't crash the system
-- **Document public APIs** - Clear JSDoc comments
+**❌ DON'T:**
+- Don't expose context directly (use message passing)
+- Don't create circular child dependencies
+- Don't skip interface definitions
+- Don't use prop drilling (use messages)
 
-### ❌ DON'T:
+## Future: Jazz CoMap Integration
 
-- **Don't store actor state in engines** - Use `actor.context`
-- **Don't mutate definitions** - Treat as immutable
-- **Don't hardcode paths** - Use relative imports
-- **Don't bypass engines** - Use proper APIs
-- **Don't create global singletons** - Pass instances
+When migrating to Jazz-native architecture:
+- Each actor becomes a CoMap
+- `children` map stored in CoMap
+- `inbox` becomes CoFeed
+- `subscriptions` becomes CoList
+- Context dynamically queried (not stored)
 
-## Debugging
-
-```javascript
-// Expose OS globally
-window.os = os;
-window.engines = os.getEngines();
-
-// Inspect actor
-const actor = os.getActor('actor_todo_001');
-console.log(actor.context);
-console.log(actor.machine.currentState);
-
-// Monitor events
-const originalSend = os.stateEngine.send;
-os.stateEngine.send = function(machineId, event, payload) {
-  console.log('Event:', event, payload);
-  return originalSend.call(this, machineId, event, payload);
-};
-
-// Monitor rerenders
-const originalRerender = os.actorEngine.rerender;
-os.actorEngine.rerender = function(actor) {
-  console.log('Rerender:', actor.id);
-  return originalRerender.call(this, actor);
-};
-```
-
-## Next Steps
-
-- Read [Engines Guide](./engines.md) - Creating custom engines
-- Read [Tools Guide](./tools.md) - Creating tool modules
-- Read [DSL Guide](./dsl.md) - Extending DSL types
+**Migration Path:**
+- Current: File-based actor definitions
+- Future: CoMap-based actor definitions
+- Interface validation remains the same
+- Message passing becomes CoFeed operations
 
 ---
 
-# REACTIVE QUERIES
+# 06_REACTIVE QUERIES
 
-*Source: developers/reactive-queries.md*
+*Source: developers/06_reactive-queries.md*
 
 # Reactive Queries - Technical Architecture
 
@@ -3709,464 +4164,1152 @@ This foundation enables building reactive, data-driven applications while mainta
 
 ---
 
-# SCHEMAS
+# 07_COJSON
 
-*Source: developers/schemas.md*
+*Source: developers/07_cojson.md*
 
-# JSON Schema System
-
-MaiaOS uses a centralized JSON Schema validation system to ensure all `.maia` files conform to their expected structure. This provides:
-
-- **Runtime validation** - Catch malformed data early
-- **Clear error messages** - Know exactly what's wrong and where
-- **Type safety** - Consistent data structures across the system
-- **Documentation** - Schemas serve as authoritative documentation
+# MaiaCojson: JSON-based CRDT Data Layer
 
 ## Overview
 
-All schemas are located in `src/schemata/` and use JSON Schema Draft 2020-12. The validation engine uses AJV for fast, cached validation.
+**MaiaCojson** is a JSON Schema-native wrapper around Jazz's CRDT (Conflict-free Replicated Data Types) protocol, providing a purely JSON-based API for collaborative data management in MaiaOS.
 
-## Validation Engine
+**Key Features**:
+- **JSON-based CRUD**: `o.create({})`, `o.read({})`, `o.update({})`, `o.delete({})`
+- **100% Reactive**: Auto-subscribed data updates automatically
+- **Auto-Resolution**: Nested references resolve automatically
+- **Real CRDTs**: Built on `cojson` package (Jazz's CRDT core)
+- **Zero Mocks**: All 127 tests run against real collaborative data structures
 
-The `ValidationEngine` class provides a unified API for validating all MaiaOS data types:
+## Why MaiaCojson?
+
+### Problem with jazz-tools
+- Requires Zod schemas (TypeScript-first)
+- Complex API with manual subscription management
+- Not designed for JSON-native environments
+
+### MaiaCojson Solution
+- **JSON Schema** instead of Zod
+- **Simple API**: Just JSON operations
+- **Auto-managed**: Subscriptions, caching, reference resolution all handled internally
+
+## Architecture
+
+```mermaid
+graph TB
+    User[MaiaScript Code]
+    CRUD[MaiaCRUD API]
+    RefResolver[Reference Resolver]
+    SubCache[Subscription Cache]
+    Validators[JSON Schema Validators]
+    Wrappers[CoValue Wrappers]
+    RawCojson[Raw Cojson CRDTs]
+    
+    User -->|"o.create({})"| CRUD
+    User -->|"o.read({})"| CRUD
+    User -->|"o.update({})"| CRUD
+    
+    CRUD --> Validators
+    CRUD --> RefResolver
+    CRUD --> SubCache
+    
+    RefResolver --> Wrappers
+    SubCache --> Wrappers
+    Validators --> Wrappers
+    
+    Wrappers --> RawCojson
+    
+    RefResolver -.->|Auto-resolve co-ids| RefResolver
+    SubCache -.->|Deduplicate| SubCache
+```
+
+### Layers Explained
+
+1. **User Layer (MaiaScript)**
+   - Pure JSON operations
+   - No knowledge of CRDTs
+   - Simple, declarative API
+
+2. **CRUD API Layer**
+   - `MaiaCRUD` class
+   - Handles create/read/update/delete
+   - Manages LocalNode, Account, Group internally
+
+3. **Core Systems**
+   - **Reference Resolver**: Auto-resolves co-id strings to CoValue wrappers
+   - **Subscription Cache**: Deduplicates subscriptions, 5-second cleanup timeout
+   - **JSON Schema Validators**: Validates data before CRDT operations
+
+4. **Wrapper Layer**
+   - Thin Proxy-based wrappers around Raw CRDTs
+   - CoMap, CoList, CoStream, CoBinary, Account, Group, CoPlainText
+   - Property access via Proxies
+
+5. **Raw CRDT Layer** (from `cojson` package)
+   - RawCoMap, RawCoList, RawCoStream, etc.
+   - Actual collaborative data structures
+   - Sync, encryption, permissions built-in
+
+## CoValue Types
+
+MaiaCojson provides 7 core CRDT types:
+
+| Type | JSON Schema | Description | Example |
+|------|-------------|-------------|---------|
+| **CoMap** | `co-map` | Key-value collaborative map | User profiles, settings |
+| **CoList** | `co-list` | Ordered collaborative list | Todo items, messages |
+| **CoStream** | `co-stream` | Append-only stream | Activity logs, events |
+| **CoBinary** | `co-binary` | Binary data stream | Files, images |
+| **Account** | `co-account` | User identity | Current user |
+| **Group** | `co-group` | Permission group | Teams, access control |
+| **CoPlainText** | `co-plaintext` | Collaborative text | Documents, notes |
+
+### Co-ID References
+
+References between CoValues use co-ids (string format: `co_z<base58>`):
+
+```json
+{
+  "type": "co-map",
+  "properties": {
+    "author": { "type": "co-id" }
+  }
+}
+```
+
+MaiaCojson auto-resolves these to actual CoValue wrappers when accessed.
+
+## API Reference
+
+### Initialize MaiaCRUD
 
 ```javascript
-import { ValidationEngine, getSchema } from '../schemata/index.js';
+import { MaiaCRUD } from '@maiaos/maia-cojson';
+import { LocalNode } from 'cojson';
+import { WasmCrypto } from 'cojson/crypto/WasmCrypto';
 
-const engine = new ValidationEngine();
+// Initialize cojson runtime
+const crypto = await WasmCrypto.create();
+const { node, accountID } = await LocalNode.withNewlyCreatedAccount({
+  creationProps: { name: "Demo User" },
+  peers: [], // Add sync peers here
+  crypto,
+});
+const group = node.createGroup();
 
-// Load a schema
-const actorSchema = getSchema('actor');
-engine.loadSchema('actor', actorSchema);
-
-// Validate data
-const result = engine.validate('actor', actorData);
-if (!result.valid) {
-  console.error('Validation errors:', result.errors);
-}
+// Create CRUD API instance
+const o = new MaiaCRUD({ node, accountID, group });
 ```
 
-## Using Validation Helper
+### o.create({}) - Create CoValues
 
-For most use cases, use the validation helper which automatically loads all schemas:
+**Creates a new collaborative data structure**
 
 ```javascript
-import { validateOrThrow } from '../schemata/validation.helper.js';
-
-// Validate and throw on error
-try {
-  validateOrThrow('actor', actorData, 'path/to/actor.maia');
-} catch (error) {
-  console.error('Validation failed:', error.message);
-}
-```
-
-## Schema Types
-
-### Actor Schema
-
-Validates actor definitions (`.actor.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"actor"`
-- `$id`: Unique identifier (pattern: `^actor_`)
-
-**Optional fields:**
-- `contextRef`, `stateRef`, `viewRef`, `interfaceRef`, `brandRef`, `styleRef`
-- `children`: Object mapping child names to actor IDs
-- `subscriptions`: Array of actor IDs to receive messages from
-- `inbox`: Array of messages
-- `inboxWatermark`: Number (default: 0)
-
-**Example:**
-```json
-{
-  "$type": "actor",
-  "$id": "actor_todo_001",
-  "contextRef": "todo",
-  "viewRef": "todo",
-  "stateRef": "todo"
-}
-```
-
-### Context Schema
-
-Validates context definitions (`.context.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"context"`
-- `$id`: Unique identifier (pattern: `^context_`)
-
-**Additional properties:** Any additional fields are allowed (flexible structure).
-
-**Example:**
-```json
-{
-  "$type": "context",
-  "$id": "context_todo_001",
-  "todos": [],
-  "newTodoText": ""
-}
-```
-
-### State Schema
-
-Validates state machine definitions (`.state.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"state"`
-- `$id`: Unique identifier (pattern: `^state_`)
-- `initial`: Initial state name
-- `states`: Object mapping state names to state definitions
-
-**State definition properties:**
-- `entry`: Action or array of actions to execute on entry
-- `exit`: Action or array of actions to execute on exit
-- `on`: Object mapping event names to transitions
-
-**Example:**
-```json
-{
-  "$type": "state",
-  "$id": "state_todo_001",
-  "initial": "idle",
-  "states": {
-    "idle": {
-      "on": {
-        "CREATE_TODO": "creating"
-      }
-    }
-  }
-}
-```
-
-### View Schema
-
-Validates view definitions (`.view.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"view"`
-- `$id`: Unique identifier (pattern: `^co_view_`)
-
-**Properties:**
-- `root`: Root DOM node (for leaf views)
-- `container`: Container node (for composite views)
-
-**View node properties:**
-- `tag`: HTML tag name
-- `class`: CSS class name
-- `text`: Text content (can be expression)
-- `value`: Input value (can be expression)
-- `attrs`: HTML attributes object
-- `children`: Array of child nodes
-- `$on`: Event handlers object
-- `$each`: Loop definition
-- `$slot`: Slot reference (expression)
-
-**Example:**
-```json
-{
-  "$type": "view",
-  "$id": "co_view_todo_001",
-  "root": {
-    "tag": "div",
-    "text": "$title",
-    "children": []
-  }
-}
-```
-
-### Style Schema
-
-Validates style definitions (`.style.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"actor.style"`
-
-**Properties:**
-- `tokens`: Design tokens object
-- `components`: Component-specific styles object
-
-**Example:**
-```json
-{
-  "$type": "actor.style",
-  "tokens": {
-    "colors": {
-      "primary": "#8fa89b"
-    }
-  },
-  "components": {
-    "button": {
-      "background": "{colors.primary}"
-    }
-  }
-}
-```
-
-### Brand Style Schema
-
-Validates brand style definitions (`brand.style.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"brand.style"`
-- `$id`: Unique identifier (pattern: `^co_brand_`)
-
-**Properties:**
-- `tokens`: Design tokens (colors, spacing, typography, radii, shadows)
-- `components`: Component-specific styles
-- `selectors`: CSS selector-based styles
-
-**Example:**
-```json
-{
-  "$type": "brand.style",
-  "$id": "co_brand_001",
-  "tokens": {
-    "colors": {
-      "primary": "#8fa89b"
-    }
-  },
-  "components": {
-    "button": {
-      "background": "{colors.primary}"
-    }
-  }
-}
-```
-
-### Interface Schema
-
-Validates interface definitions (`.interface.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"actor.interface"`
-
-**Properties:**
-- `inbox`: Object mapping message types to payload schemas
-- `publishes`: Object mapping message types to payload schemas
-- `subscriptions`: Array of actor IDs
-- `watermark`: Number (default: 0)
-
-**Example:**
-```json
-{
-  "$type": "actor.interface",
-  "inbox": {
-    "CREATE_TODO": {
-      "payload": {
-        "text": "string"
-      }
-    }
-  },
-  "publishes": {
-    "TODO_CREATED": {
-      "payload": {
-        "id": "string"
-      }
-    }
-  }
-}
-```
-
-### Tool Schema
-
-Validates tool definitions (`.tool.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"tool"`
-- `$id`: Unique identifier (pattern: `^tool_`)
-- `name`: Tool identifier (pattern: `^@`)
-- `description`: Tool description
-- `parameters`: JSON Schema for tool parameters
-
-**Example:**
-```json
-{
-  "$type": "tool",
-  "$id": "tool_create_001",
-  "name": "@mutation/create",
-  "description": "Creates a new entity",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "schema": {
-        "type": "string"
-      },
-      "data": {
-        "type": "object"
-      }
+const post = await o.create({
+  type: "co-map",
+  schema: {
+    type: "co-map",
+    properties: {
+      title: { type: "string" },
+      content: { type: "string" },
+      author: { type: "co-id" },
+      likes: { type: "number" },
     },
-    "required": ["schema", "data"]
+    required: ["title", "content"],
+  },
+  data: {
+    title: "Hello World",
+    content: "This is a collaborative post",
+    author: accountID, // Stores as co-id
+    likes: 0,
+  },
+});
+
+console.log(post.$id); // Real CRDT ID: co_z...
+console.log(post.title); // "Hello World"
+```
+
+**Supported Types**:
+- `co-map` - Creates RawCoMap
+- `co-list` - Creates RawCoList
+- `co-stream` - Creates RawCoStream
+- `co-binary` - Creates RawBinaryCoStream
+
+**Features**:
+- Validates data against JSON Schema before creating
+- Automatically extracts co-ids from object references
+- Returns wrapped CoValue with property access
+
+### o.read({}) - Read CoValues (Reactive)
+
+**Loads a CoValue and auto-subscribes to updates**
+
+```javascript
+const post = await o.read({
+  id: "co_z123abc...",
+  schema: {
+    type: "co-map",
+    properties: {
+      title: { type: "string" },
+      likes: { type: "number" },
+    },
+  },
+});
+
+console.log(post.title); // Current value
+
+// post.likes updates automatically when changed!
+// 100% reactive - no manual subscriptions needed
+```
+
+**Features**:
+- Auto-subscribes via SubscriptionCache
+- Deduplicates subscriptions to same co-id
+- Returns loading state if unavailable: `{ $isLoaded: false, $id: "co_z..." }`
+- Updates automatically via real cojson subscriptions
+
+**Timeout Option**:
+```javascript
+const post = await o.read({
+  id: "co_z123...",
+  schema: POST_SCHEMA,
+  timeout: 10000, // 10 seconds
+});
+```
+
+### o.update({}) - Update CoValues
+
+**Modifies an existing CoValue**
+
+```javascript
+await o.update({
+  id: post.$id,
+  data: {
+    likes: 42,
+    title: "Updated Title",
+  },
+});
+
+// post.likes is now 42 (reactive update!)
+```
+
+**Features**:
+- Updates only specified properties
+- Validates against schema if provided
+- Works with CoMap (sets keys) and CoList (appends items)
+
+**With Validation**:
+```javascript
+await o.update({
+  id: post.$id,
+  data: { likes: 42 },
+  schema: {
+    type: "co-map",
+    properties: {
+      likes: { type: "number" },
+    },
+  },
+});
+```
+
+### o.delete({}) - Delete CoValues
+
+**Deletes a CoValue**
+
+```javascript
+await o.delete({
+  id: post.$id,
+});
+
+// post.title is now undefined
+// All keys removed from CoMap
+```
+
+**Behavior**:
+- **CoMap**: Deletes all keys
+- **CoList**: Deletes all items
+- Underlying CRDT still exists (for sync), but content is cleared
+
+## JSON Schema Extensions
+
+MaiaCojson extends JSON Schema with CRDT-specific types:
+
+### Co-Types
+
+```json
+{
+  "type": "co-map",
+  "properties": {
+    "title": { "type": "string" },
+    "items": { "type": "co-list" },
+    "author": { "type": "co-id" },
+    "data": { "type": "co-binary" }
   }
 }
 ```
 
-### Skill Schema
+### Schema Preprocessing
 
-Validates skill definitions (`.skill.maia` files).
+MaiaCojson automatically converts `co-*` types to Ajv-compatible formats:
 
-**Required fields:**
-- `$type`: Must be `"skill"`
-- `$id`: Unique identifier (pattern: `^skill_`)
-- `actorType`: Actor type this skill describes
-- `description`: High-level capability summary
-- `stateEvents`: Events the actor can handle
-- `queryableContext`: Context fields AI can read
-
-**Optional fields:**
-- `version`: Skill version
-- `capabilities`: High-level capability categories
-- `bestPractices`: Guidelines for AI agents
-- `commonPatterns`: Reusable interaction sequences
-- `examples`: Usage examples
-
-**Example:**
+**Input**:
 ```json
 {
-  "$type": "skill",
-  "$id": "skill_todo_001",
-  "actorType": "todo",
-  "description": "Todo list manager",
-  "stateEvents": {
-    "CREATE_TODO": {
-      "description": "Create a new todo",
-      "payload": {
-        "text": {
-          "type": "string",
-          "required": true
+  "type": "co-map",
+  "properties": {
+    "author": { "type": "co-id" }
+  }
+}
+```
+
+**Preprocessed for Ajv**:
+```json
+{
+  "type": "object",
+  "x-co-type": "co-map",
+  "properties": {
+    "author": {
+      "type": "string",
+      "pattern": "^co_z[a-zA-Z0-9]+$",
+      "x-co-type": "co-id"
+    }
+  }
+}
+```
+
+The original type is preserved in `x-co-type` for internal use.
+
+## Complete Example: Blog System
+
+```javascript
+import { MaiaCRUD } from '@maiaos/maia-cojson';
+import { LocalNode } from 'cojson';
+import { WasmCrypto } from 'cojson/crypto/WasmCrypto';
+
+// Initialize
+const crypto = await WasmCrypto.create();
+const { node, accountID } = await LocalNode.withNewlyCreatedAccount({
+  creationProps: { name: "Blogger" },
+  peers: [],
+  crypto,
+});
+const group = node.createGroup();
+const o = new MaiaCRUD({ node, accountID, group });
+
+// Define schemas
+const POST_SCHEMA = {
+  type: "co-map",
+  properties: {
+    title: { type: "string" },
+    content: { type: "string" },
+    author: { type: "co-id" },
+    likes: { type: "number" },
+  },
+  required: ["title", "content", "author"],
+};
+
+const BLOG_SCHEMA = {
+  type: "co-map",
+  properties: {
+    title: { type: "string" },
+    posts: {
+      type: "co-list",
+      items: { type: "co-id" }, // References to posts
+    },
+  },
+  required: ["title"],
+};
+
+// 1. CREATE blog
+const blog = await o.create({
+  type: "co-map",
+  schema: BLOG_SCHEMA,
+  data: {
+    title: "My Tech Blog",
+  },
+});
+
+console.log("Blog created:", blog.$id); // co_z...
+
+// 2. CREATE posts list
+const posts = await o.create({
+  type: "co-list",
+  schema: {
+    type: "co-list",
+    items: POST_SCHEMA,
+  },
+  data: [],
+});
+
+// 3. CREATE post
+const post = await o.create({
+  type: "co-map",
+  schema: POST_SCHEMA,
+  data: {
+    title: "Getting Started",
+    content: "Welcome to MaiaCojson!",
+    author: accountID,
+    likes: 0,
+  },
+});
+
+// 4. ADD post to list
+await o.update({
+  id: posts.$id,
+  data: [post], // Appends post reference
+});
+
+// 5. READ post (reactive!)
+const loadedPost = await o.read({
+  id: post.$id,
+  schema: POST_SCHEMA,
+});
+
+console.log(loadedPost.title); // "Getting Started"
+
+// 6. UPDATE post
+await o.update({
+  id: post.$id,
+  data: { likes: 42 },
+});
+
+// loadedPost.likes is now 42 (automatic reactive update!)
+
+// 7. DELETE post
+await o.delete({ id: post.$id });
+
+// loadedPost.title is now undefined
+```
+
+## Reactivity System
+
+### How Reactivity Works
+
+**1. Subscription Cache (Deduplication)**
+
+When you call `o.read()`, MaiaCojson:
+1. Checks if a subscription already exists for that co-id
+2. Reuses existing subscription (no duplicate `node.subscribe()` calls)
+3. Adds your read callback to the subscriber set
+4. When CRDT updates, triggers all callbacks
+
+**Structure**:
+```javascript
+Map<coId, {
+  callbacks: Set<Function>,
+  subscriberCount: number,
+  unsubscribe: Function,
+  cleanupTimeoutId: number | null,
+}>
+```
+
+**2. Cleanup Timeout (5 seconds)**
+
+When subscriber count reaches 0:
+1. Schedules cleanup after 5 seconds
+2. If new subscriber added, cancels cleanup
+3. Prevents subscription churn (rapid subscribe/unsubscribe)
+
+**3. Automatic Updates**
+
+When real CRDT changes:
+```
+RawCoMap.set() → node.subscribe() callback → All subscribers notified → UI updates
+```
+
+No manual subscription management needed!
+
+## Reference Resolution
+
+### The Problem
+
+CRDTs store references as co-id strings:
+
+```javascript
+{
+  "author": "co_z123abc..." // String, not object
+}
+```
+
+### MaiaCojson Solution
+
+**Auto-Resolution**: When you access a co-id, MaiaCojson automatically:
+1. Checks cache (coValuesCache)
+2. If not loaded, calls `node.load(coId)`
+3. Returns loading state immediately (non-blocking)
+4. Updates automatically when loaded
+
+**Example**:
+```javascript
+const post = await o.read({ id: "co_z123...", schema: POST_SCHEMA });
+
+// post.author is a co-id string internally
+// But you can resolve it:
+import { resolveReference } from '@maiaos/maia-cojson';
+
+const author = await resolveReference(
+  post.author,
+  AUTHOR_SCHEMA,
+  o.node
+);
+
+console.log(author.name); // Resolved!
+```
+
+### Circular Reference Detection
+
+MaiaCojson uses a `WeakSet` to track resolution paths:
+
+```javascript
+// map1.ref → map2
+// map2.ref → map1 (circular!)
+
+const map1 = await resolveReference(map1Id, schema, node);
+
+// Returns loading state for circular refs (no infinite loop)
+```
+
+## Caching System
+
+### Instance Cache (coValuesCache)
+
+**Purpose**: Ensure same `RawCoValue` always returns same wrapper instance (object identity)
+
+**Implementation**:
+```javascript
+// WeakMap<RawCoValue, CoValue>
+const coValuesCache = {
+  get(raw, compute) {
+    const cached = weakMap.get(raw);
+    if (cached) return cached;
+    
+    const computed = compute();
+    weakMap.set(raw, computed);
+    return computed;
+  },
+};
+```
+
+**Benefits**:
+- Automatic garbage collection (WeakMap)
+- Object identity: `CoMap.fromRaw(raw) === CoMap.fromRaw(raw)`
+- No memory leaks
+
+### Subscription Cache
+
+**Purpose**: Deduplicate subscriptions to same CoValue
+
+**Implementation**:
+```javascript
+Map<coId, {
+  callbacks: Set<Function>,
+  subscriberCount: number,
+  unsubscribe: Function,     // Real cojson unsubscribe
+  cleanupTimeoutId: number,   // 5-second timeout
+}>
+```
+
+**Lifecycle**:
+1. First `o.read()` → Creates subscription
+2. Second `o.read()` → Reuses subscription (adds callback)
+3. All callbacks unsubscribed → Schedules cleanup (5s)
+4. New `o.read()` before timeout → Cancels cleanup
+5. Timeout expires → Destroys subscription
+
+**Benefits**:
+- No duplicate `node.subscribe()` calls
+- Efficient update propagation
+- Prevents subscription churn
+- Automatic cleanup (no memory leaks)
+
+## Validation System
+
+### SchemaValidator
+
+**Purpose**: Validate data against JSON Schema before CRDT operations
+
+```javascript
+import { SchemaValidator } from '@maiaos/maia-cojson';
+
+const validator = new SchemaValidator({
+  type: "co-map",
+  properties: {
+    title: { type: "string" },
+    likes: { type: "number" },
+  },
+  required: ["title"],
+});
+
+try {
+  validator.validate({
+    title: "Hello",
+    likes: 42,
+  });
+  console.log("✅ Valid!");
+} catch (error) {
+  console.error("❌", error.message);
+  console.error("Errors:", error.ajvErrors);
+}
+```
+
+### Preprocessing
+
+**Schema Preprocessor** converts co-* types to Ajv-compatible formats:
+
+```javascript
+import { preprocessSchema } from '@maiaos/maia-cojson';
+
+const original = {
+  type: "co-map",
+  properties: {
+    author: { type: "co-id" }
+  }
+};
+
+const processed = preprocessSchema(original);
+
+// processed.type === "object"
+// processed["x-co-type"] === "co-map"
+// processed.properties.author.pattern === "^co_z[a-zA-Z0-9]+$"
+```
+
+### ValidationError
+
+Custom error class with formatted Ajv errors:
+
+```javascript
+try {
+  validator.validate(invalidData);
+} catch (error) {
+  console.log(error.message);
+  // "Validation failed:
+  //  (root): must have required property 'title'"
+  
+  console.log(error.ajvErrors);
+  // [{
+  //   instancePath: "",
+  //   schemaPath: "#/required",
+  //   keyword: "required",
+  //   params: { missingProperty: "title" },
+  //   message: "must have required property 'title'"
+  // }]
+  
+  console.log(error.originalSchema);
+  // Original JSON Schema
+}
+```
+
+## Internal Components
+
+### Wrappers (Proxy-based)
+
+All wrappers use JavaScript Proxies for property access:
+
+**CoMap Example**:
+```javascript
+class CoMap {
+  constructor(rawCoMap, schema) {
+    this._raw = rawCoMap;
+    this.$schema = schema;
+    
+    return new Proxy(this, {
+      get(target, prop) {
+        // System properties
+        if (prop === '$id') return target._raw.id;
+        if (prop === '$schema') return target.$schema;
+        
+        // Get from RawCoMap
+        const value = target._raw.get(prop);
+        
+        // Check if co-id reference
+        if (typeof value === 'string' && value.startsWith('co_')) {
+          return value; // Return co-id (resolve separately)
         }
+        
+        return value;
+      },
+      
+      set(target, prop, value) {
+        // Extract $id if object
+        if (value && typeof value === 'object' && value.$id) {
+          target._raw.set(prop, value.$id);
+        } else {
+          target._raw.set(prop, value);
+        }
+        return true;
       }
-    }
-  },
-  "queryableContext": {
-    "todos": {
-      "type": "array",
-      "description": "List of todos"
-    }
+    });
+  }
+  
+  static fromRaw(raw, schema) {
+    return coValuesCache.get(raw, () => new CoMap(raw, schema));
   }
 }
 ```
 
-### Vibe Schema
+### Reference Resolver
 
-Validates vibe definitions (`.vibe.maia` files).
+**Purpose**: Auto-resolve co-id strings to CoValue wrappers
 
-**Required fields:**
-- `$type`: Must be `"vibe"`
-- `$id`: Unique identifier (pattern: `^vibe_`)
-- `name`: Vibe name
-- `description`: Vibe description
-- `actor`: Path to actor definition file
+**API**:
+```javascript
+import { resolveReference, isCoId } from '@maiaos/maia-cojson';
 
-**Example:**
-```json
-{
-  "$type": "vibe",
-  "$id": "vibe_todos_001",
-  "name": "Todo List",
-  "description": "A todo list application",
-  "actor": "./vibe/vibe.actor.maia"
-}
-```
-
-### Message Schema
-
-Validates messages passed between actors.
-
-**Required fields:**
-- `type`: Message type/event name
-- `timestamp`: Unix timestamp (number, minimum: 0)
-
-**Optional fields:**
-- `payload`: Message payload data (object)
-- `from`: Sender actor ID (string)
-- `id`: Optional message ID for deduplication (string)
-
-**Example:**
-```json
-{
-  "type": "CREATE_TODO",
-  "payload": {
-    "text": "Buy milk"
-  },
-  "from": "actor_user_001",
-  "timestamp": 1234567890
-}
-```
-
-## Common Definitions
-
-The `common.schema.json` file defines shared patterns used across multiple schemas:
-
-- **Expression**: Context reference (`$field`), item reference (`$$field`), or literal value
-- **Guard**: Guard condition for state machine transitions
-- **Action**: Tool invocation or context update
-- **Transition**: State machine transition definition
-- **MessagePayload**: Message payload definition
-
-## Integration
-
-Validation is automatically integrated into all engines:
-
-- **ActorEngine**: Validates actor, context, and interface files on load
-- **StateEngine**: Validates state machine files on load
-- **ViewEngine**: Validates view files on load
-- **StyleEngine**: Validates style files on load
-- **ToolEngine**: Validates tool definition files on load
-- **Kernel**: Validates vibe manifest files on load
-
-## Error Messages
-
-Validation errors include:
-
-- `instancePath`: JSON path to the invalid field (e.g., `/properties/name`)
-- `schemaPath`: JSON path in the schema (e.g., `/properties/name/type`)
-- `keyword`: Validation keyword that failed (e.g., `required`, `type`)
-- `message`: Human-readable error message
-- `params`: Additional error parameters
-
-**Example error:**
-```json
-{
-  "instancePath": "/properties/name",
-  "schemaPath": "#/properties/name/type",
-  "keyword": "type",
-  "message": "must be string",
-  "params": {
-    "type": "string"
+// Check if value is a co-id
+if (isCoId(value)) {
+  // Resolve to wrapper
+  const resolved = await resolveReference(value, schema, node);
+  
+  if (resolved.$isLoaded) {
+    console.log(resolved.name); // Resolved CoMap
+  } else {
+    console.log("Loading..."); // Not yet available
   }
 }
 ```
 
-## Performance
+**Features**:
+- Uses `node.load()` for async loading
+- Returns loading state immediately (non-blocking)
+- Detects circular references
+- Integrates with coValuesCache
 
-- Schemas are compiled once and cached
-- Validation is fast (< 1ms per file typically)
-- Validation only occurs on file load, not at runtime
+### Subscription Cache
 
-## Extending Schemas
+**Purpose**: Deduplicate and manage cojson subscriptions
 
-To add a new schema:
+**API**:
+```javascript
+import { SubscriptionCache } from '@maiaos/maia-cojson';
 
-1. Create `src/schemata/newtype.schema.json`
-2. Add schema to `src/schemata/index.js` exports
-3. Update `validation.helper.js` to load the new schema
-4. Add validation calls in the appropriate engine
+const cache = new SubscriptionCache(5000); // 5-second cleanup
+
+// Add subscriber
+cache.addSubscriber(coId, (value) => {
+  console.log("Updated:", value);
+}, node);
+
+// Remove subscriber
+cache.removeSubscriber(coId, callback);
+
+// Get subscriber count
+cache.getSubscriberCount(coId); // number
+
+// Clear all
+cache.clear();
+```
+
+**Lifecycle**:
+1. `addSubscriber()` → Creates `node.subscribe()` if first subscriber
+2. `addSubscriber()` (again) → Reuses existing subscription
+3. `removeSubscriber()` → Decrements count, schedules cleanup if 0
+4. Wait 5 seconds → Cleanup destroys subscription
+5. `addSubscriber()` before timeout → Cancels cleanup
+
+## Loading States
+
+**Three States**:
+```javascript
+import { CoValueLoadingState } from '@maiaos/maia-cojson';
+
+CoValueLoadingState.LOADING      // "loading"
+CoValueLoadingState.LOADED       // "loaded"
+CoValueLoadingState.UNAVAILABLE  // "unavailable"
+```
+
+**Loading State Object**:
+```javascript
+{
+  $isLoaded: false,
+  $id: "co_z123...",
+  $loadingState: "unavailable" | "error" | "circular",
+  $error: "Error message" // if error
+}
+```
+
+## Testing Strategy
+
+### Zero Mocks Policy
+
+**All 127 tests use real CRDTs** - NO mocks, stubs, or fakes!
+
+**Required in Every Test**:
+```javascript
+import { LocalNode } from "cojson";
+import { WasmCrypto } from "cojson/crypto/WasmCrypto";
+
+const crypto = await WasmCrypto.create();
+const { node, accountID } = await LocalNode.withNewlyCreatedAccount({
+  creationProps: { name: "Test User" },
+  peers: [],
+  crypto,
+});
+const group = node.createGroup();
+```
+
+**Why No Mocks**:
+1. **Real behavior**: Mocks can't simulate CRDT merge logic
+2. **Subscription edge cases**: Real subscriptions have race conditions
+3. **Co-id format**: Real co-ids have specific format requirements
+4. **Production confidence**: Works in tests = works in production
+
+### Test Suite
+
+```
+Phase 1 (Original).................. 100 tests
+├── Cache + Loading States........... 13 tests
+├── Core Wrappers.................... 41 tests
+└── JSON Schema Validation........... 46 tests
+
+Milestones 4-5 (New)................ 27 tests
+├── Reference Resolver............... 7 tests
+├── Subscription Cache............... 9 tests
+└── MaiaCRUD API..................... 11 tests
+
+Total: 127 tests passing (all with real CRDTs)
+```
+
+## Integration with MaiaScript
+
+### Basic Integration
+
+```javascript
+// In MaiaScript engine
+import { MaiaCRUD } from '@maiaos/maia-cojson';
+
+// Initialize once
+const o = new MaiaCRUD({ node, accountID, group });
+
+// Use in intent handlers
+async function createTodo(title, description) {
+  return await o.create({
+    type: "co-map",
+    schema: TODO_SCHEMA,
+    data: { title, description, done: false },
+  });
+}
+
+async function loadTodos(todoListId) {
+  const list = await o.read({
+    id: todoListId,
+    schema: TODO_LIST_SCHEMA,
+  });
+  
+  // list is reactive - updates automatically!
+  return list;
+}
+```
+
+### With Schema Registry
+
+```javascript
+// schemas/todo.schema.json
+{
+  "type": "co-map",
+  "properties": {
+    "title": { "type": "string" },
+    "done": { "type": "boolean" }
+  }
+}
+
+// In MaiaScript
+const schema = await loadSchema("todo");
+
+const todo = await o.create({
+  type: "co-map",
+  schema,
+  data: { title: "Buy milk", done: false },
+});
+```
+
+## Performance Considerations
+
+### Caching
+
+**Two-level cache**:
+1. **Instance Cache (WeakMap)**: Same raw → same wrapper
+2. **Subscription Cache (Map)**: Same co-id → shared subscription
+
+**Benefits**:
+- O(1) lookups
+- No duplicate subscriptions
+- Automatic GC
+
+### Lazy Loading
+
+**References loaded on-demand**:
+- Co-id strings stored directly (lightweight)
+- Resolved only when accessed
+- Loading state returned immediately (non-blocking)
+
+### Cleanup
+
+**5-second timeout** prevents:
+- Subscription churn (rapid sub/unsub)
+- Memory leaks (old subscriptions)
+- Unnecessary `node.subscribe()` calls
+
+## Advanced Topics
+
+### Custom Schemas
+
+**Extend base schemas**:
+```javascript
+const BASE_POST = {
+  type: "co-map",
+  properties: {
+    title: { type: "string" },
+    content: { type: "string" },
+  },
+};
+
+const BLOG_POST = {
+  ...BASE_POST,
+  properties: {
+    ...BASE_POST.properties,
+    author: { type: "co-id" },
+    likes: { type: "number" },
+  },
+  required: ["title", "content", "author"],
+};
+```
+
+### Nested Structures
+
+**CoList of CoMaps**:
+```javascript
+const posts = await o.create({
+  type: "co-list",
+  schema: {
+    type: "co-list",
+    items: {
+      type: "co-map",
+      properties: {
+        title: { type: "string" },
+      },
+    },
+  },
+  data: [],
+});
+
+// Add post
+const post = await o.create({
+  type: "co-map",
+  schema: { type: "co-map", properties: { title: { type: "string" } } },
+  data: { title: "Post 1" },
+});
+
+await o.update({
+  id: posts.$id,
+  data: [post], // Stores co-id reference
+});
+```
+
+### Direct Wrapper Access
+
+**Low-level API still available**:
+```javascript
+import { CoMap } from '@maiaos/maia-cojson';
+
+// Direct access to raw CRDT
+const coMap = CoMap.fromRaw(rawCoMap, schema);
+
+coMap.title = "Hello";
+console.log(coMap._raw.get("title")); // Direct raw access
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**1. "Validation failed: must have required property"**
+- Check schema `required` array
+- Ensure all required fields provided in `data`
+
+**2. "CoValue unavailable"**
+- Co-id doesn't exist or not synced yet
+- Check `timeout` option in `o.read()`
+- Verify network/peer connectivity
+
+**3. "Loading state returned instead of value"**
+- CoValue not yet loaded
+- Use loading state: `if (!value.$isLoaded) { /* show loading */ }`
+
+**4. Tests fail with "asArray is not a function"**
+- Using mock instead of real RawCoList
+- Fix: Use `group.createList()` from real cojson
 
 ## Best Practices
 
-1. **Be permissive initially**: Start with schemas that accept current data, tighten later
-2. **Use clear descriptions**: Add `title` and `description` fields for better error messages
-3. **Reuse common definitions**: Extract shared patterns into `common.schema.json`
-4. **Test against real data**: Use integration tests to validate all existing files
-5. **Version schemas**: Include `$schema` field pointing to JSON Schema spec
+### 1. Always Define Schemas
+
+```javascript
+// ✅ Good
+const TODO_SCHEMA = {
+  type: "co-map",
+  properties: {
+    title: { type: "string" },
+    done: { type: "boolean" },
+  },
+  required: ["title"],
+};
+
+const todo = await o.create({
+  type: "co-map",
+  schema: TODO_SCHEMA,
+  data: { title: "Task", done: false },
+});
+
+// ❌ Bad
+const todo = await o.create({
+  type: "co-map",
+  schema: {}, // Empty schema = no validation!
+  data: { anything: "goes" },
+});
+```
+
+### 2. Use References for Relationships
+
+```javascript
+// ✅ Good (reference)
+const post = await o.create({
+  type: "co-map",
+  schema: POST_SCHEMA,
+  data: {
+    title: "Hello",
+    author: authorCoMap, // Stores as co-id
+  },
+});
+
+// ❌ Bad (nested object)
+const post = await o.create({
+  type: "co-map",
+  schema: POST_SCHEMA,
+  data: {
+    title: "Hello",
+    author: {
+      name: "Alice", // Stores as plain JSON (not collaborative!)
+    },
+  },
+});
+```
+
+### 3. Handle Loading States
+
+```javascript
+const post = await o.read({ id, schema });
+
+if (!post.$isLoaded) {
+  // Show loading UI
+  return <div>Loading...</div>;
+}
+
+// Use post data
+return <div>{post.title}</div>;
+```
+
+### 4. Clean Up Subscriptions
+
+```javascript
+// When component unmounts
+o.destroy(); // Clears all subscriptions
+```
+
+## Comparison: jazz-tools vs MaiaCojson
+
+| Feature | jazz-tools | MaiaCojson |
+|---------|-----------|-----------|
+| **Schema Format** | Zod (TypeScript) | JSON Schema |
+| **API Style** | Class-based, complex | JSON-based, simple |
+| **Subscriptions** | Manual | Automatic |
+| **Reference Resolution** | Deep query DSL (`$each`, `$onError`) | Auto-resolve (simple) |
+| **Validation** | Runtime Zod checks | JSON Schema (Ajv) |
+| **Integration** | TypeScript-first | JSON-native |
+| **Complexity** | High | Low |
+| **Testing** | Some mocks | Zero mocks (all real CRDTs) |
+
+## Package Information
+
+- **Name**: `@maiaos/maia-cojson`
+- **Version**: `0.1.23`
+- **Dependencies**: `cojson@^0.19.21`, `ajv@^8.12.0`
+- **Test Command**: `bun test`
+- **Dev Server**: `bun dev` (http://localhost:5173)
+
+## Example App
+
+See [`libs/maia-cojson/src/app/main.js`](../../maia-cojson/src/app/main.js) for a complete working example demonstrating:
+- MaiaCRUD initialization
+- JSON-based operations
+- Real CRDT IDs generation
+- Schema validation
+
+Run: `cd libs/maia-cojson && bun dev`
+
+## Future Enhancements (Phase 2)
+
+**Higher-Order Types** (built on core 7):
+- **CoFeed**: Twitter-like activity streams
+- **CoVector**: GitHub-like threaded comments  
+- **ImageDefinition**: Profile pictures with metadata
+
+**Deep Query DSL** (from jazz-tools):
+- `$each` for nested resolution
+- `$onError: "catch"` for error boundaries
+- Depth control for performance
+
+**Framework Integrations**:
+- Svelte stores
+- React hooks
+- Native reactive bindings
+
+## Contributing
+
+When contributing to MaiaCojson:
+
+**Zero Mocks Policy**:
+- ✅ All tests MUST use real cojson types
+- ✅ Real LocalNode initialization
+- ✅ Real co-id generation (`co_z...`)
+- ❌ NO Mock classes
+- ❌ NO stubs or fakes
+
+**Test Requirements**:
+```javascript
+// Required imports
+import { LocalNode } from "cojson";
+import { WasmCrypto } from "cojson/crypto/WasmCrypto";
+
+// Setup
+beforeAll(async () => {
+  const crypto = await WasmCrypto.create();
+  const { node, accountID } = await LocalNode.withNewlyCreatedAccount({
+    creationProps: { name: "Test User" },
+    peers: [],
+    crypto,
+  });
+  const group = node.createGroup();
+  // Use real CRDTs in tests!
+});
+```
+
+## Resources
+
+- **Source Code**: `libs/maia-cojson/`
+- **Tests**: `libs/maia-cojson/src/**/**.test.js`
+- **Example App**: `libs/maia-cojson/src/app/`
+- **Cojson Docs**: [Jazz Documentation](https://jazz.tools)
+
+## License
+
+Part of MaiaOS project
 
 ---
 
-# TOOLS
+# 08_TOOLS
 
-*Source: developers/tools.md*
+*Source: developers/08_tools.md*
 
 # Tools Guide (Developer)
 
@@ -4766,6 +5909,104 @@ export class DatabaseModule {
 - Read [Engines Guide](./engines.md) - Creating custom engines
 - Read [DSL Guide](./dsl.md) - Defining new DSL types
 - Read [MaiaOS Guide](./maiaos.md) - Understanding the system
+
+---
+
+# README
+
+*Source: developers/README.md*
+
+# MaiaOS Developer Documentation
+
+Developer-facing documentation for understanding and extending MaiaOS.
+
+## Documentation Order
+
+Read the documentation in the following order for a complete understanding:
+
+### 1. [MaiaOS Architecture](./01_maiaos.md)
+**Overview of the entire system**
+- Three-layer architecture (Definition, Execution, Intelligence)
+- Core concepts and design philosophy
+- How the layers interact
+
+### 2. [DSL Fundamentals](./02_dsl.md)
+**MaiaScript Domain-Specific Language**
+- `.maia` file structure and syntax
+- Declarative composition patterns
+- File naming conventions
+- Reference resolution
+
+### 3. [Schemas](./03_schemas.md)
+**Schema definitions and validation**
+- Schema structure (actors, state machines, views, styles, skills)
+- Schema validation and type safety
+- Schema composition and inheritance
+- Best practices
+
+### 4. [Engines](./04_engines.md)
+**Execution engines that interpret definitions**
+- ActorEngine - Actor lifecycle management
+- StateEngine - State machine interpreter
+- ViewEngine - View-to-DOM renderer
+- ToolEngine - Tool executor
+- StyleEngine - Style compiler
+- ModuleRegistry - Dynamic module loader
+
+### 5. [Composition](./05_composition.md)
+**How to compose components and build features**
+- Actor composition patterns
+- State machine composition
+- View composition
+- Style composition
+- Modular architecture
+
+### 6. [Reactive Queries](./06_reactive-queries.md)
+**Reactive data system**
+- Query syntax and patterns
+- Reactive updates and subscriptions
+- Data flow and state management
+- Performance optimization
+
+### 7. [CoJSON Integration](./07_cojson.md)
+**CRDT-based collaborative data layer**
+- MaiaCojson architecture
+- JSON Schema wrappers for CRDTs
+- CRUD API (`o.create`, `o.read`, `o.update`, `o.delete`)
+- Real-time collaboration and sync
+- Zero Mocks Policy for testing
+
+### 8. [Tools](./08_tools.md)
+**Development tools and utilities**
+- CLI tools
+- Build system
+- Testing framework
+- Debugging tools
+- Code generation
+
+---
+
+## Contributing
+
+When updating these docs:
+- ✅ Keep documentation current with code changes
+- ✅ Include code examples
+- ✅ Update cross-references if doc structure changes
+- ❌ **DO NOT** update `docs/agents/LLM_*.md` files (auto-generated)
+
+## Auto-Generated Documentation
+
+**Agent-facing documentation** is auto-generated from these developer docs:
+- `docs/agents/LLM_Developers.md` - Auto-generated, DO NOT edit manually
+- Run `bun run generate:llm-docs` to regenerate agent docs
+
+---
+
+## Quick Links
+
+- [Creator Documentation](../creators/) - For creators (user-facing)
+- [Agent Documentation](../agents/) - For LLM agents (auto-generated)
+- [Getting Started](../getting-started/) - Quick start guides
 
 ---
 

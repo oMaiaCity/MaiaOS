@@ -1,0 +1,293 @@
+/**
+ * MaiaCojson - Liquid Glass Blog
+ * Earthy pastels with glassmorphism
+ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Earthy Pastels */
+  --sage: #a8b5a0;
+  --sage-light: #c4cec0;
+  --sage-dark: #7a8674;
+  --sand: #d4c5b0;
+  --terracotta: #c4917a;
+  --cream: #f5f0e8;
+  --earth-dark: #4a4238;
+  
+  /* Glass effect */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  
+  --radius: 1rem;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.7;
+  color: var(--earth-dark);
+  background: linear-gradient(135deg, #e8dcc8 0%, #c4cec0 50%, #a8b5a0 100%);
+  min-height: 100vh;
+  padding: 3rem 1.5rem;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Header - Liquid Glass */
+.header {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 3rem 2rem;
+  text-align: center;
+  box-shadow: var(--glass-shadow);
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  font-weight: 300;
+  margin-bottom: 0.5rem;
+  color: var(--earth-dark);
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: var(--sage-dark);
+  font-weight: 400;
+}
+
+/* Toolbar - Liquid Glass */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--glass-shadow);
+  margin-bottom: 2rem;
+}
+
+.btn-create {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--sage);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-create:hover:not(:disabled) {
+  background: var(--sage-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-create:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.stats-mini {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.9rem;
+  color: var(--sage-dark);
+}
+
+.stat-mini {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.stat-mini strong {
+  color: var(--earth-dark);
+  font-weight: 600;
+}
+
+/* Posts - Liquid Glass Cards */
+.posts {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.post {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 2rem;
+  box-shadow: var(--glass-shadow);
+  transition: all 0.3s ease;
+}
+
+.post:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.2);
+}
+
+/* Post Header - Title + Edit */
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.post-title {
+  flex: 1;
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--earth-dark);
+  margin: 0;
+  letter-spacing: -0.01em;
+  cursor: text;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: background 0.2s;
+}
+
+.post-title:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.post-title[contenteditable="true"] {
+  background: white;
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
+}
+
+.post-content {
+  color: var(--sage-dark);
+  margin-bottom: 1.5rem;
+  line-height: 1.8;
+  font-size: 1rem;
+}
+
+.post-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Action Buttons */
+.btn-icon {
+  background: transparent;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  color: var(--sage-dark);
+  transition: all 0.2s;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--earth-dark);
+}
+
+.btn-like {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: transparent;
+  border: 1px solid var(--sage-light);
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  color: var(--terracotta);
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.btn-like:hover {
+  background: var(--terracotta);
+  color: white;
+  border-color: var(--terracotta);
+}
+
+.btn-delete {
+  background: transparent;
+  border: 1px solid rgba(255, 0, 0, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  color: #c44;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btn-delete:hover {
+  background: #c44;
+  color: white;
+  border-color: #c44;
+}
+
+
+/* Responsive */
+@media (max-width: 768px) {
+  body {
+    padding: 1.5rem 1rem;
+  }
+  
+  .header {
+    padding: 2rem 1.5rem;
+  }
+  
+  .header h1 {
+    font-size: 2rem;
+  }
+  
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .btn-create {
+    justify-content: center;
+  }
+  
+  .stats-mini {
+    justify-content: center;
+  }
+  
+  .post {
+    padding: 1.5rem;
+  }
+  
+  .post-title {
+    font-size: 1.25rem;
+  }
+}

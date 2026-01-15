@@ -160,6 +160,7 @@ For **every** implementation milestone, follow this strict order:
 - Update ALL call sites to use new patterns
 - Delete unused files, functions, and old implementations
 - Verify no "legacy mode" flags or switches remain
+- **ELIMINATE ALL MOCKS** - Replace with real implementations
 
 **Critical Cleanup Checklist:**
 - ✅ All old implementations deleted (not commented out)
@@ -171,67 +172,165 @@ For **every** implementation milestone, follow this strict order:
 - ❌ No "TODO: migrate this later" comments
 - ❌ No "keep for backwards compatibility" code
 
-**Step 4: Browser-Based Testing** 🌐
+**CRITICAL: Zero Mocks Checklist** 🚫
 
-For **frontend features, UI components, or web-based functionality**, use MCP browser tools to test in a real browser environment:
+Mocks hide bugs and create false confidence. Replace ALL mocks with real implementations:
 
-**Browser Testing Checklist:**
-- ✅ Navigate to the application URL (e.g., `http://localhost:4202` for app service)
-- ✅ Take screenshots to verify visual state and UI rendering
-- ✅ Check browser console for errors, warnings, or unexpected logs
-- ✅ Test user interactions (clicks, form submissions, navigation)
-- ✅ Verify network requests are correct (check network tab)
-- ✅ Test responsive behavior (resize browser window if applicable)
-- ✅ Verify accessibility (check for ARIA labels, keyboard navigation)
+**Search and Destroy Mocks:**
+```bash
+# 1. Search for mock classes
+grep -r "class Mock" src/ --include="*.js"
+grep -r "MockRaw" src/ --include="*.js"
 
-**Browser Testing Workflow:**
+# 2. Search for stub/fake patterns
+grep -r "stub\|fake\|spy" src/ --include="*.js"
+
+# 3. Search for mock imports
+grep -r "sinon\|jest.mock\|vi.mock" src/ --include="*.js"
+
+# ALL results MUST be 0 (except comments about mocking policy)
+```
+
+**Replace Mocks With Real Implementations:**
+- ✅ Use real database connections (not in-memory fakes)
+- ✅ Use real API clients (not stubbed responses)
+- ✅ Use real CRDTs from actual packages (not MockRawCoMap)
+- ✅ Initialize real LocalNode/context (not fake setup)
+- ✅ Generate real IDs (not "test_123" or "fake_id")
+- ❌ NO Mock classes (MockRawCoMap, MockLocalNode, FakeStorage)
+- ❌ NO Stub methods (stub.returns(), fake implementations)
+- ❌ NO In-memory fakes (FakeDatabase, MockAPI)
+- ❌ NO Hardcoded test IDs (use real ID generators)
+
+**Why Zero Mocks Matters:**
+1. **Mocks hide bugs**: Real systems have timing, race conditions, edge cases that mocks can't simulate
+2. **False confidence**: Tests pass with mocks but fail in production
+3. **Brittle tests**: Mocks require maintenance when real implementation changes
+4. **Integration issues**: Mocks don't catch API contract violations
+5. **Production parity**: Tests should mirror production environment
+
+**Acceptable Testing Patterns:**
+- ✅ Real test databases (SQLite in-memory, test fixtures)
+- ✅ Real service instances with test configuration
+- ✅ Real network calls to test/staging environments
+- ✅ Real CRDT initialization (LocalNode, Groups)
+- ✅ Integration tests with actual data files
+
+**When Mocks Are Acceptable (Rare)**:
+- ✅ External services you don't control (payment gateways, 3rd party APIs)
+- ✅ Slow operations in unit tests (use integration tests for real versions)
+- ✅ Rate-limited APIs (but have integration tests with real API)
+
+**Validation Commands (Run After Every Milestone):**
+```bash
+# Scan entire src/ directory
+cd [project-root]
+
+# Search for mocks (MUST return 0)
+grep -r "class Mock" src/ --include="*.js" | wc -l
+grep -r "Mock" src/**/*.test.js | wc -l
+
+# Search for stubs/fakes (MUST return 0)  
+grep -r "stub\|fake" src/ --include="*.js" | grep -v "fakeId\|// fake" | wc -l
+
+# Verify real implementation imports
+grep -r "from ['\"]<real-package>" src/ --include="*.js" | wc -l
+
+# Run full test suite (MUST pass with real implementations)
+bun test
+```
+
+**If Mocks Found:**
+1. **STOP** - Do not proceed to next milestone
+2. Identify what the mock is simulating
+3. Replace with real implementation:
+   - Import real package/service
+   - Initialize real context (LocalNode, database, etc.)
+   - Use real methods and data
+4. Update tests to work with real implementation
+5. Re-run validation commands
+6. Only proceed when all mocks eliminated
+
+**Step 4: Manual Browser Debugging** 🌐
+
+For **frontend features, UI components, or web-based functionality**, use **Cursor's native in-app browser** for **manual debugging and verification** during implementation.
+
+**What This Is:**
+- ✅ **Manual debugging** - LLM opens browser, inspects console, checks network, verifies functionality
+- ✅ **Implementation verification** - Quick checks during development to ensure code works
+- ✅ **Anti-mock validation** - Verify real data (not mocks) appears in console logs
+
+**What This Is NOT:**
+- ❌ **NOT automated browser tests** (no Puppeteer/Playwright/Selenium scripts)
+- ❌ **NOT test automation** (write unit/integration tests instead)
+- ❌ **NOT end-to-end test suites** (manual verification only)
+
+**Browser Debugging Workflow:**
+
 1. **Start the dev server** (if not already running):
    ```bash
    bun dev:app  # or appropriate service command
    ```
 
-2. **Navigate to the application:**
-   - Use `browser_navigate` to open the app URL
-   - Wait for page load using `browser_wait_for`
+2. **Open Cursor's Browser:**
+   - Open browser in Cursor IDE (browser icon or Command Palette)
+   - Navigate to app URL (e.g., `http://localhost:4202`)
 
-3. **Take initial screenshot:**
-   - Use `browser_take_screenshot` to capture the current state
-   - Save screenshots with descriptive names (e.g., `milestone-1-initial-state.png`)
+3. **Quick Visual Check:**
+   - Does the UI render?
+   - Are there obvious visual bugs?
+   - Do basic interactions work (click buttons, fill forms)?
 
-4. **Check browser console:**
-   - Use `browser_console_messages` to check for errors or warnings
-   - Verify no unexpected console errors exist
-   - Document any expected console messages
+4. **Console Check (CRITICAL for Anti-Mock Validation):**
+   - Open DevTools Console
+   - **Look for**:
+     - ✅ Real IDs: `co_z...` (not `mock_123`, `test_`, `fake_`)
+     - ✅ Real data structures (not hardcoded test data)
+     - ✅ No JavaScript errors or unexpected warnings
+   
+   **Example:**
+   ```javascript
+   // ✅ Good - Real data in console
+   console.log("Created blog:", "co_z9h5nwiNynbxnC3nTw...")
+   
+   // ❌ Bad - Mocked data in console  
+   console.log("Created blog:", "mock_blog_123")
+   ```
 
-5. **Test interactions:**
-   - Use `browser_snapshot` to get page structure
-   - Use `browser_click` to interact with elements
-   - Use `browser_type` to fill forms
-   - Use `browser_select_option` for dropdowns
-   - Take screenshots after each major interaction
+5. **Network Tab Check:**
+   - Are requests succeeding (200-299)?
+   - Any failed requests (4xx, 5xx)?
+   - Do payloads look correct?
 
-6. **Verify network requests:**
-   - Use `browser_network_requests` to check API calls
-   - Verify requests are correct (endpoints, payloads, responses)
-   - Check for failed requests or unexpected calls
+6. **Basic Interaction Testing:**
+   - Click through the feature
+   - Verify core functionality works
+   - Check for obvious errors
 
-7. **Document results:**
-   - Save screenshots showing before/after states
-   - Note any console errors or warnings
-   - Document any issues found during browser testing
+7. **Document Findings:**
+   - Note any console errors
+   - Note any network failures
+   - Note any visual bugs
+   - Confirm real data (not mocks) if applicable
 
-**When to Use Browser Testing:**
-- ✅ Frontend features (UI components, views, pages)
-- ✅ User interactions (forms, buttons, navigation)
-- ✅ Visual changes (styling, layout, responsive design)
-- ✅ Integration with browser APIs (localStorage, fetch, etc.)
-- ✅ End-to-end user workflows
+**When to Use Browser Debugging:**
+- ✅ After implementing frontend features (quick verification)
+- ✅ When suspicious of mocks (check console for real data)
+- ✅ When UI isn't rendering as expected
+- ✅ When investigating bugs or errors
+- ✅ During milestone checkpoints (verify everything still works)
 
-**When to Skip Browser Testing:**
-- ❌ Pure backend/API changes (unless they affect frontend)
-- ❌ Unit tests for isolated functions
-- ❌ Database schema changes (unless they affect UI)
-- ❌ Configuration-only changes
+**When NOT to Use:**
+- ❌ For backend-only changes (no UI impact)
+- ❌ As a replacement for unit tests (write proper tests!)
+- ❌ For automated testing (this is manual debugging only)
+
+**Browser Debugging Best Practices:**
+- **Quick checks, not thorough testing** - This is debugging, not QA
+- **Console is your friend** - Most issues show up here first
+- **Real data validation** - Console should show real IDs, not mocks
+- **Don't write browser automation** - Just open browser, look around, document findings
+- **Complement tests, don't replace them** - Unit/integration tests are still required
 
 **Step 5: Human-in-the-Loop Feedback** 👤
 - Pause after milestone completion
@@ -325,51 +424,68 @@ Before proceeding, ensure:
 bun test
 ```
 
-**Run Browser-Based Tests** 🌐
+**Manual Browser Debugging** 🌐
 
-For frontend features, perform comprehensive browser testing:
+For frontend features, use **Cursor's browser** for **quick manual verification** (not automated testing):
 
-1. **Navigate to the application:**
-   - Use `browser_navigate` to open the app (e.g., `http://localhost:4202`)
-   - Wait for full page load
+1. **Open Cursor Browser:**
+   - Open browser in Cursor IDE
+   - Navigate to app URL (e.g., `http://localhost:4202`)
 
-2. **Take comprehensive screenshots:**
-   - Initial page load state
-   - After all user interactions
-   - Error states (if applicable)
-   - Success states
-   - Different viewport sizes (if responsive design)
+2. **Quick Visual Check:**
+   - Does UI render correctly?
+   - Any obvious visual bugs?
+   - Basic interactions working?
 
-3. **Check browser console:**
-   - Use `browser_console_messages` to verify:
+3. **Console Check (CRITICAL - Anti-Mock Validation):**
+   - Open DevTools Console
+   - **Check for**:
+     - ✅ Real data: `co_z...` IDs (not `mock_123`)
      - ✅ No JavaScript errors
      - ✅ No unexpected warnings
-     - ✅ Expected console logs are present (if any)
-   - Document any console issues found
+   - **Example:**
+     ```
+     // ✅ Good - Real data
+     Created blog: co_z9h5nwiNynbxnC3nTwPMPkrVaMQ
+     
+     // ❌ Bad - Mocked data (STOP!)
+     Created blog: mock_blog_123
+     ```
 
-4. **Verify network requests:**
-   - Use `browser_network_requests` to check:
-     - ✅ All API calls succeed (status 200-299)
-     - ✅ No failed requests (4xx, 5xx errors)
-     - ✅ Request payloads are correct
-     - ✅ Response data is valid
+4. **Network Tab Check:**
+   - Open Network tab
+   - **Quick checks**:
+     - ✅ Requests succeed (200-299)?
+     - ❌ Any failures (4xx, 5xx)?
+     - ✅ Payloads look correct?
 
-5. **Test user workflows:**
-   - Navigate through the feature end-to-end
-   - Test all user interactions
-   - Verify data persistence (if applicable)
-   - Test error handling and edge cases
+5. **Basic Interaction Check:**
+   - Click through core feature
+   - Verify basic functionality
+   - Test a few user actions
 
-6. **Document browser test results:**
-   - Console log summary (no errors)
-   - Network request summary (all successful)
-   - Any issues or edge cases discovered
+6. **Document Findings:**
+   - Note console errors (if any)
+   - Note network issues (if any)
+   - Confirm real data visible (no mocks)
 
-**Browser Testing Output:**
-- Screenshots saved with descriptive names
-- Console log summary (errors: 0, warnings: X)
-- Network request summary (successful: X, failed: 0)
-- Feature verification status (✅ working / ❌ issues found)
+**Browser Debugging Output:**
+- ✅ "Console: 0 errors, real co-ids visible"
+- ✅ "Network: requests succeed, no failures"  
+- ✅ "UI: renders correctly, interactions work"
+- OR
+- ❌ "Console: Found mock IDs (mock_123) - STOP and fix!"
+- ❌ "Network: requests failing - investigate"
+- ❌ "UI: visual bugs found - fix before proceeding"
+
+**Red Flags (STOP and Fix)**:
+- ❌ Console shows `mock_`, `test_`, `fake_` in IDs
+- ❌ Console shows `undefined` for critical data
+- ❌ JavaScript errors in console
+- ❌ Network requests failing
+- ❌ UI not rendering or broken
+
+**Remember**: This is **manual debugging**, NOT automated browser testing. Just open browser, look around, document findings. Write unit/integration tests separately.
 
 **2. Human-in-the-Loop Final Feedback** 👤
 
@@ -390,13 +506,18 @@ Present to human:
 **After all tests pass and human approves**, update relevant documentation:
 
 **Update these locations:**
-- `libs/maia-script/src/docs/developers/` - Developer-facing docs
-- `libs/maia-script/src/docs/vibecreators/` - Vibecreator-facing docs
-- `libs/maia-script/src/docs/getting-started/` - Getting started guides
+- `libs/maia-script/docs/developers/` - Developer-facing docs (technical implementation)
+- `libs/maia-script/docs/creators/` - Creator-facing docs (how to use features)
+- `libs/maia-script/docs/getting-started/` - Getting started guides
 - Component-level README files (if applicable)
 
 **DO NOT UPDATE:**
-- ❌ `libs/maia-script/src/docs/agents/LLM_*.md` - These are **auto-generated**
+- ❌ `libs/maia-script/docs/agents/LLM_*.md` - These are **auto-generated** from developer/creator docs
+
+**To regenerate agent docs after updating:**
+```bash
+bun run generate:llm-docs
+```
 
 **Documentation should include:**
 - What changed and why
@@ -469,12 +590,12 @@ todos:
 - [ ] Update all call sites to new implementation
 - [ ] Verify 100% migration complete
 
-**Browser Testing** (if frontend feature):
-- [ ] Navigate to app and take initial screenshot
-- [ ] Test user interactions and take screenshots
-- [ ] Check browser console for errors/warnings
-- [ ] Verify network requests are correct
-- [ ] Document browser test results
+**Manual Browser Debugging** (if frontend feature):
+- [ ] Open app in Cursor browser
+- [ ] Check console for errors and verify real data (no mocks)
+- [ ] Check network tab for failed requests
+- [ ] Verify basic functionality works
+- [ ] Document any issues found
 
 **Human Checkpoint:** ✋ Pause for feedback
 
@@ -494,18 +615,18 @@ todos:
 - [ ] Update all call sites to new implementation
 - [ ] Verify 100% migration complete
 
-**Browser Testing** (if frontend feature):
-- [ ] Navigate to app and take initial screenshot
-- [ ] Test user interactions and take screenshots
-- [ ] Check browser console for errors/warnings
-- [ ] Verify network requests are correct
-- [ ] Document browser test results
+**Manual Browser Debugging** (if frontend feature):
+- [ ] Open app in Cursor browser
+- [ ] Check console for errors and verify real data (no mocks)
+- [ ] Check network tab for failed requests
+- [ ] Verify basic functionality works
+- [ ] Document any issues found
 
 **Human Checkpoint:** ✋ Pause for feedback
 
 ### Milestone 3: Documentation & Final Review
-- [ ] All tests passing ✅ (unit, integration, browser)
-- [ ] Browser testing complete (screenshots, console, network verified)
+- [ ] All tests passing ✅ (unit, integration tests)
+- [ ] Manual browser debugging complete (console verified, no errors)
 - [ ] Update developer docs
 - [ ] Update vibecreator docs
 - [ ] Final human approval ✋
@@ -518,9 +639,8 @@ todos:
 ## Testing Strategy
 - **Unit Tests**: [What to test and where]
 - **Integration Tests**: [What to test and where]
-- **Browser Tests**: [What to test in browser - UI, interactions, console, network]
+- **Manual Browser Debugging**: [Quick checks - console errors, network failures, visual bugs]
 - **Test Output**: [Expected test summary format]
-- **Browser Test Output**: [Screenshots, console logs, network requests summary]
 
 ## Risks & Mitigation
 [Potential issues and how to address them]
