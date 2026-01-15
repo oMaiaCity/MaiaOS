@@ -3,15 +3,15 @@
 ## Core Concepts
 
 ### Maia Garden
-The main brand, encompassing the website, social media channels, and organizational identity. Maia Garden e.V. is the democratic Brand, IP Asset Holder, and creator entity for Maia AI.
+The main brand, encompassing the website, social media channels, and organizational identity. Maia Garden e.V. is the democratic Brand, IP Asset Holder, and creator entity for Maia Guardian (AI).
 
 ### Maia Holding GmbH
 100% subsidiary of Maia Garden e.V., responsible for organizational management and asset holding for all future cities' assets, including real estate, housing, startups etc and Maia City infrastructure.
 
 ### Maia City GmbH
-Formerly "Visioncreator GmbH" - the operational entity building AI-native infrastructures and platforms for the coordination of Maia City. Brings Maia AI and Maia Garden brand to market through product offerings.
+Formerly "Visioncreator GmbH" - the operational entity building AI-native infrastructures and platforms for the coordination of Maia City. Brings Maia Guardian (AI) and Maia Garden brand to market through product offerings.
 
-### Maia AI
+### Maia Guardian (AI)
 The artificial intelligence system powering the Maia ecosystem, designed to enhance human productivity, creativity, and sovereignty.
 
 ### Maia Vibes

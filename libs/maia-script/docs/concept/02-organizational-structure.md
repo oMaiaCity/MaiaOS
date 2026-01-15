@@ -17,12 +17,12 @@ Maia Garden e.V. (Parent Organization)
 
 **Type**: Eingetragener Verein (Registered Non-Profit Association) - German legal structure
 
-**Role**: Brand, IP Asset Holder, and Maia AI Creator Entity
+**Role**: Brand, IP Asset Holder, and Maia Guardian (AI) Creator Entity
 
 **Key Responsibilities**:
 - Stewardship of the Maia brand identity
 - Intellectual property management and protection
-- Maia AI research, development, and ethical oversight
+- Maia Guardian (AI) research, development, and ethical oversight
 - Governance and guardianship of all subsidiary divisions
 - Democratic decision-making structure
 - Community representation and stakeholder engagement
@@ -71,7 +71,7 @@ Maia Garden e.V. (Parent Organization)
 **Key Responsibilities**:
 - Development of AI-native infrastructures and platforms
 - Coordination of Maia City operations
-- Market-facing brand management for Maia AI and Maia Garden
+- Market-facing brand management for Maia Guardian (AI) and Maia Garden
 - Product development and delivery
 - Social media management for all Maia Garden channels
 - Customer relationship management
