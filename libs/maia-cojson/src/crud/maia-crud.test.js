@@ -10,10 +10,13 @@
 import { describe, test, expect, beforeAll } from "bun:test";
 import { LocalNode } from "cojson";
 import { WasmCrypto } from "cojson/crypto/WasmCrypto";
-import { MaiaCRUD } from "./maia-crud.js";
+import { MaiaDB } from "./maia-crud.js";
 
 // Real cojson context
-let o; // MaiaCRUD instance
+let db; // MaiaDB instance
+let schema; // Schema CoMap (system)
+let data; // Data CoMap (user)
+let group; // Group
 
 beforeAll(async () => {
   const crypto = await WasmCrypto.create();
@@ -24,31 +27,36 @@ beforeAll(async () => {
   });
   
   const { node, accountID } = result;
-  const group = node.createGroup();
+  group = node.createGroup();
+  schema = group.createMap(); // Schema CoMap
+  data = group.createMap();   // Data CoMap
   
-  // Initialize MaiaCRUD with real cojson context
-  o = new MaiaCRUD({ node, accountID, group });
+  // Initialize MaiaDB with Schema and Data
+  db = new MaiaDB({ node, accountID, group, schema, data });
 });
 
-describe("MaiaCRUD - create()", () => {
-  test("creates CoMap with real CRDT and correct schema", async () => {
-    const schema = {
+describe("MaiaDB - create()", () => {
+  test("creates CoMap with real CRDT using schemaId", async () => {
+    await db.initialize();
+    
+    const testPostSchemaId = await db.registerSchema("TestPost", {
       type: "co-map",
       properties: {
         title: { type: "string" },
         likes: { type: "number" },
       },
       required: ["title"],
-    };
+    });
     
-    const post = await o.create({
-      type: "co-map",
-      schema,
+    const result = await db.create({
+      schemaId: testPostSchemaId,
       data: {
         title: "Test Post",
         likes: 0,
       },
     });
+    
+    const post = result.entity;
     
     // Verify real co-id generated
     expect(post.$id).toMatch(/^co_z/);
@@ -57,16 +65,19 @@ describe("MaiaCRUD - create()", () => {
   });
   
   test("creates CoList with real CRDT", async () => {
-    const schema = {
+    await db.initialize();
+    
+    const listSchemaId = await db.registerSchema("TagList", {
       type: "co-list",
       items: { type: "string" },
-    };
+    });
     
-    const list = await o.create({
-      type: "co-list",
-      schema,
+    const result = await db.create({
+      schemaId: listSchemaId,
       data: ["item1", "item2", "item3"],
     });
+    
+    const list = result.entity;
     
     // Verify real co-id generated
     expect(list.$id).toMatch(/^co_z/);
@@ -77,32 +88,65 @@ describe("MaiaCRUD - create()", () => {
     expect(items).toEqual(["item1", "item2", "item3"]);
   });
   
-  test("stores references as co-ids in create()", async () => {
-    // Create author
-    const author = await o.create({
+  test("schema definitions have $schema and $id at root level", async () => {
+    await db.initialize();
+    
+    const testSchemaId = await db.registerSchema("CompleteSpec", {
       type: "co-map",
-      schema: {
-        type: "co-map",
-        properties: { name: { type: "string" } },
+      properties: {
+        title: { type: "string" }
+      }
+    });
+    
+    // Load schema and verify complete spec
+    const definition = await db.schemaStore.loadSchema(testSchemaId);
+    
+    expect(definition.$schema).toBeDefined();
+    expect(definition.$schema).toContain("maia.city"); // URI format!
+    expect(definition.$schema).toContain("co_z"); // Contains co-id
+    expect(definition.$id).toContain("maia.city"); // URI format!
+    expect(definition.$id).toContain(testSchemaId); // Contains this schema's co-id
+    expect(definition.type).toBe("co-map");
+  });
+  
+  test("stores references as co-ids in create()", async () => {
+    await db.initialize();
+    
+    // Register schemas
+    const authorSchemaId = await db.registerSchema("StoreRefAuthor", {
+      type: "co-map",
+      properties: { name: { type: "string" } },
+    });
+    
+    const postSchemaId = await db.registerSchema("StoreRefPost", {
+      type: "co-map",
+      properties: {
+        title: { type: "string" },
+        author: { 
+          type: "co-id",
+          "x-co-schema": authorSchemaId
+        },
       },
+    });
+    
+    // Create author
+    const authorResult = await db.create({
+      schemaId: authorSchemaId,
       data: { name: "Alice" },
     });
     
+    const author = authorResult.entity;
+    
     // Create post referencing author
-    const post = await o.create({
-      type: "co-map",
-      schema: {
-        type: "co-map",
-        properties: {
-          title: { type: "string" },
-          author: { type: "co-id" },
-        },
-      },
+    const postResult = await db.create({
+      schemaId: postSchemaId,
       data: {
         title: "Post by Alice",
         author: author, // Pass CoMap object
       },
     });
+    
+    const post = postResult.entity;
     
     // Author should be stored as co-id string
     const storedAuthor = post._raw.get("author");
@@ -111,45 +155,47 @@ describe("MaiaCRUD - create()", () => {
   });
   
   test("validates schema on create()", async () => {
-    const schema = {
+    await db.initialize();
+    
+    const validatedSchemaId = await db.registerSchema("ValidatedCreate", {
       type: "co-map",
       properties: {
         title: { type: "string" },
         likes: { type: "number" },
       },
       required: ["title"],
-    };
+    });
     
     // Missing required field
     await expect(
-      o.create({
-        type: "co-map",
-        schema,
+      db.create({
+        schemaId: validatedSchemaId,
         data: { likes: 42 }, // Missing title
       })
     ).rejects.toThrow();
   });
 });
 
-describe("MaiaCRUD - read()", () => {
+describe("MaiaDB - read()", () => {
   test("loads and returns CoMap with real CRDT", async () => {
-    // First create
-    const created = await o.create({
+    await db.initialize();
+    
+    const readTestSchemaId = await db.registerSchema("ReadTest", {
       type: "co-map",
-      schema: {
-        type: "co-map",
-        properties: { title: { type: "string" } },
-      },
+      properties: { title: { type: "string" } },
+    });
+    
+    // First create
+    const result = await db.create({
+      schemaId: readTestSchemaId,
       data: { title: "Read Test" },
     });
     
+    const created = result.entity;
+    
     // Then read
-    const loaded = await o.read({
+    const loaded = await db.read({
       id: created.$id,
-      schema: {
-        type: "co-map",
-        properties: { title: { type: "string" } },
-      },
     });
     
     expect(loaded.$id).toBe(created.$id);
@@ -157,23 +203,24 @@ describe("MaiaCRUD - read()", () => {
   });
   
   test("read() auto-subscribes and is reactive", async () => {
-    // Create CoMap
-    const post = await o.create({
+    await db.initialize();
+    
+    const reactiveSchemaId = await db.registerSchema("ReactiveTest", {
       type: "co-map",
-      schema: {
-        type: "co-map",
-        properties: { likes: { type: "number" } },
-      },
+      properties: { likes: { type: "number" } },
+    });
+    
+    // Create CoMap
+    const result = await db.create({
+      schemaId: reactiveSchemaId,
       data: { likes: 0 },
     });
     
+    const post = result.entity;
+    
     // Read (should auto-subscribe)
-    const loaded = await o.read({
+    const loaded = await db.read({
       id: post.$id,
-      schema: {
-        type: "co-map",
-        properties: { likes: { type: "number" } },
-      },
     });
     
     expect(loaded.likes).toBe(0);
@@ -185,21 +232,16 @@ describe("MaiaCRUD - read()", () => {
     await new Promise(resolve => setTimeout(resolve, 50));
     
     // Read again (should reflect update)
-    const updated = await o.read({
+    const updated = await db.read({
       id: post.$id,
-      schema: {
-        type: "co-map",
-        properties: { likes: { type: "number" } },
-      },
     });
     
     expect(updated.likes).toBe(42);
   });
   
   test("returns loading state for unavailable id", async () => {
-    const result = await o.read({
+    const result = await db.read({
       id: "co_zFakeIDDoesNotExist",
-      schema: { type: "co-map" },
       timeout: 100,
     });
     
@@ -208,25 +250,30 @@ describe("MaiaCRUD - read()", () => {
   });
 });
 
-describe("MaiaCRUD - update()", () => {
+describe("MaiaDB - update()", () => {
   test("modifies existing CoMap with real CRDT", async () => {
-    // Create
-    const post = await o.create({
+    await db.initialize();
+    
+    const updateSchemaId = await db.registerSchema("UpdateTest", {
       type: "co-map",
-      schema: {
-        type: "co-map",
-        properties: {
-          title: { type: "string" },
-          likes: { type: "number" },
-        },
+      properties: {
+        title: { type: "string" },
+        likes: { type: "number" },
       },
+    });
+    
+    // Create
+    const result = await db.create({
+      schemaId: updateSchemaId,
       data: { title: "Original", likes: 0 },
     });
+    
+    const post = result.entity;
     
     expect(post.likes).toBe(0);
     
     // Update
-    await o.update({
+    await db.update({
       id: post.$id,
       data: { likes: 42 },
     });
@@ -237,56 +284,68 @@ describe("MaiaCRUD - update()", () => {
   });
   
   test("validates schema on update()", async () => {
-    const post = await o.create({
+    await db.initialize();
+    
+    const validateSchemaId = await db.registerSchema("ValidateUpdate", {
       type: "co-map",
-      schema: {
-        type: "co-map",
-        properties: {
-          likes: { type: "number" },
-        },
+      properties: {
+        likes: { type: "number" },
       },
+    });
+    
+    const result = await db.create({
+      schemaId: validateSchemaId,
       data: { likes: 0 },
     });
     
+    const post = result.entity;
+    
+    // Load schema for validation
+    const schemaDef = await db.schemaStore.loadSchema(validateSchemaId);
+    
     // Invalid update (likes should be number)
     await expect(
-      o.update({
+      db.update({
         id: post.$id,
         data: { likes: "invalid" },
-        schema: {
-          type: "co-map",
-          properties: { likes: { type: "number" } },
-        },
+        schema: schemaDef,
       })
     ).rejects.toThrow();
   });
 });
 
-describe("MaiaCRUD - delete()", () => {
+describe("MaiaDB - delete()", () => {
   test("deletes CoMap by clearing all keys", async () => {
-    // Create
-    const post = await o.create({
+    await db.initialize();
+    
+    const deleteSchemaId = await db.registerSchema("DeleteTest", {
       type: "co-map",
-      schema: {
-        type: "co-map",
-        properties: { title: { type: "string" } },
-      },
+      properties: { title: { type: "string" } },
+    });
+    
+    // Create
+    const result = await db.create({
+      schemaId: deleteSchemaId,
       data: { title: "To Delete" },
     });
+    
+    const post = result.entity;
     
     expect(post.title).toBe("To Delete");
     
     // Delete
-    await o.delete({ id: post.$id });
+    await db.delete({ id: post.$id });
     
     // Verify deleted (title should be undefined)
     expect(post.title).toBeUndefined();
   });
 });
 
-describe("MaiaCRUD - Full Round-Trip", () => {
+describe("MaiaDB - Full Round-Trip", () => {
   test("create → read → update → delete with real CRDTs", async () => {
-    const schema = {
+    await db.initialize();
+    
+    const roundTripSchemaId = await db.registerSchema("RoundTrip", {
       type: "co-map",
       properties: {
         title: { type: "string" },
@@ -294,12 +353,11 @@ describe("MaiaCRUD - Full Round-Trip", () => {
         likes: { type: "number" },
       },
       required: ["title"],
-    };
+    });
     
     // CREATE
-    const created = await o.create({
-      type: "co-map",
-      schema,
+    const result = await db.create({
+      schemaId: roundTripSchemaId,
       data: {
         title: "Full Test",
         content: "Testing CRUD",
@@ -307,20 +365,21 @@ describe("MaiaCRUD - Full Round-Trip", () => {
       },
     });
     
+    const created = result.entity;
+    
     expect(created.$id).toMatch(/^co_z/); // Real co-id
     expect(created.title).toBe("Full Test");
     
     // READ
-    const loaded = await o.read({
+    const loaded = await db.read({
       id: created.$id,
-      schema,
     });
     
     expect(loaded.$id).toBe(created.$id);
     expect(loaded.content).toBe("Testing CRUD");
     
     // UPDATE
-    await o.update({
+    await db.update({
       id: created.$id,
       data: { likes: 99 },
     });
@@ -328,10 +387,130 @@ describe("MaiaCRUD - Full Round-Trip", () => {
     expect(created.likes).toBe(99);
     
     // DELETE
-    await o.delete({ id: created.$id });
+    await db.delete({ id: created.$id });
     
     expect(created.title).toBeUndefined();
     expect(created.content).toBeUndefined();
     expect(created.likes).toBeUndefined();
   });
 });
+
+describe("MaiaDB - Schema-as-CoMaps API", () => {
+  test("initializes with MetaSchema", async () => {
+    const metaSchemaId = await db.initialize();
+    
+    expect(metaSchemaId).toBeDefined();
+    expect(metaSchemaId.startsWith("co_z")).toBe(true);
+    expect(schema.get("Genesis")).toBe(metaSchemaId);
+  });
+  
+  test("schema definitions have $schema and $id at root", async () => {
+    await db.initialize();
+    
+    // Register blog schema
+    const blogSchemaId = await db.registerSchema("BlogWithRefs", {
+      type: "co-map",
+      properties: {
+        title: { type: "string" }
+      },
+      required: ["title"]
+    });
+    
+    // Load and verify definition structure
+    const definition = await db.schemaStore.loadSchema(blogSchemaId);
+    
+    expect(definition.$schema).toBeDefined();
+    expect(definition.$schema).toContain("maia.city"); // URI format!
+    expect(definition.$schema).toContain("co_z"); // Contains co-id
+    expect(definition.$id).toContain("maia.city"); // URI format!
+    expect(definition.$id).toContain(blogSchemaId); // Contains this schema's co-id
+    expect(definition.type).toBe("co-map");
+    expect(definition.properties.title.type).toBe("string");
+  });
+  
+  test("validates $ref format for schema references", async () => {
+    await db.initialize();
+    
+    // Attempt to register with invalid $ref (not maia.city URI)
+    await expect(
+      db.registerSchema("BadRef", {
+        type: "co-map",
+        properties: {
+          author: { "$ref": "co_zInvalidFormat" } // Invalid URI!
+        }
+      })
+    ).rejects.toThrow(/maia.city/);
+  });
+  
+  test("uses explicit x-co-schema when provided with complete specs", async () => {
+    await db.initialize();
+    
+    // Create author schema
+    const authorSchemaId = await db.registerSchema("ExplicitAuthor", {
+      type: "co-map",
+      properties: {
+        name: { type: "string" }
+      }
+    });
+    
+    // Verify author schema has complete spec
+    const authorDef = await db.schemaStore.loadSchema(authorSchemaId);
+    expect(authorDef.$schema).toBeDefined();
+    expect(authorDef.$schema).toContain("maia.city"); // URI format!
+    expect(authorDef.$id).toContain(authorSchemaId); // Contains co-id!
+    
+    // Create post schema with native $ref
+    const postSchemaId = await db.registerSchema("PostWithExplicitAuthor", {
+      type: "co-map",
+      properties: {
+        title: { type: "string" },
+        author: { 
+          "$ref": `https://maia.city/${authorSchemaId}`  // Native JSON Schema $ref!
+        }
+      }
+    });
+    
+    // Load and verify complete spec
+    const loadedDef = await db.schemaStore.loadSchema(postSchemaId);
+    expect(loadedDef.$schema).toBeDefined();
+    expect(loadedDef.$schema).toContain("maia.city"); // URI format!
+    expect(loadedDef.$id).toContain(postSchemaId); // Contains co-id!
+    expect(loadedDef.properties.author.$ref).toBeDefined();
+    expect(loadedDef.properties.author.$ref).toContain(authorSchemaId);
+    expect(loadedDef.properties.author.$ref).toContain("maia.city");
+  });
+  
+  test("lists all schemas from Registry with complete definitions", async () => {
+    await db.initialize();
+    
+    const schemas = await db.schemaStore.listSchemas();
+    
+    expect(schemas.length).toBeGreaterThan(0);
+    expect(schemas[0].name).toBeDefined();
+    expect(schemas[0].id.startsWith("co_z")).toBe(true);
+    expect(schemas[0].definition).toBeDefined();
+    expect(schemas[0].definition.$schema).toBeDefined(); // Has $schema!
+    expect(schemas[0].definition.$schema).toContain("maia.city"); // URI format!
+    expect(schemas[0].definition.$id).toContain(schemas[0].id); // Contains co-id!
+  });
+  
+  test("creates entity using schemaId", async () => {
+    await db.initialize();
+    
+    const simpleSchemaId = await db.registerSchema("SimpleEntity", {
+      type: "co-map",
+      properties: {
+        title: { type: "string" }
+      }
+    });
+    
+    const result = await db.create({
+      schemaId: simpleSchemaId,
+      data: { title: "Simple" }
+    });
+    
+    expect(result.entity.title).toBe("Simple");
+    expect(result.entityId.startsWith("co_z")).toBe(true);
+  });
+});
+

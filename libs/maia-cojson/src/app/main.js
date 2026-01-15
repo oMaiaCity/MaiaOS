@@ -4,33 +4,25 @@
  * A clean, minimal blog built with CRDTs
  */
 
-import { MaiaCRUD } from "../index.js";
+import { MaiaDB } from "../index.js";
 import { LocalNode } from "cojson";
 import { WasmCrypto } from "cojson/crypto/WasmCrypto";
 
-// Schemas
-const POST_SCHEMA = {
-  type: "co-map",
-  properties: {
-    title: { type: "string" },
-    content: { type: "string" },
-    author: { type: "co-id" },
-    likes: { type: "number" },
-  },
-  required: ["title", "content", "author"],
-};
+// Note: POST_SCHEMA moved to schema registration in initializeMaiaDB()
 
 // Global state
-let o = null;
+let db = null; // MaiaDB instance
 let allPosts = [];
+let currentView = 'blog'; // Current view: 'blog' or 'schemas'
+let schemaIds = {}; // Store registered schema co-ids
 
-// Initialize MaiaCRUD
-async function initializeMaiaCRUD() {
-  if (o) return o;
+// Initialize MaiaDB with Schema and Data
+async function initializeMaiaDB() {
+  if (db) return db;
   
   const crypto = await WasmCrypto.create();
   
-  // Create new account each session (ephemeral for now)
+  // Create new account each session (ephemeral)
   const result = await LocalNode.withNewlyCreatedAccount({
     creationProps: { name: "Blog Author" },
     peers: [],
@@ -40,8 +32,57 @@ async function initializeMaiaCRUD() {
   const { node, accountID } = result;
   const group = node.createGroup();
   
-  o = new MaiaCRUD({ node, accountID, group });
-  return o;
+  // Create Schema CoMap (system meta)
+  const schema = group.createMap();
+  
+  // Create Data CoMap (user data)
+  const data = group.createMap();
+  
+  // Initialize MaiaDB with Schema and Data
+  db = new MaiaDB({ node, accountID, group, schema, data });
+  
+  // Initialize MetaSchema
+  console.log("🌱 Bootstrapping MetaSchema...");
+  const metaSchemaId = await db.initialize();
+  console.log("✅ MetaSchema:", metaSchemaId);
+  
+  // Register schemas in dependency order (explicit, no auto-inference)
+  
+  // 1. Register Author schema FIRST (no dependencies)
+  schemaIds.author = await db.registerSchema("Author", {
+    type: "co-map",
+    properties: {
+      name: { type: "string" }
+    }
+  });
+  
+  // 2. Register Blog schema
+  schemaIds.blog = await db.registerSchema("Blog", {
+    type: "co-map",
+    properties: {
+      title: { type: "string" },
+      description: { type: "string" }
+    },
+    required: ["title"]
+  });
+  
+  // 3. Register Post schema with native $ref
+  schemaIds.post = await db.registerSchema("Post", {
+    type: "co-map",
+    properties: {
+      title: { type: "string" },
+      content: { type: "string" },
+      author: { 
+        "$ref": `https://maia.city/${schemaIds.author}`  // Native JSON Schema $ref!
+      },
+      likes: { type: "number" }
+    },
+    required: ["title", "content", "author"]
+  });
+  
+  console.log("📋 Schemas registered (explicit):", schemaIds);
+  
+  return db; // Just return db - schemas auto-resolve by name!
 }
 
 // Sample post content
@@ -69,56 +110,53 @@ const sampleContent = [
 
 // Create initial posts
 async function createInitialPosts() {
-  const api = await initializeMaiaCRUD();
+  await initializeMaiaDB(); // Populates global schemaIds
   
-  const post1 = await api.create({
-    type: "co-map",
-    schema: POST_SCHEMA,
+  console.log("Creating posts with schemaId:", schemaIds.post);
+  
+  const result1 = await db.create({
+    schemaId: schemaIds.post, // Use schema co-id
     data: {
-      title: "Welcome to MaiaCojson",
-      content: "A simple, clean blog built with JSON Schema and CRDTs. Everything is collaborative by default.",
-      author: api.accountID,
+      title: "Welcome to MaiaDB",
+      content: "A simple, clean blog built with JSON Schema and CRDTs. Complete schema validation!",
+      author: db.accountID,
       likes: 12,
     },
   });
   
-  const post2 = await api.create({
-    type: "co-map",
-    schema: POST_SCHEMA,
+  const result2 = await db.create({
+    schemaId: schemaIds.post, // Use schema co-id
     data: {
-      title: "JSON-based CRUD API",
-      content: "Create, read, update, and delete - all with simple JSON operations. No complex APIs to learn.",
-      author: api.accountID,
+      title: "Pure JSON API",
+      content: "Schemas stored as CoMaps with $schema and $id. All definitions validated!",
+      author: db.accountID,
       likes: 8,
     },
   });
   
-  allPosts = [post1, post2];
+  allPosts = [result1.entity, result2.entity];
   return allPosts;
 }
 
 // Create random post
 async function createRandomPost() {
-  const api = await initializeMaiaCRUD();
-  
   const randomTitle = sampleTitles[Math.floor(Math.random() * sampleTitles.length)];
   const randomContent = sampleContent[Math.floor(Math.random() * sampleContent.length)];
   const randomLikes = Math.floor(Math.random() * 50);
   
-  const newPost = await api.create({
-    type: "co-map",
-    schema: POST_SCHEMA,
+  const result = await db.create({
+    schemaId: schemaIds.post, // Use schema co-id
     data: {
       title: randomTitle,
       content: randomContent,
-      author: api.accountID,
+      author: db.accountID,
       likes: randomLikes,
     },
   });
   
-  allPosts.unshift(newPost);
+  allPosts.unshift(result.entity);
   renderBlog();
-  return newPost;
+  return result.entity;
 }
 
 // Like a post (increment likes)
@@ -181,12 +219,10 @@ function enableTitleEdit(postIndex) {
 async function deletePost(postIndex) {
   const post = allPosts[postIndex];
   
-  if (confirm(`Delete "${post.title}"?`)) {
-    // Just remove from local array (CRDT cleanup would happen with proper sync)
-    allPosts.splice(postIndex, 1);
-    console.log(`🗑️  Deleted post: ${post.title}`);
-    renderBlog();
-  }
+  // Delete directly without confirmation
+  allPosts.splice(postIndex, 1);
+  console.log(`🗑️  Deleted post: ${post.title}`);
+  renderBlog();
 }
 
 // SVG Icons
@@ -197,38 +233,95 @@ const icons = {
   document: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
   edit: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
   trash: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
+  schema: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
+  chevron: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`,
 };
 
+// Switch view
+function switchView(view) {
+  currentView = view;
+  renderBlog();
+}
+
+// Toggle schema expansion
+async function toggleSchema(schemaIdx) {
+  const defEl = document.getElementById(`schema-def-${schemaIdx}`);
+  const card = document.querySelector(`[data-schema-idx="${schemaIdx}"]`);
+  
+  if (defEl.classList.contains('expanded')) {
+    // Collapse
+    defEl.classList.remove('expanded');
+    card.classList.remove('expanded');
+  } else {
+    // Expand and load schema
+    defEl.classList.add('expanded');
+    card.classList.add('expanded');
+    
+    // Get schemas list again
+    const schemas = await db.schemaStore.listSchemas();
+    const schema = schemas[schemaIdx];
+    
+    // Display schema definition (already loaded in schemasList)
+    try {
+      defEl.innerHTML = `<pre><code>${JSON.stringify(schema.definition, null, 2)}</code></pre>`;
+    } catch (error) {
+      defEl.innerHTML = `<div class="error">Failed to display schema: ${error.message}</div>`;
+    }
+  }
+}
+
 // Render blog
-function renderBlog() {
+async function renderBlog() {
   const app = document.getElementById("app");
   const totalLikes = allPosts.reduce((sum, post) => sum + (post.likes || 0), 0);
+  
+  // Get schemas list
+  let schemasList = [];
+  if (db && db.schemaStore) {
+    try {
+      schemasList = await db.schemaStore.listSchemas();
+    } catch (error) {
+      console.error("Failed to load schemas:", error);
+    }
+  }
   
   app.innerHTML = `
     <div class="container">
       <header class="header">
         <h1>Simple Blog</h1>
-        <p class="subtitle">Built with MaiaCojson</p>
+        <p class="subtitle">Built with MaiaCojson Schema-as-CoMaps</p>
       </header>
       
-      <div class="toolbar">
-        <button id="create-post-btn" class="btn-create">
-          ${icons.plus}
-          <span>Create Random Post</span>
+      <div class="tabs">
+        <button class="tab ${currentView === 'blog' ? 'active' : ''}" onclick="window.switchView('blog')">
+          ${icons.document} Blog
         </button>
-        <div class="stats-mini">
-          <span class="stat-mini">
-            ${icons.document}
-            <strong>${allPosts.length}</strong> posts
-          </span>
-          <span class="stat-mini">
-            ${icons.heart}
-            <strong>${totalLikes}</strong> likes
-          </span>
-        </div>
+        <button class="tab ${currentView === 'schemas' ? 'active' : ''}" onclick="window.switchView('schemas')">
+          ${icons.schema} Schemas
+        </button>
       </div>
+
       
-      <div class="posts">
+      <div class="view-content">
+        ${currentView === 'blog' ? `
+          <div class="toolbar">
+            <button id="create-post-btn" class="btn-create">
+              ${icons.plus}
+              <span>Create Random Post</span>
+            </button>
+            <div class="stats-mini">
+              <span class="stat-mini">
+                ${icons.document}
+                <strong>${allPosts.length}</strong> posts
+              </span>
+              <span class="stat-mini">
+                ${icons.heart}
+                <strong>${totalLikes}</strong> likes
+              </span>
+            </div>
+          </div>
+          
+          <div class="posts">
         ${allPosts.map((post, index) => `
           <article class="post" data-index="${index}">
             <div class="post-header">
@@ -249,21 +342,53 @@ function renderBlog() {
             </div>
           </article>
         `).join("")}
+          </div>
+        ` : `
+          <div class="schemas-view">
+            <h2 class="schemas-title">Schema Registry</h2>
+            <p class="schemas-subtitle">System schemas stored as CoMaps in Schema.Registry (CoList)</p>
+            
+            <div class="schemas-list">
+              ${schemasList.map((s, idx) => `
+                <div class="schema-card" data-schema-idx="${idx}">
+                  <div class="schema-header" onclick="window.toggleSchema(${idx})">
+                    <div class="schema-header-left">
+                      <h3 class="schema-name">${s.name}</h3>
+                      ${s.name === 'MetaSchema' ? '<span class="badge">Self-Referencing</span>' : ''}
+                    </div>
+                    <button class="btn-expand">
+                      ${icons.chevron}
+                    </button>
+                  </div>
+                  <code class="schema-id">${s.id}</code>
+                  ${s.name === 'MetaSchema' ? '<p class="schema-note">Self-referencing meta-schema (validates all schemas)</p>' : ''}
+                  <div class="schema-definition" id="schema-def-${idx}">
+                    <div class="loading">Loading schema...</div>
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `}
       </div>
     </div>
   `;
   
-  // Attach event listener
-  document.getElementById("create-post-btn").addEventListener("click", async () => {
-    const btn = document.getElementById("create-post-btn");
-    btn.disabled = true;
-    btn.textContent = "Creating...";
-    
-    await createRandomPost();
-    
-    btn.disabled = false;
-    btn.innerHTML = `${icons.plus}<span>Create Random Post</span>`;
-  });
+  // Attach event listeners if blog view
+  if (currentView === 'blog') {
+    const createBtn = document.getElementById("create-post-btn");
+    if (createBtn) {
+      createBtn.addEventListener("click", async () => {
+        createBtn.disabled = true;
+        createBtn.textContent = "Creating...";
+        
+        await createRandomPost();
+        
+        createBtn.disabled = false;
+        createBtn.innerHTML = `${icons.plus}<span>Create Random Post</span>`;
+      });
+    }
+  }
 }
 
 // Initialize app
@@ -286,5 +411,7 @@ async function init() {
 window.likePost = likePost;
 window.enableTitleEdit = enableTitleEdit;
 window.deletePost = deletePost;
+window.switchView = switchView;
+window.toggleSchema = toggleSchema;
 
 init();

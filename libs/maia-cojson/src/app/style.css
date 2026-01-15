@@ -68,6 +68,47 @@ body {
   font-weight: 400;
 }
 
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--glass-shadow);
+  margin-bottom: 2rem;
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  color: var(--sage-dark);
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.tab.active {
+  background: var(--sage);
+  color: white;
+  border-color: var(--sage);
+}
+
 /* Toolbar - Liquid Glass */
 .toolbar {
   display: flex;
@@ -127,6 +168,160 @@ body {
 .stat-mini strong {
   color: var(--earth-dark);
   font-weight: 600;
+}
+
+/* Schema View */
+.schemas-view {
+  padding: 2rem;
+}
+
+.schemas-title {
+  font-size: 1.75rem;
+  font-weight: 400;
+  color: var(--earth-dark);
+  margin-bottom: 0.5rem;
+}
+
+.schemas-subtitle {
+  font-size: 0.95rem;
+  color: var(--sage-dark);
+  margin-bottom: 2rem;
+}
+
+.schemas-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.schema-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--glass-shadow);
+  transition: all 0.3s ease;
+}
+
+.schema-card:hover {
+  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.2);
+}
+
+.schema-card.expanded {
+  border-color: var(--sage);
+}
+
+.schema-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.schema-header:hover .btn-expand {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.schema-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.btn-expand {
+  background: transparent;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  color: var(--sage-dark);
+  transition: all 0.2s;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.schema-card.expanded .btn-expand {
+  transform: rotate(180deg);
+}
+
+.schema-name {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--earth-dark);
+  margin: 0;
+}
+
+.badge {
+  background: var(--terracotta);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.schema-id {
+  display: block;
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--sage-dark);
+  background: rgba(0, 0, 0, 0.03);
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+  word-break: break-all;
+}
+
+.schema-note {
+  font-size: 0.9rem;
+  color: var(--sage-dark);
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
+.schema-definition {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  margin-top: 0;
+}
+
+.schema-definition.expanded {
+  max-height: 600px;
+  overflow: auto;
+  margin-top: 1rem;
+}
+
+.schema-definition pre {
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--earth-dark);
+}
+
+.schema-definition code {
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+}
+
+.schema-definition .loading {
+  color: var(--sage-dark);
+  font-size: 0.9rem;
+  padding: 1rem;
+  text-align: center;
+}
+
+.schema-definition .error {
+  color: #c44;
+  font-size: 0.9rem;
+  padding: 1rem;
 }
 
 /* Posts - Liquid Glass Cards */

@@ -23,6 +23,57 @@
 - **Simple API**: Just JSON operations
 - **Auto-managed**: Subscriptions, caching, reference resolution all handled internally
 
+## Schema Name Resolution (MaiaDB)
+
+**MaiaCojson** has been renamed to **MaiaDB** with schema auto-resolution!
+
+### How It Works
+
+You can now use schema **names** instead of managing co-ids:
+
+```javascript
+// Register schema by name
+await db.registerSchema("Post", {
+  type: "co-map",
+  properties: {
+    title: { type: "string" },
+    author: { type: "co-id" }
+  }
+});
+
+// Create using the NAME - auto-resolved internally!
+const { entity, entityId } = await db.create({
+  schema: "Post", // Just the name!
+  data: { title: "Hello", author: accountID }
+});
+```
+
+### Internal Mechanism
+
+Each schema CoMap stores its own name as a property:
+
+```javascript
+// Schema CoMap structure:
+{
+  "$schema": "co_zMetaSchemaId",  // Reference to MetaSchema
+  "name": "Post",                 // Human-readable name HERE!
+  "definition": {                 // Clean JSON definition
+    "type": "co-map",
+    "properties": {...}
+  }
+}
+```
+
+**Resolution steps:**
+1. Call `db.create({ schema: "Post", ... })`
+2. `_resolveSchema("Post")` checks cache
+3. If not cached, loads all schemas from `Schema.Registry` (CoList of co-ids)
+4. Finds schema where `schemaMap.get("name") === "Post"`
+5. Returns `schemaMap.get("definition")`
+6. Caches mapping for performance
+
+**No separate name→id registry needed!** The name is stored in each schema CoMap.
+
 ## Architecture
 
 ```mermaid

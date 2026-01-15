@@ -1,12 +1,17 @@
 # MaiaCojson - JSON-based Reactive CRDT Layer
 
-**Complete Implementation** ✅ - 127 tests passing!
+**Complete Implementation** ✅ - 145 tests passing!
 
 A JSON Schema-native CRDT wrapper with a purely JSON-based reactive CRUD API for collaborative data management.
 
 ## Why MaiaCojson?
 
-- **Pure JSON API**: `o.create({})`, `o.read({})`, `o.update({})`, `o.delete({})`
+- **Schemas as CoMaps**: Schemas are collaborative CRDTs with complete JSON Schema specs
+- **MetaSchema**: Self-referencing schema validates all schemas ($schema = URI)
+- **Schema/Data Separation**: Clean system (Schema) and user (Data) hierarchy
+- **URI-based References**: `$schema` and `$id` use `https://maia.city/{co-id}` format
+- **Native `$ref`**: Uses standard JSON Schema `$ref` for schema references
+- **Pure JSON API**: `db.create({})`, `db.read({})`, `db.update({})`, `db.delete({})`
 - **100% Reactive**: Auto-subscribed, updates automatically
 - **Auto-Resolution**: Nested references resolve automatically
 - **Real CRDTs**: Built on `cojson` package (not jazz-tools!)
@@ -37,7 +42,11 @@ User Code (JSON Config)
 - **Subscription Cache** (9 tests): Deduplication, 5-second cleanup, reactivity
 - **MaiaCRUD API** (11 tests): JSON-based create/read/update/delete
 
-**Total: 127 tests passing!** 🎉
+### ✅ Schema-as-CoMaps Architecture (18 tests)
+- **SchemaStore** (12 tests): Registry, MetaSchema, inference, linking
+- **CRUD Integration** (6 tests): schemaId-based creation, listing, backwards compat
+
+**Total: 145 tests passing!** 🎉
 
 **All tests use REAL CRDTs** (Zero Mocks Policy enforced)
 
@@ -70,25 +79,40 @@ const { node, accountID } = await LocalNode.withNewlyCreatedAccount({
 });
 const group = node.createGroup();
 
-// Create MaiaCRUD API
-const o = new MaiaCRUD({ node, accountID, group });
+// Create Schema CoMap (system meta) and Data CoMap (user data)
+const schema = group.createMap();
+const data = group.createMap();
 
-// Define schema
-const POST_SCHEMA = {
+// Create MaiaDB API with Schema and Data
+const db = new MaiaDB({ node, accountID, group, schema, data });
+
+// Bootstrap MetaSchema (self-referencing)
+await db.initialize();
+
+// Register schemas in dependency order (explicit, no auto-inference!)
+const authorSchemaId = await db.registerSchema("Author", {
+  type: "co-map",
+  properties: {
+    name: { type: "string" }
+  }
+});
+
+const postSchemaId = await db.registerSchema("Post", {
   type: "co-map",
   properties: {
     title: { type: "string" },
     content: { type: "string" },
-    author: { type: "co-id" },
+    author: { 
+      "$ref": `https://maia.city/${authorSchemaId}`  // Native JSON Schema $ref!
+    },
     likes: { type: "number" },
   },
   required: ["title", "content"],
-};
+});
 
-// CREATE post (JSON operation)
-const post = await o.create({
-  type: "co-map",
-  schema: POST_SCHEMA,
+// CREATE post using schema ID
+const { entity, entityId } = await db.create({
+  schemaId: postSchemaId,
   data: {
     title: "Hello World",
     content: "This is collaborative!",
@@ -97,27 +121,188 @@ const post = await o.create({
   },
 });
 
-console.log(post.$id); // Real CRDT ID: co_z...
+console.log(entityId); // Real CRDT ID: co_z...
 
-// READ post (100% reactive, auto-subscribed)
-const loaded = await o.read({
-  id: post.$id,
-  schema: POST_SCHEMA,
+// UPDATE directly through wrapper (proxy updates CRDT)
+entity.likes = 42;
+entity.title = "Updated Title";
+
+// READ (100% reactive, auto-subscribed)
+const loaded = await db.read({
+  id: entityId,
 });
 
-console.log(loaded.title); // "Hello World"
+console.log(loaded.title); // "Updated Title"
 
-// UPDATE post (JSON operation)
-await o.update({
-  id: post.$id,
-  data: { likes: 42 },
-});
+// List all schemas (with complete JSON Schema specs)
+const schemas = await db.schemaStore.listSchemas();
+console.log(schemas[0].definition);
+// {
+//   "$schema": "https://maia.city/co_zMetaId",
+//   "$id": "https://maia.city/co_zPostId",
+//   "type": "co-map",
+//   "properties": {...}
+// }
 
 // loaded.likes is now 42 (automatic reactive update!)
 
 // DELETE post
-await o.delete({ id: post.$id });
+await db.delete({ id: entity.$id });
 ```
+
+## Schema-as-CoMaps Architecture
+
+### Clean Hierarchy
+
+```
+Group
+  ├─ Schema CoMap (system meta)
+  │   ├─ Genesis: co-id → MetaSchema
+  │   └─ Registry: co-id → CoList of all schemas
+  └─ Data CoMap (user data)
+      └─ [Your application data]
+```
+
+Schemas are stored as collaborative CoMaps in `Schema.Registry` (a CoList), enabling schema evolution, discovery, and proper co-id reference handling.
+
+### MetaSchema (Self-Referencing)
+
+Self-referencing meta-schema that validates all other schemas:
+
+```javascript
+// Bootstrap MetaSchema
+await db.initialize();
+
+// MetaSchema structure (complete JSON Schema spec!):
+{
+  "$schema": "co_zMetaSchemaId",  // Raw co-id in CoMap property
+  "name": "MetaSchema",
+  "definition": {
+    "$schema": "https://maia.city/co_zMetaSchemaId",  // URI format!
+    "$id": "https://maia.city/co_zMetaSchemaId",      // URI format!
+    "type": "co-map",
+    "properties": { 
+      "$schema": { "type": "co-id" },
+      "name": { "type": "string" },
+      "definition": { "type": "object" },
+      // ... JSON Schema 2020 + x-co-* extensions
+    }
+  }
+}
+```
+
+### Registering Schemas
+
+```javascript
+// Register a schema (stored as CoMap)
+const postSchemaId = await o.registerSchema("PostSchema", {
+  type: "co-map",
+  properties: {
+    title: { type: "string" },
+    author: { type: "co-id" } // Auto-creates authorSchema
+  },
+  required: ["title"]
+});
+
+// Schema is now in Schema.Registry (CoList)
+```
+
+### Explicit Dependencies Required
+
+All co-id properties MUST have explicit `x-co-schema`. No auto-inference!
+
+```javascript
+// ❌ This will throw an error:
+await db.registerSchema("Bad", {
+  properties: {
+    author: { type: "co-id" } // Missing x-co-schema!
+  }
+});
+// Error: co-id property "author" must have x-co-schema reference
+
+// ✅ Correct approach:
+// 1. Register Author first
+const authorSchemaId = await db.registerSchema("Author", {...});
+
+// 2. Reference it explicitly
+await db.registerSchema("Post", {
+  properties: {
+    author: { 
+      type: "co-id",
+      "x-co-schema": authorSchemaId  // Explicit!
+    }
+  }
+});
+```
+
+**Why explicit?** Clearer dependencies, easier debugging, no magic.
+
+### Complete Schema Example
+
+```javascript
+// Register in dependency order
+const authorSchemaId = await db.registerSchema("Author", {
+  type: "co-map",
+  properties: {
+    name: { type: "string" },
+    email: { type: "string" }
+  }
+});
+
+const postSchemaId = await db.registerSchema("Post", {
+  type: "co-map",
+  properties: {
+    title: { type: "string" },
+    author: { 
+      "$ref": `https://maia.city/${authorSchemaId}`  // Native JSON Schema $ref!
+    }
+  },
+  required: ["title", "author"]
+});
+
+// The stored definition has complete JSON Schema spec:
+// {
+//   "$schema": "https://maia.city/co_zMetaId",
+//   "$id": "https://maia.city/co_zPostId",
+//   "type": "co-map",
+//   "properties": {
+//     "title": { "type": "string" },
+//     "author": {
+//       "$ref": "https://maia.city/co_zAuthorId"  // Standard JSON Schema!
+//     }
+//   },
+//   "required": ["title", "author"]
+// }
+```
+
+### Schema Discovery
+
+List all registered schemas:
+
+```javascript
+const schemas = await o.schemaStore.listSchemas();
+// Returns: [
+//   { name: "MetaSchema", id: "co_z...", definition: {...} },
+//   { name: "PostSchema", id: "co_z...", definition: {...} },
+//   { name: "authorSchema", id: "co_z...", definition: {...} }
+// ]
+```
+
+### Creating Entities
+
+Use schema co-ids (type inferred from schema):
+
+```javascript
+const { entity, entityId } = await db.create({
+  schemaId: postSchemaId, // Just the co-id - type inferred from definition
+  data: { 
+    title: "My Post",
+    author: authorEntity  // Can pass CoValue wrapper (extracts $id automatically)
+  }
+});
+```
+
+**Note:** No `type` parameter needed - inferred from schema definition.
 
 ## JSON Schema Co-Types
 

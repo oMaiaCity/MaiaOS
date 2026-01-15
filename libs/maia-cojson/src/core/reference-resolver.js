@@ -101,8 +101,21 @@ export async function resolveReference(coId, schema, node, options = {}) {
     // Add to resolution path
     resolutionPath.add(raw);
     
-    // Get appropriate wrapper class
-    const WrapperClass = getWrapperClass(schema.type);
+    // Get appropriate wrapper class (detect from schema or raw CRDT type)
+    let type;
+    if (schema && schema.type) {
+      type = schema.type;
+    } else {
+      // Detect type from raw CRDT
+      if (raw.type === "comap") type = "co-map";
+      else if (raw.type === "colist") type = "co-list";
+      else if (raw.type === "costream") type = "co-stream";
+      else if (raw.type === "account") type = "co-account";
+      else if (raw.type === "group") type = "co-group";
+      else type = "co-map"; // Default
+    }
+    
+    const WrapperClass = getWrapperClass(type);
     
     // Wrap with CoValue wrapper (uses cache for object identity)
     const wrapper = WrapperClass.fromRaw(raw, schema);

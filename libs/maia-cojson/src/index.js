@@ -40,5 +40,10 @@ export {
 
 export { SubscriptionCache } from './core/subscription-cache.js';
 
-// CRUD API (Milestone 5)
-export { MaiaCRUD } from './crud/maia-crud.js';
+// Database API
+export { MaiaDB } from './crud/maia-crud.js';
+// Legacy export for backward compatibility
+export { MaiaDB as MaiaCRUD } from './crud/maia-crud.js';
+
+// Schema System
+export { SchemaStore, META_SCHEMA_DEFINITION } from './schema/index.js';
