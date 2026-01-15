@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Vibecreators
 
-**Auto-generated:** 2026-01-14T22:04:32.609Z
+**Auto-generated:** 2026-01-15T13:05:37.274Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -170,6 +170,29 @@ function TodoApp() {
 ```
 
 That's the entire actor. Context, state, and view are separate files. No JavaScript. No build. Just JSON.
+
+## Service/UI Actor Architecture
+
+MaiaOS uses a **service actor / UI actor** pattern for building applications:
+
+**Service Actors** (orchestration):
+- Entry point for every vibe
+- Handle business logic and data management
+- Coordinate between UI actors
+- Minimal or no view (only render child actors)
+
+**UI Actors** (presentation):
+- Render user interfaces
+- Handle user interactions
+- Receive data/configurations from service actors
+- Send generic events to service actors
+
+**Default Pattern:**
+```
+Vibe → Service Actor → Composite Actor → UI Actors
+```
+
+This ensures clean separation of concerns and scalable architecture. See [Actors Documentation](../vibecreators/02-actors.md#default-vibe-pattern-service--composite--ui) for details.
 
 ## Key Differentiators
 
@@ -824,6 +847,38 @@ libs/maia-script/src/
 
 ## Key Architectural Patterns
 
+### Service Actor / UI Actor Separation
+
+MaiaOS follows a clear separation between **service actors** (orchestration) and **UI actors** (presentation):
+
+**Service Actors:**
+- Orchestrate data queries and mutations
+- Manage application-level state
+- Coordinate between UI actors via messages
+- Typically have minimal or no view (only render child actors)
+
+**UI Actors:**
+- Render user interfaces
+- Handle user interactions
+- Receive query configurations from service actors
+- Send generic UI events to service actors
+
+**Default Vibe Pattern:**
+```
+Vibe Entry Point
+  └── Service Actor (orchestrating, minimal view)
+        └── Composite Actor (first UI actor, shared structure)
+              └── UI Actors (leaf components)
+```
+
+This pattern ensures:
+- ✅ Clear separation of concerns
+- ✅ Scalable through composition
+- ✅ Message-based communication
+- ✅ Consistent architecture across vibes
+
+See [Actors Documentation](../vibecreators/02-actors.md#default-vibe-pattern-service--composite--ui) for details.
+
 ### Schema-Agnostic Design
 
 Tools don't know about specific data types:
@@ -1147,7 +1202,7 @@ A vibe is a JSON manifest file (`.vibe.maia`) that serves as an "app store listi
 
 **What vibes provide:**
 - App metadata (name, description)
-- Reference to the root actor
+- Reference to the root actor (always a **service actor**)
 - Marketplace/catalog integration
 - Single entry point for loading apps
 
@@ -1157,6 +1212,20 @@ A vibe is a JSON manifest file (`.vibe.maia`) that serves as an "app store listi
 - Not UI definitions (that's in views)
 
 > **Analogy:** If actors are the "executable," vibes are the "app store listing" that describes and loads them.
+
+### Default Pattern: Service Actor Entry Point
+
+**By default, every vibe loads a service actor** as its entry point. This service actor orchestrates the application and loads UI actors as children.
+
+```
+Vibe → Service Actor → Composite Actor → UI Actors
+```
+
+This pattern ensures:
+- ✅ Clear separation of concerns (service logic vs. UI)
+- ✅ Scalable architecture (add UI actors as needed)
+- ✅ Message-based communication (loose coupling)
+- ✅ Consistent structure across all vibes
 
 ## Vibe Structure
 
@@ -1223,22 +1292,40 @@ my-app/
 }
 ```
 
-### Step 3: Create Your Root Actor
+### Step 3: Create Your Root Service Actor
 
-The actor referenced in the vibe is your app's entry point:
+The actor referenced in the vibe is your app's entry point - **always a service actor**:
 
-**`myapp.actor.maia`:**
+**`myapp.actor.maia` (Service Actor):**
 ```json
 {
   "$type": "actor",
   "$id": "actor_myapp_001",
   "id": "actor_myapp_001",
+  "role": "service",
   "contextRef": "myapp",
   "stateRef": "myapp",
-  "viewRef": "myapp",
-  "styleRef": "brand"
+  "viewRef": "myapp",      // ← Minimal view (only renders child)
+  "styleRef": "brand",
+  "children": {
+    "composite": "actor_composite_001"  // ← Loads first UI actor
+  }
 }
 ```
+
+**Service Actor View (Minimal):**
+```json
+{
+  "$type": "view",
+  "container": {
+    "tag": "div",
+    "class": "service-container",
+    "$slot": "$composite"  // ← Only renders child actor
+  }
+}
+```
+
+The service actor orchestrates the application and loads UI actors as children. See [Actors](./02-actors.md#default-vibe-pattern-service--composite--ui) for the complete pattern.
 
 ## Loading Vibes
 
@@ -1341,11 +1428,31 @@ Vibe (App Manifest)
 vibes/todos/
 ├── todos.vibe.maia         # App manifest
 ├── index.html              # App launcher
-├── todo.actor.maia         # Root actor
-├── todo.context.maia       # Runtime state
-├── todo.state.maia         # Behavior (state machine)
-├── todo.view.maia          # UI definition
-└── brand.style.maia        # Design system
+├── vibe/                   # Service actor (entry point)
+│   ├── vibe.actor.maia    # Service actor definition
+│   ├── vibe.context.maia   # Service actor context
+│   ├── vibe.state.maia     # Service actor state machine
+│   ├── vibe.view.maia      # Minimal view (renders child)
+│   └── vibe.interface.maia # Message interface
+├── composite/              # Composite actor (first UI actor)
+│   ├── composite.actor.maia
+│   ├── composite.context.maia
+│   ├── composite.state.maia
+│   ├── composite.view.maia
+│   └── composite.interface.maia
+├── list/                   # UI actor
+│   ├── list.actor.maia
+│   ├── list.context.maia
+│   ├── list.state.maia
+│   ├── list.view.maia
+│   └── list.interface.maia
+├── kanban/                 # UI actor
+│   ├── kanban.actor.maia
+│   ├── kanban.context.maia
+│   ├── kanban.state.maia
+│   ├── kanban.view.maia
+│   └── kanban.interface.maia
+└── brand.style.maia        # Shared design system
 ```
 
 ### Vibe Manifest
@@ -1357,9 +1464,11 @@ vibes/todos/
   "$id": "vibe_todos_001",
   "name": "Todo List",
   "description": "A complete todo list application with state machines, drag-drop kanban view, and AI-compatible tools. Showcases MaiaOS actor system, message passing, and declarative UI.",
-  "actor": "./todo.actor.maia"
+  "actor": "./vibe/vibe.actor.maia"
 }
 ```
+
+**Note:** The vibe references a **service actor** (`vibe/vibe.actor.maia`) which orchestrates the application and loads UI actors as children.
 
 ### Launcher HTML
 
@@ -1811,17 +1920,80 @@ Create a file named `{name}.actor.maia`:
 
 ## Actor Types
 
-### UI Actors
-Actors with a view component that renders to the DOM:
+MaiaOS distinguishes between two fundamental actor types based on their responsibilities and whether they render UI:
 
+### Service Actors
+
+**Service actors** are orchestrating actors responsible for business logic, data management, and coordination. They typically have **no view** (or a minimal view that only renders child actors).
+
+**Characteristics:**
+- ✅ Orchestrate data queries and mutations
+- ✅ Manage application-level state
+- ✅ Coordinate between UI actors
+- ✅ Handle message routing and business logic
+- ❌ No direct UI rendering (or minimal container view)
+
+**Example: Vibe Service Actor (Default Entry Point)**
 ```json
 {
   "$type": "actor",
-  "id": "actor_todo_001",
-  "stateRef": "todo",
-  "viewRef": "todo",      // ← Has UI
-  "styleRef": "brand",
-  "context": {...}
+  "$id": "actor_vibe_001",
+  "role": "service",
+  "contextRef": "vibe/vibe",
+  "viewRef": "vibe/vibe",      // ← Minimal view (only renders child)
+  "stateRef": "vibe/vibe",
+  "interfaceRef": "vibe/vibe",
+  "children": {
+    "composite": "actor_composite_001"  // ← Loads first UI actor
+  },
+  "subscriptions": [
+    "actor_composite_001",
+    "actor_list_001",
+    "actor_kanban_001"
+  ]
+}
+```
+
+**Service Actor View (Minimal):**
+```json
+{
+  "$type": "view",
+  "container": {
+    "tag": "div",
+    "class": "service-container",
+    "$slot": "$composite"  // ← Only renders child actor
+  }
+}
+```
+
+**Use cases:**
+- **Vibe entry points** (default pattern - every vibe loads a service actor)
+- Data synchronization services
+- Background workers
+- API coordinators
+- Business logic orchestration
+
+### UI Actors
+
+**UI actors** are presentation actors responsible for rendering user interfaces. They receive data/configurations from service actors and handle user interactions.
+
+**Characteristics:**
+- ✅ Render UI components
+- ✅ Handle user interactions
+- ✅ Receive query configurations from service actors
+- ✅ Send generic UI events (e.g., `TOGGLE_BUTTON`, `DELETE_BUTTON`) to service actors
+- ❌ No direct data mutations (delegate to service actors)
+
+**Example: List UI Actor**
+```json
+{
+  "$type": "actor",
+  "$id": "actor_list_001",
+  "role": "ui",
+  "viewRef": "list/list",      // ← Full UI view
+  "stateRef": "list/list",
+  "contextRef": "list/list",
+  "subscriptions": ["actor_vibe_001"]  // ← Subscribes to service actor
 }
 ```
 
@@ -1830,27 +2002,203 @@ Actors with a view component that renders to the DOM:
 - Note editors
 - Calendar widgets
 - Chat interfaces
+- Form components
+- Navigation components
 
-### Service Actors
-Actors without UI that provide background functionality:
+### Composite Actors
 
+**Composite actors** are a special type of UI actor that compose other UI actors. They provide shared UI structure (e.g., header, form, view switcher) and slot child actors.
+
+**Example: Composite Actor**
 ```json
 {
   "$type": "actor",
-  "id": "actor_sync_service",
-  "stateRef": "sync",
-  "context": {
-    "lastSyncTime": null,
-    "syncStatus": "idle"
+  "$id": "actor_composite_001",
+  "role": "composite-view",
+  "viewRef": "composite/composite",
+  "stateRef": "composite/composite",
+  "children": {
+    "list": "actor_list_001",      // ← Child UI actors
+    "kanban": "actor_kanban_001"
+  },
+  "subscriptions": ["actor_vibe_001"]  // ← Subscribes to service actor
+}
+```
+
+**Composite View:**
+```json
+{
+  "$type": "view",
+  "container": {
+    "tag": "div",
+    "children": [
+      {
+        "tag": "header",
+        "children": [
+          {"tag": "h1", "text": "Todo List"},
+          {"tag": "button", "$on": {"click": {"send": "SWITCH_VIEW"}}}
+        ]
+      },
+      {
+        "tag": "main",
+        "$slot": "$currentView"  // ← Slots child UI actors
+      }
+    ]
   }
 }
 ```
 
-**Use cases:**
-- Data synchronization
-- Background workers
-- Notification services
-- API coordinators
+## Default Vibe Pattern: Service → Composite → UI
+
+**The standard pattern for building vibes:**
+
+```
+Vibe Entry Point
+  └── Service Actor (orchestrating, minimal view)
+        └── Composite Actor (first UI actor, shared structure)
+              └── UI Actors (leaf components)
+```
+
+### Step 1: Vibe Loads Service Actor
+
+Every vibe's entry point is a **service actor** that orchestrates the application:
+
+**`todos.vibe.maia`:**
+```json
+{
+  "$type": "vibe",
+  "$id": "vibe_todos_001",
+  "name": "Todo List",
+  "description": "A todo list application",
+  "actor": "./vibe/vibe.actor.maia"  // ← Service actor
+}
+```
+
+### Step 2: Service Actor Loads Composite
+
+The service actor loads a **composite actor** as its first child:
+
+**`vibe.actor.maia` (Service Actor):**
+```json
+{
+  "$type": "actor",
+  "$id": "actor_vibe_001",
+  "role": "service",
+  "viewRef": "vibe/vibe",      // ← Minimal view
+  "stateRef": "vibe/vibe",     // ← Orchestrates queries/mutations
+  "children": {
+    "composite": "actor_composite_001"  // ← First UI actor
+  }
+}
+```
+
+**Service Actor Responsibilities:**
+- Orchestrate data queries (send `SUBSCRIBE_TO_TODOS` messages to UI actors)
+- Handle mutations (`CREATE_BUTTON`, `TOGGLE_BUTTON`, `DELETE_BUTTON`)
+- Manage application-level state
+- Coordinate between UI actors via messages
+
+### Step 3: Composite Actor Composes UI Actors
+
+The composite actor provides shared UI structure and slots child UI actors:
+
+**`composite.actor.maia`:**
+```json
+{
+  "$type": "actor",
+  "$id": "actor_composite_001",
+  "role": "composite-view",
+  "viewRef": "composite/composite",
+  "children": {
+    "list": "actor_list_001",      // ← UI actors
+    "kanban": "actor_kanban_001"
+  }
+}
+```
+
+**Composite Actor Responsibilities:**
+- Render shared UI (header, form, view switcher)
+- Slot child UI actors based on context
+- Forward UI events to service actor
+- Receive state updates from service actor
+
+### Step 4: UI Actors Render Components
+
+Leaf UI actors render specific components:
+
+**`list.actor.maia`:**
+```json
+{
+  "$type": "actor",
+  "$id": "actor_list_001",
+  "role": "ui",
+  "viewRef": "list/list",
+  "stateRef": "list/list"
+}
+```
+
+**UI Actor Responsibilities:**
+- Execute queries based on configurations from service actor
+- Render UI components
+- Send generic UI events to service actor
+- Receive data updates via messages
+
+### Message Flow Pattern
+
+```
+User clicks button in UI Actor
+  ↓
+UI Actor sends: TOGGLE_BUTTON { id: "123" }
+  ↓
+Service Actor receives message
+  ↓
+Service Actor executes mutation: @mutation/toggle
+  ↓
+Service Actor publishes: TODO_COMPLETED { id: "123" }
+  ↓
+UI Actors receive update and re-render
+```
+
+### Why This Pattern?
+
+✅ **Clear Separation of Concerns**
+- Service actors = Business logic
+- UI actors = Presentation
+
+✅ **Scalable Through Composition**
+- Start simple (service → composite → UI)
+- Add more UI actors as needed
+- Service actor orchestrates everything
+
+✅ **Message-Based Communication**
+- Loose coupling between actors
+- Easy to test and modify
+- AI agents can understand message contracts
+
+✅ **Default Pattern for Vibes**
+- Every vibe follows this structure
+- Consistent architecture
+- Easy to understand and extend
+
+### Scaling Through Composition
+
+**Simple Vibe:**
+```
+Service Actor → Composite Actor → UI Actor
+```
+
+**Complex Vibe:**
+```
+Service Actor
+  └── Composite Actor
+        ├── Header UI Actor
+        ├── Form UI Actor
+        ├── List UI Actor
+        │     └── List Item UI Actor (repeated)
+        └── Footer UI Actor
+```
+
+The service actor orchestrates all of them via messages, maintaining clean separation of concerns.
 
 ## Context (Runtime State)
 
@@ -2559,6 +2907,7 @@ vibe_root (composite)
 - Understand [State Machines](./05-state.md) - Actor behavior
 - Explore [Context](./04-context.md) - Runtime data management
 - Create [Views](./07-views.md) - UI representation
+- Review [Best Practices](./10-best-practices.md) - Architecture patterns and scalability
 
 ## Debugging Actors
 
@@ -6715,6 +7064,793 @@ styleElement.textContent += `
 - Learn about [Brand](./08-brand.md) - Design system foundation
 - Explore [Views](./07-views.md) - How to use style classes
 - Understand [Actors](./02-actors.md) - Linking styles to actors
+
+---
+
+# BEST PRACTICES
+
+*Source: vibecreators/10-best-practices.md*
+
+# Best Practices: Actor Architecture
+
+**Comprehensive guide to building scalable, maintainable MaiaOS applications**
+
+## Table of Contents
+
+1. [State Separation Pattern](#1-state-separation-pattern)
+2. [Service vs UI Actor Responsibilities](#2-service-vs-ui-actor-responsibilities)
+3. [Composite/Leaf Pattern](#3-compositeleaf-pattern)
+4. [Message Flow Patterns](#4-message-flow-patterns)
+5. [Scalability Strategies](#5-scalability-strategies)
+6. [Performance Optimization](#6-performance-optimization)
+7. [Domain Separation](#7-domain-separation)
+8. [Feature Modules](#8-feature-modules)
+9. [Anti-Patterns to Avoid](#9-anti-patterns-to-avoid)
+10. [Real-World Examples](#10-real-world-examples)
+
+---
+
+## 1. State Separation Pattern
+
+### Principle: Co-location & Single Responsibility
+
+**Rule of thumb:** State should be co-located with the component that renders it and uses it.
+
+### Three-Layer Architecture
+
+#### Layer 1: Vibe Service Actor (Business Logic)
+
+**Manages:**
+- ✅ Business logic and data orchestration
+- ✅ Data query configurations
+- ✅ Mutation state (creating, toggling, deleting)
+- ✅ Coordination between UI actors
+
+**Does NOT manage:**
+- ❌ UI state (view mode, button states)
+- ❌ Form state (input values)
+- ❌ Component-specific UI state
+
+**Example Context:**
+```json
+{
+  "$type": "context",
+  "composite": "@composite"
+  // Only business logic references - no UI state
+}
+```
+
+#### Layer 2: Composite Actor (UI Orchestration)
+
+**Manages:**
+- ✅ UI orchestration (view mode, current view)
+- ✅ Button states (listButtonActive, kanbanButtonActive)
+- ✅ Form state (newTodoText) - co-located with form
+- ✅ UI presentation (title, placeholders, labels)
+
+**Does NOT manage:**
+- ❌ Business logic
+- ❌ Data mutations
+- ❌ Query configurations
+
+**Example Context:**
+```json
+{
+  "$type": "context",
+  "title": "Todo List",                    // UI presentation
+  "inputPlaceholder": "Add a new todo...", // UI presentation
+  "addButtonText": "Add",                  // UI presentation
+  "viewMode": "list",                      // UI orchestration
+  "currentView": "@list",                  // UI orchestration
+  "listButtonActive": true,                // UI orchestration
+  "kanbanButtonActive": false,             // UI orchestration
+  "newTodoText": ""                        // Form state (co-located)
+}
+```
+
+#### Layer 3: UI Actors (Component-Specific)
+
+**Manages:**
+- ✅ Component-specific UI state (drag-drop, hover, etc.)
+- ✅ Filtered/derived data for rendering (query results)
+
+**Does NOT manage:**
+- ❌ Business logic
+- ❌ App-level UI orchestration
+- ❌ Form state (unless component-specific)
+
+**Example Contexts:**
+
+**Kanban Actor:**
+```json
+{
+  "$type": "context",
+  "todosTodo": [],        // Filtered data (query result)
+  "todosDone": [],       // Filtered data (query result)
+  "draggedItemId": null, // Component-specific UI state
+  "dragOverColumn": null // Component-specific UI state
+}
+```
+
+**List Actor:**
+```json
+{
+  "$type": "context",
+  "todos": []  // Filtered data (query result)
+}
+```
+
+---
+
+## 2. Service vs UI Actor Responsibilities
+
+### Service Actors
+
+**Responsibilities:**
+- Orchestrate data queries (send `SUBSCRIBE_TO_TODOS` to UI actors)
+- Execute mutations (`CREATE_BUTTON`, `TOGGLE_BUTTON`, `DELETE_BUTTON`)
+- Publish data events (`TODO_CREATED`, `TODO_COMPLETED`, `TODO_DELETED`)
+- Coordinate between UI actors via messages
+
+**State Management:**
+- Business logic state only
+- No UI state
+- No form state
+
+### UI Actors
+
+**Responsibilities:**
+- Render component UI
+- Execute queries based on configurations from service actor
+- Manage component-specific UI interactions (drag-drop, hover, etc.)
+- Send generic UI events to service actor (`TOGGLE_BUTTON`, `DELETE_BUTTON`)
+
+**State Management:**
+- Component-specific UI state
+- Filtered data for rendering
+- No business logic
+
+### Composite Actors
+
+**Responsibilities:**
+- Render shared UI (header, form, view switcher)
+- Manage view switching logic
+- Manage form input state
+- Forward UI events to service actor
+- Slot child UI actors based on view mode
+
+**State Management:**
+- UI orchestration state
+- Form state (co-located with form)
+- UI presentation state
+
+---
+
+## 3. Composite/Leaf Pattern
+
+### Pattern Structure
+
+```
+Vibe Service Actor (business logic)
+  └── Composite Actor (UI orchestration)
+        ├── UI Actor (component)
+        └── UI Actor (component)
+```
+
+### Unlimited Nesting
+
+**Composites can contain composites infinitely:**
+
+```
+Composite Level 1 (App Layout)
+  └── Composite Level 2 (Feature)
+        └── Composite Level 3 (Component Group)
+              └── Composite Level 4 (Sub-component)
+                    └── UI Actor (Leaf)
+```
+
+**Service actors can delegate to other service actors:**
+
+```
+Vibe Service Actor
+  └── Domain Service Actor
+        └── Feature Service Actor
+              └── Query Service Actor
+```
+
+### Scalability Levels
+
+#### Level 1: Simple App (2-5 Actors)
+```
+Vibe Service Actor
+  └── Composite Actor
+        ├── List UI Actor
+        └── Kanban UI Actor
+```
+
+**Use case:** Todo app, simple dashboard  
+**Complexity:** Low
+
+#### Level 2: Medium App (10-20 Actors)
+```
+Vibe Service Actor
+  └── App Composite Actor
+        ├── Header Composite Actor
+        │     ├── Logo UI Actor
+        │     ├── Navigation UI Actor
+        │     └── User Menu UI Actor
+        ├── Main Composite Actor
+        │     ├── Content Composite Actor
+        │     │     ├── Todos Composite Actor
+        │     │     └── Notes Composite Actor
+        │     └── Details Panel UI Actor
+        └── Footer UI Actor
+```
+
+**Use case:** Multi-feature app, dashboard with modules  
+**Complexity:** Medium  
+**Pattern:** Nested composites
+
+#### Level 3: Large App (20-50 Actors)
+```
+Vibe Service Actor
+  ├── Todos Service Actor (domain logic)
+  ├── Notes Service Actor (domain logic)
+  └── App Composite Actor
+        ├── Todos Feature Composite Actor
+        └── Notes Feature Composite Actor
+```
+
+**Use case:** Multi-domain app, SaaS application  
+**Complexity:** High  
+**Pattern:** Domain service actors
+
+#### Level 4: Enterprise App (50-200+ Actors)
+```
+Vibe Service Actor
+  ├── Auth Service Actor
+  ├── Data Service Actor
+  ├── Todos Domain Service Actor
+  │     ├── Todos Query Service Actor
+  │     └── Todos Mutation Service Actor
+  └── App Composite Actor
+        ├── Header Composite Actor
+        ├── Main Composite Actor
+        │     ├── Todos Feature Composite Actor
+        │     │     ├── Todos Header Composite Actor
+        │     │     ├── Todos Views Composite Actor
+        │     │     └── Todos Details UI Actor
+        │     └── Notes Feature Composite Actor
+        └── Footer Composite Actor
+```
+
+**Use case:** Enterprise SaaS, complex business applications  
+**Complexity:** Very High  
+**Pattern:** Hierarchical services + deep nesting
+
+---
+
+## 4. Message Flow Patterns
+
+### Pattern: UI Event → Service Actor → Data Mutation → UI Update
+
+```
+User clicks button in Composite
+  ↓
+Composite: SWITCH_VIEW { viewMode: "kanban" }
+  ├─ Updates local state (viewMode, button states, currentView)
+  └─ Forwards to Vibe: SWITCH_VIEW { viewMode: "kanban" }
+      ↓
+Vibe: Receives SWITCH_VIEW (no-op, just acknowledges)
+  ↓
+User types in Composite form
+  ↓
+Composite: UPDATE_INPUT { newTodoText: "Buy milk" }
+  ├─ Updates local state (newTodoText)
+  └─ Forwards to Vibe: UPDATE_INPUT { newTodoText: "Buy milk" }
+      ↓
+Vibe: Receives UPDATE_INPUT (no-op, just acknowledges)
+  ↓
+User clicks "Add" button in Composite
+  ↓
+Composite: CREATE_BUTTON { text: "Buy milk" }
+  └─ Forwards to Vibe: CREATE_BUTTON { text: "Buy milk" }
+      ↓
+Vibe: Executes mutation (@mutation/create)
+  ├─ Publishes: TODO_CREATED { id: "123", text: "Buy milk" }
+  └─ Publishes: INPUT_CLEARED → Composite
+      ↓
+Composite: Receives INPUT_CLEARED
+  └─ Updates local state (newTodoText: "")
+```
+
+### Message Routing
+
+**Messages flow through hierarchy:**
+- **Up:** UI events → Feature → Domain → App
+- **Down:** Data updates → App → Domain → Feature → UI
+- **Across:** Feature-to-feature communication via app service
+
+**Each layer can:**
+- Handle locally (if it owns the state)
+- Forward up (if parent should handle)
+- Forward down (if child should handle)
+- Broadcast (if multiple actors need it)
+
+---
+
+## 5. Scalability Strategies
+
+### Strategy 1: Horizontal Scaling (Add Features)
+
+**Add new feature modules:**
+```
+App Composite Actor
+  ├── Existing Feature Composite Actor
+  ├── Existing Feature Composite Actor
+  └── NEW Feature Composite Actor  ← Add here
+```
+
+**Impact:** Minimal - no changes to existing actors
+
+### Strategy 2: Vertical Scaling (Add Depth)
+
+**Add nested composites:**
+```
+Existing Composite Actor
+  └── NEW Composite Actor  ← Add nesting level
+        └── UI Actor
+```
+
+**Impact:** Minimal - maintains clear boundaries
+
+### Strategy 3: Domain Scaling (Add Domains)
+
+**Add domain service:**
+```
+App Service Actor
+  ├── Existing Domain Service Actor
+  ├── Existing Domain Service Actor
+  └── NEW Domain Service Actor  ← Add here
+```
+
+**Impact:** Minimal - clear domain boundaries
+
+---
+
+## 6. Performance Optimization
+
+### Lazy Loading
+
+**Load actors on-demand:**
+```json
+{
+  "$type": "actor",
+  "children": {
+    "todos": "actor_todos_001",
+    "notes": "actor_notes_001"
+  },
+  "lazy": ["notes"]  // Load notes only when accessed
+}
+```
+
+**Benefits:**
+- Reduce initial load time
+- Improve performance
+- Code splitting ready
+
+### Targeted Messaging
+
+**Send to specific actors instead of broadcasting:**
+```json
+{
+  "tool": "@core/publishMessage",
+  "payload": {
+    "type": "VIEW_MODE_UPDATED",
+    "payload": {...},
+    "target": "actor_composite_001"  // ← Targeted
+  }
+}
+```
+
+**Benefits:**
+- Reduce message overhead
+- Improve performance
+- Avoid validation errors
+
+### Message Batching
+
+**Batch multiple updates:**
+```json
+{
+  "tool": "@core/publishMessage",
+  "payload": {
+    "type": "BATCH_UPDATE",
+    "payload": {
+      "messages": [
+        { "type": "TODO_CREATED", "payload": {...} },
+        { "type": "NOTE_CREATED", "payload": {...} }
+      ]
+    }
+  }
+}
+```
+
+**Benefits:**
+- Reduce message overhead
+- Improve performance
+- Atomic updates
+
+### Actor Lifecycle Management
+
+**Destroy unused actors:**
+- Destroy actors when not visible
+- Recreate on demand
+- Cache actor definitions, not instances
+
+**Benefits:**
+- Optimize memory usage
+- Improve performance
+- Better resource management
+
+---
+
+## 7. Domain Separation
+
+### Pattern: One Service Actor Per Domain
+
+**Each domain gets its own service actor:**
+```
+App Service Actor
+  ├── Todos Domain Service Actor
+  ├── Notes Domain Service Actor
+  ├── Calendar Domain Service Actor
+  └── Users Domain Service Actor
+```
+
+**Benefits:**
+- ✅ Clear boundaries
+- ✅ Independent scaling
+- ✅ Team ownership
+- ✅ Isolated testing
+
+### Domain Service Responsibilities
+
+**Domain Service Actor:**
+- Manages domain-specific business logic
+- Orchestrates domain queries
+- Executes domain mutations
+- Publishes domain events
+
+**Example:**
+```json
+{
+  "$type": "actor",
+  "$id": "actor_todos_service_001",
+  "role": "service",
+  "stateRef": "todos-service",
+  "contextRef": "todos-service"
+}
+```
+
+---
+
+## 8. Feature Modules
+
+### Pattern: One Composite Per Feature
+
+**Each feature gets its own composite:**
+```
+App Composite Actor
+  ├── Todos Feature Composite Actor
+  ├── Notes Feature Composite Actor
+  ├── Calendar Feature Composite Actor
+  └── Settings Feature Composite Actor
+```
+
+**Benefits:**
+- ✅ Feature isolation
+- ✅ Independent development
+- ✅ Lazy loading ready
+- ✅ Code splitting ready
+
+### Feature Composite Responsibilities
+
+**Feature Composite Actor:**
+- Manages feature-specific UI orchestration
+- Coordinates feature UI actors
+- Handles feature-specific form state
+- Forwards feature events to domain service
+
+**Example:**
+```json
+{
+  "$type": "actor",
+  "$id": "actor_todos_feature_001",
+  "role": "composite",
+  "viewRef": "todos-feature",
+  "stateRef": "todos-feature",
+  "children": {
+    "list": "actor_todos_list_001",
+    "kanban": "actor_todos_kanban_001"
+  }
+}
+```
+
+---
+
+## 9. Anti-Patterns to Avoid
+
+### ❌ Don't: Put UI State in Service Actor
+
+**Bad:**
+```json
+{
+  "$type": "context",
+  "viewMode": "list",        // ❌ UI state in service
+  "listButtonActive": true,  // ❌ UI state in service
+  "newTodoText": ""          // ❌ Form state in service
+}
+```
+
+**Good:**
+```json
+{
+  "$type": "context",
+  "composite": "@composite"  // ✅ Only business logic references
+}
+```
+
+### ❌ Don't: Put Business Logic in UI Actors
+
+**Bad:**
+```json
+{
+  "states": {
+    "creating": {
+      "entry": {
+        "tool": "@mutation/create",  // ❌ Business logic in UI actor
+        "payload": {...}
+      }
+    }
+  }
+}
+```
+
+**Good:**
+```json
+{
+  "states": {
+    "idle": {
+      "on": {
+        "CREATE_BUTTON": {
+          "actions": [
+            {
+              "tool": "@core/publishMessage",  // ✅ Forward to service
+              "payload": {
+                "type": "CREATE_BUTTON",
+                "target": "actor_service_001"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+### ❌ Don't: Duplicate State Across Actors
+
+**Bad:**
+```json
+// Service Actor
+{ "viewMode": "list" }
+
+// Composite Actor
+{ "viewMode": "list" }  // ❌ Duplicated
+```
+
+**Good:**
+```json
+// Service Actor
+{ "composite": "@composite" }  // ✅ No UI state
+
+// Composite Actor
+{ "viewMode": "list" }  // ✅ Single source of truth
+```
+
+### ❌ Don't: Create Monolithic Service Actors
+
+**Bad:**
+```json
+{
+  "$type": "actor",
+  "role": "service",
+  "stateRef": "monolithic-service"  // ❌ Everything in one service
+}
+```
+
+**Good:**
+```json
+{
+  "$type": "actor",
+  "role": "service",
+  "children": {
+    "todos": "actor_todos_service_001",    // ✅ Domain separation
+    "notes": "actor_notes_service_001",   // ✅ Domain separation
+    "calendar": "actor_calendar_service_001"  // ✅ Domain separation
+  }
+}
+```
+
+### ❌ Don't: Nest Unnecessarily
+
+**Bad:**
+```
+Composite Actor
+  └── Composite Actor
+        └── Composite Actor
+              └── Composite Actor
+                    └── UI Actor  // ❌ Unnecessary nesting
+```
+
+**Good:**
+```
+Composite Actor
+  ├── UI Actor  // ✅ Flat when possible
+  └── UI Actor
+```
+
+### ❌ Don't: Broadcast Everything
+
+**Bad:**
+```json
+{
+  "tool": "@core/publishMessage",
+  "payload": {
+    "type": "UPDATE_INPUT",
+    // ❌ No target - broadcasts to all subscribers
+  }
+}
+```
+
+**Good:**
+```json
+{
+  "tool": "@core/publishMessage",
+  "payload": {
+    "type": "UPDATE_INPUT",
+    "target": "actor_composite_001"  // ✅ Targeted messaging
+  }
+}
+```
+
+---
+
+## 10. Real-World Examples
+
+### Example 1: E-Commerce App (30-50 Actors)
+
+```
+App Service Actor
+  ├── Products Service Actor
+  ├── Cart Service Actor
+  ├── Orders Service Actor
+  └── App Composite Actor
+        ├── Header Composite Actor
+        ├── Main Composite Actor
+        │     ├── Products Feature Composite Actor
+        │     ├── Cart Feature Composite Actor
+        │     └── Orders Feature Composite Actor
+        └── Footer Composite Actor
+```
+
+**Pattern:** Domain services + feature composites  
+**Complexity:** Medium-High
+
+### Example 2: Project Management App (40-60 Actors)
+
+```
+App Service Actor
+  ├── Projects Service Actor
+  ├── Tasks Service Actor
+  ├── Teams Service Actor
+  └── App Composite Actor
+        ├── Header Composite Actor
+        ├── Main Composite Actor
+        │     ├── Projects Feature Composite Actor
+        │     ├── Tasks Feature Composite Actor
+        │     └── Teams Feature Composite Actor
+        └── Footer Composite Actor
+```
+
+**Pattern:** Domain services + feature composites  
+**Complexity:** High
+
+### Example 3: Enterprise CRM (100-200+ Actors)
+
+```
+App Service Actor
+  ├── Auth Service Actor
+  ├── Data Service Actor
+  ├── Customers Service Actor
+  ├── Sales Service Actor
+  ├── Support Service Actor
+  └── App Composite Actor
+        ├── Header Composite Actor
+        ├── Main Composite Actor
+        │     ├── Customers Feature Composite Actor
+        │     ├── Sales Feature Composite Actor
+        │     └── Support Feature Composite Actor
+        └── Footer Composite Actor
+```
+
+**Pattern:** Hierarchical services + deep nesting  
+**Complexity:** Very High
+
+---
+
+## Summary: Best Practices Checklist
+
+### ✅ State Management
+
+- [ ] Service actors manage business logic only
+- [ ] Composite actors manage UI orchestration
+- [ ] UI actors manage component-specific state
+- [ ] State is co-located with components that use it
+- [ ] No state duplication across actors
+
+### ✅ Architecture
+
+- [ ] Use domain service actors for large apps
+- [ ] Use feature composites for feature isolation
+- [ ] Nest composites logically (not unnecessarily)
+- [ ] Maintain clear separation of concerns
+- [ ] Follow single responsibility principle
+
+### ✅ Messaging
+
+- [ ] Use targeted messaging (not broadcasting)
+- [ ] Forward UI events to service actors
+- [ ] Publish data events from service actors
+- [ ] Handle state locally when possible
+- [ ] Use message batching for performance
+
+### ✅ Performance
+
+- [ ] Lazy load features when possible
+- [ ] Use code splitting for large apps
+- [ ] Manage actor lifecycle (destroy unused)
+- [ ] Cache actor definitions, not instances
+- [ ] Optimize message routing
+
+### ✅ Scalability
+
+- [ ] Start simple, scale as needed
+- [ ] Add domains independently
+- [ ] Add features independently
+- [ ] Maintain clear boundaries
+- [ ] Document architecture decisions
+
+---
+
+## Quick Reference
+
+| Concern | Service Actor | Composite Actor | UI Actor |
+|---------|---------------|----------------|----------|
+| **Business Logic** | ✅ Yes | ❌ No | ❌ No |
+| **Data Mutations** | ✅ Yes | ❌ No | ❌ No |
+| **Query Orchestration** | ✅ Yes | ❌ No | ❌ No |
+| **UI Orchestration** | ❌ No | ✅ Yes | ❌ No |
+| **View Switching** | ❌ No | ✅ Yes | ❌ No |
+| **Form State** | ❌ No | ✅ Yes | ❌ No (unless component-specific) |
+| **Component UI State** | ❌ No | ❌ No | ✅ Yes |
+| **Filtered Data** | ❌ No | ❌ No | ✅ Yes |
+
+---
+
+**Remember:** The pattern scales from simple apps (2-5 actors) to enterprise applications (200+ actors) while maintaining clear separation of concerns and co-location of state.
 
 ---
 

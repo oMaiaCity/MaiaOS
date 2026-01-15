@@ -7,6 +7,9 @@
  * - docs/agents/LLM_Vibecreator.md (ARCHITECTURE + vibecreators docs)
  * - docs/agents/LLM_Developers.md (ARCHITECTURE + developers docs)
  * 
+ * Reads from: docs/ (getting-started, vibecreators, developers)
+ * Writes to: docs/agents/ (LLM documentation files)
+ * 
  * Runs on file changes in watch mode
  */
 
@@ -18,8 +21,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const DOCS_DIR = join(__dirname, '../src/docs');
-const AGENTS_DIR = join(DOCS_DIR, 'agents');
+const DOCS_DIR = join(__dirname, '../docs');
+const OUTPUT_AGENTS_DIR = join(__dirname, '../docs/agents');
 const GETTING_STARTED_DIR = join(DOCS_DIR, 'getting-started');
 
 /**
@@ -80,7 +83,7 @@ async function generate() {
   
   try {
     // Ensure agents directory exists
-    await mkdir(AGENTS_DIR, { recursive: true });
+    await mkdir(OUTPUT_AGENTS_DIR, { recursive: true });
     
     // Read getting-started docs (prefix for both)
     const gettingStartedDocs = await readMarkdownFiles(GETTING_STARTED_DIR);
@@ -107,7 +110,7 @@ async function generate() {
     
     const vibecreatorLLM = await generateLLMDoc('Vibecreators', vibecreatorSections);
     await writeFile(
-      join(AGENTS_DIR, 'LLM_Vibecreator.md'),
+      join(OUTPUT_AGENTS_DIR, 'LLM_Vibecreator.md'),
       vibecreatorLLM,
       'utf-8'
     );
@@ -129,14 +132,14 @@ async function generate() {
     
     const developerLLM = await generateLLMDoc('Developers', developerSections);
     await writeFile(
-      join(AGENTS_DIR, 'LLM_Developers.md'),
+      join(OUTPUT_AGENTS_DIR, 'LLM_Developers.md'),
       developerLLM,
       'utf-8'
     );
     console.log('✅ Generated LLM_Developers.md');
     
     console.log('🎉 LLM documentation generated successfully!');
-    console.log(`📍 Output: ${AGENTS_DIR}`);
+    console.log(`📍 Output: ${OUTPUT_AGENTS_DIR}`);
   } catch (error) {
     console.error('❌ Error generating LLM docs:', error);
     throw error;
