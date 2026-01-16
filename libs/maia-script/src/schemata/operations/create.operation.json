@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://maia.city/operations/create",
+  "title": "Create Operation Schema",
+  "description": "Validates create operations for new CoValues",
+  "type": "object",
+  "properties": {
+    "op": {
+      "const": "create",
+      "description": "Operation type identifier"
+    },
+    "schema": {
+      "type": "string",
+      "pattern": "^co_z[a-zA-Z0-9]+$",
+      "description": "Schema co-id to validate against"
+    },
+    "data": {
+      "type": "object",
+      "description": "Initial data for the CoValue"
+    }
+  },
+  "required": ["op", "schema", "data"],
+  "additionalProperties": false
+}

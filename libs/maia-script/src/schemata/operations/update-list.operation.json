@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://maia.city/operations/update-list",
+  "title": "Update CoList Operation Schema",
+  "description": "Validates CoList update operations with rich array operations",
+  "type": "object",
+  "properties": {
+    "op": {
+      "const": "update",
+      "description": "Operation type identifier"
+    },
+    "target": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^co_z[a-zA-Z0-9]+$",
+          "description": "CoValue ID to update"
+        }
+      },
+      "required": ["id"]
+    },
+    "changes": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": ["push", "unshift", "splice", "pop", "shift", "remove", "retain", "set"],
+              "description": "List operation type"
+            },
+            "value": {
+              "description": "Value for push/unshift/set operations"
+            },
+            "index": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Index for set/splice operations"
+            },
+            "deleteCount": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Number of items to delete in splice"
+            },
+            "items": {
+              "type": "array",
+              "description": "Items to insert in splice"
+            },
+            "predicate": {
+              "type": "object",
+              "description": "Predicate for remove/retain operations"
+            }
+          },
+          "required": ["op"]
+        }
+      },
+      "required": ["items"]
+    }
+  },
+  "required": ["op", "target", "changes"],
+  "additionalProperties": false
+}

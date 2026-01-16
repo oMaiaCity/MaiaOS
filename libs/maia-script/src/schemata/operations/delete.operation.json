@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://maia.city/operations/delete",
+  "title": "Delete Operation Schema",
+  "description": "Validates delete operations (soft or hard delete)",
+  "type": "object",
+  "properties": {
+    "op": {
+      "const": "delete",
+      "description": "Operation type identifier"
+    },
+    "target": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^co_z[a-zA-Z0-9]+$",
+          "description": "CoValue ID to delete"
+        }
+      },
+      "required": ["id"]
+    },
+    "hard": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, performs hard delete (GDPR/privacy)"
+    }
+  },
+  "required": ["op", "target"],
+  "additionalProperties": false
+}

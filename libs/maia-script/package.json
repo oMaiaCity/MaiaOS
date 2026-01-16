@@ -8,10 +8,16 @@
     "./modules/*": "./src/modules/*"
   },
   "dependencies": {
+    "@maiaos/maia-cojson": "workspace:*",
     "ajv": "^8.12.0"
   },
+  "devDependencies": {
+    "cojson": "^0.19.21",
+    "vite": "^6.0.7"
+  },
   "scripts": {
-    "dev": "bun run dev:docs & bun test --watch --bail & bunx browser-sync start --server src --port 4200 --files 'src/**/*.{js,maia,html,css}' --no-notify --no-open --no-ui",
+    "dev": "bun run dev:docs & bun test --watch --bail & vite",
+    "dev:old": "bun run dev:docs & bun test --watch --bail & bunx browser-sync start --server src --port 4200 --files 'src/**/*.{js,maia,html,css}' --no-notify --no-open --no-ui",
     "dev:docs": "bun run scripts/generate-llm-docs.js --watch",
     "build:docs": "bun run scripts/generate-llm-docs.js",
     "serve": "bunx serve -p 4200 src",

@@ -1,99 +1,263 @@
-# MaiaCojson: JSON-based CRDT Data Layer
+# MaiaDB: JSON Schema-Native CRDT Database
 
 ## Overview
 
-**MaiaCojson** is a JSON Schema-native wrapper around Jazz's CRDT (Conflict-free Replicated Data Types) protocol, providing a purely JSON-based API for collaborative data management in MaiaOS.
+**MaiaDB** is a JSON Schema-native wrapper around cojson (Jazz's CRDT core library), providing a purely JSON-based database API with an operations-based architecture for collaborative data management in MaiaOS.
 
 **Key Features**:
-- **JSON-based CRUD**: `o.create({})`, `o.read({})`, `o.update({})`, `o.delete({})`
-- **100% Reactive**: Auto-subscribed data updates automatically
-- **Auto-Resolution**: Nested references resolve automatically
+- **Operations-Based API**: Single `o.db({ op })` entry point for all database interactions
+- **Schema-as-CoMaps**: JSON Schemas are collaborative CRDTs themselves
+- **JSON-Native**: All operations are pure JSON configurations
+- **URI-Based References**: Standard `$ref` for schema dependencies
+- **100% Reactive**: Auto-subscribed data updates
+- **Auto-Resolution**: Nested co-id references resolve automatically via operations
 - **Real CRDTs**: Built on `cojson` package (Jazz's CRDT core)
-- **Zero Mocks**: All 127 tests run against real collaborative data structures
 
-## Why MaiaCojson?
+## Why MaiaDB?
 
-### Problem with jazz-tools
-- Requires Zod schemas (TypeScript-first)
-- Complex API with manual subscription management
-- Not designed for JSON-native environments
+MaiaDB provides a high-level, JSON-native API over cojson's raw CRDT primitives:
 
-### MaiaCojson Solution
-- **JSON Schema** instead of Zod
-- **Simple API**: Just JSON operations
-- **Auto-managed**: Subscriptions, caching, reference resolution all handled internally
+- **JSON Schema** for runtime validation and introspection
+- **Simple Operations API**: `o.db({ op: "create", ... })` instead of raw CRDT methods
+- **Auto-managed**: Subscriptions, caching, reference resolution handled internally
+- **Collaborative Schemas**: Schemas themselves are versioned CRDTs
+- **LLM-Friendly**: All operations have formal JSON Schema DSL definitions
 
-## Schema Name Resolution (MaiaDB)
+For details on the operations API, see [Operations Documentation](../vibes/11_operations.md).
 
-**MaiaCojson** has been renamed to **MaiaDB** with schema auto-resolution!
+## Operations-Based Architecture
 
-### How It Works
-
-You can now use schema **names** instead of managing co-ids:
+MaiaDB uses a unified operations API where all database interactions flow through a single entry point:
 
 ```javascript
-// Register schema by name
-await db.registerSchema("Post", {
-  type: "co-map",
-  properties: {
-    title: { type: "string" },
-    author: { type: "co-id" }
-  }
-});
-
-// Create using the NAME - auto-resolved internally!
-const { entity, entityId } = await db.create({
-  schema: "Post", // Just the name!
-  data: { title: "Hello", author: accountID }
-});
+await o.db({ op: "operationName", ...params })
 ```
 
-### Internal Mechanism
+**Key benefits:**
+- **Uniform interface**: Single API for all CRUD + schema operations
+- **JSON-configurable**: All operations are pure JSON
+- **Validated**: Each operation type has a formal DSL schema
+- **Composable**: Operations can be batched and nested
+- **Read-only wrappers**: CoValue wrappers are read-only; all mutations via operations
 
-Each schema CoMap stores its own name as a property:
+See the [Operations Guide](../vibes/11_operations.md) for complete documentation.
+
+## Schema-as-CoMaps Architecture
+
+**MaiaCojson** has been renamed to **MaiaDB** with a revolutionary schema system where JSON Schemas themselves are collaborative CRDTs!
+
+### Core Concepts
+
+**1. Schema/Data Separation**
+
+MaiaDB maintains two distinct root-level CoMaps:
+
+- **`Schema` CoMap** (System/Meta Layer):
+  - `Genesis`: co-id reference to the MetaSchema CoValue
+  - `Registry`: CoList containing co-ids of all registered schemas
+  
+- **`Data` CoMap** (Application Layer):
+  - Your application's actual data
+  - References schemas by co-id for validation
+
+**2. MetaSchema (Self-Referencing)**
+
+The foundational meta-schema that validates all other schemas, including itself:
 
 ```javascript
-// Schema CoMap structure:
 {
-  "$schema": "co_zMetaSchemaId",  // Reference to MetaSchema
-  "name": "Post",                 // Human-readable name HERE!
-  "definition": {                 // Clean JSON definition
-    "type": "co-map",
-    "properties": {...}
+  "$schema": "https://maia.city/co_zMetaSchemaId",  // References itself!
+  "$id": "https://maia.city/co_zMetaSchemaId",      // Its own co-id
+  "type": "co-map",
+  "properties": {
+    "$schema": { "type": "co-id" },
+    "type": { "type": "string" },
+    "properties": { "type": "object" },
+    // ... JSON Schema 2020 spec
   }
 }
 ```
 
-**Resolution steps:**
-1. Call `db.create({ schema: "Post", ... })`
-2. `_resolveSchema("Post")` checks cache
-3. If not cached, loads all schemas from `Schema.Registry` (CoList of co-ids)
-4. Finds schema where `schemaMap.get("name") === "Post"`
-5. Returns `schemaMap.get("definition")`
-6. Caches mapping for performance
+**3. Schema Storage**
 
-**No separate name→id registry needed!** The name is stored in each schema CoMap.
+Each registered schema is stored as a CoMap with a `definition` property:
+
+```javascript
+// Schema CoMap structure:
+{
+  definition: {
+    "$schema": "https://maia.city/co_zMetaSchemaId",
+    "$id": "https://maia.city/co_zSchemaId",
+    "type": "co-map",
+    "properties": {
+      "title": { "type": "string" },
+      "author": {
+        "type": "co-id",
+        "$ref": "https://maia.city/co_zAuthorSchemaId"
+      }
+    },
+    "required": ["title"]
+  }
+}
+```
+
+**Key Points:**
+- Schema definitions are **plain JSON objects** (not recursive CoMaps)
+- Each schema includes complete JSON Schema metadata (`$schema`, `$id`)
+- Schemas reference other schemas via `$ref` (for co-id properties)
+- All co-ids are formatted as URIs: `https://maia.city/{co-id}`
+
+**4. Registry System**
+
+The `Schema.Registry` is a CoList that tracks all registered schemas:
+
+```javascript
+Schema.Registry = [
+  "co_zMetaSchemaId",
+  "co_zAuthorSchemaId",
+  "co_zPostSchemaId",
+  // ... more schema co-ids
+]
+```
+
+### Co-ID References: Data Layer vs Schema Layer
+
+**CRITICAL DISTINCTION**: `type: "co-id"` and `$ref` serve different purposes and BOTH are required for entity-to-entity relationships:
+
+**`type: "co-id"` (Data Layer)**
+- Indicates a property contains a **reference** to another CoValue
+- The actual runtime value is a co-id string: `"co_zJohnDoe123"`
+- Used by MaiaDB to resolve and load the referenced CoValue
+
+**`$ref` (Schema Layer)**
+- Indicates **which schema** the referenced CoValue should conform to
+- Used at validation time to ensure data integrity
+- Points to another schema definition via URI
+
+**Example - Both Working Together:**
+
+```javascript
+// Schema Definition (tells MaiaDB what to expect)
+{
+  "type": "co-map",
+  "properties": {
+    "author": {
+      "type": "co-id",  // ← REQUIRED: Marks this as a reference
+      "$ref": "https://maia.city/co_zAuthorSchemaId"  // ← REQUIRED: Links to Author schema
+    }
+  }
+}
+
+// Data Instance (actual stored data)
+{
+  "title": "My Post",
+  "author": "co_zJohnDoe123"  // ← The actual co-id reference!
+}
+
+// Runtime Resolution:
+// 1. MaiaDB sees "type": "co-id" → loads co_zJohnDoe123
+// 2. MaiaDB sees "$ref" → validates loaded data against Author schema
+// 3. Returns wrapped CoMap representing the author
+```
+
+**Why Both Are Needed:**
+- `type: "co-id"` alone → MaiaDB knows it's a reference but can't validate it
+- `$ref` alone → Ajv validator doesn't know it's a CRDT reference
+- Together → Complete type safety + CRDT resolution
+
+### URI-Based References
+
+All schema references use the URI format `https://maia.city/{co-id}` for JSON Schema compatibility:
+
+**`$schema` (Validation)**
+- Reference to the meta-schema that validates this schema
+- For user schemas: `"$schema": "https://maia.city/co_zMetaSchemaId"`
+- For MetaSchema: `"$schema": "https://maia.city/co_zMetaSchemaId"` (self-reference)
+
+**`$id` (Identity)**
+- Unique identifier for the schema itself
+- Derived from the schema's CoMap co-id
+- Example: `"$id": "https://maia.city/co_zPostSchemaId"`
+
+**`$ref` (Cross-References)**
+- Native JSON Schema keyword for referencing other schemas
+- Used for co-id properties to link to their target schema
+- Example: `"$ref": "https://maia.city/co_zAuthorSchemaId"`
+
+**Why URIs?**
+- Standard JSON Schema format (Ajv compatible)
+- Globally unique (uses co-id)
+- Future-proof for distributed schema resolution
+- Clean separation between storage (co-id) and validation (URI)
+
+### Validation Strategy
+
+MaiaDB uses a two-layer approach to handle URI-based schemas:
+
+**1. Storage Layer (Full JSON Schema)**
+```javascript
+{
+  "$schema": "https://maia.city/co_zMetaId",
+  "$id": "https://maia.city/co_zPostId",
+  "properties": {
+    "author": {
+      "type": "co-id",
+      "$ref": "https://maia.city/co_zAuthorId"
+    }
+  }
+}
+```
+
+**2. Validation Layer (Metadata Stripped)**
+
+Before passing to Ajv, `_stripSchemaMetadata()` transforms the schema:
+
+```javascript
+// _stripSchemaMetadata() removes:
+// - Root-level $schema and $id (metadata)
+// - Replaces $ref with generic co-id pattern
+
+{
+  "properties": {
+    "author": {
+      "type": "string",
+      "pattern": "^co_z[a-zA-Z0-9]+$"  // Generic co-id validation
+    }
+  }
+}
+```
+
+**Benefits:**
+- JSON Schema compliance at storage layer
+- Ajv can validate data structure without resolving URIs
+- CRDT resolution happens at runtime (separate layer)
+- Clean separation of concerns
 
 ## Architecture
 
 ```mermaid
 graph TB
     User[MaiaScript Code]
-    CRUD[MaiaCRUD API]
+    DB[MaiaDB API]
+    SchemaStore[Schema Store]
     RefResolver[Reference Resolver]
     SubCache[Subscription Cache]
     Validators[JSON Schema Validators]
     Wrappers[CoValue Wrappers]
     RawCojson[Raw Cojson CRDTs]
     
-    User -->|"o.create({})"| CRUD
-    User -->|"o.read({})"| CRUD
-    User -->|"o.update({})"| CRUD
+    User -->|"db.create({schemaId})"| DB
+    User -->|"db.read({id})"| DB
+    User -->|"db.update({id})"| DB
+    User -->|"db.registerSchema()"| DB
     
-    CRUD --> Validators
-    CRUD --> RefResolver
-    CRUD --> SubCache
+    DB --> SchemaStore
+    DB --> Validators
+    DB --> RefResolver
+    DB --> SubCache
     
+    SchemaStore -->|Load schema definitions| Wrappers
+    SchemaStore -->|MetaSchema validation| Validators
     RefResolver --> Wrappers
     SubCache --> Wrappers
     Validators --> Wrappers
@@ -102,6 +266,7 @@ graph TB
     
     RefResolver -.->|Auto-resolve co-ids| RefResolver
     SubCache -.->|Deduplicate| SubCache
+    SchemaStore -.->|Schema/Data CoMaps| RawCojson
 ```
 
 ### Layers Explained
@@ -110,30 +275,39 @@ graph TB
    - Pure JSON operations
    - No knowledge of CRDTs
    - Simple, declarative API
+   - Works with schemaIds (co-ids)
 
-2. **CRUD API Layer**
-   - `MaiaCRUD` class
+2. **MaiaDB API Layer**
+   - `MaiaDB` class (formerly MaiaCRUD)
    - Handles create/read/update/delete
+   - Schema registration via `registerSchema()`
    - Manages LocalNode, Account, Group internally
 
-3. **Core Systems**
+3. **Schema Store Layer**
+   - Manages Schema-as-CoMaps architecture
+   - Bootstraps MetaSchema (self-referencing)
+   - Maintains Schema.Registry (CoList of schema co-ids)
+   - Loads and validates schema definitions
+   - Handles URI-based references (`$schema`, `$id`, `$ref`)
+
+4. **Core Systems**
    - **Reference Resolver**: Auto-resolves co-id strings to CoValue wrappers
    - **Subscription Cache**: Deduplicates subscriptions, 5-second cleanup timeout
-   - **JSON Schema Validators**: Validates data before CRDT operations
+   - **JSON Schema Validators**: Validates data before CRDT operations (with metadata stripping)
 
-4. **Wrapper Layer**
+5. **Wrapper Layer**
    - Thin Proxy-based wrappers around Raw CRDTs
    - CoMap, CoList, CoStream, CoBinary, Account, Group, CoPlainText
    - Property access via Proxies
 
-5. **Raw CRDT Layer** (from `cojson` package)
+6. **Raw CRDT Layer** (from `cojson` package)
    - RawCoMap, RawCoList, RawCoStream, etc.
    - Actual collaborative data structures
    - Sync, encryption, permissions built-in
 
 ## CoValue Types
 
-MaiaCojson provides 7 core CRDT types:
+MaiaDB provides 7 core CRDT types:
 
 | Type | JSON Schema | Description | Example |
 |------|-------------|-------------|---------|
@@ -147,25 +321,28 @@ MaiaCojson provides 7 core CRDT types:
 
 ### Co-ID References
 
-References between CoValues use co-ids (string format: `co_z<base58>`):
+References between CoValues use co-ids (string format: `co_z<base58>`) with explicit `$ref` for validation:
 
 ```json
 {
   "type": "co-map",
   "properties": {
-    "author": { "type": "co-id" }
+    "author": {
+      "type": "co-id",
+      "$ref": "https://maia.city/co_zAuthorSchemaId"
+    }
   }
 }
 ```
 
-MaiaCojson auto-resolves these to actual CoValue wrappers when accessed.
+MaiaDB auto-resolves co-id strings to actual CoValue wrappers when accessed, and validates them against the referenced schema.
 
 ## API Reference
 
-### Initialize MaiaCRUD
+### Initialize MaiaDB
 
 ```javascript
-import { MaiaCRUD } from '@maiaos/maia-cojson';
+import { MaiaDB } from '@maiaos/maia-cojson';
 import { LocalNode } from 'cojson';
 import { WasmCrypto } from 'cojson/crypto/WasmCrypto';
 
@@ -178,64 +355,105 @@ const { node, accountID } = await LocalNode.withNewlyCreatedAccount({
 });
 const group = node.createGroup();
 
-// Create CRUD API instance
-const o = new MaiaCRUD({ node, accountID, group });
+// Create MaiaDB instance
+const db = new MaiaDB({ node, accountID, group });
 ```
 
-### o.create({}) - Create CoValues
+### db.registerSchema() - Register Schemas
+
+**Registers a new JSON Schema as a collaborative CoMap**
+
+```javascript
+const authorSchemaId = await db.registerSchema("Author", {
+  type: "co-map",
+  properties: {
+    title: { type: "string" },
+    description: { type: "string" }
+  },
+  required: ["title"]
+});
+
+const postSchemaId = await db.registerSchema("Post", {
+  type: "co-map",
+  properties: {
+    title: { type: "string" },
+    content: { type: "string" },
+    author: {
+      type: "co-id",  // ← Data layer
+      "$ref": `https://maia.city/${authorSchemaId}`  // ← Schema layer
+    },
+    likes: { type: "number" }
+  },
+  required: ["title", "content", "author"]
+});
+
+console.log(postSchemaId); // "co_z..." (the schema's co-id)
+```
+
+**Features**:
+- Stores schema as a CoMap with `definition` property
+- Automatically adds `$schema` and `$id` (URI format)
+- Validates schema against MetaSchema
+- Adds schema co-id to Schema.Registry
+- Returns schema co-id for use in `create()`
+
+**Important**: Schema names are NOT unique identifiers. Use the returned `schemaId` (co-id) for all operations.
+
+### db.create() - Create CoValues
 
 **Creates a new collaborative data structure**
 
 ```javascript
-const post = await o.create({
+// First, register schema
+const postSchemaId = await db.registerSchema("Post", {
   type: "co-map",
-  schema: {
-    type: "co-map",
-    properties: {
-      title: { type: "string" },
-      content: { type: "string" },
-      author: { type: "co-id" },
-      likes: { type: "number" },
-    },
-    required: ["title", "content"],
+  properties: {
+    title: { type: "string" },
+    content: { type: "string" },
+    author: { type: "co-id" },
+    likes: { type: "number" }
   },
+  required: ["title", "content"]
+});
+
+// Then create data using schemaId
+const post = await db.create({
+  schemaId: postSchemaId,  // ← Use co-id returned from registerSchema
   data: {
     title: "Hello World",
     content: "This is a collaborative post",
     author: accountID, // Stores as co-id
-    likes: 0,
-  },
+    likes: 0
+  }
 });
 
 console.log(post.$id); // Real CRDT ID: co_z...
 console.log(post.title); // "Hello World"
 ```
 
-**Supported Types**:
+**Parameters**:
+- `schemaId`: co-id of registered schema (from `registerSchema()`)
+- `data`: Plain JSON object with data to store
+
+**Features**:
+- Infers CRDT type from schema definition (`type` property)
+- Validates data against JSON Schema before creating (with metadata stripping)
+- Automatically extracts co-ids from object references
+- Returns wrapped CoValue with property access
+
+**Supported CRDT Types** (inferred from schema):
 - `co-map` - Creates RawCoMap
 - `co-list` - Creates RawCoList
 - `co-stream` - Creates RawCoStream
 - `co-binary` - Creates RawBinaryCoStream
 
-**Features**:
-- Validates data against JSON Schema before creating
-- Automatically extracts co-ids from object references
-- Returns wrapped CoValue with property access
-
-### o.read({}) - Read CoValues (Reactive)
+### db.read() - Read CoValues (Reactive)
 
 **Loads a CoValue and auto-subscribes to updates**
 
 ```javascript
-const post = await o.read({
-  id: "co_z123abc...",
-  schema: {
-    type: "co-map",
-    properties: {
-      title: { type: "string" },
-      likes: { type: "number" },
-    },
-  },
+const post = await db.read({
+  id: "co_z123abc..."
 });
 
 console.log(post.title); // Current value
@@ -244,68 +462,67 @@ console.log(post.title); // Current value
 // 100% reactive - no manual subscriptions needed
 ```
 
+**Parameters**:
+- `id`: co-id of the CoValue to load
+- `timeout` (optional): Timeout in milliseconds
+
 **Features**:
+- Auto-detects CRDT type from the raw CoValue
 - Auto-subscribes via SubscriptionCache
 - Deduplicates subscriptions to same co-id
 - Returns loading state if unavailable: `{ $isLoaded: false, $id: "co_z..." }`
 - Updates automatically via real cojson subscriptions
+- No schema parameter needed (type detection is automatic)
 
 **Timeout Option**:
 ```javascript
-const post = await o.read({
+const post = await db.read({
   id: "co_z123...",
-  schema: POST_SCHEMA,
   timeout: 10000, // 10 seconds
 });
 ```
 
-### o.update({}) - Update CoValues
+### db.update() - Update CoValues
 
 **Modifies an existing CoValue**
 
 ```javascript
-await o.update({
+await db.update({
   id: post.$id,
   data: {
     likes: 42,
-    title: "Updated Title",
-  },
+    title: "Updated Title"
+  }
 });
 
 // post.likes is now 42 (reactive update!)
 ```
 
+**Parameters**:
+- `id`: co-id of the CoValue to update
+- `data`: Plain JSON object with properties to update
+
 **Features**:
 - Updates only specified properties
-- Validates against schema if provided
 - Works with CoMap (sets keys) and CoList (appends items)
+- Validation happens automatically if schema was registered
+- Direct property assignment on returned CoValue wrappers
 
-**With Validation**:
-```javascript
-await o.update({
-  id: post.$id,
-  data: { likes: 42 },
-  schema: {
-    type: "co-map",
-    properties: {
-      likes: { type: "number" },
-    },
-  },
-});
-```
-
-### o.delete({}) - Delete CoValues
+### db.delete() - Delete CoValues
 
 **Deletes a CoValue**
 
 ```javascript
-await o.delete({
-  id: post.$id,
+await db.delete({
+  id: post.$id
 });
 
 // post.title is now undefined
 // All keys removed from CoMap
 ```
+
+**Parameters**:
+- `id`: co-id of the CoValue to delete
 
 **Behavior**:
 - **CoMap**: Deletes all keys
@@ -314,7 +531,7 @@ await o.delete({
 
 ## JSON Schema Extensions
 
-MaiaCojson extends JSON Schema with CRDT-specific types:
+MaiaDB extends JSON Schema with CRDT-specific types:
 
 ### Co-Types
 
@@ -332,7 +549,7 @@ MaiaCojson extends JSON Schema with CRDT-specific types:
 
 ### Schema Preprocessing
 
-MaiaCojson automatically converts `co-*` types to Ajv-compatible formats:
+MaiaDB automatically converts `co-*` types to Ajv-compatible formats for validation:
 
 **Input**:
 ```json
@@ -364,7 +581,7 @@ The original type is preserved in `x-co-type` for internal use.
 ## Complete Example: Blog System
 
 ```javascript
-import { MaiaCRUD } from '@maiaos/maia-cojson';
+import { MaiaDB } from '@maiaos/maia-cojson';
 import { LocalNode } from 'cojson';
 import { WasmCrypto } from 'cojson/crypto/WasmCrypto';
 
@@ -376,92 +593,134 @@ const { node, accountID } = await LocalNode.withNewlyCreatedAccount({
   crypto,
 });
 const group = node.createGroup();
-const o = new MaiaCRUD({ node, accountID, group });
+const db = new MaiaDB({ node, accountID, group });
 
-// Define schemas
-const POST_SCHEMA = {
+// 1. REGISTER SCHEMAS
+// Author schema (no dependencies)
+const authorSchemaId = await db.registerSchema("Author", {
+  type: "co-map",
+  properties: {
+    title: { type: "string" },
+    description: { type: "string" }
+  },
+  required: ["title"]
+});
+
+// Post schema (depends on Author)
+const postSchemaId = await db.registerSchema("Post", {
   type: "co-map",
   properties: {
     title: { type: "string" },
     content: { type: "string" },
-    author: { type: "co-id" },
-    likes: { type: "number" },
+    author: {
+      type: "co-id",  // ← Data layer: marks as reference
+      "$ref": `https://maia.city/${authorSchemaId}`  // ← Schema layer: validation
+    },
+    likes: { type: "number" }
   },
-  required: ["title", "content", "author"],
-};
+  required: ["title", "content", "author"]
+});
 
-const BLOG_SCHEMA = {
+// Blog schema
+const blogSchemaId = await db.registerSchema("Blog", {
   type: "co-map",
   properties: {
     title: { type: "string" },
     posts: {
       type: "co-list",
-      items: { type: "co-id" }, // References to posts
-    },
+      items: {
+        type: "co-id",  // ← References to posts
+        "$ref": `https://maia.city/${postSchemaId}`
+      }
+    }
   },
-  required: ["title"],
-};
+  required: ["title"]
+});
 
-// 1. CREATE blog
-const blog = await o.create({
-  type: "co-map",
-  schema: BLOG_SCHEMA,
+console.log("Schemas registered:", { authorSchemaId, postSchemaId, blogSchemaId });
+
+// 2. CREATE author
+const author = await db.create({
+  schemaId: authorSchemaId,
   data: {
-    title: "My Tech Blog",
-  },
+    title: "Tech Blogger",
+    description: "Writing about CRDTs"
+  }
+});
+
+// 3. CREATE blog
+const blog = await db.create({
+  schemaId: blogSchemaId,
+  data: {
+    title: "My Tech Blog"
+  }
 });
 
 console.log("Blog created:", blog.$id); // co_z...
 
-// 2. CREATE posts list
-const posts = await o.create({
+// 4. CREATE posts list
+const postsListSchemaId = await db.registerSchema("PostsList", {
   type: "co-list",
-  schema: {
-    type: "co-list",
-    items: POST_SCHEMA,
-  },
-  data: [],
+  items: {
+    type: "co-id",
+    "$ref": `https://maia.city/${postSchemaId}`
+  }
 });
 
-// 3. CREATE post
-const post = await o.create({
-  type: "co-map",
-  schema: POST_SCHEMA,
+const posts = await db.create({
+  schemaId: postsListSchemaId,
+  data: []
+});
+
+// 5. CREATE post (with author reference)
+const post = await db.create({
+  schemaId: postSchemaId,
   data: {
-    title: "Getting Started",
-    content: "Welcome to MaiaCojson!",
-    author: accountID,
-    likes: 0,
-  },
+    title: "Getting Started with MaiaDB",
+    content: "Welcome to MaiaDB! Schemas are CRDTs...",
+    author: author.$id,  // ← co-id reference stored
+    likes: 0
+  }
 });
 
-// 4. ADD post to list
-await o.update({
+console.log("Post created:", post.$id);
+console.log("Author co-id:", post.author);  // "co_z..."
+
+// 6. ADD post to list
+await db.update({
   id: posts.$id,
-  data: [post], // Appends post reference
+  data: [post]  // Appends post reference
 });
 
-// 5. READ post (reactive!)
-const loadedPost = await o.read({
-  id: post.$id,
-  schema: POST_SCHEMA,
+// 7. READ post (reactive!)
+const loadedPost = await db.read({
+  id: post.$id
 });
 
-console.log(loadedPost.title); // "Getting Started"
+console.log(loadedPost.title); // "Getting Started with MaiaDB"
 
-// 6. UPDATE post
-await o.update({
+// 8. UPDATE post (increase likes)
+await db.update({
   id: post.$id,
-  data: { likes: 42 },
+  data: { likes: 42 }
 });
 
 // loadedPost.likes is now 42 (automatic reactive update!)
+console.log(loadedPost.likes); // 42
 
-// 7. DELETE post
-await o.delete({ id: post.$id });
+// 9. DELETE post
+await db.delete({ id: post.$id });
 
-// loadedPost.title is now undefined
+// loadedPost.title is now undefined (content cleared)
 ```
+
+**Key Differences from Old API:**
+- ✅ Schemas registered first with `registerSchema()`
+- ✅ `create()` uses `schemaId` instead of inline schema
+- ✅ Explicit `$ref` for all co-id properties
+- ✅ `read()` doesn't need schema (auto-detected)
+- ✅ URI-based references (`https://maia.city/{co-id}`)
+- ✅ Clear separation: data layer (`type: "co-id"`) vs schema layer (`$ref`)
 
 ## Reactivity System
 
@@ -469,7 +728,7 @@ await o.delete({ id: post.$id });
 
 **1. Subscription Cache (Deduplication)**
 
-When you call `o.read()`, MaiaCojson:
+When you call `db.read()`, MaiaDB:
 1. Checks if a subscription already exists for that co-id
 2. Reuses existing subscription (no duplicate `node.subscribe()` calls)
 3. Adds your read callback to the subscriber set
@@ -513,9 +772,9 @@ CRDTs store references as co-id strings:
 }
 ```
 
-### MaiaCojson Solution
+### MaiaDB Solution
 
-**Auto-Resolution**: When you access a co-id, MaiaCojson automatically:
+**Auto-Resolution**: When you access a co-id, MaiaDB automatically:
 1. Checks cache (coValuesCache)
 2. If not loaded, calls `node.load(coId)`
 3. Returns loading state immediately (non-blocking)
@@ -523,7 +782,7 @@ CRDTs store references as co-id strings:
 
 **Example**:
 ```javascript
-const post = await o.read({ id: "co_z123...", schema: POST_SCHEMA });
+const post = await db.read({ id: "co_z123..." });
 
 // post.author is a co-id string internally
 // But you can resolve it:
@@ -531,8 +790,8 @@ import { resolveReference } from '@maiaos/maia-cojson';
 
 const author = await resolveReference(
   post.author,
-  AUTHOR_SCHEMA,
-  o.node
+  null,  // Schema is auto-detected
+  db.node
 );
 
 console.log(author.name); // Resolved!
@@ -540,7 +799,7 @@ console.log(author.name); // Resolved!
 
 ### Circular Reference Detection
 
-MaiaCojson uses a `WeakSet` to track resolution paths:
+MaiaDB uses a `WeakSet` to track resolution paths:
 
 ```javascript
 // map1.ref → map2
@@ -592,10 +851,10 @@ Map<coId, {
 ```
 
 **Lifecycle**:
-1. First `o.read()` → Creates subscription
-2. Second `o.read()` → Reuses subscription (adds callback)
+1. First `db.read()` → Creates subscription
+2. Second `db.read()` → Reuses subscription (adds callback)
 3. All callbacks unsubscribed → Schedules cleanup (5s)
-4. New `o.read()` before timeout → Cancels cleanup
+4. New `db.read()` before timeout → Cancels cleanup
 5. Timeout expires → Destroys subscription
 
 **Benefits**:
@@ -788,6 +1047,11 @@ cache.clear();
 4. Wait 5 seconds → Cleanup destroys subscription
 5. `addSubscriber()` before timeout → Cancels cleanup
 
+**Used by MaiaDB:**
+- `db.read()` adds subscriber automatically
+- Subscriptions persist for 5 seconds after last use
+- All subscriptions cleaned up on `db.destroy()`
+
 ## Loading States
 
 **Three States**:
@@ -809,47 +1073,6 @@ CoValueLoadingState.UNAVAILABLE  // "unavailable"
 }
 ```
 
-## Testing Strategy
-
-### Zero Mocks Policy
-
-**All 127 tests use real CRDTs** - NO mocks, stubs, or fakes!
-
-**Required in Every Test**:
-```javascript
-import { LocalNode } from "cojson";
-import { WasmCrypto } from "cojson/crypto/WasmCrypto";
-
-const crypto = await WasmCrypto.create();
-const { node, accountID } = await LocalNode.withNewlyCreatedAccount({
-  creationProps: { name: "Test User" },
-  peers: [],
-  crypto,
-});
-const group = node.createGroup();
-```
-
-**Why No Mocks**:
-1. **Real behavior**: Mocks can't simulate CRDT merge logic
-2. **Subscription edge cases**: Real subscriptions have race conditions
-3. **Co-id format**: Real co-ids have specific format requirements
-4. **Production confidence**: Works in tests = works in production
-
-### Test Suite
-
-```
-Phase 1 (Original).................. 100 tests
-├── Cache + Loading States........... 13 tests
-├── Core Wrappers.................... 41 tests
-└── JSON Schema Validation........... 46 tests
-
-Milestones 4-5 (New)................ 27 tests
-├── Reference Resolver............... 7 tests
-├── Subscription Cache............... 9 tests
-└── MaiaCRUD API..................... 11 tests
-
-Total: 127 tests passing (all with real CRDTs)
-```
 
 ## Integration with MaiaScript
 
@@ -857,28 +1080,44 @@ Total: 127 tests passing (all with real CRDTs)
 
 ```javascript
 // In MaiaScript engine
-import { MaiaCRUD } from '@maiaos/maia-cojson';
+import { MaiaDB } from '@maiaos/maia-cojson';
 
 // Initialize once
-const o = new MaiaCRUD({ node, accountID, group });
+const db = new MaiaDB({ node, accountID, group });
+
+// Register schemas at startup
+const todoSchemaId = await db.registerSchema("Todo", {
+  type: "co-map",
+  properties: {
+    title: { type: "string" },
+    description: { type: "string" },
+    done: { type: "boolean" }
+  },
+  required: ["title"]
+});
 
 // Use in intent handlers
 async function createTodo(title, description) {
-  return await o.create({
-    type: "co-map",
-    schema: TODO_SCHEMA,
-    data: { title, description, done: false },
+  return await db.create({
+    schemaId: todoSchemaId,
+    data: { title, description, done: false }
   });
 }
 
 async function loadTodos(todoListId) {
-  const list = await o.read({
-    id: todoListId,
-    schema: TODO_LIST_SCHEMA,
+  const list = await db.read({
+    id: todoListId
   });
   
   // list is reactive - updates automatically!
   return list;
+}
+
+async function updateTodo(todoId, updates) {
+  await db.update({
+    id: todoId,
+    data: updates
+  });
 }
 ```
 
@@ -891,16 +1130,17 @@ async function loadTodos(todoListId) {
   "properties": {
     "title": { "type": "string" },
     "done": { "type": "boolean" }
-  }
+  },
+  "required": ["title"]
 }
 
-// In MaiaScript
-const schema = await loadSchema("todo");
+// In MaiaScript - load and register schema
+const todoSchemaJson = await loadSchemaFile("todo");
+const todoSchemaId = await db.registerSchema("Todo", todoSchemaJson);
 
-const todo = await o.create({
-  type: "co-map",
-  schema,
-  data: { title: "Buy milk", done: false },
+const todo = await db.create({
+  schemaId: todoSchemaId,
+  data: { title: "Buy milk", done: false }
 });
 ```
 
@@ -960,30 +1200,38 @@ const BLOG_POST = {
 
 **CoList of CoMaps**:
 ```javascript
-const posts = await o.create({
-  type: "co-list",
-  schema: {
-    type: "co-list",
-    items: {
-      type: "co-map",
-      properties: {
-        title: { type: "string" },
-      },
-    },
+// Register schemas
+const postSchemaId = await db.registerSchema("SimplePost", {
+  type: "co-map",
+  properties: {
+    title: { type: "string" }
   },
-  data: [],
+  required: ["title"]
+});
+
+const postsListSchemaId = await db.registerSchema("PostsList", {
+  type: "co-list",
+  items: {
+    type: "co-id",
+    "$ref": `https://maia.city/${postSchemaId}`
+  }
+});
+
+// Create list
+const posts = await db.create({
+  schemaId: postsListSchemaId,
+  data: []
 });
 
 // Add post
-const post = await o.create({
-  type: "co-map",
-  schema: { type: "co-map", properties: { title: { type: "string" } } },
-  data: { title: "Post 1" },
+const post = await db.create({
+  schemaId: postSchemaId,
+  data: { title: "Post 1" }
 });
 
-await o.update({
+await db.update({
   id: posts.$id,
-  data: [post], // Stores co-id reference
+  data: [post]  // Stores co-id reference
 });
 ```
 
@@ -1010,7 +1258,7 @@ console.log(coMap._raw.get("title")); // Direct raw access
 
 **2. "CoValue unavailable"**
 - Co-id doesn't exist or not synced yet
-- Check `timeout` option in `o.read()`
+- Check `timeout` option in `db.read()`
 - Verify network/peer connectivity
 
 **3. "Loading state returned instead of value"**
@@ -1079,7 +1327,7 @@ const post = await o.create({
 ### 3. Handle Loading States
 
 ```javascript
-const post = await o.read({ id, schema });
+const post = await db.read({ id });
 
 if (!post.$isLoaded) {
   // Show loading UI
@@ -1094,60 +1342,71 @@ return <div>{post.title}</div>;
 
 ```javascript
 // When component unmounts
-o.destroy(); // Clears all subscriptions
+db.destroy(); // Clears all subscriptions
 ```
 
-## Comparison: jazz-tools vs MaiaCojson
+## About cojson
 
-| Feature | jazz-tools | MaiaCojson |
-|---------|-----------|-----------|
-| **Schema Format** | Zod (TypeScript) | JSON Schema |
-| **API Style** | Class-based, complex | JSON-based, simple |
-| **Subscriptions** | Manual | Automatic |
-| **Reference Resolution** | Deep query DSL (`$each`, `$onError`) | Auto-resolve (simple) |
-| **Validation** | Runtime Zod checks | JSON Schema (Ajv) |
-| **Integration** | TypeScript-first | JSON-native |
-| **Complexity** | High | Low |
-| **Testing** | Some mocks | Zero mocks (all real CRDTs) |
+**cojson** is Jazz's core CRDT library that provides the foundational data structures for collaborative applications. MaiaDB wraps cojson with a high-level, JSON-native API.
+
+**What cojson provides:**
+- Core CRDT types: CoMap, CoList, CoStream, CoBinary
+- Local-first synchronization
+- Conflict-free collaborative editing
+- Efficient binary protocol
+- IndexedDB persistence
+
+**What MaiaDB adds:**
+- Operations-based API (`o.db({ op })`)
+- JSON Schema validation and introspection
+- Schema-as-CoMaps architecture
+- Automatic subscription management
+- Deep reference resolution
+- LLM-friendly JSON configurations
+
+MaiaDB is the high-level interface; cojson is the low-level engine.
 
 ## Package Information
 
-- **Name**: `@maiaos/maia-cojson`
-- **Version**: `0.1.23`
+- **Name**: `@maiaos/maia-cojson` (kernel), `@maia/script` (operations engine)
+- **Version**: `0.17.0`
 - **Dependencies**: `cojson@^0.19.21`, `ajv@^8.12.0`
 - **Test Command**: `bun test`
-- **Dev Server**: `bun dev` (http://localhost:5173)
+- **Dev Server**: `bun dev` (http://localhost:4200)
 
 ## Example App
 
-See [`libs/maia-cojson/src/app/main.js`](../../maia-cojson/src/app/main.js) for a complete working example demonstrating:
-- MaiaCRUD initialization
-- JSON-based operations
-- Real CRDT IDs generation
-- Schema validation
+See [`libs/maia-script/src/vibes/blog/`](../../maia-script/src/vibes/blog/) for a complete working example demonstrating:
+- MaiaOS initialization with `createMaiaOS()`
+- Operations-based API (`o.db({ op })`)
+- Schema registration and management
+- CRUD operations with validation
+- Deep resolution of references
+- Inspector view of loaded CoValues
 
-Run: `cd libs/maia-cojson && bun dev`
+Run: `cd libs/maia-script && bun dev`, then open http://localhost:4200/vibes/blog/
 
-## Future Enhancements (Phase 2)
+## Future Enhancements
 
-**Higher-Order Types** (built on core 7):
-- **CoFeed**: Twitter-like activity streams
-- **CoVector**: GitHub-like threaded comments  
+**Advanced Operations:**
+- `subscribe`: Explicit subscription management
+- `query`: Advanced filtering and querying
+- `migrate`: Schema migration operations
+- `transaction`: Multi-operation atomicity
+
+**Higher-Order Types:**
+- **CoFeed**: Activity streams
+- **CoVector**: Threaded comments
 - **ImageDefinition**: Profile pictures with metadata
 
-**Deep Query DSL** (from jazz-tools):
-- `$each` for nested resolution
-- `$onError: "catch"` for error boundaries
-- Depth control for performance
-
-**Framework Integrations**:
+**Framework Integrations:**
 - Svelte stores
 - React hooks
 - Native reactive bindings
 
 ## Contributing
 
-When contributing to MaiaCojson:
+When contributing to MaiaDB:
 
 **Zero Mocks Policy**:
 - ✅ All tests MUST use real cojson types

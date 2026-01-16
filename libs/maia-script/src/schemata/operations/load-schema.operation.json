@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://maia.city/operations/load-schema",
+  "title": "Load Schema Operation",
+  "description": "Validates loadSchema operations for retrieving schema definitions",
+  "type": "object",
+  "properties": {
+    "op": {
+      "const": "loadSchema",
+      "description": "Operation type identifier"
+    },
+    "target": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^co_z[a-zA-Z0-9]+$",
+          "description": "Schema CoValue ID to load"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  "required": ["op", "target"],
+  "additionalProperties": false
+}

@@ -32,18 +32,9 @@ export {
   ValidationError,
 } from './validation/index.js';
 
-// Reference Resolution & Subscriptions (Milestone 4-5)
-export {
-  resolveReference,
-  isCoId,
-} from './core/reference-resolver.js';
-
+// Core utilities (Milestone 4-5)
+export { isCoId } from './lib/index.js';
 export { SubscriptionCache } from './core/subscription-cache.js';
-
-// Database API
-export { MaiaDB } from './crud/maia-crud.js';
-// Legacy export for backward compatibility
-export { MaiaDB as MaiaCRUD } from './crud/maia-crud.js';
 
 // Schema System
 export { SchemaStore, META_SCHEMA_DEFINITION } from './schema/index.js';
