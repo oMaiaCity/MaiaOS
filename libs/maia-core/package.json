@@ -1,5 +1,5 @@
 {
-  "name": "@MaiaOS/db",
+  "name": "@MaiaOS/core",
   "version": "0.1.23",
   "type": "module",
   "main": "./src/index.js",
@@ -7,6 +7,6 @@
     ".": "./src/index.js"
   },
   "dependencies": {
-    "cojson": "^0.19.21"
+    "@MaiaOS/db": "workspace:*"
   }
 }

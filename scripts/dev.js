@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 
 /**
- * Development script for me service
- * Simple process management without aggressive cleanup
+ * Development script for MaiaOS
+ * Runs maia-city (4200) and voice-call services
  */
 
 import { spawn } from 'node:child_process'
@@ -12,66 +12,31 @@ import { fileURLToPath } from 'node:url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')
 
-// Track child processes
-let childProcess = null
-let assetSyncProcess = null
+let maiaCityProcess = null
 let voiceCallProcess = null
+let docsWatcherProcess = null
 
-/**
- * Start the asset sync watcher
- */
-function startAssetSync() {
-	console.log('[brand-assets] Starting asset sync watcher...\n')
+function startMaiaCity() {
+	console.log('[maia-city] Starting on port 4200...\n')
 
-	assetSyncProcess = spawn('node', ['scripts/sync-assets.js', '--watch'], {
+	maiaCityProcess = spawn('bun', ['--filter', 'maia-city', 'dev'], {
 		cwd: rootDir,
 		stdio: 'inherit',
 		shell: false,
 		env: { ...process.env },
 	})
 
-	// Handle process errors (non-fatal)
-	assetSyncProcess.on('error', (_error) => {
-		// Don't exit - asset sync is optional
-	})
-
-	// Handle process exit (non-fatal)
-	assetSyncProcess.on('exit', (code) => {
-		if (code !== 0 && code !== null) {
-			// Don't exit - asset sync is optional
-		}
-	})
-}
-
-/**
- * Start the me service
- */
-function startService() {
-	console.log('[me] Starting on port 4200...\n')
-
-	childProcess = spawn('bun', ['--env-file=../../.env', '--filter', 'me', 'dev'], {
-		cwd: rootDir,
-		stdio: 'inherit',
-		shell: false,
-		env: { ...process.env },
-	})
-
-	// Handle process errors
-	childProcess.on('error', (_error) => {
+	maiaCityProcess.on('error', (_error) => {
 		process.exit(1)
 	})
 
-	// Handle process exit
-	childProcess.on('exit', (code) => {
+	maiaCityProcess.on('exit', (code) => {
 		if (code !== 0 && code !== null) {
 			process.exit(code)
 		}
 	})
 }
 
-/**
- * Start the voice call service
- */
 function startVoiceCall() {
 	console.log('[voice-call] Starting voice call service...\n')
 
@@ -82,75 +47,81 @@ function startVoiceCall() {
 		env: { ...process.env },
 	})
 
-	// Handle process errors (non-fatal - voice-call is optional)
 	voiceCallProcess.on('error', (_error) => {
-		// Don't exit - voice-call is optional
+		// Non-fatal - voice-call is optional
 	})
 
-	// Handle process exit (non-fatal)
 	voiceCallProcess.on('exit', (code) => {
 		if (code !== 0 && code !== null) {
-			// Don't exit - voice-call is optional
+			// Non-fatal
 		}
 	})
 }
 
-/**
- * Setup signal handlers for graceful shutdown
- */
+function startDocsWatcher() {
+	console.log('[docs] Starting LLM docs watcher...\n')
+
+	docsWatcherProcess = spawn('bun', ['scripts/generate-llm-docs.js', '--watch'], {
+		cwd: rootDir,
+		stdio: 'inherit',
+		shell: false,
+		env: { ...process.env },
+	})
+
+	docsWatcherProcess.on('error', (_error) => {
+		// Non-fatal - docs watcher is optional
+		console.warn('[docs] Failed to start docs watcher')
+	})
+
+	docsWatcherProcess.on('exit', (code) => {
+		if (code !== 0 && code !== null) {
+			// Non-fatal
+			console.warn('[docs] Docs watcher exited with code', code)
+		}
+	})
+}
+
 function setupSignalHandlers() {
-	// Handle Ctrl+C (SIGINT)
 	process.on('SIGINT', () => {
 		console.log('\n[Dev] Shutting down...')
-		if (assetSyncProcess && !assetSyncProcess.killed) {
-			assetSyncProcess.kill('SIGTERM')
+		if (docsWatcherProcess && !docsWatcherProcess.killed) {
+			docsWatcherProcess.kill('SIGTERM')
 		}
 		if (voiceCallProcess && !voiceCallProcess.killed) {
 			voiceCallProcess.kill('SIGTERM')
 		}
-		if (childProcess && !childProcess.killed) {
-			childProcess.kill('SIGTERM')
+		if (maiaCityProcess && !maiaCityProcess.killed) {
+			maiaCityProcess.kill('SIGTERM')
 		}
 		process.exit(0)
 	})
 
-	// Handle termination signal (SIGTERM)
 	process.on('SIGTERM', () => {
 		console.log('\n[Dev] Shutting down...')
-		if (assetSyncProcess && !assetSyncProcess.killed) {
-			assetSyncProcess.kill('SIGTERM')
+		if (docsWatcherProcess && !docsWatcherProcess.killed) {
+			docsWatcherProcess.kill('SIGTERM')
 		}
 		if (voiceCallProcess && !voiceCallProcess.killed) {
 			voiceCallProcess.kill('SIGTERM')
 		}
-		if (childProcess && !childProcess.killed) {
-			childProcess.kill('SIGTERM')
+		if (maiaCityProcess && !maiaCityProcess.killed) {
+			maiaCityProcess.kill('SIGTERM')
 		}
 		process.exit(0)
 	})
 }
 
-/**
- * Main execution
- */
 function main() {
-	console.log('[Dev] Starting me service and voice call service...\n')
+	console.log('[Dev] Starting MaiaOS services...\n')
 	console.log('Press Ctrl+C to stop\n')
 
 	setupSignalHandlers()
 
-	// Start asset sync watcher first
-	startAssetSync()
-
-	// Start voice call service
+	startDocsWatcher()
 	startVoiceCall()
+	startMaiaCity()
 
-	// Start me service
-	startService()
-
-	// Keep the script running
 	process.stdin.resume()
 }
 
-// Run main
 main()

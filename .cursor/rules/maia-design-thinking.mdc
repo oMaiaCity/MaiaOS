@@ -26,16 +26,26 @@ MaiaOS uses a 6-stage design thinking process: **Empathize → Define → Ideate
 
 **Goal**: Deeply understand the problem, users, and constraints before proposing solutions.
 
+**First Principles Thinking** (Elon Musk's approach):
+- **Break down to fundamentals**: What are the irreducible truths? What are the physical/technical/economic constraints that cannot be avoided?
+- **Question analogies**: Don't assume existing solutions are optimal. Ask "Why does it work this way?" and "What if we started from scratch?"
+- **Identify constraints**: What are the actual limits? (physics, laws, user needs, not just "how it's always been done")
+- **Separate signal from noise**: What are the core requirements vs. incidental implementation details?
+- **Challenge inherited assumptions**: "We do X because..." - is that reason still valid? Could we eliminate X entirely?
+
 **Questions to Explore:**
 - Who is affected by this problem? (users, developers, maintainers)
 - What is the current state? What's working? What's broken?
 - What are the real needs vs. stated wants?
 - What constraints exist? (technical, time, resources, architecture)
 - What assumptions are we making? Challenge them.
+- **What are the fundamental requirements?** (First principles: what MUST be true?)
+- **What can we eliminate?** (What's unnecessary complexity?)
+- **What are the irreducible costs?** (What can't be optimized away?)
 
-**Output**: A clear understanding of the problem space, user needs, and constraints.
+**Output**: A clear understanding of the problem space, user needs, constraints, and fundamental truths.
 
-**LLM Action**: Ask clarifying questions, read relevant code/files, understand the codebase context.
+**LLM Action**: Ask clarifying questions, read relevant code/files, understand the codebase context, identify fundamental constraints and challenge assumptions.
 
 ---
 
@@ -43,18 +53,29 @@ MaiaOS uses a 6-stage design thinking process: **Empathize → Define → Ideate
 
 **Goal**: Synthesize insights into a clear problem statement and success criteria.
 
+**First Principles Thinking** (Elon Musk's approach):
+- **Define the problem from first principles**: What is the actual problem we're solving? Not "how do we implement X?" but "what fundamental need does X address?"
+- **Question the problem itself**: Is this the right problem? Could we solve a more fundamental problem instead?
+- **Identify the minimum viable solution**: What's the simplest thing that could possibly work? What's the irreducible core?
+- **Cost-benefit from fundamentals**: What are the actual costs (time, complexity, maintenance)? What are the real benefits? Is the ratio favorable?
+- **Eliminate unnecessary complexity**: What can we remove? What's the simplest path to the goal?
+
 **Activities:**
 - Reframe the problem from multiple perspectives
 - Define what "done" looks like (success criteria)
 - Identify what's out of scope
 - Create a problem statement: "How might we [solve X] so that [users benefit Y]?"
+- **Identify the fundamental problem** (not just symptoms)
+- **Define the minimum viable solution** (what's absolutely necessary?)
+- **Question if we're solving the right problem** (could we solve something more fundamental?)
 
 **Output**: 
-- Clear problem statement
+- Clear problem statement (from first principles)
 - Success criteria (desirable, feasible, viable)
 - Scope boundaries
+- Minimum viable solution definition
 
-**LLM Action**: Synthesize findings into a concise problem definition and success metrics.
+**LLM Action**: Synthesize findings into a concise problem definition and success metrics, ensuring the problem is defined from first principles.
 
 ---
 
@@ -92,7 +113,7 @@ MaiaOS uses a 6-stage design thinking process: **Empathize → Define → Ideate
 - Detailed implementation plan with steps
 - File structure and code organization
 - API/interface definitions
-- Testing strategy
+- Manual testing approach
 - Rollout plan (if applicable)
 
 **LLM Action**: Create a structured plan document with todos, file paths, code structure, and implementation steps.
@@ -101,15 +122,14 @@ MaiaOS uses a 6-stage design thinking process: **Empathize → Define → Ideate
 
 ### Stage 5: IMPLEMENT — Execute the Solution
 
-**Goal**: Execute the plan incrementally using TDD, with human-in-the-loop validation at each milestone.
+**Goal**: Execute the plan incrementally with human-in-the-loop validation at each milestone.
 
 #### Implementation Planning Structure
 
 **1. Incremental Milestones**
 
-Structure the implementation as **incremental, least invasive, testable, migrateable mini milestones**:
+Structure the implementation as **incremental, least invasive, fully functional, migrateable mini milestones**:
 
-- ✅ **Each milestone must be independently testable**
 - ✅ **Each milestone should be fully functional** (not half-done features)
 - ✅ **Migrate 100% fullstack** - no partial migrations or legacy wrappers
 - ❌ **Never create hacky backwards compatibility layers**
@@ -118,40 +138,34 @@ Structure the implementation as **incremental, least invasive, testable, migrate
 
 **Example Milestone Structure:**
 ```
-Milestone 1: Add base engine structure + tests
-  ├─ Write tests (Red)
-  ├─ Implement (Green)
+Milestone 1: Add base engine structure
+  ├─ Implement core structure
   ├─ Clean up legacy & migrate 100%
+  ├─ Manual user testing
   └─ Pause for human feedback ✋
 
-Milestone 2: Implement core methods + tests
-  ├─ Write tests (Red)
-  ├─ Implement (Green)
+Milestone 2: Implement core methods
+  ├─ Implement functionality
   ├─ Clean up legacy & migrate 100%
+  ├─ Manual user testing
   └─ Pause for human feedback ✋
 
-Milestone 3: Add integration tests + documentation
-  ├─ Write tests (Red)
-  ├─ Implement (Green)
-  ├─ Clean up legacy & migrate 100%
-  └─ Pause for human feedback ✋
+Milestone 3: Add documentation & final review
+  ├─ Update documentation
+  ├─ Final manual user testing
+  └─ Human approval ✋
 ```
 
-**2. Test-Driven Development (TDD) - ALWAYS**
+**2. Implementation Steps**
 
-For **every** implementation milestone, follow this strict order:
+For **every** implementation milestone, follow this order:
 
-**Step 1: Write Tests First** 🧪
-- Write unit tests for the functionality you're about to implement
-- Write integration tests if applicable
-- Tests should fail initially (Red phase)
+**Step 1: Implement the Solution** 💻
+- Write the code to implement the functionality
+- Keep it simple and focused on the milestone goal
+- Refactor for clarity and maintainability as you go
 
-**Step 2: Implement the Solution** 💻
-- Write the minimal code to make tests pass
-- Refactor for clarity and maintainability
-- Ensure all tests pass (Green phase)
-
-**Step 3: Clean Up Legacy & Migrate 100%** 🧹
+**Step 2: Clean Up Legacy & Migrate 100%** 🧹
 - **ALWAYS migrate 100% fullstack** - no partial migrations
 - Remove ALL legacy code that has been replaced
 - Delete backwards compatibility hacks/shims/wrappers
@@ -160,98 +174,17 @@ For **every** implementation milestone, follow this strict order:
 - Update ALL call sites to use new patterns
 - Delete unused files, functions, and old implementations
 - Verify no "legacy mode" flags or switches remain
-- **ELIMINATE ALL MOCKS** - Replace with real implementations
 
 **Critical Cleanup Checklist:**
 - ✅ All old implementations deleted (not commented out)
 - ✅ All backwards compatibility layers removed
 - ✅ All call sites updated to new API/architecture
-- ✅ All tests updated to test new implementation only
 - ✅ No "if (legacy)" or "if (oldMode)" conditionals
 - ✅ All imports/exports updated to new structure
 - ❌ No "TODO: migrate this later" comments
 - ❌ No "keep for backwards compatibility" code
 
-**CRITICAL: Zero Mocks Checklist** 🚫
-
-Mocks hide bugs and create false confidence. Replace ALL mocks with real implementations:
-
-**Search and Destroy Mocks:**
-```bash
-# 1. Search for mock classes
-grep -r "class Mock" src/ --include="*.js"
-grep -r "MockRaw" src/ --include="*.js"
-
-# 2. Search for stub/fake patterns
-grep -r "stub\|fake\|spy" src/ --include="*.js"
-
-# 3. Search for mock imports
-grep -r "sinon\|jest.mock\|vi.mock" src/ --include="*.js"
-
-# ALL results MUST be 0 (except comments about mocking policy)
-```
-
-**Replace Mocks With Real Implementations:**
-- ✅ Use real database connections (not in-memory fakes)
-- ✅ Use real API clients (not stubbed responses)
-- ✅ Use real CRDTs from actual packages (not MockRawCoMap)
-- ✅ Initialize real LocalNode/context (not fake setup)
-- ✅ Generate real IDs (not "test_123" or "fake_id")
-- ❌ NO Mock classes (MockRawCoMap, MockLocalNode, FakeStorage)
-- ❌ NO Stub methods (stub.returns(), fake implementations)
-- ❌ NO In-memory fakes (FakeDatabase, MockAPI)
-- ❌ NO Hardcoded test IDs (use real ID generators)
-
-**Why Zero Mocks Matters:**
-1. **Mocks hide bugs**: Real systems have timing, race conditions, edge cases that mocks can't simulate
-2. **False confidence**: Tests pass with mocks but fail in production
-3. **Brittle tests**: Mocks require maintenance when real implementation changes
-4. **Integration issues**: Mocks don't catch API contract violations
-5. **Production parity**: Tests should mirror production environment
-
-**Acceptable Testing Patterns:**
-- ✅ Real test databases (SQLite in-memory, test fixtures)
-- ✅ Real service instances with test configuration
-- ✅ Real network calls to test/staging environments
-- ✅ Real CRDT initialization (LocalNode, Groups)
-- ✅ Integration tests with actual data files
-
-**When Mocks Are Acceptable (Rare)**:
-- ✅ External services you don't control (payment gateways, 3rd party APIs)
-- ✅ Slow operations in unit tests (use integration tests for real versions)
-- ✅ Rate-limited APIs (but have integration tests with real API)
-
-**Validation Commands (Run After Every Milestone):**
-```bash
-# Scan entire src/ directory
-cd [project-root]
-
-# Search for mocks (MUST return 0)
-grep -r "class Mock" src/ --include="*.js" | wc -l
-grep -r "Mock" src/**/*.test.js | wc -l
-
-# Search for stubs/fakes (MUST return 0)  
-grep -r "stub\|fake" src/ --include="*.js" | grep -v "fakeId\|// fake" | wc -l
-
-# Verify real implementation imports
-grep -r "from ['\"]<real-package>" src/ --include="*.js" | wc -l
-
-# Run full test suite (MUST pass with real implementations)
-bun test
-```
-
-**If Mocks Found:**
-1. **STOP** - Do not proceed to next milestone
-2. Identify what the mock is simulating
-3. Replace with real implementation:
-   - Import real package/service
-   - Initialize real context (LocalNode, database, etc.)
-   - Use real methods and data
-4. Update tests to work with real implementation
-5. Re-run validation commands
-6. Only proceed when all mocks eliminated
-
-**Step 4: Manual Browser Debugging** 🌐
+**Step 3: Manual Browser Debugging** 🌐
 
 For **frontend features, UI components, or web-based functionality**, use **Cursor's native in-app browser** for **manual debugging and verification** during implementation.
 
@@ -330,99 +263,45 @@ For **frontend features, UI components, or web-based functionality**, use **Curs
 - **Console is your friend** - Most issues show up here first
 - **Real data validation** - Console should show real IDs, not mocks
 - **Don't write browser automation** - Just open browser, look around, document findings
-- **Complement tests, don't replace them** - Unit/integration tests are still required
+- **Manual user testing** - Have the user actually use the feature and provide feedback
 
-**Step 5: Human-in-the-Loop Feedback** 👤
+**Step 4: Human-in-the-Loop Feedback** 👤
 - Pause after milestone completion
-- Run all tests (unit, integration, and browser) to verify nothing broke
-- Present results (including screenshots and console logs) to human for feedback
+- Present results (including screenshots and console logs) to human for manual testing
+- User should manually test the feature and provide feedback
 - Iterate if needed before next milestone
 
-**Testing Requirements for OS-Level Components:**
-
-For OS-level engines (like `style-engine`, `state-engine`, etc.), always structure tests as:
-
-```
-engines/
-├── [engine-name]/
-│   ├── [engine-name].engine.js           ← Implementation
-│   ├── [engine-name].engine.test.js      ← Unit tests (colocated)
-│   └── [engine-name].engine.integration.test.js  ← Integration tests
-```
-
-**Unit Tests** (`*.engine.test.js`):
-- Test individual methods in isolation
-- Use mocks/stubs for dependencies
-- Fast, focused tests
-
-**Integration Tests** (`*.engine.integration.test.js`):
-- Test with real files/data from `vibes/` folder
-- Auto-discover test cases (e.g., all `.style.maia` files)
-- Validate end-to-end workflows
-- Use standard Bun test output (no custom summaries)
-
-**Test Output Style:**
-- Use standard Bun test runner output
-- Let Bun handle test reporting naturally
-- Use `--bail` flag to stop on first error (optional)
-
-**Example Test Structure:**
-```javascript
-// Integration test - auto-discovery
-const files = discoverFiles(vibesDir);
-
-for (const file of files) {
-  describe(`${file.vibe}/${file.name}`, () => {
-    it('validates structure and generates valid CSS', () => {
-      // Test structure validation
-      // Test CSS generation
-      // Test output quality
-    });
-  });
-}
-```
-
 **Output**: 
-- Working, tested code at each milestone
+- Working code at each milestone
 - Human feedback incorporated before proceeding
-- All tests passing (green)
+- Manual user testing completed
 
 **LLM Action**: 
-1. Write tests first (Red phase)
-2. Implement solution to pass tests (Green phase)
-3. Clean up ALL legacy code and ensure 100% migration (Refactor phase)
-4. Run browser-based tests (for frontend features):
+1. Implement solution
+2. Clean up ALL legacy code and ensure 100% migration
+3. Run manual browser debugging (for frontend features):
    - Navigate to app, take screenshots, check console, test interactions
-5. Pause for human feedback
-6. Iterate based on feedback
-7. Move to next milestone
+4. Present to human for manual user testing
+5. Iterate based on feedback
+6. Move to next milestone
 
 ---
 
 ### Stage 6: REVIEW & FEEDBACK — Validate and Document
 
-**Goal**: Ensure solution is complete, tested, and documented before considering it "done."
+**Goal**: Ensure solution is complete, manually tested, and documented before considering it "done."
 
 #### Review Process
 
-**1. Verify All Tests Pass & No Legacy Code Remains** ✅
+**1. Verify Implementation & No Legacy Code Remains** ✅
 
 Before proceeding, ensure:
-- ✅ All new tests pass
-- ✅ No existing tests are broken
-- ✅ Integration tests pass with real data
-- ✅ Browser-based tests pass (for frontend features)
 - ✅ No linter errors
 - ✅ Code follows project conventions
 - ✅ ALL legacy code has been deleted (no commented out code)
 - ✅ No backwards compatibility hacks remain
 - ✅ 100% migration to new architecture complete
 - ✅ No "TODO: migrate later" comments exist
-
-**Run full test suite:**
-```bash
-bun test
-```
 
 **Manual Browser Debugging** 🌐
 
@@ -491,7 +370,7 @@ For frontend features, use **Cursor's browser** for **quick manual verification*
 
 Present to human:
 - Summary of changes
-- Test results (all passing)
+- Manual testing results
 - Any trade-offs or limitations
 - Next steps (if any)
 
@@ -503,7 +382,7 @@ Present to human:
 
 **3. Update Documentation** 📝
 
-**After all tests pass and human approves**, update relevant documentation:
+**After manual testing and human approves**, update relevant documentation:
 
 **Update these locations:**
 - `libs/maia-script/docs/developers/` - Developer-facing docs (technical implementation)
@@ -526,17 +405,17 @@ bun run generate:llm-docs
 - Migration guide (if breaking changes)
 
 **Output**: 
-- Fully tested, working solution
+- Fully manually tested, working solution
 - Human-approved implementation
 - Updated documentation
 - Ready to ship ✨
 
 **LLM Action**: 
-1. Run all tests (unit, integration, browser) and verify success
-2. Perform comprehensive browser testing:
+1. Verify implementation and cleanup complete
+2. Perform comprehensive manual browser testing:
    - Navigate to app, take screenshots, check console, verify network requests
    - Document browser test results (screenshots, console logs, network summary)
-3. Present results (including browser test results) to human for final approval
+3. Present results (including browser test results) to human for manual user testing and final approval
 4. Update relevant documentation (skip LLM docs)
 5. Confirm solution is complete
 
@@ -575,14 +454,9 @@ todos:
 ## Implementation Milestones
 
 ### Milestone 1: [Name]
-**Tests to Write:**
-- [ ] Unit test for X
-- [ ] Integration test for Y
-
 **Implementation:**
 - [ ] Create file structure
 - [ ] Implement core functionality
-- [ ] Ensure tests pass
 
 **Cleanup & Migration:**
 - [ ] Remove ALL legacy code replaced by this milestone
@@ -592,22 +466,17 @@ todos:
 
 **Manual Browser Debugging** (if frontend feature):
 - [ ] Open app in Cursor browser
-- [ ] Check console for errors and verify real data (no mocks)
+- [ ] Check console for errors and verify real data
 - [ ] Check network tab for failed requests
 - [ ] Verify basic functionality works
 - [ ] Document any issues found
 
-**Human Checkpoint:** ✋ Pause for feedback
+**Human Checkpoint:** ✋ Pause for manual user testing and feedback
 
 ### Milestone 2: [Name]
-**Tests to Write:**
-- [ ] Unit test for X
-- [ ] Integration test for Y
-
 **Implementation:**
 - [ ] Integrate with existing systems
 - [ ] Implement feature Z
-- [ ] Ensure tests pass
 
 **Cleanup & Migration:**
 - [ ] Remove ALL legacy code replaced by this milestone
@@ -617,16 +486,16 @@ todos:
 
 **Manual Browser Debugging** (if frontend feature):
 - [ ] Open app in Cursor browser
-- [ ] Check console for errors and verify real data (no mocks)
+- [ ] Check console for errors and verify real data
 - [ ] Check network tab for failed requests
 - [ ] Verify basic functionality works
 - [ ] Document any issues found
 
-**Human Checkpoint:** ✋ Pause for feedback
+**Human Checkpoint:** ✋ Pause for manual user testing and feedback
 
 ### Milestone 3: Documentation & Final Review
-- [ ] All tests passing ✅ (unit, integration tests)
 - [ ] Manual browser debugging complete (console verified, no errors)
+- [ ] Manual user testing complete
 - [ ] Update developer docs
 - [ ] Update vibecreator docs
 - [ ] Final human approval ✋
@@ -636,11 +505,9 @@ todos:
 [Detailed file/folder structure with new files highlighted]
 ```
 
-## Testing Strategy
-- **Unit Tests**: [What to test and where]
-- **Integration Tests**: [What to test and where]
+## Manual Testing Strategy
 - **Manual Browser Debugging**: [Quick checks - console errors, network failures, visual bugs]
-- **Test Output**: [Expected test summary format]
+- **Manual User Testing**: [User will manually test the feature and provide feedback]
 
 ## Risks & Mitigation
 [Potential issues and how to address them]
@@ -680,7 +547,7 @@ todos:
 ## Process Flexibility
 
 **Non-Linear**: You can:
-- Jump between stages (e.g., implement → define if tests reveal misunderstanding)
+- Jump between stages (e.g., implement → define if manual testing reveals misunderstanding)
 - Run stages in parallel (ideate while still defining)
 - Revisit earlier stages based on new insights
 - Skip stages if they're not needed for the specific context
@@ -693,15 +560,15 @@ todos:
 ## Example Workflow
 
 1. **User**: "I want to add authentication"
-2. **Empathize**: "Who needs auth? What auth patterns exist? What are security requirements?"
-3. **Define**: "Problem: Users need secure, scalable auth. Success: OAuth2 support, session management, secure by default."
+2. **Empathize**: "Who needs auth? What auth patterns exist? What are security requirements? What are the fundamental constraints? (First principles: What MUST be true for auth to work?)"
+3. **Define**: "Problem: Users need secure, scalable auth. Success: OAuth2 support, session management, secure by default. Minimum viable: What's the simplest secure auth we can build?"
 4. **Ideate**: "Options: OAuth2, JWT, session-based. Recommendation: OAuth2 for flexibility."
-5. **Prototype**: "Plan: Add auth module, integrate with kernel, create auth middleware, add tests."
+5. **Prototype**: "Plan: Add auth module, integrate with kernel, create auth middleware."
 6. **Implement**: 
-   - Milestone 1: Write auth module tests → Implement auth module → Clean up old auth code → Human feedback ✋
-   - Milestone 2: Write integration tests → Implement kernel integration → Remove legacy patterns → Human feedback ✋
-   - Milestone 3: Write middleware tests → Implement middleware → Delete all backwards compat layers → Human feedback ✋
-7. **Review & Feedback**: "All tests pass ✅ → Human approves → Update docs → Ship! 🚀"
+   - Milestone 1: Implement auth module → Clean up old auth code → Manual user testing → Human feedback ✋
+   - Milestone 2: Implement kernel integration → Remove legacy patterns → Manual user testing → Human feedback ✋
+   - Milestone 3: Implement middleware → Delete all backwards compat layers → Manual user testing → Human feedback ✋
+7. **Review & Feedback**: "Manual testing complete ✅ → Human approves → Update docs → Ship! 🚀"
 
 ---
 
