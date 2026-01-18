@@ -10,7 +10,7 @@
  *   node scripts/sync-assets.js --no-watch  # One-time sync only
  */
 
-import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync, watch } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync, watch, unlinkSync, rmSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -27,13 +27,40 @@ const serviceStaticDirs = [
 ]
 
 /**
+ * Remove a single asset from all service static directories
+ */
+function removeAssetFromServices(relativePath) {
+	serviceStaticDirs.forEach((staticDir) => {
+		try {
+			const targetPath = join(staticDir, relativePath)
+			if (existsSync(targetPath)) {
+				const stat = statSync(targetPath)
+				if (stat.isFile()) {
+					unlinkSync(targetPath)
+					console.log(`🗑️ Removed: ${relativePath}`)
+				} else if (stat.isDirectory()) {
+					rmSync(targetPath, { recursive: true, force: true })
+					console.log(`🗑️ Removed directory: ${relativePath}`)
+				}
+			}
+		} catch (_err) {}
+	})
+}
+
+/**
  * Copy a single file to all service static directories (preserves subfolder structure)
  */
 function copyAssetToServices(relativePath) {
 	const sourcePath = resolve(brandAssetsDir, relativePath)
 
-	// Skip if not a file
-	if (!existsSync(sourcePath) || !statSync(sourcePath).isFile()) {
+	// If source doesn't exist, remove from destination
+	if (!existsSync(sourcePath)) {
+		removeAssetFromServices(relativePath)
+		return
+	}
+
+	// Skip if not a file (it might be a directory change event)
+	if (!statSync(sourcePath).isFile()) {
 		return
 	}
 
@@ -41,7 +68,7 @@ function copyAssetToServices(relativePath) {
 	serviceStaticDirs.forEach((staticDir) => {
 		try {
 			const targetPath = join(staticDir, relativePath)
-			const targetDir = dirname(targetPath) // Use path.dirname() for cross-platform compatibility
+			const targetDir = dirname(targetPath)
 
 			// Create directory if it doesn't exist (preserves subfolder structure)
 			if (!existsSync(targetDir)) {
@@ -93,11 +120,27 @@ function syncAllAssets() {
 		return
 	}
 
-	// Get all files recursively
-	const files = getAllFiles(brandAssetsDir)
-
-	files.forEach((relativePath) => {
+	// 1. Copy/Update all source files to destination
+	const sourceFiles = getAllFiles(brandAssetsDir)
+	sourceFiles.forEach((relativePath) => {
 		copyAssetToServices(relativePath)
+	})
+
+	// 2. Clean up destination files that don't exist in source anymore
+	serviceStaticDirs.forEach((staticDir) => {
+		if (!existsSync(staticDir)) return
+
+		const destFiles = getAllFiles(staticDir)
+		destFiles.forEach((relativePath) => {
+			const sourcePath = resolve(brandAssetsDir, relativePath)
+			if (!existsSync(sourcePath)) {
+				const destPath = join(staticDir, relativePath)
+				try {
+					unlinkSync(destPath)
+					console.log(`🗑️ Cleaned up (orphaned): ${relativePath}`)
+				} catch (_err) {}
+			}
+		})
 	})
 
 	console.log('✅ All brand assets synced!\n')
