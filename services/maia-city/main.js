@@ -242,8 +242,16 @@ function renderSignInPrompt() {
 				<div class="liquid-glass--face"></div>
 				<div class="liquid-glass--edge"></div>
 				<div class="sign-in-inner">
-					<h1><span>Welcome to</span>Maia City</h1>
-					<p class="sign-in-subtitle">Discover your true potential<br><span>the human - who you were meant to become</span></p>
+					<div class="logo-container">
+						<img src="/brand/logo.svg" alt="Maia City" class="sign-in-logo" />
+					</div>
+					<h1>
+						<span>where you become</span>
+						<span class="h1-main-text">
+							<span class="h1-line-1">the human</span>
+						</span>
+					</h1>
+					<p class="sign-in-subtitle">you were always meant to be</p>
 					${!hasAccount ? `
 						<p class="sign-in-description">
 							Get started by creating a new safe. Your account will be secured with biometric authentication.

@@ -1388,6 +1388,21 @@ details pre {
   z-index: 5;
 }
 
+.logo-container {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.sign-in-logo {
+  height: 120px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+}
+
 /* Liquid Glass Layers */
 .liquid-glass--bend {
   backdrop-filter: blur(8px) saturate(140%); /* Further reduced blur for even more clarity */
@@ -1433,36 +1448,52 @@ details pre {
   /* Removed text-shadow shading, using high blur/saturation behind for contrast instead */
 }
 
-.sign-in-content h1 span {
+.sign-in-content h1 > span:first-child {
   display: block;
   font-family: "SF Pro Display", "Inter", sans-serif;
   font-size: 1.1rem;
   font-weight: 600;
   letter-spacing: 0.2em;
-  text-transform: uppercase;
+  text-transform: lowercase;
   margin-bottom: 0.75rem;
   opacity: 0.9;
   color: var(--text-welcome);
 }
 
+.sign-in-content h1 .h1-main-text {
+  display: block;
+  font-family: 'Shrikhand', cursive;
+  font-weight: normal;
+  letter-spacing: 0.01em;
+  margin-top: 0.5rem;
+  color: var(--text-pure-white);
+  text-transform: none;
+}
+
+.sign-in-content h1 .h1-main-text .h1-line-1 {
+  display: block;
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.sign-in-content h1 .h1-main-text .h1-line-2 {
+  display: block;
+  font-size: 3rem;
+  line-height: 1;
+}
+
 .sign-in-subtitle {
-  font-size: 1.15rem;
-  color: var(--text-accent);
+  font-size: 1.3rem; /* Slightly larger than h1 main text */
+  color: var(--text-welcome); /* Slightly creamish - super light cream */
   margin-bottom: 3rem;
-  font-weight: 500;
+  font-weight: 600; /* Slightly bolder for better contrast */
   letter-spacing: -0.01em;
   line-height: 1.5;
   max-width: 90%;
   margin-left: auto;
   margin-right: auto;
-  opacity: 0.95;
-}
-
-.sign-in-subtitle span {
-  display: block;
-  font-size: 1.05rem;
-  opacity: 0.8;
-  margin-top: 0.25rem;
+  opacity: 1; /* Full opacity for maximum contrast */
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); /* Add subtle shadow for readability */
 }
 
 .sign-in-description {

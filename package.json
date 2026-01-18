@@ -21,6 +21,8 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.8",
+		"@realfavicongenerator/generate-favicon": "^0.6.0",
+		"@realfavicongenerator/image-adapter-node": "^0.6.1",
 		"@semantic-release/changelog": "^6.0.3",
 		"@semantic-release/commit-analyzer": "^13.0.1",
 		"@semantic-release/exec": "^7.1.0",

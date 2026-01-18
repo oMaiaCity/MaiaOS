@@ -16,6 +16,7 @@ let maiaCityProcess = null
 let voiceCallProcess = null
 let docsWatcherProcess = null
 let assetSyncProcess = null
+let faviconProcess = null
 
 function startMaiaCity() {
 	console.log('[maia-city] Starting on port 4200...\n')
@@ -82,6 +83,29 @@ function startDocsWatcher() {
 	})
 }
 
+function generateFavicons() {
+	console.log('[favicons] Generating favicons from logo...\n')
+
+	faviconProcess = spawn('bun', ['scripts/generate-favicons.js'], {
+		cwd: rootDir,
+		stdio: 'inherit',
+		shell: false,
+		env: { ...process.env },
+	})
+
+	faviconProcess.on('error', (_error) => {
+		// Non-fatal - favicon generation is optional
+		console.warn('[favicons] Failed to generate favicons')
+	})
+
+	faviconProcess.on('exit', (code) => {
+		if (code !== 0 && code !== null) {
+			// Non-fatal
+			console.warn('[favicons] Favicon generation exited with code', code)
+		}
+	})
+}
+
 function startAssetSync() {
 	console.log('[assets] Starting brand asset sync...\n')
 
@@ -108,6 +132,9 @@ function startAssetSync() {
 function setupSignalHandlers() {
 	process.on('SIGINT', () => {
 		console.log('\n[Dev] Shutting down...')
+		if (faviconProcess && !faviconProcess.killed) {
+			faviconProcess.kill('SIGTERM')
+		}
 		if (assetSyncProcess && !assetSyncProcess.killed) {
 			assetSyncProcess.kill('SIGTERM')
 		}
@@ -125,6 +152,9 @@ function setupSignalHandlers() {
 
 	process.on('SIGTERM', () => {
 		console.log('\n[Dev] Shutting down...')
+		if (faviconProcess && !faviconProcess.killed) {
+			faviconProcess.kill('SIGTERM')
+		}
 		if (assetSyncProcess && !assetSyncProcess.killed) {
 			assetSyncProcess.kill('SIGTERM')
 		}
@@ -147,10 +177,16 @@ function main() {
 
 	setupSignalHandlers()
 
-	startAssetSync()
-	startDocsWatcher()
-	startVoiceCall()
-	startMaiaCity()
+	// Generate favicons first (runs once, then exits)
+	generateFavicons()
+	
+	// Wait a bit for favicon generation to start, then start other services
+	setTimeout(() => {
+		startAssetSync()
+		startDocsWatcher()
+		startVoiceCall()
+		startMaiaCity()
+	}, 1000)
 
 	process.stdin.resume()
 }
