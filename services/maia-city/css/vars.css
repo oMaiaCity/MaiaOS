@@ -1,0 +1,21 @@
+:root {
+  /* Brand Colors - Inspired by Paradise Water and Nature */
+  --brand-green: #4ca661;
+  --brand-water: #00d2ff;
+  --brand-earth: #8b5e3c;
+  --brand-yellow: #ffb703;
+  --brand-red: #ef4444;
+  
+  /* Liquid Glass Config */
+  --glass-border: rgba(255, 255, 255, 0.25);
+  --glass-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.15);
+  
+  /* Text Styles */
+  --text-pure-white: #ffffff;
+  --text-welcome: #fdfcf0; /* Super light cream */
+  --text-primary: #f8f9fa;
+  --text-accent: #ede6d9; /* Earthy cream */
+  
+  --earth-dark: #2c2520;
+  --radius: 1rem; /* Even more compact for dashboard */
+}

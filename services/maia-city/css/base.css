@@ -1,0 +1,42 @@
+@font-face {
+  font-family: 'Shrikhand';
+  src: url('/brand/fonts/Shrikhand/Shrikhand-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IndieFlower';
+  src: url('/brand/fonts/IndieFlower/IndieFlower-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "SF Pro Display", "Inter", sans-serif;
+  line-height: 1.6;
+  color: var(--text-primary);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  background: #000;
+}
+
+/* Utils */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+pre, code {
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+}

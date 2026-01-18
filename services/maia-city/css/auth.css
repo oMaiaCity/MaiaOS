@@ -1,0 +1,163 @@
+/* Authentication Page Styles */
+.sign-in-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  position: relative;
+  background-image: url('/brand/images/banner.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+.sign-in-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.4) 100%);
+  z-index: 0;
+}
+
+.sign-in-content {
+  position: relative;
+  z-index: 1;
+  background: transparent; /* Background handled by layers */
+  border-radius: var(--radius);
+  padding: 4.5rem 4rem; /* Restored original padding */
+  max-width: 540px;
+  width: 100%;
+  text-align: center;
+  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Content wrapper above glass layers */
+.sign-in-inner {
+  position: relative;
+  z-index: 10 !important;
+}
+
+.logo-container {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.sign-in-logo {
+  height: 120px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+}
+
+.sign-in-content h1 {
+  font-family: 'Shrikhand', cursive;
+  font-size: 4.5rem;
+  color: var(--text-pure-white);
+  line-height: 0.85;
+  margin-bottom: 1.5rem;
+}
+
+.sign-in-content h1 > span:first-child {
+  display: block;
+  font-family: "SF Pro Display", "Inter", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+  color: var(--text-welcome);
+}
+
+.h1-main-text {
+  display: block;
+  font-family: 'Shrikhand', cursive;
+  font-weight: normal;
+  letter-spacing: 0.01em;
+  margin-top: 0.5rem;
+  color: var(--text-pure-white);
+  text-transform: none;
+}
+
+.h1-line-1 {
+  display: block;
+  font-size: 3rem; /* Original size from Turn 13 */
+  line-height: 1;
+}
+
+.sign-in-subtitle {
+  font-family: 'IndieFlower', cursive; /* Slogan font */
+  font-size: 1.5rem;
+  color: var(--text-welcome);
+  margin-bottom: 3rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.sign-in-description {
+  font-size: 1.15rem;
+  color: var(--text-primary);
+  margin-bottom: 4rem;
+  line-height: 1.6;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+.sign-in-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 2rem;
+}
+
+/* Original Signup Button Styles */
+.sign-in-btn {
+  background: var(--brand-green);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 1.5rem 2.5rem;
+  font-size: 1.2rem;
+  border-radius: 1.5rem;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  font-weight: 600;
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  width: 100%;
+  letter-spacing: -0.01em;
+}
+
+.sign-in-btn:hover {
+  background: #5dbb72;
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+}
+
+.sign-in-btn.secondary {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: var(--text-accent);
+  font-size: 1.1rem;
+  padding: 1.3rem;
+  box-shadow: none;
+  font-weight: 600;
+  margin-top: 0.25rem;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.sign-in-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: var(--text-welcome);
+  transform: translateY(-1px);
+}
