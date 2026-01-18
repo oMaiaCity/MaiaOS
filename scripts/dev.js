@@ -15,6 +15,7 @@ const rootDir = resolve(__dirname, '..')
 let maiaCityProcess = null
 let voiceCallProcess = null
 let docsWatcherProcess = null
+let assetSyncProcess = null
 
 function startMaiaCity() {
 	console.log('[maia-city] Starting on port 4200...\n')
@@ -81,9 +82,35 @@ function startDocsWatcher() {
 	})
 }
 
+function startAssetSync() {
+	console.log('[assets] Starting brand asset sync...\n')
+
+	assetSyncProcess = spawn('node', ['scripts/sync-assets.js'], {
+		cwd: rootDir,
+		stdio: 'inherit',
+		shell: false,
+		env: { ...process.env },
+	})
+
+	assetSyncProcess.on('error', (_error) => {
+		// Non-fatal - asset sync is optional
+		console.warn('[assets] Failed to start asset sync')
+	})
+
+	assetSyncProcess.on('exit', (code) => {
+		if (code !== 0 && code !== null) {
+			// Non-fatal
+			console.warn('[assets] Asset sync exited with code', code)
+		}
+	})
+}
+
 function setupSignalHandlers() {
 	process.on('SIGINT', () => {
 		console.log('\n[Dev] Shutting down...')
+		if (assetSyncProcess && !assetSyncProcess.killed) {
+			assetSyncProcess.kill('SIGTERM')
+		}
 		if (docsWatcherProcess && !docsWatcherProcess.killed) {
 			docsWatcherProcess.kill('SIGTERM')
 		}
@@ -98,6 +125,9 @@ function setupSignalHandlers() {
 
 	process.on('SIGTERM', () => {
 		console.log('\n[Dev] Shutting down...')
+		if (assetSyncProcess && !assetSyncProcess.killed) {
+			assetSyncProcess.kill('SIGTERM')
+		}
 		if (docsWatcherProcess && !docsWatcherProcess.killed) {
 			docsWatcherProcess.kill('SIGTERM')
 		}
@@ -117,6 +147,7 @@ function main() {
 
 	setupSignalHandlers()
 
+	startAssetSync()
 	startDocsWatcher()
 	startVoiceCall()
 	startMaiaCity()

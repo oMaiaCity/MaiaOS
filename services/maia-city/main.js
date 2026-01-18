@@ -22,6 +22,63 @@ let syncState = {
 };
 let unsubscribeSync = null;
 
+// Check if user has previously authenticated (localStorage flag only, no secrets)
+const HAS_ACCOUNT_KEY = 'maia_has_account';
+
+function hasExistingAccount() {
+	return localStorage.getItem(HAS_ACCOUNT_KEY) === 'true';
+}
+
+function markAccountExists() {
+	localStorage.setItem(HAS_ACCOUNT_KEY, 'true');
+}
+
+function clearAccountFlag() {
+	localStorage.removeItem(HAS_ACCOUNT_KEY);
+}
+
+/**
+ * Show a toast notification
+ * @param {string} message - The message to display
+ * @param {string} type - Type of toast: 'success', 'error', 'info'
+ * @param {number} duration - Duration in ms (default: 5000)
+ */
+function showToast(message, type = 'info', duration = 5000) {
+	const icons = {
+		success: '✅',
+		error: '⚠️',
+		info: 'ℹ️'
+	};
+	
+	const titles = {
+		success: 'Success',
+		error: 'Authentication Failed',
+		info: 'Info'
+	};
+	
+	const toast = document.createElement('div');
+	toast.className = `toast ${type}`;
+	toast.innerHTML = `
+		<div class="toast-content">
+			<div class="toast-icon">${icons[type]}</div>
+			<div class="toast-message">
+				<div class="toast-title">${titles[type]}</div>
+				${message}
+			</div>
+		</div>
+	`;
+	
+	document.body.appendChild(toast);
+	
+	// Auto-remove after duration
+	setTimeout(() => {
+		toast.classList.add('removing');
+		setTimeout(() => {
+			document.body.removeChild(toast);
+		}, 300); // Match animation duration
+	}, duration);
+}
+
 async function init() {
 	try {
 		console.log("🚀 Initializing MaiaCity...");
@@ -41,23 +98,20 @@ async function init() {
 		renderSignInPrompt();
 	} catch (error) {
 		console.error("Failed to initialize:", error);
-		document.getElementById("app").innerHTML = `
-			<div style="padding: 2rem;">
-				<h1>Error</h1>
-				<pre>${error.message}\n\n${error.stack}</pre>
-			</div>
-		`;
+		showToast("Failed to initialize: " + error.message, 'error', 10000);
 	}
 }
 
+/**
+ * Sign in with existing passkey
+ */
 async function signIn() {
 	try {
 		console.log("🔐 Signing in with existing passkey...");
 		
-		// Sign in with existing passkey
 		const { accountID, node, account } = await signInWithPasskey({ salt: "maia.city" });
 		
-		console.log("✅ Passkey authenticated:", accountID);
+		console.log("✅ Existing passkey authenticated:", accountID);
 		
 		// Create MaiaOS with node and account
 		maia = await createMaiaOS({ node, account, accountID });
@@ -67,6 +121,9 @@ async function signIn() {
 			signedIn: true,
 			accountID: accountID,
 		};
+		
+		// Mark that user has successfully authenticated
+		markAccountExists();
 		
 		// Subscribe to sync state changes
 		unsubscribeSync = subscribeSyncState((state) => {
@@ -77,29 +134,40 @@ async function signIn() {
 		renderApp();
 		
 		console.log("✅ MaiaOS initialized with authenticated account!");
+		
 	} catch (error) {
 		console.error("Sign in failed:", error);
 		
 		if (error.message.includes("PRF not supported") || error.message.includes("WebAuthn")) {
 			renderUnsupportedBrowser(error.message);
+		} else if (error.name === 'NotAllowedError' ||
+		           error.message.includes("User denied permission") || 
+		           error.message.includes("denied permission")) {
+			showToast("You cancelled the passkey prompt. Click the button again when you're ready.", 'info', 5000);
+			renderSignInPrompt();
 		} else {
-			alert(`Sign in failed: ${error.message}`);
+			const friendlyMessage = error.message.includes("Failed to evaluate PRF") 
+				? "Unable to authenticate with your passkey. Please try again."
+				: error.message;
+			showToast(friendlyMessage, 'error', 7000);
 			renderSignInPrompt();
 		}
 	}
 }
 
+/**
+ * Register new passkey
+ */
 async function register() {
 	try {
 		console.log("📝 Registering new passkey...");
 		
-		// Explicitly register a new passkey (no localStorage check needed)
 		const { accountID, node, account } = await signUpWithPasskey({ 
 			name: "maia",
 			salt: "maia.city" 
 		});
 		
-		console.log("✅ New passkey registered:", accountID);
+		console.log("✅ New passkey created:", accountID);
 		
 		// Create MaiaOS with node and account
 		maia = await createMaiaOS({ node, account, accountID });
@@ -110,6 +178,11 @@ async function register() {
 			accountID: accountID,
 		};
 		
+		// Mark that user has successfully registered
+		markAccountExists();
+		console.log("✅ Marked account as existing in localStorage");
+		console.log("   localStorage now:", localStorage.getItem('maia_has_account'));
+		
 		// Subscribe to sync state changes
 		unsubscribeSync = subscribeSyncState((state) => {
 			syncState = state;
@@ -119,13 +192,22 @@ async function register() {
 		renderApp();
 		
 		console.log("✅ MaiaOS initialized with new account!");
+		
 	} catch (error) {
 		console.error("Registration failed:", error);
 		
 		if (error.message.includes("PRF not supported") || error.message.includes("WebAuthn")) {
 			renderUnsupportedBrowser(error.message);
+		} else if (error.name === 'NotAllowedError' ||
+		           error.message.includes("User denied permission") || 
+		           error.message.includes("denied permission")) {
+			showToast("You cancelled the passkey prompt. Click the button again when you're ready.", 'info', 5000);
+			renderSignInPrompt();
 		} else {
-			alert(`Registration failed: ${error.message}`);
+			const friendlyMessage = error.message.includes("Failed to create passkey")
+				? "Unable to create passkey. Please try again."
+				: error.message;
+			showToast(friendlyMessage, 'error', 7000);
 			renderSignInPrompt();
 		}
 	}
@@ -140,30 +222,51 @@ function signOut() {
 	authState = { signedIn: false, accountID: null };
 	syncState = { connected: false, syncing: false, error: null };
 	maia = null;
-	window.location.reload(); // Reload to reset state (session-only)
+	
+	// DON'T clear the account flag - passkey still exists on device!
+	// User can still sign back in, so UI should show "Sign In" as primary
+	window.location.reload();
 }
 
 function renderSignInPrompt() {
+	const hasAccount = hasExistingAccount();
+	
+	console.log("🔍 Rendering sign-in prompt...");
+	console.log("   localStorage flag:", localStorage.getItem('maia_has_account'));
+	console.log("   hasAccount:", hasAccount);
+	
 	document.getElementById("app").innerHTML = `
 		<div class="sign-in-container">
-			<div class="sign-in-content">
-				<h1>🏙️ Maia City Inspector</h1>
-				<p class="sign-in-subtitle">Explore your self-sovereign data space</p>
-				<p class="sign-in-description">
-					Sign in with your passkey or register a new one.
-					Your account is secured with biometric authentication and synced via Jazz cloud.
-				</p>
-				<div style="display: flex; gap: 1rem; margin-top: 2rem; flex-direction: column;">
-					<button class="sign-in-btn" onclick="window.handleSignIn()" style="width: 100%;">
-						🔐 Sign In with Passkey
-					</button>
-					<button class="sign-in-btn" onclick="window.handleRegister()" style="width: 100%; background: rgba(196, 145, 122, 0.6);">
-						📝 Register New Passkey
-					</button>
+			<div class="sign-in-content liquid-glass">
+				<div class="liquid-glass--bend"></div>
+				<div class="liquid-glass--face"></div>
+				<div class="liquid-glass--edge"></div>
+				<div class="sign-in-inner">
+					<h1><span>Welcome to</span>Maia City</h1>
+					<p class="sign-in-subtitle">Discover your true potential<br><span>the human - who you were meant to become</span></p>
+					${!hasAccount ? `
+						<p class="sign-in-description">
+							Get started by creating a new safe. Your account will be secured with biometric authentication.
+						</p>
+					` : ''}
+					<div class="sign-in-buttons">
+						${hasAccount ? `
+							<button class="sign-in-btn" onclick="window.handleSignIn()">
+								Unlock Safe
+							</button>
+							<button class="sign-in-btn secondary" onclick="window.handleRegister()">
+								Create new Safe
+							</button>
+						` : `
+							<button class="sign-in-btn" onclick="window.handleRegister()">
+								Create new Safe
+							</button>
+							<button class="sign-in-btn secondary" onclick="window.handleSignIn()">
+								Already have a safe? Unlock
+							</button>
+						`}
+					</div>
 				</div>
-				<p class="sign-in-note">
-					<small>Uses Face ID, Touch ID, or Windows Hello • No localStorage used</small>
-				</p>
 			</div>
 		</div>
 	`;
@@ -197,6 +300,7 @@ function renderUnsupportedBrowser(message) {
 window.handleSignIn = signIn;
 window.handleRegister = register;
 window.handleSignOut = signOut;
+window.showToast = showToast; // Expose for debugging
 
 function switchView(view) {
 	currentView = view;

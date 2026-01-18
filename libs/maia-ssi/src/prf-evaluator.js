@@ -17,11 +17,17 @@ import { arrayBufferToBase64, base64ToArrayBuffer } from './utils.js';
 export async function evaluatePRF({ salt, rpId = window.location.hostname }) {
 	try {
 		// Request authentication with PRF evaluation
+		// IMPORTANT: authenticatorAttachment: 'platform' + hints: ['client-device']
+		// ensures we only use platform authenticators (Touch ID, Face ID, Windows Hello)
+		// and the UI prioritizes local device auth without showing QR/cross-platform options
 		const assertion = await navigator.credentials.get({
 			publicKey: {
 				challenge: crypto.getRandomValues(new Uint8Array(32)),
 				rpId: rpId,
 				userVerification: 'required',
+				authenticatorAttachment: 'platform', // ONLY platform authenticators!
+				// WebAuthn Level 3: Hint the browser UI to show platform authenticator
+				hints: ['client-device'], // Prioritize local device, suppress QR code UI
 				extensions: {
 					prf: {
 						eval: {
@@ -94,10 +100,12 @@ export async function createPasskeyWithPRF({ name, userId, rpId = window.locatio
 					{ type: 'public-key', alg: -257 } // RS256
 				],
 				authenticatorSelection: {
-					authenticatorAttachment: 'platform',
+					authenticatorAttachment: 'platform', // ONLY platform authenticators
 					residentKey: 'required',
 					userVerification: 'required',
 				},
+				// WebAuthn Level 3: Hint the browser UI to show platform authenticator first
+				hints: ['client-device'], // Prioritize local device authenticator UI
 				extensions: prfConfig
 			}
 		});

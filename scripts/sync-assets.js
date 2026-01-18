@@ -2,12 +2,12 @@
 /**
  * Hot-reload-aware asset sync script for @maia/brand
  *
- * Syncs assets from libs/maia-brand/src/assets to service static folders.
+ * Syncs assets from libs/maia-brand/src/assets to maia-city service static folder.
  * Runs in watch mode during development for hot reloading.
  *
  * Usage:
- *   node scripts/sync-assets.js          # One-time sync
- *   node scripts/sync-assets.js --watch  # Watch mode
+ *   node scripts/sync-assets.js          # Sync and watch (default)
+ *   node scripts/sync-assets.js --no-watch  # One-time sync only
  */
 
 import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync, watch } from 'node:fs'
@@ -20,26 +20,11 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const monorepoRoot = resolve(__dirname, '..')
 const brandAssetsDir = resolve(monorepoRoot, 'libs/maia-brand/src/assets')
 
-// Detect if we're in Docker build context (service copied to root) or normal monorepo
-// In Docker: services/app/ . is copied to /app, so static/ is at /app/static/
-// In monorepo: static/ is at services/app/static/
-const isDockerContext =
-	existsSync(resolve(monorepoRoot, 'package.json')) && !existsSync(resolve(monorepoRoot, 'services'))
-
-// Get current working directory to detect which service we're building
-const cwd = process.cwd()
-const isMeService = cwd.includes('services/me') || (cwd.includes('me') && !cwd.includes('website'))
-
-const serviceStaticDirs = isDockerContext
-	? [
-			// Docker build context: sync to current service's static folder
-			resolve(cwd, 'static/brand'),
-		]
-	: [
-			// Normal monorepo context: sync to detected service(s) only
-			// When running from monorepo root (!isDockerContext), include all services
-			...(isMeService || !isDockerContext ? [resolve(monorepoRoot, 'services/me/static/brand')] : []),
-		].filter(Boolean)
+// Sync assets to maia-city service only
+// Vite serves static files from 'public' directory by default
+const serviceStaticDirs = [
+	resolve(monorepoRoot, 'services/maia-city/public/brand'),
+]
 
 /**
  * Copy a single file to all service static directories (preserves subfolder structure)
@@ -99,10 +84,10 @@ function getAllFiles(dirPath, basePath = '') {
 }
 
 /**
- * Sync all assets from brand package to services (preserves folder structure)
+ * Sync all assets from brand package to maia-city service (preserves folder structure)
  */
 function syncAllAssets() {
-	console.log('🔄 Syncing brand assets to services...')
+	console.log('🔄 Syncing brand assets to maia-city...')
 
 	if (!existsSync(brandAssetsDir)) {
 		return
@@ -134,13 +119,13 @@ function watchAssets() {
 
 // Main execution
 const args = process.argv.slice(2)
-const isWatchMode = args.includes('--watch') || args.includes('-w')
+const isNoWatch = args.includes('--no-watch') || args.includes('--no-w')
 
 // Initial sync
 syncAllAssets()
 
-// Watch mode
-if (isWatchMode) {
+// Watch mode (enabled by default)
+if (!isNoWatch) {
 	watchAssets()
 	console.log('Press Ctrl+C to stop watching.\n')
 } else {

@@ -4,10 +4,36 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Maia DB - Inspector</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="/brand/favicon/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/brand/favicon/favicon-96x96.png" />
+    <link rel="icon" type="image/x-icon" href="/brand/favicon/favicon.ico" />
+    <link rel="apple-touch-icon" href="/brand/favicon/apple-touch-icon.png" />
+    
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/brand/favicon/site.webmanifest" />
+    <meta name="theme-color" content="#e3e9ec" />
+    
+    <!-- Fonts -->
+    <link rel="preload" href="/brand/fonts/Shrikhand/Shrikhand-Regular.ttf" as="font" type="font/ttf" crossorigin />
+    
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
     <div id="app"></div>
+    
+    <!-- Liquid Glass SVG Filter -->
+    <svg style="visibility: hidden; position: absolute;" width="0" height="0" xmlns="http://www.w3.org/2000/svg" version="1.1">
+      <defs>
+        <filter id="glass-blur">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="glass" />
+          <feComposite in="SourceGraphic" in2="glass" operator="atop" />
+        </filter>
+      </defs>
+    </svg>
+
     <script type="module" src="/main.js"></script>
   </body>
 </html>
