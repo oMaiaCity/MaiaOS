@@ -1,16 +1,26 @@
-import { createMaiaID } from "@MaiaOS/db";
+import { signInWithPasskey, isPRFSupported } from "@MaiaOS/ssi";
 
 /**
  * MaiaOS Kernel - Unified 'o' object
  * 
- * First Principles: Just MaiaID (cojson Account) + Inspector
+ * STRICT: Account creation handled by @MaiaOS/ssi
+ * No manual account creation, passkey authentication required
  */
-export async function createMaiaOS() {
-	// Create MaiaID using db layer (pure cojson, no profile)
-	const { node, account, accountID } = await createMaiaID({ name: "MaiaID" });
+export async function createMaiaOS(options = {}) {
+	const { node, account, accountID, name } = options;
 
-	console.log("✅ MaiaID created:", accountID);
-	console.log("📋 Account type:", account.type, "(built-in cojson property)");
+	// STRICT: node and account REQUIRED (must come from signInWithPasskey)
+	if (!node || !account) {
+		throw new Error(
+			"Node and Account required. Use signInWithPasskey() first.\n" +
+			"Example:\n" +
+			"  const { node, account } = await signInWithPasskey();\n" +
+			"  const o = await createMaiaOS({ node, account });"
+		);
+	}
+
+	console.log("✅ MaiaOS initialized with authenticated account:", accountID || account.id);
+	console.log("📋 Account type:", account.type);
 	console.log("📋 Account keys:", account.keys());
 
 	return {
@@ -19,6 +29,9 @@ export async function createMaiaOS() {
 			maiaId: account,
 			node: node,
 		},
+
+		// o.auth - Authentication layer (NEW!)
+		auth: createAuthAPI(),
 
 		// o.db - Database layer (future)
 		db: {},
@@ -365,5 +378,49 @@ export async function createMaiaOS() {
 				};
 			}
 		},
+	};
+}
+
+/**
+ * Create auth API for managing authentication state
+ * STRICT: PRF required, throws if unsupported
+ */
+function createAuthAPI() {
+	return {
+		/**
+		 * Initialize auth system - check PRF support
+		 * STRICT: Throws if PRF not supported
+		 */
+		init: async () => {
+			try {
+				await isPRFSupported();
+				console.log("✅ Auth system initialized - PRF supported");
+			} catch (error) {
+				throw new Error(
+					"WebAuthn PRF not supported. Please use:\n" +
+					"- Chrome on macOS/Linux/Windows 11\n" +
+					"- Safari on macOS 13+/iOS 16+\n" +
+					"Firefox and Windows 10 are NOT supported."
+				);
+			}
+		},
+
+		/**
+		 * Sign in with passkey (auto-detects register vs login)
+		 * @param {Object} options
+		 * @param {string} options.salt - Salt for PRF (default: "maia.city")
+		 * @returns {Promise<{accountID: string, agentSecret: Object, node: Object, account: Object}>}
+		 */
+		signIn: async (options = {}) => {
+			const { salt = "maia.city" } = options;
+			console.log("🔐 Signing in with passkey...");
+			// Note: signInWithPasskey now creates/loads the account internally
+			return await signInWithPasskey({ salt });
+		},
+
+		/**
+		 * REMOVED: No localStorage, session-only authentication
+		 * Use signIn() to create a new session
+		 */
 	};
 }

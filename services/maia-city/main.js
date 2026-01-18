@@ -1,25 +1,44 @@
 /**
  * MaiaCity Inspector - First Principles
  * 
- * Minimal frontend: Display MaiaID primitive in inspector.
+ * STRICT: Requires passkey authentication via WebAuthn PRF
  */
 
-import { createMaiaOS } from "@MaiaOS/core";
+import { createMaiaOS, signInWithPasskey, signUpWithPasskey, isPRFSupported, subscribeSyncState } from "@MaiaOS/core";
 
 let maia;
 let currentView = 'account'; // Current schema type being viewed
 let selectedCoValueId = null; // Selected CoValue for detail view
+let authState = {
+	signedIn: false,
+	accountID: null,
+};
+
+// Sync state
+let syncState = {
+	connected: false,
+	syncing: false,
+	error: null,
+};
+let unsubscribeSync = null;
 
 async function init() {
 	try {
-		console.log("🚀 Initializing MaiaOS...");
+		console.log("🚀 Initializing MaiaCity...");
 		
-		maia = await createMaiaOS();
-		window.maia = maia; // Expose for debugging
+		// STRICT: Check PRF support first
+		try {
+			await isPRFSupported();
+			console.log("✅ WebAuthn PRF supported");
+		} catch (error) {
+			console.error("❌ PRF not supported:", error);
+			renderUnsupportedBrowser(error.message);
+			return;
+		}
 		
-		renderApp();
-		
-		console.log("✅ MaiaOS initialized!");
+		// Show sign-in prompt (no localStorage check)
+		console.log("🔐 Showing sign-in prompt");
+		renderSignInPrompt();
 	} catch (error) {
 		console.error("Failed to initialize:", error);
 		document.getElementById("app").innerHTML = `
@@ -30,6 +49,154 @@ async function init() {
 		`;
 	}
 }
+
+async function signIn() {
+	try {
+		console.log("🔐 Signing in with existing passkey...");
+		
+		// Sign in with existing passkey
+		const { accountID, node, account } = await signInWithPasskey({ salt: "maia.city" });
+		
+		console.log("✅ Passkey authenticated:", accountID);
+		
+		// Create MaiaOS with node and account
+		maia = await createMaiaOS({ node, account, accountID });
+		window.maia = maia;
+		
+		authState = {
+			signedIn: true,
+			accountID: accountID,
+		};
+		
+		// Subscribe to sync state changes
+		unsubscribeSync = subscribeSyncState((state) => {
+			syncState = state;
+			renderApp(); // Re-render when sync state changes
+		});
+		
+		renderApp();
+		
+		console.log("✅ MaiaOS initialized with authenticated account!");
+	} catch (error) {
+		console.error("Sign in failed:", error);
+		
+		if (error.message.includes("PRF not supported") || error.message.includes("WebAuthn")) {
+			renderUnsupportedBrowser(error.message);
+		} else {
+			alert(`Sign in failed: ${error.message}`);
+			renderSignInPrompt();
+		}
+	}
+}
+
+async function register() {
+	try {
+		console.log("📝 Registering new passkey...");
+		
+		// Explicitly register a new passkey (no localStorage check needed)
+		const { accountID, node, account } = await signUpWithPasskey({ 
+			name: "maia",
+			salt: "maia.city" 
+		});
+		
+		console.log("✅ New passkey registered:", accountID);
+		
+		// Create MaiaOS with node and account
+		maia = await createMaiaOS({ node, account, accountID });
+		window.maia = maia;
+		
+		authState = {
+			signedIn: true,
+			accountID: accountID,
+		};
+		
+		// Subscribe to sync state changes
+		unsubscribeSync = subscribeSyncState((state) => {
+			syncState = state;
+			renderApp(); // Re-render when sync state changes
+		});
+		
+		renderApp();
+		
+		console.log("✅ MaiaOS initialized with new account!");
+	} catch (error) {
+		console.error("Registration failed:", error);
+		
+		if (error.message.includes("PRF not supported") || error.message.includes("WebAuthn")) {
+			renderUnsupportedBrowser(error.message);
+		} else {
+			alert(`Registration failed: ${error.message}`);
+			renderSignInPrompt();
+		}
+	}
+}
+
+function signOut() {
+	console.log("🚪 Signing out...");
+	if (unsubscribeSync) {
+		unsubscribeSync();
+		unsubscribeSync = null;
+	}
+	authState = { signedIn: false, accountID: null };
+	syncState = { connected: false, syncing: false, error: null };
+	maia = null;
+	window.location.reload(); // Reload to reset state (session-only)
+}
+
+function renderSignInPrompt() {
+	document.getElementById("app").innerHTML = `
+		<div class="sign-in-container">
+			<div class="sign-in-content">
+				<h1>🏙️ Maia City Inspector</h1>
+				<p class="sign-in-subtitle">Explore your self-sovereign data space</p>
+				<p class="sign-in-description">
+					Sign in with your passkey or register a new one.
+					Your account is secured with biometric authentication and synced via Jazz cloud.
+				</p>
+				<div style="display: flex; gap: 1rem; margin-top: 2rem; flex-direction: column;">
+					<button class="sign-in-btn" onclick="window.handleSignIn()" style="width: 100%;">
+						🔐 Sign In with Passkey
+					</button>
+					<button class="sign-in-btn" onclick="window.handleRegister()" style="width: 100%; background: rgba(196, 145, 122, 0.6);">
+						📝 Register New Passkey
+					</button>
+				</div>
+				<p class="sign-in-note">
+					<small>Uses Face ID, Touch ID, or Windows Hello • No localStorage used</small>
+				</p>
+			</div>
+		</div>
+	`;
+}
+
+function renderUnsupportedBrowser(message) {
+	document.getElementById("app").innerHTML = `
+		<div class="unsupported-browser">
+			<div class="unsupported-content">
+				<h1>⚠️ Browser Not Supported</h1>
+				<p class="unsupported-message">${message}</p>
+				<div class="unsupported-requirements">
+					<h3>Please use:</h3>
+					<ul>
+						<li>✅ Chrome on macOS, Linux, or Windows 11</li>
+						<li>✅ Safari on macOS 13+ or iOS 16+</li>
+					</ul>
+					<h3>Not supported:</h3>
+					<ul>
+						<li>❌ Firefox (all platforms)</li>
+						<li>❌ Windows 10 (any browser)</li>
+						<li>❌ Older browsers</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	`;
+}
+
+// Expose globally for onclick handlers
+window.handleSignIn = signIn;
+window.handleRegister = register;
+window.handleSignOut = signOut;
 
 function switchView(view) {
 	currentView = view;
@@ -314,8 +481,26 @@ function renderApp() {
 	document.getElementById("app").innerHTML = `
 		<div class="db-container">
 			<header class="db-header">
-				<h1>Maia DB</h1>
-				<code class="db-status">Connected • ${accountId}</code>
+				<div class="header-left">
+					<h1>Maia DB</h1>
+					<code class="db-status">Connected • ${truncate(accountId, 30)}</code>
+				</div>
+				<div class="header-right">
+					<!-- Sync Status Indicator -->
+					<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
+						<span class="sync-dot"></span>
+						<span class="sync-text">
+							${syncState.connected && syncState.syncing ? 'Syncing' : 
+							  syncState.connected ? 'Connected' : 
+							  syncState.error || 'Offline'}
+						</span>
+					</div>
+					${authState.signedIn ? `
+						<button class="sign-out-btn" onclick="window.handleSignOut()">
+							Sign Out
+						</button>
+					` : ''}
+				</div>
 			</header>
 			
 			<div class="db-layout ${selectedCoValueId ? 'with-detail' : ''}">

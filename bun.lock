@@ -33,6 +33,7 @@
       "version": "0.1.23",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/ssi": "workspace:*",
       },
     },
     "libs/maia-db": {
@@ -41,6 +42,10 @@
       "dependencies": {
         "cojson": "^0.19.21",
       },
+    },
+    "libs/maia-docs": {
+      "name": "@MaiaOS/docs",
+      "version": "0.1.23",
     },
     "libs/maia-script": {
       "name": "@MaiaOS/script",
@@ -51,6 +56,15 @@
       },
       "devDependencies": {
         "cojson": "^0.19.21",
+      },
+    },
+    "libs/maia-ssi": {
+      "name": "@MaiaOS/ssi",
+      "version": "0.1.23",
+      "dependencies": {
+        "@MaiaOS/db": "workspace:*",
+        "cojson-storage-indexeddb": "0.19.21",
+        "cojson-transport-ws": "0.19.21",
       },
     },
     "libs/maia-voice": {
@@ -92,7 +106,11 @@
 
     "@MaiaOS/db": ["@MaiaOS/db@workspace:libs/maia-db"],
 
+    "@MaiaOS/docs": ["@MaiaOS/docs@workspace:libs/maia-docs"],
+
     "@MaiaOS/script": ["@MaiaOS/script@workspace:libs/maia-script"],
+
+    "@MaiaOS/ssi": ["@MaiaOS/ssi@workspace:libs/maia-ssi"],
 
     "@MaiaOS/voice": ["@MaiaOS/voice@workspace:libs/maia-voice"],
 
