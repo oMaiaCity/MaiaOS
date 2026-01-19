@@ -28,6 +28,8 @@ import { validateOrThrow, validateAgainstSchemaOrThrow } from '../schemata/valid
 import * as schemata from '../schemata/index.js';
 // Import ValidationEngine for meta schema validation
 import { ValidationEngine } from '../schemata/validation.engine.js';
+// Import schema loader utility
+import { loadSchemaFromDB } from '../schemata/schema-loader.js';
 
 /**
  * MaiaOS - Operating System for Actor-based Applications
@@ -43,7 +45,6 @@ export class MaiaOS {
     this.actorEngine = null;
     this.subscriptionEngine = null; // Subscription management engine
     this.dbEngine = null; // Database operation engine
-    this.actors = new Map();
   }
 
   /**
@@ -53,7 +54,6 @@ export class MaiaOS {
    */
   static async boot(config = {}) {
     const os = new MaiaOS();
-    os.vibeRegistry = config.registry || null; // Store registry if provided
     
     console.log('🚀 Booting MaiaOS v0.4...');
     console.log('📦 Kernel: Module-based architecture');
@@ -146,7 +146,10 @@ export class MaiaOS {
     
     os.stateEngine = new StateEngine(os.toolEngine, os.evaluator);
     os.styleEngine = new StyleEngine();
-    os.styleEngine.clearCache(); // Clear cache on boot for development
+    // Clear cache on boot in development only
+    if (config.isDevelopment || import.meta.env.DEV) {
+      os.styleEngine.clearCache();
+    }
     os.viewEngine = new ViewEngine(os.evaluator, null, os.moduleRegistry);
     
     // Initialize ActorEngine (will receive SubscriptionEngine after it's created)
@@ -204,12 +207,11 @@ export class MaiaOS {
   async createActor(actorPath, container) {
     const actorConfig = await this.actorEngine.loadActor(actorPath);
     const actor = await this.actorEngine.createActor(actorConfig, container);
-    this.actors.set(actor.id, actor);
     return actor;
   }
 
   /**
-   * Load a vibe (app manifest) and create its root actor
+   * Load a vibe (app manifest) from file and create its root actor
    * @param {string} vibePath - Path to vibe manifest
    * @param {HTMLElement} container - Container element
    * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
@@ -226,12 +228,9 @@ export class MaiaOS {
     const vibe = await response.json();
     
     // Validate vibe structure using schema (load from IndexedDB on-the-fly)
-    const schema = await this._loadSchemaFromDB('vibe');
+    const schema = await loadSchemaFromDB(this.dbEngine, 'vibe');
     if (schema) {
       await validateAgainstSchemaOrThrow(schema, vibe, 'vibe');
-    } else {
-      // Fallback to registered schema if not in DB yet
-      await validateOrThrow('vibe', vibe, vibePath);
     }
     
     console.log(`✨ Vibe: "${vibe.name}"`);
@@ -269,12 +268,9 @@ export class MaiaOS {
     }
     
     // Validate vibe structure using schema (load from IndexedDB on-the-fly)
-    const schema = await this._loadSchemaFromDB('vibe');
+    const schema = await loadSchemaFromDB(this.dbEngine, 'vibe');
     if (schema) {
       await validateAgainstSchemaOrThrow(schema, vibe, 'vibe');
-    } else {
-      // Fallback to registered schema if not in DB yet
-      await validateOrThrow('vibe', vibe, `maia.db:${vibeName}`);
     }
     
     console.log(`✨ Vibe: "${vibe.name}"`);
@@ -285,48 +281,12 @@ export class MaiaOS {
     
     // Create root actor
     const actor = await this.actorEngine.createActor(actorConfig, container);
-    this.actors.set(actor.id, actor);
     
     console.log(`✅ Vibe loaded: ${vibe.name}`);
     
     return { vibe, actor };
   }
   
-  /**
-   * Load a vibe from a pre-loaded registry (backwards compatibility - DEPRECATED)
-   * @deprecated Use loadVibeFromDatabase() instead
-   * @param {Object} vibe - Vibe manifest object
-   * @param {HTMLElement} container - Container element
-   * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
-   */
-  async loadVibeFromRegistry(vibe, container) {
-    console.warn('[MaiaOS] loadVibeFromRegistry is deprecated - vibe should be loaded from database');
-    
-    console.log(`📦 Loading vibe from registry: "${vibe.name}"...`);
-    
-    // Validate vibe structure using schema (load from IndexedDB on-the-fly)
-    const schema = await this._loadSchemaFromDB('vibe');
-    if (schema) {
-      await validateAgainstSchemaOrThrow(schema, vibe, 'vibe');
-    } else {
-      // Fallback to registered schema if not in DB yet
-      await validateOrThrow('vibe', vibe, 'registry');
-    }
-    
-    console.log(`✨ Vibe: "${vibe.name}"`);
-    
-    // Load actor config via loadActor (which uses maia.db())
-    const actorPath = vibe.actor; // e.g., "vibe/vibe"
-    const actorConfig = await this.actorEngine.loadActor(actorPath);
-    
-    // Create root actor
-    const actor = await this.actorEngine.createActor(actorConfig, container);
-    this.actors.set(actor.id, actor);
-    
-    console.log(`✅ Vibe loaded: ${vibe.name}`);
-    
-    return { vibe, actor };
-  }
 
   /**
    * Get actor by ID
@@ -334,7 +294,7 @@ export class MaiaOS {
    * @returns {Object|null} Actor instance
    */
   getActor(actorId) {
-    return this.actors.get(actorId);
+    return this.actorEngine.getActor(actorId);
   }
 
   /**
@@ -371,22 +331,6 @@ export class MaiaOS {
     };
   }
   
-  /**
-   * Load schema from IndexedDB for on-the-fly validation
-   * @private
-   * @param {string} schemaType - Schema type (e.g., 'vibe', 'actor')
-   * @returns {Promise<Object|null>} Schema object or null if not found
-   */
-  async _loadSchemaFromDB(schemaType) {
-    if (!this.dbEngine || !this.dbEngine.backend) return null;
-    
-    try {
-      const schemaKey = `@schema/${schemaType}`;
-      return await this.dbEngine.backend.getSchema(schemaKey);
-    } catch (error) {
-      return null;
-    }
-  }
 }
 
 // Re-export engines for advanced use cases

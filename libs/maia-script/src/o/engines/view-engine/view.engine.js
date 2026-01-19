@@ -1,5 +1,7 @@
 // Import validation helper
 import { validateOrThrow, validateAgainstSchemaOrThrow } from '../../../schemata/validation.helper.js';
+// Import schema loader utility
+import { loadSchemaFromDB } from '../../../schemata/schema-loader.js';
 
 /**
  * ViewEngine - Renders .maia view files to Shadow DOM
@@ -63,12 +65,9 @@ export class ViewEngine {
       
       if (viewDef) {
         // Load schema from IndexedDB and validate on-the-fly
-        const schema = await this._loadSchemaFromDB('view');
+        const schema = await loadSchemaFromDB(this.dbEngine, 'view');
         if (schema) {
           await validateAgainstSchemaOrThrow(schema, viewDef, 'view');
-        } else {
-          // Fallback to registered schema if not in DB yet
-          await validateOrThrow('view', viewDef, `maia.db:${viewKey}`);
         }
         this.viewCache.set(viewRef, viewDef);
         return viewDef;
@@ -80,22 +79,6 @@ export class ViewEngine {
     throw new Error(`[ViewEngine] Database engine not available`);
   }
   
-  /**
-   * Load schema from IndexedDB for on-the-fly validation
-   * @private
-   * @param {string} schemaType - Schema type (e.g., 'view', 'state')
-   * @returns {Promise<Object|null>} Schema object or null if not found
-   */
-  async _loadSchemaFromDB(schemaType) {
-    if (!this.dbEngine || !this.dbEngine.backend) return null;
-    
-    try {
-      const schemaKey = `@schema/${schemaType}`;
-      return await this.dbEngine.backend.getSchema(schemaKey);
-    } catch (error) {
-      return null;
-    }
-  }
 
 
   /**

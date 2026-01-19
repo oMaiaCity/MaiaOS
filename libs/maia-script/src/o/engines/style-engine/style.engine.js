@@ -1,5 +1,7 @@
 // Import validation helper
 import { validateOrThrow, validateAgainstSchemaOrThrow } from '../../../schemata/validation.helper.js';
+// Import schema loader utility
+import { loadSchemaFromDB } from '../../../schemata/schema-loader.js';
 
 /**
  * StyleEngine - Compiles .maia style files to CSS with Constructable Stylesheets
@@ -53,12 +55,9 @@ export class StyleEngine {
         const type = styleDef.$type === 'brand.style' ? 'brandStyle' : 'style';
         
         // Load schema from IndexedDB and validate on-the-fly
-        const schema = await this._loadSchemaFromDB(type);
+        const schema = await loadSchemaFromDB(this.dbEngine, type);
         if (schema) {
           await validateAgainstSchemaOrThrow(schema, styleDef, type);
-        } else {
-          // Fallback to registered schema if not in DB yet
-          await validateOrThrow(type, styleDef, `maia.db:${styleKey}`);
         }
         
         return styleDef;
@@ -459,20 +458,4 @@ export class StyleEngine {
     this.cache.clear();
   }
   
-  /**
-   * Load schema from IndexedDB for on-the-fly validation
-   * @private
-   * @param {string} schemaType - Schema type (e.g., 'style', 'brandStyle')
-   * @returns {Promise<Object|null>} Schema object or null if not found
-   */
-  async _loadSchemaFromDB(schemaType) {
-    if (!this.dbEngine || !this.dbEngine.backend) return null;
-    
-    try {
-      const schemaKey = `@schema/${schemaType}`;
-      return await this.dbEngine.backend.getSchema(schemaKey);
-    } catch (error) {
-      return null;
-    }
-  }
 }

@@ -76,7 +76,8 @@ export class ModuleRegistry {
   }
 
   /**
-   * Clear all registered modules (for testing)
+   * Clear all registered modules
+   * @internal For testing purposes only
    */
   clear() {
     this.modules.clear();

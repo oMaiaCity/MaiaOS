@@ -1,6 +1,6 @@
 /**
  * Core Module - @core/* tools
- * Provides essential todo application functionality
+ * Provides core UI tools (view modes, modals, utilities)
  */
 
 // Import tools from registry

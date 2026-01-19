@@ -10,6 +10,8 @@
 import { MessageQueue } from '../message-queue/message.queue.js';
 // Import validation helper
 import { validateAgainstSchemaOrThrow, validateOrThrow } from '../../../schemata/validation.helper.js';
+// Import schema loader utility
+import { loadSchemaFromDB } from '../../../schemata/schema-loader.js';
 
 export class ActorEngine {
   constructor(styleEngine, viewEngine, moduleRegistry, toolEngine, stateEngine = null) {
@@ -72,12 +74,9 @@ export class ActorEngine {
     // If path is already an object (pre-loaded config), return it directly
     if (typeof path === 'object' && path !== null) {
       // Load schema from IndexedDB and validate on-the-fly
-      const schema = await this._loadSchemaFromDB('actor');
+      const schema = await loadSchemaFromDB(this.dbEngine, 'actor');
       if (schema) {
         await validateAgainstSchemaOrThrow(schema, path, 'actor');
-      } else {
-        // Fallback to registered schema if not in DB yet
-        await validateOrThrow('actor', path, 'maia.db');
       }
       return path;
     }
@@ -93,12 +92,9 @@ export class ActorEngine {
       
       if (actor) {
         // Load schema from IndexedDB and validate on-the-fly
-        const schema = await this._loadSchemaFromDB('actor');
+        const schema = await loadSchemaFromDB(this.dbEngine, 'actor');
         if (schema) {
           await validateAgainstSchemaOrThrow(schema, actor, 'actor');
-        } else {
-          // Fallback to registered schema if not in DB yet
-          await validateOrThrow('actor', actor, `maia.db:${actorKey}`);
         }
         return actor;
       }
@@ -109,23 +105,6 @@ export class ActorEngine {
     throw new Error(`[ActorEngine] Database engine not available`);
   }
   
-  /**
-   * Load schema from IndexedDB for on-the-fly validation
-   * @private
-   * @param {string} schemaType - Schema type (e.g., 'actor', 'context', 'state')
-   * @returns {Promise<Object|null>} Schema object or null if not found
-   */
-  async _loadSchemaFromDB(schemaType) {
-    if (!this.dbEngine || !this.dbEngine.backend) return null;
-    
-    try {
-      const schemaKey = `@schema/${schemaType}`;
-      return await this.dbEngine.backend.getSchema(schemaKey);
-    } catch (error) {
-      // Schema not found in DB, return null (will use fallback)
-      return null;
-    }
-  }
 
   /**
    * Load a .context.maia file
@@ -144,12 +123,9 @@ export class ActorEngine {
       
       if (contextDef) {
         // Load schema from IndexedDB and validate on-the-fly
-        const schema = await this._loadSchemaFromDB('context');
+        const schema = await loadSchemaFromDB(this.dbEngine, 'context');
         if (schema) {
           await validateAgainstSchemaOrThrow(schema, contextDef, 'context');
-        } else {
-          // Fallback to registered schema if not in DB yet
-          await validateOrThrow('context', contextDef, `maia.db:${contextKey}`);
         }
         
         // Return context without metadata
@@ -180,12 +156,9 @@ export class ActorEngine {
       
       if (interfaceDef) {
         // Load schema from IndexedDB and validate on-the-fly
-        const schema = await this._loadSchemaFromDB('interface');
+        const schema = await loadSchemaFromDB(this.dbEngine, 'interface');
         if (schema) {
           await validateAgainstSchemaOrThrow(schema, interfaceDef, 'interface');
-        } else {
-          // Fallback to registered schema if not in DB yet
-          await validateOrThrow('interface', interfaceDef, `maia.db:${interfaceKey}`);
         }
         return interfaceDef;
       }
