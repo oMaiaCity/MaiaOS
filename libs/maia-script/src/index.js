@@ -2,13 +2,24 @@
  * MaiaScript - Main Entry Point
  * 
  * Exports:
- * - createMaiaOS: Create MaiaOS system context
- * - OperationsEngine: Operations engine class
+ * - MaiaOS: Main OS class with boot() method
+ * - All engines for direct use (Actor, View, Style, State, Tool, MaiaDB)
+ * - MaiaDB: Unified database operation engine (DBEngine, IndexedDBBackend)
  */
 
-export { createMaiaOS, OperationsEngine } from "./o/o.js";
+// Export kernel/OS
+export { MaiaOS } from "./o/kernel.js";
 
-// Future exports:
-// export { MaiaScriptEvaluator } from "./o/engines/MaiaScriptEvaluator.js";
-// export { ViewEngine } from "./o/engines/view-engine/view.engine.js";
-// etc.
+// Export all engines
+export { ActorEngine } from "./o/engines/actor-engine/actor.engine.js";
+export { ViewEngine } from "./o/engines/view-engine/view.engine.js";
+export { StyleEngine } from "./o/engines/style-engine/style.engine.js";
+export { StateEngine } from "./o/engines/state-engine/state.engine.js";
+export { ToolEngine } from "./o/engines/tool-engine/tool.engine.js";
+export { MaiaScriptEvaluator } from "./o/engines/MaiaScriptEvaluator.js";
+export { ModuleRegistry } from "./o/engines/ModuleRegistry.js";
+export { MessageQueue } from "./o/engines/message-queue/message.queue.js";
+
+// Export MaiaDB (unified database operation engine)
+export { DBEngine } from "./o/engines/maiadb/db.engine.js";
+export { IndexedDBBackend } from "./o/engines/maiadb/backend/indexeddb.js";

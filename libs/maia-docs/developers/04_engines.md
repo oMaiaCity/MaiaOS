@@ -11,10 +11,12 @@ Engines are the **execution machinery** of MaiaOS. They interpret declarative de
 | Engine | Purpose | Input | Output |
 |--------|---------|-------|--------|
 | `ActorEngine` | Actor lifecycle | Actor definitions | Running actors |
+| `SubscriptionEngine` | Reactive data | Context query objects | Auto-updating context |
 | `StateEngine` | State machines | State definitions + events | State transitions |
 | `ViewEngine` | UI rendering | View definitions | Shadow DOM |
 | `ToolEngine` | Action execution | Tool names + payloads | Side effects |
 | `StyleEngine` | Style compilation | Style definitions | CSS |
+| `DBEngine` | Database operations | @db tool payloads | CRUD results |
 | `ModuleRegistry` | Module loading | Module names | Registered modules |
 | `MaiaScriptEvaluator` | Expression eval | DSL expressions | Evaluated values |
 
@@ -29,6 +31,241 @@ Engines are the **execution machinery** of MaiaOS. They interpret declarative de
 5. **Emit Events** - Notify other engines (if needed)
 
 All engines automatically validate their input data against JSON schemas when loading definitions. See [Schema System](./schemas.md) for details.
+
+### SubscriptionEngine - Context-Driven Reactivity
+
+**SubscriptionEngine** is the central reactive system that makes data automatically update your UI. It's the "magic" behind automatic re-rendering when data changes.
+
+#### What It Does
+
+**The problem it solves:** You want your UI to automatically update when data changes, without writing manual subscription code.
+
+**How it works:**
+
+1. **Scans actor context** - When an actor is created, SubscriptionEngine looks at its context
+2. **Identifies query objects** - Finds objects with a `schema` field (e.g., `{ "schema": "@schema/todos", "filter": null }`)
+3. **Auto-subscribes** - Creates database subscriptions for each query object
+4. **Updates context** - When data changes, updates `actor.context[key]` with new data
+5. **Triggers re-renders** - Schedules actor re-render (batched in microtask)
+6. **Cleans up** - Unsubscribes when actor is destroyed (prevents memory leaks)
+
+#### Architecture
+
+**Location:** `libs/maia-script/src/o/engines/subscription-engine/subscription.engine.js`
+
+```javascript
+export class SubscriptionEngine {
+  constructor(dbEngine, actorEngine) {
+    this.dbEngine = dbEngine;
+    this.actorEngine = actorEngine;
+    this.pendingRerenders = new Set();  // Batching system
+    this.batchTimer = null;
+    this.debugMode = true;
+  }
+  
+  // Initialize subscriptions for an actor
+  async initialize(actor) {
+    await this._subscribeToContext(actor);
+  }
+  
+  // Watch context for query objects
+  async _subscribeToContext(actor) {
+    for (const [key, value] of Object.entries(actor.context)) {
+      // Query object → reactive subscription
+      if (value?.schema?.startsWith('@')) {
+        const unsubscribe = await this.dbEngine.execute({
+          op: 'query',
+          schema: value.schema,
+          filter: value.filter || null,
+          callback: (data) => this._handleDataUpdate(actor.id, key, data)
+        });
+        
+        actor._subscriptions.push(unsubscribe);
+      }
+    }
+  }
+  
+  // Handle data updates
+  _handleDataUpdate(actorId, contextKey, data) {
+    const actor = this.actorEngine.getActor(actorId);
+    if (!actor) return;
+    
+    // Deduplication check
+    if (this._isSameData(actor.context[contextKey], data)) {
+      return; // Skip if data hasn't changed
+    }
+    
+    // Update context
+    actor.context[contextKey] = data;
+    
+    // Schedule batched re-render
+    if (actor._initialRenderComplete) {
+      this._scheduleRerender(actorId);
+    }
+  }
+  
+  // Batching system
+  _scheduleRerender(actorId) {
+    this.pendingRerenders.add(actorId);
+    
+    if (!this.batchTimer) {
+      this.batchTimer = queueMicrotask(() => {
+        this._flushRerenders();
+      });
+    }
+  }
+  
+  _flushRerenders() {
+    const actorIds = Array.from(this.pendingRerenders);
+    this.pendingRerenders.clear();
+    this.batchTimer = null;
+    
+    for (const actorId of actorIds) {
+      this.actorEngine.rerender(actorId);
+    }
+  }
+  
+  // Cleanup
+  cleanup(actor) {
+    actor._subscriptions.forEach(unsubscribe => unsubscribe());
+    actor._subscriptions = [];
+    this.pendingRerenders.delete(actor.id);
+  }
+}
+```
+
+#### Integration with ActorEngine
+
+**In ActorEngine:**
+
+```javascript
+class ActorEngine {
+  constructor(styleEngine, viewEngine, ..., subscriptionEngine) {
+    // ... other initialization
+    this.subscriptionEngine = subscriptionEngine;
+  }
+  
+  async createActor(actorPath, container, os) {
+    // ... create actor instance
+    
+    // Initialize subscriptions
+    if (this.subscriptionEngine) {
+      await this.subscriptionEngine.initialize(actor);
+    }
+    
+    // ... render view
+  }
+  
+  destroyActor(actorId) {
+    const actor = this.actors.get(actorId);
+    if (actor) {
+      // Cleanup subscriptions
+      if (this.subscriptionEngine) {
+        this.subscriptionEngine.cleanup(actor);
+      }
+      // ... rest of cleanup
+    }
+  }
+}
+```
+
+#### Query Object Format
+
+A **query object** in context declares a reactive data subscription:
+
+```json
+{
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  }
+}
+```
+
+**Properties:**
+- `schema` (required): Database collection ID (must start with `@`)
+- `filter` (optional): Filter criteria (null = get all)
+
+**Examples:**
+
+```json
+// All todos
+{ "schema": "@schema/todos", "filter": null }
+
+// Incomplete todos only
+{ "schema": "@schema/todos", "filter": { "done": false } }
+
+// Completed todos only
+{ "schema": "@schema/todos", "filter": { "done": true } }
+```
+
+#### Batching and Deduplication
+
+**Batching** - Multiple updates in quick succession are batched into a single re-render:
+
+```
+Update 1 → Schedule re-render (microtask)
+Update 2 → Already scheduled, add to batch
+Update 3 → Already scheduled, add to batch
+  ↓
+Microtask runs → Re-render ONCE
+```
+
+**Result:** 3 updates = 1 re-render (instead of 3 re-renders)
+
+**Deduplication** - If data hasn't changed, skip re-render:
+
+```javascript
+// Old: [{ id: "1", text: "Buy milk" }]
+// New: [{ id: "1", text: "Buy milk" }]
+// Result: Skip re-render (data is the same)
+```
+
+**Result:** No unnecessary re-renders!
+
+#### Debug Logging
+
+SubscriptionEngine logs all operations in development mode:
+
+```javascript
+[SubscriptionEngine] Initialized
+[SubscriptionEngine] Initializing actor_list_001
+[SubscriptionEngine] ✅ actor_list_001 → @schema/todos → $todos
+[SubscriptionEngine] actor_list_001 initialized with 1 subscription(s)
+[SubscriptionEngine] 📥 actor_list_001.$todos initial data (3)
+[SubscriptionEngine] 🔄 actor_list_001.$todos updated (4)
+[SubscriptionEngine] 🎨 Batched re-render: 1 actor(s) [actor_list_001]
+```
+
+**Emoji legend:**
+- ✅ Subscription created
+- 📥 Initial data received
+- 🔄 Data updated
+- ⏭️ Skipped (no change)
+- 🎨 Re-rendering
+- 🧹 Cleaning up
+
+#### Why This Architecture?
+
+**Before (scattered subscriptions):**
+- Subscription logic in ActorEngine, StateEngine, query tools
+- Manual subscription tracking
+- Memory leaks from forgotten unsubscribes
+- Inconsistent patterns
+- Hard to debug
+
+**After (centralized SubscriptionEngine):**
+- ✅ All reactivity in one place
+- ✅ Context-driven (declarative)
+- ✅ Automatic cleanup (no memory leaks)
+- ✅ Batched re-renders (performance)
+- ✅ Deduplicated updates (efficiency)
+- ✅ Clean debug logs (visibility)
+- ✅ Future-ready (CoJSON migration)
+
+**Key insight:** Actors never think about subscriptions. They just declare what data they need in context, and SubscriptionEngine handles everything.
+
+See [Reactive Data System](./06_reactive-queries.md) for detailed usage examples.
 
 ### Engine Interface Pattern
 

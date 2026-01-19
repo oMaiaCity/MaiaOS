@@ -3,21 +3,37 @@
  * Provides actor interface validation and schema management
  */
 
+// Import tools from registry
+import { getTool } from '../tools/index.js';
+
 export class InterfaceModule {
   /**
    * Register interface tools with the system
    * @param {ModuleRegistry} registry - Module registry instance
-   * @param {ToolEngine} toolEngine - Tool engine instance (passed from kernel)
    */
-  static async register(registry, toolEngine) {
-    const tools = [
+  static async register(registry) {
+    // Get toolEngine from registry (stored by kernel during boot)
+    const toolEngine = registry._toolEngine;
+    if (!toolEngine) {
+      throw new Error('[InterfaceModule] ToolEngine not available in registry');
+    }
+    
+    const toolNames = [
       'validateInterface'
     ];
     
-    console.log(`[InterfaceModule] Registering ${tools.length} tools...`);
+    console.log(`[InterfaceModule] Registering ${toolNames.length} tools...`);
     
-    for (const tool of tools) {
-      await toolEngine.registerTool(`interface/${tool}`, `@interface/${tool}`);
+    for (const toolName of toolNames) {
+      const namespacePath = `interface/${toolName}`;
+      const tool = getTool(namespacePath);
+      
+      if (tool) {
+        await toolEngine.registerTool(namespacePath, `@interface/${toolName}`, {
+          definition: tool.definition,
+          function: tool.function
+        });
+      }
     }
     
     // Register module with config
@@ -25,7 +41,7 @@ export class InterfaceModule {
       version: '1.0.0',
       description: 'Actor interface validation and schema management',
       namespace: '@interface',
-      tools: tools.map(t => `@interface/${t}`)
+      tools: toolNames.map(t => `@interface/${t}`)
     });
     
     console.log('[InterfaceModule] Registration complete');
@@ -47,11 +63,5 @@ export class InterfaceModule {
  * @param {ModuleRegistry} registry - Module registry instance
  */
 export async function register(registry) {
-  // Get toolEngine from registry context (will be set by kernel)
-  const toolEngine = registry._toolEngine;
-  if (!toolEngine) {
-    throw new Error('[InterfaceModule] ToolEngine not available in registry context');
-  }
-  
-  await InterfaceModule.register(registry, toolEngine);
+  await InterfaceModule.register(registry);
 }

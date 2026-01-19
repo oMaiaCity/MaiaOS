@@ -3,6 +3,9 @@
  * Provides drag-and-drop functionality with configuration
  */
 
+// Import tools from registry
+import { getTool } from '../tools/index.js';
+
 export class DragDropModule {
   /**
    * Drag-drop configuration
@@ -39,10 +42,15 @@ export class DragDropModule {
   /**
    * Register drag-drop tools with the system
    * @param {ModuleRegistry} registry - Module registry instance
-   * @param {ToolEngine} toolEngine - Tool engine instance
    */
-  static async register(registry, toolEngine) {
-    const tools = [
+  static async register(registry) {
+    // Get toolEngine from registry (stored by kernel during boot)
+    const toolEngine = registry._toolEngine;
+    if (!toolEngine) {
+      throw new Error('[DragDropModule] ToolEngine not available in registry');
+    }
+    
+    const toolNames = [
       'start',
       'end',
       'drop',
@@ -50,21 +58,35 @@ export class DragDropModule {
       'dragLeave'
     ];
     
-    console.log(`[DragDropModule] Registering ${tools.length + 1} tools...`);
+    console.log(`[DragDropModule] Registering ${toolNames.length + 1} tools...`);
     
     // Register @context/update first (critical for input handling)
     try {
-      await toolEngine.registerTool(`context/update`, `@context/update`);
+      const contextUpdateTool = getTool('context/update');
+      if (contextUpdateTool) {
+        await toolEngine.registerTool('context/update', '@context/update', {
+          definition: contextUpdateTool.definition,
+          function: contextUpdateTool.function
+        });
+      }
     } catch (error) {
       console.error('[DragDropModule] Failed to register @context/update:', error.message);
     }
     
     // Register drag-drop tools
-    for (const tool of tools) {
+    for (const toolName of toolNames) {
       try {
-        await toolEngine.registerTool(`dragdrop/${tool}`, `@dragdrop/${tool}`);
+        const namespacePath = `dragdrop/${toolName}`;
+        const tool = getTool(namespacePath);
+        
+        if (tool) {
+          await toolEngine.registerTool(namespacePath, `@dragdrop/${toolName}`, {
+            definition: tool.definition,
+            function: tool.function
+          });
+        }
       } catch (error) {
-        console.error(`[DragDropModule] Failed to register @dragdrop/${tool}:`, error.message);
+        console.error(`[DragDropModule] Failed to register @dragdrop/${toolName}:`, error.message);
       }
     }
     
@@ -73,7 +95,7 @@ export class DragDropModule {
       version: '1.0.0',
       description: 'Drag-and-drop tools and configuration',
       namespace: '@dragdrop',
-      tools: tools.map(t => `@dragdrop/${t}`).concat(['@context/update'])
+      tools: toolNames.map(t => `@dragdrop/${t}`).concat(['@context/update'])
     });
     
     console.log('[DragDropModule] Registration complete');
@@ -129,11 +151,5 @@ export class DragDropModule {
  * @param {ModuleRegistry} registry - Module registry instance
  */
 export async function register(registry) {
-  // Get toolEngine from registry context (will be set by kernel)
-  const toolEngine = registry._toolEngine;
-  if (!toolEngine) {
-    throw new Error('[DragDropModule] ToolEngine not available in registry context');
-  }
-  
-  await DragDropModule.register(registry, toolEngine);
+  await DragDropModule.register(registry);
 }

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todos - Maia City</title>
+  
+  <!-- Favicons -->
+  <link rel="icon" type="image/svg+xml" href="/brand/favicon/favicon.svg" />
+  
+  <style>
+    /* 
+      HOST CSS - ABSOLUTELY MINIMAL
+      This is outside Shadow DOM and should only handle layout.
+      All styling happens inside Shadow DOM via Constructable Stylesheets.
+    */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #f8f9fa;
+      font-family: system-ui, sans-serif;
+      color: #333;
+      font-size: 14px;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .host-wrapper {
+      width: 100vw;
+      height: 100vh;
+      background: #f8f9fa;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <!-- HOST: Minimal layout wrapper only -->
+  <div class="host-wrapper">
+    <div id="actor-todo"></div>
+  </div>
+  
+  <script type="module">
+    // Import the todos vibe loader from @MaiaOS/script
+    import { loadTodosVibe } from '@MaiaOS/script/vibes/todos/loader.js';
+    
+    async function boot() {
+      try {
+        // Get container
+        const container = document.getElementById('actor-todo');
+        
+        // Load the todos vibe (all paths are handled internally by maia-script)
+        const { os, vibe, actor } = await loadTodosVibe(container);
+        
+        console.log('💡 Inspect #shadow-root elements to see complete style isolation');
+        console.log('🎯 Try the todo app - all actions go through state machine!');
+        console.log('🔄 To see config changes: Edit .maia files → Save → Refresh (F5)');
+        
+        // Expose globally for debugging
+        window.MaiaOS = os;
+        window.os = os;
+        window.engines = os.getEngines();
+        window.vibe = vibe;
+        window.todoActor = actor;
+        
+      } catch (error) {
+        console.error('❌ Boot failed:', error);
+        console.error('Stack:', error.stack);
+      }
+    }
+    
+    boot();
+  </script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Developers
 
-**Auto-generated:** 2026-01-19T14:23:15.790Z
+**Auto-generated:** 2026-01-19T21:44:40.626Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -2892,10 +2892,12 @@ Engines are the **execution machinery** of MaiaOS. They interpret declarative de
 | Engine | Purpose | Input | Output |
 |--------|---------|-------|--------|
 | `ActorEngine` | Actor lifecycle | Actor definitions | Running actors |
+| `SubscriptionEngine` | Reactive data | Context query objects | Auto-updating context |
 | `StateEngine` | State machines | State definitions + events | State transitions |
 | `ViewEngine` | UI rendering | View definitions | Shadow DOM |
 | `ToolEngine` | Action execution | Tool names + payloads | Side effects |
 | `StyleEngine` | Style compilation | Style definitions | CSS |
+| `DBEngine` | Database operations | @db tool payloads | CRUD results |
 | `ModuleRegistry` | Module loading | Module names | Registered modules |
 | `MaiaScriptEvaluator` | Expression eval | DSL expressions | Evaluated values |
 
@@ -2910,6 +2912,241 @@ Engines are the **execution machinery** of MaiaOS. They interpret declarative de
 5. **Emit Events** - Notify other engines (if needed)
 
 All engines automatically validate their input data against JSON schemas when loading definitions. See [Schema System](./schemas.md) for details.
+
+### SubscriptionEngine - Context-Driven Reactivity
+
+**SubscriptionEngine** is the central reactive system that makes data automatically update your UI. It's the "magic" behind automatic re-rendering when data changes.
+
+#### What It Does
+
+**The problem it solves:** You want your UI to automatically update when data changes, without writing manual subscription code.
+
+**How it works:**
+
+1. **Scans actor context** - When an actor is created, SubscriptionEngine looks at its context
+2. **Identifies query objects** - Finds objects with a `schema` field (e.g., `{ "schema": "@schema/todos", "filter": null }`)
+3. **Auto-subscribes** - Creates database subscriptions for each query object
+4. **Updates context** - When data changes, updates `actor.context[key]` with new data
+5. **Triggers re-renders** - Schedules actor re-render (batched in microtask)
+6. **Cleans up** - Unsubscribes when actor is destroyed (prevents memory leaks)
+
+#### Architecture
+
+**Location:** `libs/maia-script/src/o/engines/subscription-engine/subscription.engine.js`
+
+```javascript
+export class SubscriptionEngine {
+  constructor(dbEngine, actorEngine) {
+    this.dbEngine = dbEngine;
+    this.actorEngine = actorEngine;
+    this.pendingRerenders = new Set();  // Batching system
+    this.batchTimer = null;
+    this.debugMode = true;
+  }
+  
+  // Initialize subscriptions for an actor
+  async initialize(actor) {
+    await this._subscribeToContext(actor);
+  }
+  
+  // Watch context for query objects
+  async _subscribeToContext(actor) {
+    for (const [key, value] of Object.entries(actor.context)) {
+      // Query object → reactive subscription
+      if (value?.schema?.startsWith('@')) {
+        const unsubscribe = await this.dbEngine.execute({
+          op: 'query',
+          schema: value.schema,
+          filter: value.filter || null,
+          callback: (data) => this._handleDataUpdate(actor.id, key, data)
+        });
+        
+        actor._subscriptions.push(unsubscribe);
+      }
+    }
+  }
+  
+  // Handle data updates
+  _handleDataUpdate(actorId, contextKey, data) {
+    const actor = this.actorEngine.getActor(actorId);
+    if (!actor) return;
+    
+    // Deduplication check
+    if (this._isSameData(actor.context[contextKey], data)) {
+      return; // Skip if data hasn't changed
+    }
+    
+    // Update context
+    actor.context[contextKey] = data;
+    
+    // Schedule batched re-render
+    if (actor._initialRenderComplete) {
+      this._scheduleRerender(actorId);
+    }
+  }
+  
+  // Batching system
+  _scheduleRerender(actorId) {
+    this.pendingRerenders.add(actorId);
+    
+    if (!this.batchTimer) {
+      this.batchTimer = queueMicrotask(() => {
+        this._flushRerenders();
+      });
+    }
+  }
+  
+  _flushRerenders() {
+    const actorIds = Array.from(this.pendingRerenders);
+    this.pendingRerenders.clear();
+    this.batchTimer = null;
+    
+    for (const actorId of actorIds) {
+      this.actorEngine.rerender(actorId);
+    }
+  }
+  
+  // Cleanup
+  cleanup(actor) {
+    actor._subscriptions.forEach(unsubscribe => unsubscribe());
+    actor._subscriptions = [];
+    this.pendingRerenders.delete(actor.id);
+  }
+}
+```
+
+#### Integration with ActorEngine
+
+**In ActorEngine:**
+
+```javascript
+class ActorEngine {
+  constructor(styleEngine, viewEngine, ..., subscriptionEngine) {
+    // ... other initialization
+    this.subscriptionEngine = subscriptionEngine;
+  }
+  
+  async createActor(actorPath, container, os) {
+    // ... create actor instance
+    
+    // Initialize subscriptions
+    if (this.subscriptionEngine) {
+      await this.subscriptionEngine.initialize(actor);
+    }
+    
+    // ... render view
+  }
+  
+  destroyActor(actorId) {
+    const actor = this.actors.get(actorId);
+    if (actor) {
+      // Cleanup subscriptions
+      if (this.subscriptionEngine) {
+        this.subscriptionEngine.cleanup(actor);
+      }
+      // ... rest of cleanup
+    }
+  }
+}
+```
+
+#### Query Object Format
+
+A **query object** in context declares a reactive data subscription:
+
+```json
+{
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  }
+}
+```
+
+**Properties:**
+- `schema` (required): Database collection ID (must start with `@`)
+- `filter` (optional): Filter criteria (null = get all)
+
+**Examples:**
+
+```json
+// All todos
+{ "schema": "@schema/todos", "filter": null }
+
+// Incomplete todos only
+{ "schema": "@schema/todos", "filter": { "done": false } }
+
+// Completed todos only
+{ "schema": "@schema/todos", "filter": { "done": true } }
+```
+
+#### Batching and Deduplication
+
+**Batching** - Multiple updates in quick succession are batched into a single re-render:
+
+```
+Update 1 → Schedule re-render (microtask)
+Update 2 → Already scheduled, add to batch
+Update 3 → Already scheduled, add to batch
+  ↓
+Microtask runs → Re-render ONCE
+```
+
+**Result:** 3 updates = 1 re-render (instead of 3 re-renders)
+
+**Deduplication** - If data hasn't changed, skip re-render:
+
+```javascript
+// Old: [{ id: "1", text: "Buy milk" }]
+// New: [{ id: "1", text: "Buy milk" }]
+// Result: Skip re-render (data is the same)
+```
+
+**Result:** No unnecessary re-renders!
+
+#### Debug Logging
+
+SubscriptionEngine logs all operations in development mode:
+
+```javascript
+[SubscriptionEngine] Initialized
+[SubscriptionEngine] Initializing actor_list_001
+[SubscriptionEngine] ✅ actor_list_001 → @schema/todos → $todos
+[SubscriptionEngine] actor_list_001 initialized with 1 subscription(s)
+[SubscriptionEngine] 📥 actor_list_001.$todos initial data (3)
+[SubscriptionEngine] 🔄 actor_list_001.$todos updated (4)
+[SubscriptionEngine] 🎨 Batched re-render: 1 actor(s) [actor_list_001]
+```
+
+**Emoji legend:**
+- ✅ Subscription created
+- 📥 Initial data received
+- 🔄 Data updated
+- ⏭️ Skipped (no change)
+- 🎨 Re-rendering
+- 🧹 Cleaning up
+
+#### Why This Architecture?
+
+**Before (scattered subscriptions):**
+- Subscription logic in ActorEngine, StateEngine, query tools
+- Manual subscription tracking
+- Memory leaks from forgotten unsubscribes
+- Inconsistent patterns
+- Hard to debug
+
+**After (centralized SubscriptionEngine):**
+- ✅ All reactivity in one place
+- ✅ Context-driven (declarative)
+- ✅ Automatic cleanup (no memory leaks)
+- ✅ Batched re-renders (performance)
+- ✅ Deduplicated updates (efficiency)
+- ✅ Clean debug logs (visibility)
+- ✅ Future-ready (CoJSON migration)
+
+**Key insight:** Actors never think about subscriptions. They just declare what data they need in context, and SubscriptionEngine handles everything.
+
+See [Reactive Data System](./06_reactive-queries.md) for detailed usage examples.
 
 ### Engine Interface Pattern
 
@@ -3669,498 +3906,1227 @@ When migrating to Jazz-native architecture:
 
 *Source: developers/06_reactive-queries.md*
 
-# Reactive Queries - Technical Architecture
+# Reactive Data System - How Data Magically Updates Your UI
 
-## Overview
+## What Problem Does This Solve?
 
-The reactive query system provides observable data management through a localStorage-backed ReactiveStore with automatic context updates and actor re-rendering when data changes.
+Imagine you're building a todo app. When you add a new todo, you want it to automatically appear in the list without refreshing the page. When you mark a todo as done, you want it to instantly move from the "Todo" column to the "Done" column. 
 
-## Architecture Components
+**The problem:** How do you make your UI automatically update when your data changes?
 
-### 1. ReactiveStore
+**The old way:** You'd have to manually write code to update the UI every time data changes. It's like having to manually redraw a picture every time someone adds a new element.
 
-**Location:** `libs/maia-script/src/o/engines/ReactiveStore.js`
+**The MaiaOS way:** Just declare what data you need in your `context`, and MaiaOS automatically watches for changes and updates your UI. It's like magic! ✨
 
-An observable wrapper around localStorage that implements the observer pattern:
+## Quick Example - See It in Action
 
-```javascript
-class ReactiveStore {
-  constructor(storageKey = 'maiaos_data');
-  
-  // Core CRUD
-  getCollection(schema): Array
-  setCollection(schema, data): void  // Triggers observers
-  
-  // Reactive subscriptions
-  subscribe(schema, filter, callback): unsubscribe function
-  notify(schema): void
-  
-  // Query operations
-  query(schema, filter): Array
-}
-```
+**Step 1: Declare what data you need (in your context)**
 
-**Key Features:**
-- Observer pattern for reactive updates
-- JSON-based filtering (eq, ne, gt, lt, gte, lte, in, contains)
-- localStorage persistence
-- Automatic notification of subscribers
-- Memory leak prevention via unsubscribe functions
-
-### 2. Query Tools
-
-**Location:** `libs/maia-script/src/o/tools/query/`
-
-Three tools for interacting with ReactiveStore:
-
-#### @query/subscribe
-
-Reactive subscription to a collection. Context auto-updates when data changes.
-
-```javascript
+```json
 {
-  "tool": "@query/subscribe",
-  "payload": {
-    "schema": "todos",
-    "filter": { "field": "done", "op": "eq", "value": false },
-    "target": "todosTodo"
-  }
-}
-```
-
-**Behavior:**
-- Immediately calls callback with current data
-- Updates actor context when data changes
-- Triggers actor re-render automatically
-- Stores unsubscribe function in `actor._queryObservers` for cleanup
-
-#### @query/get
-
-One-time (non-reactive) query. Loads data into context once.
-
-```javascript
-{
-  "tool": "@query/get",
-  "payload": {
-    "schema": "todos",
-    "target": "todos"
-  }
-}
-```
-
-**Use Cases:**
-- Initial data loading without reactivity
-- Performance optimization (avoid unnecessary updates)
-- Static data that doesn't change
-
-#### @query/filter
-
-One-time filtered query. Non-reactive.
-
-```javascript
-{
-  "tool": "@query/filter",
-  "payload": {
-    "schema": "todos",
-    "filter": { "field": "done", "op": "eq", "value": true },
-    "target": "completedTodos"
-  }
-}
-```
-
-**Supported Operators:**
-- `eq`: equals (===)
-- `ne`: not equals (!==)
-- `gt`: greater than (>)
-- `lt`: less than (<)
-- `gte`: greater than or equal (>=)
-- `lte`: less than or equal (<=)
-- `in`: value in array
-- `contains`: string contains substring
-
-### 3. Mutation Tools
-
-**Location:** `libs/maia-script/src/o/tools/mutation/`
-
-All mutation tools write to ReactiveStore and trigger observer notifications:
-
-```javascript
-// OLD (direct context manipulation)
-actor.context[schema].push(entity);
-
-// NEW (ReactiveStore with automatic notifications)
-const store = actor.actorEngine.reactiveStore;
-const collection = store.getCollection(schema);
-collection.push(entity);
-store.setCollection(schema, collection); // Triggers notify()
-```
-
-**Tools:**
-- `@mutation/create`: Create new entity
-- `@mutation/update`: Update existing entity
-- `@mutation/delete`: Delete entity
-- `@mutation/toggle`: Toggle boolean field
-
-### 4. ActorEngine Integration
-
-**Location:** `libs/maia-script/src/o/engines/actor-engine/actor.engine.js`
-
-**Initialization:**
-
-```javascript
-constructor(styleEngine, viewEngine, moduleRegistry, toolEngine, stateEngine) {
-  // ... existing initialization
-  this.reactiveStore = new ReactiveStore('maiaos_data');
-  console.log('[ActorEngine] ReactiveStore initialized');
-}
-```
-
-**Actor Creation:**
-
-```javascript
-const actor = {
-  id: actorId,
-  config: actorConfig,
-  shadowRoot,
-  context,
-  containerElement,
-  actorEngine: this,
-  inbox: actorConfig.inbox || [],
-  subscriptions: actorConfig.subscriptions || [],
-  inboxWatermark: actorConfig.inboxWatermark || 0,
-  _queryObservers: []  // For cleanup
-};
-```
-
-**Actor Destruction:**
-
-```javascript
-destroyActor(actorId) {
-  const actor = this.actors.get(actorId);
-  if (actor) {
-    // Cleanup query observers
-    if (actor._queryObservers && actor._queryObservers.length > 0) {
-      actor._queryObservers.forEach(unsubscribe => unsubscribe());
-      actor._queryObservers = [];
+  "context": {
+    "todos": { 
+      "schema": "@schema/todos", 
+      "filter": null 
     }
-    // ... rest of cleanup
   }
 }
 ```
 
-## Data Flow
+**Step 2: Use it in your view**
 
-### Reactive Subscription Flow
-
-```
-1. State Machine Entry Action
-   └─> @query/subscribe tool
-       └─> ReactiveStore.subscribe(schema, filter, callback)
-           ├─> Store observer in observers Map
-           ├─> Immediately call callback with current data
-           │   └─> Update actor.context[target]
-           │       └─> Trigger actor.rerender()
-           └─> Return unsubscribe function
-               └─> Store in actor._queryObservers
-
-2. Data Mutation
-   └─> @mutation/* tool
-       └─> ReactiveStore.setCollection(schema, data)
-           ├─> Save to localStorage
-           └─> ReactiveStore.notify(schema)
-               └─> Call all observer callbacks
-                   └─> Update actor.context[target]
-                       └─> Trigger actor.rerender()
+```json
+{
+  "$each": {
+    "items": "$todos",
+    "template": {
+      "tag": "li",
+      "text": "$$item.text"
+    }
+  }
+}
 ```
 
-### Example: Todo App
+**Step 3: There is no step 3!** When you create a new todo using the `@db` tool, your view automatically updates. No extra code needed.
 
-**Root Actor (vibe_root):**
-- Creates todos via `@mutation/create`
-- Publishes `TODO_CREATED` message to children
+## How It Works (The Simple Version)
 
-**Child Actor (todo_list):**
-- Subscribes to entire `todos` collection
-- Automatically updates when any todo changes
+Think of MaiaOS like a helpful assistant watching your data:
 
-**Child Actor (kanban_view):**
-- Subscribes to filtered `todos` (done: false)
-- Subscribes to filtered `todos` (done: true)
-- Each filter updates independently
+1. **You declare your needs**: "I need all todos" (in context)
+2. **MaiaOS subscribes for you**: A special engine called SubscriptionEngine notices your declaration and starts watching the database
+3. **Data changes**: Someone creates a new todo
+4. **MaiaOS notifies you**: SubscriptionEngine says "Hey! Your todos changed!"
+5. **UI updates automatically**: Your view re-renders with the new data
+
+**It's like subscribing to a newsletter** - you tell the system what you want to know about, and it automatically sends you updates when things change.
+
+## The Three Magic Ingredients
+
+### 1. Context = "What I Need" (Declarative)
+
+Your actor's `context` tells MaiaOS what data you need. Use **query objects** to declare reactive data subscriptions:
+
+```json
+{
+  "context": {
+    "todos": { 
+      "schema": "@schema/todos", 
+      "filter": null 
+    }
+  }
+}
+```
+
+**What this means:** "I need all items from the 'todos' collection, and keep me updated when they change."
+
+**Think of it like:** Ordering a newspaper subscription - you tell them what you want, and they deliver it to you every day.
+
+### 2. SubscriptionEngine = "The Watcher" (Automatic)
+
+SubscriptionEngine is a behind-the-scenes helper that:
+- Scans your context for query objects
+- Automatically subscribes to the database
+- Listens for changes
+- Updates your context when data changes
+- Triggers UI re-renders
+
+**You never interact with SubscriptionEngine directly** - it just works! Like electricity in your house - you don't think about it, you just flip the switch and the lights turn on.
+
+### 3. MaiaDB = "The Data Store" (Reactive)
+
+MaiaDB is the database that stores your data. It's special because:
+- It knows when data changes
+- It can notify subscribers (like SubscriptionEngine)
+- It's reactive by default (no manual "watch" setup)
+
+**Think of it like:** A smart filing cabinet that automatically tells you when someone adds or removes a file.
+
+## Context-Driven Reactivity - Your Data Blueprint
+
+The key concept: **Your context IS your data subscription blueprint.**
+
+### Simple Example - All Todos
+
+```json
+{
+  "context": {
+    "todos": {
+      "schema": "@schema/todos",
+      "filter": null
+    }
+  }
+}
+```
+
+**What happens:**
+1. SubscriptionEngine sees `"todos"` has a `schema` field starting with `@`
+2. It automatically creates a subscription to `@schema/todos`
+3. It initializes `context.todos = []`
+4. When data comes in, it sets `context.todos = [actual data]`
+5. Your view re-renders with the new data
+
+**In your view, you just use it:**
+
+```json
+{
+  "$each": {
+    "items": "$todos",
+    "template": {
+      "tag": "li",
+      "text": "$$item.text"
+    }
+  }
+}
+```
+
+### Filtered Example - Only Incomplete Todos
+
+```json
+{
+  "context": {
+    "todosTodo": {
+      "schema": "@schema/todos",
+      "filter": { "done": false }
+    },
+    "todosDone": {
+      "schema": "@schema/todos",
+      "filter": { "done": true }
+    }
+  }
+}
+```
+
+**What happens:**
+1. SubscriptionEngine creates TWO subscriptions (one for each context key)
+2. `todosTodo` gets all todos where `done === false`
+3. `todosDone` gets all todos where `done === true`
+4. Both update independently when data changes
+
+**In your view (Kanban board example):**
+
+```json
+{
+  "container": {
+    "tag": "div",
+    "class": "kanban",
+    "children": [
+      {
+        "tag": "div",
+        "class": "column",
+        "children": [
+          { "tag": "h2", "text": "Todo" },
+          {
+            "$each": {
+              "items": "$todosTodo",
+              "template": { "tag": "div", "text": "$$item.text" }
+            }
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "class": "column",
+        "children": [
+          { "tag": "h2", "text": "Done" },
+          {
+            "$each": {
+              "items": "$todosDone",
+              "template": { "tag": "div", "text": "$$item.text" }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## Query Objects - The Subscription Format
+
+A **query object** is how you declare "I want this data, reactively":
+
+```json
+{
+  "schema": "@schema/todos",
+  "filter": { "done": false }
+}
+```
+
+**Properties:**
+
+| Property | Required | Type | Description |
+|----------|----------|------|-------------|
+| `schema` | Yes | string | Database collection ID (must start with `@`) |
+| `filter` | No | object or null | Filter criteria (null = get all) |
+
+**Filter examples:**
+
+```json
+// All items
+{ "schema": "@schema/todos", "filter": null }
+
+// Incomplete todos
+{ "schema": "@schema/todos", "filter": { "done": false } }
+
+// Completed todos
+{ "schema": "@schema/todos", "filter": { "done": true } }
+
+// Specific user's todos
+{ "schema": "@schema/todos", "filter": { "userId": "123" } }
+```
+
+## The @ Reference System - Future-Proof IDs
+
+You might notice all schema references start with `@` (like `@schema/todos`, `@list`, `@brand`).
+
+**Why the @ symbol?**
+
+Think of `@` references as **symbolic names** that point to something. Like how `@username` on social media points to a user profile.
+
+**Right now:** `@schema/todos` is a string ID that MaiaDB uses to look up data.
+
+**In the future:** When MaiaOS migrates to CoJSON (our CRDT-based sync system), these `@` references will become **CoValue IDs** - unique identifiers for collaborative data objects that can sync across devices.
+
+**What this means for you:**
+- Keep using `@` prefixes for schemas, actors, views, styles, etc.
+- Your code will automatically work when we migrate to CoJSON
+- No breaking changes needed!
+
+**Examples:**
+```json
+{
+  "todos": { "schema": "@schema/todos", "filter": null },  // ← Data reference
+  "currentView": "@list",                                   // ← View reference (future: reactive)
+  "styleRef": "@brand"                                      // ← Style reference (future: reactive)
+}
+```
+
+## Context Types - Different Kinds of Data
+
+Your context can hold different types of data:
+
+### 1. Reactive Data (Query Objects)
+
+```json
+{
+  "todos": { "schema": "@schema/todos", "filter": null }
+}
+```
+
+**Auto-subscribes** - Changes in database automatically update context.
+
+### 2. @ References (Future Reactive)
+
+```json
+{
+  "currentView": "@list",
+  "currentStyle": "@brand"
+}
+```
+
+**Right now:** Static references to actors, views, styles.
+**Future:** Will be reactive (hot-reload when definitions change).
+
+### 3. Scalar Values (Non-Reactive)
+
+```json
+{
+  "newTodoText": "",
+  "viewMode": "list",
+  "isModalOpen": false
+}
+```
+
+**Updated by tools** - Only change when you explicitly update them via tools (like `@context/update`).
+
+## Creating, Updating, Deleting Data - The @db Tool
+
+To modify data, use the **`@db` tool**. It's a unified database operation tool that handles all CRUD operations.
+
+### Creating New Data
+
+**In your state machine:**
+
+```json
+{
+  "states": {
+    "creating": {
+      "entry": {
+        "tool": "@db",
+        "payload": {
+          "op": "create",
+          "schema": "@schema/todos",
+          "data": {
+            "text": "$newTodoText",
+            "done": false
+          }
+        }
+      },
+      "on": {
+        "SUCCESS": "idle"
+      }
+    }
+  }
+}
+```
+
+**What happens:**
+1. State machine sends event `CREATE_TODO`
+2. Transition to `creating` state
+3. Execute `@db` tool with `op: "create"`
+4. Database creates new todo
+5. **SubscriptionEngine automatically notifies subscribers**
+6. Your `context.todos` updates
+7. View re-renders with new todo
+8. Transition to `idle` state
+
+**You never manually update context** - the SubscriptionEngine does it for you!
+
+### Updating Data
+
+```json
+{
+  "tool": "@db",
+  "payload": {
+    "op": "update",
+    "schema": "@schema/todos",
+    "id": "$editingId",
+    "data": {
+      "text": "$newTodoText"
+    }
+  }
+}
+```
+
+### Toggling Boolean Fields
+
+```json
+{
+  "tool": "@db",
+  "payload": {
+    "op": "toggle",
+    "schema": "@schema/todos",
+    "id": "$$id",
+    "field": "done"
+  }
+}
+```
+
+**Special operation** - Flips a boolean field from `true` to `false` or vice versa. Perfect for todo completion!
+
+### Deleting Data
+
+```json
+{
+  "tool": "@db",
+  "payload": {
+    "op": "delete",
+    "schema": "@schema/todos",
+    "id": "$$id"
+  }
+}
+```
+
+## Data Flow - From Click to Update
+
+Let's trace what happens when you click "Add Todo":
+
+```
+1. User types "Buy milk" in input
+   ↓
+2. User clicks "Add" button
+   ↓
+3. View sends event: { "send": "CREATE_TODO" }
+   ↓
+4. State machine transitions: "idle" → "creating"
+   ↓
+5. State machine entry action executes @db tool:
+   { "op": "create", "schema": "@schema/todos", "data": {...} }
+   ↓
+6. MaiaDB creates new todo in IndexedDB:
+   { "id": "123", "text": "Buy milk", "done": false }
+   ↓
+7. MaiaDB notifies observers: "Hey! @schema/todos changed!"
+   ↓
+8. SubscriptionEngine receives notification
+   ↓
+9. SubscriptionEngine updates context:
+   actor.context.todos = [new data from database]
+   ↓
+10. SubscriptionEngine schedules re-render (batched in microtask)
+   ↓
+11. ActorEngine.rerender(actor) is called
+   ↓
+12. ViewEngine re-renders with new context.todos
+   ↓
+13. User sees "Buy milk" appear in the list! ✨
+   ↓
+14. State machine transitions: "creating" → "idle"
+```
+
+**Key insight:** You never manually update `context.todos`. The SubscriptionEngine does it automatically when the database changes.
+
+## SubscriptionEngine - The Magic Behind the Scenes
+
+You don't directly interact with SubscriptionEngine, but it's helpful to understand what it does for you:
+
+### What It Does
+
+1. **Scans your context** - Looks for query objects (objects with `schema` field)
+2. **Auto-subscribes** - Creates database subscriptions for each query object
+3. **Watches for changes** - Listens to database notifications
+4. **Updates context** - Sets `context[key]` when data changes
+5. **Batches re-renders** - Collects multiple updates and re-renders once
+6. **Deduplicates** - Skips re-renders if data hasn't actually changed
+7. **Cleans up** - Unsubscribes when actor is destroyed (prevents memory leaks)
+
+### Lifecycle
+
+```
+Actor Created
+  ↓
+SubscriptionEngine.initialize(actor)
+  ↓
+Scan context for query objects
+  ↓
+For each query object:
+  - Subscribe to MaiaDB
+  - Store unsubscribe function in actor._subscriptions
+  ↓
+Actor is now reactive!
+  ↓
+Data changes → Callback fired → Context updated → Re-render scheduled
+  ↓
+(Repeat until actor is destroyed)
+  ↓
+Actor Destroyed
+  ↓
+SubscriptionEngine.cleanup(actor)
+  ↓
+All subscriptions unsubscribed
+```
+
+### Optimization - Batching and Deduplication
+
+**Batching** - If multiple updates happen at once (e.g., you create 5 todos in a loop), SubscriptionEngine batches them:
+
+```
+Update 1 → Schedule re-render (in microtask)
+Update 2 → Already scheduled, skip
+Update 3 → Already scheduled, skip
+Update 4 → Already scheduled, skip
+Update 5 → Already scheduled, skip
+  ↓
+Microtask runs → Re-render ONCE with all updates
+```
+
+**Result:** 5 updates = 1 re-render (instead of 5 re-renders)
+
+**Deduplication** - If data hasn't actually changed, skip re-render:
 
 ```javascript
-// State machine entry for kanban_view
-"loading": {
-  "entry": [
-    {
-      "tool": "@query/subscribe",
-      "payload": {
-        "schema": "todos",
-        "filter": { "field": "done", "op": "eq", "value": false },
-        "target": "todosTodo"
+// Old data: [{ id: "1", text: "Buy milk", done: false }]
+// New data: [{ id: "1", text: "Buy milk", done: false }]
+// Result: Same data → Skip re-render
+```
+
+**Result:** No unnecessary re-renders!
+
+### Debug Logs - See What's Happening
+
+SubscriptionEngine logs everything in development mode:
+
+```javascript
+[SubscriptionEngine] Initialized
+[SubscriptionEngine] Initializing actor_list_001
+[SubscriptionEngine] ✅ actor_list_001 → @schema/todos → $todos
+[SubscriptionEngine] actor_list_001 initialized with 1 subscription(s)
+[SubscriptionEngine] 📥 actor_list_001.$todos initial data (3)
+[SubscriptionEngine] 🔄 actor_list_001.$todos updated (4)
+[SubscriptionEngine] 🎨 Batched re-render: 1 actor(s) [actor_list_001]
+```
+
+**Emojis explain what's happening:**
+- ✅ Subscription created
+- 📥 Initial data received
+- 🔄 Data updated
+- ⏭️ Skipping (no change)
+- 🎨 Re-rendering
+- 🧹 Cleaning up
+
+**Open your browser console** and watch the magic happen!
+
+## State Machine's Role - Pure Transition Rules
+
+With the new architecture, **state machines are purely declarative**. They define:
+- **What transitions happen** (A → B)
+- **What tools to execute** (`@db`, `@context/update`, etc.)
+- **What context updates to make** (via tools)
+
+**State machines DO NOT:**
+- ❌ Load data directly
+- ❌ Subscribe to data
+- ❌ Manage subscriptions
+- ❌ Know about SubscriptionEngine
+
+**Example:**
+
+```json
+{
+  "$type": "state",
+  "initial": "loading",
+  "states": {
+    "loading": {
+      "entry": [],
+      "on": {
+        "SUCCESS": "idle"
       }
     },
-    {
-      "tool": "@query/subscribe",
-      "payload": {
-        "schema": "todos",
-        "filter": { "field": "done", "op": "eq", "value": true },
-        "target": "todosDone"
+    "idle": {
+      "on": {
+        "CREATE_TODO": {
+          "target": "creating",
+          "guard": { "$ne": ["$newTodoText", ""] }
+        }
+      }
+    },
+    "creating": {
+      "entry": {
+        "tool": "@db",
+        "payload": {
+          "op": "create",
+          "schema": "@schema/todos",
+          "data": {
+            "text": "$newTodoText",
+            "done": false
+          }
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@context/update",
+              "payload": {
+                "newTodoText": ""
+              }
+            }
+          ]
+        }
       }
     }
-  ],
-  "on": {
-    "SUCCESS": "idle"
   }
 }
 ```
 
-## Memory Management
+**What the state machine does:**
+1. Defines transition rules (`idle` → `creating` when `CREATE_TODO` received)
+2. Executes tools (`@db` to create todo)
+3. Updates context (`newTodoText = ""` to clear input)
 
-### Observer Cleanup
+**What it doesn't do:**
+- Subscribe to data (SubscriptionEngine does this)
+- Load data (SubscriptionEngine does this)
+- Know about reactivity (SubscriptionEngine handles it)
 
-Observers are automatically cleaned up when actors are destroyed:
+**It's purely business logic** - "When this happens, do that."
 
-```javascript
-// Automatic cleanup in ActorEngine.destroyActor()
-if (actor._queryObservers && actor._queryObservers.length > 0) {
-  actor._queryObservers.forEach(unsubscribe => unsubscribe());
-  actor._queryObservers = [];
-}
-```
+## View's Role - Pure Consumer of Context
 
-### Preventing Memory Leaks
+Views are **purely presentation**. They read from context and render UI.
 
-1. **Unsubscribe functions:** Every `subscribe()` call returns an unsubscribe function
-2. **Tracked observers:** All observers are stored in `actor._queryObservers`
-3. **Cascading cleanup:** When an actor is destroyed, all its query observers are unsubscribed
-4. **Parent-child cleanup:** Destroying a parent actor automatically destroys child actors and their observers
+**Views DO:**
+- ✅ Read from context (`$todos`, `$newTodoText`)
+- ✅ Loop over arrays (`$each`)
+- ✅ Send events (`{ "send": "CREATE_TODO" }`)
+- ✅ Display data (`$$item.text`)
 
-## Performance Considerations
+**Views DO NOT:**
+- ❌ Subscribe to data
+- ❌ Load data
+- ❌ Know about reactivity
+- ❌ Contain business logic
 
-### Filtered Queries
+**Example:**
 
-Filtered queries only notify relevant subscribers:
-
-```javascript
-// Only actors subscribed to "done: false" will be notified
-store.subscribe('todos', { field: 'done', op: 'eq', value: false }, callback);
-```
-
-### localStorage Limits
-
-- **Size Limit:** ~5-10MB per domain
-- **Performance:** Synchronous read/write (fast for small datasets)
-- **Recommendation:** Use localStorage for prototyping, migrate to Jazz CRDTs for production
-
-### Optimization Tips
-
-1. **Use filtered subscriptions:** Only subscribe to the data you need
-2. **Minimize re-renders:** Use `@query/get` for static data
-3. **Batch mutations:** Group multiple mutations when possible
-4. **Clear cache:** Use `ReactiveStore.clear()` for testing
-
-## Testing
-
-### Unit Tests
-
-**Location:** `libs/maia-script/src/o/engines/ReactiveStore.test.js`
-
-Tests cover:
-- CRUD operations
-- Observer subscriptions and notifications
-- Filter operations (all operators)
-- Memory cleanup
-- Edge cases (corrupted data, empty collections, multiple filters)
-
-### Running Tests
-
-```bash
-bun test libs/maia-script/src/o/engines/ReactiveStore.test.js
-```
-
-### Mock localStorage
-
-For Bun tests, a localStorage mock is required:
-
-```javascript
-class LocalStorageMock {
-  constructor() {
-    this.store = {};
+```json
+{
+  "$type": "view",
+  "container": {
+    "tag": "div",
+    "children": [
+      {
+        "tag": "input",
+        "attrs": {
+          "value": "$newTodoText"
+        }
+      },
+      {
+        "tag": "button",
+        "text": "Add",
+        "$on": {
+          "click": { "send": "CREATE_TODO" }
+        }
+      },
+      {
+        "tag": "ul",
+        "$each": {
+          "items": "$todos",
+          "template": {
+            "tag": "li",
+            "children": [
+              { "tag": "span", "text": "$$item.text" },
+              {
+                "tag": "button",
+                "text": "✓",
+                "$on": {
+                  "click": {
+                    "send": "TOGGLE_TODO",
+                    "payload": { "id": "$$item.id" }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
   }
-  clear() { this.store = {}; }
-  getItem(key) { return this.store[key] || null; }
-  setItem(key, value) { this.store[key] = String(value); }
-  removeItem(key) { delete this.store[key]; }
 }
-
-global.localStorage = new LocalStorageMock();
 ```
 
-## Migration Path to Jazz CRDTs
+**That's it!** Views just read from context and send events. SubscriptionEngine keeps context up to date.
 
-This reactive architecture is designed to be compatible with Jazz's reactive patterns:
+## Real Example - Todo App Architecture
 
-### Similarities
+Let's build a complete todo app to see how it all fits together:
 
-- **Observable/reactive patterns:** Jazz CoMaps are reactive by default
-- **Subscription-based updates:** Jazz auto-syncs between clients
-- **JSON-based queries:** Jazz queries are also declarative
-- **Collection-based organization:** Jazz uses CoLists and CoMaps
+### 1. Context - Declare Your Data Needs
 
-### Migration Steps
+**`list.context.maia`:**
 
-1. Replace `ReactiveStore` with Jazz `Group`
-2. Replace `@query/subscribe` with Jazz `useCoState()` equivalent
-3. Replace `@mutation/*` tools with Jazz CoMap mutations
-4. localStorage becomes Jazz's CRDT sync layer (automatic)
-5. No changes to tool interfaces required!
-
-### Example Migration
-
-```javascript
-// BEFORE (ReactiveStore)
-const store = actor.actorEngine.reactiveStore;
-const todos = store.getCollection('todos');
-
-// AFTER (Jazz)
-const group = actor.actorEngine.jazzGroup;
-const todos = group.todos; // Reactive CoList
+```json
+{
+  "$type": "context",
+  "$id": "context_list_001",
+  
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  },
+  
+  "newTodoText": ""
+}
 ```
 
-## Debugging
+**What this does:**
+- `todos`: Reactive data (auto-subscribes, auto-updates)
+- `newTodoText`: Form state (updated via tools)
 
-### Enable Logging
+### 2. State Machine - Define Business Logic
 
-ReactiveStore and query tools include console.log statements:
+**`list.state.maia`:**
 
-```javascript
-console.log('[query/subscribe] Subscribing actor_001 to todos (filtered) → context.todosTodo');
-console.log('[query/subscribe] Updated actor_001.context.todosTodo with 3 items');
+```json
+{
+  "$type": "state",
+  "$id": "state_list_001",
+  "initial": "loading",
+  "states": {
+    "loading": {
+      "entry": [],
+      "on": {
+        "SUCCESS": "idle"
+      }
+    },
+    "idle": {
+      "on": {
+        "CREATE_TODO": {
+          "target": "creating",
+          "guard": { "$ne": ["$newTodoText", ""] }
+        },
+        "TOGGLE_TODO": "toggling",
+        "DELETE_TODO": "deleting"
+      }
+    },
+    "creating": {
+      "entry": {
+        "tool": "@db",
+        "payload": {
+          "op": "create",
+          "schema": "@schema/todos",
+          "data": {
+            "text": "$newTodoText",
+            "done": false
+          }
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@context/update",
+              "payload": {
+                "newTodoText": ""
+              }
+            }
+          ]
+        }
+      }
+    },
+    "toggling": {
+      "entry": {
+        "tool": "@db",
+        "payload": {
+          "op": "toggle",
+          "schema": "@schema/todos",
+          "id": "$$event.payload.id",
+          "field": "done"
+        }
+      },
+      "on": {
+        "SUCCESS": "idle"
+      }
+    },
+    "deleting": {
+      "entry": {
+        "tool": "@db",
+        "payload": {
+          "op": "delete",
+          "schema": "@schema/todos",
+          "id": "$$event.payload.id"
+        }
+      },
+      "on": {
+        "SUCCESS": "idle"
+      }
+    }
+  }
+}
 ```
 
-### Inspect Observers
+**What this does:**
+- Handles user events (`CREATE_TODO`, `TOGGLE_TODO`, `DELETE_TODO`)
+- Executes database operations via `@db` tool
+- Updates form state (clear input after create)
 
-```javascript
-const store = actorEngine.reactiveStore;
-console.log(store.getObservers()); // Map of schema -> Set<observer>
+### 3. View - Display Data
+
+**`list.view.maia`:**
+
+```json
+{
+  "$type": "view",
+  "$id": "view_list_001",
+  "container": {
+    "tag": "div",
+    "class": "todo-list",
+    "children": [
+      {
+        "tag": "div",
+        "class": "input-form",
+        "children": [
+          {
+            "tag": "input",
+            "attrs": {
+              "type": "text",
+              "placeholder": "What needs to be done?",
+              "value": "$newTodoText"
+            },
+            "$on": {
+              "input": {
+                "tool": "@context/update",
+                "payload": {
+                  "newTodoText": "$$event.target.value"
+                }
+              }
+            }
+          },
+          {
+            "tag": "button",
+            "text": "Add",
+            "$on": {
+              "click": { "send": "CREATE_TODO" }
+            }
+          }
+        ]
+      },
+      {
+        "tag": "ul",
+        "class": "todo-items",
+        "$each": {
+          "items": "$todos",
+          "template": {
+            "tag": "li",
+            "class": "todo-item",
+            "children": [
+              {
+                "tag": "span",
+                "text": "$$item.text",
+                "class": {
+                  "done": "$$item.done"
+                }
+              },
+              {
+                "tag": "button",
+                "text": "✓",
+                "$on": {
+                  "click": {
+                    "send": "TOGGLE_TODO",
+                    "payload": { "id": "$$item.id" }
+                  }
+                }
+              },
+              {
+                "tag": "button",
+                "text": "✕",
+                "$on": {
+                  "click": {
+                    "send": "DELETE_TODO",
+                    "payload": { "id": "$$item.id" }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}
 ```
 
-### Check localStorage
+**What this does:**
+- Renders input form (reads `$newTodoText`, sends `CREATE_TODO`)
+- Renders todo list (loops over `$todos`)
+- Renders buttons (sends `TOGGLE_TODO`, `DELETE_TODO`)
 
-```javascript
-console.log(localStorage.getItem('maiaos_data'));
-// {"todos":[{"id":"1","text":"Test","done":false}]}
+### 4. Actor - Compose It All
+
+**`list.actor.maia`:**
+
+```json
+{
+  "$type": "actor",
+  "$id": "actor_list_001",
+  "id": "actor_list_001",
+  
+  "contextRef": "list",
+  "stateRef": "list",
+  "viewRef": "list"
+}
 ```
 
-### Verify Actor Observers
+**That's it!** SubscriptionEngine handles all the reactivity automatically.
 
-```javascript
-const actor = actorEngine.actors.get('actor_todo_list_001');
-console.log(actor._queryObservers.length); // Number of active subscriptions
+## Common Patterns
+
+### Pattern 1: Multiple Filtered Views (Kanban Board)
+
+**Context:**
+
+```json
+{
+  "todosTodo": {
+    "schema": "@schema/todos",
+    "filter": { "done": false }
+  },
+  "todosDone": {
+    "schema": "@schema/todos",
+    "filter": { "done": true }
+  }
+}
 ```
+
+**View:**
+
+```json
+{
+  "container": {
+    "tag": "div",
+    "class": "kanban",
+    "children": [
+      {
+        "tag": "div",
+        "class": "column",
+        "children": [
+          { "tag": "h2", "text": "Todo" },
+          {
+            "$each": {
+              "items": "$todosTodo",
+              "template": {
+                "tag": "div",
+                "class": "card",
+                "text": "$$item.text"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "class": "column",
+        "children": [
+          { "tag": "h2", "text": "Done" },
+          {
+            "$each": {
+              "items": "$todosDone",
+              "template": {
+                "tag": "div",
+                "class": "card",
+                "text": "$$item.text"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Result:** When you toggle a todo, it automatically moves from "Todo" to "Done" column!
+
+### Pattern 2: Loading States
+
+**Context:**
+
+```json
+{
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  },
+  "isLoading": true
+}
+```
+
+**State Machine:**
+
+```json
+{
+  "states": {
+    "loading": {
+      "entry": {
+        "tool": "@context/update",
+        "payload": { "isLoading": true }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@context/update",
+              "payload": { "isLoading": false }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+**View:**
+
+```json
+{
+  "container": {
+    "tag": "div",
+    "children": [
+      {
+        "tag": "div",
+        "text": "Loading...",
+        "$if": "$isLoading"
+      },
+      {
+        "tag": "ul",
+        "$if": { "$not": "$isLoading" },
+        "$each": {
+          "items": "$todos",
+          "template": { "tag": "li", "text": "$$item.text" }
+        }
+      }
+    ]
+  }
+}
+```
+
+**Result:** Shows "Loading..." until data arrives, then shows the list!
+
+### Pattern 3: Search/Filter
+
+**Context:**
+
+```json
+{
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  },
+  "searchQuery": ""
+}
+```
+
+**View (with client-side filtering):**
+
+```json
+{
+  "container": {
+    "tag": "div",
+    "children": [
+      {
+        "tag": "input",
+        "attrs": {
+          "type": "search",
+          "placeholder": "Search todos...",
+          "value": "$searchQuery"
+        },
+        "$on": {
+          "input": {
+            "tool": "@context/update",
+            "payload": {
+              "searchQuery": "$$event.target.value"
+            }
+          }
+        }
+      },
+      {
+        "tag": "ul",
+        "$each": {
+          "items": {
+            "$filter": {
+              "items": "$todos",
+              "condition": {
+                "$contains": ["$$item.text", "$searchQuery"]
+              }
+            }
+          },
+          "template": {
+            "tag": "li",
+            "text": "$$item.text"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+**Result:** As you type, the list filters in real-time!
+
+## Troubleshooting
+
+### My data isn't showing up!
+
+**Checklist:**
+1. Is your context query object correct?
+   ```json
+   { "schema": "@schema/todos", "filter": null }
+   ```
+2. Does the schema name match your database?
+3. Is there actually data in the database? (Check IndexedDB in DevTools)
+4. Are there errors in the console?
+
+**Debug:**
+- Open DevTools → Console
+- Look for `[SubscriptionEngine]` logs
+- Look for `[IndexedDBBackend]` logs
+- Check: `✅ actor_list_001 → @schema/todos → $todos`
+
+### My UI isn't updating when I create data!
+
+**Checklist:**
+1. Are you using the `@db` tool to create data?
+   ```json
+   { "tool": "@db", "payload": { "op": "create", ... } }
+   ```
+2. Is the `schema` in your create operation the same as in your context?
+3. Are you seeing `🔄 actor_list_001.$todos updated` in console?
+
+**Debug:**
+- Check console for `[DBEngine]` logs
+- Check console for `[SubscriptionEngine]` logs
+- Verify the state machine transition completes (SUCCESS event)
+
+### I'm seeing duplicate UI elements!
+
+**Cause:** ViewEngine was appending to the shadow DOM without clearing it first.
+
+**Fixed in v0.4+** - ViewEngine now clears `shadowRoot.innerHTML = ''` on every render.
+
+**If you see this:** Update to latest MaiaOS version.
+
+### Memory leaks - Subscriptions not cleaning up!
+
+**Cause:** Old code wasn't properly unsubscribing when actors were destroyed.
+
+**Fixed in v0.4+** - SubscriptionEngine automatically cleans up all subscriptions when an actor is destroyed.
+
+**How it works:**
+- Every subscription stores an unsubscribe function in `actor._subscriptions`
+- When `destroyActor()` is called, SubscriptionEngine calls all unsubscribe functions
+- No memory leaks! ✨
+
+## Migration Path to CoJSON (Future)
+
+The current architecture is designed to be **100% compatible** with CoJSON (our CRDT-based collaborative sync system).
+
+**What will change:**
+- Database backend: IndexedDB → CoJSON sync layer
+- Schema references: `@schema/todos` → CoValue IDs
+- Reactivity: Still automatic (CRDTs are reactive by default)
+
+**What WON'T change:**
+- Query object syntax (same format)
+- Context declarations (same structure)
+- State machines (same business logic)
+- Views (same presentation code)
+- Your application code!
+
+**Migration steps (when we're ready):**
+1. Replace `IndexedDBBackend` with `CoJSONBackend`
+2. Update schema IDs to CoValue IDs
+3. Done! Everything else works automatically
+
+**You don't need to worry about this now** - just keep using the current system, and migration will be seamless.
 
 ## Best Practices
 
-1. **Always subscribe in loading state:** Use state machine entry actions
-2. **Clean filters:** Keep filter logic simple and predictable
-3. **Use filtered subscriptions:** Avoid subscribing to entire collections when you only need a subset
-4. **Test with empty data:** Ensure views handle empty arrays gracefully
-5. **Document data flow:** Use comments to explain which actors subscribe to which data
-6. **Avoid circular dependencies:** Don't create subscription loops
-7. **Profile re-renders:** Monitor actor re-render frequency in production
-8. **Prepare for Jazz:** Structure code to make Jazz migration straightforward
+### ✅ DO:
 
-## API Reference
+1. **Declare data needs in context**
+   ```json
+   { "todos": { "schema": "@schema/todos", "filter": null } }
+   ```
 
-### ReactiveStore
+2. **Use filtered subscriptions for views that need subsets**
+   ```json
+   { "todosTodo": { "schema": "@schema/todos", "filter": { "done": false } } }
+   ```
 
-```typescript
-class ReactiveStore {
-  constructor(storageKey: string = 'maiaos_data')
-  
-  getCollection(schema: string): Array
-  setCollection(schema: string, data: Array): void
-  subscribe(schema: string, filter: Object | null, callback: Function): Function
-  notify(schema: string): void
-  query(schema: string, filter: Object | null): Array
-  clear(): void
-  getObservers(): Map
-}
-```
+3. **Let SubscriptionEngine handle reactivity** (never manually update arrays)
 
-### Query Tools
+4. **Use @db tool for all CRUD operations**
+   ```json
+   { "tool": "@db", "payload": { "op": "create", ... } }
+   ```
 
-```typescript
-// @query/subscribe
-{
-  schema: string,      // Required
-  filter?: {           // Optional
-    field: string,
-    op: 'eq' | 'ne' | 'gt' | 'lt' | 'gte' | 'lte' | 'in' | 'contains',
-    value: any
-  },
-  target: string       // Required
-}
+5. **Keep state machines pure** (only transition rules and tool calls)
 
-// @query/get
-{
-  schema: string,      // Required
-  target: string       // Required
-}
+6. **Keep views pure** (only presentation, no logic)
 
-// @query/filter
-{
-  schema: string,      // Required
-  filter: {            // Required
-    field: string,
-    op: string,
-    value: any
-  },
-  target: string       // Required
-}
-```
+7. **Check console logs** (SubscriptionEngine shows everything)
 
-### Mutation Tools
+### ❌ DON'T:
 
-```typescript
-// @mutation/create
-{
-  schema: string,      // Required
-  data: Object         // Required
-}
+1. **Don't manually update query object arrays**
+   ```javascript
+   // ❌ WRONG
+   actor.context.todos.push(newTodo);
+   ```
 
-// @mutation/update
-{
-  schema: string,      // Required
-  id: string,          // Required
-  data: Object         // Required
-}
+2. **Don't create custom subscription code** (SubscriptionEngine does it)
 
-// @mutation/delete
-{
-  schema: string,      // Required
-  id: string           // Required
-}
+3. **Don't mix reactive and non-reactive data** (use query objects for data arrays)
 
-// @mutation/toggle
-{
-  schema: string,      // Required
-  id: string,          // Required
-  field?: string       // Optional, defaults to 'done'
-}
-```
+4. **Don't put business logic in views** (state machines handle logic)
+
+5. **Don't create subscriptions in state machines** (context-driven only)
+
+6. **Don't bypass the @db tool** (always use it for data operations)
 
 ## Summary
 
-The reactive query system provides:
-- **Automatic context updates:** No manual refresh needed
-- **Observable localStorage:** Single source of truth
-- **JSON-configured queries:** Extensible filter syntax
-- **Memory-safe:** Automatic observer cleanup
-- **Jazz-ready:** Clean migration path to CRDTs
+### The Big Picture
 
-This foundation enables building reactive, data-driven applications while maintaining clean separation between data management and UI rendering.
+1. **Context = What I Need** (Declarative query objects)
+2. **SubscriptionEngine = The Watcher** (Automatic subscriptions)
+3. **MaiaDB = The Data Store** (Reactive database)
+4. **State Machines = Business Logic** (Pure transition rules)
+5. **Views = Presentation** (Pure UI rendering)
+
+### Key Concepts
+
+- **Context-driven reactivity**: Your context IS your subscription blueprint
+- **Automatic subscriptions**: SubscriptionEngine handles everything
+- **@ references**: Future-proof symbolic IDs (ready for CoJSON)
+- **Pure separation**: State machines (logic), Views (presentation), SubscriptionEngine (reactivity)
+- **Centralized**: All reactivity in one place (SubscriptionEngine), no scattered code
+
+### Remember
+
+You **never manually manage subscriptions**. Just declare what data you need in context, and MaiaOS does the rest! ✨
+
+## Next Steps
+
+- Learn about [Engines](./04_engines.md) - How the system executes your definitions
+- Understand [Tools](./08_tools.md) - Creating custom tools (like @db)
+- Explore [CoJSON Integration](./07_cojson.md) - Future collaborative sync
+- Read [Best Practices](../creators/10-best-practices.md) - Patterns and anti-patterns
 
 ---
 

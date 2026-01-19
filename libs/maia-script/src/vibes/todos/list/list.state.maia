@@ -5,19 +5,6 @@
   "states": {
     "idle": {
       "on": {
-        "SUBSCRIBE_TO_TODOS": {
-          "target": "idle",
-          "actions": [
-            {
-              "tool": "@query/subscribe",
-              "payload": {
-                "schema": "$$schema",
-                "filter": "$$filter",
-                "target": "$$target"
-              }
-            }
-          ]
-        },
         "TOGGLE_BUTTON": {
           "target": "idle",
           "actions": [
@@ -43,15 +30,6 @@
             }
           ],
           "guard": { "$ne": ["$$id", null] }
-        },
-        "TODO_CREATED": {
-          "target": "idle"
-        },
-        "TODO_COMPLETED": {
-          "target": "idle"
-        },
-        "TODO_DELETED": {
-          "target": "idle"
         }
       }
     },

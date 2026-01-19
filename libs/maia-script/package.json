@@ -4,8 +4,10 @@
   "type": "module",
   "main": "src/index.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./modules/*": "./src/modules/*"
+    ".": "./src/index.js",
+    "./modules/*": "./src/modules/*",
+    "./vibes/todos/loader.js": "./src/vibes/todos/loader.js",
+    "./vibes/todos/registry.js": "./src/vibes/todos/registry.js"
   },
   "dependencies": {
     "@MaiaOS/db": "workspace:*",

@@ -1,0 +1,42 @@
+{
+  "$type": "tool",
+  "$id": "db",
+  "name": "Database Tool",
+  "description": "Unified API for all database operations (query, create, update, delete)",
+  "schema": "https://maiaos.dev/schemas/tool.schema.json",
+  "params": {
+    "op": {
+      "type": "string",
+      "enum": ["query", "create", "update", "delete", "seed"],
+      "description": "Database operation to execute"
+    },
+    "schema": {
+      "type": "string",
+      "description": "Schema reference (@schema/actor, @schema/todos, etc.)"
+    },
+    "key": {
+      "type": "string",
+      "description": "Optional: Specific key for config queries"
+    },
+    "filter": {
+      "type": "object",
+      "description": "Optional: Filter criteria for data queries"
+    },
+    "callback": {
+      "type": "function",
+      "description": "Optional: Callback for reactive subscriptions"
+    },
+    "id": {
+      "type": "string",
+      "description": "Optional: Record ID for update/delete operations"
+    },
+    "data": {
+      "type": "object",
+      "description": "Optional: Data for create/update operations"
+    }
+  },
+  "returns": {
+    "type": "any",
+    "description": "Operation result (data, unsubscribe function, created/updated/deleted record, etc.)"
+  }
+}

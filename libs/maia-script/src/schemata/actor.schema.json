@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://maiaos.dev/schemas/actor.schema.json",
+  "title": "Actor Definition",
+  "description": "Pure declarative actor specification",
+  "type": "object",
+  "required": ["$type"],
+  "properties": {
+    "$type": {
+      "type": "string",
+      "const": "actor"
+    },
+    "$id": {
+      "type": "string",
+      "description": "Unique actor identifier",
+      "pattern": "^actor_"
+    },
+    "role": {
+      "type": "string",
+      "description": "Actor role (e.g., 'vibe', 'composite', 'leaf')"
+    },
+    "contextRef": {
+      "type": "string",
+      "description": "Reference to context definition"
+    },
+    "stateRef": {
+      "type": "string",
+      "description": "Reference to state machine definition"
+    },
+    "viewRef": {
+      "type": "string",
+      "description": "Reference to view definition"
+    },
+    "interfaceRef": {
+      "type": "string",
+      "description": "Reference to interface definition"
+    },
+    "brandRef": {
+      "type": "string",
+      "description": "Reference to brand style definition"
+    },
+    "styleRef": {
+      "type": "string",
+      "description": "Reference to local style definition"
+    },
+    "children": {
+      "type": "object",
+      "description": "Child actor references",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "subscriptions": {
+      "type": "array",
+      "description": "List of actor IDs to receive messages from",
+      "items": {
+        "type": "string"
+      }
+    },
+    "inbox": {
+      "type": "array",
+      "description": "Message inbox (CoFeed)",
+      "items": {
+        "$ref": "https://maiaos.dev/schemas/message.schema.json"
+      }
+    },
+    "inboxWatermark": {
+      "type": "number",
+      "description": "Last processed message timestamp",
+      "minimum": 0,
+      "default": 0
+    }
+  }
+}

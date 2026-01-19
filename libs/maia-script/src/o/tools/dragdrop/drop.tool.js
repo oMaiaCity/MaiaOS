@@ -1,7 +1,7 @@
 /**
  * Generic Drop Tool
  * Handles drop event for any schema/collection
- * Uses @mutation/update to persist changes to ReactiveStore
+ * Uses @db to persist changes to database
  */
 export default {
   async execute(actor, payload) {
@@ -14,7 +14,7 @@ export default {
       return;
     }
     
-    // Use @mutation/update to persist the change to ReactiveStore
+    // Use @db to persist the change
     // This will automatically trigger reactive subscriptions and update filtered arrays
     const toolEngine = actor.actorEngine?.toolEngine;
     if (!toolEngine) {
@@ -23,9 +23,10 @@ export default {
     }
     
     try {
-      // Update the entity using mutation tool (persists to localStorage)
-      await toolEngine.execute('@mutation/update', actor, {
-        schema,
+      // Update the entity using @db tool
+      await toolEngine.execute('@db', actor, {
+        op: 'update',
+        schema: `@schema/${schema}`,
         id: draggedId,
         data: { [field]: value }
       });

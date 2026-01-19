@@ -18,8 +18,14 @@ import { StateEngine } from './engines/state-engine/state.engine.js';
 import { MaiaScriptEvaluator } from './engines/MaiaScriptEvaluator.js';
 import { ModuleRegistry } from './engines/ModuleRegistry.js';
 import { ToolEngine } from './engines/tool-engine/tool.engine.js';
+import { SubscriptionEngine } from './engines/subscription-engine/subscription.engine.js';
+// Import database operation engine
+import { DBEngine } from './engines/maiadb/db.engine.js';
+import { IndexedDBBackend } from './engines/maiadb/backend/indexeddb.js';
 // Import validation helper
 import { validateOrThrow } from '../schemata/validation.helper.js';
+// Import all schemas for seeding
+import * as schemata from '../schemata/index.js';
 
 /**
  * MaiaOS - Operating System for Actor-based Applications
@@ -33,6 +39,8 @@ export class MaiaOS {
     this.styleEngine = null;
     this.viewEngine = null;
     this.actorEngine = null;
+    this.subscriptionEngine = null; // Subscription management engine
+    this.dbEngine = null; // Database operation engine
     this.actors = new Map();
   }
 
@@ -43,12 +51,51 @@ export class MaiaOS {
    */
   static async boot(config = {}) {
     const os = new MaiaOS();
+    os.vibeRegistry = config.registry || null; // Store registry if provided
     
     console.log('🚀 Booting MaiaOS v0.4...');
     console.log('📦 Kernel: Module-based architecture');
     console.log('🤖 State Machines: AI-compatible actor coordination');
     console.log('📨 Message Passing: Actor-to-actor communication');
     console.log('🔧 Tools: Dynamic modular loading');
+    console.log('💾 Database: Unified operation engine (maia.db)');
+    
+    // Initialize database operation engine
+    console.log('📦 Initializing database engine...');
+    const backend = new IndexedDBBackend();
+    await backend.init();
+    os.dbEngine = new DBEngine(backend);
+    
+    // Seed database with configs + schemas + tool definitions
+    if (config.registry) {
+      console.log('🌱 Seeding database...');
+      
+      // Import tool definitions
+      const { getAllToolDefinitions } = await import('./tools/index.js');
+      const toolDefs = getAllToolDefinitions();
+      
+      // Merge tool definitions into registry
+      const configsWithTools = {
+        ...config.registry,
+        tool: toolDefs // Add tool definitions under 'tool' key
+      };
+      
+      const schemas = {};
+      
+      // Get all schema definitions from schemata module
+      if (typeof schemata.getAllSchemas === 'function') {
+        Object.assign(schemas, schemata.getAllSchemas());
+      }
+      
+      await os.dbEngine.execute({
+        op: 'seed',
+        configs: configsWithTools,
+        schemas: schemas,
+        data: { todos: [] } // Initial empty collections
+      });
+      
+      console.log('✅ Database seeded successfully');
+    }
     
     // Initialize module registry
     os.moduleRegistry = new ModuleRegistry();
@@ -57,17 +104,16 @@ export class MaiaOS {
     os.evaluator = new MaiaScriptEvaluator(os.moduleRegistry);
     os.toolEngine = new ToolEngine(os.moduleRegistry);
     
-    // Store toolEngine in registry for module access
+    // Store engines in registry for module access
     os.moduleRegistry._toolEngine = os.toolEngine;
-    
-    // Set tools path (default: ../../o/tools relative to HTML file location)
-    const toolsPath = config.toolsPath || '../../o/tools';
-    os.toolEngine.setToolsPath(toolsPath);
+    os.moduleRegistry._dbEngine = os.dbEngine;
     
     os.stateEngine = new StateEngine(os.toolEngine, os.evaluator);
     os.styleEngine = new StyleEngine();
     os.styleEngine.clearCache(); // Clear cache on boot for development
     os.viewEngine = new ViewEngine(os.evaluator, null, os.moduleRegistry);
+    
+    // Initialize ActorEngine (will receive SubscriptionEngine after it's created)
     os.actorEngine = new ActorEngine(
       os.styleEngine,
       os.viewEngine,
@@ -76,11 +122,26 @@ export class MaiaOS {
       os.stateEngine
     );
     
+    // Initialize SubscriptionEngine (context-driven reactive subscriptions)
+    os.subscriptionEngine = new SubscriptionEngine(os.dbEngine, os.actorEngine);
+    
+    // Pass database engine to engines (for internal config loading)
+    os.actorEngine.dbEngine = os.dbEngine;
+    os.viewEngine.dbEngine = os.dbEngine;
+    os.styleEngine.dbEngine = os.dbEngine;
+    os.stateEngine.dbEngine = os.dbEngine;
+    
+    // Pass SubscriptionEngine to ActorEngine
+    os.actorEngine.subscriptionEngine = os.subscriptionEngine;
+    
+    // Store reference to MaiaOS in actorEngine (for @db tool access)
+    os.actorEngine.os = os;
+    
     // Set actorEngine reference in viewEngine (circular dependency)
     os.viewEngine.actorEngine = os.actorEngine;
     
-    // Load modules (default: core, mutation, dragdrop, query, and interface)
-    const modules = config.modules || ['core', 'mutation', 'dragdrop', 'query', 'interface'];
+    // Load modules (default: db, core, dragdrop, interface)
+    const modules = config.modules || ['db', 'core', 'dragdrop', 'interface'];
     console.log(`📦 Loading ${modules.length} modules...`);
     
     for (const moduleName of modules) {
@@ -146,6 +207,74 @@ export class MaiaOS {
   }
 
   /**
+   * Load a vibe from database (maia.db)
+   * @param {string} vibeName - Vibe name (e.g., "todos", "notes")
+   * @param {HTMLElement} container - Container element
+   * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
+   */
+  async loadVibeFromDatabase(vibeName, container) {
+    console.log(`📦 Loading vibe from database: "${vibeName}"...`);
+    
+    // Load vibe manifest from database
+    const vibe = await this.dbEngine.execute({
+      op: 'query',
+      schema: '@schema/vibe',
+      key: vibeName
+    });
+    
+    if (!vibe) {
+      throw new Error(`Vibe not found in database: ${vibeName}`);
+    }
+    
+    // Validate vibe structure using schema
+    await validateOrThrow('vibe', vibe, `maia.db:${vibeName}`);
+    
+    console.log(`✨ Vibe: "${vibe.name}"`);
+    
+    // Load actor config via loadActor (which uses maia.db())
+    const actorPath = vibe.actor; // e.g., "vibe/vibe"
+    const actorConfig = await this.actorEngine.loadActor(actorPath);
+    
+    // Create root actor
+    const actor = await this.actorEngine.createActor(actorConfig, container);
+    this.actors.set(actor.id, actor);
+    
+    console.log(`✅ Vibe loaded: ${vibe.name}`);
+    
+    return { vibe, actor };
+  }
+  
+  /**
+   * Load a vibe from a pre-loaded registry (backwards compatibility - DEPRECATED)
+   * @deprecated Use loadVibeFromDatabase() instead
+   * @param {Object} vibe - Vibe manifest object
+   * @param {HTMLElement} container - Container element
+   * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
+   */
+  async loadVibeFromRegistry(vibe, container) {
+    console.warn('[MaiaOS] loadVibeFromRegistry is deprecated - vibe should be loaded from database');
+    
+    console.log(`📦 Loading vibe from registry: "${vibe.name}"...`);
+    
+    // Validate vibe structure using schema
+    await validateOrThrow('vibe', vibe, 'registry');
+    
+    console.log(`✨ Vibe: "${vibe.name}"`);
+    
+    // Load actor config via loadActor (which uses maia.db())
+    const actorPath = vibe.actor; // e.g., "vibe/vibe"
+    const actorConfig = await this.actorEngine.loadActor(actorPath);
+    
+    // Create root actor
+    const actor = await this.actorEngine.createActor(actorConfig, container);
+    this.actors.set(actor.id, actor);
+    
+    console.log(`✅ Vibe loaded: ${vibe.name}`);
+    
+    return { vibe, actor };
+  }
+
+  /**
    * Get actor by ID
    * @param {string} actorId - Actor ID
    * @returns {Object|null} Actor instance
@@ -164,6 +293,15 @@ export class MaiaOS {
   }
 
   /**
+   * Execute database operation (internal use + @db tool)
+   * @param {Object} payload - Operation payload {op: 'query|create|update|delete|seed', ...}
+   * @returns {Promise<any>} Operation result
+   */
+  async db(payload) {
+    return await this.dbEngine.execute(payload);
+  }
+  
+  /**
    * Expose engines for debugging
    */
   getEngines() {
@@ -173,6 +311,7 @@ export class MaiaOS {
       styleEngine: this.styleEngine,
       stateEngine: this.stateEngine,
       toolEngine: this.toolEngine,
+      dbEngine: this.dbEngine,
       evaluator: this.evaluator,
       moduleRegistry: this.moduleRegistry
     };

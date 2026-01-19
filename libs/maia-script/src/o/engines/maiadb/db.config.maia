@@ -1,0 +1,61 @@
+{
+  "$type": "operation-engine",
+  "$id": "db",
+  "name": "Database Operation Engine",
+  "description": "Unified API for all database operations (configs, schemas, application data)",
+  "operations": {
+    "query": {
+      "description": "Load data from database (reactive if callback provided)",
+      "params": {
+        "schema": {"type": "string", "required": true, "description": "Schema reference (@schema/actor, @schema/todos)"},
+        "key": {"type": "string", "required": false, "description": "Specific key for configs (e.g., 'vibe/vibe')"},
+        "filter": {"type": "object", "required": false, "description": "Filter criteria for data queries"},
+        "callback": {"type": "function", "required": false, "description": "Callback for reactive subscriptions"}
+      },
+      "returns": "Data or unsubscribe function (if reactive)"
+    },
+    "create": {
+      "description": "Create new record",
+      "params": {
+        "schema": {"type": "string", "required": true, "description": "Schema reference (@schema/todos)"},
+        "data": {"type": "object", "required": true, "description": "Data to create"}
+      },
+      "returns": "Created record with generated ID"
+    },
+    "update": {
+      "description": "Update existing record",
+      "params": {
+        "schema": {"type": "string", "required": true, "description": "Schema reference (@schema/todos)"},
+        "id": {"type": "string", "required": true, "description": "Record ID to update"},
+        "data": {"type": "object", "required": true, "description": "Data to update"}
+      },
+      "returns": "Updated record"
+    },
+    "delete": {
+      "description": "Delete record",
+      "params": {
+        "schema": {"type": "string", "required": true, "description": "Schema reference (@schema/todos)"},
+        "id": {"type": "string", "required": true, "description": "Record ID to delete"}
+      },
+      "returns": "true if deleted successfully"
+    },
+    "toggle": {
+      "description": "Toggle a boolean field",
+      "params": {
+        "schema": {"type": "string", "required": true, "description": "Schema reference (@schema/todos)"},
+        "id": {"type": "string", "required": true, "description": "Record ID"},
+        "field": {"type": "string", "required": true, "description": "Field name to toggle"}
+      },
+      "returns": "Updated record"
+    },
+    "seed": {
+      "description": "Flush and seed database (dev only)",
+      "params": {
+        "configs": {"type": "object", "required": true, "description": "Config registry"},
+        "schemas": {"type": "object", "required": true, "description": "Schema definitions"},
+        "data": {"type": "object", "required": false, "description": "Initial application data"}
+      },
+      "returns": "void"
+    }
+  }
+}

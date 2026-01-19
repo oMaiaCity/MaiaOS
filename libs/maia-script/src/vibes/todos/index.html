@@ -50,7 +50,6 @@
       try {
         // Boot MaiaOS with module-based configuration
         const os = await MaiaOS.boot({
-          toolsPath: '../../o/tools',
           modules: ['core', 'mutation', 'dragdrop', 'query', 'interface'] // Load core UI, mutation CRUD, dragdrop, reactive queries, and interface modules
         });
         

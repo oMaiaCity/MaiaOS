@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://maiaos.dev/schemas/message.schema.json",
+  "title": "Message",
+  "description": "Actor message for state machine transitions",
+  "type": "object",
+  "required": ["type"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "description": "Message type (event name)"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Message payload data"
+    },
+    "source": {
+      "type": "string",
+      "description": "Source actor ID"
+    },
+    "target": {
+      "type": "string",
+      "description": "Target actor ID"
+    },
+    "timestamp": {
+      "type": "number",
+      "description": "Message timestamp"
+    }
+  }
+}

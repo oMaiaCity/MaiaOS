@@ -1,8 +1,14 @@
 {
   "$type": "context",
   "$id": "context_kanban_001",
-  "todosTodo": [],
-  "todosDone": [],
+  "todosTodo": {
+    "schema": "@schema/todos",
+    "filter": {"done": false}
+  },
+  "todosDone": {
+    "schema": "@schema/todos",
+    "filter": {"done": true}
+  },
   "draggedItemId": null,
   "dragOverColumn": null
 }

@@ -4,43 +4,6 @@
   "initial": "idle",
   "states": {
     "idle": {
-      "entry": [
-        {
-          "tool": "@core/publishMessage",
-          "payload": {
-            "type": "SUBSCRIBE_TO_TODOS",
-            "payload": {
-              "schema": "todos",
-              "filter": { "field": "done", "op": "eq", "value": false },
-              "target": "todosTodo"
-            },
-            "target": "actor_kanban_001"
-          }
-        },
-        {
-          "tool": "@core/publishMessage",
-          "payload": {
-            "type": "SUBSCRIBE_TO_TODOS",
-            "payload": {
-              "schema": "todos",
-              "filter": { "field": "done", "op": "eq", "value": true },
-              "target": "todosDone"
-            },
-            "target": "actor_kanban_001"
-          }
-        },
-        {
-          "tool": "@core/publishMessage",
-          "payload": {
-            "type": "SUBSCRIBE_TO_TODOS",
-            "payload": {
-              "schema": "todos",
-              "target": "todos"
-            },
-            "target": "actor_list_001"
-          }
-        }
-      ],
       "on": {
         "CREATE_BUTTON": {
           "target": "creating",
@@ -64,9 +27,10 @@
     },
     "creating": {
       "entry": {
-        "tool": "@mutation/create",
+        "tool": "@db",
         "payload": { 
-          "schema": "todos",
+          "op": "create",
+          "schema": "@schema/todos",
           "data": { "text": "$$text", "done": false }
         }
       },
@@ -80,7 +44,8 @@
                 "type": "TODO_CREATED",
                 "payload": {
                   "id": "$lastCreatedId",
-                  "text": "$lastCreatedText"
+                  "text": "$lastCreatedText",
+                  "done": false
                 }
               }
             },
@@ -98,9 +63,10 @@
     },
     "toggling": {
       "entry": {
-        "tool": "@mutation/toggle",
+        "tool": "@db",
         "payload": { 
-          "schema": "todos",
+          "op": "toggle",
+          "schema": "@schema/todos",
           "id": "$$id",
           "field": "done"
         }
@@ -123,9 +89,10 @@
     },
     "deleting": {
       "entry": {
-        "tool": "@mutation/delete",
+        "tool": "@db",
         "payload": { 
-          "schema": "todos",
+          "op": "delete",
+          "schema": "@schema/todos",
           "id": "$$id"
         }
       },

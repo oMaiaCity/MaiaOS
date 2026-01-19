@@ -9,7 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@MaiaOS/core": "workspace:*"
+    "@MaiaOS/core": "workspace:*",
+    "@MaiaOS/script": "workspace:*"
   },
   "devDependencies": {
     "vite": "^7.2.4"

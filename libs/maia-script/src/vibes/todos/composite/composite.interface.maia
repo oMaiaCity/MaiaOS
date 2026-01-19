@@ -13,6 +13,18 @@
     "INPUT_CLEARED": {
       "payload": {}
     },
+    "TODO_CREATED": {
+      "payload": {
+        "id": "string",
+        "text": "string",
+        "done": "boolean"
+      }
+    },
+    "TODO_DELETED": {
+      "payload": {
+        "id": "string"
+      }
+    },
     "SUBSCRIBE_TO_TODOS": {
       "payload": {
         "schema": "string",

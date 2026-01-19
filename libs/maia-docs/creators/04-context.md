@@ -84,35 +84,87 @@ Context can be defined inline in the actor file or in a separate `.context.maia`
 
 ## Context Types
 
-### 1. Collections (Arrays)
-Primary data storage:
+### 1. Reactive Data (Query Objects) ⭐
+
+**Query objects** are special objects that tell MaiaOS "I want this data, and keep me updated when it changes."
+
+**Format:**
+```json
+{
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  }
+}
+```
+
+**What this means:** "Give me all items from the 'todos' collection, and automatically update me when they change."
+
+**How it works:**
+1. You declare the query object in context
+2. MaiaOS automatically subscribes to the database
+3. When data changes, MaiaOS updates your context
+4. Your view automatically re-renders
+
+**Think of it like:** Subscribing to a newsletter - you tell them what you want, they send you updates automatically.
+
+**Examples:**
 
 ```json
 {
-  "todos": [
-    {"id": "1", "text": "Buy milk", "done": false},
-    {"id": "2", "text": "Call mom", "done": true}
-  ]
+  "context": {
+    // All todos (no filter)
+    "todos": {
+      "schema": "@schema/todos",
+      "filter": null
+    },
+    
+    // Only incomplete todos
+    "todosTodo": {
+      "schema": "@schema/todos",
+      "filter": { "done": false }
+    },
+    
+    // Only completed todos
+    "todosDone": {
+      "schema": "@schema/todos",
+      "filter": { "done": true }
+    }
+  }
 }
 ```
+
+**When to use:**
+- ✅ When you need data from the database
+- ✅ When you want automatic updates
+- ✅ When data can change (todos, notes, messages, etc.)
 
 **Best practices:**
-- Always initialize as empty array `[]`
-- Include `id` field for entity tracking
-- Keep entities flat when possible
+- Use descriptive names (`todosTodo`, not `t1`)
+- Use filters to get only what you need
+- Don't manually update these arrays (MaiaOS does it automatically)
 
-### 2. Derived Data (Computed)
-Filtered or transformed collections:
+See [Reactive Data System](../developers/06_reactive-queries.md) for detailed examples.
+
+### 2. Collections (Arrays)
+Static array data (not reactive):
 
 ```json
 {
-  "todos": [...],           // Source collection
-  "todosTodo": [...],       // Filtered: incomplete todos
-  "todosDone": [...]        // Filtered: completed todos
+  "colors": ["red", "green", "blue"],
+  "options": ["option1", "option2"]
 }
 ```
 
-**Note:** Derived data is computed by tools (e.g., `@mutation/create` updates filtered arrays).
+**When to use:**
+- Static configuration data
+- Hardcoded options (not from database)
+- Local temporary collections
+
+**Best practices:**
+- Use query objects for database data (reactive)
+- Use arrays for static/local data only
+- Keep entities flat when possible
 
 ### 3. UI State
 View-related state:
@@ -295,12 +347,21 @@ export default {
 ```json
 {
   "context": {
-    // Primary data
-    "todos": [],                    // Array<Todo>
+    // Reactive data (query objects)
+    "todos": {
+      "schema": "@schema/todos",
+      "filter": null
+    },
     
-    // Derived/filtered (computed by tools)
-    "todosTodo": [],                // Array<Todo> where done=false
-    "todosDone": [],                // Array<Todo> where done=true
+    // Derived/filtered reactive data
+    "todosTodo": {
+      "schema": "@schema/todos",
+      "filter": { "done": false }
+    },
+    "todosDone": {
+      "schema": "@schema/todos",
+      "filter": { "done": true }
+    },
     
     // UI state
     "viewMode": "list",             // "list" | "kanban"
@@ -315,8 +376,8 @@ export default {
     "draggedItemIds": {},           // { [itemId: string]: boolean } - Item lookup object
     
     // Computed boolean flags (for conditional styling)
-    "listButtonActive": boolean,    // Computed by state machine
-    "kanbanButtonActive": boolean   // Computed by state machine
+    "listButtonActive": true,       // Computed by state machine
+    "kanbanButtonActive": false     // Computed by state machine
   }
 }
 ```
@@ -348,10 +409,40 @@ interface Todo {
 
 ## Context Reactivity
 
-When context changes, actors automatically re-render:
+MaiaOS automatically updates your UI when data changes. There are two types of reactivity:
+
+### 1. Reactive Data (Query Objects) - Automatic ✨
+
+When you use **query objects** in context, MaiaOS automatically keeps them up to date:
 
 ```
-Tool mutates context
+User creates a todo (via @db tool)
+  ↓
+Database stores the new todo
+  ↓
+Database notifies observers: "Data changed!"
+  ↓
+SubscriptionEngine receives notification
+  ↓
+SubscriptionEngine updates context.todos = [new data]
+  ↓
+SubscriptionEngine schedules re-render (batched)
+  ↓
+ActorEngine.rerender(actor)
+  ↓
+ViewEngine re-renders with new context
+  ↓
+User sees new todo in the list! ✨
+```
+
+**Key insight:** You never manually update `context.todos`. SubscriptionEngine does it automatically when the database changes.
+
+### 2. UI State - Manual (via Tools)
+
+When you update **UI state** (like form inputs, view modes, etc.), you explicitly update context via tools:
+
+```
+Tool mutates context (via @context/update)
   ↓
 Tool completes successfully
   ↓
@@ -366,31 +457,126 @@ ViewEngine re-renders with new context
 User sees updated UI
 ```
 
+**Example:**
+
+```json
+{
+  "tool": "@context/update",
+  "payload": {
+    "newTodoText": "",
+    "viewMode": "kanban"
+  }
+}
+```
+
+### Summary
+
+- **Query objects** → Automatic reactivity (MaiaOS watches for changes)
+- **UI state** → Manual updates (you explicitly update via tools)
+- **Both trigger re-renders** → Your view stays in sync
+
+See [Reactive Data System](../developers/06_reactive-queries.md) for detailed examples.
+
 ## Derived Data Patterns
 
-### Pattern 1: Filter Arrays
-```javascript
-// In @mutation/create tool
-actor.context.todosTodo = actor.context.todos.filter(t => !t.done);
-actor.context.todosDone = actor.context.todos.filter(t => t.done);
+### Pattern 1: Filtered Query Objects (Recommended) ⭐
+
+Use **query objects with filters** to get filtered data automatically:
+
+```json
+{
+  "context": {
+    "todosTodo": {
+      "schema": "@schema/todos",
+      "filter": { "done": false }
+    },
+    "todosDone": {
+      "schema": "@schema/todos",
+      "filter": { "done": true }
+    }
+  }
+}
 ```
+
+**What happens:**
+- MaiaOS automatically fetches filtered data
+- When a todo is toggled, it automatically moves between lists
+- No manual filtering needed!
 
 ### Pattern 2: Compute Aggregates
-```javascript
-// In @context/update tool
-actor.context.todosCount = actor.context.todos.length;
-actor.context.completedCount = actor.context.todosDone.length;
-actor.context.progressPercent = 
-  (actor.context.completedCount / actor.context.todosCount) * 100;
+
+Use computed values for counts, percentages, etc.:
+
+```json
+{
+  "states": {
+    "idle": {
+      "entry": {
+        "tool": "@context/update",
+        "payload": {
+          "todosCount": { "$length": "$todos" },
+          "completedCount": { "$length": "$todosDone" },
+          "progressPercent": {
+            "$divide": [
+              { "$multiply": ["$completedCount", 100] },
+              "$todosCount"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
 ```
 
-### Pattern 3: Sort Collections
+**Or compute in a custom tool:**
+
 ```javascript
-// In @mutation/sort tool
-actor.context.todosSorted = [...actor.context.todos].sort(
-  (a, b) => a.text.localeCompare(b.text)
-);
+// In custom @compute/stats tool
+export default {
+  async execute(actor, payload) {
+    const todos = actor.context.todos;
+    const completed = todos.filter(t => t.done);
+    
+    Object.assign(actor.context, {
+      todosCount: todos.length,
+      completedCount: completed.length,
+      progressPercent: (completed.length / todos.length) * 100
+    });
+  }
+};
 ```
+
+### Pattern 3: Client-Side Filtering (For Search/Sort)
+
+Use client-side filtering for dynamic UI filtering (search, sort):
+
+```json
+{
+  "container": {
+    "tag": "ul",
+    "$each": {
+      "items": {
+        "$filter": {
+          "items": "$todos",
+          "condition": {
+            "$contains": ["$$item.text", "$searchQuery"]
+          }
+        }
+      },
+      "template": {
+        "tag": "li",
+        "text": "$$item.text"
+      }
+    }
+  }
+}
+```
+
+**When to use each:**
+- ✅ **Query object filters** - For persistent filters (incomplete vs. completed)
+- ✅ **Client-side filters** - For temporary UI filters (search, sort)
+- ✅ **Computed values** - For calculations (counts, percentages)
 
 ## Context Debugging
 
