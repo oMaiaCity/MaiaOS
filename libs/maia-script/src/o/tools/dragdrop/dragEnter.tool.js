@@ -12,7 +12,7 @@ export default {
     
     // Trigger re-render to update CSS classes
     if (actor.actorEngine && actor.id) {
-      actor.actorEngine.rerender(actor);
+      actor.actorEngine.rerender(actor.id);
     }
     
     console.log(`✅ [dragdrop/dragEnter] Highlighting column: ${column}`);

@@ -26,7 +26,7 @@ export default {
         console.log(`[context/update] currentView changed to ${payload.currentView}, triggering re-render for ${actor.id}`);
       }
       if (inputCleared) {
-        console.log(`[context/update] Input cleared, triggering re-render for ${actor.id}`);
+        // Silent - re-render happens automatically
       }
       actor.actorEngine.rerender(actor.id);
     }

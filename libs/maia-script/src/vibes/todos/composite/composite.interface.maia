@@ -20,6 +20,11 @@
         "done": "boolean"
       }
     },
+    "TODO_COMPLETED": {
+      "payload": {
+        "id": "string"
+      }
+    },
     "TODO_DELETED": {
       "payload": {
         "id": "string"

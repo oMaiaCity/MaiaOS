@@ -24,6 +24,7 @@ export default {
     
     try {
       // Update the entity using @db tool
+      // This will automatically trigger reactive subscriptions and update filtered arrays
       await toolEngine.execute('@db', actor, {
         op: 'update',
         schema: `@schema/${schema}`,
@@ -31,10 +32,7 @@ export default {
         data: { [field]: value }
       });
       
-      // Clear drag state (dragOverColumn will be cleared by @dragdrop/end)
-      actor.context.draggedItemId = null;
-      actor.context.draggedEntityType = null;
-      
+      // Drag state will be cleared by @dragdrop/end in SUCCESS action
       console.log(`✅ [dragdrop/drop] Dropped ${schema}/${draggedId}, set ${field} = ${value}`);
     } catch (error) {
       console.error(`[dragdrop/drop] Failed to update ${schema}/${draggedId}:`, error);

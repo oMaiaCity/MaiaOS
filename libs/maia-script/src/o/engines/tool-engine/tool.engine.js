@@ -45,7 +45,7 @@ export class ToolEngine {
         namespacePath
       });
       
-      console.log(`[ToolEngine] Registered tool: ${toolRegistryName}`);
+      // Silent - kernel logs tool summary
     } catch (error) {
       console.error(`[ToolEngine] Failed to register tool ${namespacePath}:`, error.message);
       // Don't throw - allow module loading to continue
@@ -86,7 +86,7 @@ export class ToolEngine {
         // Execute tool function
         await tool.function.execute(actor, payload);
         
-        console.log(`[ToolEngine] Executed ${actionName}`);
+        // Only log errors, not successful executions (too verbose)
       } catch (error) {
         console.error(`[ToolEngine] Tool execution error (${actionName}):`, error);
         actor.context.error = error.message || 'Tool execution failed';

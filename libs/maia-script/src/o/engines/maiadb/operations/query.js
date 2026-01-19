@@ -36,14 +36,13 @@ export class QueryOperation {
     
     // Reactive query (callback provided)
     if (callback) {
-      console.log(`[QueryOperation] Reactive query: ${schema}`, filter);
+      // Silent - SubscriptionEngine handles logging
       return this.backend.subscribe(schema, filter, callback);
     }
     
     // One-time query
     if (key) {
-      // Load specific config by key
-      console.log(`[QueryOperation] Load config: ${schema}:${key}`);
+      // Load specific config by key (silent - too frequent)
       return await this.backend.get(schema, key);
     } else {
       // Query collection (optionally with filter)

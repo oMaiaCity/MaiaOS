@@ -51,8 +51,6 @@ export class SubscriptionEngine {
    * @returns {Promise<void>}
    */
   async initialize(actor) {
-    this._log(`[SubscriptionEngine] Initializing ${actor.id}`);
-    
     // Scan context for query objects and @ references
     await this._subscribeToContext(actor);
   }
@@ -99,22 +97,16 @@ export class SubscriptionEngine {
           }
           actor._subscriptions.push(unsubscribe);
           subscriptionCount++;
-          
-          const filterStr = value.filter ? ` (filtered)` : '';
-          this._log(`[SubscriptionEngine] ✅ ${actor.id} → ${value.schema}${filterStr} → $${key}`);
         } catch (error) {
           console.error(`[SubscriptionEngine] ❌ Failed ${actor.id} → ${value.schema}:`, error);
         }
       }
       
-      // @ string ref → log for now (future: reactive loading)
-      if (typeof value === 'string' && value.startsWith('@')) {
-        this._log(`[SubscriptionEngine] @ ref: ${key} = ${value}`);
-      }
+      // @ string ref → future: reactive loading (no logging needed)
     }
     
     if (subscriptionCount > 0) {
-      this._log(`[SubscriptionEngine] ${actor.id} initialized with ${subscriptionCount} subscription(s)`);
+      this._log(`[SubscriptionEngine] ✅ ${actor.id}: ${subscriptionCount} subscription(s)`);
     }
   }
 
@@ -144,9 +136,6 @@ export class SubscriptionEngine {
       }
       actor._initialDataReceived.add(contextKey);
       
-      const dataSize = Array.isArray(data) ? data.length : typeof data;
-      this._log(`[SubscriptionEngine] 📥 ${actorId}.$${contextKey} initial data (${dataSize})`);
-      
       // Always re-render on initial data (if initial render complete)
       if (actor._initialRenderComplete) {
         this._scheduleRerender(actorId);
@@ -157,15 +146,14 @@ export class SubscriptionEngine {
     // Deduplication: Check if data actually changed (subsequent updates only)
     const oldData = actor.context[contextKey];
     if (this._isSameData(oldData, data)) {
-      this._log(`[SubscriptionEngine] ⏭️ ${actorId}.$${contextKey} unchanged, skipping`);
-      return;
+      return; // Skip if unchanged
     }
 
     // Update context with new data
     actor.context[contextKey] = data;
     
     const dataSize = Array.isArray(data) ? data.length : typeof data;
-    this._log(`[SubscriptionEngine] 🔄 ${actorId}.$${contextKey} updated (${dataSize})`);
+    this._log(`[SubscriptionEngine] 🔄 ${actorId}.$${contextKey} (${dataSize})`);
 
     // Trigger batched re-render (only if initial render complete)
     if (actor._initialRenderComplete) {
@@ -202,8 +190,7 @@ export class SubscriptionEngine {
     
     // Visibility optimization: Skip hidden actors
     if (actor && !actor._isVisible) {
-      this._log(`[SubscriptionEngine] ⏭️ Skipping re-render for hidden ${actorId}`);
-      return;
+      return; // Skip hidden actors silently
     }
     
     // Add to pending re-renders
@@ -231,7 +218,9 @@ export class SubscriptionEngine {
     this.pendingRerenders.clear();
     this.batchTimer = null;
     
-    this._log(`[SubscriptionEngine] 🎨 Batched re-render: ${actorIds.length} actor(s)`, actorIds);
+    if (actorIds.length > 0) {
+      this._log(`[SubscriptionEngine] 🎨 Re-render: ${actorIds.length} actor(s)`);
+    }
     
     // Re-render all actors
     for (const actorId of actorIds) {

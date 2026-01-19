@@ -453,7 +453,7 @@ export class IndexedDBBackend {
    * @returns {Function} Unsubscribe function
    */
   subscribe(schema, filter, callback) {
-    console.log(`[IndexedDBBackend] Setting up subscription for ${schema}`, { filter });
+    // Silent - SubscriptionEngine handles logging
     
     if (!this.observers.has(schema)) {
       this.observers.set(schema, new Set());
@@ -462,11 +462,8 @@ export class IndexedDBBackend {
     const observer = { filter, callback };
     this.observers.get(schema).add(observer);
     
-    console.log(`[IndexedDBBackend] Observer registered for ${schema}, total observers: ${this.observers.get(schema).size}`);
-    
-    // Immediately call callback with current data
+    // Immediately call callback with current data (silent - SubscriptionEngine handles logging)
     this.query(schema, filter).then(data => {
-      console.log(`[IndexedDBBackend] Initial data callback for ${schema}:`, { dataLength: data?.length, filter });
       callback(data);
     });
     
@@ -489,23 +486,15 @@ export class IndexedDBBackend {
    * @param {Array} updatedCollection - The updated collection data
    */
   notifyWithData(schema, updatedCollection) {
-    console.log(`[IndexedDBBackend] Notifying observers for ${schema} with data (length: ${updatedCollection?.length})`);
-    
     const observers = this.observers.get(schema);
-    if (!observers) {
-      console.log(`[IndexedDBBackend] No observers found for ${schema}`);
-      return;
+    if (!observers || observers.size === 0) {
+      return; // No observers, silent return
     }
     
-    console.log(`[IndexedDBBackend] Found ${observers.size} observer(s) for ${schema}`);
-    
-    observers.forEach((observer, index) => {
-      console.log(`[IndexedDBBackend] Calling observer ${index + 1} for ${schema}`, { filter: observer.filter });
-      
+    // Silent - SubscriptionEngine handles logging
+    observers.forEach((observer) => {
       // Apply filter to updated collection
       const filteredData = observer.filter ? this._applyFilter(updatedCollection, observer.filter) : updatedCollection;
-      
-      console.log(`[IndexedDBBackend] Observer callback data for ${schema}:`, { dataLength: filteredData?.length });
       observer.callback(filteredData);
     });
   }

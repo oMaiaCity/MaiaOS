@@ -320,8 +320,6 @@ export class ViewEngine {
   _renderSlot(node, data, wrapperElement, actorId) {
     const slotKey = node.$slot; // e.g., "$currentView"
     
-    console.log(`[ViewEngine] Rendering slot: ${slotKey}`, { node, actorId, context: data.context });
-    
     if (!slotKey || !slotKey.startsWith('$')) {
       console.warn(`[ViewEngine] Slot key must start with $: ${slotKey}`);
       return;
@@ -329,8 +327,6 @@ export class ViewEngine {
     
     const contextKey = slotKey.slice(1); // Remove '$'
     const contextValue = data.context[contextKey]; // e.g., "@list" or "My App"
-    
-    console.log(`[ViewEngine] Slot resolution: ${contextKey} = ${contextValue}`);
     
     if (!contextValue) {
       // No value mapped - wrapper element is already created, just leave it empty
@@ -344,18 +340,9 @@ export class ViewEngine {
     if (typeof contextValue === 'string' && contextValue.startsWith('@')) {
       const namekey = contextValue.slice(1); // Remove '@'
       const actor = this.actorEngine?.getActor(actorId);
-      
-      console.log(`[ViewEngine] Looking up child actor: namekey=${namekey}`, {
-        actorId,
-        actorExists: !!actor,
-        children: actor?.children ? Object.keys(actor.children) : []
-      });
-      
       const childActor = actor?.children?.[namekey];
       
       if (childActor?.containerElement) {
-        console.log(`[ViewEngine] Attaching child actor ${namekey} to slot`);
-        
         // Mark all children as hidden first (only the attached one will be visible)
         if (actor?.children) {
           for (const child of Object.values(actor.children)) {
@@ -370,19 +357,13 @@ export class ViewEngine {
         if (childActor.containerElement.parentNode !== wrapperElement) {
           // Remove from old parent if attached elsewhere
           if (childActor.containerElement.parentNode) {
-            console.log(`[ViewEngine] Moving child actor container from existing parent`);
             childActor.containerElement.parentNode.removeChild(childActor.containerElement);
           }
           
           // Clear wrapper and attach new child
-          console.log(`[ViewEngine] Clearing slot wrapper and attaching new child`);
           wrapperElement.innerHTML = '';
           wrapperElement.appendChild(childActor.containerElement);
-        } else {
-          console.log(`[ViewEngine] Child actor already in slot, skipping append`);
         }
-        
-        console.log(`[ViewEngine] ✅ Child actor attached successfully`);
       } else {
         console.warn(`[ViewEngine] Child actor not found for namekey: ${namekey}`, {
           actorId,
@@ -502,8 +483,6 @@ export class ViewEngine {
     const eventName = eventDef.send;
     let payload = eventDef.payload || {};
     
-    console.log('🎯 Event triggered:', e.type, 'Element:', element.tagName, 'Send:', eventName);
-    
     // Query module registry for auto-preventDefault events
     const dragDropModule = this.moduleRegistry?.getModule('dragdrop');
     if (dragDropModule && typeof dragDropModule.shouldPreventDefault === 'function') {
@@ -525,16 +504,11 @@ export class ViewEngine {
     
     // Check key filter (for keyboard events)
     if (eventDef.key && e.key !== eventDef.key) {
-      console.log('⏭️ Key filter mismatch:', e.key, 'expected:', eventDef.key);
-      return; // Ignore if key doesn't match
+      return; // Ignore if key doesn't match (silently)
     }
-
-    console.log('📦 Raw payload:', payload);
 
     // Resolve payload
     payload = this.resolvePayload(payload, data, e, element);
-
-    console.log('📦 Resolved payload:', payload, 'ActorID:', actorId);
 
     // Dispatch event to state machine
     if (this.actorEngine) {

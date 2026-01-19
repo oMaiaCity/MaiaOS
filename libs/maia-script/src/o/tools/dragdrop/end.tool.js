@@ -17,7 +17,7 @@ export default {
     
     // Trigger re-render to update UI (hide dragging class, clear dropzone highlight)
     if (actor.actorEngine && actor.id) {
-      actor.actorEngine.rerender(actor);
+      actor.actorEngine.rerender(actor.id);
     }
     
     console.log('✅ [dragdrop/end] Ended dragging, cleared drag state');

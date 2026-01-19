@@ -82,6 +82,15 @@
         },
         "SUBSCRIBE_TO_TODOS": {
           "target": "idle"
+        },
+        "TODO_CREATED": {
+          "target": "idle"
+        },
+        "TODO_COMPLETED": {
+          "target": "idle"
+        },
+        "TODO_DELETED": {
+          "target": "idle"
         }
       }
     }

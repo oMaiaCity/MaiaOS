@@ -22,7 +22,7 @@ export class InterfaceModule {
       'validateInterface'
     ];
     
-    console.log(`[InterfaceModule] Registering ${toolNames.length} tools...`);
+    // Silent - kernel logs module summary
     
     for (const toolName of toolNames) {
       const namespacePath = `interface/${toolName}`;
@@ -44,7 +44,7 @@ export class InterfaceModule {
       tools: toolNames.map(t => `@interface/${t}`)
     });
     
-    console.log('[InterfaceModule] Registration complete');
+    // Silent - kernel logs module summary
   }
 
   /**

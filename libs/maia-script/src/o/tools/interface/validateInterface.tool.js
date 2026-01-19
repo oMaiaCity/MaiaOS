@@ -82,7 +82,7 @@ export default {
     }
     
     if (errors.length === 0 && warnings.length === 0) {
-      console.log(`✅ [interface/validate] ${actorId} - Interface valid`);
+      // Silent - only log errors
     }
     
     // Store validation results in actor context (for debugging)

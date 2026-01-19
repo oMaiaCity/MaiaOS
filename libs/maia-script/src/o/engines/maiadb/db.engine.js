@@ -57,7 +57,10 @@ export class DBEngine {
       throw new Error(`[DBEngine] Unknown operation: ${op}`);
     }
     
-    console.log(`[DBEngine] Executing operation: ${op}`, params);
+    // Only log non-query operations (queries are too frequent)
+    if (op !== 'query') {
+      console.log(`[DBEngine] ${op}`, params);
+    }
     
     try {
       const result = await operation.execute(params);

@@ -29,7 +29,7 @@ export class ModuleRegistry {
       ...config
     });
     
-    console.log(`[ModuleRegistry] Registered module: ${name}`);
+    // Silent - kernel logs module summary
   }
 
   /**

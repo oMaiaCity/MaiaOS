@@ -13,7 +13,7 @@ export class DBModule {
    * @param {ModuleRegistry} registry - Module registry instance
    */
   static async register(registry) {
-    console.log(`[DBModule] Registering 1 tool...`);
+    // Silent - kernel logs module summary
     
     // Get toolEngine from registry (stored by kernel during boot)
     const toolEngine = registry._toolEngine;
@@ -28,8 +28,6 @@ export class DBModule {
       namespacePath: 'db/db'
     });
     
-    console.log(`[ToolEngine] Registered tool: @db`);
-    
     // Register module with config
     registry.registerModule('db', DBModule, {
       version: '1.0.0',
@@ -38,8 +36,7 @@ export class DBModule {
       tools: ['@db']
     });
     
-    console.log('[ModuleRegistry] Registered module: db');
-    console.log('[DBModule] Registration complete');
+    // Silent - kernel logs module summary
   }
 
   /**

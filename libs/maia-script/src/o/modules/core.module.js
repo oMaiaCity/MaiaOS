@@ -24,7 +24,7 @@ export class CoreModule {
       'publishMessage'
     ];
     
-    console.log(`[CoreModule] Registering ${toolNames.length} tools...`);
+    // Silent - kernel logs module summary
     
     for (const toolName of toolNames) {
       const namespacePath = `core/${toolName}`;
@@ -46,7 +46,7 @@ export class CoreModule {
       tools: toolNames.map(t => `@core/${t}`)
     });
     
-    console.log('[CoreModule] Registration complete');
+    // Silent - kernel logs module summary
   }
 
   /**
