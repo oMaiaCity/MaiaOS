@@ -1,5 +1,5 @@
 // Import validation helper
-import { validateAgainstSchemaOrThrow } from '../../../schemata/validation.helper.js';
+import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 
 /**
  * ToolEngine - AI-Compatible Tool Execution System

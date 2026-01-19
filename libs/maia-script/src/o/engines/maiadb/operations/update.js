@@ -5,7 +5,7 @@
  *   maia.db({op: 'update', schema: '@schema/todos', id: '123', data: {done: true}})
  */
 
-import { validateAgainstSchemaOrThrow } from '../../../../schemata/validation.helper.js';
+import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 
 export class UpdateOperation {
   constructor(backend) {

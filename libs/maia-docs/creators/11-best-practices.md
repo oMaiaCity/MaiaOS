@@ -283,7 +283,7 @@ User clicks "Add" button in Composite
 Composite: CREATE_BUTTON { text: "Buy milk" }
   └─ Forwards to Vibe: CREATE_BUTTON { text: "Buy milk" }
       ↓
-Vibe: Executes mutation (@mutation/create)
+Vibe: Executes @db tool (op: "create")
   ├─ Publishes: TODO_CREATED { id: "123", text: "Buy milk" }
   └─ Publishes: INPUT_CLEARED → Composite
       ↓
@@ -536,8 +536,8 @@ App Composite Actor
   "states": {
     "creating": {
       "entry": {
-        "tool": "@mutation/create",  // ❌ Business logic in UI actor
-        "payload": {...}
+        "tool": "@db",  // ❌ Business logic in UI actor
+        "payload": { "op": "create", ... }
       }
     }
   }

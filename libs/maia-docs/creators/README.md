@@ -25,8 +25,8 @@ Read the documentation in the following order for a complete understanding:
 - Actor composition
 - Actor references and identity
 
-### 3. [Skills](./03-skills.md)
-**AI Agent Skills**
+### 3. ~~[Skills](../future/03-skills.md)~~ *(Future Feature - v0.5+)*
+**AI Agent Skills** *(Not yet implemented)*
 - Skill definitions
 - How to create skills
 - Skill composition

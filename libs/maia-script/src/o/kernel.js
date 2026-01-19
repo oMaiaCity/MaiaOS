@@ -23,13 +23,13 @@ import { SubscriptionEngine } from './engines/subscription-engine/subscription.e
 import { DBEngine } from './engines/maiadb/db.engine.js';
 import { IndexedDBBackend } from './engines/maiadb/backend/indexeddb.js';
 // Import validation helper
-import { validateOrThrow, validateAgainstSchemaOrThrow } from '../schemata/validation.helper.js';
+import { validateOrThrow, validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import all schemas for seeding
-import * as schemata from '../schemata/index.js';
+import * as schemata from '@MaiaOS/schemata';
 // Import ValidationEngine for meta schema validation
-import { ValidationEngine } from '../schemata/validation.engine.js';
+import { ValidationEngine } from '@MaiaOS/schemata/validation.engine';
 // Import schema loader utility
-import { loadSchemaFromDB } from '../schemata/schema-loader.js';
+import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
 
 /**
  * MaiaOS - Operating System for Actor-based Applications
@@ -122,7 +122,7 @@ export class MaiaOS {
       console.log('✅ Database seeded successfully');
       
       // Set schema resolver on validation helper singleton for engines to use
-      const { setSchemaResolver } = await import('../schemata/validation.helper.js');
+      const { setSchemaResolver } = await import('@MaiaOS/schemata/validation.helper');
       setSchemaResolver(async (schemaKey) => {
         try {
           return await backend.getSchema(schemaKey);

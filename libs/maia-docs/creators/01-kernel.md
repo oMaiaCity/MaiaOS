@@ -23,7 +23,7 @@ The **Kernel** is the single entry point for MaiaOS. It boots the operating syst
     async function boot() {
       // Boot the operating system
       const os = await MaiaOS.boot({
-        modules: ['core', 'mutation', 'dragdrop']
+        modules: ['db', 'core', 'dragdrop', 'interface']
       });
       
       // Create an actor
@@ -45,11 +45,8 @@ The **Kernel** is the single entry point for MaiaOS. It boots the operating syst
 
 ```javascript
 const os = await MaiaOS.boot({
-  // Modules to load (default: ['core', 'mutation', 'dragdrop'])
-  modules: ['core', 'mutation', 'dragdrop'],
-  
-  // Tools path (default: '../../o/tools')
-  toolsPath: '../../o/tools'
+  // Modules to load (default: ['db', 'core', 'dragdrop', 'interface'])
+  modules: ['db', 'core', 'dragdrop', 'interface']
 });
 ```
 
@@ -68,20 +65,20 @@ const os = await MaiaOS.boot({
 
 ## Available Modules
 
+### Database Module (`db`)
+Unified database operations through a single `@db` tool:
+- All operations use `op` parameter (`create`, `update`, `delete`, `toggle`, `query`, `seed`)
+- Example: `{ tool: "@db", payload: { op: "create", schema: "@schema/todos", data: {...} } }`
+- Reactive query objects automatically keep data in sync
+- See [State Machines](./05-state.md) for data patterns
+
 ### Core Module (`core`)
-UI utilities and modal management:
-- `@core/setViewMode` - Switch view modes
-- `@core/openModal` - Open modal dialogs
-- `@core/closeModal` - Close modals
+UI utilities and message publishing:
+- `@core/publishMessage` - Publish messages to subscribed actors
 - `@core/noop` - No-operation (for testing)
 - `@core/preventDefault` - Prevent default events
-
-### Mutation Module (`mutation`)
-Generic CRUD operations for any schema:
-- `@mutation/create` - Create entities
-- `@mutation/update` - Update entities by ID
-- `@mutation/delete` - Delete entities
-- `@mutation/toggle` - Toggle boolean fields
+- `@core/openModal` - Open modal dialogs (if using modals)
+- `@core/closeModal` - Close modals (if using modals)
 
 ### Drag-Drop Module (`dragdrop`)
 Generic drag-and-drop for any schema/field:
@@ -90,7 +87,11 @@ Generic drag-and-drop for any schema/field:
 - `@dragdrop/drop` - Handle drop with field update
 - `@dragdrop/dragEnter` - Visual feedback on enter
 - `@dragdrop/dragLeave` - Visual feedback on leave
-- `@context/update` - Update context fields (used by input bindings)
+
+### Interface Module (`interface`)
+Actor interface validation:
+- `@interface/validate` - Validate actor message contracts
+- Ensures actors communicate with correct message structures
 
 ## Creating Actors
 
@@ -192,12 +193,13 @@ On successful boot, you'll see:
 🤖 State Machines: AI-compatible actor coordination
 📨 Message Passing: Actor-to-actor communication
 🔧 Tools: Dynamic modular loading
-📦 Loading 3 modules...
+📦 Loading 4 modules...
+[DBModule] Registering 1 tool (@db)...
 [CoreModule] Registering 5 tools...
-[MutationModule] Registering 4 tools...
-[DragDropModule] Registering 6 tools...
-✅ Loaded 3 modules
-✅ Registered 15 tools
+[DragDropModule] Registering 5 tools...
+[InterfaceModule] Registering 1 tool...
+✅ Loaded 4 modules
+✅ Registered 12 tools
 ✅ MaiaOS booted successfully
 ```
 
@@ -218,9 +220,9 @@ Error: Failed to load module "dragdrop"
 
 ### Tool not found
 ```
-[ToolEngine] Tool not found: @mutation/create
+[ToolEngine] Tool not found: @db
 ```
-**Solution:** Ensure the `mutation` module is loaded in boot config
+**Solution:** Ensure the `db` module is loaded in boot config
 
 ### Actor fails to load
 ```

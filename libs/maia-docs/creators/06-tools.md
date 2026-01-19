@@ -1,14 +1,31 @@
-# Tools
+# Tools (The Hands)
 
-**Tools** are executable functions that perform actions. They are the **hands of actors** - invoked by state machines to mutate context, call APIs, update databases, etc.
+Think of tools as your actor's **hands** - they do the actual work!
 
-## Philosophy
+**Your state machine says:** "Now is the time to create a todo!"
 
-> Tools are the ONLY place where imperative code lives. Everything else is declarative.
+**The tool responds:** "Got it! Let me add that to the database for you."
 
-- **State machines** decide WHEN to act
-- **Tools** define HOW to act  
-- **Actors** hold WHAT to act upon (context)
+## What Tools Do
+
+Tools are where the actual work happens:
+- Create a todo? That's a tool! (`@db` with `op: "create"`)
+- Delete an item? That's a tool! (`@db` with `op: "delete"`)
+- Send a message? That's a tool! (`@core/publishMessage`)
+
+Your actor can't do anything without tools - they're the only way to actually make things happen.
+
+## How It Works Together
+
+```
+State Machine (The Brain)  →  "Create a todo!"
+     ↓
+Tool (The Hands)          →  Actually creates it in the database
+     ↓
+Context (The Memory)      →  Updates with the new todo
+     ↓
+View (The Face)           →  Shows the new todo to the user
+```
 
 ## Tool Structure
 
@@ -20,9 +37,9 @@ AI-compatible metadata describing the tool:
 ```json
 {
   "$type": "tool",
-  "$id": "tool_mutation_create_001",
-  "name": "@mutation/create",
-  "description": "Generic create operation for any schema",
+  "$id": "tool_db_001",
+  "name": "@db",
+  "description": "Unified database operation tool",
   "parameters": {
     "type": "object",
     "properties": {
@@ -64,50 +81,83 @@ export default {
 
 ## Available Tools
 
-### Mutation Module (`@mutation/*`)
+### Database Module (`@db`)
 
-#### `@mutation/create`
+The `@db` tool is a unified database operation tool that handles all CRUD operations through an `op` parameter.
+
+#### Create Operation
 ```json
 {
-  "tool": "@mutation/create",
+  "tool": "@db",
   "payload": {
-    "schema": "todos",
+    "op": "create",
+    "schema": "@schema/todos",
     "data": {"text": "Buy milk", "done": false}
   }
 }
 ```
 
-#### `@mutation/update`
+#### Update Operation
 ```json
 {
-  "tool": "@mutation/update",
+  "tool": "@db",
   "payload": {
-    "schema": "todos",
+    "op": "update",
+    "schema": "@schema/todos",
     "id": "123",
     "data": {"text": "Buy milk and eggs"}
   }
 }
 ```
 
-#### `@mutation/delete`
+#### Delete Operation
 ```json
 {
-  "tool": "@mutation/delete",
+  "tool": "@db",
   "payload": {
-    "schema": "todos",
+    "op": "delete",
+    "schema": "@schema/todos",
     "id": "123"
   }
 }
 ```
 
-#### `@mutation/toggle`
+#### Toggle Operation
 ```json
 {
-  "tool": "@mutation/toggle",
+  "tool": "@db",
   "payload": {
-    "schema": "todos",
+    "op": "toggle",
+    "schema": "@schema/todos",
     "id": "123",
     "field": "done"
+  }
+}
+```
+
+#### Query Operation
+```json
+{
+  "tool": "@db",
+  "payload": {
+    "op": "query",
+    "schema": "@schema/todos",
+    "filter": {"done": false}
+  }
+}
+```
+
+#### Seed Operation
+```json
+{
+  "tool": "@db",
+  "payload": {
+    "op": "seed",
+    "schema": "@schema/todos",
+    "data": [
+      {"text": "First todo", "done": false},
+      {"text": "Second todo", "done": true}
+    ]
   }
 }
 ```
@@ -264,7 +314,7 @@ export async function register(registry) {
 
 ```javascript
 const os = await MaiaOS.boot({
-  modules: ['core', 'mutation', 'dragdrop', 'custom']
+  modules: ['db', 'core', 'dragdrop', 'interface', 'custom']
 });
 ```
 

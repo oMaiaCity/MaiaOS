@@ -1,24 +1,32 @@
-# Actors
+# Actors (Building Blocks)
 
-**Actors** are the fundamental building blocks of MaiaOS applications. They are **autonomous, self-contained components** with their own state, behavior, UI, and messaging capabilities.
+Think of actors like **LEGO pieces**. Each piece is complete by itself:
+- It knows what it looks like (view)
+- It knows how to behave (state machine)
+- It remembers things (context)
+- It can talk to other pieces (messages)
 
-## Philosophy
+You snap actors together to build your app!
 
-> Actors are **pure declarative specifications** - they contain zero embedded logic, only configuration and references.
+## What's an Actor?
 
-An actor is a **lightweight definition file** (`.actor.maia`) that:
-- References a state machine (behavior)
-- References a view (UI)
-- References styles (appearance)
-- Holds runtime context (data)
-- Receives messages via inbox
-- Subscribes to other actors
+An actor is just a small file (`.actor.maia`) that says:
+- "My brain is in `todo.state.maia`" (state machine)
+- "My face is in `todo.view.maia`" (UI)
+- "My style is in `brand.style.maia`" (colors and fonts)
+- "My memory is in `todo.context.maia`" (data I remember)
 
-**Think of actors as composable building blocks:** They define *what* should happen (via references) without implementing *how* it happens (that's the engines' job). This separation makes actors:
-- **Simple** - Easy to understand and modify
-- **Composable** - Mix and match state, views, and styles
-- **Reusable** - Same definition creates multiple instances
-- **AI-friendly** - LLM agents can read and generate them easily
+**That's it!** The actor file just points to other files. The engines do the actual work.
+
+## Why This Is Cool
+
+**Simple:** Each file does one thing. Easy to understand!
+
+**Reusable:** Want 3 todo lists? Create the actor 3 times. They all work independently!
+
+**Composable:** Mix and match. Use the same view with a different state machine. Use the same state machine with a different view.
+
+**AI-Friendly:** Because it's just configuration files, AI agents can easily read and modify them!
 
 ## Actor Definition
 
@@ -300,7 +308,7 @@ UI Actor sends: TOGGLE_BUTTON { id: "123" }
   ↓
 Service Actor receives message
   ↓
-Service Actor executes mutation: @mutation/toggle
+Service Actor executes: @db tool with op: "toggle"
   ↓
 Service Actor publishes: TODO_COMPLETED { id: "123" }
   ↓
@@ -893,8 +901,8 @@ When an event happens, publish a message:
   "states": {
     "creating": {
       "entry": {
-        "tool": "@mutation/create",
-        "payload": { "schema": "todos", "data": {...} }
+        "tool": "@db",
+        "payload": { "op": "create", "schema": "@schema/todos", "data": {...} }
       },
       "on": {
         "SUCCESS": {

@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-01-19T23:08:25.450Z
+**Auto-generated:** 2026-01-19T23:44:45.783Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -1346,7 +1346,7 @@ The service actor orchestrates the application and loads UI actors as children. 
     async function boot() {
       // Boot MaiaOS
       const os = await MaiaOS.boot({
-        modules: ['core', 'mutation', 'dragdrop']
+        modules: ['db', 'core', 'dragdrop', 'interface']
       });
       
       // Load vibe
@@ -1488,8 +1488,7 @@ vibes/todos/
     
     async function boot() {
       const os = await MaiaOS.boot({
-        toolsPath: '../../o/tools',
-        modules: ['core', 'mutation', 'dragdrop']
+        modules: ['db', 'core', 'dragdrop', 'interface']
       });
       
       // Load the vibe
@@ -1639,7 +1638,7 @@ The **Kernel** is the single entry point for MaiaOS. It boots the operating syst
     async function boot() {
       // Boot the operating system
       const os = await MaiaOS.boot({
-        modules: ['core', 'mutation', 'dragdrop']
+        modules: ['db', 'core', 'dragdrop', 'interface']
       });
       
       // Create an actor
@@ -1661,11 +1660,8 @@ The **Kernel** is the single entry point for MaiaOS. It boots the operating syst
 
 ```javascript
 const os = await MaiaOS.boot({
-  // Modules to load (default: ['core', 'mutation', 'dragdrop'])
-  modules: ['core', 'mutation', 'dragdrop'],
-  
-  // Tools path (default: '../../o/tools')
-  toolsPath: '../../o/tools'
+  // Modules to load (default: ['db', 'core', 'dragdrop', 'interface'])
+  modules: ['db', 'core', 'dragdrop', 'interface']
 });
 ```
 
@@ -1684,20 +1680,20 @@ const os = await MaiaOS.boot({
 
 ## Available Modules
 
+### Database Module (`db`)
+Unified database operations through a single `@db` tool:
+- All operations use `op` parameter (`create`, `update`, `delete`, `toggle`, `query`, `seed`)
+- Example: `{ tool: "@db", payload: { op: "create", schema: "@schema/todos", data: {...} } }`
+- Reactive query objects automatically keep data in sync
+- See [State Machines](./05-state.md) for data patterns
+
 ### Core Module (`core`)
-UI utilities and modal management:
-- `@core/setViewMode` - Switch view modes
-- `@core/openModal` - Open modal dialogs
-- `@core/closeModal` - Close modals
+UI utilities and message publishing:
+- `@core/publishMessage` - Publish messages to subscribed actors
 - `@core/noop` - No-operation (for testing)
 - `@core/preventDefault` - Prevent default events
-
-### Mutation Module (`mutation`)
-Generic CRUD operations for any schema:
-- `@mutation/create` - Create entities
-- `@mutation/update` - Update entities by ID
-- `@mutation/delete` - Delete entities
-- `@mutation/toggle` - Toggle boolean fields
+- `@core/openModal` - Open modal dialogs (if using modals)
+- `@core/closeModal` - Close modals (if using modals)
 
 ### Drag-Drop Module (`dragdrop`)
 Generic drag-and-drop for any schema/field:
@@ -1706,7 +1702,11 @@ Generic drag-and-drop for any schema/field:
 - `@dragdrop/drop` - Handle drop with field update
 - `@dragdrop/dragEnter` - Visual feedback on enter
 - `@dragdrop/dragLeave` - Visual feedback on leave
-- `@context/update` - Update context fields (used by input bindings)
+
+### Interface Module (`interface`)
+Actor interface validation:
+- `@interface/validate` - Validate actor message contracts
+- Ensures actors communicate with correct message structures
 
 ## Creating Actors
 
@@ -1808,12 +1808,13 @@ On successful boot, you'll see:
 🤖 State Machines: AI-compatible actor coordination
 📨 Message Passing: Actor-to-actor communication
 🔧 Tools: Dynamic modular loading
-📦 Loading 3 modules...
+📦 Loading 4 modules...
+[DBModule] Registering 1 tool (@db)...
 [CoreModule] Registering 5 tools...
-[MutationModule] Registering 4 tools...
-[DragDropModule] Registering 6 tools...
-✅ Loaded 3 modules
-✅ Registered 15 tools
+[DragDropModule] Registering 5 tools...
+[InterfaceModule] Registering 1 tool...
+✅ Loaded 4 modules
+✅ Registered 12 tools
 ✅ MaiaOS booted successfully
 ```
 
@@ -1834,9 +1835,9 @@ Error: Failed to load module "dragdrop"
 
 ### Tool not found
 ```
-[ToolEngine] Tool not found: @mutation/create
+[ToolEngine] Tool not found: @db
 ```
-**Solution:** Ensure the `mutation` module is loaded in boot config
+**Solution:** Ensure the `db` module is loaded in boot config
 
 ### Actor fails to load
 ```
@@ -1850,27 +1851,35 @@ Failed to load actor: ./maia/todo.actor.maia
 
 *Source: creators/02-actors.md*
 
-# Actors
+# Actors (Building Blocks)
 
-**Actors** are the fundamental building blocks of MaiaOS applications. They are **autonomous, self-contained components** with their own state, behavior, UI, and messaging capabilities.
+Think of actors like **LEGO pieces**. Each piece is complete by itself:
+- It knows what it looks like (view)
+- It knows how to behave (state machine)
+- It remembers things (context)
+- It can talk to other pieces (messages)
 
-## Philosophy
+You snap actors together to build your app!
 
-> Actors are **pure declarative specifications** - they contain zero embedded logic, only configuration and references.
+## What's an Actor?
 
-An actor is a **lightweight definition file** (`.actor.maia`) that:
-- References a state machine (behavior)
-- References a view (UI)
-- References styles (appearance)
-- Holds runtime context (data)
-- Receives messages via inbox
-- Subscribes to other actors
+An actor is just a small file (`.actor.maia`) that says:
+- "My brain is in `todo.state.maia`" (state machine)
+- "My face is in `todo.view.maia`" (UI)
+- "My style is in `brand.style.maia`" (colors and fonts)
+- "My memory is in `todo.context.maia`" (data I remember)
 
-**Think of actors as composable building blocks:** They define *what* should happen (via references) without implementing *how* it happens (that's the engines' job). This separation makes actors:
-- **Simple** - Easy to understand and modify
-- **Composable** - Mix and match state, views, and styles
-- **Reusable** - Same definition creates multiple instances
-- **AI-friendly** - LLM agents can read and generate them easily
+**That's it!** The actor file just points to other files. The engines do the actual work.
+
+## Why This Is Cool
+
+**Simple:** Each file does one thing. Easy to understand!
+
+**Reusable:** Want 3 todo lists? Create the actor 3 times. They all work independently!
+
+**Composable:** Mix and match. Use the same view with a different state machine. Use the same state machine with a different view.
+
+**AI-Friendly:** Because it's just configuration files, AI agents can easily read and modify them!
 
 ## Actor Definition
 
@@ -2152,7 +2161,7 @@ UI Actor sends: TOGGLE_BUTTON { id: "123" }
   ↓
 Service Actor receives message
   ↓
-Service Actor executes mutation: @mutation/toggle
+Service Actor executes: @db tool with op: "toggle"
   ↓
 Service Actor publishes: TODO_COMPLETED { id: "123" }
   ↓
@@ -2745,8 +2754,8 @@ When an event happens, publish a message:
   "states": {
     "creating": {
       "entry": {
-        "tool": "@mutation/create",
-        "payload": { "schema": "todos", "data": {...} }
+        "tool": "@db",
+        "payload": { "op": "create", "schema": "@schema/todos", "data": {...} }
       },
       "on": {
         "SUCCESS": {
@@ -2928,443 +2937,30 @@ actor.subscriptions    // Subscribed actors
 
 ---
 
-# SKILLS
-
-*Source: creators/03-skills.md*
-
-# Skills (AI Agent Interface)
-
-**Skills** are interface specifications that describe how AI agents should interact with actors. They are **metadata for LLM orchestration**, not execution logic.
-
-> Skills tell AI agents WHAT an actor can do, WHEN to use it, and HOW to interact with it.
-
-## Philosophy
-
-- **Actors** are pure declarative specifications (definition layer)
-- **Engines** execute the logic (runtime layer)
-- **Skills** describe capabilities (interface layer for AI)
-
-Skills enable **AI-composable applications** where LLM agents can discover, understand, and orchestrate actors without hardcoded workflows.
-
-## Skill Definition
-
-Create a file named `{name}.skill.maia`:
-
-```json
-{
-  "$type": "skill",
-  "$id": "skill_todo_001",
-  "actorType": "todo",
-  "version": "1.0.0",
-  
-  "description": "A todo list manager that maintains task state and provides list/kanban views",
-  
-  "capabilities": {
-    "taskManagement": {
-      "description": "Create, complete, and delete todo items",
-      "when": "User wants to track tasks, create lists, manage todos"
-    },
-    "viewSwitching": {
-      "description": "Switch between list and kanban board layouts",
-      "when": "User wants different visualization of their tasks"
-    },
-    "dragDropOrganization": {
-      "description": "Drag tasks between todo/done columns in kanban view",
-      "when": "User wants to visually organize or complete tasks"
-    }
-  },
-  
-  "stateEvents": {
-    "CREATE_TODO": {
-      "description": "Creates a new todo item in the list",
-      "payload": {
-        "text": {
-          "type": "string",
-          "required": true,
-          "maxLength": 500,
-          "description": "The todo item text"
-        }
-      },
-      "example": {
-        "event": "CREATE_TODO",
-        "payload": {"text": "Buy groceries"}
-      },
-      "when": [
-        "User says: 'add todo'",
-        "User says: 'create task'",
-        "User says: 'remember to...'"
-      ]
-    },
-    "TOGGLE_TODO": {
-      "description": "Marks a todo as done/undone",
-      "payload": {
-        "id": {
-          "type": "string",
-          "required": true,
-          "description": "The todo item ID to toggle"
-        }
-      },
-      "when": [
-        "User says: 'mark done'",
-        "User says: 'complete task'",
-        "User says: 'check off...'"
-      ]
-    },
-    "DELETE_TODO": {
-      "description": "Removes a todo item",
-      "payload": {
-        "id": {
-          "type": "string",
-          "required": true
-        }
-      },
-      "when": ["User says: 'delete task'", "User says: 'remove...'"]
-    },
-    "SET_VIEW_MODE": {
-      "description": "Changes the visualization mode",
-      "payload": {
-        "viewMode": {
-          "type": "string",
-          "enum": ["list", "kanban"],
-          "required": true
-        }
-      },
-      "when": ["User says: 'show kanban'", "User says: 'switch to list view'"]
-    }
-  },
-  
-  "queryableContext": {
-    "todos": {
-      "type": "array",
-      "description": "All todo items",
-      "schema": {
-        "id": "string",
-        "text": "string",
-        "done": "boolean"
-      }
-    },
-    "todosTodo": {
-      "type": "array",
-      "description": "Filtered list of incomplete todos"
-    },
-    "todosDone": {
-      "type": "array",
-      "description": "Filtered list of completed todos"
-    },
-    "viewMode": {
-      "type": "string",
-      "enum": ["list", "kanban"],
-      "description": "Current view mode"
-    },
-    "newTodoText": {
-      "type": "string",
-      "description": "Current text in the input field"
-    }
-  },
-  
-  "bestPractices": [
-    "Always check existing todos before creating duplicates",
-    "Use fuzzy matching when user refers to tasks (e.g., 'finish the groceries' matches 'Buy groceries')",
-    "Provide feedback about current state (e.g., 'You have 3 incomplete tasks')",
-    "When user says 'show my tasks', read context.todos and summarize",
-    "Confirm destructive actions (DELETE_TODO) before executing"
-  ],
-  
-  "commonPatterns": {
-    "addAndView": {
-      "description": "User wants to add item and see their list",
-      "userIntent": ["add milk", "new task: call mom"],
-      "sequence": [
-        {
-          "action": "sendEvent",
-          "event": "CREATE_TODO",
-          "payload": {"text": "{{extracted from user input}}"}
-        },
-        {
-          "action": "queryContext",
-          "path": "todos",
-          "respond": "Added '{{text}}'. You now have {{todos.length}} tasks."
-        }
-      ]
-    },
-    "completeTask": {
-      "description": "User wants to mark something done",
-      "userIntent": ["finish groceries", "done with homework", "complete the report"],
-      "sequence": [
-        {
-          "action": "queryContext",
-          "path": "todosTodo",
-          "operation": "fuzzyMatch",
-          "input": "{{user's task description}}"
-        },
-        {
-          "action": "sendEvent",
-          "event": "TOGGLE_TODO",
-          "payload": {"id": "{{matched todo id}}"}
-        },
-        {
-          "action": "respond",
-          "message": "Marked '{{todo.text}}' as complete!"
-        }
-      ]
-    },
-    "listTasks": {
-      "description": "User wants to see their todos",
-      "userIntent": ["what's on my list", "show tasks", "what do I need to do"],
-      "sequence": [
-        {
-          "action": "queryContext",
-          "path": "todosTodo"
-        },
-        {
-          "action": "respond",
-          "message": "You have {{todosTodo.length}} incomplete tasks: {{list}}. {{todosDone.length}} completed."
-        }
-      ]
-    }
-  }
-}
-```
-
-## How AI Agents Use Skills
-
-### 1. Discovery Phase
-```javascript
-// Agent discovers available actors via SkillEngine
-const skills = await skillEngine.listSkills();
-
-// Agent reads skill to understand capabilities
-const todoSkill = await skillEngine.getSkill('todo');
-console.log(todoSkill.capabilities);
-// → taskManagement, viewSwitching, dragDropOrganization
-```
-
-### 2. Intent Matching Phase
-```javascript
-// User says: "Add milk to my shopping list"
-
-// Agent matches user intent to skill patterns
-const matches = agent.matchIntent(userMessage, skills);
-// → Pattern: "addAndView" from todo skill
-
-// Agent identifies relevant event
-const event = agent.selectEvent(userMessage, todoSkill);
-// → "CREATE_TODO"
-```
-
-### 3. Execution Phase
-```javascript
-// Agent generates correct payload
-const payload = agent.generatePayload(userMessage, event);
-// → {text: "Buy milk"}
-
-// Agent checks best practices
-if (todoSkill.bestPractices.includes('check duplicates')) {
-  const existing = await actor.getContext('todos');
-  const hasDuplicate = existing.some(t => fuzzyMatch(t.text, 'Buy milk'));
-}
-
-// Agent sends event to actor
-await actor.sendEvent('CREATE_TODO', payload);
-
-// Agent responds using skill guidance
-respond("Added 'Buy milk' to your todos. You now have " + 
-        actor.context.todosTodo.length + " tasks.");
-```
-
-## Skill Structure
-
-### Required Fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `$type` | string | Always `"skill"` |
-| `$id` | string | Unique identifier |
-| `actorType` | string | Actor type this skill describes |
-| `description` | string | High-level capability summary |
-| `stateEvents` | object | Events the actor can handle |
-| `queryableContext` | object | Context fields AI can read |
-
-### Optional Fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `capabilities` | object | High-level capability categories |
-| `bestPractices` | array | Guidelines for AI agents |
-| `commonPatterns` | object | Reusable interaction sequences |
-| `version` | string | Skill version |
-| `examples` | array | Usage examples |
-
-## Event Definitions
-
-Each event in `stateEvents` should include:
-
-```json
-{
-  "EVENT_NAME": {
-    "description": "What this event does",
-    "payload": {
-      "field1": {
-        "type": "string|number|boolean|object|array",
-        "required": true|false,
-        "description": "Field purpose",
-        "enum": ["option1", "option2"],  // optional
-        "maxLength": 500,                 // optional
-        "pattern": "regex"                // optional
-      }
-    },
-    "example": {
-      "event": "EVENT_NAME",
-      "payload": {...}
-    },
-    "when": [
-      "User intent pattern 1",
-      "User intent pattern 2"
-    ]
-  }
-}
-```
-
-## Context Schema
-
-Define what AI agents can query:
-
-```json
-{
-  "queryableContext": {
-    "fieldName": {
-      "type": "string|number|boolean|array|object",
-      "description": "What this field contains",
-      "schema": {...},           // For arrays/objects
-      "enum": [...],             // For string enums
-      "readOnly": true,          // If AI should not suggest modifications
-      "computed": true           // If derived from other fields
-    }
-  }
-}
-```
-
-## Common Patterns
-
-Patterns describe reusable interaction sequences:
-
-```json
-{
-  "patternName": {
-    "description": "What this pattern accomplishes",
-    "userIntent": ["Example phrases users might say"],
-    "sequence": [
-      {
-        "action": "queryContext|sendEvent|respond",
-        "...": "action-specific fields"
-      }
-    ],
-    "errorHandling": {
-      "notFound": "What to do if entity not found",
-      "duplicate": "What to do if duplicate exists"
-    }
-  }
-}
-```
-
-## Best Practices for Writing Skills
-
-### ✅ DO:
-
-- **Be explicit** - Don't assume AI knows domain conventions
-- **Provide examples** - Show actual payloads and responses
-- **Document intent patterns** - Map user phrases to events
-- **Include edge cases** - What if list is empty? Item not found?
-- **Specify constraints** - Max lengths, required fields, enums
-- **Guide error handling** - What to do when operations fail
-
-### ❌ DON'T:
-
-- **Don't include implementation details** - Skills describe interface, not implementation
-- **Don't hardcode data** - Skills are templates, not instances
-- **Don't assume context** - Each skill should be self-contained
-- **Don't mix concerns** - Keep skills focused on one actor type
-
-## Linking Skills to Actors
-
-In your actor definition, reference the skill:
-
-```json
-{
-  "$type": "actor",
-  "id": "actor_todo_001",
-  "stateRef": "todo",
-  "skillRef": "todo",     // ← References todo.skill.maia
-  "context": {...}
-}
-```
-
-## Token Efficiency (Why Skills Matter)
-
-**Without Skills** (50K+ tokens):
-```
-LLM loads:
-- All tool schemas (15+ tools × 500 tokens each)
-- Entire state machine definition (2K tokens)
-- All possible events and transitions
-- Payload schemas for every tool
-```
-
-**With Skills** (2-5K tokens):
-```
-LLM loads:
-- Single skill definition (2-5K tokens)
-- Only relevant capabilities
-- Clear usage patterns
-- Best practices guidance
-```
-
-Skills reduce token usage by **90%** while improving decision quality.
-
-## Next Steps
-
-- Learn about [State Machines](./05-state.md) - Actor behavior (execution)
-- Understand [Tools](./06-tools.md) - Executable actions
-- Explore [Context](./04-context.md) - Runtime state management
-
-## Voice/AI Agent Integration
-
-Skills are designed for voice and AI agent interfaces:
-
-```typescript
-// Voice agent discovers actors
-const skills = await skillEngine.listSkills();
-
-// LLM determines relevant actor
-const skill = ai.selectSkill(userMessage, skills);
-
-// LLM generates event
-const event = ai.generateEvent(userMessage, skill);
-
-// Execute via actor
-await actor.sendEvent(event.name, event.payload);
-```
-
-Coming in **v0.5**: Full voice integration with automatic skill discovery!
-
----
-
 # CONTEXT
 
 *Source: creators/04-context.md*
 
-# Context (Runtime State)
+# Context (The Memory)
 
-**Context** is the runtime data store for an actor. It holds all the state that tools manipulate and views render.
+Think of context as your actor's **memory** - like a notebook where it writes things down!
 
-## Philosophy
+**What's in the notebook?**
+- What todos you have (`todos: [...]`)
+- Whether a modal is open (`isModalOpen: false`)
+- What text is in the input field (`newTodoText: "Buy milk"`)
 
-> Context is the MEMORY of an actor. It's where all runtime data lives.
+Your actor looks at this notebook to know what to show and what to do!
 
-- **Actors** define initial context structure
-- **Tools** mutate context
-- **Views** read and display context
-- **State machines** orchestrate context changes
+## How It Works
+
+```
+1. You type "Buy milk" → Tool updates context: { newTodoText: "Buy milk" }
+2. You click "Add" → Tool creates todo → Context updates: { todos: [...new todo] }
+3. View looks at context → Sees new todo → Shows it on screen!
+```
+
+**The magic:** Your view automatically shows whatever is in context. Change the context, change what you see!
 
 ## Context Definition
 
@@ -3640,12 +3236,14 @@ actor.actorEngine.stateEngine.send(
 The ONLY way to mutate context:
 
 ```javascript
-// @mutation/create tool
+// @db tool with op: "create"
 export default {
   async execute(actor, payload) {
-    const { schema, data } = payload;
-    const entity = { id: Date.now().toString(), ...data };
-    actor.context[schema].push(entity);
+    const { op, schema, data } = payload;
+    if (op === "create") {
+      const entity = { id: Date.now().toString(), ...data };
+      actor.context[schema].push(entity);
+    }
   }
 };
 ```
@@ -3740,7 +3338,7 @@ export default {
 **Entity schema:**
 ```typescript
 interface Todo {
-  id: string;           // Auto-generated by @mutation/create
+  id: string;           // Auto-generated by @db tool
   text: string;         // User input
   done: boolean;        // Completion status
   createdAt?: number;   // Optional timestamp
@@ -4025,18 +3623,43 @@ validateContext(actor.context, {
 
 *Source: creators/05-state.md*
 
-# State Machines
+# State Machines (The Brain)
 
-**State machines** define actor behavior through states, transitions, guards, and actions. They are **XState-like state machine definitions** that the StateEngine interprets at runtime.
+Imagine a traffic light:
+- It has **states**: Green, Yellow, Red
+- It **changes states**: Green → Yellow → Red → Green
+- **Rules** decide when to change: "After 30 seconds, go to next state"
 
-## Philosophy
+**That's a state machine!** Your actor has states too, and rules for when to change them.
 
-> State machines are the BRAIN of an actor. They define WHAT to do WHEN something happens.
+## A Simple Example: Creating a Todo
 
-- **Actors** have no logic (just configuration)
-- **State Machines** define behavior flow and compute conditional values
-- **Tools** execute the actual work
-- **Views** reference computed values (zero conditionals in templates!)
+Your todo app might have these states:
+- **idle**: Waiting for you to do something
+- **creating**: Adding a new todo to the database
+- **error**: Something went wrong
+
+**What happens when you click "Add Todo":**
+
+```
+State: idle
+  ↓
+User clicks "Add Todo" button
+  ↓
+State machine says: "Go to 'creating' state"
+  ↓
+State: creating
+  ↓
+Tool creates the todo in database
+  ↓
+Tool says: "SUCCESS!"
+  ↓
+State machine says: "Go back to 'idle' state"
+  ↓
+State: idle (with your new todo!)
+```
+
+The state machine is like a traffic controller - it decides what happens next!
 
 ## Basic Structure
 
@@ -4060,9 +3683,10 @@ Create a file named `{name}.state.maia`:
     },
     "creating": {
       "entry": {
-        "tool": "@mutation/create",
+        "tool": "@db",
         "payload": {
-          "schema": "todos",
+          "op": "create",
+          "schema": "@schema/todos",
           "data": {"text": "$newTodoText", "done": false}
         }
       },
@@ -4100,8 +3724,8 @@ Create a file named `{name}.state.maia`:
 {
   "creating": {
     "entry": {
-      "tool": "@mutation/create",
-      "payload": {...}
+      "tool": "@db",
+      "payload": { "op": "create", ... }
     }
   }
 }
@@ -4114,7 +3738,7 @@ Or multiple actions:
   "creating": {
     "entry": [
       {"tool": "@core/showLoading", "payload": {}},
-      {"tool": "@mutation/create", "payload": {...}}
+      {"tool": "@db", "payload": { "op": "create", ... }}
     ]
   }
 }
@@ -4300,369 +3924,160 @@ actor.context.draggedItemIds[id] = true;  // Set this item as dragged
 }
 ```
 
-## Using Reactive Queries
+## Working with Data (Automatic Reactive Queries)
 
-**Reactive queries** automatically update your actor's data when changes happen. No manual refresh needed! Think of it like a spreadsheet: when you change a cell, all formulas that depend on it update automatically.
+MaiaOS automatically keeps your data in sync - no tools needed! Just define what data you want in your context, and MaiaOS handles the rest.
 
-### Quick Start: Subscribing to Data
+### Think of it like a spreadsheet:
+- You write formulas that reference other cells
+- When you change a cell, all formulas update automatically
+- You never have to manually "refresh" the spreadsheet
 
-In your state machine, add a `loading` state that subscribes to your data:
+**That's how reactive queries work!**
 
+### Quick Start: Getting Data
+
+In your context file, define **query objects** that tell MaiaOS what data you want:
+
+**`todos.context.maia`:**
 ```json
 {
-  "initial": "loading",
-  "states": {
-    "loading": {
-      "entry": {
-        "tool": "@query/subscribe",
-        "payload": {
-          "schema": "todos",
-          "target": "todos"
-        }
-      },
-      "on": {
-        "SUCCESS": "idle"
-      }
-    },
-    "idle": {
-      ...
-    }
-  }
+  "$type": "context",
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  },
+  "newTodoText": ""
 }
 ```
 
 **What happens:**
-1. Actor starts in `loading` state
-2. `@query/subscribe` tool runs
-3. Data loads into `context.todos`
-4. State machine transitions to `idle`
-5. View renders with data
-6. **Data automatically updates when it changes!**
+1. MaiaOS sees `todos` is a query object (has `schema` property)
+2. MaiaOS automatically subscribes to the database
+3. Data flows into `context.todos`
+4. When data changes, MaiaOS updates `context.todos` automatically
+5. Your view re-renders with fresh data
 
-### Query Tools
+**No tools, no manual subscriptions - it just works!**
 
-#### @query/subscribe (Reactive)
+### Filtering Data
 
-**Use for:** Data that changes frequently
+Want only incomplete todos? Use a filter:
 
 ```json
 {
-  "tool": "@query/subscribe",
-  "payload": {
-    "schema": "todos",
-    "target": "todos"
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  },
+  "todosTodo": {
+    "schema": "@schema/todos",
+    "filter": { "done": false }
+  },
+  "todosDone": {
+    "schema": "@schema/todos",
+    "filter": { "done": true }
   }
 }
 ```
 
-**Features:**
-- ✅ Automatic updates
-- ✅ Re-renders actor
-- ✅ Supports filters
-- ❌ Can't unsubscribe manually (auto-cleanup on actor destroy)
+**Result:**
+- `context.todos` = All todos
+- `context.todosTodo` = Only incomplete todos (`done: false`)
+- `context.todosDone` = Only completed todos (`done: true`)
 
-#### @query/get (One-time)
+All three automatically update when you create, update, or delete a todo!
 
-**Use for:** Static data that doesn't change
+### Creating, Updating, Deleting Data
 
-```json
-{
-  "tool": "@query/get",
-  "payload": {
-    "schema": "settings",
-    "target": "settings"
-  }
-}
-```
-
-**Features:**
-- ✅ Fast (no subscription overhead)
-- ✅ Good for read-only data
-- ❌ No automatic updates
-- ❌ Must re-run manually to refresh
-
-#### @query/filter (One-time + Filter)
-
-**Use for:** One-time filtered queries
-
-```json
-{
-  "tool": "@query/filter",
-  "payload": {
-    "schema": "todos",
-    "filter": {
-      "field": "priority",
-      "op": "gt",
-      "value": 5
-    },
-    "target": "highPriorityTodos"
-  }
-}
-```
-
-**Features:**
-- ✅ Filtered results
-- ✅ Fast (no subscription)
-- ❌ No automatic updates
-
-### Filters
-
-Filter data to show only what you need:
-
-```json
-{
-  "tool": "@query/subscribe",
-  "payload": {
-    "schema": "todos",
-    "filter": {
-      "field": "done",
-      "op": "eq",
-      "value": false
-    },
-    "target": "incompleteTodos"
-  }
-}
-```
-
-**Result:** Only incomplete todos (`done: false`) appear in `context.incompleteTodos`.
-
-#### Filter Operations
-
-**Equality:**
-```json
-{ "field": "done", "op": "eq", "value": false }  // done === false
-{ "field": "done", "op": "ne", "value": false }  // done !== false
-```
-
-**Comparison:**
-```json
-{ "field": "priority", "op": "gt", "value": 5 }   // priority > 5
-{ "field": "priority", "op": "lt", "value": 10 }  // priority < 10
-{ "field": "priority", "op": "gte", "value": 5 }  // priority >= 5
-{ "field": "priority", "op": "lte", "value": 10 } // priority <= 10
-```
-
-**Array / String:**
-```json
-{ "field": "status", "op": "in", "value": ["active", "pending"] }  // status in array
-{ "field": "text", "op": "contains", "value": "urgent" }            // text contains "urgent"
-```
-
-### Mutation Tools
+Use the `@db` tool with different `op` values:
 
 #### Create
 
 ```json
 {
-  "tool": "@mutation/create",
+  "tool": "@db",
   "payload": {
-    "schema": "todos",
+    "op": "create",
+    "schema": "@schema/todos",
     "data": {
-      "text": "Buy groceries",
-      "done": false,
-      "priority": 5
+      "text": "$newTodoText",
+      "done": false
     }
   }
 }
 ```
-
-**Result:** Creates new todo with auto-generated ID. All subscribed actors update automatically.
 
 #### Update
 
 ```json
 {
-  "tool": "@mutation/update",
+  "tool": "@db",
   "payload": {
-    "schema": "todos",
-    "id": "1234",
+    "op": "update",
+    "schema": "@schema/todos",
+    "id": "$$id",
     "data": {
-      "text": "Buy groceries and cook dinner"
+      "text": "Updated text"
     }
   }
 }
 ```
-
-**Result:** Updates existing todo. All subscribed actors update automatically.
 
 #### Delete
 
 ```json
 {
-  "tool": "@mutation/delete",
+  "tool": "@db",
   "payload": {
-    "schema": "todos",
-    "id": "1234"
+    "op": "delete",
+    "schema": "@schema/todos",
+    "id": "$$id"
   }
 }
 ```
-
-**Result:** Deletes todo. All subscribed actors update automatically.
 
 #### Toggle
 
 ```json
 {
-  "tool": "@mutation/toggle",
+  "tool": "@db",
   "payload": {
-    "schema": "todos",
-    "id": "1234",
+    "op": "toggle",
+    "schema": "@schema/todos",
+    "id": "$$id",
     "field": "done"
   }
 }
 ```
 
-**Result:** Toggles `done` from `true` to `false` (or vice versa). All subscribed actors update automatically.
-
-### Common Query Patterns
-
-#### Pattern 1: Simple List
-
-**State Machine:**
-```json
-{
-  "initial": "loading",
-  "states": {
-    "loading": {
-      "entry": {
-        "tool": "@query/subscribe",
-        "payload": {
-          "schema": "todos",
-          "target": "todos"
-        }
-      },
-      "on": { "SUCCESS": "idle" }
-    },
-    "idle": {}
-  }
-}
-```
-
-**View:**
-```json
-{
-  "$each": {
-    "items": "$todos",
-    "template": {
-      "tag": "div",
-      "text": "$$text"
-    }
-  }
-}
-```
-
-#### Pattern 2: Filtered Lists (Kanban Board)
-
-**State Machine:**
-```json
-{
-  "initial": "loading",
-  "states": {
-    "loading": {
-      "entry": [
-        {
-          "tool": "@query/subscribe",
-          "payload": {
-            "schema": "todos",
-            "filter": { "field": "done", "op": "eq", "value": false },
-            "target": "todosTodo"
-          }
-        },
-        {
-          "tool": "@query/subscribe",
-          "payload": {
-            "schema": "todos",
-            "filter": { "field": "done", "op": "eq", "value": true },
-            "target": "todosDone"
-          }
-        }
-      ],
-      "on": { "SUCCESS": "idle" }
-    },
-    "idle": {}
-  }
-}
-```
-
-**View:**
-```json
-{
-  "tag": "div",
-  "attrs": {
-    "class": "kanban-board"
-  },
-  "children": [
-    {
-      "tag": "div",
-      "attrs": {
-        "class": "column"
-      },
-      "children": [
-        {
-          "tag": "h3",
-          "text": "To Do"
-        },
-        {
-          "$each": {
-            "items": "$todosTodo",
-            "template": {
-              "tag": "div",
-              "text": "$$text"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "tag": "div",
-      "attrs": {
-        "class": "column"
-      },
-      "children": [
-        {
-          "tag": "h3",
-          "text": "Done"
-        },
-        {
-          "$each": {
-            "items": "$todosDone",
-            "template": {
-              "tag": "div",
-              "text": "$$text"
-            }
-          }
-        }
-      ]
-    }
-  ]
-}
-```
-
-#### Pattern 3: Create with Input
+### Complete Example: Todo List
 
 **Context:**
 ```json
 {
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  },
+  "todosTodo": {
+    "schema": "@schema/todos",
+    "filter": { "done": false }
+  },
+  "todosDone": {
+    "schema": "@schema/todos",
+    "filter": { "done": true }
+  },
   "newTodoText": "",
-  "todos": []
+  "viewMode": "list"
 }
 ```
 
 **State Machine:**
 ```json
 {
-  "initial": "loading",
+  "initial": "idle",
   "states": {
-    "loading": {
-      "entry": {
-        "tool": "@query/subscribe",
-        "payload": {
-          "schema": "todos",
-          "target": "todos"
-        }
-      },
-      "on": { "SUCCESS": "idle" }
-    },
     "idle": {
       "on": {
         "UPDATE_INPUT": {
@@ -4681,9 +4096,10 @@ Filter data to show only what you need:
     "creating": {
       "entry": [
         {
-          "tool": "@mutation/create",
+          "tool": "@db",
           "payload": {
-            "schema": "todos",
+            "op": "create",
+            "schema": "@schema/todos",
             "data": {
               "text": "$newTodoText",
               "done": false
@@ -4695,7 +4111,15 @@ Filter data to show only what you need:
           "payload": { "newTodoText": "" }
         }
       ],
-      "on": { "SUCCESS": "idle" }
+      "on": {
+        "SUCCESS": "idle",
+        "ERROR": "error"
+      }
+    },
+    "error": {
+      "on": {
+        "RETRY": "idle"
+      }
     }
   }
 }
@@ -4708,7 +4132,8 @@ Filter data to show only what you need:
     {
       "tag": "input",
       "attrs": {
-        "value": "$newTodoText"
+        "value": "$newTodoText",
+        "placeholder": "What needs to be done?"
       },
       "$on": {
         "input": {
@@ -4734,41 +4159,32 @@ Filter data to show only what you need:
 }
 ```
 
-### Query Best Practices
+### Best Practices
 
 **✅ DO:**
-- Always subscribe in the `loading` state
-- Use meaningful target names (`incompleteTodos`, not `data1`)
-- Filter data at subscription time (not in view)
-- Use mutation tools for all data changes
+- Define query objects in context (with `schema` property)
+- Use `@db` tool for all data changes
+- Use descriptive names (`todosTodo`, not `data1`)
+- Filter in context, not in views
 - Test with empty data (handle empty arrays gracefully)
-- Document which actors subscribe to which data
 
 **❌ DON'T:**
-- Modify `actor.context[schema]` directly
-- Create data without using `@mutation/create`
-- Forget to add `on: { SUCCESS: "idle" }` after loading
-- Mix reactive (`@query/subscribe`) and non-reactive (`@query/get`) for same data
-- Subscribe to entire collections when you only need filtered data
-- Use filters in views (use filtered subscriptions instead)
+- Don't manually modify `context.todos` directly
+- Don't use old `@mutation/*` or `@query/*` tools (deprecated)
+- Don't filter data in views (use context filters instead)
+- Don't forget to handle SUCCESS/ERROR events
 
-### Query Troubleshooting
+### Troubleshooting
 
 **Data Not Appearing:**
-1. Is your actor in the `loading` state?
-2. Is the `@query/subscribe` tool running?
-3. Is the `target` field correct? (e.g., `"target": "todos"`)
-4. Is there data in localStorage? (Open DevTools → Application → Local Storage)
+1. Is your context property a query object? (has `schema` property)
+2. Check browser console for errors
+3. Is the schema name correct? (e.g., `@schema/todos`)
 
 **Data Not Updating:**
-1. Are you using `@query/subscribe` (not `@query/get`)?
-2. Are you using mutation tools (`@mutation/*`) to modify data?
-3. Is the schema name correct in both subscribe and mutation?
-
-**Multiple Actors Not Syncing:**
-1. All actors subscribe to the same schema name
-2. All actors use mutation tools (not direct context modification)
-3. Actors are properly initialized (check console logs)
+1. Are you using `@db` tool to modify data?
+2. Is the schema name consistent between context and tool?
+3. Check console logs for SUCCESS/ERROR events
 
 ## Complete Example: Todo State Machine
 
@@ -4822,9 +4238,10 @@ Filter data to show only what you need:
     
     "creating": {
       "entry": {
-        "tool": "@mutation/create",
+        "tool": "@db",
         "payload": {
-          "schema": "todos",
+          "op": "create",
+          "schema": "@schema/todos",
           "data": {"text": "$newTodoText", "done": false}
         }
       },
@@ -4836,9 +4253,10 @@ Filter data to show only what you need:
     
     "toggling": {
       "entry": {
-        "tool": "@mutation/toggle",
+        "tool": "@db",
         "payload": {
-          "schema": "todos",
+          "op": "toggle",
+          "schema": "@schema/todos",
           "id": "$$id",
           "field": "done"
         }
@@ -4851,9 +4269,10 @@ Filter data to show only what you need:
     
     "deleting": {
       "entry": {
-        "tool": "@mutation/delete",
+        "tool": "@db",
         "payload": {
-          "schema": "todos",
+          "op": "delete",
+          "schema": "@schema/todos",
           "id": "$$id"
         }
       },
@@ -4912,7 +4331,7 @@ Handle these in your state definition:
 ```json
 {
   "creating": {
-    "entry": {"tool": "@mutation/create", "payload": {...}},
+    "entry": {"tool": "@db", "payload": { "op": "create", ... }},
     "on": {
       "SUCCESS": "idle",  // ← Automatic on tool success
       "ERROR": "error"    // ← Automatic on tool failure
@@ -4973,17 +4392,34 @@ actor.machine.definition
 
 *Source: creators/06-tools.md*
 
-# Tools
+# Tools (The Hands)
 
-**Tools** are executable functions that perform actions. They are the **hands of actors** - invoked by state machines to mutate context, call APIs, update databases, etc.
+Think of tools as your actor's **hands** - they do the actual work!
 
-## Philosophy
+**Your state machine says:** "Now is the time to create a todo!"
 
-> Tools are the ONLY place where imperative code lives. Everything else is declarative.
+**The tool responds:** "Got it! Let me add that to the database for you."
 
-- **State machines** decide WHEN to act
-- **Tools** define HOW to act  
-- **Actors** hold WHAT to act upon (context)
+## What Tools Do
+
+Tools are where the actual work happens:
+- Create a todo? That's a tool! (`@db` with `op: "create"`)
+- Delete an item? That's a tool! (`@db` with `op: "delete"`)
+- Send a message? That's a tool! (`@core/publishMessage`)
+
+Your actor can't do anything without tools - they're the only way to actually make things happen.
+
+## How It Works Together
+
+```
+State Machine (The Brain)  →  "Create a todo!"
+     ↓
+Tool (The Hands)          →  Actually creates it in the database
+     ↓
+Context (The Memory)      →  Updates with the new todo
+     ↓
+View (The Face)           →  Shows the new todo to the user
+```
 
 ## Tool Structure
 
@@ -4995,9 +4431,9 @@ AI-compatible metadata describing the tool:
 ```json
 {
   "$type": "tool",
-  "$id": "tool_mutation_create_001",
-  "name": "@mutation/create",
-  "description": "Generic create operation for any schema",
+  "$id": "tool_db_001",
+  "name": "@db",
+  "description": "Unified database operation tool",
   "parameters": {
     "type": "object",
     "properties": {
@@ -5039,50 +4475,83 @@ export default {
 
 ## Available Tools
 
-### Mutation Module (`@mutation/*`)
+### Database Module (`@db`)
 
-#### `@mutation/create`
+The `@db` tool is a unified database operation tool that handles all CRUD operations through an `op` parameter.
+
+#### Create Operation
 ```json
 {
-  "tool": "@mutation/create",
+  "tool": "@db",
   "payload": {
-    "schema": "todos",
+    "op": "create",
+    "schema": "@schema/todos",
     "data": {"text": "Buy milk", "done": false}
   }
 }
 ```
 
-#### `@mutation/update`
+#### Update Operation
 ```json
 {
-  "tool": "@mutation/update",
+  "tool": "@db",
   "payload": {
-    "schema": "todos",
+    "op": "update",
+    "schema": "@schema/todos",
     "id": "123",
     "data": {"text": "Buy milk and eggs"}
   }
 }
 ```
 
-#### `@mutation/delete`
+#### Delete Operation
 ```json
 {
-  "tool": "@mutation/delete",
+  "tool": "@db",
   "payload": {
-    "schema": "todos",
+    "op": "delete",
+    "schema": "@schema/todos",
     "id": "123"
   }
 }
 ```
 
-#### `@mutation/toggle`
+#### Toggle Operation
 ```json
 {
-  "tool": "@mutation/toggle",
+  "tool": "@db",
   "payload": {
-    "schema": "todos",
+    "op": "toggle",
+    "schema": "@schema/todos",
     "id": "123",
     "field": "done"
+  }
+}
+```
+
+#### Query Operation
+```json
+{
+  "tool": "@db",
+  "payload": {
+    "op": "query",
+    "schema": "@schema/todos",
+    "filter": {"done": false}
+  }
+}
+```
+
+#### Seed Operation
+```json
+{
+  "tool": "@db",
+  "payload": {
+    "op": "seed",
+    "schema": "@schema/todos",
+    "data": [
+      {"text": "First todo", "done": false},
+      {"text": "Second todo", "done": true}
+    ]
   }
 }
 ```
@@ -5239,7 +4708,7 @@ export async function register(registry) {
 
 ```javascript
 const os = await MaiaOS.boot({
-  modules: ['core', 'mutation', 'dragdrop', 'custom']
+  modules: ['db', 'core', 'dragdrop', 'interface', 'custom']
 });
 ```
 
@@ -7253,9 +6722,542 @@ styleElement.textContent += `
 
 ---
 
+# 10_OPERATIONS
+
+*Source: creators/10_operations.md*
+
+# Operations-Based Architecture
+
+> ⚠️ **ADVANCED TOPIC - Jazz/CoJSON Integration**
+>
+> This document describes the advanced operations architecture for Jazz/CoJSON integration.
+> For basic database operations with the `@db` tool, see [State Machines](./05-state.md) and [Tools](./06-tools.md).
+
+## Overview
+
+MaiaOS uses a **unified operations-based API** where all database interactions (read, write, schema management) are expressed as JSON-configurable operations through a single entry point: `o.db({ op })`.
+
+This architecture provides:
+- **JSON-native**: All operations are pure JSON configurations
+- **LLM-analyzable**: Each operation has a formal JSON Schema DSL
+- **Composable**: Operations can be nested (batch operations)
+- **Type-safe**: Runtime validation against operation schemas
+- **Uniform**: Single API for all database interactions
+
+> Note: Basic MaiaOS applications use the simpler `@db` tool (create, update, delete, toggle, query). This document covers the more advanced operations engine for Jazz/CoJSON integration.
+
+## Core Concept
+
+Instead of multiple method APIs (`db.create()`, `db.read()`, etc.), everything flows through:
+
+```javascript
+await o.db({ op: "operationName", ...params })
+```
+
+Where:
+- `o` = MaiaOS context object
+- `db()` = Operations engine dispatcher
+- `{ op, ...params }` = JSON operation configuration
+
+## Available Operations
+
+### Schema Operations
+
+#### `registerSchema`
+Register a new JSON Schema in the registry.
+
+```javascript
+const result = await o.db({
+  op: "registerSchema",
+  name: "Post",
+  definition: {
+    type: "co-map",
+    properties: {
+      title: { type: "string" },
+      content: { type: "string" },
+      author: { 
+        type: "co-id",
+        $ref: "https://maia.city/co_zAuthorSchemaId"
+      }
+    },
+    required: ["title", "content"]
+  }
+});
+// Returns: { schemaId: "co_z...", name: "Post" }
+```
+
+#### `loadSchema`
+Load a schema definition by ID.
+
+```javascript
+const schema = await o.db({
+  op: "loadSchema",
+  schemaId: "co_z..."
+});
+// Returns: { $schema, $id, type, properties, ... }
+```
+
+#### `listSchemas`
+List all registered schemas.
+
+```javascript
+const result = await o.db({
+  op: "listSchemas"
+});
+// Returns: { schemas: [{ id, name, definition }, ...] }
+```
+
+### Data Operations
+
+#### `create`
+Create a new CoValue with schema validation.
+
+```javascript
+const result = await o.db({
+  op: "create",
+  schema: "co_zPostSchemaId",
+  data: {
+    title: "Hello World",
+    content: "My first post",
+    author: "co_zAuthorId",
+    likes: 0
+  }
+});
+// Returns: { id: "co_z...", coValue: {...} }
+```
+
+The created CoValue automatically gets a `$schema` property pointing to the schema ID.
+
+#### `read`
+Read a CoValue with optional deep resolution.
+
+**Basic read:**
+```javascript
+const post = await o.db({
+  op: "read",
+  target: { id: "co_zPostId" }
+});
+```
+
+**Deep resolution:**
+```javascript
+const post = await o.db({
+  op: "read",
+  target: { id: "co_zPostId" },
+  resolve: {
+    author: {}, // Resolve author reference
+    comments: { // Resolve nested list
+      each: {   // Resolve each comment
+        author: {} // Resolve each comment's author
+      }
+    }
+  }
+});
+```
+
+**Resolution options:**
+- `{}`: Resolve one level
+- `each: {}`: Resolve each item in a CoList
+- `onError: "null"`: Return null on resolution failure (default: throw)
+- Depth limit: 10 levels (configurable via MAX_DEPTH)
+
+#### `update`
+Update a CoValue (CoMap or CoList).
+
+**CoMap update:**
+```javascript
+await o.db({
+  op: "update",
+  target: { id: "co_zPostId" },
+  changes: {
+    title: "Updated Title",
+    likes: { op: "increment", by: 1 }
+  }
+});
+```
+
+**Nested operations:**
+- `{ op: "set", value: X }`: Set value
+- `{ op: "increment", by: N }`: Increment number
+- `{ op: "decrement", by: N }`: Decrement number
+- `{ op: "delete" }`: Delete property
+
+**CoList update:**
+```javascript
+await o.db({
+  op: "update",
+  target: { id: "co_zListId" },
+  changes: {
+    items: [
+      { op: "push", value: "co_zNewItemId" },
+      { op: "splice", index: 2, deleteCount: 1 },
+      { op: "set", index: 0, value: "co_zUpdatedId" }
+    ]
+  }
+});
+```
+
+**List operations:**
+- `push`: Append to end
+- `unshift`: Prepend to start
+- `set`: Update at index
+- `splice`: Insert/delete items
+- `pop`: Remove last item
+- `shift`: Remove first item
+- `remove`: Remove by predicate or index
+- `retain`: Keep only matching items
+
+#### `delete`
+Delete a CoValue (soft or hard).
+
+**Soft delete (clear content):**
+```javascript
+await o.db({
+  op: "delete",
+  target: { id: "co_zPostId" }
+});
+```
+
+**Hard delete (unmount from memory):**
+```javascript
+await o.db({
+  op: "delete",
+  target: { id: "co_zPostId" },
+  hard: true
+});
+```
+
+### Inspection Operations
+
+#### `allLoaded`
+List all currently loaded CoValues in memory (debug tool).
+
+```javascript
+const result = await o.db({
+  op: "allLoaded",
+  filter: { type: "comap" } // Optional filter
+});
+// Returns: {
+//   coValues: [{ id, type, schema, properties, size, loadedAt }, ...],
+//   totalCount: 12,
+//   totalSize: "4.1 KB",
+//   byType: { comap: 11, colist: 1 },
+//   bySchema: { Post: 2, Author: 1 }
+// }
+```
+
+### Composite Operations
+
+#### `batch`
+Execute multiple operations in sequence or parallel.
+
+**Sequential batch:**
+```javascript
+await o.db({
+  op: "batch",
+  mode: "sequential",
+  operations: [
+    { op: "create", schema: authorSchemaId, data: {...} },
+    { op: "create", schema: postSchemaId, data: {...} },
+    { op: "update", target: {...}, changes: {...} }
+  ]
+});
+```
+
+**Parallel batch:**
+```javascript
+await o.db({
+  op: "batch",
+  mode: "parallel",
+  operations: [
+    { op: "read", target: { id: "co_z1" } },
+    { op: "read", target: { id: "co_z2" } },
+    { op: "read", target: { id: "co_z3" } }
+  ]
+});
+```
+
+**Error handling:**
+```javascript
+await o.db({
+  op: "batch",
+  mode: "sequential",
+  continueOnError: true, // Don't stop on errors
+  operations: [...]
+});
+```
+
+## Operation DSL Schemas
+
+Each operation type has a formal JSON Schema definition that validates the operation configuration. These DSL schemas are located at:
+
+```
+libs/maia-schemata/src/operations/
+  - register-schema.operation.json
+  - load-schema.operation.json
+  - list-schemas.operation.json
+  - read.operation.json
+  - create.operation.json
+  - update-map.operation.json
+  - update-list.operation.json
+  - delete.operation.json
+  - all-loaded.operation.json
+  - batch.operation.json
+```
+
+> Note: Operations schemas are not currently implemented. The `@db` tool uses simpler operation validation.
+
+All schemas use the `$id` format: `https://maia.city/operations/{name}`
+
+### Example DSL Schema
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://maia.city/operations/read",
+  "title": "Read Operation Schema",
+  "type": "object",
+  "properties": {
+    "op": { "const": "read" },
+    "target": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^co_z[a-zA-Z0-9]+$" }
+      },
+      "required": ["id"]
+    },
+    "resolve": { "type": "object" }
+  },
+  "required": ["op", "target"],
+  "additionalProperties": false
+}
+```
+
+## Operations Engine Architecture
+
+```
+o.db({ op })
+    ↓
+OperationsEngine
+    ↓
+OperationsValidator (validates against DSL schema)
+    ↓
+Operation Handler (executes operation)
+    ↓
+Kernel (SchemaStore, Node, SubscriptionCache)
+    ↓
+cojson (raw CRDTs)
+```
+
+### Components
+
+**OperationsEngine** (`operations-engine.engine.js`)
+- Central dispatcher for all operations
+- Registers operation handlers
+- Exposes itself to kernel for nested operations
+
+**OperationsValidator** (`operations-validator.js`)
+- Loads all DSL schemas at initialization
+- Validates operations before execution
+- Provides detailed error messages
+
+**Operation Handlers** (`handlers/`)
+- `schema-handler.js`: registerSchema, loadSchema, listSchemas
+- `read-handler.js`: read + deep resolution
+- `create-handler.js`: create with validation
+- `update-map-handler.js`: CoMap updates
+- `update-list-handler.js`: CoList updates
+- `delete-handler.js`: soft/hard delete
+- `inspector-handler.js`: allLoaded
+- `batch-handler.js`: composite operations
+- `resolver.js`: Deep resolution engine
+
+## Read-Only Wrappers
+
+The `maia-cojson` kernel provides read-only wrapper classes around raw cojson CRDTs:
+
+```javascript
+import { CoMap, CoList, CoStream } from "@maiaos/maia-cojson";
+
+// Wrappers provide convenient read access:
+const post = CoMap.fromRaw(rawCoMap);
+console.log(post.title);  // Read property
+console.log(post.keys()); // Get all keys
+
+// But ALL mutations go through operations:
+await o.db({
+  op: "update",
+  target: { id: post.$id },
+  changes: { title: "New Title" }
+});
+```
+
+**Key points:**
+- Wrappers are **read-only** proxies
+- They provide `$id`, `$type`, `$schema` metadata
+- All mutations MUST use `o.db({ op: "update" })`
+- Automatic subscription management via `SubscriptionCache`
+
+## Best Practices
+
+### 1. Always Use Operations
+
+```javascript
+// ❌ Direct mutation (not possible)
+post.title = "New Title";
+
+// ✅ Update operation
+await o.db({
+  op: "update",
+  target: { id: post.$id },
+  changes: { title: "New Title" }
+});
+```
+
+### 2. Leverage Deep Resolution
+
+```javascript
+// ❌ Multiple read operations
+const post = await o.db({ op: "read", target: { id: postId } });
+const author = await o.db({ op: "read", target: { id: post.author } });
+
+// ✅ Single read with deep resolution
+const post = await o.db({
+  op: "read",
+  target: { id: postId },
+  resolve: { author: {} }
+});
+```
+
+### 3. Use Batch for Multiple Operations
+
+```javascript
+// ❌ Sequential awaits
+const r1 = await o.db({ op: "read", target: { id: "co_z1" } });
+const r2 = await o.db({ op: "read", target: { id: "co_z2" } });
+
+// ✅ Parallel batch
+const results = await o.db({
+  op: "batch",
+  mode: "parallel",
+  operations: [
+    { op: "read", target: { id: "co_z1" } },
+    { op: "read", target: { id: "co_z2" } }
+  ]
+});
+```
+
+### 4. Store $schema Reference
+
+When creating CoMaps, the `$schema` property is automatically added:
+
+```javascript
+// The create handler automatically sets:
+rawCoMap.set("$schema", schemaId);
+rawCoMap.set("title", data.title);
+rawCoMap.set("content", data.content);
+```
+
+This enables:
+- Runtime validation
+- Schema introspection
+- Inspector schema resolution
+
+## Migration from Method-Based API
+
+**Old API** (deprecated):
+```javascript
+const post = await db.create({ schema: schemaId, data });
+const loaded = await db.read({ id: postId });
+await db.update({ id: postId, changes: { title: "New" } });
+await db.delete({ id: postId });
+```
+
+**New API** (operations-based):
+```javascript
+const post = await o.db({ op: "create", schema: schemaId, data });
+const loaded = await o.db({ op: "read", target: { id: postId } });
+await o.db({ op: "update", target: { id: postId }, changes: { title: "New" } });
+await o.db({ op: "delete", target: { id: postId } });
+```
+
+## Testing
+
+All operation handlers have comprehensive test coverage:
+
+```bash
+cd libs/maia-script
+bun test
+```
+
+Tests include:
+- DSL schema validation
+- CRUD operations against real CRDTs
+- Deep resolution with circular reference detection
+- Batch operations (sequential/parallel)
+- Error handling and edge cases
+- Zero mocks policy (all tests use real cojson)
+
+## Example: Blog Application
+
+See the complete example at `libs/maia-vibes/src/todos/`:
+
+```javascript
+// Initialize MaiaOS
+const o = await createMaiaOS({ ... });
+
+// Register schemas
+await o.db({
+  op: "registerSchema",
+  name: "Post",
+  definition: { ... }
+});
+
+// Create post
+const post = await o.db({
+  op: "create",
+  schema: postSchemaId,
+  data: { title: "Hello", content: "World", likes: 0 }
+});
+
+// Like post (increment operation)
+await o.db({
+  op: "update",
+  target: { id: post.id },
+  changes: { likes: { op: "increment", by: 1 } }
+});
+
+// Read with author resolution
+const fullPost = await o.db({
+  op: "read",
+  target: { id: post.id },
+  resolve: { author: {} }
+});
+```
+
+## Future Enhancements
+
+Potential future operations:
+- `subscribe`: Explicit subscription management
+- `unsubscribe`: Remove subscriptions
+- `migrate`: Schema migration operations
+- `export`: Export CoValues to JSON
+- `import`: Import JSON into CoValues
+- `query`: Advanced filtering/querying
+- `transaction`: Multi-operation atomicity
+
+## References
+
+- Operations Engine: `libs/maia-script/src/o/engines/operations-engine/`
+- Schemas: `libs/maia-schemata/src/`
+- Example Vibe: `libs/maia-vibes/src/todos/`
+- Tests: `libs/maia-script/src/o/engines/operations-engine/handlers/*.test.js`
+
+---
+
 # BEST PRACTICES
 
-*Source: creators/10-best-practices.md*
+*Source: creators/11-best-practices.md*
 
 # Best Practices: Actor Architecture
 
@@ -7542,7 +7544,7 @@ User clicks "Add" button in Composite
 Composite: CREATE_BUTTON { text: "Buy milk" }
   └─ Forwards to Vibe: CREATE_BUTTON { text: "Buy milk" }
       ↓
-Vibe: Executes mutation (@mutation/create)
+Vibe: Executes @db tool (op: "create")
   ├─ Publishes: TODO_CREATED { id: "123", text: "Buy milk" }
   └─ Publishes: INPUT_CLEARED → Composite
       ↓
@@ -7795,8 +7797,8 @@ App Composite Actor
   "states": {
     "creating": {
       "entry": {
-        "tool": "@mutation/create",  // ❌ Business logic in UI actor
-        "payload": {...}
+        "tool": "@db",  // ❌ Business logic in UI actor
+        "payload": { "op": "create", ... }
       }
     }
   }
@@ -8040,530 +8042,6 @@ App Service Actor
 
 ---
 
-# 11_OPERATIONS
-
-*Source: creators/11_operations.md*
-
-# Operations-Based Architecture
-
-## Overview
-
-MaiaOS uses a **unified operations-based API** where all database interactions (read, write, schema management) are expressed as JSON-configurable operations through a single entry point: `o.db({ op })`.
-
-This architecture provides:
-- **JSON-native**: All operations are pure JSON configurations
-- **LLM-analyzable**: Each operation has a formal JSON Schema DSL
-- **Composable**: Operations can be nested (batch operations)
-- **Type-safe**: Runtime validation against operation schemas
-- **Uniform**: Single API for all database interactions
-
-## Core Concept
-
-Instead of multiple method APIs (`db.create()`, `db.read()`, etc.), everything flows through:
-
-```javascript
-await o.db({ op: "operationName", ...params })
-```
-
-Where:
-- `o` = MaiaOS context object
-- `db()` = Operations engine dispatcher
-- `{ op, ...params }` = JSON operation configuration
-
-## Available Operations
-
-### Schema Operations
-
-#### `registerSchema`
-Register a new JSON Schema in the registry.
-
-```javascript
-const result = await o.db({
-  op: "registerSchema",
-  name: "Post",
-  definition: {
-    type: "co-map",
-    properties: {
-      title: { type: "string" },
-      content: { type: "string" },
-      author: { 
-        type: "co-id",
-        $ref: "https://maia.city/co_zAuthorSchemaId"
-      }
-    },
-    required: ["title", "content"]
-  }
-});
-// Returns: { schemaId: "co_z...", name: "Post" }
-```
-
-#### `loadSchema`
-Load a schema definition by ID.
-
-```javascript
-const schema = await o.db({
-  op: "loadSchema",
-  schemaId: "co_z..."
-});
-// Returns: { $schema, $id, type, properties, ... }
-```
-
-#### `listSchemas`
-List all registered schemas.
-
-```javascript
-const result = await o.db({
-  op: "listSchemas"
-});
-// Returns: { schemas: [{ id, name, definition }, ...] }
-```
-
-### Data Operations
-
-#### `create`
-Create a new CoValue with schema validation.
-
-```javascript
-const result = await o.db({
-  op: "create",
-  schema: "co_zPostSchemaId",
-  data: {
-    title: "Hello World",
-    content: "My first post",
-    author: "co_zAuthorId",
-    likes: 0
-  }
-});
-// Returns: { id: "co_z...", coValue: {...} }
-```
-
-The created CoValue automatically gets a `$schema` property pointing to the schema ID.
-
-#### `read`
-Read a CoValue with optional deep resolution.
-
-**Basic read:**
-```javascript
-const post = await o.db({
-  op: "read",
-  target: { id: "co_zPostId" }
-});
-```
-
-**Deep resolution:**
-```javascript
-const post = await o.db({
-  op: "read",
-  target: { id: "co_zPostId" },
-  resolve: {
-    author: {}, // Resolve author reference
-    comments: { // Resolve nested list
-      each: {   // Resolve each comment
-        author: {} // Resolve each comment's author
-      }
-    }
-  }
-});
-```
-
-**Resolution options:**
-- `{}`: Resolve one level
-- `each: {}`: Resolve each item in a CoList
-- `onError: "null"`: Return null on resolution failure (default: throw)
-- Depth limit: 10 levels (configurable via MAX_DEPTH)
-
-#### `update`
-Update a CoValue (CoMap or CoList).
-
-**CoMap update:**
-```javascript
-await o.db({
-  op: "update",
-  target: { id: "co_zPostId" },
-  changes: {
-    title: "Updated Title",
-    likes: { op: "increment", by: 1 }
-  }
-});
-```
-
-**Nested operations:**
-- `{ op: "set", value: X }`: Set value
-- `{ op: "increment", by: N }`: Increment number
-- `{ op: "decrement", by: N }`: Decrement number
-- `{ op: "delete" }`: Delete property
-
-**CoList update:**
-```javascript
-await o.db({
-  op: "update",
-  target: { id: "co_zListId" },
-  changes: {
-    items: [
-      { op: "push", value: "co_zNewItemId" },
-      { op: "splice", index: 2, deleteCount: 1 },
-      { op: "set", index: 0, value: "co_zUpdatedId" }
-    ]
-  }
-});
-```
-
-**List operations:**
-- `push`: Append to end
-- `unshift`: Prepend to start
-- `set`: Update at index
-- `splice`: Insert/delete items
-- `pop`: Remove last item
-- `shift`: Remove first item
-- `remove`: Remove by predicate or index
-- `retain`: Keep only matching items
-
-#### `delete`
-Delete a CoValue (soft or hard).
-
-**Soft delete (clear content):**
-```javascript
-await o.db({
-  op: "delete",
-  target: { id: "co_zPostId" }
-});
-```
-
-**Hard delete (unmount from memory):**
-```javascript
-await o.db({
-  op: "delete",
-  target: { id: "co_zPostId" },
-  hard: true
-});
-```
-
-### Inspection Operations
-
-#### `allLoaded`
-List all currently loaded CoValues in memory (debug tool).
-
-```javascript
-const result = await o.db({
-  op: "allLoaded",
-  filter: { type: "comap" } // Optional filter
-});
-// Returns: {
-//   coValues: [{ id, type, schema, properties, size, loadedAt }, ...],
-//   totalCount: 12,
-//   totalSize: "4.1 KB",
-//   byType: { comap: 11, colist: 1 },
-//   bySchema: { Post: 2, Author: 1 }
-// }
-```
-
-### Composite Operations
-
-#### `batch`
-Execute multiple operations in sequence or parallel.
-
-**Sequential batch:**
-```javascript
-await o.db({
-  op: "batch",
-  mode: "sequential",
-  operations: [
-    { op: "create", schema: authorSchemaId, data: {...} },
-    { op: "create", schema: postSchemaId, data: {...} },
-    { op: "update", target: {...}, changes: {...} }
-  ]
-});
-```
-
-**Parallel batch:**
-```javascript
-await o.db({
-  op: "batch",
-  mode: "parallel",
-  operations: [
-    { op: "read", target: { id: "co_z1" } },
-    { op: "read", target: { id: "co_z2" } },
-    { op: "read", target: { id: "co_z3" } }
-  ]
-});
-```
-
-**Error handling:**
-```javascript
-await o.db({
-  op: "batch",
-  mode: "sequential",
-  continueOnError: true, // Don't stop on errors
-  operations: [...]
-});
-```
-
-## Operation DSL Schemas
-
-Each operation type has a formal JSON Schema definition that validates the operation configuration. These DSL schemas are located at:
-
-```
-libs/maia-script/src/schemata/operations/
-  - register-schema.operation.json
-  - load-schema.operation.json
-  - list-schemas.operation.json
-  - read.operation.json
-  - create.operation.json
-  - update-map.operation.json
-  - update-list.operation.json
-  - delete.operation.json
-  - all-loaded.operation.json
-  - batch.operation.json
-```
-
-All schemas use the `$id` format: `https://maia.city/operations/{name}`
-
-### Example DSL Schema
-
-```json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://maia.city/operations/read",
-  "title": "Read Operation Schema",
-  "type": "object",
-  "properties": {
-    "op": { "const": "read" },
-    "target": {
-      "type": "object",
-      "properties": {
-        "id": { "type": "string", "pattern": "^co_z[a-zA-Z0-9]+$" }
-      },
-      "required": ["id"]
-    },
-    "resolve": { "type": "object" }
-  },
-  "required": ["op", "target"],
-  "additionalProperties": false
-}
-```
-
-## Operations Engine Architecture
-
-```
-o.db({ op })
-    ↓
-OperationsEngine
-    ↓
-OperationsValidator (validates against DSL schema)
-    ↓
-Operation Handler (executes operation)
-    ↓
-Kernel (SchemaStore, Node, SubscriptionCache)
-    ↓
-cojson (raw CRDTs)
-```
-
-### Components
-
-**OperationsEngine** (`operations-engine.engine.js`)
-- Central dispatcher for all operations
-- Registers operation handlers
-- Exposes itself to kernel for nested operations
-
-**OperationsValidator** (`operations-validator.js`)
-- Loads all DSL schemas at initialization
-- Validates operations before execution
-- Provides detailed error messages
-
-**Operation Handlers** (`handlers/`)
-- `schema-handler.js`: registerSchema, loadSchema, listSchemas
-- `read-handler.js`: read + deep resolution
-- `create-handler.js`: create with validation
-- `update-map-handler.js`: CoMap updates
-- `update-list-handler.js`: CoList updates
-- `delete-handler.js`: soft/hard delete
-- `inspector-handler.js`: allLoaded
-- `batch-handler.js`: composite operations
-- `resolver.js`: Deep resolution engine
-
-## Read-Only Wrappers
-
-The `maia-cojson` kernel provides read-only wrapper classes around raw cojson CRDTs:
-
-```javascript
-import { CoMap, CoList, CoStream } from "@maiaos/maia-cojson";
-
-// Wrappers provide convenient read access:
-const post = CoMap.fromRaw(rawCoMap);
-console.log(post.title);  // Read property
-console.log(post.keys()); // Get all keys
-
-// But ALL mutations go through operations:
-await o.db({
-  op: "update",
-  target: { id: post.$id },
-  changes: { title: "New Title" }
-});
-```
-
-**Key points:**
-- Wrappers are **read-only** proxies
-- They provide `$id`, `$type`, `$schema` metadata
-- All mutations MUST use `o.db({ op: "update" })`
-- Automatic subscription management via `SubscriptionCache`
-
-## Best Practices
-
-### 1. Always Use Operations
-
-```javascript
-// ❌ Direct mutation (not possible)
-post.title = "New Title";
-
-// ✅ Update operation
-await o.db({
-  op: "update",
-  target: { id: post.$id },
-  changes: { title: "New Title" }
-});
-```
-
-### 2. Leverage Deep Resolution
-
-```javascript
-// ❌ Multiple read operations
-const post = await o.db({ op: "read", target: { id: postId } });
-const author = await o.db({ op: "read", target: { id: post.author } });
-
-// ✅ Single read with deep resolution
-const post = await o.db({
-  op: "read",
-  target: { id: postId },
-  resolve: { author: {} }
-});
-```
-
-### 3. Use Batch for Multiple Operations
-
-```javascript
-// ❌ Sequential awaits
-const r1 = await o.db({ op: "read", target: { id: "co_z1" } });
-const r2 = await o.db({ op: "read", target: { id: "co_z2" } });
-
-// ✅ Parallel batch
-const results = await o.db({
-  op: "batch",
-  mode: "parallel",
-  operations: [
-    { op: "read", target: { id: "co_z1" } },
-    { op: "read", target: { id: "co_z2" } }
-  ]
-});
-```
-
-### 4. Store $schema Reference
-
-When creating CoMaps, the `$schema` property is automatically added:
-
-```javascript
-// The create handler automatically sets:
-rawCoMap.set("$schema", schemaId);
-rawCoMap.set("title", data.title);
-rawCoMap.set("content", data.content);
-```
-
-This enables:
-- Runtime validation
-- Schema introspection
-- Inspector schema resolution
-
-## Migration from Method-Based API
-
-**Old API** (deprecated):
-```javascript
-const post = await db.create({ schema: schemaId, data });
-const loaded = await db.read({ id: postId });
-await db.update({ id: postId, changes: { title: "New" } });
-await db.delete({ id: postId });
-```
-
-**New API** (operations-based):
-```javascript
-const post = await o.db({ op: "create", schema: schemaId, data });
-const loaded = await o.db({ op: "read", target: { id: postId } });
-await o.db({ op: "update", target: { id: postId }, changes: { title: "New" } });
-await o.db({ op: "delete", target: { id: postId } });
-```
-
-## Testing
-
-All operation handlers have comprehensive test coverage:
-
-```bash
-cd libs/maia-script
-bun test
-```
-
-Tests include:
-- DSL schema validation
-- CRUD operations against real CRDTs
-- Deep resolution with circular reference detection
-- Batch operations (sequential/parallel)
-- Error handling and edge cases
-- Zero mocks policy (all tests use real cojson)
-
-## Example: Blog Application
-
-See the complete example at `libs/maia-script/src/vibes/blog/`:
-
-```javascript
-// Initialize MaiaOS
-const o = await createMaiaOS({ ... });
-
-// Register schemas
-await o.db({
-  op: "registerSchema",
-  name: "Post",
-  definition: { ... }
-});
-
-// Create post
-const post = await o.db({
-  op: "create",
-  schema: postSchemaId,
-  data: { title: "Hello", content: "World", likes: 0 }
-});
-
-// Like post (increment operation)
-await o.db({
-  op: "update",
-  target: { id: post.id },
-  changes: { likes: { op: "increment", by: 1 } }
-});
-
-// Read with author resolution
-const fullPost = await o.db({
-  op: "read",
-  target: { id: post.id },
-  resolve: { author: {} }
-});
-```
-
-## Future Enhancements
-
-Potential future operations:
-- `subscribe`: Explicit subscription management
-- `unsubscribe`: Remove subscriptions
-- `migrate`: Schema migration operations
-- `export`: Export CoValues to JSON
-- `import`: Import JSON into CoValues
-- `query`: Advanced filtering/querying
-- `transaction`: Multi-operation atomicity
-
-## References
-
-- Operations Engine: `libs/maia-script/src/o/engines/operations-engine/`
-- DSL Schemas: `libs/maia-script/src/schemata/operations/`
-- Blog Example: `libs/maia-script/src/vibes/blog/`
-- Tests: `libs/maia-script/src/o/engines/operations-engine/handlers/*.test.js`
-
----
-
 # README
 
 *Source: creators/README.md*
@@ -8595,8 +8073,8 @@ Read the documentation in the following order for a complete understanding:
 - Actor composition
 - Actor references and identity
 
-### 3. [Skills](./03-skills.md)
-**AI Agent Skills**
+### 3. ~~[Skills](../future/03-skills.md)~~ *(Future Feature - v0.5+)*
+**AI Agent Skills** *(Not yet implemented)*
 - Skill definitions
 - How to create skills
 - Skill composition

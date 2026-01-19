@@ -1,5 +1,5 @@
 // Import validation helper
-import { validateOrThrow } from '../../../schemata/validation.helper.js';
+import { validateOrThrow } from '@MaiaOS/schemata/validation.helper';
 
 /**
  * StateEngine - XState-like State Machine Interpreter

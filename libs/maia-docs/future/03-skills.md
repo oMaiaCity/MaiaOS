@@ -1,5 +1,15 @@
 # Skills (AI Agent Interface)
 
+> ⚠️ **FUTURE FEATURE - NOT YET IMPLEMENTED**
+>
+> This documentation describes a planned feature for v0.5+. The Skills system is not currently implemented in MaiaOS.
+> 
+> **Current Status:** Design phase only
+>
+> **Planned Release:** v0.5 or later
+
+# Skills (AI Agent Interface)
+
 **Skills** are interface specifications that describe how AI agents should interact with actors. They are **metadata for LLM orchestration**, not execution logic.
 
 > Skills tell AI agents WHAT an actor can do, WHEN to use it, and HOW to interact with it.

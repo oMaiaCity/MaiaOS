@@ -1,5 +1,10 @@
 # Operations-Based Architecture
 
+> ⚠️ **ADVANCED TOPIC - Jazz/CoJSON Integration**
+>
+> This document describes the advanced operations architecture for Jazz/CoJSON integration.
+> For basic database operations with the `@db` tool, see [State Machines](./05-state.md) and [Tools](./06-tools.md).
+
 ## Overview
 
 MaiaOS uses a **unified operations-based API** where all database interactions (read, write, schema management) are expressed as JSON-configurable operations through a single entry point: `o.db({ op })`.
@@ -10,6 +15,8 @@ This architecture provides:
 - **Composable**: Operations can be nested (batch operations)
 - **Type-safe**: Runtime validation against operation schemas
 - **Uniform**: Single API for all database interactions
+
+> Note: Basic MaiaOS applications use the simpler `@db` tool (create, update, delete, toggle, query). This document covers the more advanced operations engine for Jazz/CoJSON integration.
 
 ## Core Concept
 
@@ -257,7 +264,7 @@ await o.db({
 Each operation type has a formal JSON Schema definition that validates the operation configuration. These DSL schemas are located at:
 
 ```
-libs/maia-script/src/schemata/operations/
+libs/maia-schemata/src/operations/
   - register-schema.operation.json
   - load-schema.operation.json
   - list-schemas.operation.json
@@ -269,6 +276,8 @@ libs/maia-script/src/schemata/operations/
   - all-loaded.operation.json
   - batch.operation.json
 ```
+
+> Note: Operations schemas are not currently implemented. The `@db` tool uses simpler operation validation.
 
 All schemas use the `$id` format: `https://maia.city/operations/{name}`
 
@@ -463,7 +472,7 @@ Tests include:
 
 ## Example: Blog Application
 
-See the complete example at `libs/maia-script/src/vibes/blog/`:
+See the complete example at `libs/maia-vibes/src/todos/`:
 
 ```javascript
 // Initialize MaiaOS
@@ -512,6 +521,6 @@ Potential future operations:
 ## References
 
 - Operations Engine: `libs/maia-script/src/o/engines/operations-engine/`
-- DSL Schemas: `libs/maia-script/src/schemata/operations/`
-- Blog Example: `libs/maia-script/src/vibes/blog/`
+- Schemas: `libs/maia-schemata/src/`
+- Example Vibe: `libs/maia-vibes/src/todos/`
 - Tests: `libs/maia-script/src/o/engines/operations-engine/handlers/*.test.js`

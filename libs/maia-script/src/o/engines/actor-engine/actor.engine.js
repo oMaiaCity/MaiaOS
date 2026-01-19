@@ -9,9 +9,9 @@
 // Import MessageQueue
 import { MessageQueue } from '../message-queue/message.queue.js';
 // Import validation helper
-import { validateAgainstSchemaOrThrow, validateOrThrow } from '../../../schemata/validation.helper.js';
+import { validateAgainstSchemaOrThrow, validateOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import schema loader utility
-import { loadSchemaFromDB } from '../../../schemata/schema-loader.js';
+import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
 
 export class ActorEngine {
   constructor(styleEngine, viewEngine, moduleRegistry, toolEngine, stateEngine = null) {

@@ -5,7 +5,7 @@
  *   maia.db({op: 'create', schema: '@schema/todos', data: {text: 'foo', done: false}})
  */
 
-import { validateAgainstSchemaOrThrow } from '../../../../schemata/validation.helper.js';
+import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 
 export class CreateOperation {
   constructor(backend) {

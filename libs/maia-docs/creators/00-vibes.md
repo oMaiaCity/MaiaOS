@@ -152,7 +152,7 @@ The service actor orchestrates the application and loads UI actors as children. 
     async function boot() {
       // Boot MaiaOS
       const os = await MaiaOS.boot({
-        modules: ['core', 'mutation', 'dragdrop']
+        modules: ['db', 'core', 'dragdrop', 'interface']
       });
       
       // Load vibe
@@ -294,8 +294,7 @@ vibes/todos/
     
     async function boot() {
       const os = await MaiaOS.boot({
-        toolsPath: '../../o/tools',
-        modules: ['core', 'mutation', 'dragdrop']
+        modules: ['db', 'core', 'dragdrop', 'interface']
       });
       
       // Load the vibe

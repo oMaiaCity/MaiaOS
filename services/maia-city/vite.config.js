@@ -20,9 +20,8 @@ export default defineConfig({
 		alias: {
 			"@MaiaOS/core": resolve(__dirname, "../../libs/maia-core/src/index.js"),
 			"@MaiaOS/db": resolve(__dirname, "../../libs/maia-db/src/index.js"),
-			// More specific aliases must come BEFORE base alias
-			"@MaiaOS/script/vibes/todos/loader.js": resolve(__dirname, "../../libs/maia-script/src/vibes/todos/loader.js"),
-			"@MaiaOS/script/vibes/todos/registry.js": resolve(__dirname, "../../libs/maia-script/src/vibes/todos/registry.js"),
+			"@MaiaOS/schemata": resolve(__dirname, "../../libs/maia-schemata/src"),
+			"@MaiaOS/vibes": resolve(__dirname, "../../libs/maia-vibes/src"),
 			"@MaiaOS/script": resolve(__dirname, "../../libs/maia-script/src"),
 			"cojson/crypto/WasmCrypto": resolve(__dirname, "../../libs/maia-db/node_modules/cojson/dist/crypto/WasmCrypto.js"),
 			"cojson/crypto/PureJSCrypto": resolve(__dirname, "../../libs/maia-db/node_modules/cojson/dist/crypto/PureJSCrypto.js"),

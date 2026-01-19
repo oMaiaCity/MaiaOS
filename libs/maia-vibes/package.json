@@ -1,0 +1,16 @@
+{
+  "name": "@MaiaOS/vibes",
+  "version": "0.17.0",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    "./todos/loader": "./src/todos/loader.js",
+    "./todos/registry": "./src/todos/registry.js"
+  },
+  "dependencies": {
+    "@MaiaOS/script": "workspace:*"
+  },
+  "files": [
+    "src"
+  ]
+}

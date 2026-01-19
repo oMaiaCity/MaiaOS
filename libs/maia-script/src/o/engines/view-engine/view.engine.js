@@ -1,7 +1,7 @@
 // Import validation helper
-import { validateOrThrow, validateAgainstSchemaOrThrow } from '../../../schemata/validation.helper.js';
+import { validateOrThrow, validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import schema loader utility
-import { loadSchemaFromDB } from '../../../schemata/schema-loader.js';
+import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
 
 /**
  * ViewEngine - Renders .maia view files to Shadow DOM

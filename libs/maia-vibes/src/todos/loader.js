@@ -4,7 +4,7 @@
  * Uses maia.db() unified operation engine
  */
 
-import { MaiaOS } from '../../index.js';
+import { MaiaOS } from '@MaiaOS/script';
 import { TodosVibeRegistry } from './registry.js';
 
 /**

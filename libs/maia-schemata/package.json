@@ -1,0 +1,18 @@
+{
+  "name": "@MaiaOS/schemata",
+  "version": "0.17.0",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./validation.engine": "./src/validation.engine.js",
+    "./validation.helper": "./src/validation.helper.js",
+    "./schema-loader": "./src/schema-loader.js"
+  },
+  "dependencies": {
+    "ajv": "^8.12.0"
+  },
+  "files": [
+    "src"
+  ]
+}

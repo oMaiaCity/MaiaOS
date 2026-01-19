@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@MaiaOS/core": "workspace:*",
-    "@MaiaOS/script": "workspace:*"
+    "@MaiaOS/script": "workspace:*",
+    "@MaiaOS/vibes": "workspace:*"
   },
   "devDependencies": {
     "vite": "^7.2.4"

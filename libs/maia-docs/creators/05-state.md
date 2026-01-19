@@ -1,15 +1,40 @@
-# State Machines
+# State Machines (The Brain)
 
-**State machines** define actor behavior through states, transitions, guards, and actions. They are **XState-like state machine definitions** that the StateEngine interprets at runtime.
+Imagine a traffic light:
+- It has **states**: Green, Yellow, Red
+- It **changes states**: Green → Yellow → Red → Green
+- **Rules** decide when to change: "After 30 seconds, go to next state"
 
-## Philosophy
+**That's a state machine!** Your actor has states too, and rules for when to change them.
 
-> State machines are the BRAIN of an actor. They define WHAT to do WHEN something happens.
+## A Simple Example: Creating a Todo
 
-- **Actors** have no logic (just configuration)
-- **State Machines** define behavior flow and compute conditional values
-- **Tools** execute the actual work
-- **Views** reference computed values (zero conditionals in templates!)
+Your todo app might have these states:
+- **idle**: Waiting for you to do something
+- **creating**: Adding a new todo to the database
+- **error**: Something went wrong
+
+**What happens when you click "Add Todo":**
+
+```
+State: idle
+  ↓
+User clicks "Add Todo" button
+  ↓
+State machine says: "Go to 'creating' state"
+  ↓
+State: creating
+  ↓
+Tool creates the todo in database
+  ↓
+Tool says: "SUCCESS!"
+  ↓
+State machine says: "Go back to 'idle' state"
+  ↓
+State: idle (with your new todo!)
+```
+
+The state machine is like a traffic controller - it decides what happens next!
 
 ## Basic Structure
 
@@ -33,9 +58,10 @@ Create a file named `{name}.state.maia`:
     },
     "creating": {
       "entry": {
-        "tool": "@mutation/create",
+        "tool": "@db",
         "payload": {
-          "schema": "todos",
+          "op": "create",
+          "schema": "@schema/todos",
           "data": {"text": "$newTodoText", "done": false}
         }
       },
@@ -73,8 +99,8 @@ Create a file named `{name}.state.maia`:
 {
   "creating": {
     "entry": {
-      "tool": "@mutation/create",
-      "payload": {...}
+      "tool": "@db",
+      "payload": { "op": "create", ... }
     }
   }
 }
@@ -87,7 +113,7 @@ Or multiple actions:
   "creating": {
     "entry": [
       {"tool": "@core/showLoading", "payload": {}},
-      {"tool": "@mutation/create", "payload": {...}}
+      {"tool": "@db", "payload": { "op": "create", ... }}
     ]
   }
 }
@@ -273,369 +299,160 @@ actor.context.draggedItemIds[id] = true;  // Set this item as dragged
 }
 ```
 
-## Using Reactive Queries
+## Working with Data (Automatic Reactive Queries)
 
-**Reactive queries** automatically update your actor's data when changes happen. No manual refresh needed! Think of it like a spreadsheet: when you change a cell, all formulas that depend on it update automatically.
+MaiaOS automatically keeps your data in sync - no tools needed! Just define what data you want in your context, and MaiaOS handles the rest.
 
-### Quick Start: Subscribing to Data
+### Think of it like a spreadsheet:
+- You write formulas that reference other cells
+- When you change a cell, all formulas update automatically
+- You never have to manually "refresh" the spreadsheet
 
-In your state machine, add a `loading` state that subscribes to your data:
+**That's how reactive queries work!**
 
+### Quick Start: Getting Data
+
+In your context file, define **query objects** that tell MaiaOS what data you want:
+
+**`todos.context.maia`:**
 ```json
 {
-  "initial": "loading",
-  "states": {
-    "loading": {
-      "entry": {
-        "tool": "@query/subscribe",
-        "payload": {
-          "schema": "todos",
-          "target": "todos"
-        }
-      },
-      "on": {
-        "SUCCESS": "idle"
-      }
-    },
-    "idle": {
-      ...
-    }
-  }
+  "$type": "context",
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  },
+  "newTodoText": ""
 }
 ```
 
 **What happens:**
-1. Actor starts in `loading` state
-2. `@query/subscribe` tool runs
-3. Data loads into `context.todos`
-4. State machine transitions to `idle`
-5. View renders with data
-6. **Data automatically updates when it changes!**
+1. MaiaOS sees `todos` is a query object (has `schema` property)
+2. MaiaOS automatically subscribes to the database
+3. Data flows into `context.todos`
+4. When data changes, MaiaOS updates `context.todos` automatically
+5. Your view re-renders with fresh data
 
-### Query Tools
+**No tools, no manual subscriptions - it just works!**
 
-#### @query/subscribe (Reactive)
+### Filtering Data
 
-**Use for:** Data that changes frequently
+Want only incomplete todos? Use a filter:
 
 ```json
 {
-  "tool": "@query/subscribe",
-  "payload": {
-    "schema": "todos",
-    "target": "todos"
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  },
+  "todosTodo": {
+    "schema": "@schema/todos",
+    "filter": { "done": false }
+  },
+  "todosDone": {
+    "schema": "@schema/todos",
+    "filter": { "done": true }
   }
 }
 ```
 
-**Features:**
-- ✅ Automatic updates
-- ✅ Re-renders actor
-- ✅ Supports filters
-- ❌ Can't unsubscribe manually (auto-cleanup on actor destroy)
+**Result:**
+- `context.todos` = All todos
+- `context.todosTodo` = Only incomplete todos (`done: false`)
+- `context.todosDone` = Only completed todos (`done: true`)
 
-#### @query/get (One-time)
+All three automatically update when you create, update, or delete a todo!
 
-**Use for:** Static data that doesn't change
+### Creating, Updating, Deleting Data
 
-```json
-{
-  "tool": "@query/get",
-  "payload": {
-    "schema": "settings",
-    "target": "settings"
-  }
-}
-```
-
-**Features:**
-- ✅ Fast (no subscription overhead)
-- ✅ Good for read-only data
-- ❌ No automatic updates
-- ❌ Must re-run manually to refresh
-
-#### @query/filter (One-time + Filter)
-
-**Use for:** One-time filtered queries
-
-```json
-{
-  "tool": "@query/filter",
-  "payload": {
-    "schema": "todos",
-    "filter": {
-      "field": "priority",
-      "op": "gt",
-      "value": 5
-    },
-    "target": "highPriorityTodos"
-  }
-}
-```
-
-**Features:**
-- ✅ Filtered results
-- ✅ Fast (no subscription)
-- ❌ No automatic updates
-
-### Filters
-
-Filter data to show only what you need:
-
-```json
-{
-  "tool": "@query/subscribe",
-  "payload": {
-    "schema": "todos",
-    "filter": {
-      "field": "done",
-      "op": "eq",
-      "value": false
-    },
-    "target": "incompleteTodos"
-  }
-}
-```
-
-**Result:** Only incomplete todos (`done: false`) appear in `context.incompleteTodos`.
-
-#### Filter Operations
-
-**Equality:**
-```json
-{ "field": "done", "op": "eq", "value": false }  // done === false
-{ "field": "done", "op": "ne", "value": false }  // done !== false
-```
-
-**Comparison:**
-```json
-{ "field": "priority", "op": "gt", "value": 5 }   // priority > 5
-{ "field": "priority", "op": "lt", "value": 10 }  // priority < 10
-{ "field": "priority", "op": "gte", "value": 5 }  // priority >= 5
-{ "field": "priority", "op": "lte", "value": 10 } // priority <= 10
-```
-
-**Array / String:**
-```json
-{ "field": "status", "op": "in", "value": ["active", "pending"] }  // status in array
-{ "field": "text", "op": "contains", "value": "urgent" }            // text contains "urgent"
-```
-
-### Mutation Tools
+Use the `@db` tool with different `op` values:
 
 #### Create
 
 ```json
 {
-  "tool": "@mutation/create",
+  "tool": "@db",
   "payload": {
-    "schema": "todos",
+    "op": "create",
+    "schema": "@schema/todos",
     "data": {
-      "text": "Buy groceries",
-      "done": false,
-      "priority": 5
+      "text": "$newTodoText",
+      "done": false
     }
   }
 }
 ```
-
-**Result:** Creates new todo with auto-generated ID. All subscribed actors update automatically.
 
 #### Update
 
 ```json
 {
-  "tool": "@mutation/update",
+  "tool": "@db",
   "payload": {
-    "schema": "todos",
-    "id": "1234",
+    "op": "update",
+    "schema": "@schema/todos",
+    "id": "$$id",
     "data": {
-      "text": "Buy groceries and cook dinner"
+      "text": "Updated text"
     }
   }
 }
 ```
-
-**Result:** Updates existing todo. All subscribed actors update automatically.
 
 #### Delete
 
 ```json
 {
-  "tool": "@mutation/delete",
+  "tool": "@db",
   "payload": {
-    "schema": "todos",
-    "id": "1234"
+    "op": "delete",
+    "schema": "@schema/todos",
+    "id": "$$id"
   }
 }
 ```
-
-**Result:** Deletes todo. All subscribed actors update automatically.
 
 #### Toggle
 
 ```json
 {
-  "tool": "@mutation/toggle",
+  "tool": "@db",
   "payload": {
-    "schema": "todos",
-    "id": "1234",
+    "op": "toggle",
+    "schema": "@schema/todos",
+    "id": "$$id",
     "field": "done"
   }
 }
 ```
 
-**Result:** Toggles `done` from `true` to `false` (or vice versa). All subscribed actors update automatically.
-
-### Common Query Patterns
-
-#### Pattern 1: Simple List
-
-**State Machine:**
-```json
-{
-  "initial": "loading",
-  "states": {
-    "loading": {
-      "entry": {
-        "tool": "@query/subscribe",
-        "payload": {
-          "schema": "todos",
-          "target": "todos"
-        }
-      },
-      "on": { "SUCCESS": "idle" }
-    },
-    "idle": {}
-  }
-}
-```
-
-**View:**
-```json
-{
-  "$each": {
-    "items": "$todos",
-    "template": {
-      "tag": "div",
-      "text": "$$text"
-    }
-  }
-}
-```
-
-#### Pattern 2: Filtered Lists (Kanban Board)
-
-**State Machine:**
-```json
-{
-  "initial": "loading",
-  "states": {
-    "loading": {
-      "entry": [
-        {
-          "tool": "@query/subscribe",
-          "payload": {
-            "schema": "todos",
-            "filter": { "field": "done", "op": "eq", "value": false },
-            "target": "todosTodo"
-          }
-        },
-        {
-          "tool": "@query/subscribe",
-          "payload": {
-            "schema": "todos",
-            "filter": { "field": "done", "op": "eq", "value": true },
-            "target": "todosDone"
-          }
-        }
-      ],
-      "on": { "SUCCESS": "idle" }
-    },
-    "idle": {}
-  }
-}
-```
-
-**View:**
-```json
-{
-  "tag": "div",
-  "attrs": {
-    "class": "kanban-board"
-  },
-  "children": [
-    {
-      "tag": "div",
-      "attrs": {
-        "class": "column"
-      },
-      "children": [
-        {
-          "tag": "h3",
-          "text": "To Do"
-        },
-        {
-          "$each": {
-            "items": "$todosTodo",
-            "template": {
-              "tag": "div",
-              "text": "$$text"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "tag": "div",
-      "attrs": {
-        "class": "column"
-      },
-      "children": [
-        {
-          "tag": "h3",
-          "text": "Done"
-        },
-        {
-          "$each": {
-            "items": "$todosDone",
-            "template": {
-              "tag": "div",
-              "text": "$$text"
-            }
-          }
-        }
-      ]
-    }
-  ]
-}
-```
-
-#### Pattern 3: Create with Input
+### Complete Example: Todo List
 
 **Context:**
 ```json
 {
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  },
+  "todosTodo": {
+    "schema": "@schema/todos",
+    "filter": { "done": false }
+  },
+  "todosDone": {
+    "schema": "@schema/todos",
+    "filter": { "done": true }
+  },
   "newTodoText": "",
-  "todos": []
+  "viewMode": "list"
 }
 ```
 
 **State Machine:**
 ```json
 {
-  "initial": "loading",
+  "initial": "idle",
   "states": {
-    "loading": {
-      "entry": {
-        "tool": "@query/subscribe",
-        "payload": {
-          "schema": "todos",
-          "target": "todos"
-        }
-      },
-      "on": { "SUCCESS": "idle" }
-    },
     "idle": {
       "on": {
         "UPDATE_INPUT": {
@@ -654,9 +471,10 @@ Filter data to show only what you need:
     "creating": {
       "entry": [
         {
-          "tool": "@mutation/create",
+          "tool": "@db",
           "payload": {
-            "schema": "todos",
+            "op": "create",
+            "schema": "@schema/todos",
             "data": {
               "text": "$newTodoText",
               "done": false
@@ -668,7 +486,15 @@ Filter data to show only what you need:
           "payload": { "newTodoText": "" }
         }
       ],
-      "on": { "SUCCESS": "idle" }
+      "on": {
+        "SUCCESS": "idle",
+        "ERROR": "error"
+      }
+    },
+    "error": {
+      "on": {
+        "RETRY": "idle"
+      }
     }
   }
 }
@@ -681,7 +507,8 @@ Filter data to show only what you need:
     {
       "tag": "input",
       "attrs": {
-        "value": "$newTodoText"
+        "value": "$newTodoText",
+        "placeholder": "What needs to be done?"
       },
       "$on": {
         "input": {
@@ -707,41 +534,32 @@ Filter data to show only what you need:
 }
 ```
 
-### Query Best Practices
+### Best Practices
 
 **✅ DO:**
-- Always subscribe in the `loading` state
-- Use meaningful target names (`incompleteTodos`, not `data1`)
-- Filter data at subscription time (not in view)
-- Use mutation tools for all data changes
+- Define query objects in context (with `schema` property)
+- Use `@db` tool for all data changes
+- Use descriptive names (`todosTodo`, not `data1`)
+- Filter in context, not in views
 - Test with empty data (handle empty arrays gracefully)
-- Document which actors subscribe to which data
 
 **❌ DON'T:**
-- Modify `actor.context[schema]` directly
-- Create data without using `@mutation/create`
-- Forget to add `on: { SUCCESS: "idle" }` after loading
-- Mix reactive (`@query/subscribe`) and non-reactive (`@query/get`) for same data
-- Subscribe to entire collections when you only need filtered data
-- Use filters in views (use filtered subscriptions instead)
+- Don't manually modify `context.todos` directly
+- Don't use old `@mutation/*` or `@query/*` tools (deprecated)
+- Don't filter data in views (use context filters instead)
+- Don't forget to handle SUCCESS/ERROR events
 
-### Query Troubleshooting
+### Troubleshooting
 
 **Data Not Appearing:**
-1. Is your actor in the `loading` state?
-2. Is the `@query/subscribe` tool running?
-3. Is the `target` field correct? (e.g., `"target": "todos"`)
-4. Is there data in localStorage? (Open DevTools → Application → Local Storage)
+1. Is your context property a query object? (has `schema` property)
+2. Check browser console for errors
+3. Is the schema name correct? (e.g., `@schema/todos`)
 
 **Data Not Updating:**
-1. Are you using `@query/subscribe` (not `@query/get`)?
-2. Are you using mutation tools (`@mutation/*`) to modify data?
-3. Is the schema name correct in both subscribe and mutation?
-
-**Multiple Actors Not Syncing:**
-1. All actors subscribe to the same schema name
-2. All actors use mutation tools (not direct context modification)
-3. Actors are properly initialized (check console logs)
+1. Are you using `@db` tool to modify data?
+2. Is the schema name consistent between context and tool?
+3. Check console logs for SUCCESS/ERROR events
 
 ## Complete Example: Todo State Machine
 
@@ -795,9 +613,10 @@ Filter data to show only what you need:
     
     "creating": {
       "entry": {
-        "tool": "@mutation/create",
+        "tool": "@db",
         "payload": {
-          "schema": "todos",
+          "op": "create",
+          "schema": "@schema/todos",
           "data": {"text": "$newTodoText", "done": false}
         }
       },
@@ -809,9 +628,10 @@ Filter data to show only what you need:
     
     "toggling": {
       "entry": {
-        "tool": "@mutation/toggle",
+        "tool": "@db",
         "payload": {
-          "schema": "todos",
+          "op": "toggle",
+          "schema": "@schema/todos",
           "id": "$$id",
           "field": "done"
         }
@@ -824,9 +644,10 @@ Filter data to show only what you need:
     
     "deleting": {
       "entry": {
-        "tool": "@mutation/delete",
+        "tool": "@db",
         "payload": {
-          "schema": "todos",
+          "op": "delete",
+          "schema": "@schema/todos",
           "id": "$$id"
         }
       },
@@ -885,7 +706,7 @@ Handle these in your state definition:
 ```json
 {
   "creating": {
-    "entry": {"tool": "@mutation/create", "payload": {...}},
+    "entry": {"tool": "@db", "payload": { "op": "create", ... }},
     "on": {
       "SUCCESS": "idle",  // ← Automatic on tool success
       "ERROR": "error"    // ← Automatic on tool failure
