@@ -380,6 +380,70 @@ Validates messages passed between actors.
 }
 ```
 
+### Data Schemas
+
+Validates application data (todos, notes, etc.) stored in IndexedDB. These schemas are dynamically seeded into the database and used for runtime validation of create/update operations.
+
+**Location:** `src/schemata/data/`
+
+**Required fields:**
+- `$id`: Unique schema identifier (e.g., `"https://maiaos.dev/schemas/data/todos"`)
+- `$schema`: JSON Schema version (e.g., `"http://json-schema.org/draft-07/schema#"`)
+- `type`: Must be `"object"`
+- `properties`: Object defining field schemas
+- `required`: Array of required field names
+
+**Example - Todos Schema:**
+```json
+{
+  "$id": "https://maiaos.dev/schemas/data/todos",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the todo item"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The todo item text content"
+    },
+    "done": {
+      "type": "boolean",
+      "description": "Whether the todo item is completed"
+    }
+  },
+  "required": ["text", "done"],
+  "additionalProperties": false
+}
+```
+
+**How It Works:**
+
+1. **Schema Definition**: Create a JSON Schema file in `src/schemata/data/` (e.g., `todos.schema.json`)
+2. **Automatic Seeding**: Schemas are automatically seeded into IndexedDB during `MaiaOS.boot()` via the `schemata` module
+3. **Runtime Validation**: When creating or updating data, the operation loads the schema from IndexedDB and validates the data
+4. **Storage**: Schemas are stored in IndexedDB's `schemas` store with keys like `@schema/data/todos`
+
+**Adding a New Data Schema:**
+
+1. Create `src/schemata/data/yourtype.schema.json` following JSON Schema format
+2. Export it in `src/schemata/index.js`:
+   ```javascript
+   import yourtypeSchema from './data/yourtype.schema.json';
+   const DATA_SCHEMAS = {
+     'data/todos': todosSchema,
+     'data/yourtype': yourtypeSchema  // Add here
+   };
+   ```
+3. The schema will be automatically seeded and used for validation
+
+**Validation Points:**
+- **Create operations**: Full validation (all required fields must be present)
+- **Update operations**: Partial validation (only validates fields being updated, doesn't require all fields)
+- **Toggle operations**: Validates field exists and is boolean type
+
 ## Common Definitions
 
 The `common.schema.json` file defines shared patterns used across multiple schemas:

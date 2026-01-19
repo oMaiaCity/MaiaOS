@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "@schema/meta-schema",
   "$id": "https://maiaos.dev/schemas/context.schema.json",
   "title": "Context Definition",
   "description": "Runtime data for an actor (flexible JSON structure)",

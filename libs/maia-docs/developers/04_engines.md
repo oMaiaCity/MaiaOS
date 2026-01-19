@@ -30,7 +30,135 @@ Engines are the **execution machinery** of MaiaOS. They interpret declarative de
 4. **Handle Errors** - Graceful failure and recovery
 5. **Emit Events** - Notify other engines (if needed)
 
-All engines automatically validate their input data against JSON schemas when loading definitions. See [Schema System](./schemas.md) for details.
+All engines automatically validate their input data against JSON schemas when loading definitions. See [Schema System](./03_schemas.md) for details.
+
+## Validation System
+
+MaiaOS implements **end-to-end JSON Schema validation** across all data operations. Every piece of data flowing through the system is validated against its schema definition.
+
+### Validation Coverage
+
+**Config Files** (100% validated):
+- Actors, Contexts, States, Views, Styles, Interfaces, Vibes
+- Validated when loaded from IndexedDB using AJV
+- Validation happens in respective engines (ActorEngine, StateEngine, ViewEngine, etc.)
+
+**Tool Payloads** (100% validated):
+- Full JSON Schema validation for all tool parameters
+- Validated in `ToolEngine.execute()` before tool execution
+- Uses `validateOrThrow()` helper with AJV
+
+**Message Payloads** (100% validated):
+- Full JSON Schema validation for all message payloads
+- Validated in `ActorEngine._validateMessage()` for both inbox and publishes
+- Converts interface payload format to JSON Schema automatically
+
+**Application Data** (100% validated):
+- Create operations: Full validation against data schema from IndexedDB
+- Update operations: Partial validation (only fields being updated)
+- Toggle operations: Validates field exists and is boolean type
+- Schemas stored in IndexedDB `schemas` store (e.g., `@schema/data/todos`)
+
+### How Validation Works
+
+1. **Schema Storage**: All schemas (config schemas + data schemas) are seeded into IndexedDB during `MaiaOS.boot()`
+2. **Runtime Loading**: Operations load schemas from IndexedDB on-demand
+3. **AJV Validation**: Uses AJV (fast JSON Schema validator) for validation
+4. **Fail-Fast**: Validation errors throw immediately with clear, actionable error messages
+
+### Example: Tool Payload Validation
+
+```javascript
+// Tool definition (.tool.maia)
+{
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "text": { "type": "string", "minLength": 1 }
+    },
+    "required": ["text"]
+  }
+}
+
+// Tool execution validates payload
+await toolEngine.execute('@core/createTodo', actor, { text: "Buy milk" });
+// ✅ Valid - passes validation
+
+await toolEngine.execute('@core/createTodo', actor, { text: "" });
+// ❌ Invalid - throws: "Validation failed: text should NOT be shorter than 1 characters"
+```
+
+### Example: Message Payload Validation
+
+```javascript
+// Interface definition (.interface.maia)
+{
+  "inbox": {
+    "CREATE_TODO": {
+      "payload": { "text": "string" }
+    }
+  }
+}
+
+// Message validation converts to JSON Schema and validates
+await actorEngine.sendMessage(actorId, {
+  type: "CREATE_TODO",
+  payload: { text: "Buy milk" }
+});
+// ✅ Valid - passes validation
+
+await actorEngine.sendMessage(actorId, {
+  type: "CREATE_TODO",
+  payload: { text: 123 }
+});
+// ❌ Invalid - throws: "Validation failed: text should be string"
+```
+
+### Example: Application Data Validation
+
+```javascript
+// Data schema (todos.schema.json) stored in IndexedDB
+{
+  "properties": {
+    "text": { "type": "string", "minLength": 1 },
+    "done": { "type": "boolean" }
+  },
+  "required": ["text", "done"]
+}
+
+// Create operation validates data
+await maia.db({
+  op: 'create',
+  schema: '@schema/todos',
+  data: { text: "Buy milk", done: false }
+});
+// ✅ Valid - passes validation
+
+await maia.db({
+  op: 'create',
+  schema: '@schema/todos',
+  data: { text: "", done: false }
+});
+// ❌ Invalid - throws: "Validation failed: text should NOT be shorter than 1 characters"
+```
+
+### Validation Error Messages
+
+Validation errors provide clear, actionable feedback:
+
+```
+Validation failed for 'tool-payload' in tool-payload:
+  - /text: should NOT be shorter than 1 characters
+  - /done: should be boolean
+```
+
+### Performance
+
+- AJV compiles schemas for fast validation (< 1ms per validation)
+- Schemas are cached after first load
+- Validation only occurs at operation boundaries (not on every property access)
+
+For more details, see [Validation Guide](./10_validation.md).
 
 ### SubscriptionEngine - Context-Driven Reactivity
 

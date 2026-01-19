@@ -1,5 +1,5 @@
 // Import validation helper
-import { validateOrThrow } from '../../../schemata/validation.helper.js';
+import { validateOrThrow, validateAgainstSchemaOrThrow } from '../../../schemata/validation.helper.js';
 
 /**
  * ViewEngine - Renders .maia view files to Shadow DOM
@@ -62,7 +62,14 @@ export class ViewEngine {
       });
       
       if (viewDef) {
-        await validateOrThrow('view', viewDef, `maia.db:${viewKey}`);
+        // Load schema from IndexedDB and validate on-the-fly
+        const schema = await this._loadSchemaFromDB('view');
+        if (schema) {
+          await validateAgainstSchemaOrThrow(schema, viewDef, 'view');
+        } else {
+          // Fallback to registered schema if not in DB yet
+          await validateOrThrow('view', viewDef, `maia.db:${viewKey}`);
+        }
         this.viewCache.set(viewRef, viewDef);
         return viewDef;
       }
@@ -71,6 +78,23 @@ export class ViewEngine {
     }
     
     throw new Error(`[ViewEngine] Database engine not available`);
+  }
+  
+  /**
+   * Load schema from IndexedDB for on-the-fly validation
+   * @private
+   * @param {string} schemaType - Schema type (e.g., 'view', 'state')
+   * @returns {Promise<Object|null>} Schema object or null if not found
+   */
+  async _loadSchemaFromDB(schemaType) {
+    if (!this.dbEngine || !this.dbEngine.backend) return null;
+    
+    try {
+      const schemaKey = `@schema/${schemaType}`;
+      return await this.dbEngine.backend.getSchema(schemaKey);
+    } catch (error) {
+      return null;
+    }
   }
 
 
@@ -350,8 +374,15 @@ export class ViewEngine {
           }
         }
         
-        // Mark this child as visible (optimization for re-renders)
+        // Mark this child as visible and trigger re-render with current data
+        const wasHidden = !childActor._isVisible;
         childActor._isVisible = true;
+        
+        // CRITICAL: Re-render when actor becomes visible (fixes view-switching reactivity bug)
+        // This ensures the view displays the latest data from subscriptions
+        if (wasHidden && childActor._initialRenderComplete && this.actorEngine) {
+          this.actorEngine.rerender(childActor.id);
+        }
         
         // CRITICAL: Only append if not already in wrapper (prevents duplicates during re-renders)
         if (childActor.containerElement.parentNode !== wrapperElement) {

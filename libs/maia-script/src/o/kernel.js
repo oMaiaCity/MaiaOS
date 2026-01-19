@@ -23,9 +23,11 @@ import { SubscriptionEngine } from './engines/subscription-engine/subscription.e
 import { DBEngine } from './engines/maiadb/db.engine.js';
 import { IndexedDBBackend } from './engines/maiadb/backend/indexeddb.js';
 // Import validation helper
-import { validateOrThrow } from '../schemata/validation.helper.js';
+import { validateOrThrow, validateAgainstSchemaOrThrow } from '../schemata/validation.helper.js';
 // Import all schemas for seeding
 import * as schemata from '../schemata/index.js';
+// Import ValidationEngine for meta schema validation
+import { ValidationEngine } from '../schemata/validation.engine.js';
 
 /**
  * MaiaOS - Operating System for Actor-based Applications
@@ -87,6 +89,29 @@ export class MaiaOS {
         Object.assign(schemas, schemata.getAllSchemas());
       }
       
+      // Add meta schema for validation
+      if (typeof schemata.getMetaSchema === 'function') {
+        schemas['meta-schema'] = schemata.getMetaSchema();
+      }
+      
+      // Validate all schemas against meta schema before seeding
+      // Metaschema is registered during ValidationEngine initialization
+      const validationEngine = new ValidationEngine();
+      await validationEngine.initialize();
+      
+      console.log('🔍 Validating schemas against meta schema...');
+      for (const [name, schema] of Object.entries(schemas)) {
+        const result = await validationEngine.validateSchemaAgainstMeta(schema);
+        if (!result.valid) {
+          const errorDetails = result.errors
+            .map(err => `  - ${err.instancePath}: ${err.message}`)
+            .join('\n');
+          console.error(`❌ Schema '${name}' failed meta schema validation:\n${errorDetails}`);
+          throw new Error(`Schema '${name}' is not valid JSON Schema`);
+        }
+      }
+      console.log('✅ All schemas validated against meta schema');
+      
       await os.dbEngine.execute({
         op: 'seed',
         configs: configsWithTools,
@@ -95,6 +120,17 @@ export class MaiaOS {
       });
       
       console.log('✅ Database seeded successfully');
+      
+      // Set schema resolver on validation helper singleton for engines to use
+      const { setSchemaResolver } = await import('../schemata/validation.helper.js');
+      setSchemaResolver(async (schemaKey) => {
+        try {
+          return await backend.getSchema(schemaKey);
+        } catch (error) {
+          console.warn(`[MaiaOS] Failed to resolve schema ${schemaKey}:`, error);
+          return null;
+        }
+      });
     }
     
     // Initialize module registry
@@ -189,8 +225,14 @@ export class MaiaOS {
     
     const vibe = await response.json();
     
-    // Validate vibe structure using schema
-    await validateOrThrow('vibe', vibe, vibePath);
+    // Validate vibe structure using schema (load from IndexedDB on-the-fly)
+    const schema = await this._loadSchemaFromDB('vibe');
+    if (schema) {
+      await validateAgainstSchemaOrThrow(schema, vibe, 'vibe');
+    } else {
+      // Fallback to registered schema if not in DB yet
+      await validateOrThrow('vibe', vibe, vibePath);
+    }
     
     console.log(`✨ Vibe: "${vibe.name}"`);
     
@@ -226,8 +268,14 @@ export class MaiaOS {
       throw new Error(`Vibe not found in database: ${vibeName}`);
     }
     
-    // Validate vibe structure using schema
-    await validateOrThrow('vibe', vibe, `maia.db:${vibeName}`);
+    // Validate vibe structure using schema (load from IndexedDB on-the-fly)
+    const schema = await this._loadSchemaFromDB('vibe');
+    if (schema) {
+      await validateAgainstSchemaOrThrow(schema, vibe, 'vibe');
+    } else {
+      // Fallback to registered schema if not in DB yet
+      await validateOrThrow('vibe', vibe, `maia.db:${vibeName}`);
+    }
     
     console.log(`✨ Vibe: "${vibe.name}"`);
     
@@ -256,8 +304,14 @@ export class MaiaOS {
     
     console.log(`📦 Loading vibe from registry: "${vibe.name}"...`);
     
-    // Validate vibe structure using schema
-    await validateOrThrow('vibe', vibe, 'registry');
+    // Validate vibe structure using schema (load from IndexedDB on-the-fly)
+    const schema = await this._loadSchemaFromDB('vibe');
+    if (schema) {
+      await validateAgainstSchemaOrThrow(schema, vibe, 'vibe');
+    } else {
+      // Fallback to registered schema if not in DB yet
+      await validateOrThrow('vibe', vibe, 'registry');
+    }
     
     console.log(`✨ Vibe: "${vibe.name}"`);
     
@@ -315,6 +369,23 @@ export class MaiaOS {
       evaluator: this.evaluator,
       moduleRegistry: this.moduleRegistry
     };
+  }
+  
+  /**
+   * Load schema from IndexedDB for on-the-fly validation
+   * @private
+   * @param {string} schemaType - Schema type (e.g., 'vibe', 'actor')
+   * @returns {Promise<Object|null>} Schema object or null if not found
+   */
+  async _loadSchemaFromDB(schemaType) {
+    if (!this.dbEngine || !this.dbEngine.backend) return null;
+    
+    try {
+      const schemaKey = `@schema/${schemaType}`;
+      return await this.dbEngine.backend.getSchema(schemaKey);
+    } catch (error) {
+      return null;
+    }
   }
 }
 

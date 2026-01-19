@@ -6,7 +6,15 @@
  * - Schema definitions: Imported directly from JSON files
  */
 
-export { ValidationEngine } from './validation.engine.js';
+// Import ValidationEngine for getMetaSchema (must import before using)
+import { ValidationEngine } from './validation.engine.js';
+
+export { ValidationEngine };
+
+// Export meta schema for seeding
+export function getMetaSchema() {
+  return ValidationEngine.getMetaSchema();
+}
 
 // Import all schema definitions directly as JSON
 import actorSchema from './actor.schema.json';
@@ -20,6 +28,8 @@ import toolSchema from './tool.schema.json';
 import vibeSchema from './vibe.schema.json';
 import messageSchema from './message.schema.json';
 import commonSchema from './common.schema.json';
+// Import data schemas
+import todosDataSchema from './data/todos.schema.json';
 
 // Schema registry
 const SCHEMAS = {
@@ -39,6 +49,11 @@ const SCHEMAS = {
   common: commonSchema
 };
 
+// Data schemas registry (for application data validation)
+const DATA_SCHEMAS = {
+  'data/todos': todosDataSchema
+};
+
 /**
  * Get schema for a given type (synchronous)
  * @param {string} type - Data type (e.g., 'actor', 'context', 'state')
@@ -49,11 +64,19 @@ export function getSchema(type) {
 }
 
 /**
- * Get all schemas
+ * Get all schemas (including data schemas)
  * @returns {object} All schema definitions
  */
 export function getAllSchemas() {
-  return { ...SCHEMAS };
+  return { ...SCHEMAS, ...DATA_SCHEMAS };
+}
+
+/**
+ * Get all data schemas
+ * @returns {object} Data schema definitions
+ */
+export function getDataSchemas() {
+  return { ...DATA_SCHEMAS };
 }
 
 /**

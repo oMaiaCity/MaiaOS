@@ -8,13 +8,11 @@
     "properties": {
       "interfaceDef": {
         "type": "object",
-        "description": "Interface definition to validate",
-        "required": true
+        "description": "Interface definition to validate"
       },
       "actorId": {
         "type": "string",
-        "description": "Actor ID for error reporting",
-        "required": true
+        "description": "Actor ID for error reporting"
       }
     },
     "required": ["interfaceDef", "actorId"]

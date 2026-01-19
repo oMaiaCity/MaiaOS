@@ -94,7 +94,7 @@ export class MessageQueue {
 
       // Validate message against interface (validation already done in sendMessage, but double-check for safety)
       if (actor.interface) {
-        const isValid = this.actorEngine._validateMessage(
+        const isValid = await this.actorEngine._validateMessage(
           message,
           actor.interface,
           'inbox',

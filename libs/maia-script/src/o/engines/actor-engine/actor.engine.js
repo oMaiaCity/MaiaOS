@@ -9,7 +9,7 @@
 // Import MessageQueue
 import { MessageQueue } from '../message-queue/message.queue.js';
 // Import validation helper
-import { validateOrThrow } from '../../../schemata/validation.helper.js';
+import { validateAgainstSchemaOrThrow, validateOrThrow } from '../../../schemata/validation.helper.js';
 
 export class ActorEngine {
   constructor(styleEngine, viewEngine, moduleRegistry, toolEngine, stateEngine = null) {
@@ -71,7 +71,14 @@ export class ActorEngine {
   async loadActor(path) {
     // If path is already an object (pre-loaded config), return it directly
     if (typeof path === 'object' && path !== null) {
-      await validateOrThrow('actor', path, 'maia.db');
+      // Load schema from IndexedDB and validate on-the-fly
+      const schema = await this._loadSchemaFromDB('actor');
+      if (schema) {
+        await validateAgainstSchemaOrThrow(schema, path, 'actor');
+      } else {
+        // Fallback to registered schema if not in DB yet
+        await validateOrThrow('actor', path, 'maia.db');
+      }
       return path;
     }
     
@@ -85,7 +92,14 @@ export class ActorEngine {
       });
       
       if (actor) {
-        await validateOrThrow('actor', actor, `maia.db:${actorKey}`);
+        // Load schema from IndexedDB and validate on-the-fly
+        const schema = await this._loadSchemaFromDB('actor');
+        if (schema) {
+          await validateAgainstSchemaOrThrow(schema, actor, 'actor');
+        } else {
+          // Fallback to registered schema if not in DB yet
+          await validateOrThrow('actor', actor, `maia.db:${actorKey}`);
+        }
         return actor;
       }
       
@@ -93,6 +107,24 @@ export class ActorEngine {
     }
     
     throw new Error(`[ActorEngine] Database engine not available`);
+  }
+  
+  /**
+   * Load schema from IndexedDB for on-the-fly validation
+   * @private
+   * @param {string} schemaType - Schema type (e.g., 'actor', 'context', 'state')
+   * @returns {Promise<Object|null>} Schema object or null if not found
+   */
+  async _loadSchemaFromDB(schemaType) {
+    if (!this.dbEngine || !this.dbEngine.backend) return null;
+    
+    try {
+      const schemaKey = `@schema/${schemaType}`;
+      return await this.dbEngine.backend.getSchema(schemaKey);
+    } catch (error) {
+      // Schema not found in DB, return null (will use fallback)
+      return null;
+    }
   }
 
   /**
@@ -111,7 +143,14 @@ export class ActorEngine {
       });
       
       if (contextDef) {
-        await validateOrThrow('context', contextDef, `maia.db:${contextKey}`);
+        // Load schema from IndexedDB and validate on-the-fly
+        const schema = await this._loadSchemaFromDB('context');
+        if (schema) {
+          await validateAgainstSchemaOrThrow(schema, contextDef, 'context');
+        } else {
+          // Fallback to registered schema if not in DB yet
+          await validateOrThrow('context', contextDef, `maia.db:${contextKey}`);
+        }
         
         // Return context without metadata
         const { $type, $id, ...context } = contextDef;
@@ -140,7 +179,14 @@ export class ActorEngine {
       });
       
       if (interfaceDef) {
-        await validateOrThrow('interface', interfaceDef, `maia.db:${interfaceKey}`);
+        // Load schema from IndexedDB and validate on-the-fly
+        const schema = await this._loadSchemaFromDB('interface');
+        if (schema) {
+          await validateAgainstSchemaOrThrow(schema, interfaceDef, 'interface');
+        } else {
+          // Fallback to registered schema if not in DB yet
+          await validateOrThrow('interface', interfaceDef, `maia.db:${interfaceKey}`);
+        }
         return interfaceDef;
       }
       
@@ -441,14 +487,14 @@ export class ActorEngine {
   // ============================================
 
   /**
-   * Validate message against interface schema
+   * Validate message against interface schema using full JSON Schema validation
    * @param {Object} message - Message object { type, payload }
    * @param {Object} interfaceDef - Interface definition
    * @param {string} direction - 'inbox' or 'publishes'
    * @param {string} actorId - Actor ID for error reporting
    * @returns {boolean} True if valid, false otherwise
    */
-  _validateMessage(message, interfaceDef, direction, actorId) {
+  async _validateMessage(message, interfaceDef, direction, actorId) {
     if (!interfaceDef || !interfaceDef[direction]) {
       // No interface defined - allow all messages
       return true;
@@ -462,30 +508,62 @@ export class ActorEngine {
       return false;
     }
     
-    // Validate payload structure (basic check - can be enhanced)
-    if (messageSchema.payload && message.payload) {
-      const schemaPayload = messageSchema.payload;
-      const messagePayload = message.payload;
+    // Validate payload structure using full JSON Schema validation
+    if (messageSchema.payload && message.payload !== undefined) {
+      const payloadSchema = this._convertInterfacePayloadToJsonSchema(messageSchema.payload);
       
-      // Check if payload matches expected structure
-      // This is a simplified validation - full schema validation would use JSON Schema
-      for (const [key, expectedType] of Object.entries(schemaPayload)) {
-        if (expectedType === 'string' && typeof messagePayload[key] !== 'string') {
-          console.warn(`[ActorEngine] ${direction} validation failed for ${actorId}: Payload.${key} should be string, got ${typeof messagePayload[key]}`);
-          return false;
-        }
-        if (expectedType === 'number' && typeof messagePayload[key] !== 'number') {
-          console.warn(`[ActorEngine] ${direction} validation failed for ${actorId}: Payload.${key} should be number, got ${typeof messagePayload[key]}`);
-          return false;
-        }
-        if (expectedType === 'boolean' && typeof messagePayload[key] !== 'boolean') {
-          console.warn(`[ActorEngine] ${direction} validation failed for ${actorId}: Payload.${key} should be boolean, got ${typeof messagePayload[key]}`);
-          return false;
-        }
+      try {
+        await validateAgainstSchemaOrThrow(payloadSchema, message.payload, 'message-payload');
+        return true;
+      } catch (error) {
+        console.error(`[ActorEngine] ${direction} validation failed for ${actorId}:`, error.message);
+        return false;
       }
     }
     
+    // Empty payload is valid if schema allows it
     return true;
+  }
+
+  /**
+   * Convert interface payload format to JSON Schema format
+   * Interface format: { "fieldName": "string" | "number" | "boolean" | "object" }
+   * JSON Schema format: { type: 'object', properties: { fieldName: { type: 'string' } }, required: [...] }
+   * @param {Object} interfacePayload - Interface payload definition
+   * @returns {Object} JSON Schema object
+   */
+  _convertInterfacePayloadToJsonSchema(interfacePayload) {
+    // Handle empty payload
+    if (!interfacePayload || Object.keys(interfacePayload).length === 0) {
+      return {
+        type: 'object',
+        properties: {},
+        required: []
+      };
+    }
+    
+    const properties = {};
+    const required = [];
+    
+    for (const [key, type] of Object.entries(interfacePayload)) {
+      // Handle nested objects (e.g., { "filter": "object" })
+      if (type === 'object') {
+        properties[key] = {
+          type: 'object',
+          additionalProperties: true
+        };
+      } else {
+        // Handle primitive types
+        properties[key] = { type };
+      }
+      required.push(key);
+    }
+    
+    return {
+      type: 'object',
+      properties,
+      required
+    };
   }
 
   /**
@@ -533,7 +611,7 @@ export class ActorEngine {
    * @param {string} fromActorId - Source actor ID
    * @param {Object} message - Message object { type, payload }
    */
-  publishToSubscriptions(fromActorId, message) {
+  async publishToSubscriptions(fromActorId, message) {
     const actor = this.actors.get(fromActorId);
     if (!actor) {
       console.warn(`Actor not found: ${fromActorId}`);
@@ -542,7 +620,7 @@ export class ActorEngine {
 
     // Validate outgoing message against interface.publishes
     if (actor.interface) {
-      const isValid = this._validateMessage(message, actor.interface, 'publishes', fromActorId);
+      const isValid = await this._validateMessage(message, actor.interface, 'publishes', fromActorId);
       if (!isValid) {
         console.error(`[ActorEngine] Rejected invalid publish ${message.type} from ${fromActorId}`);
         return;
@@ -575,8 +653,8 @@ export class ActorEngine {
    * @param {string} messageType - Message type
    * @param {Object} payload - Message payload
    */
-  publishMessage(fromActorId, messageType, payload = {}) {
-    this.publishToSubscriptions(fromActorId, {
+  async publishMessage(fromActorId, messageType, payload = {}) {
+    await this.publishToSubscriptions(fromActorId, {
       type: messageType,
       payload
     });

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "@schema/meta-schema",
   "$id": "https://maiaos.dev/schemas/view.schema.json",
   "title": "View Definition",
   "description": "UI structure definition with DOM tree, expressions, loops, and event handlers",

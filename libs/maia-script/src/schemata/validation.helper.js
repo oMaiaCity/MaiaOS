@@ -6,6 +6,7 @@
  */
 
 import { ValidationEngine, loadSchema, loadAllSchemas, getSchema } from './index.js';
+import { ValidationEngine as ValidationEngineClass } from './validation.engine.js';
 
 // Singleton validation engine instance
 let validationEngine = null;
@@ -14,12 +15,28 @@ let loadingPromise = null;
 const addedSchemaIds = new Set(); // Track which schema IDs we've added to AJV
 
 /**
+ * Set schema resolver for dynamic $schema reference resolution
+ * @param {Function} resolver - Async function that takes a schema key and returns the schema
+ */
+export function setSchemaResolver(resolver) {
+  if (validationEngine) {
+    validationEngine.setSchemaResolver(resolver);
+  }
+}
+
+/**
  * Get or create the validation engine instance
+ * @param {Function} schemaResolver - Optional schema resolver function (for dynamic $schema resolution)
  * @returns {Promise<ValidationEngine>} Validation engine instance
  */
-export async function getValidationEngine() {
+export async function getValidationEngine(schemaResolver = null) {
   if (!validationEngine) {
     validationEngine = new ValidationEngine();
+  }
+  
+  // Set schema resolver if provided
+  if (schemaResolver) {
+    validationEngine.setSchemaResolver(schemaResolver);
   }
   
   // Load all schemas if not already loaded (use promise to prevent concurrent loads)
@@ -32,6 +49,10 @@ export async function getValidationEngine() {
       loadingPromise = (async () => {
       await loadAllSchemas();
       
+      // Initialize AJV (metaschema is registered during initialization via _loadMetaSchema)
+      await validationEngine.initialize();
+      const ajv = validationEngine.ajv;
+      
       // Get all loaded schemas (unique by $id to avoid duplicates)
       const schemaTypes = [
         'actor', 'context', 'state', 'view', 'style', 'brandStyle',
@@ -39,46 +60,52 @@ export async function getValidationEngine() {
         'tool', 'skill', 'vibe', 'message', 'common'
       ];
       
-      // Initialize AJV first
-      await validationEngine.initialize();
-      const ajv = validationEngine.ajv;
+      // PASS 1: Add all schemas to AJV registry for $ref resolution
+      // Temporarily disable schema validation during registration
+      // (schemas reference @schema/meta-schema which is already registered)
+      const originalValidateSchema = ajv.opts.validateSchema;
+      ajv.opts.validateSchema = false;
       
-      // PASS 1: Add all schemas to AJV using addSchema() so $ref can resolve
-      // This registers schemas without compiling them
       const schemasByType = new Map();
       const uniqueSchemas = new Map(); // Track by $id to avoid duplicates
       
-      for (const type of schemaTypes) {
-        const schema = getSchema(type);
-        if (schema && schema.$id) {
-          // Only add each unique schema once (by $id)
-          if (!uniqueSchemas.has(schema.$id)) {
-            uniqueSchemas.set(schema.$id, schema);
-            schemasByType.set(type, schema);
-            
-            // Add to AJV for $ref resolution (if not already added)
-            if (!ajv.getSchema(schema.$id)) {
-              try {
-                ajv.addSchema(schema, schema.$id);
-                addedSchemaIds.add(schema.$id);
-              } catch (error) {
-                // Schema might already be added (ignore duplicate errors)
-                if (!error.message.includes('already exists')) {
-                  throw error;
+      try {
+        for (const type of schemaTypes) {
+          const schema = getSchema(type);
+          if (!schema) continue;
+          
+          if (schema.$id) {
+            // Only add each unique schema once (by $id)
+            if (!uniqueSchemas.has(schema.$id)) {
+              uniqueSchemas.set(schema.$id, schema);
+              schemasByType.set(type, schema);
+              
+              // Add to AJV for $ref resolution (if not already added)
+              if (!ajv.getSchema(schema.$id)) {
+                try {
+                  ajv.addSchema(schema, schema.$id);
+                  addedSchemaIds.add(schema.$id);
+                } catch (error) {
+                  // Schema might already be added (ignore duplicate errors)
+                  if (!error.message.includes('already exists')) {
+                    throw error;
+                  }
+                  addedSchemaIds.add(schema.$id);
                 }
+              } else {
                 addedSchemaIds.add(schema.$id);
               }
             } else {
-              addedSchemaIds.add(schema.$id);
+              // Schema already added, just map the type to it
+              schemasByType.set(type, uniqueSchemas.get(schema.$id));
             }
           } else {
-            // Schema already added, just map the type to it
-            schemasByType.set(type, uniqueSchemas.get(schema.$id));
+            // Schema without $id, store for compilation
+            schemasByType.set(type, schema);
           }
-        } else if (schema) {
-          // Schema without $id, store for compilation
-          schemasByType.set(type, schema);
         }
+      } finally {
+        ajv.opts.validateSchema = originalValidateSchema;
       }
       
       // PASS 2: Compile all schemas (now $ref can resolve because schemas are registered)
@@ -174,6 +201,109 @@ export async function validateOrThrow(type, data, context = '') {
     
     throw new Error(
       `Validation failed for '${type}'${contextMsg}:\n${errorDetails}`
+    );
+  }
+  
+  return result;
+}
+
+/**
+ * Validate data against a raw JSON Schema object (not a registered schema type)
+ * @param {Object} schema - JSON Schema object
+ * @param {any} data - Data to validate
+ * @param {string} context - Optional context for error messages (e.g., 'tool-payload')
+ * @returns {{valid: boolean, errors: Array|null}} Validation result
+ */
+export async function validateAgainstSchema(schema, data, context = '') {
+  const engine = await getValidationEngine();
+  await engine.initialize();
+  
+  try {
+    // AJV automatically resolves $schema and $ref via its registry
+    // Compile the schema (AJV caches by $id for performance)
+    let validate;
+    
+    if (schema.$id) {
+      // Try to get existing validator from cache
+      const existingValidator = engine.ajv.getSchema(schema.$id);
+      if (existingValidator) {
+        validate = existingValidator;
+      } else {
+        // Not in cache, compile it
+        validate = engine.ajv.compile(schema);
+      }
+    } else {
+      // Schema without $id - compile fresh (partial schemas, dynamic schemas)
+      validate = engine.ajv.compile(schema);
+    }
+    
+    const valid = validate(data);
+    
+    if (valid) {
+      return { valid: true, errors: null };
+    }
+    
+    // Format errors
+    const errors = validate.errors || [];
+    const formattedErrors = errors.map(error => ({
+      instancePath: error.instancePath || '/',
+      schemaPath: error.schemaPath || '',
+      keyword: error.keyword || '',
+      message: error.message || '',
+      params: error.params || {}
+    }));
+    
+    return {
+      valid: false,
+      errors: formattedErrors
+    };
+  } catch (error) {
+    // If schema already exists, try to retrieve and use it
+    if (error.message && error.message.includes('already exists') && schema.$id) {
+      const existingValidator = engine.ajv.getSchema(schema.$id);
+      if (existingValidator) {
+        const valid = existingValidator(data);
+        if (valid) {
+          return { valid: true, errors: null };
+        }
+        const errors = existingValidator.errors || [];
+        const formattedErrors = errors.map(error => ({
+          instancePath: error.instancePath || '/',
+          schemaPath: error.schemaPath || '',
+          keyword: error.keyword || '',
+          message: error.message || '',
+          params: error.params || {}
+        }));
+        return {
+          valid: false,
+          errors: formattedErrors
+        };
+      }
+    }
+    
+    // Schema compilation error - throw it instead of masking it
+    throw new Error(`[Validation] Failed to compile schema for ${context}: ${error.message}`);
+  }
+}
+
+/**
+ * Validate data against a raw JSON Schema object and throw if invalid
+ * @param {Object} schema - JSON Schema object
+ * @param {any} data - Data to validate
+ * @param {string} context - Optional context for error messages (e.g., 'tool-payload')
+ * @throws {Error} If validation fails
+ */
+export async function validateAgainstSchemaOrThrow(schema, data, context = '') {
+  const result = await validateAgainstSchema(schema, data, context);
+  
+  if (!result.valid) {
+    const contextMsg = context ? ` for '${context}'` : '';
+    const errorDetails = result.errors
+      .map(err => `  - ${err.instancePath}: ${err.message}`)
+      .join('\n');
+    
+    throw new Error(
+      `Validation failed${contextMsg}:\n${errorDetails}`
     );
   }
   

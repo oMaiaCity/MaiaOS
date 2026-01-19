@@ -12,6 +12,17 @@ export class ValidationEngine {
     
     // Cache for compiled schemas
     this.schemas = new Map();
+    
+    // Schema resolver function (for resolving $schema references from IndexedDB)
+    this.schemaResolver = null;
+  }
+  
+  /**
+   * Set schema resolver function for resolving $schema references from IndexedDB
+   * @param {Function} resolver - Async function that takes a schema key and returns the schema
+   */
+  setSchemaResolver(resolver) {
+    this.schemaResolver = resolver;
   }
 
   /**
@@ -80,26 +91,18 @@ export class ValidationEngine {
   }
 
   /**
-   * Load JSON Schema Draft 2020-12 meta-schema (hardcoded)
-   * @private
+   * Get the JSON Schema Draft 2020-12 meta-schema
+   * @returns {Object} Meta schema object
    */
-  _loadMetaSchema() {
+  static getMetaSchema() {
     const metaSchemaId = 'https://json-schema.org/draft/2020-12/schema';
     
-    // Check if meta-schema is already loaded
-    if (this.ajv.getSchema(metaSchemaId)) {
-      return;
-    }
-    
-    // Temporarily disable schema validation to add meta-schema
-    // (meta-schema can't validate itself due to circular references)
-    const originalValidateSchema = this.ajv.opts.validateSchema;
-    this.ajv.opts.validateSchema = false;
-    
-    // Hardcoded JSON Schema Draft 2020-12 meta-schema
-    // Simplified version that covers the keywords we use in our schemas
-    const metaSchema = {
-      $schema: 'https://json-schema.org/draft/2020-12/schema',
+    // JSON Schema Draft 2020-12 meta-schema
+    // This is the foundation schema that validates all other schemas
+    // The metaschema itself validates against the hardcoded standard (breaks circular dependency)
+    // All OTHER schemas validate against @schema/meta-schema (dynamically loaded)
+    return {
+      $schema: metaSchemaId, // Hardcoded standard - breaks bootstrap circular dependency!
       $id: metaSchemaId,
       $vocabulary: {
         'https://json-schema.org/draft/2020-12/vocab/core': true,
@@ -296,12 +299,41 @@ export class ValidationEngine {
         }
       }
     };
+  }
+
+  /**
+   * Load JSON Schema Draft 2020-12 meta-schema (hardcoded)
+   * @private
+   */
+  _loadMetaSchema() {
+    const metaSchemaId = 'https://json-schema.org/draft/2020-12/schema';
+    const metaSchemaDynamicId = '@schema/meta-schema';
+    
+    // Temporarily disable schema validation to add meta-schema
+    // (meta-schema can't validate itself due to circular references)
+    const originalValidateSchema = this.ajv.opts.validateSchema;
+    this.ajv.opts.validateSchema = false;
+    
+    const metaSchema = ValidationEngine.getMetaSchema();
 
     try {
-      this.ajv.addMetaSchema(metaSchema, metaSchema.$id);
-      console.log('[ValidationEngine] Loaded hardcoded meta-schema for draft-2020-12');
+      // Register with standard ID (if not already registered by AJV)
+      if (!this.ajv.getSchema(metaSchemaId)) {
+        this.ajv.addMetaSchema(metaSchema, metaSchema.$id);
+      }
+      
+      // CRITICAL: Always register with dynamic ID, even if standard ID exists
+      // This allows schemas to use "$schema": "@schema/meta-schema"
+      if (!this.ajv.getSchema(metaSchemaDynamicId)) {
+        // Create copy with dynamic $id to ensure proper registration
+        const metaSchemaCopy = JSON.parse(JSON.stringify(metaSchema));
+        metaSchemaCopy.$id = metaSchemaDynamicId;
+        this.ajv.addMetaSchema(metaSchemaCopy, metaSchemaDynamicId);
+      }
+      
+      console.log('[ValidationEngine] Loaded meta-schema for draft-2020-12');
     } catch (error) {
-      // If meta-schema already exists, that's fine
+      // If meta-schema already exists, that's fine (might be registered elsewhere)
       if (!error.message || !error.message.includes('already exists')) {
         console.warn('[ValidationEngine] Failed to add meta-schema:', error.message);
         this.ajv.opts.validateSchema = false;
@@ -309,6 +341,59 @@ export class ValidationEngine {
       }
     } finally {
       // Restore schema validation setting
+      this.ajv.opts.validateSchema = originalValidateSchema;
+    }
+  }
+
+  /**
+   * Validate a schema against the meta schema
+   * @param {Object} schema - Schema to validate
+   * @returns {{valid: boolean, errors: Array|null}} Validation result
+   */
+  async validateSchemaAgainstMeta(schema) {
+    await this.initialize();
+    
+    // Metaschema is already registered during initialization
+    // Schemas reference @schema/meta-schema, which AJV resolves automatically
+    const metaSchemaId = 'https://json-schema.org/draft/2020-12/schema';
+    const metaValidator = this.ajv.getSchema(metaSchemaId);
+    
+    if (!metaValidator) {
+      console.warn('[ValidationEngine] Meta schema not available, skipping schema validation');
+      return { valid: true, errors: null };
+    }
+    
+    // For metaschema self-validation, temporarily disable schema validation
+    const isSelfValidation = schema.$id === metaSchemaId || 
+                            (schema.$schema === metaSchemaId && 
+                             schema.$id && schema.$id.includes('schema'));
+    
+    const originalValidateSchema = this.ajv.opts.validateSchema;
+    if (isSelfValidation) {
+      this.ajv.opts.validateSchema = false;
+    }
+    
+    try {
+      const valid = metaValidator(schema);
+      
+      if (valid) {
+        return { valid: true, errors: null };
+      }
+      
+      const errors = metaValidator.errors || [];
+      const formattedErrors = errors.map(error => ({
+        instancePath: error.instancePath || '/',
+        schemaPath: error.schemaPath || '',
+        keyword: error.keyword || '',
+        message: error.message || '',
+        params: error.params || {}
+      }));
+      
+      return {
+        valid: false,
+        errors: formattedErrors
+      };
+    } finally {
       this.ajv.opts.validateSchema = originalValidateSchema;
     }
   }
@@ -335,40 +420,28 @@ export class ValidationEngine {
     }
 
     // Check if schema is already registered in AJV by $id
-    // If so, get the compiled validator instead of compiling again
     if (schema.$id) {
       const existingValidator = this.ajv.getSchema(schema.$id);
       if (existingValidator) {
         this.schemas.set(type, existingValidator);
         return existingValidator;
       }
-      
-      // Check if schema was added via addSchema() but not compiled
-      // In this case, we can safely compile it (AJV will use the existing registration)
-      // But we need to be careful - if it's already there, compile() might fail
-      // So we'll try to compile, and if it fails with "already exists", get it
     }
 
     // Compile and cache schema
+    // AJV automatically resolves $schema and $ref via its registry
     try {
-      // If schema has $id and was already added via addSchema(), 
-      // compile() will use the existing registration
       const validate = this.ajv.compile(schema);
       this.schemas.set(type, validate);
       return validate;
     } catch (error) {
-      // If error is about schema already existing, try to get it
-      if (error.message && error.message.includes('already exists')) {
-        if (schema.$id) {
-          const existingValidator = this.ajv.getSchema(schema.$id);
-          if (existingValidator) {
-            this.schemas.set(type, existingValidator);
-            return existingValidator;
-          }
+      // If schema already exists, try to retrieve it
+      if (error.message && error.message.includes('already exists') && schema.$id) {
+        const existingValidator = this.ajv.getSchema(schema.$id);
+        if (existingValidator) {
+          this.schemas.set(type, existingValidator);
+          return existingValidator;
         }
-        // If we can't get it by $id, try to get it by the schema object itself
-        // This shouldn't happen, but handle it gracefully
-        throw new Error(`Failed to load schema for type '${type}': schema with key or id "${schema.$id || 'unknown'}" already exists`);
       }
       throw new Error(`Failed to load schema for type '${type}': ${error.message}`);
     }

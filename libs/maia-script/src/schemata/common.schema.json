@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "@schema/meta-schema",
   "$id": "https://maiaos.dev/schemas/common.schema.json",
   "title": "Common MaiaOS Definitions",
   "description": "Shared schema definitions used across multiple MaiaOS types",

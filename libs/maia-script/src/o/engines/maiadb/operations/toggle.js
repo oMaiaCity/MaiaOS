@@ -33,6 +33,22 @@ export class ToggleOperation {
       throw new Error('[ToggleOperation] Field required');
     }
     
+    // Load schema and validate field exists and is boolean
+    const schemaKey = schema.replace('@schema/', '@schema/data/');
+    const dataSchema = await this._loadDataSchema(schemaKey);
+    
+    if (dataSchema) {
+      const fieldSchema = dataSchema.properties?.[field];
+      if (!fieldSchema) {
+        throw new Error(`[ToggleOperation] Field "${field}" not found in schema ${schemaKey}`);
+      }
+      if (fieldSchema.type !== 'boolean') {
+        throw new Error(`[ToggleOperation] Field "${field}" is not a boolean (type: ${fieldSchema.type})`);
+      }
+    } else {
+      console.warn(`[ToggleOperation] No schema found for ${schemaKey}, skipping field validation`);
+    }
+    
     console.log(`[ToggleOperation] Toggling ${field} for record ${id} in ${schema}`);
     
     // Get current record
@@ -48,5 +64,24 @@ export class ToggleOperation {
     
     // Update via backend
     return await this.backend.update(schema, id, { [field]: newValue });
+  }
+  
+  /**
+   * Load data schema from IndexedDB schemas store
+   * @private
+   * @param {string} schemaKey - Schema key (e.g., '@schema/data/todos')
+   * @returns {Promise<Object|null>} Schema object or null if not found
+   */
+  async _loadDataSchema(schemaKey) {
+    try {
+      const transaction = this.backend.db.transaction(['schemas'], 'readonly');
+      const store = transaction.objectStore('schemas');
+      const request = store.get(schemaKey);
+      const result = await this.backend._promisifyRequest(request);
+      return result?.value || null;
+    } catch (error) {
+      console.warn(`[ToggleOperation] Error loading schema ${schemaKey}:`, error);
+      return null;
+    }
   }
 }

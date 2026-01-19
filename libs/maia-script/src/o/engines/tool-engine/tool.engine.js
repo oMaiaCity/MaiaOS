@@ -1,5 +1,5 @@
 // Import validation helper
-import { validateOrThrow } from '../../../schemata/validation.helper.js';
+import { validateAgainstSchemaOrThrow } from '../../../schemata/validation.helper.js';
 
 /**
  * ToolEngine - AI-Compatible Tool Execution System
@@ -77,39 +77,138 @@ export class ToolEngine {
       throw new Error(`Tool not found: ${actionName}`);
     }
     
-      try {
-        // Validate payload (optional - basic validation)
-        if (tool.definition.parameters) {
-          this._validatePayload(payload, tool.definition.parameters);
-        }
-        
-        // Execute tool function
-        await tool.function.execute(actor, payload);
-        
-        // Only log errors, not successful executions (too verbose)
-      } catch (error) {
-        console.error(`[ToolEngine] Tool execution error (${actionName}):`, error);
-        actor.context.error = error.message || 'Tool execution failed';
-        throw error;
+    try {
+      // Full JSON Schema validation
+      const parametersSchema = tool.definition.parameters || tool.definition.params;
+      if (parametersSchema) {
+        // Convert to full JSON Schema format if needed
+        const schema = this._normalizeToolSchema(parametersSchema);
+        await validateAgainstSchemaOrThrow(schema, payload, 'tool-payload');
       }
+      
+      // Execute tool function
+      await tool.function.execute(actor, payload);
+      
+      // Only log errors, not successful executions (too verbose)
+    } catch (error) {
+      console.error(`[ToolEngine] Tool execution error (${actionName}):`, error);
+      actor.context.error = error.message || 'Tool execution failed';
+      throw error;
+    }
   }
 
   /**
-   * Validate payload against JSON Schema (basic validation)
-   * @param {any} payload - Tool payload
-   * @param {Object} schema - JSON Schema definition
+   * Normalize tool parameter schema to full JSON Schema format
+   * Handles both 'params' (legacy) and 'parameters' (standard) formats
+   * @param {Object} schema - Tool parameter schema (may be partial)
+   * @returns {Object} Full JSON Schema object
    */
-  _validatePayload(payload, schema) {
-    // Basic required field validation
-    if (schema.required && Array.isArray(schema.required)) {
-      for (const field of schema.required) {
-        if (!(field in payload)) {
-          throw new Error(`Missing required field: ${field}`);
+  _normalizeToolSchema(schema) {
+    // If already a full JSON Schema (has type: 'object'), use as-is or clean it up
+    if (schema.type === 'object') {
+      // If no properties field, it's already a valid schema (e.g., additionalProperties: true)
+      if (!schema.properties) {
+        return schema;
+      }
+      
+      // Has properties - clean it up
+      // Clean up invalid 'required' fields on individual properties
+      const cleanedProperties = {};
+      const requiredFields = [];
+      
+      for (const [key, propSchema] of Object.entries(schema.properties)) {
+        // Remove invalid 'required' boolean from properties
+        // Also remove invalid 'type: function' (not valid JSON Schema)
+        if (propSchema && typeof propSchema === 'object') {
+          const { required, type, ...cleanProp } = propSchema;
+          
+          // Skip properties with invalid types (like 'function')
+          if (type === 'function') {
+            // Don't include function types in validation schema
+            continue;
+          }
+          
+          cleanedProperties[key] = { type, ...cleanProp };
+          
+          // If property had required: true, add to required array
+          if (required === true) {
+            requiredFields.push(key);
+          }
+        } else {
+          cleanedProperties[key] = propSchema;
         }
+      }
+      
+      return {
+        type: 'object',
+        properties: cleanedProperties,
+        required: Array.isArray(schema.required) 
+          ? [...new Set([...schema.required, ...requiredFields])] // Merge and deduplicate
+          : requiredFields.length > 0 ? requiredFields : []
+      };
+    }
+    
+    // If it's a properties-only object (legacy 'params' format), wrap it
+    if (!schema.type && schema.properties) {
+      // Clean up invalid 'required' fields on individual properties
+      const cleanedProperties = {};
+      const requiredFields = [];
+      
+      for (const [key, propSchema] of Object.entries(schema.properties)) {
+        if (propSchema && typeof propSchema === 'object') {
+          const { required, type, ...cleanProp } = propSchema;
+          
+          // Skip properties with invalid types (like 'function')
+          if (type === 'function') {
+            continue;
+          }
+          
+          cleanedProperties[key] = { type, ...cleanProp };
+          if (required === true) {
+            requiredFields.push(key);
+          }
+        } else {
+          cleanedProperties[key] = propSchema;
+        }
+      }
+      
+      return {
+        type: 'object',
+        properties: cleanedProperties,
+        required: Array.isArray(schema.required)
+          ? [...new Set([...schema.required, ...requiredFields])]
+          : requiredFields.length > 0 ? requiredFields : []
+      };
+    }
+    
+    // Default: assume it's a properties object (legacy 'params' format)
+    // Clean up invalid 'required' fields
+    const cleanedProperties = {};
+    const requiredFields = [];
+    
+    for (const [key, propSchema] of Object.entries(schema)) {
+      if (propSchema && typeof propSchema === 'object') {
+        const { required, type, ...cleanProp } = propSchema;
+        
+        // Skip properties with invalid types (like 'function')
+        if (type === 'function') {
+          continue;
+        }
+        
+        cleanedProperties[key] = { type, ...cleanProp };
+        if (required === true) {
+          requiredFields.push(key);
+        }
+      } else {
+        cleanedProperties[key] = propSchema;
       }
     }
     
-    // Note: For production, use a proper JSON Schema validator (ajv, etc.)
+    return {
+      type: 'object',
+      properties: cleanedProperties,
+      required: requiredFields
+    };
   }
 
   /**

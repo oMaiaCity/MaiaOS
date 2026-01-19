@@ -9,7 +9,6 @@
       "type": {
         "type": "string",
         "description": "Message type",
-        "required": true
       },
       "payload": {
         "type": "object",

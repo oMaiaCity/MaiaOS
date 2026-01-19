@@ -571,6 +571,24 @@ export class IndexedDBBackend {
   }
   
   /**
+   * Get schema definition from schemas store
+   * @param {string} schemaKey - Schema key (e.g., '@schema/actor', '@schema/data/todos')
+   * @returns {Promise<Object|null>} Schema object or null if not found
+   */
+  async getSchema(schemaKey) {
+    try {
+      const transaction = this.db.transaction(['schemas'], 'readonly');
+      const store = transaction.objectStore('schemas');
+      const request = store.get(schemaKey);
+      const result = await this._promisifyRequest(request);
+      return result?.value || null;
+    } catch (error) {
+      console.warn(`[IndexedDBBackend] Error loading schema ${schemaKey}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Promisify IndexedDB request
    * @private
    */

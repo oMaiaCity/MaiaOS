@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "@schema/meta-schema",
   "$id": "https://maiaos.dev/schemas/style.schema.json",
   "title": "Style Definition",
   "description": "Actor-specific style overrides",

@@ -7,7 +7,7 @@
   "params": {
     "op": {
       "type": "string",
-      "enum": ["query", "create", "update", "delete", "seed"],
+      "enum": ["query", "create", "update", "delete", "toggle", "seed"],
       "description": "Database operation to execute"
     },
     "schema": {
@@ -23,12 +23,15 @@
       "description": "Optional: Filter criteria for data queries"
     },
     "callback": {
-      "type": "function",
-      "description": "Optional: Callback for reactive subscriptions"
+      "description": "Optional: Callback function for reactive subscriptions (not validated - runtime only)"
     },
     "id": {
       "type": "string",
-      "description": "Optional: Record ID for update/delete operations"
+      "description": "Optional: Record ID for update/delete/toggle operations"
+    },
+    "field": {
+      "type": "string",
+      "description": "Optional: Field name for toggle operations"
     },
     "data": {
       "type": "object",

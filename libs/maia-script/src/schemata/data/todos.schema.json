@@ -1,0 +1,22 @@
+{
+  "$id": "https://maiaos.dev/schemas/data/todos",
+  "$schema": "@schema/meta-schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the todo item"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The todo item text content"
+    },
+    "done": {
+      "type": "boolean",
+      "description": "Whether the todo item is completed"
+    }
+  },
+  "required": ["text", "done"],
+  "additionalProperties": false
+}

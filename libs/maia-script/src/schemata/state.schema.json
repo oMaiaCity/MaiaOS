@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "@schema/meta-schema",
   "$id": "https://maiaos.dev/schemas/state.schema.json",
   "title": "State Machine Definition",
   "description": "XState-like state machine with states, transitions, guards, and actions",
