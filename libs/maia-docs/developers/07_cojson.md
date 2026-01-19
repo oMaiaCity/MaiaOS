@@ -359,6 +359,125 @@ const group = node.createGroup();
 const db = new MaiaDB({ node, accountID, group });
 ```
 
+### Account Initialization & Seeding
+
+**Seeding Service** - Initialize new accounts with example CoValues
+
+MaiaOS provides a centralized seeding service (`@MaiaOS/db`) that creates example CoValues for new accounts. This service demonstrates best practices for creating CoValues with proper group ownership.
+
+**Why Separate Seeding?**
+- **Separation of Concerns**: Account creation (authentication) is separate from data initialization (seeding)
+- **Reusable**: Can be used across multiple applications
+- **Clean Architecture**: One central UserGroup owns all example CoValues
+
+**Using the Seeding Service:**
+
+```javascript
+import { seedExampleCoValues } from "@MaiaOS/db";
+
+// After creating account
+const { node, account } = await signUpWithPasskey({ 
+  name: "maia",
+  salt: "maia.city" 
+});
+
+// Seed example CoValues
+await seedExampleCoValues(node, account, { name: "Maia User" });
+
+// Returns:
+// {
+//   userGroup,   // The owner group (co_z...)
+//   profile,     // Profile CoMap with ProfileSchema
+//   plainText,   // CoPlainText example
+//   stream,      // CoStream with ActivityStream schema
+//   notes        // Notes CoMap with NotesSchema
+// }
+```
+
+**What Gets Created:**
+1. **UserGroup**: Central group that owns all example CoValues
+2. **Profile CoMap**: User profile with `ProfileSchema` in headerMeta
+3. **CoPlainText**: Example plain text storage
+4. **CoStream**: Activity stream example with `ActivityStream` schema
+5. **Notes CoMap**: Example notes with `NotesSchema`
+
+**Architecture:**
+
+```mermaid
+sequenceDiagram
+    participant App as Application
+    participant Seed as seedExampleCoValues
+    participant Services as oGroup/oProfile/etc
+    
+    App->>Seed: seedExampleCoValues(node, account)
+    
+    Seed->>Services: createGroup(node)
+    Services-->>Seed: return userGroup
+    
+    Seed->>Services: createProfile(userGroup, {name})
+    Services-->>Seed: return profile
+    Seed->>Seed: account.set("profile", profile.id)
+    
+    Seed->>Services: createPlainText(userGroup, text)
+    Services-->>Seed: return plainText
+    
+    Seed->>Services: createCoStream(userGroup, schema)
+    Services-->>Seed: return stream
+    
+    Seed->>Services: createCoMap(userGroup, data, schema)
+    Services-->>Seed: return notes
+    
+    Seed-->>App: return all created CoValues
+```
+
+**Key Benefits:**
+- ✅ **No Group Ownership Issues**: UserGroup created FIRST, then all CoValues reference it
+- ✅ **Proper Metadata**: Each CoValue has appropriate schema in headerMeta
+- ✅ **Composable**: Uses existing primitives (oGroup, oProfile, oMap, oPlainText, oStream)
+- ✅ **Type-Safe**: All schemas are validated
+
+**Implementation Details:**
+
+The seeding service is located at `libs/maia-db/src/services/oSeeding.js` and uses the following primitives:
+
+```javascript
+// Internal implementation (for reference)
+import { createGroup } from "./oGroup.js";
+import { createProfile } from "./oProfile.js";
+import { createCoMap } from "./oMap.js";
+import { createPlainText } from "./oPlainText.js";
+import { createCoStream } from "./oStream.js";
+
+export async function seedExampleCoValues(node, account, { name = "Maia User" } = {}) {
+  // 1. Create UserGroup (owner of all example data)
+  const userGroup = createGroup(node, { name: "UserGroup" });
+  
+  // 2. Create Profile and link to account
+  const profile = createProfile(userGroup, { name });
+  account.set("profile", profile.id);
+  
+  // 3. Create example CoValues
+  const plainText = createPlainText(userGroup, "Hello from CoPlainText!", null);
+  const stream = createCoStream(userGroup, "ActivityStream");
+  const notes = createCoMap(userGroup, {
+    title: "My First Note",
+    content: "This is an example note.",
+    created: new Date().toISOString()
+  }, "NotesSchema");
+  
+  return { userGroup, profile, plainText, stream, notes };
+}
+```
+
+**When to Use:**
+- ✅ After new account creation (signup flow)
+- ✅ When initializing demo/example data
+- ✅ When testing account initialization
+
+**When NOT to Use:**
+- ❌ During account login (data already exists)
+- ❌ For production user data (use proper schema registration instead)
+
 ### db.registerSchema() - Register Schemas
 
 **Registers a new JSON Schema as a collaborative CoMap**

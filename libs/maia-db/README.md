@@ -1,34 +1,44 @@
-# MaiaCojson - JSON-based Reactive CRDT Layer
+# MaiaDB - Collaborative Database with Automatic Subscription Management
 
-**Complete Implementation** ✅ - 145 tests passing!
+**Complete Implementation** ✅ - Pure cojson with automatic CoValue loading!
 
-A JSON Schema-native CRDT wrapper with a purely JSON-based reactive CRUD API for collaborative data management.
+A collaborative database layer built on Jazz/cojson with automatic subscription management, lazy-loading, and caching.
 
-## Why MaiaCojson?
+## Why MaiaDB?
 
-- **Schemas as CoMaps**: Schemas are collaborative CRDTs with complete JSON Schema specs
-- **MetaSchema**: Self-referencing schema validates all schemas ($schema = URI)
-- **Schema/Data Separation**: Clean system (Schema) and user (Data) hierarchy
-- **URI-based References**: `$schema` and `$id` use `https://maia.city/{co-id}` format
-- **Native `$ref`**: Uses standard JSON Schema `$ref` for schema references
-- **Pure JSON API**: `db.create({})`, `db.read({})`, `db.update({})`, `db.delete({})`
-- **100% Reactive**: Auto-subscribed, updates automatically
-- **Auto-Resolution**: Nested references resolve automatically
-- **Real CRDTs**: Built on `cojson` package (not jazz-tools!)
-- **Zero Mocks**: All tests use real collaborative data structures
-- **Type Safe**: JSON Schema validation with Ajv
+- **Automatic Loading**: CoValues load automatically from IndexedDB on access
+- **Subscription Management**: Built-in caching, deduplication, and cleanup
+- **Lazy Loading**: Only loads CoValues when needed (memory efficient)
+- **Zero Manual Subscriptions**: Just link CoValues, system handles the rest
+- **Schema Support**: Optional JSON Schema metadata for type safety
+- **Pure cojson**: Built on raw Jazz/cojson (not jazz-tools abstractions)
+- **Passkey Authentication**: Strict security with WebAuthn PRF
+- **Self-Sovereign**: Your data, your keys, your control
 
 ## Architecture
 
 ```
-User Code (JSON Config)
+User Code (createCoMap, seedExampleCoValues, etc.)
         ↓
-  MaiaCojson Wrappers (CoMap, CoList, etc.)
+  Subscription Layer (oSubscription, oSubscriptionCache)
         ↓
-  Real CRDT Types (RawCoMap, RawCoList)
+  MaiaDB Services (oMap, oList, oStream, oSeeding, etc.)
+        ↓
+  Real CRDT Types (RawCoMap, RawCoList, RawCoStream)
         ↓
     cojson (from jazz-tools)
 ```
+
+### Subscription Layer (NEW!)
+
+MaiaDB includes a powerful subscription management system that automatically handles CoValue loading:
+
+- **SubscriptionCache**: Caches active subscriptions, prevents duplicates, auto-cleanup after 5s
+- **subscribe(node, id, options)**: Subscribe to a CoValue by ID with auto-loading
+- **subscribeToLinked(node, parent, property)**: Subscribe to linked CoValues and their children
+- **Automatic Cleanup**: Unused subscriptions cleaned up automatically to prevent memory leaks
+
+**Key Insight**: Jazz requires active subscriptions to load CoValues from IndexedDB. Simply linking CoValues (e.g., `account.examples`) isn't enough - you need subscriptions. MaiaDB handles this automatically!
 
 ## Implementation Status
 

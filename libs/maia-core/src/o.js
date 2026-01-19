@@ -51,40 +51,40 @@ export async function createMaiaOS(options = {}) {
 				try {
 					const value = account.get(key); // Use CoMap.get() method
 					
-					// Check if it's a co-id reference (string starting with "co_")
-					if (typeof value === "string" && value.startsWith("co_")) {
-						// Try to load and resolve the CoValue
-						try {
-							const resolved = node.expectCoValueLoaded(value);
-							if (resolved) {
-								const content = resolved.getCurrentContent();
-								
-								// Get the content as an object (it's a CoMap)
-								let resolvedData = {};
-								if (content.asObject) {
-									resolvedData = content.asObject();
-								} else {
-									// Fallback: try to extract properties manually
-									for (const resKey in content) {
-										try {
-											const propValue = content[resKey];
-											if (typeof propValue !== 'function' && resKey !== 'core' && resKey !== 'node') {
-												resolvedData[resKey] = propValue;
-											}
-										} catch {}
-									}
-								}
-								
-								maiaIdData[key] = {
-									"_co_id": value,
-									"_resolved": resolvedData
-								};
+				// Check if it's a co-id reference (string starting with "co_")
+				if (typeof value === "string" && value.startsWith("co_")) {
+					// Try to load and resolve the CoValue
+					try {
+						const resolved = node.expectCoValueLoaded(value);
+						if (resolved && resolved.isAvailable()) {
+							const content = resolved.getCurrentContent();
+							
+							// Get the content as an object (it's a CoMap)
+							let resolvedData = {};
+							if (content.asObject) {
+								resolvedData = content.asObject();
 							} else {
-								maiaIdData[key] = value; // Co-id not loaded yet
+								// Fallback: try to extract properties manually
+								for (const resKey in content) {
+									try {
+										const propValue = content[resKey];
+										if (typeof propValue !== 'function' && resKey !== 'core' && resKey !== 'node') {
+											resolvedData[resKey] = propValue;
+										}
+									} catch {}
+								}
 							}
-						} catch (error) {
-							maiaIdData[key] = `${value} (not loaded: ${error.message})`;
+							
+							maiaIdData[key] = {
+								"_co_id": value,
+								"_resolved": resolvedData
+							};
+						} else {
+							maiaIdData[key] = `${value} (not loaded yet)`;
 						}
+					} catch (error) {
+						maiaIdData[key] = `${value} (not loaded: ${error.message})`;
+					}
 					} else {
 						maiaIdData[key] = value;
 					}
@@ -110,20 +110,35 @@ export async function createMaiaOS(options = {}) {
 			if (coValuesMap && typeof coValuesMap.entries === 'function') {
 				console.log("🔍 coValues is a Map with", coValuesMap.size, "entries");
 				
-				for (const [coId, coValueCore] of coValuesMap.entries()) {
-					try {
-						// Get the current content (the actual CoValue)
-						const content = coValueCore.getCurrentContent();
-						
-						console.log(`🔍 CoValue ${coId}:`, {
-							type: content?.type,
-							hasKeys: !!content?.keys,
-							content: content,
-							core: coValueCore
+			for (const [coId, coValueCore] of coValuesMap.entries()) {
+				try {
+					// CRITICAL: Check if CoValue is available before accessing content
+					if (!coValueCore.isAvailable()) {
+						console.warn(`⏳ CoValue ${coId} not yet available (no verified state)`);
+						allCoValues.push({
+							id: coId,
+							type: 'loading',
+							schema: null,
+							headerMeta: null,
+							keys: 'N/A',
+							content: null,
+							createdAt: null
 						});
-						
-						// Access header from coValueCore.verified.header
-						const header = coValueCore.verified?.header;
+						continue;
+					}
+					
+					// Get the current content (the actual CoValue)
+					const content = coValueCore.getCurrentContent();
+					
+					console.log(`🔍 CoValue ${coId}:`, {
+						type: content?.type,
+						hasKeys: !!content?.keys,
+						content: content,
+						core: coValueCore
+					});
+					
+					// Access header from coValueCore.verified.header
+					const header = coValueCore.verified?.header;
 						
 						// Get type from content
 						const type = content?.type || 'unknown';
@@ -244,6 +259,17 @@ export async function createMaiaOS(options = {}) {
 				const coValueCore = node.getCoValue(coId);
 				if (!coValueCore) {
 					return { error: "CoValue not found" };
+				}
+				
+				// CRITICAL: Check if CoValue is available before accessing content
+				if (!coValueCore.isAvailable()) {
+					console.warn(`⏳ CoValue ${coId} not yet available (no verified state)`);
+					return { 
+						id: coId,
+						type: 'loading',
+						error: "CoValue is loading... (waiting for verified state)",
+						loading: true
+					};
 				}
 				
 				const content = coValueCore.getCurrentContent();

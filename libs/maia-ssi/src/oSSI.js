@@ -174,12 +174,17 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 		syncSetup = setupJazzSyncPeers(apiKey);
 	}
 	
+	// Minimal migration: Creates ONLY profile + its group (required by Jazz)
+	// All other example CoValues created later by seeding service, reusing same group
+	const { minimalMigration } = await import("./minimalMigration.js");
+	
 	const result = await LocalNode.withNewlyCreatedAccount({
 		creationProps: { name },
 		crypto,
 		initialAgentSecret: agentSecret,
 		peers: syncSetup ? syncSetup.peers : [], // Pass peers array directly!
 		storage, // Pass storage directly! (jazz-tools pattern)
+		migration: minimalMigration, // Minimal: profile only (required by Jazz)
 	});
 	
 	// Assign node to peer callbacks

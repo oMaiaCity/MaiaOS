@@ -2,9 +2,15 @@
  * MaiaCity Inspector - First Principles
  * 
  * STRICT: Requires passkey authentication via WebAuthn PRF
+ * 
+ * Jazz Lazy-Loading Pattern:
+ * - CoValues are only loaded from IndexedDB when referenced by a parent or subscribed to
+ * - Seeded CoValues are linked to account.examples so Jazz loads them automatically
+ * - No manual re-seeding needed - Jazz handles persistence and loading
  */
 
 import { createMaiaOS, signInWithPasskey, signUpWithPasskey, isPRFSupported, subscribeSyncState } from "@MaiaOS/core";
+import { seedExampleCoValues as seedCoValues } from "@MaiaOS/db";
 import { renderApp } from './db-view.js';
 
 let maia;
@@ -46,9 +52,20 @@ function clearAccountFlag() {
  */
 function showToast(message, type = 'info', duration = 5000) {
 	const icons = {
-		success: '✅',
-		error: '⚠️',
-		info: 'ℹ️'
+		success: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+			<path d="M8 12.5L10.5 15L16 9.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+		</svg>`,
+		error: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+			<path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+			<circle cx="12" cy="16" r="1" fill="currentColor"/>
+		</svg>`,
+		info: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+			<path d="M12 12V16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+			<circle cx="12" cy="8" r="1" fill="currentColor"/>
+		</svg>`
 	};
 	
 	const titles = {
@@ -132,6 +149,10 @@ async function signIn() {
 			renderAppInternal(); // Re-render when sync state changes
 		});
 		
+		// Explicitly load linked CoValues from IndexedDB
+		// Jazz uses lazy-loading - CoValues are only loaded when explicitly requested
+		await loadLinkedCoValues();
+		
 		renderAppInternal();
 		
 		console.log("✅ MaiaOS initialized with authenticated account!");
@@ -153,6 +174,93 @@ async function signIn() {
 			showToast(friendlyMessage, 'error', 7000);
 			renderSignInPrompt();
 		}
+	}
+}
+
+/**
+ * Load linked CoValues from account
+ * 
+ * Jazz uses lazy-loading - CoValues are only loaded when explicitly requested.
+ * This function triggers loading of all CoValues linked to the account.
+ */
+async function loadLinkedCoValues() {
+	const { node, maiaId: account } = maia.id;
+	
+	console.log("🔄 Loading linked CoValues from account...");
+	
+	// Get the examples ID
+	const examplesId = account.get("examples");
+	if (!examplesId) {
+		console.log("   No examples linked to account");
+		return;
+	}
+	
+	console.log(`   Examples ID: ${examplesId}`);
+	
+	// Explicitly load the examples CoMap from IndexedDB
+	try {
+		const examplesCore = await node.loadCoValueCore(examplesId);
+		if (examplesCore.isAvailable()) {
+			console.log("   ✅ Examples CoMap loaded from IndexedDB");
+			
+			// Now load the child CoValues referenced by examples
+			const examplesContent = examplesCore.getCurrentContent();
+			const childIds = [];
+			
+			// Get all property values from the examples CoMap
+			for (const key of examplesContent.keys()) {
+				const childId = examplesContent.get(key);
+				if (childId && typeof childId === "string" && childId.startsWith("co_")) {
+					childIds.push({ key, id: childId });
+				}
+			}
+			
+			console.log(`   Found ${childIds.length} child CoValues to load`);
+			
+			// Load each child CoValue
+			for (const { key, id } of childIds) {
+				const childCore = await node.loadCoValueCore(id);
+				if (childCore.isAvailable()) {
+					console.log(`   ✅ ${key} (${id.substring(0, 12)}...) loaded from IndexedDB`);
+				} else {
+					console.log(`   ⏳ ${key} (${id.substring(0, 12)}...) not yet available`);
+				}
+			}
+			
+			console.log("✅ All linked CoValues loaded!");
+		} else {
+			console.log("   ⏳ Examples CoMap not yet available");
+		}
+	} catch (error) {
+		console.error("   ❌ Failed to load examples:", error);
+	}
+}
+
+/**
+ * Seed example CoValues for demonstration
+ * 
+ * Uses the centralized seeding service from @MaiaOS/db
+ * Creates: CoPlainText, CoStream, Notes, and Examples CoMap
+ * Links examples to account.examples for Jazz lazy-loading
+ */
+async function seedExampleCoValues() {
+	try {
+		console.log("🌱 Seeding example CoValues...");
+		
+		const { node, maiaId: account } = maia.id;
+		
+		// Use the centralized seeding service
+		await seedCoValues(node, account, { name: "Maia User" });
+		
+		console.log("🌱 Seeding complete!");
+		
+		// Refresh the UI to show new CoValues
+		renderAppInternal();
+		
+	} catch (error) {
+		console.error("❌ Seeding failed:", error);
+		console.error("Stack:", error.stack);
+		showToast(`Failed to create example data: ${error.message}`, 'error', 7000);
 	}
 }
 
@@ -189,6 +297,10 @@ async function register() {
 			syncState = state;
 			renderAppInternal(); // Re-render when sync state changes
 		});
+		
+		// Seed example CoValues for new accounts
+		// This creates UserGroup + Profile + examples (5 CoValues total)
+		await seedExampleCoValues();
 		
 		renderAppInternal();
 		
@@ -255,23 +367,23 @@ function renderSignInPrompt() {
 					<p class="sign-in-subtitle">you were always meant to be</p>
 					${!hasAccount ? `
 						<p class="sign-in-description">
-							Get started by creating a new safe. Your account will be secured with biometric authentication.
+							Create your new sovereign self now. Only you will own and control your maia identity and data.
 						</p>
 					` : ''}
 					<div class="sign-in-buttons">
 						${hasAccount ? `
 							<button class="sign-in-btn" onclick="window.handleSignIn()">
-								Unlock Safe
+								Unlock your Self
 							</button>
 							<button class="sign-in-btn secondary" onclick="window.handleRegister()">
-								Create new Safe
+								Create new Self
 							</button>
 						` : `
 							<button class="sign-in-btn" onclick="window.handleRegister()">
-								Create new Safe
+								Create new Self
 							</button>
 							<button class="sign-in-btn secondary" onclick="window.handleSignIn()">
-								Already have a safe? Unlock
+								Unlock your Self
 							</button>
 						`}
 					</div>
@@ -320,6 +432,29 @@ function switchView(view) {
 function selectCoValue(coId) {
 	selectedCoValueId = coId;
 	renderAppInternal();
+	
+	// If selecting a CoValue, subscribe to its loading state
+	if (coId && maia?.id?.node) {
+		const coValueCore = maia.id.node.getCoValue(coId);
+		if (coValueCore && !coValueCore.isAvailable()) {
+			console.log(`⏳ CoValue ${coId.substring(0, 12)}... not available yet, subscribing to updates...`);
+			
+			// Subscribe to updates and re-render when available
+			const unsubscribe = coValueCore.subscribe((core) => {
+				if (core.isAvailable()) {
+					console.log(`✅ CoValue ${coId.substring(0, 12)}... now available! Re-rendering...`);
+					renderAppInternal();
+					unsubscribe(); // Unsubscribe after first load
+				}
+			});
+			
+			// Trigger loading from IndexedDB
+			maia.id.node.loadCoValueCore(coId).catch(err => {
+				console.error(`❌ Failed to load ${coId.substring(0, 12)}...`, err);
+				renderAppInternal(); // Re-render to show error
+			});
+		}
+	}
 }
 
 function renderAppInternal() {

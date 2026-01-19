@@ -382,27 +382,60 @@ Present to human:
 
 **3. Update Documentation** 📝
 
-**After manual testing and human approves**, update relevant documentation:
+**After manual testing and human approves**, update the documentation so everyone understands how to use the new features.
 
-**Update these locations:**
-- `libs/maia-script/docs/developers/` - Developer-facing docs (technical implementation)
-- `libs/maia-script/docs/creators/` - Creator-facing docs (how to use features)
-- `libs/maia-script/docs/getting-started/` - Getting started guides
-- Component-level README files (if applicable)
+**Where to write docs:**
+- `libs/maia-docs/developers/` - For people building MaiaOS itself (deep technical stuff)
+- `libs/maia-docs/creators/` - For people making apps with MaiaOS (how to use it)
+- `libs/maia-docs/getting-started/` - For people just starting out (super beginner friendly)
+- Component README files - For specific parts of the codebase
 
-**DO NOT UPDATE:**
-- ❌ `libs/maia-script/docs/agents/LLM_*.md` - These are **auto-generated** from developer/creator docs
+**Skip these files:**
+- ❌ `libs/maia-docs/agents/LLM_*.md` - These update automatically, never edit them directly
 
-**To regenerate agent docs after updating:**
-```bash
-bun run generate:llm-docs
-```
 
-**Documentation should include:**
-- What changed and why
-- New APIs/interfaces/patterns
-- Usage examples
-- Migration guide (if breaking changes)
+**What to write in your docs:**
+
+Think of documentation like explaining something to a friend who's 12 years ols and curious but doesn't know the technical jargon yet.
+
+**Start with the "why":**
+- What problem does this solve?
+- Why would someone use this instead of the old way?
+- What real-world situation does this help with?
+
+**Show, don't just tell:**
+- Include simple, working examples (not just code snippets)
+- Use comments to explain what each line does
+- Build from simple examples to more complex ones
+- Show common mistakes and how to avoid them
+
+**Use clear, friendly language:**
+- Avoid jargon unless you explain it first
+- Use analogies that relate to everyday things
+- Break complex ideas into smaller, digestible pieces
+- Use short sentences and paragraphs
+
+**Structure your docs like a story:**
+1. **Quick intro** - One sentence: what is this?
+2. **Why it matters** - Why should you care about this?
+3. **Simple example** - The easiest possible way to use it
+4. **How it works** - The basic concepts (with diagrams if helpful)
+5. **Common patterns** - Real-world usage examples
+6. **Troubleshooting** - "If X happens, try Y"
+7. **Next steps** - Where to learn more
+
+**Example of good vs. unclear documentation:**
+
+❌ **Unclear:** "The SchemaValidator utilizes Ajv to validate data against JSON Schema definitions, preprocessing co-types to Ajv-compatible formats."
+
+✅ **Clear:** "Before saving your data, MaiaOS checks if it matches the schema you defined. Think of it like a spell-checker for your data - it makes sure everything is in the right format before anything gets saved. For example, if you said a field should be a number, it won't let you accidentally put text there."
+
+**Special note for migration guides:**
+If you're changing something that people are already using:
+- Start with a clear "What changed" section
+- Show the old way and the new way side-by-side
+- Explain step-by-step how to update existing code
+- Include a checklist of things to update
 
 **Output**: 
 - Fully manually tested, working solution

@@ -37,27 +37,22 @@ export function renderApp(maia, authState, syncState, currentView, selectedCoVal
 			if (value && typeof value === 'object' && value._co_id) {
 				// Resolved co-id reference
 				const coId = value._co_id;
-				const truncatedId = truncate(coId, 30);
-				const resolvedContent = JSON.stringify(value._resolved, null, 2);
+				const truncatedId = truncate(coId, 12);
 				
 				return `
-					<tr>
+					<tr class="clickable-row ${selectedCoValueId === coId ? 'selected' : ''}" onclick="selectCoValue('${coId}')">
 						<td class="prop-name">${truncate(key, 20)}</td>
 						<td class="prop-type">co-id</td>
 						<td class="prop-value">
 							<code class="co-id" title="${coId}">${truncatedId}</code>
-							<details style="margin-top: 4px;">
-								<summary>View Content</summary>
-								<pre>${resolvedContent}</pre>
-							</details>
 						</td>
 					</tr>
 				`;
 			} else if (typeof value === 'string' && value.startsWith('co_')) {
 				// Unresolved co-id
-				const truncatedId = truncate(value, 30);
+				const truncatedId = truncate(value, 12);
 				return `
-					<tr>
+					<tr class="clickable-row ${selectedCoValueId === value ? 'selected' : ''}" onclick="selectCoValue('${value}')">
 						<td class="prop-name">${truncate(key, 20)}</td>
 						<td class="prop-type">co-id</td>
 						<td class="prop-value">
@@ -109,14 +104,14 @@ export function renderApp(maia, authState, syncState, currentView, selectedCoVal
 		.join('');
 		
 		tableContent = `
-			<table class="db-table">
-				<thead>
-					<tr>
-						<th>Property</th>
-						<th>Type</th>
-						<th>Value</th>
-					</tr>
-				</thead>
+				<table class="db-table">
+					<thead>
+						<tr>
+							<th>Property</th>
+							<th>Type</th>
+							<th>Value</th>
+						</tr>
+					</thead>
 				<tbody>
 					${propertyRows}
 				</tbody>
@@ -126,12 +121,11 @@ export function renderApp(maia, authState, syncState, currentView, selectedCoVal
 		// AllCoValues view - show all CoValues
 		const coValueRows = data.map(cv => `
 			<tr class="clickable-row ${selectedCoValueId === cv.id ? 'selected' : ''}" onclick="selectCoValue('${cv.id}')">
-				<td class="prop-value"><code class="co-id" title="${cv.id}">${truncate(cv.id, 25)}</code></td>
 				<td class="prop-type">${cv.type}</td>
+				<td class="prop-value"><code class="co-id" title="${cv.id}">${truncate(cv.id, 12)}</code></td>
 				<td class="prop-value">${cv.schema || '—'}</td>
 				<td class="prop-value">${cv.keys !== undefined ? cv.keys : 'N/A'}</td>
 				<td class="prop-value">${typeof cv.headerMeta === 'object' ? JSON.stringify(cv.headerMeta) : cv.headerMeta || '—'}</td>
-				<td class="prop-value">${cv.createdAt || '—'}</td>
 			</tr>
 		`).join('');
 		
@@ -139,12 +133,11 @@ export function renderApp(maia, authState, syncState, currentView, selectedCoVal
 			<table class="db-table">
 				<thead>
 					<tr>
-						<th>CoValue ID</th>
 						<th>Type</th>
+						<th>CoValue ID</th>
 						<th>Schema</th>
 						<th>Keys</th>
 						<th>Meta</th>
-						<th>Created</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -172,13 +165,27 @@ export function renderApp(maia, authState, syncState, currentView, selectedCoVal
 	if (selectedCoValueId) {
 		const detailData = maia.getCoValueDetail(selectedCoValueId);
 		
-		if (detailData.error) {
+		// Handle loading state
+		if (detailData.loading) {
 			detailView = `
-				<aside class="db-detail db-card liquid-glass">
-					<div class="liquid-glass--bend"></div>
-					<div class="liquid-glass--face"></div>
-					<div class="liquid-glass--edge"></div>
-					<div class="detail-content-inner liquid-glass-inner">
+				<aside class="db-detail db-card whitish-card">
+					<div class="detail-content-inner">
+						<div class="detail-header">
+							<h3>Detail View</h3>
+							<button class="close-btn" onclick="selectCoValue(null)">×</button>
+						</div>
+						<div class="detail-loading">
+							<div class="loading-spinner"></div>
+							<p>Loading CoValue... (waiting for verified state)</p>
+							<p class="loading-hint">This happens when accessing newly created CoValues</p>
+						</div>
+					</div>
+				</aside>
+			`;
+		} else if (detailData.error && !detailData.loading) {
+			detailView = `
+				<aside class="db-detail db-card whitish-card">
+					<div class="detail-content-inner">
 						<div class="detail-header">
 							<h3>Detail View</h3>
 							<button class="close-btn" onclick="selectCoValue(null)">×</button>
@@ -190,25 +197,9 @@ export function renderApp(maia, authState, syncState, currentView, selectedCoVal
 				</aside>
 			`;
 		} else {
-			const propertyRows = detailData.properties.map(prop => `
-				<tr>
-					<td class="prop-name" title="${prop.key}">${truncate(prop.key, 25)}</td>
-					<td class="prop-type">${prop.type}</td>
-					<td class="prop-value" title="${prop.value}">
-						${prop.type === 'sealed' ? '<code class="sealed-value">sealed_***</code>' : 
-						  prop.type === 'co-id' ? `<code class="co-id">${truncate(prop.value, 25)}</code>` :
-						  prop.type === 'key' ? `<code class="key-value">${truncate(prop.value, 25)}</code>` :
-						  `<code>${truncate(String(prop.value), 30)}</code>`}
-					</td>
-				</tr>
-			`).join('');
-			
 			detailView = `
-				<aside class="db-detail db-card liquid-glass">
-					<div class="liquid-glass--bend"></div>
-					<div class="liquid-glass--face"></div>
-					<div class="liquid-glass--edge"></div>
-					<div class="detail-content-inner liquid-glass-inner">
+				<aside class="db-detail db-card whitish-card">
+					<div class="detail-content-inner">
 						<div class="detail-header">
 							<div class="header-top">
 								<code class="co-id-header" title="${detailData.id}">${detailData.id}</code>
@@ -231,12 +222,12 @@ export function renderApp(maia, authState, syncState, currentView, selectedCoVal
 									${detailData.properties.map(prop => `
 										<div class="property-item">
 											<div class="property-header">
-												<span class="property-key" title="${prop.key}">${truncate(prop.key, 30)}</span>
 												<span class="property-type">${prop.type}</span>
+												<span class="property-key" title="${prop.key}">${truncate(prop.key, 30)}</span>
 											</div>
 											<div class="property-value-box">
 												${prop.type === 'sealed' ? '<code>sealed_***</code>' : 
-												  prop.type === 'co-id' ? `<code class="co-id">${prop.value}</code>` :
+												  prop.type === 'co-id' ? `<code class="co-id">${truncate(prop.value, 12)}</code>` :
 												  prop.type === 'key' ? `<code class="key-value">${prop.value}</code>` :
 												  `<code>${prop.value}</code>`}
 											</div>
@@ -278,14 +269,11 @@ export function renderApp(maia, authState, syncState, currentView, selectedCoVal
 	
 	document.getElementById("app").innerHTML = `
 		<div class="db-container">
-			<header class="db-header db-card liquid-glass">
-				<div class="liquid-glass--bend"></div>
-				<div class="liquid-glass--face"></div>
-				<div class="liquid-glass--edge"></div>
-				<div class="header-content liquid-glass-inner">
+			<header class="db-header db-card whitish-card">
+				<div class="header-content">
 					<div class="header-left">
 						<h1>Maia DB</h1>
-						<code class="db-status">Connected • ${truncate(accountId, 30)}</code>
+						<code class="db-status">Connected • ${truncate(accountId, 12)}</code>
 					</div>
 					<div class="header-right">
 						<!-- Sync Status Indicator -->
@@ -307,11 +295,8 @@ export function renderApp(maia, authState, syncState, currentView, selectedCoVal
 			</header>
 			
 			<div class="db-layout ${selectedCoValueId ? 'with-detail' : ''}">
-				<aside class="db-sidebar db-card liquid-glass">
-					<div class="liquid-glass--bend"></div>
-					<div class="liquid-glass--face"></div>
-					<div class="liquid-glass--edge"></div>
-					<div class="sidebar-content-inner liquid-glass-inner">
+				<aside class="db-sidebar db-card whitish-card">
+					<div class="sidebar-content-inner">
 						<div class="sidebar-header">
 							<h3>Schema Types</h3>
 						</div>
@@ -322,11 +307,8 @@ export function renderApp(maia, authState, syncState, currentView, selectedCoVal
 				</aside>
 				
 				<main class="db-main">
-					<div class="inspector db-card liquid-glass">
-						<div class="liquid-glass--bend"></div>
-						<div class="liquid-glass--face"></div>
-						<div class="liquid-glass--edge"></div>
-						<div class="inspector-content-inner liquid-glass-inner">
+					<div class="inspector db-card whitish-card">
+						<div class="inspector-content-inner">
 							<div class="inspector-header">
 								<div>
 									<h2>${viewTitle}</h2>
