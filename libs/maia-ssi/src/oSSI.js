@@ -12,6 +12,7 @@ import { requirePRFSupport } from './feature-detection.js';
 import { createPasskeyWithPRF, evaluatePRF, getExistingPasskey } from './prf-evaluator.js';
 import { arrayBufferToBase64, base64ToArrayBuffer, stringToUint8Array, isValidAccountID, uint8ArrayToHex } from './utils.js';
 import { getStorage } from './storage.js';
+import { schemaMigration } from '../../maia-db/src/migrations/schema.migration.js';
 
 // Extract functions from cojsonInternals for cleaner code
 const { accountHeaderForInitialAgentSecret, idforHeader, rawCoIDtoBytes, rawCoIDfromBytes } = cojsonInternals;
@@ -174,9 +175,9 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 		syncSetup = setupJazzSyncPeers(apiKey);
 	}
 	
-	// Minimal migration: Creates ONLY profile + its group (required by Jazz)
+	// Schema migration: Creates profile + hierarchical account structure (account.os.schemata, etc.)
 	// All other example CoValues created later by seeding service, reusing same group
-	const { minimalMigration } = await import("./minimalMigration.js");
+	const { schemaMigration } = await import("@MaiaOS/db");
 	
 	const result = await LocalNode.withNewlyCreatedAccount({
 		creationProps: { name },
@@ -184,7 +185,7 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 		initialAgentSecret: agentSecret,
 		peers: syncSetup ? syncSetup.peers : [], // Pass peers array directly!
 		storage, // Pass storage directly! (jazz-tools pattern)
-		migration: minimalMigration, // Minimal: profile only (required by Jazz)
+		migration: schemaMigration, // Schema migration: profile + hierarchical structure
 	});
 	
 	// Assign node to peer callbacks
@@ -303,6 +304,7 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 		crypto,
 		peers: syncSetup ? syncSetup.peers : [],
 		storage,
+		migration: schemaMigration,  // ← Runs on every load, idempotent
 	});
 	
 	if (syncSetup) {

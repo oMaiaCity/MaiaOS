@@ -1,7 +1,8 @@
 /**
- * Tests for schema migration
+ * Tests for MINIMAL schema migration
  * 
- * Tests the custom migration that creates Group + Profile + ProfileList with headerMeta
+ * Tests the absolute minimal migration that just sets profile to "owner"
+ * No Group creation, no CoMap creation - testing cojson's minimum requirements
  * Uses real LocalNode and WasmCrypto (NO MOCKS)
  */
 
@@ -10,12 +11,12 @@ import { LocalNode } from "cojson";
 import { WasmCrypto } from "cojson/crypto/WasmCrypto";
 import { schemaMigration } from "./schema.migration.js";
 
-describe("schemaMigration", () => {
-	it("should create Group and Profile with correct headerMeta", async () => {
+describe("schemaMigration (MINIMAL)", () => {
+	it("should set profile to string 'owner'", async () => {
 		// Use real crypto
 		const crypto = await WasmCrypto.create();
 		
-		// Create account with custom migration
+		// Create account with minimal migration
 		const result = await LocalNode.withNewlyCreatedAccount({
 			creationProps: { name: "TestAccount" },
 			crypto,
@@ -24,32 +25,17 @@ describe("schemaMigration", () => {
 		
 		const account = result.node.expectCurrentAccount("test");
 		
-		// Verify profile was created
-		const profileId = account.get("profile");
-		expect(profileId).toBeDefined();
-		expect(typeof profileId).toBe("string");
-		expect(profileId).toMatch(/^co_z/);
-		
-		// Load profile and verify headerMeta
-		// Get the CoValue using getCoValue, then getCurrentContent
-		const profileCoValue = result.node.getCoValue(profileId);
-		expect(profileCoValue).toBeDefined();
-		const profile = profileCoValue?.getCurrentContent();
-		expect(profile).toBeDefined();
-		expect(profile.headerMeta).toEqual({ $schema: "ProfileSchema" });
-		
-		// Verify profile has correct name
-		expect(profile.get("name")).toBe("TestAccount");
-		
-		// Verify group exists
-		const group = profile.group;
-		expect(group).toBeDefined();
-		expect(group.id).toMatch(/^co_z/);
+		// Verify profile is set to string "owner"
+		const profileValue = account.get("profile");
+		expect(profileValue).toBeDefined();
+		expect(typeof profileValue).toBe("string");
+		expect(profileValue).toBe("owner");
 	});
 	
-	it("should link profile to account", async () => {
+	it("should satisfy cojson's ONLY requirement (profile must be truthy)", async () => {
 		const crypto = await WasmCrypto.create();
 		
+		// This should NOT throw error (cojson hardcoded check at line 286-288)
 		const result = await LocalNode.withNewlyCreatedAccount({
 			creationProps: { name: "TestAccount2" },
 			crypto,
@@ -57,19 +43,23 @@ describe("schemaMigration", () => {
 		});
 		
 		const account = result.node.expectCurrentAccount("test");
-		const profileId = account.get("profile");
+		const profileValue = account.get("profile");
 		
-		// Profile ID should be accessible from account
-		expect(profileId).toBeDefined();
+		// Profile must be truthy (cojson requirement - tested empirically!)
+		// Falsy values (null, undefined, "", 0, false) all fail
+		expect(profileValue).toBeDefined();
+		expect(profileValue).toBeTruthy();
 		
-		// Should be able to load the profile
-		const profileCoValue = result.node.getCoValue(profileId);
-		expect(profileCoValue).toBeDefined();
-		const profile = profileCoValue?.getCurrentContent();
-		expect(profile).toBeDefined();
+		// Note: This IS the absolute minimum! We tested:
+		// - No profile → FAILED
+		// - profile = null → FAILED
+		// - profile = undefined → FAILED
+		// - profile = "" → FAILED
+		// - profile = 0 → FAILED
+		// Only truthy values work!
 	});
 	
-	it("should create profile with ProfileSchema in headerMeta", async () => {
+	it("should not create any Group or CoMap", async () => {
 		const crypto = await WasmCrypto.create();
 		
 		const result = await LocalNode.withNewlyCreatedAccount({
@@ -79,101 +69,32 @@ describe("schemaMigration", () => {
 		});
 		
 		const account = result.node.expectCurrentAccount("test");
-		const profileId = account.get("profile");
-		const profileCoValue = result.node.getCoValue(profileId);
-		expect(profileCoValue).toBeDefined();
-		const profile = profileCoValue?.getCurrentContent();
 		
-		// Critical: Profile must have $schema in headerMeta
-		expect(profile).toBeDefined();
-		expect(profile.headerMeta).toBeDefined();
-		expect(profile.headerMeta.$schema).toBe("ProfileSchema");
+		// Get all CoValues - should only be the Account itself
+		const allCoValues = Array.from(result.node.coValues.values());
+		
+		// Account is always a CoValue, but no other CoValues should exist
+		expect(allCoValues.length).toBe(1); // Only the account itself
+		
+		// The one CoValue should be the account
+		const accountCore = allCoValues[0];
+		const accountContent = accountCore?.getCurrentContent();
+		expect(accountContent.id).toBe(account.id);
 	});
 	
-	it("should create ProfileList with ProfileListSchema and contain Profile", async () => {
+	it("should work with any account name", async () => {
 		const crypto = await WasmCrypto.create();
 		
 		const result = await LocalNode.withNewlyCreatedAccount({
-			creationProps: { name: "TestAccount4" },
+			creationProps: { name: "SomeOtherName" },
 			crypto,
 			migration: schemaMigration,
 		});
 		
 		const account = result.node.expectCurrentAccount("test");
-		const profileId = account.get("profile");
-		const profileCoValue = result.node.getCoValue(profileId);
-		const profile = profileCoValue?.getCurrentContent();
-		const group = profile.group;
+		const profileValue = account.get("profile");
 		
-		// Find ProfileList in the group's coValues
-		// The ProfileList should be accessible via LocalNode
-		const allCoValues = Array.from(result.node.coValues.values());
-		const profileListCore = allCoValues.find(cv => {
-			const content = cv.getCurrentContent();
-			return content.type === "colist" && content.headerMeta?.$schema === "ProfileListSchema";
-		});
-		
-		expect(profileListCore).toBeDefined();
-		const profileList = profileListCore?.getCurrentContent();
-		
-		// Verify ProfileList headerMeta
-		expect(profileList.headerMeta).toEqual({ $schema: "ProfileListSchema" });
-		
-		// Verify ProfileList contains the profile
-		const items = profileList.toJSON();
-		expect(items).toContain(profileId);
-		expect(items.length).toBeGreaterThanOrEqual(1);
-	});
-	
-	it("should create all CoValue examples with correct schemas", async () => {
-		const crypto = await WasmCrypto.create();
-		
-		const result = await LocalNode.withNewlyCreatedAccount({
-			creationProps: { name: "TestAccount5" },
-			crypto,
-			migration: schemaMigration,
-		});
-		
-		// Get all CoValues created by migration
-		const allCoValues = Array.from(result.node.coValues.values());
-		
-		// Find each CoValue by schema
-		const profileListCore = allCoValues.find(cv => 
-			cv.getCurrentContent().headerMeta?.$schema === "ProfileListSchema"
-		);
-		const activityStreamCore = allCoValues.find(cv => 
-			cv.getCurrentContent().headerMeta?.$schema === "ActivityStreamSchema"
-		);
-		const avatarStreamCore = allCoValues.find(cv => 
-			cv.getCurrentContent().headerMeta?.$schema === "AvatarStreamSchema"
-		);
-		const bioTextCore = allCoValues.find(cv => 
-			cv.getCurrentContent().headerMeta?.$schema === "BioTextSchema"
-		);
-		
-		// Verify ProfileList
-		expect(profileListCore).toBeDefined();
-		const profileList = profileListCore?.getCurrentContent();
-		expect(profileList.type).toBe("colist");
-		expect(profileList.headerMeta).toEqual({ $schema: "ProfileListSchema" });
-		
-		// Verify ActivityStream
-		expect(activityStreamCore).toBeDefined();
-		const activityStream = activityStreamCore?.getCurrentContent();
-		expect(activityStream.type).toBe("costream");
-		expect(activityStream.headerMeta).toEqual({ $schema: "ActivityStreamSchema" });
-		
-		// Verify AvatarStream
-		expect(avatarStreamCore).toBeDefined();
-		const avatarStream = avatarStreamCore?.getCurrentContent();
-		expect(avatarStream.type).toBe("costream");
-		expect(avatarStream.headerMeta).toEqual({ $schema: "AvatarStreamSchema" });
-		
-		// Verify BioText
-		expect(bioTextCore).toBeDefined();
-		const bioText = bioTextCore?.getCurrentContent();
-		expect(bioText.type).toBe("coplaintext");
-		expect(bioText.headerMeta).toEqual({ $schema: "BioTextSchema" });
-		expect(bioText.toString()).toBe("Hi, I'm TestAccount5!");
+		// Profile should always be "owner" regardless of account name
+		expect(profileValue).toBe("owner");
 	});
 });

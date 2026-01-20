@@ -145,9 +145,9 @@ export class CoSchemaValidationEngine {
         }
       }
       
-      // Fallback: try registry by $id
+      // Try hardcoded registry by $id (for migrations/seeding only)
       const { getAllSchemas } = await import('./registry.js');
-      const allSchemas = getAllSchemas();
+      const allSchemas = getAllSchemas(); // Migration mode - no options
       for (const schema of Object.values(allSchemas)) {
         if (schema.$id === uri) {
           return schema;
@@ -273,10 +273,10 @@ export class CoSchemaValidationEngine {
   async validateSchema(schemaName, schema = null) {
     await this.initialize();
     
-    // Get schema from registry if not provided
+    // Get schema from hardcoded registry if not provided (migration mode only)
     if (!schema) {
       const { getSchema } = await import('./registry.js');
-      schema = getSchema(schemaName);
+      schema = getSchema(schemaName); // Migration mode - no options
       if (!schema) {
         return {
           valid: false,
@@ -298,9 +298,9 @@ export class CoSchemaValidationEngine {
   async validateData(schemaName, data) {
     await this.initialize();
     
-    // Get schema from registry
+    // Get schema from hardcoded registry (migration mode only)
     const { getSchema } = await import('./registry.js');
-    let schema = getSchema(schemaName);
+    let schema = getSchema(schemaName); // Migration mode - no options
     
     if (!schema) {
       return {
@@ -385,7 +385,7 @@ export class CoSchemaValidationEngine {
     await this.initialize();
     
     const { getAllSchemas } = await import('./registry.js');
-    const allSchemas = getAllSchemas();
+    const allSchemas = getAllSchemas(); // Migration mode - no options (used during initialization)
     const ajv = this.baseEngine.ajv;
     
     // PASS 1: Add all schemas to AJV registry (for $ref resolution)

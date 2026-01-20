@@ -10,13 +10,13 @@
  */
 
 import { createMaiaOS, signInWithPasskey, signUpWithPasskey, isPRFSupported, subscribeSyncState } from "@MaiaOS/core";
-import { seedExampleCoValues as seedCoValues, createCoJSONAPI } from "@MaiaOS/db";
+import { createCoJSONAPI } from "@MaiaOS/db";
 import { renderApp } from './db-view.js';
 
 let maia;
 let cojsonAPI = null; // CoJSON API instance
-let currentView = 'account'; // Current schema type being viewed
-let selectedCoValueId = null; // Selected CoValue for detail view
+let currentView = 'all'; // Current schema filter (default: 'all' for all CoValues)
+let currentContextCoValueId = null; // Currently loaded CoValue in main context (explorer-style navigation)
 let authState = {
 	signedIn: false,
 	accountID: null,
@@ -241,33 +241,6 @@ async function loadLinkedCoValues() {
 	}
 }
 
-/**
- * Seed example CoValues for demonstration
- * 
- * Uses the centralized seeding service from @MaiaOS/db
- * Creates: CoPlainText, CoStream, Notes, and Examples CoMap
- * Links examples to account.examples for Jazz lazy-loading
- */
-async function seedExampleCoValues() {
-	try {
-		console.log("🌱 Seeding example CoValues...");
-		
-		const { node, maiaId: account } = maia.id;
-		
-		// Use the centralized seeding service
-		await seedCoValues(node, account, { name: "Maia User" });
-		
-		console.log("🌱 Seeding complete!");
-		
-		// Refresh the UI to show new CoValues
-		renderAppInternal();
-		
-	} catch (error) {
-		console.error("❌ Seeding failed:", error);
-		console.error("Stack:", error.stack);
-		showToast(`Failed to create example data: ${error.message}`, 'error', 7000);
-	}
-}
 
 /**
  * Register new passkey
@@ -306,10 +279,6 @@ async function register() {
 			syncState = state;
 			renderAppInternal(); // Re-render when sync state changes
 		});
-		
-		// Seed example CoValues for new accounts
-		// This creates UserGroup + Profile + examples (5 CoValues total)
-		await seedExampleCoValues();
 		
 		renderAppInternal();
 		
@@ -435,12 +404,13 @@ window.showToast = showToast; // Expose for debugging
 
 function switchView(view) {
 	currentView = view;
-	selectedCoValueId = null; // Reset selection when switching views
+	currentContextCoValueId = null; // Reset context when switching views
 	renderAppInternal();
 }
 
 function selectCoValue(coId) {
-	selectedCoValueId = coId;
+	// Explorer-style navigation: load CoValue into main container context
+	currentContextCoValueId = coId;
 	renderAppInternal();
 	
 	// If selecting a CoValue, subscribe to its loading state
@@ -468,11 +438,38 @@ function selectCoValue(coId) {
 }
 
 async function renderAppInternal() {
-	await renderApp(maia, cojsonAPI, authState, syncState, currentView, selectedCoValueId, switchView, selectCoValue);
+	await renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, switchView, selectCoValue);
+}
+
+function toggleExpand(expandId) {
+	console.log('toggleExpand called with:', expandId);
+	const element = document.getElementById(expandId);
+	console.log('Found element:', element);
+	
+	if (element) {
+		const isExpanded = element.style.display !== 'none';
+		element.style.display = isExpanded ? 'none' : 'block';
+		console.log('Toggled display to:', element.style.display);
+		
+		// Rotate the expand icon - need to find it in the button
+		const wrapper = element.parentElement;
+		const button = wrapper?.querySelector('button');
+		const icon = button?.querySelector('.expand-icon');
+		
+		if (icon) {
+			icon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
+			console.log('Rotated icon to:', icon.style.transform);
+		} else {
+			console.log('Icon not found in button');
+		}
+	} else {
+		console.log('Element not found with ID:', expandId);
+	}
 }
 
 // Expose globally for onclick handlers
 window.switchView = switchView;
 window.selectCoValue = selectCoValue;
+window.toggleExpand = toggleExpand;
 
 init();

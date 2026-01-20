@@ -169,9 +169,9 @@ function subscribeToChildren(node, parent, options) {
 /**
  * Subscribe to all CoValues linked from a parent property
  * 
- * Example: subscribeToLinked(account, 'examples')
- * - Subscribes to account.examples CoMap
- * - Auto-subscribes to all children (plainText, stream, notes)
+ * Example: subscribeToLinked(account, 'os')
+ * - Subscribes to account.os CoMap
+ * - Auto-subscribes to all children (data, groups, schemata, examples)
  * 
  * @param {LocalNode} node - Jazz LocalNode
  * @param {RawCoValue} parent - Parent CoValue (e.g., account)

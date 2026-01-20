@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Developers
 
-**Auto-generated:** 2026-01-20T13:27:46.191Z
+**Auto-generated:** 2026-01-20T21:05:28.189Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -6521,6 +6521,107 @@ CoValueLoadingState.UNAVAILABLE  // "unavailable"
   $error: "Error message" // if error
 }
 ```
+
+## Reloading CoValues from Storage
+
+When you modify a CoValue and need to reload it from IndexedDB (after `waitForStorageSync` completes), you must use the correct pattern to avoid cached instances.
+
+### The Problem: Cached Instances
+
+**Wrong Pattern** (returns cached instance):
+```javascript
+// ❌ This returns the in-memory cached instance, NOT reloaded from storage
+const coValueCore = node.getCoValue(id);
+const content = coValueCore.getCurrentContent();
+const value = content.get("key"); // May not reflect persisted changes!
+```
+
+**Why this fails:**
+- `node.getCoValue()` returns a cached CoValue instance that's already in memory
+- Even after `waitForStorageSync()` persists changes to IndexedDB, the cached instance may not reflect those changes
+- This causes "value not found" errors when trying to access recently modified data
+
+### The Solution: Load from Storage
+
+**Correct Pattern** (loads from IndexedDB):
+```javascript
+// ✅ This actually loads from IndexedDB storage
+// Note: node.load() returns the content directly (already calls getCurrentContent())
+const content = await node.load(id);
+if (content === 'unavailable') {
+  throw new Error('CoValue unavailable after persistence');
+}
+const value = content.get("key"); // Reflects persisted changes!
+```
+
+**Why this works:**
+- `await node.load(id)` triggers actual loading from IndexedDB
+- Returns the content directly (already calls `getCurrentContent()` internally)
+- Ensures you see modifications that were synced via `waitForStorageSync()`
+
+### When to Use Each Pattern
+
+**Use `getCoValue()` when:**
+- You want the current in-memory instance (no reload needed)
+- You're setting up subscriptions to listen for updates
+- You're checking if a CoValue exists and is available
+
+**Use `await node.load()` when:**
+- You need to reload from storage after modifications
+- You're accessing a CoValue for the first time after it was persisted
+- You need to ensure you have the latest persisted state
+
+### Real-World Example: Account Modifications
+
+```javascript
+// During migration - modify account
+account.set("os", accountOs.id, "trusting");
+account.set("data", accountData.id, "trusting");
+
+// Persist to IndexedDB
+await node.syncManager.waitForStorageSync(account.id);
+
+// ❌ Wrong: Cached instance may not reflect changes
+const cachedAccount = node.getCoValue(account.id).getCurrentContent();
+const osId = cachedAccount.get("os"); // May be undefined!
+
+// ✅ Correct: Reload from storage
+// Note: node.load() returns the content directly
+const freshAccount = await node.load(account.id);
+if (freshAccount === 'unavailable') {
+  throw new Error('Account unavailable');
+}
+const osId = freshAccount.get("os"); // Correctly reflects persisted value!
+```
+
+### Subscription Pattern (Correct Use of getCoValue)
+
+When setting up subscriptions, `getCoValue()` is correct:
+
+```javascript
+// ✅ Correct for subscriptions
+const coValueCore = node.getCoValue(id);
+if (!coValueCore.isAvailable()) {
+  // Trigger loading from storage
+  await node.loadCoValueCore(id);
+}
+
+// Subscribe to updates
+coValueCore.subscribe((core) => {
+  if (core.isAvailable()) {
+    const content = core.getCurrentContent();
+    // Handle updates...
+  }
+});
+```
+
+This pattern:
+1. Gets the cached instance with `getCoValue()`
+2. Checks if it's available with `isAvailable()`
+3. If not available, triggers loading with `loadCoValueCore()`
+4. Subscribes to future updates
+
+**Key Difference:** Subscriptions use `getCoValue()` + `loadCoValueCore()` for reactive updates, while reloading uses `await node.load()` for immediate access to persisted state.
 
 
 ## Integration with MaiaScript

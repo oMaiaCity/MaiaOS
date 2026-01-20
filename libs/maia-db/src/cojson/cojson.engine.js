@@ -16,6 +16,7 @@ import { QueryOperation } from './operations/query.js';
 import { CreateOperation } from './operations/create.js';
 import { UpdateOperation } from './operations/update.js';
 import { DeleteOperation } from './operations/delete.js';
+import { GroupOperation } from './operations/group.js';
 
 export class CoJSONEngine {
   constructor(backend) {
@@ -26,7 +27,8 @@ export class CoJSONEngine {
       query: new QueryOperation(this.backend),
       create: new CreateOperation(this.backend),
       update: new UpdateOperation(this.backend),
-      delete: new DeleteOperation(this.backend)
+      delete: new DeleteOperation(this.backend),
+      group: new GroupOperation(this.backend)
     };
     
     console.log('[CoJSONEngine] Initialized');
@@ -35,7 +37,7 @@ export class CoJSONEngine {
   /**
    * Execute a CoJSON operation
    * @param {Object} payload - Operation payload
-   * @param {string} payload.op - Operation name (query, create, update, delete)
+   * @param {string} payload.op - Operation name (query, create, update, delete, group)
    * @param {Object} payload params - Operation-specific parameters
    * @returns {Promise<any>} Operation result
    */
@@ -43,7 +45,7 @@ export class CoJSONEngine {
     const { op, ...params } = payload;
     
     if (!op) {
-      throw new Error('[CoJSONEngine] Operation required: {op: "query|create|update|delete"}');
+      throw new Error('[CoJSONEngine] Operation required: {op: "query|create|update|delete|group"}');
     }
     
     const operation = this.operations[op];

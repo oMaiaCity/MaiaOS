@@ -1,11 +1,14 @@
 /**
- * Schema Registry - Hardcoded JSON Schema definitions for MaiaDB
+ * Schema Registry - JSON Schema definitions for MaiaDB
  * 
- * Contains all current schemas used in migrations and seeding.
- * Eventually, these will be stored as CoValues and loaded dynamically.
+ * Contains hardcoded schemas ONLY for migrations and seeding (before account.os.schemata exists).
+ * All runtime schema access MUST load from account.os.schemata CoList.
+ * 
+ * NO FALLBACKS - 100% migration to CoValue-based schemas.
  */
 
 import coTypesDefs from './co-types.defs.json';
+import { getMetaSchemaDefinition } from './meta-schema.js';
 
 /**
  * AccountSchema - CoMap schema for account CoValues
@@ -14,7 +17,7 @@ import coTypesDefs from './co-types.defs.json';
 const AccountSchema = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://maia.city/AccountSchema",
-  title: "Account Schema",
+  title: "Account",
   description: "Schema for account CoMap (special CoMap with authentication properties)",
   allOf: [
     { $ref: "#/$defs/comap" }
@@ -70,7 +73,7 @@ const AccountSchema = {
 const GroupSchema = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://maia.city/GroupSchema",
-  title: "Group Schema",
+  title: "Group",
   description: "Schema for group CoMap (special CoMap with member management)",
   allOf: [
     { $ref: "#/$defs/comap" }
@@ -88,7 +91,7 @@ const GroupSchema = {
 const ProfileSchema = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://maia.city/ProfileSchema",
-  title: "Profile Schema",
+  title: "Profile",
   description: "Schema for profile CoMap",
   allOf: [
     { $ref: "#/$defs/comap" }
@@ -111,7 +114,7 @@ const ProfileSchema = {
 const ExamplesSchema = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://maia.city/ExamplesSchema",
-  title: "Examples Schema",
+  title: "Examples",
   description: "Schema for examples container CoMap",
   allOf: [
     { $ref: "#/$defs/comap" }
@@ -147,7 +150,7 @@ const ExamplesSchema = {
 const ActivityStreamSchema = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://maia.city/ActivityStreamSchema",
-  title: "Activity Stream Schema",
+  title: "Activity Stream",
   description: "Schema for activity stream CoStream",
   allOf: [
     { $ref: "#/$defs/costream" }
@@ -183,7 +186,7 @@ const ActivityStreamSchema = {
 const NotesSchema = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://maia.city/NotesSchema",
-  title: "Notes Schema",
+  title: "Notes",
   description: "Schema for notes CoList",
   allOf: [
     { $ref: "#/$defs/colist" }
@@ -218,7 +221,7 @@ const NotesSchema = {
 const TextSchema = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://maia.city/TextSchema",
-  title: "Text Schema",
+  title: "Text",
   description: "Schema for plain text CoText (leaf type)",
   allOf: [
     { $ref: "#/$defs/co-text" }
@@ -232,7 +235,7 @@ const TextSchema = {
 const PureJsonSchema = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://maia.city/PureJsonSchema",
-  title: "Pure JSON Schema",
+  title: "Pure JSON",
   description: "Schema demonstrating all 7 JSON Schema standard types plus $ref co-id",
   allOf: [
     { $ref: "#/$defs/comap" }
@@ -302,7 +305,7 @@ export const SCHEMA_REGISTRY = {
 };
 
 /**
- * Get schema by name
+ * Get schema by name from hardcoded registry
  * @param {string} schemaName - Schema name (e.g., "ProfileSchema")
  * @returns {Object|null} Schema definition or null if not found
  */
@@ -311,7 +314,7 @@ export function getSchema(schemaName) {
 }
 
 /**
- * Get all schemas
+ * Get all schemas from hardcoded registry
  * @returns {Object} All schema definitions
  */
 export function getAllSchemas() {
@@ -319,11 +322,18 @@ export function getAllSchemas() {
 }
 
 /**
- * Check if schema exists
+ * Check if schema exists in hardcoded registry (for migrations/seeding only)
  * @param {string} schemaName - Schema name
- * @returns {boolean} True if schema exists
+ * @returns {boolean} True if schema exists in hardcoded registry
+ * @deprecated Only for use during migrations/seeding. Runtime should check account.os.schemata.
  */
 export function hasSchema(schemaName) {
+  // Only check hardcoded registry (for migrations/seeding before account.os.schemata exists)
+  // Exception schemas are always valid
+  const EXCEPTION_SCHEMAS = ['@account', '@group', '@meta-schema'];
+  if (EXCEPTION_SCHEMAS.includes(schemaName)) {
+    return true;
+  }
   return schemaName in SCHEMA_REGISTRY;
 }
 
@@ -333,4 +343,13 @@ export function hasSchema(schemaName) {
  */
 export function getCoTypeDefs() {
   return coTypesDefs.$defs;
+}
+
+/**
+ * Get meta schema definition
+ * @param {string} metaSchemaCoId - Optional co-id for self-reference
+ * @returns {Object} Meta schema definition
+ */
+export function getMetaSchema(metaSchemaCoId = null) {
+  return getMetaSchemaDefinition(metaSchemaCoId);
 }

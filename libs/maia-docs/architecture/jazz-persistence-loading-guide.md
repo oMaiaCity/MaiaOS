@@ -191,6 +191,122 @@ class CoValueCoreSubscription {
 }
 ```
 
+---
+
+## Reloading CoValues from Storage
+
+### The Cached Instance Problem
+
+One of the most common bugs in Jazz applications is trying to reload a CoValue after modifications, but getting a stale cached instance instead of the latest persisted state.
+
+**The Problem Scenario:**
+
+```javascript
+// During migration - modify account
+account.set("os", accountOs.id, "trusting");
+
+// Persist to IndexedDB
+await node.syncManager.waitForStorageSync(account.id);
+
+// ❌ Wrong: This returns the cached in-memory instance
+const accountCore = node.getCoValue(account.id);
+const freshAccount = accountCore.getCurrentContent();
+const osId = freshAccount.get("os"); // May be undefined!
+```
+
+**Why it fails:**
+- `node.getCoValue()` returns a cached CoValue instance that's already in memory
+- Even after `waitForStorageSync()` persists changes to IndexedDB, the cached instance may not reflect those changes
+- This causes "value not found" errors when trying to access recently modified data
+
+### The Solution: Use node.load()
+
+```javascript
+// During migration - modify account
+account.set("os", accountOs.id, "trusting");
+
+// Persist to IndexedDB
+await node.syncManager.waitForStorageSync(account.id);
+
+// ✅ Correct: This actually loads from IndexedDB
+const accountCore = await node.load(account.id);
+if (accountCore === 'unavailable') {
+  throw new Error('Account unavailable');
+}
+const freshAccount = accountCore.getCurrentContent();
+const osId = freshAccount.get("os"); // Correctly reflects persisted value!
+```
+
+**Why it works:**
+- `await node.load(id)` triggers actual loading from IndexedDB
+- Returns the latest persisted state of the CoValue
+- Ensures you see modifications that were synced via `waitForStorageSync()`
+
+### When to Use Each Method
+
+| Method | Use Case | Reloads from Storage? |
+|--------|----------|----------------------|
+| `node.getCoValue(id)` | Get current in-memory instance, set up subscriptions | No (cached) |
+| `await node.load(id)` | Reload from storage after modifications | Yes (from IndexedDB) |
+| `node.loadCoValueCore(id)` | Trigger loading in background (used by subscriptions) | Yes (async) |
+
+### Real-World Example: Account Migration
+
+During account migration, we create several CoValues and link them to the account:
+
+```javascript
+// Create account structure
+const accountOs = await createCoMap(group, {}, "ExamplesSchema");
+const accountOsSchemata = await createCoList(group, [], "NotesSchema");
+
+// Link to account
+account.set("os", accountOs.id, "trusting");
+
+// Persist ALL changes
+await Promise.all([
+  node.syncManager.waitForStorageSync(accountOs.id),
+  node.syncManager.waitForStorageSync(accountOsSchemata.id),
+  node.syncManager.waitForStorageSync(account.id)
+]);
+
+// ❌ Wrong: Cached instance
+const cachedAccount = node.getCoValue(account.id).getCurrentContent();
+const osId = cachedAccount.get("os"); // Might be undefined!
+
+// ✅ Correct: Reload from storage
+const accountCore = await node.load(account.id);
+const freshAccount = accountCore.getCurrentContent();
+const osId = freshAccount.get("os"); // Works!
+```
+
+### Subscription Pattern (When getCoValue is Correct)
+
+For subscriptions and reactive updates, `getCoValue()` is the correct choice:
+
+```javascript
+// ✅ Correct pattern for subscriptions
+const coValueCore = node.getCoValue(id);
+
+if (!coValueCore.isAvailable()) {
+  // Trigger loading from storage
+  await node.loadCoValueCore(id);
+}
+
+// Subscribe to future updates
+coValueCore.subscribe((core) => {
+  if (core.isAvailable()) {
+    const content = core.getCurrentContent();
+    // Handle updates...
+  }
+});
+```
+
+**Key Difference:**
+- **Subscriptions**: Use `getCoValue()` + `loadCoValueCore()` for reactive updates
+- **Reloading**: Use `await node.load()` for immediate access to persisted state
+
+---
+
 ### Auto-Loading Children
 
 When you load a CoMap with references, Jazz automatically subscribes to children:
