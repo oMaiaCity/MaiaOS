@@ -39,3 +39,6 @@ export {
 	getGlobalCache,
 	resetGlobalCache 
 } from "./services/oSubscriptionCache.js";
+
+// CoJSON Mini CRUD API (database-level wrapper)
+export { createCoJSONAPI } from "./cojson/factory.js";

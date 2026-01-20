@@ -390,7 +390,7 @@ await seedExampleCoValues(node, account, { name: "Maia User" });
 //   profile,     // Profile CoMap with ProfileSchema
 //   plainText,   // CoPlainText example
 //   stream,      // CoStream with ActivityStream schema
-//   notes        // Notes CoMap with NotesSchema
+//   notes        // Notes CoList with NotesSchema
 // }
 ```
 
@@ -399,7 +399,7 @@ await seedExampleCoValues(node, account, { name: "Maia User" });
 2. **Profile CoMap**: User profile with `ProfileSchema` in headerMeta
 3. **CoPlainText**: Example plain text storage
 4. **CoStream**: Activity stream example with `ActivityStream` schema
-5. **Notes CoMap**: Example notes with `NotesSchema`
+5. **Notes CoList**: Example notes with `NotesSchema`
 
 **Architecture:**
 
@@ -459,11 +459,13 @@ export async function seedExampleCoValues(node, account, { name = "Maia User" } 
   // 3. Create example CoValues
   const plainText = createPlainText(userGroup, "Hello from CoPlainText!", null);
   const stream = createCoStream(userGroup, "ActivityStream");
-  const notes = createCoMap(userGroup, {
-    title: "My First Note",
-    content: "This is an example note.",
-    created: new Date().toISOString()
-  }, "NotesSchema");
+  const notes = createCoList(userGroup, [
+    {
+      title: "My First Note",
+      content: "This is an example note.",
+      created: new Date().toISOString()
+    }
+  ], "NotesSchema");
   
   return { userGroup, profile, plainText, stream, notes };
 }

@@ -5,7 +5,7 @@
  * - Profile CoMap (with ProfileSchema) - created during migration
  * - CoPlainText example
  * - CoStream example  
- * - Notes CoMap (with NotesSchema)
+ * - Notes CoList (with NotesSchema)
  * - Examples CoMap (container linking all examples to account)
  * 
  * CRITICAL: Must call waitForStorageSync() after creating each CoValue!
@@ -23,6 +23,7 @@
  */
 
 import { createCoMap } from "./oMap.js";
+import { createCoList } from "./oList.js";
 import { createPlainText } from "./oPlainText.js";
 import { createCoStream } from "./oStream.js";
 
@@ -40,7 +41,7 @@ import { createCoStream } from "./oStream.js";
  * @param {RawAccount} account - The account to seed data for
  * @param {Object} options - Configuration options
  * @param {string} options.name - User's display name (default: "Maia User")
- * @returns {Promise<Object>} Created CoValues (profileGroup, profile, plainText, stream, notes, examplesMap, subscriptions)
+ * @returns {Promise<Object>} Created CoValues (profileGroup, profile, plainText, stream, notes CoList, examplesMap)
  */
 export async function seedExampleCoValues(node, account, { name = "Maia User" } = {}) {
 	console.log("🌱 Starting seeding process...");
@@ -90,15 +91,17 @@ export async function seedExampleCoValues(node, account, { name = "Maia User" } 
 		console.log("   💾 CoStream persisted to IndexedDB");
 	}
 	
-	// Step 4: Create Notes CoMap (using profile's group)
-	console.log("📦 Step 4/5: Creating Notes CoMap...");
-	const notes = createCoMap(
+	// Step 4: Create Notes CoList (using profile's group)
+	console.log("📦 Step 4/5: Creating Notes CoList...");
+	const notes = createCoList(
 		profileGroup,
-		{
-			title: "My First Note",
-			content: "This is an example note stored in a CoMap. You can edit this later!",
-			created: new Date().toISOString()
-		},
+		[
+			{
+				title: "My First Note",
+				content: "This is an example note stored in a CoList. You can edit this later!",
+				created: new Date().toISOString()
+			}
+		],
 		"NotesSchema"
 	);
 	console.log("   Notes ID:", notes.id);
@@ -118,7 +121,7 @@ export async function seedExampleCoValues(node, account, { name = "Maia User" } 
 			stream: stream.id,
 			notes: notes.id,
 		},
-		null // No schema needed for examples container
+		"ExamplesSchema" // Schema for examples container
 	);
 	console.log("   Examples CoMap ID:", examplesMap.id);
 	
@@ -140,7 +143,7 @@ export async function seedExampleCoValues(node, account, { name = "Maia User" } 
 	}
 	
 	console.log("✅ Seeding process complete!");
-	console.log("   Total CoValues created: 5 (profile already exists, + plainText, stream, notes, examplesMap)");
+	console.log("   Total CoValues created: 5 (profile already exists, + plainText, stream, notes CoList, examplesMap)");
 	console.log("   All examples owned by profile's group:", profileGroup.id);
 	console.log("   All examples linked via account.examples for automatic loading!");
 	console.log("   💾 All CoValues persisted to IndexedDB (offline-first!)");

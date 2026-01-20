@@ -20,6 +20,6 @@ export { MaiaScriptEvaluator } from "./o/engines/MaiaScriptEvaluator.js";
 export { ModuleRegistry } from "./o/engines/ModuleRegistry.js";
 export { MessageQueue } from "./o/engines/message-queue/message.queue.js";
 
-// Export MaiaDB (unified database operation engine)
-export { DBEngine } from "./o/engines/maiadb/db.engine.js";
-export { IndexedDBBackend } from "./o/engines/maiadb/backend/indexeddb.js";
+// Export DB Engine (unified database operation engine)
+export { DBEngine } from "./o/engines/db-engine/db.engine.js";
+export { IndexedDBBackend } from "./o/engines/db-engine/backend/indexeddb.js";

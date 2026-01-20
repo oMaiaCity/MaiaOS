@@ -20,8 +20,8 @@ import { ModuleRegistry } from './engines/ModuleRegistry.js';
 import { ToolEngine } from './engines/tool-engine/tool.engine.js';
 import { SubscriptionEngine } from './engines/subscription-engine/subscription.engine.js';
 // Import database operation engine
-import { DBEngine } from './engines/maiadb/db.engine.js';
-import { IndexedDBBackend } from './engines/maiadb/backend/indexeddb.js';
+import { DBEngine } from './engines/db-engine/db.engine.js';
+import { IndexedDBBackend } from './engines/db-engine/backend/indexeddb.js';
 // Import validation helper
 import { validateOrThrow, validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import all schemas for seeding

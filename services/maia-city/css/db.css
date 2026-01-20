@@ -554,14 +554,253 @@ pre {
 
 /* Plaintext, stream, list, binary content containers */
 .plaintext-content pre,
-.stream-content pre,
-.list-content pre {
+.stream-content pre {
   background: var(--slate-50);
   padding: 0.75rem;
   border-radius: 8px;
   border: 1px solid var(--slate-200);
   color: var(--slate-800);
   line-height: 1.5;
+}
+
+/* List Content - Visual Items */
+.list-content {
+  margin-top: 0.5rem;
+}
+
+.empty-list {
+  padding: 2rem;
+  text-align: center;
+  color: var(--slate-400);
+  font-style: italic;
+}
+
+.list-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.list-item-card {
+  background: var(--slate-50);
+  border: 1px solid var(--slate-200);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  transition: all 0.2s;
+}
+
+.list-item-card:hover {
+  background: #ffffff;
+  border-color: var(--slate-300);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.list-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed var(--slate-200);
+}
+
+.list-item-index {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--slate-500);
+  background: var(--slate-200);
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+}
+
+.list-item-type {
+  font-size: 0.65rem;
+  color: var(--slate-400);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.list-item-properties {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.list-item-property {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.list-item-property-key {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--slate-500);
+  min-width: 80px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.list-item-property-value {
+  flex: 1;
+  font-size: 0.8rem;
+  color: var(--slate-700);
+  word-break: break-word;
+}
+
+.list-item-value {
+  font-size: 0.85rem;
+  color: var(--slate-700);
+  padding: 0.4rem 0.6rem;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid var(--slate-200);
+}
+
+/* Value type styles */
+.boolean-value {
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.boolean-value.true {
+  color: #059669;
+  background: #ecfdf5;
+}
+
+.boolean-value.false {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.number-value {
+  color: #2563eb;
+  font-weight: 500;
+  font-family: monospace;
+}
+
+.string-value {
+  color: #059669;
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+
+.array-value {
+  color: var(--slate-500);
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+.null-value {
+  color: var(--slate-400);
+  font-style: italic;
+}
+
+.undefined-value {
+  color: var(--slate-300);
+  font-style: italic;
+}
+
+.nested-object {
+  background: #ffffff;
+  border: 1px solid var(--slate-200);
+  border-radius: 6px;
+  padding: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.nested-property {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.nested-property:last-child {
+  margin-bottom: 0;
+}
+
+.nested-key {
+  font-weight: 600;
+  color: var(--slate-500);
+  min-width: 60px;
+}
+
+.nested-value {
+  color: var(--slate-700);
+  flex: 1;
+}
+
+.nested-more {
+  font-size: 0.7rem;
+  color: var(--slate-400);
+  font-style: italic;
+  margin-top: 0.25rem;
+}
+
+.nested-depth {
+  color: var(--slate-300);
+  font-style: italic;
+}
+
+/* Header Metadata Section */
+.detail-header-meta {
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed var(--slate-200);
+}
+
+.detail-header-meta h4 {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--slate-400);
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.header-meta-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.header-meta-item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  font-size: 0.8rem;
+}
+
+.header-meta-key {
+  font-weight: 600;
+  color: var(--slate-500);
+  min-width: 100px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: 0.75rem;
+}
+
+.header-meta-value {
+  flex: 1;
+  color: var(--slate-700);
+  word-break: break-word;
+}
+
+.header-meta-json {
+  background: var(--slate-50);
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--slate-200);
+  font-size: 0.75rem;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 /* Scrollbar styling for these containers */

@@ -10,10 +10,11 @@
  */
 
 import { createMaiaOS, signInWithPasskey, signUpWithPasskey, isPRFSupported, subscribeSyncState } from "@MaiaOS/core";
-import { seedExampleCoValues as seedCoValues } from "@MaiaOS/db";
+import { seedExampleCoValues as seedCoValues, createCoJSONAPI } from "@MaiaOS/db";
 import { renderApp } from './db-view.js';
 
 let maia;
+let cojsonAPI = null; // CoJSON API instance
 let currentView = 'account'; // Current schema type being viewed
 let selectedCoValueId = null; // Selected CoValue for detail view
 let authState = {
@@ -134,6 +135,10 @@ async function signIn() {
 		// Create MaiaOS with node and account
 		maia = await createMaiaOS({ node, account, accountID });
 		window.maia = maia;
+		
+		// Create CoJSON API instance
+		cojsonAPI = createCoJSONAPI(node, account);
+		window.cojsonAPI = cojsonAPI; // Expose for debugging
 		
 		authState = {
 			signedIn: true,
@@ -282,6 +287,10 @@ async function register() {
 		maia = await createMaiaOS({ node, account, accountID });
 		window.maia = maia;
 		
+		// Create CoJSON API instance
+		cojsonAPI = createCoJSONAPI(node, account);
+		window.cojsonAPI = cojsonAPI; // Expose for debugging
+		
 		authState = {
 			signedIn: true,
 			accountID: accountID,
@@ -335,6 +344,7 @@ function signOut() {
 	authState = { signedIn: false, accountID: null };
 	syncState = { connected: false, syncing: false, error: null };
 	maia = null;
+	cojsonAPI = null;
 	
 	// DON'T clear the account flag - passkey still exists on device!
 	// User can still sign back in, so UI should show "Sign In" as primary
@@ -457,8 +467,8 @@ function selectCoValue(coId) {
 	}
 }
 
-function renderAppInternal() {
-	renderApp(maia, authState, syncState, currentView, selectedCoValueId, switchView, selectCoValue);
+async function renderAppInternal() {
+	await renderApp(maia, cojsonAPI, authState, syncState, currentView, selectedCoValueId, switchView, selectCoValue);
 }
 
 // Expose globally for onclick handlers

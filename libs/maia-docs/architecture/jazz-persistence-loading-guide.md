@@ -357,8 +357,10 @@ export async function seedExampleCoValues(node, account) {
     console.log("💾 CoStream persisted to IndexedDB");
   }
   
-  // Create Notes
-  const notes = createCoMap(profileGroup, { title: "Note" });
+  // Create Notes CoList
+  const notes = createCoList(profileGroup, [
+    { title: "My First Note", content: "This is an example note.", created: new Date().toISOString() }
+  ], "NotesSchema");
   
   // ✅ CRITICAL: Wait for IndexedDB write!
   if (node.storage) {

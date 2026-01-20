@@ -130,38 +130,38 @@ export async function createMaiaOS(options = {}) {
 					// Get the current content (the actual CoValue)
 					const content = coValueCore.getCurrentContent();
 					
+					// Access header from coValueCore.verified.header
+					const header = coValueCore.verified?.header;
+					const headerMeta = header?.meta || null;
+					const schema = headerMeta?.$schema || null;
+					const createdAt = header?.createdAt || null;
+					
+					// Get keys count (only for CoMaps)
+					let keysCount = 'N/A';
+					if (content && content.keys && typeof content.keys === 'function') {
+						try {
+							const keys = content.keys();
+							keysCount = keys.length;
+						} catch (e) {
+							// Ignore
+						}
+					}
+					
+					// Get type from content
+					const type = content?.type || 'unknown';
+					
+					// Log full header metadata
 					console.log(`🔍 CoValue ${coId}:`, {
-						type: content?.type,
+						id: coId,
+						type: type,
+						createdAt: createdAt,
+						headerMeta: headerMeta,
+						schema: schema,
+						keys: keysCount,
 						hasKeys: !!content?.keys,
 						content: content,
 						core: coValueCore
 					});
-					
-					// Access header from coValueCore.verified.header
-					const header = coValueCore.verified?.header;
-						
-						// Get type from content
-						const type = content?.type || 'unknown';
-						
-						// Get keys count (only for CoMaps)
-						let keysCount = 'N/A';
-						if (content && content.keys && typeof content.keys === 'function') {
-							try {
-								const keys = content.keys();
-								keysCount = keys.length;
-							} catch (e) {
-								console.warn("Keys error:", e);
-							}
-						}
-						
-					// Get metadata from header
-					const headerMeta = header?.meta || null;
-					
-					// Extract schema from headerMeta
-					const schema = headerMeta?.$schema || null;
-					
-					// Get created timestamp
-					const createdAt = header?.createdAt || null;
 					
 					// Extract special content based on type
 					let specialContent = null;
@@ -394,7 +394,20 @@ export async function createMaiaOS(options = {}) {
 					}
 				}
 				
-				console.log("🔍 CoValue detail:", detail);
+				// Log full header metadata
+				console.log("🔍 CoValue detail:", {
+					id: detail.id,
+					type: detail.type,
+					createdAt: detail.createdAt,
+					headerMeta: detail.headerMeta,
+					schema: detail.headerMeta?.$schema || null,
+					properties: detail.properties.length,
+					specialContent: detail.specialContent ? {
+						type: detail.specialContent.type,
+						itemCount: detail.specialContent.itemCount || detail.specialContent.length || detail.specialContent.size || 'N/A'
+					} : null,
+					fullDetail: detail
+				});
 				return detail;
 			} catch (error) {
 				console.error(`Failed to get CoValue detail for ${coId}:`, error);
