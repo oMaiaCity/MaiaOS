@@ -7,6 +7,7 @@
  * - CoStream example  
  * - Notes CoList (with NotesSchema)
  * - Examples CoMap (container linking all examples to account)
+ * - PureJsonSchema CoMap (demonstrating all 7 JSON Schema types)
  * 
  * CRITICAL: Must call waitForStorageSync() after creating each CoValue!
  * This ensures CoValues are persisted to IndexedDB before the function returns.
@@ -26,6 +27,8 @@ import { createCoMap } from "./oMap.js";
 import { createCoList } from "./oList.js";
 import { createPlainText } from "./oPlainText.js";
 import { createCoStream } from "./oStream.js";
+import { getSharedValidationEngine } from "../schemas/validation-singleton.js";
+import { getAllSchemas } from "../schemas/registry.js";
 
 /**
  * Seed example CoValues for a new account
@@ -46,8 +49,29 @@ import { createCoStream } from "./oStream.js";
 export async function seedExampleCoValues(node, account, { name = "Maia User" } = {}) {
 	console.log("🌱 Starting seeding process...");
 	
+	// Get shared validation engine (already initialized and schemas registered)
+	console.log("🔍 Getting shared validation engine...");
+	const validationEngine = await getSharedValidationEngine();
+	
+	// Validate all schemas before seeding (double-check)
+	console.log("🔍 Validating schemas before seeding...");
+	const allSchemas = getAllSchemas();
+	
+	// PASS 1: Validate all schemas against meta-schema
+	for (const [schemaName, schema] of Object.entries(allSchemas)) {
+		const result = await validationEngine.validateSchema(schemaName, schema);
+		if (!result.valid) {
+			const errorDetails = result.errors
+				.map(err => `  - ${err.instancePath}: ${err.message}`)
+				.join('\n');
+			console.error(`❌ Schema '${schemaName}' failed meta schema validation:\n${errorDetails}`);
+			throw new Error(`Schema '${schemaName}' is not valid JSON Schema`);
+		}
+	}
+	console.log("✅ All schemas validated against meta-schema");
+	
 	// Step 1: Get existing profile and its group (created during migration)
-	console.log("📦 Step 1/5: Getting existing profile group...");
+	console.log("📦 Step 1/6: Getting existing profile group...");
 	const profileId = account.get("profile");
 	if (!profileId) {
 		throw new Error("Profile not found! Migration must create profile first.");
@@ -66,11 +90,23 @@ export async function seedExampleCoValues(node, account, { name = "Maia User" } 
 	console.log("   ✅ Reusing existing profile group for all examples");
 	
 	// Step 2: Create CoPlainText example (using profile's group)
-	console.log("📦 Step 2/5: Creating CoPlainText example...");
-	const plainText = createPlainText(
+	console.log("📦 Step 2/6: Creating CoPlainText example...");
+	const plainTextContent = "Hello from CoPlainText! This is an example of plain text storage in MaiaOS.";
+	
+	// Validate plain text data against TextSchema
+	const textValidation = await validationEngine.validateData("TextSchema", plainTextContent);
+	if (!textValidation.valid) {
+		const errorDetails = textValidation.errors
+			.map(err => `  - ${err.instancePath}: ${err.message}`)
+			.join('\n');
+		console.error(`❌ Plain text data failed validation:\n${errorDetails}`);
+		throw new Error(`Plain text data is not valid against TextSchema`);
+	}
+	
+	const plainText = await createPlainText(
 		profileGroup,
-		"Hello from CoPlainText! This is an example of plain text storage in MaiaOS.",
-		null
+		plainTextContent,
+		"TextSchema"
 	);
 	console.log("   CoPlainText ID:", plainText.id);
 	
@@ -82,7 +118,7 @@ export async function seedExampleCoValues(node, account, { name = "Maia User" } 
 	
 	// Step 3: Create CoStream example (using profile's group)
 	console.log("📦 Step 3/5: Creating CoStream example...");
-	const stream = createCoStream(profileGroup, "ActivityStream");
+	const stream = createCoStream(profileGroup, "ActivityStreamSchema");
 	console.log("   CoStream ID:", stream.id);
 	
 	// ✅ CRITICAL: Wait for IndexedDB write to complete (offline-first pattern)
@@ -92,16 +128,28 @@ export async function seedExampleCoValues(node, account, { name = "Maia User" } 
 	}
 	
 	// Step 4: Create Notes CoList (using profile's group)
-	console.log("📦 Step 4/5: Creating Notes CoList...");
-	const notes = createCoList(
+	console.log("📦 Step 4/6: Creating Notes CoList...");
+	const notesData = [
+		{
+			title: "My First Note",
+			content: "This is an example note stored in a CoList. You can edit this later!",
+			created: new Date().toISOString()
+		}
+	];
+	
+	// Validate notes data against NotesSchema
+	const notesValidation = await validationEngine.validateData("NotesSchema", notesData);
+	if (!notesValidation.valid) {
+		const errorDetails = notesValidation.errors
+			.map(err => `  - ${err.instancePath}: ${err.message}`)
+			.join('\n');
+		console.error(`❌ Notes data failed validation:\n${errorDetails}`);
+		throw new Error(`Notes data is not valid against NotesSchema`);
+	}
+	
+	const notes = await createCoList(
 		profileGroup,
-		[
-			{
-				title: "My First Note",
-				content: "This is an example note stored in a CoList. You can edit this later!",
-				created: new Date().toISOString()
-			}
-		],
+		notesData,
 		"NotesSchema"
 	);
 	console.log("   Notes ID:", notes.id);
@@ -112,15 +160,67 @@ export async function seedExampleCoValues(node, account, { name = "Maia User" } 
 		console.log("   💾 Notes persisted to IndexedDB");
 	}
 	
-	// Step 5: Create Examples CoMap and link to account (CRITICAL for Jazz lazy-loading!)
-	console.log("📦 Step 5/5: Creating Examples CoMap and linking to account...");
-	const examplesMap = createCoMap(
-		profileGroup,
-		{
-			plainText: plainText.id,
-			stream: stream.id,
-			notes: notes.id,
+	// Step 5: Create PureJsonSchema CoMap (demonstrating all 7 JSON Schema types)
+	console.log("📦 Step 5/6: Creating PureJsonSchema CoMap...");
+	const pureJsonData = {
+		string: "Hello, World!",
+		number: 42.5,
+		integer: 100,
+		boolean: true,
+		nullValue: null,
+		object: {
+			nested: "value",
+			count: 5
 		},
+		array: [1, 2, 3, "four", true],
+		author: profile.id // Co-id reference to Profile (demonstrates $ref)
+	};
+	
+	// Validate PureJsonSchema data before creating
+	const pureJsonValidation = await validationEngine.validateData("PureJsonSchema", pureJsonData);
+	if (!pureJsonValidation.valid) {
+		const errorDetails = pureJsonValidation.errors
+			.map(err => `  - ${err.instancePath}: ${err.message}`)
+			.join('\n');
+		console.error(`❌ PureJsonSchema data failed validation:\n${errorDetails}`);
+		throw new Error(`PureJsonSchema data is not valid`);
+	}
+	
+	const pureJsonMap = await createCoMap(
+		profileGroup,
+		pureJsonData,
+		"PureJsonSchema"
+	);
+	console.log("   PureJsonSchema CoMap ID:", pureJsonMap.id);
+	
+	// ✅ CRITICAL: Wait for IndexedDB write to complete
+	if (node.storage) {
+		await node.syncManager.waitForStorageSync(pureJsonMap.id);
+		console.log("   💾 PureJsonSchema persisted to IndexedDB");
+	}
+	
+	// Step 6: Create Examples CoMap and link to account (CRITICAL for Jazz lazy-loading!)
+	console.log("📦 Step 6/6: Creating Examples CoMap and linking to account...");
+	const examplesData = {
+		plainText: plainText.id,
+		stream: stream.id,
+		notes: notes.id,
+		pureJson: pureJsonMap.id
+	};
+	
+	// Validate examples data against ExamplesSchema
+	const examplesValidation = await validationEngine.validateData("ExamplesSchema", examplesData);
+	if (!examplesValidation.valid) {
+		const errorDetails = examplesValidation.errors
+			.map(err => `  - ${err.instancePath}: ${err.message}`)
+			.join('\n');
+		console.error(`❌ Examples data failed validation:\n${errorDetails}`);
+		throw new Error(`Examples data is not valid against ExamplesSchema`);
+	}
+	
+	const examplesMap = await createCoMap(
+		profileGroup,
+		examplesData,
 		"ExamplesSchema" // Schema for examples container
 	);
 	console.log("   Examples CoMap ID:", examplesMap.id);
@@ -143,7 +243,7 @@ export async function seedExampleCoValues(node, account, { name = "Maia User" } 
 	}
 	
 	console.log("✅ Seeding process complete!");
-	console.log("   Total CoValues created: 5 (profile already exists, + plainText, stream, notes CoList, examplesMap)");
+	console.log("   Total CoValues created: 6 (profile already exists, + plainText, stream, notes CoList, pureJsonMap, examplesMap)");
 	console.log("   All examples owned by profile's group:", profileGroup.id);
 	console.log("   All examples linked via account.examples for automatic loading!");
 	console.log("   💾 All CoValues persisted to IndexedDB (offline-first!)");
@@ -154,6 +254,7 @@ export async function seedExampleCoValues(node, account, { name = "Maia User" } 
 		plainText,
 		stream,
 		notes,
+		pureJsonMap,   // PureJsonSchema CoMap
 		examplesMap,   // Container linking examples to account
 	};
 }

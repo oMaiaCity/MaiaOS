@@ -4,6 +4,8 @@
  */
 
 import { truncate } from './utils.js'
+// Import getSchema from schemas registry (not the meta utility)
+import { getSchema } from '../../libs/maia-db/src/schemas/index.js'
 
 export async function renderApp(maia, cojsonAPI, authState, syncState, currentView, selectedCoValueId, switchView, selectCoValue) {
 	// Get data based on current view
@@ -56,100 +58,120 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 	let tableContent = '';
 	
 	if (currentView === 'account') {
-		// Account view - show properties from cojson query result
+		// Account view - show properties from cojson query result using card-based design
 		// Data structure: {id, type, schema, properties: [{key, value, type}], ...}
-		let propertyRows = '';
+		let propertyItems = '';
 		
 		if (data.error) {
-			propertyRows = `<tr><td colspan="3">Error: ${data.error}</td></tr>`;
+			propertyItems = '<div class="empty-state">Error: ' + data.error + '</div>';
 		} else if (data.properties && Array.isArray(data.properties)) {
+			// Get schema definition for property labels
+			const schemaDef = data.schema ? getSchema(data.schema) : null;
+			
 			// Use properties from cojson query result
-			propertyRows = data.properties.map(prop => {
+			propertyItems = data.properties.map(prop => {
 				const value = prop.value;
 				const propType = prop.type;
 				const key = prop.key;
 				
-				if (propType === 'co-id') {
-					const truncatedId = truncate(value, 12);
-					return `
-						<tr class="clickable-row ${selectedCoValueId === value ? 'selected' : ''}" onclick="selectCoValue('${value}')">
-							<td class="prop-name">${truncate(key, 20)}</td>
-							<td class="prop-type">co-id</td>
-							<td class="prop-value">
-								<code class="co-id" title="${value}">${truncatedId}</code>
-							</td>
-						</tr>
-					`;
-				} else if (propType === 'key') {
-					const truncatedKey = truncate(value, 30);
-					return `
-						<tr>
-							<td class="prop-name">${truncate(key, 20)}</td>
-							<td class="prop-type">key</td>
-							<td class="prop-value"><code class="key-value" title="${value}">${truncatedKey}</code></td>
-						</tr>
-					`;
-				} else if (propType === 'sealed') {
-					return `
-						<tr>
-							<td class="prop-name" title="${key}">${truncate(key, 20)}</td>
-							<td class="prop-type">sealed</td>
-							<td class="prop-value"><code class="sealed-value">sealed_***</code></td>
-						</tr>
-					`;
-				} else {
-					const truncatedValue = truncate(String(value), 30);
-					return `
-						<tr>
-							<td class="prop-name">${truncate(key, 20)}</td>
-							<td class="prop-type">${propType}</td>
-							<td class="prop-value"><code title="${value}">${truncatedValue}</code></td>
-						</tr>
-					`;
-				}
+				// Get property label from schema definition
+				const propSchema = schemaDef?.properties?.[key];
+				const propLabel = propSchema?.title || key; // Use schema title if available
+				
+				// Format type badge
+				const typeBadge = propType || 'unknown';
+				const typeClass = typeBadge.replace(/-/g, ''); // Remove hyphens for CSS class
+				
+				const isClickable = propType === 'co-id';
+				const isSelected = isClickable && selectedCoValueId === value;
+				
+				return `
+					<button 
+						type="button"
+						class="list-item-card property-item-button ${isClickable ? 'hoverable' : ''} ${isSelected ? 'selected' : ''}"
+						${isClickable ? `onclick="selectCoValue('${value}')"` : ''}
+					>
+						<div class="flex justify-between items-center gap-2">
+							<!-- Left side: Property Key -->
+							<div class="flex items-center gap-1.5 flex-shrink-0 min-w-0">
+								<span class="text-xs font-medium text-slate-500 uppercase tracking-wide truncate" title="${key}">
+									${propLabel}
+								</span>
+							</div>
+							
+							<!-- Right side: Value and Badge -->
+							<div class="flex items-center gap-2 flex-1 justify-end min-w-0">
+								${propType === 'co-id' ? `<code class="co-id text-xs text-slate-600 hover:underline" title="${value}">${truncate(value, 12)}</code>` :
+								  propType === 'key' ? `<code class="key-value text-xs text-slate-600" title="${value}">${truncate(value, 30)}</code>` :
+								  propType === 'sealed' ? '<code class="text-xs text-slate-600">sealed_***</code>' :
+								  propType === 'null' ? '<span class="text-xs text-slate-400 italic">null</span>' :
+								  propType === 'array' ? `<span class="text-xs text-slate-600 break-all min-w-0 text-right">${value}</span>` :
+								  `<span class="text-xs text-slate-600 break-all min-w-0 text-right">${truncate(String(value), 50)}</span>`}
+								<span class="badge badge-type badge-${typeClass}">${typeBadge}</span>
+								${isClickable ? `
+									<svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+									</svg>
+								` : ''}
+							</div>
+						</div>
+					</button>
+				`;
 			}).join('');
 		} else {
 			// Fallback: empty or no properties
-			propertyRows = '<tr><td colspan="3">No properties available</td></tr>';
+			propertyItems = '<div class="empty-state">No properties available</div>';
 		}
 		
 		tableContent = `
-				<table class="db-table">
-					<thead>
-						<tr>
-							<th>Property</th>
-							<th>Type</th>
-							<th>Value</th>
-						</tr>
-					</thead>
-				<tbody>
-					${propertyRows}
-				</tbody>
-			</table>
+			<div class="list-view-container">
+				${propertyItems}
+			</div>
 		`;
 	} else if (currentView === 'all') {
 		// AllCoValues view - show all CoValues from cojson query
-		const coValueRows = Array.isArray(data) ? data.map(cv => `
-			<tr class="clickable-row ${selectedCoValueId === cv.id ? 'selected' : ''}" onclick="selectCoValue('${cv.id}')">
-				<td class="prop-type">${cv.type || 'unknown'}</td>
-				<td class="prop-value"><code class="co-id" title="${cv.id}">${truncate(cv.id, 12)}</code></td>
-				<td class="prop-value">${cv.schema || '—'}</td>
-			</tr>
-		`).join('') : '<tr><td colspan="3">No CoValues found</td></tr>';
+		// Use card-based design like legacy ListItem
+		const coValueItems = Array.isArray(data) ? data.map(cv => {
+			// Get schema definition for property labels
+			const schemaDef = cv.schema ? getSchema(cv.schema) : null;
+			
+			// Format type badge
+			const typeBadge = cv.type || 'unknown';
+			const typeClass = typeBadge.replace(/-/g, ''); // Remove hyphens for CSS class
+			
+			return `
+				<button 
+					type="button"
+					class="list-item-card clickable-item ${selectedCoValueId === cv.id ? 'selected' : ''}"
+					onclick="selectCoValue('${cv.id}')"
+				>
+					<div class="flex justify-between items-center gap-2">
+						<!-- Left side: Schema -->
+						<div class="flex items-center gap-2 flex-shrink-0 min-w-0">
+							<span class="text-xs font-medium text-slate-500 uppercase tracking-wide truncate">
+								${cv.schema || '—'}
+							</span>
+						</div>
+						
+						<!-- Right side: CoValue ID, Arrow, and Badge -->
+						<div class="flex items-center gap-2 flex-1 justify-end min-w-0">
+							<code class="co-id text-xs text-slate-600 hover:underline" title="${cv.id}">
+								${truncate(cv.id, 12)}
+							</code>
+							<svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+							</svg>
+							<span class="badge badge-type badge-${typeClass}">${typeBadge}</span>
+						</div>
+					</div>
+				</button>
+			`;
+		}).join('') : '<div class="empty-state">No CoValues found</div>';
 		
 		tableContent = `
-			<table class="db-table">
-				<thead>
-					<tr>
-						<th>Type</th>
-						<th>CoValue ID</th>
-						<th>Schema</th>
-					</tr>
-				</thead>
-				<tbody>
-					${coValueRows}
-				</tbody>
-			</table>
+			<div class="list-view-container">
+				${coValueItems}
+			</div>
 		`;
 	}
 	
@@ -251,20 +273,49 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 							<div class="detail-properties">
 								<h4>Properties (${detailData.properties.length})</h4>
 								<div class="property-list">
-									${detailData.properties.map(prop => `
-										<div class="property-item">
-											<div class="property-header">
-												<span class="property-type">${prop.type}</span>
-												<span class="property-key" title="${prop.key}">${truncate(prop.key, 30)}</span>
-											</div>
-											<div class="property-value-box">
-												${prop.type === 'sealed' ? '<code>sealed_***</code>' : 
-												  prop.type === 'co-id' ? `<code class="co-id">${truncate(prop.value, 12)}</code>` :
-												  prop.type === 'key' ? `<code class="key-value">${prop.value}</code>` :
-												  `<code>${prop.value}</code>`}
-											</div>
-										</div>
-									`).join('')}
+									${detailData.properties.map(prop => {
+										// Get schema definition for property labels
+										const schemaDef = detailData.schema ? getSchema(detailData.schema) : null;
+										const propSchema = schemaDef?.properties?.[prop.key];
+										const propLabel = propSchema?.title || prop.key; // Use schema title if available
+										
+										// Format type badge
+										const typeBadge = prop.type || 'unknown';
+										const typeClass = typeBadge.replace(/-/g, ''); // Remove hyphens for CSS class
+										
+										return `
+											<button 
+												type="button"
+												class="list-item-card property-item-button ${prop.type === 'co-id' ? 'hoverable' : ''}"
+												${prop.type === 'co-id' ? `onclick="selectCoValue('${prop.value}')"` : ''}
+											>
+												<div class="flex justify-between items-center gap-2">
+													<!-- Left side: Property Key -->
+													<div class="flex items-center gap-1.5 flex-shrink-0 min-w-0">
+														<span class="text-xs font-medium text-slate-500 uppercase tracking-wide truncate" title="${prop.key}">
+															${propLabel}
+														</span>
+													</div>
+													
+													<!-- Right side: Value and Badge -->
+													<div class="flex items-center gap-2 flex-1 justify-end min-w-0">
+														${prop.type === 'sealed' ? '<code class="text-xs text-slate-600">sealed_***</code>' : 
+														  prop.type === 'co-id' ? `<code class="co-id text-xs text-slate-600 hover:underline" title="${prop.value}">${truncate(prop.value, 12)}</code>` :
+														  prop.type === 'key' ? `<code class="key-value text-xs text-slate-600" title="${prop.value}">${prop.value}</code>` :
+														  prop.type === 'null' ? '<span class="text-xs text-slate-400 italic">null</span>' :
+														  prop.type === 'array' ? `<span class="text-xs text-slate-600 break-all min-w-0 text-right">${prop.value}</span>` :
+														  `<span class="text-xs text-slate-600 break-all min-w-0 text-right">${String(prop.value).length > 50 ? truncate(String(prop.value), 50) : String(prop.value)}</span>`}
+														<span class="badge badge-type badge-${typeClass}">${typeBadge}</span>
+														${prop.type === 'co-id' ? `
+															<svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+															</svg>
+														` : ''}
+													</div>
+												</div>
+											</button>
+										`;
+									}).join('')}
 								</div>
 							</div>
 							` : ''}

@@ -283,6 +283,236 @@
   border: 1px solid var(--slate-200);
 }
 
+/* List View Container - Card-based design */
+.list-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+/* List Item Card - Legacy style */
+.list-item-card {
+  width: 100%;
+  text-align: left;
+  background: #f1f5f9; /* slate-100 */
+  border: 1px solid #ffffff;
+  border-radius: 1rem; /* rounded-2xl */
+  padding: 0.75rem; /* p-3 */
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.02);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.list-item-card:hover {
+  background: #f8fafc; /* slate-50 */
+  border-color: #cbd5e1; /* slate-300 */
+}
+
+.list-item-card.selected {
+  background: #ffffff;
+  border-color: #94a3b8; /* slate-400 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.list-item-card.hoverable:hover {
+  border-color: #cbd5e1;
+}
+
+.property-item-button {
+  width: 100%;
+}
+
+/* Badge Styles */
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.375rem; /* 6px */
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.badge-type {
+  background: #e2e8f0; /* slate-200 */
+  color: #475569; /* slate-600 */
+}
+
+.badge-comap {
+  background: #dbeafe; /* blue-100 */
+  color: #1e40af; /* blue-800 */
+}
+
+.badge-colist {
+  background: #fce7f3; /* pink-100 */
+  color: #9f1239; /* rose-900 */
+}
+
+.badge-cotext {
+  background: #dcfce7; /* green-100 */
+  color: #166534; /* green-800 */
+}
+
+.badge-costream {
+  background: #fef3c7; /* amber-100 */
+  color: #92400e; /* amber-800 */
+}
+
+.badge-coid {
+  background: #e0e7ff; /* indigo-100 */
+  color: #3730a3; /* indigo-800 */
+}
+
+.badge-string {
+  background: #dcfce7; /* green-100 */
+  color: #166534; /* green-800 */
+}
+
+.badge-number {
+  background: #dbeafe; /* blue-100 */
+  color: #1e40af; /* blue-800 */
+}
+
+.badge-boolean {
+  background: #fce7f3; /* pink-100 */
+  color: #9f1239; /* rose-900 */
+}
+
+.badge-object {
+  background: #e2e8f0; /* slate-200 */
+  color: #475569; /* slate-600 */
+}
+
+.badge-array {
+  background: #fef3c7; /* amber-100 */
+  color: #92400e; /* amber-800 */
+}
+
+.badge-null {
+  background: #f1f5f9; /* slate-100 */
+  color: #64748b; /* slate-500 */
+  font-style: italic;
+}
+
+.badge-sealed {
+  background: #f1f5f9; /* slate-100 */
+  color: #64748b; /* slate-500 */
+}
+
+.badge-key {
+  background: #fed7aa; /* orange-200 */
+  color: #9a3412; /* orange-800 */
+}
+
+/* Empty State */
+.empty-state {
+  padding: 2rem;
+  text-align: center;
+  color: #94a3b8; /* slate-400 */
+  font-style: italic;
+}
+
+/* Flex utilities */
+.flex {
+  display: flex;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.gap-1\.5 {
+  gap: 0.375rem;
+}
+
+.flex-shrink-0 {
+  flex-shrink: 0;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
+.justify-end {
+  justify-content: flex-end;
+}
+
+.text-xs {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.text-slate-500 {
+  color: #64748b;
+}
+
+.uppercase {
+  text-transform: uppercase;
+}
+
+.tracking-wide {
+  letter-spacing: 0.025em;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-slate-600 {
+  color: #475569;
+}
+
+.hover\:underline:hover {
+  text-decoration: underline;
+}
+
+.shrink-0 {
+  flex-shrink: 0;
+}
+
+.w-3 {
+  width: 0.75rem;
+}
+
+.h-3 {
+  height: 0.75rem;
+}
+
+.text-slate-400 {
+  color: #94a3b8;
+}
+
+.break-all {
+  word-break: break-all;
+}
+
+.text-right {
+  text-align: right;
+}
+
 /* Data Table - "Pill" Style Rows */
 .db-table {
   width: 100%;

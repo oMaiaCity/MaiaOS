@@ -1,13 +1,13 @@
 /**
  * Create Operation - Create new CoValues
  * 
- * Supports unified type syntax: "map", "list", "text", "stream"
- * - map: cojson({op: 'create', coType: 'map', group: group, data: {...}, schema: 'SchemaName'})
- * - list: cojson({op: 'create', coType: 'list', group: group, data: [...], schema: 'SchemaName'})
- * - text: cojson({op: 'create', coType: 'text', group: group, data: 'text', schema: 'SchemaName'})
- * - stream: cojson({op: 'create', coType: 'stream', group: group, schema: 'SchemaName'})
+ * Supports co-type syntax: "comap", "colist", "cotext", "costream"
+ * - comap: cojson({op: 'create', coType: 'comap', group: group, data: {...}, schema: 'SchemaName'})
+ * - colist: cojson({op: 'create', coType: 'colist', group: group, data: [...], schema: 'SchemaName'})
+ * - cotext: cojson({op: 'create', coType: 'cotext', group: group, data: 'text', schema: 'SchemaName'})
+ * - costream: cojson({op: 'create', coType: 'costream', group: group, schema: 'SchemaName'})
  * 
- * Also accepts legacy types: "co-map", "co-list", "co-text", "co-stream" for backwards compatibility
+ * Also accepts simplified types: "map", "list", "text", "stream" for convenience (normalized to co-types)
  */
 
 import { createCoMap } from '../../services/oMap.js';
@@ -23,11 +23,12 @@ export class CreateOperation {
   /**
    * Execute create operation
    * @param {Object} params
-   * @param {string} params.coType - CoValue type ('map', 'list', 'text', 'stream' or legacy 'co-map', 'co-list', 'co-text', 'co-stream')
+   * @param {string} params.coType - CoValue type ('map', 'list', 'text', 'stream' or 'comap', 'colist', 'cotext', 'costream')
    * @param {RawGroup} [params.group] - Group to create in (defaults to account's default group)
    * @param {Object|Array|string} params.data - Initial data (object for map, array for list, string for text)
-   * @param {string} [params.schema] - Schema name for headerMeta
+   * @param {string} params.schema - Schema name for headerMeta (REQUIRED - no fallbacks)
    * @returns {Promise<Object>} Created CoValue data
+   * @throws {Error} If schema is missing or validation fails
    */
   async execute(params) {
     const { coType, group, data, schema } = params;
@@ -36,16 +37,21 @@ export class CreateOperation {
       throw new Error('[CreateOperation] coType required');
     }
     
+    // STRICT: Schema is MANDATORY - no fallbacks
+    if (!schema || typeof schema !== 'string') {
+      throw new Error('[CreateOperation] Schema is REQUIRED. Provide a valid schema name (e.g., "ProfileSchema", "NotesSchema", "TextSchema")');
+    }
+    
     // Normalize type: map unified types to internal types
     let internalType = coType;
-    if (coType === 'map' || coType === 'co-map') {
-      internalType = 'co-map';
-    } else if (coType === 'list' || coType === 'co-list') {
-      internalType = 'co-list';
-    } else if (coType === 'text' || coType === 'co-text') {
-      internalType = 'co-text';
-    } else if (coType === 'stream' || coType === 'co-stream') {
-      internalType = 'co-stream';
+    if (coType === 'map' || coType === 'comap' || coType === 'co-map') {
+      internalType = 'comap';
+    } else if (coType === 'list' || coType === 'colist' || coType === 'co-list') {
+      internalType = 'colist';
+    } else if (coType === 'text' || coType === 'cotext' || coType === 'co-text') {
+      internalType = 'cotext';
+    } else if (coType === 'stream' || coType === 'costream' || coType === 'co-stream') {
+      internalType = 'costream';
     }
     
     // Use provided group or default group
@@ -57,33 +63,33 @@ export class CreateOperation {
     let coValue;
     
     switch (internalType) {
-      case 'co-map':
+      case 'comap':
         if (!data || typeof data !== 'object') {
           throw new Error('[CreateOperation] Data required for map (must be object)');
         }
-        coValue = createCoMap(targetGroup, data, schema);
+        coValue = await createCoMap(targetGroup, data, schema);
         break;
         
-      case 'co-list':
+      case 'colist':
         if (!Array.isArray(data)) {
           throw new Error('[CreateOperation] Data required for list (must be array)');
         }
-        coValue = createCoList(targetGroup, data, schema);
+        coValue = await createCoList(targetGroup, data, schema);
         break;
         
-      case 'co-text':
+      case 'cotext':
         if (typeof data !== 'string') {
           throw new Error('[CreateOperation] Data required for text (must be string)');
         }
-        coValue = createPlainText(targetGroup, data, schema);
+        coValue = await createPlainText(targetGroup, data, schema);
         break;
         
-      case 'co-stream':
+      case 'costream':
         coValue = createCoStream(targetGroup, schema);
         break;
         
       default:
-        throw new Error(`[CreateOperation] Unknown coType: ${coType}. Supported: map, list, text, stream`);
+        throw new Error(`[CreateOperation] Unknown coType: ${coType}. Supported: comap, colist, cotext, costream (or map, list, text, stream)`);
     }
     
     // Wait for storage sync (important for persistence)
@@ -99,88 +105,45 @@ export class CreateOperation {
       const header = this.backend.getHeader(coValueCore);
       const headerMeta = header?.meta || null;
       
-      // Extract basic data and normalize to unified syntax
+      // Extract basic data and normalize to co-type names (comap, cotext, costream, colist)
       const rawType = content?.type || 'unknown';
       let normalizedType = rawType;
-      if (rawType === 'coplaintext' || rawType === 'co-text') {
-        normalizedType = 'text';
-      } else if (rawType === 'colist' || rawType === 'co-list') {
-        normalizedType = 'list';
-      } else if (rawType === 'costream' || rawType === 'co-stream') {
-        normalizedType = 'stream';
-      } else if (rawType === 'comap' || rawType === 'co-map') {
-        normalizedType = 'map';
+      if (rawType === 'coplaintext' || rawType === 'co-text' || rawType === 'cotext' || rawType === 'text') {
+        normalizedType = 'cotext';
+      } else if (rawType === 'colist' || rawType === 'co-list' || rawType === 'list') {
+        normalizedType = 'colist';
+      } else if (rawType === 'costream' || rawType === 'co-stream' || rawType === 'stream') {
+        normalizedType = 'costream';
+      } else if (rawType === 'comap' || rawType === 'co-map' || rawType === 'map') {
+        normalizedType = 'comap';
       }
       
-      // Determine schema (with fake schemas for accounts/groups/text)
-      let finalSchema = schema || null;
-      if (headerMeta?.type === 'account') {
-        finalSchema = '@self';
-      } else if (rawType === 'coplaintext' || rawType === 'co-text' || normalizedType === 'text') {
-        finalSchema = '@text'; // Fake schema for co-text (leaf type)
-      } else {
-        // Check if it's a group (check multiple possible locations)
-        let isGroup = false;
-        
-        // Method 1: Check coValueCore.ruleset
-        if (coValueCore?.ruleset?.type === 'group') {
-          isGroup = true;
-        }
-        // Method 2: Check content.core.isGroup()
-        else if (content?.core?.isGroup && typeof content.core.isGroup === 'function') {
-          try {
-            isGroup = content.core.isGroup();
-          } catch (e) {
-            // Ignore
-          }
-        }
-        // Method 3: Check header.ruleset
-        else if (header?.ruleset?.type === 'group') {
-          isGroup = true;
-        }
-        // Method 4: Check if content has group methods
-        else if (content && typeof content.addMember === 'function' && typeof content.createMap === 'function') {
-          isGroup = true;
-        }
-        
-        if (isGroup) {
-          finalSchema = '@group';
-        } else {
-          finalSchema = headerMeta?.$schema || null;
-        }
-      }
-      
+      // Schema is always set from the required parameter - no fallbacks
       return {
         id: coValue.id,
         type: normalizedType,
-        schema: finalSchema,
+        schema: schema, // Always use provided schema - no fallbacks
         headerMeta: headerMeta,
         createdAt: header?.createdAt || null
       };
     }
     
-    // Fallback: return basic info with normalized type
+    // Fallback: return basic info with co-type names
     let normalizedType = coType;
-    if (coType === 'co-map' || coType === 'map') {
-      normalizedType = 'map';
-    } else if (coType === 'co-list' || coType === 'list') {
-      normalizedType = 'list';
-    } else if (coType === 'co-text' || coType === 'text') {
-      normalizedType = 'text';
-    } else if (coType === 'co-stream' || coType === 'stream') {
-      normalizedType = 'stream';
-    }
-    
-    // Determine schema for fallback (with fake schemas)
-    let fallbackSchema = schema || null;
-    if (normalizedType === 'text') {
-      fallbackSchema = '@text'; // Fake schema for co-text
+    if (coType === 'map' || coType === 'comap' || coType === 'co-map') {
+      normalizedType = 'comap';
+    } else if (coType === 'list' || coType === 'colist' || coType === 'co-list') {
+      normalizedType = 'colist';
+    } else if (coType === 'text' || coType === 'coplaintext' || coType === 'cotext' || coType === 'co-text') {
+      normalizedType = 'cotext';
+    } else if (coType === 'stream' || coType === 'costream' || coType === 'co-stream') {
+      normalizedType = 'costream';
     }
     
     return {
       id: coValue.id,
       type: normalizedType,
-      schema: fallbackSchema
+      schema: schema // Always use provided schema - no fallbacks
     };
   }
 }

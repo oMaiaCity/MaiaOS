@@ -43,57 +43,57 @@ export class UpdateOperation {
     const content = this.backend.getCurrentContent(coValueCore);
     const rawType = content?.type || 'unknown';
     
-    // Normalize type to unified syntax for internal checks
-    // But we still need to check against raw types for actual operations
+    // Normalize type to co-type names (comap, cotext, costream, colist)
     let normalizedType = rawType;
-    if (rawType === 'coplaintext' || rawType === 'co-text') {
-      normalizedType = 'text';
-    } else if (rawType === 'colist' || rawType === 'co-list') {
-      normalizedType = 'list';
-    } else if (rawType === 'costream' || rawType === 'co-stream') {
-      normalizedType = 'stream';
-    } else if (rawType === 'comap' || rawType === 'co-map') {
-      normalizedType = 'map';
+    if (rawType === 'coplaintext' || rawType === 'co-text' || rawType === 'cotext' || rawType === 'text') {
+      normalizedType = 'cotext';
+    } else if (rawType === 'colist' || rawType === 'co-list' || rawType === 'list') {
+      normalizedType = 'colist';
+    } else if (rawType === 'costream' || rawType === 'co-stream' || rawType === 'stream') {
+      normalizedType = 'costream';
+    } else if (rawType === 'comap' || rawType === 'co-map' || rawType === 'map') {
+      normalizedType = 'comap';
     }
     
     // Use rawType for actual operations (content methods expect raw types)
     switch (rawType) {
-      case 'co-map':
       case 'comap':
+      case 'co-map':
         // Update CoMap properties
         if (typeof data !== 'object') {
-          throw new Error('[UpdateOperation] Data must be object for co-map');
+          throw new Error('[UpdateOperation] Data must be object for comap');
         }
         for (const [key, value] of Object.entries(data)) {
           content.set(key, value);
         }
         break;
         
-      case 'co-list':
       case 'colist':
+      case 'co-list':
         // Update CoList item at index
         if (index === undefined) {
-          throw new Error('[UpdateOperation] Index required for co-list updates');
+          throw new Error('[UpdateOperation] Index required for colist updates');
         }
         if (typeof data !== 'object') {
-          throw new Error('[UpdateOperation] Data must be object for co-list item');
+          throw new Error('[UpdateOperation] Data must be object for colist item');
         }
         // CoList doesn't have direct set by index, need to delete and insert
         // For now, throw error - this needs more complex logic
         throw new Error('[UpdateOperation] CoList updates not yet implemented (requires delete+insert)');
         
-      case 'co-text':
+      case 'cotext':
       case 'coplaintext':
+      case 'co-text':
         // Replace CoText content
         if (typeof data !== 'string') {
-          throw new Error('[UpdateOperation] Data must be string for co-text');
+          throw new Error('[UpdateOperation] Data must be string for cotext');
         }
         // CoPlainText doesn't have direct replace, need to clear and append
         // For now, throw error - this needs more complex logic
         throw new Error('[UpdateOperation] CoText updates not yet implemented (requires clear+append)');
         
-      case 'co-stream':
       case 'costream':
+      case 'co-stream':
         throw new Error('[UpdateOperation] CoStream is append-only, cannot update');
         
       default:

@@ -2,7 +2,10 @@
  * Metadata utility for setting schema references in headerMeta
  * 
  * Uses cojson's native headerMeta field instead of wrapper CoMaps
+ * Now uses schema registry to validate schema names
  */
+
+import { hasSchema as hasSchemaInRegistry, getSchema as getSchemaFromRegistry } from '../schemas/registry.js';
 
 /**
  * Create metadata object with schema reference
@@ -10,8 +13,13 @@
  * @returns {JsonObject} Metadata object for headerMeta
  */
 export function createSchemaMeta(schemaName) {
+	// Validate schema exists in registry
+	if (!hasSchemaInRegistry(schemaName)) {
+		console.warn(`[createSchemaMeta] Schema '${schemaName}' not found in registry`);
+	}
+	
 	return {
-		$schema: schemaName  // Hardcoded string for now, will be co-id later
+		$schema: schemaName  // Schema name (will be resolved to schema $id or co-id later)
 	};
 }
 

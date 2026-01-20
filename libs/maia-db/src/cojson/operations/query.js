@@ -149,13 +149,13 @@ export class QueryOperation {
         // Check if this CoValue matches the schema
         let matches = false;
         
-        if (schema === '@self') {
-          // Match account
+        if (schema === 'AccountSchema' || schema === '@self') {
+          // Match account (support both old @self and new AccountSchema)
           matches = headerMeta?.type === 'account';
-        } else if (schema === '@text') {
-          // Match co-text (leaf type)
-          matches = rawType === 'coplaintext' || rawType === 'co-text';
-        } else if (schema === '@group') {
+        } else if (schema === 'TextSchema' || schema === '@text') {
+          // Match cotext (support both old @text and new TextSchema)
+          matches = rawType === 'coplaintext' || rawType === 'co-text' || rawType === 'cotext' || coType === 'cotext';
+        } else if (schema === 'GroupSchema' || schema === '@group') {
           // Match groups (but not account)
           // Check multiple possible locations for group detection
           let isGroup = false;
@@ -183,7 +183,7 @@ export class QueryOperation {
           
           matches = isGroup && headerMeta?.type !== 'account';
         } else {
-          // Match by headerMeta.$schema
+          // Match by headerMeta.$schema (real schema name)
           matches = headerMeta?.$schema === schema;
         }
         
@@ -214,27 +214,30 @@ export class QueryOperation {
     // Get type from content
     const rawType = content?.type || 'unknown';
     
-    // Normalize type to unified syntax: "list", "text", "stream", "map"
+    // Normalize type to full co-type names: "co-map", "co-list", "co-text", "co-stream"
     let coType = rawType;
-    if (rawType === 'coplaintext' || rawType === 'co-text') {
-      coType = 'text';
+    if (rawType === 'coplaintext' || rawType === 'co-text' || rawType === 'cotext') {
+      coType = 'co-text';
     } else if (rawType === 'colist' || rawType === 'co-list') {
-      coType = 'list';
+      coType = 'co-list';
     } else if (rawType === 'costream' || rawType === 'co-stream') {
-      coType = 'stream';
+      coType = 'co-stream';
     } else if (rawType === 'comap' || rawType === 'co-map') {
-      coType = 'map';
+      coType = 'co-map';
     }
     
-    // Determine schema (with fake schemas for accounts/groups/text)
-    let schema = null;
-    if (headerMeta?.type === 'account') {
-      schema = '@self'; // Fake schema for account
-    } else if (rawType === 'coplaintext' || rawType === 'co-text' || coType === 'text') {
-      schema = '@text'; // Fake schema for co-text (leaf type)
-    } else {
+    // Determine schema from headerMeta (real schema names, no fake schemas)
+    // Accounts and groups will have their schemas set during migration
+    let schema = headerMeta?.$schema || null;
+    
+    // Special handling for accounts (they should have AccountSchema)
+    if (headerMeta?.type === 'account' && !schema) {
+      schema = 'AccountSchema'; // Default schema name for accounts
+    }
+    
+    // Special handling for groups (they should have GroupSchema)
+    if (!schema) {
       // Check if it's a group
-      // Groups have ruleset.type === 'group' - check multiple possible locations
       let isGroup = false;
       
       // Method 1: Check coValueCore.ruleset (if directly accessible)
@@ -259,11 +262,14 @@ export class QueryOperation {
         isGroup = true;
       }
       
-      if (isGroup) {
-        schema = '@group'; // Fake schema for group
-      } else {
-        schema = headerMeta?.$schema || null; // Real schema
+      if (isGroup && headerMeta?.type !== 'account') {
+        schema = 'GroupSchema'; // Default schema name for groups
       }
+    }
+    
+    // Special handling for cotext (they should have TextSchema)
+    if ((rawType === 'coplaintext' || rawType === 'co-text' || rawType === 'cotext' || coType === 'cotext') && !schema) {
+      schema = 'TextSchema'; // Default schema name for cotext
     }
     
     // Get keys count (only for CoMaps)
@@ -347,7 +353,16 @@ export class QueryOperation {
             } else if (typeof value === 'string' && value.startsWith('sealed_')) {
               type = 'sealed';
               displayValue = 'sealed_***';
+            } else if (value === null) {
+              // Check for null first (before object check)
+              type = 'null';
+              displayValue = null;
+            } else if (Array.isArray(value)) {
+              // Check for array before object check
+              type = 'array';
+              displayValue = JSON.stringify(value);
             } else if (typeof value === 'object' && value !== null) {
+              type = 'object';
               displayValue = JSON.stringify(value);
             }
             

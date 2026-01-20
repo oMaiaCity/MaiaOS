@@ -42,6 +42,7 @@
       "name": "@MaiaOS/db",
       "version": "0.1.23",
       "dependencies": {
+        "@MaiaOS/schemata": "workspace:*",
         "cojson": "^0.19.21",
       },
     },

@@ -14,6 +14,8 @@
  */
 
 import { createSchemaMeta } from "../utils/meta.js";
+import { getSharedValidationEngine } from "../schemas/validation-singleton.js";
+import { getAllSchemas } from "../schemas/registry.js";
 
 /**
  * Main schema migration for account initialization
@@ -31,6 +33,9 @@ export async function schemaMigration(account, node, creationProps) {
 	
 	console.log("🔄 Running schema migration for account:", name);
 	
+	// Get shared validation engine (already initialized and schemas registered)
+	const validationEngine = await getSharedValidationEngine();
+	
 	// 1. Create profileGroup
 	// Note: Groups don't support meta parameter in createGroup()
 	// so we can't set headerMeta on Group creation
@@ -42,8 +47,20 @@ export async function schemaMigration(account, node, creationProps) {
 	
 	// 2. Create Profile CoMap with headerMeta
 	const profileMeta = createSchemaMeta("ProfileSchema");
+	const profileData = { name };
+	
+	// Validate profile data against schema before creating
+	const profileValidation = await validationEngine.validateData("ProfileSchema", profileData);
+	if (!profileValidation.valid) {
+		const errorDetails = profileValidation.errors
+			.map(err => `  - ${err.instancePath}: ${err.message}`)
+			.join('\n');
+		console.error(`❌ Profile data failed validation:\n${errorDetails}`);
+		throw new Error(`Profile data is not valid against ProfileSchema`);
+	}
+	
 	const profile = profileGroup.createMap(
-		{ name },
+		profileData,
 		profileMeta  // Set headerMeta at creation time!
 	);
 	
@@ -62,10 +79,22 @@ export async function schemaMigration(account, node, creationProps) {
 	// 4. Create CoStream example (Activity/Message stream)
 	const activityStreamMeta = createSchemaMeta("ActivityStreamSchema");
 	const activityStream = profileGroup.createStream(activityStreamMeta);
-	// Push initial activity
-	activityStream.push({ type: "profile_created", name });
-	activityStream.push({ type: "welcome", message: "Welcome to MaiaOS!" });
-	activityStream.push({ type: "first_login", timestamp: new Date().toISOString() });
+	
+	// Push initial activities (validate each item against schema)
+	const activities = [
+		{ type: "profile_created", name },
+		{ type: "welcome", message: "Welcome to MaiaOS!" },
+		{ type: "first_login", timestamp: new Date().toISOString() }
+	];
+	
+	for (const activity of activities) {
+		// Validate activity item against ActivityStreamSchema items schema
+		const activityValidation = await validationEngine.validateData("ActivityStreamSchema", [activity]);
+		if (!activityValidation.valid) {
+			console.warn(`⚠️ Activity item failed validation, but continuing:`, activity);
+		}
+		activityStream.push(activity);
+	}
 	
 	console.log("   ✅ ActivityStream created:", activityStream.id);
 	console.log("      HeaderMeta:", activityStream.headerMeta);

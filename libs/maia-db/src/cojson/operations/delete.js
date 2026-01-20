@@ -39,8 +39,17 @@ export class DeleteOperation {
     const content = this.backend.getCurrentContent(coValueCore);
     const rawType = content?.type || 'unknown';
     
-    // Normalize type
-    const coType = rawType === 'coplaintext' ? 'co-text' : rawType;
+    // Normalize type to co-type names (co-map, co-text, co-stream, co-list)
+    let coType = rawType;
+    if (rawType === 'coplaintext' || rawType === 'co-text' || rawType === 'text') {
+      coType = 'co-text';
+    } else if (rawType === 'colist' || rawType === 'co-list' || rawType === 'list') {
+      coType = 'co-list';
+    } else if (rawType === 'costream' || rawType === 'co-stream' || rawType === 'stream') {
+      coType = 'co-stream';
+    } else if (rawType === 'comap' || rawType === 'co-map' || rawType === 'map') {
+      coType = 'co-map';
+    }
     
     // If key or index provided, delete property/item
     if (key !== undefined) {
@@ -72,8 +81,8 @@ export class DeleteOperation {
     
     if (index !== undefined) {
       // Delete CoList item (check rawType for actual operations)
-      if (rawType !== 'co-list' && rawType !== 'colist') {
-        throw new Error('[DeleteOperation] Index deletion only supported for list');
+      if (rawType !== 'colist' && rawType !== 'co-list') {
+        throw new Error('[DeleteOperation] Index deletion only supported for colist');
       }
       // CoList delete by index - need to use deleteAt method if available
       // For now, throw error - this needs more complex logic
