@@ -113,11 +113,91 @@ export class IndexedDBBackend {
       }
     }
     
+    // Helper function to find all $co references in a schema (recursively)
+    const findCoReferences = (obj, visited = new Set()) => {
+      const refs = new Set();
+      if (!obj || typeof obj !== 'object' || visited.has(obj)) {
+        return refs;
+      }
+      visited.add(obj);
+      
+      // Check if this object has a $co keyword
+      if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('@schema/')) {
+        refs.add(obj.$co);
+      }
+      
+      // Recursively check all properties
+      for (const value of Object.values(obj)) {
+        if (value && typeof value === 'object') {
+          if (Array.isArray(value)) {
+            for (const item of value) {
+              if (item && typeof item === 'object') {
+                const itemRefs = findCoReferences(item, visited);
+                itemRefs.forEach(ref => refs.add(ref));
+              }
+            }
+          } else {
+            const nestedRefs = findCoReferences(value, visited);
+            nestedRefs.forEach(ref => refs.add(ref));
+          }
+        }
+      }
+      
+      return refs;
+    };
+    
+    // Build dependency map: schemaKey -> Set of referenced schema keys
+    const schemaDependencies = new Map();
+    for (const [schemaKey, { schema }] of uniqueSchemasBy$id) {
+      const refs = findCoReferences(schema);
+      schemaDependencies.set(schemaKey, refs);
+    }
+    
+    // Sort schemas by dependency order (leaf schemas first, then composite schemas)
+    // Use topological sort to handle dependencies correctly
+    const sortedSchemaKeys = [];
+    const processed = new Set();
+    const processing = new Set(); // Detect circular dependencies
+    
+    const visitSchema = (schemaKey) => {
+      if (processed.has(schemaKey)) {
+        return; // Already processed
+      }
+      if (processing.has(schemaKey)) {
+        // Circular dependency detected - this is OK for self-references (e.g., actor -> actor)
+        // Just continue processing
+        return;
+      }
+      
+      processing.add(schemaKey);
+      
+      // Process dependencies first
+      const deps = schemaDependencies.get(schemaKey) || new Set();
+      for (const dep of deps) {
+        // Only process if it's a schema we're seeding (starts with @schema/)
+        if (dep.startsWith('@schema/') && uniqueSchemasBy$id.has(dep)) {
+          visitSchema(dep);
+        }
+      }
+      
+      processing.delete(schemaKey);
+      processed.add(schemaKey);
+      sortedSchemaKeys.push(schemaKey);
+    };
+    
+    // Visit all schemas
+    for (const schemaKey of uniqueSchemasBy$id.keys()) {
+      visitSchema(schemaKey);
+    }
+    
+    console.log(`[IndexedDBBackend] Phase 1: Sorted ${sortedSchemaKeys.length} schemas by dependency order`);
+    
     // Phase 1: Generate co-ids for all unique schemas, build co-id map
     console.log('[IndexedDBBackend] Phase 1: Generating co-ids for schemas...');
     const schemaCoIdMap = new Map();
     
-    for (const [schemaKey, { schema }] of uniqueSchemasBy$id) {
+    for (const schemaKey of sortedSchemaKeys) {
+      const { schema } = uniqueSchemasBy$id.get(schemaKey);
       // Generate co-id for schema
       const schemaCoId = generateCoIdForSchema(schema);
       
@@ -126,26 +206,73 @@ export class IndexedDBBackend {
     }
     
     // Phase 2: Transform all schemas (replace human-readable refs with co-ids)
-    console.log('[IndexedDBBackend] Phase 2: Transforming schemas...');
+    // Transform in dependency order to ensure referenced schemas are already transformed
+    console.log('[IndexedDBBackend] Phase 2: Transforming schemas in dependency order...');
     const transformedSchemas = {};
-    for (const [name, schema] of Object.entries(schemas)) {
-      // Get the schema's $id to look up the co-id
-      const schemaKey = schema.$id || `@schema/${name}`;
+    const transformedSchemasByKey = new Map(); // Map by schemaKey for lookup
+    
+    for (const schemaKey of sortedSchemaKeys) {
+      const { name, schema } = uniqueSchemasBy$id.get(schemaKey);
       const schemaCoId = schemaCoIdMap.get(schemaKey);
       
       if (!schemaCoId) {
-        // This shouldn't happen if deduplication worked correctly
         throw new Error(`No co-id found for schema ${name} with $id ${schemaKey}`);
       }
       
       transformedSchemas[name] = transformSchemaForSeeding(schema, schemaCoIdMap);
       // Update $id to use co-id
       transformedSchemas[name].$id = schemaCoId;
+      transformedSchemasByKey.set(schemaKey, transformedSchemas[name]);
     }
     
-    // Phase 3: Seed schemas to IndexedDB with co-ids
-    console.log('[IndexedDBBackend] Phase 3: Seeding schemas...');
-    await this._seedSchemas(transformedSchemas, schemaCoIdMap);
+    // Phase 2.5: Validate transformed schemas against their $schema meta-schema
+    // Validate in dependency order so referenced schemas are already registered
+    console.log('[IndexedDBBackend] Phase 2.5: Validating transformed schemas in dependency order...');
+    const { ValidationEngine } = await import('@MaiaOS/schemata/validation.engine.js');
+    const validationEngine = new ValidationEngine();
+    
+    // Set up schema resolver for loading meta-schemas and referenced schemas
+    // Check in-memory transformed schemas map first (since we're seeding), then fallback to DB
+    validationEngine.setSchemaResolver(async (schemaKey) => {
+      // First check if it's in the transformed schemas map (being seeded)
+      if (schemaKey.startsWith('co_z')) {
+        // Find schema by co-id in transformedSchemas
+        for (const schema of Object.values(transformedSchemas)) {
+          if (schema.$id === schemaKey) {
+            return schema;
+          }
+        }
+      } else if (schemaKey.startsWith('@schema/')) {
+        // Human-readable ID - check transformedSchemasByKey
+        const transformed = transformedSchemasByKey.get(schemaKey);
+        if (transformed) {
+          return transformed;
+        }
+      }
+      // Fallback: try to load from DB (if already stored)
+      return await this.getSchema(schemaKey);
+    });
+    
+    await validationEngine.initialize();
+    
+    // Validate each transformed schema in dependency order
+    for (const schemaKey of sortedSchemaKeys) {
+      const { name } = uniqueSchemasBy$id.get(schemaKey);
+      const schema = transformedSchemas[name];
+      
+      const result = await validationEngine.validateSchemaAgainstMeta(schema);
+      if (!result.valid) {
+        const errorDetails = result.errors
+          .map(err => `  - ${err.instancePath}: ${err.message}`)
+          .join('\n');
+        throw new Error(`Transformed schema '${name}' failed validation:\n${errorDetails}`);
+      }
+    }
+    console.log('[IndexedDBBackend] ✅ All transformed schemas validated successfully');
+    
+    // Phase 3: Seed schemas to IndexedDB with co-ids in dependency order
+    console.log('[IndexedDBBackend] Phase 3: Seeding schemas in dependency order...');
+    await this._seedSchemas(transformedSchemas, schemaCoIdMap, sortedSchemaKeys, uniqueSchemasBy$id);
     
     // Phase 3.5: Register data collection co-ids BEFORE transforming instances
     // This ensures query objects can be transformed to use co-ids during Phase 4
@@ -340,10 +467,82 @@ export class IndexedDBBackend {
     // Note: We'll store all mappings after seeding configs (need instanceCoIdMap)
     // This is called later after _seedConfigs
     
+    // Phase 4.5: Validate transformed instances against their $schema schemas
+    console.log('[IndexedDBBackend] Phase 4.5: Validating transformed instances...');
+    const { validateAgainstSchemaOrThrow } = await import('@MaiaOS/schemata/validation.helper.js');
+    const { setSchemaResolver } = await import('@MaiaOS/schemata/validation.helper.js');
+    
+    // Set up schema resolver for dynamic schema loading
+    // The ValidationEngine will dynamically resolve and register schemas as needed via _resolveAndRegisterSchemaDependencies
+    // This is more efficient than pre-registering all schemas, and ensures correct dependency resolution
+    setSchemaResolver(async (schemaKey) => {
+      // First check transformed schemas (in-memory, being seeded)
+      if (schemaKey.startsWith('co_z')) {
+        for (const schema of Object.values(transformedSchemas)) {
+          if (schema.$id === schemaKey) {
+            return schema;
+          }
+        }
+      } else if (schemaKey.startsWith('@schema/')) {
+        const entry = uniqueSchemasBy$id.get(schemaKey);
+        if (entry) {
+          const transformed = transformedSchemas[entry.name];
+          if (transformed) {
+            return transformed;
+          }
+        }
+      }
+      
+      // Fallback to DB (schemas were just seeded in Phase 3)
+      return await this.getSchema(schemaKey);
+    });
+    
+    // Validate each transformed instance
+    for (const [configType, configValue] of Object.entries(transformedConfigs)) {
+      if (Array.isArray(configValue)) {
+        for (const [index, instance] of configValue.entries()) {
+          if (instance && instance.$schema) {
+            const schema = await this.getSchema(instance.$schema);
+            if (schema) {
+              await validateAgainstSchemaOrThrow(
+                schema,
+                instance,
+                `${configType}[${index}] (${instance.$id || 'no-id'})`
+              );
+            }
+          }
+        }
+      } else if (configValue && typeof configValue === 'object' && configValue.$schema) {
+        const schema = await this.getSchema(configValue.$schema);
+        if (schema) {
+          await validateAgainstSchemaOrThrow(
+            schema,
+            configValue,
+            `${configType} (${configValue.$id || 'no-id'})`
+          );
+        }
+      } else if (configValue && typeof configValue === 'object') {
+        // Nested objects (e.g., actors: { 'vibe/vibe': {...} })
+        for (const [instanceKey, instance] of Object.entries(configValue)) {
+          if (instance && instance.$schema) {
+            const schema = await this.getSchema(instance.$schema);
+            if (schema) {
+              await validateAgainstSchemaOrThrow(
+                schema,
+                instance,
+                `${configType}.${instanceKey} (${instance.$id || 'no-id'})`
+              );
+            }
+          }
+        }
+      }
+    }
+    console.log('[IndexedDBBackend] ✅ All transformed instances validated successfully');
+    
     // Phase 5: Validate all configs/instances - REJECT if nested co-types found
     console.log('[IndexedDBBackend] Phase 5: Validating configs (checking for nested co-types)...');
-    // Note: Instance validation happens at runtime, not during seeding
-    // We only validate schemas for nested co-types
+    // Note: Instances are now validated during seeding (Phase 4.5) and at runtime
+    // We only validate schemas for nested co-types here
     
     // Phase 6: Seed configs/instances to IndexedDB with co-ids
     console.log('[IndexedDBBackend] Phase 6: Seeding configs/instances...');
@@ -663,18 +862,29 @@ export class IndexedDBBackend {
   }
   
   /**
-   * Seed schemas into database with co-ids
+   * Seed schemas into database with co-ids in dependency order
    * @private
-   * @param {Object} schemas - Transformed schemas with co-ids
+   * @param {Object} schemas - Transformed schemas with co-ids (keyed by name)
    * @param {Map<string, string>} coIdMap - Map of human-readable ID → co-id
+   * @param {Array<string>} sortedSchemaKeys - Schema keys sorted by dependency order
+   * @param {Map<string, {name: string, schema: Object}>} uniqueSchemasBy$id - Map of schemaKey -> {name, schema}
    */
-  async _seedSchemas(schemas, coIdMap) {
+  async _seedSchemas(schemas, coIdMap, sortedSchemaKeys, uniqueSchemasBy$id) {
     const transaction = this.db.transaction(['schemas'], 'readwrite');
     const store = transaction.objectStore('schemas');
     
     let count = 0;
     
-    for (const [name, schema] of Object.entries(schemas)) {
+    // Seed schemas in dependency order (leaf schemas first, then composite schemas)
+    for (const schemaKey of sortedSchemaKeys) {
+      const { name } = uniqueSchemasBy$id.get(schemaKey);
+      const schema = schemas[name];
+      
+      if (!schema) {
+        console.warn(`[IndexedDBBackend] Schema ${name} not found in transformedSchemas, skipping`);
+        continue;
+      }
+      
       // Schema $id should already be a co-id (set in Phase 2)
       const coId = schema.$id;
       
@@ -692,7 +902,7 @@ export class IndexedDBBackend {
       count++;
     }
     
-    console.log(`[IndexedDBBackend] Seeded ${count} schemas with co-ids`);
+    console.log(`[IndexedDBBackend] Seeded ${count} schemas with co-ids in dependency order`);
   }
   
   /**

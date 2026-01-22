@@ -39,6 +39,9 @@ export function ajvCoTypesPlugin(ajv) {
   })
   
   // Add cotype keyword - validates CRDT type at schema root only
+  // For colist/costream, instances can be either:
+  // 1. Direct arrays (raw CRDT structure)
+  // 2. Objects with an 'items' property (wrapped with metadata like $schema, $id)
   ajv.addKeyword({
     keyword: 'cotype',
     validate: (schema, data) => {
@@ -46,7 +49,15 @@ export function ajvCoTypesPlugin(ajv) {
         return typeof data === 'object' && !Array.isArray(data) && data !== null
       }
       if (schema === 'colist' || schema === 'costream') {
-        return Array.isArray(data)
+        // Direct array (raw CRDT structure)
+        if (Array.isArray(data)) {
+          return true
+        }
+        // Object with 'items' property (wrapped instance with metadata)
+        if (typeof data === 'object' && data !== null && Array.isArray(data.items)) {
+          return true
+        }
+        return false
       }
       return false
     },

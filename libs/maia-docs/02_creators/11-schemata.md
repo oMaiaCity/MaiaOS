@@ -269,9 +269,31 @@ const transformed = transformSchemaForSeeding(schema, schemaCoIdMap);
 // Result: All $co references now use co-ids
 ```
 
-### Phase 3: Instance Transformation
+### Phase 2.5: Schema Validation After Transformation
 
-3. **Transform all instances** (actors, views, contexts, etc.)
+2.5. **Validate transformed schemas** (ensure transformation didn't introduce errors)
+   - Each transformed schema validated against its `$schema` meta-schema
+   - Meta-schema loaded from in-memory map or database
+   - Ensures data integrity before storage
+   - Throws error if validation fails
+
+```javascript
+// Validate transformed schema
+const result = await validationEngine.validateSchemaAgainstMeta(transformedSchema);
+if (!result.valid) {
+  throw new Error(`Schema validation failed: ${result.errors}`);
+}
+```
+
+### Phase 3: Schema Storage
+
+3. **Store validated schemas in IndexedDB**
+   - Schemas stored with co-id as key
+   - Already validated in Phases 1 and 2.5
+
+### Phase 4: Instance Transformation
+
+4. **Transform all instances** (actors, views, contexts, etc.)
    - `$schema: "@schema/actor"` → `$schema: "co_zABC123..."`
    - `$id: "actor/001"` → `$id: "co_zInstance789..."`
    - Property values with `$co` references are transformed
@@ -283,19 +305,34 @@ const transformed = transformInstanceForSeeding(instance, coIdMap);
 // Result: All references now use co-ids
 ```
 
-### Phase 4: Storage
+### Phase 4.5: Instance Validation After Transformation
 
-4. **Store transformed schemas and instances in IndexedDB**
-   - Schemas stored with co-id as key
+4.5. **Validate transformed instances** (ensure transformation didn't introduce errors)
+   - Each transformed instance validated against its `$schema` schema
+   - Schema loaded from database (seeded in Phase 3)
+   - Ensures data integrity before storage
+   - Throws error if validation fails
+
+```javascript
+// Validate transformed instance
+const schema = await dbEngine.getSchema(instance.$schema);
+await validateAgainstSchemaOrThrow(schema, instance, context);
+```
+
+### Phase 5: Instance Storage
+
+5. **Store validated instances in IndexedDB**
    - Instances stored with co-id as key
-   - All references are now co-ids
+   - Already validated in Phase 4.5
+   - Also validated on load (runtime check)
 
 ## Code Generation
 
 Currently, schemas are **not** compiled to TypeScript or other code. They remain as JSON Schema definitions that are:
 
-1. **Validated** against the meta-schema during seeding
+1. **Validated** against the meta-schema during seeding (before and after transformation)
 2. **Transformed** from human-readable IDs to co-ids
+3. **Validated again** after transformation to ensure integrity
 3. **Stored** in IndexedDB for runtime resolution
 4. **Used** for runtime validation via AJV
 

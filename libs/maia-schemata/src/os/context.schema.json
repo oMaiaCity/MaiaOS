@@ -16,22 +16,32 @@
       "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "todos": {
-      "type": "object",
-      "description": "Query object for reactive subscription. SubscriptionEngine replaces this with a plain array when data loads.",
-      "properties": {
-        "schema": {
-          "type": "string",
-          "description": "Schema reference (e.g., '@schema/todos')"
+      "description": "Query object for reactive subscription (replaced with plain array by SubscriptionEngine when data loads). Can be either a query object during seeding or an array after SubscriptionEngine processes it.",
+      "anyOf": [
+        {
+          "type": "object",
+          "description": "Query object for reactive subscription",
+          "properties": {
+            "schema": {
+              "type": "string",
+              "description": "Schema reference (e.g., '@schema/todos')"
+            },
+            "filter": {
+              "description": "Filter criteria (object or null)",
+              "oneOf": [
+                {"type": "object"},
+                {"type": "null"}
+              ]
+            }
+          },
+          "required": ["schema"],
+          "additionalProperties": false
         },
-        "filter": {
-          "description": "Filter criteria (object or null)",
-          "oneOf": [
-            {"type": "object"},
-            {"type": "null"}
-          ]
+        {
+          "type": "array",
+          "description": "Array of data items (after SubscriptionEngine processes the query object)"
         }
-      },
-      "required": ["schema"]
+      ]
     }
   },
   "additionalProperties": {

@@ -416,22 +416,119 @@ export class ValidationEngine {
     await this.initialize();
     
     // Dynamically determine which meta schema to use based on schema's $schema field
-    const schemaMetaSchemaId = schema.$schema;
+    let schemaMetaSchemaId = schema.$schema;
     
     if (!schemaMetaSchemaId) {
       throw new Error(`[ValidationEngine] Schema missing required $schema field. All schemas must declare their meta schema.`);
     }
     
-    // Get the appropriate meta schema validator
+    // If $schema is a co-id, resolve it to get the actual meta-schema
+    let resolvedMetaSchemaId = schemaMetaSchemaId;
+    let metaSchemaObject = null;
+    
+    if (schemaMetaSchemaId.startsWith('co_z')) {
+      // This is a co-id reference - resolve it to get the actual meta-schema
+      if (this.schemaResolver) {
+        metaSchemaObject = await this.schemaResolver(schemaMetaSchemaId);
+        if (metaSchemaObject && metaSchemaObject.$id) {
+          // Use the resolved meta-schema's $id to determine which validator to use
+          // The $id might still be a co-id, so we need to check the original $id
+          // Look for the original human-readable ID in the resolved schema
+          // For meta-schemas, we check if it's registered with '@schema/meta' or standard meta-schema ID
+          resolvedMetaSchemaId = metaSchemaObject.$id;
+        } else {
+          // If we can't resolve, check if it's registered in AJV by co-id
+          const coIdValidator = this.ajv.getSchema(schemaMetaSchemaId);
+          if (coIdValidator) {
+            // Use the co-id directly as the validator key
+            resolvedMetaSchemaId = schemaMetaSchemaId;
+          } else {
+            throw new Error(`[ValidationEngine] Could not resolve meta-schema co-id '${schemaMetaSchemaId}'. Schema resolver returned null or undefined.`);
+          }
+        }
+      } else {
+        // No schema resolver - try to use co-id directly if registered in AJV
+        const coIdValidator = this.ajv.getSchema(schemaMetaSchemaId);
+        if (coIdValidator) {
+          resolvedMetaSchemaId = schemaMetaSchemaId;
+        } else {
+          throw new Error(`[ValidationEngine] Meta-schema co-id '${schemaMetaSchemaId}' not found and no schema resolver available.`);
+        }
+      }
+    }
+    
+    // Determine which meta-schema validator to use
     let metaValidator;
-    if (schemaMetaSchemaId === '@schema/meta') {
+    
+    // Check by ID first (for human-readable IDs)
+    if (resolvedMetaSchemaId === '@schema/meta' || resolvedMetaSchemaId === '@schema/meta-schema') {
       // Use custom CoJSON meta schema (strictly requires cotype - comap, colist, or costream)
       metaValidator = this.ajv.getSchema('@schema/meta');
-    } else if (schemaMetaSchemaId === 'https://json-schema.org/draft/2020-12/schema') {
+    } else if (resolvedMetaSchemaId === 'https://json-schema.org/draft/2020-12/schema') {
       // Use standard JSON Schema meta schema (for meta schema itself)
       metaValidator = this.ajv.getSchema('https://json-schema.org/draft/2020-12/schema');
+    } else if (resolvedMetaSchemaId.startsWith('co_z')) {
+      // Co-id reference - try to get validator by co-id first
+      metaValidator = this.ajv.getSchema(resolvedMetaSchemaId);
+      
+      // If not found by co-id, determine type from resolved object structure and register if needed
+      if (!metaValidator && metaSchemaObject) {
+        // Check if resolved object has properties that indicate meta-schema type
+        // CoJSON meta-schema has properties.cotype with enum ["comap", "colist", "costream"]
+        // CoJSON meta-schema also has $vocabulary with "https://maiaos.dev/vocab/cojson": true
+        // Standard meta-schema has $vocabulary but no cotype property
+        const hasCotypeProperty = metaSchemaObject.properties && 
+          metaSchemaObject.properties.cotype &&
+          metaSchemaObject.properties.cotype.enum &&
+          Array.isArray(metaSchemaObject.properties.cotype.enum) &&
+          metaSchemaObject.properties.cotype.enum.includes('comap');
+        
+        const hasCojsonVocabulary = metaSchemaObject.$vocabulary && 
+          metaSchemaObject.$vocabulary['https://maiaos.dev/vocab/cojson'] === true;
+        
+        let targetMetaSchemaId;
+        if (hasCotypeProperty || hasCojsonVocabulary) {
+          // This is the CoJSON meta-schema
+          targetMetaSchemaId = '@schema/meta';
+        } else if (metaSchemaObject.$vocabulary) {
+          // This is likely the standard JSON Schema meta-schema
+          targetMetaSchemaId = 'https://json-schema.org/draft/2020-12/schema';
+        } else {
+          // Default to CoJSON meta-schema for transformed schemas (most common case)
+          targetMetaSchemaId = '@schema/meta';
+        }
+        
+        // Try to get the validator for the target meta-schema
+        metaValidator = this.ajv.getSchema(targetMetaSchemaId);
+        
+        // If still not found, register the resolved meta-schema temporarily
+        if (!metaValidator && metaSchemaObject) {
+          try {
+            // Temporarily disable schema validation to register meta-schema
+            const originalValidateSchema = this.ajv.opts.validateSchema;
+            this.ajv.opts.validateSchema = false;
+            try {
+              // Register with both co-id and target meta-schema ID
+              this.ajv.addSchema(metaSchemaObject, resolvedMetaSchemaId);
+              if (targetMetaSchemaId !== resolvedMetaSchemaId) {
+                this.ajv.addSchema(metaSchemaObject, targetMetaSchemaId);
+              }
+              metaValidator = this.ajv.getSchema(targetMetaSchemaId);
+            } finally {
+              this.ajv.opts.validateSchema = originalValidateSchema;
+            }
+          } catch (error) {
+            // If registration fails, try to use the target meta-schema validator directly
+            metaValidator = this.ajv.getSchema(targetMetaSchemaId);
+          }
+        }
+      }
+      
+      if (!metaValidator) {
+        throw new Error(`[ValidationEngine] Meta-schema validator not found for co-id '${resolvedMetaSchemaId}'. Make sure the meta-schema is registered in AJV.`);
+      }
     } else {
-      throw new Error(`[ValidationEngine] Unknown meta schema '${schemaMetaSchemaId}'. Expected '@schema/meta' or standard JSON Schema meta schema.`);
+      throw new Error(`[ValidationEngine] Unknown meta schema '${schemaMetaSchemaId}' (resolved to '${resolvedMetaSchemaId}'). Expected '@schema/meta' or standard JSON Schema meta schema.`);
     }
     
     if (!metaValidator) {
