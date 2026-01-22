@@ -6,9 +6,13 @@
  * Note: Schema is now a co-id (transformed during seeding), not a human-readable reference
  */
 
+import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
+import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
+
 export class CreateOperation {
-  constructor(backend) {
+  constructor(backend, dbEngine = null) {
     this.backend = backend;
+    this.dbEngine = dbEngine;
   }
   
   /**
@@ -29,9 +33,13 @@ export class CreateOperation {
       throw new Error('[CreateOperation] Data required');
     }
     
-    // Schema is now a co-id (transformed during seeding)
-    // Note: Data validation is not performed here. If validation is required,
-    // it should be done before calling this operation (e.g., in tools or state machines).
+    // Validate data against schema before creating (single source of truth)
+    if (this.dbEngine) {
+      const schemaDef = await loadSchemaFromDB(this.dbEngine, schema);
+      if (schemaDef) {
+        await validateAgainstSchemaOrThrow(schemaDef, data, `create operation for schema ${schema}`);
+      }
+    }
     
     console.log(`[CreateOperation] Creating record in collection ${schema}`, data);
     

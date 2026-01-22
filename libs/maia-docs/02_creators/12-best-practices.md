@@ -29,8 +29,9 @@
 6. [Performance Optimization](#6-performance-optimization)
 7. [Domain Separation](#7-domain-separation)
 8. [Feature Modules](#8-feature-modules)
-9. [Anti-Patterns to Avoid](#9-anti-patterns-to-avoid)
-10. [Real-World Examples](#10-real-world-examples)
+9. [Schema Definitions](#9-schema-definitions)
+10. [Anti-Patterns to Avoid](#10-anti-patterns-to-avoid)
+11. [Real-World Examples](#11-real-world-examples)
 
 ---
 
@@ -609,7 +610,329 @@ App Composite Actor
 
 ---
 
-## 9. Anti-Patterns to Avoid
+## 9. Schema Definitions
+
+### Core Principles
+
+#### Every Schema Must Have a Co-Type
+
+**CRITICAL RULE**: Every schema or instance **must** be one of three CoJSON types:
+
+- **`cotype: "comap"`** - CRDT map (key-value pairs with properties)
+- **`cotype: "colist"`** - CRDT list (ordered array with items)
+- **`cotype: "costream"`** - CRDT stream (append-only list with items)
+
+**Example:**
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/actor",
+  "title": "Actor Definition",
+  "cotype": "comap",  // ← REQUIRED: Must be comap, colist, or costream
+  "properties": {
+    // ...
+  }
+}
+```
+
+#### Use `$co` for CoValue References, `$ref` Only for Internal Definitions
+
+**CRITICAL RULE**: 
+- **Use `$co`** to reference **separate CoValue entities** (other schemas, actors, views, etc.)
+- **Use `$ref`** **ONLY** for internal schema definitions (within `$defs`)
+
+**Why?**
+- `$co` indicates a property value is a **co-id reference** to another CoValue
+- `$ref` is for JSON Schema internal references (like `#/$defs/viewNode`)
+- Never use `$ref` to reference external schemas - always use `$co`
+
+**✅ CORRECT:**
+```json
+{
+  "properties": {
+    "context": {
+      "$co": "@schema/context",  // ← References separate CoValue
+      "description": "Co-id reference to context definition"
+    },
+    "children": {
+      "type": "array",
+      "items": {
+        "$co": "@schema/actor"  // ← Each item is a co-id reference
+      }
+    }
+  },
+  "$defs": {
+    "viewNode": {
+      "type": "object",
+      "properties": {
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/viewNode"  // ← OK: Internal reference
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**❌ WRONG:**
+```json
+{
+  "properties": {
+    "context": {
+      "$ref": "@schema/context"  // ← WRONG: Use $co for CoValue references
+    }
+  }
+}
+```
+
+### Required Schema Fields
+
+Every schema must have:
+
+1. **`$schema`** - Reference to meta-schema (usually `"@schema/meta"`)
+2. **`$id`** - Unique schema identifier (human-readable like `"@schema/actor"` or co-id like `"co_z..."`)
+3. **`title`** - Human-readable schema title
+4. **`cotype`** - CoJSON type: `"comap"`, `"colist"`, or `"costream"`
+
+### Common Schema Patterns
+
+#### Pattern 1: Referencing Other Schemas
+
+**Always use `$co` for schema references:**
+```json
+{
+  "properties": {
+    "view": {
+      "$co": "@schema/view"  // ← Always use $co for schema references
+    }
+  }
+}
+```
+
+#### Pattern 2: Arrays of CoValue References
+
+**Each array item is a co-id reference:**
+```json
+{
+  "properties": {
+    "children": {
+      "type": "array",
+      "items": {
+        "$co": "@schema/actor"  // ← Each item is a co-id reference
+      }
+    }
+  }
+}
+```
+
+#### Pattern 3: Recursive Internal Definitions
+
+**Use `$ref` for recursive internal structures:**
+```json
+{
+  "$defs": {
+    "viewNode": {
+      "type": "object",
+      "properties": {
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/viewNode"  // ← OK: Internal recursive reference
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+#### Pattern 4: Expression References
+
+**Reference expression schemas with `$co`:**
+```json
+{
+  "properties": {
+    "text": {
+      "$co": "@schema/maia-script-expression"  // ← Expression schema reference
+    },
+    "value": {
+      "$co": "@schema/maia-script-expression"  // ← Expression schema reference
+    }
+  }
+}
+```
+
+#### Pattern 5: Schema Composition with `allOf`
+
+**Use `$co` in `allOf` to extend schemas:**
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/guard",
+  "title": "Guard",
+  "cotype": "comap",
+  "properties": {
+    "$id": {
+      "type": "string",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
+    }
+  },
+  "allOf": [
+    {
+      "$co": "@schema/maia-script-expression"  // ← Uses $co for schema reference
+    }
+  ]
+}
+```
+
+#### Pattern 6: Dynamic Properties with `additionalProperties`
+
+**Use `$co` in `additionalProperties` for dynamic keys:**
+```json
+{
+  "properties": {
+    "payload": {
+      "type": "object",
+      "additionalProperties": {
+        "$co": "@schema/maia-script-expression"  // ← Uses $co for schema reference
+      }
+    }
+  }
+}
+```
+
+### Schema Validation Rules
+
+#### ✅ DO:
+
+1. **Always specify `cotype`** - Every schema must be `comap`, `colist`, or `costream`
+2. **Use `$co` for CoValue references** - References to other schemas, actors, views, etc.
+3. **Use `$ref` for internal definitions** - Only within `$defs` or for self-references
+4. **Include `$id` pattern validation** - Validate co-id format: `^co_z[a-zA-Z0-9]+$`
+5. **Transform during seeding** - All human-readable IDs become co-ids
+
+#### ❌ DON'T:
+
+1. **Don't use `$ref` for external schemas** - Always use `$co` instead
+2. **Don't nest co-types** - Properties cannot have `cotype`, use `$co` to reference separate CoValues
+3. **Don't mix `$co` and `$ref`** - Use `$co` for CoValues, `$ref` only for internal definitions
+4. **Don't skip `cotype`** - Every schema/instance must specify its CoJSON type
+5. **Don't use human-readable IDs at runtime** - All IDs must be co-ids after seeding
+
+### Schema Examples
+
+#### Example 1: Actor Schema (comap)
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/actor",
+  "title": "Actor Definition",
+  "cotype": "comap",
+  "properties": {
+    "$id": {
+      "type": "string",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
+    },
+    "context": {
+      "$co": "@schema/context",  // ← CoValue reference
+      "description": "Co-id reference to context definition"
+    },
+    "view": {
+      "$co": "@schema/view",  // ← CoValue reference
+      "description": "Co-id reference to view definition"
+    },
+    "children": {
+      "type": "object",
+      "additionalProperties": {
+        "$co": "@schema/actor"  // ← Each child is a co-id reference
+      }
+    }
+  }
+}
+```
+
+#### Example 2: Inbox Schema (costream)
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/inbox",
+  "title": "Inbox CoStream",
+  "cotype": "costream",  // ← Append-only stream
+  "properties": {
+    "$id": {
+      "type": "string",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
+    },
+    "items": {
+      "type": "array",
+      "description": "Array of message co-id references",
+      "items": {
+        "$co": "@schema/message",  // ← Each item is a co-id reference
+        "description": "Each item is a co-id reference to a message"
+      }
+    }
+  },
+  "required": ["items"]
+}
+```
+
+#### Example 3: View Schema (comap with internal $defs)
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/view",
+  "title": "View Definition",
+  "cotype": "comap",
+  "properties": {
+    "tag": { "type": "string" },
+    "text": {
+      "$co": "@schema/maia-script-expression"  // ← CoValue reference
+    },
+    "children": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/viewNode"  // ← OK: Internal reference to $defs
+      }
+    }
+  },
+  "$defs": {
+    "viewNode": {
+      "type": "object",
+      "properties": {
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/viewNode"  // ← OK: Recursive internal reference
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Reading Schema Definitions
+
+When reading and understanding schema definitions:
+
+1. **Identify the Co-Type** - Check `cotype` field first to understand the data structure
+2. **Follow `$co` References** - These point to separate CoValue entities that need to be resolved
+3. **Understand `$ref` Scope** - These are internal to the schema, defined in `$defs`
+4. **Check Required Fields** - Look for `required` array to understand mandatory properties
+5. **Validate Patterns** - Check `pattern` fields for string validation rules (especially co-id patterns)
+
+**Best Practice:** When working with schemas, always:
+- Start with the `cotype` to understand the structure
+- Trace `$co` references to understand relationships
+- Use `$defs` for reusable internal structures
+- Keep schemas focused and single-purpose
+
+---
+
+## 10. Anti-Patterns to Avoid
 
 ### ❌ Don't: Put UI State in Service Actor
 
@@ -762,7 +1085,7 @@ Composite Actor
 
 ---
 
-## 10. Real-World Examples
+## 11. Real-World Examples
 
 ### Example 1: E-Commerce App (30-50 Actors)
 
@@ -869,6 +1192,15 @@ App Service Actor
 - [ ] Add features independently
 - [ ] Maintain clear boundaries
 - [ ] Document architecture decisions
+
+### ✅ Schema Definitions
+
+- [ ] Every schema has a `cotype` (comap, colist, or costream)
+- [ ] Use `$co` for CoValue references (external schemas, actors, views)
+- [ ] Use `$ref` only for internal definitions (within `$defs`)
+- [ ] Include required fields: `$schema`, `$id`, `title`, `cotype`
+- [ ] Validate co-id patterns: `^co_z[a-zA-Z0-9]+$`
+- [ ] Keep schemas focused and single-purpose
 
 ---
 

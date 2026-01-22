@@ -20,22 +20,25 @@ MaiaScript is MaiaOS's secure JSON-based expression language for runtime logic.
 
 ## Usage
 
-```typescript
-import { safeEvaluate, isMaiaScriptExpression } from '@maia/script'
-import type { MaiaScriptExpression } from '@maia/script'
+```javascript
+import { MaiaOS } from '@MaiaOS/script'
 
-const expr: MaiaScriptExpression = {
+// Boot MaiaOS
+const os = await MaiaOS.boot({
+  registry: {
+    // Your configs here
+  }
+})
+
+// MaiaScript expressions are evaluated automatically by engines
+// Example expression in JSON config:
+const expr = {
   "$if": {
-    "test": { "$eq": [{ "$": "item.status" }, "done"] },
+    "condition": { "$eq": ["$item.status", "done"] },
     "then": "bg-green-100",
     "else": "bg-gray-100"
   }
 }
-
-const result = safeEvaluate(expr, {
-  item: { status: "done" }
-})
-// result: "bg-green-100"
 ```
 
 ## Core Operations
@@ -68,17 +71,17 @@ const result = safeEvaluate(expr, {
 
 ```
 src/
-├── evaluator.ts      # MaiaScriptEngine (expression evaluator)
-├── validator.ts      # Security validator
-├── helpers.ts        # Utility functions
-├── types.ts          # TypeScript definitions
-├── index.ts          # Public API
-└── modules/          # Pluggable modules (Phase 4+)
-    ├── registry.ts   # Module registry
-    ├── types.ts      # Module types
-    ├── builtin.module.ts     # Core operations
-    ├── dragdrop.module.ts    # Drag-drop capabilities
-    └── security.module.ts    # Security validation
+├── o/
+│   ├── kernel.js              # MaiaOS kernel (main entry point)
+│   ├── engines/
+│   │   ├── MaiaScriptEvaluator.js  # Expression evaluator
+│   │   ├── actor-engine/      # Actor orchestration
+│   │   ├── view-engine/       # UI rendering
+│   │   ├── state-engine/      # State machine interpreter
+│   │   ├── tool-engine/       # Tool execution
+│   │   └── db-engine/         # Database operations
+│   └── tools/                 # Built-in tools
+└── index.js                    # Public API exports
 ```
 
 ## API Reference

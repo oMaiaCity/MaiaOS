@@ -27,11 +27,11 @@ export class DBEngine {
   constructor(backend) {
     this.backend = backend;
     
-    // Initialize modular operations
+    // Initialize modular operations (pass dbEngine for validation)
     this.operations = {
       query: new QueryOperation(this.backend),
-      create: new CreateOperation(this.backend),
-      update: new UpdateOperation(this.backend),
+      create: new CreateOperation(this.backend, this),
+      update: new UpdateOperation(this.backend, this),
       updateConfig: new UpdateConfigOperation(this.backend),
       delete: new DeleteOperation(this.backend),
       toggle: new ToggleOperation(this.backend),

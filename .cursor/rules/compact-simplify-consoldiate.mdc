@@ -1,5 +1,4 @@
----
-description: Analyzes files/folders to find opportunities to compact, simplify, consolidate, and clean up code while maintaining 100% feature parity. Removes deprecated code, fallbacks, architectural hacks, and legacy patterns.
+description: Analyzes files/folders to find opportunities to compact, simplify, consolidate, and clean up code while maintaining 100% feature parity. Removes deprecated code, fallbacks, architectural hacks, and legacy patterns. Also performs security audits (especially for MaiaScript JSON DSL and execution engines) and ensures 100% type safety with JSON schema validation for MaiaScript expressions, execution engines (ViewEngine, StateEngine, ToolEngine, ActorEngine), and user/AI-generated JSON configs.
 alwaysApply: false
 ---
 
@@ -15,8 +14,10 @@ When analyzing files/folders, your goal is to:
 3. **Consolidate** - Merge similar patterns, interfaces, and implementations
 4. **Abstract & Unify** - Create unified interfaces for similar functionality
 5. **Clean Up** - Remove deprecated code, fallbacks, hacks, and legacy patterns
-6. **Maintain Parity** - Preserve 100% feature parity (no breaking changes)
-7. **Stay Safe** - Never break the current system
+6. **Security Audit** - Identify and fix potential security vulnerabilities
+7. **Type Safety & Validation** - Ensure 100% typed interfaces with JSON schema validation
+8. **Maintain Parity** - Preserve 100% feature parity (no breaking changes)
+9. **Stay Safe** - Never break the current system
 
 ## Analysis Protocol
 
@@ -52,6 +53,18 @@ When files/folders are provided, follow this **systematic analysis process**:
 - Unused imports, variables, or exports
 - Dead code paths (unreachable code)
 
+**1.4.1 Identify TypeScript Code (REMOVE ALL)**
+- **TypeScript Files**: `.ts`, `.tsx` files (convert to `.js` or delete)
+- **TypeScript Config**: `tsconfig.json` files (delete)
+- **TypeScript Types**: Type annotations (`: Type`, `interface`, `type`, `enum`)
+- **TypeScript Syntax**: Generic types (`<T>`, `Array<T>`), type assertions (`as Type`)
+- **TypeScript Imports**: Type-only imports (`import type`, `import { type }`)
+- **TypeScript Comments**: `@ts-ignore`, `@ts-expect-error`, `@ts-check`
+- **TypeScript Dependencies**: `typescript` package in `package.json` (remove)
+- **TypeScript Dev Dependencies**: `@types/*` packages (remove)
+- **TypeScript Build Scripts**: Build scripts that compile TypeScript (remove)
+- **Type Definitions**: `.d.ts` declaration files (delete or convert to JSDoc)
+
 **1.5 Find Architectural Hacks**
 - Workarounds marked with `HACK`, `FIXME`, `XXX`, `TEMP`
 - Type assertions (`as any`, `@ts-ignore`) that bypass type safety
@@ -65,6 +78,76 @@ When files/folders are provided, follow this **systematic analysis process**:
 - APIs that do similar things but have different interfaces
 - Configuration objects with similar structures
 - Error handling patterns that could be unified
+
+**1.7 Security Vulnerability Scan**
+
+**General Security Issues:**
+- **Input Validation**: Missing or insufficient input validation
+- **SQL Injection**: Raw SQL queries without parameterization
+- **XSS Vulnerabilities**: Unescaped user input in HTML/JS output
+- **CSRF**: Missing CSRF tokens or protection
+- **Authentication/Authorization**: Weak auth checks, missing permission validation
+- **Sensitive Data Exposure**: Hardcoded secrets, API keys, passwords
+- **Insecure Dependencies**: Outdated packages with known vulnerabilities
+- **Path Traversal**: Unvalidated file paths or directory access
+- **Command Injection**: Unsanitized shell commands or system calls
+- **Insecure Deserialization**: Untrusted data deserialization
+- **Missing Rate Limiting**: APIs without rate limiting or throttling
+- **Insecure Configuration**: Default credentials, debug mode in production
+- **Logging Sensitive Data**: Passwords, tokens, or PII in logs
+- **Weak Cryptography**: Weak hashing algorithms, insecure random number generation
+- **Insecure Communication**: Missing HTTPS, weak TLS configuration
+
+**MaiaScript & Execution Engine Security (CRITICAL):**
+- **Code Injection**: MaiaScript expressions evaluated without validation (user/AI-generated JSON)
+- **HTML Injection**: ViewEngine rendering HTML without sanitization (XSS risk)
+- **Path Traversal**: Unsafe path resolution in `$context`/`$item` operations
+- **Expression DoS**: Nested MaiaScript expressions without depth/recursion limits
+- **Config Injection**: User/AI-generated JSON configs executed without validation
+- **Unvalidated Payloads**: Engine payloads (ViewEngine, StateEngine, ToolEngine) without validation
+- **Unsafe Evaluation**: MaiaScriptEvaluator evaluating expressions without sandboxing checks
+- **Tool Execution**: Tools executed with unvalidated payloads (potential RCE)
+- **Actor Message Injection**: Actor messages processed without payload validation
+- **State Machine Injection**: State transitions triggered with unvalidated payloads
+
+**1.8 MaiaScript & Execution Engine Type Safety Audit**
+
+**MaiaScript JSON DSL Validation:**
+- **MaiaScript Expression Types**: Missing TypeScript types for DSL operations (`$if`, `$eq`, `$context`, etc.)
+- **Expression JSON Schemas**: Missing JSON schema definitions for MaiaScript expressions
+- **DSL Operation Validation**: Unvalidated DSL operations at evaluation time
+- **Expression Input Sanitization**: User/AI-generated JSON configs without sanitization
+- **Path Resolution Safety**: Unsafe path traversal in `$context`, `$item` operations
+- **Expression Recursion Limits**: Missing depth limits on nested MaiaScript expressions
+
+**Execution Engine Type Safety:**
+- **ViewEngine**: HTML rendering without input sanitization, unsafe DOM manipulation
+- **StateEngine**: State machine payloads without validation, untyped state transitions
+- **ToolEngine**: Tool payloads without JSON schema validation, unsafe tool execution
+- **ActorEngine**: Actor messages without type checking, unvalidated message payloads
+- **MaiaScriptEvaluator**: Core evaluator without type safety, unsafe expression evaluation
+
+**JSON Config Validation:**
+- **Actor Configs**: User/AI-generated actor definitions without schema validation
+- **View Configs**: View definitions without validation (XSS risk in HTML rendering)
+- **State Configs**: State machine definitions without validation
+- **Tool Configs**: Tool definitions without parameter schema validation
+- **Interface Configs**: Message interface definitions without payload validation
+
+**Runtime Validation Boundaries:**
+- **Config Loading**: Configs loaded from IndexedDB without validation
+- **Engine Input**: Payloads entering engines without validation
+- **Engine Output**: Engine outputs without type checking
+- **MaiaScript Evaluation**: Expressions evaluated without input sanitization
+- **HTML Injection**: ViewEngine rendering HTML without sanitization
+- **Code Evaluation**: MaiaScript evaluation without sandboxing checks
+
+**Type Safety Gaps:**
+- **Untyped Engines**: Engine classes without TypeScript types
+- **Untyped Payloads**: Payload objects without type definitions
+- **Type Assertions**: Use of `as any`, `@ts-ignore` in engine code
+- **Schema Mismatches**: JSON schemas that don't match TypeScript types
+- **Missing Validation**: No validation at engine boundaries
 
 ### Phase 2: Analysis & Opportunities
 
@@ -92,6 +175,28 @@ When files/folders are provided, follow this **systematic analysis process**:
 - **Fallback Code**: Code paths that are no longer needed
 - **Hacks**: Temporary workarounds that can be properly fixed
 - **Unused Code**: Dead code, unused imports, unreachable paths
+- **TypeScript Code**: ALL TypeScript files, types, configs, and dependencies (REMOVE - project uses JavaScript only)
+
+**2.5 Security Issues**
+- **Critical Vulnerabilities**: Issues that pose immediate security risks
+- **High-Risk Patterns**: Code patterns that could lead to vulnerabilities
+- **Missing Security Controls**: Absent authentication, authorization, validation
+- **Insecure Practices**: Code that follows insecure patterns
+- **Dependency Vulnerabilities**: Outdated packages with known CVEs
+- **MaiaScript Security**: Code injection, HTML injection, unvalidated expression evaluation
+- **Engine Security**: Unvalidated payloads, unsafe tool execution, config injection
+
+**2.6 MaiaScript & Engine Type Safety Gaps**
+- **MaiaScript Expression Types**: Missing TypeScript types for DSL operations
+- **Expression Schemas**: Missing JSON schemas for MaiaScript expressions
+- **Engine Payload Types**: Untyped payloads in ViewEngine, StateEngine, ToolEngine, ActorEngine
+- **Config Validation**: User/AI-generated JSON configs without schema validation
+- **Input Sanitization**: Missing sanitization for user-generated JSON configs
+- **HTML Injection Risk**: ViewEngine rendering HTML without sanitization
+- **Code Evaluation Safety**: MaiaScript evaluation without proper sandboxing
+- **Runtime Validation**: Missing validation at engine boundaries (config loading, payload evaluation)
+- **Type Assertions**: Use of `any`, `@ts-ignore` in engine code
+- **Schema Mismatches**: JSON schemas that don't match TypeScript types
 
 ### Phase 3: Safety Analysis
 
@@ -178,6 +283,28 @@ Milestone 4: Clean up legacy code
   ├─ Delete fallback paths
   ├─ Fix architectural hacks
   ├─ Remove unused code
+  ├─ Remove ALL TypeScript code (files, types, configs, dependencies)
+  └─ Verify feature parity ✅
+
+Milestone 5: Security audit and fixes
+  ├─ Identify security vulnerabilities
+  ├─ Fix critical security issues
+  ├─ Add missing security controls
+  ├─ Update insecure dependencies
+  └─ Verify feature parity ✅
+
+Milestone 6: MaiaScript & execution engine type safety
+  ├─ Add TypeScript types for MaiaScript expressions (DSL operations)
+  ├─ Create JSON schemas for all MaiaScript expression types
+  ├─ Add input sanitization for user/AI-generated JSON configs
+  ├─ Add runtime validation at engine boundaries:
+  │  ├─ Config loading (actor, view, state, tool configs)
+  │  ├─ Engine payloads (ViewEngine, StateEngine, ToolEngine, ActorEngine)
+  │  ├─ MaiaScript evaluation (expression validation before evaluation)
+  │  └─ HTML rendering (ViewEngine HTML sanitization)
+  ├─ Type all engine classes and payloads
+  ├─ Remove unsafe type assertions (`as any`, `@ts-ignore`)
+  ├─ Ensure 100% type coverage for MaiaScript DSL and engines
   └─ Verify feature parity ✅
 ```
 
@@ -207,6 +334,7 @@ When analyzing code, provide:
 - **Complexity**: [Z] functions that could be simplified
 - **Legacy Code**: [W] deprecated/legacy patterns found
 - **Hacks**: [V] architectural hacks/workarounds found
+- **TypeScript Code**: [T] TypeScript files/configs/dependencies found (REMOVE ALL - project is JavaScript-only)
 
 ### Consolidation Opportunities
 1. [Description of opportunity]
@@ -227,6 +355,30 @@ When analyzing code, provide:
    - Files affected: [list]
    - Impact: [high/medium/low]
    - Risk: [high/medium/low]
+
+### TypeScript Removal Opportunities
+1. [Description of TypeScript code/file to remove]
+   - Files affected: [list of .ts/.tsx files]
+   - TypeScript features: [types, interfaces, configs, dependencies]
+   - Conversion needed: [convert to JS/delete]
+   - Impact: [high/medium/low]
+   - Risk: [high/medium/low]
+
+### Security Issues
+1. [Description of security issue]
+   - Files affected: [list]
+   - Severity: [critical/high/medium/low]
+   - Risk: [high/medium/low]
+   - Fix priority: [immediate/high/medium/low]
+
+### MaiaScript & Engine Type Safety Gaps
+1. [Description of MaiaScript/engine type/validation gap]
+   - Files affected: [list]
+   - Engine: [ViewEngine/StateEngine/ToolEngine/ActorEngine/MaiaScriptEvaluator]
+   - Impact: [high/medium/low]
+   - Risk: [high/medium/low]
+   - Security Risk: [critical/high/medium/low] (especially for user-generated configs)
+   - Type coverage: [current %] → [target: 100%]
 ```
 
 ### Detailed Plan
@@ -250,6 +402,8 @@ When analyzing code, provide:
 
 **Files to Delete**:
 - `path/to/deprecated.js` - [why it's safe to delete]
+- `path/to/file.ts` - TypeScript file (convert to .js or delete)
+- `tsconfig.json` - TypeScript config (not used, delete)
 
 **Feature Parity Check**:
 - ✅ Feature X: [how it's preserved]
@@ -308,6 +462,14 @@ When analyzing code, provide:
 - ✅ Fix hacks with proper solutions
 - ✅ Remove legacy compatibility layers
 - ✅ Clean up unused configuration
+- ✅ **Remove ALL TypeScript code** (project uses JavaScript only):
+  - Delete `.ts`/`.tsx` files (convert to `.js` if needed)
+  - Delete `tsconfig.json` files
+  - Remove TypeScript types (convert to JSDoc if needed)
+  - Remove `typescript` package from dependencies
+  - Remove `@types/*` packages from devDependencies
+  - Remove TypeScript build scripts
+  - Delete `.d.ts` declaration files
 
 **DON'T:**
 - ❌ Comment out code "just in case"
@@ -315,6 +477,9 @@ When analyzing code, provide:
 - ❌ Delete code that's still referenced
 - ❌ Remove error handling that's still needed
 - ❌ Clean up code that's actively used
+- ❌ **Keep TypeScript files** - convert to JavaScript or delete
+- ❌ **Keep TypeScript dependencies** - remove from package.json
+- ❌ **Keep TypeScript configs** - delete tsconfig.json files
 
 ### When Abstracting/Unifying
 
@@ -331,6 +496,109 @@ When analyzing code, provide:
 - ❌ Add unnecessary indirection layers
 - ❌ Break type safety with `any` or `@ts-ignore`
 
+### When Auditing Security
+
+**DO:**
+- ✅ Scan for OWASP Top 10 vulnerabilities
+- ✅ Check input validation at all boundaries
+- ✅ Verify authentication/authorization checks
+- ✅ Review sensitive data handling (secrets, PII)
+- ✅ Check for insecure dependencies (npm audit, etc.)
+- ✅ Verify secure communication (HTTPS, TLS)
+- ✅ Review error handling (don't leak sensitive info)
+- ✅ Check logging (no secrets in logs)
+- ✅ Verify rate limiting on public APIs
+- ✅ Review file system access and path validation
+
+**DON'T:**
+- ❌ Ignore security warnings or deprecations
+- ❌ Leave hardcoded secrets or credentials
+- ❌ Skip input validation "for performance"
+- ❌ Expose sensitive data in error messages
+- ❌ Use weak cryptography or hashing
+- ❌ Trust user input without validation
+- ❌ Skip security updates for dependencies
+
+**Security Checklist:**
+- [ ] All user input validated and sanitized
+- [ ] No SQL injection vulnerabilities
+- [ ] No XSS vulnerabilities (output escaped)
+- [ ] CSRF protection in place
+- [ ] Authentication required for protected routes
+- [ ] Authorization checks at every permission boundary
+- [ ] No secrets in code or logs
+- [ ] Dependencies up-to-date (no known CVEs)
+- [ ] HTTPS/TLS configured correctly
+- [ ] Rate limiting on public APIs
+- [ ] Secure error handling (no info leakage)
+- [ ] File paths validated (no path traversal)
+- [ ] Commands sanitized (no command injection)
+
+**MaiaScript & Engine Security Checklist (CRITICAL):**
+- [ ] **MaiaScript Expression Validation**: All expressions validated before evaluation
+- [ ] **Input Sanitization**: User/AI-generated JSON configs sanitized before loading
+- [ ] **HTML Sanitization**: ViewEngine HTML rendering sanitized (prevent XSS)
+- [ ] **Path Validation**: Path resolution in `$context`/`$item` validated and sanitized
+- [ ] **Expression Limits**: Depth/recursion limits on nested MaiaScript expressions
+- [ ] **Config Validation**: All JSON configs validated with schemas before execution
+- [ ] **Engine Payload Validation**: All payloads validated before engine processing
+- [ ] **Tool Execution Safety**: Tool payloads validated before execution
+- [ ] **Actor Message Validation**: Actor messages validated before processing
+- [ ] **State Machine Validation**: State transitions validated before execution
+- [ ] **No Code Injection**: MaiaScript evaluation sandboxed, no `eval()` or `new Function()`
+- [ ] **Sandboxing Checks**: MaiaScriptEvaluator has proper sandboxing and whitelist checks
+
+### When Ensuring MaiaScript & Engine Type Safety
+
+**CRITICAL: MaiaOS is a runtime IDE where users/AI generate JSON configs that execute directly in the host environment. Type safety and validation are SECURITY REQUIREMENTS, not just code quality.**
+
+**DO:**
+- ✅ **MaiaScript Expression JSON Schemas**: Create JSON schemas for MaiaScript expressions (validate before evaluation) - use JSON schemas, NOT TypeScript types
+- ✅ **Expression Type Definitions**: Define expression types using JSON schemas (project uses JavaScript, not TypeScript)
+- ✅ **Input Sanitization**: Sanitize ALL user/AI-generated JSON configs before loading/evaluation
+- ✅ **Engine Payload Validation**: Validate all payloads entering engines with JSON schemas (ViewEngine, StateEngine, ToolEngine, ActorEngine) - use JSON schemas, NOT TypeScript types
+- ✅ **Config Validation**: Validate ALL JSON configs (actor, view, state, tool) with JSON schemas before use
+- ✅ **Runtime Validation at Engine Boundaries**:
+  - **Config Loading**: Validate configs when loaded from IndexedDB
+  - **MaiaScript Evaluation**: Validate expressions before evaluation (prevent injection)
+  - **Engine Payloads**: Validate payloads before engine processing
+  - **HTML Rendering**: Sanitize HTML in ViewEngine (prevent XSS)
+  - **Tool Execution**: Validate tool payloads before execution
+  - **Actor Messages**: Validate message payloads before processing
+- ✅ **Path Resolution Safety**: Validate and sanitize paths in `$context` and `$item` operations
+- ✅ **Expression Depth Limits**: Add recursion/depth limits to prevent DoS via nested expressions
+- ✅ **Validation Instead of Types**: Use JSON schema validation instead of TypeScript types (project is JavaScript-only)
+- ✅ **Schema Matching**: Ensure TypeScript types match JSON schemas exactly
+- ✅ **Clear Validation Errors**: Provide clear error messages for validation failures
+
+**DON'T:**
+- ❌ Use TypeScript types (project is JavaScript-only - use JSON schemas instead)
+- ❌ Skip runtime validation (JSON schemas provide runtime validation - TypeScript types don't exist in this project)
+- ❌ Trust user/AI-generated JSON configs without validation
+- ❌ Render HTML without sanitization (ViewEngine XSS risk)
+- ❌ Evaluate MaiaScript expressions without input validation
+- ❌ Skip validation at engine boundaries (config loading, payload evaluation)
+- ❌ Allow unsafe path traversal in `$context`/`$item` operations
+- ❌ Add TypeScript files or dependencies (remove all TypeScript code)
+
+**MaiaScript & Engine Type Safety Checklist (JavaScript + JSON Schemas Only):**
+- [ ] **MaiaScript Expression JSON Schemas**: JSON schemas for all DSL operations (`$if`, `$eq`, `$context`, `$item`, etc.)
+- [ ] **Expression Validation**: All MaiaScript expressions validated with JSON schemas before evaluation
+- [ ] **Input Sanitization**: User/AI-generated JSON configs sanitized before use
+- [ ] **ViewEngine Validation**: All view payloads validated with JSON schemas, HTML sanitized
+- [ ] **StateEngine Validation**: All state machine payloads validated with JSON schemas
+- [ ] **ToolEngine Validation**: All tool payloads validated with JSON schemas
+- [ ] **ActorEngine Validation**: All actor messages validated with JSON schemas
+- [ ] **MaiaScriptEvaluator Safety**: Core evaluator has proper validation and sandboxing (no TypeScript types needed)
+- [ ] **Config Validation**: All configs (actor, view, state, tool) validated with JSON schemas
+- [ ] **Runtime Validation**: Validation at all engine boundaries (config loading, evaluation, rendering)
+- [ ] **Path Safety**: Path resolution in `$context`/`$item` validated and sanitized
+- [ ] **Expression Limits**: Depth/recursion limits on nested MaiaScript expressions
+- [ ] **HTML Sanitization**: ViewEngine HTML rendering sanitized (prevent XSS)
+- [ ] **No TypeScript**: No TypeScript files, types, configs, or dependencies (project is JavaScript-only)
+- [ ] **JSON Schema Coverage**: 100% JSON schema coverage for MaiaScript DSL and all engines
+- [ ] **No Type Assertions**: No TypeScript syntax (`as any`, `@ts-ignore`) in code
+
 ## Verification Checklist
 
 Before finalizing any changes, verify:
@@ -341,7 +609,23 @@ Before finalizing any changes, verify:
 - [ ] **No Duplicates**: Duplicate code has been consolidated
 - [ ] **No Legacy Code**: Deprecated code has been removed
 - [ ] **No Hacks**: Architectural hacks have been properly fixed
-- [ ] **Type Safety**: No `any` types or `@ts-ignore` added
+- [ ] **No TypeScript**: ALL TypeScript files, types, configs, and dependencies removed (project is JavaScript-only)
+- [ ] **MaiaScript JSON Schemas**: All DSL operations have JSON schemas, expressions validated
+- [ ] **Engine Validation**: All engines (ViewEngine, StateEngine, ToolEngine, ActorEngine) validate payloads with JSON schemas
+- [ ] **Config Validation**: All JSON configs (actor, view, state, tool) validated with schemas
+- [ ] **Input Sanitization**: User/AI-generated JSON configs sanitized before use
+- [ ] **Runtime Validation**: Validation at all engine boundaries (config loading, evaluation, rendering)
+- [ ] **HTML Sanitization**: ViewEngine HTML rendering sanitized (prevent XSS)
+- [ ] **Path Safety**: Path resolution in `$context`/`$item` validated and sanitized
+- [ ] **Expression Limits**: Depth/recursion limits on nested MaiaScript expressions
+- [ ] **No TypeScript**: No TypeScript files, types, configs, or dependencies (project is JavaScript-only)
+- [ ] **JSON Schema Coverage**: 100% JSON schema coverage for MaiaScript DSL and all engines
+- [ ] **Security**: No critical security vulnerabilities
+- [ ] **Input Validation**: All user input validated and sanitized
+- [ ] **Authentication**: Required for protected resources
+- [ ] **Authorization**: Permission checks at boundaries
+- [ ] **No Secrets**: No hardcoded secrets or credentials
+- [ ] **Dependencies**: All dependencies up-to-date (no known CVEs)
 - [ ] **Tests Pass**: All existing tests still pass
 - [ ] **Linter Clean**: No new linter errors introduced
 - [ ] **Documentation**: Changes are documented in code/comments
@@ -349,13 +633,17 @@ Before finalizing any changes, verify:
 ## Example Workflow
 
 1. **User**: "@folder1 @folder2 analyze and consolidate"
-2. **Discovery**: Read all files, map architecture, find duplicates
-3. **Analysis**: Identify consolidation opportunities, assess risks
-4. **Plan**: Create detailed milestone plan with safety checks
-5. **Implement**: Execute changes incrementally, verify after each milestone
+2. **Discovery**: Read all files, map architecture, find duplicates, scan security, audit types
+3. **Analysis**: Identify consolidation opportunities, security issues, type gaps, assess risks
+4. **Plan**: Create detailed milestone plan with safety checks (6 milestones)
+5. **Implement**: Execute changes incrementally, verify after each milestone:
+   - Milestone 1-4: Consolidate, unify, simplify, cleanup
+   - Milestone 5: Fix security vulnerabilities
+   - Milestone 6: Add MaiaScript & engine types, validation, input sanitization (100% coverage)
 6. **Verify**: Test all functionality, ensure feature parity
-7. **Cleanup**: Remove deprecated code, fix hacks, delete unused code
-8. **Document**: Update comments/docs to reflect changes
+7. **Security**: Verify all security issues fixed, no vulnerabilities remain
+8. **MaiaScript Type Safety**: Verify 100% type coverage for DSL and engines, all configs validated, input sanitized
+9. **Document**: Update comments/docs to reflect changes
 
 ## Key Principles
 
@@ -365,7 +653,11 @@ Before finalizing any changes, verify:
 4. **No Regressions**: Maintain exact behavior (same inputs → same outputs).
 5. **Complete Cleanup**: Remove deprecated code completely, don't leave it commented.
 6. **Unified Patterns**: Similar functionality should use similar patterns.
-7. **Type Safety**: Preserve and improve type safety, don't bypass it.
+7. **No TypeScript**: Remove ALL TypeScript code - project uses JavaScript only (convert .ts to .js or delete, remove types, configs, dependencies).
+8. **Security First**: Fix security vulnerabilities immediately, especially critical ones.
+9. **MaiaScript Type Safety**: All MaiaScript expressions and engines must be typed with JSON schemas (CRITICAL for user-generated configs) - use JSON schemas, NOT TypeScript types.
+10. **Validate Engine Boundaries**: All engine boundaries (config loading, MaiaScript evaluation, HTML rendering) must have runtime validation and input sanitization.
+11. **User-Generated Configs**: Never trust user/AI-generated JSON configs - always validate and sanitize before execution.
 
 ---
 

@@ -2,7 +2,7 @@
   "name": "@MaiaOS/script",
   "version": "0.17.0",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",
     "./modules/*": "./src/modules/*"

@@ -31,6 +31,8 @@ import guardSchema from './os/guard.schema.json';
 import actionSchema from './os/action.schema.json';
 import transitionSchema from './os/transition.schema.json';
 import messagePayloadSchema from './os/messagePayload.schema.json';
+// Import MaiaScript expression schema
+import expressionSchema from './os/maia-script-expression.schema.json';
 // Import CoValue schemas
 import subscriptionsSchema from './os/subscriptions.schema.json';
 import inboxSchema from './os/inbox.schema.json';
@@ -57,6 +59,8 @@ const SCHEMAS = {
   action: actionSchema,
   transition: transitionSchema,
   messagePayload: messagePayloadSchema,
+  // MaiaScript expression schema (for validating DSL expressions)
+  'maia-script-expression': expressionSchema,
   // CoValue schemas (separate CoValues referenced via $co)
   subscriptions: subscriptionsSchema,
   inbox: inboxSchema

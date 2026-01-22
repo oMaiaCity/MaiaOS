@@ -2,6 +2,8 @@
 import { validateOrThrow, validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import schema loader utility
 import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
+// Import HTML sanitization utility
+import { sanitizeAttribute, containsDangerousHTML } from '../../utils/html-sanitizer.js';
 
 /**
  * ViewEngine - Renders .maia view files to Shadow DOM
@@ -21,6 +23,12 @@ import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
  * Removed:
  * - $if: DELETED (use data-attributes + CSS instead)
  * - slot: DELETED (migrated to $slot)
+ * 
+ * Security:
+ * - Uses textContent for text rendering (automatically escapes HTML)
+ * - Uses createElement/appendChild for DOM structure (safe)
+ * - Sanitizes attribute values to prevent XSS
+ * - If HTML content rendering is added in the future, use sanitizeHTML() utility
  */
 export class ViewEngine {
   constructor(evaluator, actorEngine, moduleRegistry) {
@@ -146,7 +154,15 @@ export class ViewEngine {
           const resolvedValue = this.evaluator.evaluate(attrValue, data);
           if (resolvedValue !== undefined && resolvedValue !== null) {
             // Convert boolean to string for data attributes (CSS selectors need strings)
-            const stringValue = typeof resolvedValue === 'boolean' ? String(resolvedValue) : resolvedValue;
+            let stringValue = typeof resolvedValue === 'boolean' ? String(resolvedValue) : String(resolvedValue);
+            
+            // Sanitize attribute values to prevent XSS (defensive hardening)
+            // Note: setAttribute() already escapes quotes, but we sanitize for extra safety
+            if (containsDangerousHTML(stringValue)) {
+              console.warn(`[ViewEngine] Potentially dangerous HTML detected in attribute ${attrName}, sanitizing`);
+              stringValue = sanitizeAttribute(stringValue);
+            }
+            
             element.setAttribute(attrName, stringValue);
           }
         }

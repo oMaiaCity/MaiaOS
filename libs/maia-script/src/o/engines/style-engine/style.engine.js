@@ -2,6 +2,8 @@
 import { validateOrThrow, validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import schema loader utility
 import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
+// Import shared path resolver utility
+import { resolvePath } from '../../utils/path-resolver.js';
 
 /**
  * StyleEngine - Compiles .maia style files to CSS with Constructable Stylesheets
@@ -122,19 +124,9 @@ export class StyleEngine {
     if (typeof value !== 'string') return value;
     
     return value.replace(/\{([^}]+)\}/g, (match, path) => {
-      const tokenValue = this.resolvePath(tokens, path);
+      const tokenValue = resolvePath(tokens, path);
       return tokenValue !== undefined ? tokenValue : match;
     });
-  }
-
-  /**
-   * Resolve a dot-separated path in an object
-   * @param {Object} obj - The object to traverse
-   * @param {string} path - Dot-separated path
-   * @returns {any} The resolved value
-   */
-  resolvePath(obj, path) {
-    return path.split('.').reduce((acc, key) => acc?.[key], obj);
   }
 
   /**

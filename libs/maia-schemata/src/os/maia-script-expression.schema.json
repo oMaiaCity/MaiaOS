@@ -1,0 +1,111 @@
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/maia-script-expression",
+  "title": "MaiaScript Expression",
+  "cotype": "comap",
+  "description": "JSON-based DSL expression schema for MaiaScript runtime logic. Supports data access, comparisons, logical operations, control flow, and nested expressions.",
+  "anyOf": [
+    {
+      "description": "Primitive value",
+      "type": ["number", "boolean", "null"]
+    },
+    {
+      "description": "String value (including shortcut syntax $key or $$key)",
+      "type": "string"
+    },
+    {
+      "$ref": "#/$defs/expressionObject"
+    }
+  ],
+  "$defs": {
+    "expressionObject": {
+      "description": "MaiaScript expression object (DSL operation)",
+      "type": "object",
+      "oneOf": [
+        {
+          "description": "$context operation - access context data",
+          "properties": {
+            "$context": {
+              "type": "string",
+              "description": "Dot-separated path in context object (e.g., 'user.name')",
+              "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$"
+            }
+          },
+          "required": ["$context"],
+          "additionalProperties": false
+        },
+        {
+          "description": "$item operation - access item data",
+          "properties": {
+            "$item": {
+              "type": "string",
+              "description": "Dot-separated path in item object (e.g., 'id', 'status.value')",
+              "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$"
+            }
+          },
+          "required": ["$item"],
+          "additionalProperties": false
+        },
+        {
+          "description": "$eq operation - equality comparison",
+          "properties": {
+            "$eq": {
+              "type": "array",
+              "description": "Array of two expressions to compare",
+              "items": {
+                "$ref": "#"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": ["$eq"],
+          "additionalProperties": false
+        },
+        {
+          "description": "$ne operation - inequality comparison",
+          "properties": {
+            "$ne": {
+              "type": "array",
+              "description": "Array of two expressions to compare",
+              "items": {
+                "$ref": "#"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": ["$ne"],
+          "additionalProperties": false
+        },
+        {
+          "description": "$if operation - conditional expression",
+          "properties": {
+            "$if": {
+              "type": "object",
+              "description": "Conditional expression object",
+              "properties": {
+                "condition": {
+                  "$ref": "#",
+                  "description": "Condition expression (evaluated to boolean)"
+                },
+                "then": {
+                  "$ref": "#",
+                  "description": "Expression to evaluate if condition is true"
+                },
+                "else": {
+                  "$ref": "#",
+                  "description": "Expression to evaluate if condition is false"
+                }
+              },
+              "required": ["condition", "then", "else"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["$if"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

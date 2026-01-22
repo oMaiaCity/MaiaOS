@@ -52,7 +52,8 @@ export function transformSchemaForSeeding(schema, coIdMap) {
     }
   }
 
-  // Transform $co keyword values (replace placeholder co-ids with actual co-ids)
+  // Transform $co keyword values (replace human-readable IDs with co-ids)
+  // CRITICAL: This must happen AFTER all schemas have been added to coIdMap
   transformCoReferences(transformed, coIdMap);
 
   // Transform items in arrays (for colist/costream)
@@ -113,7 +114,10 @@ function transformCoReferences(obj, coIdMap) {
       if (coId) {
         obj.$co = coId;
       } else {
-        console.warn(`[SchemaTransformer] No co-id found for $co reference: ${refValue}`);
+        // CRITICAL: This means the referenced schema isn't in the coIdMap
+        // This will cause validation errors at runtime
+        console.error(`[SchemaTransformer] No co-id found for $co reference: ${refValue}. Available keys in coIdMap:`, Array.from(coIdMap.keys()));
+        // Don't transform - leave as-is (will fail validation, but at least we'll see the error)
       }
     }
   }
