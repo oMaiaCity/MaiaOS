@@ -18,7 +18,7 @@ The **Kernel** is the single entry point for MaiaOS. It boots the operating syst
 
   <!-- Import MaiaOS Kernel -->
   <script type="module">
-    import { MaiaOS } from '../../o/kernel.js';
+    import { MaiaOS } from '@MaiaOS/kernel';
     
     async function boot() {
       // Boot the operating system

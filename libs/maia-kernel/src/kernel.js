@@ -1,12 +1,12 @@
 /**
- * MaiaScript Kernel - v0.4
+ * MaiaOS Kernel - v0.4
  * 
- * Single entry point for the MaiaScript Operating System
- * Bundles all engines and exposes unified API
- * Module-based architecture with dynamic loading
+ * Single entry point for the MaiaOS Operating System
+ * Central source of truth for booting and managing the OS
+ * Imports engines from @MaiaOS/script and orchestrates them
  * 
  * Usage:
- *   import { MaiaOS } from './kernel.js';
+ *   import { MaiaOS } from '@MaiaOS/kernel';
  *   const os = await MaiaOS.boot(config);
  */
 
@@ -19,7 +19,6 @@ import { MaiaScriptEvaluator } from '@MaiaOS/script';
 import { ModuleRegistry } from '@MaiaOS/script';
 import { ToolEngine } from '@MaiaOS/script';
 import { SubscriptionEngine } from '@MaiaOS/script';
-// Import database operation engine
 import { DBEngine } from '@MaiaOS/script';
 import { IndexedDBBackend } from '@MaiaOS/script';
 // Import validation helper
@@ -413,14 +412,3 @@ export class MaiaOS {
   }
   
 }
-
-// Re-export engines for advanced use cases
-export {
-  ActorEngine,
-  ViewEngine,
-  StyleEngine,
-  StateEngine,
-  MaiaScriptEvaluator,
-  ModuleRegistry,
-  ToolEngine
-};

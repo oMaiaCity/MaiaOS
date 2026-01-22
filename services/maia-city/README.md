@@ -55,10 +55,15 @@ Server runs on **http://localhost:4200**
 
 The todos example demonstrates clean import/export pattern:
 
+**maia-kernel exports:**
+```javascript
+// libs/maia-kernel/src/index.js
+export { MaiaOS } from "./kernel.js";
+```
+
 **maia-script exports:**
 ```javascript
 // libs/maia-script/src/index.js
-export { MaiaOS } from "./kernel.js";
 export { ActorEngine, ViewEngine, StyleEngine, ... } from "./engines/...";
 ```
 

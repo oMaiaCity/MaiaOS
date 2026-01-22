@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-01-22T22:11:46.180Z
+**Auto-generated:** 2026-01-22T22:16:49.244Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -1622,7 +1622,7 @@ The agent orchestrates the application and loads UI actors as children. See [Act
   <div id="app-container"></div>
   
   <script type="module">
-    import { MaiaOS } from './o/kernel.js';
+    import { MaiaOS } from '@MaiaOS/kernel';
     
     async function boot() {
       // Boot MaiaOS
@@ -1775,7 +1775,7 @@ vibes/todos/
   <div id="actor-todo"></div>
   
   <script type="module">
-    import { MaiaOS } from '../../o/kernel.js';
+    import { MaiaOS } from '@MaiaOS/kernel';
     
     async function boot() {
       const os = await MaiaOS.boot({
@@ -1926,7 +1926,7 @@ The **Kernel** is the single entry point for MaiaOS. It boots the operating syst
 
   <!-- Import MaiaOS Kernel -->
   <script type="module">
-    import { MaiaOS } from '../../o/kernel.js';
+    import { MaiaOS } from '@MaiaOS/kernel';
     
     async function boot() {
       // Boot the operating system

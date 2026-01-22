@@ -203,7 +203,7 @@ The agent orchestrates the application and loads UI actors as children. See [Act
   <div id="app-container"></div>
   
   <script type="module">
-    import { MaiaOS } from './o/kernel.js';
+    import { MaiaOS } from '@MaiaOS/kernel';
     
     async function boot() {
       // Boot MaiaOS
@@ -356,7 +356,7 @@ vibes/todos/
   <div id="actor-todo"></div>
   
   <script type="module">
-    import { MaiaOS } from '../../o/kernel.js';
+    import { MaiaOS } from '@MaiaOS/kernel';
     
     async function boot() {
       const os = await MaiaOS.boot({
