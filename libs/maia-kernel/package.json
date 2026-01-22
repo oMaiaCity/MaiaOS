@@ -1,5 +1,5 @@
 {
-  "name": "@MaiaOS/core",
+  "name": "@MaiaOS/kernel",
   "version": "0.1.23",
   "type": "module",
   "main": "./src/index.js",
@@ -8,6 +8,8 @@
   },
   "dependencies": {
     "@MaiaOS/db": "workspace:*",
-    "@MaiaOS/ssi": "workspace:*"
+    "@MaiaOS/ssi": "workspace:*",
+    "@MaiaOS/script": "workspace:*",
+    "@MaiaOS/schemata": "workspace:*"
   }
 }

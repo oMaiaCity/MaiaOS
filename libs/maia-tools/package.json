@@ -1,0 +1,20 @@
+{
+  "name": "@MaiaOS/tools",
+  "version": "0.17.0",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./db/*": "./src/db/*",
+    "./core/*": "./src/core/*",
+    "./dragdrop/*": "./src/dragdrop/*",
+    "./interface/*": "./src/interface/*",
+    "./context/*": "./src/context/*"
+  },
+  "dependencies": {
+    "@MaiaOS/schemata": "workspace:*"
+  },
+  "files": [
+    "src"
+  ]
+}

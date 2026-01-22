@@ -5,7 +5,7 @@
  * Used by all modules (core, db, dragdrop, interface) for consistent registration patterns.
  */
 
-import { getTool } from '../tools/index.js';
+import { getTool } from '@MaiaOS/tools';
 
 /**
  * Get and validate toolEngine from registry

@@ -4,8 +4,8 @@
  */
 
 // Import db tool directly
-import dbTool from '../tools/db/db.tool.js';
-import dbToolDef from '../tools/db/db.tool.maia';
+import dbTool from '@MaiaOS/tools/db/db.tool.js';
+import dbToolDef from '@MaiaOS/tools/db/db.tool.maia';
 import { getToolEngine, registerModuleConfig } from '../utils/module-registration.js';
 
 export class DBModule {

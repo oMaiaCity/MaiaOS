@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-01-22T14:43:39.712Z
+**Auto-generated:** 2026-01-22T21:44:08.972Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -70,11 +70,14 @@ MaiaOS:       Write .maia → Run
 - No webpack, no vite, no build tools
 
 **How It Works:**
-1. Browser loads `kernel.js` (single entry point)
-2. Kernel loads `.maia` files via `fetch()`
-3. Engines interpret and execute
-4. Shadow DOM renders isolated UI
-5. Done!
+1. Browser loads `o/kernel.js` (single entry point)
+2. Kernel initializes engines (Actor, View, State, Tool, DB, Subscription, etc.)
+3. Kernel loads modules (db, core, dragdrop, interface)
+4. Kernel seeds database with configs, schemas, and tool definitions
+5. Kernel loads `.maia` files via `fetch()` or database queries
+6. Engines interpret and execute
+7. Shadow DOM renders isolated UI
+8. Done!
 
 ## Three-Layer Architecture
 
@@ -98,6 +101,9 @@ MaiaOS:       Write .maia → Run
 - `ViewEngine` - Renders views
 - `ToolEngine` - Executes actions
 - `StyleEngine` - Compiles styles
+- `DBEngine` - Unified database operations (query, create, update, delete, toggle)
+- `SubscriptionEngine` - Context-driven reactive subscriptions
+- `MessageQueue` - Actor-to-actor communication
 
 **Logic lives here, not in your app.**
 
@@ -256,12 +262,15 @@ MaiaOS is **frontend-first** but with backend patterns:
 ## Core Concepts
 
 ### MaiaOS
+
 The operating system itself. A runtime-based, AI-native platform for building declarative applications. Think of it as "an OS for apps" that runs in the browser.
 
 ### Kernel
+
 The single entry point (`o/kernel.js`). Boots the system, loads modules, initializes engines, and creates actors. One file to rule them all.
 
 ### MaiaScript
+
 The JSON-based DSL (Domain Specific Language) for defining actors, views, states, styles, and tools. Pure declarative syntax with expressions like `$context`, `$$item`, `@inputValue`.
 
 ---
@@ -269,130 +278,77 @@ The JSON-based DSL (Domain Specific Language) for defining actors, views, states
 ## Definition Layer (Declarative)
 
 ### Actor
+
 A pure declarative specification (`.actor.maia`) that references other components. Contains zero logic - just IDs and references. Think: "component configuration file."
 
-**Example:**
-```json
-{
-  "$type": "actor",
-  "contextRef": "todo",
-  "stateRef": "todo",
-  "viewRef": "todo"
-}
-```
-
 ### Context
+
 Runtime data for an actor (`.context.maia`). All state lives here: collections, UI state, form values, etc. Can be inline or separate file.
 
-**Example:**
-```json
-{
-  "$type": "context",
-  "todos": [],
-  "newTodoText": "",
-  "viewMode": "list"
-}
-```
-
 ### State Machine
+
 Behavior flow definition (`.state.maia`). XState-like state machine with states, transitions, guards, and actions. Defines WHAT happens WHEN.
 
-**Example:**
-```json
-{
-  "$type": "state",
-  "initial": "idle",
-  "states": {
-    "idle": {
-      "on": {
-        "CREATE_TODO": "creating"
-      }
-    }
-  }
-}
-```
-
 ### View
+
 UI structure definition (`.view.maia`). Declarative DOM tree with expressions, loops, conditionals, and event handlers. Renders to Shadow DOM.
 
-**Example:**
-```json
-{
-  "$type": "view",
-  "root": {
-    "tag": "div",
-    "text": "$title",
-    "children": [...]
-  }
-}
-```
-
 ### Style
+
 Appearance definition (`.style.maia`). Design tokens + component styles. Compiles to CSS and injects into Shadow DOM.
 
 **Types:**
+
 - **Brand** (`brand.style.maia`) - Shared design system
 - **Local** (`actor.style.maia`) - Actor-specific overrides
 
 ### Skill
-AI agent interface specification (`.skill.maia`). Describes actor capabilities, events, context schema, and usage patterns for LLM orchestration.
 
-**Example:**
-```json
-{
-  "$type": "skill",
-  "actorType": "todo",
-  "capabilities": {
-    "taskManagement": "Create, complete, delete todos"
-  },
-  "stateEvents": {...}
-}
-```
+AI agent interface specification (`.skill.maia`). Describes actor capabilities, events, context schema, and usage patterns for LLM orchestration.
 
 ---
 
 ## Execution Layer (Imperative)
 
 ### Engine
+
 JavaScript execution machinery that interprets definitions. Engines contain all the logic - definitions contain none.
 
 **Core Engines:**
+
 - **ActorEngine** - Orchestrates actors, manages lifecycle
 - **StateEngine** - Interprets state machines, executes transitions
 - **ViewEngine** - Renders views to Shadow DOM
 - **ToolEngine** - Executes tool actions
 - **StyleEngine** - Compiles styles to CSS
+- **DBEngine** - Unified database operation engine (query, create, update, delete, toggle, seed)
+- **SubscriptionEngine** - Context-driven reactive subscriptions
+- **MessageQueue** - Actor-to-actor message passing
+- **ModuleRegistry** - Manages dynamic module loading
 - **MaiaScriptEvaluator** - Evaluates DSL expressions
 
 ### Tool
-An executable function (`.tool.js` + `.tool.maia`). The ONLY place imperative code lives. Tools mutate actor context based on payloads.
+
+An executable function (`.tool.js` + `.tool.maia`). The ONLY place imperative code lives. Tools mutate actor context or execute operations based on payloads.
 
 **Structure:**
+
 - `.tool.maia` - JSON schema (AI-compatible metadata)
 - `.tool.js` - JavaScript function (execution logic)
 
-**Example:**
-```javascript
-// create.tool.js
-export default {
-  async execute(actor, payload) {
-    const { schema, data } = payload;
-    const entity = { id: Date.now().toString(), ...data };
-    actor.context[schema].push(entity);
-  }
-};
-```
-
 ### Module
+
 A collection of related tools (`.module.js`). Modules register tools with the ToolEngine at boot time.
 
 **Built-in Modules:**
-- `@core/*` - UI utilities (modals, view modes)
-- `@mutation/*` - Generic CRUD (create, update, delete, toggle)
-- `@dragdrop/*` - Drag-and-drop handlers
-- `@context/*` - Context manipulation
+
+- `db` - Database operations (unified API: `@db`)
+- `core` - UI utilities (modals, focus, preventDefault)
+- `dragdrop` - Drag-and-drop handlers
+- `interface` - Interface validation
 
 ### Module Registry
+
 Central plugin system for dynamic module loading. Manages module lifecycle and tool registration.
 
 ---
@@ -400,12 +356,15 @@ Central plugin system for dynamic module loading. Manages module lifecycle and t
 ## Intelligence Layer (AI Orchestration)
 
 ### Vibecreator
+
 A person who builds MaiaOS applications. Writes `.maia` files, composes actors, defines behaviors. No JavaScript required.
 
 ### Agent / LLM
+
 AI assistant (ChatGPT, Claude, Cursor, etc.) that reads skills and generates events. Orchestrates actors based on user intent.
 
 ### Skill Engine
+
 (v0.5) Engine that manages skill discovery and interpretation for AI agents. Enables LLM-driven app orchestration.
 
 ---
@@ -413,38 +372,29 @@ AI assistant (ChatGPT, Claude, Cursor, etc.) that reads skills and generates eve
 ## Data Flow Concepts
 
 ### Event
+
 A message sent to a state machine to trigger a transition. Events have a name and optional payload.
 
-**Example:**
-```json
-{
-  "send": "CREATE_TODO",
-  "payload": { "text": "$newTodoText" }
-}
-```
-
 ### Payload
+
 Data passed with an event. Can contain expressions that are evaluated at runtime.
 
 **Expression Types:**
+
 - `$field` - Context reference (`actor.context.field`)
 - `$$field` - Item reference (in loops: `item.field`)
 - `@inputValue` - DOM value reference (`input.value`)
 
 ### Guard
+
 A condition that determines if a transition should occur. Evaluated before state change.
 
-**Example:**
-```json
-{
-  "guard": { "$ne": ["$newTodoText", ""] }
-}
-```
-
 ### Transition
+
 Moving from one state to another in response to an event. Can have guards and actions.
 
 ### Action
+
 A tool invocation or context update. Executed during state transitions (entry/exit/inline).
 
 ---
@@ -452,17 +402,21 @@ A tool invocation or context update. Executed during state transitions (entry/ex
 ## UI Concepts
 
 ### Shadow DOM
+
 Browser-native encapsulation. Each actor renders into its own shadow root with isolated styles and DOM.
 
 **Benefits:**
+
 - Style isolation (no CSS leakage)
 - DOM encapsulation
 - Multiple instances without conflicts
 
 ### Constructable Stylesheet
+
 Modern CSS API for efficient style sharing. Brand styles compiled once, adopted by all actors.
 
 ### Component
+
 In MaiaOS, "component" = "actor". Reusable, isolated, self-contained unit with state, view, and behavior.
 
 ---
@@ -470,25 +424,21 @@ In MaiaOS, "component" = "actor". Reusable, isolated, self-contained unit with s
 ## Architectural Patterns
 
 ### Schema-Agnostic
-Tools don't know about specific data types. They work with generic `schema` and `data` parameters.
 
-**Example:**
-```javascript
-@mutation/create { schema: "todos", data: {...} }
-@mutation/create { schema: "notes", data: {...} }
-```
-
-Same tool, different schema. Zero hardcoded domain knowledge.
+Database operations don't know about specific data types. They work with generic `schema` (co-ids) and `data` parameters. Same tool, different schema. Zero hardcoded domain knowledge. All schemas are co-ids (CoJSON IDs).
 
 ### Message Passing
+
 Actors communicate asynchronously via inboxes and subscriptions. Watermark pattern for processing.
 
 **Properties:**
+
 - `inbox` - Message queue
 - `subscriptions` - Actors to receive messages from
 - `inboxWatermark` - Last processed message index
 
 ### Modular Architecture
+
 Everything is a plugin. Engines are pluggable, tools are modular, modules are dynamic.
 
 ---
@@ -496,9 +446,11 @@ Everything is a plugin. Engines are pluggable, tools are modular, modules are dy
 ## File Conventions
 
 ### `.maia` Extension
+
 All MaiaOS definition files use `.maia` extension. JSON format with `$type` discriminator.
 
 **Types:**
+
 - `actor.maia` - Actor definition
 - `context.maia` - Runtime data
 - `state.maia` - State machine
@@ -508,55 +460,55 @@ All MaiaOS definition files use `.maia` extension. JSON format with `$type` disc
 - `tool.maia` - Tool metadata
 
 ### Naming Pattern
+
 `{name}.{type}.maia`
 
 **Examples:**
+
 - `todo.actor.maia`
 - `todo.context.maia`
 - `todo.state.maia`
 - `brand.style.maia`
 
 ### CoMap ID (Future)
-Fake IDs used for Jazz integration. Currently maps to filenames, will map to Jazz CoMaps in v0.5.
 
-**Example:**
-```json
-{
-  "viewRef": "co_view_001"  // Maps to: todo.view.maia
-}
-```
+Fake IDs used for Jazz integration. Currently maps to filenames, will map to Jazz CoMaps in v0.5.
 
 ---
 
 ## Development Concepts
 
 ### Hot Reload
+
 Automatic browser refresh on file changes. No build process, instant updates.
 
 ### Watch Mode
+
 Scripts that monitor file changes and regenerate outputs (e.g., LLM docs).
 
 ### Vibecreators Docs
+
 User-facing documentation for app builders. Located in `docs/vibecreators/`.
 
 ### Developers Docs
+
 Technical documentation for core contributors. Located in `docs/developers/`.
 
 ### LLM Docs
+
 Auto-generated, context-optimized documentation for AI agents. Located in `docs/agents/`.
 
 ---
 
 ## Quick Reference
 
-| Term | Type | Purpose |
-|------|------|---------|
+| Term      | Type       | Purpose                  |
+| --------- | ---------- | ------------------------ |
 | **Actor** | Definition | Component configuration |
 | **Context** | Definition | Runtime data |
 | **State** | Definition | Behavior flow |
 | **View** | Definition | UI structure |
 | **Style** | Definition | Appearance |
-| **Skill** | Definition | AI interface |
 | **Engine** | Execution | Interprets definitions |
 | **Tool** | Execution | Executes actions |
 | **Module** | Execution | Groups tools |
@@ -587,6 +539,7 @@ Auto-generated, context-optimized documentation for AI agents. Located in `docs/
 ┌─────────────────────────────────────────────────────────────┐
 │                         MaiaOS Kernel                        │
 │                    (Single Entry Point)                      │
+│                      o/kernel.js                             │
 └─────────────────────────────────────────────────────────────┘
                               │
         ┌─────────────────────┼─────────────────────┐
@@ -602,10 +555,17 @@ Auto-generated, context-optimized documentation for AI agents. Located in `docs/
         ▼              ▼             ▼             ▼
 ┌─────────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
 │   Modules   │  │  State   │  │   View   │  │   Tool   │
-│ (core,      │  │  Engine  │  │  Engine  │  │  Engine  │
-│  mutation,  │  └──────────┘  └──────────┘  └──────────┘
-│  dragdrop)  │
+│ (db, core,  │  │  Engine  │  │  Engine  │  │  Engine  │
+│  dragdrop,  │  └──────────┘  └──────────┘  └──────────┘
+│  interface)  │
 └─────────────┘
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Additional Engines                        │
+│  DBEngine | SubscriptionEngine | MessageQueue              │
+│  ActorEngine | StyleEngine | MaiaScriptEvaluator            │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## Three Layers
@@ -617,28 +577,46 @@ Auto-generated, context-optimized documentation for AI agents. Located in `docs/
 **Actors** - Component configuration:
 ```json
 {
-  "$type": "actor",
-  "id": "actor_todo_001",
-  "contextRef": "todo",
-  "stateRef": "todo",
-  "viewRef": "todo"
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo",
+  "role": "todo-list",
+  "context": "@context/todo",
+  "state": "@state/todo",
+  "view": "@view/todo",
+  "interface": "@interface/todo",
+  "brand": "@style/brand",        // ← Shared design system (required)
+  "style": "@style/todo",         // ← Actor-specific overrides (optional)
+  "subscriptions": "@subscriptions/todo",
+  "inbox": "@inbox/todo",
+  "inboxWatermark": 0
 }
 ```
+
+**Note:** 
+- `brand` is **required** - shared design system (tokens, components) used by all actors
+- `style` is **optional** - actor-specific style overrides that merge with brand
+- StyleEngine merges brand + style at runtime (brand first, then style overrides)
+- All references (`context`, `view`, `state`, `interface`, `brand`, `style`, `subscriptions`, `inbox`) use co-id references (like `@context/todo`) that are transformed to actual co-ids (`co_z...`) during seeding
+- The `$schema` and `$id` properties also use schema/instance references that get transformed
 
 **Context** - Runtime data:
 ```json
 {
-  "$type": "context",
+  "$schema": "@schema/context",
+  "$id": "@context/todo",
   "todos": [],
   "newTodoText": "",
   "viewMode": "list"
 }
 ```
 
+**Note:** Context files use `$schema` and `$id` with schema/instance references that get transformed to co-ids during seeding.
+
 **State** - Behavior flow:
 ```json
 {
-  "$type": "state",
+  "$schema": "@schema/state",
+  "$id": "@state/todo",
   "initial": "idle",
   "states": {
     "idle": {
@@ -650,10 +628,13 @@ Auto-generated, context-optimized documentation for AI agents. Located in `docs/
 }
 ```
 
+**Note:** State machine files use `$schema` and `$id` with schema/instance references. Tool payloads in state machines reference co-ids (transformed during seeding).
+
 **View** - UI structure:
 ```json
 {
-  "$type": "view",
+  "$schema": "@schema/view",
+  "$id": "@view/todo",
   "root": {
     "tag": "div",
     "text": "$title"
@@ -661,28 +642,50 @@ Auto-generated, context-optimized documentation for AI agents. Located in `docs/
 }
 ```
 
-**Style** - Appearance:
+**Note:** View files use `$schema` and `$id` with schema/instance references.
+
+**Style** - Appearance (Brand or Local):
 ```json
 {
-  "$type": "style",
+  "$schema": "@schema/style",
+  "$id": "@style/brand",
   "tokens": {
     "colors": {
       "primary": "#3b82f6"
+    }
+  },
+  "components": {
+    "button": {
+      "padding": "0.5rem 1rem",
+      "background": "{colors.primary}"
     }
   }
 }
 ```
 
-**Skill** - AI interface:
+**Note:** 
+- **Brand styles** (`@style/brand`) - Shared design system with tokens and components, referenced via `brand` property
+- **Local styles** (`@style/todo`) - Actor-specific overrides, referenced via `style` property (optional)
+- StyleEngine merges brand + local styles at runtime (brand first, local overrides)
+- Style files use `$schema` and `$id` with schema/instance references
+
+**Interface** - Message contract (replaces skill):
 ```json
 {
-  "$type": "skill",
-  "actorType": "todo",
-  "capabilities": {
-    "taskManagement": "Create, complete, delete todos"
+  "$schema": "@schema/interface",
+  "$id": "@interface/todo",
+  "messages": {
+    "CREATE_TODO": {
+      "description": "Creates a new todo item",
+      "payload": {
+        "text": { "type": "string", "required": true }
+      }
+    }
   }
 }
 ```
+
+**Note:** Interface files define message contracts between actors. They use `$schema` and `$id` with schema/instance references. Skills (AI agent interface) are planned for v0.5.
 
 ### 2. Execution Layer (Imperative)
 
@@ -693,6 +696,9 @@ Auto-generated, context-optimized documentation for AI agents. Located in `docs/
 - **ViewEngine** - Renders views to Shadow DOM
 - **ToolEngine** - Executes tool actions
 - **StyleEngine** - Compiles styles to CSS
+- **DBEngine** - Unified database operation engine (query, create, update, delete, toggle, seed)
+- **SubscriptionEngine** - Context-driven reactive subscriptions
+- **MessageQueue** - Actor-to-actor message passing
 - **ModuleRegistry** - Manages dynamic module loading
 - **MaiaScriptEvaluator** - Evaluates DSL expressions
 
@@ -711,14 +717,17 @@ export default {
 
 **Modules** - Tool collections:
 
+**Built-in Modules:**
+- **db** - Database operations (replaces mutation module)
+- **core** - UI utilities (modals, focus, preventDefault)
+- **dragdrop** - Drag-and-drop handlers
+- **interface** - Interface validation
+
 ```javascript
-// mutation.module.js
-export class MutationModule {
+// db.module.js
+export class DBModule {
   static async register(registry, toolEngine) {
-    const tools = ['create', 'update', 'delete', 'toggle'];
-    for (const tool of tools) {
-      await toolEngine.registerTool(`mutation/${tool}`, `@mutation/${tool}`);
-    }
+    await toolEngine.registerTool('db', '@db');
   }
 }
 ```
@@ -746,6 +755,43 @@ export class MutationModule {
   }
 }
 ```
+
+## Seeding & Reference Transformation
+
+During vibe loading, all human-readable references are transformed to co-ids:
+
+**Before Seeding (Human-Readable):**
+```json
+{
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo",
+  "context": "@context/todo",
+  "view": "@view/todo",
+  "state": "@state/todo"
+}
+```
+
+**After Seeding (Co-IDs):**
+```json
+{
+  "$schema": "co_z9h5nwiNynbxnC3nTwPMPkrVaMQ",
+  "$id": "co_z8k4m2pLqRsTvWxYzAbCdEfGhIjKl",
+  "context": "co_z7j3l1nKoQtPuVwXyZaBcDeFgHiJk",
+  "view": "co_z6i2k0mJnPsOuTwVxYaBcDeFgHiJk",
+  "state": "co_z5h1j9lIoNrQsTuVwXyZaBcDeFgHiJk"
+}
+```
+
+**Transformation Process:**
+1. Schema transformer maps `@schema/*` → co-ids
+2. Instance transformer maps `@actor/*`, `@context/*`, `@view/*`, etc. → co-ids
+3. All references in actors, state machines, and tool payloads are transformed
+4. Co-ids are stored in database, human-readable refs remain in source `.maia` files
+
+**Why This Matters:**
+- Source files remain human-readable (`@actor/todo` is clearer than `co_z8k4m2pLqRsTvWxYzAbCdEfGhIjKl`)
+- Runtime uses co-ids for efficient lookups and CoJSON integration
+- Transformation happens automatically during seeding
 
 ## Data Flow
 
@@ -814,35 +860,70 @@ libs/maia-script/src/
 ├── o/                          # Operating System Layer
 │   ├── kernel.js               # Single entry point
 │   ├── engines/                # Execution engines
-│   │   ├── ActorEngine.js
-│   │   ├── StateEngine.js
-│   │   ├── ViewEngine.js
-│   │   ├── ToolEngine.js
-│   │   └── ModuleRegistry.js
+│   │   ├── actor-engine/
+│   │   │   └── actor.engine.js
+│   │   ├── state-engine/
+│   │   │   └── state.engine.js
+│   │   ├── view-engine/
+│   │   │   └── view.engine.js
+│   │   ├── style-engine/
+│   │   │   └── style.engine.js
+│   │   ├── tool-engine/
+│   │   │   └── tool.engine.js
+│   │   ├── db-engine/         # Database operation engine
+│   │   │   ├── db.engine.js
+│   │   │   ├── backend/
+│   │   │   │   └── indexeddb.js
+│   │   │   └── operations/
+│   │   │       ├── query.js
+│   │   │       ├── create.js
+│   │   │       ├── update.js
+│   │   │       ├── delete.js
+│   │   │       ├── toggle.js
+│   │   │       └── seed.js
+│   │   ├── subscription-engine/
+│   │   │   └── subscription.engine.js
+│   │   ├── message-queue/
+│   │   │   └── message.queue.js
+│   │   ├── ModuleRegistry.js
+│   │   └── MaiaScriptEvaluator.js
 │   ├── modules/                # Tool modules
-│   │   ├── core.module.js
-│   │   ├── mutation.module.js
-│   │   └── dragdrop.module.js
+│   │   ├── db.module.js        # Database operations
+│   │   ├── core.module.js      # UI utilities
+│   │   ├── dragdrop.module.js  # Drag-and-drop
+│   │   └── interface.module.js # Interface validation
 │   └── tools/                  # Tool implementations
-│       ├── core/
-│       ├── mutation/
-│       ├── dragdrop/
-│       └── context/
+│       ├── db/                 # Database tool (@db)
+│       ├── core/               # UI utilities
+│       ├── dragdrop/           # Drag-and-drop handlers
+│       ├── context/            # Context manipulation
+│       └── interface/          # Interface validation
 │
-├── examples/                   # Example applications
-│   └── todos/
-│       ├── index.html
-│       ├── todo.actor.maia
-│       ├── todo.context.maia
-│       ├── todo.state.maia
-│       ├── todo.view.maia
-│       └── brand.style.maia
+├── index.html                  # App marketplace entry point
+├── index.js                    # Main export file
 │
-└── docs/                       # Documentation
-    ├── getting-started/
-    ├── vibecreators/
-    ├── developers/
-    └── agents/
+└── libs/maia-vibes/src/        # Example applications
+    └── todos/
+        ├── index.html
+        ├── manifest.vibe.maia
+        └── [actor files...]
+```
+
+**Monorepo Structure:**
+```
+MaiaOS/
+├── libs/
+│   ├── maia-script/            # Core OS (kernel, engines, tools)
+│   ├── maia-db/                # CoJSON layer (CRDT operations)
+│   ├── maia-schemata/          # Schema validation
+│   ├── maia-vibes/             # Example vibes/apps
+│   ├── maia-ssi/               # Self-sovereign identity
+│   ├── maia-voice/             # Voice integration
+│   └── maia-brand/             # Branding/assets
+└── services/                   # Application services
+    ├── app/                    # Main application
+    ├── website/                # Landing page
+    └── wallet/                 # Auth service
 ```
 
 ## Key Architectural Patterns
@@ -881,21 +962,23 @@ See [Actors Documentation](../vibecreators/02-actors.md#default-vibe-pattern-ser
 
 ### Schema-Agnostic Design
 
-Tools don't know about specific data types:
+Database operations work with any schema via co-ids:
 
 ```javascript
-@mutation/create { schema: "todos", data: {...} }
-@mutation/create { schema: "notes", data: {...} }
-@mutation/create { schema: "users", data: {...} }
+@db { op: "create", schema: "co_z...", data: {...} }
+@db { op: "update", schema: "co_z...", id: "co_z...", data: {...} }
+@db { op: "delete", schema: "co_z...", id: "co_z..." }
+@db { op: "toggle", schema: "co_z...", id: "co_z...", field: "done" }
 ```
 
-Same tool, different schema. Zero hardcoded domain knowledge.
+Same tool, different schema. Zero hardcoded domain knowledge. All schemas are co-ids (CoJSON IDs) - no human-readable fallbacks.
 
 ### Modular Everything
 
-- **Tools** grouped into modules (`@core/*`, `@mutation/*`)
-- **Modules** loaded dynamically at boot
-- **Engines** pluggable (future: add ThreeJS renderer)
+- **Tools** grouped into modules (`@db`, `@core/*`, `@dragdrop/*`, `@interface/*`)
+- **Modules** loaded dynamically at boot (db, core, dragdrop, interface)
+- **Engines** pluggable (ActorEngine, ViewEngine, StateEngine, DBEngine, etc.)
+- **Database** unified operation engine with swappable backends (IndexedDB, CoJSON CRDT)
 - **Skills** describe capabilities without implementation
 
 ### Shadow DOM Isolation
@@ -949,8 +1032,8 @@ actor.inbox = [...]; // Watermark pattern
 - **v0.1** - Basic actor/view/style system
 - **v0.2** - Added state machines and tool system
 - **v0.3** - Added message passing and AI tool definitions
-- **v0.4** - **Current** - Modular architecture with generic CRUD
-- **v0.5** - **Planned** - Skills as AI agent interface
+- **v0.4** - **Current** - Unified database engine (DBEngine), subscription engine, modular architecture
+- **v0.5** - **Planned** - Skills as AI agent interface, CoJSON integration
 
 ## Next Steps
 
@@ -978,21 +1061,24 @@ actor.inbox = [...]; // Watermark pattern
 
 ## Quick Start
 
-###  Clone the Repository
+### Clone the Repository
 
 ```bash
 # Clone
 git clone https://github.com/oMaiaCity/MaiaOS.git
-cd MaiaOS/libs/maia-script
+cd MaiaOS
 
-# Install dependencies
+# Install dependencies (from root - installs for all workspaces)
 bun install
 
-# Start dev server with hot reload
-bun dev
+# Start dev server (from root or specific service)
+bun dev:app  # Main app service (port 4202)
+# OR
+cd libs/maia-script
+bun dev  # MaiaScript dev server
 
 # Open browser
-open http://localhost:4200/
+open http://localhost:4202/  # or appropriate port
 ```
 
 ## File Structure
@@ -1051,9 +1137,10 @@ my-app/
     },
     "creating": {
       "entry": {
-        "tool": "@mutation/create",
+        "tool": "@db",
         "payload": {
-          "schema": "todos",
+          "op": "create",
+          "schema": "co_z...",
           "data": { "text": "$newTodoText", "done": false }
         }
       },
@@ -1070,6 +1157,8 @@ my-app/
   }
 }
 ```
+
+**Note:** The `schema` field must be a co-id (CoJSON ID like `co_z...`). Schema references are resolved during vibe loading/seeding.
 
 **`todo.view.maia`:**
 ```json
@@ -1171,16 +1260,18 @@ my-app/
 
 ## Next Steps
 
-- [Vibecreators Docs](../vibecreators/) - Learn to build apps
-- [Examples](../../examples/todos/) - See complete working app
-- [Developers Docs](../developers/) - Extend MaiaOS core
+- [Vibecreators Docs](../02_creators/) - Learn to build apps
+- [Examples](../../maia-vibes/src/todos/) - See complete working app
+- [Developers Docs](../03_developers/) - Extend MaiaOS core
 
 ## Resources
 
-- **Examples:** `libs/maia-script/src/examples/todos/`
+- **Examples:** `libs/maia-vibes/src/todos/`
 - **Kernel:** `libs/maia-script/src/o/kernel.js`
+- **Engines:** `libs/maia-script/src/o/engines/`
 - **Tools:** `libs/maia-script/src/o/tools/`
-- **Docs:** `libs/maia-script/src/docs/`
+- **Modules:** `libs/maia-script/src/o/modules/`
+- **Docs:** `libs/maia-docs/`
 
 ## Support
 
@@ -1188,9 +1279,143 @@ my-app/
 
 ---
 
+# OVERVIEW
+
+*Source: creators/00-overview.md*
+
+# MaiaOS Creator Documentation
+
+Creator-facing documentation for building with MaiaOS.
+
+## Documentation Order
+
+Read the documentation in the following order for a complete understanding:
+
+### 1. [Vibes](./01-vibes.md)
+**Understanding the Vibe System**
+- What are Vibes?
+- **Agent-first development pattern** (ALWAYS create agent service actor first!)
+- Vibe composition and structure
+- Vibe ecosystem
+
+### 2. [Kernel](./02-kernel.md)
+**MaiaOS Kernel Fundamentals**
+- Kernel architecture
+- Core concepts
+- System initialization
+
+### 3. [Actors](./03-actors.md)
+**Actor-Based Component System**
+- What are Actors?
+- **Agent-first development** (create agent service actor first!)
+- Actor lifecycle
+- Actor composition
+- Co-id references and seeding transformation
+- Brand/style separation (`brand` required, `style` optional)
+
+### 4. [Context](./04-context.md)
+**Context Management**
+- Context system
+- Context passing
+- Context composition
+- Data flow
+
+### 5. [State](./05-state.md)
+**State Management**
+- State machines
+- State transitions
+- Event handling
+- Reactive state
+
+### 6. [Tools](./06-tools.md)
+**Tool System**
+- Tool definitions
+- Tool execution
+- Tool composition
+- Custom tools
+
+### 7. [Operations](./07_operations.md)
+**Database Operations API**
+- Unified database operations (`maia.db()`)
+- Query, create, update, delete, toggle operations
+- Reactive subscriptions
+- Co-id usage and schema transformation
+
+### 8. [Views](./08-views.md)
+**View System**
+- View structure
+- View composition
+- View-to-DOM rendering
+- Reactive updates
+
+### 9. [Brand](./09-brand.md)
+**Brand System (Shared Design System)**
+- Brand definitions (`brand.style.maia`)
+- Brand tokens (colors, spacing, typography)
+- Brand components (shared UI patterns)
+- **Required** - All actors reference brand via `brand` property
+
+### 10. [Style](./10-style.md)
+**Style System (Actor-Specific Overrides)**
+- Local style definitions (`{name}.style.maia`)
+- Actor-specific customization
+- **Optional** - Actors can override brand via `style` property
+- StyleEngine merges brand + style (brand first, style overrides)
+
+### 11. [Best Practices](./11-best-practices.md)
+**Best Practices and Patterns**
+- Recommended patterns
+- Common pitfalls
+- Performance tips
+- Maintainability
+
+---
+
+## Who This Is For
+
+This documentation is for **creators** who want to:
+- Build applications with MaiaOS
+- Create vibes (component definitions)
+- Compose features using the declarative DSL
+- Integrate AI agents into applications
+- Design and style user interfaces
+
+## What You'll Learn
+
+- How to use MaiaScript (`.maia` files)
+- How to compose actors, state machines, views, and styles
+- How to create AI-powered features with skills
+- How to manage state and context
+- How to build reactive, collaborative applications
+
+---
+
+## Related Documentation
+
+- [Developer Documentation](../developers/) - Technical implementation details
+- [Getting Started](../getting-started/) - Quick start guides
+- [Agent Documentation](../agents/) - Auto-generated LLM agent docs
+
+---
+
+## Contributing
+
+When updating these docs:
+- ✅ Keep content user-friendly and example-driven
+- ✅ Focus on "how to use" rather than "how it works"
+- ✅ Include practical examples
+- ❌ **DO NOT** update `docs/agents/LLM_*.md` files (auto-generated)
+
+To regenerate agent docs after updating:
+```bash
+bun run generate:llm-docs
+```
+
+---
+
 # VIBES
 
-*Source: creators/00-vibes.md*
+*Source: creators/01-vibes.md*
 
 # Vibes (App Manifests)
 
@@ -1213,31 +1438,40 @@ A vibe is a JSON manifest file (`.vibe.maia`) that serves as an "app store listi
 
 > **Analogy:** If actors are the "executable," vibes are the "app store listing" that describes and loads them.
 
-### Default Pattern: Service Actor Entry Point
+### Default Pattern: Agent Service Actor Entry Point
 
-**By default, every vibe loads a service actor** as its entry point. This service actor orchestrates the application and loads UI actors as children.
+**Every vibe MUST have an "agent" service actor** as its entry point. This orchestrating service actor is called the **agent** and handles all business logic, data management, and coordination.
+
+**Best Practice:** Always define the agent service actor first when creating a vibe.
 
 ```
-Vibe → Service Actor → Composite Actor → UI Actors
+Vibe → Agent (Service Actor) → Composite Actor → UI Actors
 ```
+
+**Why "agent"?**
+- Clear naming convention: the agent orchestrates everything
+- Consistent across all vibes: every vibe has an `@actor/agent`
+- AI-friendly: agents understand this pattern
+- Best practice: start with the agent, then build UI actors
 
 This pattern ensures:
 - ✅ Clear separation of concerns (service logic vs. UI)
 - ✅ Scalable architecture (add UI actors as needed)
 - ✅ Message-based communication (loose coupling)
 - ✅ Consistent structure across all vibes
+- ✅ Agent-first development (define orchestrator first)
 
 ## Vibe Structure
 
-Create a file named `{name}.vibe.maia`:
+Create a file named `manifest.vibe.maia`:
 
 ```json
 {
-  "$type": "vibe",
-  "$id": "vibe_myapp_001",
-  "name": "My App",
-  "description": "A description of what this app does",
-  "actor": "./myapp.actor.maia"
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/todos",
+  "name": "Todo List",
+  "description": "A complete todo list application",
+  "actor": "@actor/agent"
 }
 ```
 
@@ -1245,11 +1479,11 @@ Create a file named `{name}.vibe.maia`:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `$type` | string | Always `"vibe"` |
-| `$id` | string | Unique identifier for this vibe |
+| `$schema` | string | Schema reference (`@schema/vibe`) - transformed to co-id during seeding |
+| `$id` | string | Unique vibe identifier (`@vibe/todos`) - transformed to co-id during seeding |
 | `name` | string | Display name for marketplace |
 | `description` | string | Brief description of the app |
-| `actor` | string | Relative path to root actor file |
+| `actor` | string | Reference to agent service actor (`@actor/agent`) - transformed to co-id during seeding |
 
 ### Field Details
 
@@ -1265,67 +1499,114 @@ Create a file named `{name}.vibe.maia`:
 
 ## Creating a Vibe
 
+### Best Practice: Agent-First Development
+
+**Always create the agent service actor first.** This is your app's orchestrator and entry point.
+
+**Why Agent-First?**
+1. **Clear Architecture** - Agent defines the app's structure and data flow
+2. **Data First** - Agent handles all data operations before UI concerns
+3. **UI Second** - UI actors receive data from agent, keeping them simple
+4. **Consistent Pattern** - Every vibe follows the same structure
+5. **AI-Friendly** - LLMs understand this pattern and can generate vibes correctly
+
+**Development Order:**
+1. ✅ **Create agent service actor** (`agent/agent.actor.maia`) - ALWAYS FIRST
+2. ✅ Create vibe manifest (`manifest.vibe.maia`) - References agent
+3. ✅ Create composite actor (`composite/composite.actor.maia`) - First UI actor
+4. ✅ Create UI actors (`list/list.actor.maia`, etc.) - Leaf components
+
 ### Step 1: Organize Your App
 
 Structure your app directory:
 
 ```
-my-app/
-├── myapp.vibe.maia       # Vibe manifest
-├── myapp.actor.maia      # Root actor
-├── myapp.context.maia    # Runtime data
-├── myapp.state.maia      # State machine
-├── myapp.view.maia       # UI definition
-└── myapp.style.maia      # Styling (optional)
+todos/
+├── manifest.vibe.maia    # Vibe manifest
+├── agent/                # Agent service actor (ALWAYS CREATE FIRST)
+│   ├── agent.actor.maia
+│   ├── agent.context.maia
+│   ├── agent.state.maia
+│   ├── agent.view.maia
+│   ├── agent.interface.maia
+│   ├── agent.subscriptions.maia
+│   └── agent.inbox.maia
+├── composite/            # Composite actor (first UI actor)
+│   ├── composite.actor.maia
+│   └── ...
+├── list/                 # UI actors
+│   ├── list.actor.maia
+│   └── ...
+└── agent/                # Brand style (shared design system)
+    └── brand.style.maia
 ```
 
 ### Step 2: Create the Vibe Manifest
 
-**`myapp.vibe.maia`:**
+**`manifest.vibe.maia`:**
 ```json
 {
-  "$type": "vibe",
-  "$id": "vibe_myapp_001",
-  "name": "My Todo App",
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/todos",
+  "name": "Todo List",
   "description": "A simple todo list with drag-and-drop organization",
-  "actor": "./myapp.actor.maia"
+  "actor": "@actor/agent"
 }
 ```
 
-### Step 3: Create Your Root Service Actor
+**Note:** The `actor` field references `@actor/agent` - this is the agent service actor that orchestrates the entire vibe.
 
-The actor referenced in the vibe is your app's entry point - **always a service actor**:
+### Step 3: Create Your Agent Service Actor (ALWAYS FIRST!)
 
-**`myapp.actor.maia` (Service Actor):**
+**Best Practice:** Always define the agent service actor first. This is your app's orchestrator.
+
+**`agent/agent.actor.maia` (Agent Service Actor):**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_myapp_001",
-  "id": "actor_myapp_001",
-  "role": "service",
-  "contextRef": "myapp",
-  "stateRef": "myapp",
-  "viewRef": "myapp",      // ← Minimal view (only renders child)
-  "styleRef": "brand",
+  "$schema": "@schema/actor",
+  "$id": "@actor/agent",
+  "role": "agent",
+  "context": "@context/agent",
+  "state": "@state/agent",
+  "view": "@view/agent",
+  "interface": "@interface/agent",
+  "brand": "@style/brand",
   "children": {
-    "composite": "actor_composite_001"  // ← Loads first UI actor
-  }
+    "composite": "@actor/composite"
+  },
+  "subscriptions": "@subscriptions/agent",
+  "inbox": "@inbox/agent",
+  "inboxWatermark": 0
 }
 ```
 
-**Service Actor View (Minimal):**
+**Agent Responsibilities:**
+- Orchestrate data queries and mutations
+- Manage application-level state
+- Coordinate between UI actors via messages
+- Handle business logic
+- Load composite actor as first child
+
+**Agent View (Minimal):**
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/agent",
+  "root": {
     "tag": "div",
-    "class": "service-container",
+    "attrs": { "class": "agent-container" },
     "$slot": "$composite"  // ← Only renders child actor
   }
 }
 ```
 
-The service actor orchestrates the application and loads UI actors as children. See [Actors](./02-actors.md#default-vibe-pattern-service--composite--ui) for the complete pattern.
+The agent orchestrates the application and loads UI actors as children. See [Actors](./02-actors.md#default-vibe-pattern-service--composite--ui) for the complete pattern.
+
+**Why Start with Agent?**
+1. **Clear Architecture** - Agent defines the app's structure
+2. **Data First** - Agent handles all data operations
+3. **UI Second** - UI actors receive data from agent
+4. **Best Practice** - Always define orchestrator before components
 
 ## Loading Vibes
 
@@ -1426,49 +1707,59 @@ Vibe (App Manifest)
 
 ```
 vibes/todos/
-├── todos.vibe.maia         # App manifest
+├── manifest.vibe.maia      # App manifest (references @actor/agent)
 ├── index.html              # App launcher
-├── vibe/                   # Service actor (entry point)
-│   ├── vibe.actor.maia    # Service actor definition
-│   ├── vibe.context.maia   # Service actor context
-│   ├── vibe.state.maia     # Service actor state machine
-│   ├── vibe.view.maia      # Minimal view (renders child)
-│   └── vibe.interface.maia # Message interface
+├── agent/                  # Agent service actor (ALWAYS CREATE FIRST)
+│   ├── agent.actor.maia    # Agent actor definition
+│   ├── agent.context.maia  # Agent context
+│   ├── agent.state.maia    # Agent state machine
+│   ├── agent.view.maia    # Minimal view (renders child)
+│   ├── agent.interface.maia # Message interface
+│   ├── agent.subscriptions.maia # Subscriptions colist
+│   ├── agent.inbox.maia   # Inbox costream
+│   └── brand.style.maia   # Shared design system
 ├── composite/              # Composite actor (first UI actor)
 │   ├── composite.actor.maia
 │   ├── composite.context.maia
 │   ├── composite.state.maia
 │   ├── composite.view.maia
-│   └── composite.interface.maia
+│   ├── composite.interface.maia
+│   ├── composite.subscriptions.maia
+│   └── composite.inbox.maia
 ├── list/                   # UI actor
 │   ├── list.actor.maia
 │   ├── list.context.maia
 │   ├── list.state.maia
 │   ├── list.view.maia
-│   └── list.interface.maia
-├── kanban/                 # UI actor
-│   ├── kanban.actor.maia
-│   ├── kanban.context.maia
-│   ├── kanban.state.maia
-│   ├── kanban.view.maia
-│   └── kanban.interface.maia
-└── brand.style.maia        # Shared design system
+│   ├── list.interface.maia
+│   ├── list.subscriptions.maia
+│   └── list.inbox.maia
+└── kanban/                 # UI actor
+    ├── kanban.actor.maia
+    ├── kanban.context.maia
+    ├── kanban.state.maia
+    ├── kanban.view.maia
+    ├── kanban.interface.maia
+    ├── kanban.subscriptions.maia
+    └── kanban.inbox.maia
 ```
+
+**Note:** The agent directory is created first and contains the orchestrating service actor that all other actors depend on.
 
 ### Vibe Manifest
 
-**`todos.vibe.maia`:**
+**`manifest.vibe.maia`:**
 ```json
 {
-  "$type": "vibe",
-  "$id": "vibe_todos_001",
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/todos",
   "name": "Todo List",
   "description": "A complete todo list application with state machines, drag-drop kanban view, and AI-compatible tools. Showcases MaiaOS actor system, message passing, and declarative UI.",
-  "actor": "./vibe/vibe.actor.maia"
+  "actor": "@actor/agent"
 }
 ```
 
-**Note:** The vibe references a **service actor** (`vibe/vibe.actor.maia`) which orchestrates the application and loads UI actors as children.
+**Note:** The vibe references the **agent service actor** (`@actor/agent`) which orchestrates the application and loads UI actors as children. The agent is always defined first.
 
 ### Launcher HTML
 
@@ -1493,7 +1784,7 @@ vibes/todos/
       
       // Load the vibe
       const { vibe, actor } = await os.loadVibe(
-        './todos.vibe.maia',
+        './manifest.vibe.maia',
         document.getElementById('actor-todo')
       );
       
@@ -1514,19 +1805,21 @@ vibes/todos/
 
 ### ✅ DO:
 
+- **Always create agent first** - Define `@actor/agent` before any UI actors
+- **Use schema references** - `@schema/vibe`, `@actor/agent` (transformed to co-ids during seeding)
 - **Keep descriptions concise** - 1-3 sentences max
-- **Use semantic naming** - `todos.vibe.maia`, not `app.vibe.maia`
-- **Match vibe and actor names** - `todos.vibe.maia` → `todo.actor.maia`
-- **Use relative paths** - `"./actor.maia"` not absolute paths
+- **Use semantic naming** - `manifest.vibe.maia`, `agent/agent.actor.maia`
+- **Reference agent in vibe** - Always use `"actor": "@actor/agent"` in vibe manifest
 - **One vibe per app** - Each app gets its own vibe manifest
 
 ### ❌ DON'T:
 
-- **Don't hardcode absolute paths** - Use relative paths
+- **Don't skip the agent** - Every vibe MUST have an agent service actor
+- **Don't use file paths** - Use schema references (`@actor/agent`, not `"./agent.actor.maia"`)
 - **Don't include logic** - Vibes are metadata only
 - **Don't duplicate actor properties** - Vibe references actor, doesn't contain it
-- **Don't skip validation** - Always include `$type: "vibe"`
-- **Don't nest actors** - Reference one root actor only
+- **Don't skip schema** - Always include `$schema: "@schema/vibe"`
+- **Don't nest actors** - Reference one root actor only (the agent)
 
 ## Marketplace Integration (Future)
 
@@ -1571,7 +1864,7 @@ const { vibe, actor } = await os.loadVibe('./app.vibe.maia', container);
 console.log(vibe.name);        // "My App"
 console.log(vibe.description); // "App description"
 console.log(vibe.actor);       // "./myapp.actor.maia"
-console.log(vibe.$id);         // "vibe_myapp_001"
+console.log(vibe.$id);         // "@vibe/todos" (or co-id after seeding)
 
 // Inspect actor (as usual)
 console.log(actor.id);         // "actor_myapp_001"
@@ -1611,7 +1904,7 @@ console.log(actor.context);    // Runtime state
 
 # KERNEL
 
-*Source: creators/01-kernel.md*
+*Source: creators/02-kernel.md*
 
 # Kernel Loader (Getting Started)
 
@@ -1683,7 +1976,8 @@ const os = await MaiaOS.boot({
 ### Database Module (`db`)
 Unified database operations through a single `@db` tool:
 - All operations use `op` parameter (`create`, `update`, `delete`, `toggle`, `query`, `seed`)
-- Example: `{ tool: "@db", payload: { op: "create", schema: "@schema/todos", data: {...} } }`
+- Example: `{ tool: "@db", payload: { op: "create", schema: "co_z...", data: {...} } }`
+- **Note:** Schema must be a co-id (`co_z...`) - schema references (`@schema/todos`) are transformed to co-ids during seeding
 - Reactive query objects automatically keep data in sync
 - See [State Machines](./05-state.md) for data patterns
 
@@ -1729,23 +2023,27 @@ const actors = await Promise.all([
 
 ### Loading Vibes (Recommended)
 
-**Vibes** are app manifests that provide marketplace metadata and reference the root actor. This is the recommended way to load applications:
+**Vibes** are app manifests that provide marketplace metadata and reference the agent service actor. This is the recommended way to load applications:
 
 ```javascript
 // Load a vibe (app manifest)
 const { vibe, actor } = await os.loadVibe(
-  './vibes/todos/todos.vibe.maia',
+  './vibes/todos/manifest.vibe.maia',
   document.getElementById('app')
 );
 
 console.log('Loaded vibe:', vibe.name);        // "Todo List"
 console.log('Description:', vibe.description); // App description
-console.log('Actor:', actor);                  // Created actor instance
+console.log('Actor:', actor);                  // Created agent actor instance
 ```
 
 **What's the difference?**
 - `createActor()` - Direct actor creation (low-level)
 - `loadVibe()` - Load app via manifest (recommended, marketplace-ready)
+  - Always loads the agent service actor (`@actor/agent`)
+  - Agent orchestrates the entire application
+
+**Best Practice:** Always create the agent service actor first, then reference it in the vibe manifest.
 
 **Learn more:** See [Vibes](./00-vibes.md) for complete documentation on app manifests.
 
@@ -1849,7 +2147,7 @@ Failed to load actor: ./maia/todo.actor.maia
 
 # ACTORS
 
-*Source: creators/02-actors.md*
+*Source: creators/03-actors.md*
 
 # Actors (Building Blocks)
 
@@ -1887,45 +2185,62 @@ Create a file named `{name}.actor.maia`:
 
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_todo_001",
-  "id": "actor_todo_001",
-  
-  "contextRef": "todo",
-  "stateRef": "todo",
-  "viewRef": "todo",
-  "styleRef": "brand",
-  
-  "inbox": [],
-  "subscriptions": [],
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo",
+  "role": "todo-list",
+  "context": "@context/todo",
+  "state": "@state/todo",
+  "view": "@view/todo",
+  "interface": "@interface/todo",
+  "brand": "@style/brand",
+  "style": "@style/todo",
+  "subscriptions": "@subscriptions/todo",
+  "inbox": "@inbox/todo",
   "inboxWatermark": 0
 }
 ```
 
-**Note:** Context can be defined inline (see below) or in a separate `.context.maia` file using `contextRef` for cleaner organization.
+**Note:** All references (`context`, `view`, `state`, `interface`, `brand`, `style`, `subscriptions`, `inbox`) use schema/instance references (like `@context/todo`) that are transformed to co-ids (`co_z...`) during seeding. The `$schema` and `$id` properties also use schema references.
 
 ### Properties
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `$type` | string | Yes | Always `"actor"` |
-| `$id` | string | Yes | Unique identifier for this definition |
-| `id` | string | Yes | Runtime instance ID |
-| `contextRef` | string | No | References `{name}.context.maia` file (alternative to inline context) |
-| `context` | object | No | Inline initial runtime data (alternative to contextRef) |
-| `stateRef` | string | Yes | References `{name}.state.maia` file |
-| `viewRef` | string | No | References `{name}.view.maia` file (optional for service actors) |
-| `styleRef` | string | No | References `{name}.style.maia` file |
-| `children` | object | No | Map of slot names to child actor IDs (for composite actors) |
-| `interfaceRef` | string | No | References `{name}.interface.maia` file (message contract) |
-| `inbox` | array | No | Message queue (managed at runtime) |
-| `subscriptions` | array | No | Actors to receive messages from |
-| `inboxWatermark` | number | No | Last processed message index |
+| `$schema` | string | Yes | Schema reference (`@schema/actor`) - transformed to co-id during seeding |
+| `$id` | string | Yes | Unique actor identifier (`@actor/todo`) - transformed to co-id during seeding |
+| `role` | string | No | Actor role (e.g., `"agent"`, `"composite"`, `"todo-list"`) |
+| `context` | string | No | Co-id reference to context (`@context/todo`) - transformed during seeding |
+| `state` | string | Yes | Co-id reference to state machine (`@state/todo`) - transformed during seeding |
+| `view` | string | No | Co-id reference to view (`@view/todo`) - optional for service actors |
+| `interface` | string | No | Co-id reference to interface (`@interface/todo`) - message contract |
+| `brand` | string | Yes | Co-id reference to brand style (`@style/brand`) - shared design system |
+| `style` | string | No | Co-id reference to local style (`@style/todo`) - actor-specific overrides |
+| `children` | object | No | Map of slot names to child actor references (`{"composite": "@actor/composite"}`) |
+| `subscriptions` | string | No | Co-id reference to subscriptions colist (`@subscriptions/todo`) |
+| `inbox` | string | No | Co-id reference to inbox costream (`@inbox/todo`) |
+| `inboxWatermark` | number | No | Last processed message timestamp (default: 0) |
 
-**Context Options:**
-- Use `contextRef` to load context from a separate file (recommended for large contexts)
-- Use inline `context` for small, simple actors
-- If both are present, `contextRef` takes precedence
+**Style Properties:**
+- `brand` is **required** - shared design system (tokens, components) used by all actors
+- `style` is **optional** - actor-specific style overrides that merge with brand
+- StyleEngine merges brand + style at runtime (brand first, then style overrides)
+
+## Best Practice: Agent-First Development
+
+**Always create the agent service actor first when building a vibe.**
+
+**Why?**
+- **Clear Architecture** - Agent defines the app's structure
+- **Data First** - Agent handles all data operations
+- **UI Second** - UI actors receive data from agent
+- **Consistent Pattern** - Every vibe follows the same structure
+- **AI-Friendly** - LLMs understand this pattern
+
+**Development Order:**
+1. ✅ **Create agent service actor** (`agent/agent.actor.maia`) - ALWAYS FIRST
+2. ✅ Create vibe manifest (`manifest.vibe.maia`) - References `@actor/agent`
+3. ✅ Create composite actor (`composite/composite.actor.maia`) - First UI actor
+4. ✅ Create UI actors (`list/list.actor.maia`, etc.) - Leaf components
 
 ## Actor Types
 
@@ -1942,45 +2257,52 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
 - ✅ Handle message routing and business logic
 - ❌ No direct UI rendering (or minimal container view)
 
-**Example: Vibe Service Actor (Default Entry Point)**
+**Example: Agent Service Actor (Default Entry Point - ALWAYS CREATE FIRST)**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_vibe_001",
-  "role": "service",
-  "contextRef": "vibe/vibe",
-  "viewRef": "vibe/vibe",      // ← Minimal view (only renders child)
-  "stateRef": "vibe/vibe",
-  "interfaceRef": "vibe/vibe",
+  "$schema": "@schema/actor",
+  "$id": "@actor/agent",
+  "role": "agent",
+  "context": "@context/agent",
+  "view": "@view/agent",        // ← Minimal view (only renders child)
+  "state": "@state/agent",
+  "interface": "@interface/agent",
+  "brand": "@style/brand",
   "children": {
-    "composite": "actor_composite_001"  // ← Loads first UI actor
+    "composite": "@actor/composite"  // ← Loads first UI actor
   },
-  "subscriptions": [
-    "actor_composite_001",
-    "actor_list_001",
-    "actor_kanban_001"
-  ]
+  "subscriptions": "@subscriptions/agent",
+  "inbox": "@inbox/agent",
+  "inboxWatermark": 0
 }
 ```
 
-**Service Actor View (Minimal):**
+**Best Practice:** Always define the agent service actor first when creating a vibe. This is your app's orchestrator.
+
+**Agent View (Minimal):**
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/agent",
+  "root": {
     "tag": "div",
-    "class": "service-container",
+    "attrs": { "class": "agent-container" },
     "$slot": "$composite"  // ← Only renders child actor
   }
 }
 ```
 
 **Use cases:**
-- **Vibe entry points** (default pattern - every vibe loads a service actor)
+- **Vibe entry points** (default pattern - every vibe loads an agent service actor)
 - Data synchronization services
 - Background workers
 - API coordinators
 - Business logic orchestration
+
+**Why "agent"?**
+- Clear naming: the agent orchestrates everything
+- Consistent pattern: every vibe has `@actor/agent`
+- Best practice: define agent first, then UI actors
 
 ### UI Actors
 
@@ -1996,13 +2318,17 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
 **Example: List UI Actor**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_list_001",
-  "role": "ui",
-  "viewRef": "list/list",      // ← Full UI view
-  "stateRef": "list/list",
-  "contextRef": "list/list",
-  "subscriptions": ["actor_vibe_001"]  // ← Subscribes to service actor
+  "$schema": "@schema/actor",
+  "$id": "@actor/list",
+  "role": "todo-list",
+  "context": "@context/list",
+  "view": "@view/list",        // ← Full UI view
+  "state": "@state/list",
+  "interface": "@interface/list",
+  "brand": "@style/brand",
+  "subscriptions": "@subscriptions/list",  // ← Subscribes to agent
+  "inbox": "@inbox/list",
+  "inboxWatermark": 0
 }
 ```
 
@@ -2021,16 +2347,21 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
 **Example: Composite Actor**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_composite_001",
-  "role": "composite-view",
-  "viewRef": "composite/composite",
-  "stateRef": "composite/composite",
+  "$schema": "@schema/actor",
+  "$id": "@actor/composite",
+  "role": "composite",
+  "context": "@context/composite",
+  "view": "@view/composite",
+  "state": "@state/composite",
+  "interface": "@interface/composite",
+  "brand": "@style/brand",
   "children": {
-    "list": "actor_list_001",      // ← Child UI actors
-    "kanban": "actor_kanban_001"
+    "list": "@actor/list",        // ← Child UI actors
+    "kanban": "@actor/kanban"
   },
-  "subscriptions": ["actor_vibe_001"]  // ← Subscribes to service actor
+  "subscriptions": "@subscriptions/composite",  // ← Subscribes to agent
+  "inbox": "@inbox/composite",
+  "inboxWatermark": 0
 }
 ```
 
@@ -2068,60 +2399,122 @@ Vibe Entry Point
               └── UI Actors (leaf components)
 ```
 
-### Step 1: Vibe Loads Service Actor
+### Step 1: Vibe Loads Agent Service Actor
 
-Every vibe's entry point is a **service actor** that orchestrates the application:
+Every vibe's entry point is an **agent service actor** that orchestrates the application:
 
-**`todos.vibe.maia`:**
+**`manifest.vibe.maia`:**
 ```json
 {
-  "$type": "vibe",
-  "$id": "vibe_todos_001",
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/todos",
   "name": "Todo List",
   "description": "A todo list application",
-  "actor": "./vibe/vibe.actor.maia"  // ← Service actor
+  "actor": "@actor/agent"  // ← Agent service actor (ALWAYS CREATE FIRST)
 }
 ```
 
-### Step 2: Service Actor Loads Composite
+**Best Practice:** Always define the agent service actor first. This is your app's orchestrator.
 
-The service actor loads a **composite actor** as its first child:
+### Context Updates: State Machine as Single Source of Truth
 
-**`vibe.actor.maia` (Service Actor):**
+**CRITICAL:** All context updates must flow through state machines.
+
+**Pattern:**
+1. View sends event to state machine
+2. State machine invokes `@context/update` tool
+3. Tool updates context
+4. View re-renders with new context
+
+**Example:**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_vibe_001",
-  "role": "service",
-  "viewRef": "vibe/vibe",      // ← Minimal view
-  "stateRef": "vibe/vibe",     // ← Orchestrates queries/mutations
-  "children": {
-    "composite": "actor_composite_001"  // ← First UI actor
+  "idle": {
+    "on": {
+      "UPDATE_INPUT": {
+        "target": "idle",
+        "actions": [
+          {
+            "tool": "@context/update",
+            "payload": { "newTodoText": "$$newTodoText" }
+          }
+        ]
+      }
+    }
   }
 }
 ```
 
-**Service Actor Responsibilities:**
+**Never:**
+- ❌ Mutate context directly: `actor.context.field = value`
+- ❌ Update context from views
+- ❌ Update context from tools (unless invoked by state machine)
+
+**Always:**
+- ✅ Update context via state machine actions
+- ✅ Use `@context/update` tool for context updates
+- ✅ Handle errors via state machine ERROR events
+
+### Step 2: Agent Service Actor Loads Composite
+
+The agent loads a **composite actor** as its first child:
+
+**`agent/agent.actor.maia` (Agent Service Actor):**
+```json
+{
+  "$schema": "@schema/actor",
+  "$id": "@actor/agent",
+  "role": "agent",
+  "context": "@context/agent",
+  "view": "@view/agent",        // ← Minimal view
+  "state": "@state/agent",      // ← Orchestrates queries/mutations
+  "interface": "@interface/agent",
+  "brand": "@style/brand",
+  "children": {
+    "composite": "@actor/composite"  // ← First UI actor
+  },
+  "subscriptions": "@subscriptions/agent",
+  "inbox": "@inbox/agent",
+  "inboxWatermark": 0
+}
+```
+
+**Agent Service Actor Responsibilities:**
 - Orchestrate data queries (send `SUBSCRIBE_TO_TODOS` messages to UI actors)
 - Handle mutations (`CREATE_BUTTON`, `TOGGLE_BUTTON`, `DELETE_BUTTON`)
 - Manage application-level state
 - Coordinate between UI actors via messages
+- Load composite actor as first child
+- Define message contracts via interface
+
+**Why Start with Agent?**
+1. **Clear Architecture** - Agent defines the app's structure
+2. **Data First** - Agent handles all data operations
+3. **UI Second** - UI actors receive data from agent
+4. **Best Practice** - Always define orchestrator before components
 
 ### Step 3: Composite Actor Composes UI Actors
 
 The composite actor provides shared UI structure and slots child UI actors:
 
-**`composite.actor.maia`:**
+**`composite/composite.actor.maia`:**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_composite_001",
-  "role": "composite-view",
-  "viewRef": "composite/composite",
+  "$schema": "@schema/actor",
+  "$id": "@actor/composite",
+  "role": "composite",
+  "context": "@context/composite",
+  "view": "@view/composite",
+  "state": "@state/composite",
+  "interface": "@interface/composite",
+  "brand": "@style/brand",
   "children": {
-    "list": "actor_list_001",      // ← UI actors
-    "kanban": "actor_kanban_001"
-  }
+    "list": "@actor/list",        // ← UI actors
+    "kanban": "@actor/kanban"
+  },
+  "subscriptions": "@subscriptions/composite",
+  "inbox": "@inbox/composite",
+  "inboxWatermark": 0
 }
 ```
 
@@ -2135,14 +2528,20 @@ The composite actor provides shared UI structure and slots child UI actors:
 
 Leaf UI actors render specific components:
 
-**`list.actor.maia`:**
+**`list/list.actor.maia`:**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_list_001",
-  "role": "ui",
-  "viewRef": "list/list",
-  "stateRef": "list/list"
+  "$schema": "@schema/actor",
+  "$id": "@actor/list",
+  "role": "todo-list",
+  "context": "@context/list",
+  "view": "@view/list",
+  "state": "@state/list",
+  "interface": "@interface/list",
+  "brand": "@style/brand",
+  "subscriptions": "@subscriptions/list",
+  "inbox": "@inbox/list",
+  "inboxWatermark": 0
 }
 ```
 
@@ -2213,25 +2612,13 @@ The service actor orchestrates all of them via messages, maintaining clean separ
 
 The `context` holds all runtime data for the actor. It can be defined inline in the actor file or in a separate `.context.maia` file:
 
-**Option 1: Inline Context**
-```json
-{
-  "$type": "actor",
-  "id": "actor_todo_001",
-  "stateRef": "todo",
-  "context": {
-    "todos": [],
-    "newTodoText": "",
-    "viewMode": "list"
-  }
-}
-```
+**Separate Context File (Recommended):**
 
-**Option 2: Separate Context File (`todo.context.maia`)**
+**`todo.context.maia`:**
 ```json
 {
-  "$type": "context",
-  "$id": "context_todo_001",
+  "$schema": "@schema/context",
+  "$id": "@context/todo",
   "todos": [],
   "newTodoText": "",
   "viewMode": "list"
@@ -2241,12 +2628,14 @@ The `context` holds all runtime data for the actor. It can be defined inline in 
 Referenced in actor:
 ```json
 {
-  "$type": "actor",
-  "id": "actor_todo_001",
-  "contextRef": "todo",
-  "stateRef": "todo"
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo",
+  "context": "@context/todo",  // ← Co-id reference (transformed during seeding)
+  "state": "@state/todo"
 }
 ```
+
+**Note:** Context is always in a separate file. The `context` property references it via co-id (`@context/todo`), which gets transformed to an actual co-id (`co_z...`) during seeding.
 
 **Example Context Structure:**
 ```json
@@ -2280,11 +2669,15 @@ Referenced in actor:
 - Use clear, descriptive names
 - Initialize all fields (avoid `undefined`)
 - Store only serializable data (no functions)
+- **Update context via state machines** - State machines are the single source of truth
+- **Use `@context/update` tool** - Always update context through state machine actions
 
 ❌ **DON'T:**
 - Store UI elements or DOM references
 - Put logic in context (use tools instead)
 - Mix concerns (separate data from UI state)
+- **Don't mutate context directly** - Always use state machines and tools
+- **Don't update context from views** - Views send events, state machines update context
 
 ## Actor Lifecycle
 
@@ -2338,11 +2731,33 @@ console.log(actor.context.todos);
 console.log(actor.machine.currentState); // 'idle', 'creating', etc.
 ```
 
-## Message Passing
+## Message Passing & Event Flow
 
-Actors communicate asynchronously via **inboxes and subscriptions**:
+**CRITICAL:** Actor inbox is the **single source of truth** for ALL events (internal, external, SUCCESS, ERROR).
+
+**Unified Event Flow:**
+- ✅ View events → inbox → state machine
+- ✅ External messages → inbox → state machine  
+- ✅ Tool SUCCESS/ERROR → inbox → state machine
+- ✅ All events appear in inbox log for traceability
+
+**Event Flow Pattern:**
+```
+View Event → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+External Message → inbox → processMessages() → StateEngine.send()
+Tool SUCCESS → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+```
+
+**Why inbox for all events:**
+- **Unified Event Log:** Complete traceability of all events
+- **Watermark Pattern:** Prevents duplicate processing
+- **Consistent Handling:** All events follow same path
+- **Better Debugging:** Can inspect inbox to see all events
 
 ### Sending Messages
+
+**External messages** (actor-to-actor):
 
 ```javascript
 // Send to specific actor
@@ -2355,6 +2770,8 @@ os.sendMessage('actor_todo_001', {
 // Actors can send to each other
 actor.actorEngine.sendMessage(targetActorId, message);
 ```
+
+**Internal events** (from views) automatically route through inbox via `sendInternalEvent()`.
 
 ### Subscribing to Messages
 
@@ -2375,20 +2792,27 @@ actor.actorEngine.subscribe('actor_todo_001', 'actor_calendar_001');
 
 ### Processing Messages
 
-Messages are processed via the actor's state machine. Define message handlers:
+Messages are processed via the actor's state machine. The inbox is automatically processed, and events are routed to state machines:
 
 ```json
 {
   "idle": {
     "on": {
       "MESSAGE_RECEIVED": {
-        "target": "processingMessage",
-        "guard": {"$ne": ["$inbox.length", 0]}
+        "target": "processingMessage"
+      },
+      "SUCCESS": {
+        "target": "idle"
+      },
+      "ERROR": {
+        "target": "error"
       }
     }
   }
 }
 ```
+
+**Note:** All events (including SUCCESS/ERROR from tools) flow through inbox and are processed by `processMessages()`, which routes them to the state machine.
 
 ## Shadow DOM Isolation
 
@@ -2438,17 +2862,17 @@ maia/
 **`todo.actor.maia`:**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_todo_001",
-  "id": "actor_todo_001",
-  
-  "contextRef": "todo",
-  "stateRef": "todo",
-  "viewRef": "todo",
-  "styleRef": "brand",
-  
-  "inbox": [],
-  "subscriptions": [],
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo",
+  "role": "todo-list",
+  "context": "@context/todo",
+  "state": "@state/todo",
+  "view": "@view/todo",
+  "interface": "@interface/todo",
+  "brand": "@style/brand",
+  "style": "@style/todo",
+  "subscriptions": "@subscriptions/todo",
+  "inbox": "@inbox/todo",
   "inboxWatermark": 0
 }
 ```
@@ -2456,8 +2880,8 @@ maia/
 **`todo.context.maia`:**
 ```json
 {
-  "$type": "context",
-  "$id": "context_todo_001",
+  "$schema": "@schema/context",
+  "$id": "@context/todo",
   "todos": [
     {"id": "1", "text": "Learn MaiaOS", "done": true},
     {"id": "2", "text": "Build an app", "done": false}
@@ -2961,6 +3385,70 @@ Your actor looks at this notebook to know what to show and what to do!
 ```
 
 **The magic:** Your view automatically shows whatever is in context. Change the context, change what you see!
+
+## State Machine as Single Source of Truth
+
+**CRITICAL PRINCIPLE:** State machines are the **single source of truth** for all context changes.
+
+**What this means:**
+- ✅ All context updates MUST flow through state machines
+- ✅ State machines invoke tools (like `@context/update`) to update context
+- ✅ Views send events to state machines, never update context directly
+- ✅ Tools can update context, but ONLY when invoked by state machines
+
+**The ONLY exception:**
+- ✅ **SubscriptionEngine** automatically updates reactive query objects (infrastructure)
+- This is infrastructure that keeps database queries in sync - not manual context updates
+
+**Why this matters:**
+- **Predictable:** All context changes happen in one place (state machines)
+- **Debuggable:** Easy to trace where context changes come from
+- **Testable:** State machines define clear contracts for context updates
+- **AI-friendly:** LLMs can understand and generate correct patterns
+
+**Correct Pattern:**
+```
+User clicks button
+  ↓
+View sends event to state machine
+  ↓
+State machine invokes @context/update tool
+  ↓
+Tool updates context
+  ↓
+View re-renders with new context
+```
+
+**Anti-Patterns (DON'T DO THIS):**
+- ❌ Direct context mutation: `actor.context.field = value`
+- ❌ Invoking `@context/update` from views
+- ❌ Calling `ActorEngine.updateContext()` directly
+- ❌ Setting error context directly in ToolEngine (should use ERROR events)
+- ❌ Named actions that mutate context directly (should use `@context/update` tool)
+
+**Error Handling:**
+When tools fail, state machines receive ERROR events and can update context accordingly:
+```json
+{
+  "creating": {
+    "entry": {
+      "tool": "@db",
+      "payload": { "op": "create", ... }
+    },
+    "on": {
+      "ERROR": {
+        "target": "error",
+        "actions": [
+          {
+            "tool": "@context/update",
+            "payload": { "error": "$$error" }
+          }
+        ]
+      }
+    }
+  }
+}
+```
 
 ## Context Definition
 
@@ -3661,14 +4149,102 @@ State: idle (with your new todo!)
 
 The state machine is like a traffic controller - it decides what happens next!
 
+## State Machine Responsibility: Single Source of Truth
+
+**CRITICAL:** State machines are the **single source of truth** for all context changes.
+
+**Your state machine is responsible for:**
+- ✅ All context updates (via `@context/update` tool)
+- ✅ All data mutations (via `@db` tool)
+- ✅ All error handling (via ERROR event handlers)
+- ✅ All UI state changes (view mode, button states, form values)
+
+**State machines update context by:**
+1. Receiving events from inbox (unified event flow)
+2. Invoking tools (like `@context/update`) to update context
+3. Handling tool success/failure via SUCCESS/ERROR events (also routed through inbox)
+
+## Inbox as Single Source of Truth for Events
+
+**CRITICAL PRINCIPLE:** Actor inbox is the **single source of truth** for ALL events (internal, external, SUCCESS, ERROR).
+
+**What this means:**
+- ✅ All events MUST flow through actor inbox
+- ✅ View events → inbox → state machine
+- ✅ External messages → inbox → state machine
+- ✅ Tool SUCCESS/ERROR → inbox → state machine
+- ✅ StateEngine.send() only called from processMessages()
+
+**Event Flow Pattern:**
+```
+User clicks button
+  ↓
+View sends event → sendInternalEvent()
+  ↓
+Event added to inbox
+  ↓
+processMessages() processes inbox
+  ↓
+StateEngine.send() receives event
+  ↓
+State machine transitions
+  ↓
+Tool executes (SUCCESS/ERROR)
+  ↓
+SUCCESS/ERROR routed through inbox
+  ↓
+processMessages() processes SUCCESS/ERROR
+  ↓
+State machine handles SUCCESS/ERROR
+```
+
+**Why this matters:**
+- **Unified Event Log:** All events appear in inbox for complete traceability
+- **Consistent Pattern:** Single source of truth for all events
+- **Better Debugging:** Can trace all events through inbox log
+- **Watermark Consistency:** All events follow watermark pattern
+- **AI-Friendly:** LLMs can understand complete event flow
+
+**Anti-Patterns:**
+- ❌ Calling StateEngine.send() directly (bypasses inbox)
+- ❌ Sending SUCCESS/ERROR directly to state machine
+- ❌ Bypassing inbox for any events
+
+**Example:**
+```json
+{
+  "idle": {
+    "on": {
+      "UPDATE_INPUT": {
+        "target": "idle",
+        "actions": [
+          {
+            "tool": "@context/update",
+            "payload": { "newTodoText": "$$newTodoText" }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+**Why this matters:**
+- **Predictable:** All context changes happen in state machines
+- **Debuggable:** Easy to trace context changes
+- **Testable:** State machines define clear contracts
+- **AI-friendly:** LLMs understand this pattern
+
+**Remember:** Views send events, state machines update context, tools execute operations. Never update context directly from views or tools!
+
 ## Basic Structure
 
 Create a file named `{name}.state.maia`:
 
 ```json
 {
-  "$type": "state",
-  "$id": "state_todo_001",
+  "$schema": "@schema/state",
+  "$id": "@state/todo",
   
   "initial": "idle",
   
@@ -3686,7 +4262,7 @@ Create a file named `{name}.state.maia`:
         "tool": "@db",
         "payload": {
           "op": "create",
-          "schema": "@schema/todos",
+          "schema": "co_z...",
           "data": {"text": "$newTodoText", "done": false}
         }
       },
@@ -3703,6 +4279,11 @@ Create a file named `{name}.state.maia`:
   }
 }
 ```
+
+**Note:** 
+- `$schema` and `$id` use schema references (`@schema/state`, `@state/todo`) that are transformed to co-ids during seeding
+- The `schema` field in tool payloads must be a co-id (`co_z...`) - schema references (`@schema/todos`) are transformed to co-ids during seeding
+- In your source files, you can use schema references, but at runtime they become co-ids
 
 ## State Definition
 
@@ -4352,6 +4933,8 @@ Handle these in your state definition:
 - Use `$$` for event payloads, `$` for context
 - **Compute boolean flags** - State machine computes, context stores, views reference
 - **Maintain item lookup objects** - For item-specific conditional styling
+- **Update context via tools** - Always use `@context/update` tool, never mutate directly
+- **Handle errors in state machines** - Use ERROR event handlers to update error context
 
 ### ❌ DON'T:
 
@@ -4361,6 +4944,9 @@ Handle these in your state definition:
 - Use `$` for event payload fields
 - Create cycles without exit conditions
 - **Don't put conditionals in views** - Compute flags in state machine instead
+- **Don't mutate context directly** - Always use `@context/update` tool
+- **Don't update context from views** - Views send events, state machines update context
+- **Don't update context from tools** - Tools are invoked by state machines, not the other way around
 
 ## Debugging State Machines
 
@@ -4485,11 +5071,13 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
   "tool": "@db",
   "payload": {
     "op": "create",
-    "schema": "@schema/todos",
+    "schema": "co_z...",
     "data": {"text": "Buy milk", "done": false}
   }
 }
 ```
+
+**Note:** The `schema` field must be a co-id (`co_z...`). Schema references (`@schema/todos`) are transformed to co-ids during seeding. In your source state machine files, you can use schema references, but they get transformed to co-ids before execution.
 
 #### Update Operation
 ```json
@@ -4497,8 +5085,8 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
   "tool": "@db",
   "payload": {
     "op": "update",
-    "schema": "@schema/todos",
-    "id": "123",
+    "schema": "co_z...",
+    "id": "co_z...",
     "data": {"text": "Buy milk and eggs"}
   }
 }
@@ -4510,8 +5098,8 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
   "tool": "@db",
   "payload": {
     "op": "delete",
-    "schema": "@schema/todos",
-    "id": "123"
+    "schema": "co_z...",
+    "id": "co_z..."
   }
 }
 ```
@@ -4821,9 +5409,663 @@ console.log(mockActor.context.todos); // [{id: "...", text: "Test", done: false}
 
 ---
 
+# OPERATIONS
+
+*Source: creators/07-operations.md*
+
+# Database Operations API
+
+MaiaOS uses a **flexible, composable database operations API** through a single unified entry point: `maia.db({op: ...})`.
+
+## Core Concept
+
+All database operations flow through one simple API:
+
+```javascript
+await maia.db({ op: "operationName", ...params })
+```
+
+Where:
+- `maia` = MaiaOS instance (from `MaiaOS.boot()`)
+- `db()` = Unified database operation router
+- `{ op, ...params }` = Operation configuration (pure JSON)
+
+**Why this design?**
+- ✅ **Simple** - One API for everything
+- ✅ **Composable** - Easy to extend with new operations
+- ✅ **JSON-native** - Perfect for declarative configs
+- ✅ **Type-safe** - Runtime validation against schemas
+- ✅ **Flexible** - Swappable backends (IndexedDB, CoJSON, etc.)
+
+## Available Operations
+
+### `query` - Load Data
+
+Load data, configs, or schemas from the database.
+
+**Load a specific config:**
+```javascript
+const actorConfig = await maia.db({
+  op: "query",
+  schema: "@schema/actor",
+  key: "@actor/agent"
+});
+```
+
+**Query a collection:**
+```javascript
+const todos = await maia.db({
+  op: "query",
+  schema: "co_z..."  // Co-id (transformed from @schema/todos during seeding)
+});
+```
+
+**Query with filter:**
+```javascript
+const incompleteTodos = await maia.db({
+  op: "query",
+  schema: "co_z...",  // Co-id
+  filter: { done: false }
+});
+```
+
+**Note:** 
+- For configs, use schema references (`@schema/actor`) and instance references (`@actor/agent`)
+- For data collections, use co-ids (`co_z...`) - schema references are transformed to co-ids during seeding
+- In source files, you can use schema references, but they become co-ids at runtime
+
+**Reactive subscription (with callback):**
+```javascript
+const unsubscribe = await maia.db({
+  op: "query",
+  schema: "@schema/todos",
+  callback: (data) => {
+    console.log("Todos updated:", data);
+    // Update your UI here
+  }
+});
+
+// Later, unsubscribe
+unsubscribe();
+```
+
+**Parameters:**
+- `schema` (required) - Schema reference (`@schema/actor`) for configs, or co-id (`co_z...`) for data collections
+- `key` (optional) - Specific key for configs (e.g., `"@actor/agent"`)
+- `filter` (optional) - Filter criteria object (e.g., `{done: false}`)
+- `callback` (optional) - Function for reactive subscriptions
+
+**Note:** 
+- For configs: Use schema references (`@schema/actor`, `@schema/view`, etc.)
+- For data collections: Use co-ids (`co_z...`) - schema references are transformed to co-ids during seeding
+- In your source files, you can use schema references (`@schema/todos`), but they become co-ids at runtime
+
+**Returns:**
+- Data (if one-time query)
+- Unsubscribe function (if reactive with callback)
+
+### `create` - Create New Records
+
+Create a new record with schema validation.
+
+```javascript
+const newTodo = await maia.db({
+  op: "create",
+  schema: "co_z...",  // Co-id (transformed from @schema/todos during seeding)
+  data: {
+    text: "Buy groceries",
+    done: false
+  }
+});
+
+console.log("Created:", newTodo.id); // Auto-generated ID (co-id)
+```
+
+**Parameters:**
+- `schema` (required) - Co-id (`co_z...`) for data collections. Schema references (`@schema/todos`) are transformed to co-ids during seeding
+- `data` (required) - Data object to create
+
+**Returns:**
+- Created record with auto-generated `id` and all fields
+
+**Validation:**
+- Automatically validates against the schema definition
+- Throws error if validation fails
+
+### `update` - Update Existing Records
+
+Update an existing record with partial validation.
+
+```javascript
+const updated = await maia.db({
+  op: "update",
+  schema: "@schema/todos",
+  id: "123",
+  data: {
+    text: "Buy groceries and cook dinner"
+  }
+});
+```
+
+**Parameters:**
+- `schema` (required) - Schema reference
+- `id` (required) - Record ID to update
+- `data` (required) - Partial data object (only fields to update)
+
+**Returns:**
+- Updated record
+
+**Validation:**
+- Validates only the fields you're updating (partial validation)
+- Doesn't require all schema fields
+- Throws error if validation fails
+
+### `delete` - Delete Records
+
+Delete a record from the database.
+
+```javascript
+const deleted = await maia.db({
+  op: "delete",
+  schema: "@schema/todos",
+  id: "123"
+});
+
+console.log("Deleted:", deleted); // true
+```
+
+**Parameters:**
+- `schema` (required) - Schema reference
+- `id` (required) - Record ID to delete
+
+**Returns:**
+- `true` if deleted successfully
+
+### `toggle` - Toggle Boolean Field
+
+Toggle a boolean field (convenience operation).
+
+```javascript
+const updated = await maia.db({
+  op: "toggle",
+  schema: "@schema/todos",
+  id: "123",
+  field: "done"
+});
+
+// If done was false, now it's true (and vice versa)
+```
+
+**Parameters:**
+- `schema` (required) - Schema reference
+- `id` (required) - Record ID
+- `field` (required) - Boolean field name to toggle
+
+**Returns:**
+- Updated record with toggled field
+
+**Validation:**
+- Validates that the field exists in schema
+- Validates that the field is a boolean type
+- Throws error if field doesn't exist or isn't boolean
+
+### `seed` - Seed Database (Dev Only)
+
+Flush and seed the database with initial data (development only).
+
+```javascript
+await maia.db({
+  op: "seed",
+  configs: {
+    "vibe/vibe": { /* vibe config */ },
+    "vibe/vibe.actor": { /* actor config */ }
+  },
+  schemas: {
+    "@schema/todos": { /* schema definition */ }
+  },
+  data: {
+    "@schema/todos": [
+      { text: "First todo", done: false },
+      { text: "Second todo", done: true }
+    ]
+  }
+});
+```
+
+**Parameters:**
+- `configs` (optional) - Config objects keyed by path
+- `schemas` (optional) - Schema definitions keyed by schema ID
+- `data` (optional) - Data arrays keyed by schema ID
+
+**Returns:**
+- `true` when seeding completes
+
+**Note:** This operation clears existing data. Use only in development!
+
+## Tool Invocation Pattern
+
+**CRITICAL:** Tools are invoked BY state machines, never directly from views or other engines.
+
+**Pattern:**
+1. View sends event to state machine
+2. State machine invokes tool (in entry actions or transition actions)
+3. Tool executes operation
+4. State machine receives SUCCESS/ERROR event
+5. State machine updates context if needed
+
+**Why this matters:**
+- **Single source of truth:** All operations flow through state machines
+- **Predictable:** Easy to trace where operations come from
+- **Error handling:** State machines handle SUCCESS/ERROR events
+- **Context updates:** State machines update context via `@context/update` tool
+
+**Never:**
+- ❌ Invoke tools directly from views
+- ❌ Invoke tools from other engines
+- ❌ Update context directly in tools (unless invoked by state machine)
+
+**Always:**
+- ✅ Invoke tools from state machine actions
+- ✅ Handle SUCCESS/ERROR events in state machines
+- ✅ Update context via state machine actions using `@context/update` tool
+
+## Usage in State Machines
+
+Use the `@db` tool in your state machine definitions:
+
+```json
+{
+  "states": {
+    "creating": {
+      "entry": {
+        "tool": "@db",
+        "payload": {
+          "op": "create",
+          "schema": "@schema/todos",
+          "data": {
+            "text": "$newTodoText",
+            "done": false
+          }
+        }
+      },
+      "on": {
+        "SUCCESS": "idle",
+        "ERROR": "error"
+      }
+    },
+    "toggling": {
+      "entry": {
+        "tool": "@db",
+        "payload": {
+          "op": "toggle",
+          "schema": "@schema/todos",
+          "id": "$$id",
+          "field": "done"
+        }
+      },
+      "on": {
+        "SUCCESS": "idle"
+      }
+    }
+  }
+}
+```
+
+## Architecture
+
+```
+@db tool (in state machine)
+  ↓
+maia.db({op: ...})
+  ↓
+DBEngine.execute()
+  ↓
+Operation Handler (query/create/update/delete/toggle/seed)
+  ↓
+Backend (IndexedDB, CoJSON, etc.)
+  ↓
+Database
+```
+
+**Key Components:**
+
+1. **DBEngine** (`libs/maia-script/src/o/engines/maiadb/db.engine.js`)
+   - Routes operations to handlers
+   - Supports swappable backends
+
+2. **Operation Handlers** (`libs/maia-script/src/o/engines/maiadb/operations/`)
+   - `query.js` - Query operation handler
+   - `create.js` - Create operation handler
+   - `update.js` - Update operation handler
+   - `delete.js` - Delete operation handler
+   - `toggle.js` - Toggle operation handler
+   - `seed.js` - Seed operation handler
+
+3. **Backend** (`libs/maia-script/src/o/engines/maiadb/backend/`)
+   - `indexeddb.js` - IndexedDB backend (current)
+   - Future: CoJSON CRDT backend
+
+## Best Practices
+
+### 1. Tools Are Invoked by State Machines
+
+**✅ DO:** Invoke tools from state machine actions
+
+```json
+{
+  "idle": {
+    "on": {
+      "CREATE_TODO": {
+        "target": "creating",
+        "actions": [
+          {
+            "tool": "@db",
+            "payload": {
+              "op": "create",
+              "schema": "@schema/todos",
+              "data": {...}
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+**❌ DON'T:** Invoke tools directly from views or other engines
+
+```javascript
+// ❌ Don't do this - tools should be invoked by state machines
+actor.actorEngine.toolEngine.execute('@db', actor, payload);
+```
+
+### 2. Use Reactive Queries in Context
+
+**✅ DO:** Define query objects in context (automatic reactivity)
+
+```json
+{
+  "context": {
+    "todos": {
+      "schema": "@schema/todos",
+      "filter": null
+    }
+  }
+}
+```
+
+**❌ DON'T:** Manually subscribe in state machines
+
+```json
+{
+  "entry": {
+    "tool": "@db",
+    "payload": {
+      "op": "query",
+      "schema": "@schema/todos",
+      "callback": "..." // Don't do this - use context query objects!
+    }
+  }
+}
+```
+
+### 3. Always Use Operations for Mutations
+
+**✅ DO:** Use `@db` tool for all data changes (invoked by state machines)
+
+```json
+{
+  "tool": "@db",
+  "payload": {
+    "op": "create",
+    "schema": "@schema/todos",
+    "data": {...}
+  }
+}
+```
+
+**❌ DON'T:** Modify reactive query data directly
+
+```json
+{
+  "tool": "@context/update",
+  "payload": {
+    "todos": [...] // Don't mutate reactive data directly!
+  }
+}
+```
+
+### 4. Handle Errors in State Machines
+
+**✅ DO:** Handle SUCCESS/ERROR events and update context via state machine
+
+```json
+{
+  "creating": {
+    "entry": {
+      "tool": "@db",
+      "payload": {...}
+    },
+    "on": {
+      "SUCCESS": "idle",
+      "ERROR": {
+        "target": "error",
+        "actions": [
+          {
+            "tool": "@context/update",
+            "payload": { "error": "$$error" }
+          }
+        ]
+      }
+    }
+  },
+  "error": {
+    "on": {
+      "RETRY": "creating",
+      "DISMISS": "idle"
+    }
+  }
+}
+```
+
+**❌ DON'T:** Set error context directly in tools
+
+```javascript
+// ❌ Don't do this - errors should be handled by state machines
+actor.context.error = error.message;
+```
+
+### 5. Use Toggle for Boolean Fields
+
+**✅ DO:** Use `toggle` operation for boolean fields
+
+```json
+{
+  "tool": "@db",
+  "payload": {
+    "op": "toggle",
+    "schema": "@schema/todos",
+    "id": "$$id",
+    "field": "done"
+  }
+}
+```
+
+**❌ DON'T:** Manually read, flip, and update
+
+```json
+{
+  "tool": "@db",
+  "payload": {
+    "op": "update",
+    "schema": "@schema/todos",
+    "id": "$$id",
+    "data": {
+      "done": {"$not": "$done"} // Don't do this - use toggle!
+    }
+  }
+}
+```
+
+## Examples
+
+### Complete Todo List Example
+
+**Context:**
+```json
+{
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  },
+  "newTodoText": ""
+}
+```
+
+**State Machine:**
+```json
+{
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "CREATE_TODO": {
+          "target": "creating",
+          "guard": {"$ne": ["$newTodoText", ""]}
+        },
+        "TOGGLE_TODO": {
+          "target": "toggling"
+        },
+        "DELETE_TODO": {
+          "target": "deleting"
+        }
+      }
+    },
+    "creating": {
+      "entry": [
+        {
+          "tool": "@db",
+          "payload": {
+            "op": "create",
+            "schema": "@schema/todos",
+            "data": {
+              "text": "$newTodoText",
+              "done": false
+            }
+          }
+        },
+        {
+          "tool": "@context/update",
+          "payload": {"newTodoText": ""}
+        }
+      ],
+      "on": {
+        "SUCCESS": "idle",
+        "ERROR": "error"
+      }
+    },
+    "toggling": {
+      "entry": {
+        "tool": "@db",
+        "payload": {
+          "op": "toggle",
+          "schema": "@schema/todos",
+          "id": "$$id",
+          "field": "done"
+        }
+      },
+      "on": {
+        "SUCCESS": "idle",
+        "ERROR": "error"
+      }
+    },
+    "deleting": {
+      "entry": {
+        "tool": "@db",
+        "payload": {
+          "op": "delete",
+          "schema": "@schema/todos",
+          "id": "$$id"
+        }
+      },
+      "on": {
+        "SUCCESS": "idle",
+        "ERROR": "error"
+      }
+    },
+    "error": {
+      "on": {
+        "RETRY": "idle",
+        "DISMISS": "idle"
+      }
+    }
+  }
+}
+```
+
+## Operation Schema
+
+The `@db` tool validates operations against this schema:
+
+```json
+{
+  "op": {
+    "type": "string",
+    "enum": ["query", "create", "update", "delete", "toggle", "seed"]
+  },
+  "schema": {
+    "type": "string",
+    "description": "Schema reference (@schema/actor, @schema/todos, etc.)"
+  },
+  "key": {
+    "type": "string",
+    "description": "Optional: Specific key for config queries"
+  },
+  "filter": {
+    "type": "object",
+    "description": "Optional: Filter criteria for data queries"
+  },
+  "callback": {
+    "description": "Optional: Callback function for reactive subscriptions"
+  },
+  "id": {
+    "type": "string",
+    "description": "Optional: Record ID for update/delete/toggle operations"
+  },
+  "field": {
+    "type": "string",
+    "description": "Optional: Field name for toggle operations"
+  },
+  "data": {
+    "type": "object",
+    "description": "Optional: Data for create/update operations"
+  }
+}
+```
+
+## References
+
+- **DBEngine:** `libs/maia-script/src/o/engines/maiadb/db.engine.js`
+- **Operation Handlers:** `libs/maia-script/src/o/engines/maiadb/operations/`
+- **Backend:** `libs/maia-script/src/o/engines/maiadb/backend/indexeddb.js`
+- **Tool Definition:** `libs/maia-script/src/o/tools/db/db.tool.maia`
+- **Example Vibe:** `libs/maia-vibes/src/todos/`
+
+## Future Enhancements
+
+Potential future operations:
+- `batch` - Execute multiple operations atomically
+- `transaction` - Multi-operation transactions
+- `migrate` - Schema migration operations
+- `export` - Export data to JSON
+- `import` - Import JSON into database
+
+---
+
 # VIEWS
 
-*Source: creators/07-views.md*
+*Source: creators/08-views.md*
 
 # Views (UI Representation)
 
@@ -4846,8 +6088,8 @@ Create a file named `{name}.view.maia`:
 
 ```json
 {
-  "$type": "view",
-  "$id": "view_todo_001",
+  "$schema": "@schema/view",
+  "$id": "@view/todo",
   
   "root": {
     "tag": "div",
@@ -4881,6 +6123,8 @@ Create a file named `{name}.view.maia`:
   }
 }
 ```
+
+**Note:** `$schema` and `$id` use schema references (`@schema/view`, `@view/todo`) that are transformed to co-ids (`co_z...`) during seeding.
 
 ## Element Structure
 
@@ -5580,7 +6824,7 @@ Views support only these operations:
 
 # BRAND
 
-*Source: creators/08-brand.md*
+*Source: creators/09-brand.md*
 
 # Brand (Design System)
 
@@ -5590,10 +6834,11 @@ Views support only these operations:
 
 > Brand is the IDENTITY of your application. It ensures visual consistency across all actors.
 
-- **Brand** defines design tokens (colors, spacing, typography)
+- **Brand** defines design tokens (colors, spacing, typography) and shared component styles
 - **StyleEngine** compiles brand definitions to CSS
-- **Actors** reference brand via `styleRef`
-- **Actors** can also have local styles for customization
+- **Actors** reference brand via `brand` property (required)
+- **Actors** can also have local styles via `style` property (optional) for customization
+- **StyleEngine merges** brand + style at runtime (brand first, style overrides)
 
 ## Brand Definition
 
@@ -5601,8 +6846,8 @@ Create a file named `brand.style.maia`:
 
 ```json
 {
-  "$type": "style",
-  "$id": "style_brand_001",
+  "$schema": "@schema/style",
+  "$id": "@style/brand",
   
   "tokens": {
     "colors": {
@@ -5950,11 +7195,12 @@ In your actor definition:
 
 ```json
 {
-  "$type": "actor",
-  "id": "actor_todo_001",
-  "styleRef": "brand",    // ← References brand.style.maia
-  "viewRef": "todo",
-  "stateRef": "todo"
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo",
+  "brand": "@style/brand",  // ← Required: shared design system
+  "style": "@style/todo",   // ← Optional: actor-specific overrides
+  "view": "@view/todo",
+  "state": "@state/todo"
 }
 ```
 
@@ -6099,8 +7345,8 @@ For conditional styling, use nested `data` syntax in component definitions:
 
 ```json
 {
-  "$type": "style",
-  "$id": "style_brand_001",
+  "$schema": "@schema/style",
+  "$id": "@style/brand",
   
   "tokens": {
     "colors": {
@@ -6183,7 +7429,7 @@ For conditional styling, use nested `data` syntax in component definitions:
 
 # STYLE
 
-*Source: creators/09-style.md*
+*Source: creators/10-style.md*
 
 # Style (Local Styling)
 
@@ -6218,8 +7464,8 @@ Create a file named `{name}.style.maia`:
 
 ```json
 {
-  "$type": "style",
-  "$id": "style_todo_001",
+  "$schema": "@schema/style",
+  "$id": "@style/todo",
   
   "components": {
     "todoItem": {
@@ -6265,16 +7511,20 @@ In your actor definition:
 
 ```json
 {
-  "$type": "actor",
-  "id": "actor_todo_001",
-  "styleRef": "brand",         // ← Brand foundation
-  "localStyleRef": "todo",     // ← Actor-specific styles (optional)
-  "viewRef": "todo",
-  "stateRef": "todo"
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo",
+  "brand": "@style/brand",  // ← Required: shared design system
+  "style": "@style/todo",   // ← Optional: actor-specific overrides
+  "view": "@view/todo",
+  "state": "@state/todo"
 }
 ```
 
-**Note:** Currently MaiaOS uses `styleRef` for brand. In v0.5, we'll add `localStyleRef` for actor-specific styles. For now, you can combine them in a single style file.
+**Note:** 
+- `brand` is **required** - shared design system (tokens, components) used by all actors
+- `style` is **optional** - actor-specific style overrides that merge with brand
+- StyleEngine merges brand + style at runtime (brand first, style overrides)
+- Both use co-id references (`@style/brand`, `@style/todo`) that are transformed to co-ids during seeding
 
 ## Style Compilation
 
@@ -6616,8 +7866,8 @@ For conditional styling, use nested `data` syntax in component definitions:
 
 ```json
 {
-  "$type": "style",
-  "$id": "style_todo_001",
+  "$schema": "@schema/style",
+  "$id": "@style/todo",
   
   "components": {
     "todoApp": {
@@ -6722,582 +7972,711 @@ styleElement.textContent += `
 
 ---
 
-# 10_OPERATIONS
+# SCHEMATA
 
-*Source: creators/10_operations.md*
+*Source: creators/11-schemata.md*
 
-# Database Operations API
+# MaiaOS Schemata System
 
-MaiaOS uses a **flexible, composable database operations API** through a single unified entry point: `maia.db({op: ...})`.
+The MaiaOS schemata system provides a JSON Schema-based type system for CoJSON types (comap, colist, costream) with co-id-based references, seeding, and runtime validation.
 
-## Core Concept
+## Core Principles
 
-All database operations flow through one simple API:
+### 1. Every Schema Must Have a Co-Type
 
-```javascript
-await maia.db({ op: "operationName", ...params })
-```
+**CRITICAL RULE**: Every schema or instance **must** be one of three CoJSON types:
 
-Where:
-- `maia` = MaiaOS instance (from `MaiaOS.boot()`)
-- `db()` = Unified database operation router
-- `{ op, ...params }` = Operation configuration (pure JSON)
+- **`cotype: "comap"`** - CRDT map (key-value pairs with properties)
+- **`cotype: "colist"`** - CRDT list (ordered array with items)
+- **`cotype: "costream"`** - CRDT stream (append-only list with items)
 
-**Why this design?**
-- ✅ **Simple** - One API for everything
-- ✅ **Composable** - Easy to extend with new operations
-- ✅ **JSON-native** - Perfect for declarative configs
-- ✅ **Type-safe** - Runtime validation against schemas
-- ✅ **Flexible** - Swappable backends (IndexedDB, CoJSON, etc.)
-
-## Available Operations
-
-### `query` - Load Data
-
-Load data, configs, or schemas from the database.
-
-**Load a specific config:**
-```javascript
-const vibeConfig = await maia.db({
-  op: "query",
-  schema: "@schema/actor",
-  key: "vibe/vibe"
-});
-```
-
-**Query a collection:**
-```javascript
-const todos = await maia.db({
-  op: "query",
-  schema: "@schema/todos"
-});
-```
-
-**Query with filter:**
-```javascript
-const incompleteTodos = await maia.db({
-  op: "query",
-  schema: "@schema/todos",
-  filter: { done: false }
-});
-```
-
-**Reactive subscription (with callback):**
-```javascript
-const unsubscribe = await maia.db({
-  op: "query",
-  schema: "@schema/todos",
-  callback: (data) => {
-    console.log("Todos updated:", data);
-    // Update your UI here
-  }
-});
-
-// Later, unsubscribe
-unsubscribe();
-```
-
-**Parameters:**
-- `schema` (required) - Schema reference (`@schema/actor`, `@schema/todos`, etc.)
-- `key` (optional) - Specific key for configs (e.g., `"vibe/vibe"`)
-- `filter` (optional) - Filter criteria object (e.g., `{done: false}`)
-- `callback` (optional) - Function for reactive subscriptions
-
-**Returns:**
-- Data (if one-time query)
-- Unsubscribe function (if reactive with callback)
-
-### `create` - Create New Records
-
-Create a new record with schema validation.
-
-```javascript
-const newTodo = await maia.db({
-  op: "create",
-  schema: "@schema/todos",
-  data: {
-    text: "Buy groceries",
-    done: false
-  }
-});
-
-console.log("Created:", newTodo.id); // Auto-generated ID
-```
-
-**Parameters:**
-- `schema` (required) - Schema reference (`@schema/todos`, etc.)
-- `data` (required) - Data object to create
-
-**Returns:**
-- Created record with auto-generated `id` and all fields
-
-**Validation:**
-- Automatically validates against the schema definition
-- Throws error if validation fails
-
-### `update` - Update Existing Records
-
-Update an existing record with partial validation.
-
-```javascript
-const updated = await maia.db({
-  op: "update",
-  schema: "@schema/todos",
-  id: "123",
-  data: {
-    text: "Buy groceries and cook dinner"
-  }
-});
-```
-
-**Parameters:**
-- `schema` (required) - Schema reference
-- `id` (required) - Record ID to update
-- `data` (required) - Partial data object (only fields to update)
-
-**Returns:**
-- Updated record
-
-**Validation:**
-- Validates only the fields you're updating (partial validation)
-- Doesn't require all schema fields
-- Throws error if validation fails
-
-### `delete` - Delete Records
-
-Delete a record from the database.
-
-```javascript
-const deleted = await maia.db({
-  op: "delete",
-  schema: "@schema/todos",
-  id: "123"
-});
-
-console.log("Deleted:", deleted); // true
-```
-
-**Parameters:**
-- `schema` (required) - Schema reference
-- `id` (required) - Record ID to delete
-
-**Returns:**
-- `true` if deleted successfully
-
-### `toggle` - Toggle Boolean Field
-
-Toggle a boolean field (convenience operation).
-
-```javascript
-const updated = await maia.db({
-  op: "toggle",
-  schema: "@schema/todos",
-  id: "123",
-  field: "done"
-});
-
-// If done was false, now it's true (and vice versa)
-```
-
-**Parameters:**
-- `schema` (required) - Schema reference
-- `id` (required) - Record ID
-- `field` (required) - Boolean field name to toggle
-
-**Returns:**
-- Updated record with toggled field
-
-**Validation:**
-- Validates that the field exists in schema
-- Validates that the field is a boolean type
-- Throws error if field doesn't exist or isn't boolean
-
-### `seed` - Seed Database (Dev Only)
-
-Flush and seed the database with initial data (development only).
-
-```javascript
-await maia.db({
-  op: "seed",
-  configs: {
-    "vibe/vibe": { /* vibe config */ },
-    "vibe/vibe.actor": { /* actor config */ }
-  },
-  schemas: {
-    "@schema/todos": { /* schema definition */ }
-  },
-  data: {
-    "@schema/todos": [
-      { text: "First todo", done: false },
-      { text: "Second todo", done: true }
-    ]
-  }
-});
-```
-
-**Parameters:**
-- `configs` (optional) - Config objects keyed by path
-- `schemas` (optional) - Schema definitions keyed by schema ID
-- `data` (optional) - Data arrays keyed by schema ID
-
-**Returns:**
-- `true` when seeding completes
-
-**Note:** This operation clears existing data. Use only in development!
-
-## Usage in State Machines
-
-Use the `@db` tool in your state machine definitions:
-
+**Example:**
 ```json
 {
-  "states": {
-    "creating": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "create",
-          "schema": "@schema/todos",
-          "data": {
-            "text": "$newTodoText",
-            "done": false
+  "$schema": "@schema/meta",
+  "$id": "@schema/actor",
+  "title": "Actor Definition",
+  "cotype": "comap",  // ← REQUIRED: Must be comap, colist, or costream
+  "properties": {
+    // ...
+  }
+}
+```
+
+### 2. Use `$co` for CoValue References, `$ref` Only for Internal Definitions
+
+**CRITICAL RULE**: 
+- **Use `$co`** to reference **separate CoValue entities** (other schemas, actors, views, etc.)
+- **Use `$ref`** **ONLY** for internal schema definitions (within `$defs`)
+
+**Why?**
+- `$co` indicates a property value is a **co-id reference** to another CoValue
+- `$ref` is for JSON Schema internal references (like `#/$defs/viewNode`)
+- Never use `$ref` to reference external schemas - always use `$co`
+
+**✅ CORRECT:**
+```json
+{
+  "properties": {
+    "context": {
+      "$co": "@schema/context",  // ← References separate CoValue
+      "description": "Co-id reference to context definition"
+    },
+    "children": {
+      "type": "array",
+      "items": {
+        "$co": "@schema/actor"  // ← Each item is a co-id reference
+      }
+    }
+  },
+  "$defs": {
+    "viewNode": {
+      "type": "object",
+      "properties": {
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/viewNode"  // ← OK: Internal reference
           }
         }
-      },
-      "on": {
-        "SUCCESS": "idle",
-        "ERROR": "error"
-      }
-    },
-    "toggling": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "toggle",
-          "schema": "@schema/todos",
-          "id": "$$id",
-          "field": "done"
-        }
-      },
-      "on": {
-        "SUCCESS": "idle"
       }
     }
   }
 }
 ```
 
-## Architecture
-
-```
-@db tool (in state machine)
-  ↓
-maia.db({op: ...})
-  ↓
-DBEngine.execute()
-  ↓
-Operation Handler (query/create/update/delete/toggle/seed)
-  ↓
-Backend (IndexedDB, CoJSON, etc.)
-  ↓
-Database
-```
-
-**Key Components:**
-
-1. **DBEngine** (`libs/maia-script/src/o/engines/maiadb/db.engine.js`)
-   - Routes operations to handlers
-   - Supports swappable backends
-
-2. **Operation Handlers** (`libs/maia-script/src/o/engines/maiadb/operations/`)
-   - `query.js` - Query operation handler
-   - `create.js` - Create operation handler
-   - `update.js` - Update operation handler
-   - `delete.js` - Delete operation handler
-   - `toggle.js` - Toggle operation handler
-   - `seed.js` - Seed operation handler
-
-3. **Backend** (`libs/maia-script/src/o/engines/maiadb/backend/`)
-   - `indexeddb.js` - IndexedDB backend (current)
-   - Future: CoJSON CRDT backend
-
-## Best Practices
-
-### 1. Use Reactive Queries in Context
-
-**✅ DO:** Define query objects in context (automatic reactivity)
-
+**❌ WRONG:**
 ```json
 {
-  "context": {
-    "todos": {
-      "schema": "@schema/todos",
-      "filter": null
+  "properties": {
+    "context": {
+      "$ref": "@schema/context"  // ← WRONG: Use $co for CoValue references
     }
   }
 }
 ```
 
-**❌ DON'T:** Manually subscribe in state machines
+## Schema Structure
 
+### Required Fields
+
+Every schema must have:
+
+1. **`$schema`** - Reference to meta-schema (usually `"@schema/meta"`)
+2. **`$id`** - Unique schema identifier (human-readable like `"@schema/actor"` or co-id like `"co_z..."`)
+3. **`title`** - Human-readable schema title
+4. **`cotype`** - CoJSON type: `"comap"`, `"colist"`, or `"costream"`
+
+### Schema Examples
+
+#### Example 1: Actor Schema (comap)
 ```json
 {
-  "entry": {
-    "tool": "@db",
-    "payload": {
-      "op": "query",
-      "schema": "@schema/todos",
-      "callback": "..." // Don't do this - use context query objects!
-    }
-  }
-}
-```
-
-### 2. Always Use Operations for Mutations
-
-**✅ DO:** Use `@db` tool for all data changes
-
-```json
-{
-  "tool": "@db",
-  "payload": {
-    "op": "create",
-    "schema": "@schema/todos",
-    "data": {...}
-  }
-}
-```
-
-**❌ DON'T:** Modify context directly
-
-```json
-{
-  "tool": "@context/update",
-  "payload": {
-    "todos": [...] // Don't mutate reactive data directly!
-  }
-}
-```
-
-### 3. Handle Errors
-
-**✅ DO:** Handle SUCCESS/ERROR events
-
-```json
-{
-  "creating": {
-    "entry": {
-      "tool": "@db",
-      "payload": {...}
+  "$schema": "@schema/meta",
+  "$id": "@schema/actor",
+  "title": "Actor Definition",
+  "cotype": "comap",
+  "properties": {
+    "$id": {
+      "type": "string",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
-    "on": {
-      "SUCCESS": "idle",
-      "ERROR": "error"
+    "context": {
+      "$co": "@schema/context",  // ← CoValue reference
+      "description": "Co-id reference to context definition"
+    },
+    "view": {
+      "$co": "@schema/view",  // ← CoValue reference
+      "description": "Co-id reference to view definition"
+    },
+    "children": {
+      "type": "object",
+      "additionalProperties": {
+        "$co": "@schema/actor"  // ← Each child is a co-id reference
+      }
+    }
+  }
+}
+```
+
+#### Example 2: Inbox Schema (costream)
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/inbox",
+  "title": "Inbox CoStream",
+  "cotype": "costream",  // ← Append-only stream
+  "properties": {
+    "$id": {
+      "type": "string",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
+    },
+    "items": {
+      "type": "array",
+      "description": "Array of message co-id references",
+      "items": {
+        "$co": "@schema/message",  // ← Each item is a co-id reference
+        "description": "Each item is a co-id reference to a message"
+      }
     }
   },
-  "error": {
-    "on": {
-      "RETRY": "creating",
-      "DISMISS": "idle"
+  "required": ["items"]
+}
+```
+
+#### Example 3: Guard Schema (comap with allOf)
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/guard",
+  "title": "Guard",
+  "cotype": "comap",
+  "properties": {
+    "$id": {
+      "type": "string",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     }
-  }
-}
-```
-
-### 4. Use Toggle for Boolean Fields
-
-**✅ DO:** Use `toggle` operation for boolean fields
-
-```json
-{
-  "tool": "@db",
-  "payload": {
-    "op": "toggle",
-    "schema": "@schema/todos",
-    "id": "$$id",
-    "field": "done"
-  }
-}
-```
-
-**❌ DON'T:** Manually read, flip, and update
-
-```json
-{
-  "tool": "@db",
-  "payload": {
-    "op": "update",
-    "schema": "@schema/todos",
-    "id": "$$id",
-    "data": {
-      "done": {"$not": "$done"} // Don't do this - use toggle!
-    }
-  }
-}
-```
-
-## Examples
-
-### Complete Todo List Example
-
-**Context:**
-```json
-{
-  "todos": {
-    "schema": "@schema/todos",
-    "filter": null
   },
-  "newTodoText": ""
+  "allOf": [
+    {
+      "$co": "@schema/maia-script-expression"  // ← Uses $co for schema reference
+    }
+  ]
 }
 ```
 
-**State Machine:**
+**Note**: The `guard` schema uses `$co` in `allOf` to reference another schema. This is the correct pattern - `allOf` merges schemas, and `$co` ensures the reference is properly resolved during seeding and validation.
+
+#### Example 4: View Schema (comap with internal $defs)
 ```json
 {
-  "initial": "idle",
-  "states": {
-    "idle": {
-      "on": {
-        "CREATE_TODO": {
-          "target": "creating",
-          "guard": {"$ne": ["$newTodoText", ""]}
-        },
-        "TOGGLE_TODO": {
-          "target": "toggling"
-        },
-        "DELETE_TODO": {
-          "target": "deleting"
+  "$schema": "@schema/meta",
+  "$id": "@schema/view",
+  "title": "View Definition",
+  "cotype": "comap",
+  "properties": {
+    "tag": { "type": "string" },
+    "text": {
+      "$co": "@schema/maia-script-expression"  // ← CoValue reference
+    },
+    "children": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/viewNode"  // ← OK: Internal reference to $defs
+      }
+    }
+  },
+  "$defs": {
+    "viewNode": {
+      "type": "object",
+      "properties": {
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/viewNode"  // ← OK: Recursive internal reference
+          }
         }
       }
-    },
-    "creating": {
-      "entry": [
+    }
+  }
+}
+```
+
+#### Example 5: MaiaScript Expression Schema (comap with recursive $ref)
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/maia-script-expression",
+  "title": "MaiaScript Expression",
+  "cotype": "comap",
+  "anyOf": [
+    { "type": ["number", "boolean", "null"] },
+    { "type": "string" },
+    { "$ref": "#/$defs/expressionObject" }  // ← OK: Internal reference
+  ],
+  "$defs": {
+    "expressionObject": {
+      "type": "object",
+      "oneOf": [
         {
-          "tool": "@db",
-          "payload": {
-            "op": "create",
-            "schema": "@schema/todos",
-            "data": {
-              "text": "$newTodoText",
-              "done": false
+          "properties": {
+            "$eq": {
+              "type": "array",
+              "items": {
+                "$ref": "#"  // ← OK: Self-reference (recursive)
+              }
             }
           }
-        },
-        {
-          "tool": "@context/update",
-          "payload": {"newTodoText": ""}
         }
-      ],
-      "on": {
-        "SUCCESS": "idle",
-        "ERROR": "error"
-      }
-    },
-    "toggling": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "toggle",
-          "schema": "@schema/todos",
-          "id": "$$id",
-          "field": "done"
-        }
-      },
-      "on": {
-        "SUCCESS": "idle",
-        "ERROR": "error"
-      }
-    },
-    "deleting": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "delete",
-          "schema": "@schema/todos",
-          "id": "$$id"
-        }
-      },
-      "on": {
-        "SUCCESS": "idle",
-        "ERROR": "error"
-      }
-    },
-    "error": {
-      "on": {
-        "RETRY": "idle",
-        "DISMISS": "idle"
+      ]
+    }
+  }
+}
+```
+
+## Seeding Process
+
+The seeding process transforms human-readable schema IDs (like `"@schema/actor"`) into co-ids (like `"co_zABC123..."`) and stores everything in IndexedDB.
+
+### Phase 1: Co-ID Generation
+
+1. **Generate co-ids for all schemas**
+   - Each unique schema `$id` gets a deterministic co-id
+   - Co-ids are stored in a registry: `Map<human-readable-id, co-id>`
+
+```javascript
+// Example: Schema "@schema/actor" → co-id "co_zABC123..."
+const schemaCoIdMap = new Map();
+for (const schema of schemas) {
+  const coId = generateCoIdForSchema(schema);
+  schemaCoIdMap.set(schema.$id, coId);
+}
+```
+
+### Phase 2: Schema Transformation
+
+2. **Transform all schemas** (replace human-readable refs with co-ids)
+   - `$schema: "@schema/meta"` → `$schema: "co_zMeta123..."`
+   - `$id: "@schema/actor"` → `$id: "co_zABC123..."`
+   - `$co: "@schema/context"` → `$co: "co_zContext456..."`
+   - `$ref` values are **NOT** transformed (only for internal definitions)
+
+```javascript
+// Transform schema
+const transformed = transformSchemaForSeeding(schema, schemaCoIdMap);
+// Result: All $co references now use co-ids
+```
+
+### Phase 2.5: Schema Validation After Transformation
+
+2.5. **Validate transformed schemas** (ensure transformation didn't introduce errors)
+   - Each transformed schema validated against its `$schema` meta-schema
+   - Meta-schema loaded from in-memory map or database
+   - Ensures data integrity before storage
+   - Throws error if validation fails
+
+```javascript
+// Validate transformed schema
+const result = await validationEngine.validateSchemaAgainstMeta(transformedSchema);
+if (!result.valid) {
+  throw new Error(`Schema validation failed: ${result.errors}`);
+}
+```
+
+### Phase 3: Schema Storage
+
+3. **Store validated schemas in IndexedDB**
+   - Schemas stored with co-id as key
+   - Already validated in Phases 1 and 2.5
+
+### Phase 4: Instance Transformation
+
+4. **Transform all instances** (actors, views, contexts, etc.)
+   - `$schema: "@schema/actor"` → `$schema: "co_zABC123..."`
+   - `$id: "actor/001"` → `$id: "co_zInstance789..."`
+   - Property values with `$co` references are transformed
+   - Query objects (`{schema: "@schema/todos", filter: {...}}`) are transformed
+
+```javascript
+// Transform instance
+const transformed = transformInstanceForSeeding(instance, coIdMap);
+// Result: All references now use co-ids
+```
+
+### Phase 4.5: Instance Validation After Transformation
+
+4.5. **Validate transformed instances** (ensure transformation didn't introduce errors)
+   - Each transformed instance validated against its `$schema` schema
+   - Schema loaded from database (seeded in Phase 3)
+   - Ensures data integrity before storage
+   - Throws error if validation fails
+
+```javascript
+// Validate transformed instance
+const schema = await dbEngine.getSchema(instance.$schema);
+await validateAgainstSchemaOrThrow(schema, instance, context);
+```
+
+### Phase 5: Instance Storage
+
+5. **Store validated instances in IndexedDB**
+   - Instances stored with co-id as key
+   - Already validated in Phase 4.5
+   - Also validated on load (runtime check)
+
+## Code Generation
+
+Currently, schemas are **not** compiled to TypeScript or other code. They remain as JSON Schema definitions that are:
+
+1. **Validated** against the meta-schema during seeding (before and after transformation)
+2. **Transformed** from human-readable IDs to co-ids
+3. **Validated again** after transformation to ensure integrity
+3. **Stored** in IndexedDB for runtime resolution
+4. **Used** for runtime validation via AJV
+
+Future code generation could:
+- Generate TypeScript types from schemas
+- Generate runtime validators
+- Generate serialization/deserialization code
+
+## Runtime Resolution and Validation
+
+### Schema Resolution
+
+At runtime, schemas are resolved from IndexedDB using co-ids:
+
+```javascript
+// Resolve schema by co-id
+const schema = await schemaResolver("co_zABC123...");
+// Returns full schema definition
+```
+
+### Validation Process
+
+1. **Load schema** from IndexedDB using co-id
+2. **Resolve dependencies**:
+   - `$schema` references (meta-schema)
+   - `$co` references (other schemas)
+   - `$ref` references (internal definitions)
+3. **Register schemas** in AJV registry
+4. **Validate instance** against schema
+
+```javascript
+const validationEngine = new ValidationEngine();
+await validationEngine.initialize();
+
+// Validate instance against schema
+const result = await validationEngine.validate(
+  instance,
+  schemaCoId
+);
+```
+
+### $co Reference Resolution
+
+When validating, `$co` references are resolved:
+
+1. **Extract `$co` value** (co-id or human-readable ID)
+2. **Resolve schema** from IndexedDB
+3. **Register schema** in AJV for validation
+4. **Validate** that the referenced value conforms to the schema
+
+```javascript
+// Property definition
+{
+  "context": {
+    "$co": "co_zContext456..."  // ← Resolved to context schema
+  }
+}
+
+// Runtime validation
+// 1. Load context schema: co_zContext456...
+// 2. Validate instance.context value against context schema
+// 3. Ensure instance.context is a valid co-id string
+```
+
+### Validation Rules
+
+- **Co-ID validation**: Properties with `$co` must contain valid co-id strings (`co_z...`)
+- **Schema conformance**: Referenced CoValues must conform to their schema
+- **Type checking**: All properties validated against their schema definitions
+- **Required fields**: Required properties must be present
+
+## Common Patterns
+
+### Pattern 1: Referencing Other Schemas
+
+```json
+{
+  "properties": {
+    "view": {
+      "$co": "@schema/view"  // ← Always use $co for schema references
+    }
+  }
+}
+```
+
+### Pattern 2: Arrays of CoValue References
+
+```json
+{
+  "properties": {
+    "children": {
+      "type": "array",
+      "items": {
+        "$co": "@schema/actor"  // ← Each item is a co-id reference
       }
     }
   }
 }
 ```
 
-## Operation Schema
-
-The `@db` tool validates operations against this schema:
+### Pattern 3: Recursive Internal Definitions
 
 ```json
 {
-  "op": {
-    "type": "string",
-    "enum": ["query", "create", "update", "delete", "toggle", "seed"]
-  },
-  "schema": {
-    "type": "string",
-    "description": "Schema reference (@schema/actor, @schema/todos, etc.)"
-  },
-  "key": {
-    "type": "string",
-    "description": "Optional: Specific key for config queries"
-  },
-  "filter": {
-    "type": "object",
-    "description": "Optional: Filter criteria for data queries"
-  },
-  "callback": {
-    "description": "Optional: Callback function for reactive subscriptions"
-  },
-  "id": {
-    "type": "string",
-    "description": "Optional: Record ID for update/delete/toggle operations"
-  },
-  "field": {
-    "type": "string",
-    "description": "Optional: Field name for toggle operations"
-  },
-  "data": {
-    "type": "object",
-    "description": "Optional: Data for create/update operations"
+  "$defs": {
+    "viewNode": {
+      "type": "object",
+      "properties": {
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/viewNode"  // ← OK: Internal recursive reference
+          }
+        }
+      }
+    }
   }
 }
 ```
 
-## References
+### Pattern 4: Expression References
 
-- **DBEngine:** `libs/maia-script/src/o/engines/maiadb/db.engine.js`
-- **Operation Handlers:** `libs/maia-script/src/o/engines/maiadb/operations/`
-- **Backend:** `libs/maia-script/src/o/engines/maiadb/backend/indexeddb.js`
-- **Tool Definition:** `libs/maia-script/src/o/tools/db/db.tool.maia`
-- **Example Vibe:** `libs/maia-vibes/src/todos/`
+```json
+{
+  "properties": {
+    "text": {
+      "$co": "@schema/maia-script-expression"  // ← Expression schema reference
+    },
+    "value": {
+      "$co": "@schema/maia-script-expression"  // ← Expression schema reference
+    }
+  }
+}
+```
 
-## Future Enhancements
+### Pattern 5: Nested Objects with $co
 
-Potential future operations:
-- `batch` - Execute multiple operations atomically
-- `transaction` - Multi-operation transactions
-- `migrate` - Schema migration operations
-- `export` - Export data to JSON
-- `import` - Import JSON into database
+```json
+{
+  "properties": {
+    "attrs": {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "$co": "@schema/maia-script-expression"  // ← Expression in attributes
+          },
+          {
+            "type": "object",
+            "additionalProperties": {
+              "$co": "@schema/maia-script-expression"  // ← Nested expression
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+## Validation Rules Summary
+
+### ✅ DO:
+
+1. **Always specify `cotype`** - Every schema must be `comap`, `colist`, or `costream`
+2. **Use `$co` for CoValue references** - References to other schemas, actors, views, etc.
+3. **Use `$ref` for internal definitions** - Only within `$defs` or for self-references
+4. **Include `$id` pattern validation** - Validate co-id format: `^co_z[a-zA-Z0-9]+$`
+5. **Transform during seeding** - All human-readable IDs become co-ids
+
+### ❌ DON'T:
+
+1. **Don't use `$ref` for external schemas** - Always use `$co` instead
+2. **Don't nest co-types** - Properties cannot have `cotype`, use `$co` to reference separate CoValues
+3. **Don't mix `$co` and `$ref`** - Use `$co` for CoValues, `$ref` only for internal definitions
+4. **Don't skip `cotype`** - Every schema/instance must specify its CoJSON type
+5. **Don't use human-readable IDs at runtime** - All IDs must be co-ids after seeding
+
+### Special Contexts: `allOf` and `additionalProperties`
+
+**`allOf` and Schema Composition:**
+- `allOf` is a JSON Schema composition keyword that merges multiple schemas
+- When using `allOf` to extend another schema, **use `$co`** (e.g., `guard` schema extending `maia-script-expression`)
+- Example: `guard.schema.json` correctly uses `$co` in `allOf`
+
+**`additionalProperties` and Dynamic Keys:**
+- `additionalProperties` defines the schema for dynamic object keys
+- When referencing external schemas, **use `$co`** (e.g., `action.payload` referencing `maia-script-expression`)
+- Example: `action.schema.json` correctly uses `$co` in `additionalProperties`
+
+**Consistency**: All schemas in the codebase consistently use `$co` for external schema references, even in `allOf` and `additionalProperties` contexts.
+
+## Examples from Codebase
+
+### Action Schema
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/action",
+  "title": "Action",
+  "cotype": "comap",
+  "properties": {
+    "$id": {
+      "type": "string",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
+    },
+    "tool": { "type": "string" },
+    "payload": {
+      "type": "object",
+      "additionalProperties": {
+        "$co": "@schema/maia-script-expression"  // ← Uses $co for schema reference
+      }
+    }
+  },
+  "required": ["tool"]
+}
+```
+
+**Note**: The `action` schema correctly uses `$co` in `additionalProperties` to reference the expression schema. This ensures dynamic payload properties are validated against the expression schema.
+
+### Context Schema
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/context",
+  "title": "Context Definition",
+  "cotype": "comap",
+  "properties": {
+    "$id": {
+      "type": "string",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
+    },
+    "todos": {
+      "type": "object",
+      "properties": {
+        "schema": {
+          "type": "string",
+          "description": "Schema reference (e.g., '@schema/todos')"
+        },
+        "filter": {
+          "oneOf": [
+            {"type": "object"},
+            {"type": "null"}
+          ]
+        }
+      },
+      "required": ["schema"]
+    }
+  },
+  "additionalProperties": {
+    "anyOf": [
+      {
+        "type": "object",
+        "properties": {
+          "schema": { "type": "string" },
+          "filter": { "oneOf": [{"type": "object"}, {"type": "null"}] }
+        },
+        "required": ["schema"]
+      },
+      {
+        "type": ["string", "number", "boolean", "null", "array", "object"]
+      }
+    ]
+  }
+}
+```
+
+### State Schema
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/state",
+  "title": "State Machine Definition",
+  "cotype": "comap",
+  "properties": {
+    "initial": { "type": "string" },
+    "states": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "entry": {
+            "oneOf": [
+              { "type": "object" },
+              { "type": "array" },
+              { "$co": "@schema/action" },  // ← CoValue reference
+              {
+                "type": "array",
+                "items": { "$co": "@schema/action" }  // ← Array of CoValue references
+              }
+            ]
+          },
+          "on": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                { "type": "string" },
+                {
+                  "type": "object",
+                  "properties": {
+                    "target": { "type": "string" },
+                    "guard": {
+                      "$co": "@schema/maia-script-expression"  // ← Expression reference
+                    },
+                    "actions": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          { "type": "object" },
+                          { "$co": "@schema/action" }  // ← CoValue reference
+                        ]
+                      }
+                    }
+                  }
+                },
+                { "$co": "@schema/transition" }  // ← CoValue reference
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": ["initial", "states"]
+}
+```
+
+## Summary
+
+The MaiaOS schemata system provides:
+
+1. **Type safety** via JSON Schema validation
+2. **CoJSON integration** via `cotype` specification
+3. **CoValue references** via `$co` keyword
+4. **Seeding** transforms human-readable IDs to co-ids
+5. **Runtime validation** resolves and validates all references
+6. **Strict rules**: `$co` for CoValues, `$ref` only for internal definitions, every schema must have `cotype`
+
+This ensures type-safe, validated, and properly referenced CoJSON data structures throughout the MaiaOS runtime.
 
 ---
 
 # BEST PRACTICES
 
-*Source: creators/11-best-practices.md*
+*Source: creators/12-best-practices.md*
 
 # Best Practices: Actor Architecture
 
 **Comprehensive guide to building scalable, maintainable MaiaOS applications**
+
+## Agent-First Development
+
+**Always create the agent service actor first when building a vibe.**
+
+**Why?**
+- **Clear Architecture** - Agent defines the app's structure and data flow
+- **Data First** - Agent handles all data operations before UI concerns
+- **UI Second** - UI actors receive data from agent, keeping them simple
+- **Consistent Pattern** - Every vibe follows the same structure
+- **AI-Friendly** - LLMs understand this pattern and can generate vibes correctly
+
+**Development Order:**
+1. ✅ **Create agent service actor** (`agent/agent.actor.maia`) - ALWAYS FIRST
+2. ✅ Create vibe manifest (`manifest.vibe.maia`) - References `@actor/agent`
+3. ✅ Create composite actor (`composite/composite.actor.maia`) - First UI actor
+4. ✅ Create UI actors (`list/list.actor.maia`, etc.) - Leaf components
 
 ## Table of Contents
 
@@ -7309,8 +8688,9 @@ Potential future operations:
 6. [Performance Optimization](#6-performance-optimization)
 7. [Domain Separation](#7-domain-separation)
 8. [Feature Modules](#8-feature-modules)
-9. [Anti-Patterns to Avoid](#9-anti-patterns-to-avoid)
-10. [Real-World Examples](#10-real-world-examples)
+9. [Schema Definitions](#9-schema-definitions)
+10. [Anti-Patterns to Avoid](#10-anti-patterns-to-avoid)
+11. [Real-World Examples](#11-real-world-examples)
 
 ---
 
@@ -7320,9 +8700,76 @@ Potential future operations:
 
 **Rule of thumb:** State should be co-located with the component that renders it and uses it.
 
+### Context Updates: State Machine as Single Source of Truth
+
+**CRITICAL PRINCIPLE:** State machines are the **single source of truth** for all context changes.
+
+**All context updates MUST:**
+- ✅ Flow through state machines
+- ✅ Use `@context/update` tool (never mutate directly)
+- ✅ Be triggered by events from inbox (never directly)
+
+**The ONLY exception:**
+- ✅ SubscriptionEngine automatically updates reactive query objects (infrastructure)
+
+**Correct Pattern:**
+```json
+{
+  "idle": {
+    "on": {
+      "UPDATE_INPUT": {
+        "target": "idle",
+        "actions": [
+          {
+            "tool": "@context/update",
+            "payload": { "newTodoText": "$$newTodoText" }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+**Anti-Patterns:**
+- ❌ Direct mutation: `actor.context.field = value`
+- ❌ Updating from views
+- ❌ Updating from tools (unless invoked by state machine)
+- ❌ Setting error context directly in ToolEngine
+
+### Event Flow: Inbox as Single Source of Truth
+
+**CRITICAL PRINCIPLE:** Actor inbox is the **single source of truth** for ALL events.
+
+**All events MUST flow through inbox:**
+- ✅ View events → inbox → state machine
+- ✅ External messages → inbox → state machine
+- ✅ Tool SUCCESS/ERROR → inbox → state machine
+- ✅ StateEngine.send() only called from processMessages()
+
+**Event Flow Pattern:**
+```
+View Event → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+Tool SUCCESS → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+```
+
+**Why this matters:**
+- **Unified Event Log:** All events appear in inbox for traceability
+- **Watermark Pattern:** Prevents duplicate processing
+- **Consistent Handling:** All events follow same path
+- **Better Debugging:** Can inspect inbox to see complete event history
+
+**Anti-Patterns:**
+- ❌ Calling StateEngine.send() directly (bypasses inbox)
+- ❌ Sending SUCCESS/ERROR directly to state machine
+- ❌ Bypassing inbox for any events
+
 ### Three-Layer Architecture
 
-#### Layer 1: Vibe Service Actor (Business Logic)
+#### Layer 1: Agent Service Actor (Business Logic)
+
+**Best Practice:** Always create the agent service actor first. This is your app's orchestrator.
 
 **Manages:**
 - ✅ Business logic and data orchestration
@@ -7338,8 +8785,9 @@ Potential future operations:
 **Example Context:**
 ```json
 {
-  "$type": "context",
-  "composite": "@composite"
+  "$schema": "@schema/context",
+  "$id": "@context/agent",
+  "composite": "@actor/composite"
   // Only business logic references - no UI state
 }
 ```
@@ -7360,12 +8808,13 @@ Potential future operations:
 **Example Context:**
 ```json
 {
-  "$type": "context",
+  "$schema": "@schema/context",
+  "$id": "@context/composite",
   "title": "Todo List",                    // UI presentation
   "inputPlaceholder": "Add a new todo...", // UI presentation
   "addButtonText": "Add",                  // UI presentation
   "viewMode": "list",                      // UI orchestration
-  "currentView": "@list",                  // UI orchestration
+  "currentView": "@actor/list",            // UI orchestration
   "listButtonActive": true,                // UI orchestration
   "kanbanButtonActive": false,             // UI orchestration
   "newTodoText": ""                        // Form state (co-located)
@@ -7388,7 +8837,8 @@ Potential future operations:
 **Kanban Actor:**
 ```json
 {
-  "$type": "context",
+  "$schema": "@schema/context",
+  "$id": "@context/kanban",
   "todosTodo": [],        // Filtered data (query result)
   "todosDone": [],       // Filtered data (query result)
   "draggedItemId": null, // Component-specific UI state
@@ -7399,7 +8849,8 @@ Potential future operations:
 **List Actor:**
 ```json
 {
-  "$type": "context",
+  "$schema": "@schema/context",
+  "$id": "@context/list",
   "todos": []  // Filtered data (query result)
 }
 ```
@@ -7649,10 +9100,11 @@ App Service Actor
 **Load actors on-demand:**
 ```json
 {
-  "$type": "actor",
+  "$schema": "@schema/actor",
+  "$id": "@actor/composite",
   "children": {
-    "todos": "actor_todos_001",
-    "notes": "actor_notes_001"
+    "todos": "@actor/todos",
+    "notes": "@actor/notes"
   },
   "lazy": ["notes"]  // Load notes only when accessed
 }
@@ -7749,13 +9201,21 @@ App Service Actor
 **Example:**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_todos_service_001",
-  "role": "service",
-  "stateRef": "todos-service",
-  "contextRef": "todos-service"
+  "$schema": "@schema/actor",
+  "$id": "@actor/agent",
+  "role": "agent",
+  "context": "@context/agent",
+  "state": "@state/agent",
+  "view": "@view/agent",
+  "interface": "@interface/agent",
+  "brand": "@style/brand",
+  "subscriptions": "@subscriptions/agent",
+  "inbox": "@inbox/agent",
+  "inboxWatermark": 0
 }
 ```
+
+**Note:** Always create the agent service actor first. This is your app's orchestrator.
 
 ---
 
@@ -7789,28 +9249,357 @@ App Composite Actor
 **Example:**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_todos_feature_001",
+  "$schema": "@schema/actor",
+  "$id": "@actor/composite",
   "role": "composite",
-  "viewRef": "todos-feature",
-  "stateRef": "todos-feature",
+  "context": "@context/composite",
+  "view": "@view/composite",
+  "state": "@state/composite",
+  "interface": "@interface/composite",
+  "brand": "@style/brand",
   "children": {
-    "list": "actor_todos_list_001",
-    "kanban": "actor_todos_kanban_001"
-  }
+    "list": "@actor/list",
+    "kanban": "@actor/kanban"
+  },
+  "subscriptions": "@subscriptions/composite",
+  "inbox": "@inbox/composite",
+  "inboxWatermark": 0
 }
 ```
 
 ---
 
-## 9. Anti-Patterns to Avoid
+## 9. Schema Definitions
+
+### Core Principles
+
+#### Every Schema Must Have a Co-Type
+
+**CRITICAL RULE**: Every schema or instance **must** be one of three CoJSON types:
+
+- **`cotype: "comap"`** - CRDT map (key-value pairs with properties)
+- **`cotype: "colist"`** - CRDT list (ordered array with items)
+- **`cotype: "costream"`** - CRDT stream (append-only list with items)
+
+**Example:**
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/actor",
+  "title": "Actor Definition",
+  "cotype": "comap",  // ← REQUIRED: Must be comap, colist, or costream
+  "properties": {
+    // ...
+  }
+}
+```
+
+#### Use `$co` for CoValue References, `$ref` Only for Internal Definitions
+
+**CRITICAL RULE**: 
+- **Use `$co`** to reference **separate CoValue entities** (other schemas, actors, views, etc.)
+- **Use `$ref`** **ONLY** for internal schema definitions (within `$defs`)
+
+**Why?**
+- `$co` indicates a property value is a **co-id reference** to another CoValue
+- `$ref` is for JSON Schema internal references (like `#/$defs/viewNode`)
+- Never use `$ref` to reference external schemas - always use `$co`
+
+**✅ CORRECT:**
+```json
+{
+  "properties": {
+    "context": {
+      "$co": "@schema/context",  // ← References separate CoValue
+      "description": "Co-id reference to context definition"
+    },
+    "children": {
+      "type": "array",
+      "items": {
+        "$co": "@schema/actor"  // ← Each item is a co-id reference
+      }
+    }
+  },
+  "$defs": {
+    "viewNode": {
+      "type": "object",
+      "properties": {
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/viewNode"  // ← OK: Internal reference
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**❌ WRONG:**
+```json
+{
+  "properties": {
+    "context": {
+      "$ref": "@schema/context"  // ← WRONG: Use $co for CoValue references
+    }
+  }
+}
+```
+
+### Required Schema Fields
+
+Every schema must have:
+
+1. **`$schema`** - Reference to meta-schema (usually `"@schema/meta"`)
+2. **`$id`** - Unique schema identifier (human-readable like `"@schema/actor"` or co-id like `"co_z..."`)
+3. **`title`** - Human-readable schema title
+4. **`cotype`** - CoJSON type: `"comap"`, `"colist"`, or `"costream"`
+
+### Common Schema Patterns
+
+#### Pattern 1: Referencing Other Schemas
+
+**Always use `$co` for schema references:**
+```json
+{
+  "properties": {
+    "view": {
+      "$co": "@schema/view"  // ← Always use $co for schema references
+    }
+  }
+}
+```
+
+#### Pattern 2: Arrays of CoValue References
+
+**Each array item is a co-id reference:**
+```json
+{
+  "properties": {
+    "children": {
+      "type": "array",
+      "items": {
+        "$co": "@schema/actor"  // ← Each item is a co-id reference
+      }
+    }
+  }
+}
+```
+
+#### Pattern 3: Recursive Internal Definitions
+
+**Use `$ref` for recursive internal structures:**
+```json
+{
+  "$defs": {
+    "viewNode": {
+      "type": "object",
+      "properties": {
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/viewNode"  // ← OK: Internal recursive reference
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+#### Pattern 4: Expression References
+
+**Reference expression schemas with `$co`:**
+```json
+{
+  "properties": {
+    "text": {
+      "$co": "@schema/maia-script-expression"  // ← Expression schema reference
+    },
+    "value": {
+      "$co": "@schema/maia-script-expression"  // ← Expression schema reference
+    }
+  }
+}
+```
+
+#### Pattern 5: Schema Composition with `allOf`
+
+**Use `$co` in `allOf` to extend schemas:**
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/guard",
+  "title": "Guard",
+  "cotype": "comap",
+  "properties": {
+    "$id": {
+      "type": "string",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
+    }
+  },
+  "allOf": [
+    {
+      "$co": "@schema/maia-script-expression"  // ← Uses $co for schema reference
+    }
+  ]
+}
+```
+
+#### Pattern 6: Dynamic Properties with `additionalProperties`
+
+**Use `$co` in `additionalProperties` for dynamic keys:**
+```json
+{
+  "properties": {
+    "payload": {
+      "type": "object",
+      "additionalProperties": {
+        "$co": "@schema/maia-script-expression"  // ← Uses $co for schema reference
+      }
+    }
+  }
+}
+```
+
+### Schema Validation Rules
+
+#### ✅ DO:
+
+1. **Always specify `cotype`** - Every schema must be `comap`, `colist`, or `costream`
+2. **Use `$co` for CoValue references** - References to other schemas, actors, views, etc.
+3. **Use `$ref` for internal definitions** - Only within `$defs` or for self-references
+4. **Include `$id` pattern validation** - Validate co-id format: `^co_z[a-zA-Z0-9]+$`
+5. **Transform during seeding** - All human-readable IDs become co-ids
+
+#### ❌ DON'T:
+
+1. **Don't use `$ref` for external schemas** - Always use `$co` instead
+2. **Don't nest co-types** - Properties cannot have `cotype`, use `$co` to reference separate CoValues
+3. **Don't mix `$co` and `$ref`** - Use `$co` for CoValues, `$ref` only for internal definitions
+4. **Don't skip `cotype`** - Every schema/instance must specify its CoJSON type
+5. **Don't use human-readable IDs at runtime** - All IDs must be co-ids after seeding
+
+### Schema Examples
+
+#### Example 1: Actor Schema (comap)
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/actor",
+  "title": "Actor Definition",
+  "cotype": "comap",
+  "properties": {
+    "$id": {
+      "type": "string",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
+    },
+    "context": {
+      "$co": "@schema/context",  // ← CoValue reference
+      "description": "Co-id reference to context definition"
+    },
+    "view": {
+      "$co": "@schema/view",  // ← CoValue reference
+      "description": "Co-id reference to view definition"
+    },
+    "children": {
+      "type": "object",
+      "additionalProperties": {
+        "$co": "@schema/actor"  // ← Each child is a co-id reference
+      }
+    }
+  }
+}
+```
+
+#### Example 2: Inbox Schema (costream)
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/inbox",
+  "title": "Inbox CoStream",
+  "cotype": "costream",  // ← Append-only stream
+  "properties": {
+    "$id": {
+      "type": "string",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
+    },
+    "items": {
+      "type": "array",
+      "description": "Array of message co-id references",
+      "items": {
+        "$co": "@schema/message",  // ← Each item is a co-id reference
+        "description": "Each item is a co-id reference to a message"
+      }
+    }
+  },
+  "required": ["items"]
+}
+```
+
+#### Example 3: View Schema (comap with internal $defs)
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/view",
+  "title": "View Definition",
+  "cotype": "comap",
+  "properties": {
+    "tag": { "type": "string" },
+    "text": {
+      "$co": "@schema/maia-script-expression"  // ← CoValue reference
+    },
+    "children": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/viewNode"  // ← OK: Internal reference to $defs
+      }
+    }
+  },
+  "$defs": {
+    "viewNode": {
+      "type": "object",
+      "properties": {
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/viewNode"  // ← OK: Recursive internal reference
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Reading Schema Definitions
+
+When reading and understanding schema definitions:
+
+1. **Identify the Co-Type** - Check `cotype` field first to understand the data structure
+2. **Follow `$co` References** - These point to separate CoValue entities that need to be resolved
+3. **Understand `$ref` Scope** - These are internal to the schema, defined in `$defs`
+4. **Check Required Fields** - Look for `required` array to understand mandatory properties
+5. **Validate Patterns** - Check `pattern` fields for string validation rules (especially co-id patterns)
+
+**Best Practice:** When working with schemas, always:
+- Start with the `cotype` to understand the structure
+- Trace `$co` references to understand relationships
+- Use `$defs` for reusable internal structures
+- Keep schemas focused and single-purpose
+
+---
+
+## 10. Anti-Patterns to Avoid
 
 ### ❌ Don't: Put UI State in Service Actor
 
 **Bad:**
 ```json
 {
-  "$type": "context",
+  "$schema": "@schema/context",
+  "$id": "@context/agent",
   "viewMode": "list",        // ❌ UI state in service
   "listButtonActive": true,  // ❌ UI state in service
   "newTodoText": ""          // ❌ Form state in service
@@ -7820,8 +9609,9 @@ App Composite Actor
 **Good:**
 ```json
 {
-  "$type": "context",
-  "composite": "@composite"  // ✅ Only business logic references
+  "$schema": "@schema/context",
+  "$id": "@context/agent",
+  "composite": "@actor/composite"  // ✅ Only business logic references
 }
 ```
 
@@ -7889,21 +9679,23 @@ App Composite Actor
 **Bad:**
 ```json
 {
-  "$type": "actor",
-  "role": "service",
-  "stateRef": "monolithic-service"  // ❌ Everything in one service
+  "$schema": "@schema/actor",
+  "$id": "@actor/agent",
+  "role": "agent",
+  "state": "@state/monolithic-service"  // ❌ Everything in one service
 }
 ```
 
 **Good:**
 ```json
 {
-  "$type": "actor",
-  "role": "service",
+  "$schema": "@schema/actor",
+  "$id": "@actor/agent",
+  "role": "agent",
   "children": {
-    "todos": "actor_todos_service_001",    // ✅ Domain separation
-    "notes": "actor_notes_service_001",   // ✅ Domain separation
-    "calendar": "actor_calendar_service_001"  // ✅ Domain separation
+    "todos": "@actor/todos-service",    // ✅ Domain separation
+    "notes": "@actor/notes-service",   // ✅ Domain separation
+    "calendar": "@actor/calendar-service"  // ✅ Domain separation
   }
 }
 ```
@@ -7952,7 +9744,7 @@ Composite Actor
 
 ---
 
-## 10. Real-World Examples
+## 11. Real-World Examples
 
 ### Example 1: E-Commerce App (30-50 Actors)
 
@@ -8024,6 +9816,9 @@ App Service Actor
 - [ ] UI actors manage component-specific state
 - [ ] State is co-located with components that use it
 - [ ] No state duplication across actors
+- [ ] **State machines are single source of truth** - All context updates flow through state machines
+- [ ] **Use `@context/update` tool** - Always update context via state machine actions
+- [ ] **Handle errors in state machines** - Use ERROR event handlers to update error context
 
 ### ✅ Architecture
 
@@ -8057,6 +9852,15 @@ App Service Actor
 - [ ] Maintain clear boundaries
 - [ ] Document architecture decisions
 
+### ✅ Schema Definitions
+
+- [ ] Every schema has a `cotype` (comap, colist, or costream)
+- [ ] Use `$co` for CoValue references (external schemas, actors, views)
+- [ ] Use `$ref` only for internal definitions (within `$defs`)
+- [ ] Include required fields: `$schema`, `$id`, `title`, `cotype`
+- [ ] Validate co-id patterns: `^co_z[a-zA-Z0-9]+$`
+- [ ] Keep schemas focused and single-purpose
+
 ---
 
 ## Quick Reference
@@ -8075,137 +9879,6 @@ App Service Actor
 ---
 
 **Remember:** The pattern scales from simple apps (2-5 actors) to enterprise applications (200+ actors) while maintaining clear separation of concerns and co-location of state.
-
----
-
-# README
-
-*Source: creators/README.md*
-
-# MaiaOS Creator Documentation
-
-Creator-facing documentation for building with MaiaOS.
-
-## Documentation Order
-
-Read the documentation in the following order for a complete understanding:
-
-### 0. [Vibes](./00-vibes.md)
-**Understanding the Vibe System**
-- What are Vibes?
-- Vibe composition and structure
-- Vibe ecosystem
-
-### 1. [Kernel](./01-kernel.md)
-**MaiaOS Kernel Fundamentals**
-- Kernel architecture
-- Core concepts
-- System initialization
-
-### 2. [Actors](./02-actors.md)
-**Actor-Based Component System**
-- What are Actors?
-- Actor lifecycle
-- Actor composition
-- Actor references and identity
-
-### 3. ~~[Skills](../future/03-skills.md)~~ *(Future Feature - v0.5+)*
-**AI Agent Skills** *(Not yet implemented)*
-- Skill definitions
-- How to create skills
-- Skill composition
-- LLM integration
-
-### 4. [Context](./04-context.md)
-**Context Management**
-- Context system
-- Context passing
-- Context composition
-- Data flow
-
-### 5. [State](./05-state.md)
-**State Management**
-- State machines
-- State transitions
-- Event handling
-- Reactive state
-
-### 6. [Tools](./06-tools.md)
-**Tool System**
-- Tool definitions
-- Tool execution
-- Tool composition
-- Custom tools
-
-### 7. [Views](./07-views.md)
-**View System**
-- View structure
-- View composition
-- View-to-DOM rendering
-- Reactive updates
-
-### 8. [Brand](./08-brand.md)
-**Brand System**
-- Brand definitions
-- Brand tokens
-- Brand composition
-- Theme system
-
-### 9. [Style](./09-style.md)
-**Style System**
-- Style definitions
-- CSS generation
-- Style composition
-- Responsive design
-
-### 10. [Best Practices](./10-best-practices.md)
-**Best Practices and Patterns**
-- Recommended patterns
-- Common pitfalls
-- Performance tips
-- Maintainability
-
----
-
-## Who This Is For
-
-This documentation is for **creators** who want to:
-- Build applications with MaiaOS
-- Create vibes (component definitions)
-- Compose features using the declarative DSL
-- Integrate AI agents into applications
-- Design and style user interfaces
-
-## What You'll Learn
-
-- How to use MaiaScript (`.maia` files)
-- How to compose actors, state machines, views, and styles
-- How to create AI-powered features with skills
-- How to manage state and context
-- How to build reactive, collaborative applications
-
----
-
-## Related Documentation
-
-- [Developer Documentation](../developers/) - Technical implementation details
-- [Getting Started](../getting-started/) - Quick start guides
-- [Agent Documentation](../agents/) - Auto-generated LLM agent docs
-
----
-
-## Contributing
-
-When updating these docs:
-- ✅ Keep content user-friendly and example-driven
-- ✅ Focus on "how to use" rather than "how it works"
-- ✅ Include practical examples
-- ❌ **DO NOT** update `docs/agents/LLM_*.md` files (auto-generated)
-
-To regenerate agent docs after updating:
-```bash
-bun run generate:llm-docs
-```
 
 ---
 

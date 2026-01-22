@@ -18,11 +18,12 @@ export default defineConfig({
 	appType: 'mpa', // Multi-page app mode - prevents SPA fallback
 	resolve: {
 		alias: {
-			"@MaiaOS/core": resolve(__dirname, "../../libs/maia-core/src/index.js"),
+			"@MaiaOS/kernel": resolve(__dirname, "../../libs/maia-kernel/src/index.js"),
 			"@MaiaOS/db": resolve(__dirname, "../../libs/maia-db/src/index.js"),
 			"@MaiaOS/schemata": resolve(__dirname, "../../libs/maia-schemata/src"),
 			"@MaiaOS/vibes": resolve(__dirname, "../../libs/maia-vibes/src"),
 			"@MaiaOS/script": resolve(__dirname, "../../libs/maia-script/src"),
+			"@MaiaOS/tools": resolve(__dirname, "../../libs/maia-tools/src"),
 			"cojson/crypto/WasmCrypto": resolve(__dirname, "../../libs/maia-db/node_modules/cojson/dist/crypto/WasmCrypto.js"),
 			"cojson/crypto/PureJSCrypto": resolve(__dirname, "../../libs/maia-db/node_modules/cojson/dist/crypto/PureJSCrypto.js"),
 			cojson: resolve(__dirname, "../../libs/maia-db/node_modules/cojson/dist"),

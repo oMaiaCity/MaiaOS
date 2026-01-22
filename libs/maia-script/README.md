@@ -1,6 +1,8 @@
-# @maia/script
+# @MaiaOS/script
 
-MaiaScript is MaiaOS's secure JSON-based expression language for runtime logic.
+MaiaScript provides reusable execution components (engines, modules, utils) for MaiaOS.
+
+**Note:** The MaiaOS kernel (`MaiaOS.boot()`) is now exported from `@MaiaOS/kernel`. This package exports engines, modules, and utilities for reuse.
 
 ## Features
 
@@ -8,20 +10,24 @@ MaiaScript is MaiaOS's secure JSON-based expression language for runtime logic.
 - ✅ Sandboxed evaluation (secure from untrusted input)
 - ✅ Whitelisted operations only
 - ✅ Pluggable module system
+- ✅ Reusable engines (ActorEngine, ViewEngine, StyleEngine, StateEngine, ToolEngine, etc.)
 
 ## Installation
 
 ```bash
 # In workspace package
 "dependencies": {
-  "@maia/script": "workspace:*"
+  "@MaiaOS/script": "workspace:*",
+  "@MaiaOS/kernel": "workspace:*"  # For MaiaOS.boot()
 }
 ```
 
 ## Usage
 
+### Using the Kernel
+
 ```javascript
-import { MaiaOS } from '@MaiaOS/script'
+import { MaiaOS } from '@MaiaOS/kernel'
 
 // Boot MaiaOS
 const os = await MaiaOS.boot({
@@ -29,8 +35,20 @@ const os = await MaiaOS.boot({
     // Your configs here
   }
 })
+```
 
-// MaiaScript expressions are evaluated automatically by engines
+### Using Engines Directly
+
+```javascript
+import { ActorEngine, ViewEngine, StateEngine } from '@MaiaOS/script'
+
+// Use engines independently for advanced use cases
+const actorEngine = new ActorEngine(...)
+```
+
+### MaiaScript Expressions
+
+MaiaScript expressions are evaluated automatically by engines:
 // Example expression in JSON config:
 const expr = {
   "$if": {
@@ -71,18 +89,23 @@ const expr = {
 
 ```
 src/
-├── o/
-│   ├── kernel.js              # MaiaOS kernel (main entry point)
-│   ├── engines/
-│   │   ├── MaiaScriptEvaluator.js  # Expression evaluator
-│   │   ├── actor-engine/      # Actor orchestration
-│   │   ├── view-engine/       # UI rendering
-│   │   ├── state-engine/      # State machine interpreter
-│   │   ├── tool-engine/       # Tool execution
-│   │   └── db-engine/         # Database operations
-│   └── tools/                 # Built-in tools
-└── index.js                    # Public API exports
+├── engines/
+│   ├── MaiaScriptEvaluator.js  # Expression evaluator
+│   ├── actor-engine/          # Actor orchestration
+│   ├── view-engine/           # UI rendering
+│   ├── state-engine/          # State machine interpreter
+│   ├── tool-engine/           # Tool execution
+│   ├── db-engine/             # Database operations
+│   └── subscription-engine/   # Reactive subscriptions
+├── modules/                   # Module definitions (db, core, dragdrop, interface)
+├── utils/                     # Shared utilities (module-registration, etc.)
+└── index.js                   # Public API exports (engines only)
 ```
+
+**Notes:**
+- Kernel (`MaiaOS.boot()`) has been moved to `@MaiaOS/kernel`
+- Tools have been extracted to `@MaiaOS/tools` package
+- Engines, modules, and utils remain here for reuse
 
 ## API Reference
 

@@ -27,7 +27,7 @@ services/maia-city/
 
 ## Dependencies
 
-- `@MaiaOS/core` - Core functionality (Jazz, auth)
+- `@MaiaOS/kernel` - Kernel functionality (Jazz, auth)
 - `@MaiaOS/db` - Database utilities
 - `@MaiaOS/script` - MaiaScript engine (Actor system, DSL)
 
@@ -58,14 +58,14 @@ The todos example demonstrates clean import/export pattern:
 **maia-script exports:**
 ```javascript
 // libs/maia-script/src/index.js
-export { MaiaOS } from "./o/kernel.js";
-export { ActorEngine, ViewEngine, StyleEngine, ... } from "./o/engines/...";
+export { MaiaOS } from "./kernel.js";
+export { ActorEngine, ViewEngine, StyleEngine, ... } from "./engines/...";
 ```
 
 **maia-city imports:**
 ```javascript
 // services/maia-city/vibes/todos.html
-import { MaiaOS } from '@MaiaOS/script';
+import { MaiaOS } from '@MaiaOS/kernel';
 const os = await MaiaOS.boot({ ... });
 ```
 

@@ -9,5 +9,6 @@
  */
 
 // Re-export todos loader and registry for convenience
-export { loadTodosVibe, MaiaOS, TodosVibeRegistry } from './todos/loader.js';
+export { loadTodosVibe, TodosVibeRegistry } from './todos/loader.js';
+export { MaiaOS } from '@MaiaOS/kernel';
 export { TodosVibeRegistry as TodosRegistry } from './todos/registry.js';

@@ -9,7 +9,7 @@
  * - No manual re-seeding needed - Jazz handles persistence and loading
  */
 
-import { createMaiaOS, signInWithPasskey, signUpWithPasskey, isPRFSupported, subscribeSyncState } from "@MaiaOS/core";
+import { createMaiaOS, signInWithPasskey, signUpWithPasskey, isPRFSupported, subscribeSyncState } from "@MaiaOS/kernel";
 import { createCoJSONAPI } from "@MaiaOS/db";
 import { renderApp } from './db-view.js';
 

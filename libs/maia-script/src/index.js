@@ -2,24 +2,26 @@
  * MaiaScript - Main Entry Point
  * 
  * Exports:
- * - MaiaOS: Main OS class with boot() method
  * - All engines for direct use (Actor, View, Style, State, Tool, MaiaDB)
  * - MaiaDB: Unified database operation engine (DBEngine, IndexedDBBackend)
+ * - Modules and utils via subpath exports
+ * 
+ * Note: MaiaOS kernel is now exported from @MaiaOS/kernel
  */
 
-// Export kernel/OS
-export { MaiaOS } from "./o/kernel.js";
-
 // Export all engines
-export { ActorEngine } from "./o/engines/actor-engine/actor.engine.js";
-export { ViewEngine } from "./o/engines/view-engine/view.engine.js";
-export { StyleEngine } from "./o/engines/style-engine/style.engine.js";
-export { StateEngine } from "./o/engines/state-engine/state.engine.js";
-export { ToolEngine } from "./o/engines/tool-engine/tool.engine.js";
-export { MaiaScriptEvaluator } from "./o/engines/MaiaScriptEvaluator.js";
-export { ModuleRegistry } from "./o/engines/ModuleRegistry.js";
-export { MessageQueue } from "./o/engines/message-queue/message.queue.js";
+export { ActorEngine } from "./engines/actor-engine/actor.engine.js";
+export { ViewEngine } from "./engines/view-engine/view.engine.js";
+export { StyleEngine } from "./engines/style-engine/style.engine.js";
+export { StateEngine } from "./engines/state-engine/state.engine.js";
+export { ToolEngine } from "./engines/tool-engine/tool.engine.js";
+export { MaiaScriptEvaluator } from "./engines/MaiaScriptEvaluator.js";
+export { ModuleRegistry } from "./engines/ModuleRegistry.js";
+export { MessageQueue } from "./engines/message-queue/message.queue.js";
 
 // Export DB Engine (unified database operation engine)
-export { DBEngine } from "./o/engines/db-engine/db.engine.js";
-export { IndexedDBBackend } from "./o/engines/db-engine/backend/indexeddb.js";
+export { DBEngine } from "./engines/db-engine/db.engine.js";
+export { IndexedDBBackend } from "./engines/db-engine/backend/indexeddb.js";
+
+// Export SubscriptionEngine (used by kernel)
+export { SubscriptionEngine } from "./engines/subscription-engine/subscription.engine.js";

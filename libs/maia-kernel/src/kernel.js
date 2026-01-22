@@ -6,22 +6,22 @@
  * Module-based architecture with dynamic loading
  * 
  * Usage:
- *   import { MaiaOS } from './o/kernel.js';
+ *   import { MaiaOS } from './kernel.js';
  *   const os = await MaiaOS.boot(config);
  */
 
-// Import all engines
-import { ActorEngine } from './engines/actor-engine/actor.engine.js';
-import { ViewEngine } from './engines/view-engine/view.engine.js';
-import { StyleEngine } from './engines/style-engine/style.engine.js';
-import { StateEngine } from './engines/state-engine/state.engine.js';
-import { MaiaScriptEvaluator } from './engines/MaiaScriptEvaluator.js';
-import { ModuleRegistry } from './engines/ModuleRegistry.js';
-import { ToolEngine } from './engines/tool-engine/tool.engine.js';
-import { SubscriptionEngine } from './engines/subscription-engine/subscription.engine.js';
+// Import all engines from @MaiaOS/script
+import { ActorEngine } from '@MaiaOS/script';
+import { ViewEngine } from '@MaiaOS/script';
+import { StyleEngine } from '@MaiaOS/script';
+import { StateEngine } from '@MaiaOS/script';
+import { MaiaScriptEvaluator } from '@MaiaOS/script';
+import { ModuleRegistry } from '@MaiaOS/script';
+import { ToolEngine } from '@MaiaOS/script';
+import { SubscriptionEngine } from '@MaiaOS/script';
 // Import database operation engine
-import { DBEngine } from './engines/db-engine/db.engine.js';
-import { IndexedDBBackend } from './engines/db-engine/backend/indexeddb.js';
+import { DBEngine } from '@MaiaOS/script';
+import { IndexedDBBackend } from '@MaiaOS/script';
 // Import validation helper
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import all schemas for seeding
@@ -147,7 +147,7 @@ export class MaiaOS {
     console.log('🌱 Seeding database...');
     
     // Import tool definitions
-    const { getAllToolDefinitions } = await import('./tools/index.js');
+    const { getAllToolDefinitions } = await import('@MaiaOS/tools');
     const toolDefs = getAllToolDefinitions();
     
     // Merge tool definitions into registry

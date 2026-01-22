@@ -5,11 +5,13 @@
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",
-    "./modules/*": "./src/modules/*"
+    "./modules/*": "./src/modules/*",
+    "./engines/*": "./src/engines/*"
   },
   "dependencies": {
     "@MaiaOS/db": "workspace:*",
-    "@MaiaOS/schemata": "workspace:*"
+    "@MaiaOS/schemata": "workspace:*",
+    "@MaiaOS/tools": "workspace:*"
   },
   "devDependencies": {
     "cojson": "^0.19.21"

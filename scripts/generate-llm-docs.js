@@ -22,8 +22,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const DOCS_DIR = join(__dirname, '../libs/maia-docs');
-const OUTPUT_AGENTS_DIR = join(DOCS_DIR, 'agents');
-const GETTING_STARTED_DIR = join(DOCS_DIR, 'getting-started');
+const OUTPUT_AGENTS_DIR = join(DOCS_DIR, '04_agents');
+const GETTING_STARTED_DIR = join(DOCS_DIR, '01_getting-started');
 
 /**
  * Read all markdown files from a directory
@@ -89,10 +89,10 @@ async function generate() {
     const gettingStartedDocs = await readMarkdownFiles(GETTING_STARTED_DIR);
     
     // Read creators docs
-    const creatorDocs = await readMarkdownFiles(join(DOCS_DIR, 'creators'));
+    const creatorDocs = await readMarkdownFiles(join(DOCS_DIR, '02_creators'));
     
     // Read developers docs
-    const developerDocs = await readMarkdownFiles(join(DOCS_DIR, 'developers'));
+    const developerDocs = await readMarkdownFiles(join(DOCS_DIR, '03_developers'));
     
     // Generate Creator LLM doc
     const creatorSections = [
@@ -158,8 +158,8 @@ async function watchMode() {
   // Watch for changes
   const watchDirs = [
     GETTING_STARTED_DIR,
-    join(DOCS_DIR, 'creators'),
-    join(DOCS_DIR, 'developers')
+    join(DOCS_DIR, '02_creators'),
+    join(DOCS_DIR, '03_developers')
   ];
   
   for (const dir of watchDirs) {

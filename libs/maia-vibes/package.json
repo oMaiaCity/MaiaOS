@@ -8,7 +8,7 @@
     "./todos/registry": "./src/todos/registry.js"
   },
   "dependencies": {
-    "@MaiaOS/script": "workspace:*"
+    "@MaiaOS/kernel": "workspace:*"
   },
   "files": [
     "src"

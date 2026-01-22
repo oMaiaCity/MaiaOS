@@ -1,4 +1,5 @@
-export { createMaiaOS } from "./o.js";
+export { createMaiaOS } from "./auth.js";
+export { MaiaOS } from "./kernel.js";
 
 // Re-export auth functions for convenience
 export { 

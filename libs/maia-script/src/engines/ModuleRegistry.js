@@ -88,7 +88,7 @@ export class ModuleRegistry {
   /**
    * Load a module (imports and registers)
    * @param {string} moduleName - Module name to load
-   * @param {string} modulePath - Path to module file (optional, defaults to o/modules/{name}.module.js)
+   * @param {string} modulePath - Path to module file (optional, defaults to modules/{name}.module.js)
    * @returns {Promise<void>}
    */
   async loadModule(moduleName, modulePath = null) {
@@ -97,7 +97,7 @@ export class ModuleRegistry {
       return;
   }
 
-    // Path relative to o/engines/ (where ModuleRegistry.js is located)
+    // Path relative to engines/ (where ModuleRegistry.js is located)
     const path = modulePath || `../modules/${moduleName}.module.js`;
     
     try {

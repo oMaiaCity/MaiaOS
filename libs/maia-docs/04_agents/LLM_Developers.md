@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Developers
 
-**Auto-generated:** 2026-01-22T14:43:39.713Z
+**Auto-generated:** 2026-01-22T21:44:08.975Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -70,11 +70,14 @@ MaiaOS:       Write .maia → Run
 - No webpack, no vite, no build tools
 
 **How It Works:**
-1. Browser loads `kernel.js` (single entry point)
-2. Kernel loads `.maia` files via `fetch()`
-3. Engines interpret and execute
-4. Shadow DOM renders isolated UI
-5. Done!
+1. Browser loads `o/kernel.js` (single entry point)
+2. Kernel initializes engines (Actor, View, State, Tool, DB, Subscription, etc.)
+3. Kernel loads modules (db, core, dragdrop, interface)
+4. Kernel seeds database with configs, schemas, and tool definitions
+5. Kernel loads `.maia` files via `fetch()` or database queries
+6. Engines interpret and execute
+7. Shadow DOM renders isolated UI
+8. Done!
 
 ## Three-Layer Architecture
 
@@ -98,6 +101,9 @@ MaiaOS:       Write .maia → Run
 - `ViewEngine` - Renders views
 - `ToolEngine` - Executes actions
 - `StyleEngine` - Compiles styles
+- `DBEngine` - Unified database operations (query, create, update, delete, toggle)
+- `SubscriptionEngine` - Context-driven reactive subscriptions
+- `MessageQueue` - Actor-to-actor communication
 
 **Logic lives here, not in your app.**
 
@@ -256,12 +262,15 @@ MaiaOS is **frontend-first** but with backend patterns:
 ## Core Concepts
 
 ### MaiaOS
+
 The operating system itself. A runtime-based, AI-native platform for building declarative applications. Think of it as "an OS for apps" that runs in the browser.
 
 ### Kernel
+
 The single entry point (`o/kernel.js`). Boots the system, loads modules, initializes engines, and creates actors. One file to rule them all.
 
 ### MaiaScript
+
 The JSON-based DSL (Domain Specific Language) for defining actors, views, states, styles, and tools. Pure declarative syntax with expressions like `$context`, `$$item`, `@inputValue`.
 
 ---
@@ -269,130 +278,77 @@ The JSON-based DSL (Domain Specific Language) for defining actors, views, states
 ## Definition Layer (Declarative)
 
 ### Actor
+
 A pure declarative specification (`.actor.maia`) that references other components. Contains zero logic - just IDs and references. Think: "component configuration file."
 
-**Example:**
-```json
-{
-  "$type": "actor",
-  "contextRef": "todo",
-  "stateRef": "todo",
-  "viewRef": "todo"
-}
-```
-
 ### Context
+
 Runtime data for an actor (`.context.maia`). All state lives here: collections, UI state, form values, etc. Can be inline or separate file.
 
-**Example:**
-```json
-{
-  "$type": "context",
-  "todos": [],
-  "newTodoText": "",
-  "viewMode": "list"
-}
-```
-
 ### State Machine
+
 Behavior flow definition (`.state.maia`). XState-like state machine with states, transitions, guards, and actions. Defines WHAT happens WHEN.
 
-**Example:**
-```json
-{
-  "$type": "state",
-  "initial": "idle",
-  "states": {
-    "idle": {
-      "on": {
-        "CREATE_TODO": "creating"
-      }
-    }
-  }
-}
-```
-
 ### View
+
 UI structure definition (`.view.maia`). Declarative DOM tree with expressions, loops, conditionals, and event handlers. Renders to Shadow DOM.
 
-**Example:**
-```json
-{
-  "$type": "view",
-  "root": {
-    "tag": "div",
-    "text": "$title",
-    "children": [...]
-  }
-}
-```
-
 ### Style
+
 Appearance definition (`.style.maia`). Design tokens + component styles. Compiles to CSS and injects into Shadow DOM.
 
 **Types:**
+
 - **Brand** (`brand.style.maia`) - Shared design system
 - **Local** (`actor.style.maia`) - Actor-specific overrides
 
 ### Skill
-AI agent interface specification (`.skill.maia`). Describes actor capabilities, events, context schema, and usage patterns for LLM orchestration.
 
-**Example:**
-```json
-{
-  "$type": "skill",
-  "actorType": "todo",
-  "capabilities": {
-    "taskManagement": "Create, complete, delete todos"
-  },
-  "stateEvents": {...}
-}
-```
+AI agent interface specification (`.skill.maia`). Describes actor capabilities, events, context schema, and usage patterns for LLM orchestration.
 
 ---
 
 ## Execution Layer (Imperative)
 
 ### Engine
+
 JavaScript execution machinery that interprets definitions. Engines contain all the logic - definitions contain none.
 
 **Core Engines:**
+
 - **ActorEngine** - Orchestrates actors, manages lifecycle
 - **StateEngine** - Interprets state machines, executes transitions
 - **ViewEngine** - Renders views to Shadow DOM
 - **ToolEngine** - Executes tool actions
 - **StyleEngine** - Compiles styles to CSS
+- **DBEngine** - Unified database operation engine (query, create, update, delete, toggle, seed)
+- **SubscriptionEngine** - Context-driven reactive subscriptions
+- **MessageQueue** - Actor-to-actor message passing
+- **ModuleRegistry** - Manages dynamic module loading
 - **MaiaScriptEvaluator** - Evaluates DSL expressions
 
 ### Tool
-An executable function (`.tool.js` + `.tool.maia`). The ONLY place imperative code lives. Tools mutate actor context based on payloads.
+
+An executable function (`.tool.js` + `.tool.maia`). The ONLY place imperative code lives. Tools mutate actor context or execute operations based on payloads.
 
 **Structure:**
+
 - `.tool.maia` - JSON schema (AI-compatible metadata)
 - `.tool.js` - JavaScript function (execution logic)
 
-**Example:**
-```javascript
-// create.tool.js
-export default {
-  async execute(actor, payload) {
-    const { schema, data } = payload;
-    const entity = { id: Date.now().toString(), ...data };
-    actor.context[schema].push(entity);
-  }
-};
-```
-
 ### Module
+
 A collection of related tools (`.module.js`). Modules register tools with the ToolEngine at boot time.
 
 **Built-in Modules:**
-- `@core/*` - UI utilities (modals, view modes)
-- `@mutation/*` - Generic CRUD (create, update, delete, toggle)
-- `@dragdrop/*` - Drag-and-drop handlers
-- `@context/*` - Context manipulation
+
+- `db` - Database operations (unified API: `@db`)
+- `core` - UI utilities (modals, focus, preventDefault)
+- `dragdrop` - Drag-and-drop handlers
+- `interface` - Interface validation
 
 ### Module Registry
+
 Central plugin system for dynamic module loading. Manages module lifecycle and tool registration.
 
 ---
@@ -400,12 +356,15 @@ Central plugin system for dynamic module loading. Manages module lifecycle and t
 ## Intelligence Layer (AI Orchestration)
 
 ### Vibecreator
+
 A person who builds MaiaOS applications. Writes `.maia` files, composes actors, defines behaviors. No JavaScript required.
 
 ### Agent / LLM
+
 AI assistant (ChatGPT, Claude, Cursor, etc.) that reads skills and generates events. Orchestrates actors based on user intent.
 
 ### Skill Engine
+
 (v0.5) Engine that manages skill discovery and interpretation for AI agents. Enables LLM-driven app orchestration.
 
 ---
@@ -413,38 +372,29 @@ AI assistant (ChatGPT, Claude, Cursor, etc.) that reads skills and generates eve
 ## Data Flow Concepts
 
 ### Event
+
 A message sent to a state machine to trigger a transition. Events have a name and optional payload.
 
-**Example:**
-```json
-{
-  "send": "CREATE_TODO",
-  "payload": { "text": "$newTodoText" }
-}
-```
-
 ### Payload
+
 Data passed with an event. Can contain expressions that are evaluated at runtime.
 
 **Expression Types:**
+
 - `$field` - Context reference (`actor.context.field`)
 - `$$field` - Item reference (in loops: `item.field`)
 - `@inputValue` - DOM value reference (`input.value`)
 
 ### Guard
+
 A condition that determines if a transition should occur. Evaluated before state change.
 
-**Example:**
-```json
-{
-  "guard": { "$ne": ["$newTodoText", ""] }
-}
-```
-
 ### Transition
+
 Moving from one state to another in response to an event. Can have guards and actions.
 
 ### Action
+
 A tool invocation or context update. Executed during state transitions (entry/exit/inline).
 
 ---
@@ -452,17 +402,21 @@ A tool invocation or context update. Executed during state transitions (entry/ex
 ## UI Concepts
 
 ### Shadow DOM
+
 Browser-native encapsulation. Each actor renders into its own shadow root with isolated styles and DOM.
 
 **Benefits:**
+
 - Style isolation (no CSS leakage)
 - DOM encapsulation
 - Multiple instances without conflicts
 
 ### Constructable Stylesheet
+
 Modern CSS API for efficient style sharing. Brand styles compiled once, adopted by all actors.
 
 ### Component
+
 In MaiaOS, "component" = "actor". Reusable, isolated, self-contained unit with state, view, and behavior.
 
 ---
@@ -470,25 +424,21 @@ In MaiaOS, "component" = "actor". Reusable, isolated, self-contained unit with s
 ## Architectural Patterns
 
 ### Schema-Agnostic
-Tools don't know about specific data types. They work with generic `schema` and `data` parameters.
 
-**Example:**
-```javascript
-@mutation/create { schema: "todos", data: {...} }
-@mutation/create { schema: "notes", data: {...} }
-```
-
-Same tool, different schema. Zero hardcoded domain knowledge.
+Database operations don't know about specific data types. They work with generic `schema` (co-ids) and `data` parameters. Same tool, different schema. Zero hardcoded domain knowledge. All schemas are co-ids (CoJSON IDs).
 
 ### Message Passing
+
 Actors communicate asynchronously via inboxes and subscriptions. Watermark pattern for processing.
 
 **Properties:**
+
 - `inbox` - Message queue
 - `subscriptions` - Actors to receive messages from
 - `inboxWatermark` - Last processed message index
 
 ### Modular Architecture
+
 Everything is a plugin. Engines are pluggable, tools are modular, modules are dynamic.
 
 ---
@@ -496,9 +446,11 @@ Everything is a plugin. Engines are pluggable, tools are modular, modules are dy
 ## File Conventions
 
 ### `.maia` Extension
+
 All MaiaOS definition files use `.maia` extension. JSON format with `$type` discriminator.
 
 **Types:**
+
 - `actor.maia` - Actor definition
 - `context.maia` - Runtime data
 - `state.maia` - State machine
@@ -508,55 +460,55 @@ All MaiaOS definition files use `.maia` extension. JSON format with `$type` disc
 - `tool.maia` - Tool metadata
 
 ### Naming Pattern
+
 `{name}.{type}.maia`
 
 **Examples:**
+
 - `todo.actor.maia`
 - `todo.context.maia`
 - `todo.state.maia`
 - `brand.style.maia`
 
 ### CoMap ID (Future)
-Fake IDs used for Jazz integration. Currently maps to filenames, will map to Jazz CoMaps in v0.5.
 
-**Example:**
-```json
-{
-  "viewRef": "co_view_001"  // Maps to: todo.view.maia
-}
-```
+Fake IDs used for Jazz integration. Currently maps to filenames, will map to Jazz CoMaps in v0.5.
 
 ---
 
 ## Development Concepts
 
 ### Hot Reload
+
 Automatic browser refresh on file changes. No build process, instant updates.
 
 ### Watch Mode
+
 Scripts that monitor file changes and regenerate outputs (e.g., LLM docs).
 
 ### Vibecreators Docs
+
 User-facing documentation for app builders. Located in `docs/vibecreators/`.
 
 ### Developers Docs
+
 Technical documentation for core contributors. Located in `docs/developers/`.
 
 ### LLM Docs
+
 Auto-generated, context-optimized documentation for AI agents. Located in `docs/agents/`.
 
 ---
 
 ## Quick Reference
 
-| Term | Type | Purpose |
-|------|------|---------|
+| Term      | Type       | Purpose                  |
+| --------- | ---------- | ------------------------ |
 | **Actor** | Definition | Component configuration |
 | **Context** | Definition | Runtime data |
 | **State** | Definition | Behavior flow |
 | **View** | Definition | UI structure |
 | **Style** | Definition | Appearance |
-| **Skill** | Definition | AI interface |
 | **Engine** | Execution | Interprets definitions |
 | **Tool** | Execution | Executes actions |
 | **Module** | Execution | Groups tools |
@@ -587,6 +539,7 @@ Auto-generated, context-optimized documentation for AI agents. Located in `docs/
 ┌─────────────────────────────────────────────────────────────┐
 │                         MaiaOS Kernel                        │
 │                    (Single Entry Point)                      │
+│                      o/kernel.js                             │
 └─────────────────────────────────────────────────────────────┘
                               │
         ┌─────────────────────┼─────────────────────┐
@@ -602,10 +555,17 @@ Auto-generated, context-optimized documentation for AI agents. Located in `docs/
         ▼              ▼             ▼             ▼
 ┌─────────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
 │   Modules   │  │  State   │  │   View   │  │   Tool   │
-│ (core,      │  │  Engine  │  │  Engine  │  │  Engine  │
-│  mutation,  │  └──────────┘  └──────────┘  └──────────┘
-│  dragdrop)  │
+│ (db, core,  │  │  Engine  │  │  Engine  │  │  Engine  │
+│  dragdrop,  │  └──────────┘  └──────────┘  └──────────┘
+│  interface)  │
 └─────────────┘
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Additional Engines                        │
+│  DBEngine | SubscriptionEngine | MessageQueue              │
+│  ActorEngine | StyleEngine | MaiaScriptEvaluator            │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## Three Layers
@@ -617,28 +577,46 @@ Auto-generated, context-optimized documentation for AI agents. Located in `docs/
 **Actors** - Component configuration:
 ```json
 {
-  "$type": "actor",
-  "id": "actor_todo_001",
-  "contextRef": "todo",
-  "stateRef": "todo",
-  "viewRef": "todo"
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo",
+  "role": "todo-list",
+  "context": "@context/todo",
+  "state": "@state/todo",
+  "view": "@view/todo",
+  "interface": "@interface/todo",
+  "brand": "@style/brand",        // ← Shared design system (required)
+  "style": "@style/todo",         // ← Actor-specific overrides (optional)
+  "subscriptions": "@subscriptions/todo",
+  "inbox": "@inbox/todo",
+  "inboxWatermark": 0
 }
 ```
+
+**Note:** 
+- `brand` is **required** - shared design system (tokens, components) used by all actors
+- `style` is **optional** - actor-specific style overrides that merge with brand
+- StyleEngine merges brand + style at runtime (brand first, then style overrides)
+- All references (`context`, `view`, `state`, `interface`, `brand`, `style`, `subscriptions`, `inbox`) use co-id references (like `@context/todo`) that are transformed to actual co-ids (`co_z...`) during seeding
+- The `$schema` and `$id` properties also use schema/instance references that get transformed
 
 **Context** - Runtime data:
 ```json
 {
-  "$type": "context",
+  "$schema": "@schema/context",
+  "$id": "@context/todo",
   "todos": [],
   "newTodoText": "",
   "viewMode": "list"
 }
 ```
 
+**Note:** Context files use `$schema` and `$id` with schema/instance references that get transformed to co-ids during seeding.
+
 **State** - Behavior flow:
 ```json
 {
-  "$type": "state",
+  "$schema": "@schema/state",
+  "$id": "@state/todo",
   "initial": "idle",
   "states": {
     "idle": {
@@ -650,10 +628,13 @@ Auto-generated, context-optimized documentation for AI agents. Located in `docs/
 }
 ```
 
+**Note:** State machine files use `$schema` and `$id` with schema/instance references. Tool payloads in state machines reference co-ids (transformed during seeding).
+
 **View** - UI structure:
 ```json
 {
-  "$type": "view",
+  "$schema": "@schema/view",
+  "$id": "@view/todo",
   "root": {
     "tag": "div",
     "text": "$title"
@@ -661,28 +642,50 @@ Auto-generated, context-optimized documentation for AI agents. Located in `docs/
 }
 ```
 
-**Style** - Appearance:
+**Note:** View files use `$schema` and `$id` with schema/instance references.
+
+**Style** - Appearance (Brand or Local):
 ```json
 {
-  "$type": "style",
+  "$schema": "@schema/style",
+  "$id": "@style/brand",
   "tokens": {
     "colors": {
       "primary": "#3b82f6"
+    }
+  },
+  "components": {
+    "button": {
+      "padding": "0.5rem 1rem",
+      "background": "{colors.primary}"
     }
   }
 }
 ```
 
-**Skill** - AI interface:
+**Note:** 
+- **Brand styles** (`@style/brand`) - Shared design system with tokens and components, referenced via `brand` property
+- **Local styles** (`@style/todo`) - Actor-specific overrides, referenced via `style` property (optional)
+- StyleEngine merges brand + local styles at runtime (brand first, local overrides)
+- Style files use `$schema` and `$id` with schema/instance references
+
+**Interface** - Message contract (replaces skill):
 ```json
 {
-  "$type": "skill",
-  "actorType": "todo",
-  "capabilities": {
-    "taskManagement": "Create, complete, delete todos"
+  "$schema": "@schema/interface",
+  "$id": "@interface/todo",
+  "messages": {
+    "CREATE_TODO": {
+      "description": "Creates a new todo item",
+      "payload": {
+        "text": { "type": "string", "required": true }
+      }
+    }
   }
 }
 ```
+
+**Note:** Interface files define message contracts between actors. They use `$schema` and `$id` with schema/instance references. Skills (AI agent interface) are planned for v0.5.
 
 ### 2. Execution Layer (Imperative)
 
@@ -693,6 +696,9 @@ Auto-generated, context-optimized documentation for AI agents. Located in `docs/
 - **ViewEngine** - Renders views to Shadow DOM
 - **ToolEngine** - Executes tool actions
 - **StyleEngine** - Compiles styles to CSS
+- **DBEngine** - Unified database operation engine (query, create, update, delete, toggle, seed)
+- **SubscriptionEngine** - Context-driven reactive subscriptions
+- **MessageQueue** - Actor-to-actor message passing
 - **ModuleRegistry** - Manages dynamic module loading
 - **MaiaScriptEvaluator** - Evaluates DSL expressions
 
@@ -711,14 +717,17 @@ export default {
 
 **Modules** - Tool collections:
 
+**Built-in Modules:**
+- **db** - Database operations (replaces mutation module)
+- **core** - UI utilities (modals, focus, preventDefault)
+- **dragdrop** - Drag-and-drop handlers
+- **interface** - Interface validation
+
 ```javascript
-// mutation.module.js
-export class MutationModule {
+// db.module.js
+export class DBModule {
   static async register(registry, toolEngine) {
-    const tools = ['create', 'update', 'delete', 'toggle'];
-    for (const tool of tools) {
-      await toolEngine.registerTool(`mutation/${tool}`, `@mutation/${tool}`);
-    }
+    await toolEngine.registerTool('db', '@db');
   }
 }
 ```
@@ -746,6 +755,43 @@ export class MutationModule {
   }
 }
 ```
+
+## Seeding & Reference Transformation
+
+During vibe loading, all human-readable references are transformed to co-ids:
+
+**Before Seeding (Human-Readable):**
+```json
+{
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo",
+  "context": "@context/todo",
+  "view": "@view/todo",
+  "state": "@state/todo"
+}
+```
+
+**After Seeding (Co-IDs):**
+```json
+{
+  "$schema": "co_z9h5nwiNynbxnC3nTwPMPkrVaMQ",
+  "$id": "co_z8k4m2pLqRsTvWxYzAbCdEfGhIjKl",
+  "context": "co_z7j3l1nKoQtPuVwXyZaBcDeFgHiJk",
+  "view": "co_z6i2k0mJnPsOuTwVxYaBcDeFgHiJk",
+  "state": "co_z5h1j9lIoNrQsTuVwXyZaBcDeFgHiJk"
+}
+```
+
+**Transformation Process:**
+1. Schema transformer maps `@schema/*` → co-ids
+2. Instance transformer maps `@actor/*`, `@context/*`, `@view/*`, etc. → co-ids
+3. All references in actors, state machines, and tool payloads are transformed
+4. Co-ids are stored in database, human-readable refs remain in source `.maia` files
+
+**Why This Matters:**
+- Source files remain human-readable (`@actor/todo` is clearer than `co_z8k4m2pLqRsTvWxYzAbCdEfGhIjKl`)
+- Runtime uses co-ids for efficient lookups and CoJSON integration
+- Transformation happens automatically during seeding
 
 ## Data Flow
 
@@ -814,35 +860,70 @@ libs/maia-script/src/
 ├── o/                          # Operating System Layer
 │   ├── kernel.js               # Single entry point
 │   ├── engines/                # Execution engines
-│   │   ├── ActorEngine.js
-│   │   ├── StateEngine.js
-│   │   ├── ViewEngine.js
-│   │   ├── ToolEngine.js
-│   │   └── ModuleRegistry.js
+│   │   ├── actor-engine/
+│   │   │   └── actor.engine.js
+│   │   ├── state-engine/
+│   │   │   └── state.engine.js
+│   │   ├── view-engine/
+│   │   │   └── view.engine.js
+│   │   ├── style-engine/
+│   │   │   └── style.engine.js
+│   │   ├── tool-engine/
+│   │   │   └── tool.engine.js
+│   │   ├── db-engine/         # Database operation engine
+│   │   │   ├── db.engine.js
+│   │   │   ├── backend/
+│   │   │   │   └── indexeddb.js
+│   │   │   └── operations/
+│   │   │       ├── query.js
+│   │   │       ├── create.js
+│   │   │       ├── update.js
+│   │   │       ├── delete.js
+│   │   │       ├── toggle.js
+│   │   │       └── seed.js
+│   │   ├── subscription-engine/
+│   │   │   └── subscription.engine.js
+│   │   ├── message-queue/
+│   │   │   └── message.queue.js
+│   │   ├── ModuleRegistry.js
+│   │   └── MaiaScriptEvaluator.js
 │   ├── modules/                # Tool modules
-│   │   ├── core.module.js
-│   │   ├── mutation.module.js
-│   │   └── dragdrop.module.js
+│   │   ├── db.module.js        # Database operations
+│   │   ├── core.module.js      # UI utilities
+│   │   ├── dragdrop.module.js  # Drag-and-drop
+│   │   └── interface.module.js # Interface validation
 │   └── tools/                  # Tool implementations
-│       ├── core/
-│       ├── mutation/
-│       ├── dragdrop/
-│       └── context/
+│       ├── db/                 # Database tool (@db)
+│       ├── core/               # UI utilities
+│       ├── dragdrop/           # Drag-and-drop handlers
+│       ├── context/            # Context manipulation
+│       └── interface/          # Interface validation
 │
-├── examples/                   # Example applications
-│   └── todos/
-│       ├── index.html
-│       ├── todo.actor.maia
-│       ├── todo.context.maia
-│       ├── todo.state.maia
-│       ├── todo.view.maia
-│       └── brand.style.maia
+├── index.html                  # App marketplace entry point
+├── index.js                    # Main export file
 │
-└── docs/                       # Documentation
-    ├── getting-started/
-    ├── vibecreators/
-    ├── developers/
-    └── agents/
+└── libs/maia-vibes/src/        # Example applications
+    └── todos/
+        ├── index.html
+        ├── manifest.vibe.maia
+        └── [actor files...]
+```
+
+**Monorepo Structure:**
+```
+MaiaOS/
+├── libs/
+│   ├── maia-script/            # Core OS (kernel, engines, tools)
+│   ├── maia-db/                # CoJSON layer (CRDT operations)
+│   ├── maia-schemata/          # Schema validation
+│   ├── maia-vibes/             # Example vibes/apps
+│   ├── maia-ssi/               # Self-sovereign identity
+│   ├── maia-voice/             # Voice integration
+│   └── maia-brand/             # Branding/assets
+└── services/                   # Application services
+    ├── app/                    # Main application
+    ├── website/                # Landing page
+    └── wallet/                 # Auth service
 ```
 
 ## Key Architectural Patterns
@@ -881,21 +962,23 @@ See [Actors Documentation](../vibecreators/02-actors.md#default-vibe-pattern-ser
 
 ### Schema-Agnostic Design
 
-Tools don't know about specific data types:
+Database operations work with any schema via co-ids:
 
 ```javascript
-@mutation/create { schema: "todos", data: {...} }
-@mutation/create { schema: "notes", data: {...} }
-@mutation/create { schema: "users", data: {...} }
+@db { op: "create", schema: "co_z...", data: {...} }
+@db { op: "update", schema: "co_z...", id: "co_z...", data: {...} }
+@db { op: "delete", schema: "co_z...", id: "co_z..." }
+@db { op: "toggle", schema: "co_z...", id: "co_z...", field: "done" }
 ```
 
-Same tool, different schema. Zero hardcoded domain knowledge.
+Same tool, different schema. Zero hardcoded domain knowledge. All schemas are co-ids (CoJSON IDs) - no human-readable fallbacks.
 
 ### Modular Everything
 
-- **Tools** grouped into modules (`@core/*`, `@mutation/*`)
-- **Modules** loaded dynamically at boot
-- **Engines** pluggable (future: add ThreeJS renderer)
+- **Tools** grouped into modules (`@db`, `@core/*`, `@dragdrop/*`, `@interface/*`)
+- **Modules** loaded dynamically at boot (db, core, dragdrop, interface)
+- **Engines** pluggable (ActorEngine, ViewEngine, StateEngine, DBEngine, etc.)
+- **Database** unified operation engine with swappable backends (IndexedDB, CoJSON CRDT)
 - **Skills** describe capabilities without implementation
 
 ### Shadow DOM Isolation
@@ -949,8 +1032,8 @@ actor.inbox = [...]; // Watermark pattern
 - **v0.1** - Basic actor/view/style system
 - **v0.2** - Added state machines and tool system
 - **v0.3** - Added message passing and AI tool definitions
-- **v0.4** - **Current** - Modular architecture with generic CRUD
-- **v0.5** - **Planned** - Skills as AI agent interface
+- **v0.4** - **Current** - Unified database engine (DBEngine), subscription engine, modular architecture
+- **v0.5** - **Planned** - Skills as AI agent interface, CoJSON integration
 
 ## Next Steps
 
@@ -978,21 +1061,24 @@ actor.inbox = [...]; // Watermark pattern
 
 ## Quick Start
 
-###  Clone the Repository
+### Clone the Repository
 
 ```bash
 # Clone
 git clone https://github.com/oMaiaCity/MaiaOS.git
-cd MaiaOS/libs/maia-script
+cd MaiaOS
 
-# Install dependencies
+# Install dependencies (from root - installs for all workspaces)
 bun install
 
-# Start dev server with hot reload
-bun dev
+# Start dev server (from root or specific service)
+bun dev:app  # Main app service (port 4202)
+# OR
+cd libs/maia-script
+bun dev  # MaiaScript dev server
 
 # Open browser
-open http://localhost:4200/
+open http://localhost:4202/  # or appropriate port
 ```
 
 ## File Structure
@@ -1051,9 +1137,10 @@ my-app/
     },
     "creating": {
       "entry": {
-        "tool": "@mutation/create",
+        "tool": "@db",
         "payload": {
-          "schema": "todos",
+          "op": "create",
+          "schema": "co_z...",
           "data": { "text": "$newTodoText", "done": false }
         }
       },
@@ -1070,6 +1157,8 @@ my-app/
   }
 }
 ```
+
+**Note:** The `schema` field must be a co-id (CoJSON ID like `co_z...`). Schema references are resolved during vibe loading/seeding.
 
 **`todo.view.maia`:**
 ```json
@@ -1171,16 +1260,18 @@ my-app/
 
 ## Next Steps
 
-- [Vibecreators Docs](../vibecreators/) - Learn to build apps
-- [Examples](../../examples/todos/) - See complete working app
-- [Developers Docs](../developers/) - Extend MaiaOS core
+- [Vibecreators Docs](../02_creators/) - Learn to build apps
+- [Examples](../../maia-vibes/src/todos/) - See complete working app
+- [Developers Docs](../03_developers/) - Extend MaiaOS core
 
 ## Resources
 
-- **Examples:** `libs/maia-script/src/examples/todos/`
+- **Examples:** `libs/maia-vibes/src/todos/`
 - **Kernel:** `libs/maia-script/src/o/kernel.js`
+- **Engines:** `libs/maia-script/src/o/engines/`
 - **Tools:** `libs/maia-script/src/o/tools/`
-- **Docs:** `libs/maia-script/src/docs/`
+- **Modules:** `libs/maia-script/src/o/modules/`
+- **Docs:** `libs/maia-docs/`
 
 ## Support
 
@@ -8590,6 +8681,13 @@ Read the documentation in the following order for a complete understanding:
 - Schema composition and inheritance
 - Best practices
 
+### 3a. [maia-schemata Package](./maia-schemata/README.md)
+**Schema validation and transformation system**
+- ValidationEngine implementation details
+- Schema transformation for seeding
+- CoJSON types integration
+- Co-ID generation and registry
+
 ### 4. [Engines](./04_engines.md)
 **Execution engines that interpret definitions**
 - ActorEngine - Actor lifecycle management
@@ -8653,6 +8751,721 @@ When updating these docs:
 - [Creator Documentation](../creators/) - For creators (user-facing)
 - [Agent Documentation](../agents/) - For LLM agents (auto-generated)
 - [Getting Started](../getting-started/) - Quick start guides
+
+---
+
+# VALIDATION ROUNDTRIPS ANALYSIS
+
+*Source: developers/validation-roundtrips-analysis.md*
+
+# Validation Engine & Roundtrips Analysis
+
+Complete analysis of when schemas and entities get validated during seeding, creating, and loading operations, including how `$co` links work.
+
+## Overview
+
+MaiaOS uses **JSON Schema validation** with AJV for all data validation. The validation engine supports:
+- **Schemas**: Validated against meta-schema during seeding
+- **Configs/Instances**: Validated when loaded from IndexedDB
+- **Application Data**: Validated during create/update operations
+- **$co Links**: Custom keyword for CoValue references (validated via AJV plugin)
+
+## Validation Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        SEEDING PHASE                             │
+└─────────────────────────────────────────────────────────────────┘
+
+1. SCHEMA VALIDATION (Before Seeding)
+   ┌─────────────────────────────────────────────────────────────┐
+   │ kernel.js:boot() → ValidationEngine.validateSchemaAgainstMeta() │
+   │                                                               │
+   │ • All schemas validated against meta-schema                   │
+   │ • Meta-schema: @schema/meta (CoJSON) or draft-2020-12        │
+   │ • Location: libs/maia-script/src/o/kernel.js:103-112          │
+   │ • Throws error if schema invalid                              │
+   └─────────────────────────────────────────────────────────────┘
+                              ↓
+2. SCHEMA TRANSFORMATION (During Seeding)
+   ┌─────────────────────────────────────────────────────────────┐
+   │ IndexedDBBackend.seed() → transformSchemaForSeeding()        │
+   │                                                               │
+   │ • Human-readable IDs (@schema/actor) → co-ids (co_z...)     │
+   │ • $schema references transformed                              │
+   │ • $id references transformed                                  │
+   │ • $co keyword values transformed                              │
+   │ • $ref references transformed                                │
+   │ • Location: libs/maia-schemata/src/schema-transformer.js:14  │
+   └─────────────────────────────────────────────────────────────┘
+                              ↓
+2.5. SCHEMA VALIDATION (After Transformation)
+   ┌─────────────────────────────────────────────────────────────┐
+   │ IndexedDBBackend.seed() → ValidationEngine.validateSchemaAgainstMeta() │
+   │                                                               │
+   │ • Transformed schemas validated against their $schema meta-schema │
+   │ • Meta-schema loaded from in-memory map or DB                │
+   │ • Ensures transformation didn't introduce errors             │
+   │ • Location: libs/maia-script/src/o/engines/db-engine/        │
+   │   backend/indexeddb.js:146-175                                │
+   │ • Throws error if validation fails                           │
+   └─────────────────────────────────────────────────────────────┘
+                              ↓
+3. SCHEMA STORAGE (Validated)
+   ┌─────────────────────────────────────────────────────────────┐
+   │ IndexedDBBackend._seedSchemas()                              │
+   │                                                               │
+   │ • Schemas stored with co-ids as keys                         │
+   │ • Already validated in steps 1 and 2.5                       │
+   │ • Location: libs/maia-script/src/o/engines/db-engine/        │
+   │   backend/indexeddb.js:671                                   │
+   └─────────────────────────────────────────────────────────────┘
+                              ↓
+4. INSTANCE TRANSFORMATION (During Seeding)
+   ┌─────────────────────────────────────────────────────────────┐
+   │ IndexedDBBackend.seed() → transformInstanceForSeeding()      │
+   │                                                               │
+   │ • Human-readable references → co-ids                        │
+   │ • $schema references transformed                             │
+   │ • $id set to co-id                                           │
+   │ • Reference properties (actor, context, view) transformed   │
+   │ • Query objects transformed                                  │
+   │ • Location: libs/maia-schemata/src/schema-transformer.js:145 │
+   └─────────────────────────────────────────────────────────────┘
+                              ↓
+4.5. INSTANCE VALIDATION (After Transformation)
+   ┌─────────────────────────────────────────────────────────────┐
+   │ IndexedDBBackend.seed() → validateAgainstSchemaOrThrow()     │
+   │                                                               │
+   │ • Transformed instances validated against their $schema schema │
+   │ • Schema loaded from DB (seeded in Phase 3)                  │
+   │ • Ensures transformation didn't introduce errors             │
+   │ • Location: libs/maia-script/src/o/engines/db-engine/        │
+   │   backend/indexeddb.js:378-420                                │
+   │ • Throws error if validation fails                           │
+   └─────────────────────────────────────────────────────────────┘
+                              ↓
+5. INSTANCE STORAGE (Validated)
+   ┌─────────────────────────────────────────────────────────────┐
+   │ IndexedDBBackend._seedConfigs()                              │
+   │                                                               │
+   │ • Configs stored with co-ids as keys                         │
+   │ • Already validated in Phase 4.5                             │
+   │ • Also validated on load (runtime check)                     │
+   │ • Location: libs/maia-script/src/o/engines/db-engine/        │
+   │   backend/indexeddb.js:541                                    │
+   └─────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│                        LOADING PHASE                             │
+└─────────────────────────────────────────────────────────────────┘
+
+6. CONFIG/INSTANCE VALIDATION (On Load)
+   ┌─────────────────────────────────────────────────────────────┐
+   │ ActorEngine.loadActor() → validateAgainstSchemaOrThrow()     │
+   │ StateEngine.loadStateDef() → validateOrThrow()                │
+   │ ViewEngine.loadView() → validateOrThrow()                    │
+   │                                                               │
+   │ • Schema loaded from IndexedDB via loadSchemaFromDB()        │
+   │ • Instance validated against schema                         │
+   │ • Throws error if validation fails                           │
+   │ • Location:                                                  │
+   │   - libs/maia-script/src/o/engines/actor-engine/            │
+   │     actor.engine.js:73-110                                   │
+   │   - libs/maia-script/src/o/engines/state-engine/            │
+   │     state.engine.js:34-61                                    │
+   └─────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│                      CREATING PHASE                              │
+└─────────────────────────────────────────────────────────────────┘
+
+7. APPLICATION DATA VALIDATION (On Create/Update)
+   ┌─────────────────────────────────────────────────────────────┐
+   │ CreateOperation.execute() → validateAgainstSchemaOrThrow()    │
+   │ UpdateOperation.execute() → validateAgainstSchemaOrThrow()   │
+   │                                                               │
+   │ • Schema loaded from IndexedDB via loadSchemaFromDB()        │
+   │ • Data validated against schema before storage               │
+   │ • Throws error if validation fails                           │
+   │ • Location:                                                  │
+   │   - libs/maia-script/src/o/engines/db-engine/               │
+   │     operations/create.js:36-42                               │
+   │   - libs/maia-script/src/o/engines/db-engine/               │
+   │     operations/update.js:41-47                               │
+   └─────────────────────────────────────────────────────────────┘
+```
+
+## Detailed Validation Points
+
+### 1. Schema Validation During Seeding
+
+**When:** Before schemas are stored in IndexedDB  
+**Where:** `libs/maia-script/src/o/kernel.js:97-113`  
+**What:** All schemas validated against meta-schema
+
+```javascript
+// kernel.js:boot()
+const validationEngine = new ValidationEngine();
+await validationEngine.initialize();
+
+console.log('🔍 Validating schemas against meta schema...');
+for (const [name, schema] of Object.entries(schemas)) {
+  const result = await validationEngine.validateSchemaAgainstMeta(schema);
+  if (!result.valid) {
+    const errorDetails = result.errors
+      .map(err => `  - ${err.instancePath}: ${err.message}`)
+      .join('\n');
+    console.error(`❌ Schema '${name}' failed meta schema validation:\n${errorDetails}`);
+    throw new Error(`Schema '${name}' is not valid JSON Schema`);
+  }
+}
+```
+
+**Meta-Schema Types:**
+- `@schema/meta` - CoJSON custom meta-schema (requires `cotype` at root)
+- `https://json-schema.org/draft/2020-12/schema` - Standard JSON Schema meta-schema
+
+**What Gets Validated:**
+- Schema structure (properties, type, etc.)
+- Required fields (`$schema`, `$id`)
+- `cotype` keyword (must be `comap`, `colist`, or `costream` at root)
+- `$co` keyword syntax (human-readable ID or co-id)
+- `$ref` references (validated during schema compilation)
+
+### 2. Schema Transformation During Seeding
+
+**When:** After initial schema validation, before Phase 2.5 validation  
+**Where:** `libs/maia-schemata/src/schema-transformer.js:14-79`  
+**What:** Human-readable IDs → co-ids
+
+**Transformation Targets:**
+- `$schema` field: `@schema/meta` → `co_z...`
+- `$id` field: `@schema/actor` → `co_z...`
+- `$co` keyword values: `@schema/actor` → `co_z...`
+- `$ref` references: `@schema/actor` → `co_z...`
+- Nested schemas in `properties`, `$defs`, `items`, `allOf`, `anyOf`, `oneOf`
+
+**Example:**
+```javascript
+// Before transformation
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/actor",
+  "cotype": "comap",
+  "properties": {
+    "view": {
+      "$co": "@schema/view"  // Human-readable reference
+    }
+  }
+}
+
+// After transformation
+{
+  "$schema": "co_z123...",  // Meta-schema co-id
+  "$id": "co_z456...",      // Actor schema co-id
+  "cotype": "comap",
+  "properties": {
+    "view": {
+      "$co": "co_z789..."   // View schema co-id
+    }
+  }
+}
+```
+
+### 2.5. Schema Validation After Transformation
+
+**When:** After schema transformation, before storage  
+**Where:** `libs/maia-script/src/o/engines/db-engine/backend/indexeddb.js:146-175`  
+**What:** Transformed schemas validated against their `$schema` meta-schema
+
+```javascript
+// Phase 2.5: Validate transformed schemas against their $schema meta-schema
+const { ValidationEngine } = await import('@MaiaOS/schemata/validation.engine.js');
+const validationEngine = new ValidationEngine();
+
+// Set up schema resolver for loading meta-schemas
+validationEngine.setSchemaResolver(async (schemaKey) => {
+  // First check if it's in the transformed schemas map (being seeded)
+  if (schemaKey.startsWith('co_z')) {
+    for (const schema of Object.values(transformedSchemas)) {
+      if (schema.$id === schemaKey) {
+        return schema;
+      }
+    }
+  }
+  // Fallback: try to load from DB (if already stored)
+  return await this.getSchema(schemaKey);
+});
+
+await validationEngine.initialize();
+
+// Validate each transformed schema
+for (const [name, schema] of Object.entries(transformedSchemas)) {
+  const result = await validationEngine.validateSchemaAgainstMeta(schema);
+  if (!result.valid) {
+    const errorDetails = result.errors
+      .map(err => `  - ${err.instancePath}: ${err.message}`)
+      .join('\n');
+    throw new Error(`Transformed schema '${name}' failed validation:\n${errorDetails}`);
+  }
+}
+```
+
+**What Gets Validated:**
+- Transformed schema structure is still valid
+- `$schema` co-id reference is valid (meta-schema exists)
+- Transformation didn't introduce errors
+- All `$co` references resolve correctly
+
+**Why This Matters:**
+- Catches transformation errors before storage
+- Ensures data integrity from the start
+- Prevents invalid schemas from being stored
+
+### 3. Instance Transformation During Seeding
+
+**When:** After schema transformation, before instance storage  
+**Where:** `libs/maia-schemata/src/schema-transformer.js:145-302`  
+**What:** Human-readable references → co-ids
+
+**Transformation Targets:**
+- `$schema` field: `@schema/actor` → `co_z...`
+- `$id` field: `@actor/vibe` → `co_z...` (set to co-id)
+- Reference properties: `actor`, `context`, `view`, `state`, `interface`, `brand`, `style`
+- `children` object: `@actor/child` → `co_z...`
+- `items` arrays (subscriptions, inbox): `@actor/vibe` → `co_z...`
+- Query objects: `{schema: "@schema/todos"}` → `{schema: "co_z..."}`
+- Tool payloads: `{target: "@actor/vibe"}` → `{target: "co_z..."}`
+
+**Example:**
+```javascript
+// Before transformation
+{
+  "$schema": "@schema/actor",
+  "$id": "@actor/vibe",
+  "view": "@view/list",
+  "children": {
+    "item": "@actor/list-item"
+  }
+}
+
+// After transformation
+{
+  "$schema": "co_z456...",  // Actor schema co-id
+  "$id": "co_z789...",      // Vibe actor co-id
+  "view": "co_z101...",     // List view co-id
+  "children": {
+    "item": "co_z202..."    // List-item actor co-id
+  }
+}
+```
+
+### 4.5. Instance Validation After Transformation
+
+**When:** After instance transformation, before storage  
+**Where:** `libs/maia-script/src/o/engines/db-engine/backend/indexeddb.js:378-420`  
+**What:** Transformed instances validated against their `$schema` schema
+
+```javascript
+// Phase 4.5: Validate transformed instances against their $schema schemas
+const { validateAgainstSchemaOrThrow } = await import('@MaiaOS/schemata/validation.helper.js');
+const { setSchemaResolver } = await import('@MaiaOS/schemata/validation.helper.js');
+
+// Set up schema resolver for loading schemas from DB (schemas were just seeded in Phase 3)
+setSchemaResolver(async (schemaKey) => {
+  return await this.getSchema(schemaKey);
+});
+
+// Validate each transformed instance
+for (const [configType, configValue] of Object.entries(transformedConfigs)) {
+  if (Array.isArray(configValue)) {
+    for (const [index, instance] of configValue.entries()) {
+      if (instance && instance.$schema) {
+        const schema = await this.getSchema(instance.$schema);
+        if (schema) {
+          await validateAgainstSchemaOrThrow(
+            schema,
+            instance,
+            `${configType}[${index}] (${instance.$id || 'no-id'})`
+          );
+        }
+      }
+    }
+  } else if (configValue && typeof configValue === 'object' && configValue.$schema) {
+    const schema = await this.getSchema(configValue.$schema);
+    if (schema) {
+      await validateAgainstSchemaOrThrow(
+        schema,
+        configValue,
+        `${configType} (${configValue.$id || 'no-id'})`
+      );
+    }
+  } else if (configValue && typeof configValue === 'object') {
+    // Nested objects (e.g., actors: { 'vibe/vibe': {...} })
+    for (const [instanceKey, instance] of Object.entries(configValue)) {
+      if (instance && instance.$schema) {
+        const schema = await this.getSchema(instance.$schema);
+        if (schema) {
+          await validateAgainstSchemaOrThrow(
+            schema,
+            instance,
+            `${configType}.${instanceKey} (${instance.$id || 'no-id'})`
+          );
+        }
+      }
+    }
+  }
+}
+```
+
+**What Gets Validated:**
+- Required fields (`$schema`, `$id`)
+- Field types and formats
+- Reference properties (must be valid co-ids)
+- Nested object structures
+- Enum values
+- Transformation didn't introduce errors
+
+**Why This Matters:**
+- Catches transformation errors before storage
+- Ensures data integrity from the start
+- Prevents invalid instances from being stored
+- Errors caught during seeding, not at runtime
+
+### 4. Config/Instance Validation On Load
+
+**When:** When configs/instances are loaded from IndexedDB  
+**Where:** Engine load methods (ActorEngine, StateEngine, ViewEngine)  
+**What:** Instance validated against its schema
+
+**ActorEngine.loadActor():**
+```javascript
+// libs/maia-script/src/o/engines/actor-engine/actor.engine.js:73-110
+async loadActor(coIdOrConfig) {
+  // If pre-loaded config object, validate it
+  if (typeof coIdOrConfig === 'object' && coIdOrConfig !== null) {
+    const schema = await loadSchemaFromDB(this.dbEngine, 'actor');
+    if (schema) {
+      await validateAgainstSchemaOrThrow(schema, coIdOrConfig, 'actor');
+    }
+    return coIdOrConfig;
+  }
+  
+  // Load from IndexedDB
+  const actor = await this.dbEngine.execute({
+    op: 'query',
+    schema: '@schema/actor',
+    key: coIdOrConfig
+  });
+  
+  // Validate loaded actor
+  const schema = await loadSchemaFromDB(this.dbEngine, 'actor');
+  if (schema) {
+    await validateAgainstSchemaOrThrow(schema, actor, 'actor');
+  }
+  
+  return actor;
+}
+```
+
+**StateEngine.loadStateDef():**
+```javascript
+// libs/maia-script/src/o/engines/state-engine/state.engine.js:34-61
+async loadStateDef(stateRef) {
+  const stateDef = await this.dbEngine.execute({
+    op: 'query',
+    schema: '@schema/state',
+    key: stateRef
+  });
+  
+  await validateOrThrow('state', stateDef, `maia.db:${stateRef}`);
+  this.stateCache.set(stateRef, stateDef);
+  return stateDef;
+}
+```
+
+**What Gets Validated:**
+- Required fields (`$schema`, `$id`)
+- Field types and formats
+- Reference properties (must be valid co-ids)
+- Nested object structures
+- Enum values
+
+### 5. Application Data Validation On Create/Update
+
+**When:** Before data is stored in IndexedDB  
+**Where:** CreateOperation.execute(), UpdateOperation.execute()  
+**What:** Data validated against collection schema
+
+**CreateOperation.execute():**
+```javascript
+// libs/maia-script/src/o/engines/db-engine/operations/create.js:25-47
+async execute(params) {
+  const { schema, data } = params;
+  
+  // Validate data against schema before creating
+  if (this.dbEngine) {
+    const schemaDef = await loadSchemaFromDB(this.dbEngine, schema);
+    if (schemaDef) {
+      await validateAgainstSchemaOrThrow(schemaDef, data, `create operation for schema ${schema}`);
+    }
+  }
+  
+  return await this.backend.create(schema, data);
+}
+```
+
+**UpdateOperation.execute():**
+```javascript
+// libs/maia-script/src/o/engines/db-engine/operations/update.js:26-52
+async execute(params) {
+  const { schema, id, data } = params;
+  
+  // Validate data against schema before updating
+  if (this.dbEngine) {
+    const schemaDef = await loadSchemaFromDB(this.dbEngine, schema);
+    if (schemaDef) {
+      await validateAgainstSchemaOrThrow(schemaDef, data, `update operation for schema ${schema}`);
+    }
+  }
+  
+  return await this.backend.update(schema, id, data);
+}
+```
+
+**What Gets Validated:**
+- Required fields
+- Field types (string, number, boolean, object, array)
+- String constraints (minLength, maxLength, pattern)
+- Number constraints (minimum, maximum)
+- Enum values
+- Nested object structures
+- `$co` references (must be valid co-ids matching referenced schema)
+
+## How $co Links Work
+
+### Overview
+
+The `$co` keyword is a **custom AJV keyword** that validates CoValue references. It's a macro that expands to string validation with a co-id pattern.
+
+### AJV Plugin Implementation
+
+**Location:** `libs/maia-schemata/src/ajv-co-types-plugin.js:16-39`
+
+```javascript
+ajv.addKeyword({
+  keyword: "$co",
+  macro: (schemaCoId) => ({
+    type: "string",
+    pattern: "^co_z[a-zA-Z0-9]+$",
+    _schemaRef: schemaCoId  // Store schema co-id for metadata
+  }),
+  metaSchema: {
+    type: "string",
+    anyOf: [
+      {
+        pattern: "^co_z[a-zA-Z0-9]+$",
+        description: "Co-id reference (after transformation)"
+      },
+      {
+        pattern: "^@schema/",
+        description: "Human-readable schema ID (before transformation)"
+      }
+    ],
+    description: "Reference to schema that this property value must conform to"
+  }
+})
+```
+
+### How $co Works
+
+1. **Schema Definition:**
+   ```json
+   {
+     "properties": {
+       "view": {
+         "$co": "@schema/view"  // Human-readable (before transformation)
+       }
+     }
+   }
+   ```
+
+2. **Schema Transformation:**
+   During seeding, `transformSchemaForSeeding()` replaces `@schema/view` with the actual co-id:
+   ```json
+   {
+     "properties": {
+       "view": {
+         "$co": "co_z789..."  // Co-id (after transformation)
+       }
+     }
+   }
+   ```
+
+3. **Validation:**
+   When validating an instance, AJV:
+   - Expands `$co` macro to: `{type: "string", pattern: "^co_z[a-zA-Z0-9]+$"}`
+   - Validates that the property value is a valid co-id string
+   - Stores the referenced schema co-id in `_schemaRef` (for future use)
+
+4. **Schema Resolution:**
+   The ValidationEngine's `_resolveAndRegisterSchemaDependencies()` method:
+   - Finds all `$co` references in schemas
+   - Resolves them via `schemaResolver` (loads from IndexedDB)
+   - Registers referenced schemas in AJV registry
+   - Enables `$ref` resolution during schema compilation
+
+**Location:** `libs/maia-schemata/src/validation.engine.js:596-703`
+
+### $co vs $ref
+
+| Feature | `$co` | `$ref` |
+|---------|-------|--------|
+| **Purpose** | CoValue reference (runtime entity) | Schema reference (compile-time) |
+| **Value Type** | Co-id string (`co_z...`) | Schema co-id or URI |
+| **Validation** | Validates co-id pattern | Validates against referenced schema |
+| **Usage** | Properties referencing other CoValues | Schemas referencing other schemas |
+| **Example** | `"view": {"$co": "co_z789..."}` | `"$ref": "co_z456..."` |
+
+### $co Resolution Flow
+
+```
+Schema Definition (with $co)
+  ↓
+transformSchemaForSeeding() → Replace @schema/name with co-id
+  ↓
+Store in IndexedDB (with co-id in $co)
+  ↓
+Load Schema from IndexedDB
+  ↓
+_resolveAndRegisterSchemaDependencies() → Find $co references
+  ↓
+schemaResolver($co value) → Load referenced schema from IndexedDB
+  ↓
+Register referenced schema in AJV registry
+  ↓
+Compile schema (AJV can resolve $ref to referenced schema)
+  ↓
+Validate instance (AJV validates $co as co-id string pattern)
+```
+
+## Schema Resolution & Dependency Loading
+
+### Schema Resolver
+
+**Location:** `libs/maia-script/src/o/kernel.js:125-133`
+
+```javascript
+setSchemaResolver(async (schemaKey) => {
+  try {
+    return await backend.getSchema(schemaKey);
+  } catch (error) {
+    console.warn(`[MaiaOS] Failed to resolve schema ${schemaKey}:`, error);
+    return null;
+  }
+});
+```
+
+### Dependency Resolution
+
+**Location:** `libs/maia-schemata/src/validation.engine.js:536-723`
+
+The `_resolveAndRegisterSchemaDependencies()` method:
+1. Recursively traverses schema object
+2. Finds `$schema` references (co-ids)
+3. Finds `$co` references (co-ids or human-readable IDs)
+4. Resolves each reference via `schemaResolver`
+5. Registers resolved schemas in AJV registry (by both co-id and reference)
+6. Prevents circular dependencies (tracks `resolvingSchemas` set)
+
+**Key Features:**
+- Handles reference objects (`{ $coId: "co_z...", ... }`)
+- Prevents infinite loops (tracks resolved schemas)
+- Registers schemas with multiple keys (co-id and reference)
+- Temporarily disables schema validation during registration (prevents circular dependency errors)
+
+## Validation Engine Architecture
+
+### Components
+
+1. **ValidationEngine** (`libs/maia-schemata/src/validation.engine.js`)
+   - Core AJV instance management
+   - Schema compilation and caching
+   - Meta-schema registration
+   - Dependency resolution
+
+2. **ValidationHelper** (`libs/maia-schemata/src/validation.helper.js`)
+   - Singleton validation engine
+   - Convenience functions (`validate`, `validateOrThrow`, `validateAgainstSchema`)
+   - Schema resolver management
+
+3. **AJV CoTypes Plugin** (`libs/maia-schemata/src/ajv-co-types-plugin.js`)
+   - `$co` keyword macro
+   - `cotype` keyword validator
+
+4. **Schema Loader** (`libs/maia-schemata/src/schema-loader.js`)
+   - Loads schemas from IndexedDB
+   - Handles co-ids and human-readable keys
+   - Resolves reference objects
+
+### Validation Flow Summary
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    VALIDATION ROUNDTRIPS                     │
+└─────────────────────────────────────────────────────────────┘
+
+SEEDING:
+  1. Schemas validated against meta-schema ✅
+  2. Schemas transformed (human-readable → co-ids) ✅
+  2.5. Transformed schemas validated against their $schema meta-schema ✅
+  3. Schemas stored (validated) ✅
+  4. Instances transformed (human-readable → co-ids) ✅
+  4.5. Transformed instances validated against their $schema schema ✅
+  5. Instances stored (validated) ✅
+
+LOADING:
+  6. Configs/instances loaded from IndexedDB ✅
+  7. Configs/instances validated against schema ✅
+
+CREATING:
+  8. Application data validated against schema ✅
+  9. Data stored in IndexedDB ✅
+
+UPDATING:
+  10. Application data validated against schema ✅
+  11. Data updated in IndexedDB ✅
+```
+
+## Key Takeaways
+
+1. **Schemas are validated twice** during seeding:
+   - Before transformation (against meta-schema)
+   - After transformation (against their $schema meta-schema)
+2. **Instances are validated twice**:
+   - During seeding (after transformation, before storage)
+   - On load (when loaded from IndexedDB)
+3. **Application data is validated on create/update** (against collection schema)
+4. **$co links** are transformed during seeding and validated as co-id strings
+5. **Schema dependencies** are resolved and registered before compilation
+6. **Validation happens before storage** - ensures invalid data never gets stored
+
+## Files Reference
+
+- **Validation Engine:** `libs/maia-schemata/src/validation.engine.js`
+- **Validation Helper:** `libs/maia-schemata/src/validation.helper.js`
+- **Schema Transformer:** `libs/maia-schemata/src/schema-transformer.js`
+- **Schema Loader:** `libs/maia-schemata/src/schema-loader.js`
+- **AJV Plugin:** `libs/maia-schemata/src/ajv-co-types-plugin.js`
+- **Kernel Boot:** `libs/maia-script/src/o/kernel.js:55-134`
+- **Backend Seed:** `libs/maia-script/src/o/engines/db-engine/backend/indexeddb.js:95-381`
+- **Create Operation:** `libs/maia-script/src/o/engines/db-engine/operations/create.js`
+- **Update Operation:** `libs/maia-script/src/o/engines/db-engine/operations/update.js`
+- **Actor Engine Load:** `libs/maia-script/src/o/engines/actor-engine/actor.engine.js:73-110`
+- **State Engine Load:** `libs/maia-script/src/o/engines/state-engine/state.engine.js:34-61`
 
 ---
 
