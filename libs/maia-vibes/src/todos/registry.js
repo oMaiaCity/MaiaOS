@@ -41,7 +41,7 @@ import kanbanState from './kanban/kanban.state.maia';
 import agentInterface from './agent/agent.interface.maia';
 import compositeInterface from './composite/composite.interface.maia';
 import listInterface from './list/list.interface.maia';
-// Note: list-item/list-item.interface.maia doesn't exist
+import listItemInterface from './list-item/list-item.interface.maia';
 import kanbanInterface from './kanban/kanban.interface.maia';
 
 // Import all subscriptions colists
@@ -106,7 +106,7 @@ export const TodosVibeRegistry = {
     '@interface/agent': agentInterface,
     '@interface/composite': compositeInterface,
     '@interface/list': listInterface,
-    // '@interface/list-item': listItemInterface, // File doesn't exist
+    '@interface/list-item': listItemInterface,
     '@interface/kanban': kanbanInterface,
   },
   

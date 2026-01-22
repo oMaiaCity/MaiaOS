@@ -36,6 +36,94 @@ State: idle (with your new todo!)
 
 The state machine is like a traffic controller - it decides what happens next!
 
+## State Machine Responsibility: Single Source of Truth
+
+**CRITICAL:** State machines are the **single source of truth** for all context changes.
+
+**Your state machine is responsible for:**
+- ✅ All context updates (via `@context/update` tool)
+- ✅ All data mutations (via `@db` tool)
+- ✅ All error handling (via ERROR event handlers)
+- ✅ All UI state changes (view mode, button states, form values)
+
+**State machines update context by:**
+1. Receiving events from inbox (unified event flow)
+2. Invoking tools (like `@context/update`) to update context
+3. Handling tool success/failure via SUCCESS/ERROR events (also routed through inbox)
+
+## Inbox as Single Source of Truth for Events
+
+**CRITICAL PRINCIPLE:** Actor inbox is the **single source of truth** for ALL events (internal, external, SUCCESS, ERROR).
+
+**What this means:**
+- ✅ All events MUST flow through actor inbox
+- ✅ View events → inbox → state machine
+- ✅ External messages → inbox → state machine
+- ✅ Tool SUCCESS/ERROR → inbox → state machine
+- ✅ StateEngine.send() only called from processMessages()
+
+**Event Flow Pattern:**
+```
+User clicks button
+  ↓
+View sends event → sendInternalEvent()
+  ↓
+Event added to inbox
+  ↓
+processMessages() processes inbox
+  ↓
+StateEngine.send() receives event
+  ↓
+State machine transitions
+  ↓
+Tool executes (SUCCESS/ERROR)
+  ↓
+SUCCESS/ERROR routed through inbox
+  ↓
+processMessages() processes SUCCESS/ERROR
+  ↓
+State machine handles SUCCESS/ERROR
+```
+
+**Why this matters:**
+- **Unified Event Log:** All events appear in inbox for complete traceability
+- **Consistent Pattern:** Single source of truth for all events
+- **Better Debugging:** Can trace all events through inbox log
+- **Watermark Consistency:** All events follow watermark pattern
+- **AI-Friendly:** LLMs can understand complete event flow
+
+**Anti-Patterns:**
+- ❌ Calling StateEngine.send() directly (bypasses inbox)
+- ❌ Sending SUCCESS/ERROR directly to state machine
+- ❌ Bypassing inbox for any events
+
+**Example:**
+```json
+{
+  "idle": {
+    "on": {
+      "UPDATE_INPUT": {
+        "target": "idle",
+        "actions": [
+          {
+            "tool": "@context/update",
+            "payload": { "newTodoText": "$$newTodoText" }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+**Why this matters:**
+- **Predictable:** All context changes happen in state machines
+- **Debuggable:** Easy to trace context changes
+- **Testable:** State machines define clear contracts
+- **AI-friendly:** LLMs understand this pattern
+
+**Remember:** Views send events, state machines update context, tools execute operations. Never update context directly from views or tools!
+
 ## Basic Structure
 
 Create a file named `{name}.state.maia`:
@@ -732,6 +820,8 @@ Handle these in your state definition:
 - Use `$$` for event payloads, `$` for context
 - **Compute boolean flags** - State machine computes, context stores, views reference
 - **Maintain item lookup objects** - For item-specific conditional styling
+- **Update context via tools** - Always use `@context/update` tool, never mutate directly
+- **Handle errors in state machines** - Use ERROR event handlers to update error context
 
 ### ❌ DON'T:
 
@@ -741,6 +831,9 @@ Handle these in your state definition:
 - Use `$` for event payload fields
 - Create cycles without exit conditions
 - **Don't put conditionals in views** - Compute flags in state machine instead
+- **Don't mutate context directly** - Always use `@context/update` tool
+- **Don't update context from views** - Views send events, state machines update context
+- **Don't update context from tools** - Tools are invoked by state machines, not the other way around
 
 ## Debugging State Machines
 

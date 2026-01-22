@@ -19,6 +19,70 @@ Your actor looks at this notebook to know what to show and what to do!
 
 **The magic:** Your view automatically shows whatever is in context. Change the context, change what you see!
 
+## State Machine as Single Source of Truth
+
+**CRITICAL PRINCIPLE:** State machines are the **single source of truth** for all context changes.
+
+**What this means:**
+- ✅ All context updates MUST flow through state machines
+- ✅ State machines invoke tools (like `@context/update`) to update context
+- ✅ Views send events to state machines, never update context directly
+- ✅ Tools can update context, but ONLY when invoked by state machines
+
+**The ONLY exception:**
+- ✅ **SubscriptionEngine** automatically updates reactive query objects (infrastructure)
+- This is infrastructure that keeps database queries in sync - not manual context updates
+
+**Why this matters:**
+- **Predictable:** All context changes happen in one place (state machines)
+- **Debuggable:** Easy to trace where context changes come from
+- **Testable:** State machines define clear contracts for context updates
+- **AI-friendly:** LLMs can understand and generate correct patterns
+
+**Correct Pattern:**
+```
+User clicks button
+  ↓
+View sends event to state machine
+  ↓
+State machine invokes @context/update tool
+  ↓
+Tool updates context
+  ↓
+View re-renders with new context
+```
+
+**Anti-Patterns (DON'T DO THIS):**
+- ❌ Direct context mutation: `actor.context.field = value`
+- ❌ Invoking `@context/update` from views
+- ❌ Calling `ActorEngine.updateContext()` directly
+- ❌ Setting error context directly in ToolEngine (should use ERROR events)
+- ❌ Named actions that mutate context directly (should use `@context/update` tool)
+
+**Error Handling:**
+When tools fail, state machines receive ERROR events and can update context accordingly:
+```json
+{
+  "creating": {
+    "entry": {
+      "tool": "@db",
+      "payload": { "op": "create", ... }
+    },
+    "on": {
+      "ERROR": {
+        "target": "error",
+        "actions": [
+          {
+            "tool": "@context/update",
+            "payload": { "error": "$$error" }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
 ## Context Definition
 
 Context can be defined inline in the actor file or in a separate `.context.maia` file.

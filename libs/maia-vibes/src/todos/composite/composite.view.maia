@@ -20,7 +20,7 @@
               "class": "button-view-switch",
               "attrs": {
                 "data-view": "list",
-                "data": "$listButtonActive"
+                "data-active": "$listButtonActive"
               },
               "text": "List",
               "$on": {
@@ -35,7 +35,7 @@
               "class": "button-view-switch",
               "attrs": {
                 "data-view": "kanban",
-                "data": "$kanbanButtonActive"
+                "data-active": "$kanbanButtonActive"
               },
               "text": "Kanban",
               "$on": {

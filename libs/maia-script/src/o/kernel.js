@@ -179,6 +179,9 @@ export class MaiaOS {
     // Set actorEngine reference in viewEngine (circular dependency)
     os.viewEngine.actorEngine = os.actorEngine;
     
+    // Set actorEngine reference in stateEngine (for unified event flow through inbox)
+    os.stateEngine.actorEngine = os.actorEngine;
+    
     // Load modules (default: db, core, dragdrop, interface)
     const modules = config.modules || ['db', 'core', 'dragdrop', 'interface'];
     console.log(`📦 Loading ${modules.length} modules...`);

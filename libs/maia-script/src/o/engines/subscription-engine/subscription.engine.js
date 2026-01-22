@@ -11,6 +11,11 @@
  * - @ refs → auto-resolve (future: hot-reload)
  * - State machines stay pure (only update context)
  * - Views just consume context (no subscription logic)
+ * 
+ * IMPORTANT: This engine directly updates actor context for reactive query objects.
+ * This is the ONLY exception to the rule that state machines are the single source
+ * of truth for context changes. SubscriptionEngine is infrastructure that automatically
+ * keeps reactive query objects in sync with the database.
  */
 
 export class SubscriptionEngine {

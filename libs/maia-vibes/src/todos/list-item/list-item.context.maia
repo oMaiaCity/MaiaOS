@@ -16,5 +16,6 @@
   "draggedItemId": null,
   "listButtonActive": true,
   "kanbanButtonActive": false,
-  "draggedItemIds": {}
+  "draggedItemIds": {},
+  "error": null
 }

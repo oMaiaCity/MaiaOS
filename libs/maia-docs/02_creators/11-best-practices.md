@@ -40,6 +40,71 @@
 
 **Rule of thumb:** State should be co-located with the component that renders it and uses it.
 
+### Context Updates: State Machine as Single Source of Truth
+
+**CRITICAL PRINCIPLE:** State machines are the **single source of truth** for all context changes.
+
+**All context updates MUST:**
+- ✅ Flow through state machines
+- ✅ Use `@context/update` tool (never mutate directly)
+- ✅ Be triggered by events from inbox (never directly)
+
+**The ONLY exception:**
+- ✅ SubscriptionEngine automatically updates reactive query objects (infrastructure)
+
+**Correct Pattern:**
+```json
+{
+  "idle": {
+    "on": {
+      "UPDATE_INPUT": {
+        "target": "idle",
+        "actions": [
+          {
+            "tool": "@context/update",
+            "payload": { "newTodoText": "$$newTodoText" }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+**Anti-Patterns:**
+- ❌ Direct mutation: `actor.context.field = value`
+- ❌ Updating from views
+- ❌ Updating from tools (unless invoked by state machine)
+- ❌ Setting error context directly in ToolEngine
+
+### Event Flow: Inbox as Single Source of Truth
+
+**CRITICAL PRINCIPLE:** Actor inbox is the **single source of truth** for ALL events.
+
+**All events MUST flow through inbox:**
+- ✅ View events → inbox → state machine
+- ✅ External messages → inbox → state machine
+- ✅ Tool SUCCESS/ERROR → inbox → state machine
+- ✅ StateEngine.send() only called from processMessages()
+
+**Event Flow Pattern:**
+```
+View Event → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+Tool SUCCESS → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+```
+
+**Why this matters:**
+- **Unified Event Log:** All events appear in inbox for traceability
+- **Watermark Pattern:** Prevents duplicate processing
+- **Consistent Handling:** All events follow same path
+- **Better Debugging:** Can inspect inbox to see complete event history
+
+**Anti-Patterns:**
+- ❌ Calling StateEngine.send() directly (bypasses inbox)
+- ❌ Sending SUCCESS/ERROR directly to state machine
+- ❌ Bypassing inbox for any events
+
 ### Three-Layer Architecture
 
 #### Layer 1: Agent Service Actor (Business Logic)
@@ -769,6 +834,9 @@ App Service Actor
 - [ ] UI actors manage component-specific state
 - [ ] State is co-located with components that use it
 - [ ] No state duplication across actors
+- [ ] **State machines are single source of truth** - All context updates flow through state machines
+- [ ] **Use `@context/update` tool** - Always update context via state machine actions
+- [ ] **Handle errors in state machines** - Use ERROR event handlers to update error context
 
 ### ✅ Architecture
 

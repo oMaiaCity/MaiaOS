@@ -11,5 +11,6 @@
     "filter": {"done": true}
   },
   "draggedItemId": null,
-  "dragOverColumn": null
+  "dragOverColumn": null,
+  "error": null
 }

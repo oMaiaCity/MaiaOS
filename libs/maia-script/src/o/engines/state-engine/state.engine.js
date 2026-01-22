@@ -17,9 +17,10 @@ import { validateOrThrow } from '@MaiaOS/schemata/validation.helper';
  * - Observable state changes
  */
 export class StateEngine {
-  constructor(toolEngine, evaluator) {
+  constructor(toolEngine, evaluator, actorEngine = null) {
     this.toolEngine = toolEngine;
     this.evaluator = evaluator;
+    this.actorEngine = actorEngine; // ActorEngine reference (set by kernel after ActorEngine creation)
     this.machines = new Map(); // machineId → machine instance
     this.stateCache = new Map(); // stateRef → state definition
     this.dbEngine = null; // Database operation engine (set by kernel)
@@ -273,10 +274,17 @@ export class StateEngine {
       // Execute all entry actions
       await this._executeActions(machine, entry);
       
-      // After all entry actions complete, send SUCCESS if state handles it
+      // After all entry actions complete, route SUCCESS through inbox if state handles it
       // This allows loading states to transition to idle after subscriptions are set up
       if (stateDef.on && stateDef.on.SUCCESS) {
-        await this.send(machine.id, 'SUCCESS', {});
+        // Route through inbox for unified event logging
+        if (this.actorEngine && machine.actor) {
+          await this.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', {});
+        } else {
+          // Fallback: direct send if actorEngine not available (should not happen in normal flow)
+          console.warn('[StateEngine] ActorEngine not available, sending SUCCESS directly');
+          await this.send(machine.id, 'SUCCESS', {});
+        }
       }
     }
   }
@@ -334,27 +342,32 @@ export class StateEngine {
    * @returns {Promise<void>}
    */
   async _executeNamedAction(machine, actionName, payload) {
-    // Named actions are predefined mutations on context
-    // Example: "clearInput" → context.newTodoText = ""
+    // Named actions use @context/update tool to maintain single source of truth
+    // All context updates must flow through state machines via tools
     
     const commonActions = {
-      clearInput: () => {
-        machine.context.newTodoText = '';
+      clearInput: {
+        tool: '@context/update',
+        payload: { newTodoText: '' }
       },
-      resetError: () => {
-        machine.context.error = null;
+      resetError: {
+        tool: '@context/update',
+        payload: { error: null }
       },
-      setLoading: () => {
-        machine.context.isLoading = true;
+      setLoading: {
+        tool: '@context/update',
+        payload: { isLoading: true }
       },
-      clearLoading: () => {
-        machine.context.isLoading = false;
+      clearLoading: {
+        tool: '@context/update',
+        payload: { isLoading: false }
       }
     };
 
     const action = commonActions[actionName];
     if (action) {
-      action(payload);
+      // Invoke @context/update tool (no auto-transition since we're in the middle of a transition)
+      await this._invokeTool(machine, action.tool, action.payload, false);
     } else {
       console.warn(`Unknown action: ${actionName}`);
     }
@@ -379,22 +392,36 @@ export class StateEngine {
       // Execute tool via ToolEngine
       await this.toolEngine.execute(toolName, machine.actor, evaluatedPayload);
       
-      // Tool succeeded - send SUCCESS event (if machine handles it and autoTransition is true)
-      // This allows state machines to react to tool completion
+      // Tool succeeded - route SUCCESS event through inbox (if machine handles it and autoTransition is true)
+      // This ensures all events flow through inbox for unified traceability
       if (autoTransition) {
       const currentStateDef = machine.definition.states[machine.currentState];
       if (currentStateDef.on && currentStateDef.on.SUCCESS) {
-        await this.send(machine.id, 'SUCCESS', {});
+        // Route through inbox for unified event logging
+        if (this.actorEngine && machine.actor) {
+          await this.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', {});
+        } else {
+          // Fallback: direct send if actorEngine not available (should not happen in normal flow)
+          console.warn('[StateEngine] ActorEngine not available, sending SUCCESS directly');
+          await this.send(machine.id, 'SUCCESS', {});
+        }
         }
       }
     } catch (error) {
       console.error(`[StateEngine] Tool invocation failed: ${toolName}`, error);
       
-      // Tool failed - send ERROR event (if machine handles it and autoTransition is true)
+      // Tool failed - route ERROR event through inbox (if machine handles it and autoTransition is true)
       if (autoTransition) {
       const currentStateDef = machine.definition.states[machine.currentState];
       if (currentStateDef.on && currentStateDef.on.ERROR) {
-        await this.send(machine.id, 'ERROR', { error: error.message });
+        // Route through inbox for unified event logging
+        if (this.actorEngine && machine.actor) {
+          await this.actorEngine.sendInternalEvent(machine.actor.id, 'ERROR', { error: error.message });
+        } else {
+          // Fallback: direct send if actorEngine not available (should not happen in normal flow)
+          console.warn('[StateEngine] ActorEngine not available, sending ERROR directly');
+          await this.send(machine.id, 'ERROR', { error: error.message });
+        }
         }
       }
     }

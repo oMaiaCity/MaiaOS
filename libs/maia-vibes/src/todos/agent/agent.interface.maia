@@ -23,6 +23,12 @@
         "filter": "object",
         "target": "string"
       }
+    },
+    "SUCCESS": {
+      "payload": {}
+    },
+    "ERROR": {
+      "payload": { "error": "string" }
     }
   },
   "publishes": {

@@ -8,5 +8,6 @@
   "currentView": "@list",
   "listButtonActive": true,
   "kanbanButtonActive": false,
-  "newTodoText": ""
+  "newTodoText": "",
+  "error": null
 }

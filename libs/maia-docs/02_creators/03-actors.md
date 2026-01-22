@@ -265,6 +265,45 @@ Every vibe's entry point is an **agent service actor** that orchestrates the app
 
 **Best Practice:** Always define the agent service actor first. This is your app's orchestrator.
 
+### Context Updates: State Machine as Single Source of Truth
+
+**CRITICAL:** All context updates must flow through state machines.
+
+**Pattern:**
+1. View sends event to state machine
+2. State machine invokes `@context/update` tool
+3. Tool updates context
+4. View re-renders with new context
+
+**Example:**
+```json
+{
+  "idle": {
+    "on": {
+      "UPDATE_INPUT": {
+        "target": "idle",
+        "actions": [
+          {
+            "tool": "@context/update",
+            "payload": { "newTodoText": "$$newTodoText" }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+**Never:**
+- ❌ Mutate context directly: `actor.context.field = value`
+- ❌ Update context from views
+- ❌ Update context from tools (unless invoked by state machine)
+
+**Always:**
+- ✅ Update context via state machine actions
+- ✅ Use `@context/update` tool for context updates
+- ✅ Handle errors via state machine ERROR events
+
 ### Step 2: Agent Service Actor Loads Composite
 
 The agent loads a **composite actor** as its first child:
@@ -479,11 +518,15 @@ Referenced in actor:
 - Use clear, descriptive names
 - Initialize all fields (avoid `undefined`)
 - Store only serializable data (no functions)
+- **Update context via state machines** - State machines are the single source of truth
+- **Use `@context/update` tool** - Always update context through state machine actions
 
 ❌ **DON'T:**
 - Store UI elements or DOM references
 - Put logic in context (use tools instead)
 - Mix concerns (separate data from UI state)
+- **Don't mutate context directly** - Always use state machines and tools
+- **Don't update context from views** - Views send events, state machines update context
 
 ## Actor Lifecycle
 
@@ -537,11 +580,33 @@ console.log(actor.context.todos);
 console.log(actor.machine.currentState); // 'idle', 'creating', etc.
 ```
 
-## Message Passing
+## Message Passing & Event Flow
 
-Actors communicate asynchronously via **inboxes and subscriptions**:
+**CRITICAL:** Actor inbox is the **single source of truth** for ALL events (internal, external, SUCCESS, ERROR).
+
+**Unified Event Flow:**
+- ✅ View events → inbox → state machine
+- ✅ External messages → inbox → state machine  
+- ✅ Tool SUCCESS/ERROR → inbox → state machine
+- ✅ All events appear in inbox log for traceability
+
+**Event Flow Pattern:**
+```
+View Event → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+External Message → inbox → processMessages() → StateEngine.send()
+Tool SUCCESS → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+```
+
+**Why inbox for all events:**
+- **Unified Event Log:** Complete traceability of all events
+- **Watermark Pattern:** Prevents duplicate processing
+- **Consistent Handling:** All events follow same path
+- **Better Debugging:** Can inspect inbox to see all events
 
 ### Sending Messages
+
+**External messages** (actor-to-actor):
 
 ```javascript
 // Send to specific actor
@@ -554,6 +619,8 @@ os.sendMessage('actor_todo_001', {
 // Actors can send to each other
 actor.actorEngine.sendMessage(targetActorId, message);
 ```
+
+**Internal events** (from views) automatically route through inbox via `sendInternalEvent()`.
 
 ### Subscribing to Messages
 
@@ -574,20 +641,27 @@ actor.actorEngine.subscribe('actor_todo_001', 'actor_calendar_001');
 
 ### Processing Messages
 
-Messages are processed via the actor's state machine. Define message handlers:
+Messages are processed via the actor's state machine. The inbox is automatically processed, and events are routed to state machines:
 
 ```json
 {
   "idle": {
     "on": {
       "MESSAGE_RECEIVED": {
-        "target": "processingMessage",
-        "guard": {"$ne": ["$inbox.length", 0]}
+        "target": "processingMessage"
+      },
+      "SUCCESS": {
+        "target": "idle"
+      },
+      "ERROR": {
+        "target": "error"
       }
     }
   }
 }
 ```
+
+**Note:** All events (including SUCCESS/ERROR from tools) flow through inbox and are processed by `processMessages()`, which routes them to the state machine.
 
 ## Shadow DOM Isolation
 

@@ -23,6 +23,15 @@
     },
     "DELETE_BUTTON": {
       "payload": { "id": "string" }
+    },
+    "ERROR": {
+      "payload": { "error": "string" }
+    },
+    "RETRY": {
+      "payload": {}
+    },
+    "DISMISS": {
+      "payload": {}
     }
   },
   "publishes": {

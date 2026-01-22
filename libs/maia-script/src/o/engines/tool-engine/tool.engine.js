@@ -92,7 +92,8 @@ export class ToolEngine {
       // Only log errors, not successful executions (too verbose)
     } catch (error) {
       console.error(`[ToolEngine] Tool execution error (${actionName}):`, error);
-      actor.context.error = error.message || 'Tool execution failed';
+      // Note: Error context should be set by state machine ERROR handlers via @context/update tool
+      // State machines receive ERROR events and can update context accordingly
       throw error;
     }
   }

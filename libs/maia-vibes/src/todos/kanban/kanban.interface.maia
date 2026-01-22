@@ -45,6 +45,12 @@
     },
     "TODO_DELETED": {
       "payload": { "id": "string" }
+    },
+    "SUCCESS": {
+      "payload": {}
+    },
+    "ERROR": {
+      "payload": { "error": "string" }
     }
   },
   "publishes": {

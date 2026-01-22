@@ -382,24 +382,6 @@ export class ActorEngine {
     return actor;
   }
 
-  /**
-   * Update actor context and re-render
-   * @param {string} actorId - The actor ID
-   * @param {Object} updates - Partial context updates
-   */
-  async updateContext(actorId, updates) {
-    const actor = this.actors.get(actorId);
-    if (!actor) {
-      console.warn(`Actor not found: ${actorId}`);
-      return;
-    }
-
-    // Apply updates to context
-    actor.context = { ...actor.context, ...updates };
-
-    // Re-render
-    await this.rerender(actorId);
-  }
 
   /**
    * Rerender an actor without modifying context

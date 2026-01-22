@@ -125,9 +125,29 @@
       }
     },
     "error": {
+      "entry": {
+        "tool": "@context/update",
+        "payload": { "error": "$$error" }
+      },
       "on": {
-        "RETRY": "idle",
-        "DISMISS": "idle"
+        "RETRY": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@context/update",
+              "payload": { "error": null }
+            }
+          ]
+        },
+        "DISMISS": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@context/update",
+              "payload": { "error": null }
+            }
+          ]
+        }
       }
     }
   }

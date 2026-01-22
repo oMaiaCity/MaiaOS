@@ -227,6 +227,33 @@ await maia.db({
 
 **Note:** This operation clears existing data. Use only in development!
 
+## Tool Invocation Pattern
+
+**CRITICAL:** Tools are invoked BY state machines, never directly from views or other engines.
+
+**Pattern:**
+1. View sends event to state machine
+2. State machine invokes tool (in entry actions or transition actions)
+3. Tool executes operation
+4. State machine receives SUCCESS/ERROR event
+5. State machine updates context if needed
+
+**Why this matters:**
+- **Single source of truth:** All operations flow through state machines
+- **Predictable:** Easy to trace where operations come from
+- **Error handling:** State machines handle SUCCESS/ERROR events
+- **Context updates:** State machines update context via `@context/update` tool
+
+**Never:**
+- ❌ Invoke tools directly from views
+- ❌ Invoke tools from other engines
+- ❌ Update context directly in tools (unless invoked by state machine)
+
+**Always:**
+- ✅ Invoke tools from state machine actions
+- ✅ Handle SUCCESS/ERROR events in state machines
+- ✅ Update context via state machine actions using `@context/update` tool
+
 ## Usage in State Machines
 
 Use the `@db` tool in your state machine definitions:
@@ -305,7 +332,40 @@ Database
 
 ## Best Practices
 
-### 1. Use Reactive Queries in Context
+### 1. Tools Are Invoked by State Machines
+
+**✅ DO:** Invoke tools from state machine actions
+
+```json
+{
+  "idle": {
+    "on": {
+      "CREATE_TODO": {
+        "target": "creating",
+        "actions": [
+          {
+            "tool": "@db",
+            "payload": {
+              "op": "create",
+              "schema": "@schema/todos",
+              "data": {...}
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+**❌ DON'T:** Invoke tools directly from views or other engines
+
+```javascript
+// ❌ Don't do this - tools should be invoked by state machines
+actor.actorEngine.toolEngine.execute('@db', actor, payload);
+```
+
+### 2. Use Reactive Queries in Context
 
 **✅ DO:** Define query objects in context (automatic reactivity)
 
@@ -335,9 +395,9 @@ Database
 }
 ```
 
-### 2. Always Use Operations for Mutations
+### 3. Always Use Operations for Mutations
 
-**✅ DO:** Use `@db` tool for all data changes
+**✅ DO:** Use `@db` tool for all data changes (invoked by state machines)
 
 ```json
 {
@@ -350,7 +410,7 @@ Database
 }
 ```
 
-**❌ DON'T:** Modify context directly
+**❌ DON'T:** Modify reactive query data directly
 
 ```json
 {
@@ -361,9 +421,9 @@ Database
 }
 ```
 
-### 3. Handle Errors
+### 4. Handle Errors in State Machines
 
-**✅ DO:** Handle SUCCESS/ERROR events
+**✅ DO:** Handle SUCCESS/ERROR events and update context via state machine
 
 ```json
 {
@@ -374,7 +434,15 @@ Database
     },
     "on": {
       "SUCCESS": "idle",
-      "ERROR": "error"
+      "ERROR": {
+        "target": "error",
+        "actions": [
+          {
+            "tool": "@context/update",
+            "payload": { "error": "$$error" }
+          }
+        ]
+      }
     }
   },
   "error": {
@@ -386,7 +454,14 @@ Database
 }
 ```
 
-### 4. Use Toggle for Boolean Fields
+**❌ DON'T:** Set error context directly in tools
+
+```javascript
+// ❌ Don't do this - errors should be handled by state machines
+actor.context.error = error.message;
+```
+
+### 5. Use Toggle for Boolean Fields
 
 **✅ DO:** Use `toggle` operation for boolean fields
 

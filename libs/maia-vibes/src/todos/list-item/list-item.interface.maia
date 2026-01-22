@@ -1,0 +1,59 @@
+{
+  "$schema": "@schema/interface",
+  "$id": "@interface/list-item",
+  "inbox": {
+    "UPDATE_INPUT": {
+      "payload": { "newTodoText": "string" }
+    },
+    "CREATE_TODO": {
+      "payload": { "text": "string" }
+    },
+    "TOGGLE_TODO": {
+      "payload": { "id": "string" }
+    },
+    "DELETE_TODO": {
+      "payload": { "id": "string" }
+    },
+    "SET_VIEW_MODE": {
+      "payload": { "viewMode": "string" }
+    },
+    "OPEN_MODAL": {
+      "payload": {}
+    },
+    "CLOSE_MODAL": {
+      "payload": {}
+    },
+    "DRAG_START": {
+      "payload": { "schema": "string", "id": "string" }
+    },
+    "DRAG_END": {
+      "payload": {}
+    },
+    "DRAG_OVER": {
+      "payload": {}
+    },
+    "DROP": {
+      "payload": {
+        "schema": "string",
+        "field": "string",
+        "value": "boolean"
+      }
+    },
+    "STOP_PROPAGATION": {
+      "payload": {}
+    },
+    "RETRY": {
+      "payload": {}
+    },
+    "DISMISS": {
+      "payload": {}
+    },
+    "SUCCESS": {
+      "payload": {}
+    },
+    "ERROR": {
+      "payload": { "error": "string" }
+    }
+  },
+  "publishes": {}
+}

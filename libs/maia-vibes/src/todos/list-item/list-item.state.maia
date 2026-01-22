@@ -27,7 +27,21 @@
           "guard": { "$ne": ["$$id", null] }
         },
         "SET_VIEW_MODE": {
-          "target": "settingViewMode"
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@context/update",
+              "payload": {
+                "viewMode": "$$viewMode",
+                "listButtonActive": {
+                  "$eq": ["$$viewMode", "list"]
+                },
+                "kanbanButtonActive": {
+                  "$eq": ["$$viewMode", "kanban"]
+                }
+              }
+            }
+          ]
         },
         "OPEN_MODAL": {
           "target": "openingModal"
@@ -86,16 +100,6 @@
         "ERROR": "error"
       }
     },
-    "settingViewMode": {
-      "entry": {
-        "tool": "@core/setViewMode",
-        "payload": { "viewMode": "$$viewMode" }
-      },
-      "on": {
-        "SUCCESS": "idle",
-        "ERROR": "error"
-      }
-    },
     "openingModal": {
       "entry": {
         "tool": "@core/openModal",
@@ -142,9 +146,29 @@
       }
     },
     "error": {
+      "entry": {
+        "tool": "@context/update",
+        "payload": { "error": "$$error" }
+      },
       "on": {
-        "RETRY": "idle",
-        "DISMISS": "idle"
+        "RETRY": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@context/update",
+              "payload": { "error": null }
+            }
+          ]
+        },
+        "DISMISS": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@context/update",
+              "payload": { "error": null }
+            }
+          ]
+        }
       }
     }
   }
