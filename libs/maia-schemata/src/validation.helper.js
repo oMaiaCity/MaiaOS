@@ -5,8 +5,38 @@
  * validation function for engines to use.
  */
 
-import { ValidationEngine, loadSchema, loadAllSchemas, getSchema } from './index.js';
-import { ValidationEngine as ValidationEngineClass } from './validation.engine.js';
+import { ValidationEngine, loadAllSchemas, getSchema } from './index.js';
+
+/**
+ * Format AJV validation errors into a consistent structure
+ * @param {Array} errors - Array of AJV error objects
+ * @returns {Array} Formatted error objects
+ */
+export function formatValidationErrors(errors) {
+  return errors.map(error => ({
+    instancePath: error.instancePath || '/',
+    schemaPath: error.schemaPath || '',
+    keyword: error.keyword || '',
+    message: error.message || '',
+    params: error.params || {}
+  }));
+}
+
+/**
+ * Execute a callback with schema validation temporarily disabled
+ * @param {Object} ajv - AJV instance
+ * @param {Function} callback - Callback function to execute (can be async)
+ * @returns {*} Return value of callback (or Promise if callback is async)
+ */
+export async function withSchemaValidationDisabled(ajv, callback) {
+  const originalValidateSchema = ajv.opts.validateSchema;
+  ajv.opts.validateSchema = false;
+  try {
+    return await callback();
+  } finally {
+    ajv.opts.validateSchema = originalValidateSchema;
+  }
+}
 
 // Singleton validation engine instance
 let validationEngine = null;
@@ -79,13 +109,10 @@ export async function getValidationEngine(schemaResolver = null) {
       // PASS 1: Add all schemas to AJV registry for $ref resolution
       // Temporarily disable schema validation during registration
       // (schemas reference @schema/meta-schema which is already registered)
-      const originalValidateSchema = ajv.opts.validateSchema;
-      ajv.opts.validateSchema = false;
-      
       const schemasByType = new Map();
       const uniqueSchemas = new Map(); // Track by $id to avoid duplicates
       
-      try {
+      await withSchemaValidationDisabled(ajv, async () => {
         for (const type of schemaTypes) {
           const schema = getSchema(type);
           if (!schema) continue;
@@ -120,9 +147,7 @@ export async function getValidationEngine(schemaResolver = null) {
             schemasByType.set(type, schema);
           }
         }
-      } finally {
-        ajv.opts.validateSchema = originalValidateSchema;
-      }
+      });
       
       // PASS 2: Compile all schemas (now $ref can resolve because schemas are registered)
       for (const [type, schema] of schemasByType.entries()) {
@@ -264,13 +289,7 @@ export async function validateAgainstSchema(schema, data, context = '') {
     
     // Format errors
     const errors = validate.errors || [];
-    const formattedErrors = errors.map(error => ({
-      instancePath: error.instancePath || '/',
-      schemaPath: error.schemaPath || '',
-      keyword: error.keyword || '',
-      message: error.message || '',
-      params: error.params || {}
-    }));
+    const formattedErrors = formatValidationErrors(errors);
     
     return {
       valid: false,
@@ -286,13 +305,7 @@ export async function validateAgainstSchema(schema, data, context = '') {
           return { valid: true, errors: null };
         }
         const errors = existingValidator.errors || [];
-        const formattedErrors = errors.map(error => ({
-          instancePath: error.instancePath || '/',
-          schemaPath: error.schemaPath || '',
-          keyword: error.keyword || '',
-          message: error.message || '',
-          params: error.params || {}
-        }));
+        const formattedErrors = formatValidationErrors(errors);
         return {
           valid: false,
           errors: formattedErrors

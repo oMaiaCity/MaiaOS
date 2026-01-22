@@ -2,7 +2,6 @@
 
 **Complete hierarchy from lowest-level primitives to high-level CoValues**
 
-Last updated: 2026-01-17
 
 ---
 

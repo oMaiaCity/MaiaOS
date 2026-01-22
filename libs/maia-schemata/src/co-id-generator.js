@@ -8,10 +8,13 @@
  */
 
 /**
- * Generate a random co-id
+ * Generate a co-id for any content (schema, instance, data entity, etc.)
+ * @param {Object} [content] - Content object (for future deterministic generation, currently unused)
  * @returns {string} Co-id in format co_z[A-Za-z0-9]{43}
  */
-export function generateCoId() {
+export function generateCoId(content) {
+  // For now, generate random co-id
+  // In future, could use content-addressable hash: hash(content) → co-id
   const randomBytes = new Uint8Array(32);
   crypto.getRandomValues(randomBytes);
   const base64 = btoa(String.fromCharCode(...randomBytes))
@@ -20,39 +23,6 @@ export function generateCoId() {
     .replace(/=/g, '')
     .substring(0, 43);
   return `co_z${base64}`;
-}
-
-/**
- * Generate a co-id for a schema
- * @param {Object} schemaContent - Schema content (for future deterministic generation)
- * @returns {string} Co-id for the schema
- */
-export function generateCoIdForSchema(schemaContent) {
-  // For now, generate random co-id
-  // In future, could use content-addressable hash: hash(schemaContent) → co-id
-  return generateCoId();
-}
-
-/**
- * Generate a co-id for an instance (config, actor, view, etc.)
- * @param {Object} instanceContent - Instance content (for future deterministic generation)
- * @returns {string} Co-id for the instance
- */
-export function generateCoIdForInstance(instanceContent) {
-  // For now, generate random co-id
-  // In future, could use content-addressable hash: hash(instanceContent) → co-id
-  return generateCoId();
-}
-
-/**
- * Generate a co-id for a data entity (todo item, etc.)
- * @param {Object} entityContent - Entity content (for future deterministic generation)
- * @returns {string} Co-id for the data entity
- */
-export function generateCoIdForDataEntity(entityContent) {
-  // For now, generate random co-id
-  // In future, could use content-addressable hash: hash(entityContent) → co-id
-  return generateCoId();
 }
 
 /**

@@ -92,7 +92,7 @@ export class IndexedDBBackend {
     console.log('[IndexedDBBackend] Starting seed with co-id resolution...');
     
     // Import co-id generator and transformer
-    const { generateCoIdForSchema, generateCoIdForInstance, generateCoIdForDataEntity, CoIdRegistry } = 
+    const { generateCoId, CoIdRegistry } = 
       await import('@MaiaOS/schemata/co-id-generator');
     const { transformSchemaForSeeding, transformInstanceForSeeding, validateNoNestedCoTypes } = 
       await import('@MaiaOS/schemata/schema-transformer');
@@ -199,7 +199,7 @@ export class IndexedDBBackend {
     for (const schemaKey of sortedSchemaKeys) {
       const { schema } = uniqueSchemasBy$id.get(schemaKey);
       // Generate co-id for schema
-      const schemaCoId = generateCoIdForSchema(schema);
+      const schemaCoId = generateCoId(schema);
       
       schemaCoIdMap.set(schemaKey, schemaCoId);
       coIdRegistry.register(schemaKey, schemaCoId);
@@ -295,7 +295,7 @@ export class IndexedDBBackend {
           coIdRegistry.register(collectionName, collectionCoId);
         } else {
           // Generate co-id for collection (same algorithm as _seedData)
-          collectionCoId = generateCoIdForDataEntity({ collection: collectionName });
+          collectionCoId = generateCoId({ collection: collectionName });
           
           // Register both @schema/collectionName and collectionName → collectionCoId
           // This allows transformInstanceForSeeding to resolve query objects
@@ -381,7 +381,7 @@ export class IndexedDBBackend {
       // Get the first instance with this $id (stored in instanceByIdMap)
       const firstOccurrence = instanceByIdMap.get(instanceId);
       if (firstOccurrence) {
-        const instanceCoId = generateCoIdForInstance(firstOccurrence.instance);
+        const instanceCoId = generateCoId(firstOccurrence.instance);
         coIdByInstanceId.set(instanceId, instanceCoId);
         // Register in registry immediately
         coIdRegistry.register(instanceId, instanceCoId);
@@ -546,7 +546,7 @@ export class IndexedDBBackend {
     
     // Phase 6: Seed configs/instances to IndexedDB with co-ids
     console.log('[IndexedDBBackend] Phase 6: Seeding configs/instances...');
-    await this._seedConfigs(transformedConfigs, instanceCoIdMap, generateCoIdForInstance);
+    await this._seedConfigs(transformedConfigs, instanceCoIdMap, generateCoId);
     
     // Phase 7: Generate co-ids for all data entities (todo items, etc.) - under the hood
     console.log('[IndexedDBBackend] Phase 7: Generating co-ids for data entities...');
@@ -558,7 +558,7 @@ export class IndexedDBBackend {
     console.log('[IndexedDBBackend] Phase 8: Seeding initial data...');
     try {
       // Pass dataCollectionCoIds map to reuse co-ids from Phase 3.5 (avoid duplicate registration)
-      await this._seedData(data, generateCoIdForDataEntity, coIdRegistry, dataCollectionCoIds);
+      await this._seedData(data, generateCoId, coIdRegistry, dataCollectionCoIds);
     } catch (error) {
       console.error('[IndexedDBBackend] Error seeding data:', error);
       throw error;
@@ -654,7 +654,7 @@ export class IndexedDBBackend {
       }
       
       // Generate co-ids for new schemas and compare
-      const { generateCoIdForSchema } = await import('@MaiaOS/schemata/co-id-generator');
+      const { generateCoId } = await import('@MaiaOS/schemata/co-id-generator');
       
       // Deduplicate new schemas by $id
       const uniqueNewSchemasBy$id = new Map();
@@ -673,7 +673,7 @@ export class IndexedDBBackend {
       
       // Compare each schema by content (deep equality)
       for (const [schemaKey, newSchema] of uniqueNewSchemasBy$id) {
-        const newCoId = generateCoIdForSchema(newSchema);
+        const newCoId = generateCoId(newSchema);
         const existingSchema = existingByCoId.get(newCoId);
         
         if (!existingSchema) {
@@ -735,9 +735,9 @@ export class IndexedDBBackend {
    * @private
    * @param {Object} configs - Transformed configs with co-ids
    * @param {Map<string, string>} instanceCoIdMap - Map of instance key → co-id
-   * @param {Function} generateCoIdForInstance - Function to generate co-id for instances
+   * @param {Function} generateCoId - Function to generate co-id for instances
    */
-  async _seedConfigs(configs, instanceCoIdMap, generateCoIdForInstance) {
+  async _seedConfigs(configs, instanceCoIdMap, generateCoId) {
     const transaction = this.db.transaction(['configs'], 'readwrite');
     const store = transaction.objectStore('configs');
     
@@ -757,7 +757,7 @@ export class IndexedDBBackend {
         
         // If still not found, generate one (shouldn't happen if Phase 4 worked correctly)
         if (!vibeCoId || !vibeCoId.startsWith('co_z')) {
-          vibeCoId = generateCoIdForInstance(configs.vibe);
+          vibeCoId = generateCoId(configs.vibe);
         }
         
         // Set $id to co-id (required!)
@@ -830,33 +830,33 @@ export class IndexedDBBackend {
     };
     
     // Seed styles
-    count += await seedConfigType('style', configs.styles, generateCoIdForInstance);
+    count += await seedConfigType('style', configs.styles, generateCoId);
     
     // Seed actors
-    count += await seedConfigType('actor', configs.actors, generateCoIdForInstance);
+    count += await seedConfigType('actor', configs.actors, generateCoId);
     
     // Seed views
-    count += await seedConfigType('view', configs.views, generateCoIdForInstance);
+    count += await seedConfigType('view', configs.views, generateCoId);
     
     // Seed contexts
-    count += await seedConfigType('context', configs.contexts, generateCoIdForInstance);
+    count += await seedConfigType('context', configs.contexts, generateCoId);
     
     // Seed states
-    count += await seedConfigType('state', configs.states, generateCoIdForInstance);
+    count += await seedConfigType('state', configs.states, generateCoId);
     
     // Seed interfaces
-    count += await seedConfigType('interface', configs.interfaces, generateCoIdForInstance);
+    count += await seedConfigType('interface', configs.interfaces, generateCoId);
     
     // Seed subscriptions (colist CoValues)
-    count += await seedConfigType('subscriptions', configs.subscriptions, generateCoIdForInstance);
+    count += await seedConfigType('subscriptions', configs.subscriptions, generateCoId);
     
     // Seed inboxes (costream CoValues)
-    count += await seedConfigType('inbox', configs.inboxes, generateCoIdForInstance);
+    count += await seedConfigType('inbox', configs.inboxes, generateCoId);
     
     // Note: subscriptions/inboxes/tokens/components all handled cleanly at the .maia definition level
     
     // Seed tool definitions
-    count += await seedConfigType('tool', configs.tool, generateCoIdForInstance);
+    count += await seedConfigType('tool', configs.tool, generateCoId);
     
     console.log(`[IndexedDBBackend] Seeded ${count} configs`);
   }
@@ -909,11 +909,11 @@ export class IndexedDBBackend {
    * Seed initial data into database with co-ids
    * @private
    * @param {Object} data - Initial data collections
-   * @param {Function} generateCoIdForDataEntity - Function to generate co-id for data entity
+   * @param {Function} generateCoId - Function to generate co-id for data entity
    * @param {CoIdRegistry} coIdRegistry - Registry to store mappings
    * @param {Map<string, string>} [dataCollectionCoIds] - Pre-registered collection co-ids from Phase 3.5 (to avoid duplicate registration)
    */
-  async _seedData(data, generateCoIdForDataEntity, coIdRegistry, dataCollectionCoIds = null) {
+  async _seedData(data, generateCoId, coIdRegistry, dataCollectionCoIds = null) {
     const transaction = this.db.transaction(['data'], 'readwrite');
     const store = transaction.objectStore('data');
     
@@ -935,7 +935,7 @@ export class IndexedDBBackend {
       // Store each item individually with $schema field
       if (Array.isArray(collection)) {
         for (const item of collection) {
-          const coId = item.$id || generateCoIdForDataEntity(item);
+          const coId = item.$id || generateCoId(item);
           const record = {
             $id: coId,
             $schema: schemaCoId,  // Store schema co-id in item
@@ -1108,10 +1108,10 @@ export class IndexedDBBackend {
     const storeName = 'data'; // Only data store supports create
     
     // Import co-id generator
-    const { generateCoIdForDataEntity } = await import('@MaiaOS/schemata/co-id-generator');
+    const { generateCoId } = await import('@MaiaOS/schemata/co-id-generator');
     
     // Generate co-id for the item
-    const coId = generateCoIdForDataEntity(data);
+    const coId = generateCoId(data);
     
     // Schema should already be a co-id (transformed during seeding)
     // Work directly with co-id, no registry lookup needed

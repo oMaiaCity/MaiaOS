@@ -1,0 +1,716 @@
+---
+alwaysApply: false
+---
+
+# MaiaOS Documentation Writing Guide
+
+**Write documentation like you're explaining to a curious 12-year-old who's smart but doesn't know the jargon yet.**
+
+---
+
+## Core Principles
+
+### 1. The 12-Year-Old Test
+
+**Every sentence should pass this test:** "Would a curious 12-year-old understand this?"
+
+- ✅ **Good**: "Think of a CoMap like a shared notebook. When you write something, everyone else can see it instantly, and if two people write at the same time, the system figures out how to combine both changes without losing anything."
+- ❌ **Bad**: "CoMap is a CRDT-based collaborative data structure implementing operational transformation with conflict-free replicated data type semantics."
+
+**If you find yourself using jargon, stop and ask:**
+- "What everyday thing is this like?"
+- "How would I explain this to someone who's never heard of CRDTs?"
+- "What's the simplest way to say this?"
+
+### 2. Progressive Complexity (ELI5 → ELI15 → ELI25)
+
+Structure every document to build from simple to complex:
+
+```
+1. OVERVIEW (ELI5 - Like I'm 5)
+   └─ "What is this? Why should I care?"
+   
+2. BASIC CONCEPTS (ELI15 - Like I'm 15)
+   └─ "How does it work? Show me a simple example."
+   
+3. DETAILED EXPLANATION (ELI25 - Like I'm 25)
+   └─ "Now let's dive deep into how it actually works."
+   
+4. ADVANCED PATTERNS (Expert)
+   └─ "Here's how experts use this in complex scenarios."
+```
+
+**Example Structure:**
+```markdown
+# [Feature Name]
+
+## Overview
+[One sentence: What is this?]
+[One paragraph: Why does it matter?]
+
+## The Simple Version
+[Analogy + basic example]
+
+## How It Works
+[Progressive explanation with examples]
+
+## Advanced Usage
+[Complex patterns, edge cases]
+```
+
+### 3. The ADEPT Method
+
+Use this structure for explaining concepts:
+
+1. **Analogy** - Connect to something familiar
+   - "Think of CoValues like shared Google Docs..."
+   - "Imagine schemas as blueprints for houses..."
+
+2. **Diagram** - Visual representation
+   - Use ASCII art, mermaid diagrams, or simple drawings
+   - Show relationships, not just text
+
+3. **Example** - Show it working
+   - Real, runnable code
+   - Start with the simplest possible example
+   - Build up to more complex ones
+
+4. **Plain-English Description** - Explain without jargon
+   - "When you create a new actor, MaiaOS..."
+   - Avoid technical terms until after the concept is understood
+
+5. **Technical Details** - Now introduce the jargon
+   - "Technically, this uses CRDTs which means..."
+   - Save the technical terms for after understanding is built
+
+### 4. The Three Cs
+
+**Clarity:**
+- One idea per sentence
+- Aim for 15-20 words per sentence
+- Use active voice ("MaiaOS creates..." not "A CoValue is created by MaiaOS...")
+- Prefer simple words over complex ones
+
+**Conciseness:**
+- Cut unnecessary words
+- Don't repeat yourself
+- Get to the point quickly
+
+**Consistency:**
+- Use the same terms throughout
+- If you call it "CoValue" in one place, don't call it "co-value" or "CoValue instance" elsewhere
+- Create a terminology glossary if needed
+
+---
+
+## Documentation Structure by Audience
+
+### Target Group 1: Creators (`libs/maia-docs/02_creators/`)
+
+**Who:** End users building apps with MaiaOS using JSON schema-defined DSL (MaiaScript)
+
+**Focus:**
+- ✅ **HOW to use** MaiaOS features
+- ✅ **WHAT** each feature does
+- ✅ **WHEN** to use each feature
+- ✅ Practical examples and patterns
+- ❌ **NOT** how MaiaOS is implemented internally
+- ❌ **NOT** technical architecture details
+
+**Writing Style:**
+- Start with "You can..." or "To create..."
+- Show complete, working examples
+- Explain the "why" behind patterns
+- Use MaiaScript examples, not JavaScript implementation code
+
+**Example:**
+```markdown
+# Creating Actors
+
+## What Are Actors?
+
+Think of actors like LEGO blocks. Each actor is a self-contained piece that does one thing well. You can snap them together to build bigger things.
+
+## Creating Your First Actor
+
+To create an actor, you write a `.maia` file. Here's the simplest possible actor:
+
+```json
+{
+  "actor": {
+    "name": "my-first-actor",
+    "view": {
+      "type": "div",
+      "children": "Hello, World!"
+    }
+  }
+}
+```
+
+This creates a simple actor that displays "Hello, World!" on the screen.
+```
+
+### Target Group 2: Developers (`libs/maia-docs/03_developers/`)
+
+**Who:** Technical people who want to extend, improve, or understand MaiaOS internals
+
+**Focus:**
+- ✅ **HOW** MaiaOS is implemented
+- ✅ **WHY** architectural decisions were made
+- ✅ **WHAT** the code structure looks like
+- ✅ Technical deep-dives and implementation details
+- ❌ **NOT** how to use MaiaOS (that's for creators)
+
+**Organization by Package:**
+
+Structure developer docs by package:
+
+```
+03_developers/
+├── README.md (overview)
+├── maia-core/
+│   ├── README.md
+│   ├── architecture.md
+│   └── api-reference.md
+├── maia-schemata/
+│   ├── README.md
+│   ├── validation.md
+│   └── schema-transformation.md
+├── maia-db/
+│   ├── README.md
+│   ├── cojson-integration.md
+│   └── operations.md
+├── maia-script/
+│   ├── README.md
+│   ├── engines/
+│   └── modules/
+└── architecture/
+    └── [shared architecture docs]
+```
+
+**Writing Style:**
+- Can use more technical language, but still explain concepts
+- Show code implementation, not just usage
+- Explain trade-offs and design decisions
+- Reference source files and line numbers when helpful
+
+**Example:**
+```markdown
+# maia-core: Core System Services
+
+## Overview
+
+The `maia-core` package provides the foundational services that power MaiaOS. Think of it as the operating system kernel - it doesn't do much on its own, but everything else depends on it.
+
+## Architecture
+
+The core system is organized into:
+
+- **Services**: Core functionality (oGroup, oID, oMap, etc.)
+- **Engines**: Processing systems (validation, transformation)
+- **Utils**: Shared utilities
+
+See `libs/maia-core/src/` for implementation.
+```
+
+### Target Group 3: LLM Agents (`libs/maia-docs/04_agents/`)
+
+**Who:** AI agents (auto-generated from creator + developer docs)
+
+**Focus:**
+- ❌ **NEVER manually edit these files**
+- ✅ They're auto-generated from creator and developer docs
+- ✅ To update agent docs, update the source docs and regenerate
+
+**Regeneration:**
+```bash
+bun run generate:llm-docs
+```
+
+---
+
+## Document Structure Template
+
+Every document should follow this structure:
+
+```markdown
+# [Title]
+
+## Overview
+
+[One sentence: What is this?]
+[One paragraph: Why does it matter? What problem does it solve?]
+
+---
+
+## The Simple Version
+
+[Start with an analogy]
+[Show the simplest possible example]
+[Explain what just happened in plain English]
+
+---
+
+## How It Works
+
+[Progressive explanation]
+[Build from simple to complex]
+[Use examples at each step]
+
+---
+
+## Examples
+
+### Basic Example
+[Simplest working example]
+
+### Common Pattern
+[Most common way to use this]
+
+### Advanced Pattern
+[Complex but useful pattern]
+
+---
+
+## Key Concepts
+
+[Break down important concepts one by one]
+[Each concept gets its own section with analogy + example]
+
+---
+
+## Common Patterns
+
+[Show real-world usage patterns]
+[Explain when to use each pattern]
+
+---
+
+## Troubleshooting
+
+### Problem: [Common issue]
+**Solution:** [How to fix it]
+
+---
+
+## Related Documentation
+
+- [Link to related concepts]
+- [Link to advanced topics]
+
+---
+
+## References
+
+- Source files: `libs/package-name/src/...`
+- Related schemas: `@schema/...`
+```
+
+---
+
+## Writing Process: Before You Write
+
+**CRITICAL:** Before creating, updating, or consolidating documentation, follow this process:
+
+### Step 1: Read the Implementation
+
+**Read ALL relevant package files:**
+- `package.json` - Understand dependencies and purpose
+- `src/index.js` - See what's exported
+- `src/**/*.js` - Understand the actual implementation
+- Test files - See how it's supposed to work
+
+**Goal:** Understand what the code actually does, not what you think it does.
+
+### Step 2: Read Existing Documentation
+
+**Read ALL existing docs:**
+- Creator docs (`02_creators/`)
+- Developer docs (`03_developers/`)
+- Architecture docs (`03_developers/architecture/`)
+- Related concept docs
+
+**Goal:** Understand what's already documented, what's missing, what's outdated.
+
+### Step 3: Create Comparison/Update Plan
+
+**Create a plan that includes:**
+
+1. **What's Missing:**
+   - What concepts aren't documented?
+   - What examples are missing?
+   - What patterns aren't explained?
+
+2. **What's Outdated:**
+   - What docs don't match the implementation?
+   - What examples are broken?
+   - What concepts have changed?
+
+3. **What Needs Consolidation:**
+   - Are there duplicate explanations?
+   - Can multiple docs be merged?
+   - Is information scattered?
+
+4. **Migration Plan:**
+   - How to organize new concepts?
+   - Where do migrated concepts belong?
+   - How to maintain consistency?
+
+**Example Plan:**
+```markdown
+## Documentation Update Plan: [Feature Name]
+
+### Current State
+- ✅ Documented: [what exists]
+- ❌ Missing: [what's not documented]
+- ⚠️ Outdated: [what needs updating]
+
+### Implementation Analysis
+- Source: `libs/package-name/src/feature.js`
+- Key concepts: [list concepts found in code]
+- New concepts: [concepts not yet documented]
+
+### Update Strategy
+1. Update `02_creators/feature.md` - Add usage examples
+2. Create `03_developers/package-name/feature.md` - Add implementation details
+3. Consolidate scattered info from [files] into [target file]
+4. Add analogies for concepts: [list concepts needing analogies]
+
+### New Concepts to Document
+- Concept 1: [analogy idea] → [target doc]
+- Concept 2: [analogy idea] → [target doc]
+```
+
+### Step 4: Write/Update Documentation
+
+Only after completing steps 1-3, proceed to write or update docs following the principles above.
+
+---
+
+## Best Practices from Industry Leaders
+
+### Stripe Documentation (Industry Standard)
+
+**What makes Stripe docs great:**
+- ✅ **Progressive disclosure**: Quickstart → Guide → Reference
+- ✅ **Interactive examples**: "Try it" sections with copy-paste code
+- ✅ **Use-case organization**: Docs organized by what you're trying to do
+- ✅ **Complete examples**: Every example is runnable and complete
+
+**Apply to MaiaOS:**
+- Start with quickstart examples
+- Show complete, runnable MaiaScript examples
+- Organize by use case ("Creating a todo app" not "CoMap API")
+- Include "Try it yourself" sections
+
+### MDN Web Docs (Mozilla)
+
+**What makes MDN great:**
+- ✅ **Clear structure**: Overview → Syntax → Examples → Specifications
+- ✅ **Multiple examples**: Basic → Intermediate → Advanced
+- ✅ **Accessibility**: Clear language, good formatting
+- ✅ **Interactive**: Code examples you can edit
+
+**Apply to MaiaOS:**
+- Follow consistent structure across all docs
+- Provide examples at multiple complexity levels
+- Use clear formatting (code blocks, callouts, diagrams)
+- Make examples copy-paste ready
+
+### React Documentation
+
+**What makes React docs great:**
+- ✅ **Conceptual first**: Explains "why" before "how"
+- ✅ **Practical examples**: Real-world scenarios
+- ✅ **Progressive tutorials**: Build understanding step-by-step
+- ✅ **Common mistakes**: Shows what NOT to do
+
+**Apply to MaiaOS:**
+- Explain why MaiaOS works the way it does
+- Use real-world examples (todo apps, blogs, etc.)
+- Build tutorials that progress logically
+- Include "Common Pitfalls" sections
+
+---
+
+## Visual Elements
+
+### Use Diagrams
+
+**ASCII Art for Simple Diagrams:**
+```
+┌─────────────────┐
+│   Actor         │
+│  ┌───────────┐  │
+│  │   View    │  │
+│  └───────────┘  │
+└─────────────────┘
+```
+
+**Layer Diagrams (like cojson.md):**
+```
+LAYER 0: Primitives
+    ↓
+LAYER 1: Identifiers
+    ↓
+LAYER 2: Operations
+```
+
+### Use Callouts
+
+**✅ DO:**
+```markdown
+> **💡 Tip:** Always create your agent service actor first!
+```
+
+**⚠️ WARNING:**
+```markdown
+> **⚠️ Important:** Never use `$ref` for CoValue references - use `$co` instead!
+```
+
+**❌ DON'T:**
+```markdown
+> **❌ Common Mistake:** Don't forget to include `cotype` in your schema!
+```
+
+---
+
+## Code Examples
+
+### Every Example Must Be:
+
+1. **Complete** - Can be copied and run as-is
+2. **Realistic** - Shows actual usage, not contrived examples
+3. **Commented** - Explain what each part does
+4. **Progressive** - Start simple, build complexity
+
+### Example Format:
+
+```markdown
+### Basic Example
+
+Here's the simplest way to create an actor:
+
+```json
+{
+  "actor": {
+    "name": "greeting",
+    "view": {
+      "type": "div",
+      "children": "Hello!"
+    }
+  }
+}
+```
+
+**What this does:**
+- Creates an actor named "greeting"
+- The actor displays "Hello!" in a div element
+- This is the minimum required to create a working actor
+```
+
+### Show Before/After:
+
+```markdown
+### Before (Wrong Way)
+
+```json
+{
+  "context": {
+    "$ref": "@schema/context"  // ❌ Wrong!
+  }
+}
+```
+
+### After (Right Way)
+
+```json
+{
+  "context": {
+    "$co": "@schema/context"  // ✅ Correct!
+  }
+}
+```
+
+**Why:** `$co` is for CoValue references, `$ref` is only for internal schema definitions.
+```
+
+---
+
+## Terminology Consistency
+
+### Create a Glossary
+
+For each major concept area, maintain consistent terminology:
+
+**CoValues:**
+- ✅ "CoValue" (capital C, capital V)
+- ✅ "CoMap", "CoList", "CoStream" (capital C, capital letter for type)
+- ❌ "co-value", "coValue", "co_map"
+
+**Actors:**
+- ✅ "actor" (lowercase when referring to concept)
+- ✅ "Actor" (capitalized when referring to the class/type)
+- ✅ "actor definition" (lowercase)
+
+**Schemas:**
+- ✅ "schema" (lowercase)
+- ✅ "Schema" (capitalized when referring to the system)
+- ✅ "$schema" (with dollar sign when referring to JSON Schema field)
+
+### Document Your Choices
+
+In each doc, establish terminology early:
+
+```markdown
+## Terminology
+
+In this document:
+- **CoValue** refers to any collaborative data structure (CoMap, CoList, etc.)
+- **actor** refers to a MaiaOS component definition
+- **schema** refers to a JSON Schema definition
+```
+
+---
+
+## Review Checklist
+
+Before considering documentation complete, verify:
+
+- [ ] **Overview exists** - One sentence + one paragraph explaining what/why
+- [ ] **Analogy included** - At least one analogy explaining the concept
+- [ ] **Simple example** - Simplest possible working example
+- [ ] **Progressive complexity** - Builds from simple to complex
+- [ ] **Complete examples** - All code examples are runnable
+- [ ] **Visual elements** - Diagrams, callouts, or formatting to break up text
+- [ ] **12-year-old test** - Would a curious 12-year-old understand this?
+- [ ] **Terminology consistent** - Same terms used throughout
+- [ ] **Related docs linked** - Links to related concepts
+- [ ] **Implementation referenced** - Links to source files (for developer docs)
+- [ ] **No jargon without explanation** - Technical terms explained when first used
+- [ ] **Active voice** - Uses "MaiaOS does X" not "X is done by MaiaOS"
+- [ ] **Short sentences** - 15-20 words max per sentence
+- [ ] **One idea per sentence** - Each sentence has a single clear point
+
+---
+
+## Examples of Great Documentation
+
+### Reference: `libs/maia-docs/03_developers/architecture/cojson.md`
+
+**Why it's great:**
+- ✅ Clear layer diagram showing hierarchy
+- ✅ Progressive complexity (Layer 0 → Layer 7+)
+- ✅ Visual ASCII art diagrams
+- ✅ Examples showing full stack
+- ✅ Key insights section
+- ✅ References to source files
+
+**Use this as a template** for architecture documentation.
+
+---
+
+## Common Mistakes to Avoid
+
+### ❌ Don't Start with Jargon
+
+**Bad:**
+```markdown
+CoValues are CRDT-based collaborative data structures...
+```
+
+**Good:**
+```markdown
+Think of CoValues like shared Google Docs. When you make a change, everyone else sees it instantly, and the system automatically handles conflicts.
+```
+
+### ❌ Don't Assume Prior Knowledge
+
+**Bad:**
+```markdown
+Use the CoMap API to create collaborative maps.
+```
+
+**Good:**
+```markdown
+To create a collaborative map (think of it like a shared object that multiple people can edit), use the CoMap API like this:
+```
+
+### ❌ Don't Skip the "Why"
+
+**Bad:**
+```markdown
+Actors have a `brand` property.
+```
+
+**Good:**
+```markdown
+Actors have a `brand` property that connects them to your design system. Think of it like giving all your LEGO blocks the same color scheme - it makes everything look consistent.
+```
+
+### ❌ Don't Write Walls of Text
+
+**Bad:**
+```markdown
+CoValues are collaborative data structures that use CRDTs to enable conflict-free replication across multiple peers. They support real-time synchronization and can handle concurrent edits without requiring a central server. The system uses operational transformation to merge changes...
+```
+
+**Good:**
+```markdown
+## What Are CoValues?
+
+CoValues are like shared notebooks that multiple people can edit at the same time.
+
+**Key features:**
+- ✅ **Real-time sync** - Changes appear instantly for everyone
+- ✅ **Conflict-free** - The system automatically merges changes
+- ✅ **No server needed** - Works peer-to-peer
+
+## How They Work
+
+Think of it like this: When you write something, everyone else sees it. If two people write at the same time, the system figures out how to combine both changes without losing anything.
+```
+
+---
+
+## Final Reminder
+
+**Write like you're explaining to a curious 12-year-old.**
+
+If you find yourself writing something that wouldn't make sense to a smart 12-year-old, stop and ask:
+- "What everyday thing is this like?"
+- "How would I explain this to someone who's never heard of [technical term]?"
+- "What's the simplest way to say this?"
+
+**Your goal:** Make complex concepts accessible without dumbing them down.
+
+---
+
+## Quick Reference
+
+**Structure:**
+1. Overview (what/why)
+2. Simple version (analogy + basic example)
+3. How it works (progressive explanation)
+4. Examples (basic → advanced)
+5. Key concepts (one by one)
+6. Common patterns
+7. Troubleshooting
+8. Related docs
+
+**Writing:**
+- 12-year-old test
+- Progressive complexity
+- ADEPT method (Analogy → Diagram → Example → Plain-English → Technical)
+- Three Cs (Clarity, Conciseness, Consistency)
+
+**Process:**
+1. Read implementation
+2. Read existing docs
+3. Create comparison/update plan
+4. Write/update docs
+
+**Audience:**
+- Creators: HOW to use (examples, patterns)
+- Developers: HOW it works (implementation, architecture)
+- Agents: Auto-generated (don't touch)

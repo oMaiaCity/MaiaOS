@@ -26,6 +26,13 @@ Read the documentation in the following order for a complete understanding:
 - Schema composition and inheritance
 - Best practices
 
+### 3a. [maia-schemata Package](./maia-schemata/README.md)
+**Schema validation and transformation system**
+- ValidationEngine implementation details
+- Schema transformation for seeding
+- CoJSON types integration
+- Co-ID generation and registry
+
 ### 4. [Engines](./04_engines.md)
 **Execution engines that interpret definitions**
 - ActorEngine - Actor lifecycle management

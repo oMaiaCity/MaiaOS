@@ -14,10 +14,14 @@ When analyzing files/folders, your goal is to:
 3. **Consolidate** - Merge similar patterns, interfaces, and implementations
 4. **Abstract & Unify** - Create unified interfaces for similar functionality
 5. **Clean Up** - Remove deprecated code, fallbacks, hacks, and legacy patterns
-6. **Security Audit** - Identify and fix potential security vulnerabilities
-7. **Type Safety & Validation** - Ensure 100% typed interfaces with JSON schema validation
-8. **Maintain Parity** - Preserve 100% feature parity (no breaking changes)
-9. **Stay Safe** - Never break the current system
+6. **Split Large Files** - Break files >500 lines into smaller, logically clustered files
+7. **Decompose Functions** - Split large/complex functions into focused, single-responsibility functions
+8. **Remove Unused Imports** - Clean up all unused imports and dependencies
+9. **Apply KISS & DRY** - Keep It Simple, Stupid (KISS) and Don't Repeat Yourself (DRY) principles everywhere
+10. **Security Audit** - Identify and fix potential security vulnerabilities
+11. **Type Safety & Validation** - Ensure 100% typed interfaces with JSON schema validation
+12. **Maintain Parity** - Preserve 100% feature parity (no breaking changes)
+13. **Stay Safe** - Never break the current system
 
 ## Analysis Protocol
 
@@ -44,6 +48,35 @@ When files/folders are provided, follow this **systematic analysis process**:
 - Inconsistent naming conventions
 - Mixed concerns (business logic + infrastructure)
 
+**1.3.1 Identify Large Files (>500 Lines)**
+- **File Size**: Files exceeding 500 lines should be split
+- **Logical Clustering**: Identify logical groupings within large files:
+  - Related functions/classes that belong together
+  - Feature modules that can be extracted
+  - Utility functions that can be grouped
+  - Configuration/data that can be separated
+  - Test code that can be moved to separate test files
+- **Cohesion**: Group code by responsibility/concern
+- **Coupling**: Identify dependencies between logical clusters
+- **Folder Clustering**: If split files still belong logically together as one unit, cluster them in a shared folder:
+  - Example: `validation.helper.js` → `validation/validators.js`, `validation/transformers.js`, `validation/error-handlers.js`
+  - Example: `api-client.js` → `api-client/request.js`, `api-client/response.js`, `api-client/middleware.js`
+  - Keep related files together in a folder rather than scattering them
+- **Extraction Strategy**: Plan how to split while maintaining imports/exports and folder organization
+
+**1.3.2 Identify Large/Complex Functions**
+- **Function Length**: Functions exceeding 50-100 lines should be decomposed
+- **Cyclomatic Complexity**: Functions with high complexity (nested conditionals, loops, branches)
+- **Multiple Responsibilities**: Functions doing more than one thing
+- **Extraction Opportunities**: Identify logical blocks that can become separate functions:
+  - Validation logic
+  - Data transformation steps
+  - Error handling blocks
+  - Repeated patterns within the function
+  - Helper calculations or utilities
+- **Function Naming**: Each extracted function should have a clear, single-purpose name
+- **Dependencies**: Map what each function needs (parameters, imports)
+
 **1.4 Identify Legacy & Deprecated Code**
 - Commented-out code blocks
 - Functions marked as `@deprecated` or `TODO: remove`
@@ -52,6 +85,17 @@ When files/folders are provided, follow this **systematic analysis process**:
 - Legacy API patterns that have been replaced
 - Unused imports, variables, or exports
 - Dead code paths (unreachable code)
+
+**1.4.1 Identify Unused Imports**
+- **Import Analysis**: Scan all import statements in each file
+- **Usage Tracking**: Verify each imported item is actually used:
+  - Functions, classes, constants, types
+  - Default imports vs named imports
+  - Re-exports that aren't used
+- **Dependency Verification**: Check if imported modules are used anywhere in the file
+- **Side-Effect Imports**: Identify imports that only have side effects (may need to keep)
+- **Unused Exports**: Find exports that are never imported elsewhere
+- **Circular Dependencies**: Identify circular import chains that can be broken
 
 **1.4.1 Identify TypeScript Code (REMOVE ALL)**
 - **TypeScript Files**: `.ts`, `.tsx` files (convert to `.js` or delete)
@@ -162,6 +206,11 @@ When files/folders are provided, follow this **systematic analysis process**:
 - **Over-Engineering**: Remove unnecessary abstractions or indirection
 - **Verbose Code**: Identify verbose patterns that could be more concise
 - **Unclear Logic**: Find code that could be more readable/straightforward
+- **Large Files**: Files >500 lines that can be split into logical modules
+- **Large Functions**: Functions >50-100 lines or high complexity that can be decomposed
+- **Unused Imports**: Import statements that can be safely removed
+- **KISS Violations**: Overly complex solutions that can be simplified
+- **DRY Violations**: Repeated code patterns that can be extracted
 
 **2.3 Abstraction Opportunities**
 - **Similar Interfaces**: Find APIs that could share a common interface
@@ -197,6 +246,54 @@ When files/folders are provided, follow this **systematic analysis process**:
 - **Runtime Validation**: Missing validation at engine boundaries (config loading, payload evaluation)
 - **Type Assertions**: Use of `any`, `@ts-ignore` in engine code
 - **Schema Mismatches**: JSON schemas that don't match TypeScript types
+
+**2.7 File Splitting Opportunities**
+- **Large Files**: Files exceeding 500 lines that should be split
+- **Logical Clusters**: Identify cohesive groups of code that can be extracted:
+  - Related utility functions → `utils/` subdirectory
+  - Feature modules → separate feature files
+  - Configuration/data → separate config/data files
+  - Types/interfaces → separate type definition files
+  - Test code → separate test files
+- **Folder Clustering**: If split files belong logically together as one unit, cluster them in a shared folder:
+  - Example: Split `validation.helper.js` → `validation/` folder with `validators.js`, `transformers.js`, `error-handlers.js`, `index.js`
+  - Example: Split `api-client.js` → `api-client/` folder with `request.js`, `response.js`, `middleware.js`, `index.js`
+  - Keep related files together rather than scattering them
+- **Import/Export Strategy**: Plan how to maintain clean imports after splitting (use folder imports via index.js)
+- **Cohesion**: Group code by single responsibility/concern
+- **Coupling**: Minimize dependencies between split files (but keep related files in same folder)
+
+**2.8 Function Decomposition Opportunities**
+- **Large Functions**: Functions exceeding 50-100 lines that should be split
+- **High Complexity**: Functions with high cyclomatic complexity (>10)
+- **Multiple Responsibilities**: Functions doing more than one thing
+- **Extraction Candidates**: Identify logical blocks that can become separate functions:
+  - Validation logic → `validateX()` functions
+  - Data transformation → `transformX()` functions
+  - Error handling → `handleXError()` functions
+  - Repeated patterns → extract to helper functions
+  - Calculations → extract to pure utility functions
+- **Single Responsibility**: Each function should do ONE thing well
+- **Clear Naming**: Extracted functions should have descriptive, single-purpose names
+
+**2.9 Unused Import Opportunities**
+- **Unused Imports**: Import statements that are never used in the file
+- **Unused Exports**: Exported items that are never imported elsewhere
+- **Dead Dependencies**: Package dependencies that are no longer needed
+- **Circular Dependencies**: Import cycles that can be broken by removing unused imports
+- **Side-Effect Imports**: Imports that only have side effects (evaluate if needed)
+
+**2.10 KISS & DRY Violations**
+- **KISS Violations**: Overly complex solutions that can be simplified:
+  - Unnecessary abstractions or indirection layers
+  - Over-engineered patterns where simple code would work
+  - Complex conditionals that can be simplified
+  - Verbose code that can be more concise
+- **DRY Violations**: Repeated code patterns that should be extracted:
+  - Duplicate code blocks (exact or near-duplicate)
+  - Similar functions that can share implementation
+  - Repeated patterns that can become utilities
+  - Copy-paste code that should be refactored
 
 ### Phase 3: Safety Analysis
 
@@ -254,6 +351,28 @@ For each opportunity, design a solution that:
 - Remove fallback code paths
 - Fix hacks with proper solutions
 - Delete unused code, imports, exports
+- Remove ALL unused imports and dependencies
+
+**File Splitting:**
+- Split files >500 lines into smaller, logically clustered files
+- Extract related functions/classes into separate modules
+- Group code by single responsibility/concern
+- Maintain clean import/export structure
+- Preserve all functionality while improving organization
+
+**Function Decomposition:**
+- Split large/complex functions (>50-100 lines) into smaller functions
+- Extract logical blocks into focused, single-responsibility functions
+- Each function should do ONE thing well
+- Use clear, descriptive function names
+- Maintain same behavior with improved readability
+
+**KISS & DRY Application:**
+- Simplify overly complex solutions (KISS)
+- Extract repeated patterns into reusable utilities (DRY)
+- Remove unnecessary abstractions
+- Prefer simple, straightforward code over clever solutions
+- Consolidate duplicate code into shared implementations
 
 **4.2 Implementation Strategy**
 
@@ -278,12 +397,23 @@ Milestone 3: Simplify complex logic
   ├─ Improve readability
   └─ Verify feature parity ✅
 
-Milestone 4: Clean up legacy code
+Milestone 4: Clean up legacy code and unused imports
   ├─ Remove deprecated code
   ├─ Delete fallback paths
   ├─ Fix architectural hacks
   ├─ Remove unused code
+  ├─ Remove ALL unused imports and dependencies
   ├─ Remove ALL TypeScript code (files, types, configs, dependencies)
+  └─ Verify feature parity ✅
+
+Milestone 4.5: Split large files and decompose functions
+  ├─ Identify files >500 lines
+  ├─ Split files into logical clusters (by responsibility/concern)
+  ├─ Extract related functions/classes into separate modules
+  ├─ Identify large/complex functions (>50-100 lines)
+  ├─ Decompose functions into focused, single-responsibility functions
+  ├─ Update all imports/exports
+  ├─ Apply KISS & DRY principles throughout
   └─ Verify feature parity ✅
 
 Milestone 5: Security audit and fixes
@@ -332,6 +462,11 @@ When analyzing code, provide:
 - **Duplication**: [X] duplicate code blocks found
 - **Similar Interfaces**: [Y] interfaces that could be unified
 - **Complexity**: [Z] functions that could be simplified
+- **Large Files**: [L] files >500 lines that should be split
+- **Large Functions**: [F] functions >50-100 lines that should be decomposed
+- **Unused Imports**: [U] unused imports/dependencies found
+- **KISS Violations**: [K] overly complex solutions that can be simplified
+- **DRY Violations**: [D] repeated code patterns that can be extracted
 - **Legacy Code**: [W] deprecated/legacy patterns found
 - **Hacks**: [V] architectural hacks/workarounds found
 - **TypeScript Code**: [T] TypeScript files/configs/dependencies found (REMOVE ALL - project is JavaScript-only)
@@ -379,6 +514,50 @@ When analyzing code, provide:
    - Risk: [high/medium/low]
    - Security Risk: [critical/high/medium/low] (especially for user-generated configs)
    - Type coverage: [current %] → [target: 100%]
+
+### File Splitting Opportunities
+1. [Description of large file to split]
+   - File: [path/to/large-file.js]
+   - Current size: [X] lines
+   - Logical clusters: [list of clusters to extract]
+   - Folder structure: [proposed folder if files belong together, e.g., `validation/`]
+   - New files: [list of proposed new files with folder structure]
+     - Example: `validation/validators.js`, `validation/transformers.js`, `validation/index.js`
+   - Impact: [high/medium/low]
+   - Risk: [high/medium/low]
+
+### Function Decomposition Opportunities
+1. [Description of large/complex function to decompose]
+   - File: [path/to/file.js]
+   - Function: [functionName]
+   - Current size/complexity: [X lines, Y cyclomatic complexity]
+   - Extraction points: [list of blocks to extract]
+   - New functions: [list of proposed new functions]
+   - Impact: [high/medium/low]
+   - Risk: [high/medium/low]
+
+### Unused Import Opportunities
+1. [Description of unused imports]
+   - File: [path/to/file.js]
+   - Unused imports: [list of unused imports]
+   - Unused dependencies: [list of unused packages]
+   - Impact: [high/medium/low]
+   - Risk: [low] (safe to remove)
+
+### KISS & DRY Violations
+1. [Description of KISS violation - overly complex solution]
+   - Files affected: [list]
+   - Complexity: [description]
+   - Simplified approach: [description]
+   - Impact: [high/medium/low]
+   - Risk: [high/medium/low]
+
+2. [Description of DRY violation - repeated code]
+   - Files affected: [list]
+   - Duplication: [description]
+   - Consolidation approach: [description]
+   - Impact: [high/medium/low]
+   - Risk: [high/medium/low]
 ```
 
 ### Detailed Plan
@@ -404,6 +583,20 @@ When analyzing code, provide:
 - `path/to/deprecated.js` - [why it's safe to delete]
 - `path/to/file.ts` - TypeScript file (convert to .js or delete)
 - `tsconfig.json` - TypeScript config (not used, delete)
+
+**Files to Split**:
+- `path/to/large-file.js` (X lines) → Split into folder `path/to/large-file/`:
+  - `path/to/large-file/utils.js` - [utility functions]
+  - `path/to/large-file/validators.js` - [validation logic]
+  - `path/to/large-file/transformers.js` - [transformation logic]
+  - `path/to/large-file/index.js` - [re-exports for backward compatibility]
+  - **Note**: Files clustered in shared folder since they belong logically together as one unit
+
+**Functions to Decompose**:
+- `path/to/file.js::largeFunction()` (X lines) → Split into:
+  - `validateInput()` - [validation logic]
+  - `transformData()` - [transformation logic]
+  - `handleErrors()` - [error handling]
 
 **Feature Parity Check**:
 - ✅ Feature X: [how it's preserved]
@@ -462,6 +655,8 @@ When analyzing code, provide:
 - ✅ Fix hacks with proper solutions
 - ✅ Remove legacy compatibility layers
 - ✅ Clean up unused configuration
+- ✅ **Remove ALL unused imports**: Scan every file and remove imports that aren't used
+- ✅ **Remove unused dependencies**: Remove packages from package.json that aren't imported anywhere
 - ✅ **Remove ALL TypeScript code** (project uses JavaScript only):
   - Delete `.ts`/`.tsx` files (convert to `.js` if needed)
   - Delete `tsconfig.json` files
@@ -477,9 +672,151 @@ When analyzing code, provide:
 - ❌ Delete code that's still referenced
 - ❌ Remove error handling that's still needed
 - ❌ Clean up code that's actively used
+- ❌ **Keep unused imports** - remove them completely
 - ❌ **Keep TypeScript files** - convert to JavaScript or delete
 - ❌ **Keep TypeScript dependencies** - remove from package.json
 - ❌ **Keep TypeScript configs** - delete tsconfig.json files
+
+### When Splitting Large Files
+
+**DO:**
+- ✅ **Split files >500 lines** into smaller, logically clustered files
+- ✅ **Group by responsibility**: Extract related functions/classes that share a single concern
+- ✅ **Cluster in shared folders**: If split files still belong logically together as one unit, place them in a shared folder:
+  - Example: `validation.helper.js` (600 lines) → `validation/validators.js`, `validation/transformers.js`, `validation/error-handlers.js`
+  - Example: `api-client.js` (800 lines) → `api-client/request.js`, `api-client/response.js`, `api-client/middleware.js`, `api-client/index.js`
+  - Keep related files together rather than scattering them across the codebase
+- ✅ **Create logical modules**: Group utilities, features, configs, types separately
+- ✅ **Use index files**: Create `index.js` in the folder to re-export public APIs (maintains backward compatibility)
+- ✅ **Maintain clean imports**: Update all import/export statements correctly
+- ✅ **Preserve functionality**: Ensure all code still works after splitting
+- ✅ **Use descriptive names**: New files should have clear, purpose-driven names
+- ✅ **Follow directory structure**: Place files in appropriate subdirectories (utils/, features/, config/, etc.)
+- ✅ **Update exports**: Create index files or update exports to maintain API compatibility
+
+**DON'T:**
+- ❌ Split files arbitrarily (must be logical clustering)
+- ❌ Scatter related files across different directories (cluster them in a shared folder)
+- ❌ Break circular dependencies by splitting (fix the dependency issue first)
+- ❌ Split files that are already well-organized (<500 lines)
+- ❌ Create too many tiny files (balance between size and organization)
+- ❌ Break public APIs when splitting (maintain export compatibility via index.js)
+- ❌ Split without updating imports (will break the code)
+
+**File Splitting Strategy:**
+1. **Identify logical clusters** within the large file (by responsibility/concern)
+2. **Determine folder structure**: If split files belong together, create a shared folder (e.g., `validation/`, `api-client/`)
+3. **Create new files** for each logical cluster with descriptive names in the appropriate folder
+4. **Create index.js** in the folder to re-export public APIs (maintains backward compatibility)
+5. **Move code** to appropriate new files, maintaining functionality
+6. **Update imports/exports** in all affected files (use folder imports: `from './validation'` instead of `from './validation/validators'`)
+7. **Update original file** to import and re-export from folder (or remove if empty and replaced by folder)
+8. **Verify** all functionality still works
+
+**Example:**
+```javascript
+// Before: validation.helper.js (600 lines)
+export function validateEmail() { ... }
+export function validatePhone() { ... }
+export function transformData() { ... }
+export function handleErrors() { ... }
+
+// After: validation/ folder structure
+// validation/validators.js
+export function validateEmail() { ... }
+export function validatePhone() { ... }
+
+// validation/transformers.js
+export function transformData() { ... }
+
+// validation/error-handlers.js
+export function handleErrors() { ... }
+
+// validation/index.js (re-exports for backward compatibility)
+export * from './validators.js';
+export * from './transformers.js';
+export * from './error-handlers.js';
+
+// Other files can still import the same way:
+import { validateEmail, transformData } from './validation';
+```
+
+### When Decomposing Functions
+
+**DO:**
+- ✅ **Split large functions** (>50-100 lines) into smaller, focused functions
+- ✅ **Extract by responsibility**: Each function should do ONE thing well
+- ✅ **Use clear names**: Extracted functions should have descriptive, single-purpose names
+- ✅ **Extract logical blocks**: Validation, transformation, error handling, calculations
+- ✅ **Maintain behavior**: Ensure decomposed functions produce same results
+- ✅ **Reduce complexity**: Lower cyclomatic complexity by extracting conditionals/loops
+- ✅ **Improve readability**: Code should be easier to understand after decomposition
+- ✅ **Create pure functions**: Extract calculations/transformations into pure utility functions when possible
+
+**DON'T:**
+- ❌ Over-decompose (don't create functions for every 2-3 lines)
+- ❌ Extract without clear purpose (each function should have a reason)
+- ❌ Break function behavior when decomposing (maintain exact same logic)
+- ❌ Create functions with unclear names (names should describe what they do)
+- ❌ Extract code that's only used once (unless it improves readability significantly)
+- ❌ Decompose functions that are already simple and clear
+
+**Function Decomposition Strategy:**
+1. **Identify extraction points**: Validation, transformation, error handling, repeated patterns
+2. **Extract logical blocks** into separate functions with clear names
+3. **Update function calls** to use extracted functions
+4. **Verify behavior** remains identical
+5. **Improve readability** - code should be easier to understand
+
+**Extraction Patterns:**
+- **Validation logic** → `validateX(input)` functions
+- **Data transformation** → `transformX(data)` functions
+- **Error handling** → `handleXError(error)` functions
+- **Repeated patterns** → extract to helper/utility functions
+- **Complex calculations** → extract to pure utility functions
+- **Nested conditionals** → extract to separate functions with early returns
+
+### When Applying KISS & DRY Principles
+
+**KISS (Keep It Simple, Stupid):**
+
+**DO:**
+- ✅ **Prefer simple solutions** over complex ones
+- ✅ **Remove unnecessary abstractions** that don't add value
+- ✅ **Simplify complex conditionals** with early returns or clearer logic
+- ✅ **Use straightforward code** instead of clever tricks
+- ✅ **Reduce indirection** - don't add layers unless necessary
+- ✅ **Make code readable** - simple code is easier to understand and maintain
+
+**DON'T:**
+- ❌ Over-engineer solutions (use simplest approach that works)
+- ❌ Add abstractions "just in case" (YAGNI - You Aren't Gonna Need It)
+- ❌ Use complex patterns when simple code would work
+- ❌ Optimize prematurely (keep it simple first, optimize if needed)
+- ❌ Add unnecessary indirection layers
+
+**DRY (Don't Repeat Yourself):**
+
+**DO:**
+- ✅ **Extract duplicate code** into shared utilities
+- ✅ **Consolidate similar functions** into common implementations
+- ✅ **Create reusable helpers** for repeated patterns
+- ✅ **Use configuration** instead of hardcoding repeated values
+- ✅ **Share common logic** across similar functions
+- ✅ **Create utilities** for repeated calculations/transformations
+
+**DON'T:**
+- ❌ Copy-paste code (extract to shared function instead)
+- ❌ Repeat similar logic in multiple places (consolidate)
+- ❌ Duplicate configuration (use shared config)
+- ❌ Create duplicate implementations (unify them)
+- ❌ Repeat validation/transformation logic (extract to utilities)
+
+**KISS & DRY Balance:**
+- **KISS first**: Prefer simple, straightforward code
+- **DRY when it helps**: Extract duplication when it improves maintainability
+- **Don't over-abstract**: Don't create complex abstractions just to avoid duplication
+- **Find the sweet spot**: Simple code that avoids unnecessary repetition
 
 ### When Abstracting/Unifying
 
@@ -606,7 +943,12 @@ Before finalizing any changes, verify:
 - [ ] **Feature Parity**: All features work identically
 - [ ] **No Breaking Changes**: Public APIs unchanged (or documented)
 - [ ] **No Dead Code**: All code paths are reachable
-- [ ] **No Duplicates**: Duplicate code has been consolidated
+- [ ] **No Duplicates**: Duplicate code has been consolidated (DRY principle applied)
+- [ ] **No Large Files**: All files >500 lines have been split into logical clusters
+- [ ] **No Large Functions**: All functions >50-100 lines have been decomposed
+- [ ] **No Unused Imports**: All unused imports and dependencies removed
+- [ ] **KISS Applied**: Code is simple and straightforward (no over-engineering)
+- [ ] **DRY Applied**: No repeated code patterns (consolidated into utilities)
 - [ ] **No Legacy Code**: Deprecated code has been removed
 - [ ] **No Hacks**: Architectural hacks have been properly fixed
 - [ ] **No TypeScript**: ALL TypeScript files, types, configs, and dependencies removed (project is JavaScript-only)
@@ -633,17 +975,26 @@ Before finalizing any changes, verify:
 ## Example Workflow
 
 1. **User**: "@folder1 @folder2 analyze and consolidate"
-2. **Discovery**: Read all files, map architecture, find duplicates, scan security, audit types
-3. **Analysis**: Identify consolidation opportunities, security issues, type gaps, assess risks
-4. **Plan**: Create detailed milestone plan with safety checks (6 milestones)
-5. **Implement**: Execute changes incrementally, verify after each milestone:
-   - Milestone 1-4: Consolidate, unify, simplify, cleanup
+2. **Discovery**: Read all files, map architecture, find duplicates, identify large files/functions, find unused imports, scan security, audit types
+3. **Analysis**: Identify consolidation opportunities, file splitting needs, function decomposition needs, unused imports, KISS/DRY violations, security issues, type gaps, assess risks
+4. **Plan**: Create detailed milestone plan with safety checks (7 milestones):
+   - Milestone 1-3: Consolidate, unify, simplify
+   - Milestone 4: Clean up legacy code and unused imports
+   - Milestone 4.5: Split large files and decompose functions, apply KISS/DRY
    - Milestone 5: Fix security vulnerabilities
    - Milestone 6: Add MaiaScript & engine types, validation, input sanitization (100% coverage)
+5. **Implement**: Execute changes incrementally, verify after each milestone:
+   - Milestone 1-3: Consolidate, unify, simplify
+   - Milestone 4: Remove deprecated code, unused imports, TypeScript
+   - Milestone 4.5: Split large files, decompose functions, apply KISS/DRY principles
+   - Milestone 5: Fix security vulnerabilities
+   - Milestone 6: Add MaiaScript & engine types, validation, input sanitization
 6. **Verify**: Test all functionality, ensure feature parity
-7. **Security**: Verify all security issues fixed, no vulnerabilities remain
-8. **MaiaScript Type Safety**: Verify 100% type coverage for DSL and engines, all configs validated, input sanitized
-9. **Document**: Update comments/docs to reflect changes
+7. **File Organization**: Verify all files <500 lines, functions <50-100 lines, no unused imports
+8. **KISS/DRY**: Verify code is simple and DRY (no unnecessary complexity or duplication)
+9. **Security**: Verify all security issues fixed, no vulnerabilities remain
+10. **MaiaScript Type Safety**: Verify 100% type coverage for DSL and engines, all configs validated, input sanitized
+11. **Document**: Update comments/docs to reflect changes
 
 ## Key Principles
 
@@ -653,11 +1004,16 @@ Before finalizing any changes, verify:
 4. **No Regressions**: Maintain exact behavior (same inputs → same outputs).
 5. **Complete Cleanup**: Remove deprecated code completely, don't leave it commented.
 6. **Unified Patterns**: Similar functionality should use similar patterns.
-7. **No TypeScript**: Remove ALL TypeScript code - project uses JavaScript only (convert .ts to .js or delete, remove types, configs, dependencies).
-8. **Security First**: Fix security vulnerabilities immediately, especially critical ones.
-9. **MaiaScript Type Safety**: All MaiaScript expressions and engines must be typed with JSON schemas (CRITICAL for user-generated configs) - use JSON schemas, NOT TypeScript types.
-10. **Validate Engine Boundaries**: All engine boundaries (config loading, MaiaScript evaluation, HTML rendering) must have runtime validation and input sanitization.
-11. **User-Generated Configs**: Never trust user/AI-generated JSON configs - always validate and sanitize before execution.
+7. **File Size Limits**: Split files >500 lines into smaller, logically clustered files.
+8. **Function Size Limits**: Decompose functions >50-100 lines into focused, single-responsibility functions.
+9. **Remove Unused Code**: Remove ALL unused imports, exports, and dependencies.
+10. **KISS Principle**: Keep It Simple, Stupid - prefer simple solutions over complex ones.
+11. **DRY Principle**: Don't Repeat Yourself - extract duplicate code into shared utilities.
+12. **No TypeScript**: Remove ALL TypeScript code - project uses JavaScript only (convert .ts to .js or delete, remove types, configs, dependencies).
+13. **Security First**: Fix security vulnerabilities immediately, especially critical ones.
+14. **MaiaScript Type Safety**: All MaiaScript expressions and engines must be typed with JSON schemas (CRITICAL for user-generated configs) - use JSON schemas, NOT TypeScript types.
+15. **Validate Engine Boundaries**: All engine boundaries (config loading, MaiaScript evaluation, HTML rendering) must have runtime validation and input sanitization.
+16. **User-Generated Configs**: Never trust user/AI-generated JSON configs - always validate and sanitize before execution.
 
 ---
 

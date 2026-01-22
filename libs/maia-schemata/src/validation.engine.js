@@ -8,6 +8,8 @@
  */
 import { ajvCoTypesPlugin } from './ajv-co-types-plugin.js';
 import customMetaSchema from './os/meta.schema.json';
+import baseMetaSchema from './os/base-meta-schema.json';
+import { formatValidationErrors, withSchemaValidationDisabled } from './validation.helper.js';
 
 export class ValidationEngine {
   constructor() {
@@ -130,210 +132,11 @@ export class ValidationEngine {
    * @returns {Object} Meta schema object
    */
   static getBaseMetaSchema() {
-    const metaSchemaId = 'https://json-schema.org/draft/2020-12/schema';
-    
     // JSON Schema Draft 2020-12 meta-schema
     // This is the foundation schema that validates all other schemas
     // The metaschema itself validates against the hardcoded standard (breaks circular dependency)
     // All OTHER schemas validate against @schema/meta-schema (dynamically loaded)
-    return {
-      $schema: metaSchemaId, // Hardcoded standard - breaks bootstrap circular dependency!
-      $id: metaSchemaId,
-      $vocabulary: {
-        'https://json-schema.org/draft/2020-12/vocab/core': true,
-        'https://json-schema.org/draft/2020-12/vocab/applicator': true,
-        'https://json-schema.org/draft/2020-12/vocab/unevaluated': true,
-        'https://json-schema.org/draft/2020-12/vocab/validation': true,
-        'https://json-schema.org/draft/2020-12/vocab/meta-data': true,
-        'https://json-schema.org/draft/2020-12/vocab/format-annotation': true,
-        'https://json-schema.org/draft/2020-12/vocab/content': true
-      },
-      $dynamicAnchor: 'meta',
-      title: 'Core and Validation specifications meta-schema',
-      type: ['object', 'boolean'],
-      properties: {
-        $id: {
-          type: 'string',
-          format: 'uri-reference',
-          pattern: '^[^#]*#?$'
-        },
-        $schema: {
-          type: 'string',
-          format: 'uri-reference'
-        },
-        $anchor: {
-          type: 'string',
-          pattern: '^[A-Za-z][-A-Za-z0-9.:_]*$'
-        },
-        $ref: {
-          type: 'string',
-          format: 'uri-reference'
-        },
-        $dynamicRef: {
-          type: 'string',
-          format: 'uri-reference'
-        },
-        $dynamicAnchor: {
-          type: 'string',
-          pattern: '^[A-Za-z][-A-Za-z0-9.:_]*$'
-        },
-        $vocabulary: {
-          type: 'object',
-          patternProperties: {
-            '^[^#]*#?$': {
-              type: 'boolean'
-            }
-          },
-          additionalProperties: false
-        },
-        $comment: {
-          type: 'string'
-        },
-        $defs: {
-          type: 'object',
-          additionalProperties: { $dynamicRef: '#meta' },
-          default: {}
-        },
-        type: {
-          anyOf: [
-            { $ref: '#/$defs/simpleTypes' },
-            {
-              type: 'array',
-              items: { $ref: '#/$defs/simpleTypes' },
-              minItems: 1,
-              uniqueItems: true
-            }
-          ]
-        },
-        const: true,
-        enum: {
-          type: 'array',
-          items: true
-        },
-        multipleOf: {
-          type: 'number',
-          exclusiveMinimum: 0
-        },
-        maximum: { type: 'number' },
-        exclusiveMaximum: { type: 'number' },
-        minimum: { type: 'number' },
-        exclusiveMinimum: { type: 'number' },
-        maxLength: { $ref: '#/$defs/nonNegativeInteger' },
-        minLength: { $ref: '#/$defs/nonNegativeIntegerDefault0' },
-        pattern: {
-          type: 'string',
-          format: 'regex'
-        },
-        maxItems: { $ref: '#/$defs/nonNegativeInteger' },
-        minItems: { $ref: '#/$defs/nonNegativeIntegerDefault0' },
-        uniqueItems: {
-          type: 'boolean',
-          default: false
-        },
-        maxContains: { $ref: '#/$defs/nonNegativeInteger' },
-        minContains: {
-          $ref: '#/$defs/nonNegativeInteger',
-          default: 1
-        },
-        maxProperties: { $ref: '#/$defs/nonNegativeInteger' },
-        minProperties: { $ref: '#/$defs/nonNegativeIntegerDefault0' },
-        required: { $ref: '#/$defs/stringArray' },
-        dependentRequired: {
-          type: 'object',
-          additionalProperties: {
-            $ref: '#/$defs/stringArray'
-          }
-        },
-        properties: {
-          type: 'object',
-          additionalProperties: { $dynamicRef: '#meta' },
-          default: {}
-        },
-        patternProperties: {
-          type: 'object',
-          additionalProperties: { $dynamicRef: '#meta' },
-          propertyNames: { format: 'regex' },
-          default: {}
-        },
-        additionalProperties: { $dynamicRef: '#meta' },
-        propertyNames: { $dynamicRef: '#meta' },
-        unevaluatedItems: { $dynamicRef: '#meta' },
-        unevaluatedProperties: { $dynamicRef: '#meta' },
-        items: { $dynamicRef: '#meta' },
-        prefixItems: {
-          $ref: '#/$defs/schemaArray'
-        },
-        contains: { $dynamicRef: '#meta' },
-        allOf: {
-          $ref: '#/$defs/schemaArray'
-        },
-        anyOf: {
-          $ref: '#/$defs/schemaArray'
-        },
-        oneOf: {
-          $ref: '#/$defs/schemaArray'
-        },
-        not: { $dynamicRef: '#meta' },
-        if: { $dynamicRef: '#meta' },
-        then: { $dynamicRef: '#meta' },
-        else: { $dynamicRef: '#meta' },
-        format: { type: 'string' },
-        contentEncoding: { type: 'string' },
-        contentMediaType: { type: 'string' },
-        contentSchema: { $dynamicRef: '#meta' },
-        title: { type: 'string' },
-        description: { type: 'string' },
-        default: true,
-        deprecated: {
-          type: 'boolean',
-          default: false
-        },
-        readOnly: {
-          type: 'boolean',
-          default: false
-        },
-        writeOnly: {
-          type: 'boolean',
-          default: false
-        },
-        examples: {
-          type: 'array',
-          items: true
-        }
-      },
-      $defs: {
-        nonNegativeInteger: {
-          type: 'integer',
-          minimum: 0
-        },
-        nonNegativeIntegerDefault0: {
-          $ref: '#/$defs/nonNegativeInteger',
-          default: 0
-        },
-        simpleTypes: {
-          enum: [
-            'array',
-            'boolean',
-            'integer',
-            'null',
-            'number',
-            'object',
-            'string'
-          ]
-        },
-        stringArray: {
-          type: 'array',
-          items: { type: 'string' },
-          uniqueItems: true,
-          default: []
-        },
-        schemaArray: {
-          type: 'array',
-          minItems: 1,
-          items: { $dynamicRef: '#meta' }
-        }
-      }
-    };
+    return baseMetaSchema;
   }
 
   /**
@@ -346,37 +149,32 @@ export class ValidationEngine {
     
     // Temporarily disable schema validation to add meta-schema
     // (meta-schema can't validate itself due to circular references)
-    const originalValidateSchema = this.ajv.opts.validateSchema;
-    this.ajv.opts.validateSchema = false;
-    
     const metaSchema = ValidationEngine.getBaseMetaSchema();
 
     try {
-      // Register with standard ID (if not already registered by AJV)
-      if (!this.ajv.getSchema(metaSchemaId)) {
-        this.ajv.addMetaSchema(metaSchema, metaSchema.$id);
-      }
-      
-      // CRITICAL: Always register with dynamic ID, even if standard ID exists
-      // This allows schemas to use "$schema": "@schema/meta-schema"
-      if (!this.ajv.getSchema(metaSchemaDynamicId)) {
-        // Create copy with dynamic $id to ensure proper registration
-        const metaSchemaCopy = JSON.parse(JSON.stringify(metaSchema));
-        metaSchemaCopy.$id = metaSchemaDynamicId;
-        this.ajv.addMetaSchema(metaSchemaCopy, metaSchemaDynamicId);
-      }
+      withSchemaValidationDisabled(this.ajv, () => {
+        // Register with standard ID (if not already registered by AJV)
+        if (!this.ajv.getSchema(metaSchemaId)) {
+          this.ajv.addMetaSchema(metaSchema, metaSchema.$id);
+        }
+        
+        // CRITICAL: Always register with dynamic ID, even if standard ID exists
+        // This allows schemas to use "$schema": "@schema/meta-schema"
+        if (!this.ajv.getSchema(metaSchemaDynamicId)) {
+          // Create copy with dynamic $id to ensure proper registration
+          const metaSchemaCopy = JSON.parse(JSON.stringify(metaSchema));
+          metaSchemaCopy.$id = metaSchemaDynamicId;
+          this.ajv.addMetaSchema(metaSchemaCopy, metaSchemaDynamicId);
+        }
+      });
       
       console.log('[ValidationEngine] Loaded meta-schema for draft-2020-12');
     } catch (error) {
       // If meta-schema already exists, that's fine (might be registered elsewhere)
       if (!error.message || !error.message.includes('already exists')) {
         console.warn('[ValidationEngine] Failed to add meta-schema:', error.message);
-        this.ajv.opts.validateSchema = false;
         return;
       }
-    } finally {
-      // Restore schema validation setting
-      this.ajv.opts.validateSchema = originalValidateSchema;
     }
   }
 
@@ -388,41 +186,29 @@ export class ValidationEngine {
     const customMetaSchemaId = '@schema/meta';
     
     // Temporarily disable schema validation to add custom meta-schema
-    const originalValidateSchema = this.ajv.opts.validateSchema;
-    this.ajv.opts.validateSchema = false;
-    
     try {
-      // Register with @schema/ format
-      if (!this.ajv.getSchema(customMetaSchemaId)) {
-        this.ajv.addMetaSchema(customMetaSchema, customMetaSchemaId);
-      }
-      
-      console.log('[ValidationEngine] Loaded CoJSON custom meta-schema');
+      withSchemaValidationDisabled(this.ajv, () => {
+        // Register with @schema/ format
+        if (!this.ajv.getSchema(customMetaSchemaId)) {
+          this.ajv.addMetaSchema(customMetaSchema, customMetaSchemaId);
+        }
+        
+        console.log('[ValidationEngine] Loaded CoJSON custom meta-schema');
+      });
     } catch (error) {
       if (!error.message || !error.message.includes('already exists')) {
         console.warn('[ValidationEngine] Failed to add CoJSON meta-schema:', error.message);
       }
-    } finally {
-      this.ajv.opts.validateSchema = originalValidateSchema;
     }
   }
 
   /**
-   * Validate a schema against the meta schema
-   * @param {Object} schema - Schema to validate
-   * @returns {{valid: boolean, errors: Array|null}} Validation result
+   * Resolve meta-schema ID from co-id or return as-is
+   * @private
+   * @param {string} schemaMetaSchemaId - Meta-schema ID (may be co-id)
+   * @returns {Promise<{resolvedMetaSchemaId: string, metaSchemaObject: Object|null}>}
    */
-  async validateSchemaAgainstMeta(schema) {
-    await this.initialize();
-    
-    // Dynamically determine which meta schema to use based on schema's $schema field
-    let schemaMetaSchemaId = schema.$schema;
-    
-    if (!schemaMetaSchemaId) {
-      throw new Error(`[ValidationEngine] Schema missing required $schema field. All schemas must declare their meta schema.`);
-    }
-    
-    // If $schema is a co-id, resolve it to get the actual meta-schema
+  async _resolveMetaSchemaId(schemaMetaSchemaId) {
     let resolvedMetaSchemaId = schemaMetaSchemaId;
     let metaSchemaObject = null;
     
@@ -431,16 +217,11 @@ export class ValidationEngine {
       if (this.schemaResolver) {
         metaSchemaObject = await this.schemaResolver(schemaMetaSchemaId);
         if (metaSchemaObject && metaSchemaObject.$id) {
-          // Use the resolved meta-schema's $id to determine which validator to use
-          // The $id might still be a co-id, so we need to check the original $id
-          // Look for the original human-readable ID in the resolved schema
-          // For meta-schemas, we check if it's registered with '@schema/meta' or standard meta-schema ID
           resolvedMetaSchemaId = metaSchemaObject.$id;
         } else {
           // If we can't resolve, check if it's registered in AJV by co-id
           const coIdValidator = this.ajv.getSchema(schemaMetaSchemaId);
           if (coIdValidator) {
-            // Use the co-id directly as the validator key
             resolvedMetaSchemaId = schemaMetaSchemaId;
           } else {
             throw new Error(`[ValidationEngine] Could not resolve meta-schema co-id '${schemaMetaSchemaId}'. Schema resolver returned null or undefined.`);
@@ -457,46 +238,61 @@ export class ValidationEngine {
       }
     }
     
-    // Determine which meta-schema validator to use
-    let metaValidator;
+    return { resolvedMetaSchemaId, metaSchemaObject };
+  }
+
+  /**
+   * Determine meta-schema type (CoJSON vs standard JSON Schema)
+   * @private
+   * @param {Object} metaSchemaObject - Resolved meta-schema object
+   * @returns {string} Target meta-schema ID ('@schema/meta' or standard meta-schema ID)
+   */
+  _determineMetaSchemaType(metaSchemaObject) {
+    // Check if resolved object has properties that indicate meta-schema type
+    // CoJSON meta-schema has properties.cotype with enum ["comap", "colist", "costream"]
+    // CoJSON meta-schema also has $vocabulary with "https://maiaos.dev/vocab/cojson": true
+    // Standard meta-schema has $vocabulary but no cotype property
+    const hasCotypeProperty = metaSchemaObject.properties && 
+      metaSchemaObject.properties.cotype &&
+      metaSchemaObject.properties.cotype.enum &&
+      Array.isArray(metaSchemaObject.properties.cotype.enum) &&
+      metaSchemaObject.properties.cotype.enum.includes('comap');
     
+    const hasCojsonVocabulary = metaSchemaObject.$vocabulary && 
+      metaSchemaObject.$vocabulary['https://maiaos.dev/vocab/cojson'] === true;
+    
+    if (hasCotypeProperty || hasCojsonVocabulary) {
+      // This is the CoJSON meta-schema
+      return '@schema/meta';
+    } else if (metaSchemaObject.$vocabulary) {
+      // This is likely the standard JSON Schema meta-schema
+      return 'https://json-schema.org/draft/2020-12/schema';
+    } else {
+      // Default to CoJSON meta-schema for transformed schemas (most common case)
+      return '@schema/meta';
+    }
+  }
+
+  /**
+   * Get meta-schema validator, registering if necessary
+   * @private
+   * @param {string} resolvedMetaSchemaId - Resolved meta-schema ID
+   * @param {Object|null} metaSchemaObject - Resolved meta-schema object (if available)
+   * @returns {Function|null} Meta-schema validator function
+   */
+  _getMetaSchemaValidator(resolvedMetaSchemaId, metaSchemaObject) {
     // Check by ID first (for human-readable IDs)
     if (resolvedMetaSchemaId === '@schema/meta' || resolvedMetaSchemaId === '@schema/meta-schema') {
-      // Use custom CoJSON meta schema (strictly requires cotype - comap, colist, or costream)
-      metaValidator = this.ajv.getSchema('@schema/meta');
+      return this.ajv.getSchema('@schema/meta');
     } else if (resolvedMetaSchemaId === 'https://json-schema.org/draft/2020-12/schema') {
-      // Use standard JSON Schema meta schema (for meta schema itself)
-      metaValidator = this.ajv.getSchema('https://json-schema.org/draft/2020-12/schema');
+      return this.ajv.getSchema('https://json-schema.org/draft/2020-12/schema');
     } else if (resolvedMetaSchemaId.startsWith('co_z')) {
       // Co-id reference - try to get validator by co-id first
-      metaValidator = this.ajv.getSchema(resolvedMetaSchemaId);
+      let metaValidator = this.ajv.getSchema(resolvedMetaSchemaId);
       
       // If not found by co-id, determine type from resolved object structure and register if needed
       if (!metaValidator && metaSchemaObject) {
-        // Check if resolved object has properties that indicate meta-schema type
-        // CoJSON meta-schema has properties.cotype with enum ["comap", "colist", "costream"]
-        // CoJSON meta-schema also has $vocabulary with "https://maiaos.dev/vocab/cojson": true
-        // Standard meta-schema has $vocabulary but no cotype property
-        const hasCotypeProperty = metaSchemaObject.properties && 
-          metaSchemaObject.properties.cotype &&
-          metaSchemaObject.properties.cotype.enum &&
-          Array.isArray(metaSchemaObject.properties.cotype.enum) &&
-          metaSchemaObject.properties.cotype.enum.includes('comap');
-        
-        const hasCojsonVocabulary = metaSchemaObject.$vocabulary && 
-          metaSchemaObject.$vocabulary['https://maiaos.dev/vocab/cojson'] === true;
-        
-        let targetMetaSchemaId;
-        if (hasCotypeProperty || hasCojsonVocabulary) {
-          // This is the CoJSON meta-schema
-          targetMetaSchemaId = '@schema/meta';
-        } else if (metaSchemaObject.$vocabulary) {
-          // This is likely the standard JSON Schema meta-schema
-          targetMetaSchemaId = 'https://json-schema.org/draft/2020-12/schema';
-        } else {
-          // Default to CoJSON meta-schema for transformed schemas (most common case)
-          targetMetaSchemaId = '@schema/meta';
-        }
+        const targetMetaSchemaId = this._determineMetaSchemaType(metaSchemaObject);
         
         // Try to get the validator for the target meta-schema
         metaValidator = this.ajv.getSchema(targetMetaSchemaId);
@@ -505,18 +301,14 @@ export class ValidationEngine {
         if (!metaValidator && metaSchemaObject) {
           try {
             // Temporarily disable schema validation to register meta-schema
-            const originalValidateSchema = this.ajv.opts.validateSchema;
-            this.ajv.opts.validateSchema = false;
-            try {
+            withSchemaValidationDisabled(this.ajv, () => {
               // Register with both co-id and target meta-schema ID
               this.ajv.addSchema(metaSchemaObject, resolvedMetaSchemaId);
               if (targetMetaSchemaId !== resolvedMetaSchemaId) {
                 this.ajv.addSchema(metaSchemaObject, targetMetaSchemaId);
               }
               metaValidator = this.ajv.getSchema(targetMetaSchemaId);
-            } finally {
-              this.ajv.opts.validateSchema = originalValidateSchema;
-            }
+            });
           } catch (error) {
             // If registration fails, try to use the target meta-schema validator directly
             metaValidator = this.ajv.getSchema(targetMetaSchemaId);
@@ -527,9 +319,33 @@ export class ValidationEngine {
       if (!metaValidator) {
         throw new Error(`[ValidationEngine] Meta-schema validator not found for co-id '${resolvedMetaSchemaId}'. Make sure the meta-schema is registered in AJV.`);
       }
+      
+      return metaValidator;
     } else {
-      throw new Error(`[ValidationEngine] Unknown meta schema '${schemaMetaSchemaId}' (resolved to '${resolvedMetaSchemaId}'). Expected '@schema/meta' or standard JSON Schema meta schema.`);
+      throw new Error(`[ValidationEngine] Unknown meta schema (resolved to '${resolvedMetaSchemaId}'). Expected '@schema/meta' or standard JSON Schema meta schema.`);
     }
+  }
+
+  /**
+   * Validate a schema against its meta-schema
+   * @param {Object} schema - Schema to validate
+   * @returns {{valid: boolean, errors: Array|null}} Validation result
+   */
+  async validateSchemaAgainstMeta(schema) {
+    await this.initialize();
+    
+    // Dynamically determine which meta schema to use based on schema's $schema field
+    const schemaMetaSchemaId = schema.$schema;
+    
+    if (!schemaMetaSchemaId) {
+      throw new Error(`[ValidationEngine] Schema missing required $schema field. All schemas must declare their meta schema.`);
+    }
+    
+    // Resolve meta-schema ID (handles co-id references)
+    const { resolvedMetaSchemaId, metaSchemaObject } = await this._resolveMetaSchemaId(schemaMetaSchemaId);
+    
+    // Get meta-schema validator
+    const metaValidator = this._getMetaSchemaValidator(resolvedMetaSchemaId, metaSchemaObject);
     
     if (!metaValidator) {
       console.warn(`[ValidationEngine] Meta schema '${schemaMetaSchemaId}' not available, skipping schema validation`);
@@ -543,34 +359,37 @@ export class ValidationEngine {
                             (schema.$schema === standardMetaSchemaId && 
                              schema.$id && schema.$id.includes('schema'));
     
-    const originalValidateSchema = this.ajv.opts.validateSchema;
     if (isSelfValidation) {
-      this.ajv.opts.validateSchema = false;
+      return withSchemaValidationDisabled(this.ajv, () => {
+        const valid = metaValidator(schema);
+        
+        if (valid) {
+          return { valid: true, errors: null };
+        }
+        
+        const errors = metaValidator.errors || [];
+        const formattedErrors = formatValidationErrors(errors);
+        
+        return {
+          valid: false,
+          errors: formattedErrors
+        };
+      });
     }
     
-    try {
-      const valid = metaValidator(schema);
-      
-      if (valid) {
-        return { valid: true, errors: null };
-      }
-      
-      const errors = metaValidator.errors || [];
-      const formattedErrors = errors.map(error => ({
-        instancePath: error.instancePath || '/',
-        schemaPath: error.schemaPath || '',
-        keyword: error.keyword || '',
-        message: error.message || '',
-        params: error.params || {}
-      }));
-      
-      return {
-        valid: false,
-        errors: formattedErrors
-      };
-    } finally {
-      this.ajv.opts.validateSchema = originalValidateSchema;
+    const valid = metaValidator(schema);
+    
+    if (valid) {
+      return { valid: true, errors: null };
     }
+    
+    const errors = metaValidator.errors || [];
+    const formattedErrors = formatValidationErrors(errors);
+    
+    return {
+      valid: false,
+      errors: formattedErrors
+    };
   }
 
   /**
@@ -626,6 +445,166 @@ export class ValidationEngine {
   }
 
   /**
+   * Resolve $schema reference (co-id) and register meta-schema
+   * @private
+   * @param {string} coId - Co-id of the meta-schema
+   * @param {Set} resolvedSchemas - Set of already resolved schema co-ids
+   * @param {Set} resolvingSchemas - Set of schemas currently being resolved
+   * @param {Function} resolveRecursive - Recursive resolution function
+   * @returns {Promise<void>}
+   */
+  async _resolveSchemaReference(coId, resolvedSchemas, resolvingSchemas, resolveRecursive) {
+    if (resolvedSchemas.has(coId) || resolvingSchemas.has(coId)) {
+      return; // Already resolved or in progress
+    }
+    
+    resolvingSchemas.add(coId);
+    try {
+      let metaSchema = await this.schemaResolver(coId);
+      
+      // Handle reference objects (from IndexedDB mapping)
+      if (metaSchema && metaSchema.$coId && !metaSchema.$schema) {
+        metaSchema = await this.schemaResolver(metaSchema.$coId);
+      }
+      
+      if (metaSchema) {
+        // Recursively resolve references in the meta-schema FIRST
+        await resolveRecursive(metaSchema);
+        
+        // Register meta-schema with BOTH its $id AND the co-id (for AJV resolution)
+        if (metaSchema.$id) {
+          if (!this.ajv.getSchema(metaSchema.$id)) {
+            this.ajv.addMetaSchema(metaSchema, metaSchema.$id);
+          }
+        }
+        // Always register with co-id as key so AJV can resolve $schema references
+        if (!this.ajv.getSchema(coId)) {
+          this.ajv.addMetaSchema(metaSchema, coId);
+        }
+        
+        resolvedSchemas.add(coId);
+      } else {
+        console.warn(`[ValidationEngine] Schema resolver returned null for $schema co-id ${coId}`);
+      }
+    } catch (error) {
+      console.error(`[ValidationEngine] Failed to resolve $schema co-id ${coId}:`, error);
+      throw error; // Re-throw to surface the error
+    } finally {
+      resolvingSchemas.delete(coId);
+    }
+  }
+
+  /**
+   * Register a resolved schema in AJV
+   * @private
+   * @param {Object} schema - Schema to register
+   * @param {string} ref - Reference ID (human-readable or co-id)
+   * @param {string} coId - Co-id of the schema
+   */
+  _registerResolvedSchema(schema, ref, coId) {
+    // Register with the reference used in $co FIRST (before co-id)
+    // This ensures AJV can resolve @schema/... references during compilation
+    // Only register if different from co-id to avoid duplicate registration
+    if (ref !== coId && !this.ajv.getSchema(ref)) {
+      try {
+        withSchemaValidationDisabled(this.ajv, () => {
+          this.ajv.addSchema(schema, ref);
+        });
+      } catch (error) {
+        if (error.message && error.message.includes('already exists')) {
+          // Silent - duplicate registration is fine
+        } else {
+          throw error;
+        }
+      }
+    }
+    
+    // Now register schema with its $id (co-id) - only if not already registered
+    if (coId && !this.ajv.getSchema(coId)) {
+      try {
+        withSchemaValidationDisabled(this.ajv, () => {
+          this.ajv.addSchema(schema, coId);
+        });
+      } catch (error) {
+        if (error.message && error.message.includes('already exists')) {
+          // Silent - duplicate registration is fine
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+
+  /**
+   * Resolve $co reference and register schema
+   * @private
+   * @param {string} ref - Reference (co-id or human-readable ID)
+   * @param {Set} resolvedSchemas - Set of already resolved schema co-ids
+   * @param {Set} resolvingSchemas - Set of schemas currently being resolved
+   * @param {Function} resolveRecursive - Recursive resolution function
+   * @returns {Promise<void>}
+   */
+  async _resolveCoReference(ref, resolvedSchemas, resolvingSchemas, resolveRecursive) {
+    // Skip if already resolved or currently being resolved (prevents infinite loops)
+    if (resolvedSchemas.has(ref) || resolvingSchemas.has(ref)) {
+      return; // Silent skip - already resolved or in progress
+    }
+    
+    resolvingSchemas.add(ref);
+    try {
+      // Try to resolve (works for both co-ids and human-readable IDs)
+      let referencedSchema = await this.schemaResolver(ref);
+      
+      // Handle reference objects (from IndexedDB mapping)
+      if (referencedSchema && referencedSchema.$coId && !referencedSchema.$schema) {
+        referencedSchema = await this.schemaResolver(referencedSchema.$coId);
+      }
+      
+      if (!referencedSchema) {
+        // Schema not found - this is a critical error for $co references
+        const errorMsg = `[ValidationEngine] Schema resolver returned null for $co reference ${ref}. This schema must be registered before it can be referenced.`;
+        console.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+      
+      // Track by co-id $id to prevent duplicate registration
+      const schemaCoId = referencedSchema.$id;
+      
+      // Skip if already resolved (check by co-id)
+      if (schemaCoId && resolvedSchemas.has(schemaCoId)) {
+        resolvingSchemas.delete(ref);
+        return; // Silent skip - already resolved
+      }
+      
+      // CRITICAL: Resolve ALL dependencies of the referenced schema FIRST
+      // before registering it, so AJV can compile it successfully
+      // This is safe because we've already marked ref as "resolving" to prevent loops
+      await resolveRecursive(referencedSchema);
+      
+      // Mark as resolved by co-id (after dependencies are resolved)
+      if (schemaCoId) {
+        resolvedSchemas.add(schemaCoId);
+      }
+      // Also track by reference to avoid re-resolving
+      resolvedSchemas.add(ref);
+      
+      // Register the schema
+      this._registerResolvedSchema(referencedSchema, ref, schemaCoId);
+    } catch (error) {
+      // Only throw if it's not a duplicate registration error
+      if (error.message && error.message.includes('already exists')) {
+        console.warn(`[ValidationEngine] Duplicate registration handled for ${ref}`);
+      } else {
+        console.error(`[ValidationEngine] Failed to resolve $co reference ${ref}:`, error);
+        throw error; // Re-throw to surface the error
+      }
+    } finally {
+      // Always remove from resolving set, even on error
+      resolvingSchemas.delete(ref);
+    }
+  }
+
+  /**
    * Resolve and register all schema dependencies ($schema and $co references)
    * @private
    * @param {Object} schema - Schema object
@@ -637,186 +616,39 @@ export class ValidationEngine {
     
     // Temporarily disable schema validation to avoid circular dependency errors
     // Schemas will be validated against meta-schema separately before use
-    const originalValidateSchema = this.ajv.opts.validateSchema;
-    this.ajv.opts.validateSchema = false;
-    
-    try {
+    await withSchemaValidationDisabled(this.ajv, async () => {
       const resolvedSchemas = new Set(); // Track resolved schemas to avoid infinite loops
       const resolvingSchemas = new Set(); // Track schemas currently being resolved to prevent circular dependencies
       
       const resolveRecursive = async (obj) => {
-      if (!obj || typeof obj !== 'object') {
-        return;
-      }
-      
-      // Resolve $schema reference if it's a co-id
-      if (obj.$schema && typeof obj.$schema === 'string' && obj.$schema.startsWith('co_z')) {
-        const coId = obj.$schema;
-        if (!resolvedSchemas.has(coId) && !resolvingSchemas.has(coId)) {
-          resolvingSchemas.add(coId);
-          try {
-            let metaSchema = await this.schemaResolver(coId);
-            
-            // Handle reference objects (from IndexedDB mapping)
-            if (metaSchema && metaSchema.$coId && !metaSchema.$schema) {
-              metaSchema = await this.schemaResolver(metaSchema.$coId);
-            }
-            
-            if (metaSchema) {
-              // Recursively resolve references in the meta-schema FIRST
-              await resolveRecursive(metaSchema);
-              
-              // Register meta-schema with BOTH its $id AND the co-id (for AJV resolution)
-              if (metaSchema.$id) {
-                if (!this.ajv.getSchema(metaSchema.$id)) {
-                  this.ajv.addMetaSchema(metaSchema, metaSchema.$id);
-                }
-              }
-              // Always register with co-id as key so AJV can resolve $schema references
-              if (!this.ajv.getSchema(coId)) {
-                this.ajv.addMetaSchema(metaSchema, coId);
-              }
-              
-              resolvedSchemas.add(coId);
-            } else {
-              console.warn(`[ValidationEngine] Schema resolver returned null for $schema co-id ${coId}`);
-            }
-          } catch (error) {
-            console.error(`[ValidationEngine] Failed to resolve $schema co-id ${coId}:`, error);
-            throw error; // Re-throw to surface the error
-          } finally {
-            resolvingSchemas.delete(coId);
-          }
-        }
-      }
-      
-      // Check for $co keyword (can be co-id or human-readable schema ID)
-      if (obj.$co && typeof obj.$co === 'string') {
-        const ref = obj.$co;
-        
-        // Skip if already resolved or currently being resolved (prevents infinite loops)
-        if (resolvedSchemas.has(ref) || resolvingSchemas.has(ref)) {
-          return; // Silent skip - already resolved or in progress
+        if (!obj || typeof obj !== 'object') {
+          return;
         }
         
-        try {
-          // Mark as being resolved BEFORE recursive call to prevent circular dependencies
-          resolvingSchemas.add(ref);
-          
-          // Try to resolve (works for both co-ids and human-readable IDs)
-          let referencedSchema = await this.schemaResolver(ref);
-          
-          // Handle reference objects (from IndexedDB mapping)
-          if (referencedSchema && referencedSchema.$coId && !referencedSchema.$schema) {
-            referencedSchema = await this.schemaResolver(referencedSchema.$coId);
-          }
-          
-          if (!referencedSchema) {
-            // Schema not found - this is a critical error for $co references
-            const errorMsg = `[ValidationEngine] Schema resolver returned null for $co reference ${ref}. This schema must be registered before it can be referenced.`;
-            console.error(errorMsg);
-            throw new Error(errorMsg);
-          }
-          
-          if (referencedSchema) {
-            // Track by co-id $id to prevent duplicate registration
-            const schemaCoId = referencedSchema.$id;
-            
-            // Skip if already resolved (check by co-id)
-            if (schemaCoId && resolvedSchemas.has(schemaCoId)) {
-              resolvingSchemas.delete(ref);
-              return; // Silent skip - already resolved
-            }
-            
-            // CRITICAL: Resolve ALL dependencies of the referenced schema FIRST
-            // before registering it, so AJV can compile it successfully
-            // This is safe because we've already marked ref as "resolving" to prevent loops
-            await resolveRecursive(referencedSchema);
-            
-            // Mark as resolved by co-id (after dependencies are resolved)
-            if (schemaCoId) {
-              resolvedSchemas.add(schemaCoId);
-            }
-            // Also track by reference to avoid re-resolving
-            resolvedSchemas.add(ref);
-            
-            // CRITICAL: Register with the reference used in $co FIRST (before co-id)
-            // This ensures AJV can resolve @schema/... references during compilation
-            // Only register if different from co-id to avoid duplicate registration
-            if (ref !== schemaCoId && !this.ajv.getSchema(ref)) {
-              try {
-                // Temporarily disable schema validation to avoid circular dependency errors
-                const originalValidateSchema = this.ajv.opts.validateSchema;
-                this.ajv.opts.validateSchema = false;
-                try {
-                  this.ajv.addSchema(referencedSchema, ref);
-                } finally {
-                  this.ajv.opts.validateSchema = originalValidateSchema;
-                }
-              } catch (error) {
-                if (error.message && error.message.includes('already exists')) {
-                  // Silent - duplicate registration is fine
-                } else {
-                  throw error;
-                }
-              }
-            }
-            
-            // Now register schema with its $id (co-id) - only if not already registered
-            if (schemaCoId && !this.ajv.getSchema(schemaCoId)) {
-              try {
-                // Temporarily disable schema validation to avoid circular dependency errors
-                const originalValidateSchema = this.ajv.opts.validateSchema;
-                this.ajv.opts.validateSchema = false;
-                try {
-                  this.ajv.addSchema(referencedSchema, schemaCoId);
-                } finally {
-                  this.ajv.opts.validateSchema = originalValidateSchema;
-                }
-              } catch (error) {
-                if (error.message && error.message.includes('already exists')) {
-                  // Silent - duplicate registration is fine
-                } else {
-                  throw error;
-                }
-              }
-            }
-          } else {
-            console.warn(`[ValidationEngine] Schema resolver returned null for $co reference ${ref}`);
-            // Don't throw - let AJV handle missing references (it will fail during compilation)
-          }
-        } catch (error) {
-          // Only throw if it's not a duplicate registration error
-          if (error.message && error.message.includes('already exists')) {
-            console.warn(`[ValidationEngine] Duplicate registration handled for ${ref}`);
-          } else {
-            console.error(`[ValidationEngine] Failed to resolve $co reference ${ref}:`, error);
-            throw error; // Re-throw to surface the error
-          }
-        } finally {
-          // Always remove from resolving set, even on error
-          resolvingSchemas.delete(ref);
+        // Resolve $schema reference if it's a co-id
+        if (obj.$schema && typeof obj.$schema === 'string' && obj.$schema.startsWith('co_z')) {
+          await this._resolveSchemaReference(obj.$schema, resolvedSchemas, resolvingSchemas, resolveRecursive);
         }
-      }
-      
-      
-      // Recursively check all properties
-      for (const value of Object.values(obj)) {
-        if (Array.isArray(value)) {
-          for (const item of value) {
-            await resolveRecursive(item);
-          }
-        } else if (value && typeof value === 'object') {
-          await resolveRecursive(value);
+        
+        // Check for $co keyword (can be co-id or human-readable schema ID)
+        if (obj.$co && typeof obj.$co === 'string') {
+          await this._resolveCoReference(obj.$co, resolvedSchemas, resolvingSchemas, resolveRecursive);
         }
-      }
+        
+        // Recursively check all properties
+        for (const value of Object.values(obj)) {
+          if (Array.isArray(value)) {
+            for (const item of value) {
+              await resolveRecursive(item);
+            }
+          } else if (value && typeof value === 'object') {
+            await resolveRecursive(value);
+          }
+        }
       };
       
       await resolveRecursive(schema);
-    } finally {
-      // Restore original validateSchema setting
-      this.ajv.opts.validateSchema = originalValidateSchema;
-    }
+    });
   }
 
   /**
@@ -853,13 +685,7 @@ export class ValidationEngine {
 
     // Format errors for better readability
     const errors = validate.errors || [];
-    const formattedErrors = errors.map(error => ({
-      instancePath: error.instancePath || '/',
-      schemaPath: error.schemaPath || '',
-      keyword: error.keyword || '',
-      message: error.message || '',
-      params: error.params || {}
-    }));
+    const formattedErrors = formatValidationErrors(errors);
 
     return {
       valid: false,

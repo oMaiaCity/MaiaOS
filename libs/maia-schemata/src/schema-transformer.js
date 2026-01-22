@@ -308,11 +308,153 @@ export function transformInstanceForSeeding(instance, coIdMap) {
  * @param {Object} obj - Object to transform (may be instance or nested object)
  * @param {Map<string, string>} coIdMap - Map of human-readable ID → co-id
  */
+/**
+ * Transform a schema reference to co-id
+ * @param {string} schemaRef - Schema reference (e.g., "@schema/todos")
+ * @param {Map} coIdMap - Map of human-readable IDs to co-ids
+ * @param {string} context - Context for error messages
+ * @returns {string|null} Co-id or null if not found
+ */
+function transformSchemaReference(schemaRef, coIdMap, context = '') {
+  if (schemaRef.startsWith('@schema/') && !schemaRef.startsWith('co_z')) {
+    const coId = coIdMap.get(schemaRef);
+    if (coId) {
+      return coId;
+    } else {
+      console.warn(`[SchemaTransformer] No co-id found for ${context} schema: ${schemaRef}. Make sure data collections are registered before transformation.`);
+      return null;
+    }
+  }
+  // Already a co-id, return as-is
+  return schemaRef;
+}
+
+/**
+ * Transform a target reference to co-id
+ * @param {string} targetRef - Target reference (e.g., "@actor/vibe")
+ * @param {Map} coIdMap - Map of human-readable IDs to co-ids
+ * @param {string} context - Context for error messages
+ * @returns {string|null} Co-id or null if not found
+ */
+function transformTargetReference(targetRef, coIdMap, context = '') {
+  if (targetRef.startsWith('@actor/') && !targetRef.startsWith('co_z')) {
+    const coId = coIdMap.get(targetRef);
+    if (coId) {
+      return coId;
+    } else {
+      const actorKeys = Array.from(coIdMap.keys()).filter(k => k.includes('actor') || k.includes('vibe') || k.includes('composite'));
+      const keyCount = actorKeys.length;
+      const keySample = actorKeys.slice(0, context.includes('array') ? 10 : 20).join(', ');
+      const keySuffix = keyCount > (context.includes('array') ? 10 : 20) ? '...' : '';
+      console.warn(`[SchemaTransformer] ❌ No co-id found for ${context} target: ${targetRef}. Available actor keys (${keyCount}): ${keySample}${keySuffix}`);
+      return null;
+    }
+  }
+  // Already a co-id, return as-is
+  return targetRef;
+}
+
+/**
+ * Transform a query object schema reference
+ * @param {Object} queryObj - Query object with schema property
+ * @param {Map} coIdMap - Map of human-readable IDs to co-ids
+ */
+function transformQueryObjectSchema(queryObj, coIdMap) {
+  if (queryObj.schema && typeof queryObj.schema === 'string') {
+    const coId = transformSchemaReference(queryObj.schema, coIdMap, 'query object');
+    if (coId) {
+      queryObj.schema = coId;
+    }
+  }
+}
+
+/**
+ * Transform tool payload (handles schema and target references in payload)
+ * @param {Object} payload - Tool payload object
+ * @param {Map} coIdMap - Map of human-readable IDs to co-ids
+ * @param {Function} transformRecursive - Recursive transformation function
+ */
+function transformToolPayload(payload, coIdMap, transformRecursive) {
+  if (!payload || typeof payload !== 'object') {
+    return;
+  }
+  
+  // First, recursively process the payload to find all target fields
+  transformRecursive(payload, coIdMap);
+  
+  // Then check for schema reference in payload (for @db tool)
+  if (payload.schema && typeof payload.schema === 'string') {
+    const coId = transformSchemaReference(payload.schema, coIdMap, 'tool payload');
+    if (coId) {
+      payload.schema = coId;
+    }
+  }
+  
+  // Check for target reference in payload (for @core/publishMessage tool)
+  // The recursive call above should have already transformed it, but this is a fallback
+  if (payload.target && typeof payload.target === 'string') {
+    const coId = transformTargetReference(payload.target, coIdMap, 'tool payload');
+    if (coId) {
+      payload.target = coId;
+    }
+  }
+}
+
+/**
+ * Transform action payload (handles target references in action payloads)
+ * @param {Object} action - Action object with tool and payload
+ * @param {Map} coIdMap - Map of human-readable IDs to co-ids
+ * @param {Function} transformRecursive - Recursive transformation function
+ */
+function transformActionPayload(action, coIdMap, transformRecursive) {
+  if (!action.payload || typeof action.payload !== 'object') {
+    return;
+  }
+  
+  // Check for target in payload
+  if (action.payload.target && typeof action.payload.target === 'string') {
+    const coId = transformTargetReference(action.payload.target, coIdMap, 'tool action');
+    if (coId) {
+      action.payload.target = coId;
+    }
+  }
+  
+  // Recursively check payload
+  transformRecursive(action.payload, coIdMap);
+}
+
+/**
+ * Transform array items (handles action payloads and direct actor references in arrays)
+ * @param {Array} arr - Array to transform
+ * @param {Map} coIdMap - Map of human-readable IDs to co-ids
+ * @param {Function} transformRecursive - Recursive transformation function
+ */
+function transformArrayItems(arr, coIdMap, transformRecursive) {
+  for (let i = 0; i < arr.length; i++) {
+    const item = arr[i];
+    if (item && typeof item === 'object') {
+      // Direct transformation for action payloads in arrays
+      if (item.payload && item.payload.target && typeof item.payload.target === 'string') {
+        const coId = transformTargetReference(item.payload.target, coIdMap, 'action payload.target in array');
+        if (coId) {
+          item.payload.target = coId;
+        }
+      }
+      transformRecursive(item, coIdMap);
+    } else if (typeof item === 'string' && item.startsWith('@actor/') && !item.startsWith('co_z')) {
+      // Handle case where array contains actor references directly (e.g., subscriptions arrays)
+      const coId = coIdMap.get(item);
+      if (coId) {
+        arr[i] = coId;
+      }
+    }
+  }
+}
+
 function transformQueryObjects(obj, coIdMap, depth = 0) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
     return;
   }
-
 
   // Check all properties for query objects
   for (const [key, value] of Object.entries(obj)) {
@@ -322,140 +464,43 @@ function transformQueryObjects(obj, coIdMap, depth = 0) {
     }
 
     // Check for top-level schema field in contexts (e.g., context.schema = "@schema/todos")
-    if (key === 'schema' && typeof value === 'string' && value.startsWith('@schema/') && !value.startsWith('co_z')) {
-      const coId = coIdMap.get(value);
+    if (key === 'schema' && typeof value === 'string') {
+      const coId = transformSchemaReference(value, coIdMap, 'top-level schema field');
       if (coId) {
         obj[key] = coId;
-      } else {
-        console.warn(`[SchemaTransformer] No co-id found for top-level schema field: ${value}. Make sure data collections are registered before transformation.`);
       }
       continue; // Skip further processing of this property
     }
 
     // Check for target field at any level (for @core/publishMessage tool payloads)
-    if (key === 'target' && typeof value === 'string' && value.startsWith('@actor/') && !value.startsWith('co_z')) {
-      const coId = coIdMap.get(value);
+    if (key === 'target' && typeof value === 'string') {
+      const coId = transformTargetReference(value, coIdMap, 'target field');
       if (coId) {
         obj[key] = coId;
-      } else {
-        const actorKeys = Array.from(coIdMap.keys()).filter(k => k.includes('actor') || k.includes('vibe') || k.includes('composite'));
-        console.warn(`[SchemaTransformer] ❌ No co-id found for target field: ${value}. Available actor keys (${actorKeys.length}): ${actorKeys.slice(0, 20).join(', ')}${actorKeys.length > 20 ? '...' : ''}`);
       }
       continue; // Skip further processing of this property
     }
 
-    // Check if this is a query object: {schema: string, filter?: object}
-    // OR a tool payload: {tool: "@db", payload: {schema: "@schema/todos", ...}}
-    // OR a state machine action: {tool: "@core/publishMessage", payload: {target: "@actor/vibe", ...}}
+    // Check if this is a query object, tool payload, or action
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       // Check for query object pattern: {schema: string, filter?: object}
       if (value.schema && typeof value.schema === 'string') {
-        // This looks like a query object
-        const schemaRef = value.schema;
-        
-        // If it's a human-readable reference (starts with @schema/), transform it
-        if (schemaRef.startsWith('@schema/') && !schemaRef.startsWith('co_z')) {
-          const coId = coIdMap.get(schemaRef);
-          if (coId) {
-            // Transform query object schema to co-id
-            value.schema = coId;
-          } else {
-            // Warn but don't throw - might be a data collection that wasn't registered
-            console.warn(`[SchemaTransformer] No co-id found for query object schema: ${schemaRef}. Make sure data collections are registered before transformation.`);
-          }
-        }
-        // If it's already a co-id, leave it as is
+        transformQueryObjectSchema(value, coIdMap);
       } 
-      // Check for tool payload pattern: {tool: "@db", payload: {schema: "@schema/todos", ...}}
-      // OR {tool: "@core/publishMessage", payload: {target: "@actor/vibe", ...}}
-      // OR any object with a payload property
+      // Check for tool payload pattern: {tool: "@db", payload: {...}} or any object with payload
       else if (value.payload && typeof value.payload === 'object') {
-        // First, recursively process the payload to find all target fields
-        // This will find target fields via the top-level check in transformQueryObjects
-        transformQueryObjects(value.payload, coIdMap, depth + 1);
-        
-        // Then check for schema reference in payload (for @db tool)
-        if (value.payload.schema && typeof value.payload.schema === 'string') {
-          const schemaRef = value.payload.schema;
-          
-          // If it's a human-readable reference (starts with @schema/), transform it
-          if (schemaRef.startsWith('@schema/') && !schemaRef.startsWith('co_z')) {
-            const coId = coIdMap.get(schemaRef);
-            if (coId) {
-              // Transform tool payload schema to co-id
-              value.payload.schema = coId;
-            } else {
-              console.warn(`[SchemaTransformer] No co-id found for tool payload schema: ${schemaRef}. Make sure data collections are registered before transformation.`);
-            }
-          }
-        }
-        
-        // Check for target reference in payload (for @core/publishMessage tool)
-        // The recursive call above should have already transformed it, but this is a fallback
-        if (value.payload.target && typeof value.payload.target === 'string' && value.payload.target.startsWith('@actor/') && !value.payload.target.startsWith('co_z')) {
-          const targetRef = value.payload.target;
-          const coId = coIdMap.get(targetRef);
-          if (coId) {
-            value.payload.target = coId;
-          } else {
-            const actorKeys = Array.from(coIdMap.keys()).filter(k => k.includes('actor') || k.includes('vibe') || k.includes('composite'));
-            console.warn(`[SchemaTransformer] ❌ No co-id found for tool payload target: ${targetRef}. Available actor keys (${actorKeys.length}): ${actorKeys.slice(0, 10).join(', ')}${actorKeys.length > 10 ? '...' : ''}`);
-          }
-        }
+        transformToolPayload(value.payload, coIdMap, transformQueryObjects);
       } 
       // Check if this is a tool action object (has 'tool' property)
       else if (value.tool && typeof value.tool === 'string' && value.payload && typeof value.payload === 'object') {
-        // This is a tool action: {tool: "@core/publishMessage", payload: {...}}
-        // Check for target in payload
-        if (value.payload.target && typeof value.payload.target === 'string' && value.payload.target.startsWith('@actor/') && !value.payload.target.startsWith('co_z')) {
-          const targetRef = value.payload.target;
-          const coId = coIdMap.get(targetRef);
-          if (coId) {
-            value.payload.target = coId;
-          } else {
-            const actorKeys = Array.from(coIdMap.keys()).filter(k => k.includes('actor') || k.includes('vibe') || k.includes('composite'));
-            console.warn(`[SchemaTransformer] ❌ No co-id found for tool action target: ${targetRef}. Available actor keys (${actorKeys.length}): ${actorKeys.slice(0, 10).join(', ')}${actorKeys.length > 10 ? '...' : ''}`);
-          }
-        }
-        // Recursively check payload
-        transformQueryObjects(value.payload, coIdMap, depth + 1);
+        transformActionPayload(value, coIdMap, transformQueryObjects);
       } else {
         // Recursively check nested objects (for nested query objects or other structures)
-        // This handles cases like action objects: {tool: "...", payload: {target: "@actor/vibe"}}
-        // When we iterate and find payload, value is the payload object itself
-        // So we need to recursively process it to find target fields
         transformQueryObjects(value, coIdMap, depth + 1);
       }
     } else if (value && typeof value === 'object' && Array.isArray(value)) {
       // Recursively check array elements
-      // This handles arrays like actions: [{tool: "...", payload: {target: "@actor/vibe"}}]
-      for (let i = 0; i < value.length; i++) {
-        const item = value[i];
-        if (item && typeof item === 'object') {
-          // Direct transformation for action payloads in arrays
-          // This handles: {tool: "@core/publishMessage", payload: {target: "@actor/vibe"}}
-          if (item.payload && item.payload.target && typeof item.payload.target === 'string' && item.payload.target.startsWith('@actor/') && !item.payload.target.startsWith('co_z')) {
-            const targetRef = item.payload.target;
-            const coId = coIdMap.get(targetRef);
-            if (coId) {
-              item.payload.target = coId;
-            } else {
-              const actorKeys = Array.from(coIdMap.keys()).filter(k => k.includes('actor') || k.includes('vibe') || k.includes('composite'));
-              console.warn(`[SchemaTransformer] ❌ No co-id found for action payload.target in array: ${targetRef}. Available keys: ${actorKeys.slice(0, 10).join(', ')}`);
-            }
-          }
-          transformQueryObjects(item, coIdMap, depth + 1);
-        } else if (typeof item === 'string' && item.startsWith('@actor/') && !item.startsWith('co_z')) {
-          // Handle case where array contains actor references directly (e.g., subscriptions arrays)
-          const coId = coIdMap.get(item);
-          if (coId) {
-            const index = value.indexOf(item);
-            if (index !== -1) {
-              value[index] = coId;
-            }
-          }
-        }
-      }
+      transformArrayItems(value, coIdMap, transformQueryObjects);
     }
   }
 }

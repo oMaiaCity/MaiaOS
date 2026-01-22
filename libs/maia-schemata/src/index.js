@@ -118,16 +118,3 @@ export async function loadAllSchemas() {
   return Promise.resolve();
 }
 
-// Schema type mapping
-export const SCHEMA_TYPES = {
-  actor: 'actor',
-  context: 'context',
-  state: 'state',
-  view: 'view',
-  style: 'style',
-  'brand.style': 'brand',
-  'actor.style': 'style',
-  'actor.interface': 'interface',
-  tool: 'tool',
-  vibe: 'vibe'
-};
