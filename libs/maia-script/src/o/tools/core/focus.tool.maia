@@ -1,0 +1,16 @@
+{
+  "$schema": "@schema/tool",
+  "$id": "tool_focus_001",
+  "name": "@core/focus",
+  "description": "Focuses an element in the actor's shadow DOM using a CSS selector",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "selector": {
+        "type": "string",
+        "description": "CSS selector to find the element to focus (e.g., 'input.input', '.input')"
+      }
+    },
+    "required": ["selector"]
+  }
+}

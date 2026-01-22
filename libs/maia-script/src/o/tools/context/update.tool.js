@@ -28,7 +28,23 @@ export default {
       if (inputCleared) {
         // Silent - re-render happens automatically
       }
-      actor.actorEngine.rerender(actor.id);
+      await actor.actorEngine.rerender(actor.id);
+      
+      // After re-render completes, focus the input if it was cleared
+      if (inputCleared && actor.shadowRoot) {
+        // Wait for DOM to update, then focus the input
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const input = actor.shadowRoot.querySelector('input.input') ||
+                          actor.shadowRoot.querySelector('.input') ||
+                          actor.shadowRoot.querySelector('input[type="text"]') ||
+                          actor.shadowRoot.querySelector('input');
+            if (input) {
+              input.focus();
+            }
+          });
+        });
+      }
     }
     // Otherwise, no rerender needed - input bindings are handled by DOM during typing
   }

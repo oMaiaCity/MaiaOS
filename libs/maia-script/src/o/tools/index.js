@@ -9,6 +9,7 @@
 import noopDef from './core/noop.tool.maia';
 import preventDefaultDef from './core/preventDefault.tool.maia';
 import publishMessageDef from './core/publishMessage.tool.maia';
+import focusDef from './core/focus.tool.maia';
 
 import contextUpdateDef from './context/update.tool.maia';
 
@@ -24,6 +25,7 @@ import validateInterfaceDef from './interface/validateInterface.tool.maia';
 import noopFn from './core/noop.tool.js';
 import preventDefaultFn from './core/preventDefault.tool.js';
 import publishMessageFn from './core/publishMessage.tool.js';
+import focusFn from './core/focus.tool.js';
 
 import contextUpdateFn from './context/update.tool.js';
 
@@ -42,6 +44,7 @@ export const TOOLS = {
   'core/noop': { definition: noopDef, function: noopFn },
   'core/preventDefault': { definition: preventDefaultDef, function: preventDefaultFn },
   'core/publishMessage': { definition: publishMessageDef, function: publishMessageFn },
+  'core/focus': { definition: focusDef, function: focusFn },
   
   'context/update': { definition: contextUpdateDef, function: contextUpdateFn },
   

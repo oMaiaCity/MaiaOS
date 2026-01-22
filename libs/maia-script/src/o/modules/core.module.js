@@ -21,7 +21,8 @@ export class CoreModule {
     const toolNames = [
       'noop',
       'preventDefault',
-      'publishMessage'
+      'publishMessage',
+      'focus'
     ];
     
     // Silent - kernel logs module summary

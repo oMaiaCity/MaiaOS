@@ -77,6 +77,10 @@
             {
               "tool": "@context/update",
               "payload": { "newTodoText": "" }
+            },
+            {
+              "tool": "@core/focus",
+              "payload": { "selector": "input.input" }
             }
           ]
         },
