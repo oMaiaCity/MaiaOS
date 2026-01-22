@@ -297,385 +297,10 @@ export class IndexedDBBackend {
     // Step 3a: Extract subscriptions, inbox, tokens, and components as separate CoValues
     // NOTE: subscriptions and inboxes are now in separate .maia files (e.g., vibe.subscriptions.maia, vibe.inbox.maia)
     // No extraction logic needed - they're already clean and separated at the definition level
-    /* LEGACY EXTRACTION LOGIC - NO LONGER USED
-    const subscriptionsColists = []; // Store subscriptions colists to seed separately
-    const inboxCoStreams = []; // Store inbox costreams to seed separately
-    
-    const extractActorCoValues = (configObj, prefix = '') => {
-      for (const [key, value] of Object.entries(configObj)) {
-        if (value && typeof value === 'object' && !Array.isArray(value)) {
-          // Check if this is an actor instance (strict check: must be actor schema or actor ID)
-          if (value.$schema === '@schema/actor' || (value.$id && value.$id.startsWith('@actor/'))) {
-            const actorId = value.$id || key;
-            
-            // Extract subscriptions as native colist CoValue (CRDT type)
-            // Always ensure subscriptions property exists - create empty colist if missing
-            if (value.subscriptions && Array.isArray(value.subscriptions)) {
-              // Transform references in subscriptions array to co-ids BEFORE extraction
-              const transformedSubscriptions = value.subscriptions.map(ref => {
-                if (typeof ref === 'string' && !ref.startsWith('co_z')) {
-                  // Check if it's a new @actor/instance format
-                  if (ref.startsWith('@')) {
-                    const coId = coIdByInstanceId.get(ref);
-                    if (coId) {
-                      return coId;
-                    } else {
-                      console.warn(`[IndexedDBBackend] No co-id found for subscriptions reference: ${ref}`);
-                      return ref;
-                    }
-                  } else {
-                    // Legacy format - try direct lookup
-                    const coId = coIdByInstanceId.get(ref);
-                    return coId || ref;
-                  }
-                }
-                return ref;
-              });
-              
-              // Array present: Extract and create native colist CoValue
-              const subscriptionsCoId = generateCoIdForInstance({ type: 'subscriptions', actorId });
-              
-              // Store the transformed array (colist CRDT → Array for IndexedDB)
-              subscriptionsColists.push({
-                coId: subscriptionsCoId,
-                schema: '@schema/subscriptions',
-                data: transformedSubscriptions // Transformed array with co-ids
-              });
-              
-              value.subscriptions = subscriptionsCoId; // Replace with co-id reference
-              
-              const subscriptionsKey = `${prefix ? `${prefix}.` : ''}${key}.subscriptions`;
-              coIdRegistry.register(subscriptionsKey, subscriptionsCoId);
-              instanceCoIdMap.set(subscriptionsKey, subscriptionsCoId);
-            } else if (!value.subscriptions) {
-              // Property missing: Create empty native colist CoValue
-              const subscriptionsCoId = generateCoIdForInstance({ type: 'subscriptions', actorId });
-              
-              // Store empty array (empty colist CRDT → empty array for IndexedDB)
-              subscriptionsColists.push({
-                coId: subscriptionsCoId,
-                schema: '@schema/subscriptions',
-                data: [] // Empty native colist (CRDT format)
-              });
-              
-              value.subscriptions = subscriptionsCoId; // Set co-id reference
-              
-              const subscriptionsKey = `${prefix ? `${prefix}.` : ''}${key}.subscriptions`;
-              coIdRegistry.register(subscriptionsKey, subscriptionsCoId);
-              instanceCoIdMap.set(subscriptionsKey, subscriptionsCoId);
-            }
-            
-            // Extract inbox as native costream CoValue (CRDT type)
-            // Always ensure inbox property exists - create empty costream if missing
-            if (value.inbox && Array.isArray(value.inbox)) {
-              // Array present: Extract and create native costream CoValue
-              const inboxCoId = generateCoIdForInstance({ type: 'inbox', actorId });
-              
-              // Store the array directly (costream CRDT → Array for IndexedDB)
-              inboxCoStreams.push({
-                coId: inboxCoId,
-                schema: '@schema/inbox',
-                data: value.inbox // Native costream CRDT data (array format)
-              });
-              
-              value.inbox = inboxCoId; // Replace with co-id reference
-              
-              const inboxKey = `${prefix ? `${prefix}.` : ''}${key}.inbox`;
-              coIdRegistry.register(inboxKey, inboxCoId);
-              instanceCoIdMap.set(inboxKey, inboxCoId);
-            } else if (!value.inbox) {
-              // Property missing: Create empty native costream CoValue
-              const inboxCoId = generateCoIdForInstance({ type: 'inbox', actorId });
-              
-              // Store empty array (empty costream CRDT → empty array for IndexedDB)
-              inboxCoStreams.push({
-                coId: inboxCoId,
-                schema: '@schema/inbox',
-                data: [] // Empty native costream (CRDT format)
-              });
-              
-              value.inbox = inboxCoId; // Set co-id reference
-              
-              const inboxKey = `${prefix ? `${prefix}.` : ''}${key}.inbox`;
-              coIdRegistry.register(inboxKey, inboxCoId);
-              instanceCoIdMap.set(inboxKey, inboxCoId);
-            }
-          }
-          
-          // Recurse into nested objects
-          extractActorCoValues(value, prefix ? `${prefix}.${key}` : key);
-        } else if (Array.isArray(value)) {
-          // Handle arrays of instances
-          value.forEach((item, index) => {
-            if (item && typeof item === 'object' && (item.$schema === '@schema/actor' || (item.$id && item.$id.startsWith('@actor/')))) {
-              const actorId = item.$id || `${key}[${index}]`;
-              
-              // Extract subscriptions as native colist CoValue (CRDT type)
-              // Always ensure subscriptions property exists
-              if (item.subscriptions && Array.isArray(item.subscriptions)) {
-                // Transform references in subscriptions array to co-ids BEFORE extraction
-                const transformedSubscriptions = item.subscriptions.map(ref => {
-                  if (typeof ref === 'string' && !ref.startsWith('co_z')) {
-                    // Check if it's a new @actor/instance format
-                    if (ref.startsWith('@')) {
-                      const coId = coIdByInstanceId.get(ref);
-                      if (coId) {
-                        return coId;
-                      } else {
-                        console.warn(`[IndexedDBBackend] No co-id found for subscriptions reference: ${ref}`);
-                        return ref;
-                      }
-                    } else {
-                      // Legacy format - try direct lookup
-                      const coId = coIdByInstanceId.get(ref);
-                      return coId || ref;
-                    }
-                  }
-                  return ref;
-                });
-                
-                // Array present: Extract and create native colist CoValue
-                const subscriptionsCoId = generateCoIdForInstance({ type: 'subscriptions', actorId });
-                
-                subscriptionsColists.push({
-                  coId: subscriptionsCoId,
-                  schema: '@schema/subscriptions',
-                  data: transformedSubscriptions // Transformed array with co-ids
-                });
-                
-                item.subscriptions = subscriptionsCoId; // Replace with co-id reference
-                
-                const subscriptionsKey = `${prefix ? `${prefix}.` : ''}${key}[${index}].subscriptions`;
-                coIdRegistry.register(subscriptionsKey, subscriptionsCoId);
-                instanceCoIdMap.set(subscriptionsKey, subscriptionsCoId);
-              } else if (!item.subscriptions) {
-                // Property missing: Create empty native colist CoValue
-                const subscriptionsCoId = generateCoIdForInstance({ type: 'subscriptions', actorId });
-                
-                subscriptionsColists.push({
-                  coId: subscriptionsCoId,
-                  schema: '@schema/subscriptions',
-                  data: [] // Empty native colist (CRDT format)
-                });
-                
-                item.subscriptions = subscriptionsCoId; // Set co-id reference
-                
-                const subscriptionsKey = `${prefix ? `${prefix}.` : ''}${key}[${index}].subscriptions`;
-                coIdRegistry.register(subscriptionsKey, subscriptionsCoId);
-                instanceCoIdMap.set(subscriptionsKey, subscriptionsCoId);
-              }
-              
-              // Extract inbox as native costream CoValue (CRDT type)
-              // Always ensure inbox property exists
-              if (item.inbox && Array.isArray(item.inbox)) {
-                // Array present: Extract and create native costream CoValue
-                const inboxCoId = generateCoIdForInstance({ type: 'inbox', actorId });
-                
-                inboxCoStreams.push({
-                  coId: inboxCoId,
-                  schema: '@schema/inbox',
-                  data: item.inbox // Native costream CRDT data (array format)
-                });
-                
-                item.inbox = inboxCoId; // Replace with co-id reference
-                
-                const inboxKey = `${prefix ? `${prefix}.` : ''}${key}[${index}].inbox`;
-                coIdRegistry.register(inboxKey, inboxCoId);
-                instanceCoIdMap.set(inboxKey, inboxCoId);
-              } else if (!item.inbox) {
-                // Property missing: Create empty native costream CoValue
-                const inboxCoId = generateCoIdForInstance({ type: 'inbox', actorId });
-                
-                inboxCoStreams.push({
-                  coId: inboxCoId,
-                  schema: '@schema/inbox',
-                  data: [] // Empty native costream (CRDT format)
-                });
-                
-                item.inbox = inboxCoId; // Set co-id reference
-                
-                const inboxKey = `${prefix ? `${prefix}.` : ''}${key}[${index}].inbox`;
-                coIdRegistry.register(inboxKey, inboxCoId);
-                instanceCoIdMap.set(inboxKey, inboxCoId);
-              }
-            }
-          });
-        }
-      }
-    };
-    END OF LEGACY EXTRACTION LOGIC */
     
     // NOTE: All CoValues (subscriptions, inboxes, tokens, components) are now properly defined
     // in their own .maia files at the definition level. No runtime extraction hacks needed!
     
-    /* LEGACY STYLE EXTRACTION - NO LONGER USED
-    const extractStyleCoValues = (configObj, prefix = '') => {
-      for (const [key, value] of Object.entries(configObj)) {
-        if (value && typeof value === 'object' && !Array.isArray(value)) {
-          // Check if this is a style or brandStyle instance
-          if (value.$schema === '@schema/style' || 
-              (value.$id && (value.$id.startsWith('@style/') || value.$id.startsWith('@tokens/') || value.$id.startsWith('@components/')))) {
-            const styleId = value.$id || key;
-            
-            // Extract tokens as native comap CoValue (CRDT type)
-            if (value.tokens && typeof value.tokens === 'object' && !Array.isArray(value.tokens)) {
-              // Object present: Extract and create native comap CoValue
-              const tokensCoId = generateCoIdForInstance({ type: 'tokens', styleId });
-              
-              tokensComaps.push({
-                coId: tokensCoId,
-                schema: '@schema/tokens-comap',
-                data: value.tokens // Native comap CRDT data (object format)
-              });
-              
-              value.tokens = tokensCoId; // Replace with co-id reference
-              
-              const tokensKey = `${prefix ? `${prefix}.` : ''}${key}.tokens`;
-              coIdRegistry.register(tokensKey, tokensCoId);
-              instanceCoIdMap.set(tokensKey, tokensCoId);
-            } else if (value.tokens && typeof value.tokens === 'string' && value.tokens.startsWith('@')) {
-              // Already a reference - transform to co-id if needed
-              if (!value.tokens.startsWith('co_z')) {
-                const tokensCoId = coIdByInstanceId.get(value.tokens);
-                if (tokensCoId) {
-                  value.tokens = tokensCoId;
-                } else {
-                  console.warn(`[IndexedDBBackend] No co-id found for tokens reference: ${value.tokens}`);
-                }
-              }
-            } else if (!value.tokens) {
-              // Property missing: Create empty native comap CoValue
-              const tokensCoId = generateCoIdForInstance({ type: 'tokens', styleId });
-              
-              tokensComaps.push({
-                coId: tokensCoId,
-                schema: '@schema/tokens-comap',
-                data: {} // Empty native comap (CRDT format)
-              });
-              
-              value.tokens = tokensCoId; // Set co-id reference
-              
-              const tokensKey = `${prefix ? `${prefix}.` : ''}${key}.tokens`;
-              coIdRegistry.register(tokensKey, tokensCoId);
-              instanceCoIdMap.set(tokensKey, tokensCoId);
-            }
-            
-            // Extract components as native comap CoValue (CRDT type)
-            if (value.components && typeof value.components === 'object' && !Array.isArray(value.components)) {
-              // Object present: Extract and create native comap CoValue
-              const componentsCoId = generateCoIdForInstance({ type: 'components', styleId });
-              
-              componentsComaps.push({
-                coId: componentsCoId,
-                schema: '@schema/components-comap',
-                data: value.components // Native comap CRDT data (object format)
-              });
-              
-              value.components = componentsCoId; // Replace with co-id reference
-              
-              const componentsKey = `${prefix ? `${prefix}.` : ''}${key}.components`;
-              coIdRegistry.register(componentsKey, componentsCoId);
-              instanceCoIdMap.set(componentsKey, componentsCoId);
-            } else if (value.components && typeof value.components === 'string' && value.components.startsWith('@')) {
-              // Already a reference - transform to co-id if needed
-              if (!value.components.startsWith('co_z')) {
-                const componentsCoId = coIdByInstanceId.get(value.components);
-                if (componentsCoId) {
-                  value.components = componentsCoId;
-                } else {
-                  console.warn(`[IndexedDBBackend] No co-id found for components reference: ${value.components}`);
-                }
-              }
-            } else if (!value.components) {
-              // Property missing: Create empty native comap CoValue
-              const componentsCoId = generateCoIdForInstance({ type: 'components', styleId });
-              
-              componentsComaps.push({
-                coId: componentsCoId,
-                schema: '@schema/components-comap',
-                data: {} // Empty native comap (CRDT format)
-              });
-              
-              value.components = componentsCoId; // Set co-id reference
-              
-              const componentsKey = `${prefix ? `${prefix}.` : ''}${key}.components`;
-              coIdRegistry.register(componentsKey, componentsCoId);
-              instanceCoIdMap.set(componentsKey, componentsCoId);
-            }
-          }
-          
-          // Recurse into nested objects
-          extractStyleCoValues(value, prefix ? `${prefix}.${key}` : key);
-        } else if (Array.isArray(value)) {
-          // Handle arrays of instances
-          value.forEach((item, index) => {
-            if (item && typeof item === 'object' && (item.$schema === '@schema/style' || item.$schema === '@schema/brandStyle')) {
-              const styleId = item.$id || `${key}[${index}]`;
-              
-              // Extract tokens
-              if (item.tokens && typeof item.tokens === 'object' && !Array.isArray(item.tokens)) {
-                const tokensCoId = generateCoIdForInstance({ type: 'tokens', styleId });
-                tokensComaps.push({
-                  coId: tokensCoId,
-                  schema: '@schema/tokens-comap',
-                  data: item.tokens
-                });
-                item.tokens = tokensCoId;
-                const tokensKey = `${prefix ? `${prefix}.` : ''}${key}[${index}].tokens`;
-                coIdRegistry.register(tokensKey, tokensCoId);
-                instanceCoIdMap.set(tokensKey, tokensCoId);
-              } else if (item.tokens && typeof item.tokens === 'string' && item.tokens.startsWith('@') && !item.tokens.startsWith('co_z')) {
-                const tokensCoId = coIdByInstanceId.get(item.tokens);
-                if (tokensCoId) {
-                  item.tokens = tokensCoId;
-                }
-              } else if (!item.tokens) {
-                const tokensCoId = generateCoIdForInstance({ type: 'tokens', styleId });
-                tokensComaps.push({
-                  coId: tokensCoId,
-                  schema: '@schema/tokens-comap',
-                  data: {}
-                });
-                item.tokens = tokensCoId;
-                const tokensKey = `${prefix ? `${prefix}.` : ''}${key}[${index}].tokens`;
-                coIdRegistry.register(tokensKey, tokensCoId);
-                instanceCoIdMap.set(tokensKey, tokensCoId);
-              }
-              
-              // Extract components
-              if (item.components && typeof item.components === 'object' && !Array.isArray(item.components)) {
-                const componentsCoId = generateCoIdForInstance({ type: 'components', styleId });
-                componentsComaps.push({
-                  coId: componentsCoId,
-                  schema: '@schema/components-comap',
-                  data: item.components
-                });
-                item.components = componentsCoId;
-                const componentsKey = `${prefix ? `${prefix}.` : ''}${key}[${index}].components`;
-                coIdRegistry.register(componentsKey, componentsCoId);
-                instanceCoIdMap.set(componentsKey, componentsCoId);
-              } else if (item.components && typeof item.components === 'string' && item.components.startsWith('@') && !item.components.startsWith('co_z')) {
-                const componentsCoId = coIdByInstanceId.get(item.components);
-                if (componentsCoId) {
-                  item.components = componentsCoId;
-                }
-              } else if (!item.components) {
-                const componentsCoId = generateCoIdForInstance({ type: 'components', styleId });
-                componentsComaps.push({
-                  coId: componentsCoId,
-                  schema: '@schema/components-comap',
-                  data: {}
-                });
-                item.components = componentsCoId;
-                const componentsKey = `${prefix ? `${prefix}.` : ''}${key}[${index}].components`;
-                coIdRegistry.register(componentsKey, componentsCoId);
-                instanceCoIdMap.set(componentsKey, componentsCoId);
-              }
-            }
-          });
-        }
-      }
-    }; */
     
     // Note: tokens and components are now embedded objects in styles (no extraction needed)
     
@@ -868,8 +493,8 @@ export class IndexedDBBackend {
       // All schemas are identical
       return false;
     } catch (error) {
-      // On error, default to reseeding (safe fallback)
-      console.warn('[IndexedDBBackend] Error comparing schemas, will reseed:', error);
+      // On error, default to reseeding (safe fallback for schema comparison errors)
+      console.warn('[IndexedDBBackend] Error comparing schemas, will reseed to ensure consistency:', error.message);
       return true;
     }
   }
@@ -1697,14 +1322,13 @@ export class IndexedDBBackend {
           
           for (const [path, config] of entries) {
             // Get co-id - config.$id should already be a co-id after transformation
-            // But also check instanceCoIdMap as fallback
             let coId = null;
             
-            // First, check if config.$id is already a co-id (after transformation)
+            // config.$id should be a co-id after transformation
             if (config.$id && config.$id.startsWith('co_z')) {
               coId = config.$id;
             } else {
-              // Fallback: try to get from instanceCoIdMap
+              // If transformation failed, try instanceCoIdMap lookup
               // Keys in instanceCoIdMap are like "actors.vibe/vibe" or just "vibe/vibe"
               const possibleKeys = [
                 `${configTypeKey}.${path}`,
@@ -1717,6 +1341,11 @@ export class IndexedDBBackend {
                   coId = instanceCoIdMap.get(key);
                   break;
                 }
+              }
+              
+              // Fail fast if no co-id found after transformation
+              if (!coId) {
+                throw new Error(`[IndexedDBBackend] No co-id found for config ${configType}:${path} after transformation. config.$id: ${config.$id}`);
               }
             }
             
@@ -1749,9 +1378,9 @@ export class IndexedDBBackend {
                 break;
               }
             }
-            // Fallback to 'todos' if not found
+            // Fail fast if vibe original ID not found
             if (!vibeOriginalId) {
-              vibeOriginalId = 'todos';
+              throw new Error(`[IndexedDBBackend] Could not find original vibe ID for co-id ${vibeCoId} in instanceCoIdMap`);
             }
             
             // Store @schema/vibe:todos (using original $id)

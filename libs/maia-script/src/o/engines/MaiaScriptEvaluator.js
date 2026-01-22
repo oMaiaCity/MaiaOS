@@ -114,13 +114,7 @@ export class MaiaScriptEvaluator {
     // $ prefix = context (single-dollar for context)
     const path = shortcut.substring(1); // Remove $
     
-    // Legacy support: Check if path starts with "item." (backwards compatibility)
-    if (path.startsWith('item.')) {
-      const itemPath = path.substring(5); // Remove "item."
-      return this.resolvePath(data.item, itemPath);
-    }
-    
-    // Default: resolve to context
+    // Resolve to context
     return this.resolvePath(data.context, path);
   }
 

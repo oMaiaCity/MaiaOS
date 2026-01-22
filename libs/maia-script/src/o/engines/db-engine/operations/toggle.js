@@ -34,7 +34,8 @@ export class ToggleOperation {
     }
     
     // Schema is now a co-id (transformed during seeding)
-    // Field validation skipped - assume field exists and is boolean
+    // Note: Field existence and type are validated below (lines 49-57).
+    // Schema-level validation is not performed - if needed, do it before calling this operation.
     
     console.log(`[ToggleOperation] Toggling ${field} for record ${id} in collection ${schema}`);
     

@@ -30,8 +30,8 @@ export class CreateOperation {
     }
     
     // Schema is now a co-id (transformed during seeding)
-    // Schema validation is handled at the data schema level, not collection level
-    // Skip validation here - data schemas validate individual records
+    // Note: Data validation is not performed here. If validation is required,
+    // it should be done before calling this operation (e.g., in tools or state machines).
     
     console.log(`[CreateOperation] Creating record in collection ${schema}`, data);
     

@@ -89,13 +89,6 @@ export class StateEngine {
     // Clear the flag after entry actions complete
     machine._isInitialCreation = false;
     
-    // Auto-transition from "init" to "idle" if initial state is "init"
-    // Note: No longer needed - subscriptions are now automatic based on view analysis
-    // This code is kept for backwards compatibility but won't trigger for most state machines
-    if (machine.currentState === 'init') {
-      await this.send(machineId, 'INIT_COMPLETE', {});
-    }
-    
     return machine;
   }
 
@@ -278,13 +271,10 @@ export class StateEngine {
       // This allows loading states to transition to idle after subscriptions are set up
       if (stateDef.on && stateDef.on.SUCCESS) {
         // Route through inbox for unified event logging
-        if (this.actorEngine && machine.actor) {
-          await this.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', {});
-        } else {
-          // Fallback: direct send if actorEngine not available (should not happen in normal flow)
-          console.warn('[StateEngine] ActorEngine not available, sending SUCCESS directly');
-          await this.send(machine.id, 'SUCCESS', {});
+        if (!this.actorEngine || !machine.actor) {
+          throw new Error('[StateEngine] ActorEngine not available - cannot route SUCCESS event through inbox');
         }
+        await this.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', {});
       }
     }
   }
@@ -398,13 +388,10 @@ export class StateEngine {
       const currentStateDef = machine.definition.states[machine.currentState];
       if (currentStateDef.on && currentStateDef.on.SUCCESS) {
         // Route through inbox for unified event logging
-        if (this.actorEngine && machine.actor) {
-          await this.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', {});
-        } else {
-          // Fallback: direct send if actorEngine not available (should not happen in normal flow)
-          console.warn('[StateEngine] ActorEngine not available, sending SUCCESS directly');
-          await this.send(machine.id, 'SUCCESS', {});
+        if (!this.actorEngine || !machine.actor) {
+          throw new Error('[StateEngine] ActorEngine not available - cannot route SUCCESS event through inbox');
         }
+        await this.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', {});
         }
       }
     } catch (error) {
@@ -415,14 +402,11 @@ export class StateEngine {
       const currentStateDef = machine.definition.states[machine.currentState];
       if (currentStateDef.on && currentStateDef.on.ERROR) {
         // Route through inbox for unified event logging
-        if (this.actorEngine && machine.actor) {
-          await this.actorEngine.sendInternalEvent(machine.actor.id, 'ERROR', { error: error.message });
-        } else {
-          // Fallback: direct send if actorEngine not available (should not happen in normal flow)
-          console.warn('[StateEngine] ActorEngine not available, sending ERROR directly');
-          await this.send(machine.id, 'ERROR', { error: error.message });
+        if (!this.actorEngine || !machine.actor) {
+          throw new Error('[StateEngine] ActorEngine not available - cannot route ERROR event through inbox');
         }
-        }
+        await this.actorEngine.sendInternalEvent(machine.actor.id, 'ERROR', { error: error.message });
+      }
       }
     }
   }
