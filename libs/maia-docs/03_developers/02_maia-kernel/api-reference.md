@@ -1,0 +1,207 @@
+# API Reference
+
+Complete API reference for `@MaiaOS/kernel` package.
+
+---
+
+## `createMaiaOS(options)`
+
+Creates an authenticated MaiaOS instance (identity layer).
+
+**Parameters:**
+- `options.node` (required) - LocalNode instance from `signInWithPasskey`
+- `options.account` (required) - RawAccount instance from `signInWithPasskey`
+- `options.accountID` (optional) - Account ID string
+- `options.name` (optional) - Display name
+
+**Returns:** `Promise<Object>` - MaiaOS instance with:
+- `id` - Identity object (`{ maiaId, node }`)
+- `auth` - Authentication API
+- `db` - Database API (future)
+- `script` - DSL API (future)
+- `inspector()` - Dev tool to inspect account
+- `getAllCoValues()` - List all CoValues
+- `getCoValueDetail(coId)` - Get CoValue details
+
+**Throws:** If `node` or `account` not provided
+
+**Example:**
+```javascript
+const { node, account } = await signInWithPasskey({ salt: "maia.city" });
+const o = await createMaiaOS({ node, account });
+
+// Inspect your account
+const accountData = o.inspector();
+console.log("Account data:", accountData);
+
+// List all CoValues
+const coValues = o.getAllCoValues();
+console.log("CoValues:", coValues);
+```
+
+---
+
+## `MaiaOS.boot(config)`
+
+Boots the MaiaOS operating system (execution layer).
+
+**Parameters:**
+- `config.modules` (optional, default: `['db', 'core', 'dragdrop', 'interface']`) - Modules to load
+- `config.registry` (optional) - Config registry for seeding database
+- `config.isDevelopment` (optional) - Development mode flag
+
+**Returns:** `Promise<MaiaOS>` - Booted OS instance
+
+**Example:**
+```javascript
+const os = await MaiaOS.boot({
+  modules: ['db', 'core', 'dragdrop', 'interface'],
+  registry: {
+    // Your configs here
+  }
+});
+```
+
+---
+
+## `os.createActor(actorPath, container)`
+
+Creates an actor from a `.maia` file.
+
+**Parameters:**
+- `actorPath` (string) - Path to actor file or co-id
+- `container` (HTMLElement) - DOM container for actor
+
+**Returns:** `Promise<Object>` - Created actor instance
+
+**Example:**
+```javascript
+const actor = await os.createActor(
+  './actors/todo.actor.maia',
+  document.getElementById('todo-container')
+);
+```
+
+---
+
+## `os.loadVibe(vibePath, container)`
+
+Loads a vibe (app manifest) from a file.
+
+**Parameters:**
+- `vibePath` (string) - Path to `.vibe.maia` file
+- `container` (HTMLElement) - DOM container for root actor
+
+**Returns:** `Promise<{vibe: Object, actor: Object}>` - Vibe metadata and actor
+
+**Example:**
+```javascript
+const { vibe, actor } = await os.loadVibe(
+  './vibes/todos/manifest.vibe.maia',
+  document.getElementById('app-container')
+);
+```
+
+---
+
+## `os.loadVibeFromDatabase(vibeId, container)`
+
+Loads a vibe from the database.
+
+**Parameters:**
+- `vibeId` (string) - Vibe ID (e.g., `"@vibe/todos"`)
+- `container` (HTMLElement) - DOM container for root actor
+
+**Returns:** `Promise<{vibe: Object, actor: Object}>` - Vibe metadata and actor
+
+**Example:**
+```javascript
+const { vibe, actor } = await os.loadVibeFromDatabase(
+  '@vibe/todos',
+  document.getElementById('app-container')
+);
+```
+
+---
+
+## `os.getActor(actorId)`
+
+Gets an actor by ID.
+
+**Parameters:**
+- `actorId` (string) - Actor ID
+
+**Returns:** `Object|null` - Actor instance or null
+
+---
+
+## `os.sendMessage(actorId, message)`
+
+Sends a message to an actor.
+
+**Parameters:**
+- `actorId` (string) - Target actor ID
+- `message` (Object) - Message object
+
+**Example:**
+```javascript
+os.sendMessage('actor-123', {
+  type: 'click',
+  target: 'button-1'
+});
+```
+
+---
+
+## `os.db(payload)`
+
+Executes a database operation (internal use + `@db` tool).
+
+**Parameters:**
+- `payload` (Object) - Operation payload:
+  - `op` (string) - Operation type: `'query'`, `'create'`, `'update'`, `'delete'`, `'seed'`
+  - Other fields depend on operation type
+
+**Returns:** `Promise<any>` - Operation result
+
+**Example:**
+```javascript
+// Query
+const todos = await os.db({
+  op: 'query',
+  schema: '@schema/todos',
+  filter: { completed: false }
+});
+
+// Create
+const newTodo = await os.db({
+  op: 'create',
+  schema: '@schema/todos',
+  data: { text: 'Buy milk', completed: false }
+});
+```
+
+---
+
+## `os.getEngines()`
+
+Gets all engines for debugging.
+
+**Returns:** `Object` - Engine instances:
+- `actorEngine` - ActorEngine
+- `viewEngine` - ViewEngine
+- `styleEngine` - StyleEngine
+- `stateEngine` - StateEngine
+- `toolEngine` - ToolEngine
+- `dbEngine` - DBEngine
+- `evaluator` - MaiaScriptEvaluator
+- `moduleRegistry` - ModuleRegistry
+
+---
+
+## Related Documentation
+
+- [Main README](./README.md) - Package overview
+- [auth-layer.md](./auth-layer.md) - Identity & Authentication layer
+- [boot-process.md](./boot-process.md) - Boot process details
+- [patterns.md](./patterns.md) - Common patterns

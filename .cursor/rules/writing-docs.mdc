@@ -308,6 +308,196 @@ Every document should follow this structure:
 
 ---
 
+## Documentation File Size and Splitting
+
+### Maximum File Size
+
+**Rule: Keep documentation files between 150-300 lines maximum.**
+
+- ✅ **150-200 lines** - Ideal for focused topics
+- ✅ **200-250 lines** - Acceptable for comprehensive topics
+- ⚠️ **250-300 lines** - Maximum acceptable size
+- ❌ **300+ lines** - **MUST split into multiple files**
+
+### When to Split
+
+Split large documentation files when:
+
+1. **File exceeds 300 lines** - Hard to navigate and digest
+2. **Multiple distinct topics** - Each topic can stand alone
+3. **Different audiences** - API reference vs. conceptual explanations
+4. **Different use cases** - Getting started vs. advanced patterns
+5. **Different layers** - Auth layer vs. execution layer
+
+### How to Split Logically
+
+**Cluster related concepts together:**
+
+- **By topic** - All engines together, all modules together, all expressions together
+- **By audience** - Concepts vs. API reference vs. troubleshooting
+- **By use case** - Getting started vs. advanced patterns
+- **By layer** - Auth layer vs. execution layer vs. data layer
+
+**Example splitting strategy:**
+
+```
+Before (928 lines):
+├── README.md (everything)
+
+After (split into focused files):
+├── README.md (overview, architecture, navigation - ~150 lines)
+├── engines.md (all engine descriptions - ~300 lines)
+├── modules.md (module system - ~200 lines)
+├── expressions.md (expression language - ~200 lines)
+├── api-reference.md (API reference - ~150 lines)
+└── patterns.md (patterns & troubleshooting - ~150 lines)
+```
+
+### Main README Structure
+
+The main README should serve as a **navigation hub**:
+
+```markdown
+# Package Name
+
+## Overview
+[One sentence: What is this?]
+[One paragraph: Why does it matter?]
+
+## The Simple Version
+[Analogy + basic example]
+
+## Architecture
+[High-level architecture diagram/explanation]
+
+## Documentation Structure
+
+This package documentation is organized into focused topics:
+
+- **[engines.md](./engines.md)** - Detailed engine descriptions
+- **[modules.md](./modules.md)** - Module system and custom modules
+- **[expressions.md](./expressions.md)** - MaiaScript expression language
+- **[api-reference.md](./api-reference.md)** - Complete API reference
+- **[patterns.md](./patterns.md)** - Common patterns and troubleshooting
+
+## Quick Start
+
+[Simple example showing basic usage]
+
+## Related Documentation
+
+- [Link to related packages]
+- [Link to architecture docs]
+```
+
+**Key principles:**
+- ✅ Keep main README concise (~150 lines max)
+- ✅ Provide clear navigation to sub-files
+- ✅ Include quick start example
+- ✅ Link to related documentation
+
+### Sub-File Structure
+
+Each sub-file should be **self-contained** but link to related files:
+
+```markdown
+# Topic Name
+
+## Overview
+[Brief overview of this specific topic]
+
+## [Main Content]
+[Detailed explanation]
+
+## Related Topics
+
+- [Link to related sub-file]
+- [Link back to main README]
+
+## See Also
+
+- [Link to related package docs]
+```
+
+**Key principles:**
+- ✅ Each file focuses on one topic (250-300 lines max)
+- ✅ Include overview section
+- ✅ Link to related files for context
+- ✅ Cross-reference related concepts
+
+### Logical Clustering Examples
+
+**✅ Good Clustering:**
+
+```
+maia-script/
+├── README.md (overview + navigation)
+├── engines.md (all 10 engines together)
+├── modules.md (module system + custom modules)
+├── expressions.md (expression language reference)
+├── api-reference.md (complete API)
+└── patterns.md (patterns + troubleshooting)
+```
+
+**❌ Bad Clustering:**
+
+```
+maia-script/
+├── README.md (overview)
+├── engine-1.md (single engine)
+├── engine-2.md (single engine)
+├── engine-3.md (single engine)
+... (10 separate files - too fragmented)
+```
+
+**Why:** Engines are related concepts that belong together. Split only when a single topic exceeds 300 lines.
+
+### Cross-References
+
+**Always include cross-references:**
+
+- Main README → Links to all sub-files
+- Sub-files → Link back to main README
+- Sub-files → Link to related sub-files
+- Sub-files → Link to related package docs
+
+**Example:**
+
+```markdown
+## Related Documentation
+
+- [Main README](./README.md) - Package overview
+- [engines.md](./engines.md) - Engine details
+- [expressions.md](./expressions.md) - Expression language
+- [maia-kernel Package](../02_maia-kernel/README.md) - Boot process
+```
+
+### File Naming Conventions
+
+Use clear, descriptive names:
+
+- ✅ `engines.md` - Clear topic name
+- ✅ `api-reference.md` - Standard naming
+- ✅ `auth-layer.md` - Descriptive layer name
+- ❌ `part1.md` - Not descriptive
+- ❌ `details.md` - Too vague
+
+### Summary
+
+**File Size Rules:**
+- 150-200 lines: Ideal
+- 200-250 lines: Acceptable
+- 250-300 lines: Maximum
+- 300+ lines: **MUST split**
+
+**Splitting Strategy:**
+- Cluster by topic, audience, use case, or layer
+- Main README = Navigation hub (~150 lines)
+- Sub-files = Focused topics (250-300 lines max)
+- Include cross-references between files
+
+---
+
 ## Writing Process: Before You Write
 
 **CRITICAL:** Before creating, updating, or consolidating documentation, follow this process:

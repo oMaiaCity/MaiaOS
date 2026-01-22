@@ -4,18 +4,20 @@
  * Combines multiple .md files into single context-optimized files
  * 
  * Output:
- * - docs/agents/LLM_Creators.md (ARCHITECTURE + creators docs)
- * - docs/agents/LLM_Developers.md (ARCHITECTURE + developers docs)
+ * - libs/maia-docs/04_agents/LLM_Creators.md (ARCHITECTURE + creators docs)
+ * - libs/maia-docs/04_agents/LLM_Developers.md (ARCHITECTURE + developers docs)
  * 
- * Reads from: docs/ (getting-started, creators, developers)
- * Writes to: docs/agents/ (LLM documentation files)
+ * Reads from: libs/maia-docs/ (getting-started, creators, developers)
+ * Writes to: libs/maia-docs/04_agents/ (LLM documentation files)
+ * 
+ * Supports nested directory structures (recursive reading)
  * 
  * Runs on file changes in watch mode
  */
 
 import { watch } from 'fs';
-import { readdir, readFile, writeFile, mkdir } from 'fs/promises';
-import { join, dirname } from 'path';
+import { readdir, readFile, writeFile, mkdir, stat } from 'fs/promises';
+import { join, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,25 +28,34 @@ const OUTPUT_AGENTS_DIR = join(DOCS_DIR, '04_agents');
 const GETTING_STARTED_DIR = join(DOCS_DIR, '01_getting-started');
 
 /**
- * Read all markdown files from a directory
+ * Read all markdown files from a directory recursively
  */
-async function readMarkdownFiles(dir) {
+async function readMarkdownFiles(dir, baseDir = dir) {
   try {
-    const files = await readdir(dir);
-    const mdFiles = files
-      .filter(f => f.endsWith('.md'))
-      .sort(); // Alphabetical order (01-, 02-, etc.)
-    
+    const entries = await readdir(dir, { withFileTypes: true });
     const contents = [];
-    for (const file of mdFiles) {
-      const filePath = join(dir, file);
-      const content = await readFile(filePath, 'utf-8');
-      contents.push({
-        file,
-        content: content.trim()
-      });
+    
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name);
+      
+      if (entry.isDirectory()) {
+        // Recursively read subdirectories
+        const subContents = await readMarkdownFiles(fullPath, baseDir);
+        contents.push(...subContents);
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        // Read markdown file
+        const content = await readFile(fullPath, 'utf-8');
+        const relativePath = relative(baseDir, fullPath);
+        contents.push({
+          file: entry.name,
+          path: relativePath,
+          content: content.trim()
+        });
+      }
     }
-    return contents;
+    
+    // Sort by path to maintain order (01_maia-self, 02_maia-kernel, etc.)
+    return contents.sort((a, b) => a.path.localeCompare(b.path));
   } catch (error) {
     console.error(`Error reading directory ${dir}:`, error.message);
     return [];
@@ -98,12 +109,12 @@ async function generate() {
     const creatorSections = [
       ...gettingStartedDocs.map(doc => ({
         title: doc.file.replace('.md', '').replace(/^\d+_/, '').replace(/-/g, ' ').toUpperCase(),
-        source: `getting-started/${doc.file}`,
+        source: `getting-started/${doc.path || doc.file}`,
         content: doc.content
       })),
       ...creatorDocs.map(doc => ({
         title: doc.file.replace('.md', '').replace(/^\d+-/, '').replace(/-/g, ' ').toUpperCase(),
-        source: `creators/${doc.file}`,
+        source: `creators/${doc.path || doc.file}`,
         content: doc.content
       }))
     ];
@@ -120,14 +131,24 @@ async function generate() {
     const developerSections = [
       ...gettingStartedDocs.map(doc => ({
         title: doc.file.replace('.md', '').replace(/^\d+_/, '').replace(/-/g, ' ').toUpperCase(),
-        source: `getting-started/${doc.file}`,
+        source: `getting-started/${doc.path || doc.file}`,
         content: doc.content
       })),
-      ...developerDocs.map(doc => ({
-        title: doc.file.replace('.md', '').replace(/-/g, ' ').toUpperCase(),
-        source: `developers/${doc.file}`,
-        content: doc.content
-      }))
+      ...developerDocs.map(doc => {
+        // Extract package name from path (e.g., "01_maia-self/README.md" -> "maia-self")
+        const pathParts = (doc.path || doc.file).split('/');
+        const packageName = pathParts[0]?.replace(/^\d+_/, '') || doc.file.replace('.md', '');
+        const fileName = doc.file.replace('.md', '').replace(/^\d+_/, '');
+        const title = pathParts.length > 1 
+          ? `${packageName}/${fileName}`.replace(/-/g, ' ').toUpperCase()
+          : fileName.replace(/-/g, ' ').toUpperCase();
+        
+        return {
+          title,
+          source: `developers/${doc.path || doc.file}`,
+          content: doc.content
+        };
+      })
     ];
     
     const developerLLM = await generateLLMDoc('Developers', developerSections);
@@ -155,7 +176,7 @@ async function watchMode() {
   // Initial generation
   await generate();
   
-  // Watch for changes
+  // Watch for changes (recursively)
   const watchDirs = [
     GETTING_STARTED_DIR,
     join(DOCS_DIR, '02_creators'),
@@ -164,7 +185,7 @@ async function watchMode() {
   
   for (const dir of watchDirs) {
     try {
-      watch(dir, { recursive: false }, async (eventType, filename) => {
+      watch(dir, { recursive: true }, async (eventType, filename) => {
         if (filename && filename.endsWith('.md')) {
           console.log(`\n🔄 Detected change: ${filename}`);
           await generate();

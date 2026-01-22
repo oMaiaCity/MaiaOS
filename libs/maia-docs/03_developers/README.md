@@ -6,72 +6,73 @@ Developer-facing documentation for understanding and extending MaiaOS.
 
 Read the documentation in the following order for a complete understanding:
 
-### 1. [MaiaOS Architecture](./01_maiaos.md)
-**Overview of the entire system**
-- Three-layer architecture (Definition, Execution, Intelligence)
-- Core concepts and design philosophy
-- How the layers interact
+### 1. [maia-self Package](./01_maia-self/README.md)
+**Self-Sovereign Identity and Authentication**
+- Hardware-backed authentication (WebAuthn PRF)
+- Zero-storage architecture (no secrets in browser)
+- Deterministic account derivation
+- Registration and login flows
+- Bottom-up cryptography concepts
+- Security analysis and threat model
 
-### 2. [DSL Fundamentals](./02_dsl.md)
-**MaiaScript Domain-Specific Language**
-- `.maia` file structure and syntax
-- Declarative composition patterns
-- File naming conventions
-- Reference resolution
+**Sub-topics:**
+- [Security Analysis](./01_maia-self/security-analysis.md) - Threat model and attack vectors
+- [Auth Flows](./01_maia-self/auth-flows.md) - Registration and login flows
+- [Cryptography](./01_maia-self/cryptography.md) - Bottom-up crypto concepts
+- [API Reference](./01_maia-self/api-reference.md) - Complete API reference
 
-### 3. [Schemas](./03_schemas.md)
-**Schema definitions and validation**
-- Schema structure (actors, state machines, views, styles, skills)
-- Schema validation and type safety
-- Schema composition and inheritance
-- Best practices
+### 2. [maia-kernel Package](./02_maia-kernel/README.md)
+**Core system services and boot process**
+- Identity & authentication layer (`createMaiaOS`)
+- Actor & DSL execution layer (`MaiaOS.boot()`)
+- Boot process and engine initialization
+- Module loading and database seeding
+- Public API reference
 
-### 3a. [maia-schemata Package](./maia-schemata/README.md)
+**Sub-topics:**
+- [Auth Layer](./02_maia-kernel/auth-layer.md) - Identity & Authentication layer
+- [Boot Process](./02_maia-kernel/boot-process.md) - Boot process and execution layer
+- [API Reference](./02_maia-kernel/api-reference.md) - Complete API reference
+- [Patterns](./02_maia-kernel/patterns.md) - Common patterns and troubleshooting
+
+### 3. [maia-schemata Package](./03_maia-schemata/README.md)
 **Schema validation and transformation system**
 - ValidationEngine implementation details
 - Schema transformation for seeding
 - CoJSON types integration
 - Co-ID generation and registry
 
-### 4. [Engines](./04_engines.md)
-**Execution engines that interpret definitions**
-- ActorEngine - Actor lifecycle management
-- StateEngine - State machine interpreter
-- ViewEngine - View-to-DOM renderer
-- ToolEngine - Tool executor
-- StyleEngine - Style compiler
-- ModuleRegistry - Dynamic module loader
+**Sub-topics:**
+- [Validation](./03_maia-schemata/validation.md) - Schema validation system
+- [Transformation](./03_maia-schemata/transformation.md) - Schema transformation for seeding
+- [CoJSON Integration](./03_maia-schemata/cojson-integration.md) - CoJSON types integration
+- [Co-ID Generation](./03_maia-schemata/co-id-generation.md) - Co-ID generation and registry
 
-### 5. [Composition](./05_composition.md)
-**How to compose components and build features**
-- Actor composition patterns
-- State machine composition
-- View composition
-- Style composition
-- Modular architecture
+### 4. [maia-script Package](./04_maia-script/README.md)
+**Execution engines and modules**
+- Engine architecture and relationships
+- Individual engine details (ActorEngine, ViewEngine, StateEngine, etc.)
+- Module system and custom module creation
+- MaiaScript expression language reference
+- Using engines independently for advanced use cases
+- Complete API reference
 
-### 6. [Reactive Queries](./06_reactive-queries.md)
-**Reactive data system**
-- Query syntax and patterns
-- Reactive updates and subscriptions
-- Data flow and state management
-- Performance optimization
+**Sub-topics:**
+- [Engines](./04_maia-script/engines.md) - Detailed engine descriptions
+- [Modules](./04_maia-script/modules.md) - Module system and custom modules
+- [Expressions](./04_maia-script/expressions.md) - MaiaScript expression language
+- [API Reference](./04_maia-script/api-reference.md) - Complete API reference
+- [Patterns](./04_maia-script/patterns.md) - Common patterns and troubleshooting
 
-### 7. [CoJSON Integration](./07_cojson.md)
+### 5. [maia-db Package](./05_maia-db/cojson.md)
 **CRDT-based collaborative data layer**
-- MaiaCojson architecture
-- JSON Schema wrappers for CRDTs
-- CRUD API (`o.create`, `o.read`, `o.update`, `o.delete`)
-- Real-time collaboration and sync
-- Zero Mocks Policy for testing
+- Complete cojson architecture hierarchy
+- Cryptographic primitives to high-level CoValues
+- CRDT operations and conflict resolution
+- Storage and sync mechanisms
 
-### 8. [Tools](./08_tools.md)
-**Development tools and utilities**
-- CLI tools
-- Build system
-- Testing framework
-- Debugging tools
-- Code generation
+**Sub-topics:**
+- [CoJSON Architecture](./05_maia-db/cojson.md) - Complete layer hierarchy from primitives to CoValues
 
 ---
 
