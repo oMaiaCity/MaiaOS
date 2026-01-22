@@ -3,8 +3,7 @@
  * Provides core UI tools (view modes, modals, utilities)
  */
 
-// Import tools from registry
-import { getTool } from '../tools/index.js';
+import { getToolEngine, registerToolsFromRegistry, registerModuleConfig } from '../utils/module-registration.js';
 
 export class CoreModule {
   /**
@@ -12,11 +11,7 @@ export class CoreModule {
    * @param {ModuleRegistry} registry - Module registry instance
    */
   static async register(registry) {
-    // Get toolEngine from registry (stored by kernel during boot)
-    const toolEngine = registry._toolEngine;
-    if (!toolEngine) {
-      throw new Error('[CoreModule] ToolEngine not available in registry');
-    }
+    const toolEngine = getToolEngine(registry, 'CoreModule');
     
     const toolNames = [
       'noop',
@@ -27,20 +22,10 @@ export class CoreModule {
     
     // Silent - kernel logs module summary
     
-    for (const toolName of toolNames) {
-      const namespacePath = `core/${toolName}`;
-      const tool = getTool(namespacePath);
-      
-      if (tool) {
-        await toolEngine.registerTool(namespacePath, `@core/${toolName}`, {
-          definition: tool.definition,
-          function: tool.function
-        });
-      }
-    }
+    await registerToolsFromRegistry(registry, toolEngine, 'core', toolNames, '@core', { silent: true });
     
     // Register module with config
-    registry.registerModule('core', CoreModule, {
+    registerModuleConfig(registry, 'core', CoreModule, {
       version: '1.0.0',
       description: 'Core UI tools (view modes, modals, utilities)',
       namespace: '@core',

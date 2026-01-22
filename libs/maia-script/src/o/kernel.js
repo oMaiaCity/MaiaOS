@@ -23,7 +23,7 @@ import { SubscriptionEngine } from './engines/subscription-engine/subscription.e
 import { DBEngine } from './engines/db-engine/db.engine.js';
 import { IndexedDBBackend } from './engines/db-engine/backend/indexeddb.js';
 // Import validation helper
-import { validateOrThrow, validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
+import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import all schemas for seeding
 import * as schemata from '@MaiaOS/schemata';
 // Import ValidationEngine for meta schema validation
@@ -62,77 +62,137 @@ export class MaiaOS {
     console.log('🔧 Tools: Dynamic modular loading');
     console.log('💾 Database: Unified operation engine (maia.db)');
     
-    // Initialize database operation engine
+    // Initialize database
+    const backend = await MaiaOS._initializeDatabase(os);
+    
+    // Seed database if registry provided
+    if (config.registry) {
+      await MaiaOS._seedDatabase(os, backend, config);
+    }
+    
+    // Initialize engines
+    MaiaOS._initializeEngines(os, config);
+    
+    // Load modules
+    await MaiaOS._loadModules(os, config);
+    
+    console.log(`✅ Loaded ${os.moduleRegistry.listModules().length} modules`);
+    console.log(`✅ Registered ${os.toolEngine.tools.size} tools`);
+    console.log('✅ MaiaOS booted successfully');
+    
+    return os;
+  }
+
+  /**
+   * Initialize database backend and engine
+   * @param {MaiaOS} os - OS instance
+   * @returns {Promise<IndexedDBBackend>} Initialized backend
+   */
+  static async _initializeDatabase(os) {
     console.log('📦 Initializing database engine...');
     const backend = new IndexedDBBackend();
     await backend.init();
     os.dbEngine = new DBEngine(backend);
+    return backend;
+  }
+
+  /**
+   * Collect schemas from schemata module
+   * @returns {Object} Schemas object
+   */
+  static _collectSchemas() {
+    const schemas = {};
     
-    // Seed database with configs + schemas + tool definitions
-    if (config.registry) {
-      console.log('🌱 Seeding database...');
-      
-      // Import tool definitions
-      const { getAllToolDefinitions } = await import('./tools/index.js');
-      const toolDefs = getAllToolDefinitions();
-      
-      // Merge tool definitions into registry
-      const configsWithTools = {
-        ...config.registry,
-        tool: toolDefs // Add tool definitions under 'tool' key
-      };
-      
-      const schemas = {};
-      
-      // Get all schema definitions from schemata module
-      if (typeof schemata.getAllSchemas === 'function') {
-        Object.assign(schemas, schemata.getAllSchemas());
-      }
-      
-      // Add meta schema for validation
-      if (typeof schemata.getMetaSchema === 'function') {
-        schemas['meta-schema'] = schemata.getMetaSchema();
-      }
-      
-      // Validate all schemas against meta schema before seeding
-      // Metaschema is registered during ValidationEngine initialization
-      const validationEngine = new ValidationEngine();
-      await validationEngine.initialize();
-      
-      console.log('🔍 Validating schemas against meta schema...');
-      for (const [name, schema] of Object.entries(schemas)) {
-        const result = await validationEngine.validateSchemaAgainstMeta(schema);
-        if (!result.valid) {
-          const errorDetails = result.errors
-            .map(err => `  - ${err.instancePath}: ${err.message}`)
-            .join('\n');
-          console.error(`❌ Schema '${name}' failed meta schema validation:\n${errorDetails}`);
-          throw new Error(`Schema '${name}' is not valid JSON Schema`);
-        }
-      }
-      console.log('✅ All schemas validated against meta schema');
-      
-      await os.dbEngine.execute({
-        op: 'seed',
-        configs: configsWithTools,
-        schemas: schemas,
-        data: { todos: [] } // Initial empty collections
-      });
-      
-      console.log('✅ Database seeded successfully');
-      
-      // Set schema resolver on validation helper singleton for engines to use
-      const { setSchemaResolver } = await import('@MaiaOS/schemata/validation.helper');
-      setSchemaResolver(async (schemaKey) => {
-        try {
-          return await backend.getSchema(schemaKey);
-        } catch (error) {
-          console.warn(`[MaiaOS] Failed to resolve schema ${schemaKey}:`, error);
-          return null;
-        }
-      });
+    // Get all schema definitions from schemata module
+    if (typeof schemata.getAllSchemas === 'function') {
+      Object.assign(schemas, schemata.getAllSchemas());
     }
     
+    // Add meta schema for validation
+    if (typeof schemata.getMetaSchema === 'function') {
+      schemas['meta-schema'] = schemata.getMetaSchema();
+    }
+    
+    return schemas;
+  }
+
+  /**
+   * Validate schemas against meta schema
+   * @param {Object} schemas - Schemas to validate
+   * @param {ValidationEngine} validationEngine - Validation engine instance
+   * @throws {Error} If any schema fails validation
+   */
+  static async _validateSchemas(schemas, validationEngine) {
+    console.log('🔍 Validating schemas against meta schema...');
+    for (const [name, schema] of Object.entries(schemas)) {
+      const result = await validationEngine.validateSchemaAgainstMeta(schema);
+      if (!result.valid) {
+        const errorDetails = result.errors
+          .map(err => `  - ${err.instancePath}: ${err.message}`)
+          .join('\n');
+        console.error(`❌ Schema '${name}' failed meta schema validation:\n${errorDetails}`);
+        throw new Error(`Schema '${name}' is not valid JSON Schema`);
+      }
+    }
+    console.log('✅ All schemas validated against meta schema');
+  }
+
+  /**
+   * Seed database with configs, schemas, and tool definitions
+   * @param {MaiaOS} os - OS instance
+   * @param {IndexedDBBackend} backend - Database backend
+   * @param {Object} config - Boot configuration
+   */
+  static async _seedDatabase(os, backend, config) {
+    console.log('🌱 Seeding database...');
+    
+    // Import tool definitions
+    const { getAllToolDefinitions } = await import('./tools/index.js');
+    const toolDefs = getAllToolDefinitions();
+    
+    // Merge tool definitions into registry
+    const configsWithTools = {
+      ...config.registry,
+      tool: toolDefs // Add tool definitions under 'tool' key
+    };
+    
+    // Collect schemas
+    const schemas = MaiaOS._collectSchemas();
+    
+    // Validate schemas against meta schema before seeding
+    // Metaschema is registered during ValidationEngine initialization
+    const validationEngine = new ValidationEngine();
+    await validationEngine.initialize();
+    await MaiaOS._validateSchemas(schemas, validationEngine);
+    
+    // Seed database
+    await os.dbEngine.execute({
+      op: 'seed',
+      configs: configsWithTools,
+      schemas: schemas,
+      data: { todos: [] } // Initial empty collections
+    });
+    
+    console.log('✅ Database seeded successfully');
+    
+    // Set schema resolver on validation helper singleton for engines to use
+    const { setSchemaResolver } = await import('@MaiaOS/schemata/validation.helper');
+    setSchemaResolver(async (schemaKey) => {
+      try {
+        return await backend.getSchema(schemaKey);
+      } catch (error) {
+        console.warn(`[MaiaOS] Failed to resolve schema ${schemaKey}:`, error);
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Initialize all engines and wire dependencies
+   * @param {MaiaOS} os - OS instance
+   * @param {Object} config - Boot configuration
+   */
+  static _initializeEngines(os, config) {
     // Initialize module registry
     os.moduleRegistry = new ModuleRegistry();
     
@@ -181,7 +241,14 @@ export class MaiaOS {
     
     // Set actorEngine reference in stateEngine (for unified event flow through inbox)
     os.stateEngine.actorEngine = os.actorEngine;
-    
+  }
+
+  /**
+   * Load modules
+   * @param {MaiaOS} os - OS instance
+   * @param {Object} config - Boot configuration
+   */
+  static async _loadModules(os, config) {
     // Load modules (default: db, core, dragdrop, interface)
     const modules = config.modules || ['db', 'core', 'dragdrop', 'interface'];
     console.log(`📦 Loading ${modules.length} modules...`);
@@ -193,12 +260,6 @@ export class MaiaOS {
         console.error(`Failed to load module "${moduleName}":`, error);
       }
     }
-    
-    console.log(`✅ Loaded ${os.moduleRegistry.listModules().length} modules`);
-    console.log(`✅ Registered ${os.toolEngine.tools.size} tools`);
-    console.log('✅ MaiaOS booted successfully');
-    
-    return os;
   }
 
   /**

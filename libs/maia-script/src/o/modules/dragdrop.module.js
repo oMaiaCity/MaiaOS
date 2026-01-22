@@ -3,8 +3,7 @@
  * Provides drag-and-drop functionality with configuration
  */
 
-// Import tools from registry
-import { getTool } from '../tools/index.js';
+import { getToolEngine, registerToolsFromRegistry, registerSingleToolFromRegistry, registerModuleConfig } from '../utils/module-registration.js';
 
 export class DragDropModule {
   /**
@@ -44,11 +43,7 @@ export class DragDropModule {
    * @param {ModuleRegistry} registry - Module registry instance
    */
   static async register(registry) {
-    // Get toolEngine from registry (stored by kernel during boot)
-    const toolEngine = registry._toolEngine;
-    if (!toolEngine) {
-      throw new Error('[DragDropModule] ToolEngine not available in registry');
-    }
+    const toolEngine = getToolEngine(registry, 'DragDropModule');
     
     const toolNames = [
       'start',
@@ -61,37 +56,13 @@ export class DragDropModule {
     console.log(`[DragDropModule] Registering ${toolNames.length + 1} tools...`);
     
     // Register @context/update first (critical for input handling)
-    try {
-      const contextUpdateTool = getTool('context/update');
-      if (contextUpdateTool) {
-        await toolEngine.registerTool('context/update', '@context/update', {
-          definition: contextUpdateTool.definition,
-          function: contextUpdateTool.function
-        });
-      }
-    } catch (error) {
-      console.error('[DragDropModule] Failed to register @context/update:', error.message);
-    }
+    await registerSingleToolFromRegistry(toolEngine, 'context/update', '@context/update');
     
     // Register drag-drop tools
-    for (const toolName of toolNames) {
-      try {
-        const namespacePath = `dragdrop/${toolName}`;
-        const tool = getTool(namespacePath);
-        
-        if (tool) {
-          await toolEngine.registerTool(namespacePath, `@dragdrop/${toolName}`, {
-            definition: tool.definition,
-            function: tool.function
-          });
-        }
-      } catch (error) {
-        console.error(`[DragDropModule] Failed to register @dragdrop/${toolName}:`, error.message);
-      }
-    }
+    await registerToolsFromRegistry(registry, toolEngine, 'dragdrop', toolNames, '@dragdrop');
     
     // Register module with config (even if some tools failed)
-    registry.registerModule('dragdrop', DragDropModule, {
+    registerModuleConfig(registry, 'dragdrop', DragDropModule, {
       version: '1.0.0',
       description: 'Drag-and-drop tools and configuration',
       namespace: '@dragdrop',
@@ -107,29 +78,13 @@ export class DragDropModule {
    * @returns {any}
    */
   static query(query) {
-    // Allow querying configuration
+    // Return whole config if query is 'config'
     if (query === 'config') {
       return DragDropModule.config;
     }
     
-    if (query === 'autoPreventDefaultEvents') {
-      return DragDropModule.config.autoPreventDefaultEvents;
-    }
-    
-    if (query === 'visualFeedback') {
-      return DragDropModule.config.visualFeedback;
-    }
-    
-    if (query === 'allowedDraggableTags') {
-      return DragDropModule.config.allowedDraggableTags;
-    }
-    
-    if (query === 'allowedDropzoneTags') {
-      return DragDropModule.config.allowedDropzoneTags;
-    }
-    
-    // Check if specific config key exists
-    if (query in DragDropModule.config) {
+    // Check if query is a key in config object
+    if (Object.prototype.hasOwnProperty.call(DragDropModule.config, query)) {
       return DragDropModule.config[query];
     }
     

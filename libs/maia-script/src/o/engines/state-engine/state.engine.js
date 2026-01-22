@@ -1,5 +1,7 @@
 // Import validation helper
 import { validateOrThrow } from '@MaiaOS/schemata/validation.helper';
+// Import shared utilities
+import { loadConfig } from '../../utils/config-loader.js';
 
 /**
  * StateEngine - XState-like State Machine Interpreter
@@ -28,35 +30,23 @@ export class StateEngine {
 
   /**
    * Load a state machine definition from .state.maia file
-   * @param {string} stateRef - State reference ID (e.g., "state_todo_001")
+   * @param {string} stateRef - State reference ID (e.g., "co_z...")
    * @returns {Promise<Object>} The parsed state definition
    */
   async loadStateDef(stateRef) {
     // Check cache first
-    if (!stateRef || !stateRef.startsWith('co_z')) {
-      throw new Error(`[StateEngine] loadState requires a co-id (starts with 'co_z'), got: ${stateRef}`);
-    }
-    
     if (this.stateCache.has(stateRef)) {
       return this.stateCache.get(stateRef);
     }
-
-    if (!this.dbEngine) {
-      throw new Error(`[StateEngine] Database engine not available`);
-    }
     
-    const stateDef = await this.dbEngine.execute({
-      op: 'query',
-      schema: '@schema/state',
-      key: stateRef
-    });
+    const stateDef = await loadConfig(
+      this.dbEngine,
+      '@schema/state',
+      stateRef,
+      'state',
+      this.stateCache
+    );
     
-    if (!stateDef) {
-      throw new Error(`Failed to load state from database by co-id: ${stateRef}`);
-    }
-    
-    await validateOrThrow('state', stateDef, `maia.db:${stateRef}`);
-    this.stateCache.set(stateRef, stateDef);
     return stateDef;
   }
 
@@ -156,7 +146,7 @@ export class StateEngine {
     // Evaluate guard (if present) - use current eventPayload
     // Check for !== undefined to allow false/0 guards
     if (guard !== undefined && guard !== null) {
-      const guardResult = this._evaluateGuard(guard, machine.context, machine.eventPayload);
+      const guardResult = await this._evaluateGuard(guard, machine.context, machine.eventPayload);
       console.log(`[StateEngine] Guard evaluation for ${event}:`, { guard, payload: machine.eventPayload, result: guardResult });
       if (!guardResult) {
         console.log(`[StateEngine] Guard failed for ${event}, blocking transition`);
@@ -220,9 +210,9 @@ export class StateEngine {
    * @param {Object|boolean} guard - Guard expression
    * @param {Object} context - Actor context
    * @param {Object} payload - Event payload
-   * @returns {boolean} Guard result
+   * @returns {Promise<boolean>} Guard result
    */
-  _evaluateGuard(guard, context, payload) {
+  async _evaluateGuard(guard, context, payload) {
     // Boolean guards pass through
     if (typeof guard === 'boolean') {
       return guard;
@@ -232,7 +222,7 @@ export class StateEngine {
     try {
       const data = { context, item: payload };
       console.log(`[StateEngine] Evaluating guard:`, { guard, payload, contextKeys: Object.keys(context) });
-      const result = this.evaluator.evaluate(guard, data);
+      const result = await this.evaluator.evaluate(guard, data);
       const boolResult = Boolean(result);
       console.log(`[StateEngine] Guard result:`, { guard, result, boolResult });
       return boolResult;
@@ -375,7 +365,7 @@ export class StateEngine {
     try {
       // Evaluate payload through MaiaScript (resolve $variables and $$item references)
       // Use machine.eventPayload as item context for $$id resolution
-      const evaluatedPayload = this._evaluatePayload(payload, machine.context, machine.eventPayload);
+      const evaluatedPayload = await this._evaluatePayload(payload, machine.context, machine.eventPayload);
       
       console.log(`[StateEngine] Invoking tool: ${toolName}`, evaluatedPayload);
       
@@ -416,9 +406,9 @@ export class StateEngine {
    * @param {any} payload - Raw payload from state machine definition
    * @param {Object} context - Actor context
    * @param {Object} eventPayload - Event payload (already resolved)
-   * @returns {any} Evaluated payload
+   * @returns {Promise<any>} Evaluated payload
    */
-  _evaluatePayload(payload, context, eventPayload = {}) {
+  async _evaluatePayload(payload, context, eventPayload = {}) {
     // Handle primitives
     if (payload === null || typeof payload !== 'object') {
       return payload;
@@ -426,7 +416,7 @@ export class StateEngine {
 
     // Handle arrays
     if (Array.isArray(payload)) {
-      return payload.map(item => this._evaluatePayload(item, context, eventPayload));
+      return Promise.all(payload.map(item => this._evaluatePayload(item, context, eventPayload)));
     }
 
     // Check if this is a DSL operation (like $if, $eq, etc.)
@@ -435,7 +425,7 @@ export class StateEngine {
     if (keys.length === 1 && keys[0].startsWith('$')) {
       // This is a DSL operation, evaluate it directly
       const data = { context, item: eventPayload };
-      return this.evaluator.evaluate(payload, data);
+      return await this.evaluator.evaluate(payload, data);
     }
 
     // Handle objects recursively (not DSL operations)
@@ -449,14 +439,14 @@ export class StateEngine {
         // Check if it's a DSL operation (like $if, $eq, etc.)
         if (this.evaluator.isDSLOperation(value)) {
           // Evaluate DSL operation directly
-          evaluated[key] = this.evaluator.evaluate(value, data);
+          evaluated[key] = await this.evaluator.evaluate(value, data);
         } else {
           // Otherwise, recursively evaluate it
-          evaluated[key] = this._evaluatePayload(value, context, eventPayload);
+          evaluated[key] = await this._evaluatePayload(value, context, eventPayload);
         }
       } else {
         // Otherwise, evaluate as a MaiaScript expression
-        evaluated[key] = this.evaluator.evaluate(value, data);
+        evaluated[key] = await this.evaluator.evaluate(value, data);
       }
     }
     return evaluated;

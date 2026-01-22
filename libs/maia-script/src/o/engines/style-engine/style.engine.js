@@ -1,8 +1,5 @@
-// Import validation helper
-import { validateOrThrow, validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
-// Import schema loader utility
-import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
-// Import shared path resolver utility
+// Import shared utilities
+import { loadConfig } from '../../utils/config-loader.js';
 import { resolvePath } from '../../utils/path-resolver.js';
 
 /**
@@ -39,36 +36,16 @@ export class StyleEngine {
    * @returns {Promise<Object>} The parsed style definition
    */
   async loadStyle(coId) {
-    if (!coId || !coId.startsWith('co_z')) {
-      throw new Error(`[StyleEngine] loadStyle requires a co-id, got: ${coId}`);
-    }
+    const styleDef = await loadConfig(
+      this.dbEngine,
+      '@schema/style',
+      coId,
+      'style'
+    );
     
-    if (!this.dbEngine) {
-      throw new Error(`[StyleEngine] Database engine not available`);
-    }
-    
-    const styleDef = await this.dbEngine.execute({
-      op: 'query',
-      schema: '@schema/style',
-      key: coId
-    });
-    
-    if (!styleDef) {
-      throw new Error(`Failed to load style from database by co-id: ${coId}`);
-    }
-    
-    // Determine type from $schema field (must be present)
+    // Validate $schema field is present
     if (!styleDef.$schema) {
       throw new Error(`Style definition missing required $schema field`);
-    }
-    // Brand and style now use the same schema (@schema/style)
-    // Brand styles typically have selectors, actor styles are overrides
-    const type = 'style';
-    
-    // Load schema from IndexedDB and validate on-the-fly
-    const schema = await loadSchemaFromDB(this.dbEngine, type);
-    if (schema) {
-      await validateAgainstSchemaOrThrow(schema, styleDef, type);
     }
     
     return styleDef;

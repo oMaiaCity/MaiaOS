@@ -22,26 +22,28 @@ export class MaiaScriptEvaluator {
    * @param {any} expression - The expression to evaluate
    * @param {Object} data - The data context { context, item }
    * @param {number} depth - Current recursion depth (internal)
-   * @returns {any} The evaluated result
+   * @returns {Promise<any>} The evaluated result
    */
-  evaluate(expression, data, depth = 0) {
+  async evaluate(expression, data, depth = 0) {
     // Enforce depth limit to prevent DoS via deeply nested expressions
     if (depth > this.maxDepth) {
       throw new Error(`[MaiaScriptEvaluator] Maximum recursion depth (${this.maxDepth}) exceeded. Expression may be malicious or too complex.`);
     }
     
     // Validate expression against schema before evaluation (if validation enabled)
-    if (this.validateExpressions && depth === 0) {
+    // Only validate complex expressions (objects), not primitives (they're safe)
+    // NOTE: Schema validation now properly handles primitives - cotype validation
+    // passes for primitives since they're not CoValues
+    if (this.validateExpressions && depth === 0 && typeof expression === 'object' && expression !== null && !Array.isArray(expression)) {
       // Only validate at top level to avoid performance issues
+      // Only validate objects (DSL operations), not primitives
       const expressionSchema = getSchema('maia-script-expression');
       if (expressionSchema) {
         try {
-          // Note: validateAgainstSchemaOrThrow is async, but we're in a sync context
-          // For now, we'll validate synchronously at the top level only
-          // Full async validation would require making evaluate() async, which is a breaking change
-          // TODO: Consider making evaluate() async in a future version for full validation
+          await validateAgainstSchemaOrThrow(expressionSchema, expression, 'maia-script-expression');
         } catch (error) {
-          console.warn('[MaiaScriptEvaluator] Expression validation skipped (async validation not supported in sync context):', error);
+          console.error('[MaiaScriptEvaluator] Expression validation failed:', error);
+          throw new Error(`[MaiaScriptEvaluator] Invalid MaiaScript expression: ${error.message}`);
         }
       }
     }
@@ -73,16 +75,16 @@ export class MaiaScriptEvaluator {
     // Handle $eq operation (equality comparison)
     if ('$eq' in expression) {
       const [left, right] = expression.$eq;
-      const leftValue = this.evaluate(left, data, depth + 1);
-      const rightValue = this.evaluate(right, data, depth + 1);
+      const leftValue = await this.evaluate(left, data, depth + 1);
+      const rightValue = await this.evaluate(right, data, depth + 1);
       return leftValue === rightValue;
     }
 
     // Handle $ne operation (inequality comparison)
     if ('$ne' in expression) {
       const [left, right] = expression.$ne;
-      const leftValue = this.evaluate(left, data, depth + 1);
-      const rightValue = this.evaluate(right, data, depth + 1);
+      const leftValue = await this.evaluate(left, data, depth + 1);
+      const rightValue = await this.evaluate(right, data, depth + 1);
       return leftValue !== rightValue;
     }
 
@@ -93,12 +95,12 @@ export class MaiaScriptEvaluator {
       if (typeof condition === 'string' && condition.startsWith('$')) {
         condition = this.evaluateShortcut(condition, data);
       } else {
-        condition = this.evaluate(condition, data, depth + 1);
+        condition = await this.evaluate(condition, data, depth + 1);
       }
       
       return condition 
-        ? this.evaluate(expression.$if.then, data, depth + 1)
-        : this.evaluate(expression.$if.else, data, depth + 1);
+        ? await this.evaluate(expression.$if.then, data, depth + 1)
+        : await this.evaluate(expression.$if.else, data, depth + 1);
     }
 
     // Handle ternary operator: "condition ? then : else"
@@ -113,10 +115,10 @@ export class MaiaScriptEvaluator {
         if (conditionStr.startsWith('$')) {
           condition = this.evaluateShortcut(conditionStr, data);
         } else {
-          condition = this.evaluate(conditionStr, data, depth + 1);
+          condition = await this.evaluate(conditionStr, data, depth + 1);
         }
         
-        return condition ? this.evaluate(thenStr, data, depth + 1) : this.evaluate(elseStr, data, depth + 1);
+        return condition ? await this.evaluate(thenStr, data, depth + 1) : await this.evaluate(elseStr, data, depth + 1);
       }
     }
 

@@ -1,7 +1,7 @@
 // Import validation helper
-import { validateOrThrow, validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
-// Import schema loader utility
-import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
+import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
+// Import shared utilities
+import { loadConfig } from '../../utils/config-loader.js';
 // Import HTML sanitization utility
 import { sanitizeAttribute, containsDangerousHTML } from '../../utils/html-sanitizer.js';
 
@@ -48,35 +48,19 @@ export class ViewEngine {
    * @returns {Promise<Object>} The parsed view definition
    */
   async loadView(coId) {
-    if (!coId || !coId.startsWith('co_z')) {
-      throw new Error(`[ViewEngine] loadView requires a co-id (starts with 'co_z'), got: ${coId}`);
-    }
-    
+    // Check cache first
     if (this.viewCache.has(coId)) {
       return this.viewCache.get(coId);
     }
-
-    if (!this.dbEngine) {
-      throw new Error(`[ViewEngine] Database engine not available`);
-    }
     
-    const viewDef = await this.dbEngine.execute({
-      op: 'query',
-      schema: '@schema/view',
-      key: coId
-    });
+    const viewDef = await loadConfig(
+      this.dbEngine,
+      '@schema/view',
+      coId,
+      'view',
+      this.viewCache
+    );
     
-    if (!viewDef) {
-      throw new Error(`Failed to load view from database by co-id: ${coId}`);
-    }
-    
-    // Load schema from IndexedDB and validate on-the-fly
-    const schema = await loadSchemaFromDB(this.dbEngine, 'view');
-    if (schema) {
-      await validateAgainstSchemaOrThrow(schema, viewDef, 'view');
-    }
-    
-    this.viewCache.set(coId, viewDef);
     return viewDef;
   }
   
@@ -90,7 +74,7 @@ export class ViewEngine {
    * @param {CSSStyleSheet[]} styleSheets - Stylesheets to adopt
    * @param {string} actorId - The actor ID
    */
-  render(viewDef, context, shadowRoot, styleSheets, actorId) {
+  async render(viewDef, context, shadowRoot, styleSheets, actorId) {
     // Reset input counter for this actor at start of render
     // This ensures inputs get consistent IDs across re-renders (same position = same ID)
     this.actorInputCounters.set(actorId, 0);
@@ -106,7 +90,7 @@ export class ViewEngine {
     this.currentActorId = actorId;
     
     // View IS the node structure (no container/root wrapper needed)
-    const element = this.renderNode(viewDef, { context }, actorId);
+    const element = await this.renderNode(viewDef, { context }, actorId);
     
     if (element) {
       element.style.containerType = 'inline-size';
@@ -122,9 +106,9 @@ export class ViewEngine {
    * @param {Object} node - The node definition
    * @param {Object} data - The data context { context, item }
    * @param {string} actorId - The actor ID
-   * @returns {HTMLElement|null} The rendered element
+   * @returns {Promise<HTMLElement|null>} The rendered element
    */
-  renderNode(node, data, actorId) {
+  async renderNode(node, data, actorId) {
     if (!node) return null;
 
     // Create element
@@ -137,7 +121,7 @@ export class ViewEngine {
       if (typeof node.class === 'object' && node.class.$if) {
         throw new Error('[ViewEngine] "$if" is no longer supported in class property. Use data-attributes and CSS instead.');
       }
-      const classValue = this.evaluator.evaluate(node.class, data);
+      const classValue = await this.evaluator.evaluate(node.class, data);
       if (classValue) {
         element.className = classValue;
       }
@@ -148,10 +132,10 @@ export class ViewEngine {
       for (const [attrName, attrValue] of Object.entries(node.attrs)) {
         // Special handling for data-attribute mapping
         if (attrName === 'data') {
-          this._resolveDataAttributes(attrValue, data, element);
+          await this._resolveDataAttributes(attrValue, data, element);
         } else {
           // Regular attributes
-          const resolvedValue = this.evaluator.evaluate(attrValue, data);
+          const resolvedValue = await this.evaluator.evaluate(attrValue, data);
           if (resolvedValue !== undefined && resolvedValue !== null) {
             // Convert boolean to string for data attributes (CSS selectors need strings)
             let stringValue = typeof resolvedValue === 'boolean' ? String(resolvedValue) : String(resolvedValue);
@@ -171,7 +155,7 @@ export class ViewEngine {
 
     // Handle value (for input/textarea elements)
     if (node.value !== undefined) {
-      const resolvedValue = this.evaluator.evaluate(node.value, data);
+      const resolvedValue = await this.evaluator.evaluate(node.value, data);
       if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
         if (element.tagName === 'INPUT') {
           element.value = resolvedValue || '';
@@ -194,7 +178,7 @@ export class ViewEngine {
 
     // Handle text content
     if (node.text !== undefined) {
-      const textValue = this.evaluator.evaluate(node.text, data);
+      const textValue = await this.evaluator.evaluate(node.text, data);
       element.textContent = textValue || '';
     }
 
@@ -202,7 +186,7 @@ export class ViewEngine {
     if (node.$each) {
       // Clear existing children before rendering new items (prevents duplicates on re-render)
       element.innerHTML = '';
-      const fragment = this.renderEach(node.$each, data, actorId);
+      const fragment = await this.renderEach(node.$each, data, actorId);
       element.appendChild(fragment);
     }
 
@@ -214,7 +198,7 @@ export class ViewEngine {
     // Handle $slot property: { $slot: "$key" }
     // If node has $slot property, render slot content into the element and return early
     if (node.$slot) {
-      this._renderSlot(node, data, element, actorId);
+      await this._renderSlot(node, data, element, actorId);
       return element;
     }
 
@@ -231,7 +215,7 @@ export class ViewEngine {
           throw new Error('[ViewEngine] "$if" is no longer supported in view templates. Use data-attributes and CSS instead.');
         }
         // Normal child node
-        const childElement = this.renderNode(child, data, actorId);
+        const childElement = await this.renderNode(child, data, actorId);
         if (childElement) {
           element.appendChild(childElement);
         }
@@ -256,15 +240,15 @@ export class ViewEngine {
    * @param {Object} data - The data context { context, item }
    * @param {HTMLElement} element - The element to set attributes on
    */
-  _resolveDataAttributes(dataSpec, data, element) {
+  async _resolveDataAttributes(dataSpec, data, element) {
     if (typeof dataSpec === 'string') {
       // String shorthand: "data": "$dragOverColumn"
       // Special case: if it's an object path like "$draggedItemIds.$$id", resolve item lookup
       if (dataSpec.includes('.$$')) {
         // Item lookup syntax: "$draggedItemIds.$$id" -> looks up draggedItemIds[item.id]
         const [contextKey, itemKey] = dataSpec.split('.');
-        const contextObj = this.evaluator.evaluate(contextKey, data);
-        const itemId = this.evaluator.evaluate(itemKey, data);
+        const contextObj = await this.evaluator.evaluate(contextKey, data);
+        const itemId = await this.evaluator.evaluate(itemKey, data);
         
         if (contextObj && typeof contextObj === 'object' && itemId) {
           const value = contextObj[itemId];
@@ -277,7 +261,7 @@ export class ViewEngine {
         }
       } else {
         // Regular context value
-        const value = this.evaluator.evaluate(dataSpec, data);
+        const value = await this.evaluator.evaluate(dataSpec, data);
         if (value !== null && value !== undefined) {
           // Extract key name from context key (remove $ or $$)
           const key = dataSpec.startsWith('$$') 
@@ -296,20 +280,20 @@ export class ViewEngine {
         // Check if this is a comparison: { "isDragged": { "$eq": ["$draggedItemId", "$$id"] } }
         if (typeof valueSpec === 'object' && valueSpec !== null && valueSpec.$eq) {
           // This is a comparison - evaluate it
-          const comparisonResult = this.evaluator.evaluate(valueSpec, data);
+          const comparisonResult = await this.evaluator.evaluate(valueSpec, data);
           value = comparisonResult ? 'true' : null; // Set to 'true' if match, null if no match
         } else if (typeof valueSpec === 'string' && valueSpec.includes('.$$')) {
           // Item lookup syntax: "$draggedItemIds.$$id"
           const [contextKey, itemKey] = valueSpec.split('.');
-          const contextObj = this.evaluator.evaluate(contextKey, data);
-          const itemId = this.evaluator.evaluate(itemKey, data);
+          const contextObj = await this.evaluator.evaluate(contextKey, data);
+          const itemId = await this.evaluator.evaluate(itemKey, data);
           
           if (contextObj && typeof contextObj === 'object' && itemId) {
             value = contextObj[itemId];
           }
         } else {
           // Regular value evaluation
-          value = this.evaluator.evaluate(valueSpec, data);
+          value = await this.evaluator.evaluate(valueSpec, data);
         }
         
         if (value !== null && value !== undefined) {
@@ -327,7 +311,7 @@ export class ViewEngine {
    * @param {HTMLElement} wrapperElement - The wrapper element (already created by renderNode)
    * @param {string} actorId - The actor ID
    */
-  _renderSlot(node, data, wrapperElement, actorId) {
+  async _renderSlot(node, data, wrapperElement, actorId) {
     const slotKey = node.$slot; // e.g., "$currentView"
     
     if (!slotKey || !slotKey.startsWith('$')) {
@@ -402,15 +386,15 @@ export class ViewEngine {
    * Create wrapper element for slot (applies tag, class, attrs from node)
    * @param {Object} node - Node definition with tag, class, attrs
    * @param {Object} data - The data context
-   * @returns {HTMLElement} The wrapper element
+   * @returns {Promise<HTMLElement>} The wrapper element
    */
-  _createSlotWrapper(node, data) {
+  async _createSlotWrapper(node, data) {
     const tag = node.tag || 'div';
     const element = document.createElement(tag);
     
     // Apply class
     if (node.class) {
-      const classValue = this.evaluator.evaluate(node.class, data);
+      const classValue = await this.evaluator.evaluate(node.class, data);
       if (classValue) {
         element.className = classValue;
       }
@@ -419,7 +403,7 @@ export class ViewEngine {
     // Apply attrs
     if (node.attrs) {
       for (const [attrName, attrValue] of Object.entries(node.attrs)) {
-        const resolved = this.evaluator.evaluate(attrValue, data);
+        const resolved = await this.evaluator.evaluate(attrValue, data);
         if (resolved !== undefined && resolved !== null) {
           const stringValue = typeof resolved === 'boolean' ? String(resolved) : resolved;
           element.setAttribute(attrName, stringValue);
@@ -440,13 +424,13 @@ export class ViewEngine {
    * @param {Object} eachDef - The $each definition { items, template }
    * @param {Object} data - The data context
    * @param {string} actorId - The actor ID
-   * @returns {DocumentFragment} Fragment containing all rendered items
+   * @returns {Promise<DocumentFragment>} Fragment containing all rendered items
    */
-  renderEach(eachDef, data, actorId) {
+  async renderEach(eachDef, data, actorId) {
     const fragment = document.createDocumentFragment();
     
     // Evaluate items
-    const items = this.evaluator.evaluate(eachDef.items, data);
+    const items = await this.evaluator.evaluate(eachDef.items, data);
     
     if (!Array.isArray(items) || items.length === 0) {
       return fragment;
@@ -461,7 +445,7 @@ export class ViewEngine {
         index: i
       };
       
-      const itemElement = this.renderNode(eachDef.template, itemData, actorId);
+      const itemElement = await this.renderNode(eachDef.template, itemData, actorId);
       if (itemElement) {
         fragment.appendChild(itemElement);
       }
@@ -531,7 +515,7 @@ export class ViewEngine {
     }
 
     // Resolve payload
-    payload = this.resolvePayload(payload, data, e, element);
+    payload = await this.resolvePayload(payload, data, e, element);
 
     // Route internal event through inbox for unified event logging
     // This creates a single source of truth for all events (internal + external)
@@ -555,9 +539,9 @@ export class ViewEngine {
    * @param {Object} data - The data context
    * @param {Event} e - The DOM event
    * @param {HTMLElement} element - The target element
-   * @returns {Object} Resolved payload
+   * @returns {Promise<Object>} Resolved payload
    */
-  resolvePayload(payload, data, e, element) {
+  async resolvePayload(payload, data, e, element) {
     if (!payload || typeof payload !== 'object') {
       return payload;
     }
@@ -575,15 +559,15 @@ export class ViewEngine {
       }
       // Handle string DSL shortcuts (e.g., "$item.id", "$newTodoText")
       else if (typeof value === 'string' && value.startsWith('$')) {
-        resolved[key] = this.evaluator.evaluate(value, data);
+        resolved[key] = await this.evaluator.evaluate(value, data);
       }
       // Handle DSL expressions (objects)
       else if (this.evaluator.isDSLOperation(value)) {
-        resolved[key] = this.evaluator.evaluate(value, data);
+        resolved[key] = await this.evaluator.evaluate(value, data);
       }
       // Handle nested objects
       else if (typeof value === 'object' && value !== null) {
-        resolved[key] = this.resolvePayload(value, data, e, element);
+        resolved[key] = await this.resolvePayload(value, data, e, element);
       }
       // Pass through primitives
       else {

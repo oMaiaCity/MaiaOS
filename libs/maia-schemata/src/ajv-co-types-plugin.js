@@ -42,11 +42,21 @@ export function ajvCoTypesPlugin(ajv) {
   // For colist/costream, instances can be either:
   // 1. Direct arrays (raw CRDT structure)
   // 2. Objects with an 'items' property (wrapped with metadata like $schema, $id)
+  // NOTE: cotype only applies to CoValues (objects/arrays), not primitives
+  // Primitives (string, number, boolean, null) pass cotype validation automatically
+  // because they are not CoValues and cotype validation doesn't apply to them
   ajv.addKeyword({
     keyword: 'cotype',
     validate: (schema, data) => {
+      // Primitives (string, number, boolean, null, undefined) are not CoValues
+      // cotype validation doesn't apply to them, so they pass validation
+      if (data === null || typeof data !== 'object') {
+        return true
+      }
+      
       if (schema === 'comap') {
-        return typeof data === 'object' && !Array.isArray(data) && data !== null
+        // comap must be an object (not array, not null)
+        return !Array.isArray(data)
       }
       if (schema === 'colist' || schema === 'costream') {
         // Direct array (raw CRDT structure)

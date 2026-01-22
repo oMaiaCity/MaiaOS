@@ -6,6 +6,7 @@
 // Import db tool directly
 import dbTool from '../tools/db/db.tool.js';
 import dbToolDef from '../tools/db/db.tool.maia';
+import { getToolEngine, registerModuleConfig } from '../utils/module-registration.js';
 
 export class DBModule {
   /**
@@ -15,11 +16,7 @@ export class DBModule {
   static async register(registry) {
     // Silent - kernel logs module summary
     
-    // Get toolEngine from registry (stored by kernel during boot)
-    const toolEngine = registry._toolEngine;
-    if (!toolEngine) {
-      throw new Error('[DBModule] ToolEngine not available in registry');
-    }
+    const toolEngine = getToolEngine(registry, 'DBModule');
     
     // Register @db tool directly (no .maia file loading needed)
     toolEngine.tools.set('@db', {
@@ -29,7 +26,7 @@ export class DBModule {
     });
     
     // Register module with config
-    registry.registerModule('db', DBModule, {
+    registerModuleConfig(registry, 'db', DBModule, {
       version: '1.0.0',
       description: 'Unified database operation API',
       namespace: '@db',

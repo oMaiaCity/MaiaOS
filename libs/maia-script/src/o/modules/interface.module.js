@@ -3,8 +3,7 @@
  * Provides actor interface validation and schema management
  */
 
-// Import tools from registry
-import { getTool } from '../tools/index.js';
+import { getToolEngine, registerToolsFromRegistry, registerModuleConfig } from '../utils/module-registration.js';
 
 export class InterfaceModule {
   /**
@@ -12,11 +11,7 @@ export class InterfaceModule {
    * @param {ModuleRegistry} registry - Module registry instance
    */
   static async register(registry) {
-    // Get toolEngine from registry (stored by kernel during boot)
-    const toolEngine = registry._toolEngine;
-    if (!toolEngine) {
-      throw new Error('[InterfaceModule] ToolEngine not available in registry');
-    }
+    const toolEngine = getToolEngine(registry, 'InterfaceModule');
     
     const toolNames = [
       'validateInterface'
@@ -24,20 +19,10 @@ export class InterfaceModule {
     
     // Silent - kernel logs module summary
     
-    for (const toolName of toolNames) {
-      const namespacePath = `interface/${toolName}`;
-      const tool = getTool(namespacePath);
-      
-      if (tool) {
-        await toolEngine.registerTool(namespacePath, `@interface/${toolName}`, {
-          definition: tool.definition,
-          function: tool.function
-        });
-      }
-    }
+    await registerToolsFromRegistry(registry, toolEngine, 'interface', toolNames, '@interface', { silent: true });
     
     // Register module with config
-    registry.registerModule('interface', InterfaceModule, {
+    registerModuleConfig(registry, 'interface', InterfaceModule, {
       version: '1.0.0',
       description: 'Actor interface validation and schema management',
       namespace: '@interface',

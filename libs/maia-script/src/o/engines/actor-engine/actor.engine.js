@@ -12,6 +12,8 @@ import { MessageQueue } from '../message-queue/message.queue.js';
 import { validateAgainstSchemaOrThrow, validateOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import schema loader utility
 import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
+// Import shared utilities
+import { loadConfigOrUseProvided, loadConfig } from '../../utils/config-loader.js';
 
 export class ActorEngine {
   constructor(styleEngine, viewEngine, moduleRegistry, toolEngine, stateEngine = null) {
@@ -71,42 +73,12 @@ export class ActorEngine {
    * @returns {Promise<Object>} The parsed actor config
    */
   async loadActor(coIdOrConfig) {
-    // If it's already an object (pre-loaded config), return it directly
-    if (typeof coIdOrConfig === 'object' && coIdOrConfig !== null) {
-      // Load schema from IndexedDB and validate on-the-fly
-      const schema = await loadSchemaFromDB(this.dbEngine, 'actor');
-      if (schema) {
-        await validateAgainstSchemaOrThrow(schema, coIdOrConfig, 'actor');
-      }
-      return coIdOrConfig;
-    }
-    
-    // Must be a co-id string
-    if (typeof coIdOrConfig !== 'string' || !coIdOrConfig.startsWith('co_z')) {
-      throw new Error(`[ActorEngine] loadActor requires a co-id (starts with 'co_z'), got: ${coIdOrConfig}`);
-    }
-    
-    if (!this.dbEngine) {
-      throw new Error(`[ActorEngine] Database engine not available`);
-    }
-    
-    const actor = await this.dbEngine.execute({
-      op: 'query',
-      schema: '@schema/actor',
-      key: coIdOrConfig
-    });
-    
-    if (!actor) {
-      throw new Error(`Failed to load actor from database by co-id: ${coIdOrConfig}`);
-    }
-    
-    // Load schema from IndexedDB and validate on-the-fly
-    const schema = await loadSchemaFromDB(this.dbEngine, 'actor');
-    if (schema) {
-      await validateAgainstSchemaOrThrow(schema, actor, 'actor');
-    }
-    
-    return actor;
+    return await loadConfigOrUseProvided(
+      this.dbEngine,
+      '@schema/actor',
+      coIdOrConfig,
+      'actor'
+    );
   }
   
 
@@ -116,29 +88,12 @@ export class ActorEngine {
    * @returns {Promise<Object>} The parsed context
    */
   async loadContext(coId) {
-    if (!coId || !coId.startsWith('co_z')) {
-      throw new Error(`[ActorEngine] loadContext requires a co-id (starts with 'co_z'), got: ${coId}`);
-    }
-    
-    if (!this.dbEngine) {
-      throw new Error(`[ActorEngine] Database engine not available`);
-    }
-    
-    const contextDef = await this.dbEngine.execute({
-      op: 'query',
-      schema: '@schema/context',
-      key: coId
-    });
-    
-    if (!contextDef) {
-      throw new Error(`Failed to load context from database by co-id: ${coId}`);
-    }
-    
-    // Load schema from IndexedDB and validate on-the-fly
-    const schema = await loadSchemaFromDB(this.dbEngine, 'context');
-    if (schema) {
-      await validateAgainstSchemaOrThrow(schema, contextDef, 'context');
-    }
+    const contextDef = await loadConfig(
+      this.dbEngine,
+      '@schema/context',
+      coId,
+      'context'
+    );
     
     // Return context without metadata
     const { $schema, $id, ...context } = contextDef;
@@ -151,31 +106,12 @@ export class ActorEngine {
    * @returns {Promise<Object>} The parsed interface definition
    */
   async loadInterface(coId) {
-    if (!coId || !coId.startsWith('co_z')) {
-      throw new Error(`[ActorEngine] loadInterface requires a co-id (starts with 'co_z'), got: ${coId}`);
-    }
-    
-    if (!this.dbEngine) {
-      throw new Error(`[ActorEngine] Database engine not available`);
-    }
-    
-    const interfaceDef = await this.dbEngine.execute({
-      op: 'query',
-      schema: '@schema/interface',
-      key: coId
-    });
-    
-    if (!interfaceDef) {
-      throw new Error(`Failed to load interface from database by co-id: ${coId}`);
-    }
-    
-    // Load schema from IndexedDB and validate on-the-fly
-    const schema = await loadSchemaFromDB(this.dbEngine, 'interface');
-    if (schema) {
-      await validateAgainstSchemaOrThrow(schema, interfaceDef, 'interface');
-    }
-    
-    return interfaceDef;
+    return await loadConfig(
+      this.dbEngine,
+      '@schema/interface',
+      coId,
+      'interface'
+    );
   }
 
   /**
@@ -353,7 +289,7 @@ export class ActorEngine {
     }
     
     // Initial render with actor ID
-    this.viewEngine.render(viewDef, actor.context, shadowRoot, styleSheets, actorId);
+    await this.viewEngine.render(viewDef, actor.context, shadowRoot, styleSheets, actorId);
     
     // Mark initial render as complete (queries that execute after this should trigger re-renders)
     actor._initialRenderComplete = true;
@@ -419,7 +355,7 @@ export class ActorEngine {
     const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
 
     // Re-render the view
-    this.viewEngine.render(viewDef, actor.context, actor.shadowRoot, styleSheets, actorId);
+    await this.viewEngine.render(viewDef, actor.context, actor.shadowRoot, styleSheets, actorId);
 
     // Restore focus after re-render (microtask to allow DOM to update)
     if (focusInfo) {
