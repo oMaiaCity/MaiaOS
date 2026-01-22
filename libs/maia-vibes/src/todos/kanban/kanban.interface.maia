@@ -18,6 +18,12 @@
     "DRAG_OVER": {
       "payload": {}
     },
+    "DRAG_ENTER": {
+      "payload": { "column": "string" }
+    },
+    "DRAG_LEAVE": {
+      "payload": { "column": "string" }
+    },
     "DROP": {
       "payload": { 
         "schema": "string",

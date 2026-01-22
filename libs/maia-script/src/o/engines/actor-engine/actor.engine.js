@@ -690,6 +690,46 @@ export class ActorEngine {
   }
 
   /**
+   * Send an internal event (from DOM/user interaction) to an actor's inbox
+   * Routes through inbox for unified event logging, but processes immediately
+   * @param {string} actorId - Target actor ID (usually self)
+   * @param {string} eventType - Event type (e.g., "CREATE_BUTTON")
+   * @param {Object} payload - Event payload
+   */
+  async sendInternalEvent(actorId, eventType, payload = {}) {
+    const actor = this.actors.get(actorId);
+    if (!actor) {
+      console.warn(`Actor not found: ${actorId}`);
+      return;
+    }
+
+    // Create message with metadata (self-originated)
+    const message = {
+      type: eventType,
+      payload: payload,
+      from: actorId, // Self-originated internal event
+      timestamp: Date.now(),
+      id: `${eventType}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    };
+
+    // Validate against interface.inbox if present
+    if (actor.interface) {
+      const isValid = await this._validateMessage(message, actor.interface, 'inbox', actorId);
+      if (!isValid) {
+        console.warn(`[ActorEngine] Rejected invalid internal event ${eventType} from ${actorId}`);
+        return;
+      }
+    }
+
+    // Add directly to inbox (synchronous, for immediate processing)
+    actor.inbox.push(message);
+
+    // Process immediately (synchronous for internal events)
+    // This ensures immediate handling while still logging to inbox
+    await this.processMessages(actorId);
+  }
+
+  /**
    * Process unconsumed messages in an actor's inbox
    * Uses watermark pattern to avoid replay
    * @param {string} actorId - Actor ID
@@ -743,6 +783,9 @@ export class ActorEngine {
 
         // Update watermark after successful processing
         actor.inboxWatermark = message.timestamp;
+        
+        // Persist watermark to actor config
+        await this._persistWatermark(actorId, message.timestamp);
       } catch (error) {
         console.error(`Failed to process message ${message.type}:`, error);
         // Continue processing other messages
@@ -752,6 +795,50 @@ export class ActorEngine {
     // Don't automatically re-render here - let the state engine handle re-renders
     // The state engine will only re-render if the state actually changed
     // This prevents unnecessary re-renders for messages like UPDATE_INPUT that don't change state
+  }
+
+  /**
+   * Persist watermark to actor config in database
+   * @param {string} actorId - Actor co-id
+   * @param {number} watermark - Watermark timestamp
+   * @private
+   */
+  async _persistWatermark(actorId, watermark) {
+    if (!this.dbEngine) {
+      console.warn(`[ActorEngine] Cannot persist watermark: database engine not available`);
+      return;
+    }
+
+    try {
+      // Get current actor config
+      const actorConfig = await this.dbEngine.execute({
+        op: 'query',
+        schema: '@schema/actor',
+        key: actorId
+      });
+
+      if (!actorConfig) {
+        console.warn(`[ActorEngine] Cannot persist watermark: actor config not found for ${actorId}`);
+        return;
+      }
+
+      // Update actor config with new watermark
+      await this.dbEngine.execute({
+        op: 'updateConfig',
+        schema: '@schema/actor',
+        id: actorId,
+        data: { inboxWatermark: watermark }
+      });
+
+      // Also update in-memory config reference
+      const actor = this.actors.get(actorId);
+      if (actor && actor.config) {
+        actor.config.inboxWatermark = watermark;
+      }
+    } catch (error) {
+      console.error(`[ActorEngine] Failed to persist watermark for ${actorId}:`, error);
+      // Don't throw - watermark update is best-effort, shouldn't break message processing
+    }
   }
 
   /**

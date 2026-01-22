@@ -463,8 +463,13 @@ export class ViewEngine {
    */
   attachEvents(element, events, data, actorId) {
     for (const [eventName, eventDef] of Object.entries(events)) {
-      element.addEventListener(eventName, (e) => {
-        this.handleEvent(e, eventDef, data, element, actorId);
+      element.addEventListener(eventName, async (e) => {
+        // Handle async event processing (routes through inbox)
+        try {
+          await this.handleEvent(e, eventDef, data, element, actorId);
+        } catch (error) {
+          console.error(`[ViewEngine] Error handling event ${eventName}:`, error);
+        }
       });
     }
   }
@@ -473,13 +478,14 @@ export class ViewEngine {
   /**
    * Handle an event
    * v0.2: Supports both action (v0.1) and send (v0.2) syntax
+   * v0.5: Routes internal events through inbox for unified event logging
    * @param {Event} e - The DOM event
    * @param {Object} eventDef - Event definition { action, payload, key? } or { send, payload, key? }
    * @param {Object} data - The data context
    * @param {HTMLElement} element - The target element
    * @param {string} actorId - The actor ID (from closure)
    */
-  handleEvent(e, eventDef, data, element, actorId) {
+  async handleEvent(e, eventDef, data, element, actorId) {
     // v0.2: JSON-native event syntax
     const eventName = eventDef.send;
     let payload = eventDef.payload || {};
@@ -511,11 +517,14 @@ export class ViewEngine {
     // Resolve payload
     payload = this.resolvePayload(payload, data, e, element);
 
-    // Dispatch event to state machine
+    // Route internal event through inbox for unified event logging
+    // This creates a single source of truth for all events (internal + external)
     if (this.actorEngine) {
       const actor = this.actorEngine.getActor(actorId);
-      if (actor && actor.machine && this.actorEngine.stateEngine) {
-        this.actorEngine.stateEngine.send(actor.machine.id, eventName, payload);
+      if (actor && actor.machine) {
+        // Use sendInternalEvent to route through inbox
+        // This logs the event and processes it immediately
+        await this.actorEngine.sendInternalEvent(actorId, eventName, payload);
       } else {
         console.warn(`Cannot send event ${eventName}: Actor has no state machine`);
       }

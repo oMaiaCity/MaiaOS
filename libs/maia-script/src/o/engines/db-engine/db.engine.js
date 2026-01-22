@@ -5,18 +5,20 @@
  * Routes operations to modular sub-operation handlers
  * Supports swappable backends (IndexedDB, CoJSON CRDT)
  * 
- * Operations:
- * - query: Load configs/schemas/data (reactive if callback provided)
- * - create: Create new records
- * - update: Update existing records
- * - delete: Delete records
- * - toggle: Toggle boolean field
- * - seed: Flush + seed (dev only)
- */
+   * Operations:
+   * - query: Load configs/schemas/data (reactive if callback provided)
+   * - create: Create new records
+   * - update: Update existing records (data collections)
+   * - updateConfig: Update actor configs (system properties)
+   * - delete: Delete records
+   * - toggle: Toggle boolean field
+   * - seed: Flush + seed (dev only)
+   */
 
 import { QueryOperation } from './operations/query.js';
 import { CreateOperation } from './operations/create.js';
 import { UpdateOperation } from './operations/update.js';
+import { UpdateConfigOperation } from './operations/update-config.js';
 import { DeleteOperation } from './operations/delete.js';
 import { ToggleOperation } from './operations/toggle.js';
 import { SeedOperation } from './operations/seed.js';
@@ -30,6 +32,7 @@ export class DBEngine {
       query: new QueryOperation(this.backend),
       create: new CreateOperation(this.backend),
       update: new UpdateOperation(this.backend),
+      updateConfig: new UpdateConfigOperation(this.backend),
       delete: new DeleteOperation(this.backend),
       toggle: new ToggleOperation(this.backend),
       seed: new SeedOperation(this.backend)
@@ -49,7 +52,7 @@ export class DBEngine {
     const { op, ...params } = payload;
     
     if (!op) {
-      throw new Error('[DBEngine] Operation required: {op: "query|create|update|delete|seed"}');
+      throw new Error('[DBEngine] Operation required: {op: "query|create|update|updateConfig|delete|seed"}');
     }
     
     const operation = this.operations[op];

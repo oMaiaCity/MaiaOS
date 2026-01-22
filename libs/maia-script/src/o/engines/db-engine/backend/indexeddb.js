@@ -99,8 +99,9 @@ export class IndexedDBBackend {
     
     const coIdRegistry = new CoIdRegistry();
     
-    // Flush configs and schemas only (preserve user data)
-    await this.flush(['configs', 'schemas']);
+    // Simple seeding: flush everything and reseed
+    // TODO: Add smart seeding later to preserve data across sessions
+    await this.flush(['configs', 'schemas', 'data']);
     
     // Deduplicate schemas by $id (same schema may be registered under multiple keys)
     const uniqueSchemasBy$id = new Map();
@@ -729,18 +730,14 @@ export class IndexedDBBackend {
     // For seeding, we'll generate them here
     
     // Phase 8: Seed data entities to IndexedDB with co-ids (no hardcoded `id` field)
-    const hasExistingData = await this._hasExistingData();
-    if (!hasExistingData) {
-      console.log('[IndexedDBBackend] Phase 8: Seeding initial data...');
-      try {
-        // Pass dataCollectionCoIds map to reuse co-ids from Phase 3.5 (avoid duplicate registration)
-        await this._seedData(data, generateCoIdForDataEntity, coIdRegistry, dataCollectionCoIds);
-      } catch (error) {
-        console.error('[IndexedDBBackend] Error seeding data:', error);
-        throw error;
-      }
-    } else {
-      console.log('[IndexedDBBackend] Existing data found, skipping data seed to preserve user data');
+    // Simple seeding: always seed data (data store already flushed above)
+    console.log('[IndexedDBBackend] Phase 8: Seeding initial data...');
+    try {
+      // Pass dataCollectionCoIds map to reuse co-ids from Phase 3.5 (avoid duplicate registration)
+      await this._seedData(data, generateCoIdForDataEntity, coIdRegistry, dataCollectionCoIds);
+    } catch (error) {
+      console.error('[IndexedDBBackend] Error seeding data:', error);
+      throw error;
     }
     
     // Phase 8b: Store ALL human-readable → co-id mappings in coIdRegistry store
@@ -758,6 +755,125 @@ export class IndexedDBBackend {
     console.log('[IndexedDBBackend] Seed complete!');
   }
   
+  /**
+   * Load existing co-id registry from database
+   * Preserves mappings for data collections and other persisted entities
+   * @private
+   * @param {CoIdRegistry} coIdRegistry - Registry to populate
+   */
+  async _loadCoIdRegistry(coIdRegistry) {
+    try {
+      if (!this.db.objectStoreNames.contains('coIdRegistry')) {
+        console.log('[IndexedDBBackend] coIdRegistry store does not exist, starting fresh');
+        return;
+      }
+      
+      const transaction = this.db.transaction(['coIdRegistry'], 'readonly');
+      const store = transaction.objectStore('coIdRegistry');
+      const request = store.getAll();
+      const existingMappings = await this._promisifyRequest(request);
+      
+      if (existingMappings && existingMappings.length > 0) {
+        let count = 0;
+        for (const item of existingMappings) {
+          if (item.key && item.value) {
+            coIdRegistry.register(item.key, item.value);
+            count++;
+          }
+        }
+        console.log(`[IndexedDBBackend] Loaded ${count} existing co-id mappings from registry`);
+      }
+    } catch (error) {
+      console.warn('[IndexedDBBackend] Error loading co-id registry, starting fresh:', error);
+      // Don't throw - allow seeding to continue with fresh registry
+    }
+  }
+
+  /**
+   * Normalize schema for comparison (remove $id, sort keys)
+   * @private
+   * @param {Object} schema - Schema to normalize
+   * @returns {string} Normalized JSON string
+   */
+  _normalizeSchemaForComparison(schema) {
+    const normalized = { ...schema };
+    delete normalized.$id; // Remove $id for comparison
+    return JSON.stringify(normalized, Object.keys(normalized).sort());
+  }
+
+  /**
+   * Check if schemas have changed (need reseeding)
+   * Compares incoming schemas with existing schemas by content
+   * @private
+   * @param {Object} newSchemas - New schemas to compare
+   * @returns {Promise<boolean>} true if schemas changed (should reseed)
+   */
+  async _shouldReseedSchemas(newSchemas) {
+    try {
+      // Get existing schemas from database
+      const transaction = this.db.transaction(['schemas'], 'readonly');
+      const store = transaction.objectStore('schemas');
+      const request = store.getAll();
+      const existingSchemas = await this._promisifyRequest(request);
+      
+      // If no existing schemas, need to seed
+      if (!existingSchemas || existingSchemas.length === 0) {
+        return true;
+      }
+      
+      // Build map of existing schemas by $id (co-id)
+      const existingByCoId = new Map();
+      for (const item of existingSchemas) {
+        if (item.value && item.value.$id) {
+          existingByCoId.set(item.value.$id, item.value);
+        }
+      }
+      
+      // Generate co-ids for new schemas and compare
+      const { generateCoIdForSchema } = await import('@MaiaOS/schemata/co-id-generator');
+      
+      // Deduplicate new schemas by $id
+      const uniqueNewSchemasBy$id = new Map();
+      for (const [name, schema] of Object.entries(newSchemas)) {
+        const schemaKey = schema.$id || `@schema/${name}`;
+        if (!uniqueNewSchemasBy$id.has(schemaKey)) {
+          uniqueNewSchemasBy$id.set(schemaKey, schema);
+        }
+      }
+      
+      // Compare count first (quick check)
+      if (uniqueNewSchemasBy$id.size !== existingByCoId.size) {
+        console.log(`[IndexedDBBackend] Schema count changed: ${existingByCoId.size} → ${uniqueNewSchemasBy$id.size}`);
+        return true;
+      }
+      
+      // Compare each schema by content (deep equality)
+      for (const [schemaKey, newSchema] of uniqueNewSchemasBy$id) {
+        const newCoId = generateCoIdForSchema(newSchema);
+        const existingSchema = existingByCoId.get(newCoId);
+        
+        if (!existingSchema) {
+          // New schema not found in existing
+          console.log(`[IndexedDBBackend] New schema detected: ${schemaKey}`);
+          return true;
+        }
+        
+        // Compare schema content (deep equality via normalized JSON)
+        if (this._normalizeSchemaForComparison(newSchema) !== this._normalizeSchemaForComparison(existingSchema)) {
+          console.log(`[IndexedDBBackend] Schema content changed: ${schemaKey}`);
+          return true;
+        }
+      }
+      
+      // All schemas are identical
+      return false;
+    } catch (error) {
+      // On error, default to reseeding (safe fallback)
+      console.warn('[IndexedDBBackend] Error comparing schemas, will reseed:', error);
+      return true;
+    }
+  }
+
   /**
    * Check if data store has any existing records
    * @private
@@ -1254,6 +1370,48 @@ export class IndexedDBBackend {
     return updatedRecord;
   }
   
+  /**
+   * Update actor config (for system properties like watermark)
+   * @param {string} schema - Schema reference (@schema/actor)
+   * @param {string} id - Actor co-id ($id)
+   * @param {Object} data - Data to update
+   * @returns {Promise<Object>} Updated config
+   */
+  async updateConfig(schema, id, data) {
+    const storeName = 'configs';
+    
+    // Get existing config directly by co-id
+    const transaction = this.db.transaction([storeName], 'readwrite');
+    const store = transaction.objectStore(storeName);
+    const request = store.get(id);
+    const result = await this._promisifyRequest(request);
+    
+    if (!result || !result.value) {
+      throw new Error(`[IndexedDBBackend] Config not found: ${id}`);
+    }
+    
+    // Update config (preserve $id and $schema)
+    const updatedConfig = { 
+      ...result.value, 
+      ...data,
+      $id: result.value.$id,  // Preserve $id
+      $schema: result.value.$schema  // Preserve $schema
+    };
+    
+    // Save updated config
+    await this._promisifyRequest(store.put({
+      key: id,
+      value: updatedConfig
+    }));
+    
+    // Wait for transaction to commit
+    await transaction.complete;
+    
+    console.log(`[IndexedDBBackend] Updated config ${id}:`, data);
+    
+    return updatedConfig;
+  }
+
   /**
    * Delete record
    * @param {string} schema - Schema co-id (co_z...) for data collections
