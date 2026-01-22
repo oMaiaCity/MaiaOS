@@ -38,8 +38,6 @@ export class UpdateConfigOperation {
       throw new Error(`[UpdateConfigOperation] ID must be a co-id (co_z...), got: ${id}`);
     }
     
-    console.log(`[UpdateConfigOperation] Updating config ${id} in schema ${schema}`, data);
-    
     return await this.backend.updateConfig(schema, id, data);
   }
 }

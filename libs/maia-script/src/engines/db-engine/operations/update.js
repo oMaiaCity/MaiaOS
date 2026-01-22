@@ -46,8 +46,6 @@ export class UpdateOperation {
       }
     }
     
-    console.log(`[UpdateOperation] Updating record ${id} in collection ${schema}`, data);
-    
     return await this.backend.update(schema, id, data);
   }
 }

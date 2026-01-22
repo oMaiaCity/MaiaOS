@@ -5,8 +5,6 @@ export default {
   async execute(actor, payload) {
     const { selector } = payload;
     
-    console.log('[focus] Executing focus tool', { selector, actorId: actor.id, hasShadowRoot: !!actor.shadowRoot });
-    
     if (!selector) {
       console.warn('[focus] No selector provided');
       return;
@@ -35,21 +33,12 @@ export default {
         }
         
         if (element) {
-          console.log('[focus] Found element, focusing', { selector, element: element.tagName, attempt });
           element.focus();
         } else if (attempt < maxAttempts) {
           // Retry if element not found yet (re-render might still be in progress)
-          console.log(`[focus] Element not found, retrying (attempt ${attempt + 1}/${maxAttempts})`);
           tryFocus(attempt + 1);
         } else {
-          console.warn(`[focus] Element not found with selector: ${selector} after ${maxAttempts} attempts`);
-          // Final attempt: log what's actually in the shadow root for debugging
-          const allInputs = actor.shadowRoot.querySelectorAll('input');
-          console.warn('[focus] Available inputs in shadow root:', Array.from(allInputs).map(el => ({
-            tagName: el.tagName,
-            className: el.className,
-            type: el.type
-          })));
+          // Silent - element not found after retries (not critical)
         }
       }, delay);
     };

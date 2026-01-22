@@ -27,10 +27,8 @@ export class SubscriptionEngine {
     this.pendingRerenders = new Set(); // Set of actor IDs pending re-render
     this.batchTimer = null; // Microtask timer for batching
     
-    // Debug mode (set to false in production)
-    this.debugMode = true;
-    
-    this._log('[SubscriptionEngine] Initialized');
+    // Debug mode (set to true for verbose subscription logging)
+    this.debugMode = false;
   }
   
   /**

@@ -29,8 +29,6 @@ export class DeleteOperation {
       throw new Error('[DeleteOperation] ID required');
     }
     
-    console.log(`[DeleteOperation] Deleting record ${id} from collection ${schema}`);
-    
     return await this.backend.delete(schema, id);
   }
 }

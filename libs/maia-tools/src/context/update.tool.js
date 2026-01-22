@@ -22,12 +22,6 @@ export default {
     
     // Trigger re-render if view switching or input clearing happened
     if ((currentViewChanged || inputCleared) && actor.actorEngine && actor.id) {
-      if (currentViewChanged) {
-        console.log(`[context/update] currentView changed to ${payload.currentView}, triggering re-render for ${actor.id}`);
-      }
-      if (inputCleared) {
-        // Silent - re-render happens automatically
-      }
       await actor.actorEngine.rerender(actor.id);
       
       // After re-render completes, focus the input if it was cleared

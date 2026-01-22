@@ -29,11 +29,6 @@ export class SeedOperation {
       throw new Error('[SeedOperation] Schemas required');
     }
     
-    console.log('[SeedOperation] Seeding database...');
-    console.log(`[SeedOperation] Configs:`, Object.keys(configs).length, 'types');
-    console.log(`[SeedOperation] Schemas:`, Object.keys(schemas).length, 'schemas');
-    console.log(`[SeedOperation] Data:`, Object.keys(data || {}).length, 'collections');
-    
     return await this.backend.seed(configs, schemas, data || {});
   }
 }

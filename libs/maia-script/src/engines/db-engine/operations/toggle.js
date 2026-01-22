@@ -37,8 +37,6 @@ export class ToggleOperation {
     // Note: Field existence and type are validated below (lines 49-57).
     // Schema-level validation is not performed - if needed, do it before calling this operation.
     
-    console.log(`[ToggleOperation] Toggling ${field} for record ${id} in collection ${schema}`);
-    
     // Get current record (using co-id $id field)
     const collection = await this.backend.query(schema, null);
     const record = collection.find(item => item.$id === id);

@@ -18,7 +18,5 @@ export default {
     
     // Set this item as dragged (for item-specific data-attribute lookups)
     actor.context.draggedItemIds[id] = true;
-    
-    console.log(`✅ [dragdrop/start] Started dragging ${schema}/${id}`);
   }
 };

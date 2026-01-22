@@ -46,7 +46,6 @@ export class QueryOperation {
       return await this.backend.get(schema, key);
     } else {
       // Query collection (optionally with filter)
-      console.log(`[QueryOperation] Query collection: ${schema}`, filter);
       return await this.backend.query(schema, filter);
     }
   }

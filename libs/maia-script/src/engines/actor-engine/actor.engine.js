@@ -281,7 +281,6 @@ export class ActorEngine {
             actor.subscriptions.push(childActorId);
           }
           
-          console.log(`✅ Created child actor ${childActorId} (namekey: ${namekey}) for ${actorId}`);
         } catch (error) {
           console.error(`Failed to create child actor ${childActorId} (namekey: ${namekey}):`, error);
         }

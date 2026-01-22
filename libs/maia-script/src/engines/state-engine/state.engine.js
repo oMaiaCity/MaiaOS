@@ -96,8 +96,6 @@ export class StateEngine {
       return;
     }
 
-    console.log(`[StateEngine] ${event} → ${machine.currentState}`);
-
     // Get current state definition
     const currentStateDef = machine.definition.states[machine.currentState];
     if (!currentStateDef) {
@@ -147,9 +145,7 @@ export class StateEngine {
     // Check for !== undefined to allow false/0 guards
     if (guard !== undefined && guard !== null) {
       const guardResult = await this._evaluateGuard(guard, machine.context, machine.eventPayload);
-      console.log(`[StateEngine] Guard evaluation for ${event}:`, { guard, payload: machine.eventPayload, result: guardResult });
       if (!guardResult) {
-        console.log(`[StateEngine] Guard failed for ${event}, blocking transition`);
         return;
       }
     }
@@ -174,11 +170,9 @@ export class StateEngine {
     const previousState = machine.currentState;
     machine.currentState = targetState;
     
-    // Only log actual state changes (not idle → idle)
+    // Only log actual state changes (not idle → idle or no state change)
     if (previousState !== targetState) {
-      console.log(`[StateEngine] ${event} → ${previousState} → ${targetState}`);
-    } else {
-      console.log(`[StateEngine] ${event} → ${previousState} (no state change)`);
+      console.log(`[StateEngine] ${previousState} → ${targetState} (${event})`);
     }
 
     // Execute entry actions for new state (only if state actually changed)
@@ -221,10 +215,8 @@ export class StateEngine {
     // Evaluate guard expression using MaiaScript
     try {
       const data = { context, item: payload };
-      console.log(`[StateEngine] Evaluating guard:`, { guard, payload, contextKeys: Object.keys(context) });
       const result = await this.evaluator.evaluate(guard, data);
       const boolResult = Boolean(result);
-      console.log(`[StateEngine] Guard result:`, { guard, result, boolResult });
       return boolResult;
     } catch (error) {
       console.error('[StateEngine] Guard evaluation error:', error);
@@ -366,8 +358,6 @@ export class StateEngine {
       // Evaluate payload through MaiaScript (resolve $variables and $$item references)
       // Use machine.eventPayload as item context for $$id resolution
       const evaluatedPayload = await this._evaluatePayload(payload, machine.context, machine.eventPayload);
-      
-      console.log(`[StateEngine] Invoking tool: ${toolName}`, evaluatedPayload);
       
       // Execute tool via ToolEngine
       await this.toolEngine.execute(toolName, machine.actor, evaluatedPayload);

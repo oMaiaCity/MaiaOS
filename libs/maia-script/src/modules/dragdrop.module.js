@@ -53,8 +53,6 @@ export class DragDropModule {
       'dragLeave'
     ];
     
-    console.log(`[DragDropModule] Registering ${toolNames.length + 1} tools...`);
-    
     // Register @context/update first (critical for input handling)
     await registerSingleToolFromRegistry(toolEngine, 'context/update', '@context/update');
     
@@ -68,8 +66,6 @@ export class DragDropModule {
       namespace: '@dragdrop',
       tools: toolNames.map(t => `@dragdrop/${t}`).concat(['@context/update'])
     });
-    
-    console.log('[DragDropModule] Registration complete');
   }
 
   /**

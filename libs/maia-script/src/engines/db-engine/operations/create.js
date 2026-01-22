@@ -41,8 +41,6 @@ export class CreateOperation {
       }
     }
     
-    console.log(`[CreateOperation] Creating record in collection ${schema}`, data);
-    
     return await this.backend.create(schema, data);
   }
 }

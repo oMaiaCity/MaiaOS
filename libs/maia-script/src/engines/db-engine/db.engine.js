@@ -38,7 +38,6 @@ export class DBEngine {
       seed: new SeedOperation(this.backend)
     };
     
-    console.log('[DBEngine] Initialized with backend:', backend.constructor.name);
   }
   
   /**
@@ -58,11 +57,6 @@ export class DBEngine {
     const operation = this.operations[op];
     if (!operation) {
       throw new Error(`[DBEngine] Unknown operation: ${op}`);
-    }
-    
-    // Only log non-query operations (queries are too frequent)
-    if (op !== 'query') {
-      console.log(`[DBEngine] ${op}`, params);
     }
     
     try {

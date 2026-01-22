@@ -167,8 +167,6 @@ export class ValidationEngine {
           this.ajv.addMetaSchema(metaSchemaCopy, metaSchemaDynamicId);
         }
       });
-      
-      console.log('[ValidationEngine] Loaded meta-schema for draft-2020-12');
     } catch (error) {
       // If meta-schema already exists, that's fine (might be registered elsewhere)
       if (!error.message || !error.message.includes('already exists')) {
@@ -192,8 +190,6 @@ export class ValidationEngine {
         if (!this.ajv.getSchema(customMetaSchemaId)) {
           this.ajv.addMetaSchema(customMetaSchema, customMetaSchemaId);
         }
-        
-        console.log('[ValidationEngine] Loaded CoJSON custom meta-schema');
       });
     } catch (error) {
       if (!error.message || !error.message.includes('already exists')) {

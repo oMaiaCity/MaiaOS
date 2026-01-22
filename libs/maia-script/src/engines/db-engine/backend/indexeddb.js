@@ -30,8 +30,6 @@ export class IndexedDBBackend {
     // Observers for reactive subscriptions
     // Map: schema -> Set<{filter, callback}>
     this.observers = new Map();
-    
-    console.log('[IndexedDBBackend] Initialized');
   }
   
   /**
@@ -49,7 +47,6 @@ export class IndexedDBBackend {
       
       request.onsuccess = () => {
         this.db = request.result;
-        console.log('[IndexedDBBackend] Database opened successfully');
         resolve();
       };
       
@@ -59,22 +56,18 @@ export class IndexedDBBackend {
         // Create object stores
         if (!db.objectStoreNames.contains('configs')) {
           db.createObjectStore('configs', { keyPath: 'key' });
-          console.log('[IndexedDBBackend] Created "configs" object store');
         }
         
         if (!db.objectStoreNames.contains('schemas')) {
           db.createObjectStore('schemas', { keyPath: 'key' });
-          console.log('[IndexedDBBackend] Created "schemas" object store');
         }
         
         if (!db.objectStoreNames.contains('data')) {
           db.createObjectStore('data', { keyPath: 'key' });
-          console.log('[IndexedDBBackend] Created "data" object store');
         }
         
         if (!db.objectStoreNames.contains('coIdRegistry')) {
           db.createObjectStore('coIdRegistry', { keyPath: 'key' });
-          console.log('[IndexedDBBackend] Created "coIdRegistry" object store');
         }
       };
     });
@@ -89,8 +82,6 @@ export class IndexedDBBackend {
    * @returns {Promise<void>}
    */
   async seed(configs, schemas, data) {
-    console.log('[IndexedDBBackend] Starting seed with co-id resolution...');
-    
     // Import co-id generator and transformer
     const { generateCoId, CoIdRegistry } = 
       await import('@MaiaOS/schemata/co-id-generator');
@@ -190,10 +181,7 @@ export class IndexedDBBackend {
       visitSchema(schemaKey);
     }
     
-    console.log(`[IndexedDBBackend] Phase 1: Sorted ${sortedSchemaKeys.length} schemas by dependency order`);
-    
     // Phase 1: Generate co-ids for all unique schemas, build co-id map
-    console.log('[IndexedDBBackend] Phase 1: Generating co-ids for schemas...');
     const schemaCoIdMap = new Map();
     
     for (const schemaKey of sortedSchemaKeys) {
@@ -207,7 +195,6 @@ export class IndexedDBBackend {
     
     // Phase 2: Transform all schemas (replace human-readable refs with co-ids)
     // Transform in dependency order to ensure referenced schemas are already transformed
-    console.log('[IndexedDBBackend] Phase 2: Transforming schemas in dependency order...');
     const transformedSchemas = {};
     const transformedSchemasByKey = new Map(); // Map by schemaKey for lookup
     
@@ -227,7 +214,6 @@ export class IndexedDBBackend {
     
     // Phase 2.5: Validate transformed schemas against their $schema meta-schema
     // Validate in dependency order so referenced schemas are already registered
-    console.log('[IndexedDBBackend] Phase 2.5: Validating transformed schemas in dependency order...');
     const { ValidationEngine } = await import('@MaiaOS/schemata/validation.engine.js');
     const validationEngine = new ValidationEngine();
     
@@ -268,16 +254,13 @@ export class IndexedDBBackend {
         throw new Error(`Transformed schema '${name}' failed validation:\n${errorDetails}`);
       }
     }
-    console.log('[IndexedDBBackend] ✅ All transformed schemas validated successfully');
     
     // Phase 3: Seed schemas to IndexedDB with co-ids in dependency order
-    console.log('[IndexedDBBackend] Phase 3: Seeding schemas in dependency order...');
     await this._seedSchemas(transformedSchemas, schemaCoIdMap, sortedSchemaKeys, uniqueSchemasBy$id);
     
     // Phase 3.5: Register data collection co-ids BEFORE transforming instances
     // This ensures query objects can be transformed to use co-ids during Phase 4
     // Store the co-ids so _seedData can reuse them (avoid duplicate registration)
-    console.log('[IndexedDBBackend] Phase 3.5: Registering data collection co-ids for query object transformation...');
     const dataCollectionCoIds = new Map(); // Map: collectionName → co-id
     if (data) {
       for (const [collectionName, collection] of Object.entries(data)) {
@@ -290,7 +273,6 @@ export class IndexedDBBackend {
         const existingCoId = coIdRegistry.registry.get(schemaKey);
         if (existingCoId) {
           collectionCoId = existingCoId;
-          console.log(`[IndexedDBBackend] Reusing existing co-id for ${schemaKey} (from schema): ${collectionCoId}`);
           // Still register collectionName → co-id mapping for data collection lookups
           coIdRegistry.register(collectionName, collectionCoId);
         } else {
@@ -301,7 +283,6 @@ export class IndexedDBBackend {
           // This allows transformInstanceForSeeding to resolve query objects
           coIdRegistry.register(schemaKey, collectionCoId);
           coIdRegistry.register(collectionName, collectionCoId);
-          console.log(`[IndexedDBBackend] Pre-registered data collection: ${schemaKey} → ${collectionCoId}`);
         }
         
         // Store for reuse in _seedData
@@ -313,7 +294,6 @@ export class IndexedDBBackend {
     // Strategy: Generate co-ids for all unique $id values first, then assign to all instances
     // This ensures instances with the same $id (e.g., list-item/list-item in actors, views, contexts)
     // get the same co-id, preventing duplicate registration errors
-    console.log('[IndexedDBBackend] Phase 4: Generating co-ids and transforming configs/instances...');
     
     // Step 1: Collect all instances (deduplicated by $id)
     const instanceCoIdMap = new Map(); // Maps instance key → co-id
@@ -365,7 +345,6 @@ export class IndexedDBBackend {
     };
     
     const allInstances = collectInstances(configs);
-    console.log(`[IndexedDBBackend] Phase 4: Collected ${allInstances.length} instances (deduplicated by $id)`);
     
     // Step 2: Generate co-ids for all unique $id values first
     const uniqueInstanceIds = new Set();
@@ -415,10 +394,6 @@ export class IndexedDBBackend {
         console.error(`[IndexedDBBackend] ❌ DUPLICATE $id DETECTED: "${instanceId}" is used in multiple files (key: ${key}, original: ${reuseCoId}). Each .maia file must have a unique $id. Please update the files to use unique IDs (e.g., @actor/vibe, @context/vibe).`);
       }
       
-      // Debug logging for vibe specifically
-      if (key === 'vibe' || (instanceId && instanceId.startsWith('@vibe/'))) {
-        console.log(`[IndexedDBBackend] Phase 4: Vibe instance - key: ${key}, $id: ${instanceId}, co-id: ${instanceCoId}`);
-      }
     }
     
     // Step 3a: Extract subscriptions, inbox, tokens, and components as separate CoValues
@@ -444,10 +419,7 @@ export class IndexedDBBackend {
         // These are objects with nested instances: { 'vibe/vibe': {...}, 'list/list': {...} }
         if (configType === 'vibe') {
           // Vibe is a single instance at root level
-          // Debug logging for vibe specifically
-          console.log(`[IndexedDBBackend] Phase 4: Transforming vibe - $id before transform: ${configValue.$id}`);
           transformedConfigs[configType] = transformInstanceForSeeding(configValue, coIdRegistry.getAll());
-          console.log(`[IndexedDBBackend] Phase 4: Transforming vibe - $id after transform: ${transformedConfigs[configType].$id}`);
         } else {
           // Nested objects: transform each nested instance individually
           transformedConfigs[configType] = {};
@@ -468,7 +440,6 @@ export class IndexedDBBackend {
     // This is called later after _seedConfigs
     
     // Phase 4.5: Validate transformed instances against their $schema schemas
-    console.log('[IndexedDBBackend] Phase 4.5: Validating transformed instances...');
     const { validateAgainstSchemaOrThrow } = await import('@MaiaOS/schemata/validation.helper.js');
     const { setSchemaResolver } = await import('@MaiaOS/schemata/validation.helper.js');
     
@@ -537,25 +508,20 @@ export class IndexedDBBackend {
         }
       }
     }
-    console.log('[IndexedDBBackend] ✅ All transformed instances validated successfully');
     
     // Phase 5: Validate all configs/instances - REJECT if nested co-types found
-    console.log('[IndexedDBBackend] Phase 5: Validating configs (checking for nested co-types)...');
     // Note: Instances are now validated during seeding (Phase 4.5) and at runtime
     // We only validate schemas for nested co-types here
     
     // Phase 6: Seed configs/instances to IndexedDB with co-ids
-    console.log('[IndexedDBBackend] Phase 6: Seeding configs/instances...');
     await this._seedConfigs(transformedConfigs, instanceCoIdMap, generateCoId);
     
     // Phase 7: Generate co-ids for all data entities (todo items, etc.) - under the hood
-    console.log('[IndexedDBBackend] Phase 7: Generating co-ids for data entities...');
     // Data entities get co-ids generated automatically during creation
     // For seeding, we'll generate them here
     
     // Phase 8: Seed data entities to IndexedDB with co-ids (no hardcoded `id` field)
     // Simple seeding: always seed data (data store already flushed above)
-    console.log('[IndexedDBBackend] Phase 8: Seeding initial data...');
     try {
       // Pass dataCollectionCoIds map to reuse co-ids from Phase 3.5 (avoid duplicate registration)
       await this._seedData(data, generateCoId, coIdRegistry, dataCollectionCoIds);
@@ -568,15 +534,12 @@ export class IndexedDBBackend {
     // Pass original configs to build @schema/type:path mappings correctly
     // Must be called AFTER _seedData or _registerExistingDataCollections so data collection mappings are included
     // Always run this phase even if previous phases had errors (to populate registry)
-    console.log('[IndexedDBBackend] Phase 8b: Storing co-id registry mappings...');
     try {
       await this._storeCoIdRegistry(coIdRegistry, schemaCoIdMap, instanceCoIdMap, configs);
     } catch (error) {
       console.error('[IndexedDBBackend] Error storing co-id registry:', error);
       throw error;
     }
-    
-    console.log('[IndexedDBBackend] Seed complete!');
   }
   
   /**
@@ -718,16 +681,12 @@ export class IndexedDBBackend {
    * @returns {Promise<void>}
    */
   async flush(storeNames = ['configs', 'schemas', 'data']) {
-    console.log(`[IndexedDBBackend] Flushing stores:`, storeNames);
-    
     const transaction = this.db.transaction(storeNames, 'readwrite');
     
     for (const storeName of storeNames) {
       const store = transaction.objectStore(storeName);
       await this._promisifyRequest(store.clear());
     }
-    
-    console.log('[IndexedDBBackend] Stores flushed');
   }
   
   /**
@@ -857,8 +816,6 @@ export class IndexedDBBackend {
     
     // Seed tool definitions
     count += await seedConfigType('tool', configs.tool, generateCoId);
-    
-    console.log(`[IndexedDBBackend] Seeded ${count} configs`);
   }
   
   /**
@@ -901,8 +858,6 @@ export class IndexedDBBackend {
       
       count++;
     }
-    
-    console.log(`[IndexedDBBackend] Seeded ${count} schemas with co-ids in dependency order`);
   }
   
   /**
@@ -950,11 +905,7 @@ export class IndexedDBBackend {
           totalItems++;
         }
       }
-      
-      console.log(`[IndexedDBBackend] Seeded ${collection.length || 0} items for collection ${collectionName} (schema: ${schemaCoId})`);
     }
-    
-    console.log(`[IndexedDBBackend] Seeded ${totalItems} total data items`);
   }
   
   /**
@@ -1008,11 +959,16 @@ export class IndexedDBBackend {
     
     // Resolve human-readable key to co-id via registry
     // Try multiple key formats: full schema path, simple key, etc.
+    // Skip @schema/ prefix if key is already a co-id
     const possibleKeys = [
       `${schema}:${key}`,  // @schema/vibe:todos
       key,                  // todos, vibe/vibe
-      `@schema/${key}`      // @schema/todos (for schemas)
     ];
+    
+    // Only try @schema/ prefix if key is not already a co-id
+    if (!key.startsWith('co_z')) {
+      possibleKeys.push(`@schema/${key}`);  // @schema/todos (for schemas)
+    }
     
     let coId = null;
     for (const possibleKey of possibleKeys) {
@@ -1023,7 +979,7 @@ export class IndexedDBBackend {
     }
     
     if (!coId) {
-      console.warn(`[IndexedDBBackend] Could not resolve key "${key}" for schema "${schema}" to co-id`);
+      // Silent - too frequent and not user-facing
       return null;
     }
     
@@ -1136,9 +1092,6 @@ export class IndexedDBBackend {
     
     // CRITICAL: Wait for transaction to commit before notifying observers
     await transaction.complete; // transaction.complete is already a Promise
-    console.log(`[IndexedDBBackend] Transaction committed for ${schema}`);
-    
-    console.log(`[IndexedDBBackend] Created record in ${schema}:`, record);
     
     // Notify observers by re-querying (simpler than maintaining collection state)
     const updatedItems = await this.query(schema, null);
@@ -1194,9 +1147,6 @@ export class IndexedDBBackend {
     
     // CRITICAL: Wait for transaction to commit before notifying observers
     await transaction.complete; // transaction.complete is already a Promise
-    console.log(`[IndexedDBBackend] Transaction committed for ${schema}`);
-    
-    console.log(`[IndexedDBBackend] Updated record in ${schema}:`, updatedRecord);
     
     // Notify observers by re-querying
     const updatedItems = await this.query(schema, null);
@@ -1242,8 +1192,6 @@ export class IndexedDBBackend {
     // Wait for transaction to commit
     await transaction.complete;
     
-    console.log(`[IndexedDBBackend] Updated config ${id}:`, data);
-    
     return updatedConfig;
   }
 
@@ -1282,9 +1230,6 @@ export class IndexedDBBackend {
     
     // CRITICAL: Wait for transaction to commit before notifying observers
     await transaction.complete; // transaction.complete is already a Promise
-    console.log(`[IndexedDBBackend] Transaction committed for ${schema}`);
-    
-    console.log(`[IndexedDBBackend] Deleted record from ${schema}:`, id);
     
     // Notify observers by re-querying
     const updatedItems = await this.query(schema, null);
@@ -1434,11 +1379,15 @@ export class IndexedDBBackend {
       let schemaCoId = schemaKey;
       
       // If it's already a co-id, use it directly
-      if (!schemaKey.startsWith('co_z')) {
+      // Also check if it's incorrectly prefixed with @schema/ (bug fix)
+      if (schemaKey.startsWith('@schema/co_z')) {
+        // Extract the co-id from the incorrectly prefixed key
+        schemaCoId = schemaKey.replace('@schema/', '');
+      } else if (!schemaKey.startsWith('co_z')) {
         // Resolve human-readable key to co-id via registry
         schemaCoId = await this.resolveHumanReadableKey(schemaKey);
         if (!schemaCoId) {
-          console.warn(`[IndexedDBBackend] Could not resolve schema key "${schemaKey}" to co-id`);
+          // Silent - too frequent and not user-facing
           return null;
         }
       }
@@ -1619,8 +1568,6 @@ export class IndexedDBBackend {
           }
         }
       }
-      
-      console.log(`[IndexedDBBackend] Stored ${count} co-id registry mappings`);
     } catch (error) {
       console.warn(`[IndexedDBBackend] Failed to store co-id registry:`, error);
       // Don't throw - registry is optional for backwards compatibility

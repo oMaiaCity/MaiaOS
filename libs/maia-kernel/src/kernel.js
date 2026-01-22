@@ -55,11 +55,6 @@ export class MaiaOS {
     const os = new MaiaOS();
     
     console.log('🚀 Booting MaiaOS v0.4...');
-    console.log('📦 Kernel: Module-based architecture');
-    console.log('🤖 State Machines: AI-compatible actor coordination');
-    console.log('📨 Message Passing: Actor-to-actor communication');
-    console.log('🔧 Tools: Dynamic modular loading');
-    console.log('💾 Database: Unified operation engine (maia.db)');
     
     // Initialize database
     const backend = await MaiaOS._initializeDatabase(os);
@@ -75,9 +70,7 @@ export class MaiaOS {
     // Load modules
     await MaiaOS._loadModules(os, config);
     
-    console.log(`✅ Loaded ${os.moduleRegistry.listModules().length} modules`);
-    console.log(`✅ Registered ${os.toolEngine.tools.size} tools`);
-    console.log('✅ MaiaOS booted successfully');
+    console.log(`✅ MaiaOS booted: ${os.moduleRegistry.listModules().length} modules, ${os.toolEngine.tools.size} tools`);
     
     return os;
   }
@@ -88,7 +81,6 @@ export class MaiaOS {
    * @returns {Promise<IndexedDBBackend>} Initialized backend
    */
   static async _initializeDatabase(os) {
-    console.log('📦 Initializing database engine...');
     const backend = new IndexedDBBackend();
     await backend.init();
     os.dbEngine = new DBEngine(backend);
@@ -122,7 +114,6 @@ export class MaiaOS {
    * @throws {Error} If any schema fails validation
    */
   static async _validateSchemas(schemas, validationEngine) {
-    console.log('🔍 Validating schemas against meta schema...');
     for (const [name, schema] of Object.entries(schemas)) {
       const result = await validationEngine.validateSchemaAgainstMeta(schema);
       if (!result.valid) {
@@ -133,7 +124,6 @@ export class MaiaOS {
         throw new Error(`Schema '${name}' is not valid JSON Schema`);
       }
     }
-    console.log('✅ All schemas validated against meta schema');
   }
 
   /**
@@ -250,7 +240,6 @@ export class MaiaOS {
   static async _loadModules(os, config) {
     // Load modules (default: db, core, dragdrop, interface)
     const modules = config.modules || ['db', 'core', 'dragdrop', 'interface'];
-    console.log(`📦 Loading ${modules.length} modules...`);
     
     for (const moduleName of modules) {
       try {
@@ -280,8 +269,6 @@ export class MaiaOS {
    * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
    */
   async loadVibe(vibePath, container) {
-    console.log(`📦 Loading vibe from ${vibePath}...`);
-    
     // Fetch vibe manifest
     const response = await fetch(vibePath);
     if (!response.ok) {
@@ -295,8 +282,6 @@ export class MaiaOS {
     if (schema) {
       await validateAgainstSchemaOrThrow(schema, vibe, 'vibe');
     }
-    
-    console.log(`✨ Vibe: "${vibe.name}"`);
     
     // Resolve actor path relative to vibe location
     const vibeDir = vibePath.substring(0, vibePath.lastIndexOf('/'));
@@ -317,8 +302,6 @@ export class MaiaOS {
    * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
    */
   async loadVibeFromDatabase(vibeId, container) {
-    console.log(`📦 Loading vibe from database: "${vibeId}"...`);
-    
     // Load vibe manifest from database using new ID format
     const vibe = await this.dbEngine.execute({
       op: 'query',
@@ -335,8 +318,6 @@ export class MaiaOS {
     if (schema) {
       await validateAgainstSchemaOrThrow(schema, vibe, 'vibe');
     }
-    
-    console.log(`✨ Vibe: "${vibe.name}"`);
     
     // Resolve actor ID (can be human-readable like @actor/agent or co-id)
     let actorCoId = vibe.actor; // e.g., "@actor/agent" or "co_z..."

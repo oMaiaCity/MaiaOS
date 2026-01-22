@@ -19,7 +19,5 @@ export default {
     if (actor.actorEngine && actor.id) {
       actor.actorEngine.rerender(actor.id);
     }
-    
-    console.log('✅ [dragdrop/end] Ended dragging, cleared drag state');
   }
 };

@@ -39,7 +39,6 @@ export default {
       });
       
       // Drag state will be cleared by @dragdrop/end in SUCCESS action
-      console.log(`✅ [dragdrop/drop] Dropped ${schema}/${draggedId}, set ${field} = ${value}`);
     } catch (error) {
       console.error(`[dragdrop/drop] Failed to update ${schema}/${draggedId}:`, error);
       throw error;

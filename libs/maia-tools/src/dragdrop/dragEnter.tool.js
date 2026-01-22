@@ -17,7 +17,5 @@ export default {
     if (!hasActiveDrag && actor.actorEngine && actor.id) {
       actor.actorEngine.rerender(actor.id);
     }
-    
-    console.log(`✅ [dragdrop/dragEnter] Highlighting column: ${column}`);
   }
 };
