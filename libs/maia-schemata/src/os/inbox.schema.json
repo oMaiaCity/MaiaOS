@@ -1,6 +1,6 @@
 {
-  "$schema": "@schema/meta-schema-cojson",
-  "$id": "@schema/inbox-costream",
+  "$schema": "@schema/meta",
+  "$id": "@schema/inbox",
   "title": "Inbox CoStream",
   "description": "A costream (append-only stream) of messages received by this actor",
   "cotype": "costream",

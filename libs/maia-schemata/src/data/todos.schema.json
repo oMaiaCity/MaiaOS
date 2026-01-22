@@ -1,6 +1,6 @@
 {
   "$id": "@schema/data/todos",
-  "$schema": "@schema/meta-schema-cojson",
+  "$schema": "@schema/meta",
   "title": "Todo Item Schema",
   "cotype": "comap",
   "properties": {

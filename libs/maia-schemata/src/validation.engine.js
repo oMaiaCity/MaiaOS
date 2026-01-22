@@ -7,7 +7,7 @@
  * Supports CoJSON types via custom meta-schema and AJV plugin.
  */
 import { ajvCoTypesPlugin } from './ajv-co-types-plugin.js';
-import customMetaSchema from './meta-schema-cojson.json';
+import customMetaSchema from './os/meta.schema.json';
 
 export class ValidationEngine {
   constructor() {
@@ -388,7 +388,7 @@ export class ValidationEngine {
    * @private
    */
   _loadCoJsonMetaSchema() {
-    const customMetaSchemaId = '@schema/meta-schema-cojson';
+    const customMetaSchemaId = '@schema/meta';
     
     // Temporarily disable schema validation to add custom meta-schema
     const originalValidateSchema = this.ajv.opts.validateSchema;

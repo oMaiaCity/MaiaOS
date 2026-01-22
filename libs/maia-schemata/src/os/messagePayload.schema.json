@@ -1,5 +1,5 @@
 {
-  "$schema": "@schema/meta-schema-cojson",
+  "$schema": "@schema/meta",
   "$id": "@schema/messagePayload",
   "title": "Message Payload",
   "description": "Message payload definition",

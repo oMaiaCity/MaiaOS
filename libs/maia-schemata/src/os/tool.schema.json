@@ -1,5 +1,5 @@
 {
-  "$schema": "@schema/meta-schema-cojson",
+  "$schema": "@schema/meta",
   "$id": "@schema/tool",
   "title": "Tool Definition",
   "description": "Tool metadata (AI-compatible JSON schema)",

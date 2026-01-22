@@ -1,7 +1,0 @@
-{
-  "$schema": "@schema/meta-schema-cojson",
-  "$id": "@schema/common",
-  "title": "Common MaiaOS Definitions",
-  "description": "Shared schema definitions used across multiple MaiaOS types (now empty - all definitions extracted as separate schemas)",
-  "cotype": "comap"
-}

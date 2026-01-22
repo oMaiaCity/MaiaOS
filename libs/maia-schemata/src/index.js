@@ -17,28 +17,24 @@ export function getMetaSchema() {
 }
 
 // Import all schema definitions directly as JSON
-import actorSchema from './actor.schema.json';
-import contextSchema from './context.schema.json';
-import stateSchema from './state.schema.json';
-import viewSchema from './view.schema.json';
-import styleSchema from './style.schema.json';
-import brandStyleSchema from './brandStyle.schema.json';
-import interfaceSchema from './interface.schema.json';
-import toolSchema from './tool.schema.json';
-import vibeSchema from './vibe.schema.json';
-import messageSchema from './message.schema.json';
-import commonSchema from './common.schema.json';
+import actorSchema from './os/actor.schema.json';
+import contextSchema from './os/context.schema.json';
+import stateSchema from './os/state.schema.json';
+import viewSchema from './os/view.schema.json';
+import styleSchema from './os/style.schema.json';
+import brandStyleSchema from './os/brandStyle.schema.json';
+import interfaceSchema from './os/interface.schema.json';
+import toolSchema from './os/tool.schema.json';
+import vibeSchema from './os/vibe.schema.json';
+import messageSchema from './os/message.schema.json';
 // Import extracted $defs as separate schemas
-import guardSchema from './guard.schema.json';
-import actionSchema from './action.schema.json';
-import transitionSchema from './transition.schema.json';
-import messagePayloadSchema from './messagePayload.schema.json';
+import guardSchema from './os/guard.schema.json';
+import actionSchema from './os/action.schema.json';
+import transitionSchema from './os/transition.schema.json';
+import messagePayloadSchema from './os/messagePayload.schema.json';
 // Import CoValue schemas
-import tokensComapSchema from './tokens-comap.schema.json';
-import componentsComapSchema from './components-comap.schema.json';
-import subscriptionsColistSchema from './subscriptions-colist.schema.json';
-import inboxCostreamSchema from './inbox-costream.schema.json';
-import todosSchema from './todos-colist.schema.json';
+import subscriptionsColistSchema from './os/subscriptions-colist.schema.json';
+import inboxSchema from './os/inbox.schema.json';
 // Import data schemas
 import todosDataSchema from './data/todos.schema.json';
 
@@ -57,18 +53,14 @@ const SCHEMAS = {
   tool: toolSchema,
   vibe: vibeSchema,
   message: messageSchema,
-  common: commonSchema,
   // Extracted $defs as separate schemas (expression is inline type definition, not a CoValue)
   guard: guardSchema,
   action: actionSchema,
   transition: transitionSchema,
   messagePayload: messagePayloadSchema,
   // CoValue schemas (separate CoValues referenced via $co)
-  'tokens-comap': tokensComapSchema,
-  'components-comap': componentsComapSchema,
   'subscriptions-colist': subscriptionsColistSchema,
-  'inbox-costream': inboxCostreamSchema,
-  todos: todosSchema
+  inbox: inboxSchema
 };
 
 // Data schemas registry (for application data validation)

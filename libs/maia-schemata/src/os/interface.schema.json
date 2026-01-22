@@ -1,5 +1,5 @@
 {
-  "$schema": "@schema/meta-schema-cojson",
+  "$schema": "@schema/meta",
   "$id": "@schema/interface",
   "title": "Actor Interface Definition",
   "description": "Message interface specification (inbox, publishes, subscriptions)",

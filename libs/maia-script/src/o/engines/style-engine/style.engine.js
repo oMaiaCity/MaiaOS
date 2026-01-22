@@ -73,60 +73,6 @@ export class StyleEngine {
   }
 
   /**
-   * Load tokens by co-id
-   * @param {string} coId - Tokens co-id (e.g., 'co_z...')
-   * @returns {Promise<Object>} The tokens object
-   */
-  async loadTokens(coId) {
-    if (!coId || !coId.startsWith('co_z')) {
-      throw new Error(`[StyleEngine] loadTokens requires a co-id, got: ${coId}`);
-    }
-    
-    if (!this.dbEngine) {
-      throw new Error(`[StyleEngine] Database engine not available`);
-    }
-    
-    const tokens = await this.dbEngine.execute({
-      op: 'query',
-      schema: '@schema/tokens-comap',
-      key: coId
-    });
-    
-    if (!tokens) {
-      throw new Error(`Failed to load tokens from database by co-id: ${coId}`);
-    }
-    
-    return tokens || {};
-  }
-
-  /**
-   * Load components by co-id
-   * @param {string} coId - Components co-id (e.g., 'co_z...')
-   * @returns {Promise<Object>} The components object
-   */
-  async loadComponents(coId) {
-    if (!coId || !coId.startsWith('co_z')) {
-      throw new Error(`[StyleEngine] loadComponents requires a co-id, got: ${coId}`);
-    }
-    
-    if (!this.dbEngine) {
-      throw new Error(`[StyleEngine] Database engine not available`);
-    }
-    
-    const components = await this.dbEngine.execute({
-      op: 'query',
-      schema: '@schema/components-comap',
-      key: coId
-    });
-    
-    if (!components) {
-      throw new Error(`Failed to load components from database by co-id: ${coId}`);
-    }
-    
-    return components || {};
-  }
-
-  /**
    * Deep merge two objects (actor wins on conflicts)
    * @param {Object} target - Base object (brand)
    * @param {Object} source - Override object (actor)

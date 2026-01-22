@@ -1,5 +1,5 @@
 {
-  "$schema": "@schema/meta-schema-cojson",
+  "$schema": "@schema/meta",
   "$id": "@schema/actor",
   "title": "Actor Definition",
   "description": "Pure declarative actor specification",
@@ -55,7 +55,7 @@
       "description": "Co-id reference to subscriptions colist (list of actor co-ids to receive messages from)"
     },
     "inbox": {
-      "$co": "@schema/inbox-costream",
+      "$co": "@schema/inbox",
       "description": "Co-id reference to message inbox costream (append-only message feed)"
     },
     "inboxWatermark": {

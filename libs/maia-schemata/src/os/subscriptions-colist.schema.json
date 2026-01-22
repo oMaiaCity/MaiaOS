@@ -1,5 +1,5 @@
 {
-  "$schema": "@schema/meta-schema-cojson",
+  "$schema": "@schema/meta",
   "$id": "@schema/subscriptions-colist",
   "title": "Subscriptions Colist",
   "description": "A colist of actor co-ids that this actor subscribes to for receiving messages",

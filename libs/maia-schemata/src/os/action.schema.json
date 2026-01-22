@@ -1,5 +1,5 @@
 {
-  "$schema": "@schema/meta-schema-cojson",
+  "$schema": "@schema/meta",
   "$id": "@schema/action",
   "title": "Action",
   "description": "Action (tool invocation or context update)",

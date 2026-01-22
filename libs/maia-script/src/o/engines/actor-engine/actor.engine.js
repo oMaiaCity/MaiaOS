@@ -226,7 +226,7 @@ export class ActorEngine {
     if (actorConfig.inbox) {
       const inboxCostream = await this.dbEngine.execute({
         op: 'query',
-        schema: '@schema/inbox-costream',
+        schema: '@schema/inbox',
         key: actorConfig.inbox
       });
       if (inboxCostream && Array.isArray(inboxCostream.items)) {
