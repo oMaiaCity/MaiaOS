@@ -1,140 +1,199 @@
 {
-  "$schema": "@schema/meta-schema",
-  "$id": "https://maiaos.dev/schemas/view.schema.json",
+  "$schema": "@schema/meta-schema-cojson",
+  "$id": "@schema/view",
   "title": "View Definition",
-  "description": "UI structure definition with DOM tree, expressions, loops, and event handlers",
-  "type": "object",
-  "required": ["$type"],
+  "description": "UI structure definition with DOM tree, expressions, loops, and event handlers (recursive viewNode structure)",
+  "cotype": "comap",
   "properties": {
-    "$type": {
+    "$schema": {
       "type": "string",
-      "const": "view"
+      "description": "Schema reference",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "$id": {
       "type": "string",
-      "description": "Unique view identifier",
-      "pattern": "^co_view_"
+      "description": "Unique view identifier (co-id)",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
-    "root": {
-      "description": "Root DOM node (for leaf views)",
+    "tag": {
+      "type": "string",
+      "description": "HTML tag name"
+    },
+    "class": {
+      "type": "string",
+      "description": "CSS class name"
+    },
+    "text": {
+      "description": "Text content (can be expression)",
+      "anyOf": [
+        { "type": "string", "pattern": "^\\$\\$" },
+        { "type": "string", "pattern": "^@" },
+        { "type": "string", "pattern": "^\\$[^$]" },
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "null" }
+      ]
+    },
+    "value": {
+      "description": "Input value (can be expression)",
+      "anyOf": [
+        { "type": "string", "pattern": "^\\$\\$" },
+        { "type": "string", "pattern": "^@" },
+        { "type": "string", "pattern": "^\\$[^$]" },
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "null" }
+      ]
+    },
+    "attrs": {
       "type": "object",
-      "properties": {
-        "tag": {
-          "type": "string",
-          "description": "HTML tag name"
-        },
-        "class": {
-          "type": "string",
-          "description": "CSS class name"
-        },
-        "text": {
-          "description": "Text content (can be expression)",
-          "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/expression"
-        },
-        "value": {
-          "description": "Input value (can be expression)",
-          "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/expression"
-        },
-        "attrs": {
-          "type": "object",
-          "description": "HTML attributes",
-          "additionalProperties": {
-            "anyOf": [
-              {
-                "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/expression"
-              },
-              {
-                "type": "object",
-                "description": "Nested attribute object (e.g., data attribute)",
-                "additionalProperties": {
-                  "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/expression"
-                }
-              }
-            ]
-          }
-        },
-        "children": {
-          "type": "array",
-          "description": "Child nodes",
-          "items": {
-            "$ref": "#/$defs/viewNode"
-          }
-        },
-        "$on": {
-          "type": "object",
-          "description": "Event handlers",
-          "additionalProperties": {
+      "description": "HTML attributes",
+      "additionalProperties": {
+        "anyOf": [
+          { "type": "string", "pattern": "^\\$\\$" },
+          { "type": "string", "pattern": "^@" },
+          { "type": "string", "pattern": "^\\$[^$]" },
+          { "type": "string" },
+          { "type": "number" },
+          { "type": "boolean" },
+          { "type": "null" },
+          {
             "type": "object",
-            "properties": {
-              "send": {
-                "type": "string",
-                "description": "Event name to send"
-              },
-              "payload": {
-                "type": "object",
-                "description": "Event payload",
-                "additionalProperties": true
-              },
-              "key": {
-                "type": "string",
-                "description": "Keyboard key filter (e.g., 'Enter')"
-              }
-            },
-            "required": ["send"]
+            "description": "Nested attribute object (e.g., data attribute)",
+            "additionalProperties": {
+              "anyOf": [
+                { "type": "string", "pattern": "^\\$\\$" },
+                { "type": "string", "pattern": "^@" },
+                { "type": "string", "pattern": "^\\$[^$]" },
+                { "type": "string" },
+                { "type": "number" },
+                { "type": "boolean" },
+                { "type": "null" }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "children": {
+      "type": "array",
+      "description": "Child nodes (recursive)",
+      "items": {
+        "$ref": "#/$defs/viewNode"
+      }
+    },
+    "$on": {
+      "type": "object",
+      "description": "Event handlers",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "send": {
+            "type": "string",
+            "description": "Event name to send"
+          },
+          "payload": {
+            "type": "object",
+            "description": "Event payload",
+            "additionalProperties": true
+          },
+          "key": {
+            "type": "string",
+            "description": "Keyboard key filter (e.g., 'Enter')"
           }
         },
-        "$each": {
-          "type": "object",
-          "description": "Loop definition",
-          "properties": {
-            "items": {
-              "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/expression"
-            },
-            "template": {
-              "$ref": "#/$defs/viewNode"
-            }
-          },
-          "required": ["items", "template"]
+        "required": ["send"]
+      }
+    },
+    "$each": {
+      "type": "object",
+      "description": "Loop definition",
+      "properties": {
+        "items": {
+          "description": "Items expression",
+          "anyOf": [
+            { "type": "string", "pattern": "^\\$\\$" },
+            { "type": "string", "pattern": "^@" },
+            { "type": "string", "pattern": "^\\$[^$]" },
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "boolean" },
+            { "type": "null" }
+          ]
         },
-        "$slot": {
-          "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/expression"
+        "template": {
+          "$ref": "#/$defs/viewNode"
         }
       },
-      "additionalProperties": false
+      "required": ["items", "template"]
     },
-    "container": {
-      "description": "Container node (for composite views)",
-      "$ref": "#/$defs/viewNode"
+    "$slot": {
+      "description": "Slot expression",
+      "anyOf": [
+        { "type": "string", "pattern": "^\\$\\$" },
+        { "type": "string", "pattern": "^@" },
+        { "type": "string", "pattern": "^\\$[^$]" },
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "null" }
+      ]
     }
   },
   "$defs": {
     "viewNode": {
       "type": "object",
+      "description": "Recursive DOM node structure",
       "properties": {
-        "tag": {
-          "type": "string"
-        },
-        "class": {
-          "type": "string"
-        },
+        "tag": { "type": "string" },
+        "class": { "type": "string" },
         "text": {
-          "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/expression"
+          "anyOf": [
+            { "type": "string", "pattern": "^\\$\\$" },
+            { "type": "string", "pattern": "^@" },
+            { "type": "string", "pattern": "^\\$[^$]" },
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "boolean" },
+            { "type": "null" }
+          ]
         },
         "value": {
-          "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/expression"
+          "anyOf": [
+            { "type": "string", "pattern": "^\\$\\$" },
+            { "type": "string", "pattern": "^@" },
+            { "type": "string", "pattern": "^\\$[^$]" },
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "boolean" },
+            { "type": "null" }
+          ]
         },
         "attrs": {
           "type": "object",
           "additionalProperties": {
             "anyOf": [
-              {
-                "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/expression"
-              },
+              { "type": "string", "pattern": "^\\$\\$" },
+              { "type": "string", "pattern": "^@" },
+              { "type": "string", "pattern": "^\\$[^$]" },
+              { "type": "string" },
+              { "type": "number" },
+              { "type": "boolean" },
+              { "type": "null" },
               {
                 "type": "object",
-                "description": "Nested attribute object (e.g., data attribute)",
                 "additionalProperties": {
-                  "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/expression"
+                  "anyOf": [
+                    { "type": "string", "pattern": "^\\$\\$" },
+                    { "type": "string", "pattern": "^@" },
+                    { "type": "string", "pattern": "^\\$[^$]" },
+                    { "type": "string" },
+                    { "type": "number" },
+                    { "type": "boolean" },
+                    { "type": "null" }
+                  ]
                 }
               }
             ]
@@ -151,16 +210,9 @@
           "additionalProperties": {
             "type": "object",
             "properties": {
-              "send": {
-                "type": "string"
-              },
-              "payload": {
-                "type": "object",
-                "additionalProperties": true
-              },
-              "key": {
-                "type": "string"
-              }
+              "send": { "type": "string" },
+              "payload": { "type": "object", "additionalProperties": true },
+              "key": { "type": "string" }
             },
             "required": ["send"]
           }
@@ -169,7 +221,15 @@
           "type": "object",
           "properties": {
             "items": {
-              "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/expression"
+              "anyOf": [
+                { "type": "string", "pattern": "^\\$\\$" },
+                { "type": "string", "pattern": "^@" },
+                { "type": "string", "pattern": "^\\$[^$]" },
+                { "type": "string" },
+                { "type": "number" },
+                { "type": "boolean" },
+                { "type": "null" }
+              ]
             },
             "template": {
               "$ref": "#/$defs/viewNode"
@@ -178,10 +238,19 @@
           "required": ["items", "template"]
         },
         "$slot": {
-          "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/expression"
+          "anyOf": [
+            { "type": "string", "pattern": "^\\$\\$" },
+            { "type": "string", "pattern": "^@" },
+            { "type": "string", "pattern": "^\\$[^$]" },
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "boolean" },
+            { "type": "null" }
+          ]
         }
       },
       "additionalProperties": false
     }
-  }
+  },
+  "additionalProperties": false
 }

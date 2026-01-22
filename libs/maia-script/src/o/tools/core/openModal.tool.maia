@@ -1,5 +1,5 @@
 {
-  "$type": "tool",
+  "$schema": "@schema/tool",
   "$id": "tool_openModal_001",
   "name": "@core/openModal",
   "description": "Opens a modal dialog",

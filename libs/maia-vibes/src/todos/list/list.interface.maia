@@ -1,5 +1,6 @@
 {
-  "$type": "actor.interface",
+  "$schema": "@schema/interface",
+  "$id": "@interface/list",
   "inbox": {
     "SUBSCRIBE_TO_TODOS": {
       "payload": {
@@ -31,7 +32,5 @@
     "DELETE_BUTTON": {
       "payload": { "id": "string" }
     }
-  },
-  "subscriptions": ["actor_vibe_001"],
-  "watermark": 0
+  }
 }

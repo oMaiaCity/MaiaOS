@@ -22,9 +22,9 @@ export async function loadTodosVibe(container) {
     registry: TodosVibeRegistry  // Pass registry for database seeding
   });
   
-  // Load Todo Vibe from database
+  // Load Todo Vibe from database using new ID format
   const { vibe, actor: todoActor } = await os.loadVibeFromDatabase(
-    'todos', // Vibe name as stored in database
+    '@vibe/todos', // Vibe ID in new format
     container
   );
   

@@ -1,6 +1,7 @@
 {
-  "$type": "context",
-  "$id": "context_list_001",
+  "$schema": "@schema/context",
+  "$id": "@context/list",
+  "schema": "@schema/todos",
   "todos": {
     "schema": "@schema/todos",
     "filter": null

@@ -1,19 +1,15 @@
 {
-  "$schema": "@schema/meta-schema",
-  "$id": "https://maiaos.dev/schemas/tool.schema.json",
+  "$schema": "@schema/meta-schema-cojson",
+  "$id": "@schema/tool",
   "title": "Tool Definition",
   "description": "Tool metadata (AI-compatible JSON schema)",
-  "type": "object",
-  "required": ["$type", "name", "description", "parameters"],
+  "cotype": "comap",
+  "required": ["name", "description", "parameters"],
   "properties": {
-    "$type": {
-      "type": "string",
-      "const": "tool"
-    },
     "$id": {
       "type": "string",
-      "description": "Unique tool identifier",
-      "pattern": "^tool_"
+      "description": "Unique tool identifier (co-id)",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "name": {
       "type": "string",

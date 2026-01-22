@@ -1,9 +1,9 @@
 {
-  "$schema": "@schema/meta-schema",
-  "$id": "https://maiaos.dev/schemas/message.schema.json",
+  "$schema": "@schema/meta-schema-cojson",
+  "$id": "@schema/message",
   "title": "Message",
   "description": "Actor message for state machine transitions",
-  "type": "object",
+  "cotype": "comap",
   "required": ["type"],
   "properties": {
     "type": {
@@ -16,11 +16,13 @@
     },
     "source": {
       "type": "string",
-      "description": "Source actor ID"
+      "description": "Source actor co-id",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "target": {
       "type": "string",
-      "description": "Target actor ID"
+      "description": "Target actor co-id",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "timestamp": {
       "type": "number",

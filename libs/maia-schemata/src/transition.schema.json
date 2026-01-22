@@ -1,0 +1,28 @@
+{
+  "$schema": "@schema/meta-schema-cojson",
+  "$id": "@schema/transition",
+  "title": "Transition",
+  "description": "State machine transition",
+  "cotype": "comap",
+  "properties": {
+    "$id": {
+      "type": "string",
+      "description": "Unique transition identifier (co-id)",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
+    },
+    "target": {
+      "type": "string",
+      "description": "Target state name"
+    },
+    "guard": {
+      "$co": "@schema/guard"
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "$co": "@schema/action"
+      }
+    }
+  },
+  "required": ["target"]
+}

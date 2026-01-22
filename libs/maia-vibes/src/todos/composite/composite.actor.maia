@@ -1,20 +1,18 @@
 {
-  "$type": "actor",
-  "$id": "actor_composite_001",
+  "$schema": "@schema/actor",
+  "$id": "@actor/composite",
   "role": "composite",
-  "contextRef": "composite/composite",
-  "viewRef": "composite/composite",
-  "stateRef": "composite/composite",
-  "interfaceRef": "composite/composite",
-  "brandRef": "co_brand_001",
-  "styleRef": "todo",
+  "context": "@context/composite",
+  "view": "@view/composite",
+  "state": "@state/composite",
+  "interface": "@interface/composite",
+  "brand": "@style/brand",
+  "style": "@style/todo",
   "children": {
-    "list": "actor_list_001",
-    "kanban": "actor_kanban_001"
+    "list": "@actor/list",
+    "kanban": "@actor/kanban"
   },
-  "subscriptions": [
-    "actor_vibe_001"
-  ],
-  "inbox": [],
+  "subscriptions": "@subscriptions/composite",
+  "inbox": "@inbox/composite",
   "inboxWatermark": 0
 }

@@ -1,48 +1,29 @@
 {
-  "$schema": "@schema/meta-schema",
-  "$id": "https://maiaos.dev/schemas/style.schema.json",
+  "$schema": "@schema/meta-schema-cojson",
+  "$id": "@schema/style",
   "title": "Style Definition",
   "description": "Actor-specific style overrides",
-  "type": "object",
-  "required": ["$type"],
+  "cotype": "comap",
   "properties": {
-    "$type": {
+    "$schema": {
       "type": "string",
-      "const": "actor.style"
+      "description": "Schema reference",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "$id": {
       "type": "string",
-      "description": "Unique style identifier"
+      "description": "Unique style identifier (co-id)",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "tokens": {
       "type": "object",
       "description": "Design tokens (colors, spacing, typography, etc.)",
-      "additionalProperties": {
-        "type": "object",
-        "additionalProperties": true
-      }
+      "additionalProperties": true
     },
     "components": {
       "type": "object",
-      "description": "Component-specific styles",
-      "additionalProperties": {
-        "type": "object",
-        "description": "CSS properties and values",
-        "additionalProperties": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "object",
-              "additionalProperties": true
-            }
-          ]
-        }
-      }
+      "description": "Component styles",
+      "additionalProperties": true
     }
   }
 }

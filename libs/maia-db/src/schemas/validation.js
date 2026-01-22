@@ -107,14 +107,48 @@ export class CoSchemaValidationEngine {
   }
   
   /**
-   * Resolve a schema URI (for $ref resolution)
+   * Resolve a schema URI or co-id (for $ref and $schema resolution)
    * @private
-   * @param {string} uri - Schema URI (e.g., "https://maia.city/ProfileSchema" or "https://maia.city/co_z123...")
+   * @param {string} uriOrCoId - Schema URI (e.g., "https://maia.city/ProfileSchema") or co-id (e.g., "co_z123...")
    * @returns {Promise<Object|null>} Resolved schema or null
    */
-  async _resolveSchemaUri(uri) {
-    if (uri.startsWith('https://maia.city/')) {
-      const identifier = uri.replace('https://maia.city/', '');
+  async _resolveSchemaUri(uriOrCoId) {
+    // Handle co-id directly (format: co_z...)
+    if (uriOrCoId && typeof uriOrCoId === 'string' && uriOrCoId.startsWith('co_z')) {
+      // It's a co-id - resolve via schemaResolver
+      if (this.schemaResolver) {
+        try {
+          // Check cache first
+          if (this.resolvedSchemas.has(uriOrCoId)) {
+            return this.resolvedSchemas.get(uriOrCoId);
+          }
+          
+          const resolvedSchema = await this.schemaResolver(uriOrCoId);
+          if (resolvedSchema) {
+            // Cache resolved schema
+            this.resolvedSchemas.set(uriOrCoId, resolvedSchema);
+            return resolvedSchema;
+          }
+        } catch (error) {
+          console.warn(`[CoSchemaValidationEngine] Failed to resolve schema for co-id ${uriOrCoId}:`, error);
+        }
+      }
+      
+      // Try hardcoded registry by $id (for migrations/seeding only)
+      const { getAllSchemas } = await import('./registry.js');
+      const allSchemas = getAllSchemas(); // Migration mode - no options
+      for (const schema of Object.values(allSchemas)) {
+        if (schema.$id === uriOrCoId) {
+          return schema;
+        }
+      }
+      
+      return null;
+    }
+    
+    // Handle URI format
+    if (uriOrCoId && typeof uriOrCoId === 'string' && uriOrCoId.startsWith('https://maia.city/')) {
+      const identifier = uriOrCoId.replace('https://maia.city/', '');
       
       // Check if it's a schema name (not a co-id)
       if (!identifier.startsWith('co_z')) {
@@ -149,9 +183,19 @@ export class CoSchemaValidationEngine {
       const { getAllSchemas } = await import('./registry.js');
       const allSchemas = getAllSchemas(); // Migration mode - no options
       for (const schema of Object.values(allSchemas)) {
-        if (schema.$id === uri) {
+        if (schema.$id === uriOrCoId) {
           return schema;
         }
+      }
+    }
+    
+    // Handle @schema/... format (human-readable references)
+    if (uriOrCoId && typeof uriOrCoId === 'string' && uriOrCoId.startsWith('@schema/')) {
+      const schemaName = uriOrCoId.replace('@schema/', '');
+      const { getSchema } = await import('./registry.js');
+      const schema = getSchema(schemaName);
+      if (schema) {
+        return schema;
       }
     }
     
@@ -196,10 +240,10 @@ export class CoSchemaValidationEngine {
       visited.add(schema.$id);
     }
     
-    // Resolve $ref
+    // Resolve $ref and $co keywords
     if (schema.$ref) {
       try {
-        // Resolve schema URI
+        // Resolve schema URI or co-id
         const resolvedSchema = await this._resolveSchemaUri(schema.$ref);
         if (resolvedSchema) {
           // Add resolved schema to AJV registry if it has $id (check before adding)
@@ -221,6 +265,32 @@ export class CoSchemaValidationEngine {
         }
       } catch (error) {
         console.warn(`[CoSchemaValidationEngine] Failed to resolve $ref ${schema.$ref}:`, error);
+      }
+    }
+    
+    // Handle $co keyword (co-id reference)
+    if (schema.$co && typeof schema.$co === 'string') {
+      // $co keyword is handled by AJV plugin, but we can resolve the referenced schema
+      // for validation purposes
+      try {
+        const resolvedSchema = await this._resolveSchemaUri(schema.$co);
+        if (resolvedSchema) {
+          // Add resolved schema to AJV registry
+          if (resolvedSchema.$id) {
+            const existingSchema = this.baseEngine.ajv.getSchema(resolvedSchema.$id);
+            if (!existingSchema) {
+              try {
+                this.baseEngine.ajv.addSchema(resolvedSchema, resolvedSchema.$id);
+              } catch (error) {
+                if (!error.message.includes('already exists')) {
+                  console.warn(`[CoSchemaValidationEngine] Failed to add resolved schema ${resolvedSchema.$id}:`, error);
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(`[CoSchemaValidationEngine] Failed to resolve $co ${schema.$co}:`, error);
       }
     }
     

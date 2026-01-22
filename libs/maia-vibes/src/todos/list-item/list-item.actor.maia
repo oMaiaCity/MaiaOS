@@ -1,13 +1,13 @@
 {
-  "$type": "actor",
-  "$id": "actor_list_item_001",
+  "$schema": "@schema/actor",
+  "$id": "@actor/list-item",
   "role": "todo-manager",
-  "contextRef": "list-item/list-item",
-  "viewRef": "list-item/list-item",
-  "brandRef": "co_brand_001",
-  "styleRef": "list-item/list-item",
-  "stateRef": "list-item/list-item",
-  "inbox": [],
-  "subscriptions": [],
+  "context": "@context/list-item",
+  "view": "@view/list-item",
+  "brand": "@style/brand",
+  "style": "@style/list-item",
+  "state": "@state/list-item",
+  "subscriptions": "@subscriptions/list-item",
+  "inbox": "@inbox/list-item",
   "inboxWatermark": 0
 }

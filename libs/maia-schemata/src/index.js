@@ -28,6 +28,17 @@ import toolSchema from './tool.schema.json';
 import vibeSchema from './vibe.schema.json';
 import messageSchema from './message.schema.json';
 import commonSchema from './common.schema.json';
+// Import extracted $defs as separate schemas
+import guardSchema from './guard.schema.json';
+import actionSchema from './action.schema.json';
+import transitionSchema from './transition.schema.json';
+import messagePayloadSchema from './messagePayload.schema.json';
+// Import CoValue schemas
+import tokensComapSchema from './tokens-comap.schema.json';
+import componentsComapSchema from './components-comap.schema.json';
+import subscriptionsColistSchema from './subscriptions-colist.schema.json';
+import inboxCostreamSchema from './inbox-costream.schema.json';
+import todosSchema from './todos-colist.schema.json';
 // Import data schemas
 import todosDataSchema from './data/todos.schema.json';
 
@@ -46,7 +57,18 @@ const SCHEMAS = {
   tool: toolSchema,
   vibe: vibeSchema,
   message: messageSchema,
-  common: commonSchema
+  common: commonSchema,
+  // Extracted $defs as separate schemas (expression is inline type definition, not a CoValue)
+  guard: guardSchema,
+  action: actionSchema,
+  transition: transitionSchema,
+  messagePayload: messagePayloadSchema,
+  // CoValue schemas (separate CoValues referenced via $co)
+  'tokens-comap': tokensComapSchema,
+  'components-comap': componentsComapSchema,
+  'subscriptions-colist': subscriptionsColistSchema,
+  'inbox-costream': inboxCostreamSchema,
+  todos: todosSchema
 };
 
 // Data schemas registry (for application data validation)

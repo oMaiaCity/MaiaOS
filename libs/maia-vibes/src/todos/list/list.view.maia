@@ -1,45 +1,43 @@
 {
-  "$type": "view",
-  "$id": "co_view_list_001",
-  "container": {
-    "class": "list",
-    "$each": {
-      "items": "$todos",
-      "template": {
-        "class": "card",
-        "attrs": {
-          "data-done": "$$done"
+  "$schema": "@schema/view",
+  "$id": "@view/list",
+  "class": "list",
+  "$each": {
+    "items": "$todos",
+    "template": {
+      "class": "card",
+      "attrs": {
+        "data-done": "$$done"
+      },
+      "children": [
+        {
+          "tag": "span",
+          "class": "body",
+          "text": "$$text"
         },
-        "children": [
-          {
-            "tag": "span",
-            "class": "body",
-            "text": "$$text"
-          },
-          {
-            "tag": "button",
-            "class": "button-small",
-            "text": "✓",
-            "$on": {
-              "click": {
-                "send": "TOGGLE_BUTTON",
-                "payload": { "id": "$$id" }
-              }
-            }
-          },
-          {
-            "tag": "button",
-            "class": "button-small button-danger",
-            "text": "✕",
-            "$on": {
-              "click": {
-                "send": "DELETE_BUTTON",
-                "payload": { "id": "$$id" }
-              }
+        {
+          "tag": "button",
+          "class": "button-small",
+          "text": "✓",
+          "$on": {
+            "click": {
+              "send": "TOGGLE_BUTTON",
+              "payload": { "id": "$$id" }
             }
           }
-        ]
-      }
+        },
+        {
+          "tag": "button",
+          "class": "button-small button-danger",
+          "text": "✕",
+          "$on": {
+            "click": {
+              "send": "DELETE_BUTTON",
+              "payload": { "id": "$$id" }
+            }
+          }
+        }
+      ]
     }
   }
 }

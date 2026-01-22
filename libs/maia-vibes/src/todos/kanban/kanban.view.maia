@@ -1,204 +1,202 @@
 {
-  "$type": "view",
-  "$id": "co_view_kanban_001",
-  "container": {
-    "class": "kanban",
-    "children": [
-      {
-        "class": "kanban-column",
-        "attrs": {
-          "data-column": "todo"
-        },
-        "children": [
-          {
-            "tag": "h2",
-            "class": "kanban-column-title",
-            "text": "Todo"
-          },
-          {
-            "class": "kanban-column-content",
-            "attrs": {
-              "data-column": "todo",
-              "data": "$dragOverColumn"
-            },
-            "$on": {
-              "dragover": {
-                "send": "DRAG_OVER"
-              },
-              "dragenter": {
-                "send": "DRAG_ENTER",
-                "payload": { "column": "@dataColumn" }
-              },
-              "dragleave": {
-                "send": "DRAG_LEAVE",
-                "payload": { "column": "@dataColumn" }
-              },
-              "drop": {
-                "send": "DROP",
-                "payload": { 
-                  "schema": "todos",
-                  "field": "done",
-                  "value": false
-                }
-              }
-            },
-            "$each": {
-              "items": "$todosTodo",
-              "template": {
-                "class": "card",
-                "attrs": {
-                  "draggable": "true",
-                  "data-id": "$$id",
-                  "data": {
-                    "isDragged": "$draggedItemIds.$$id"
-                  }
-                },
-                "$on": {
-                  "dragstart": {
-                    "send": "DRAG_START",
-                    "payload": { "schema": "todos", "id": "$$id" }
-                  },
-                  "dragend": {
-                    "send": "DRAG_END"
-                  }
-                },
-                "children": [
-                  {
-                    "tag": "span",
-                    "class": "body",
-                    "text": "$$text"
-                  },
-                  {
-                    "class": "card-actions",
-                    "children": [
-                      {
-                        "tag": "button",
-                        "class": "button-small",
-                        "text": "✓",
-                        "$on": {
-                          "click": {
-                            "send": "TOGGLE_BUTTON",
-                            "payload": { "id": "$$id" }
-                          }
-                        }
-                      },
-                      {
-                        "tag": "button",
-                        "class": "button-small button-danger",
-                        "text": "✕",
-                        "$on": {
-                          "click": {
-                            "send": "DELETE_BUTTON",
-                            "payload": { "id": "$$id" }
-                          }
-                        }
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
-        ]
+  "$schema": "@schema/view",
+  "$id": "@view/kanban",
+  "class": "kanban",
+  "children": [
+    {
+      "class": "kanban-column",
+      "attrs": {
+        "data-column": "todo"
       },
-      {
-        "class": "kanban-column",
-        "attrs": {
-          "data-column": "done"
+      "children": [
+        {
+          "tag": "h2",
+          "class": "kanban-column-title",
+          "text": "Todo"
         },
-        "children": [
-          {
-            "tag": "h2",
-            "class": "kanban-column-title",
-            "text": "Done"
+        {
+          "class": "kanban-column-content",
+          "attrs": {
+            "data-column": "todo",
+            "data": "$dragOverColumn"
           },
-          {
-            "class": "kanban-column-content",
-            "attrs": {
-              "data-column": "done",
-              "data": "$dragOverColumn"
+          "$on": {
+            "dragover": {
+              "send": "DRAG_OVER"
             },
-            "$on": {
-              "dragover": {
-                "send": "DRAG_OVER"
-              },
-              "dragenter": {
-                "send": "DRAG_ENTER",
-                "payload": { "column": "@dataColumn" }
-              },
-              "dragleave": {
-                "send": "DRAG_LEAVE",
-                "payload": { "column": "@dataColumn" }
-              },
-              "drop": {
-                "send": "DROP",
-                "payload": { 
-                  "schema": "todos",
-                  "field": "done",
-                  "value": true
-                }
-              }
+            "dragenter": {
+              "send": "DRAG_ENTER",
+              "payload": { "column": "@dataColumn" }
             },
-            "$each": {
-              "items": "$todosDone",
-              "template": {
-                "class": "card",
-                "attrs": {
-                  "draggable": "true",
-                  "data-id": "$$id",
-                  "data-done": "true",
-                  "data": {
-                    "isDragged": "$draggedItemIds.$$id"
-                  }
-                },
-                "$on": {
-                  "dragstart": {
-                    "send": "DRAG_START",
-                    "payload": { "schema": "todos", "id": "$$id" }
-                  },
-                  "dragend": {
-                    "send": "DRAG_END"
-                  }
-                },
-                "children": [
-                  {
-                    "tag": "span",
-                    "class": "body",
-                    "text": "$$text"
-                  },
-                  {
-                    "class": "card-actions",
-                    "children": [
-                      {
-                        "tag": "button",
-                        "class": "button-small",
-                        "text": "↩",
-                        "$on": {
-                          "click": {
-                            "send": "TOGGLE_BUTTON",
-                            "payload": { "id": "$$id" }
-                          }
-                        }
-                      },
-                      {
-                        "tag": "button",
-                        "class": "button-small button-danger",
-                        "text": "✕",
-                        "$on": {
-                          "click": {
-                            "send": "DELETE_BUTTON",
-                            "payload": { "id": "$$id" }
-                          }
-                        }
-                      }
-                    ]
-                  }
-                ]
+            "dragleave": {
+              "send": "DRAG_LEAVE",
+              "payload": { "column": "@dataColumn" }
+            },
+            "drop": {
+              "send": "DROP",
+              "payload": { 
+                "schema": "$schema",
+                "field": "done",
+                "value": false
               }
             }
+          },
+          "$each": {
+            "items": "$todosTodo",
+            "template": {
+              "class": "card",
+              "attrs": {
+                "draggable": "true",
+                "data-id": "$$id",
+                "data": {
+                  "isDragged": "$draggedItemIds.$$id"
+                }
+              },
+              "$on": {
+                "dragstart": {
+                  "send": "DRAG_START",
+                  "payload": { "schema": "todos", "id": "$$id" }
+                },
+                "dragend": {
+                  "send": "DRAG_END"
+                }
+              },
+              "children": [
+                {
+                  "tag": "span",
+                  "class": "body",
+                  "text": "$$text"
+                },
+                {
+                  "class": "card-actions",
+                  "children": [
+                    {
+                      "tag": "button",
+                      "class": "button-small",
+                      "text": "✓",
+                      "$on": {
+                        "click": {
+                          "send": "TOGGLE_BUTTON",
+                          "payload": { "id": "$$id" }
+                        }
+                      }
+                    },
+                    {
+                      "tag": "button",
+                      "class": "button-small button-danger",
+                      "text": "✕",
+                      "$on": {
+                        "click": {
+                          "send": "DELETE_BUTTON",
+                          "payload": { "id": "$$id" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
           }
-        ]
-      }
-    ]
-  }
+        }
+      ]
+    },
+    {
+      "class": "kanban-column",
+      "attrs": {
+        "data-column": "done"
+      },
+      "children": [
+        {
+          "tag": "h2",
+          "class": "kanban-column-title",
+          "text": "Done"
+        },
+        {
+          "class": "kanban-column-content",
+          "attrs": {
+            "data-column": "done",
+            "data": "$dragOverColumn"
+          },
+          "$on": {
+            "dragover": {
+              "send": "DRAG_OVER"
+            },
+            "dragenter": {
+              "send": "DRAG_ENTER",
+              "payload": { "column": "@dataColumn" }
+            },
+            "dragleave": {
+              "send": "DRAG_LEAVE",
+              "payload": { "column": "@dataColumn" }
+            },
+            "drop": {
+              "send": "DROP",
+              "payload": { 
+                "schema": "$schema",
+                "field": "done",
+                "value": true
+              }
+            }
+          },
+          "$each": {
+            "items": "$todosDone",
+            "template": {
+              "class": "card",
+              "attrs": {
+                "draggable": "true",
+                "data-id": "$$id",
+                "data-done": "true",
+                "data": {
+                  "isDragged": "$draggedItemIds.$$id"
+                }
+              },
+              "$on": {
+                "dragstart": {
+                  "send": "DRAG_START",
+                  "payload": { "schema": "todos", "id": "$$id" }
+                },
+                "dragend": {
+                  "send": "DRAG_END"
+                }
+              },
+              "children": [
+                {
+                  "tag": "span",
+                  "class": "body",
+                  "text": "$$text"
+                },
+                {
+                  "class": "card-actions",
+                  "children": [
+                    {
+                      "tag": "button",
+                      "class": "button-small",
+                      "text": "↩",
+                      "$on": {
+                        "click": {
+                          "send": "TOGGLE_BUTTON",
+                          "payload": { "id": "$$id" }
+                        }
+                      }
+                    },
+                    {
+                      "tag": "button",
+                      "class": "button-small button-danger",
+                      "text": "✕",
+                      "$on": {
+                        "click": {
+                          "send": "DELETE_BUTTON",
+                          "payload": { "id": "$$id" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
 }

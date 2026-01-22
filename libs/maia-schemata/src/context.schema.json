@@ -1,32 +1,64 @@
 {
-  "$schema": "@schema/meta-schema",
-  "$id": "https://maiaos.dev/schemas/context.schema.json",
+  "$schema": "@schema/meta-schema-cojson",
+  "$id": "@schema/context",
   "title": "Context Definition",
-  "description": "Runtime data for an actor (flexible JSON structure)",
-  "type": "object",
-  "required": ["$type"],
+  "description": "Runtime data for an actor (flexible JSON structure). The context itself is a comap CoValue (for CRDT sync/versioning), but all inner properties are plain JS objects/arrays/strings - NOT CoJSON types.",
+  "cotype": "comap",
   "properties": {
-    "$type": {
+    "$schema": {
       "type": "string",
-      "const": "context"
+      "description": "Schema reference",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "$id": {
       "type": "string",
-      "description": "Unique context identifier",
-      "pattern": "^context_"
+      "description": "Unique context identifier (co-id)",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
+    },
+    "todos": {
+      "type": "object",
+      "description": "Query object for reactive subscription. SubscriptionEngine replaces this with a plain array when data loads.",
+      "properties": {
+        "schema": {
+          "type": "string",
+          "description": "Schema reference (e.g., '@schema/todos')"
+        },
+        "filter": {
+          "description": "Filter criteria (object or null)",
+          "oneOf": [
+            {"type": "object"},
+            {"type": "null"}
+          ]
+        }
+      },
+      "required": ["schema"]
     }
   },
   "additionalProperties": {
-    "description": "Any additional context fields (collections, UI state, form values, etc.)",
-    "oneOf": [
+    "description": "Any additional context fields (collections, UI state, form values, etc.). All inner properties are plain JS types (objects/arrays/strings/primitives) - NOT CoJSON types. Query objects are replaced with plain arrays by SubscriptionEngine.",
+    "anyOf": [
       {
-        "type": "array"
+        "type": "object",
+        "description": "Query object for reactive subscription (replaced with plain array by SubscriptionEngine)",
+        "properties": {
+          "schema": {
+            "type": "string",
+            "description": "Schema reference"
+          },
+          "filter": {
+            "description": "Filter criteria (object or null)",
+            "anyOf": [
+              {"type": "object"},
+              {"type": "null"}
+            ]
+          }
+        },
+        "required": ["schema"],
+        "additionalProperties": false
       },
       {
-        "type": "object"
-      },
-      {
-        "type": ["string", "number", "boolean", "null"]
+        "type": ["string", "number", "boolean", "null", "array", "object"],
+        "description": "Plain JS types (arrays/objects/strings/primitives) - NOT CoJSON types"
       }
     ]
   }

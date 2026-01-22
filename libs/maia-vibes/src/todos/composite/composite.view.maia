@@ -1,96 +1,94 @@
 {
-  "$type": "view",
-  "$id": "co_view_composite_001",
-  "container": {
-    "tag": "div",
-    "class": "stack",
-    "children": [
-      {
-        "class": "header-section",
-        "children": [
-          {
-            "tag": "h1",
-            "class": "title",
-            "text": "$title"
-          },
-          {
-            "class": "view-switcher",
-            "children": [
-              {
-                "tag": "button",
-                "class": "button-view-switch",
-                "attrs": {
-                  "data-view": "list",
-                  "data": "$listButtonActive"
-                },
-                "text": "List",
-                "$on": {
-                  "click": {
-                    "send": "SWITCH_VIEW",
-                    "payload": { "viewMode": "list" }
-                  }
-                }
+  "$schema": "@schema/view",
+  "$id": "@view/composite",
+  "tag": "div",
+  "class": "stack",
+  "children": [
+    {
+      "class": "header-section",
+      "children": [
+        {
+          "tag": "h1",
+          "class": "title",
+          "text": "$title"
+        },
+        {
+          "class": "view-switcher",
+          "children": [
+            {
+              "tag": "button",
+              "class": "button-view-switch",
+              "attrs": {
+                "data-view": "list",
+                "data": "$listButtonActive"
               },
-              {
-                "tag": "button",
-                "class": "button-view-switch",
-                "attrs": {
-                  "data-view": "kanban",
-                  "data": "$kanbanButtonActive"
-                },
-                "text": "Kanban",
-                "$on": {
-                  "click": {
-                    "send": "SWITCH_VIEW",
-                    "payload": { "viewMode": "kanban" }
-                  }
+              "text": "List",
+              "$on": {
+                "click": {
+                  "send": "SWITCH_VIEW",
+                  "payload": { "viewMode": "list" }
                 }
               }
-            ]
-          }
-        ]
-      },
-      {
-        "class": "form",
-        "children": [
-          {
-            "tag": "input",
-            "class": "input",
-            "attrs": {
-              "type": "text",
-              "placeholder": "$inputPlaceholder"
             },
-            "value": "$newTodoText",
-            "$on": {
-              "input": {
-                "send": "UPDATE_INPUT",
-                "payload": { "newTodoText": "@inputValue" }
+            {
+              "tag": "button",
+              "class": "button-view-switch",
+              "attrs": {
+                "data-view": "kanban",
+                "data": "$kanbanButtonActive"
               },
-              "keydown": {
-                "send": "CREATE_BUTTON",
-                "payload": { "text": "$newTodoText" },
-                "key": "Enter"
+              "text": "Kanban",
+              "$on": {
+                "click": {
+                  "send": "SWITCH_VIEW",
+                  "payload": { "viewMode": "kanban" }
+                }
               }
             }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "form",
+      "children": [
+        {
+          "tag": "input",
+          "class": "input",
+          "attrs": {
+            "type": "text",
+            "placeholder": "$inputPlaceholder"
           },
-          {
-            "tag": "button",
-            "class": "button",
-            "text": "$addButtonText",
-            "$on": {
-              "click": {
-                "send": "CREATE_BUTTON",
-                "payload": { "text": "$newTodoText" }
-              }
+          "value": "$newTodoText",
+          "$on": {
+            "input": {
+              "send": "UPDATE_INPUT",
+              "payload": { "newTodoText": "@inputValue" }
+            },
+            "keydown": {
+              "send": "CREATE_BUTTON",
+              "payload": { "text": "$newTodoText" },
+              "key": "Enter"
             }
           }
-        ]
-      },
-      {
-        "tag": "main",
-        "class": "content-area",
-        "$slot": "$currentView"
-      }
-    ]
-  }
+        },
+        {
+          "tag": "button",
+          "class": "button",
+          "text": "$addButtonText",
+          "$on": {
+            "click": {
+              "send": "CREATE_BUTTON",
+              "payload": { "text": "$newTodoText" }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "tag": "main",
+      "class": "content-area",
+      "$slot": "$currentView"
+    }
+  ]
 }

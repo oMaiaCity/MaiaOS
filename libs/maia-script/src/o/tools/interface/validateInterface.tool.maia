@@ -1,5 +1,5 @@
 {
-  "$type": "tool",
+  "$schema": "@schema/tool",
   "$id": "tool_validate_interface_001",
   "name": "@interface/validate",
   "description": "Validates actor interface schema against expected format",

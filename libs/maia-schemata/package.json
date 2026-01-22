@@ -7,7 +7,9 @@
     ".": "./src/index.js",
     "./validation.engine": "./src/validation.engine.js",
     "./validation.helper": "./src/validation.helper.js",
-    "./schema-loader": "./src/schema-loader.js"
+    "./schema-loader": "./src/schema-loader.js",
+    "./co-id-generator": "./src/co-id-generator.js",
+    "./schema-transformer": "./src/schema-transformer.js"
   },
   "dependencies": {
     "ajv": "^8.12.0"

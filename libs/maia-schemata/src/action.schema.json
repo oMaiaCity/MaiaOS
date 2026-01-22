@@ -1,0 +1,24 @@
+{
+  "$schema": "@schema/meta-schema-cojson",
+  "$id": "@schema/action",
+  "title": "Action",
+  "description": "Action (tool invocation or context update)",
+  "cotype": "comap",
+  "properties": {
+    "$id": {
+      "type": "string",
+      "description": "Unique action identifier (co-id)",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
+    },
+    "tool": {
+      "type": "string",
+      "description": "Tool identifier (e.g., '@mutation/create')"
+    },
+    "payload": {
+      "description": "Tool payload (can contain expressions)",
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "required": ["tool"]
+}

@@ -1,0 +1,5 @@
+{
+  "$schema": "@schema/inbox-costream",
+  "$id": "@inbox/composite",
+  "items": []
+}

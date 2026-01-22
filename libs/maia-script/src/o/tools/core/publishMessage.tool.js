@@ -19,6 +19,7 @@ export default {
     if (actor.actorEngine) {
       if (target) {
         // Targeted messaging - send to specific actor only
+        // Note: target should already be a co-id (transformed during seeding)
         actor.actorEngine.sendMessage(target, {
           type,
           payload: messagePayload,

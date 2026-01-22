@@ -12,8 +12,11 @@ export default {
     if (actor.context.dragOverColumn === column) {
       actor.context.dragOverColumn = null;
       
-      // Trigger re-render to update CSS classes
-      if (actor.actorEngine && actor.id) {
+      // CRITICAL: Don't rerender during drag operations - it recreates DOM and causes loops
+      // The CSS classes will be applied on the next natural rerender (after drag ends)
+      // Check if there's an active drag operation (any drag, not just from this actor)
+      const hasActiveDrag = actor.context.draggedItemId !== null && actor.context.draggedItemId !== undefined;
+      if (!hasActiveDrag && actor.actorEngine && actor.id) {
         actor.actorEngine.rerender(actor.id);
       }
       

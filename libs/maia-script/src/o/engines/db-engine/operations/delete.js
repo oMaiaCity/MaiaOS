@@ -2,7 +2,8 @@
  * Delete Operation - Delete records
  * 
  * Usage:
- *   maia.db({op: 'delete', schema: '@schema/todos', id: '123'})
+ *   maia.db({op: 'delete', schema: 'co_z...', id: 'co_z...'})
+ * Note: Schema is now a co-id (transformed during seeding), not a human-readable reference
  */
 
 export class DeleteOperation {
@@ -13,8 +14,8 @@ export class DeleteOperation {
   /**
    * Execute delete operation
    * @param {Object} params
-   * @param {string} params.schema - Schema reference (@schema/todos, etc.)
-   * @param {string} params.id - Record ID to delete
+   * @param {string} params.schema - Schema co-id (co_z...) for data collections
+   * @param {string} params.id - Record co-id ($id) to delete
    * @returns {Promise<boolean>} true if deleted successfully
    */
   async execute(params) {
@@ -28,7 +29,7 @@ export class DeleteOperation {
       throw new Error('[DeleteOperation] ID required');
     }
     
-    console.log(`[DeleteOperation] Deleting record ${id} from ${schema}`);
+    console.log(`[DeleteOperation] Deleting record ${id} from collection ${schema}`);
     
     return await this.backend.delete(schema, id);
   }

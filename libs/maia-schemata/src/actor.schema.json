@@ -1,68 +1,62 @@
 {
-  "$schema": "@schema/meta-schema",
-  "$id": "https://maiaos.dev/schemas/actor.schema.json",
+  "$schema": "@schema/meta-schema-cojson",
+  "$id": "@schema/actor",
   "title": "Actor Definition",
   "description": "Pure declarative actor specification",
-  "type": "object",
-  "required": ["$type"],
+  "cotype": "comap",
   "properties": {
-    "$type": {
+    "$schema": {
       "type": "string",
-      "const": "actor"
+      "description": "Schema reference",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "$id": {
       "type": "string",
-      "description": "Unique actor identifier",
-      "pattern": "^actor_"
+      "description": "Unique actor identifier (co-id)",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "role": {
       "type": "string",
-      "description": "Actor role (e.g., 'vibe', 'composite', 'leaf')"
+      "description": "Actor role (e.g., 'kanban-view', 'vibe', 'composite', 'leaf')"
     },
-    "contextRef": {
-      "type": "string",
-      "description": "Reference to context definition"
+    "context": {
+      "$co": "@schema/context",
+      "description": "Co-id reference to context definition"
     },
-    "stateRef": {
-      "type": "string",
-      "description": "Reference to state machine definition"
+    "view": {
+      "$co": "@schema/view",
+      "description": "Co-id reference to view definition"
     },
-    "viewRef": {
-      "type": "string",
-      "description": "Reference to view definition"
+    "state": {
+      "$co": "@schema/state",
+      "description": "Co-id reference to state machine definition"
     },
-    "interfaceRef": {
-      "type": "string",
-      "description": "Reference to interface definition"
+    "interface": {
+      "$co": "@schema/interface",
+      "description": "Co-id reference to interface definition"
     },
-    "brandRef": {
-      "type": "string",
-      "description": "Reference to brand style definition"
+    "brand": {
+      "$co": "@schema/brandStyle",
+      "description": "Co-id reference to brand style definition"
     },
-    "styleRef": {
-      "type": "string",
-      "description": "Reference to local style definition"
+    "style": {
+      "$co": "@schema/style",
+      "description": "Co-id reference to local style definition"
     },
     "children": {
       "type": "object",
       "description": "Child actor references",
       "additionalProperties": {
-        "type": "string"
+        "$co": "@schema/actor"
       }
     },
     "subscriptions": {
-      "type": "array",
-      "description": "List of actor IDs to receive messages from",
-      "items": {
-        "type": "string"
-      }
+      "$co": "@schema/subscriptions-colist",
+      "description": "Co-id reference to subscriptions colist (list of actor co-ids to receive messages from)"
     },
     "inbox": {
-      "type": "array",
-      "description": "Message inbox (CoFeed)",
-      "items": {
-        "$ref": "https://maiaos.dev/schemas/message.schema.json"
-      }
+      "$co": "@schema/inbox-costream",
+      "description": "Co-id reference to message inbox costream (append-only message feed)"
     },
     "inboxWatermark": {
       "type": "number",

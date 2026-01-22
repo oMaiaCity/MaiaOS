@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "@schema/meta-schema-cojson",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true,
+    "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
+    "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
+    "https://json-schema.org/draft/2020-12/vocab/content": true,
+    "https://maiaos.dev/vocab/cojson": true
+  },
+  "allOf": [
+    {"$ref": "https://json-schema.org/draft/2020-12/schema"}
+  ],
+  "title": "MaiaOS CoJSON Meta-Schema",
+  "type": ["object", "boolean"],
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Human-readable schema title (required)"
+    },
+    "cotype": {
+      "enum": ["comap", "colist", "costream"],
+      "description": "CRDT type at schema root. Schemas can be comap (with properties), colist (with items), or costream (with items). CoText is modeled as colist with string items."
+    },
+    "$co": {
+      "type": "string",
+      "anyOf": [
+        {
+          "pattern": "^co_z[a-zA-Z0-9]+$",
+          "description": "Co-id reference (after transformation)"
+        },
+        {
+          "pattern": "^@schema/",
+          "description": "Human-readable schema ID (before transformation)"
+        }
+      ],
+      "description": "Reference to schema that this property value must conform to (human-readable ID or co-id). Use $co in properties to reference separate CoValues, never use cotype in properties."
+    }
+  },
+  "required": ["title", "cotype"]
+}

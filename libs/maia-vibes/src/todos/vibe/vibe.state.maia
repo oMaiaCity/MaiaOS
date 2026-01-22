@@ -1,6 +1,6 @@
 {
-  "$type": "state",
-  "$id": "state_vibe_001",
+  "$schema": "@schema/state",
+  "$id": "@state/vibe",
   "initial": "idle",
   "states": {
     "idle": {
@@ -53,7 +53,7 @@
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "INPUT_CLEARED",
-                "target": "actor_composite_001"
+                "target": "@actor/composite"
               }
             }
           ]

@@ -35,48 +35,41 @@ export class ViewEngine {
   }
 
   /**
-   * Resolve a view reference to key name
-   * @param {string} ref - View reference (e.g., './list/list' -> 'list/list')
-   * @returns {string} The view key
-   */
-  resolveViewRef(ref) {
-    // Extract key from relative path or use as-is
-    return ref.replace('./', '').replace('.view.maia', '');
-  }
-
-  /**
-   * Load a .maia view file by CoMap ID reference
-   * @param {string} viewRef - The view reference (fake CoMap ID)
+   * Load a view by co-id
+   * @param {string} coId - View co-id (e.g., 'co_z...')
    * @returns {Promise<Object>} The parsed view definition
    */
-  async loadView(viewRef) {
-    if (this.viewCache.has(viewRef)) {
-      return this.viewCache.get(viewRef);
-    }
-
-    // Load from database via maia.db()
-    if (this.dbEngine) {
-      const viewKey = viewRef.replace('./', '').replace('.view.maia', '');
-      const viewDef = await this.dbEngine.execute({
-        op: 'query',
-        schema: '@schema/view',
-        key: viewKey
-      });
-      
-      if (viewDef) {
-        // Load schema from IndexedDB and validate on-the-fly
-        const schema = await loadSchemaFromDB(this.dbEngine, 'view');
-        if (schema) {
-          await validateAgainstSchemaOrThrow(schema, viewDef, 'view');
-        }
-        this.viewCache.set(viewRef, viewDef);
-        return viewDef;
-      }
-      
-      throw new Error(`Failed to load view from database: ${viewKey}`);
+  async loadView(coId) {
+    if (!coId || !coId.startsWith('co_z')) {
+      throw new Error(`[ViewEngine] loadView requires a co-id (starts with 'co_z'), got: ${coId}`);
     }
     
-    throw new Error(`[ViewEngine] Database engine not available`);
+    if (this.viewCache.has(coId)) {
+      return this.viewCache.get(coId);
+    }
+
+    if (!this.dbEngine) {
+      throw new Error(`[ViewEngine] Database engine not available`);
+    }
+    
+    const viewDef = await this.dbEngine.execute({
+      op: 'query',
+      schema: '@schema/view',
+      key: coId
+    });
+    
+    if (!viewDef) {
+      throw new Error(`Failed to load view from database by co-id: ${coId}`);
+    }
+    
+    // Load schema from IndexedDB and validate on-the-fly
+    const schema = await loadSchemaFromDB(this.dbEngine, 'view');
+    if (schema) {
+      await validateAgainstSchemaOrThrow(schema, viewDef, 'view');
+    }
+    
+    this.viewCache.set(coId, viewDef);
+    return viewDef;
   }
   
 
@@ -104,14 +97,8 @@ export class ViewEngine {
     // Store actor ID for event handling
     this.currentActorId = actorId;
     
-    // Render container (if present) or root node
-    const nodeDef = viewDef.container || viewDef.root;
-    if (!nodeDef) {
-      console.warn(`[ViewEngine] View has no container or root:`, viewDef);
-      return;
-    }
-    
-    const element = this.renderNode(nodeDef, { context }, actorId);
+    // View IS the node structure (no container/root wrapper needed)
+    const element = this.renderNode(viewDef, { context }, actorId);
     
     if (element) {
       element.style.containerType = 'inline-size';

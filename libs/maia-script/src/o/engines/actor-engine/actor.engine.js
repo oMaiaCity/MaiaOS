@@ -66,107 +66,116 @@ export class ActorEngine {
   }
 
   /**
-   * Load a .maia actor file
-   * @param {string} path - Path to the actor file or actor config object
+   * Load an actor by co-id or config object
+   * @param {string|Object} coIdOrConfig - Actor co-id (e.g., 'co_z...') or pre-loaded config object
    * @returns {Promise<Object>} The parsed actor config
    */
-  async loadActor(path) {
-    // If path is already an object (pre-loaded config), return it directly
-    if (typeof path === 'object' && path !== null) {
+  async loadActor(coIdOrConfig) {
+    // If it's already an object (pre-loaded config), return it directly
+    if (typeof coIdOrConfig === 'object' && coIdOrConfig !== null) {
       // Load schema from IndexedDB and validate on-the-fly
       const schema = await loadSchemaFromDB(this.dbEngine, 'actor');
       if (schema) {
-        await validateAgainstSchemaOrThrow(schema, path, 'actor');
+        await validateAgainstSchemaOrThrow(schema, coIdOrConfig, 'actor');
       }
-      return path;
+      return coIdOrConfig;
     }
     
-    // Load from database via maia.db()
-    if (this.dbEngine) {
-      const actorKey = path.replace('./', '').replace('.actor.maia', '');
-      const actor = await this.dbEngine.execute({
-        op: 'query',
-        schema: '@schema/actor',
-        key: actorKey
-      });
-      
-      if (actor) {
-        // Load schema from IndexedDB and validate on-the-fly
-        const schema = await loadSchemaFromDB(this.dbEngine, 'actor');
-        if (schema) {
-          await validateAgainstSchemaOrThrow(schema, actor, 'actor');
-        }
-        return actor;
-      }
-      
-      throw new Error(`Failed to load actor from database: ${actorKey}`);
+    // Must be a co-id string
+    if (typeof coIdOrConfig !== 'string' || !coIdOrConfig.startsWith('co_z')) {
+      throw new Error(`[ActorEngine] loadActor requires a co-id (starts with 'co_z'), got: ${coIdOrConfig}`);
     }
     
-    throw new Error(`[ActorEngine] Database engine not available`);
+    if (!this.dbEngine) {
+      throw new Error(`[ActorEngine] Database engine not available`);
+    }
+    
+    const actor = await this.dbEngine.execute({
+      op: 'query',
+      schema: '@schema/actor',
+      key: coIdOrConfig
+    });
+    
+    if (!actor) {
+      throw new Error(`Failed to load actor from database by co-id: ${coIdOrConfig}`);
+    }
+    
+    // Load schema from IndexedDB and validate on-the-fly
+    const schema = await loadSchemaFromDB(this.dbEngine, 'actor');
+    if (schema) {
+      await validateAgainstSchemaOrThrow(schema, actor, 'actor');
+    }
+    
+    return actor;
   }
   
 
   /**
-   * Load a .context.maia file
-   * @param {string} ref - Context reference name (e.g., "todo" -> "todo.context.maia")
+   * Load a context by co-id
+   * @param {string} coId - Context co-id (e.g., 'co_z...')
    * @returns {Promise<Object>} The parsed context
    */
-  async loadContext(ref) {
-    // Load from database via maia.db()
-    if (this.dbEngine) {
-      const contextKey = ref.replace('./', '').replace('.context.maia', '');
-      const contextDef = await this.dbEngine.execute({
-        op: 'query',
-        schema: '@schema/context',
-        key: contextKey
-      });
-      
-      if (contextDef) {
-        // Load schema from IndexedDB and validate on-the-fly
-        const schema = await loadSchemaFromDB(this.dbEngine, 'context');
-        if (schema) {
-          await validateAgainstSchemaOrThrow(schema, contextDef, 'context');
-        }
-        
-        // Return context without metadata
-        const { $type, $id, ...context } = contextDef;
-        return context;
-      }
-      
-      throw new Error(`Failed to load context from database: ${contextKey}`);
+  async loadContext(coId) {
+    if (!coId || !coId.startsWith('co_z')) {
+      throw new Error(`[ActorEngine] loadContext requires a co-id (starts with 'co_z'), got: ${coId}`);
     }
     
-    throw new Error(`[ActorEngine] Database engine not available`);
+    if (!this.dbEngine) {
+      throw new Error(`[ActorEngine] Database engine not available`);
+    }
+    
+    const contextDef = await this.dbEngine.execute({
+      op: 'query',
+      schema: '@schema/context',
+      key: coId
+    });
+    
+    if (!contextDef) {
+      throw new Error(`Failed to load context from database by co-id: ${coId}`);
+    }
+    
+    // Load schema from IndexedDB and validate on-the-fly
+    const schema = await loadSchemaFromDB(this.dbEngine, 'context');
+    if (schema) {
+      await validateAgainstSchemaOrThrow(schema, contextDef, 'context');
+    }
+    
+    // Return context without metadata
+    const { $schema, $id, ...context } = contextDef;
+    return context;
   }
 
   /**
-   * Load a .interface.maia file
-   * @param {string} ref - Interface reference name (e.g., "todo" -> "todo.interface.maia")
+   * Load an interface by co-id
+   * @param {string} coId - Interface co-id (e.g., 'co_z...')
    * @returns {Promise<Object>} The parsed interface definition
    */
-  async loadInterface(ref) {
-    // Load from database via maia.db()
-    if (this.dbEngine) {
-      const interfaceKey = ref.replace('./', '').replace('.interface.maia', '');
-      const interfaceDef = await this.dbEngine.execute({
-        op: 'query',
-        schema: '@schema/interface',
-        key: interfaceKey
-      });
-      
-      if (interfaceDef) {
-        // Load schema from IndexedDB and validate on-the-fly
-        const schema = await loadSchemaFromDB(this.dbEngine, 'interface');
-        if (schema) {
-          await validateAgainstSchemaOrThrow(schema, interfaceDef, 'interface');
-        }
-        return interfaceDef;
-      }
-      
-      throw new Error(`Failed to load interface from database: ${interfaceKey}`);
+  async loadInterface(coId) {
+    if (!coId || !coId.startsWith('co_z')) {
+      throw new Error(`[ActorEngine] loadInterface requires a co-id (starts with 'co_z'), got: ${coId}`);
     }
     
-    throw new Error(`[ActorEngine] Database engine not available`);
+    if (!this.dbEngine) {
+      throw new Error(`[ActorEngine] Database engine not available`);
+    }
+    
+    const interfaceDef = await this.dbEngine.execute({
+      op: 'query',
+      schema: '@schema/interface',
+      key: coId
+    });
+    
+    if (!interfaceDef) {
+      throw new Error(`Failed to load interface from database by co-id: ${coId}`);
+    }
+    
+    // Load schema from IndexedDB and validate on-the-fly
+    const schema = await loadSchemaFromDB(this.dbEngine, 'interface');
+    if (schema) {
+      await validateAgainstSchemaOrThrow(schema, interfaceDef, 'interface');
+    }
+    
+    return interfaceDef;
   }
 
   /**
@@ -185,15 +194,44 @@ export class ActorEngine {
     // Get stylesheets (brand + actor merged)
     const styleSheets = await this.styleEngine.getStyleSheets(actorConfig);
     
-    // Load view
-    const viewDef = await this.viewEngine.loadView(actorConfig.viewRef);
+    // Load view (must be co-id)
+    if (!actorConfig.view) {
+      throw new Error(`[ActorEngine] Actor config must have 'view' property with co-id`);
+    }
+    const viewDef = await this.viewEngine.loadView(actorConfig.view);
     
-    // Load context (either from contextRef or inline context)
+    // Load context (must be co-id)
     let context;
-    if (actorConfig.contextRef) {
-      context = await this.loadContext(actorConfig.contextRef);
+    if (actorConfig.context) {
+      context = await this.loadContext(actorConfig.context);
     } else {
-      context = actorConfig.context || {};
+      context = {};
+    }
+    
+    // Load subscriptions colist (co-id → array of actor IDs)
+    let subscriptions = [];
+    if (actorConfig.subscriptions) {
+      const subscriptionsColist = await this.dbEngine.execute({
+        op: 'query',
+        schema: '@schema/subscriptions-colist',
+        key: actorConfig.subscriptions
+      });
+      if (subscriptionsColist && Array.isArray(subscriptionsColist.items)) {
+        subscriptions = subscriptionsColist.items;
+      }
+    }
+    
+    // Load inbox costream (co-id → array of messages)
+    let inbox = [];
+    if (actorConfig.inbox) {
+      const inboxCostream = await this.dbEngine.execute({
+        op: 'query',
+        schema: '@schema/inbox-costream',
+        key: actorConfig.inbox
+      });
+      if (inboxCostream && Array.isArray(inboxCostream.items)) {
+        inbox = inboxCostream.items;
+      }
     }
     
     // Store actor state
@@ -206,8 +244,8 @@ export class ActorEngine {
       actorEngine: this, // Reference to ActorEngine for rerender
       viewDef, // Store view definition for auto-subscription analysis
       // v0.2: Message passing
-      inbox: actorConfig.inbox || [],
-      subscriptions: actorConfig.subscriptions || [],
+      inbox: inbox,
+      subscriptions: subscriptions,
       inboxWatermark: actorConfig.inboxWatermark || 0,
       // v0.5: Subscriptions managed by SubscriptionEngine
       _subscriptions: [], // Per-actor subscriptions (unsubscribe functions)
@@ -224,21 +262,21 @@ export class ActorEngine {
       await this.subscriptionEngine.initialize(actor);
     }
     
-    // Load state machine (if stateRef is defined)
+    // Load state machine (if state is defined)
     // IMPORTANT: Await to ensure entry actions (like subscriptions) complete before initial render
-    if (this.stateEngine && actorConfig.stateRef) {
+    if (this.stateEngine && actorConfig.state) {
       try {
-        const stateDef = await this.stateEngine.loadStateDef(actorConfig.stateRef);
+        const stateDef = await this.stateEngine.loadStateDef(actorConfig.state);
         actor.machine = await this.stateEngine.createMachine(stateDef, actor);
       } catch (error) {
         console.error(`Failed to load state machine for ${actorId}:`, error);
       }
     }
     
-    // Load and validate interface (if interfaceRef is defined)
-    if (actorConfig.interfaceRef) {
+    // Load and validate interface (if interface is defined)
+    if (actorConfig.interface) {
       try {
-        const interfaceDef = await this.loadInterface(actorConfig.interfaceRef);
+        const interfaceDef = await this.loadInterface(actorConfig.interface);
         actor.interface = interfaceDef;
         
         // Validate interface (non-blocking)
@@ -252,22 +290,40 @@ export class ActorEngine {
     }
     
     // Load and create child actors (if children map is defined)
-    // Flat structure: { namekey: actorId }
+    // Flat structure: { namekey: actorId } where actorId can be human-readable (@actor/name) or co-id (co_z...)
     if (actorConfig.children && typeof actorConfig.children === 'object') {
       actor.children = {};
       
       for (const [namekey, childActorId] of Object.entries(actorConfig.children)) {
         try {
-          // Resolve actor ID to filename
-          const childFilename = this.resolveActorIdToFilename(childActorId);
+          // childActorId can be:
+          // 1. Human-readable ID (e.g., "@actor/composite") - resolve to co-id via database
+          // 2. Co-id (e.g., "co_z...") - use directly
           
-          // Load child actor config
-          const childActorConfig = await this.loadActor(`./${childFilename}.actor.maia`);
+          let childCoId = childActorId;
           
-          // Ensure child actor ID matches expected ID
-          if (childActorConfig.$id !== childActorId) {
-            console.warn(`[ActorEngine] Child actor ID mismatch: expected ${childActorId}, got ${childActorConfig.$id}`);
-            childActorConfig.$id = childActorId; // Use expected ID
+          // If it's a human-readable ID, resolve it to a co-id
+          if (!childActorId.startsWith('co_z')) {
+            if (!this.dbEngine) {
+              throw new Error(`[ActorEngine] Cannot resolve human-readable ID ${childActorId} - database engine not available`);
+            }
+            
+            // Try to resolve via database (handles @actor/name format)
+            const resolvedActor = await this.dbEngine.get('@schema/actor', childActorId);
+            if (resolvedActor && resolvedActor.$id && resolvedActor.$id.startsWith('co_z')) {
+              childCoId = resolvedActor.$id;
+            } else {
+              throw new Error(`[ActorEngine] Could not resolve child actor ID ${childActorId} to a co-id`);
+            }
+          }
+          
+          // Load child actor config using co-id
+          const childActorConfig = await this.loadActor(childCoId);
+          
+          // Ensure child actor ID matches expected ID (for consistency)
+          if (childActorConfig.$id !== childCoId) {
+            console.warn(`[ActorEngine] Child actor ID mismatch: expected ${childCoId}, got ${childActorConfig.$id}`);
+            childActorConfig.$id = childCoId; // Use expected co-id
           }
           
           // Create container for child actor (NOT attached to DOM yet - ViewEngine will handle attachment)
@@ -375,7 +431,7 @@ export class ActorEngine {
     } : null;
 
     // Reload view
-    const viewDef = await this.viewEngine.loadView(actor.config.viewRef);
+    const viewDef = await this.viewEngine.loadView(actor.config.view);
 
     // Get stylesheets (brand + actor merged)
     const styleSheets = await this.styleEngine.getStyleSheets(actor.config);

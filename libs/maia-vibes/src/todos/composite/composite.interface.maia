@@ -1,5 +1,6 @@
 {
-  "$type": "actor.interface",
+  "$schema": "@schema/interface",
+  "$id": "@interface/composite",
   "inbox": {
     "SWITCH_VIEW": {
       "payload": { "viewMode": "string" }
@@ -49,7 +50,5 @@
     "CREATE_BUTTON": {
       "payload": { "text": "string" }
     }
-  },
-  "subscriptions": ["actor_vibe_001"],
-  "watermark": 0
+  }
 }

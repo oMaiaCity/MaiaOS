@@ -2,15 +2,15 @@
  * Query Operation - Load data from database
  * 
  * Handles:
- * - Loading configs (@schema/actor, @schema/view, etc.)
- * - Loading schemas (@schema/actor schema definition)
- * - Querying application data (@schema/todos with optional filter)
+ * - Loading configs (@schema/actor, @schema/view, etc.) - uses human-readable references
+ * - Loading schemas (@schema/actor schema definition) - uses human-readable references
+ * - Querying application data (co_z... co-id) - uses co-ids directly
  * - Reactive subscriptions (when callback provided)
  * 
  * Usage:
- *   maia.db({op: 'query', schema: '@schema/actor', key: 'vibe/vibe'})
- *   maia.db({op: 'query', schema: '@schema/todos', filter: {done: false}})
- *   maia.db({op: 'query', schema: '@schema/todos', callback: (data) => {...}}) // Reactive!
+ *   maia.db({op: 'query', schema: '@schema/actor', key: 'vibe/vibe'})  // Config lookup
+ *   maia.db({op: 'query', schema: 'co_z...', filter: {done: false}})  // Data collection (co-id)
+ *   maia.db({op: 'query', schema: 'co_z...', callback: (data) => {...}}) // Reactive! (co-id)
  */
 
 export class QueryOperation {
@@ -21,7 +21,7 @@ export class QueryOperation {
   /**
    * Execute query operation
    * @param {Object} params
-   * @param {string} params.schema - Schema reference (@schema/actor, @schema/todos, etc.)
+   * @param {string} params.schema - Schema co-id (co_z...) for data collections, or schema reference for configs
    * @param {string} [params.key] - Specific key for configs (e.g., 'vibe/vibe')
    * @param {Object} [params.filter] - Filter criteria for data queries
    * @param {Function} [params.callback] - Callback for reactive subscriptions

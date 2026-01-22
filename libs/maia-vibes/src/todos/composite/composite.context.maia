@@ -1,6 +1,6 @@
 {
-  "$type": "context",
-  "$id": "context_composite_001",
+  "$schema": "@schema/context",
+  "$id": "@context/composite",
   "title": "Todo List",
   "inputPlaceholder": "Add a new todo...",
   "addButtonText": "Add",

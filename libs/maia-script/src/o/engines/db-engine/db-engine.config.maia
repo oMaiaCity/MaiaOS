@@ -1,6 +1,6 @@
 {
-  "$type": "operation-engine",
-  "$id": "db",
+  "$schema": "@schema/tool",
+  "$id": "@tool/db",
   "name": "Database Operation Engine",
   "description": "Unified API for all database operations (configs, schemas, application data)",
   "operations": {

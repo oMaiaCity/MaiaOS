@@ -1,9 +1,7 @@
 {
-  "$type": "view",
-  "$id": "co_view_vibe_001",
-  "container": {
-    "tag": "div",
-    "class": "service-container",
-    "$slot": "$composite"
-  }
+  "$schema": "@schema/view",
+  "$id": "@view/vibe",
+  "tag": "div",
+  "class": "service-container",
+  "$slot": "$composite"
 }

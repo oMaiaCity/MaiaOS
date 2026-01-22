@@ -1,11 +1,13 @@
 {
-  "$id": "https://maiaos.dev/schemas/data/todos",
-  "$schema": "@schema/meta-schema",
-  "type": "object",
+  "$id": "@schema/data/todos",
+  "$schema": "@schema/meta-schema-cojson",
+  "title": "Todo Item Schema",
+  "cotype": "comap",
   "properties": {
-    "id": {
+    "$id": {
       "type": "string",
-      "description": "Unique identifier for the todo item"
+      "description": "Unique identifier for the todo item (co-id)",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "text": {
       "type": "string",

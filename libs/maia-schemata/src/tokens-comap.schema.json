@@ -1,0 +1,47 @@
+{
+  "$schema": "@schema/meta-schema-cojson",
+  "$id": "@schema/tokens-comap",
+  "title": "Design Tokens CoMap",
+  "description": "Design tokens (colors, spacing, typography, radii, shadows, etc.) as a separate CoValue",
+  "cotype": "comap",
+  "properties": {
+    "$id": {
+      "type": "string",
+      "description": "Unique tokens identifier (co-id)",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
+    },
+    "colors": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "description": "Color value (hex, rgb, rgba, etc.)"
+      }
+    },
+    "spacing": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "description": "Spacing value (rem, px, etc.)"
+      }
+    },
+    "typography": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "radii": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "description": "Border radius value"
+      }
+    },
+    "shadows": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "description": "Box shadow value"
+      }
+    }
+  },
+  "additionalProperties": true
+}

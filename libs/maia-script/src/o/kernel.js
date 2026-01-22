@@ -249,22 +249,22 @@ export class MaiaOS {
 
   /**
    * Load a vibe from database (maia.db)
-   * @param {string} vibeName - Vibe name (e.g., "todos", "notes")
+   * @param {string} vibeId - Vibe ID in new format (e.g., "@vibe/todos", "@vibe/notes")
    * @param {HTMLElement} container - Container element
    * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
    */
-  async loadVibeFromDatabase(vibeName, container) {
-    console.log(`📦 Loading vibe from database: "${vibeName}"...`);
+  async loadVibeFromDatabase(vibeId, container) {
+    console.log(`📦 Loading vibe from database: "${vibeId}"...`);
     
-    // Load vibe manifest from database
+    // Load vibe manifest from database using new ID format
     const vibe = await this.dbEngine.execute({
       op: 'query',
       schema: '@schema/vibe',
-      key: vibeName
+      key: vibeId
     });
     
     if (!vibe) {
-      throw new Error(`Vibe not found in database: ${vibeName}`);
+      throw new Error(`Vibe not found in database: ${vibeId}`);
     }
     
     // Validate vibe structure using schema (load from IndexedDB on-the-fly)

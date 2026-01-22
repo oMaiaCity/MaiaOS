@@ -32,29 +32,31 @@ export class StateEngine {
    */
   async loadStateDef(stateRef) {
     // Check cache first
+    if (!stateRef || !stateRef.startsWith('co_z')) {
+      throw new Error(`[StateEngine] loadState requires a co-id (starts with 'co_z'), got: ${stateRef}`);
+    }
+    
     if (this.stateCache.has(stateRef)) {
       return this.stateCache.get(stateRef);
     }
 
-    // Load from database via maia.db()
-    if (this.dbEngine) {
-      const stateKey = stateRef.replace('./', '').replace('.state.maia', '');
-      const stateDef = await this.dbEngine.execute({
-        op: 'query',
-        schema: '@schema/state',
-        key: stateKey
-      });
-      
-      if (stateDef) {
-        await validateOrThrow('state', stateDef, `maia.db:${stateKey}`);
-        this.stateCache.set(stateRef, stateDef);
-        return stateDef;
-      }
-      
-      throw new Error(`Failed to load state from database: ${stateKey}`);
+    if (!this.dbEngine) {
+      throw new Error(`[StateEngine] Database engine not available`);
     }
     
-    throw new Error(`[StateEngine] Database engine not available`);
+    const stateDef = await this.dbEngine.execute({
+      op: 'query',
+      schema: '@schema/state',
+      key: stateRef
+    });
+    
+    if (!stateDef) {
+      throw new Error(`Failed to load state from database by co-id: ${stateRef}`);
+    }
+    
+    await validateOrThrow('state', stateDef, `maia.db:${stateRef}`);
+    this.stateCache.set(stateRef, stateDef);
+    return stateDef;
   }
 
   /**
@@ -161,8 +163,9 @@ export class StateEngine {
     // Check for !== undefined to allow false/0 guards
     if (guard !== undefined && guard !== null) {
       const guardResult = this._evaluateGuard(guard, machine.context, machine.eventPayload);
+      console.log(`[StateEngine] Guard evaluation for ${event}:`, { guard, payload: machine.eventPayload, result: guardResult });
       if (!guardResult) {
-        console.log(`[StateEngine] Guard failed for ${event}`);
+        console.log(`[StateEngine] Guard failed for ${event}, blocking transition`);
         return;
       }
     }
@@ -189,12 +192,14 @@ export class StateEngine {
     
     // Only log actual state changes (not idle → idle)
     if (previousState !== targetState) {
-      console.log(`[StateEngine] ${previousState} → ${targetState}`);
+      console.log(`[StateEngine] ${event} → ${previousState} → ${targetState}`);
+    } else {
+      console.log(`[StateEngine] ${event} → ${previousState} (no state change)`);
     }
 
     // Execute entry actions for new state (only if state actually changed)
     if (previousState !== targetState) {
-    await this._executeEntry(machine, targetState);
+      await this._executeEntry(machine, targetState);
     }
     
     // eventPayload is preserved for SUCCESS/ERROR events (for $$id resolution)
@@ -232,8 +237,11 @@ export class StateEngine {
     // Evaluate guard expression using MaiaScript
     try {
       const data = { context, item: payload };
+      console.log(`[StateEngine] Evaluating guard:`, { guard, payload, contextKeys: Object.keys(context) });
       const result = this.evaluator.evaluate(guard, data);
-      return Boolean(result);
+      const boolResult = Boolean(result);
+      console.log(`[StateEngine] Guard result:`, { guard, result, boolResult });
+      return boolResult;
     } catch (error) {
       console.error('[StateEngine] Guard evaluation error:', error);
       return false;

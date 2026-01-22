@@ -2,10 +2,9 @@
  * Create Operation - Create new records
  * 
  * Usage:
- *   maia.db({op: 'create', schema: '@schema/todos', data: {text: 'foo', done: false}})
+ *   maia.db({op: 'create', schema: 'co_z...', data: {text: 'foo', done: false}})
+ * Note: Schema is now a co-id (transformed during seeding), not a human-readable reference
  */
-
-import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 
 export class CreateOperation {
   constructor(backend) {
@@ -15,9 +14,9 @@ export class CreateOperation {
   /**
    * Execute create operation
    * @param {Object} params
-   * @param {string} params.schema - Schema reference (@schema/todos, etc.)
+   * @param {string} params.schema - Schema co-id (co_z...) for data collections
    * @param {Object} params.data - Data to create
-   * @returns {Promise<Object>} Created record with generated ID
+   * @returns {Promise<Object>} Created record with generated co-id
    */
   async execute(params) {
     const { schema, data } = params;
@@ -30,40 +29,12 @@ export class CreateOperation {
       throw new Error('[CreateOperation] Data required');
     }
     
-    // Load data schema from IndexedDB for validation
-    // Convert @schema/todos to @schema/data/todos
-    const schemaKey = schema.replace('@schema/', '@schema/data/');
-    const dataSchema = await this._loadDataSchema(schemaKey);
+    // Schema is now a co-id (transformed during seeding)
+    // Schema validation is handled at the data schema level, not collection level
+    // Skip validation here - data schemas validate individual records
     
-    // Validate data if schema exists
-    if (dataSchema) {
-      console.log(`[CreateOperation] Validating against ${schemaKey}`);
-      await validateAgainstSchemaOrThrow(dataSchema, data, 'application-data');
-    } else {
-      console.warn(`[CreateOperation] No schema found for ${schemaKey}, skipping validation`);
-    }
-    
-    console.log(`[CreateOperation] Creating record in ${schema}`, data);
+    console.log(`[CreateOperation] Creating record in collection ${schema}`, data);
     
     return await this.backend.create(schema, data);
-  }
-  
-  /**
-   * Load data schema from IndexedDB schemas store
-   * @private
-   * @param {string} schemaKey - Schema key (e.g., '@schema/data/todos')
-   * @returns {Promise<Object|null>} Schema object or null if not found
-   */
-  async _loadDataSchema(schemaKey) {
-    try {
-      const transaction = this.backend.db.transaction(['schemas'], 'readonly');
-      const store = transaction.objectStore('schemas');
-      const request = store.get(schemaKey);
-      const result = await this.backend._promisifyRequest(request);
-      return result?.value || null;
-    } catch (error) {
-      console.warn(`[CreateOperation] Error loading schema ${schemaKey}:`, error);
-      return null;
-    }
   }
 }

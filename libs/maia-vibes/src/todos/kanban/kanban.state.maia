@@ -1,6 +1,6 @@
 {
-  "$type": "state",
-  "$id": "state_kanban_001",
+  "$schema": "@schema/state",
+  "$id": "@state/kanban",
   "initial": "idle",
   "states": {
     "idle": {

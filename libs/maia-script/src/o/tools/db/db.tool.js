@@ -8,10 +8,14 @@
  * State machines should use context-driven approach instead of manual @db subscriptions.
  * 
  * Usage in state machines:
- *   {"tool": "@db", "payload": {"op": "query", "schema": "@schema/todos"}}
- *   {"tool": "@db", "payload": {"op": "create", "schema": "@schema/todos", "data": {...}}}
- *   {"tool": "@db", "payload": {"op": "update", "schema": "@schema/todos", "id": "123", "data": {...}}}
- *   {"tool": "@db", "payload": {"op": "delete", "schema": "@schema/todos", "id": "123"}}
+ *   {"tool": "@db", "payload": {"op": "create", "schema": "co_z...", "data": {...}}}
+ *   {"tool": "@db", "payload": {"op": "update", "schema": "co_z...", "id": "co_z...", "data": {...}}}
+ *   {"tool": "@db", "payload": {"op": "delete", "schema": "co_z...", "id": "co_z..."}}
+ *   {"tool": "@db", "payload": {"op": "toggle", "schema": "co_z...", "id": "co_z...", "field": "done"}}
+ * 
+ * Note: 100% migration to co-ids - NO human-readable fallbacks.
+ * State machine entry actions MUST be transformed during seeding (payload.schema → co-id).
+ * This tool ONLY accepts co-ids (co_z...) for data collection operations.
  */
 export default {
   async execute(actor, payload) {
@@ -25,12 +29,24 @@ export default {
       throw new Error('[@db] Database engine not available');
     }
     
+    // For data collection operations (create, update, delete, toggle), schema MUST be a co-id
+    // 100% migration: NO human-readable fallbacks - all schemas must be transformed during seeding
+    const dataCollectionOps = ['create', 'update', 'delete', 'toggle'];
+    if (dataCollectionOps.includes(payload.op) && payload.schema) {
+      // Schema MUST be a co-id (transformed during seeding)
+      // If it's not a co-id, that's an error - transformation should have happened during seeding
+      if (!payload.schema.startsWith('co_z')) {
+        throw new Error(`[@db] Schema must be a co-id (co_z...), got: ${payload.schema}. State machine entry actions should be transformed during seeding. No human-readable fallbacks allowed.`);
+      }
+      // Schema is already a co-id, use it directly
+    }
+    
     // Execute database operation
     const result = await os.db(payload);
     
     // For create operations, store last created ID/text for state machine access
     if (payload.op === 'create' && result) {
-      actor.context.lastCreatedId = result.id;
+      actor.context.lastCreatedId = result.id || result.$id;
       actor.context.lastCreatedText = result.text;
     }
     

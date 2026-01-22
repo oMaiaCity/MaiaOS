@@ -45,6 +45,20 @@ import listInterface from './list/list.interface.maia';
 // Note: list-item/list-item.interface.maia doesn't exist
 import kanbanInterface from './kanban/kanban.interface.maia';
 
+// Import all subscriptions colists
+import vibeSubscriptions from './vibe/vibe.subscriptions.maia';
+import compositeSubscriptions from './composite/composite.subscriptions.maia';
+import listSubscriptions from './list/list.subscriptions.maia';
+import listItemSubscriptions from './list-item/list-item.subscriptions.maia';
+import kanbanSubscriptions from './kanban/kanban.subscriptions.maia';
+
+// Import all inbox costreams
+import vibeInbox from './vibe/vibe.inbox.maia';
+import compositeInbox from './composite/composite.inbox.maia';
+import listInbox from './list/list.inbox.maia';
+import listItemInbox from './list-item/list-item.inbox.maia';
+import kanbanInbox from './kanban/kanban.inbox.maia';
+
 /**
  * Todos Vibe Registry
  * All configs pre-loaded and ready to use
@@ -53,48 +67,64 @@ export const TodosVibeRegistry = {
   vibe: todosVibe,
   
   styles: {
-    brand: brandStyle,
-    todo: todoStyle,
-    'list-item': listItemStyle,
+    '@style/brand': brandStyle,
+    '@style/todo': todoStyle,
+    '@style/list-item': listItemStyle,
   },
   
   actors: {
-    'vibe/vibe': vibeActor,
-    'composite/composite': compositeActor,
-    'list/list': listActor,
-    'list-item/list-item': listItemActor,
-    'kanban/kanban': kanbanActor,
+    '@actor/vibe': vibeActor,
+    '@actor/composite': compositeActor,
+    '@actor/list': listActor,
+    '@actor/list-item': listItemActor,
+    '@actor/kanban': kanbanActor,
   },
   
   views: {
-    'vibe/vibe': vibeView,
-    'composite/composite': compositeView,
-    'list/list': listView,
-    'list-item/list-item': listItemView,
-    'kanban/kanban': kanbanView,
+    '@view/vibe': vibeView,
+    '@view/composite': compositeView,
+    '@view/list': listView,
+    '@view/list-item': listItemView,
+    '@view/kanban': kanbanView,
   },
   
   contexts: {
-    'vibe/vibe': vibeContext,
-    'composite/composite': compositeContext,
-    'list/list': listContext,
-    'list-item/list-item': listItemContext,
-    'kanban/kanban': kanbanContext,
+    '@context/vibe': vibeContext,
+    '@context/composite': compositeContext,
+    '@context/list': listContext,
+    '@context/list-item': listItemContext,
+    '@context/kanban': kanbanContext,
   },
   
   states: {
-    'vibe/vibe': vibeState,
-    'composite/composite': compositeState,
-    'list/list': listState,
-    'list-item/list-item': listItemState,
-    'kanban/kanban': kanbanState,
+    '@state/vibe': vibeState,
+    '@state/composite': compositeState,
+    '@state/list': listState,
+    '@state/list-item': listItemState,
+    '@state/kanban': kanbanState,
   },
   
   interfaces: {
-    'vibe/vibe': vibeInterface,
-    'composite/composite': compositeInterface,
-    'list/list': listInterface,
-    // 'list-item/list-item': listItemInterface, // File doesn't exist
-    'kanban/kanban': kanbanInterface,
+    '@interface/vibe': vibeInterface,
+    '@interface/composite': compositeInterface,
+    '@interface/list': listInterface,
+    // '@interface/list-item': listItemInterface, // File doesn't exist
+    '@interface/kanban': kanbanInterface,
+  },
+  
+  subscriptions: {
+    '@subscriptions/vibe': vibeSubscriptions,
+    '@subscriptions/composite': compositeSubscriptions,
+    '@subscriptions/list': listSubscriptions,
+    '@subscriptions/list-item': listItemSubscriptions,
+    '@subscriptions/kanban': kanbanSubscriptions,
+  },
+  
+  inboxes: {
+    '@inbox/vibe': vibeInbox,
+    '@inbox/composite': compositeInbox,
+    '@inbox/list': listInbox,
+    '@inbox/list-item': listItemInbox,
+    '@inbox/kanban': kanbanInbox,
   },
 };

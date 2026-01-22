@@ -14,59 +14,116 @@ export class StyleEngine {
   }
 
   /**
-   * Resolve a style reference to key name
-   * @param {string} ref - Style reference (e.g., './brand', 'co_brand_001')
-   * @returns {string} The style key
+   * Resolve a style reference - expects co-id only
+   * @param {string} ref - Style co-id (e.g., 'co_z...')
+   * @returns {string} The co-id
    */
   resolveStyleRef(ref) {
-    // Legacy CoMap ID mappings (for backwards compatibility during migration)
-    const coMapToKey = {
-      'co_brand_001': 'brand',
-      'co_brand_002': 'sunset',
-      'co_todo_001': 'todo'
-    };
-    
-    // If it's a CoMap ID, map to key
-    if (coMapToKey[ref]) {
-      return coMapToKey[ref];
+    if (!ref) {
+      throw new Error(`[StyleEngine] Style reference is required but was: ${ref}`);
     }
     
-    // Extract key from relative path or use as-is
-    return ref.replace('./', '').replace('.style.maia', '');
+    // Must be a co-id
+    if (!ref.startsWith('co_z')) {
+      throw new Error(`[StyleEngine] Style reference must be a co-id (starts with 'co_z'), got: ${ref}`);
+    }
+    
+    return ref;
   }
 
   /**
-   * Load a .maia style file
-   * @param {string} path - Path to the .maia file
-   * @returns {Promise<Object>} The parsed JSON
+   * Load a style by co-id
+   * @param {string} coId - Style co-id (e.g., 'co_z...')
+   * @returns {Promise<Object>} The parsed style definition
    */
-  async loadStyle(path) {
-    // Load from database via maia.db()
-    if (this.dbEngine) {
-      const styleKey = path.replace('./', '').replace('.style.maia', '');
-      const styleDef = await this.dbEngine.execute({
-        op: 'query',
-        schema: '@schema/style',
-        key: styleKey
-      });
-      
-      if (styleDef) {
-        // Validate style data (determine type from $type field)
-        const type = styleDef.$type === 'brand.style' ? 'brandStyle' : 'style';
-        
-        // Load schema from IndexedDB and validate on-the-fly
-        const schema = await loadSchemaFromDB(this.dbEngine, type);
-        if (schema) {
-          await validateAgainstSchemaOrThrow(schema, styleDef, type);
-        }
-        
-        return styleDef;
-      }
-      
-      throw new Error(`Failed to load style from database: ${styleKey}`);
+  async loadStyle(coId) {
+    if (!coId || !coId.startsWith('co_z')) {
+      throw new Error(`[StyleEngine] loadStyle requires a co-id, got: ${coId}`);
     }
     
-    throw new Error(`[StyleEngine] Database engine not available`);
+    if (!this.dbEngine) {
+      throw new Error(`[StyleEngine] Database engine not available`);
+    }
+    
+    const styleDef = await this.dbEngine.execute({
+      op: 'query',
+      schema: '@schema/style',
+      key: coId
+    });
+    
+    if (!styleDef) {
+      throw new Error(`Failed to load style from database by co-id: ${coId}`);
+    }
+    
+    // Determine type from $schema field (must be present)
+    if (!styleDef.$schema) {
+      throw new Error(`Style definition missing required $schema field`);
+    }
+    const type = styleDef.$schema.includes('brandStyle') || 
+                 styleDef.$schema.includes('@schema/brandStyle')
+                 ? 'brandStyle' : 'style';
+    
+    // Load schema from IndexedDB and validate on-the-fly
+    const schema = await loadSchemaFromDB(this.dbEngine, type);
+    if (schema) {
+      await validateAgainstSchemaOrThrow(schema, styleDef, type);
+    }
+    
+    return styleDef;
+  }
+
+  /**
+   * Load tokens by co-id
+   * @param {string} coId - Tokens co-id (e.g., 'co_z...')
+   * @returns {Promise<Object>} The tokens object
+   */
+  async loadTokens(coId) {
+    if (!coId || !coId.startsWith('co_z')) {
+      throw new Error(`[StyleEngine] loadTokens requires a co-id, got: ${coId}`);
+    }
+    
+    if (!this.dbEngine) {
+      throw new Error(`[StyleEngine] Database engine not available`);
+    }
+    
+    const tokens = await this.dbEngine.execute({
+      op: 'query',
+      schema: '@schema/tokens-comap',
+      key: coId
+    });
+    
+    if (!tokens) {
+      throw new Error(`Failed to load tokens from database by co-id: ${coId}`);
+    }
+    
+    return tokens || {};
+  }
+
+  /**
+   * Load components by co-id
+   * @param {string} coId - Components co-id (e.g., 'co_z...')
+   * @returns {Promise<Object>} The components object
+   */
+  async loadComponents(coId) {
+    if (!coId || !coId.startsWith('co_z')) {
+      throw new Error(`[StyleEngine] loadComponents requires a co-id, got: ${coId}`);
+    }
+    
+    if (!this.dbEngine) {
+      throw new Error(`[StyleEngine] Database engine not available`);
+    }
+    
+    const components = await this.dbEngine.execute({
+      op: 'query',
+      schema: '@schema/components-comap',
+      key: coId
+    });
+    
+    if (!components) {
+      throw new Error(`Failed to load components from database by co-id: ${coId}`);
+    }
+    
+    return components || {};
   }
 
   /**
@@ -413,25 +470,41 @@ export class StyleEngine {
    * @returns {Promise<CSSStyleSheet[]>} Array of stylesheets
    */
   async getStyleSheets(actorConfig) {
-    const cacheKey = `${actorConfig.brandRef}_${actorConfig.styleRef || 'none'}`;
+    // Use brand and style properties (must be co-ids)
+    const brandCoId = actorConfig.brand;
+    const styleCoId = actorConfig.style;
+    
+    if (!brandCoId) {
+      throw new Error(`[StyleEngine] Actor config must have 'brand' property with co-id`);
+    }
+    
+    const cacheKey = `${brandCoId}_${styleCoId || 'none'}`;
     
     // Check cache
     if (this.cache.has(cacheKey)) {
       return this.cache.get(cacheKey);
     }
 
-    // Resolve brand ref (CoMap ID → filename)
-    const brandFile = this.resolveStyleRef(actorConfig.brandRef);
-    const brand = await this.loadStyle(`./${brandFile}.style.maia`);
+    // Resolve and load brand by co-id
+    const brandResolved = this.resolveStyleRef(brandCoId);
+    const brand = await this.loadStyle(brandResolved);
     
-    // Load actor (overrides only) - optional
-    const actor = actorConfig.styleRef 
-      ? await this.loadStyle(`./${this.resolveStyleRef(actorConfig.styleRef)}.style.maia`)
-      : { tokens: {}, components: {} };
+    // Load actor style (overrides only) - optional
+    let actor = { tokens: {}, components: {} };
+    if (styleCoId) {
+      const styleResolved = this.resolveStyleRef(styleCoId);
+      actor = await this.loadStyle(styleResolved);
+    }
+    
+    // Tokens and components are now embedded objects (not separate CoValues)
+    const brandTokens = brand.tokens || {};
+    const brandComponents = brand.components || {};
+    const actorTokens = actor.tokens || {};
+    const actorComponents = actor.components || {};
     
     // Deep merge (actor wins on conflicts)
-    const mergedTokens = this.deepMerge(brand.tokens || {}, actor.tokens || {});
-    const mergedComponents = this.deepMerge(brand.components || {}, actor.components || {});
+    const mergedTokens = this.deepMerge(brandTokens, actorTokens);
+    const mergedComponents = this.deepMerge(brandComponents, actorComponents);
     const mergedSelectors = this.deepMerge(brand.selectors || {}, actor.selectors || {});
     
     // Merge raw CSS (brand first, then actor) - only as fallback

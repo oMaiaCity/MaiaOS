@@ -1,5 +1,5 @@
 {
-  "$type": "tool",
+  "$schema": "@schema/tool",
   "$id": "tool_contextUpdate_001",
   "name": "@context/update",
   "description": "Updates a single field in the actor context (for input bindings)",

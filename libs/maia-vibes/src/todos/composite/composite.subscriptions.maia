@@ -1,0 +1,7 @@
+{
+  "$schema": "@schema/subscriptions-colist",
+  "$id": "@subscriptions/composite",
+  "items": [
+    "@actor/vibe"
+  ]
+}

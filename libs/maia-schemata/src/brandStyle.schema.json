@@ -1,80 +1,29 @@
 {
-  "$schema": "@schema/meta-schema",
-  "$id": "https://maiaos.dev/schemas/brand-style.schema.json",
+  "$schema": "@schema/meta-schema-cojson",
+  "$id": "@schema/brandStyle",
   "title": "Brand Style Definition",
   "description": "Shared design system (brand styles)",
-  "type": "object",
-  "required": ["$type"],
+  "cotype": "comap",
   "properties": {
-    "$type": {
+    "$schema": {
       "type": "string",
-      "const": "brand.style"
+      "description": "Schema reference",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "$id": {
       "type": "string",
-      "description": "Unique brand style identifier",
-      "pattern": "^co_brand_"
+      "description": "Unique brand style identifier (co-id)",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "tokens": {
       "type": "object",
-      "description": "Design tokens (colors, spacing, typography, radii, shadows, etc.)",
-      "properties": {
-        "colors": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string",
-            "description": "Color value (hex, rgb, rgba, etc.)"
-          }
-        },
-        "spacing": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string",
-            "description": "Spacing value (rem, px, etc.)"
-          }
-        },
-        "typography": {
-          "type": "object",
-          "additionalProperties": true
-        },
-        "radii": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string",
-            "description": "Border radius value"
-          }
-        },
-        "shadows": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string",
-            "description": "Box shadow value"
-          }
-        }
-      },
+      "description": "Design tokens (colors, spacing, typography, etc.)",
       "additionalProperties": true
     },
     "components": {
       "type": "object",
-      "description": "Component-specific styles",
-      "additionalProperties": {
-        "type": "object",
-        "description": "CSS properties and values",
-        "additionalProperties": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "object",
-              "additionalProperties": true
-            }
-          ]
-        }
-      }
+      "description": "Component styles",
+      "additionalProperties": true
     },
     "selectors": {
       "type": "object",

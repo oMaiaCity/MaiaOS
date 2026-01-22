@@ -1,5 +1,5 @@
 {
-  "$type": "context",
-  "$id": "context_vibe_001",
+  "$schema": "@schema/context",
+  "$id": "@context/vibe",
   "composite": "@composite"
 }

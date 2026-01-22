@@ -1,6 +1,6 @@
 {
-  "$type": "state",
-  "$id": "state_list_001",
+  "$schema": "@schema/state",
+  "$id": "@state/list",
   "initial": "idle",
   "states": {
     "idle": {

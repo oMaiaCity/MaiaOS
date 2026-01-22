@@ -1,14 +1,19 @@
 {
-  "$schema": "@schema/meta-schema",
-  "$id": "https://maiaos.dev/schemas/interface.schema.json",
+  "$schema": "@schema/meta-schema-cojson",
+  "$id": "@schema/interface",
   "title": "Actor Interface Definition",
   "description": "Message interface specification (inbox, publishes, subscriptions)",
-  "type": "object",
-  "required": ["$type"],
+  "cotype": "comap",
   "properties": {
-    "$type": {
+    "$schema": {
       "type": "string",
-      "const": "actor.interface"
+      "description": "Schema reference",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
+    },
+    "$id": {
+      "type": "string",
+      "description": "Unique interface identifier (co-id)",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "inbox": {
       "type": "object",
@@ -64,9 +69,9 @@
     },
     "subscriptions": {
       "type": "array",
-      "description": "List of actor IDs to subscribe to",
+      "description": "List of actor co-ids to subscribe to",
       "items": {
-        "type": "string"
+        "$co": "@schema/actor"
       }
     },
     "watermark": {

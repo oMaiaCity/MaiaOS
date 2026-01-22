@@ -1,21 +1,17 @@
 {
-  "$type": "actor",
-  "$id": "actor_vibe_001",
+  "$schema": "@schema/actor",
+  "$id": "@actor/vibe",
   "role": "vibe",
-  "contextRef": "vibe/vibe",
-  "viewRef": "vibe/vibe",
-  "stateRef": "vibe/vibe",
-  "interfaceRef": "vibe/vibe",
-  "brandRef": "co_brand_001",
-  "styleRef": "todo",
+  "context": "@context/vibe",
+  "view": "@view/vibe",
+  "state": "@state/vibe",
+  "interface": "@interface/vibe",
+  "brand": "@style/brand",
+  "style": "@style/todo",
   "children": {
-    "composite": "actor_composite_001"
+    "composite": "@actor/composite"
   },
-  "subscriptions": [
-    "actor_composite_001",
-    "actor_list_001",
-    "actor_kanban_001"
-  ],
-  "inbox": [],
+  "subscriptions": "@subscriptions/vibe",
+  "inbox": "@inbox/vibe",
   "inboxWatermark": 0
 }

@@ -1,5 +1,6 @@
 {
-  "$type": "actor.style",
+  "$schema": "@schema/style",
+  "$id": "@style/todo",
   "tokens": {
     "colors": {
       "primary": "#8fa89b",

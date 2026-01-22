@@ -72,7 +72,9 @@ export class SubscriptionEngine {
     
     for (const [key, value] of Object.entries(actor.context)) {
       // Query object → reactive data subscription
-      if (value?.schema?.startsWith('@')) {
+      // Query objects have structure: {schema: "co_z...", filter: {...}}
+      // Detect by structure (has schema property), not by @ prefix
+      if (value && typeof value === 'object' && value.schema && typeof value.schema === 'string') {
         try {
           // CRITICAL: Mark that this key hasn't received initial data yet
           // This ensures first callback always updates, even if data is empty
@@ -83,6 +85,13 @@ export class SubscriptionEngine {
           // Initialize context key with empty array (views expect arrays)
           // First callback will always update (tracked by _initialDataReceived)
           actor.context[key] = [];
+          
+          // Schema should already be a co-id (transformed during seeding)
+          // If it's still a human-readable reference, that's an error
+          if (!value.schema.startsWith('co_z')) {
+            console.error(`[SubscriptionEngine] ❌ Query object schema is not a co-id: ${value.schema}. Expected co-id after seeding transformation.`);
+            continue;
+          }
           
           const unsubscribe = await this.dbEngine.execute({
             op: 'query',

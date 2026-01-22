@@ -15,9 +15,9 @@ export default {
     const errors = [];
     const warnings = [];
     
-    // Validate $type
-    if (interfaceDef.$type !== 'actor.interface') {
-      errors.push('$type must be "actor.interface"');
+    // Validate $schema (replaces legacy $type)
+    if (interfaceDef.$schema && !interfaceDef.$schema.startsWith('@schema/interface') && !interfaceDef.$schema.startsWith('co_z')) {
+      warnings.push(`$schema should reference @schema/interface or a co-id, got: ${interfaceDef.$schema}`);
     }
     
     // Validate inbox (incoming messages)
@@ -52,25 +52,8 @@ export default {
       }
     }
     
-    // Validate subscriptions (array of actor IDs)
-    if (interfaceDef.subscriptions) {
-      if (!Array.isArray(interfaceDef.subscriptions)) {
-        errors.push('subscriptions must be an array');
-      } else {
-        interfaceDef.subscriptions.forEach((sub, idx) => {
-          if (typeof sub !== 'string') {
-            errors.push(`subscriptions[${idx}] must be a string (actor ID)`);
-          }
-        });
-      }
-    }
-    
-    // Validate watermark (timestamp)
-    if (interfaceDef.watermark !== undefined) {
-      if (typeof interfaceDef.watermark !== 'number') {
-        errors.push('watermark must be a number (timestamp)');
-      }
-    }
+    // Note: subscriptions and watermark are now in actor.maia files, not interface files
+    // Interface files only define API contracts (inbox/publishes message schemas)
     
     // Log results
     if (errors.length > 0) {

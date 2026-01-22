@@ -1,5 +1,5 @@
 {
-  "$type": "tool",
+  "$schema": "@schema/tool",
   "$id": "tool_dragdrop_start_001",
   "name": "@dragdrop/start",
   "description": "Generic drag start handler. Stores the dragged entity information in context for later use by drop handler.",

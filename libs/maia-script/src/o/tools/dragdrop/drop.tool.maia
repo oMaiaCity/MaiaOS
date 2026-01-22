@@ -1,5 +1,5 @@
 {
-  "$type": "tool",
+  "$schema": "@schema/tool",
   "$id": "tool_dragdrop_drop_001",
   "name": "@dragdrop/drop",
   "description": "Generic drop handler for drag-and-drop operations. Updates a field on the dragged entity based on the drop target.",

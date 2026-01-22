@@ -13,12 +13,14 @@ let validationEngine = null;
 let schemasLoaded = false;
 let loadingPromise = null;
 const addedSchemaIds = new Set(); // Track which schema IDs we've added to AJV
+let pendingSchemaResolver = null; // Store resolver if set before engine initialization
 
 /**
  * Set schema resolver for dynamic $schema reference resolution
  * @param {Function} resolver - Async function that takes a schema key and returns the schema
  */
 export function setSchemaResolver(resolver) {
+  pendingSchemaResolver = resolver; // Always store it
   if (validationEngine) {
     validationEngine.setSchemaResolver(resolver);
   }
@@ -34,9 +36,13 @@ export async function getValidationEngine(schemaResolver = null) {
     validationEngine = new ValidationEngine();
   }
   
-  // Set schema resolver if provided
+  // Set schema resolver if provided (takes precedence)
   if (schemaResolver) {
     validationEngine.setSchemaResolver(schemaResolver);
+    pendingSchemaResolver = schemaResolver; // Also store for future reference
+  } else if (pendingSchemaResolver) {
+    // Use pending resolver if no new one provided
+    validationEngine.setSchemaResolver(pendingSchemaResolver);
   }
   
   // Load all schemas if not already loaded (use promise to prevent concurrent loads)
@@ -49,9 +55,19 @@ export async function getValidationEngine(schemaResolver = null) {
       loadingPromise = (async () => {
       await loadAllSchemas();
       
+      // Apply pending schema resolver before initialization (so loadSchema can use it)
+      if (pendingSchemaResolver && !validationEngine.schemaResolver) {
+        validationEngine.setSchemaResolver(pendingSchemaResolver);
+      }
+      
       // Initialize AJV (metaschema is registered during initialization via _loadMetaSchema)
       await validationEngine.initialize();
       const ajv = validationEngine.ajv;
+      
+      // Also apply after initialization (in case it was set during initialization)
+      if (pendingSchemaResolver && !validationEngine.schemaResolver) {
+        validationEngine.setSchemaResolver(pendingSchemaResolver);
+      }
       
       // Get all loaded schemas (unique by $id to avoid duplicates)
       const schemaTypes = [
@@ -148,22 +164,21 @@ export async function getValidationEngine(schemaResolver = null) {
 export async function validate(type, data, context = '') {
   const engine = await getValidationEngine();
   
-  // Map $type to schema type
-  const typeMap = {
-    'actor': 'actor',
-    'context': 'context',
-    'state': 'state',
-    'view': 'view',
-    'actor.style': 'style',
-    'brand.style': 'brandStyle',
-    'actor.interface': 'interface',
-    'tool': 'tool',
-    'skill': 'skill',
-    'vibe': 'vibe'
-  };
+  // Extract schema type from $schema (required - no $type fallback)
+  // Extract schema name from $schema (e.g., "@schema/actor" -> "actor")
+  let schemaType = type;
   
-  // If data has $type, use it to determine schema type
-  const schemaType = data?.$type ? (typeMap[data.$type] || type) : type;
+  if (data?.$schema) {
+    // Extract schema name from $schema (handles both @schema/name and co_z... formats)
+    const schemaMatch = data.$schema.match(/@schema\/([^:]+)/);
+    if (schemaMatch) {
+      schemaType = schemaMatch[1];
+    }
+    // If it's a co-id, we'll use the provided type parameter
+  } else {
+    // $schema is required - throw error if missing
+    throw new Error(`Validation failed: data missing required $schema field. Got: ${JSON.stringify(Object.keys(data || {}))}`);
+  }
   
   if (!engine.hasSchema(schemaType)) {
     console.warn(`[Validation] Schema '${schemaType}' not loaded. Skipping validation.`);
@@ -219,6 +234,10 @@ export async function validateAgainstSchema(schema, data, context = '') {
   await engine.initialize();
   
   try {
+    // Before compiling, ensure all referenced schemas are loaded and registered
+    // This is critical for schemas loaded from IndexedDB with co-id references
+    await engine._resolveAndRegisterSchemaDependencies(schema);
+    
     // AJV automatically resolves $schema and $ref via its registry
     // Compile the schema (AJV caches by $id for performance)
     let validate;

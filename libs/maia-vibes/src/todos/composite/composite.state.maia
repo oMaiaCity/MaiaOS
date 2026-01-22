@@ -1,6 +1,6 @@
 {
-  "$type": "state",
-  "$id": "state_composite_001",
+  "$schema": "@schema/state",
+  "$id": "@state/composite",
   "initial": "idle",
   "states": {
     "idle": {
@@ -32,7 +32,7 @@
               "payload": {
                 "type": "SWITCH_VIEW",
                 "payload": { "viewMode": "$$viewMode" },
-                "target": "actor_vibe_001"
+                "target": "@actor/vibe"
               }
             }
           ]
@@ -49,7 +49,7 @@
               "payload": {
                 "type": "UPDATE_INPUT",
                 "payload": { "newTodoText": "$$newTodoText" },
-                "target": "actor_vibe_001"
+                "target": "@actor/vibe"
               }
             }
           ]
@@ -66,7 +66,7 @@
               "payload": {
                 "type": "CREATE_BUTTON",
                 "payload": { "text": "$$text" },
-                "target": "actor_vibe_001"
+                "target": "@actor/vibe"
               }
             }
           ]

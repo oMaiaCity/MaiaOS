@@ -1,5 +1,6 @@
 {
-  "$type": "actor.interface",
+  "$schema": "@schema/interface",
+  "$id": "@interface/vibe",
   "inbox": {
     "CREATE_BUTTON": {
       "payload": { "text": "string" }
@@ -43,9 +44,7 @@
       }
     },
     "INPUT_CLEARED": {
-      "payload": {}
+      "payload": {      }
     }
-  },
-  "subscriptions": ["actor_composite_001", "actor_list_001", "actor_kanban_001"],
-  "watermark": 0
+  }
 }

@@ -1,19 +1,20 @@
 {
-  "$schema": "@schema/meta-schema",
-  "$id": "https://maiaos.dev/schemas/state.schema.json",
+  "$schema": "@schema/meta-schema-cojson",
+  "$id": "@schema/state",
   "title": "State Machine Definition",
   "description": "XState-like state machine with states, transitions, guards, and actions",
-  "type": "object",
-  "required": ["$type", "initial", "states"],
+  "cotype": "comap",
+  "required": ["initial", "states"],
   "properties": {
-    "$type": {
+    "$schema": {
       "type": "string",
-      "const": "state"
+      "description": "Schema reference",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "$id": {
       "type": "string",
-      "description": "Unique state machine identifier",
-      "pattern": "^state_"
+      "description": "Unique state machine identifier (co-id)",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "initial": {
       "type": "string",
@@ -28,12 +29,49 @@
           "entry": {
             "oneOf": [
               {
-                "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/action"
+                "type": "object",
+                "description": "Inline action object",
+                "properties": {
+                  "tool": {
+                    "type": "string",
+                    "description": "Tool identifier"
+                  },
+                  "payload": {
+                    "type": "object",
+                    "description": "Tool payload",
+                    "additionalProperties": true
+                  }
+                },
+                "required": ["tool"]
               },
               {
                 "type": "array",
+                "description": "Array of inline action objects",
                 "items": {
-                  "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/action"
+                  "type": "object",
+                  "properties": {
+                    "tool": {
+                      "type": "string",
+                      "description": "Tool identifier"
+                    },
+                    "payload": {
+                      "type": "object",
+                      "description": "Tool payload",
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": ["tool"]
+                }
+              },
+              {
+                "$co": "@schema/action",
+                "description": "Co-id reference to action CoValue"
+              },
+              {
+                "type": "array",
+                "description": "Array of action co-id references",
+                "items": {
+                  "$co": "@schema/action"
                 }
               }
             ]
@@ -41,12 +79,49 @@
           "exit": {
             "oneOf": [
               {
-                "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/action"
+                "type": "object",
+                "description": "Inline action object",
+                "properties": {
+                  "tool": {
+                    "type": "string",
+                    "description": "Tool identifier"
+                  },
+                  "payload": {
+                    "type": "object",
+                    "description": "Tool payload",
+                    "additionalProperties": true
+                  }
+                },
+                "required": ["tool"]
               },
               {
                 "type": "array",
+                "description": "Array of inline action objects",
                 "items": {
-                  "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/action"
+                  "type": "object",
+                  "properties": {
+                    "tool": {
+                      "type": "string",
+                      "description": "Tool identifier"
+                    },
+                    "payload": {
+                      "type": "object",
+                      "description": "Tool payload",
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": ["tool"]
+                }
+              },
+              {
+                "$co": "@schema/action",
+                "description": "Co-id reference to action CoValue"
+              },
+              {
+                "type": "array",
+                "description": "Array of action co-id references",
+                "items": {
+                  "$co": "@schema/action"
                 }
               }
             ]
@@ -58,10 +133,51 @@
               "oneOf": [
                 {
                   "type": "string",
-                  "description": "Simple target state"
+                  "description": "Simple target state name"
                 },
                 {
-                  "$ref": "https://maiaos.dev/schemas/common.schema.json#/$defs/transition"
+                  "type": "object",
+                  "description": "Inline transition object",
+                  "properties": {
+                    "target": {
+                      "type": "string",
+                      "description": "Target state name"
+                    },
+                    "guard": {
+                      "type": "object",
+                      "description": "Guard condition",
+                      "additionalProperties": true
+                    },
+                    "actions": {
+                      "type": "array",
+                      "description": "Transition actions",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "tool": {
+                                "type": "string"
+                              },
+                              "payload": {
+                                "type": "object",
+                                "additionalProperties": true
+                              }
+                            },
+                            "required": ["tool"]
+                          },
+                          {
+                            "$co": "@schema/action"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": ["target"]
+                },
+                {
+                  "$co": "@schema/transition",
+                  "description": "Co-id reference to transition CoValue"
                 }
               ]
             }
