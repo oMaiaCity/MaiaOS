@@ -2,6 +2,23 @@
 
 **Comprehensive guide to building scalable, maintainable MaiaOS applications**
 
+## Agent-First Development
+
+**Always create the agent service actor first when building a vibe.**
+
+**Why?**
+- **Clear Architecture** - Agent defines the app's structure and data flow
+- **Data First** - Agent handles all data operations before UI concerns
+- **UI Second** - UI actors receive data from agent, keeping them simple
+- **Consistent Pattern** - Every vibe follows the same structure
+- **AI-Friendly** - LLMs understand this pattern and can generate vibes correctly
+
+**Development Order:**
+1. ✅ **Create agent service actor** (`agent/agent.actor.maia`) - ALWAYS FIRST
+2. ✅ Create vibe manifest (`manifest.vibe.maia`) - References `@actor/agent`
+3. ✅ Create composite actor (`composite/composite.actor.maia`) - First UI actor
+4. ✅ Create UI actors (`list/list.actor.maia`, etc.) - Leaf components
+
 ## Table of Contents
 
 1. [State Separation Pattern](#1-state-separation-pattern)
@@ -25,7 +42,9 @@
 
 ### Three-Layer Architecture
 
-#### Layer 1: Vibe Service Actor (Business Logic)
+#### Layer 1: Agent Service Actor (Business Logic)
+
+**Best Practice:** Always create the agent service actor first. This is your app's orchestrator.
 
 **Manages:**
 - ✅ Business logic and data orchestration
@@ -41,8 +60,9 @@
 **Example Context:**
 ```json
 {
-  "$type": "context",
-  "composite": "@composite"
+  "$schema": "@schema/context",
+  "$id": "@context/agent",
+  "composite": "@actor/composite"
   // Only business logic references - no UI state
 }
 ```
@@ -63,12 +83,13 @@
 **Example Context:**
 ```json
 {
-  "$type": "context",
+  "$schema": "@schema/context",
+  "$id": "@context/composite",
   "title": "Todo List",                    // UI presentation
   "inputPlaceholder": "Add a new todo...", // UI presentation
   "addButtonText": "Add",                  // UI presentation
   "viewMode": "list",                      // UI orchestration
-  "currentView": "@list",                  // UI orchestration
+  "currentView": "@actor/list",            // UI orchestration
   "listButtonActive": true,                // UI orchestration
   "kanbanButtonActive": false,             // UI orchestration
   "newTodoText": ""                        // Form state (co-located)
@@ -91,7 +112,8 @@
 **Kanban Actor:**
 ```json
 {
-  "$type": "context",
+  "$schema": "@schema/context",
+  "$id": "@context/kanban",
   "todosTodo": [],        // Filtered data (query result)
   "todosDone": [],       // Filtered data (query result)
   "draggedItemId": null, // Component-specific UI state
@@ -102,7 +124,8 @@
 **List Actor:**
 ```json
 {
-  "$type": "context",
+  "$schema": "@schema/context",
+  "$id": "@context/list",
   "todos": []  // Filtered data (query result)
 }
 ```
@@ -352,10 +375,11 @@ App Service Actor
 **Load actors on-demand:**
 ```json
 {
-  "$type": "actor",
+  "$schema": "@schema/actor",
+  "$id": "@actor/composite",
   "children": {
-    "todos": "actor_todos_001",
-    "notes": "actor_notes_001"
+    "todos": "@actor/todos",
+    "notes": "@actor/notes"
   },
   "lazy": ["notes"]  // Load notes only when accessed
 }
@@ -452,13 +476,21 @@ App Service Actor
 **Example:**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_todos_service_001",
-  "role": "service",
-  "stateRef": "todos-service",
-  "contextRef": "todos-service"
+  "$schema": "@schema/actor",
+  "$id": "@actor/agent",
+  "role": "agent",
+  "context": "@context/agent",
+  "state": "@state/agent",
+  "view": "@view/agent",
+  "interface": "@interface/agent",
+  "brand": "@style/brand",
+  "subscriptions": "@subscriptions/agent",
+  "inbox": "@inbox/agent",
+  "inboxWatermark": 0
 }
 ```
+
+**Note:** Always create the agent service actor first. This is your app's orchestrator.
 
 ---
 
@@ -492,15 +524,21 @@ App Composite Actor
 **Example:**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_todos_feature_001",
+  "$schema": "@schema/actor",
+  "$id": "@actor/composite",
   "role": "composite",
-  "viewRef": "todos-feature",
-  "stateRef": "todos-feature",
+  "context": "@context/composite",
+  "view": "@view/composite",
+  "state": "@state/composite",
+  "interface": "@interface/composite",
+  "brand": "@style/brand",
   "children": {
-    "list": "actor_todos_list_001",
-    "kanban": "actor_todos_kanban_001"
-  }
+    "list": "@actor/list",
+    "kanban": "@actor/kanban"
+  },
+  "subscriptions": "@subscriptions/composite",
+  "inbox": "@inbox/composite",
+  "inboxWatermark": 0
 }
 ```
 
@@ -513,7 +551,8 @@ App Composite Actor
 **Bad:**
 ```json
 {
-  "$type": "context",
+  "$schema": "@schema/context",
+  "$id": "@context/agent",
   "viewMode": "list",        // ❌ UI state in service
   "listButtonActive": true,  // ❌ UI state in service
   "newTodoText": ""          // ❌ Form state in service
@@ -523,8 +562,9 @@ App Composite Actor
 **Good:**
 ```json
 {
-  "$type": "context",
-  "composite": "@composite"  // ✅ Only business logic references
+  "$schema": "@schema/context",
+  "$id": "@context/agent",
+  "composite": "@actor/composite"  // ✅ Only business logic references
 }
 ```
 
@@ -592,21 +632,23 @@ App Composite Actor
 **Bad:**
 ```json
 {
-  "$type": "actor",
-  "role": "service",
-  "stateRef": "monolithic-service"  // ❌ Everything in one service
+  "$schema": "@schema/actor",
+  "$id": "@actor/agent",
+  "role": "agent",
+  "state": "@state/monolithic-service"  // ❌ Everything in one service
 }
 ```
 
 **Good:**
 ```json
 {
-  "$type": "actor",
-  "role": "service",
+  "$schema": "@schema/actor",
+  "$id": "@actor/agent",
+  "role": "agent",
   "children": {
-    "todos": "actor_todos_service_001",    // ✅ Domain separation
-    "notes": "actor_notes_service_001",   // ✅ Domain separation
-    "calendar": "actor_calendar_service_001"  // ✅ Domain separation
+    "todos": "@actor/todos-service",    // ✅ Domain separation
+    "notes": "@actor/notes-service",   // ✅ Domain separation
+    "calendar": "@actor/calendar-service"  // ✅ Domain separation
   }
 }
 ```

@@ -59,11 +59,14 @@ MaiaOS:       Write .maia → Run
 - No webpack, no vite, no build tools
 
 **How It Works:**
-1. Browser loads `kernel.js` (single entry point)
-2. Kernel loads `.maia` files via `fetch()`
-3. Engines interpret and execute
-4. Shadow DOM renders isolated UI
-5. Done!
+1. Browser loads `o/kernel.js` (single entry point)
+2. Kernel initializes engines (Actor, View, State, Tool, DB, Subscription, etc.)
+3. Kernel loads modules (db, core, dragdrop, interface)
+4. Kernel seeds database with configs, schemas, and tool definitions
+5. Kernel loads `.maia` files via `fetch()` or database queries
+6. Engines interpret and execute
+7. Shadow DOM renders isolated UI
+8. Done!
 
 ## Three-Layer Architecture
 
@@ -87,6 +90,9 @@ MaiaOS:       Write .maia → Run
 - `ViewEngine` - Renders views
 - `ToolEngine` - Executes actions
 - `StyleEngine` - Compiles styles
+- `DBEngine` - Unified database operations (query, create, update, delete, toggle)
+- `SubscriptionEngine` - Context-driven reactive subscriptions
+- `MessageQueue` - Actor-to-actor communication
 
 **Logic lives here, not in your app.**
 

@@ -19,31 +19,40 @@ A vibe is a JSON manifest file (`.vibe.maia`) that serves as an "app store listi
 
 > **Analogy:** If actors are the "executable," vibes are the "app store listing" that describes and loads them.
 
-### Default Pattern: Service Actor Entry Point
+### Default Pattern: Agent Service Actor Entry Point
 
-**By default, every vibe loads a service actor** as its entry point. This service actor orchestrates the application and loads UI actors as children.
+**Every vibe MUST have an "agent" service actor** as its entry point. This orchestrating service actor is called the **agent** and handles all business logic, data management, and coordination.
+
+**Best Practice:** Always define the agent service actor first when creating a vibe.
 
 ```
-Vibe → Service Actor → Composite Actor → UI Actors
+Vibe → Agent (Service Actor) → Composite Actor → UI Actors
 ```
+
+**Why "agent"?**
+- Clear naming convention: the agent orchestrates everything
+- Consistent across all vibes: every vibe has an `@actor/agent`
+- AI-friendly: agents understand this pattern
+- Best practice: start with the agent, then build UI actors
 
 This pattern ensures:
 - ✅ Clear separation of concerns (service logic vs. UI)
 - ✅ Scalable architecture (add UI actors as needed)
 - ✅ Message-based communication (loose coupling)
 - ✅ Consistent structure across all vibes
+- ✅ Agent-first development (define orchestrator first)
 
 ## Vibe Structure
 
-Create a file named `{name}.vibe.maia`:
+Create a file named `manifest.vibe.maia`:
 
 ```json
 {
-  "$type": "vibe",
-  "$id": "vibe_myapp_001",
-  "name": "My App",
-  "description": "A description of what this app does",
-  "actor": "./myapp.actor.maia"
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/todos",
+  "name": "Todo List",
+  "description": "A complete todo list application",
+  "actor": "@actor/agent"
 }
 ```
 
@@ -51,11 +60,11 @@ Create a file named `{name}.vibe.maia`:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `$type` | string | Always `"vibe"` |
-| `$id` | string | Unique identifier for this vibe |
+| `$schema` | string | Schema reference (`@schema/vibe`) - transformed to co-id during seeding |
+| `$id` | string | Unique vibe identifier (`@vibe/todos`) - transformed to co-id during seeding |
 | `name` | string | Display name for marketplace |
 | `description` | string | Brief description of the app |
-| `actor` | string | Relative path to root actor file |
+| `actor` | string | Reference to agent service actor (`@actor/agent`) - transformed to co-id during seeding |
 
 ### Field Details
 
@@ -71,67 +80,114 @@ Create a file named `{name}.vibe.maia`:
 
 ## Creating a Vibe
 
+### Best Practice: Agent-First Development
+
+**Always create the agent service actor first.** This is your app's orchestrator and entry point.
+
+**Why Agent-First?**
+1. **Clear Architecture** - Agent defines the app's structure and data flow
+2. **Data First** - Agent handles all data operations before UI concerns
+3. **UI Second** - UI actors receive data from agent, keeping them simple
+4. **Consistent Pattern** - Every vibe follows the same structure
+5. **AI-Friendly** - LLMs understand this pattern and can generate vibes correctly
+
+**Development Order:**
+1. ✅ **Create agent service actor** (`agent/agent.actor.maia`) - ALWAYS FIRST
+2. ✅ Create vibe manifest (`manifest.vibe.maia`) - References agent
+3. ✅ Create composite actor (`composite/composite.actor.maia`) - First UI actor
+4. ✅ Create UI actors (`list/list.actor.maia`, etc.) - Leaf components
+
 ### Step 1: Organize Your App
 
 Structure your app directory:
 
 ```
-my-app/
-├── myapp.vibe.maia       # Vibe manifest
-├── myapp.actor.maia      # Root actor
-├── myapp.context.maia    # Runtime data
-├── myapp.state.maia      # State machine
-├── myapp.view.maia       # UI definition
-└── myapp.style.maia      # Styling (optional)
+todos/
+├── manifest.vibe.maia    # Vibe manifest
+├── agent/                # Agent service actor (ALWAYS CREATE FIRST)
+│   ├── agent.actor.maia
+│   ├── agent.context.maia
+│   ├── agent.state.maia
+│   ├── agent.view.maia
+│   ├── agent.interface.maia
+│   ├── agent.subscriptions.maia
+│   └── agent.inbox.maia
+├── composite/            # Composite actor (first UI actor)
+│   ├── composite.actor.maia
+│   └── ...
+├── list/                 # UI actors
+│   ├── list.actor.maia
+│   └── ...
+└── agent/                # Brand style (shared design system)
+    └── brand.style.maia
 ```
 
 ### Step 2: Create the Vibe Manifest
 
-**`myapp.vibe.maia`:**
+**`manifest.vibe.maia`:**
 ```json
 {
-  "$type": "vibe",
-  "$id": "vibe_myapp_001",
-  "name": "My Todo App",
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/todos",
+  "name": "Todo List",
   "description": "A simple todo list with drag-and-drop organization",
-  "actor": "./myapp.actor.maia"
+  "actor": "@actor/agent"
 }
 ```
 
-### Step 3: Create Your Root Service Actor
+**Note:** The `actor` field references `@actor/agent` - this is the agent service actor that orchestrates the entire vibe.
 
-The actor referenced in the vibe is your app's entry point - **always a service actor**:
+### Step 3: Create Your Agent Service Actor (ALWAYS FIRST!)
 
-**`myapp.actor.maia` (Service Actor):**
+**Best Practice:** Always define the agent service actor first. This is your app's orchestrator.
+
+**`agent/agent.actor.maia` (Agent Service Actor):**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_myapp_001",
-  "id": "actor_myapp_001",
-  "role": "service",
-  "contextRef": "myapp",
-  "stateRef": "myapp",
-  "viewRef": "myapp",      // ← Minimal view (only renders child)
-  "styleRef": "brand",
+  "$schema": "@schema/actor",
+  "$id": "@actor/agent",
+  "role": "agent",
+  "context": "@context/agent",
+  "state": "@state/agent",
+  "view": "@view/agent",
+  "interface": "@interface/agent",
+  "brand": "@style/brand",
   "children": {
-    "composite": "actor_composite_001"  // ← Loads first UI actor
-  }
+    "composite": "@actor/composite"
+  },
+  "subscriptions": "@subscriptions/agent",
+  "inbox": "@inbox/agent",
+  "inboxWatermark": 0
 }
 ```
 
-**Service Actor View (Minimal):**
+**Agent Responsibilities:**
+- Orchestrate data queries and mutations
+- Manage application-level state
+- Coordinate between UI actors via messages
+- Handle business logic
+- Load composite actor as first child
+
+**Agent View (Minimal):**
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/agent",
+  "root": {
     "tag": "div",
-    "class": "service-container",
+    "attrs": { "class": "agent-container" },
     "$slot": "$composite"  // ← Only renders child actor
   }
 }
 ```
 
-The service actor orchestrates the application and loads UI actors as children. See [Actors](./02-actors.md#default-vibe-pattern-service--composite--ui) for the complete pattern.
+The agent orchestrates the application and loads UI actors as children. See [Actors](./02-actors.md#default-vibe-pattern-service--composite--ui) for the complete pattern.
+
+**Why Start with Agent?**
+1. **Clear Architecture** - Agent defines the app's structure
+2. **Data First** - Agent handles all data operations
+3. **UI Second** - UI actors receive data from agent
+4. **Best Practice** - Always define orchestrator before components
 
 ## Loading Vibes
 
@@ -232,49 +288,59 @@ Vibe (App Manifest)
 
 ```
 vibes/todos/
-├── todos.vibe.maia         # App manifest
+├── manifest.vibe.maia      # App manifest (references @actor/agent)
 ├── index.html              # App launcher
-├── vibe/                   # Service actor (entry point)
-│   ├── vibe.actor.maia    # Service actor definition
-│   ├── vibe.context.maia   # Service actor context
-│   ├── vibe.state.maia     # Service actor state machine
-│   ├── vibe.view.maia      # Minimal view (renders child)
-│   └── vibe.interface.maia # Message interface
+├── agent/                  # Agent service actor (ALWAYS CREATE FIRST)
+│   ├── agent.actor.maia    # Agent actor definition
+│   ├── agent.context.maia  # Agent context
+│   ├── agent.state.maia    # Agent state machine
+│   ├── agent.view.maia    # Minimal view (renders child)
+│   ├── agent.interface.maia # Message interface
+│   ├── agent.subscriptions.maia # Subscriptions colist
+│   ├── agent.inbox.maia   # Inbox costream
+│   └── brand.style.maia   # Shared design system
 ├── composite/              # Composite actor (first UI actor)
 │   ├── composite.actor.maia
 │   ├── composite.context.maia
 │   ├── composite.state.maia
 │   ├── composite.view.maia
-│   └── composite.interface.maia
+│   ├── composite.interface.maia
+│   ├── composite.subscriptions.maia
+│   └── composite.inbox.maia
 ├── list/                   # UI actor
 │   ├── list.actor.maia
 │   ├── list.context.maia
 │   ├── list.state.maia
 │   ├── list.view.maia
-│   └── list.interface.maia
-├── kanban/                 # UI actor
-│   ├── kanban.actor.maia
-│   ├── kanban.context.maia
-│   ├── kanban.state.maia
-│   ├── kanban.view.maia
-│   └── kanban.interface.maia
-└── brand.style.maia        # Shared design system
+│   ├── list.interface.maia
+│   ├── list.subscriptions.maia
+│   └── list.inbox.maia
+└── kanban/                 # UI actor
+    ├── kanban.actor.maia
+    ├── kanban.context.maia
+    ├── kanban.state.maia
+    ├── kanban.view.maia
+    ├── kanban.interface.maia
+    ├── kanban.subscriptions.maia
+    └── kanban.inbox.maia
 ```
+
+**Note:** The agent directory is created first and contains the orchestrating service actor that all other actors depend on.
 
 ### Vibe Manifest
 
-**`todos.vibe.maia`:**
+**`manifest.vibe.maia`:**
 ```json
 {
-  "$type": "vibe",
-  "$id": "vibe_todos_001",
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/todos",
   "name": "Todo List",
   "description": "A complete todo list application with state machines, drag-drop kanban view, and AI-compatible tools. Showcases MaiaOS actor system, message passing, and declarative UI.",
-  "actor": "./vibe/vibe.actor.maia"
+  "actor": "@actor/agent"
 }
 ```
 
-**Note:** The vibe references a **service actor** (`vibe/vibe.actor.maia`) which orchestrates the application and loads UI actors as children.
+**Note:** The vibe references the **agent service actor** (`@actor/agent`) which orchestrates the application and loads UI actors as children. The agent is always defined first.
 
 ### Launcher HTML
 
@@ -299,7 +365,7 @@ vibes/todos/
       
       // Load the vibe
       const { vibe, actor } = await os.loadVibe(
-        './todos.vibe.maia',
+        './manifest.vibe.maia',
         document.getElementById('actor-todo')
       );
       
@@ -320,19 +386,21 @@ vibes/todos/
 
 ### ✅ DO:
 
+- **Always create agent first** - Define `@actor/agent` before any UI actors
+- **Use schema references** - `@schema/vibe`, `@actor/agent` (transformed to co-ids during seeding)
 - **Keep descriptions concise** - 1-3 sentences max
-- **Use semantic naming** - `todos.vibe.maia`, not `app.vibe.maia`
-- **Match vibe and actor names** - `todos.vibe.maia` → `todo.actor.maia`
-- **Use relative paths** - `"./actor.maia"` not absolute paths
+- **Use semantic naming** - `manifest.vibe.maia`, `agent/agent.actor.maia`
+- **Reference agent in vibe** - Always use `"actor": "@actor/agent"` in vibe manifest
 - **One vibe per app** - Each app gets its own vibe manifest
 
 ### ❌ DON'T:
 
-- **Don't hardcode absolute paths** - Use relative paths
+- **Don't skip the agent** - Every vibe MUST have an agent service actor
+- **Don't use file paths** - Use schema references (`@actor/agent`, not `"./agent.actor.maia"`)
 - **Don't include logic** - Vibes are metadata only
 - **Don't duplicate actor properties** - Vibe references actor, doesn't contain it
-- **Don't skip validation** - Always include `$type: "vibe"`
-- **Don't nest actors** - Reference one root actor only
+- **Don't skip schema** - Always include `$schema: "@schema/vibe"`
+- **Don't nest actors** - Reference one root actor only (the agent)
 
 ## Marketplace Integration (Future)
 
@@ -377,7 +445,7 @@ const { vibe, actor } = await os.loadVibe('./app.vibe.maia', container);
 console.log(vibe.name);        // "My App"
 console.log(vibe.description); // "App description"
 console.log(vibe.actor);       // "./myapp.actor.maia"
-console.log(vibe.$id);         // "vibe_myapp_001"
+console.log(vibe.$id);         // "@vibe/todos" (or co-id after seeding)
 
 // Inspect actor (as usual)
 console.log(actor.id);         // "actor_myapp_001"

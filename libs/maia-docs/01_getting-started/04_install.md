@@ -12,21 +12,24 @@
 
 ## Quick Start
 
-###  Clone the Repository
+### Clone the Repository
 
 ```bash
 # Clone
 git clone https://github.com/oMaiaCity/MaiaOS.git
-cd MaiaOS/libs/maia-script
+cd MaiaOS
 
-# Install dependencies
+# Install dependencies (from root - installs for all workspaces)
 bun install
 
-# Start dev server with hot reload
-bun dev
+# Start dev server (from root or specific service)
+bun dev:app  # Main app service (port 4202)
+# OR
+cd libs/maia-script
+bun dev  # MaiaScript dev server
 
 # Open browser
-open http://localhost:4200/
+open http://localhost:4202/  # or appropriate port
 ```
 
 ## File Structure
@@ -85,9 +88,10 @@ my-app/
     },
     "creating": {
       "entry": {
-        "tool": "@mutation/create",
+        "tool": "@db",
         "payload": {
-          "schema": "todos",
+          "op": "create",
+          "schema": "co_z...",
           "data": { "text": "$newTodoText", "done": false }
         }
       },
@@ -104,6 +108,8 @@ my-app/
   }
 }
 ```
+
+**Note:** The `schema` field must be a co-id (CoJSON ID like `co_z...`). Schema references are resolved during vibe loading/seeding.
 
 **`todo.view.maia`:**
 ```json
@@ -205,16 +211,18 @@ my-app/
 
 ## Next Steps
 
-- [Vibecreators Docs](../vibecreators/) - Learn to build apps
-- [Examples](../../examples/todos/) - See complete working app
-- [Developers Docs](../developers/) - Extend MaiaOS core
+- [Vibecreators Docs](../02_creators/) - Learn to build apps
+- [Examples](../../maia-vibes/src/todos/) - See complete working app
+- [Developers Docs](../03_developers/) - Extend MaiaOS core
 
 ## Resources
 
-- **Examples:** `libs/maia-script/src/examples/todos/`
+- **Examples:** `libs/maia-vibes/src/todos/`
 - **Kernel:** `libs/maia-script/src/o/kernel.js`
+- **Engines:** `libs/maia-script/src/o/engines/`
 - **Tools:** `libs/maia-script/src/o/tools/`
-- **Docs:** `libs/maia-script/src/docs/`
+- **Modules:** `libs/maia-script/src/o/modules/`
+- **Docs:** `libs/maia-docs/`
 
 ## Support
 

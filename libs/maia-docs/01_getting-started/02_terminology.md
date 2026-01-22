@@ -111,10 +111,14 @@ JavaScript execution machinery that interprets definitions. Engines contain all 
 - **ViewEngine** - Renders views to Shadow DOM
 - **ToolEngine** - Executes tool actions
 - **StyleEngine** - Compiles styles to CSS
+- **DBEngine** - Unified database operation engine (query, create, update, delete, toggle, seed)
+- **SubscriptionEngine** - Context-driven reactive subscriptions
+- **MessageQueue** - Actor-to-actor message passing
+- **ModuleRegistry** - Manages dynamic module loading
 - **MaiaScriptEvaluator** - Evaluates DSL expressions
 
 ### Tool
-An executable function (`.tool.js` + `.tool.maia`). The ONLY place imperative code lives. Tools mutate actor context based on payloads.
+An executable function (`.tool.js` + `.tool.maia`). The ONLY place imperative code lives. Tools mutate actor context or execute operations based on payloads.
 
 **Structure:**
 - `.tool.maia` - JSON schema (AI-compatible metadata)
@@ -122,12 +126,11 @@ An executable function (`.tool.js` + `.tool.maia`). The ONLY place imperative co
 
 **Example:**
 ```javascript
-// create.tool.js
+// db.tool.js - Database operations
 export default {
   async execute(actor, payload) {
-    const { schema, data } = payload;
-    const entity = { id: Date.now().toString(), ...data };
-    actor.context[schema].push(entity);
+    const os = actor.actorEngine.os;
+    return await os.db(payload); // {op: "create", schema: "co_z...", data: {...}}
   }
 };
 ```
@@ -136,10 +139,10 @@ export default {
 A collection of related tools (`.module.js`). Modules register tools with the ToolEngine at boot time.
 
 **Built-in Modules:**
-- `@core/*` - UI utilities (modals, view modes)
-- `@mutation/*` - Generic CRUD (create, update, delete, toggle)
-- `@dragdrop/*` - Drag-and-drop handlers
-- `@context/*` - Context manipulation
+- `db` - Database operations (unified API: `@db`)
+- `core` - UI utilities (modals, focus, preventDefault)
+- `dragdrop` - Drag-and-drop handlers
+- `interface` - Interface validation
 
 ### Module Registry
 Central plugin system for dynamic module loading. Manages module lifecycle and tool registration.
@@ -219,15 +222,16 @@ In MaiaOS, "component" = "actor". Reusable, isolated, self-contained unit with s
 ## Architectural Patterns
 
 ### Schema-Agnostic
-Tools don't know about specific data types. They work with generic `schema` and `data` parameters.
+Database operations don't know about specific data types. They work with generic `schema` (co-ids) and `data` parameters.
 
 **Example:**
 ```javascript
-@mutation/create { schema: "todos", data: {...} }
-@mutation/create { schema: "notes", data: {...} }
+@db { op: "create", schema: "co_z...", data: {...} }
+@db { op: "update", schema: "co_z...", id: "co_z...", data: {...} }
+@db { op: "delete", schema: "co_z...", id: "co_z..." }
 ```
 
-Same tool, different schema. Zero hardcoded domain knowledge.
+Same tool, different schema. Zero hardcoded domain knowledge. All schemas are co-ids (CoJSON IDs).
 
 ### Message Passing
 Actors communicate asynchronously via inboxes and subscriptions. Watermark pattern for processing.

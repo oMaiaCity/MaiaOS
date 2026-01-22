@@ -6,31 +6,27 @@ Creator-facing documentation for building with MaiaOS.
 
 Read the documentation in the following order for a complete understanding:
 
-### 0. [Vibes](./00-vibes.md)
+### 1. [Vibes](./01-vibes.md)
 **Understanding the Vibe System**
 - What are Vibes?
+- **Agent-first development pattern** (ALWAYS create agent service actor first!)
 - Vibe composition and structure
 - Vibe ecosystem
 
-### 1. [Kernel](./01-kernel.md)
+### 2. [Kernel](./02-kernel.md)
 **MaiaOS Kernel Fundamentals**
 - Kernel architecture
 - Core concepts
 - System initialization
 
-### 2. [Actors](./02-actors.md)
+### 3. [Actors](./03-actors.md)
 **Actor-Based Component System**
 - What are Actors?
+- **Agent-first development** (create agent service actor first!)
 - Actor lifecycle
 - Actor composition
-- Actor references and identity
-
-### 3. ~~[Skills](../future/03-skills.md)~~ *(Future Feature - v0.5+)*
-**AI Agent Skills** *(Not yet implemented)*
-- Skill definitions
-- How to create skills
-- Skill composition
-- LLM integration
+- Co-id references and seeding transformation
+- Brand/style separation (`brand` required, `style` optional)
 
 ### 4. [Context](./04-context.md)
 **Context Management**
@@ -53,28 +49,35 @@ Read the documentation in the following order for a complete understanding:
 - Tool composition
 - Custom tools
 
-### 7. [Views](./07-views.md)
+### 7. [Operations](./07_operations.md)
+**Database Operations API**
+- Unified database operations (`maia.db()`)
+- Query, create, update, delete, toggle operations
+- Reactive subscriptions
+- Co-id usage and schema transformation
+
+### 8. [Views](./08-views.md)
 **View System**
 - View structure
 - View composition
 - View-to-DOM rendering
 - Reactive updates
 
-### 8. [Brand](./08-brand.md)
-**Brand System**
-- Brand definitions
-- Brand tokens
-- Brand composition
-- Theme system
+### 9. [Brand](./09-brand.md)
+**Brand System (Shared Design System)**
+- Brand definitions (`brand.style.maia`)
+- Brand tokens (colors, spacing, typography)
+- Brand components (shared UI patterns)
+- **Required** - All actors reference brand via `brand` property
 
-### 9. [Style](./09-style.md)
-**Style System**
-- Style definitions
-- CSS generation
-- Style composition
-- Responsive design
+### 10. [Style](./10-style.md)
+**Style System (Actor-Specific Overrides)**
+- Local style definitions (`{name}.style.maia`)
+- Actor-specific customization
+- **Optional** - Actors can override brand via `style` property
+- StyleEngine merges brand + style (brand first, style overrides)
 
-### 10. [Best Practices](./10-best-practices.md)
+### 11. [Best Practices](./11-best-practices.md)
 **Best Practices and Patterns**
 - Recommended patterns
 - Common pitfalls

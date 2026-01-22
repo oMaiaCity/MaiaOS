@@ -34,45 +34,62 @@ Create a file named `{name}.actor.maia`:
 
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_todo_001",
-  "id": "actor_todo_001",
-  
-  "contextRef": "todo",
-  "stateRef": "todo",
-  "viewRef": "todo",
-  "styleRef": "brand",
-  
-  "inbox": [],
-  "subscriptions": [],
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo",
+  "role": "todo-list",
+  "context": "@context/todo",
+  "state": "@state/todo",
+  "view": "@view/todo",
+  "interface": "@interface/todo",
+  "brand": "@style/brand",
+  "style": "@style/todo",
+  "subscriptions": "@subscriptions/todo",
+  "inbox": "@inbox/todo",
   "inboxWatermark": 0
 }
 ```
 
-**Note:** Context can be defined inline (see below) or in a separate `.context.maia` file using `contextRef` for cleaner organization.
+**Note:** All references (`context`, `view`, `state`, `interface`, `brand`, `style`, `subscriptions`, `inbox`) use schema/instance references (like `@context/todo`) that are transformed to co-ids (`co_z...`) during seeding. The `$schema` and `$id` properties also use schema references.
 
 ### Properties
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `$type` | string | Yes | Always `"actor"` |
-| `$id` | string | Yes | Unique identifier for this definition |
-| `id` | string | Yes | Runtime instance ID |
-| `contextRef` | string | No | References `{name}.context.maia` file (alternative to inline context) |
-| `context` | object | No | Inline initial runtime data (alternative to contextRef) |
-| `stateRef` | string | Yes | References `{name}.state.maia` file |
-| `viewRef` | string | No | References `{name}.view.maia` file (optional for service actors) |
-| `styleRef` | string | No | References `{name}.style.maia` file |
-| `children` | object | No | Map of slot names to child actor IDs (for composite actors) |
-| `interfaceRef` | string | No | References `{name}.interface.maia` file (message contract) |
-| `inbox` | array | No | Message queue (managed at runtime) |
-| `subscriptions` | array | No | Actors to receive messages from |
-| `inboxWatermark` | number | No | Last processed message index |
+| `$schema` | string | Yes | Schema reference (`@schema/actor`) - transformed to co-id during seeding |
+| `$id` | string | Yes | Unique actor identifier (`@actor/todo`) - transformed to co-id during seeding |
+| `role` | string | No | Actor role (e.g., `"agent"`, `"composite"`, `"todo-list"`) |
+| `context` | string | No | Co-id reference to context (`@context/todo`) - transformed during seeding |
+| `state` | string | Yes | Co-id reference to state machine (`@state/todo`) - transformed during seeding |
+| `view` | string | No | Co-id reference to view (`@view/todo`) - optional for service actors |
+| `interface` | string | No | Co-id reference to interface (`@interface/todo`) - message contract |
+| `brand` | string | Yes | Co-id reference to brand style (`@style/brand`) - shared design system |
+| `style` | string | No | Co-id reference to local style (`@style/todo`) - actor-specific overrides |
+| `children` | object | No | Map of slot names to child actor references (`{"composite": "@actor/composite"}`) |
+| `subscriptions` | string | No | Co-id reference to subscriptions colist (`@subscriptions/todo`) |
+| `inbox` | string | No | Co-id reference to inbox costream (`@inbox/todo`) |
+| `inboxWatermark` | number | No | Last processed message timestamp (default: 0) |
 
-**Context Options:**
-- Use `contextRef` to load context from a separate file (recommended for large contexts)
-- Use inline `context` for small, simple actors
-- If both are present, `contextRef` takes precedence
+**Style Properties:**
+- `brand` is **required** - shared design system (tokens, components) used by all actors
+- `style` is **optional** - actor-specific style overrides that merge with brand
+- StyleEngine merges brand + style at runtime (brand first, then style overrides)
+
+## Best Practice: Agent-First Development
+
+**Always create the agent service actor first when building a vibe.**
+
+**Why?**
+- **Clear Architecture** - Agent defines the app's structure
+- **Data First** - Agent handles all data operations
+- **UI Second** - UI actors receive data from agent
+- **Consistent Pattern** - Every vibe follows the same structure
+- **AI-Friendly** - LLMs understand this pattern
+
+**Development Order:**
+1. ✅ **Create agent service actor** (`agent/agent.actor.maia`) - ALWAYS FIRST
+2. ✅ Create vibe manifest (`manifest.vibe.maia`) - References `@actor/agent`
+3. ✅ Create composite actor (`composite/composite.actor.maia`) - First UI actor
+4. ✅ Create UI actors (`list/list.actor.maia`, etc.) - Leaf components
 
 ## Actor Types
 
@@ -89,45 +106,52 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
 - ✅ Handle message routing and business logic
 - ❌ No direct UI rendering (or minimal container view)
 
-**Example: Vibe Service Actor (Default Entry Point)**
+**Example: Agent Service Actor (Default Entry Point - ALWAYS CREATE FIRST)**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_vibe_001",
-  "role": "service",
-  "contextRef": "vibe/vibe",
-  "viewRef": "vibe/vibe",      // ← Minimal view (only renders child)
-  "stateRef": "vibe/vibe",
-  "interfaceRef": "vibe/vibe",
+  "$schema": "@schema/actor",
+  "$id": "@actor/agent",
+  "role": "agent",
+  "context": "@context/agent",
+  "view": "@view/agent",        // ← Minimal view (only renders child)
+  "state": "@state/agent",
+  "interface": "@interface/agent",
+  "brand": "@style/brand",
   "children": {
-    "composite": "actor_composite_001"  // ← Loads first UI actor
+    "composite": "@actor/composite"  // ← Loads first UI actor
   },
-  "subscriptions": [
-    "actor_composite_001",
-    "actor_list_001",
-    "actor_kanban_001"
-  ]
+  "subscriptions": "@subscriptions/agent",
+  "inbox": "@inbox/agent",
+  "inboxWatermark": 0
 }
 ```
 
-**Service Actor View (Minimal):**
+**Best Practice:** Always define the agent service actor first when creating a vibe. This is your app's orchestrator.
+
+**Agent View (Minimal):**
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/agent",
+  "root": {
     "tag": "div",
-    "class": "service-container",
+    "attrs": { "class": "agent-container" },
     "$slot": "$composite"  // ← Only renders child actor
   }
 }
 ```
 
 **Use cases:**
-- **Vibe entry points** (default pattern - every vibe loads a service actor)
+- **Vibe entry points** (default pattern - every vibe loads an agent service actor)
 - Data synchronization services
 - Background workers
 - API coordinators
 - Business logic orchestration
+
+**Why "agent"?**
+- Clear naming: the agent orchestrates everything
+- Consistent pattern: every vibe has `@actor/agent`
+- Best practice: define agent first, then UI actors
 
 ### UI Actors
 
@@ -143,13 +167,17 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
 **Example: List UI Actor**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_list_001",
-  "role": "ui",
-  "viewRef": "list/list",      // ← Full UI view
-  "stateRef": "list/list",
-  "contextRef": "list/list",
-  "subscriptions": ["actor_vibe_001"]  // ← Subscribes to service actor
+  "$schema": "@schema/actor",
+  "$id": "@actor/list",
+  "role": "todo-list",
+  "context": "@context/list",
+  "view": "@view/list",        // ← Full UI view
+  "state": "@state/list",
+  "interface": "@interface/list",
+  "brand": "@style/brand",
+  "subscriptions": "@subscriptions/list",  // ← Subscribes to agent
+  "inbox": "@inbox/list",
+  "inboxWatermark": 0
 }
 ```
 
@@ -168,16 +196,21 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
 **Example: Composite Actor**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_composite_001",
-  "role": "composite-view",
-  "viewRef": "composite/composite",
-  "stateRef": "composite/composite",
+  "$schema": "@schema/actor",
+  "$id": "@actor/composite",
+  "role": "composite",
+  "context": "@context/composite",
+  "view": "@view/composite",
+  "state": "@state/composite",
+  "interface": "@interface/composite",
+  "brand": "@style/brand",
   "children": {
-    "list": "actor_list_001",      // ← Child UI actors
-    "kanban": "actor_kanban_001"
+    "list": "@actor/list",        // ← Child UI actors
+    "kanban": "@actor/kanban"
   },
-  "subscriptions": ["actor_vibe_001"]  // ← Subscribes to service actor
+  "subscriptions": "@subscriptions/composite",  // ← Subscribes to agent
+  "inbox": "@inbox/composite",
+  "inboxWatermark": 0
 }
 ```
 
@@ -215,60 +248,83 @@ Vibe Entry Point
               └── UI Actors (leaf components)
 ```
 
-### Step 1: Vibe Loads Service Actor
+### Step 1: Vibe Loads Agent Service Actor
 
-Every vibe's entry point is a **service actor** that orchestrates the application:
+Every vibe's entry point is an **agent service actor** that orchestrates the application:
 
-**`todos.vibe.maia`:**
+**`manifest.vibe.maia`:**
 ```json
 {
-  "$type": "vibe",
-  "$id": "vibe_todos_001",
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/todos",
   "name": "Todo List",
   "description": "A todo list application",
-  "actor": "./vibe/vibe.actor.maia"  // ← Service actor
+  "actor": "@actor/agent"  // ← Agent service actor (ALWAYS CREATE FIRST)
 }
 ```
 
-### Step 2: Service Actor Loads Composite
+**Best Practice:** Always define the agent service actor first. This is your app's orchestrator.
 
-The service actor loads a **composite actor** as its first child:
+### Step 2: Agent Service Actor Loads Composite
 
-**`vibe.actor.maia` (Service Actor):**
+The agent loads a **composite actor** as its first child:
+
+**`agent/agent.actor.maia` (Agent Service Actor):**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_vibe_001",
-  "role": "service",
-  "viewRef": "vibe/vibe",      // ← Minimal view
-  "stateRef": "vibe/vibe",     // ← Orchestrates queries/mutations
+  "$schema": "@schema/actor",
+  "$id": "@actor/agent",
+  "role": "agent",
+  "context": "@context/agent",
+  "view": "@view/agent",        // ← Minimal view
+  "state": "@state/agent",      // ← Orchestrates queries/mutations
+  "interface": "@interface/agent",
+  "brand": "@style/brand",
   "children": {
-    "composite": "actor_composite_001"  // ← First UI actor
-  }
+    "composite": "@actor/composite"  // ← First UI actor
+  },
+  "subscriptions": "@subscriptions/agent",
+  "inbox": "@inbox/agent",
+  "inboxWatermark": 0
 }
 ```
 
-**Service Actor Responsibilities:**
+**Agent Service Actor Responsibilities:**
 - Orchestrate data queries (send `SUBSCRIBE_TO_TODOS` messages to UI actors)
 - Handle mutations (`CREATE_BUTTON`, `TOGGLE_BUTTON`, `DELETE_BUTTON`)
 - Manage application-level state
 - Coordinate between UI actors via messages
+- Load composite actor as first child
+- Define message contracts via interface
+
+**Why Start with Agent?**
+1. **Clear Architecture** - Agent defines the app's structure
+2. **Data First** - Agent handles all data operations
+3. **UI Second** - UI actors receive data from agent
+4. **Best Practice** - Always define orchestrator before components
 
 ### Step 3: Composite Actor Composes UI Actors
 
 The composite actor provides shared UI structure and slots child UI actors:
 
-**`composite.actor.maia`:**
+**`composite/composite.actor.maia`:**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_composite_001",
-  "role": "composite-view",
-  "viewRef": "composite/composite",
+  "$schema": "@schema/actor",
+  "$id": "@actor/composite",
+  "role": "composite",
+  "context": "@context/composite",
+  "view": "@view/composite",
+  "state": "@state/composite",
+  "interface": "@interface/composite",
+  "brand": "@style/brand",
   "children": {
-    "list": "actor_list_001",      // ← UI actors
-    "kanban": "actor_kanban_001"
-  }
+    "list": "@actor/list",        // ← UI actors
+    "kanban": "@actor/kanban"
+  },
+  "subscriptions": "@subscriptions/composite",
+  "inbox": "@inbox/composite",
+  "inboxWatermark": 0
 }
 ```
 
@@ -282,14 +338,20 @@ The composite actor provides shared UI structure and slots child UI actors:
 
 Leaf UI actors render specific components:
 
-**`list.actor.maia`:**
+**`list/list.actor.maia`:**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_list_001",
-  "role": "ui",
-  "viewRef": "list/list",
-  "stateRef": "list/list"
+  "$schema": "@schema/actor",
+  "$id": "@actor/list",
+  "role": "todo-list",
+  "context": "@context/list",
+  "view": "@view/list",
+  "state": "@state/list",
+  "interface": "@interface/list",
+  "brand": "@style/brand",
+  "subscriptions": "@subscriptions/list",
+  "inbox": "@inbox/list",
+  "inboxWatermark": 0
 }
 ```
 
@@ -360,25 +422,13 @@ The service actor orchestrates all of them via messages, maintaining clean separ
 
 The `context` holds all runtime data for the actor. It can be defined inline in the actor file or in a separate `.context.maia` file:
 
-**Option 1: Inline Context**
-```json
-{
-  "$type": "actor",
-  "id": "actor_todo_001",
-  "stateRef": "todo",
-  "context": {
-    "todos": [],
-    "newTodoText": "",
-    "viewMode": "list"
-  }
-}
-```
+**Separate Context File (Recommended):**
 
-**Option 2: Separate Context File (`todo.context.maia`)**
+**`todo.context.maia`:**
 ```json
 {
-  "$type": "context",
-  "$id": "context_todo_001",
+  "$schema": "@schema/context",
+  "$id": "@context/todo",
   "todos": [],
   "newTodoText": "",
   "viewMode": "list"
@@ -388,12 +438,14 @@ The `context` holds all runtime data for the actor. It can be defined inline in 
 Referenced in actor:
 ```json
 {
-  "$type": "actor",
-  "id": "actor_todo_001",
-  "contextRef": "todo",
-  "stateRef": "todo"
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo",
+  "context": "@context/todo",  // ← Co-id reference (transformed during seeding)
+  "state": "@state/todo"
 }
 ```
+
+**Note:** Context is always in a separate file. The `context` property references it via co-id (`@context/todo`), which gets transformed to an actual co-id (`co_z...`) during seeding.
 
 **Example Context Structure:**
 ```json
@@ -585,17 +637,17 @@ maia/
 **`todo.actor.maia`:**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_todo_001",
-  "id": "actor_todo_001",
-  
-  "contextRef": "todo",
-  "stateRef": "todo",
-  "viewRef": "todo",
-  "styleRef": "brand",
-  
-  "inbox": [],
-  "subscriptions": [],
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo",
+  "role": "todo-list",
+  "context": "@context/todo",
+  "state": "@state/todo",
+  "view": "@view/todo",
+  "interface": "@interface/todo",
+  "brand": "@style/brand",
+  "style": "@style/todo",
+  "subscriptions": "@subscriptions/todo",
+  "inbox": "@inbox/todo",
   "inboxWatermark": 0
 }
 ```
@@ -603,8 +655,8 @@ maia/
 **`todo.context.maia`:**
 ```json
 {
-  "$type": "context",
-  "$id": "context_todo_001",
+  "$schema": "@schema/context",
+  "$id": "@context/todo",
   "todos": [
     {"id": "1", "text": "Learn MaiaOS", "done": true},
     {"id": "2", "text": "Build an app", "done": false}

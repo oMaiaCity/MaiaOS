@@ -68,7 +68,8 @@ const os = await MaiaOS.boot({
 ### Database Module (`db`)
 Unified database operations through a single `@db` tool:
 - All operations use `op` parameter (`create`, `update`, `delete`, `toggle`, `query`, `seed`)
-- Example: `{ tool: "@db", payload: { op: "create", schema: "@schema/todos", data: {...} } }`
+- Example: `{ tool: "@db", payload: { op: "create", schema: "co_z...", data: {...} } }`
+- **Note:** Schema must be a co-id (`co_z...`) - schema references (`@schema/todos`) are transformed to co-ids during seeding
 - Reactive query objects automatically keep data in sync
 - See [State Machines](./05-state.md) for data patterns
 
@@ -114,23 +115,27 @@ const actors = await Promise.all([
 
 ### Loading Vibes (Recommended)
 
-**Vibes** are app manifests that provide marketplace metadata and reference the root actor. This is the recommended way to load applications:
+**Vibes** are app manifests that provide marketplace metadata and reference the agent service actor. This is the recommended way to load applications:
 
 ```javascript
 // Load a vibe (app manifest)
 const { vibe, actor } = await os.loadVibe(
-  './vibes/todos/todos.vibe.maia',
+  './vibes/todos/manifest.vibe.maia',
   document.getElementById('app')
 );
 
 console.log('Loaded vibe:', vibe.name);        // "Todo List"
 console.log('Description:', vibe.description); // App description
-console.log('Actor:', actor);                  // Created actor instance
+console.log('Actor:', actor);                  // Created agent actor instance
 ```
 
 **What's the difference?**
 - `createActor()` - Direct actor creation (low-level)
 - `loadVibe()` - Load app via manifest (recommended, marketplace-ready)
+  - Always loads the agent service actor (`@actor/agent`)
+  - Agent orchestrates the entire application
+
+**Best Practice:** Always create the agent service actor first, then reference it in the vibe manifest.
 
 **Learn more:** See [Vibes](./00-vibes.md) for complete documentation on app manifests.
 

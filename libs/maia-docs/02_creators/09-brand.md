@@ -6,10 +6,11 @@
 
 > Brand is the IDENTITY of your application. It ensures visual consistency across all actors.
 
-- **Brand** defines design tokens (colors, spacing, typography)
+- **Brand** defines design tokens (colors, spacing, typography) and shared component styles
 - **StyleEngine** compiles brand definitions to CSS
-- **Actors** reference brand via `styleRef`
-- **Actors** can also have local styles for customization
+- **Actors** reference brand via `brand` property (required)
+- **Actors** can also have local styles via `style` property (optional) for customization
+- **StyleEngine merges** brand + style at runtime (brand first, style overrides)
 
 ## Brand Definition
 
@@ -17,8 +18,8 @@ Create a file named `brand.style.maia`:
 
 ```json
 {
-  "$type": "style",
-  "$id": "style_brand_001",
+  "$schema": "@schema/style",
+  "$id": "@style/brand",
   
   "tokens": {
     "colors": {
@@ -366,11 +367,12 @@ In your actor definition:
 
 ```json
 {
-  "$type": "actor",
-  "id": "actor_todo_001",
-  "styleRef": "brand",    // ← References brand.style.maia
-  "viewRef": "todo",
-  "stateRef": "todo"
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo",
+  "brand": "@style/brand",  // ← Required: shared design system
+  "style": "@style/todo",   // ← Optional: actor-specific overrides
+  "view": "@view/todo",
+  "state": "@state/todo"
 }
 ```
 
@@ -515,8 +517,8 @@ For conditional styling, use nested `data` syntax in component definitions:
 
 ```json
 {
-  "$type": "style",
-  "$id": "style_brand_001",
+  "$schema": "@schema/style",
+  "$id": "@style/brand",
   
   "tokens": {
     "colors": {

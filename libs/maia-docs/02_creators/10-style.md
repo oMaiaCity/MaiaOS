@@ -31,8 +31,8 @@ Create a file named `{name}.style.maia`:
 
 ```json
 {
-  "$type": "style",
-  "$id": "style_todo_001",
+  "$schema": "@schema/style",
+  "$id": "@style/todo",
   
   "components": {
     "todoItem": {
@@ -78,16 +78,20 @@ In your actor definition:
 
 ```json
 {
-  "$type": "actor",
-  "id": "actor_todo_001",
-  "styleRef": "brand",         // ← Brand foundation
-  "localStyleRef": "todo",     // ← Actor-specific styles (optional)
-  "viewRef": "todo",
-  "stateRef": "todo"
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo",
+  "brand": "@style/brand",  // ← Required: shared design system
+  "style": "@style/todo",   // ← Optional: actor-specific overrides
+  "view": "@view/todo",
+  "state": "@state/todo"
 }
 ```
 
-**Note:** Currently MaiaOS uses `styleRef` for brand. In v0.5, we'll add `localStyleRef` for actor-specific styles. For now, you can combine them in a single style file.
+**Note:** 
+- `brand` is **required** - shared design system (tokens, components) used by all actors
+- `style` is **optional** - actor-specific style overrides that merge with brand
+- StyleEngine merges brand + style at runtime (brand first, style overrides)
+- Both use co-id references (`@style/brand`, `@style/todo`) that are transformed to co-ids during seeding
 
 ## Style Compilation
 
@@ -429,8 +433,8 @@ For conditional styling, use nested `data` syntax in component definitions:
 
 ```json
 {
-  "$type": "style",
-  "$id": "style_todo_001",
+  "$schema": "@schema/style",
+  "$id": "@style/todo",
   
   "components": {
     "todoApp": {

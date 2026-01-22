@@ -91,11 +91,13 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
   "tool": "@db",
   "payload": {
     "op": "create",
-    "schema": "@schema/todos",
+    "schema": "co_z...",
     "data": {"text": "Buy milk", "done": false}
   }
 }
 ```
+
+**Note:** The `schema` field must be a co-id (`co_z...`). Schema references (`@schema/todos`) are transformed to co-ids during seeding. In your source state machine files, you can use schema references, but they get transformed to co-ids before execution.
 
 #### Update Operation
 ```json
@@ -103,8 +105,8 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
   "tool": "@db",
   "payload": {
     "op": "update",
-    "schema": "@schema/todos",
-    "id": "123",
+    "schema": "co_z...",
+    "id": "co_z...",
     "data": {"text": "Buy milk and eggs"}
   }
 }
@@ -116,8 +118,8 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
   "tool": "@db",
   "payload": {
     "op": "delete",
-    "schema": "@schema/todos",
-    "id": "123"
+    "schema": "co_z...",
+    "id": "co_z..."
   }
 }
 ```

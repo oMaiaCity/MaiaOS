@@ -19,8 +19,8 @@ Create a file named `{name}.view.maia`:
 
 ```json
 {
-  "$type": "view",
-  "$id": "view_todo_001",
+  "$schema": "@schema/view",
+  "$id": "@view/todo",
   
   "root": {
     "tag": "div",
@@ -54,6 +54,8 @@ Create a file named `{name}.view.maia`:
   }
 }
 ```
+
+**Note:** `$schema` and `$id` use schema references (`@schema/view`, `@view/todo`) that are transformed to co-ids (`co_z...`) during seeding.
 
 ## Element Structure
 

@@ -30,10 +30,10 @@ Load data, configs, or schemas from the database.
 
 **Load a specific config:**
 ```javascript
-const vibeConfig = await maia.db({
+const actorConfig = await maia.db({
   op: "query",
   schema: "@schema/actor",
-  key: "vibe/vibe"
+  key: "@actor/agent"
 });
 ```
 
@@ -41,7 +41,7 @@ const vibeConfig = await maia.db({
 ```javascript
 const todos = await maia.db({
   op: "query",
-  schema: "@schema/todos"
+  schema: "co_z..."  // Co-id (transformed from @schema/todos during seeding)
 });
 ```
 
@@ -49,10 +49,15 @@ const todos = await maia.db({
 ```javascript
 const incompleteTodos = await maia.db({
   op: "query",
-  schema: "@schema/todos",
+  schema: "co_z...",  // Co-id
   filter: { done: false }
 });
 ```
+
+**Note:** 
+- For configs, use schema references (`@schema/actor`) and instance references (`@actor/agent`)
+- For data collections, use co-ids (`co_z...`) - schema references are transformed to co-ids during seeding
+- In source files, you can use schema references, but they become co-ids at runtime
 
 **Reactive subscription (with callback):**
 ```javascript
@@ -70,10 +75,15 @@ unsubscribe();
 ```
 
 **Parameters:**
-- `schema` (required) - Schema reference (`@schema/actor`, `@schema/todos`, etc.)
-- `key` (optional) - Specific key for configs (e.g., `"vibe/vibe"`)
+- `schema` (required) - Schema reference (`@schema/actor`) for configs, or co-id (`co_z...`) for data collections
+- `key` (optional) - Specific key for configs (e.g., `"@actor/agent"`)
 - `filter` (optional) - Filter criteria object (e.g., `{done: false}`)
 - `callback` (optional) - Function for reactive subscriptions
+
+**Note:** 
+- For configs: Use schema references (`@schema/actor`, `@schema/view`, etc.)
+- For data collections: Use co-ids (`co_z...`) - schema references are transformed to co-ids during seeding
+- In your source files, you can use schema references (`@schema/todos`), but they become co-ids at runtime
 
 **Returns:**
 - Data (if one-time query)
@@ -86,18 +96,18 @@ Create a new record with schema validation.
 ```javascript
 const newTodo = await maia.db({
   op: "create",
-  schema: "@schema/todos",
+  schema: "co_z...",  // Co-id (transformed from @schema/todos during seeding)
   data: {
     text: "Buy groceries",
     done: false
   }
 });
 
-console.log("Created:", newTodo.id); // Auto-generated ID
+console.log("Created:", newTodo.id); // Auto-generated ID (co-id)
 ```
 
 **Parameters:**
-- `schema` (required) - Schema reference (`@schema/todos`, etc.)
+- `schema` (required) - Co-id (`co_z...`) for data collections. Schema references (`@schema/todos`) are transformed to co-ids during seeding
 - `data` (required) - Data object to create
 
 **Returns:**
