@@ -1,6 +1,6 @@
 {
   "$schema": "@schema/state",
-  "$id": "@state/vibe",
+  "$id": "@state/agent",
   "initial": "idle",
   "states": {
     "idle": {

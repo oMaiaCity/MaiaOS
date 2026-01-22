@@ -337,7 +337,7 @@ export class IndexedDBBackend {
               // Store the transformed array (colist CRDT → Array for IndexedDB)
               subscriptionsColists.push({
                 coId: subscriptionsCoId,
-                schema: '@schema/subscriptions-colist',
+                schema: '@schema/subscriptions',
                 data: transformedSubscriptions // Transformed array with co-ids
               });
               
@@ -353,7 +353,7 @@ export class IndexedDBBackend {
               // Store empty array (empty colist CRDT → empty array for IndexedDB)
               subscriptionsColists.push({
                 coId: subscriptionsCoId,
-                schema: '@schema/subscriptions-colist',
+                schema: '@schema/subscriptions',
                 data: [] // Empty native colist (CRDT format)
               });
               
@@ -438,7 +438,7 @@ export class IndexedDBBackend {
                 
                 subscriptionsColists.push({
                   coId: subscriptionsCoId,
-                  schema: '@schema/subscriptions-colist',
+                  schema: '@schema/subscriptions',
                   data: transformedSubscriptions // Transformed array with co-ids
                 });
                 
@@ -453,7 +453,7 @@ export class IndexedDBBackend {
                 
                 subscriptionsColists.push({
                   coId: subscriptionsCoId,
-                  schema: '@schema/subscriptions-colist',
+                  schema: '@schema/subscriptions',
                   data: [] // Empty native colist (CRDT format)
                 });
                 
@@ -472,7 +472,7 @@ export class IndexedDBBackend {
                 
                 inboxCoStreams.push({
                   coId: inboxCoId,
-                  schema: '@schema/inbox-costream',
+                  schema: '@schema/inbox',
                   data: item.inbox // Native costream CRDT data (array format)
                 });
                 
@@ -487,7 +487,7 @@ export class IndexedDBBackend {
                 
                 inboxCoStreams.push({
                   coId: inboxCoId,
-                  schema: '@schema/inbox-costream',
+                  schema: '@schema/inbox',
                   data: [] // Empty native costream (CRDT format)
                 });
                 
@@ -512,7 +512,7 @@ export class IndexedDBBackend {
       for (const [key, value] of Object.entries(configObj)) {
         if (value && typeof value === 'object' && !Array.isArray(value)) {
           // Check if this is a style or brandStyle instance
-          if (value.$schema === '@schema/style' || value.$schema === '@schema/brandStyle' || 
+          if (value.$schema === '@schema/style' || 
               (value.$id && (value.$id.startsWith('@style/') || value.$id.startsWith('@tokens/') || value.$id.startsWith('@components/')))) {
             const styleId = value.$id || key;
             
@@ -1411,7 +1411,7 @@ export class IndexedDBBackend {
   _getStoreName(schema) {
     // Check if it's a config type (used with key parameter for loading configs)
     // Examples: @schema/actor:vibe/vibe, @schema/view:list/list
-    const configTypes = ['actor', 'view', 'style', 'state', 'context', 'interface', 'vibe', 'tool', 'subscriptions-colist', 'inbox'];
+    const configTypes = ['actor', 'view', 'style', 'state', 'context', 'interface', 'vibe', 'tool', 'subscriptions', 'inbox'];
     
     for (const configType of configTypes) {
       // Match pattern: @schema/{configType}:key or contains /{configType}/

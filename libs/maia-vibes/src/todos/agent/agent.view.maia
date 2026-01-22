@@ -1,6 +1,6 @@
 {
   "$schema": "@schema/view",
-  "$id": "@view/vibe",
+  "$id": "@view/agent",
   "tag": "div",
   "class": "service-container",
   "$slot": "$composite"

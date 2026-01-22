@@ -275,9 +275,26 @@ export class MaiaOS {
     
     console.log(`✨ Vibe: "${vibe.name}"`);
     
+    // Resolve actor ID (can be human-readable like @actor/agent or co-id)
+    let actorCoId = vibe.actor; // e.g., "@actor/agent" or "co_z..."
+    
+    // If it's a human-readable ID, resolve it to a co-id
+    if (!actorCoId.startsWith('co_z')) {
+      if (!this.dbEngine) {
+        throw new Error(`[MaiaOS] Cannot resolve human-readable actor ID ${actorCoId} - database engine not available`);
+      }
+      
+      // Resolve via database (handles @actor/name format)
+      const resolvedActor = await this.dbEngine.get('@schema/actor', actorCoId);
+      if (resolvedActor && resolvedActor.$id && resolvedActor.$id.startsWith('co_z')) {
+        actorCoId = resolvedActor.$id;
+      } else {
+        throw new Error(`[MaiaOS] Could not resolve actor ID ${vibe.actor} to a co-id`);
+      }
+    }
+    
     // Load actor config via loadActor (which uses maia.db())
-    const actorPath = vibe.actor; // e.g., "vibe/vibe"
-    const actorConfig = await this.actorEngine.loadActor(actorPath);
+    const actorConfig = await this.actorEngine.loadActor(actorCoId);
     
     // Create root actor
     const actor = await this.actorEngine.createActor(actorConfig, container);

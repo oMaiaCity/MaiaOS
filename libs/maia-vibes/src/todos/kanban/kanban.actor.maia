@@ -7,7 +7,6 @@
   "state": "@state/kanban",
   "interface": "@interface/kanban",
   "brand": "@style/brand",
-  "style": "@style/todo",
   "subscriptions": "@subscriptions/kanban",
   "inbox": "@inbox/kanban",
   "inboxWatermark": 0

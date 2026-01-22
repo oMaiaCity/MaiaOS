@@ -1,5 +1,5 @@
 {
   "$schema": "@schema/context",
-  "$id": "@context/vibe",
+  "$id": "@context/agent",
   "composite": "@composite"
 }

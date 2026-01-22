@@ -1,0 +1,16 @@
+{
+  "$schema": "@schema/actor",
+  "$id": "@actor/agent",
+  "role": "agent",
+  "context": "@context/agent",
+  "view": "@view/agent",
+  "state": "@state/agent",
+  "interface": "@interface/agent",
+  "brand": "@style/brand",
+  "children": {
+    "composite": "@actor/composite"
+  },
+  "subscriptions": "@subscriptions/agent",
+  "inbox": "@inbox/agent",
+  "inboxWatermark": 0
+}

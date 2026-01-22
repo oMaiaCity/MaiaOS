@@ -235,12 +235,12 @@ export function transformInstanceForSeeding(instance, coIdMap) {
   // Note: subscriptions and inbox are now in separate .maia files (already clean at definition level)
   // No legacy extraction/transformation logic needed
 
-  // Transform items array for subscriptions-colist and inbox
+  // Transform items array for subscriptions and inbox
   // These are separate CoValue files with items arrays containing actor/message references
   if (transformed.items && Array.isArray(transformed.items)) {
     const schema = transformed.$schema;
-    // Check if this is a subscriptions-colist or inbox
-    if (schema && (schema.includes('subscriptions-colist') || schema.includes('inbox'))) {
+    // Check if this is a subscriptions or inbox
+    if (schema && (schema.includes('subscriptions') || schema.includes('inbox'))) {
       transformed.items = transformed.items.map(ref => {
         if (typeof ref === 'string' && !ref.startsWith('co_z')) {
           // Must be @actor/ or @message/ format

@@ -71,7 +71,7 @@ export async function getValidationEngine(schemaResolver = null) {
       
       // Get all loaded schemas (unique by $id to avoid duplicates)
       const schemaTypes = [
-        'actor', 'context', 'state', 'view', 'style', 'brandStyle',
+        'actor', 'context', 'state', 'view', 'style', 'brand',
         'brand.style', 'actor.style', 'interface', 'actor.interface',
         'tool', 'skill', 'vibe', 'message', 'common'
       ];

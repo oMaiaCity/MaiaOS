@@ -1,5 +1,5 @@
 {
-  "$schema": "@schema/brandStyle",
+  "$schema": "@schema/style",
   "$id": "@style/brand",
   "tokens": {
     "colors": {

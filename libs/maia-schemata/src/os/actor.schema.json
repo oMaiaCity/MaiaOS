@@ -36,8 +36,8 @@
       "description": "Co-id reference to interface definition"
     },
     "brand": {
-      "$co": "@schema/brandStyle",
-      "description": "Co-id reference to brand style definition"
+      "$co": "@schema/style",
+      "description": "Co-id reference to brand style definition (uses style schema)"
     },
     "style": {
       "$co": "@schema/style",
@@ -51,7 +51,7 @@
       }
     },
     "subscriptions": {
-      "$co": "@schema/subscriptions-colist",
+      "$co": "@schema/subscriptions",
       "description": "Co-id reference to subscriptions colist (list of actor co-ids to receive messages from)"
     },
     "inbox": {

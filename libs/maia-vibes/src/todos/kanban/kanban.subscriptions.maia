@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/subscriptions-colist",
+  "$schema": "@schema/subscriptions",
   "$id": "@subscriptions/kanban",
   "items": [
-    "@actor/vibe"
+    "@actor/agent"
   ]
 }

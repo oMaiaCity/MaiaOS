@@ -59,9 +59,9 @@ export class StyleEngine {
     if (!styleDef.$schema) {
       throw new Error(`Style definition missing required $schema field`);
     }
-    const type = styleDef.$schema.includes('brandStyle') || 
-                 styleDef.$schema.includes('@schema/brandStyle')
-                 ? 'brandStyle' : 'style';
+    // Brand and style now use the same schema (@schema/style)
+    // Brand styles typically have selectors, actor styles are overrides
+    const type = 'style';
     
     // Load schema from IndexedDB and validate on-the-fly
     const schema = await loadSchemaFromDB(this.dbEngine, type);

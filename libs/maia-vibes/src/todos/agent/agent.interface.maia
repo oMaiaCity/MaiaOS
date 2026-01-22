@@ -1,6 +1,6 @@
 {
   "$schema": "@schema/interface",
-  "$id": "@interface/vibe",
+  "$id": "@interface/agent",
   "inbox": {
     "CREATE_BUTTON": {
       "payload": { "text": "string" }

@@ -47,31 +47,26 @@ export class ValidationEngine {
     this.ajvPromise = (async () => {
       let Ajv;
       
-      // Try to use import in Node/Bun environment
-      if (typeof window === 'undefined') {
+      // Try to use local import first (works in both Node/Bun and browser via bundler)
+      try {
+        // For draft-2020-12, use Ajv2020 class
+        const ajvModule = await import('ajv/dist/2020.js');
+        Ajv = ajvModule.default || ajvModule.Ajv2020 || ajvModule;
+      } catch (e) {
+        // Fallback to regular Ajv
         try {
-          // For draft-2020-12, use Ajv2020 class
-          const ajvModule = await import('ajv/dist/2020.js');
-          Ajv = ajvModule.default || ajvModule.Ajv2020 || ajvModule;
-        } catch (e) {
-          // Fallback to regular Ajv
+          Ajv = (await import('ajv')).default;
+        } catch (e2) {
+          // Last resort: CDN fallback (only if local import fails)
+          // Note: This may cause source map warnings in browser console
           try {
-            Ajv = (await import('ajv')).default;
-          } catch (e2) {
-            // Fallback to CDN if import fails
             const ajvModule = await import('https://esm.sh/ajv@8.12.0/dist/2020.js');
+            Ajv = ajvModule.default || ajvModule.Ajv2020 || ajvModule;
+          } catch (e3) {
+            // Final fallback to regular Ajv from CDN
+            const ajvModule = await import('https://esm.sh/ajv@8.12.0');
             Ajv = ajvModule.default || ajvModule;
           }
-        }
-      } else {
-        // Browser: try Ajv2020 first (for draft-2020-12 support)
-        try {
-          const ajvModule = await import('https://esm.sh/ajv@8.12.0/dist/2020.js');
-          Ajv = ajvModule.default || ajvModule.Ajv2020 || ajvModule;
-        } catch (e) {
-          // Fallback to regular Ajv
-          const ajvModule = await import('https://esm.sh/ajv@8.12.0');
-          Ajv = ajvModule.default || ajvModule;
         }
       }
 

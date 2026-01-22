@@ -54,7 +54,7 @@
         });
         
         // Load Todo Vibe (app manifest)
-        const { vibe, actor: todoActor } = await os.loadVibe('./todos.vibe.maia', document.getElementById('actor-todo'));
+        const { vibe, actor: todoActor } = await os.loadVibe('./manifest.vibe.maia', document.getElementById('actor-todo'));
         
         console.log('✅ Vibe loaded:', vibe.name);
         console.log('✅ Todo Actor with State Machine:', todoActor.machine?.currentState);

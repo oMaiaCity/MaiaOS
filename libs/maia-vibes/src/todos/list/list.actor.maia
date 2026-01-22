@@ -7,7 +7,6 @@
   "state": "@state/list",
   "interface": "@interface/list",
   "brand": "@style/brand",
-  "style": "@style/todo",
   "subscriptions": "@subscriptions/list",
   "inbox": "@inbox/list",
   "inboxWatermark": 0

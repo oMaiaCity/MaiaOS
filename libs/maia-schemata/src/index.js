@@ -22,7 +22,6 @@ import contextSchema from './os/context.schema.json';
 import stateSchema from './os/state.schema.json';
 import viewSchema from './os/view.schema.json';
 import styleSchema from './os/style.schema.json';
-import brandStyleSchema from './os/brandStyle.schema.json';
 import interfaceSchema from './os/interface.schema.json';
 import toolSchema from './os/tool.schema.json';
 import vibeSchema from './os/vibe.schema.json';
@@ -33,7 +32,7 @@ import actionSchema from './os/action.schema.json';
 import transitionSchema from './os/transition.schema.json';
 import messagePayloadSchema from './os/messagePayload.schema.json';
 // Import CoValue schemas
-import subscriptionsColistSchema from './os/subscriptions-colist.schema.json';
+import subscriptionsSchema from './os/subscriptions.schema.json';
 import inboxSchema from './os/inbox.schema.json';
 // Import data schemas
 import todosDataSchema from './data/todos.schema.json';
@@ -45,8 +44,8 @@ const SCHEMAS = {
   state: stateSchema,
   view: viewSchema,
   style: styleSchema,
-  brandStyle: brandStyleSchema,
-  'brand.style': brandStyleSchema,
+  brand: styleSchema,
+  'brand.style': styleSchema,
   'actor.style': styleSchema,
   interface: interfaceSchema,
   'actor.interface': interfaceSchema,
@@ -59,7 +58,7 @@ const SCHEMAS = {
   transition: transitionSchema,
   messagePayload: messagePayloadSchema,
   // CoValue schemas (separate CoValues referenced via $co)
-  'subscriptions-colist': subscriptionsColistSchema,
+  subscriptions: subscriptionsSchema,
   inbox: inboxSchema
 };
 
@@ -122,7 +121,7 @@ export const SCHEMA_TYPES = {
   state: 'state',
   view: 'view',
   style: 'style',
-  'brand.style': 'brandStyle',
+  'brand.style': 'brand',
   'actor.style': 'style',
   'actor.interface': 'interface',
   tool: 'tool',

@@ -213,7 +213,7 @@ export class ActorEngine {
     if (actorConfig.subscriptions) {
       const subscriptionsColist = await this.dbEngine.execute({
         op: 'query',
-        schema: '@schema/subscriptions-colist',
+        schema: '@schema/subscriptions',
         key: actorConfig.subscriptions
       });
       if (subscriptionsColist && Array.isArray(subscriptionsColist.items)) {
