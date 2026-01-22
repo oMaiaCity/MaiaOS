@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-01-22T21:44:08.972Z
+**Auto-generated:** 2026-01-22T21:50:08.641Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -917,7 +917,7 @@ MaiaOS/
 │   ├── maia-db/                # CoJSON layer (CRDT operations)
 │   ├── maia-schemata/          # Schema validation
 │   ├── maia-vibes/             # Example vibes/apps
-│   ├── maia-ssi/               # Self-sovereign identity
+│   ├── maia-self/              # Self-sovereign identity
 │   ├── maia-voice/             # Voice integration
 │   └── maia-brand/             # Branding/assets
 └── services/                   # Application services

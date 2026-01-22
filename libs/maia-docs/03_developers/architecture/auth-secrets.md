@@ -252,7 +252,7 @@ This document explains how we achieve this using cojson's primitives.
 
 ### Implementation: Actual Code
 
-#### Registration (libs/maia-ssi/src/oSSI.js)
+#### Registration (libs/maia-self/src/oSSI.js)
 
 ```javascript
 export async function signUpWithPasskey({ name = "maia", salt = "maia.city" }) {
@@ -297,7 +297,7 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" }) {
 }
 ```
 
-#### Login (libs/maia-ssi/src/oSSI.js)
+#### Login (libs/maia-self/src/oSSI.js)
 
 ```javascript
 export async function signInWithPasskey({ salt = "maia.city" }) {
@@ -366,7 +366,7 @@ export async function signInWithPasskey({ salt = "maia.city" }) {
 We use **IndexedDB** for local caching and **Jazz Cloud** for cross-device sync.
 
 ```javascript
-// libs/maia-ssi/src/storage.js
+// libs/maia-self/src/storage.js
 import { getIndexedDBStorage } from "cojson-storage-indexeddb";
 
 export async function getStorage() {
@@ -815,11 +815,11 @@ const accountID = idforHeader(header, crypto); // Pure function!
 ### 4. Implementation Files
 
 **Core Authentication:**
-- `libs/maia-ssi/src/oSSI.js` - Sign up & sign in logic
-- `libs/maia-ssi/src/prf-evaluator.js` - WebAuthn PRF interface
-- `libs/maia-ssi/src/feature-detection.js` - Strict PRF requirement
-- `libs/maia-ssi/src/storage.js` - IndexedDB helper (for CoValue data)
-- `libs/maia-ssi/src/utils.js` - Encoding/validation utilities
+- `libs/maia-self/src/oSSI.js` - Sign up & sign in logic
+- `libs/maia-self/src/prf-evaluator.js` - WebAuthn PRF interface
+- `libs/maia-self/src/feature-detection.js` - Strict PRF requirement
+- `libs/maia-self/src/storage.js` - IndexedDB helper (for CoValue data)
+- `libs/maia-self/src/utils.js` - Encoding/validation utilities
 
 **Integration:**
 - `libs/maia-core/src/o.js` - MaiaOS kernel (exposes auth API)
@@ -845,12 +845,12 @@ const accountID = idforHeader(header, crypto); // Pure function!
 - `libs/maia-db/node_modules/cojson/src/ids.ts` - `rawCoIDtoBytes`, `rawCoIDfromBytes`
 
 ### MaiaOS Implementation
-- `libs/maia-ssi/src/oSSI.js` - **Main authentication logic**
-- `libs/maia-ssi/src/prf-evaluator.js` - WebAuthn PRF interface
-- `libs/maia-ssi/src/feature-detection.js` - Strict PRF requirement enforcement
-- `libs/maia-ssi/src/storage.js` - IndexedDB helper (CoValue data only)
-- `libs/maia-ssi/src/utils.js` - Encoding, validation, byte manipulation
-- `libs/maia-core/src/o.js` - MaiaOS kernel (auth API integration)
+- `libs/maia-self/src/oSSI.js` - **Main authentication logic**
+- `libs/maia-self/src/prf-evaluator.js` - WebAuthn PRF interface
+- `libs/maia-self/src/feature-detection.js` - Strict PRF requirement enforcement
+- `libs/maia-self/src/storage.js` - IndexedDB helper (CoValue data only)
+- `libs/maia-self/src/utils.js` - Encoding, validation, byte manipulation
+- `libs/maia-kernel/src/auth.js` - MaiaOS kernel (auth API integration)
 - `services/maia-city/main.js` - Inspector UI (sign in/register)
 
 ### External Dependencies

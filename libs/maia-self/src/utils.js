@@ -1,5 +1,5 @@
 /**
- * Utility functions for maia-ssi
+ * Utility functions for maia-self
  */
 
 /**

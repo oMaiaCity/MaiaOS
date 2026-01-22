@@ -8,4 +8,4 @@ export {
 	isPRFSupported,
 	subscribeSyncState, // NEW: Sync state observable
 	// NO LOCALSTORAGE: Removed signOut, isSignedIn, getCurrentAccount, inspectStorage
-} from "@MaiaOS/ssi";
+} from "@MaiaOS/self";

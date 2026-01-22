@@ -462,7 +462,7 @@ async function init() {
 
 - [WebAuthn PRF Extension](https://www.w3.org/TR/webauthn-3/#prf-extension)
 - [Passkey Best Practices](https://developers.google.com/identity/passkeys)
-- [Security Guarantees](../../../libs/maia-ssi/SECURITY.md)
+- [Security Guarantees](../../../libs/maia-self/SECURITY.md)
 
 ## See Also
 

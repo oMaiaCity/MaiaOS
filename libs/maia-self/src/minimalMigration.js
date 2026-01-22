@@ -8,7 +8,7 @@
  * which reuses this same group.
  */
 
-// Import from maia-db (relative path since we're in maia-ssi)
+// Import from maia-db (relative path since we're in maia-self)
 import { createSchemaMeta } from "@MaiaOS/db";
 
 /**

@@ -1397,7 +1397,7 @@ User Authenticated
 
 ### Implementation Files
 
-**Core Authentication (`libs/maia-ssi/`):**
+**Core Authentication (`libs/maia-self/`):**
 - `src/oSSI.js` - Main: signUpWithPasskey(), signInWithPasskey()
 - `src/prf-evaluator.js` - WebAuthn PRF interface
 - `src/feature-detection.js` - Strict PRF requirement enforcement
@@ -1483,12 +1483,12 @@ User Authenticated
 ### MaiaOS Implementation
 
 **Core Authentication:**
-- `libs/maia-ssi/src/oSSI.js` - Registration & login logic with deterministic accountID
-- `libs/maia-ssi/src/prf-evaluator.js` - WebAuthn PRF interface
-- `libs/maia-ssi/src/feature-detection.js` - Strict PRF requirement enforcement
-- `libs/maia-ssi/src/storage.js` - IndexedDB helper (CoValue data only)
-- `libs/maia-ssi/src/utils.js` - Byte encoding, validation utilities
-- `libs/maia-core/src/o.js` - MaiaOS kernel (auth API integration)
+- `libs/maia-self/src/oSSI.js` - Registration & login logic with deterministic accountID
+- `libs/maia-self/src/prf-evaluator.js` - WebAuthn PRF interface
+- `libs/maia-self/src/feature-detection.js` - Strict PRF requirement enforcement
+- `libs/maia-self/src/storage.js` - IndexedDB helper (CoValue data only)
+- `libs/maia-self/src/utils.js` - Byte encoding, validation utilities
+- `libs/maia-kernel/src/auth.js` - MaiaOS kernel (auth API integration)
 - `services/maia-city/main.js` - Inspector UI (sign in/register flow)
 
 **Related Documentation:**

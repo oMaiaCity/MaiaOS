@@ -1,5 +1,5 @@
 /**
- * @MaiaOS/ssi - Self-Sovereign Identity via WebAuthn PRF
+ * @MaiaOS/self - Self-Sovereign Identity via WebAuthn PRF
  * 
  * STRICT: PRF required, no fallbacks
  */

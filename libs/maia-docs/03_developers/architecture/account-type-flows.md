@@ -179,7 +179,7 @@ Step 4: Cleanup
 ### Code Example (Upgrade)
 
 ```javascript
-import { upgradeVisitorToTraveler } from '@MaiaOS/ssi';
+import { upgradeVisitorToTraveler } from '@MaiaOS/self';
 
 // Get current Visitor account
 const visitor = await loadVisitorAccount();
@@ -252,7 +252,7 @@ Step 3: Sign In as Traveler
 ### Code Example (Discard)
 
 ```javascript
-import { signInAsTraveler, getAccountState } from '@MaiaOS/ssi';
+import { signInAsTraveler, getAccountState } from '@MaiaOS/self';
 
 // Check if Visitor exists
 const accountState = getAccountState();

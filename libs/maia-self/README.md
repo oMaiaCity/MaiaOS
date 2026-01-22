@@ -1,4 +1,4 @@
-# @MaiaOS/ssi
+# @MaiaOS/self
 
 Self-Sovereign Identity (SSI) via WebAuthn PRF for MaiaOS.
 
@@ -35,7 +35,7 @@ This package provides passkey-based authentication with deterministic account de
 ## Installation
 
 ```bash
-bun add @MaiaOS/ssi
+bun add @MaiaOS/self
 ```
 
 ## Setup
@@ -59,7 +59,7 @@ Get your API key from: https://jazz.tools/cloud
 ### Sign Up (Create New Account)
 
 ```javascript
-import { signUpWithPasskey } from '@MaiaOS/ssi';
+import { signUpWithPasskey } from '@MaiaOS/self';
 
 const { accountID, agentSecret, node, account } = await signUpWithPasskey({
   name: "maia",
@@ -75,7 +75,7 @@ const { accountID, agentSecret, node, account } = await signUpWithPasskey({
 ### Sign In (Use Existing Passkey)
 
 ```javascript
-import { signInWithPasskey } from '@MaiaOS/ssi';
+import { signInWithPasskey } from '@MaiaOS/self';
 
 const { accountID, agentSecret, node, account } = await signInWithPasskey({
   salt: "maia.city"
@@ -89,7 +89,7 @@ const { accountID, agentSecret, node, account } = await signInWithPasskey({
 ### Sync Status Monitoring
 
 ```javascript
-import { subscribeSyncState } from '@MaiaOS/ssi';
+import { subscribeSyncState } from '@MaiaOS/self';
 
 const unsubscribe = subscribeSyncState((state) => {
   console.log("Sync status:", state);
@@ -103,7 +103,7 @@ unsubscribe();
 ### Feature Detection
 
 ```javascript
-import { isPRFSupported } from '@MaiaOS/ssi';
+import { isPRFSupported } from '@MaiaOS/self';
 
 try {
   await isPRFSupported();
@@ -260,8 +260,8 @@ Strictly require PRF support (throws on unsupported browsers).
 
 ```javascript
 // In your app initialization
-import { signInWithPasskey, signUpWithPasskey, subscribeSyncState } from '@MaiaOS/ssi';
-import { createMaiaOS } from '@MaiaOS/core';
+import { signInWithPasskey, signUpWithPasskey, subscribeSyncState } from '@MaiaOS/self';
+import { createMaiaOS } from '@MaiaOS/kernel';
 
 async function init() {
   // Check PRF support first

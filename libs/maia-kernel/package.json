@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@MaiaOS/db": "workspace:*",
-    "@MaiaOS/ssi": "workspace:*",
+    "@MaiaOS/self": "workspace:*",
     "@MaiaOS/script": "workspace:*",
     "@MaiaOS/schemata": "workspace:*"
   }

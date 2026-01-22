@@ -359,7 +359,7 @@ async function defaultMigration(account, node) {
 ### Our Custom Migration
 
 ```javascript
-// In libs/maia-ssi/src/minimalMigration.js
+// In libs/maia-self/src/minimalMigration.js
 export async function minimalMigration(account, node, creationProps) {
   const profileGroup = node.createGroup();
   

@@ -1,5 +1,5 @@
 {
-  "name": "@MaiaOS/ssi",
+  "name": "@MaiaOS/self",
   "version": "0.1.23",
   "type": "module",
   "main": "./src/index.js",

@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Developers
 
-**Auto-generated:** 2026-01-22T21:44:08.975Z
+**Auto-generated:** 2026-01-22T21:50:08.642Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -917,7 +917,7 @@ MaiaOS/
 │   ├── maia-db/                # CoJSON layer (CRDT operations)
 │   ├── maia-schemata/          # Schema validation
 │   ├── maia-vibes/             # Example vibes/apps
-│   ├── maia-ssi/               # Self-sovereign identity
+│   ├── maia-self/              # Self-sovereign identity
 │   ├── maia-voice/             # Voice integration
 │   └── maia-brand/             # Branding/assets
 └── services/                   # Application services
@@ -8161,7 +8161,7 @@ async function init() {
 
 - [WebAuthn PRF Extension](https://www.w3.org/TR/webauthn-3/#prf-extension)
 - [Passkey Best Practices](https://developers.google.com/identity/passkeys)
-- [Security Guarantees](../../../libs/maia-ssi/SECURITY.md)
+- [Security Guarantees](../../../libs/maia-self/SECURITY.md)
 
 ## See Also
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-`@MaiaOS/ssi` provides passkey-based authentication with **zero secret storage**. All cryptographic secrets are derived on-demand from the passkey and **never** written to persistent storage.
+`@MaiaOS/self` provides passkey-based authentication with **zero secret storage**. All cryptographic secrets are derived on-demand from the passkey and **never** written to persistent storage.
 
 ## What's Stored in localStorage
 
@@ -100,7 +100,7 @@ if (!data.accountID || !data.credentialId || !data.salt) {
 Debug utility to inspect storage contents:
 
 ```javascript
-import { inspectStorage } from '@MaiaOS/ssi';
+import { inspectStorage } from '@MaiaOS/self';
 
 const report = inspectStorage();
 // Returns: { hasAccount, accountID, credentialId, salt, securityCheck, warnings }

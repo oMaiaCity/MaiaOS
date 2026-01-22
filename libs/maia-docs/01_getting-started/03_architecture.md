@@ -386,7 +386,7 @@ MaiaOS/
 │   ├── maia-db/                # CoJSON layer (CRDT operations)
 │   ├── maia-schemata/          # Schema validation
 │   ├── maia-vibes/             # Example vibes/apps
-│   ├── maia-ssi/               # Self-sovereign identity
+│   ├── maia-self/              # Self-sovereign identity
 │   ├── maia-voice/             # Voice integration
 │   └── maia-brand/             # Branding/assets
 └── services/                   # Application services

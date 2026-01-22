@@ -1,9 +1,9 @@
-import { signInWithPasskey, isPRFSupported } from "@MaiaOS/ssi";
+import { signInWithPasskey, isPRFSupported } from "@MaiaOS/self";
 
 /**
  * MaiaOS Kernel - Unified 'o' object
  * 
- * STRICT: Account creation handled by @MaiaOS/ssi
+ * STRICT: Account creation handled by @MaiaOS/self
  * No manual account creation, passkey authentication required
  */
 export async function createMaiaOS(options = {}) {
