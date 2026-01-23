@@ -188,14 +188,27 @@ export async function subscribeConfigsBatch(dbEngine, requests) {
     throw new Error(`[subscribeConfigsBatch] Database engine not available`);
   }
   
-  // Batch get all configs in a single transaction (all configs are in the same 'configs' store)
+  // Batch read all configs using unified read() operation with keys parameter
   // Collect all co-ids regardless of schema
   const allCoIds = requests.map(req => req.coId);
-  // Use first request's schemaRef for getBatch (not used by getBatch, but required for validation)
+  // Use first request's schemaRef for read() (not used for batch reads, but required for validation)
   // All configs are in the same 'configs' store, so schema doesn't matter for batching
-  const configsMap = allCoIds.length > 0 
-    ? await dbEngine.backend.getBatch(requests[0].schemaRef, allCoIds)
-    : new Map();
+  // read() with keys returns array of ReactiveStores - map them back to co-ids
+  const batchStores = allCoIds.length > 0 
+    ? await dbEngine.execute({
+        op: 'read',
+        schema: requests[0].schemaRef,
+        keys: allCoIds
+      })
+    : [];
+  
+  // Create a Map from co-ids to stores for easy lookup
+  const configsMap = new Map();
+  allCoIds.forEach((coId, index) => {
+    if (batchStores[index]) {
+      configsMap.set(coId, batchStores[index].value);
+    }
+  });
   
   // Helper to validate and cache config
   const validateAndCache = async (config, configType, coId, cache) => {

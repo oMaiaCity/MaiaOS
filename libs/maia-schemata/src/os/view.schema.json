@@ -12,7 +12,12 @@
     },
     "$id": {
       "type": "string",
-      "description": "Unique view identifier (co-id)",
+      "description": "View identifier (co-id)",
+      "pattern": "^co_z[a-zA-Z0-9]+$"
+    },
+    "id": {
+      "type": "string",
+      "description": "View identifier (co-id) - added by IndexedDB backend for frontend access",
       "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "tag": {

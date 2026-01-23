@@ -10,11 +10,6 @@
       "description": "Schema reference",
       "pattern": "^co_z[a-zA-Z0-9]+$"
     },
-    "$id": {
-      "type": "string",
-      "description": "Unique interface identifier (co-id)",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
-    },
     "inbox": {
       "type": "object",
       "description": "Incoming message definitions",

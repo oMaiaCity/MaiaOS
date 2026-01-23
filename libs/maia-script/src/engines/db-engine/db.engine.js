@@ -8,19 +8,15 @@
    * Operations:
    * - read: Load configs/schemas/data (always returns reactive store)
    * - create: Create new records
-   * - update: Update existing records (data collections)
-   * - updateConfig: Update actor configs (system properties)
+   * - update: Update existing records (unified for data collections and configs)
    * - delete: Delete records
-   * - toggle: Toggle boolean field
    * - seed: Flush + seed (dev only)
    */
 
 import { ReadOperation } from './operations/read.js';
 import { CreateOperation } from './operations/create.js';
 import { UpdateOperation } from './operations/update.js';
-import { UpdateConfigOperation } from './operations/update-config.js';
 import { DeleteOperation } from './operations/delete.js';
-import { ToggleOperation } from './operations/toggle.js';
 import { SeedOperation } from './operations/seed.js';
 
 export class DBEngine {
@@ -31,10 +27,8 @@ export class DBEngine {
     this.operations = {
       read: new ReadOperation(this.backend),  // Unified reactive read operation
       create: new CreateOperation(this.backend, this),
-      update: new UpdateOperation(this.backend, this),
-      updateConfig: new UpdateConfigOperation(this.backend),
+      update: new UpdateOperation(this.backend, this),  // Unified for data + configs
       delete: new DeleteOperation(this.backend),
-      toggle: new ToggleOperation(this.backend),
       seed: new SeedOperation(this.backend)
     };
     
@@ -51,7 +45,7 @@ export class DBEngine {
     const { op, ...params } = payload;
     
     if (!op) {
-      throw new Error('[DBEngine] Operation required: {op: "read|create|update|updateConfig|delete|seed"}');
+      throw new Error('[DBEngine] Operation required: {op: "read|create|update|delete|seed"}');
     }
     
     const operation = this.operations[op];

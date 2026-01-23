@@ -22,7 +22,7 @@
           "$on": {
             "click": {
               "send": "TOGGLE_BUTTON",
-              "payload": { "id": "$$id" }
+              "payload": { "id": "$$id", "done": "$$done" }
             }
           }
         },

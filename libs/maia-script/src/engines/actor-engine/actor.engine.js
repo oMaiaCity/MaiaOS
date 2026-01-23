@@ -266,7 +266,10 @@ export class ActorEngine {
       try {
         const results = await subscribeConfigsBatch(this.dbEngine, messageSubscriptionRequests);
         results.forEach(({ unsubscribe }) => {
-          actor._configSubscriptions.push(unsubscribe);
+          if (!actor._subscriptions) {
+            actor._subscriptions = [];
+          }
+          actor._subscriptions.push(unsubscribe);
         });
       } catch (error) {
         console.error(`[ActorEngine] ❌ Batch subscription failed for ${actorId}:`, error);
@@ -361,15 +364,17 @@ export class ActorEngine {
         const childActorConfig = await this.loadActor(childCoId);
         
         // Ensure child actor ID matches expected ID (for consistency)
-        if (childActorConfig.$id !== childCoId) {
-          console.warn(`[ActorEngine] Child actor ID mismatch: expected ${childCoId}, got ${childActorConfig.$id}`);
+        // Use $id if present, otherwise fall back to id (added by IndexedDB normalization)
+        const childActorConfigId = childActorConfig.$id || childActorConfig.id;
+        if (childActorConfigId !== childCoId) {
+          console.warn(`[ActorEngine] Child actor ID mismatch: expected ${childCoId}, got ${childActorConfigId}`);
           childActorConfig.$id = childCoId; // Use expected co-id
         }
         
         // Create container for child actor (NOT attached to DOM yet - ViewEngine will handle attachment)
         const childContainer = document.createElement('div');
         childContainer.dataset.namekey = namekey;
-        childContainer.dataset.childActorId = childActorId;
+        childContainer.dataset.childActorId = childCoId; // Use co-id, not config id
         
         // Create child actor recursively
         const childActor = await this.createActor(childActorConfig, childContainer);
@@ -381,12 +386,15 @@ export class ActorEngine {
         actor.children[namekey] = childActor;
         
         // Auto-subscribe parent to child (if not already subscribed)
-        if (!actor.subscriptions.includes(childActorId)) {
-          actor.subscriptions.push(childActorId);
+        // Use childCoId (the actual co-id) for subscriptions, not the config id
+        if (!actor.subscriptions.includes(childCoId)) {
+          actor.subscriptions.push(childCoId);
         }
         
       } catch (error) {
-        console.error(`Failed to create child actor ${childActorId} (namekey: ${namekey}):`, error);
+        // Use childCoId if available, otherwise fall back to childActorId from loop
+        const errorActorId = childCoId || childActorId;
+        console.error(`Failed to create child actor ${errorActorId} (namekey: ${namekey}):`, error);
       }
     }
   }
@@ -399,7 +407,8 @@ export class ActorEngine {
    * @param {HTMLElement} containerElement - The container to attach to
    */
   async createActor(actorConfig, containerElement) {
-    const actorId = actorConfig.$id;
+    // Use $id if present, otherwise fall back to id (added by IndexedDB normalization)
+    const actorId = actorConfig.$id || actorConfig.id;
     
     // Create shadow root
     const shadowRoot = containerElement.attachShadow({ mode: 'open' });
@@ -423,11 +432,8 @@ export class ActorEngine {
       inbox: inbox,
       subscriptions: subscriptions,
       inboxWatermark: actorConfig.inboxWatermark || 0,
-      // v0.5: Subscriptions managed by SubscriptionEngine
-      _subscriptions: [], // Per-actor subscriptions (unsubscribe functions)
-      
-      // Store config subscriptions (for config CRDT reactivity)
-      _configSubscriptions: [],
+      // v0.5: Subscriptions managed by SubscriptionEngine (unified for data and configs)
+      _subscriptions: [], // Per-actor subscriptions (unsubscribe functions) - unified for data + configs
       // Track if initial render has completed (for query subscription re-render logic)
       _initialRenderComplete: false,
       // Track visibility (for re-render optimization)
@@ -911,9 +917,9 @@ export class ActorEngine {
         return;
       }
 
-      // Update actor config with new watermark
+      // Update actor config with new watermark (using unified update operation)
       await this.dbEngine.execute({
-        op: 'updateConfig',
+        op: 'update',
         schema: actorSchemaCoId,
         id: actorId,
         data: { inboxWatermark: watermark }

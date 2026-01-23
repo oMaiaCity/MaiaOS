@@ -65,10 +65,14 @@
       "entry": {
         "tool": "@db",
         "payload": { 
-          "op": "toggle",
+          "op": "update",
           "schema": "@schema/todos",
           "id": "$$id",
-          "field": "done"
+          "data": {
+            "done": {
+              "$not": "$$done"
+            }
+          }
         }
       },
       "on": {

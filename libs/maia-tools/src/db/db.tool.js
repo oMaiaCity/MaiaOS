@@ -11,7 +11,6 @@
  *   {"tool": "@db", "payload": {"op": "create", "schema": "co_z...", "data": {...}}}
  *   {"tool": "@db", "payload": {"op": "update", "schema": "co_z...", "id": "co_z...", "data": {...}}}
  *   {"tool": "@db", "payload": {"op": "delete", "schema": "co_z...", "id": "co_z..."}}
- *   {"tool": "@db", "payload": {"op": "toggle", "schema": "co_z...", "id": "co_z...", "field": "done"}}
  * 
  * Note: 100% migration to co-ids - NO human-readable fallbacks.
  * State machine entry actions MUST be transformed during seeding (payload.schema → co-id).
@@ -29,9 +28,9 @@ export default {
       throw new Error('[@db] Database engine not available');
     }
     
-    // For data collection operations (create, update, delete, toggle), schema MUST be a co-id
+    // For data collection operations (create, update, delete), schema MUST be a co-id
     // 100% migration: NO human-readable fallbacks - all schemas must be transformed during seeding
-    const dataCollectionOps = ['create', 'update', 'delete', 'toggle'];
+    const dataCollectionOps = ['create', 'update', 'delete'];
     if (dataCollectionOps.includes(payload.op) && payload.schema) {
       // Schema MUST be a co-id (transformed during seeding)
       // If it's not a co-id, that's an error - transformation should have happened during seeding

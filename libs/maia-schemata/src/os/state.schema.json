@@ -11,11 +11,6 @@
       "description": "Schema reference",
       "pattern": "^co_z[a-zA-Z0-9]+$"
     },
-    "$id": {
-      "type": "string",
-      "description": "Unique state machine identifier (co-id)",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
-    },
     "initial": {
       "type": "string",
       "description": "Initial state name"

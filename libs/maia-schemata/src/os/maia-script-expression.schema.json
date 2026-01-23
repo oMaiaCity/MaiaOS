@@ -79,6 +79,17 @@
           "additionalProperties": false
         },
         {
+          "description": "$not operation - logical NOT (negate boolean)",
+          "properties": {
+            "$not": {
+              "$ref": "#",
+              "description": "Expression to negate (evaluated to boolean, then negated)"
+            }
+          },
+          "required": ["$not"],
+          "additionalProperties": false
+        },
+        {
           "description": "$if operation - conditional expression",
           "properties": {
             "$if": {

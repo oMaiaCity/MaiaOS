@@ -5,11 +5,6 @@
   "description": "Message payload definition",
   "cotype": "comap",
   "properties": {
-    "$id": {
-      "type": "string",
-      "description": "Unique message payload identifier (co-id)",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
-    }
   },
   "additionalProperties": true
 }

@@ -7,7 +7,7 @@
   "params": {
     "op": {
       "type": "string",
-      "enum": ["query", "create", "update", "delete", "toggle", "seed"],
+      "enum": ["query", "create", "update", "delete", "seed"],
       "description": "Database operation to execute"
     },
     "schema": {
@@ -27,11 +27,7 @@
     },
     "id": {
       "type": "string",
-      "description": "Optional: Record ID for update/delete/toggle operations"
-    },
-    "field": {
-      "type": "string",
-      "description": "Optional: Field name for toggle operations"
+      "description": "Optional: Record ID for update/delete operations"
     },
     "data": {
       "type": "object",

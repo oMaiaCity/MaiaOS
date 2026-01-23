@@ -4,11 +4,6 @@
   "title": "Todo Item Schema",
   "cotype": "comap",
   "properties": {
-    "$id": {
-      "type": "string",
-      "description": "Unique identifier for the todo item (co-id)",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
-    },
     "text": {
       "type": "string",
       "minLength": 1,

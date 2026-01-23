@@ -88,6 +88,12 @@ export class MaiaScriptEvaluator {
       return leftValue !== rightValue;
     }
 
+    // Handle $not operation (logical NOT - negate boolean)
+    if ('$not' in expression) {
+      const operand = await this.evaluate(expression.$not, data, depth + 1);
+      return !operand;
+    }
+
     // Handle $if operation
     if ('$if' in expression) {
       // Evaluate condition (supports shortcuts like "$item.done" or DSL operations like "$eq")
@@ -145,7 +151,7 @@ export class MaiaScriptEvaluator {
     // $ prefix = context (single-dollar for context)
     const path = shortcut.substring(1); // Remove $
     
-    // Resolve to context
+    // Resolve to context (supports dot notation like "$existing.done")
     return resolvePath(data.context, path);
   }
 
@@ -160,6 +166,6 @@ export class MaiaScriptEvaluator {
     }
     if (typeof expression !== 'object' || expression === null) return false;
     return '$context' in expression || '$item' in expression || '$if' in expression || 
-           '$eq' in expression || '$ne' in expression;
+           '$eq' in expression || '$ne' in expression || '$not' in expression;
   }
 }

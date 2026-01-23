@@ -22,10 +22,10 @@
       "returns": "Created record with generated ID"
     },
     "update": {
-      "description": "Update existing record",
+      "description": "Update existing record (unified for data collections and configs - handles ALL CoValues uniformly)",
       "params": {
-        "schema": {"type": "string", "required": true, "description": "Schema reference (@schema/todos)"},
-        "id": {"type": "string", "required": true, "description": "Record ID to update"},
+        "schema": {"type": "string", "required": true, "description": "Schema co-id (co_z...) - MUST be a co-id, not '@schema/...'"},
+        "id": {"type": "string", "required": true, "description": "Record co-id to update"},
         "data": {"type": "object", "required": true, "description": "Data to update"}
       },
       "returns": "Updated record"
@@ -37,15 +37,6 @@
         "id": {"type": "string", "required": true, "description": "Record ID to delete"}
       },
       "returns": "true if deleted successfully"
-    },
-    "toggle": {
-      "description": "Toggle a boolean field",
-      "params": {
-        "schema": {"type": "string", "required": true, "description": "Schema reference (@schema/todos)"},
-        "id": {"type": "string", "required": true, "description": "Record ID"},
-        "field": {"type": "string", "required": true, "description": "Field name to toggle"}
-      },
-      "returns": "Updated record"
     },
     "seed": {
       "description": "Flush and seed database (dev only)",

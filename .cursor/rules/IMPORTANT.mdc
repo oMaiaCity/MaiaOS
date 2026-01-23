@@ -1,0 +1,11 @@
+---
+alwaysApply: true
+---
+YOU MUST ALWAYS FOLLOW THOSE BASIC RULES
+
+- NO backwards compatibility layers
+- NO fallbacks
+- NO hacky fixes
+- No deprecation notices
+- Always migrate 100% 
+- Always solve problems by their root cause, with first principles engineering, never apply hacky patches 

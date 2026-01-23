@@ -10,11 +10,6 @@
       "description": "Schema reference",
       "pattern": "^co_z[a-zA-Z0-9]+$"
     },
-    "$id": {
-      "type": "string",
-      "description": "Unique subscriptions colist identifier (co-id)",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
-    },
     "items": {
       "type": "array",
       "description": "Array of actor co-id references",

@@ -265,16 +265,23 @@ export class IndexedDBBackend {
     if (data) {
       for (const [collectionName, collection] of Object.entries(data)) {
         const schemaKey = `@schema/${collectionName}`;
+        const dataSchemaKey = `@schema/data/${collectionName}`;
         
         // Check if @schema/collectionName is already registered (e.g., as a schema definition)
+        // Also check @schema/data/collectionName (for data schemas like todos.schema.json)
         // If so, reuse that co-id instead of generating a new one
         // This handles the case where a schema exists with the same name as the data collection
         let collectionCoId;
         const existingCoId = coIdRegistry.registry.get(schemaKey);
+        const dataSchemaCoId = coIdRegistry.registry.get(dataSchemaKey);
+        
         if (existingCoId) {
           collectionCoId = existingCoId;
-          // Still register collectionName → co-id mapping for data collection lookups
-          coIdRegistry.register(collectionName, collectionCoId);
+        } else if (dataSchemaCoId) {
+          // Use the data schema co-id (e.g., @schema/data/todos)
+          collectionCoId = dataSchemaCoId;
+          // Register @schema/collectionName → data schema co-id mapping
+          coIdRegistry.register(schemaKey, collectionCoId);
         } else {
           // Generate co-id for collection (same algorithm as _seedData)
           collectionCoId = generateCoId({ collection: collectionName });
@@ -282,8 +289,10 @@ export class IndexedDBBackend {
           // Register both @schema/collectionName and collectionName → collectionCoId
           // This allows transformInstanceForSeeding to resolve query objects
           coIdRegistry.register(schemaKey, collectionCoId);
-          coIdRegistry.register(collectionName, collectionCoId);
         }
+        
+        // Always register collectionName → co-id mapping for data collection lookups
+        coIdRegistry.register(collectionName, collectionCoId);
         
         // Store for reuse in _seedData
         dataCollectionCoIds.set(collectionName, collectionCoId);
@@ -760,11 +769,13 @@ export class IndexedDBBackend {
       
       // Store with co-id as PRIMARY KEY (required!)
       // NO human-readable keys in content stores - mappings go to coIdRegistry only
-      console.log(`[IndexedDBBackend] Storing vibe with co-id: ${vibeCoId}, originalId: ${originalVibeId || 'unknown'}, $id: ${configs.vibe.$id}`);
+      // Remove $id from value (it's the key, not stored in value)
+      const { $id, ...vibeWithoutId } = configs.vibe;
+      console.log(`[IndexedDBBackend] Storing vibe with co-id: ${vibeCoId}, originalId: ${originalVibeId || 'unknown'}`);
       
       await this._promisifyRequest(store.put({
         key: vibeCoId,
-        value: configs.vibe
+        value: vibeWithoutId
       }));
       
       count++;
@@ -827,15 +838,15 @@ export class IndexedDBBackend {
         // Check if this co-id already exists with different content
         const existingConfig = await this._promisifyRequest(store.get(coId));
         if (existingConfig?.value) {
-          // Compare content to ensure it's the same config
-          const existingContent = JSON.stringify(existingConfig.value, Object.keys(existingConfig.value).sort());
-          const newContent = JSON.stringify(config, Object.keys(config).sort());
+          // Compare content to ensure it's the same config (exclude $id from comparison - it's the key)
+          const { $id: existingId, ...existingWithoutId } = existingConfig.value;
+          const { $id: newId, ...newWithoutId } = config;
+          const existingContent = JSON.stringify(existingWithoutId, Object.keys(existingWithoutId).sort());
+          const newContent = JSON.stringify(newWithoutId, Object.keys(newWithoutId).sort());
           if (existingContent !== newContent) {
             throw new Error(
               `[IndexedDBBackend] CRITICAL BUG: Co-id ${coId} already exists with DIFFERENT content! ` +
               `This would overwrite existing config. ` +
-              `Existing: ${existingConfig.value.$id || 'no $id'}, ` +
-              `New: ${config.$id || 'no $id'}. ` +
               `This indicates a bug in co-id generation or reuse logic.`
             );
           }
@@ -845,9 +856,11 @@ export class IndexedDBBackend {
         
         // Store with co-id as PRIMARY KEY (required!)
         // NO human-readable keys in content stores - mappings go to coIdRegistry only
+        // Remove $id from value (it's the key, not stored in value)
+        const { $id, ...configWithoutId } = config;
         await this._promisifyRequest(store.put({
           key: coId,
-          value: config
+          value: configWithoutId
         }));
         
         
@@ -919,9 +932,11 @@ export class IndexedDBBackend {
       
       // Store schema with co-id as PRIMARY KEY (required!)
       // NO human-readable keys in content stores - mappings go to coIdRegistry only
+      // Remove $id from value (it's the key, not stored in value)
+      const { $id, ...schemaWithoutId } = schema;
       await this._promisifyRequest(store.put({
         key: coId,
-        value: schema
+        value: schemaWithoutId
       }));
       
       count++;
@@ -955,14 +970,16 @@ export class IndexedDBBackend {
         continue;
       }
       
-      // Store each item individually with $schema field
+      // Store each item individually with $schema field (NO $id - redundant with key)
       if (Array.isArray(collection)) {
         for (const item of collection) {
+          // Extract $id if present (for co-id), but don't store it in value
           const coId = item.$id || generateCoId(item);
+          // Remove $id from item data before storing (it's the key, not part of value)
+          const { $id, ...itemData } = item;
           const record = {
-            $id: coId,
             $schema: schemaCoId,  // Store schema co-id in item
-            ...item
+            ...itemData
           };
           
           await this._promisifyRequest(store.put({
@@ -1014,69 +1031,6 @@ export class IndexedDBBackend {
    * @param {string[]} keys - Array of config co-ids to fetch
    * @returns {Promise<Map<string, any>>} Map of coId -> config value
    */
-  async getBatch(schema, keys) {
-    // Validate schema is a co-id (runtime code must use co-ids only)
-    if (!schema || !schema.startsWith('co_z')) {
-      throw new Error(`[IndexedDBBackend] Schema must be a co-id (co_z...), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
-    }
-    
-    if (!keys || keys.length === 0) {
-      return new Map();
-    }
-    
-    // Filter to only co-id keys (skip human-readable keys for batch)
-    const coIdKeys = keys.filter(key => key && key.startsWith('co_z'));
-    
-    if (coIdKeys.length === 0) {
-      return new Map();
-    }
-    
-    // Single transaction to get all configs
-    const configsTransaction = this.db.transaction(['configs'], 'readonly');
-    const configsStore = configsTransaction.objectStore('configs');
-    
-    // Get all keys in parallel within the same transaction
-    const promises = coIdKeys.map(key => 
-      this._promisifyRequest(configsStore.get(key))
-    );
-    
-    const results = await Promise.all(promises);
-    
-    // Build map: coId -> config value
-    const map = new Map();
-    coIdKeys.forEach((key, i) => {
-      const result = results[i];
-      if (result?.value) {
-        map.set(key, result.value);
-      } else if (result) {
-        // If result exists but doesn't have .value, use the whole thing
-        map.set(key, result);
-      }
-    });
-    
-    // If any configs weren't found in configs store, try data store
-    const missingKeys = coIdKeys.filter(key => !map.has(key));
-    if (missingKeys.length > 0) {
-      const dataTransaction = this.db.transaction(['data'], 'readonly');
-      const dataStore = dataTransaction.objectStore('data');
-      
-      const dataPromises = missingKeys.map(key => 
-        this._promisifyRequest(dataStore.get(key))
-      );
-      
-      const dataResults = await Promise.all(dataPromises);
-      
-      missingKeys.forEach((key, i) => {
-        const result = dataResults[i];
-        if (result?.value) {
-          map.set(key, result.value);
-        }
-      });
-    }
-    
-    return map;
-  }
-  
   /**
    * Create new record
    * @param {string} schema - Schema co-id (co_z...) for data collections
@@ -1098,9 +1052,8 @@ export class IndexedDBBackend {
       throw new Error(`[IndexedDBBackend] Data collection schema must be a co-id, got: ${schema}. Query objects should be transformed during seeding.`);
     }
     
-    // Create record with $id, $schema, and data fields
+    // Create record with $schema and data fields (NO $id - redundant with key)
     const record = { 
-      $id: coId, 
       $schema: schema,  // Store schema co-id in item for query filtering
       ...data 
     };
@@ -1125,39 +1078,55 @@ export class IndexedDBBackend {
     
     // Filter items by $schema field matching the schema co-id
     const updatedItems = (allResults || [])
-      .map(item => item.value)
-      .filter(item => item && item.$schema === schema)
-      .map(item => ({
-        ...item,
-        id: item.$id
-      }));
+      .filter(item => item.value && item.value.$schema === schema)
+      .map(item => this._normalizeItem(item.value, item.key));
     
     this.notifyWithData(schema, updatedItems || []);
     
-    return record;
+    // Return record with id field for state machine access
+    return {
+      ...record,
+      id: coId  // Add id field for state machine access ($lastCreatedId)
+    };
   }
   
   /**
-   * Update existing record
-   * @param {string} schema - Schema co-id (co_z...) for data collections
-   * @param {string} id - Record co-id ($id)
+   * Update existing record - handles ALL CoValues uniformly (data + configs)
+   * NO distinction between configs and data - everything is just co-ids
+   * @param {string} schema - Schema co-id (co_z...) - MUST be a co-id, not '@schema/...'
+   * @param {string} id - Record co-id to update
    * @param {Object} data - Data to update
    * @returns {Promise<Object>} Updated record
    */
   async update(schema, id, data) {
-    const storeName = 'data';
-    
-    // Schema should already be a co-id (transformed during seeding)
-    // Work directly with co-id, no registry lookup needed
-    if (!schema.startsWith('co_z')) {
-      throw new Error(`[IndexedDBBackend] Data collection schema must be a co-id, got: ${schema}. Query objects should be transformed during seeding.`);
+    // Validate schema is a co-id (runtime code must use co-ids only)
+    if (!schema || !schema.startsWith('co_z')) {
+      throw new Error(`[IndexedDBBackend] Schema must be a co-id (co_z...), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
     }
     
-    // Get existing item directly by its co-id
-    const transaction = this.db.transaction([storeName], 'readwrite');
-    const store = transaction.objectStore(storeName);
-    const request = store.get(id);
-    const result = await this._promisifyRequest(request);
+    // Validate id is a co-id
+    if (!id || !id.startsWith('co_z')) {
+      throw new Error(`[IndexedDBBackend] ID must be a co-id (co_z...), got: ${id}`);
+    }
+    
+    // RADICAL SIMPLIFICATION: Check BOTH stores (configs and data) - find the co-id, update it wherever it lives
+    // No distinction between configs and data - everything is just co-ids
+    
+    // Try configs store first
+    let transaction = this.db.transaction(['configs'], 'readwrite');
+    let store = transaction.objectStore('configs');
+    let request = store.get(id);
+    let result = await this._promisifyRequest(request);
+    let storeName = 'configs';
+    
+    // If not found in configs, try data store
+    if (!result || !result.value) {
+      transaction = this.db.transaction(['data'], 'readwrite');
+      store = transaction.objectStore('data');
+      request = store.get(id);
+      result = await this._promisifyRequest(request);
+      storeName = 'data';
+    }
     
     if (!result || !result.value) {
       throw new Error(`[IndexedDBBackend] Record not found: ${id}`);
@@ -1168,12 +1137,11 @@ export class IndexedDBBackend {
       throw new Error(`[IndexedDBBackend] Record ${id} does not belong to schema ${schema}`);
     }
     
-    // Update record (preserve $id and $schema)
+    // Update record (preserve $schema only, NOT $id - redundant with key)
     const updatedRecord = { 
       ...result.value, 
       ...data,
-      $id: result.value.$id,  // Preserve $id
-      $schema: result.value.$schema  // Preserve $schema
+      $schema: result.value.$schema  // Preserve $schema (needed for collection filtering)
     };
     
     // Save updated item
@@ -1185,7 +1153,7 @@ export class IndexedDBBackend {
     // CRITICAL: Wait for transaction to commit before notifying observers
     await transaction.complete; // transaction.complete is already a Promise
     
-    // Notify observers by re-reading
+    // Always notify observers for reactivity (both data and configs)
     const dataStore = await this.read(schema, null, null);
     const updatedItems = dataStore.value;
     this.notifyWithData(schema, updatedItems);
@@ -1193,50 +1161,6 @@ export class IndexedDBBackend {
     return updatedRecord;
   }
   
-  /**
-   * Update actor config (for system properties like watermark)
-   * @param {string} schema - Schema co-id (co_z...) - MUST be a co-id, not '@schema/...'
-   * @param {string} id - Actor co-id ($id)
-   * @param {Object} data - Data to update
-   * @returns {Promise<Object>} Updated config
-   */
-  async updateConfig(schema, id, data) {
-    // Validate schema is a co-id (runtime code must use co-ids only)
-    if (!schema || !schema.startsWith('co_z')) {
-      throw new Error(`[IndexedDBBackend] Schema must be a co-id (co_z...), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
-    }
-    
-    const storeName = 'configs';
-    
-    // Get existing config directly by co-id
-    const transaction = this.db.transaction([storeName], 'readwrite');
-    const store = transaction.objectStore(storeName);
-    const request = store.get(id);
-    const result = await this._promisifyRequest(request);
-    
-    if (!result || !result.value) {
-      throw new Error(`[IndexedDBBackend] Config not found: ${id}`);
-    }
-    
-    // Update config (preserve $id and $schema)
-    const updatedConfig = { 
-      ...result.value, 
-      ...data,
-      $id: result.value.$id,  // Preserve $id
-      $schema: result.value.$schema  // Preserve $schema
-    };
-    
-    // Save updated config
-    await this._promisifyRequest(store.put({
-      key: id,
-      value: updatedConfig
-    }));
-    
-    // Wait for transaction to commit
-    await transaction.complete;
-    
-    return updatedConfig;
-  }
 
   /**
    * Delete record
@@ -1284,20 +1208,187 @@ export class IndexedDBBackend {
   
   
   /**
-   * Read data - unified method that always returns reactive store
-   * Replaces get(), query(), and subscribe() with single unified API
+   * Read data - unified method that always returns reactive store (or array of stores for batch reads)
+   * Replaces get(), query(), subscribe(), and getBatch() with single unified API
    * @param {string} schema - Schema co-id (co_z...) - MUST be a co-id, not '@schema/...'
    * @param {string} [key] - Optional: specific key (co-id) for single item
+   * @param {string[]} [keys] - Optional: array of co-ids for batch reads (consolidates getBatch)
    * @param {Object} [filter] - Optional: filter criteria for collection queries
-   * @returns {Promise<ReactiveStore>} Reactive store that holds current value and notifies on updates
+   * @returns {Promise<ReactiveStore|ReactiveStore[]>} Reactive store(s) that hold current value and notify on updates
    */
-  async read(schema, key, filter) {
+  async read(schema, key, keys, filter) {
     // Import ReactiveStore
     const { ReactiveStore } = await import('../../../utils/reactive-store.js');
     
     // Validate schema is a co-id
     if (!schema || !schema.startsWith('co_z')) {
       throw new Error(`[IndexedDBBackend] Schema must be a co-id (co_z...), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
+    }
+    
+    // Handle batch reads (keys array) - NO distinction between configs and data, just read co-ids
+    if (keys && Array.isArray(keys) && keys.length > 0) {
+      // Filter to only co-id keys
+      const coIdKeys = keys.filter(k => k && k.startsWith('co_z'));
+      
+      if (coIdKeys.length === 0) {
+        return [];
+      }
+      
+      // Single transaction: check BOTH stores (configs and data) - find co-ids wherever they live
+      const transaction = this.db.transaction(['configs', 'data'], 'readonly');
+      const configsStore = transaction.objectStore('configs');
+      const dataStore = transaction.objectStore('data');
+      
+      // Read all keys in parallel - try configs first, then data
+      const promises = coIdKeys.map(async (coId) => {
+        // Try configs store first
+        const configsRequest = configsStore.get(coId);
+        const configsResult = await this._promisifyRequest(configsRequest);
+        
+        if (configsResult?.value) {
+          return { key: coId, value: configsResult.value, store: 'configs' };
+        }
+        
+        // Fall back to data store
+        const dataRequest = dataStore.get(coId);
+        const dataResult = await this._promisifyRequest(dataRequest);
+        
+        if (dataResult?.value) {
+          return { key: coId, value: dataResult.value, store: 'data' };
+        }
+        
+        return { key: coId, value: null, store: null };
+      });
+      
+      const results = await Promise.all(promises);
+      
+      // Create ReactiveStore for each key found
+      const stores = results.map(({ key: coId, value }) => {
+        const store = new ReactiveStore(value);
+        
+        // Set up observer for this specific key
+        if (!this.observers.has(schema)) {
+          this.observers.set(schema, new Set());
+        }
+        
+        const observer = {
+          filter: null,
+          callback: (data) => {
+            // Find item matching this co-id (match id field, NOT $id)
+            let item = null;
+            if (Array.isArray(data)) {
+              item = data.find(item => item?.id === coId) || null;
+            } else if (data && data.id === coId) {
+              item = data;
+            }
+            
+            if (item !== null) {
+              // Normalize: remove $id if present, add id from coId
+              store._set(this._normalizeItem(item, coId));
+            }
+          }
+        };
+        
+        this.observers.get(schema).add(observer);
+        
+        // Store unsubscribe function
+        store._unsubscribe = () => {
+          const observers = this.observers.get(schema);
+          if (observers) {
+            observers.delete(observer);
+            if (observers.size === 0) {
+              this.observers.delete(schema);
+            }
+          }
+        };
+        
+        return store;
+      });
+      
+      return stores;
+    }
+    
+    // Handle batch reads (keys array) - NO distinction between configs and data, just read co-ids
+    if (keys && Array.isArray(keys) && keys.length > 0) {
+      // Filter to only co-id keys
+      const coIdKeys = keys.filter(k => k && k.startsWith('co_z'));
+      
+      if (coIdKeys.length === 0) {
+        return [];
+      }
+      
+      // Single transaction: check BOTH stores (configs and data) - find co-ids wherever they live
+      const transaction = this.db.transaction(['configs', 'data'], 'readonly');
+      const configsStore = transaction.objectStore('configs');
+      const dataStore = transaction.objectStore('data');
+      
+      // Read all keys in parallel - try configs first, then data
+      const promises = coIdKeys.map(async (coId) => {
+        // Try configs store first
+        const configsRequest = configsStore.get(coId);
+        const configsResult = await this._promisifyRequest(configsRequest);
+        
+        if (configsResult?.value) {
+          return { key: coId, value: configsResult.value, store: 'configs' };
+        }
+        
+        // Fall back to data store
+        const dataRequest = dataStore.get(coId);
+        const dataResult = await this._promisifyRequest(dataRequest);
+        
+        if (dataResult?.value) {
+          return { key: coId, value: dataResult.value, store: 'data' };
+        }
+        
+        return { key: coId, value: null, store: null };
+      });
+      
+      const results = await Promise.all(promises);
+      
+      // Create ReactiveStore for each key found
+      const stores = results.map(({ key: coId, value }) => {
+        const store = new ReactiveStore(value);
+        
+        // Set up observer for this specific key
+        if (!this.observers.has(schema)) {
+          this.observers.set(schema, new Set());
+        }
+        
+        const observer = {
+          filter: null,
+          callback: (data) => {
+            // Find item matching this co-id (match id field, NOT $id)
+            let item = null;
+            if (Array.isArray(data)) {
+              item = data.find(item => item?.id === coId) || null;
+            } else if (data && data.id === coId) {
+              item = data;
+            }
+            
+            if (item !== null) {
+              // Normalize: remove $id if present, add id from coId
+              store._set(this._normalizeItem(item, coId));
+            }
+          }
+        };
+        
+        this.observers.get(schema).add(observer);
+        
+        // Store unsubscribe function
+        store._unsubscribe = () => {
+          const observers = this.observers.get(schema);
+          if (observers) {
+            observers.delete(observer);
+            if (observers.size === 0) {
+              this.observers.delete(schema);
+            }
+          }
+        };
+        
+        return store;
+      });
+      
+      return stores;
     }
     
     // Create reactive store with null initial value
@@ -1315,7 +1406,7 @@ export class IndexedDBBackend {
         const configsResult = await this._promisifyRequest(configsRequest);
         
         if (configsResult?.value) {
-          initialValue = configsResult.value;
+          initialValue = this._normalizeItem(configsResult.value, key);
         } else if (configsResult) {
           initialValue = configsResult;
         } else {
@@ -1324,7 +1415,11 @@ export class IndexedDBBackend {
           const dataStore = dataTransaction.objectStore('data');
           const dataRequest = dataStore.get(key);
           const dataResult = await this._promisifyRequest(dataRequest);
-          initialValue = dataResult?.value || null;
+          if (dataResult?.value) {
+            initialValue = this._normalizeItem(dataResult.value, key);
+          } else {
+            initialValue = null;
+          }
         }
       } else {
         // Human-readable key - resolve to co-id first, then lookup
@@ -1341,7 +1436,11 @@ export class IndexedDBBackend {
           const dbStore = transaction.objectStore(storeName);
           const request = dbStore.get(coId);
           const result = await this._promisifyRequest(request);
-          initialValue = result?.value || null;
+          if (result?.value) {
+            initialValue = this._normalizeItem(result.value, coId);
+          } else {
+            initialValue = null;
+          }
         } else {
           initialValue = null;
         }
@@ -1358,7 +1457,7 @@ export class IndexedDBBackend {
         // Filter to only entries with co-id keys (actual configs/schemas, not mappings)
         const items = (allResults || [])
           .filter(item => item.key && item.key.startsWith('co_z'))
-          .map(item => item.value);
+          .map(item => this._normalizeItem(item.value, item.key));
         
         // Apply filter if provided
         if (filter && items.length > 0) {
@@ -1369,38 +1468,26 @@ export class IndexedDBBackend {
       } else {
         // Data items: Filter by $schema field matching the query schema co-id
         let items = (allResults || [])
-          .map(item => item.value)
-          .filter(item => item && item.$schema === schema);
+          .filter(item => item.value && item.value.$schema === schema)
+          .map(item => this._normalizeItem(item.value, item.key));
         
         // Apply filter if provided
         if (filter && items.length > 0) {
           items = this._applyFilter(items, filter);
         }
         
-        // Normalize items: add id field from $id for view compatibility
-        initialValue = items.map(item => ({
-          ...item,
-          id: item.$id
-        }));
+        initialValue = items;
       }
     }
     
     // Set initial value if found
     if (initialValue !== null && initialValue !== undefined) {
       if (key) {
-        // Single item
-        store._set(initialValue);
+        // Single item - normalize (remove $id, add id from key)
+        store._set(this._normalizeItem(initialValue, key));
       } else {
-        // Collection - normalize items: add id field from $id for view compatibility
-        if (Array.isArray(initialValue)) {
-          const normalized = initialValue.map(item => ({
-            ...item,
-            id: item.$id
-          }));
-          store._set(normalized);
-        } else {
-          store._set(initialValue);
-        }
+        // Collection - already normalized above via _normalizeItem()
+        store._set(initialValue);
       }
     } else if (!key) {
       // Collection with no data - set empty array
@@ -1420,9 +1507,9 @@ export class IndexedDBBackend {
         if (key) {
           let item = null;
           if (Array.isArray(data)) {
-            // Collection: find item by key
-            item = data.find(item => item?.$id === key || item?.id === key) || null;
-          } else if (data && (data.$id === key || data.id === key)) {
+            // Collection: find item by key (match id field, NOT $id)
+            item = data.find(item => item?.id === key) || null;
+          } else if (data && data.id === key) {
             // Single item that matches key
             item = data;
           } else {
@@ -1431,20 +1518,13 @@ export class IndexedDBBackend {
           }
           // Only update if we found the item (don't overwrite valid initial value with null)
           if (item !== null) {
-            store._set(item);
+            // Normalize: remove $id if present, add id from key
+            store._set(this._normalizeItem(item, key));
           }
         } else {
           // No key: use data as-is (collection or single item)
-          // Normalize items: add id field from $id for view compatibility
-          if (Array.isArray(data)) {
-            const normalized = data.map(item => ({
-              ...item,
-              id: item.$id
-            }));
-            store._set(normalized);
-          } else {
-            store._set(data);
-          }
+          // Data from notifyWithData() already has id field normalized
+          store._set(data);
         }
       }
     };
@@ -1487,23 +1567,57 @@ export class IndexedDBBackend {
         filteredData = this._applyFilter(data, observer.filter);
       }
       
-      // Normalize items: add id field from $id for view compatibility ($$id syntax)
-      if (Array.isArray(filteredData)) {
-        filteredData = filteredData.map(item => ({
-          ...item,
-          id: item.$id
-        }));
-      } else if (filteredData && filteredData.$id) {
-        filteredData = {
-          ...filteredData,
-          id: filteredData.$id
-        };
-      }
+      // Data from read() already has id field normalized (derived from key, NOT from $id)
+      // No normalization needed here - data is already in correct format
       
       observer.callback(filteredData);
     });
   }
   
+  /**
+   * Normalize item: add id from key (for frontend access)
+   * This is the SINGLE source of truth for item normalization
+   * @param {Object} item - Item value from database (fresh seeded, no $id)
+   * @param {string} key - Co-id key (co_z...)
+   * @returns {Object} Normalized item with id field derived from key
+   * @private
+   */
+  /**
+   * Get raw record from database (without normalization)
+   * Used for validation - returns stored data as-is (with $schema metadata, without id)
+   * @param {string} id - Record co-id
+   * @returns {Promise<Object|null>} Raw stored record or null if not found
+   */
+  async getRawRecord(id) {
+    // Try configs store first
+    let transaction = this.db.transaction(['configs'], 'readonly');
+    let store = transaction.objectStore('configs');
+    let request = store.get(id);
+    let result = await this._promisifyRequest(request);
+    
+    // If not found in configs, try data store
+    if (!result || !result.value) {
+      transaction = this.db.transaction(['data'], 'readonly');
+      store = transaction.objectStore('data');
+      request = store.get(id);
+      result = await this._promisifyRequest(request);
+    }
+    
+    return result?.value || null;
+  }
+
+  _normalizeItem(item, key) {
+    if (!item || typeof item !== 'object') {
+      return item;
+    }
+    // Add id from key (for frontend access) - no $id removal needed (fresh seeded)
+    // Note: id is NOT stored in database, only added when reading for frontend convenience
+    return {
+      ...item,
+      id: key  // Always derive id from key (computed property, not stored)
+    };
+  }
+
   /**
    * Apply filter to collection
    * @private
@@ -1580,7 +1694,15 @@ export class IndexedDBBackend {
       const request = store.get(schemaCoId);
       const result = await this._promisifyRequest(request);
       
-      return result?.value || null;
+      if (result?.value) {
+        // Add $id back to schema for compatibility (it was stripped during storage)
+        return {
+          ...result.value,
+          $id: schemaCoId
+        };
+      }
+      
+      return null;
     } catch (error) {
       console.warn(`[IndexedDBBackend] Error loading schema ${schemaKey}:`, error);
       return null;

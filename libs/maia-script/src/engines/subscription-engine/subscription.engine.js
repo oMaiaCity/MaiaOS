@@ -159,9 +159,9 @@ export class SubscriptionEngine {
 
     const config = actor.config;
 
-    // Initialize config subscriptions array if not exists
-    if (!actor._configSubscriptions) {
-      actor._configSubscriptions = [];
+    // Initialize unified subscriptions array if not exists (handles both data and configs)
+    if (!actor._subscriptions) {
+      actor._subscriptions = [];
     }
 
     // Collect view/style/state subscriptions (go through engines)
@@ -176,7 +176,7 @@ export class SubscriptionEngine {
     const totalCount = engineCount + interfaceContextCount;
 
     // Note: subscriptions and inbox are already handled in actor.engine.js createActor()
-    // They're stored in actor._configSubscriptions there
+    // They're stored in actor._subscriptions there (unified for data and configs)
 
     if (totalCount > 0) {
       this._log(`[SubscriptionEngine] ✅ ${actor.id}: ${totalCount} config subscription(s)`);
@@ -234,18 +234,15 @@ export class SubscriptionEngine {
   }
 
   /**
-   * Cleanup all subscriptions for an actor
+   * Cleanup all subscriptions for an actor (unified for data and configs)
    * Called when actor is destroyed
    * @param {Object} actor - Actor instance
    */
   cleanup(actor) {
-    let totalCount = 0;
-
-    // Cleanup data subscriptions
+    // Cleanup unified subscriptions (both data and configs)
     if (actor._subscriptions && actor._subscriptions.length > 0) {
       const count = actor._subscriptions.length;
-      totalCount += count;
-      this._log(`[SubscriptionEngine] 🧹 Cleanup ${actor.id}: ${count} data subscription(s)`);
+      this._log(`[SubscriptionEngine] 🧹 Cleanup ${actor.id}: ${count} subscription(s) (unified data + configs)`);
 
       actor._subscriptions.forEach(unsubscribe => {
         if (typeof unsubscribe === 'function') {
@@ -254,25 +251,6 @@ export class SubscriptionEngine {
       });
 
       actor._subscriptions = [];
-    }
-
-    // Cleanup config subscriptions
-    if (actor._configSubscriptions && actor._configSubscriptions.length > 0) {
-      const count = actor._configSubscriptions.length;
-      totalCount += count;
-      this._log(`[SubscriptionEngine] 🧹 Cleanup ${actor.id}: ${count} config subscription(s)`);
-
-      actor._configSubscriptions.forEach(unsubscribe => {
-        if (typeof unsubscribe === 'function') {
-          unsubscribe();
-        }
-      });
-
-      actor._configSubscriptions = [];
-    }
-
-    if (totalCount > 0) {
-      this._log(`[SubscriptionEngine] 🧹 Cleanup ${actor.id}: ${totalCount} total subscription(s)`);
     }
     
     // Remove from pending re-renders if present

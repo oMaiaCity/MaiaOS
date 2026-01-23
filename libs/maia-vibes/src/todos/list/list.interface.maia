@@ -19,7 +19,7 @@
       "payload": { "id": "string" }
     },
     "TOGGLE_BUTTON": {
-      "payload": { "id": "string" }
+      "payload": { "id": "string", "done": "boolean" }
     },
     "DELETE_BUTTON": {
       "payload": { "id": "string" }
@@ -36,7 +36,7 @@
   },
   "publishes": {
     "TOGGLE_BUTTON": {
-      "payload": { "id": "string" }
+      "payload": { "id": "string", "done": "boolean" }
     },
     "DELETE_BUTTON": {
       "payload": { "id": "string" }

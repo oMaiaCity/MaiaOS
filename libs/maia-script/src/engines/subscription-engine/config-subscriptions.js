@@ -41,7 +41,10 @@ function collectEngineSubscription(
   
   if (existingUnsubscribe) {
     // Subscription already exists, reuse it
-    actor._configSubscriptions.push(existingUnsubscribe);
+    if (!actor._subscriptions) {
+      actor._subscriptions = [];
+    }
+    actor._subscriptions.push(existingUnsubscribe);
     return 1;
   }
 
@@ -52,7 +55,10 @@ function collectEngineSubscription(
     }).then(() => {
       const unsubscribe = subscriptionMap?.get(configCoId);
       if (unsubscribe) {
-        actor._configSubscriptions.push(unsubscribe);
+        if (!actor._subscriptions) {
+          actor._subscriptions = [];
+        }
+        actor._subscriptions.push(unsubscribe);
         return 1;
       }
       return 0;
@@ -160,10 +166,10 @@ export async function collectInterfaceContextSubscriptions(subscriptionEngine, a
             });
             
             // Store unsubscribe function
-            if (!actor._configSubscriptions) {
-              actor._configSubscriptions = [];
+            if (!actor._subscriptions) {
+              actor._subscriptions = [];
             }
-            actor._configSubscriptions.push(unsubscribe);
+            actor._subscriptions.push(unsubscribe);
             
             return unsubscribe;
           }).catch(error => {
@@ -197,10 +203,10 @@ export async function collectInterfaceContextSubscriptions(subscriptionEngine, a
             });
             
             // Store unsubscribe function
-            if (!actor._configSubscriptions) {
-              actor._configSubscriptions = [];
+            if (!actor._subscriptions) {
+              actor._subscriptions = [];
             }
-            actor._configSubscriptions.push(unsubscribe);
+            actor._subscriptions.push(unsubscribe);
             
             return unsubscribe;
           }).catch(error => {
@@ -230,7 +236,7 @@ export async function executeBatchSubscriptions(subscriptionEngine, actor, inter
   // Execute interface/context subscriptions and engine subscriptions in parallel
   const interfaceContextPromise = interfaceContextSubscriptions.length > 0 
     ? Promise.all(interfaceContextSubscriptions).then(() => {
-        // Subscriptions are already stored in actor._configSubscriptions by collectInterfaceContextSubscriptions
+        // Subscriptions are already stored in actor._subscriptions by collectInterfaceContextSubscriptions (unified for data + configs)
         subscriptionCount += interfaceContextSubscriptions.length;
       }).catch(error => {
         console.error(`[SubscriptionEngine] ❌ Interface/context subscription failed for ${actor.id}:`, error);

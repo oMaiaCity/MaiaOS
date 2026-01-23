@@ -10,11 +10,6 @@
       "description": "Schema reference",
       "pattern": "^co_z[a-zA-Z0-9]+$"
     },
-    "$id": {
-      "type": "string",
-      "description": "Unique context identifier (co-id)",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
-    },
     "todos": {
       "description": "Query object for reactive subscription (replaced with plain array by SubscriptionEngine when data loads). Can be either a query object during seeding or an array after SubscriptionEngine processes it.",
       "anyOf": [

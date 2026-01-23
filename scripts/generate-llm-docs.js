@@ -6,6 +6,11 @@
  * Output:
  * - libs/maia-docs/04_agents/LLM_Creators.md (ARCHITECTURE + creators docs)
  * - libs/maia-docs/04_agents/LLM_Developers.md (ARCHITECTURE + developers docs)
+ * - libs/maia-docs/04_agents/LLM_maia-self.md (package-specific: 01_maia-self)
+ * - libs/maia-docs/04_agents/LLM_maia-kernel.md (package-specific: 02_maia-kernel)
+ * - libs/maia-docs/04_agents/LLM_maia-schemata.md (package-specific: 03_maia-schemata)
+ * - libs/maia-docs/04_agents/LLM_maia-script.md (package-specific: 04_maia-script)
+ * - libs/maia-docs/04_agents/LLM_maia-db.md (package-specific: 05_maia-db)
  * 
  * Reads from: libs/maia-docs/ (getting-started, creators, developers)
  * Writes to: libs/maia-docs/04_agents/ (LLM documentation files)
@@ -87,6 +92,42 @@ async function generateLLMDoc(type, sections) {
 }
 
 /**
+ * Extract package name from directory path
+ * e.g., "01_maia-self" -> "maia-self"
+ */
+function extractPackageName(dirName) {
+  return dirName.replace(/^\d+_/, '');
+}
+
+/**
+ * Generate package-specific LLM documentation
+ */
+async function generatePackageDoc(packageDir, packageName) {
+  const packageDocs = await readMarkdownFiles(packageDir);
+  
+  if (packageDocs.length === 0) {
+    console.log(`⚠️  No docs found for ${packageName}, skipping...`);
+    return;
+  }
+  
+  const sections = packageDocs.map(doc => {
+    const fileName = doc.file.replace('.md', '').replace(/^\d+_/, '');
+    const title = fileName.replace(/-/g, ' ').toUpperCase();
+    
+    return {
+      title,
+      source: `developers/${doc.path || doc.file}`,
+      content: doc.content
+    };
+  });
+  
+  const packageLLM = await generateLLMDoc(packageName, sections);
+  const outputFile = join(OUTPUT_AGENTS_DIR, `LLM_${packageName}.md`);
+  await writeFile(outputFile, packageLLM, 'utf-8');
+  console.log(`✅ Generated LLM_${packageName}.md`);
+}
+
+/**
  * Main generation function
  */
 async function generate() {
@@ -159,6 +200,18 @@ async function generate() {
     );
     console.log('✅ Generated LLM_Developers.md');
     
+    // Generate package-specific docs
+    const developersDir = join(DOCS_DIR, '03_developers');
+    const entries = await readdir(developersDir, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      if (entry.isDirectory() && /^\d+_/.test(entry.name)) {
+        const packageName = extractPackageName(entry.name);
+        const packageDir = join(developersDir, entry.name);
+        await generatePackageDoc(packageDir, packageName);
+      }
+    }
+    
     console.log('🎉 LLM documentation generated successfully!');
     console.log(`📍 Output: ${OUTPUT_AGENTS_DIR}`);
   } catch (error) {
@@ -182,6 +235,19 @@ async function watchMode() {
     join(DOCS_DIR, '02_creators'),
     join(DOCS_DIR, '03_developers')
   ];
+  
+  // Also watch individual package directories
+  const developersDir = join(DOCS_DIR, '03_developers');
+  try {
+    const entries = await readdir(developersDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory() && /^\d+_/.test(entry.name)) {
+        watchDirs.push(join(developersDir, entry.name));
+      }
+    }
+  } catch (error) {
+    console.warn(`⚠️  Could not read developers directory:`, error.message);
+  }
   
   for (const dir of watchDirs) {
     try {
