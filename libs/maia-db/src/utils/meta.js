@@ -9,11 +9,16 @@ import { hasSchema as hasSchemaInRegistry, getSchema as getSchemaFromRegistry } 
 
 /**
  * Exception schemas that don't need validation against registry
+ * These are special cases where headerMeta.$schema is not a co-id:
+ * - @account: Account CoValue (read-only headerMeta)
+ * - @group: Group CoValue (read-only headerMeta)
+ * - GenesisSchema: Metaschema CoValue (chicken-egg problem - can't self-reference co-id in read-only headerMeta)
+ *   The GenesisSchema CoMap has title: "Meta Schema" in its definition
  */
 export const EXCEPTION_SCHEMAS = {
 	ACCOUNT: '@account',
 	GROUP: '@group',
-	META_SCHEMA: '@meta-schema'
+	META_SCHEMA: 'GenesisSchema'
 };
 
 /**
@@ -29,17 +34,18 @@ export function isExceptionSchema(schema) {
 
 /**
  * Create metadata object with schema reference
- * @param {string} schemaName - Schema name (e.g., "ProfileSchema", "PostSchema", "@account", "@group", "@meta-schema")
+ * @param {string} schemaName - Schema name or co-id (e.g., "ProfileSchema", "co_z123...", "@account", "@group", "GenesisSchema")
  * @returns {JsonObject} Metadata object for headerMeta
  */
 export function createSchemaMeta(schemaName) {
 	// Exception schemas don't need registry validation
-	if (!isExceptionSchema(schemaName) && !hasSchemaInRegistry(schemaName)) {
+	// Note: schemaName can be a co-id (starts with "co_z") for actual schema references
+	if (!isExceptionSchema(schemaName) && !schemaName.startsWith('co_z') && !hasSchemaInRegistry(schemaName)) {
 		console.warn(`[createSchemaMeta] Schema '${schemaName}' not found in registry`);
 	}
 	
 	return {
-		$schema: schemaName  // Schema name (will be resolved to schema $id or co-id later)
+		$schema: schemaName  // Schema name, co-id, or exception schema
 	};
 }
 
@@ -91,7 +97,7 @@ export function validateHeaderMetaSchema(coValue) {
 	if (!schema) {
 		return { 
 			valid: false, 
-			error: 'CoValue missing $schema in headerMeta (required for all CoValues except @account, @group, @meta-schema)' 
+			error: 'CoValue missing $schema in headerMeta (required for all CoValues except @account, @group, GenesisSchema)' 
 		};
 	}
 	

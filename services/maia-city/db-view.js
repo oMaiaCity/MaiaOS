@@ -158,50 +158,49 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 			console.error('Error querying CoValues:', err);
 			data = [];
 		}
-	} else if (cojsonAPI) {
-		// Query all CoValues (no schema filter)
+	} else if (currentView === 'account' && cojsonAPI) {
+		// Default to account view - load account CoValue
 		try {
-			const store = await cojsonAPI.cojson({op: 'read'}); // No schema = all CoValues
+			const store = await cojsonAPI.cojson({op: 'read', schema: null, key: account.id});
 			// ReadOperation returns a ReactiveStore - get current value
-			let result = store.value || store;
-			data = Array.isArray(result) ? result : [];
+			let accountData = store.value || store;
+			data = accountData;
 			
 			// Subscribe to ReactiveStore updates for reactivity
 			if (registerSubscription && typeof store.subscribe === 'function') {
-				const subscriptionKey = 'allCoValues';
-				let lastLength = result.length;
-				const unsubscribe = store.subscribe((updatedResult) => {
-					// Re-render when store updates (check if data actually changed)
-					if (updatedResult && Array.isArray(updatedResult) && updatedResult.length !== lastLength) {
-						console.log(`🔄 [DB Viewer] Store updated for all CoValues, re-rendering...`);
-						lastLength = updatedResult.length;
-						// Use setTimeout to prevent infinite loops and batch updates
-						setTimeout(() => {
-							renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, switchView, selectCoValue, registerSubscription);
-						}, 0);
-					}
+				const subscriptionKey = `account:${account.id}`;
+				const unsubscribe = store.subscribe(() => {
+					// Re-render when store updates
+					setTimeout(() => {
+						renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, switchView, selectCoValue, registerSubscription);
+					}, 0);
 				});
 				registerSubscription(subscriptionKey, unsubscribe);
 			}
+			
+			// Set account as context if not already set
+			if (!currentContextCoValueId) {
+				currentContextCoValueId = account.id;
+			}
 		} catch (err) {
-			console.error('Error querying CoValues:', err);
-			data = [];
+			console.error('Error loading account:', err);
+			data = { error: err.message, id: account.id, loading: false };
 		}
 	} else {
 		data = [];
 	}
 	
-	if (currentView && currentView !== 'all') {
+	if (currentView && currentView !== 'account') {
 		// Get schema from hardcoded registry
 		const schema = getSchema(currentView) || allSchemas[currentView];
 		viewTitle = schema?.title || currentView;
 		viewSubtitle = `${Array.isArray(data) ? data.length : 0} CoValue(s)`;
 	} else {
-		viewTitle = 'All CoValues';
+		viewTitle = 'Account';
 		viewSubtitle = '';
 	}
 	
-	// Build account structure navigation (minimal: Account + All CoValues)
+	// Build account structure navigation (Account only)
 	const navigationItems = [];
 	
 	// Entry 1: Account itself
@@ -209,14 +208,6 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 		id: account.id,
 		label: 'Account',
 		type: 'account'
-	});
-	
-	// Entry 2: All CoValues
-	navigationItems.push({
-		id: 'all',
-		label: 'All CoValues',
-		type: 'all',
-		count: Array.isArray(data) ? data.length : 0
 	});
 
 	// Build table content based on view
@@ -560,65 +551,22 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 			tableContent = '<div class="empty-state">No properties available</div>';
 		}
 	} else {
-		// AllCoValues view - show all CoValues from cojson query
-		// Use card-based design like legacy ListItem
-		const coValueItems = Array.isArray(data) ? data.map(cv => {
-			// Get schema definition for property labels
-			const schemaDef = cv.schema ? getSchema(cv.schema) : null;
-			
-			// Format type badge
-			const typeBadge = cv.type || 'unknown';
-			const typeClass = typeBadge.replace(/-/g, ''); // Remove hyphens for CSS class
-			
-			return `
-				<button 
-					type="button"
-					class="list-item-card clickable-item ${currentContextCoValueId === cv.id ? 'selected' : ''}"
-					onclick="selectCoValue('${cv.id}')"
-				>
-					<div class="flex justify-between items-center gap-2">
-						<!-- Left side: Display Name -->
-						<div class="flex flex-col gap-0.5 flex-grow min-w-0">
-							<span class="text-sm font-medium text-slate-700 truncate">
-								${cv.displayName || cv.schema || cv.id}
-							</span>
-							<span class="text-xs text-slate-400 uppercase tracking-wide">
-								${cv.schema || cv.type}
-							</span>
-						</div>
-						
-						<!-- Right side: CoValue ID, Arrow, and Badge -->
-						<div class="flex items-center gap-2 flex-shrink-0 justify-end">
-							<code class="co-id text-xs text-slate-600 hover:underline" title="${cv.id}">
-								${truncate(cv.id, 12)}
-							</code>
-							<svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-							</svg>
-							<span class="badge badge-type badge-${typeClass}">${typeBadge}</span>
-						</div>
-					</div>
-				</button>
-			`;
-		}).join('') : '<div class="empty-state">No CoValues found</div>';
-		
-		tableContent = `
-			<div class="list-view-container">
-				${coValueItems}
-			</div>
-		`;
+		// Default account view or other views - show empty state or error
+		if (data && data.error) {
+			tableContent = `<div class="empty-state">Error: ${data.error}</div>`;
+		} else if (!data || (data.properties && data.properties.length === 0)) {
+			tableContent = '<div class="empty-state">No properties available</div>';
+		} else {
+			tableContent = '<div class="empty-state">No data available</div>';
+		}
 	}
 	
 	// Build sidebar navigation items (flat structure, same visual level)
 	const sidebarItems = navigationItems.map(item => {
-		// Special handling for "All CoValues" - it switches view, doesn't load a CoValue
-		const isActive = item.id === 'all' 
-			? (!currentContextCoValueId && currentView === 'all')
-			: (currentContextCoValueId === item.id);
+		// Account navigation - select account CoValue
+		const isActive = currentContextCoValueId === item.id || (currentView === 'account' && !currentContextCoValueId);
 		
-		const clickHandler = item.id === 'all' 
-			? `onclick="switchView('all')"` 
-			: `onclick="selectCoValue('${item.id}')"`;
+		const clickHandler = `onclick="selectCoValue('${item.id}')"`;
 		
 		return `
 			<div class="sidebar-item ${isActive ? 'active' : ''}" ${clickHandler}>
@@ -750,6 +698,9 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 							</span>
 						</div>
 						${authState.signedIn ? `
+							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database with schemas and configs (dev only)">
+								🌱 Seed
+							</button>
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
 								Sign Out
 							</button>

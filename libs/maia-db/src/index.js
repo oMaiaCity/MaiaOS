@@ -41,3 +41,6 @@ export {
 
 // CoJSON Mini CRUD API (database-level wrapper)
 export { createCoJSONAPI } from "./cojson/factory.js";
+
+// CoJSON Backend (for MaiaOS.boot() compatibility)
+export { CoJSONBackend } from "./cojson/backend/cojson-backend.js";

@@ -74,12 +74,13 @@ export async function createSchemaCoMap(group, schemaDefinition, metaSchemaCoId)
   }
   
   // Create the schema CoMap
-  // Use "@meta-schema" as the schema name (special exception for schema CoMaps)
-  // This sets headerMeta.$schema = "@meta-schema" during creation
+  // Schema CoMaps should use the actual metaSchema co-id in headerMeta
+  // This function is deprecated - use universalGroup.createMap() directly with metaSchema co-id
+  // Keeping for backward compatibility but should not be used in new code
   const schemaCoMap = await createCoMap(
     group,
     schemaCoMapData,
-    '@meta-schema' // Use exception schema for schema CoMaps
+    'GenesisSchema' // Will be replaced with actual co-id by caller
   );
   
   // Update $id with actual co-id
@@ -113,12 +114,12 @@ export async function createMetaSchemaCoMap(group) {
   // Create meta schema with temporary co-id (will be updated after creation)
   const metaSchemaDef = getMetaSchemaCoMapDefinition('co_zTEMP');
   
-  // Create the meta schema CoMap with headerMeta.$schema = "@meta-schema"
-  // This sets headerMeta during creation via meta parameter
+  // Create the meta schema CoMap with headerMeta.$schema = "GenesisSchema"
+  // SPECIAL: Can't self-reference co-id in read-only headerMeta, so use "GenesisSchema" exception
   const metaSchemaCoMap = await createCoMap(
     group,
     metaSchemaDef,
-    '@meta-schema' // Sets headerMeta.$schema = "@meta-schema" during creation
+    'GenesisSchema' // Sets headerMeta.$schema = "GenesisSchema" (special exception)
   );
   
   // Update meta schema with actual co-id for self-reference

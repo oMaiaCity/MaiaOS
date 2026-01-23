@@ -43,7 +43,7 @@ export function getMetaSchemaDefinition(metaSchemaCoId = null) {
       'https://json-schema.org/draft/2020-12/vocab/content': true
     },
     $dynamicAnchor: 'meta',
-    title: 'MaiaOS Meta Schema',
+    title: 'Meta Schema',
     description: 'JSON Schema 2020-12 meta schema with embedded co-type definitions for MaiaOS',
     type: ['object', 'boolean'],
     properties: {

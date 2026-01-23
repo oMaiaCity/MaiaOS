@@ -15,6 +15,7 @@ import { createCoMap } from '../../services/oMap.js';
 import { createCoList } from '../../services/oList.js';
 import { createPlainText } from '../../services/oPlainText.js';
 import { createCoStream } from '../../services/oStream.js';
+import { seed } from './seeding/seed.js';
 
 export class CoJSONBackend extends DBAdapter {
   constructor(node, account) {
@@ -83,32 +84,87 @@ export class CoJSONBackend extends DBAdapter {
   
   /**
    * Get default group from account (for create operations)
-   * Returns universal group (hardcoded owner/admin of all CoValues)
+   * Returns universal group via account.profile.group using read() API
+   * Uses @group exception since groups don't have $schema
    * @returns {RawGroup|null} Universal group or null if not found
    */
-  getDefaultGroup() {
-    // Get universal group from account (created by migration)
-    const universalGroupId = this.account.get("universalGroup");
-    if (!universalGroupId) {
-      console.warn('[CoJSONBackend] Universal group not found on account - falling back to account');
+  async getDefaultGroup() {
+    try {
+      // Use read() API to get profile (operation-based)
+      const profileStore = await this.read(null, this.account.get("profile"));
+      if (!profileStore || profileStore.error) {
+        console.warn('[CoJSONBackend] Profile not found on account - falling back to account');
+        return this.account;
+      }
+      
+      // Wait for profile to be available
+      await new Promise((resolve) => {
+        if (!profileStore.loading) {
+          resolve();
+          return;
+        }
+        const unsubscribe = profileStore.subscribe(() => {
+          if (!profileStore.loading) {
+            unsubscribe();
+            resolve();
+          }
+        });
+      });
+      
+      const profileData = profileStore.value;
+      if (!profileData || !profileData.properties) {
+        console.warn('[CoJSONBackend] Profile data not available - falling back to account');
+        return this.account;
+      }
+      
+      // Find group property in profile
+      const groupProperty = profileData.properties.find(p => p.key === 'group');
+      if (!groupProperty || !groupProperty.value) {
+        console.warn('[CoJSONBackend] Universal group not found in profile.group - falling back to account');
+        return this.account;
+      }
+      
+      const universalGroupId = groupProperty.value;
+      
+      // Use read() API with @group exception (groups don't have $schema)
+      const groupStore = await this.read('@group', universalGroupId);
+      if (!groupStore || groupStore.error) {
+        console.warn('[CoJSONBackend] Universal group not available - falling back to account');
+        return this.account;
+      }
+      
+      // Wait for group to be available
+      await new Promise((resolve) => {
+        if (!groupStore.loading) {
+          resolve();
+          return;
+        }
+        const unsubscribe = groupStore.subscribe(() => {
+          if (!groupStore.loading) {
+            unsubscribe();
+            resolve();
+          }
+        });
+      });
+      
+      // Get the actual RawGroup from CoValueCore (needed for createMap/createList)
+      const universalGroupCore = this.getCoValue(universalGroupId);
+      if (!universalGroupCore) {
+        console.warn('[CoJSONBackend] Universal group core not found - falling back to account');
+        return this.account;
+      }
+      
+      const universalGroup = this.getCurrentContent(universalGroupCore);
+      if (!universalGroup || typeof universalGroup.createMap !== 'function') {
+        console.warn('[CoJSONBackend] Universal group content not available - falling back to account');
+        return this.account;
+      }
+      
+      return universalGroup;
+    } catch (error) {
+      console.warn('[CoJSONBackend] Error getting default group:', error);
       return this.account;
     }
-    
-    const universalGroupCore = this.node.getCoValue(universalGroupId);
-    if (!universalGroupCore || universalGroupCore.type !== 'group') {
-      console.warn('[CoJSONBackend] Universal group not available - falling back to account');
-      return this.account;
-    }
-    
-    // Get actual group content (RawGroup) from CoValueCore
-    const universalGroup = this.getCurrentContent(universalGroupCore);
-    if (!universalGroup || typeof universalGroup.createMap !== 'function') {
-      console.warn('[CoJSONBackend] Universal group content not available - falling back to account');
-      return this.account;
-    }
-    
-    // Return universal group (private, hardcoded owner/admin)
-    return universalGroup;
   }
   
   /**
@@ -530,7 +586,10 @@ export class CoJSONBackend extends DBAdapter {
 
   /**
    * Read data from database - directly translates to CoJSON raw operations
-   * @param {string} schema - Schema co-id (co_z...)
+   * @param {string} schema - Schema co-id (co_z...) or special exceptions:
+   *   - '@group' - For groups (no $schema, use ruleset.type === 'group')
+   *   - '@account' - For accounts (no $schema, use headerMeta.type === 'account')
+   *   - '@meta-schema' or 'GenesisSchema' - For meta schema
    * @param {string} [key] - Specific key (co-id) for single item
    * @param {string[]} [keys] - Array of co-ids for batch reads
    * @param {Object} [filter] - Filter criteria for collection queries
@@ -539,13 +598,13 @@ export class CoJSONBackend extends DBAdapter {
   async read(schema, key, keys, filter) {
     // Batch read (multiple keys)
     if (keys && Array.isArray(keys)) {
-      const stores = await Promise.all(keys.map(coId => this._readSingleItem(coId)));
+      const stores = await Promise.all(keys.map(coId => this._readSingleItem(coId, schema)));
       return stores;
     }
 
     // Single item read
     if (key) {
-      return await this._readSingleItem(key);
+      return await this._readSingleItem(key, schema);
     }
 
     // Collection read (by schema) or all CoValues (if schema is null/undefined)
@@ -560,9 +619,10 @@ export class CoJSONBackend extends DBAdapter {
    * Read a single CoValue by ID and wrap in ReactiveStore
    * @private
    * @param {string} coId - CoValue ID
+   * @param {string} [schemaHint] - Schema hint for special types (@group, @account, @meta-schema)
    * @returns {Promise<ReactiveStore>} ReactiveStore with CoValue data
    */
-  async _readSingleItem(coId) {
+  async _readSingleItem(coId, schemaHint = null) {
     const store = new ReactiveStore(null);
     const coValueCore = this.getCoValue(coId);
     
@@ -584,14 +644,14 @@ export class CoJSONBackend extends DBAdapter {
           return;
         }
 
-        // Extract CoValue data
-        const data = this._extractCoValueData(core);
+        // Extract CoValue data with schema hint for special types
+        const data = this._extractCoValueData(core, schemaHint);
         store._set(data);
       });
 
       // Set initial value if available
       if (coValueCore.isAvailable()) {
-        const data = this._extractCoValueData(coValueCore);
+        const data = this._extractCoValueData(coValueCore, schemaHint);
         store._set(data);
       } else {
         // Trigger load if not available
@@ -610,7 +670,7 @@ export class CoJSONBackend extends DBAdapter {
     if (isReused && coValueCore) {
       // Get current value and set on new store
       if (coValueCore.isAvailable()) {
-        const currentData = this._extractCoValueData(coValueCore);
+        const currentData = this._extractCoValueData(coValueCore, schemaHint);
         store._set(currentData);
       } else {
         store._set({ id: coId, loading: true });
@@ -622,7 +682,7 @@ export class CoJSONBackend extends DBAdapter {
           store._set({ id: coId, loading: true });
           return;
         }
-        const data = this._extractCoValueData(core);
+        const data = this._extractCoValueData(core, schemaHint);
         store._set(data);
       });
       
@@ -800,15 +860,28 @@ export class CoJSONBackend extends DBAdapter {
    * Extract CoValue data from CoValueCore and normalize (match IndexedDB format)
    * @private
    * @param {CoValueCore} coValueCore - CoValueCore instance
+   * @param {string} [schemaHint] - Schema hint for special types (@group, @account, @meta-schema)
    * @returns {Object} Normalized CoValue data (flattened properties, id field added)
    */
-  _extractCoValueData(coValueCore) {
+  _extractCoValueData(coValueCore, schemaHint = null) {
     const content = this.getCurrentContent(coValueCore);
     const header = this.getHeader(coValueCore);
     const headerMeta = header?.meta || null;
+    const ruleset = coValueCore.ruleset || header?.ruleset;
     
     const rawType = content?.type || 'unknown';
-    const schema = headerMeta?.$schema || null;
+    
+    // Determine schema based on hint or headerMeta
+    let schema = headerMeta?.$schema || null;
+    
+    // Handle special types that don't have $schema
+    if (schemaHint === '@group' || (ruleset && ruleset.type === 'group')) {
+      schema = '@group'; // Groups don't have $schema, use special marker
+    } else if (schemaHint === '@account' || (headerMeta && headerMeta.type === 'account')) {
+      schema = '@account'; // Accounts don't have $schema, use special marker
+    } else if (schemaHint === '@meta-schema' || schema === 'GenesisSchema') {
+      schema = '@meta-schema'; // Meta schema uses special marker
+    }
 
     // Normalize based on type
     if (rawType === 'colist' && content && content.toJSON) {
@@ -1006,9 +1079,10 @@ export class CoJSONBackend extends DBAdapter {
       }
     }
     
-    const group = this.getDefaultGroup();
-    if (!group) {
-      throw new Error('[CoJSONBackend] Group required for create');
+    // Use account for auto-assignment of universal group
+    // The create functions will automatically get universal group from account
+    if (!this.account) {
+      throw new Error('[CoJSONBackend] Account required for create');
     }
 
     let coValue;
@@ -1017,23 +1091,25 @@ export class CoJSONBackend extends DBAdapter {
         if (!data || typeof data !== 'object' || Array.isArray(data)) {
           throw new Error('[CoJSONBackend] Data must be object for comap');
         }
-        coValue = await createCoMap(group, data, schema);
+        coValue = await createCoMap(this.account, data, schema, this.node);
         break;
       case 'colist':
         if (!Array.isArray(data)) {
           throw new Error('[CoJSONBackend] Data must be array for colist');
         }
-        coValue = await createCoList(group, data, schema);
+        coValue = await createCoList(this.account, data, schema, this.node);
         break;
       case 'cotext':
       case 'coplaintext':
         if (typeof data !== 'string') {
           throw new Error('[CoJSONBackend] Data must be string for cotext');
         }
+        // createPlainText still uses group for now (will update later)
+        const group = await this.getDefaultGroup();
         coValue = await createPlainText(group, data, schema);
         break;
       case 'costream':
-        coValue = createCoStream(group, schema);
+        coValue = createCoStream(this.account, schema, this.node);
         break;
       default:
         throw new Error(`[CoJSONBackend] Unsupported cotype: ${cotype}`);
@@ -1214,5 +1290,20 @@ export class CoJSONBackend extends DBAdapter {
     }
 
     return null;
+  }
+  
+  /**
+   * Seed database with configs, schemas, and initial data
+   * @param {Object} configs - Config registry {vibe, styles, actors, views, contexts, states, interfaces}
+   * @param {Object} schemas - Schema definitions
+   * @param {Object} data - Initial application data {todos: [], ...}
+   * @returns {Promise<Object>} Summary of what was seeded
+   */
+  async seed(configs, schemas, data) {
+    if (!this.account) {
+      throw new Error('[CoJSONBackend] Account required for seed');
+    }
+    
+    return await seed(this.account, this.node, configs, schemas, data || {});
   }
 }

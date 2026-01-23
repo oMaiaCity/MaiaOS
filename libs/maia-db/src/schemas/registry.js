@@ -330,7 +330,7 @@ export function getAllSchemas() {
 export function hasSchema(schemaName) {
   // Only check hardcoded registry (for migrations/seeding before account.os.schemata exists)
   // Exception schemas are always valid
-  const EXCEPTION_SCHEMAS = ['@account', '@group', '@meta-schema'];
+  const EXCEPTION_SCHEMAS = ['@account', '@group', 'GenesisSchema'];
   if (EXCEPTION_SCHEMAS.includes(schemaName)) {
     return true;
   }

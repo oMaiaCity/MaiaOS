@@ -9,13 +9,13 @@
  * - No manual re-seeding needed - Jazz handles persistence and loading
  */
 
-import { createMaiaOS, signInWithPasskey, signUpWithPasskey, isPRFSupported, subscribeSyncState } from "@MaiaOS/kernel";
+import { MaiaOS, signInWithPasskey, signUpWithPasskey, isPRFSupported, subscribeSyncState } from "@MaiaOS/kernel";
 import { createCoJSONAPI } from "@MaiaOS/db";
 import { renderApp } from './db-view.js';
 
 let maia;
 let cojsonAPI = null; // CoJSON API instance
-let currentView = 'all'; // Current schema filter (default: 'all' for all CoValues)
+let currentView = 'account'; // Current schema filter (default: 'account')
 let currentContextCoValueId = null; // Currently loaded CoValue in main context (explorer-style navigation)
 let authState = {
 	signedIn: false,
@@ -135,8 +135,8 @@ async function signIn() {
 		
 		console.log("✅ Existing passkey authenticated:", accountID);
 		
-		// Create MaiaOS with node and account
-		maia = await createMaiaOS({ node, account, accountID });
+		// Boot MaiaOS with node and account (using CoJSON backend)
+		maia = await MaiaOS.boot({ node, account });
 		window.maia = maia;
 		
 		// Create CoJSON API instance
@@ -160,6 +160,11 @@ async function signIn() {
 		// Explicitly load linked CoValues from IndexedDB
 		// Jazz uses lazy-loading - CoValues are only loaded when explicitly requested
 		await loadLinkedCoValues();
+		
+		// Set account as default context
+		if (maia && maia.id && maia.id.maiaId) {
+			currentContextCoValueId = maia.id.maiaId.id;
+		}
 		
 		renderAppInternal();
 		
@@ -259,8 +264,8 @@ async function register() {
 		
 		console.log("✅ New passkey created:", accountID);
 		
-		// Create MaiaOS with node and account
-		maia = await createMaiaOS({ node, account, accountID });
+		// Boot MaiaOS with node and account (using CoJSON backend)
+		maia = await MaiaOS.boot({ node, account });
 		window.maia = maia;
 		
 		// Create CoJSON API instance
@@ -399,10 +404,52 @@ function renderUnsupportedBrowser(message) {
 	`;
 }
 
+/**
+ * Handle seed button click - seed database with schemas and configs
+ */
+async function handleSeed() {
+	if (!maia || !maia.id) {
+		showToast("Please sign in first", 'error', 3000);
+		return;
+	}
+	
+	try {
+		showToast("🌱 Seeding database...", 'info', 2000);
+		
+		// Get node and account from maia
+		const { node, maiaId: account } = maia.id;
+		
+		// Boot with registry to trigger seeding
+		// Empty registry {} will seed schemas only (no configs)
+		// Or you can provide configs: { registry: { vibe: {...}, styles: {...}, ... } }
+		maia = await MaiaOS.boot({ 
+			node, 
+			account,
+			registry: {} // Empty registry = seed schemas only
+		});
+		
+		// Re-create CoJSON API instance
+		cojsonAPI = createCoJSONAPI(node, account);
+		window.cojsonAPI = cojsonAPI;
+		
+		// Reload linked CoValues to see seeded data
+		await loadLinkedCoValues();
+		
+		// Re-render
+		renderAppInternal();
+		
+		showToast("✅ Database seeded successfully!", 'success', 3000);
+	} catch (error) {
+		console.error("Seeding failed:", error);
+		showToast(`Seeding failed: ${error.message}`, 'error', 5000);
+	}
+}
+
 // Expose globally for onclick handlers
 window.handleSignIn = signIn;
 window.handleRegister = register;
 window.handleSignOut = signOut;
+window.handleSeed = handleSeed;
 window.showToast = showToast; // Expose for debugging
 
 // switchView moved above selectCoValue

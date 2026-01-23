@@ -44,11 +44,144 @@ export class MaiaOS {
     this.actorEngine = null;
     this.subscriptionEngine = null; // Subscription management engine
     this.dbEngine = null; // Database operation engine
+    
+    // CoJSON backend support (for maia-city compatibility)
+    this._node = null;
+    this._account = null;
+  }
+  
+  /**
+   * Compatibility property for maia-city and other tools
+   * Exposes node and account in the same structure as createMaiaOS()
+   */
+  get id() {
+    if (!this._node || !this._account) {
+      return null;
+    }
+    return {
+      maiaId: this._account,
+      node: this._node
+    };
+  }
+  
+  /**
+   * Get all CoValues from the node (for maia-city compatibility)
+   * @returns {Array} Array of CoValue metadata
+   */
+  getAllCoValues() {
+    if (!this._node) {
+      return [];
+    }
+    
+    const allCoValues = [];
+    const coValuesMap = this._node.coValues;
+    
+    if (coValuesMap && typeof coValuesMap.entries === 'function') {
+      for (const [coId, coValueCore] of coValuesMap.entries()) {
+        try {
+          if (!coValueCore.isAvailable()) {
+            allCoValues.push({
+              id: coId,
+              type: 'loading',
+              schema: null,
+              headerMeta: null,
+              keys: 'N/A',
+              content: null,
+              createdAt: null
+            });
+            continue;
+          }
+          
+          const content = coValueCore.getCurrentContent();
+          const header = coValueCore.verified?.header;
+          const headerMeta = header?.meta || null;
+          const schema = headerMeta?.$schema || null;
+          const createdAt = header?.createdAt || null;
+          
+          let keysCount = 'N/A';
+          if (content && content.keys && typeof content.keys === 'function') {
+            try {
+              const keys = content.keys();
+              keysCount = keys.length;
+            } catch (e) {
+              // Ignore
+            }
+          }
+          
+          const type = content?.type || 'unknown';
+          
+          let specialContent = null;
+          if (type === 'costream') {
+            try {
+              const streamData = content.toJSON();
+              if (streamData instanceof Uint8Array) {
+                specialContent = {
+                  type: 'stream',
+                  itemCount: 'binary',
+                  preview: `${streamData.length} bytes`
+                };
+              } else if (streamData && typeof streamData === 'object') {
+                const allItems = [];
+                for (const sessionKey in streamData) {
+                  if (Array.isArray(streamData[sessionKey])) {
+                    allItems.push(...streamData[sessionKey]);
+                  }
+                }
+                specialContent = {
+                  type: 'stream',
+                  itemCount: allItems.length,
+                  preview: allItems.slice(0, 3)
+                };
+              }
+            } catch (e) {
+              // Ignore
+            }
+          } else if (type === 'coplaintext') {
+            try {
+              specialContent = {
+                type: 'plaintext',
+                content: content.text || content.toString()
+              };
+            } catch (e) {
+              // Ignore
+            }
+          }
+          
+          allCoValues.push({
+            id: coId,
+            type: type,
+            schema: schema,
+            headerMeta: headerMeta,
+            keys: keysCount,
+            content: specialContent || content,
+            createdAt: createdAt
+          });
+        } catch (error) {
+          console.warn(`Error processing CoValue ${coId}:`, error);
+          allCoValues.push({
+            id: coId,
+            type: 'error',
+            schema: null,
+            headerMeta: null,
+            keys: 'N/A',
+            content: null,
+            createdAt: null,
+            error: error.message
+          });
+        }
+      }
+    }
+    
+    return allCoValues;
   }
 
   /**
    * Boot the operating system
    * @param {Object} config - Boot configuration
+   * @param {Object} [config.node] - LocalNode instance (for CoJSON backend)
+   * @param {Object} [config.account] - RawAccount instance (for CoJSON backend)
+   * @param {Object} [config.backend] - Pre-initialized backend (optional, will create if not provided)
+   * @param {Object} [config.registry] - Config registry for seeding
    * @returns {Promise<MaiaOS>} Booted OS instance
    */
   static async boot(config = {}) {
@@ -56,8 +189,14 @@ export class MaiaOS {
     
     console.log('🚀 Booting MaiaOS v0.4...');
     
-    // Initialize database
-    const backend = await MaiaOS._initializeDatabase(os);
+    // Store node and account for CoJSON backend compatibility
+    if (config.node && config.account) {
+      os._node = config.node;
+      os._account = config.account;
+    }
+    
+    // Initialize database (supports both IndexedDB and CoJSON backends)
+    const backend = await MaiaOS._initializeDatabase(os, config);
     
     // Seed database if registry provided
     if (config.registry) {
@@ -77,13 +216,35 @@ export class MaiaOS {
 
   /**
    * Initialize database backend and engine
+   * Supports both IndexedDB (default) and CoJSON backends
    * @param {MaiaOS} os - OS instance
-   * @returns {Promise<IndexedDBBackend>} Initialized backend
+   * @param {Object} config - Boot configuration
+   * @param {Object} [config.node] - LocalNode instance (for CoJSON backend)
+   * @param {Object} [config.account] - RawAccount instance (for CoJSON backend)
+   * @param {Object} [config.backend] - Pre-initialized backend (optional)
+   * @returns {Promise<DBAdapter>} Initialized backend
    */
-  static async _initializeDatabase(os) {
+  static async _initializeDatabase(os, config = {}) {
+    // If backend is provided, use it
+    if (config.backend) {
+      os.dbEngine = new DBEngine(config.backend);
+      return config.backend;
+    }
+    
+    // If node and account are provided, use CoJSON backend
+    if (config.node && config.account) {
+      const { CoJSONBackend } = await import('@MaiaOS/db');
+      const backend = new CoJSONBackend(config.node, config.account);
+      os.dbEngine = new DBEngine(backend);
+      console.log('   Using CoJSON backend');
+      return backend;
+    }
+    
+    // Default: Use IndexedDB backend
     const backend = new IndexedDBBackend();
     await backend.init();
     os.dbEngine = new DBEngine(backend);
+    console.log('   Using IndexedDB backend');
     return backend;
   }
 
