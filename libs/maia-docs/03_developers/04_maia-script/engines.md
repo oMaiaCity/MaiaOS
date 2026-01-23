@@ -304,27 +304,47 @@ const newTodo = await dbEngine.execute({
 
 ## SubscriptionEngine
 
-**Purpose:** Context-driven reactive subscription manager.
+**Purpose:** Context-driven reactive subscription manager with end-to-end reactivity.
 
 **What it does:**
-- Watches actor context for query objects
+- Watches actor context for query objects (data subscriptions)
 - Auto-subscribes to reactive data
+- **Subscribes to config CRDTs** (view, style, state, interface, context, brand) for runtime-editable configs
 - Auto-resolves `@` references
 - Batches re-renders for performance
 - Updates actor context automatically (infrastructure exception)
+- Handles config updates reactively (view/style/state changes trigger re-renders)
 
 **Key Methods:**
-- `initialize(actor)` - Initialize subscriptions for an actor
-- `updateSubscriptions(actor)` - Update subscriptions when context changes
-- `cleanup(actor)` - Clean up subscriptions when actor is destroyed
+- `initialize(actor)` - Initialize subscriptions for an actor (data + config)
+- `setEngines(engines)` - Set view/style/state engines for config subscriptions
+- `cleanup(actor)` - Clean up all subscriptions when actor is destroyed
+
+**Subscription Types:**
+1. **Data Subscriptions** - Query objects in context (`{schema: "co_z...", filter: {...}}`)
+2. **Config Subscriptions** - Config CRDTs (view, style, state, interface, context, brand)
+3. **Message Subscriptions** - Subscriptions/inbox colists (handled in ActorEngine)
 
 **Dependencies:**
 - `DBEngine` - For query operations
-- `ActorEngine` - For triggering re-renders
+- `ActorEngine` - For triggering re-renders and loading configs
+- `ViewEngine` - For view subscriptions
+- `StyleEngine` - For style/brand subscriptions
+- `StateEngine` - For state machine subscriptions
 
 **Important:** This engine directly updates actor context for reactive query objects. This is the ONLY exception to the rule that state machines are the single source of truth for context changes.
 
+**Config Reactivity:**
+When config CRDTs change (view, style, state, etc.), SubscriptionEngine automatically:
+- Updates caches
+- Updates actor properties (`actor.viewDef`, `actor.machine`, etc.)
+- Triggers re-renders
+- Reloads stylesheets (for style changes)
+- Recreates state machines (for state changes)
+
 **Source:** `libs/maia-script/src/engines/subscription-engine/subscription.engine.js`
+
+**See also:** [subscriptions.md](./subscriptions.md) - Detailed subscription architecture documentation
 
 ---
 

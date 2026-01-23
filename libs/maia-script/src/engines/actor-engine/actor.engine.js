@@ -10,10 +10,10 @@
 import { MessageQueue } from '../message-queue/message.queue.js';
 // Import validation helper
 import { validateAgainstSchemaOrThrow, validateOrThrow } from '@MaiaOS/schemata/validation.helper';
+// Import config loader utilities
+import { loadConfig, subscribeConfig, subscribeConfigsBatch, loadConfigOrUseProvided } from '../../utils/config-loader.js';
 // Import schema loader utility
 import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
-// Import shared utilities
-import { loadConfigOrUseProvided, loadConfig } from '../../utils/config-loader.js';
 
 export class ActorEngine {
   constructor(styleEngine, viewEngine, moduleRegistry, toolEngine, stateEngine = null) {
@@ -73,9 +73,13 @@ export class ActorEngine {
    * @returns {Promise<Object>} The parsed actor config
    */
   async loadActor(coIdOrConfig) {
+    const actorSchemaCoId = await this.dbEngine.getSchemaCoId('actor');
+    if (!actorSchemaCoId) {
+      throw new Error('[ActorEngine] Failed to resolve actor schema co-id');
+    }
     return await loadConfigOrUseProvided(
       this.dbEngine,
-      '@schema/actor',
+      actorSchemaCoId,
       coIdOrConfig,
       'actor'
     );
@@ -83,17 +87,34 @@ export class ActorEngine {
   
 
   /**
-   * Load a context by co-id
+   * Load a context by co-id (reactive subscription)
    * @param {string} coId - Context co-id (e.g., 'co_z...')
+   * @param {Function} [onUpdate] - Optional callback when context changes
    * @returns {Promise<Object>} The parsed context
    */
-  async loadContext(coId) {
-    const contextDef = await loadConfig(
+  async loadContext(coId, onUpdate = null) {
+    const contextSchemaCoId = await this.dbEngine.getSchemaCoId('context');
+    if (!contextSchemaCoId) {
+      throw new Error('[ActorEngine] Failed to resolve context schema co-id');
+    }
+    
+    // Use subscription for reactivity
+    const { config: contextDef, unsubscribe } = await subscribeConfig(
       this.dbEngine,
-      '@schema/context',
+      contextSchemaCoId,
       coId,
-      'context'
+      'context',
+      (updatedContextDef) => {
+        // Call custom update handler if provided
+        if (onUpdate) {
+          const { $schema, $id, ...context } = updatedContextDef;
+          onUpdate(context);
+        }
+      }
     );
+    
+    // Store unsubscribe function (if we have an actor context, store it there)
+    // For now, we'll handle this in createActor
     
     // Return context without metadata
     const { $schema, $id, ...context } = contextDef;
@@ -101,17 +122,32 @@ export class ActorEngine {
   }
 
   /**
-   * Load an interface by co-id
+   * Load an interface by co-id (reactive subscription)
    * @param {string} coId - Interface co-id (e.g., 'co_z...')
+   * @param {Function} [onUpdate] - Optional callback when interface changes
    * @returns {Promise<Object>} The parsed interface definition
    */
-  async loadInterface(coId) {
-    return await loadConfig(
+  async loadInterface(coId, onUpdate = null) {
+    const interfaceSchemaCoId = await this.dbEngine.getSchemaCoId('interface');
+    if (!interfaceSchemaCoId) {
+      throw new Error('[ActorEngine] Failed to resolve interface schema co-id');
+    }
+    
+    // Use subscription for reactivity
+    const { config: interfaceDef, unsubscribe } = await subscribeConfig(
       this.dbEngine,
-      '@schema/interface',
+      interfaceSchemaCoId,
       coId,
-      'interface'
+      'interface',
+      (updatedInterface) => {
+        // Call custom update handler if provided
+        if (onUpdate) {
+          onUpdate(updatedInterface);
+        }
+      }
     );
+    
+    return interfaceDef;
   }
 
   /**
@@ -134,22 +170,31 @@ export class ActorEngine {
     if (!actorConfig.view) {
       throw new Error(`[ActorEngine] Actor config must have 'view' property with co-id`);
     }
+    // Load view without subscription handler - SubscriptionEngine will add handler later
+    // This avoids duplicate DB queries (loadView checks cache first)
     const viewDef = await this.viewEngine.loadView(actorConfig.view);
     
     // Load context (must be co-id)
     let context;
     if (actorConfig.context) {
+      // Load context without subscription handler - SubscriptionEngine will add handler later
       context = await this.loadContext(actorConfig.context);
     } else {
       context = {};
     }
     
-    // Load subscriptions colist (co-id → array of actor IDs)
+    // Load subscriptions colist (co-id → array of actor IDs) - REACTIVE
     let subscriptions = [];
     if (actorConfig.subscriptions) {
+      const subscriptionsSchemaCoId = await this.dbEngine.getSchemaCoId('subscriptions');
+      if (!subscriptionsSchemaCoId) {
+        throw new Error('[ActorEngine] Failed to resolve subscriptions schema co-id');
+      }
+      
+      // Get initial value (one-time query for now, subscription set up after actor creation)
       const subscriptionsColist = await this.dbEngine.execute({
         op: 'query',
-        schema: '@schema/subscriptions',
+        schema: subscriptionsSchemaCoId,
         key: actorConfig.subscriptions
       });
       if (subscriptionsColist && Array.isArray(subscriptionsColist.items)) {
@@ -157,12 +202,18 @@ export class ActorEngine {
       }
     }
     
-    // Load inbox costream (co-id → array of messages)
+    // Load inbox costream (co-id → array of messages) - REACTIVE
     let inbox = [];
     if (actorConfig.inbox) {
+      const inboxSchemaCoId = await this.dbEngine.getSchemaCoId('inbox');
+      if (!inboxSchemaCoId) {
+        throw new Error('[ActorEngine] Failed to resolve inbox schema co-id');
+      }
+      
+      // Get initial value (one-time query for now, subscription set up after actor creation)
       const inboxCostream = await this.dbEngine.execute({
         op: 'query',
-        schema: '@schema/inbox',
+        schema: inboxSchemaCoId,
         key: actorConfig.inbox
       });
       if (inboxCostream && Array.isArray(inboxCostream.items)) {
@@ -185,11 +236,75 @@ export class ActorEngine {
       inboxWatermark: actorConfig.inboxWatermark || 0,
       // v0.5: Subscriptions managed by SubscriptionEngine
       _subscriptions: [], // Per-actor subscriptions (unsubscribe functions)
+      
+      // Store config subscriptions (for config CRDT reactivity)
+      _configSubscriptions: [],
       // Track if initial render has completed (for query subscription re-render logic)
       _initialRenderComplete: false,
       // Track visibility (for re-render optimization)
-      _isVisible: true // Actors are visible by default (root vibe is always visible)
+      _isVisible: true, // Actors are visible by default (root vibe is always visible)
     };
+    
+    // Set up reactive subscriptions for subscriptions colist and inbox costream (batch)
+    // Collect subscription requests for batch API
+    const messageSubscriptionRequests = [];
+    
+    if (actorConfig.subscriptions) {
+      try {
+        const subscriptionsSchemaCoId = await this.dbEngine.getSchemaCoId('subscriptions');
+        if (subscriptionsSchemaCoId) {
+          messageSubscriptionRequests.push({
+            schemaRef: subscriptionsSchemaCoId,
+            coId: actorConfig.subscriptions,
+            configType: 'subscriptions',
+            onUpdate: (updatedColist) => {
+              if (updatedColist && Array.isArray(updatedColist.items)) {
+                actor.subscriptions = updatedColist.items;
+                // TODO: Re-subscribe to new actors, unsubscribe from removed ones (Milestone 3)
+              }
+            },
+            cache: null
+          });
+        }
+      } catch (error) {
+        console.error(`[ActorEngine] ❌ Failed to get subscriptions schema co-id for ${actorId}:`, error);
+      }
+    }
+    
+    if (actorConfig.inbox) {
+      try {
+        const inboxSchemaCoId = await this.dbEngine.getSchemaCoId('inbox');
+        if (inboxSchemaCoId) {
+          messageSubscriptionRequests.push({
+            schemaRef: inboxSchemaCoId,
+            coId: actorConfig.inbox,
+            configType: 'inbox',
+            onUpdate: (updatedCostream) => {
+              if (updatedCostream && Array.isArray(updatedCostream.items)) {
+                actor.inbox = updatedCostream.items;
+                // TODO: Process new messages (Milestone 3)
+              }
+            },
+            cache: null
+          });
+        }
+      } catch (error) {
+        console.error(`[ActorEngine] ❌ Failed to get inbox schema co-id for ${actorId}:`, error);
+      }
+    }
+    
+    // Use batch API for message subscriptions (subscriptions + inbox)
+    if (messageSubscriptionRequests.length > 0) {
+      try {
+        const results = await subscribeConfigsBatch(this.dbEngine, messageSubscriptionRequests);
+        results.forEach(({ unsubscribe }) => {
+          actor._configSubscriptions.push(unsubscribe);
+        });
+      } catch (error) {
+        console.error(`[ActorEngine] ❌ Batch subscription failed for ${actorId}:`, error);
+      }
+    }
+    
     this.actors.set(actorId, actor);
     
     // Auto-subscribe to reactive data based on context (context-driven)
@@ -202,6 +317,7 @@ export class ActorEngine {
     // IMPORTANT: Await to ensure entry actions (like subscriptions) complete before initial render
     if (this.stateEngine && actorConfig.state) {
       try {
+        // Load state without subscription handler - SubscriptionEngine will add handler later
         const stateDef = await this.stateEngine.loadStateDef(actorConfig.state);
         actor.machine = await this.stateEngine.createMachine(stateDef, actor);
       } catch (error) {
@@ -212,6 +328,7 @@ export class ActorEngine {
     // Load and validate interface (if interface is defined)
     if (actorConfig.interface) {
       try {
+        // Load interface without subscription handler - SubscriptionEngine will add handler later
         const interfaceDef = await this.loadInterface(actorConfig.interface);
         actor.interface = interfaceDef;
         
@@ -245,7 +362,15 @@ export class ActorEngine {
             }
             
             // Try to resolve via database (handles @actor/name format)
-            const resolvedActor = await this.dbEngine.get('@schema/actor', childActorId);
+            const actorSchemaCoId = await this.dbEngine.getSchemaCoId('actor');
+            if (!actorSchemaCoId) {
+              throw new Error(`[ActorEngine] Failed to resolve actor schema co-id`);
+            }
+            const resolvedActor = await this.dbEngine.execute({
+              op: 'query',
+              schema: actorSchemaCoId,
+              key: childActorId
+            });
             if (resolvedActor && resolvedActor.$id && resolvedActor.$id.startsWith('co_z')) {
               childCoId = resolvedActor.$id;
             } else {
@@ -727,10 +852,17 @@ export class ActorEngine {
     }
 
     try {
+      // Get actor schema co-id
+      const actorSchemaCoId = await this.dbEngine.getSchemaCoId('actor');
+      if (!actorSchemaCoId) {
+        console.warn(`[ActorEngine] Cannot persist watermark: failed to resolve actor schema co-id`);
+        return;
+      }
+      
       // Get current actor config
       const actorConfig = await this.dbEngine.execute({
         op: 'query',
-        schema: '@schema/actor',
+        schema: actorSchemaCoId,
         key: actorId
       });
 
@@ -742,7 +874,7 @@ export class ActorEngine {
       // Update actor config with new watermark
       await this.dbEngine.execute({
         op: 'updateConfig',
-        schema: '@schema/actor',
+        schema: actorSchemaCoId,
         id: actorId,
         data: { inboxWatermark: watermark }
       });

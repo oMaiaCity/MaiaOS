@@ -1,7 +1,7 @@
 // Import validation helper
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import shared utilities
-import { loadConfig } from '../../utils/config-loader.js';
+import { loadConfig, subscribeConfig } from '../../utils/config-loader.js';
 // Import HTML sanitization utility
 import { sanitizeAttribute, containsDangerousHTML } from '../../utils/html-sanitizer.js';
 
@@ -40,26 +40,54 @@ export class ViewEngine {
     
     // Track input counters per actor for stable IDs across re-renders
     this.actorInputCounters = new Map();
+    
+    // Track subscriptions for reactive view updates
+    this.viewSubscriptions = new Map(); // coId -> unsubscribe function
   }
 
   /**
-   * Load a view by co-id
+   * Load a view by co-id (reactive subscription)
    * @param {string} coId - View co-id (e.g., 'co_z...')
+   * @param {Function} [onUpdate] - Optional callback when view changes
    * @returns {Promise<Object>} The parsed view definition
    */
-  async loadView(coId) {
-    // Check cache first
-    if (this.viewCache.has(coId)) {
-      return this.viewCache.get(coId);
+  async loadView(coId, onUpdate = null) {
+    // Check if subscription already exists - if so, return cached and skip duplicate setup
+    const existingUnsubscribe = this.viewSubscriptions?.get(coId);
+    if (existingUnsubscribe) {
+      // Subscription already exists, return cached value
+      // Note: If onUpdate is provided but subscription exists, we can't add handler
+      // Caller should ensure subscription is set up with handler from the start
+      if (this.viewCache.has(coId)) {
+        return this.viewCache.get(coId);
+      }
     }
     
-    const viewDef = await loadConfig(
+    const viewSchemaCoId = await this.dbEngine.getSchemaCoId('view');
+    if (!viewSchemaCoId) {
+      throw new Error('[ViewEngine] Failed to resolve view schema co-id');
+    }
+    
+    // Always set up subscription for reactivity (even without onUpdate callback)
+    // This avoids duplicate DB queries when _subscribeToConfig() is called later
+    const { config: viewDef, unsubscribe } = await subscribeConfig(
       this.dbEngine,
-      '@schema/view',
+      viewSchemaCoId,
       coId,
       'view',
+      (updatedView) => {
+        // Update cache
+        this.viewCache.set(coId, updatedView);
+        // Call custom update handler if provided
+        if (onUpdate) {
+          onUpdate(updatedView);
+        }
+      },
       this.viewCache
     );
+    
+    // Store unsubscribe function
+    this.viewSubscriptions.set(coId, unsubscribe);
     
     return viewDef;
   }
@@ -366,14 +394,21 @@ export class ViewEngine {
           wrapperElement.appendChild(childActor.containerElement);
         }
       } else {
-        console.warn(`[ViewEngine] Child actor not found for namekey: ${namekey}`, {
-          actorId,
-          availableChildren: actor?.children ? Object.keys(actor.children) : [],
-          contextValue,
-          namekey,
-          childActorExists: !!childActor,
-          containerElementExists: !!childActor?.containerElement
-        });
+        // Child actor not found - this can happen during initial render before child actors are created
+        // Or if child actor creation failed. Just skip rendering this slot silently.
+        // The view will re-render once child actors are created.
+        // Only warn if this is a re-render (not initial render) to avoid noise
+        if (actor?._initialRenderComplete) {
+          console.warn(`[ViewEngine] Child actor not found for namekey: ${namekey}`, {
+            actorId,
+            availableChildren: actor?.children ? Object.keys(actor.children) : [],
+            contextValue,
+            namekey,
+            childActorExists: !!childActor,
+            containerElementExists: !!childActor?.containerElement
+          });
+        }
+        // Don't render anything - slot will be empty until child actor is created
       }
     } else {
       // Plain value - render as text in wrapper

@@ -1,5 +1,5 @@
 // Import shared utilities
-import { loadConfig } from '../../utils/config-loader.js';
+import { loadConfig, subscribeConfig } from '../../utils/config-loader.js';
 import { resolvePath } from '../../utils/path-resolver.js';
 
 /**
@@ -10,6 +10,7 @@ export class StyleEngine {
   constructor() {
     this.cache = new Map(); // Cache compiled stylesheets by ID
     this.dbEngine = null; // Database operation engine (set by kernel)
+    this.styleSubscriptions = new Map(); // coId -> unsubscribe function
   }
 
   /**
@@ -31,17 +32,37 @@ export class StyleEngine {
   }
 
   /**
-   * Load a style by co-id
+   * Load a style by co-id (reactive subscription)
    * @param {string} coId - Style co-id (e.g., 'co_z...')
+   * @param {Function} [onUpdate] - Optional callback when style changes
    * @returns {Promise<Object>} The parsed style definition
    */
-  async loadStyle(coId) {
-    const styleDef = await loadConfig(
+  async loadStyle(coId, onUpdate = null) {
+    // Check if subscription already exists - if so, we need to re-subscribe with handler
+    // But for now, always set up subscription (style loading is fast)
+    // TODO: Optimize to reuse existing subscriptions
+    
+    const styleSchemaCoId = await this.dbEngine.getSchemaCoId('style');
+    if (!styleSchemaCoId) {
+      throw new Error('[StyleEngine] Failed to resolve style schema co-id');
+    }
+    
+    // Always set up subscription for reactivity (even without onUpdate callback)
+    const { config: styleDef, unsubscribe } = await subscribeConfig(
       this.dbEngine,
-      '@schema/style',
+      styleSchemaCoId,
       coId,
-      'style'
+      'style',
+      (updatedStyle) => {
+        // Call custom update handler if provided
+        if (onUpdate) {
+          onUpdate(updatedStyle);
+        }
+      }
     );
+    
+    // Store unsubscribe function
+    this.styleSubscriptions.set(coId, unsubscribe);
     
     // Validate $schema field is present
     if (!styleDef.$schema) {

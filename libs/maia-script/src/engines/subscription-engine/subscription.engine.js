@@ -18,6 +18,8 @@
  * keeps reactive query objects in sync with the database.
  */
 
+import { subscribeConfig, subscribeConfigsBatch } from '../../utils/config-loader.js';
+
 export class SubscriptionEngine {
   constructor(dbEngine, actorEngine) {
     this.dbEngine = dbEngine;
@@ -29,6 +31,16 @@ export class SubscriptionEngine {
     
     // Debug mode (set to true for verbose subscription logging)
     this.debugMode = false;
+  }
+  
+  /**
+   * Set engines for config subscriptions (called by kernel after engines are initialized)
+   * @param {Object} engines - Object with viewEngine, styleEngine, stateEngine
+   */
+  setEngines(engines) {
+    this.viewEngine = engines.viewEngine;
+    this.styleEngine = engines.styleEngine;
+    this.stateEngine = engines.stateEngine;
   }
   
   /**
@@ -48,7 +60,7 @@ export class SubscriptionEngine {
   }
 
   /**
-   * Initialize subscriptions by analyzing actor's context
+   * Initialize subscriptions by analyzing actor's context and configs
    * Called when actor is created
    * @param {Object} actor - Actor instance
    * @returns {Promise<void>}
@@ -56,6 +68,9 @@ export class SubscriptionEngine {
   async initialize(actor) {
     // Scan context for query objects and @ references
     await this._subscribeToContext(actor);
+    
+    // Subscribe to config CRDTs (view, style, state, interface, context, brand)
+    await this._subscribeToConfig(actor);
   }
 
   /**
@@ -245,25 +260,364 @@ export class SubscriptionEngine {
   }
 
   /**
+   * Subscribe to config CRDTs (view, style, state, interface, context, brand)
+   * Makes config files runtime-editable - changes trigger actor updates
+   * Uses batch API to optimize performance (single DB transaction)
+   * @param {Object} actor - Actor instance
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _subscribeToConfig(actor) {
+    if (!actor.config || typeof actor.config !== 'object') {
+      return;
+    }
+
+    // Engines must be set before subscribing to configs
+    if (!this.viewEngine || !this.styleEngine) {
+      this._log(`[SubscriptionEngine] Engines not set, skipping config subscriptions for ${actor.id}`);
+      return;
+    }
+
+    const config = actor.config;
+    let subscriptionCount = 0;
+
+    // Initialize config subscriptions array if not exists
+    if (!actor._configSubscriptions) {
+      actor._configSubscriptions = [];
+    }
+
+    // Collect all batch subscription requests
+    const batchRequests = [];
+    const engineSubscriptions = []; // For view/style/state that go through engines
+
+    // Collect view subscription (if not already subscribed)
+    if (config.view && config.view.startsWith('co_z') && this.viewEngine) {
+      const existingUnsubscribe = this.viewEngine.viewSubscriptions?.get(config.view);
+      if (existingUnsubscribe) {
+        // Subscription already exists (from createActor), reuse it
+        actor._configSubscriptions.push(existingUnsubscribe);
+        subscriptionCount++;
+      } else {
+        // Need to set up subscription via engine (will use batch internally)
+        engineSubscriptions.push(
+          this.viewEngine.loadView(config.view, (updatedView) => {
+            this._handleViewUpdate(actor.id, updatedView);
+          }).then(() => {
+            const unsubscribe = this.viewEngine.viewSubscriptions?.get(config.view);
+            if (unsubscribe) {
+              actor._configSubscriptions.push(unsubscribe);
+              subscriptionCount++;
+            }
+          }).catch(error => {
+            console.error(`[SubscriptionEngine] ❌ Failed to subscribe to view for ${actor.id}:`, error);
+          })
+        );
+      }
+    }
+
+    // Collect style subscription (if not already subscribed)
+    if (config.style && config.style.startsWith('co_z') && this.styleEngine) {
+      const existingUnsubscribe = this.styleEngine.styleSubscriptions?.get(config.style);
+      if (existingUnsubscribe) {
+        actor._configSubscriptions.push(existingUnsubscribe);
+        subscriptionCount++;
+      } else {
+        engineSubscriptions.push(
+          this.styleEngine.loadStyle(config.style, (updatedStyle) => {
+            this._handleStyleUpdate(actor.id, updatedStyle);
+          }).then(() => {
+            const unsubscribe = this.styleEngine.styleSubscriptions?.get(config.style);
+            if (unsubscribe) {
+              actor._configSubscriptions.push(unsubscribe);
+              subscriptionCount++;
+            }
+          }).catch(error => {
+            console.error(`[SubscriptionEngine] ❌ Failed to subscribe to style for ${actor.id}:`, error);
+          })
+        );
+      }
+    }
+
+    // Collect brand subscription (if not already subscribed)
+    if (config.brand && config.brand.startsWith('co_z') && this.styleEngine) {
+      const existingUnsubscribe = this.styleEngine.styleSubscriptions?.get(config.brand);
+      if (existingUnsubscribe) {
+        actor._configSubscriptions.push(existingUnsubscribe);
+        subscriptionCount++;
+      } else {
+        engineSubscriptions.push(
+          this.styleEngine.loadStyle(config.brand, (updatedBrand) => {
+            this._handleStyleUpdate(actor.id, updatedBrand);
+          }).then(() => {
+            const unsubscribe = this.styleEngine.styleSubscriptions?.get(config.brand);
+            if (unsubscribe) {
+              actor._configSubscriptions.push(unsubscribe);
+              subscriptionCount++;
+            }
+          }).catch(error => {
+            console.error(`[SubscriptionEngine] ❌ Failed to subscribe to brand for ${actor.id}:`, error);
+          })
+        );
+      }
+    }
+
+    // Collect state subscription (if not already subscribed)
+    if (config.state && config.state.startsWith('co_z') && this.stateEngine) {
+      const existingUnsubscribe = this.stateEngine.stateSubscriptions?.get(config.state);
+      if (existingUnsubscribe) {
+        actor._configSubscriptions.push(existingUnsubscribe);
+        subscriptionCount++;
+      } else {
+        engineSubscriptions.push(
+          this.stateEngine.loadStateDef(config.state, (updatedStateDef) => {
+            this._handleStateUpdate(actor.id, updatedStateDef);
+          }).then(() => {
+            const unsubscribe = this.stateEngine.stateSubscriptions?.get(config.state);
+            if (unsubscribe) {
+              actor._configSubscriptions.push(unsubscribe);
+              subscriptionCount++;
+            }
+          }).catch(error => {
+            console.error(`[SubscriptionEngine] ❌ Failed to subscribe to state for ${actor.id}:`, error);
+          })
+        );
+      }
+    }
+
+    // Collect interface subscription for batch API
+    if (config.interface && config.interface.startsWith('co_z')) {
+      try {
+        const interfaceSchemaCoId = await this.dbEngine.getSchemaCoId('interface');
+        if (interfaceSchemaCoId) {
+          batchRequests.push({
+            schemaRef: interfaceSchemaCoId,
+            coId: config.interface,
+            configType: 'interface',
+            onUpdate: (updatedInterface) => {
+              this._handleInterfaceUpdate(actor.id, updatedInterface);
+            },
+            cache: null
+          });
+        }
+      } catch (error) {
+        console.error(`[SubscriptionEngine] ❌ Failed to get interface schema co-id for ${actor.id}:`, error);
+      }
+    }
+
+    // Collect context subscription for batch API
+    if (config.context && config.context.startsWith('co_z')) {
+      try {
+        const contextSchemaCoId = await this.dbEngine.getSchemaCoId('context');
+        if (contextSchemaCoId) {
+          batchRequests.push({
+            schemaRef: contextSchemaCoId,
+            coId: config.context,
+            configType: 'context',
+            onUpdate: (updatedContextDef) => {
+              // Extract context without metadata ($schema, $id)
+              const { $schema, $id, ...context } = updatedContextDef;
+              this._handleContextUpdate(actor.id, context);
+            },
+            cache: null
+          });
+        }
+      } catch (error) {
+        console.error(`[SubscriptionEngine] ❌ Failed to get context schema co-id for ${actor.id}:`, error);
+      }
+    }
+
+    // Execute batch subscriptions and engine subscriptions in parallel
+    const batchPromise = batchRequests.length > 0 
+      ? subscribeConfigsBatch(this.dbEngine, batchRequests).then(results => {
+          results.forEach(({ unsubscribe }) => {
+            actor._configSubscriptions.push(unsubscribe);
+            subscriptionCount++;
+          });
+        }).catch(error => {
+          console.error(`[SubscriptionEngine] ❌ Batch subscription failed for ${actor.id}:`, error);
+        })
+      : Promise.resolve();
+
+    // Wait for all subscriptions (batch + engines) to complete
+    await Promise.all([batchPromise, ...engineSubscriptions]);
+
+    // Note: subscriptions and inbox are already handled in actor.engine.js createActor()
+    // They're stored in actor._configSubscriptions there
+
+    if (subscriptionCount > 0) {
+      this._log(`[SubscriptionEngine] ✅ ${actor.id}: ${subscriptionCount} config subscription(s)`);
+    }
+  }
+
+  /**
+   * Handle view update - invalidate cache, update actor, re-render
+   * @param {string} actorId - Actor ID
+   * @param {Object} newViewDef - Updated view definition
+   * @private
+   */
+  _handleViewUpdate(actorId, newViewDef) {
+    const actor = this.actorEngine.getActor(actorId);
+    if (!actor) return;
+
+    // Invalidate cache
+    if (this.viewEngine.viewCache) {
+      this.viewEngine.viewCache.delete(actor.config.view);
+    }
+
+    // Update actor's view definition
+    actor.viewDef = newViewDef;
+
+    // Trigger re-render
+    this._scheduleRerender(actorId);
+  }
+
+  /**
+   * Handle style update - invalidate cache, reload stylesheets, re-render
+   * @param {string} actorId - Actor ID
+   * @param {Object} newStyleDef - Updated style definition
+   * @private
+   */
+  async _handleStyleUpdate(actorId, newStyleDef) {
+    const actor = this.actorEngine.getActor(actorId);
+    if (!actor) return;
+
+    // Cache is already updated by loadStyle subscription callback
+    // Reload stylesheets and re-render
+    try {
+      const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
+      // Update shadow root stylesheets
+      actor.shadowRoot.adoptedStyleSheets = styleSheets;
+      
+      // Trigger re-render (styles changed, need to re-render to apply)
+      this._scheduleRerender(actorId);
+    } catch (error) {
+      console.error(`[SubscriptionEngine] Failed to update styles for ${actorId}:`, error);
+    }
+  }
+
+  /**
+   * Handle state update - destroy old machine, create new machine
+   * @param {string} actorId - Actor ID
+   * @param {Object} newStateDef - Updated state definition
+   * @private
+   */
+  async _handleStateUpdate(actorId, newStateDef) {
+    const actor = this.actorEngine.getActor(actorId);
+    if (!actor || !this.stateEngine) return;
+
+    // Invalidate cache
+    if (this.stateEngine.stateCache) {
+      this.stateEngine.stateCache.delete(actor.config.state);
+    }
+
+    try {
+      // Destroy old machine
+      if (actor.machine) {
+        this.stateEngine.destroyMachine(actor.machine.id);
+      }
+
+      // Create new machine
+      actor.machine = await this.stateEngine.createMachine(newStateDef, actor);
+
+      // Trigger re-render (state machine changes may affect UI)
+      this._scheduleRerender(actorId);
+    } catch (error) {
+      console.error(`[SubscriptionEngine] Failed to update state machine for ${actorId}:`, error);
+    }
+  }
+
+  /**
+   * Handle interface update - reload interface, re-validate
+   * @param {string} actorId - Actor ID
+   * @param {Object} newInterfaceDef - Updated interface definition
+   * @private
+   */
+  async _handleInterfaceUpdate(actorId, newInterfaceDef) {
+    const actor = this.actorEngine.getActor(actorId);
+    if (!actor) return;
+
+    // Update actor's interface
+    actor.interface = newInterfaceDef;
+
+    // Re-validate interface (non-blocking)
+    try {
+      await this.actorEngine.toolEngine.execute('@interface/validateInterface', actor, {
+        interfaceDef: newInterfaceDef,
+        actorId
+      });
+    } catch (error) {
+      console.warn(`[SubscriptionEngine] Interface validation failed for ${actorId}:`, error);
+    }
+
+    // Note: Interface changes don't require re-render (only affects message validation)
+  }
+
+  /**
+   * Handle context update - merge with existing context, preserve query subscriptions
+   * @param {string} actorId - Actor ID
+   * @param {Object} newContext - Updated context (without $schema/$id)
+   * @private
+   */
+  async _handleContextUpdate(actorId, newContext) {
+    const actor = this.actorEngine.getActor(actorId);
+    if (!actor) return;
+
+    // Merge new context with existing context
+    // Preserve query subscriptions (they're managed separately)
+    const existingContext = actor.context || {};
+    
+    // Merge contexts (new values override existing)
+    actor.context = { ...existingContext, ...newContext };
+
+    // Re-subscribe to any new query objects in the updated context
+    // This handles new query objects added to context
+    await this._subscribeToContext(actor);
+
+    // Trigger re-render
+    this._scheduleRerender(actorId);
+  }
+
+  /**
    * Cleanup all subscriptions for an actor
    * Called when actor is destroyed
    * @param {Object} actor - Actor instance
    */
   cleanup(actor) {
-    if (!actor._subscriptions || actor._subscriptions.length === 0) {
-      return;
+    let totalCount = 0;
+
+    // Cleanup data subscriptions
+    if (actor._subscriptions && actor._subscriptions.length > 0) {
+      const count = actor._subscriptions.length;
+      totalCount += count;
+      this._log(`[SubscriptionEngine] 🧹 Cleanup ${actor.id}: ${count} data subscription(s)`);
+
+      actor._subscriptions.forEach(unsubscribe => {
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        }
+      });
+
+      actor._subscriptions = [];
     }
 
-    const count = actor._subscriptions.length;
-    this._log(`[SubscriptionEngine] 🧹 Cleanup ${actor.id}: ${count} subscription(s)`);
+    // Cleanup config subscriptions
+    if (actor._configSubscriptions && actor._configSubscriptions.length > 0) {
+      const count = actor._configSubscriptions.length;
+      totalCount += count;
+      this._log(`[SubscriptionEngine] 🧹 Cleanup ${actor.id}: ${count} config subscription(s)`);
 
-    actor._subscriptions.forEach(unsubscribe => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
-    });
+      actor._configSubscriptions.forEach(unsubscribe => {
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        }
+      });
 
-    actor._subscriptions = [];
+      actor._configSubscriptions = [];
+    }
+
+    if (totalCount > 0) {
+      this._log(`[SubscriptionEngine] 🧹 Cleanup ${actor.id}: ${totalCount} total subscription(s)`);
+    }
     
     // Remove from pending re-renders if present
     this.pendingRerenders.delete(actor.id);

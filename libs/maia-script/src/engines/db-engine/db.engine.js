@@ -67,4 +67,31 @@ export class DBEngine {
       throw error;
     }
   }
+  
+  /**
+   * Get schema co-id for a schema name (e.g., 'actor', 'view', 'subscriptions')
+   * Resolves human-readable schema names to co-ids via coIdRegistry
+   * @param {string} schemaName - Schema name (e.g., 'actor', 'view', 'subscriptions', 'inbox', 'vibe')
+   * @returns {Promise<string|null>} Schema co-id (co_z...) or null if not found
+   */
+  async getSchemaCoId(schemaName) {
+    // Try @schema/... format first (most common)
+    const schemaKey = `@schema/${schemaName}`;
+    const coId = await this.backend.resolveHumanReadableKey(schemaKey);
+    if (coId) {
+      return coId;
+    }
+    
+    // Fallback: try just the schema name
+    return await this.backend.resolveHumanReadableKey(schemaName);
+  }
+  
+  /**
+   * Resolve a human-readable ID to a co-id
+   * @param {string} humanReadableId - Human-readable ID (e.g., '@vibe/todos', 'vibe/vibe')
+   * @returns {Promise<string|null>} Co-id (co_z...) or null if not found
+   */
+  async resolveCoId(humanReadableId) {
+    return await this.backend.resolveHumanReadableKey(humanReadableId);
+  }
 }

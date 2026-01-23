@@ -92,7 +92,7 @@ export class IndexedDBBackend {
     
     // Simple seeding: flush everything and reseed
     // TODO: Add smart seeding later to preserve data across sessions
-    await this.flush(['configs', 'schemas', 'data']);
+    await this.flush(['configs', 'schemas', 'data', 'coIdRegistry']);
     
     // Deduplicate schemas by $id (same schema may be registered under multiple keys)
     const uniqueSchemasBy$id = new Map();
@@ -380,6 +380,13 @@ export class IndexedDBBackend {
       instanceCoIdMap.set(key, instanceCoId);
       instanceCoIdMap.set(instanceId, instanceCoId); // Map by $id too
       
+      // Special handling for tools: also register by `name` field (e.g., @core/noop, @db)
+      // Tools use `name` as their runtime identifier, not $id
+      if (instance.name && instance.name.startsWith('@')) {
+        instanceCoIdMap.set(instance.name, instanceCoId);
+        coIdRegistry.register(instance.name, instanceCoId);
+      }
+      
       // SET $id to co-id immediately (before transformation) - modifies original object
       instance.$id = instanceCoId;
       
@@ -388,6 +395,7 @@ export class IndexedDBBackend {
       // Also register instanceId → co-id mapping (for subscriptions, children, etc.)
       // Always register instanceId separately to ensure lookups work (even if same as key)
       coIdRegistry.register(instanceId, instanceCoId);
+      
       
       // Error logging for duplicates (instead of silently reusing)
       if (reuseCoId) {
@@ -752,6 +760,8 @@ export class IndexedDBBackend {
       
       // Store with co-id as PRIMARY KEY (required!)
       // NO human-readable keys in content stores - mappings go to coIdRegistry only
+      
+      
         await this._promisifyRequest(store.put({
         key: vibeCoId,
         value: configs.vibe
@@ -766,15 +776,72 @@ export class IndexedDBBackend {
       
       let typeCount = 0;
       for (const [path, config] of Object.entries(configsOfType)) {
-        // Ensure config has a co-id (required!)
-        const coId = config.$id || instanceCoIdMap.get(`${configType}.${path}`) || generateCoId(config);
+        // CRITICAL: Config MUST have a co-id already set from transformation phase
+        // NEVER generate a new co-id here - that would create mismatches!
+        // The co-id should have been set in Step 3 (Phase 4) before transformation
+        let coId = config.$id;
         
+        // If $id is missing, try to find it in instanceCoIdMap (should have been set in Phase 4)
         if (!coId || !coId.startsWith('co_z')) {
-          throw new Error(`Config ${configType}:${path} missing valid co-id. Expected co-id starting with 'co_z', got: ${coId}`);
+          // Try lookup by path
+          coId = instanceCoIdMap.get(`${configType}.${path}`);
+          
+          // If still not found, try lookup by original $id (before transformation)
+          // The instanceCoIdMap stores both "path" → co-id and "original $id" → co-id
+          if (!coId || !coId.startsWith('co_z')) {
+            // Try to find by reverse lookup - find what key maps to this config
+            // This should never happen if seeding worked correctly
+            const possibleKeys = [
+              path, // e.g., "@actor/agent"
+              `${configType}.${path}`, // e.g., "actors.@actor/agent"
+            ];
+            
+            for (const key of possibleKeys) {
+              if (instanceCoIdMap.has(key)) {
+                coId = instanceCoIdMap.get(key);
+                break;
+              }
+            }
+          }
+          
+          // If STILL not found, this is a critical error - don't generate a new one!
+          if (!coId || !coId.startsWith('co_z')) {
+            throw new Error(
+              `[IndexedDBBackend] CRITICAL: Config ${configType}:${path} has no co-id! ` +
+              `This means the transformation phase failed. ` +
+              `Config $id: ${config.$id}, ` +
+              `Available keys in instanceCoIdMap: ${Array.from(instanceCoIdMap.keys()).filter(k => k.includes(configType) || k.includes(path)).join(', ')}`
+            );
+          }
+          
+          // Set $id to the found co-id
+          config.$id = coId;
         }
         
-        // Set $id to co-id (required!)
-        config.$id = coId;
+        // Validate co-id format
+        if (!coId.startsWith('co_z')) {
+          throw new Error(`Config ${configType}:${path} has invalid co-id format. Expected co-id starting with 'co_z', got: ${coId}`);
+        }
+        
+        // CRITICAL: Verify we're not overwriting a different config with the same co-id
+        // Check if this co-id already exists with different content
+        const existingConfig = await this._promisifyRequest(store.get(coId));
+        if (existingConfig?.value) {
+          // Compare content to ensure it's the same config
+          const existingContent = JSON.stringify(existingConfig.value, Object.keys(existingConfig.value).sort());
+          const newContent = JSON.stringify(config, Object.keys(config).sort());
+          if (existingContent !== newContent) {
+            throw new Error(
+              `[IndexedDBBackend] CRITICAL BUG: Co-id ${coId} already exists with DIFFERENT content! ` +
+              `This would overwrite existing config. ` +
+              `Existing: ${existingConfig.value.$id || 'no $id'}, ` +
+              `New: ${config.$id || 'no $id'}. ` +
+              `This indicates a bug in co-id generation or reuse logic.`
+            );
+          }
+          // Same content, safe to skip (idempotent)
+          continue;
+        }
         
         // Store with co-id as PRIMARY KEY (required!)
         // NO human-readable keys in content stores - mappings go to coIdRegistry only
@@ -782,6 +849,7 @@ export class IndexedDBBackend {
           key: coId,
           value: config
         }));
+        
         
         typeCount++;
       }
@@ -941,34 +1009,85 @@ export class IndexedDBBackend {
   
   /**
    * Get single item by schema + key
-   * @param {string} schema - Schema reference (@schema/actor, @schema/todos)
-   * @param {string} key - Item key (e.g., 'vibe/vibe' or co-id 'co_z...')
+   * @param {string} schema - Schema co-id (co_z...) - MUST be a co-id, not '@schema/...'
+   * @param {string} key - Item key (co-id 'co_z...' or human-readable like 'vibe/vibe')
    * @returns {Promise<any>} Item value
    */
   async get(schema, key) {
-    const storeName = this._getStoreName(schema);
-    
-    // If key is already a co-id, use it directly
-    if (key && key.startsWith('co_z')) {
-    const transaction = this.db.transaction([storeName], 'readonly');
-    const store = transaction.objectStore(storeName);
-      const request = store.get(key);
-    const result = await this._promisifyRequest(request);
-    return result?.value;
+    // Validate schema is a co-id (runtime code must use co-ids only)
+    if (!schema || !schema.startsWith('co_z')) {
+      throw new Error(`[IndexedDBBackend] Schema must be a co-id (co_z...), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
     }
+    
+    
+    // If key is already a co-id, try configs store first (configs are commonly looked up by key)
+    // Then fall back to data store if not found
+    if (key && key.startsWith('co_z')) {
+      // Try configs store first (most common for single-item lookups)
+      const configsTransaction = this.db.transaction(['configs'], 'readonly');
+      const configsStore = configsTransaction.objectStore('configs');
+      const configsRequest = configsStore.get(key);
+      const configsResult = await this._promisifyRequest(configsRequest);
+      
+      if (configsResult?.value) {
+        return configsResult.value;
+      }
+      
+      // If configsResult exists but doesn't have .value, return the whole thing
+      if (configsResult) {
+        return configsResult;
+      }
+      
+      // Debug: Log if not found in configs (for troubleshooting)
+      if (!configsResult?.value) {
+        console.warn(`[IndexedDBBackend] Config not found in 'configs' store for co-id: ${key} (schema: ${schema.substring(0, 30)}...)`);
+        // Debug: List all actor configs in the store (use same transaction)
+        if (key.includes('actor') || schema.includes('actor')) {
+          try {
+            const allConfigsRequest = configsStore.getAll();
+            const allConfigs = await this._promisifyRequest(allConfigsRequest);
+            console.warn(`[IndexedDBBackend] Total configs in store: ${allConfigs.length}`);
+            const actorConfigs = allConfigs.filter(c => {
+              const value = c.value || c;
+              return value?.$schema === schema || value?.$id?.includes('actor') || c.key?.includes('actor');
+            });
+            console.warn(`[IndexedDBBackend] Available actor configs (${actorConfigs.length}):`, actorConfigs.map(c => {
+              const value = c.value || c;
+              return {
+                key: c.key || 'no key',
+                $id: value?.$id || 'no $id',
+                $schema: value?.$schema || 'no $schema',
+                name: value?.name || value?.role || 'unknown'
+              };
+            }));
+            // Also check if the exact key exists
+            const exactKeyRequest = configsStore.get(key);
+            const exactKeyResult = await this._promisifyRequest(exactKeyRequest);
+            console.warn(`[IndexedDBBackend] Direct lookup for key '${key}':`, exactKeyResult ? 'FOUND' : 'NOT FOUND');
+          } catch (error) {
+            console.error(`[IndexedDBBackend] Error listing configs:`, error);
+          }
+        }
+      }
+      
+      // Fall back to data store if not found in configs
+      const dataTransaction = this.db.transaction(['data'], 'readonly');
+      const dataStore = dataTransaction.objectStore('data');
+      const dataRequest = dataStore.get(key);
+      const dataResult = await this._promisifyRequest(dataRequest);
+      return dataResult?.value || null;
+    }
+    
+    // For human-readable keys, use the old logic with store name resolution
+    const storeName = this._getStoreName(schema);
     
     // Resolve human-readable key to co-id via registry
     // Try multiple key formats: full schema path, simple key, etc.
-    // Skip @schema/ prefix if key is already a co-id
+    // Note: We still resolve human-readable keys (like 'vibe/vibe'), but NOT @schema/... patterns
     const possibleKeys = [
-      `${schema}:${key}`,  // @schema/vibe:todos
-      key,                  // todos, vibe/vibe
+      `${schema}:${key}`,  // co_z...:vibe/vibe (if schema is co-id)
+      key,                  // vibe/vibe, todos
     ];
-    
-    // Only try @schema/ prefix if key is not already a co-id
-    if (!key.startsWith('co_z')) {
-      possibleKeys.push(`@schema/${key}`);  // @schema/todos (for schemas)
-    }
     
     let coId = null;
     for (const possibleKey of possibleKeys) {
@@ -993,12 +1112,87 @@ export class IndexedDBBackend {
   }
   
   /**
+   * Get multiple configs in a single transaction (batch operation)
+   * Optimizes performance by reducing transaction overhead
+   * @param {string} schema - Schema co-id (co_z...) - MUST be a co-id, not '@schema/...'
+   * @param {string[]} keys - Array of config co-ids to fetch
+   * @returns {Promise<Map<string, any>>} Map of coId -> config value
+   */
+  async getBatch(schema, keys) {
+    // Validate schema is a co-id (runtime code must use co-ids only)
+    if (!schema || !schema.startsWith('co_z')) {
+      throw new Error(`[IndexedDBBackend] Schema must be a co-id (co_z...), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
+    }
+    
+    if (!keys || keys.length === 0) {
+      return new Map();
+    }
+    
+    // Filter to only co-id keys (skip human-readable keys for batch)
+    const coIdKeys = keys.filter(key => key && key.startsWith('co_z'));
+    
+    if (coIdKeys.length === 0) {
+      return new Map();
+    }
+    
+    // Single transaction to get all configs
+    const configsTransaction = this.db.transaction(['configs'], 'readonly');
+    const configsStore = configsTransaction.objectStore('configs');
+    
+    // Get all keys in parallel within the same transaction
+    const promises = coIdKeys.map(key => 
+      this._promisifyRequest(configsStore.get(key))
+    );
+    
+    const results = await Promise.all(promises);
+    
+    // Build map: coId -> config value
+    const map = new Map();
+    coIdKeys.forEach((key, i) => {
+      const result = results[i];
+      if (result?.value) {
+        map.set(key, result.value);
+      } else if (result) {
+        // If result exists but doesn't have .value, use the whole thing
+        map.set(key, result);
+      }
+    });
+    
+    // If any configs weren't found in configs store, try data store
+    const missingKeys = coIdKeys.filter(key => !map.has(key));
+    if (missingKeys.length > 0) {
+      const dataTransaction = this.db.transaction(['data'], 'readonly');
+      const dataStore = dataTransaction.objectStore('data');
+      
+      const dataPromises = missingKeys.map(key => 
+        this._promisifyRequest(dataStore.get(key))
+      );
+      
+      const dataResults = await Promise.all(dataPromises);
+      
+      missingKeys.forEach((key, i) => {
+        const result = dataResults[i];
+        if (result?.value) {
+          map.set(key, result.value);
+        }
+      });
+    }
+    
+    return map;
+  }
+  
+  /**
    * Query collection (optionally with filter)
-   * @param {string} schema - Schema reference (@schema/todos)
+   * @param {string} schema - Schema co-id (co_z...) - MUST be a co-id, not '@schema/...'
    * @param {Object} filter - Filter criteria {field: value} or null
    * @returns {Promise<Array>} Array of items
    */
   async query(schema, filter = null) {
+    // Validate schema is a co-id (runtime code must use co-ids only)
+    if (!schema || !schema.startsWith('co_z')) {
+      throw new Error(`[IndexedDBBackend] Schema must be a co-id (co_z...), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
+    }
+    
     const storeName = this._getStoreName(schema);
     
     const transaction = this.db.transaction([storeName], 'readonly');
@@ -1157,12 +1351,17 @@ export class IndexedDBBackend {
   
   /**
    * Update actor config (for system properties like watermark)
-   * @param {string} schema - Schema reference (@schema/actor)
+   * @param {string} schema - Schema co-id (co_z...) - MUST be a co-id, not '@schema/...'
    * @param {string} id - Actor co-id ($id)
    * @param {Object} data - Data to update
    * @returns {Promise<Object>} Updated config
    */
   async updateConfig(schema, id, data) {
+    // Validate schema is a co-id (runtime code must use co-ids only)
+    if (!schema || !schema.startsWith('co_z')) {
+      throw new Error(`[IndexedDBBackend] Schema must be a co-id (co_z...), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
+    }
+    
     const storeName = 'configs';
     
     // Get existing config directly by co-id
@@ -1240,12 +1439,17 @@ export class IndexedDBBackend {
   
   /**
    * Subscribe to collection changes (reactive)
-   * @param {string} schema - Schema reference (@schema/todos)
+   * @param {string} schema - Schema co-id (co_z...) - MUST be a co-id, not '@schema/...'
    * @param {Object} filter - Filter criteria or null
    * @param {Function} callback - Called when collection changes (data) => void
    * @returns {Function} Unsubscribe function
    */
   subscribe(schema, filter, callback) {
+    // Validate schema is a co-id (runtime code must use co-ids only)
+    if (!schema || !schema.startsWith('co_z')) {
+      throw new Error(`[IndexedDBBackend] Schema must be a co-id (co_z...), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
+    }
+    
     // Silent - SubscriptionEngine handles logging
     
     if (!this.observers.has(schema)) {
@@ -1480,43 +1684,84 @@ export class IndexedDBBackend {
             : Object.entries(configsOfType);
           
           for (const [path, config] of entries) {
-            // Get co-id - config.$id should already be a co-id after transformation
+            // CRITICAL: Always use instanceCoIdMap as source of truth for co-id
+            // This ensures we use the SAME co-id that was used when storing the config in _seedConfigs
+            // instanceCoIdMap was built during Phase 4 and is what _seedConfigs uses
             let coId = null;
             
-            // config.$id should be a co-id after transformation
-            if (config.$id && config.$id.startsWith('co_z')) {
-              coId = config.$id;
-            } else {
-              // If transformation failed, try instanceCoIdMap lookup
-              // Keys in instanceCoIdMap are like "actors.vibe/vibe" or just "vibe/vibe"
-              const possibleKeys = [
-                `${configTypeKey}.${path}`,
-                path,
-                config.$id || path
-              ];
-              
-              for (const key of possibleKeys) {
-                if (instanceCoIdMap.has(key)) {
-                  coId = instanceCoIdMap.get(key);
-                  break;
-                }
-              }
-              
-              // Fail fast if no co-id found after transformation
-              if (!coId) {
-                throw new Error(`[IndexedDBBackend] No co-id found for config ${configType}:${path} after transformation. config.$id: ${config.$id}`);
+            // Try instanceCoIdMap lookup first (this is the source of truth)
+            // Keys in instanceCoIdMap are like "actors.@actor/agent" or just "@actor/agent"
+            const possibleKeys = [
+              `${configTypeKey}.${path}`,  // e.g., "actors.@actor/agent"
+              path,                         // e.g., "@actor/agent"
+              config.$id || path           // Fallback to config.$id if path doesn't match
+            ];
+            
+            for (const key of possibleKeys) {
+              if (instanceCoIdMap && instanceCoIdMap.has(key)) {
+                coId = instanceCoIdMap.get(key);
+                break;
               }
             }
             
+            // Fallback: if instanceCoIdMap lookup failed, try config.$id (might be co-id if config was transformed)
+            if (!coId && config.$id && config.$id.startsWith('co_z')) {
+              coId = config.$id;
+            }
+            
+            // Fail fast if no co-id found
+            if (!coId) {
+              const availableKeys = instanceCoIdMap ? Array.from(instanceCoIdMap.keys()).filter(k => 
+                k.includes(configType) || k.includes(path) || (config.$id && k.includes(config.$id))
+              ).join(', ') : 'none';
+              throw new Error(
+                `[IndexedDBBackend] No co-id found for config ${configType}:${path} after transformation. ` +
+                `config.$id: ${config.$id}, ` +
+                `Available keys in instanceCoIdMap: ${availableKeys}`
+              );
+            }
+            
             if (coId) {
-              const fullKey = `@schema/${configType}:${path}`;
-              if (!storedKeys.has(fullKey)) {
+              // Find original $id by reverse lookup in instanceCoIdMap (co-id → instanceId)
+              // instanceCoIdMap stores both "path" → co-id and "original $id" → co-id mappings
+              let originalId = null;
+              
+              // Special handling for tools: use the `name` field directly (e.g., @core/noop, @db)
+              if (configType === 'tool' && config.name) {
+                // Tools use `name` field as their identifier (e.g., "@core/noop", "@db")
+                originalId = config.name;
+              } else if (instanceCoIdMap) {
+                // For other configs, reverse lookup in instanceCoIdMap
+                // Find the key that maps to this co-id and matches @type/... pattern
+                for (const [key, mappedCoId] of instanceCoIdMap.entries()) {
+                  if (mappedCoId === coId && key.startsWith('@') && !key.startsWith('@schema/')) {
+                    originalId = key;
+                    break;
+                  }
+                }
+              }
+              
+              // Fallback: if reverse lookup failed but path looks like a valid ID, use it
+              if (!originalId && path && path.startsWith('@') && !path.startsWith('@schema/')) {
+                originalId = path;
+              }
+              
+              // ONLY register the original $id format (e.g., @actor/agent, @interface/agent, @core/noop)
+              // No @schema/type:path format - just use the flat IDs directly!
+              // Note: We use instanceCoIdMap as source of truth (same as _seedConfigs), so co-id should match
+              if (originalId && !storedKeys.has(originalId)) {
                 await this._promisifyRequest(store.put({
-                  key: fullKey,
+                  key: originalId,
                   value: coId
                 }));
-                storedKeys.add(fullKey);
+                storedKeys.add(originalId);
                 count++;
+              } else if (!originalId) {
+                // For tools, this is expected if name is missing - skip silently
+                // For other configs, this shouldn't happen
+                if (configType !== 'tool') {
+                  console.warn(`[IndexedDBBackend] Could not find original $id for ${configType}:${path} with co-id ${coId.substring(0, 20)}...`);
+                }
               }
             } else {
               console.warn(`[IndexedDBBackend] Could not find co-id for config ${configType}:${path}`);
@@ -1526,48 +1771,72 @@ export class IndexedDBBackend {
         
         // Special handling for vibe
         if (configs.vibe && instanceCoIdMap) {
-          const vibeCoId = instanceCoIdMap.get('vibe') || instanceCoIdMap.get('todos');
+          // Get vibe co-id - try multiple possible keys
+          const vibeCoId = instanceCoIdMap.get('vibe') || 
+                          instanceCoIdMap.get('@vibe/todos') || 
+                          instanceCoIdMap.get('todos');
+          
           if (vibeCoId) {
             // Find original $id by reverse lookup in instanceCoIdMap
-            // The original $id was registered in Phase 4 (e.g., "todos")
+            // The vibe's $id is "@vibe/todos" (from manifest.vibe.maia)
+            // It was registered in Phase 4, so it should be in instanceCoIdMap
             let vibeOriginalId = null;
-            for (const [humanId, mappedCoId] of instanceCoIdMap.entries()) {
-              if (mappedCoId === vibeCoId && humanId !== 'vibe' && !humanId.includes('.')) {
-                vibeOriginalId = humanId;
-                break;
+            
+            // First, try to find @vibe/todos directly (most common case)
+            if (instanceCoIdMap.get('@vibe/todos') === vibeCoId) {
+              vibeOriginalId = '@vibe/todos';
+            } else {
+              // Fallback: search for any human-readable ID that maps to this co-id
+              // (excluding the root 'vibe' key and nested keys with dots)
+              for (const [humanId, mappedCoId] of instanceCoIdMap.entries()) {
+                if (mappedCoId === vibeCoId && humanId !== 'vibe' && !humanId.includes('.')) {
+                  vibeOriginalId = humanId;
+                  break;
+                }
               }
             }
+            
             // Fail fast if vibe original ID not found
             if (!vibeOriginalId) {
-              throw new Error(`[IndexedDBBackend] Could not find original vibe ID for co-id ${vibeCoId} in instanceCoIdMap`);
+              const availableKeys = Array.from(instanceCoIdMap.keys()).filter(k => instanceCoIdMap.get(k) === vibeCoId);
+              throw new Error(`[IndexedDBBackend] Could not find original vibe ID for co-id ${vibeCoId} in instanceCoIdMap. Available keys mapping to this co-id: ${availableKeys.join(', ')}`);
             }
             
-            // Store @schema/vibe:todos (using original $id)
-            const vibeKey = `@schema/vibe:${vibeOriginalId}`;
-            if (!storedKeys.has(vibeKey)) {
+            // Store @vibe/todos directly (the vibe's $id format) - this is what runtime code uses
+            if (!storedKeys.has(vibeOriginalId)) {
               await this._promisifyRequest(store.put({
-                key: vibeKey,
+                key: vibeOriginalId,
                 value: vibeCoId
               }));
-              storedKeys.add(vibeKey);
+              storedKeys.add(vibeOriginalId);
               count++;
             }
             
-            // Also store @schema/vibe:Todo List (using name if available)
-            if (configs.vibe.name) {
-              const vibeNameKey = `@schema/vibe:${configs.vibe.name}`;
-              if (!storedKeys.has(vibeNameKey)) {
+            // Also store @schema/vibe:todos format (extract "todos" from "@vibe/todos")
+            // This is for backwards compatibility with code that might still use this format
+            const vibeNamePart = vibeOriginalId.replace('@vibe/', '').replace('@schema/vibe:', '');
+            if (vibeNamePart && vibeNamePart !== vibeOriginalId) {
+              const vibeSchemaKey = `@schema/vibe:${vibeNamePart}`;
+              if (!storedKeys.has(vibeSchemaKey)) {
                 await this._promisifyRequest(store.put({
-                  key: vibeNameKey,
+                  key: vibeSchemaKey,
                   value: vibeCoId
                 }));
-                storedKeys.add(vibeNameKey);
+                storedKeys.add(vibeSchemaKey);
                 count++;
               }
             }
+          } else {
+            console.warn(`[IndexedDBBackend] Vibe co-id not found in instanceCoIdMap. Available keys: ${Array.from(instanceCoIdMap.keys()).filter(k => k.includes('vibe') || k.includes('todos')).join(', ')}`);
           }
         }
       }
+      
+      // Ensure transaction completes before returning
+      // Note: IndexedDB transactions auto-commit when all requests complete, but explicitly waiting ensures completion
+      await transaction.complete;
+      
+      console.log(`[IndexedDBBackend] Stored ${count} co-id registry mappings`);
     } catch (error) {
       console.warn(`[IndexedDBBackend] Failed to store co-id registry:`, error);
       // Don't throw - registry is optional for backwards compatibility

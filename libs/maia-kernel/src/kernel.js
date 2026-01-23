@@ -219,6 +219,13 @@ export class MaiaOS {
     os.styleEngine.dbEngine = os.dbEngine;
     os.stateEngine.dbEngine = os.dbEngine;
     
+    // Pass engines to SubscriptionEngine (for config subscriptions)
+    os.subscriptionEngine.setEngines({
+      viewEngine: os.viewEngine,
+      styleEngine: os.styleEngine,
+      stateEngine: os.stateEngine
+    });
+    
     // Pass SubscriptionEngine to ActorEngine
     os.actorEngine.subscriptionEngine = os.subscriptionEngine;
     
@@ -302,15 +309,52 @@ export class MaiaOS {
    * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
    */
   async loadVibeFromDatabase(vibeId, container) {
-    // Load vibe manifest from database using new ID format
+    // Get vibe schema co-id
+    const vibeSchemaCoId = await this.dbEngine.getSchemaCoId('vibe');
+    if (!vibeSchemaCoId) {
+      throw new Error('[Kernel] Failed to resolve vibe schema co-id');
+    }
+    
+    // Resolve human-readable vibeId to co-id if needed
+    let vibeCoId = vibeId;
+    if (!vibeId.startsWith('co_z')) {
+      // Define alternative formats to try
+      const alternatives = [
+        `@schema/vibe:${vibeId.replace('@vibe/', '')}`, // @schema/vibe:todos
+        vibeId.replace('@vibe/', 'vibe/'), // vibe/todos
+        `@vibe/${vibeId.replace('@vibe/', '')}`, // @vibe/todos (explicit)
+      ];
+      
+      // Try to resolve human-readable ID (e.g., @vibe/todos) to co-id
+      vibeCoId = await this.dbEngine.resolveCoId(vibeId);
+      if (!vibeCoId) {
+        // Try alternative formats that might be stored in registry
+        for (const alt of alternatives) {
+          vibeCoId = await this.dbEngine.resolveCoId(alt);
+          if (vibeCoId) {
+            console.log(`[Kernel] Resolved vibe ID '${vibeId}' via alternative format '${alt}' to co-id: ${vibeCoId}`);
+            break;
+          }
+        }
+      } else {
+        console.log(`[Kernel] Resolved vibe ID '${vibeId}' directly to co-id: ${vibeCoId}`);
+      }
+      if (!vibeCoId) {
+        // Debug: Try to see what's actually in the registry
+        console.error(`[Kernel] Failed to resolve vibe ID '${vibeId}'. Tried: ${vibeId}, ${alternatives.join(', ')}`);
+        throw new Error(`[Kernel] Failed to resolve vibe ID '${vibeId}' to co-id. Make sure the vibe was seeded correctly. The database may need to be cleared and re-seeded.`);
+      }
+    }
+    
+    // Load vibe manifest from database using co-id
     const vibe = await this.dbEngine.execute({
       op: 'query',
-      schema: '@schema/vibe',
-      key: vibeId
+      schema: vibeSchemaCoId,
+      key: vibeCoId
     });
     
     if (!vibe) {
-      throw new Error(`Vibe not found in database: ${vibeId}`);
+      throw new Error(`Vibe not found in database: ${vibeId} (resolved to ${vibeCoId})`);
     }
     
     // Validate vibe structure using schema (load from IndexedDB on-the-fly)
@@ -322,19 +366,108 @@ export class MaiaOS {
     // Resolve actor ID (can be human-readable like @actor/agent or co-id)
     let actorCoId = vibe.actor; // e.g., "@actor/agent" or "co_z..."
     
-    // If it's a human-readable ID, resolve it to a co-id
-    if (!actorCoId.startsWith('co_z')) {
+    // If it's already a co-id, verify it exists first
+    // If it doesn't exist, try resolving from registry (handles mismatches from transformation)
+    if (actorCoId && actorCoId.startsWith('co_z')) {
+      // Verify the co-id exists in database
+      const actorExists = await this.dbEngine.execute({
+        op: 'query',
+        schema: await this.dbEngine.getSchemaCoId('actor'),
+        key: actorCoId
+      });
+      
+      if (!actorExists) {
+        // Co-id from vibe doesn't exist - try resolving @actor/agent from registry instead
+        console.warn(`[Kernel] Actor co-id ${actorCoId.substring(0, 20)}... from vibe not found. Trying to resolve @actor/agent from registry...`);
+        const resolvedFromRegistry = await this.dbEngine.resolveCoId('@actor/agent');
+        if (resolvedFromRegistry && resolvedFromRegistry.startsWith('co_z')) {
+          // Verify the resolved co-id exists
+          const resolvedExists = await this.dbEngine.execute({
+            op: 'query',
+            schema: await this.dbEngine.getSchemaCoId('actor'),
+            key: resolvedFromRegistry
+          });
+          if (resolvedExists) {
+            actorCoId = resolvedFromRegistry;
+            console.log(`[Kernel] Resolved @actor/agent from registry to co-id: ${actorCoId}`);
+          } else {
+            throw new Error(`[MaiaOS] Actor co-id ${actorCoId.substring(0, 20)}... from vibe not found, and resolved @actor/agent (${resolvedFromRegistry.substring(0, 20)}...) also not found. The actor may not have been seeded correctly.`);
+          }
+        } else {
+          throw new Error(`[MaiaOS] Actor co-id ${actorCoId.substring(0, 20)}... from vibe not found, and @actor/agent not found in registry. The actor may not have been seeded correctly.`);
+        }
+      } else {
+        console.log(`[Kernel] Using actor co-id ${actorCoId.substring(0, 20)}... from vibe`);
+      }
+    } else if (!actorCoId.startsWith('co_z')) {
+      // Human-readable ID - resolve from registry
       if (!this.dbEngine) {
         throw new Error(`[MaiaOS] Cannot resolve human-readable actor ID ${actorCoId} - database engine not available`);
       }
       
-      // Resolve via database (handles @actor/name format)
-      const resolvedActor = await this.dbEngine.get('@schema/actor', actorCoId);
-      if (resolvedActor && resolvedActor.$id && resolvedActor.$id.startsWith('co_z')) {
-        actorCoId = resolvedActor.$id;
+      const originalActorId = actorCoId;
+      
+      // Resolve via coIdRegistry (handles @actor/name format)
+      actorCoId = await this.dbEngine.resolveCoId(actorCoId);
+      if (!actorCoId || !actorCoId.startsWith('co_z')) {
+        // Try alternative formats
+        const alternatives = [
+          `@schema/actor:${originalActorId.replace('@actor/', '')}`,
+          originalActorId.replace('@actor/', 'actor/'),
+        ];
+        for (const alt of alternatives) {
+          const resolved = await this.dbEngine.resolveCoId(alt);
+          if (resolved && resolved.startsWith('co_z')) {
+            actorCoId = resolved;
+            console.log(`[Kernel] Resolved actor ID '${originalActorId}' via alternative format '${alt}' to co-id: ${actorCoId}`);
+            break;
+          }
+        }
+        if (!actorCoId || !actorCoId.startsWith('co_z')) {
+          console.error(`[Kernel] Failed to resolve actor ID '${originalActorId}'. Available keys in coIdRegistry:`, await this._debugCoIdRegistry());
+          throw new Error(`[MaiaOS] Could not resolve actor ID ${originalActorId} to a co-id. Make sure the actor was seeded correctly.`);
+        }
       } else {
-        throw new Error(`[MaiaOS] Could not resolve actor ID ${vibe.actor} to a co-id`);
+        console.log(`[Kernel] Resolved actor ID '${originalActorId}' directly to co-id: ${actorCoId}`);
       }
+    }
+    
+    // Debug: Verify actor exists in database before loading
+    const actorExists = await this.dbEngine.execute({
+      op: 'query',
+      schema: await this.dbEngine.getSchemaCoId('actor'),
+      key: actorCoId
+    });
+    if (!actorExists) {
+      console.error(`[Kernel] Actor co-id ${actorCoId} not found in database. Checking configs store...`);
+      // Try direct get to see what's in the store
+      const directGet = await this.dbEngine.backend.get(
+        await this.dbEngine.getSchemaCoId('actor'),
+        actorCoId
+      );
+      console.error(`[Kernel] Direct get result:`, directGet);
+      
+      // Debug: Check what actor co-ids ARE in the configs store
+      try {
+        const actorSchemaCoId = await this.dbEngine.getSchemaCoId('actor');
+        const configsTransaction = this.dbEngine.backend.db.transaction(['configs'], 'readonly');
+        const configsStore = configsTransaction.objectStore('configs');
+        const allConfigsRequest = configsStore.getAll();
+        const allConfigs = await this.dbEngine.backend._promisifyRequest(allConfigsRequest);
+        const actorConfigs = (allConfigs || []).filter(item => 
+          item.value && item.value.$schema && 
+          item.value.$schema === actorSchemaCoId
+        );
+        console.error(`[Kernel] Available actor configs in store:`, actorConfigs.map(c => ({
+          key: c.key,
+          $id: c.value?.$id,
+          role: c.value?.role
+        })));
+      } catch (err) {
+        console.error(`[Kernel] Could not list configs:`, err);
+      }
+      
+      throw new Error(`[MaiaOS] Actor with co-id ${actorCoId} not found in database. The actor may not have been seeded correctly.`);
     }
     
     // Load actor config via loadActor (which uses maia.db())
@@ -348,6 +481,25 @@ export class MaiaOS {
     return { vibe, actor };
   }
   
+  /**
+   * Debug helper to list coIdRegistry keys (for troubleshooting)
+   * @private
+   */
+  async _debugCoIdRegistry() {
+    try {
+      // Get all keys from coIdRegistry store
+      const transaction = this.dbEngine.backend.db.transaction(['coIdRegistry'], 'readonly');
+      const store = transaction.objectStore('coIdRegistry');
+      const request = store.getAllKeys();
+      const keys = await new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      return keys.filter(k => k && (k.includes('actor') || k.includes('agent')));
+    } catch (error) {
+      return [`Error: ${error.message}`];
+    }
+  }
 
   /**
    * Get actor by ID

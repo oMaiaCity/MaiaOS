@@ -42,24 +42,20 @@
   
   <script type="module">
     // MaiaOS v0.4 - Kernel Architecture with Vibes
-    // Single entry point: @MaiaOS/kernel
-    // Central source of truth for MaiaOS
-    import { MaiaOS } from '@MaiaOS/kernel';
+    // Offline-first: All configs loaded from IndexedDB, no network requests
+    import { loadTodosVibe } from './loader.js';
     
     async function boot() {
       try {
-        // Boot MaiaOS with module-based configuration
-        const os = await MaiaOS.boot({
-          modules: ['core', 'mutation', 'dragdrop', 'query', 'interface'] // Load core UI, mutation CRUD, dragdrop, reactive queries, and interface modules
-        });
-        
-        // Load Todo Vibe (app manifest)
-        const { vibe, actor: todoActor } = await os.loadVibe('./manifest.vibe.maia', document.getElementById('actor-todo'));
+        // Load Todo Vibe from IndexedDB (offline-first)
+        // This seeds the database with registry and loads from IndexedDB
+        const { os, vibe, actor: todoActor } = await loadTodosVibe(document.getElementById('actor-todo'));
         
         console.log('✅ Vibe loaded:', vibe.name);
         console.log('✅ Todo Actor with State Machine:', todoActor.machine?.currentState);
         console.log('💡 Inspect #shadow-root elements to see complete style isolation');
         console.log('🎯 Try the todo app - all actions now go through state machine!');
+        console.log('🌐 Offline-first: All configs loaded from IndexedDB, no network requests');
         
         // Expose OS globally for debugging
         window.MaiaOS = os;

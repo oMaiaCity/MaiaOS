@@ -1,7 +1,7 @@
 // Import validation helper
 import { validateOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import shared utilities
-import { loadConfig } from '../../utils/config-loader.js';
+import { loadConfig, subscribeConfig } from '../../utils/config-loader.js';
 
 /**
  * StateEngine - XState-like State Machine Interpreter
@@ -26,26 +26,47 @@ export class StateEngine {
     this.machines = new Map(); // machineId → machine instance
     this.stateCache = new Map(); // stateRef → state definition
     this.dbEngine = null; // Database operation engine (set by kernel)
+    this.stateSubscriptions = new Map(); // stateRef -> unsubscribe function
   }
 
   /**
-   * Load a state machine definition from .state.maia file
+   * Load a state machine definition from .state.maia file (reactive subscription)
    * @param {string} stateRef - State reference ID (e.g., "co_z...")
+   * @param {Function} [onUpdate] - Optional callback when state definition changes
    * @returns {Promise<Object>} The parsed state definition
    */
-  async loadStateDef(stateRef) {
-    // Check cache first
-    if (this.stateCache.has(stateRef)) {
+  async loadStateDef(stateRef, onUpdate = null) {
+    // Check if subscription already exists - if so, return cached and skip duplicate setup
+    const existingUnsubscribe = this.stateSubscriptions?.get(stateRef);
+    if (existingUnsubscribe && this.stateCache.has(stateRef)) {
+      // Subscription already exists, return cached value
       return this.stateCache.get(stateRef);
     }
     
-    const stateDef = await loadConfig(
+    const stateSchemaCoId = await this.dbEngine.getSchemaCoId('state');
+    if (!stateSchemaCoId) {
+      throw new Error('[StateEngine] Failed to resolve state schema co-id');
+    }
+    
+    // Always set up subscription for reactivity (even without onUpdate callback)
+    const { config: stateDef, unsubscribe } = await subscribeConfig(
       this.dbEngine,
-      '@schema/state',
+      stateSchemaCoId,
       stateRef,
       'state',
+      (updatedStateDef) => {
+        // Update cache
+        this.stateCache.set(stateRef, updatedStateDef);
+        // Call custom update handler if provided
+        if (onUpdate) {
+          onUpdate(updatedStateDef);
+        }
+      },
       this.stateCache
     );
+    
+    // Store unsubscribe function
+    this.stateSubscriptions.set(stateRef, unsubscribe);
     
     return stateDef;
   }
