@@ -1,5 +1,6 @@
 // Import shared utilities
-import { loadConfig, subscribeConfig } from '../../utils/config-loader.js';
+import { subscribeConfig } from '../../utils/config-loader.js';
+import { getSchemaCoIdSafe } from '../../utils/subscription-helpers.js';
 import { resolvePath } from '../../utils/path-resolver.js';
 
 /**
@@ -42,10 +43,7 @@ export class StyleEngine {
     // But for now, always set up subscription (style loading is fast)
     // TODO: Optimize to reuse existing subscriptions
     
-    const styleSchemaCoId = await this.dbEngine.getSchemaCoId('style');
-    if (!styleSchemaCoId) {
-      throw new Error('[StyleEngine] Failed to resolve style schema co-id');
-    }
+    const styleSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'style');
     
     // Always set up subscription for reactivity (even without onUpdate callback)
     const { config: styleDef, unsubscribe } = await subscribeConfig(

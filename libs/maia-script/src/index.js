@@ -11,7 +11,7 @@
 
 // Export all engines
 export { ActorEngine } from "./engines/actor-engine/actor.engine.js";
-export { ViewEngine } from "./engines/view-engine/view.engine.js";
+export { ViewEngine } from "./engines/view-engine/index.js";
 export { StyleEngine } from "./engines/style-engine/style.engine.js";
 export { StateEngine } from "./engines/state-engine/state.engine.js";
 export { ToolEngine } from "./engines/tool-engine/tool.engine.js";
@@ -24,4 +24,4 @@ export { DBEngine } from "./engines/db-engine/db.engine.js";
 export { IndexedDBBackend } from "./engines/db-engine/backend/indexeddb.js";
 
 // Export SubscriptionEngine (used by kernel)
-export { SubscriptionEngine } from "./engines/subscription-engine/subscription.engine.js";
+export { SubscriptionEngine } from "./engines/subscription-engine/index.js";

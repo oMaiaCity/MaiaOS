@@ -1,9 +1,13 @@
 // Import validation helper
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import shared utilities
-import { loadConfig, subscribeConfig } from '../../utils/config-loader.js';
-// Import HTML sanitization utility
-import { sanitizeAttribute, containsDangerousHTML } from '../../utils/html-sanitizer.js';
+import { subscribeConfig } from '../../utils/config-loader.js';
+import { getSchemaCoIdSafe } from '../../utils/subscription-helpers.js';
+// Import modules
+import { renderNode, renderEach, applyNodeAttributes, renderNodeChildren } from './renderer.js';
+import { renderSlot, createSlotWrapper } from './slots.js';
+import { attachEvents, handleEvent, resolvePayload } from './events.js';
+import { resolveDataAttributes } from './data-attributes.js';
 
 /**
  * ViewEngine - Renders .maia view files to Shadow DOM
@@ -63,10 +67,7 @@ export class ViewEngine {
       }
     }
     
-    const viewSchemaCoId = await this.dbEngine.getSchemaCoId('view');
-    if (!viewSchemaCoId) {
-      throw new Error('[ViewEngine] Failed to resolve view schema co-id');
-    }
+    const viewSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'view');
     
     // Always set up subscription for reactivity (even without onUpdate callback)
     // This avoids duplicate DB queries when _subscribeToConfig() is called later
@@ -130,6 +131,32 @@ export class ViewEngine {
 
 
   /**
+   * Apply node attributes (class, attrs, value, text)
+   * @param {HTMLElement} element - The element to apply attributes to
+   * @param {Object} node - The node definition
+   * @param {Object} data - The data context { context, item }
+   * @param {string} actorId - The actor ID
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _applyNodeAttributes(element, node, data, actorId) {
+    return applyNodeAttributes(this, element, node, data, actorId);
+  }
+
+  /**
+   * Render node children
+   * @param {HTMLElement} element - The parent element
+   * @param {Object} node - The node definition
+   * @param {Object} data - The data context { context, item }
+   * @param {string} actorId - The actor ID
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _renderNodeChildren(element, node, data, actorId) {
+    return renderNodeChildren(this, element, node, data, actorId);
+  }
+
+  /**
    * Render a single node (recursive)
    * @param {Object} node - The node definition
    * @param {Object} data - The data context { context, item }
@@ -137,129 +164,7 @@ export class ViewEngine {
    * @returns {Promise<HTMLElement|null>} The rendered element
    */
   async renderNode(node, data, actorId) {
-    if (!node) return null;
-
-    // Create element
-    const tag = node.tag || 'div';
-    const element = document.createElement(tag);
-
-    // Handle class attribute
-    if (node.class) {
-      // Reject $if in class (removed - use data-attributes + CSS instead)
-      if (typeof node.class === 'object' && node.class.$if) {
-        throw new Error('[ViewEngine] "$if" is no longer supported in class property. Use data-attributes and CSS instead.');
-      }
-      const classValue = await this.evaluator.evaluate(node.class, data);
-      if (classValue) {
-        element.className = classValue;
-      }
-    }
-
-    // Handle attrs (other HTML attributes)
-    if (node.attrs) {
-      for (const [attrName, attrValue] of Object.entries(node.attrs)) {
-        // Special handling for data-attribute mapping
-        if (attrName === 'data') {
-          await this._resolveDataAttributes(attrValue, data, element);
-        } else {
-          // Regular attributes
-          const resolvedValue = await this.evaluator.evaluate(attrValue, data);
-          if (resolvedValue !== undefined && resolvedValue !== null) {
-            // Convert boolean to string for data attributes (CSS selectors need strings)
-            let stringValue = typeof resolvedValue === 'boolean' ? String(resolvedValue) : String(resolvedValue);
-            
-            // Sanitize attribute values to prevent XSS (defensive hardening)
-            // Note: setAttribute() already escapes quotes, but we sanitize for extra safety
-            if (containsDangerousHTML(stringValue)) {
-              console.warn(`[ViewEngine] Potentially dangerous HTML detected in attribute ${attrName}, sanitizing`);
-              stringValue = sanitizeAttribute(stringValue);
-            }
-            
-            element.setAttribute(attrName, stringValue);
-          }
-        }
-      }
-    }
-
-    // Handle value (for input/textarea elements)
-    if (node.value !== undefined) {
-      const resolvedValue = await this.evaluator.evaluate(node.value, data);
-      if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-        if (element.tagName === 'INPUT') {
-          element.value = resolvedValue || '';
-        } else {
-          element.textContent = resolvedValue || '';
-        }
-        
-        // Add stable unique identifier for focus restoration
-        // Use a counter per actor to ensure same input gets same ID across re-renders
-        if (!this.actorInputCounters.has(actorId)) {
-          this.actorInputCounters.set(actorId, 0);
-        }
-        const inputIndex = this.actorInputCounters.get(actorId);
-        this.actorInputCounters.set(actorId, inputIndex + 1);
-        
-        const inputId = `${actorId}_input_${inputIndex}`;
-        element.setAttribute('data-actor-input', inputId);
-      }
-    }
-
-    // Handle text content
-    if (node.text !== undefined) {
-      const textValue = await this.evaluator.evaluate(node.text, data);
-      element.textContent = textValue || '';
-    }
-
-    // Handle $each operation
-    if (node.$each) {
-      // Clear existing children before rendering new items (prevents duplicates on re-render)
-      element.innerHTML = '';
-      const fragment = await this.renderEach(node.$each, data, actorId);
-      element.appendChild(fragment);
-    }
-
-    // Handle events
-    if (node.$on) {
-      this.attachEvents(element, node.$on, data, actorId);
-    }
-
-    // Handle $slot property: { $slot: "$key" }
-    // If node has $slot property, render slot content into the element and return early
-    if (node.$slot) {
-      await this._renderSlot(node, data, element, actorId);
-      return element;
-    }
-
-    // Reject old slot syntax (migrated to $slot)
-    if (node.slot) {
-      throw new Error('[ViewEngine] Old "slot" syntax is no longer supported. Use "$slot" instead.');
-    }
-
-    // Handle children
-    if (node.children && Array.isArray(node.children)) {
-      for (const child of node.children) {
-        // Reject $if in children (removed - use data-attributes + CSS instead)
-        if (child && typeof child === 'object' && child.$if) {
-          throw new Error('[ViewEngine] "$if" is no longer supported in view templates. Use data-attributes and CSS instead.');
-        }
-        // Normal child node
-        const childElement = await this.renderNode(child, data, actorId);
-        if (childElement) {
-          element.appendChild(childElement);
-        }
-      }
-    }
-
-    return element;
-  }
-
-  /**
-   * Convert camelCase to kebab-case
-   * @param {string} str - camelCase string
-   * @returns {string} kebab-case string
-   */
-  _toKebabCase(str) {
-    return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+    return renderNode(this, node, data, actorId);
   }
 
   /**
@@ -267,69 +172,10 @@ export class ViewEngine {
    * @param {string|Object} dataSpec - Data specification: "$contextKey" or { "key": "$value" }
    * @param {Object} data - The data context { context, item }
    * @param {HTMLElement} element - The element to set attributes on
+   * @private
    */
   async _resolveDataAttributes(dataSpec, data, element) {
-    if (typeof dataSpec === 'string') {
-      // String shorthand: "data": "$dragOverColumn"
-      // Special case: if it's an object path like "$draggedItemIds.$$id", resolve item lookup
-      if (dataSpec.includes('.$$')) {
-        // Item lookup syntax: "$draggedItemIds.$$id" -> looks up draggedItemIds[item.id]
-        const [contextKey, itemKey] = dataSpec.split('.');
-        const contextObj = await this.evaluator.evaluate(contextKey, data);
-        const itemId = await this.evaluator.evaluate(itemKey, data);
-        
-        if (contextObj && typeof contextObj === 'object' && itemId) {
-          const value = contextObj[itemId];
-          if (value !== null && value !== undefined) {
-            // Extract key name from context key (remove $)
-            const key = contextKey.substring(1);
-            const attrName = `data-${this._toKebabCase(key)}`;
-            element.setAttribute(attrName, String(value));
-          }
-        }
-      } else {
-        // Regular context value
-        const value = await this.evaluator.evaluate(dataSpec, data);
-        if (value !== null && value !== undefined) {
-          // Extract key name from context key (remove $ or $$)
-          const key = dataSpec.startsWith('$$') 
-            ? dataSpec.substring(2) // Remove $$
-            : dataSpec.substring(1); // Remove $
-          const attrName = `data-${this._toKebabCase(key)}`;
-          element.setAttribute(attrName, String(value));
-        }
-      }
-    } else if (typeof dataSpec === 'object' && dataSpec !== null) {
-      // Object syntax: "data": { "dragOver": "$dragOverColumn", "itemId": "$draggedItemId" }
-      // Special case: if value is an object with $eq, compare context value with item value
-      for (const [key, valueSpec] of Object.entries(dataSpec)) {
-        let value;
-        
-        // Check if this is a comparison: { "isDragged": { "$eq": ["$draggedItemId", "$$id"] } }
-        if (typeof valueSpec === 'object' && valueSpec !== null && valueSpec.$eq) {
-          // This is a comparison - evaluate it
-          const comparisonResult = await this.evaluator.evaluate(valueSpec, data);
-          value = comparisonResult ? 'true' : null; // Set to 'true' if match, null if no match
-        } else if (typeof valueSpec === 'string' && valueSpec.includes('.$$')) {
-          // Item lookup syntax: "$draggedItemIds.$$id"
-          const [contextKey, itemKey] = valueSpec.split('.');
-          const contextObj = await this.evaluator.evaluate(contextKey, data);
-          const itemId = await this.evaluator.evaluate(itemKey, data);
-          
-          if (contextObj && typeof contextObj === 'object' && itemId) {
-            value = contextObj[itemId];
-          }
-        } else {
-          // Regular value evaluation
-          value = await this.evaluator.evaluate(valueSpec, data);
-        }
-        
-        if (value !== null && value !== undefined) {
-          const attrName = `data-${this._toKebabCase(key)}`;
-          element.setAttribute(attrName, String(value));
-        }
-      }
-    }
+    return resolveDataAttributes(this, dataSpec, data, element);
   }
 
   /**
@@ -338,83 +184,10 @@ export class ViewEngine {
    * @param {Object} data - The data context { context }
    * @param {HTMLElement} wrapperElement - The wrapper element (already created by renderNode)
    * @param {string} actorId - The actor ID
+   * @private
    */
   async _renderSlot(node, data, wrapperElement, actorId) {
-    const slotKey = node.$slot; // e.g., "$currentView"
-    
-    if (!slotKey || !slotKey.startsWith('$')) {
-      console.warn(`[ViewEngine] Slot key must start with $: ${slotKey}`);
-      return;
-    }
-    
-    const contextKey = slotKey.slice(1); // Remove '$'
-    const contextValue = data.context[contextKey]; // e.g., "@list" or "My App"
-    
-    if (!contextValue) {
-      // No value mapped - wrapper element is already created, just leave it empty
-      console.warn(`[ViewEngine] No context value for slot key: ${contextKey}`, {
-        availableKeys: Object.keys(data.context || {})
-      });
-      return;
-    }
-    
-    // Check if it's an actor reference (starts with @)
-    if (typeof contextValue === 'string' && contextValue.startsWith('@')) {
-      const namekey = contextValue.slice(1); // Remove '@'
-      const actor = this.actorEngine?.getActor(actorId);
-      const childActor = actor?.children?.[namekey];
-      
-      if (childActor?.containerElement) {
-        // Mark all children as hidden first (only the attached one will be visible)
-        if (actor?.children) {
-          for (const child of Object.values(actor.children)) {
-            child._isVisible = false;
-          }
-        }
-        
-        // Mark this child as visible and trigger re-render with current data
-        const wasHidden = !childActor._isVisible;
-        childActor._isVisible = true;
-        
-        // CRITICAL: Re-render when actor becomes visible (fixes view-switching reactivity bug)
-        // This ensures the view displays the latest data from subscriptions
-        if (wasHidden && childActor._initialRenderComplete && this.actorEngine) {
-          this.actorEngine.rerender(childActor.id);
-        }
-        
-        // CRITICAL: Only append if not already in wrapper (prevents duplicates during re-renders)
-        if (childActor.containerElement.parentNode !== wrapperElement) {
-          // Remove from old parent if attached elsewhere
-          if (childActor.containerElement.parentNode) {
-            childActor.containerElement.parentNode.removeChild(childActor.containerElement);
-          }
-          
-          // Clear wrapper and attach new child
-          wrapperElement.innerHTML = '';
-          wrapperElement.appendChild(childActor.containerElement);
-        }
-      } else {
-        // Child actor not found - this can happen during initial render before child actors are created
-        // Or if child actor creation failed. Just skip rendering this slot silently.
-        // The view will re-render once child actors are created.
-        // Only warn if this is a re-render (not initial render) to avoid noise
-        if (actor?._initialRenderComplete) {
-          console.warn(`[ViewEngine] Child actor not found for namekey: ${namekey}`, {
-            actorId,
-            availableChildren: actor?.children ? Object.keys(actor.children) : [],
-            contextValue,
-            namekey,
-            childActorExists: !!childActor,
-            containerElementExists: !!childActor?.containerElement
-          });
-        }
-        // Don't render anything - slot will be empty until child actor is created
-      }
-    } else {
-      // Plain value - render as text in wrapper
-      console.log(`[ViewEngine] Rendering plain value: ${contextValue}`);
-      wrapperElement.textContent = String(contextValue);
-    }
+    return renderSlot(this, node, data, wrapperElement, actorId);
   }
 
   /**
@@ -422,36 +195,10 @@ export class ViewEngine {
    * @param {Object} node - Node definition with tag, class, attrs
    * @param {Object} data - The data context
    * @returns {Promise<HTMLElement>} The wrapper element
+   * @private
    */
   async _createSlotWrapper(node, data) {
-    const tag = node.tag || 'div';
-    const element = document.createElement(tag);
-    
-    // Apply class
-    if (node.class) {
-      const classValue = await this.evaluator.evaluate(node.class, data);
-      if (classValue) {
-        element.className = classValue;
-      }
-    }
-    
-    // Apply attrs
-    if (node.attrs) {
-      for (const [attrName, attrValue] of Object.entries(node.attrs)) {
-        const resolved = await this.evaluator.evaluate(attrValue, data);
-        if (resolved !== undefined && resolved !== null) {
-          const stringValue = typeof resolved === 'boolean' ? String(resolved) : resolved;
-          element.setAttribute(attrName, stringValue);
-        }
-      }
-    }
-    
-    // Handle events (if any)
-    if (node.$on) {
-      this.attachEvents(element, node.$on, data, this.currentActorId);
-    }
-    
-    return element;
+    return createSlotWrapper(this, node, data);
   }
 
   /**
@@ -462,31 +209,7 @@ export class ViewEngine {
    * @returns {Promise<DocumentFragment>} Fragment containing all rendered items
    */
   async renderEach(eachDef, data, actorId) {
-    const fragment = document.createDocumentFragment();
-    
-    // Evaluate items
-    const items = await this.evaluator.evaluate(eachDef.items, data);
-    
-    if (!Array.isArray(items) || items.length === 0) {
-      return fragment;
-    }
-
-    // Render each item
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      const itemData = {
-        context: data.context,
-        item: item,
-        index: i
-      };
-      
-      const itemElement = await this.renderNode(eachDef.template, itemData, actorId);
-      if (itemElement) {
-        fragment.appendChild(itemElement);
-      }
-    }
-
-    return fragment;
+    return renderEach(this, eachDef, data, actorId);
   }
 
   /**
@@ -497,18 +220,8 @@ export class ViewEngine {
    * @param {string} actorId - The actor ID (captured in closure)
    */
   attachEvents(element, events, data, actorId) {
-    for (const [eventName, eventDef] of Object.entries(events)) {
-      element.addEventListener(eventName, async (e) => {
-        // Handle async event processing (routes through inbox)
-        try {
-          await this.handleEvent(e, eventDef, data, element, actorId);
-        } catch (error) {
-          console.error(`[ViewEngine] Error handling event ${eventName}:`, error);
-        }
-      });
-    }
+    return attachEvents(this, element, events, data, actorId);
   }
-
 
   /**
    * Handle an event
@@ -521,51 +234,7 @@ export class ViewEngine {
    * @param {string} actorId - The actor ID (from closure)
    */
   async handleEvent(e, eventDef, data, element, actorId) {
-    // v0.2: JSON-native event syntax
-    const eventName = eventDef.send;
-    let payload = eventDef.payload || {};
-    
-    // Query module registry for auto-preventDefault events
-    const dragDropModule = this.moduleRegistry?.getModule('dragdrop');
-    if (dragDropModule && typeof dragDropModule.shouldPreventDefault === 'function') {
-      if (dragDropModule.shouldPreventDefault(e.type)) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    }
-    
-    // Handle special events that don't go to state machine
-    if (eventName === 'DRAG_OVER') {
-      return; // Already prevented above
-    }
-    
-    if (eventName === 'STOP_PROPAGATION') {
-      e.stopPropagation();
-      return; // Don't send to state machine
-    }
-    
-    // Check key filter (for keyboard events)
-    if (eventDef.key && e.key !== eventDef.key) {
-      return; // Ignore if key doesn't match (silently)
-    }
-
-    // Resolve payload
-    payload = await this.resolvePayload(payload, data, e, element);
-
-    // Route internal event through inbox for unified event logging
-    // This creates a single source of truth for all events (internal + external)
-    if (this.actorEngine) {
-      const actor = this.actorEngine.getActor(actorId);
-      if (actor && actor.machine) {
-        // Use sendInternalEvent to route through inbox
-        // This logs the event and processes it immediately
-        await this.actorEngine.sendInternalEvent(actorId, eventName, payload);
-      } else {
-        console.warn(`Cannot send event ${eventName}: Actor has no state machine`);
-      }
-    } else {
-      console.warn('No actorEngine set, cannot handle event:', eventName);
-    }
+    return handleEvent(this, e, eventDef, data, element, actorId);
   }
 
   /**
@@ -577,40 +246,7 @@ export class ViewEngine {
    * @returns {Promise<Object>} Resolved payload
    */
   async resolvePayload(payload, data, e, element) {
-    if (!payload || typeof payload !== 'object') {
-      return payload;
-    }
-
-    const resolved = {};
-    
-    for (const [key, value] of Object.entries(payload)) {
-      // Handle special @inputValue marker
-      if (value === '@inputValue') {
-        resolved[key] = element.value || '';
-      }
-      // Handle special @dataColumn marker (extracts data-column attribute)
-      else if (value === '@dataColumn') {
-        resolved[key] = element.dataset.column || element.getAttribute('data-column') || null;
-      }
-      // Handle string DSL shortcuts (e.g., "$item.id", "$newTodoText")
-      else if (typeof value === 'string' && value.startsWith('$')) {
-        resolved[key] = await this.evaluator.evaluate(value, data);
-      }
-      // Handle DSL expressions (objects)
-      else if (this.evaluator.isDSLOperation(value)) {
-        resolved[key] = await this.evaluator.evaluate(value, data);
-      }
-      // Handle nested objects
-      else if (typeof value === 'object' && value !== null) {
-        resolved[key] = await this.resolvePayload(value, data, e, element);
-      }
-      // Pass through primitives
-      else {
-        resolved[key] = value;
-      }
-    }
-
-    return resolved;
+    return resolvePayload(this, payload, data, e, element);
   }
 
   /**

@@ -11,7 +11,8 @@ import { MessageQueue } from '../message-queue/message.queue.js';
 // Import validation helper
 import { validateAgainstSchemaOrThrow, validateOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import config loader utilities
-import { loadConfig, subscribeConfig, subscribeConfigsBatch, loadConfigOrUseProvided } from '../../utils/config-loader.js';
+import { subscribeConfig, subscribeConfigsBatch, loadConfigOrUseProvided } from '../../utils/config-loader.js';
+import { getSchemaCoIdSafe } from '../../utils/subscription-helpers.js';
 // Import schema loader utility
 import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
 
@@ -73,10 +74,7 @@ export class ActorEngine {
    * @returns {Promise<Object>} The parsed actor config
    */
   async loadActor(coIdOrConfig) {
-    const actorSchemaCoId = await this.dbEngine.getSchemaCoId('actor');
-    if (!actorSchemaCoId) {
-      throw new Error('[ActorEngine] Failed to resolve actor schema co-id');
-    }
+    const actorSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'actor');
     return await loadConfigOrUseProvided(
       this.dbEngine,
       actorSchemaCoId,
@@ -128,10 +126,7 @@ export class ActorEngine {
    * @returns {Promise<Object>} The parsed interface definition
    */
   async loadInterface(coId, onUpdate = null) {
-    const interfaceSchemaCoId = await this.dbEngine.getSchemaCoId('interface');
-    if (!interfaceSchemaCoId) {
-      throw new Error('[ActorEngine] Failed to resolve interface schema co-id');
-    }
+    const interfaceSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'interface');
     
     // Use subscription for reactivity
     const { config: interfaceDef, unsubscribe } = await subscribeConfig(
@@ -151,21 +146,12 @@ export class ActorEngine {
   }
 
   /**
-   * Create and render an actor
-   * v0.2: Added message passing (inbox, subscriptions, watermark)
-   * v0.4: Added contextRef support for separate context files
+   * Load actor configs (view, context, subscriptions, inbox)
    * @param {Object} actorConfig - The actor configuration
-   * @param {HTMLElement} containerElement - The container to attach to
+   * @returns {Promise<{viewDef: Object, context: Object, subscriptions: Array, inbox: Array}>}
+   * @private
    */
-  async createActor(actorConfig, containerElement) {
-    const actorId = actorConfig.$id;
-    
-    // Create shadow root
-    const shadowRoot = containerElement.attachShadow({ mode: 'open' });
-    
-    // Get stylesheets (brand + actor merged)
-    const styleSheets = await this.styleEngine.getStyleSheets(actorConfig);
-    
+  async _loadActorConfigs(actorConfig) {
     // Load view (must be co-id)
     if (!actorConfig.view) {
       throw new Error(`[ActorEngine] Actor config must have 'view' property with co-id`);
@@ -186,10 +172,7 @@ export class ActorEngine {
     // Load subscriptions colist (co-id → array of actor IDs) - REACTIVE
     let subscriptions = [];
     if (actorConfig.subscriptions) {
-      const subscriptionsSchemaCoId = await this.dbEngine.getSchemaCoId('subscriptions');
-      if (!subscriptionsSchemaCoId) {
-        throw new Error('[ActorEngine] Failed to resolve subscriptions schema co-id');
-      }
+      const subscriptionsSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'subscriptions');
       
       // Get initial value (one-time query for now, subscription set up after actor creation)
       const subscriptionsColist = await this.dbEngine.execute({
@@ -205,10 +188,7 @@ export class ActorEngine {
     // Load inbox costream (co-id → array of messages) - REACTIVE
     let inbox = [];
     if (actorConfig.inbox) {
-      const inboxSchemaCoId = await this.dbEngine.getSchemaCoId('inbox');
-      if (!inboxSchemaCoId) {
-        throw new Error('[ActorEngine] Failed to resolve inbox schema co-id');
-      }
+      const inboxSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'inbox');
       
       // Get initial value (one-time query for now, subscription set up after actor creation)
       const inboxCostream = await this.dbEngine.execute({
@@ -221,32 +201,18 @@ export class ActorEngine {
       }
     }
     
-    // Store actor state
-    const actor = {
-      id: actorId,
-      config: actorConfig,
-      shadowRoot,
-      context,
-      containerElement,
-      actorEngine: this, // Reference to ActorEngine for rerender
-      viewDef, // Store view definition for auto-subscription analysis
-      // v0.2: Message passing
-      inbox: inbox,
-      subscriptions: subscriptions,
-      inboxWatermark: actorConfig.inboxWatermark || 0,
-      // v0.5: Subscriptions managed by SubscriptionEngine
-      _subscriptions: [], // Per-actor subscriptions (unsubscribe functions)
-      
-      // Store config subscriptions (for config CRDT reactivity)
-      _configSubscriptions: [],
-      // Track if initial render has completed (for query subscription re-render logic)
-      _initialRenderComplete: false,
-      // Track visibility (for re-render optimization)
-      _isVisible: true, // Actors are visible by default (root vibe is always visible)
-    };
-    
-    // Set up reactive subscriptions for subscriptions colist and inbox costream (batch)
-    // Collect subscription requests for batch API
+    return { viewDef, context, subscriptions, inbox };
+  }
+
+  /**
+   * Set up reactive subscriptions for subscriptions colist and inbox costream (batch)
+   * @param {Object} actor - Actor instance
+   * @param {Object} actorConfig - The actor configuration
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _setupMessageSubscriptions(actor, actorConfig) {
+    const actorId = actor.id;
     const messageSubscriptionRequests = [];
     
     if (actorConfig.subscriptions) {
@@ -304,14 +270,17 @@ export class ActorEngine {
         console.error(`[ActorEngine] ❌ Batch subscription failed for ${actorId}:`, error);
       }
     }
-    
-    this.actors.set(actorId, actor);
-    
-    // Auto-subscribe to reactive data based on context (context-driven)
-    // SubscriptionEngine analyzes context for query objects and @ refs
-    if (this.subscriptionEngine) {
-      await this.subscriptionEngine.initialize(actor);
-    }
+  }
+
+  /**
+   * Initialize actor state (state machine and interface)
+   * @param {Object} actor - Actor instance
+   * @param {Object} actorConfig - The actor configuration
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _initializeActorState(actor, actorConfig) {
+    const actorId = actor.id;
     
     // Load state machine (if state is defined)
     // IMPORTANT: Await to ensure entry actions (like subscriptions) complete before initial render
@@ -341,76 +310,143 @@ export class ActorEngine {
         console.warn(`Failed to load interface for ${actorId}:`, error);
       }
     }
+  }
+
+  /**
+   * Create child actors from children map
+   * @param {Object} actor - Parent actor instance
+   * @param {Object} actorConfig - The actor configuration
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _createChildActors(actor, actorConfig) {
+    if (!actorConfig.children || typeof actorConfig.children !== 'object') {
+      return;
+    }
     
-    // Load and create child actors (if children map is defined)
-    // Flat structure: { namekey: actorId } where actorId can be human-readable (@actor/name) or co-id (co_z...)
-    if (actorConfig.children && typeof actorConfig.children === 'object') {
-      actor.children = {};
-      
-      for (const [namekey, childActorId] of Object.entries(actorConfig.children)) {
-        try {
-          // childActorId can be:
-          // 1. Human-readable ID (e.g., "@actor/composite") - resolve to co-id via database
-          // 2. Co-id (e.g., "co_z...") - use directly
-          
-          let childCoId = childActorId;
-          
-          // If it's a human-readable ID, resolve it to a co-id
-          if (!childActorId.startsWith('co_z')) {
-            if (!this.dbEngine) {
-              throw new Error(`[ActorEngine] Cannot resolve human-readable ID ${childActorId} - database engine not available`);
-            }
-            
-            // Try to resolve via database (handles @actor/name format)
-            const actorSchemaCoId = await this.dbEngine.getSchemaCoId('actor');
-            if (!actorSchemaCoId) {
-              throw new Error(`[ActorEngine] Failed to resolve actor schema co-id`);
-            }
-            const resolvedActor = await this.dbEngine.execute({
-              op: 'query',
-              schema: actorSchemaCoId,
-              key: childActorId
-            });
-            if (resolvedActor && resolvedActor.$id && resolvedActor.$id.startsWith('co_z')) {
-              childCoId = resolvedActor.$id;
-            } else {
-              throw new Error(`[ActorEngine] Could not resolve child actor ID ${childActorId} to a co-id`);
-            }
+    actor.children = {};
+    
+    for (const [namekey, childActorId] of Object.entries(actorConfig.children)) {
+      try {
+        // childActorId can be:
+        // 1. Human-readable ID (e.g., "@actor/composite") - resolve to co-id via database
+        // 2. Co-id (e.g., "co_z...") - use directly
+        
+        let childCoId = childActorId;
+        
+        // If it's a human-readable ID, resolve it to a co-id
+        if (!childActorId.startsWith('co_z')) {
+          if (!this.dbEngine) {
+            throw new Error(`[ActorEngine] Cannot resolve human-readable ID ${childActorId} - database engine not available`);
           }
           
-          // Load child actor config using co-id
-          const childActorConfig = await this.loadActor(childCoId);
-          
-          // Ensure child actor ID matches expected ID (for consistency)
-          if (childActorConfig.$id !== childCoId) {
-            console.warn(`[ActorEngine] Child actor ID mismatch: expected ${childCoId}, got ${childActorConfig.$id}`);
-            childActorConfig.$id = childCoId; // Use expected co-id
+          // Try to resolve via database (handles @actor/name format)
+          const actorSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'actor');
+          const resolvedActor = await this.dbEngine.execute({
+            op: 'query',
+            schema: actorSchemaCoId,
+            key: childActorId
+          });
+          if (resolvedActor && resolvedActor.$id && resolvedActor.$id.startsWith('co_z')) {
+            childCoId = resolvedActor.$id;
+          } else {
+            throw new Error(`[ActorEngine] Could not resolve child actor ID ${childActorId} to a co-id`);
           }
-          
-          // Create container for child actor (NOT attached to DOM yet - ViewEngine will handle attachment)
-          const childContainer = document.createElement('div');
-          childContainer.dataset.namekey = namekey;
-          childContainer.dataset.childActorId = childActorId;
-          
-          // Create child actor recursively
-          const childActor = await this.createActor(childActorConfig, childContainer);
-          
-          // Store namekey on child actor
-          childActor.namekey = namekey;
-          
-          // Store child actor reference
-          actor.children[namekey] = childActor;
-          
-          // Auto-subscribe parent to child (if not already subscribed)
-          if (!actor.subscriptions.includes(childActorId)) {
-            actor.subscriptions.push(childActorId);
-          }
-          
-        } catch (error) {
-          console.error(`Failed to create child actor ${childActorId} (namekey: ${namekey}):`, error);
         }
+        
+        // Load child actor config using co-id
+        const childActorConfig = await this.loadActor(childCoId);
+        
+        // Ensure child actor ID matches expected ID (for consistency)
+        if (childActorConfig.$id !== childCoId) {
+          console.warn(`[ActorEngine] Child actor ID mismatch: expected ${childCoId}, got ${childActorConfig.$id}`);
+          childActorConfig.$id = childCoId; // Use expected co-id
+        }
+        
+        // Create container for child actor (NOT attached to DOM yet - ViewEngine will handle attachment)
+        const childContainer = document.createElement('div');
+        childContainer.dataset.namekey = namekey;
+        childContainer.dataset.childActorId = childActorId;
+        
+        // Create child actor recursively
+        const childActor = await this.createActor(childActorConfig, childContainer);
+        
+        // Store namekey on child actor
+        childActor.namekey = namekey;
+        
+        // Store child actor reference
+        actor.children[namekey] = childActor;
+        
+        // Auto-subscribe parent to child (if not already subscribed)
+        if (!actor.subscriptions.includes(childActorId)) {
+          actor.subscriptions.push(childActorId);
+        }
+        
+      } catch (error) {
+        console.error(`Failed to create child actor ${childActorId} (namekey: ${namekey}):`, error);
       }
     }
+  }
+
+  /**
+   * Create and render an actor
+   * v0.2: Added message passing (inbox, subscriptions, watermark)
+   * v0.4: Added contextRef support for separate context files
+   * @param {Object} actorConfig - The actor configuration
+   * @param {HTMLElement} containerElement - The container to attach to
+   */
+  async createActor(actorConfig, containerElement) {
+    const actorId = actorConfig.$id;
+    
+    // Create shadow root
+    const shadowRoot = containerElement.attachShadow({ mode: 'open' });
+    
+    // Get stylesheets (brand + actor merged)
+    const styleSheets = await this.styleEngine.getStyleSheets(actorConfig);
+    
+    // Load actor configs (view, context, subscriptions, inbox)
+    const { viewDef, context, subscriptions, inbox } = await this._loadActorConfigs(actorConfig);
+    
+    // Store actor state
+    const actor = {
+      id: actorId,
+      config: actorConfig,
+      shadowRoot,
+      context,
+      containerElement,
+      actorEngine: this, // Reference to ActorEngine for rerender
+      viewDef, // Store view definition for auto-subscription analysis
+      // v0.2: Message passing
+      inbox: inbox,
+      subscriptions: subscriptions,
+      inboxWatermark: actorConfig.inboxWatermark || 0,
+      // v0.5: Subscriptions managed by SubscriptionEngine
+      _subscriptions: [], // Per-actor subscriptions (unsubscribe functions)
+      
+      // Store config subscriptions (for config CRDT reactivity)
+      _configSubscriptions: [],
+      // Track if initial render has completed (for query subscription re-render logic)
+      _initialRenderComplete: false,
+      // Track visibility (for re-render optimization)
+      _isVisible: true, // Actors are visible by default (root vibe is always visible)
+    };
+    
+    // Set up reactive subscriptions for subscriptions colist and inbox costream (batch)
+    await this._setupMessageSubscriptions(actor, actorConfig);
+    
+    this.actors.set(actorId, actor);
+    
+    // Auto-subscribe to reactive data based on context (context-driven)
+    // SubscriptionEngine analyzes context for query objects and @ refs
+    if (this.subscriptionEngine) {
+      await this.subscriptionEngine.initialize(actor);
+    }
+    
+    // Initialize actor state (state machine and interface)
+    await this._initializeActorState(actor, actorConfig);
+    
+    // Create child actors
+    await this._createChildActors(actor, actorConfig);
     
     // Initial render with actor ID
     await this.viewEngine.render(viewDef, actor.context, shadowRoot, styleSheets, actorId);

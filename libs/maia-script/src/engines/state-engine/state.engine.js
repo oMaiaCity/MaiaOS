@@ -1,7 +1,8 @@
 // Import validation helper
 import { validateOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import shared utilities
-import { loadConfig, subscribeConfig } from '../../utils/config-loader.js';
+import { subscribeConfig } from '../../utils/config-loader.js';
+import { getSchemaCoIdSafe } from '../../utils/subscription-helpers.js';
 
 /**
  * StateEngine - XState-like State Machine Interpreter
@@ -43,10 +44,7 @@ export class StateEngine {
       return this.stateCache.get(stateRef);
     }
     
-    const stateSchemaCoId = await this.dbEngine.getSchemaCoId('state');
-    if (!stateSchemaCoId) {
-      throw new Error('[StateEngine] Failed to resolve state schema co-id');
-    }
+    const stateSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'state');
     
     // Always set up subscription for reactivity (even without onUpdate callback)
     const { config: stateDef, unsubscribe } = await subscribeConfig(
