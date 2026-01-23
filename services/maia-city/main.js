@@ -28,6 +28,9 @@ let syncState = {
 	syncing: false,
 	error: null,
 };
+
+// Subscription management for ReactiveStore updates
+let activeStoreSubscriptions = new Map(); // coId/queryKey → unsubscribe function
 let unsubscribeSync = null;
 
 // Check if user has previously authenticated (localStorage flag only, no secrets)
@@ -402,13 +405,12 @@ window.handleRegister = register;
 window.handleSignOut = signOut;
 window.showToast = showToast; // Expose for debugging
 
-function switchView(view) {
-	currentView = view;
-	currentContextCoValueId = null; // Reset context when switching views
-	renderAppInternal();
-}
+// switchView moved above selectCoValue
 
 function selectCoValue(coId) {
+	// Clean up old subscriptions when navigating away
+	cleanupStoreSubscriptions();
+	
 	// Explorer-style navigation: load CoValue into main container context
 	currentContextCoValueId = coId;
 	renderAppInternal();
@@ -437,8 +439,44 @@ function selectCoValue(coId) {
 	}
 }
 
+function switchView(view) {
+	// Clean up old subscriptions when switching views
+	cleanupStoreSubscriptions();
+	
+	currentView = view;
+	currentContextCoValueId = null; // Reset context when switching views
+	renderAppInternal();
+}
+
+function cleanupStoreSubscriptions() {
+	// Clean up all active ReactiveStore subscriptions
+	for (const [key, unsubscribe] of activeStoreSubscriptions.entries()) {
+		try {
+			unsubscribe();
+		} catch (e) {
+			console.warn(`[DB Viewer] Error cleaning up subscription for ${key}:`, e);
+		}
+	}
+	activeStoreSubscriptions.clear();
+}
+
 async function renderAppInternal() {
-	await renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, switchView, selectCoValue);
+	// Register subscription callback to track ReactiveStore subscriptions
+	const registerSubscription = (key, unsubscribe) => {
+		// Clean up old subscription for this key if it exists
+		const oldUnsubscribe = activeStoreSubscriptions.get(key);
+		if (oldUnsubscribe) {
+			try {
+				oldUnsubscribe();
+			} catch (e) {
+				console.warn(`[DB Viewer] Error cleaning up old subscription for ${key}:`, e);
+			}
+		}
+		// Store new subscription
+		activeStoreSubscriptions.set(key, unsubscribe);
+	};
+	
+	await renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, switchView, selectCoValue, registerSubscription);
 }
 
 function toggleExpand(expandId) {

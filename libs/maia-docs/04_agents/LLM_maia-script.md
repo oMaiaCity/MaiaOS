@@ -1,6 +1,6 @@
 # MaiaOS Documentation for maia-script
 
-**Auto-generated:** 2026-01-23T09:33:53.547Z
+**Auto-generated:** 2026-01-23T11:22:27.757Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -397,27 +397,28 @@ const result = await toolEngine.executeTool(
 
 ## DBEngine
 
-**Purpose:** Unified database operation router.
+**Purpose:** Unified database operation router (extends shared operations layer).
 
 **What it does:**
+- Extends `DBEngine` from `@MaiaOS/operations` with MaiaScript evaluator support
 - Routes operations to modular handlers
-- Supports operations: `read`, `create`, `update`, `updateConfig`, `delete`, `toggle`, `seed`
+- Supports operations: `read`, `create`, `update`, `delete`, `seed`
 - Works with swappable backends (IndexedDB, CoJSON CRDT)
 - Validates operations against schemas
 - **Unified `read()` API** - Always returns reactive stores
+- **MaiaScript expression evaluation** - Supports expressions in update operations
 
 **Key Methods:**
 - `execute(payload)` - Execute a database operation
+- `getSchemaCoId(schemaName)` - Resolve human-readable schema name to co-id
+- `resolveCoId(humanReadableId)` - Resolve human-readable ID to co-id
 
 **Operations:**
 - `read` - **Primary API** - Load configs/schemas/data (always returns reactive store)
-- `query` - **DEPRECATED** - Use `read` instead (kept for compatibility)
 - `create` - Create new records
-- `update` - Update existing records (data collections)
-- `updateConfig` - Update actor configs (system properties)
+- `update` - Update existing records (unified for data collections and configs, supports MaiaScript expressions)
 - `delete` - Delete records
-- `toggle` - Toggle boolean field
-- `seed` - Flush + seed database (dev only)
+- `seed` - Flush + seed database (dev only, IndexedDB backend)
 
 **Example:**
 ```javascript
@@ -448,11 +449,31 @@ const newTodo = await dbEngine.execute({
   schema: 'co_zTodos123',
   data: { text: 'Buy milk', completed: false }
 });
+
+// Update with MaiaScript expression (maia-script specific)
+const updated = await dbEngine.execute({
+  op: 'update',
+  schema: 'co_zTodos123',
+  id: 'co_zTodo456',
+  data: {
+    done: { $not: '$existing.done' }  // Toggle using MaiaScript
+  }
+});
 ```
 
-**Important:** All schemas must be co-ids (`co_z...`). Human-readable IDs (`@schema/...`) are transformed to co-ids during seeding.
+**Important:** 
+- All schemas must be co-ids (`co_z...`). Human-readable IDs (`@schema/...`) are transformed to co-ids during seeding.
+- The `DBEngine` in `maia-script` extends the shared `DBEngine` from `@MaiaOS/operations` to add MaiaScript evaluator support.
+- Operations are implemented in `@MaiaOS/operations` and shared across all backends.
 
-**Source:** `libs/maia-script/src/engines/db-engine/db.engine.js`
+**Dependencies:**
+- `@MaiaOS/operations` - Shared operations layer (DBEngine, operations, ReactiveStore)
+- `MaiaScriptEvaluator` - For expression evaluation in updates
+
+**Source:** 
+- `libs/maia-script/src/engines/db-engine/db.engine.js` - maia-script wrapper
+- `libs/maia-operations/src/engine.js` - Shared DBEngine implementation
+- `libs/maia-operations/src/operations/` - Shared operation implementations
 
 ---
 
@@ -1213,7 +1234,9 @@ For full system usage, see the [maia-kernel Package](../02_maia-kernel/README.md
 ## Related Documentation
 
 - [maia-kernel Package](../02_maia-kernel/README.md) - Boot process and orchestration
+- [maia-operations Package](../06_maia-operations/README.md) - Shared database operations layer
 - [maia-schemata Package](../03_maia-schemata/README.md) - Schema validation
+- [maia-db Package](../05_maia-db/cojson.md) - Database backends
 - [DSL Fundamentals](../02_dsl.md) - MaiaScript language reference
 - [Engines](../04_engines.md) - High-level engine overview
 
@@ -1230,6 +1253,7 @@ For full system usage, see the [maia-kernel Package](../02_maia-kernel/README.md
 - `src/utils/` - Shared utilities
 
 **Dependencies:**
+- `@MaiaOS/operations` - Shared database operations layer
 - `@MaiaOS/tools` - Tool definitions
 - `@MaiaOS/schemata` - Schema validation
 - `@MaiaOS/db` - Database layer

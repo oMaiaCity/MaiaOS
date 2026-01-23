@@ -147,7 +147,9 @@ For full system usage, see the [maia-kernel Package](../02_maia-kernel/README.md
 ## Related Documentation
 
 - [maia-kernel Package](../02_maia-kernel/README.md) - Boot process and orchestration
+- [maia-operations Package](../06_maia-operations/README.md) - Shared database operations layer
 - [maia-schemata Package](../03_maia-schemata/README.md) - Schema validation
+- [maia-db Package](../05_maia-db/cojson.md) - Database backends
 - [DSL Fundamentals](../02_dsl.md) - MaiaScript language reference
 - [Engines](../04_engines.md) - High-level engine overview
 
@@ -164,6 +166,7 @@ For full system usage, see the [maia-kernel Package](../02_maia-kernel/README.md
 - `src/utils/` - Shared utilities
 
 **Dependencies:**
+- `@MaiaOS/operations` - Shared database operations layer
 - `@MaiaOS/tools` - Tool definitions
 - `@MaiaOS/schemata` - Schema validation
 - `@MaiaOS/db` - Database layer

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@MaiaOS/db": "workspace:*",
+    "@MaiaOS/operations": "workspace:*",
     "@MaiaOS/schemata": "workspace:*",
     "@MaiaOS/tools": "workspace:*"
   },

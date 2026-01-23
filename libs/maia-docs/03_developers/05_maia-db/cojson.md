@@ -298,3 +298,17 @@ const profile = group.createMap({ name: "Alice" }, profileMeta);
   - `libs/maia-db/src/services/` - CoValue creation services
   - `libs/maia-db/src/utils/meta.js` - Schema metadata utilities
   - `libs/maia-core/src/o.js` - Inspector with schema support
+
+---
+
+## Operations Layer Integration
+
+The CoJSON backend will implement the `DBAdapter` interface from `@MaiaOS/operations`, allowing it to use the same unified operations layer as the IndexedDB backend.
+
+**Future Integration:**
+- CoJSON backend will implement `DBAdapter` interface
+- Operations (read, create, update, delete) will work identically for both backends
+- Same `DBEngine` API regardless of backend choice
+
+**Related Documentation:**
+- [maia-operations Package](../06_maia-operations/README.md) - Shared operations layer and DBAdapter interface

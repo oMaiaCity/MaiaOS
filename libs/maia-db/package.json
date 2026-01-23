@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "cojson": "^0.19.21",
+    "@MaiaOS/operations": "workspace:*",
     "@MaiaOS/schemata": "workspace:*"
   }
 }

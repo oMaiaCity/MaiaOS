@@ -1217,8 +1217,8 @@ export class IndexedDBBackend {
    * @returns {Promise<ReactiveStore|ReactiveStore[]>} Reactive store(s) that hold current value and notify on updates
    */
   async read(schema, key, keys, filter) {
-    // Import ReactiveStore
-    const { ReactiveStore } = await import('../../../utils/reactive-store.js');
+    // Import ReactiveStore from shared operations package
+    const { ReactiveStore } = await import('@MaiaOS/operations/reactive-store');
     
     // Validate schema is a co-id
     if (!schema || !schema.startsWith('co_z')) {

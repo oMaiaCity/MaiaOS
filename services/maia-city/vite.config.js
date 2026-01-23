@@ -20,6 +20,10 @@ export default defineConfig({
 			alias: {
 				"@MaiaOS/kernel": resolve(__dirname, "../../libs/maia-kernel/src/index.js"),
 				"@MaiaOS/db": resolve(__dirname, "../../libs/maia-db/src/index.js"),
+				"@MaiaOS/operations": resolve(__dirname, "../../libs/maia-operations/src"),
+				"@MaiaOS/operations/reactive-store": resolve(__dirname, "../../libs/maia-operations/src/reactive-store.js"),
+				"@MaiaOS/operations/db-adapter": resolve(__dirname, "../../libs/maia-operations/src/db-adapter.js"),
+				"@MaiaOS/operations/operations": resolve(__dirname, "../../libs/maia-operations/src/operations/index.js"),
 				"@MaiaOS/schemata": resolve(__dirname, "../../libs/maia-schemata/src"),
 				"@MaiaOS/vibes": resolve(__dirname, "../../libs/maia-vibes/src"),
 				"@MaiaOS/script": resolve(__dirname, "../../libs/maia-script/src"),

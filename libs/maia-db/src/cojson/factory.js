@@ -2,16 +2,16 @@
  * CoJSON API Factory - Create cojson API instance
  * 
  * Creates a standalone cojson API that works directly with CoJSON raw types.
- * This is a database-level wrapper, independent from maiascript engines.
+ * Uses shared DBEngine from @MaiaOS/operations with CoJSONBackend adapter.
  * 
  * Usage:
  *   import { createCoJSONAPI } from '@MaiaOS/db';
  *   const { node, account } = maia.id;
  *   const cojsonAPI = createCoJSONAPI(node, account);
- *   const result = await cojsonAPI.cojson({op: 'query', id: 'co_z...'});
+ *   const result = await cojsonAPI.cojson({op: 'read', schema: 'co_z...', key: 'co_z...'});
  */
 
-import { CoJSONEngine } from './cojson.engine.js';
+import { DBEngine } from '@MaiaOS/operations';
 import { CoJSONBackend } from './backend/cojson-backend.js';
 
 /**
@@ -29,23 +29,23 @@ export function createCoJSONAPI(node, account) {
     throw new Error('[createCoJSONAPI] Account required');
   }
   
-  // Create backend
+  // Create backend (implements DBAdapter)
   const backend = new CoJSONBackend(node, account);
   
-  // Create engine
-  const engine = new CoJSONEngine(backend);
+  // Create shared DBEngine with backend
+  const dbEngine = new DBEngine(backend);
   
   // Return API object
   return {
     /**
-     * Execute a CoJSON operation
+     * Execute a database operation
      * @param {Object} payload - Operation payload
-     * @param {string} payload.op - Operation name (query, create, update, delete)
+     * @param {string} payload.op - Operation name (read, create, update, delete)
      * @param {Object} payload params - Operation-specific parameters
      * @returns {Promise<any>} Operation result
      */
     cojson: async (payload) => {
-      return await engine.execute(payload);
+      return await dbEngine.execute(payload);
     }
   };
 }

@@ -1,6 +1,6 @@
 # MaiaOS Documentation for maia-schemata
 
-**Auto-generated:** 2026-01-23T09:33:53.543Z
+**Auto-generated:** 2026-01-23T11:22:27.755Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -1005,6 +1005,15 @@ The `maia-db` package uses `maia-schemata` for:
 - Resolving co-id references during validation
 - Validating data before create/update operations
 
+### With maia-operations
+
+The `maia-operations` package uses `maia-schemata` for:
+- Validating data against schemas in create/update operations
+- Loading schemas from database for validation
+- Schema validation is enforced by operations (100% migration - no fallbacks)
+
+**See:** `libs/maia-operations/src/operations/create.js` and `libs/maia-operations/src/operations/update.js`
+
 ---
 
 ## Key Concepts
@@ -1091,11 +1100,12 @@ transformInstanceForSeeding(instance, coIdMap);
 
 ## Related Documentation
 
+- [maia-operations Package](../06_maia-operations/README.md) - Operations layer that uses schema validation
 - [Schema Definitions](../03_schemas.md) - Schema structure and usage
 - [Validation Engine Details](./validation.md) - How ValidationEngine works
 - [Schema Transformation](./transformation.md) - How transformation works
 - [CoJSON Integration](./cojson-integration.md) - CoJSON types support
-- [CoJSON Architecture](../architecture/cojson.md) - CoJSON system overview
+- [CoJSON Architecture](../05_maia-db/cojson.md) - CoJSON system overview
 
 ---
 

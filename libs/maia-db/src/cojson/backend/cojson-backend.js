@@ -1,13 +1,27 @@
 /**
- * CoJSON Backend - Works directly with LocalNode and CoValues
+ * CoJSON Backend - Implements DBAdapter interface using CoJSON raw operations
  * 
- * Provides low-level access to CoJSON primitives for the cojson API
+ * Directly translates database operations to native CoJSON operations.
+ * No wrapping layer - works directly with CoJSON raw types (CoMap, CoList, CoStream).
  */
 
-export class CoJSONBackend {
+import { DBAdapter } from '@MaiaOS/operations/db-adapter';
+import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
+import { getGlobalCache } from '../../services/oSubscriptionCache.js';
+import { validateHeaderMetaSchema } from '../../utils/meta.js';
+import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
+import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
+import { createCoMap } from '../../services/oMap.js';
+import { createCoList } from '../../services/oList.js';
+import { createPlainText } from '../../services/oPlainText.js';
+import { createCoStream } from '../../services/oStream.js';
+
+export class CoJSONBackend extends DBAdapter {
   constructor(node, account) {
+    super();
     this.node = node;
     this.account = account;
+    this.subscriptionCache = getGlobalCache();
     
     console.log('[CoJSONBackend] Initialized with node and account');
   }
@@ -69,12 +83,32 @@ export class CoJSONBackend {
   
   /**
    * Get default group from account (for create operations)
-   * @returns {RawGroup|null} Default group or null
+   * Returns universal group (hardcoded owner/admin of all CoValues)
+   * @returns {RawGroup|null} Universal group or null if not found
    */
   getDefaultGroup() {
-    // Account is a Group, so we can use it directly or get a child group
-    // For now, return account as the default group
-    return this.account;
+    // Get universal group from account (created by migration)
+    const universalGroupId = this.account.get("universalGroup");
+    if (!universalGroupId) {
+      console.warn('[CoJSONBackend] Universal group not found on account - falling back to account');
+      return this.account;
+    }
+    
+    const universalGroupCore = this.node.getCoValue(universalGroupId);
+    if (!universalGroupCore || universalGroupCore.type !== 'group') {
+      console.warn('[CoJSONBackend] Universal group not available - falling back to account');
+      return this.account;
+    }
+    
+    // Get actual group content (RawGroup) from CoValueCore
+    const universalGroup = this.getCurrentContent(universalGroupCore);
+    if (!universalGroup || typeof universalGroup.createMap !== 'function') {
+      console.warn('[CoJSONBackend] Universal group content not available - falling back to account');
+      return this.account;
+    }
+    
+    // Return universal group (private, hardcoded owner/admin)
+    return universalGroup;
   }
   
   /**
@@ -488,5 +522,697 @@ export class CoJSONBackend {
     } else {
       throw new Error('[CoJSONBackend] Group does not support role changes');
     }
+  }
+
+  // ============================================================================
+  // DBAdapter Interface Implementation
+  // ============================================================================
+
+  /**
+   * Read data from database - directly translates to CoJSON raw operations
+   * @param {string} schema - Schema co-id (co_z...)
+   * @param {string} [key] - Specific key (co-id) for single item
+   * @param {string[]} [keys] - Array of co-ids for batch reads
+   * @param {Object} [filter] - Filter criteria for collection queries
+   * @returns {Promise<ReactiveStore|ReactiveStore[]>} Reactive store(s) that hold current value and notify on updates
+   */
+  async read(schema, key, keys, filter) {
+    // Batch read (multiple keys)
+    if (keys && Array.isArray(keys)) {
+      const stores = await Promise.all(keys.map(coId => this._readSingleItem(coId)));
+      return stores;
+    }
+
+    // Single item read
+    if (key) {
+      return await this._readSingleItem(key);
+    }
+
+    // Collection read (by schema) or all CoValues (if schema is null/undefined)
+    if (!schema) {
+      return await this._readAllCoValues(filter);
+    }
+    
+    return await this._readCollection(schema, filter);
+  }
+
+  /**
+   * Read a single CoValue by ID and wrap in ReactiveStore
+   * @private
+   * @param {string} coId - CoValue ID
+   * @returns {Promise<ReactiveStore>} ReactiveStore with CoValue data
+   */
+  async _readSingleItem(coId) {
+    const store = new ReactiveStore(null);
+    const coValueCore = this.getCoValue(coId);
+    
+    // Check if subscription already exists in cache (reused)
+    const existingSubscription = this.subscriptionCache.cache?.get(coId);
+    const isReused = !!existingSubscription;
+    
+    // Get or create subscription using cache
+    const subscription = this.subscriptionCache.getOrCreate(coId, () => {
+      if (!coValueCore) {
+        store._set({ error: 'CoValue not found', id: coId });
+        return { unsubscribe: () => {} };
+      }
+
+      // Set up subscription to CoValue updates
+      const unsubscribe = coValueCore.subscribe((core) => {
+        if (!core.isAvailable()) {
+          store._set({ id: coId, loading: true });
+          return;
+        }
+
+        // Extract CoValue data
+        const data = this._extractCoValueData(core);
+        store._set(data);
+      });
+
+      // Set initial value if available
+      if (coValueCore.isAvailable()) {
+        const data = this._extractCoValueData(coValueCore);
+        store._set(data);
+      } else {
+        // Trigger load if not available
+        this.node.loadCoValueCore(coId).catch(err => {
+          store._set({ error: err.message, id: coId });
+        });
+      }
+
+      return { unsubscribe };
+    });
+
+    // CRITICAL FIX: If subscription was reused from cache, the cached subscription
+    // is updating an OLD ReactiveStore. We need to:
+    // 1. Get current value from CoValueCore and set it on the NEW store immediately
+    // 2. Create a NEW subscription that updates the NEW store
+    if (isReused && coValueCore) {
+      // Get current value and set on new store
+      if (coValueCore.isAvailable()) {
+        const currentData = this._extractCoValueData(coValueCore);
+        store._set(currentData);
+      } else {
+        store._set({ id: coId, loading: true });
+      }
+      
+      // Create new subscription that updates THIS store (not the old one)
+      const newUnsubscribe = coValueCore.subscribe((core) => {
+        if (!core.isAvailable()) {
+          store._set({ id: coId, loading: true });
+          return;
+        }
+        const data = this._extractCoValueData(core);
+        store._set(data);
+      });
+      
+      // Replace cached subscription with one that updates the new store
+      this.subscriptionCache.cache.set(coId, { unsubscribe: newUnsubscribe });
+    }
+
+    // Set up store unsubscribe to clean up subscription
+    const originalUnsubscribe = store._unsubscribe;
+    store._unsubscribe = () => {
+      if (originalUnsubscribe) originalUnsubscribe();
+      this.subscriptionCache.scheduleCleanup(coId);
+    };
+
+    return store;
+  }
+
+  /**
+   * Read a collection of CoValues by schema
+   * @private
+   * @param {string} schema - Schema co-id (co_z...)
+   * @param {Object} [filter] - Filter criteria
+   * @returns {Promise<ReactiveStore>} ReactiveStore with array of CoValue data
+   */
+  async _readCollection(schema, filter) {
+    const store = new ReactiveStore([]);
+    const matchingCoIds = new Set();
+    const unsubscribeFunctions = [];
+
+    // Helper to update store with current matching CoValues
+    const updateStore = () => {
+      const allCoValues = this.getAllCoValues();
+      const results = [];
+
+      for (const [coId, coValueCore] of allCoValues.entries()) {
+        // Skip invalid IDs
+        if (!coId || typeof coId !== 'string' || !coId.startsWith('co_')) {
+          continue;
+        }
+
+        // Skip if not available
+        if (!this.isAvailable(coValueCore)) {
+          continue;
+        }
+
+        // Check if CoValue matches schema
+        const header = this.getHeader(coValueCore);
+        const headerMeta = header?.meta || null;
+        const schemaFromMeta = headerMeta?.$schema;
+
+        // Match schema (can be co-id or human-readable)
+        if (schemaFromMeta === schema || schemaFromMeta === `@schema/${schema}`) {
+          const data = this._extractCoValueData(coValueCore);
+          
+          // Apply filter if provided
+          if (!filter || this._matchesFilter(data, filter)) {
+            results.push(data);
+            matchingCoIds.add(coId);
+          }
+        }
+      }
+
+      store._set(results);
+    };
+
+    // Initial load
+    updateStore();
+
+    // Set up subscriptions for all matching CoValues
+    for (const coId of matchingCoIds) {
+      const subscription = this.subscriptionCache.getOrCreate(coId, () => {
+        const coValueCore = this.getCoValue(coId);
+        if (!coValueCore) {
+          return { unsubscribe: () => {} };
+        }
+
+        const unsubscribe = coValueCore.subscribe(() => {
+          // Update store when any matching CoValue changes
+          updateStore();
+        });
+
+        return { unsubscribe };
+      });
+
+      unsubscribeFunctions.push(() => {
+        this.subscriptionCache.scheduleCleanup(coId);
+      });
+    }
+
+    // Set up store unsubscribe to clean up all subscriptions
+    const originalUnsubscribe = store._unsubscribe;
+    store._unsubscribe = () => {
+      if (originalUnsubscribe) originalUnsubscribe();
+      unsubscribeFunctions.forEach(fn => fn());
+    };
+
+    return store;
+  }
+
+  /**
+   * Read all CoValues (no schema filter)
+   * @private
+   * @param {Object} [filter] - Filter criteria
+   * @returns {Promise<ReactiveStore>} ReactiveStore with array of all CoValue data
+   */
+  async _readAllCoValues(filter) {
+    const store = new ReactiveStore([]);
+    const matchingCoIds = new Set();
+    const unsubscribeFunctions = [];
+
+    // Helper to update store with all CoValues
+    const updateStore = () => {
+      const allCoValues = this.getAllCoValues();
+      const results = [];
+
+      for (const [coId, coValueCore] of allCoValues.entries()) {
+        // Skip invalid IDs
+        if (!coId || typeof coId !== 'string' || !coId.startsWith('co_')) {
+          continue;
+        }
+
+        // Skip if not available
+        if (!this.isAvailable(coValueCore)) {
+          continue;
+        }
+
+        // Extract CoValue data (no schema filtering)
+        const data = this._extractCoValueData(coValueCore);
+        
+        // Apply filter if provided
+        if (!filter || this._matchesFilter(data, filter)) {
+          results.push(data);
+          matchingCoIds.add(coId);
+        }
+      }
+
+      store._set(results);
+    };
+
+    // Initial load
+    updateStore();
+
+    // Set up subscriptions for all CoValues
+    for (const coId of matchingCoIds) {
+      const subscription = this.subscriptionCache.getOrCreate(coId, () => {
+        const coValueCore = this.getCoValue(coId);
+        if (!coValueCore) {
+          return { unsubscribe: () => {} };
+        }
+
+        const unsubscribe = coValueCore.subscribe(() => {
+          // Update store when any CoValue changes
+          updateStore();
+        });
+
+        return { unsubscribe };
+      });
+
+      unsubscribeFunctions.push(() => {
+        this.subscriptionCache.scheduleCleanup(coId);
+      });
+    }
+
+    // Set up store unsubscribe to clean up all subscriptions
+    const originalUnsubscribe = store._unsubscribe;
+    store._unsubscribe = () => {
+      if (originalUnsubscribe) originalUnsubscribe();
+      unsubscribeFunctions.forEach(fn => fn());
+    };
+
+    return store;
+  }
+
+  /**
+   * Extract CoValue data from CoValueCore and normalize (match IndexedDB format)
+   * @private
+   * @param {CoValueCore} coValueCore - CoValueCore instance
+   * @returns {Object} Normalized CoValue data (flattened properties, id field added)
+   */
+  _extractCoValueData(coValueCore) {
+    const content = this.getCurrentContent(coValueCore);
+    const header = this.getHeader(coValueCore);
+    const headerMeta = header?.meta || null;
+    
+    const rawType = content?.type || 'unknown';
+    const schema = headerMeta?.$schema || null;
+
+    // Normalize based on type
+    if (rawType === 'colist' && content && content.toJSON) {
+      // CoList: return array of items
+      try {
+        const items = content.toJSON();
+        // Normalize each item (add id if missing)
+        return items.map((item, index) => {
+          if (typeof item === 'object' && item !== null && !item.id) {
+            // Generate id from index (or use item's co-id if it has one)
+            return { ...item, id: item.$id || `item_${index}` };
+          }
+          return item;
+        });
+      } catch (e) {
+        return [];
+      }
+    } else if (content && content.get && typeof content.get === 'function') {
+      // CoMap: format properties as array for DB viewer (with key, value, type)
+      const accountType = headerMeta?.type || null;  // Preserve account type from headerMeta
+      
+      const normalized = {
+        id: coValueCore.id,  // Always add id field (derived from co-id)
+        schema: schema,  // Keep schema for reference (DB viewer uses 'schema' not '$schema')
+        type: rawType,  // Add type for DB viewer
+        displayName: accountType === 'account' ? 'Account' : (schema || 'CoMap'),  // Display name for DB viewer
+        properties: []  // Properties array for DB viewer
+      };
+      
+      // Preserve headerMeta.type for account CoMaps
+      if (accountType) {
+        normalized.headerMeta = { type: accountType };
+      }
+
+      // Extract properties as array (format expected by DB viewer)
+      const keys = content.keys();
+      for (const key of keys) {
+        try {
+          const value = content.get(key);
+          let type = typeof value;
+          let displayValue = value;
+          
+          // Detect co-id references
+          if (typeof value === 'string' && value.startsWith('co_')) {
+            type = 'co-id';
+          } else if (typeof value === 'string' && value.startsWith('key_')) {
+            type = 'key';
+          } else if (typeof value === 'string' && value.startsWith('sealed_')) {
+            type = 'sealed';
+            displayValue = 'sealed_***';
+          } else if (value === null) {
+            type = 'null';
+          } else if (value === undefined) {
+            type = 'undefined';
+          } else if (typeof value === 'object' && value !== null) {
+            type = 'object';
+            displayValue = JSON.stringify(value);
+          } else if (Array.isArray(value)) {
+            type = 'array';
+            displayValue = JSON.stringify(value);
+          }
+          
+          normalized.properties.push({
+            key: key,
+            value: displayValue,
+            type: type
+          });
+        } catch (e) {
+          normalized.properties.push({
+            key: key,
+            value: `<error: ${e.message}>`,
+            type: 'error'
+          });
+        }
+      }
+
+      return normalized;
+    }
+
+    // Fallback for other types
+    return {
+      id: coValueCore.id,
+      type: rawType,
+      $schema: schema,
+      headerMeta: headerMeta
+    };
+  }
+
+  /**
+   * Extract CoValue data from RawCoValue content
+   * @private
+   * @param {RawCoValue} content - RawCoValue content
+   * @returns {Object} Extracted data
+   */
+  _extractCoValueDataFromContent(content) {
+    if (!content) return null;
+
+    const rawType = content.type || 'unknown';
+    const properties = {};
+
+    if (content.get && typeof content.get === 'function') {
+      const keys = content.keys();
+      for (const key of keys) {
+        properties[key] = content.get(key);
+      }
+    }
+
+    let items = null;
+    if (rawType === 'colist' && content.toJSON) {
+      try {
+        items = content.toJSON();
+      } catch (e) {
+        // Ignore
+      }
+    }
+
+    return {
+      id: content.id,
+      type: rawType,
+      properties: properties,
+      items: items,
+      content: content
+    };
+  }
+
+  /**
+   * Check if CoValue data matches filter criteria
+   * @private
+   * @param {Object|Array} data - CoValue data (object for CoMap, array for CoList)
+   * @param {Object} filter - Filter criteria
+   * @returns {boolean} True if matches filter
+   */
+  _matchesFilter(data, filter) {
+    // For arrays (CoList), filter applies to items
+    if (Array.isArray(data)) {
+      return data.some(item => {
+        for (const [key, value] of Object.entries(filter)) {
+          if (item[key] !== value) {
+            return false;
+          }
+        }
+        return true;
+      });
+    }
+
+    // For objects (CoMap), filter applies to properties
+    if (data && typeof data === 'object') {
+      for (const [key, value] of Object.entries(filter)) {
+        if (data[key] !== value) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Create new record - directly creates CoValue using CoJSON raw methods
+   * @param {string} schema - Schema co-id (co_z...) for data collections
+   * @param {Object} data - Data to create
+   * @returns {Promise<Object>} Created record with generated co-id
+   */
+  async create(schema, data) {
+    // Determine cotype from schema or data type
+    let cotype = null;
+    
+    // Try to load schema to get cotype
+    try {
+      const schemaCore = this.getCoValue(schema);
+      if (schemaCore && this.isAvailable(schemaCore)) {
+        const schemaContent = this.getCurrentContent(schemaCore);
+        if (schemaContent && schemaContent.get) {
+          const definition = schemaContent.get('definition');
+          if (definition && definition.cotype) {
+            cotype = definition.cotype;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn(`[CoJSONBackend] Failed to load schema ${schema} for cotype:`, e);
+    }
+
+    // Fallback: infer from data type
+    if (!cotype) {
+      if (Array.isArray(data)) {
+        cotype = 'colist';
+      } else if (typeof data === 'string') {
+        cotype = 'cotext';
+      } else if (typeof data === 'object' && data !== null) {
+        cotype = 'comap';
+      } else {
+        throw new Error(`[CoJSONBackend] Cannot determine cotype from data type for schema ${schema}`);
+      }
+    }
+    
+    const group = this.getDefaultGroup();
+    if (!group) {
+      throw new Error('[CoJSONBackend] Group required for create');
+    }
+
+    let coValue;
+    switch (cotype) {
+      case 'comap':
+        if (!data || typeof data !== 'object' || Array.isArray(data)) {
+          throw new Error('[CoJSONBackend] Data must be object for comap');
+        }
+        coValue = await createCoMap(group, data, schema);
+        break;
+      case 'colist':
+        if (!Array.isArray(data)) {
+          throw new Error('[CoJSONBackend] Data must be array for colist');
+        }
+        coValue = await createCoList(group, data, schema);
+        break;
+      case 'cotext':
+      case 'coplaintext':
+        if (typeof data !== 'string') {
+          throw new Error('[CoJSONBackend] Data must be string for cotext');
+        }
+        coValue = await createPlainText(group, data, schema);
+        break;
+      case 'costream':
+        coValue = createCoStream(group, schema);
+        break;
+      default:
+        throw new Error(`[CoJSONBackend] Unsupported cotype: ${cotype}`);
+    }
+
+    // Wait for storage sync
+    if (this.node.storage) {
+      await this.node.syncManager.waitForStorageSync(coValue.id);
+    }
+
+    // Return created CoValue data
+    const coValueCore = this.getCoValue(coValue.id);
+    if (coValueCore && this.isAvailable(coValueCore)) {
+      return this._extractCoValueData(coValueCore);
+    }
+
+    return {
+      id: coValue.id,
+      type: cotype,
+      schema: schema
+    };
+  }
+
+  /**
+   * Update existing record - directly updates CoValue using CoJSON raw methods
+   * @param {string} schema - Schema co-id (co_z...)
+   * @param {string} id - Record co-id to update
+   * @param {Object} data - Data to update
+   * @returns {Promise<Object>} Updated record
+   */
+  async update(schema, id, data) {
+    const coValueCore = this.getCoValue(id);
+    if (!coValueCore) {
+      throw new Error(`[CoJSONBackend] CoValue not found: ${id}`);
+    }
+
+    if (!this.isAvailable(coValueCore)) {
+      throw new Error(`[CoJSONBackend] CoValue not available: ${id}`);
+    }
+
+    const content = this.getCurrentContent(coValueCore);
+    const rawType = content?.type || 'unknown';
+
+    // Update based on type
+    if (rawType === 'comap' && content.set) {
+      // Update CoMap properties
+      for (const [key, value] of Object.entries(data)) {
+        content.set(key, value);
+      }
+    } else {
+      throw new Error(`[CoJSONBackend] Update not supported for type: ${rawType}`);
+    }
+
+    // Wait for storage sync
+    if (this.node.storage) {
+      await this.node.syncManager.waitForStorageSync(id);
+    }
+
+    // Return updated data
+    return this._extractCoValueData(coValueCore);
+  }
+
+  /**
+   * Delete record - directly deletes using CoJSON raw methods
+   * @param {string} schema - Schema co-id (co_z...)
+   * @param {string} id - Record co-id to delete
+   * @returns {Promise<boolean>} true if deleted successfully
+   */
+  async delete(schema, id) {
+    // CoJSON doesn't support deleting CoValues directly
+    // For CoMaps, we can delete properties
+    // For now, throw error - deletion needs special handling
+    throw new Error('[CoJSONBackend] Delete operation not yet implemented for CoJSON backend');
+  }
+
+  /**
+   * Get raw record from database (without normalization)
+   * Used for validation - returns stored data as-is (with $schema metadata, without id)
+   * @param {string} id - Record co-id
+   * @returns {Promise<Object|null>} Raw stored record or null if not found
+   */
+  async getRawRecord(id) {
+    const coValueCore = this.getCoValue(id);
+    if (!coValueCore || !this.isAvailable(coValueCore)) {
+      return null;
+    }
+
+    const content = this.getCurrentContent(coValueCore);
+    const header = this.getHeader(coValueCore);
+    const headerMeta = header?.meta || null;
+    const schema = headerMeta?.$schema || null;
+
+    // Return raw data WITHOUT id (id is the key, not stored)
+    // Include $schema for validation
+    if (content && content.get && typeof content.get === 'function') {
+      // CoMap: extract properties without id
+      const raw = {
+        $schema: schema  // Metadata for querying/validation
+      };
+
+      const keys = content.keys();
+      for (const key of keys) {
+        raw[key] = content.get(key);
+      }
+
+      return raw;
+    }
+
+    // For CoLists, return array without id
+    if (content && content.toJSON) {
+      try {
+        return content.toJSON();
+      } catch (e) {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Resolve human-readable key to co-id
+   * @param {string} humanReadableKey - Human-readable ID (e.g., '@schema/todos', '@schema/actor', 'vibe/vibe')
+   * @returns {Promise<string|null>} Co-id (co_z...) or null if not found
+   */
+  async resolveHumanReadableKey(humanReadableKey) {
+    // Normalize key format
+    let normalizedKey = humanReadableKey;
+    if (!normalizedKey.startsWith('@schema/') && !normalizedKey.startsWith('@')) {
+      normalizedKey = `@schema/${normalizedKey}`;
+    }
+
+    // Query all CoValues to find matching human-readable key
+    // This is inefficient but CoJSON doesn't have a registry like IndexedDB
+    const allCoValues = this.getAllCoValues();
+    
+    for (const [coId, coValueCore] of allCoValues.entries()) {
+      if (!coId || typeof coId !== 'string' || !coId.startsWith('co_')) {
+        continue;
+      }
+
+      if (!this.isAvailable(coValueCore)) {
+        continue;
+      }
+
+      const header = this.getHeader(coValueCore);
+      const headerMeta = header?.meta || null;
+      const schema = headerMeta?.$schema;
+
+      // Check if schema matches human-readable key (exact match or normalized)
+      if (schema === humanReadableKey || schema === normalizedKey) {
+        return coId;
+      }
+
+      // For schemas, also check if the schema's definition has a matching title or $id
+      const content = this.getCurrentContent(coValueCore);
+      if (content && content.get) {
+        // Check if this is a schema CoValue (has 'definition' property)
+        const definition = content.get('definition');
+        if (definition) {
+          // Check schema $id or title
+          if (definition.$id === humanReadableKey || definition.$id === normalizedKey) {
+            return coId;
+          }
+          if (definition.title && definition.title.toLowerCase() === humanReadableKey.toLowerCase()) {
+            return coId;
+          }
+        }
+
+        // Check properties for human-readable keys (for configs like 'vibe/vibe')
+        const keys = content.keys();
+        for (const key of keys) {
+          if (key === humanReadableKey || key === normalizedKey) {
+            return coId;
+          }
+        }
+      }
+    }
+
+    return null;
   }
 }

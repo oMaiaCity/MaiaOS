@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Developers
 
-**Auto-generated:** 2026-01-23T09:33:53.531Z
+**Auto-generated:** 2026-01-23T11:22:27.754Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -5149,6 +5149,15 @@ The `maia-db` package uses `maia-schemata` for:
 - Resolving co-id references during validation
 - Validating data before create/update operations
 
+### With maia-operations
+
+The `maia-operations` package uses `maia-schemata` for:
+- Validating data against schemas in create/update operations
+- Loading schemas from database for validation
+- Schema validation is enforced by operations (100% migration - no fallbacks)
+
+**See:** `libs/maia-operations/src/operations/create.js` and `libs/maia-operations/src/operations/update.js`
+
 ---
 
 ## Key Concepts
@@ -5235,11 +5244,12 @@ transformInstanceForSeeding(instance, coIdMap);
 
 ## Related Documentation
 
+- [maia-operations Package](../06_maia-operations/README.md) - Operations layer that uses schema validation
 - [Schema Definitions](../03_schemas.md) - Schema structure and usage
 - [Validation Engine Details](./validation.md) - How ValidationEngine works
 - [Schema Transformation](./transformation.md) - How transformation works
 - [CoJSON Integration](./cojson-integration.md) - CoJSON types support
-- [CoJSON Architecture](../architecture/cojson.md) - CoJSON system overview
+- [CoJSON Architecture](../05_maia-db/cojson.md) - CoJSON system overview
 
 ---
 
@@ -6604,27 +6614,28 @@ const result = await toolEngine.executeTool(
 
 ## DBEngine
 
-**Purpose:** Unified database operation router.
+**Purpose:** Unified database operation router (extends shared operations layer).
 
 **What it does:**
+- Extends `DBEngine` from `@MaiaOS/operations` with MaiaScript evaluator support
 - Routes operations to modular handlers
-- Supports operations: `read`, `create`, `update`, `updateConfig`, `delete`, `toggle`, `seed`
+- Supports operations: `read`, `create`, `update`, `delete`, `seed`
 - Works with swappable backends (IndexedDB, CoJSON CRDT)
 - Validates operations against schemas
 - **Unified `read()` API** - Always returns reactive stores
+- **MaiaScript expression evaluation** - Supports expressions in update operations
 
 **Key Methods:**
 - `execute(payload)` - Execute a database operation
+- `getSchemaCoId(schemaName)` - Resolve human-readable schema name to co-id
+- `resolveCoId(humanReadableId)` - Resolve human-readable ID to co-id
 
 **Operations:**
 - `read` - **Primary API** - Load configs/schemas/data (always returns reactive store)
-- `query` - **DEPRECATED** - Use `read` instead (kept for compatibility)
 - `create` - Create new records
-- `update` - Update existing records (data collections)
-- `updateConfig` - Update actor configs (system properties)
+- `update` - Update existing records (unified for data collections and configs, supports MaiaScript expressions)
 - `delete` - Delete records
-- `toggle` - Toggle boolean field
-- `seed` - Flush + seed database (dev only)
+- `seed` - Flush + seed database (dev only, IndexedDB backend)
 
 **Example:**
 ```javascript
@@ -6655,11 +6666,31 @@ const newTodo = await dbEngine.execute({
   schema: 'co_zTodos123',
   data: { text: 'Buy milk', completed: false }
 });
+
+// Update with MaiaScript expression (maia-script specific)
+const updated = await dbEngine.execute({
+  op: 'update',
+  schema: 'co_zTodos123',
+  id: 'co_zTodo456',
+  data: {
+    done: { $not: '$existing.done' }  // Toggle using MaiaScript
+  }
+});
 ```
 
-**Important:** All schemas must be co-ids (`co_z...`). Human-readable IDs (`@schema/...`) are transformed to co-ids during seeding.
+**Important:** 
+- All schemas must be co-ids (`co_z...`). Human-readable IDs (`@schema/...`) are transformed to co-ids during seeding.
+- The `DBEngine` in `maia-script` extends the shared `DBEngine` from `@MaiaOS/operations` to add MaiaScript evaluator support.
+- Operations are implemented in `@MaiaOS/operations` and shared across all backends.
 
-**Source:** `libs/maia-script/src/engines/db-engine/db.engine.js`
+**Dependencies:**
+- `@MaiaOS/operations` - Shared operations layer (DBEngine, operations, ReactiveStore)
+- `MaiaScriptEvaluator` - For expression evaluation in updates
+
+**Source:** 
+- `libs/maia-script/src/engines/db-engine/db.engine.js` - maia-script wrapper
+- `libs/maia-operations/src/engine.js` - Shared DBEngine implementation
+- `libs/maia-operations/src/operations/` - Shared operation implementations
 
 ---
 
@@ -7420,7 +7451,9 @@ For full system usage, see the [maia-kernel Package](../02_maia-kernel/README.md
 ## Related Documentation
 
 - [maia-kernel Package](../02_maia-kernel/README.md) - Boot process and orchestration
+- [maia-operations Package](../06_maia-operations/README.md) - Shared database operations layer
 - [maia-schemata Package](../03_maia-schemata/README.md) - Schema validation
+- [maia-db Package](../05_maia-db/cojson.md) - Database backends
 - [DSL Fundamentals](../02_dsl.md) - MaiaScript language reference
 - [Engines](../04_engines.md) - High-level engine overview
 
@@ -7437,6 +7470,7 @@ For full system usage, see the [maia-kernel Package](../02_maia-kernel/README.md
 - `src/utils/` - Shared utilities
 
 **Dependencies:**
+- `@MaiaOS/operations` - Shared database operations layer
 - `@MaiaOS/tools` - Tool definitions
 - `@MaiaOS/schemata` - Schema validation
 - `@MaiaOS/db` - Database layer
@@ -8997,6 +9031,553 @@ const profile = group.createMap({ name: "Alice" }, profileMeta);
 
 ---
 
+## Operations Layer Integration
+
+The CoJSON backend will implement the `DBAdapter` interface from `@MaiaOS/operations`, allowing it to use the same unified operations layer as the IndexedDB backend.
+
+**Future Integration:**
+- CoJSON backend will implement `DBAdapter` interface
+- Operations (read, create, update, delete) will work identically for both backends
+- Same `DBEngine` API regardless of backend choice
+
+**Related Documentation:**
+- [maia-operations Package](../06_maia-operations/README.md) - Shared operations layer and DBAdapter interface
+
+---
+
+# MAIA DB/README
+
+*Source: developers/05_maia-db/README.md*
+
+# maia-db: Database Backends
+
+## Overview
+
+The `@MaiaOS/db` package provides database backends for MaiaOS. Currently, it includes the CoJSON CRDT backend implementation, with plans to implement the `DBAdapter` interface from `@MaiaOS/operations` to unify operations across backends.
+
+**What it is:**
+- ✅ **CoJSON backend** - CRDT-based collaborative database backend
+- ✅ **CoValue services** - Services for creating and managing CoValues
+- ✅ **Schema integration** - Schema metadata utilities for CoValues
+
+**What it isn't:**
+- ❌ **Not the operations layer** - Operations are in `@MaiaOS/operations`
+- ❌ **Not the IndexedDB backend** - IndexedDB backend is in `@MaiaOS/script`
+- ❌ **Not the database engine** - DBEngine is in `@MaiaOS/operations`
+
+---
+
+## The Simple Version
+
+Think of `maia-db` like a specialized storage system:
+
+- **CoJSON backend** = A collaborative storage system where multiple people can edit at the same time
+- **CoValue services** = Helpers for creating and managing collaborative data structures
+- **Schema integration** = Connects your schemas to the collaborative storage
+
+**Analogy:**
+Imagine you have two storage systems:
+- **IndexedDB** = A local filing cabinet (fast, local-only)
+- **CoJSON** = A shared Google Doc (collaborative, syncs across devices)
+
+Both storage systems will eventually speak the same language (`DBAdapter` interface) so you can use the same operations regardless of which one you choose.
+
+---
+
+## Architecture
+
+### Current Structure
+
+```
+libs/maia-db/src/
+├── cojson/                    # CoJSON backend implementation
+│   ├── backend/               # Backend adapter (future: implements DBAdapter)
+│   ├── operations/             # CoJSON-specific operations
+│   └── factory.js             # Factory for creating CoJSON instances
+├── services/                  # CoValue creation services
+│   ├── oGroup.js              # Group creation
+│   ├── oID.js                 # ID generation
+│   ├── oMap.js                # CoMap creation
+│   ├── oList.js               # CoList creation
+│   └── ...
+├── schemas/                   # Schema system integration
+│   ├── registry.js            # Schema registry
+│   ├── validation.js          # Schema validation
+│   └── ...
+└── migrations/                # Database migrations
+```
+
+### Future Integration
+
+The CoJSON backend will implement the `DBAdapter` interface from `@MaiaOS/operations`:
+
+```
+┌─────────────────────────────────────────┐
+│         @MaiaOS/operations               │
+│  (DBEngine, Operations, DBAdapter)       │
+└─────────────────┬───────────────────────┘
+                  │
+        ┌─────────┴─────────┐
+        ↓                   ↓
+┌───────────────┐   ┌───────────────┐
+│ IndexedDB     │   │ CoJSON        │
+│ Backend       │   │ Backend       │
+│ (implements   │   │ (implements   │
+│  DBAdapter)   │   │  DBAdapter)   │
+└───────────────┘   └───────────────┘
+```
+
+---
+
+## Documentation
+
+- **[CoJSON Architecture](./cojson.md)** - Complete layer hierarchy from cryptographic primitives to high-level CoValues
+
+---
+
+## Related Documentation
+
+- [maia-operations Package](../06_maia-operations/README.md) - Shared operations layer and DBAdapter interface
+- [maia-script Package](../04_maia-script/README.md) - IndexedDB backend implementation
+- [maia-schemata Package](../03_maia-schemata/README.md) - Schema validation and transformation
+
+---
+
+## Source Files
+
+**Package:** `libs/maia-db/`
+
+**Key Files:**
+- `src/cojson/` - CoJSON backend implementation
+- `src/services/` - CoValue creation services
+- `src/schemas/` - Schema system integration
+
+**Dependencies:**
+- `cojson` - CRDT library
+- `@MaiaOS/schemata` - Schema validation
+
+---
+
+# MAIA OPERATIONS/README
+
+*Source: developers/06_maia-operations/README.md*
+
+# maia-operations: Shared Database Operations Layer
+
+## Overview
+
+The `@MaiaOS/operations` package provides a **shared operations layer** that works with any database backend. Think of it as a universal translator - it defines a common language (the `DBAdapter` interface) that all backends must speak, and provides unified operations that work regardless of which backend you're using.
+
+**What it is:**
+- ✅ **Shared operations** - Read, create, update, delete, seed operations that work with any backend
+- ✅ **DBAdapter interface** - Defines what all backends must implement
+- ✅ **DBEngine** - Unified operation router that works with any backend adapter
+- ✅ **ReactiveStore** - Shared reactive data store pattern (like Svelte stores)
+
+**What it isn't:**
+- ❌ **Not a backend** - It doesn't store data itself, it works with backends
+- ❌ **Not maia-script specific** - Can be used by any package that needs database operations
+- ❌ **Not the database** - The actual storage is handled by backends (IndexedDB, CoJSON, etc.)
+
+---
+
+## The Simple Version
+
+Think of `maia-operations` like a universal remote control:
+
+- **DBAdapter** = The universal language all TVs must understand
+- **Operations** = The buttons on the remote (read, create, update, delete)
+- **DBEngine** = The remote control itself (routes button presses to the right operation)
+- **ReactiveStore** = The display screen (shows current value and updates automatically)
+
+**Analogy:**
+Imagine you have different brands of TVs (IndexedDB, CoJSON, etc.). Each TV speaks a different language, but they all understand the same remote control commands. The `maia-operations` package is like that universal remote - it defines the common language (`DBAdapter`) and provides the buttons (`operations`) that work with any TV.
+
+---
+
+## Architecture
+
+### Package Structure
+
+```
+libs/maia-operations/src/
+├── index.js                    # Main exports
+├── engine.js                   # Unified DBEngine
+├── db-adapter.js               # DBAdapter interface
+├── reactive-store.js           # ReactiveStore implementation
+└── operations/                 # Operation classes
+    ├── index.js                # Operations exports
+    ├── read.js                 # ReadOperation (supports keys array)
+    ├── create.js               # CreateOperation
+    ├── update.js               # UpdateOperation (data + configs)
+    ├── delete.js               # DeleteOperation
+    └── seed.js                 # SeedOperation (backend-specific)
+```
+
+### How It Works
+
+```
+┌─────────────────────────────────────────┐
+│         Your Application                │
+│  (maia-script, maia-db, etc.)          │
+└─────────────────┬───────────────────────┘
+                  │
+                  ↓
+┌─────────────────────────────────────────┐
+│         DBEngine                        │
+│  (from @MaiaOS/operations)             │
+│  - Routes operations                    │
+│  - Validates schemas                    │
+│  - Manages operation handlers           │
+└─────────────────┬───────────────────────┘
+                  │
+                  ↓
+┌─────────────────────────────────────────┐
+│         Operations                      │
+│  (ReadOperation, CreateOperation, etc.) │
+│  - Execute specific operations          │
+│  - Validate against schemas            │
+│  - Call backend adapter methods         │
+└─────────────────┬───────────────────────┘
+                  │
+                  ↓
+┌─────────────────────────────────────────┐
+│         DBAdapter Interface              │
+│  (read, create, update, delete, etc.)   │
+│  - Defines what backends must implement │
+└─────────────────┬───────────────────────┘
+                  │
+        ┌─────────┴─────────┐
+        ↓                   ↓
+┌───────────────┐   ┌───────────────┐
+│ IndexedDB     │   │ CoJSON        │
+│ Backend       │   │ Backend        │
+│ (implements   │   │ (implements   │
+│  DBAdapter)   │   │  DBAdapter)   │
+└───────────────┘   └───────────────┘
+```
+
+---
+
+## Key Concepts
+
+### DBAdapter Interface
+
+All backends must implement the `DBAdapter` interface. This ensures that operations work the same way regardless of which backend you're using.
+
+**Required Methods:**
+- `read(schema, key, keys, filter)` - Read data (returns ReactiveStore)
+- `create(schema, data)` - Create new records
+- `update(schema, id, data)` - Update existing records
+- `delete(schema, id)` - Delete records
+- `getRawRecord(id)` - Get raw stored data (for validation)
+- `resolveHumanReadableKey(key)` - Resolve human-readable IDs to co-ids
+
+**Optional Methods:**
+- `seed(configs, schemas, data)` - Seed database (backend-specific)
+
+### Operations
+
+Operations are modular handlers that execute specific database operations:
+
+- **ReadOperation** - Loads data (always returns ReactiveStore)
+- **CreateOperation** - Creates new records (validates against schema)
+- **UpdateOperation** - Updates existing records (unified for data + configs)
+- **DeleteOperation** - Deletes records
+- **SeedOperation** - Seeds database (backend-specific, IndexedDB only)
+
+### DBEngine
+
+The `DBEngine` routes operations to the appropriate handler. It:
+- Accepts a `DBAdapter` instance in the constructor
+- Routes `execute()` calls to the right operation handler
+- Provides helper methods like `getSchemaCoId()` and `resolveCoId()`
+- Optionally accepts an evaluator for MaiaScript expression evaluation
+
+### ReactiveStore
+
+A simple reactive data store pattern (like Svelte stores):
+- Holds a current value
+- Notifies subscribers when the value changes
+- Used by all read operations to provide reactive data access
+
+---
+
+## Usage
+
+### Basic Usage
+
+```javascript
+import { DBEngine, DBAdapter } from '@MaiaOS/operations';
+import { IndexedDBBackend } from '@MaiaOS/script';
+
+// Create backend (must implement DBAdapter)
+const backend = new IndexedDBBackend();
+await backend.init();
+
+// Create DBEngine with backend
+const dbEngine = new DBEngine(backend);
+
+// Execute operations
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: 'co_zTodos123',
+  filter: { completed: false }
+});
+
+// Store is reactive
+console.log('Current todos:', store.value);
+store.subscribe((todos) => {
+  console.log('Todos updated:', todos);
+});
+```
+
+### With MaiaScript Evaluator (maia-script)
+
+```javascript
+import { DBEngine } from '@MaiaOS/operations';
+import { MaiaScriptEvaluator } from '@MaiaOS/script';
+
+const backend = new IndexedDBBackend();
+await backend.init();
+
+// Create evaluator for MaiaScript expressions
+const evaluator = new MaiaScriptEvaluator();
+
+// Pass evaluator to DBEngine
+const dbEngine = new DBEngine(backend, { evaluator });
+
+// Now update operations can evaluate MaiaScript expressions
+await dbEngine.execute({
+  op: 'update',
+  schema: 'co_zTodos123',
+  id: 'co_zTodo456',
+  data: {
+    done: { $not: '$existing.done' }  // Toggle using MaiaScript
+  }
+});
+```
+
+### Creating a Custom Backend
+
+To create a custom backend, implement the `DBAdapter` interface:
+
+```javascript
+import { DBAdapter } from '@MaiaOS/operations';
+import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
+
+class MyCustomBackend extends DBAdapter {
+  async read(schema, key, keys, filter) {
+    // Implement read logic
+    // Must return ReactiveStore (or array of stores for batch reads)
+    const data = await this._fetchData(schema, key, keys, filter);
+    const store = new ReactiveStore(data);
+    // Set up reactive updates...
+    return store;
+  }
+
+  async create(schema, data) {
+    // Implement create logic
+    // Must return created record with co-id
+  }
+
+  async update(schema, id, data) {
+    // Implement update logic
+    // Must return updated record
+  }
+
+  async delete(schema, id) {
+    // Implement delete logic
+    // Must return true if deleted successfully
+  }
+
+  async getRawRecord(id) {
+    // Implement getRawRecord logic
+    // Must return raw stored data (with $schema metadata)
+  }
+
+  async resolveHumanReadableKey(key) {
+    // Implement resolveHumanReadableKey logic
+    // Must return co-id or null
+  }
+}
+```
+
+---
+
+## Operations Reference
+
+### ReadOperation
+
+**Purpose:** Load data from database (always returns reactive store)
+
+**Parameters:**
+- `schema` (string, required) - Schema co-id (co_z...)
+- `key` (string, optional) - Specific key (co-id) for single item
+- `keys` (string[], optional) - Array of co-ids for batch reads
+- `filter` (object, optional) - Filter criteria for collection queries
+
+**Returns:** `ReactiveStore` (or array of stores for batch reads)
+
+**Example:**
+```javascript
+// Single item
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: 'co_zTodos123',
+  key: 'co_zTodo456'
+});
+
+// Collection
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: 'co_zTodos123'
+});
+
+// Batch read
+const stores = await dbEngine.execute({
+  op: 'read',
+  schema: 'co_zTodos123',
+  keys: ['co_zTodo1', 'co_zTodo2', 'co_zTodo3']
+});
+```
+
+### CreateOperation
+
+**Purpose:** Create new records
+
+**Parameters:**
+- `schema` (string, required) - Schema co-id (co_z...)
+- `data` (object, required) - Data to create
+
+**Returns:** Created record with generated co-id
+
+**Example:**
+```javascript
+const newTodo = await dbEngine.execute({
+  op: 'create',
+  schema: 'co_zTodos123',
+  data: { text: 'Buy milk', completed: false }
+});
+```
+
+### UpdateOperation
+
+**Purpose:** Update existing records (unified for data collections and configs)
+
+**Parameters:**
+- `schema` (string, required) - Schema co-id (co_z...)
+- `id` (string, required) - Record co-id to update
+- `data` (object, required) - Data to update
+
+**Returns:** Updated record
+
+**Features:**
+- Validates merged result (existing + update data) against schema
+- Supports MaiaScript expressions if evaluator is provided
+- Handles both data collections and configs uniformly
+
+**Example:**
+```javascript
+const updated = await dbEngine.execute({
+  op: 'update',
+  schema: 'co_zTodos123',
+  id: 'co_zTodo456',
+  data: { completed: true }
+});
+```
+
+### DeleteOperation
+
+**Purpose:** Delete records
+
+**Parameters:**
+- `schema` (string, required) - Schema co-id (co_z...)
+- `id` (string, required) - Record co-id to delete
+
+**Returns:** `true` if deleted successfully
+
+**Example:**
+```javascript
+await dbEngine.execute({
+  op: 'delete',
+  schema: 'co_zTodos123',
+  id: 'co_zTodo456'
+});
+```
+
+### SeedOperation
+
+**Purpose:** Seed database with initial data (backend-specific, IndexedDB only)
+
+**Parameters:**
+- `configs` (object, required) - Config registry
+- `schemas` (object, required) - Schema definitions
+- `data` (object, optional) - Initial application data
+
+**Returns:** `void`
+
+**Example:**
+```javascript
+await dbEngine.execute({
+  op: 'seed',
+  configs: { /* ... */ },
+  schemas: { /* ... */ },
+  data: { /* ... */ }
+});
+```
+
+---
+
+## Integration with Other Packages
+
+### maia-script
+
+`maia-script` extends the shared `DBEngine` with MaiaScript evaluator support:
+
+```javascript
+// In maia-script
+import { DBEngine as SharedDBEngine } from '@MaiaOS/operations';
+import { MaiaScriptEvaluator } from './MaiaScriptEvaluator.js';
+
+export class DBEngine extends SharedDBEngine {
+  constructor(backend) {
+    const evaluator = new MaiaScriptEvaluator();
+    super(backend, { evaluator });
+  }
+}
+```
+
+### maia-db
+
+`maia-db` will implement `DBAdapter` for the CoJSON backend, allowing it to use the same operations layer as IndexedDB.
+
+---
+
+## Related Documentation
+
+- [maia-script Package](../04_maia-script/README.md) - Uses operations layer
+- [maia-db Package](../05_maia-db/cojson.md) - Will implement DBAdapter for CoJSON
+- [maia-schemata Package](../03_maia-schemata/README.md) - Schema validation used by operations
+
+---
+
+## Source Files
+
+**Package:** `libs/maia-operations/`
+
+**Key Files:**
+- `src/index.js` - Main exports
+- `src/engine.js` - Unified DBEngine
+- `src/db-adapter.js` - DBAdapter interface
+- `src/reactive-store.js` - ReactiveStore implementation
+- `src/operations/` - All operation classes
+
+**Dependencies:**
+- `@MaiaOS/schemata` - Schema validation
+
+---
+
 # README
 
 *Source: developers/README.md*
@@ -9076,6 +9657,17 @@ Read the documentation in the following order for a complete understanding:
 
 **Sub-topics:**
 - [CoJSON Architecture](./05_maia-db/cojson.md) - Complete layer hierarchy from primitives to CoValues
+
+### 6. [maia-operations Package](./06_maia-operations/README.md)
+**Shared database operations layer**
+- Unified operations that work with any backend
+- DBAdapter interface for backend implementations
+- DBEngine operation router
+- ReactiveStore reactive data pattern
+- Shared by maia-script and maia-db packages
+
+**Sub-topics:**
+- [README](./06_maia-operations/README.md) - Complete operations layer documentation
 
 ---
 

@@ -17,7 +17,7 @@ function escapeHtml(text) {
 	return div.innerHTML;
 }
 
-export async function renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, switchView, selectCoValue) {
+export async function renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, switchView, selectCoValue, registerSubscription) {
 	// Get data based on current view
 	let data, viewTitle, viewSubtitle;
 	
@@ -31,8 +31,68 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 	// Explorer-style navigation: if a CoValue is loaded into context, show it in main container
 	if (currentContextCoValueId && cojsonAPI) {
 		try {
-			const contextData = await cojsonAPI.cojson({op: 'query', id: currentContextCoValueId});
+			// Use unified read API - query by ID (key parameter)
+			// Note: schema is required by ReadOperation, but backend handles key-only reads
+			// Using the coId as schema is a workaround - backend will use key parameter
+			const store = await cojsonAPI.cojson({op: 'read', schema: currentContextCoValueId, key: currentContextCoValueId});
+			// ReadOperation returns a ReactiveStore - get current value
+			let contextData = store.value || store;
+			console.log(`[DB Viewer] Loaded CoValue ${currentContextCoValueId.substring(0, 12)}...:`, {
+				id: contextData?.id,
+				loading: contextData?.loading,
+				hasProperties: !!(contextData?.properties && Array.isArray(contextData.properties)),
+				propertiesCount: (contextData?.properties && Array.isArray(contextData.properties)) ? contextData.properties.length : 0,
+				error: contextData?.error
+			});
 			data = contextData;
+			
+			// Subscribe to ReactiveStore updates for reactivity
+			if (registerSubscription && typeof store.subscribe === 'function') {
+				const subscriptionKey = `coValue:${currentContextCoValueId}`;
+				let lastPropertiesCount = (contextData?.properties && Array.isArray(contextData.properties)) ? contextData.properties.length : (contextData?.loading ? -1 : 0);
+				let lastLoadingState = contextData?.loading || false;
+				let lastDataHash = JSON.stringify({ 
+					propsCount: lastPropertiesCount, 
+					loading: lastLoadingState,
+					hasError: !!contextData?.error
+				});
+				
+				console.log(`[DB Viewer] Setting up subscription for ${currentContextCoValueId.substring(0, 12)}... (initial: props=${lastPropertiesCount}, loading=${lastLoadingState})`);
+				
+				const unsubscribe = store.subscribe((updatedData) => {
+					// Check if data actually changed (properties appeared, loading state changed, etc.)
+					const currentPropertiesCount = (updatedData?.properties && Array.isArray(updatedData.properties)) ? updatedData.properties.length : 0;
+					const currentLoadingState = updatedData?.loading || false;
+					const currentDataHash = JSON.stringify({ 
+						propsCount: currentPropertiesCount, 
+						loading: currentLoadingState,
+						hasError: !!updatedData?.error
+					});
+					
+					const dataChanged = currentDataHash !== lastDataHash;
+					
+					if (updatedData && dataChanged) {
+						console.log(`🔄 [DB Viewer] Store updated for ${currentContextCoValueId.substring(0, 12)}... (props: ${lastPropertiesCount}→${currentPropertiesCount}, loading: ${lastLoadingState}→${currentLoadingState}), re-rendering...`);
+						console.log(`[DB Viewer] Updated data:`, {
+							id: updatedData?.id,
+							loading: updatedData?.loading,
+							hasProperties: !!(updatedData?.properties && Array.isArray(updatedData?.properties)),
+							propertiesCount: currentPropertiesCount,
+							error: updatedData?.error
+						});
+						lastPropertiesCount = currentPropertiesCount;
+						lastLoadingState = currentLoadingState;
+						lastDataHash = currentDataHash;
+						// Use setTimeout to prevent infinite loops and batch updates
+						setTimeout(() => {
+							renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, switchView, selectCoValue, registerSubscription);
+						}, 0);
+					}
+				});
+				registerSubscription(subscriptionKey, unsubscribe);
+			} else {
+				console.warn(`[DB Viewer] Cannot subscribe to store updates - registerSubscription: ${!!registerSubscription}, store.subscribe: ${typeof store.subscribe}`);
+			}
 			// Clean displayName: remove (co-id ref...) part, keep only the label
 			let cleanDisplayName = contextData.displayName || contextData.schema || 'CoValue';
 			// Remove pattern like "Label (abc123...)" - keep only "Label"
@@ -46,36 +106,99 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 			viewTitle = 'Error';
 			viewSubtitle = '';
 		}
-	} else {
-		// Consolidated "All CoValues" explorer - filter by schema if selected
-		if (cojsonAPI) {
-			try {
-				if (currentView && currentView !== 'all') {
-					// Filter by schema
-					const result = await cojsonAPI.cojson({op: 'query', schema: currentView});
-					data = Array.isArray(result) ? result : [];
-				} else {
-					// Query all CoValues
-					const result = await cojsonAPI.cojson({op: 'query'});
-					data = Array.isArray(result) ? result : [];
+	} else if (currentView && cojsonAPI) {
+		// Filter by schema
+		// ReadOperation requires schema to be a co-id (co_z...)
+		// If currentView is not a co-id, get all CoValues and filter manually
+		try {
+			if (currentView.startsWith('co_z')) {
+				// Schema is already a co-id - use unified read API
+				const store = await cojsonAPI.cojson({op: 'read', schema: currentView});
+				// ReadOperation returns a ReactiveStore - get current value
+				let result = store.value || store;
+				data = Array.isArray(result) ? result : [];
+				
+				// Subscribe to ReactiveStore updates for reactivity
+				if (registerSubscription && typeof store.subscribe === 'function') {
+					const subscriptionKey = `schema:${currentView}`;
+					let lastLength = result.length;
+					const unsubscribe = store.subscribe((updatedResult) => {
+						// Re-render when store updates (check if data actually changed)
+						if (updatedResult && Array.isArray(updatedResult) && updatedResult.length !== lastLength) {
+							console.log(`🔄 [DB Viewer] Store updated for schema ${currentView.substring(0, 12)}..., re-rendering...`);
+							lastLength = updatedResult.length;
+							// Use setTimeout to prevent infinite loops and batch updates
+							setTimeout(() => {
+								renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, switchView, selectCoValue, registerSubscription);
+							}, 0);
+						}
+					});
+					registerSubscription(subscriptionKey, unsubscribe);
 				}
-			} catch (err) {
-				console.error('Error querying CoValues:', err);
-				data = [];
+			} else {
+				// Human-readable schema name - get all CoValues and filter by schema
+				const allCoValues = maia.getAllCoValues();
+				data = allCoValues
+					.filter(cv => {
+						// Match schema name (can be in various formats)
+						const schema = cv.schema;
+						return schema === currentView || 
+						       schema === `@schema/${currentView}` ||
+						       schema?.endsWith(`/${currentView}`);
+					})
+					.map(cv => ({
+						id: cv.id,
+						schema: cv.schema,
+						type: cv.type,
+						displayName: cv.schema || cv.id,
+						...cv
+					}));
 			}
-		} else {
+		} catch (err) {
+			console.error('Error querying CoValues:', err);
 			data = [];
 		}
-		
-		if (currentView && currentView !== 'all') {
-			// Get schema from hardcoded registry
-			const schema = getSchema(currentView) || allSchemas[currentView];
-			viewTitle = schema?.title || currentView;
-			viewSubtitle = `${Array.isArray(data) ? data.length : 0} CoValue(s)`;
-		} else {
-			viewTitle = 'All CoValues';
-			viewSubtitle = '';
+	} else if (cojsonAPI) {
+		// Query all CoValues (no schema filter)
+		try {
+			const store = await cojsonAPI.cojson({op: 'read'}); // No schema = all CoValues
+			// ReadOperation returns a ReactiveStore - get current value
+			let result = store.value || store;
+			data = Array.isArray(result) ? result : [];
+			
+			// Subscribe to ReactiveStore updates for reactivity
+			if (registerSubscription && typeof store.subscribe === 'function') {
+				const subscriptionKey = 'allCoValues';
+				let lastLength = result.length;
+				const unsubscribe = store.subscribe((updatedResult) => {
+					// Re-render when store updates (check if data actually changed)
+					if (updatedResult && Array.isArray(updatedResult) && updatedResult.length !== lastLength) {
+						console.log(`🔄 [DB Viewer] Store updated for all CoValues, re-rendering...`);
+						lastLength = updatedResult.length;
+						// Use setTimeout to prevent infinite loops and batch updates
+						setTimeout(() => {
+							renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, switchView, selectCoValue, registerSubscription);
+						}, 0);
+					}
+				});
+				registerSubscription(subscriptionKey, unsubscribe);
+			}
+		} catch (err) {
+			console.error('Error querying CoValues:', err);
+			data = [];
 		}
+	} else {
+		data = [];
+	}
+	
+	if (currentView && currentView !== 'all') {
+		// Get schema from hardcoded registry
+		const schema = getSchema(currentView) || allSchemas[currentView];
+		viewTitle = schema?.title || currentView;
+		viewSubtitle = `${Array.isArray(data) ? data.length : 0} CoValue(s)`;
+	} else {
+		viewTitle = 'All CoValues';
+		viewSubtitle = '';
 	}
 	
 	// Build account structure navigation (minimal: Account + All CoValues)
@@ -331,6 +454,14 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 					</div>
 				`;
 			}
+		} else if (data.loading) {
+			// Show loading state
+			tableContent = `
+				<div class="empty-state">
+					<div class="loading-spinner"></div>
+					<p>Loading CoValue... (waiting for verified state)</p>
+				</div>
+			`;
 		} else if (data.properties && Array.isArray(data.properties) && data.properties.length > 0) {
 			// CoMap: Display properties
 			// Get schema definition for property labels
@@ -665,5 +796,4 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 			</div>
 		</div>
 	`;
-	
 }

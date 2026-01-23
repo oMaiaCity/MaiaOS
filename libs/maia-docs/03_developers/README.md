@@ -74,6 +74,17 @@ Read the documentation in the following order for a complete understanding:
 **Sub-topics:**
 - [CoJSON Architecture](./05_maia-db/cojson.md) - Complete layer hierarchy from primitives to CoValues
 
+### 6. [maia-operations Package](./06_maia-operations/README.md)
+**Shared database operations layer**
+- Unified operations that work with any backend
+- DBAdapter interface for backend implementations
+- DBEngine operation router
+- ReactiveStore reactive data pattern
+- Shared by maia-script and maia-db packages
+
+**Sub-topics:**
+- [README](./06_maia-operations/README.md) - Complete operations layer documentation
+
 ---
 
 ## Contributing
