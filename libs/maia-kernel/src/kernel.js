@@ -346,14 +346,51 @@ export class MaiaOS {
       }
     }
     
-    // Load vibe manifest from database using co-id
-    const vibe = await this.dbEngine.execute({
-      op: 'query',
+    // Load vibe manifest from database using co-id (using read operation with reactive store)
+    console.log(`[Kernel] Loading vibe from database: schema=${vibeSchemaCoId}, key=${vibeCoId}`);
+    
+    const store = await this.dbEngine.execute({
+      op: 'read',
       schema: vibeSchemaCoId,
       key: vibeCoId
     });
     
+    // Get current value from reactive store
+    const vibe = store.value;
+    
+    // Debug: Check what we got
+    console.log(`[Kernel] Store value after read:`, vibe ? 'FOUND' : 'NULL', vibe ? { $id: vibe.$id, name: vibe.name } : null);
+    
     if (!vibe) {
+      // Debug: Try to see what's actually in the database
+      console.error(`[Kernel] Vibe not found! Trying to debug...`);
+      console.error(`[Kernel] Resolved co-id: ${vibeCoId}`);
+      console.error(`[Kernel] Schema co-id: ${vibeSchemaCoId}`);
+      
+      // Try direct read to see what's returned
+      try {
+        const directStore = await this.dbEngine.execute({
+          op: 'read',
+          schema: vibeSchemaCoId,
+          key: vibeCoId
+        });
+        const directValue = directStore.value;
+        console.error(`[Kernel] Direct read() result:`, directValue ? 'FOUND' : 'NULL', directValue);
+      } catch (err) {
+        console.error(`[Kernel] Direct read() error:`, err);
+      }
+      
+      // Try to list all vibes in the configs store
+      try {
+        const allVibes = await this.dbEngine.execute({
+          op: 'read',
+          schema: vibeSchemaCoId
+        });
+        console.error(`[Kernel] All vibes in store:`, allVibes.value);
+      } catch (err) {
+        console.error(`[Kernel] Error listing vibes:`, err);
+      }
+      
       throw new Error(`Vibe not found in database: ${vibeId} (resolved to ${vibeCoId})`);
     }
     
@@ -369,24 +406,26 @@ export class MaiaOS {
     // If it's already a co-id, verify it exists first
     // If it doesn't exist, try resolving from registry (handles mismatches from transformation)
     if (actorCoId && actorCoId.startsWith('co_z')) {
-      // Verify the co-id exists in database
-      const actorExists = await this.dbEngine.execute({
-        op: 'query',
+      // Verify the co-id exists in database (using read operation with reactive store)
+      const actorStore = await this.dbEngine.execute({
+        op: 'read',
         schema: await this.dbEngine.getSchemaCoId('actor'),
         key: actorCoId
       });
+      const actorExists = actorStore.value;
       
       if (!actorExists) {
         // Co-id from vibe doesn't exist - try resolving @actor/agent from registry instead
         console.warn(`[Kernel] Actor co-id ${actorCoId.substring(0, 20)}... from vibe not found. Trying to resolve @actor/agent from registry...`);
         const resolvedFromRegistry = await this.dbEngine.resolveCoId('@actor/agent');
         if (resolvedFromRegistry && resolvedFromRegistry.startsWith('co_z')) {
-          // Verify the resolved co-id exists
-          const resolvedExists = await this.dbEngine.execute({
-            op: 'query',
+          // Verify the resolved co-id exists (using read operation with reactive store)
+          const resolvedStore = await this.dbEngine.execute({
+            op: 'read',
             schema: await this.dbEngine.getSchemaCoId('actor'),
             key: resolvedFromRegistry
           });
+          const resolvedExists = resolvedStore.value;
           if (resolvedExists) {
             actorCoId = resolvedFromRegistry;
             console.log(`[Kernel] Resolved @actor/agent from registry to co-id: ${actorCoId}`);
@@ -432,20 +471,23 @@ export class MaiaOS {
       }
     }
     
-    // Debug: Verify actor exists in database before loading
-    const actorExists = await this.dbEngine.execute({
-      op: 'query',
+    // Debug: Verify actor exists in database before loading (using read operation with reactive store)
+    const actorStore = await this.dbEngine.execute({
+      op: 'read',
       schema: await this.dbEngine.getSchemaCoId('actor'),
       key: actorCoId
     });
+    const actorExists = actorStore.value;
     if (!actorExists) {
       console.error(`[Kernel] Actor co-id ${actorCoId} not found in database. Checking configs store...`);
-      // Try direct get to see what's in the store
-      const directGet = await this.dbEngine.backend.get(
-        await this.dbEngine.getSchemaCoId('actor'),
-        actorCoId
-      );
-      console.error(`[Kernel] Direct get result:`, directGet);
+      // Try direct read to see what's in the store
+      const directStore = await this.dbEngine.execute({
+        op: 'read',
+        schema: await this.dbEngine.getSchemaCoId('actor'),
+        key: actorCoId
+      });
+      const directValue = directStore.value;
+      console.error(`[Kernel] Direct read result:`, directValue);
       
       // Debug: Check what actor co-ids ARE in the configs store
       try {

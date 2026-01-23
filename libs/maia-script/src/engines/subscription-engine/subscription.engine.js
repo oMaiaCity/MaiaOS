@@ -167,13 +167,13 @@ export class SubscriptionEngine {
     // Collect view/style/state subscriptions (go through engines)
     const { engineSubscriptions, subscriptionCount: engineCount } = await collectViewStyleStateSubscriptions(this, actor, config);
 
-    // Collect interface/context subscriptions (use batch API)
-    const batchRequests = await collectInterfaceContextSubscriptions(this, actor, config);
+    // Collect interface/context subscriptions (use pure stores from read() API)
+    const interfaceContextSubscriptions = await collectInterfaceContextSubscriptions(this, actor, config);
 
-    // Execute batch subscriptions
-    const batchCount = await executeBatchSubscriptions(this, actor, batchRequests, engineSubscriptions);
+    // Execute interface/context subscriptions
+    const interfaceContextCount = await executeBatchSubscriptions(this, actor, interfaceContextSubscriptions, engineSubscriptions);
 
-    const totalCount = engineCount + batchCount;
+    const totalCount = engineCount + interfaceContextCount;
 
     // Note: subscriptions and inbox are already handled in actor.engine.js createActor()
     // They're stored in actor._configSubscriptions there

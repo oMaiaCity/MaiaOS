@@ -3,6 +3,8 @@
  * 
  * Handles reactive data subscriptions from actor context query objects.
  * Auto-subscribes to data and updates actor context reactively.
+ * 
+ * Uses pure stores from read() API - no callback handling.
  */
 
 /**
@@ -42,13 +44,16 @@ export async function subscribeToContext(subscriptionEngine, actor) {
           continue;
         }
         
-        const unsubscribe = await subscriptionEngine.dbEngine.execute({
-          op: 'query',
+        // Use read() operation - always returns reactive store
+        const store = await subscriptionEngine.dbEngine.execute({
+          op: 'read',
           schema: value.schema,
-          filter: value.filter || null,
-          callback: (data) => {
-            handleDataUpdate(subscriptionEngine, actor.id, key, data);
-          }
+          filter: value.filter || null
+        });
+        
+        // Subscribe to store updates
+        const unsubscribe = store.subscribe((data) => {
+          handleDataUpdate(subscriptionEngine, actor.id, key, data);
         });
         
         // Store unsubscribe function

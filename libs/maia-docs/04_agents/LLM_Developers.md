@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Developers
 
-**Auto-generated:** 2026-01-23T00:06:11.940Z
+**Auto-generated:** 2026-01-23T01:10:34.764Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -3450,18 +3450,26 @@ Executes a database operation (internal use + `@db` tool).
 
 **Parameters:**
 - `payload` (Object) - Operation payload:
-  - `op` (string) - Operation type: `'query'`, `'create'`, `'update'`, `'delete'`, `'seed'`
+  - `op` (string) - Operation type: `'read'`, `'create'`, `'update'`, `'delete'`, `'seed'`
   - Other fields depend on operation type
 
-**Returns:** `Promise<any>` - Operation result
+**Returns:** `Promise<any>` - Operation result (for `read`, returns ReactiveStore)
 
 **Example:**
 ```javascript
-// Query
-const todos = await os.db({
-  op: 'query',
-  schema: '@schema/todos',
+// Read (always returns reactive store)
+const store = await os.db({
+  op: 'read',
+  schema: 'co_zTodos123',  // Schema co-id (co_z...)
   filter: { completed: false }
+});
+
+// Store has current value immediately
+console.log('Current todos:', store.value);
+
+// Subscribe to updates
+const unsubscribe = store.subscribe((todos) => {
+  console.log('Todos updated:', todos);
 });
 
 // Create
@@ -3824,7 +3832,7 @@ Executes a database operation (internal use + `@db` tool).
 
 **Parameters:**
 - `payload` (Object) - Operation payload:
-  - `op` (string) - Operation type: `'query'`, `'create'`, `'update'`, `'delete'`, `'seed'`
+  - `op` (string) - Operation type: `'read'`, `'create'`, `'update'`, `'delete'`, `'seed'`
   - Other fields depend on operation type
 
 **Returns:** `Promise<any>` - Operation result
@@ -6292,10 +6300,18 @@ const backend = new IndexedDBBackend();
 await backend.init();
 const dbEngine = new DBEngine(backend);
 
-// Use database directly
-const result = await dbEngine.execute({
-  op: 'query',
-  schema: '@schema/todos'
+// Use read() API (always returns reactive store)
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: 'co_zTodos123'  // Schema co-id (co_z...)
+});
+
+// Store has current value
+console.log('Current data:', store.value);
+
+// Subscribe to updates
+const unsubscribe = store.subscribe((data) => {
+  console.log('Data updated:', data);
 });
 ```
 
@@ -6592,15 +6608,17 @@ const result = await toolEngine.executeTool(
 
 **What it does:**
 - Routes operations to modular handlers
-- Supports operations: `query`, `create`, `update`, `updateConfig`, `delete`, `toggle`, `seed`
+- Supports operations: `read`, `create`, `update`, `updateConfig`, `delete`, `toggle`, `seed`
 - Works with swappable backends (IndexedDB, CoJSON CRDT)
 - Validates operations against schemas
+- **Unified `read()` API** - Always returns reactive stores
 
 **Key Methods:**
 - `execute(payload)` - Execute a database operation
 
 **Operations:**
-- `query` - Load configs/schemas/data (reactive if callback provided)
+- `read` - **Primary API** - Load configs/schemas/data (always returns reactive store)
+- `query` - **DEPRECATED** - Use `read` instead (kept for compatibility)
 - `create` - Create new records
 - `update` - Update existing records (data collections)
 - `updateConfig` - Update actor configs (system properties)
@@ -6616,20 +6634,30 @@ const backend = new IndexedDBBackend();
 await backend.init();
 const dbEngine = new DBEngine(backend);
 
-// Query
-const todos = await dbEngine.execute({
-  op: 'query',
-  schema: '@schema/todos',
+// Read (unified API - always returns reactive store)
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: 'co_zTodos123',  // Schema co-id (co_z...)
   filter: { completed: false }
+});
+
+// Store has current value
+console.log('Current todos:', store.value);
+
+// Subscribe to updates
+const unsubscribe = store.subscribe((data) => {
+  console.log('Todos updated:', data);
 });
 
 // Create
 const newTodo = await dbEngine.execute({
   op: 'create',
-  schema: '@schema/todos',
+  schema: 'co_zTodos123',
   data: { text: 'Buy milk', completed: false }
 });
 ```
+
+**Important:** All schemas must be co-ids (`co_z...`). Human-readable IDs (`@schema/...`) are transformed to co-ids during seeding.
 
 **Source:** `libs/maia-script/src/engines/db-engine/db.engine.js`
 
@@ -6659,7 +6687,7 @@ const newTodo = await dbEngine.execute({
 3. **Message Subscriptions** - Subscriptions/inbox colists (handled in ActorEngine)
 
 **Dependencies:**
-- `DBEngine` - For query operations
+- `DBEngine` - For read operations (unified `read()` API)
 - `ActorEngine` - For triggering re-renders and loading configs
 - `ViewEngine` - For view subscriptions
 - `StyleEngine` - For style/brand subscriptions
@@ -6966,10 +6994,17 @@ export async function register(registry) {
 {
   tool: '@db',
   payload: {
-    op: 'query',
-    schema: '@schema/todos'
+    op: 'read',
+    schema: 'co_zTodos123'  // Schema co-id (co_z...)
   }
 }
+
+// read() always returns a reactive store
+const store = await os.db({op: 'read', schema: 'co_zTodos123'});
+console.log('Current todos:', store.value);
+store.subscribe((todos) => {
+  console.log('Todos updated:', todos);
+});
 ```
 
 ---
@@ -7142,10 +7177,18 @@ const backend = new IndexedDBBackend();
 await backend.init();
 const dbEngine = new DBEngine(backend);
 
-// Query without full OS
-const data = await dbEngine.execute({
-  op: 'query',
-  schema: '@schema/mySchema'
+// Use read() API (always returns reactive store)
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: 'co_zMySchema123'  // Schema co-id (co_z...)
+});
+
+// Store has current value
+console.log('Current data:', store.value);
+
+// Subscribe to updates
+const unsubscribe = store.subscribe((data) => {
+  console.log('Data updated:', data);
 });
 ```
 
@@ -7400,114 +7443,24 @@ For full system usage, see the [maia-kernel Package](../02_maia-kernel/README.md
 
 ---
 
-# MAIA SCRIPT/SUBSCRIPTIONS
+# MAIA SCRIPT/SUBSCRIPTIONS CONFIG
 
-*Source: developers/04_maia-script/subscriptions.md*
+*Source: developers/04_maia-script/subscriptions-config.md*
 
-# Subscription Architecture
+# Config Subscriptions
 
 ## Overview
 
-MaiaOS uses a **decentralized, per-actor subscription system** for end-to-end reactivity. Every actor automatically subscribes to:
-1. **Data dependencies** (query objects in context)
-2. **Config CRDTs** (view, style, state, interface, context, brand)
-3. **Message channels** (subscriptions colist, inbox costream)
+Config subscriptions automatically keep actor configs (view, style, state, etc.) in sync with their CRDT definitions. When a config CRDT changes, the actor automatically updates and re-renders.
 
-When any dependency changes, actors automatically update and re-render.
+**Think of it like:** Auto-save in a document editor - when you change the document, everyone viewing it sees the update automatically.
 
 ---
 
-## Architecture
+## The Simple Version
 
-### Decentralized Per-Actor Tracking
+Actor configs reference CRDTs by co-id. SubscriptionEngine automatically subscribes to these CRDTs:
 
-**Each actor tracks its own subscriptions:**
-
-```javascript
-actor._subscriptions = [unsubscribe1, unsubscribe2, ...];      // Data subscriptions
-actor._configSubscriptions = [unsubscribe1, unsubscribe2, ...]; // Config subscriptions
-```
-
-**Benefits:**
-- Simple cleanup (actor destruction → unsubscribe all)
-- No centralized subscription registry needed
-- Backend handles deduplication (future: `oSubscriptionCache`)
-
-### Backend Abstraction
-
-**Current Backend (Mocked IndexedDB):**
-- `IndexedDBBackend` in `libs/maia-script/src/engines/db-engine/backend/indexeddb.js`
-- Observer pattern: `this.observers = new Map()`
-- Each subscription creates separate observer
-- No centralized deduplication (that's future)
-
-**Future Backend (Real CoJSON):**
-- `maia-db` with `oSubscriptionCache`
-- Centralized deduplication (multiple actors → one backend subscription)
-- Automatic cleanup after 5 seconds
-- **NOT part of this refactor** - defer to backend swap
-
----
-
-## Subscription Types
-
-### 1. Data Subscriptions
-
-**Trigger:** Query objects in actor context
-
-**Pattern:**
-```javascript
-actor.context = {
-  todos: {
-    schema: "co_z...",  // Schema co-id (co_z...)
-    filter: { completed: false }
-  }
-}
-```
-
-**How it works:**
-1. `SubscriptionEngine.initialize(actor)` scans context
-2. Finds query objects (`{schema: "co_z...", filter: {...}}`)
-3. Subscribes via `dbEngine.execute({op: 'query', schema, filter, callback})`
-4. Updates `actor.context[key]` when data changes
-5. Triggers batched re-render
-
-**Example:**
-```javascript
-// Context has query object
-actor.context = {
-  todos: { schema: "co_zTodos123", filter: { done: false } }
-}
-
-// SubscriptionEngine automatically:
-// 1. Subscribes to todos matching filter
-// 2. Updates actor.context.todos when data changes
-// 3. Triggers re-render
-```
-
-**Source:** `SubscriptionEngine._subscribeToContext()`
-
----
-
-### 2. Config Subscriptions
-
-**Trigger:** Config CRDTs referenced in actor config
-
-**Configs subscribed to:**
-- `view` - View definition CRDT
-- `style` - Style definition CRDT
-- `brand` - Brand style CRDT
-- `state` - State machine definition CRDT
-- `interface` - Interface definition CRDT
-- `context` - Base context CRDT (not query objects)
-
-**How it works:**
-1. `SubscriptionEngine.initialize(actor)` calls `_subscribeToConfig(actor)`
-2. Scans `actor.config` for config co-ids
-3. Subscribes to each config CRDT via engine's `loadView()`/`loadStyle()`/etc.
-4. When config changes, handler updates actor and triggers re-render
-
-**Example:**
 ```javascript
 // Actor config references view co-id
 actor.config = {
@@ -7522,100 +7475,54 @@ actor.config = {
 // 4. When style changes → reloads stylesheets → re-renders
 ```
 
-**Source:** `SubscriptionEngine._subscribeToConfig()`
-
 ---
 
-### 3. Message Subscriptions
+## How It Works
 
-**Trigger:** Subscriptions colist and inbox costream
+### Config Types
 
-**How it works:**
-1. `ActorEngine.createActor()` loads subscriptions/inbox
-2. Sets up subscriptions via `subscribeConfig()`
-3. Updates `actor.subscriptions` and `actor.inbox` arrays when they change
-4. Stored in `actor._configSubscriptions`
+SubscriptionEngine subscribes to these config CRDTs:
 
-**Example:**
-```javascript
-// Actor config references subscriptions colist
-actor.config = {
-  subscriptions: "co_zSubscriptions789"
-}
+- **`view`** - View definition CRDT (HTML structure)
+- **`style`** - Style definition CRDT (CSS styles)
+- **`brand`** - Brand style CRDT (design system tokens)
+- **`state`** - State machine definition CRDT (state transitions)
+- **`interface`** - Interface definition CRDT (message validation)
+- **`context`** - Base context CRDT (initial context values)
 
-// ActorEngine automatically:
-// 1. Loads subscriptions colist
-// 2. Subscribes to changes
-// 3. Updates actor.subscriptions array when colist changes
-```
+### Subscription Process
 
-**Source:** `ActorEngine.createActor()` (lines 245-279)
+1. **Scan Config:**
+   ```javascript
+   // SubscriptionEngine.initialize(actor) scans actor.config
+   if (config.view && config.view.startsWith('co_z')) {
+     // Subscribe to view CRDT
+   }
+   ```
 
----
+2. **Subscribe via Engine or read() API:**
+   ```javascript
+   // View/style/state go through engines (they handle caching)
+   await viewEngine.loadView(config.view, (updatedView) => {
+     handleViewUpdate(actorId, updatedView);
+   });
+   
+   // Interface/context use read() API directly
+   const store = await dbEngine.execute({
+     op: 'read',
+     schema: interfaceSchemaCoId,
+     key: config.interface
+   });
+   store.subscribe((updatedInterface) => {
+     handleInterfaceUpdate(actorId, updatedInterface);
+   });
+   ```
 
-## Subscription Lifecycle
-
-### Initialization
-
-**When:** Actor is created
-
-**Process:**
-1. `ActorEngine.createActor()` creates actor
-2. Loads configs (view, style, state, etc.) - one-time load
-3. Calls `SubscriptionEngine.initialize(actor)`
-4. `SubscriptionEngine` subscribes to:
-   - Data (query objects in context)
-   - Configs (view, style, state, interface, context, brand)
-5. Subscriptions stored in `actor._subscriptions` and `actor._configSubscriptions`
-
-**Code:**
-```javascript
-// In ActorEngine.createActor()
-if (this.subscriptionEngine) {
-  await this.subscriptionEngine.initialize(actor);
-}
-```
-
----
-
-### Updates
-
-**Data Updates:**
-- Subscription callback fires with new data
-- `SubscriptionEngine._handleDataUpdate()` updates `actor.context[key]`
-- Batched re-render scheduled
-
-**Config Updates:**
-- Subscription callback fires with new config
-- Handler updates actor property (`actor.viewDef`, `actor.machine`, etc.)
-- Cache invalidated/updated
-- Batched re-render scheduled
-
-**Message Updates:**
-- Subscription callback fires with new colist/costream
-- `ActorEngine` updates `actor.subscriptions` or `actor.inbox`
-- Message processing triggered (if needed)
-
----
-
-### Cleanup
-
-**When:** Actor is destroyed
-
-**Process:**
-1. `ActorEngine.destroyActor()` called
-2. Calls `SubscriptionEngine.cleanup(actor)`
-3. Unsubscribes all data subscriptions (`actor._subscriptions`)
-4. Unsubscribes all config subscriptions (`actor._configSubscriptions`)
-5. Removes from pending re-renders
-
-**Code:**
-```javascript
-// In ActorEngine.destroyActor()
-if (this.subscriptionEngine) {
-  this.subscriptionEngine.cleanup(actor);
-}
-```
+3. **Store Unsubscribe Function:**
+   ```javascript
+   // Store for cleanup when actor is destroyed
+   actor._configSubscriptions.push(unsubscribe);
+   ```
 
 ---
 
@@ -7647,8 +7554,6 @@ _handleViewUpdate(actorId, newViewDef) {
 }
 ```
 
----
-
 ### Style Update
 
 **Handler:** `SubscriptionEngine._handleStyleUpdate()`
@@ -7673,8 +7578,6 @@ async _handleStyleUpdate(actorId, newStyleDef) {
   this._scheduleRerender(actorId);
 }
 ```
-
----
 
 ### State Update
 
@@ -7708,8 +7611,6 @@ async _handleStateUpdate(actorId, newStateDef) {
 }
 ```
 
----
-
 ### Interface Update
 
 **Handler:** `SubscriptionEngine._handleInterfaceUpdate()`
@@ -7736,8 +7637,6 @@ async _handleInterfaceUpdate(actorId, newInterfaceDef) {
 }
 ```
 
----
-
 ### Context Update
 
 **Handler:** `SubscriptionEngine._handleContextUpdate()`
@@ -7763,6 +7662,608 @@ async _handleContextUpdate(actorId, newContext) {
   // Re-render
   this._scheduleRerender(actorId);
 }
+```
+
+---
+
+## Examples
+
+### View Subscription
+
+```javascript
+// Actor config references view co-id
+actor.config = {
+  view: "co_zView123"
+}
+
+// SubscriptionEngine automatically:
+// 1. Subscribes to view CRDT via viewEngine.loadView()
+// 2. When view changes → handleViewUpdate() fires
+// 3. Updates actor.viewDef
+// 4. Triggers re-render
+```
+
+### Style Subscription
+
+```javascript
+// Actor config references style and brand co-ids
+actor.config = {
+  style: "co_zStyle456",
+  brand: "co_zBrand789"
+}
+
+// SubscriptionEngine automatically:
+// 1. Subscribes to style CRDT
+// 2. Subscribes to brand CRDT
+// 3. When style changes → handleStyleUpdate() fires
+// 4. Reloads stylesheets
+// 5. Updates shadowRoot.adoptedStyleSheets
+// 6. Triggers re-render
+```
+
+### State Subscription
+
+```javascript
+// Actor config references state co-id
+actor.config = {
+  state: "co_zState123"
+}
+
+// SubscriptionEngine automatically:
+// 1. Subscribes to state CRDT via stateEngine.loadStateDef()
+// 2. When state changes → handleStateUpdate() fires
+// 3. Destroys old state machine
+// 4. Creates new state machine
+// 5. Triggers re-render
+```
+
+---
+
+## Key Concepts
+
+### Engine Subscriptions vs Direct Subscriptions
+
+**View/Style/State:** Go through engines (they handle caching and batch subscriptions)
+
+```javascript
+// View subscription goes through ViewEngine
+await viewEngine.loadView(config.view, (updatedView) => {
+  handleViewUpdate(actorId, updatedView);
+});
+```
+
+**Interface/Context:** Use read() API directly
+
+```javascript
+// Interface subscription uses read() API
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: interfaceSchemaCoId,
+  key: config.interface
+});
+store.subscribe((updatedInterface) => {
+  handleInterfaceUpdate(actorId, updatedInterface);
+});
+```
+
+### Cache Invalidation
+
+When configs update, caches are invalidated:
+
+```javascript
+// View update invalidates cache
+this.viewEngine.viewCache.delete(actor.config.view);
+
+// State update invalidates cache
+this.stateEngine.stateCache.delete(actor.config.state);
+```
+
+Caches are repopulated on next load (when re-render calls `loadView()`/`loadStateDef()` again).
+
+---
+
+## Common Patterns
+
+### Multiple Config Subscriptions
+
+Actors can subscribe to multiple configs:
+
+```javascript
+actor.config = {
+  view: "co_zView123",
+  style: "co_zStyle456",
+  state: "co_zState789",
+  interface: "co_zInterface012"
+}
+
+// SubscriptionEngine subscribes to all automatically
+```
+
+### Runtime Config Editing
+
+Configs are runtime-editable - changes propagate automatically:
+
+```javascript
+// Edit view CRDT in database
+await dbEngine.execute({
+  op: 'updateConfig',
+  schema: viewSchemaCoId,
+  id: "co_zView123",
+  data: { /* updated view */ }
+});
+
+// Actor automatically:
+// 1. Receives update via subscription
+// 2. Updates actor.viewDef
+// 3. Re-renders with new view
+```
+
+---
+
+## Troubleshooting
+
+### Config Not Updating
+
+**Symptoms:** Config CRDT changes but actor doesn't update
+
+**Check:**
+1. Is subscription set up? (`actor._configSubscriptions` has unsubscribe function)
+2. Is config co-id valid? (starts with `co_z`)
+3. Is handler being called? (add logging to handler)
+4. Is cache being invalidated? (check cache before/after)
+
+**Fix:**
+- Verify `SubscriptionEngine.initialize()` is called
+- Verify engines are set (`subscriptionEngine.setEngines()`)
+- Check console for subscription errors
+
+### Duplicate Subscriptions
+
+**Symptoms:** Multiple subscriptions to same config
+
+**Check:**
+1. Is `loadView()` called multiple times with `onUpdate`?
+2. Are subscriptions cleaned up properly?
+3. Is `_subscribeToConfig()` called multiple times?
+
+**Fix:**
+- Ensure `initialize()` is only called once per actor
+- Ensure `cleanup()` is called when actor is destroyed
+- Check for duplicate `loadView()` calls
+
+---
+
+## Related Documentation
+
+- [subscriptions.md](./subscriptions.md) - Subscription overview
+- [subscriptions-data.md](./subscriptions-data.md) - Data subscriptions
+- [subscriptions-patterns.md](./subscriptions-patterns.md) - Patterns and troubleshooting
+- [engines.md](./engines.md) - ViewEngine, StyleEngine, StateEngine details
+
+---
+
+## References
+
+- Source: `libs/maia-script/src/engines/subscription-engine/config-subscriptions.js`
+- Update Handlers: `libs/maia-script/src/engines/subscription-engine/update-handlers.js`
+- DB Engine: `libs/maia-script/src/engines/db-engine/operations/read.js`
+
+---
+
+# MAIA SCRIPT/SUBSCRIPTIONS DATA
+
+*Source: developers/04_maia-script/subscriptions-data.md*
+
+# Data Subscriptions
+
+## Overview
+
+Data subscriptions automatically keep actor context in sync with database queries. When you define a query object in an actor's context, SubscriptionEngine automatically subscribes to that data and updates the context whenever it changes.
+
+**Think of it like:** Setting up a Google Doc notification - whenever someone edits the document, you get notified automatically.
+
+---
+
+## The Simple Version
+
+Query objects in actor context automatically create reactive subscriptions:
+
+```javascript
+actor.context = {
+  todos: {
+    schema: "co_zTodos123",  // Which data to watch
+    filter: { completed: false }  // Filter criteria
+  }
+}
+
+// SubscriptionEngine automatically:
+// 1. Uses read() API to get reactive store
+// 2. Subscribes to store updates
+// 3. Updates actor.context.todos when data changes
+// 4. Triggers re-render so UI updates
+```
+
+---
+
+## How It Works
+
+### Query Objects
+
+Query objects are simple objects in actor context that tell SubscriptionEngine what data to watch:
+
+```javascript
+{
+  schema: "co_zTodos123",  // Schema co-id (co_z...)
+  filter: { completed: false }  // Optional filter criteria
+}
+```
+
+**Detection:**
+- SubscriptionEngine scans `actor.context` for objects with `schema` property
+- If `schema` is a string starting with `co_z`, it's a query object
+- Query objects are automatically subscribed to
+
+### Subscription Process
+
+1. **Scan Context:**
+   ```javascript
+   // SubscriptionEngine.initialize(actor) scans context
+   for (const [key, value] of Object.entries(actor.context)) {
+     if (value && typeof value === 'object' && value.schema) {
+       // Found query object!
+     }
+   }
+   ```
+
+2. **Use read() API:**
+   ```javascript
+   // read() always returns reactive store
+   const store = await dbEngine.execute({
+     op: 'read',
+     schema: value.schema,  // co_zTodos123
+     filter: value.filter || null
+   });
+   ```
+
+3. **Subscribe to Store:**
+   ```javascript
+   // Subscribe to store updates
+   const unsubscribe = store.subscribe((data) => {
+     handleDataUpdate(subscriptionEngine, actor.id, key, data);
+   });
+   ```
+
+4. **Store Unsubscribe Function:**
+   ```javascript
+   // Store for cleanup when actor is destroyed
+   actor._subscriptions.push(unsubscribe);
+   ```
+
+### Update Handling
+
+When data changes, the store subscription fires:
+
+```javascript
+function handleDataUpdate(subscriptionEngine, actorId, contextKey, data) {
+  const actor = subscriptionEngine.actorEngine.getActor(actorId);
+  if (!actor) return; // Actor may have been destroyed
+
+  // Update context with new data
+  actor.context[contextKey] = data;
+  
+  // Trigger batched re-render
+  subscriptionEngine._scheduleRerender(actorId);
+}
+```
+
+---
+
+## Examples
+
+### Basic Example
+
+```javascript
+// Actor context with query object
+actor.context = {
+  todos: {
+    schema: "co_zTodos123",
+    filter: { completed: false }
+  }
+}
+
+// SubscriptionEngine automatically subscribes:
+// 1. Calls dbEngine.execute({op: 'read', schema: "co_zTodos123", filter: {...}})
+// 2. Gets reactive store
+// 3. Subscribes to store updates
+// 4. Updates actor.context.todos when data changes
+```
+
+### Multiple Queries
+
+```javascript
+// Actor can have multiple query objects
+actor.context = {
+  todos: {
+    schema: "co_zTodos123",
+    filter: { completed: false }
+  },
+  notes: {
+    schema: "co_zNotes456",
+    filter: { archived: false }
+  }
+}
+
+// SubscriptionEngine subscribes to both automatically
+```
+
+### Filtered Queries
+
+```javascript
+// Query objects can have filters
+actor.context = {
+  activeTodos: {
+    schema: "co_zTodos123",
+    filter: { 
+      completed: false,
+      priority: 'high'
+    }
+  }
+}
+
+// Only todos matching filter are returned
+```
+
+---
+
+## Key Concepts
+
+### Reactive Stores
+
+The `read()` API always returns a `ReactiveStore`:
+
+```javascript
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: "co_zTodos123",
+  filter: { completed: false }
+});
+
+// Store has current value
+console.log('Current:', store.value);  // Array of todos
+
+// Subscribe to updates
+const unsubscribe = store.subscribe((data) => {
+  console.log('Updated:', data);  // New data when it changes
+});
+```
+
+**Store Properties:**
+- `store.value` - Current data value
+- `store.subscribe(callback)` - Subscribe to updates, returns unsubscribe function
+
+### Initial Data
+
+Stores always have initial data loaded immediately:
+
+```javascript
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: "co_zTodos123"
+});
+
+// Initial value is available immediately
+console.log('Initial todos:', store.value);  // Already loaded!
+
+// Subscribe for future updates
+store.subscribe((data) => {
+  console.log('Updated:', data);
+});
+```
+
+### Deduplication
+
+SubscriptionEngine checks if data actually changed before updating:
+
+```javascript
+function handleDataUpdate(subscriptionEngine, actorId, contextKey, data) {
+  const actor = subscriptionEngine.actorEngine.getActor(actorId);
+  const oldData = actor.context[contextKey];
+  
+  // Check if data changed
+  if (isSameData(oldData, data)) {
+    return; // Skip if unchanged
+  }
+  
+  // Update context
+  actor.context[contextKey] = data;
+  subscriptionEngine._scheduleRerender(actorId);
+}
+```
+
+---
+
+## Common Patterns
+
+### Dynamic Queries
+
+Query objects can be updated dynamically:
+
+```javascript
+// Initial query
+actor.context = {
+  todos: {
+    schema: "co_zTodos123",
+    filter: { completed: false }
+  }
+}
+
+// Later, update filter
+actor.context.todos.filter = { completed: true };
+
+// SubscriptionEngine will re-subscribe automatically
+// (handled by context update handler)
+```
+
+### Empty Results
+
+Stores handle empty results gracefully:
+
+```javascript
+// Query with no results
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: "co_zTodos123",
+  filter: { completed: true }  // No completed todos
+});
+
+console.log(store.value);  // [] (empty array)
+
+// Subscribe still works - will fire when todos are completed
+store.subscribe((data) => {
+  console.log('Todos updated:', data);
+});
+```
+
+---
+
+## Troubleshooting
+
+### Data Not Updating
+
+**Symptoms:** Query object in context but data doesn't update
+
+**Check:**
+1. Is schema a co-id? (must start with `co_z`)
+2. Is subscription set up? (`actor._subscriptions` has unsubscribe function)
+3. Is store subscription working? (check console for errors)
+
+**Fix:**
+- Verify schema is transformed to co-id during seeding
+- Check that `SubscriptionEngine.initialize()` is called
+- Verify `read()` operation succeeds
+
+### Duplicate Updates
+
+**Symptoms:** Same data triggers multiple updates
+
+**Check:**
+1. Is deduplication working? (check `isSameData()` function)
+2. Are multiple subscriptions to same query?
+3. Is batching working? (check `pendingRerenders`)
+
+**Fix:**
+- Verify deduplication logic
+- Check for duplicate query objects in context
+- Ensure batching system is working
+
+---
+
+## Related Documentation
+
+- [subscriptions.md](./subscriptions.md) - Subscription overview
+- [subscriptions-config.md](./subscriptions-config.md) - Config subscriptions
+- [subscriptions-patterns.md](./subscriptions-patterns.md) - Patterns and troubleshooting
+- [engines.md](./engines.md) - DBEngine and SubscriptionEngine details
+
+---
+
+## References
+
+- Source: `libs/maia-script/src/engines/subscription-engine/data-subscriptions.js`
+- DB Engine: `libs/maia-script/src/engines/db-engine/operations/read.js`
+- Reactive Store: `libs/maia-script/src/utils/reactive-store.js`
+
+---
+
+# MAIA SCRIPT/SUBSCRIPTIONS PATTERNS
+
+*Source: developers/04_maia-script/subscriptions-patterns.md*
+
+# Subscription Patterns
+
+## Overview
+
+This document covers common subscription patterns, troubleshooting, and best practices for working with MaiaOS subscriptions.
+
+---
+
+## Subscription Patterns
+
+### Data Subscription Pattern
+
+**Using read() API with reactive stores:**
+
+```javascript
+// Query object in context
+actor.context = {
+  todos: {
+    schema: "co_zTodos123",  // Schema co-id
+    filter: { completed: false }
+  }
+}
+
+// SubscriptionEngine automatically subscribes:
+// 1. Uses read() API to get reactive store
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: "co_zTodos123",
+  filter: { completed: false }
+});
+
+// 2. Subscribes to store updates
+const unsubscribe = store.subscribe((data) => {
+  // Updates actor.context.todos automatically
+  actor.context.todos = data;
+  subscriptionEngine._scheduleRerender(actorId);
+});
+
+// 3. Stores unsubscribe function for cleanup
+actor._subscriptions.push(unsubscribe);
+```
+
+### Config Subscription Pattern
+
+**Using read() API for interface/context:**
+
+```javascript
+// Get schema co-id (must be co-id, not @schema/...)
+const interfaceSchemaCoId = await dbEngine.getSchemaCoId('interface');
+
+// Subscribe to config CRDT using read() API
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: interfaceSchemaCoId,  // co-id (co_z...)
+  key: actorConfig.interface  // co-id of config
+});
+
+// Subscribe to store updates
+const unsubscribe = store.subscribe((updatedInterface) => {
+  // Handle update
+  actor.interface = updatedInterface;
+  // No re-render needed (interface only affects validation)
+});
+
+// Store for cleanup
+actor._configSubscriptions.push(unsubscribe);
+```
+
+**Using engine methods for view/style/state:**
+
+```javascript
+// View subscription goes through ViewEngine (handles caching)
+await viewEngine.loadView(config.view, (updatedView) => {
+  handleViewUpdate(actorId, updatedView);
+});
+
+// Style subscription goes through StyleEngine
+await styleEngine.loadStyle(config.style, (updatedStyle) => {
+  handleStyleUpdate(actorId, updatedStyle);
+});
+
+// State subscription goes through StateEngine
+await stateEngine.loadStateDef(config.state, (updatedStateDef) => {
+  handleStateUpdate(actorId, updatedStateDef);
+});
 ```
 
 ---
@@ -7804,24 +8305,24 @@ _flushRerenders() {
 
 ## Cache Invalidation
 
-**Current Approach (Temporary):**
+**Current Approach:**
 - Engines maintain caches (`viewCache`, `stateCache`, etc.)
 - Config subscription callbacks update caches automatically
 - Handlers explicitly invalidate caches before updates
 - Caches repopulated on next load
 
-**Future Approach (Backend Swap):**
-- Backend handles caching automatically
-- No engine-level caches needed
-- Config changes automatically propagate via CRDT subscriptions
-
 **Cache Update Flow:**
 1. Config CRDT changes
-2. Subscription callback fires
+2. Store subscription fires
 3. Engine's `loadView()`/`loadStyle()` callback updates cache
 4. Handler invalidates cache (redundant but explicit)
 5. Handler updates actor and triggers re-render
 6. Re-render calls `loadView()` again → cache repopulated
+
+**Future Approach (Backend Swap):**
+- Backend handles caching automatically
+- No engine-level caches needed
+- Config changes automatically propagate via CRDT subscriptions
 
 ---
 
@@ -7832,103 +8333,43 @@ _flushRerenders() {
 **Rule:** Runtime code MUST use co-ids (`co_z...`), NEVER human-readable IDs (`@schema/...`)
 
 **Enforcement:**
-- `QueryOperation` validates: `if (schema.startsWith('@schema/')) throw new Error(...)`
-- `IndexedDBBackend.get()` validates: `if (!schema.startsWith('co_z')) throw new Error(...)`
+- `ReadOperation` validates: `if (!schema.startsWith('co_z')) throw new Error(...)`
+- Human-readable IDs are transformed to co-ids during seeding
+- Runtime code operates on CRDTs directly (co-ids are CRDT identifiers)
 
 **Why:**
 - Human-readable IDs are transformed to co-ids during seeding
 - Runtime code operates on CRDTs directly (co-ids are CRDT identifiers)
 - Backend swap will use real cojson (co-ids are native)
 
----
+### Unified read() API
 
-### All Queries Are Subscriptions
+**Rule:** All data access uses `read()` operation, which always returns reactive stores
 
-**Rule:** Every query MUST have a callback (subscription), no one-time queries
-
-**Enforcement:**
-- `config-loader.js` uses `subscribeConfig()` (always requires callback)
-- `QueryOperation` requires callback for reactive queries
-- One-time queries removed from codebase
-
-**Why:**
-- End-to-end reactivity requires subscriptions
-- Configs are runtime-editable (need subscriptions)
-- Data is reactive (need subscriptions)
-
----
-
-## Subscription Pattern
-
-### Config Subscription Pattern
-
+**Pattern:**
 ```javascript
-// Get schema co-id (must be co-id, not @schema/...)
-const viewSchemaCoId = await dbEngine.getSchemaCoId('view');
-
-// Subscribe to config CRDT
-const { config: viewDef, unsubscribe } = await subscribeConfig(
-  dbEngine,
-  viewSchemaCoId,  // co-id (co_z...)
-  actorConfig.view,  // co-id of config
-  'view',
-  (updatedView) => {
-    // Handle update
-    actor.viewDef = updatedView;
-    actorEngine.rerender(actorId);
-  }
-);
-
-// Store for cleanup
-actor._configSubscriptions.push(unsubscribe);
-```
-
----
-
-### Data Subscription Pattern
-
-```javascript
-// Query object in context
-actor.context = {
-  todos: {
-    schema: "co_zTodos123",  // Schema co-id
-    filter: { completed: false }
-  }
-}
-
-// SubscriptionEngine automatically subscribes:
-const unsubscribe = await dbEngine.execute({
-  op: 'query',
-  schema: "co_zTodos123",
-  filter: { completed: false },
-  callback: (data) => {
-    // Updates actor.context.todos automatically
-    actor.context.todos = data;
-    subscriptionEngine._scheduleRerender(actorId);
-  }
+// read() always returns ReactiveStore
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: "co_zTodos123",  // Schema co-id
+  key: "co_zTodo456"  // Optional: specific item co-id
+  filter: { completed: false }  // Optional: filter criteria
 });
 
-// Stored in actor._subscriptions
-actor._subscriptions.push(unsubscribe);
+// Store has current value
+console.log('Current:', store.value);
+
+// Subscribe to updates
+const unsubscribe = store.subscribe((data) => {
+  console.log('Updated:', data);
+});
 ```
 
----
-
-## Future: Backend Swap
-
-**Current:** Mocked IndexedDB backend
-**Future:** Real CoJSON CRDT backend
-
-**Changes:**
-- Backend will use `oSubscriptionCache` for deduplication
-- Multiple actors subscribing to same CRDT → one backend subscription
-- Automatic cleanup after 5 seconds of inactivity
-- No engine-level caches needed (backend handles caching)
-
-**Migration:**
-- Subscription API stays the same (`dbEngine.execute({op: 'query', ...})`)
-- Backend implementation swaps
-- No actor-level code changes needed
+**Why:**
+- Single pattern for all data access
+- Always reactive (stores notify on changes)
+- Consistent across configs and data
+- No callback confusion (pure store pattern)
 
 ---
 
@@ -7949,8 +8390,6 @@ actor._subscriptions.push(unsubscribe);
 - Verify engines are set (`subscriptionEngine.setEngines()`)
 - Check console for subscription errors
 
----
-
 ### Duplicate Subscriptions
 
 **Symptoms:** Multiple subscriptions to same config
@@ -7964,8 +8403,6 @@ actor._subscriptions.push(unsubscribe);
 - Ensure `initialize()` is only called once per actor
 - Ensure `cleanup()` is called when actor is destroyed
 - Check for duplicate `loadView()` calls
-
----
 
 ### Performance Issues
 
@@ -7981,13 +8418,275 @@ actor._subscriptions.push(unsubscribe);
 - Check for unnecessary subscriptions
 - Optimize handlers (avoid heavy work in callbacks)
 
+### Data Not Updating
+
+**Symptoms:** Query object in context but data doesn't update
+
+**Check:**
+1. Is schema a co-id? (must start with `co_z`)
+2. Is subscription set up? (`actor._subscriptions` has unsubscribe function)
+3. Is store subscription working? (check console for errors)
+
+**Fix:**
+- Verify schema is transformed to co-id during seeding
+- Check that `SubscriptionEngine.initialize()` is called
+- Verify `read()` operation succeeds
+
+---
+
+## Future: Backend Swap
+
+**Current:** IndexedDB backend with reactive stores
+
+**Future:** Real CoJSON CRDT backend
+
+**Changes:**
+- Backend will use `oSubscriptionCache` for deduplication
+- Multiple actors subscribing to same CRDT → one backend subscription
+- Automatic cleanup after 5 seconds of inactivity
+- No engine-level caches needed (backend handles caching)
+
+**Migration:**
+- Subscription API stays the same (`dbEngine.execute({op: 'read', ...})`)
+- Backend implementation swaps
+- No actor-level code changes needed
+
 ---
 
 ## Related Documentation
 
+- [subscriptions.md](./subscriptions.md) - Subscription overview
+- [subscriptions-data.md](./subscriptions-data.md) - Data subscriptions
+- [subscriptions-config.md](./subscriptions-config.md) - Config subscriptions
+- [engines.md](./engines.md) - Engine details
+
+---
+
+## References
+
+- Source: `libs/maia-script/src/engines/subscription-engine/`
+- DB Engine: `libs/maia-script/src/engines/db-engine/operations/read.js`
+- Reactive Store: `libs/maia-script/src/utils/reactive-store.js`
+
+---
+
+# MAIA SCRIPT/SUBSCRIPTIONS
+
+*Source: developers/04_maia-script/subscriptions.md*
+
+# Subscription Architecture
+
+## Overview
+
+MaiaOS uses a **decentralized, per-actor subscription system** for end-to-end reactivity. Every actor automatically subscribes to:
+1. **Data dependencies** (query objects in context)
+2. **Config CRDTs** (view, style, state, interface, context, brand)
+3. **Message channels** (subscriptions colist, inbox costream)
+
+When any dependency changes, actors automatically update and re-render.
+
+---
+
+## The Simple Version
+
+Think of subscriptions like automatic notifications. When you tell an actor "watch this data," it automatically gets notified whenever that data changes, just like getting a text message when someone updates a shared document.
+
+**Example:**
+```javascript
+// Actor context has a query object
+actor.context = {
+  todos: {
+    schema: "co_zTodos123",  // Which data to watch
+    filter: { completed: false }  // Filter criteria
+  }
+}
+
+// SubscriptionEngine automatically:
+// 1. Subscribes to todos matching the filter
+// 2. Updates actor.context.todos when data changes
+// 3. Triggers re-render so the UI updates
+```
+
+---
+
+## Architecture
+
+### Decentralized Per-Actor Tracking
+
+**Each actor tracks its own subscriptions:**
+
+```javascript
+actor._subscriptions = [unsubscribe1, unsubscribe2, ...];      // Data subscriptions
+actor._configSubscriptions = [unsubscribe1, unsubscribe2, ...]; // Config subscriptions
+```
+
+**Benefits:**
+- Simple cleanup (actor destruction → unsubscribe all)
+- No centralized subscription registry needed
+- Backend handles deduplication (future: `oSubscriptionCache`)
+
+### Backend Abstraction
+
+**Current Backend (IndexedDB):**
+- `IndexedDBBackend` in `libs/maia-script/src/engines/db-engine/backend/indexeddb.js`
+- Uses reactive stores from unified `read()` API
+- Observer pattern: `this.observers = new Map()`
+- Each subscription creates separate observer
+- No centralized deduplication (that's future)
+
+**Future Backend (Real CoJSON):**
+- `maia-db` with `oSubscriptionCache`
+- Centralized deduplication (multiple actors → one backend subscription)
+- Automatic cleanup after 5 seconds
+- **NOT part of this refactor** - defer to backend swap
+
+---
+
+## Documentation Structure
+
+This subscription documentation is organized into focused topics:
+
+- **[subscriptions-data.md](./subscriptions-data.md)** - Data subscriptions (query objects, reactive updates)
+- **[subscriptions-config.md](./subscriptions-config.md)** - Config subscriptions (view, style, state, handlers)
+- **[subscriptions-patterns.md](./subscriptions-patterns.md)** - Patterns, troubleshooting, and examples
+
+---
+
+## Quick Start
+
+**Data Subscription:**
+```javascript
+// Query object in context automatically creates subscription
+actor.context = {
+  todos: {
+    schema: "co_zTodos123",
+    filter: { completed: false }
+  }
+}
+
+// SubscriptionEngine uses read() API:
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: "co_zTodos123",
+  filter: { completed: false }
+});
+
+// Subscribe to store updates
+const unsubscribe = store.subscribe((data) => {
+  actor.context.todos = data;
+  subscriptionEngine._scheduleRerender(actorId);
+});
+```
+
+**Config Subscription:**
+```javascript
+// Actor config references view co-id
+actor.config = {
+  view: "co_zView123"
+}
+
+// SubscriptionEngine automatically subscribes to view CRDT
+// When view changes → updates actor.viewDef → re-renders
+```
+
+---
+
+## Key Concepts
+
+### Unified `read()` API
+
+All data access uses the unified `read()` operation, which always returns a reactive store:
+
+```javascript
+// read() always returns a ReactiveStore
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: "co_zTodos123",  // Schema co-id (co_z...)
+  filter: { completed: false }  // Optional filter
+});
+
+// Store has current value
+console.log('Current todos:', store.value);
+
+// Subscribe to updates
+const unsubscribe = store.subscribe((data) => {
+  console.log('Todos updated:', data);
+});
+```
+
+**Why unified API:**
+- Single pattern for all data access
+- Always reactive (stores notify on changes)
+- Consistent across configs and data
+- No callback confusion (pure store pattern)
+
+### Co-IDs Only
+
+**Rule:** Runtime code MUST use co-ids (`co_z...`), NEVER human-readable IDs (`@schema/...`)
+
+**Enforcement:**
+- `ReadOperation` validates: `if (!schema.startsWith('co_z')) throw new Error(...)`
+- Human-readable IDs are transformed to co-ids during seeding
+- Runtime code operates on CRDTs directly (co-ids are CRDT identifiers)
+
+---
+
+## Subscription Lifecycle
+
+### Initialization
+
+**When:** Actor is created
+
+**Process:**
+1. `ActorEngine.createActor()` creates actor
+2. Loads configs (view, style, state, etc.) - one-time load
+3. Calls `SubscriptionEngine.initialize(actor)`
+4. `SubscriptionEngine` subscribes to:
+   - Data (query objects in context)
+   - Configs (view, style, state, interface, context, brand)
+5. Subscriptions stored in `actor._subscriptions` and `actor._configSubscriptions`
+
+### Updates
+
+**Data Updates:**
+- Store subscription fires with new data
+- `SubscriptionEngine._handleDataUpdate()` updates `actor.context[key]`
+- Batched re-render scheduled
+
+**Config Updates:**
+- Store subscription fires with new config
+- Handler updates actor property (`actor.viewDef`, `actor.machine`, etc.)
+- Cache invalidated/updated
+- Batched re-render scheduled
+
+### Cleanup
+
+**When:** Actor is destroyed
+
+**Process:**
+1. `ActorEngine.destroyActor()` called
+2. Calls `SubscriptionEngine.cleanup(actor)`
+3. Unsubscribes all data subscriptions (`actor._subscriptions`)
+4. Unsubscribes all config subscriptions (`actor._configSubscriptions`)
+5. Removes from pending re-renders
+
+---
+
+## Related Documentation
+
+- [subscriptions-data.md](./subscriptions-data.md) - Data subscriptions details
+- [subscriptions-config.md](./subscriptions-config.md) - Config subscriptions details
+- [subscriptions-patterns.md](./subscriptions-patterns.md) - Patterns and troubleshooting
 - [engines.md](./engines.md) - Engine overview (includes SubscriptionEngine)
 - [api-reference.md](./api-reference.md) - Complete API reference
-- [patterns.md](./patterns.md) - Common patterns and best practices
+
+---
+
+## References
+
+- Source files: `libs/maia-script/src/engines/subscription-engine/`
+- DB Engine: `libs/maia-script/src/engines/db-engine/`
+- Reactive Store: `libs/maia-script/src/utils/reactive-store.js`
 
 ---
 

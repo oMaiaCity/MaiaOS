@@ -44,7 +44,9 @@ export class ToggleOperation {
     // Schema-level validation is not performed - if needed, do it before calling this operation.
     
     // Get current record (using co-id $id field)
-    const collection = await this.backend.query(schema, null);
+    // Use read() to get reactive store, then access current value
+    const store = await this.backend.read(schema, null, null);
+    const collection = store.value;
     const record = collection.find(item => item.$id === id);
     
     if (!record) {

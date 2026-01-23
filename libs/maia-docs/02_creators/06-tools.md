@@ -137,17 +137,19 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
 }
 ```
 
-#### Query Operation
+#### Read Operation
 ```json
 {
   "tool": "@db",
   "payload": {
-    "op": "query",
-    "schema": "@schema/todos",
+    "op": "read",
+    "schema": "co_zTodos123",  // Schema co-id (co_z...)
     "filter": {"done": false}
   }
 }
 ```
+
+**Note:** `read()` always returns a reactive store. Use `store.value` for current value and `store.subscribe()` for updates.
 
 #### Seed Operation
 ```json

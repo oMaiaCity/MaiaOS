@@ -20,7 +20,7 @@ import { validateCoId } from './co-id-validator.js';
  * @param {string} configType - Config type for error messages (e.g., 'actor', 'view')
  * @param {Function} onUpdate - Callback called when config changes: (newConfig) => void
  * @param {Map} cache - Optional cache map (coId -> config) to avoid duplicate loads
- * @returns {Promise<{config: Object, unsubscribe: Function}>} Initial config and unsubscribe function
+ * @returns {Promise<{config: Object, unsubscribe: Function, store: ReactiveStore}>} Initial config, unsubscribe function, and reactive store
  * @throws {Error} If co-id is invalid, config not found, or validation fails
  */
 export async function subscribeConfig(dbEngine, schemaRef, coId, configType, onUpdate, cache = null) {
@@ -59,67 +59,73 @@ export async function subscribeConfig(dbEngine, schemaRef, coId, configType, onU
   if (cache && cache.has(coId)) {
     const cachedConfig = cache.get(coId);
     
-    // Set up subscription for future updates
-    // Query operation returns unsubscribe function (may be Promise or direct)
-    const unsubscribe = await dbEngine.execute({
-      op: 'query',
+    // Set up subscription for future updates using read() operation
+    const store = await dbEngine.execute({
+      op: 'read',
       schema: schemaRef,
-      key: coId,
-      callback: async (newConfig) => {
+      key: coId
+    });
+    
+    const unsubscribe = store.subscribe(async (newConfig) => {
+      try {
         const validated = await validateAndCache(newConfig);
         if (validated) {
           onUpdate(validated);
         }
+      } catch (error) {
+        console.error(`[${configType}] Error validating config in subscription callback:`, error);
+        // Don't throw - subscription callbacks shouldn't throw unhandled errors
       }
     });
     
-    return { config: cachedConfig, unsubscribe };
+    return { config: cachedConfig, unsubscribe, store };
   }
   
-  // Subscribe to config changes
-  // The query operation will call callback immediately with current data, then on updates
+  // Subscribe to config changes using read() operation
+  // Read operation returns reactive store that calls callback immediately, then on updates
   let initialConfig = null;
   let initialConfigResolved = false;
   let initialConfigError = null;
-  let unsubscribeFn = null;
   
-  // Set up subscription - query operation handles initial callback + subscription
-  unsubscribeFn = await dbEngine.execute({
-    op: 'query',
+  // Set up subscription - read operation returns reactive store
+  const store = await dbEngine.execute({
+    op: 'read',
     schema: schemaRef,
-    key: coId,
-    callback: async (config) => {
-      try {
-        const validated = await validateAndCache(config);
+    key: coId
+  });
+  
+  // Subscribe to store updates
+  const unsubscribeFn = store.subscribe(async (config) => {
+    try {
+      const validated = await validateAndCache(config);
+      
+      // First callback is the initial value
+      if (!initialConfigResolved) {
+        if (!validated) {
+          initialConfigResolved = true;
+          initialConfigError = new Error(`Failed to load ${configType} from database by co-id: ${coId}`);
+          return;
+        }
         
-        // First callback is the initial value
-        if (!initialConfigResolved) {
-          if (!validated) {
-            initialConfigResolved = true;
-            initialConfigError = new Error(`Failed to load ${configType} from database by co-id: ${coId}`);
-            return;
-          }
-          
-          initialConfig = validated;
-          initialConfigResolved = true;
-          // Call onUpdate with initial value (for consistency)
+        initialConfig = validated;
+        initialConfigResolved = true;
+        // Call onUpdate with initial value (for consistency)
+        onUpdate(validated);
+      } else {
+        // Subsequent updates
+        if (validated) {
           onUpdate(validated);
-        } else {
-          // Subsequent updates
-          if (validated) {
-            onUpdate(validated);
-          }
         }
-      } catch (error) {
-        if (!initialConfigResolved) {
-          initialConfigResolved = true;
-          initialConfigError = error;
-        }
+      }
+    } catch (error) {
+      if (!initialConfigResolved) {
+        initialConfigResolved = true;
+        initialConfigError = error;
       }
     }
   });
   
-  // Wait for initial callback to fire (query operation calls it immediately)
+  // Wait for initial callback to fire (store calls callback immediately)
   // Use a small delay to ensure async callback has fired
   let attempts = 0;
   while (!initialConfigResolved && attempts < 10) {
@@ -136,7 +142,7 @@ export async function subscribeConfig(dbEngine, schemaRef, coId, configType, onU
     throw new Error(`Failed to load ${configType} from database by co-id: ${coId}`);
   }
   
-  return { config: initialConfig, unsubscribe: unsubscribeFn };
+  return { config: initialConfig, unsubscribe: unsubscribeFn, store };
 }
 
 /**
@@ -163,7 +169,7 @@ export async function loadConfig(dbEngine, schemaRef, coId, configType, cache = 
  * Optimizes performance by batching DB queries and subscription setup
  * @param {Object} dbEngine - Database engine instance
  * @param {Array} requests - Array of subscription requests: [{schemaRef, coId, configType, onUpdate, cache}, ...]
- * @returns {Promise<Array<{config: Object, unsubscribe: Function}>>} Array of results matching request order
+ * @returns {Promise<Array<{config: Object, unsubscribe: Function, store: ReactiveStore}>>} Array of results matching request order
  */
 export async function subscribeConfigsBatch(dbEngine, requests) {
   if (!requests || requests.length === 0) {
@@ -218,20 +224,26 @@ export async function subscribeConfigsBatch(dbEngine, requests) {
       if (cache && cache.has(coId)) {
         const cachedConfig = cache.get(coId);
         
-        // Set up subscription for future updates
-        const unsubscribe = await dbEngine.execute({
-          op: 'query',
+        // Set up subscription for future updates using read() operation
+        const store = await dbEngine.execute({
+          op: 'read',
           schema: schemaRef,
-          key: coId,
-          callback: async (newConfig) => {
+          key: coId
+        });
+        
+        const unsubscribe = store.subscribe(async (newConfig) => {
+          try {
             const validated = await validateAndCache(newConfig, configType, coId, cache);
             if (validated) {
               onUpdate(validated);
             }
+          } catch (error) {
+            console.error(`[${configType}] Error validating config in subscription callback:`, error);
+            // Don't throw - subscription callbacks shouldn't throw unhandled errors
           }
         });
         
-        return { config: cachedConfig, unsubscribe, index };
+        return { config: cachedConfig, unsubscribe, index, store };
       }
       
       // Get config from batch results
@@ -243,43 +255,43 @@ export async function subscribeConfigsBatch(dbEngine, requests) {
       }
       
       // If config not found in batch results, it will be loaded by subscription callback
-      // Set up subscription - query operation handles initial callback + subscription
+      // Set up subscription - read operation returns reactive store
       let initialConfig = config;
       let initialConfigResolved = !!config;
       let initialConfigError = null;
-      let unsubscribeFn = null;
       
-      unsubscribeFn = await dbEngine.execute({
-        op: 'query',
+      const store = await dbEngine.execute({
+        op: 'read',
         schema: schemaRef,
-        key: coId,
-        callback: async (newConfig) => {
-          try {
-            const validated = await validateAndCache(newConfig, configType, coId, cache);
+        key: coId
+      });
+      
+      const unsubscribeFn = store.subscribe(async (newConfig) => {
+        try {
+          const validated = await validateAndCache(newConfig, configType, coId, cache);
+          
+          // First callback is the initial value
+          if (!initialConfigResolved) {
+            if (!validated) {
+              initialConfigResolved = true;
+              initialConfigError = new Error(`Failed to load ${configType} from database by co-id: ${coId}`);
+              return;
+            }
             
-            // First callback is the initial value
-            if (!initialConfigResolved) {
-              if (!validated) {
-                initialConfigResolved = true;
-                initialConfigError = new Error(`Failed to load ${configType} from database by co-id: ${coId}`);
-                return;
-              }
-              
-              initialConfig = validated;
-              initialConfigResolved = true;
-              // Call onUpdate with initial value (for consistency)
+            initialConfig = validated;
+            initialConfigResolved = true;
+            // Call onUpdate with initial value (for consistency)
+            onUpdate(validated);
+          } else {
+            // Subsequent updates
+            if (validated) {
               onUpdate(validated);
-            } else {
-              // Subsequent updates
-              if (validated) {
-                onUpdate(validated);
-              }
             }
-          } catch (error) {
-            if (!initialConfigResolved) {
-              initialConfigResolved = true;
-              initialConfigError = error;
-            }
+          }
+        } catch (error) {
+          if (!initialConfigResolved) {
+            initialConfigResolved = true;
+            initialConfigError = error;
           }
         }
       });
@@ -302,12 +314,12 @@ export async function subscribeConfigsBatch(dbEngine, requests) {
         }
       }
       
-      return { config: initialConfig, unsubscribe: unsubscribeFn, index };
+      return { config: initialConfig, unsubscribe: unsubscribeFn, index, store };
     })
   );
   
   // Return results in original request order
-  return results.sort((a, b) => a.index - b.index).map(({ config, unsubscribe }) => ({ config, unsubscribe }));
+  return results.sort((a, b) => a.index - b.index).map(({ config, unsubscribe, store }) => ({ config, unsubscribe, store }));
 }
 
 /**

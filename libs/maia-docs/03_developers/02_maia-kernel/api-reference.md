@@ -159,18 +159,26 @@ Executes a database operation (internal use + `@db` tool).
 
 **Parameters:**
 - `payload` (Object) - Operation payload:
-  - `op` (string) - Operation type: `'query'`, `'create'`, `'update'`, `'delete'`, `'seed'`
+  - `op` (string) - Operation type: `'read'`, `'create'`, `'update'`, `'delete'`, `'seed'`
   - Other fields depend on operation type
 
-**Returns:** `Promise<any>` - Operation result
+**Returns:** `Promise<any>` - Operation result (for `read`, returns ReactiveStore)
 
 **Example:**
 ```javascript
-// Query
-const todos = await os.db({
-  op: 'query',
-  schema: '@schema/todos',
+// Read (always returns reactive store)
+const store = await os.db({
+  op: 'read',
+  schema: 'co_zTodos123',  // Schema co-id (co_z...)
   filter: { completed: false }
+});
+
+// Store has current value immediately
+console.log('Current todos:', store.value);
+
+// Subscribe to updates
+const unsubscribe = store.subscribe((todos) => {
+  console.log('Todos updated:', todos);
 });
 
 // Create

@@ -6,7 +6,7 @@
  * Supports swappable backends (IndexedDB, CoJSON CRDT)
  * 
    * Operations:
-   * - query: Load configs/schemas/data (reactive if callback provided)
+   * - read: Load configs/schemas/data (always returns reactive store)
    * - create: Create new records
    * - update: Update existing records (data collections)
    * - updateConfig: Update actor configs (system properties)
@@ -15,7 +15,7 @@
    * - seed: Flush + seed (dev only)
    */
 
-import { QueryOperation } from './operations/query.js';
+import { ReadOperation } from './operations/read.js';
 import { CreateOperation } from './operations/create.js';
 import { UpdateOperation } from './operations/update.js';
 import { UpdateConfigOperation } from './operations/update-config.js';
@@ -29,7 +29,7 @@ export class DBEngine {
     
     // Initialize modular operations (pass dbEngine for validation)
     this.operations = {
-      query: new QueryOperation(this.backend),
+      read: new ReadOperation(this.backend),  // Unified reactive read operation
       create: new CreateOperation(this.backend, this),
       update: new UpdateOperation(this.backend, this),
       updateConfig: new UpdateConfigOperation(this.backend),
@@ -43,7 +43,7 @@ export class DBEngine {
   /**
    * Execute a database operation
    * @param {Object} payload - Operation payload
-   * @param {string} payload.op - Operation name (query, create, update, delete, seed)
+   * @param {string} payload.op - Operation name (read, create, update, delete, seed)
    * @param {Object} payload params - Operation-specific parameters
    * @returns {Promise<any>} Operation result
    */
@@ -51,7 +51,7 @@ export class DBEngine {
     const { op, ...params } = payload;
     
     if (!op) {
-      throw new Error('[DBEngine] Operation required: {op: "query|create|update|updateConfig|delete|seed"}');
+      throw new Error('[DBEngine] Operation required: {op: "read|create|update|updateConfig|delete|seed"}');
     }
     
     const operation = this.operations[op];

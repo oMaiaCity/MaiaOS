@@ -259,15 +259,17 @@ const result = await toolEngine.executeTool(
 
 **What it does:**
 - Routes operations to modular handlers
-- Supports operations: `query`, `create`, `update`, `updateConfig`, `delete`, `toggle`, `seed`
+- Supports operations: `read`, `create`, `update`, `updateConfig`, `delete`, `toggle`, `seed`
 - Works with swappable backends (IndexedDB, CoJSON CRDT)
 - Validates operations against schemas
+- **Unified `read()` API** - Always returns reactive stores
 
 **Key Methods:**
 - `execute(payload)` - Execute a database operation
 
 **Operations:**
-- `query` - Load configs/schemas/data (reactive if callback provided)
+- `read` - **Primary API** - Load configs/schemas/data (always returns reactive store)
+- `query` - **DEPRECATED** - Use `read` instead (kept for compatibility)
 - `create` - Create new records
 - `update` - Update existing records (data collections)
 - `updateConfig` - Update actor configs (system properties)
@@ -283,20 +285,30 @@ const backend = new IndexedDBBackend();
 await backend.init();
 const dbEngine = new DBEngine(backend);
 
-// Query
-const todos = await dbEngine.execute({
-  op: 'query',
-  schema: '@schema/todos',
+// Read (unified API - always returns reactive store)
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: 'co_zTodos123',  // Schema co-id (co_z...)
   filter: { completed: false }
+});
+
+// Store has current value
+console.log('Current todos:', store.value);
+
+// Subscribe to updates
+const unsubscribe = store.subscribe((data) => {
+  console.log('Todos updated:', data);
 });
 
 // Create
 const newTodo = await dbEngine.execute({
   op: 'create',
-  schema: '@schema/todos',
+  schema: 'co_zTodos123',
   data: { text: 'Buy milk', completed: false }
 });
 ```
+
+**Important:** All schemas must be co-ids (`co_z...`). Human-readable IDs (`@schema/...`) are transformed to co-ids during seeding.
 
 **Source:** `libs/maia-script/src/engines/db-engine/db.engine.js`
 
@@ -326,7 +338,7 @@ const newTodo = await dbEngine.execute({
 3. **Message Subscriptions** - Subscriptions/inbox colists (handled in ActorEngine)
 
 **Dependencies:**
-- `DBEngine` - For query operations
+- `DBEngine` - For read operations (unified `read()` API)
 - `ActorEngine` - For triggering re-renders and loading configs
 - `ViewEngine` - For view subscriptions
 - `StyleEngine` - For style/brand subscriptions

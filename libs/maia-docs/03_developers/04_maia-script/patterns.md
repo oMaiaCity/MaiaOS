@@ -50,10 +50,18 @@ const backend = new IndexedDBBackend();
 await backend.init();
 const dbEngine = new DBEngine(backend);
 
-// Query without full OS
-const data = await dbEngine.execute({
-  op: 'query',
-  schema: '@schema/mySchema'
+// Use read() API (always returns reactive store)
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: 'co_zMySchema123'  // Schema co-id (co_z...)
+});
+
+// Store has current value
+console.log('Current data:', store.value);
+
+// Subscribe to updates
+const unsubscribe = store.subscribe((data) => {
+  console.log('Data updated:', data);
 });
 ```
 

@@ -172,7 +172,7 @@ Executes a database operation (internal use + `@db` tool).
 
 **Parameters:**
 - `payload` (Object) - Operation payload:
-  - `op` (string) - Operation type: `'query'`, `'create'`, `'update'`, `'delete'`, `'seed'`
+  - `op` (string) - Operation type: `'read'`, `'create'`, `'update'`, `'delete'`, `'seed'`
   - Other fields depend on operation type
 
 **Returns:** `Promise<any>` - Operation result

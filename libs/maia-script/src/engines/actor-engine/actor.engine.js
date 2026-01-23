@@ -174,12 +174,13 @@ export class ActorEngine {
     if (actorConfig.subscriptions) {
       const subscriptionsSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'subscriptions');
       
-      // Get initial value (one-time query for now, subscription set up after actor creation)
-      const subscriptionsColist = await this.dbEngine.execute({
-        op: 'query',
+      // Get initial value using read() - returns reactive store
+      const subscriptionsStore = await this.dbEngine.execute({
+        op: 'read',
         schema: subscriptionsSchemaCoId,
         key: actorConfig.subscriptions
       });
+      const subscriptionsColist = subscriptionsStore.value;
       if (subscriptionsColist && Array.isArray(subscriptionsColist.items)) {
         subscriptions = subscriptionsColist.items;
       }
@@ -190,12 +191,13 @@ export class ActorEngine {
     if (actorConfig.inbox) {
       const inboxSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'inbox');
       
-      // Get initial value (one-time query for now, subscription set up after actor creation)
-      const inboxCostream = await this.dbEngine.execute({
-        op: 'query',
+      // Get initial value using read() - returns reactive store
+      const inboxStore = await this.dbEngine.execute({
+        op: 'read',
         schema: inboxSchemaCoId,
         key: actorConfig.inbox
       });
+      const inboxCostream = inboxStore.value;
       if (inboxCostream && Array.isArray(inboxCostream.items)) {
         inbox = inboxCostream.items;
       }
@@ -342,11 +344,12 @@ export class ActorEngine {
           
           // Try to resolve via database (handles @actor/name format)
           const actorSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'actor');
-          const resolvedActor = await this.dbEngine.execute({
-            op: 'query',
+          const actorStore = await this.dbEngine.execute({
+            op: 'read',
             schema: actorSchemaCoId,
             key: childActorId
           });
+          const resolvedActor = actorStore.value;
           if (resolvedActor && resolvedActor.$id && resolvedActor.$id.startsWith('co_z')) {
             childCoId = resolvedActor.$id;
           } else {
@@ -895,12 +898,13 @@ export class ActorEngine {
         return;
       }
       
-      // Get current actor config
-      const actorConfig = await this.dbEngine.execute({
-        op: 'query',
+      // Get current actor config using read() - returns reactive store
+      const actorStore = await this.dbEngine.execute({
+        op: 'read',
         schema: actorSchemaCoId,
         key: actorId
       });
+      const actorConfig = actorStore.value;
 
       if (!actorConfig) {
         console.warn(`[ActorEngine] Cannot persist watermark: actor config not found for ${actorId}`);

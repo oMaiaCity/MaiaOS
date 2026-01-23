@@ -21,7 +21,10 @@ export { MessageQueue } from "./engines/message-queue/message.queue.js";
 
 // Export DB Engine (unified database operation engine)
 export { DBEngine } from "./engines/db-engine/db.engine.js";
-export { IndexedDBBackend } from "./engines/db-engine/backend/indexeddb.js";
+export { IndexedDBBackend } from "./engines/db-engine/backend/indexeddb/index.js";
 
 // Export SubscriptionEngine (used by kernel)
 export { SubscriptionEngine } from "./engines/subscription-engine/index.js";
+
+// Export ReactiveStore (reactive data store pattern)
+export { ReactiveStore } from "./utils/reactive-store.js";

@@ -4,15 +4,14 @@
   "name": "Database Operation Engine",
   "description": "Unified API for all database operations (configs, schemas, application data)",
   "operations": {
-    "query": {
-      "description": "Load data from database (reactive if callback provided)",
+    "read": {
+      "description": "Read data from database - always returns reactive store",
       "params": {
-        "schema": {"type": "string", "required": true, "description": "Schema reference (@schema/actor, @schema/todos)"},
-        "key": {"type": "string", "required": false, "description": "Specific key for configs (e.g., 'vibe/vibe')"},
-        "filter": {"type": "object", "required": false, "description": "Filter criteria for data queries"},
-        "callback": {"type": "function", "required": false, "description": "Callback for reactive subscriptions"}
+        "schema": {"type": "string", "required": true, "description": "Schema co-id (co_z...)"},
+        "key": {"type": "string", "required": false, "description": "Optional: specific key (co-id) for single item"},
+        "filter": {"type": "object", "required": false, "description": "Optional: filter criteria for collection queries"}
       },
-      "returns": "Data or unsubscribe function (if reactive)"
+      "returns": "ReactiveStore - always reactive, use store.subscribe() and store.value"
     },
     "create": {
       "description": "Create new record",

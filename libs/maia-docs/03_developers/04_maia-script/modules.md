@@ -55,10 +55,17 @@ export async function register(registry) {
 {
   tool: '@db',
   payload: {
-    op: 'query',
-    schema: '@schema/todos'
+    op: 'read',
+    schema: 'co_zTodos123'  // Schema co-id (co_z...)
   }
 }
+
+// read() always returns a reactive store
+const store = await os.db({op: 'read', schema: 'co_zTodos123'});
+console.log('Current todos:', store.value);
+store.subscribe((todos) => {
+  console.log('Todos updated:', todos);
+});
 ```
 
 ---

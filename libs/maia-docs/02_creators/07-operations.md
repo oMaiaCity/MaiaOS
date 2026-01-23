@@ -24,70 +24,74 @@ Where:
 
 ## Available Operations
 
-### `query` - Load Data
+### `read` - Load Data (Always Reactive)
 
-Load data, configs, or schemas from the database.
+Load data, configs, or schemas from the database. **Always returns a reactive store** that you can subscribe to.
 
 **Load a specific config:**
 ```javascript
-const actorConfig = await maia.db({
-  op: "query",
-  schema: "@schema/actor",
-  key: "@actor/agent"
+const store = await maia.db({
+  op: "read",
+  schema: "co_zActor123",  // Schema co-id (co_z...)
+  key: "co_zAgent456"      // Config co-id (co_z...)
+});
+
+// Store has current value immediately
+console.log('Current config:', store.value);
+
+// Subscribe to updates
+const unsubscribe = store.subscribe((data) => {
+  console.log('Config updated:', data);
 });
 ```
 
-**Query a collection:**
+**Read a collection:**
 ```javascript
-const todos = await maia.db({
-  op: "query",
-  schema: "co_z..."  // Co-id (transformed from @schema/todos during seeding)
+const store = await maia.db({
+  op: "read",
+  schema: "co_zTodos123"  // Schema co-id (co_z...)
+});
+
+// Store has current value immediately
+console.log('Current todos:', store.value);
+
+// Subscribe to updates
+const unsubscribe = store.subscribe((todos) => {
+  console.log('Todos updated:', todos);
 });
 ```
 
-**Query with filter:**
+**Read with filter:**
 ```javascript
-const incompleteTodos = await maia.db({
-  op: "query",
-  schema: "co_z...",  // Co-id
+const store = await maia.db({
+  op: "read",
+  schema: "co_zTodos123",  // Schema co-id (co_z...)
   filter: { done: false }
 });
-```
 
-**Note:** 
-- For configs, use schema references (`@schema/actor`) and instance references (`@actor/agent`)
-- For data collections, use co-ids (`co_z...`) - schema references are transformed to co-ids during seeding
-- In source files, you can use schema references, but they become co-ids at runtime
+// Store has filtered results immediately
+console.log('Incomplete todos:', store.value);
 
-**Reactive subscription (with callback):**
-```javascript
-const unsubscribe = await maia.db({
-  op: "query",
-  schema: "@schema/todos",
-  callback: (data) => {
-    console.log("Todos updated:", data);
-    // Update your UI here
-  }
+// Subscribe to updates (filter is automatically applied)
+const unsubscribe = store.subscribe((todos) => {
+  console.log('Incomplete todos updated:', todos);
 });
-
-// Later, unsubscribe
-unsubscribe();
 ```
+
+**Important Notes:** 
+- **All schemas must be co-ids** (`co_z...`) at runtime - human-readable IDs (`@schema/...`) are transformed to co-ids during seeding
+- **Always returns a reactive store** - use `store.value` for current value and `store.subscribe()` for updates
+- **No callbacks** - the store pattern replaces callback-based subscriptions
 
 **Parameters:**
-- `schema` (required) - Schema reference (`@schema/actor`) for configs, or co-id (`co_z...`) for data collections
-- `key` (optional) - Specific key for configs (e.g., `"@actor/agent"`)
+- `schema` (required) - Schema co-id (`co_z...`) - MUST be a co-id, not `@schema/...`
+- `key` (optional) - Specific key (co-id) for single item lookups
 - `filter` (optional) - Filter criteria object (e.g., `{done: false}`)
-- `callback` (optional) - Function for reactive subscriptions
-
-**Note:** 
-- For configs: Use schema references (`@schema/actor`, `@schema/view`, etc.)
-- For data collections: Use co-ids (`co_z...`) - schema references are transformed to co-ids during seeding
-- In your source files, you can use schema references (`@schema/todos`), but they become co-ids at runtime
 
 **Returns:**
-- Data (if one-time query)
-- Unsubscribe function (if reactive with callback)
+- `ReactiveStore` - Always returns a reactive store with:
+  - `store.value` - Current data value (available immediately)
+  - `store.subscribe(callback)` - Subscribe to updates, returns unsubscribe function
 
 ### `create` - Create New Records
 
@@ -318,16 +322,16 @@ Database
    - Routes operations to handlers
    - Supports swappable backends
 
-2. **Operation Handlers** (`libs/maia-script/src/o/engines/maiadb/operations/`)
-   - `query.js` - Query operation handler
+2. **Operation Handlers** (`libs/maia-script/src/engines/db-engine/operations/`)
+   - `read.js` - Read operation handler (always returns reactive store)
    - `create.js` - Create operation handler
    - `update.js` - Update operation handler
    - `delete.js` - Delete operation handler
    - `toggle.js` - Toggle operation handler
    - `seed.js` - Seed operation handler
 
-3. **Backend** (`libs/maia-script/src/o/engines/maiadb/backend/`)
-   - `indexeddb.js` - IndexedDB backend (current)
+3. **Backend** (`libs/maia-script/src/engines/db-engine/backend/`)
+   - `indexeddb/` - IndexedDB backend (current)
    - Future: CoJSON CRDT backend
 
 ## Best Practices
@@ -387,9 +391,9 @@ actor.actorEngine.toolEngine.execute('@db', actor, payload);
   "entry": {
     "tool": "@db",
     "payload": {
-      "op": "query",
-      "schema": "@schema/todos",
-      "callback": "..." // Don't do this - use context query objects!
+      "op": "read",
+      "schema": "co_zTodos123"
+      // Don't manually subscribe - use context query objects instead!
     }
   }
 }
@@ -597,7 +601,7 @@ The `@db` tool validates operations against this schema:
 {
   "op": {
     "type": "string",
-    "enum": ["query", "create", "update", "delete", "toggle", "seed"]
+    "enum": ["read", "create", "update", "delete", "toggle", "seed"]
   },
   "schema": {
     "type": "string",
@@ -610,9 +614,6 @@ The `@db` tool validates operations against this schema:
   "filter": {
     "type": "object",
     "description": "Optional: Filter criteria for data queries"
-  },
-  "callback": {
-    "description": "Optional: Callback function for reactive subscriptions"
   },
   "id": {
     "type": "string",
@@ -631,10 +632,10 @@ The `@db` tool validates operations against this schema:
 
 ## References
 
-- **DBEngine:** `libs/maia-script/src/o/engines/maiadb/db.engine.js`
-- **Operation Handlers:** `libs/maia-script/src/o/engines/maiadb/operations/`
-- **Backend:** `libs/maia-script/src/o/engines/maiadb/backend/indexeddb.js`
-- **Tool Definition:** `libs/maia-script/src/o/tools/db/db.tool.maia`
+- **DBEngine:** `libs/maia-script/src/engines/db-engine/db.engine.js`
+- **Operation Handlers:** `libs/maia-script/src/engines/db-engine/operations/`
+- **Backend:** `libs/maia-script/src/engines/db-engine/backend/indexeddb/`
+- **Tool Definition:** `libs/maia-tools/src/db/db.tool.js`
 - **Example Vibe:** `libs/maia-vibes/src/todos/`
 
 ## Future Enhancements

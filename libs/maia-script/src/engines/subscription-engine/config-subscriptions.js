@@ -3,9 +3,67 @@
  * 
  * Handles reactive subscriptions to config CRDTs (view, style, state, interface, context, brand).
  * Makes config files runtime-editable - changes trigger actor updates.
+ * 
+ * Uses pure stores from read() API - no callback handling.
  */
 
-import { subscribeConfigsBatch } from '../../utils/config-loader.js';
+/**
+ * Helper function to collect engine-based config subscription
+ * Reduces duplication for view/style/brand/state subscriptions
+ * @param {Object} subscriptionEngine - SubscriptionEngine instance
+ * @param {Object} actor - Actor instance
+ * @param {string} configKey - Config key (e.g., 'view', 'style', 'brand', 'state')
+ * @param {string} configCoId - Config co-id (co_z...)
+ * @param {Object} engine - Engine instance (viewEngine, styleEngine, or stateEngine)
+ * @param {string} subscriptionMapKey - Key in engine's subscription map (e.g., 'viewSubscriptions', 'styleSubscriptions')
+ * @param {Function} loadMethod - Engine's load method (e.g., loadView, loadStyle, loadStateDef)
+ * @param {Function} updateHandler - Handler function for updates (e.g., _handleViewUpdate, _handleStyleUpdate)
+ * @param {Array} engineSubscriptions - Array to push subscription promise to
+ * @returns {number} 1 if subscription added/reused, 0 otherwise
+ */
+function collectEngineSubscription(
+  subscriptionEngine,
+  actor,
+  configKey,
+  configCoId,
+  engine,
+  subscriptionMapKey,
+  loadMethod,
+  updateHandler,
+  engineSubscriptions
+) {
+  if (!configCoId || !configCoId.startsWith('co_z') || !engine) {
+    return 0;
+  }
+
+  const subscriptionMap = engine[subscriptionMapKey];
+  const existingUnsubscribe = subscriptionMap?.get(configCoId);
+  
+  if (existingUnsubscribe) {
+    // Subscription already exists, reuse it
+    actor._configSubscriptions.push(existingUnsubscribe);
+    return 1;
+  }
+
+  // Create new subscription via engine
+  engineSubscriptions.push(
+    loadMethod.call(engine, configCoId, (updatedConfig) => {
+      updateHandler.call(subscriptionEngine, actor.id, updatedConfig);
+    }).then(() => {
+      const unsubscribe = subscriptionMap?.get(configCoId);
+      if (unsubscribe) {
+        actor._configSubscriptions.push(unsubscribe);
+        return 1;
+      }
+      return 0;
+    }).catch(error => {
+      console.error(`[SubscriptionEngine] ❌ Failed to subscribe to ${configKey} for ${actor.id}:`, error);
+      return 0;
+    })
+  );
+
+  return 0; // Will be counted when promise resolves
+}
 
 /**
  * Collect view/style/state subscriptions (go through engines)
@@ -18,183 +76,169 @@ export async function collectViewStyleStateSubscriptions(subscriptionEngine, act
   const engineSubscriptions = [];
   let subscriptionCount = 0;
 
-  // Collect view subscription (if not already subscribed)
-  if (config.view && config.view.startsWith('co_z') && subscriptionEngine.viewEngine) {
-    const existingUnsubscribe = subscriptionEngine.viewEngine.viewSubscriptions?.get(config.view);
-    if (existingUnsubscribe) {
-      // Subscription already exists (from createActor), reuse it
-      actor._configSubscriptions.push(existingUnsubscribe);
-      subscriptionCount++;
-    } else {
-      // Need to set up subscription via engine (will use batch internally)
-      engineSubscriptions.push(
-        subscriptionEngine.viewEngine.loadView(config.view, (updatedView) => {
-          subscriptionEngine._handleViewUpdate(actor.id, updatedView);
-        }).then(() => {
-          const unsubscribe = subscriptionEngine.viewEngine.viewSubscriptions?.get(config.view);
-          if (unsubscribe) {
-            actor._configSubscriptions.push(unsubscribe);
-            subscriptionCount++;
-          }
-        }).catch(error => {
-          console.error(`[SubscriptionEngine] ❌ Failed to subscribe to view for ${actor.id}:`, error);
-        })
-      );
-    }
-  }
+  // Collect view subscription
+  subscriptionCount += collectEngineSubscription(
+    subscriptionEngine,
+    actor,
+    'view',
+    config.view,
+    subscriptionEngine.viewEngine,
+    'viewSubscriptions',
+    subscriptionEngine.viewEngine?.loadView,
+    subscriptionEngine._handleViewUpdate,
+    engineSubscriptions
+  );
 
-  // Collect style subscription (if not already subscribed)
-  if (config.style && config.style.startsWith('co_z') && subscriptionEngine.styleEngine) {
-    const existingUnsubscribe = subscriptionEngine.styleEngine.styleSubscriptions?.get(config.style);
-    if (existingUnsubscribe) {
-      actor._configSubscriptions.push(existingUnsubscribe);
-      subscriptionCount++;
-    } else {
-      engineSubscriptions.push(
-        subscriptionEngine.styleEngine.loadStyle(config.style, (updatedStyle) => {
-          subscriptionEngine._handleStyleUpdate(actor.id, updatedStyle);
-        }).then(() => {
-          const unsubscribe = subscriptionEngine.styleEngine.styleSubscriptions?.get(config.style);
-          if (unsubscribe) {
-            actor._configSubscriptions.push(unsubscribe);
-            subscriptionCount++;
-          }
-        }).catch(error => {
-          console.error(`[SubscriptionEngine] ❌ Failed to subscribe to style for ${actor.id}:`, error);
-        })
-      );
-    }
-  }
+  // Collect style subscription
+  subscriptionCount += collectEngineSubscription(
+    subscriptionEngine,
+    actor,
+    'style',
+    config.style,
+    subscriptionEngine.styleEngine,
+    'styleSubscriptions',
+    subscriptionEngine.styleEngine?.loadStyle,
+    subscriptionEngine._handleStyleUpdate,
+    engineSubscriptions
+  );
 
-  // Collect brand subscription (if not already subscribed)
-  if (config.brand && config.brand.startsWith('co_z') && subscriptionEngine.styleEngine) {
-    const existingUnsubscribe = subscriptionEngine.styleEngine.styleSubscriptions?.get(config.brand);
-    if (existingUnsubscribe) {
-      actor._configSubscriptions.push(existingUnsubscribe);
-      subscriptionCount++;
-    } else {
-      engineSubscriptions.push(
-        subscriptionEngine.styleEngine.loadStyle(config.brand, (updatedBrand) => {
-          subscriptionEngine._handleStyleUpdate(actor.id, updatedBrand);
-        }).then(() => {
-          const unsubscribe = subscriptionEngine.styleEngine.styleSubscriptions?.get(config.brand);
-          if (unsubscribe) {
-            actor._configSubscriptions.push(unsubscribe);
-            subscriptionCount++;
-          }
-        }).catch(error => {
-          console.error(`[SubscriptionEngine] ❌ Failed to subscribe to brand for ${actor.id}:`, error);
-        })
-      );
-    }
-  }
+  // Collect brand subscription (uses styleEngine)
+  subscriptionCount += collectEngineSubscription(
+    subscriptionEngine,
+    actor,
+    'brand',
+    config.brand,
+    subscriptionEngine.styleEngine,
+    'styleSubscriptions',
+    subscriptionEngine.styleEngine?.loadStyle,
+    subscriptionEngine._handleStyleUpdate,
+    engineSubscriptions
+  );
 
-  // Collect state subscription (if not already subscribed)
-  if (config.state && config.state.startsWith('co_z') && subscriptionEngine.stateEngine) {
-    const existingUnsubscribe = subscriptionEngine.stateEngine.stateSubscriptions?.get(config.state);
-    if (existingUnsubscribe) {
-      actor._configSubscriptions.push(existingUnsubscribe);
-      subscriptionCount++;
-    } else {
-      engineSubscriptions.push(
-        subscriptionEngine.stateEngine.loadStateDef(config.state, (updatedStateDef) => {
-          subscriptionEngine._handleStateUpdate(actor.id, updatedStateDef);
-        }).then(() => {
-          const unsubscribe = subscriptionEngine.stateEngine.stateSubscriptions?.get(config.state);
-          if (unsubscribe) {
-            actor._configSubscriptions.push(unsubscribe);
-            subscriptionCount++;
-          }
-        }).catch(error => {
-          console.error(`[SubscriptionEngine] ❌ Failed to subscribe to state for ${actor.id}:`, error);
-        })
-      );
-    }
-  }
+  // Collect state subscription
+  subscriptionCount += collectEngineSubscription(
+    subscriptionEngine,
+    actor,
+    'state',
+    config.state,
+    subscriptionEngine.stateEngine,
+    'stateSubscriptions',
+    subscriptionEngine.stateEngine?.loadStateDef,
+    subscriptionEngine._handleStateUpdate,
+    engineSubscriptions
+  );
 
   return { engineSubscriptions, subscriptionCount };
 }
 
 /**
- * Collect interface/context subscriptions (use batch API)
+ * Collect interface/context subscriptions (use pure stores from read() API)
  * @param {Object} subscriptionEngine - SubscriptionEngine instance
  * @param {Object} actor - Actor instance
  * @param {Object} config - Actor config
- * @returns {Promise<Array>} Batch subscription requests
+ * @returns {Promise<Array>} Array of subscription promises
  */
 export async function collectInterfaceContextSubscriptions(subscriptionEngine, actor, config) {
-  const batchRequests = [];
+  const subscriptions = [];
 
-  // Collect interface subscription for batch API
+  // Collect interface subscription using pure store
   if (config.interface && config.interface.startsWith('co_z')) {
     try {
       const interfaceSchemaCoId = await subscriptionEngine.dbEngine.getSchemaCoId('interface');
       if (interfaceSchemaCoId) {
-        batchRequests.push({
-          schemaRef: interfaceSchemaCoId,
-          coId: config.interface,
-          configType: 'interface',
-          onUpdate: (updatedInterface) => {
-            subscriptionEngine._handleInterfaceUpdate(actor.id, updatedInterface);
-          },
-          cache: null
-        });
+        subscriptions.push(
+          subscriptionEngine.dbEngine.execute({
+            op: 'read',
+            schema: interfaceSchemaCoId,
+            key: config.interface
+          }).then(async (store) => {
+            // Subscribe to store updates
+            const unsubscribe = store.subscribe((updatedInterface) => {
+              if (updatedInterface) {
+                subscriptionEngine._handleInterfaceUpdate(actor.id, updatedInterface);
+              }
+            });
+            
+            // Store unsubscribe function
+            if (!actor._configSubscriptions) {
+              actor._configSubscriptions = [];
+            }
+            actor._configSubscriptions.push(unsubscribe);
+            
+            return unsubscribe;
+          }).catch(error => {
+            console.error(`[SubscriptionEngine] ❌ Failed to subscribe to interface for ${actor.id}:`, error);
+          })
+        );
       }
     } catch (error) {
       console.error(`[SubscriptionEngine] ❌ Failed to get interface schema co-id for ${actor.id}:`, error);
     }
   }
 
-  // Collect context subscription for batch API
+  // Collect context subscription using pure store
   if (config.context && config.context.startsWith('co_z')) {
     try {
       const contextSchemaCoId = await subscriptionEngine.dbEngine.getSchemaCoId('context');
       if (contextSchemaCoId) {
-        batchRequests.push({
-          schemaRef: contextSchemaCoId,
-          coId: config.context,
-          configType: 'context',
-          onUpdate: (updatedContextDef) => {
-            // Extract context without metadata ($schema, $id)
-            const { $schema, $id, ...context } = updatedContextDef;
-            subscriptionEngine._handleContextUpdate(actor.id, context);
-          },
-          cache: null
-        });
+        subscriptions.push(
+          subscriptionEngine.dbEngine.execute({
+            op: 'read',
+            schema: contextSchemaCoId,
+            key: config.context
+          }).then(async (store) => {
+            // Subscribe to store updates
+            const unsubscribe = store.subscribe((updatedContextDef) => {
+              if (updatedContextDef) {
+                // Extract context without metadata ($schema, $id)
+                const { $schema, $id, ...context } = updatedContextDef;
+                subscriptionEngine._handleContextUpdate(actor.id, context);
+              }
+            });
+            
+            // Store unsubscribe function
+            if (!actor._configSubscriptions) {
+              actor._configSubscriptions = [];
+            }
+            actor._configSubscriptions.push(unsubscribe);
+            
+            return unsubscribe;
+          }).catch(error => {
+            console.error(`[SubscriptionEngine] ❌ Failed to subscribe to context for ${actor.id}:`, error);
+          })
+        );
       }
     } catch (error) {
       console.error(`[SubscriptionEngine] ❌ Failed to get context schema co-id for ${actor.id}:`, error);
     }
   }
 
-  return batchRequests;
+  return subscriptions;
 }
 
 /**
- * Execute batch subscriptions and engine subscriptions in parallel
+ * Execute interface/context subscriptions and engine subscriptions in parallel
  * @param {Object} subscriptionEngine - SubscriptionEngine instance
  * @param {Object} actor - Actor instance
- * @param {Array} batchRequests - Batch subscription requests
+ * @param {Array} interfaceContextSubscriptions - Interface/context subscription promises
  * @param {Array} engineSubscriptions - Engine subscription promises
  * @returns {Promise<number>} Total subscription count
  */
-export async function executeBatchSubscriptions(subscriptionEngine, actor, batchRequests, engineSubscriptions) {
+export async function executeBatchSubscriptions(subscriptionEngine, actor, interfaceContextSubscriptions, engineSubscriptions) {
   let subscriptionCount = 0;
 
-  // Execute batch subscriptions and engine subscriptions in parallel
-  const batchPromise = batchRequests.length > 0 
-    ? subscribeConfigsBatch(subscriptionEngine.dbEngine, batchRequests).then(results => {
-        results.forEach(({ unsubscribe }) => {
-          actor._configSubscriptions.push(unsubscribe);
-          subscriptionCount++;
-        });
+  // Execute interface/context subscriptions and engine subscriptions in parallel
+  const interfaceContextPromise = interfaceContextSubscriptions.length > 0 
+    ? Promise.all(interfaceContextSubscriptions).then(() => {
+        // Subscriptions are already stored in actor._configSubscriptions by collectInterfaceContextSubscriptions
+        subscriptionCount += interfaceContextSubscriptions.length;
       }).catch(error => {
-        console.error(`[SubscriptionEngine] ❌ Batch subscription failed for ${actor.id}:`, error);
+        console.error(`[SubscriptionEngine] ❌ Interface/context subscription failed for ${actor.id}:`, error);
       })
     : Promise.resolve();
 
-  // Wait for all subscriptions (batch + engines) to complete
-  await Promise.all([batchPromise, ...engineSubscriptions]);
+  // Wait for all subscriptions (interface/context + engines) to complete
+  await Promise.all([interfaceContextPromise, ...engineSubscriptions]);
 
   return subscriptionCount;
 }
