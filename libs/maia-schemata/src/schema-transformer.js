@@ -140,9 +140,11 @@ function transformCoReferences(obj, coIdMap) {
  * Transform an instance for seeding (replace human-readable refs with co-ids)
  * @param {Object} instance - Instance object (config, actor, view, etc.)
  * @param {Map<string, string>} coIdMap - Map of human-readable ID → co-id
+ * @param {Object} options - Optional transformation options
+ * @param {Function} options.schemaResolver - Optional function to resolve schema definitions by co-id: (schemaCoId) => Promise<Object|null>
  * @returns {Object} Transformed instance
  */
-export function transformInstanceForSeeding(instance, coIdMap) {
+export function transformInstanceForSeeding(instance, coIdMap, options = {}) {
   if (!instance || typeof instance !== 'object') {
     return instance;
   }
@@ -191,9 +193,9 @@ export function transformInstanceForSeeding(instance, coIdMap) {
   }
   // Note: If $id doesn't exist, it will be generated in _seedConfigs
 
-  // Transform reference properties (actor, context, view, state, interface, brand, style, subscriptions, inbox)
+  // Transform reference properties (actor, context, view, state, interface, brand, style, subscriptions, inbox, children)
   // Note: tokens and components are now embedded objects in styles, not separate CoValue references
-  const referenceProps = ['actor', 'context', 'view', 'state', 'interface', 'brand', 'style', 'subscriptions', 'inbox'];
+  const referenceProps = ['actor', 'context', 'view', 'state', 'interface', 'brand', 'style', 'subscriptions', 'inbox', 'children'];
   for (const prop of referenceProps) {
     if (transformed[prop] && typeof transformed[prop] === 'string') {
       const ref = transformed[prop];
@@ -212,7 +214,16 @@ export function transformInstanceForSeeding(instance, coIdMap) {
       if (coId) {
         transformed[prop] = coId;
       } else {
-        throw new Error(`[SchemaTransformer] No co-id found for ${prop} reference: ${ref}. Make sure the referenced instance exists and has a unique $id.`);
+        // Log available keys for debugging
+        const availableKeys = Array.from(coIdMap.keys())
+          .filter(k => k.startsWith('@'))
+          .slice(0, 10)
+          .join(', ');
+        throw new Error(
+          `[SchemaTransformer] No co-id found for ${prop} reference: ${ref}. ` +
+          `Make sure the referenced instance exists and has a unique $id. ` +
+          `Available refs (first 10): ${availableKeys}`
+        );
       }
     }
   }
@@ -230,7 +241,14 @@ export function transformInstanceForSeeding(instance, coIdMap) {
         if (coId) {
           transformed.children[key] = coId;
         } else {
-          throw new Error(`[SchemaTransformer] No co-id found for children[${key}] reference: ${childRef}`);
+          const availableActors = Array.from(coIdMap.keys())
+            .filter(k => k.startsWith('@actor/'))
+            .slice(0, 10)
+            .join(', ');
+          throw new Error(
+            `[SchemaTransformer] No co-id found for children[${key}] reference: ${childRef}. ` +
+            `Available actors (first 10): ${availableActors}`
+          );
         }
       }
     }
@@ -239,15 +257,19 @@ export function transformInstanceForSeeding(instance, coIdMap) {
   // Note: subscriptions and inbox are now in separate .maia files (already clean at definition level)
   // No legacy extraction/transformation logic needed
 
-  // Transform items array for subscriptions and inbox
-  // These are separate CoValue files with items arrays containing actor/message references
+  // Transform items array for colist/costream schemas (fully generic - works for ANY schema with items array)
+  // If items array contains string references (starting with @), transform them to co-ids
+  // This works for subscriptions (colist of actors), inboxes (costream of messages), or any future colist/costream schema
   if (transformed.items && Array.isArray(transformed.items)) {
-    const schema = transformed.$schema;
-    // Check if this is a subscriptions or inbox
-    if (schema && (schema.includes('subscriptions') || schema.includes('inbox'))) {
+    // Check if items array contains any string references that need transformation
+    const hasReferences = transformed.items.some(item => 
+      typeof item === 'string' && item.startsWith('@') && !item.startsWith('co_z')
+    );
+    
+    if (hasReferences) {
       transformed.items = transformed.items.map(ref => {
         if (typeof ref === 'string' && !ref.startsWith('co_z')) {
-          // Must be @actor/ or @message/ format
+          // Must be @maiatype/instance format (e.g., @actor/agent, @message/123)
           if (!ref.startsWith('@')) {
             throw new Error(`[SchemaTransformer] items array reference must use @maiatype/instance format, got: ${ref}`);
           }
@@ -256,10 +278,10 @@ export function transformInstanceForSeeding(instance, coIdMap) {
           if (coId) {
             return coId;
           } else {
-            throw new Error(`[SchemaTransformer] No co-id found for items reference: ${ref}`);
+            throw new Error(`[SchemaTransformer] No co-id found for items reference: ${ref}. Make sure the referenced instance exists and has a unique $id.`);
           }
         }
-        return ref;
+        return ref; // Already a co-id or non-string, return as-is
       });
     }
   }

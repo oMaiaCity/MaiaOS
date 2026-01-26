@@ -36,6 +36,7 @@ import expressionSchema from './os/maia-script-expression.schema.json';
 // Import CoValue schemas
 import subscriptionsSchema from './os/subscriptions.schema.json';
 import inboxSchema from './os/inbox.schema.json';
+import childrenSchema from './os/children.schema.json';
 // Import data schemas
 import todosDataSchema from './data/todos.schema.json';
 
@@ -63,7 +64,8 @@ const SCHEMAS = {
   'maia-script-expression': expressionSchema,
   // CoValue schemas (separate CoValues referenced via $co)
   subscriptions: subscriptionsSchema,
-  inbox: inboxSchema
+  inbox: inboxSchema,
+  children: childrenSchema
 };
 
 // Data schemas registry (for application data validation)

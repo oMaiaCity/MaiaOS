@@ -6,11 +6,6 @@
   "cotype": "comap",
   "required": ["initial", "states"],
   "properties": {
-    "$schema": {
-      "type": "string",
-      "description": "Schema reference",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
-    },
     "initial": {
       "type": "string",
       "description": "Initial state name"

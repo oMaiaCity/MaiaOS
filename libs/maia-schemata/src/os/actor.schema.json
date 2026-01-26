@@ -5,11 +5,6 @@
   "description": "Pure declarative actor specification",
   "cotype": "comap",
   "properties": {
-    "$schema": {
-      "type": "string",
-      "description": "Schema reference",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
-    },
     "role": {
       "type": "string",
       "description": "Actor role (e.g., 'kanban-view', 'vibe', 'composite', 'leaf')"
@@ -39,11 +34,8 @@
       "description": "Co-id reference to local style definition"
     },
     "children": {
-      "type": "object",
-      "description": "Child actor references",
-      "additionalProperties": {
-        "$co": "@schema/actor"
-      }
+      "$co": "@schema/children",
+      "description": "Co-id reference to children colist (list of child actor co-ids)"
     },
     "subscriptions": {
       "$co": "@schema/subscriptions",

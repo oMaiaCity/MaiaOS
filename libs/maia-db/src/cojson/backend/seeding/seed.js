@@ -419,56 +419,428 @@ export async function seed(account, node, configs, schemas, data) {
   }
   */
   
-  // Empty maps for now (configs and data are commented out)
+  // Empty maps for now (data is commented out)
   const instanceCoIdMap = new Map();
   const dataCollectionCoIds = new Map();
   
-  // Phase 6-8: Config and data seeding (COMMENTED OUT - focusing on schemas and registry only)
-  // TODO: Re-enable config and data seeding once schema/registry seeding is stable
-  /*
-  // Phase 6: Transform all instances with schema co-ids (schemas already created)
-  // Note: Config co-ids will be assigned by CoJSON when we create the CoMaps
-  console.log('   Transforming config references...');
-  const transformedConfigs = {};
-  for (const [configType, configValue] of Object.entries(configs)) {
-    if (Array.isArray(configValue)) {
-      transformedConfigs[configType] = configValue.map(item => 
-        transformInstanceForSeeding(item, coIdRegistry.getAll())
-      );
-    } else if (configValue && typeof configValue === 'object') {
-      if (configType === 'vibe') {
-        transformedConfigs[configType] = transformInstanceForSeeding(configValue, coIdRegistry.getAll());
-      } else {
-        transformedConfigs[configType] = {};
-        for (const [instanceKey, instance] of Object.entries(configValue)) {
-          transformedConfigs[configType][instanceKey] = transformInstanceForSeeding(instance, coIdRegistry.getAll());
+  // Phase 6-7: Config seeding with "leaf first" order (same as IndexedDB)
+  // Strategy: Generate co-ids for ALL configs first, register them, then transform and seed
+  
+  // Step 1: Build combined registry (schema co-ids + will include instance co-ids)
+  // Read schema co-ids from persisted registry (account.os.schematas) - REAL co-ids from CoJSON
+  const getCombinedRegistry = async () => {
+    // Start with schema registry
+    const schemaRegistry = new Map();
+    
+    // Try to read from persisted registry first
+    const osId = account.get("os");
+    if (osId) {
+      const osCore = node.getCoValue(osId);
+      if (osCore && osCore.type === 'comap') {
+        const osContent = osCore.getCurrentContent?.();
+        if (osContent && typeof osContent.get === 'function') {
+          const schematasId = osContent.get("schematas");
+          if (schematasId) {
+            const schematasCore = node.getCoValue(schematasId);
+            if (schematasCore && schematasCore.type === 'comap') {
+              const schematasContent = schematasCore.getCurrentContent?.();
+              if (schematasContent && typeof schematasContent.get === 'function') {
+                // Read all mappings from persisted registry (REAL co-ids from CoJSON)
+                const keys = schematasContent.keys();
+                for (const key of keys) {
+                  const coId = schematasContent.get(key);
+                  if (coId && typeof coId === 'string' && coId.startsWith('co_z')) {
+                    schemaRegistry.set(key, coId);
+                  }
+                }
+                if (schemaRegistry.size > 0) {
+                  console.log(`   📖 Using persisted registry from account.os.schematas (${schemaRegistry.size} mappings)`);
+                }
+              }
+            }
+          }
         }
       }
-    } else {
-      transformedConfigs[configType] = configValue;
     }
-  }
-  
-  // Phase 7: Create config CoMaps (CoJSON assigns IDs automatically)
-  // Then update instanceCoIdMap and coIdRegistry with actual IDs
-  console.log('   Seeding configs...');
-  const seededConfigs = await seedConfigs(account, node, universalGroup, transformedConfigs, instanceCoIdMap);
-  
-  // Update instanceCoIdMap and coIdRegistry with actual CoMap IDs
-  for (const configInfo of seededConfigs.configs || []) {
-    const actualCoId = configInfo.coId;
-    const path = configInfo.path;
     
-    // Update maps with actual co-id
-    instanceCoIdMap.set(path, actualCoId);
-    if (configInfo.expectedCoId) {
-      instanceCoIdMap.set(configInfo.expectedCoId, actualCoId);
-      coIdRegistry.register(configInfo.expectedCoId, actualCoId);
+    // If registry doesn't exist yet, build it from actual co-ids we just created (from schemaCoIdMap)
+    if (schemaRegistry.size === 0) {
+      console.log('   📝 Building registry from actual CoMap co-ids (schemas just created)');
+      for (const [schemaKey, actualCoId] of schemaCoIdMap.entries()) {
+        schemaRegistry.set(schemaKey, actualCoId);
+      }
+      // Also add meta-schema if we have it
+      if (metaSchemaCoId) {
+        schemaRegistry.set('@meta-schema', metaSchemaCoId);
+      }
     }
-    coIdRegistry.register(path, actualCoId);
+    
+    return schemaRegistry;
+  };
+  
+  let combinedRegistry = await getCombinedRegistry();
+  
+  // Step 2: Register data collection schema co-ids (for query object transformations)
+  // Some configs have query objects that reference data collection schemas (e.g., @schema/todos)
+  // We need these in the registry before transforming configs
+  if (data) {
+    for (const [collectionName] of Object.entries(data)) {
+      const schemaKey = `@schema/${collectionName}`;
+      const dataSchemaKey = `@schema/data/${collectionName}`;
+      
+      // Check if data schema exists in schema registry
+      const dataSchemaCoId = combinedRegistry.get(dataSchemaKey);
+      if (dataSchemaCoId) {
+        // Register both @schema/todos and @schema/data/todos → same co-id
+        combinedRegistry.set(schemaKey, dataSchemaCoId);
+        coIdRegistry.register(schemaKey, dataSchemaCoId);
+        console.log(`   📋 Registered data collection schema: ${schemaKey} → ${dataSchemaCoId.substring(0, 12)}...`);
+      }
+    }
   }
   
-  // Phase 8: Seed data entities to CoJSON
+  // Step 3: Seed configs in "leaf first" order - ONLY use real co-ids from CoJSON!
+  // Create actors first WITHOUT transforming config references (only schema refs)
+  // Then register real co-ids, then transform dependent configs like vibes
+  let seededConfigs = { configs: [], count: 0 };
+  
+  // Helper: Transform only schema references (skip config references that don't exist yet)
+  const transformSchemaRefsOnly = (instance, schemaRegistry) => {
+    if (!instance || typeof instance !== 'object') {
+      return instance;
+    }
+    const transformed = JSON.parse(JSON.stringify(instance));
+    
+    // Transform $schema reference only
+    if (transformed.$schema && transformed.$schema.startsWith('@schema/')) {
+      const coId = schemaRegistry.get(transformed.$schema);
+      if (coId) {
+        transformed.$schema = coId;
+      }
+    }
+    
+    // Don't transform config references (actor, children, etc.) - they'll be resolved after creation
+    return transformed;
+  };
+
+  // Helper to rebuild combined registry with latest registrations
+  const refreshCombinedRegistry = () => {
+    // Start with schema registry (from account.os.schematas)
+    const refreshed = new Map(combinedRegistry);
+
+    // Add all instance co-ids registered so far
+    for (const [key, coId] of instanceCoIdMap.entries()) {
+      if (coId && typeof coId === 'string' && coId.startsWith('co_z')) {
+        refreshed.set(key, coId);
+      }
+    }
+
+    // Add all co-ids from coIdRegistry
+    for (const [key, coId] of coIdRegistry.getAll()) {
+      if (coId && typeof coId === 'string' && coId.startsWith('co_z')) {
+        refreshed.set(key, coId);
+      }
+    }
+
+    // Logging for verification
+    console.log(`   📝 Registry refreshed: ${refreshed.size} total mappings`);
+    const actorRefs = Array.from(refreshed.keys()).filter(k => k.startsWith('@actor/'));
+    if (actorRefs.length > 0) {
+      console.log(`      - Actors: ${actorRefs.length} (${actorRefs.slice(0, 5).join(', ')}...)`);
+    }
+    const viewRefs = Array.from(refreshed.keys()).filter(k => k.startsWith('@view/'));
+    if (viewRefs.length > 0) {
+      console.log(`      - Views: ${viewRefs.length} (${viewRefs.slice(0, 5).join(', ')}...)`);
+    }
+
+    return refreshed;
+  };
+
+  // Seed all configs in "leaf first" order (same as IndexedDB)
+  // Order: styles → actors → views → contexts → states → interfaces → subscriptions → inboxes → tool → vibe
+  // Create all configs first with schema refs only, register their co-ids, then update references
+  
+  // Helper to seed a config type and register co-ids
+  // Note: configTypeKey is plural (e.g., 'actors'), but seedConfigs expects singular type names
+  const seedConfigTypeAndRegister = async (configTypeKey, configsOfType, singularTypeName) => {
+    if (!configsOfType || typeof configsOfType !== 'object') {
+      return { configs: [], count: 0 };
+    }
+    
+    console.log(`   🌱 Seeding ${configTypeKey} (schema refs only)...`);
+    const transformed = {};
+    for (const [instanceKey, instance] of Object.entries(configsOfType)) {
+      transformed[instanceKey] = transformSchemaRefsOnly(instance, combinedRegistry);
+    }
+    
+    // seedConfigs expects keys like 'actors', 'views', etc., but uses singular type names internally
+    const configsToSeed = { [configTypeKey]: transformed };
+    const seeded = await seedConfigs(account, node, universalGroup, configsToSeed, instanceCoIdMap, schemaCoMaps, schemaCoIdMap);
+    
+    // Register REAL co-ids from CoJSON
+    for (const configInfo of seeded.configs || []) {
+      const actualCoId = configInfo.coId;
+      const path = configInfo.path;
+      const originalId = configInfo.expectedCoId;
+      
+      instanceCoIdMap.set(path, actualCoId);
+      if (originalId) {
+        instanceCoIdMap.set(originalId, actualCoId);
+        combinedRegistry.set(originalId, actualCoId);
+        coIdRegistry.register(originalId, actualCoId);
+      }
+      coIdRegistry.register(path, actualCoId);
+    }
+    
+    console.log(`   ✅ Registered ${seeded.configs?.length || 0} ${configTypeKey} co-ids (REAL from CoJSON)`);
+    return seeded;
+  };
+  
+  // Seed all config types in dependency order (same as IndexedDB)
+  // Order: styles → actors → views → contexts → states → interfaces → subscriptions → inboxes → tool
+  if (configs) {
+    const stylesSeeded = await seedConfigTypeAndRegister('styles', configs.styles, 'style');
+    seededConfigs.configs.push(...(stylesSeeded.configs || []));
+    seededConfigs.count += stylesSeeded.count || 0;
+    combinedRegistry = refreshCombinedRegistry(); // REFRESH: styles now available
+
+    const actorsSeeded = await seedConfigTypeAndRegister('actors', configs.actors, 'actor');
+    seededConfigs.configs.push(...(actorsSeeded.configs || []));
+    seededConfigs.count += actorsSeeded.count || 0;
+    combinedRegistry = refreshCombinedRegistry(); // REFRESH: actors now available
+
+    const viewsSeeded = await seedConfigTypeAndRegister('views', configs.views, 'view');
+    seededConfigs.configs.push(...(viewsSeeded.configs || []));
+    seededConfigs.count += viewsSeeded.count || 0;
+    combinedRegistry = refreshCombinedRegistry(); // REFRESH: views now available
+
+    const contextsSeeded = await seedConfigTypeAndRegister('contexts', configs.contexts, 'context');
+    seededConfigs.configs.push(...(contextsSeeded.configs || []));
+    seededConfigs.count += contextsSeeded.count || 0;
+    combinedRegistry = refreshCombinedRegistry(); // REFRESH: contexts now available
+
+    const statesSeeded = await seedConfigTypeAndRegister('states', configs.states, 'state');
+    seededConfigs.configs.push(...(statesSeeded.configs || []));
+    seededConfigs.count += statesSeeded.count || 0;
+    combinedRegistry = refreshCombinedRegistry(); // REFRESH: states now available
+
+    const interfacesSeeded = await seedConfigTypeAndRegister('interfaces', configs.interfaces, 'interface');
+    seededConfigs.configs.push(...(interfacesSeeded.configs || []));
+    seededConfigs.count += interfacesSeeded.count || 0;
+    combinedRegistry = refreshCombinedRegistry(); // REFRESH: interfaces now available
+
+    const subscriptionsSeeded = await seedConfigTypeAndRegister('subscriptions', configs.subscriptions, 'subscription');
+    seededConfigs.configs.push(...(subscriptionsSeeded.configs || []));
+    seededConfigs.count += subscriptionsSeeded.count || 0;
+    combinedRegistry = refreshCombinedRegistry(); // REFRESH: subscriptions now available
+
+    const inboxesSeeded = await seedConfigTypeAndRegister('inboxes', configs.inboxes, 'inbox');
+    seededConfigs.configs.push(...(inboxesSeeded.configs || []));
+    seededConfigs.count += inboxesSeeded.count || 0;
+    combinedRegistry = refreshCombinedRegistry(); // REFRESH: inboxes now available
+
+    const childrenSeeded = await seedConfigTypeAndRegister('children', configs.children, 'children');
+    seededConfigs.configs.push(...(childrenSeeded.configs || []));
+    seededConfigs.count += childrenSeeded.count || 0;
+    combinedRegistry = refreshCombinedRegistry(); // REFRESH: children now available
+
+    const toolsSeeded = await seedConfigTypeAndRegister('tool', configs.tool, 'tool');
+    seededConfigs.configs.push(...(toolsSeeded.configs || []));
+    seededConfigs.count += toolsSeeded.count || 0;
+    combinedRegistry = refreshCombinedRegistry(); // REFRESH: tools now available
+  }
+  
+  // Now update all configs with transformed references (all co-ids are now registered)
+  console.log('   🔄 Updating all configs with transformed co-id references...');
+  const updateConfigReferences = async (configsToUpdate, originalConfigs) => {
+    if (!configsToUpdate || !originalConfigs) {
+      console.log(`   ⚠️  Update skipped: configsToUpdate=${!!configsToUpdate}, originalConfigs=${!!originalConfigs}`);
+      return 0;
+    }
+
+    // Use latest registry with all registered co-ids
+    const latestRegistry = refreshCombinedRegistry();
+
+    let updatedCount = 0;
+    for (const configInfo of configsToUpdate) {
+      const coId = configInfo.coId;
+      const originalId = configInfo.expectedCoId;
+
+      // Find original config
+      const originalConfig = originalId && originalConfigs
+        ? Object.values(originalConfigs).find(cfg => cfg.$id === originalId)
+        : null;
+
+      if (!originalConfig) {
+        console.log(`   ⚠️  No original config found for co-id: ${coId}, expectedCoId: ${originalId}`);
+        continue;
+      }
+
+      console.log(`   🔍 Updating config ${originalId} (${coId}) [${configInfo.cotype || 'comap'}]...`);
+      console.log(`      Original:`, JSON.stringify(originalConfig, null, 2).substring(0, 200));
+
+      // Transform with full registry (all co-ids now available)
+      const fullyTransformed = transformInstanceForSeeding(originalConfig, latestRegistry);
+      console.log(`      Transformed:`, JSON.stringify(fullyTransformed, null, 2).substring(0, 200));
+
+      // Use the stored CoValue reference (CoMap, CoList, or CoStream)
+      const coValue = configInfo.coMap;
+      const cotype = configInfo.cotype || 'comap';
+
+      if (cotype === 'colist') {
+        // CoList: Append transformed items (CoLists are append-only, items are added via append())
+        if (coValue && typeof coValue.append === 'function') {
+          const transformedItems = fullyTransformed.items || [];
+          // Append transformed items (CoLists created empty, so just append all items)
+          for (const item of transformedItems) {
+            coValue.append(item);
+          }
+          console.log(`      Appended ${transformedItems.length} items to CoList`);
+          updatedCount++;
+        } else {
+          console.log(`   ⚠️  Cannot update CoList: append method not available`);
+        }
+      } else if (cotype === 'costream') {
+        // CoStream: Append-only, add items with resolved references
+        if (coValue && typeof coValue.push === 'function') {
+          const transformedItems = fullyTransformed.items || [];
+          // Append transformed items to the stream
+          for (const item of transformedItems) {
+            coValue.push(item);
+          }
+          console.log(`      Appended ${transformedItems.length} items to CoStream`);
+          updatedCount++;
+        } else {
+          console.log(`   ⚠️  Cannot update CoStream: push method not available`);
+        }
+      } else {
+        // CoMap: Update all properties
+        if (coValue && typeof coValue.set === 'function') {
+          // Skip $id and $schema (those are in metadata, not properties)
+          const { $id, $schema, ...propsToSet } = fullyTransformed;
+
+          for (const [key, value] of Object.entries(propsToSet)) {
+            console.log(`      Setting ${key}:`, typeof value === 'string' ? value : JSON.stringify(value).substring(0, 100));
+            coValue.set(key, value);
+          }
+
+          updatedCount++;
+        } else {
+          console.log(`   ⚠️  Cannot update CoMap: set method not available`);
+        }
+      }
+    }
+    console.log(`   ✅ Updated ${updatedCount} configs`);
+    return updatedCount;
+  };
+  
+  if (configs) {
+    // Update order: dependencies first, then dependents
+    // 1. Update subscriptions, inboxes, children first (they reference actors, but don't affect actor updates)
+    const subscriptionsToUpdate = seededConfigs.configs.filter(c => c.type === 'subscription');
+    await updateConfigReferences(subscriptionsToUpdate, configs.subscriptions);
+
+    const inboxesToUpdate = seededConfigs.configs.filter(c => c.type === 'inbox');
+    await updateConfigReferences(inboxesToUpdate, configs.inboxes);
+
+    // Update children BEFORE actors (actors reference children)
+    const childrenToUpdate = seededConfigs.configs.filter(c => c.type === 'children');
+    await updateConfigReferences(childrenToUpdate, configs.children);
+    
+    // Refresh registry after children are updated (so actor updates can resolve children references)
+    refreshCombinedRegistry();
+
+    // 2. Update actors AFTER children are registered (actors reference children)
+    const actorsToUpdate = seededConfigs.configs.filter(c => c.type === 'actor');
+    await updateConfigReferences(actorsToUpdate, configs.actors);
+    
+    const viewsToUpdate = seededConfigs.configs.filter(c => c.type === 'view');
+    await updateConfigReferences(viewsToUpdate, configs.views);
+    
+    const contextsToUpdate = seededConfigs.configs.filter(c => c.type === 'context');
+    await updateConfigReferences(contextsToUpdate, configs.contexts);
+    
+    const statesToUpdate = seededConfigs.configs.filter(c => c.type === 'state');
+    await updateConfigReferences(statesToUpdate, configs.states);
+    
+    const interfacesToUpdate = seededConfigs.configs.filter(c => c.type === 'interface');
+    await updateConfigReferences(interfacesToUpdate, configs.interfaces);
+
+    // Styles and tools don't typically reference other configs, skip update
+  }
+  
+  console.log(`   ✅ Updated all configs with co-id references`);
+  
+  // Seed vibe (depends on actors, so seed after actors)
+  // Now that actors are registered, we can transform vibe references properly
+  if (configs && configs.vibe) {
+    console.log('   🌱 Seeding vibe...');
+
+    // REFRESH REGISTRY before transforming vibe (actors are now registered)
+    combinedRegistry = refreshCombinedRegistry();
+
+    // Re-transform vibe now that actors are registered
+    const retransformedVibe = transformInstanceForSeeding(configs.vibe, combinedRegistry);
+    
+    // Extract vibe key from original $id BEFORE transformation
+    const originalVibeId = configs.vibe.$id || '';
+    const vibeKey = originalVibeId.startsWith('@vibe/') 
+      ? originalVibeId.replace('@vibe/', '')
+      : (configs.vibe.name || 'default').toLowerCase().replace(/\s+/g, '-');
+    
+    const vibeConfigs = { vibe: retransformedVibe };
+    const vibeSeeded = await seedConfigs(account, node, universalGroup, vibeConfigs, instanceCoIdMap, schemaCoMaps, schemaCoIdMap);
+    seededConfigs.configs.push(...(vibeSeeded.configs || []));
+    seededConfigs.count += vibeSeeded.count || 0;
+    
+    // Store vibe in account.vibes CoMap (simplified structure: account.vibes.todos = co-id)
+    if (vibeSeeded.configs && vibeSeeded.configs.length > 0) {
+      const vibeInfo = vibeSeeded.configs[0]; // First config should be the vibe
+      const vibeCoId = vibeInfo.coId;
+      
+      // Create or get account.vibes CoMap
+      let vibesId = account.get("vibes");
+      let vibes;
+      
+      if (vibesId) {
+        const vibesCore = node.getCoValue(vibesId);
+        if (vibesCore && vibesCore.type === 'comap') {
+          const vibesContent = vibesCore.getCurrentContent?.();
+          if (vibesContent && typeof vibesContent.set === 'function') {
+            vibes = vibesContent;
+            console.log('   ℹ️  account.vibes already exists:', vibesId);
+          }
+        }
+      }
+      
+      if (!vibes) {
+        // Create vibes CoMap directly using universalGroup
+        const vibesMeta = { $schema: 'GenesisSchema' };
+        vibes = universalGroup.createMap({}, vibesMeta);
+        account.set("vibes", vibes.id);
+        console.log('   ✅ account.vibes created:', vibes.id);
+      }
+      
+      // Store vibe co-id in account.vibes CoMap
+      vibes.set(vibeKey, vibeCoId);
+      console.log(`   ✅ Stored vibe in account.vibes: ${vibeKey} → ${vibeCoId}`);
+      
+      // Register REAL co-id from CoJSON (never pre-generate!)
+      const originalVibeIdForRegistry = configs.vibe.$id; // Original $id (e.g., @vibe/todos)
+      instanceCoIdMap.set('vibe', vibeCoId);
+      if (originalVibeIdForRegistry) {
+        instanceCoIdMap.set(originalVibeIdForRegistry, vibeCoId);
+        combinedRegistry.set(originalVibeIdForRegistry, vibeCoId); // Add to registry for future transformations
+        coIdRegistry.register(originalVibeIdForRegistry, vibeCoId);
+      }
+      coIdRegistry.register('vibe', vibeCoId);
+      console.log(`   ✅ Registered vibe co-id (REAL from CoJSON): ${originalVibeIdForRegistry || 'vibe'} → ${vibeCoId}`);
+    }
+  }
+  
+  // Phase 8: Seed data entities to CoJSON (COMMENTED OUT)
+  // TODO: Re-enable data seeding once config seeding is stable
+  /*
   console.log('   Seeding data...');
   const seededData = await seedData(account, node, universalGroup, data, generateCoId, coIdRegistry, dataCollectionCoIds);
   */
@@ -478,11 +850,23 @@ export async function seed(account, node, configs, schemas, data) {
   await storeRegistry(account, node, universalGroup, coIdRegistry, schemaCoIdMap, instanceCoIdMap, configs || {}, seededSchemas);
   
   console.log('✅ CoJSON seeding complete!');
-  
+
+  // Verify registry contains all expected references
+  const finalRegistry = coIdRegistry.getAll();
+  console.log(`   📊 Final registry: ${finalRegistry.size} mappings`);
+
+  // Group by type
+  const byType = {};
+  for (const [key] of finalRegistry) {
+    const type = key.split('/')[0] || 'other';
+    byType[type] = (byType[type] || 0) + 1;
+  }
+  console.log('   📊 Registry breakdown:', byType);
+
   return {
     metaSchema: metaSchemaCoId,
     schemas: seededSchemas,
-    configs: { configs: [] }, // Empty for now
+    configs: seededConfigs,
     data: { collections: [], totalItems: 0 }, // Empty for now
     registry: coIdRegistry.getAll()
   };
@@ -493,64 +877,123 @@ export async function seed(account, node, configs, schemas, data) {
  * Creates CoMaps for each config instance (vibe, actors, views, contexts, etc.)
  * @private
  */
-async function seedConfigs(account, node, universalGroup, transformedConfigs, instanceCoIdMap) {
+async function seedConfigs(account, node, universalGroup, transformedConfigs, instanceCoIdMap, schemaCoMaps, schemaCoIdMap) {
   const seededConfigs = [];
   let totalCount = 0;
   
-  // Helper to create a config CoMap
-  const createConfigCoMap = async (config, configType, path) => {
+  // Helper to create a config (CoMap, CoList, or CoStream based on schema's cotype)
+  const createConfig = async (config, configType, path) => {
     // Get schema co-id from $schema property
     const schemaCoId = config.$schema;
     if (!schemaCoId || !schemaCoId.startsWith('co_z')) {
       throw new Error(`[CoJSONSeed] Config ${configType}:${path} has invalid $schema: ${schemaCoId}`);
     }
+
+    // Retrieve the schema definition to check its cotype
+    // Use the schemaCoMaps map we created during schema seeding (more reliable than getCoValue)
+    let cotype = 'comap'; // Default to comap
     
-    // Remove $id from config (it's stored separately, not in the CoMap)
-    const { $id, ...configWithoutId } = config;
+    // Find schema by reverse lookup in schemaCoIdMap
+    let schemaCoMap = null;
+    for (const [schemaKey, coId] of schemaCoIdMap.entries()) {
+      if (coId === schemaCoId) {
+        schemaCoMap = schemaCoMaps.get(schemaKey);
+        break;
+      }
+    }
     
-    // Create CoMap directly with custom headerMeta (configs use schema co-ids, not schema names)
-    // Use universal group to create the CoMap
+    // If not found in map, try getCoValue as fallback
+    if (!schemaCoMap) {
+      const schemaCore = node.getCoValue(schemaCoId);
+      if (schemaCore && schemaCore.type === 'comap') {
+        schemaCoMap = schemaCore.getCurrentContent?.();
+      }
+    }
+    
+    if (schemaCoMap && typeof schemaCoMap.get === 'function') {
+      // Try to get cotype property
+      cotype = schemaCoMap.get('cotype') || 'comap';
+      
+      // Debug: log all properties to see what's actually stored
+      if (cotype === 'comap') {
+        const keys = schemaCoMap.keys ? Array.from(schemaCoMap.keys()) : [];
+        const allProps = {};
+        if (keys.length > 0) {
+          for (const key of keys) {
+            allProps[key] = schemaCoMap.get(key);
+          }
+        }
+        console.log(`   🔍 Schema ${schemaCoId.substring(0, 12)}... (config: ${path}) - cotype: ${cotype}, keys: [${keys.join(', ')}], sample props:`, JSON.stringify(allProps).substring(0, 200));
+      } else {
+        console.log(`   ✅ Found cotype "${cotype}" for schema ${schemaCoId.substring(0, 12)}... (config: ${path})`);
+      }
+    } else {
+      console.warn(`   ⚠️  Cannot read schema CoMap for ${schemaCoId.substring(0, 12)}... (config: ${path}), schemaCoMap type: ${typeof schemaCoMap}`);
+    }
+
+    // Remove $id and $schema from config (they're stored in metadata, not as properties)
+    const { $id, $schema, ...configWithoutId } = config;
+
+    // Create the appropriate CoJSON type based on schema's cotype
     const meta = { $schema: schemaCoId }; // Set schema co-id in headerMeta
-    const configCoMap = universalGroup.createMap(configWithoutId, meta);
-    
-    // CoJSON assigned the ID automatically - verify it matches expected co-id
-    const actualCoId = configCoMap.id;
+    let coValue;
+    let actualCoId;
+
+    if (cotype === 'colist') {
+      // CoList: Create empty list, items will be added during update phase when refs are resolved
+      coValue = universalGroup.createList([], meta);
+      actualCoId = coValue.id;
+      console.log(`   📝 Created CoList ${path} (co-id: ${actualCoId}, type: ${coValue.type || 'unknown'})`);
+    } else if (cotype === 'costream') {
+      // CoStream: Create empty stream, items will be appended during update phase when refs are resolved
+      coValue = universalGroup.createStream(meta);
+      actualCoId = coValue.id;
+      console.log(`   📝 Created CoStream ${path} (co-id: ${actualCoId}, type: ${coValue.type || 'unknown'})`);
+    } else {
+      // CoMap: Default behavior
+      coValue = universalGroup.createMap(configWithoutId, meta);
+      actualCoId = coValue.id;
+      console.log(`   📝 Created CoMap ${path} (co-id: ${actualCoId})`);
+    }
+
+    // Verify co-id matches expected
     const expectedCoId = $id;
-    
     if (expectedCoId && expectedCoId !== actualCoId) {
       console.warn(`[CoJSONSeed] Config ${configType}:${path} co-id mismatch. Expected: ${expectedCoId}, Got: ${actualCoId}`);
       // Update instanceCoIdMap with actual co-id
       instanceCoIdMap.set(path, actualCoId);
       instanceCoIdMap.set($id, actualCoId);
     }
-    
+
     return {
       type: configType,
       path,
       coId: actualCoId,
       expectedCoId: expectedCoId,
-      coMapId: actualCoId
+      coMapId: actualCoId,
+      coMap: coValue, // Store the actual CoValue reference (CoMap, CoList, or CoStream)
+      cotype: cotype  // Store the type for reference
     };
   };
   
   // Seed vibe (single instance at root)
   if (transformedConfigs.vibe) {
-    const vibeInfo = await createConfigCoMap(transformedConfigs.vibe, 'vibe', 'vibe');
+    const vibeInfo = await createConfig(transformedConfigs.vibe, 'vibe', 'vibe');
     seededConfigs.push(vibeInfo);
     totalCount++;
     console.log(`   ✅ Vibe seeded: ${vibeInfo.coId}`);
   }
-  
+
   // Helper to seed a config type (actors, views, etc.)
   const seedConfigType = async (configType, configsOfType) => {
     if (!configsOfType || typeof configsOfType !== 'object') {
       return 0;
     }
-    
+
     let typeCount = 0;
     for (const [path, config] of Object.entries(configsOfType)) {
       if (config && typeof config === 'object' && config.$schema) {
-        const configInfo = await createConfigCoMap(config, configType, path);
+        const configInfo = await createConfig(config, configType, path);
         seededConfigs.push(configInfo);
         typeCount++;
         console.log(`   ✅ ${configType} seeded: ${path} → ${configInfo.coId}`);
@@ -568,6 +1011,7 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
   totalCount += await seedConfigType('interface', transformedConfigs.interfaces);
   totalCount += await seedConfigType('subscription', transformedConfigs.subscriptions);
   totalCount += await seedConfigType('inbox', transformedConfigs.inboxes);
+  totalCount += await seedConfigType('children', transformedConfigs.children);
   
   return {
     count: totalCount,
@@ -793,17 +1237,26 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
     console.log('   ✅ account.os.schematas created:', schematas.id);
   }
   
-  // Store all mappings from coIdRegistry
+  // Store ONLY schema mappings (not instance manifests like vibes, actors, etc.)
+  // os.schematas should only contain schemas, not config instances
   const allMappings = coIdRegistry.getAll();
   let mappingCount = 0;
   
   for (const [humanReadableKey, coId] of allMappings) {
-    // Only store if not already set (avoid overwriting)
-    if (!schematas.get(humanReadableKey)) {
-      schematas.set(humanReadableKey, coId);
-      mappingCount++;
+    // Only store schemas: @schema/*, @meta-schema, and data collection schemas
+    // DO NOT store instances: @actor/*, @vibe/*, @view/*, @context/*, etc.
+    const isSchema = humanReadableKey.startsWith('@schema/') || 
+                     humanReadableKey === '@meta-schema' ||
+                     humanReadableKey.startsWith('data/');
+    
+    if (isSchema) {
+      // Only store if not already set (avoid overwriting)
+      if (!schematas.get(humanReadableKey)) {
+        schematas.set(humanReadableKey, coId);
+        mappingCount++;
+      }
     }
   }
   
-  console.log(`   ✅ Stored ${mappingCount} mappings in schematas`);
+  console.log(`   ✅ Stored ${mappingCount} schema mappings in os.schematas (instances excluded)`);
 }

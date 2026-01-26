@@ -5,11 +5,6 @@
   "description": "Runtime data for an actor (flexible JSON structure). The context itself is a comap CoValue (for CRDT sync/versioning), but all inner properties are plain JS objects/arrays/strings - NOT CoJSON types.",
   "cotype": "comap",
   "properties": {
-    "$schema": {
-      "type": "string",
-      "description": "Schema reference",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
-    },
     "todos": {
       "description": "Query object for reactive subscription (replaced with plain array by SubscriptionEngine when data loads). Can be either a query object during seeding or an array after SubscriptionEngine processes it.",
       "anyOf": [

@@ -58,6 +58,10 @@ import listInbox from './list/list.inbox.maia';
 import listItemInbox from './list-item/list-item.inbox.maia';
 import kanbanInbox from './kanban/kanban.inbox.maia';
 
+// Import all children colists
+import agentChildren from './agent/agent.children.maia';
+import compositeChildren from './composite/composite.children.maia';
+
 /**
  * Todos Vibe Registry
  * All configs pre-loaded and ready to use
@@ -124,5 +128,10 @@ export const TodosVibeRegistry = {
     '@inbox/list': listInbox,
     '@inbox/list-item': listItemInbox,
     '@inbox/kanban': kanbanInbox,
+  },
+  
+  children: {
+    '@children/agent': agentChildren,
+    '@children/composite': compositeChildren,
   },
 };

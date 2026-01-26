@@ -1,0 +1,7 @@
+{
+  "$schema": "@schema/children",
+  "$id": "@children/agent",
+  "items": [
+    "@actor/composite"
+  ]
+}

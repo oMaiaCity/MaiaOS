@@ -17,6 +17,7 @@ let maia;
 let cojsonAPI = null; // CoJSON API instance
 let currentView = 'account'; // Current schema filter (default: 'account')
 let currentContextCoValueId = null; // Currently loaded CoValue in main context (explorer-style navigation)
+let navigationHistory = []; // Navigation history stack for back button
 let authState = {
 	signedIn: false,
 	accountID: null,
@@ -287,9 +288,14 @@ async function register() {
 			syncState = state;
 			renderAppInternal(); // Re-render when sync state changes
 		});
-		
+
+		// Set account as default context
+		if (maia && maia.id && maia.id.maiaId) {
+			currentContextCoValueId = maia.id.maiaId.id;
+		}
+
 		renderAppInternal();
-		
+
 		console.log("✅ MaiaOS initialized with new account!");
 		
 	} catch (error) {
@@ -419,13 +425,14 @@ async function handleSeed() {
 		// Get node and account from maia
 		const { node, maiaId: account } = maia.id;
 		
-		// Boot with registry to trigger seeding
-		// Empty registry {} will seed schemas only (no configs)
-		// Or you can provide configs: { registry: { vibe: {...}, styles: {...}, ... } }
+		// Import TodosVibeRegistry to seed vibes
+		const { TodosVibeRegistry } = await import('@MaiaOS/vibes/todos/registry.js');
+		
+		// Boot with registry to trigger seeding (includes vibe)
 		maia = await MaiaOS.boot({ 
 			node, 
 			account,
-			registry: {} // Empty registry = seed schemas only
+			registry: TodosVibeRegistry // Include vibe registry for seeding
 		});
 		
 		// Re-create CoJSON API instance
@@ -454,20 +461,26 @@ window.showToast = showToast; // Expose for debugging
 
 // switchView moved above selectCoValue
 
-function selectCoValue(coId) {
+function selectCoValue(coId, skipHistory = false) {
 	// Clean up old subscriptions when navigating away
 	cleanupStoreSubscriptions();
-	
+
+	// Add current context to navigation history (unless we're going back or it's null)
+	if (!skipHistory && currentContextCoValueId !== null && currentContextCoValueId !== coId) {
+		navigationHistory.push(currentContextCoValueId);
+		console.log('📚 Navigation history:', navigationHistory.map(id => id?.substring(0, 12) + '...'));
+	}
+
 	// Explorer-style navigation: load CoValue into main container context
 	currentContextCoValueId = coId;
 	renderAppInternal();
-	
+
 	// If selecting a CoValue, subscribe to its loading state
 	if (coId && maia?.id?.node) {
 		const coValueCore = maia.id.node.getCoValue(coId);
 		if (coValueCore && !coValueCore.isAvailable()) {
 			console.log(`⏳ CoValue ${coId.substring(0, 12)}... not available yet, subscribing to updates...`);
-			
+
 			// Subscribe to updates and re-render when available
 			const unsubscribe = coValueCore.subscribe((core) => {
 				if (core.isAvailable()) {
@@ -476,7 +489,7 @@ function selectCoValue(coId) {
 					unsubscribe(); // Unsubscribe after first load
 				}
 			});
-			
+
 			// Trigger loading from IndexedDB
 			maia.id.node.loadCoValueCore(coId).catch(err => {
 				console.error(`❌ Failed to load ${coId.substring(0, 12)}...`, err);
@@ -486,12 +499,28 @@ function selectCoValue(coId) {
 	}
 }
 
+function goBack() {
+	// Navigate back in history
+	if (navigationHistory.length > 0) {
+		const previousCoId = navigationHistory.pop();
+		console.log('⬅️ Going back to:', previousCoId?.substring(0, 12) + '...');
+		selectCoValue(previousCoId, true); // Skip adding to history
+	} else {
+		// No history, go to account root
+		const accountId = maia?.id?.maiaId?.id;
+		if (accountId) {
+			selectCoValue(accountId, true);
+		}
+	}
+}
+
 function switchView(view) {
 	// Clean up old subscriptions when switching views
 	cleanupStoreSubscriptions();
-	
+
 	currentView = view;
 	currentContextCoValueId = null; // Reset context when switching views
+	navigationHistory = []; // Clear navigation history when switching views
 	renderAppInternal();
 }
 
@@ -555,6 +584,7 @@ function toggleExpand(expandId) {
 // Expose globally for onclick handlers
 window.switchView = switchView;
 window.selectCoValue = selectCoValue;
+window.goBack = goBack;
 window.toggleExpand = toggleExpand;
 
 init();

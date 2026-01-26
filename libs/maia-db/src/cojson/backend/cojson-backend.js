@@ -885,19 +885,48 @@ export class CoJSONBackend extends DBAdapter {
 
     // Normalize based on type
     if (rawType === 'colist' && content && content.toJSON) {
-      // CoList: return array of items
+      // CoList: The list IS the content - return items directly (no properties, CoLists don't have custom properties)
       try {
         const items = content.toJSON();
-        // Normalize each item (add id if missing)
-        return items.map((item, index) => {
-          if (typeof item === 'object' && item !== null && !item.id) {
-            // Generate id from index (or use item's co-id if it has one)
-            return { ...item, id: item.$id || `item_${index}` };
-          }
-          return item;
-        });
+        return {
+          id: coValueCore.id,
+          schema: schema,
+          type: 'colist',
+          items: items, // Items ARE the CoList content (not a property)
+          // No properties array - CoLists don't have custom key-value properties, only items
+        };
       } catch (e) {
-        return [];
+        return {
+          id: coValueCore.id,
+          schema: schema,
+          type: 'colist',
+          items: []
+        };
+      }
+    } else if (rawType === 'costream' && content) {
+      // CoStream: The stream IS the content - return items directly (no properties, CoStreams don't have custom properties)
+      try {
+        // CoStream doesn't have toJSON, iterate through items
+        const items = [];
+        if (content[Symbol.iterator]) {
+          for (const item of content) {
+            items.push(item);
+          }
+        }
+        return {
+          id: coValueCore.id,
+          schema: schema,
+          type: 'costream',
+          items: items, // Items ARE the CoStream content (not a property)
+          // No properties array - CoStreams don't have custom key-value properties, only items
+        };
+      } catch (e) {
+        return {
+          id: coValueCore.id,
+          schema: schema,
+          type: 'costream',
+          items: []
+        };
       }
     } else if (content && content.get && typeof content.get === 'function') {
       // CoMap: format properties as array for DB viewer (with key, value, type)

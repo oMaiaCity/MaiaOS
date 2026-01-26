@@ -18,6 +18,144 @@ function escapeHtml(text) {
 }
 
 export async function renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, switchView, selectCoValue, registerSubscription) {
+	// Helper to render any value consistently
+	const renderValue = (value, depth = 0) => {
+		if (depth > 2) return '<span class="nested-depth">...</span>';
+		if (value === null) return '<span class="null-value text-xs text-slate-400 italic">null</span>';
+		if (value === undefined) return '<span class="undefined-value text-xs text-slate-400 italic">undefined</span>';
+		
+		if (typeof value === 'string') {
+			if (value.startsWith('co_')) {
+				return `<code class="co-id text-xs text-slate-600 hover:underline clickable" onclick="selectCoValue('${value}')" title="${value}">${truncate(value, 12)}</code>`;
+			}
+			if (value.startsWith('key_')) {
+				return `<code class="key-value text-xs text-slate-600" title="${value}">${truncate(value, 30)}</code>`;
+			}
+			if (value.startsWith('sealed_')) {
+				return '<code class="sealed-value text-xs text-slate-600 italic">sealed_***</code>';
+			}
+			
+			const maxLength = 100;
+			const truncated = value.length > maxLength ? value.substring(0, maxLength) + '...' : value;
+			return `<span class="string-value text-xs text-slate-600 break-all min-w-0 text-right" title="${value}">"${escapeHtml(truncated)}"</span>`;
+		}
+		
+		if (typeof value === 'boolean') {
+			return `<span class="boolean-value ${value ? 'true' : 'false'} text-xs font-semibold ${value ? 'text-emerald-600 bg-emerald-50' : 'text-slate-600 bg-slate-50'} px-1.5 py-0.5 rounded">${value}</span>`;
+		}
+		
+		if (typeof value === 'number') {
+			return `<span class="number-value text-xs text-slate-600 font-medium">${value}</span>`;
+		}
+		
+		if (Array.isArray(value)) {
+			// Truncate array preview to max 24 characters
+			const preview = `[${value.length} ${value.length === 1 ? 'item' : 'items'}]`;
+			const truncated = preview.length > 24 ? preview.substring(0, 21) + '...' : preview;
+			return `<span class="array-value text-xs text-slate-500 italic" title="${escapeHtml(JSON.stringify(value))}">${escapeHtml(truncated)}</span>`;
+		}
+		
+		if (typeof value === 'object' && value !== null) {
+			// Create a compact JSON preview string, truncated to max 24 characters total (including "OBJECT >")
+			const objectIndicator = ' OBJECT >';
+			const maxJsonLength = 24 - objectIndicator.length; // Reserve space for " OBJECT >"
+			
+			try {
+				const jsonString = JSON.stringify(value);
+				let truncated = jsonString;
+				if (jsonString.length > maxJsonLength) {
+					truncated = jsonString.substring(0, maxJsonLength - 3) + '...';
+				}
+				return `<span class="object-value text-xs text-slate-500 italic" title="${escapeHtml(jsonString)}">${escapeHtml(truncated)}<span class="text-slate-400">${objectIndicator}</span></span>`;
+			} catch (e) {
+				// Fallback if JSON.stringify fails
+				const keys = Object.keys(value);
+				const preview = `{${keys.length} ${keys.length === 1 ? 'key' : 'keys'}}`;
+				let truncated = preview;
+				if (preview.length > maxJsonLength) {
+					truncated = preview.substring(0, maxJsonLength - 3) + '...';
+				}
+				return `<span class="object-value text-xs text-slate-500 italic">${escapeHtml(truncated)}<span class="text-slate-400">${objectIndicator}</span></span>`;
+			}
+		}
+		
+		return `<span class="text-xs text-slate-600">${escapeHtml(String(value))}</span>`;
+	};
+
+	// Helper to format JSON properly (parse if string, then stringify with indentation)
+	const formatJSON = (value) => {
+		if (typeof value === 'string') {
+			// Try to parse as JSON first
+			try {
+				const parsed = JSON.parse(value);
+				return JSON.stringify(parsed, null, 2);
+			} catch (e) {
+				// Not valid JSON, return as-is
+				return value;
+			}
+		} else if (Array.isArray(value)) {
+			// Explicitly handle arrays
+			return JSON.stringify(value, null, 2);
+		} else if (typeof value === 'object' && value !== null) {
+			// Handle objects
+			return JSON.stringify(value, null, 2);
+		} else {
+			return String(value);
+		}
+	};
+
+	// Helper to render a property row consistently
+	const renderPropertyRow = (label, value, type, key, isExpandable = false, expandId = '', schemaTitle = '') => {
+		const typeClass = type ? type.replace(/-/g, '') : 'unknown';
+		const isCoIdClickable = type === 'co-id';
+		const isClickable = isCoIdClickable || isExpandable;
+		
+		let onclickHandler = '';
+		if (isCoIdClickable) {
+			onclickHandler = `onclick="selectCoValue('${value}')"`;
+		} else if (isExpandable) {
+			onclickHandler = `onclick="event.stopPropagation(); toggleExpand('${expandId}')"`;
+		}
+
+		return `
+			<div class="property-item-wrapper w-full">
+				<button 
+					type="button"
+					class="list-item-card property-item-button w-full ${isClickable ? 'hoverable' : ''} group"
+					${onclickHandler}
+				>
+					<div class="flex justify-between items-center gap-3">
+						<!-- Left side: Property Key -->
+						<div class="flex items-center gap-2 flex-shrink-0 min-w-0">
+							<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate group-hover:text-slate-600 transition-colors" title="${key}">
+								${label}
+							</span>
+							${isExpandable ? `<svg class="w-3 h-3 text-slate-300 group-hover:text-slate-500 transition-colors expand-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>` : ''}
+						</div>
+						
+						<!-- Right side: Value and Badge -->
+						<div class="flex items-center gap-2.5 flex-1 justify-end min-w-0">
+							<div class="value-container flex-1 flex justify-end truncate">
+								${renderValue(value)}
+							</div>
+							<span class="badge badge-type badge-${typeClass} text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-tighter rounded-md border border-white/50 shadow-sm">${type.toUpperCase()}</span>
+							${isClickable ? `
+								<svg class="w-3 h-3 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+								</svg>
+							` : ''}
+						</div>
+					</div>
+				</button>
+				${isExpandable ? `
+					<div id="${expandId}" class="expanded-content bg-slate-50/80 border-t border-slate-100 p-3 mt-1 rounded-b-xl" style="display: none;">
+						<pre class="json-display text-[11px] font-mono text-slate-600 leading-relaxed whitespace-pre-wrap break-words">${escapeHtml(formatJSON(value))}</pre>
+					</div>
+				` : ''}
+			</div>
+		`;
+	};
+
 	// Get data based on current view
 	let data, viewTitle, viewSubtitle;
 	
@@ -27,7 +165,12 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 	// Get account and node for navigation
 	const account = maia.id.maiaId;
 	const node = maia.id.node;
-	
+
+	// Default to showing account if no context is set
+	if (!currentContextCoValueId && account?.id) {
+		currentContextCoValueId = account.id;
+	}
+
 	// Explorer-style navigation: if a CoValue is loaded into context, show it in main container
 	if (currentContextCoValueId && cojsonAPI) {
 		try {
@@ -53,7 +196,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 				let lastLoadingState = contextData?.loading || false;
 				let lastDataHash = JSON.stringify({ 
 					propsCount: lastPropertiesCount, 
-					loading: lastLoadingState,
+					loading: lastLoadingState, 
 					hasError: !!contextData?.error
 				});
 				
@@ -93,12 +236,8 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 			} else {
 				console.warn(`[DB Viewer] Cannot subscribe to store updates - registerSubscription: ${!!registerSubscription}, store.subscribe: ${typeof store.subscribe}`);
 			}
-			// Clean displayName: remove (co-id ref...) part, keep only the label
-			let cleanDisplayName = contextData.displayName || contextData.schema || 'CoValue';
-			// Remove pattern like "Label (abc123...)" - keep only "Label"
-			cleanDisplayName = cleanDisplayName.replace(/\s*\([^)]+\)\s*$/, '');
-			viewTitle = cleanDisplayName;
-			// No subtitle needed - co-id is shown in header
+			// Use ID as title (no displayName logic)
+			viewTitle = contextData.id ? truncate(contextData.id, 24) : 'CoValue';
 			viewSubtitle = '';
 		} catch (err) {
 			console.error('Error querying context CoValue:', err);
@@ -143,60 +282,24 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 						// Match schema name (can be in various formats)
 						const schema = cv.schema;
 						return schema === currentView || 
-						       schema === `@schema/${currentView}` ||
-						       schema?.endsWith(`/${currentView}`);
+							   schema === `@schema/${currentView}` ||
+							   (cv.headerMeta?.$schema === currentView);
 					})
 					.map(cv => ({
-						id: cv.id,
-						schema: cv.schema,
-						type: cv.type,
 						displayName: cv.schema || cv.id,
 						...cv
 					}));
 			}
 		} catch (err) {
-			console.error('Error querying CoValues:', err);
+			console.error('Error querying by schema:', err);
 			data = [];
 		}
-	} else if (currentView === 'account' && cojsonAPI) {
-		// Default to account view - load account CoValue
-		try {
-			const store = await cojsonAPI.cojson({op: 'read', schema: null, key: account.id});
-			// ReadOperation returns a ReactiveStore - get current value
-			let accountData = store.value || store;
-			data = accountData;
-			
-			// Subscribe to ReactiveStore updates for reactivity
-			if (registerSubscription && typeof store.subscribe === 'function') {
-				const subscriptionKey = `account:${account.id}`;
-				const unsubscribe = store.subscribe(() => {
-					// Re-render when store updates
-					setTimeout(() => {
-						renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, switchView, selectCoValue, registerSubscription);
-					}, 0);
-				});
-				registerSubscription(subscriptionKey, unsubscribe);
-			}
-			
-			// Set account as context if not already set
-			if (!currentContextCoValueId) {
-				currentContextCoValueId = account.id;
-			}
-		} catch (err) {
-			console.error('Error loading account:', err);
-			data = { error: err.message, id: account.id, loading: false };
-		}
-	} else {
-		data = [];
-	}
-	
-	if (currentView && currentView !== 'account') {
-		// Get schema from hardcoded registry
 		const schema = getSchema(currentView) || allSchemas[currentView];
 		viewTitle = schema?.title || currentView;
 		viewSubtitle = `${Array.isArray(data) ? data.length : 0} CoValue(s)`;
 	} else {
-		viewTitle = 'Account';
+		// Default: show account ID if available
+		viewTitle = account?.id ? truncate(account.id, 24) : 'CoValue';
 		viewSubtitle = '';
 	}
 	
@@ -212,371 +315,100 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 
 	// Build table content based on view
 	let tableContent = '';
+	let headerInfo = null; // Store header info for colist/costream to display in inspector-header
 	
 	// Explorer-style: if context CoValue is loaded, show its properties in main container
 	if (currentContextCoValueId && data) {
 		// Show CoValue properties in main container (reuse property rendering from detail view)
 		if (data.error && !data.loading) {
-			tableContent = `<div class="empty-state">Error: ${data.error}</div>`;
+			tableContent = `<div class="empty-state p-8 text-center text-rose-500 font-medium bg-rose-50/50 rounded-2xl border border-rose-100">Error: ${data.error}</div>`;
 		} else if (data.loading) {
 			tableContent = `
-				<div class="empty-state">
-					<div class="loading-spinner"></div>
-					<p>Loading CoValue... (waiting for verified state)</p>
+				<div class="empty-state p-12 flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl border border-slate-100">
+					<div class="loading-spinner w-8 h-8 border-4 border-slate-200 border-t-slate-400 rounded-full animate-spin"></div>
+					<p class="mt-4 text-slate-500 font-medium">Loading CoValue... (waiting for verified state)</p>
 				</div>
 			`;
-		} else if (data.properties && data.properties.definition) {
-			// Schema CoMap: display schema definition
-			const definition = data.properties.definition;
-			tableContent = `
-				<div class="schema-definition">
-					<div class="schema-definition-header">
-						<h3>Schema Definition</h3>
-						${definition.description ? `<p class="schema-description">${escapeHtml(definition.description)}</p>` : ''}
-					</div>
-					<pre class="schema-json">${escapeHtml(JSON.stringify(definition, null, 2))}</pre>
-				</div>
-			`;
-		} else if (data.specialContent) {
-			// Display special content for CoText, CoStream, CoList
-			const special = data.specialContent;
+		} else if (data.type === 'colist' || data.type === 'costream') {
+			// CoList/CoStream: Display items directly (they ARE the list/stream, no properties)
+			const items = data.items || [];
+			const isStream = data.type === 'costream';
+			const typeLabel = isStream ? 'CoStream' : 'CoList';
 			
-			if (special.type === 'plaintext') {
-				// CoText: Display text content
-				tableContent = `
-					<div class="special-content-container">
-						<div class="special-content-header">
-							<h4>Text Content (${special.length} characters)</h4>
-						</div>
-						<div class="plaintext-content">
-							<pre class="plaintext-display">${escapeHtml(special.text)}</pre>
-						</div>
-					</div>
-				`;
-			} else if (special.type === 'stream') {
-				// CoStream: Display stream items
-				tableContent = `
-					<div class="special-content-container">
-						<div class="special-content-header">
-							<h4>Stream Items (${special.itemCount} total)</h4>
-						</div>
-						<div class="stream-content">
-							${special.items && special.items.length > 0 ? `
-								<div class="stream-items">
-									${special.items.map((item, index) => {
-										const renderValue = (value, depth = 0) => {
-											if (depth > 2) return '<span class="nested-depth">...</span>';
-											if (value === null) return '<span class="null-value">null</span>';
-											if (value === undefined) return '<span class="undefined-value">undefined</span>';
-											if (typeof value === 'string' && value.startsWith('co_')) {
-												return `<code class="co-id clickable" onclick="selectCoValue('${value}')" title="${value}">${truncate(value, 12)}</code>`;
-											}
-											if (typeof value === 'string' && value.startsWith('key_')) {
-												return `<code class="key-value" title="${value}">${truncate(value, 20)}</code>`;
-											}
-											if (typeof value === 'string' && value.startsWith('sealed_')) {
-												return '<code class="sealed-value">sealed_***</code>';
-											}
-											if (typeof value === 'boolean') {
-												return `<span class="boolean-value ${value ? 'true' : 'false'}">${value}</span>`;
-											}
-											if (typeof value === 'number') {
-												return `<span class="number-value">${value}</span>`;
-											}
-											if (typeof value === 'string') {
-												const maxLength = 100;
-												const truncated = value.length > maxLength ? value.substring(0, maxLength) + '...' : value;
-												return `<span class="string-value" title="${value}">"${escapeHtml(truncated)}"</span>`;
-											}
-											if (Array.isArray(value)) {
-												return `<span class="array-value">[${value.length} items]</span>`;
-											}
-											if (typeof value === 'object' && value !== null) {
-												const keys = Object.keys(value);
-												return `
-													<div class="nested-object">
-														${keys.slice(0, 3).map(key => `
-															<div class="nested-property">
-																<span class="nested-key">${key}:</span>
-																<span class="nested-value">${renderValue(value[key], depth + 1)}</span>
-															</div>
-														`).join('')}
-														${keys.length > 3 ? `<div class="nested-more">+${keys.length - 3} more</div>` : ''}
-													</div>
-												`;
-											}
-											return `<span>${escapeHtml(String(value))}</span>`;
-										};
-										
-										// Generic rendering: handle objects, arrays, primitives
-										const itemKeys = typeof item === 'object' && item !== null ? Object.keys(item) : [];
-										
-										return `
-											<div class="stream-item-card">
-												<div class="stream-item-header">
-													<span class="stream-item-index">#${index + 1}</span>
-													${itemKeys.length > 0 ? `<span class="stream-item-type">Object (${itemKeys.length} properties)</span>` : ''}
-												</div>
-												${typeof item === 'object' && item !== null ? `
-													<div class="stream-item-properties">
-														${itemKeys.map(key => `
-															<div class="stream-item-property">
-																<span class="stream-item-property-key">${key}:</span>
-																<span class="stream-item-property-value">${renderValue(item[key])}</span>
-															</div>
-														`).join('')}
-													</div>
-												` : `
-													<div class="stream-item-value">
-														${renderValue(item)}
-													</div>
-												`}
-											</div>
-										`;
-									}).join('')}
-								</div>
-							` : `
-								<div class="empty-state">
-									<p>No items in this stream</p>
-								</div>
-							`}
-						</div>
-					</div>
-				`;
-			} else if (special.type === 'list') {
-				// CoList: Display list items
-				tableContent = `
-					<div class="special-content-container">
-						<div class="special-content-header">
-							<h4>List Items (${special.itemCount} total)</h4>
-						</div>
-						<div class="list-content">
-							${special.items && special.items.length > 0 ? `
-								<div class="list-items">
-									${special.items.map((item, index) => {
-										const renderValue = (value, depth = 0) => {
-											if (depth > 2) return '<span class="nested-depth">...</span>';
-											if (value === null) return '<span class="null-value">null</span>';
-											if (value === undefined) return '<span class="undefined-value">undefined</span>';
-											if (typeof value === 'string' && value.startsWith('co_')) {
-												return `<code class="co-id clickable" onclick="selectCoValue('${value}')" title="${value}">${truncate(value, 12)}</code>`;
-											}
-											if (typeof value === 'string' && value.startsWith('key_')) {
-												return `<code class="key-value" title="${value}">${truncate(value, 20)}</code>`;
-											}
-											if (typeof value === 'string' && value.startsWith('sealed_')) {
-												return '<code class="sealed-value">sealed_***</code>';
-											}
-											if (typeof value === 'boolean') {
-												return `<span class="boolean-value ${value ? 'true' : 'false'}">${value}</span>`;
-											}
-											if (typeof value === 'number') {
-												return `<span class="number-value">${value}</span>`;
-											}
-											if (typeof value === 'string') {
-												const maxLength = 100;
-												const truncated = value.length > maxLength ? value.substring(0, maxLength) + '...' : value;
-												return `<span class="string-value" title="${value}">"${escapeHtml(truncated)}"</span>`;
-											}
-											if (Array.isArray(value)) {
-												return `<span class="array-value">[${value.length} items]</span>`;
-											}
-											if (typeof value === 'object' && value !== null) {
-												const keys = Object.keys(value);
-												return `
-													<div class="nested-object">
-														${keys.slice(0, 3).map(key => `
-															<div class="nested-property">
-																<span class="nested-key">${key}:</span>
-																<span class="nested-value">${renderValue(value[key], depth + 1)}</span>
-															</div>
-														`).join('')}
-														${keys.length > 3 ? `<div class="nested-more">+${keys.length - 3} more</div>` : ''}
-													</div>
-												`;
-											}
-											return `<span>${escapeHtml(String(value))}</span>`;
-										};
-										
-										const itemKeys = typeof item === 'object' && item !== null ? Object.keys(item) : [];
-										
-										return `
-											<div class="list-item-card">
-												<div class="list-item-header">
-													<span class="list-item-index">#${index + 1}</span>
-													${itemKeys.length > 0 ? `<span class="list-item-type">Object (${itemKeys.length} properties)</span>` : ''}
-												</div>
-												${typeof item === 'object' && item !== null ? `
-													<div class="list-item-properties">
-														${itemKeys.map(key => `
-															<div class="list-item-property">
-																<span class="list-item-property-key">${key}:</span>
-																<span class="list-item-property-value">${renderValue(item[key])}</span>
-															</div>
-														`).join('')}
-													</div>
-												` : `
-													<div class="list-item-value">
-														${renderValue(item)}
-													</div>
-												`}
-											</div>
-										`;
-									}).join('')}
-								</div>
-							` : `
-								<div class="empty-state">
-									<p>No items in this list</p>
-								</div>
-							`}
-						</div>
-					</div>
-				`;
-			} else if (special.type === 'binary') {
-				// BinaryCoStream: Display binary info
-				tableContent = `
-					<div class="special-content-container">
-						<div class="special-content-header">
-							<h4>Binary Content</h4>
-						</div>
-						<div class="binary-content">
-							<p>${special.preview}</p>
-						</div>
-					</div>
-				`;
-			}
-		} else if (data.loading) {
-			// Show loading state
+			// Store header info for display in inspector-header
+			headerInfo = {
+				type: data.type,
+				typeLabel: typeLabel,
+				itemCount: items.length,
+				description: isStream ? 'Append-only stream' : 'Ordered list'
+			};
+			
+			const itemRows = items.map((item, index) => {
+				const label = `#${index + 1}`;
+				let type = typeof item;
+				if (typeof item === 'string' && item.startsWith('co_')) {
+					type = 'co-id';
+				} else if (Array.isArray(item)) {
+					type = 'array';
+				} else if (typeof item === 'object' && item !== null) {
+					type = 'object';
+				}
+				
+				// Make objects and arrays expandable
+				const isExpandable = (typeof item === 'object' && item !== null) || Array.isArray(item);
+				const expandId = isExpandable ? `expand-item-${index}-${Math.random().toString(36).substr(2, 9)}` : '';
+				
+				return renderPropertyRow(label, item, type, label, isExpandable, expandId);
+			}).join('');
+
 			tableContent = `
-				<div class="empty-state">
-					<div class="loading-spinner"></div>
-					<p>Loading CoValue... (waiting for verified state)</p>
+				<div class="list-stream-container space-y-4">
+					<div class="list-view-container space-y-1">
+						${items.length > 0 ? itemRows : `<div class="p-8 text-center text-slate-400 italic bg-slate-50/30 rounded-xl border border-dashed border-slate-200">No items in this ${typeLabel.toLowerCase()}</div>`}
+					</div>
 				</div>
 			`;
 		} else if (data.properties && Array.isArray(data.properties) && data.properties.length > 0) {
 			// CoMap: Display properties
-			// Get schema definition for property labels
 			const schemaDef = data.schema ? getSchema(data.schema) : null;
 			
-			// Use properties from cojson query result
 			const propertyItems = data.properties.map(prop => {
 				const value = prop.value;
-				const propType = prop.type;
+				let propType = prop.type;
 				const key = prop.key;
 				
-				// Get property label from schema definition
+				// Detect array type from actual value if not set
+				if (Array.isArray(value) && propType !== 'array') {
+					propType = 'array';
+				} else if (typeof value === 'object' && value !== null && !Array.isArray(value) && propType !== 'object') {
+					propType = 'object';
+				}
+				
 				const propSchema = schemaDef?.properties?.[key];
-				const propLabel = propSchema?.title || key; // Use schema title if available
+				const propLabel = propSchema?.title || key;
 				
-				// Format type badge
-				const typeBadge = propType || 'unknown';
-				const typeClass = typeBadge.replace(/-/g, ''); // Remove hyphens for CSS class
-				
-				const isCoIdClickable = propType === 'co-id';
-				const isExpandable = propType === 'object' || propType === 'array';
-				const isClickable = isCoIdClickable || isExpandable;
-				
-				// Generate unique ID for expandable sections
+				// Make objects and arrays expandable
+				const isExpandable = propType === 'object' || propType === 'array' || 
+					(typeof value === 'object' && value !== null && !Array.isArray(value)) ||
+					Array.isArray(value);
 				const expandId = isExpandable ? `expand-${key}-${Math.random().toString(36).substr(2, 9)}` : '';
 				
-				// For object/array, format as pretty JSON string
-				let expandedContent = '';
-				if (isExpandable) {
-					try {
-						const parsed = typeof value === 'string' ? JSON.parse(value) : value;
-						const formattedJson = JSON.stringify(parsed, null, 2);
-						expandedContent = `<pre class="json-display">${escapeHtml(formattedJson)}</pre>`;
-					} catch (e) {
-						expandedContent = `<pre class="json-display error">Error parsing ${propType}: ${e.message}</pre>`;
-					}
-				}
-				
-				// Create single onclick handler
-				let onclickHandler = '';
-				if (isCoIdClickable) {
-					onclickHandler = `onclick="selectCoValue('${value}')"`;
-				} else if (isExpandable) {
-					onclickHandler = `onclick="event.stopPropagation(); toggleExpand('${expandId}')"`;
-				}
-				
-				return `
-					<div class="property-item-wrapper">
-						<button 
-							type="button"
-							class="list-item-card property-item-button ${isClickable ? 'hoverable' : ''}"
-							${onclickHandler}
-						>
-							<div class="flex justify-between items-center gap-2">
-								<!-- Left side: Property Key -->
-								<div class="flex items-center gap-1.5 flex-shrink-0 min-w-0">
-									<span class="text-xs font-medium text-slate-500 uppercase tracking-wide truncate" title="${key}">
-										${propLabel}
-									</span>
-									${isExpandable ? `<svg class="w-3 h-3 text-slate-400 expand-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>` : ''}
-								</div>
-								
-								<!-- Right side: Value and Badge -->
-							<div class="flex items-center gap-2 flex-1 justify-end min-w-0">
-								${propType === 'co-id' ? `<code class="co-id text-xs text-slate-600 hover:underline" title="${value}">${truncate(value, 12)}</code>` :
-								  propType === 'key' ? `<code class="key-value text-xs text-slate-600" title="${value}">${truncate(value, 30)}</code>` :
-								  propType === 'sealed' ? '<code class="text-xs text-slate-600">sealed_***</code>' :
-								  propType === 'null' ? '<span class="text-xs text-slate-400 italic">null</span>' :
-								  propType === 'array' ? `<span class="text-xs text-slate-600 break-all min-w-0 text-right">${value}</span>` :
-								  `<span class="text-xs text-slate-600 break-all min-w-0 text-right">${truncate(String(value), 50)}</span>`}
-								<span class="badge badge-type badge-${typeClass}">${typeBadge}</span>
-								${isClickable ? `
-									<svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-									</svg>
-								` : ''}
-							</div>
-						</div>
-					</button>
-					${isExpandable ? `
-						<div id="${expandId}" class="expanded-content" style="display: none;">
-							${expandedContent}
-						</div>
-					` : ''}
-				</div>
-				`;
+				return renderPropertyRow(propLabel, value, propType, key, isExpandable, expandId);
 			}).join('');
 			
 			tableContent = `
-				<div class="list-view-container">
+				<div class="list-view-container space-y-1">
 					${propertyItems}
 				</div>
 			`;
 		} else {
 			// Fallback: empty or no properties
-			tableContent = '<div class="empty-state">No properties available</div>';
+			tableContent = '<div class="empty-state p-12 text-center text-slate-400 italic bg-slate-50/30 rounded-2xl border border-dashed border-slate-200">No properties available</div>';
 		}
 	} else {
-		// Default account view or other views - show empty state or error
-		if (data && data.error) {
-			tableContent = `<div class="empty-state">Error: ${data.error}</div>`;
-		} else if (!data || (data.properties && data.properties.length === 0)) {
-			tableContent = '<div class="empty-state">No properties available</div>';
-		} else {
-			tableContent = '<div class="empty-state">No data available</div>';
-		}
+		// Default view - show list of CoValues or error
+		tableContent = '<div class="empty-state p-12 text-center text-slate-400 italic bg-slate-50/30 rounded-2xl border border-dashed border-slate-200">Select a CoValue to explore its content</div>';
 	}
-	
-	// Build sidebar navigation items (flat structure, same visual level)
-	const sidebarItems = navigationItems.map(item => {
-		// Account navigation - select account CoValue
-		const isActive = currentContextCoValueId === item.id || (currentView === 'account' && !currentContextCoValueId);
-		
-		const clickHandler = `onclick="selectCoValue('${item.id}')"`;
-		
-		return `
-			<div class="sidebar-item ${isActive ? 'active' : ''}" ${clickHandler}>
-				<div class="sidebar-label">
-					<span class="sidebar-name">${item.label}</span>
-					${item.count !== undefined ? `<span class="sidebar-count">${item.count}</span>` : ''}
-				</div>
-			</div>
-		`;
-	}).join('');
 
 	// Get account ID for header status
 	const accountId = maia?.id?.maiaId?.id || '';
@@ -586,26 +418,67 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 	if (currentContextCoValueId && data && !data.error && !data.loading) {
 		const groupInfo = data.groupInfo || null;
 		const hasMembers = groupInfo && (groupInfo.accountMembers?.length > 0 || groupInfo.groupMembers?.length > 0);
-		
+
 		// Sort account members: "everyone" first
 		const sortedAccountMembers = groupInfo?.accountMembers ? [...groupInfo.accountMembers].sort((a, b) => {
 			if (a.id === 'everyone') return -1;
 			if (b.id === 'everyone') return 1;
 			return 0;
 		}) : [];
+
+		// Fetch schema title if schema is a co-id using the abstracted read operation API
+		let schemaTitle = null;
+		if (data.schema && data.schema.startsWith('co_z') && cojsonAPI) {
+			try {
+				// Use unified read API - same pattern as loading main context data
+				const schemaStore = await cojsonAPI.cojson({op: 'read', schema: data.schema, key: data.schema});
+				const schemaData = schemaStore.value || schemaStore;
+				
+				if (schemaData && !schemaData.error && !schemaData.loading) {
+					// Check if schema has properties array (CoMap structure)
+					if (schemaData.properties && Array.isArray(schemaData.properties)) {
+						const titleProp = schemaData.properties.find(p => p.key === 'title');
+						if (titleProp && titleProp.value) {
+							schemaTitle = titleProp.value;
+						}
+						// Also check definition.title for schema definitions
+						if (!schemaTitle) {
+							const definitionProp = schemaData.properties.find(p => p.key === 'definition');
+							if (definitionProp && definitionProp.value && typeof definitionProp.value === 'object') {
+								schemaTitle = definitionProp.value.title || null;
+							}
+						}
+					}
+				}
+			} catch (e) {
+				console.warn('[DB Viewer] Failed to fetch schema title:', e);
+			}
+		}
 		
 		metadataSidebar = `
 			<aside class="db-metadata db-card whitish-card">
 				<div class="metadata-content">
 					<!-- Consolidated Metadata View (no tabs) -->
 					<div class="metadata-info-list">
+						<!-- ID first (item's own ID) -->
+						<div class="metadata-info-item">
+							<span class="metadata-info-key">ID</span>
+							<code class="metadata-info-value" title="${data.id}">${truncate(data.id, 24)}</code>
+						</div>
 						${data.schema ? `
 							<div class="metadata-info-item">
 								<span class="metadata-info-key">@SCHEMA</span>
 								${data.schema.startsWith('co_') ? `
-									<code class="metadata-info-value co-id" onclick="selectCoValue('${data.schema}')" title="${data.schema}" style="cursor: pointer; text-decoration: underline;">
-										${truncate(data.schema, 24)}
-									</code>
+									${schemaTitle ? `
+										<code class="metadata-info-value co-id" onclick="selectCoValue('${data.schema}')" title="${data.schema}" style="cursor: pointer; text-decoration: underline;">
+											${escapeHtml(schemaTitle)}
+										</code>
+										<div class="metadata-info-schema-id" title="${data.schema}">${truncate(data.schema, 24)}</div>
+									` : `
+										<code class="metadata-info-value co-id" onclick="selectCoValue('${data.schema}')" title="${data.schema}" style="cursor: pointer; text-decoration: underline;">
+											${truncate(data.schema, 24)}
+										</code>
+									`}
 								` : `
 									<code class="metadata-info-value" title="${data.schema}">
 										${data.schema}
@@ -614,12 +487,10 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 							</div>
 						` : ''}
 						<div class="metadata-info-item">
-							<span class="metadata-info-key">ID</span>
-							<code class="metadata-info-value" title="${data.id}">${truncate(data.id, 24)}</code>
-						</div>
-						<div class="metadata-info-item">
 							<span class="metadata-info-key">CONTENT TYPE</span>
-							<span class="badge badge-type badge-${(data.type || 'unknown').replace(/-/g, '')}">${data.type || 'unknown'}</span>
+							<span class="badge badge-type badge-${(data.type || 'unknown').replace(/-/g, '')}">
+								${data.type === 'colist' ? 'COLIST' : data.type === 'costream' ? 'COSTREAM' : (data.type || 'unknown').toUpperCase()}
+							</span>
 						</div>
 						${groupInfo?.groupId ? `
 							<div class="metadata-info-item">
@@ -672,13 +543,32 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 									</div>
 								` : ''}
 							</div>
-						` : ''
+						` : `
+							<div class="metadata-empty">No member information available for this group.</div>
+						`
 					) : ''}
 				</div>
 			</aside>
 		`;
 	}
 	
+	// Build sidebar navigation items (flat structure, same visual level)
+	const sidebarItems = navigationItems.map(item => {
+		// Account navigation - select account CoValue
+		const isActive = currentContextCoValueId === item.id || (currentView === 'account' && !currentContextCoValueId);
+		
+		const clickHandler = `onclick="selectCoValue('${item.id}')"`;
+		
+		return `
+			<div class="sidebar-item ${isActive ? 'active' : ''}" ${clickHandler}>
+				<div class="sidebar-label">
+					<span class="sidebar-name">${item.label}</span>
+					${item.count !== undefined ? `<span class="sidebar-count">${item.count}</span>` : ''}
+				</div>
+			</div>
+		`;
+	}).join('');
+
 	document.getElementById("app").innerHTML = `
 		<div class="db-container">
 			<header class="db-header db-card whitish-card">
@@ -698,9 +588,6 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 							</span>
 						</div>
 						${authState.signedIn ? `
-							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database with schemas and configs (dev only)">
-								🌱 Seed
-							</button>
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
 								Sign Out
 							</button>
@@ -718,6 +605,34 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 						<div class="sidebar-content">
 							${sidebarItems}
 						</div>
+						<div class="sidebar-back-widget">
+							<div class="sidebar-header">
+								<h3>Actions</h3>
+							</div>
+							<div class="sidebar-content sidebar-actions-row">
+								${currentContextCoValueId ? `
+									<div class="sidebar-item back-sidebar-item" onclick="goBack()" title="Back">
+										<div class="sidebar-label">
+											<svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+											</svg>
+											<span class="sidebar-name">Back</span>
+										</div>
+									</div>
+								` : ''}
+								${authState.signedIn ? `
+									<div class="sidebar-item seed-sidebar-item" onclick="window.handleSeed()" title="Seed database with schemas and configs (dev only)">
+										<div class="sidebar-label">
+											<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+												<path d="M12 22V12M12 12C12 12 12 7 7 7C7 7 2 7 2 12C2 12 2 17 7 17C12 17 12 12 12 12ZM12 12C12 12 12 7 17 7C17 7 22 7 22 12C22 12 22 17 17 17C12 17 12 12 12 12Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+												<path d="M12 12C12 12 12 9 12 9M12 9C12 6.5 10 4.5 7.5 4.5C5 4.5 3 6.5 3 9C3 9 3 11.5 5.5 11.5C8 11.5 10 9.5 10 7M12 9C12 6.5 14 4.5 16.5 4.5C19 4.5 21 6.5 21 9C21 9 21 11.5 18.5 11.5C16 11.5 14 9.5 14 7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+											</svg>
+											<span class="sidebar-name">Seed</span>
+										</div>
+									</div>
+								` : ''}
+							</div>
+						</div>
 					</div>
 				</aside>
 				
@@ -725,18 +640,21 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 					<div class="inspector db-card whitish-card">
 						<div class="inspector-content-inner">
 						<div class="inspector-header">
-							<div class="flex items-center gap-2 flex-grow">
-								${currentContextCoValueId ? `
-									<button class="back-btn" onclick="selectCoValue(null)" title="Back to list">
-										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-										</svg>
-										<span class="back-label">Back</span>
-									</button>
+							<div class="flex items-center gap-3 flex-grow">
+								${currentContextCoValueId && data?.id ? `
+									<code class="co-id-header">${truncate(data.id, 32)}</code>
+								` : `
+									<h2>${viewTitle}</h2>
+								`}
+								${headerInfo ? `
+									<span class="badge badge-type badge-${headerInfo.type} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${headerInfo.typeLabel}</span>
+									<span class="text-sm font-semibold text-slate-700">${headerInfo.itemCount} ${headerInfo.itemCount === 1 ? 'Item' : 'Items'}</span>
+									<span class="text-xs text-slate-400 font-medium italic">${headerInfo.description}</span>
 								` : ''}
-								<h2>${viewTitle}</h2>
+								${!headerInfo && data?.type ? `
+									<span class="badge badge-type badge-${data.type.replace(/-/g, '')} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${data.type === 'colist' ? 'COLIST' : data.type === 'costream' ? 'COSTREAM' : (data.type || 'COMAP').toUpperCase()}</span>
+								` : ''}
 							</div>
-							${currentContextCoValueId && data?.id ? `<code class="co-id-header">${data.id}</code>` : ''}
 						</div>
 							${tableContent}
 						</div>

@@ -1,9 +1,10 @@
 {
   "$schema": "@schema/view",
   "$id": "@view/composite",
-  "tag": "div",
-  "class": "stack",
-  "children": [
+  "content": {
+    "tag": "div",
+    "class": "stack",
+    "children": [
     {
       "class": "header-section",
       "children": [
@@ -91,4 +92,5 @@
       "$slot": "$currentView"
     }
   ]
+  }
 }

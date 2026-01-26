@@ -1,0 +1,11 @@
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/children",
+  "title": "Children Colist",
+  "description": "A colist of child actor co-ids",
+  "cotype": "colist",
+  "items": {
+    "$co": "@schema/actor",
+    "description": "Each item is a co-id reference to a child actor"
+  }
+}

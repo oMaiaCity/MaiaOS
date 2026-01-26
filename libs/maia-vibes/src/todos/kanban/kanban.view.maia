@@ -1,8 +1,9 @@
 {
   "$schema": "@schema/view",
   "$id": "@view/kanban",
-  "class": "kanban",
-  "children": [
+  "content": {
+    "class": "kanban",
+    "children": [
     {
       "class": "kanban-column",
       "attrs": {
@@ -199,4 +200,5 @@
       ]
     }
   ]
+  }
 }

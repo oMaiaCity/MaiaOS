@@ -1,7 +1,9 @@
 {
   "$schema": "@schema/view",
   "$id": "@view/agent",
-  "tag": "div",
-  "class": "service-container",
-  "$slot": "$composite"
+  "content": {
+    "tag": "div",
+    "class": "service-container",
+    "$slot": "$composite"
+  }
 }

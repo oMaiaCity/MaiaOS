@@ -1,8 +1,9 @@
 {
   "$schema": "@schema/view",
   "$id": "@view/list",
-  "class": "list",
-  "$each": {
+  "content": {
+    "class": "list",
+    "$each": {
     "items": "$todos",
     "template": {
       "class": "card",
@@ -39,5 +40,6 @@
         }
       ]
     }
+  }
   }
 }

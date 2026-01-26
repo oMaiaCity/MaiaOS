@@ -6,11 +6,6 @@
   "cotype": "comap",
   "required": ["name", "description", "parameters"],
   "properties": {
-    "$id": {
-      "type": "string",
-      "description": "Unique tool identifier (co-id)",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
-    },
     "name": {
       "type": "string",
       "description": "Tool identifier (e.g., '@mutation/create')",

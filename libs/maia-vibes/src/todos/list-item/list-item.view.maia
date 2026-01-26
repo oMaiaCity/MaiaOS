@@ -1,11 +1,12 @@
 {
   "$schema": "@schema/view",
   "$id": "@view/list-item",
-  "class": "stack",
-  "attrs": {
-    "data-view": "$viewMode"
-  },
-  "children": [
+  "content": {
+    "class": "stack",
+    "attrs": {
+      "data-view": "$viewMode"
+    },
+    "children": [
     {
       "class": "header-section",
       "children": [
@@ -362,4 +363,5 @@
       ]
     }
   ]
+  }
 }
