@@ -8,6 +8,8 @@
 import { createSchemaMeta, isExceptionSchema } from "../utils/meta.js";
 import { getSharedValidationEngine } from "../schemas/validation-singleton.js";
 import { hasSchema } from "../schemas/registry.js";
+import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
+import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 
 /**
  * Create a generic CoMap with MANDATORY schema validation
@@ -16,19 +18,24 @@ import { hasSchema } from "../schemas/registry.js";
  * 
  * @param {RawAccount|RawGroup} accountOrGroup - Account (to get universal group) or Group (for backward compatibility)
  * @param {Object} init - Initial properties
- * @param {string} schemaName - Schema name for headerMeta (REQUIRED - use "@meta-schema" for meta schema creation)
+ * @param {string} schemaName - Schema name or co-id for headerMeta (REQUIRED - use "@meta-schema" for meta schema creation)
  * @param {LocalNode} [node] - LocalNode instance (required if accountOrGroup is account)
+ * @param {Object} [dbEngine] - Database engine for runtime schema validation (REQUIRED for co-ids)
  * @returns {Promise<RawCoMap>}
  * @throws {Error} If schema is missing or data validation fails
  */
-export async function createCoMap(accountOrGroup, init = {}, schemaName, node = null) {
+export async function createCoMap(accountOrGroup, init = {}, schemaName, node = null, dbEngine = null) {
 	// Get universal group from account (auto-assignment)
 	let group = accountOrGroup;
 	
-	// Check if first param is account (has get("profile") property) or group
-	// Accounts have profile property, regular groups don't
-	if (accountOrGroup && typeof accountOrGroup.get === 'function') {
-		// Try to get profile - if it exists, it's an account
+	// CRITICAL: Check if this is already a resolved group (from getDefaultGroup())
+	// Groups have createMap method, accounts don't
+	if (accountOrGroup && typeof accountOrGroup.createMap === 'function') {
+		// Already a resolved group - use it directly (standardized via getDefaultGroup())
+		group = accountOrGroup;
+	} else if (accountOrGroup && typeof accountOrGroup.get === 'function') {
+		// Check if first param is account (has get("profile") property) or group
+		// Accounts have profile property, regular groups don't
 		const profileId = accountOrGroup.get("profile");
 		if (profileId) {
 			// It's an account - resolve universal group via account.profile.group
@@ -44,17 +51,23 @@ export async function createCoMap(accountOrGroup, init = {}, schemaName, node = 
 			}
 			
 			// Wait for profile to be available
-			if (!profileCore.isAvailable()) {
+			if (!profileCore || !profileCore.isAvailable()) {
 				console.log(`[createCoMap] Waiting for profile ${profileId.substring(0, 12)}... to be available...`);
 				await new Promise((resolve, reject) => {
 					let unsubscribe = null;
 					const timeout = setTimeout(() => {
 						if (unsubscribe) unsubscribe();
-						reject(new Error(`Timeout waiting for profile ${profileId} to be available`));
+						reject(new Error(`Timeout waiting for profile ${profileId} to be available. The profile may not exist or may not be synced yet.`));
 					}, 10000);
 					
+					if (!profileCore) {
+						clearTimeout(timeout);
+						reject(new Error(`Profile core not found: ${profileId}. Ensure the account has a valid profile.`));
+						return;
+					}
+					
 					unsubscribe = profileCore.subscribe((core) => {
-						if (core.isAvailable()) {
+						if (core && core.isAvailable()) {
 							clearTimeout(timeout);
 							if (unsubscribe) unsubscribe();
 							resolve();
@@ -72,7 +85,7 @@ export async function createCoMap(accountOrGroup, init = {}, schemaName, node = 
 			}
 			
 			if (!profileCore || profileCore.type !== 'comap') {
-				throw new Error(`[createCoMap] Profile not available: ${profileId}`);
+				throw new Error(`[createCoMap] Profile not available or invalid type: ${profileId}. Expected comap, got ${profileCore?.type || 'null'}. Ensure the account has a valid profile.`);
 			}
 			
 			const profile = profileCore.getCurrentContent?.();
@@ -157,21 +170,40 @@ export async function createCoMap(accountOrGroup, init = {}, schemaName, node = 
 		return comap;
 	}
 	
-	// Validate schema exists in registry (skip for exception schemas)
-	if (!isExceptionSchema(schemaName) && !hasSchema(schemaName)) {
+	// Validate schema exists in registry (skip for exception schemas and co-ids)
+	// Co-ids (starting with "co_z") are actual schema CoValue IDs and don't need registry validation
+	if (!isExceptionSchema(schemaName) && !schemaName.startsWith('co_z') && !hasSchema(schemaName)) {
 		throw new Error(`[createCoMap] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema, ExamplesSchema, ActivityStreamSchema, NotesSchema, TextSchema, PureJsonSchema`);
 	}
 	
-	// Validate data against schema BEFORE creating CoValue (skip for exception schemas)
+	// Validate data against schema BEFORE creating CoValue
+	// STRICT: Always validate using runtime schema from database (no fallbacks, no legacy hacks)
 	if (!isExceptionSchema(schemaName)) {
-		const engine = await getSharedValidationEngine();
-		const validation = await engine.validateData(schemaName, init);
-		
-		if (!validation.valid) {
-			const errorDetails = validation.errors
-				.map(err => `  - ${err.instancePath}: ${err.message}`)
-				.join('\n');
-			throw new Error(`[createCoMap] Data validation failed for schema '${schemaName}':\n${errorDetails}`);
+		if (schemaName.startsWith('co_z')) {
+			// Schema co-id - MUST validate using runtime schema from database
+			if (!dbEngine) {
+				throw new Error(`[createCoMap] dbEngine is REQUIRED for co-id schema validation. Schema: ${schemaName}. Pass dbEngine as 5th parameter.`);
+			}
+			
+			// Load schema from database (runtime schema - single source of truth)
+			const schemaDef = await loadSchemaFromDB(dbEngine, schemaName);
+			if (!schemaDef) {
+				throw new Error(`[createCoMap] Schema not found in database: ${schemaName}`);
+			}
+			
+			// Validate data against runtime schema
+			await validateAgainstSchemaOrThrow(schemaDef, init, `createCoMap for schema ${schemaName}`);
+		} else {
+			// Schema name - use hardcoded registry (only for migrations/seeding)
+			const engine = await getSharedValidationEngine();
+			const validation = await engine.validateData(schemaName, init);
+			
+			if (!validation.valid) {
+				const errorDetails = validation.errors
+					.map(err => `  - ${err.instancePath}: ${err.message}`)
+					.join('\n');
+				throw new Error(`[createCoMap] Data validation failed for schema '${schemaName}':\n${errorDetails}`);
+			}
 		}
 	}
 	

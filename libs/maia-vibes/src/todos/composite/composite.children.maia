@@ -1,8 +1,0 @@
-{
-  "$schema": "@schema/children",
-  "$id": "@children/composite",
-  "items": [
-    "@actor/list",
-    "@actor/kanban"
-  ]
-}

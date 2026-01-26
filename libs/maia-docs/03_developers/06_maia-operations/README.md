@@ -121,14 +121,18 @@ Operations are modular handlers that execute specific database operations:
 - **UpdateOperation** - Updates existing records (unified for data + configs)
 - **DeleteOperation** - Deletes records
 - **SeedOperation** - Seeds database (backend-specific, IndexedDB only)
+- **SchemaOperation** - Loads schema definitions by co-id, schema name, or from CoValue headerMeta
+- **ResolveOperation** - Resolves human-readable keys to co-ids
 
 ### DBEngine
 
 The `DBEngine` routes operations to the appropriate handler. It:
 - Accepts a `DBAdapter` instance in the constructor
 - Routes `execute()` calls to the right operation handler
-- Provides helper methods like `getSchemaCoId()` and `resolveCoId()`
+- Provides helper methods like `getSchemaCoId()` and `resolveCoId()` (which use operations API internally)
 - Optionally accepts an evaluator for MaiaScript expression evaluation
+
+**Important:** All database access should go through `dbEngine.execute({op: ...})`. Helper methods like `getSchemaCoId()` use the operations API internally, ensuring consistent patterns throughout the codebase.
 
 ### ReactiveStore
 
@@ -363,7 +367,112 @@ await dbEngine.execute({
 });
 ```
 
+### SchemaOperation
+
+**Purpose:** Load schema definitions by co-id, schema name, or from CoValue headerMeta
+
+**Parameters:**
+- `coId` (string, optional) - Schema co-id (co_z...) - direct load
+- `schemaName` (string, optional) - Schema name (e.g., 'vibe', 'actor') - resolves internally
+- `fromCoValue` (string, optional) - CoValue co-id - extracts headerMeta.$schema internally
+
+**Returns:** Schema definition object or null if not found
+
+**Example:**
+```javascript
+// Load schema by co-id
+const schema = await dbEngine.execute({
+  op: 'schema',
+  coId: 'co_zSchema123'
+});
+
+// Load schema by name (operation resolves internally)
+const schema = await dbEngine.execute({
+  op: 'schema',
+  schemaName: 'vibe'
+});
+
+// Load schema from CoValue's headerMeta
+const schema = await dbEngine.execute({
+  op: 'schema',
+  fromCoValue: 'co_zValue456'
+});
+```
+
+### ResolveOperation
+
+**Purpose:** Resolve human-readable keys to co-ids
+
+**Parameters:**
+- `humanReadableKey` (string, required) - Human-readable ID (e.g., '@schema/actor', '@vibe/todos')
+
+**Returns:** Co-id (co_z...) or null if not found
+
+**Example:**
+```javascript
+const coId = await dbEngine.execute({
+  op: 'resolve',
+  humanReadableKey: '@schema/actor'
+});
+```
+
+**Note:** This operation is typically used internally by helper methods like `getSchemaCoId()` and `resolveCoId()`. Engines should use those helper methods rather than calling resolve directly.
+
 ---
+
+## Unified Operations API Pattern
+
+**Principle:** All database access should go through the unified operations API (`dbEngine.execute({op: ...})`). This ensures consistency, maintainability, and backend abstraction.
+
+### Architecture Flow
+
+```
+Engines/Utils → dbEngine.execute({op: ...}) → Operations → Backend Methods
+```
+
+**Allowed:**
+- ✅ Engines call `dbEngine.execute({op: 'read', ...})`
+- ✅ Engines use helper methods like `getSchemaCoId()` (which use operations API internally)
+- ✅ Operations call `this.backend.*` methods (operations ARE the abstraction layer)
+
+**Not Allowed:**
+- ❌ Engines calling `dbEngine.backend.*` directly
+- ❌ Engines calling `backend.*` methods directly
+- ❌ Utilities calling backend methods directly
+
+### How Engines Should Access Database
+
+**✅ Correct Pattern:**
+```javascript
+// Direct operation call
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: 'co_zTodos123',
+  key: 'co_zTodo456'
+});
+
+// Using helper methods (which use operations API internally)
+const schemaCoId = await dbEngine.getSchemaCoId('actor');
+const coId = await dbEngine.resolveCoId('@vibe/todos');
+
+// Using utilities that use operations API
+import { subscribeConfig } from '@MaiaOS/script/utils';
+const { config } = await subscribeConfig(dbEngine, schemaCoId, coId, 'actor');
+```
+
+**❌ Incorrect Pattern:**
+```javascript
+// DON'T call backend directly from engines
+const data = await dbEngine.backend.read(...);  // ❌
+const coId = await dbEngine.backend.resolveHumanReadableKey(...);  // ❌
+```
+
+### Why This Matters
+
+1. **Consistency**: All database access follows the same pattern
+2. **Maintainability**: Single API to maintain, easier to debug
+3. **Backend Abstraction**: Engines don't need to know backend implementation details
+4. **Future-proof**: Easy to add new operations or swap backends
 
 ## Integration with Other Packages
 
@@ -384,9 +493,16 @@ export class DBEngine extends SharedDBEngine {
 }
 ```
 
+**All engines in maia-script use the operations API:**
+- `ActorEngine` - Uses `dbEngine.execute({op: 'read'})` for configs
+- `StyleEngine` - Uses `subscribeConfig()` → `dbEngine.execute({op: 'read'})`
+- `ViewEngine` - Uses `subscribeConfig()` → `dbEngine.execute({op: 'read'})`
+- `StateEngine` - Uses `subscribeConfig()` → `dbEngine.execute({op: 'read'})`
+- `SubscriptionEngine` - Uses `dbEngine.execute({op: 'read'})` for data subscriptions
+
 ### maia-db
 
-`maia-db` will implement `DBAdapter` for the CoJSON backend, allowing it to use the same operations layer as IndexedDB.
+`maia-db` implements `DBAdapter` for the CoJSON backend, allowing it to use the same operations layer as IndexedDB. All database access goes through the unified operations API.
 
 ---
 

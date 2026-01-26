@@ -54,7 +54,10 @@ export function transformSchemaForSeeding(schema, coIdMap) {
 
   // Transform $co keyword values (replace human-readable IDs with co-ids)
   // CRITICAL: This must happen AFTER all schemas have been added to coIdMap
-  transformCoReferences(transformed, coIdMap);
+  const transformedCount = transformCoReferences(transformed, coIdMap, transformed.$id || 'root');
+  if (transformedCount > 0 && transformed.$id) {
+    console.log(`[SchemaTransformer] Transformed ${transformedCount} $co reference(s) in schema ${transformed.$id}`);
+  }
 
   // Transform items in arrays (for colist/costream)
   if (transformed.items) {
@@ -93,11 +96,17 @@ function transformProperties(properties, coIdMap) {
 /**
  * Transform $co keyword references (replace human-readable IDs with co-ids)
  * @private
+ * @param {Object} obj - Object to transform
+ * @param {Map<string, string>} coIdMap - Map of human-readable ID → co-id
+ * @param {string} path - Current path for logging (optional)
+ * @returns {number} Number of references transformed
  */
-function transformCoReferences(obj, coIdMap) {
+function transformCoReferences(obj, coIdMap, path = '') {
   if (!obj || typeof obj !== 'object') {
-    return;
+    return 0;
   }
+
+  let transformedCount = 0;
 
   // Check if this object has a $co keyword
   if (obj.$co && typeof obj.$co === 'string') {
@@ -105,7 +114,7 @@ function transformCoReferences(obj, coIdMap) {
     
     // If it's already a co-id, skip
     if (refValue.startsWith('co_z')) {
-      return;
+      return 0;
     }
     
     // If it's a human-readable ID (starts with @schema/), look it up in coIdMap
@@ -113,27 +122,41 @@ function transformCoReferences(obj, coIdMap) {
       const coId = coIdMap.get(refValue);
       if (coId) {
         obj.$co = coId;
+        transformedCount++;
+        if (path) {
+          console.log(`[SchemaTransformer] Transformed $co reference at ${path}: ${refValue} → ${coId.substring(0, 12)}...`);
+        }
       } else {
         // CRITICAL: This means the referenced schema isn't in the coIdMap
         // This will cause validation errors at runtime
-        console.error(`[SchemaTransformer] No co-id found for $co reference: ${refValue}. Available keys in coIdMap:`, Array.from(coIdMap.keys()));
-        // Don't transform - leave as-is (will fail validation, but at least we'll see the error)
+        const availableKeys = Array.from(coIdMap.keys()).filter(k => k.startsWith('@schema/')).slice(0, 10).join(', ');
+        console.error(`[SchemaTransformer] ❌ No co-id found for $co reference at ${path || 'root'}: ${refValue}. Available schema keys (first 10): ${availableKeys}`);
+        throw new Error(`[SchemaTransformer] Failed to transform $co reference: ${refValue}. Schema must be registered before it can be referenced.`);
       }
     }
   }
 
   // Recursively transform nested objects
-  for (const value of Object.values(obj)) {
+  for (const [key, value] of Object.entries(obj)) {
+    // Skip special properties that are handled separately
+    if (key === '$schema' || key === '$id' || key.startsWith('$')) {
+      continue;
+    }
+    
     if (value && typeof value === 'object' && !Array.isArray(value)) {
-      transformCoReferences(value, coIdMap);
+      const nestedPath = path ? `${path}.${key}` : key;
+      transformedCount += transformCoReferences(value, coIdMap, nestedPath);
     } else if (Array.isArray(value)) {
-      value.forEach(item => {
+      value.forEach((item, index) => {
         if (item && typeof item === 'object') {
-          transformCoReferences(item, coIdMap);
+          const arrayPath = path ? `${path}.${key}[${index}]` : `${key}[${index}]`;
+          transformedCount += transformCoReferences(item, coIdMap, arrayPath);
         }
       });
     }
   }
+  
+  return transformedCount;
 }
 
 /**
@@ -193,9 +216,10 @@ export function transformInstanceForSeeding(instance, coIdMap, options = {}) {
   }
   // Note: If $id doesn't exist, it will be generated in _seedConfigs
 
-  // Transform reference properties (actor, context, view, state, interface, brand, style, subscriptions, inbox, children)
+  // Transform reference properties (actor, context, view, state, interface, brand, style, subscriptions, inbox)
   // Note: tokens and components are now embedded objects in styles, not separate CoValue references
-  const referenceProps = ['actor', 'context', 'view', 'state', 'interface', 'brand', 'style', 'subscriptions', 'inbox', 'children'];
+  // Note: children property removed - children are now stored in context.actors
+  const referenceProps = ['actor', 'context', 'view', 'state', 'interface', 'brand', 'style', 'subscriptions', 'inbox'];
   for (const prop of referenceProps) {
     if (transformed[prop] && typeof transformed[prop] === 'string') {
       const ref = transformed[prop];
@@ -224,6 +248,35 @@ export function transformInstanceForSeeding(instance, coIdMap, options = {}) {
           `Make sure the referenced instance exists and has a unique $id. ` +
           `Available refs (first 10): ${availableKeys}`
         );
+      }
+    }
+  }
+  
+  // Transform context.actors (explicit system property for child actors)
+  // context.actors is a map: { "namekey": "@actor/instance", ... }
+  // Transform all values (actor references) to co-ids
+  if (transformed.actors && typeof transformed.actors === 'object' && !Array.isArray(transformed.actors)) {
+    for (const [namekey, actorRef] of Object.entries(transformed.actors)) {
+      if (typeof actorRef === 'string') {
+        // Skip if already a co-id
+        if (actorRef.startsWith('co_z')) {
+          continue;
+        }
+        
+        // Must be @actor/instance format
+        if (!actorRef.startsWith('@actor/')) {
+          throw new Error(`[SchemaTransformer] context.actors[${namekey}] must use @actor/instance format, got: ${actorRef}`);
+        }
+        
+        const coId = coIdMap.get(actorRef);
+        if (coId) {
+          transformed.actors[namekey] = coId;
+        } else {
+          throw new Error(
+            `[SchemaTransformer] No co-id found for context.actors[${namekey}] reference: ${actorRef}. ` +
+            `Make sure the referenced actor exists and has a unique $id.`
+          );
+        }
       }
     }
   }
@@ -378,6 +431,7 @@ function transformTargetReference(targetRef, coIdMap, context = '') {
 
 /**
  * Transform a query object schema reference
+ * Ensures query objects only have schema and filter properties (strict validation)
  * @param {Object} queryObj - Query object with schema property
  * @param {Map} coIdMap - Map of human-readable IDs to co-ids
  */
@@ -387,6 +441,32 @@ function transformQueryObjectSchema(queryObj, coIdMap) {
     if (coId) {
       queryObj.schema = coId;
     }
+  }
+  
+  // CRITICAL: Ensure query object only has schema and filter properties (strict validation)
+  // Remove any extra properties that might have been added
+  // Query objects must match schema exactly: {schema: "co_z...", filter: {...}|null}
+  const cleanedQueryObj = {
+    schema: queryObj.schema
+  };
+  if ('filter' in queryObj) {
+    cleanedQueryObj.filter = queryObj.filter;
+  }
+  
+  // Replace original object properties with cleaned version
+  Object.keys(queryObj).forEach(key => {
+    if (key !== 'schema' && key !== 'filter') {
+      delete queryObj[key];
+    }
+  });
+  
+  // Ensure schema and filter are set correctly
+  queryObj.schema = cleanedQueryObj.schema;
+  if ('filter' in cleanedQueryObj) {
+    queryObj.filter = cleanedQueryObj.filter;
+  } else {
+    // Filter is optional, but if not present, don't add it (let schema default handle it)
+    delete queryObj.filter;
   }
 }
 
@@ -493,6 +573,31 @@ function transformQueryObjects(obj, coIdMap, depth = 0) {
       }
       continue; // Skip further processing of this property
     }
+    
+    // Check for context.actors (explicit system property for child actors)
+    // context.actors is a map: { "namekey": "@actor/instance", ... }
+    // Transform all values (actor references) to co-ids
+    if (key === 'actors' && value && typeof value === 'object' && !Array.isArray(value)) {
+      for (const [namekey, actorRef] of Object.entries(value)) {
+        if (typeof actorRef === 'string') {
+          // Skip if already a co-id
+          if (actorRef.startsWith('co_z')) {
+            continue;
+          }
+          
+          // Must be @actor/instance format
+          if (!actorRef.startsWith('@actor/')) {
+            throw new Error(`[SchemaTransformer] context.actors[${namekey}] must use @actor/instance format, got: ${actorRef}`);
+          }
+          
+          const coId = transformTargetReference(actorRef, coIdMap, `context.actors[${namekey}]`);
+          if (coId) {
+            value[namekey] = coId;
+          }
+        }
+      }
+      continue; // Skip further processing of this property
+    }
 
     // Check for target field at any level (for @core/publishMessage tool payloads)
     if (key === 'target' && typeof value === 'string') {
@@ -525,6 +630,56 @@ function transformQueryObjects(obj, coIdMap, depth = 0) {
       transformArrayItems(value, coIdMap, transformQueryObjects);
     }
   }
+}
+
+/**
+ * Verify that no @schema/... references remain in transformed schema
+ * @param {Object} schema - Transformed schema to verify
+ * @param {string} path - Current path (for error messages)
+ * @returns {Array<string>} Array of error messages (empty if valid)
+ */
+export function verifyNoSchemaReferences(schema, path = '') {
+  const errors = [];
+
+  if (!schema || typeof schema !== 'object') {
+    return errors;
+  }
+
+  // Check if this object has a $co keyword with @schema/ reference
+  if (schema.$co && typeof schema.$co === 'string') {
+    if (schema.$co.startsWith('@schema/')) {
+      errors.push(`Found @schema/ reference in $co at ${path || 'root'}: ${schema.$co}. All $co references must be transformed to co-ids.`);
+    }
+  }
+
+  // Check $schema reference
+  if (schema.$schema && typeof schema.$schema === 'string' && schema.$schema.startsWith('@schema/')) {
+    errors.push(`Found @schema/ reference in $schema at ${path || 'root'}: ${schema.$schema}. $schema must be transformed to co-id.`);
+  }
+
+  // Check $id reference
+  if (schema.$id && typeof schema.$id === 'string' && schema.$id.startsWith('@schema/')) {
+    errors.push(`Found @schema/ reference in $id at ${path || 'root'}: ${schema.$id}. $id must be transformed to co-id.`);
+  }
+
+  // Recursively check nested objects
+  for (const [key, value] of Object.entries(schema)) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const nestedPath = path ? `${path}.${key}` : key;
+      const nestedErrors = verifyNoSchemaReferences(value, nestedPath);
+      errors.push(...nestedErrors);
+    } else if (Array.isArray(value)) {
+      value.forEach((item, index) => {
+        if (item && typeof item === 'object') {
+          const arrayPath = path ? `${path}.${key}[${index}]` : `${key}[${index}]`;
+          const arrayErrors = verifyNoSchemaReferences(item, arrayPath);
+          errors.push(...arrayErrors);
+        }
+      });
+    }
+  }
+
+  return errors;
 }
 
 /**

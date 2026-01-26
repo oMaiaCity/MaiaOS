@@ -7,22 +7,56 @@
 
 /**
  * Get schema co-id safely with consistent error handling
+ * PREFERRED: Use fromCoValue pattern to extract schema from CoValue's headerMeta.$schema
  * @param {Object} dbEngine - Database engine instance
- * @param {string} configType - Config type (e.g., 'view', 'style', 'state', 'actor')
+ * @param {string|Object} configTypeOrOptions - Config type (e.g., 'view', 'style') OR options object
+ * @param {string} [options.fromCoValue] - CoValue co-id - extracts headerMeta.$schema (PREFERRED)
  * @returns {Promise<string>} Schema co-id
  * @throws {Error} If schema co-id cannot be resolved
  */
-export async function getSchemaCoIdSafe(dbEngine, configType) {
+export async function getSchemaCoIdSafe(dbEngine, configTypeOrOptions, options = {}) {
   if (!dbEngine) {
-    throw new Error(`[${configType}] Database engine not available`);
+    throw new Error(`[getSchemaCoIdSafe] Database engine not available`);
   }
   
-  const schemaCoId = await dbEngine.getSchemaCoId(configType);
-  if (!schemaCoId) {
-    throw new Error(`[${configType}] Failed to resolve ${configType} schema co-id`);
+  // Handle options object as first parameter
+  let configType = configTypeOrOptions;
+  let fromCoValue = options?.fromCoValue;
+  
+  if (configTypeOrOptions && typeof configTypeOrOptions === 'object' && !Array.isArray(configTypeOrOptions)) {
+    configType = configTypeOrOptions.configType;
+    fromCoValue = configTypeOrOptions.fromCoValue;
   }
   
-  return schemaCoId;
+  // PREFERRED: Extract schema from CoValue's headerMeta.$schema
+  if (fromCoValue) {
+    if (!fromCoValue.startsWith('co_z')) {
+      throw new Error(`[getSchemaCoIdSafe] fromCoValue must be a valid co-id (co_z...), got: ${fromCoValue}`);
+    }
+    const schemaStore = await dbEngine.execute({
+      op: 'schema',
+      fromCoValue: fromCoValue
+    });
+    const schemaCoId = schemaStore.value?.$id;
+    if (!schemaCoId) {
+      throw new Error(`[getSchemaCoIdSafe] Failed to extract schema co-id from CoValue ${fromCoValue}. CoValue must have $schema in headerMeta.`);
+    }
+    return schemaCoId;
+  }
+  
+  // Fallback: Schema name resolution (for cases where we don't have instance co-id)
+  // This should be rare - prefer fromCoValue pattern
+  if (configType) {
+    // Use resolve operation (seeding-only pattern, but kept for backward compatibility)
+    const schemaKey = `@schema/${configType}`;
+    const schemaCoId = await dbEngine.execute({ op: 'resolve', humanReadableKey: schemaKey });
+    if (!schemaCoId) {
+      throw new Error(`[getSchemaCoIdSafe] Failed to resolve ${configType} schema co-id. Use fromCoValue pattern instead if you have an instance co-id.`);
+    }
+    return schemaCoId;
+  }
+  
+  throw new Error(`[getSchemaCoIdSafe] Either configType or fromCoValue must be provided`);
 }
 
 /**
@@ -47,7 +81,8 @@ export async function createConfigSubscription({
   subscriptionsMap = null,
   onUpdateWrapper = null
 }) {
-  const schemaCoId = await getSchemaCoIdSafe(dbEngine, configType);
+  // Extract schema co-id from config instance's headerMeta.$schema using fromCoValue pattern
+  const schemaCoId = await getSchemaCoIdSafe(dbEngine, { fromCoValue: coId });
   
   // Wrap onUpdate if wrapper provided
   const wrappedOnUpdate = onUpdateWrapper 

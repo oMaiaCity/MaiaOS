@@ -65,14 +65,77 @@ export async function handleEvent(viewEngine, e, eventDef, data, element, actorI
     return; // Ignore if key doesn't match (silently)
   }
 
-  // Resolve payload
-  payload = await resolvePayload(viewEngine, payload, data, e, element);
-
   // Route internal event through inbox for unified event logging
   // This creates a single source of truth for all events (internal + external)
   if (viewEngine.actorEngine) {
     const actor = viewEngine.actorEngine.getActor(actorId);
     if (actor && actor.machine) {
+      // CRITICAL FIX: Ensure schema is resolved for drag/drop events BEFORE resolving payload
+      // This ensures schema is available when resolvePayload evaluates expressions
+      if ((eventName === 'DRAG_START' || eventName === 'DROP') && payload && payload.schema) {
+        // If schema is an expression (starts with $), resolve it from actor context first
+        if (typeof payload.schema === 'string' && payload.schema.startsWith('$')) {
+          // Try to resolve from actor context (same pattern as toggle button - no schema needed in payload)
+          // But for drag/drop, we need schema, so resolve it from context
+          const schemaKey = payload.schema.replace('$', ''); // e.g., "$todosSchema" -> "todosSchema"
+          let resolvedSchema = actor.context[schemaKey] || actor.context[`${schemaKey}Schema`];
+          
+          // If not found, try to find any schema that matches the base name
+          // e.g., "todosSchema" -> try "todosTodoSchema" or "todosDoneSchema"
+          if (!resolvedSchema || !resolvedSchema.startsWith('co_z')) {
+            const baseName = schemaKey.replace(/Schema$/, '').toLowerCase(); // e.g., "todosSchema" -> "todos"
+            // Look for any schema key that contains the base name and ends with "schema"
+            for (const [key, value] of Object.entries(actor.context)) {
+              const lowerKey = key.toLowerCase();
+              // Match keys like "todosTodoSchema", "todosDoneSchema", "todostodoSchema", etc.
+              // Must contain base name and "schema" (case-insensitive)
+              if (lowerKey.includes(baseName) && lowerKey.includes('schema')) {
+                if (typeof value === 'string' && value.startsWith('co_z')) {
+                  resolvedSchema = value;
+                  break; // Use first matching schema (both todosTodoSchema and todosDoneSchema use same schema)
+                }
+              }
+            }
+          }
+          
+          // Fallback: look for schema in context query objects (todosTodo, todosDone, etc.)
+          if (!resolvedSchema || !resolvedSchema.startsWith('co_z')) {
+            for (const [key, value] of Object.entries(actor.context)) {
+              if (value && typeof value === 'object' && value.schema && typeof value.schema === 'string' && value.schema.startsWith('co_z')) {
+                resolvedSchema = value.schema;
+                break;
+              }
+            }
+          }
+          
+          // Update payload with resolved schema
+          if (resolvedSchema && typeof resolvedSchema === 'string' && resolvedSchema.startsWith('co_z')) {
+            payload.schema = resolvedSchema;
+          } else {
+            console.error(`[ViewEngine] Failed to resolve schema for ${eventName}. Original: ${payload.schema}, Available context keys:`, Object.keys(actor.context));
+          }
+        }
+      }
+      
+      // Resolve payload (now schema should be resolved if it was an expression)
+      // Store resolved schema before resolvePayload in case it gets overwritten
+      const resolvedSchemaBeforePayload = payload.schema;
+      payload = await resolvePayload(viewEngine, payload, data, e, element);
+      
+      // Restore resolved schema if resolvePayload overwrote it (e.g., if data.context doesn't have todosSchema)
+      if ((eventName === 'DRAG_START' || eventName === 'DROP') && resolvedSchemaBeforePayload && 
+          typeof resolvedSchemaBeforePayload === 'string' && resolvedSchemaBeforePayload.startsWith('co_z')) {
+        payload.schema = resolvedSchemaBeforePayload;
+      }
+      
+      // Final check: ensure schema is a co-id for drag/drop events
+      if ((eventName === 'DRAG_START' || eventName === 'DROP') && payload.schema) {
+        if (typeof payload.schema !== 'string' || !payload.schema.startsWith('co_z')) {
+          console.error(`[ViewEngine] Schema not resolved for ${eventName}. Payload:`, payload, 'Resolved before payload:', resolvedSchemaBeforePayload);
+          return; // Don't send invalid event
+        }
+      }
+      
       // Use sendInternalEvent to route through inbox
       // This logs the event and processes it immediately
       await viewEngine.actorEngine.sendInternalEvent(actorId, eventName, payload);

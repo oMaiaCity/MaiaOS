@@ -20,7 +20,6 @@ import { ModuleRegistry } from '@MaiaOS/script';
 import { ToolEngine } from '@MaiaOS/script';
 import { SubscriptionEngine } from '@MaiaOS/script';
 import { DBEngine } from '@MaiaOS/script';
-import { IndexedDBBackend } from '@MaiaOS/script';
 // Import validation helper
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import all schemas for seeding
@@ -178,11 +177,12 @@ export class MaiaOS {
   /**
    * Boot the operating system
    * @param {Object} config - Boot configuration
-   * @param {Object} [config.node] - LocalNode instance (for CoJSON backend)
-   * @param {Object} [config.account] - RawAccount instance (for CoJSON backend)
-   * @param {Object} [config.backend] - Pre-initialized backend (optional, will create if not provided)
+   * @param {Object} [config.node] - LocalNode instance (required for CoJSON backend if backend not provided)
+   * @param {Object} [config.account] - RawAccount instance (required for CoJSON backend if backend not provided)
+   * @param {Object} [config.backend] - Pre-initialized backend (alternative to node+account)
    * @param {Object} [config.registry] - Config registry for seeding
    * @returns {Promise<MaiaOS>} Booted OS instance
+   * @throws {Error} If neither backend nor node+account is provided
    */
   static async boot(config = {}) {
     const os = new MaiaOS();
@@ -195,7 +195,7 @@ export class MaiaOS {
       os._account = config.account;
     }
     
-    // Initialize database (supports both IndexedDB and CoJSON backends)
+    // Initialize database (requires CoJSON backend via node+account or pre-initialized backend)
     const backend = await MaiaOS._initializeDatabase(os, config);
     
     // Seed database if registry provided
@@ -216,13 +216,14 @@ export class MaiaOS {
 
   /**
    * Initialize database backend and engine
-   * Supports both IndexedDB (default) and CoJSON backends
+   * Requires either a pre-initialized backend or CoJSON node+account
    * @param {MaiaOS} os - OS instance
    * @param {Object} config - Boot configuration
-   * @param {Object} [config.node] - LocalNode instance (for CoJSON backend)
-   * @param {Object} [config.account] - RawAccount instance (for CoJSON backend)
-   * @param {Object} [config.backend] - Pre-initialized backend (optional)
+   * @param {Object} [config.node] - LocalNode instance (required for CoJSON backend)
+   * @param {Object} [config.account] - RawAccount instance (required for CoJSON backend)
+   * @param {Object} [config.backend] - Pre-initialized backend (alternative to node+account)
    * @returns {Promise<DBAdapter>} Initialized backend
+   * @throws {Error} If neither backend nor node+account is provided
    */
   static async _initializeDatabase(os, config = {}) {
     // If backend is provided, use it
@@ -236,16 +237,17 @@ export class MaiaOS {
       const { CoJSONBackend } = await import('@MaiaOS/db');
       const backend = new CoJSONBackend(config.node, config.account);
       os.dbEngine = new DBEngine(backend);
+      // Set dbEngine on backend for runtime schema validation in create functions
+      backend.dbEngine = os.dbEngine;
       console.log('   Using CoJSON backend');
       return backend;
     }
     
-    // Default: Use IndexedDB backend
-    const backend = new IndexedDBBackend();
-    await backend.init();
-    os.dbEngine = new DBEngine(backend);
-    console.log('   Using IndexedDB backend');
-    return backend;
+    // No backend provided - throw error
+    throw new Error(
+      'MaiaOS.boot() requires either a backend or node+account for CoJSON backend. ' +
+      'Provide either: { backend: <DBAdapter> } or { node: <LocalNode>, account: <RawAccount> }'
+    );
   }
 
   /**
@@ -290,7 +292,7 @@ export class MaiaOS {
   /**
    * Seed database with configs, schemas, and tool definitions
    * @param {MaiaOS} os - OS instance
-   * @param {IndexedDBBackend} backend - Database backend
+   * @param {DBAdapter} backend - Database backend (CoJSONBackend)
    * @param {Object} config - Boot configuration
    */
   static async _seedDatabase(os, backend, config) {
@@ -316,25 +318,26 @@ export class MaiaOS {
     await MaiaOS._validateSchemas(schemas, validationEngine);
     
     // Seed database
+    // Merge registry default data with any existing data (don't override, merge)
+    const defaultData = config.registry?.data || {};
+    const seedData = {
+      todos: defaultData.todos || [], // Use registry default todos if available
+      ...defaultData // Include any other default data from registry
+    };
+    
     await os.dbEngine.execute({
       op: 'seed',
       configs: configsWithTools,
       schemas: schemas,
-      data: { todos: [] } // Initial empty collections
+      data: seedData
     });
     
     console.log('✅ Database seeded successfully');
     
     // Set schema resolver on validation helper singleton for engines to use
+    // Pass dbEngine to use operations API (preferred over resolver function)
     const { setSchemaResolver } = await import('@MaiaOS/schemata/validation.helper');
-    setSchemaResolver(async (schemaKey) => {
-      try {
-        return await backend.getSchema(schemaKey);
-      } catch (error) {
-        console.warn(`[MaiaOS] Failed to resolve schema ${schemaKey}:`, error);
-        return null;
-      }
-    });
+    setSchemaResolver(null, os.dbEngine); // Pass dbEngine to use operations API
   }
 
   /**
@@ -347,7 +350,8 @@ export class MaiaOS {
     os.moduleRegistry = new ModuleRegistry();
     
     // Initialize engines
-    os.evaluator = new MaiaScriptEvaluator(os.moduleRegistry);
+    // CRITICAL: Pass dbEngine to evaluator for runtime schema validation (no fallbacks)
+    os.evaluator = new MaiaScriptEvaluator(os.moduleRegistry, { dbEngine: os.dbEngine });
     os.toolEngine = new ToolEngine(os.moduleRegistry);
     
     // Store engines in registry for module access
@@ -445,11 +449,10 @@ export class MaiaOS {
     
     const vibe = await response.json();
     
-    // Validate vibe structure using schema (load from IndexedDB on-the-fly)
-    const schema = await loadSchemaFromDB(this.dbEngine, 'vibe');
-    if (schema) {
-      await validateAgainstSchemaOrThrow(schema, vibe, 'vibe');
-    }
+    // Validate vibe structure using schema
+    // Note: When loading from file, we can't use fromCoValue pattern since it's not in the database yet
+    // For file-based loading, we skip schema validation (vibe will be validated when seeded)
+    // If you need validation, load the vibe schema by co-id or use loadVibeFromDatabase instead
     
     // Resolve actor path relative to vibe location
     const vibeDir = vibePath.substring(0, vibePath.lastIndexOf('/'));
@@ -464,75 +467,119 @@ export class MaiaOS {
   }
 
   /**
+   * Load a vibe from account.vibes using the abstracted operations API
+   * @param {string} vibeKey - Vibe key in account.vibes (e.g., "todos")
+   * @param {HTMLElement} container - Container element
+   * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
+   */
+  async loadVibeFromAccount(vibeKey, container) {
+    if (!this.dbEngine || !this._account) {
+      throw new Error('[Kernel] Cannot load vibe from account - dbEngine or account not available');
+    }
+
+    const account = this._account;
+    
+    // Step 1: Read account CoMap using abstracted operations API
+    const accountStore = await this.dbEngine.execute({
+      op: 'read',
+      schema: '@account',
+      key: account.id
+    });
+    
+    const accountData = accountStore.value;
+    if (!accountData) {
+      throw new Error('[Kernel] Failed to read account CoMap');
+    }
+    
+    // Step 2: Extract vibes CoMap co-id from account data
+    // Operations API returns flat objects: {id: '...', profile: '...', vibes: '...'}
+    const vibesId = accountData.vibes;
+    if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_')) {
+      throw new Error(`[Kernel] account.vibes not found. Make sure the vibe was seeded correctly. Account data: ${JSON.stringify({id: accountData.id, hasVibes: !!accountData.vibes})}`);
+    }
+    
+    // Step 3: Read account.vibes CoMap using abstracted operations API
+    // Backend's _readSingleItem waits for CoValue to be loaded before returning store
+    const vibesStore = await this.dbEngine.execute({
+      op: 'read',
+      schema: vibesId,
+      key: vibesId
+    });
+    
+    // Store is already loaded by backend (operations API abstraction)
+    const vibesData = vibesStore.value;
+    
+    if (!vibesData || vibesData.error) {
+      throw new Error(`[Kernel] account.vibes CoMap not found or error (co-id: ${vibesId}): ${vibesData?.error || 'Unknown error'}. Make sure the vibe was seeded correctly.`);
+    }
+    
+    // Operations API returns flat objects: {id: '...', todos: 'co_...', ...}
+    // Extract vibe co-id directly from flat object
+    const vibeCoId = vibesData[vibeKey];
+    if (!vibeCoId || typeof vibeCoId !== 'string' || !vibeCoId.startsWith('co_')) {
+      const availableVibes = Object.keys(vibesData).filter(k => k !== 'id' && typeof vibesData[k] === 'string' && vibesData[k].startsWith('co_'));
+      throw new Error(`[Kernel] Vibe '${vibeKey}' not found in account.vibes. Available vibes: ${availableVibes.join(', ')}`);
+    }
+    
+    // Step 5: Load vibe using co-id (reuse existing loadVibeFromDatabase logic)
+    return await this.loadVibeFromDatabase(vibeCoId, container);
+  }
+
+  /**
    * Load a vibe from database (maia.db)
-   * @param {string} vibeId - Vibe ID in new format (e.g., "@vibe/todos", "@vibe/notes")
+   * @param {string} vibeId - Vibe ID (co-id or human-readable like "@vibe/todos")
    * @param {HTMLElement} container - Container element
    * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
    */
   async loadVibeFromDatabase(vibeId, container) {
-    // Get vibe schema co-id
-    const vibeSchemaCoId = await this.dbEngine.getSchemaCoId('vibe');
-    if (!vibeSchemaCoId) {
-      throw new Error('[Kernel] Failed to resolve vibe schema co-id');
-    }
-    
-    // Resolve human-readable vibeId to co-id if needed
-    let vibeCoId = vibeId;
+    // Vibe ID should already be co-id (transformed during seeding)
+    // If not co-id, it's a seeding error - fail fast
     if (!vibeId.startsWith('co_z')) {
-      // Define alternative formats to try
-      const alternatives = [
-        `@schema/vibe:${vibeId.replace('@vibe/', '')}`, // @schema/vibe:todos
-        vibeId.replace('@vibe/', 'vibe/'), // vibe/todos
-        `@vibe/${vibeId.replace('@vibe/', '')}`, // @vibe/todos (explicit)
-      ];
-      
-      // Try to resolve human-readable ID (e.g., @vibe/todos) to co-id
-      vibeCoId = await this.dbEngine.resolveCoId(vibeId);
-      if (!vibeCoId) {
-        // Try alternative formats that might be stored in registry
-        for (const alt of alternatives) {
-          vibeCoId = await this.dbEngine.resolveCoId(alt);
-          if (vibeCoId) {
-            console.log(`[Kernel] Resolved vibe ID '${vibeId}' via alternative format '${alt}' to co-id: ${vibeCoId}`);
-            break;
-          }
-        }
-      } else {
-        console.log(`[Kernel] Resolved vibe ID '${vibeId}' directly to co-id: ${vibeCoId}`);
-      }
-      if (!vibeCoId) {
-        // Debug: Try to see what's actually in the registry
-        console.error(`[Kernel] Failed to resolve vibe ID '${vibeId}'. Tried: ${vibeId}, ${alternatives.join(', ')}`);
-        throw new Error(`[Kernel] Failed to resolve vibe ID '${vibeId}' to co-id. Make sure the vibe was seeded correctly. The database may need to be cleared and re-seeded.`);
-      }
+      throw new Error(`[Kernel] Vibe ID must be co-id at runtime: ${vibeId}. This should have been resolved during seeding.`);
     }
+    const vibeCoId = vibeId;
     
-    // Load vibe manifest from database using co-id (using read operation with reactive store)
-    console.log(`[Kernel] Loading vibe from database: schema=${vibeSchemaCoId}, key=${vibeCoId}`);
+    // Load vibe CoValue first (without schema filter - read CoValue directly)
+    // This allows us to extract schema co-id from headerMeta.$schema
+    console.log(`[Kernel] Loading vibe from database: key=${vibeCoId}`);
     
-    const store = await this.dbEngine.execute({
+    const vibeStore = await this.dbEngine.execute({
       op: 'read',
-      schema: vibeSchemaCoId,
+      schema: null, // No schema filter - read CoValue directly
       key: vibeCoId
     });
     
-    // Get current value from reactive store
-    const vibe = store.value;
+    // Extract schema co-id from vibe's headerMeta.$schema using fromCoValue pattern
+    const schemaStore = await this.dbEngine.execute({
+      op: 'schema',
+      fromCoValue: vibeCoId // ✅ Extracts headerMeta.$schema internally
+    });
+    const vibeSchemaCoId = schemaStore.value?.$id || vibeStore.value?.$schema;
+    
+    if (!vibeSchemaCoId) {
+      throw new Error(`[Kernel] Failed to extract schema co-id from vibe ${vibeCoId}. Vibe must have $schema in headerMeta.`);
+    }
+    
+    // Use the store we already have (vibeStore contains the vibe data)
+    const store = vibeStore;
+    
+    // Store is already loaded by backend (operations API abstraction)
+    let vibe = store.value;
     
     // Debug: Check what we got
-    console.log(`[Kernel] Store value after read:`, vibe ? 'FOUND' : 'NULL', vibe ? { $id: vibe.$id, name: vibe.name } : null);
+    console.log(`[Kernel] Store value after read:`, vibe ? 'FOUND' : 'NULL', vibe ? { $id: vibe.$id, name: vibe.name, hasProperties: !!vibe.properties } : null);
     
-    if (!vibe) {
+    if (!vibe || vibe.error) {
       // Debug: Try to see what's actually in the database
       console.error(`[Kernel] Vibe not found! Trying to debug...`);
-      console.error(`[Kernel] Resolved co-id: ${vibeCoId}`);
+      console.error(`[Kernel] Vibe co-id: ${vibeCoId}`);
       console.error(`[Kernel] Schema co-id: ${vibeSchemaCoId}`);
       
       // Try direct read to see what's returned
       try {
         const directStore = await this.dbEngine.execute({
           op: 'read',
-          schema: vibeSchemaCoId,
+          schema: null, // Read CoValue directly
           key: vibeCoId
         });
         const directValue = directStore.value;
@@ -541,135 +588,61 @@ export class MaiaOS {
         console.error(`[Kernel] Direct read() error:`, err);
       }
       
-      // Try to list all vibes in the configs store
-      try {
-        const allVibes = await this.dbEngine.execute({
-          op: 'read',
-          schema: vibeSchemaCoId
-        });
-        console.error(`[Kernel] All vibes in store:`, allVibes.value);
-      } catch (err) {
-        console.error(`[Kernel] Error listing vibes:`, err);
-      }
-      
-      throw new Error(`Vibe not found in database: ${vibeId} (resolved to ${vibeCoId})`);
+      throw new Error(`Vibe not found in database: ${vibeId} (co-id: ${vibeCoId})`);
     }
     
-    // Validate vibe structure using schema (load from IndexedDB on-the-fly)
-    const schema = await loadSchemaFromDB(this.dbEngine, 'vibe');
+    // Convert CoJSON backend format (properties array) to plain object if needed
+    if (vibe.properties && Array.isArray(vibe.properties)) {
+      // CoJSON backend returns objects with properties array - convert to plain object
+      const plainVibe = {};
+      for (const prop of vibe.properties) {
+        plainVibe[prop.key] = prop.value;
+      }
+      // Preserve metadata
+      if (vibe.id) plainVibe.id = vibe.id;
+      if (vibe.$schema) plainVibe.$schema = vibe.$schema; // Use $schema from headerMeta
+      if (vibe.type) plainVibe.type = vibe.type;
+      vibe = plainVibe;
+      console.log(`[Kernel] Converted vibe from properties array format. Actor: ${vibe.actor}`);
+    }
+    
+    // Validate vibe structure using schema (load from schemaStore we already have)
+    const schema = schemaStore.value;
     if (schema) {
       await validateAgainstSchemaOrThrow(schema, vibe, 'vibe');
     }
     
-    // Resolve actor ID (can be human-readable like @actor/agent or co-id)
-    let actorCoId = vibe.actor; // e.g., "@actor/agent" or "co_z..."
+    // Actor ID should already be co-id (transformed during seeding)
+    // If not co-id, it's a seeding error - fail fast
+    let actorCoId = vibe.actor; // Should be "co_z..." (already transformed)
     
-    // If it's already a co-id, verify it exists first
-    // If it doesn't exist, try resolving from registry (handles mismatches from transformation)
-    if (actorCoId && actorCoId.startsWith('co_z')) {
-      // Verify the co-id exists in database (using read operation with reactive store)
-      const actorStore = await this.dbEngine.execute({
-        op: 'read',
-        schema: await this.dbEngine.getSchemaCoId('actor'),
-        key: actorCoId
-      });
-      const actorExists = actorStore.value;
-      
-      if (!actorExists) {
-        // Co-id from vibe doesn't exist - try resolving @actor/agent from registry instead
-        console.warn(`[Kernel] Actor co-id ${actorCoId.substring(0, 20)}... from vibe not found. Trying to resolve @actor/agent from registry...`);
-        const resolvedFromRegistry = await this.dbEngine.resolveCoId('@actor/agent');
-        if (resolvedFromRegistry && resolvedFromRegistry.startsWith('co_z')) {
-          // Verify the resolved co-id exists (using read operation with reactive store)
-          const resolvedStore = await this.dbEngine.execute({
-            op: 'read',
-            schema: await this.dbEngine.getSchemaCoId('actor'),
-            key: resolvedFromRegistry
-          });
-          const resolvedExists = resolvedStore.value;
-          if (resolvedExists) {
-            actorCoId = resolvedFromRegistry;
-            console.log(`[Kernel] Resolved @actor/agent from registry to co-id: ${actorCoId}`);
-          } else {
-            throw new Error(`[MaiaOS] Actor co-id ${actorCoId.substring(0, 20)}... from vibe not found, and resolved @actor/agent (${resolvedFromRegistry.substring(0, 20)}...) also not found. The actor may not have been seeded correctly.`);
-          }
-        } else {
-          throw new Error(`[MaiaOS] Actor co-id ${actorCoId.substring(0, 20)}... from vibe not found, and @actor/agent not found in registry. The actor may not have been seeded correctly.`);
-        }
-      } else {
-        console.log(`[Kernel] Using actor co-id ${actorCoId.substring(0, 20)}... from vibe`);
-      }
-    } else if (!actorCoId.startsWith('co_z')) {
-      // Human-readable ID - resolve from registry
-      if (!this.dbEngine) {
-        throw new Error(`[MaiaOS] Cannot resolve human-readable actor ID ${actorCoId} - database engine not available`);
-      }
-      
-      const originalActorId = actorCoId;
-      
-      // Resolve via coIdRegistry (handles @actor/name format)
-      actorCoId = await this.dbEngine.resolveCoId(actorCoId);
-      if (!actorCoId || !actorCoId.startsWith('co_z')) {
-        // Try alternative formats
-        const alternatives = [
-          `@schema/actor:${originalActorId.replace('@actor/', '')}`,
-          originalActorId.replace('@actor/', 'actor/'),
-        ];
-        for (const alt of alternatives) {
-          const resolved = await this.dbEngine.resolveCoId(alt);
-          if (resolved && resolved.startsWith('co_z')) {
-            actorCoId = resolved;
-            console.log(`[Kernel] Resolved actor ID '${originalActorId}' via alternative format '${alt}' to co-id: ${actorCoId}`);
-            break;
-          }
-        }
-        if (!actorCoId || !actorCoId.startsWith('co_z')) {
-          console.error(`[Kernel] Failed to resolve actor ID '${originalActorId}'. Available keys in coIdRegistry:`, await this._debugCoIdRegistry());
-          throw new Error(`[MaiaOS] Could not resolve actor ID ${originalActorId} to a co-id. Make sure the actor was seeded correctly.`);
-        }
-      } else {
-        console.log(`[Kernel] Resolved actor ID '${originalActorId}' directly to co-id: ${actorCoId}`);
-      }
+    if (!actorCoId) {
+      throw new Error(`[MaiaOS] Vibe ${vibeId} (${vibeCoId}) does not have an 'actor' property. Vibe structure: ${JSON.stringify(Object.keys(vibe))}`);
     }
     
-    // Debug: Verify actor exists in database before loading (using read operation with reactive store)
+    if (!actorCoId.startsWith('co_z')) {
+      throw new Error(`[Kernel] Actor ID must be co-id at runtime: ${actorCoId}. This should have been resolved during seeding.`);
+    }
+    
+    // Extract actor schema co-id from actor's headerMeta.$schema using fromCoValue pattern
+    const actorSchemaStore = await this.dbEngine.execute({
+      op: 'schema',
+      fromCoValue: actorCoId // ✅ Extracts headerMeta.$schema from actor instance
+    });
+    const actorSchemaCoId = actorSchemaStore.value?.$id;
+    
+    if (!actorSchemaCoId) {
+      throw new Error(`[Kernel] Failed to extract schema co-id from actor ${actorCoId}. Actor must have $schema in headerMeta.`);
+    }
+    
+    // Verify actor exists in database (using read operation with reactive store)
     const actorStore = await this.dbEngine.execute({
       op: 'read',
-      schema: await this.dbEngine.getSchemaCoId('actor'),
+      schema: actorSchemaCoId,
       key: actorCoId
     });
     const actorExists = actorStore.value;
     if (!actorExists) {
-      console.error(`[Kernel] Actor co-id ${actorCoId} not found in database. Checking configs store...`);
-      // Try direct read to see what's in the store
-      const directStore = await this.dbEngine.execute({
-        op: 'read',
-        schema: await this.dbEngine.getSchemaCoId('actor'),
-        key: actorCoId
-      });
-      const directValue = directStore.value;
-      console.error(`[Kernel] Direct read result:`, directValue);
-      
-      // Debug: Check what actor co-ids ARE in the configs store
-      try {
-        const actorSchemaCoId = await this.dbEngine.getSchemaCoId('actor');
-        const configsTransaction = this.dbEngine.backend.db.transaction(['configs'], 'readonly');
-        const configsStore = configsTransaction.objectStore('configs');
-        const allConfigsRequest = configsStore.getAll();
-        const allConfigs = await this.dbEngine.backend._promisifyRequest(allConfigsRequest);
-        const actorConfigs = (allConfigs || []).filter(item => 
-          item.value && item.value.$schema && 
-          item.value.$schema === actorSchemaCoId
-        );
-        console.error(`[Kernel] Available actor configs in store:`, actorConfigs.map(c => ({
-          key: c.key,
-          $id: c.value?.$id,
-          role: c.value?.role
-        })));
-      } catch (err) {
-        console.error(`[Kernel] Could not list configs:`, err);
-      }
-      
       throw new Error(`[MaiaOS] Actor with co-id ${actorCoId} not found in database. The actor may not have been seeded correctly.`);
     }
     

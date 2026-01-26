@@ -1,52 +1,58 @@
 /**
  * Shared schema loader utility
- * Loads schema from IndexedDB for on-the-fly validation
- * Supports both human-readable keys and co-ids
+ * Loads schema from database using operations API
+ * Supports co-ids, human-readable keys, and CoValue header metadata
+ * 
+ * CRITICAL: Always use fromCoValue when validating CoJSON values to ensure
+ * schema comes from the value's header metadata (single source of truth)
  * 
  * @param {Object} dbEngine - Database engine instance
- * @param {string} schemaTypeOrCoId - Schema type (e.g., 'vibe', 'actor', 'view', 'style') or co-id (e.g., 'co_z123...')
+ * @param {string|Object} schemaTypeOrCoIdOrOptions - Schema type (e.g., 'vibe', 'actor'), co-id (e.g., 'co_z123...'), or options object
+ * @param {Object} [options] - Options object (if first param is string, this is ignored)
+ * @param {string} [options.fromCoValue] - CoValue co-id - extracts headerMeta.$schema internally (PREFERRED for validation)
  * @returns {Promise<Object|null>} Schema object or null if not found
  */
-export async function loadSchemaFromDB(dbEngine, schemaTypeOrCoId) {
-  if (!dbEngine || !dbEngine.backend) return null;
+export async function loadSchemaFromDB(dbEngine, schemaTypeOrCoIdOrOptions, options = {}) {
+  if (!dbEngine) return null;
+  
+  // Handle options object as first parameter
+  let schemaTypeOrCoId = schemaTypeOrCoIdOrOptions;
+  let fromCoValue = options?.fromCoValue;
+  
+  if (schemaTypeOrCoIdOrOptions && typeof schemaTypeOrCoIdOrOptions === 'object' && !Array.isArray(schemaTypeOrCoIdOrOptions)) {
+    // First parameter is options object
+    schemaTypeOrCoId = schemaTypeOrCoIdOrOptions.schemaType || schemaTypeOrCoIdOrOptions.schemaName || schemaTypeOrCoIdOrOptions.coId;
+    fromCoValue = schemaTypeOrCoIdOrOptions.fromCoValue;
+  }
+  
   try {
+    // PREFERRED: Load schema from CoValue's header metadata (single source of truth)
+    if (fromCoValue) {
+      if (!fromCoValue.startsWith('co_z')) {
+        throw new Error(`[schema-loader] fromCoValue must be a valid co-id (co_z...), got: ${fromCoValue}`);
+      }
+      const schemaStore = await dbEngine.execute({
+        op: 'schema',
+        fromCoValue: fromCoValue
+      });
+      return schemaStore.value; // Extract value from ReactiveStore
+    }
+    
     // Check if it's a co-id
     if (schemaTypeOrCoId && schemaTypeOrCoId.startsWith('co_z')) {
-      // Try to load directly by co-id
-      if (dbEngine.backend.getSchema) {
-        const schema = await dbEngine.backend.getSchema(schemaTypeOrCoId);
-        if (schema) return schema;
-      }
-      
-      // Fallback: try to get from schemas store directly
-      if (dbEngine.backend.db) {
-        const transaction = dbEngine.backend.db.transaction(['schemas'], 'readonly');
-        const store = transaction.objectStore('schemas');
-        const request = store.get(schemaTypeOrCoId);
-        const result = await dbEngine.backend._promisifyRequest(request);
-        if (result?.value) {
-          // Check if it's a reference object or actual schema
-          if (result.value.$coId) {
-            // It's a reference, load the actual schema
-            return await loadSchemaFromDB(dbEngine, result.value.$coId);
-          }
-          return result.value;
-        }
-      }
+      // Load schema directly by co-id via operations API
+      const schemaStore = await dbEngine.execute({
+        op: 'schema',
+        coId: schemaTypeOrCoId
+      });
+      return schemaStore.value; // Extract value from ReactiveStore
     }
     
-    // Human-readable key
-    const schemaKey = `@schema/${schemaTypeOrCoId}`;
-    const schema = await dbEngine.backend.getSchema(schemaKey);
-    
-    // If schema has $coId reference, load the actual schema
-    if (schema && schema.$coId) {
-      return await loadSchemaFromDB(dbEngine, schema.$coId);
-    }
-    
-    return schema;
+    // Human-readable schema name - NOT SUPPORTED at runtime
+    // All schema loading must use co-id or fromCoValue pattern
+    throw new Error(`[schema-loader] Schema name resolution not supported at runtime: ${schemaTypeOrCoId}. Use co-id or fromCoValue pattern instead.`);
   } catch (error) {
-    console.warn(`[schema-loader] Failed to load schema ${schemaTypeOrCoId}:`, error);
+    console.warn(`[schema-loader] Failed to load schema ${schemaTypeOrCoId || fromCoValue}:`, error);
     return null;
   }
 }

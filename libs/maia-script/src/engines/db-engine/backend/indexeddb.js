@@ -218,7 +218,8 @@ export class IndexedDBBackend {
     const validationEngine = new ValidationEngine();
     
     // Set up schema resolver for loading meta-schemas and referenced schemas
-    // Check in-memory transformed schemas map first (since we're seeding), then fallback to DB
+    // Check in-memory transformed schemas map first (since we're seeding)
+    // No IndexedDB fallbacks - schemas should be in-memory during seeding
     validationEngine.setSchemaResolver(async (schemaKey) => {
       // First check if it's in the transformed schemas map (being seeded)
       if (schemaKey.startsWith('co_z')) {
@@ -235,8 +236,9 @@ export class IndexedDBBackend {
           return transformed;
         }
       }
-      // Fallback: try to load from DB (if already stored)
-      return await this.getSchema(schemaKey);
+      // No fallback - schemas should be in-memory during seeding
+      console.warn(`[SchemaResolver] Schema ${schemaKey} not found in transformed schemas during seeding. This may indicate a missing schema dependency.`);
+      return null;
     });
     
     await validationEngine.initialize();
@@ -463,6 +465,8 @@ export class IndexedDBBackend {
     // Set up schema resolver for dynamic schema loading
     // The ValidationEngine will dynamically resolve and register schemas as needed via _resolveAndRegisterSchemaDependencies
     // This is more efficient than pre-registering all schemas, and ensures correct dependency resolution
+    // Note: During seeding, we check in-memory schemas first
+    // After seeding, the resolver should be updated with dbEngine to use operations API (no IndexedDB fallbacks)
     setSchemaResolver(async (schemaKey) => {
       // First check transformed schemas (in-memory, being seeded)
       if (schemaKey.startsWith('co_z')) {
@@ -481,45 +485,101 @@ export class IndexedDBBackend {
         }
       }
       
-      // Fallback to DB (schemas were just seeded in Phase 3)
-      return await this.getSchema(schemaKey);
+      // No fallback - schemas should be in-memory during seeding
+      // After seeding, resolver uses operations API via dbEngine (no IndexedDB fallbacks)
+      console.warn(`[SchemaResolver] Schema ${schemaKey} not found in transformed schemas during seeding. This may indicate a missing schema dependency.`);
+      return null;
     });
     
     // Validate each transformed instance
+    // Use transformed schemas from memory (no IndexedDB fallbacks)
     for (const [configType, configValue] of Object.entries(transformedConfigs)) {
       if (Array.isArray(configValue)) {
         for (const [index, instance] of configValue.entries()) {
           if (instance && instance.$schema) {
-            const schema = await this.getSchema(instance.$schema);
+            // Look up schema in transformed schemas map (by co-id or human-readable key)
+            let schema = null;
+            const schemaRef = instance.$schema;
+            if (schemaRef.startsWith('co_z')) {
+              // Find by co-id in transformedSchemas
+              for (const s of Object.values(transformedSchemas)) {
+                if (s.$id === schemaRef) {
+                  schema = s;
+                  break;
+                }
+              }
+            } else if (schemaRef.startsWith('@schema/')) {
+              // Find by human-readable key
+              const entry = uniqueSchemasBy$id.get(schemaRef);
+              if (entry) {
+                schema = transformedSchemas[entry.name];
+              }
+            }
             if (schema) {
               await validateAgainstSchemaOrThrow(
                 schema,
                 instance,
                 `${configType}[${index}] (${instance.$id || 'no-id'})`
               );
+            } else {
+              console.warn(`[IndexedDBBackend] Schema ${schemaRef} not found in transformed schemas for ${configType}[${index}]`);
             }
           }
         }
       } else if (configValue && typeof configValue === 'object' && configValue.$schema) {
-        const schema = await this.getSchema(configValue.$schema);
+        // Look up schema in transformed schemas map
+        let schema = null;
+        const schemaRef = configValue.$schema;
+        if (schemaRef.startsWith('co_z')) {
+          for (const s of Object.values(transformedSchemas)) {
+            if (s.$id === schemaRef) {
+              schema = s;
+              break;
+            }
+          }
+        } else if (schemaRef.startsWith('@schema/')) {
+          const entry = uniqueSchemasBy$id.get(schemaRef);
+          if (entry) {
+            schema = transformedSchemas[entry.name];
+          }
+        }
         if (schema) {
           await validateAgainstSchemaOrThrow(
             schema,
             configValue,
             `${configType} (${configValue.$id || 'no-id'})`
           );
+        } else {
+          console.warn(`[IndexedDBBackend] Schema ${schemaRef} not found in transformed schemas for ${configType}`);
         }
       } else if (configValue && typeof configValue === 'object') {
         // Nested objects (e.g., actors: { 'vibe/vibe': {...} })
         for (const [instanceKey, instance] of Object.entries(configValue)) {
           if (instance && instance.$schema) {
-            const schema = await this.getSchema(instance.$schema);
+            // Look up schema in transformed schemas map
+            let schema = null;
+            const schemaRef = instance.$schema;
+            if (schemaRef.startsWith('co_z')) {
+              for (const s of Object.values(transformedSchemas)) {
+                if (s.$id === schemaRef) {
+                  schema = s;
+                  break;
+                }
+              }
+            } else if (schemaRef.startsWith('@schema/')) {
+              const entry = uniqueSchemasBy$id.get(schemaRef);
+              if (entry) {
+                schema = transformedSchemas[entry.name];
+              }
+            }
             if (schema) {
               await validateAgainstSchemaOrThrow(
                 schema,
                 instance,
                 `${configType}.${instanceKey} (${instance.$id || 'no-id'})`
               );
+            } else {
+              console.warn(`[IndexedDBBackend] Schema ${schemaRef} not found in transformed schemas for ${configType}.${instanceKey}`);
             }
           }
         }

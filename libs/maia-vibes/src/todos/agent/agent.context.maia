@@ -2,5 +2,8 @@
   "$schema": "@schema/context",
   "$id": "@context/agent",
   "composite": "@composite",
-  "error": null
+  "error": null,
+  "actors": {
+    "composite": "@actor/composite"
+  }
 }

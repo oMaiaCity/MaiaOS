@@ -44,7 +44,8 @@ export class StateEngine {
       return this.stateCache.get(stateRef);
     }
     
-    const stateSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'state');
+    // Extract schema co-id from state CoValue's headerMeta.$schema using fromCoValue pattern
+    const stateSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: stateRef });
     
     // Always set up subscription for reactivity (even without onUpdate callback)
     const { config: stateDef, unsubscribe } = await subscribeConfig(
@@ -455,7 +456,38 @@ export class StateEngine {
         }
       } else {
         // Otherwise, evaluate as a MaiaScript expression
-        evaluated[key] = await this.evaluator.evaluate(value, data);
+        let evaluatedValue = await this.evaluator.evaluate(value, data);
+        
+        // Fallback: If it's a schema expression that resolved to undefined, try to find it
+        // This handles cases where $todosSchema doesn't exist but todosTodoSchema or todosDoneSchema do
+        if (evaluatedValue === undefined && typeof value === 'string' && value.startsWith('$') && value.endsWith('Schema')) {
+          const schemaKey = value.substring(1); // Remove $, e.g., "todosSchema"
+          const baseName = schemaKey.replace(/Schema$/, '').toLowerCase(); // e.g., "todos"
+          
+          // Look for any schema key that contains the base name
+          for (const [ctxKey, ctxValue] of Object.entries(context)) {
+            const lowerKey = ctxKey.toLowerCase();
+            // Match keys like "todosTodoSchema", "todosDoneSchema", "todostodoschema", etc.
+            if (lowerKey.includes(baseName) && lowerKey.includes('schema')) {
+              if (typeof ctxValue === 'string' && ctxValue.startsWith('co_z')) {
+                evaluatedValue = ctxValue;
+                break;
+              }
+            }
+          }
+          
+          // Also check query objects (todosTodo, todosDone, etc.)
+          if (evaluatedValue === undefined) {
+            for (const [ctxKey, ctxValue] of Object.entries(context)) {
+              if (ctxValue && typeof ctxValue === 'object' && ctxValue.schema && typeof ctxValue.schema === 'string' && ctxValue.schema.startsWith('co_z')) {
+                evaluatedValue = ctxValue.schema;
+                break;
+              }
+            }
+          }
+        }
+        
+        evaluated[key] = evaluatedValue;
       }
     }
     return evaluated;

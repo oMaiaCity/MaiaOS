@@ -40,7 +40,7 @@ export async function seed(account, node, configs, schemas, data) {
   // Import co-id generator and transformer
   const { generateCoId, CoIdRegistry } = 
     await import('@MaiaOS/schemata/co-id-generator');
-  const { transformSchemaForSeeding, transformInstanceForSeeding, validateNoNestedCoTypes } = 
+  const { transformSchemaForSeeding, transformInstanceForSeeding, validateNoNestedCoTypes, verifyNoSchemaReferences } = 
     await import('@MaiaOS/schemata/schema-transformer');
   
   const coIdRegistry = new CoIdRegistry();
@@ -77,14 +77,25 @@ export async function seed(account, node, configs, schemas, data) {
     throw new Error(`[CoJSONSeed] Profile not available: ${profileId}`);
   }
   
-  // Extract group reference from profile properties
+  // Extract group reference from profile data
+  // Note: read() API returns flat objects (not normalized format with properties array)
   const profileData = profileStore.value;
-  const groupProperty = profileData.properties?.find(p => p.key === 'group');
-  if (!groupProperty || !groupProperty.value) {
+  
+  // Handle both flat object format (from operations API) and normalized format (legacy)
+  let universalGroupId;
+  if (profileData.properties && Array.isArray(profileData.properties)) {
+    // Normalized format (legacy) - extract from properties array
+    const groupProperty = profileData.properties.find(p => p.key === 'group');
+    if (!groupProperty || !groupProperty.value) {
+      throw new Error('[CoJSONSeed] Universal group not found in profile.group. Ensure identity migration has run.');
+    }
+    universalGroupId = groupProperty.value;
+  } else if (profileData.group && typeof profileData.group === 'string') {
+    // Flat object format (operations API) - direct property access
+    universalGroupId = profileData.group;
+  } else {
     throw new Error('[CoJSONSeed] Universal group not found in profile.group. Ensure identity migration has run.');
   }
-  
-  const universalGroupId = groupProperty.value;
   
   // Use read() API with @group exception (groups don't have $schema)
   const groupStore = await backend.read('@group', universalGroupId);
@@ -123,6 +134,8 @@ export async function seed(account, node, configs, schemas, data) {
   }
   
   // Get the group content (RawGroup) for creating CoValues
+  // Note: read() API returns flat objects, but we need the RawGroup for creating CoValues
+  // So we get it directly from the core, not from the store
   const universalGroup = universalGroupCore.getCurrentContent?.();
   if (!universalGroup || typeof universalGroup.createMap !== 'function') {
     throw new Error(`[CoJSONSeed] Universal group content not available: ${universalGroupId}`);
@@ -296,6 +309,15 @@ export async function seed(account, node, configs, schemas, data) {
     // Transform schema with actual co-ids
     const transformedSchema = transformSchemaForSeeding(schema, schemaCoIdMap);
     transformedSchema.$id = `https://maia.city/${schemaCoId}`;
+    
+    // Verify no @schema/... references remain after transformation
+    const verificationErrors = verifyNoSchemaReferences(transformedSchema, schemaKey);
+    if (verificationErrors.length > 0) {
+      const errorMsg = `[Seed] Schema ${schemaKey} still contains @schema/ references after transformation:\n${verificationErrors.join('\n')}`;
+      console.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+    
     transformedSchemas[name] = transformedSchema;
     transformedSchemasByKey.set(schemaKey, transformedSchema);
     
@@ -838,12 +860,9 @@ export async function seed(account, node, configs, schemas, data) {
     }
   }
   
-  // Phase 8: Seed data entities to CoJSON (COMMENTED OUT)
-  // TODO: Re-enable data seeding once config seeding is stable
-  /*
+  // Phase 8: Seed data entities to CoJSON
   console.log('   Seeding data...');
   const seededData = await seedData(account, node, universalGroup, data, generateCoId, coIdRegistry, dataCollectionCoIds);
-  */
   
   // Phase 9: Store registry in account.os.schematas CoMap
   console.log('   Storing registry...');
@@ -867,7 +886,7 @@ export async function seed(account, node, configs, schemas, data) {
     metaSchema: metaSchemaCoId,
     schemas: seededSchemas,
     configs: seededConfigs,
-    data: { collections: [], totalItems: 0 }, // Empty for now
+    data: seededData,
     registry: coIdRegistry.getAll()
   };
 }
@@ -1026,6 +1045,9 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
  * @private
  */
 async function seedData(account, node, universalGroup, data, generateCoId, coIdRegistry, dataCollectionCoIds) {
+  // Import transformer for data items
+  const { transformInstanceForSeeding } = await import('@MaiaOS/schemata/schema-transformer');
+  
   if (!data || Object.keys(data).length === 0) {
     return {
       collections: [],

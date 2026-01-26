@@ -1707,3 +1707,11 @@ pre {
 	color: var(--slate-500);
 	margin-top: 0.5rem;
 }
+
+/* Vibe Container - Full width/height for inline vibe rendering */
+.vibe-container {
+	width: 100%;
+	height: 100%;
+	min-height: 100%;
+	overflow: auto;
+}

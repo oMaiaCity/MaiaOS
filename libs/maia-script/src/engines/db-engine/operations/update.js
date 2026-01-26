@@ -59,11 +59,6 @@ export class UpdateOperation {
       throw new Error('[UpdateOperation] dbEngine required for schema validation');
     }
     
-    const schemaDef = await loadSchemaFromDB(this.dbEngine, schema);
-    if (!schemaDef) {
-      throw new Error(`[UpdateOperation] Schema not found: ${schema}. Schema must exist - no fallbacks (100% migration).`);
-    }
-    
     // For updates, we need to validate the merged result (existing + update data), not just the update data
     // Get raw stored data (without normalization - no id field, but has $schema metadata)
     const rawExistingData = await this.backend.getRawRecord(id);
@@ -72,9 +67,12 @@ export class UpdateOperation {
       throw new Error(`[UpdateOperation] Record not found: ${id}`);
     }
     
-    // Verify record belongs to this schema
-    if (rawExistingData.$schema !== schema) {
-      throw new Error(`[UpdateOperation] Record ${id} does not belong to schema ${schema}`);
+    // Extract schema from CoValue headerMeta using operations API (pure metadata header lookup)
+    // Use {op: 'schema', fromCoValue: id} to extract schema from headerMeta.$schema - NO data fallbacks
+    const schemaStore = await this.dbEngine.execute({ op: 'schema', fromCoValue: id });
+    const schemaDef = schemaStore.value; // Extract value from ReactiveStore
+    if (!schemaDef) {
+      throw new Error(`[UpdateOperation] Failed to extract schema from CoValue ${id} headerMeta. CoValue must have $schema in headerMeta.`);
     }
     
     // Exclude $schema (metadata, stored for querying but not part of schema validation)

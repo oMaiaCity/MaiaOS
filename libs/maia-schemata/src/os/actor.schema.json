@@ -33,10 +33,6 @@
       "$co": "@schema/style",
       "description": "Co-id reference to local style definition"
     },
-    "children": {
-      "$co": "@schema/children",
-      "description": "Co-id reference to children colist (list of child actor co-ids)"
-    },
     "subscriptions": {
       "$co": "@schema/subscriptions",
       "description": "Co-id reference to subscriptions colist (list of actor co-ids to receive messages from)"

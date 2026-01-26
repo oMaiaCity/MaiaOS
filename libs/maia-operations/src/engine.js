@@ -11,6 +11,8 @@
  * - update: Update existing records (unified for data collections and configs)
  * - delete: Delete records
  * - seed: Flush + seed (dev only)
+ * - schema: Load schema definitions by co-id, schema name, or from CoValue headerMeta
+ * - resolve: Resolve human-readable keys to co-ids
  */
 
 import { ReadOperation } from './operations/read.js';
@@ -18,6 +20,8 @@ import { CreateOperation } from './operations/create.js';
 import { UpdateOperation } from './operations/update.js';
 import { DeleteOperation } from './operations/delete.js';
 import { SeedOperation } from './operations/seed.js';
+import { SchemaOperation } from './operations/schema.js';
+import { ResolveOperation } from './operations/resolve.js';
 
 export class DBEngine {
   /**
@@ -30,13 +34,23 @@ export class DBEngine {
     this.backend = backend;
     const { evaluator } = options;
     
-    // Initialize modular operations (pass dbEngine for validation)
+    // Pass dbEngine to backend for runtime schema validation in create functions
+    if (backend && typeof backend.setDbEngine === 'function') {
+      backend.setDbEngine(this);
+    } else if (backend && backend.constructor.name === 'CoJSONBackend') {
+      // CoJSONBackend stores dbEngine in constructor
+      backend.dbEngine = this;
+    }
+    
+    // Initialize modular operations (pass dbEngine for validation and inter-operation calls)
     this.operations = {
       read: new ReadOperation(this.backend),  // Unified reactive read operation
       create: new CreateOperation(this.backend, this),
       update: new UpdateOperation(this.backend, this, evaluator),  // Unified for data + configs, optional evaluator
       delete: new DeleteOperation(this.backend),
-      seed: new SeedOperation(this.backend)
+      seed: new SeedOperation(this.backend),
+      schema: new SchemaOperation(this.backend, this),  // Schema loading operation (needs dbEngine for resolve operation)
+      resolve: new ResolveOperation(this.backend)  // Co-id resolution operation
     };
   }
   
@@ -51,7 +65,7 @@ export class DBEngine {
     const { op, ...params } = payload;
     
     if (!op) {
-      throw new Error('[DBEngine] Operation required: {op: "read|create|update|delete|seed"}');
+      throw new Error('[DBEngine] Operation required: {op: "read|create|update|delete|seed|schema|resolve"}');
     }
     
     const operation = this.operations[op];
@@ -69,29 +83,14 @@ export class DBEngine {
   }
   
   /**
-   * Get schema co-id for a schema name (e.g., 'actor', 'view', 'subscriptions')
-   * Resolves human-readable schema names to co-ids via coIdRegistry
-   * @param {string} schemaName - Schema name (e.g., 'actor', 'view', 'subscriptions', 'inbox', 'vibe')
-   * @returns {Promise<string|null>} Schema co-id (co_z...) or null if not found
-   */
-  async getSchemaCoId(schemaName) {
-    // Try @schema/... format first (most common)
-    const schemaKey = `@schema/${schemaName}`;
-    const coId = await this.backend.resolveHumanReadableKey(schemaKey);
-    if (coId) {
-      return coId;
-    }
-    
-    // Fallback: try just the schema name
-    return await this.backend.resolveHumanReadableKey(schemaName);
-  }
-  
-  /**
    * Resolve a human-readable ID to a co-id
+   * DEPRECATED: This method should only be used during seeding. At runtime, all IDs should already be co-ids.
+   * @deprecated Use co-ids directly at runtime. This method is only for seeding/backward compatibility.
    * @param {string} humanReadableId - Human-readable ID (e.g., '@vibe/todos', 'vibe/vibe')
    * @returns {Promise<string|null>} Co-id (co_z...) or null if not found
    */
   async resolveCoId(humanReadableId) {
-    return await this.backend.resolveHumanReadableKey(humanReadableId);
+    console.warn(`[DBEngine] resolveCoId() called at runtime with: ${humanReadableId}. This should only be used during seeding. At runtime, all IDs should already be co-ids.`);
+    return await this.execute({op: 'resolve', humanReadableKey: humanReadableId});
   }
 }

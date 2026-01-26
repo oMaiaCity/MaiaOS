@@ -1,6 +1,8 @@
 import { createSchemaMeta, isExceptionSchema } from "../utils/meta.js";
 import { getSharedValidationEngine } from "../schemas/validation-singleton.js";
 import { hasSchema } from "../schemas/registry.js";
+import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
+import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 
 /**
  * Create a generic CoList with MANDATORY schema validation
@@ -14,7 +16,7 @@ import { hasSchema } from "../schemas/registry.js";
  * @returns {Promise<RawCoList>} The created CoList
  * @throws {Error} If schema is missing or data validation fails
  */
-export async function createCoList(accountOrGroup, init = [], schemaName, node = null) {
+export async function createCoList(accountOrGroup, init = [], schemaName, node = null, dbEngine = null) {
 	// Get universal group from account (auto-assignment)
 	let group = accountOrGroup;
 	
@@ -77,16 +79,34 @@ export async function createCoList(accountOrGroup, init = [], schemaName, node =
 		throw new Error(`[createCoList] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema, ExamplesSchema, ActivityStreamSchema, NotesSchema, TextSchema, PureJsonSchema`);
 	}
 	
-	// Validate data against schema BEFORE creating CoValue (skip for exception schemas and co-ids)
-	if (!isExceptionSchema(schemaName) && !schemaName.startsWith('co_z')) {
-		const engine = await getSharedValidationEngine();
-		const validation = await engine.validateData(schemaName, init);
-		
-		if (!validation.valid) {
-			const errorDetails = validation.errors
-				.map(err => `  - ${err.instancePath}: ${err.message}`)
-				.join('\n');
-			throw new Error(`[createCoList] Data validation failed for schema '${schemaName}':\n${errorDetails}`);
+	// Validate data against schema BEFORE creating CoValue
+	// STRICT: Always validate using runtime schema from database (no fallbacks, no legacy hacks)
+	if (!isExceptionSchema(schemaName)) {
+		if (schemaName.startsWith('co_z')) {
+			// Schema co-id - MUST validate using runtime schema from database
+			if (!dbEngine) {
+				throw new Error(`[createCoList] dbEngine is REQUIRED for co-id schema validation. Schema: ${schemaName}. Pass dbEngine as 5th parameter.`);
+			}
+			
+			// Load schema from database (runtime schema - single source of truth)
+			const schemaDef = await loadSchemaFromDB(dbEngine, schemaName);
+			if (!schemaDef) {
+				throw new Error(`[createCoList] Schema not found in database: ${schemaName}`);
+			}
+			
+			// Validate data against runtime schema
+			await validateAgainstSchemaOrThrow(schemaDef, init, `createCoList for schema ${schemaName}`);
+		} else {
+			// Schema name - use hardcoded registry (only for migrations/seeding)
+			const engine = await getSharedValidationEngine();
+			const validation = await engine.validateData(schemaName, init);
+			
+			if (!validation.valid) {
+				const errorDetails = validation.errors
+					.map(err => `  - ${err.instancePath}: ${err.message}`)
+					.join('\n');
+				throw new Error(`[createCoList] Data validation failed for schema '${schemaName}':\n${errorDetails}`);
+			}
 		}
 	}
 	

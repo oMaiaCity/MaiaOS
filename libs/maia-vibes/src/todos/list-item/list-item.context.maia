@@ -1,7 +1,6 @@
 {
   "$schema": "@schema/context",
   "$id": "@context/list-item",
-  "schema": "@schema/todos",
   "title": "My Todos",
   "inputPlaceholder": "What needs to be done?",
   "addButtonText": "Add Todo",

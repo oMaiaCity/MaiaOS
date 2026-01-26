@@ -7,7 +7,6 @@
   "state": "@state/agent",
   "interface": "@interface/agent",
   "brand": "@style/brand",
-  "children": "@children/agent",
   "subscriptions": "@subscriptions/agent",
   "inbox": "@inbox/agent",
   "inboxWatermark": 0

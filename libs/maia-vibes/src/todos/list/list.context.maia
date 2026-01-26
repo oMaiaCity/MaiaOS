@@ -1,9 +1,8 @@
 {
   "$schema": "@schema/context",
   "$id": "@context/list",
-  "schema": "@schema/todos",
   "todos": {
-    "schema": "@schema/todos",
+    "schema": "@schema/data/todos",
     "filter": null
   },
   "error": null

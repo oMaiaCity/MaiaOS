@@ -2,7 +2,7 @@
 
 The main UI service for MaiaOS, featuring:
 - **Database Inspector** at `/` (root) - Explore Jazz CoValues with authentication
-- **Todos Vibe Example** at `/vibes/todos.html` - Full-stack JSON DSL compositor demo
+- **Dynamic Vibe Rendering** - Load and render vibes dynamically (e.g., Todos Vibe via navigation)
 
 ## Structure
 
@@ -10,8 +10,8 @@ The main UI service for MaiaOS, featuring:
 services/maia-city/
 ├── index.html          # Main app (database inspector)
 ├── main.js             # Main app logic
+├── db-view.js          # Database viewer and dynamic vibe renderer
 ├── vibes/
-│   ├── todos.html      # Todos vibe entry point
 │   └── todos/          # Todos vibe components
 │       ├── todos.vibe.maia
 │       ├── brand.style.maia
@@ -47,13 +47,30 @@ Server runs on **http://localhost:4200**
 ## Routes
 
 - **/** - Database inspector (requires passkey auth)
-- **/vibes/todos.html** - Todos example (no auth required)
+  - Includes dynamic vibe rendering - navigate to "Todos Vibe" in the sidebar to load vibes dynamically
 
 ## Architecture
 
-### Clean Import Pattern
+### Dynamic Vibe Rendering
 
-The todos example demonstrates clean import/export pattern:
+Vibes are loaded dynamically within the main maia-city app. When a user navigates to a vibe (e.g., "Todos Vibe" in the sidebar), the app:
+
+1. Calls `loadVibe('todos')` which sets `currentVibe = 'todos'`
+2. Renders a container div in the main view area
+3. Calls `maia.loadVibeFromAccount('todos', container)` to load the vibe from the account's vibes registry
+4. The vibe renders inline within the database inspector interface
+
+**Example:**
+```javascript
+// In services/maia-city/main.js
+async function loadVibe(vibeKey) {
+  currentVibe = vibeKey;
+  await renderAppInternal(); // Renders vibe container
+  // db-view.js handles actual vibe loading via maia.loadVibeFromAccount()
+}
+```
+
+### Clean Import Pattern
 
 **maia-kernel exports:**
 ```javascript
@@ -69,16 +86,12 @@ export { ActorEngine, ViewEngine, StyleEngine, ... } from "./engines/...";
 
 **maia-city imports:**
 ```javascript
-// services/maia-city/vibes/todos.html
+// services/maia-city/main.js
 import { MaiaOS } from '@MaiaOS/kernel';
-const os = await MaiaOS.boot({ ... });
+const os = await MaiaOS.boot({ node, account });
 ```
 
 **Vite resolves** `@MaiaOS/script` to `../../libs/maia-script/src/index.js` via `vite.config.js`.
-
-### Tools Path
-
-Tools are loaded from the maia-script package. The ToolEngine resolves paths relative to the HTML file location, so we use `/vibes/todos` as the base and it will find tools in the maia-script package via Vite's module resolution.
 
 ## Port
 

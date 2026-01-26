@@ -15,14 +15,12 @@
       "description": "Message payload data"
     },
     "source": {
-      "type": "string",
-      "description": "Source actor co-id",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
+      "$co": "@schema/actor",
+      "description": "Co-id reference to source actor"
     },
     "target": {
-      "type": "string",
-      "description": "Target actor co-id",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
+      "$co": "@schema/actor",
+      "description": "Co-id reference to target actor"
     },
     "timestamp": {
       "type": "number",

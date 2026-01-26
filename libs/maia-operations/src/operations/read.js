@@ -32,9 +32,10 @@ export class ReadOperation {
     const { schema, key, keys, filter } = params;
     
     // Schema is optional - if not provided, query all CoValues
-    // Validate schema is a co-id only if provided (not human-readable)
-    if (schema && !schema.startsWith('co_z')) {
-      throw new Error(`[ReadOperation] Schema must be a co-id (co_z...), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
+    // Validate schema is a co-id or special schema hint (for CoJSON backend)
+    // Special schema hints: @account, @group, @meta-schema (not human-readable @schema/... patterns)
+    if (schema && !schema.startsWith('co_z') && !['@account', '@group', '@meta-schema'].includes(schema)) {
+      throw new Error(`[ReadOperation] Schema must be a co-id (co_z...) or special schema hint (@account, @group, @meta-schema), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
     }
     
     // Validate: if keys provided, ensure it's an array

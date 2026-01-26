@@ -17,7 +17,7 @@ function escapeHtml(text) {
 	return div.innerHTML;
 }
 
-export async function renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, switchView, selectCoValue, registerSubscription) {
+export async function renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, registerSubscription) {
 	// Helper to render any value consistently
 	const renderValue = (value, depth = 0) => {
 		if (depth > 2) return '<span class="nested-depth">...</span>';
@@ -180,11 +180,16 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 			const store = await cojsonAPI.cojson({op: 'read', schema: currentContextCoValueId, key: currentContextCoValueId});
 			// ReadOperation returns a ReactiveStore - get current value
 			let contextData = store.value || store;
+			// Operations API returns flat objects: {id: '...', profile: '...', vibes: '...'}
+			// Convert to normalized format for DB Viewer display
+			const hasProperties = contextData && typeof contextData === 'object' && !Array.isArray(contextData) && Object.keys(contextData).filter(k => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$schema' && k !== 'type').length > 0;
+			const propertiesCount = hasProperties ? Object.keys(contextData).filter(k => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$schema' && k !== 'type').length : 0;
+			
 			console.log(`[DB Viewer] Loaded CoValue ${currentContextCoValueId.substring(0, 12)}...:`, {
 				id: contextData?.id,
 				loading: contextData?.loading,
-				hasProperties: !!(contextData?.properties && Array.isArray(contextData.properties)),
-				propertiesCount: (contextData?.properties && Array.isArray(contextData.properties)) ? contextData.properties.length : 0,
+				hasProperties: hasProperties,
+				propertiesCount: propertiesCount,
 				error: contextData?.error
 			});
 			data = contextData;
@@ -192,7 +197,11 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 			// Subscribe to ReactiveStore updates for reactivity
 			if (registerSubscription && typeof store.subscribe === 'function') {
 				const subscriptionKey = `coValue:${currentContextCoValueId}`;
-				let lastPropertiesCount = (contextData?.properties && Array.isArray(contextData.properties)) ? contextData.properties.length : (contextData?.loading ? -1 : 0);
+				// Count properties from flat object (exclude metadata keys)
+				const flatPropertyCount = contextData && typeof contextData === 'object' && !Array.isArray(contextData) 
+					? Object.keys(contextData).filter(k => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$schema' && k !== 'type').length 
+					: 0;
+				let lastPropertiesCount = contextData?.loading ? -1 : flatPropertyCount;
 				let lastLoadingState = contextData?.loading || false;
 				let lastDataHash = JSON.stringify({ 
 					propsCount: lastPropertiesCount, 
@@ -204,7 +213,11 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 				
 				const unsubscribe = store.subscribe((updatedData) => {
 					// Check if data actually changed (properties appeared, loading state changed, etc.)
-					const currentPropertiesCount = (updatedData?.properties && Array.isArray(updatedData.properties)) ? updatedData.properties.length : 0;
+					// Count properties from flat object (exclude metadata keys)
+					const currentFlatPropertyCount = updatedData && typeof updatedData === 'object' && !Array.isArray(updatedData)
+						? Object.keys(updatedData).filter(k => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$schema' && k !== 'type').length
+						: 0;
+					const currentPropertiesCount = updatedData?.loading ? -1 : currentFlatPropertyCount;
 					const currentLoadingState = updatedData?.loading || false;
 					const currentDataHash = JSON.stringify({ 
 						propsCount: currentPropertiesCount, 
@@ -216,10 +229,11 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 					
 					if (updatedData && dataChanged) {
 						console.log(`🔄 [DB Viewer] Store updated for ${currentContextCoValueId.substring(0, 12)}... (props: ${lastPropertiesCount}→${currentPropertiesCount}, loading: ${lastLoadingState}→${currentLoadingState}), re-rendering...`);
+						const updatedHasProperties = updatedData && typeof updatedData === 'object' && !Array.isArray(updatedData) && currentFlatPropertyCount > 0;
 						console.log(`[DB Viewer] Updated data:`, {
 							id: updatedData?.id,
 							loading: updatedData?.loading,
-							hasProperties: !!(updatedData?.properties && Array.isArray(updatedData?.properties)),
+							hasProperties: updatedHasProperties,
 							propertiesCount: currentPropertiesCount,
 							error: updatedData?.error
 						});
@@ -280,13 +294,13 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 				data = allCoValues
 					.filter(cv => {
 						// Match schema name (can be in various formats)
-						const schema = cv.schema;
+						const schema = cv.$schema || cv.schema; // Prefer $schema, fallback to schema
 						return schema === currentView || 
 							   schema === `@schema/${currentView}` ||
 							   (cv.headerMeta?.$schema === currentView);
 					})
 					.map(cv => ({
-						displayName: cv.schema || cv.id,
+						displayName: cv.$schema || cv.schema || cv.id, // Prefer $schema
 						...cv
 					}));
 			}
@@ -303,7 +317,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 		viewSubtitle = '';
 	}
 	
-	// Build account structure navigation (Account only)
+	// Build account structure navigation (Account + dynamically loaded vibes)
 	const navigationItems = [];
 	
 	// Entry 1: Account itself
@@ -312,13 +326,109 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 		label: 'Account',
 		type: 'account'
 	});
+	
+	// Entry 2+: Dynamically load vibes from account.vibes
+	try {
+		// Read account.vibes CoMap to get all available vibes
+		const accountStore = await cojsonAPI.cojson({op: 'read', schema: '@account', key: account.id});
+		const accountData = accountStore.value || accountStore;
+		
+		// Operations API returns flat objects: {id: '...', profile: '...', vibes: '...'}
+		if (accountData && accountData.vibes && typeof accountData.vibes === 'string' && accountData.vibes.startsWith('co_')) {
+			const vibesId = accountData.vibes;
+			const vibesStore = await cojsonAPI.cojson({op: 'read', schema: vibesId, key: vibesId});
+			const vibesData = vibesStore.value || vibesStore;
+			
+			// Operations API returns flat objects: {id: '...', todos: 'co_...', ...}
+			if (vibesData && typeof vibesData === 'object' && !Array.isArray(vibesData)) {
+				// Extract vibe keys (exclude metadata keys)
+				const vibeKeys = Object.keys(vibesData).filter(k => 
+					k !== 'id' && 
+					k !== 'loading' && 
+					k !== 'error' && 
+					k !== '$schema' && 
+					k !== 'type'
+				);
+				
+				// Add each vibe from account.vibes to navigation
+				for (const vibeKey of vibeKeys) {
+					const vibeCoId = vibesData[vibeKey];
+					if (typeof vibeCoId === 'string' && vibeCoId.startsWith('co_')) {
+						navigationItems.push({
+							id: `vibe-${vibeKey}`,
+							label: `${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)} Vibe`,
+							type: 'vibe',
+							vibeKey: vibeKey
+						});
+					}
+				}
+			}
+		}
+	} catch (error) {
+		console.warn('[DB Viewer] Failed to load vibes dynamically, falling back to hardcoded list:', error);
+		// Fallback: Add hardcoded todos vibe if dynamic loading fails
+		navigationItems.push({
+			id: 'todos-vibe',
+			label: 'Todos Vibe',
+			type: 'vibe',
+			vibeKey: 'todos'
+		});
+	}
 
 	// Build table content based on view
 	let tableContent = '';
 	let headerInfo = null; // Store header info for colist/costream to display in inspector-header
 	
-	// Explorer-style: if context CoValue is loaded, show its properties in main container
-	if (currentContextCoValueId && data) {
+	// If a vibe is active, render vibe content instead of DB content
+	// Ensure currentVibe is a string (not a function or other type)
+	if (currentVibe && typeof currentVibe === 'string') {
+		tableContent = `<div id="vibe-container-${currentVibe}" class="vibe-container" style="width: 100%; height: 100%; min-height: 400px;"></div>`;
+		// Load vibe asynchronously after DOM is updated
+		// Use requestAnimationFrame to ensure DOM is ready
+		requestAnimationFrame(async () => {
+			try {
+				// Wait a bit more to ensure DOM is fully updated
+				await new Promise(resolve => setTimeout(resolve, 10));
+				
+				const container = document.getElementById(`vibe-container-${currentVibe}`);
+				console.log(`[DB Viewer] Looking for container: vibe-container-${currentVibe}`, container ? 'FOUND' : 'NOT FOUND');
+				if (!container) {
+					console.error(`[DB Viewer] Container not found: vibe-container-${currentVibe}. Available IDs:`, Array.from(document.querySelectorAll('[id^="vibe-container"]')).map(el => el.id));
+					return;
+				}
+				if (!maia) {
+					console.error(`[DB Viewer] MaiaOS instance not available`);
+					return;
+				}
+				console.log(`[DB Viewer] Loading vibe ${currentVibe} into container...`, { container, containerParent: container.parentElement });
+				// Reuse existing maia session - load vibe directly
+				const { vibe, actor } = await maia.loadVibeFromAccount(currentVibe, container);
+				console.log(`✅ Vibe loaded inline: ${vibe.name}`, { 
+					vibe, 
+					actor: { id: actor.id, shadowRoot: !!actor.shadowRoot },
+					container: { id: container.id, children: container.children.length },
+					shadowRootChildren: actor?.shadowRoot ? actor.shadowRoot.children.length : 0
+				});
+				// Debug: Check if shadow root has content
+				if (actor?.shadowRoot) {
+					console.log(`[DB Viewer] Shadow root content:`, {
+						children: actor.shadowRoot.children.length,
+						childTags: Array.from(actor.shadowRoot.children).map(c => c.tagName),
+						innerHTML: actor.shadowRoot.innerHTML.substring(0, 200)
+					});
+				} else {
+					console.warn(`[DB Viewer] Actor has no shadow root!`, actor);
+				}
+			} catch (error) {
+				console.error(`❌ Failed to load vibe ${currentVibe}:`, error);
+				const container = document.getElementById(`vibe-container-${currentVibe}`);
+				if (container) {
+					container.innerHTML = `<div class="empty-state p-8 text-center text-rose-500 font-medium bg-rose-50/50 rounded-2xl border border-rose-100">Error loading vibe: ${error.message}</div>`;
+				}
+			}
+		});
+	} else if (currentContextCoValueId && data) {
+		// Explorer-style: if context CoValue is loaded, show its properties in main container
 		// Show CoValue properties in main container (reuse property rendering from detail view)
 		if (data.error && !data.loading) {
 			tableContent = `<div class="empty-state p-8 text-center text-rose-500 font-medium bg-rose-50/50 rounded-2xl border border-rose-100">Error: ${data.error}</div>`;
@@ -368,39 +478,63 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 					</div>
 				</div>
 			`;
-		} else if (data.properties && Array.isArray(data.properties) && data.properties.length > 0) {
-			// CoMap: Display properties
-			const schemaDef = data.schema ? getSchema(data.schema) : null;
+		} else if (data && typeof data === 'object' && !Array.isArray(data) && !data.error && !data.loading) {
+			// CoMap: Display properties from flat object format (operations API)
+			// Convert flat object to normalized format for display
+			const schemaCoId = data.$schema || data.schema; // Prefer $schema, fallback to schema
+			const schemaDef = schemaCoId ? getSchema(schemaCoId) : null;
 			
-			const propertyItems = data.properties.map(prop => {
-				const value = prop.value;
-				let propType = prop.type;
-				const key = prop.key;
-				
-				// Detect array type from actual value if not set
-				if (Array.isArray(value) && propType !== 'array') {
-					propType = 'array';
-				} else if (typeof value === 'object' && value !== null && !Array.isArray(value) && propType !== 'object') {
-					propType = 'object';
-				}
-				
-				const propSchema = schemaDef?.properties?.[key];
-				const propLabel = propSchema?.title || key;
-				
-				// Make objects and arrays expandable
-				const isExpandable = propType === 'object' || propType === 'array' || 
-					(typeof value === 'object' && value !== null && !Array.isArray(value)) ||
-					Array.isArray(value);
-				const expandId = isExpandable ? `expand-${key}-${Math.random().toString(36).substr(2, 9)}` : '';
-				
-				return renderPropertyRow(propLabel, value, propType, key, isExpandable, expandId);
-			}).join('');
+			// Extract properties from flat object (exclude metadata keys)
+			const propertyKeys = Object.keys(data).filter(k => 
+				k !== 'id' && 
+				k !== 'loading' && 
+				k !== 'error' && 
+				k !== '$schema' && 
+				k !== 'schema' && 
+				k !== 'type' &&
+				k !== 'displayName' &&
+				k !== 'headerMeta'
+			);
 			
-			tableContent = `
-				<div class="list-view-container space-y-1">
-					${propertyItems}
-				</div>
-			`;
+			if (propertyKeys.length === 0) {
+				// No properties - show empty state
+				tableContent = '<div class="empty-state p-12 text-center text-slate-400 italic bg-slate-50/30 rounded-2xl border border-dashed border-slate-200">No properties available</div>';
+			} else {
+				const propertyItems = propertyKeys.map(key => {
+					const value = data[key];
+					let propType = typeof value;
+				
+					// Detect co-id references
+					if (typeof value === 'string' && value.startsWith('co_')) {
+						propType = 'co-id';
+					} else if (typeof value === 'string' && value.startsWith('key_')) {
+						propType = 'key';
+					} else if (typeof value === 'string' && value.startsWith('sealed_')) {
+						propType = 'sealed';
+					} else if (Array.isArray(value)) {
+						propType = 'array';
+					} else if (typeof value === 'object' && value !== null) {
+						propType = 'object';
+					}
+					
+					const propSchema = schemaDef?.properties?.[key];
+					const propLabel = propSchema?.title || key;
+					
+					// Make objects and arrays expandable
+					const isExpandable = propType === 'object' || propType === 'array' || 
+						(typeof value === 'object' && value !== null && !Array.isArray(value)) ||
+						Array.isArray(value);
+					const expandId = isExpandable ? `expand-${key}-${Math.random().toString(36).substr(2, 9)}` : '';
+					
+					return renderPropertyRow(propLabel, value, propType, key, isExpandable, expandId);
+				}).join('');
+			
+				tableContent = `
+					<div class="list-view-container space-y-1">
+						${propertyItems}
+					</div>
+				`;
+			}
 		} else {
 			// Fallback: empty or no properties
 			tableContent = '<div class="empty-state p-12 text-center text-slate-400 italic bg-slate-50/30 rounded-2xl border border-dashed border-slate-200">No properties available</div>';
@@ -428,25 +562,23 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 
 		// Fetch schema title if schema is a co-id using the abstracted read operation API
 		let schemaTitle = null;
-		if (data.schema && data.schema.startsWith('co_z') && cojsonAPI) {
+		const schemaCoId = data.$schema || data.schema; // Prefer $schema, fallback to schema
+		if (schemaCoId && schemaCoId.startsWith('co_z') && cojsonAPI) {
 			try {
 				// Use unified read API - same pattern as loading main context data
-				const schemaStore = await cojsonAPI.cojson({op: 'read', schema: data.schema, key: data.schema});
+				const schemaStore = await cojsonAPI.cojson({op: 'read', schema: schemaCoId, key: schemaCoId});
 				const schemaData = schemaStore.value || schemaStore;
 				
 				if (schemaData && !schemaData.error && !schemaData.loading) {
-					// Check if schema has properties array (CoMap structure)
-					if (schemaData.properties && Array.isArray(schemaData.properties)) {
-						const titleProp = schemaData.properties.find(p => p.key === 'title');
-						if (titleProp && titleProp.value) {
-							schemaTitle = titleProp.value;
+					// Operations API returns flat objects: {id: '...', title: '...', definition: {...}, ...}
+					if (schemaData && typeof schemaData === 'object' && !Array.isArray(schemaData)) {
+						// Check title directly
+						if (schemaData.title && typeof schemaData.title === 'string') {
+							schemaTitle = schemaData.title;
 						}
 						// Also check definition.title for schema definitions
-						if (!schemaTitle) {
-							const definitionProp = schemaData.properties.find(p => p.key === 'definition');
-							if (definitionProp && definitionProp.value && typeof definitionProp.value === 'object') {
-								schemaTitle = definitionProp.value.title || null;
-							}
+						if (!schemaTitle && schemaData.definition && typeof schemaData.definition === 'object') {
+							schemaTitle = schemaData.definition.title || null;
 						}
 					}
 				}
@@ -455,7 +587,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 			}
 		}
 		
-		metadataSidebar = `
+		metadataSidebar = currentVibe ? '' : `
 			<aside class="db-metadata db-card whitish-card">
 				<div class="metadata-content">
 					<!-- Consolidated Metadata View (no tabs) -->
@@ -465,23 +597,23 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 							<span class="metadata-info-key">ID</span>
 							<code class="metadata-info-value" title="${data.id}">${truncate(data.id, 24)}</code>
 						</div>
-						${data.schema ? `
+						${schemaCoId ? `
 							<div class="metadata-info-item">
 								<span class="metadata-info-key">@SCHEMA</span>
-								${data.schema.startsWith('co_') ? `
+								${schemaCoId.startsWith('co_') ? `
 									${schemaTitle ? `
-										<code class="metadata-info-value co-id" onclick="selectCoValue('${data.schema}')" title="${data.schema}" style="cursor: pointer; text-decoration: underline;">
+										<code class="metadata-info-value co-id" onclick="selectCoValue('${schemaCoId}')" title="${schemaCoId}" style="cursor: pointer; text-decoration: underline;">
 											${escapeHtml(schemaTitle)}
 										</code>
-										<div class="metadata-info-schema-id" title="${data.schema}">${truncate(data.schema, 24)}</div>
+										<div class="metadata-info-schema-id" title="${schemaCoId}">${truncate(schemaCoId, 24)}</div>
 									` : `
-										<code class="metadata-info-value co-id" onclick="selectCoValue('${data.schema}')" title="${data.schema}" style="cursor: pointer; text-decoration: underline;">
-											${truncate(data.schema, 24)}
+										<code class="metadata-info-value co-id" onclick="selectCoValue('${schemaCoId}')" title="${schemaCoId}" style="cursor: pointer; text-decoration: underline;">
+											${truncate(schemaCoId, 24)}
 										</code>
 									`}
 								` : `
-									<code class="metadata-info-value" title="${data.schema}">
-										${data.schema}
+									<code class="metadata-info-value" title="${schemaCoId}">
+										${schemaCoId}
 									</code>
 								`}
 							</div>
@@ -554,8 +686,23 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 	
 	// Build sidebar navigation items (flat structure, same visual level)
 	const sidebarItems = navigationItems.map(item => {
+		// Handle vibe items - load vibe inline
+		if (item.vibeKey) {
+			const isActive = currentVibe === item.vibeKey;
+			// Use data attribute to avoid template string interpolation issues
+			const vibeKeyEscaped = escapeHtml(item.vibeKey);
+			return `
+				<div class="sidebar-item ${isActive ? 'active' : ''}" data-vibe-key="${vibeKeyEscaped}" onclick="window.loadVibe(this.dataset.vibeKey)">
+					<div class="sidebar-label">
+						<span class="sidebar-name">${item.label}</span>
+						${item.count !== undefined ? `<span class="sidebar-count">${item.count}</span>` : ''}
+					</div>
+				</div>
+			`;
+		}
+		
 		// Account navigation - select account CoValue
-		const isActive = currentContextCoValueId === item.id || (currentView === 'account' && !currentContextCoValueId);
+		const isActive = currentContextCoValueId === item.id || (currentView === 'account' && !currentContextCoValueId && !currentVibe);
 		
 		const clickHandler = `onclick="selectCoValue('${item.id}')"`;
 		
@@ -610,8 +757,8 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 								<h3>Actions</h3>
 							</div>
 							<div class="sidebar-content sidebar-actions-row">
-								${currentContextCoValueId ? `
-									<div class="sidebar-item back-sidebar-item" onclick="goBack()" title="Back">
+								${(currentContextCoValueId || currentVibe) ? `
+									<div class="sidebar-item back-sidebar-item" onclick="${currentVibe ? 'window.loadVibe(null)' : 'goBack()'}" title="Back">
 										<div class="sidebar-label">
 											<svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -641,7 +788,9 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 						<div class="inspector-content-inner">
 						<div class="inspector-header">
 							<div class="flex items-center gap-3 flex-grow">
-								${currentContextCoValueId && data?.id ? `
+								${currentVibe && typeof currentVibe === 'string' ? `
+									<h2>${currentVibe === 'todos' ? 'Todos Vibe' : currentVibe}</h2>
+								` : currentContextCoValueId && data?.id ? `
 									<code class="co-id-header">${truncate(data.id, 32)}</code>
 								` : `
 									<h2>${viewTitle}</h2>

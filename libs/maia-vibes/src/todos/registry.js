@@ -58,9 +58,8 @@ import listInbox from './list/list.inbox.maia';
 import listItemInbox from './list-item/list-item.inbox.maia';
 import kanbanInbox from './kanban/kanban.inbox.maia';
 
-// Import all children colists
-import agentChildren from './agent/agent.children.maia';
-import compositeChildren from './composite/composite.children.maia';
+// Note: Children are now stored in context.actors (not separate children CoList files)
+// See agent.context.maia and composite.context.maia for children definitions
 
 /**
  * Todos Vibe Registry
@@ -130,8 +129,20 @@ export const TodosVibeRegistry = {
     '@inbox/kanban': kanbanInbox,
   },
   
-  children: {
-    '@children/agent': agentChildren,
-    '@children/composite': compositeChildren,
-  },
+  // Note: Children are now stored in context.actors (not separate children CoList files)
+  // See agent.context.maia and composite.context.maia for children definitions
+  
+  // Default data to seed
+  data: {
+    todos: [
+      {
+        text: "Welcome to MaiaOS! 🎉",
+        done: false
+      },
+      {
+        text: "Toggle me to mark as complete",
+        done: false
+      }
+    ]
+  }
 };

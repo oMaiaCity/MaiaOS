@@ -71,7 +71,7 @@
     "dragging": {
       "entry": {
         "tool": "@dragdrop/start",
-        "payload": { "schema": "$$schema", "id": "$$id" }
+        "payload": { "schema": "$todosSchema", "id": "$$id" }
       },
       "on": {
         "DRAG_END": {
@@ -107,7 +107,7 @@
       "entry": {
         "tool": "@dragdrop/drop",
         "payload": { 
-          "schema": "$$schema",
+          "schema": "$todosSchema",
           "field": "$$field",
           "value": "$$value"
         }

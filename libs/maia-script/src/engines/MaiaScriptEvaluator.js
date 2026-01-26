@@ -1,6 +1,6 @@
 import { resolvePath } from '../utils/path-resolver.js';
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
-import { getSchema } from '@MaiaOS/schemata';
+import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
 
 /**
  * MaiaScriptEvaluator - Minimal DSL evaluator for prototype
@@ -15,6 +15,7 @@ export class MaiaScriptEvaluator {
     this.registry = moduleRegistry;
     this.maxDepth = options.maxDepth || 50; // Maximum recursion depth to prevent DoS
     this.validateExpressions = options.validateExpressions !== false; // Enable validation by default
+    this.dbEngine = options.dbEngine || null; // Optional dbEngine for schema loading via operations API
   }
 
   /**
@@ -32,19 +33,22 @@ export class MaiaScriptEvaluator {
     
     // Validate expression against schema before evaluation (if validation enabled)
     // Only validate complex expressions (objects), not primitives (they're safe)
-    // NOTE: Schema validation now properly handles primitives - cotype validation
-    // passes for primitives since they're not CoValues
+    // NOTE: Expressions are DSL operations (code), not data - validate against hardcoded schema definition
+    // Expressions don't need runtime schema validation from database (they're not CoValues)
     if (this.validateExpressions && depth === 0 && typeof expression === 'object' && expression !== null && !Array.isArray(expression)) {
       // Only validate at top level to avoid performance issues
       // Only validate objects (DSL operations), not primitives
-      const expressionSchema = getSchema('maia-script-expression');
-      if (expressionSchema) {
-        try {
+      // Use hardcoded schema definition (expressions are code, not runtime data)
+      try {
+        const { getSchema } = await import('@MaiaOS/schemata');
+        const expressionSchema = getSchema('maia-script-expression');
+        if (expressionSchema) {
+          const { validateAgainstSchemaOrThrow } = await import('@MaiaOS/schemata/validation.helper');
           await validateAgainstSchemaOrThrow(expressionSchema, expression, 'maia-script-expression');
-        } catch (error) {
-          console.error('[MaiaScriptEvaluator] Expression validation failed:', error);
-          throw new Error(`[MaiaScriptEvaluator] Invalid MaiaScript expression: ${error.message}`);
         }
+      } catch (error) {
+        console.error('[MaiaScriptEvaluator] Expression validation failed:', error);
+        throw new Error(`[MaiaScriptEvaluator] Invalid MaiaScript expression: ${error.message}`);
       }
     }
     // Primitives pass through (except strings starting with $)

@@ -1,11 +1,12 @@
 {
   "$schema": "@schema/meta",
   "$id": "@schema/children",
-  "title": "Children Colist",
-  "description": "A colist of child actor co-ids",
-  "cotype": "colist",
-  "items": {
+  "title": "Children CoMap",
+  "description": "A comap of child actors (namekey → actor co-id)",
+  "cotype": "comap",
+  "properties": {},
+  "additionalProperties": {
     "$co": "@schema/actor",
-    "description": "Each item is a co-id reference to a child actor"
+    "description": "Each value is a co-id reference to a child actor"
   }
 }

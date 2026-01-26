@@ -64,7 +64,7 @@
       "entry": {
         "tool": "@mutation/create",
         "payload": { 
-          "schema": "todos",
+          "schema": "$todosSchema",
           "data": { "text": "$newTodoText", "done": false }
         }
       },
@@ -78,7 +78,7 @@
         "tool": "@db",
         "payload": { 
           "op": "update",
-          "schema": "@schema/todos",
+          "schema": "@schema/data/todos",
           "id": "$$id",
           "data": {
             "done": {
@@ -94,9 +94,10 @@
     },
     "deleting": {
       "entry": {
-        "tool": "@mutation/delete",
+        "tool": "@db",
         "payload": { 
-          "schema": "todos",
+          "op": "delete",
+          "schema": "$todosSchema",
           "id": "$$id"
         }
       },

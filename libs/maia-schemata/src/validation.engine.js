@@ -494,14 +494,21 @@ export class ValidationEngine {
    * Register a resolved schema in AJV
    * @private
    * @param {Object} schema - Schema to register
-   * @param {string} ref - Reference ID (human-readable or co-id)
+   * @param {string} ref - Reference ID (should be co-id after transformation)
    * @param {string} coId - Co-id of the schema
    */
   _registerResolvedSchema(schema, ref, coId) {
+    // CRITICAL: After seeding, all $co references should be co-ids, not @schema/... patterns
+    // If we see @schema/... here, it means transformation failed or schema is from source files
+    if (ref && ref.startsWith('@schema/')) {
+      console.warn(`[ValidationEngine] Warning: Registering schema with @schema/ reference: ${ref}. This should be a co-id after seeding. Schema may be from source files instead of database.`);
+      // Still register it so validation can work, but log the warning
+    }
+    
     // Register with the reference used in $co FIRST (before co-id)
-    // This ensures AJV can resolve @schema/... references during compilation
+    // This ensures AJV can resolve references during compilation
     // Only register if different from co-id to avoid duplicate registration
-    if (ref !== coId && !this.ajv.getSchema(ref)) {
+    if (ref !== coId && ref && !this.ajv.getSchema(ref)) {
       try {
         withSchemaValidationDisabled(this.ajv, () => {
           this.ajv.addSchema(schema, ref);
@@ -546,9 +553,17 @@ export class ValidationEngine {
       return; // Silent skip - already resolved or in progress
     }
     
+    // CRITICAL: After seeding, all $co references should be co-ids, not @schema/... patterns
+    // If we see @schema/... here, it means the schema wasn't transformed correctly
+    if (ref && ref.startsWith('@schema/')) {
+      console.warn(`[ValidationEngine] Warning: Resolving $co reference with @schema/ pattern: ${ref}. This should be a co-id after seeding. The schema may not have been transformed correctly.`);
+      // Still try to resolve it via schema resolver (which should handle @schema/... via operations API)
+    }
+    
     resolvingSchemas.add(ref);
     try {
       // Try to resolve (works for both co-ids and human-readable IDs)
+      // Schema resolver uses operations API which loads from database
       let referencedSchema = await this.schemaResolver(ref);
       
       // Handle reference objects (from IndexedDB mapping)
@@ -558,7 +573,7 @@ export class ValidationEngine {
       
       if (!referencedSchema) {
         // Schema not found - this is a critical error for $co references
-        const errorMsg = `[ValidationEngine] Schema resolver returned null for $co reference ${ref}. This schema must be registered before it can be referenced.`;
+        const errorMsg = `[ValidationEngine] Schema resolver returned null for $co reference ${ref}. This schema must be registered before it can be referenced. If this is an @schema/... reference, ensure schemas were transformed correctly during seeding.`;
         console.error(errorMsg);
         throw new Error(errorMsg);
       }

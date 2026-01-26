@@ -2,7 +2,7 @@
   "$schema": "@schema/meta",
   "$id": "@schema/interface",
   "title": "Actor Interface Definition",
-  "description": "Message interface specification (inbox, publishes, subscriptions)",
+  "description": "Message interface specification (inbox and publishes message type definitions)",
   "cotype": "comap",
   "properties": {
     "inbox": {
@@ -56,19 +56,6 @@
         },
         "additionalProperties": false
       }
-    },
-    "subscriptions": {
-      "type": "array",
-      "description": "List of actor co-ids to subscribe to",
-      "items": {
-        "$co": "@schema/actor"
-      }
-    },
-    "watermark": {
-      "type": "number",
-      "description": "Inbox watermark (last processed message index)",
-      "minimum": 0,
-      "default": 0
     }
   }
 }

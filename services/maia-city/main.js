@@ -17,6 +17,7 @@ let maia;
 let cojsonAPI = null; // CoJSON API instance
 let currentView = 'account'; // Current schema filter (default: 'account')
 let currentContextCoValueId = null; // Currently loaded CoValue in main context (explorer-style navigation)
+let currentVibe = null; // Currently loaded vibe (null = DB view mode, 'todos' = todos vibe, etc.)
 let navigationHistory = []; // Navigation history stack for back button
 let authState = {
 	signedIn: false,
@@ -552,7 +553,44 @@ async function renderAppInternal() {
 		activeStoreSubscriptions.set(key, unsubscribe);
 	};
 	
-	await renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, switchView, selectCoValue, registerSubscription);
+	await renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, registerSubscription);
+}
+
+/**
+ * Load a vibe inline in the main context area
+ * @param {string|null} vibeKey - Vibe key (e.g., 'todos') or null to exit vibe mode
+ */
+async function loadVibe(vibeKey) {
+	if (!maia && vibeKey !== null) {
+		console.error('[MaiaCity] Cannot load vibe - MaiaOS not initialized');
+		return;
+	}
+	
+	// Ensure vibeKey is a string or null (not a function)
+	if (vibeKey !== null && typeof vibeKey !== 'string') {
+		console.error(`[MaiaCity] Invalid vibeKey type: expected string or null, got ${typeof vibeKey}`, vibeKey);
+		return;
+	}
+	
+	try {
+		if (vibeKey === null) {
+			console.log('[MaiaCity] Exiting vibe mode');
+			currentVibe = null;
+			currentContextCoValueId = null;
+		} else {
+			console.log(`[MaiaCity] Loading vibe: ${vibeKey}`);
+			// Set current vibe state
+			currentVibe = vibeKey;
+			currentContextCoValueId = null; // Clear DB context
+		}
+		
+		// Re-render to show vibe content or return to DB view
+		await renderAppInternal();
+	} catch (error) {
+		console.error(`[MaiaCity] Failed to load vibe ${vibeKey}:`, error);
+		currentVibe = null;
+		await renderAppInternal();
+	}
 }
 
 function toggleExpand(expandId) {
@@ -585,6 +623,7 @@ function toggleExpand(expandId) {
 window.switchView = switchView;
 window.selectCoValue = selectCoValue;
 window.goBack = goBack;
+window.loadVibe = loadVibe;
 window.toggleExpand = toggleExpand;
 
 init();

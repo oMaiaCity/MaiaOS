@@ -1,13 +1,12 @@
 {
   "$schema": "@schema/context",
   "$id": "@context/kanban",
-  "schema": "@schema/todos",
   "todosTodo": {
-    "schema": "@schema/todos",
+    "schema": "@schema/data/todos",
     "filter": {"done": false}
   },
   "todosDone": {
-    "schema": "@schema/todos",
+    "schema": "@schema/data/todos",
     "filter": {"done": true}
   },
   "draggedItemId": null,

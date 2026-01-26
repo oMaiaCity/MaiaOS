@@ -253,6 +253,16 @@ export class SubscriptionEngine {
       actor._subscriptions = [];
     }
     
+    // Cleanup actor-level query tracking
+    if (actor._querySchemaMap) {
+      actor._querySchemaMap.clear();
+      actor._querySchemaMap = null;
+    }
+    if (actor._queries) {
+      actor._queries.clear();
+      actor._queries = null;
+    }
+    
     // Remove from pending re-renders if present
     this.pendingRerenders.delete(actor.id);
   }

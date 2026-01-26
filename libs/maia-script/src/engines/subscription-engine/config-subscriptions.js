@@ -150,7 +150,12 @@ export async function collectInterfaceContextSubscriptions(subscriptionEngine, a
   // Collect interface subscription using pure store
   if (config.interface && config.interface.startsWith('co_z')) {
     try {
-      const interfaceSchemaCoId = await subscriptionEngine.dbEngine.getSchemaCoId('interface');
+      // Extract schema co-id from interface CoValue's headerMeta.$schema using fromCoValue pattern
+      const interfaceSchemaStore = await subscriptionEngine.dbEngine.execute({
+        op: 'schema',
+        fromCoValue: config.interface
+      });
+      const interfaceSchemaCoId = interfaceSchemaStore.value?.$id;
       if (interfaceSchemaCoId) {
         subscriptions.push(
           subscriptionEngine.dbEngine.execute({
@@ -178,14 +183,19 @@ export async function collectInterfaceContextSubscriptions(subscriptionEngine, a
         );
       }
     } catch (error) {
-      console.error(`[SubscriptionEngine] ❌ Failed to get interface schema co-id for ${actor.id}:`, error);
+      console.error(`[SubscriptionEngine] ❌ Failed to extract interface schema co-id for ${actor.id}:`, error);
     }
   }
 
   // Collect context subscription using pure store
   if (config.context && config.context.startsWith('co_z')) {
     try {
-      const contextSchemaCoId = await subscriptionEngine.dbEngine.getSchemaCoId('context');
+      // Extract schema co-id from context CoValue's headerMeta.$schema using fromCoValue pattern
+      const contextSchemaStore = await subscriptionEngine.dbEngine.execute({
+        op: 'schema',
+        fromCoValue: config.context
+      });
+      const contextSchemaCoId = contextSchemaStore.value?.$id;
       if (contextSchemaCoId) {
         subscriptions.push(
           subscriptionEngine.dbEngine.execute({
@@ -215,7 +225,7 @@ export async function collectInterfaceContextSubscriptions(subscriptionEngine, a
         );
       }
     } catch (error) {
-      console.error(`[SubscriptionEngine] ❌ Failed to get context schema co-id for ${actor.id}:`, error);
+      console.error(`[SubscriptionEngine] ❌ Failed to extract context schema co-id for ${actor.id}:`, error);
     }
   }
 

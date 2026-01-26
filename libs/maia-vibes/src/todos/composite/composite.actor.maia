@@ -7,7 +7,6 @@
   "state": "@state/composite",
   "interface": "@interface/composite",
   "brand": "@style/brand",
-  "children": "@children/composite",
   "subscriptions": "@subscriptions/composite",
   "inbox": "@inbox/composite",
   "inboxWatermark": 0

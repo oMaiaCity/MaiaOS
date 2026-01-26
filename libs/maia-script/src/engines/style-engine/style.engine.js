@@ -43,7 +43,8 @@ export class StyleEngine {
     // But for now, always set up subscription (style loading is fast)
     // TODO: Optimize to reuse existing subscriptions
     
-    const styleSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'style');
+    // Extract schema co-id from style CoValue's headerMeta.$schema using fromCoValue pattern
+    const styleSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: coId });
     
     // Always set up subscription for reactivity (even without onUpdate callback)
     const { config: styleDef, unsubscribe } = await subscribeConfig(
@@ -62,10 +63,9 @@ export class StyleEngine {
     // Store unsubscribe function
     this.styleSubscriptions.set(coId, unsubscribe);
     
-    // Validate $schema field is present
-    if (!styleDef.$schema) {
-      throw new Error(`Style definition missing required $schema field`);
-    }
+    // $schema is now a system property from CoJSON headerMeta.$schema
+    // It's automatically added by convertPropertiesArrayToPlainObject() from the schema field
+    // No need to validate - it's always present for CoJSON-backed configs
     
     return styleDef;
   }
@@ -404,12 +404,29 @@ export class StyleEngine {
    * @returns {Promise<CSSStyleSheet[]>} Array of stylesheets
    */
   async getStyleSheets(actorConfig) {
+    // Ensure actorConfig is in plain object format (not properties array format)
+    // This handles cases where config might not have been fully converted
+    let config = actorConfig;
+    if (config.properties && Array.isArray(config.properties)) {
+      // Convert from properties array format
+      config = {};
+      for (const prop of actorConfig.properties) {
+        if (prop && prop.key !== undefined) {
+          config[prop.key] = prop.value;
+        }
+      }
+      // Preserve metadata
+      if (actorConfig.id) config.id = actorConfig.id;
+      if (actorConfig.$schema) config.$schema = actorConfig.$schema;
+      if (actorConfig.schema) config.schema = actorConfig.schema;
+    }
+    
     // Use brand and style properties (must be co-ids)
-    const brandCoId = actorConfig.brand;
-    const styleCoId = actorConfig.style;
+    const brandCoId = config.brand;
+    const styleCoId = config.style;
     
     if (!brandCoId) {
-      throw new Error(`[StyleEngine] Actor config must have 'brand' property with co-id`);
+      throw new Error(`[StyleEngine] Actor config must have 'brand' property with co-id. Config keys: ${Object.keys(config).join(', ')}. Config: ${JSON.stringify(config, null, 2)}`);
     }
     
     const cacheKey = `${brandCoId}_${styleCoId || 'none'}`;

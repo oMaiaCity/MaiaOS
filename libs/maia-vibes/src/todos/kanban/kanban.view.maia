@@ -36,7 +36,7 @@
             "drop": {
               "send": "DROP",
               "payload": { 
-                "schema": "$schema",
+                "schema": "$todosSchema",
                 "field": "done",
                 "value": false
               }
@@ -56,7 +56,7 @@
               "$on": {
                 "dragstart": {
                   "send": "DRAG_START",
-                  "payload": { "schema": "todos", "id": "$$id" }
+                  "payload": { "schema": "$todosSchema", "id": "$$id" }
                 },
                 "dragend": {
                   "send": "DRAG_END"
@@ -133,7 +133,7 @@
             "drop": {
               "send": "DROP",
               "payload": { 
-                "schema": "$schema",
+                "schema": "$todosSchema",
                 "field": "done",
                 "value": true
               }
@@ -154,7 +154,7 @@
               "$on": {
                 "dragstart": {
                   "send": "DRAG_START",
-                  "payload": { "schema": "todos", "id": "$$id" }
+                  "payload": { "schema": "$todosSchema", "id": "$$id" }
                 },
                 "dragend": {
                   "send": "DRAG_END"

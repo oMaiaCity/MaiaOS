@@ -15,9 +15,8 @@
       "description": "Vibe description"
     },
     "actor": {
-      "type": "string",
-      "description": "Path to agents orchestration actor co-id",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
+      "$co": "@schema/actor",
+      "description": "Co-id reference to actor definition (root actor for this vibe)"
     }
   }
 }

@@ -40,12 +40,10 @@ export class SubscriptionCache {
 		if (existing) {
 			// Cancel cleanup since subscription is being used
 			this.cancelCleanup(id);
-			console.log(`🔄 [SUB CACHE] Reusing existing subscription for ${id.substring(0, 12)}...`);
 			return existing;
 		}
 
 		// Create new subscription via factory
-		console.log(`✨ [SUB CACHE] Creating new subscription for ${id.substring(0, 12)}...`);
 		const subscription = factory();
 		
 		// Store in cache
@@ -66,10 +64,7 @@ export class SubscriptionCache {
 		// Clear any existing timer first
 		this.cancelCleanup(id);
 
-		console.log(`⏳ [SUB CACHE] Scheduling cleanup for ${id.substring(0, 12)}... (${this.cleanupTimeout}ms)`);
-
 		const timerId = setTimeout(() => {
-			console.log(`🧹 [SUB CACHE] Cleaning up subscription for ${id.substring(0, 12)}...`);
 			this.destroy(id);
 		}, this.cleanupTimeout);
 
@@ -89,7 +84,6 @@ export class SubscriptionCache {
 		if (timerId) {
 			clearTimeout(timerId);
 			this.cleanupTimers.delete(id);
-			console.log(`✋ [SUB CACHE] Cancelled cleanup for ${id.substring(0, 12)}...`);
 		}
 	}
 
@@ -102,7 +96,6 @@ export class SubscriptionCache {
 		const subscription = this.cache.get(id);
 		
 		if (!subscription) {
-			console.log(`⚠️  [SUB CACHE] Cannot destroy ${id.substring(0, 12)}... - not in cache`);
 			return;
 		}
 
@@ -120,8 +113,6 @@ export class SubscriptionCache {
 		
 		// Clear timer if exists
 		this.cancelCleanup(id);
-
-		console.log(`🗑️  [SUB CACHE] Destroyed subscription for ${id.substring(0, 12)}...`);
 	}
 
 	/**
@@ -159,8 +150,6 @@ export class SubscriptionCache {
 	 * Useful for cleanup on app shutdown or context switch
 	 */
 	clear() {
-		console.log(`🧹 [SUB CACHE] Clearing all subscriptions (${this.cache.size} total)`);
-
 		// Destroy all subscriptions
 		for (const id of this.cache.keys()) {
 			this.destroy(id);
@@ -188,7 +177,6 @@ let globalCache = null;
 export function getGlobalCache(cleanupTimeout) {
 	if (!globalCache) {
 		globalCache = new SubscriptionCache(cleanupTimeout);
-		console.log('🌐 [SUB CACHE] Global subscription cache initialized');
 	}
 	return globalCache;
 }
@@ -200,6 +188,5 @@ export function resetGlobalCache() {
 	if (globalCache) {
 		globalCache.clear();
 		globalCache = null;
-		console.log('🔄 [SUB CACHE] Global cache reset');
 	}
 }

@@ -5,7 +5,7 @@
  * validation function for engines to use.
  */
 
-import { ValidationEngine, loadAllSchemas, getSchema } from './index.js';
+import { ValidationEngine } from './index.js';
 
 /**
  * Format AJV validation errors into a consistent structure
@@ -40,19 +40,65 @@ export async function withSchemaValidationDisabled(ajv, callback) {
 
 // Singleton validation engine instance
 let validationEngine = null;
-let schemasLoaded = false;
-let loadingPromise = null;
-const addedSchemaIds = new Set(); // Track which schema IDs we've added to AJV
 let pendingSchemaResolver = null; // Store resolver if set before engine initialization
 
 /**
  * Set schema resolver for dynamic $schema reference resolution
  * @param {Function} resolver - Async function that takes a schema key and returns the schema
+ * @param {Object} [dbEngine] - Optional dbEngine for operations API (preferred over resolver function)
  */
-export function setSchemaResolver(resolver) {
-  pendingSchemaResolver = resolver; // Always store it
-  if (validationEngine) {
-    validationEngine.setSchemaResolver(resolver);
+export function setSchemaResolver(resolver, dbEngine = null) {
+  // If dbEngine is provided, create a resolver that uses operations API
+  if (dbEngine) {
+    const operationsResolver = async (schemaKey) => {
+      // Use operations API to load schema (CRITICAL: operations API is the single source of truth)
+      try {
+        // If it's a co-id, load directly via operations API
+        if (schemaKey.startsWith('co_z')) {
+          const schemaStore = await dbEngine.execute({ op: 'schema', coId: schemaKey });
+          const schema = schemaStore.value; // Extract value from ReactiveStore
+          if (!schema) {
+            console.warn(`[SchemaResolver] Schema ${schemaKey} not found via operations API (op: 'schema', coId: '${schemaKey}')`);
+          }
+          return schema;
+        }
+        // If it's a human-readable key (@schema/...), extract schema name and use operations API
+        if (schemaKey.startsWith('@schema/')) {
+          const schemaName = schemaKey.replace('@schema/', '');
+          const schemaStore = await dbEngine.execute({ op: 'schema', schemaName: schemaName });
+          const schema = schemaStore.value; // Extract value from ReactiveStore
+          if (!schema) {
+            console.warn(`[SchemaResolver] Schema ${schemaKey} (name: ${schemaName}) not found via operations API (op: 'schema', schemaName: '${schemaName}')`);
+          }
+          return schema;
+        }
+        // Try as schema name (handles both 'actor' and '@schema/actor' formats) via operations API
+        const schemaStore = await dbEngine.execute({ op: 'schema', schemaName: schemaKey });
+        const schema = schemaStore.value; // Extract value from ReactiveStore
+        if (!schema) {
+          console.warn(`[SchemaResolver] Schema ${schemaKey} not found via operations API (op: 'schema', schemaName: '${schemaKey}')`);
+        }
+        return schema;
+      } catch (error) {
+        console.error(`[SchemaResolver] Error loading schema ${schemaKey} via operations API:`, error);
+        // Fallback to provided resolver if available (for backward compatibility during migration)
+        if (resolver) {
+          console.warn(`[SchemaResolver] Falling back to provided resolver for ${schemaKey}`);
+          return await resolver(schemaKey);
+        }
+        return null;
+      }
+    };
+    pendingSchemaResolver = operationsResolver;
+    if (validationEngine) {
+      validationEngine.setSchemaResolver(operationsResolver);
+    }
+  } else {
+    // Use provided resolver function directly
+    pendingSchemaResolver = resolver;
+    if (validationEngine) {
+      validationEngine.setSchemaResolver(resolver);
+    }
   }
 }
 
@@ -75,142 +121,36 @@ export async function getValidationEngine(schemaResolver = null) {
     validationEngine.setSchemaResolver(pendingSchemaResolver);
   }
   
-  // Load all schemas if not already loaded (use promise to prevent concurrent loads)
-  if (!schemasLoaded) {
-    if (loadingPromise) {
-      await loadingPromise;
-      return validationEngine;
-    }
-
-      loadingPromise = (async () => {
-      await loadAllSchemas();
-      
-      // Apply pending schema resolver before initialization (so loadSchema can use it)
-      if (pendingSchemaResolver && !validationEngine.schemaResolver) {
-        validationEngine.setSchemaResolver(pendingSchemaResolver);
-      }
-      
-      // Initialize AJV (metaschema is registered during initialization via _loadMetaSchema)
-      await validationEngine.initialize();
-      const ajv = validationEngine.ajv;
-      
-      // Also apply after initialization (in case it was set during initialization)
-      if (pendingSchemaResolver && !validationEngine.schemaResolver) {
-        validationEngine.setSchemaResolver(pendingSchemaResolver);
-      }
-      
-      // Get all loaded schemas (unique by $id to avoid duplicates)
-      const schemaTypes = [
-        'actor', 'context', 'state', 'view', 'style', 'brand',
-        'brand.style', 'actor.style', 'interface', 'actor.interface',
-        'tool', 'skill', 'vibe', 'message', 'common'
-      ];
-      
-      // PASS 1: Add all schemas to AJV registry for $ref resolution
-      // Temporarily disable schema validation during registration
-      // (schemas reference @schema/meta-schema which is already registered)
-      const schemasByType = new Map();
-      const uniqueSchemas = new Map(); // Track by $id to avoid duplicates
-      
-      await withSchemaValidationDisabled(ajv, async () => {
-        for (const type of schemaTypes) {
-          const schema = getSchema(type);
-          if (!schema) continue;
-          
-          if (schema.$id) {
-            // Only add each unique schema once (by $id)
-            if (!uniqueSchemas.has(schema.$id)) {
-              uniqueSchemas.set(schema.$id, schema);
-              schemasByType.set(type, schema);
-              
-              // Add to AJV for $ref resolution (if not already added)
-              if (!ajv.getSchema(schema.$id)) {
-                try {
-                  ajv.addSchema(schema, schema.$id);
-                  addedSchemaIds.add(schema.$id);
-                } catch (error) {
-                  // Schema might already be added (ignore duplicate errors)
-                  if (!error.message.includes('already exists')) {
-                    throw error;
-                  }
-                  addedSchemaIds.add(schema.$id);
-                }
-              } else {
-                addedSchemaIds.add(schema.$id);
-              }
-            } else {
-              // Schema already added, just map the type to it
-              schemasByType.set(type, uniqueSchemas.get(schema.$id));
-            }
-          } else {
-            // Schema without $id, store for compilation
-            schemasByType.set(type, schema);
-          }
-        }
-      });
-      
-      // PASS 2: Compile all schemas (now $ref can resolve because schemas are registered)
-      for (const [type, schema] of schemasByType.entries()) {
-        if (!validationEngine.hasSchema(type)) {
-          try {
-            await validationEngine.loadSchema(type, schema);
-          } catch (error) {
-            // If compilation fails, try to get existing validator
-            if (schema.$id) {
-              const existingValidator = ajv.getSchema(schema.$id);
-              if (existingValidator) {
-                validationEngine.schemas.set(type, existingValidator);
-              } else {
-                throw error;
-              }
-            } else {
-              throw error;
-            }
-          }
-        }
-      }
-      
-      schemasLoaded = true;
-    })();
-
-    await loadingPromise;
-  }
+  // Initialize AJV (metaschema is registered during initialization via _loadMetaSchema)
+  // No pre-loading - schemas are loaded dynamically on-demand from database via operations API
+  await validationEngine.initialize();
   
   return validationEngine;
 }
 
 /**
  * Validate data against a schema type
+ * @deprecated Use validateAgainstSchema() with schema loaded from database instead
+ * This function is kept for backwards compatibility but schemas should be loaded dynamically
  * @param {string} type - Schema type (e.g., 'actor', 'context', 'state')
  * @param {any} data - Data to validate
  * @param {string} context - Optional context for error messages (e.g., file path)
  * @returns {{valid: boolean, errors: Array|null}} Validation result
  */
 export async function validate(type, data, context = '') {
+  // This function is deprecated - schemas should be loaded dynamically from database
+  // Use validateAgainstSchema() with schema loaded via operations API instead
+  console.warn(`[Validation] validate() is deprecated. Load schema dynamically and use validateAgainstSchema() instead.`);
+  
   const engine = await getValidationEngine();
   
-  // Extract schema type from $schema (required - no $type fallback)
-  // Extract schema name from $schema (e.g., "@schema/actor" -> "actor")
-  let schemaType = type;
-  
-  if (data?.$schema) {
-    // Extract schema name from $schema (handles both @schema/name and co_z... formats)
-    const schemaMatch = data.$schema.match(/@schema\/([^:]+)/);
-    if (schemaMatch) {
-      schemaType = schemaMatch[1];
-    }
-    // If it's a co-id, we'll use the provided type parameter
-  } else {
-    // $schema is required - throw error if missing
-    throw new Error(`Validation failed: data missing required $schema field. Got: ${JSON.stringify(Object.keys(data || {}))}`);
+  // This will fail because schemas are no longer pre-loaded
+  // Callers should use validateAgainstSchema() with schema loaded from database
+  if (!engine.hasSchema(type)) {
+    throw new Error(`[Validation] Schema '${type}' not found. Schemas must be loaded dynamically from database via operations API. Use validateAgainstSchema() with schema loaded via {op: 'schema', ...} instead.`);
   }
   
-  if (!engine.hasSchema(schemaType)) {
-    console.warn(`[Validation] Schema '${schemaType}' not loaded. Skipping validation.`);
-    return { valid: true, errors: null };
-  }
-  
-  const result = await engine.validate(schemaType, data);
+  const result = await engine.validate(type, data);
   
   if (!result.valid && context) {
     // Enhance errors with context

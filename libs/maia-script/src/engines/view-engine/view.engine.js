@@ -2,7 +2,6 @@
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import shared utilities
 import { subscribeConfig } from '../../utils/config-loader.js';
-import { getSchemaCoIdSafe } from '../../utils/subscription-helpers.js';
 // Import modules
 import { renderNode, renderEach, applyNodeAttributes, renderNodeChildren } from './renderer.js';
 import { renderSlot, createSlotWrapper } from './slots.js';
@@ -67,7 +66,24 @@ export class ViewEngine {
       }
     }
     
-    const viewSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'view');
+    // Extract schema co-id from view CoValue's headerMeta.$schema using read() operation
+    // Backend's _readSingleItem waits for CoValue to be loaded before returning store
+    const viewStore = await this.dbEngine.execute({
+      op: 'read',
+      schema: null, // Read CoValue directly
+      key: coId
+    });
+    
+    // Store is already loaded by backend (operations API abstraction)
+    const viewData = viewStore.value;
+    
+    // Extract schema co-id from store value
+    // For CoMaps, _extractCoValueData stores headerMeta.$schema as '$schema' field for consistency
+    const viewSchemaCoId = viewData?.$schema || null;
+    
+    if (!viewSchemaCoId) {
+      throw new Error(`[ViewEngine] Failed to extract schema co-id from view CoValue ${coId}. View must have $schema in headerMeta. View data: ${JSON.stringify({ id: viewData?.id, loading: viewData?.loading, hasProperties: viewData?.hasProperties, properties: viewData?.properties?.length })}`);
+    }
     
     // Always set up subscription for reactivity (even without onUpdate callback)
     // This avoids duplicate DB queries when _subscribeToConfig() is called later
@@ -118,8 +134,12 @@ export class ViewEngine {
     // Store actor ID for event handling
     this.currentActorId = actorId;
     
+    // Extract view content from wrapper (new schema structure: { content: { ... } })
+    // Support both old format (viewDef is the node directly) and new format (viewDef.content is the node)
+    const viewNode = viewDef.content || viewDef;
+    
     // View IS the node structure (no container/root wrapper needed)
-    const element = await this.renderNode(viewDef, { context }, actorId);
+    const element = await this.renderNode(viewNode, { context }, actorId);
     
     if (element) {
       element.style.containerType = 'inline-size';

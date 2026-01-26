@@ -27,31 +27,92 @@ export async function subscribeToContext(subscriptionEngine, actor) {
     // Detect by structure (has schema property), not by @ prefix
     if (value && typeof value === 'object' && value.schema && typeof value.schema === 'string') {
       try {
-        // CRITICAL: Mark that this key hasn't received initial data yet
-        // This ensures first callback always updates, even if data is empty
-        if (!actor._initialDataReceived) {
-          actor._initialDataReceived = new Set();
-        }
-        
-        // Initialize context key with empty array (views expect arrays)
-        // First callback will always update (tracked by _initialDataReceived)
-        actor.context[key] = [];
-        
-        // Schema should already be a co-id (transformed during seeding)
-        // If it's still a human-readable reference, that's an error
-        if (!value.schema.startsWith('co_z')) {
-          console.error(`[SubscriptionEngine] ❌ Query object schema is not a co-id: ${value.schema}. Expected co-id after seeding transformation.`);
-          continue;
+        // Resolve schema if it's a human-readable reference (should be co-id after seeding, but handle gracefully)
+        let schemaCoId = value.schema;
+        if (!schemaCoId.startsWith('co_z')) {
+          if (schemaCoId.startsWith('@schema/')) {
+            // Try to resolve human-readable reference to co-id
+            try {
+              const resolved = await subscriptionEngine.dbEngine.execute({
+                op: 'resolve',
+                humanReadableKey: schemaCoId
+              });
+              if (resolved && resolved.startsWith('co_z')) {
+                schemaCoId = resolved;
+                console.log(`[SubscriptionEngine] ✅ Resolved schema reference ${value.schema} → ${schemaCoId}`);
+              } else {
+                console.error(`[SubscriptionEngine] ❌ Could not resolve schema reference: ${value.schema}`);
+                continue;
+              }
+            } catch (error) {
+              console.error(`[SubscriptionEngine] ❌ Failed to resolve schema reference ${value.schema}:`, error);
+              continue;
+            }
+          } else {
+            console.error(`[SubscriptionEngine] ❌ Query object schema is not a co-id or @schema/ reference: ${value.schema}`);
+            continue;
+          }
         }
         
         // Use read() operation - always returns reactive store
         const store = await subscriptionEngine.dbEngine.execute({
           op: 'read',
-          schema: value.schema,
+          schema: schemaCoId,
           filter: value.filter || null
         });
         
-        // Subscribe to store updates
+        // Track query-to-schema mapping for actor-level coordination
+        if (!actor._querySchemaMap) {
+          actor._querySchemaMap = new Map(); // schemaCoId → Set<queryKey>
+        }
+        if (!actor._queries) {
+          actor._queries = new Map(); // queryKey → {schema, filter, store}
+        }
+        
+        // Track this query
+        if (!actor._querySchemaMap.has(schemaCoId)) {
+          actor._querySchemaMap.set(schemaCoId, new Set());
+        }
+        actor._querySchemaMap.get(schemaCoId).add(key);
+        actor._queries.set(key, { schema: schemaCoId, filter: value.filter || null, store });
+        
+        // Set context to store's current value immediately (before subscribing)
+        // This ensures initial render has correct data and prevents duplicate from immediate subscribe callback
+        actor.context[key] = store.value || [];
+        
+        // CRITICAL FIX: Wait a microtask to ensure any pending store updates have settled
+        // This prevents race conditions where updateStore() is called after we set context
+        // but before we subscribe, causing duplicate callbacks
+        await new Promise(resolve => queueMicrotask(resolve));
+        
+        // Mark as initial data received (prevents immediate callback from processing again)
+        if (!actor._initialDataReceived) {
+          actor._initialDataReceived = new Set();
+        }
+        actor._initialDataReceived.add(key);
+        
+        // Add schema to context for use in view templates (e.g., drag/drop)
+        // Use the resolved schema co-id
+        // Add both key-specific schema (e.g., "todosTodo" → "todosTodoSchema") 
+        // and base schema name (e.g., "todosSchema") for consistency
+        const schemaKey = `${key}Schema`; // e.g., "todos" → "todosSchema", "todosTodo" → "todosTodoSchema"
+        if (!actor.context[schemaKey]) {
+          actor.context[schemaKey] = schemaCoId;
+        }
+        
+        // Also add base schema name if key contains the schema name (e.g., "todosTodo" → "todosSchema")
+        // Extract base name from key (remove suffixes like "Todo", "Done", etc.)
+        const baseKeyMatch = key.match(/^(\w+)(Todo|Done|Active|Completed)?$/i);
+        if (baseKeyMatch && baseKeyMatch[1]) {
+          const baseKey = baseKeyMatch[1].toLowerCase(); // e.g., "todos"
+          const baseSchemaKey = `${baseKey}Schema`; // e.g., "todosSchema"
+          if (!actor.context[baseSchemaKey]) {
+            actor.context[baseSchemaKey] = schemaCoId;
+            subscriptionEngine._log(`[SubscriptionEngine] Added base schema ${baseSchemaKey} = ${schemaCoId.substring(0, 12)}... from query ${key}`);
+          }
+        }
+        
+        // Subscribe to store updates (immediate callback will be skipped since we already have the value)
         const unsubscribe = store.subscribe((data) => {
           handleDataUpdate(subscriptionEngine, actor.id, key, data);
         });
@@ -89,10 +150,27 @@ export function handleDataUpdate(subscriptionEngine, actorId, contextKey, data) 
     return; // Actor may have been destroyed
   }
 
+  // CRITICAL FIX: Skip all processing during initial render phase if data matches context
+  // This prevents the immediate callback from store.subscribe() from updating context
+  // before the initial render completes, which causes duplicate rendering
+  if (!actor._initialRenderComplete) {
+    const existingData = actor.context[contextKey];
+    if (isSameData(existingData, data)) {
+      return; // Skip - data matches what's already in context, no need to update
+    }
+    // If data is different, we still need to process it (legitimate update during setup)
+  }
+
   // Check if this is the first data for this key
   const isInitialData = !actor._initialDataReceived || !actor._initialDataReceived.has(contextKey);
   
   if (isInitialData) {
+    // Check if we already have this exact data (prevents duplicate from immediate subscribe callback)
+    const existingData = actor.context[contextKey];
+    if (isSameData(existingData, data)) {
+      return; // Skip duplicate initial data
+    }
+    
     // Always accept initial data (even if empty)
     actor.context[contextKey] = data;
     

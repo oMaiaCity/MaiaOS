@@ -35,6 +35,9 @@ export function createCoJSONAPI(node, account) {
   // Create shared DBEngine with backend
   const dbEngine = new DBEngine(backend);
   
+  // Set dbEngine on backend for runtime schema validation in create functions
+  backend.dbEngine = dbEngine;
+  
   // Return API object
   return {
     /**

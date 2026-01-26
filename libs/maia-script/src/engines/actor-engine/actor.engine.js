@@ -12,7 +12,6 @@ import { MessageQueue } from '../message-queue/message.queue.js';
 import { validateAgainstSchemaOrThrow, validateOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import config loader utilities
 import { subscribeConfig, subscribeConfigsBatch, loadConfigOrUseProvided } from '../../utils/config-loader.js';
-import { getSchemaCoIdSafe } from '../../utils/subscription-helpers.js';
 // Import schema loader utility
 import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
 
@@ -74,13 +73,39 @@ export class ActorEngine {
    * @returns {Promise<Object>} The parsed actor config
    */
   async loadActor(coIdOrConfig) {
-    const actorSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'actor');
-    return await loadConfigOrUseProvided(
-      this.dbEngine,
-      actorSchemaCoId,
-      coIdOrConfig,
-      'actor'
-    );
+    // If it's already a config object, use it directly
+    if (typeof coIdOrConfig === 'object' && coIdOrConfig !== null) {
+      return await loadConfigOrUseProvided(
+        this.dbEngine,
+        null, // Schema will be extracted from config's headerMeta
+        coIdOrConfig,
+        'actor'
+      );
+    }
+    
+    // If it's a co-id, extract schema from CoValue's headerMeta using fromCoValue pattern
+    if (typeof coIdOrConfig === 'string' && coIdOrConfig.startsWith('co_z')) {
+      // Load schema from actor CoValue's headerMeta
+      const actorSchemaStore = await this.dbEngine.execute({
+        op: 'schema',
+        fromCoValue: coIdOrConfig
+      });
+      const actorSchemaCoId = actorSchemaStore.value?.$id;
+      
+      if (!actorSchemaCoId) {
+        throw new Error(`[ActorEngine] Failed to extract schema co-id from actor ${coIdOrConfig}. Actor must have $schema in headerMeta.`);
+      }
+      
+      return await loadConfigOrUseProvided(
+        this.dbEngine,
+        actorSchemaCoId,
+        coIdOrConfig,
+        'actor'
+      );
+    }
+    
+    // Not a co-id and not an object - invalid input
+    throw new Error(`[ActorEngine] loadActor expects co-id (co_z...) or config object, got: ${typeof coIdOrConfig}`);
   }
   
 
@@ -91,9 +116,15 @@ export class ActorEngine {
    * @returns {Promise<Object>} The parsed context
    */
   async loadContext(coId, onUpdate = null) {
-    const contextSchemaCoId = await this.dbEngine.getSchemaCoId('context');
+    // Extract schema co-id from context CoValue's headerMeta using fromCoValue pattern
+    const contextSchemaStore = await this.dbEngine.execute({
+      op: 'schema',
+      fromCoValue: coId
+    });
+    const contextSchemaCoId = contextSchemaStore.value?.$id;
+    
     if (!contextSchemaCoId) {
-      throw new Error('[ActorEngine] Failed to resolve context schema co-id');
+      throw new Error(`[ActorEngine] Failed to extract schema co-id from context ${coId}. Context must have $schema in headerMeta.`);
     }
     
     // Use subscription for reactivity
@@ -126,7 +157,16 @@ export class ActorEngine {
    * @returns {Promise<Object>} The parsed interface definition
    */
   async loadInterface(coId, onUpdate = null) {
-    const interfaceSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'interface');
+    // Extract schema co-id from interface CoValue's headerMeta using fromCoValue pattern
+    const interfaceSchemaStore = await this.dbEngine.execute({
+      op: 'schema',
+      fromCoValue: coId
+    });
+    const interfaceSchemaCoId = interfaceSchemaStore.value?.$id;
+    
+    if (!interfaceSchemaCoId) {
+      throw new Error(`[ActorEngine] Failed to extract schema co-id from interface ${coId}. Interface must have $schema in headerMeta.`);
+    }
     
     // Use subscription for reactivity
     const { config: interfaceDef, unsubscribe } = await subscribeConfig(
@@ -172,7 +212,16 @@ export class ActorEngine {
     // Load subscriptions colist (co-id → array of actor IDs) - REACTIVE
     let subscriptions = [];
     if (actorConfig.subscriptions) {
-      const subscriptionsSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'subscriptions');
+      // Extract schema co-id from subscriptions CoValue's headerMeta using fromCoValue pattern
+      const subscriptionsSchemaStore = await this.dbEngine.execute({
+        op: 'schema',
+        fromCoValue: actorConfig.subscriptions
+      });
+      const subscriptionsSchemaCoId = subscriptionsSchemaStore.value?.$id;
+      
+      if (!subscriptionsSchemaCoId) {
+        throw new Error(`[ActorEngine] Failed to extract schema co-id from subscriptions ${actorConfig.subscriptions}. Subscriptions must have $schema in headerMeta.`);
+      }
       
       // Get initial value using read() - returns reactive store
       const subscriptionsStore = await this.dbEngine.execute({
@@ -189,7 +238,16 @@ export class ActorEngine {
     // Load inbox costream (co-id → array of messages) - REACTIVE
     let inbox = [];
     if (actorConfig.inbox) {
-      const inboxSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'inbox');
+      // Extract schema co-id from inbox CoValue's headerMeta using fromCoValue pattern
+      const inboxSchemaStore = await this.dbEngine.execute({
+        op: 'schema',
+        fromCoValue: actorConfig.inbox
+      });
+      const inboxSchemaCoId = inboxSchemaStore.value?.$id;
+      
+      if (!inboxSchemaCoId) {
+        throw new Error(`[ActorEngine] Failed to extract schema co-id from inbox ${actorConfig.inbox}. Inbox must have $schema in headerMeta.`);
+      }
       
       // Get initial value using read() - returns reactive store
       const inboxStore = await this.dbEngine.execute({
@@ -219,7 +277,13 @@ export class ActorEngine {
     
     if (actorConfig.subscriptions) {
       try {
-        const subscriptionsSchemaCoId = await this.dbEngine.getSchemaCoId('subscriptions');
+        // Extract schema co-id from subscriptions CoValue's headerMeta using fromCoValue pattern
+        const subscriptionsSchemaStore = await this.dbEngine.execute({
+          op: 'schema',
+          fromCoValue: actorConfig.subscriptions
+        });
+        const subscriptionsSchemaCoId = subscriptionsSchemaStore.value?.$id;
+        
         if (subscriptionsSchemaCoId) {
           messageSubscriptionRequests.push({
             schemaRef: subscriptionsSchemaCoId,
@@ -241,7 +305,13 @@ export class ActorEngine {
     
     if (actorConfig.inbox) {
       try {
-        const inboxSchemaCoId = await this.dbEngine.getSchemaCoId('inbox');
+        // Extract schema co-id from inbox CoValue's headerMeta using fromCoValue pattern
+        const inboxSchemaStore = await this.dbEngine.execute({
+          op: 'schema',
+          fromCoValue: actorConfig.inbox
+        });
+        const inboxSchemaCoId = inboxSchemaStore.value?.$id;
+        
         if (inboxSchemaCoId) {
           messageSubscriptionRequests.push({
             schemaRef: inboxSchemaCoId,
@@ -318,63 +388,45 @@ export class ActorEngine {
   }
 
   /**
-   * Create child actors from children map
+   * Create child actors from context.actors map
    * @param {Object} actor - Parent actor instance
-   * @param {Object} actorConfig - The actor configuration
+   * @param {Object} context - Actor context (contains actors property)
    * @returns {Promise<void>}
    * @private
    */
-  async _createChildActors(actor, actorConfig) {
-    if (!actorConfig.children || typeof actorConfig.children !== 'object') {
+  async _createChildActors(actor, context) {
+    // Children are stored in context.actors (explicit system property)
+    // Keys are namekeys, values are co-ids (already transformed during seeding)
+    // Format: context.actors = { "list": "co_z...", "kanban": "co_z..." }
+    if (!context.actors || typeof context.actors !== 'object') {
       return;
     }
     
     actor.children = {};
     
-    for (const [namekey, childActorId] of Object.entries(actorConfig.children)) {
+    // Iterate over context.actors entries (namekey → co-id pairs)
+    for (const [namekey, childActorCoId] of Object.entries(context.actors)) {
       try {
-        // childActorId can be:
-        // 1. Human-readable ID (e.g., "@actor/composite") - resolve to co-id via database
-        // 2. Co-id (e.g., "co_z...") - use directly
-        
-        let childCoId = childActorId;
-        
-        // If it's a human-readable ID, resolve it to a co-id
-        if (!childActorId.startsWith('co_z')) {
-          if (!this.dbEngine) {
-            throw new Error(`[ActorEngine] Cannot resolve human-readable ID ${childActorId} - database engine not available`);
-          }
-          
-          // Try to resolve via database (handles @actor/name format)
-          const actorSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, 'actor');
-          const actorStore = await this.dbEngine.execute({
-            op: 'read',
-            schema: actorSchemaCoId,
-            key: childActorId
-          });
-          const resolvedActor = actorStore.value;
-          if (resolvedActor && resolvedActor.$id && resolvedActor.$id.startsWith('co_z')) {
-            childCoId = resolvedActor.$id;
-          } else {
-            throw new Error(`[ActorEngine] Could not resolve child actor ID ${childActorId} to a co-id`);
-          }
+        // Child actor IDs should already be co-ids (transformed during seeding)
+        // If not co-id, it's a seeding error - fail fast
+        if (!childActorCoId || !childActorCoId.startsWith('co_z')) {
+          throw new Error(`[ActorEngine] Child actor ID must be co-id: ${childActorCoId}. This should have been resolved during seeding.`);
         }
         
-        // Load child actor config using co-id
-        const childActorConfig = await this.loadActor(childCoId);
+        // Load child actor directly by co-id (instance level)
+        const childActorConfig = await this.loadActor(childActorCoId);
         
         // Ensure child actor ID matches expected ID (for consistency)
-        // Use $id if present, otherwise fall back to id (added by IndexedDB normalization)
         const childActorConfigId = childActorConfig.$id || childActorConfig.id;
-        if (childActorConfigId !== childCoId) {
-          console.warn(`[ActorEngine] Child actor ID mismatch: expected ${childCoId}, got ${childActorConfigId}`);
-          childActorConfig.$id = childCoId; // Use expected co-id
+        if (childActorConfigId !== childActorCoId) {
+          console.warn(`[ActorEngine] Child actor ID mismatch: expected ${childActorCoId}, got ${childActorConfigId}`);
+          childActorConfig.$id = childActorCoId; // Use expected co-id
         }
         
         // Create container for child actor (NOT attached to DOM yet - ViewEngine will handle attachment)
         const childContainer = document.createElement('div');
         childContainer.dataset.namekey = namekey;
-        childContainer.dataset.childActorId = childCoId; // Use co-id, not config id
+        childContainer.dataset.childActorId = childActorCoId; // Use co-id
         
         // Create child actor recursively
         const childActor = await this.createActor(childActorConfig, childContainer);
@@ -386,15 +438,12 @@ export class ActorEngine {
         actor.children[namekey] = childActor;
         
         // Auto-subscribe parent to child (if not already subscribed)
-        // Use childCoId (the actual co-id) for subscriptions, not the config id
-        if (!actor.subscriptions.includes(childCoId)) {
-          actor.subscriptions.push(childCoId);
+        if (!actor.subscriptions.includes(childActorCoId)) {
+          actor.subscriptions.push(childActorCoId);
         }
         
       } catch (error) {
-        // Use childCoId if available, otherwise fall back to childActorId from loop
-        const errorActorId = childCoId || childActorId;
-        console.error(`Failed to create child actor ${errorActorId} (namekey: ${namekey}):`, error);
+        console.error(`Failed to create child actor ${childActorCoId} (namekey: ${namekey}):`, error);
       }
     }
   }
@@ -454,8 +503,8 @@ export class ActorEngine {
     // Initialize actor state (state machine and interface)
     await this._initializeActorState(actor, actorConfig);
     
-    // Create child actors
-    await this._createChildActors(actor, actorConfig);
+    // Create child actors from context.actors (explicit system property)
+    await this._createChildActors(actor, context);
     
     // Initial render with actor ID
     await this.viewEngine.render(viewDef, actor.context, shadowRoot, styleSheets, actorId);
@@ -897,10 +946,15 @@ export class ActorEngine {
     }
 
     try {
-      // Get actor schema co-id
-      const actorSchemaCoId = await this.dbEngine.getSchemaCoId('actor');
+      // Extract schema co-id from actor CoValue's headerMeta using fromCoValue pattern
+      const actorSchemaStore = await this.dbEngine.execute({
+        op: 'schema',
+        fromCoValue: actorId
+      });
+      const actorSchemaCoId = actorSchemaStore.value?.$id;
+      
       if (!actorSchemaCoId) {
-        console.warn(`[ActorEngine] Cannot persist watermark: failed to resolve actor schema co-id`);
+        console.warn(`[ActorEngine] Cannot persist watermark: failed to extract schema co-id from actor ${actorId}`);
         return;
       }
       
