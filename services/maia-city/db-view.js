@@ -185,13 +185,6 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 			const hasProperties = contextData && typeof contextData === 'object' && !Array.isArray(contextData) && Object.keys(contextData).filter(k => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$schema' && k !== 'type').length > 0;
 			const propertiesCount = hasProperties ? Object.keys(contextData).filter(k => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$schema' && k !== 'type').length : 0;
 			
-			console.log(`[DB Viewer] Loaded CoValue ${currentContextCoValueId.substring(0, 12)}...:`, {
-				id: contextData?.id,
-				loading: contextData?.loading,
-				hasProperties: hasProperties,
-				propertiesCount: propertiesCount,
-				error: contextData?.error
-			});
 			data = contextData;
 			
 			// Subscribe to ReactiveStore updates for reactivity
@@ -208,8 +201,6 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 					loading: lastLoadingState, 
 					hasError: !!contextData?.error
 				});
-				
-				console.log(`[DB Viewer] Setting up subscription for ${currentContextCoValueId.substring(0, 12)}... (initial: props=${lastPropertiesCount}, loading=${lastLoadingState})`);
 				
 				const unsubscribe = store.subscribe((updatedData) => {
 					// Check if data actually changed (properties appeared, loading state changed, etc.)
@@ -228,15 +219,6 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 					const dataChanged = currentDataHash !== lastDataHash;
 					
 					if (updatedData && dataChanged) {
-						console.log(`🔄 [DB Viewer] Store updated for ${currentContextCoValueId.substring(0, 12)}... (props: ${lastPropertiesCount}→${currentPropertiesCount}, loading: ${lastLoadingState}→${currentLoadingState}), re-rendering...`);
-						const updatedHasProperties = updatedData && typeof updatedData === 'object' && !Array.isArray(updatedData) && currentFlatPropertyCount > 0;
-						console.log(`[DB Viewer] Updated data:`, {
-							id: updatedData?.id,
-							loading: updatedData?.loading,
-							hasProperties: updatedHasProperties,
-							propertiesCount: currentPropertiesCount,
-							error: updatedData?.error
-						});
 						lastPropertiesCount = currentPropertiesCount;
 						lastLoadingState = currentLoadingState;
 						lastDataHash = currentDataHash;
@@ -247,8 +229,6 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 					}
 				});
 				registerSubscription(subscriptionKey, unsubscribe);
-			} else {
-				console.warn(`[DB Viewer] Cannot subscribe to store updates - registerSubscription: ${!!registerSubscription}, store.subscribe: ${typeof store.subscribe}`);
 			}
 			// Use ID as title (no displayName logic)
 			viewTitle = contextData.id ? truncate(contextData.id, 24) : 'CoValue';
@@ -400,25 +380,8 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 					console.error(`[DB Viewer] MaiaOS instance not available`);
 					return;
 				}
-				console.log(`[DB Viewer] Loading vibe ${currentVibe} into container...`, { container, containerParent: container.parentElement });
 				// Reuse existing maia session - load vibe directly
-				const { vibe, actor } = await maia.loadVibeFromAccount(currentVibe, container);
-				console.log(`✅ Vibe loaded inline: ${vibe.name}`, { 
-					vibe, 
-					actor: { id: actor.id, shadowRoot: !!actor.shadowRoot },
-					container: { id: container.id, children: container.children.length },
-					shadowRootChildren: actor?.shadowRoot ? actor.shadowRoot.children.length : 0
-				});
-				// Debug: Check if shadow root has content
-				if (actor?.shadowRoot) {
-					console.log(`[DB Viewer] Shadow root content:`, {
-						children: actor.shadowRoot.children.length,
-						childTags: Array.from(actor.shadowRoot.children).map(c => c.tagName),
-						innerHTML: actor.shadowRoot.innerHTML.substring(0, 200)
-					});
-				} else {
-					console.warn(`[DB Viewer] Actor has no shadow root!`, actor);
-				}
+				await maia.loadVibeFromAccount(currentVibe, container);
 			} catch (error) {
 				console.error(`❌ Failed to load vibe ${currentVibe}:`, error);
 				const container = document.getElementById(`vibe-container-${currentVibe}`);

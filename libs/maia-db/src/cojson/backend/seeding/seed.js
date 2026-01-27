@@ -142,7 +142,6 @@ export async function seed(account, node, configs, schemas, data) {
   }
   
   console.log('🌱 Starting CoJSON seeding...');
-  console.log('   Using universal group:', universalGroupId);
   
   // Deduplicate schemas by $id (same schema may be registered under multiple keys)
   const uniqueSchemasBy$id = new Map();
@@ -236,7 +235,6 @@ export async function seed(account, node, configs, schemas, data) {
   // We can't put the metaschema's own co-id in headerMeta.$schema (chicken-egg problem)
   let metaSchemaCoId = account.get("os")?.get?.("metaSchema");
   if (!metaSchemaCoId) {
-    console.log('   Creating metaschema...');
     // Create metaschema with "GenesisSchema" exception (can't self-reference co-id in read-only headerMeta)
     const metaSchemaMeta = { $schema: 'GenesisSchema' }; // Special exception for metaschema
     const metaSchemaCoMap = universalGroup.createMap(
@@ -258,15 +256,11 @@ export async function seed(account, node, configs, schemas, data) {
     
     metaSchemaCoId = actualMetaSchemaCoId;
     coIdRegistry.register('@meta-schema', metaSchemaCoId);
-    console.log('   ✅ Metaschema created:', metaSchemaCoId);
-    console.log('      HeaderMeta.$schema: "GenesisSchema" (special exception)');
   } else {
-    console.log('   ℹ️  Metaschema already exists:', metaSchemaCoId);
   }
   
   // Phase 2: Create schema CoMaps (CoJSON assigns IDs automatically)
   // Use metaSchema co-id in headerMeta
-  console.log('   Creating schema CoMaps...');
   const schemaCoIdMap = new Map(); // Will be populated as we create CoMaps
   const schemaCoMaps = new Map(); // Store CoMap instances for later updates
   
@@ -293,11 +287,9 @@ export async function seed(account, node, configs, schemas, data) {
     schemaCoMaps.set(schemaKey, schemaCoMap);
     coIdRegistry.register(schemaKey, actualCoId);
     
-    console.log(`   ✅ Schema CoMap created: ${name} → ${actualCoId}`);
   }
   
   // Phase 3: Now transform all schemas with actual co-ids and update CoMaps
-  console.log('   Transforming schema references...');
   const transformedSchemas = {};
   const transformedSchemasByKey = new Map();
   
@@ -476,7 +468,6 @@ export async function seed(account, node, configs, schemas, data) {
                   }
                 }
                 if (schemaRegistry.size > 0) {
-                  console.log(`   📖 Using persisted registry from account.os.schematas (${schemaRegistry.size} mappings)`);
                 }
               }
             }
@@ -487,7 +478,6 @@ export async function seed(account, node, configs, schemas, data) {
     
     // If registry doesn't exist yet, build it from actual co-ids we just created (from schemaCoIdMap)
     if (schemaRegistry.size === 0) {
-      console.log('   📝 Building registry from actual CoMap co-ids (schemas just created)');
       for (const [schemaKey, actualCoId] of schemaCoIdMap.entries()) {
         schemaRegistry.set(schemaKey, actualCoId);
       }
@@ -516,7 +506,6 @@ export async function seed(account, node, configs, schemas, data) {
         // Register both @schema/todos and @schema/data/todos → same co-id
         combinedRegistry.set(schemaKey, dataSchemaCoId);
         coIdRegistry.register(schemaKey, dataSchemaCoId);
-        console.log(`   📋 Registered data collection schema: ${schemaKey} → ${dataSchemaCoId.substring(0, 12)}...`);
       }
     }
   }
@@ -564,16 +553,6 @@ export async function seed(account, node, configs, schemas, data) {
       }
     }
 
-    // Logging for verification
-    console.log(`   📝 Registry refreshed: ${refreshed.size} total mappings`);
-    const actorRefs = Array.from(refreshed.keys()).filter(k => k.startsWith('@actor/'));
-    if (actorRefs.length > 0) {
-      console.log(`      - Actors: ${actorRefs.length} (${actorRefs.slice(0, 5).join(', ')}...)`);
-    }
-    const viewRefs = Array.from(refreshed.keys()).filter(k => k.startsWith('@view/'));
-    if (viewRefs.length > 0) {
-      console.log(`      - Views: ${viewRefs.length} (${viewRefs.slice(0, 5).join(', ')}...)`);
-    }
 
     return refreshed;
   };
@@ -589,7 +568,6 @@ export async function seed(account, node, configs, schemas, data) {
       return { configs: [], count: 0 };
     }
     
-    console.log(`   🌱 Seeding ${configTypeKey} (schema refs only)...`);
     const transformed = {};
     for (const [instanceKey, instance] of Object.entries(configsOfType)) {
       transformed[instanceKey] = transformSchemaRefsOnly(instance, combinedRegistry);
@@ -614,7 +592,6 @@ export async function seed(account, node, configs, schemas, data) {
       coIdRegistry.register(path, actualCoId);
     }
     
-    console.log(`   ✅ Registered ${seeded.configs?.length || 0} ${configTypeKey} co-ids (REAL from CoJSON)`);
     return seeded;
   };
   
@@ -673,10 +650,8 @@ export async function seed(account, node, configs, schemas, data) {
   }
   
   // Now update all configs with transformed references (all co-ids are now registered)
-  console.log('   🔄 Updating all configs with transformed co-id references...');
   const updateConfigReferences = async (configsToUpdate, originalConfigs) => {
     if (!configsToUpdate || !originalConfigs) {
-      console.log(`   ⚠️  Update skipped: configsToUpdate=${!!configsToUpdate}, originalConfigs=${!!originalConfigs}`);
       return 0;
     }
 
@@ -694,16 +669,11 @@ export async function seed(account, node, configs, schemas, data) {
         : null;
 
       if (!originalConfig) {
-        console.log(`   ⚠️  No original config found for co-id: ${coId}, expectedCoId: ${originalId}`);
         continue;
       }
 
-      console.log(`   🔍 Updating config ${originalId} (${coId}) [${configInfo.cotype || 'comap'}]...`);
-      console.log(`      Original:`, JSON.stringify(originalConfig, null, 2).substring(0, 200));
-
       // Transform with full registry (all co-ids now available)
       const fullyTransformed = transformInstanceForSeeding(originalConfig, latestRegistry);
-      console.log(`      Transformed:`, JSON.stringify(fullyTransformed, null, 2).substring(0, 200));
 
       // Use the stored CoValue reference (CoMap, CoList, or CoStream)
       const coValue = configInfo.coMap;
@@ -717,7 +687,6 @@ export async function seed(account, node, configs, schemas, data) {
           for (const item of transformedItems) {
             coValue.append(item);
           }
-          console.log(`      Appended ${transformedItems.length} items to CoList`);
           updatedCount++;
         } else {
           console.log(`   ⚠️  Cannot update CoList: append method not available`);
@@ -730,7 +699,6 @@ export async function seed(account, node, configs, schemas, data) {
           for (const item of transformedItems) {
             coValue.push(item);
           }
-          console.log(`      Appended ${transformedItems.length} items to CoStream`);
           updatedCount++;
         } else {
           console.log(`   ⚠️  Cannot update CoStream: push method not available`);
@@ -741,8 +709,17 @@ export async function seed(account, node, configs, schemas, data) {
           // Skip $id and $schema (those are in metadata, not properties)
           const { $id, $schema, ...propsToSet } = fullyTransformed;
 
+          // For state machines, log the transformation
+          if (propsToSet.states && typeof propsToSet.states === 'object') {
+            // Check if any entry has schema that was transformed
+            for (const [stateName, stateDef] of Object.entries(propsToSet.states)) {
+              if (stateDef?.entry?.payload?.schema) {
+                console.log(`[Seed] Updating state machine ${originalId || coId}: state "${stateName}" entry schema: ${stateDef.entry.payload.schema}`);
+              }
+            }
+          }
+
           for (const [key, value] of Object.entries(propsToSet)) {
-            console.log(`      Setting ${key}:`, typeof value === 'string' ? value : JSON.stringify(value).substring(0, 100));
             coValue.set(key, value);
           }
 
@@ -752,7 +729,6 @@ export async function seed(account, node, configs, schemas, data) {
         }
       }
     }
-    console.log(`   ✅ Updated ${updatedCount} configs`);
     return updatedCount;
   };
   
@@ -791,12 +767,10 @@ export async function seed(account, node, configs, schemas, data) {
     // Styles and tools don't typically reference other configs, skip update
   }
   
-  console.log(`   ✅ Updated all configs with co-id references`);
   
   // Seed vibe (depends on actors, so seed after actors)
   // Now that actors are registered, we can transform vibe references properly
   if (configs && configs.vibe) {
-    console.log('   🌱 Seeding vibe...');
 
     // REFRESH REGISTRY before transforming vibe (actors are now registered)
     combinedRegistry = refreshCombinedRegistry();
@@ -830,7 +804,6 @@ export async function seed(account, node, configs, schemas, data) {
           const vibesContent = vibesCore.getCurrentContent?.();
           if (vibesContent && typeof vibesContent.set === 'function') {
             vibes = vibesContent;
-            console.log('   ℹ️  account.vibes already exists:', vibesId);
           }
         }
       }
@@ -840,12 +813,10 @@ export async function seed(account, node, configs, schemas, data) {
         const vibesMeta = { $schema: 'GenesisSchema' };
         vibes = universalGroup.createMap({}, vibesMeta);
         account.set("vibes", vibes.id);
-        console.log('   ✅ account.vibes created:', vibes.id);
       }
       
       // Store vibe co-id in account.vibes CoMap
       vibes.set(vibeKey, vibeCoId);
-      console.log(`   ✅ Stored vibe in account.vibes: ${vibeKey} → ${vibeCoId}`);
       
       // Register REAL co-id from CoJSON (never pre-generate!)
       const originalVibeIdForRegistry = configs.vibe.$id; // Original $id (e.g., @vibe/todos)
@@ -856,23 +827,19 @@ export async function seed(account, node, configs, schemas, data) {
         coIdRegistry.register(originalVibeIdForRegistry, vibeCoId);
       }
       coIdRegistry.register('vibe', vibeCoId);
-      console.log(`   ✅ Registered vibe co-id (REAL from CoJSON): ${originalVibeIdForRegistry || 'vibe'} → ${vibeCoId}`);
     }
   }
   
   // Phase 8: Seed data entities to CoJSON
-  console.log('   Seeding data...');
   const seededData = await seedData(account, node, universalGroup, data, generateCoId, coIdRegistry, dataCollectionCoIds);
   
   // Phase 9: Store registry in account.os.schematas CoMap
-  console.log('   Storing registry...');
   await storeRegistry(account, node, universalGroup, coIdRegistry, schemaCoIdMap, instanceCoIdMap, configs || {}, seededSchemas);
   
   console.log('✅ CoJSON seeding complete!');
 
   // Verify registry contains all expected references
   const finalRegistry = coIdRegistry.getAll();
-  console.log(`   📊 Final registry: ${finalRegistry.size} mappings`);
 
   // Group by type
   const byType = {};
@@ -934,18 +901,6 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
       cotype = schemaCoMap.get('cotype') || 'comap';
       
       // Debug: log all properties to see what's actually stored
-      if (cotype === 'comap') {
-        const keys = schemaCoMap.keys ? Array.from(schemaCoMap.keys()) : [];
-        const allProps = {};
-        if (keys.length > 0) {
-          for (const key of keys) {
-            allProps[key] = schemaCoMap.get(key);
-          }
-        }
-        console.log(`   🔍 Schema ${schemaCoId.substring(0, 12)}... (config: ${path}) - cotype: ${cotype}, keys: [${keys.join(', ')}], sample props:`, JSON.stringify(allProps).substring(0, 200));
-      } else {
-        console.log(`   ✅ Found cotype "${cotype}" for schema ${schemaCoId.substring(0, 12)}... (config: ${path})`);
-      }
     } else {
       console.warn(`   ⚠️  Cannot read schema CoMap for ${schemaCoId.substring(0, 12)}... (config: ${path}), schemaCoMap type: ${typeof schemaCoMap}`);
     }
@@ -968,6 +923,32 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
       coValue = universalGroup.createStream(meta);
       actualCoId = coValue.id;
       console.log(`   📝 Created CoStream ${path} (co-id: ${actualCoId}, type: ${coValue.type || 'unknown'})`);
+      
+      // Add default welcome message to inbox CoStreams for debugging display issues
+      if (path && path.includes('@inbox/')) {
+        try {
+          // During seeding, we use direct CoStream push (not operations API) because:
+          // 1. dbEngine isn't available yet during seeding
+          // 2. Reactive stores aren't set up yet (they're created after seeding)
+          // 3. After seeding, CoStreams will be read via operations API (read operation)
+          // This is acceptable for seeding - runtime operations should use push operation
+          if (coValue && typeof coValue.push === 'function') {
+            const defaultMessage = {
+              type: 'INIT',
+              payload: { message: 'Inbox initialized' },
+              from: 'system',
+              timestamp: Date.now(),
+              id: `INIT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+            };
+            coValue.push(defaultMessage);
+            console.log(`   📨 Added default message to inbox CoStream ${path}`);
+          } else {
+            console.warn(`   ⚠️ CoStream ${path} doesn't have push method`);
+          }
+        } catch (error) {
+          console.warn(`   ⚠️ Failed to add default message to inbox CoStream ${path}:`, error);
+        }
+      }
     } else {
       // CoMap: Default behavior
       coValue = universalGroup.createMap(configWithoutId, meta);
@@ -975,11 +956,8 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
       console.log(`   📝 Created CoMap ${path} (co-id: ${actualCoId})`);
     }
 
-    // Verify co-id matches expected
-    const expectedCoId = $id;
-    if (expectedCoId && expectedCoId !== actualCoId) {
-      console.warn(`[CoJSONSeed] Config ${configType}:${path} co-id mismatch. Expected: ${expectedCoId}, Got: ${actualCoId}`);
-      // Update instanceCoIdMap with actual co-id
+    // Update instanceCoIdMap with actual co-id (CoJSON generates random co-ids, so they won't match human-readable IDs)
+    if ($id) {
       instanceCoIdMap.set(path, actualCoId);
       instanceCoIdMap.set($id, actualCoId);
     }
@@ -988,7 +966,7 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
       type: configType,
       path,
       coId: actualCoId,
-      expectedCoId: expectedCoId,
+      expectedCoId: $id || undefined, // Use $id from config (line 899), or undefined if not present
       coMapId: actualCoId,
       coMap: coValue, // Store the actual CoValue reference (CoMap, CoList, or CoStream)
       cotype: cotype  // Store the type for reference
@@ -1000,7 +978,6 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
     const vibeInfo = await createConfig(transformedConfigs.vibe, 'vibe', 'vibe');
     seededConfigs.push(vibeInfo);
     totalCount++;
-    console.log(`   ✅ Vibe seeded: ${vibeInfo.coId}`);
   }
 
   // Helper to seed a config type (actors, views, etc.)
@@ -1015,7 +992,6 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
         const configInfo = await createConfig(config, configType, path);
         seededConfigs.push(configInfo);
         typeCount++;
-        console.log(`   ✅ ${configType} seeded: ${path} → ${configInfo.coId}`);
       }
     }
     return typeCount;
@@ -1065,7 +1041,6 @@ async function seedData(account, node, universalGroup, data, generateCoId, coIdR
       const dataContent = dataCore.getCurrentContent?.();
       if (dataContent && typeof dataContent.get === 'function') {
         dataCoMap = dataContent;
-        console.log('   ℹ️  account.data already exists:', dataId);
       }
     }
   }
@@ -1076,7 +1051,6 @@ async function seedData(account, node, universalGroup, data, generateCoId, coIdR
     const dataMeta = { $schema: 'GenesisSchema' };
     dataCoMap = universalGroup.createMap({}, dataMeta);
     account.set("data", dataCoMap.id);
-    console.log('   ✅ account.data created:', dataCoMap.id);
   }
   
   const seededCollections = [];
@@ -1117,7 +1091,6 @@ async function seedData(account, node, universalGroup, data, generateCoId, coIdR
         const listContent = listCore.getCurrentContent?.();
         if (listContent && typeof listContent.append === 'function') {
           collectionList = listContent;
-          console.log(`   ℹ️  account.data.${collectionName} already exists:`, collectionListId);
         }
       }
     }
@@ -1168,7 +1141,6 @@ async function seedData(account, node, universalGroup, data, generateCoId, coIdR
       
       dataCollectionCoIds.set(collectionName, collectionList.id);
       
-      console.log(`   ✅ account.data.${collectionName} created:`, collectionList.id);
     }
     
     // Create CoMaps for each item and append to list
@@ -1196,7 +1168,6 @@ async function seedData(account, node, universalGroup, data, generateCoId, coIdR
     });
     
     totalItems += itemCount;
-    console.log(`   ✅ Seeded ${itemCount} items to ${collectionName}`);
   }
   
   return {
@@ -1221,7 +1192,6 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
       const osContent = osCore.getCurrentContent?.();
       if (osContent && typeof osContent.get === 'function') {
         os = osContent;
-        console.log('   ℹ️  account.os already exists:', osId);
       }
     }
   }
@@ -1232,7 +1202,6 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
     const osMeta = { $schema: 'GenesisSchema' };
     os = universalGroup.createMap({}, osMeta);
     account.set("os", os.id);
-    console.log('   ✅ account.os created:', os.id);
   }
   
   // Create account.os.schematas CoMap if not exists (renamed from registry)
@@ -1245,7 +1214,6 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
       const schematasContent = schematasCore.getCurrentContent?.();
       if (schematasContent && typeof schematasContent.set === 'function') {
         schematas = schematasContent;
-        console.log('   ℹ️  account.os.schematas already exists:', schematasId);
       }
     }
   }
@@ -1256,7 +1224,6 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
     const schematasMeta = { $schema: 'GenesisSchema' };
     schematas = universalGroup.createMap({}, schematasMeta);
     os.set("schematas", schematas.id);
-    console.log('   ✅ account.os.schematas created:', schematas.id);
   }
   
   // Store ONLY schema mappings (not instance manifests like vibes, actors, etc.)
@@ -1280,5 +1247,4 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
     }
   }
   
-  console.log(`   ✅ Stored ${mappingCount} schema mappings in os.schematas (instances excluded)`);
 }

@@ -131,11 +131,7 @@ async function init() {
  */
 async function signIn() {
 	try {
-		console.log("🔐 Signing in with existing passkey...");
-		
 		const { accountID, node, account } = await signInWithPasskey({ salt: "maia.city" });
-		
-		console.log("✅ Existing passkey authenticated:", accountID);
 		
 		// Boot MaiaOS with node and account (using CoJSON backend)
 		maia = await MaiaOS.boot({ node, account });
@@ -160,7 +156,6 @@ async function signIn() {
 		});
 		
 		// Explicitly load linked CoValues from IndexedDB
-		// Jazz uses lazy-loading - CoValues are only loaded when explicitly requested
 		await loadLinkedCoValues();
 		
 		// Set account as default context
@@ -169,8 +164,6 @@ async function signIn() {
 		}
 		
 		renderAppInternal();
-		
-		console.log("✅ MaiaOS initialized with authenticated account!");
 		
 	} catch (error) {
 		console.error("Sign in failed:", error);
@@ -201,7 +194,6 @@ async function signIn() {
 async function loadLinkedCoValues() {
 	const { node, maiaId: account } = maia.id;
 	
-	console.log("🔄 Loading linked CoValues from account...");
 	
 	// Get the examples ID
 	const examplesId = account.get("examples");
@@ -216,7 +208,6 @@ async function loadLinkedCoValues() {
 	try {
 		const examplesCore = await node.loadCoValueCore(examplesId);
 		if (examplesCore.isAvailable()) {
-			console.log("   ✅ Examples CoMap loaded from IndexedDB");
 			
 			// Now load the child CoValues referenced by examples
 			const examplesContent = examplesCore.getCurrentContent();
@@ -466,10 +457,21 @@ function selectCoValue(coId, skipHistory = false) {
 	// Clean up old subscriptions when navigating away
 	cleanupStoreSubscriptions();
 
+	// If we're in vibe mode and selecting account, exit vibe mode first
+	if (currentVibe !== null && coId === maia?.id?.maiaId?.id) {
+		currentVibe = null;
+		// If there's navigation history, restore the previous context instead of going to account
+		if (navigationHistory.length > 0) {
+			const previousCoId = navigationHistory.pop();
+			currentContextCoValueId = previousCoId;
+			renderAppInternal();
+			return;
+		}
+	}
+
 	// Add current context to navigation history (unless we're going back or it's null)
 	if (!skipHistory && currentContextCoValueId !== null && currentContextCoValueId !== coId) {
 		navigationHistory.push(currentContextCoValueId);
-		console.log('📚 Navigation history:', navigationHistory.map(id => id?.substring(0, 12) + '...'));
 	}
 
 	// Explorer-style navigation: load CoValue into main container context
@@ -480,12 +482,9 @@ function selectCoValue(coId, skipHistory = false) {
 	if (coId && maia?.id?.node) {
 		const coValueCore = maia.id.node.getCoValue(coId);
 		if (coValueCore && !coValueCore.isAvailable()) {
-			console.log(`⏳ CoValue ${coId.substring(0, 12)}... not available yet, subscribing to updates...`);
-
 			// Subscribe to updates and re-render when available
 			const unsubscribe = coValueCore.subscribe((core) => {
 				if (core.isAvailable()) {
-					console.log(`✅ CoValue ${coId.substring(0, 12)}... now available! Re-rendering...`);
 					renderAppInternal();
 					unsubscribe(); // Unsubscribe after first load
 				}
@@ -501,10 +500,15 @@ function selectCoValue(coId, skipHistory = false) {
 }
 
 function goBack() {
+	// If we're in vibe mode, exit vibe mode first
+	if (currentVibe !== null) {
+		loadVibe(null);
+		return;
+	}
+	
 	// Navigate back in history
 	if (navigationHistory.length > 0) {
 		const previousCoId = navigationHistory.pop();
-		console.log('⬅️ Going back to:', previousCoId?.substring(0, 12) + '...');
 		selectCoValue(previousCoId, true); // Skip adding to history
 	} else {
 		// No history, go to account root
@@ -574,11 +578,23 @@ async function loadVibe(vibeKey) {
 	
 	try {
 		if (vibeKey === null) {
-			console.log('[MaiaCity] Exiting vibe mode');
 			currentVibe = null;
-			currentContextCoValueId = null;
+			// Restore previous context if available, otherwise keep current context
+			if (navigationHistory.length > 0) {
+				const previousCoId = navigationHistory.pop();
+				currentContextCoValueId = previousCoId;
+			} else if (currentContextCoValueId === null) {
+				// No history and no context, go to account root
+				const accountId = maia?.id?.maiaId?.id;
+				if (accountId) {
+					currentContextCoValueId = accountId;
+				}
+			}
 		} else {
-			console.log(`[MaiaCity] Loading vibe: ${vibeKey}`);
+			// Save current context to history before entering vibe mode
+			if (currentContextCoValueId !== null) {
+				navigationHistory.push(currentContextCoValueId);
+			}
 			// Set current vibe state
 			currentVibe = vibeKey;
 			currentContextCoValueId = null; // Clear DB context

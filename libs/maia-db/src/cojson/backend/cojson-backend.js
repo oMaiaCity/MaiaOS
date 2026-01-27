@@ -1125,14 +1125,34 @@ export class CoJSONBackend extends DBAdapter {
       }
     } else if (rawType === 'costream' && content) {
       // CoStream: The stream IS the content - return items directly (no properties, CoStreams don't have custom properties)
+      // CoStreams have a session-based structure: { session_id: [items...] }
+      // Use toJSON() to get the session structure, then flatten all sessions into a single array
       try {
-        // CoStream doesn't have toJSON, iterate through items
+        const streamData = content.toJSON();
         const items = [];
-        if (content[Symbol.iterator]) {
-          for (const item of content) {
-            items.push(item);
+        
+        if (streamData && typeof streamData === 'object' && !(streamData instanceof Uint8Array)) {
+          // Flatten all sessions into single array
+          for (const sessionKey in streamData) {
+            if (Array.isArray(streamData[sessionKey])) {
+              items.push(...streamData[sessionKey]);
+            }
           }
         }
+        
+        // Essential debug: Log CoStream reading (always log for debugging)
+        console.log(`[CoJSONBackend] 📥 Read CoStream ${coValueCore.id} (${items.length} items)`);
+        if (items.length > 0) {
+          console.log(`[CoJSONBackend]   First item:`, JSON.stringify(items[0]).substring(0, 100));
+        } else {
+          // Log stream structure when empty to diagnose
+          console.log(`[CoJSONBackend]   Stream data type:`, typeof streamData, streamData instanceof Uint8Array ? 'Uint8Array' : 'object');
+          if (streamData && typeof streamData === 'object' && !(streamData instanceof Uint8Array)) {
+            console.log(`[CoJSONBackend]   Session keys:`, Object.keys(streamData));
+            console.log(`[CoJSONBackend]   Session counts:`, Object.fromEntries(Object.entries(streamData).map(([k, v]) => [k, Array.isArray(v) ? v.length : 'not array'])));
+          }
+        }
+        
         return {
           id: coValueCore.id,
           schema: schema,
@@ -1141,6 +1161,7 @@ export class CoJSONBackend extends DBAdapter {
           // No properties array - CoStreams don't have custom key-value properties, only items
         };
       } catch (e) {
+        console.error(`[CoJSONBackend] ❌ Error reading CoStream ${coValueCore.id.substring(0, 12)}...:`, e);
         return {
           id: coValueCore.id,
           $schema: schema, // Use $schema for consistency with headerMeta.$schema
@@ -1334,12 +1355,18 @@ export class CoJSONBackend extends DBAdapter {
     // CoStream: return object with type and items array
     if (rawType === 'costream' && content) {
       try {
+        const streamData = content.toJSON();
         const items = [];
-        if (content[Symbol.iterator]) {
-          for (const item of content) {
-            items.push(item);
+        
+        if (streamData && typeof streamData === 'object' && !(streamData instanceof Uint8Array)) {
+          // Flatten all sessions into single array
+          for (const sessionKey in streamData) {
+            if (Array.isArray(streamData[sessionKey])) {
+              items.push(...streamData[sessionKey]);
+            }
           }
         }
+        
         return {
           id: coValueCore.id,
           type: 'costream',
@@ -1347,6 +1374,7 @@ export class CoJSONBackend extends DBAdapter {
           items: items
         };
       } catch (e) {
+        console.error(`[CoJSONBackend] Error extracting CoStream ${coValueCore.id.substring(0, 12)}...:`, e);
         return {
           id: coValueCore.id,
           type: 'costream',
@@ -1553,66 +1581,50 @@ export class CoJSONBackend extends DBAdapter {
     // CRITICAL: For data collection items (CoMaps), automatically append to collection CoList
     // This ensures created items appear in queries immediately
     if (cotype === 'comap' && coValue.id && schema) {
-      console.log(`[CoJSONBackend] 🔍 Attempting to append item ${coValue.id.substring(0, 12)}... to collection (schema: ${schema.substring(0, 12)}...)`);
-      try {
-        // Get the actual schema co-id from the created item's headerMeta (single source of truth)
-        const coValueCore = this.getCoValue(coValue.id);
-        console.log(`[CoJSONBackend]   - coValueCore found:`, !!coValueCore);
-        const itemHeader = coValueCore ? this.getHeader(coValueCore) : null;
-        console.log(`[CoJSONBackend]   - itemHeader found:`, !!itemHeader);
-        const itemHeaderMeta = itemHeader?.meta || null;
-        const itemSchemaCoId = itemHeaderMeta?.$schema;
-        console.log(`[CoJSONBackend]   - itemSchemaCoId:`, itemSchemaCoId?.substring(0, 20));
-        
-        // Use item's schema co-id if available, otherwise fall back to passed schema
-        const schemaToMatch = itemSchemaCoId || schema;
-        console.log(`[CoJSONBackend]   - schemaToMatch:`, schemaToMatch?.substring(0, 20));
-        
-        if (!schemaToMatch) {
-          console.warn(`[CoJSONBackend] Cannot append item to collection: no schema found in item headerMeta or passed schema`);
-          // Don't return - continue to return the created item
-        } else {
-          // Get account.data CoMap
-          const dataId = this.account.get("data");
-          console.log(`[CoJSONBackend]   - dataId:`, dataId?.substring(0, 20));
-          if (dataId) {
-          const dataCore = this.getCoValue(dataId);
-          if (dataCore && this.isAvailable(dataCore)) {
-            const dataContent = this.getCurrentContent(dataCore);
-            if (dataContent && typeof dataContent.get === 'function') {
-              // Find the CoList in account.data that has matching item schema
-              // Iterate through account.data properties to find matching CoList
-              const keys = dataContent.keys && typeof dataContent.keys === 'function' 
-                ? dataContent.keys() 
-                : Object.keys(dataContent);
-              
-              console.log(`[CoJSONBackend]   - Checking ${keys.length} properties in account.data`);
-              for (const key of keys) {
-                const collectionListId = dataContent.get(key);
-                console.log(`[CoJSONBackend]   - Property ${key}:`, collectionListId?.substring(0, 20));
-                if (collectionListId && typeof collectionListId === 'string' && collectionListId.startsWith('co_')) {
-                  const collectionListCore = this.getCoValue(collectionListId);
-                  console.log(`[CoJSONBackend]     - coValueCore found:`, !!collectionListCore, `type:`, collectionListCore?.type, `available:`, collectionListCore ? this.isAvailable(collectionListCore) : false);
-                  
-                  // Check if available and is a colist (use cotype property)
-                  if (collectionListCore && this.isAvailable(collectionListCore)) {
-                    const collectionListContent = this.getCurrentContent(collectionListCore);
-                    const cotype = collectionListContent?.cotype || collectionListContent?.type;
-                    console.log(`[CoJSONBackend]     - cotype:`, cotype);
+        try {
+          // Get the actual schema co-id from the created item's headerMeta (single source of truth)
+          const coValueCore = this.getCoValue(coValue.id);
+          const itemHeader = coValueCore ? this.getHeader(coValueCore) : null;
+          const itemHeaderMeta = itemHeader?.meta || null;
+          const itemSchemaCoId = itemHeaderMeta?.$schema;
+          
+          // Use item's schema co-id if available, otherwise fall back to passed schema
+          const schemaToMatch = itemSchemaCoId || schema;
+          
+          if (schemaToMatch) {
+            // Get account.data CoMap
+            const dataId = this.account.get("data");
+            if (dataId) {
+            const dataCore = this.getCoValue(dataId);
+            if (dataCore && this.isAvailable(dataCore)) {
+              const dataContent = this.getCurrentContent(dataCore);
+              if (dataContent && typeof dataContent.get === 'function') {
+                // Find the CoList in account.data that has matching item schema
+                const keys = dataContent.keys && typeof dataContent.keys === 'function' 
+                  ? dataContent.keys() 
+                  : Object.keys(dataContent);
+                
+                for (const key of keys) {
+                  const collectionListId = dataContent.get(key);
+                  if (collectionListId && typeof collectionListId === 'string' && collectionListId.startsWith('co_')) {
+                    const collectionListCore = this.getCoValue(collectionListId);
                     
-                    if (cotype === 'colist') {
-                      // Check if this CoList's item schema matches the created item's schema
-                      const listHeader = this.getHeader(collectionListCore);
-                      const listHeaderMeta = listHeader?.meta || null;
-                      const listItemSchema = listHeaderMeta?.$schema;
-                      console.log(`[CoJSONBackend]     - Collection ${key}: listItemSchema=${listItemSchema?.substring(0, 20)}, schemaToMatch=${schemaToMatch?.substring(0, 20)}, match=${listItemSchema === schemaToMatch}`);
+                    // Check if available and is a colist
+                    if (collectionListCore && this.isAvailable(collectionListCore)) {
+                      const collectionListContent = this.getCurrentContent(collectionListCore);
+                      const cotype = collectionListContent?.cotype || collectionListContent?.type;
                       
-                      // Match schema co-ids (both should be co-ids at this point)
-                      if (listItemSchema === schemaToMatch) {
-                        // Found matching CoList - append item
-                        if (collectionListContent && typeof collectionListContent.append === 'function') {
+                      if (cotype === 'colist') {
+                        // Check if this CoList's item schema matches the created item's schema
+                        const listHeader = this.getHeader(collectionListCore);
+                        const listHeaderMeta = listHeader?.meta || null;
+                        const listItemSchema = listHeaderMeta?.$schema;
+                        
+                        // Match schema co-ids (both should be co-ids at this point)
+                        if (listItemSchema === schemaToMatch) {
+                          // Found matching CoList - append item
+                          if (collectionListContent && typeof collectionListContent.append === 'function') {
                         collectionListContent.append(coValue.id);
-                        console.log(`[CoJSONBackend] ✅ Appended created item ${coValue.id.substring(0, 12)}... to collection ${key} (schema: ${schemaToMatch.substring(0, 12)}...)`);
                         
                         // Wait for colist to sync after append (ensures subscription fires with new item)
                         if (this.node.storage) {
@@ -1626,17 +1638,13 @@ export class CoJSONBackend extends DBAdapter {
                   }
                 }
               }
-              console.log(`[CoJSONBackend]   - No matching collection found`);
             }
           }
         }
         }
       } catch (error) {
-        // Don't fail creation if collection append fails - log and continue
-        console.warn(`[CoJSONBackend] Failed to append item to collection:`, error);
+        // Don't fail creation if collection append fails - continue silently
       }
-    } else {
-      console.log(`[CoJSONBackend] ⏭️  Skipping colist append: cotype=${cotype}, hasId=${!!coValue?.id}, hasSchema=${!!schema}`);
     }
 
     // Return created CoValue data (extract properties as flat object for tool access)
@@ -1767,14 +1775,11 @@ export class CoJSONBackend extends DBAdapter {
                           if (itemIndex !== -1) {
                             // Remove item from CoList (hard delete)
                             collectionListContent.delete(itemIndex);
-                            console.log(`[CoJSONBackend] ✅ Removed item ${id.substring(0, 12)}... from CoList ${key} at index ${itemIndex}`);
                             
                             // Wait for colist to sync after delete
                             if (this.node.storage) {
                               await this.node.syncManager.waitForStorageSync(collectionListCore.id);
                             }
-                          } else {
-                            console.warn(`[CoJSONBackend] Item ${id.substring(0, 12)}... not found in CoList ${key}`);
                           }
                         } catch (error) {
                           console.error(`[CoJSONBackend] Error removing item from CoList:`, error);
@@ -1814,7 +1819,6 @@ export class CoJSONBackend extends DBAdapter {
         await this.node.syncManager.waitForStorageSync(id);
       }
       
-      console.log(`[CoJSONBackend] ✅ Hard deleted item ${id.substring(0, 12)}... (removed from CoList and cleared CoMap)`);
       return true;
     } else {
       throw new Error(`[CoJSONBackend] Delete not supported for type: ${rawType}`);

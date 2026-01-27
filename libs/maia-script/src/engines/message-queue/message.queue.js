@@ -108,10 +108,21 @@ export class MessageQueue {
         }
       }
 
-      // Add to actor's inbox
-      actor.inbox.push(message);
+      // Write message to CoStream via operations API (ensures proper reactive store updates)
+      if (actor.inboxCoId && this.actorEngine.dbEngine) {
+        try {
+          await this.actorEngine.dbEngine.execute({
+            op: 'push',
+            coId: actor.inboxCoId,
+            item: message
+          });
+        } catch (error) {
+          console.error(`[MessageQueue] Failed to persist message to CoStream ${actor.inboxCoId}:`, error);
+        }
+      }
       
       // Process message (this will handle state machine transitions)
+      // Reactive store will update automatically, triggering processMessages via subscription
       await this.actorEngine.processMessages(this.actorId);
 
       // Success - message processed

@@ -11,3 +11,4 @@ export { DeleteOperation } from './delete.js';
 export { SeedOperation } from './seed.js';
 export { SchemaOperation } from './schema.js';
 export { ResolveOperation } from './resolve.js';
+export { PushOperation } from './push.js';

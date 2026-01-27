@@ -38,7 +38,6 @@ export class ViewEngine {
     this.evaluator = evaluator;
     this.actorEngine = actorEngine;
     this.moduleRegistry = moduleRegistry;
-    this.viewCache = new Map();
     this.dbEngine = null; // Database operation engine (set by kernel)
     
     // Track input counters per actor for stable IDs across re-renders
@@ -55,14 +54,26 @@ export class ViewEngine {
    * @returns {Promise<Object>} The parsed view definition
    */
   async loadView(coId, onUpdate = null) {
-    // Check if subscription already exists - if so, return cached and skip duplicate setup
+    // Check if subscription already exists - if so, skip duplicate setup
+    // Always read from reactive store (no cache)
     const existingUnsubscribe = this.viewSubscriptions?.get(coId);
     if (existingUnsubscribe) {
-      // Subscription already exists, return cached value
-      // Note: If onUpdate is provided but subscription exists, we can't add handler
-      // Caller should ensure subscription is set up with handler from the start
-      if (this.viewCache.has(coId)) {
-        return this.viewCache.get(coId);
+      // Subscription already exists, get current value from reactive store
+      // Read directly from store to get current value
+      const viewStore = await this.dbEngine.execute({
+        op: 'read',
+        schema: null,
+        key: coId
+      });
+      const viewData = viewStore.value;
+      const viewSchemaCoId = viewData?.$schema || null;
+      if (viewSchemaCoId) {
+        const store = await this.dbEngine.execute({
+          op: 'read',
+          schema: viewSchemaCoId,
+          key: coId
+        });
+        return store.value;
       }
     }
     
@@ -93,14 +104,12 @@ export class ViewEngine {
       coId,
       'view',
       (updatedView) => {
-        // Update cache
-        this.viewCache.set(coId, updatedView);
         // Call custom update handler if provided
         if (onUpdate) {
           onUpdate(updatedView);
         }
       },
-      this.viewCache
+      null // NO CACHE - always read from reactive store
     );
     
     // Store unsubscribe function

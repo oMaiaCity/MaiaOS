@@ -126,6 +126,7 @@ export async function subscribeConfig(dbEngine, schemaRef, coId, configType, onU
   };
   
   // Check cache first - if cached, still set up subscription for updates
+  // Note: If cache is null, this check is skipped and we always read from reactive store
   if (cache && cache.has(coId)) {
     const cachedConfig = cache.get(coId);
     

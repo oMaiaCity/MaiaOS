@@ -25,7 +25,6 @@ export class StateEngine {
     this.evaluator = evaluator;
     this.actorEngine = actorEngine; // ActorEngine reference (set by kernel after ActorEngine creation)
     this.machines = new Map(); // machineId → machine instance
-    this.stateCache = new Map(); // stateRef → state definition
     this.dbEngine = null; // Database operation engine (set by kernel)
     this.stateSubscriptions = new Map(); // stateRef -> unsubscribe function
   }
@@ -37,34 +36,27 @@ export class StateEngine {
    * @returns {Promise<Object>} The parsed state definition
    */
   async loadStateDef(stateRef, onUpdate = null) {
-    // Check if subscription already exists - if so, return cached and skip duplicate setup
-    const existingUnsubscribe = this.stateSubscriptions?.get(stateRef);
-    if (existingUnsubscribe && this.stateCache.has(stateRef)) {
-      // Subscription already exists, return cached value
-      return this.stateCache.get(stateRef);
-    }
-    
     // Extract schema co-id from state CoValue's headerMeta.$schema using fromCoValue pattern
     const stateSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: stateRef });
     
-    // Always set up subscription for reactivity (even without onUpdate callback)
+    // Always set up subscription for reactivity - NO CACHE (pass null)
+    // State machines must be 100% reactive, always reading from reactive store
+    // Even if subscription already exists, we still call subscribeConfig to get current value from store
     const { config: stateDef, unsubscribe } = await subscribeConfig(
       this.dbEngine,
       stateSchemaCoId,
       stateRef,
       'state',
       (updatedStateDef) => {
-        // Update cache
-        this.stateCache.set(stateRef, updatedStateDef);
         // Call custom update handler if provided
         if (onUpdate) {
           onUpdate(updatedStateDef);
         }
       },
-      this.stateCache
+      null // NO CACHE - always read from reactive store
     );
     
-    // Store unsubscribe function
+    // Store unsubscribe function (overwrites previous if exists - that's okay)
     this.stateSubscriptions.set(stateRef, unsubscribe);
     
     return stateDef;

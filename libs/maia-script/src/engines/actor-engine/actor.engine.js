@@ -188,7 +188,7 @@ export class ActorEngine {
   /**
    * Load actor configs (view, context, subscriptions, inbox)
    * @param {Object} actorConfig - The actor configuration
-   * @returns {Promise<{viewDef: Object, context: Object, subscriptions: Array, inbox: Array}>}
+   * @returns {Promise<{viewDef: Object, context: Object, subscriptions: Array, inbox: ReactiveStore, inboxCoId: string}>}
    * @private
    */
   async _loadActorConfigs(actorConfig) {
@@ -235,9 +235,12 @@ export class ActorEngine {
       }
     }
     
-    // Load inbox costream (co-id → array of messages) - REACTIVE
-    let inbox = [];
+    // Load inbox costream - REACTIVE STORE (100% CoStream-based, no in-memory arrays)
+    let inbox = null; // Reactive store reference, not array
+    let inboxCoId = null; // Store CoStream CoValue ID for persistence
     if (actorConfig.inbox) {
+      inboxCoId = actorConfig.inbox; // Store CoStream CoValue ID
+      
       // Extract schema co-id from inbox CoValue's headerMeta using fromCoValue pattern
       const inboxSchemaStore = await this.dbEngine.execute({
         op: 'schema',
@@ -249,19 +252,17 @@ export class ActorEngine {
         throw new Error(`[ActorEngine] Failed to extract schema co-id from inbox ${actorConfig.inbox}. Inbox must have $schema in headerMeta.`);
       }
       
-      // Get initial value using read() - returns reactive store
+      // Get reactive store - this is what actor.inbox will reference
       const inboxStore = await this.dbEngine.execute({
         op: 'read',
         schema: inboxSchemaCoId,
         key: actorConfig.inbox
       });
-      const inboxCostream = inboxStore.value;
-      if (inboxCostream && Array.isArray(inboxCostream.items)) {
-        inbox = inboxCostream.items;
-      }
+      // Store reactive store reference, not array
+      inbox = inboxStore;
     }
     
-    return { viewDef, context, subscriptions, inbox };
+    return { viewDef, context, subscriptions, inbox, inboxCoId };
   }
 
   /**
@@ -318,9 +319,10 @@ export class ActorEngine {
             coId: actorConfig.inbox,
             configType: 'inbox',
             onUpdate: (updatedCostream) => {
+              // Reactive store updates automatically, trigger message processing when new messages arrive
               if (updatedCostream && Array.isArray(updatedCostream.items)) {
-                actor.inbox = updatedCostream.items;
-                // TODO: Process new messages (Milestone 3)
+                // Process new messages from CoStream (100% CoStream-based, no in-memory arrays)
+                this.processMessages(actorId);
               }
             },
             cache: null
@@ -466,7 +468,7 @@ export class ActorEngine {
     const styleSheets = await this.styleEngine.getStyleSheets(actorConfig);
     
     // Load actor configs (view, context, subscriptions, inbox)
-    const { viewDef, context, subscriptions, inbox } = await this._loadActorConfigs(actorConfig);
+    const { viewDef, context, subscriptions, inbox, inboxCoId } = await this._loadActorConfigs(actorConfig);
     
     // Store actor state
     const actor = {
@@ -479,6 +481,7 @@ export class ActorEngine {
       viewDef, // Store view definition for auto-subscription analysis
       // v0.2: Message passing
       inbox: inbox,
+      inboxCoId: inboxCoId, // Store CoStream CoValue ID for persistence
       subscriptions: subscriptions,
       inboxWatermark: actorConfig.inboxWatermark || 0,
       // v0.5: Subscriptions managed by SubscriptionEngine (unified for data and configs)
@@ -857,12 +860,32 @@ export class ActorEngine {
       }
     }
 
-    // Add directly to inbox (synchronous, for immediate processing)
-    actor.inbox.push(message);
+    // Write message to CoStream via operations API (ensures proper reactive store updates)
+    if (actor.inboxCoId && this.dbEngine) {
+      try {
+        // Use push operation instead of direct backend access
+        // This ensures reactive stores are properly updated
+        const result = await this.dbEngine.execute({
+          op: 'push',
+          coId: actor.inboxCoId,
+          item: message
+        });
+        
+        // Debug: Log successful push
+        console.log(`[ActorEngine] ✅ Pushed ${eventType} to CoStream ${actor.inboxCoId} via operations API (${result.itemsPushed} item(s))`);
+        console.log(`[ActorEngine]   Message:`, JSON.stringify(message).substring(0, 150));
+      } catch (error) {
+        console.error(`[ActorEngine] ❌ Failed to push message to CoStream ${actor.inboxCoId}:`, error);
+      }
+    } else {
+      console.warn(`[ActorEngine] ⚠️ No inboxCoId or dbEngine for actor ${actorId}`);
+    }
 
-    // Process immediately (synchronous for internal events)
-    // This ensures immediate handling while still logging to inbox
-    await this.processMessages(actorId);
+    // Process messages from reactive store after pushing to CoStream
+    // The inbox subscription will also trigger processMessages() automatically, but for immediate
+    // processing of internal events, we call it here after a microtask to allow CoStream to update
+    await Promise.resolve(); // Allow CoStream push to complete
+    await this.processMessages(actorId); // Process from reactive store
   }
 
   /**
@@ -877,10 +900,13 @@ export class ActorEngine {
       return;
     }
 
+    // Read messages from CoStream reactive store (100% CoStream-based, no in-memory arrays)
+    const inboxItems = actor.inbox?.value?.items || [];
+    
     // Filter messages after watermark (unconsumed messages)
     // Also deduplicate by message ID to prevent processing the same message twice
     const seenMessageIds = new Set();
-    const newMessages = actor.inbox.filter(msg => {
+    const newMessages = inboxItems.filter(msg => {
       // Skip if already processed (watermark check)
       if (msg.timestamp <= actor.inboxWatermark) {
         return false;
@@ -932,6 +958,7 @@ export class ActorEngine {
     // The state engine will only re-render if the state actually changed
     // This prevents unnecessary re-renders for messages like UPDATE_INPUT that don't change state
   }
+
 
   /**
    * Persist watermark to actor config in database

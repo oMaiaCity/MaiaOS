@@ -56,7 +56,6 @@ export function transformSchemaForSeeding(schema, coIdMap) {
   // CRITICAL: This must happen AFTER all schemas have been added to coIdMap
   const transformedCount = transformCoReferences(transformed, coIdMap, transformed.$id || 'root');
   if (transformedCount > 0 && transformed.$id) {
-    console.log(`[SchemaTransformer] Transformed ${transformedCount} $co reference(s) in schema ${transformed.$id}`);
   }
 
   // Transform items in arrays (for colist/costream)
@@ -124,7 +123,6 @@ function transformCoReferences(obj, coIdMap, path = '') {
         obj.$co = coId;
         transformedCount++;
         if (path) {
-          console.log(`[SchemaTransformer] Transformed $co reference at ${path}: ${refValue} → ${coId.substring(0, 12)}...`);
         }
       } else {
         // CRITICAL: This means the referenced schema isn't in the coIdMap
@@ -367,6 +365,50 @@ export function transformInstanceForSeeding(instance, coIdMap, options = {}) {
     }
   }
 
+  // Transform state machine structures (states.entry and states.on.*.actions)
+  // State machines have structure: {states: {stateName: {entry: {tool: "@db", payload: {...}}, on: {...}}}}
+  // Entry can be an object with tool/payload OR an array of actions
+  // Transition actions are in on.*.actions arrays
+  if (transformed.states && typeof transformed.states === 'object' && !Array.isArray(transformed.states)) {
+    for (const [stateName, stateDef] of Object.entries(transformed.states)) {
+      if (!stateDef || typeof stateDef !== 'object') {
+        continue;
+      }
+
+      // Transform entry (can be object with tool/payload OR array of actions)
+      if (stateDef.entry) {
+        if (stateDef.entry.tool && stateDef.entry.payload) {
+          // Entry is an object with tool and payload - transform payload
+          const originalSchema = stateDef.entry.payload.schema;
+          transformToolPayload(stateDef.entry.payload, coIdMap, transformQueryObjects);
+          if (originalSchema && originalSchema !== stateDef.entry.payload.schema) {
+            console.log(`[SchemaTransformer] ✅ Transformed state machine entry schema: ${originalSchema} → ${stateDef.entry.payload.schema}`);
+          }
+        } else if (Array.isArray(stateDef.entry)) {
+          // Entry is an array of actions - transform each action
+          transformArrayItems(stateDef.entry, coIdMap, transformQueryObjects);
+        } else if (stateDef.entry.payload) {
+          // Entry might be just a payload object
+          const originalSchema = stateDef.entry.payload.schema;
+          transformToolPayload(stateDef.entry.payload, coIdMap, transformQueryObjects);
+          if (originalSchema && originalSchema !== stateDef.entry.payload.schema) {
+            console.log(`[SchemaTransformer] ✅ Transformed state machine entry schema: ${originalSchema} → ${stateDef.entry.payload.schema}`);
+          }
+        }
+      }
+
+      // Transform transition actions (on.*.actions arrays)
+      if (stateDef.on && typeof stateDef.on === 'object') {
+        for (const [eventName, transition] of Object.entries(stateDef.on)) {
+          if (transition && typeof transition === 'object' && Array.isArray(transition.actions)) {
+            // Transform actions array
+            transformArrayItems(transition.actions, coIdMap, transformQueryObjects);
+          }
+        }
+      }
+    }
+  }
+
   // Transform query objects in context properties
   // Query objects have structure: {schema: "@schema/todos", filter: {...}}
   // Transform schema field from human-readable reference to co-id
@@ -535,12 +577,22 @@ function transformArrayItems(arr, coIdMap, transformRecursive) {
   for (let i = 0; i < arr.length; i++) {
     const item = arr[i];
     if (item && typeof item === 'object') {
-      // Direct transformation for action payloads in arrays
-      if (item.payload && item.payload.target && typeof item.payload.target === 'string') {
-        const coId = transformTargetReference(item.payload.target, coIdMap, 'action payload.target in array');
-        if (coId) {
-          item.payload.target = coId;
+      // Check if this is a tool action object (has 'tool' and 'payload' properties)
+      if (item.tool && typeof item.tool === 'string' && item.payload && typeof item.payload === 'object') {
+        // Transform action payload (handles both schema and target references)
+        transformActionPayload(item, coIdMap, transformRecursive);
+        // Also transform tool payload schema references
+        transformToolPayload(item.payload, coIdMap, transformRecursive);
+      } else if (item.payload && typeof item.payload === 'object') {
+        // Direct transformation for action payloads in arrays
+        if (item.payload.target && typeof item.payload.target === 'string') {
+          const coId = transformTargetReference(item.payload.target, coIdMap, 'action payload.target in array');
+          if (coId) {
+            item.payload.target = coId;
+          }
         }
+        // Transform tool payload schema references
+        transformToolPayload(item.payload, coIdMap, transformRecursive);
       }
       transformRecursive(item, coIdMap);
     } else if (typeof item === 'string' && item.startsWith('@actor/') && !item.startsWith('co_z')) {

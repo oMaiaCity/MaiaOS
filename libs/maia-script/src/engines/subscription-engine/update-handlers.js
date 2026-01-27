@@ -14,11 +14,6 @@ export function handleViewUpdate(subscriptionEngine, actorId, newViewDef) {
   const actor = subscriptionEngine.actorEngine.getActor(actorId);
   if (!actor) return;
 
-  // Invalidate cache
-  if (subscriptionEngine.viewEngine.viewCache) {
-    subscriptionEngine.viewEngine.viewCache.delete(actor.config.view);
-  }
-
   // Update actor's view definition
   actor.viewDef = newViewDef;
 
@@ -59,11 +54,6 @@ export async function handleStyleUpdate(subscriptionEngine, actorId, newStyleDef
 export async function handleStateUpdate(subscriptionEngine, actorId, newStateDef) {
   const actor = subscriptionEngine.actorEngine.getActor(actorId);
   if (!actor || !subscriptionEngine.stateEngine) return;
-
-  // Invalidate cache
-  if (subscriptionEngine.stateEngine.stateCache) {
-    subscriptionEngine.stateEngine.stateCache.delete(actor.config.state);
-  }
 
   try {
     // Destroy old machine

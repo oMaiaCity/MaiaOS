@@ -15,13 +15,6 @@ export default {
       return;
     }
     
-    // Debug: Log the actual structure of inbox and publishes
-    if (interfaceDef.inbox) {
-      console.log(`[interface/validate] ${actorId} - inbox type: ${typeof interfaceDef.inbox}, isArray: ${Array.isArray(interfaceDef.inbox)}, keys: ${interfaceDef.inbox && typeof interfaceDef.inbox === 'object' ? Object.keys(interfaceDef.inbox).length : 'N/A'}`);
-    }
-    if (interfaceDef.publishes) {
-      console.log(`[interface/validate] ${actorId} - publishes type: ${typeof interfaceDef.publishes}, isArray: ${Array.isArray(interfaceDef.publishes)}, keys: ${interfaceDef.publishes && typeof interfaceDef.publishes === 'object' ? Object.keys(interfaceDef.publishes).length : 'N/A'}`);
-    }
     
     const errors = [];
     const warnings = [];
