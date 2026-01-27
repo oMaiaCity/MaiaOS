@@ -148,14 +148,17 @@ export class SubscriptionCache {
 	 * Clear all subscriptions and timers
 	 * 
 	 * Useful for cleanup on app shutdown or context switch
+	 * CRITICAL: Properly unsubscribes from all CoValueCores before clearing
 	 */
 	clear() {
-		// Destroy all subscriptions
-		for (const id of this.cache.keys()) {
+		// Destroy all subscriptions (this properly unsubscribes from CoValueCores)
+		// Create a copy of keys array to avoid iteration issues during deletion
+		const ids = Array.from(this.cache.keys());
+		for (const id of ids) {
 			this.destroy(id);
 		}
 
-		// Clear maps
+		// Clear maps (should already be empty after destroy, but ensure it's clean)
 		this.cache.clear();
 		this.cleanupTimers.clear();
 	}
@@ -169,13 +172,49 @@ export class SubscriptionCache {
 let globalCache = null;
 
 /**
- * Get or create global subscription cache
+ * Current node instance tracked by the cache
  * 
+ * Used to detect when node changes (e.g., after re-login) and clear stale subscriptions
+ */
+let currentNode = null;
+
+/**
+ * Get or create global subscription cache (node-aware)
+ * 
+ * Following jazz-tools pattern: subscriptions are inherently tied to node instance.
+ * When node changes, cache is automatically cleared to prevent stale subscriptions.
+ * 
+ * @param {Object} node - Current node instance (required for node-aware caching)
  * @param {number} cleanupTimeout - Optional cleanup timeout override
  * @returns {SubscriptionCache}
  */
-export function getGlobalCache(cleanupTimeout) {
-	if (!globalCache) {
+export function getGlobalCache(node, cleanupTimeout) {
+	// Handle backward compatibility: if first arg is number, treat as cleanupTimeout (old signature)
+	// This allows old code to still work, but node-aware caching won't work without node
+	if (typeof node === 'number') {
+		cleanupTimeout = node;
+		node = null;
+		console.warn('[oSubscriptionCache] getGlobalCache called without node parameter. Node-aware caching disabled.');
+	}
+	
+	// Detect node change: if node instance is different, clear stale cache
+	if (node && currentNode !== node) {
+		if (globalCache) {
+			const cacheSize = globalCache.size;
+			// Clear old cache tied to previous node
+			globalCache.clear();
+			console.log(`[oSubscriptionCache] Node changed - cleared ${cacheSize} stale subscriptions`);
+		}
+		// Track new node instance
+		currentNode = node;
+		// Create fresh cache for new node
+		globalCache = new SubscriptionCache(cleanupTimeout);
+		console.log(`[oSubscriptionCache] Created new subscription cache for new node`);
+	} else if (!globalCache) {
+		// First time initialization
+		if (node) {
+			currentNode = node;
+		}
 		globalCache = new SubscriptionCache(cleanupTimeout);
 	}
 	return globalCache;
@@ -183,10 +222,13 @@ export function getGlobalCache(cleanupTimeout) {
 
 /**
  * Reset global cache (primarily for testing)
+ * 
+ * Also clears node tracking to allow fresh start
  */
 export function resetGlobalCache() {
 	if (globalCache) {
 		globalCache.clear();
 		globalCache = null;
 	}
+	currentNode = null;
 }

@@ -379,6 +379,8 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 					console.error(`[DB Viewer] MaiaOS instance not available`);
 					return;
 				}
+				// Store container reference for cleanup on unload (accessible via window.currentVibeContainer)
+				window.currentVibeContainer = container;
 				// Reuse existing maia session - load vibe directly
 				await maia.loadVibeFromAccount(currentVibe, container);
 			} catch (error) {

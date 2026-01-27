@@ -204,6 +204,33 @@ store.subscribe((data) => {
 });
 ```
 
+### CoList Loading (Backend Implementation)
+
+**Important:** Collection queries (queries that return arrays of items) use CoLists as the single source of truth. The backend automatically loads CoLists from IndexedDB before querying to ensure data is available after re-login.
+
+**How it works:**
+1. When `read()` is called for a collection query, the backend resolves the collection name from the schema
+2. It gets the CoList ID from `account.data.<collectionName>`
+3. It loads the CoList from IndexedDB and waits for it to be available (jazz-tools pattern)
+4. Only then does it read items from the CoList and return them in the store
+
+**Why this matters:**
+- After re-login, CoLists exist in IndexedDB but aren't loaded into node memory
+- Without explicit loading, queries would return empty results initially
+- By waiting for CoList to be available, we ensure queries always return correct data
+
+**Example:**
+```javascript
+// Backend automatically handles CoList loading
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: "co_zTodos123"  // Collection query
+});
+
+// Store.value contains all items from CoList (already loaded)
+console.log('Todos:', store.value);  // Array of todos, not empty!
+```
+
 ### Deduplication
 
 SubscriptionEngine checks if data actually changed before updating:
@@ -299,6 +326,57 @@ store.subscribe((data) => {
 - Verify deduplication logic
 - Check for duplicate query objects in context
 - Ensure batching system is working
+
+---
+
+## CRDT-Safe Watermark Pattern
+
+### Distributed Inbox Message Processing
+
+In a distributed multi-browser scenario, actors share inboxes (CoStreams) across browser instances. To prevent duplicate message processing, MaiaOS uses a CRDT-safe watermark pattern.
+
+**The Problem:**
+- Two browser instances can both read the same message timestamp before either updates the watermark
+- Both browsers process the message, then both update the watermark
+- Result: Message is processed twice (duplicate actions)
+
+**The Solution:**
+CRDT-safe max() logic for watermark updates:
+
+```javascript
+// Before processing messages, read current watermark from persisted config
+const actorConfig = await dbEngine.execute({
+  op: 'read',
+  schema: actorSchemaCoId,
+  key: actorId
+});
+const currentWatermark = actorConfig.inboxWatermark || 0;
+
+// Only process messages after current watermark
+const newMessages = inboxItems.filter(msg => msg.timestamp > currentWatermark);
+
+// When updating watermark, use max() logic
+if (newWatermark > currentWatermark) {
+  // Only update if new watermark is greater than current
+  await dbEngine.execute({
+    op: 'update',
+    schema: actorSchemaCoId,
+    id: actorId,
+    data: { inboxWatermark: newWatermark }
+  });
+}
+```
+
+**Key Points:**
+- Watermark is always read from persisted config (not just in-memory) before processing
+- Watermark updates use max(current, new) logic - only update if new > current
+- This ensures that even if two browsers both try to update, the max() logic prevents duplicate processing
+- Watermark is stored in actor config CoMap, which is CRDT-based and syncs across browsers
+
+**Implementation:**
+- `ActorEngine.processMessages()` reads watermark from persisted config before filtering messages
+- `ActorEngine._persistWatermark()` implements CRDT-safe max() logic
+- Watermark updates are idempotent - multiple updates with the same value are safe
 
 ---
 

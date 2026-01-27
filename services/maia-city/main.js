@@ -18,6 +18,7 @@ let cojsonAPI = null; // CoJSON API instance
 let currentView = 'account'; // Current schema filter (default: 'account')
 let currentContextCoValueId = null; // Currently loaded CoValue in main context (explorer-style navigation)
 let currentVibe = null; // Currently loaded vibe (null = DB view mode, 'todos' = todos vibe, etc.)
+let currentVibeContainer = null; // Currently loaded vibe container element (for cleanup on unload)
 let navigationHistory = []; // Navigation history stack for back button
 let authState = {
 	signedIn: false,
@@ -553,6 +554,16 @@ async function loadVibe(vibeKey) {
 	
 	try {
 		if (vibeKey === null) {
+			// Unloading vibe - destroy all actors for the current vibe container
+			// Get container reference from window (set by db-view.js when loading vibe)
+			const containerToCleanup = window.currentVibeContainer || currentVibeContainer;
+			if (containerToCleanup && maia && maia.actorEngine) {
+				console.log(`[MaiaCity] Unloading vibe, destroying actors for container`);
+				maia.actorEngine.destroyActorsForContainer(containerToCleanup);
+				currentVibeContainer = null;
+				window.currentVibeContainer = null;
+			}
+			
 			currentVibe = null;
 			// Restore previous context if available, otherwise keep current context
 			if (navigationHistory.length > 0) {

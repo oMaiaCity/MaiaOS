@@ -28,6 +28,10 @@ export class ActorEngine {
     this.dbEngine = null; // Database operation engine (set by kernel)
     this.os = null; // Reference to MaiaOS instance (set by kernel)
     
+    // Container-based actor tracking for cleanup on vibe unload
+    // Map<containerElement, Set<actorId>> - tracks which actors belong to which container
+    this._containerActors = new Map();
+    
     // Let ViewEngine know about us for action handling
     this.viewEngine.setActorEngine(this);
   }
@@ -461,6 +465,8 @@ export class ActorEngine {
     // Use $id if present, otherwise fall back to id (added by IndexedDB normalization)
     const actorId = actorConfig.$id || actorConfig.id;
     
+    console.log(`[ActorEngine] Creating new actor: ${actorId}`);
+    
     // Create shadow root
     const shadowRoot = containerElement.attachShadow({ mode: 'open' });
     
@@ -496,6 +502,14 @@ export class ActorEngine {
     await this._setupMessageSubscriptions(actor, actorConfig);
     
     this.actors.set(actorId, actor);
+    
+    // Register actor with container for cleanup tracking
+    if (containerElement) {
+      if (!this._containerActors.has(containerElement)) {
+        this._containerActors.set(containerElement, new Set());
+      }
+      this._containerActors.get(containerElement).add(actorId);
+    }
     
     // Auto-subscribe to reactive data based on context (context-driven)
     // SubscriptionEngine analyzes context for query objects and @ refs
@@ -555,6 +569,19 @@ export class ActorEngine {
     if (!actor._isVisible) {
       console.log(`[ActorEngine] Skipping re-render for hidden actor: ${actorId}`);
       return;
+    }
+
+    // CRITICAL FIX: Destroy all child actors before re-rendering
+    // When view switches (e.g., list → kanban), child actors are removed from DOM
+    // but not destroyed, causing stores to accumulate in _storeSubscriptions
+    const childActorElements = actor.shadowRoot.querySelectorAll('[data-actor-id]');
+    const childActorIds = Array.from(childActorElements).map(el => el.dataset.actorId).filter(Boolean);
+    
+    if (childActorIds.length > 0) {
+      console.log(`[ActorEngine] Destroying ${childActorIds.length} child actor(s) before rerender of ${actorId}`);
+      for (const childActorId of childActorIds) {
+        this.destroyActor(childActorId);
+      }
     }
 
     // Capture focused element and selection before re-render
@@ -635,9 +662,12 @@ export class ActorEngine {
   destroyActor(actorId) {
     const actor = this.actors.get(actorId);
     if (actor) {
+      console.log(`[ActorEngine] Destroying actor: ${actorId}`);
       actor.shadowRoot.innerHTML = '';
       
       // Cleanup subscriptions (delegated to SubscriptionEngine)
+      // This automatically triggers store._unsubscribe() when last subscriber unsubscribes,
+      // cleaning up _storeSubscriptions in CoJSONBackend
       if (this.subscriptionEngine) {
         this.subscriptionEngine.cleanup(actor);
       }
@@ -646,8 +676,48 @@ export class ActorEngine {
       if (actor.machine && this.stateEngine) {
         this.stateEngine.destroyMachine(actor.machine.id);
       }
+      
+      // Remove actor from container tracking
+      if (actor.containerElement && this._containerActors.has(actor.containerElement)) {
+        const containerActors = this._containerActors.get(actor.containerElement);
+        containerActors.delete(actorId);
+        // Clean up empty container entries
+        if (containerActors.size === 0) {
+          this._containerActors.delete(actor.containerElement);
+        }
+      }
+      
       this.actors.delete(actorId);
     }
+  }
+
+  /**
+   * Destroy all actors for a given container
+   * Used when unloading a vibe to clean up all actors associated with that container
+   * @param {HTMLElement} containerElement - The container element
+   */
+  destroyActorsForContainer(containerElement) {
+    if (!containerElement) {
+      return;
+    }
+    
+    const actorIds = this._containerActors.get(containerElement);
+    if (!actorIds || actorIds.size === 0) {
+      return;
+    }
+    
+    // Create a copy of the Set to avoid modification during iteration
+    const actorIdsToDestroy = Array.from(actorIds);
+    
+    console.log(`[ActorEngine] Destroying ${actorIdsToDestroy.length} actor(s) for container`);
+    
+    // Destroy all actors for this container
+    for (const actorId of actorIdsToDestroy) {
+      this.destroyActor(actorId);
+    }
+    
+    // Clean up container entry (should already be empty, but ensure it's removed)
+    this._containerActors.delete(containerElement);
   }
 
   // ============================================
@@ -880,13 +950,15 @@ export class ActorEngine {
     // Process messages from reactive store after pushing to CoStream
     // The inbox subscription will also trigger processMessages() automatically, but for immediate
     // processing of internal events, we call it here after a microtask to allow CoStream to update
+    // CRITICAL FIX: Processing guard in processMessages() prevents duplicate processing if subscription also triggers
     await Promise.resolve(); // Allow CoStream push to complete
-    await this.processMessages(actorId); // Process from reactive store
+    await this.processMessages(actorId); // Process from reactive store (guard prevents duplicates)
   }
 
   /**
    * Process unconsumed messages in an actor's inbox
    * Uses watermark pattern to avoid replay
+   * CRITICAL FIX: Added processing guard to prevent concurrent execution
    * @param {string} actorId - Actor ID
    */
   async processMessages(actorId) {
@@ -896,15 +968,60 @@ export class ActorEngine {
       return;
     }
 
-    // Read messages from CoStream reactive store (100% CoStream-based, no in-memory arrays)
-    const inboxItems = actor.inbox?.value?.items || [];
+    // CRITICAL FIX: Prevent concurrent processing to avoid duplicate message handling
+    // This prevents race conditions when sendInternalEvent and inbox subscription both call processMessages
+    if (actor._isProcessingMessages) {
+      // Already processing - skip this call (subscription will retry when processing completes)
+      console.log(`[ActorEngine] Skipping concurrent processMessages for ${actorId} (already processing)`);
+      return;
+    }
+
+    // Set processing flag
+    actor._isProcessingMessages = true;
+
+    try {
+      // CRITICAL FIX: Read watermark from persisted config before filtering messages
+      // This ensures we always check against the latest persisted watermark, not stale in-memory value
+      // This is CRDT-safe: prevents duplicate processing when watermark is updated concurrently
+      let currentWatermark = actor.inboxWatermark || 0;
+      if (this.dbEngine) {
+        try {
+          // Extract schema co-id from actor CoValue's headerMeta using fromCoValue pattern
+          const actorSchemaStore = await this.dbEngine.execute({
+            op: 'schema',
+            fromCoValue: actorId
+          });
+          const actorSchemaCoId = actorSchemaStore.value?.$id;
+          
+          if (actorSchemaCoId) {
+            // Read current watermark from persisted config
+            const actorStore = await this.dbEngine.execute({
+              op: 'read',
+              schema: actorSchemaCoId,
+              key: actorId
+            });
+            const actorConfig = actorStore.value;
+            if (actorConfig && actorConfig.inboxWatermark !== undefined) {
+              currentWatermark = actorConfig.inboxWatermark;
+              // Update in-memory watermark to match persisted value
+              actor.inboxWatermark = currentWatermark;
+            }
+          }
+        } catch (error) {
+          // If reading watermark fails, use in-memory value as fallback
+          console.warn(`[ActorEngine] Failed to read watermark from config for ${actorId}, using in-memory value:`, error);
+        }
+      }
+
+      // Read messages from CoStream reactive store (100% CoStream-based, no in-memory arrays)
+      const inboxItems = actor.inbox?.value?.items || [];
     
     // Filter messages after watermark (unconsumed messages)
     // Also deduplicate by message ID to prevent processing the same message twice
     const seenMessageIds = new Set();
     const newMessages = inboxItems.filter(msg => {
-      // Skip if already processed (watermark check)
-      if (msg.timestamp <= actor.inboxWatermark) {
+      // Skip if already processed (watermark check - using persisted watermark)
+      if (msg.timestamp <= currentWatermark) {
         return false;
       }
       // Skip if duplicate (same ID already seen in this batch)
@@ -950,14 +1067,20 @@ export class ActorEngine {
       }
     }
 
-    // Don't automatically re-render here - let the state engine handle re-renders
-    // The state engine will only re-render if the state actually changed
-    // This prevents unnecessary re-renders for messages like UPDATE_INPUT that don't change state
+      // Don't automatically re-render here - let the state engine handle re-renders
+      // The state engine will only re-render if the state actually changed
+      // This prevents unnecessary re-renders for messages like UPDATE_INPUT that don't change state
+    } finally {
+      // Always clear processing flag, even if an error occurred
+      actor._isProcessingMessages = false;
+    }
   }
 
 
   /**
    * Persist watermark to actor config in database
+   * CRDT-safe: Only updates if new watermark > current watermark (max() logic)
+   * This prevents duplicate message processing in distributed multi-browser scenarios
    * @param {string} actorId - Actor co-id
    * @param {number} watermark - Watermark timestamp
    * @private
@@ -981,7 +1104,9 @@ export class ActorEngine {
         return;
       }
       
-      // Get current actor config using read() - returns reactive store
+      // CRITICAL FIX: Read current watermark from persisted config (not just in-memory)
+      // This ensures we always check against the latest persisted watermark, not stale in-memory value
+      // This is CRDT-safe: prevents duplicate processing when two browsers both try to update watermark
       const actorStore = await this.dbEngine.execute({
         op: 'read',
         schema: actorSchemaCoId,
@@ -991,6 +1116,15 @@ export class ActorEngine {
 
       if (!actorConfig) {
         console.warn(`[ActorEngine] Cannot persist watermark: actor config not found for ${actorId}`);
+        return;
+      }
+
+      // CRDT-safe max() logic: Only update if new watermark > current watermark
+      // This ensures that even if two browsers both try to update, the max() logic prevents duplicate processing
+      const currentWatermark = actorConfig.inboxWatermark || 0;
+      if (watermark <= currentWatermark) {
+        // New watermark is not greater than current - skip update (already processed or concurrent update)
+        console.log(`[ActorEngine] Skipping watermark update for ${actorId}: new=${watermark} <= current=${currentWatermark}`);
         return;
       }
 

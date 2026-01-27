@@ -23,12 +23,36 @@ export class CoJSONBackend extends DBAdapter {
     this.node = node;
     this.account = account;
     this.dbEngine = dbEngine; // Store dbEngine for runtime schema validation
-    this.subscriptionCache = getGlobalCache();
+    
+    // CRITICAL FIX: Reset subscription caches when new backend is created
+    // This prevents stale subscriptions from previous session after re-login
+    this._resetCaches();
+    
+    // Get node-aware subscription cache (auto-clears if node changed)
+    this.subscriptionCache = getGlobalCache(node);
     // Cache universal group after first resolution (performance optimization)
     this._cachedUniversalGroup = null;
     // Track all ReactiveStores per CoValue for cross-actor reactivity
     // Map<coId, Set<{store, updateFn, schema, filter}>>
     this._storeSubscriptions = new Map();
+  }
+  
+  /**
+   * Reset all subscription-related caches
+   * 
+   * Called when new backend is created to clear stale subscriptions from previous session.
+   * Centralized cache management following DRY principle.
+   */
+  _resetCaches() {
+    // Clear backend-specific store subscriptions Map
+    // (will be empty on new backend, but ensure it's clean)
+    const subscriptionCount = this._storeSubscriptions?.size || 0;
+    this._storeSubscriptions = new Map();
+    if (subscriptionCount > 0) {
+      console.log(`[CoJSONBackend] Cleared ${subscriptionCount} store subscriptions on backend reset`);
+    }
+    // Note: Global subscription cache is cleared automatically by getGlobalCache(node)
+    // when it detects a node change, so we don't need to call resetGlobalCache() here
   }
   
   /**
@@ -644,70 +668,41 @@ export class CoJSONBackend extends DBAdapter {
     const store = new ReactiveStore(null);
     const coValueCore = this.getCoValue(coId);
     
-    // Check if subscription already exists in cache (reused)
-    const existingSubscription = this.subscriptionCache.cache?.get(coId);
-    const isReused = !!existingSubscription;
-    
-    // Get or create subscription using cache
-    const subscription = this.subscriptionCache.getOrCreate(coId, () => {
-      if (!coValueCore) {
-        store._set({ error: 'CoValue not found', id: coId });
-        return { unsubscribe: () => {} };
+    // CRITICAL FIX: Always create a fresh subscription for this store
+    // Cached subscriptions from previous sessions are tied to old node/CoValueCore instances
+    // Even if cache was cleared, we need to ensure subscriptions use current node
+    if (!coValueCore) {
+      store._set({ error: 'CoValue not found', id: coId });
+      return store;
+    }
+
+    // Always create a NEW subscription tied to THIS node's CoValueCore
+    // Don't reuse cached subscriptions - they might be tied to old node instances
+    const unsubscribe = coValueCore.subscribe((core) => {
+      if (!core.isAvailable()) {
+        store._set({ id: coId, loading: true });
+        return;
       }
 
-      // Set up subscription to CoValue updates
-      const unsubscribe = coValueCore.subscribe((core) => {
-        if (!core.isAvailable()) {
-          store._set({ id: coId, loading: true });
-          return;
-        }
-
-        // Extract CoValue data as flat object (for operations API - SubscriptionEngine/UI expect flat objects)
-        // Use flat format for single items too (consistent with collections)
-        const data = this._extractCoValueDataFlat(core, schemaHint);
-        store._set(data);
-      });
-
-      // Set initial value if available (use flat format for operations API)
-      if (coValueCore.isAvailable()) {
-        const data = this._extractCoValueDataFlat(coValueCore, schemaHint);
-        store._set(data);
-      } else {
-        // Trigger load if not available
-        this.node.loadCoValueCore(coId).catch(err => {
-          store._set({ error: err.message, id: coId });
-        });
-      }
-
-      return { unsubscribe };
+      // Extract CoValue data as flat object (for operations API)
+      const data = this._extractCoValueDataFlat(core, schemaHint);
+      store._set(data);
     });
 
-    // CRITICAL FIX: If subscription was reused from cache, the cached subscription
-    // is updating an OLD ReactiveStore. We need to:
-    // 1. Get current value from CoValueCore and set it on the NEW store immediately
-    // 2. Create a NEW subscription that updates the NEW store
-    if (isReused && coValueCore) {
-      // Get current value and set on new store (use flat format)
-      if (coValueCore.isAvailable()) {
-        const currentData = this._extractCoValueDataFlat(coValueCore, schemaHint);
-        store._set(currentData);
-      } else {
-        store._set({ id: coId, loading: true });
-      }
-      
-      // Create new subscription that updates THIS store (not the old one)
-      const newUnsubscribe = coValueCore.subscribe((core) => {
-        if (!core.isAvailable()) {
-          store._set({ id: coId, loading: true });
-          return;
-        }
-        const data = this._extractCoValueDataFlat(core, schemaHint);
-        store._set(data);
+    // Set initial value if available (use flat format for operations API)
+    if (coValueCore.isAvailable()) {
+      const data = this._extractCoValueDataFlat(coValueCore, schemaHint);
+      store._set(data);
+    } else {
+      // Trigger load if not available using generic method (jazz-tools pattern)
+      this._ensureCoValueLoaded(coId).catch(err => {
+        store._set({ error: err.message, id: coId });
       });
-      
-      // Replace cached subscription with one that updates the new store
-      this.subscriptionCache.cache.set(coId, { unsubscribe: newUnsubscribe });
     }
+
+    // Store subscription in cache for cleanup tracking (but don't reuse it)
+    // The cache is used for cleanup scheduling, not for reusing subscriptions
+    this.subscriptionCache.cache.set(coId, { unsubscribe });
 
     // Set up store unsubscribe to clean up subscription
     const originalUnsubscribe = store._unsubscribe;
@@ -795,6 +790,184 @@ export class CoJSONBackend extends DBAdapter {
   }
 
   /**
+   * Resolve collection name from schema (co-id or human-readable)
+   * @private
+   * @param {string} schema - Schema co-id (co_z...) or human-readable (@schema/data/todos)
+   * @returns {Promise<string|null>} Collection name (e.g., "todos") or null if not found
+   */
+  async _resolveCollectionName(schema) {
+    // If schema is human-readable format, extract collection name directly
+    if (schema.startsWith('@schema/data/')) {
+      // Extract "todos" from "@schema/data/todos"
+      return schema.replace('@schema/data/', '');
+    }
+    if (schema.startsWith('@schema/')) {
+      // Extract "todos" from "@schema/todos" (backward compatibility)
+      return schema.replace('@schema/', '');
+    }
+    
+    // If schema is a co-id, find matching CoList by checking account.data CoLists
+    if (schema.startsWith('co_z')) {
+      const dataId = this.account.get("data");
+      if (!dataId) {
+        return null;
+      }
+      
+      // Trigger loading for account.data (don't wait - let caller handle waiting)
+      const dataCore = await this._ensureCoValueLoaded(dataId);
+      if (!dataCore || !this.isAvailable(dataCore)) {
+        return null;
+      }
+      
+      const dataContent = this.getCurrentContent(dataCore);
+      if (!dataContent || typeof dataContent.get !== 'function') {
+        return null;
+      }
+      
+      // Iterate through all collections in account.data
+      const keys = dataContent.keys && typeof dataContent.keys === 'function' 
+        ? dataContent.keys() 
+        : Object.keys(dataContent);
+      
+      for (const collectionName of keys) {
+        const collectionListId = dataContent.get(collectionName);
+        if (collectionListId && typeof collectionListId === 'string' && collectionListId.startsWith('co_')) {
+          // Trigger loading for collection CoList (don't wait - just check if available)
+          const collectionListCore = await this._ensureCoValueLoaded(collectionListId);
+          if (collectionListCore && this.isAvailable(collectionListCore)) {
+            const listHeader = this.getHeader(collectionListCore);
+            const listHeaderMeta = listHeader?.meta || null;
+            const listItemSchema = listHeaderMeta?.$schema;
+            
+            // Check if this CoList's item schema matches the query schema
+            if (listItemSchema === schema) {
+              return collectionName;
+            }
+          }
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Get CoList ID from account.data.<collectionName>
+   * @private
+   * @param {string} collectionName - Collection name (e.g., "todos")
+   * @returns {Promise<string|null>} CoList ID or null if not found
+   */
+  async _getCoListId(collectionName) {
+    const dataId = this.account.get("data");
+    if (!dataId) {
+      return null;
+    }
+    
+    // Trigger loading for account.data (don't wait - let caller handle waiting)
+    const dataCore = await this._ensureCoValueLoaded(dataId);
+    if (!dataCore || !this.isAvailable(dataCore)) {
+      return null;
+    }
+    
+    const dataContent = this.getCurrentContent(dataCore);
+    if (!dataContent || typeof dataContent.get !== 'function') {
+      return null;
+    }
+    
+    const collectionListId = dataContent.get(collectionName);
+    if (collectionListId && typeof collectionListId === 'string' && collectionListId.startsWith('co_')) {
+      return collectionListId;
+    }
+    
+    return null;
+  }
+
+  /**
+   * Ensure CoValue is loaded from IndexedDB (jazz-tools pattern)
+   * Generic method that works for ANY CoValue type (CoMap, CoList, CoStream, etc.)
+   * After re-login, CoValues exist in IndexedDB but aren't loaded into node memory
+   * This method explicitly loads them before accessing, just like jazz-tools does
+   * @private
+   * @param {string} coId - CoValue ID (co-id)
+   * @param {Object} [options] - Options
+   * @param {boolean} [options.waitForAvailable=false] - Wait for CoValue to become available
+   * @param {number} [options.timeoutMs=2000] - Timeout in milliseconds
+   * @returns {Promise<CoValueCore|null>} CoValueCore or null if not found
+   */
+  async _ensureCoValueLoaded(coId, options = {}) {
+    const { waitForAvailable = false, timeoutMs = 2000 } = options;
+    
+    if (!coId || !coId.startsWith('co_')) {
+      return null; // Invalid co-id
+    }
+    
+    // Get CoValueCore (creates if doesn't exist)
+    const coValueCore = this.getCoValue(coId);
+    if (!coValueCore) {
+      return null; // CoValueCore doesn't exist (shouldn't happen)
+    }
+    
+    // If already available, return immediately
+    if (coValueCore.isAvailable()) {
+      return coValueCore;
+    }
+    
+    // Not available - trigger loading from IndexedDB (jazz-tools pattern)
+    console.log(`[CoJSONBackend] Loading CoValue from IndexedDB: ${coId.substring(0, 12)}...`);
+    this.node.loadCoValueCore(coId).catch(err => {
+      console.error(`[CoJSONBackend] Failed to load CoValue ${coId}:`, err);
+    });
+    
+    // If waitForAvailable is true, wait for it to become available
+    if (waitForAvailable) {
+      await new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          console.warn(`[CoJSONBackend] Timeout waiting for CoValue ${coId} to load`);
+          resolve();
+        }, timeoutMs);
+        
+        const unsubscribe = coValueCore.subscribe((core) => {
+          if (core.isAvailable()) {
+            console.log(`[CoJSONBackend] CoValue loaded: ${coId.substring(0, 12)}...`);
+            clearTimeout(timeout);
+            unsubscribe();
+            resolve();
+          }
+        });
+      });
+    }
+    
+    return coValueCore;
+  }
+
+  /**
+   * Ensure CoList is loaded from IndexedDB (jazz-tools pattern)
+   * DEPRECATED: Use _ensureCoValueLoaded() instead
+   * Kept for backward compatibility - delegates to generic method
+   * @private
+   * @param {string} schema - Schema co-id (co_z...) or human-readable (@schema/data/todos)
+   * @returns {Promise<void>}
+   */
+  async _ensureCoListLoaded(schema) {
+    // Resolve collection name from schema
+    const collectionName = await this._resolveCollectionName(schema);
+    if (!collectionName) {
+      // Can't resolve collection name - skip loading (might be a non-collection schema)
+      return;
+    }
+    
+    // Get CoList ID from account.data.<collectionName>
+    const coListId = await this._getCoListId(collectionName);
+    if (!coListId) {
+      // CoList doesn't exist yet - skip loading (will be created on first item)
+      return;
+    }
+    
+    // Use generic method to load CoList
+    await this._ensureCoValueLoaded(coListId, { waitForAvailable: true, timeoutMs: 1000 });
+  }
+
+  /**
    * Read a collection of CoValues by schema
    * @private
    * @param {string} schema - Schema co-id (co_z...)
@@ -806,99 +979,140 @@ export class CoJSONBackend extends DBAdapter {
     const matchingCoIds = new Set();
     const unsubscribeFunctions = [];
 
+    // CRITICAL FIX: Load CoList and wait for it to be available before initial updateStore() call
+    // After re-login, CoList exists in IndexedDB but isn't loaded into node memory
+    // We need to explicitly load it and wait for it to be available before querying
+    let coListId = null;
+    let coListCore = null;
+    
+    // Resolve collection name from schema
+    const collectionName = await this._resolveCollectionName(schema);
+    if (collectionName) {
+      // Get CoList ID from account.data.<collectionName>
+      coListId = await this._getCoListId(collectionName);
+      if (coListId) {
+        // Load CoList and wait for it to be available (jazz-tools pattern)
+        coListCore = await this._ensureCoValueLoaded(coListId, { waitForAvailable: true, timeoutMs: 2000 });
+        if (coListCore && this.isAvailable(coListCore)) {
+          // Track CoList for subscription (to detect new items)
+          matchingCoIds.add(coListId);
+        }
+      }
+    }
+
+    // Track last store value to prevent duplicate updates during initial load
+    let lastStoreValue = null;
+    
+    // Helper to check if two arrays contain the same items (by ID)
+    const isSameStoreValue = (oldValue, newValue) => {
+      if (!Array.isArray(oldValue) || !Array.isArray(newValue)) {
+        return false;
+      }
+      if (oldValue.length !== newValue.length) {
+        return false;
+      }
+      
+      // CRITICAL FIX: Deep comparison - compare actual item data, not just IDs
+      // When a todo's `done` property changes, we need to detect it and trigger UI update
+      // Previous implementation only compared IDs, which blocked updates when properties changed
+      return JSON.stringify(oldValue) === JSON.stringify(newValue);
+    };
+
     // Helper to update store with current matching CoValues
     const updateStore = () => {
-      const allCoValues = this.getAllCoValues();
       const results = [];
       const itemsFromCoLists = new Set(); // Track items already added from CoLists to prevent duplicates
 
-      // First pass: Process CoLists and collect their items
-      for (const [coId, coValueCore] of allCoValues.entries()) {
-        // Skip invalid IDs
-        if (!coId || typeof coId !== 'string' || !coId.startsWith('co_')) {
-          continue;
+      // CRITICAL FIX: Get current CoListCore (may have changed since initial load)
+      // If we have a coListId, get the current CoListCore from node
+      let currentCoListCore = coListCore;
+      if (coListId) {
+        const currentCore = this.getCoValue(coListId);
+        if (currentCore && this.isAvailable(currentCore)) {
+          currentCoListCore = currentCore;
         }
+      }
 
-        // Skip if not available
-        if (!this.isAvailable(coValueCore)) {
-          continue;
-        }
-
-        // Check if CoValue matches schema
-        const header = this.getHeader(coValueCore);
-        const headerMeta = header?.meta || null;
-        const schemaFromMeta = headerMeta?.$schema;
-
-        // Match schema (can be co-id or human-readable)
-        if (schemaFromMeta === schema || schemaFromMeta === `@schema/${schema}`) {
-          // Handle CoList: if it's a CoList matching the schema, return its items directly
-          const content = this.getCurrentContent(coValueCore);
-          const cotype = content?.cotype || content?.type;
-          if (cotype === 'colist') {
-            if (content && content.toJSON) {
-              try {
-                const itemIds = content.toJSON(); // Array of item co-ids (strings)
-                // Load each item CoMap and extract as flat object
-                const flatItems = [];
-                for (const itemId of itemIds) {
-                  if (typeof itemId === 'string' && itemId.startsWith('co_')) {
-                    // Track that this item is from a CoList
-                    itemsFromCoLists.add(itemId);
-                    
-                    // Always track item for subscription (even if not available yet)
-                    // This ensures we get notified when it becomes available
-                    matchingCoIds.add(itemId);
-                    
-                    // Load the actual CoMap for this item ID
-                    const itemCore = this.getCoValue(itemId);
-                    if (itemCore && this.isAvailable(itemCore)) {
-                      const itemContent = this.getCurrentContent(itemCore);
-                      if (itemContent && typeof itemContent.get === 'function') {
-                        // Extract as flat object
-                        const flatItem = { id: itemId };
-                        const keys = itemContent.keys && typeof itemContent.keys === 'function' 
-                          ? itemContent.keys() 
-                          : Object.keys(itemContent);
-                        for (const key of keys) {
-                          flatItem[key] = itemContent.get(key);
-                        }
-                        flatItems.push(flatItem);
-                      }
-                    }
-                    // Note: If item not available yet, we still track it for subscription
-                    // The subscription will fire when it becomes available, triggering updateStore() again
-                  } else if (itemId && typeof itemId.get === 'function') {
-                    // Already a CoMap object (shouldn't happen with toJSON, but handle it)
-                    const itemIdStr = itemId.id;
-                    itemsFromCoLists.add(itemIdStr);
-                    const flatItem = { id: itemIdStr };
-                    const keys = itemId.keys && typeof itemId.keys === 'function' 
-                      ? itemId.keys() 
-                      : Object.keys(itemId);
-                    for (const key of keys) {
-                      flatItem[key] = itemId.get(key);
-                    }
-                    flatItems.push(flatItem);
-                  } else if (itemId && typeof itemId === 'object' && itemId.id) {
-                    // Already a plain object with id
-                    itemsFromCoLists.add(itemId.id);
-                    flatItems.push(itemId);
-                  }
-                }
+      // Use the CoList we loaded (or get it dynamically if it exists now)
+      if (currentCoListCore && this.isAvailable(currentCoListCore)) {
+        const content = this.getCurrentContent(currentCoListCore);
+        const cotype = content?.cotype || content?.type;
+        if (cotype === 'colist' && content && content.toJSON) {
+          try {
+            const itemIds = content.toJSON(); // Array of item co-ids (strings)
+            // Load each item CoMap and extract as flat object
+            const flatItems = [];
+            for (const itemId of itemIds) {
+              if (typeof itemId === 'string' && itemId.startsWith('co_')) {
+                // Track that this item is from a CoList
+                itemsFromCoLists.add(itemId);
                 
-                // Apply filter if provided
-                if (filter) {
-                  const filteredItems = flatItems.filter(item => this._matchesFilter(item, filter));
-                  results.push(...filteredItems);
+                // Always track item for subscription (even if not available yet)
+                // This ensures we get notified when it becomes available
+                matchingCoIds.add(itemId);
+                
+                // Load the actual CoMap for this item ID using generic method (trigger loading, don't wait)
+                const itemCore = this.getCoValue(itemId);
+                if (itemCore) {
+                  // Trigger loading if not available (subscription will fire when ready)
+                  if (!itemCore.isAvailable()) {
+                    this._ensureCoValueLoaded(itemId).catch(err => {
+                      console.error(`[CoJSONBackend] Failed to load item ${itemId}:`, err);
+                    });
+                  }
+                  
+                  // Extract item if available
+                  if (this.isAvailable(itemCore)) {
+                    const itemContent = this.getCurrentContent(itemCore);
+                    if (itemContent && typeof itemContent.get === 'function') {
+                      // Extract as flat object
+                      const flatItem = { id: itemId };
+                      const keys = itemContent.keys && typeof itemContent.keys === 'function' 
+                        ? itemContent.keys() 
+                        : Object.keys(itemContent);
+                      for (const key of keys) {
+                        flatItem[key] = itemContent.get(key);
+                      }
+                      flatItems.push(flatItem);
+                    }
+                  }
                 } else {
-                  results.push(...flatItems);
+                  // Item not in node memory - trigger loading from IndexedDB
+                  this._ensureCoValueLoaded(itemId).catch(err => {
+                    console.error(`[CoJSONBackend] Failed to load item ${itemId}:`, err);
+                  });
                 }
-                // Also track the CoList itself for subscription (to detect new items)
-                matchingCoIds.add(coId);
-              } catch (e) {
-                console.warn(`[CoJSONBackend] Error reading CoList items:`, e);
+                // Note: If item not available yet, we still track it for subscription
+                // The subscription will fire when it becomes available, triggering updateStore() again
+              } else if (itemId && typeof itemId.get === 'function') {
+                // Already a CoMap object (shouldn't happen with toJSON, but handle it)
+                const itemIdStr = itemId.id;
+                itemsFromCoLists.add(itemIdStr);
+                const flatItem = { id: itemIdStr };
+                const keys = itemId.keys && typeof itemId.keys === 'function' 
+                  ? itemId.keys() 
+                  : Object.keys(itemId);
+                for (const key of keys) {
+                  flatItem[key] = itemId.get(key);
+                }
+                flatItems.push(flatItem);
+              } else if (itemId && typeof itemId === 'object' && itemId.id) {
+                // Already a plain object with id
+                itemsFromCoLists.add(itemId.id);
+                flatItems.push(itemId);
               }
             }
+            
+            // Apply filter if provided
+            if (filter) {
+              const filteredItems = flatItems.filter(item => this._matchesFilter(item, filter));
+              console.log(`[CoJSONBackend] Applied filter to ${flatItems.length} items, ${filteredItems.length} matched`, filter);
+              results.push(...filteredItems);
+            } else {
+              results.push(...flatItems);
+            }
+          } catch (e) {
+            console.warn(`[CoJSONBackend] Error reading CoList items:`, e);
           }
         }
       }
@@ -928,7 +1142,16 @@ export class CoJSONBackend extends DBAdapter {
         console.warn(`[CoJSONBackend] Found ${duplicateCount} duplicate items in read results (deduplicated)`);
       }
 
-      store._set(deduplicatedResults);
+      // CRITICAL FIX: Prevent duplicate updates during initial load
+      // Only update store if data actually changed (prevents duplicate renders)
+      const valueChanged = !isSameStoreValue(lastStoreValue, deduplicatedResults);
+      if (valueChanged) {
+        console.log(`[CoJSONBackend] Store value changed, updating store with ${deduplicatedResults.length} item(s)`);
+        lastStoreValue = deduplicatedResults;
+        store._set(deduplicatedResults);
+      } else {
+        console.log(`[CoJSONBackend] Store value unchanged, skipping store._set() (${deduplicatedResults.length} items)`);
+      }
     };
 
     // Track which CoIds we've already set up subscriptions for
@@ -936,43 +1159,63 @@ export class CoJSONBackend extends DBAdapter {
     
     const setupSubscription = (coId) => {
       if (subscribedCoIds.has(coId)) {
+        console.log(`[CoJSONBackend] Skipping setupSubscription for ${coId.substring(0, 12)}... (already subscribed)`);
         return; // Already subscribed for this query
       }
       subscribedCoIds.add(coId);
+      console.log(`[CoJSONBackend] Setting up subscription for ${coId.substring(0, 12)}...`);
       
       // Track this store's update function for cross-actor reactivity
       if (!this._storeSubscriptions.has(coId)) {
         this._storeSubscriptions.set(coId, new Set());
       }
-      const storeInfo = { store, updateStore, schema, filter };
-      this._storeSubscriptions.get(coId).add(storeInfo);
       
-      const subscription = this.subscriptionCache.getOrCreate(coId, () => {
-        const coValueCore = this.getCoValue(coId);
-        if (!coValueCore) {
-          return { unsubscribe: () => {} };
-        }
+      // CRITICAL FIX: Prevent duplicate storeInfo for the same store reference
+      // Multiple calls to updateStore() for the same query should not add duplicates
+      const storeInfoSet = this._storeSubscriptions.get(coId);
+      const alreadyTracked = Array.from(storeInfoSet).some(info => info.store === store);
+      
+      if (alreadyTracked) {
+        console.log(`[CoJSONBackend] Store already tracked for ${coId.substring(0, 12)}... - skipping duplicate`);
+        return; // Store already tracked - don't add duplicate
+      }
+      
+      const storeInfo = { store, updateStore, schema, filter };
+      storeInfoSet.add(storeInfo);
+      console.log(`[CoJSONBackend] Added storeInfo for ${coId.substring(0, 12)}... (now ${storeInfoSet.size} store(s) for this CoValue)`);
+      
+      // CRITICAL FIX: Always create a fresh subscription tied to current node
+      // Don't reuse cached subscriptions - they might be tied to old node instances
+      const coValueCore = this.getCoValue(coId);
+      if (!coValueCore) {
+        return; // Skip if CoValue not found
+      }
 
-        const unsubscribe = coValueCore.subscribe(() => {
-          // Update ALL stores that subscribe to this CoValue (cross-actor reactivity)
-          const storeInfos = this._storeSubscriptions.get(coId);
-          if (storeInfos) {
-            for (const { updateStore: updateFn } of storeInfos) {
-              // Call each store's update function
-              // Each updateFn closure handles its own matchingCoIds and subscription setup
-              updateFn();
-            }
+      // Create NEW subscription tied to THIS node's CoValueCore
+      const unsubscribe = coValueCore.subscribe(() => {
+        // Update ALL stores that subscribe to this CoValue (cross-actor reactivity)
+        const storeInfos = this._storeSubscriptions.get(coId);
+        if (storeInfos) {
+          console.log(`[CoJSONBackend] CoValue ${coId.substring(0, 12)}... updated → triggering ${storeInfos.size} store(s)`);
+          for (const { updateStore: updateFn } of storeInfos) {
+            // Call each store's update function
+            // Each updateFn closure handles its own matchingCoIds and subscription setup
+            updateFn();
           }
-        });
-
-        return { unsubscribe };
+        }
       });
+
+      // Store subscription in cache for cleanup tracking (but don't reuse it)
+      // The cache is used for cleanup scheduling, not for reusing subscriptions
+      this.subscriptionCache.cache.set(coId, { unsubscribe });
 
       unsubscribeFunctions.push(() => {
         // Clean up store reference when store is unsubscribed
+        console.log(`[CoJSONBackend] Cleaning up storeInfo for ${coId.substring(0, 12)}...`);
         const storeInfos = this._storeSubscriptions.get(coId);
         if (storeInfos) {
           storeInfos.delete(storeInfo);
+          console.log(`[CoJSONBackend] Removed storeInfo for ${coId.substring(0, 12)}... (now ${storeInfos.size} store(s) for this CoValue)`);
           if (storeInfos.size === 0) {
             this._storeSubscriptions.delete(coId);
           }
@@ -1021,8 +1264,13 @@ export class CoJSONBackend extends DBAdapter {
           continue;
         }
 
-        // Skip if not available
+        // Trigger loading for unavailable CoValues (jazz-tools pattern)
         if (!this.isAvailable(coValueCore)) {
+          // Use generic method to trigger loading (don't wait - subscription will fire when ready)
+          this._ensureCoValueLoaded(coId).catch(err => {
+            console.error(`[CoJSONBackend] Failed to load CoValue ${coId}:`, err);
+          });
+          // Skip for now - subscription will trigger updateStore() when available
           continue;
         }
 
@@ -1040,24 +1288,27 @@ export class CoJSONBackend extends DBAdapter {
       store._set(results);
     };
 
-    // Initial load
+    // Initial load (triggers loading for unavailable CoValues)
     updateStore();
 
     // Set up subscriptions for all CoValues
     for (const coId of matchingCoIds) {
-      const subscription = this.subscriptionCache.getOrCreate(coId, () => {
-        const coValueCore = this.getCoValue(coId);
-        if (!coValueCore) {
-          return { unsubscribe: () => {} };
-        }
+      // CRITICAL FIX: Always create a fresh subscription tied to current node
+      // Don't reuse cached subscriptions - they might be tied to old node instances
+      const coValueCore = this.getCoValue(coId);
+      if (!coValueCore) {
+        return; // Skip if CoValue not found
+      }
 
-        const unsubscribe = coValueCore.subscribe(() => {
-          // Update store when any CoValue changes
-          updateStore();
-        });
-
-        return { unsubscribe };
+      // Create NEW subscription tied to THIS node's CoValueCore
+      const unsubscribe = coValueCore.subscribe(() => {
+        // Update store when any CoValue changes
+        updateStore();
       });
+
+      // Store subscription in cache for cleanup tracking (but don't reuse it)
+      // The cache is used for cleanup scheduling, not for reusing subscriptions
+      this.subscriptionCache.cache.set(coId, { unsubscribe });
 
       unsubscribeFunctions.push(() => {
         this.subscriptionCache.scheduleCleanup(coId);
@@ -1498,9 +1749,9 @@ export class CoJSONBackend extends DBAdapter {
     // Determine cotype from schema or data type
     let cotype = null;
     
-    // Try to load schema to get cotype
+    // Try to load schema to get cotype using generic method
     try {
-      const schemaCore = this.getCoValue(schema);
+      const schemaCore = await this._ensureCoValueLoaded(schema, { waitForAvailable: true });
       if (schemaCore && this.isAvailable(schemaCore)) {
         const schemaContent = this.getCurrentContent(schemaCore);
         if (schemaContent && schemaContent.get) {
@@ -1593,7 +1844,8 @@ export class CoJSONBackend extends DBAdapter {
             // Get account.data CoMap
             const dataId = this.account.get("data");
             if (dataId) {
-            const dataCore = this.getCoValue(dataId);
+            // Ensure account.data is loaded
+            const dataCore = await this._ensureCoValueLoaded(dataId, { waitForAvailable: true });
             if (dataCore && this.isAvailable(dataCore)) {
               const dataContent = this.getCurrentContent(dataCore);
               if (dataContent && typeof dataContent.get === 'function') {
@@ -1605,7 +1857,8 @@ export class CoJSONBackend extends DBAdapter {
                 for (const key of keys) {
                   const collectionListId = dataContent.get(key);
                   if (collectionListId && typeof collectionListId === 'string' && collectionListId.startsWith('co_')) {
-                    const collectionListCore = this.getCoValue(collectionListId);
+                    // Ensure collection CoList is loaded
+                    const collectionListCore = await this._ensureCoValueLoaded(collectionListId, { waitForAvailable: true });
                     
                     // Check if available and is a colist
                     if (collectionListCore && this.isAvailable(collectionListCore)) {
@@ -1620,17 +1873,34 @@ export class CoJSONBackend extends DBAdapter {
                         
                         // Match schema co-ids (both should be co-ids at this point)
                         if (listItemSchema === schemaToMatch) {
-                          // Found matching CoList - append item
+                          // Found matching CoList - check if item already exists before appending
                           if (collectionListContent && typeof collectionListContent.append === 'function') {
-                        collectionListContent.append(coValue.id);
-                        
-                        // Wait for colist to sync after append (ensures subscription fires with new item)
-                        if (this.node.storage) {
-                          await this.node.syncManager.waitForStorageSync(collectionListCore.id);
-                        }
-                        
-                          break; // Found and appended, no need to check other collections
-                        }
+                            // CRITICAL FIX: Check if item already exists in CoList to prevent duplicate appends
+                            // This prevents multi-browser duplication where same item gets appended multiple times
+                            let itemExists = false;
+                            try {
+                              if (typeof collectionListContent.toJSON === 'function') {
+                                const existingItemIds = collectionListContent.toJSON();
+                                itemExists = Array.isArray(existingItemIds) && existingItemIds.includes(coValue.id);
+                              }
+                            } catch (e) {
+                              // If toJSON fails, assume item doesn't exist and proceed with append
+                              console.warn(`[CoJSONBackend] Error checking if item exists in CoList:`, e);
+                            }
+                            
+                            if (!itemExists) {
+                              collectionListContent.append(coValue.id);
+                              
+                              // Wait for colist to sync after append (ensures subscription fires with new item)
+                              if (this.node.storage) {
+                                await this.node.syncManager.waitForStorageSync(collectionListCore.id);
+                              }
+                            } else {
+                              console.log(`[CoJSONBackend] Item ${coValue.id.substring(0, 12)}... already exists in CoList, skipping append`);
+                            }
+                            
+                            break; // Found matching CoList, no need to check other collections
+                          }
                       }
                     }
                   }
@@ -1679,7 +1949,8 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {Promise<Object>} Updated record
    */
   async update(schema, id, data) {
-    const coValueCore = this.getCoValue(id);
+    // Ensure CoValue is loaded before updating (jazz-tools pattern)
+    const coValueCore = await this._ensureCoValueLoaded(id, { waitForAvailable: true });
     if (!coValueCore) {
       throw new Error(`[CoJSONBackend] CoValue not found: ${id}`);
     }
@@ -1718,7 +1989,8 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {Promise<boolean>} true if deleted successfully
    */
   async delete(schema, id) {
-    const coValueCore = this.getCoValue(id);
+    // Ensure CoValue is loaded before deleting (jazz-tools pattern)
+    const coValueCore = await this._ensureCoValueLoaded(id, { waitForAvailable: true });
     if (!coValueCore) {
       throw new Error(`[CoJSONBackend] CoValue not found: ${id}`);
     }
@@ -1740,7 +2012,8 @@ export class CoJSONBackend extends DBAdapter {
       // Find the CoList in account.data that contains this item
       const dataId = this.account.get("data");
       if (dataId) {
-        const dataCore = this.getCoValue(dataId);
+        // Ensure account.data is loaded
+        const dataCore = await this._ensureCoValueLoaded(dataId, { waitForAvailable: true });
         if (dataCore && this.isAvailable(dataCore)) {
           const dataContent = this.getCurrentContent(dataCore);
           if (dataContent && typeof dataContent.get === 'function') {
@@ -1752,7 +2025,8 @@ export class CoJSONBackend extends DBAdapter {
             for (const key of keys) {
               const collectionListId = dataContent.get(key);
               if (collectionListId && typeof collectionListId === 'string' && collectionListId.startsWith('co_')) {
-                const collectionListCore = this.getCoValue(collectionListId);
+                // Ensure collection CoList is loaded
+                const collectionListCore = await this._ensureCoValueLoaded(collectionListId, { waitForAvailable: true });
                 if (collectionListCore && this.isAvailable(collectionListCore)) {
                   const collectionListContent = this.getCurrentContent(collectionListCore);
                   const listCotype = collectionListContent?.cotype || collectionListContent?.type;

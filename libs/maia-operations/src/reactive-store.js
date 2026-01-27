@@ -17,6 +17,7 @@ export class ReactiveStore {
   constructor(initialValue) {
     this._value = initialValue;
     this._subscribers = new Set();
+    this._unsubscribe = null; // Optional cleanup function set by backend (e.g., CoJSONBackend)
   }
   
   /**
@@ -30,6 +31,7 @@ export class ReactiveStore {
   /**
    * Subscribe to value changes
    * Callback is called immediately with current value, then on every update
+   * Automatically calls _unsubscribe() when the last subscriber unsubscribes
    * @param {Function} callback - Function called with new value
    * @param {Object} [options] - Subscription options
    * @param {boolean} [options.skipInitial=false] - If true, don't call callback immediately with current value
@@ -40,7 +42,18 @@ export class ReactiveStore {
     if (!options.skipInitial) {
       callback(this._value); // Call immediately with current value
     }
-    return () => this._subscribers.delete(callback);
+    
+    // Return unsubscribe function that checks if we should call _unsubscribe()
+    return () => {
+      this._subscribers.delete(callback);
+      
+      // CRITICAL FIX: Auto-call _unsubscribe() when last subscriber unsubscribes
+      // This ensures CoJSONBackend._storeSubscriptions is cleaned up automatically
+      // when all actors unsubscribe from a store (e.g., when vibe is unloaded)
+      if (this._subscribers.size === 0 && this._unsubscribe) {
+        this._unsubscribe();
+      }
+    };
   }
   
   /**

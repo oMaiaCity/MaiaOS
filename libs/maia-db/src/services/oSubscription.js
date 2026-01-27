@@ -34,7 +34,8 @@ export function subscribe(node, id, options = {}) {
 		cleanupTimeout = 5000,
 	} = options;
 
-	const cache = getGlobalCache(cleanupTimeout);
+	// Pass node to getGlobalCache for node-aware caching (auto-clears on node change)
+	const cache = getGlobalCache(node, cleanupTimeout);
 
 	// Get or create subscription
 	const subscription = cache.getOrCreate(id, () => {
@@ -238,32 +239,35 @@ export function subscribeToLinked(node, parent, property, options = {}) {
 /**
  * Get current subscription for a CoValue (if exists)
  * 
+ * @param {LocalNode} node - Jazz LocalNode instance (required for node-aware caching)
  * @param {string} id - CoValue ID
  * @returns {Object|null} Subscription or null
  */
-export function getSubscription(id) {
-	const cache = getGlobalCache();
+export function getSubscription(node, id) {
+	const cache = getGlobalCache(node);
 	return cache.get(id);
 }
 
 /**
  * Check if CoValue has active subscription
  * 
+ * @param {LocalNode} node - Jazz LocalNode instance (required for node-aware caching)
  * @param {string} id - CoValue ID
  * @returns {boolean}
  */
-export function hasSubscription(id) {
-	const cache = getGlobalCache();
+export function hasSubscription(node, id) {
+	const cache = getGlobalCache(node);
 	return cache.has(id);
 }
 
 /**
  * Manually unsubscribe from a CoValue
  * 
+ * @param {LocalNode} node - Jazz LocalNode instance (required for node-aware caching)
  * @param {string} id - CoValue ID
  */
-export function unsubscribe(id) {
-	const cache = getGlobalCache();
+export function unsubscribe(node, id) {
+	const cache = getGlobalCache(node);
 	const subscription = cache.get(id);
 
 	if (subscription && subscription.unsubscribe) {
@@ -276,10 +280,11 @@ export function unsubscribe(id) {
 /**
  * Get subscription cache statistics
  * 
+ * @param {LocalNode} node - Jazz LocalNode instance (required for node-aware caching)
  * @returns {Object} { size, ids }
  */
-export function getSubscriptionStats() {
-	const cache = getGlobalCache();
+export function getSubscriptionStats(node) {
+	const cache = getGlobalCache(node);
 	return {
 		size: cache.size,
 		ids: Array.from(cache.cache.keys()).map(id => id.substring(0, 12) + '...')

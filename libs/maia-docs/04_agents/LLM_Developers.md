@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Developers
 
-**Auto-generated:** 2026-01-27T11:52:28.042Z
+**Auto-generated:** 2026-01-27T14:05:39.339Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -8094,6 +8094,33 @@ store.subscribe((data) => {
 });
 ```
 
+### CoList Loading (Backend Implementation)
+
+**Important:** Collection queries (queries that return arrays of items) use CoLists as the single source of truth. The backend automatically loads CoLists from IndexedDB before querying to ensure data is available after re-login.
+
+**How it works:**
+1. When `read()` is called for a collection query, the backend resolves the collection name from the schema
+2. It gets the CoList ID from `account.data.<collectionName>`
+3. It loads the CoList from IndexedDB and waits for it to be available (jazz-tools pattern)
+4. Only then does it read items from the CoList and return them in the store
+
+**Why this matters:**
+- After re-login, CoLists exist in IndexedDB but aren't loaded into node memory
+- Without explicit loading, queries would return empty results initially
+- By waiting for CoList to be available, we ensure queries always return correct data
+
+**Example:**
+```javascript
+// Backend automatically handles CoList loading
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: "co_zTodos123"  // Collection query
+});
+
+// Store.value contains all items from CoList (already loaded)
+console.log('Todos:', store.value);  // Array of todos, not empty!
+```
+
 ### Deduplication
 
 SubscriptionEngine checks if data actually changed before updating:
@@ -8192,6 +8219,57 @@ store.subscribe((data) => {
 
 ---
 
+## CRDT-Safe Watermark Pattern
+
+### Distributed Inbox Message Processing
+
+In a distributed multi-browser scenario, actors share inboxes (CoStreams) across browser instances. To prevent duplicate message processing, MaiaOS uses a CRDT-safe watermark pattern.
+
+**The Problem:**
+- Two browser instances can both read the same message timestamp before either updates the watermark
+- Both browsers process the message, then both update the watermark
+- Result: Message is processed twice (duplicate actions)
+
+**The Solution:**
+CRDT-safe max() logic for watermark updates:
+
+```javascript
+// Before processing messages, read current watermark from persisted config
+const actorConfig = await dbEngine.execute({
+  op: 'read',
+  schema: actorSchemaCoId,
+  key: actorId
+});
+const currentWatermark = actorConfig.inboxWatermark || 0;
+
+// Only process messages after current watermark
+const newMessages = inboxItems.filter(msg => msg.timestamp > currentWatermark);
+
+// When updating watermark, use max() logic
+if (newWatermark > currentWatermark) {
+  // Only update if new watermark is greater than current
+  await dbEngine.execute({
+    op: 'update',
+    schema: actorSchemaCoId,
+    id: actorId,
+    data: { inboxWatermark: newWatermark }
+  });
+}
+```
+
+**Key Points:**
+- Watermark is always read from persisted config (not just in-memory) before processing
+- Watermark updates use max(current, new) logic - only update if new > current
+- This ensures that even if two browsers both try to update, the max() logic prevents duplicate processing
+- Watermark is stored in actor config CoMap, which is CRDT-based and syncs across browsers
+
+**Implementation:**
+- `ActorEngine.processMessages()` reads watermark from persisted config before filtering messages
+- `ActorEngine._persistWatermark()` implements CRDT-safe max() logic
+- Watermark updates are idempotent - multiple updates with the same value are safe
+
+---
+
 ## Related Documentation
 
 - [subscriptions.md](./subscriptions.md) - Subscription overview
@@ -8254,6 +8332,14 @@ const unsubscribe = store.subscribe((data) => {
 // 3. Stores unsubscribe function for cleanup
 actor._subscriptions.push(unsubscribe);
 ```
+
+**Important Notes:**
+- Collection queries (queries that return arrays) automatically load CoLists from IndexedDB before querying
+- This ensures data is available immediately after re-login (CoLists exist in IndexedDB but need to be loaded into node memory)
+- The backend waits for CoList to be available before returning initial store value, ensuring queries never return empty results incorrectly
+- All subscriptions created via `read()` operations are automatically stored in `actor._subscriptions` for cleanup
+- When actors are destroyed, `SubscriptionEngine.cleanup()` unsubscribes from all subscriptions, which automatically triggers `store._unsubscribe()` when the last subscriber unsubscribes
+- This ensures `CoJSONBackend._storeSubscriptions` is cleaned up automatically without manual tracking
 
 ### Config Subscription Pattern
 
@@ -8451,6 +8537,49 @@ const unsubscribe = store.subscribe((data) => {
 - Verify batching system is working
 - Check for unnecessary subscriptions
 - Optimize handlers (avoid heavy work in callbacks)
+
+## Actor Lifecycle and Cleanup
+
+### Container-Based Actor Tracking
+
+Actors are tracked by container element to enable cleanup when vibes are unloaded:
+
+```javascript
+// Actors are registered with their container on creation
+actorEngine._containerActors.set(containerElement, new Set([actorId1, actorId2]));
+
+// When unloading a vibe, destroy all actors for that container
+actorEngine.destroyActorsForContainer(containerElement);
+```
+
+**Key Points:**
+- Each actor is registered with its container element when created
+- Container tracking enables bulk cleanup when vibes are unloaded
+- `destroyActorsForContainer()` destroys all actors for a container and cleans up subscriptions automatically
+
+### Automatic Subscription Cleanup
+
+Subscriptions are automatically cleaned up when actors are destroyed:
+
+1. **Actor Destruction**: When `destroyActor()` is called, it calls `SubscriptionEngine.cleanup()`
+2. **Unsubscribe All**: `SubscriptionEngine.cleanup()` unsubscribes from all `actor._subscriptions`
+3. **Auto-Cleanup**: When the last subscriber unsubscribes from a store, `ReactiveStore` automatically calls `store._unsubscribe()`
+4. **Backend Cleanup**: `store._unsubscribe()` cleans up `CoJSONBackend._storeSubscriptions` automatically
+
+**Flow:**
+```
+destroyActor(actorId)
+  → SubscriptionEngine.cleanup(actor)
+    → unsubscribe from all actor._subscriptions
+      → ReactiveStore: last subscriber unsubscribes
+        → store._unsubscribe() called automatically
+          → CoJSONBackend._storeSubscriptions cleaned up
+```
+
+**Important:**
+- All subscriptions must go through `read()` → `store.subscribe()` → `actor._subscriptions` pattern
+- Never bypass this pattern - direct database access won't be cleaned up automatically
+- Container-based tracking ensures all actors for a vibe are destroyed together
 
 ### Data Not Updating
 

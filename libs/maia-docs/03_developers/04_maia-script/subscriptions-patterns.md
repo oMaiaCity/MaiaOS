@@ -40,6 +40,14 @@ const unsubscribe = store.subscribe((data) => {
 actor._subscriptions.push(unsubscribe);
 ```
 
+**Important Notes:**
+- Collection queries (queries that return arrays) automatically load CoLists from IndexedDB before querying
+- This ensures data is available immediately after re-login (CoLists exist in IndexedDB but need to be loaded into node memory)
+- The backend waits for CoList to be available before returning initial store value, ensuring queries never return empty results incorrectly
+- All subscriptions created via `read()` operations are automatically stored in `actor._subscriptions` for cleanup
+- When actors are destroyed, `SubscriptionEngine.cleanup()` unsubscribes from all subscriptions, which automatically triggers `store._unsubscribe()` when the last subscriber unsubscribes
+- This ensures `CoJSONBackend._storeSubscriptions` is cleaned up automatically without manual tracking
+
 ### Config Subscription Pattern
 
 **Using read() API for interface/context:**
@@ -236,6 +244,49 @@ const unsubscribe = store.subscribe((data) => {
 - Verify batching system is working
 - Check for unnecessary subscriptions
 - Optimize handlers (avoid heavy work in callbacks)
+
+## Actor Lifecycle and Cleanup
+
+### Container-Based Actor Tracking
+
+Actors are tracked by container element to enable cleanup when vibes are unloaded:
+
+```javascript
+// Actors are registered with their container on creation
+actorEngine._containerActors.set(containerElement, new Set([actorId1, actorId2]));
+
+// When unloading a vibe, destroy all actors for that container
+actorEngine.destroyActorsForContainer(containerElement);
+```
+
+**Key Points:**
+- Each actor is registered with its container element when created
+- Container tracking enables bulk cleanup when vibes are unloaded
+- `destroyActorsForContainer()` destroys all actors for a container and cleans up subscriptions automatically
+
+### Automatic Subscription Cleanup
+
+Subscriptions are automatically cleaned up when actors are destroyed:
+
+1. **Actor Destruction**: When `destroyActor()` is called, it calls `SubscriptionEngine.cleanup()`
+2. **Unsubscribe All**: `SubscriptionEngine.cleanup()` unsubscribes from all `actor._subscriptions`
+3. **Auto-Cleanup**: When the last subscriber unsubscribes from a store, `ReactiveStore` automatically calls `store._unsubscribe()`
+4. **Backend Cleanup**: `store._unsubscribe()` cleans up `CoJSONBackend._storeSubscriptions` automatically
+
+**Flow:**
+```
+destroyActor(actorId)
+  → SubscriptionEngine.cleanup(actor)
+    → unsubscribe from all actor._subscriptions
+      → ReactiveStore: last subscriber unsubscribes
+        → store._unsubscribe() called automatically
+          → CoJSONBackend._storeSubscriptions cleaned up
+```
+
+**Important:**
+- All subscriptions must go through `read()` → `store.subscribe()` → `actor._subscriptions` pattern
+- Never bypass this pattern - direct database access won't be cleaned up automatically
+- Container-based tracking ensures all actors for a vibe are destroyed together
 
 ### Data Not Updating
 
