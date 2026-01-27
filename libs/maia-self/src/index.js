@@ -9,7 +9,7 @@ export {
 	signInWithPasskey,
 	subscribeSyncState, // NEW: Sync state observable
 	// NO LOCALSTORAGE: Removed isSignedIn, signOut, getCurrentAccount, inspectStorage
-} from './oSSI.js';
+} from './self.js';
 
 export {
 	isPRFSupported,

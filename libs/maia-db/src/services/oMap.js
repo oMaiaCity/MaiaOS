@@ -212,9 +212,5 @@ export async function createCoMap(accountOrGroup, init = {}, schemaName, node = 
 	// Create CoMap with metadata passed to cojson
 	const comap = group.createMap(init, meta);
 	
-	console.log("✅ CoMap created:", comap.id);
-	console.log("   Schema:", schemaName);
-	console.log("   HeaderMeta:", comap.headerMeta);
-	
 	return comap;
 }

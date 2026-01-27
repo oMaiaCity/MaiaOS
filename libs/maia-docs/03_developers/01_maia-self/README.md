@@ -225,7 +225,7 @@ const { accountID, agentSecret, node, account } = await signInWithPasskey({
 
 **Key Files:**
 - `src/index.js` - Public API exports
-- `src/oSSI.js` - Sign up & sign in logic
+- `src/self.js` - Sign up & sign in logic
 - `src/prf-evaluator.js` - WebAuthn PRF interface
 - `src/feature-detection.js` - PRF support detection
 - `src/storage.js` - IndexedDB helper (for CoValue data)

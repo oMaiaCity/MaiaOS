@@ -181,11 +181,6 @@ export class StateEngine {
     // Transition to target state
     const previousState = machine.currentState;
     machine.currentState = targetState;
-    
-    // Only log actual state changes (not idle → idle or no state change)
-    if (previousState !== targetState) {
-      console.log(`[StateEngine] ${previousState} → ${targetState} (${event})`);
-    }
 
     // Execute entry actions for new state (only if state actually changed)
     if (previousState !== targetState) {

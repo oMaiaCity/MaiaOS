@@ -335,7 +335,7 @@ Cross-Device:
 ### Registration Implementation
 
 ```javascript
-// libs/maia-self/src/oSSI.js
+// libs/maia-self/src/self.js
 
 export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = {}) {
   await requirePRFSupport();
@@ -381,7 +381,7 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 ### Login Implementation
 
 ```javascript
-// libs/maia-self/src/oSSI.js
+// libs/maia-self/src/self.js
 
 export async function signInWithPasskey({ salt = "maia.city" } = {}) {
   await requirePRFSupport();

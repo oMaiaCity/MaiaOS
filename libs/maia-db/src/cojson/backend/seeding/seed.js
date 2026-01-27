@@ -141,7 +141,7 @@ export async function seed(account, node, configs, schemas, data) {
     throw new Error(`[CoJSONSeed] Universal group content not available: ${universalGroupId}`);
   }
   
-  console.log('🌱 Starting CoJSON seeding...');
+  // Starting CoJSON seeding...
   
   // Deduplicate schemas by $id (same schema may be registered under multiple keys)
   const uniqueSchemasBy$id = new Map();
@@ -714,7 +714,7 @@ export async function seed(account, node, configs, schemas, data) {
             // Check if any entry has schema that was transformed
             for (const [stateName, stateDef] of Object.entries(propsToSet.states)) {
               if (stateDef?.entry?.payload?.schema) {
-                console.log(`[Seed] Updating state machine ${originalId || coId}: state "${stateName}" entry schema: ${stateDef.entry.payload.schema}`);
+                // Updating state machine schema references
               }
             }
           }
@@ -836,18 +836,7 @@ export async function seed(account, node, configs, schemas, data) {
   // Phase 9: Store registry in account.os.schematas CoMap
   await storeRegistry(account, node, universalGroup, coIdRegistry, schemaCoIdMap, instanceCoIdMap, configs || {}, seededSchemas);
   
-  console.log('✅ CoJSON seeding complete!');
-
-  // Verify registry contains all expected references
-  const finalRegistry = coIdRegistry.getAll();
-
-  // Group by type
-  const byType = {};
-  for (const [key] of finalRegistry) {
-    const type = key.split('/')[0] || 'other';
-    byType[type] = (byType[type] || 0) + 1;
-  }
-  console.log('   📊 Registry breakdown:', byType);
+  // CoJSON seeding complete
 
   return {
     metaSchema: metaSchemaCoId,
@@ -917,12 +906,10 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
       // CoList: Create empty list, items will be added during update phase when refs are resolved
       coValue = universalGroup.createList([], meta);
       actualCoId = coValue.id;
-      console.log(`   📝 Created CoList ${path} (co-id: ${actualCoId}, type: ${coValue.type || 'unknown'})`);
     } else if (cotype === 'costream') {
       // CoStream: Create empty stream, items will be appended during update phase when refs are resolved
       coValue = universalGroup.createStream(meta);
       actualCoId = coValue.id;
-      console.log(`   📝 Created CoStream ${path} (co-id: ${actualCoId}, type: ${coValue.type || 'unknown'})`);
       
       // Add default welcome message to inbox CoStreams for debugging display issues
       if (path && path.includes('@inbox/')) {
@@ -941,19 +928,15 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
               id: `INIT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
             };
             coValue.push(defaultMessage);
-            console.log(`   📨 Added default message to inbox CoStream ${path}`);
-          } else {
-            console.warn(`   ⚠️ CoStream ${path} doesn't have push method`);
           }
         } catch (error) {
-          console.warn(`   ⚠️ Failed to add default message to inbox CoStream ${path}:`, error);
+          // Silently fail - default message is optional
         }
       }
     } else {
       // CoMap: Default behavior
       coValue = universalGroup.createMap(configWithoutId, meta);
       actualCoId = coValue.id;
-      console.log(`   📝 Created CoMap ${path} (co-id: ${actualCoId})`);
     }
 
     // Update instanceCoIdMap with actual co-id (CoJSON generates random co-ids, so they won't match human-readable IDs)

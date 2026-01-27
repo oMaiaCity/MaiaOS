@@ -1,6 +1,6 @@
 # MaiaOS Documentation for maia-self
 
-**Auto-generated:** 2026-01-26T22:52:00.992Z
+**Auto-generated:** 2026-01-27T11:52:28.046Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -738,7 +738,7 @@ Cross-Device:
 ### Registration Implementation
 
 ```javascript
-// libs/maia-self/src/oSSI.js
+// libs/maia-self/src/self.js
 
 export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = {}) {
   await requirePRFSupport();
@@ -784,7 +784,7 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 ### Login Implementation
 
 ```javascript
-// libs/maia-self/src/oSSI.js
+// libs/maia-self/src/self.js
 
 export async function signInWithPasskey({ salt = "maia.city" } = {}) {
   await requirePRFSupport();
@@ -1558,7 +1558,7 @@ const { accountID, agentSecret, node, account } = await signInWithPasskey({
 
 **Key Files:**
 - `src/index.js` - Public API exports
-- `src/oSSI.js` - Sign up & sign in logic
+- `src/self.js` - Sign up & sign in logic
 - `src/prf-evaluator.js` - WebAuthn PRF interface
 - `src/feature-detection.js` - PRF support detection
 - `src/storage.js` - IndexedDB helper (for CoValue data)

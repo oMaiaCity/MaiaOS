@@ -32,11 +32,7 @@ export async function schemaMigration(account, node, creationProps) {
 	const isCreation = creationProps !== undefined;
 	const accountName = creationProps?.name || "maia";
 	
-	if (isCreation) {
-		console.log("🔄 Running identity migration (account creation)...");
-	} else {
-		console.log("🔄 Running identity migration (idempotent, onload)...");
-	}
+	// Running identity migration
 	
 	// 1. Check if profile already exists (cojson requirement)
 	let profileId = account.get("profile");
@@ -73,9 +69,6 @@ export async function schemaMigration(account, node, creationProps) {
 		// This group will be the hardcoded owner/admin of ALL future CoValues
 		// Note: Groups are created via node.createGroup(), not account.createGroup()
 		universalGroup = node.createGroup();
-		console.log("   ✅ Universal group created:", universalGroup.id);
-		console.log("      Group is PRIVATE (non-public)");
-		console.log("      Group will be auto-assigned as owner/admin of all CoValues");
 	}
 	
 	// 3. Create or update profile with group reference
@@ -86,36 +79,12 @@ export async function schemaMigration(account, node, creationProps) {
 			group: universalGroup.id  // Reference to universal group (single source of truth)
 		}, {$schema: "ProfileSchema"});
 		account.set("profile", profile.id);
-		console.log("   ✅ Profile CoMap created:", profile.id);
-		console.log("      Profile name:", accountName);
-		console.log("      Profile group:", universalGroup.id);
 	} else {
 		// Update existing profile to include group reference if missing
 		if (!profile.get("group")) {
 			profile.set("group", universalGroup.id);
-			console.log("   ✅ Updated existing profile with group reference:", universalGroup.id);
 		}
 	}
 	
-	console.log("🎉 Identity migration complete!");
-	console.log("   Profile:", profile.id);
-	console.log("   Universal Group:", universalGroup.id);
-	console.log("   Group reference: account.profile.group →", universalGroup.id);
-	
-	// Final verification: Check if profile is linked to account
-	const finalProfileId = account.get("profile");
-	
-	if (!finalProfileId) {
-		console.warn("   ⚠️  account.profile not yet readable (transaction may not be processed yet)");
-		console.warn("      Expected:", profile.id);
-		console.warn("      This is OK - transaction will be processed by cojson");
-	} else {
-		console.log("   ✅ Verified: account.profile is linked:", finalProfileId);
-	}
-	
-	console.log("   ✅ Migration complete - identity layer created");
-	console.log("      Account structure:");
-	console.log("        account.profile →", profile.id);
-	console.log("        account.profile.group →", universalGroup.id, "(universal group, owner/admin of all CoValues)");
-	console.log("      (All data structures will be created via seed() operation)");
+	// Identity migration complete
 }

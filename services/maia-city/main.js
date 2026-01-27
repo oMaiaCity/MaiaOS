@@ -105,12 +105,9 @@ function showToast(message, type = 'info', duration = 5000) {
 
 async function init() {
 	try {
-		console.log("🚀 Initializing MaiaCity...");
-		
 		// STRICT: Check PRF support first
 		try {
 			await isPRFSupported();
-			console.log("✅ WebAuthn PRF supported");
 		} catch (error) {
 			console.error("❌ PRF not supported:", error);
 			renderUnsupportedBrowser(error.message);
@@ -118,7 +115,6 @@ async function init() {
 		}
 		
 		// Show sign-in prompt (no localStorage check)
-		console.log("🔐 Showing sign-in prompt");
 		renderSignInPrompt();
 	} catch (error) {
 		console.error("Failed to initialize:", error);
@@ -198,11 +194,11 @@ async function loadLinkedCoValues() {
 	// Get the examples ID
 	const examplesId = account.get("examples");
 	if (!examplesId) {
-		console.log("   No examples linked to account");
+		// No examples linked to account
 		return;
 	}
 	
-	console.log(`   Examples ID: ${examplesId}`);
+	// Examples ID available
 	
 	// Explicitly load the examples CoMap from IndexedDB
 	try {
@@ -221,21 +217,10 @@ async function loadLinkedCoValues() {
 				}
 			}
 			
-			console.log(`   Found ${childIds.length} child CoValues to load`);
-			
 			// Load each child CoValue
 			for (const { key, id } of childIds) {
-				const childCore = await node.loadCoValueCore(id);
-				if (childCore.isAvailable()) {
-					console.log(`   ✅ ${key} (${id.substring(0, 12)}...) loaded from IndexedDB`);
-				} else {
-					console.log(`   ⏳ ${key} (${id.substring(0, 12)}...) not yet available`);
-				}
+				await node.loadCoValueCore(id);
 			}
-			
-			console.log("✅ All linked CoValues loaded!");
-		} else {
-			console.log("   ⏳ Examples CoMap not yet available");
 		}
 	} catch (error) {
 		console.error("   ❌ Failed to load examples:", error);
@@ -248,14 +233,10 @@ async function loadLinkedCoValues() {
  */
 async function register() {
 	try {
-		console.log("📝 Registering new passkey...");
-		
 		const { accountID, node, account } = await signUpWithPasskey({ 
 			name: "maia",
 			salt: "maia.city" 
 		});
-		
-		console.log("✅ New passkey created:", accountID);
 		
 		// Boot MaiaOS with node and account (using CoJSON backend)
 		maia = await MaiaOS.boot({ node, account });
@@ -272,8 +253,6 @@ async function register() {
 		
 		// Mark that user has successfully registered
 		markAccountExists();
-		console.log("✅ Marked account as existing in localStorage");
-		console.log("   localStorage now:", localStorage.getItem('maia_has_account'));
 		
 		// Subscribe to sync state changes
 		unsubscribeSync = subscribeSyncState((state) => {
@@ -287,8 +266,6 @@ async function register() {
 		}
 
 		renderAppInternal();
-
-		console.log("✅ MaiaOS initialized with new account!");
 		
 	} catch (error) {
 		console.error("Registration failed:", error);
@@ -311,7 +288,7 @@ async function register() {
 }
 
 function signOut() {
-	console.log("🚪 Signing out...");
+	// Signing out
 	if (unsubscribeSync) {
 		unsubscribeSync();
 		unsubscribeSync = null;
@@ -329,9 +306,7 @@ function signOut() {
 function renderSignInPrompt() {
 	const hasAccount = hasExistingAccount();
 	
-	console.log("🔍 Rendering sign-in prompt...");
-	console.log("   localStorage flag:", localStorage.getItem('maia_has_account'));
-	console.log("   hasAccount:", hasAccount);
+	// Rendering sign-in prompt
 	
 	document.getElementById("app").innerHTML = `
 		<div class="sign-in-container">
@@ -610,14 +585,11 @@ async function loadVibe(vibeKey) {
 }
 
 function toggleExpand(expandId) {
-	console.log('toggleExpand called with:', expandId);
 	const element = document.getElementById(expandId);
-	console.log('Found element:', element);
 	
 	if (element) {
 		const isExpanded = element.style.display !== 'none';
 		element.style.display = isExpanded ? 'none' : 'block';
-		console.log('Toggled display to:', element.style.display);
 		
 		// Rotate the expand icon - need to find it in the button
 		const wrapper = element.parentElement;
@@ -626,12 +598,7 @@ function toggleExpand(expandId) {
 		
 		if (icon) {
 			icon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
-			console.log('Rotated icon to:', icon.style.transform);
-		} else {
-			console.log('Icon not found in button');
 		}
-	} else {
-		console.log('Element not found with ID:', expandId);
 	}
 }
 

@@ -77,19 +77,8 @@ export async function subscribeToContext(subscriptionEngine, actor) {
         actor._queries.set(key, { schema: schemaCoId, filter: value.filter || null, store });
         
         // Set context to store's current value immediately (before subscribing)
-        // This ensures initial render has correct data and prevents duplicate from immediate subscribe callback
+        // This ensures initial render has correct data
         actor.context[key] = store.value || [];
-        
-        // CRITICAL FIX: Wait a microtask to ensure any pending store updates have settled
-        // This prevents race conditions where updateStore() is called after we set context
-        // but before we subscribe, causing duplicate callbacks
-        await new Promise(resolve => queueMicrotask(resolve));
-        
-        // Mark as initial data received (prevents immediate callback from processing again)
-        if (!actor._initialDataReceived) {
-          actor._initialDataReceived = new Set();
-        }
-        actor._initialDataReceived.add(key);
         
         // Add schema to context for use in view templates (e.g., drag/drop)
         // Use the resolved schema co-id
@@ -112,10 +101,11 @@ export async function subscribeToContext(subscriptionEngine, actor) {
           }
         }
         
-        // Subscribe to store updates (immediate callback will be skipped since we already have the value)
+        // Subscribe to store updates with skipInitial=true to prevent duplicate callback
+        // We already set actor.context[key] = store.value above, so we don't need the immediate callback
         const unsubscribe = store.subscribe((data) => {
           handleDataUpdate(subscriptionEngine, actor.id, key, data);
-        });
+        }, { skipInitial: true });
         
         // Store unsubscribe function
         if (!actor._subscriptions) {

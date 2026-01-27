@@ -20,8 +20,9 @@ export default {
       actor.context[key] = value;
     }
     
-    // Trigger re-render if view switching or input clearing happened
-    if ((currentViewChanged || inputCleared) && actor.actorEngine && actor.id) {
+    // Trigger re-render if view switching or input clearing
+    // Only trigger re-render if initial render is complete (prevents duplicate rendering on initial load)
+    if ((currentViewChanged || inputCleared) && actor.actorEngine && actor.id && actor._initialRenderComplete) {
       await actor.actorEngine.rerender(actor.id);
       
       // After re-render completes, focus the input if it was cleared

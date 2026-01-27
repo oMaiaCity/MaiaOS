@@ -870,10 +870,6 @@ export class ActorEngine {
           coId: actor.inboxCoId,
           item: message
         });
-        
-        // Debug: Log successful push
-        console.log(`[ActorEngine] ✅ Pushed ${eventType} to CoStream ${actor.inboxCoId} via operations API (${result.itemsPushed} item(s))`);
-        console.log(`[ActorEngine]   Message:`, JSON.stringify(message).substring(0, 150));
       } catch (error) {
         console.error(`[ActorEngine] ❌ Failed to push message to CoStream ${actor.inboxCoId}:`, error);
       }

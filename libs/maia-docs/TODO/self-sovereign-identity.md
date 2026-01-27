@@ -1398,7 +1398,7 @@ User Authenticated
 ### Implementation Files
 
 **Core Authentication (`libs/maia-self/`):**
-- `src/oSSI.js` - Main: signUpWithPasskey(), signInWithPasskey()
+- `src/self.js` - Main: signUpWithPasskey(), signInWithPasskey()
 - `src/prf-evaluator.js` - WebAuthn PRF interface
 - `src/feature-detection.js` - Strict PRF requirement enforcement
 - `src/storage.js` - IndexedDB helper (CoValue data only)
@@ -1483,7 +1483,7 @@ User Authenticated
 ### MaiaOS Implementation
 
 **Core Authentication:**
-- `libs/maia-self/src/oSSI.js` - Registration & login logic with deterministic accountID
+- `libs/maia-self/src/self.js` - Registration & login logic with deterministic accountID
 - `libs/maia-self/src/prf-evaluator.js` - WebAuthn PRF interface
 - `libs/maia-self/src/feature-detection.js` - Strict PRF requirement enforcement
 - `libs/maia-self/src/storage.js` - IndexedDB helper (CoValue data only)

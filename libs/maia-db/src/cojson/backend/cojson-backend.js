@@ -29,8 +29,6 @@ export class CoJSONBackend extends DBAdapter {
     // Track all ReactiveStores per CoValue for cross-actor reactivity
     // Map<coId, Set<{store, updateFn, schema, filter}>>
     this._storeSubscriptions = new Map();
-    
-    console.log('[CoJSONBackend] Initialized with node and account');
   }
   
   /**
@@ -1996,14 +1994,23 @@ export class CoJSONBackend extends DBAdapter {
   /**
    * Get schema co-id from a CoValue's headerMeta
    * Internal helper method - called by SchemaOperation
+   * Uses reactive store layer to ensure CoValue is loaded before reading schema
    * @param {string} coId - CoValue co-id
    * @returns {Promise<string|null>} Schema co-id or null if not found
    */
   async getSchemaCoIdFromCoValue(coId) {
-    const coValueCore = this.node.getCoValue(coId);
-    if (!coValueCore) return null;
-    const header = this.getHeader(coValueCore);
-    return header?.meta?.$schema || null;
+    // Use reactive store layer to ensure CoValue is loaded before reading schema
+    // _readSingleItem handles loading via _waitForStoreReady() and extracts $schema via _extractCoValueDataFlat
+    const store = await this._readSingleItem(coId);
+    const coValueData = store.value;
+    
+    // Extract $schema from store value (already populated by _extractCoValueDataFlat)
+    // _extractCoValueDataFlat extracts headerMeta.$schema and stores it as $schema field
+    if (!coValueData || coValueData.error) {
+      return null;
+    }
+    
+    return coValueData.$schema || null;
   }
   
   /**

@@ -98,6 +98,30 @@ export class MaiaScriptEvaluator {
       return !operand;
     }
 
+    // Handle $and operation (logical AND - all operands must be truthy)
+    if ('$and' in expression) {
+      const operands = Array.isArray(expression.$and) ? expression.$and : [expression.$and];
+      for (const operand of operands) {
+        const value = await this.evaluate(operand, data, depth + 1);
+        if (!value) {
+          return false; // Short-circuit: return false if any operand is falsy
+        }
+      }
+      return true; // All operands are truthy
+    }
+
+    // Handle $or operation (logical OR - at least one operand must be truthy)
+    if ('$or' in expression) {
+      const operands = Array.isArray(expression.$or) ? expression.$or : [expression.$or];
+      for (const operand of operands) {
+        const value = await this.evaluate(operand, data, depth + 1);
+        if (value) {
+          return true; // Short-circuit: return true if any operand is truthy
+        }
+      }
+      return false; // All operands are falsy
+    }
+
     // Handle $if operation
     if ('$if' in expression) {
       // Evaluate condition (supports shortcuts like "$item.done" or DSL operations like "$eq")
@@ -170,6 +194,7 @@ export class MaiaScriptEvaluator {
     }
     if (typeof expression !== 'object' || expression === null) return false;
     return '$context' in expression || '$item' in expression || '$if' in expression || 
-           '$eq' in expression || '$ne' in expression || '$not' in expression;
+           '$eq' in expression || '$ne' in expression || '$not' in expression ||
+           '$and' in expression || '$or' in expression;
   }
 }

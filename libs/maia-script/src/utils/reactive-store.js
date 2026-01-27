@@ -31,11 +31,15 @@ export class ReactiveStore {
    * Subscribe to value changes
    * Callback is called immediately with current value, then on every update
    * @param {Function} callback - Function called with new value
+   * @param {Object} [options] - Subscription options
+   * @param {boolean} [options.skipInitial=false] - If true, don't call callback immediately with current value
    * @returns {Function} Unsubscribe function
    */
-  subscribe(callback) {
+  subscribe(callback, options = {}) {
     this._subscribers.add(callback);
-    callback(this._value); // Call immediately with current value
+    if (!options.skipInitial) {
+      callback(this._value); // Call immediately with current value
+    }
     return () => this._subscribers.delete(callback);
   }
   

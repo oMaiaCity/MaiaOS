@@ -187,7 +187,7 @@ export class MaiaOS {
   static async boot(config = {}) {
     const os = new MaiaOS();
     
-    console.log('🚀 Booting MaiaOS v0.4...');
+    // Booting MaiaOS
     
     // Store node and account for CoJSON backend compatibility
     if (config.node && config.account) {
@@ -209,7 +209,7 @@ export class MaiaOS {
     // Load modules
     await MaiaOS._loadModules(os, config);
     
-    console.log(`✅ MaiaOS booted: ${os.moduleRegistry.listModules().length} modules, ${os.toolEngine.tools.size} tools`);
+    // MaiaOS booted
     
     return os;
   }
@@ -239,7 +239,7 @@ export class MaiaOS {
       os.dbEngine = new DBEngine(backend);
       // Set dbEngine on backend for runtime schema validation in create functions
       backend.dbEngine = os.dbEngine;
-      console.log('   Using CoJSON backend');
+      // Using CoJSON backend
       return backend;
     }
     
@@ -296,7 +296,7 @@ export class MaiaOS {
    * @param {Object} config - Boot configuration
    */
   static async _seedDatabase(os, backend, config) {
-    console.log('🌱 Seeding database...');
+    // Seeding database
     
     // Import tool definitions
     const { getAllToolDefinitions } = await import('@MaiaOS/tools');
@@ -332,7 +332,7 @@ export class MaiaOS {
       data: seedData
     });
     
-    console.log('✅ Database seeded successfully');
+    // Database seeded successfully
     
     // Set schema resolver on validation helper singleton for engines to use
     // Pass dbEngine to use operations API (preferred over resolver function)
@@ -541,7 +541,7 @@ export class MaiaOS {
     
     // Load vibe CoValue first (without schema filter - read CoValue directly)
     // This allows us to extract schema co-id from headerMeta.$schema
-    console.log(`[Kernel] Loading vibe from database: key=${vibeCoId}`);
+    // Loading vibe from database
     
     const vibeStore = await this.dbEngine.execute({
       op: 'read',
@@ -567,7 +567,7 @@ export class MaiaOS {
     let vibe = store.value;
     
     // Debug: Check what we got
-    console.log(`[Kernel] Store value after read:`, vibe ? 'FOUND' : 'NULL', vibe ? { $id: vibe.$id, name: vibe.name, hasProperties: !!vibe.properties } : null);
+    // Store value loaded
     
     if (!vibe || vibe.error) {
       // Debug: Try to see what's actually in the database

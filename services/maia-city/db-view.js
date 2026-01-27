@@ -371,7 +371,6 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 				await new Promise(resolve => setTimeout(resolve, 10));
 				
 				const container = document.getElementById(`vibe-container-${currentVibe}`);
-				console.log(`[DB Viewer] Looking for container: vibe-container-${currentVibe}`, container ? 'FOUND' : 'NOT FOUND');
 				if (!container) {
 					console.error(`[DB Viewer] Container not found: vibe-container-${currentVibe}. Available IDs:`, Array.from(document.querySelectorAll('[id^="vibe-container"]')).map(el => el.id));
 					return;

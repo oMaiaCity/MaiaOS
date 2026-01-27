@@ -1,5 +1,5 @@
 /**
- * oSSI - Self-Sovereign Identity service
+ * Self - Self-Sovereign Identity service
  * Passkey-based authentication with deterministic account derivation via PRF
  * 
  * STRICT: PRF required, no fallbacks
@@ -54,27 +54,21 @@ function setupJazzSyncPeers(apiKey) {
 	let node = undefined;
 	const peers = [];
 	
-	console.log("🌐 [SYNC] Setting up Jazz sync peer...");
-	console.log("   URL:", jazzCloudUrl);
+	// Setting up Jazz sync peer
 	
 	const wsPeer = new WebSocketPeerWithReconnection({
 		peer: jazzCloudUrl,
 		reconnectionTimeout: 5000,
 		addPeer: (peer) => {
-			console.log("📥 [SYNC] addPeer callback triggered!");
 			if (node) {
-				console.log("   Adding peer to node.syncManager...");
 				node.syncManager.addPeer(peer);
-				console.log("✅ [SYNC] Peer added to sync manager");
 				jazzSyncState = { connected: true, syncing: true, error: null };
 				notifySyncStateChange();
 			} else {
-				console.log("   Node not ready yet, storing peer in array");
 				peers.push(peer);
 			}
 		},
 		removePeer: (peer) => {
-			console.log("📤 [SYNC] removePeer callback triggered!");
 			const index = peers.indexOf(peer);
 			if (index > -1) {
 				peers.splice(index, 1);
@@ -86,20 +80,17 @@ function setupJazzSyncPeers(apiKey) {
 	
 	// Subscribe to connection changes
 	wsPeer.subscribe((connected) => {
-		console.log(`🔔 [SYNC] Connection state changed: ${connected}`);
 		jazzSyncState = { connected, syncing: connected, error: connected ? null : "Offline" };
 		notifySyncStateChange();
 	});
 	
 	// Enable the peer immediately
 	wsPeer.enable();
-	console.log("✅ [SYNC] WebSocket peer enabled and ready");
 	
 	return {
 		peers,
 		setNode: (n) => {
 			node = n;
-			console.log("🔗 [SYNC] Node assigned to peer");
 		},
 		wsPeer,
 	};
@@ -171,7 +162,6 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 	const apiKey = import.meta.env?.VITE_JAZZ_API_KEY;
 	let syncSetup = null;
 	if (apiKey) {
-		console.log("🔌 [SYNC] Setting up Jazz sync BEFORE account creation...");
 		syncSetup = setupJazzSyncPeers(apiKey);
 	}
 	
@@ -191,21 +181,12 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 	// Assign node to peer callbacks
 	if (syncSetup) {
 		syncSetup.setNode(result.node);
-		console.log("✅ [SYNC] Jazz sync peer connected to node");
-	}
-	
-	if (storage) {
-		console.log("💾 [STORAGE] Account persisted to IndexedDB");
 	}
 	
 	const account = result.node.expectCurrentAccount("signUpWithPasskey");
 	const createdAccountID = account.id;
 	
 	// VERIFICATION: Computed accountID MUST match created accountID!
-	console.log("🔍 Verifying accountID...");
-	console.log("   Computed:", computedAccountID);
-	console.log("   Created: ", createdAccountID);
-	
 	if (createdAccountID !== computedAccountID) {
 		throw new Error(
 			`CRITICAL: AccountID mismatch!\n` +
@@ -214,12 +195,6 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 			`This should never happen - deterministic computation failed!`
 		);
 	}
-	
-	console.log("✅ AccountID verification passed!");
-	console.log("🎉 Registration complete! TRUE single-passkey flow!");
-	console.log("   📱 1 passkey created");
-	console.log("   👆 1 biometric prompt");
-	console.log("   💾 0 secrets stored");
 	
 	if (!syncSetup) {
 		console.warn("⚠️  [SYNC] No Jazz API key - account won't sync to cloud!");
@@ -341,4 +316,3 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
  * All state is in memory only. Passkeys stored in hardware.
  * Account data synced to Jazz cloud server.
  */
-
