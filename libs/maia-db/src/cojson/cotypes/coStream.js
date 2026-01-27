@@ -1,5 +1,5 @@
-import { createSchemaMeta } from "../utils/meta.js";
-import { hasSchema } from "../schemas/registry.js";
+import { createSchemaMeta } from "../../schemas/meta.js";
+import { hasSchema } from "../../schemas/registry.js";
 
 /**
  * Create a CoStream with MANDATORY schema validation

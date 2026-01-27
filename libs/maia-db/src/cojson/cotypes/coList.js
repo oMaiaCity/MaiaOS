@@ -1,7 +1,7 @@
-import { createSchemaMeta, isExceptionSchema } from "../utils/meta.js";
+import { createSchemaMeta, isExceptionSchema } from "../../schemas/meta.js";
 import { getValidationEngine } from '@MaiaOS/schemata/validation.helper';
-import { getAllSchemas } from "../schemas/registry.js";
-import { hasSchema } from "../schemas/registry.js";
+import { getAllSchemas } from "../../schemas/registry.js";
+import { hasSchema } from "../../schemas/registry.js";
 import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 

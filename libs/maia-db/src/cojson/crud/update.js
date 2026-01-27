@@ -4,8 +4,8 @@
  * Provides the update() method for updating existing CoValues.
  */
 
-import * as collectionHelpers from '../read/collection-helpers.js';
-import * as dataExtraction from '../extract/data-extraction.js';
+import * as collectionHelpers from './collection-helpers.js';
+import * as dataExtraction from './data-extraction.js';
 
 /**
  * Update existing record - directly updates CoValue using CoJSON raw methods

@@ -1,5 +1,5 @@
 /**
- * oSubscription - Automatic CoValue subscription and loading
+ * CoSubscription - Automatic CoValue subscription and loading
  * 
  * Provides high-level API for subscribing to CoValues with automatic loading,
  * caching, and lifecycle management. Ports Jazz's subscription patterns into
@@ -13,7 +13,7 @@
  * - Automatic cleanup after inactivity
  */
 
-import { getGlobalCache } from './oSubscriptionCache.js';
+import { getGlobalCache } from './coSubscriptionCache.js';
 
 /**
  * Subscribe to a CoValue and automatically load it from IndexedDB

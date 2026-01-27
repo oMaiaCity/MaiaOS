@@ -5,7 +5,7 @@
  * schema/vibe names to Co-IDs using registry lookups.
  */
 
-import * as collectionHelpers from '../read/collection-helpers.js';
+import * as collectionHelpers from '../crud/collection-helpers.js';
 
 /**
  * Resolve human-readable key to co-id

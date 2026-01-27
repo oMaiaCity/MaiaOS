@@ -987,7 +987,6 @@ export class ActorEngine {
     // This prevents race conditions when sendInternalEvent and inbox subscription both call processMessages
     if (actor._isProcessingMessages) {
       // Already processing - skip this call (subscription will retry when processing completes)
-      console.log(`[ActorEngine] Skipping concurrent processMessages for ${actorId} (already processing)`);
       return;
     }
 

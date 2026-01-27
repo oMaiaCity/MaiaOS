@@ -7,9 +7,9 @@
  * - Data items created from schemas validate against co-types
  */
 
-import { createCoMap } from './oMap.js';
+import { createCoMap } from '../cotypes/coMap.js';
 import { getValidationEngine } from '@MaiaOS/schemata/validation.helper';
-import { getAllSchemas } from '../schemas/registry.js';
+import { getAllSchemas } from '../../schemas/registry.js';
 import { getMetaSchemaCoMapDefinition } from '@MaiaOS/schemata/meta-schema';
 
 /**

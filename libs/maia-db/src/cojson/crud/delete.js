@@ -4,7 +4,7 @@
  * Provides the delete() method for deleting CoValues.
  */
 
-import * as collectionHelpers from '../read/collection-helpers.js';
+import * as collectionHelpers from './collection-helpers.js';
 
 /**
  * Delete record - hard delete using CoJSON native operations

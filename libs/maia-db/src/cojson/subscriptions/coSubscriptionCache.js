@@ -1,5 +1,5 @@
 /**
- * oSubscriptionCache - Subscription lifecycle and caching management
+ * CoSubscriptionCache - Subscription lifecycle and caching management
  * 
  * Simplified port of Jazz's SubscriptionCache pattern for maia-db.
  * Manages subscription lifecycle, deduplication, and automatic cleanup.

@@ -1,5 +1,5 @@
 /**
- * oGroup Service - Group creation
+ * CoGroup Service - Group creation
  * 
  * Handles Group creation
  * 

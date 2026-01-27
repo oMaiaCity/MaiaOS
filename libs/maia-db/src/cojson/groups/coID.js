@@ -1,12 +1,12 @@
 /**
- * oID Service - Account (Identity) primitive
+ * CoID Service - Account (Identity) primitive
  * 
  * STRICT: Uses passkey-derived agentSecret, no random generation
  */
 
 import { LocalNode } from "cojson";
 import { WasmCrypto } from "cojson/crypto/WasmCrypto";
-import { schemaMigration } from "../migrations/schema.migration.js";
+import { schemaMigration } from "../../migrations/schema.migration.js";
 
 /**
  * Create a new MaiaID (Account) with provided agentSecret

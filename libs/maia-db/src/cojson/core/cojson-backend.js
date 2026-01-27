@@ -6,23 +6,23 @@
  */
 
 import { DBAdapter } from '@MaiaOS/operations/db-adapter';
-import { getGlobalCache } from '../../services/oSubscriptionCache.js';
-import { seed } from './seeding/seed.js';
-import * as coValueAccess from './core/co-value-access.js';
-import { resetCaches } from './core/cache-management.js';
-import * as groupAccess from './groups/group-access.js';
-import * as groupInfo from './groups/group-info.js';
-import * as groupMembers from './groups/group-members.js';
-import { readSingleItem, waitForStoreReady } from './read/read-operations.js';
-import { readCollection, readAllCoValues } from './read/collection-read.js';
-import * as collectionHelpers from './read/collection-helpers.js';
-import * as dataExtraction from './extract/data-extraction.js';
-import * as filterHelpers from './extract/filter-helpers.js';
-import * as crudCreate from './crud/create.js';
-import * as crudUpdate from './crud/update.js';
-import * as crudDelete from './crud/delete.js';
-import { resolveHumanReadableKey as resolveKey } from './schema/resolve-key.js';
-import { getSchemaCoIdFromCoValue, loadSchemaByCoId as loadSchema } from './schema/schema-loading.js';
+import { getGlobalCache } from '../subscriptions/coSubscriptionCache.js';
+import { seed } from '../schema/seed.js';
+import * as coValueAccess from './co-value-access.js';
+import { resetCaches } from '../subscriptions/cache-management.js';
+import * as groupAccess from '../groups/group-access.js';
+import * as groupInfo from '../groups/group-info.js';
+import * as groupMembers from '../groups/group-members.js';
+import { waitForStoreReady } from '../crud/read-operations.js';
+import { read as universalRead } from '../crud/read.js';
+import * as collectionHelpers from '../crud/collection-helpers.js';
+import * as dataExtraction from '../crud/data-extraction.js';
+import * as filterHelpers from '../crud/filter-helpers.js';
+import * as crudCreate from '../crud/create.js';
+import * as crudUpdate from '../crud/update.js';
+import * as crudDelete from '../crud/delete.js';
+import { resolveHumanReadableKey as resolveKey } from '../schema/resolve-key.js';
+import { getSchemaCoIdFromCoValue, loadSchemaByCoId as loadSchema } from '../schema/schema-loading.js';
 
 export class CoJSONBackend extends DBAdapter {
   constructor(node, account, dbEngine = null) {
@@ -39,9 +39,7 @@ export class CoJSONBackend extends DBAdapter {
     this.subscriptionCache = getGlobalCache(node);
     // Cache universal group after first resolution (performance optimization)
     this._cachedUniversalGroup = null;
-    // Track all ReactiveStores per CoValue for cross-actor reactivity
-    // Map<coId, Set<{store, updateFn, schema, filter}>>
-    this._storeSubscriptions = new Map();
+    // Note: _storeSubscriptions removed - using subscriptionCache only for subscription tracking
   }
   
   /**
@@ -252,21 +250,21 @@ export class CoJSONBackend extends DBAdapter {
   async read(schema, key, keys, filter) {
     // Batch read (multiple keys)
     if (keys && Array.isArray(keys)) {
-      const stores = await Promise.all(keys.map(coId => readSingleItem(this, coId, schema)));
+      const stores = await Promise.all(keys.map(coId => universalRead(this, coId, schema, null, schema)));
       return stores;
     }
 
     // Single item read
     if (key) {
-      return await readSingleItem(this, key, schema);
+      return await universalRead(this, key, schema, null, schema);
     }
 
     // Collection read (by schema) or all CoValues (if schema is null/undefined)
     if (!schema) {
-      return await readAllCoValues(this, filter);
+      return await universalRead(this, null, null, filter);
     }
     
-    return await readCollection(this, schema, filter);
+    return await universalRead(this, null, schema, filter);
   }
 
   /**
@@ -278,7 +276,7 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {Promise<ReactiveStore>} ReactiveStore with CoValue data (already loaded)
    */
   async _readSingleItem(coId, schemaHint = null) {
-    return await readSingleItem(this, coId, schemaHint);
+    return await universalRead(this, coId, schemaHint, null, schemaHint);
   }
 
   /**
@@ -350,7 +348,7 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {Promise<ReactiveStore>} ReactiveStore with array of CoValue data
    */
   async _readCollection(schema, filter) {
-    return await readCollection(this, schema, filter);
+    return await universalRead(this, null, schema, filter);
   }
 
   /**
@@ -360,7 +358,7 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {Promise<ReactiveStore>} ReactiveStore with array of all CoValue data
    */
   async _readAllCoValues(filter) {
-    return await readAllCoValues(this, filter);
+    return await universalRead(this, null, null, filter);
   }
 
   /**

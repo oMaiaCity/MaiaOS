@@ -22,8 +22,8 @@
  * All CoValues (except exceptions) use actual schema co-ids in headerMeta.$schema
  */
 
-import { createCoMap } from '../../../services/oMap.js';
-import { createCoList } from '../../../services/oList.js';
+import { createCoMap } from '../cotypes/coMap.js';
+import { createCoList } from '../cotypes/coList.js';
 import { getMetaSchemaCoMapDefinition } from '@MaiaOS/schemata/meta-schema';
 
 /**
@@ -52,7 +52,7 @@ export async function seed(account, node, configs, schemas, data) {
   }
   
   // Use read() API to get profile (operation-based)
-  const { CoJSONBackend } = await import('../cojson-backend.js');
+  const { CoJSONBackend } = await import('../core/cojson-backend.js');
   const backend = new CoJSONBackend(node, account);
   const profileStore = await backend.read(null, profileId);
   

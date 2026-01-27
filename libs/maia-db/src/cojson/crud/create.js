@@ -4,11 +4,11 @@
  * Provides the create() method for creating new CoValues.
  */
 
-import { createCoMap } from '../../../services/oMap.js';
-import { createCoList } from '../../../services/oList.js';
-import { createCoStream } from '../../../services/oStream.js';
-import * as collectionHelpers from '../read/collection-helpers.js';
-import * as dataExtraction from '../extract/data-extraction.js';
+import { createCoMap } from '../cotypes/coMap.js';
+import { createCoList } from '../cotypes/coList.js';
+import { createCoStream } from '../cotypes/coStream.js';
+import * as collectionHelpers from './collection-helpers.js';
+import * as dataExtraction from './data-extraction.js';
 
 /**
  * Append item to collection CoList
@@ -210,26 +210,32 @@ export async function create(backend, schema, data) {
   }
 
   // Return created CoValue data (extract properties as flat object for tool access)
+  // CRITICAL: Always include original data as fallback to ensure all properties are available
+  // This ensures $lastCreatedText and other properties are accessible even if CoValue extraction fails
   const coValueCore = backend.getCoValue(coValue.id);
   if (coValueCore && backend.isAvailable(coValueCore)) {
     const content = backend.getCurrentContent(coValueCore);
     if (content && typeof content.get === 'function') {
       // Extract properties as flat object (for tool access like $lastCreatedText)
-      const result = { id: coValue.id };
+      const result = { id: coValue.id, ...data }; // Start with original data to ensure all properties
       const keys = content.keys && typeof content.keys === 'function' 
         ? content.keys() 
         : Object.keys(content);
       for (const key of keys) {
+        // Override with actual CoValue content if available (more accurate)
         result[key] = content.get(key);
       }
       return result;
     }
-    // Fallback to normalized format
-    return dataExtraction.extractCoValueData(backend, coValueCore);
+    // Fallback to normalized format, but include original data
+    const extracted = dataExtraction.extractCoValueData(backend, coValueCore);
+    return { ...data, id: coValue.id, ...extracted }; // Merge original data with extracted
   }
 
+  // Final fallback: return original data with id (ensures all properties including text are available)
   return {
     id: coValue.id,
+    ...data, // Include original data to ensure text and other properties are available
     type: cotype,
     schema: schema
   };

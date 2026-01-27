@@ -5,7 +5,7 @@
  * Now uses schema registry to validate schema names
  */
 
-import { hasSchema as hasSchemaInRegistry, getSchema as getSchemaFromRegistry } from '../schemas/registry.js';
+import { hasSchema as hasSchemaInRegistry, getSchema as getSchemaFromRegistry } from './registry.js';
 
 /**
  * Exception schemas that don't need validation against registry

@@ -1,10 +1,10 @@
 /**
- * oProfile Service - Profile CoMap
+ * CoProfile Service - Profile CoMap
  * 
  * Handles Profile creation with schema metadata
  */
 
-import { createSchemaMeta } from "../utils/meta.js";
+import { createSchemaMeta } from "../../schemas/meta.js";
 
 /**
  * Create a new Profile CoMap with ProfileSchema in headerMeta

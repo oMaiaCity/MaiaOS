@@ -12,7 +12,7 @@
  */
 
 import { DBEngine } from '@MaiaOS/operations';
-import { CoJSONBackend } from './backend/cojson-backend.js';
+import { CoJSONBackend } from './cojson-backend.js';
 
 /**
  * Create a CoJSON API instance

@@ -5,7 +5,8 @@
  * from CoValues.
  */
 
-import { readSingleItem } from '../read/read-operations.js';
+import { read as universalRead } from '../crud/read.js';
+import { waitForStoreReady } from '../crud/read-operations.js';
 
 /**
  * Get schema co-id from a CoValue's headerMeta
@@ -17,8 +18,18 @@ import { readSingleItem } from '../read/read-operations.js';
  */
 export async function getSchemaCoIdFromCoValue(backend, coId) {
   // Use reactive store layer to ensure CoValue is loaded before reading schema
-  // readSingleItem handles loading via waitForStoreReady() and extracts $schema via extractCoValueDataFlat
-  const store = await readSingleItem(backend, coId);
+  // universalRead returns store immediately (progressive loading), so we need to wait for it to be ready
+  const store = await universalRead(backend, coId);
+  
+  // Wait for store to be ready (since we need synchronous access to store.value)
+  // This ensures the CoValue is loaded before we access store.value
+  try {
+    await waitForStoreReady(store, coId, 5000);
+  } catch (error) {
+    // Store has error - return null
+    return null;
+  }
+  
   const coValueData = store.value;
   
   // Extract $schema from store value (already populated by extractCoValueDataFlat)

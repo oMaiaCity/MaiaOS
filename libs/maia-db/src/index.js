@@ -13,13 +13,13 @@
 
 // Re-export services for external use
 // STRICT: No createAccount() - only createAccountWithSecret() and loadAccount()
-export { createAccountWithSecret, loadAccount } from "./services/oID.js";
-export { createGroup } from "./services/oGroup.js";
-export { createCoMap } from "./services/oMap.js";
-export { createCoList } from "./services/oList.js";
-export { createCoStream } from "./services/oStream.js";
-export { createProfile } from "./services/oProfile.js";
-export { createSchemaMeta, hasSchema, getSchema } from "./utils/meta.js";
+export { createAccountWithSecret, loadAccount } from "./cojson/groups/coID.js";
+export { createGroup } from "./cojson/groups/coGroup.js";
+export { createCoMap } from "./cojson/cotypes/coMap.js";
+export { createCoList } from "./cojson/cotypes/coList.js";
+export { createCoStream } from "./cojson/cotypes/coStream.js";
+export { createProfile } from "./cojson/groups/coProfile.js";
+export { createSchemaMeta, hasSchema, getSchema } from "./schemas/meta.js";
 export { schemaMigration } from "./migrations/schema.migration.js";
 
 // Subscription management (NEW)
@@ -30,16 +30,16 @@ export {
 	hasSubscription, 
 	unsubscribe,
 	getSubscriptionStats 
-} from "./services/oSubscription.js";
+} from "./cojson/subscriptions/coSubscription.js";
 
 export { 
 	SubscriptionCache,
 	getGlobalCache,
 	resetGlobalCache 
-} from "./services/oSubscriptionCache.js";
+} from "./cojson/subscriptions/coSubscriptionCache.js";
 
 // CoJSON Mini CRUD API (database-level wrapper)
-export { createCoJSONAPI } from "./cojson/factory.js";
+export { createCoJSONAPI } from "./cojson/core/factory.js";
 
 // CoJSON Backend (for MaiaOS.boot() compatibility)
-export { CoJSONBackend } from "./cojson/backend/cojson-backend.js";
+export { CoJSONBackend } from "./cojson/core/cojson-backend.js";
