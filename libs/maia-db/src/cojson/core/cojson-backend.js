@@ -245,26 +245,38 @@ export class CoJSONBackend extends DBAdapter {
    * @param {string} [key] - Specific key (co-id) for single item
    * @param {string[]} [keys] - Array of co-ids for batch reads
    * @param {Object} [filter] - Filter criteria for collection queries
+   * @param {Object} [options] - Options for deep resolution
+   * @param {boolean} [options.deepResolve=true] - Enable/disable deep resolution (default: true)
+   * @param {number} [options.maxDepth=10] - Maximum depth for recursive resolution (default: 10)
+   * @param {number} [options.timeoutMs=5000] - Timeout for waiting for nested CoValues (default: 5000)
    * @returns {Promise<ReactiveStore|ReactiveStore[]>} Reactive store(s) that hold current value and notify on updates
    */
-  async read(schema, key, keys, filter) {
+  async read(schema, key, keys, filter, options = {}) {
+    const {
+      deepResolve = true,
+      maxDepth = 10,
+      timeoutMs = 5000
+    } = options;
+    
+    const readOptions = { deepResolve, maxDepth, timeoutMs };
+    
     // Batch read (multiple keys)
     if (keys && Array.isArray(keys)) {
-      const stores = await Promise.all(keys.map(coId => universalRead(this, coId, schema, null, schema)));
+      const stores = await Promise.all(keys.map(coId => universalRead(this, coId, schema, null, schema, readOptions)));
       return stores;
     }
 
     // Single item read
     if (key) {
-      return await universalRead(this, key, schema, null, schema);
+      return await universalRead(this, key, schema, null, schema, readOptions);
     }
 
     // Collection read (by schema) or all CoValues (if schema is null/undefined)
     if (!schema) {
-      return await universalRead(this, null, null, filter);
+      return await universalRead(this, null, null, filter, null, readOptions);
     }
     
-    return await universalRead(this, null, schema, filter);
+    return await universalRead(this, null, schema, filter, null, readOptions);
   }
 
   /**

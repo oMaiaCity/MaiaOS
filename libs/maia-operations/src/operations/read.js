@@ -26,10 +26,14 @@ export class ReadOperation {
    * @param {string} [params.key] - Specific key (co-id) for single item
    * @param {string[]} [params.keys] - Array of co-ids for batch reads (consolidates getBatch)
    * @param {Object} [params.filter] - Filter criteria for collection queries
+   * @param {Object} [params.options] - Options for deep resolution
+   * @param {boolean} [params.options.deepResolve=true] - Enable/disable deep resolution (default: true)
+   * @param {number} [params.options.maxDepth=10] - Maximum depth for recursive resolution (default: 10)
+   * @param {number} [params.options.timeoutMs=5000] - Timeout for waiting for nested CoValues (default: 5000)
    * @returns {Promise<ReactiveStore|ReactiveStore[]>} Reactive store(s) that hold current value and notify on updates
    */
   async execute(params) {
-    const { schema, key, keys, filter } = params;
+    const { schema, key, keys, filter, options } = params;
     
     // Schema is optional - if not provided, query all CoValues
     // Validate schema is a co-id or special schema hint (for CoJSON backend)
@@ -50,6 +54,7 @@ export class ReadOperation {
     
     // Use backend.read() directly - it's the unified API that handles everything
     // Returns a ReactiveStore (or array of stores for batch reads) with initial value set and reactive updates configured
-    return await this.backend.read(schema, key, keys, filter);
+    // Pass through options for deep resolution (defaults to enabled)
+    return await this.backend.read(schema, key, keys, filter, options);
   }
 }

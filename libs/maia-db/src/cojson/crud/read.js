@@ -13,6 +13,7 @@ import { ensureCoValueLoaded } from './collection-helpers.js';
 import { extractCoValueDataFlat } from './data-extraction.js';
 import { resolveCollectionName, getCoListId } from './collection-helpers.js';
 import { matchesFilter } from './filter-helpers.js';
+import { deepResolveCoValue, resolveNestedReferencesPublic } from './deep-resolution.js';
 
 /**
  * Universal read() function - works for ANY CoValue type
@@ -29,22 +30,32 @@ import { matchesFilter } from './filter-helpers.js';
  * @param {string} [schema] - Schema co-id (for collection read, or schemaHint for single item)
  * @param {Object} [filter] - Filter criteria (for collection/all reads)
  * @param {string} [schemaHint] - Schema hint for special types (@group, @account, @meta-schema)
+ * @param {Object} [options] - Options for deep resolution
+ * @param {boolean} [options.deepResolve=true] - Enable/disable deep resolution (default: true)
+ * @param {number} [options.maxDepth=10] - Maximum depth for recursive resolution (default: 10)
+ * @param {number} [options.timeoutMs=5000] - Timeout for waiting for nested CoValues (default: 5000)
  * @returns {Promise<ReactiveStore>} ReactiveStore with CoValue data (progressive loading)
  */
-export async function read(backend, coId = null, schema = null, filter = null, schemaHint = null) {
+export async function read(backend, coId = null, schema = null, filter = null, schemaHint = null, options = {}) {
+  const {
+    deepResolve = true,
+    maxDepth = 10,
+    timeoutMs = 5000
+  } = options;
+  
   // Single item read (by coId)
   if (coId) {
     // Use schema as schemaHint if provided
-    return await readSingleCoValue(backend, coId, schemaHint || schema);
+    return await readSingleCoValue(backend, coId, schemaHint || schema, { deepResolve, maxDepth, timeoutMs });
   }
   
   // Collection read (by schema) - returns array of items from CoList
   if (schema) {
-    return await readCollection(backend, schema, filter);
+    return await readCollection(backend, schema, filter, { deepResolve, maxDepth, timeoutMs });
   }
   
   // All CoValues read (no schema) - returns array of all CoValues
-  return await readAllCoValues(backend, filter);
+  return await readAllCoValues(backend, filter, { deepResolve, maxDepth, timeoutMs });
 }
 
 /**
@@ -53,9 +64,16 @@ export async function read(backend, coId = null, schema = null, filter = null, s
  * @param {Object} backend - Backend instance
  * @param {string} coId - CoValue ID
  * @param {string} [schemaHint] - Schema hint for special types
+ * @param {Object} [options] - Options for deep resolution
  * @returns {Promise<ReactiveStore>} ReactiveStore with CoValue data
  */
-async function readSingleCoValue(backend, coId, schemaHint = null) {
+async function readSingleCoValue(backend, coId, schemaHint = null, options = {}) {
+  const {
+    deepResolve = true,
+    maxDepth = 10,
+    timeoutMs = 5000
+  } = options;
+  
   const store = new ReactiveStore(null);
   const coValueCore = backend.getCoValue(coId);
   
@@ -65,7 +83,7 @@ async function readSingleCoValue(backend, coId, schemaHint = null) {
   }
 
   // Subscribe to CoValueCore (same pattern for all types)
-  const unsubscribe = coValueCore.subscribe((core) => {
+  const unsubscribe = coValueCore.subscribe(async (core) => {
     if (!core.isAvailable()) {
       store._set({ id: coId, loading: true });
       return;
@@ -73,6 +91,17 @@ async function readSingleCoValue(backend, coId, schemaHint = null) {
 
     // Extract CoValue data as flat object
     const data = extractCoValueDataFlat(backend, core, schemaHint);
+    
+    // Deep resolve nested references if enabled
+    if (deepResolve) {
+      try {
+        await resolveNestedReferencesPublic(backend, data, { maxDepth, timeoutMs });
+      } catch (err) {
+        console.warn(`[CoJSONBackend] Deep resolution failed for ${coId.substring(0, 12)}...:`, err.message);
+        // Continue with data even if deep resolution fails
+      }
+    }
+    
     store._set(data);
   });
 
@@ -82,11 +111,38 @@ async function readSingleCoValue(backend, coId, schemaHint = null) {
   // Set initial value immediately with available data (progressive loading)
   if (coValueCore.isAvailable()) {
     const data = extractCoValueDataFlat(backend, coValueCore, schemaHint);
+    
+    // Deep resolve nested references if enabled
+    if (deepResolve) {
+      try {
+        await deepResolveCoValue(backend, coId, { deepResolve, maxDepth, timeoutMs });
+        // Re-extract data after deep resolution (may have changed)
+        const updatedCore = backend.getCoValue(coId);
+        if (updatedCore && backend.isAvailable(updatedCore)) {
+          const updatedData = extractCoValueDataFlat(backend, updatedCore, schemaHint);
+          store._set(updatedData);
+          return store;
+        }
+      } catch (err) {
+        console.warn(`[CoJSONBackend] Deep resolution failed for ${coId.substring(0, 12)}...:`, err.message);
+        // Continue with original data even if deep resolution fails
+      }
+    }
+    
     store._set(data);
   } else {
     // Set loading state, trigger load (subscription will fire when available)
     store._set({ id: coId, loading: true });
-    ensureCoValueLoaded(backend, coId).catch(err => {
+    ensureCoValueLoaded(backend, coId).then(async () => {
+      // After loading, perform deep resolution if enabled
+      if (deepResolve) {
+        try {
+          await deepResolveCoValue(backend, coId, { deepResolve, maxDepth, timeoutMs });
+        } catch (err) {
+          console.warn(`[CoJSONBackend] Deep resolution failed for ${coId.substring(0, 12)}...:`, err.message);
+        }
+      }
+    }).catch(err => {
       store._set({ error: err.message, id: coId });
     });
   }
@@ -109,9 +165,15 @@ async function readSingleCoValue(backend, coId, schemaHint = null) {
  * @param {Object} backend - Backend instance
  * @param {string} schema - Schema co-id (co_z...)
  * @param {Object} [filter] - Filter criteria
+ * @param {Object} [options] - Options for deep resolution
  * @returns {Promise<ReactiveStore>} ReactiveStore with array of CoValue data
  */
-async function readCollection(backend, schema, filter = null) {
+async function readCollection(backend, schema, filter = null, options = {}) {
+  const {
+    deepResolve = true,
+    maxDepth = 10,
+    timeoutMs = 5000
+  } = options;
   const store = new ReactiveStore([]);
   
   // Resolve collection name from schema
@@ -171,7 +233,10 @@ async function readCollection(backend, schema, filter = null) {
     
     // Subscribe to item changes (fires when item becomes available or updates)
     const unsubscribeItem = itemCore.subscribe(() => {
-      updateStore();
+      // Fire and forget - don't await async updateStore in subscription callback
+      updateStore().catch(err => {
+        console.warn(`[CoJSONBackend] Error updating store:`, err);
+      });
     });
     
     // Use subscriptionCache for each item (same pattern for all CoValue references)
@@ -179,7 +244,7 @@ async function readCollection(backend, schema, filter = null) {
   };
   
   // Helper to update store with current items
-  const updateStore = () => {
+  const updateStore = async () => {
     const results = [];
     
     // Get current CoList content (should be available now, but check anyway)
@@ -219,6 +284,16 @@ async function readCollection(backend, schema, filter = null) {
         if (backend.isAvailable(itemCore)) {
           const itemData = extractCoValueDataFlat(backend, itemCore);
           
+          // Deep resolve nested references if enabled
+          if (deepResolve) {
+            try {
+              await resolveNestedReferencesPublic(backend, itemData, { maxDepth, timeoutMs });
+            } catch (err) {
+              console.warn(`[CoJSONBackend] Deep resolution failed for item ${itemId.substring(0, 12)}...:`, err.message);
+              // Continue with item data even if deep resolution fails
+            }
+          }
+          
           // Apply filter if provided
           if (!filter || matchesFilter(itemData, filter)) {
             results.push(itemData);
@@ -236,7 +311,10 @@ async function readCollection(backend, schema, filter = null) {
   
   // Subscribe to CoList changes (fires when items are added/removed or CoList updates)
   const unsubscribeCoList = coListCore.subscribe(() => {
-    updateStore();
+    // Fire and forget - don't await async updateStore in subscription callback
+    updateStore().catch(err => {
+      console.warn(`[CoJSONBackend] Error updating store:`, err);
+    });
   });
   
   // Use subscriptionCache for CoList
@@ -271,7 +349,7 @@ async function readCollection(backend, schema, filter = null) {
   
   // Initial load (progressive - shows available items immediately, sets up subscriptions for all items)
   // Items that aren't ready yet will populate reactively via subscriptions
-  updateStore();
+  await updateStore();
   
   // Set up store unsubscribe to clean up subscriptions
   const originalUnsubscribe = store._unsubscribe;
@@ -293,9 +371,15 @@ async function readCollection(backend, schema, filter = null) {
  * 
  * @param {Object} backend - Backend instance
  * @param {Object} [filter] - Filter criteria
+ * @param {Object} [options] - Options for deep resolution
  * @returns {Promise<ReactiveStore>} ReactiveStore with array of all CoValue data
  */
-async function readAllCoValues(backend, filter = null) {
+async function readAllCoValues(backend, filter = null, options = {}) {
+  const {
+    deepResolve = true,
+    maxDepth = 10,
+    timeoutMs = 5000
+  } = options;
   const store = new ReactiveStore([]);
   
   // Track CoValue IDs we've subscribed to (for cleanup)
@@ -319,7 +403,7 @@ async function readAllCoValues(backend, filter = null) {
   };
   
   // Helper to update store with all CoValues
-  const updateStore = () => {
+  const updateStore = async () => {
     const allCoValues = backend.getAllCoValues();
     const results = [];
 
@@ -343,6 +427,16 @@ async function readAllCoValues(backend, filter = null) {
       // Extract CoValue data as flat object
       const data = extractCoValueDataFlat(backend, coValueCore);
       
+      // Deep resolve nested references if enabled
+      if (deepResolve) {
+        try {
+          await resolveNestedReferencesPublic(backend, data, { maxDepth, timeoutMs });
+        } catch (err) {
+          console.warn(`[CoJSONBackend] Deep resolution failed for ${coId.substring(0, 12)}...:`, err.message);
+          // Continue with data even if deep resolution fails
+        }
+      }
+      
       // Apply filter if provided
       if (!filter || matchesFilter(data, filter)) {
         results.push(data);
@@ -353,7 +447,7 @@ async function readAllCoValues(backend, filter = null) {
   };
 
   // Initial load (triggers loading for unavailable CoValues, sets up subscriptions)
-  updateStore();
+  await updateStore();
 
   // Set up store unsubscribe to clean up subscriptions
   const originalUnsubscribe = store._unsubscribe;
