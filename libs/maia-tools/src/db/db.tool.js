@@ -45,8 +45,10 @@ export default {
     
     // For create operations, store last created ID/text for state machine access
     if (payload.op === 'create' && result) {
-      actor.context.lastCreatedId = result.id || result.$id;
-      actor.context.lastCreatedText = result.text;
+      actor.context.lastCreatedId = result.id || result.$id || result;
+      // CRITICAL FIX: Ensure lastCreatedText is always set
+      // Result might not have text property directly, so use payload.data.text as fallback
+      actor.context.lastCreatedText = result.text || result.data?.text || payload.data?.text || '';
     }
     
     return result;

@@ -54,12 +54,11 @@ export class ViewEngine {
    * @returns {Promise<Object>} The parsed view definition
    */
   async loadView(coId, onUpdate = null) {
-    // Check if subscription already exists - if so, skip duplicate setup
-    // Always read from reactive store (no cache)
-    const existingUnsubscribe = this.viewSubscriptions?.get(coId);
-    if (existingUnsubscribe) {
-      // Subscription already exists, get current value from reactive store
-      // Read directly from store to get current value
+    // Check if subscription already exists in new format
+    const existingSubscription = this.viewSubscriptions?.get(coId);
+    if (existingSubscription && existingSubscription.unsubscribe) {
+      // Subscription already exists - reuse it
+      // Read config from store and set up onUpdate callback if provided
       const viewStore = await this.dbEngine.execute({
         op: 'read',
         schema: null,
@@ -73,7 +72,19 @@ export class ViewEngine {
           schema: viewSchemaCoId,
           key: coId
         });
-        return store.value;
+        const viewDef = store.value;
+        
+        // Set up onUpdate callback if provided (subscribe to store for FUTURE updates only)
+        // NOTE: Do NOT call onUpdate immediately here - collectEngineSubscription handles that
+        // to ensure consistent behavior between new and reused subscriptions
+        if (onUpdate) {
+          // Subscribe for future updates only (skipInitial prevents immediate callback)
+          store.subscribe((updatedView) => {
+            onUpdate(updatedView);
+          }, { skipInitial: true });
+        }
+        
+        return viewDef;
       }
     }
     
@@ -112,8 +123,9 @@ export class ViewEngine {
       null // NO CACHE - always read from reactive store
     );
     
-    // Store unsubscribe function
-    this.viewSubscriptions.set(coId, unsubscribe);
+    // Store unsubscribe function with ref count tracking
+    // Store as object to allow reference counting
+    this.viewSubscriptions.set(coId, { unsubscribe, refCount: 0 });
     
     return viewDef;
   }
@@ -151,6 +163,10 @@ export class ViewEngine {
     const element = await this.renderNode(viewNode, { context }, actorId);
     
     if (element) {
+      // CRITICAL FIX: Clear shadowRoot before appending to prevent duplicate content
+      // This handles the case where render is called multiple times (e.g., during rerender)
+      shadowRoot.innerHTML = '';
+      
       element.style.containerType = 'inline-size';
       element.style.containerName = 'actor-root';
       element.dataset.actorId = actorId;

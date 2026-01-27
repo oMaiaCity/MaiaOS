@@ -37,15 +37,50 @@ function collectEngineSubscription(
   }
 
   const subscriptionMap = engine[subscriptionMapKey];
-  const existingUnsubscribe = subscriptionMap?.get(configCoId);
+  const existingSubscription = subscriptionMap?.get(configCoId);
   
-  if (existingUnsubscribe) {
-    // Subscription already exists, reuse it
-    if (!actor._subscriptions) {
-      actor._subscriptions = [];
-    }
-    actor._subscriptions.push(existingUnsubscribe);
-    return 1;
+  if (existingSubscription && existingSubscription.unsubscribe) {
+    // Subscription already exists in new format - reuse it
+    // CRITICAL: We still need to load the config to get the definition (for state machines, views, etc.)
+    // AND call the update handler immediately with current config so state machines get created
+    
+    // Load config - engine will detect existing subscription and return config without creating duplicate
+    engineSubscriptions.push(
+      loadMethod.call(engine, configCoId, (updatedConfig) => {
+        // Update handler for when config changes
+        updateHandler.call(subscriptionEngine, actor.id, updatedConfig);
+      }).then((currentConfig) => {
+        // CRITICAL FIX: Call update handler immediately with current config
+        // This ensures state machines get created when reusing subscriptions
+        // (handleStateUpdate creates the machine, handleViewUpdate updates viewDef, etc.)
+        updateHandler.call(subscriptionEngine, actor.id, currentConfig);
+        
+        // Increment ref count for this actor
+        existingSubscription.refCount++;
+        
+        if (!actor._subscriptions) {
+          actor._subscriptions = [];
+        }
+        // Wrap unsubscribe to decrement ref count
+        const wrappedUnsubscribe = () => {
+          const currentSubscription = subscriptionMap?.get(configCoId);
+          if (currentSubscription && currentSubscription.unsubscribe) {
+            currentSubscription.refCount--;
+            if (currentSubscription.refCount <= 0) {
+              // Last actor unsubscribed - clean up
+              currentSubscription.unsubscribe();
+              subscriptionMap.delete(configCoId);
+            }
+          }
+        };
+        actor._subscriptions.push(wrappedUnsubscribe);
+        return 1;
+      }).catch(error => {
+        console.error(`[SubscriptionEngine] ❌ Failed to load ${configKey} for ${actor.id}:`, error);
+        return 0;
+      })
+    );
+    return 0; // Will be counted when promise resolves
   }
 
   // Create new subscription via engine
@@ -53,12 +88,27 @@ function collectEngineSubscription(
     loadMethod.call(engine, configCoId, (updatedConfig) => {
       updateHandler.call(subscriptionEngine, actor.id, updatedConfig);
     }).then(() => {
-      const unsubscribe = subscriptionMap?.get(configCoId);
-      if (unsubscribe) {
+      const subscriptionEntry = subscriptionMap?.get(configCoId);
+      if (subscriptionEntry && subscriptionEntry.unsubscribe) {
+        // Initialize ref count to 1 (this actor)
+        subscriptionEntry.refCount = 1;
+        
         if (!actor._subscriptions) {
           actor._subscriptions = [];
         }
-        actor._subscriptions.push(unsubscribe);
+        // Wrap unsubscribe to decrement ref count
+        const wrappedUnsubscribe = () => {
+          const currentEntry = subscriptionMap?.get(configCoId);
+          if (currentEntry && currentEntry.unsubscribe) {
+            currentEntry.refCount--;
+            if (currentEntry.refCount <= 0) {
+              // Last actor unsubscribed - clean up
+              currentEntry.unsubscribe();
+              subscriptionMap.delete(configCoId);
+            }
+          }
+        };
+        actor._subscriptions.push(wrappedUnsubscribe);
         return 1;
       }
       return 0;

@@ -1,5 +1,6 @@
 import { createSchemaMeta, isExceptionSchema } from "../utils/meta.js";
-import { getSharedValidationEngine } from "../schemas/validation-singleton.js";
+import { getValidationEngine } from '@MaiaOS/schemata/validation.helper';
+import { getAllSchemas } from "../schemas/registry.js";
 import { hasSchema } from "../schemas/registry.js";
 import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
@@ -76,7 +77,7 @@ export async function createCoList(accountOrGroup, init = [], schemaName, node =
 	
 	// Skip validation for exception schemas or co-ids
 	if (!isExceptionSchema(schemaName) && !schemaName.startsWith('co_z') && !hasSchema(schemaName)) {
-		throw new Error(`[createCoList] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema, ExamplesSchema, ActivityStreamSchema, NotesSchema, TextSchema, PureJsonSchema`);
+		throw new Error(`[createCoList] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema, ExamplesSchema, ActivityStreamSchema, NotesSchema, PureJsonSchema`);
 	}
 	
 	// Validate data against schema BEFORE creating CoValue
@@ -98,7 +99,9 @@ export async function createCoList(accountOrGroup, init = [], schemaName, node =
 			await validateAgainstSchemaOrThrow(schemaDef, init, `createCoList for schema ${schemaName}`);
 		} else {
 			// Schema name - use hardcoded registry (only for migrations/seeding)
-			const engine = await getSharedValidationEngine();
+			const engine = await getValidationEngine({
+				registrySchemas: getAllSchemas()
+			});
 			const validation = await engine.validateData(schemaName, init);
 			
 			if (!validation.valid) {

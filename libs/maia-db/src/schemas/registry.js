@@ -7,8 +7,7 @@
  * NO FALLBACKS - 100% migration to CoValue-based schemas.
  */
 
-import coTypesDefs from './co-types.defs.json';
-import { getMetaSchemaDefinition } from './meta-schema.js';
+import coTypesDefs from '@MaiaOS/schemata/co-types.defs.json';
 
 /**
  * AccountSchema - CoMap schema for account CoValues
@@ -216,20 +215,6 @@ const NotesSchema = {
 };
 
 /**
- * TextSchema - CoText schema for plain text CoValues
- */
-const TextSchema = {
-  $schema: "https://json-schema.org/draft/2020-12/schema",
-  $id: "https://maia.city/TextSchema",
-  title: "Text",
-  description: "Schema for plain text CoText (leaf type)",
-  allOf: [
-    { $ref: "#/$defs/co-text" }
-  ],
-  $defs: coTypesDefs.$defs
-};
-
-/**
  * PureJsonSchema - CoMap schema demonstrating all 7 JSON Schema standard types
  */
 const PureJsonSchema = {
@@ -300,7 +285,6 @@ export const SCHEMA_REGISTRY = {
   ExamplesSchema,
   ActivityStreamSchema,
   NotesSchema,
-  TextSchema,
   PureJsonSchema
 };
 

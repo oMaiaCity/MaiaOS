@@ -1,1020 +1,524 @@
-description: Analyzes files/folders to find opportunities to compact, simplify, consolidate, and clean up code while maintaining 100% feature parity. Removes deprecated code, fallbacks, architectural hacks, and legacy patterns. Also performs security audits (especially for MaiaScript JSON DSL and execution engines) and ensures 100% type safety with JSON schema validation for MaiaScript expressions, execution engines (ViewEngine, StateEngine, ToolEngine, ActorEngine), and user/AI-generated JSON configs.
+description: Analyzes files/folders to reduce code to 25% of current lines through radical elimination, not optimization. Uses first principles thinking to identify what shouldn't exist at all, then eliminates it. Resists creating sophistication layers. Reduces dependencies, complexity, and code lines dramatically. Also performs security audits (especially for MaiaScript JSON DSL and execution engines) and ensures 100% type safety with JSON schema validation for MaiaScript expressions, execution engines (ViewEngine, StateEngine, ToolEngine, ActorEngine), and user/AI-generated JSON configs.
 alwaysApply: false
 ---
 
 # Compact, Simplify & Consolidate Rule
 
-You are a **code simplification and consolidation expert** specializing in reducing complexity, eliminating redundancy, and cleaning up technical debt while maintaining 100% feature parity and system stability.
+You are a **radical code elimination expert**. Your goal is to reduce code to **25% of current lines** through elimination, not optimization. Use first principles thinking: **Don't optimize what shouldn't exist in the first place.**
 
-## Core Mission
+## Core Mission: Radical Reduction to 25%
 
-When analyzing files/folders, your goal is to:
-1. **Compact** - Reduce code size without losing functionality
-2. **Simplify** - Reduce complexity and cognitive load
-3. **Consolidate** - Merge similar patterns, interfaces, and implementations
-4. **Abstract & Unify** - Create unified interfaces for similar functionality
-5. **Clean Up** - Remove deprecated code, fallbacks, hacks, and legacy patterns
-6. **Split Large Files** - Break files >500 lines into smaller, logically clustered files
-7. **Decompose Functions** - Split large/complex functions into focused, single-responsibility functions
-8. **Remove Unused Imports** - Clean up all unused imports and dependencies
-9. **Apply KISS & DRY** - Keep It Simple, Stupid (KISS) and Don't Repeat Yourself (DRY) principles everywhere
-10. **Security Audit** - Identify and fix potential security vulnerabilities
-11. **Type Safety & Validation** - Ensure 100% typed interfaces with JSON schema validation
-12. **Maintain Parity** - Preserve 100% feature parity (no breaking changes)
-13. **Stay Safe** - Never break the current system
+**CRITICAL FIRST PRINCIPLES APPROACH**:
+1. **NEVER BREAK ANYTHING**: Always maintain functionality. Never break existing features.
+2. **ALWAYS MIGRATE END-TO-END FULLSTACK**: 100% migration, no partial migrations, no backwards compatibility layers
+3. **Question existence first**: "Why does this code exist? Should it exist at all?"
+4. **Eliminate before optimizing**: Don't optimize code that shouldn't be there
+5. **Resist sophistication**: Don't create new abstraction layers or indirection
+6. **Radical reduction**: Target 25% of current code lines through elimination
+7. **Reduce dependencies**: Eliminate unnecessary dependencies, not just optimize them
+8. **Simplify architecture**: Remove unnecessary patterns, layers, abstractions
+
+**Primary Goal**: Reduce code to **25% of current lines** by:
+- **Eliminating** unnecessary code, features, abstractions, layers
+- **Removing** dependencies that aren't essential
+- **Deleting** code that solves problems that shouldn't exist
+- **Consolidating** similar functionality into minimal implementations
+- **Creating universal generic DRY interfaces** between all moving pieces (eliminates duplication, connects modules)
+- **Questioning** every line: "Is this absolutely necessary?"
+
+**Universal Generic DRY Interfaces**:
+- **Between moving pieces**: Create unified interfaces that connect different modules/components
+- **Eliminate duplication**: One universal interface instead of many similar ones
+- **Generic, not specific**: Interfaces that work across all moving pieces, not ad-hoc solutions
+- **Simple, not sophisticated**: Minimal interfaces that reduce code, not add layers
+- **DRY principle**: Extract common patterns into universal interfaces
+
+**NOT the goal**:
+- ❌ Optimizing existing code that shouldn't exist
+- ❌ Creating ad-hoc abstraction layers (use universal generic interfaces instead)
+- ❌ Refactoring without eliminating
+- ❌ Maintaining features "just in case"
+- ❌ Over-engineering interfaces (keep them simple and universal)
+
+## First Principles Analysis (CENTRAL)
+
+**Before analyzing code, ask these questions in order:**
+
+1. **Should this code exist at all?**
+   - What problem does it solve?
+   - Is that problem still relevant?
+   - Could we eliminate the problem entirely?
+   - Is this solving a problem we created ourselves?
+
+2. **What's the irreducible core?**
+   - What's the absolute minimum needed?
+   - What can we eliminate entirely?
+   - What's the simplest possible implementation?
+   - What dependencies can we remove?
+
+3. **Are we optimizing the wrong thing?**
+   - Are we optimizing code that shouldn't exist?
+   - Are we adding layers to simplify complexity we created?
+   - Are we solving symptoms instead of root causes?
+
+4. **Can we eliminate instead of refactor?**
+   - Can we delete this entire module/feature?
+   - Can we remove this abstraction layer?
+   - Can we eliminate this dependency?
+   - Can we solve this differently without code?
+
+**First Principles Decision Tree**:
+```
+For every piece of code:
+1. Should this exist? → NO: DELETE IT
+2. Is this solving a real problem? → NO: DELETE IT
+3. Can we eliminate the problem? → YES: DELETE THE CODE
+4. What's the irreducible minimum? → KEEP ONLY THAT
+5. Can we remove dependencies? → YES: REMOVE THEM
+```
 
 ## Analysis Protocol
 
-When files/folders are provided, follow this **systematic analysis process**:
-
-### Phase 1: Discovery & Mapping
-
-**1.1 Read All Provided Files**
-- Read every file in the provided paths recursively
-- Understand the full context and dependencies
-- Map the architecture and data flow
-- Identify all entry points and public APIs
-
-**1.2 Identify Patterns & Duplication**
-- Find duplicate code blocks (similar logic in multiple places)
-- Identify similar functions/methods that could be unified
-- Spot repeated patterns that could be abstracted
-- Map dependencies and coupling between modules
-
-**1.3 Catalog Complexity Sources**
-- Overly complex functions (high cyclomatic complexity)
-- Deeply nested conditionals or callbacks
-- Unnecessary abstractions or indirection layers
-- Inconsistent naming conventions
-- Mixed concerns (business logic + infrastructure)
-
-**1.3.1 Identify Large Files (>500 Lines)**
-- **File Size**: Files exceeding 500 lines should be split
-- **Logical Clustering**: Identify logical groupings within large files:
-  - Related functions/classes that belong together
-  - Feature modules that can be extracted
-  - Utility functions that can be grouped
-  - Configuration/data that can be separated
-  - Test code that can be moved to separate test files
-- **Cohesion**: Group code by responsibility/concern
-- **Coupling**: Identify dependencies between logical clusters
-- **Folder Clustering**: If split files still belong logically together as one unit, cluster them in a shared folder:
-  - Example: `validation.helper.js` → `validation/validators.js`, `validation/transformers.js`, `validation/error-handlers.js`
-  - Example: `api-client.js` → `api-client/request.js`, `api-client/response.js`, `api-client/middleware.js`
-  - Keep related files together in a folder rather than scattering them
-- **Extraction Strategy**: Plan how to split while maintaining imports/exports and folder organization
-
-**1.3.2 Identify Large/Complex Functions**
-- **Function Length**: Functions exceeding 50-100 lines should be decomposed
-- **Cyclomatic Complexity**: Functions with high complexity (nested conditionals, loops, branches)
-- **Multiple Responsibilities**: Functions doing more than one thing
-- **Extraction Opportunities**: Identify logical blocks that can become separate functions:
-  - Validation logic
-  - Data transformation steps
-  - Error handling blocks
-  - Repeated patterns within the function
-  - Helper calculations or utilities
-- **Function Naming**: Each extracted function should have a clear, single-purpose name
-- **Dependencies**: Map what each function needs (parameters, imports)
-
-**1.4 Identify Legacy & Deprecated Code**
-- Commented-out code blocks
-- Functions marked as `@deprecated` or `TODO: remove`
-- Fallback code paths that are no longer needed
-- Compatibility shims or wrappers
-- Legacy API patterns that have been replaced
-- Unused imports, variables, or exports
-- Dead code paths (unreachable code)
-
-**1.4.1 Identify Unused Imports**
-- **Import Analysis**: Scan all import statements in each file
-- **Usage Tracking**: Verify each imported item is actually used:
-  - Functions, classes, constants, types
-  - Default imports vs named imports
-  - Re-exports that aren't used
-- **Dependency Verification**: Check if imported modules are used anywhere in the file
-- **Side-Effect Imports**: Identify imports that only have side effects (may need to keep)
-- **Unused Exports**: Find exports that are never imported elsewhere
-- **Circular Dependencies**: Identify circular import chains that can be broken
-
-**1.4.1 Identify TypeScript Code (REMOVE ALL)**
-- **TypeScript Files**: `.ts`, `.tsx` files (convert to `.js` or delete)
-- **TypeScript Config**: `tsconfig.json` files (delete)
-- **TypeScript Types**: Type annotations (`: Type`, `interface`, `type`, `enum`)
-- **TypeScript Syntax**: Generic types (`<T>`, `Array<T>`), type assertions (`as Type`)
-- **TypeScript Imports**: Type-only imports (`import type`, `import { type }`)
-- **TypeScript Comments**: `@ts-ignore`, `@ts-expect-error`, `@ts-check`
-- **TypeScript Dependencies**: `typescript` package in `package.json` (remove)
-- **TypeScript Dev Dependencies**: `@types/*` packages (remove)
-- **TypeScript Build Scripts**: Build scripts that compile TypeScript (remove)
-- **Type Definitions**: `.d.ts` declaration files (delete or convert to JSDoc)
-
-**1.5 Find Architectural Hacks**
-- Workarounds marked with `HACK`, `FIXME`, `XXX`, `TEMP`
-- Type assertions (`as any`, `@ts-ignore`) that bypass type safety
-- Conditional logic based on environment flags (`if (legacyMode)`)
-- Backwards compatibility layers that are no longer needed
-- Ad-hoc solutions that bypass proper architecture
-
-**1.6 Map Similar Interfaces**
-- Functions with similar signatures but different implementations
-- Classes/modules with overlapping responsibilities
-- APIs that do similar things but have different interfaces
-- Configuration objects with similar structures
-- Error handling patterns that could be unified
-
-**1.7 Security Vulnerability Scan**
-
-**General Security Issues:**
-- **Input Validation**: Missing or insufficient input validation
-- **SQL Injection**: Raw SQL queries without parameterization
-- **XSS Vulnerabilities**: Unescaped user input in HTML/JS output
-- **CSRF**: Missing CSRF tokens or protection
-- **Authentication/Authorization**: Weak auth checks, missing permission validation
-- **Sensitive Data Exposure**: Hardcoded secrets, API keys, passwords
-- **Insecure Dependencies**: Outdated packages with known vulnerabilities
-- **Path Traversal**: Unvalidated file paths or directory access
-- **Command Injection**: Unsanitized shell commands or system calls
-- **Insecure Deserialization**: Untrusted data deserialization
-- **Missing Rate Limiting**: APIs without rate limiting or throttling
-- **Insecure Configuration**: Default credentials, debug mode in production
-- **Logging Sensitive Data**: Passwords, tokens, or PII in logs
-- **Weak Cryptography**: Weak hashing algorithms, insecure random number generation
-- **Insecure Communication**: Missing HTTPS, weak TLS configuration
-
-**MaiaScript & Execution Engine Security (CRITICAL):**
-- **Code Injection**: MaiaScript expressions evaluated without validation (user/AI-generated JSON)
-- **HTML Injection**: ViewEngine rendering HTML without sanitization (XSS risk)
-- **Path Traversal**: Unsafe path resolution in `$context`/`$item` operations
-- **Expression DoS**: Nested MaiaScript expressions without depth/recursion limits
-- **Config Injection**: User/AI-generated JSON configs executed without validation
-- **Unvalidated Payloads**: Engine payloads (ViewEngine, StateEngine, ToolEngine) without validation
-- **Unsafe Evaluation**: MaiaScriptEvaluator evaluating expressions without sandboxing checks
-- **Tool Execution**: Tools executed with unvalidated payloads (potential RCE)
-- **Actor Message Injection**: Actor messages processed without payload validation
-- **State Machine Injection**: State transitions triggered with unvalidated payloads
-
-**1.8 MaiaScript & Execution Engine Type Safety Audit**
-
-**MaiaScript JSON DSL Validation:**
-- **MaiaScript Expression Types**: Missing TypeScript types for DSL operations (`$if`, `$eq`, `$context`, etc.)
-- **Expression JSON Schemas**: Missing JSON schema definitions for MaiaScript expressions
-- **DSL Operation Validation**: Unvalidated DSL operations at evaluation time
-- **Expression Input Sanitization**: User/AI-generated JSON configs without sanitization
-- **Path Resolution Safety**: Unsafe path traversal in `$context`, `$item` operations
-- **Expression Recursion Limits**: Missing depth limits on nested MaiaScript expressions
-
-**Execution Engine Type Safety:**
-- **ViewEngine**: HTML rendering without input sanitization, unsafe DOM manipulation
-- **StateEngine**: State machine payloads without validation, untyped state transitions
-- **ToolEngine**: Tool payloads without JSON schema validation, unsafe tool execution
-- **ActorEngine**: Actor messages without type checking, unvalidated message payloads
-- **MaiaScriptEvaluator**: Core evaluator without type safety, unsafe expression evaluation
-
-**JSON Config Validation:**
-- **Actor Configs**: User/AI-generated actor definitions without schema validation
-- **View Configs**: View definitions without validation (XSS risk in HTML rendering)
-- **State Configs**: State machine definitions without validation
-- **Tool Configs**: Tool definitions without parameter schema validation
-- **Interface Configs**: Message interface definitions without payload validation
-
-**Runtime Validation Boundaries:**
-- **Config Loading**: Configs loaded from IndexedDB without validation
-- **Engine Input**: Payloads entering engines without validation
-- **Engine Output**: Engine outputs without type checking
-- **MaiaScript Evaluation**: Expressions evaluated without input sanitization
-- **HTML Injection**: ViewEngine rendering HTML without sanitization
-- **Code Evaluation**: MaiaScript evaluation without sandboxing checks
-
-**Type Safety Gaps:**
-- **Untyped Engines**: Engine classes without TypeScript types
-- **Untyped Payloads**: Payload objects without type definitions
-- **Type Assertions**: Use of `as any`, `@ts-ignore` in engine code
-- **Schema Mismatches**: JSON schemas that don't match TypeScript types
-- **Missing Validation**: No validation at engine boundaries
-
-### Phase 2: Analysis & Opportunities
-
-**2.1 Consolidation Opportunities**
-- **Duplicate Code**: Identify exact or near-duplicate implementations
-- **Similar Functions**: Find functions that could share a common implementation
-- **Repeated Patterns**: Spot patterns that could become utilities or helpers
-- **Multiple Implementations**: Find different ways of doing the same thing
-
-**2.2 Simplification Opportunities**
-- **Complex Conditionals**: Simplify nested if/else, switch statements
-- **Over-Engineering**: Remove unnecessary abstractions or indirection
-- **Verbose Code**: Identify verbose patterns that could be more concise
-- **Unclear Logic**: Find code that could be more readable/straightforward
-- **Large Files**: Files >500 lines that can be split into logical modules
-- **Large Functions**: Functions >50-100 lines or high complexity that can be decomposed
-- **Unused Imports**: Import statements that can be safely removed
-- **KISS Violations**: Overly complex solutions that can be simplified
-- **DRY Violations**: Repeated code patterns that can be extracted
-
-**2.3 Abstraction Opportunities**
-- **Similar Interfaces**: Find APIs that could share a common interface
-- **Repeated Logic**: Identify logic that appears in multiple places
-- **Configuration Patterns**: Unify similar configuration structures
-- **Error Handling**: Consolidate error handling patterns
-
-**2.4 Cleanup Opportunities**
-- **Deprecated Code**: Code marked for removal or no longer used
-- **Legacy Patterns**: Old patterns that have been replaced
-- **Fallback Code**: Code paths that are no longer needed
-- **Hacks**: Temporary workarounds that can be properly fixed
-- **Unused Code**: Dead code, unused imports, unreachable paths
-- **TypeScript Code**: ALL TypeScript files, types, configs, and dependencies (REMOVE - project uses JavaScript only)
-
-**2.5 Security Issues**
-- **Critical Vulnerabilities**: Issues that pose immediate security risks
-- **High-Risk Patterns**: Code patterns that could lead to vulnerabilities
-- **Missing Security Controls**: Absent authentication, authorization, validation
-- **Insecure Practices**: Code that follows insecure patterns
-- **Dependency Vulnerabilities**: Outdated packages with known CVEs
-- **MaiaScript Security**: Code injection, HTML injection, unvalidated expression evaluation
-- **Engine Security**: Unvalidated payloads, unsafe tool execution, config injection
-
-**2.6 MaiaScript & Engine Type Safety Gaps**
-- **MaiaScript Expression Types**: Missing TypeScript types for DSL operations
-- **Expression Schemas**: Missing JSON schemas for MaiaScript expressions
-- **Engine Payload Types**: Untyped payloads in ViewEngine, StateEngine, ToolEngine, ActorEngine
-- **Config Validation**: User/AI-generated JSON configs without schema validation
-- **Input Sanitization**: Missing sanitization for user-generated JSON configs
-- **HTML Injection Risk**: ViewEngine rendering HTML without sanitization
-- **Code Evaluation Safety**: MaiaScript evaluation without proper sandboxing
-- **Runtime Validation**: Missing validation at engine boundaries (config loading, payload evaluation)
-- **Type Assertions**: Use of `any`, `@ts-ignore` in engine code
-- **Schema Mismatches**: JSON schemas that don't match TypeScript types
-
-**2.7 File Splitting Opportunities**
-- **Large Files**: Files exceeding 500 lines that should be split
-- **Logical Clusters**: Identify cohesive groups of code that can be extracted:
-  - Related utility functions → `utils/` subdirectory
-  - Feature modules → separate feature files
-  - Configuration/data → separate config/data files
-  - Types/interfaces → separate type definition files
-  - Test code → separate test files
-- **Folder Clustering**: If split files belong logically together as one unit, cluster them in a shared folder:
-  - Example: Split `validation.helper.js` → `validation/` folder with `validators.js`, `transformers.js`, `error-handlers.js`, `index.js`
-  - Example: Split `api-client.js` → `api-client/` folder with `request.js`, `response.js`, `middleware.js`, `index.js`
-  - Keep related files together rather than scattering them
-- **Import/Export Strategy**: Plan how to maintain clean imports after splitting (use folder imports via index.js)
-- **Cohesion**: Group code by single responsibility/concern
-- **Coupling**: Minimize dependencies between split files (but keep related files in same folder)
-
-**2.8 Function Decomposition Opportunities**
-- **Large Functions**: Functions exceeding 50-100 lines that should be split
-- **High Complexity**: Functions with high cyclomatic complexity (>10)
-- **Multiple Responsibilities**: Functions doing more than one thing
-- **Extraction Candidates**: Identify logical blocks that can become separate functions:
-  - Validation logic → `validateX()` functions
-  - Data transformation → `transformX()` functions
-  - Error handling → `handleXError()` functions
-  - Repeated patterns → extract to helper functions
-  - Calculations → extract to pure utility functions
-- **Single Responsibility**: Each function should do ONE thing well
-- **Clear Naming**: Extracted functions should have descriptive, single-purpose names
-
-**2.9 Unused Import Opportunities**
-- **Unused Imports**: Import statements that are never used in the file
-- **Unused Exports**: Exported items that are never imported elsewhere
-- **Dead Dependencies**: Package dependencies that are no longer needed
-- **Circular Dependencies**: Import cycles that can be broken by removing unused imports
-- **Side-Effect Imports**: Imports that only have side effects (evaluate if needed)
-
-**2.10 KISS & DRY Violations**
-- **KISS Violations**: Overly complex solutions that can be simplified:
-  - Unnecessary abstractions or indirection layers
-  - Over-engineered patterns where simple code would work
-  - Complex conditionals that can be simplified
-  - Verbose code that can be more concise
-- **DRY Violations**: Repeated code patterns that should be extracted:
-  - Duplicate code blocks (exact or near-duplicate)
-  - Similar functions that can share implementation
-  - Repeated patterns that can become utilities
-  - Copy-paste code that should be refactored
-
-### Phase 3: Safety Analysis
-
-**Before proposing any changes, verify:**
-
-**3.1 Feature Parity Check**
-- List all current features/functions
-- Verify each feature will still work after changes
-- Identify any functionality that might be affected
-- Map all public APIs and their usage
-
-**3.2 Dependency Analysis**
-- Find all files that import/use the code being changed
-- Check for external dependencies or consumers
-- Verify no breaking changes to public APIs
-- Check for runtime dependencies that might break
-
-**3.3 Test Coverage**
-- Identify existing tests for the code
-- Ensure tests will still pass after changes
-- Note if new tests are needed to verify consolidation
-
-**3.4 Risk Assessment**
-- Identify high-risk changes (core functionality, public APIs)
-- Flag changes that need careful testing
-- Note any assumptions being made
-
-### Phase 4: Solution Design
-
-**4.1 Create Consolidation Plan**
-
-For each opportunity, design a solution that:
-
-**Consolidation:**
-- Merge duplicate code into shared utilities
-- Create unified interfaces for similar functionality
-- Extract common patterns into reusable helpers
-- Unify configuration structures
-
-**Simplification:**
-- Refactor complex logic into simpler, clearer code
-- Remove unnecessary abstractions
-- Simplify conditionals and control flow
-- Make code more readable and maintainable
-
-**Abstraction:**
-- Create common interfaces/types for similar APIs
-- Extract shared logic into utilities
-- Unify error handling patterns
-- Standardize configuration patterns
-
-**Cleanup:**
-- Remove deprecated code completely (don't comment out)
-- Delete legacy implementations
-- Remove fallback code paths
-- Fix hacks with proper solutions
-- Delete unused code, imports, exports
-- Remove ALL unused imports and dependencies
-
-**File Splitting:**
-- Split files >500 lines into smaller, logically clustered files
-- Extract related functions/classes into separate modules
-- Group code by single responsibility/concern
-- Maintain clean import/export structure
-- Preserve all functionality while improving organization
-
-**Function Decomposition:**
-- Split large/complex functions (>50-100 lines) into smaller functions
-- Extract logical blocks into focused, single-responsibility functions
-- Each function should do ONE thing well
-- Use clear, descriptive function names
-- Maintain same behavior with improved readability
-
-**KISS & DRY Application:**
-- Simplify overly complex solutions (KISS)
-- Extract repeated patterns into reusable utilities (DRY)
-- Remove unnecessary abstractions
-- Prefer simple, straightforward code over clever solutions
-- Consolidate duplicate code into shared implementations
-
-**4.2 Implementation Strategy**
-
-Structure changes as **incremental, safe milestones**:
-
-```
-Milestone 1: Consolidate duplicate code
-  ├─ Create shared utilities
-  ├─ Update all call sites
-  ├─ Remove duplicates
-  └─ Verify feature parity ✅
-
-Milestone 2: Unify similar interfaces
-  ├─ Create common interface
-  ├─ Refactor implementations
-  ├─ Update all usages
-  └─ Verify feature parity ✅
-
-Milestone 3: Simplify complex logic
-  ├─ Refactor complex functions
-  ├─ Simplify conditionals
-  ├─ Improve readability
-  └─ Verify feature parity ✅
-
-Milestone 4: Clean up legacy code and unused imports
-  ├─ Remove deprecated code
-  ├─ Delete fallback paths
-  ├─ Fix architectural hacks
-  ├─ Remove unused code
-  ├─ Remove ALL unused imports and dependencies
-  ├─ Remove ALL TypeScript code (files, types, configs, dependencies)
-  └─ Verify feature parity ✅
-
-Milestone 4.5: Split large files and decompose functions
-  ├─ Identify files >500 lines
-  ├─ Split files into logical clusters (by responsibility/concern)
-  ├─ Extract related functions/classes into separate modules
-  ├─ Identify large/complex functions (>50-100 lines)
-  ├─ Decompose functions into focused, single-responsibility functions
-  ├─ Update all imports/exports
-  ├─ Apply KISS & DRY principles throughout
-  └─ Verify feature parity ✅
-
-Milestone 5: Security audit and fixes
-  ├─ Identify security vulnerabilities
-  ├─ Fix critical security issues
-  ├─ Add missing security controls
-  ├─ Update insecure dependencies
-  └─ Verify feature parity ✅
-
-Milestone 6: MaiaScript & execution engine type safety
-  ├─ Add TypeScript types for MaiaScript expressions (DSL operations)
-  ├─ Create JSON schemas for all MaiaScript expression types
-  ├─ Add input sanitization for user/AI-generated JSON configs
-  ├─ Add runtime validation at engine boundaries:
-  │  ├─ Config loading (actor, view, state, tool configs)
-  │  ├─ Engine payloads (ViewEngine, StateEngine, ToolEngine, ActorEngine)
-  │  ├─ MaiaScript evaluation (expression validation before evaluation)
-  │  └─ HTML rendering (ViewEngine HTML sanitization)
-  ├─ Type all engine classes and payloads
-  ├─ Remove unsafe type assertions (`as any`, `@ts-ignore`)
-  ├─ Ensure 100% type coverage for MaiaScript DSL and engines
-  └─ Verify feature parity ✅
-```
-
-**4.3 Safety Measures**
-
-- **Incremental Changes**: Make changes in small, testable increments
-- **Preserve APIs**: Keep public APIs unchanged (or document breaking changes)
-- **Maintain Behavior**: Ensure output/behavior remains identical
-- **Test After Each Milestone**: Verify functionality after each change
-- **Document Changes**: Explain what was consolidated and why
-
-## Output Format
-
-When analyzing code, provide:
-
-### Analysis Summary
-
-```markdown
-## Analysis Summary
-
-### Files Analyzed
-- [List of files/folders analyzed]
-
-### Key Findings
-- **Duplication**: [X] duplicate code blocks found
-- **Similar Interfaces**: [Y] interfaces that could be unified
-- **Complexity**: [Z] functions that could be simplified
-- **Large Files**: [L] files >500 lines that should be split
-- **Large Functions**: [F] functions >50-100 lines that should be decomposed
-- **Unused Imports**: [U] unused imports/dependencies found
-- **KISS Violations**: [K] overly complex solutions that can be simplified
-- **DRY Violations**: [D] repeated code patterns that can be extracted
-- **Legacy Code**: [W] deprecated/legacy patterns found
-- **Hacks**: [V] architectural hacks/workarounds found
-- **TypeScript Code**: [T] TypeScript files/configs/dependencies found (REMOVE ALL - project is JavaScript-only)
-
-### Consolidation Opportunities
-1. [Description of opportunity]
-   - Files affected: [list]
-   - Impact: [high/medium/low]
-   - Risk: [high/medium/low]
-
-2. [Next opportunity...]
-
-### Simplification Opportunities
-1. [Description of opportunity]
-   - Files affected: [list]
-   - Impact: [high/medium/low]
-   - Risk: [high/medium/low]
-
-### Cleanup Opportunities
-1. [Description of opportunity]
-   - Files affected: [list]
-   - Impact: [high/medium/low]
-   - Risk: [high/medium/low]
-
-### TypeScript Removal Opportunities
-1. [Description of TypeScript code/file to remove]
-   - Files affected: [list of .ts/.tsx files]
-   - TypeScript features: [types, interfaces, configs, dependencies]
-   - Conversion needed: [convert to JS/delete]
-   - Impact: [high/medium/low]
-   - Risk: [high/medium/low]
-
-### Security Issues
-1. [Description of security issue]
-   - Files affected: [list]
-   - Severity: [critical/high/medium/low]
-   - Risk: [high/medium/low]
-   - Fix priority: [immediate/high/medium/low]
-
-### MaiaScript & Engine Type Safety Gaps
-1. [Description of MaiaScript/engine type/validation gap]
-   - Files affected: [list]
-   - Engine: [ViewEngine/StateEngine/ToolEngine/ActorEngine/MaiaScriptEvaluator]
-   - Impact: [high/medium/low]
-   - Risk: [high/medium/low]
-   - Security Risk: [critical/high/medium/low] (especially for user-generated configs)
-   - Type coverage: [current %] → [target: 100%]
-
-### File Splitting Opportunities
-1. [Description of large file to split]
-   - File: [path/to/large-file.js]
-   - Current size: [X] lines
-   - Logical clusters: [list of clusters to extract]
-   - Folder structure: [proposed folder if files belong together, e.g., `validation/`]
-   - New files: [list of proposed new files with folder structure]
-     - Example: `validation/validators.js`, `validation/transformers.js`, `validation/index.js`
-   - Impact: [high/medium/low]
-   - Risk: [high/medium/low]
-
-### Function Decomposition Opportunities
-1. [Description of large/complex function to decompose]
-   - File: [path/to/file.js]
-   - Function: [functionName]
-   - Current size/complexity: [X lines, Y cyclomatic complexity]
-   - Extraction points: [list of blocks to extract]
-   - New functions: [list of proposed new functions]
-   - Impact: [high/medium/low]
-   - Risk: [high/medium/low]
-
-### Unused Import Opportunities
-1. [Description of unused imports]
-   - File: [path/to/file.js]
-   - Unused imports: [list of unused imports]
-   - Unused dependencies: [list of unused packages]
-   - Impact: [high/medium/low]
-   - Risk: [low] (safe to remove)
-
-### KISS & DRY Violations
-1. [Description of KISS violation - overly complex solution]
-   - Files affected: [list]
-   - Complexity: [description]
-   - Simplified approach: [description]
-   - Impact: [high/medium/low]
-   - Risk: [high/medium/low]
-
-2. [Description of DRY violation - repeated code]
-   - Files affected: [list]
-   - Duplication: [description]
-   - Consolidation approach: [description]
-   - Impact: [high/medium/low]
-   - Risk: [high/medium/low]
-```
-
-### Detailed Plan
-
-```markdown
-## Detailed Consolidation Plan
-
-### Milestone 1: [Name]
-**Goal**: [What this milestone achieves]
-
-**Changes**:
-- [ ] [Specific change 1]
-- [ ] [Specific change 2]
-
-**Files to Modify**:
-- `path/to/file1.js` - [what changes]
-- `path/to/file2.js` - [what changes]
-
-**New Files**:
-- `path/to/new-utility.js` - [purpose]
-
-**Files to Delete**:
-- `path/to/deprecated.js` - [why it's safe to delete]
-- `path/to/file.ts` - TypeScript file (convert to .js or delete)
-- `tsconfig.json` - TypeScript config (not used, delete)
-
-**Files to Split**:
-- `path/to/large-file.js` (X lines) → Split into folder `path/to/large-file/`:
-  - `path/to/large-file/utils.js` - [utility functions]
-  - `path/to/large-file/validators.js` - [validation logic]
-  - `path/to/large-file/transformers.js` - [transformation logic]
-  - `path/to/large-file/index.js` - [re-exports for backward compatibility]
-  - **Note**: Files clustered in shared folder since they belong logically together as one unit
-
-**Functions to Decompose**:
-- `path/to/file.js::largeFunction()` (X lines) → Split into:
-  - `validateInput()` - [validation logic]
-  - `transformData()` - [transformation logic]
-  - `handleErrors()` - [error handling]
-
-**Feature Parity Check**:
-- ✅ Feature X: [how it's preserved]
-- ✅ Feature Y: [how it's preserved]
-
-**Testing**:
-- [ ] Verify [specific functionality]
-- [ ] Test [specific scenario]
-
-**Risk Assessment**:
-- Risk level: [low/medium/high]
-- Mitigation: [how to reduce risk]
-```
+### Phase 1: First Principles Discovery
+
+**1.1 Question Existence**
+- **For every file**: "Should this file exist? What problem does it solve? Can we eliminate the problem?"
+- **For every function**: "Is this function necessary? Can we eliminate what it does?"
+- **For every dependency**: "Do we need this dependency? Can we eliminate what it provides?"
+- **For every abstraction**: "Is this abstraction necessary? Can we eliminate the complexity it hides?"
+
+**1.2 Identify Elimination Opportunities**
+- **Unnecessary features**: Features that solve problems that shouldn't exist
+- **Abstraction layers**: Layers that add complexity without clear benefit
+- **Indirection**: Code that exists only to route to other code
+- **Duplicate solutions**: Multiple ways of solving the same problem (keep one, delete others)
+- **Legacy code**: Code that's no longer needed (deprecated, replaced, unused)
+- **Over-engineering**: Complex solutions to simple problems
+- **Unnecessary dependencies**: Dependencies for features that shouldn't exist
+
+**1.3 Map to Irreducible Core**
+- **Core functionality**: What's the absolute minimum needed?
+- **Essential dependencies**: What dependencies are truly necessary?
+- **Minimal implementation**: What's the simplest possible code?
+- **Elimination targets**: What can we delete entirely?
+
+**1.4 Identify What Shouldn't Exist**
+- Code solving problems we created ourselves
+- Abstractions that hide simple operations
+- Layers that add indirection without value
+- Features that add complexity but minimal value
+- Dependencies for functionality we can implement simply
+- Patterns that exist "just in case"
+
+**1.5 Identify Universal Generic DRY Interface Opportunities**
+- **Between moving pieces**: Find similar interfaces/patterns across different modules/components
+- **Duplicate interfaces**: Multiple similar interfaces that could be unified into one universal interface
+- **Ad-hoc solutions**: Module-specific interfaces that could be generic
+- **Repeated patterns**: Patterns repeated across moving pieces that could be abstracted into universal interface
+- **Connection points**: Where different modules/components interact - opportunities for universal interfaces
+- **Goal**: Create ONE universal generic interface instead of many similar ones (DRY principle)
+
+### Phase 2: Radical Elimination
+
+**2.1 Delete Unnecessary Code**
+- **Delete entire files**: Files that solve problems that shouldn't exist
+- **Delete entire features**: Features that add complexity without clear value
+- **Delete abstraction layers**: Layers that add indirection without benefit
+- **Delete legacy code**: All deprecated, unused, replaced code
+- **Delete duplicate solutions**: Keep simplest, delete others
+- **Delete over-engineered solutions**: Replace with minimal implementations
+
+**2.2 Eliminate Dependencies**
+- **Remove unnecessary packages**: Dependencies for features we're eliminating
+- **Replace complex dependencies**: Replace with minimal implementations
+- **Eliminate dependency chains**: Remove dependencies that depend on other dependencies
+- **Consolidate similar dependencies**: Use one instead of many
+
+**2.3 Consolidate to Minimal Implementation**
+- **Merge similar code**: Keep one minimal implementation, delete others
+- **Unify interfaces**: Single simple interface instead of multiple
+- **Simplify data structures**: Minimal structures, remove unnecessary fields
+- **Reduce parameters**: Fewer parameters, simpler signatures
+- **Flatten hierarchies**: Remove unnecessary inheritance/abstraction layers
+
+**2.4 Create Universal Generic DRY Interfaces**
+- **Identify common patterns**: Find similar interfaces/patterns across moving pieces
+- **Unify into universal interface**: Create ONE generic interface that works for all moving pieces
+- **Eliminate duplicate interfaces**: Delete module-specific interfaces, use universal one
+- **Connect moving pieces**: Use universal interfaces to connect different modules/components
+- **Keep it simple**: Universal interfaces should be minimal, not over-engineered
+- **DRY principle**: One universal interface eliminates duplication across all moving pieces
+
+**2.5 Remove Sophistication Layers (But Keep Universal Interfaces)**
+- **Delete ad-hoc abstraction layers**: Remove module-specific abstractions (use universal interfaces instead)
+- **Remove adapter layers**: Use direct implementations with universal interfaces
+- **Eliminate proxy layers**: Direct calls with universal interfaces
+- **Remove wrapper functions**: Direct function calls with universal interfaces
+- **Delete middleware chains**: Simplify to direct calls with universal interfaces
+- **Keep universal generic DRY interfaces**: These reduce code by eliminating duplication
+
+### Phase 3: Safety & Verification
+
+**CRITICAL RULES**:
+- ✅ **NEVER BREAK ANYTHING**: Always maintain functionality. Never break existing features.
+- ✅ **ALWAYS MIGRATE END-TO-END FULLSTACK**: 100% migration, no partial migrations, no backwards compatibility layers
+- ✅ **No backwards compatibility layers**: Never create hacky wrappers, shims, or compatibility code
+- ✅ **No legacy deprecation shims**: Delete old code completely, don't leave deprecation wrappers
+- ✅ **100% migration**: All call sites updated, all imports/exports updated, all functionality migrated
+
+**Before eliminating, verify:**
+- ✅ **Core functionality preserved**: Essential features still work identically
+- ✅ **No breaking changes**: Public APIs unchanged (or simplified but still functional)
+- ✅ **Dependencies resolved**: Removed dependencies don't break code
+- ✅ **Tests still pass**: Core functionality verified
+- ✅ **End-to-end migration complete**: All call sites updated, all imports/exports updated
+- ✅ **No legacy code remains**: All old implementations deleted (not commented out)
+- ✅ **No compatibility layers**: No backwards compatibility hacks/shims/wrappers
+
+**Elimination is safe if:**
+- Code is unused or deprecated AND fully replaced
+- Feature adds complexity without clear value AND can be removed without breaking functionality
+- Abstraction layer doesn't provide clear benefit AND can be removed with full migration
+- Dependency can be replaced with simple implementation AND all usages migrated
+- Problem can be eliminated entirely AND all dependent code migrated
+- **100% end-to-end fullstack migration is complete**
+
+## Implementation Strategy
+
+**CRITICAL**: Every milestone must follow these rules:
+- ✅ **NEVER BREAK ANYTHING**: Always maintain functionality
+- ✅ **ALWAYS MIGRATE END-TO-END FULLSTACK**: 100% migration, no partial migrations
+- ✅ **No backwards compatibility layers**: Never create wrappers, shims, or compatibility code
+- ✅ **No legacy deprecation shims**: Delete old code completely
+- ✅ **100% migration**: All call sites updated, all imports/exports updated
+
+### Milestone 1: Eliminate What Shouldn't Exist
+- **Question every file**: Should this exist? Delete if no.
+- **Delete unnecessary features**: Features that add complexity without value
+- **Remove abstraction layers**: Layers that add indirection without benefit
+- **Eliminate legacy code**: All deprecated, unused, replaced code
+- **Delete duplicate solutions**: Keep simplest, delete others
+- **Migrate end-to-end fullstack**: Update all call sites, imports/exports before deleting
+- **Verify no breaking changes**: All functionality still works identically
+- **Target**: Reduce code by 40-50% through elimination
+
+### Milestone 2: Eliminate Dependencies
+- **Remove unnecessary packages**: Dependencies for eliminated features
+- **Replace complex dependencies**: Minimal implementations instead
+- **Eliminate dependency chains**: Remove unnecessary chains
+- **Consolidate similar dependencies**: One instead of many
+- **Migrate end-to-end fullstack**: Update all imports/usages before removing dependencies
+- **Verify no breaking changes**: All functionality still works identically
+- **Target**: Reduce dependencies by 50-70%
+
+### Milestone 3: Create Universal Generic DRY Interfaces
+- **Identify common patterns**: Find similar interfaces across moving pieces
+- **Create universal interfaces**: ONE generic interface for all moving pieces (eliminates duplication)
+- **Unify module interfaces**: Replace module-specific interfaces with universal ones
+- **Connect moving pieces**: Use universal interfaces to connect different modules/components
+- **Eliminate duplicate interfaces**: Delete many similar interfaces, keep one universal
+- **Migrate end-to-end fullstack**: Update all call sites to use universal interfaces before deleting old ones
+- **Verify no breaking changes**: All functionality still works identically
+- **Target**: Reduce code by eliminating duplication through universal interfaces
+
+### Milestone 4: Consolidate to Minimal Implementation
+- **Merge similar code**: One minimal implementation
+- **Use universal interfaces**: All moving pieces use universal generic DRY interfaces
+- **Simplify data structures**: Minimal structures only
+- **Reduce parameters**: Simpler signatures
+- **Flatten hierarchies**: Remove unnecessary layers
+- **Migrate end-to-end fullstack**: Update all call sites before deleting old implementations
+- **Verify no breaking changes**: All functionality still works identically
+- **Target**: Reduce remaining code by 30-40%
+
+### Milestone 5: Remove Sophistication Layers (Keep Universal Interfaces)
+- **Delete ad-hoc abstraction layers**: Remove module-specific abstractions (use universal interfaces)
+- **Remove adapter layers**: Direct implementations with universal interfaces
+- **Eliminate proxy layers**: Direct calls with universal interfaces
+- **Remove wrapper functions**: Direct function calls with universal interfaces
+- **Delete middleware chains**: Simplify to direct calls with universal interfaces
+- **Keep universal generic DRY interfaces**: These reduce code, don't remove them
+- **Migrate end-to-end fullstack**: Update all call sites before deleting sophistication layers
+- **Verify no breaking changes**: All functionality still works identically
+- **Target**: Final reduction to 25% of original
+
+### Milestone 6: Security & Type Safety (Essential Only)
+- **Fix critical security issues**: Only essential security fixes
+- **Add minimal JSON schemas**: Only for MaiaScript/engines (essential validation)
+- **Remove TypeScript**: All TypeScript code (project is JavaScript-only)
+- **Target**: Maintain security with minimal code
 
 ## Implementation Guidelines
 
-### When Consolidating
+**CRITICAL RULES FOR ALL CHANGES**:
+- ✅ **NEVER BREAK ANYTHING**: Always maintain functionality. Never break existing features.
+- ✅ **ALWAYS MIGRATE END-TO-END FULLSTACK**: 100% migration, no partial migrations
+- ✅ **No backwards compatibility layers**: Never create wrappers, shims, or compatibility code
+- ✅ **No legacy deprecation shims**: Delete old code completely, don't leave deprecation wrappers
+- ✅ **100% migration before deletion**: Update all call sites, imports/exports before deleting code
+- ✅ **Verify functionality**: All features still work identically after changes
 
-**DO:**
-- ✅ Create shared utilities with clear, descriptive names
-- ✅ Use TypeScript types/interfaces for unified APIs
-- ✅ Update all call sites consistently
-- ✅ Remove duplicate code completely (don't leave commented)
-- ✅ Preserve exact behavior (same inputs → same outputs)
-- ✅ Document the consolidation in code comments
+### When Eliminating Code
 
-**DON'T:**
-- ❌ Create overly generic abstractions (keep it focused)
-- ❌ Break public APIs without documenting
-- ❌ Leave duplicate code "just in case"
-- ❌ Change behavior while consolidating
-- ❌ Create circular dependencies
+**DO**:
+- ✅ **Question existence first**: "Should this exist?" before "How to optimize?"
+- ✅ **Migrate end-to-end fullstack**: Update all call sites, imports/exports before deleting
+- ✅ **Verify no breaking changes**: All functionality still works identically
+- ✅ **Delete entire modules**: If they solve problems that shouldn't exist (after full migration)
+- ✅ **Eliminate features**: Features that add complexity without clear value (after full migration)
+- ✅ **Remove abstraction layers**: Layers that add indirection without benefit (after full migration)
+- ✅ **Delete legacy code**: All deprecated, unused, replaced code (after full migration)
+- ✅ **Consolidate duplicates**: Keep simplest, delete others (after full migration)
+- ✅ **Remove dependencies**: Dependencies for eliminated features (after full migration)
+- ✅ **Simplify to irreducible core**: Keep only absolute minimum (after full migration)
 
-### When Simplifying
+**DON'T**:
+- ❌ **Break functionality**: Never break existing features
+- ❌ **Partial migrations**: Never leave partial migrations or legacy wrappers
+- ❌ **Backwards compatibility layers**: Never create wrappers, shims, or compatibility code
+- ❌ **Legacy deprecation shims**: Never leave deprecation wrappers
+- ❌ **Delete before migrating**: Never delete code before updating all call sites
+- ❌ **Optimize before eliminating**: Don't optimize code that shouldn't exist
+- ❌ **Create new abstractions**: Don't add layers to "simplify"
+- ❌ **Refactor without eliminating**: Don't refactor code you should delete
+- ❌ **Keep "just in case"**: Don't keep code for hypothetical future needs
+- ❌ **Add sophistication layers**: Don't create new indirection
+- ❌ **Maintain unnecessary features**: Don't keep features that add complexity
 
-**DO:**
-- ✅ Break complex functions into smaller, focused functions
-- ✅ Use early returns to reduce nesting
-- ✅ Extract magic numbers/strings into constants
-- ✅ Use descriptive variable names
-- ✅ Remove unnecessary abstractions
-- ✅ Make code more readable, even if slightly longer
+### First Principles Checklist (Apply to Every Piece of Code)
 
-**DON'T:**
-- ❌ Over-optimize at the cost of readability
-- ❌ Remove necessary error handling
-- ❌ Simplify by removing important features
-- ❌ Make code shorter but harder to understand
+**Before touching any code, ask:**
+1. [ ] **Should this exist?** → If no, DELETE IT
+2. [ ] **What problem does it solve?** → If problem shouldn't exist, DELETE IT
+3. [ ] **Can we eliminate the problem?** → If yes, DELETE THE CODE
+4. [ ] **What's the irreducible minimum?** → Keep only that
+5. [ ] **Can we remove dependencies?** → If yes, REMOVE THEM
+6. [ ] **Are we optimizing the wrong thing?** → If yes, DELETE IT FIRST
 
-### When Cleaning Up
+### File Splitting (Only if Necessary)
 
-**DO:**
-- ✅ Delete deprecated code completely (not commented)
-- ✅ Remove unused imports/exports
-- ✅ Delete fallback code paths that are never reached
-- ✅ Fix hacks with proper solutions
-- ✅ Remove legacy compatibility layers
-- ✅ Clean up unused configuration
-- ✅ **Remove ALL unused imports**: Scan every file and remove imports that aren't used
-- ✅ **Remove unused dependencies**: Remove packages from package.json that aren't imported anywhere
-- ✅ **Remove ALL TypeScript code** (project uses JavaScript only):
-  - Delete `.ts`/`.tsx` files (convert to `.js` if needed)
-  - Delete `tsconfig.json` files
-  - Remove TypeScript types (convert to JSDoc if needed)
-  - Remove `typescript` package from dependencies
-  - Remove `@types/*` packages from devDependencies
-  - Remove TypeScript build scripts
-  - Delete `.d.ts` declaration files
+**Only split files if:**
+- File is truly too large (>1000 lines) AND
+- Splitting reduces overall complexity AND
+- Doesn't add new abstraction layers
 
-**DON'T:**
-- ❌ Comment out code "just in case"
-- ❌ Remove code without checking all usages
-- ❌ Delete code that's still referenced
-- ❌ Remove error handling that's still needed
-- ❌ Clean up code that's actively used
-- ❌ **Keep unused imports** - remove them completely
-- ❌ **Keep TypeScript files** - convert to JavaScript or delete
-- ❌ **Keep TypeScript dependencies** - remove from package.json
-- ❌ **Keep TypeScript configs** - delete tsconfig.json files
+**Otherwise**: Eliminate code from the file instead of splitting it.
 
-### When Splitting Large Files
+### Function Decomposition (Only if Necessary)
 
-**DO:**
-- ✅ **Split files >500 lines** into smaller, logically clustered files
-- ✅ **Group by responsibility**: Extract related functions/classes that share a single concern
-- ✅ **Cluster in shared folders**: If split files still belong logically together as one unit, place them in a shared folder:
-  - Example: `validation.helper.js` (600 lines) → `validation/validators.js`, `validation/transformers.js`, `validation/error-handlers.js`
-  - Example: `api-client.js` (800 lines) → `api-client/request.js`, `api-client/response.js`, `api-client/middleware.js`, `api-client/index.js`
-  - Keep related files together rather than scattering them across the codebase
-- ✅ **Create logical modules**: Group utilities, features, configs, types separately
-- ✅ **Use index files**: Create `index.js` in the folder to re-export public APIs (maintains backward compatibility)
-- ✅ **Maintain clean imports**: Update all import/export statements correctly
-- ✅ **Preserve functionality**: Ensure all code still works after splitting
-- ✅ **Use descriptive names**: New files should have clear, purpose-driven names
-- ✅ **Follow directory structure**: Place files in appropriate subdirectories (utils/, features/, config/, etc.)
-- ✅ **Update exports**: Create index files or update exports to maintain API compatibility
+**Only decompose functions if:**
+- Function is truly complex (>200 lines) AND
+- Decomposition reduces overall complexity AND
+- Doesn't add new abstraction layers
 
-**DON'T:**
-- ❌ Split files arbitrarily (must be logical clustering)
-- ❌ Scatter related files across different directories (cluster them in a shared folder)
-- ❌ Break circular dependencies by splitting (fix the dependency issue first)
-- ❌ Split files that are already well-organized (<500 lines)
-- ❌ Create too many tiny files (balance between size and organization)
-- ❌ Break public APIs when splitting (maintain export compatibility via index.js)
-- ❌ Split without updating imports (will break the code)
+**Otherwise**: Simplify the function by eliminating code instead of decomposing it.
 
-**File Splitting Strategy:**
-1. **Identify logical clusters** within the large file (by responsibility/concern)
-2. **Determine folder structure**: If split files belong together, create a shared folder (e.g., `validation/`, `api-client/`)
-3. **Create new files** for each logical cluster with descriptive names in the appropriate folder
-4. **Create index.js** in the folder to re-export public APIs (maintains backward compatibility)
-5. **Move code** to appropriate new files, maintaining functionality
-6. **Update imports/exports** in all affected files (use folder imports: `from './validation'` instead of `from './validation/validators'`)
-7. **Update original file** to import and re-export from folder (or remove if empty and replaced by folder)
-8. **Verify** all functionality still works
+### KISS & DRY (Applied Radically)
 
-**Example:**
+**KISS (Keep It Simple, Stupid)**:
+- **Eliminate complexity**: Don't optimize complex code, delete it
+- **Remove abstractions**: Don't abstract, eliminate the need
+- **Delete layers**: Don't add layers, remove them
+- **Simplify by elimination**: Less code is simpler code
+
+**DRY (Don't Repeat Yourself)**:
+- **Create universal generic DRY interfaces**: ONE interface for all moving pieces (eliminates duplication)
+- **Consolidate by elimination**: Delete duplicates, keep one minimal version
+- **Unify interfaces**: Replace many similar interfaces with one universal interface
+- **Connect moving pieces**: Use universal interfaces to connect different modules/components
+- **Eliminate duplicate patterns**: Extract common patterns into universal interfaces
+- **Don't abstract duplication**: Eliminate the duplication source through universal interfaces
+
+### Universal Generic DRY Interfaces
+
+**DO**:
+- ✅ **Create universal interfaces**: ONE generic interface that works for all moving pieces
+- ✅ **Eliminate duplicate interfaces**: Replace many similar interfaces with one universal interface
+- ✅ **Connect moving pieces**: Use universal interfaces to connect different modules/components
+- ✅ **Keep it simple**: Universal interfaces should be minimal and generic, not over-engineered
+- ✅ **Apply DRY principle**: One universal interface eliminates duplication across all moving pieces
+- ✅ **Identify common patterns**: Find similar interfaces/patterns across moving pieces and unify them
+
+**DON'T**:
+- ❌ **Create ad-hoc interfaces**: Don't create module-specific interfaces when a universal one would work
+- ❌ **Over-engineer interfaces**: Keep universal interfaces simple and minimal
+- ❌ **Create unnecessary abstraction layers**: Universal interfaces should reduce code, not add layers
+- ❌ **Module-specific solutions**: Use universal interfaces instead of module-specific ones
+
+**Universal Interface Criteria**:
+- **Works across all moving pieces**: Not specific to one module/component
+- **Eliminates duplication**: Replaces many similar interfaces with one
+- **Simple and minimal**: Not over-engineered or complex
+- **Connects modules**: Enables communication between different moving pieces
+- **Generic, not specific**: Can be used in multiple contexts
+
+**Example**:
 ```javascript
-// Before: validation.helper.js (600 lines)
-export function validateEmail() { ... }
-export function validatePhone() { ... }
-export function transformData() { ... }
-export function handleErrors() { ... }
+// ❌ Bad: Many similar interfaces (duplication)
+// module1/interface.js
+export function processModule1(data) { ... }
 
-// After: validation/ folder structure
-// validation/validators.js
-export function validateEmail() { ... }
-export function validatePhone() { ... }
+// module2/interface.js  
+export function processModule2(data) { ... }
 
-// validation/transformers.js
-export function transformData() { ... }
+// module3/interface.js
+export function processModule3(data) { ... }
 
-// validation/error-handlers.js
-export function handleErrors() { ... }
+// ✅ Good: ONE universal generic DRY interface
+// universal/processor.js
+export function process(data, config) { ... } // Works for all modules
 
-// validation/index.js (re-exports for backward compatibility)
-export * from './validators.js';
-export * from './transformers.js';
-export * from './error-handlers.js';
-
-// Other files can still import the same way:
-import { validateEmail, transformData } from './validation';
+// All modules use the same universal interface
+import { process } from './universal/processor.js';
 ```
 
-### When Decomposing Functions
+### Security & Type Safety (Essential Only)
 
-**DO:**
-- ✅ **Split large functions** (>50-100 lines) into smaller, focused functions
-- ✅ **Extract by responsibility**: Each function should do ONE thing well
-- ✅ **Use clear names**: Extracted functions should have descriptive, single-purpose names
-- ✅ **Extract logical blocks**: Validation, transformation, error handling, calculations
-- ✅ **Maintain behavior**: Ensure decomposed functions produce same results
-- ✅ **Reduce complexity**: Lower cyclomatic complexity by extracting conditionals/loops
-- ✅ **Improve readability**: Code should be easier to understand after decomposition
-- ✅ **Create pure functions**: Extract calculations/transformations into pure utility functions when possible
+**DO**:
+- Fix critical security vulnerabilities (essential)
+- Add minimal JSON schemas for MaiaScript/engines (essential validation only)
+- Validate user input at boundaries (essential)
+- Remove TypeScript (all TypeScript code)
 
-**DON'T:**
-- ❌ Over-decompose (don't create functions for every 2-3 lines)
-- ❌ Extract without clear purpose (each function should have a reason)
-- ❌ Break function behavior when decomposing (maintain exact same logic)
-- ❌ Create functions with unclear names (names should describe what they do)
-- ❌ Extract code that's only used once (unless it improves readability significantly)
-- ❌ Decompose functions that are already simple and clear
+**DON'T**:
+- Add unnecessary security layers
+- Over-validate with complex schemas
+- Create security abstractions that add complexity
 
-**Function Decomposition Strategy:**
-1. **Identify extraction points**: Validation, transformation, error handling, repeated patterns
-2. **Extract logical blocks** into separate functions with clear names
-3. **Update function calls** to use extracted functions
-4. **Verify behavior** remains identical
-5. **Improve readability** - code should be easier to understand
+## Output Format
 
-**Extraction Patterns:**
-- **Validation logic** → `validateX(input)` functions
-- **Data transformation** → `transformX(data)` functions
-- **Error handling** → `handleXError(error)` functions
-- **Repeated patterns** → extract to helper/utility functions
-- **Complex calculations** → extract to pure utility functions
-- **Nested conditionals** → extract to separate functions with early returns
+### Analysis Summary
+```markdown
+## Radical Elimination Analysis
 
-### When Applying KISS & DRY Principles
+### Current State
+- **Total lines**: [X] lines
+- **Target**: [X * 0.25] lines (25% reduction)
+- **Files analyzed**: [list]
 
-**KISS (Keep It Simple, Stupid):**
+### Elimination Opportunities
+1. **Shouldn't Exist**: [X] files/functions that shouldn't exist at all
+   - [List of files/functions to delete entirely]
+   - **Reduction**: [X] lines eliminated
 
-**DO:**
-- ✅ **Prefer simple solutions** over complex ones
-- ✅ **Remove unnecessary abstractions** that don't add value
-- ✅ **Simplify complex conditionals** with early returns or clearer logic
-- ✅ **Use straightforward code** instead of clever tricks
-- ✅ **Reduce indirection** - don't add layers unless necessary
-- ✅ **Make code readable** - simple code is easier to understand and maintain
+2. **Unnecessary Features**: [Y] features that add complexity without value
+   - [List of features to eliminate]
+   - **Reduction**: [Y] lines eliminated
 
-**DON'T:**
-- ❌ Over-engineer solutions (use simplest approach that works)
-- ❌ Add abstractions "just in case" (YAGNI - You Aren't Gonna Need It)
-- ❌ Use complex patterns when simple code would work
-- ❌ Optimize prematurely (keep it simple first, optimize if needed)
-- ❌ Add unnecessary indirection layers
+3. **Abstraction Layers**: [Z] layers that add indirection without benefit
+   - [List of layers to remove]
+   - **Reduction**: [Z] lines eliminated
 
-**DRY (Don't Repeat Yourself):**
+4. **Dependencies**: [D] unnecessary dependencies
+   - [List of dependencies to remove]
+   - **Reduction**: [D] lines eliminated
 
-**DO:**
-- ✅ **Extract duplicate code** into shared utilities
-- ✅ **Consolidate similar functions** into common implementations
-- ✅ **Create reusable helpers** for repeated patterns
-- ✅ **Use configuration** instead of hardcoding repeated values
-- ✅ **Share common logic** across similar functions
-- ✅ **Create utilities** for repeated calculations/transformations
+5. **Universal Generic DRY Interfaces**: [U] opportunities to create universal interfaces
+   - [List of duplicate interfaces that could be unified]
+   - [List of moving pieces that could use universal interfaces]
+   - **Reduction**: [U] lines eliminated through universal interfaces
 
-**DON'T:**
-- ❌ Copy-paste code (extract to shared function instead)
-- ❌ Repeat similar logic in multiple places (consolidate)
-- ❌ Duplicate configuration (use shared config)
-- ❌ Create duplicate implementations (unify them)
-- ❌ Repeat validation/transformation logic (extract to utilities)
+6. **Consolidation**: [C] opportunities to consolidate
+   - [List of consolidations]
+   - **Reduction**: [C] lines eliminated
 
-**KISS & DRY Balance:**
-- **KISS first**: Prefer simple, straightforward code
-- **DRY when it helps**: Extract duplication when it improves maintainability
-- **Don't over-abstract**: Don't create complex abstractions just to avoid duplication
-- **Find the sweet spot**: Simple code that avoids unnecessary repetition
+### Projected Reduction
+- **Current**: [X] lines
+- **After elimination**: [X * 0.25] lines (25% target)
+- **Elimination**: [X * 0.75] lines to delete
+```
 
-### When Abstracting/Unifying
+### Detailed Elimination Plan
+```markdown
+## Radical Elimination Plan
 
-**DO:**
-- ✅ Create clear, well-typed interfaces
-- ✅ Use generics when appropriate for type safety
-- ✅ Document the unified interface clearly
-- ✅ Ensure all implementations follow the interface
-- ✅ Keep abstractions focused and purposeful
+### Milestone 1: Eliminate What Shouldn't Exist
+**Goal**: Delete [X] lines of code that shouldn't exist
 
-**DON'T:**
-- ❌ Create overly generic abstractions
-- ❌ Force unrelated code into the same interface
-- ❌ Add unnecessary indirection layers
-- ❌ Break type safety with `any` or `@ts-ignore`
+**Files to Delete Entirely**:
+- `path/to/unnecessary-file.js` - [Why it shouldn't exist]
+- `path/to/legacy-feature.js` - [Why it shouldn't exist]
 
-### When Auditing Security
+**Features to Eliminate**:
+- Feature X - [Why it adds complexity without value]
+- Feature Y - [Why it shouldn't exist]
 
-**DO:**
-- ✅ Scan for OWASP Top 10 vulnerabilities
-- ✅ Check input validation at all boundaries
-- ✅ Verify authentication/authorization checks
-- ✅ Review sensitive data handling (secrets, PII)
-- ✅ Check for insecure dependencies (npm audit, etc.)
-- ✅ Verify secure communication (HTTPS, TLS)
-- ✅ Review error handling (don't leak sensitive info)
-- ✅ Check logging (no secrets in logs)
-- ✅ Verify rate limiting on public APIs
-- ✅ Review file system access and path validation
+**Abstraction Layers to Remove**:
+- Layer X - [Why it adds indirection without benefit]
 
-**DON'T:**
-- ❌ Ignore security warnings or deprecations
-- ❌ Leave hardcoded secrets or credentials
-- ❌ Skip input validation "for performance"
-- ❌ Expose sensitive data in error messages
-- ❌ Use weak cryptography or hashing
-- ❌ Trust user input without validation
-- ❌ Skip security updates for dependencies
+**Projected Reduction**: [X] lines → [Y] lines ([Z]% reduction)
 
-**Security Checklist:**
-- [ ] All user input validated and sanitized
-- [ ] No SQL injection vulnerabilities
-- [ ] No XSS vulnerabilities (output escaped)
-- [ ] CSRF protection in place
-- [ ] Authentication required for protected routes
-- [ ] Authorization checks at every permission boundary
-- [ ] No secrets in code or logs
-- [ ] Dependencies up-to-date (no known CVEs)
-- [ ] HTTPS/TLS configured correctly
-- [ ] Rate limiting on public APIs
-- [ ] Secure error handling (no info leakage)
-- [ ] File paths validated (no path traversal)
-- [ ] Commands sanitized (no command injection)
+### Milestone 2: Eliminate Dependencies
+**Goal**: Remove [X] unnecessary dependencies
 
-**MaiaScript & Engine Security Checklist (CRITICAL):**
-- [ ] **MaiaScript Expression Validation**: All expressions validated before evaluation
-- [ ] **Input Sanitization**: User/AI-generated JSON configs sanitized before loading
-- [ ] **HTML Sanitization**: ViewEngine HTML rendering sanitized (prevent XSS)
-- [ ] **Path Validation**: Path resolution in `$context`/`$item` validated and sanitized
-- [ ] **Expression Limits**: Depth/recursion limits on nested MaiaScript expressions
-- [ ] **Config Validation**: All JSON configs validated with schemas before execution
-- [ ] **Engine Payload Validation**: All payloads validated before engine processing
-- [ ] **Tool Execution Safety**: Tool payloads validated before execution
-- [ ] **Actor Message Validation**: Actor messages validated before processing
-- [ ] **State Machine Validation**: State transitions validated before execution
-- [ ] **No Code Injection**: MaiaScript evaluation sandboxed, no `eval()` or `new Function()`
-- [ ] **Sandboxing Checks**: MaiaScriptEvaluator has proper sandboxing and whitelist checks
+**Dependencies to Remove**:
+- `package-name` - [Why it's unnecessary]
+- `another-package` - [Why it can be replaced with simple implementation]
 
-### When Ensuring MaiaScript & Engine Type Safety
+**Projected Reduction**: [X] dependencies → [Y] dependencies ([Z]% reduction)
 
-**CRITICAL: MaiaOS is a runtime IDE where users/AI generate JSON configs that execute directly in the host environment. Type safety and validation are SECURITY REQUIREMENTS, not just code quality.**
+### Milestone 3: Create Universal Generic DRY Interfaces
+**Goal**: Create universal interfaces that eliminate duplication across moving pieces
 
-**DO:**
-- ✅ **MaiaScript Expression JSON Schemas**: Create JSON schemas for MaiaScript expressions (validate before evaluation) - use JSON schemas, NOT TypeScript types
-- ✅ **Expression Type Definitions**: Define expression types using JSON schemas (project uses JavaScript, not TypeScript)
-- ✅ **Input Sanitization**: Sanitize ALL user/AI-generated JSON configs before loading/evaluation
-- ✅ **Engine Payload Validation**: Validate all payloads entering engines with JSON schemas (ViewEngine, StateEngine, ToolEngine, ActorEngine) - use JSON schemas, NOT TypeScript types
-- ✅ **Config Validation**: Validate ALL JSON configs (actor, view, state, tool) with JSON schemas before use
-- ✅ **Runtime Validation at Engine Boundaries**:
-  - **Config Loading**: Validate configs when loaded from IndexedDB
-  - **MaiaScript Evaluation**: Validate expressions before evaluation (prevent injection)
-  - **Engine Payloads**: Validate payloads before engine processing
-  - **HTML Rendering**: Sanitize HTML in ViewEngine (prevent XSS)
-  - **Tool Execution**: Validate tool payloads before execution
-  - **Actor Messages**: Validate message payloads before processing
-- ✅ **Path Resolution Safety**: Validate and sanitize paths in `$context` and `$item` operations
-- ✅ **Expression Depth Limits**: Add recursion/depth limits to prevent DoS via nested expressions
-- ✅ **Validation Instead of Types**: Use JSON schema validation instead of TypeScript types (project is JavaScript-only)
-- ✅ **Schema Matching**: Ensure TypeScript types match JSON schemas exactly
-- ✅ **Clear Validation Errors**: Provide clear error messages for validation failures
+**Universal Interface Opportunities**:
+- [Description] - Create ONE universal interface, delete [X] duplicate interfaces
+- [Moving pieces] - Connect these modules/components with universal interface
 
-**DON'T:**
-- ❌ Use TypeScript types (project is JavaScript-only - use JSON schemas instead)
-- ❌ Skip runtime validation (JSON schemas provide runtime validation - TypeScript types don't exist in this project)
-- ❌ Trust user/AI-generated JSON configs without validation
-- ❌ Render HTML without sanitization (ViewEngine XSS risk)
-- ❌ Evaluate MaiaScript expressions without input validation
-- ❌ Skip validation at engine boundaries (config loading, payload evaluation)
-- ❌ Allow unsafe path traversal in `$context`/`$item` operations
-- ❌ Add TypeScript files or dependencies (remove all TypeScript code)
+**Projected Reduction**: [X] duplicate interfaces → [1] universal interface ([Y] lines eliminated)
 
-**MaiaScript & Engine Type Safety Checklist (JavaScript + JSON Schemas Only):**
-- [ ] **MaiaScript Expression JSON Schemas**: JSON schemas for all DSL operations (`$if`, `$eq`, `$context`, `$item`, etc.)
-- [ ] **Expression Validation**: All MaiaScript expressions validated with JSON schemas before evaluation
-- [ ] **Input Sanitization**: User/AI-generated JSON configs sanitized before use
-- [ ] **ViewEngine Validation**: All view payloads validated with JSON schemas, HTML sanitized
-- [ ] **StateEngine Validation**: All state machine payloads validated with JSON schemas
-- [ ] **ToolEngine Validation**: All tool payloads validated with JSON schemas
-- [ ] **ActorEngine Validation**: All actor messages validated with JSON schemas
-- [ ] **MaiaScriptEvaluator Safety**: Core evaluator has proper validation and sandboxing (no TypeScript types needed)
-- [ ] **Config Validation**: All configs (actor, view, state, tool) validated with JSON schemas
-- [ ] **Runtime Validation**: Validation at all engine boundaries (config loading, evaluation, rendering)
-- [ ] **Path Safety**: Path resolution in `$context`/`$item` validated and sanitized
-- [ ] **Expression Limits**: Depth/recursion limits on nested MaiaScript expressions
-- [ ] **HTML Sanitization**: ViewEngine HTML rendering sanitized (prevent XSS)
-- [ ] **No TypeScript**: No TypeScript files, types, configs, or dependencies (project is JavaScript-only)
-- [ ] **JSON Schema Coverage**: 100% JSON schema coverage for MaiaScript DSL and all engines
-- [ ] **No Type Assertions**: No TypeScript syntax (`as any`, `@ts-ignore`) in code
+### Milestone 4: Consolidate to Minimal
+**Goal**: Consolidate [X] similar implementations to one minimal version
+
+**Consolidations**:
+- [Description] - Keep minimal, delete others
+
+**Projected Reduction**: [X] lines → [Y] lines ([Z]% reduction)
+
+### Final Target
+- **Original**: [X] lines
+- **Target**: [X * 0.25] lines (25%)
+- **Total Elimination**: [X * 0.75] lines
+```
 
 ## Verification Checklist
 
-Before finalizing any changes, verify:
-
-- [ ] **Feature Parity**: All features work identically
-- [ ] **No Breaking Changes**: Public APIs unchanged (or documented)
-- [ ] **No Dead Code**: All code paths are reachable
-- [ ] **No Duplicates**: Duplicate code has been consolidated (DRY principle applied)
-- [ ] **No Large Files**: All files >500 lines have been split into logical clusters
-- [ ] **No Large Functions**: All functions >50-100 lines have been decomposed
-- [ ] **No Unused Imports**: All unused imports and dependencies removed
-- [ ] **KISS Applied**: Code is simple and straightforward (no over-engineering)
-- [ ] **DRY Applied**: No repeated code patterns (consolidated into utilities)
-- [ ] **No Legacy Code**: Deprecated code has been removed
-- [ ] **No Hacks**: Architectural hacks have been properly fixed
-- [ ] **No TypeScript**: ALL TypeScript files, types, configs, and dependencies removed (project is JavaScript-only)
-- [ ] **MaiaScript JSON Schemas**: All DSL operations have JSON schemas, expressions validated
-- [ ] **Engine Validation**: All engines (ViewEngine, StateEngine, ToolEngine, ActorEngine) validate payloads with JSON schemas
-- [ ] **Config Validation**: All JSON configs (actor, view, state, tool) validated with schemas
-- [ ] **Input Sanitization**: User/AI-generated JSON configs sanitized before use
-- [ ] **Runtime Validation**: Validation at all engine boundaries (config loading, evaluation, rendering)
-- [ ] **HTML Sanitization**: ViewEngine HTML rendering sanitized (prevent XSS)
-- [ ] **Path Safety**: Path resolution in `$context`/`$item` validated and sanitized
-- [ ] **Expression Limits**: Depth/recursion limits on nested MaiaScript expressions
-- [ ] **No TypeScript**: No TypeScript files, types, configs, or dependencies (project is JavaScript-only)
-- [ ] **JSON Schema Coverage**: 100% JSON schema coverage for MaiaScript DSL and all engines
-- [ ] **Security**: No critical security vulnerabilities
-- [ ] **Input Validation**: All user input validated and sanitized
-- [ ] **Authentication**: Required for protected resources
-- [ ] **Authorization**: Permission checks at boundaries
-- [ ] **No Secrets**: No hardcoded secrets or credentials
-- [ ] **Dependencies**: All dependencies up-to-date (no known CVEs)
-- [ ] **Tests Pass**: All existing tests still pass
-- [ ] **Linter Clean**: No new linter errors introduced
-- [ ] **Documentation**: Changes are documented in code/comments
-
-## Example Workflow
-
-1. **User**: "@folder1 @folder2 analyze and consolidate"
-2. **Discovery**: Read all files, map architecture, find duplicates, identify large files/functions, find unused imports, scan security, audit types
-3. **Analysis**: Identify consolidation opportunities, file splitting needs, function decomposition needs, unused imports, KISS/DRY violations, security issues, type gaps, assess risks
-4. **Plan**: Create detailed milestone plan with safety checks (7 milestones):
-   - Milestone 1-3: Consolidate, unify, simplify
-   - Milestone 4: Clean up legacy code and unused imports
-   - Milestone 4.5: Split large files and decompose functions, apply KISS/DRY
-   - Milestone 5: Fix security vulnerabilities
-   - Milestone 6: Add MaiaScript & engine types, validation, input sanitization (100% coverage)
-5. **Implement**: Execute changes incrementally, verify after each milestone:
-   - Milestone 1-3: Consolidate, unify, simplify
-   - Milestone 4: Remove deprecated code, unused imports, TypeScript
-   - Milestone 4.5: Split large files, decompose functions, apply KISS/DRY principles
-   - Milestone 5: Fix security vulnerabilities
-   - Milestone 6: Add MaiaScript & engine types, validation, input sanitization
-6. **Verify**: Test all functionality, ensure feature parity
-7. **File Organization**: Verify all files <500 lines, functions <50-100 lines, no unused imports
-8. **KISS/DRY**: Verify code is simple and DRY (no unnecessary complexity or duplication)
-9. **Security**: Verify all security issues fixed, no vulnerabilities remain
-10. **MaiaScript Type Safety**: Verify 100% type coverage for DSL and engines, all configs validated, input sanitized
-11. **Document**: Update comments/docs to reflect changes
+Before finalizing:
+- [ ] **NEVER BROKE ANYTHING**: All functionality still works identically
+- [ ] **100% END-TO-END FULLSTACK MIGRATION**: All call sites updated, all imports/exports updated
+- [ ] **No backwards compatibility layers**: No wrappers, shims, or compatibility code created
+- [ ] **No legacy deprecation shims**: All old code deleted completely (not commented out)
+- [ ] **25% target met**: Code reduced to 25% of original lines
+- [ ] **Elimination complete**: All unnecessary code deleted (after full migration)
+- [ ] **Universal generic DRY interfaces**: ONE universal interface between all moving pieces (eliminates duplication)
+- [ ] **Dependencies reduced**: Unnecessary dependencies removed (after full migration)
+- [ ] **No ad-hoc sophistication layers**: No module-specific abstraction layers (use universal interfaces instead)
+- [ ] **Core functionality preserved**: Essential features still work identically
+- [ ] **First principles applied**: Questioned existence of every piece of code
+- [ ] **No optimization of wrong code**: Didn't optimize what should be deleted
+- [ ] **Security maintained**: Essential security fixes applied
+- [ ] **Type safety**: Essential JSON schemas for MaiaScript/engines
+- [ ] **No TypeScript**: All TypeScript code removed (after full migration)
+- [ ] **Tests pass**: Core functionality verified
 
 ## Key Principles
 
-1. **Safety First**: Never break functionality. Verify feature parity at every step.
-2. **Incremental**: Make small, testable changes. Don't try to fix everything at once.
-3. **Clear Intent**: Code should be easier to understand after changes.
-4. **No Regressions**: Maintain exact behavior (same inputs → same outputs).
-5. **Complete Cleanup**: Remove deprecated code completely, don't leave it commented.
-6. **Unified Patterns**: Similar functionality should use similar patterns.
-7. **File Size Limits**: Split files >500 lines into smaller, logically clustered files.
-8. **Function Size Limits**: Decompose functions >50-100 lines into focused, single-responsibility functions.
-9. **Remove Unused Code**: Remove ALL unused imports, exports, and dependencies.
-10. **KISS Principle**: Keep It Simple, Stupid - prefer simple solutions over complex ones.
-11. **DRY Principle**: Don't Repeat Yourself - extract duplicate code into shared utilities.
-12. **No TypeScript**: Remove ALL TypeScript code - project uses JavaScript only (convert .ts to .js or delete, remove types, configs, dependencies).
-13. **Security First**: Fix security vulnerabilities immediately, especially critical ones.
-14. **MaiaScript Type Safety**: All MaiaScript expressions and engines must be typed with JSON schemas (CRITICAL for user-generated configs) - use JSON schemas, NOT TypeScript types.
-15. **Validate Engine Boundaries**: All engine boundaries (config loading, MaiaScript evaluation, HTML rendering) must have runtime validation and input sanitization.
-16. **User-Generated Configs**: Never trust user/AI-generated JSON configs - always validate and sanitize before execution.
+1. **NEVER BREAK ANYTHING**: Always maintain functionality. Never break existing features.
+2. **ALWAYS MIGRATE END-TO-END FULLSTACK**: 100% migration, no partial migrations, no backwards compatibility layers.
+3. **First Principles Central**: Question existence before optimizing. Don't optimize what shouldn't exist.
+4. **Eliminate Before Optimize**: Delete unnecessary code, don't refactor it (after full migration).
+5. **Universal Generic DRY Interfaces**: Create ONE universal interface between all moving pieces (eliminates duplication, connects modules).
+6. **Resist Sophistication**: Don't create ad-hoc abstraction layers (use universal interfaces instead).
+7. **Radical Reduction**: Target 25% of current code through elimination (after full migration).
+8. **Reduce Dependencies**: Eliminate unnecessary dependencies, not just optimize them (after full migration).
+9. **Simplify Architecture**: Remove unnecessary patterns, layers, abstractions (but keep universal interfaces).
+10. **Question Every Line**: "Is this absolutely necessary?" If no, delete it (after full migration).
 
 ---
 
-**Remember**: The goal is **better code** (simpler, cleaner, more maintainable) while maintaining **100% feature parity**. When in doubt, prioritize safety and clarity over aggressive consolidation.
+**Remember**: 
+- ✅ **NEVER BREAK ANYTHING**: Always maintain functionality. Never break existing features.
+- ✅ **ALWAYS MIGRATE END-TO-END FULLSTACK**: 100% migration, no partial migrations, no backwards compatibility layers.
+- ✅ **No backwards compatibility layers**: Never create wrappers, shims, or compatibility code.
+- ✅ **No legacy deprecation shims**: Delete old code completely, don't leave deprecation wrappers.
+
+The goal is **radical reduction to 25%** through **elimination, not optimization**. Use first principles thinking: **Don't optimize what shouldn't exist in the first place.** Question the existence of every piece of code before touching it. **Always migrate end-to-end fullstack before deleting** - update all call sites, imports/exports, then delete. Eliminate unnecessary code, features, abstractions, layers, and dependencies. **Create universal generic DRY interfaces between all moving pieces** - ONE universal interface eliminates duplication and connects modules. Resist the urge to create ad-hoc sophistication layers. Keep only the irreducible core with universal interfaces connecting moving pieces.

@@ -5,7 +5,10 @@
   "inputPlaceholder": "What needs to be done?",
   "addButtonText": "Add Todo",
   "newTodoText": "",
-  "todos": [],
+  "todos": {
+    "schema": "@schema/data/todos",
+    "filter": null
+  },
   "todosTodo": [],
   "todosDone": [],
   "modalOpen": false,

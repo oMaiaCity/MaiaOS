@@ -8,8 +8,9 @@
  */
 
 import { createCoMap } from './oMap.js';
-import { getSharedValidationEngine } from '../schemas/validation-singleton.js';
-import { getMetaSchemaCoMapDefinition } from '../schemas/meta-schema.js';
+import { getValidationEngine } from '@MaiaOS/schemata/validation.helper';
+import { getAllSchemas } from '../schemas/registry.js';
+import { getMetaSchemaCoMapDefinition } from '@MaiaOS/schemata/meta-schema';
 
 /**
  * Create a schema CoMap with definition property
@@ -65,8 +66,7 @@ export async function createSchemaCoMap(group, schemaDefinition, metaSchemaCoId)
   const hasCoTypeRef = schemaCoMapData.definition.allOf?.some(
     ref => ref.$ref && (ref.$ref.includes('#/$defs/comap') || 
                         ref.$ref.includes('#/$defs/colist') || 
-                        ref.$ref.includes('#/$defs/costream') || 
-                        ref.$ref.includes('#/$defs/cotext'))
+                        ref.$ref.includes('#/$defs/costream'))
   );
   
   if (!hasCoTypeRef && !schemaCoMapData.definition.type) {
@@ -145,7 +145,9 @@ export async function createMetaSchemaCoMap(group) {
  * @returns {Promise<Object>} Validation result { valid: boolean, errors: Array }
  */
 export async function validateSchemaDefinition(schemaDefinition, metaSchemaCoId) {
-  const validationEngine = await getSharedValidationEngine();
+  const validationEngine = await getValidationEngine({
+    registrySchemas: getAllSchemas()
+  });
   
   // Load meta schema if not already loaded
   const metaSchemaDef = getMetaSchemaCoMapDefinition(metaSchemaCoId);
@@ -180,8 +182,7 @@ export async function validateSchemaDefinition(schemaDefinition, metaSchemaCoId)
     const hasCoTypeRef = schemaDefinition.definition.allOf?.some(
       ref => ref.$ref && (ref.$ref.includes('#/$defs/comap') || 
                           ref.$ref.includes('#/$defs/colist') || 
-                          ref.$ref.includes('#/$defs/costream') || 
-                          ref.$ref.includes('#/$defs/cotext'))
+                          ref.$ref.includes('#/$defs/costream'))
     );
     
     if (!hasCoTypeRef && !schemaDefinition.definition.type) {

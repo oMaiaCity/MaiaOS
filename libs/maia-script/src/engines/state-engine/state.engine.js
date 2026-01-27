@@ -26,7 +26,7 @@ export class StateEngine {
     this.actorEngine = actorEngine; // ActorEngine reference (set by kernel after ActorEngine creation)
     this.machines = new Map(); // machineId → machine instance
     this.dbEngine = null; // Database operation engine (set by kernel)
-    this.stateSubscriptions = new Map(); // stateRef -> unsubscribe function
+    this.stateSubscriptions = new Map(); // stateRef -> { unsubscribe, refCount }
   }
 
   /**
@@ -36,12 +36,37 @@ export class StateEngine {
    * @returns {Promise<Object>} The parsed state definition
    */
   async loadStateDef(stateRef, onUpdate = null) {
+    // Check if subscription already exists in new format
+    const existingSubscription = this.stateSubscriptions?.get(stateRef);
+    if (existingSubscription && existingSubscription.unsubscribe) {
+      // Subscription already exists - reuse it
+      // Read config from store and set up onUpdate callback if provided
+      const stateSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: stateRef });
+      const store = await this.dbEngine.execute({
+        op: 'read',
+        schema: stateSchemaCoId,
+        key: stateRef
+      });
+      const stateDef = store.value;
+      
+      // Set up onUpdate callback if provided (subscribe to store for FUTURE updates only)
+      // NOTE: Do NOT call onUpdate immediately here - collectEngineSubscription handles that
+      // to ensure consistent behavior between new and reused subscriptions
+      if (onUpdate) {
+        // Subscribe for future updates only (skipInitial prevents immediate callback)
+        store.subscribe((updatedStateDef) => {
+          onUpdate(updatedStateDef);
+        }, { skipInitial: true });
+      }
+      
+      return stateDef;
+    }
+    
     // Extract schema co-id from state CoValue's headerMeta.$schema using fromCoValue pattern
     const stateSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: stateRef });
     
-    // Always set up subscription for reactivity - NO CACHE (pass null)
+    // Create new subscription - NO CACHE (pass null)
     // State machines must be 100% reactive, always reading from reactive store
-    // Even if subscription already exists, we still call subscribeConfig to get current value from store
     const { config: stateDef, unsubscribe } = await subscribeConfig(
       this.dbEngine,
       stateSchemaCoId,
@@ -56,8 +81,8 @@ export class StateEngine {
       null // NO CACHE - always read from reactive store
     );
     
-    // Store unsubscribe function (overwrites previous if exists - that's okay)
-    this.stateSubscriptions.set(stateRef, unsubscribe);
+    // Store unsubscribe function with ref count tracking
+    this.stateSubscriptions.set(stateRef, { unsubscribe, refCount: 0 });
     
     return stateDef;
   }
@@ -196,10 +221,12 @@ export class StateEngine {
     // - Entering "dragging" state (DOM recreation would cancel drag)
     // - This is the initial creation transition (initial render will happen after state machine is created)
     // - Transitioning from "init" to "idle" (initialization transition, initial render will happen after)
+    // - Actor hasn't completed initial render yet (prevents premature rerenders during initialization)
     const stateChanged = previousState !== targetState;
     const isInitialCreation = machine._isInitialCreation === true;
     const isInitTransition = previousState === 'init' && targetState === 'idle';
-    const shouldRerender = stateChanged && targetState !== 'dragging' && !isInitialCreation && !isInitTransition;
+    const actorInitComplete = machine.actor._initialRenderComplete === true;
+    const shouldRerender = stateChanged && targetState !== 'dragging' && !isInitialCreation && !isInitTransition && actorInitComplete;
     
     if (machine.actor.actorEngine && shouldRerender) {
       await machine.actor.actorEngine.rerender(machine.actor.id);

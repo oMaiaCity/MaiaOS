@@ -2,7 +2,7 @@
  * Meta Schema - JSON Schema 2020-12 meta schema with embedded co-type $defs
  * 
  * This meta schema validates all other schemas in the system.
- * It includes embedded $defs for co-types (comap, colist, costream, cotext)
+ * It includes embedded $defs for co-types (comap, colist, costream)
  * and enforces that schema CoMaps are root type `co-map` with `definition` property.
  * 
  * The meta schema will self-reference via $schema once it's created as a CoValue.
@@ -17,7 +17,7 @@ import coTypesDefs from './co-types.defs.json';
  * 
  * This meta schema:
  * - Validates schema CoMaps (must be root type `co-map` with `definition` property)
- * - Includes embedded $defs for co-types (comap, colist, costream, cotext)
+ * - Includes embedded $defs for co-types (comap, colist, costream)
  * - Enforces that schema definitions use standard JSON Schema structure (objects/arrays)
  * - Will self-reference via $schema once created as CoValue
  * 

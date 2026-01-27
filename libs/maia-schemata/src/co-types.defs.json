@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://maia.city/schemas/co-types",
   "title": "Co-Type Definitions",
-  "description": "Custom $defs for CRDT primitives (comap, costream, cotext, colist)",
+  "description": "Custom $defs for CRDT primitives (comap, costream, colist)",
   "$defs": {
     "comap": {
       "description": "CoMap - CRDT-based collaborative map/object",
@@ -83,10 +83,6 @@
           }
         ]
       }
-    },
-    "co-text": {
-      "description": "CoText - CRDT-based plain text (leaf type, cannot compose other CoValues)",
-      "type": "string"
     },
     "colist": {
       "description": "CoList - CRDT-based collaborative list/array",

@@ -104,25 +104,51 @@ export function setSchemaResolver(resolver, dbEngine = null) {
 
 /**
  * Get or create the validation engine instance
- * @param {Function} schemaResolver - Optional schema resolver function (for dynamic $schema resolution)
+ * @param {Object|Function} optionsOrResolver - Options object or schema resolver function (for backward compatibility)
+ * @param {Function} [options.schemaResolver] - Schema resolver function (for dynamic $schema resolution)
+ * @param {Object} [options.registrySchemas] - Registry schemas map (ONLY for migrations/seeding - human-readable ID lookup)
  * @returns {Promise<ValidationEngine>} Validation engine instance
  */
-export async function getValidationEngine(schemaResolver = null) {
-  if (!validationEngine) {
-    validationEngine = new ValidationEngine();
+export async function getValidationEngine(optionsOrResolver = null) {
+  // Handle backward compatibility: if first param is a function, treat it as schemaResolver
+  let schemaResolver = null;
+  let registrySchemas = null;
+  
+  if (typeof optionsOrResolver === 'function') {
+    // Backward compatibility: function passed directly
+    schemaResolver = optionsOrResolver;
+  } else if (optionsOrResolver && typeof optionsOrResolver === 'object') {
+    // Options object
+    schemaResolver = optionsOrResolver.schemaResolver || null;
+    registrySchemas = optionsOrResolver.registrySchemas || null;
   }
   
-  // Set schema resolver if provided (takes precedence)
+  // If no options provided, check for pending resolver
+  if (!schemaResolver && pendingSchemaResolver) {
+    schemaResolver = pendingSchemaResolver;
+  }
+  
+  // Create new engine if needed (with registry schemas if provided)
+  if (!validationEngine) {
+    validationEngine = new ValidationEngine({ registrySchemas });
+  } else if (registrySchemas && !validationEngine.registrySchemas) {
+    // If registry schemas provided but engine already exists without them, create new one
+    // This handles the case where engine was created without registry schemas
+    validationEngine = new ValidationEngine({ registrySchemas });
+  }
+  
+  // Set schema resolver if provided
   if (schemaResolver) {
     validationEngine.setSchemaResolver(schemaResolver);
     pendingSchemaResolver = schemaResolver; // Also store for future reference
-  } else if (pendingSchemaResolver) {
-    // Use pending resolver if no new one provided
+  } else if (pendingSchemaResolver && !validationEngine.schemaResolver) {
+    // Use pending resolver if no new one provided and engine doesn't have one
     validationEngine.setSchemaResolver(pendingSchemaResolver);
   }
   
   // Initialize AJV (metaschema is registered during initialization via _loadMetaSchema)
-  // No pre-loading - schemas are loaded dynamically on-demand from database via operations API
+  // Co-types are ALWAYS loaded during initialization (required, not optional)
+  // Registry schemas are registered if provided (migrations/seeding only)
   await validationEngine.initialize();
   
   return validationEngine;

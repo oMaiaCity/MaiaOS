@@ -17,8 +17,11 @@ export function handleViewUpdate(subscriptionEngine, actorId, newViewDef) {
   // Update actor's view definition
   actor.viewDef = newViewDef;
 
-  // Trigger re-render
-  subscriptionEngine._scheduleRerender(actorId);
+  // Only trigger re-render after initial render is complete
+  // This prevents premature rerenders during actor initialization
+  if (actor._initialRenderComplete) {
+    subscriptionEngine._scheduleRerender(actorId);
+  }
 }
 
 /**
@@ -38,8 +41,11 @@ export async function handleStyleUpdate(subscriptionEngine, actorId, newStyleDef
     // Update shadow root stylesheets
     actor.shadowRoot.adoptedStyleSheets = styleSheets;
     
-    // Trigger re-render (styles changed, need to re-render to apply)
-    subscriptionEngine._scheduleRerender(actorId);
+    // Only trigger re-render after initial render is complete
+    // This prevents premature rerenders during actor initialization
+    if (actor._initialRenderComplete) {
+      subscriptionEngine._scheduleRerender(actorId);
+    }
   } catch (error) {
     console.error(`[SubscriptionEngine] Failed to update styles for ${actorId}:`, error);
   }
@@ -64,8 +70,11 @@ export async function handleStateUpdate(subscriptionEngine, actorId, newStateDef
     // Create new machine
     actor.machine = await subscriptionEngine.stateEngine.createMachine(newStateDef, actor);
 
-    // Trigger re-render (state machine changes may affect UI)
-    subscriptionEngine._scheduleRerender(actorId);
+    // Only trigger re-render after initial render is complete
+    // This prevents premature rerenders during actor initialization
+    if (actor._initialRenderComplete) {
+      subscriptionEngine._scheduleRerender(actorId);
+    }
   } catch (error) {
     console.error(`[SubscriptionEngine] Failed to update state machine for ${actorId}:`, error);
   }
@@ -114,11 +123,15 @@ export async function handleContextUpdate(subscriptionEngine, actorId, newContex
   // Merge contexts (new values override existing)
   actor.context = { ...existingContext, ...newContext };
 
-  // Re-subscribe to any new query objects in the updated context
-  // This handles new query objects added to context
+  // Re-subscribe to any NEW query objects in the updated context
+  // subscribeToContext() now has deduplication check, so it will only subscribe to new queries
+  // This prevents duplicate subscriptions when context updates
   const { subscribeToContext } = await import('./data-subscriptions.js');
   await subscribeToContext(subscriptionEngine, actor);
 
-  // Trigger re-render
-  subscriptionEngine._scheduleRerender(actorId);
+  // Only trigger re-render after initial render is complete
+  // This prevents premature rerenders during actor initialization
+  if (actor._initialRenderComplete) {
+    subscriptionEngine._scheduleRerender(actorId);
+  }
 }

@@ -363,9 +363,10 @@ export class ActorEngine {
   async _initializeActorState(actor, actorConfig) {
     const actorId = actor.id;
     
-    // Load state machine (if state is defined)
+    // Load state machine (if state is defined AND not already created by SubscriptionEngine)
+    // SubscriptionEngine.initialize() may have already created the machine via handleStateUpdate
     // IMPORTANT: Await to ensure entry actions (like subscriptions) complete before initial render
-    if (this.stateEngine && actorConfig.state) {
+    if (this.stateEngine && actorConfig.state && !actor.machine) {
       try {
         // Load state without subscription handler - SubscriptionEngine will add handler later
         const stateDef = await this.stateEngine.loadStateDef(actorConfig.state);
@@ -375,8 +376,9 @@ export class ActorEngine {
       }
     }
     
-    // Load and validate interface (if interface is defined)
-    if (actorConfig.interface) {
+    // Load and validate interface (if interface is defined AND not already loaded)
+    // SubscriptionEngine.initialize() may have already loaded the interface
+    if (actorConfig.interface && !actor.interface) {
       try {
         // Load interface without subscription handler - SubscriptionEngine will add handler later
         const interfaceDef = await this.loadInterface(actorConfig.interface);
@@ -529,6 +531,16 @@ export class ActorEngine {
     // Mark initial render as complete (queries that execute after this should trigger re-renders)
     actor._initialRenderComplete = true;
     
+    // CRITICAL FIX: Check if data arrived during initialization and trigger rerender
+    // This handles the case where subscription data loads after context was set but before render
+    if (actor._needsPostInitRerender) {
+      delete actor._needsPostInitRerender;
+      // Schedule rerender via subscription engine (batched)
+      if (this.subscriptionEngine) {
+        this.subscriptionEngine._scheduleRerender(actorId);
+      }
+    }
+    
     // Ensure message queue exists for this actor
     if (!this.messageQueues.has(actorId)) {
       this.messageQueues.set(actorId, new MessageQueue(actorId, this));
@@ -575,7 +587,10 @@ export class ActorEngine {
     // When view switches (e.g., list → kanban), child actors are removed from DOM
     // but not destroyed, causing stores to accumulate in _storeSubscriptions
     const childActorElements = actor.shadowRoot.querySelectorAll('[data-actor-id]');
-    const childActorIds = Array.from(childActorElements).map(el => el.dataset.actorId).filter(Boolean);
+    const childActorIds = Array.from(childActorElements)
+      .map(el => el.dataset.actorId)
+      .filter(Boolean)
+      .filter(id => id !== actorId); // CRITICAL: Exclude self! (root element also has data-actor-id)
     
     if (childActorIds.length > 0) {
       console.log(`[ActorEngine] Destroying ${childActorIds.length} child actor(s) before rerender of ${actorId}`);

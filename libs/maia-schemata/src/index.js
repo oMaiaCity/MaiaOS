@@ -11,6 +11,18 @@ import { ValidationEngine } from './validation.engine.js';
 
 export { ValidationEngine };
 
+// Export validation helper functions
+export { getValidationEngine, validateAgainstSchema, validateAgainstSchemaOrThrow, setSchemaResolver } from './validation.helper.js';
+
+// Export meta schema functions
+export { getMetaSchemaDefinition, getMetaSchemaCoMapDefinition } from './meta-schema.js';
+
+// Export schema loader functions
+export { loadSchemaFromDB, loadSchemasFromAccount, getSchemaByCoId, getSchemaByName } from './schema-loader.js';
+
+// Export co-type definitions
+export { default as coTypesDefs } from './co-types.defs.json';
+
 // Export meta schema for seeding
 export function getMetaSchema() {
   return ValidationEngine.getMetaSchema();

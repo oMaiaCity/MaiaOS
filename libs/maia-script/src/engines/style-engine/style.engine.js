@@ -11,7 +11,7 @@ export class StyleEngine {
   constructor() {
     this.cache = new Map(); // Cache compiled stylesheets by ID
     this.dbEngine = null; // Database operation engine (set by kernel)
-    this.styleSubscriptions = new Map(); // coId -> unsubscribe function
+    this.styleSubscriptions = new Map(); // coId -> { unsubscribe, refCount }
   }
 
   /**
@@ -39,14 +39,36 @@ export class StyleEngine {
    * @returns {Promise<Object>} The parsed style definition
    */
   async loadStyle(coId, onUpdate = null) {
-    // Check if subscription already exists - if so, we need to re-subscribe with handler
-    // But for now, always set up subscription (style loading is fast)
-    // TODO: Optimize to reuse existing subscriptions
+    // Check if subscription already exists in new format
+    const existingSubscription = this.styleSubscriptions?.get(coId);
+    if (existingSubscription && existingSubscription.unsubscribe) {
+      // Subscription already exists - reuse it
+      // Read config from store and set up onUpdate callback if provided
+      const styleSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: coId });
+      const store = await this.dbEngine.execute({
+        op: 'read',
+        schema: styleSchemaCoId,
+        key: coId
+      });
+      const styleDef = store.value;
+      
+      // Set up onUpdate callback if provided (subscribe to store for FUTURE updates only)
+      // NOTE: Do NOT call onUpdate immediately here - collectEngineSubscription handles that
+      // to ensure consistent behavior between new and reused subscriptions
+      if (onUpdate) {
+        // Subscribe for future updates only (skipInitial prevents immediate callback)
+        store.subscribe((updatedStyle) => {
+          onUpdate(updatedStyle);
+        }, { skipInitial: true });
+      }
+      
+      return styleDef;
+    }
     
     // Extract schema co-id from style CoValue's headerMeta.$schema using fromCoValue pattern
     const styleSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: coId });
     
-    // Always set up subscription for reactivity (even without onUpdate callback)
+    // Create new subscription
     const { config: styleDef, unsubscribe } = await subscribeConfig(
       this.dbEngine,
       styleSchemaCoId,
@@ -60,8 +82,8 @@ export class StyleEngine {
       }
     );
     
-    // Store unsubscribe function
-    this.styleSubscriptions.set(coId, unsubscribe);
+    // Store unsubscribe function with ref count tracking
+    this.styleSubscriptions.set(coId, { unsubscribe, refCount: 0 });
     
     // $schema is now a system property from CoJSON headerMeta.$schema
     // It's automatically added by convertPropertiesArrayToPlainObject() from the schema field

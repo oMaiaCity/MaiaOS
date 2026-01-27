@@ -72,7 +72,7 @@ export function createCoStream(accountOrGroup, schemaName, node = null) {
 	
 	// Validate schema exists in registry
 	if (!hasSchema(schemaName)) {
-		throw new Error(`[createCoStream] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema, ExamplesSchema, ActivityStreamSchema, NotesSchema, TextSchema, PureJsonSchema`);
+		throw new Error(`[createCoStream] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema, ExamplesSchema, ActivityStreamSchema, NotesSchema, PureJsonSchema`);
 	}
 	
 	const meta = createSchemaMeta(schemaName);

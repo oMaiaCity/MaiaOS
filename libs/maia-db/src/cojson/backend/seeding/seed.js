@@ -24,7 +24,7 @@
 
 import { createCoMap } from '../../../services/oMap.js';
 import { createCoList } from '../../../services/oList.js';
-import { getMetaSchemaCoMapDefinition } from '../../../schemas/meta-schema.js';
+import { getMetaSchemaCoMapDefinition } from '@MaiaOS/schemata/meta-schema';
 
 /**
  * Seed CoJSON database with configs, schemas, and data

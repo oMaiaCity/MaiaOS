@@ -6,7 +6,8 @@
  */
 
 import { createSchemaMeta, isExceptionSchema } from "../utils/meta.js";
-import { getSharedValidationEngine } from "../schemas/validation-singleton.js";
+import { getValidationEngine } from '@MaiaOS/schemata/validation.helper';
+import { getAllSchemas } from "../schemas/registry.js";
 import { hasSchema } from "../schemas/registry.js";
 import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
@@ -173,7 +174,7 @@ export async function createCoMap(accountOrGroup, init = {}, schemaName, node = 
 	// Validate schema exists in registry (skip for exception schemas and co-ids)
 	// Co-ids (starting with "co_z") are actual schema CoValue IDs and don't need registry validation
 	if (!isExceptionSchema(schemaName) && !schemaName.startsWith('co_z') && !hasSchema(schemaName)) {
-		throw new Error(`[createCoMap] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema, ExamplesSchema, ActivityStreamSchema, NotesSchema, TextSchema, PureJsonSchema`);
+		throw new Error(`[createCoMap] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema, ExamplesSchema, ActivityStreamSchema, NotesSchema, PureJsonSchema`);
 	}
 	
 	// Validate data against schema BEFORE creating CoValue
@@ -195,7 +196,9 @@ export async function createCoMap(accountOrGroup, init = {}, schemaName, node = 
 			await validateAgainstSchemaOrThrow(schemaDef, init, `createCoMap for schema ${schemaName}`);
 		} else {
 			// Schema name - use hardcoded registry (only for migrations/seeding)
-			const engine = await getSharedValidationEngine();
+			const engine = await getValidationEngine({
+				registrySchemas: getAllSchemas()
+			});
 			const validation = await engine.validateData(schemaName, init);
 			
 			if (!validation.valid) {

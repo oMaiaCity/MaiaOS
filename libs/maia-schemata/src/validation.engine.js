@@ -12,7 +12,7 @@ import baseMetaSchema from './os/base-meta-schema.json';
 import { formatValidationErrors, withSchemaValidationDisabled } from './validation.helper.js';
 
 export class ValidationEngine {
-  constructor() {
+  constructor(options = {}) {
     this.ajv = null;
     this.ajvPromise = null;
     this.initialized = false;
@@ -22,6 +22,9 @@ export class ValidationEngine {
     
     // Schema resolver function (for resolving $schema references from IndexedDB)
     this.schemaResolver = null;
+    
+    // Registry schemas (ONLY for migrations/seeding - human-readable ID lookup)
+    this.registrySchemas = options.registrySchemas || null;
   }
   
   /**
@@ -112,6 +115,14 @@ export class ValidationEngine {
       // Register CoJSON custom meta-schema and plugin
       this._loadCoJsonMetaSchema();
       ajvCoTypesPlugin(this.ajv);
+
+      // ALWAYS register co-type definitions (REQUIRED, not optional)
+      await this._loadCoTypeDefinitions();
+
+      // Register registry schemas ONLY if provided (migrations/seeding only)
+      if (this.registrySchemas) {
+        await this.registerAllSchemas(this.registrySchemas);
+      }
 
       this.initialized = true;
     })();
@@ -726,5 +737,142 @@ export class ValidationEngine {
     }
     
     return result;
+  }
+
+  /**
+   * Load co-type definitions into AJV (REQUIRED for all CoValue validation)
+   * @private
+   */
+  async _loadCoTypeDefinitions() {
+    const coTypesDefs = await import('./co-types.defs.json');
+    const coTypesSchema = {
+      $id: 'https://maia.city/schemas/co-types',
+      $defs: coTypesDefs.$defs
+    };
+    
+    if (!this.ajv.getSchema(coTypesSchema.$id)) {
+      try {
+        withSchemaValidationDisabled(this.ajv, () => {
+          this.ajv.addSchema(coTypesSchema, coTypesSchema.$id);
+        });
+      } catch (error) {
+        if (!error.message || !error.message.includes('already exists')) {
+          console.warn('[ValidationEngine] Failed to add co-type definitions:', error.message);
+        }
+      }
+    }
+  }
+
+  /**
+   * Register all schemas from registry into AJV (MIGRATIONS/SEEDING ONLY)
+   * @param {Object} schemas - Map of schema names to schema definitions
+   * @returns {Promise<void>}
+   */
+  async registerAllSchemas(schemas) {
+    await this.initialize();
+    
+    if (!schemas || typeof schemas !== 'object') {
+      return;
+    }
+    
+    const ajv = this.ajv;
+    
+    // PASS 1: Add all schemas to AJV registry (for $ref resolution)
+    const originalValidateSchema = ajv.opts.validateSchema;
+    ajv.opts.validateSchema = false; // Temporarily disable schema validation
+    
+    try {
+      for (const [name, schema] of Object.entries(schemas)) {
+        if (schema && schema.$id && !ajv.getSchema(schema.$id)) {
+          try {
+            ajv.addSchema(schema, schema.$id);
+          } catch (error) {
+            if (!error.message.includes('already exists')) {
+              console.warn(`[ValidationEngine] Failed to add schema ${name}:`, error);
+            }
+          }
+        }
+      }
+    } finally {
+      ajv.opts.validateSchema = originalValidateSchema;
+    }
+    
+    // PASS 2: Resolve all $ref dependencies and re-register if needed
+    // Note: Schema dependencies are resolved automatically by AJV during compilation
+    // This pass ensures all schemas are properly registered for $ref resolution
+  }
+
+  /**
+   * Validate data against a schema by name (MIGRATIONS/SEEDING ONLY)
+   * CRITICAL: This method is ONLY for migrations/seeding
+   * Runtime validation MUST use validateAgainstSchema() with schema loaded from CoValue header metadata
+   * 
+   * @param {string} schemaName - Schema name (human-readable ID from registry)
+   * @param {any} data - Data to validate
+   * @returns {Promise<{valid: boolean, errors: Array|null}>} Validation result
+   */
+  async validateData(schemaName, data) {
+    await this.initialize();
+    
+    if (!this.registrySchemas) {
+      throw new Error('[ValidationEngine] validateData() requires registrySchemas. This method is ONLY for migrations/seeding. Runtime validation must use validateAgainstSchema() with schema from CoValue header metadata.');
+    }
+    
+    // Get schema from registry by human-readable name
+    const schema = this.registrySchemas[schemaName];
+    
+    if (!schema) {
+      return {
+        valid: false,
+        errors: [{ message: `Schema '${schemaName}' not found in registry` }]
+      };
+    }
+    
+    // Check if schema is already compiled in AJV
+    let validate;
+    if (schema.$id) {
+      validate = this.ajv.getSchema(schema.$id);
+    }
+    
+    // If not already compiled, compile it
+    if (!validate) {
+      try {
+        // Ensure all referenced schemas are loaded and registered
+        await this._resolveAndRegisterSchemaDependencies(schema);
+        
+        // Compile the schema
+        validate = this.ajv.compile(schema);
+      } catch (error) {
+        return {
+          valid: false,
+          errors: [{ message: `Failed to compile schema '${schemaName}': ${error.message}` }]
+        };
+      }
+    }
+    
+    // Validate data
+    try {
+      const valid = validate(data);
+      
+      if (valid) {
+        return {
+          valid: true,
+          errors: null
+        };
+      }
+      
+      const errors = validate.errors || [];
+      const formattedErrors = formatValidationErrors(errors);
+      
+      return {
+        valid: false,
+        errors: formattedErrors
+      };
+    } catch (error) {
+      return {
+        valid: false,
+        errors: [{ message: `Validation error: ${error.message}` }]
+      };
+    }
   }
 }

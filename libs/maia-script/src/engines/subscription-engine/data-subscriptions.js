@@ -26,6 +26,13 @@ export async function subscribeToContext(subscriptionEngine, actor) {
     // Query objects have structure: {schema: "co_z...", filter: {...}}
     // Detect by structure (has schema property), not by @ prefix
     if (value && typeof value === 'object' && value.schema && typeof value.schema === 'string') {
+      // CRITICAL FIX: Check if already subscribed to prevent duplicate subscriptions
+      // This prevents handleContextUpdate() from creating duplicate subscriptions
+      if (actor._queries?.has(key)) {
+        subscriptionEngine._log(`[SubscriptionEngine] ⏭️  ${actor.id}: Already subscribed to ${key}, skipping`);
+        continue; // Skip - already subscribed
+      }
+      
       try {
         // Resolve schema if it's a human-readable reference (should be co-id after seeding, but handle gracefully)
         let schemaCoId = value.schema;
@@ -77,8 +84,18 @@ export async function subscribeToContext(subscriptionEngine, actor) {
         actor._queries.set(key, { schema: schemaCoId, filter: value.filter || null, store });
         
         // Set context to store's current value immediately (before subscribing)
-        // This ensures initial render has correct data
-        actor.context[key] = store.value || [];
+        // This ensures initial render has correct data if store is already loaded
+        const initialValue = store.value || [];
+        actor.context[key] = initialValue;
+        
+        // Track that we've set initial value (even if empty) to detect when real data arrives
+        if (!actor._initialDataReceived) {
+          actor._initialDataReceived = new Set();
+        }
+        // Mark as received only if we have actual data (not empty array)
+        if (initialValue && (Array.isArray(initialValue) ? initialValue.length > 0 : true)) {
+          actor._initialDataReceived.add(key);
+        }
         
         // Add schema to context for use in view templates (e.g., drag/drop)
         // Use the resolved schema co-id
@@ -101,11 +118,11 @@ export async function subscribeToContext(subscriptionEngine, actor) {
           }
         }
         
-        // Subscribe to store updates with skipInitial=true to prevent duplicate callback
-        // We already set actor.context[key] = store.value above, so we don't need the immediate callback
+        // Subscribe to store updates - callback will fire immediately with current value
+        // This ensures we get data even if store.value was empty when we accessed it
         const unsubscribe = store.subscribe((data) => {
           handleDataUpdate(subscriptionEngine, actor.id, key, data);
-        }, { skipInitial: true });
+        });
         
         // Store unsubscribe function
         if (!actor._subscriptions) {
@@ -140,38 +157,43 @@ export function handleDataUpdate(subscriptionEngine, actorId, contextKey, data) 
     return; // Actor may have been destroyed
   }
 
-  // CRITICAL FIX: Skip all processing during initial render phase if data matches context
-  // This prevents the immediate callback from store.subscribe() from updating context
-  // before the initial render completes, which causes duplicate rendering
-  if (!actor._initialRenderComplete) {
-    const existingData = actor.context[contextKey];
-    if (isSameData(existingData, data)) {
-      return; // Skip - data matches what's already in context, no need to update
+  // Check if this is the first real data for this key (not just empty array)
+  const hasReceivedData = actor._initialDataReceived && actor._initialDataReceived.has(contextKey);
+  const isInitialData = !hasReceivedData;
+  
+  // Check if data actually changed
+  const existingData = actor.context[contextKey];
+  if (isSameData(existingData, data)) {
+    // Data unchanged - skip processing
+    // But if this is initial data and we haven't marked it as received, mark it now
+    if (isInitialData && data && (Array.isArray(data) ? data.length > 0 : true)) {
+      if (!actor._initialDataReceived) {
+        actor._initialDataReceived = new Set();
+      }
+      actor._initialDataReceived.add(contextKey);
     }
-    // If data is different, we still need to process it (legitimate update during setup)
+    return; // Skip - data matches what's already in context
   }
-
-  // Check if this is the first data for this key
-  const isInitialData = !actor._initialDataReceived || !actor._initialDataReceived.has(contextKey);
   
   if (isInitialData) {
-    // Check if we already have this exact data (prevents duplicate from immediate subscribe callback)
-    const existingData = actor.context[contextKey];
-    if (isSameData(existingData, data)) {
-      return; // Skip duplicate initial data
-    }
-    
-    // Always accept initial data (even if empty)
+    // First real data for this key - always accept it
     actor.context[contextKey] = data;
     
     if (!actor._initialDataReceived) {
       actor._initialDataReceived = new Set();
     }
-    actor._initialDataReceived.add(contextKey);
+    // Only mark as received if we have actual data (not empty array)
+    if (data && (Array.isArray(data) ? data.length > 0 : true)) {
+      actor._initialDataReceived.add(contextKey);
+    }
     
     // Always re-render on initial data (if initial render complete)
     if (actor._initialRenderComplete) {
       subscriptionEngine._scheduleRerender(actorId);
+    } else {
+      // CRITICAL FIX: Mark that data arrived during initialization
+      // Actor will need a rerender after initial render completes
+      actor._needsPostInitRerender = true;
     }
     return;
   }
