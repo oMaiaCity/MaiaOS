@@ -40,12 +40,6 @@
     "inbox": {
       "$co": "@schema/inbox",
       "description": "Co-id reference to message inbox costream (append-only message feed)"
-    },
-    "inboxWatermark": {
-      "type": "number",
-      "description": "Last processed message timestamp",
-      "minimum": 0,
-      "default": 0
     }
   }
 }

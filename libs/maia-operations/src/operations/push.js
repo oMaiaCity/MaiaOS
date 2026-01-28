@@ -90,6 +90,20 @@ export class PushOperation {
       throw new Error('[PushOperation] At least one item required (use item or items parameter)');
     }
     
+    // Validate items when schema specifies items.$co (items must be co-id references)
+    if (schema.items && schema.items.$co) {
+      // Schema specifies that items should be co-id references
+      for (const itemToPush of itemsToPush) {
+        if (typeof itemToPush !== 'string' || !itemToPush.startsWith('co_z')) {
+          throw new Error(
+            `[PushOperation] Items must be co-id references (co_z...) when schema specifies items.$co. ` +
+            `Got: ${typeof itemToPush === 'object' ? JSON.stringify(itemToPush).substring(0, 100) : itemToPush}. ` +
+            `Schema expects: ${schema.items.$co}`
+          );
+        }
+      }
+    }
+    
     // Push each item
     for (const itemToPush of itemsToPush) {
       content.push(itemToPush);

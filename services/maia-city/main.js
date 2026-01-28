@@ -554,14 +554,15 @@ async function loadVibe(vibeKey) {
 	
 	try {
 		if (vibeKey === null) {
-			// Unloading vibe - destroy all actors for the current vibe container
-			// Get container reference from window (set by db-view.js when loading vibe)
-			const containerToCleanup = window.currentVibeContainer || currentVibeContainer;
-			if (containerToCleanup && maia && maia.actorEngine) {
-				maia.actorEngine.destroyActorsForContainer(containerToCleanup);
-				currentVibeContainer = null;
-				window.currentVibeContainer = null;
+			// Unloading vibe - detach actors (keep alive for reuse)
+			// Use vibe-based tracking instead of container-based
+			if (currentVibe && maia && maia.actorEngine) {
+				maia.actorEngine.detachActorsForVibe(currentVibe);
 			}
+			
+			// Clear container reference
+			currentVibeContainer = null;
+			window.currentVibeContainer = null;
 			
 			currentVibe = null;
 			// Restore previous context if available, otherwise keep current context

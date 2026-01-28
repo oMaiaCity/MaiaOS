@@ -335,3 +335,75 @@ export function extractCoValueDataFlat(backend, coValueCore, schemaHint = null) 
     $schema: schema
   };
 }
+
+/**
+ * Extract CoStream with session structure preserved and CRDT metadata
+ * Backend-to-backend helper for inbox processing
+ * @param {Object} backend - Backend instance
+ * @param {CoValueCore} coValueCore - CoValueCore instance
+ * @returns {Object|null} CoStream data with sessions and CRDT metadata, or null if not a CoStream
+ */
+export function extractCoStreamWithSessions(backend, coValueCore) {
+  const content = backend.getCurrentContent(coValueCore);
+  const header = backend.getHeader(coValueCore);
+  const headerMeta = header?.meta || null;
+  const rawType = content?.type || 'unknown';
+  
+  // Only handle CoStreams
+  if (rawType !== 'costream' || !content) {
+    return null;
+  }
+  
+  // CoStream content is RawCoStreamView which has items property: { [sessionID]: CoStreamItem[] }
+  // Each CoStreamItem has { value, tx, madeAt }
+  // If schema specifies items as co-id references ($co), value will be a co-id string
+  // Otherwise, value will be the message data (plain object)
+  if (content.items && typeof content.items === 'object') {
+    const sessions = {};
+    
+    // Iterate over each session
+    for (const [sessionID, items] of Object.entries(content.items)) {
+      if (Array.isArray(items)) {
+        // Map items to include message data + CRDT metadata
+        // Preserve original item structure to check if value is a co-id reference
+        sessions[sessionID] = items.map(item => {
+          // Check if item.value is a co-id reference (starts with co_z)
+          const isCoIdReference = typeof item.value === 'string' && item.value.startsWith('co_z');
+          
+          if (isCoIdReference) {
+            // Item is a co-id reference to a CoMap - return co-id for later reading
+            return {
+              _coId: item.value, // Message CoMap co-id (native co-id)
+              _sessionID: sessionID, // Internal metadata: session ID
+              _madeAt: item.madeAt, // Internal metadata: CRDT madeAt timestamp
+              _tx: item.tx // Internal metadata: transaction ID
+            };
+          } else {
+            // Item is plain object (legacy format) - spread message data
+            return {
+              ...item.value, // Message data (type, payload, from, id)
+              _sessionID: sessionID, // Internal metadata: session ID
+              _madeAt: item.madeAt, // Internal metadata: CRDT madeAt timestamp
+              _tx: item.tx // Internal metadata: transaction ID
+            };
+          }
+        });
+      }
+    }
+    
+    return {
+      id: coValueCore.id,
+      type: 'costream',
+      $schema: headerMeta?.$schema || null,
+      sessions: sessions // Preserve session structure: { sessionID: [messages...] }
+    };
+  }
+  
+  // Fallback: empty stream
+  return {
+    id: coValueCore.id,
+    type: 'costream',
+    $schema: headerMeta?.$schema || null,
+    sessions: {}
+  };
+}

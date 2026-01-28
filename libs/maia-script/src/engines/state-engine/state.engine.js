@@ -162,6 +162,12 @@ export class StateEngine {
    * @returns {Promise<void>}
    */
   async _executeTransition(machine, transition, event, payload) {
+    // CRITICAL: Ensure machine.context always references actor.context (sync before every transition)
+    // This ensures lastCreatedId/lastCreatedText set by tools are immediately available
+    if (machine.context !== machine.actor.context) {
+      machine.context = machine.actor.context;
+    }
+    
     // For SUCCESS/ERROR events (from tool completion), preserve the original eventPayload
     // This allows actions in SUCCESS transitions to access the original event data (e.g., $$id)
     // For other events, update eventPayload with the new payload
@@ -283,14 +289,11 @@ export class StateEngine {
       // Execute all entry actions
       await this._executeActions(machine, entry);
       
-      // After all entry actions complete, route SUCCESS through inbox if state handles it
-      // This allows loading states to transition to idle after subscriptions are set up
+      // After all entry actions complete, route SUCCESS directly to StateEngine if state handles it
+      // Internal events (SUCCESS/ERROR) are processed immediately without inbox routing
       if (stateDef.on && stateDef.on.SUCCESS) {
-        // Route through inbox for unified event logging
-        if (!this.actorEngine || !machine.actor) {
-          throw new Error('[StateEngine] ActorEngine not available - cannot route SUCCESS event through inbox');
-        }
-        await this.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', {});
+        // Route SUCCESS event directly to StateEngine (internal event, no inbox routing)
+        await this.send(machine.id, 'SUCCESS', {});
       }
     }
   }
@@ -389,38 +392,58 @@ export class StateEngine {
    */
   async _invokeTool(machine, toolName, payload = {}, autoTransition = true) {
     try {
+      // CRITICAL: Ensure machine.context references actor.context (should be same reference, but verify)
+      // This ensures lastCreatedId/lastCreatedText set by @db tool are immediately available
+      if (machine.context !== machine.actor.context) {
+        console.warn(`[StateEngine] machine.context !== actor.context for ${machine.actor.id}, syncing...`);
+        machine.context = machine.actor.context;
+      }
+      
       // Evaluate payload through MaiaScript (resolve $variables and $$item references)
       // Use machine.eventPayload as item context for $$id resolution
       const evaluatedPayload = await this._evaluatePayload(payload, machine.context, machine.eventPayload);
       
+      // Debug logging for payload evaluation (especially for publishMessage with $lastCreatedId)
+      if (toolName === '@core/publishMessage' && evaluatedPayload.payload) {
+        console.log(`[StateEngine] Evaluated publishMessage payload:`, {
+          type: evaluatedPayload.type,
+          payloadKeys: Object.keys(evaluatedPayload.payload),
+          hasId: 'id' in evaluatedPayload.payload,
+          hasText: 'text' in evaluatedPayload.payload,
+          idValue: evaluatedPayload.payload.id,
+          textValue: evaluatedPayload.payload.text,
+          contextHasLastCreatedId: 'lastCreatedId' in machine.context,
+          lastCreatedId: machine.context.lastCreatedId,
+          lastCreatedText: machine.context.lastCreatedText
+        });
+      }
+      
       // Execute tool via ToolEngine
       await this.toolEngine.execute(toolName, machine.actor, evaluatedPayload);
       
-      // Tool succeeded - route SUCCESS event through inbox (if machine handles it and autoTransition is true)
-      // This ensures all events flow through inbox for unified traceability
+      // Tool succeeded - route SUCCESS event directly to StateEngine (skip inbox for internal events)
+      // Internal events (SUCCESS/ERROR) are processed immediately without inbox routing
+      // This avoids timing issues and duplicate processing while maintaining architecture
+      // Cross-actor messages still go through inbox for proper session-based watermarking
       if (autoTransition) {
-      const currentStateDef = machine.definition.states[machine.currentState];
-      if (currentStateDef.on && currentStateDef.on.SUCCESS) {
-        // Route through inbox for unified event logging
-        if (!this.actorEngine || !machine.actor) {
-          throw new Error('[StateEngine] ActorEngine not available - cannot route SUCCESS event through inbox');
-        }
-        await this.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', {});
+        const currentStateDef = machine.definition.states[machine.currentState];
+        if (currentStateDef.on && currentStateDef.on.SUCCESS) {
+          // Route SUCCESS event directly to StateEngine (internal event, no inbox routing)
+          // This ensures immediate processing without waiting for reactive store updates
+          await this.send(machine.id, 'SUCCESS', {});
         }
       }
     } catch (error) {
       console.error(`[StateEngine] Tool invocation failed: ${toolName}`, error);
       
-      // Tool failed - route ERROR event through inbox (if machine handles it and autoTransition is true)
+      // Tool failed - route ERROR event directly to StateEngine (skip inbox for internal events)
+      // Internal events (SUCCESS/ERROR) are processed immediately without inbox routing
       if (autoTransition) {
-      const currentStateDef = machine.definition.states[machine.currentState];
-      if (currentStateDef.on && currentStateDef.on.ERROR) {
-        // Route through inbox for unified event logging
-        if (!this.actorEngine || !machine.actor) {
-          throw new Error('[StateEngine] ActorEngine not available - cannot route ERROR event through inbox');
+        const currentStateDef = machine.definition.states[machine.currentState];
+        if (currentStateDef.on && currentStateDef.on.ERROR) {
+          // Route ERROR event directly to StateEngine (internal event, no inbox routing)
+          await this.send(machine.id, 'ERROR', { error: error.message });
         }
-        await this.actorEngine.sendInternalEvent(machine.actor.id, 'ERROR', { error: error.message });
-      }
       }
     }
   }
@@ -471,6 +494,20 @@ export class StateEngine {
       } else {
         // Otherwise, evaluate as a MaiaScript expression
         let evaluatedValue = await this.evaluator.evaluate(value, data);
+        
+        // CRITICAL FIX: If evaluation returns undefined for $lastCreatedId/$lastCreatedText, check context directly
+        // This handles cases where evaluator might not find the value due to timing or reference issues
+        if (evaluatedValue === undefined && typeof value === 'string' && value.startsWith('$')) {
+          const path = value.substring(1); // Remove $ prefix
+          // Check if it's lastCreatedId or lastCreatedText (common case)
+          if (path === 'lastCreatedId' || path === 'lastCreatedText') {
+            const directValue = context[path];
+            if (directValue !== undefined) {
+              console.log(`[StateEngine] Direct context access for ${value}:`, directValue);
+              evaluatedValue = directValue;
+            }
+          }
+        }
         
         // Fallback: If it's a schema expression that resolved to undefined, try to find it
         // This handles cases where $todosSchema doesn't exist but todosTodoSchema or todosDoneSchema do

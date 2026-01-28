@@ -22,9 +22,10 @@
       "$co": "@schema/actor",
       "description": "Co-id reference to target actor"
     },
-    "timestamp": {
-      "type": "number",
-      "description": "Message timestamp"
+    "processed": {
+      "type": "boolean",
+      "description": "Whether this message has been processed",
+      "default": false
     }
   }
 }

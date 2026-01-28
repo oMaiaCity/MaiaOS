@@ -911,28 +911,10 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
       coValue = universalGroup.createStream(meta);
       actualCoId = coValue.id;
       
-      // Add default welcome message to inbox CoStreams for debugging display issues
-      if (path && path.includes('@inbox/')) {
-        try {
-          // During seeding, we use direct CoStream push (not operations API) because:
-          // 1. dbEngine isn't available yet during seeding
-          // 2. Reactive stores aren't set up yet (they're created after seeding)
-          // 3. After seeding, CoStreams will be read via operations API (read operation)
-          // This is acceptable for seeding - runtime operations should use push operation
-          if (coValue && typeof coValue.push === 'function') {
-            const defaultMessage = {
-              type: 'INIT',
-              payload: { message: 'Inbox initialized' },
-              from: 'system',
-              timestamp: Date.now(),
-              id: `INIT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-            };
-            coValue.push(defaultMessage);
-          }
-        } catch (error) {
-          // Silently fail - default message is optional
-        }
-      }
+      // Skip INIT messages during seeding - they're optional debug messages
+      // All runtime messages should be created as CoMap CoValues using createAndPushMessage helper
+      // During seeding, dbEngine isn't available yet, so we can't create proper CoMap messages
+      // INIT messages are skipped - they were only for debugging display issues
     } else {
       // CoMap: Default behavior
       coValue = universalGroup.createMap(configWithoutId, meta);

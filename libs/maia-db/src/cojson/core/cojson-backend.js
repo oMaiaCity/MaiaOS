@@ -17,6 +17,7 @@ import { waitForStoreReady } from '../crud/read-operations.js';
 import { read as universalRead } from '../crud/read.js';
 import * as collectionHelpers from '../crud/collection-helpers.js';
 import * as dataExtraction from '../crud/data-extraction.js';
+import { extractCoStreamWithSessions } from '../crud/data-extraction.js';
 import * as filterHelpers from '../crud/filter-helpers.js';
 import * as crudCreate from '../crud/create.js';
 import * as crudUpdate from '../crud/update.js';
@@ -102,6 +103,33 @@ export class CoJSONBackend extends DBAdapter {
    */
   getAccount() {
     return coValueAccess.getAccount(this.account);
+  }
+  
+  /**
+   * Get current session ID from the node
+   * @returns {string|null} Current session ID or null if node not available
+   */
+  getCurrentSessionID() {
+    if (!this.node || !this.node.currentSessionID) {
+      return null;
+    }
+    return this.node.currentSessionID;
+  }
+  
+  /**
+   * Read inbox CoStream with session structure and CRDT metadata preserved
+   * Backend-to-backend method for inbox processing
+   * @param {string} inboxCoId - Inbox CoStream co-id
+   * @returns {Object|null} CoStream data with sessions and CRDT metadata, or null if not found/not a CoStream
+   */
+  readInboxWithSessions(inboxCoId) {
+    const coValueCore = this.getCoValue(inboxCoId);
+    if (!coValueCore || !this.isAvailable(coValueCore)) {
+      return null;
+    }
+    
+    // Use backend-to-backend helper to extract CoStream with sessions
+    return extractCoStreamWithSessions(this, coValueCore);
   }
   
   /**

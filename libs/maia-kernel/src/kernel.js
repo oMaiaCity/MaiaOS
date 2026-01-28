@@ -384,6 +384,9 @@ export class MaiaOS {
     os.styleEngine.dbEngine = os.dbEngine;
     os.stateEngine.dbEngine = os.dbEngine;
     
+    // Update current session ID in ActorEngine (for session-based watermarking)
+    os.actorEngine._updateCurrentSessionID();
+    
     // Pass engines to SubscriptionEngine (for config subscriptions)
     os.subscriptionEngine.setEngines({
       viewEngine: os.viewEngine,
@@ -522,16 +525,17 @@ export class MaiaOS {
     }
     
     // Step 5: Load vibe using co-id (reuse existing loadVibeFromDatabase logic)
-    return await this.loadVibeFromDatabase(vibeCoId, container);
+    return await this.loadVibeFromDatabase(vibeCoId, container, vibeKey);
   }
 
   /**
    * Load a vibe from database (maia.db)
    * @param {string} vibeId - Vibe ID (co-id or human-readable like "@vibe/todos")
    * @param {HTMLElement} container - Container element
+   * @param {string} [vibeKey] - Optional vibe key for actor reuse tracking (e.g., 'todos')
    * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
    */
-  async loadVibeFromDatabase(vibeId, container) {
+  async loadVibeFromDatabase(vibeId, container, vibeKey = null) {
     // Vibe ID should already be co-id (transformed during seeding)
     // If not co-id, it's a seeding error - fail fast
     if (!vibeId.startsWith('co_z')) {
@@ -646,11 +650,26 @@ export class MaiaOS {
       throw new Error(`[MaiaOS] Actor with co-id ${actorCoId} not found in database. The actor may not have been seeded correctly.`);
     }
     
+    // Check if actors already exist for this vibe (reuse-based lifecycle)
+    if (vibeKey) {
+      const existingActors = this.actorEngine.getActorsForVibe(vibeKey);
+      if (existingActors && existingActors.size > 0) {
+        // Reuse existing actors - reattach to new container
+        console.log(`[Kernel] Reusing existing actors for vibe: ${vibeKey}`);
+        const rootActor = await this.actorEngine.reattachActorsForVibe(vibeKey, container);
+        if (rootActor) {
+          console.log(`✅ Vibe reattached: ${vibe.name}`);
+          return { vibe, actor: rootActor };
+        }
+      }
+    }
+    
+    // First time loading or no vibeKey - create actors normally
     // Load actor config via loadActor (which uses maia.db())
     const actorConfig = await this.actorEngine.loadActor(actorCoId);
     
-    // Create root actor
-    const actor = await this.actorEngine.createActor(actorConfig, container);
+    // Create root actor with vibeKey for tracking
+    const actor = await this.actorEngine.createActor(actorConfig, container, vibeKey);
     
     console.log(`✅ Vibe loaded: ${vibe.name}`);
     

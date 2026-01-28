@@ -23,6 +23,7 @@ import { SeedOperation } from './operations/seed.js';
 import { SchemaOperation } from './operations/schema.js';
 import { ResolveOperation } from './operations/resolve.js';
 import { PushOperation } from './operations/push.js';
+import { ProcessInboxOperation } from './operations/process-inbox.js';
 
 export class DBEngine {
   /**
@@ -52,7 +53,8 @@ export class DBEngine {
       seed: new SeedOperation(this.backend),
       schema: new SchemaOperation(this.backend, this),  // Schema loading operation (needs dbEngine for resolve operation)
       resolve: new ResolveOperation(this.backend),  // Co-id resolution operation
-      push: new PushOperation(this.backend, this)  // CoStream append operation
+      push: new PushOperation(this.backend, this),  // CoStream append operation
+      processInbox: new ProcessInboxOperation(this.backend, this)  // Inbox processing with session-based watermarks
     };
   }
   

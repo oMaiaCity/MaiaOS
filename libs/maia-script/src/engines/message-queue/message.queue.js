@@ -9,6 +9,8 @@
  * - At-least-once delivery semantics
  */
 
+import { createAndPushMessage } from '@MaiaOS/db';
+
 export class MessageQueue {
   constructor(actorId, actorEngine) {
     this.actorId = actorId;
@@ -29,7 +31,7 @@ export class MessageQueue {
 
   /**
    * Add message to queue
-   * @param {Object} message - Message object { type, payload, from, timestamp }
+   * @param {Object} message - Message object { type, payload, from, id }
    */
   enqueue(message) {
     const queueMessage = {
@@ -108,16 +110,25 @@ export class MessageQueue {
         }
       }
 
-      // Write message to CoStream via operations API (ensures proper reactive store updates)
+      // Create message CoMap and push co-id to inbox CoStream
+      // Message schema validation happens inside createAndPushMessage
       if (actor.inboxCoId && this.actorEngine.dbEngine) {
         try {
-          await this.actorEngine.dbEngine.execute({
-            op: 'push',
-            coId: actor.inboxCoId,
-            item: message
-          });
+          // Create message CoMap with proper schema fields
+          // Schema uses 'source' and 'target' (co-id references), not 'from' and 'id'
+          const messageCoId = await createAndPushMessage(
+            this.actorEngine.dbEngine,
+            actor.inboxCoId,
+            {
+              type: message.type,
+              payload: message.payload,
+              source: message.from, // Source actor (who sent the message)
+              target: this.actorId, // Target actor (who receives the message)
+              processed: false
+            }
+          );
         } catch (error) {
-          console.error(`[MessageQueue] Failed to persist message to CoStream ${actor.inboxCoId}:`, error);
+          console.error(`[MessageQueue] Failed to create and push message to inbox ${actor.inboxCoId}:`, error);
         }
       }
       

@@ -43,3 +43,9 @@ export { createCoJSONAPI } from "./cojson/core/factory.js";
 
 // CoJSON Backend (for MaiaOS.boot() compatibility)
 export { CoJSONBackend } from "./cojson/core/cojson-backend.js";
+
+// Process Inbox (backend-to-backend inbox processing)
+export { processInbox } from "./cojson/crud/process-inbox.js";
+
+// Message Helpers (create and push message CoMaps)
+export { createAndPushMessage } from "./cojson/crud/message-helpers.js";

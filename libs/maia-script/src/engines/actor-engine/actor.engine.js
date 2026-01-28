@@ -14,6 +14,8 @@ import { validateAgainstSchemaOrThrow, validateOrThrow } from '@MaiaOS/schemata/
 import { subscribeConfig, subscribeConfigsBatch, loadConfigOrUseProvided } from '../../utils/config-loader.js';
 // Import schema loader utility
 import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
+// Import message helper
+import { createAndPushMessage } from '@MaiaOS/db';
 
 export class ActorEngine {
   constructor(styleEngine, viewEngine, moduleRegistry, toolEngine, stateEngine = null) {
@@ -27,13 +29,37 @@ export class ActorEngine {
     this.messageQueues = new Map(); // Resilient message queues per actor
     this.dbEngine = null; // Database operation engine (set by kernel)
     this.os = null; // Reference to MaiaOS instance (set by kernel)
+    this.currentSessionID = null; // Current session ID from cojson node (set when dbEngine is set)
     
     // Container-based actor tracking for cleanup on vibe unload
     // Map<containerElement, Set<actorId>> - tracks which actors belong to which container
     this._containerActors = new Map();
     
+    // Vibe-based actor tracking for reuse across navigation
+    // Map<vibeKey, Set<actorId>> - tracks which actors belong to which vibe
+    this._vibeActors = new Map();
+    
     // Let ViewEngine know about us for action handling
     this.viewEngine.setActorEngine(this);
+  }
+
+  /**
+   * Update current session ID from dbEngine backend
+   * Called when dbEngine is set to extract session ID from CoJSON backend
+   * @private
+   */
+  _updateCurrentSessionID() {
+    if (!this.dbEngine || !this.dbEngine.backend) {
+      this.currentSessionID = null;
+      return;
+    }
+    
+    // Check if backend has getCurrentSessionID method (CoJSONBackend)
+    if (typeof this.dbEngine.backend.getCurrentSessionID === 'function') {
+      this.currentSessionID = this.dbEngine.backend.getCurrentSessionID();
+    } else {
+      this.currentSessionID = null;
+    }
   }
 
 
@@ -324,8 +350,14 @@ export class ActorEngine {
             configType: 'inbox',
             onUpdate: (updatedCostream) => {
               // Reactive store updates automatically, trigger message processing when new messages arrive
+              // CRITICAL FIX: Only process if actor still exists (might have been destroyed)
+              if (!this.actors.has(actorId)) {
+                return; // Actor destroyed, skip processing
+              }
+              
               if (updatedCostream && Array.isArray(updatedCostream.items)) {
                 // Process new messages from CoStream (100% CoStream-based, no in-memory arrays)
+                // processMessages() already has deduplication guard (_isProcessingMessages)
                 this.processMessages(actorId);
               }
             },
@@ -399,10 +431,11 @@ export class ActorEngine {
    * Create child actors from context.actors map
    * @param {Object} actor - Parent actor instance
    * @param {Object} context - Actor context (contains actors property)
+   * @param {string} [vibeKey] - Optional vibe key for tracking child actors
    * @returns {Promise<void>}
    * @private
    */
-  async _createChildActors(actor, context) {
+  async _createChildActors(actor, context, vibeKey = null) {
     // Children are stored in context.actors (explicit system property)
     // Keys are namekeys, values are co-ids (already transformed during seeding)
     // Format: context.actors = { "list": "co_z...", "kanban": "co_z..." }
@@ -436,8 +469,8 @@ export class ActorEngine {
         childContainer.dataset.namekey = namekey;
         childContainer.dataset.childActorId = childActorCoId; // Use co-id
         
-        // Create child actor recursively
-        const childActor = await this.createActor(childActorConfig, childContainer);
+        // Create child actor recursively (pass vibeKey so child is also registered with vibe)
+        const childActor = await this.createActor(childActorConfig, childContainer, vibeKey);
         
         // Store namekey on child actor
         childActor.namekey = namekey;
@@ -458,16 +491,33 @@ export class ActorEngine {
 
   /**
    * Create and render an actor
-   * v0.2: Added message passing (inbox, subscriptions, watermark)
+   * v0.2: Added message passing (inbox, subscriptions, processed flag)
    * v0.4: Added contextRef support for separate context files
+   * v0.6: Added vibe-based reuse support
    * @param {Object} actorConfig - The actor configuration
    * @param {HTMLElement} containerElement - The container to attach to
+   * @param {string} [vibeKey] - Optional vibe key for tracking (e.g., 'todos')
    */
-  async createActor(actorConfig, containerElement) {
+  async createActor(actorConfig, containerElement, vibeKey = null) {
     // Use $id if present, otherwise fall back to id (added by IndexedDB normalization)
     const actorId = actorConfig.$id || actorConfig.id;
     
-    console.log(`[ActorEngine] Creating new actor: ${actorId}`);
+    // Check if actor already exists
+    if (this.actors.has(actorId)) {
+      const existingActor = this.actors.get(actorId);
+      
+      // If vibeKey is provided and actor exists, reuse it (reattach to new container)
+      if (vibeKey) {
+        console.log(`[ActorEngine] Reusing existing actor: ${actorId} for vibe: ${vibeKey}`);
+        return await this.reuseActor(actorId, containerElement, vibeKey);
+      } else {
+        // No vibeKey - backward compatibility: return existing actor
+        console.warn(`[ActorEngine] Actor ${actorId} already exists, skipping duplicate creation`);
+        return existingActor;
+      }
+    }
+    
+    console.log(`[ActorEngine] Creating new actor: ${actorId}${vibeKey ? ` for vibe: ${vibeKey}` : ''}`);
     
     // Create shadow root
     const shadowRoot = containerElement.attachShadow({ mode: 'open' });
@@ -491,7 +541,7 @@ export class ActorEngine {
       inbox: inbox,
       inboxCoId: inboxCoId, // Store CoStream CoValue ID for persistence
       subscriptions: subscriptions,
-      inboxWatermark: actorConfig.inboxWatermark || 0,
+      // inboxWatermarks removed - using processed flag on message CoMaps instead
       // v0.5: Subscriptions managed by SubscriptionEngine (unified for data and configs)
       _subscriptions: [], // Per-actor subscriptions (unsubscribe functions) - unified for data + configs
       // Track if initial render has completed (for query subscription re-render logic)
@@ -505,12 +555,17 @@ export class ActorEngine {
     
     this.actors.set(actorId, actor);
     
-    // Register actor with container for cleanup tracking
+    // Register actor with container for cleanup tracking (backward compatibility)
     if (containerElement) {
       if (!this._containerActors.has(containerElement)) {
         this._containerActors.set(containerElement, new Set());
       }
       this._containerActors.get(containerElement).add(actorId);
+    }
+    
+    // Register actor with vibe for reuse tracking
+    if (vibeKey) {
+      this.registerActorForVibe(actorId, vibeKey);
     }
     
     // Auto-subscribe to reactive data based on context (context-driven)
@@ -687,6 +742,102 @@ export class ActorEngine {
   }
 
   /**
+   * Register an actor with a vibe key for reuse tracking
+   * @param {string} actorId - The actor ID
+   * @param {string} vibeKey - The vibe key (e.g., 'todos')
+   */
+  registerActorForVibe(actorId, vibeKey) {
+    if (!vibeKey) return;
+    
+    if (!this._vibeActors.has(vibeKey)) {
+      this._vibeActors.set(vibeKey, new Set());
+    }
+    this._vibeActors.get(vibeKey).add(actorId);
+  }
+
+  /**
+   * Get all actors for a vibe
+   * @param {string} vibeKey - The vibe key (e.g., 'todos')
+   * @returns {Set<string>|undefined} Set of actor IDs for the vibe
+   */
+  getActorsForVibe(vibeKey) {
+    return this._vibeActors.get(vibeKey);
+  }
+
+  /**
+   * Reuse an existing actor by reattaching it to a new container
+   * @param {string} actorId - The actor ID
+   * @param {HTMLElement} containerElement - The new container to attach to
+   * @param {string} vibeKey - The vibe key (e.g., 'todos')
+   * @returns {Promise<Object>} The reused actor instance
+   */
+  async reuseActor(actorId, containerElement, vibeKey) {
+    const actor = this.actors.get(actorId);
+    if (!actor) {
+      throw new Error(`[ActorEngine] Cannot reuse actor ${actorId} - actor not found`);
+    }
+
+    // Update container reference
+    const oldContainer = actor.containerElement;
+    actor.containerElement = containerElement;
+
+    // Update container-based tracking (backward compatibility)
+    if (oldContainer && this._containerActors.has(oldContainer)) {
+      const oldContainerActors = this._containerActors.get(oldContainer);
+      oldContainerActors.delete(actorId);
+      if (oldContainerActors.size === 0) {
+        this._containerActors.delete(oldContainer);
+      }
+    }
+
+    if (containerElement) {
+      if (!this._containerActors.has(containerElement)) {
+        this._containerActors.set(containerElement, new Set());
+      }
+      this._containerActors.get(containerElement).add(actorId);
+    }
+
+    // Ensure actor is registered with vibe
+    this.registerActorForVibe(actorId, vibeKey);
+
+    // Reattach shadow root to new container
+    // Shadow roots are attached to their host element via attachShadow()
+    // The containerElement IS the shadow root host
+    // When reusing, the old containerElement (which has the shadow root) needs to be moved
+    if (actor.shadowRoot) {
+      const oldContainer = actor.shadowRoot.host;
+      
+      if (oldContainer && oldContainer !== containerElement) {
+        // The old containerElement has the shadow root attached
+        // Move it to be a child of the new containerElement (which is the parent wrapper)
+        // This preserves the shadow root and all its content
+        if (oldContainer.parentNode) {
+          oldContainer.parentNode.removeChild(oldContainer);
+        }
+        containerElement.appendChild(oldContainer);
+        
+        // Keep reference to old container (which has the shadow root)
+        // The new containerElement is just a wrapper
+        // Don't update actor.containerElement - it should still point to the element with shadow root
+      }
+      // If oldContainer === containerElement, shadow root is already attached correctly
+    } else {
+      // Shadow root doesn't exist - create one on the new container
+      actor.shadowRoot = containerElement.attachShadow({ mode: 'open' });
+    }
+
+    // Mark actor as visible
+    actor._isVisible = true;
+
+    // Trigger re-render to ensure UI is up to date with latest context
+    if (actor._initialRenderComplete) {
+      await this.rerender(actorId);
+    }
+
+    return actor;
+  }
+
+  /**
    * Destroy an actor
    * @param {string} actorId - The actor ID
    */
@@ -708,6 +859,12 @@ export class ActorEngine {
         this.stateEngine.destroyMachine(actor.machine.id);
       }
       
+      // Clean up processed message keys if they exist
+      if (actor._processedMessageKeys) {
+        actor._processedMessageKeys.clear();
+        delete actor._processedMessageKeys;
+      }
+      
       // Remove actor from container tracking
       if (actor.containerElement && this._containerActors.has(actor.containerElement)) {
         const containerActors = this._containerActors.get(actor.containerElement);
@@ -715,6 +872,18 @@ export class ActorEngine {
         // Clean up empty container entries
         if (containerActors.size === 0) {
           this._containerActors.delete(actor.containerElement);
+        }
+      }
+
+      // Remove actor from vibe tracking
+      for (const [vibeKey, vibeActorIds] of this._vibeActors.entries()) {
+        if (vibeActorIds.has(actorId)) {
+          vibeActorIds.delete(actorId);
+          // Clean up empty vibe entries
+          if (vibeActorIds.size === 0) {
+            this._vibeActors.delete(vibeKey);
+          }
+          break; // Actor can only belong to one vibe
         }
       }
       
@@ -749,6 +918,116 @@ export class ActorEngine {
     
     // Clean up container entry (should already be empty, but ensure it's removed)
     this._containerActors.delete(containerElement);
+  }
+
+  /**
+   * Detach all actors for a vibe (hide UI, keep actors alive)
+   * Used when navigating away from a vibe - preserves actors for reuse
+   * @param {string} vibeKey - The vibe key (e.g., 'todos')
+   */
+  detachActorsForVibe(vibeKey) {
+    if (!vibeKey) {
+      return;
+    }
+
+    const actorIds = this._vibeActors.get(vibeKey);
+    if (!actorIds || actorIds.size === 0) {
+      return;
+    }
+
+    console.log(`[ActorEngine] Detaching ${actorIds.size} actor(s) for vibe: ${vibeKey}`);
+
+    // Detach UI but keep actors alive
+    for (const actorId of actorIds) {
+      const actor = this.actors.get(actorId);
+      if (actor) {
+        // Hide shadow root by detaching from DOM
+        if (actor.shadowRoot && actor.shadowRoot.host && actor.shadowRoot.host.parentNode) {
+          actor.shadowRoot.host.parentNode.removeChild(actor.shadowRoot.host);
+        }
+
+        // Mark as hidden
+        actor._isVisible = false;
+
+        // Clear container reference (will be set again on reattach)
+        // Keep containerElement in actor for reference, but remove from container tracking
+        if (actor.containerElement && this._containerActors.has(actor.containerElement)) {
+          const containerActors = this._containerActors.get(actor.containerElement);
+          containerActors.delete(actorId);
+          if (containerActors.size === 0) {
+            this._containerActors.delete(actor.containerElement);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Reattach all actors for a vibe to a new container
+   * Used when navigating back to a vibe - reuses existing actors
+   * @param {string} vibeKey - The vibe key (e.g., 'todos')
+   * @param {HTMLElement} containerElement - The container element for the root actor
+   * @returns {Promise<Object|undefined>} The root actor instance, or undefined if no actors found
+   */
+  async reattachActorsForVibe(vibeKey, containerElement) {
+    if (!vibeKey || !containerElement) {
+      return undefined;
+    }
+
+    const actorIds = this._vibeActors.get(vibeKey);
+    if (!actorIds || actorIds.size === 0) {
+      return undefined;
+    }
+
+    console.log(`[ActorEngine] Reattaching ${actorIds.size} actor(s) for vibe: ${vibeKey}`);
+
+    // Find root actor (first actor created, or actor with no parent)
+    // For now, we'll use the first actor in the set as root
+    // In practice, the root actor is the one passed to createActor first
+    const rootActorId = Array.from(actorIds)[0];
+    const rootActor = this.actors.get(rootActorId);
+
+    if (!rootActor) {
+      console.warn(`[ActorEngine] Root actor ${rootActorId} not found for vibe: ${vibeKey}`);
+      return undefined;
+    }
+
+    // Reattach root actor to new container
+    await this.reuseActor(rootActorId, containerElement, vibeKey);
+
+    // Child actors will be reattached automatically when parent re-renders
+    // via the slot rendering system
+
+    return rootActor;
+  }
+
+  /**
+   * Destroy all actors for a vibe (complete cleanup)
+   * Used for explicit cleanup when needed (e.g., app shutdown)
+   * @param {string} vibeKey - The vibe key (e.g., 'todos')
+   */
+  destroyActorsForVibe(vibeKey) {
+    if (!vibeKey) {
+      return;
+    }
+
+    const actorIds = this._vibeActors.get(vibeKey);
+    if (!actorIds || actorIds.size === 0) {
+      return;
+    }
+
+    // Create a copy to avoid modification during iteration
+    const actorIdsToDestroy = Array.from(actorIds);
+
+    console.log(`[ActorEngine] Destroying ${actorIdsToDestroy.length} actor(s) for vibe: ${vibeKey}`);
+
+    // Destroy all actors for this vibe
+    for (const actorId of actorIdsToDestroy) {
+      this.destroyActor(actorId);
+    }
+
+    // Clean up vibe entry
+    this._vibeActors.delete(vibeKey);
   }
 
   // ============================================
@@ -857,17 +1136,12 @@ export class ActorEngine {
       }
       // Deduplicate: don't queue the same message twice
       const pending = this.pendingMessages.get(actorId);
-      const key = message.id || `${message.type}_${message.timestamp}`;
-      const alreadyQueued = pending.some(m => (m.id || `${m.type}_${m.timestamp}`) === key);
+      const key = message.id || `${message.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const alreadyQueued = pending.some(m => m.id === key || (!m.id && !message.id && m.type === message.type));
       if (!alreadyQueued) {
         pending.push(message);
       }
       return;
-    }
-
-    // Add timestamp if not present
-    if (!message.timestamp) {
-      message.timestamp = Date.now();
     }
 
     // Use resilient message queue for delivery
@@ -898,11 +1172,10 @@ export class ActorEngine {
 
     // Add metadata
     message.from = fromActorId;
-    message.timestamp = Date.now();
     
     // Generate base message ID if not present
     if (!message.id) {
-      message.id = `${message.type}_${message.timestamp}_${Math.random().toString(36).substr(2, 9)}`;
+      message.id = `${message.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
 
     // Send to all subscribed actors (each gets a unique copy with same base ID + subscriber suffix)
@@ -948,11 +1221,10 @@ export class ActorEngine {
       type: eventType,
       payload: payload,
       from: actorId, // Self-originated internal event
-      timestamp: Date.now(),
       id: `${eventType}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     };
 
-    // Validate against interface.inbox if present
+    // Validate against interface.inbox if present (validates message structure)
     if (actor.interface) {
       const isValid = await this._validateMessage(message, actor.interface, 'inbox', actorId);
       if (!isValid) {
@@ -961,18 +1233,25 @@ export class ActorEngine {
       }
     }
 
-    // Write message to CoStream via operations API (ensures proper reactive store updates)
+    // Create message CoMap and push co-id to inbox CoStream
+    // Message schema validation happens inside createAndPushMessage
     if (actor.inboxCoId && this.dbEngine) {
       try {
-        // Use push operation instead of direct backend access
-        // This ensures reactive stores are properly updated
-        const result = await this.dbEngine.execute({
-          op: 'push',
-          coId: actor.inboxCoId,
-          item: message
-        });
+        // Create message CoMap with proper schema fields
+        // Schema uses 'source' and 'target' (co-id references), not 'from' and 'id'
+        const messageCoId = await createAndPushMessage(
+          this.dbEngine,
+          actor.inboxCoId,
+          {
+            type: eventType,
+            payload: payload,
+            source: actorId, // Source actor (self-originated internal event)
+            target: actorId, // Target actor (same actor - internal event)
+            processed: false
+          }
+        );
       } catch (error) {
-        console.error(`[ActorEngine] ❌ Failed to push message to CoStream ${actor.inboxCoId}:`, error);
+        console.error(`[ActorEngine] ❌ Failed to create and push message to inbox ${actor.inboxCoId}:`, error);
       }
     } else {
       console.warn(`[ActorEngine] ⚠️ No inboxCoId or dbEngine for actor ${actorId}`);
@@ -988,7 +1267,8 @@ export class ActorEngine {
 
   /**
    * Process unconsumed messages in an actor's inbox
-   * Uses watermark pattern to avoid replay
+   * Uses backend processInbox operation for all inbox/processed flag logic (backend-to-backend)
+   * ActorEngine only handles business logic (what actions to take)
    * CRITICAL FIX: Added processing guard to prevent concurrent execution
    * @param {string} actorId - Actor ID
    */
@@ -1010,92 +1290,70 @@ export class ActorEngine {
     actor._isProcessingMessages = true;
 
     try {
-      // CRITICAL FIX: Read watermark from persisted config before filtering messages
-      // This ensures we always check against the latest persisted watermark, not stale in-memory value
-      // This is CRDT-safe: prevents duplicate processing when watermark is updated concurrently
-      let currentWatermark = actor.inboxWatermark || 0;
-      if (this.dbEngine) {
+      if (!actor.inboxCoId || !this.dbEngine) {
+        console.warn(`[ActorEngine] Cannot process messages: missing inboxCoId or dbEngine for ${actorId}`);
+        return;
+      }
+
+      // Call backend operation to process inbox (backend-to-backend)
+      // Backend handles: reading CoStream with sessions, checking processed flag, updating processed flag
+      // CRITICAL: Trust CRDT sync - no in-memory caching needed
+      const result = await this.dbEngine.execute({
+        op: 'processInbox',
+        actorId: actorId,
+        inboxCoId: actor.inboxCoId
+      });
+
+      const unprocessedMessages = result.messages || [];
+      
+      if (unprocessedMessages.length === 0) {
+        return;
+      }
+
+      // Debug logging for cross-session tracking
+      const sessionId = this.currentSessionID ? this.currentSessionID.substring(0, 12) : 'unknown';
+      console.debug(`[ActorEngine] Session ${sessionId}... processing ${unprocessedMessages.length} messages for actor ${actorId.substring(0, 12)}...`);
+      console.debug(`[ActorEngine]   Message types:`, unprocessedMessages.map(m => m.type));
+
+      // Process each message sequentially (business logic - ActorEngine/StateEngine responsibility)
+      // CRITICAL: No in-memory deduplication - trust CRDT sync and processed flag on message CoMaps
+      // Backend already filtered out processed messages by checking processed flag directly from CoValue
+      for (const message of unprocessedMessages) {
         try {
-          // Extract schema co-id from actor CoValue's headerMeta using fromCoValue pattern
-          const actorSchemaStore = await this.dbEngine.execute({
-            op: 'schema',
-            fromCoValue: actorId
-          });
-          const actorSchemaCoId = actorSchemaStore.value?.$id;
+          // Skip validation for system messages (INIT, etc.) - they don't need interface validation
+          const isSystemMessage = message.type === 'INIT' || message.from === 'system';
           
-          if (actorSchemaCoId) {
-            // Read current watermark from persisted config
-            const actorStore = await this.dbEngine.execute({
-              op: 'read',
-              schema: actorSchemaCoId,
-              key: actorId
-            });
-            const actorConfig = actorStore.value;
-            if (actorConfig && actorConfig.inboxWatermark !== undefined) {
-              currentWatermark = actorConfig.inboxWatermark;
-              // Update in-memory watermark to match persisted value
-              actor.inboxWatermark = currentWatermark;
+          // Validate message against interface.inbox if present (skip for system messages)
+          if (actor.interface && !isSystemMessage) {
+            const isValid = await this._validateMessage(message, actor.interface, 'inbox', actorId);
+            if (!isValid) {
+              console.warn(`[ActorEngine] Rejected invalid message ${message.type} for ${actorId}`);
+              continue;
+            }
+          }
+
+          // Skip processing system messages (they're just for debugging/display, not actual events)
+          if (isSystemMessage) {
+            console.debug(`[ActorEngine] Skipping system message ${message.type} for ${actorId} (no processing needed)`);
+            continue;
+          }
+
+          // If actor has state machine, send event to state machine
+          if (actor.machine && this.stateEngine) {
+            await this.stateEngine.send(actor.machine.id, message.type, message.payload);
+          } else {
+            // Otherwise, treat as tool invocation
+            if (message.type.startsWith('@')) {
+              await this.toolEngine.execute(message.type, actor, message.payload);
+            } else {
+              console.warn(`Unknown message type: ${message.type} (not a tool, no state machine)`);
             }
           }
         } catch (error) {
-          // If reading watermark fails, use in-memory value as fallback
-          console.warn(`[ActorEngine] Failed to read watermark from config for ${actorId}, using in-memory value:`, error);
+          console.error(`Failed to process message ${message.type}:`, error);
+          // Continue processing other messages
         }
       }
-
-      // Read messages from CoStream reactive store (100% CoStream-based, no in-memory arrays)
-      const inboxItems = actor.inbox?.value?.items || [];
-    
-    // Filter messages after watermark (unconsumed messages)
-    // Also deduplicate by message ID to prevent processing the same message twice
-    const seenMessageIds = new Set();
-    const newMessages = inboxItems.filter(msg => {
-      // Skip if already processed (watermark check - using persisted watermark)
-      if (msg.timestamp <= currentWatermark) {
-        return false;
-      }
-      // Skip if duplicate (same ID already seen in this batch)
-      if (msg.id && seenMessageIds.has(msg.id)) {
-        return false;
-      }
-      if (msg.id) {
-        seenMessageIds.add(msg.id);
-      }
-      return true;
-    });
-
-    if (newMessages.length === 0) {
-      return;
-    }
-
-    // Sort by timestamp (oldest first)
-    newMessages.sort((a, b) => a.timestamp - b.timestamp);
-
-    // Process each message sequentially
-    for (const message of newMessages) {
-      try {
-        // If actor has state machine, send event to state machine
-        if (actor.machine && this.stateEngine) {
-          await this.stateEngine.send(actor.machine.id, message.type, message.payload);
-        } else {
-          // Otherwise, treat as tool invocation
-          if (message.type.startsWith('@')) {
-            await this.toolEngine.execute(message.type, actor, message.payload);
-          } else {
-            console.warn(`Unknown message type: ${message.type} (not a tool, no state machine)`);
-          }
-        }
-
-        // Update watermark after successful processing
-        actor.inboxWatermark = message.timestamp;
-        
-        // Persist watermark to actor config
-        await this._persistWatermark(actorId, message.timestamp);
-      } catch (error) {
-        console.error(`Failed to process message ${message.type}:`, error);
-        // Continue processing other messages
-      }
-    }
 
       // Don't automatically re-render here - let the state engine handle re-renders
       // The state engine will only re-render if the state actually changed
@@ -1107,75 +1365,6 @@ export class ActorEngine {
   }
 
 
-  /**
-   * Persist watermark to actor config in database
-   * CRDT-safe: Only updates if new watermark > current watermark (max() logic)
-   * This prevents duplicate message processing in distributed multi-browser scenarios
-   * @param {string} actorId - Actor co-id
-   * @param {number} watermark - Watermark timestamp
-   * @private
-   */
-  async _persistWatermark(actorId, watermark) {
-    if (!this.dbEngine) {
-      console.warn(`[ActorEngine] Cannot persist watermark: database engine not available`);
-      return;
-    }
-
-    try {
-      // Extract schema co-id from actor CoValue's headerMeta using fromCoValue pattern
-      const actorSchemaStore = await this.dbEngine.execute({
-        op: 'schema',
-        fromCoValue: actorId
-      });
-      const actorSchemaCoId = actorSchemaStore.value?.$id;
-      
-      if (!actorSchemaCoId) {
-        console.warn(`[ActorEngine] Cannot persist watermark: failed to extract schema co-id from actor ${actorId}`);
-        return;
-      }
-      
-      // CRITICAL FIX: Read current watermark from persisted config (not just in-memory)
-      // This ensures we always check against the latest persisted watermark, not stale in-memory value
-      // This is CRDT-safe: prevents duplicate processing when two browsers both try to update watermark
-      const actorStore = await this.dbEngine.execute({
-        op: 'read',
-        schema: actorSchemaCoId,
-        key: actorId
-      });
-      const actorConfig = actorStore.value;
-
-      if (!actorConfig) {
-        console.warn(`[ActorEngine] Cannot persist watermark: actor config not found for ${actorId}`);
-        return;
-      }
-
-      // CRDT-safe max() logic: Only update if new watermark > current watermark
-      // This ensures that even if two browsers both try to update, the max() logic prevents duplicate processing
-      const currentWatermark = actorConfig.inboxWatermark || 0;
-      if (watermark <= currentWatermark) {
-        // New watermark is not greater than current - skip update (already processed or concurrent update)
-        console.log(`[ActorEngine] Skipping watermark update for ${actorId}: new=${watermark} <= current=${currentWatermark}`);
-        return;
-      }
-
-      // Update actor config with new watermark (using unified update operation)
-      await this.dbEngine.execute({
-        op: 'update',
-        schema: actorSchemaCoId,
-        id: actorId,
-        data: { inboxWatermark: watermark }
-      });
-
-      // Also update in-memory config reference
-      const actor = this.actors.get(actorId);
-      if (actor && actor.config) {
-        actor.config.inboxWatermark = watermark;
-      }
-    } catch (error) {
-      console.error(`[ActorEngine] Failed to persist watermark for ${actorId}:`, error);
-      // Don't throw - watermark update is best-effort, shouldn't break message processing
-    }
-  }
 
   /**
    * Subscribe actor A to actor B's messages
