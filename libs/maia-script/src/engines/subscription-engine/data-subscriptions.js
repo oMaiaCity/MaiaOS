@@ -83,19 +83,28 @@ export async function subscribeToContext(subscriptionEngine, actor) {
         actor._querySchemaMap.get(schemaCoId).add(key);
         actor._queries.set(key, { schema: schemaCoId, filter: value.filter || null, store });
         
+        // CRITICAL FIX: Ensure context key exists BEFORE subscribing
+        // The subscription callback fires immediately, so we need to ensure context is set first
         // Set context to store's current value immediately (before subscribing)
         // This ensures initial render has correct data if store is already loaded
         const initialValue = store.value || [];
+        
+        // CRITICAL: Always replace with actual array data (never keep query object)
         actor.context[key] = initialValue;
         
-        // Track that we've set initial value (even if empty) to detect when real data arrives
+        // Verify it's actually an array (error only if wrong)
+        const isArray = Array.isArray(actor.context[key]);
+        if (!isArray && initialValue) {
+          console.error(`[subscribeToContext] ❌ CRITICAL: Context ${key} is NOT an array! Value:`, actor.context[key]);
+        }
+        
+        // CRITICAL FIX: Don't mark as received here - let handleDataUpdate mark it when it processes the data
+        // This ensures that when the subscription fires immediately with the same value, we still process it
+        // as initial data if this is the first time this actor is seeing it
         if (!actor._initialDataReceived) {
           actor._initialDataReceived = new Set();
         }
-        // Mark as received only if we have actual data (not empty array)
-        if (initialValue && (Array.isArray(initialValue) ? initialValue.length > 0 : true)) {
-          actor._initialDataReceived.add(key);
-        }
+        // Don't mark as received here - handleDataUpdate will mark it when processing
         
         // Add schema to context for use in view templates (e.g., drag/drop)
         // Use the resolved schema co-id
@@ -122,7 +131,7 @@ export async function subscribeToContext(subscriptionEngine, actor) {
         // This ensures we get data even if store.value was empty when we accessed it
         const unsubscribe = store.subscribe((data) => {
           handleDataUpdate(subscriptionEngine, actor.id, key, data);
-        });
+        }, { skipInitial: false }); // Keep skipInitial: false so we get immediate callback
         
         // Store unsubscribe function
         if (!actor._subscriptions) {
@@ -154,30 +163,90 @@ export async function subscribeToContext(subscriptionEngine, actor) {
 export function handleDataUpdate(subscriptionEngine, actorId, contextKey, data) {
   const actor = subscriptionEngine.actorEngine.getActor(actorId);
   if (!actor) {
+    console.log(`[handleDataUpdate] Actor ${actorId.substring(0, 12)}... not found, skipping`);
     return; // Actor may have been destroyed
   }
 
+  // CRITICAL FIX: Ensure context key exists (might be undefined if subscription fired before context was set)
+  if (!(contextKey in actor.context)) {
+    actor.context[contextKey] = undefined; // Initialize to undefined so we can detect it
+  }
+  
+  // CRITICAL: Verify that incoming data is actually an array (not a query object)
+  const isQueryObject = data && typeof data === 'object' && data.schema && typeof data.schema === 'string' && !Array.isArray(data);
+  if (isQueryObject) {
+    console.error(`[handleDataUpdate] ❌ CRITICAL: Received query object instead of array for ${contextKey}! Data:`, data);
+    return; // Don't process query objects - they should have been resolved to arrays
+  }
+  
   // Check if this is the first real data for this key (not just empty array)
   const hasReceivedData = actor._initialDataReceived && actor._initialDataReceived.has(contextKey);
   const isInitialData = !hasReceivedData;
   
   // Check if data actually changed
   const existingData = actor.context[contextKey];
+  
+  // CRITICAL: Check if existing data is a query object (should never happen, but handle gracefully)
+  const existingIsQueryObject = existingData && typeof existingData === 'object' && existingData.schema && typeof existingData.schema === 'string' && !Array.isArray(existingData);
+  if (existingIsQueryObject) {
+    console.error(`[handleDataUpdate] ❌ CRITICAL: Existing context ${contextKey} is a query object! Replacing with actual data.`);
+  }
+  
+  // CRITICAL FIX: If existingData is undefined and new data is empty array, treat as initial data
+  // This handles the case where subscription fires before context was set
+  if (existingData === undefined && Array.isArray(data) && data.length === 0) {
+    // Set to empty array and mark as initial data
+    actor.context[contextKey] = data;
+    if (!actor._initialDataReceived) {
+      actor._initialDataReceived = new Set();
+    }
+    // Don't mark as received (empty array), so we'll accept real data when it arrives
+    if (actor._initialRenderComplete) {
+      subscriptionEngine._scheduleRerender(actorId);
+    } else {
+      actor._needsPostInitRerender = true;
+    }
+    return;
+  }
+  
   if (isSameData(existingData, data)) {
-    // Data unchanged - skip processing
-    // But if this is initial data and we haven't marked it as received, mark it now
-    if (isInitialData && data && (Array.isArray(data) ? data.length > 0 : true)) {
+    // Data unchanged - but if this is the first time this actor is seeing it, we still need to process it
+    // This handles the case where navigating back: cached store has data, context is set to match,
+    // but subscription fires immediately and we need to ensure it's marked as received AND UI is updated
+    if (isInitialData) {
+      // Mark as received even though data is unchanged (this is initial data for this actor)
       if (!actor._initialDataReceived) {
         actor._initialDataReceived = new Set();
       }
-      actor._initialDataReceived.add(contextKey);
+      if (data && (Array.isArray(data) ? data.length > 0 : true)) {
+        actor._initialDataReceived.add(contextKey);
+      }
+      // CRITICAL: Always update context and trigger rerender for initial data, even if unchanged
+      // This ensures UI is populated when navigating back to a vibe with cached store data
+      actor.context[contextKey] = data;
+      const isArrayAfterUpdate = Array.isArray(actor.context[contextKey]);
+      if (!isArrayAfterUpdate && data) {
+        console.error(`[handleDataUpdate] ❌ CRITICAL: Context ${contextKey} is NOT an array after update! Value:`, actor.context[contextKey]);
+      }
+      // Always trigger rerender for initial data to ensure UI is updated (progressive rendering)
+      if (actor._initialRenderComplete) {
+        subscriptionEngine._scheduleRerender(actorId);
+      } else {
+        actor._needsPostInitRerender = true;
+      }
+      return;
     }
+    // Data unchanged and not initial - skip processing
     return; // Skip - data matches what's already in context
   }
   
   if (isInitialData) {
     // First real data for this key - always accept it
     actor.context[contextKey] = data;
+    const isArrayAfterUpdate = Array.isArray(actor.context[contextKey]);
+    if (!isArrayAfterUpdate && data) {
+      console.error(`[handleDataUpdate] ❌ CRITICAL: Context ${contextKey} is NOT an array after accepting initial data! Value:`, actor.context[contextKey]);
+    }
     
     if (!actor._initialDataReceived) {
       actor._initialDataReceived = new Set();
@@ -206,13 +275,21 @@ export function handleDataUpdate(subscriptionEngine, actorId, contextKey, data) 
 
   // Update context with new data
   actor.context[contextKey] = data;
+  const isArrayAfterUpdate = Array.isArray(actor.context[contextKey]);
+  if (!isArrayAfterUpdate && data) {
+    console.error(`[handleDataUpdate] ❌ CRITICAL: Context ${contextKey} is NOT an array after update! Value:`, actor.context[contextKey]);
+  }
   
   const dataSize = Array.isArray(data) ? data.length : typeof data;
   subscriptionEngine._log(`[SubscriptionEngine] 🔄 ${actorId}.$${contextKey} (${dataSize})`);
 
-  // Trigger batched re-render (only if initial render complete)
+  // CRITICAL: Always trigger rerender on ANY context change (progressive rendering)
+  // This ensures views are fully reactive and update immediately when data changes
   if (actor._initialRenderComplete) {
     subscriptionEngine._scheduleRerender(actorId);
+  } else {
+    // Mark for post-init rerender if initial render not complete
+    actor._needsPostInitRerender = true;
   }
 }
 

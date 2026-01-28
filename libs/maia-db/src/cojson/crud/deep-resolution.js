@@ -9,12 +9,32 @@ import { ensureCoValueLoaded } from './collection-helpers.js';
 import { extractCoValueDataFlat } from './data-extraction.js';
 
 /**
+ * Global cache to track ongoing and completed deep resolution operations
+ * Prevents duplicate work when multiple calls try to resolve the same CoValue
+ * 
+ * Structure: coId → Promise<void> (ongoing) or true (completed)
+ * - Promise: Resolution is in progress, wait for it
+ * - true: Resolution already completed, skip
+ */
+const resolutionCache = new Map(); // coId → Promise<void> | true
+
+/**
+ * Check if a CoValue is already resolved or being resolved
+ * @param {string} coId - CoValue ID
+ * @returns {boolean} True if already resolved or being resolved
+ */
+export function isDeepResolvedOrResolving(coId) {
+  const cached = resolutionCache.get(coId);
+  return cached === true || (cached && typeof cached.then === 'function');
+}
+
+/**
  * Extract all CoValue IDs from a data object recursively
  * @param {any} data - Data object to scan
  * @param {Set<string>} visited - Set of already visited CoValue IDs (for circular ref detection)
  * @param {number} depth - Current recursion depth
  * @param {number} maxDepth - Maximum recursion depth
- * @returns {Set<string>} Set of CoValue IDs found
+ * @returns {Set<string>} Set of CoValue IDs found (excluding already visited ones)
  */
 function extractCoValueIds(data, visited = new Set(), depth = 0, maxDepth = 10) {
   const coIds = new Set();
@@ -31,7 +51,12 @@ function extractCoValueIds(data, visited = new Set(), depth = 0, maxDepth = 10) 
   if (Array.isArray(data)) {
     for (const item of data) {
       const itemIds = extractCoValueIds(item, visited, depth + 1, maxDepth);
-      itemIds.forEach(id => coIds.add(id));
+      itemIds.forEach(id => {
+        // Only add if not already visited (prevents circular references)
+        if (!visited.has(id)) {
+          coIds.add(id);
+        }
+      });
     }
     return coIds;
   }
@@ -45,14 +70,19 @@ function extractCoValueIds(data, visited = new Set(), depth = 0, maxDepth = 10) 
     
     // Check if value is a CoValue ID (string starting with 'co_')
     if (typeof value === 'string' && value.startsWith('co_')) {
-      // Skip if already visited (circular reference)
+      // CRITICAL: Skip if already visited (circular reference detection)
       if (!visited.has(value)) {
         coIds.add(value);
       }
     } else if (typeof value === 'object' && value !== null) {
       // Recursively scan nested objects
       const nestedIds = extractCoValueIds(value, visited, depth + 1, maxDepth);
-      nestedIds.forEach(id => coIds.add(id));
+      nestedIds.forEach(id => {
+        // Only add if not already visited
+        if (!visited.has(id)) {
+          coIds.add(id);
+        }
+      });
     }
   }
   
@@ -97,19 +127,22 @@ async function waitForCoValueAvailable(backend, coId, timeoutMs = 5000) {
  * @param {number} options.currentDepth - Current recursion depth (internal)
  * @returns {Promise<void>} Resolves when all nested CoValues are loaded
  */
-async function resolveNestedReferences(backend, data, visited = new Set(), options = {}) {
+export async function resolveNestedReferences(backend, data, visited = new Set(), options = {}) {
   const {
     maxDepth = 10,
     timeoutMs = 5000,
     currentDepth = 0
   } = options;
   
+  const indent = '  '.repeat(currentDepth);
+  const depthPrefix = `[DeepResolution:depth${currentDepth}]`;
+  
   if (currentDepth > maxDepth) {
-    console.warn(`[DeepResolution] Max depth ${maxDepth} reached, stopping recursion`);
+    console.warn(`${depthPrefix} ⚠️ Max depth ${maxDepth} reached, stopping recursion`);
     return;
   }
   
-  // Extract all CoValue IDs from data
+  // Extract all CoValue IDs from data (already filters out visited ones)
   const coIds = extractCoValueIds(data, visited, currentDepth, maxDepth);
   
   if (coIds.size === 0) {
@@ -118,11 +151,13 @@ async function resolveNestedReferences(backend, data, visited = new Set(), optio
   
   // Load all nested CoValues in parallel
   const loadPromises = Array.from(coIds).map(async (coId) => {
-    // Skip if already visited (circular reference)
+    // CRITICAL: Mark as visited BEFORE loading to prevent circular resolution
+    // This ensures that if A→B→A, we stop at the second A
     if (visited.has(coId)) {
-      return;
+      return; // Already being resolved or resolved - skip silently
     }
     
+    // Mark as visited immediately to prevent circular references
     visited.add(coId);
     
     try {
@@ -132,7 +167,6 @@ async function resolveNestedReferences(backend, data, visited = new Set(), optio
       // Get the CoValue data
       const coValueCore = backend.getCoValue(coId);
       if (!coValueCore || !backend.isAvailable(coValueCore)) {
-        console.warn(`[DeepResolution] CoValue ${coId.substring(0, 12)}... failed to load`);
         return;
       }
       
@@ -140,6 +174,7 @@ async function resolveNestedReferences(backend, data, visited = new Set(), optio
       const nestedData = extractCoValueDataFlat(backend, coValueCore);
       
       // Recursively resolve nested references in the nested CoValue
+      // Pass the same visited set to prevent circular resolution
       await resolveNestedReferences(backend, nestedData, visited, {
         maxDepth,
         timeoutMs,
@@ -158,7 +193,7 @@ async function resolveNestedReferences(backend, data, visited = new Set(), optio
       backend.subscriptionCache.getOrCreate(coId, () => ({ unsubscribe }));
       
     } catch (error) {
-      console.warn(`[DeepResolution] Failed to resolve nested CoValue ${coId.substring(0, 12)}...:`, error.message);
+      // Silently continue - errors are logged at top level if needed
       // Continue with other CoValues even if one fails
     }
   });
@@ -184,27 +219,64 @@ export async function deepResolveCoValue(backend, coId, options = {}) {
     timeoutMs = 5000
   } = options;
   
+  const debugPrefix = `[deepResolveCoValue:${coId.substring(0, 12)}...]`;
+  
   if (!deepResolve) {
     return; // Deep resolution disabled
   }
   
-  // Ensure the main CoValue is loaded
-  await ensureCoValueLoaded(backend, coId, { waitForAvailable: true, timeoutMs });
-  
-  const coValueCore = backend.getCoValue(coId);
-  if (!coValueCore || !backend.isAvailable(coValueCore)) {
-    throw new Error(`CoValue ${coId} failed to load`);
+  // CRITICAL OPTIMIZATION: Check if resolution is already completed or in progress
+  const cached = resolutionCache.get(coId);
+  if (cached === true) {
+    // Already resolved - skip silently (no log to reduce noise)
+    return;
+  }
+  if (cached && typeof cached.then === 'function') {
+    // Resolution in progress - wait for it
+    await cached;
+    return;
   }
   
-  // Extract data from CoValue
-  const data = extractCoValueDataFlat(backend, coValueCore);
+  // Create resolution promise and store it
+  const resolutionPromise = (async () => {
+    try {
+      const startTime = Date.now();
+      
+      // Ensure the main CoValue is loaded
+      await ensureCoValueLoaded(backend, coId, { waitForAvailable: true, timeoutMs });
+      
+      const coValueCore = backend.getCoValue(coId);
+      if (!coValueCore || !backend.isAvailable(coValueCore)) {
+        throw new Error(`CoValue ${coId} failed to load`);
+      }
+      
+      // Extract data from CoValue
+      const data = extractCoValueDataFlat(backend, coValueCore);
+      
+      // Resolve nested references
+      // Start with the root CoValue in visited set to prevent resolving it again
+      const visited = new Set([coId]);
+      
+      await resolveNestedReferences(backend, data, visited, {
+        maxDepth,
+        timeoutMs,
+        currentDepth: 0
+      });
+      
+      // Mark as completed in cache (permanent - don't delete)
+      resolutionCache.set(coId, true);
+    } catch (error) {
+      // On error, remove from cache so it can be retried
+      resolutionCache.delete(coId);
+      throw error;
+    }
+  })();
   
-  // Resolve nested references
-  await resolveNestedReferences(backend, data, new Set([coId]), {
-    maxDepth,
-    timeoutMs,
-    currentDepth: 0
-  });
+  // Store the promise so other calls can wait for it
+  resolutionCache.set(coId, resolutionPromise);
+  
+  // Wait for resolution to complete
+  await resolutionPromise;
 }
 
 /**

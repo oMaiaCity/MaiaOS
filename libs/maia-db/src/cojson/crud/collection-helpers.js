@@ -128,7 +128,6 @@ export async function ensureCoValueLoaded(backend, coId, options = {}) {
   }
   
   // Not available - trigger loading from IndexedDB (jazz-tools pattern)
-  console.log(`[CoJSONBackend] Loading CoValue from IndexedDB: ${coId.substring(0, 12)}...`);
   backend.node.loadCoValueCore(coId).catch(err => {
     console.error(`[CoJSONBackend] Failed to load CoValue ${coId}:`, err);
   });
@@ -144,7 +143,6 @@ export async function ensureCoValueLoaded(backend, coId, options = {}) {
       
       const unsubscribe = coValueCore.subscribe((core) => {
         if (core.isAvailable()) {
-          console.log(`[CoJSONBackend] CoValue loaded: ${coId.substring(0, 12)}...`);
           clearTimeout(timeout);
           unsubscribe();
           resolve();

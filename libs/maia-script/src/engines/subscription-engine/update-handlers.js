@@ -120,8 +120,25 @@ export async function handleContextUpdate(subscriptionEngine, actorId, newContex
   // Preserve query subscriptions (they're managed separately)
   const existingContext = actor.context || {};
   
-  // Merge contexts (new values override existing)
-  actor.context = { ...existingContext, ...newContext };
+  // CRITICAL: Don't overwrite arrays with query objects
+  // If a key already has an array value (from subscription), preserve it
+  // Only merge non-query-object values, or let subscribeToContext handle query objects
+  const mergedContext = { ...existingContext };
+  for (const [key, value] of Object.entries(newContext)) {
+    const existingValue = existingContext[key];
+    const isExistingArray = Array.isArray(existingValue);
+    const isNewQueryObject = value && typeof value === 'object' && value.schema && typeof value.schema === 'string' && !Array.isArray(value);
+    
+    // If existing value is an array (from subscription) and new value is a query object, skip it
+    // subscribeToContext will handle query objects and replace them with arrays
+    if (isExistingArray && isNewQueryObject) {
+      continue; // Skip - preserve the array
+    }
+    
+    mergedContext[key] = value;
+  }
+  
+  actor.context = mergedContext;
 
   // Re-subscribe to any NEW query objects in the updated context
   // subscribeToContext() now has deduplication check, so it will only subscribe to new queries

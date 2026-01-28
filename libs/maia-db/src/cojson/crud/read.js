@@ -13,7 +13,14 @@ import { ensureCoValueLoaded } from './collection-helpers.js';
 import { extractCoValueDataFlat } from './data-extraction.js';
 import { resolveCollectionName, getCoListId } from './collection-helpers.js';
 import { matchesFilter } from './filter-helpers.js';
-import { deepResolveCoValue, resolveNestedReferencesPublic } from './deep-resolution.js';
+import { deepResolveCoValue, resolveNestedReferencesPublic, resolveNestedReferences, isDeepResolvedOrResolving } from './deep-resolution.js';
+
+/**
+ * Store cache - caches stores by schema+filter to allow multiple actors to share the same store
+ * Key format: `${schema}:${JSON.stringify(filter)}`
+ * This prevents creating duplicate stores when multiple actors subscribe to the same collection
+ */
+const storeCache = new Map(); // cacheKey → ReactiveStore
 
 /**
  * Universal read() function - works for ANY CoValue type
@@ -82,6 +89,35 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
     return store;
   }
 
+  // Helper to do deep resolution (relies on global resolutionCache in deepResolveCoValue)
+  const doDeepResolution = async () => {
+    if (!deepResolve) {
+      return; // Deep resolution disabled
+    }
+    
+    // CRITICAL OPTIMIZATION: Check global cache BEFORE calling deepResolveCoValue
+    // This prevents unnecessary function calls even if the cache would catch them
+    if (isDeepResolvedOrResolving(coId)) {
+      // Already resolved or being resolved - skip silently (cache hit!)
+      // No log to reduce noise - this is the expected path for already-resolved CoValues
+      return;
+    }
+    
+    try {
+      // deepResolveCoValue has its own global cache to prevent duplicate work
+      // But we check here first to avoid the function call overhead
+      await deepResolveCoValue(backend, coId, { deepResolve, maxDepth, timeoutMs });
+    } catch (err) {
+      console.error(`[readSingleCoValue] ❌ Deep resolution failed for ${coId.substring(0, 12)}...:`, err.message);
+      // Continue even if deep resolution fails
+    }
+  };
+  
+  // Track if we've triggered deep resolution for this readSingleCoValue call
+  // This prevents calling it multiple times within the same function call
+  // (e.g., both in initial load path AND subscription callback)
+  let deepResolutionTriggered = false;
+  
   // Subscribe to CoValueCore (same pattern for all types)
   const unsubscribe = coValueCore.subscribe(async (core) => {
     if (!core.isAvailable()) {
@@ -92,14 +128,12 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
     // Extract CoValue data as flat object
     const data = extractCoValueDataFlat(backend, core, schemaHint);
     
-    // Deep resolve nested references if enabled
-    if (deepResolve) {
-      try {
-        await resolveNestedReferencesPublic(backend, data, { maxDepth, timeoutMs });
-      } catch (err) {
-        console.warn(`[CoJSONBackend] Deep resolution failed for ${coId.substring(0, 12)}...:`, err.message);
-        // Continue with data even if deep resolution fails
-      }
+    // CRITICAL: Only trigger deep resolution ONCE per readSingleCoValue call
+    // The global resolutionCache in deepResolveCoValue prevents duplicate work across calls
+    // This local flag prevents duplicate work within the same call
+    if (!deepResolutionTriggered) {
+      deepResolutionTriggered = true;
+      await doDeepResolution();
     }
     
     store._set(data);
@@ -112,21 +146,18 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
   if (coValueCore.isAvailable()) {
     const data = extractCoValueDataFlat(backend, coValueCore, schemaHint);
     
-    // Deep resolve nested references if enabled
-    if (deepResolve) {
-      try {
-        await deepResolveCoValue(backend, coId, { deepResolve, maxDepth, timeoutMs });
-        // Re-extract data after deep resolution (may have changed)
-        const updatedCore = backend.getCoValue(coId);
-        if (updatedCore && backend.isAvailable(updatedCore)) {
-          const updatedData = extractCoValueDataFlat(backend, updatedCore, schemaHint);
-          store._set(updatedData);
-          return store;
-        }
-      } catch (err) {
-        console.warn(`[CoJSONBackend] Deep resolution failed for ${coId.substring(0, 12)}...:`, err.message);
-        // Continue with original data even if deep resolution fails
-      }
+    // Trigger deep resolution once (will be skipped by global cache if already done)
+    if (!deepResolutionTriggered) {
+      deepResolutionTriggered = true;
+      await doDeepResolution();
+    }
+    
+    // Re-extract data after deep resolution (may have changed)
+    const updatedCore = backend.getCoValue(coId);
+    if (updatedCore && backend.isAvailable(updatedCore)) {
+      const updatedData = extractCoValueDataFlat(backend, updatedCore, schemaHint);
+      store._set(updatedData);
+      return store;
     }
     
     store._set(data);
@@ -134,14 +165,8 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
     // Set loading state, trigger load (subscription will fire when available)
     store._set({ id: coId, loading: true });
     ensureCoValueLoaded(backend, coId).then(async () => {
-      // After loading, perform deep resolution if enabled
-      if (deepResolve) {
-        try {
-          await deepResolveCoValue(backend, coId, { deepResolve, maxDepth, timeoutMs });
-        } catch (err) {
-          console.warn(`[CoJSONBackend] Deep resolution failed for ${coId.substring(0, 12)}...:`, err.message);
-        }
-      }
+      // Deep resolution will happen in subscription callback (if not already triggered)
+      // No need to do it here - subscription will fire when loaded
     }).catch(err => {
       store._set({ error: err.message, id: coId });
     });
@@ -174,19 +199,29 @@ async function readCollection(backend, schema, filter = null, options = {}) {
     maxDepth = 10,
     timeoutMs = 5000
   } = options;
-  const store = new ReactiveStore([]);
+  
+  // CRITICAL FIX: Cache stores by schema+filter to allow multiple actors to share the same store
+  // This prevents creating duplicate stores when navigating back to a vibe
+  const cacheKey = `${schema}:${JSON.stringify(filter || {})}`;
+  let store = storeCache.get(cacheKey);
+  
+  if (store) {
+    return store;
+  }
+  
+  // Create new store
+  store = new ReactiveStore([]);
+  storeCache.set(cacheKey, store);
   
   // Resolve collection name from schema
   const collectionName = await resolveCollectionName(backend, schema);
   if (!collectionName) {
-    // No collection found - return empty array
     return store;
   }
   
   // Get CoList ID from account.data.<collectionName>
   const coListId = await getCoListId(backend, collectionName);
   if (!coListId) {
-    // CoList doesn't exist yet - return empty array (will be populated when items are added)
     return store;
   }
   
@@ -201,7 +236,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
   if (!backend.isAvailable(coListCore)) {
     // Trigger loading and wait for it to become available (progressive loading)
     await ensureCoValueLoaded(backend, coListId, { waitForAvailable: true, timeoutMs: 2000 }).catch(err => {
-      console.error(`[CoJSONBackend] Failed to load CoList ${coListId}:`, err);
+      console.error(`[readCollection] Failed to load CoList ${coListId.substring(0, 12)}...:`, err);
     });
     // Get updated CoValueCore after loading
     coListCore = backend.getCoValue(coListId);
@@ -213,6 +248,15 @@ async function readCollection(backend, schema, filter = null, options = {}) {
   // Track item IDs we've subscribed to (for cleanup)
   const subscribedItemIds = new Set();
   
+  // CRITICAL OPTIMIZATION: Track which items have already been deep-resolved
+  // Prevents duplicate deep resolution work when updateStore() is called multiple times
+  const deepResolvedItems = new Set();
+  
+  // CRITICAL OPTIMIZATION: Persistent shared visited set across ALL updateStore() calls
+  // This prevents duplicate deep resolution work when updateStore() is called multiple times
+  // (e.g., from subscription callbacks firing repeatedly)
+  const sharedVisited = new Set();
+  
   // Helper to subscribe to an item CoValue
   const subscribeToItem = (itemId) => {
     // Skip if already subscribed
@@ -223,17 +267,41 @@ async function readCollection(backend, schema, filter = null, options = {}) {
     subscribedItemIds.add(itemId);
     
     const itemCore = backend.getCoValue(itemId);
-    if (!itemCore) {
-      // Item not in memory yet - trigger loading, subscription will be set up when it becomes available
-      ensureCoValueLoaded(backend, itemId).catch(err => {
+    if (!itemCore || !backend.isAvailable(itemCore)) {
+      // Item not in memory or not available yet - trigger loading and wait for it to be available
+      ensureCoValueLoaded(backend, itemId, { waitForAvailable: true, timeoutMs: 2000 }).then(() => {
+        // Item is now loaded and available - set up subscription
+        const loadedItemCore = backend.getCoValue(itemId);
+        if (loadedItemCore && backend.isAvailable(loadedItemCore)) {
+          // Subscribe to item changes (fires when item becomes available or updates)
+          const unsubscribeItem = loadedItemCore.subscribe(() => {
+            // Fire and forget - don't await async updateStore in subscription callback
+            updateStore().catch(err => {
+              console.warn(`[CoJSONBackend] Error updating store:`, err);
+            });
+          });
+          
+          // Use subscriptionCache for each item (same pattern for all CoValue references)
+          backend.subscriptionCache.getOrCreate(itemId, () => ({ unsubscribe: unsubscribeItem }));
+          
+          // CRITICAL FIX: Trigger updateStore immediately after item is available
+          // This ensures items that just loaded are included in the store
+          updateStore().catch(err => {
+            console.warn(`[CoJSONBackend] Error updating store after item load:`, err);
+          });
+        }
+      }).catch(err => {
         console.error(`[CoJSONBackend] Failed to load item ${itemId}:`, err);
       });
       return;
     }
     
     // Subscribe to item changes (fires when item becomes available or updates)
+    // CRITICAL: Only trigger updateStore, don't re-do deep resolution
+    // Deep resolution is already done once when item is first loaded
     const unsubscribeItem = itemCore.subscribe(() => {
       // Fire and forget - don't await async updateStore in subscription callback
+      // Note: updateStore will skip deep resolution for items already in deepResolvedItems
       updateStore().catch(err => {
         console.warn(`[CoJSONBackend] Error updating store:`, err);
       });
@@ -251,7 +319,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
     if (!backend.isAvailable(coListCore)) {
       // CoList became unavailable - trigger reload
       ensureCoValueLoaded(backend, coListId).catch(err => {
-        console.error(`[CoJSONBackend] Failed to load CoList ${coListId}:`, err);
+        console.error(`[readCollection] Failed to reload CoList:`, err);
       });
       return;
     }
@@ -265,6 +333,9 @@ async function readCollection(backend, schema, filter = null, options = {}) {
       const itemIdsArray = content.toJSON(); // Array of item co-ids
       
       // Process each item ID
+      let availableCount = 0;
+      let unavailableCount = 0;
+      
       for (const itemId of itemIdsArray) {
         if (typeof itemId !== 'string' || !itemId.startsWith('co_')) {
           continue;
@@ -277,20 +348,29 @@ async function readCollection(backend, schema, filter = null, options = {}) {
         const itemCore = backend.getCoValue(itemId);
         if (!itemCore) {
           // Item not in memory - subscribeToItem already triggered loading
+          unavailableCount++;
           continue;
         }
         
         // Extract item if available (progressive loading - show available items immediately)
         if (backend.isAvailable(itemCore)) {
+          availableCount++;
           const itemData = extractCoValueDataFlat(backend, itemCore);
           
           // Deep resolve nested references if enabled
-          if (deepResolve) {
+          // CRITICAL: Only deep-resolve each item ONCE, even if updateStore() is called multiple times
+          // This prevents cascading duplicate work when subscriptions fire repeatedly
+          if (deepResolve && !deepResolvedItems.has(itemId)) {
             try {
-              await resolveNestedReferencesPublic(backend, itemData, { maxDepth, timeoutMs });
+              await resolveNestedReferences(backend, itemData, sharedVisited, {
+                maxDepth,
+                timeoutMs,
+                currentDepth: 0
+              });
+              // Mark as resolved to prevent duplicate work
+              deepResolvedItems.add(itemId);
             } catch (err) {
-              console.warn(`[CoJSONBackend] Deep resolution failed for item ${itemId.substring(0, 12)}...:`, err.message);
-              // Continue with item data even if deep resolution fails
+              // Silently continue - deep resolution failure shouldn't block item display
             }
           }
           
@@ -298,11 +378,14 @@ async function readCollection(backend, schema, filter = null, options = {}) {
           if (!filter || matchesFilter(itemData, filter)) {
             results.push(itemData);
           }
+        } else {
+          unavailableCount++;
         }
         // If item not available yet, subscription will fire when it becomes available
       }
+      
     } catch (e) {
-      console.warn(`[CoJSONBackend] Error reading CoList items:`, e);
+      console.warn(`[readCollection] Error reading CoList items:`, e);
     }
     
     // Update store with current results (progressive loading - may be partial, updates reactively)
@@ -351,9 +434,11 @@ async function readCollection(backend, schema, filter = null, options = {}) {
   // Items that aren't ready yet will populate reactively via subscriptions
   await updateStore();
   
-  // Set up store unsubscribe to clean up subscriptions
+  // Set up store unsubscribe to clean up subscriptions and remove from cache
   const originalUnsubscribe = store._unsubscribe;
   store._unsubscribe = () => {
+    // Remove from cache when store is cleaned up
+    storeCache.delete(cacheKey);
     if (originalUnsubscribe) originalUnsubscribe();
     backend.subscriptionCache.scheduleCleanup(coListId);
     for (const itemId of subscribedItemIds) {
@@ -432,8 +517,7 @@ async function readAllCoValues(backend, filter = null, options = {}) {
         try {
           await resolveNestedReferencesPublic(backend, data, { maxDepth, timeoutMs });
         } catch (err) {
-          console.warn(`[CoJSONBackend] Deep resolution failed for ${coId.substring(0, 12)}...:`, err.message);
-          // Continue with data even if deep resolution fails
+          // Silently continue - deep resolution failure shouldn't block the app
         }
       }
       

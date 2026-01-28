@@ -9,11 +9,6 @@
       "class": "header-section",
       "children": [
         {
-          "tag": "h1",
-          "class": "title",
-          "text": "$title"
-        },
-        {
           "class": "view-switcher",
           "children": [
             {

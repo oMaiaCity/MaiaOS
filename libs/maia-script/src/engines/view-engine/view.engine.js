@@ -135,12 +135,29 @@ export class ViewEngine {
   /**
    * Render a view definition into a shadow root
    * @param {Object} viewDef - The view definition
-   * @param {Object} context - The actor context
+   * @param {Object} context - The actor context (reactive - always use latest)
    * @param {ShadowRoot} shadowRoot - The shadow root to render into
    * @param {CSSStyleSheet[]} styleSheets - Stylesheets to adopt
    * @param {string} actorId - The actor ID
    */
   async render(viewDef, context, shadowRoot, styleSheets, actorId) {
+    // CRITICAL: Check for query objects in context (error only if found)
+    const problematicKeys = [];
+    for (const key of Object.keys(context || {})) {
+      const value = context[key];
+      // Check if it's a query object where we expect an array
+      const isQueryObject = value && typeof value === 'object' && value.schema && typeof value.schema === 'string' && !Array.isArray(value);
+      if (isQueryObject && (key.includes('Todo') || key.includes('Done') || key === 'todos')) {
+        problematicKeys.push(key);
+      }
+    }
+    if (problematicKeys.length > 0) {
+      console.error(`[ViewEngine] ❌ CRITICAL: Found query objects in context instead of arrays:`, problematicKeys);
+      for (const key of problematicKeys) {
+        console.error(`[ViewEngine] ❌ Context ${key} value:`, context[key]);
+      }
+    }
+    
     // Reset input counter for this actor at start of render
     // This ensures inputs get consistent IDs across re-renders (same position = same ID)
     this.actorInputCounters.set(actorId, 0);
@@ -159,7 +176,8 @@ export class ViewEngine {
     // Support both old format (viewDef is the node directly) and new format (viewDef.content is the node)
     const viewNode = viewDef.content || viewDef;
     
-    // View IS the node structure (no container/root wrapper needed)
+    // CRITICAL: Always use the context passed in (reactive updates)
+    // Pass context directly to renderNode to ensure it uses latest data
     const element = await this.renderNode(viewNode, { context }, actorId);
     
     if (element) {

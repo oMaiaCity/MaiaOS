@@ -531,13 +531,24 @@ export class ActorEngine {
     // Mark initial render as complete (queries that execute after this should trigger re-renders)
     actor._initialRenderComplete = true;
     
-    // CRITICAL FIX: Check if data arrived during initialization and trigger rerender
+    // CRITICAL FIX: Check if data arrived during initialization and trigger rerender IMMEDIATELY
     // This handles the case where subscription data loads after context was set but before render
+    // When navigating back, cached stores have data, subscriptions fire immediately, and we need
+    // to ensure the UI is updated even if the initial render happened with empty/old context
     if (actor._needsPostInitRerender) {
       delete actor._needsPostInitRerender;
-      // Schedule rerender via subscription engine (batched)
-      if (this.subscriptionEngine) {
-        this.subscriptionEngine._scheduleRerender(actorId);
+      
+      // CRITICAL: Trigger rerender IMMEDIATELY (not batched) to ensure UI updates when navigating back
+      // This ensures that if subscriptions populated context during initialization, the UI reflects it
+      // Use latest context from actor (reactive updates)
+      try {
+        await this.rerender(actorId);
+      } catch (error) {
+        console.error(`[ActorEngine] ❌ Post-init rerender failed for ${actorId}:`, error);
+        // Fallback to batched rerender if immediate rerender fails
+        if (this.subscriptionEngine) {
+          this.subscriptionEngine._scheduleRerender(actorId);
+        }
       }
     }
     
@@ -583,6 +594,7 @@ export class ActorEngine {
       return;
     }
 
+
     // CRITICAL FIX: Destroy all child actors before re-rendering
     // When view switches (e.g., list → kanban), child actors are removed from DOM
     // but not destroyed, causing stores to accumulate in _storeSubscriptions
@@ -617,8 +629,12 @@ export class ActorEngine {
     // Get stylesheets (brand + actor merged)
     const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
 
-    // Re-render the view
-    await this.viewEngine.render(viewDef, actor.context, actor.shadowRoot, styleSheets, actorId);
+    // CRITICAL: Always use the LATEST context from actor (reactive updates)
+    // Pass actor.context directly (not a copy) to ensure view engine gets latest data
+    const latestContext = actor.context;
+
+    // Re-render the view with latest context
+    await this.viewEngine.render(viewDef, latestContext, actor.shadowRoot, styleSheets, actorId);
 
     // Restore focus after re-render (microtask to allow DOM to update)
     if (focusInfo) {

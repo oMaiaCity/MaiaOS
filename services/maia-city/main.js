@@ -558,7 +558,6 @@ async function loadVibe(vibeKey) {
 			// Get container reference from window (set by db-view.js when loading vibe)
 			const containerToCleanup = window.currentVibeContainer || currentVibeContainer;
 			if (containerToCleanup && maia && maia.actorEngine) {
-				console.log(`[MaiaCity] Unloading vibe, destroying actors for container`);
 				maia.actorEngine.destroyActorsForContainer(containerToCleanup);
 				currentVibeContainer = null;
 				window.currentVibeContainer = null;
@@ -612,6 +611,125 @@ function toggleExpand(expandId) {
 		}
 	}
 }
+
+/**
+ * Debug helper function for inspecting todos state
+ * Exposed as window.debugTodos() for console access
+ */
+window.debugTodos = function() {
+	if (!maia) {
+		console.error('[debugTodos] MaiaOS not initialized');
+		return;
+	}
+	
+	console.log('=== TODOS DEBUG INFO ===');
+	
+	// Find todos-related actors
+	const actorEngine = maia.actorEngine;
+	if (!actorEngine) {
+		console.error('[debugTodos] ActorEngine not available');
+		return;
+	}
+	
+	const actors = actorEngine.getAllActors();
+	console.log(`Total actors: ${actors.length}`);
+	
+	// Find actors with todos context
+	const todosActors = [];
+	for (const actor of actors) {
+		if (actor.context && ('todos' in actor.context || 'todosTodo' in actor.context)) {
+			todosActors.push(actor);
+		}
+	}
+	
+	console.log(`Actors with todos context: ${todosActors.length}`);
+	
+	for (const actor of todosActors) {
+		console.log(`\n--- Actor ${actor.id.substring(0, 12)}... ---`);
+		console.log(`Context keys:`, Object.keys(actor.context));
+		
+		// Check todos context
+		if (actor.context.todos) {
+			const todos = actor.context.todos;
+			const todosType = Array.isArray(todos) ? `array[${todos.length}]` : typeof todos;
+			console.log(`context.todos: ${todosType}`, todos);
+		}
+		
+		if (actor.context.todosTodo) {
+			const todosTodo = actor.context.todosTodo;
+			const todosTodoType = Array.isArray(todosTodo) ? `array[${todosTodo.length}]` : typeof todosTodo;
+			console.log(`context.todosTodo: ${todosTodoType}`, todosTodo);
+		}
+		
+		// Check queries
+		if (actor._queries) {
+			console.log(`Queries:`, Array.from(actor._queries.keys()));
+			for (const [key, query] of actor._queries.entries()) {
+				const store = query.store;
+				const storeValue = store?.value;
+				const storeValueType = Array.isArray(storeValue) ? `array[${storeValue.length}]` : typeof storeValue;
+				const subscriberCount = store?._subscribers?.size || 0;
+				console.log(`  Query "${key}": store.value = ${storeValueType}, subscribers = ${subscriberCount}`);
+			}
+		}
+		
+		// Check initial data received
+		if (actor._initialDataReceived) {
+			console.log(`Initial data received:`, Array.from(actor._initialDataReceived));
+		}
+		
+		// Check render state
+		console.log(`Initial render complete: ${actor._initialRenderComplete}`);
+		console.log(`Needs post-init rerender: ${actor._needsPostInitRerender}`);
+	}
+	
+	// Check backend for todos CoList
+	const backend = maia.dbEngine?.backend;
+	if (backend) {
+		try {
+			// Try to find todos collection
+			const account = backend.getAccount();
+			if (account && account.data) {
+				const todosListId = account.data.get('todos');
+				if (todosListId) {
+					console.log(`\n--- Todos CoList ---`);
+					console.log(`CoList ID: ${todosListId}`);
+					const todosListCore = backend.getCoValue(todosListId);
+					if (todosListCore) {
+						const isAvailable = backend.isAvailable(todosListCore);
+						console.log(`CoList available: ${isAvailable}`);
+						if (isAvailable) {
+							const content = backend.getCurrentContent(todosListCore);
+							if (content && content.toJSON) {
+								const itemIds = content.toJSON();
+								console.log(`CoList item IDs: ${itemIds.length} items`, itemIds);
+								
+								// Check each item
+								for (const itemId of itemIds) {
+									const itemCore = backend.getCoValue(itemId);
+									if (itemCore) {
+										const itemAvailable = backend.isAvailable(itemCore);
+										console.log(`  Item ${itemId.substring(0, 12)}...: available=${itemAvailable}`);
+									} else {
+										console.log(`  Item ${itemId.substring(0, 12)}...: not in memory`);
+									}
+								}
+							}
+						}
+					} else {
+						console.log(`CoList CoValueCore not found`);
+					}
+				} else {
+					console.log(`\nTodos CoList ID not found in account.data`);
+				}
+			}
+		} catch (error) {
+			console.error('[debugTodos] Error checking backend:', error);
+		}
+	}
+	
+	console.log('\n=== END DEBUG INFO ===');
+};
 
 // Expose globally for onclick handlers
 window.switchView = switchView;
