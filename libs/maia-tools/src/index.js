@@ -11,7 +11,6 @@ import publishMessageDef from './core/publishMessage.tool.maia';
 import focusDef from './core/focus.tool.maia';
 
 import dragStartDef from './dragdrop/start.tool.maia';
-import dragEndDef from './dragdrop/end.tool.maia';
 import dropDef from './dragdrop/drop.tool.maia';
 import dragOverDef from './dragdrop/dragOver.tool.maia';
 
@@ -23,7 +22,6 @@ import publishMessageFn from './core/publishMessage.tool.js';
 import focusFn from './core/focus.tool.js';
 
 import dragStartFn from './dragdrop/start.tool.js';
-import dragEndFn from './dragdrop/end.tool.js';
 import dropFn from './dragdrop/drop.tool.js';
 import dragOverFn from './dragdrop/dragOver.tool.js';
 
@@ -38,7 +36,6 @@ export const TOOLS = {
   'core/focus': { definition: focusDef, function: focusFn },
   
   'dragdrop/start': { definition: dragStartDef, function: dragStartFn },
-  'dragdrop/end': { definition: dragEndDef, function: dragEndFn },
   'dragdrop/drop': { definition: dropDef, function: dropFn },
   'dragdrop/dragOver': { definition: dragOverDef, function: dragOverFn },
   

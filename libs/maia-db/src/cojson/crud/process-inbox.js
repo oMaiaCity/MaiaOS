@@ -87,6 +87,7 @@ export async function processInbox(backend, actorId, inboxCoId) {
 
   // Collect unprocessed messages from all sessions
   const unprocessedMessages = [];
+  
 
   // Process each session
   for (const [sessionID, messages] of Object.entries(inboxData.sessions)) {
@@ -180,13 +181,11 @@ export async function processInbox(backend, actorId, inboxCoId) {
           
           // Ensure required fields exist
           if (!extractedMessageData.type) {
-            // Log all keys and values to debug why type is missing
             console.error(
               `[processInbox] ❌ REJECTED message ${messageCoId} - missing required 'type' field. ` +
               `Keys found: [${keys.join(', ')}]. ` +
               `All values: ${JSON.stringify(messageData).substring(0, 300)}`
             );
-            // Skip messages without type - they're invalid
             continue;
           }
           
@@ -196,8 +195,6 @@ export async function processInbox(backend, actorId, inboxCoId) {
             _sessionID: sessionID,
             _madeAt: madeAt
           });
-        } else {
-          // Message already processed - skip it (no logging to reduce noise)
         }
       } catch (error) {
         console.error(`[processInbox] Failed to read message CoMap ${messageCoId}:`, error);
@@ -207,7 +204,6 @@ export async function processInbox(backend, actorId, inboxCoId) {
   }
 
   // Sort messages by madeAt (oldest first) for processing order
-  // Note: Messages are already marked as processed above when we detect they're unprocessed
   unprocessedMessages.sort((a, b) => (a._madeAt || 0) - (b._madeAt || 0));
 
   return {

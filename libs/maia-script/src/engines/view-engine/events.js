@@ -58,26 +58,6 @@ export async function handleEvent(viewEngine, e, eventDef, data, element, actorI
     }
   }
   
-  // Handle special events that don't go to state machine
-  // dragover fires continuously - we only need to preventDefault, not process it
-  if (eventName === 'DRAG_OVER') {
-    return; // Already prevented above, don't send to state machine
-  }
-  
-  // Filter dragenter/dragleave: Only process if event target is the dropzone element itself
-  // (not a child element - browser fires these events for every child element)
-  // This prevents rapid state transitions when moving over child elements
-  if ((eventName === 'DRAG_ENTER' || eventName === 'DRAG_LEAVE')) {
-    // Only process if this is actually the dropzone element (has data-column attribute)
-    // AND the event target is the element itself (not a child element)
-    const isDropzone = element.hasAttribute('data-column') || element.dataset.column;
-    // For dragenter/dragleave, we only want events where the target IS the dropzone element
-    // If target is a child (SPAN, BUTTON, etc.), ignore it
-    if (!isDropzone || e.target !== element) {
-      // Event is on a child element or not a dropzone - ignore it
-      return;
-    }
-  }
   
   if (eventName === 'STOP_PROPAGATION') {
     e.stopPropagation();
@@ -87,6 +67,16 @@ export async function handleEvent(viewEngine, e, eventDef, data, element, actorI
   // Check key filter (for keyboard events)
   if (eventDef.key && e.key !== eventDef.key) {
     return; // Ignore if key doesn't match (silently)
+  }
+
+  // CRITICAL: Prevent UPDATE_INPUT race conditions during fast typing
+  // Only send UPDATE_INPUT on blur, not on every input event
+  // This prevents CRDT operations from arriving out of order and overwriting newer values
+  // The DOM value is the source of truth while typing, context syncs on blur
+  if (eventName === 'UPDATE_INPUT' && e.type === 'input') {
+    // Don't send UPDATE_INPUT on input events - only on blur
+    // This prevents race conditions where older CRDT updates overwrite newer ones
+    return;
   }
 
   // Route internal event through inbox for unified event logging

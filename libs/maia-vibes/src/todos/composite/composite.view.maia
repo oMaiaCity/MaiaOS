@@ -65,9 +65,13 @@
               "send": "UPDATE_INPUT",
               "payload": { "newTodoText": "@inputValue" }
             },
+            "blur": {
+              "send": "UPDATE_INPUT",
+              "payload": { "newTodoText": "@inputValue" }
+            },
             "keydown": {
               "send": "CREATE_BUTTON",
-              "payload": { "text": "$newTodoText" },
+              "payload": { "text": "@inputValue" },
               "key": "Enter"
             }
           }
@@ -79,7 +83,7 @@
           "$on": {
             "click": {
               "send": "CREATE_BUTTON",
-              "payload": { "text": "$newTodoText" }
+              "payload": { "text": "@inputValue" }
             }
           }
         }

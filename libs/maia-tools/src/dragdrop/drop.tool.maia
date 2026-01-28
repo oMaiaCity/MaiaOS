@@ -8,13 +8,12 @@
     "properties": {
       "field": {
         "type": "string",
-        "description": "The field to update on drop (e.g., 'done', 'status', 'column')",
-        "default": "done"
+        "description": "The field to update on drop (e.g., 'done', 'status', 'column')"
       },
       "value": {
         "description": "The value to set (can be boolean, string, number based on field type)"
       }
     },
-    "required": ["value"]
+    "required": ["field", "value"]
   }
 }

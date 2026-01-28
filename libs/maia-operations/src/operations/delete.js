@@ -27,10 +27,7 @@ export class DeleteOperation {
   async execute(params) {
     const { id } = params;
     
-    console.log('[DeleteOperation] execute called with:', { id, params });
-    
     if (!id) {
-      console.error('[DeleteOperation] ID is missing!', { id, params });
       throw new Error('[DeleteOperation] ID required');
     }
     

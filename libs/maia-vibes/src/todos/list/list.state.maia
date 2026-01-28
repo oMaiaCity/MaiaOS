@@ -30,6 +30,9 @@
               }
             }
           ]
+        },
+        "SUCCESS": {
+          "target": "idle"
         }
       }
     },

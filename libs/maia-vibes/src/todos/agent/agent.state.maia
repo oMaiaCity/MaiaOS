@@ -55,7 +55,20 @@
                   "id": "$$result.id",
                   "text": "$$result.text",
                   "done": false
-                }
+                },
+                "target": "@actor/composite"
+              }
+            },
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "TODO_CREATED",
+                "payload": {
+                  "id": "$$result.id",
+                  "text": "$$result.text",
+                  "done": false
+                },
+                "target": "@actor/kanban"
               }
             },
             {
@@ -106,7 +119,16 @@
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "TODO_COMPLETED",
-                "payload": { "id": "$$id" }
+                "payload": { "id": "$$id" },
+                "target": "@actor/composite"
+              }
+            },
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "TODO_COMPLETED",
+                "payload": { "id": "$$id" },
+                "target": "@actor/kanban"
               }
             }
           ]
@@ -145,7 +167,16 @@
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "TODO_DELETED",
-                "payload": { "id": "$$id" }
+                "payload": { "id": "$$id" },
+                "target": "@actor/composite"
+              }
+            },
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "TODO_DELETED",
+                "payload": { "id": "$$id" },
+                "target": "@actor/kanban"
               }
             }
           ]

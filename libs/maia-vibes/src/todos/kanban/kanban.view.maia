@@ -23,15 +23,15 @@
           },
           "$on": {
             "dragover": {
-              "send": "DRAG_OVER"
+              "send": "STOP_PROPAGATION"
             },
             "dragenter": {
-              "send": "DRAG_ENTER",
-              "payload": { "column": "@dataColumn" }
+              "send": "DRAG_OVER",
+              "payload": { "key": "dragOverColumn", "value": "@dataColumn" }
             },
             "dragleave": {
-              "send": "DRAG_LEAVE",
-              "payload": { "column": "@dataColumn" }
+              "send": "DRAG_OVER",
+              "payload": { "key": "dragOverColumn", "value": null }
             },
             "drop": {
               "send": "DROP",
@@ -119,15 +119,15 @@
           },
           "$on": {
             "dragover": {
-              "send": "DRAG_OVER"
+              "send": "STOP_PROPAGATION"
             },
             "dragenter": {
-              "send": "DRAG_ENTER",
-              "payload": { "column": "@dataColumn" }
+              "send": "DRAG_OVER",
+              "payload": { "key": "dragOverColumn", "value": "@dataColumn" }
             },
             "dragleave": {
-              "send": "DRAG_LEAVE",
-              "payload": { "column": "@dataColumn" }
+              "send": "DRAG_OVER",
+              "payload": { "key": "dragOverColumn", "value": null }
             },
             "drop": {
               "send": "DROP",

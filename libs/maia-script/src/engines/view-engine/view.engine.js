@@ -1,5 +1,3 @@
-// Import validation helper
-import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import shared utilities
 import { subscribeConfig } from '../../utils/config-loader.js';
 // Import modules
@@ -74,11 +72,15 @@ export class ViewEngine {
         });
         const viewDef = store.value;
         
+        // subscribeConfig already validates views internally using operations API
+        // No need for duplicate validation here
+        
         // Set up onUpdate callback if provided (subscribe to store for FUTURE updates only)
         // NOTE: Do NOT call onUpdate immediately here - collectEngineSubscription handles that
         // to ensure consistent behavior between new and reused subscriptions
         if (onUpdate) {
           // Subscribe for future updates only (skipInitial prevents immediate callback)
+          // subscribeConfig already validates updates in its callback
           store.subscribe((updatedView) => {
             onUpdate(updatedView);
           }, { skipInitial: true });
@@ -109,12 +111,14 @@ export class ViewEngine {
     
     // Always set up subscription for reactivity (even without onUpdate callback)
     // This avoids duplicate DB queries when _subscribeToConfig() is called later
+    // subscribeConfig validates views internally using operations API (loadSchemaFromDB → dbEngine.execute({ op: 'schema', fromCoValue: coId }))
     const { config: viewDef, unsubscribe } = await subscribeConfig(
       this.dbEngine,
       viewSchemaCoId,
       coId,
       'view',
       (updatedView) => {
+        // subscribeConfig already validates views in its callback using operations API
         // Call custom update handler if provided
         if (onUpdate) {
           onUpdate(updatedView);
@@ -122,6 +126,9 @@ export class ViewEngine {
       },
       null // NO CACHE - always read from reactive store
     );
+    
+    // subscribeConfig already validates initial view internally using operations API
+    // No need for duplicate validation here
     
     // Store unsubscribe function with ref count tracking
     // Store as object to allow reference counting

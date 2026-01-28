@@ -384,9 +384,6 @@ export class MaiaOS {
     os.styleEngine.dbEngine = os.dbEngine;
     os.stateEngine.dbEngine = os.dbEngine;
     
-    // Update current session ID in ActorEngine (for session-based watermarking)
-    os.actorEngine._updateCurrentSessionID();
-    
     // Pass engines to SubscriptionEngine (for config subscriptions)
     os.subscriptionEngine.setEngines({
       viewEngine: os.viewEngine,

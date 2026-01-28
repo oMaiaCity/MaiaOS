@@ -17,7 +17,13 @@
  * @returns {Promise<any>} Fully resolved payload with all expressions evaluated
  */
 export async function resolveExpressions(payload, evaluator, data) {
-  // Handle primitives (pass through)
+  // Handle string expressions (e.g., "$$result", "$context.key")
+  // CRITICAL: Strings starting with $ are MaiaScript expressions and must be evaluated
+  if (typeof payload === 'string' && payload.startsWith('$')) {
+    return await evaluator.evaluate(payload, data);
+  }
+  
+  // Handle other primitives (pass through)
   if (payload === null || typeof payload !== 'object') {
     return payload;
   }

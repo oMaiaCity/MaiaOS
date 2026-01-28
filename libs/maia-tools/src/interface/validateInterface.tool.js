@@ -145,12 +145,9 @@ export default {
       // Silent - only log errors
     }
     
-    // Store validation results in actor context (for debugging)
-    if (!actor.context._interfaceValidation) {
-      actor.context._interfaceValidation = {};
-    }
-    
-    actor.context._interfaceValidation = {
+    // Return validation results - state machines handle context updates via updateContext actions
+    // Tools should NEVER mutate context directly - all context updates must flow through state machines
+    return {
       valid: errors.length === 0,
       errors,
       warnings,

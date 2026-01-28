@@ -1,6 +1,6 @@
 # MaiaOS Documentation for maia-script
 
-**Auto-generated:** 2026-01-28T21:08:49.209Z
+**Auto-generated:** 2026-01-28T22:17:26.165Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -193,14 +193,21 @@ const result = await evaluator.evaluate(
 - Coordinates ViewEngine, StyleEngine, StateEngine
 - Manages actor context and state
 - Processes messages and triggers state transitions
+- **Sequential processing**: Ensures events process one at a time (deterministic state machines)
 
 **Key Methods:**
 - `createActor(actorConfig, container)` - Create an actor
 - `loadActor(actorId)` - Load actor config from database
 - `sendMessage(actorId, message)` - Send message to actor
-- `processMessages(actorId)` - Process pending messages
+- `processMessages(actorId)` - Process pending messages sequentially (guarded against concurrent execution)
 - `getActor(actorId)` - Get actor by ID
 - `rerenderActor(actorId)` - Re-render actor view
+
+**Sequential Processing:**
+- `processMessages()` uses `_isProcessing` guard to prevent concurrent execution
+- Events process one at a time, ensuring deterministic state transitions
+- Unhandled events are marked as processed (not rejected)
+- Sequential processing handled generically in engine - no need to handle in state configs
 
 **Dependencies:**
 - `StyleEngine` - For style compilation
@@ -330,16 +337,24 @@ const styleSheets = await styleEngine.compile(
 - Executes entry/exit actions
 - Processes events (`send('EVENT_NAME')`)
 - Supports side effects (invoke, after delays)
+- **Deterministic**: Only one state at a time, sequential transitions
 
 **Key Methods:**
 - `loadStateDef(stateRef)` - Load state definition
 - `createMachine(stateDef, actor)` - Create state machine instance
-- `sendEvent(actorId, event)` - Send event to state machine
+- `send(machineId, event, payload)` - Send event to state machine (called only from ActorEngine.processMessages())
 
 **Dependencies:**
 - `ToolEngine` - For executing actions
 - `MaiaScriptEvaluator` - For evaluating guards
-- `ActorEngine` - For unified event flow
+- `ActorEngine` - For unified event flow and sequential processing
+
+**Deterministic State Machines:**
+- State machines are deterministic - only ONE state at a time
+- Events process sequentially (guarded by ActorEngine)
+- No parallel states possible
+- Unhandled events are processed and removed (not rejected)
+- Sequential processing handled generically - state configs don't need "what if already in state X" logic
 
 **Example:**
 ```javascript

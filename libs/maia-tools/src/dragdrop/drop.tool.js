@@ -5,24 +5,42 @@
  * 
  * Schema is extracted from CoValue headerMeta by update operation internally
  * NO schema handling needed in tools - operations handle it "under the hood"
+ * 
+ * CRDT-COMPATIBLE IDEMPOTENT PATTERN:
+ * - Returns structured results instead of throwing errors for missing prerequisites
+ * - Can be called safely even when prerequisites aren't met (idempotent no-op)
+ * - State machines handle results gracefully without guards
  */
 export default {
   async execute(actor, payload) {
-    console.log('[dragdrop/drop] Executing with payload:', payload, 'context:', actor.context);
-    const { field = 'done', value } = payload;
+    const { field, value } = payload;
     
-    // Get dragged item ID from context (set by @dragdrop/start)
-    // More resilient: check both draggedItemId and draggedItemIds object
+    // Validate required payload fields
+    if (!field) {
+      // Return structured result for missing field (idempotent no-op)
+      return {
+        success: false,
+        skipped: true,
+        reason: 'Field is required in payload',
+        draggedItemId: null
+      };
+    }
+    
+    // Get dragged item ID from context (set by state machine via updateContext action)
+    // ARCHITECTURE: Context is single source of truth, managed by state machine
     const draggedId = actor.context.draggedItemId || 
       (actor.context.draggedItemIds && Object.keys(actor.context.draggedItemIds).find(id => actor.context.draggedItemIds[id]));
     
-    console.log('[dragdrop/drop] Dragged ID:', draggedId);
-    
+    // Handle missing draggedItemId gracefully (idempotent no-op)
+    // This allows DROP events to arrive out-of-order (e.g., before DRAG_START)
+    // State machine will receive SUCCESS event with skipped: true, can handle gracefully
     if (!draggedId) {
-      // Silently skip if no drag operation in progress (may happen during rapid state changes)
-      // This is more resilient than throwing an error
-      console.warn('[dragdrop/drop] No dragged item found in context, skipping');
-      return;
+      return {
+        success: false,
+        skipped: true,
+        reason: 'No dragged item found in context. Ensure DRAG_START was called and draggedItemId was set via state machine updateContext action.',
+        draggedItemId: null
+      };
     }
     
     // Use @db to persist the change
@@ -30,12 +48,16 @@ export default {
     // Schema is automatically extracted from CoValue headerMeta by update operation
     const toolEngine = actor.actorEngine?.toolEngine;
     if (!toolEngine) {
-      console.error('[dragdrop/drop] ToolEngine not available');
-      return;
+      // ToolEngine unavailable - return structured error (idempotent no-op)
+      return {
+        success: false,
+        skipped: true,
+        reason: 'ToolEngine not available',
+        draggedItemId: draggedId
+      };
     }
     
     try {
-      console.log('[dragdrop/drop] Updating entity:', { id: draggedId, field, value });
       // Update the entity using @db tool
       // Schema is automatically extracted from CoValue headerMeta by update operation
       await toolEngine.execute('@db', actor, {
@@ -44,11 +66,25 @@ export default {
         data: { [field]: value }
       });
       
-      console.log('[dragdrop/drop] Update successful');
-      // Drag state will be cleared by @dragdrop/end in SUCCESS action
+      // Return success result - state machine will handle context updates via SUCCESS handler
+      return {
+        success: true,
+        skipped: false,
+        draggedItemId: draggedId,
+        updated: { [field]: value }
+      };
     } catch (error) {
-      console.error(`[dragdrop/drop] Failed to update ${draggedId}:`, error);
-      throw error;
+      // Database operation failed - this is a real error, not a missing prerequisite
+      // Return structured error result (state machine can handle via ERROR event or SUCCESS with success: false)
+      // For now, we'll return structured result so state machine can handle gracefully
+      // If state machine needs to distinguish real errors, it can check result.success === false && result.skipped === false
+      return {
+        success: false,
+        skipped: false,
+        reason: `Failed to update ${draggedId}: ${error.message}`,
+        draggedItemId: draggedId,
+        error: error.message
+      };
     }
   }
 };

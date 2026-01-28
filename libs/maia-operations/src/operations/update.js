@@ -35,10 +35,7 @@ export class UpdateOperation {
   async execute(params) {
     const { id, data } = params;
     
-    console.log('[UpdateOperation] execute called with:', { id, data, params });
-    
     if (!id) {
-      console.error('[UpdateOperation] ID is missing!', { id, data, params });
       throw new Error('[UpdateOperation] ID required');
     }
     

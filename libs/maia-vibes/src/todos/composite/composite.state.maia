@@ -41,14 +41,6 @@
           "actions": [
             {
               "updateContext": { "newTodoText": "$$newTodoText" }
-            },
-            {
-              "tool": "@core/publishMessage",
-              "payload": {
-                "type": "UPDATE_INPUT",
-                "payload": { "newTodoText": "$$newTodoText" },
-                "target": "@actor/agent"
-              }
             }
           ]
         },
@@ -90,6 +82,9 @@
           "target": "idle"
         },
         "TODO_DELETED": {
+          "target": "idle"
+        },
+        "SUCCESS": {
           "target": "idle"
         }
       }

@@ -125,6 +125,74 @@ State machine handles SUCCESS/ERROR
 
 **Remember:** Views send events, state machines update context, tools execute operations. Never update context directly from views or tools!
 
+## Deterministic State Machines: Sequential Processing
+
+**CRITICAL PRINCIPLE:** State machines are **deterministic** - only ONE state at a time, transitions happen sequentially.
+
+**What this means:**
+- ✅ Events are processed **one at a time** (sequential, not parallel)
+- ✅ State machine always has a **single current state**
+- ✅ Transitions happen **sequentially** - one completes before the next starts
+- ✅ **No parallel states** - impossible to be in multiple states simultaneously
+
+**How it works:**
+- Generic sequential processing handled in engines (ActorEngine, StateEngine)
+- Processing guard prevents concurrent execution
+- Events queue in inbox and process sequentially
+- **You don't need to handle this in your state configs** - engines handle it generically
+
+**Unhandled Events:**
+- Events not handled by current state are **processed and removed** (marked `processed: true`)
+- They are **not rejected** - just removed from queue
+- This ensures clean inbox management without errors
+
+**Example - Simplified Kanban Flow:**
+```json
+{
+  "idle": {
+    "on": {
+      "DRAG_START": { "target": "dragging" }
+    }
+  },
+  "dragging": {
+    "on": {
+      "DRAG_ENTER": { "target": "dragOver" },
+      "DRAG_END": { "target": "idle" },
+      "DROP": { "target": "dropping" }
+    }
+  },
+  "dragOver": {
+    "on": {
+      "DRAG_LEAVE": { "target": "dragging" },
+      "DROP": { "target": "dropping" }
+    }
+  },
+  "dropping": {
+    "entry": { "tool": "@dragdrop/drop" },
+    "exit": {
+      "updateContext": {
+        "draggedItemId": null,
+        "dragOverColumn": null
+      }
+    },
+    "on": {
+      "SUCCESS": { "target": "idle" }
+    }
+  }
+}
+```
+
+**Key Points:**
+- Linear flow: idle → dragging → dragOver → dropping → idle
+- No self-transitions (no "what if already in dragging" logic)
+- Cleanup in exit actions (not separate cleanup states)
+- Sequential processing handled generically - you just define the flow
+
+**Anti-Patterns:**
+- ❌ Handling events "while already in this state" (engines handle sequential processing)
+- ❌ Creating cleanup states (use exit actions instead)
+- ❌ Self-transitions for parallel state handling (not needed with sequential processing)
+
 ## Basic Structure
 
 Create a file named `{name}.state.maia`:

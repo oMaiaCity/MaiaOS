@@ -1,15 +1,18 @@
 /**
- * Drag Over Tool - Unified tool for dragEnter and dragLeave
- * Sets dragOverColumn to the column name when entering, null when leaving
+ * Generic Drag Over Tool - Unified tool for dragEnter and dragLeave
+ * Returns a generic key/value pair for updating context via state machine updateContext action
  * 
- * Consolidates dragEnter and dragLeave into a single tool (eliminates duplication)
+ * ARCHITECTURE: Tool returns result only - state machine uses updateContext action to update context
+ * This makes the tool fully generic - works for any drag-over scenario, not just columns
  */
 export default {
   async execute(actor, payload) {
-    const { column } = payload; // null to clear (dragLeave), string to set (dragEnter)
+    const { key, value } = payload; // key: context key to update, value: value to set (null to clear)
     
+    // Return result - state machine will use updateContext action to update context
+    // This ensures state machine is single source of truth for all context updates
     return {
-      dragOverColumn: column
+      [key]: value
     };
   }
 };

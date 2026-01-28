@@ -1,6 +1,6 @@
 # MaiaOS Documentation for maia-operations
 
-**Auto-generated:** 2026-01-28T21:08:49.215Z
+**Auto-generated:** 2026-01-28T22:17:26.182Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---

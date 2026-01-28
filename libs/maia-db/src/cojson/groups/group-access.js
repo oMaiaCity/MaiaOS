@@ -72,21 +72,9 @@ export async function getDefaultGroup(backend) {
     throw new Error('[CoJSONBackend] Profile data not available. Ensure the profile is properly loaded.');
   }
   
-  // Debug logging: Log profileData structure to help diagnose issues
-  console.log('[getDefaultGroup] Profile data structure:', {
-    id: profileData.id,
-    type: profileData.type,
-    hasProperties: !!profileData.properties,
-    propertiesCount: profileData.properties?.length || 0,
-    hasGroup: 'group' in profileData,
-    groupValue: profileData.group,
-    allKeys: Object.keys(profileData)
-  });
-  
   // Verify profile has content (not empty CoMap)
   const profileKeys = Object.keys(profileData).filter(key => !['id', 'type', '$schema'].includes(key));
   if (profileKeys.length === 0 && (!profileData.properties || profileData.properties.length === 0)) {
-    console.error('[getDefaultGroup] Profile CoMap appears to be empty. Available keys:', Object.keys(profileData));
     throw new Error('[CoJSONBackend] Profile CoMap is empty. This may indicate the identity migration has not run. Please ensure schemaMigration() has been called during account creation/loading.');
   }
   
@@ -96,7 +84,6 @@ export async function getDefaultGroup(backend) {
     // Normalized format (legacy) - extract from properties array
     const groupProperty = profileData.properties.find(p => p.key === 'group');
     if (!groupProperty || !groupProperty.value) {
-      console.error('[getDefaultGroup] Profile properties:', profileData.properties);
       throw new Error('[CoJSONBackend] Universal group not found in profile.group. The profile exists but does not have a "group" property. This indicates the identity migration may not have completed successfully. Please check that schemaMigration() sets profile.set("group", universalGroupId).');
     }
     universalGroupId = groupProperty.value;
@@ -104,21 +91,11 @@ export async function getDefaultGroup(backend) {
     // Flat object format (operations API) - direct property access
     universalGroupId = profileData.group;
   } else {
-    // Debug: Log what we actually got
-    console.error('[getDefaultGroup] Profile data missing group property. Available properties:', {
-      hasPropertiesArray: !!profileData.properties,
-      propertiesArrayLength: profileData.properties?.length || 0,
-      hasGroupProperty: 'group' in profileData,
-      groupType: typeof profileData.group,
-      allKeys: Object.keys(profileData),
-      profileDataSample: JSON.stringify(profileData, null, 2).substring(0, 500)
-    });
     throw new Error('[CoJSONBackend] Universal group not found in profile.group. The profile exists but does not have a "group" property. This indicates the identity migration may not have completed successfully. Please ensure schemaMigration() has been called and sets profile.set("group", universalGroupId).');
   }
   
   // Validate universalGroupId format
   if (!universalGroupId || typeof universalGroupId !== 'string' || !universalGroupId.startsWith('co_z')) {
-    console.error('[getDefaultGroup] Invalid universalGroupId format:', universalGroupId);
     throw new Error(`[CoJSONBackend] Invalid universal group ID format: ${universalGroupId}. Expected a valid co-id (co_z...). This may indicate a migration issue.`);
   }
   
