@@ -165,15 +165,31 @@ export class MaiaScriptEvaluator {
    * v0.2 syntax:
    * - $key → context.key (implicit context)
    * - $$key → item.key (explicit item with double-dollar)
-   * @param {string} shortcut - The shortcut string (e.g., "$title", "$$text")
-   * @param {Object} data - The data context
+   * - $$result → result (tool result with double-dollar)
+   * @param {string} shortcut - The shortcut string (e.g., "$title", "$$text", "$$result.draggedItemId")
+   * @param {Object} data - The data context { context, item, result }
    * @returns {any} The evaluated result
    */
   evaluateShortcut(shortcut, data) {
+    // $$result → result (special case for tool results)
+    if (shortcut.startsWith('$$result')) {
+      const path = shortcut.substring(8); // Remove "$$result"
+      if (path.startsWith('.')) {
+        // $$result.property → result.property
+        return resolvePath(data.result, path.substring(1));
+      } else if (path === '') {
+        // $$result → result (entire object)
+        return data.result;
+      }
+      // Fall through to item resolution if path doesn't start with .
+    }
+    
     // $$ prefix = item (double-dollar for iteration items)
     if (shortcut.startsWith('$$')) {
       const path = shortcut.substring(2); // Remove $$
-      return resolvePath(data.item, path);
+      const result = resolvePath(data.item, path);
+      
+      return result;
     }
     
     // $ prefix = context (single-dollar for context)

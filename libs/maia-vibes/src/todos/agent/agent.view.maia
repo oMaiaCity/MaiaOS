@@ -4,6 +4,6 @@
   "content": {
     "tag": "div",
     "class": "service-container",
-    "$slot": "$composite"
+    "$slot": "$currentView"
   }
 }

@@ -21,10 +21,6 @@
       "$co": "@schema/state",
       "description": "Co-id reference to state machine definition"
     },
-    "interface": {
-      "$co": "@schema/interface",
-      "description": "Co-id reference to interface definition"
-    },
     "brand": {
       "$co": "@schema/style",
       "description": "Co-id reference to brand style definition (uses style schema)"
@@ -33,9 +29,9 @@
       "$co": "@schema/style",
       "description": "Co-id reference to local style definition"
     },
-    "subscriptions": {
-      "$co": "@schema/subscriptions",
-      "description": "Co-id reference to subscriptions colist (list of actor co-ids to receive messages from)"
+    "topics": {
+      "$co": "@schema/topics",
+      "description": "Co-id reference to topics colist (list of topic CoValue references this actor subscribes to)"
     },
     "inbox": {
       "$co": "@schema/inbox",

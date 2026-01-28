@@ -6,10 +6,6 @@
  * Generic and universal - no domain-specific logic
  */
 
-// Import MessageQueue
-import { MessageQueue } from '../message-queue/message.queue.js';
-// Import validation helper
-import { validateAgainstSchemaOrThrow, validateOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import config loader utilities
 import { subscribeConfig, subscribeConfigsBatch, loadConfigOrUseProvided } from '../../utils/config-loader.js';
 // Import schema loader utility
@@ -26,7 +22,6 @@ export class ActorEngine {
     this.stateEngine = stateEngine; // StateEngine for state machines (optional)
     this.actors = new Map();
     this.pendingMessages = new Map(); // Queue messages for actors that don't exist yet
-    this.messageQueues = new Map(); // Resilient message queues per actor
     this.dbEngine = null; // Database operation engine (set by kernel)
     this.os = null; // Reference to MaiaOS instance (set by kernel)
     this.currentSessionID = null; // Current session ID from cojson node (set when dbEngine is set)
@@ -218,57 +213,29 @@ export class ActorEngine {
       }
     }
     
+    // Sanitize updates: convert undefined to null for schema validation (JSON Schema doesn't allow undefined)
+    const sanitizedUpdates = {};
+    for (const [key, value] of Object.entries(updates)) {
+      sanitizedUpdates[key] = value === undefined ? null : value;
+    }
+    
     // Persist updates to CRDT CoValue using operations API
     await this.dbEngine.execute({
       op: 'update',
       schema: contextSchemaCoId,
       id: actor.contextCoId,
-      data: updates
+      data: sanitizedUpdates
     });
     
     // Note: Reactive subscription will automatically update actor.context
     // No need to manually update actor.context here - the subscription handles it
   }
 
-  /**
-   * Load an interface by co-id (reactive subscription)
-   * @param {string} coId - Interface co-id (e.g., 'co_z...')
-   * @param {Function} [onUpdate] - Optional callback when interface changes
-   * @returns {Promise<Object>} The parsed interface definition
-   */
-  async loadInterface(coId, onUpdate = null) {
-    // Extract schema co-id from interface CoValue's headerMeta using fromCoValue pattern
-    const interfaceSchemaStore = await this.dbEngine.execute({
-      op: 'schema',
-      fromCoValue: coId
-    });
-    const interfaceSchemaCoId = interfaceSchemaStore.value?.$id;
-    
-    if (!interfaceSchemaCoId) {
-      throw new Error(`[ActorEngine] Failed to extract schema co-id from interface ${coId}. Interface must have $schema in headerMeta.`);
-    }
-    
-    // Use subscription for reactivity
-    const { config: interfaceDef, unsubscribe } = await subscribeConfig(
-      this.dbEngine,
-      interfaceSchemaCoId,
-      coId,
-      'interface',
-      (updatedInterface) => {
-        // Call custom update handler if provided
-        if (onUpdate) {
-          onUpdate(updatedInterface);
-        }
-      }
-    );
-    
-    return interfaceDef;
-  }
 
   /**
-   * Load actor configs (view, context, subscriptions, inbox)
+   * Load actor configs (view, context, topics, inbox)
    * @param {Object} actorConfig - The actor configuration
-   * @returns {Promise<{viewDef: Object, context: Object, subscriptions: Array, inbox: ReactiveStore, inboxCoId: string}>}
+   * @returns {Promise<{viewDef: Object, context: Object, topics: Array, inbox: ReactiveStore, inboxCoId: string}>}
    * @private
    */
   async _loadActorConfigs(actorConfig) {
@@ -292,29 +259,29 @@ export class ActorEngine {
       contextSchemaCoId = contextResult.contextSchemaCoId;
     }
     
-    // Load subscriptions colist (co-id → array of actor IDs) - REACTIVE
-    let subscriptions = [];
-    if (actorConfig.subscriptions) {
-      // Extract schema co-id from subscriptions CoValue's headerMeta using fromCoValue pattern
-      const subscriptionsSchemaStore = await this.dbEngine.execute({
+    // Load topics colist (co-id → array of topic CoValue references) - REACTIVE
+    let topics = [];
+    if (actorConfig.topics) {
+      // Extract schema co-id from topics CoValue's headerMeta using fromCoValue pattern
+      const topicsSchemaStore = await this.dbEngine.execute({
         op: 'schema',
-        fromCoValue: actorConfig.subscriptions
+        fromCoValue: actorConfig.topics
       });
-      const subscriptionsSchemaCoId = subscriptionsSchemaStore.value?.$id;
+      const topicsSchemaCoId = topicsSchemaStore.value?.$id;
       
-      if (!subscriptionsSchemaCoId) {
-        throw new Error(`[ActorEngine] Failed to extract schema co-id from subscriptions ${actorConfig.subscriptions}. Subscriptions must have $schema in headerMeta.`);
+      if (!topicsSchemaCoId) {
+        throw new Error(`[ActorEngine] Failed to extract schema co-id from topics ${actorConfig.topics}. Topics must have $schema in headerMeta.`);
       }
       
       // Get initial value using read() - returns reactive store
-      const subscriptionsStore = await this.dbEngine.execute({
+      const topicsStore = await this.dbEngine.execute({
         op: 'read',
-        schema: subscriptionsSchemaCoId,
-        key: actorConfig.subscriptions
+        schema: topicsSchemaCoId,
+        key: actorConfig.topics
       });
-      const subscriptionsColist = subscriptionsStore.value;
-      if (subscriptionsColist && Array.isArray(subscriptionsColist.items)) {
-        subscriptions = subscriptionsColist.items;
+      const topicsColist = topicsStore.value;
+      if (topicsColist && Array.isArray(topicsColist.items)) {
+        topics = topicsColist.items;
       }
     }
     
@@ -345,11 +312,11 @@ export class ActorEngine {
       inbox = inboxStore;
     }
     
-    return { viewDef, context, contextCoId, contextSchemaCoId, subscriptions, inbox, inboxCoId };
+    return { viewDef, context, contextCoId, contextSchemaCoId, topics, inbox, inboxCoId };
   }
 
   /**
-   * Set up reactive subscriptions for subscriptions colist and inbox costream (batch)
+   * Set up reactive subscriptions for topics colist and inbox costream (batch)
    * @param {Object} actor - Actor instance
    * @param {Object} actorConfig - The actor configuration
    * @returns {Promise<void>}
@@ -359,31 +326,30 @@ export class ActorEngine {
     const actorId = actor.id;
     const messageSubscriptionRequests = [];
     
-    if (actorConfig.subscriptions) {
+    if (actorConfig.topics) {
       try {
-        // Extract schema co-id from subscriptions CoValue's headerMeta using fromCoValue pattern
-        const subscriptionsSchemaStore = await this.dbEngine.execute({
+        // Extract schema co-id from topics CoValue's headerMeta using fromCoValue pattern
+        const topicsSchemaStore = await this.dbEngine.execute({
           op: 'schema',
-          fromCoValue: actorConfig.subscriptions
+          fromCoValue: actorConfig.topics
         });
-        const subscriptionsSchemaCoId = subscriptionsSchemaStore.value?.$id;
+        const topicsSchemaCoId = topicsSchemaStore.value?.$id;
         
-        if (subscriptionsSchemaCoId) {
+        if (topicsSchemaCoId) {
           messageSubscriptionRequests.push({
-            schemaRef: subscriptionsSchemaCoId,
-            coId: actorConfig.subscriptions,
-            configType: 'subscriptions',
+            schemaRef: topicsSchemaCoId,
+            coId: actorConfig.topics,
+            configType: 'topics',
             onUpdate: (updatedColist) => {
               if (updatedColist && Array.isArray(updatedColist.items)) {
-                actor.subscriptions = updatedColist.items;
-                // TODO: Re-subscribe to new actors, unsubscribe from removed ones (Milestone 3)
+                actor.topics = updatedColist.items;
               }
             },
             cache: null
           });
         }
       } catch (error) {
-        console.error(`[ActorEngine] ❌ Failed to get subscriptions schema co-id for ${actorId}:`, error);
+        console.error(`[ActorEngine] ❌ Failed to get topics schema co-id for ${actorId}:`, error);
       }
     }
     
@@ -410,7 +376,7 @@ export class ActorEngine {
               
               if (updatedCostream && Array.isArray(updatedCostream.items)) {
                 // Process new messages from CoStream (100% CoStream-based, no in-memory arrays)
-                // processMessages() already has deduplication guard (_isProcessingMessages)
+                // Subscription-based processing (no immediate calls, no race conditions)
                 this.processMessages(actorId);
               }
             },
@@ -422,7 +388,7 @@ export class ActorEngine {
       }
     }
     
-    // Use batch API for message subscriptions (subscriptions + inbox)
+    // Use batch API for message subscriptions (topics + inbox)
     if (messageSubscriptionRequests.length > 0) {
       try {
         const results = await subscribeConfigsBatch(this.dbEngine, messageSubscriptionRequests);
@@ -439,7 +405,7 @@ export class ActorEngine {
   }
 
   /**
-   * Initialize actor state (state machine and interface)
+   * Initialize actor state (state machine)
    * @param {Object} actor - Actor instance
    * @param {Object} actorConfig - The actor configuration
    * @returns {Promise<void>}
@@ -450,7 +416,7 @@ export class ActorEngine {
     
     // Load state machine (if state is defined AND not already created by SubscriptionEngine)
     // SubscriptionEngine.initialize() may have already created the machine via handleStateUpdate
-    // IMPORTANT: Await to ensure entry actions (like subscriptions) complete before initial render
+    // IMPORTANT: Await to ensure entry actions complete before initial render
     if (this.stateEngine && actorConfig.state && !actor.machine) {
       try {
         // Load state without subscription handler - SubscriptionEngine will add handler later
@@ -460,85 +426,156 @@ export class ActorEngine {
         console.error(`Failed to load state machine for ${actorId}:`, error);
       }
     }
-    
-    // Load and validate interface (if interface is defined AND not already loaded)
-    // SubscriptionEngine.initialize() may have already loaded the interface
-    if (actorConfig.interface && !actor.interface) {
-      try {
-        // Load interface without subscription handler - SubscriptionEngine will add handler later
-        const interfaceDef = await this.loadInterface(actorConfig.interface);
-        actor.interface = interfaceDef;
-        
-        // Validate interface (non-blocking)
-        await this.toolEngine.execute('@interface/validateInterface', actor, {
-          interfaceDef,
-          actorId
-        });
-      } catch (error) {
-        console.warn(`Failed to load interface for ${actorId}:`, error);
-      }
-    }
   }
 
   /**
-   * Create child actors from context.actors map
-   * @param {Object} actor - Parent actor instance
-   * @param {Object} context - Actor context (contains actors property)
-   * @param {string} [vibeKey] - Optional vibe key for tracking child actors
-   * @returns {Promise<void>}
+   * Determine if an actor is a service actor (orchestrator) vs UI actor (presentation)
+   * Service actors: Have role "agent" OR have minimal view (only renders child actors via $slot)
+   * UI actors: Have full view (render actual UI components)
+   * @param {Object} actorConfig - Actor configuration
+   * @param {Object} viewDef - View definition (optional, will be loaded if not provided)
+   * @returns {Promise<boolean>} True if service actor, false if UI actor
    * @private
    */
-  async _createChildActors(actor, context, vibeKey = null) {
-    // Children are stored in context.actors (explicit system property)
-    // Keys are namekeys, values are co-ids (already transformed during seeding)
-    // Format: context.actors = { "list": "co_z...", "kanban": "co_z..." }
-    if (!context.actors || typeof context.actors !== 'object') {
-      return;
+  async _isServiceActor(actorConfig, viewDef = null) {
+    // Check role first (fast path)
+    if (actorConfig.role === 'agent') {
+      return true;
     }
-    
-    actor.children = {};
-    
-    // Iterate over context.actors entries (namekey → co-id pairs)
-    for (const [namekey, childActorCoId] of Object.entries(context.actors)) {
+
+    // If no view, it's a service actor (no UI to render)
+    if (!actorConfig.view) {
+      return true;
+    }
+
+    // Load view if not provided
+    if (!viewDef) {
       try {
-        // Child actor IDs should already be co-ids (transformed during seeding)
-        // If not co-id, it's a seeding error - fail fast
-        if (!childActorCoId || !childActorCoId.startsWith('co_z')) {
-          throw new Error(`[ActorEngine] Child actor ID must be co-id: ${childActorCoId}. This should have been resolved during seeding.`);
-        }
-        
-        // Load child actor directly by co-id (instance level)
-        const childActorConfig = await this.loadActor(childActorCoId);
-        
-        // Ensure child actor ID matches expected ID (for consistency)
-        const childActorConfigId = childActorConfig.$id || childActorConfig.id;
-        if (childActorConfigId !== childActorCoId) {
-          console.warn(`[ActorEngine] Child actor ID mismatch: expected ${childActorCoId}, got ${childActorConfigId}`);
-          childActorConfig.$id = childActorCoId; // Use expected co-id
-        }
-        
-        // Create container for child actor (NOT attached to DOM yet - ViewEngine will handle attachment)
-        const childContainer = document.createElement('div');
-        childContainer.dataset.namekey = namekey;
-        childContainer.dataset.childActorId = childActorCoId; // Use co-id
-        
-        // Create child actor recursively (pass vibeKey so child is also registered with vibe)
-        const childActor = await this.createActor(childActorConfig, childContainer, vibeKey);
-        
-        // Store namekey on child actor
-        childActor.namekey = namekey;
-        
-        // Store child actor reference
-        actor.children[namekey] = childActor;
-        
-        // Auto-subscribe parent to child (if not already subscribed)
-        if (!actor.subscriptions.includes(childActorCoId)) {
-          actor.subscriptions.push(childActorCoId);
-        }
-        
+        viewDef = await this.viewEngine.loadView(actorConfig.view);
       } catch (error) {
-        console.error(`Failed to create child actor ${childActorCoId} (namekey: ${namekey}):`, error);
+        console.warn(`[ActorEngine] Failed to load view for type detection: ${actorConfig.view}`, error);
+        // If view can't be loaded, assume UI actor (safer default)
+        return false;
       }
+    }
+
+    // Check if view is minimal (only has $slot, no actual UI components)
+    const hasMinimalView = this._hasMinimalView(viewDef);
+    return hasMinimalView;
+  }
+
+  /**
+   * Check if a view definition is minimal (only renders child actors via $slot)
+   * Minimal view: Only has $slot property, no actual UI components (buttons, inputs, etc.)
+   * @param {Object} viewDef - View definition
+   * @returns {boolean} True if minimal view, false if full UI view
+   * @private
+   */
+  _hasMinimalView(viewDef) {
+    if (!viewDef) return true; // No view = minimal
+
+    // Get root node (could be "content", "root", or direct properties)
+    const rootNode = viewDef.content || viewDef.root || viewDef;
+    
+    if (!rootNode) return true; // No root = minimal
+
+    // Check if root only has $slot (minimal view)
+    if (rootNode.$slot && !rootNode.children) {
+      return true; // Only has $slot, no children = minimal
+    }
+
+    // Check children recursively - if all children are just slots, it's minimal
+    if (rootNode.children && Array.isArray(rootNode.children)) {
+      return rootNode.children.every(child => {
+        // Child is minimal if it only has $slot or is just a wrapper with $slot
+        return child.$slot || (child.children && child.children.every(c => c.$slot));
+      });
+    }
+
+    // If it has actual UI components (buttons, inputs, etc.), it's not minimal
+    // Check for common UI component indicators
+    const hasUIComponents = rootNode.tag && 
+      (rootNode.text || rootNode.value || rootNode.$on || 
+       (rootNode.children && rootNode.children.some(child => 
+         child.tag && (child.text || child.value || child.$on)
+       )));
+
+    return !hasUIComponents;
+  }
+
+  /**
+   * Create a child actor lazily if it doesn't exist yet
+   * Only creates the child actor when it's actually needed (referenced by context.currentView)
+   * @param {Object} actor - Parent actor instance
+   * @param {string} namekey - Child actor namekey (e.g., "list", "kanban")
+   * @param {string} [vibeKey] - Optional vibe key for tracking child actors
+   * @returns {Promise<Object|null>} The child actor instance, or null if not found/created
+   * @private
+   */
+  async _createChildActorIfNeeded(actor, namekey, vibeKey = null) {
+    // Check if child actor already exists
+    if (actor.children && actor.children[namekey]) {
+      return actor.children[namekey];
+    }
+
+    // Initialize children map if not exists
+    if (!actor.children) {
+      actor.children = {};
+    }
+
+    // Get context (may have been updated reactively)
+    const context = actor.context;
+    
+    // Check if namekey exists in context["@actors"]
+    if (!context["@actors"] || typeof context["@actors"] !== 'object') {
+      console.warn(`[ActorEngine] No @actors defined in context for ${actor.id}`);
+      return null;
+    }
+
+    const childActorCoId = context["@actors"][namekey];
+    if (!childActorCoId) {
+      console.warn(`[ActorEngine] Child actor namekey "${namekey}" not found in context["@actors"] for ${actor.id}`);
+      return null;
+    }
+
+    try {
+      // Child actor IDs should already be co-ids (transformed during seeding)
+      // If not co-id, it's a seeding error - fail fast
+      if (!childActorCoId.startsWith('co_z')) {
+        throw new Error(`[ActorEngine] Child actor ID must be co-id: ${childActorCoId}. This should have been resolved during seeding.`);
+      }
+      
+      console.log(`[ActorEngine] Creating child actor lazily: ${namekey} (${childActorCoId}) for parent ${actor.id}`);
+      
+      // Load child actor directly by co-id (instance level)
+      const childActorConfig = await this.loadActor(childActorCoId);
+      
+      // Ensure child actor ID matches expected ID (for consistency)
+      const childActorConfigId = childActorConfig.$id || childActorConfig.id;
+      if (childActorConfigId !== childActorCoId) {
+        console.warn(`[ActorEngine] Child actor ID mismatch: expected ${childActorCoId}, got ${childActorConfigId}`);
+        childActorConfig.$id = childActorCoId; // Use expected co-id
+      }
+      
+      // Create container for child actor (NOT attached to DOM yet - ViewEngine will handle attachment)
+      const childContainer = document.createElement('div');
+      childContainer.dataset.namekey = namekey;
+      childContainer.dataset.childActorId = childActorCoId; // Use co-id
+      
+      // Create child actor recursively (pass vibeKey so child is also registered with vibe)
+      const childActor = await this.createActor(childActorConfig, childContainer, vibeKey);
+      
+      // Store namekey on child actor
+      childActor.namekey = namekey;
+      
+      // Store child actor reference
+      actor.children[namekey] = childActor;
+      
+      return childActor;
+      
+    } catch (error) {
+      console.error(`[ActorEngine] Failed to create child actor ${childActorCoId} (namekey: ${namekey}):`, error);
+      return null;
     }
   }
 
@@ -578,8 +615,12 @@ export class ActorEngine {
     // Get stylesheets (brand + actor merged)
     const styleSheets = await this.styleEngine.getStyleSheets(actorConfig);
     
-    // Load actor configs (view, context, subscriptions, inbox)
-    const { viewDef, context, contextCoId, contextSchemaCoId, subscriptions, inbox, inboxCoId } = await this._loadActorConfigs(actorConfig);
+    // Load actor configs (view, context, topics, inbox)
+    const { viewDef, context, contextCoId, contextSchemaCoId, topics, inbox, inboxCoId } = await this._loadActorConfigs(actorConfig);
+    
+    // Determine actor type (service vs UI) for lifecycle management
+    const isServiceActor = await this._isServiceActor(actorConfig, viewDef);
+    const actorType = isServiceActor ? 'service' : 'ui';
     
     // Store actor state
     const actor = {
@@ -592,23 +633,36 @@ export class ActorEngine {
       containerElement,
       actorEngine: this, // Reference to ActorEngine for rerender
       viewDef, // Store view definition for auto-subscription analysis
+      actorType, // 'service' or 'ui' - determines lifecycle behavior
+      vibeKey, // Store vibeKey for lazy child actor creation
       // v0.2: Message passing
       inbox: inbox,
       inboxCoId: inboxCoId, // Store CoStream CoValue ID for persistence
-      subscriptions: subscriptions,
-      // inboxWatermarks removed - using processed flag on message CoMaps instead
+      topics: topics, // Topics CoList (topic CoValue references)
       // v0.5: Subscriptions managed by SubscriptionEngine (unified for data and configs)
       _subscriptions: [], // Per-actor subscriptions (unsubscribe functions) - unified for data + configs
       // Track if initial render has completed (for query subscription re-render logic)
       _initialRenderComplete: false,
-      // Track visibility (for re-render optimization)
-      _isVisible: true, // Actors are visible by default (root vibe is always visible)
     };
     
-    // Set up reactive subscriptions for subscriptions colist and inbox costream (batch)
+    console.log(`[ActorEngine] Actor ${actorId} type: ${actorType}${isServiceActor ? ' (persists)' : ' (created/destroyed on demand)'}`);
+    
+    // Set up reactive subscriptions for topics colist and inbox costream (batch)
     await this._setupMessageSubscriptions(actor, actorConfig);
     
+    // Add actor to map BEFORE subscribing to topics (subscribeToTopic needs actor in map)
     this.actors.set(actorId, actor);
+    
+    // Automatically subscribe actor to all topics in its topics CoList
+    if (actor.topics && actor.topics.length > 0) {
+      for (const topicCoId of actor.topics) {
+        try {
+          await this.subscribeToTopic(actorId, topicCoId);
+        } catch (error) {
+          console.warn(`[ActorEngine] Failed to auto-subscribe ${actorId} to topic ${topicCoId}:`, error);
+        }
+      }
+    }
     
     // Register actor with container for cleanup tracking (backward compatibility)
     if (containerElement) {
@@ -632,8 +686,11 @@ export class ActorEngine {
     // Initialize actor state (state machine and interface)
     await this._initializeActorState(actor, actorConfig);
     
-    // Create child actors from context.actors (explicit system property)
-    await this._createChildActors(actor, context);
+    // Initialize children map (will be populated lazily when needed)
+    actor.children = {};
+    
+    // NOTE: Child actors are now created lazily in renderSlot() when referenced by context.currentView
+    // This avoids creating all child actors upfront when only one is visible
     
     // Initial render with actor ID
     await this.viewEngine.render(viewDef, actor.context, shadowRoot, styleSheets, actorId);
@@ -662,23 +719,12 @@ export class ActorEngine {
       }
     }
     
-    // Ensure message queue exists for this actor
-    if (!this.messageQueues.has(actorId)) {
-      this.messageQueues.set(actorId, new MessageQueue(actorId, this));
-    }
-    const messageQueue = this.messageQueues.get(actorId);
-
     // Deliver any pending messages that were queued before actor was created
     if (this.pendingMessages.has(actorId)) {
       const pending = this.pendingMessages.get(actorId);
-      // Deduplicate messages by ID before enqueueing
-      const seenIds = new Set();
+      // Send pending messages directly to inbox (CRDT handles persistence)
       for (const message of pending) {
-        const msgId = message.id || `${message.type}_${message.timestamp}`;
-        if (!seenIds.has(msgId)) {
-          seenIds.add(msgId);
-          messageQueue.enqueue(message);
-        }
+        await this.sendMessage(actorId, message);
       }
       this.pendingMessages.delete(actorId);
     }
@@ -697,29 +743,9 @@ export class ActorEngine {
       console.warn(`Actor not found: ${actorId}`);
       return;
     }
-    
-    // Skip re-render if actor is not visible (optimization)
-    if (!actor._isVisible) {
-      console.log(`[ActorEngine] Skipping re-render for hidden actor: ${actorId}`);
-      return;
-    }
 
-
-    // CRITICAL FIX: Destroy all child actors before re-rendering
-    // When view switches (e.g., list → kanban), child actors are removed from DOM
-    // but not destroyed, causing stores to accumulate in _storeSubscriptions
-    const childActorElements = actor.shadowRoot.querySelectorAll('[data-actor-id]');
-    const childActorIds = Array.from(childActorElements)
-      .map(el => el.dataset.actorId)
-      .filter(Boolean)
-      .filter(id => id !== actorId); // CRITICAL: Exclude self! (root element also has data-actor-id)
-    
-    if (childActorIds.length > 0) {
-      console.log(`[ActorEngine] Destroying ${childActorIds.length} child actor(s) before rerender of ${actorId}`);
-      for (const childActorId of childActorIds) {
-        this.destroyActor(childActorId);
-      }
-    }
+    // NOTE: Child actor lifecycle is now managed in renderSlot() - destroy inactive UI actors when switching views
+    // Service actors persist, UI actors are created/destroyed on demand
 
     // Capture focused element and selection before re-render
     const activeElement = actor.shadowRoot.activeElement;
@@ -881,9 +907,6 @@ export class ActorEngine {
       actor.shadowRoot = containerElement.attachShadow({ mode: 'open' });
     }
 
-    // Mark actor as visible
-    actor._isVisible = true;
-
     // Trigger re-render to ensure UI is up to date with latest context
     if (actor._initialRenderComplete) {
       await this.rerender(actorId);
@@ -1001,9 +1024,6 @@ export class ActorEngine {
           actor.shadowRoot.host.parentNode.removeChild(actor.shadowRoot.host);
         }
 
-        // Mark as hidden
-        actor._isVisible = false;
-
         // Clear container reference (will be set again on reattach)
         // Keep containerElement in actor for reference, but remove from container tracking
         if (actor.containerElement && this._containerActors.has(actor.containerElement)) {
@@ -1051,7 +1071,7 @@ export class ActorEngine {
     await this.reuseActor(rootActorId, containerElement, vibeKey);
 
     // Child actors will be reattached automatically when parent re-renders
-    // via the slot rendering system
+    // via the slot rendering system (lazy creation)
 
     return rootActor;
   }
@@ -1089,99 +1109,15 @@ export class ActorEngine {
   // MESSAGE PASSING SYSTEM (v0.2)
   // ============================================
 
-  /**
-   * Validate message against interface schema using full JSON Schema validation
-   * @param {Object} message - Message object { type, payload }
-   * @param {Object} interfaceDef - Interface definition
-   * @param {string} direction - 'inbox' or 'publishes'
-   * @param {string} actorId - Actor ID for error reporting
-   * @returns {boolean} True if valid, false otherwise
-   */
-  async _validateMessage(message, interfaceDef, direction, actorId) {
-    if (!interfaceDef || !interfaceDef[direction]) {
-      // No interface defined - allow all messages
-      return true;
-    }
-    
-    const messageType = message.type;
-    const messageSchema = interfaceDef[direction][messageType];
-    
-    if (!messageSchema) {
-      console.warn(`[ActorEngine] ${direction} validation failed for ${actorId}: Message type "${messageType}" not defined in interface`);
-      return false;
-    }
-    
-    // Validate payload structure using full JSON Schema validation
-    if (messageSchema.payload && message.payload !== undefined) {
-      const payloadSchema = this._convertInterfacePayloadToJsonSchema(messageSchema.payload);
-      
-      try {
-        await validateAgainstSchemaOrThrow(payloadSchema, message.payload, 'message-payload');
-        return true;
-      } catch (error) {
-        console.error(`[ActorEngine] ${direction} validation failed for ${actorId}:`, error.message);
-        return false;
-      }
-    }
-    
-    // Empty payload is valid if schema allows it
-    return true;
-  }
-
-  /**
-   * Convert interface payload format to JSON Schema format
-   * Interface format: { "fieldName": "string" | "number" | "boolean" | "object" }
-   * JSON Schema format: { type: 'object', properties: { fieldName: { type: 'string' } }, required: [...] }
-   * @param {Object} interfacePayload - Interface payload definition
-   * @returns {Object} JSON Schema object
-   */
-  _convertInterfacePayloadToJsonSchema(interfacePayload) {
-    // Handle empty payload
-    if (!interfacePayload || Object.keys(interfacePayload).length === 0) {
-      return {
-        type: 'object',
-        properties: {},
-        required: []
-      };
-    }
-    
-    const properties = {};
-    const required = [];
-    
-    for (const [key, type] of Object.entries(interfacePayload)) {
-      // Handle nested objects (e.g., { "filter": "object" })
-      if (type === 'object') {
-        properties[key] = {
-          type: 'object',
-          additionalProperties: true
-        };
-      } else {
-        // Handle primitive types
-        properties[key] = { type };
-      }
-      required.push(key);
-    }
-    
-    return {
-      type: 'object',
-      properties,
-      required
-    };
-  }
 
   /**
    * Send a message to an actor's inbox
+   * CRDT handles persistence and sync automatically - no MessageQueue needed
    * @param {string} actorId - Target actor ID
-   * @param {Object} message - Message object { type, payload, from, timestamp }
+   * @param {Object} message - Message object { type, payload, from, timestamp, topic? }
    */
-  sendMessage(actorId, message) {
+  async sendMessage(actorId, message) {
     const actor = this.actors.get(actorId);
-    
-    // Ensure message queue exists for this actor
-    if (!this.messageQueues.has(actorId)) {
-      this.messageQueues.set(actorId, new MessageQueue(actorId, this));
-    }
-    const messageQueue = this.messageQueues.get(actorId);
 
     if (!actor) {
       // Actor not created yet - queue message for later
@@ -1199,62 +1135,259 @@ export class ActorEngine {
       return;
     }
 
-    // Use resilient message queue for delivery
-    messageQueue.enqueue(message);
+    // Actor exists - send message directly to inbox CoStream (CRDT handles persistence)
+    if (actor.inboxCoId && this.dbEngine) {
+      try {
+        // Build message data - only include topic if it's a valid co-id (not null/undefined)
+        const messageData = {
+          type: message.type,
+          payload: message.payload || {},
+          source: message.from || message.source,
+          target: actorId,
+          processed: false
+        };
+        
+        // Only include topic if it's a valid co-id string (don't include null/undefined)
+        // The $co keyword validation requires a string, not null
+        if (message.topic && typeof message.topic === 'string' && message.topic.startsWith('co_z')) {
+          messageData.topic = message.topic;
+        }
+        
+        // Debug logging for TOGGLE_BUTTON and DELETE_BUTTON
+        if (message.type === 'TOGGLE_BUTTON' || message.type === 'DELETE_BUTTON') {
+          console.log(`[ActorEngine] Adding ${message.type} to inbox ${actor.inboxCoId} for actor ${actorId}:`, {
+            messageData,
+            actorType: actor.type,
+            hasStateMachine: !!actor.machine
+          });
+        }
+        
+        await createAndPushMessage(
+          this.dbEngine,
+          actor.inboxCoId,
+          messageData
+        );
+        
+        // Debug logging after message added
+        if (message.type === 'TOGGLE_BUTTON' || message.type === 'DELETE_BUTTON') {
+          console.log(`[ActorEngine] ✅ ${message.type} added to inbox, subscription should trigger processMessages`);
+        }
+      } catch (error) {
+        console.error(`[ActorEngine] ❌ Failed to send message to ${actorId}:`, error);
+      }
+    } else {
+      console.warn(`[ActorEngine] ⚠️ No inboxCoId or dbEngine for actor ${actorId}`, {
+        hasInboxCoId: !!actor.inboxCoId,
+        hasDbEngine: !!this.dbEngine,
+        actorType: actor.type
+      });
+    }
   }
 
   /**
-   * Publish a message to all subscribed actors
-   * Validates message against interface.publishes before sending
-   * @param {string} fromActorId - Source actor ID
-   * @param {Object} message - Message object { type, payload }
+   * Subscribe an actor to a topic CoValue
+   * Adds the actor to the topic's subscribers CoList
+   * @param {string} actorId - Actor ID to subscribe
+   * @param {string} topicCoId - Topic CoValue ID (e.g., '@topic/todos-created')
    */
-  async publishToSubscriptions(fromActorId, message) {
-    const actor = this.actors.get(fromActorId);
+  async subscribeToTopic(actorId, topicCoId) {
+    const actor = this.actors.get(actorId);
     if (!actor) {
-      console.warn(`Actor not found: ${fromActorId}`);
+      console.warn(`Actor not found: ${actorId}`);
       return;
     }
 
-    // Validate outgoing message against interface.publishes
-    if (actor.interface) {
-      const isValid = await this._validateMessage(message, actor.interface, 'publishes', fromActorId);
-      if (!isValid) {
-        console.error(`[ActorEngine] Rejected invalid publish ${message.type} from ${fromActorId}`);
-        return;
-      }
+    if (!this.dbEngine) {
+      console.warn(`[ActorEngine] No dbEngine available for subscribeToTopic`);
+      return;
     }
 
-    // Add metadata
-    message.from = fromActorId;
-    
-    // Generate base message ID if not present
-    if (!message.id) {
-      message.id = `${message.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    }
-
-    // Send to all subscribed actors (each gets a unique copy with same base ID + subscriber suffix)
-    let sentCount = 0;
-    for (const subscriberId of actor.subscriptions) {
-      this.sendMessage(subscriberId, { 
-        ...message,
-        id: `${message.id}_${subscriberId}` // Unique ID per subscriber to allow deduplication
+    try {
+      // Read topic CoValue to get subscribers CoList
+      const topicSchemaStore = await this.dbEngine.execute({
+        op: 'schema',
+        fromCoValue: topicCoId
       });
-      sentCount++;
+      const topicSchemaCoId = topicSchemaStore.value?.$id;
+      
+      if (!topicSchemaCoId) {
+        throw new Error(`[ActorEngine] Failed to extract schema co-id from topic ${topicCoId}`);
+      }
+
+      const topicStore = await this.dbEngine.execute({
+        op: 'read',
+        schema: topicSchemaCoId,
+        key: topicCoId
+      });
+      const topic = topicStore.value;
+      
+      if (!topic || !topic.subscribers) {
+        throw new Error(`[ActorEngine] Topic ${topicCoId} does not have subscribers CoList`);
+      }
+
+      // Read subscribers CoList
+      const subscribersSchemaStore = await this.dbEngine.execute({
+        op: 'schema',
+        fromCoValue: topic.subscribers
+      });
+      const subscribersSchemaCoId = subscribersSchemaStore.value?.$id;
+      
+      if (!subscribersSchemaCoId) {
+        throw new Error(`[ActorEngine] Failed to extract schema co-id from subscribers ${topic.subscribers}`);
+      }
+
+      const subscribersStore = await this.dbEngine.execute({
+        op: 'read',
+        schema: subscribersSchemaCoId,
+        key: topic.subscribers
+      });
+      const subscribers = subscribersStore.value;
+      
+      // Add actor to subscribers CoList if not already present
+      if (!subscribers.items || !subscribers.items.includes(actorId)) {
+        await this.dbEngine.execute({
+          op: 'append',
+          coId: topic.subscribers,
+          item: actorId
+        });
+      }
+
+      // Add topic to actor's topics CoList if not already present
+      if (actor.topics && !actor.topics.includes(topicCoId)) {
+        const actorConfig = actor.config;
+        if (actorConfig.topics) {
+          await this.dbEngine.execute({
+            op: 'append',
+            coId: actorConfig.topics,
+            item: topicCoId
+          });
+        }
+      }
+    } catch (error) {
+      console.error(`[ActorEngine] Failed to subscribe ${actorId} to topic ${topicCoId}:`, error);
     }
   }
 
   /**
-   * Publish a message (alias for publishToSubscriptions)
-   * @param {string} fromActorId - Source actor ID
+   * Publish a message to a topic CoValue
+   * Routes message to all actors subscribed to the topic
+   * 
+   * TOPIC ROUTING: Messages are routed to all actors in the topic's subscribers CoList.
+   * Each subscriber receives a unique copy with a unique message ID (base ID + subscriber suffix).
+   * 
+   * Flow: publishToTopic() → read topic subscribers → sendMessage() → inbox CoStream → processMessages() → StateEngine.send()
+   * 
+   * @param {string} topicCoId - Topic CoValue ID (e.g., '@topic/todos-created')
+   * @param {Object} message - Message object { type, payload }
+   * @param {string} [fromActorId] - Optional source actor ID (for metadata)
+   */
+  async publishToTopic(topicCoId, message, fromActorId = null) {
+    if (!this.dbEngine) {
+      console.warn(`[ActorEngine] No dbEngine available for publishToTopic`);
+      return;
+    }
+
+    try {
+      // Resolve topic human-readable ID to co-id if needed
+      let resolvedTopicCoId = topicCoId;
+      if (topicCoId && !topicCoId.startsWith('co_z')) {
+        // Human-readable ID - resolve to co-id
+        try {
+          const resolved = await this.dbEngine.execute({
+            op: 'resolve',
+            humanReadableKey: topicCoId
+          });
+          if (resolved && resolved.startsWith('co_z')) {
+            resolvedTopicCoId = resolved;
+          } else {
+            throw new Error(`[ActorEngine] Failed to resolve topic ${topicCoId} to co-id`);
+          }
+        } catch (error) {
+          console.error(`[ActorEngine] Failed to resolve topic ${topicCoId}:`, error);
+          throw new Error(`[ActorEngine] Topic ${topicCoId} must be a co-id (co_z...) or resolvable human-readable ID`);
+        }
+      }
+
+      // Read topic CoValue to get subscribers CoList
+      const topicSchemaStore = await this.dbEngine.execute({
+        op: 'schema',
+        fromCoValue: resolvedTopicCoId
+      });
+      const topicSchemaCoId = topicSchemaStore.value?.$id;
+      
+      if (!topicSchemaCoId) {
+        throw new Error(`[ActorEngine] Failed to extract schema co-id from topic ${resolvedTopicCoId}`);
+      }
+
+      const topicStore = await this.dbEngine.execute({
+        op: 'read',
+        schema: topicSchemaCoId,
+        key: resolvedTopicCoId
+      });
+      const topic = topicStore.value;
+      
+      if (!topic || !topic.subscribers) {
+        throw new Error(`[ActorEngine] Topic ${resolvedTopicCoId} does not have subscribers CoList`);
+      }
+
+      // Read subscribers CoList
+      const subscribersSchemaStore = await this.dbEngine.execute({
+        op: 'schema',
+        fromCoValue: topic.subscribers
+      });
+      const subscribersSchemaCoId = subscribersSchemaStore.value?.$id;
+      
+      if (!subscribersSchemaCoId) {
+        throw new Error(`[ActorEngine] Failed to extract schema co-id from subscribers ${topic.subscribers}`);
+      }
+
+      const subscribersStore = await this.dbEngine.execute({
+        op: 'read',
+        schema: subscribersSchemaCoId,
+        key: topic.subscribers
+      });
+      const subscribers = subscribersStore.value;
+      
+      if (!subscribers || !subscribers.items || subscribers.items.length === 0) {
+        // No subscribers, nothing to do
+        return;
+      }
+
+      // Add metadata (use resolved co-id for topic field)
+      message.from = fromActorId;
+      message.topic = resolvedTopicCoId; // Use resolved co-id (required by message schema validation)
+      
+      // Generate base message ID if not present
+      if (!message.id) {
+        message.id = `${message.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      }
+
+      // Send to all subscribed actors (each gets a unique copy with same base ID + subscriber suffix)
+      let sentCount = 0;
+      for (const subscriberId of subscribers.items) {
+        await this.sendMessage(subscriberId, { 
+          ...message,
+          id: `${message.id}_${subscriberId}` // Unique ID per subscriber to allow deduplication
+        });
+        sentCount++;
+      }
+    } catch (error) {
+      console.error(`[ActorEngine] Failed to publish to topic ${topicCoId}:`, error);
+    }
+  }
+
+  /**
+   * Publish a message (alias for publishToTopic)
+   * @param {string} topicCoId - Topic CoValue ID
    * @param {string} messageType - Message type
    * @param {Object} payload - Message payload
+   * @param {string} [fromActorId] - Optional source actor ID
    */
-  async publishMessage(fromActorId, messageType, payload = {}) {
-    await this.publishToSubscriptions(fromActorId, {
+  async publishMessage(topicCoId, messageType, payload = {}, fromActorId = null) {
+    await this.publishToTopic(topicCoId, {
       type: messageType,
       payload
-    });
+    }, fromActorId);
   }
 
   /**
@@ -1274,8 +1407,12 @@ export class ActorEngine {
    * - Complete traceability (all events appear in inbox log)
    * - Consistent event handling (same path for all events)
    * - Per-message processed flags (distributed deduplication via CRDT)
+   * - Event scoping: Events are always scoped to the actorId parameter (the actor that rendered the element)
    * 
-   * @param {string} actorId - Actor ID
+   * EVENT SCOPING GUARANTEE: The actorId parameter is always the actor that rendered the element
+   * triggering the event. This is guaranteed by the closure in ViewEngine.attachEvents().
+   * 
+   * @param {string} actorId - Actor ID (GUARANTEED to be the actor that rendered the element)
    * @param {string} eventType - Event type (e.g., 'SUCCESS', 'ERROR', 'CLICK_BUTTON')
    * @param {Object} payload - Event payload
    */
@@ -1293,15 +1430,6 @@ export class ActorEngine {
       from: actorId, // Self-originated internal event
       id: `${eventType}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     };
-
-    // Validate against interface.inbox if present (validates message structure)
-    if (actor.interface) {
-      const isValid = await this._validateMessage(message, actor.interface, 'inbox', actorId);
-      if (!isValid) {
-        console.warn(`[ActorEngine] Rejected invalid internal event ${eventType} from ${actorId}`);
-        return;
-      }
-    }
 
     // Create message CoMap and push co-id to inbox CoStream
     // Message schema validation happens inside createAndPushMessage
@@ -1327,12 +1455,8 @@ export class ActorEngine {
       console.warn(`[ActorEngine] ⚠️ No inboxCoId or dbEngine for actor ${actorId}`);
     }
 
-    // Process messages from reactive store after pushing to CoStream
-    // The inbox subscription will also trigger processMessages() automatically, but for immediate
-    // processing of internal events, we call it here after a microtask to allow CoStream to update
-    // CRITICAL FIX: Processing guard in processMessages() prevents duplicate processing if subscription also triggers
-    await Promise.resolve(); // Allow CoStream push to complete
-    await this.processMessages(actorId); // Process from reactive store (guard prevents duplicates)
+    // Inbox subscription will trigger processMessages() automatically
+    // No need for immediate processing - subscription handles it
   }
 
   /**
@@ -1363,21 +1487,12 @@ export class ActorEngine {
       return;
     }
 
-    // CRITICAL FIX: Prevent concurrent processing to avoid duplicate message handling
-    // This prevents race conditions when sendInternalEvent and inbox subscription both call processMessages
-    if (actor._isProcessingMessages) {
-      // Already processing - skip this call (subscription will retry when processing completes)
+    if (!actor.inboxCoId || !this.dbEngine) {
+      console.warn(`[ActorEngine] Cannot process messages: missing inboxCoId or dbEngine for ${actorId}`);
       return;
     }
 
-    // Set processing flag
-    actor._isProcessingMessages = true;
-
     try {
-      if (!actor.inboxCoId || !this.dbEngine) {
-        console.warn(`[ActorEngine] Cannot process messages: missing inboxCoId or dbEngine for ${actorId}`);
-        return;
-      }
 
       // Call backend operation to process inbox (backend-to-backend)
       // Backend handles: reading CoStream with sessions, checking processed flag, updating processed flag
@@ -1390,6 +1505,14 @@ export class ActorEngine {
 
       const unprocessedMessages = result.messages || [];
       
+      // Debug logging for agent actor inbox processing
+      if (unprocessedMessages.length > 0 && (actorId === 'co_zL4NYWXZNqUxNrTyE8Yp3ecWKjQ' || actor.type === 'service')) {
+        console.log(`[ActorEngine] Processing ${unprocessedMessages.length} messages for ${actorId}:`, {
+          messageTypes: unprocessedMessages.map(m => m.type),
+          actorType: actor.type
+        });
+      }
+      
       if (unprocessedMessages.length === 0) {
         return;
       }
@@ -1399,27 +1522,33 @@ export class ActorEngine {
       // Backend already filtered out processed messages by checking processed flag directly from CoValue
       for (const message of unprocessedMessages) {
         try {
-          // Skip validation for system messages (INIT, etc.) - they don't need interface validation
-          const isSystemMessage = message.type === 'INIT' || message.from === 'system';
-          
-          // Validate message against interface.inbox if present (skip for system messages)
-          if (actor.interface && !isSystemMessage) {
-            const isValid = await this._validateMessage(message, actor.interface, 'inbox', actorId);
-            if (!isValid) {
-              console.warn(`[ActorEngine] Rejected invalid message ${message.type} for ${actorId}`);
-              continue;
-            }
-          }
-
           // Skip processing system messages (they're just for debugging/display, not actual events)
+          const isSystemMessage = message.type === 'INIT' || message.from === 'system';
           if (isSystemMessage) {
             console.debug(`[ActorEngine] Skipping system message ${message.type} for ${actorId} (no processing needed)`);
             continue;
           }
 
+          // Debug logging for TOGGLE_BUTTON and DELETE_BUTTON
+          if (message.type === 'TOGGLE_BUTTON' || message.type === 'DELETE_BUTTON') {
+            console.log(`[ActorEngine] Processing ${message.type} message for ${actorId}:`, {
+              type: message.type,
+              payload: message.payload,
+              hasStateMachine: !!actor.machine,
+              machineId: actor.machine?.id,
+              hasStateEngine: !!this.stateEngine
+            });
+          }
+
           // If actor has state machine, send event to state machine
           if (actor.machine && this.stateEngine) {
+            if (message.type === 'TOGGLE_BUTTON' || message.type === 'DELETE_BUTTON') {
+              console.log(`[ActorEngine] Sending ${message.type} to state machine ${actor.machine.id}`);
+            }
             await this.stateEngine.send(actor.machine.id, message.type, message.payload);
+            if (message.type === 'TOGGLE_BUTTON' || message.type === 'DELETE_BUTTON') {
+              console.log(`[ActorEngine] ✅ State machine send completed for ${message.type}`);
+            }
           } else {
             // Otherwise, treat as tool invocation
             if (message.type.startsWith('@')) {
@@ -1437,49 +1566,12 @@ export class ActorEngine {
       // Don't automatically re-render here - let the state engine handle re-renders
       // The state engine will only re-render if the state actually changed
       // This prevents unnecessary re-renders for messages like UPDATE_INPUT that don't change state
-    } finally {
-      // Always clear processing flag, even if an error occurred
-      actor._isProcessingMessages = false;
+    } catch (error) {
+      console.error(`[ActorEngine] Error processing messages for ${actorId}:`, error);
     }
   }
 
 
 
-  /**
-   * Subscribe actor A to actor B's messages
-   * @param {string} actorIdA - Actor A (subscriber)
-   * @param {string} actorIdB - Actor B (publisher)
-   */
-  subscribe(actorIdA, actorIdB) {
-    const actorB = this.actors.get(actorIdB);
-    if (!actorB) {
-      console.warn(`Actor not found: ${actorIdB}`);
-      return;
-    }
-
-    // Add actorA to actorB's subscriptions
-    if (!actorB.subscriptions.includes(actorIdA)) {
-      actorB.subscriptions.push(actorIdA);
-    }
-  }
-
-  /**
-   * Unsubscribe actor A from actor B's messages
-   * @param {string} actorIdA - Actor A (subscriber)
-   * @param {string} actorIdB - Actor B (publisher)
-   */
-  unsubscribe(actorIdA, actorIdB) {
-    const actorB = this.actors.get(actorIdB);
-    if (!actorB) {
-      console.warn(`Actor not found: ${actorIdB}`);
-      return;
-    }
-
-    // Remove actorA from actorB's subscriptions
-    const index = actorB.subscriptions.indexOf(actorIdA);
-    if (index !== -1) {
-      actorB.subscriptions.splice(index, 1);
-    }
-  }
 
 }

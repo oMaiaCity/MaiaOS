@@ -5,7 +5,7 @@ import { subscribeConfig } from '../../utils/config-loader.js';
 // Import modules
 import { renderNode, renderEach, applyNodeAttributes, renderNodeChildren } from './renderer.js';
 import { renderSlot, createSlotWrapper } from './slots.js';
-import { attachEvents, handleEvent, resolvePayload } from './events.js';
+import { attachEvents, handleEvent } from './events.js';
 import { resolveDataAttributes } from './data-attributes.js';
 
 /**

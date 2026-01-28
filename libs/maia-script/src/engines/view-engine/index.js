@@ -8,5 +8,5 @@
 export { ViewEngine } from './view.engine.js';
 export { renderNode, renderEach, applyNodeAttributes, renderNodeChildren } from './renderer.js';
 export { renderSlot, createSlotWrapper } from './slots.js';
-export { attachEvents, handleEvent, resolvePayload } from './events.js';
+export { attachEvents, handleEvent } from './events.js';
 export { resolveDataAttributes, toKebabCase } from './data-attributes.js';

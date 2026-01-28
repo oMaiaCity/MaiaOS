@@ -6,28 +6,24 @@
     "idle": {
       "on": {
         "DRAG_START": {
-          "target": "dragging"
+          "target": "dragging",
+          "actions": [
+            {
+              "tool": "@dragdrop/start",
+              "payload": { "id": "$$id" },
+              "onSuccess": {
+                "updateContext": {
+                  "draggedItemId": "$$result.draggedItemId",
+                  "draggedItemIds": "$$result.draggedItemIds"
+                }
+              }
+            }
+          ]
         },
-        "DRAG_END": "idle",
+        "DRAG_END": {
+          "target": "dragEnding"
+        },
         "DRAG_OVER": "idle",
-        "DRAG_ENTER": {
-          "target": "idle",
-          "actions": [
-            {
-              "tool": "@dragdrop/dragEnter",
-              "payload": { "column": "$$column" }
-            }
-          ]
-        },
-        "DRAG_LEAVE": {
-          "target": "idle",
-          "actions": [
-            {
-              "tool": "@dragdrop/dragLeave",
-              "payload": { "column": "$$column" }
-            }
-          ]
-        },
         "DROP": {
           "target": "dropping"
         },
@@ -38,11 +34,11 @@
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "TOGGLE_BUTTON",
-                "payload": { "id": "$$id", "done": "$$done" }
+                "payload": { "id": "$$id", "done": "$$done" },
+                "target": "@actor/agent"
               }
             }
-          ],
-          "guard": { "$ne": ["$$id", null] }
+          ]
         },
         "DELETE_BUTTON": {
           "target": "idle",
@@ -51,11 +47,11 @@
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "DELETE_BUTTON",
-                "payload": { "id": "$$id" }
+                "payload": { "id": "$$id" },
+                "target": "@actor/agent"
               }
             }
-          ],
-          "guard": { "$ne": ["$$id", null] }
+          ]
         },
         "TODO_CREATED": {
           "target": "idle"
@@ -69,25 +65,47 @@
       }
     },
     "dragging": {
-      "entry": {
-        "tool": "@dragdrop/start",
-        "payload": { "schema": "$todosSchema", "id": "$$id" }
-      },
       "on": {
-        "DRAG_END": {
-          "target": "idle",
+        "SUCCESS": {
+          "target": "dragging",
           "actions": [
             {
-              "tool": "@dragdrop/end"
+              "updateContext": {
+                "draggedItemId": "$$result.draggedItemId",
+                "draggedItemIds": "$$result.draggedItemIds"
+              }
             }
           ]
+        },
+        "DRAG_START": {
+          "target": "dragging",
+          "actions": [
+            {
+              "tool": "@dragdrop/start",
+              "payload": { "id": "$$id" },
+              "onSuccess": {
+                "updateContext": {
+                  "draggedItemId": "$$result.draggedItemId",
+                  "draggedItemIds": "$$result.draggedItemIds"
+                }
+              }
+            }
+          ]
+        },
+        "DRAG_END": {
+          "target": "dragEnding"
         },
         "DRAG_ENTER": {
           "target": "dragging",
           "actions": [
             {
-              "tool": "@dragdrop/dragEnter",
-              "payload": { "column": "$$column" }
+              "tool": "@dragdrop/dragOver",
+              "payload": { "column": "$$column" },
+              "onSuccess": {
+                "updateContext": {
+                  "dragOverColumn": "$$result.dragOverColumn"
+                }
+              }
             }
           ]
         },
@@ -95,29 +113,190 @@
           "target": "dragging",
           "actions": [
             {
-              "tool": "@dragdrop/dragLeave",
-              "payload": { "column": "$$column" }
+              "tool": "@dragdrop/dragOver",
+              "payload": { "column": null },
+              "onSuccess": {
+                "updateContext": {
+                  "dragOverColumn": "$$result.dragOverColumn"
+                }
+              }
             }
           ]
         },
-        "DROP": "dropping"
+        "DROP": "dropping",
+        "TOGGLE_BUTTON": {
+          "target": "dragEnding",
+          "actions": [
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "TOGGLE_BUTTON",
+                "payload": { "id": "$$id", "done": "$$done" },
+                "target": "@actor/agent"
+              }
+            }
+          ]
+        },
+        "DELETE_BUTTON": {
+          "target": "dragEnding",
+          "actions": [
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "DELETE_BUTTON",
+                "payload": { "id": "$$id" },
+                "target": "@actor/agent"
+              }
+            }
+          ]
+        },
+        "ERROR": "error"
       }
     },
-    "dropping": {
+    "dragEnding": {
       "entry": {
-        "tool": "@dragdrop/drop",
-        "payload": { 
-          "schema": "$todosSchema",
-          "field": "$$field",
-          "value": "$$value"
-        }
+        "tool": "@dragdrop/end"
       },
       "on": {
         "SUCCESS": {
           "target": "idle",
           "actions": [
             {
-              "tool": "@dragdrop/end"
+              "updateContext": {
+                "draggedItemId": "$$result.draggedItemId",
+                "dragOverColumn": "$$result.dragOverColumn",
+                "draggedItemIds": "$$result.draggedItemIds"
+              }
+            }
+          ]
+        },
+        "ERROR": "error",
+        "DRAG_START": {
+          "target": "dragging",
+          "actions": [
+            {
+              "tool": "@dragdrop/start",
+              "payload": { "id": "$$id" },
+              "onSuccess": {
+                "updateContext": {
+                  "draggedItemId": "$$result.draggedItemId",
+                  "draggedItemIds": "$$result.draggedItemIds"
+                }
+              }
+            }
+          ]
+        },
+        "DRAG_ENTER": {
+          "target": "dragging",
+          "actions": [
+            {
+              "tool": "@dragdrop/dragOver",
+              "payload": { "column": "$$column" },
+              "onSuccess": {
+                "updateContext": {
+                  "dragOverColumn": "$$result.dragOverColumn"
+                }
+              }
+            }
+          ]
+        },
+        "DRAG_LEAVE": {
+          "target": "dragging",
+          "actions": [
+            {
+              "tool": "@dragdrop/dragOver",
+              "payload": { "column": null },
+              "onSuccess": {
+                "updateContext": {
+                  "dragOverColumn": "$$result.dragOverColumn"
+                }
+              }
+            }
+          ]
+        },
+        "DROP": "dropping",
+        "DRAG_END": "dragEnding",
+        "TOGGLE_BUTTON": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "TOGGLE_BUTTON",
+                "payload": { "id": "$$id", "done": "$$done" },
+                "target": "@actor/agent"
+              }
+            }
+          ]
+        },
+        "DELETE_BUTTON": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "DELETE_BUTTON",
+                "payload": { "id": "$$id" },
+                "target": "@actor/agent"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "dropping": {
+      "entry": {
+        "tool": "@dragdrop/drop",
+        "payload": { 
+          "field": "$$field",
+          "value": "$$value"
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "dragEnding"
+        },
+        "DRAG_START": {
+          "target": "dragging",
+          "actions": [
+            {
+              "tool": "@dragdrop/start",
+              "payload": { "id": "$$id" },
+              "onSuccess": {
+                "updateContext": {
+                  "draggedItemId": "$$result.draggedItemId",
+                  "draggedItemIds": "$$result.draggedItemIds"
+                }
+              }
+            }
+          ]
+        },
+        "DRAG_END": {
+          "target": "dragEnding"
+        },
+        "TOGGLE_BUTTON": {
+          "target": "dragEnding",
+          "actions": [
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "TOGGLE_BUTTON",
+                "payload": { "id": "$$id", "done": "$$done" },
+                "target": "@actor/agent"
+              }
+            }
+          ]
+        },
+        "DELETE_BUTTON": {
+          "target": "dragEnding",
+          "actions": [
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "DELETE_BUTTON",
+                "payload": { "id": "$$id" },
+                "target": "@actor/agent"
+              }
             }
           ]
         },

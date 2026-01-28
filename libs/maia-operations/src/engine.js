@@ -23,6 +23,7 @@ import { SeedOperation } from './operations/seed.js';
 import { SchemaOperation } from './operations/schema.js';
 import { ResolveOperation } from './operations/resolve.js';
 import { PushOperation } from './operations/push.js';
+import { AppendOperation } from './operations/append.js';
 import { ProcessInboxOperation } from './operations/process-inbox.js';
 
 export class DBEngine {
@@ -49,11 +50,12 @@ export class DBEngine {
       read: new ReadOperation(this.backend),  // Unified reactive read operation
       create: new CreateOperation(this.backend, this),
       update: new UpdateOperation(this.backend, this, evaluator),  // Unified for data + configs, optional evaluator
-      delete: new DeleteOperation(this.backend),
+      delete: new DeleteOperation(this.backend, this),  // Needs dbEngine to extract schema from CoValue headerMeta
       seed: new SeedOperation(this.backend),
       schema: new SchemaOperation(this.backend, this),  // Schema loading operation (needs dbEngine for resolve operation)
       resolve: new ResolveOperation(this.backend),  // Co-id resolution operation
       push: new PushOperation(this.backend, this),  // CoStream append operation
+      append: new AppendOperation(this.backend, this),  // CoList append operation
       processInbox: new ProcessInboxOperation(this.backend, this)  // Inbox processing with session-based watermarks
     };
   }

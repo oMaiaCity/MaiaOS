@@ -81,29 +81,12 @@ export async function handleStateUpdate(subscriptionEngine, actorId, newStateDef
 }
 
 /**
- * Handle interface update - reload interface, re-validate
- * @param {Object} subscriptionEngine - SubscriptionEngine instance
- * @param {string} actorId - Actor ID
- * @param {Object} newInterfaceDef - Updated interface definition
+ * Handle interface update - REMOVED (interfaces no longer exist, topics handle routing)
+ * @deprecated Interfaces have been removed - topics handle message routing now
  */
 export async function handleInterfaceUpdate(subscriptionEngine, actorId, newInterfaceDef) {
-  const actor = subscriptionEngine.actorEngine.getActor(actorId);
-  if (!actor) return;
-
-  // Update actor's interface
-  actor.interface = newInterfaceDef;
-
-  // Re-validate interface (non-blocking)
-  try {
-    await subscriptionEngine.actorEngine.toolEngine.execute('@interface/validateInterface', actor, {
-      interfaceDef: newInterfaceDef,
-      actorId
-    });
-  } catch (error) {
-    console.warn(`[SubscriptionEngine] Interface validation failed for ${actorId}:`, error);
-  }
-
-  // Note: Interface changes don't require re-render (only affects message validation)
+  // No-op - interfaces removed, topics handle routing
+  console.warn(`[SubscriptionEngine] handleInterfaceUpdate called but interfaces are removed - topics handle routing now`);
 }
 
 /**

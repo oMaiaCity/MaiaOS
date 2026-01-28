@@ -1,0 +1,31 @@
+{
+  "error": {
+    "entry": {
+      "updateContext": {
+        "error": "$$error"
+      }
+    },
+    "on": {
+      "RETRY": {
+        "target": "idle",
+        "actions": [
+          {
+            "updateContext": {
+              "error": null
+            }
+          }
+        ]
+      },
+      "DISMISS": {
+        "target": "idle",
+        "actions": [
+          {
+            "updateContext": {
+              "error": null
+            }
+          }
+        ]
+      }
+    }
+  }
+}

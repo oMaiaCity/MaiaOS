@@ -136,7 +136,19 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
   "root": {
     "tag": "div",
     "attrs": { "class": "agent-container" },
-    "$slot": "$composite"  // ← Only renders child actor
+    "$slot": "$currentView"  // ← Only renders child actor
+  }
+}
+```
+
+**Agent Context:**
+```json
+{
+  "$schema": "@schema/context",
+  "$id": "@context/agent",
+  "currentView": "@composite",  // ← Context property (CRDT CoValue) - references active child
+  "@actors": {
+    "composite": "@actor/composite"  // ← System property (like $schema/$id) - defines children
   }
 }
 ```
@@ -217,8 +229,9 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
 **Composite View:**
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/composite",
+  "content": {
     "tag": "div",
     "children": [
       {
@@ -233,6 +246,19 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
         "$slot": "$currentView"  // ← Slots child UI actors
       }
     ]
+  }
+}
+```
+
+**Composite Context:**
+```json
+{
+  "$schema": "@schema/context",
+  "$id": "@context/composite",
+  "currentView": "@list",  // ← Context property (CRDT CoValue) - references active child
+  "@actors": {
+    "list": "@actor/list",      // ← System property (like $schema/$id) - defines children
+    "kanban": "@actor/kanban"
   }
 }
 ```
@@ -461,6 +487,34 @@ The service actor orchestrates all of them via messages, maintaining clean separ
 
 The `context` holds all runtime data for the actor. It can be defined inline in the actor file or in a separate `.context.maia` file:
 
+### System Properties in Context
+
+Context files can contain **system properties** (like `$schema` and `$id`) that are used by the actor engine:
+
+**`@actors` - Child Actor Definitions:**
+- **System property** (like `$schema`, `$id`) - clearly indicates it's not user-defined context data
+- Defines which child actors exist (used by actor engine to create children)
+- Contains external references (`@actor/composite`, `@actor/list`, etc.)
+- Format: `"@actors": { "namekey": "@actor/instance", ... }`
+
+**Example:**
+```json
+{
+  "$schema": "@schema/context",
+  "$id": "@context/agent",
+  "currentView": "@composite",  // ← Context property (CRDT CoValue) - references active child
+  "@actors": {
+    "composite": "@actor/composite"  // ← System property - defines children
+  }
+}
+```
+
+**Key Points:**
+- `context["@actors"]` is a **system property** - defines which children exist
+- `context.currentView` is a **context property** (CRDT CoValue) - references the active child actor
+- Slot resolution: `"$slot": "$currentView"` → looks up `context.currentView` → extracts namekey → finds `actor.children[namekey]`
+- **Unified pattern**: All actors use `currentView` for slot resolution (even if they only have one child)
+
 **Separate Context File (Recommended):**
 
 **`todo.context.maia`:**
@@ -507,7 +561,7 @@ Referenced in actor:
   
   // Drag-drop state (managed by tools)
   "draggedItemId": null,
-  "draggedEntityType": null
+  "draggedItemIds": {}
 }
 ```
 
@@ -530,26 +584,80 @@ Referenced in actor:
 
 ## Actor Lifecycle
 
+### Service Actors vs UI Actors
+
+MaiaOS differentiates between **service actors** and **UI actors** for lifecycle management:
+
+**Service Actors:**
+- **Persist** throughout the vibe lifecycle
+- Created once when vibe loads
+- Destroyed only when vibe is unloaded
+- Examples: Agent orchestrators, data services
+
+**UI Actors:**
+- **Created on-demand** when their view is active (referenced by `context.currentView`)
+- **Destroyed** when switching to a different view
+- Examples: List views, kanban views, form components
+
+### Lifecycle Flow
+
+**Service Actor Lifecycle:**
 ```
 ┌─────────────┐
-│   Created   │  ← createActor() called
+│   Created   │  ← createActor() called (once per vibe)
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
 │  Booting    │  ← State machine initialized
-└──────┬──────┘      View rendered (if viewRef exists)
-       │            Styles applied (if styleRef exists)
+└──────┬──────┘      View rendered (minimal, only slots)
+       │            Styles applied
+       ▼
+┌─────────────┐
+│   Active    │  ← Processes events (persists)
+└──────┬──────┘      Processes messages
+       │            Re-renders on state changes
+       │            (Lifecycle continues until vibe unloads)
+       ▼
+┌─────────────┐
+│  Destroyed  │  ← destroyActor() called (only on vibe unload)
+└─────────────┘
+```
+
+**UI Actor Lifecycle:**
+```
+┌─────────────┐
+│   Created   │  ← createActor() called lazily (when referenced by context.currentView)
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Booting    │  ← State machine initialized
+└──────┬──────┘      View rendered (full UI)
+       │            Styles applied
        ▼
 ┌─────────────┐
 │   Active    │  ← Processes events
 └──────┬──────┘      Processes messages
        │            Re-renders on state changes
+       │            (Active while context.currentView references this actor)
        ▼
 ┌─────────────┐
-│  Destroyed  │  ← destroyActor() called
+│  Destroyed  │  ← destroyActor() called (when switching to different view)
 └─────────────┘
 ```
+
+### Lazy Child Actor Creation
+
+Child actors are **created lazily** - only when they're referenced by `context.currentView`:
+
+- **Before**: All child actors were created immediately (wasteful)
+- **After**: Only the active child actor is created (efficient)
+
+When switching views:
+1. Previously active UI child actor is destroyed
+2. New child actor is created lazily (if not already exists)
+3. Service child actors persist (not destroyed)
 
 ### Creating Actors
 
@@ -841,17 +949,22 @@ maia/
 
 **Syntax:**
 - Use `$slot` with a context value (e.g., `"$slot": "$currentView"`)
-- State machine sets context value to child actor name (e.g., `currentView: "@list"`)
-- ViewEngine resolves `@list` → finds child actor with name `list` in `children` map
+- Context property contains `@namekey` reference (e.g., `currentView: "@list"`)
+- ViewEngine extracts `namekey` from `@namekey` → finds child actor in `actor.children[namekey]`
 - Attaches child actor's container to the slot element
 
-**Example:**
+**Unified Pattern:**
+All slot resolution works the same way - no differentiation between "static" and "dynamic" slots. Everything is a CRDT CoValue.
+
+**Example Context:**
 ```json
 {
-  "$type": "actor",
-  "children": {
-    "header": "actor_header_001",    // ← Child actor ID
-    "list": "actor_todo_list_001"     // ← Child actor ID
+  "$schema": "@schema/context",
+  "$id": "@context/composite",
+  "currentView": "@list",  // ← Context property (CRDT CoValue) - references active child
+  "@actors": {
+    "list": "@actor/list",      // ← System property (like $schema/$id) - defines children
+    "kanban": "@actor/kanban"
   }
 }
 ```
@@ -859,17 +972,14 @@ maia/
 **View with slots:**
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/composite",
+  "content": {
     "tag": "div",
     "children": [
       {
-        "tag": "header",
-        "$slot": "$headerView"  // Context value set by state machine
-      },
-      {
         "tag": "main",
-        "$slot": "$currentView" // Context value set by state machine
+        "$slot": "$currentView"  // ← Resolves: context.currentView = "@list" → namekey "list" → actor.children["list"]
       }
     ]
   }
@@ -881,17 +991,27 @@ maia/
 {
   "states": {
     "idle": {
-      "entry": {
-        "tool": "@core/updateContext",
-        "payload": {
-          "headerView": "@header",
-          "currentView": "@list"
+      "on": {
+        "SWITCH_VIEW": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "currentView": "@list"  // ← Updates context property (CRDT CoValue)
+              }
+            }
+          ]
         }
       }
     }
   }
 }
 ```
+
+**Key Points:**
+- `context["@actors"]` is a **system property** (like `$schema`, `$id`) that defines which children exist
+- `context.currentView` is a **context property** (CRDT CoValue) that references the active child actor
+- Slot resolution is **unified** - same logic for all slots, whether they reference one child or switch between multiple
 
 ### Building a Composable App
 
@@ -1154,7 +1274,7 @@ vibe_root (composite)
             {
               "tool": "@core/updateContext",
               "payload": {
-                "currentView": "$viewMode === 'list' ? '@list' : '@kanban'"
+                "currentView": "$viewMode === 'list' ? '@list' : '@kanban'"  // ← Updates context property (CRDT CoValue)
               }
             }
           ]

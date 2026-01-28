@@ -1,7 +1,0 @@
-{
-  "$schema": "@schema/subscriptions",
-  "$id": "@subscriptions/composite",
-  "items": [
-    "@actor/agent"
-  ]
-}

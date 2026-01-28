@@ -4,6 +4,9 @@
  * Handles event attachment, processing, and payload resolution.
  */
 
+import { extractDOMValues } from '@MaiaOS/schemata/payload-resolver.js';
+import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
+
 /**
  * Attach event listeners to an element
  * @param {Object} viewEngine - ViewEngine instance
@@ -35,24 +38,45 @@ export function attachEvents(viewEngine, element, events, data, actorId) {
  * @param {Object} data - The data context
  * @param {HTMLElement} element - The target element
  * @param {string} actorId - The actor ID (from closure)
+ * 
+ * EVENT SCOPING: Events are always scoped to the actor that rendered the element.
+ * The actorId parameter comes from the closure when the event handler was attached,
+ * ensuring events are always routed to the correct actor's inbox.
  */
 export async function handleEvent(viewEngine, e, eventDef, data, element, actorId) {
   // v0.2: JSON-native event syntax
   const eventName = eventDef.send;
   let payload = eventDef.payload || {};
   
-  // Query module registry for auto-preventDefault events
-  const dragDropModule = viewEngine.moduleRegistry?.getModule('dragdrop');
-  if (dragDropModule && typeof dragDropModule.shouldPreventDefault === 'function') {
-    if (dragDropModule.shouldPreventDefault(e.type)) {
-      e.preventDefault();
-      e.stopPropagation();
+  // CRITICAL: For drag/drop events, preventDefault MUST be called synchronously
+  // This is required by the browser for drop events to work
+  // dragover MUST preventDefault for drop to fire
+  if (e.type === 'dragover' || e.type === 'drop' || e.type === 'dragenter') {
+    e.preventDefault();
+    if (e.type === 'dragover') {
+      e.dataTransfer.dropEffect = 'move'; // Set visual feedback
     }
   }
   
   // Handle special events that don't go to state machine
+  // dragover fires continuously - we only need to preventDefault, not process it
   if (eventName === 'DRAG_OVER') {
-    return; // Already prevented above
+    return; // Already prevented above, don't send to state machine
+  }
+  
+  // Filter dragenter/dragleave: Only process if event target is the dropzone element itself
+  // (not a child element - browser fires these events for every child element)
+  // This prevents rapid state transitions when moving over child elements
+  if ((eventName === 'DRAG_ENTER' || eventName === 'DRAG_LEAVE')) {
+    // Only process if this is actually the dropzone element (has data-column attribute)
+    // AND the event target is the element itself (not a child element)
+    const isDropzone = element.hasAttribute('data-column') || element.dataset.column;
+    // For dragenter/dragleave, we only want events where the target IS the dropzone element
+    // If target is a child (SPAN, BUTTON, etc.), ignore it
+    if (!isDropzone || e.target !== element) {
+      // Event is on a child element or not a dropzone - ignore it
+      return;
+    }
   }
   
   if (eventName === 'STOP_PROPAGATION') {
@@ -70,74 +94,21 @@ export async function handleEvent(viewEngine, e, eventDef, data, element, actorI
   if (viewEngine.actorEngine) {
     const actor = viewEngine.actorEngine.getActor(actorId);
     if (actor && actor.machine) {
-      // CRITICAL FIX: Ensure schema is resolved for drag/drop events BEFORE resolving payload
-      // This ensures schema is available when resolvePayload evaluates expressions
-      if ((eventName === 'DRAG_START' || eventName === 'DROP') && payload && payload.schema) {
-        // If schema is an expression (starts with $), resolve it from actor context first
-        if (typeof payload.schema === 'string' && payload.schema.startsWith('$')) {
-          // Try to resolve from actor context (same pattern as toggle button - no schema needed in payload)
-          // But for drag/drop, we need schema, so resolve it from context
-          const schemaKey = payload.schema.replace('$', ''); // e.g., "$todosSchema" -> "todosSchema"
-          let resolvedSchema = actor.context[schemaKey] || actor.context[`${schemaKey}Schema`];
-          
-          // If not found, try to find any schema that matches the base name
-          // e.g., "todosSchema" -> try "todosTodoSchema" or "todosDoneSchema"
-          if (!resolvedSchema || !resolvedSchema.startsWith('co_z')) {
-            const baseName = schemaKey.replace(/Schema$/, '').toLowerCase(); // e.g., "todosSchema" -> "todos"
-            // Look for any schema key that contains the base name and ends with "schema"
-            for (const [key, value] of Object.entries(actor.context)) {
-              const lowerKey = key.toLowerCase();
-              // Match keys like "todosTodoSchema", "todosDoneSchema", "todostodoSchema", etc.
-              // Must contain base name and "schema" (case-insensitive)
-              if (lowerKey.includes(baseName) && lowerKey.includes('schema')) {
-                if (typeof value === 'string' && value.startsWith('co_z')) {
-                  resolvedSchema = value;
-                  break; // Use first matching schema (both todosTodoSchema and todosDoneSchema use same schema)
-                }
-              }
-            }
-          }
-          
-          // Fallback: look for schema in context query objects (todosTodo, todosDone, etc.)
-          if (!resolvedSchema || !resolvedSchema.startsWith('co_z')) {
-            for (const [key, value] of Object.entries(actor.context)) {
-              if (value && typeof value === 'object' && value.schema && typeof value.schema === 'string' && value.schema.startsWith('co_z')) {
-                resolvedSchema = value.schema;
-                break;
-              }
-            }
-          }
-          
-          // Update payload with resolved schema
-          if (resolvedSchema && typeof resolvedSchema === 'string' && resolvedSchema.startsWith('co_z')) {
-            payload.schema = resolvedSchema;
-          } else {
-            console.error(`[ViewEngine] Failed to resolve schema for ${eventName}. Original: ${payload.schema}, Available context keys:`, Object.keys(actor.context));
-          }
-        }
-      }
+      // Step 1: Extract DOM values only (@inputValue, @dataColumn)
+      // DOM markers are extracted first, then expressions are resolved
+      payload = extractDOMValues(payload, element);
       
-      // Resolve payload (now schema should be resolved if it was an expression)
-      // Store resolved schema before resolvePayload in case it gets overwritten
-      const resolvedSchemaBeforePayload = payload.schema;
-      payload = await resolvePayload(viewEngine, payload, data, e, element);
+      // Step 2: Resolve ALL expressions ($context, $$item, DSL operations) BEFORE sending to state machine
+      // ARCHITECTURE: Views send resolved values, not expressions
+      // The view engine has access to both context and item data, so resolve everything here
+      // This ensures state machines receive actual values, not expression strings
+      const expressionData = {
+        context: data.context || {},
+        item: data.item || {}
+      };
+      payload = await resolveExpressions(payload, viewEngine.evaluator, expressionData);
       
-      // Restore resolved schema if resolvePayload overwrote it (e.g., if data.context doesn't have todosSchema)
-      if ((eventName === 'DRAG_START' || eventName === 'DROP') && resolvedSchemaBeforePayload && 
-          typeof resolvedSchemaBeforePayload === 'string' && resolvedSchemaBeforePayload.startsWith('co_z')) {
-        payload.schema = resolvedSchemaBeforePayload;
-      }
-      
-      // Final check: ensure schema is a co-id for drag/drop events
-      if ((eventName === 'DRAG_START' || eventName === 'DROP') && payload.schema) {
-        if (typeof payload.schema !== 'string' || !payload.schema.startsWith('co_z')) {
-          console.error(`[ViewEngine] Schema not resolved for ${eventName}. Payload:`, payload, 'Resolved before payload:', resolvedSchemaBeforePayload);
-          return; // Don't send invalid event
-        }
-      }
-      
-      // Use sendInternalEvent to route through inbox
-      // This logs the event and processes it immediately
+      // Step 3: Send fully resolved payload to inbox
       await viewEngine.actorEngine.sendInternalEvent(actorId, eventName, payload);
     } else {
       console.warn(`Cannot send event ${eventName}: Actor has no state machine`);
@@ -147,48 +118,3 @@ export async function handleEvent(viewEngine, e, eventDef, data, element, actorI
   }
 }
 
-/**
- * Resolve a payload object (replace DSL expressions and @inputValue)
- * @param {Object} viewEngine - ViewEngine instance
- * @param {Object} payload - The payload to resolve
- * @param {Object} data - The data context
- * @param {Event} e - The DOM event
- * @param {HTMLElement} element - The target element
- * @returns {Promise<Object>} Resolved payload
- */
-export async function resolvePayload(viewEngine, payload, data, e, element) {
-  if (!payload || typeof payload !== 'object') {
-    return payload;
-  }
-
-  const resolved = {};
-  
-  for (const [key, value] of Object.entries(payload)) {
-    // Handle special @inputValue marker
-    if (value === '@inputValue') {
-      resolved[key] = element.value || '';
-    }
-    // Handle special @dataColumn marker (extracts data-column attribute)
-    else if (value === '@dataColumn') {
-      resolved[key] = element.dataset.column || element.getAttribute('data-column') || null;
-    }
-    // Handle string DSL shortcuts (e.g., "$item.id", "$newTodoText")
-    else if (typeof value === 'string' && value.startsWith('$')) {
-      resolved[key] = await viewEngine.evaluator.evaluate(value, data);
-    }
-    // Handle DSL expressions (objects)
-    else if (viewEngine.evaluator.isDSLOperation(value)) {
-      resolved[key] = await viewEngine.evaluator.evaluate(value, data);
-    }
-    // Handle nested objects
-    else if (typeof value === 'object' && value !== null) {
-      resolved[key] = await resolvePayload(viewEngine, value, data, e, element);
-    }
-    // Pass through primitives
-    else {
-      resolved[key] = value;
-    }
-  }
-
-  return resolved;
-}

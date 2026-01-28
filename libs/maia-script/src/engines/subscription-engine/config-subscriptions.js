@@ -188,7 +188,8 @@ export async function collectViewStyleStateSubscriptions(subscriptionEngine, act
 }
 
 /**
- * Collect interface/context subscriptions (use pure stores from read() API)
+ * Collect context subscriptions (use pure stores from read() API)
+ * Note: Interface subscriptions removed - topics handle message routing now
  * @param {Object} subscriptionEngine - SubscriptionEngine instance
  * @param {Object} actor - Actor instance
  * @param {Object} config - Actor config
@@ -197,45 +198,7 @@ export async function collectViewStyleStateSubscriptions(subscriptionEngine, act
 export async function collectInterfaceContextSubscriptions(subscriptionEngine, actor, config) {
   const subscriptions = [];
 
-  // Collect interface subscription using pure store
-  if (config.interface && config.interface.startsWith('co_z')) {
-    try {
-      // Extract schema co-id from interface CoValue's headerMeta.$schema using fromCoValue pattern
-      const interfaceSchemaStore = await subscriptionEngine.dbEngine.execute({
-        op: 'schema',
-        fromCoValue: config.interface
-      });
-      const interfaceSchemaCoId = interfaceSchemaStore.value?.$id;
-      if (interfaceSchemaCoId) {
-        subscriptions.push(
-          subscriptionEngine.dbEngine.execute({
-            op: 'read',
-            schema: interfaceSchemaCoId,
-            key: config.interface
-          }).then(async (store) => {
-            // Subscribe to store updates
-            const unsubscribe = store.subscribe((updatedInterface) => {
-              if (updatedInterface) {
-                subscriptionEngine._handleInterfaceUpdate(actor.id, updatedInterface);
-              }
-            });
-            
-            // Store unsubscribe function
-            if (!actor._subscriptions) {
-              actor._subscriptions = [];
-            }
-            actor._subscriptions.push(unsubscribe);
-            
-            return unsubscribe;
-          }).catch(error => {
-            console.error(`[SubscriptionEngine] ❌ Failed to subscribe to interface for ${actor.id}:`, error);
-          })
-        );
-      }
-    } catch (error) {
-      console.error(`[SubscriptionEngine] ❌ Failed to extract interface schema co-id for ${actor.id}:`, error);
-    }
-  }
+  // Note: Interface subscriptions removed - topics handle message routing now
 
   // Collect context subscription using pure store
   if (config.context && config.context.startsWith('co_z')) {
@@ -283,28 +246,28 @@ export async function collectInterfaceContextSubscriptions(subscriptionEngine, a
 }
 
 /**
- * Execute interface/context subscriptions and engine subscriptions in parallel
+ * Execute context subscriptions and engine subscriptions in parallel
  * @param {Object} subscriptionEngine - SubscriptionEngine instance
  * @param {Object} actor - Actor instance
- * @param {Array} interfaceContextSubscriptions - Interface/context subscription promises
+ * @param {Array} interfaceContextSubscriptions - Context subscription promises (renamed for backward compatibility)
  * @param {Array} engineSubscriptions - Engine subscription promises
  * @returns {Promise<number>} Total subscription count
  */
 export async function executeBatchSubscriptions(subscriptionEngine, actor, interfaceContextSubscriptions, engineSubscriptions) {
   let subscriptionCount = 0;
 
-  // Execute interface/context subscriptions and engine subscriptions in parallel
-  const interfaceContextPromise = interfaceContextSubscriptions.length > 0 
+  // Execute context subscriptions and engine subscriptions in parallel
+  const contextPromise = interfaceContextSubscriptions.length > 0 
     ? Promise.all(interfaceContextSubscriptions).then(() => {
         // Subscriptions are already stored in actor._subscriptions by collectInterfaceContextSubscriptions (unified for data + configs)
         subscriptionCount += interfaceContextSubscriptions.length;
       }).catch(error => {
-        console.error(`[SubscriptionEngine] ❌ Interface/context subscription failed for ${actor.id}:`, error);
+        console.error(`[SubscriptionEngine] ❌ Context subscription failed for ${actor.id}:`, error);
       })
     : Promise.resolve();
 
-  // Wait for all subscriptions (interface/context + engines) to complete
-  await Promise.all([interfaceContextPromise, ...engineSubscriptions]);
+  // Wait for all subscriptions (context + engines) to complete
+  await Promise.all([contextPromise, ...engineSubscriptions]);
 
   return subscriptionCount;
 }

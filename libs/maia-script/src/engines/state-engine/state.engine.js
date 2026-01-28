@@ -3,6 +3,7 @@ import { validateOrThrow } from '@MaiaOS/schemata/validation.helper';
 // Import shared utilities
 import { subscribeConfig } from '../../utils/config-loader.js';
 import { getSchemaCoIdSafe } from '../../utils/subscription-helpers.js';
+import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
 
 /**
  * StateEngine - XState-like State Machine Interpreter
@@ -123,7 +124,8 @@ export class StateEngine {
       actor,
       currentState: stateDef.initial,
       // No context property - always use machine.actor.context (reactive read of CoValue)
-      history: [] // State transition history
+      history: [], // State transition history
+      eventPayload: {} // Current event payload (from CRDT inbox message, no in-memory preservation)
     };
     
     this.machines.set(machineId, machine);
@@ -166,7 +168,8 @@ export class StateEngine {
     const transition = transitions[event];
     
     if (!transition) {
-      // Silently ignore unhandled events (normal for broadcast messages)
+      // Always warn on unhandled events (developer feedback)
+      console.warn(`[StateEngine] Event "${event}" not handled in state "${machine.currentState}" for machine ${machineId}. Available: ${Object.keys(transitions).join(', ')}`);
       return;
     }
 
@@ -183,13 +186,28 @@ export class StateEngine {
    * @returns {Promise<void>}
    */
   async _executeTransition(machine, transition, event, payload) {
-    // For SUCCESS/ERROR events (from tool completion), preserve the original eventPayload
-    // This allows actions in SUCCESS transitions to access the original event data (e.g., $$id)
-    // For other events, update eventPayload with the new payload
-    if (event !== 'SUCCESS' && event !== 'ERROR') {
-      machine.eventPayload = payload;
+    // Simple assignment: always replace eventPayload with new payload
+    // Single source of truth for current event data
+    machine.eventPayload = payload || {};
+    
+    // For SUCCESS events, store tool result separately
+    // This allows SUCCESS handlers to access $$result while keeping eventPayload clean
+    if (event === 'SUCCESS') {
+      machine.lastToolResult = payload.result || null;
+      // Debug logging for SUCCESS events
+      if (payload.result) {
+        console.log(`[StateEngine] SUCCESS event: stored tool result in lastToolResult:`, {
+          result: payload.result,
+          resultKeys: Object.keys(payload.result || {}),
+          lastToolResult: machine.lastToolResult
+        });
+      } else {
+        console.warn(`[StateEngine] SUCCESS event: payload.result is null/undefined`, {
+          payload,
+          event
+        });
+      }
     }
-    // For SUCCESS/ERROR, machine.eventPayload already contains the original event data
     
     // Transition can be:
     // 1. String: direct target state
@@ -299,7 +317,13 @@ export class StateEngine {
     
     if (entry.tool) {
       // Implicit tool invocation
-      await this._invokeTool(machine, entry.tool, entry.payload);
+      // Store result for $$result access in SUCCESS handlers
+      const result = await this._invokeTool(machine, entry.tool, entry.payload);
+      // Store result immediately so SUCCESS handlers can access it via $$result
+      // (SUCCESS event will also set it, but this ensures it's available immediately)
+      if (result) {
+        machine.lastToolResult = result;
+      }
     } else if (Array.isArray(entry)) {
       // Execute all entry actions
       await this._executeActions(machine, entry);
@@ -332,7 +356,11 @@ export class StateEngine {
     const exit = stateDef.exit;
 
     if (exit.tool) {
-      await this._invokeTool(machine, exit.tool, exit.payload);
+      // Store result for $$result access in SUCCESS handlers
+      const result = await this._invokeTool(machine, exit.tool, exit.payload);
+      if (result) {
+        machine.lastToolResult = result;
+      }
     } else if (Array.isArray(exit)) {
       await this._executeActions(machine, exit);
     }
@@ -359,14 +387,53 @@ export class StateEngine {
         // Context updates are infrastructure (like SubscriptionEngine), not tools
         // Evaluate payload through MaiaScript (resolve $variables and $$item references)
         // machine.actor.context is always current (reactive read of CoValue via read() API)
-        const evaluatedUpdates = await this._evaluatePayload(action.updateContext, machine.actor.context, payload);
+        // Debug logging for updateContext with $$result
+        if (JSON.stringify(action.updateContext).includes('$$result')) {
+          console.log(`[StateEngine] Evaluating updateContext with $$result:`, {
+            updateContext: action.updateContext,
+            lastToolResult: machine.lastToolResult,
+            lastToolResultKeys: machine.lastToolResult ? Object.keys(machine.lastToolResult) : null
+          });
+        }
+        const evaluatedUpdates = await this._evaluatePayload(action.updateContext, machine.actor.context, payload, machine.lastToolResult);
+        
+        // Convert undefined values to null for schema validation (JSON Schema doesn't allow undefined)
+        const sanitizedUpdates = {};
+        for (const [key, value] of Object.entries(evaluatedUpdates)) {
+          sanitizedUpdates[key] = value === undefined ? null : value;
+        }
+        
         // Direct infrastructure call - no tool invocation needed
-        await machine.actor.actorEngine.updateContextCoValue(machine.actor, evaluatedUpdates);
+        await machine.actor.actorEngine.updateContextCoValue(machine.actor, sanitizedUpdates);
         // No sync needed - machine.actor.context automatically updates reactively via SubscriptionEngine
       } else if (typeof action === 'object' && action.tool) {
         // Inline tool invocation - do NOT auto-send SUCCESS/ERROR
         // (we're already in the middle of a transition)
-        await this._invokeTool(machine, action.tool, action.payload, false);
+        const result = await this._invokeTool(machine, action.tool, action.payload, false);
+        
+        // If tool has onSuccess handler, execute it with the result
+        if (action.onSuccess && result) {
+          // Store result in lastToolResult for $$result resolution
+          machine.lastToolResult = result;
+          
+          // Handle onSuccess.updateContext
+          if (action.onSuccess.updateContext) {
+            const evaluatedUpdates = await this._evaluatePayload(
+              action.onSuccess.updateContext,
+              machine.actor.context,
+              machine.eventPayload,
+              machine.lastToolResult
+            );
+            
+            // Convert undefined values to null for schema validation
+            const sanitizedUpdates = {};
+            for (const [key, value] of Object.entries(evaluatedUpdates)) {
+              sanitizedUpdates[key] = value === undefined ? null : value;
+            }
+            
+            await machine.actor.actorEngine.updateContextCoValue(machine.actor, sanitizedUpdates);
+          }
+        }
       }
     }
   }
@@ -420,27 +487,79 @@ export class StateEngine {
       // Evaluate payload through MaiaScript (resolve $variables and $$item references)
       // Use machine.eventPayload as item context for $$id resolution
       // machine.actor.context is always current (reactive read of CoValue via read() API)
-      const evaluatedPayload = await this._evaluatePayload(payload, machine.actor.context, machine.eventPayload);
+      // eventPayload is set by _executeTransition from CRDT inbox message (no in-memory preservation)
+      const eventPayload = machine.eventPayload || {};
       
-      // Execute tool via ToolEngine
-      await this.toolEngine.execute(toolName, machine.actor, evaluatedPayload);
+      const evaluatedPayload = await this._evaluatePayload(payload, machine.actor.context, eventPayload, machine.lastToolResult);
       
-      // No sync needed - machine.actor.context automatically updates reactively via SubscriptionEngine
+      // Debug logging for update/delete operations
+      if (toolName === '@db' && (evaluatedPayload.op === 'update' || evaluatedPayload.op === 'delete')) {
+        console.log(`[StateEngine] ${evaluatedPayload.op} operation:`, {
+          id: evaluatedPayload.id,
+          data: evaluatedPayload.data,
+          eventPayload,
+          contextKeys: Object.keys(machine.actor.context),
+          rawPayload: payload
+        });
+        
+        // If id is undefined, log warning
+        if (!evaluatedPayload.id) {
+          console.error(`[StateEngine] ❌ ${evaluatedPayload.op} operation has undefined id!`, {
+            evaluatedPayload,
+            eventPayload,
+            rawPayload: payload,
+            context: machine.actor.context
+          });
+        }
+      }
+      
+      // Debug logging for dragdrop/start
+      if (toolName === '@dragdrop/start') {
+        console.log(`[StateEngine] dragdrop/start operation:`, {
+          evaluatedPayload,
+          eventPayload,
+          rawPayload: payload,
+          contextKeys: Object.keys(machine.actor.context),
+          todosSchema: machine.actor.context.todosSchema
+        });
+      }
+      
+      // Debug logging for publishMessage
+      if (toolName === '@core/publishMessage') {
+        console.log(`[StateEngine] publishMessage tool invoked:`, {
+          evaluatedPayload,
+          eventPayload,
+          rawPayload: payload,
+          actorId: machine.actor.id
+        });
+      }
+      
+      // Execute tool via ToolEngine and capture result
+      const result = await this.toolEngine.execute(toolName, machine.actor, evaluatedPayload);
       
       // Tool succeeded - route SUCCESS event through inbox for unified event logging
       // All events MUST flow through inbox → processMessages() → StateEngine.send()
       // This ensures complete traceability and consistent event handling
+      // Include tool result in SUCCESS event payload so state machines can access it via $$result
       if (autoTransition) {
         const currentStateDef = machine.definition.states[machine.currentState];
         if (currentStateDef.on && currentStateDef.on.SUCCESS) {
           // Route SUCCESS through inbox → processMessages() → StateEngine.send()
+          // Include result in payload so SUCCESS handlers can access it via $$result
           await machine.actor.actorEngine.sendInternalEvent(
             machine.actor.id,
             'SUCCESS',
-            {}
+            { result }
           );
         }
       }
+      
+      // Return result for use in transition actions and inline tool invocations
+      // Result is merged into eventPayload by:
+      // - _executeTransition for SUCCESS events (from inbox)
+      // - _executeActions for inline tool invocations with onSuccess handlers
+      // No sync needed - machine.actor.context automatically updates reactively via SubscriptionEngine
+      return result;
     } catch (error) {
       console.error(`[StateEngine] Tool invocation failed: ${toolName}`, error);
       
@@ -464,96 +583,46 @@ export class StateEngine {
    * Evaluate payload (resolve MaiaScript expressions) - RECURSIVE
    * @param {any} payload - Raw payload from state machine definition
    * @param {Object} context - Actor context
-   * @param {Object} eventPayload - Event payload (already resolved)
+   * @param {Object} eventPayload - Event payload (with DOM values extracted, MaiaScript preserved)
    * @returns {Promise<any>} Evaluated payload
+   * 
+   * SINGLE RESOLUTION POINT for MaiaScript expressions:
+   * - View layer extracts DOM values only (@inputValue, @dataColumn)
+   * - State machine resolves ALL MaiaScript expressions ($context, $$item, DSL operations)
+   * - This is the ONLY place where MaiaScript expressions are resolved
+   * - eventPayload contains DOM values + raw MaiaScript expressions (not yet resolved)
    */
-  async _evaluatePayload(payload, context, eventPayload = {}) {
-    // Handle primitives
-    if (payload === null || typeof payload !== 'object') {
-      return payload;
-    }
-
-    // Handle arrays
-    if (Array.isArray(payload)) {
-      return Promise.all(payload.map(item => this._evaluatePayload(item, context, eventPayload)));
-    }
-
-    // Check if this is a DSL operation (like $if, $eq, etc.)
-    // DSL operations have keys starting with $ and should be evaluated directly
-    const keys = Object.keys(payload);
-    if (keys.length === 1 && keys[0].startsWith('$')) {
-      // This is a DSL operation, evaluate it directly
-      const data = { context, item: eventPayload };
-      return await this.evaluator.evaluate(payload, data);
-    }
-
-    // Handle objects recursively (not DSL operations)
-    const evaluated = {};
-    for (const [key, value] of Object.entries(payload)) {
-      // Use eventPayload as item context (contains already-resolved $$id values)
-      const data = { context, item: eventPayload };
-      
-      // If value is an object or array, check if it's a DSL operation first
-      if (value && typeof value === 'object') {
-        // Check if it's a DSL operation (like $if, $eq, etc.)
-        if (this.evaluator.isDSLOperation(value)) {
-          // Evaluate DSL operation directly
-          evaluated[key] = await this.evaluator.evaluate(value, data);
-        } else {
-          // Otherwise, recursively evaluate it
-          evaluated[key] = await this._evaluatePayload(value, context, eventPayload);
+  async _evaluatePayload(payload, context, eventPayload = {}, lastToolResult = null) {
+    // Ensure eventPayload is an object (not undefined/null)
+    const safeEventPayload = eventPayload || {};
+    
+    // Use eventPayload as item context for $$id resolution in tool payloads
+    // eventPayload contains DOM values + raw MaiaScript expressions
+    const itemContext = safeEventPayload;
+    
+    // SINGLE RESOLUTION POINT: Resolve ALL MaiaScript expressions here
+    // Include result for $$result access in SUCCESS handlers
+    const data = { 
+      context, 
+      item: itemContext,
+      result: lastToolResult || null
+    };
+    const resolved = await resolveExpressions(payload, this.evaluator, data);
+    
+    // Debug logging for expression resolution
+    if (typeof payload === 'object' && payload !== null && !Array.isArray(payload)) {
+      for (const [key, value] of Object.entries(payload)) {
+        if (typeof value === 'string' && value.startsWith('$') && resolved[key] === undefined) {
+          console.warn(`[StateEngine] Expression "${value}" evaluated to undefined`, {
+            context: Object.keys(data.context),
+            item: Object.keys(data.item),
+            value
+          });
         }
-      } else {
-        // Otherwise, evaluate as a MaiaScript expression
-        let evaluatedValue = await this.evaluator.evaluate(value, data);
-        
-        // CRITICAL FIX: If evaluation returns undefined for $lastCreatedId/$lastCreatedText, check context directly
-        // This handles cases where evaluator might not find the value due to timing or reference issues
-        if (evaluatedValue === undefined && typeof value === 'string' && value.startsWith('$')) {
-          const path = value.substring(1); // Remove $ prefix
-          // Check if it's lastCreatedId or lastCreatedText (common case)
-          if (path === 'lastCreatedId' || path === 'lastCreatedText') {
-            const directValue = context[path];
-            if (directValue !== undefined) {
-              console.log(`[StateEngine] Direct context access for ${value}:`, directValue);
-              evaluatedValue = directValue;
-            }
-          }
-        }
-        
-        // Fallback: If it's a schema expression that resolved to undefined, try to find it
-        // This handles cases where $todosSchema doesn't exist but todosTodoSchema or todosDoneSchema do
-        if (evaluatedValue === undefined && typeof value === 'string' && value.startsWith('$') && value.endsWith('Schema')) {
-          const schemaKey = value.substring(1); // Remove $, e.g., "todosSchema"
-          const baseName = schemaKey.replace(/Schema$/, '').toLowerCase(); // e.g., "todos"
-          
-          // Look for any schema key that contains the base name
-          for (const [ctxKey, ctxValue] of Object.entries(context)) {
-            const lowerKey = ctxKey.toLowerCase();
-            // Match keys like "todosTodoSchema", "todosDoneSchema", "todostodoschema", etc.
-            if (lowerKey.includes(baseName) && lowerKey.includes('schema')) {
-              if (typeof ctxValue === 'string' && ctxValue.startsWith('co_z')) {
-                evaluatedValue = ctxValue;
-                break;
-              }
-            }
-          }
-          
-          // Also check query objects (todosTodo, todosDone, etc.)
-          if (evaluatedValue === undefined) {
-            for (const [ctxKey, ctxValue] of Object.entries(context)) {
-              if (ctxValue && typeof ctxValue === 'object' && ctxValue.schema && typeof ctxValue.schema === 'string' && ctxValue.schema.startsWith('co_z')) {
-                evaluatedValue = ctxValue.schema;
-                break;
-              }
-            }
-          }
-        }
-        
-        evaluated[key] = evaluatedValue;
       }
     }
-    return evaluated;
+    
+    return resolved;
   }
 
   /**

@@ -238,25 +238,28 @@ await maia.db({
 **Pattern:**
 1. View sends event to state machine
 2. State machine invokes tool (in entry actions or transition actions)
-3. Tool executes operation
-4. State machine receives SUCCESS/ERROR event
-5. State machine updates context if needed
+3. Tool executes operation and returns result
+4. State machine receives SUCCESS event with tool result in payload
+5. State machine updates context via `updateContext` action using `$$result`
 
 **Why this matters:**
 - **Single source of truth:** All operations flow through state machines
 - **Predictable:** Easy to trace where operations come from
 - **Error handling:** State machines handle SUCCESS/ERROR events
 - **Context updates:** State machines update context via `updateContext` infrastructure action
+- **Tool results accessible:** Tool results available via `$$result` in SUCCESS handlers
 
 **Never:**
 - ❌ Invoke tools directly from views
 - ❌ Invoke tools from other engines
-- ❌ Update context directly in tools (unless invoked by state machine)
+- ❌ Update context directly in tools (tools should return results, not manipulate context)
+- ❌ Tools calling `updateContextCoValue()` directly
 
 **Always:**
 - ✅ Invoke tools from state machine actions
 - ✅ Handle SUCCESS/ERROR events in state machines
 - ✅ Update context via state machine actions using `updateContext` infrastructure action
+- ✅ Tools return results - state machines handle context updates
 
 ## Usage in State Machines
 
@@ -278,7 +281,21 @@ Use the `@db` tool in your state machine definitions:
         }
       },
       "on": {
-        "SUCCESS": "idle",
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "TODO_CREATED",
+                "payload": {
+                  "id": "$$result.id",      // ← Access tool result
+                  "text": "$$result.text"  // ← Tool result available in SUCCESS handler
+                }
+              }
+            }
+          ]
+        },
         "ERROR": "error"
       }
     },
@@ -299,6 +316,11 @@ Use the `@db` tool in your state machine definitions:
   }
 }
 ```
+
+**Accessing Tool Results:**
+- Tool results are included in SUCCESS event payload as `result`
+- Access via `$$result.propertyName` in SUCCESS handlers
+- Example: `$$result.id`, `$$result.text`, `$$result.draggedItemId`
 
 ## Architecture
 

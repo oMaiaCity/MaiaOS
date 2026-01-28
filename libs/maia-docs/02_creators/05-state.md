@@ -786,7 +786,7 @@ ActorEngine.rerender() (if state changed)
 ## Automatic Tool Events
 
 When a tool executes in an `entry` action:
-- Tool succeeds → StateEngine auto-sends `SUCCESS` event
+- Tool succeeds → StateEngine auto-sends `SUCCESS` event with tool result in payload
 - Tool fails → StateEngine auto-sends `ERROR` event
 
 Handle these in your state definition:
@@ -796,12 +796,31 @@ Handle these in your state definition:
   "creating": {
     "entry": {"tool": "@db", "payload": { "op": "create", ... }},
     "on": {
-      "SUCCESS": "idle",  // ← Automatic on tool success
-      "ERROR": "error"    // ← Automatic on tool failure
+      "SUCCESS": {
+        "target": "idle",
+        "actions": [
+          {
+            "tool": "@core/publishMessage",
+            "payload": {
+              "type": "TODO_CREATED",
+              "payload": {
+                "id": "$$result.id",      // ← Access tool result via $$result
+                "text": "$$result.text"   // ← Tool result is available in SUCCESS handler
+              }
+            }
+          }
+        ]
+      },
+      "ERROR": "error"
     }
   }
 }
 ```
+
+**Accessing Tool Results:**
+- Tool results are available in SUCCESS event payload as `$$result`
+- Use `$$result.propertyName` to access specific result properties
+- Example: `$$result.id`, `$$result.text`, `$$result.draggedItemId`
 
 ## Best Practices
 

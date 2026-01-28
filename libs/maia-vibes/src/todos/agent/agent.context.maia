@@ -1,9 +1,9 @@
 {
   "$schema": "@schema/context",
   "$id": "@context/agent",
-  "composite": "@composite",
+  "currentView": "@composite",
   "error": null,
-  "actors": {
+  "@actors": {
     "composite": "@actor/composite"
   }
 }

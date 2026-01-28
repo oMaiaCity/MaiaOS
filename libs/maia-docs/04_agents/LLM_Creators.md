@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-01-28T14:33:23.952Z
+**Auto-generated:** 2026-01-28T21:08:49.202Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -1986,8 +1986,6 @@ UI utilities and message publishing:
 - `@core/publishMessage` - Publish messages to subscribed actors
 - `@core/noop` - No-operation (for testing)
 - `@core/preventDefault` - Prevent default events
-- `@core/openModal` - Open modal dialogs (if using modals)
-- `@core/closeModal` - Close modals (if using modals)
 
 ### Drag-Drop Module (`dragdrop`)
 Generic drag-and-drop for any schema/field:
@@ -2287,7 +2285,19 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
   "root": {
     "tag": "div",
     "attrs": { "class": "agent-container" },
-    "$slot": "$composite"  // ← Only renders child actor
+    "$slot": "$currentView"  // ← Only renders child actor
+  }
+}
+```
+
+**Agent Context:**
+```json
+{
+  "$schema": "@schema/context",
+  "$id": "@context/agent",
+  "currentView": "@composite",  // ← Context property (CRDT CoValue) - references active child
+  "@actors": {
+    "composite": "@actor/composite"  // ← System property (like $schema/$id) - defines children
   }
 }
 ```
@@ -2368,8 +2378,9 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
 **Composite View:**
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/composite",
+  "content": {
     "tag": "div",
     "children": [
       {
@@ -2384,6 +2395,19 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
         "$slot": "$currentView"  // ← Slots child UI actors
       }
     ]
+  }
+}
+```
+
+**Composite Context:**
+```json
+{
+  "$schema": "@schema/context",
+  "$id": "@context/composite",
+  "currentView": "@list",  // ← Context property (CRDT CoValue) - references active child
+  "@actors": {
+    "list": "@actor/list",      // ← System property (like $schema/$id) - defines children
+    "kanban": "@actor/kanban"
   }
 }
 ```
@@ -2612,6 +2636,34 @@ The service actor orchestrates all of them via messages, maintaining clean separ
 
 The `context` holds all runtime data for the actor. It can be defined inline in the actor file or in a separate `.context.maia` file:
 
+### System Properties in Context
+
+Context files can contain **system properties** (like `$schema` and `$id`) that are used by the actor engine:
+
+**`@actors` - Child Actor Definitions:**
+- **System property** (like `$schema`, `$id`) - clearly indicates it's not user-defined context data
+- Defines which child actors exist (used by actor engine to create children)
+- Contains external references (`@actor/composite`, `@actor/list`, etc.)
+- Format: `"@actors": { "namekey": "@actor/instance", ... }`
+
+**Example:**
+```json
+{
+  "$schema": "@schema/context",
+  "$id": "@context/agent",
+  "currentView": "@composite",  // ← Context property (CRDT CoValue) - references active child
+  "@actors": {
+    "composite": "@actor/composite"  // ← System property - defines children
+  }
+}
+```
+
+**Key Points:**
+- `context["@actors"]` is a **system property** - defines which children exist
+- `context.currentView` is a **context property** (CRDT CoValue) - references the active child actor
+- Slot resolution: `"$slot": "$currentView"` → looks up `context.currentView` → extracts namekey → finds `actor.children[namekey]`
+- **Unified pattern**: All actors use `currentView` for slot resolution (even if they only have one child)
+
 **Separate Context File (Recommended):**
 
 **`todo.context.maia`:**
@@ -2658,7 +2710,7 @@ Referenced in actor:
   
   // Drag-drop state (managed by tools)
   "draggedItemId": null,
-  "draggedEntityType": null
+  "draggedItemIds": {}
 }
 ```
 
@@ -2681,26 +2733,80 @@ Referenced in actor:
 
 ## Actor Lifecycle
 
+### Service Actors vs UI Actors
+
+MaiaOS differentiates between **service actors** and **UI actors** for lifecycle management:
+
+**Service Actors:**
+- **Persist** throughout the vibe lifecycle
+- Created once when vibe loads
+- Destroyed only when vibe is unloaded
+- Examples: Agent orchestrators, data services
+
+**UI Actors:**
+- **Created on-demand** when their view is active (referenced by `context.currentView`)
+- **Destroyed** when switching to a different view
+- Examples: List views, kanban views, form components
+
+### Lifecycle Flow
+
+**Service Actor Lifecycle:**
 ```
 ┌─────────────┐
-│   Created   │  ← createActor() called
+│   Created   │  ← createActor() called (once per vibe)
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
 │  Booting    │  ← State machine initialized
-└──────┬──────┘      View rendered (if viewRef exists)
-       │            Styles applied (if styleRef exists)
+└──────┬──────┘      View rendered (minimal, only slots)
+       │            Styles applied
+       ▼
+┌─────────────┐
+│   Active    │  ← Processes events (persists)
+└──────┬──────┘      Processes messages
+       │            Re-renders on state changes
+       │            (Lifecycle continues until vibe unloads)
+       ▼
+┌─────────────┐
+│  Destroyed  │  ← destroyActor() called (only on vibe unload)
+└─────────────┘
+```
+
+**UI Actor Lifecycle:**
+```
+┌─────────────┐
+│   Created   │  ← createActor() called lazily (when referenced by context.currentView)
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Booting    │  ← State machine initialized
+└──────┬──────┘      View rendered (full UI)
+       │            Styles applied
        ▼
 ┌─────────────┐
 │   Active    │  ← Processes events
 └──────┬──────┘      Processes messages
        │            Re-renders on state changes
+       │            (Active while context.currentView references this actor)
        ▼
 ┌─────────────┐
-│  Destroyed  │  ← destroyActor() called
+│  Destroyed  │  ← destroyActor() called (when switching to different view)
 └─────────────┘
 ```
+
+### Lazy Child Actor Creation
+
+Child actors are **created lazily** - only when they're referenced by `context.currentView`:
+
+- **Before**: All child actors were created immediately (wasteful)
+- **After**: Only the active child actor is created (efficient)
+
+When switching views:
+1. Previously active UI child actor is destroyed
+2. New child actor is created lazily (if not already exists)
+3. Service child actors persist (not destroyed)
 
 ### Creating Actors
 
@@ -2992,17 +3098,22 @@ maia/
 
 **Syntax:**
 - Use `$slot` with a context value (e.g., `"$slot": "$currentView"`)
-- State machine sets context value to child actor name (e.g., `currentView: "@list"`)
-- ViewEngine resolves `@list` → finds child actor with name `list` in `children` map
+- Context property contains `@namekey` reference (e.g., `currentView: "@list"`)
+- ViewEngine extracts `namekey` from `@namekey` → finds child actor in `actor.children[namekey]`
 - Attaches child actor's container to the slot element
 
-**Example:**
+**Unified Pattern:**
+All slot resolution works the same way - no differentiation between "static" and "dynamic" slots. Everything is a CRDT CoValue.
+
+**Example Context:**
 ```json
 {
-  "$type": "actor",
-  "children": {
-    "header": "actor_header_001",    // ← Child actor ID
-    "list": "actor_todo_list_001"     // ← Child actor ID
+  "$schema": "@schema/context",
+  "$id": "@context/composite",
+  "currentView": "@list",  // ← Context property (CRDT CoValue) - references active child
+  "@actors": {
+    "list": "@actor/list",      // ← System property (like $schema/$id) - defines children
+    "kanban": "@actor/kanban"
   }
 }
 ```
@@ -3010,17 +3121,14 @@ maia/
 **View with slots:**
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/composite",
+  "content": {
     "tag": "div",
     "children": [
       {
-        "tag": "header",
-        "$slot": "$headerView"  // Context value set by state machine
-      },
-      {
         "tag": "main",
-        "$slot": "$currentView" // Context value set by state machine
+        "$slot": "$currentView"  // ← Resolves: context.currentView = "@list" → namekey "list" → actor.children["list"]
       }
     ]
   }
@@ -3032,17 +3140,27 @@ maia/
 {
   "states": {
     "idle": {
-      "entry": {
-        "tool": "@core/updateContext",
-        "payload": {
-          "headerView": "@header",
-          "currentView": "@list"
+      "on": {
+        "SWITCH_VIEW": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "currentView": "@list"  // ← Updates context property (CRDT CoValue)
+              }
+            }
+          ]
         }
       }
     }
   }
 }
 ```
+
+**Key Points:**
+- `context["@actors"]` is a **system property** (like `$schema`, `$id`) that defines which children exist
+- `context.currentView` is a **context property** (CRDT CoValue) that references the active child actor
+- Slot resolution is **unified** - same logic for all slots, whether they reference one child or switch between multiple
 
 ### Building a Composable App
 
@@ -3305,7 +3423,7 @@ vibe_root (composite)
             {
               "tool": "@core/updateContext",
               "payload": {
-                "currentView": "$viewMode === 'list' ? '@list' : '@kanban'"
+                "currentView": "$viewMode === 'list' ? '@list' : '@kanban'"  // ← Updates context property (CRDT CoValue)
               }
             }
           ]
@@ -4900,7 +5018,7 @@ ActorEngine.rerender() (if state changed)
 ## Automatic Tool Events
 
 When a tool executes in an `entry` action:
-- Tool succeeds → StateEngine auto-sends `SUCCESS` event
+- Tool succeeds → StateEngine auto-sends `SUCCESS` event with tool result in payload
 - Tool fails → StateEngine auto-sends `ERROR` event
 
 Handle these in your state definition:
@@ -4910,12 +5028,31 @@ Handle these in your state definition:
   "creating": {
     "entry": {"tool": "@db", "payload": { "op": "create", ... }},
     "on": {
-      "SUCCESS": "idle",  // ← Automatic on tool success
-      "ERROR": "error"    // ← Automatic on tool failure
+      "SUCCESS": {
+        "target": "idle",
+        "actions": [
+          {
+            "tool": "@core/publishMessage",
+            "payload": {
+              "type": "TODO_CREATED",
+              "payload": {
+                "id": "$$result.id",      // ← Access tool result via $$result
+                "text": "$$result.text"   // ← Tool result is available in SUCCESS handler
+              }
+            }
+          }
+        ]
+      },
+      "ERROR": "error"
     }
   }
 }
 ```
+
+**Accessing Tool Results:**
+- Tool results are available in SUCCESS event payload as `$$result`
+- Use `$$result.propertyName` to access specific result properties
+- Example: `$$result.id`, `$$result.text`, `$$result.draggedItemId`
 
 ## Best Practices
 
@@ -5041,19 +5178,17 @@ export default {
   async execute(actor, payload) {
     const { schema, data } = payload;
     
-    // Create entity
-    const entity = {
-      id: Date.now().toString(),
-      ...data
-    };
+    // Execute operation (e.g., database operation)
+    const result = await someOperation(data);
     
-    // Add to collection
-    actor.context[schema].push(entity);
-    
-    console.log(`✅ Created ${schema}:`, entity);
+    // Return result - state machines handle context updates via updateContext actions
+    // Tools should NOT directly manipulate context - all updates flow through state machines
+    return result;
   }
 };
 ```
+
+**CRITICAL:** Tools should return results, not manipulate context directly. State machines handle all context updates via `updateContext` actions in SUCCESS handlers.
 
 ## Available Tools
 
@@ -5075,18 +5210,50 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
 
 **Note:** The `schema` field must be a co-id (`co_z...`). Schema references (`@schema/todos`) are transformed to co-ids during seeding. In your source state machine files, you can use schema references, but they get transformed to co-ids before execution.
 
+**Tool Results:**
+The `@db` tool returns the created/updated/deleted record. Access the result in SUCCESS handlers via `$$result`:
+
+```json
+{
+  "creating": {
+    "entry": {
+      "tool": "@db",
+      "payload": { "op": "create", "schema": "@schema/todos", "data": {...} }
+    },
+    "on": {
+      "SUCCESS": {
+        "target": "idle",
+        "actions": [
+          {
+            "tool": "@core/publishMessage",
+            "payload": {
+              "type": "TODO_CREATED",
+              "payload": {
+                "id": "$$result.id",      // ← Tool result available here
+                "text": "$$result.text"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
 #### Update Operation
 ```json
 {
   "tool": "@db",
   "payload": {
     "op": "update",
-    "schema": "co_z...",
     "id": "co_z...",
     "data": {"text": "Buy milk and eggs"}
   }
 }
 ```
+
+**Note:** For `update` and `delete` operations, `schema` is not required. The schema is automatically extracted from the CoValue's headerMeta internally by the operation.
 
 #### Delete Operation
 ```json
@@ -5094,11 +5261,12 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
   "tool": "@db",
   "payload": {
     "op": "delete",
-    "schema": "co_z...",
     "id": "co_z..."
   }
 }
 ```
+
+**Note:** For `update` and `delete` operations, `schema` is not required. The schema is automatically extracted from the CoValue's headerMeta internally by the operation.
 
 #### Toggle Operation
 ```json
@@ -5152,21 +5320,6 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
 }
 ```
 
-#### `@core/openModal`
-```json
-{
-  "tool": "@core/openModal",
-  "payload": {}
-}
-```
-
-#### `@core/closeModal`
-```json
-{
-  "tool": "@core/closeModal",
-  "payload": {}
-}
-```
 
 ### Drag-Drop Module (`@dragdrop/*`)
 
@@ -5175,8 +5328,35 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
 {
   "tool": "@dragdrop/start",
   "payload": {
-    "schema": "todos",
-    "id": "123"
+    "id": "co_z..."
+  }
+}
+```
+
+**Note:** Schema is not required. The schema is automatically extracted from the CoValue's headerMeta internally by update/delete operations when needed.
+
+**Tool Result:** Returns drag state object. Update context in SUCCESS handler:
+
+```json
+{
+  "dragging": {
+    "entry": {
+      "tool": "@dragdrop/start",
+      "payload": { "id": "$$id" }
+    },
+    "on": {
+      "SUCCESS": {
+        "target": "dragging",
+        "actions": [
+          {
+            "updateContext": {
+              "draggedItemId": "$$result.draggedItemId",
+              "draggedItemIds": "$$result.draggedItemIds"
+            }
+          }
+        ]
+      }
+    }
   }
 }
 ```
@@ -5186,12 +5366,15 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
 {
   "tool": "@dragdrop/drop",
   "payload": {
-    "schema": "todos",
     "field": "done",
     "value": true
   }
 }
 ```
+
+**Note:** Schema is not required. The schema is automatically extracted from the CoValue's headerMeta internally by the update operation.
+
+**Tool Result:** Returns update result. Access via `$$result` in SUCCESS handler.
 
 ### Context Updates (Infrastructure, Not Tools)
 
@@ -5656,25 +5839,28 @@ await maia.db({
 **Pattern:**
 1. View sends event to state machine
 2. State machine invokes tool (in entry actions or transition actions)
-3. Tool executes operation
-4. State machine receives SUCCESS/ERROR event
-5. State machine updates context if needed
+3. Tool executes operation and returns result
+4. State machine receives SUCCESS event with tool result in payload
+5. State machine updates context via `updateContext` action using `$$result`
 
 **Why this matters:**
 - **Single source of truth:** All operations flow through state machines
 - **Predictable:** Easy to trace where operations come from
 - **Error handling:** State machines handle SUCCESS/ERROR events
 - **Context updates:** State machines update context via `updateContext` infrastructure action
+- **Tool results accessible:** Tool results available via `$$result` in SUCCESS handlers
 
 **Never:**
 - ❌ Invoke tools directly from views
 - ❌ Invoke tools from other engines
-- ❌ Update context directly in tools (unless invoked by state machine)
+- ❌ Update context directly in tools (tools should return results, not manipulate context)
+- ❌ Tools calling `updateContextCoValue()` directly
 
 **Always:**
 - ✅ Invoke tools from state machine actions
 - ✅ Handle SUCCESS/ERROR events in state machines
 - ✅ Update context via state machine actions using `updateContext` infrastructure action
+- ✅ Tools return results - state machines handle context updates
 
 ## Usage in State Machines
 
@@ -5696,7 +5882,21 @@ Use the `@db` tool in your state machine definitions:
         }
       },
       "on": {
-        "SUCCESS": "idle",
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "TODO_CREATED",
+                "payload": {
+                  "id": "$$result.id",      // ← Access tool result
+                  "text": "$$result.text"  // ← Tool result available in SUCCESS handler
+                }
+              }
+            }
+          ]
+        },
         "ERROR": "error"
       }
     },
@@ -5717,6 +5917,11 @@ Use the `@db` tool in your state machine definitions:
   }
 }
 ```
+
+**Accessing Tool Results:**
+- Tool results are included in SUCCESS event payload as `result`
+- Access via `$$result.propertyName` in SUCCESS handlers
+- Example: `$$result.id`, `$$result.text`, `$$result.draggedItemId`
 
 ## Architecture
 
@@ -8757,6 +8962,11 @@ Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngi
 - **Consistent Handling:** All events follow same path
 - **Better Debugging:** Can inspect inbox to see complete event history
 
+**Event Scoping Guarantee:**
+- ✅ Events are **always scoped** to the actor that rendered the element
+- ✅ The `actorId` parameter comes from the closure when the event handler was attached
+- ✅ This ensures events are always routed to the correct actor's inbox
+
 **Anti-Patterns:**
 - ❌ Calling StateEngine.send() directly (bypasses inbox)
 - ❌ Sending SUCCESS/ERROR directly to state machine
@@ -8767,6 +8977,8 @@ Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngi
 #### Layer 1: Agent Service Actor (Business Logic)
 
 **Best Practice:** Always create the agent service actor first. This is your app's orchestrator.
+
+**Lifecycle:** Service actors **persist** throughout the vibe lifecycle - created once, destroyed only on vibe unload.
 
 **Manages:**
 - ✅ Business logic and data orchestration
@@ -9664,11 +9876,23 @@ When reading and understanding schema definitions:
 
 **Good:**
 ```json
-// Service Actor
-{ "composite": "@composite" }  // ✅ No UI state
+// Service Actor Context
+{
+  "currentView": "@composite",  // ✅ Context property (CRDT CoValue) - references active child
+  "@actors": {
+    "composite": "@actor/composite"  // ✅ System property (like $schema/$id) - defines children
+  }
+}
 
-// Composite Actor
-{ "viewMode": "list" }  // ✅ Single source of truth
+// Composite Actor Context
+{
+  "viewMode": "list",  // ✅ Single source of truth
+  "currentView": "@list",  // ✅ Context property - references active child
+  "@actors": {
+    "list": "@actor/list",
+    "kanban": "@actor/kanban"
+  }
+}
 ```
 
 ### ❌ Don't: Create Monolithic Service Actors

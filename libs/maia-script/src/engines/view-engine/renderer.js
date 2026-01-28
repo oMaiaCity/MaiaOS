@@ -61,11 +61,27 @@ export async function applyNodeAttributes(viewEngine, element, node, data, actor
   if (node.value !== undefined) {
     const resolvedValue = await viewEngine.evaluator.evaluate(node.value, data);
     if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-      if (element.tagName === 'INPUT') {
-        element.value = resolvedValue || '';
-      } else {
-        element.textContent = resolvedValue || '';
+      // CRITICAL: Don't overwrite input value if user is actively typing
+      // This prevents race conditions where older context updates overwrite newer user input
+      const isFocused = document.activeElement === element;
+      const currentValue = element.tagName === 'INPUT' ? element.value : element.textContent;
+      const newValue = resolvedValue || '';
+      
+      // Update logic:
+      // - If input is NOT focused: Always sync with context (normal case)
+      // - If input IS focused AND values differ: Preserve DOM value (user is typing, don't overwrite)
+      // - If input IS focused AND values match: Safe to update (no-op, but keeps in sync)
+      // This preserves user input during fast typing while still syncing when appropriate
+      const shouldUpdate = !isFocused || currentValue === newValue;
+      
+      if (shouldUpdate) {
+        if (element.tagName === 'INPUT') {
+          element.value = newValue;
+        } else {
+          element.textContent = newValue;
+        }
       }
+      // If input is focused and values differ, preserve DOM value (user is typing)
       
       // Add stable unique identifier for focus restoration
       // Use a counter per actor to ensure same input gets same ID across re-renders

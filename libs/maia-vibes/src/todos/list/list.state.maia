@@ -12,11 +12,11 @@
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "TOGGLE_BUTTON",
-                "payload": { "id": "$$id", "done": "$$done" }
+                "payload": { "id": "$$id", "done": "$$done" },
+                "target": "@actor/agent"
               }
             }
-          ],
-          "guard": { "$ne": ["$$id", null] }
+          ]
         },
         "DELETE_BUTTON": {
           "target": "idle",
@@ -25,11 +25,11 @@
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "DELETE_BUTTON",
-                "payload": { "id": "$$id" }
+                "payload": { "id": "$$id" },
+                "target": "@actor/agent"
               }
             }
-          ],
-          "guard": { "$ne": ["$$id", null] }
+          ]
         }
       }
     },

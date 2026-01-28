@@ -214,10 +214,12 @@ export function transformInstanceForSeeding(instance, coIdMap, options = {}) {
   }
   // Note: If $id doesn't exist, it will be generated in _seedConfigs
 
-  // Transform reference properties (actor, context, view, state, interface, brand, style, subscriptions, inbox)
+  // Transform reference properties (actor, context, view, state, brand, style, topics, inbox, subscribers)
   // Note: tokens and components are now embedded objects in styles, not separate CoValue references
   // Note: children property removed - children are now stored in context.actors
-  const referenceProps = ['actor', 'context', 'view', 'state', 'interface', 'brand', 'style', 'subscriptions', 'inbox'];
+  // Note: interface and subscriptions removed - topics handle message routing now
+  // Note: subscribers is a property of topic CoValues (references subscribers CoList)
+  const referenceProps = ['actor', 'context', 'view', 'state', 'brand', 'style', 'topics', 'inbox', 'subscribers'];
   for (const prop of referenceProps) {
     if (transformed[prop] && typeof transformed[prop] === 'string') {
       const ref = transformed[prop];
@@ -626,10 +628,10 @@ function transformQueryObjects(obj, coIdMap, depth = 0) {
       continue; // Skip further processing of this property
     }
     
-    // Check for context.actors (explicit system property for child actors)
-    // context.actors is a map: { "namekey": "@actor/instance", ... }
+    // Check for context.@actors (system property for child actors, like $schema/$id)
+    // context.@actors is a map: { "namekey": "@actor/instance", ... }
     // Transform all values (actor references) to co-ids
-    if (key === 'actors' && value && typeof value === 'object' && !Array.isArray(value)) {
+    if (key === '@actors' && value && typeof value === 'object' && !Array.isArray(value)) {
       for (const [namekey, actorRef] of Object.entries(value)) {
         if (typeof actorRef === 'string') {
           // Skip if already a co-id
@@ -639,16 +641,21 @@ function transformQueryObjects(obj, coIdMap, depth = 0) {
           
           // Must be @actor/instance format
           if (!actorRef.startsWith('@actor/')) {
-            throw new Error(`[SchemaTransformer] context.actors[${namekey}] must use @actor/instance format, got: ${actorRef}`);
+            throw new Error(`[SchemaTransformer] context.@actors[${namekey}] must use @actor/instance format, got: ${actorRef}`);
           }
           
-          const coId = transformTargetReference(actorRef, coIdMap, `context.actors[${namekey}]`);
+          const coId = transformTargetReference(actorRef, coIdMap, `context.@actors[${namekey}]`);
           if (coId) {
             value[namekey] = coId;
           }
         }
       }
       continue; // Skip further processing of this property
+    }
+    
+    // Legacy "actors" support - fail fast with clear error
+    if (key === 'actors' && value && typeof value === 'object' && !Array.isArray(value)) {
+      throw new Error(`[SchemaTransformer] Legacy "actors" property found. Please migrate to "@actors" system property.`);
     }
 
     // Check for target field at any level (for @core/publishMessage tool payloads)

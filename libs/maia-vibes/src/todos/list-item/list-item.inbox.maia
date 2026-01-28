@@ -1,5 +1,0 @@
-{
-  "$schema": "@schema/inbox",
-  "$id": "@inbox/list-item",
-  "items": []
-}

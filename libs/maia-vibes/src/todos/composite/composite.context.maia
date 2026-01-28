@@ -9,8 +9,7 @@
   "listButtonActive": true,
   "kanbanButtonActive": false,
   "newTodoText": "",
-  "error": null,
-  "actors": {
+  "@actors": {
     "list": "@actor/list",
     "kanban": "@actor/kanban"
   }

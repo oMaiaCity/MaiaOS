@@ -932,6 +932,10 @@ export class IndexedDBBackend {
     // Seed styles
     count += await seedConfigType('style', configs.styles, generateCoId);
     
+    // Seed topics (colist CoValues) - must be before actors
+    // Note: subscribers and topicCoValues removed - using direct messaging instead
+    count += await seedConfigType('topics', configs.topics, generateCoId);
+    
     // Seed actors
     count += await seedConfigType('actor', configs.actors, generateCoId);
     
@@ -947,7 +951,7 @@ export class IndexedDBBackend {
     // Seed interfaces
     count += await seedConfigType('interface', configs.interfaces, generateCoId);
     
-    // Seed subscriptions (colist CoValues)
+    // Seed subscriptions (colist CoValues) - legacy, kept for backward compatibility during migration
     count += await seedConfigType('subscriptions', configs.subscriptions, generateCoId);
     
     // Seed inboxes (costream CoValues)

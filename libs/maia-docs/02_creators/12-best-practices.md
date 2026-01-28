@@ -100,6 +100,11 @@ Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngi
 - **Consistent Handling:** All events follow same path
 - **Better Debugging:** Can inspect inbox to see complete event history
 
+**Event Scoping Guarantee:**
+- ✅ Events are **always scoped** to the actor that rendered the element
+- ✅ The `actorId` parameter comes from the closure when the event handler was attached
+- ✅ This ensures events are always routed to the correct actor's inbox
+
 **Anti-Patterns:**
 - ❌ Calling StateEngine.send() directly (bypasses inbox)
 - ❌ Sending SUCCESS/ERROR directly to state machine
@@ -110,6 +115,8 @@ Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngi
 #### Layer 1: Agent Service Actor (Business Logic)
 
 **Best Practice:** Always create the agent service actor first. This is your app's orchestrator.
+
+**Lifecycle:** Service actors **persist** throughout the vibe lifecycle - created once, destroyed only on vibe unload.
 
 **Manages:**
 - ✅ Business logic and data orchestration
@@ -1007,11 +1014,23 @@ When reading and understanding schema definitions:
 
 **Good:**
 ```json
-// Service Actor
-{ "composite": "@composite" }  // ✅ No UI state
+// Service Actor Context
+{
+  "currentView": "@composite",  // ✅ Context property (CRDT CoValue) - references active child
+  "@actors": {
+    "composite": "@actor/composite"  // ✅ System property (like $schema/$id) - defines children
+  }
+}
 
-// Composite Actor
-{ "viewMode": "list" }  // ✅ Single source of truth
+// Composite Actor Context
+{
+  "viewMode": "list",  // ✅ Single source of truth
+  "currentView": "@list",  // ✅ Context property - references active child
+  "@actors": {
+    "list": "@actor/list",
+    "kanban": "@actor/kanban"
+  }
+}
 ```
 
 ### ❌ Don't: Create Monolithic Service Actors

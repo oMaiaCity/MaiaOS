@@ -2,8 +2,6 @@
   "$schema": "@schema/subscriptions",
   "$id": "@subscriptions/agent",
   "items": [
-    "@actor/composite",
-    "@actor/list",
-    "@actor/kanban"
+    "@actor/composite"
   ]
 }

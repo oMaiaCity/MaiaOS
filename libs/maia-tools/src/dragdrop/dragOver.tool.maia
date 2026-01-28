@@ -1,0 +1,24 @@
+{
+  "$schema": "@schema/tool",
+  "$id": "tool_dragdrop_dragOver_001",
+  "name": "@dragdrop/dragOver",
+  "description": "Unified tool for dragEnter/dragLeave - sets dragOverColumn context field",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "column": {
+        "type": ["string", "null"],
+        "description": "Column name to set (dragEnter) or null to clear (dragLeave)"
+      }
+    }
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "dragOverColumn": {
+        "type": ["string", "null"],
+        "description": "The column name or null"
+      }
+    }
+  }
+}

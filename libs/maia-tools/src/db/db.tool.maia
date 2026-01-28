@@ -12,7 +12,7 @@
     },
     "schema": {
       "type": "string",
-      "description": "Schema reference (@schema/actor, @schema/todos, etc.)"
+      "description": "Schema reference (co-id) - REQUIRED for 'create' operation only (no CoValue exists yet). OPTIONAL for 'update' and 'delete' operations (schema is extracted from CoValue headerMeta internally by operations)."
     },
     "key": {
       "type": "string",

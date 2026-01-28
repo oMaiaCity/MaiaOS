@@ -78,8 +78,6 @@ UI utilities and message publishing:
 - `@core/publishMessage` - Publish messages to subscribed actors
 - `@core/noop` - No-operation (for testing)
 - `@core/preventDefault` - Prevent default events
-- `@core/openModal` - Open modal dialogs (if using modals)
-- `@core/closeModal` - Close modals (if using modals)
 
 ### Drag-Drop Module (`dragdrop`)
 Generic drag-and-drop for any schema/field:

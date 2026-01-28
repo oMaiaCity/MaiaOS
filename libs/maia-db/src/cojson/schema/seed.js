@@ -596,12 +596,18 @@ export async function seed(account, node, configs, schemas, data) {
   };
   
   // Seed all config types in dependency order (same as IndexedDB)
-  // Order: styles → actors → views → contexts → states → interfaces → subscriptions → inboxes → tool
+  // Order: styles → topics → actors → views → contexts → states → interfaces → subscriptions → inboxes → tool
+  // Note: subscribers and topicCoValues removed - using direct messaging instead
   if (configs) {
     const stylesSeeded = await seedConfigTypeAndRegister('styles', configs.styles, 'style');
     seededConfigs.configs.push(...(stylesSeeded.configs || []));
     seededConfigs.count += stylesSeeded.count || 0;
     combinedRegistry = refreshCombinedRegistry(); // REFRESH: styles now available
+
+    const topicsSeeded = await seedConfigTypeAndRegister('topics', configs.topics, 'topics');
+    seededConfigs.configs.push(...(topicsSeeded.configs || []));
+    seededConfigs.count += topicsSeeded.count || 0;
+    combinedRegistry = refreshCombinedRegistry(); // REFRESH: topics now available
 
     const actorsSeeded = await seedConfigTypeAndRegister('actors', configs.actors, 'actor');
     seededConfigs.configs.push(...(actorsSeeded.configs || []));
@@ -734,12 +740,21 @@ export async function seed(account, node, configs, schemas, data) {
   
   if (configs) {
     // Update order: dependencies first, then dependents
-    // 1. Update subscriptions, inboxes, children first (they reference actors, but don't affect actor updates)
+    // 1. Update subscriptions, inboxes first (they reference actors, but don't affect actor updates)
     const subscriptionsToUpdate = seededConfigs.configs.filter(c => c.type === 'subscription');
     await updateConfigReferences(subscriptionsToUpdate, configs.subscriptions);
 
     const inboxesToUpdate = seededConfigs.configs.filter(c => c.type === 'inbox');
     await updateConfigReferences(inboxesToUpdate, configs.inboxes);
+
+    // Update topics BEFORE actors (actors reference topics)
+    // Note: subscribers and topicCoValues removed - using direct messaging instead
+    // Note: topics CoLists are typically empty initially, but we update them to ensure they're registered
+    const topicsToUpdate = seededConfigs.configs.filter(c => c.type === 'topics');
+    await updateConfigReferences(topicsToUpdate, configs.topics);
+    
+    // Refresh registry after topics are updated (so actor updates can resolve topics references)
+    refreshCombinedRegistry();
 
     // Update children BEFORE actors (actors reference children)
     const childrenToUpdate = seededConfigs.configs.filter(c => c.type === 'children');
@@ -748,7 +763,7 @@ export async function seed(account, node, configs, schemas, data) {
     // Refresh registry after children are updated (so actor updates can resolve children references)
     refreshCombinedRegistry();
 
-    // 2. Update actors AFTER children are registered (actors reference children)
+    // 2. Update actors AFTER topics and children are registered (actors reference topics and children)
     const actorsToUpdate = seededConfigs.configs.filter(c => c.type === 'actor');
     await updateConfigReferences(actorsToUpdate, configs.actors);
     
@@ -963,7 +978,9 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
   };
   
   // Seed all config types
+  // Note: subscribers and topicCoValues removed - using direct messaging instead
   totalCount += await seedConfigType('style', transformedConfigs.styles);
+  totalCount += await seedConfigType('topics', transformedConfigs.topics);
   totalCount += await seedConfigType('actor', transformedConfigs.actors);
   totalCount += await seedConfigType('view', transformedConfigs.views);
   totalCount += await seedConfigType('context', transformedConfigs.contexts);
@@ -1197,13 +1214,15 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
   let mappingCount = 0;
   
   for (const [humanReadableKey, coId] of allMappings) {
-    // Only store schemas: @schema/*, @meta-schema, and data collection schemas
-    // DO NOT store instances: @actor/*, @vibe/*, @view/*, @context/*, etc.
+    // Store schemas: @schema/*, @meta-schema, and data collection schemas
+    // Also store topics: @topic/* (needed for runtime resolution in publishToTopic)
+    // DO NOT store other instances: @actor/*, @vibe/*, @view/*, @context/*, etc.
     const isSchema = humanReadableKey.startsWith('@schema/') || 
                      humanReadableKey === '@meta-schema' ||
                      humanReadableKey.startsWith('data/');
+    const isTopic = humanReadableKey.startsWith('@topic/');
     
-    if (isSchema) {
+    if (isSchema || isTopic) {
       // Only store if not already set (avoid overwriting)
       if (!schematas.get(humanReadableKey)) {
         schematas.set(humanReadableKey, coId);

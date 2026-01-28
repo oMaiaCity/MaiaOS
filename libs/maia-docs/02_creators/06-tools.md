@@ -65,19 +65,17 @@ export default {
   async execute(actor, payload) {
     const { schema, data } = payload;
     
-    // Create entity
-    const entity = {
-      id: Date.now().toString(),
-      ...data
-    };
+    // Execute operation (e.g., database operation)
+    const result = await someOperation(data);
     
-    // Add to collection
-    actor.context[schema].push(entity);
-    
-    console.log(`✅ Created ${schema}:`, entity);
+    // Return result - state machines handle context updates via updateContext actions
+    // Tools should NOT directly manipulate context - all updates flow through state machines
+    return result;
   }
 };
 ```
+
+**CRITICAL:** Tools should return results, not manipulate context directly. State machines handle all context updates via `updateContext` actions in SUCCESS handlers.
 
 ## Available Tools
 
@@ -99,18 +97,50 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
 
 **Note:** The `schema` field must be a co-id (`co_z...`). Schema references (`@schema/todos`) are transformed to co-ids during seeding. In your source state machine files, you can use schema references, but they get transformed to co-ids before execution.
 
+**Tool Results:**
+The `@db` tool returns the created/updated/deleted record. Access the result in SUCCESS handlers via `$$result`:
+
+```json
+{
+  "creating": {
+    "entry": {
+      "tool": "@db",
+      "payload": { "op": "create", "schema": "@schema/todos", "data": {...} }
+    },
+    "on": {
+      "SUCCESS": {
+        "target": "idle",
+        "actions": [
+          {
+            "tool": "@core/publishMessage",
+            "payload": {
+              "type": "TODO_CREATED",
+              "payload": {
+                "id": "$$result.id",      // ← Tool result available here
+                "text": "$$result.text"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
 #### Update Operation
 ```json
 {
   "tool": "@db",
   "payload": {
     "op": "update",
-    "schema": "co_z...",
     "id": "co_z...",
     "data": {"text": "Buy milk and eggs"}
   }
 }
 ```
+
+**Note:** For `update` and `delete` operations, `schema` is not required. The schema is automatically extracted from the CoValue's headerMeta internally by the operation.
 
 #### Delete Operation
 ```json
@@ -118,11 +148,12 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
   "tool": "@db",
   "payload": {
     "op": "delete",
-    "schema": "co_z...",
     "id": "co_z..."
   }
 }
 ```
+
+**Note:** For `update` and `delete` operations, `schema` is not required. The schema is automatically extracted from the CoValue's headerMeta internally by the operation.
 
 #### Toggle Operation
 ```json
@@ -176,21 +207,6 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
 }
 ```
 
-#### `@core/openModal`
-```json
-{
-  "tool": "@core/openModal",
-  "payload": {}
-}
-```
-
-#### `@core/closeModal`
-```json
-{
-  "tool": "@core/closeModal",
-  "payload": {}
-}
-```
 
 ### Drag-Drop Module (`@dragdrop/*`)
 
@@ -199,8 +215,35 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
 {
   "tool": "@dragdrop/start",
   "payload": {
-    "schema": "todos",
-    "id": "123"
+    "id": "co_z..."
+  }
+}
+```
+
+**Note:** Schema is not required. The schema is automatically extracted from the CoValue's headerMeta internally by update/delete operations when needed.
+
+**Tool Result:** Returns drag state object. Update context in SUCCESS handler:
+
+```json
+{
+  "dragging": {
+    "entry": {
+      "tool": "@dragdrop/start",
+      "payload": { "id": "$$id" }
+    },
+    "on": {
+      "SUCCESS": {
+        "target": "dragging",
+        "actions": [
+          {
+            "updateContext": {
+              "draggedItemId": "$$result.draggedItemId",
+              "draggedItemIds": "$$result.draggedItemIds"
+            }
+          }
+        ]
+      }
+    }
   }
 }
 ```
@@ -210,12 +253,15 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
 {
   "tool": "@dragdrop/drop",
   "payload": {
-    "schema": "todos",
     "field": "done",
     "value": true
   }
 }
 ```
+
+**Note:** Schema is not required. The schema is automatically extracted from the CoValue's headerMeta internally by the update operation.
+
+**Tool Result:** Returns update result. Access via `$$result` in SUCCESS handler.
 
 ### Context Updates (Infrastructure, Not Tools)
 

@@ -49,8 +49,7 @@ export class DragDropModule {
       'start',
       'end',
       'drop',
-      'dragEnter',
-      'dragLeave'
+      'dragOver'
     ];
     
     // Register drag-drop tools

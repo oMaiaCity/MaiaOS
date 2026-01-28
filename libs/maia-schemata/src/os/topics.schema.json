@@ -1,0 +1,11 @@
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/topics",
+  "title": "Topics Colist",
+  "description": "A colist of topic CoValue references that this actor subscribes to",
+  "cotype": "colist",
+  "items": {
+    "$co": "@schema/topic",
+    "description": "Each item is a co-id reference to a topic CoValue"
+  }
+}

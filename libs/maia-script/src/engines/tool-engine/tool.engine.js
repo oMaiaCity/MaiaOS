@@ -67,7 +67,7 @@ export class ToolEngine {
    * @param {string} actionName - e.g., '@core/createTodo'
    * @param {object} actor - Actor instance with context
    * @param {any} payload - Action payload
-   * @returns {Promise<void>}
+   * @returns {Promise<any>} Tool execution result
    */
   async execute(actionName, actor, payload) {
     const tool = this.tools.get(actionName);
@@ -86,10 +86,11 @@ export class ToolEngine {
         await validateAgainstSchemaOrThrow(schema, payload, 'tool-payload');
       }
       
-      // Execute tool function
-      await tool.function.execute(actor, payload);
+      // Execute tool function and capture result
+      const result = await tool.function.execute(actor, payload);
       
-      // Only log errors, not successful executions (too verbose)
+      // Return tool result (may be undefined if tool doesn't return a value)
+      return result;
     } catch (error) {
       console.error(`[ToolEngine] Tool execution error (${actionName}):`, error);
       // Note: Error context should be set by state machine ERROR handlers via @context/update tool

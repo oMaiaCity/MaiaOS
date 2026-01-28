@@ -1,7 +1,0 @@
-{
-  "$schema": "@schema/subscriptions",
-  "$id": "@subscriptions/kanban",
-  "items": [
-    "@actor/agent"
-  ]
-}

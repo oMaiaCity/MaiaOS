@@ -20,8 +20,11 @@ export async function renderSlot(viewEngine, node, data, wrapperElement, actorId
     return;
   }
   
-  const contextKey = slotKey.slice(1); // Remove '$'
-  const contextValue = data.context[contextKey]; // e.g., "@list" or "My App"
+  const contextKey = slotKey.slice(1); // Remove '$' from "$currentView" or "$composite"
+  
+  // Unified logic: All slot resolution works the same way
+  // 1. Look up context property (could be "currentView" or any other key - same logic)
+  const contextValue = data.context[contextKey];
   
   if (!contextValue) {
     // No value mapped - wrapper element is already created, just leave it empty
@@ -31,62 +34,105 @@ export async function renderSlot(viewEngine, node, data, wrapperElement, actorId
     return;
   }
   
-  // Check if it's an actor reference (starts with @)
+  // 2. Extract namekey from context value (should be "@namekey" format)
+  let namekey;
   if (typeof contextValue === 'string' && contextValue.startsWith('@')) {
-    const namekey = contextValue.slice(1); // Remove '@'
-    const actor = viewEngine.actorEngine?.getActor(actorId);
-    const childActor = actor?.children?.[namekey];
+    namekey = contextValue.slice(1); // Remove '@' from "@composite" or "@list"
     
-    if (childActor?.containerElement) {
-      // Mark all children as hidden first (only the attached one will be visible)
-      if (actor?.children) {
-        for (const child of Object.values(actor.children)) {
-          child._isVisible = false;
-        }
-      }
-      
-      // Mark this child as visible and trigger re-render with current data
-      const wasHidden = !childActor._isVisible;
-      childActor._isVisible = true;
-      
-      // CRITICAL: Re-render when actor becomes visible (fixes view-switching reactivity bug)
-      // This ensures the view displays the latest data from subscriptions
-      if (wasHidden && childActor._initialRenderComplete && viewEngine.actorEngine) {
-        viewEngine.actorEngine.rerender(childActor.id);
-      }
-      
-      // CRITICAL: Only append if not already in wrapper (prevents duplicates during re-renders)
-      if (childActor.containerElement.parentNode !== wrapperElement) {
-        // Remove from old parent if attached elsewhere
-        if (childActor.containerElement.parentNode) {
-          childActor.containerElement.parentNode.removeChild(childActor.containerElement);
-        }
-        
-        // Clear wrapper and attach new child
-        wrapperElement.innerHTML = '';
-        wrapperElement.appendChild(childActor.containerElement);
-      }
-    } else {
-      // Child actor not found - this can happen during initial render before child actors are created
-      // Or if child actor creation failed. Just skip rendering this slot silently.
-      // The view will re-render once child actors are created.
+    // 3. Validate: Check namekey exists in @actors (for better error messages)
+    const actorsMap = data.context["@actors"];
+    if (actorsMap && !actorsMap[namekey]) {
+      console.warn(`[ViewEngine] Namekey "${namekey}" not found in context["@actors"]`, {
+        actorId,
+        contextKey,
+        contextValue,
+        availableActors: actorsMap ? Object.keys(actorsMap) : []
+      });
+    }
+  } else {
+    // Plain value - render as text (not an actor reference)
+    console.log(`[ViewEngine] Rendering plain value: ${contextValue}`);
+    wrapperElement.textContent = String(contextValue);
+    return;
+  }
+  
+  // 4. Look up child actor (lazy creation - only create when needed)
+  const actor = viewEngine.actorEngine?.getActor(actorId);
+  
+  if (!actor) {
+    console.warn(`[ViewEngine] Parent actor not found: ${actorId}`);
+    return;
+  }
+
+  // Get or create child actor lazily (only creates when referenced by context.currentView)
+  let childActor = actor.children?.[namekey];
+  
+  // If child actor doesn't exist, create it lazily
+  if (!childActor) {
+    // Get vibeKey from parent actor if available (for tracking)
+    const vibeKey = actor.vibeKey || null;
+    
+    // Create child actor on-demand
+    childActor = await viewEngine.actorEngine._createChildActorIfNeeded(actor, namekey, vibeKey);
+    
+    if (!childActor) {
+      // Child actor creation failed - this can happen during initial render or if config is invalid
       // Only warn if this is a re-render (not initial render) to avoid noise
-      if (actor?._initialRenderComplete) {
-        console.warn(`[ViewEngine] Child actor not found for namekey: ${namekey}`, {
+      if (actor._initialRenderComplete) {
+        console.warn(`[ViewEngine] Failed to create child actor for namekey: ${namekey}`, {
           actorId,
           availableChildren: actor?.children ? Object.keys(actor.children) : [],
           contextValue,
-          namekey,
-          childActorExists: !!childActor,
-          containerElementExists: !!childActor?.containerElement
+          namekey
         });
       }
       // Don't render anything - slot will be empty until child actor is created
+      return;
+    }
+  }
+  
+  // Child actor exists - attach to slot
+  if (childActor.containerElement) {
+    // Proper lifecycle management: Destroy inactive UI child actors when switching views
+    // Service actors persist, UI actors are created/destroyed on demand
+    if (actor?.children) {
+      for (const [key, child] of Object.entries(actor.children)) {
+        // Skip the child we're about to attach
+        if (key === namekey) continue;
+        
+        // Destroy inactive UI child actors (service actors persist)
+        if (child.actorType === 'ui') {
+          console.log(`[ViewEngine] Destroying inactive UI child actor: ${key} (${child.id})`);
+          viewEngine.actorEngine.destroyActor(child.id);
+          delete actor.children[key];
+        }
+        // Service actors persist - don't destroy them
+      }
+    }
+    
+    // Trigger re-render if child actor was just created or needs update
+    if (childActor._initialRenderComplete && viewEngine.actorEngine) {
+      viewEngine.actorEngine.rerender(childActor.id);
+    }
+    
+    // CRITICAL: Only append if not already in wrapper (prevents duplicates during re-renders)
+    if (childActor.containerElement.parentNode !== wrapperElement) {
+      // Remove from old parent if attached elsewhere
+      if (childActor.containerElement.parentNode) {
+        childActor.containerElement.parentNode.removeChild(childActor.containerElement);
+      }
+      
+      // Clear wrapper and attach new child
+      wrapperElement.innerHTML = '';
+      wrapperElement.appendChild(childActor.containerElement);
     }
   } else {
-    // Plain value - render as text in wrapper
-    console.log(`[ViewEngine] Rendering plain value: ${contextValue}`);
-    wrapperElement.textContent = String(contextValue);
+    // Child actor exists but has no container - this shouldn't happen, but handle gracefully
+    console.warn(`[ViewEngine] Child actor ${namekey} has no containerElement`, {
+      actorId,
+      namekey,
+      childActorId: childActor.id
+    });
   }
 }
 

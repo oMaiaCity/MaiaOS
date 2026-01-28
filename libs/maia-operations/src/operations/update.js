@@ -2,8 +2,10 @@
  * Update Operation - Update existing records (unified for data collections and configs)
  * 
  * Usage:
- *   maia.db({op: 'update', schema: 'co_z...', id: 'co_z...', data: {done: true}})
- * Note: Schema is now a co-id (transformed during seeding), not a human-readable reference
+ *   maia.db({op: 'update', id: 'co_z...', data: {done: true}})  // Schema extracted from CoValue headerMeta
+ * 
+ * Schema is ALWAYS extracted from CoValue headerMeta (single source of truth)
+ * NO schema parameter needed - universal schema resolver handles it
  * 
  * This operation handles ALL CoValues uniformly - no distinction between configs and data.
  * Everything is just co-ids. Always validates against schema (100% migration - no fallbacks).
@@ -11,6 +13,8 @@
 
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
+import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
+import { resolveSchema } from '../utils/schema-resolver.js';
 
 export class UpdateOperation {
   constructor(backend, dbEngine = null, evaluator = null) {
@@ -22,24 +26,19 @@ export class UpdateOperation {
   /**
    * Execute update operation - handles ALL CoValues uniformly (data + configs)
    * @param {Object} params
-   * @param {string} params.schema - Schema co-id (co_z...) - MUST be a co-id, not '@schema/...'
    * @param {string} params.id - Record co-id to update
    * @param {Object} params.data - Data to update
    * @returns {Promise<Object>} Updated record
+   * 
+   * Schema is ALWAYS extracted from CoValue headerMeta using universal resolver
    */
   async execute(params) {
-    const { schema, id, data } = params;
+    const { id, data } = params;
     
-    if (!schema) {
-      throw new Error('[UpdateOperation] Schema required');
-    }
-    
-    // Validate schema is a co-id (runtime code must use co-ids only)
-    if (!schema.startsWith('co_z')) {
-      throw new Error(`[UpdateOperation] Schema must be a co-id (co_z...), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
-    }
+    console.log('[UpdateOperation] execute called with:', { id, data, params });
     
     if (!id) {
+      console.error('[UpdateOperation] ID is missing!', { id, data, params });
       throw new Error('[UpdateOperation] ID required');
     }
     
@@ -58,11 +57,6 @@ export class UpdateOperation {
       throw new Error('[UpdateOperation] dbEngine required for schema validation');
     }
     
-    const schemaDef = await loadSchemaFromDB(this.dbEngine, schema);
-    if (!schemaDef) {
-      throw new Error(`[UpdateOperation] Schema not found: ${schema}. Schema must exist - no fallbacks (100% migration).`);
-    }
-    
     // For updates, we need to validate the merged result (existing + update data), not just the update data
     // Get raw stored data (without normalization - no id field, but has $schema metadata)
     const rawExistingData = await this.backend.getRawRecord(id);
@@ -71,9 +65,14 @@ export class UpdateOperation {
       throw new Error(`[UpdateOperation] Record not found: ${id}`);
     }
     
-    // Verify record belongs to this schema
-    if (rawExistingData.$schema !== schema) {
-      throw new Error(`[UpdateOperation] Record ${id} does not belong to schema ${schema}`);
+    // Extract schema co-id from CoValue headerMeta using universal resolver
+    // This is the ONLY place to get schema - single source of truth
+    const schemaCoId = await resolveSchema(id, this.dbEngine);
+    
+    // Load schema definition for validation using fromCoValue pattern (single source of truth)
+    const schemaDef = await loadSchemaFromDB(this.dbEngine, { fromCoValue: id });
+    if (!schemaDef) {
+      throw new Error(`[UpdateOperation] Failed to load schema definition for CoValue ${id}. Schema co-id: ${schemaCoId}`);
     }
     
     // Exclude $schema (metadata, stored for querying but not part of schema validation)
@@ -92,10 +91,10 @@ export class UpdateOperation {
     };
     
     // Validate merged result against schema (ensures all required fields are present)
-    await validateAgainstSchemaOrThrow(schemaDef, mergedData, `update operation for schema ${schema}`);
+    await validateAgainstSchemaOrThrow(schemaDef, mergedData, `update operation for schema ${schemaCoId}`);
     
     // Use unified update() method that handles both data and configs
-    return await this.backend.update(schema, id, evaluatedData);
+    return await this.backend.update(schemaCoId, id, evaluatedData);
   }
   
   /**
@@ -106,65 +105,19 @@ export class UpdateOperation {
    * @returns {Promise<Object>} Evaluated data
    */
   async _evaluateDataWithExisting(data, existingData) {
-    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    // If no evaluator, return data as-is (should already be evaluated by state engine)
+    if (!this.evaluator) {
       return data;
     }
     
-    const evaluated = {};
-    for (const [key, value] of Object.entries(data)) {
-      // Create evaluation context with existing data available as $existing
-      const evaluationContext = {
-        context: { existing: existingData },
-        item: {}
-      };
-      
-      // Check if value is a MaiaScript expression
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
-        if (this.evaluator && this.evaluator.isDSLOperation(value)) {
-          // Evaluate DSL operation with access to existing data
-          evaluated[key] = await this.evaluator.evaluate(value, evaluationContext);
-        } else {
-          // Recursively evaluate nested objects (or use as-is if no evaluator)
-          evaluated[key] = this.evaluator 
-            ? await this._evaluateDataWithExisting(value, existingData)
-            : value;
-        }
-      } else if (typeof value === 'string' && value.startsWith('$')) {
-        // Evaluate string expressions (like "$existing.done")
-        // Handle $existing.* paths directly for better performance
-        if (value.startsWith('$existing.')) {
-          const path = value.substring(10); // Remove "$existing."
-          evaluated[key] = this._resolvePath(existingData, path);
-        } else if (this.evaluator) {
-          evaluated[key] = await this.evaluator.evaluate(value, evaluationContext);
-        } else {
-          // No evaluator - use as-is (should already be evaluated by state engine)
-          evaluated[key] = value;
-        }
-      } else {
-        // Primitive value, use as-is
-        evaluated[key] = value;
-      }
-    }
+    // Create evaluation context with existing data available as $existing in context
+    // This allows expressions like "$existing.done" or {"$not": "$existing.done"}
+    const dataContext = {
+      context: { existing: existingData },
+      item: {}
+    };
     
-    return evaluated;
-  }
-  
-  /**
-   * Resolve dot-notation path in object (e.g., "done" or "user.name")
-   * @param {Object} obj - Object to resolve path in
-   * @param {string} path - Dot-separated path
-   * @returns {any} Resolved value or undefined
-   */
-  _resolvePath(obj, path) {
-    const parts = path.split('.');
-    let current = obj;
-    for (const part of parts) {
-      if (current === null || current === undefined) {
-        return undefined;
-      }
-      current = current[part];
-    }
-    return current;
+    // Use universal expression resolver
+    return await resolveExpressions(data, this.evaluator, dataContext);
   }
 }

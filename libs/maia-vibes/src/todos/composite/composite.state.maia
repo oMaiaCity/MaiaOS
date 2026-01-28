@@ -11,18 +11,18 @@
             {
               "updateContext": {
                 "viewMode": "$$viewMode",
-                "listButtonActive": {
-                  "$eq": ["$$viewMode", "list"]
-                },
-                "kanbanButtonActive": {
-                  "$eq": ["$$viewMode", "kanban"]
-                },
                 "currentView": {
                   "$if": {
                     "condition": { "$eq": ["$$viewMode", "list"] },
                     "then": "@list",
                     "else": "@kanban"
                   }
+                },
+                "listButtonActive": {
+                  "$eq": ["$$viewMode", "list"]
+                },
+                "kanbanButtonActive": {
+                  "$eq": ["$$viewMode", "kanban"]
                 }
               }
             },
@@ -56,15 +56,15 @@
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "newTodoText": "" }
-            },
-            {
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "CREATE_BUTTON",
                 "payload": { "text": "$$text" },
                 "target": "@actor/agent"
               }
+            },
+            {
+              "updateContext": { "newTodoText": "" }
             }
           ]
         },

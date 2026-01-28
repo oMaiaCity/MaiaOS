@@ -94,9 +94,9 @@ export class SubscriptionEngine {
   _scheduleRerender(actorId) {
     const actor = this.actorEngine.getActor(actorId);
     
-    // Visibility optimization: Skip hidden actors
-    if (actor && !actor._isVisible) {
-      return; // Skip hidden actors silently
+    // Skip if actor doesn't exist (may have been destroyed)
+    if (!actor) {
+      return;
     }
     
     // Add to pending re-renders

@@ -12,3 +12,4 @@ export { SeedOperation } from './seed.js';
 export { SchemaOperation } from './schema.js';
 export { ResolveOperation } from './resolve.js';
 export { PushOperation } from './push.js';
+export { AppendOperation } from './append.js';

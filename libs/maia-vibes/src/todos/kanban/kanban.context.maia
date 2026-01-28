@@ -1,6 +1,10 @@
 {
   "$schema": "@schema/context",
   "$id": "@context/kanban",
+  "todos": {
+    "schema": "@schema/data/todos",
+    "filter": null
+  },
   "todosTodo": {
     "schema": "@schema/data/todos",
     "filter": {"done": false}

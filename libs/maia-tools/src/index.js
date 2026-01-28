@@ -7,33 +7,25 @@
 
 // Import tool definitions directly as JSON
 import noopDef from './core/noop.tool.maia';
-import preventDefaultDef from './core/preventDefault.tool.maia';
 import publishMessageDef from './core/publishMessage.tool.maia';
 import focusDef from './core/focus.tool.maia';
-
-import contextUpdateDef from './context/update.tool.maia';
 
 import dragStartDef from './dragdrop/start.tool.maia';
 import dragEndDef from './dragdrop/end.tool.maia';
 import dropDef from './dragdrop/drop.tool.maia';
-import dragEnterDef from './dragdrop/dragEnter.tool.maia';
-import dragLeaveDef from './dragdrop/dragLeave.tool.maia';
+import dragOverDef from './dragdrop/dragOver.tool.maia';
 
 import validateInterfaceDef from './interface/validateInterface.tool.maia';
 
 // Import tool functions
 import noopFn from './core/noop.tool.js';
-import preventDefaultFn from './core/preventDefault.tool.js';
 import publishMessageFn from './core/publishMessage.tool.js';
 import focusFn from './core/focus.tool.js';
-
-import contextUpdateFn from './context/update.tool.js';
 
 import dragStartFn from './dragdrop/start.tool.js';
 import dragEndFn from './dragdrop/end.tool.js';
 import dropFn from './dragdrop/drop.tool.js';
-import dragEnterFn from './dragdrop/dragEnter.tool.js';
-import dragLeaveFn from './dragdrop/dragLeave.tool.js';
+import dragOverFn from './dragdrop/dragOver.tool.js';
 
 import validateInterfaceFn from './interface/validateInterface.tool.js';
 
@@ -42,17 +34,13 @@ import validateInterfaceFn from './interface/validateInterface.tool.js';
  */
 export const TOOLS = {
   'core/noop': { definition: noopDef, function: noopFn },
-  'core/preventDefault': { definition: preventDefaultDef, function: preventDefaultFn },
   'core/publishMessage': { definition: publishMessageDef, function: publishMessageFn },
   'core/focus': { definition: focusDef, function: focusFn },
-  
-  'context/update': { definition: contextUpdateDef, function: contextUpdateFn },
   
   'dragdrop/start': { definition: dragStartDef, function: dragStartFn },
   'dragdrop/end': { definition: dragEndDef, function: dragEndFn },
   'dragdrop/drop': { definition: dropDef, function: dropFn },
-  'dragdrop/dragEnter': { definition: dragEnterDef, function: dragEnterFn },
-  'dragdrop/dragLeave': { definition: dragLeaveDef, function: dragLeaveFn },
+  'dragdrop/dragOver': { definition: dragOverDef, function: dragOverFn },
   
   'interface/validateInterface': { definition: validateInterfaceDef, function: validateInterfaceFn }
 };

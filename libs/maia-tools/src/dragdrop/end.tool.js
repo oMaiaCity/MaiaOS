@@ -4,7 +4,9 @@
  */
 export default {
   async execute(actor, payload) {
-    // CRDT-FIRST: Persist drag state clearing to context CoValue
+    console.log('[dragdrop/end] Executing, context:', actor.context);
+    // Return cleared drag state - state machines handle context updates via updateContext actions in SUCCESS handlers
+    // Tools should not directly manipulate context - all updates flow through state machines
     const draggedId = actor.context.draggedItemId;
     const draggedItemIds = actor.context.draggedItemIds || {};
     
@@ -13,19 +15,13 @@ export default {
       delete draggedItemIds[draggedId];
     }
     
-    // Persist cleared drag state to CRDT CoValue using operations API
-    if (actor.actorEngine) {
-      await actor.actorEngine.updateContextCoValue(actor, {
-        draggedItemId: null,
-        draggedEntityType: null,
-        dragOverColumn: null,
-        draggedItemIds: draggedItemIds
-      });
-    }
-    
-    // Trigger re-render to update UI (hide dragging class, clear dropzone highlight)
-    if (actor.actorEngine && actor.id) {
-      actor.actorEngine.rerender(actor.id);
-    }
+    // Return cleared drag state for state machine to update context
+    const result = {
+      draggedItemId: null,
+      dragOverColumn: null,
+      draggedItemIds: draggedItemIds
+    };
+    console.log('[dragdrop/end] Returning result:', result);
+    return result;
   }
 };

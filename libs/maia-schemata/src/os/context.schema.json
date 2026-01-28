@@ -35,31 +35,7 @@
     }
   },
   "additionalProperties": {
-    "description": "Any additional context fields (collections, UI state, form values, etc.). All inner properties are plain JS types (objects/arrays/strings/primitives) - NOT CoJSON types. Query objects are replaced with plain arrays by SubscriptionEngine.",
-    "anyOf": [
-      {
-        "type": "object",
-        "description": "Query object for reactive subscription (replaced with plain array by SubscriptionEngine)",
-        "properties": {
-          "schema": {
-            "type": "string",
-            "description": "Schema reference"
-          },
-          "filter": {
-            "description": "Filter criteria (object or null)",
-            "anyOf": [
-              {"type": "object"},
-              {"type": "null"}
-            ]
-          }
-        },
-        "required": ["schema"],
-        "additionalProperties": false
-      },
-      {
-        "type": ["string", "number", "boolean", "null", "array", "object"],
-        "description": "Plain JS types (arrays/objects/strings/primitives) - NOT CoJSON types"
-      }
-    ]
+    "description": "Any additional context fields (collections, UI state, form values, etc.). All inner properties are plain JS types (objects/arrays/strings/primitives) - NOT CoJSON types.",
+    "type": ["string", "number", "boolean", "null", "array", "object"]
   }
 }

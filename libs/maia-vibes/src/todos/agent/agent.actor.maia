@@ -5,9 +5,7 @@
   "context": "@context/agent",
   "view": "@view/agent",
   "state": "@state/agent",
-  "interface": "@interface/agent",
   "brand": "@style/brand",
-  "subscriptions": "@subscriptions/agent",
-  "inbox": "@inbox/agent",
-  "inboxWatermark": 0
+  "topics": "@topics/agent",
+  "inbox": "@inbox/agent"
 }

@@ -2,14 +2,10 @@
   "$schema": "@schema/tool",
   "$id": "tool_dragdrop_drop_001",
   "name": "@dragdrop/drop",
-  "description": "Generic drop handler for drag-and-drop operations. Updates a field on the dragged entity based on the drop target.",
+  "description": "Generic drop handler for drag-and-drop operations. Updates a field on the dragged entity based on the drop target. Schema is extracted from CoValue headerMeta by the update operation.",
   "parameters": {
     "type": "object",
     "properties": {
-      "schema": {
-        "type": "string",
-        "description": "The schema/collection name (e.g., 'todos', 'tasks', 'cards')"
-      },
       "field": {
         "type": "string",
         "description": "The field to update on drop (e.g., 'done', 'status', 'column')",
@@ -19,6 +15,6 @@
         "description": "The value to set (can be boolean, string, number based on field type)"
       }
     },
-    "required": ["schema", "value"]
+    "required": ["value"]
   }
 }

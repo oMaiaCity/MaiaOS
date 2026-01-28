@@ -6,16 +6,13 @@
     "idle": {
       "on": {
         "CREATE_BUTTON": {
-          "target": "creating",
-          "guard": { "$ne": ["$$text", ""] }
+          "target": "creating"
         },
         "TOGGLE_BUTTON": {
-          "target": "toggling",
-          "guard": { "$ne": ["$$id", null] }
+          "target": "toggling"
         },
         "DELETE_BUTTON": {
-          "target": "deleting",
-          "guard": { "$ne": ["$$id", null] }
+          "target": "deleting"
         },
         "SWITCH_VIEW": {
           "target": "idle"
@@ -35,6 +32,18 @@
         }
       },
       "on": {
+        "UPDATE_INPUT": {
+          "target": "idle"
+        },
+        "CREATE_BUTTON": {
+          "target": "creating"
+        },
+        "TOGGLE_BUTTON": {
+          "target": "toggling"
+        },
+        "DELETE_BUTTON": {
+          "target": "deleting"
+        },
         "SUCCESS": {
           "target": "idle",
           "actions": [
@@ -43,8 +52,8 @@
               "payload": {
                 "type": "TODO_CREATED",
                 "payload": {
-                  "id": "$lastCreatedId",
-                  "text": "$lastCreatedText",
+                  "id": "$$result.id",
+                  "text": "$$result.text",
                   "done": false
                 }
               }
@@ -66,7 +75,6 @@
         "tool": "@db",
         "payload": { 
           "op": "update",
-          "schema": "@schema/data/todos",
           "id": "$$id",
           "data": {
             "done": {
@@ -76,6 +84,21 @@
         }
       },
       "on": {
+        "TOGGLE_BUTTON": {
+          "target": "toggling"
+        },
+        "DELETE_BUTTON": {
+          "target": "deleting"
+        },
+        "UPDATE_INPUT": {
+          "target": "idle"
+        },
+        "CREATE_BUTTON": {
+          "target": "creating"
+        },
+        "SWITCH_VIEW": {
+          "target": "idle"
+        },
         "SUCCESS": {
           "target": "idle",
           "actions": [
@@ -96,11 +119,25 @@
         "tool": "@db",
         "payload": { 
           "op": "delete",
-          "schema": "@schema/data/todos",
           "id": "$$id"
         }
       },
       "on": {
+        "DELETE_BUTTON": {
+          "target": "deleting"
+        },
+        "UPDATE_INPUT": {
+          "target": "idle"
+        },
+        "CREATE_BUTTON": {
+          "target": "creating"
+        },
+        "SWITCH_VIEW": {
+          "target": "idle"
+        },
+        "TOGGLE_BUTTON": {
+          "target": "toggling"
+        },
         "SUCCESS": {
           "target": "idle",
           "actions": [
@@ -121,6 +158,12 @@
         "updateContext": { "error": "$$error" }
       },
       "on": {
+        "TOGGLE_BUTTON": {
+          "target": "toggling"
+        },
+        "DELETE_BUTTON": {
+          "target": "deleting"
+        },
         "RETRY": {
           "target": "idle",
           "actions": [

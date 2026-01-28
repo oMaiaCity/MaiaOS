@@ -34,7 +34,6 @@ import contextSchema from './os/context.schema.json';
 import stateSchema from './os/state.schema.json';
 import viewSchema from './os/view.schema.json';
 import styleSchema from './os/style.schema.json';
-import interfaceSchema from './os/interface.schema.json';
 import toolSchema from './os/tool.schema.json';
 import vibeSchema from './os/vibe.schema.json';
 import messageSchema from './os/message.schema.json';
@@ -46,7 +45,9 @@ import messagePayloadSchema from './os/messagePayload.schema.json';
 // Import MaiaScript expression schema
 import expressionSchema from './os/maia-script-expression.schema.json';
 // Import CoValue schemas
-import subscriptionsSchema from './os/subscriptions.schema.json';
+import topicSchema from './os/topic.schema.json';
+import topicsSchema from './os/topics.schema.json';
+import subscribersSchema from './os/subscribers.schema.json';
 import inboxSchema from './os/inbox.schema.json';
 import childrenSchema from './os/children.schema.json';
 // Import data schemas
@@ -62,8 +63,6 @@ const SCHEMAS = {
   brand: styleSchema,
   'brand.style': styleSchema,
   'actor.style': styleSchema,
-  interface: interfaceSchema,
-  'actor.interface': interfaceSchema,
   tool: toolSchema,
   vibe: vibeSchema,
   message: messageSchema,
@@ -75,7 +74,9 @@ const SCHEMAS = {
   // MaiaScript expression schema (for validating DSL expressions)
   'maia-script-expression': expressionSchema,
   // CoValue schemas (separate CoValues referenced via $co)
-  subscriptions: subscriptionsSchema,
+  topic: topicSchema,
+  topics: topicsSchema,
+  subscribers: subscribersSchema,
   inbox: inboxSchema,
   children: childrenSchema
 };
