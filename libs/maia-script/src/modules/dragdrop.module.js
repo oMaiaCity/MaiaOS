@@ -53,9 +53,6 @@ export class DragDropModule {
       'dragLeave'
     ];
     
-    // Register @context/update first (critical for input handling)
-    await registerSingleToolFromRegistry(toolEngine, 'context/update', '@context/update');
-    
     // Register drag-drop tools
     await registerToolsFromRegistry(registry, toolEngine, 'dragdrop', toolNames, '@dragdrop');
     
@@ -64,7 +61,7 @@ export class DragDropModule {
       version: '1.0.0',
       description: 'Drag-and-drop tools and configuration',
       namespace: '@dragdrop',
-      tools: toolNames.map(t => `@dragdrop/${t}`).concat(['@context/update'])
+      tools: toolNames.map(t => `@dragdrop/${t}`)
     });
   }
 

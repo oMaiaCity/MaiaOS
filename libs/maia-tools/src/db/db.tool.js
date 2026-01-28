@@ -44,11 +44,16 @@ export default {
     const result = await os.db(payload);
     
     // For create operations, store last created ID/text for state machine access
-    if (payload.op === 'create' && result) {
-      actor.context.lastCreatedId = result.id || result.$id || result;
-      // CRITICAL FIX: Ensure lastCreatedText is always set
-      // Result might not have text property directly, so use payload.data.text as fallback
-      actor.context.lastCreatedText = result.text || result.data?.text || payload.data?.text || '';
+    // CRDT-FIRST: Persist to context CoValue instead of mutating in-memory
+    if (payload.op === 'create' && result && actor.actorEngine) {
+      const lastCreatedId = result.id || result.$id || result;
+      const lastCreatedText = result.text || result.data?.text || payload.data?.text || '';
+      
+      // Persist to CRDT CoValue using operations API
+      await actor.actorEngine.updateContextCoValue(actor, {
+        lastCreatedId,
+        lastCreatedText
+      });
     }
     
     return result;

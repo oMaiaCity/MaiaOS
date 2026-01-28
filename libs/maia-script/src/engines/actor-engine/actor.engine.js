@@ -143,7 +143,7 @@ export class ActorEngine {
    * Load a context by co-id (reactive subscription)
    * @param {string} coId - Context co-id (e.g., 'co_z...')
    * @param {Function} [onUpdate] - Optional callback when context changes
-   * @returns {Promise<Object>} The parsed context
+   * @returns {Promise<{context: Object, contextCoId: string, contextSchemaCoId: string}>} The parsed context and Co-ID references
    */
   async loadContext(coId, onUpdate = null) {
     // Extract schema co-id from context CoValue's headerMeta using fromCoValue pattern
@@ -175,9 +175,59 @@ export class ActorEngine {
     // Store unsubscribe function (if we have an actor context, store it there)
     // For now, we'll handle this in createActor
     
-    // Return context without metadata
+    // Return context without metadata, plus Co-ID references for persistence
     const { $schema, $id, ...context } = contextDef;
-    return context;
+    return {
+      context,
+      contextCoId: coId,
+      contextSchemaCoId
+    };
+  }
+
+  /**
+   * Update context CoValue using operations API
+   * Persists changes to CRDT, which propagates via reactive subscriptions
+   * This is the CRDT-first way to update context - all context updates should use this method
+   * @param {Object} actor - Actor instance
+   * @param {Object} updates - Object with field names as keys and new values
+   * @returns {Promise<void>}
+   */
+  async updateContextCoValue(actor, updates) {
+    if (!actor.contextCoId) {
+      // Context might not have a Co-ID (e.g., empty context object created in-memory)
+      // In this case, we can't persist - log warning and skip
+      console.warn(`[ActorEngine] Actor ${actor.id} has no contextCoId, cannot persist context updates:`, updates);
+      return;
+    }
+    
+    if (!this.dbEngine) {
+      throw new Error(`[ActorEngine] dbEngine not available for actor ${actor.id}`);
+    }
+    
+    // Use stored contextSchemaCoId if available, otherwise extract it
+    let contextSchemaCoId = actor.contextSchemaCoId;
+    if (!contextSchemaCoId) {
+      const contextSchemaStore = await this.dbEngine.execute({
+        op: 'schema',
+        fromCoValue: actor.contextCoId
+      });
+      contextSchemaCoId = contextSchemaStore.value?.$id;
+      
+      if (!contextSchemaCoId) {
+        throw new Error(`[ActorEngine] Failed to extract schema co-id from context ${actor.contextCoId}`);
+      }
+    }
+    
+    // Persist updates to CRDT CoValue using operations API
+    await this.dbEngine.execute({
+      op: 'update',
+      schema: contextSchemaCoId,
+      id: actor.contextCoId,
+      data: updates
+    });
+    
+    // Note: Reactive subscription will automatically update actor.context
+    // No need to manually update actor.context here - the subscription handles it
   }
 
   /**
@@ -231,12 +281,15 @@ export class ActorEngine {
     const viewDef = await this.viewEngine.loadView(actorConfig.view);
     
     // Load context (must be co-id)
-    let context;
+    let context = {};
+    let contextCoId = null;
+    let contextSchemaCoId = null;
     if (actorConfig.context) {
       // Load context without subscription handler - SubscriptionEngine will add handler later
-      context = await this.loadContext(actorConfig.context);
-    } else {
-      context = {};
+      const contextResult = await this.loadContext(actorConfig.context);
+      context = contextResult.context;
+      contextCoId = contextResult.contextCoId;
+      contextSchemaCoId = contextResult.contextSchemaCoId;
     }
     
     // Load subscriptions colist (co-id → array of actor IDs) - REACTIVE
@@ -292,7 +345,7 @@ export class ActorEngine {
       inbox = inboxStore;
     }
     
-    return { viewDef, context, subscriptions, inbox, inboxCoId };
+    return { viewDef, context, contextCoId, contextSchemaCoId, subscriptions, inbox, inboxCoId };
   }
 
   /**
@@ -526,7 +579,7 @@ export class ActorEngine {
     const styleSheets = await this.styleEngine.getStyleSheets(actorConfig);
     
     // Load actor configs (view, context, subscriptions, inbox)
-    const { viewDef, context, subscriptions, inbox, inboxCoId } = await this._loadActorConfigs(actorConfig);
+    const { viewDef, context, contextCoId, contextSchemaCoId, subscriptions, inbox, inboxCoId } = await this._loadActorConfigs(actorConfig);
     
     // Store actor state
     const actor = {
@@ -534,6 +587,8 @@ export class ActorEngine {
       config: actorConfig,
       shadowRoot,
       context,
+      contextCoId: contextCoId, // Store context CoValue ID for persistence (CRDT-first architecture)
+      contextSchemaCoId: contextSchemaCoId, // Store context schema Co-ID for update operations
       containerElement,
       actorEngine: this, // Reference to ActorEngine for rerender
       viewDef, // Store view definition for auto-subscription analysis
@@ -1209,6 +1264,21 @@ export class ActorEngine {
    * @param {string} eventType - Event type (e.g., "CREATE_BUTTON")
    * @param {Object} payload - Event payload
    */
+  /**
+   * Send an internal event (from view or state machine) through inbox
+   * 
+   * ARCHITECTURE: All events MUST flow through inbox for unified event logging
+   * Flow: sendInternalEvent() → inbox CoStream → processMessages() → StateEngine.send()
+   * 
+   * This ensures:
+   * - Complete traceability (all events appear in inbox log)
+   * - Consistent event handling (same path for all events)
+   * - Per-message processed flags (distributed deduplication via CRDT)
+   * 
+   * @param {string} actorId - Actor ID
+   * @param {string} eventType - Event type (e.g., 'SUCCESS', 'ERROR', 'CLICK_BUTTON')
+   * @param {Object} payload - Event payload
+   */
   async sendInternalEvent(actorId, eventType, payload = {}) {
     const actor = this.actors.get(actorId);
     if (!actor) {
@@ -1272,6 +1342,20 @@ export class ActorEngine {
    * CRITICAL FIX: Added processing guard to prevent concurrent execution
    * @param {string} actorId - Actor ID
    */
+  /**
+   * Process messages from actor inbox
+   * 
+   * ARCHITECTURE: This is the ONLY place that calls StateEngine.send()
+   * Flow: inbox CoStream → processMessages() → StateEngine.send() → state machine
+   * 
+   * Uses per-message `processed` flags (not watermark):
+   * - Each message CoMap has a `processed` boolean flag
+   * - Backend checks `processed === false` before returning messages
+   * - Backend sets `processed: true` immediately after reading (prevents race conditions)
+   * - Distributed per-message - no single watermark needed
+   * 
+   * @param {string} actorId - Actor ID
+   */
   async processMessages(actorId) {
     const actor = this.actors.get(actorId);
     if (!actor) {
@@ -1309,11 +1393,6 @@ export class ActorEngine {
       if (unprocessedMessages.length === 0) {
         return;
       }
-
-      // Debug logging for cross-session tracking
-      const sessionId = this.currentSessionID ? this.currentSessionID.substring(0, 12) : 'unknown';
-      console.debug(`[ActorEngine] Session ${sessionId}... processing ${unprocessedMessages.length} messages for actor ${actorId.substring(0, 12)}...`);
-      console.debug(`[ActorEngine]   Message types:`, unprocessedMessages.map(m => m.type));
 
       // Process each message sequentially (business logic - ActorEngine/StateEngine responsibility)
       // CRITICAL: No in-memory deduplication - trust CRDT sync and processed flag on message CoMaps

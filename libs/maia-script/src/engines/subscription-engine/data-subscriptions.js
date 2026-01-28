@@ -90,6 +90,8 @@ export async function subscribeToContext(subscriptionEngine, actor) {
         const initialValue = store.value || [];
         
         // CRITICAL: Always replace with actual array data (never keep query object)
+        // READ-ONLY REACTIVE: Query results are derived/computed data, not persisted state
+        // These mutations are correct - query results should NOT be persisted to context CoValue
         actor.context[key] = initialValue;
         
         // Verify it's actually an array (error only if wrong)
@@ -110,6 +112,7 @@ export async function subscribeToContext(subscriptionEngine, actor) {
         // Use the resolved schema co-id
         // Add both key-specific schema (e.g., "todosTodo" → "todosTodoSchema") 
         // and base schema name (e.g., "todosSchema") for consistency
+        // READ-ONLY REACTIVE: Schema references are metadata, not persisted state
         const schemaKey = `${key}Schema`; // e.g., "todos" → "todosSchema", "todosTodo" → "todosTodoSchema"
         if (!actor.context[schemaKey]) {
           actor.context[schemaKey] = schemaCoId;
@@ -155,10 +158,18 @@ export async function subscribeToContext(subscriptionEngine, actor) {
 /**
  * Handle data update from subscription callback
  * Updates actor context and triggers batched re-render
+ * 
+ * CRITICAL: This is a READ-ONLY reactive update handler
+ * - Called when query subscriptions update (e.g., todos array changes)
+ * - Updates in-memory actor.context[key] with query results
+ * - Does NOT persist to context CoValue (query results are derived/computed data)
+ * - Query results are NOT part of the context CoValue - they're derived from database queries
+ * - This is correct behavior - we're updating derived data, not persisting it
+ * 
  * @param {Object} subscriptionEngine - SubscriptionEngine instance
  * @param {string} actorId - Actor ID
  * @param {string} contextKey - Context key to update
- * @param {any} data - New data from subscription
+ * @param {any} data - New data from subscription (query results)
  */
 export function handleDataUpdate(subscriptionEngine, actorId, contextKey, data) {
   const actor = subscriptionEngine.actorEngine.getActor(actorId);

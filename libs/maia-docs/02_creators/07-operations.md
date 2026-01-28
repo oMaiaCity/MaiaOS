@@ -246,7 +246,7 @@ await maia.db({
 - **Single source of truth:** All operations flow through state machines
 - **Predictable:** Easy to trace where operations come from
 - **Error handling:** State machines handle SUCCESS/ERROR events
-- **Context updates:** State machines update context via `@context/update` tool
+- **Context updates:** State machines update context via `updateContext` infrastructure action
 
 **Never:**
 - ❌ Invoke tools directly from views
@@ -256,7 +256,7 @@ await maia.db({
 **Always:**
 - ✅ Invoke tools from state machine actions
 - ✅ Handle SUCCESS/ERROR events in state machines
-- ✅ Update context via state machine actions using `@context/update` tool
+- ✅ Update context via state machine actions using `updateContext` infrastructure action
 
 ## Usage in State Machines
 
@@ -418,11 +418,9 @@ actor.actorEngine.toolEngine.execute('@db', actor, payload);
 
 ```json
 {
-  "tool": "@context/update",
-  "payload": {
+  "updateContext": {
     "todos": [...] // Don't mutate reactive data directly!
   }
-}
 ```
 
 ### 4. Handle Errors in State Machines
@@ -442,8 +440,7 @@ actor.actorEngine.toolEngine.execute('@db', actor, payload);
         "target": "error",
         "actions": [
           {
-            "tool": "@context/update",
-            "payload": { "error": "$$error" }
+            "updateContext": { "error": "$$error" }
           }
         ]
       }
@@ -545,8 +542,7 @@ actor.context.error = error.message;
           }
         },
         {
-          "tool": "@context/update",
-          "payload": {"newTodoText": ""}
+          "updateContext": {"newTodoText": ""}
         }
       ],
       "on": {

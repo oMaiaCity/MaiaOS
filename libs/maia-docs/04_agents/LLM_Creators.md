@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-01-28T11:42:50.476Z
+**Auto-generated:** 2026-01-28T14:33:23.952Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -2218,7 +2218,7 @@ Create a file named `{name}.actor.maia`:
 | `children` | object | No | Map of slot names to child actor references (`{"composite": "@actor/composite"}`) |
 | `subscriptions` | string | No | Co-id reference to subscriptions colist (`@subscriptions/todo`) |
 | `inbox` | string | No | Co-id reference to inbox costream (`@inbox/todo`) |
-| `inboxWatermark` | number | No | Last processed message timestamp (default: 0) |
+| `inboxWatermark` | number | No | **DEPRECATED** - Use per-message `processed` flags instead (default: 0) |
 
 **Style Properties:**
 - `brand` is **required** - shared design system (tokens, components) used by all actors
@@ -2421,10 +2421,11 @@ Every vibe's entry point is an **agent service actor** that orchestrates the app
 **CRITICAL:** All context updates must flow through state machines.
 
 **Pattern:**
-1. View sends event to state machine
-2. State machine invokes `@context/update` tool
-3. Tool updates context
-4. View re-renders with new context
+1. View sends event to state machine (via inbox)
+2. State machine uses `updateContext` action (infrastructure, not a tool)
+3. `updateContextCoValue()` persists to context CoValue (CRDT)
+4. SubscriptionEngine reactively updates `actor.context` (read-only derived data)
+5. View re-renders with new context
 
 **Example:**
 ```json
@@ -2435,8 +2436,7 @@ Every vibe's entry point is an **agent service actor** that orchestrates the app
         "target": "idle",
         "actions": [
           {
-            "tool": "@context/update",
-            "payload": { "newTodoText": "$$newTodoText" }
+            "updateContext": { "newTodoText": "$$newTodoText" }
           }
         ]
       }
@@ -2448,11 +2448,11 @@ Every vibe's entry point is an **agent service actor** that orchestrates the app
 **Never:**
 - ❌ Mutate context directly: `actor.context.field = value`
 - ❌ Update context from views
-- ❌ Update context from tools (unless invoked by state machine)
+- ❌ Use `@context/update` tool (removed - use `updateContext` infrastructure action)
 
 **Always:**
 - ✅ Update context via state machine actions
-- ✅ Use `@context/update` tool for context updates
+- ✅ Use `updateContext` infrastructure action for context updates
 - ✅ Handle errors via state machine ERROR events
 
 ### Step 2: Agent Service Actor Loads Composite
@@ -2670,7 +2670,7 @@ Referenced in actor:
 - Initialize all fields (avoid `undefined`)
 - Store only serializable data (no functions)
 - **Update context via state machines** - State machines are the single source of truth
-- **Use `@context/update` tool** - Always update context through state machine actions
+- **Use `updateContext` infrastructure action** - Always update context through state machine actions
 
 ❌ **DON'T:**
 - Store UI elements or DOM references
@@ -2751,7 +2751,7 @@ Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngi
 
 **Why inbox for all events:**
 - **Unified Event Log:** Complete traceability of all events
-- **Watermark Pattern:** Prevents duplicate processing
+- **Per-Message Processed Flags:** Each message has a `processed` boolean flag (distributed CRDT-native deduplication)
 - **Consistent Handling:** All events follow same path
 - **Better Debugging:** Can inspect inbox to see all events
 
@@ -3392,13 +3392,14 @@ Your actor looks at this notebook to know what to show and what to do!
 
 **What this means:**
 - ✅ All context updates MUST flow through state machines
-- ✅ State machines invoke tools (like `@context/update`) to update context
+- ✅ State machines use `updateContext` action (infrastructure, not a tool) to update context
 - ✅ Views send events to state machines, never update context directly
-- ✅ Tools can update context, but ONLY when invoked by state machines
+- ✅ Context updates are infrastructure (like SubscriptionEngine) - pure CRDT persistence
 
-**The ONLY exception:**
+**Infrastructure updates (read-only reactive):**
 - ✅ **SubscriptionEngine** automatically updates reactive query objects (infrastructure)
 - This is infrastructure that keeps database queries in sync - not manual context updates
+- SubscriptionEngine updates are read-only derived data (reactive subscriptions)
 
 **Why this matters:**
 - **Predictable:** All context changes happen in one place (state machines)
@@ -3410,24 +3411,26 @@ Your actor looks at this notebook to know what to show and what to do!
 ```
 User clicks button
   ↓
-View sends event to state machine
+View sends event to state machine (via inbox)
   ↓
-State machine invokes @context/update tool
+State machine uses updateContext action (infrastructure)
   ↓
-Tool updates context
+updateContextCoValue() persists to context CoValue (CRDT)
+  ↓
+SubscriptionEngine reactively updates actor.context
   ↓
 View re-renders with new context
 ```
 
 **Anti-Patterns (DON'T DO THIS):**
 - ❌ Direct context mutation: `actor.context.field = value`
-- ❌ Invoking `@context/update` from views
-- ❌ Calling `ActorEngine.updateContext()` directly
+- ❌ Using `@context/update` tool (removed - context updates are infrastructure)
+- ❌ Calling `ActorEngine.updateContextCoValue()` directly from views
 - ❌ Setting error context directly in ToolEngine (should use ERROR events)
-- ❌ Named actions that mutate context directly (should use `@context/update` tool)
+- ❌ Mutating context outside of state machines
 
 **Error Handling:**
-When tools fail, state machines receive ERROR events and can update context accordingly:
+When tools fail, state machines receive ERROR events (via inbox) and can update context accordingly:
 ```json
 {
   "creating": {
@@ -3440,8 +3443,7 @@ When tools fail, state machines receive ERROR events and can update context acco
         "target": "error",
         "actions": [
           {
-            "tool": "@context/update",
-            "payload": { "error": "$$error" }
+            "updateContext": { "error": "$$error" }
           }
         ]
       }
@@ -3449,6 +3451,8 @@ When tools fail, state machines receive ERROR events and can update context acco
   }
 }
 ```
+
+**Note:** `updateContext` is infrastructure (not a tool). It directly calls `updateContextCoValue()` to persist changes to the context CoValue (CRDT).
 
 ## Context Definition
 
@@ -3736,28 +3740,25 @@ export default {
 };
 ```
 
-### Via @context/update
-Generic context field update:
+### Via updateContext (Infrastructure Action)
+Generic context field update (infrastructure, not a tool):
 
 ```json
 {
-  "tool": "@context/update",
-  "payload": {
+  "updateContext": {
     "newTodoText": "$$newTodoText",
     "viewMode": "kanban"
   }
 }
 ```
 
-JavaScript equivalent:
+**Note:** `updateContext` is infrastructure that directly calls `updateContextCoValue()` to persist changes to the context CoValue (CRDT). It's not a tool - it's pure infrastructure like SubscriptionEngine.
 
-```javascript
-export default {
-  async execute(actor, payload) {
-    Object.assign(actor.context, payload);
-  }
-};
-```
+**How it works:**
+1. State machine action evaluates payload (resolves `$` and `$$` references)
+2. Calls `actor.actorEngine.updateContextCoValue(actor, updates)` directly
+3. Persists changes to context CoValue (CRDT)
+4. SubscriptionEngine reactively updates `actor.context` (read-only derived data)
 
 ## Context Best Practices
 
@@ -3774,7 +3775,8 @@ export default {
 
 ### ❌ DON'T:
 
-- **Don't mutate directly** - Always use tools
+- **Don't mutate directly** - Always use `updateContext` action in state machines
+- **Don't use `@context/update` tool** - Removed, use `updateContext` infrastructure action instead
 - **Don't store UI elements** - No DOM references
 - **Don't store functions** - Only JSON-serializable data
 - **Don't mix concerns** - Separate data from UI state
@@ -3883,7 +3885,7 @@ User sees new todo in the list! ✨
 When you update **UI state** (like form inputs, view modes, etc.), you explicitly update context via tools:
 
 ```
-Tool mutates context (via @context/update)
+State machine uses updateContext action (infrastructure)
   ↓
 Tool completes successfully
   ↓
@@ -3902,7 +3904,7 @@ User sees updated UI
 
 ```json
 {
-  "tool": "@context/update",
+        "updateContext": {
   "payload": {
     "newTodoText": "",
     "viewMode": "kanban"
@@ -3912,8 +3914,8 @@ User sees updated UI
 
 ### Summary
 
-- **Query objects** → Automatic reactivity (MaiaOS watches for changes)
-- **UI state** → Manual updates (you explicitly update via tools)
+- **Query objects** → Automatic reactivity (SubscriptionEngine watches for changes)
+- **UI state** → Manual updates (you explicitly update via `updateContext` infrastructure action)
 - **Both trigger re-renders** → Your view stays in sync
 
 See [Reactive Data System](../developers/06_reactive-queries.md) for detailed examples.
@@ -3953,8 +3955,7 @@ Use computed values for counts, percentages, etc.:
   "states": {
     "idle": {
       "entry": {
-        "tool": "@context/update",
-        "payload": {
+        "updateContext": {
           "todosCount": { "$length": "$todos" },
           "completedCount": { "$length": "$todosDone" },
           "progressPercent": {
@@ -4154,15 +4155,15 @@ The state machine is like a traffic controller - it decides what happens next!
 **CRITICAL:** State machines are the **single source of truth** for all context changes.
 
 **Your state machine is responsible for:**
-- ✅ All context updates (via `@context/update` tool)
+- ✅ All context updates (via `updateContext` infrastructure action)
 - ✅ All data mutations (via `@db` tool)
 - ✅ All error handling (via ERROR event handlers)
 - ✅ All UI state changes (view mode, button states, form values)
 
 **State machines update context by:**
 1. Receiving events from inbox (unified event flow)
-2. Invoking tools (like `@context/update`) to update context
-3. Handling tool success/failure via SUCCESS/ERROR events (also routed through inbox)
+2. Using `updateContext` action (infrastructure, not a tool) to update context
+3. Handling tool success/failure via SUCCESS/ERROR events (routed through inbox)
 
 ## Inbox as Single Source of Truth for Events
 
@@ -4202,7 +4203,7 @@ State machine handles SUCCESS/ERROR
 - **Unified Event Log:** All events appear in inbox for complete traceability
 - **Consistent Pattern:** Single source of truth for all events
 - **Better Debugging:** Can trace all events through inbox log
-- **Watermark Consistency:** All events follow watermark pattern
+- **Per-Message Processed Flags:** Each message has a `processed` boolean flag (distributed CRDT-native deduplication)
 - **AI-Friendly:** LLMs can understand complete event flow
 
 **Anti-Patterns:**
@@ -4219,8 +4220,7 @@ State machine handles SUCCESS/ERROR
         "target": "idle",
         "actions": [
           {
-            "tool": "@context/update",
-            "payload": { "newTodoText": "$$newTodoText" }
+            "updateContext": { "newTodoText": "$$newTodoText" }
           }
         ]
       }
@@ -4228,6 +4228,8 @@ State machine handles SUCCESS/ERROR
   }
 }
 ```
+
+**Note:** `updateContext` is infrastructure (not a tool). It directly calls `updateContextCoValue()` to persist changes to the context CoValue (CRDT).
 
 **Why this matters:**
 - **Predictable:** All context changes happen in state machines
@@ -4354,7 +4356,7 @@ Or multiple actions:
   "on": {
     "UPDATE_INPUT": {
       "target": "idle",  // Stay in same state
-      "actions": [{"tool": "@context/update", "payload": {...}}]
+      "actions": [{"updateContext": {...}}]
     }
   }
 }
@@ -4444,8 +4446,7 @@ Use MaiaScript expressions in payloads:
   "SWITCH_VIEW": {
     "target": "idle",
     "actions": [{
-      "tool": "@context/update",
-      "payload": {
+      "updateContext": {
         "viewMode": "$$viewMode",
         "listButtonActive": {"$eq": ["$$viewMode", "list"]},      // Compute flag
         "kanbanButtonActive": {"$eq": ["$$viewMode", "kanban"]},   // Compute flag
@@ -4456,8 +4457,7 @@ Use MaiaScript expressions in payloads:
             "else": "@kanban"
           }
         }
-      }
-    }]
+      }]
   }
 }
 ```
@@ -4664,8 +4664,7 @@ Use the `@db` tool with different `op` values:
         "UPDATE_INPUT": {
           "target": "idle",
           "actions": [{
-            "tool": "@context/update",
-            "payload": { "newTodoText": "$$value" }
+            "updateContext": { "newTodoText": "$$value" }
           }]
         },
         "CREATE_TODO": {
@@ -4688,8 +4687,7 @@ Use the `@db` tool with different `op` values:
           }
         },
         {
-          "tool": "@context/update",
-          "payload": { "newTodoText": "" }
+          "updateContext": { "newTodoText": "" }
         }
       ],
       "on": {
@@ -4781,8 +4779,7 @@ Use the `@db` tool with different `op` values:
         "UPDATE_INPUT": {
           "target": "idle",
           "actions": [{
-            "tool": "@context/update",
-            "payload": {"newTodoText": "$$newTodoText"}
+            "updateContext": {"newTodoText": "$$newTodoText"}
           }]
         },
         "CREATE_TODO": {
@@ -4799,8 +4796,7 @@ Use the `@db` tool with different `op` values:
         "SWITCH_VIEW": {
           "target": "idle",
           "actions": [{
-            "tool": "@context/update",
-            "payload": {
+            "updateContext": {
               "viewMode": "$$viewMode",
               "listButtonActive": {"$eq": ["$$viewMode", "list"]},
               "kanbanButtonActive": {"$eq": ["$$viewMode", "kanban"]},
@@ -4933,7 +4929,7 @@ Handle these in your state definition:
 - Use `$$` for event payloads, `$` for context
 - **Compute boolean flags** - State machine computes, context stores, views reference
 - **Maintain item lookup objects** - For item-specific conditional styling
-- **Update context via tools** - Always use `@context/update` tool, never mutate directly
+- **Update context via infrastructure** - Always use `updateContext` action, never mutate directly
 - **Handle errors in state machines** - Use ERROR event handlers to update error context
 
 ### ❌ DON'T:
@@ -4944,7 +4940,7 @@ Handle these in your state definition:
 - Use `$` for event payload fields
 - Create cycles without exit conditions
 - **Don't put conditionals in views** - Compute flags in state machine instead
-- **Don't mutate context directly** - Always use `@context/update` tool
+- **Don't mutate context directly** - Always use `updateContext` infrastructure action
 - **Don't update context from views** - Views send events, state machines update context
 - **Don't update context from tools** - Tools are invoked by state machines, not the other way around
 
@@ -5197,18 +5193,23 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
 }
 ```
 
-### Context Module (`@context/*`)
+### Context Updates (Infrastructure, Not Tools)
 
-#### `@context/update`
+**Note:** Context updates are infrastructure (not tools). Use `updateContext` action in state machines:
+
 ```json
 {
-  "tool": "@context/update",
-  "payload": {
+  "updateContext": {
     "newTodoText": "Updated value",
     "someField": "new value"
   }
 }
 ```
+
+**How it works:**
+- `updateContext` is infrastructure that directly calls `updateContextCoValue()` 
+- Persists changes to context CoValue (CRDT)
+- SubscriptionEngine reactively updates `actor.context` (read-only derived data)
 
 ## Creating Custom Tools
 
@@ -5663,7 +5664,7 @@ await maia.db({
 - **Single source of truth:** All operations flow through state machines
 - **Predictable:** Easy to trace where operations come from
 - **Error handling:** State machines handle SUCCESS/ERROR events
-- **Context updates:** State machines update context via `@context/update` tool
+- **Context updates:** State machines update context via `updateContext` infrastructure action
 
 **Never:**
 - ❌ Invoke tools directly from views
@@ -5673,7 +5674,7 @@ await maia.db({
 **Always:**
 - ✅ Invoke tools from state machine actions
 - ✅ Handle SUCCESS/ERROR events in state machines
-- ✅ Update context via state machine actions using `@context/update` tool
+- ✅ Update context via state machine actions using `updateContext` infrastructure action
 
 ## Usage in State Machines
 
@@ -5835,11 +5836,9 @@ actor.actorEngine.toolEngine.execute('@db', actor, payload);
 
 ```json
 {
-  "tool": "@context/update",
-  "payload": {
+  "updateContext": {
     "todos": [...] // Don't mutate reactive data directly!
   }
-}
 ```
 
 ### 4. Handle Errors in State Machines
@@ -5859,8 +5858,7 @@ actor.actorEngine.toolEngine.execute('@db', actor, payload);
         "target": "error",
         "actions": [
           {
-            "tool": "@context/update",
-            "payload": { "error": "$$error" }
+            "updateContext": { "error": "$$error" }
           }
         ]
       }
@@ -5962,8 +5960,7 @@ actor.context.error = error.message;
           }
         },
         {
-          "tool": "@context/update",
-          "payload": {"newTodoText": ""}
+          "updateContext": {"newTodoText": ""}
         }
       ],
       "on": {
@@ -6344,12 +6341,10 @@ Data-attributes are the primary mechanism for conditional styling. The state mac
 **1. State Machine computes boolean flags:**
 ```json
 {
-  "tool": "@context/update",
-  "payload": {
+  "updateContext": {
     "listButtonActive": {"$eq": ["$$viewMode", "list"]},
     "kanbanButtonActive": {"$eq": ["$$viewMode", "kanban"]}
   }
-}
 ```
 
 **2. View references context values:**
@@ -8709,7 +8704,7 @@ This ensures type-safe, validated, and properly referenced CoJSON data structure
 
 **All context updates MUST:**
 - ✅ Flow through state machines
-- ✅ Use `@context/update` tool (never mutate directly)
+- ✅ Use `updateContext` infrastructure action (never mutate directly)
 - ✅ Be triggered by events from inbox (never directly)
 
 **The ONLY exception:**
@@ -8724,8 +8719,7 @@ This ensures type-safe, validated, and properly referenced CoJSON data structure
         "target": "idle",
         "actions": [
           {
-            "tool": "@context/update",
-            "payload": { "newTodoText": "$$newTodoText" }
+            "updateContext": { "newTodoText": "$$newTodoText" }
           }
         ]
       }
@@ -8759,7 +8753,7 @@ Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngi
 
 **Why this matters:**
 - **Unified Event Log:** All events appear in inbox for traceability
-- **Watermark Pattern:** Prevents duplicate processing
+- **Per-Message Processed Flags:** Each message has a `processed` boolean flag (distributed CRDT-native deduplication)
 - **Consistent Handling:** All events follow same path
 - **Better Debugging:** Can inspect inbox to see complete event history
 
@@ -9820,7 +9814,7 @@ App Service Actor
 - [ ] State is co-located with components that use it
 - [ ] No state duplication across actors
 - [ ] **State machines are single source of truth** - All context updates flow through state machines
-- [ ] **Use `@context/update` tool** - Always update context via state machine actions
+- [ ] **Use `updateContext` infrastructure action** - Always update context via state machine actions
 - [ ] **Handle errors in state machines** - Use ERROR event handlers to update error context
 
 ### ✅ Architecture

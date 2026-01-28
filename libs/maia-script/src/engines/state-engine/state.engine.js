@@ -18,6 +18,27 @@ import { getSchemaCoIdSafe } from '../../utils/subscription-helpers.js';
  * - Clean state interfaces for LLM reasoning
  * - Predictable state transitions
  * - Observable state changes
+ * 
+ * ARCHITECTURE - Strict Event Flow Pattern:
+ * 
+ * All events MUST flow: inbox → processMessages() → StateEngine.send() → state machine → context
+ * 
+ * - View events: handleEvent() → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+ * - External messages: sendMessage() → inbox → processMessages() → StateEngine.send()
+ * - SUCCESS/ERROR events: _invokeTool() → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+ * 
+ * Context updates are infrastructure (not tools):
+ * - State machines use `updateContext` action → updateContextCoValue() directly
+ * - No tool invocation needed - pure infrastructure (like SubscriptionEngine)
+ * - SubscriptionEngine handles reactive updates (read-only derived data)
+ * 
+ * ARCHITECTURE - Context is Single CoValue:
+ * 
+ * - actor.context = reactive read of context CoValue (via read() API + subscription)
+ * - machine.actor.context = always current (no separate machine.context property)
+ * - State machine writes: updateContextCoValue() → CoValue (persisted CRDT)
+ * - State machine reads: machine.actor.context → reactive read → UI
+ * - No JSON object replication - single source of truth via reactive read() API
  */
 export class StateEngine {
   constructor(toolEngine, evaluator, actorEngine = null) {
@@ -101,7 +122,7 @@ export class StateEngine {
       definition: stateDef,
       actor,
       currentState: stateDef.initial,
-      context: actor.context, // Share actor's context
+      // No context property - always use machine.actor.context (reactive read of CoValue)
       history: [] // State transition history
     };
     
@@ -162,12 +183,6 @@ export class StateEngine {
    * @returns {Promise<void>}
    */
   async _executeTransition(machine, transition, event, payload) {
-    // CRITICAL: Ensure machine.context always references actor.context (sync before every transition)
-    // This ensures lastCreatedId/lastCreatedText set by tools are immediately available
-    if (machine.context !== machine.actor.context) {
-      machine.context = machine.actor.context;
-    }
-    
     // For SUCCESS/ERROR events (from tool completion), preserve the original eventPayload
     // This allows actions in SUCCESS transitions to access the original event data (e.g., $$id)
     // For other events, update eventPayload with the new payload
@@ -187,7 +202,7 @@ export class StateEngine {
     // Evaluate guard (if present) - use current eventPayload
     // Check for !== undefined to allow false/0 guards
     if (guard !== undefined && guard !== null) {
-      const guardResult = await this._evaluateGuard(guard, machine.context, machine.eventPayload);
+      const guardResult = await this._evaluateGuard(guard, machine.actor.context, machine.eventPayload);
       if (!guardResult) {
         return;
       }
@@ -289,11 +304,15 @@ export class StateEngine {
       // Execute all entry actions
       await this._executeActions(machine, entry);
       
-      // After all entry actions complete, route SUCCESS directly to StateEngine if state handles it
-      // Internal events (SUCCESS/ERROR) are processed immediately without inbox routing
+      // After all entry actions complete, route SUCCESS through inbox if state handles it
+      // All events MUST flow through inbox → processMessages() → StateEngine.send()
       if (stateDef.on && stateDef.on.SUCCESS) {
-        // Route SUCCESS event directly to StateEngine (internal event, no inbox routing)
-        await this.send(machine.id, 'SUCCESS', {});
+        // Route SUCCESS through inbox → processMessages() → StateEngine.send()
+        await machine.actor.actorEngine.sendInternalEvent(
+          machine.actor.id,
+          'SUCCESS',
+          {}
+        );
       }
     }
   }
@@ -335,6 +354,15 @@ export class StateEngine {
       if (typeof action === 'string') {
         // Named action (e.g., "clearInput")
         await this._executeNamedAction(machine, action, payload);
+      } else if (typeof action === 'object' && action.updateContext) {
+        // Infrastructure action: updateContext - directly update context CoValue (not a tool)
+        // Context updates are infrastructure (like SubscriptionEngine), not tools
+        // Evaluate payload through MaiaScript (resolve $variables and $$item references)
+        // machine.actor.context is always current (reactive read of CoValue via read() API)
+        const evaluatedUpdates = await this._evaluatePayload(action.updateContext, machine.actor.context, payload);
+        // Direct infrastructure call - no tool invocation needed
+        await machine.actor.actorEngine.updateContextCoValue(machine.actor, evaluatedUpdates);
+        // No sync needed - machine.actor.context automatically updates reactively via SubscriptionEngine
       } else if (typeof action === 'object' && action.tool) {
         // Inline tool invocation - do NOT auto-send SUCCESS/ERROR
         // (we're already in the middle of a transition)
@@ -351,32 +379,29 @@ export class StateEngine {
    * @returns {Promise<void>}
    */
   async _executeNamedAction(machine, actionName, payload) {
-    // Named actions use @context/update tool to maintain single source of truth
-    // All context updates must flow through state machines via tools
+    // Named actions use infrastructure updateContextCoValue() directly
+    // Context updates are infrastructure (like SubscriptionEngine), not tools
     
     const commonActions = {
       clearInput: {
-        tool: '@context/update',
-        payload: { newTodoText: '' }
+        newTodoText: ''
       },
       resetError: {
-        tool: '@context/update',
-        payload: { error: null }
+        error: null
       },
       setLoading: {
-        tool: '@context/update',
-        payload: { isLoading: true }
+        isLoading: true
       },
       clearLoading: {
-        tool: '@context/update',
-        payload: { isLoading: false }
+        isLoading: false
       }
     };
 
-    const action = commonActions[actionName];
-    if (action) {
-      // Invoke @context/update tool (no auto-transition since we're in the middle of a transition)
-      await this._invokeTool(machine, action.tool, action.payload, false);
+    const updates = commonActions[actionName];
+    if (updates) {
+      // Direct infrastructure call - no tool invocation needed
+      await machine.actor.actorEngine.updateContextCoValue(machine.actor, updates);
+      // No sync needed - machine.actor.context automatically updates reactively via SubscriptionEngine
     } else {
       console.warn(`Unknown action: ${actionName}`);
     }
@@ -392,16 +417,10 @@ export class StateEngine {
    */
   async _invokeTool(machine, toolName, payload = {}, autoTransition = true) {
     try {
-      // CRITICAL: Ensure machine.context references actor.context (should be same reference, but verify)
-      // This ensures lastCreatedId/lastCreatedText set by @db tool are immediately available
-      if (machine.context !== machine.actor.context) {
-        console.warn(`[StateEngine] machine.context !== actor.context for ${machine.actor.id}, syncing...`);
-        machine.context = machine.actor.context;
-      }
-      
       // Evaluate payload through MaiaScript (resolve $variables and $$item references)
       // Use machine.eventPayload as item context for $$id resolution
-      const evaluatedPayload = await this._evaluatePayload(payload, machine.context, machine.eventPayload);
+      // machine.actor.context is always current (reactive read of CoValue via read() API)
+      const evaluatedPayload = await this._evaluatePayload(payload, machine.actor.context, machine.eventPayload);
       
       // Debug logging for payload evaluation (especially for publishMessage with $lastCreatedId)
       if (toolName === '@core/publishMessage' && evaluatedPayload.payload) {
@@ -412,37 +431,45 @@ export class StateEngine {
           hasText: 'text' in evaluatedPayload.payload,
           idValue: evaluatedPayload.payload.id,
           textValue: evaluatedPayload.payload.text,
-          contextHasLastCreatedId: 'lastCreatedId' in machine.context,
-          lastCreatedId: machine.context.lastCreatedId,
-          lastCreatedText: machine.context.lastCreatedText
+          contextHasLastCreatedId: 'lastCreatedId' in machine.actor.context,
+          lastCreatedId: machine.actor.context.lastCreatedId,
+          lastCreatedText: machine.actor.context.lastCreatedText
         });
       }
       
       // Execute tool via ToolEngine
       await this.toolEngine.execute(toolName, machine.actor, evaluatedPayload);
       
-      // Tool succeeded - route SUCCESS event directly to StateEngine (skip inbox for internal events)
-      // Internal events (SUCCESS/ERROR) are processed immediately without inbox routing
-      // This avoids timing issues and duplicate processing while maintaining architecture
-      // Cross-actor messages still go through inbox for proper session-based watermarking
+      // No sync needed - machine.actor.context automatically updates reactively via SubscriptionEngine
+      
+      // Tool succeeded - route SUCCESS event through inbox for unified event logging
+      // All events MUST flow through inbox → processMessages() → StateEngine.send()
+      // This ensures complete traceability and consistent event handling
       if (autoTransition) {
         const currentStateDef = machine.definition.states[machine.currentState];
         if (currentStateDef.on && currentStateDef.on.SUCCESS) {
-          // Route SUCCESS event directly to StateEngine (internal event, no inbox routing)
-          // This ensures immediate processing without waiting for reactive store updates
-          await this.send(machine.id, 'SUCCESS', {});
+          // Route SUCCESS through inbox → processMessages() → StateEngine.send()
+          await machine.actor.actorEngine.sendInternalEvent(
+            machine.actor.id,
+            'SUCCESS',
+            {}
+          );
         }
       }
     } catch (error) {
       console.error(`[StateEngine] Tool invocation failed: ${toolName}`, error);
       
-      // Tool failed - route ERROR event directly to StateEngine (skip inbox for internal events)
-      // Internal events (SUCCESS/ERROR) are processed immediately without inbox routing
+      // Tool failed - route ERROR event through inbox for unified event logging
+      // All events MUST flow through inbox → processMessages() → StateEngine.send()
       if (autoTransition) {
         const currentStateDef = machine.definition.states[machine.currentState];
         if (currentStateDef.on && currentStateDef.on.ERROR) {
-          // Route ERROR event directly to StateEngine (internal event, no inbox routing)
-          await this.send(machine.id, 'ERROR', { error: error.message });
+          // Route ERROR through inbox → processMessages() → StateEngine.send()
+          await machine.actor.actorEngine.sendInternalEvent(
+            machine.actor.id,
+            'ERROR',
+            { error: error.message }
+          );
         }
       }
     }

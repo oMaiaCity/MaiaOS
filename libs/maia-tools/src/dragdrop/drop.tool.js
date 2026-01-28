@@ -9,19 +9,25 @@ export default {
     const { schema, field = 'done', value } = payload;
     
     // Get dragged item ID from context (set by @dragdrop/start)
-    const draggedId = actor.context.draggedItemId;
+    // More resilient: check both draggedItemId and draggedItemIds object
+    const draggedId = actor.context.draggedItemId || 
+      (actor.context.draggedItemIds && Object.keys(actor.context.draggedItemIds).find(id => actor.context.draggedItemIds[id]));
+    
     if (!draggedId) {
-      console.warn('[dragdrop/drop] No draggedItemId in context');
+      // Silently skip if no drag operation in progress (may happen during rapid state changes)
+      // This is more resilient than throwing an error
       return;
     }
     
     // Resolve schema - prefer draggedSchema from context (set by start tool), then resolve payload schema
-    let schemaCoId = actor.context.draggedSchema;
+    // More resilient: also check draggedEntityType as fallback
+    let schemaCoId = actor.context.draggedSchema || actor.context.draggedEntityType;
     
     if (!schemaCoId) {
       // Fall back to payload schema
       if (!schema) {
-        throw new Error('[dragdrop/drop] Schema is required in payload or context');
+        // More resilient: if no schema available, skip silently (may happen during rapid state changes)
+        return;
       }
       
       schemaCoId = schema;

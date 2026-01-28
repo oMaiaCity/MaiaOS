@@ -47,7 +47,7 @@
 
 **All context updates MUST:**
 - ✅ Flow through state machines
-- ✅ Use `@context/update` tool (never mutate directly)
+- ✅ Use `updateContext` infrastructure action (never mutate directly)
 - ✅ Be triggered by events from inbox (never directly)
 
 **The ONLY exception:**
@@ -62,8 +62,7 @@
         "target": "idle",
         "actions": [
           {
-            "tool": "@context/update",
-            "payload": { "newTodoText": "$$newTodoText" }
+            "updateContext": { "newTodoText": "$$newTodoText" }
           }
         ]
       }
@@ -97,7 +96,7 @@ Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngi
 
 **Why this matters:**
 - **Unified Event Log:** All events appear in inbox for traceability
-- **Watermark Pattern:** Prevents duplicate processing
+- **Per-Message Processed Flags:** Each message has a `processed` boolean flag (distributed CRDT-native deduplication)
 - **Consistent Handling:** All events follow same path
 - **Better Debugging:** Can inspect inbox to see complete event history
 
@@ -1158,7 +1157,7 @@ App Service Actor
 - [ ] State is co-located with components that use it
 - [ ] No state duplication across actors
 - [ ] **State machines are single source of truth** - All context updates flow through state machines
-- [ ] **Use `@context/update` tool** - Always update context via state machine actions
+- [ ] **Use `updateContext` infrastructure action** - Always update context via state machine actions
 - [ ] **Handle errors in state machines** - Use ERROR event handlers to update error context
 
 ### ✅ Architecture

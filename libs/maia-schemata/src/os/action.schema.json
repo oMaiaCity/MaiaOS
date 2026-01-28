@@ -4,16 +4,32 @@
   "title": "Action",
   "description": "Action (tool invocation or context update)",
   "cotype": "comap",
-  "properties": {
-    "tool": {
-      "type": "string",
-      "description": "Tool identifier (e.g., '@mutation/create')"
-    },
-    "payload": {
-      "description": "Tool payload (can contain expressions)",
+  "oneOf": [
+    {
       "type": "object",
-      "additionalProperties": true
+      "properties": {
+        "tool": {
+          "type": "string",
+          "description": "Tool identifier (e.g., '@mutation/create')"
+        },
+        "payload": {
+          "description": "Tool payload (can contain expressions)",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "required": ["tool"]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "updateContext": {
+          "type": "object",
+          "description": "Context updates (infrastructure, not a tool)",
+          "additionalProperties": true
+        }
+      },
+      "required": ["updateContext"]
     }
-  },
-  "required": ["tool"]
+  ]
 }

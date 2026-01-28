@@ -9,8 +9,7 @@
           "target": "idle",
           "actions": [
             {
-              "tool": "@context/update",
-              "payload": { "newTodoText": "$$newTodoText" }
+              "updateContext": { "newTodoText": "$$newTodoText" }
             }
           ]
         },
@@ -30,8 +29,7 @@
           "target": "idle",
           "actions": [
             {
-              "tool": "@context/update",
-              "payload": {
+              "updateContext": {
                 "viewMode": "$$viewMode",
                 "listButtonActive": {
                   "$eq": ["$$viewMode", "list"]
@@ -153,16 +151,14 @@
     },
     "error": {
       "entry": {
-        "tool": "@context/update",
-        "payload": { "error": "$$error" }
+        "updateContext": { "error": "$$error" }
       },
       "on": {
         "RETRY": {
           "target": "idle",
           "actions": [
             {
-              "tool": "@context/update",
-              "payload": { "error": null }
+              "updateContext": { "error": null }
             }
           ]
         },
@@ -170,8 +166,7 @@
           "target": "idle",
           "actions": [
             {
-              "tool": "@context/update",
-              "payload": { "error": null }
+              "updateContext": { "error": null }
             }
           ]
         }

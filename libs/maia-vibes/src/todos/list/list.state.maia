@@ -35,16 +35,14 @@
     },
     "error": {
       "entry": {
-        "tool": "@context/update",
-        "payload": { "error": "$$error" }
+        "updateContext": { "error": "$$error" }
       },
       "on": {
         "RETRY": {
           "target": "idle",
           "actions": [
             {
-              "tool": "@context/update",
-              "payload": { "error": null }
+              "updateContext": { "error": null }
             }
           ]
         },
@@ -52,8 +50,7 @@
           "target": "idle",
           "actions": [
             {
-              "tool": "@context/update",
-              "payload": { "error": null }
+              "updateContext": { "error": null }
             }
           ]
         }

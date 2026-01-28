@@ -210,12 +210,6 @@ export async function processInbox(backend, actorId, inboxCoId) {
   // Note: Messages are already marked as processed above when we detect they're unprocessed
   unprocessedMessages.sort((a, b) => (a._madeAt || 0) - (b._madeAt || 0));
 
-  // Debug logging
-  if (unprocessedMessages.length > 0) {
-    console.debug(`[processInbox] Session ${currentSessionID.substring(0, 12)}... returning ${unprocessedMessages.length} unprocessed messages for ${actorId.substring(0, 12)}...`);
-    console.debug(`[processInbox]   Message types:`, unprocessedMessages.map(m => m.type));
-  }
-
   return {
     messages: unprocessedMessages
   };

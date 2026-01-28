@@ -67,7 +67,7 @@ Create a file named `{name}.actor.maia`:
 | `children` | object | No | Map of slot names to child actor references (`{"composite": "@actor/composite"}`) |
 | `subscriptions` | string | No | Co-id reference to subscriptions colist (`@subscriptions/todo`) |
 | `inbox` | string | No | Co-id reference to inbox costream (`@inbox/todo`) |
-| `inboxWatermark` | number | No | Last processed message timestamp (default: 0) |
+| `inboxWatermark` | number | No | **DEPRECATED** - Use per-message `processed` flags instead (default: 0) |
 
 **Style Properties:**
 - `brand` is **required** - shared design system (tokens, components) used by all actors
@@ -270,10 +270,11 @@ Every vibe's entry point is an **agent service actor** that orchestrates the app
 **CRITICAL:** All context updates must flow through state machines.
 
 **Pattern:**
-1. View sends event to state machine
-2. State machine invokes `@context/update` tool
-3. Tool updates context
-4. View re-renders with new context
+1. View sends event to state machine (via inbox)
+2. State machine uses `updateContext` action (infrastructure, not a tool)
+3. `updateContextCoValue()` persists to context CoValue (CRDT)
+4. SubscriptionEngine reactively updates `actor.context` (read-only derived data)
+5. View re-renders with new context
 
 **Example:**
 ```json
@@ -284,8 +285,7 @@ Every vibe's entry point is an **agent service actor** that orchestrates the app
         "target": "idle",
         "actions": [
           {
-            "tool": "@context/update",
-            "payload": { "newTodoText": "$$newTodoText" }
+            "updateContext": { "newTodoText": "$$newTodoText" }
           }
         ]
       }
@@ -297,11 +297,11 @@ Every vibe's entry point is an **agent service actor** that orchestrates the app
 **Never:**
 - ❌ Mutate context directly: `actor.context.field = value`
 - ❌ Update context from views
-- ❌ Update context from tools (unless invoked by state machine)
+- ❌ Use `@context/update` tool (removed - use `updateContext` infrastructure action)
 
 **Always:**
 - ✅ Update context via state machine actions
-- ✅ Use `@context/update` tool for context updates
+- ✅ Use `updateContext` infrastructure action for context updates
 - ✅ Handle errors via state machine ERROR events
 
 ### Step 2: Agent Service Actor Loads Composite
@@ -519,7 +519,7 @@ Referenced in actor:
 - Initialize all fields (avoid `undefined`)
 - Store only serializable data (no functions)
 - **Update context via state machines** - State machines are the single source of truth
-- **Use `@context/update` tool** - Always update context through state machine actions
+- **Use `updateContext` infrastructure action** - Always update context through state machine actions
 
 ❌ **DON'T:**
 - Store UI elements or DOM references
@@ -600,7 +600,7 @@ Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngi
 
 **Why inbox for all events:**
 - **Unified Event Log:** Complete traceability of all events
-- **Watermark Pattern:** Prevents duplicate processing
+- **Per-Message Processed Flags:** Each message has a `processed` boolean flag (distributed CRDT-native deduplication)
 - **Consistent Handling:** All events follow same path
 - **Better Debugging:** Can inspect inbox to see all events
 

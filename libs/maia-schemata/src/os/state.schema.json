@@ -20,7 +20,7 @@
             "oneOf": [
               {
                 "type": "object",
-                "description": "Inline action object",
+                "description": "Inline tool action object",
                 "properties": {
                   "tool": {
                     "type": "string",
@@ -35,22 +35,49 @@
                 "required": ["tool"]
               },
               {
+                "type": "object",
+                "description": "Infrastructure context update action",
+                "properties": {
+                  "updateContext": {
+                    "type": "object",
+                    "description": "Context updates (infrastructure, not a tool)",
+                    "additionalProperties": true
+                  }
+                },
+                "required": ["updateContext"]
+              },
+              {
                 "type": "array",
                 "description": "Array of inline action objects",
                 "items": {
-                  "type": "object",
-                  "properties": {
-                    "tool": {
-                      "type": "string",
-                      "description": "Tool identifier"
-                    },
-                    "payload": {
+                  "oneOf": [
+                    {
                       "type": "object",
-                      "description": "Tool payload",
-                      "additionalProperties": true
+                      "properties": {
+                        "tool": {
+                          "type": "string",
+                          "description": "Tool identifier"
+                        },
+                        "payload": {
+                          "type": "object",
+                          "description": "Tool payload",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": ["tool"]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "updateContext": {
+                          "type": "object",
+                          "description": "Context updates (infrastructure, not a tool)",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": ["updateContext"]
                     }
-                  },
-                  "required": ["tool"]
+                  ]
                 }
               },
               {
@@ -70,7 +97,7 @@
             "oneOf": [
               {
                 "type": "object",
-                "description": "Inline action object",
+                "description": "Inline tool action object",
                 "properties": {
                   "tool": {
                     "type": "string",
@@ -85,22 +112,49 @@
                 "required": ["tool"]
               },
               {
+                "type": "object",
+                "description": "Infrastructure context update action",
+                "properties": {
+                  "updateContext": {
+                    "type": "object",
+                    "description": "Context updates (infrastructure, not a tool)",
+                    "additionalProperties": true
+                  }
+                },
+                "required": ["updateContext"]
+              },
+              {
                 "type": "array",
                 "description": "Array of inline action objects",
                 "items": {
-                  "type": "object",
-                  "properties": {
-                    "tool": {
-                      "type": "string",
-                      "description": "Tool identifier"
-                    },
-                    "payload": {
+                  "oneOf": [
+                    {
                       "type": "object",
-                      "description": "Tool payload",
-                      "additionalProperties": true
+                      "properties": {
+                        "tool": {
+                          "type": "string",
+                          "description": "Tool identifier"
+                        },
+                        "payload": {
+                          "type": "object",
+                          "description": "Tool payload",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": ["tool"]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "updateContext": {
+                          "type": "object",
+                          "description": "Context updates (infrastructure, not a tool)",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": ["updateContext"]
                     }
-                  },
-                  "required": ["tool"]
+                  ]
                 }
               },
               {
@@ -147,7 +201,8 @@
                             "type": "object",
                             "properties": {
                               "tool": {
-                                "type": "string"
+                                "type": "string",
+                                "description": "Tool identifier"
                               },
                               "payload": {
                                 "type": "object",
@@ -155,6 +210,17 @@
                               }
                             },
                             "required": ["tool"]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "updateContext": {
+                                "type": "object",
+                                "description": "Context updates (infrastructure, not a tool)",
+                                "additionalProperties": true
+                              }
+                            },
+                            "required": ["updateContext"]
                           },
                           {
                             "$co": "@schema/action"

@@ -272,12 +272,10 @@ Data-attributes are the primary mechanism for conditional styling. The state mac
 **1. State Machine computes boolean flags:**
 ```json
 {
-  "tool": "@context/update",
-  "payload": {
+  "updateContext": {
     "listButtonActive": {"$eq": ["$$viewMode", "list"]},
     "kanbanButtonActive": {"$eq": ["$$viewMode", "kanban"]}
   }
-}
 ```
 
 **2. View references context values:**

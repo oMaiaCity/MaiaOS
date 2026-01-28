@@ -108,9 +108,16 @@ export async function handleInterfaceUpdate(subscriptionEngine, actorId, newInte
 
 /**
  * Handle context update - merge with existing context, preserve query subscriptions
+ * 
+ * CRITICAL: This is a READ-ONLY reactive update handler
+ * - Called when context CoValue changes via CRDT sync (from another browser/device)
+ * - Updates in-memory actor.context to reflect the new state from CRDT
+ * - Does NOT persist changes (changes are already persisted by the source)
+ * - This is correct behavior - we're reacting to external changes, not creating new ones
+ * 
  * @param {Object} subscriptionEngine - SubscriptionEngine instance
  * @param {string} actorId - Actor ID
- * @param {Object} newContext - Updated context (without $schema/$id)
+ * @param {Object} newContext - Updated context (without $schema/$id) from CRDT sync
  */
 export async function handleContextUpdate(subscriptionEngine, actorId, newContext) {
   const actor = subscriptionEngine.actorEngine.getActor(actorId);
@@ -138,6 +145,8 @@ export async function handleContextUpdate(subscriptionEngine, actorId, newContex
     mergedContext[key] = value;
   }
   
+  // READ-ONLY: Update in-memory context to reflect CRDT changes
+  // This is reactive - changes are already persisted by the source (other browser/device)
   actor.context = mergedContext;
 
   // Re-subscribe to any NEW query objects in the updated context

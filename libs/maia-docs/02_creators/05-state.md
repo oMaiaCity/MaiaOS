@@ -41,15 +41,15 @@ The state machine is like a traffic controller - it decides what happens next!
 **CRITICAL:** State machines are the **single source of truth** for all context changes.
 
 **Your state machine is responsible for:**
-- ✅ All context updates (via `@context/update` tool)
+- ✅ All context updates (via `updateContext` infrastructure action)
 - ✅ All data mutations (via `@db` tool)
 - ✅ All error handling (via ERROR event handlers)
 - ✅ All UI state changes (view mode, button states, form values)
 
 **State machines update context by:**
 1. Receiving events from inbox (unified event flow)
-2. Invoking tools (like `@context/update`) to update context
-3. Handling tool success/failure via SUCCESS/ERROR events (also routed through inbox)
+2. Using `updateContext` action (infrastructure, not a tool) to update context
+3. Handling tool success/failure via SUCCESS/ERROR events (routed through inbox)
 
 ## Inbox as Single Source of Truth for Events
 
@@ -89,7 +89,7 @@ State machine handles SUCCESS/ERROR
 - **Unified Event Log:** All events appear in inbox for complete traceability
 - **Consistent Pattern:** Single source of truth for all events
 - **Better Debugging:** Can trace all events through inbox log
-- **Watermark Consistency:** All events follow watermark pattern
+- **Per-Message Processed Flags:** Each message has a `processed` boolean flag (distributed CRDT-native deduplication)
 - **AI-Friendly:** LLMs can understand complete event flow
 
 **Anti-Patterns:**
@@ -106,8 +106,7 @@ State machine handles SUCCESS/ERROR
         "target": "idle",
         "actions": [
           {
-            "tool": "@context/update",
-            "payload": { "newTodoText": "$$newTodoText" }
+            "updateContext": { "newTodoText": "$$newTodoText" }
           }
         ]
       }
@@ -115,6 +114,8 @@ State machine handles SUCCESS/ERROR
   }
 }
 ```
+
+**Note:** `updateContext` is infrastructure (not a tool). It directly calls `updateContextCoValue()` to persist changes to the context CoValue (CRDT).
 
 **Why this matters:**
 - **Predictable:** All context changes happen in state machines
@@ -241,7 +242,7 @@ Or multiple actions:
   "on": {
     "UPDATE_INPUT": {
       "target": "idle",  // Stay in same state
-      "actions": [{"tool": "@context/update", "payload": {...}}]
+      "actions": [{"updateContext": {...}}]
     }
   }
 }
@@ -331,8 +332,7 @@ Use MaiaScript expressions in payloads:
   "SWITCH_VIEW": {
     "target": "idle",
     "actions": [{
-      "tool": "@context/update",
-      "payload": {
+      "updateContext": {
         "viewMode": "$$viewMode",
         "listButtonActive": {"$eq": ["$$viewMode", "list"]},      // Compute flag
         "kanbanButtonActive": {"$eq": ["$$viewMode", "kanban"]},   // Compute flag
@@ -343,8 +343,7 @@ Use MaiaScript expressions in payloads:
             "else": "@kanban"
           }
         }
-      }
-    }]
+      }]
   }
 }
 ```
@@ -551,8 +550,7 @@ Use the `@db` tool with different `op` values:
         "UPDATE_INPUT": {
           "target": "idle",
           "actions": [{
-            "tool": "@context/update",
-            "payload": { "newTodoText": "$$value" }
+            "updateContext": { "newTodoText": "$$value" }
           }]
         },
         "CREATE_TODO": {
@@ -575,8 +573,7 @@ Use the `@db` tool with different `op` values:
           }
         },
         {
-          "tool": "@context/update",
-          "payload": { "newTodoText": "" }
+          "updateContext": { "newTodoText": "" }
         }
       ],
       "on": {
@@ -668,8 +665,7 @@ Use the `@db` tool with different `op` values:
         "UPDATE_INPUT": {
           "target": "idle",
           "actions": [{
-            "tool": "@context/update",
-            "payload": {"newTodoText": "$$newTodoText"}
+            "updateContext": {"newTodoText": "$$newTodoText"}
           }]
         },
         "CREATE_TODO": {
@@ -686,8 +682,7 @@ Use the `@db` tool with different `op` values:
         "SWITCH_VIEW": {
           "target": "idle",
           "actions": [{
-            "tool": "@context/update",
-            "payload": {
+            "updateContext": {
               "viewMode": "$$viewMode",
               "listButtonActive": {"$eq": ["$$viewMode", "list"]},
               "kanbanButtonActive": {"$eq": ["$$viewMode", "kanban"]},
@@ -820,7 +815,7 @@ Handle these in your state definition:
 - Use `$$` for event payloads, `$` for context
 - **Compute boolean flags** - State machine computes, context stores, views reference
 - **Maintain item lookup objects** - For item-specific conditional styling
-- **Update context via tools** - Always use `@context/update` tool, never mutate directly
+- **Update context via infrastructure** - Always use `updateContext` action, never mutate directly
 - **Handle errors in state machines** - Use ERROR event handlers to update error context
 
 ### ❌ DON'T:
@@ -831,7 +826,7 @@ Handle these in your state definition:
 - Use `$` for event payload fields
 - Create cycles without exit conditions
 - **Don't put conditionals in views** - Compute flags in state machine instead
-- **Don't mutate context directly** - Always use `@context/update` tool
+- **Don't mutate context directly** - Always use `updateContext` infrastructure action
 - **Don't update context from views** - Views send events, state machines update context
 - **Don't update context from tools** - Tools are invoked by state machines, not the other way around
 

@@ -49,17 +49,21 @@ export default {
       }
     }
     
-    // Store drag information in context (use resolved co-id)
-    actor.context.draggedItemId = id;
-    actor.context.draggedEntityType = schemaCoId;
-    actor.context.draggedSchema = schemaCoId; // Store resolved schema for use in drop
-    
+    // CRDT-FIRST: Persist drag state to context CoValue
     // Initialize draggedItemIds object if needed
-    if (!actor.context.draggedItemIds) {
-      actor.context.draggedItemIds = {};
-    }
+    const draggedItemIds = actor.context.draggedItemIds || {};
+    draggedItemIds[id] = true;
     
-    // Set this item as dragged (for item-specific data-attribute lookups)
-    actor.context.draggedItemIds[id] = true;
+    // Persist drag information to CRDT CoValue using operations API
+    if (actor.actorEngine) {
+      await actor.actorEngine.updateContextCoValue(actor, {
+        draggedItemId: id,
+        draggedEntityType: schemaCoId,
+        draggedSchema: schemaCoId, // Store resolved schema for use in drop
+        draggedItemIds: draggedItemIds
+      });
+    } else {
+      throw new Error('[dragdrop/start] ActorEngine not available');
+    }
   }
 };

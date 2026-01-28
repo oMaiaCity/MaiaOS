@@ -217,18 +217,23 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
 }
 ```
 
-### Context Module (`@context/*`)
+### Context Updates (Infrastructure, Not Tools)
 
-#### `@context/update`
+**Note:** Context updates are infrastructure (not tools). Use `updateContext` action in state machines:
+
 ```json
 {
-  "tool": "@context/update",
-  "payload": {
+  "updateContext": {
     "newTodoText": "Updated value",
     "someField": "new value"
   }
 }
 ```
+
+**How it works:**
+- `updateContext` is infrastructure that directly calls `updateContextCoValue()` 
+- Persists changes to context CoValue (CRDT)
+- SubscriptionEngine reactively updates `actor.context` (read-only derived data)
 
 ## Creating Custom Tools
 

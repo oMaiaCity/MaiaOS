@@ -25,13 +25,14 @@ Your actor looks at this notebook to know what to show and what to do!
 
 **What this means:**
 - ✅ All context updates MUST flow through state machines
-- ✅ State machines invoke tools (like `@context/update`) to update context
+- ✅ State machines use `updateContext` action (infrastructure, not a tool) to update context
 - ✅ Views send events to state machines, never update context directly
-- ✅ Tools can update context, but ONLY when invoked by state machines
+- ✅ Context updates are infrastructure (like SubscriptionEngine) - pure CRDT persistence
 
-**The ONLY exception:**
+**Infrastructure updates (read-only reactive):**
 - ✅ **SubscriptionEngine** automatically updates reactive query objects (infrastructure)
 - This is infrastructure that keeps database queries in sync - not manual context updates
+- SubscriptionEngine updates are read-only derived data (reactive subscriptions)
 
 **Why this matters:**
 - **Predictable:** All context changes happen in one place (state machines)
@@ -43,24 +44,26 @@ Your actor looks at this notebook to know what to show and what to do!
 ```
 User clicks button
   ↓
-View sends event to state machine
+View sends event to state machine (via inbox)
   ↓
-State machine invokes @context/update tool
+State machine uses updateContext action (infrastructure)
   ↓
-Tool updates context
+updateContextCoValue() persists to context CoValue (CRDT)
+  ↓
+SubscriptionEngine reactively updates actor.context
   ↓
 View re-renders with new context
 ```
 
 **Anti-Patterns (DON'T DO THIS):**
 - ❌ Direct context mutation: `actor.context.field = value`
-- ❌ Invoking `@context/update` from views
-- ❌ Calling `ActorEngine.updateContext()` directly
+- ❌ Using `@context/update` tool (removed - context updates are infrastructure)
+- ❌ Calling `ActorEngine.updateContextCoValue()` directly from views
 - ❌ Setting error context directly in ToolEngine (should use ERROR events)
-- ❌ Named actions that mutate context directly (should use `@context/update` tool)
+- ❌ Mutating context outside of state machines
 
 **Error Handling:**
-When tools fail, state machines receive ERROR events and can update context accordingly:
+When tools fail, state machines receive ERROR events (via inbox) and can update context accordingly:
 ```json
 {
   "creating": {
@@ -73,8 +76,7 @@ When tools fail, state machines receive ERROR events and can update context acco
         "target": "error",
         "actions": [
           {
-            "tool": "@context/update",
-            "payload": { "error": "$$error" }
+            "updateContext": { "error": "$$error" }
           }
         ]
       }
@@ -82,6 +84,8 @@ When tools fail, state machines receive ERROR events and can update context acco
   }
 }
 ```
+
+**Note:** `updateContext` is infrastructure (not a tool). It directly calls `updateContextCoValue()` to persist changes to the context CoValue (CRDT).
 
 ## Context Definition
 
@@ -369,28 +373,25 @@ export default {
 };
 ```
 
-### Via @context/update
-Generic context field update:
+### Via updateContext (Infrastructure Action)
+Generic context field update (infrastructure, not a tool):
 
 ```json
 {
-  "tool": "@context/update",
-  "payload": {
+  "updateContext": {
     "newTodoText": "$$newTodoText",
     "viewMode": "kanban"
   }
 }
 ```
 
-JavaScript equivalent:
+**Note:** `updateContext` is infrastructure that directly calls `updateContextCoValue()` to persist changes to the context CoValue (CRDT). It's not a tool - it's pure infrastructure like SubscriptionEngine.
 
-```javascript
-export default {
-  async execute(actor, payload) {
-    Object.assign(actor.context, payload);
-  }
-};
-```
+**How it works:**
+1. State machine action evaluates payload (resolves `$` and `$$` references)
+2. Calls `actor.actorEngine.updateContextCoValue(actor, updates)` directly
+3. Persists changes to context CoValue (CRDT)
+4. SubscriptionEngine reactively updates `actor.context` (read-only derived data)
 
 ## Context Best Practices
 
@@ -407,7 +408,8 @@ export default {
 
 ### ❌ DON'T:
 
-- **Don't mutate directly** - Always use tools
+- **Don't mutate directly** - Always use `updateContext` action in state machines
+- **Don't use `@context/update` tool** - Removed, use `updateContext` infrastructure action instead
 - **Don't store UI elements** - No DOM references
 - **Don't store functions** - Only JSON-serializable data
 - **Don't mix concerns** - Separate data from UI state
@@ -516,7 +518,7 @@ User sees new todo in the list! ✨
 When you update **UI state** (like form inputs, view modes, etc.), you explicitly update context via tools:
 
 ```
-Tool mutates context (via @context/update)
+State machine uses updateContext action (infrastructure)
   ↓
 Tool completes successfully
   ↓
@@ -535,7 +537,7 @@ User sees updated UI
 
 ```json
 {
-  "tool": "@context/update",
+        "updateContext": {
   "payload": {
     "newTodoText": "",
     "viewMode": "kanban"
@@ -545,8 +547,8 @@ User sees updated UI
 
 ### Summary
 
-- **Query objects** → Automatic reactivity (MaiaOS watches for changes)
-- **UI state** → Manual updates (you explicitly update via tools)
+- **Query objects** → Automatic reactivity (SubscriptionEngine watches for changes)
+- **UI state** → Manual updates (you explicitly update via `updateContext` infrastructure action)
 - **Both trigger re-renders** → Your view stays in sync
 
 See [Reactive Data System](../developers/06_reactive-queries.md) for detailed examples.
@@ -586,8 +588,7 @@ Use computed values for counts, percentages, etc.:
   "states": {
     "idle": {
       "entry": {
-        "tool": "@context/update",
-        "payload": {
+        "updateContext": {
           "todosCount": { "$length": "$todos" },
           "completedCount": { "$length": "$todosDone" },
           "progressPercent": {
