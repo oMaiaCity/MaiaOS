@@ -17,7 +17,232 @@ function escapeHtml(text) {
 	return div.innerHTML;
 }
 
-export async function renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, registerSubscription) {
+/**
+ * Load vibes from account.vibes registry dynamically using read() API
+ * The read() API handles reactivity internally - we just read the current data
+ * @param {Object} maia - MaiaOS instance
+ * @param {Object} cojsonAPI - CoJSON API instance
+ * @returns {Promise<Array>} Array of vibe objects with {key, label, coId}
+ */
+async function loadVibesFromAccount(maia, cojsonAPI) {
+	const vibes = [];
+	
+	if (!maia || !cojsonAPI) {
+		return vibes;
+	}
+	
+	try {
+		const account = maia.id.maiaId;
+		// Read account.vibes CoMap using read() API operations
+		// The read() API handles reactivity internally - we just read the current value
+		const accountStore = await cojsonAPI.cojson({op: 'read', schema: '@account', key: account.id});
+		const accountData = accountStore.value || accountStore;
+		
+		// Operations API returns flat objects: {id: '...', profile: '...', vibes: '...'}
+		if (accountData && accountData.vibes && typeof accountData.vibes === 'string' && accountData.vibes.startsWith('co_')) {
+			const vibesId = accountData.vibes;
+			const vibesStore = await cojsonAPI.cojson({op: 'read', schema: vibesId, key: vibesId});
+			const vibesData = vibesStore.value || vibesStore;
+			
+			// Operations API returns flat objects: {id: '...', todos: 'co_...', ...}
+			if (vibesData && typeof vibesData === 'object' && !Array.isArray(vibesData)) {
+				// Extract vibe keys (exclude metadata keys)
+				const vibeKeys = Object.keys(vibesData).filter(k => 
+					k !== 'id' && 
+					k !== 'loading' && 
+					k !== 'error' && 
+					k !== '$schema' && 
+					k !== 'type'
+				);
+				
+				// Add each vibe from account.vibes
+				for (const vibeKey of vibeKeys) {
+					const vibeCoId = vibesData[vibeKey];
+					if (typeof vibeCoId === 'string' && vibeCoId.startsWith('co_')) {
+						vibes.push({
+							key: vibeKey,
+							label: `${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)} Vibe`,
+							coId: vibeCoId
+						});
+					}
+				}
+			}
+		}
+	} catch (error) {
+		console.warn('[Dashboard] Failed to load vibes dynamically:', error);
+	}
+	
+	return vibes;
+}
+
+/**
+ * Render dashboard screen with grid layout
+ * Uses clean read() API - no manual subscription handling needed
+ */
+async function renderDashboard(maia, cojsonAPI, authState, syncState, navigateToScreen) {
+	const accountId = maia?.id?.maiaId?.id || '';
+	
+	// Load vibes dynamically using clean read() API (handles reactivity internally)
+	const vibes = await loadVibesFromAccount(maia, cojsonAPI);
+	
+	// Create DB Viewer card
+	const dbViewerCard = `
+		<div class="dashboard-card whitish-card" onclick="window.navigateToScreen('db-viewer')">
+			<div class="dashboard-card-content">
+				<div class="dashboard-card-icon">
+					<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M4 7h16M4 12h16M4 17h16"/>
+					</svg>
+				</div>
+				<h3 class="dashboard-card-title">DB Viewer</h3>
+				<p class="dashboard-card-description">Explore and inspect your CoValues</p>
+			</div>
+		</div>
+	`;
+	
+	// Create vibe cards
+	const vibeCards = vibes.map(vibe => `
+		<div class="dashboard-card whitish-card" onclick="window.loadVibe('${escapeHtml(vibe.key)}')">
+			<div class="dashboard-card-content">
+				<div class="dashboard-card-icon">
+					<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+					</svg>
+				</div>
+				<h3 class="dashboard-card-title">${escapeHtml(vibe.label)}</h3>
+				<p class="dashboard-card-description">Open ${escapeHtml(vibe.label)}</p>
+			</div>
+		</div>
+	`).join('');
+	
+	const cards = dbViewerCard + vibeCards;
+	
+	document.getElementById("app").innerHTML = `
+		<div class="db-container">
+			<header class="db-header db-card whitish-card">
+				<div class="header-content">
+					<div class="header-left">
+						<h1>Maia City</h1>
+						<code class="db-status">Connected • ${truncate(accountId, 12)}</code>
+					</div>
+					<div class="header-right">
+						<!-- Sync Status Indicator -->
+						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
+							<span class="sync-dot"></span>
+							<span class="sync-text">
+								${syncState.connected && syncState.syncing ? 'Syncing' : 
+								  syncState.connected ? 'Connected' : 
+								  syncState.error || 'Offline'}
+							</span>
+						</div>
+						${authState.signedIn ? `
+							<button class="sign-out-btn" onclick="window.handleSignOut()">
+								Sign Out
+							</button>
+						` : ''}
+					</div>
+				</div>
+			</header>
+			
+			<div class="dashboard-main">
+				<div class="dashboard-grid">
+					${cards || '<div class="empty-state p-12 text-center text-slate-400 italic">No apps available</div>'}
+				</div>
+			</div>
+		</div>
+	`;
+}
+
+/**
+ * Render vibe viewer screen (full-screen vibe display)
+ */
+async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVibe, navigateToScreen) {
+	const accountId = maia?.id?.maiaId?.id || '';
+	const vibeLabel = currentVibe ? `${currentVibe.charAt(0).toUpperCase() + currentVibe.slice(1)} Vibe` : 'Vibe';
+	
+	document.getElementById("app").innerHTML = `
+		<div class="db-container">
+			<header class="db-header db-card whitish-card">
+				<div class="header-content">
+					<div class="header-left">
+						<button class="back-btn" onclick="window.navigateToScreen('dashboard')" title="Back to Dashboard">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+							</svg>
+							<span class="back-label">Back</span>
+						</button>
+						<h1>${escapeHtml(vibeLabel)}</h1>
+						<code class="db-status">Connected • ${truncate(accountId, 12)}</code>
+					</div>
+					<div class="header-right">
+						<!-- Sync Status Indicator -->
+						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
+							<span class="sync-dot"></span>
+							<span class="sync-text">
+								${syncState.connected && syncState.syncing ? 'Syncing' : 
+								  syncState.connected ? 'Connected' : 
+								  syncState.error || 'Offline'}
+							</span>
+						</div>
+						${authState.signedIn ? `
+							<button class="sign-out-btn" onclick="window.handleSignOut()">
+								Sign Out
+							</button>
+						` : ''}
+					</div>
+				</div>
+			</header>
+			
+			<div class="vibe-viewer-main">
+				<div class="vibe-card db-card whitish-card">
+					<div id="vibe-container-${escapeHtml(currentVibe)}" class="vibe-container"></div>
+				</div>
+			</div>
+		</div>
+	`;
+	
+	// Load vibe asynchronously after DOM is updated
+	requestAnimationFrame(async () => {
+		try {
+			await new Promise(resolve => setTimeout(resolve, 10));
+			
+			const container = document.getElementById(`vibe-container-${currentVibe}`);
+			if (!container) {
+				console.error(`[Vibe Viewer] Container not found: vibe-container-${currentVibe}`);
+				return;
+			}
+			if (!maia) {
+				console.error(`[Vibe Viewer] MaiaOS instance not available`);
+				return;
+			}
+			// Store container reference for cleanup on unload
+			window.currentVibeContainer = container;
+			// Load vibe directly
+			await maia.loadVibeFromAccount(currentVibe, container);
+		} catch (error) {
+			console.error(`❌ Failed to load vibe ${currentVibe}:`, error);
+			const container = document.getElementById(`vibe-container-${currentVibe}`);
+			if (container) {
+				container.innerHTML = `<div class="empty-state p-8 text-center text-rose-500 font-medium bg-rose-50/50 rounded-2xl border border-rose-100">Error loading vibe: ${error.message}</div>`;
+			}
+		}
+	});
+}
+
+export async function renderApp(maia, cojsonAPI, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen, registerSubscription) {
+	// Route to appropriate screen based on currentScreen
+	if (currentScreen === 'dashboard') {
+		// Dashboard uses clean read() API - no subscription handling needed
+		await renderDashboard(maia, cojsonAPI, authState, syncState, navigateToScreen);
+		return;
+	}
+	
+	if (currentScreen === 'vibe-viewer' && currentVibe) {
+		await renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVibe, navigateToScreen);
+		return;
+	}
+	
+	// Default: render DB viewer (currentScreen === 'db-viewer')
 	// Helper to render any value consistently
 	const renderValue = (value, depth = 0) => {
 		if (depth > 2) return '<span class="nested-depth">...</span>';
@@ -224,7 +449,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 						lastDataHash = currentDataHash;
 						// Use setTimeout to prevent infinite loops and batch updates
 						setTimeout(() => {
-							renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, switchView, selectCoValue, registerSubscription);
+							renderApp(maia, cojsonAPI, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen, registerSubscription);
 						}, 0);
 					}
 				});
@@ -262,7 +487,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 							lastLength = updatedResult.length;
 							// Use setTimeout to prevent infinite loops and batch updates
 							setTimeout(() => {
-								renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, switchView, selectCoValue, registerSubscription);
+								renderApp(maia, cojsonAPI, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen, registerSubscription);
 							}, 0);
 						}
 					});
@@ -297,7 +522,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 		viewSubtitle = '';
 	}
 	
-	// Build account structure navigation (Account + dynamically loaded vibes)
+	// Build account structure navigation (Account only - vibes removed from sidebar)
 	const navigationItems = [];
 	
 	// Entry 1: Account itself
@@ -306,92 +531,13 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 		label: 'Account',
 		type: 'account'
 	});
-	
-	// Entry 2+: Dynamically load vibes from account.vibes
-	try {
-		// Read account.vibes CoMap to get all available vibes
-		const accountStore = await cojsonAPI.cojson({op: 'read', schema: '@account', key: account.id});
-		const accountData = accountStore.value || accountStore;
-		
-		// Operations API returns flat objects: {id: '...', profile: '...', vibes: '...'}
-		if (accountData && accountData.vibes && typeof accountData.vibes === 'string' && accountData.vibes.startsWith('co_')) {
-			const vibesId = accountData.vibes;
-			const vibesStore = await cojsonAPI.cojson({op: 'read', schema: vibesId, key: vibesId});
-			const vibesData = vibesStore.value || vibesStore;
-			
-			// Operations API returns flat objects: {id: '...', todos: 'co_...', ...}
-			if (vibesData && typeof vibesData === 'object' && !Array.isArray(vibesData)) {
-				// Extract vibe keys (exclude metadata keys)
-				const vibeKeys = Object.keys(vibesData).filter(k => 
-					k !== 'id' && 
-					k !== 'loading' && 
-					k !== 'error' && 
-					k !== '$schema' && 
-					k !== 'type'
-				);
-				
-				// Add each vibe from account.vibes to navigation
-				for (const vibeKey of vibeKeys) {
-					const vibeCoId = vibesData[vibeKey];
-					if (typeof vibeCoId === 'string' && vibeCoId.startsWith('co_')) {
-						navigationItems.push({
-							id: `vibe-${vibeKey}`,
-							label: `${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)} Vibe`,
-							type: 'vibe',
-							vibeKey: vibeKey
-						});
-					}
-				}
-			}
-		}
-	} catch (error) {
-		console.warn('[DB Viewer] Failed to load vibes dynamically, falling back to hardcoded list:', error);
-		// Fallback: Add hardcoded todos vibe if dynamic loading fails
-		navigationItems.push({
-			id: 'todos-vibe',
-			label: 'Todos Vibe',
-			type: 'vibe',
-			vibeKey: 'todos'
-		});
-	}
 
 	// Build table content based on view
 	let tableContent = '';
 	let headerInfo = null; // Store header info for colist/costream to display in inspector-header
 	
-	// If a vibe is active, render vibe content instead of DB content
-	// Ensure currentVibe is a string (not a function or other type)
-	if (currentVibe && typeof currentVibe === 'string') {
-		tableContent = `<div id="vibe-container-${currentVibe}" class="vibe-container" style="width: 100%; height: 100%; min-height: 400px;"></div>`;
-		// Load vibe asynchronously after DOM is updated
-		// Use requestAnimationFrame to ensure DOM is ready
-		requestAnimationFrame(async () => {
-			try {
-				// Wait a bit more to ensure DOM is fully updated
-				await new Promise(resolve => setTimeout(resolve, 10));
-				
-				const container = document.getElementById(`vibe-container-${currentVibe}`);
-				if (!container) {
-					console.error(`[DB Viewer] Container not found: vibe-container-${currentVibe}. Available IDs:`, Array.from(document.querySelectorAll('[id^="vibe-container"]')).map(el => el.id));
-					return;
-				}
-				if (!maia) {
-					console.error(`[DB Viewer] MaiaOS instance not available`);
-					return;
-				}
-				// Store container reference for cleanup on unload (accessible via window.currentVibeContainer)
-				window.currentVibeContainer = container;
-				// Reuse existing maia session - load vibe directly
-				await maia.loadVibeFromAccount(currentVibe, container);
-			} catch (error) {
-				console.error(`❌ Failed to load vibe ${currentVibe}:`, error);
-				const container = document.getElementById(`vibe-container-${currentVibe}`);
-				if (container) {
-					container.innerHTML = `<div class="empty-state p-8 text-center text-rose-500 font-medium bg-rose-50/50 rounded-2xl border border-rose-100">Error loading vibe: ${error.message}</div>`;
-				}
-			}
-		});
-	} else if (currentContextCoValueId && data) {
+	// DB Viewer only shows DB content (no vibe rendering here)
+	if (currentContextCoValueId && data) {
 		// Explorer-style: if context CoValue is loaded, show its properties in main container
 		// Show CoValue properties in main container (reuse property rendering from detail view)
 		if (data.error && !data.loading) {
@@ -551,7 +697,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 			}
 		}
 		
-		metadataSidebar = currentVibe ? '' : `
+		metadataSidebar = `
 			<aside class="db-metadata db-card whitish-card">
 				<div class="metadata-content">
 					<!-- Consolidated Metadata View (no tabs) -->
@@ -648,25 +794,10 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 		`;
 	}
 	
-	// Build sidebar navigation items (flat structure, same visual level)
+	// Build sidebar navigation items (Account only - no vibes)
 	const sidebarItems = navigationItems.map(item => {
-		// Handle vibe items - load vibe inline
-		if (item.vibeKey) {
-			const isActive = currentVibe === item.vibeKey;
-			// Use data attribute to avoid template string interpolation issues
-			const vibeKeyEscaped = escapeHtml(item.vibeKey);
-			return `
-				<div class="sidebar-item ${isActive ? 'active' : ''}" data-vibe-key="${vibeKeyEscaped}" onclick="window.loadVibe(this.dataset.vibeKey)">
-					<div class="sidebar-label">
-						<span class="sidebar-name">${item.label}</span>
-						${item.count !== undefined ? `<span class="sidebar-count">${item.count}</span>` : ''}
-					</div>
-				</div>
-			`;
-		}
-		
 		// Account navigation - select account CoValue
-		const isActive = currentContextCoValueId === item.id || (currentView === 'account' && !currentContextCoValueId && !currentVibe);
+		const isActive = currentContextCoValueId === item.id || (currentView === 'account' && !currentContextCoValueId);
 		
 		const clickHandler = `onclick="selectCoValue('${item.id}')"`;
 		
@@ -685,6 +816,12 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 			<header class="db-header db-card whitish-card">
 				<div class="header-content">
 					<div class="header-left">
+						<button class="back-btn" onclick="window.navigateToScreen('dashboard')" title="Back to Dashboard">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+							</svg>
+							<span class="back-label">Back</span>
+						</button>
 						<h1>Maia DB</h1>
 						<code class="db-status">Connected • ${truncate(accountId, 12)}</code>
 					</div>
@@ -721,8 +858,8 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 								<h3>Actions</h3>
 							</div>
 							<div class="sidebar-content sidebar-actions-row">
-								${(currentContextCoValueId || currentVibe) ? `
-									<div class="sidebar-item back-sidebar-item" onclick="${currentVibe ? 'window.loadVibe(null)' : 'goBack()'}" title="Back">
+								${currentContextCoValueId ? `
+									<div class="sidebar-item back-sidebar-item" onclick="goBack()" title="Back">
 										<div class="sidebar-label">
 											<svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -752,9 +889,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentVi
 						<div class="inspector-content-inner">
 						<div class="inspector-header">
 							<div class="flex items-center gap-3 flex-grow">
-								${currentVibe && typeof currentVibe === 'string' ? `
-									<h2>${currentVibe === 'todos' ? 'Todos Vibe' : currentVibe}</h2>
-								` : currentContextCoValueId && data?.id ? `
+								${currentContextCoValueId && data?.id ? `
 									<code class="co-id-header">${truncate(data.id, 32)}</code>
 								` : `
 									<h2>${viewTitle}</h2>

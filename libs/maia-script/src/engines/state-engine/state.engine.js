@@ -422,21 +422,6 @@ export class StateEngine {
       // machine.actor.context is always current (reactive read of CoValue via read() API)
       const evaluatedPayload = await this._evaluatePayload(payload, machine.actor.context, machine.eventPayload);
       
-      // Debug logging for payload evaluation (especially for publishMessage with $lastCreatedId)
-      if (toolName === '@core/publishMessage' && evaluatedPayload.payload) {
-        console.log(`[StateEngine] Evaluated publishMessage payload:`, {
-          type: evaluatedPayload.type,
-          payloadKeys: Object.keys(evaluatedPayload.payload),
-          hasId: 'id' in evaluatedPayload.payload,
-          hasText: 'text' in evaluatedPayload.payload,
-          idValue: evaluatedPayload.payload.id,
-          textValue: evaluatedPayload.payload.text,
-          contextHasLastCreatedId: 'lastCreatedId' in machine.actor.context,
-          lastCreatedId: machine.actor.context.lastCreatedId,
-          lastCreatedText: machine.actor.context.lastCreatedText
-        });
-      }
-      
       // Execute tool via ToolEngine
       await this.toolEngine.execute(toolName, machine.actor, evaluatedPayload);
       

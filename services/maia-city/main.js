@@ -15,11 +15,13 @@ import { renderApp } from './db-view.js';
 
 let maia;
 let cojsonAPI = null; // CoJSON API instance
+let currentScreen = 'dashboard'; // Current screen: 'dashboard' | 'db-viewer' | 'vibe-viewer'
 let currentView = 'account'; // Current schema filter (default: 'account')
 let currentContextCoValueId = null; // Currently loaded CoValue in main context (explorer-style navigation)
 let currentVibe = null; // Currently loaded vibe (null = DB view mode, 'todos' = todos vibe, etc.)
 let currentVibeContainer = null; // Currently loaded vibe container element (for cleanup on unload)
 let navigationHistory = []; // Navigation history stack for back button
+let isRendering = false; // Guard to prevent render loops
 let authState = {
 	signedIn: false,
 	accountID: null,
@@ -35,6 +37,7 @@ let syncState = {
 // Subscription management for ReactiveStore updates
 let activeStoreSubscriptions = new Map(); // coId/queryKey → unsubscribe function
 let unsubscribeSync = null;
+let syncStateRenderTimeout = null; // Debounce sync state renders
 
 // Check if user has previously authenticated (localStorage flag only, no secrets)
 const HAS_ACCOUNT_KEY = 'maia_has_account';
@@ -148,17 +151,29 @@ async function signIn() {
 		
 		// Subscribe to sync state changes
 		unsubscribeSync = subscribeSyncState((state) => {
+			// Only update if state actually changed
+			const stateChanged = JSON.stringify(syncState) !== JSON.stringify(state);
 			syncState = state;
-			renderAppInternal(); // Re-render when sync state changes
+			
+			// Debounce re-renders to prevent loops
+			if (stateChanged && !isRendering) {
+				if (syncStateRenderTimeout) {
+					clearTimeout(syncStateRenderTimeout);
+				}
+				syncStateRenderTimeout = setTimeout(() => {
+					if (!isRendering) {
+						renderAppInternal(); // Re-render when sync state changes
+					}
+				}, 100); // Small debounce
+			}
 		});
 		
 		// Explicitly load linked CoValues from IndexedDB
 		await loadLinkedCoValues();
 		
-		// Set account as default context
-		if (maia && maia.id && maia.id.maiaId) {
-			currentContextCoValueId = maia.id.maiaId.id;
-		}
+		// Start with dashboard screen (don't set default context)
+		currentScreen = 'dashboard';
+		currentContextCoValueId = null;
 		
 		renderAppInternal();
 		
@@ -257,14 +272,26 @@ async function register() {
 		
 		// Subscribe to sync state changes
 		unsubscribeSync = subscribeSyncState((state) => {
+			// Only update if state actually changed
+			const stateChanged = JSON.stringify(syncState) !== JSON.stringify(state);
 			syncState = state;
-			renderAppInternal(); // Re-render when sync state changes
+			
+			// Debounce re-renders to prevent loops
+			if (stateChanged && !isRendering) {
+				if (syncStateRenderTimeout) {
+					clearTimeout(syncStateRenderTimeout);
+				}
+				syncStateRenderTimeout = setTimeout(() => {
+					if (!isRendering) {
+						renderAppInternal(); // Re-render when sync state changes
+					}
+				}, 100); // Small debounce
+			}
 		});
 
-		// Set account as default context
-		if (maia && maia.id && maia.id.maiaId) {
-			currentContextCoValueId = maia.id.maiaId.id;
-		}
+		// Start with dashboard screen (don't set default context)
+		currentScreen = 'dashboard';
+		currentContextCoValueId = null;
 
 		renderAppInternal();
 		
@@ -427,6 +454,17 @@ window.handleSignOut = signOut;
 window.handleSeed = handleSeed;
 window.showToast = showToast; // Expose for debugging
 
+// Navigation function for screen transitions
+function navigateToScreen(screen) {
+	currentScreen = screen;
+	if (screen === 'dashboard') {
+		currentVibe = null;
+		currentContextCoValueId = null;
+		navigationHistory = [];
+	}
+	renderAppInternal();
+}
+
 // switchView moved above selectCoValue
 
 function selectCoValue(coId, skipHistory = false) {
@@ -452,6 +490,7 @@ function selectCoValue(coId, skipHistory = false) {
 
 	// Explorer-style navigation: load CoValue into main container context
 	currentContextCoValueId = coId;
+	currentScreen = 'db-viewer'; // Navigate to DB viewer when selecting a CoValue
 	renderAppInternal();
 
 	// If selecting a CoValue, subscribe to its loading state
@@ -482,16 +521,18 @@ function goBack() {
 		return;
 	}
 	
-	// Navigate back in history
-	if (navigationHistory.length > 0) {
-		const previousCoId = navigationHistory.pop();
-		selectCoValue(previousCoId, true); // Skip adding to history
-	} else {
-		// No history, go to account root
-		const accountId = maia?.id?.maiaId?.id;
-		if (accountId) {
-			selectCoValue(accountId, true);
+	// If we're in db-viewer, navigate back in history or go to dashboard
+	if (currentScreen === 'db-viewer') {
+		if (navigationHistory.length > 0) {
+			const previousCoId = navigationHistory.pop();
+			selectCoValue(previousCoId, true); // Skip adding to history
+		} else {
+			// No history, go to dashboard
+			navigateToScreen('dashboard');
 		}
+	} else {
+		// Default: go to dashboard
+		navigateToScreen('dashboard');
 	}
 }
 
@@ -502,6 +543,7 @@ function switchView(view) {
 	currentView = view;
 	currentContextCoValueId = null; // Reset context when switching views
 	navigationHistory = []; // Clear navigation history when switching views
+	currentScreen = 'db-viewer'; // Ensure we're in DB viewer when switching views
 	renderAppInternal();
 }
 
@@ -518,23 +560,37 @@ function cleanupStoreSubscriptions() {
 }
 
 async function renderAppInternal() {
-	// Register subscription callback to track ReactiveStore subscriptions
-	const registerSubscription = (key, unsubscribe) => {
-		// Clean up old subscription for this key if it exists
-		const oldUnsubscribe = activeStoreSubscriptions.get(key);
-		if (oldUnsubscribe) {
-			try {
-				oldUnsubscribe();
-			} catch (e) {
-				console.warn(`[DB Viewer] Error cleaning up old subscription for ${key}:`, e);
-			}
-		}
-		// Store new subscription
-		activeStoreSubscriptions.set(key, unsubscribe);
-	};
+	// Guard against render loops
+	if (isRendering) {
+		return;
+	}
 	
-	await renderApp(maia, cojsonAPI, authState, syncState, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, registerSubscription);
+	isRendering = true;
+	
+	try {
+		// Register subscription callback to track ReactiveStore subscriptions
+		const registerSubscription = (key, unsubscribe) => {
+			// Clean up old subscription for this key if it exists
+			const oldUnsubscribe = activeStoreSubscriptions.get(key);
+			if (oldUnsubscribe) {
+				try {
+					oldUnsubscribe();
+				} catch (e) {
+					console.warn(`[DB Viewer] Error cleaning up old subscription for ${key}:`, e);
+				}
+			}
+			// Store new subscription
+			activeStoreSubscriptions.set(key, unsubscribe);
+		};
+		
+		await renderApp(maia, cojsonAPI, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen, registerSubscription);
+	} finally {
+		isRendering = false;
+	}
 }
+
+// Expose renderAppInternal globally for reactive updates
+window.renderAppInternal = renderAppInternal;
 
 /**
  * Load a vibe inline in the main context area
@@ -565,28 +621,20 @@ async function loadVibe(vibeKey) {
 			window.currentVibeContainer = null;
 			
 			currentVibe = null;
-			// Restore previous context if available, otherwise keep current context
-			if (navigationHistory.length > 0) {
-				const previousCoId = navigationHistory.pop();
-				currentContextCoValueId = previousCoId;
-			} else if (currentContextCoValueId === null) {
-				// No history and no context, go to account root
-				const accountId = maia?.id?.maiaId?.id;
-				if (accountId) {
-					currentContextCoValueId = accountId;
-				}
-			}
+			// Navigate back to dashboard when exiting vibe
+			navigateToScreen('dashboard');
 		} else {
 			// Save current context to history before entering vibe mode
 			if (currentContextCoValueId !== null) {
 				navigationHistory.push(currentContextCoValueId);
 			}
-			// Set current vibe state
+			// Set current vibe state and navigate to vibe viewer
 			currentVibe = vibeKey;
 			currentContextCoValueId = null; // Clear DB context
+			currentScreen = 'vibe-viewer';
 		}
 		
-		// Re-render to show vibe content or return to DB view
+		// Re-render to show vibe content or return to dashboard
 		await renderAppInternal();
 	} catch (error) {
 		console.error(`[MaiaCity] Failed to load vibe ${vibeKey}:`, error);
@@ -737,6 +785,7 @@ window.switchView = switchView;
 window.selectCoValue = selectCoValue;
 window.goBack = goBack;
 window.loadVibe = loadVibe;
+window.navigateToScreen = navigateToScreen;
 window.toggleExpand = toggleExpand;
 
 init();
