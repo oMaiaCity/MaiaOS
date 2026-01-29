@@ -4,17 +4,22 @@
   "content": {
     "class": "inbox-logs",
     "$each": {
-      "items": "$todos",
+      "items": "$allActors",
       "template": {
         "class": "card",
         "attrs": {
-          "data-done": "$$done"
+          "data-role": "$$role"
         },
         "children": [
           {
             "tag": "span",
-            "class": "body",
-            "text": "$$text"
+            "class": "role",
+            "text": "$$role"
+          },
+          {
+            "tag": "span",
+            "class": "id",
+            "text": "$$id"
           }
         ]
       }

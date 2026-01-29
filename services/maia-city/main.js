@@ -665,7 +665,7 @@ function toggleExpand(expandId) {
  * Debug helper function for inspecting todos state
  * Exposed as window.debugTodos() for console access
  */
-window.debugTodos = function() {
+window.debugTodos = async function() {
 	if (!maia) {
 		console.error('[debugTodos] MaiaOS not initialized');
 		return;
@@ -737,7 +737,7 @@ window.debugTodos = function() {
 	if (backend) {
 		try {
 			// Get todos schema index colist from account.os (new indexing system)
-			const { getSchemaIndexColistId } = await import('@MaiaOS/db/cojson/crud/collection-helpers');
+			const { getSchemaIndexColistId } = await import('@MaiaOS/db');
 			const todosSchemaIndexColistId = await getSchemaIndexColistId(backend, '@schema/data/todos');
 			
 			if (todosSchemaIndexColistId) {

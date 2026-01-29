@@ -1,8 +1,8 @@
 {
   "$schema": "@schema/context",
   "$id": "@context/inbox-logs",
-  "todos": {
-    "schema": "@schema/data/todos",
+  "allActors": {
+    "schema": "@schema/actor",
     "filter": null
   }
 }

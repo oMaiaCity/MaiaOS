@@ -49,3 +49,6 @@ export { processInbox } from "./cojson/crud/process-inbox.js";
 
 // Message Helpers (create and push message CoMaps)
 export { createAndPushMessage } from "./cojson/crud/message-helpers.js";
+
+// Collection Helpers (schema index lookup)
+export { getSchemaIndexColistId, getCoListId } from "./cojson/crud/collection-helpers.js";
