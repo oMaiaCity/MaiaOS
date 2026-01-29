@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Developers
 
-**Auto-generated:** 2026-01-29T15:16:27.216Z
+**Auto-generated:** 2026-01-29T15:46:14.848Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -5961,27 +5961,49 @@ Schema A references Schema B via $co
 
 ## Schema Resolver
 
-The schema resolver is a function that loads schemas from IndexedDB.
+The schema resolver is a function that loads schemas from the database. MaiaOS uses a **universal schema resolver** (single source of truth) that consolidates all schema resolution logic.
 
 **Purpose:**
 - Resolves co-id references to actual schema objects
 - Handles reference objects (from IndexedDB mapping)
-- Supports both human-readable IDs and co-ids
+- Supports both human-readable IDs (`@schema/...`) and co-ids (`co_z...`)
+- Extracts schema co-id from CoValue headerMeta (`fromCoValue` pattern)
+
+**Universal Schema Resolver:**
+
+The universal schema resolver is located in `libs/maia-db/src/cojson/schema/schema-resolver.js` and provides:
+
+- `resolveSchema(backend, identifier)` - Resolves schema definition by co-id, registry string, or fromCoValue
+- `getSchemaCoId(backend, identifier)` - Gets schema co-id only (doesn't load definition)
+- `loadSchemaDefinition(backend, coId)` - Loads schema definition by co-id
 
 **Example:**
 ```javascript
+// Using operations API (recommended - uses universal resolver internally)
 const resolver = async (id) => {
   // id could be '@schema/actor' or 'co_z123...'
-  const schema = await dbEngine.backend.getSchema(id);
-  return schema;
+  // Operations API uses universal resolver internally
+  const schemaStore = await dbEngine.execute({ op: 'schema', coId: id });
+  return schemaStore.value;
 };
 
-engine.setSchemaResolver(resolver);
+engine.setSchemaResolver(resolver, dbEngine); // Pass dbEngine for automatic universal resolver setup
+```
+
+**Or use backend's universal resolver directly:**
+```javascript
+// Direct backend access (if you have backend instance)
+const schema = await backend.resolveSchema('@schema/actor');
+// or
+const schema = await backend.resolveSchema('co_z123...');
+// or
+const schema = await backend.resolveSchema({ fromCoValue: 'co_z456...' });
 ```
 
 **How it's used:**
 1. During `loadSchema()`, if schema has `$schema: "co_z123..."`, resolver loads the meta-schema
 2. During dependency resolution, if schema has `$co: "co_z123..."`, resolver loads the referenced schema
+3. All schema resolution goes through the universal resolver (single source of truth)
 3. Resolver handles both human-readable IDs and co-ids automatically
 
 ---
@@ -9677,34 +9699,53 @@ await dbEngine.execute({
 
 ### SchemaOperation
 
-**Purpose:** Load schema definitions by co-id, schema name, or from CoValue headerMeta
+**Purpose:** Load schema definitions by co-id or from CoValue headerMeta. Uses universal schema resolver (single source of truth).
 
 **Parameters:**
-- `coId` (string, optional) - Schema co-id (co_z...) - direct load
-- `schemaName` (string, optional) - Schema name (e.g., 'vibe', 'actor') - resolves internally
-- `fromCoValue` (string, optional) - CoValue co-id - extracts headerMeta.$schema internally
+- `coId` (string, optional) - Schema co-id (co_z...) - direct load via universal resolver
+- `fromCoValue` (string, optional) - CoValue co-id - extracts headerMeta.$schema internally via universal resolver
 
-**Returns:** Schema definition object or null if not found
+**Note:** Exactly one of `coId` or `fromCoValue` must be provided.
+
+**Returns:** `ReactiveStore` with schema definition (or null if not found). The store updates reactively when the schema changes.
 
 **Example:**
 ```javascript
-// Load schema by co-id
-const schema = await dbEngine.execute({
+// Load schema by co-id (returns ReactiveStore)
+const schemaStore = await dbEngine.execute({
   op: 'schema',
   coId: 'co_zSchema123'
 });
-
-// Load schema by name (operation resolves internally)
-const schema = await dbEngine.execute({
-  op: 'schema',
-  schemaName: 'vibe'
+const schema = schemaStore.value; // Get current value
+schemaStore.subscribe((updatedSchema) => {
+  // React to schema updates
 });
 
-// Load schema from CoValue's headerMeta
-const schema = await dbEngine.execute({
+// Load schema from CoValue's headerMeta (PREFERRED - single source of truth)
+const schemaStore = await dbEngine.execute({
   op: 'schema',
   fromCoValue: 'co_zValue456'
 });
+const schema = schemaStore.value;
+
+// To resolve registry strings (@schema/...), use resolve operation first:
+const schemaCoId = await dbEngine.execute({
+  op: 'resolve',
+  humanReadableKey: '@schema/actor'
+});
+const schemaStore = await dbEngine.execute({
+  op: 'schema',
+  coId: schemaCoId
+});
+```
+
+**Universal Schema Resolver:**
+
+SchemaOperation uses the universal schema resolver internally, which:
+- Resolves schemas by co-id (`co_z...`)
+- Resolves schemas by registry string (`@schema/...`) - via resolve operation
+- Extracts schema co-id from CoValue headerMeta (`fromCoValue` pattern)
+- Provides single source of truth for all schema resolution across MaiaOS
 ```
 
 ### ResolveOperation

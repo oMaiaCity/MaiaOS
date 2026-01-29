@@ -48,39 +48,49 @@ let pendingSchemaResolver = null; // Store resolver if set before engine initial
  * @param {Object} [dbEngine] - Optional dbEngine for operations API (preferred over resolver function)
  */
 export function setSchemaResolver(resolver, dbEngine = null) {
-  // If dbEngine is provided, create a resolver that uses operations API
+  // If dbEngine is provided, create a resolver that uses universal schema resolver (single source of truth)
   if (dbEngine) {
     const operationsResolver = async (schemaKey) => {
-      // Use operations API to load schema (CRITICAL: operations API is the single source of truth)
+      // Use universal schema resolver via backend (single source of truth)
       try {
-        // If it's a co-id, load directly via operations API
-        if (schemaKey.startsWith('co_z')) {
-          const schemaStore = await dbEngine.execute({ op: 'schema', coId: schemaKey });
+        // Prefer backend's universal resolver if available (direct access, more efficient)
+        if (dbEngine.backend && typeof dbEngine.backend.resolveSchema === 'function') {
+          return await dbEngine.backend.resolveSchema(schemaKey);
+        }
+        
+        // Fallback to operations API (which uses universal resolver internally)
+        // Universal resolver handles: co-id, registry string (@schema/...), or normalized keys
+        let identifier = schemaKey;
+        
+        // Normalize schema key if needed (for backward compatibility)
+        if (!schemaKey.startsWith('co_z') && !schemaKey.startsWith('@schema/') && !schemaKey.startsWith('@topic/')) {
+          identifier = `@schema/${schemaKey}`;
+        }
+        
+        // If it's a registry string, resolve to co-id first, then load schema
+        if (identifier.startsWith('@schema/') || identifier.startsWith('@topic/')) {
+          const resolvedCoId = await dbEngine.execute({ op: 'resolve', humanReadableKey: identifier });
+          if (!resolvedCoId) {
+            console.warn(`[SchemaResolver] Could not resolve registry string ${identifier} to co-id`);
+            return null;
+          }
+          identifier = resolvedCoId;
+        }
+        
+        // Load schema by co-id via operations API
+        if (identifier.startsWith('co_z')) {
+          const schemaStore = await dbEngine.execute({ op: 'schema', coId: identifier });
           const schema = schemaStore.value; // Extract value from ReactiveStore
           if (!schema) {
-            console.warn(`[SchemaResolver] Schema ${schemaKey} not found via operations API (op: 'schema', coId: '${schemaKey}')`);
+            console.warn(`[SchemaResolver] Schema ${schemaKey} (co-id: ${identifier}) not found via operations API`);
           }
           return schema;
         }
-        // If it's a human-readable key (@schema/...), extract schema name and use operations API
-        if (schemaKey.startsWith('@schema/')) {
-          const schemaName = schemaKey.replace('@schema/', '');
-          const schemaStore = await dbEngine.execute({ op: 'schema', schemaName: schemaName });
-          const schema = schemaStore.value; // Extract value from ReactiveStore
-          if (!schema) {
-            console.warn(`[SchemaResolver] Schema ${schemaKey} (name: ${schemaName}) not found via operations API (op: 'schema', schemaName: '${schemaName}')`);
-          }
-          return schema;
-        }
-        // Try as schema name (handles both 'actor' and '@schema/actor' formats) via operations API
-        const schemaStore = await dbEngine.execute({ op: 'schema', schemaName: schemaKey });
-        const schema = schemaStore.value; // Extract value from ReactiveStore
-        if (!schema) {
-          console.warn(`[SchemaResolver] Schema ${schemaKey} not found via operations API (op: 'schema', schemaName: '${schemaKey}')`);
-        }
-        return schema;
+        
+        console.warn(`[SchemaResolver] Invalid schema identifier: ${schemaKey}`);
+        return null;
       } catch (error) {
-        console.error(`[SchemaResolver] Error loading schema ${schemaKey} via operations API:`, error);
+        console.error(`[SchemaResolver] Error loading schema ${schemaKey} via universal resolver:`, error);
         // Fallback to provided resolver if available (for backward compatibility during migration)
         if (resolver) {
           console.warn(`[SchemaResolver] Falling back to provided resolver for ${schemaKey}`);

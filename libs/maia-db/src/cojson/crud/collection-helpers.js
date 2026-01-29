@@ -4,27 +4,22 @@
  * Provides helpers for resolving schema co-ids, getting CoList IDs using schema co-id keys in account.os, and ensuring CoValues are loaded.
  */
 
-import { resolveHumanReadableKey } from '../schema/resolve-key.js';
+import { getSchemaCoId as universalGetSchemaCoId } from '../schema/schema-resolver.js';
 
 /**
  * Resolve schema co-id from human-readable schema name or return co-id as-is
+ * Uses universal schema resolver (single source of truth)
  * @param {Object} backend - Backend instance
  * @param {string} schema - Schema co-id (co_z...) or human-readable (@schema/data/todos, @schema/actor)
  * @returns {Promise<string|null>} Schema co-id or null if not found
  */
 async function resolveSchemaCoId(backend, schema) {
-  // If already a co-id, return as-is
-  if (schema && typeof schema === 'string' && schema.startsWith('co_z')) {
-    return schema;
+  if (!schema || typeof schema !== 'string') {
+    return null;
   }
   
-  // If human-readable, resolve via schema registry
-  if (schema && typeof schema === 'string' && schema.startsWith('@schema/')) {
-    const schemaCoId = await resolveHumanReadableKey(backend, schema);
-    return schemaCoId;
-  }
-  
-  return null;
+  // Use universal schema resolver (single source of truth)
+  return await universalGetSchemaCoId(backend, schema);
 }
 
 /**

@@ -124,8 +124,8 @@ export class SchemaOperation {
       if (!fromCoValue.startsWith('co_z')) {
         throw new Error(`[SchemaOperation] fromCoValue must be a valid co-id (co_z...), got: ${fromCoValue}`);
       }
-      // Extract schema co-id from CoValue's headerMeta
-      schemaCoId = await this.backend.getSchemaCoIdFromCoValue(fromCoValue);
+      // Extract schema co-id from CoValue's headerMeta using universal resolver
+      schemaCoId = await this.backend.getSchemaCoIdUniversal({ fromCoValue });
       if (!schemaCoId) {
         console.warn(`[SchemaOperation] Could not extract schema co-id from CoValue ${fromCoValue} headerMeta`);
         // Return ReactiveStore with null value

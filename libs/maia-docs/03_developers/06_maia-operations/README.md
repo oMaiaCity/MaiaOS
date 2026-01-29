@@ -369,34 +369,53 @@ await dbEngine.execute({
 
 ### SchemaOperation
 
-**Purpose:** Load schema definitions by co-id, schema name, or from CoValue headerMeta
+**Purpose:** Load schema definitions by co-id or from CoValue headerMeta. Uses universal schema resolver (single source of truth).
 
 **Parameters:**
-- `coId` (string, optional) - Schema co-id (co_z...) - direct load
-- `schemaName` (string, optional) - Schema name (e.g., 'vibe', 'actor') - resolves internally
-- `fromCoValue` (string, optional) - CoValue co-id - extracts headerMeta.$schema internally
+- `coId` (string, optional) - Schema co-id (co_z...) - direct load via universal resolver
+- `fromCoValue` (string, optional) - CoValue co-id - extracts headerMeta.$schema internally via universal resolver
 
-**Returns:** Schema definition object or null if not found
+**Note:** Exactly one of `coId` or `fromCoValue` must be provided.
+
+**Returns:** `ReactiveStore` with schema definition (or null if not found). The store updates reactively when the schema changes.
 
 **Example:**
 ```javascript
-// Load schema by co-id
-const schema = await dbEngine.execute({
+// Load schema by co-id (returns ReactiveStore)
+const schemaStore = await dbEngine.execute({
   op: 'schema',
   coId: 'co_zSchema123'
 });
-
-// Load schema by name (operation resolves internally)
-const schema = await dbEngine.execute({
-  op: 'schema',
-  schemaName: 'vibe'
+const schema = schemaStore.value; // Get current value
+schemaStore.subscribe((updatedSchema) => {
+  // React to schema updates
 });
 
-// Load schema from CoValue's headerMeta
-const schema = await dbEngine.execute({
+// Load schema from CoValue's headerMeta (PREFERRED - single source of truth)
+const schemaStore = await dbEngine.execute({
   op: 'schema',
   fromCoValue: 'co_zValue456'
 });
+const schema = schemaStore.value;
+
+// To resolve registry strings (@schema/...), use resolve operation first:
+const schemaCoId = await dbEngine.execute({
+  op: 'resolve',
+  humanReadableKey: '@schema/actor'
+});
+const schemaStore = await dbEngine.execute({
+  op: 'schema',
+  coId: schemaCoId
+});
+```
+
+**Universal Schema Resolver:**
+
+SchemaOperation uses the universal schema resolver internally, which:
+- Resolves schemas by co-id (`co_z...`)
+- Resolves schemas by registry string (`@schema/...`) - via resolve operation
+- Extracts schema co-id from CoValue headerMeta (`fromCoValue` pattern)
+- Provides single source of truth for all schema resolution across MaiaOS
 ```
 
 ### ResolveOperation

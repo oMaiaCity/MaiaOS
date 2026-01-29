@@ -1,6 +1,6 @@
 # MaiaOS Documentation for maia-schemata
 
-**Auto-generated:** 2026-01-29T15:16:27.217Z
+**Auto-generated:** 2026-01-29T15:46:14.851Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -1817,27 +1817,49 @@ Schema A references Schema B via $co
 
 ## Schema Resolver
 
-The schema resolver is a function that loads schemas from IndexedDB.
+The schema resolver is a function that loads schemas from the database. MaiaOS uses a **universal schema resolver** (single source of truth) that consolidates all schema resolution logic.
 
 **Purpose:**
 - Resolves co-id references to actual schema objects
 - Handles reference objects (from IndexedDB mapping)
-- Supports both human-readable IDs and co-ids
+- Supports both human-readable IDs (`@schema/...`) and co-ids (`co_z...`)
+- Extracts schema co-id from CoValue headerMeta (`fromCoValue` pattern)
+
+**Universal Schema Resolver:**
+
+The universal schema resolver is located in `libs/maia-db/src/cojson/schema/schema-resolver.js` and provides:
+
+- `resolveSchema(backend, identifier)` - Resolves schema definition by co-id, registry string, or fromCoValue
+- `getSchemaCoId(backend, identifier)` - Gets schema co-id only (doesn't load definition)
+- `loadSchemaDefinition(backend, coId)` - Loads schema definition by co-id
 
 **Example:**
 ```javascript
+// Using operations API (recommended - uses universal resolver internally)
 const resolver = async (id) => {
   // id could be '@schema/actor' or 'co_z123...'
-  const schema = await dbEngine.backend.getSchema(id);
-  return schema;
+  // Operations API uses universal resolver internally
+  const schemaStore = await dbEngine.execute({ op: 'schema', coId: id });
+  return schemaStore.value;
 };
 
-engine.setSchemaResolver(resolver);
+engine.setSchemaResolver(resolver, dbEngine); // Pass dbEngine for automatic universal resolver setup
+```
+
+**Or use backend's universal resolver directly:**
+```javascript
+// Direct backend access (if you have backend instance)
+const schema = await backend.resolveSchema('@schema/actor');
+// or
+const schema = await backend.resolveSchema('co_z123...');
+// or
+const schema = await backend.resolveSchema({ fromCoValue: 'co_z456...' });
 ```
 
 **How it's used:**
 1. During `loadSchema()`, if schema has `$schema: "co_z123..."`, resolver loads the meta-schema
 2. During dependency resolution, if schema has `$co: "co_z123..."`, resolver loads the referenced schema
+3. All schema resolution goes through the universal resolver (single source of truth)
 3. Resolver handles both human-readable IDs and co-ids automatically
 
 ---

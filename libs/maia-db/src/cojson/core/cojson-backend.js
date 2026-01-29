@@ -24,6 +24,7 @@ import * as crudUpdate from '../crud/update.js';
 import * as crudDelete from '../crud/delete.js';
 import { resolveHumanReadableKey as resolveKey } from '../schema/resolve-key.js';
 import { getSchemaCoIdFromCoValue, loadSchemaByCoId as loadSchema } from '../schema/schema-loading.js';
+import { resolveSchema as universalResolveSchema, getSchemaCoId as universalGetSchemaCoId, loadSchemaDefinition as universalLoadSchemaDefinition } from '../schema/schema-resolver.js';
 import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.js';
 
 export class CoJSONBackend extends DBAdapter {
@@ -572,6 +573,32 @@ export class CoJSONBackend extends DBAdapter {
    */
   async loadSchemaByCoId(schemaCoId) {
     return await loadSchema(this, schemaCoId);
+  }
+  
+  /**
+   * Universal schema resolver - resolves schema definition by various identifier types
+   * Single source of truth for schema resolution across the codebase
+   * @param {string|Object} identifier - Schema identifier:
+   *   - Co-id string: 'co_z...' → returns schema definition
+   *   - Registry string: '@schema/...' → resolves to co-id, then returns schema definition
+   *   - Options object: { fromCoValue: 'co_z...' } → extracts schema from headerMeta, then returns schema definition
+   * @returns {Promise<Object|null>} Schema definition object or null if not found
+   */
+  async resolveSchema(identifier) {
+    return await universalResolveSchema(this, identifier);
+  }
+  
+  /**
+   * Get schema co-id only (does not load schema definition)
+   * Universal resolver for schema co-id extraction
+   * @param {string|Object} identifier - Schema identifier:
+   *   - Co-id string: 'co_z...' → returns as-is
+   *   - Registry string: '@schema/...' → resolves to co-id
+   *   - Options object: { fromCoValue: 'co_z...' } → extracts schema co-id from headerMeta
+   * @returns {Promise<string|null>} Schema co-id (co_z...) or null if not found
+   */
+  async getSchemaCoIdUniversal(identifier) {
+    return await universalGetSchemaCoId(this, identifier);
   }
   
   /**
