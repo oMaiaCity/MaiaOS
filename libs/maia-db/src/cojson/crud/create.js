@@ -9,91 +9,8 @@ import { createCoList } from '../cotypes/coList.js';
 import { createCoStream } from '../cotypes/coStream.js';
 import * as collectionHelpers from './collection-helpers.js';
 import * as dataExtraction from './data-extraction.js';
-
-/**
- * Append item to collection CoList
- * Helper function to append a created CoMap item to its collection CoList
- * @param {Object} backend - Backend instance
- * @param {RawCoValue} coValue - Created CoValue
- * @param {string} schemaToMatch - Schema co-id to match
- * @returns {Promise<void>}
- */
-async function appendToCollection(backend, coValue, schemaToMatch) {
-  // Get account.data CoMap
-  const dataId = backend.account.get("data");
-  if (!dataId) {
-    return;
-  }
-  
-  // Ensure account.data is loaded
-  const dataCore = await collectionHelpers.ensureCoValueLoaded(backend, dataId, { waitForAvailable: true });
-  if (!dataCore || !backend.isAvailable(dataCore)) {
-    return;
-  }
-  
-  const dataContent = backend.getCurrentContent(dataCore);
-  if (!dataContent || typeof dataContent.get !== 'function') {
-    return;
-  }
-  
-  // Find the CoList in account.data that has matching item schema
-  const keys = dataContent.keys && typeof dataContent.keys === 'function' 
-    ? dataContent.keys() 
-    : Object.keys(dataContent);
-  
-  for (const key of keys) {
-    const collectionListId = dataContent.get(key);
-    if (collectionListId && typeof collectionListId === 'string' && collectionListId.startsWith('co_')) {
-      // Ensure collection CoList is loaded
-      const collectionListCore = await collectionHelpers.ensureCoValueLoaded(backend, collectionListId, { waitForAvailable: true });
-      
-      // Check if available and is a colist
-      if (collectionListCore && backend.isAvailable(collectionListCore)) {
-        const collectionListContent = backend.getCurrentContent(collectionListCore);
-        const cotype = collectionListContent?.cotype || collectionListContent?.type;
-        
-        if (cotype === 'colist') {
-          // Check if this CoList's item schema matches the created item's schema
-          const listHeader = backend.getHeader(collectionListCore);
-          const listHeaderMeta = listHeader?.meta || null;
-          const listItemSchema = listHeaderMeta?.$schema;
-          
-          // Match schema co-ids (both should be co-ids at this point)
-          if (listItemSchema === schemaToMatch) {
-            // Found matching CoList - check if item already exists before appending
-            if (collectionListContent && typeof collectionListContent.append === 'function') {
-              // CRITICAL FIX: Check if item already exists in CoList to prevent duplicate appends
-              // This prevents multi-browser duplication where same item gets appended multiple times
-              let itemExists = false;
-              try {
-                if (typeof collectionListContent.toJSON === 'function') {
-                  const existingItemIds = collectionListContent.toJSON();
-                  itemExists = Array.isArray(existingItemIds) && existingItemIds.includes(coValue.id);
-                }
-              } catch (e) {
-                // If toJSON fails, assume item doesn't exist and proceed with append
-                console.warn(`[CoJSONBackend] Error checking if item exists in CoList:`, e);
-              }
-              
-              if (!itemExists) {
-                collectionListContent.append(coValue.id);
-                
-                // Wait for colist to sync after append (ensures subscription fires with new item)
-                if (backend.node.storage) {
-                  await backend.node.syncManager.waitForStorageSync(collectionListCore.id);
-                }
-              } else {
-                console.log(`[CoJSONBackend] Item ${coValue.id.substring(0, 12)}... already exists in CoList, skipping append`);
-              }
-              
-              break; // Found matching CoList, no need to check other collections
-            }
-          }
-        }
-      }
-    }
-  }
-}
+// Schema indexing is handled by storage-level hooks (more resilient than API hooks)
+// No CRUD-level hooks needed - storage hook catches ALL writes
 
 /**
  * Determine cotype from schema or data type
@@ -183,36 +100,21 @@ export async function create(backend, schema, data) {
       throw new Error(`[CoJSONBackend] Unsupported cotype: ${cotype}`);
   }
 
-  // Wait for storage sync
-  if (backend.node.storage) {
-    await backend.node.syncManager.waitForStorageSync(coValue.id);
-  }
-
-  // CRITICAL: For data collection items (CoMaps), automatically append to collection CoList
-  // This ensures created items appear in queries immediately
-  if (cotype === 'comap' && coValue.id && schema) {
-    try {
-      // Get the actual schema co-id from the created item's headerMeta (single source of truth)
-      const coValueCore = backend.getCoValue(coValue.id);
-      const itemHeader = coValueCore ? backend.getHeader(coValueCore) : null;
-      const itemHeaderMeta = itemHeader?.meta || null;
-      const itemSchemaCoId = itemHeaderMeta?.$schema;
-      
-      // Use item's schema co-id if available, otherwise fall back to passed schema
-      const schemaToMatch = itemSchemaCoId || schema;
-      
-      if (schemaToMatch) {
-        await appendToCollection(backend, coValue, schemaToMatch);
-      }
-    } catch (error) {
-      // Don't fail creation if collection append fails - continue silently
-    }
-  }
+  // CRITICAL: Don't wait for storage sync - it blocks the UI!
+  // The co-value is already created and available locally
+  // Storage sync happens asynchronously in the background
+  // Schema indexing is handled by storage-level hooks (storage-hook-wrapper.js)
+  // This is more resilient than CRUD hooks because it catches ALL writes:
+  // - Writes from CRUD API
+  // - Writes from sync (remote peers)
+  // - Writes from direct CoJSON operations
+  // No need for CRUD-level hooks here
 
   // Return created CoValue data (extract properties as flat object for tool access)
   // CRITICAL: Always include original data as fallback to ensure all properties are available
   // This ensures $lastCreatedText and other properties are accessible even if CoValue extraction fails
-  const coValueCore = backend.getCoValue(coValue.id);
+  // Get CoValueCore from node to check availability
+  const coValueCore = backend.node.getCoValue(coValue.id);
   if (coValueCore && backend.isAvailable(coValueCore)) {
     const content = backend.getCurrentContent(coValueCore);
     if (content && typeof content.get === 'function') {

@@ -184,6 +184,58 @@ For **every** implementation milestone, follow this order:
 - ❌ No "TODO: migrate this later" comments
 - ❌ No "keep for backwards compatibility" code
 
+**Step 2.5: Enforce Default Behaviors for CoJSON Backend Write Operations** 🔒
+
+For **any write operation** in the CoJSON backend (create, update, delete), enforce automatic schema indexing as a **default behavior**:
+
+**Default Behavior: Automatic Schema Indexing**
+
+1. **On Co-Value Creation:**
+   - Extract schema co-id from co-value's `headerMeta.$schema`
+   - **FIRST:** Store co-value co-id in its schema's index colist in `account.os` (keyed by schema co-id)
+   - Ensure schema index colist exists (create automatically if needed)
+   - **THEN:** Reference co-value in the actual vibe/context
+   - This ensures schema indexes are always maintained, even if vibe references fail
+
+2. **On Co-Value Update:**
+   - If schema changes, remove from old schema index, add to new schema index
+   - If schema unchanged, ensure co-value exists in schema index (idempotent)
+
+3. **On Co-Value Delete:**
+   - Extract schema co-id from co-value's `headerMeta.$schema`
+   - Remove co-value co-id from schema index colist in `account.os` (keyed by schema co-id)
+   - Then proceed with normal deletion
+
+**Colist Keying Pattern:**
+
+- **Use schema co-id as colist key** (e.g., `co_z123...`)
+- Store colists as: `account.os.{schemaCoId}` (all schemas indexed in account.os)
+- Example: `account.os["co_z123..."]` → colist of instance co-ids
+- Registry: `account.os.schemata["@schema/namekey"]` → schema co-id
+- Index: `account.os[schemaCoId]` → colist of instance co-ids
+
+**Automatic Schema Index Creation:**
+
+- When a schema is registered in `account.os.schemata`, automatically create its index colist
+- No manual seeding required - all schema indexes are created and managed automatically
+- Backend write/delete APIs enforce this behavior - impossible to bypass
+
+**Implementation Requirements:**
+
+- ✅ All write operations MUST enforce schema indexing
+- ✅ Schema index storage happens FIRST, before vibe references
+- ✅ Schema indexes are keyed by namekey (schema title like `@schema/data/todos`)
+- ✅ Schema index colists are created automatically when schemas are registered
+- ✅ No manual seeding needed - everything is automatic
+- ✅ Backend-enforced - cannot be bypassed or skipped
+
+**Why This Matters:**
+
+- **Consistency:** All co-values are automatically indexed by schema, making queries reliable
+- **Remote sync:** Schema indexes enable querying remote co-values that haven't synced yet
+- **Reactivity:** Schema index updates trigger reactive query updates automatically
+- **Maintainability:** No manual seeding logic to maintain - backend handles everything
+
 **Step 3: Manual Browser Debugging** 🌐
 
 For **frontend features, UI components, or web-based functionality**, use **Cursor's native in-app browser** for **manual debugging and verification** during implementation.
@@ -491,6 +543,13 @@ todos:
 - [ ] Create file structure
 - [ ] Implement core functionality
 
+**Default Behaviors** (if CoJSON backend write operations):
+- [ ] Enforce automatic schema indexing in write operations
+- [ ] Store co-value FIRST in schema index colist in `account.os` (keyed by schema co-id)
+- [ ] Ensure schema index colist exists (create automatically if needed)
+- [ ] Remove co-value from schema index on delete
+- [ ] Verify all schema indexes are in `account.os` keyed by schema co-id
+
 **Cleanup & Migration:**
 - [ ] Remove ALL legacy code replaced by this milestone
 - [ ] Delete backwards compatibility hacks
@@ -510,6 +569,13 @@ todos:
 **Implementation:**
 - [ ] Integrate with existing systems
 - [ ] Implement feature Z
+
+**Default Behaviors** (if CoJSON backend write operations):
+- [ ] Enforce automatic schema indexing in write operations
+- [ ] Store co-value FIRST in schema index colist in `account.os` (keyed by schema co-id)
+- [ ] Ensure schema index colist exists (create automatically if needed)
+- [ ] Remove co-value from schema index on delete
+- [ ] Verify all schema indexes are in `account.os` keyed by schema co-id
 
 **Cleanup & Migration:**
 - [ ] Remove ALL legacy code replaced by this milestone

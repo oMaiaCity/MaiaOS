@@ -730,8 +730,8 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 						` : ''}
 						<div class="metadata-info-item">
 							<span class="metadata-info-key">CONTENT TYPE</span>
-							<span class="badge badge-type badge-${(data.type || 'unknown').replace(/-/g, '')}">
-								${data.type === 'colist' ? 'COLIST' : data.type === 'costream' ? 'COSTREAM' : (data.type || 'unknown').toUpperCase()}
+							<span class="badge badge-type badge-${String(data.type || 'unknown').replace(/-/g, '')}">
+								${data.type === 'colist' ? 'COLIST' : data.type === 'costream' ? 'COSTREAM' : String(data.type || 'unknown').toUpperCase()}
 							</span>
 						</div>
 						${groupInfo?.groupId ? `
@@ -900,7 +900,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 									<span class="text-xs text-slate-400 font-medium italic">${headerInfo.description}</span>
 								` : ''}
 								${!headerInfo && data?.type ? `
-									<span class="badge badge-type badge-${data.type.replace(/-/g, '')} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${data.type === 'colist' ? 'COLIST' : data.type === 'costream' ? 'COSTREAM' : (data.type || 'COMAP').toUpperCase()}</span>
+									<span class="badge badge-type badge-${String(data.type || 'comap').replace(/-/g, '')} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${data.type === 'colist' ? 'COLIST' : data.type === 'costream' ? 'COSTREAM' : String(data.type || 'COMAP').toUpperCase()}</span>
 								` : ''}
 							</div>
 						</div>

@@ -1,7 +1,7 @@
 {
   "$schema": "@schema/meta",
   "$id": "@schema/style",
-  "title": "Style Definition",
+  "title": "@schema/style",
   "description": "Style definition (brand or actor-specific). Brand styles typically include selectors, actor styles are overrides.",
   "cotype": "comap",
   "properties": {

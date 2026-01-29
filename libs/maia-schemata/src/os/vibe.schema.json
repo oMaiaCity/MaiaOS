@@ -1,7 +1,7 @@
 {
   "$schema": "@schema/meta",
   "$id": "@schema/vibe",
-  "title": "Vibe Definition",
+  "title": "@schema/vibe",
   "description": "Vibe manifest/metadata",
   "cotype": "comap",
   "required": ["name", "description", "actor"],

@@ -1,7 +1,7 @@
 {
   "$schema": "@schema/meta",
   "$id": "@schema/action",
-  "title": "Action",
+  "title": "@schema/action",
   "description": "Action (tool invocation or context update)",
   "cotype": "comap",
   "oneOf": [

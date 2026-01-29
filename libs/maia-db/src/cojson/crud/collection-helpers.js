@@ -1,62 +1,123 @@
 /**
  * Collection Helper Functions
  * 
- * Provides helpers for resolving collection names, getting CoList IDs, and ensuring CoValues are loaded.
+ * Provides helpers for resolving schema co-ids, getting CoList IDs using schema co-id keys in account.os, and ensuring CoValues are loaded.
  */
+
+import { resolveHumanReadableKey } from '../schema/resolve-key.js';
+
+/**
+ * Resolve schema co-id from human-readable schema name or return co-id as-is
+ * @param {Object} backend - Backend instance
+ * @param {string} schema - Schema co-id (co_z...) or human-readable (@schema/data/todos, @schema/actor)
+ * @returns {Promise<string|null>} Schema co-id or null if not found
+ */
+async function resolveSchemaCoId(backend, schema) {
+  // If already a co-id, return as-is
+  if (schema && typeof schema === 'string' && schema.startsWith('co_z')) {
+    return schema;
+  }
+  
+  // If human-readable, resolve via schema registry
+  if (schema && typeof schema === 'string' && schema.startsWith('@schema/')) {
+    const schemaCoId = await resolveHumanReadableKey(backend, schema);
+    return schemaCoId;
+  }
+  
+  return null;
+}
+
+/**
+ * Get schema index colist ID using schema co-id as key (all schemas indexed in account.os)
+ * @param {Object} backend - Backend instance
+ * @param {string} schema - Schema co-id (co_z...) or human-readable (@schema/data/todos)
+ * @returns {Promise<string|null>} Schema index colist ID or null if not found
+ */
+export async function getSchemaIndexColistId(backend, schema) {
+  // Resolve schema to co-id
+  const schemaCoId = await resolveSchemaCoId(backend, schema);
+  if (!schemaCoId) {
+    return null;
+  }
+  
+  // All schema indexes are in account.os, keyed by schema co-id
+  const osId = backend.account.get('os');
+  if (!osId) {
+    return null;
+  }
+  
+  // Load account.os CoMap
+  const osCore = await ensureCoValueLoaded(backend, osId);
+  if (!osCore || !backend.isAvailable(osCore)) {
+    return null;
+  }
+  
+  const osContent = backend.getCurrentContent(osCore);
+  if (!osContent || typeof osContent.get !== 'function') {
+    return null;
+  }
+  
+  // Get schema index colist using schema co-id as key
+  const indexColistId = osContent.get(schemaCoId);
+  if (indexColistId && typeof indexColistId === 'string' && indexColistId.startsWith('co_')) {
+    return indexColistId;
+  }
+  
+  return null;
+}
 
 /**
  * Resolve collection name from schema (co-id or human-readable)
+ * DEPRECATED: Use getSchemaIndexColistId() instead
+ * Kept for backward compatibility - resolves to schema co-id and looks up colist
  * @param {Object} backend - Backend instance
  * @param {string} schema - Schema co-id (co_z...) or human-readable (@schema/data/todos)
  * @returns {Promise<string|null>} Collection name (e.g., "todos") or null if not found
  */
 export async function resolveCollectionName(backend, schema) {
-  // If schema is human-readable format, extract collection name directly
+  // For backward compatibility, try to extract collection name from human-readable schema
   if (schema.startsWith('@schema/data/')) {
     // Extract "todos" from "@schema/data/todos"
     return schema.replace('@schema/data/', '');
   }
   if (schema.startsWith('@schema/')) {
-    // Extract "todos" from "@schema/todos" (backward compatibility)
+    // Extract collection name from "@schema/<name>" (backward compatibility)
     return schema.replace('@schema/', '');
   }
   
-  // If schema is a co-id, find matching CoList by checking account.data CoLists
+  // If schema is a co-id, try to resolve via registry to get human-readable name
   if (schema.startsWith('co_z')) {
-    const dataId = backend.account.get("data");
-    if (!dataId) {
-      return null;
-    }
-    
-    // Trigger loading for account.data (don't wait - let caller handle waiting)
-    const dataCore = await ensureCoValueLoaded(backend, dataId);
-    if (!dataCore || !backend.isAvailable(dataCore)) {
-      return null;
-    }
-    
-    const dataContent = backend.getCurrentContent(dataCore);
-    if (!dataContent || typeof dataContent.get !== 'function') {
-      return null;
-    }
-    
-    // Iterate through all collections in account.data
-    const keys = dataContent.keys && typeof dataContent.keys === 'function' 
-      ? dataContent.keys() 
-      : Object.keys(dataContent);
-    
-    for (const collectionName of keys) {
-      const collectionListId = dataContent.get(collectionName);
-      if (collectionListId && typeof collectionListId === 'string' && collectionListId.startsWith('co_')) {
-        // Trigger loading for collection CoList (don't wait - just check if available)
-        const collectionListCore = await ensureCoValueLoaded(backend, collectionListId);
-        if (collectionListCore && backend.isAvailable(collectionListCore)) {
-          const listHeader = backend.getHeader(collectionListCore);
-          const listHeaderMeta = listHeader?.meta || null;
-          const listItemSchema = listHeaderMeta?.$schema;
-          
-          // Check if this CoList's item schema matches the query schema
-          if (listItemSchema === schema) {
-            return collectionName;
+    const osId = backend.account.get('os');
+    if (osId) {
+      const osCore = await ensureCoValueLoaded(backend, osId);
+      if (osCore && backend.isAvailable(osCore)) {
+        const osContent = backend.getCurrentContent(osCore);
+        if (osContent && typeof osContent.get === 'function') {
+          const schematasId = osContent.get('schematas');
+          if (schematasId) {
+            const schematasCore = await ensureCoValueLoaded(backend, schematasId);
+            if (schematasCore && backend.isAvailable(schematasCore)) {
+              const schematasContent = backend.getCurrentContent(schematasCore);
+              if (schematasContent && typeof schematasContent.get === 'function') {
+                // Find schema title by reverse lookup
+                const keys = schematasContent.keys && typeof schematasContent.keys === 'function'
+                  ? schematasContent.keys()
+                  : Object.keys(schematasContent);
+                
+                for (const key of keys) {
+                  if (schematasContent.get(key) === schema) {
+                    // Found schema title - extract collection name if data schema
+                    if (key.startsWith('@schema/data/')) {
+                      return key.replace('@schema/data/', '');
+                    }
+                    // For OS schemas, return the schema name without @schema/ prefix
+                    if (key.startsWith('@schema/')) {
+                      return key.replace('@schema/', '');
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -67,29 +128,38 @@ export async function resolveCollectionName(backend, schema) {
 }
 
 /**
- * Get CoList ID from account.data.<collectionName>
+ * Get CoList ID from account.os.<schemaCoId> (all schema indexes in account.os)
  * @param {Object} backend - Backend instance
- * @param {string} collectionName - Collection name (e.g., "todos")
+ * @param {string} collectionNameOrSchema - Collection name (e.g., "todos"), schema co-id (co_z...), or namekey (@schema/data/todos)
  * @returns {Promise<string|null>} CoList ID or null if not found
  */
-export async function getCoListId(backend, collectionName) {
-  const dataId = backend.account.get("data");
-  if (!dataId) {
+export async function getCoListId(backend, collectionNameOrSchema) {
+  // If it's a schema co-id or human-readable schema name, use schema index lookup
+  if (collectionNameOrSchema && typeof collectionNameOrSchema === 'string' && 
+      (collectionNameOrSchema.startsWith('co_z') || collectionNameOrSchema.startsWith('@schema/'))) {
+    return await getSchemaIndexColistId(backend, collectionNameOrSchema);
+  }
+  
+  // Fallback: Try old-style human-readable collection name lookup in account.os
+  // (for backward compatibility, but all indexes should be in account.os now)
+  const osId = backend.account.get("os");
+  if (!osId) {
     return null;
   }
   
-  // Trigger loading for account.data (don't wait - let caller handle waiting)
-  const dataCore = await ensureCoValueLoaded(backend, dataId);
-  if (!dataCore || !backend.isAvailable(dataCore)) {
+  // Trigger loading for account.os
+  const osCore = await ensureCoValueLoaded(backend, osId);
+  if (!osCore || !backend.isAvailable(osCore)) {
     return null;
   }
   
-  const dataContent = backend.getCurrentContent(dataCore);
-  if (!dataContent || typeof dataContent.get !== 'function') {
+  const osContent = backend.getCurrentContent(osCore);
+  if (!osContent || typeof osContent.get !== 'function') {
     return null;
   }
   
-  const collectionListId = dataContent.get(collectionName);
+  // Try to find by collection name (backward compatibility - should resolve via schema registry)
+  const collectionListId = osContent.get(collectionNameOrSchema);
   if (collectionListId && typeof collectionListId === 'string' && collectionListId.startsWith('co_')) {
     return collectionListId;
   }
@@ -170,7 +240,8 @@ export async function ensureCoListLoaded(backend, schema) {
     return;
   }
   
-  // Get CoList ID from account.data.<collectionName>
+  // Get CoList ID from schema index (account.os.<schemaCoId>)
+  // Supports schema co-ids, human-readable schema names, or collection names (legacy fallback)
   const coListId = await getCoListId(backend, collectionName);
   if (!coListId) {
     // CoList doesn't exist yet - skip loading (will be created on first item)

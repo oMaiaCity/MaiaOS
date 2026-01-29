@@ -1,7 +1,7 @@
 {
   "$schema": "@schema/meta",
   "$id": "@schema/state",
-  "title": "State Machine Definition",
+  "title": "@schema/state",
   "description": "XState-like state machine with states, transitions, guards, and actions",
   "cotype": "comap",
   "required": ["initial", "states"],

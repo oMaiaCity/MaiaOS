@@ -24,6 +24,7 @@ import * as crudUpdate from '../crud/update.js';
 import * as crudDelete from '../crud/delete.js';
 import { resolveHumanReadableKey as resolveKey } from '../schema/resolve-key.js';
 import { getSchemaCoIdFromCoValue, loadSchemaByCoId as loadSchema } from '../schema/schema-loading.js';
+import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.js';
 
 export class CoJSONBackend extends DBAdapter {
   constructor(node, account, dbEngine = null) {
@@ -41,6 +42,17 @@ export class CoJSONBackend extends DBAdapter {
     // Cache universal group after first resolution (performance optimization)
     this._cachedUniversalGroup = null;
     // Note: _storeSubscriptions removed - using subscriptionCache only for subscription tracking
+    
+    // Wrap storage with indexing hooks (MORE RESILIENT than API hooks!)
+    // This catches ALL writes: CRUD API, sync, direct CoJSON ops, etc.
+    if (node.storage) {
+      node.storage = wrapStorageWithIndexingHooks(node.storage, this);
+      console.log('[CoJSONBackend] Storage wrapped with indexing hooks');
+    }
+    
+    // Schema indexing is handled ONLY via storage-level hooks (most resilient approach)
+    // Storage hooks catch ALL writes: CRUD API, sync, direct CoJSON ops, etc.
+    // No CRUD-level hooks needed - storage hooks are universal and resilient
   }
   
   /**
@@ -343,9 +355,10 @@ export class CoJSONBackend extends DBAdapter {
   }
 
   /**
-   * Get CoList ID from account.data.<collectionName>
+   * Get CoList ID from schema index (account.os.<schemaCoId>)
+   * Supports schema co-ids, human-readable schema names, or collection names (legacy fallback)
    * @private
-   * @param {string} collectionName - Collection name (e.g., "todos")
+   * @param {string} collectionNameOrSchema - Collection name (e.g., "todos"), schema co-id (co_z...), or namekey (@schema/data/todos)
    * @returns {Promise<string|null>} CoList ID or null if not found
    */
   async _getCoListId(collectionName) {
@@ -573,6 +586,7 @@ export class CoJSONBackend extends DBAdapter {
       throw new Error('[CoJSONBackend] Account required for seed');
     }
     
-    return await seed(this.account, this.node, configs, schemas, data || {});
+    // Pass backend instance so dbEngine is available for schema validation during seeding
+    return await seed(this.account, this.node, configs, schemas, data || {}, this);
   }
 }

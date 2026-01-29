@@ -213,14 +213,9 @@ async function readCollection(backend, schema, filter = null, options = {}) {
   store = new ReactiveStore([]);
   storeCache.set(cacheKey, store);
   
-  // Resolve collection name from schema
-  const collectionName = await resolveCollectionName(backend, schema);
-  if (!collectionName) {
-    return store;
-  }
-  
-  // Get CoList ID from account.data.<collectionName>
-  const coListId = await getCoListId(backend, collectionName);
+  // Get schema index colist ID from account.os (keyed by schema co-id)
+  // Supports both schema co-ids (co_z...) and human-readable names (@schema/data/todos)
+  const coListId = await getCoListId(backend, schema);
   if (!coListId) {
     return store;
   }
@@ -231,18 +226,30 @@ async function readCollection(backend, schema, filter = null, options = {}) {
     return store;
   }
   
-  // CRITICAL FIX: Ensure CoList is loaded before processing items
-  // This ensures we can read item IDs immediately and set up subscriptions
+  // CRITICAL: Progressive loading - don't block if index colist isn't available yet
+  // Trigger loading (fire and forget) - subscription will update store when ready
   if (!backend.isAvailable(coListCore)) {
-    // Trigger loading and wait for it to become available (progressive loading)
-    await ensureCoValueLoaded(backend, coListId, { waitForAvailable: true, timeoutMs: 2000 }).catch(err => {
-      console.error(`[readCollection] Failed to load CoList ${coListId.substring(0, 12)}...:`, err);
+    // Trigger loading (non-blocking)
+    ensureCoValueLoaded(backend, coListId, { waitForAvailable: false }).catch(err => {
+      console.warn(`[readCollection] Failed to load CoList ${coListId.substring(0, 12)}...:`, err);
     });
-    // Get updated CoValueCore after loading
-    coListCore = backend.getCoValue(coListId);
-    if (!coListCore) {
-      return store;
+    
+    // Set up subscription to update store when colist becomes available
+    if (coListCore) {
+      const unsubscribeColist = coListCore.subscribe((core) => {
+        if (core && backend.isAvailable(core)) {
+          // Colist is now available - trigger store update
+          updateStore().catch(err => {
+            console.warn(`[readCollection] Error updating store after colist load:`, err);
+          });
+        }
+      });
+      backend.subscriptionCache.getOrCreate(coListId, () => ({ unsubscribe: unsubscribeColist }));
     }
+    
+    // Return store immediately (empty array) - will update reactively when colist loads
+    // This allows instant UI updates without waiting for index
+    return store;
   }
   
   // Track item IDs we've subscribed to (for cleanup)

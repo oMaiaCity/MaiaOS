@@ -1,7 +1,7 @@
 {
   "$schema": "@schema/meta",
   "$id": "@schema/transition",
-  "title": "Transition",
+  "title": "@schema/transition",
   "description": "State machine transition",
   "cotype": "comap",
   "properties": {

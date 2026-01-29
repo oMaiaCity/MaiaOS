@@ -44,6 +44,23 @@
                   "payload": { "viewMode": "kanban" }
                 }
               }
+            },
+            {
+              "tag": "button",
+              "class": "button-view-switch",
+              "attrs": {
+                "data-view": "inbox-logs",
+                "data": {
+                  "active": "$inboxLogsButtonActive"
+                }
+              },
+              "text": "Inbox Logs",
+              "$on": {
+                "click": {
+                  "send": "SWITCH_VIEW",
+                  "payload": { "viewMode": "inbox-logs" }
+                }
+              }
             }
           ]
         }

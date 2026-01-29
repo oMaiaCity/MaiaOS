@@ -1,0 +1,36 @@
+{
+  "$schema": "@schema/state",
+  "$id": "@state/inbox-logs",
+  "initial": "loading",
+  "states": {
+    "loading": {
+      "entry": {
+        "tool": "@core/queryInboxLogs",
+        "payload": {
+          "vibeKey": "todos"
+        },
+        "onSuccess": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "messages": "$$result.messages"
+              }
+            }
+          ]
+        },
+        "onError": {
+          "target": "error"
+        }
+      }
+    },
+    "idle": {},
+    "error": {
+      "on": {
+        "RETRY": {
+          "target": "loading"
+        }
+      }
+    }
+  }
+}

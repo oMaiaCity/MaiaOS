@@ -1,0 +1,16 @@
+{
+  "$type": "tool",
+  "$id": "tool_query_inbox_logs_001",
+  "name": "@core/queryInboxLogs",
+  "description": "Query all inbox messages from all actors in a vibe for debugging and event flow tracking",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "vibeKey": {
+        "type": "string",
+        "description": "Vibe key (e.g., 'todos')",
+        "default": "todos"
+      }
+    }
+  }
+}

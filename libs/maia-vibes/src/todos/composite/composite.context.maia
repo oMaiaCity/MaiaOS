@@ -8,9 +8,11 @@
   "currentView": "@list",
   "listButtonActive": true,
   "kanbanButtonActive": false,
+  "inboxLogsButtonActive": false,
   "newTodoText": "",
   "@actors": {
     "list": "@actor/list",
-    "kanban": "@actor/kanban"
+    "kanban": "@actor/kanban",
+    "inbox-logs": "@actor/inbox-logs"
   }
 }

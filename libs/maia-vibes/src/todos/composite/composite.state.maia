@@ -15,7 +15,13 @@
                   "$if": {
                     "condition": { "$eq": ["$$viewMode", "list"] },
                     "then": "@list",
-                    "else": "@kanban"
+                    "else": {
+                      "$if": {
+                        "condition": { "$eq": ["$$viewMode", "kanban"] },
+                        "then": "@kanban",
+                        "else": "@inbox-logs"
+                      }
+                    }
                   }
                 },
                 "listButtonActive": {
@@ -23,6 +29,9 @@
                 },
                 "kanbanButtonActive": {
                   "$eq": ["$$viewMode", "kanban"]
+                },
+                "inboxLogsButtonActive": {
+                  "$eq": ["$$viewMode", "inbox-logs"]
                 }
               }
             },

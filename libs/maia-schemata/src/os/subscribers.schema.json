@@ -1,7 +1,7 @@
 {
   "$schema": "@schema/meta",
   "$id": "@schema/subscribers",
-  "title": "Subscribers Colist",
+  "title": "@schema/subscribers",
   "description": "A colist of actor co-ids subscribed to a topic",
   "cotype": "colist",
   "items": {

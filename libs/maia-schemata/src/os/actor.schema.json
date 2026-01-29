@@ -1,7 +1,7 @@
 {
   "$schema": "@schema/meta",
   "$id": "@schema/actor",
-  "title": "Actor Definition",
+  "title": "@schema/actor",
   "description": "Pure declarative actor specification",
   "cotype": "comap",
   "properties": {

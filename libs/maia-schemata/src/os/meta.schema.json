@@ -14,7 +14,7 @@
   "allOf": [
     {"$ref": "https://json-schema.org/draft/2020-12/schema"}
   ],
-  "title": "MaiaOS CoJSON Meta-Schema",
+  "title": "@schema/meta",
   "type": ["object", "boolean"],
   "properties": {
     "title": {

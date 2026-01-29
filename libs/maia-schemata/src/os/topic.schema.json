@@ -1,7 +1,7 @@
 {
   "$schema": "@schema/meta",
   "$id": "@schema/topic",
-  "title": "Topic CoValue",
+  "title": "@schema/topic",
   "description": "A topic CoValue representing a message category/channel. Contains subscribers list and optional schema for validation.",
   "cotype": "comap",
   "properties": {

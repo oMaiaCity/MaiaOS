@@ -9,7 +9,7 @@
  * SPECIAL HANDLING:
  * - GenesisSchema (Meta Schema): Uses "GenesisSchema" string in headerMeta.$schema (can't self-reference co-id)
  *   The CoMap definition has title: "Meta Schema"
- * - @meta-schema: Human-readable ID used ONLY in seeding files before transformation step
+ * - @schema/meta: Human-readable ID for metaschema (matches schema title format)
  *   Gets transformed to GenesisSchema co-id during transformation
  * 
  * Seeding Order:
@@ -34,9 +34,10 @@ import { getMetaSchemaCoMapDefinition } from '@MaiaOS/schemata/meta-schema';
  * @param {Object} configs - Config registry {vibe, styles, actors, views, contexts, states, interfaces}
  * @param {Object} schemas - Schema definitions
  * @param {Object} data - Initial application data {todos: [], ...}
+ * @param {CoJSONBackend} [existingBackend] - Optional existing backend instance (with dbEngine set)
  * @returns {Promise<Object>} Summary of what was seeded
  */
-export async function seed(account, node, configs, schemas, data) {
+export async function seed(account, node, configs, schemas, data, existingBackend = null) {
   // Import co-id generator and transformer
   const { generateCoId, CoIdRegistry } = 
     await import('@MaiaOS/schemata/co-id-generator');
@@ -51,9 +52,9 @@ export async function seed(account, node, configs, schemas, data) {
     throw new Error('[CoJSONSeed] Profile not found on account. Ensure identity migration has run.');
   }
   
-  // Use read() API to get profile (operation-based)
+  // Use existing backend if provided (has dbEngine set), otherwise create new one
   const { CoJSONBackend } = await import('../core/cojson-backend.js');
-  const backend = new CoJSONBackend(node, account);
+  const backend = existingBackend || new CoJSONBackend(node, account);
   const profileStore = await backend.read(null, profileId);
   
   // Wait for profile to be available
@@ -225,10 +226,16 @@ export async function seed(account, node, configs, schemas, data) {
     sortedSchemaKeys.push(schemaKey);
   };
   
-  // Visit all schemas
+  // Visit all schemas (except @schema/meta which is handled specially in Phase 1)
   for (const schemaKey of uniqueSchemasBy$id.keys()) {
-    visitSchema(schemaKey);
+    if (schemaKey !== '@schema/meta') {
+      visitSchema(schemaKey);
+    }
   }
+  
+  // Phase 0: Create account.os FIRST (needed for storage hook to register schemas)
+  // CRITICAL: account.os must exist before schemas are created, so the storage hook can register them
+  await ensureAccountOs(account, node, universalGroup);
   
   // Phase 1: Create metaschema FIRST (needed for schema CoMaps)
   // SPECIAL HANDLING: Metaschema uses "GenesisSchema" as exception since headerMeta is read-only after creation
@@ -255,14 +262,29 @@ export async function seed(account, node, configs, schemas, data) {
     }
     
     metaSchemaCoId = actualMetaSchemaCoId;
-    coIdRegistry.register('@meta-schema', metaSchemaCoId);
-  } else {
   }
   
-  // Phase 2: Create schema CoMaps (CoJSON assigns IDs automatically)
+  // Register metaschema with @schema/meta key (matches schema title format)
+  // Only register if not already registered (idempotent - allows re-seeding)
+  if (!coIdRegistry.has('@schema/meta')) {
+    coIdRegistry.register('@schema/meta', metaSchemaCoId);
+  } else {
+    // If already registered, verify it matches (if not, that's an error)
+    const existingCoId = coIdRegistry.get('@schema/meta');
+    if (existingCoId !== metaSchemaCoId) {
+      // Use existing co-id if it's already registered (database already has it)
+      console.warn(`[Seed] Metaschema already registered with different co-id: ${existingCoId}, using existing instead of ${metaSchemaCoId}`);
+      metaSchemaCoId = existingCoId;
+    }
+  }
+  
+  // Phase 2: Create schema CoMaps using CRUD API (so hooks fire automatically)
   // Use metaSchema co-id in headerMeta
   const schemaCoIdMap = new Map(); // Will be populated as we create CoMaps
   const schemaCoMaps = new Map(); // Store CoMap instances for later updates
+  
+  // Import CRUD create function to use hooks
+  const crudCreate = await import('../crud/create.js');
   
   // Create schemas in dependency order WITHOUT transformed references first
   for (const schemaKey of sortedSchemaKeys) {
@@ -271,25 +293,33 @@ export async function seed(account, node, configs, schemas, data) {
     // Extract direct properties (exclude $schema and $id - they go in metadata only)
     const { $schema, $id, ...directProperties } = schema;
     
-    // Create schema CoMap with direct properties (no nested definition object)
-    // Use metaSchema co-id directly in headerMeta (not "@meta-schema" string)
-    const schemaCoMapData = {
-      ...directProperties
-    };
+    // Create schema CoMap using CRUD API (hooks will fire automatically)
+    // Pass metaSchema co-id as schema parameter (CRUD will use it in headerMeta)
+    const createdSchema = await crudCreate.create(backend, metaSchemaCoId, directProperties);
     
-    // Create schema CoMap with metaSchema co-id in headerMeta
-    const schemaMeta = { $schema: metaSchemaCoId }; // Use actual co-id, not "@meta-schema" string
-    const schemaCoMap = universalGroup.createMap(schemaCoMapData, schemaMeta);
-    
-    // CoJSON assigned the ID automatically - use it!
-    const actualCoId = schemaCoMap.id;
+    // CRUD API returns the created record with id
+    const actualCoId = createdSchema.id;
     schemaCoIdMap.set(schemaKey, actualCoId);
-    schemaCoMaps.set(schemaKey, schemaCoMap);
+    
+    // Get the actual CoMap instance for later updates
+    const schemaCoValueCore = backend.getCoValue(actualCoId);
+    if (schemaCoValueCore && backend.isAvailable(schemaCoValueCore)) {
+      const schemaCoMapContent = backend.getCurrentContent(schemaCoValueCore);
+      if (schemaCoMapContent && typeof schemaCoMapContent.set === 'function') {
+        schemaCoMaps.set(schemaKey, schemaCoMapContent);
+      }
+    }
+    
     coIdRegistry.register(schemaKey, actualCoId);
     
   }
   
   // Phase 3: Now transform all schemas with actual co-ids and update CoMaps
+  // CRITICAL: Add metaschema to schemaCoIdMap so transformSchemaForSeeding can replace @schema/meta references
+  if (metaSchemaCoId && !schemaCoIdMap.has('@schema/meta')) {
+    schemaCoIdMap.set('@schema/meta', metaSchemaCoId);
+  }
+  
   const transformedSchemas = {};
   const transformedSchemasByKey = new Map();
   
@@ -298,7 +328,7 @@ export async function seed(account, node, configs, schemas, data) {
     const schemaCoId = schemaCoIdMap.get(schemaKey);
     const schemaCoMap = schemaCoMaps.get(schemaKey);
     
-    // Transform schema with actual co-ids
+    // Transform schema with actual co-ids (includes @schema/meta → metaSchemaCoId mapping)
     const transformedSchema = transformSchemaForSeeding(schema, schemaCoIdMap);
     transformedSchema.$id = `https://maia.city/${schemaCoId}`;
     
@@ -481,9 +511,9 @@ export async function seed(account, node, configs, schemas, data) {
       for (const [schemaKey, actualCoId] of schemaCoIdMap.entries()) {
         schemaRegistry.set(schemaKey, actualCoId);
       }
-      // Also add meta-schema if we have it
+      // Also add metaschema if we have it (as @schema/meta to match schema title)
       if (metaSchemaCoId) {
-        schemaRegistry.set('@meta-schema', metaSchemaCoId);
+        schemaRegistry.set('@schema/meta', metaSchemaCoId);
       }
     }
     
@@ -851,6 +881,9 @@ export async function seed(account, node, configs, schemas, data) {
   // Phase 9: Store registry in account.os.schematas CoMap
   await storeRegistry(account, node, universalGroup, coIdRegistry, schemaCoIdMap, instanceCoIdMap, configs || {}, seededSchemas);
   
+  // Note: Schema registration/indexing is now handled automatically by CRUD create hooks
+  // No manual registration needed - hooks fire when schemas are created via CRUD API
+  
   // CoJSON seeding complete
 
   return {
@@ -999,7 +1032,13 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
 
 /**
  * Seed data entities to CoJSON
- * Creates account.data CoMap and account.data.todos CoList (and other collections)
+ * 
+ * LEGACY: Creates account.data CoMap and account.data.{collectionName} CoLists for backward compatibility.
+ * 
+ * NOTE: With automatic schema indexing, items are now automatically indexed in account.os.{schemaCoId}
+ * via storage hooks. The account.data colists are legacy and may be removed in the future.
+ * New code should use schema indexes from account.os instead of account.data colists.
+ * 
  * @private
  */
 async function seedData(account, node, universalGroup, data, generateCoId, coIdRegistry, dataCollectionCoIds) {
@@ -1159,40 +1198,123 @@ async function seedData(account, node, universalGroup, data, generateCoId, coIdR
 }
 
 /**
- * Store registry in account.os.schematas CoMap
- * Also creates account.os CoMap
+ * Ensure account.os CoMap exists (creates if needed)
+ * Called early in seeding so storage hook can register schemas
  * @private
  */
-async function storeRegistry(account, node, universalGroup, coIdRegistry, schemaCoIdMap, instanceCoIdMap, configs, seededSchemas) {
-  // Create account.os CoMap if not exists
+async function ensureAccountOs(account, node, universalGroup) {
   let osId = account.get("os");
-  let os;
   
   if (osId) {
-    const osCore = node.getCoValue(osId);
-    if (osCore && osCore.type === 'comap') {
-      const osContent = osCore.getCurrentContent?.();
-      if (osContent && typeof osContent.get === 'function') {
-        os = osContent;
-      }
+    // account.os exists - try to load it
+    let osCore = node.getCoValue(osId);
+    if (!osCore && node.loadCoValueCore) {
+      await node.loadCoValueCore(osId);
+      osCore = node.getCoValue(osId);
+    }
+    
+    if (osCore && osCore.isAvailable()) {
+      // account.os exists and is available - done
+      return;
     }
   }
   
-  if (!os) {
-    // Create os CoMap directly using universalGroup (already resolved)
-    // Use GenesisSchema exception (no schema validation needed for container)
-    const osMeta = { $schema: 'GenesisSchema' };
-    os = universalGroup.createMap({}, osMeta);
-    account.set("os", os.id);
+  // Create account.os if it doesn't exist
+  const osMeta = { $schema: 'GenesisSchema' };
+  const os = universalGroup.createMap({}, osMeta);
+  account.set("os", os.id);
+  
+  // Wait for storage sync and availability
+  if (node.storage && node.syncManager) {
+    try {
+      await node.syncManager.waitForStorageSync(os.id);
+      await node.syncManager.waitForStorageSync(account.id);
+    } catch (e) {
+      console.warn(`[Seed] Storage sync wait failed for account.os:`, e);
+    }
   }
   
-  // Create account.os.schematas CoMap if not exists (renamed from registry)
-  let schematasId = os.get("schematas");
+  // Wait for account.os to become available
+  let osCore = node.getCoValue(os.id);
+  if (osCore && !osCore.isAvailable()) {
+    await new Promise((resolve) => {
+      const timeout = setTimeout(resolve, 5000);
+      const unsubscribe = osCore.subscribe((core) => {
+        if (core && core.isAvailable()) {
+          clearTimeout(timeout);
+          unsubscribe();
+          resolve();
+        }
+      });
+    });
+  }
+  
+  // Create account.os.schematas CoMap if it doesn't exist
+  // Note: During initial seeding, schemas aren't registered yet, so we use GenesisSchema
+  // The schematas-registry schema will be used when it's available (after seeding)
+  osCore = node.getCoValue(os.id);
+  if (osCore && osCore.isAvailable()) {
+    const osContent = osCore.getCurrentContent?.();
+    if (osContent && typeof osContent.get === 'function') {
+      const schematasId = osContent.get("schematas");
+      if (!schematasId) {
+        const schematasMeta = { $schema: 'GenesisSchema' }; // Use GenesisSchema during initial seeding
+        const schematas = universalGroup.createMap({}, schematasMeta);
+        osContent.set("schematas", schematas.id);
+        
+        // Wait for storage sync
+        if (node.storage && node.syncManager) {
+          try {
+            await node.syncManager.waitForStorageSync(schematas.id);
+            await node.syncManager.waitForStorageSync(os.id);
+          } catch (e) {
+            console.warn(`[Seed] Storage sync wait failed for account.os.schematas:`, e);
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Store registry in account.os.schematas CoMap
+ * Also creates account.os CoMap (if not already created by ensureAccountOs)
+ * @private
+ */
+async function storeRegistry(account, node, universalGroup, coIdRegistry, schemaCoIdMap, instanceCoIdMap, configs, seededSchemas) {
+  // account.os should already exist (created by ensureAccountOs in Phase 0)
+  // Just get it and register topics (schemas are auto-registered by storage hook)
+  const osId = account.get("os");
+  if (!osId) {
+    console.warn(`[Seed] account.os not found - should have been created in Phase 0`);
+    return;
+  }
+  
+  // Get account.os CoMap
+  let osCore = node.getCoValue(osId);
+  if (!osCore && node.loadCoValueCore) {
+    await node.loadCoValueCore(osId);
+    osCore = node.getCoValue(osId);
+  }
+  
+  if (!osCore || !osCore.isAvailable()) {
+    console.warn(`[Seed] account.os (${osId.substring(0, 12)}...) not available`);
+    return;
+  }
+  
+  const osContent = osCore.getCurrentContent?.();
+  if (!osContent || typeof osContent.get !== 'function') {
+    console.warn(`[Seed] account.os content not available`);
+    return;
+  }
+  
+  // Get or create account.os.schematas CoMap
+  let schematasId = osContent.get("schematas");
   let schematas;
   
   if (schematasId) {
     const schematasCore = node.getCoValue(schematasId);
-    if (schematasCore && schematasCore.type === 'comap') {
+    if (schematasCore && schematasCore.isAvailable()) {
       const schematasContent = schematasCore.getCurrentContent?.();
       if (schematasContent && typeof schematasContent.set === 'function') {
         schematas = schematasContent;
@@ -1201,34 +1323,72 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
   }
   
   if (!schematas) {
-    // Create schematas CoMap directly using universalGroup (already resolved)
-    // Use GenesisSchema exception (no schema validation needed for key-value store)
-    const schematasMeta = { $schema: 'GenesisSchema' };
+    // Create schematas CoMap if it doesn't exist
+    // Try to use proper schema (@schema/os/schematas-registry), fallback to GenesisSchema if not available
+    // Note: During initial seeding, the schema might not be registered yet, so we fallback to GenesisSchema
+    let schematasSchemaCoId = null;
+    if (schemaCoIdMap && schemaCoIdMap.has('@schema/os/schematas-registry')) {
+      schematasSchemaCoId = schemaCoIdMap.get('@schema/os/schematas-registry');
+    }
+    const schematasMeta = schematasSchemaCoId
+      ? { $schema: schematasSchemaCoId }
+      : { $schema: 'GenesisSchema' }; // Fallback during initial seeding
     schematas = universalGroup.createMap({}, schematasMeta);
-    os.set("schematas", schematas.id);
-  }
-  
-  // Store ONLY schema mappings (not instance manifests like vibes, actors, etc.)
-  // os.schematas should only contain schemas, not config instances
-  const allMappings = coIdRegistry.getAll();
-  let mappingCount = 0;
-  
-  for (const [humanReadableKey, coId] of allMappings) {
-    // Store schemas: @schema/*, @meta-schema, and data collection schemas
-    // Also store topics: @topic/* (needed for runtime resolution in publishToTopic)
-    // DO NOT store other instances: @actor/*, @vibe/*, @view/*, @context/*, etc.
-    const isSchema = humanReadableKey.startsWith('@schema/') || 
-                     humanReadableKey === '@meta-schema' ||
-                     humanReadableKey.startsWith('data/');
-    const isTopic = humanReadableKey.startsWith('@topic/');
+    osContent.set("schematas", schematas.id);
     
-    if (isSchema || isTopic) {
-      // Only store if not already set (avoid overwriting)
-      if (!schematas.get(humanReadableKey)) {
-        schematas.set(humanReadableKey, coId);
-        mappingCount++;
+    // Wait for storage sync
+    if (node.storage && node.syncManager) {
+      try {
+        await node.syncManager.waitForStorageSync(schematas.id);
+        await node.syncManager.waitForStorageSync(osId);
+      } catch (e) {
+        console.warn(`[Seed] Storage sync wait failed for account.os.schematas:`, e);
       }
     }
+  }
+  
+  // CRITICAL: Storage hook automatically registers ALL schemas when they're created via CRUD API
+  // However, metaschema is created directly (not via CRUD API) so it needs manual registration
+  // Topics (@topic/*) are NOT schemas and also need manual registration
+  const allMappings = coIdRegistry.getAll();
+  let topicCount = 0;
+  let metaschemaRegistered = false;
+  
+  for (const [humanReadableKey, coId] of allMappings) {
+    const isMetaschema = humanReadableKey === '@schema/meta';
+    const isTopic = humanReadableKey.startsWith('@topic/');
+    
+    if (isMetaschema) {
+      // Metaschema is created directly (not via CRUD API), so storage hook won't register it
+      // Manually register it here as a fallback
+      const existingCoId = schematas.get(humanReadableKey);
+      if (!existingCoId) {
+        schematas.set(humanReadableKey, coId);
+        metaschemaRegistered = true;
+        console.log(`[Seed] Manually registered metaschema ${humanReadableKey} → ${coId.substring(0, 12)}... (created directly, not via CRUD API)`);
+      } else if (existingCoId !== coId) {
+        // Different metaschema already registered - don't overwrite
+        console.warn(`[Seed] Metaschema already registered with different co-id: ${existingCoId.substring(0, 12)}... (new: ${coId.substring(0, 12)}...). Skipping.`);
+      } else {
+        console.log(`[Seed] Metaschema ${humanReadableKey} already registered`);
+      }
+    } else if (isTopic) {
+      // Topics are NOT schemas - they need manual registration
+      const existingCoId = schematas.get(humanReadableKey);
+      if (!existingCoId) {
+        schematas.set(humanReadableKey, coId);
+        topicCount++;
+      } else if (existingCoId !== coId) {
+        // Different topic already registered - don't overwrite
+        console.warn(`[Seed] Topic ${humanReadableKey} already registered with different co-id: ${existingCoId.substring(0, 12)}... (new: ${coId.substring(0, 12)}...). Skipping.`);
+      }
+    }
+    // Note: All other schemas (@schema/* except @schema/meta) are auto-registered by storage hook
+    // They're created via CRUD API, so the hook fires automatically
+  }
+  
+  if (metaschemaRegistered || topicCount > 0) {
+    console.log(`[Seed] Manually registered: ${metaschemaRegistered ? 'metaschema' : ''}${metaschemaRegistered && topicCount > 0 ? ' + ' : ''}${topicCount > 0 ? `${topicCount} topics` : ''} in account.os.schematas`);
   }
   
 }

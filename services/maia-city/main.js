@@ -732,45 +732,44 @@ window.debugTodos = function() {
 		console.log(`Needs post-init rerender: ${actor._needsPostInitRerender}`);
 	}
 	
-	// Check backend for todos CoList
+	// Check backend for todos schema index (from account.os, not account.data.todos)
 	const backend = maia.dbEngine?.backend;
 	if (backend) {
 		try {
-			// Try to find todos collection
-			const account = backend.getAccount();
-			if (account && account.data) {
-				const todosListId = account.data.get('todos');
-				if (todosListId) {
-					console.log(`\n--- Todos CoList ---`);
-					console.log(`CoList ID: ${todosListId}`);
-					const todosListCore = backend.getCoValue(todosListId);
-					if (todosListCore) {
-						const isAvailable = backend.isAvailable(todosListCore);
-						console.log(`CoList available: ${isAvailable}`);
-						if (isAvailable) {
-							const content = backend.getCurrentContent(todosListCore);
-							if (content && content.toJSON) {
-								const itemIds = content.toJSON();
-								console.log(`CoList item IDs: ${itemIds.length} items`, itemIds);
-								
-								// Check each item
-								for (const itemId of itemIds) {
-									const itemCore = backend.getCoValue(itemId);
-									if (itemCore) {
-										const itemAvailable = backend.isAvailable(itemCore);
-										console.log(`  Item ${itemId.substring(0, 12)}...: available=${itemAvailable}`);
-									} else {
-										console.log(`  Item ${itemId.substring(0, 12)}...: not in memory`);
-									}
+			// Get todos schema index colist from account.os (new indexing system)
+			const { getSchemaIndexColistId } = await import('@MaiaOS/db/cojson/crud/collection-helpers');
+			const todosSchemaIndexColistId = await getSchemaIndexColistId(backend, '@schema/data/todos');
+			
+			if (todosSchemaIndexColistId) {
+				console.log(`\n--- Todos Schema Index Colist (from account.os) ---`);
+				console.log(`Index Colist ID: ${todosSchemaIndexColistId}`);
+				const indexColistCore = backend.getCoValue(todosSchemaIndexColistId);
+				if (indexColistCore) {
+					const isAvailable = backend.isAvailable(indexColistCore);
+					console.log(`Index Colist available: ${isAvailable}`);
+					if (isAvailable) {
+						const content = backend.getCurrentContent(indexColistCore);
+						if (content && content.toJSON) {
+							const itemIds = content.toJSON();
+							console.log(`Indexed todo IDs: ${itemIds.length} items`, itemIds);
+							
+							// Check each item
+							for (const itemId of itemIds) {
+								const itemCore = backend.getCoValue(itemId);
+								if (itemCore) {
+									const itemAvailable = backend.isAvailable(itemCore);
+									console.log(`  Todo ${itemId.substring(0, 12)}...: available=${itemAvailable}`);
+								} else {
+									console.log(`  Todo ${itemId.substring(0, 12)}...: not in memory`);
 								}
 							}
 						}
-					} else {
-						console.log(`CoList CoValueCore not found`);
 					}
 				} else {
-					console.log(`\nTodos CoList ID not found in account.data`);
+					console.log(`Index Colist CoValueCore not found`);
 				}
+			} else {
+				console.log(`\nTodos schema index colist not found in account.os (schema may not be registered yet)`);
 			}
 		} catch (error) {
 			console.error('[debugTodos] Error checking backend:', error);

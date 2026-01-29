@@ -50,6 +50,9 @@ import topicsSchema from './os/topics.schema.json';
 import subscribersSchema from './os/subscribers.schema.json';
 import inboxSchema from './os/inbox.schema.json';
 import childrenSchema from './os/children.schema.json';
+// Import OS infrastructure schemas
+import schematasRegistrySchema from './os/schematas-registry.schema.json';
+import indexColistSchema from './os/index-colist.schema.json';
 // Import data schemas
 import todosDataSchema from './data/todos.schema.json';
 
@@ -78,7 +81,10 @@ const SCHEMAS = {
   topics: topicsSchema,
   subscribers: subscribersSchema,
   inbox: inboxSchema,
-  children: childrenSchema
+  children: childrenSchema,
+  // OS infrastructure schemas
+  'os/schematas-registry': schematasRegistrySchema,
+  'os/index-colist': indexColistSchema
 };
 
 // Data schemas registry (for application data validation)

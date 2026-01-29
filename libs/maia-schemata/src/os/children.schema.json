@@ -1,7 +1,7 @@
 {
   "$schema": "@schema/meta",
   "$id": "@schema/children",
-  "title": "Children CoMap",
+  "title": "@schema/children",
   "description": "A comap of child actors (namekey → actor co-id)",
   "cotype": "comap",
   "properties": {},

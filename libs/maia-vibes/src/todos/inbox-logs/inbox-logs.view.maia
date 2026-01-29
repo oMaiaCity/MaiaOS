@@ -1,0 +1,23 @@
+{
+  "$schema": "@schema/view",
+  "$id": "@view/inbox-logs",
+  "content": {
+    "class": "inbox-logs",
+    "$each": {
+      "items": "$todos",
+      "template": {
+        "class": "card",
+        "attrs": {
+          "data-done": "$$done"
+        },
+        "children": [
+          {
+            "tag": "span",
+            "class": "body",
+            "text": "$$text"
+          }
+        ]
+      }
+    }
+  }
+}

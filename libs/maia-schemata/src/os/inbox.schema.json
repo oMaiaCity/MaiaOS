@@ -1,7 +1,7 @@
 {
   "$schema": "@schema/meta",
   "$id": "@schema/inbox",
-  "title": "Inbox CoStream",
+  "title": "@schema/inbox",
   "description": "A costream (append-only stream) of messages received by this actor",
   "cotype": "costream",
   "items": {

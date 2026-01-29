@@ -9,6 +9,7 @@
 import noopDef from './core/noop.tool.maia';
 import publishMessageDef from './core/publishMessage.tool.maia';
 import focusDef from './core/focus.tool.maia';
+import queryInboxLogsDef from './core/queryInboxLogs.tool.maia';
 
 import dragStartDef from './dragdrop/start.tool.maia';
 import dropDef from './dragdrop/drop.tool.maia';
@@ -20,6 +21,7 @@ import validateInterfaceDef from './interface/validateInterface.tool.maia';
 import noopFn from './core/noop.tool.js';
 import publishMessageFn from './core/publishMessage.tool.js';
 import focusFn from './core/focus.tool.js';
+import queryInboxLogsFn from './core/queryInboxLogs.tool.js';
 
 import dragStartFn from './dragdrop/start.tool.js';
 import dropFn from './dragdrop/drop.tool.js';
@@ -34,6 +36,7 @@ export const TOOLS = {
   'core/noop': { definition: noopDef, function: noopFn },
   'core/publishMessage': { definition: publishMessageDef, function: publishMessageFn },
   'core/focus': { definition: focusDef, function: focusFn },
+  'core/queryInboxLogs': { definition: queryInboxLogsDef, function: queryInboxLogsFn },
   
   'dragdrop/start': { definition: dragStartDef, function: dragStartFn },
   'dragdrop/drop': { definition: dropDef, function: dropFn },

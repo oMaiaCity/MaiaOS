@@ -1,7 +1,7 @@
 {
   "$id": "@schema/data/todos",
   "$schema": "@schema/meta",
-  "title": "Todo Item Schema",
+  "title": "@schema/data/todos",
   "cotype": "comap",
   "properties": {
     "text": {

@@ -13,30 +13,35 @@ import agentActor from './agent/agent.actor.maia';
 import compositeActor from './composite/composite.actor.maia';
 import listActor from './list/list.actor.maia';
 import kanbanActor from './kanban/kanban.actor.maia';
+import inboxLogsActor from './inbox-logs/inbox-logs.actor.maia';
 
 // Import all views
 import agentView from './agent/agent.view.maia';
 import compositeView from './composite/composite.view.maia';
 import listView from './list/list.view.maia';
 import kanbanView from './kanban/kanban.view.maia';
+import inboxLogsView from './inbox-logs/inbox-logs.view.maia';
 
 // Import all contexts
 import agentContext from './agent/agent.context.maia';
 import compositeContext from './composite/composite.context.maia';
 import listContext from './list/list.context.maia';
 import kanbanContext from './kanban/kanban.context.maia';
+import inboxLogsContext from './inbox-logs/inbox-logs.context.maia';
 
 // Import all states
 import agentState from './agent/agent.state.maia';
 import compositeState from './composite/composite.state.maia';
 import listState from './list/list.state.maia';
 import kanbanState from './kanban/kanban.state.maia';
+import inboxLogsState from './inbox-logs/inbox-logs.state.maia';
 
 // Import all topics colists
 import agentTopics from './agent/agent.topics.maia';
 import compositeTopics from './composite/composite.topics.maia';
 import listTopics from './list/list.topics.maia';
 import kanbanTopics from './kanban/kanban.topics.maia';
+import inboxLogsTopics from './inbox-logs/inbox-logs.topics.maia';
 
 // Topics infrastructure removed - using direct messaging instead
 
@@ -45,6 +50,7 @@ import agentInbox from './agent/agent.inbox.maia';
 import compositeInbox from './composite/composite.inbox.maia';
 import listInbox from './list/list.inbox.maia';
 import kanbanInbox from './kanban/kanban.inbox.maia';
+import inboxLogsInbox from './inbox-logs/inbox-logs.inbox.maia';
 
 // Note: Children are now stored in context.actors (not separate children CoList files)
 // See agent.context.maia and composite.context.maia for children definitions
@@ -65,6 +71,7 @@ export const TodosVibeRegistry = {
     '@actor/composite': compositeActor,
     '@actor/list': listActor,
     '@actor/kanban': kanbanActor,
+    '@actor/inbox-logs': inboxLogsActor,
   },
   
   views: {
@@ -72,6 +79,7 @@ export const TodosVibeRegistry = {
     '@view/composite': compositeView,
     '@view/list': listView,
     '@view/kanban': kanbanView,
+    '@view/inbox-logs': inboxLogsView,
   },
   
   contexts: {
@@ -79,6 +87,7 @@ export const TodosVibeRegistry = {
     '@context/composite': compositeContext,
     '@context/list': listContext,
     '@context/kanban': kanbanContext,
+    '@context/inbox-logs': inboxLogsContext,
   },
   
   states: {
@@ -86,6 +95,7 @@ export const TodosVibeRegistry = {
     '@state/composite': compositeState,
     '@state/list': listState,
     '@state/kanban': kanbanState,
+    '@state/inbox-logs': inboxLogsState,
   },
   
   topics: {
@@ -93,6 +103,7 @@ export const TodosVibeRegistry = {
     '@topics/composite': compositeTopics,
     '@topics/list': listTopics,
     '@topics/kanban': kanbanTopics,
+    '@topics/inbox-logs': inboxLogsTopics,
   },
   
   inboxes: {
@@ -100,6 +111,7 @@ export const TodosVibeRegistry = {
     '@inbox/composite': compositeInbox,
     '@inbox/list': listInbox,
     '@inbox/kanban': kanbanInbox,
+    '@inbox/inbox-logs': inboxLogsInbox,
   },
   
   // Note: Children are now stored in context.actors (not separate children CoList files)

@@ -1,7 +1,7 @@
 {
   "$schema": "@schema/meta",
   "$id": "@schema/view",
-  "title": "View Definition",
+  "title": "@schema/view",
   "description": "UI structure definition with DOM tree, expressions, loops, and event handlers (recursive viewNode structure)",
   "cotype": "comap",
   "properties": {

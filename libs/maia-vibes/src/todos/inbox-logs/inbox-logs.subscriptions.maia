@@ -1,0 +1,5 @@
+{
+  "$schema": "@schema/subscriptions",
+  "$id": "@subscriptions/inbox-logs",
+  "items": []
+}

@@ -1,7 +1,7 @@
 {
   "$schema": "@schema/meta",
   "$id": "@schema/message",
-  "title": "Message",
+  "title": "@schema/message",
   "description": "Actor message for state machine transitions",
   "cotype": "comap",
   "required": ["type"],
