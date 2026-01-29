@@ -3,11 +3,13 @@
   "$schema": "@schema/meta",
   "title": "@schema/data/todos",
   "cotype": "comap",
+  "indexing": true,
   "properties": {
     "text": {
       "type": "string",
       "minLength": 1,
-      "description": "The todo item text content"
+      "pattern": ".*\\S.*",
+      "description": "The todo item text content (must contain at least one non-whitespace character)"
     },
     "done": {
       "type": "boolean",

@@ -4,6 +4,7 @@
   "title": "@schema/guard",
   "description": "Guard condition for state machine transitions",
   "cotype": "comap",
+  "indexing": true,
   "properties": {
   },
   "additionalProperties": true

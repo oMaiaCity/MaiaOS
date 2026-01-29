@@ -4,6 +4,7 @@
   "title": "@schema/actor",
   "description": "Pure declarative actor specification",
   "cotype": "comap",
+  "indexing": true,
   "properties": {
     "role": {
       "type": "string",

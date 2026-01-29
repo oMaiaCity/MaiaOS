@@ -52,7 +52,6 @@ import inboxSchema from './os/inbox.schema.json';
 import childrenSchema from './os/children.schema.json';
 // Import OS infrastructure schemas
 import schematasRegistrySchema from './os/schematas-registry.schema.json';
-import indexColistSchema from './os/index-colist.schema.json';
 // Import data schemas
 import todosDataSchema from './data/todos.schema.json';
 
@@ -83,8 +82,7 @@ const SCHEMAS = {
   inbox: inboxSchema,
   children: childrenSchema,
   // OS infrastructure schemas
-  'os/schematas-registry': schematasRegistrySchema,
-  'os/index-colist': indexColistSchema
+  'os/schematas-registry': schematasRegistrySchema
 };
 
 // Data schemas registry (for application data validation)

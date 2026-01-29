@@ -4,6 +4,7 @@
   "title": "@schema/topics",
   "description": "A colist of topic CoValue references that this actor subscribes to",
   "cotype": "colist",
+  "indexing": true,
   "items": {
     "$co": "@schema/topic",
     "description": "Each item is a co-id reference to a topic CoValue"

@@ -4,6 +4,7 @@
   "title": "@schema/tool",
   "description": "Tool metadata (AI-compatible JSON schema)",
   "cotype": "comap",
+  "indexing": true,
   "required": ["name", "description", "parameters"],
   "properties": {
     "name": {

@@ -4,6 +4,7 @@
   "title": "@schema/vibe",
   "description": "Vibe manifest/metadata",
   "cotype": "comap",
+  "indexing": true,
   "required": ["name", "description", "actor"],
   "properties": {
     "name": {

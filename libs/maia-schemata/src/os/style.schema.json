@@ -4,6 +4,7 @@
   "title": "@schema/style",
   "description": "Style definition (brand or actor-specific). Brand styles typically include selectors, actor styles are overrides.",
   "cotype": "comap",
+  "indexing": true,
   "properties": {
     "tokens": {
       "type": "object",

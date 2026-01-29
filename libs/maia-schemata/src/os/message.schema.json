@@ -4,6 +4,7 @@
   "title": "@schema/message",
   "description": "Actor message for state machine transitions",
   "cotype": "comap",
+  "indexing": true,
   "required": ["type"],
   "properties": {
     "type": {

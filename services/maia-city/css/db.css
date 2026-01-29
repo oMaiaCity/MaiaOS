@@ -20,6 +20,24 @@
   z-index: 0;
 }
 
+/* Watermark logo background for DB viewer */
+.db-container::after {
+  content: '';
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20vw;
+  height: 20vw;
+  background-image: url('/brand/logo.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 1;
+}
+
 /* Whitish Card Design - Ported from Legacy Data Explorer */
 .whitish-card {
   background: rgba(255, 255, 255, 0.8);

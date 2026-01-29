@@ -4,6 +4,7 @@
   "title": "@schema/messagePayload",
   "description": "Message payload definition",
   "cotype": "comap",
+  "indexing": true,
   "properties": {
   },
   "additionalProperties": true

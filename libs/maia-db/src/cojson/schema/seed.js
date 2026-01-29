@@ -876,7 +876,12 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   }
   
   // Phase 8: Seed data entities to CoJSON
-  const seededData = await seedData(account, node, universalGroup, data, generateCoId, coIdRegistry, dataCollectionCoIds);
+  // NOTE: account.data seeding is deprecated - data is now indexed via schema indexes in account.os
+  // Skip seeding account.data entirely
+  const seededData = {
+    collections: [],
+    totalItems: 0
+  };
   
   // Phase 9: Store registry in account.os.schematas CoMap
   await storeRegistry(account, node, universalGroup, coIdRegistry, schemaCoIdMap, instanceCoIdMap, configs || {}, seededSchemas);

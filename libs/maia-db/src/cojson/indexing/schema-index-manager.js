@@ -13,6 +13,8 @@ import { EXCEPTION_SCHEMAS } from '../../schemas/meta.js';
 import { createCoList } from '../cotypes/coList.js';
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js';
 import { resolveHumanReadableKey } from '../schema/resolve-key.js';
+import { loadSchemaDefinition } from '../schema/schema-resolver.js';
+import { create } from '../crud/create.js';
 
 /**
  * Ensure account.os CoMap exists
@@ -89,15 +91,133 @@ async function ensureOsCoMap(backend) {
 }
 
 /**
- * Ensure schema index colist exists for a given schema co-id
- * Creates the colist in account.os[<schemaCoId>] (all schemas indexed in account.os)
+ * Generate schema-specific index colist schema for a given schema
+ * Creates a schema that enforces type safety using $co keyword
  * @param {Object} backend - Backend instance
  * @param {string} schemaCoId - Schema co-id (e.g., "co_z123...")
- * @returns {Promise<RawCoList>} Schema index colist
+ * @param {string} [metaSchemaCoId] - Optional metaSchema co-id (if not provided, will be extracted from schema's headerMeta)
+ * @returns {Promise<string|null>} Schema-specific index colist schema co-id or null if failed
  */
-export async function ensureSchemaIndexColist(backend, schemaCoId) {
+async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSchemaCoId = null) {
   if (!schemaCoId || !schemaCoId.startsWith('co_z')) {
     throw new Error(`[SchemaIndexManager] Invalid schema co-id: ${schemaCoId}`);
+  }
+
+  // Get metaSchema co-id - prefer provided parameter, otherwise extract from schema's headerMeta
+  if (!metaSchemaCoId) {
+    const schemaCoValueCore = backend.getCoValue(schemaCoId);
+    if (schemaCoValueCore) {
+      const header = backend.getHeader(schemaCoValueCore);
+      const headerMeta = header?.meta;
+      metaSchemaCoId = headerMeta?.$schema;
+      
+      // If it's a human-readable key, try to resolve it
+      if (metaSchemaCoId && !metaSchemaCoId.startsWith('co_z')) {
+        metaSchemaCoId = await resolveHumanReadableKey(backend, metaSchemaCoId);
+      }
+    }
+    
+    // Fallback: try registry lookup
+    if (!metaSchemaCoId || !metaSchemaCoId.startsWith('co_z')) {
+      metaSchemaCoId = await getMetaschemaCoId(backend);
+    }
+  }
+
+  if (!metaSchemaCoId || !metaSchemaCoId.startsWith('co_z')) {
+    console.warn(`[SchemaIndexManager] Cannot create schema-specific index colist schema - metaSchema not available`);
+    return null;
+  }
+
+  // Load schema definition to get its title
+  const schemaDef = await loadSchemaDefinition(backend, schemaCoId);
+  if (!schemaDef) {
+    console.warn(`[SchemaIndexManager] Cannot load schema definition for ${schemaCoId.substring(0, 12)}...`);
+    return null;
+  }
+
+  // Extract schema title (e.g., "@schema/data/todos")
+  const schemaTitle = schemaDef.title || schemaDef.$id;
+  if (!schemaTitle || typeof schemaTitle !== 'string' || !schemaTitle.startsWith('@schema/')) {
+    console.warn(`[SchemaIndexManager] Schema ${schemaCoId.substring(0, 12)}... has invalid title: ${schemaTitle}`);
+    return null;
+  }
+
+  // Generate schema-specific index colist schema name
+  // e.g., "@schema/data/todos" → "@schema/os/index-colist-data-todos"
+  // e.g., "@schema/os/schematas-registry" → "@schema/os/index-colist-schematas-registry"
+  // CRITICAL: Skip if this is already an index colist schema to prevent infinite recursion
+  if (schemaTitle.startsWith('@schema/os/index-colist-')) {
+    console.warn(`[SchemaIndexManager] Cannot create index colist schema for index colist schema ${schemaTitle} - would cause infinite recursion`);
+    return null;
+  }
+  
+  // Handle both @schema/data/... and @schema/os/... patterns
+  const indexColistSchemaTitle = schemaTitle.startsWith('@schema/os/')
+    ? schemaTitle.replace('@schema/os/', '@schema/os/index-colist-')
+    : schemaTitle.replace('@schema/', '@schema/os/index-colist-');
+  
+  // Check if schema-specific index colist schema already exists
+  const existingSchemaCoId = await resolveHumanReadableKey(backend, indexColistSchemaTitle);
+  if (existingSchemaCoId && existingSchemaCoId.startsWith('co_z')) {
+    return existingSchemaCoId;
+  }
+
+  // Create schema-specific index colist schema definition
+  // This schema enforces that only instances of the target schema can be stored
+  const indexColistSchemaDef = {
+    title: indexColistSchemaTitle,
+    description: `Schema-specific index colist for ${schemaTitle} - only allows instances of this schema`,
+    cotype: 'colist',
+    items: {
+      $co: schemaTitle  // Enforces type safety - only co-ids referencing the target schema are allowed
+    }
+  };
+
+  // Create the schema as a CoValue
+  try {
+    const createdSchema = await create(backend, metaSchemaCoId, indexColistSchemaDef);
+    const indexColistSchemaCoId = createdSchema.id;
+
+    // Register the schema in the registry
+    const schematasRegistry = await ensureSchemataRegistry(backend);
+    if (schematasRegistry) {
+      schematasRegistry.set(indexColistSchemaTitle, indexColistSchemaCoId);
+      console.log(`[SchemaIndexManager] Created and registered schema-specific index colist schema: ${indexColistSchemaTitle} → ${indexColistSchemaCoId.substring(0, 12)}...`);
+    }
+
+    return indexColistSchemaCoId;
+  } catch (error) {
+    console.error(`[SchemaIndexManager] Failed to create schema-specific index colist schema for ${schemaTitle}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Ensure schema index colist exists for a given schema co-id
+ * Creates the colist in account.os[<schemaCoId>] (all schemas indexed in account.os)
+ * Uses schema-specific index colist schema for type safety
+ * @param {Object} backend - Backend instance
+ * @param {string} schemaCoId - Schema co-id (e.g., "co_z123...")
+ * @param {string} [metaSchemaCoId] - Optional metaSchema co-id (if not provided, will be extracted from schema)
+ * @returns {Promise<RawCoList>} Schema index colist
+ */
+export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoId = null) {
+  if (!schemaCoId || !schemaCoId.startsWith('co_z')) {
+    throw new Error(`[SchemaIndexManager] Invalid schema co-id: ${schemaCoId}`);
+  }
+
+  // Check indexing property from schema definition
+  // Skip creating index colists if indexing is not true (defaults to false)
+  const schemaDef = await loadSchemaDefinition(backend, schemaCoId);
+  if (!schemaDef) {
+    console.warn(`[SchemaIndexManager] Cannot load schema definition for ${schemaCoId.substring(0, 12)}...`);
+    return null;
+  }
+
+  // Check indexing property (defaults to false if not present)
+  if (schemaDef.indexing !== true) {
+    console.log(`[SchemaIndexManager] Skipping index colist creation - schema has indexing: ${schemaDef.indexing ?? false}`);
+    return null;
   }
 
   // All schema indexes go in account.os, keyed by schema co-id
@@ -135,13 +255,17 @@ export async function ensureSchemaIndexColist(backend, schemaCoId) {
     return null;
   }
 
-  // Create new index colist
-  // Try to use proper schema (@schema/os/index-colist), fallback to GenesisSchema if not available
+  // Create new index colist with schema-specific schema
+  // Ensure schema-specific index colist schema exists
+  // Pass metaSchema co-id if provided to avoid registry lookup issues
+  const indexSchemaCoId = await ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSchemaCoId);
+  if (!indexSchemaCoId) {
+    console.warn(`[SchemaIndexManager] Cannot create index colist - schema-specific index colist schema not available for ${schemaCoId.substring(0, 12)}...`);
+    return null;
+  }
+
   const group = await backend.getDefaultGroup();
-  let indexSchemaCoId = await resolveHumanReadableKey(backend, '@schema/os/index-colist');
-  const indexMeta = indexSchemaCoId
-    ? { $schema: indexSchemaCoId }
-    : { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }; // Fallback to GenesisSchema if schema not registered yet
+  const indexMeta = { $schema: indexSchemaCoId };
   const indexColistRaw = group.createList([], indexMeta);
   indexColistId = indexColistRaw.id;
   
@@ -192,12 +316,10 @@ export async function ensureUnknownColist(backend) {
   }
 
   // Create new unknown colist
-  // Try to use proper schema (@schema/os/index-colist), fallback to GenesisSchema if not available
+  // Unknown items don't have schemas, so we use GenesisSchema (base schema)
+  // This is not a fallback - it's the appropriate schema for unknown items
   const group = await backend.getDefaultGroup();
-  let unknownSchemaCoId = await resolveHumanReadableKey(backend, '@schema/os/index-colist');
-  const unknownMeta = unknownSchemaCoId
-    ? { $schema: unknownSchemaCoId }
-    : { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }; // Fallback to GenesisSchema if schema not registered yet
+  const unknownMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
   const unknownColist = group.createList([], unknownMeta);
   
   // Store in account.os.unknown
@@ -495,8 +617,27 @@ export async function registerSchemaCoValue(backend, schemaCoValueCore) {
     console.error(`[SchemaIndexing] ❌ Registration failed! Expected ${schemaCoValueCore.id.substring(0, 12)}..., got ${verifyCoId ? verifyCoId.substring(0, 12) + '...' : 'null'}`);
   }
 
+  // Check indexing property from schema content
+  // Skip creating index colists if indexing is not true (defaults to false)
+  const indexing = content.get('indexing');
+  if (indexing !== true) {
+    console.log(`[SchemaIndexing] Skipping index colist creation - schema ${title} has indexing: ${indexing ?? false}`);
+    return;
+  }
+
+  // Get metaSchema co-id from schema's headerMeta for creating schema-specific index colist schema
+  const header = backend.getHeader(schemaCoValueCore);
+  const headerMeta = header?.meta;
+  let metaSchemaCoId = headerMeta?.$schema;
+  
+  // If it's a human-readable key, try to resolve it
+  if (metaSchemaCoId && !metaSchemaCoId.startsWith('co_z')) {
+    metaSchemaCoId = await resolveHumanReadableKey(backend, metaSchemaCoId);
+  }
+
   // Create schema index colist for this schema (in account.os, keyed by schema co-id)
-  await ensureSchemaIndexColist(backend, schemaCoValueCore.id);
+  // Pass metaSchema co-id to avoid registry lookup issues
+  await ensureSchemaIndexColist(backend, schemaCoValueCore.id, metaSchemaCoId);
   console.log(`[SchemaIndexing] Created index colist for schema ${title} (co-id: ${schemaCoValueCore.id.substring(0, 12)}...)`);
 }
 
@@ -618,6 +759,18 @@ export async function indexCoValue(backend, coValueCoreOrId) {
         return;
       }
 
+      // CRITICAL: Validate that co-value actually matches the schema before indexing
+      // This prevents legacy/invalid entries from being indexed
+      const header = backend.getHeader(coValueCore);
+      const headerMeta = header?.meta;
+      const coValueSchemaCoId = headerMeta?.$schema;
+      
+      // Verify the co-value's schema matches the expected schema
+      if (!coValueSchemaCoId || coValueSchemaCoId !== schemaCoId) {
+        console.warn(`[SchemaIndexing] Skipping co-value ${coId.substring(0, 12)}... - schema mismatch. Expected ${schemaCoId.substring(0, 12)}..., got ${coValueSchemaCoId ? coValueSchemaCoId.substring(0, 12) + '...' : 'null'}`);
+        return;
+      }
+
       // CRITICAL: Check if co-value co-id already in index (idempotent)
       // This is the final check - prevents duplicate entries even if function is called multiple times
       try {
@@ -632,6 +785,7 @@ export async function indexCoValue(backend, coValueCoreOrId) {
       }
 
       // Add co-value co-id to index colist
+      // Schema-specific index colist schema will validate the co-id format via $co keyword
       try {
         indexColist.append(coId);
         // Reduced logging - only log in debug mode or for first-time indexing

@@ -4,6 +4,7 @@
   "title": "@schema/action",
   "description": "Action (tool invocation or context update)",
   "cotype": "comap",
+  "indexing": true,
   "oneOf": [
     {
       "type": "object",

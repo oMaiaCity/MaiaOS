@@ -3,6 +3,7 @@
   "$id": "@schema/maia-script-expression",
   "title": "@schema/maia-script-expression",
   "cotype": "comap",
+  "indexing": false,
   "description": "JSON-based DSL expression schema for MaiaScript runtime logic. Supports data access, comparisons, logical operations, control flow, and nested expressions.",
   "anyOf": [
     {

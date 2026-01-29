@@ -4,6 +4,7 @@
   "title": "@schema/os/schematas-registry",
   "description": "Schema registry CoMap - maps schema namekeys (e.g., @schema/data/todos) to schema co-ids (co_z...). Stored in account.os.schematas",
   "cotype": "comap",
+  "indexing": false,
   "properties": {
     "@schema/meta": {
       "type": "string",

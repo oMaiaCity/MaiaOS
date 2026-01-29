@@ -4,6 +4,7 @@
   "title": "@schema/subscribers",
   "description": "A colist of actor co-ids subscribed to a topic",
   "cotype": "colist",
+  "indexing": true,
   "items": {
     "$co": "@schema/actor",
     "description": "Each item is a co-id reference to an actor subscribed to this topic"

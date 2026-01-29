@@ -16,6 +16,7 @@
   ],
   "title": "@schema/meta",
   "type": ["object", "boolean"],
+  "indexing": false,
   "properties": {
     "title": {
       "type": "string",
@@ -38,6 +39,11 @@
         }
       ],
       "description": "Reference to schema that this property value must conform to (human-readable ID or co-id). Use $co in properties to reference separate CoValues, never use cotype in properties."
+    },
+    "indexing": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether instances of this schema should be indexed in account.os.{schemaCoId}"
     }
   },
   "required": ["title", "cotype"]

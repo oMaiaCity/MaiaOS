@@ -29,6 +29,25 @@ body {
   padding: 0;
   -webkit-font-smoothing: antialiased;
   background: #000;
+  position: relative;
+}
+
+/* Watermark logo background */
+body::before {
+  content: '';
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20vw;
+  height: 20vw;
+  background-image: url('/brand/logo.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* Utils */

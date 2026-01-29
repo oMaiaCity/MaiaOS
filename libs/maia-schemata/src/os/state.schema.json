@@ -4,6 +4,7 @@
   "title": "@schema/state",
   "description": "XState-like state machine with states, transitions, guards, and actions",
   "cotype": "comap",
+  "indexing": true,
   "required": ["initial", "states"],
   "properties": {
     "initial": {

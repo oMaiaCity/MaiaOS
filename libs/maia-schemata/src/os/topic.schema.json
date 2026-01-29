@@ -4,6 +4,7 @@
   "title": "@schema/topic",
   "description": "A topic CoValue representing a message category/channel. Contains subscribers list and optional schema for validation.",
   "cotype": "comap",
+  "indexing": true,
   "properties": {
     "name": {
       "type": "string",

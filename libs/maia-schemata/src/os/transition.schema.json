@@ -4,6 +4,7 @@
   "title": "@schema/transition",
   "description": "State machine transition",
   "cotype": "comap",
+  "indexing": true,
   "properties": {
     "target": {
       "type": "string",
