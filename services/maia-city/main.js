@@ -710,17 +710,6 @@ window.debugTodos = async function() {
 			console.log(`context.todosTodo: ${todosTodoType}`, todosTodo);
 		}
 		
-		// Check queries
-		if (actor._queries) {
-			console.log(`Queries:`, Array.from(actor._queries.keys()));
-			for (const [key, query] of actor._queries.entries()) {
-				const store = query.store;
-				const storeValue = store?.value;
-				const storeValueType = Array.isArray(storeValue) ? `array[${storeValue.length}]` : typeof storeValue;
-				const subscriberCount = store?._subscribers?.size || 0;
-				console.log(`  Query "${key}": store.value = ${storeValueType}, subscribers = ${subscriberCount}`);
-			}
-		}
 		
 		// Check initial data received
 		if (actor._initialDataReceived) {

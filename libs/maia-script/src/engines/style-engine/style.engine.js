@@ -33,29 +33,21 @@ export class StyleEngine {
   /**
    * Load a style by co-id (reactive subscription)
    * @param {string} coId - Style co-id (e.g., 'co_z...')
-   * @param {Function} [onUpdate] - Optional callback when style changes
-   * @returns {Promise<Object>} The parsed style definition
+   * @returns {Promise<ReactiveStore>} ReactiveStore containing style definition
    */
-  async loadStyle(coId, onUpdate = null) {
+  async loadStyle(coId) {
     // Use direct read() API - no wrapper needed
     // Extract schema co-id from style CoValue's headerMeta.$schema using fromCoValue pattern
     const styleSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: coId });
     
-    // Read style definition using schema co-id
+    // Read style definition using schema co-id - return store directly (pure stores pattern)
     const store = await this.dbEngine.execute({
       op: 'read',
       schema: styleSchemaCoId,
       key: coId
     });
     
-    // Set up onUpdate callback if provided
-    if (onUpdate) {
-      store.subscribe((updatedStyle) => {
-        onUpdate(updatedStyle);
-      }, { skipInitial: true });
-    }
-    
-    return store.value;
+    return store; // Return store directly - caller subscribes
   }
 
   /**

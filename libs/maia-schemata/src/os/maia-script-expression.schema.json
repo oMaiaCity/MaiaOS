@@ -121,6 +121,17 @@
           "additionalProperties": false
         },
         {
+          "description": "$trim operation - trim whitespace from string",
+          "properties": {
+            "$trim": {
+              "$ref": "#",
+              "description": "Expression to trim (evaluated to string, then trimmed of leading/trailing whitespace)"
+            }
+          },
+          "required": ["$trim"],
+          "additionalProperties": false
+        },
+        {
           "description": "$if operation - conditional expression",
           "properties": {
             "$if": {

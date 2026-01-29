@@ -8,6 +8,7 @@
 
 // Import message helper
 import { createAndPushMessage } from '@MaiaOS/db';
+import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
 
 export class ActorEngine {
   constructor(styleEngine, viewEngine, moduleRegistry, toolEngine, stateEngine = null) {
@@ -23,6 +24,10 @@ export class ActorEngine {
     this._containerActors = new Map();
     this._vibeActors = new Map();
     this.viewEngine.setActorEngine(this);
+    
+    // Svelte-style rerender batching (microtask queue)
+    this.pendingRerenders = new Set(); // Track actors needing rerender
+    this.batchTimer = null; // Track if microtask is scheduled
   }
 
   /**
@@ -91,7 +96,15 @@ export class ActorEngine {
   async _loadActorConfigs(actorConfig) {
     if (!actorConfig.view) throw new Error(`[ActorEngine] Actor config must have 'view' property`);
     
-    // Use direct read() API for view config
+    // Set up subscription storage
+    const actorId = actorConfig.id || 'temp';
+    if (!this._tempSubscriptions) this._tempSubscriptions = new Map(); // actorId -> Array<unsubscribe>
+    if (!this._tempSubscriptions.has(actorId)) {
+      this._tempSubscriptions.set(actorId, []);
+    }
+    const tempSubscriptions = this._tempSubscriptions.get(actorId);
+    
+    // Load view config (needs two sequential reads: first to get schema, then to get view)
     const viewStore = await this.dbEngine.execute({ op: 'read', schema: null, key: actorConfig.view });
     const viewData = viewStore.value;
     const viewSchemaCoId = viewData?.$schema;
@@ -101,103 +114,136 @@ export class ActorEngine {
     const viewStore2 = await this.dbEngine.execute({ op: 'read', schema: viewSchemaCoId, key: actorConfig.view });
     const viewDef = viewStore2.value;
     
-    // Set up subscription for view updates (direct subscription, no SubscriptionEngine)
-    // Store unsubscribe functions temporarily, will be moved to actor._subscriptions in createActor
-    const actorId = actorConfig.id || 'temp';
-    if (!this._tempSubscriptions) this._tempSubscriptions = new Map(); // actorId -> Array<unsubscribe>
-    if (!this._tempSubscriptions.has(actorId)) {
-      this._tempSubscriptions.set(actorId, []);
-    }
-    const tempSubscriptions = this._tempSubscriptions.get(actorId);
-    
     const unsubscribeView = viewStore2.subscribe((updatedView) => {
       const actor = this.actors.get(actorId);
       if (actor) {
         actor.viewDef = updatedView;
-        if (actor._initialRenderComplete) this.rerender(actor.id);
+        if (actor._initialRenderComplete) this._scheduleRerender(actor.id);
       }
     }, { skipInitial: true });
     tempSubscriptions.push(unsubscribeView);
     
-    let context = {}, contextCoId = null, contextSchemaCoId = null;
+    // Parallelize loading of context, style, brand, and inbox configs
+    const loadPromises = [];
+    
+    // Context loading
+    let contextPromise = null;
     if (actorConfig.context) {
-      const result = await this.loadContext(actorConfig.context);
+      contextPromise = this.loadContext(actorConfig.context);
+      loadPromises.push(contextPromise);
+    }
+    
+    // Style and brand schema resolution + loading (can be parallelized)
+    let stylePromise = null;
+    let brandPromise = null;
+    if (actorConfig.style) {
+      stylePromise = (async () => {
+        try {
+          const styleSchemaCoId = await this._getSchemaCoId(actorConfig.style);
+          const styleStore = await this.dbEngine.execute({ op: 'read', schema: styleSchemaCoId, key: actorConfig.style });
+          const unsubscribeStyle = styleStore.subscribe(async (updatedStyle) => {
+            const actor = this.actors.get(actorId);
+            if (actor && this.styleEngine) {
+              try {
+                const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
+                actor.shadowRoot.adoptedStyleSheets = styleSheets;
+                if (actor._initialRenderComplete) {
+                  this._scheduleRerender(actor.id);
+                }
+              } catch (error) {
+                console.error(`[ActorEngine] Failed to update stylesheets after style change:`, error);
+              }
+            }
+          }, { skipInitial: true });
+          tempSubscriptions.push(unsubscribeStyle);
+          return styleStore;
+        } catch (error) {
+          console.error(`[ActorEngine] Failed to subscribe to style:`, error);
+          return null;
+        }
+      })();
+      loadPromises.push(stylePromise);
+    }
+    
+    if (actorConfig.brand) {
+      brandPromise = (async () => {
+        try {
+          const brandSchemaCoId = await this._getSchemaCoId(actorConfig.brand);
+          const brandStore = await this.dbEngine.execute({ op: 'read', schema: brandSchemaCoId, key: actorConfig.brand });
+          const unsubscribeBrand = brandStore.subscribe(async (updatedBrand) => {
+            const actor = this.actors.get(actorId);
+            if (actor && this.styleEngine) {
+              try {
+                const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
+                actor.shadowRoot.adoptedStyleSheets = styleSheets;
+                if (actor._initialRenderComplete) {
+                  this._scheduleRerender(actor.id);
+                }
+              } catch (error) {
+                console.error(`[ActorEngine] Failed to update stylesheets after brand change:`, error);
+              }
+            }
+          }, { skipInitial: true });
+          tempSubscriptions.push(unsubscribeBrand);
+          return brandStore;
+        } catch (error) {
+          console.error(`[ActorEngine] Failed to subscribe to brand:`, error);
+          return null;
+        }
+      })();
+      loadPromises.push(brandPromise);
+    }
+    
+    // Inbox loading
+    let inboxPromise = null;
+    if (actorConfig.inbox) {
+      inboxPromise = (async () => {
+        const inboxSchemaCoId = await this._getSchemaCoId(actorConfig.inbox);
+        return await this.dbEngine.execute({ op: 'read', schema: inboxSchemaCoId, key: actorConfig.inbox });
+      })();
+      loadPromises.push(inboxPromise);
+    }
+    
+    // Wait for all configs to load in parallel
+    await Promise.all(loadPromises);
+    
+    // Process results
+    let context = {}, contextCoId = null, contextSchemaCoId = null;
+    if (contextPromise) {
+      const result = await contextPromise;
       context = result.context;
       contextCoId = result.contextCoId;
       contextSchemaCoId = result.contextSchemaCoId;
       const contextStore = result.store;
       
-      // Set up subscription for context updates (direct subscription, same pattern as view)
       const unsubscribeContext = contextStore.subscribe((updatedContextDef) => {
         const actor = this.actors.get(actorId);
         if (actor) {
-          const { $schema, $id, ...newContext } = updatedContextDef;
-          // Merge new context into actor.context
-          actor.context = { ...actor.context, ...newContext };
-          if (actor._initialRenderComplete) {
-            this.rerender(actor.id);
+          const { $schema, ...contextWithId } = updatedContextDef;
+          let hasChanges = false;
+          for (const [key, value] of Object.entries(contextWithId)) {
+            if (actor.context[key] instanceof ReactiveStore) {
+              continue;
+            }
+            if (actor.context[key] !== value) {
+              actor.context[key] = value;
+              hasChanges = true;
+            }
+          }
+          if (hasChanges && actor._initialRenderComplete) {
+            this._scheduleRerender(actor.id);
           }
         }
       }, { skipInitial: true });
       tempSubscriptions.push(unsubscribeContext);
     }
-    // Set up subscriptions for style and brand configs (direct read() + ReactiveStore pattern)
-    if (actorConfig.brand) {
-      try {
-        const brandSchemaCoId = await this._getSchemaCoId(actorConfig.brand);
-        const brandStore = await this.dbEngine.execute({ op: 'read', schema: brandSchemaCoId, key: actorConfig.brand });
-        const unsubscribeBrand = brandStore.subscribe(async (updatedBrand) => {
-          const actor = this.actors.get(actorId);
-          if (actor && this.styleEngine) {
-            try {
-              // Reload stylesheets when brand changes
-              const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
-              actor.shadowRoot.adoptedStyleSheets = styleSheets;
-              if (actor._initialRenderComplete) {
-                this.rerender(actor.id);
-              }
-            } catch (error) {
-              console.error(`[ActorEngine] Failed to update stylesheets after brand change:`, error);
-            }
-          }
-        }, { skipInitial: true });
-        tempSubscriptions.push(unsubscribeBrand);
-      } catch (error) {
-        console.error(`[ActorEngine] Failed to subscribe to brand:`, error);
-      }
-    }
-    
-    if (actorConfig.style) {
-      try {
-        const styleSchemaCoId = await this._getSchemaCoId(actorConfig.style);
-        const styleStore = await this.dbEngine.execute({ op: 'read', schema: styleSchemaCoId, key: actorConfig.style });
-        const unsubscribeStyle = styleStore.subscribe(async (updatedStyle) => {
-          const actor = this.actors.get(actorId);
-          if (actor && this.styleEngine) {
-            try {
-              // Reload stylesheets when style changes
-              const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
-              actor.shadowRoot.adoptedStyleSheets = styleSheets;
-              if (actor._initialRenderComplete) {
-                this.rerender(actor.id);
-              }
-            } catch (error) {
-              console.error(`[ActorEngine] Failed to update stylesheets after style change:`, error);
-            }
-          }
-        }, { skipInitial: true });
-        tempSubscriptions.push(unsubscribeStyle);
-      } catch (error) {
-        console.error(`[ActorEngine] Failed to subscribe to style:`, error);
-      }
-    }
     
     let inbox = null, inboxCoId = null;
-    if (actorConfig.inbox) {
+    if (inboxPromise) {
       inboxCoId = actorConfig.inbox;
-      const inboxSchemaCoId = await this._getSchemaCoId(actorConfig.inbox);
-      inbox = await this.dbEngine.execute({ op: 'read', schema: inboxSchemaCoId, key: actorConfig.inbox });
+      inbox = await inboxPromise;
     }
+    
     return { viewDef, context, contextCoId, contextSchemaCoId, inbox, inboxCoId, tempSubscriptions };
   }
 
@@ -491,7 +537,7 @@ export class ActorEngine {
             try {
               if (actor.machine) this.stateEngine.destroyMachine(actor.machine.id);
               actor.machine = await this.stateEngine.createMachine(updatedStateDef, actor);
-              if (actor._initialRenderComplete) this.rerender(actor.id);
+              if (actor._initialRenderComplete) this._scheduleRerender(actor.id);
             } catch (error) {
               console.error(`[ActorEngine] Failed to update state machine:`, error);
             }
@@ -627,12 +673,8 @@ export class ActorEngine {
     actor._initialRenderComplete = true;
     if (actor._needsPostInitRerender) {
       delete actor._needsPostInitRerender;
-      try {
-        await this.rerender(actorId);
-      } catch (error) {
-        console.error(`[ActorEngine] Post-init rerender failed:`, error);
-        // SubscriptionEngine eliminated - rerender handled directly
-      }
+      // Schedule rerender (will be batched with other updates)
+      this._scheduleRerender(actorId);
     }
     if (this.pendingMessages.has(actorId)) {
       for (const message of this.pendingMessages.get(actorId)) {
@@ -644,6 +686,39 @@ export class ActorEngine {
   }
 
 
+  /**
+   * Schedule a rerender for an actor (batched via microtask queue)
+   * Following Svelte's batching pattern: multiple updates in same tick = one rerender
+   * @param {string} actorId - The actor ID to rerender
+   */
+  _scheduleRerender(actorId) {
+    this.pendingRerenders.add(actorId); // Deduplicates automatically (Set)
+    
+    if (!this.batchTimer) {
+      this.batchTimer = queueMicrotask(async () => {
+        await this._flushRerenders();
+      });
+    }
+  }
+
+  /**
+   * Flush all pending rerenders in batch
+   * Processes all actors that need rerendering in one microtask
+   */
+  async _flushRerenders() {
+    const actorIds = Array.from(this.pendingRerenders);
+    this.pendingRerenders.clear();
+    this.batchTimer = null;
+    
+    // Parallelize rerenders - they're independent operations
+    await Promise.all(actorIds.map(actorId => this.rerender(actorId)));
+  }
+
+  /**
+   * Rerender an actor (private implementation - only called by _flushRerenders)
+   * @param {string} actorId - The actor ID to rerender
+   * @private
+   */
   async rerender(actorId) {
     const actor = this.actors.get(actorId);
     if (!actor) {
@@ -762,7 +837,7 @@ export class ActorEngine {
     } else {
       actor.shadowRoot = containerElement.attachShadow({ mode: 'open' });
     }
-    if (actor._initialRenderComplete) await this.rerender(actorId);
+    if (actor._initialRenderComplete) this._scheduleRerender(actorId);
     return actor;
   }
 
@@ -939,10 +1014,12 @@ export class ActorEngine {
       for (const message of messages) {
         if (message.type === 'INIT' || message.from === 'system') continue;
         try {
+          // Ensure payload is always an object (never undefined/null)
+          const payload = message.payload || {};
           if (actor.machine && this.stateEngine) {
-            await this.stateEngine.send(actor.machine.id, message.type, message.payload);
+            await this.stateEngine.send(actor.machine.id, message.type, payload);
           } else if (message.type.startsWith('@')) {
-            await this.toolEngine.execute(message.type, actor, message.payload);
+            await this.toolEngine.execute(message.type, actor, payload);
           }
         } catch (error) {
           console.error(`[ActorEngine] Failed to process message:`, error);

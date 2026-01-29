@@ -99,17 +99,33 @@ await stateEngine.loadStateDef(config.state, (updatedStateDef) => {
 
 **Purpose:** Prevent excessive re-renders when multiple subscriptions fire simultaneously
 
+MaiaOS uses a **Svelte-style microtask batching system** to optimize rerender performance. When multiple reactive subscriptions fire in the same event loop tick, they're batched together so each actor only rerenders once.
+
+**Why it's needed:**
+
+In a reactive system, a single data update can trigger multiple subscriptions:
+- Store subscription fires → updates context → triggers context subscription → rerender
+- Store subscription also directly triggers rerender
+- ViewEngine store subscriptions also trigger rerender
+
+Without batching, this results in 2-3 expensive rerenders per update. Each rerender reads the view from DB, gets stylesheets, and renders the DOM.
+
 **How it works:**
 1. Multiple subscriptions fire → multiple `_scheduleRerender()` calls
-2. `_scheduleRerender()` adds actor ID to `pendingRerenders` Set
+2. `_scheduleRerender()` adds actor ID to `pendingRerenders` Set (automatically deduplicates)
 3. Schedules microtask if not already scheduled
 4. Microtask flushes all pending re-renders in one batch
-5. Each actor re-renders once
+5. Each actor re-renders once (deduplicated by Set)
 
-**Code:**
+**Implementation (ActorEngine):**
 ```javascript
+// In constructor
+this.pendingRerenders = new Set(); // Track actors needing rerender
+this.batchTimer = null; // Track if microtask is scheduled
+
+// Schedule rerender (replaces direct rerender() calls)
 _scheduleRerender(actorId) {
-  this.pendingRerenders.add(actorId);
+  this.pendingRerenders.add(actorId); // Deduplicates automatically (Set)
   
   if (!this.batchTimer) {
     this.batchTimer = queueMicrotask(() => {
@@ -118,15 +134,31 @@ _scheduleRerender(actorId) {
   }
 }
 
-_flushRerenders() {
+// Flush all pending rerenders in batch
+async _flushRerenders() {
   const actorIds = Array.from(this.pendingRerenders);
   this.pendingRerenders.clear();
+  this.batchTimer = null;
   
+  // Process all rerenders in batch
   for (const actorId of actorIds) {
-    this.actorEngine.rerender(actorId);
+    await this.rerender(actorId); // Private implementation
   }
 }
 ```
+
+**Usage:**
+
+All engines call `_scheduleRerender()` instead of `rerender()` directly:
+- `StateEngine`: When store subscriptions fire
+- `ViewEngine`: When ReactiveStore subscriptions fire  
+- `ActorEngine`: When config subscriptions fire (view, style, state, context)
+
+**Benefits:**
+- **Performance**: Reduces redundant rerenders from 2-3 per update to 1
+- **Responsiveness**: UI feels smooth even with rapid updates
+- **Standard pattern**: Follows Svelte's proven batching architecture
+- **Automatic**: Works transparently - no manual batching needed
 
 ---
 

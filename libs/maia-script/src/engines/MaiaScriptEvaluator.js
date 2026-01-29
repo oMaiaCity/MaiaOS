@@ -123,6 +123,15 @@ export class MaiaScriptEvaluator {
       return false; // All operands are falsy
     }
 
+    // Handle $trim operation (string trim whitespace)
+    if ('$trim' in expression) {
+      const value = await this.evaluate(expression.$trim, data, depth + 1);
+      if (typeof value === 'string') {
+        return value.trim();
+      }
+      return value; // Return as-is if not a string
+    }
+
     // Handle $if operation
     if ('$if' in expression) {
       // Evaluate condition (supports shortcuts like "$item.done" or DSL operations like "$eq")
@@ -220,6 +229,6 @@ export class MaiaScriptEvaluator {
     if (typeof expression !== 'object' || expression === null) return false;
     return '$context' in expression || '$item' in expression || '$if' in expression || 
            '$eq' in expression || '$ne' in expression || '$not' in expression ||
-           '$and' in expression || '$or' in expression;
+           '$and' in expression || '$or' in expression || '$trim' in expression;
   }
 }

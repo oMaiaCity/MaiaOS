@@ -22,94 +22,16 @@ function stripMetadataForValidation(config) {
   return cleanQueryObjects(cleanConfig);
 }
 
-export async function subscribeConfig(dbEngine, schemaRef, coId, configType, onUpdate, cache = null) {
+export async function subscribeConfig(dbEngine, schemaRef, coId, configType, cache = null) {
   if (!schemaRef || !schemaRef.startsWith('co_z')) {
     throw new Error(`[${configType}] schemaRef must be a co-id (co_z...), got: ${schemaRef}`);
   }
   validateCoId(coId, configType);
   if (!dbEngine) throw new Error(`[${configType}] Database engine not available`);
   
-  const convertAndValidate = async (config) => {
-    if (!config) return null;
-    const plainConfig = convertPropertiesArrayToPlainObject(config);
-    const schema = await loadSchemaFromDB(dbEngine, { fromCoValue: coId });
-    if (schema) {
-      await validateAgainstSchemaOrThrow(schema, stripMetadataForValidation(plainConfig), `${configType} (${coId})`);
-    }
-    if (cache) cache.set(coId, plainConfig);
-    return plainConfig;
-  };
-  
-  if (cache && cache.has(coId)) {
-    const store = await dbEngine.execute({ op: 'read', schema: schemaRef, key: coId });
-    const unsubscribe = store.subscribe(async (newConfig) => {
-      try {
-        const validated = await convertAndValidate(newConfig);
-        if (validated) onUpdate(validated);
-      } catch (error) {
-        console.error(`[${configType}] Error validating config in subscription callback:`, error);
-      }
-    });
-    return { config: cache.get(coId), unsubscribe, store };
-  }
-  
-  let initialConfig = null, initialConfigResolved = false, initialConfigError = null;
+  // Return store directly - caller subscribes (pure stores pattern)
   const store = await dbEngine.execute({ op: 'read', schema: schemaRef, key: coId });
-  
-  const unsubscribeFn = store.subscribe(async (config) => {
-    try {
-      if (config?.error) {
-        if (!initialConfigResolved) {
-          initialConfigResolved = true;
-          initialConfigError = new Error(`Failed to load ${configType} from database by co-id: ${coId}: ${config.error}`);
-        }
-        return;
-      }
-      const validated = await convertAndValidate(config);
-      if (!initialConfigResolved) {
-        if (!validated) {
-          initialConfigResolved = true;
-          initialConfigError = new Error(`Failed to load ${configType} from database by co-id: ${coId}`);
-          return;
-        }
-        initialConfig = validated;
-        initialConfigResolved = true;
-        onUpdate(validated);
-      } else if (validated) {
-        onUpdate(validated);
-      }
-    } catch (error) {
-      if (!initialConfigResolved) {
-        initialConfigResolved = true;
-        initialConfigError = error;
-      }
-    }
-  });
-  
-  const initialValue = store.value;
-  if (initialValue && !initialValue.error) {
-    try {
-      const validated = await convertAndValidate(initialValue);
-      if (validated) {
-        initialConfig = validated;
-        initialConfigResolved = true;
-        onUpdate(validated);
-      }
-    } catch (error) {
-      initialConfigResolved = true;
-      initialConfigError = error;
-    }
-  }
-  
-  let attempts = 0;
-  while (!initialConfigResolved && attempts < 50) {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    attempts++;
-  }
-  
-  if (initialConfigError) throw initialConfigError;
-  if (!initialConfig) throw new Error(`Failed to load ${configType} from database by co-id: ${coId}`);
-  return { config: initialConfig, unsubscribe: unsubscribeFn, store };
+  return store;
 }
 
 
@@ -125,88 +47,13 @@ export async function subscribeConfigsBatch(dbEngine, requests) {
   
   if (!dbEngine) throw new Error(`[subscribeConfigsBatch] Database engine not available`);
   
+  // Return stores directly - caller subscribes (pure stores pattern)
   const allCoIds = requests.map(req => req.coId);
-  const batchStores = allCoIds.length > 0 
+  const stores = allCoIds.length > 0 
     ? await dbEngine.execute({ op: 'read', schema: requests[0].schemaRef, keys: allCoIds })
     : [];
   
-  const configsMap = new Map();
-  allCoIds.forEach((coId, index) => {
-    if (batchStores[index]) configsMap.set(coId, batchStores[index].value);
-  });
-  
-  const convertAndValidate = async (config, configType, coId, cache) => {
-    if (!config) return null;
-    const plainConfig = convertPropertiesArrayToPlainObject(config);
-    const schema = await loadSchemaFromDB(dbEngine, { fromCoValue: coId });
-    if (schema) {
-      await validateAgainstSchemaOrThrow(schema, stripMetadataForValidation(plainConfig), `${configType} (${coId})`);
-    }
-    if (cache) cache.set(coId, plainConfig);
-    return plainConfig;
-  };
-  
-  const results = await Promise.all(
-    requests.map(async (req, index) => {
-      const { schemaRef, coId, configType, onUpdate, cache } = req;
-      
-      if (cache && cache.has(coId)) {
-        const store = await dbEngine.execute({ op: 'read', schema: schemaRef, key: coId });
-        const unsubscribe = store.subscribe(async (newConfig) => {
-          try {
-            const validated = await convertAndValidate(newConfig, configType, coId, cache);
-            if (validated) onUpdate(validated);
-          } catch (error) {
-            console.error(`[${configType}] Error validating config in subscription callback:`, error);
-          }
-        });
-        return { config: cache.get(coId), unsubscribe, index, store };
-      }
-      
-      let config = configsMap.get(coId);
-      if (config) config = await convertAndValidate(config, configType, coId, cache);
-      
-      let initialConfig = config, initialConfigResolved = !!config, initialConfigError = null;
-      const store = await dbEngine.execute({ op: 'read', schema: schemaRef, key: coId });
-      
-      const unsubscribeFn = store.subscribe(async (newConfig) => {
-        try {
-          const validated = await convertAndValidate(newConfig, configType, coId, cache);
-          if (!initialConfigResolved) {
-            if (!validated) {
-              initialConfigResolved = true;
-              initialConfigError = new Error(`Failed to load ${configType} from database by co-id: ${coId}`);
-              return;
-            }
-            initialConfig = validated;
-            initialConfigResolved = true;
-            onUpdate(validated);
-          } else if (validated) {
-            onUpdate(validated);
-          }
-        } catch (error) {
-          if (!initialConfigResolved) {
-            initialConfigResolved = true;
-            initialConfigError = error;
-          }
-        }
-      });
-      
-      if (!initialConfigResolved) {
-        let attempts = 0;
-        while (!initialConfigResolved && attempts < 10) {
-          await new Promise(resolve => setTimeout(resolve, 10));
-          attempts++;
-        }
-        if (initialConfigError) throw initialConfigError;
-        if (!initialConfig) throw new Error(`Failed to load ${configType} from database by co-id: ${coId}`);
-      }
-      
-      return { config: initialConfig, unsubscribe: unsubscribeFn, index, store };
-    })
-  );
-  
-  return results.sort((a, b) => a.index - b.index).map(({ config, unsubscribe, store }) => ({ config, unsubscribe, store }));
+  return stores;
 }
 
 function convertPropertiesArrayToPlainObject(config, requireSchema = true) {
@@ -311,6 +158,11 @@ export async function loadConfigOrUseProvided(dbEngine, schemaRef, coIdOrConfig,
     }
     return plainConfig;
   }
-  const { config } = await subscribeConfig(dbEngine, schemaRef, coIdOrConfig, configType, () => {}, cache);
+  // Get store and use current value (pure stores pattern)
+  const store = await subscribeConfig(dbEngine, schemaRef, coIdOrConfig, configType, cache);
+  const config = store.value;
+  if (!config) {
+    throw new Error(`Failed to load ${configType} from database by co-id: ${coIdOrConfig}`);
+  }
   return convertPropertiesArrayToPlainObject(config);
 }

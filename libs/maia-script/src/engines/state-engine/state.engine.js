@@ -14,16 +14,12 @@ export class StateEngine {
     this.dbEngine = null; // Database operation engine (set by kernel)
   }
 
-  async loadStateDef(stateRef, onUpdate = null) {
+  async loadStateDef(stateRef) {
     // Use direct read() API - no wrapper needed
     const stateSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: stateRef });
     const store = await this.dbEngine.execute({ op: 'read', schema: stateSchemaCoId, key: stateRef });
     
-    if (onUpdate) {
-      store.subscribe(onUpdate, { skipInitial: true });
-    }
-    
-    return store.value;
+    return store; // Return store directly - caller subscribes (pure stores pattern)
   }
 
   async createMachine(stateDef, actor) {
@@ -65,10 +61,24 @@ export class StateEngine {
     if (!currentStateDef) return;
     const transition = (currentStateDef.on || {})[event];
     if (!transition) return;
+    console.log('[StateEngine] send called', { 
+      machineId, 
+      event, 
+      payload, 
+      payloadKeys: Object.keys(payload || {}),
+      actorId: machine.actor.id 
+    });
     await this._executeTransition(machine, transition, event, payload);
   }
 
   async _executeTransition(machine, transition, event, payload) {
+    console.log('[StateEngine] _executeTransition called', { 
+      event, 
+      payload, 
+      payloadKeys: Object.keys(payload || {}),
+      currentState: machine.currentState,
+      actorId: machine.actor.id 
+    });
     machine.eventPayload = payload || {};
     if (event === 'SUCCESS') machine.lastToolResult = payload.result || null;
     
@@ -87,12 +97,28 @@ export class StateEngine {
     const previousState = machine.currentState;
     machine.currentState = targetState;
 
-    if (previousState !== targetState) await this._executeEntry(machine, targetState);
+    // CRITICAL: Preserve eventPayload for entry actions - entry actions need access to the original event payload
+    // Store it before executing entry to ensure it's available for $$id and other event payload references
+    const entryPayload = machine.eventPayload;
+    console.log('[StateEngine] About to execute entry', { 
+      previousState, 
+      targetState, 
+      entryPayload, 
+      entryPayloadKeys: Object.keys(entryPayload || {}),
+      machineEventPayload: machine.eventPayload,
+      machineEventPayloadKeys: Object.keys(machine.eventPayload || {}),
+      actorId: machine.actor.id 
+    });
+    if (previousState !== targetState) {
+      // Ensure eventPayload is set before entry actions run
+      machine.eventPayload = entryPayload;
+      await this._executeEntry(machine, targetState);
+    }
     
     const shouldRerender = previousState !== targetState && targetState !== 'dragging' && 
       !machine._isInitialCreation && !(previousState === 'init' && targetState === 'idle') &&
       machine.actor._initialRenderComplete && machine.actor.actorEngine;
-    if (shouldRerender) await machine.actor.actorEngine.rerender(machine.actor.id);
+    if (shouldRerender) machine.actor.actorEngine._scheduleRerender(machine.actor.id);
   }
 
   async _evaluateGuard(guard, context, payload) {
@@ -125,13 +151,13 @@ export class StateEngine {
       const result = await this._invokeTool(machine, actions.tool, actions.payload);
       if (result) machine.lastToolResult = result;
     } else if (Array.isArray(actions)) {
-      await this._executeActions(machine, actions);
+      await this._executeActions(machine, actions, machine.eventPayload);
       if (type === 'entry' && stateDef.on?.SUCCESS) {
         await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', {});
       }
     } else if (typeof actions === 'object' && actions !== null) {
       // Handle single action object (e.g., { mapData: {...} })
-      await this._executeActions(machine, actions);
+      await this._executeActions(machine, actions, machine.eventPayload);
       if (type === 'entry' && stateDef.on?.SUCCESS) {
         await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', {});
       }
@@ -139,7 +165,12 @@ export class StateEngine {
   }
 
   async _executeEntry(machine, stateName) { 
-    console.log('[StateEngine] _executeEntry called', { stateName, actorId: machine.actor.id });
+    console.log('[StateEngine] _executeEntry called', { 
+      stateName, 
+      actorId: machine.actor.id,
+      eventPayload: machine.eventPayload,
+      eventPayloadKeys: Object.keys(machine.eventPayload || {})
+    });
     await this._executeStateActions(machine, stateName, 'entry'); 
   }
   async _executeExit(machine, stateName) { await this._executeStateActions(machine, stateName, 'exit'); }
@@ -153,6 +184,10 @@ export class StateEngine {
   async _executeActions(machine, actions, payload = {}) {
     if (!Array.isArray(actions)) actions = [actions];
     console.log('[StateEngine] _executeActions called', { actions, actorId: machine.actor.id });
+    
+    // Batch all context updates - collect all updateContext actions and write once at the end
+    const contextUpdates = {};
+    
     for (const action of actions) {
       console.log('[StateEngine] Processing action', { action, hasMapData: !!action?.mapData });
       if (typeof action === 'string') {
@@ -179,15 +214,22 @@ export class StateEngine {
             isBoolean: typeof value === 'boolean'
           }))
         });
-        await machine.actor.actorEngine.updateContextCoValue(machine.actor, this._sanitizeUpdates(updates, machine.lastToolResult || {}));
+        // Collect updates in batch instead of writing immediately
+        Object.assign(contextUpdates, this._sanitizeUpdates(updates, machine.lastToolResult || {}));
       } else if (action?.tool) {
         const result = await this._invokeTool(machine, action.tool, action.payload, false);
         if (action.onSuccess?.updateContext && result) {
           machine.lastToolResult = result;
           const updates = await this._evaluatePayload(action.onSuccess.updateContext, machine.actor.context, machine.eventPayload, result);
-          await machine.actor.actorEngine.updateContextCoValue(machine.actor, this._sanitizeUpdates(updates, result || {}));
+          // Collect updates in batch instead of writing immediately
+          Object.assign(contextUpdates, this._sanitizeUpdates(updates, result || {}));
         }
       }
+    }
+    
+    // Single CoValue write for all batched context updates
+    if (Object.keys(contextUpdates).length > 0) {
+      await machine.actor.actorEngine.updateContextCoValue(machine.actor, contextUpdates);
     }
   }
 
@@ -266,39 +308,17 @@ export class StateEngine {
         const result = await this.dbEngine.execute({ op, ...params });
         console.log(`[StateEngine] Operation result for ${contextKey}`, { result, isReactiveStore: result && typeof result.subscribe === 'function' });
 
-        // Only read operations return ReactiveStore - map directly to context
-        // Other operations return different types (objects, arrays, etc.)
+        // mapData operations are read-only (mutations belong in tool calls)
         if (op === 'read') {
-          // Read operations return ReactiveStore - map store object to context
-          machine.actor.context[contextKey] = result;
-          console.log(`[StateEngine] Mapped ReactiveStore to context.${contextKey}`, { storeValue: result.value });
-
-          // Subscribe to store updates (direct subscription, same pattern as configs)
-          if (!machine.actor._subscriptions) machine.actor._subscriptions = [];
-          const unsubscribe = result.subscribe((data) => {
-            const actor = machine.actor;
-            if (actor) {
-              // Update context with new data
-              actor.context[contextKey] = data;
-              // Trigger rerender if actor is ready
-              if (actor._initialRenderComplete && this.actorEngine) {
-                this.actorEngine.rerender(actor.id);
-              } else {
-                actor._needsPostInitRerender = true;
-              }
-            }
-          }, { skipInitial: false }); // Don't skip initial - we want to set initial data
-          
-          // Store unsubscribe for cleanup
-          machine.actor._subscriptions.push(unsubscribe);
-
-          // Track query for cleanup if needed
-          if (!machine.actor._queries) machine.actor._queries = new Map();
-          machine.actor._queries.set(contextKey, { op, ...params, store: result });
+          // Read operations return ReactiveStore - place directly in actor.context
+          // ReactiveStore is already subscribed to CoValue by backend
+          // ViewEngine will subscribe to ReactiveStore (single subscription point)
+          const store = result;
+          machine.actor.context[contextKey] = store;
         } else {
-          // Other operations return plain values - map value to context
-          machine.actor.context[contextKey] = result;
-          console.log(`[StateEngine] Mapped result to context.${contextKey}`, { result });
+          // mapData should only contain read operations
+          // Mutations belong in tool calls, not mapData
+          console.warn(`[StateEngine] mapData operation "${op}" is not a read operation. Mutations should use tool calls instead.`);
         }
       } catch (error) {
         console.error(`[StateEngine] Failed to execute ${op} operation for context key ${contextKey}:`, error);

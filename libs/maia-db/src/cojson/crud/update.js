@@ -39,10 +39,10 @@ export async function update(backend, schema, id, data) {
     throw new Error(`[CoJSONBackend] Update not supported for type: ${rawType}`);
   }
 
-  // Wait for storage sync
-  if (backend.node.storage) {
-    await backend.node.syncManager.waitForStorageSync(id);
-  }
+  // LOCAL-FIRST: Updates are instant, sync happens in background
+  // REMOVED: await backend.node.syncManager.waitForStorageSync(id);
+  // This was blocking the event loop unnecessarily - local-first architecture means
+  // updates are immediately available locally, and sync happens asynchronously
 
   // Return updated data
   return dataExtraction.extractCoValueData(backend, coValueCore);

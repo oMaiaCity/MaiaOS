@@ -44,10 +44,9 @@ export class ViewEngine {
   /**
    * Load a view by co-id (reactive subscription)
    * @param {string} coId - View co-id (e.g., 'co_z...')
-   * @param {Function} [onUpdate] - Optional callback when view changes
-   * @returns {Promise<Object>} The parsed view definition
+   * @returns {Promise<ReactiveStore>} ReactiveStore containing view definition
    */
-  async loadView(coId, onUpdate = null) {
+  async loadView(coId) {
     // Use direct read() API - no wrapper needed
     // Extract schema co-id from view CoValue's headerMeta.$schema using read() operation
     const viewStore = await this.dbEngine.execute({
@@ -64,21 +63,14 @@ export class ViewEngine {
       throw new Error(`[ViewEngine] Failed to extract schema co-id from view CoValue ${coId}. View must have $schema in headerMeta. View data: ${JSON.stringify({ id: viewData?.id, loading: viewData?.loading, hasProperties: viewData?.hasProperties, properties: viewData?.properties?.length })}`);
     }
     
-    // Read view definition using schema co-id
+    // Read view definition using schema co-id - return store directly (pure stores pattern)
     const store = await this.dbEngine.execute({
       op: 'read',
       schema: viewSchemaCoId,
       key: coId
     });
     
-    // Set up onUpdate callback if provided
-    if (onUpdate) {
-      store.subscribe((updatedView) => {
-        onUpdate(updatedView);
-      }, { skipInitial: true });
-    }
-    
-    return store.value;
+    return store; // Return store directly - caller subscribes
   }
   
 
@@ -114,7 +106,7 @@ export class ViewEngine {
           const unsubscribe = value.subscribe(() => {
             // Trigger rerender when store updates
             if (this.actorEngine) {
-              this.actorEngine.rerender(actorId);
+              this.actorEngine._scheduleRerender(actorId);
             }
           });
           storeSubscriptions.set(key, unsubscribe);

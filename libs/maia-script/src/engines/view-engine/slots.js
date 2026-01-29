@@ -130,7 +130,7 @@ export async function renderSlot(viewEngine, node, data, wrapperElement, actorId
     
     // Trigger re-render if child actor was just created or needs update
     if (childActor._initialRenderComplete && viewEngine.actorEngine) {
-      viewEngine.actorEngine.rerender(childActor.id);
+      viewEngine.actorEngine._scheduleRerender(childActor.id);
     }
     
     // CRITICAL: Only append if not already in wrapper (prevents duplicates during re-renders)

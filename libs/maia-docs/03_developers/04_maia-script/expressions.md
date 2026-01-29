@@ -47,7 +47,7 @@ MaiaScript expressions are JSON-based and evaluated safely by `MaiaScriptEvaluat
 ### String
 
 - `$concat` - Concatenate strings
-- `$trim` - Trim whitespace
+- `$trim` - Trim whitespace: `{ "$trim": "$$text" }` (removes leading/trailing whitespace from string)
 - `$toLowerCase` - Convert to lowercase
 - `$toUpperCase` - Convert to uppercase
 
