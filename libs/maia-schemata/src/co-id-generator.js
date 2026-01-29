@@ -1,33 +1,9 @@
 /**
- * Co-ID Generator - Generate fake co-ids for seeding process
+ * Co-ID Registry - Track co-ids during seeding
+ * Maps human-readable IDs to real CoJSON co-ids
  * 
- * Generates random co-ids in the format: co_z + base64-like string (~43 chars)
- * These simulate content-addressable co-ids that will be used when migrating to real CoJSON backend.
- * 
- * Format: co_z[A-Za-z0-9]{43}
- */
-
-/**
- * Generate a co-id for any content (schema, instance, data entity, etc.)
- * @param {Object} [content] - Content object (for future deterministic generation, currently unused)
- * @returns {string} Co-id in format co_z[A-Za-z0-9]{43}
- */
-export function generateCoId(content) {
-  // For now, generate random co-id
-  // In future, could use content-addressable hash: hash(content) → co-id
-  const randomBytes = new Uint8Array(32);
-  crypto.getRandomValues(randomBytes);
-  const base64 = btoa(String.fromCharCode(...randomBytes))
-    .replace(/\+/g, '')
-    .replace(/\//g, '')
-    .replace(/=/g, '')
-    .substring(0, 43);
-  return `co_z${base64}`;
-}
-
-/**
- * Co-ID Registry - Track generated co-ids during seeding
- * Maps human-readable IDs to generated co-ids
+ * Note: Seeding uses REAL CoJSON co-ids from coValue.id (not fake generated IDs)
+ * This registry tracks the mapping: human-readable ID → real co-id
  */
 export class CoIdRegistry {
   constructor() {

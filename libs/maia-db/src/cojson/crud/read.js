@@ -11,7 +11,7 @@
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
 import { ensureCoValueLoaded } from './collection-helpers.js';
 import { extractCoValueDataFlat } from './data-extraction.js';
-import { resolveCollectionName, getCoListId } from './collection-helpers.js';
+import { getCoListId } from './collection-helpers.js';
 import { matchesFilter } from './filter-helpers.js';
 import { deepResolveCoValue, resolveNestedReferencesPublic, resolveNestedReferences, isDeepResolvedOrResolving } from './deep-resolution.js';
 

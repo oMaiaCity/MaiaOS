@@ -6,6 +6,5 @@
   "view": "@view/composite",
   "state": "@state/composite",
   "brand": "@style/brand",
-  "topics": "@topics/composite",
   "inbox": "@inbox/composite"
 }

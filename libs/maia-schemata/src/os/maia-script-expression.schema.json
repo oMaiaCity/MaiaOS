@@ -91,6 +91,36 @@
           "additionalProperties": false
         },
         {
+          "description": "$and operation - logical AND (all operands must be truthy)",
+          "properties": {
+            "$and": {
+              "type": "array",
+              "description": "Array of expressions to evaluate (all must be truthy)",
+              "items": {
+                "$ref": "#"
+              },
+              "minItems": 1
+            }
+          },
+          "required": ["$and"],
+          "additionalProperties": false
+        },
+        {
+          "description": "$or operation - logical OR (at least one operand must be truthy)",
+          "properties": {
+            "$or": {
+              "type": "array",
+              "description": "Array of expressions to evaluate (at least one must be truthy)",
+              "items": {
+                "$ref": "#"
+              },
+              "minItems": 1
+            }
+          },
+          "required": ["$or"],
+          "additionalProperties": false
+        },
+        {
           "description": "$if operation - conditional expression",
           "properties": {
             "$if": {

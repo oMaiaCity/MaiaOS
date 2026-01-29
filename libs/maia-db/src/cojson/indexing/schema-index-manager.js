@@ -143,18 +143,12 @@ async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSc
   }
 
   // Generate schema-specific index colist schema name
-  // e.g., "@schema/data/todos" → "@schema/os/index-colist-data-todos"
-  // e.g., "@schema/os/schematas-registry" → "@schema/os/index-colist-schematas-registry"
-  // CRITICAL: Skip if this is already an index colist schema to prevent infinite recursion
-  if (schemaTitle.startsWith('@schema/os/index-colist-')) {
-    console.warn(`[SchemaIndexManager] Cannot create index colist schema for index colist schema ${schemaTitle} - would cause infinite recursion`);
-    return null;
-  }
-  
-  // Handle both @schema/data/... and @schema/os/... patterns
-  const indexColistSchemaTitle = schemaTitle.startsWith('@schema/os/')
-    ? schemaTitle.replace('@schema/os/', '@schema/os/index-colist-')
-    : schemaTitle.replace('@schema/', '@schema/os/index-colist-');
+  // Preserves the full path structure after @schema/
+  // e.g., "@schema/data/todos" → "@schema/index/data/todos"
+  // e.g., "@schema/os/schematas-registry" → "@schema/index/os/schematas-registry"
+  // e.g., "@schema/actor" → "@schema/index/actor"
+  const schemaNamePart = schemaTitle.replace('@schema/', '');
+  const indexColistSchemaTitle = `@schema/index/${schemaNamePart}`;
   
   // Check if schema-specific index colist schema already exists
   const existingSchemaCoId = await resolveHumanReadableKey(backend, indexColistSchemaTitle);
@@ -164,10 +158,12 @@ async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSc
 
   // Create schema-specific index colist schema definition
   // This schema enforces that only instances of the target schema can be stored
+  // CRITICAL: Set indexing: false explicitly to prevent infinite recursion
   const indexColistSchemaDef = {
     title: indexColistSchemaTitle,
     description: `Schema-specific index colist for ${schemaTitle} - only allows instances of this schema`,
     cotype: 'colist',
+    indexing: false,  // Index colist schemas themselves should not be indexed
     items: {
       $co: schemaTitle  // Enforces type safety - only co-ids referencing the target schema are allowed
     }
@@ -429,8 +425,24 @@ export async function shouldIndexCoValue(backend, coValueCore) {
     return { shouldIndex: false, schemaCoId: null };
   }
 
-  // If schema is a co-id, use it directly
+  // If schema is a co-id, check if indexing is enabled for this schema
   if (schema && typeof schema === 'string' && schema.startsWith('co_z')) {
+    // Load schema definition to check indexing property
+    try {
+      const schemaDef = await loadSchemaDefinition(backend, schema);
+      if (schemaDef) {
+        // Check indexing property (defaults to false if not present)
+        const indexing = schemaDef.indexing;
+        if (indexing !== true) {
+          // Schema has indexing: false or undefined - don't index
+          return { shouldIndex: false, schemaCoId: schema };
+        }
+      }
+    } catch (error) {
+      // If we can't load the schema definition, assume indexing is enabled
+      // (better to index than to miss something)
+      // This can happen during seeding when schemas aren't fully registered yet
+    }
     return { shouldIndex: true, schemaCoId: schema };
   }
 
@@ -754,8 +766,8 @@ export async function indexCoValue(backend, coValueCoreOrId) {
       const indexColist = await ensureSchemaIndexColist(backend, schemaCoId);
       
       if (!indexColist) {
-        // account.os not available - skip indexing for now
-        console.warn(`[SchemaIndexing] Cannot index co-value ${coId.substring(0, 12)}... - account.os not available`);
+        // account.os not available OR schema has indexing: false - skip indexing
+        // Don't warn - this is expected for schemas with indexing: false (e.g., index schemas)
         return;
       }
 

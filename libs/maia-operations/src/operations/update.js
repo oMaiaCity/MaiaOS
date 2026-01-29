@@ -11,16 +11,15 @@
  * Everything is just co-ids. Always validates against schema (100% migration - no fallbacks).
  */
 
-import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
-import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
-import { resolveSchema } from '../utils/schema-resolver.js';
+import { ValidationUtility } from '../utils/validation.js';
 
 export class UpdateOperation {
   constructor(backend, dbEngine = null, evaluator = null) {
     this.backend = backend;
     this.dbEngine = dbEngine;
     this.evaluator = evaluator; // Optional: for evaluating MaiaScript expressions with $existing
+    this.validation = dbEngine ? new ValidationUtility(dbEngine) : null;
   }
   
   /**
@@ -50,7 +49,7 @@ export class UpdateOperation {
     
     // Always validate against schema (100% migration - NO fallbacks)
     // Schema MUST exist or throw error
-    if (!this.dbEngine) {
+    if (!this.validation) {
       throw new Error('[UpdateOperation] dbEngine required for schema validation');
     }
     
@@ -64,13 +63,7 @@ export class UpdateOperation {
     
     // Extract schema co-id from CoValue headerMeta using universal resolver
     // This is the ONLY place to get schema - single source of truth
-    const schemaCoId = await resolveSchema(id, this.dbEngine);
-    
-    // Load schema definition for validation using fromCoValue pattern (single source of truth)
-    const schemaDef = await loadSchemaFromDB(this.dbEngine, { fromCoValue: id });
-    if (!schemaDef) {
-      throw new Error(`[UpdateOperation] Failed to load schema definition for CoValue ${id}. Schema co-id: ${schemaCoId}`);
-    }
+    const schemaCoId = await this.validation.resolveSchemaCoId(id);
     
     // Exclude $schema (metadata, stored for querying but not part of schema validation)
     // Note: id is never stored (it's the key), so no need to filter it
@@ -87,8 +80,13 @@ export class UpdateOperation {
       ...evaluatedData
     };
     
-    // Validate merged result against schema (ensures all required fields are present)
-    await validateAgainstSchemaOrThrow(schemaDef, mergedData, `update operation for schema ${schemaCoId}`);
+    // Load schema and validate merged result against schema (ensures all required fields are present)
+    // Use fromCoValue pattern (single source of truth)
+    await this.validation.loadAndValidate(
+      { fromCoValue: id },
+      mergedData,
+      `update operation for schema ${schemaCoId}`
+    );
     
     // Use unified update() method that handles both data and configs
     return await this.backend.update(schemaCoId, id, evaluatedData);

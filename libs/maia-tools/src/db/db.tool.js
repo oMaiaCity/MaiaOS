@@ -4,7 +4,7 @@
  * Unified API for all database operations
  * Routes operations to maia.db() operation engine
  * 
- * Note: Reactive subscriptions are now handled by SubscriptionEngine via context query objects.
+ * Note: Reactive subscriptions are handled via direct read() + ReactiveStore subscriptions.
  * State machines should use context-driven approach instead of manual @db subscriptions.
  * 
  * Usage in state machines:

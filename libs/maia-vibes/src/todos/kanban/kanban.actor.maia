@@ -6,6 +6,5 @@
   "view": "@view/kanban",
   "state": "@state/kanban",
   "brand": "@style/brand",
-  "topics": "@topics/kanban",
   "inbox": "@inbox/kanban"
 }

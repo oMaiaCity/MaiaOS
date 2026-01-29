@@ -17,8 +17,17 @@ export { getValidationEngine, validateAgainstSchema, validateAgainstSchemaOrThro
 // Export meta schema functions
 export { getMetaSchemaDefinition, getMetaSchemaCoMapDefinition } from './meta-schema.js';
 
-// Export schema loader functions
-export { loadSchemaFromDB, loadSchemasFromAccount, getSchemaByCoId, getSchemaByName } from './schema-loader.js';
+// Export schema loader functions (runtime)
+export { loadSchemaFromDB } from './schema-loader.js';
+
+// Export schema loader functions (migrations/seeding only)
+export { loadSchemasFromAccount } from './schema-loader.js';
+
+// Export schema transformer functions (seeding only)
+export { transformForSeeding, validateSchemaStructure, verifyNoSchemaReferences, validateNoNestedCoTypes } from './schema-transformer.js';
+
+// Export co-id registry (seeding only)
+export { CoIdRegistry } from './co-id-generator.js';
 
 // Export co-type definitions
 export { default as coTypesDefs } from './co-types.defs.json';
@@ -45,8 +54,6 @@ import messagePayloadSchema from './os/messagePayload.schema.json';
 // Import MaiaScript expression schema
 import expressionSchema from './os/maia-script-expression.schema.json';
 // Import CoValue schemas
-import topicSchema from './os/topic.schema.json';
-import topicsSchema from './os/topics.schema.json';
 import subscribersSchema from './os/subscribers.schema.json';
 import inboxSchema from './os/inbox.schema.json';
 import childrenSchema from './os/children.schema.json';
@@ -76,8 +83,6 @@ const SCHEMAS = {
   // MaiaScript expression schema (for validating DSL expressions)
   'maia-script-expression': expressionSchema,
   // CoValue schemas (separate CoValues referenced via $co)
-  topic: topicSchema,
-  topics: topicsSchema,
   subscribers: subscribersSchema,
   inbox: inboxSchema,
   children: childrenSchema,
@@ -91,49 +96,21 @@ const DATA_SCHEMAS = {
 };
 
 /**
- * Get schema for a given type (synchronous)
+ * Get schema for a given type (SEEDING/MIGRATIONS ONLY - synchronous)
+ * Used to build registrySchemas for seeding
  * @param {string} type - Data type (e.g., 'actor', 'context', 'state')
  * @returns {object|null} Schema object or null if not found
  */
 export function getSchema(type) {
-  return SCHEMAS[type] || null;
+  return SCHEMAS[type] || DATA_SCHEMAS[type] || null;
 }
 
 /**
- * Get all schemas (including data schemas)
+ * Get all schemas including data schemas (SEEDING/MIGRATIONS ONLY)
+ * Used to build registrySchemas for seeding
  * @returns {object} All schema definitions
  */
 export function getAllSchemas() {
   return { ...SCHEMAS, ...DATA_SCHEMAS };
-}
-
-/**
- * Get all data schemas
- * @returns {object} Data schema definitions
- */
-export function getDataSchemas() {
-  return { ...DATA_SCHEMAS };
-}
-
-/**
- * Load a schema (for backwards compatibility - now synchronous)
- * @param {string} type - Schema type
- * @returns {Promise<object>} Schema object
- */
-export async function loadSchema(type) {
-  const schema = getSchema(type);
-  if (!schema) {
-    throw new Error(`Unknown schema type: ${type}`);
-  }
-  return schema;
-}
-
-/**
- * Preload all schemas (no-op now that schemas are imported)
- * @returns {Promise<void>}
- */
-export async function loadAllSchemas() {
-  // No-op - schemas are already loaded via imports
-  return Promise.resolve();
 }
 

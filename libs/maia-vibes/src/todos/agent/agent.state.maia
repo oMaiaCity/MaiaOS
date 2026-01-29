@@ -6,7 +6,13 @@
     "idle": {
       "on": {
         "CREATE_BUTTON": {
-          "target": "creating"
+          "target": "creating",
+          "guard": {
+            "$and": [
+              { "$ne": ["$$text", null] },
+              { "$ne": ["$$text", ""] }
+            ]
+          }
         },
         "TOGGLE_BUTTON": {
           "target": "toggling"
@@ -137,13 +143,18 @@
       }
     },
     "deleting": {
-      "entry": {
-        "tool": "@db",
-        "payload": { 
-          "op": "delete",
-          "id": "$$id"
+      "entry": [
+        {
+          "updateContext": { "deletingId": "$$id" }
+        },
+        {
+          "tool": "@db",
+          "payload": { 
+            "op": "delete",
+            "id": "$$id"
+          }
         }
-      },
+      ],
       "on": {
         "DELETE_BUTTON": {
           "target": "deleting"
@@ -167,7 +178,7 @@
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "TODO_DELETED",
-                "payload": { "id": "$$id" },
+                "payload": { "id": "$context.deletingId" },
                 "target": "@actor/composite"
               }
             },
@@ -175,13 +186,23 @@
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "TODO_DELETED",
-                "payload": { "id": "$$id" },
+                "payload": { "id": "$context.deletingId" },
                 "target": "@actor/kanban"
               }
+            },
+            {
+              "updateContext": { "deletingId": null }
             }
           ]
         },
-        "ERROR": "error"
+        "ERROR": {
+          "target": "error",
+          "actions": [
+            {
+              "updateContext": { "deletingId": null }
+            }
+          ]
+        }
       }
     },
     "error": {

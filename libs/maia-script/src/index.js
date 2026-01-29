@@ -21,8 +21,7 @@ export { ModuleRegistry } from "./engines/ModuleRegistry.js";
 // Export DB Engine (unified database operation engine)
 export { DBEngine } from "./engines/db-engine/db.engine.js";
 
-// Export SubscriptionEngine (used by kernel)
-export { SubscriptionEngine } from "./engines/subscription-engine/index.js";
+// SubscriptionEngine eliminated - all subscriptions handled via direct read() + ReactiveStore
 
 // Export ReactiveStore (reactive data store pattern) - re-export from shared operations package
 export { ReactiveStore } from "@MaiaOS/operations/reactive-store";

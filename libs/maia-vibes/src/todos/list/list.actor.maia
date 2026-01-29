@@ -6,6 +6,5 @@
   "view": "@view/list",
   "state": "@state/list",
   "brand": "@style/brand",
-  "topics": "@topics/list",
   "inbox": "@inbox/list"
 }

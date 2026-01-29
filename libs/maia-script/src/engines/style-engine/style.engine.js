@@ -1,5 +1,4 @@
 // Import shared utilities
-import { subscribeConfig } from '../../utils/config-loader.js';
 import { getSchemaCoIdSafe } from '../../utils/subscription-helpers.js';
 import { resolvePath } from '../../utils/path-resolver.js';
 
@@ -11,7 +10,6 @@ export class StyleEngine {
   constructor() {
     this.cache = new Map(); // Cache compiled stylesheets by ID
     this.dbEngine = null; // Database operation engine (set by kernel)
-    this.styleSubscriptions = new Map(); // coId -> { unsubscribe, refCount }
   }
 
   /**
@@ -39,57 +37,25 @@ export class StyleEngine {
    * @returns {Promise<Object>} The parsed style definition
    */
   async loadStyle(coId, onUpdate = null) {
-    // Check if subscription already exists in new format
-    const existingSubscription = this.styleSubscriptions?.get(coId);
-    if (existingSubscription && existingSubscription.unsubscribe) {
-      // Subscription already exists - reuse it
-      // Read config from store and set up onUpdate callback if provided
-      const styleSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: coId });
-      const store = await this.dbEngine.execute({
-        op: 'read',
-        schema: styleSchemaCoId,
-        key: coId
-      });
-      const styleDef = store.value;
-      
-      // Set up onUpdate callback if provided (subscribe to store for FUTURE updates only)
-      // NOTE: Do NOT call onUpdate immediately here - collectEngineSubscription handles that
-      // to ensure consistent behavior between new and reused subscriptions
-      if (onUpdate) {
-        // Subscribe for future updates only (skipInitial prevents immediate callback)
-        store.subscribe((updatedStyle) => {
-          onUpdate(updatedStyle);
-        }, { skipInitial: true });
-      }
-      
-      return styleDef;
-    }
-    
+    // Use direct read() API - no wrapper needed
     // Extract schema co-id from style CoValue's headerMeta.$schema using fromCoValue pattern
     const styleSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: coId });
     
-    // Create new subscription
-    const { config: styleDef, unsubscribe } = await subscribeConfig(
-      this.dbEngine,
-      styleSchemaCoId,
-      coId,
-      'style',
-      (updatedStyle) => {
-        // Call custom update handler if provided
-        if (onUpdate) {
-          onUpdate(updatedStyle);
-        }
-      }
-    );
+    // Read style definition using schema co-id
+    const store = await this.dbEngine.execute({
+      op: 'read',
+      schema: styleSchemaCoId,
+      key: coId
+    });
     
-    // Store unsubscribe function with ref count tracking
-    this.styleSubscriptions.set(coId, { unsubscribe, refCount: 0 });
+    // Set up onUpdate callback if provided
+    if (onUpdate) {
+      store.subscribe((updatedStyle) => {
+        onUpdate(updatedStyle);
+      }, { skipInitial: true });
+    }
     
-    // $schema is now a system property from CoJSON headerMeta.$schema
-    // It's automatically added by convertPropertiesArrayToPlainObject() from the schema field
-    // No need to validate - it's always present for CoJSON-backed configs
-    
-    return styleDef;
+    return store.value;
   }
 
   /**
@@ -458,15 +424,19 @@ export class StyleEngine {
       return this.cache.get(cacheKey);
     }
 
-    // Resolve and load brand by co-id
+    // Use direct read() API for style configs
     const brandResolved = this.resolveStyleRef(brandCoId);
-    const brand = await this.loadStyle(brandResolved);
+    const brandSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: brandResolved });
+    const brandStore = await this.dbEngine.execute({ op: 'read', schema: brandSchemaCoId, key: brandResolved });
+    const brand = brandStore.value;
     
     // Load actor style (overrides only) - optional
     let actor = { tokens: {}, components: {} };
     if (styleCoId) {
       const styleResolved = this.resolveStyleRef(styleCoId);
-      actor = await this.loadStyle(styleResolved);
+      const styleSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: styleResolved });
+      const styleStore = await this.dbEngine.execute({ op: 'read', schema: styleSchemaCoId, key: styleResolved });
+      actor = styleStore.value;
     }
     
     // Tokens and components are now embedded objects (not separate CoValues)

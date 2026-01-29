@@ -345,15 +345,6 @@ export class CoJSONBackend extends DBAdapter {
     return await waitForStoreReady(store, coId, timeoutMs);
   }
 
-  /**
-   * Resolve collection name from schema (co-id or human-readable)
-   * @private
-   * @param {string} schema - Schema co-id (co_z...) or human-readable (@schema/data/todos)
-   * @returns {Promise<string|null>} Collection name (e.g., "todos") or null if not found
-   */
-  async _resolveCollectionName(schema) {
-    return await collectionHelpers.resolveCollectionName(this, schema);
-  }
 
   /**
    * Get CoList ID from schema index (account.os.<schemaCoId>)
@@ -382,17 +373,6 @@ export class CoJSONBackend extends DBAdapter {
     return await collectionHelpers.ensureCoValueLoaded(this, coId, options);
   }
 
-  /**
-   * Ensure CoList is loaded from IndexedDB (jazz-tools pattern)
-   * DEPRECATED: Use _ensureCoValueLoaded() instead
-   * Kept for backward compatibility - delegates to generic method
-   * @private
-   * @param {string} schema - Schema co-id (co_z...) or human-readable (@schema/data/todos)
-   * @returns {Promise<void>}
-   */
-  async _ensureCoListLoaded(schema) {
-    return await collectionHelpers.ensureCoListLoaded(this, schema);
-  }
 
   /**
    * Read a collection of CoValues by schema

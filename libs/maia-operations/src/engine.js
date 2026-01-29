@@ -95,8 +95,4 @@ export class DBEngine {
    * @param {string} humanReadableId - Human-readable ID (e.g., '@vibe/todos', 'vibe/vibe')
    * @returns {Promise<string|null>} Co-id (co_z...) or null if not found
    */
-  async resolveCoId(humanReadableId) {
-    console.warn(`[DBEngine] resolveCoId() called at runtime with: ${humanReadableId}. This should only be used during seeding. At runtime, all IDs should already be co-ids.`);
-    return await this.execute({op: 'resolve', humanReadableKey: humanReadableId});
-  }
 }

@@ -1,10 +1,9 @@
-// Import shared utilities
-import { subscribeConfig } from '../../utils/config-loader.js';
 // Import modules
 import { renderNode, renderEach, applyNodeAttributes, renderNodeChildren } from './renderer.js';
 import { renderSlot, createSlotWrapper } from './slots.js';
 import { attachEvents, handleEvent } from './events.js';
 import { resolveDataAttributes } from './data-attributes.js';
+import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
 
 /**
  * ViewEngine - Renders .maia view files to Shadow DOM
@@ -40,9 +39,6 @@ export class ViewEngine {
     
     // Track input counters per actor for stable IDs across re-renders
     this.actorInputCounters = new Map();
-    
-    // Track subscriptions for reactive view updates
-    this.viewSubscriptions = new Map(); // coId -> unsubscribe function
   }
 
   /**
@@ -52,89 +48,37 @@ export class ViewEngine {
    * @returns {Promise<Object>} The parsed view definition
    */
   async loadView(coId, onUpdate = null) {
-    // Check if subscription already exists in new format
-    const existingSubscription = this.viewSubscriptions?.get(coId);
-    if (existingSubscription && existingSubscription.unsubscribe) {
-      // Subscription already exists - reuse it
-      // Read config from store and set up onUpdate callback if provided
-      const viewStore = await this.dbEngine.execute({
-        op: 'read',
-        schema: null,
-        key: coId
-      });
-      const viewData = viewStore.value;
-      const viewSchemaCoId = viewData?.$schema || null;
-      if (viewSchemaCoId) {
-        const store = await this.dbEngine.execute({
-          op: 'read',
-          schema: viewSchemaCoId,
-          key: coId
-        });
-        const viewDef = store.value;
-        
-        // subscribeConfig already validates views internally using operations API
-        // No need for duplicate validation here
-        
-        // Set up onUpdate callback if provided (subscribe to store for FUTURE updates only)
-        // NOTE: Do NOT call onUpdate immediately here - collectEngineSubscription handles that
-        // to ensure consistent behavior between new and reused subscriptions
-        if (onUpdate) {
-          // Subscribe for future updates only (skipInitial prevents immediate callback)
-          // subscribeConfig already validates updates in its callback
-          store.subscribe((updatedView) => {
-            onUpdate(updatedView);
-          }, { skipInitial: true });
-        }
-        
-        return viewDef;
-      }
-    }
-    
+    // Use direct read() API - no wrapper needed
     // Extract schema co-id from view CoValue's headerMeta.$schema using read() operation
-    // Backend's _readSingleItem waits for CoValue to be loaded before returning store
     const viewStore = await this.dbEngine.execute({
       op: 'read',
       schema: null, // Read CoValue directly
       key: coId
     });
     
-    // Store is already loaded by backend (operations API abstraction)
-    const viewData = viewStore.value;
-    
     // Extract schema co-id from store value
-    // For CoMaps, _extractCoValueData stores headerMeta.$schema as '$schema' field for consistency
+    const viewData = viewStore.value;
     const viewSchemaCoId = viewData?.$schema || null;
     
     if (!viewSchemaCoId) {
       throw new Error(`[ViewEngine] Failed to extract schema co-id from view CoValue ${coId}. View must have $schema in headerMeta. View data: ${JSON.stringify({ id: viewData?.id, loading: viewData?.loading, hasProperties: viewData?.hasProperties, properties: viewData?.properties?.length })}`);
     }
     
-    // Always set up subscription for reactivity (even without onUpdate callback)
-    // This avoids duplicate DB queries when _subscribeToConfig() is called later
-    // subscribeConfig validates views internally using operations API (loadSchemaFromDB → dbEngine.execute({ op: 'schema', fromCoValue: coId }))
-    const { config: viewDef, unsubscribe } = await subscribeConfig(
-      this.dbEngine,
-      viewSchemaCoId,
-      coId,
-      'view',
-      (updatedView) => {
-        // subscribeConfig already validates views in its callback using operations API
-        // Call custom update handler if provided
-        if (onUpdate) {
-          onUpdate(updatedView);
-        }
-      },
-      null // NO CACHE - always read from reactive store
-    );
+    // Read view definition using schema co-id
+    const store = await this.dbEngine.execute({
+      op: 'read',
+      schema: viewSchemaCoId,
+      key: coId
+    });
     
-    // subscribeConfig already validates initial view internally using operations API
-    // No need for duplicate validation here
+    // Set up onUpdate callback if provided
+    if (onUpdate) {
+      store.subscribe((updatedView) => {
+        onUpdate(updatedView);
+      }, { skipInitial: true });
+    }
     
-    // Store unsubscribe function with ref count tracking
-    // Store as object to allow reference counting
-    this.viewSubscriptions.set(coId, { unsubscribe, refCount: 0 });
-    
-    return viewDef;
+    return store.value;
   }
   
 
@@ -148,20 +92,41 @@ export class ViewEngine {
    * @param {string} actorId - The actor ID
    */
   async render(viewDef, context, shadowRoot, styleSheets, actorId) {
-    // CRITICAL: Check for query objects in context (error only if found)
-    const problematicKeys = [];
-    for (const key of Object.keys(context || {})) {
-      const value = context[key];
-      // Check if it's a query object where we expect an array
-      const isQueryObject = value && typeof value === 'object' && value.schema && typeof value.schema === 'string' && !Array.isArray(value);
-      if (isQueryObject && (key.includes('Todo') || key.includes('Done') || key === 'todos')) {
-        problematicKeys.push(key);
+    // Detect ReactiveStore objects in context and subscribe for reactivity
+    if (!this.actorStoreSubscriptions) {
+      this.actorStoreSubscriptions = new Map(); // actorId -> Map<key, unsubscribe>
+    }
+    
+    if (!this.actorStoreSubscriptions.has(actorId)) {
+      this.actorStoreSubscriptions.set(actorId, new Map());
+    }
+    
+    const storeSubscriptions = this.actorStoreSubscriptions.get(actorId);
+    
+    // Clean up old subscriptions for keys that no longer exist
+    const currentStoreKeys = new Set();
+    for (const [key, value] of Object.entries(context || {})) {
+      if (value instanceof ReactiveStore) {
+        currentStoreKeys.add(key);
+        
+        // Subscribe if not already subscribed
+        if (!storeSubscriptions.has(key)) {
+          const unsubscribe = value.subscribe(() => {
+            // Trigger rerender when store updates
+            if (this.actorEngine) {
+              this.actorEngine.rerender(actorId);
+            }
+          });
+          storeSubscriptions.set(key, unsubscribe);
+        }
       }
     }
-    if (problematicKeys.length > 0) {
-      console.error(`[ViewEngine] ❌ CRITICAL: Found query objects in context instead of arrays:`, problematicKeys);
-      for (const key of problematicKeys) {
-        console.error(`[ViewEngine] ❌ Context ${key} value:`, context[key]);
+    
+    // Unsubscribe from stores that are no longer in context
+    for (const [key, unsubscribe] of storeSubscriptions.entries()) {
+      if (!currentStoreKeys.has(key)) {
+        unsubscribe();
+        storeSubscriptions.delete(key);
       }
     }
     
@@ -325,5 +290,21 @@ export class ViewEngine {
    */
   setActorEngine(actorEngine) {
     this.actorEngine = actorEngine;
+  }
+
+  /**
+   * Clean up store subscriptions for an actor
+   * @param {string} actorId - The actor ID
+   */
+  cleanupActor(actorId) {
+    if (this.actorStoreSubscriptions?.has(actorId)) {
+      const storeSubscriptions = this.actorStoreSubscriptions.get(actorId);
+      for (const unsubscribe of storeSubscriptions.values()) {
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        }
+      }
+      this.actorStoreSubscriptions.delete(actorId);
+    }
   }
 }

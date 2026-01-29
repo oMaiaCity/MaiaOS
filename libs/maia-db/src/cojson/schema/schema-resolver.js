@@ -51,7 +51,7 @@ export async function resolveSchema(backend, identifier) {
   }
 
   // If it's a registry string, resolve to co-id first
-  if (identifier.startsWith('@schema/') || identifier.startsWith('@topic/')) {
+  if (identifier.startsWith('@schema/')) {
     const schemaCoId = await getSchemaCoId(backend, identifier);
     if (!schemaCoId) {
       return null;
@@ -105,7 +105,7 @@ export async function getSchemaCoId(backend, identifier) {
   }
 
   // If it's a registry string, resolve to co-id
-  if (identifier.startsWith('@schema/') || identifier.startsWith('@topic/')) {
+  if (identifier.startsWith('@schema/')) {
     return await resolveHumanReadableKey(backend, identifier);
   }
 

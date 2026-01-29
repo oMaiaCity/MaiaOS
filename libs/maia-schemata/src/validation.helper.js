@@ -44,97 +44,86 @@ let pendingSchemaResolver = null; // Store resolver if set before engine initial
 
 /**
  * Set schema resolver for dynamic $schema reference resolution
- * @param {Function} resolver - Async function that takes a schema key and returns the schema
- * @param {Object} [dbEngine] - Optional dbEngine for operations API (preferred over resolver function)
+ * @param {Object} options - Options object
+ * @param {Object} options.dbEngine - Database engine instance (REQUIRED - uses operations API)
  */
-export function setSchemaResolver(resolver, dbEngine = null) {
-  // If dbEngine is provided, create a resolver that uses universal schema resolver (single source of truth)
-  if (dbEngine) {
-    const operationsResolver = async (schemaKey) => {
-      // Use universal schema resolver via backend (single source of truth)
-      try {
-        // Prefer backend's universal resolver if available (direct access, more efficient)
-        if (dbEngine.backend && typeof dbEngine.backend.resolveSchema === 'function') {
-          return await dbEngine.backend.resolveSchema(schemaKey);
-        }
-        
-        // Fallback to operations API (which uses universal resolver internally)
-        // Universal resolver handles: co-id, registry string (@schema/...), or normalized keys
-        let identifier = schemaKey;
-        
-        // Normalize schema key if needed (for backward compatibility)
-        if (!schemaKey.startsWith('co_z') && !schemaKey.startsWith('@schema/') && !schemaKey.startsWith('@topic/')) {
-          identifier = `@schema/${schemaKey}`;
-        }
-        
-        // If it's a registry string, resolve to co-id first, then load schema
-        if (identifier.startsWith('@schema/') || identifier.startsWith('@topic/')) {
-          const resolvedCoId = await dbEngine.execute({ op: 'resolve', humanReadableKey: identifier });
-          if (!resolvedCoId) {
-            console.warn(`[SchemaResolver] Could not resolve registry string ${identifier} to co-id`);
-            return null;
-          }
-          identifier = resolvedCoId;
-        }
-        
-        // Load schema by co-id via operations API
-        if (identifier.startsWith('co_z')) {
-          const schemaStore = await dbEngine.execute({ op: 'schema', coId: identifier });
-          const schema = schemaStore.value; // Extract value from ReactiveStore
-          if (!schema) {
-            console.warn(`[SchemaResolver] Schema ${schemaKey} (co-id: ${identifier}) not found via operations API`);
-          }
-          return schema;
-        }
-        
-        console.warn(`[SchemaResolver] Invalid schema identifier: ${schemaKey}`);
-        return null;
-      } catch (error) {
-        console.error(`[SchemaResolver] Error loading schema ${schemaKey} via universal resolver:`, error);
-        // Fallback to provided resolver if available (for backward compatibility during migration)
-        if (resolver) {
-          console.warn(`[SchemaResolver] Falling back to provided resolver for ${schemaKey}`);
-          return await resolver(schemaKey);
-        }
-        return null;
+export function setSchemaResolver(options) {
+  if (!options || typeof options !== 'object') {
+    throw new Error('[setSchemaResolver] Options object required: { dbEngine }');
+  }
+  
+  const { dbEngine } = options;
+  
+  if (!dbEngine) {
+    throw new Error('[setSchemaResolver] dbEngine is REQUIRED. No fallbacks allowed.');
+  }
+  
+  // Create resolver that uses universal schema resolver via operations API (single source of truth)
+  const operationsResolver = async (schemaKey) => {
+    // Use universal schema resolver via backend (single source of truth)
+    try {
+      // Prefer backend's universal resolver if available (direct access, more efficient)
+      if (dbEngine.backend && typeof dbEngine.backend.resolveSchema === 'function') {
+        return await dbEngine.backend.resolveSchema(schemaKey);
       }
-    };
-    pendingSchemaResolver = operationsResolver;
-    if (validationEngine) {
-      validationEngine.setSchemaResolver(operationsResolver);
+      
+      // Use operations API (which uses universal resolver internally)
+      // Universal resolver handles: co-id, registry string (@schema/...)
+      let identifier = schemaKey;
+      
+      // Require proper format: co-id or @schema/... pattern
+      if (!identifier.startsWith('co_z') && !identifier.startsWith('@schema/')) {
+        throw new Error(`[SchemaResolver] Invalid schema identifier format: ${identifier}. Must be co-id (co_z...) or registry string (@schema/...)`);
+      }
+      
+      // If it's a registry string, resolve to co-id first, then load schema
+      if (identifier.startsWith('@schema/')) {
+        const resolvedCoId = await dbEngine.execute({ op: 'resolve', humanReadableKey: identifier });
+        if (!resolvedCoId) {
+          throw new Error(`[SchemaResolver] Could not resolve registry string ${identifier} to co-id`);
+        }
+        identifier = resolvedCoId;
+      }
+      
+      // Load schema by co-id via operations API
+      if (identifier.startsWith('co_z')) {
+        const schemaStore = await dbEngine.execute({ op: 'schema', coId: identifier });
+        const schema = schemaStore.value; // Extract value from ReactiveStore
+        if (!schema) {
+          throw new Error(`[SchemaResolver] Schema ${schemaKey} (co-id: ${identifier}) not found via operations API`);
+        }
+        return schema;
+      }
+      
+      throw new Error(`[SchemaResolver] Invalid schema identifier: ${schemaKey}`);
+    } catch (error) {
+      // Fail fast - no fallbacks
+      throw new Error(`[SchemaResolver] Failed to load schema ${schemaKey}: ${error.message}`);
     }
-  } else {
-    // Use provided resolver function directly
-    pendingSchemaResolver = resolver;
-    if (validationEngine) {
-      validationEngine.setSchemaResolver(resolver);
-    }
+  };
+  
+  pendingSchemaResolver = operationsResolver;
+  if (validationEngine) {
+    validationEngine.setSchemaResolver(operationsResolver);
   }
 }
 
 /**
  * Get or create the validation engine instance
- * @param {Object|Function} optionsOrResolver - Options object or schema resolver function (for backward compatibility)
- * @param {Function} [options.schemaResolver] - Schema resolver function (for dynamic $schema resolution)
+ * @param {Object} [options] - Options object
  * @param {Object} [options.registrySchemas] - Registry schemas map (ONLY for migrations/seeding - human-readable ID lookup)
  * @returns {Promise<ValidationEngine>} Validation engine instance
  */
-export async function getValidationEngine(optionsOrResolver = null) {
-  // Handle backward compatibility: if first param is a function, treat it as schemaResolver
-  let schemaResolver = null;
+export async function getValidationEngine(options = null) {
   let registrySchemas = null;
   
-  if (typeof optionsOrResolver === 'function') {
-    // Backward compatibility: function passed directly
-    schemaResolver = optionsOrResolver;
-  } else if (optionsOrResolver && typeof optionsOrResolver === 'object') {
-    // Options object
-    schemaResolver = optionsOrResolver.schemaResolver || null;
-    registrySchemas = optionsOrResolver.registrySchemas || null;
+  if (options && typeof options === 'object') {
+    registrySchemas = options.registrySchemas || null;
   }
   
   // If no options provided, check for pending resolver
-  if (!schemaResolver && pendingSchemaResolver) {
+  let schemaResolver = null;
+  if (pendingSchemaResolver) {
     schemaResolver = pendingSchemaResolver;
   }
   
@@ -147,13 +136,9 @@ export async function getValidationEngine(optionsOrResolver = null) {
     validationEngine = new ValidationEngine({ registrySchemas });
   }
   
-  // Set schema resolver if provided
-  if (schemaResolver) {
+  // Set schema resolver if pending
+  if (schemaResolver && !validationEngine.schemaResolver) {
     validationEngine.setSchemaResolver(schemaResolver);
-    pendingSchemaResolver = schemaResolver; // Also store for future reference
-  } else if (pendingSchemaResolver && !validationEngine.schemaResolver) {
-    // Use pending resolver if no new one provided and engine doesn't have one
-    validationEngine.setSchemaResolver(pendingSchemaResolver);
   }
   
   // Initialize AJV (metaschema is registered during initialization via _loadMetaSchema)
@@ -165,72 +150,15 @@ export async function getValidationEngine(optionsOrResolver = null) {
 }
 
 /**
- * Validate data against a schema type
- * @deprecated Use validateAgainstSchema() with schema loaded from database instead
- * This function is kept for backwards compatibility but schemas should be loaded dynamically
- * @param {string} type - Schema type (e.g., 'actor', 'context', 'state')
- * @param {any} data - Data to validate
- * @param {string} context - Optional context for error messages (e.g., file path)
- * @returns {{valid: boolean, errors: Array|null}} Validation result
- */
-export async function validate(type, data, context = '') {
-  // This function is deprecated - schemas should be loaded dynamically from database
-  // Use validateAgainstSchema() with schema loaded via operations API instead
-  console.warn(`[Validation] validate() is deprecated. Load schema dynamically and use validateAgainstSchema() instead.`);
-  
-  const engine = await getValidationEngine();
-  
-  // This will fail because schemas are no longer pre-loaded
-  // Callers should use validateAgainstSchema() with schema loaded from database
-  if (!engine.hasSchema(type)) {
-    throw new Error(`[Validation] Schema '${type}' not found. Schemas must be loaded dynamically from database via operations API. Use validateAgainstSchema() with schema loaded via {op: 'schema', ...} instead.`);
-  }
-  
-  const result = await engine.validate(type, data);
-  
-  if (!result.valid && context) {
-    // Enhance errors with context
-    result.errors = result.errors.map(err => ({
-      ...err,
-      context: context
-    }));
-  }
-  
-  return result;
-}
-
-/**
- * Validate data and throw if invalid
- * @param {string} type - Schema type
- * @param {any} data - Data to validate
- * @param {string} context - Optional context for error messages
- * @throws {Error} If validation fails
- */
-export async function validateOrThrow(type, data, context = '') {
-  const result = await validate(type, data, context);
-  
-  if (!result.valid) {
-    const contextMsg = context ? ` in ${context}` : '';
-    const errorDetails = result.errors
-      .map(err => `  - ${err.instancePath}: ${err.message}`)
-      .join('\n');
-    
-    throw new Error(
-      `Validation failed for '${type}'${contextMsg}:\n${errorDetails}`
-    );
-  }
-  
-  return result;
-}
-
-/**
- * Validate data against a raw JSON Schema object (not a registered schema type)
+ * Validate data against a raw JSON Schema object (single source of truth)
  * @param {Object} schema - JSON Schema object
  * @param {any} data - Data to validate
  * @param {string} context - Optional context for error messages (e.g., 'tool-payload')
+ * @param {boolean} throwOnError - If true, throw error on validation failure (default: false)
  * @returns {{valid: boolean, errors: Array|null}} Validation result
+ * @throws {Error} If throwOnError is true and validation fails
  */
-export async function validateAgainstSchema(schema, data, context = '') {
+export async function validateAgainstSchema(schema, data, context = '', throwOnError = false) {
   const engine = await getValidationEngine();
   await engine.initialize();
   
@@ -267,6 +195,18 @@ export async function validateAgainstSchema(schema, data, context = '') {
     const errors = validate.errors || [];
     const formattedErrors = formatValidationErrors(errors);
     
+    // Throw if requested
+    if (throwOnError) {
+      const contextMsg = context ? ` for '${context}'` : '';
+      const errorDetails = formattedErrors
+        .map(err => `  - ${err.instancePath}: ${err.message}`)
+        .join('\n');
+      
+      throw new Error(
+        `Validation failed${contextMsg}:\n${errorDetails}`
+      );
+    }
+    
     return {
       valid: false,
       errors: formattedErrors
@@ -282,6 +222,19 @@ export async function validateAgainstSchema(schema, data, context = '') {
         }
         const errors = existingValidator.errors || [];
         const formattedErrors = formatValidationErrors(errors);
+        
+        // Throw if requested
+        if (throwOnError) {
+          const contextMsg = context ? ` for '${context}'` : '';
+          const errorDetails = formattedErrors
+            .map(err => `  - ${err.instancePath}: ${err.message}`)
+            .join('\n');
+          
+          throw new Error(
+            `Validation failed${contextMsg}:\n${errorDetails}`
+          );
+        }
+        
         return {
           valid: false,
           errors: formattedErrors
@@ -296,24 +249,12 @@ export async function validateAgainstSchema(schema, data, context = '') {
 
 /**
  * Validate data against a raw JSON Schema object and throw if invalid
+ * Convenience function that calls validateAgainstSchema with throwOnError=true
  * @param {Object} schema - JSON Schema object
  * @param {any} data - Data to validate
  * @param {string} context - Optional context for error messages (e.g., 'tool-payload')
  * @throws {Error} If validation fails
  */
 export async function validateAgainstSchemaOrThrow(schema, data, context = '') {
-  const result = await validateAgainstSchema(schema, data, context);
-  
-  if (!result.valid) {
-    const contextMsg = context ? ` for '${context}'` : '';
-    const errorDetails = result.errors
-      .map(err => `  - ${err.instancePath}: ${err.message}`)
-      .join('\n');
-    
-    throw new Error(
-      `Validation failed${contextMsg}:\n${errorDetails}`
-    );
-  }
-  
-  return result;
+  return await validateAgainstSchema(schema, data, context, true);
 }

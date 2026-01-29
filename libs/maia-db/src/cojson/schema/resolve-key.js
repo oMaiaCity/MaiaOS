@@ -33,9 +33,8 @@ export async function resolveHumanReadableKey(backend, humanReadableKey) {
     }
 
     const isSchemaKey = normalizedKey.startsWith('@schema/');
-    const isTopicKey = humanReadableKey.startsWith('@topic/');
     
-    if (isSchemaKey || isTopicKey) {
+    if (isSchemaKey) {
       // Schema keys → check account.os.schematas registry
       const osId = backend.account.get('os');
       if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
@@ -72,16 +71,19 @@ export async function resolveHumanReadableKey(backend, humanReadableKey) {
         return null;
       }
 
-      // Lookup key in registry (try normalizedKey first, then original, then topic key)
+      // Lookup key in registry (try normalizedKey first, then original)
       const registryCoId = schematasContent.get(normalizedKey) || schematasContent.get(humanReadableKey);
       if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
-        const keyType = isTopicKey ? 'topic' : 'schema';
-        console.log(`[CoJSONBackend] ✅ Resolved ${keyType} ${humanReadableKey} (normalized: ${normalizedKey}) → ${registryCoId} from os.schematas registry`);
+        console.log(`[CoJSONBackend] ✅ Resolved schema ${humanReadableKey} (normalized: ${normalizedKey}) → ${registryCoId} from os.schematas registry`);
         return registryCoId;
       }
 
-      const keyType = isTopicKey ? 'topic' : 'schema';
-      console.warn(`[CoJSONBackend] ${keyType} key ${humanReadableKey} (normalized: ${normalizedKey}) not found in os.schematas registry. Available keys:`, Array.from(schematasContent.keys()));
+      // Don't warn for index schemas - they're created on-demand and may not exist yet
+      // Index schemas follow the pattern @schema/index/*
+      const isIndexSchema = normalizedKey.startsWith('@schema/index/');
+      if (!isIndexSchema) {
+        console.warn(`[CoJSONBackend] schema key ${humanReadableKey} (normalized: ${normalizedKey}) not found in os.schematas registry. Available keys:`, Array.from(schematasContent.keys()));
+      }
       return null;
 
     } else if (humanReadableKey.startsWith('@vibe/') || !humanReadableKey.startsWith('@')) {

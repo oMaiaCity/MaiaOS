@@ -189,7 +189,7 @@ export async function renderNode(viewEngine, node, data, actorId) {
 export async function renderEach(viewEngine, eachDef, data, actorId) {
   const fragment = document.createDocumentFragment();
   
-  // Evaluate items
+  // Evaluate items (evaluator already normalizes ReactiveStore to .value)
   const items = await viewEngine.evaluator.evaluate(eachDef.items, data);
   
   if (!Array.isArray(items) || items.length === 0) {

@@ -21,11 +21,7 @@
     },
     "target": {
       "$co": "@schema/actor",
-      "description": "Co-id reference to target actor (optional, bypasses topic routing if present)"
-    },
-    "topic": {
-      "$co": "@schema/topic",
-      "description": "Co-id reference to topic CoValue for routing (e.g., '@topic/todos-created')"
+      "description": "Co-id reference to target actor (required for direct messaging)"
     },
     "processed": {
       "type": "boolean",

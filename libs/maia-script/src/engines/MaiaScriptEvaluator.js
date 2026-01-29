@@ -1,6 +1,7 @@
 import { resolvePath } from '../utils/path-resolver.js';
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
+import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
 
 /**
  * MaiaScriptEvaluator - Minimal DSL evaluator for prototype
@@ -196,7 +197,15 @@ export class MaiaScriptEvaluator {
     const path = shortcut.substring(1); // Remove $
     
     // Resolve to context (supports dot notation like "$existing.done")
-    return resolvePath(data.context, path);
+    const resolved = resolvePath(data.context, path);
+    
+    // Normalize ReactiveStore to its value automatically
+    // This allows views to use $todos directly instead of $todos.value
+    if (resolved instanceof ReactiveStore) {
+      return resolved.value;
+    }
+    
+    return resolved;
   }
 
   /**

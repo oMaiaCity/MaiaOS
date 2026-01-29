@@ -4,6 +4,20 @@
   "initial": "idle",
   "states": {
     "idle": {
+      "entry": {
+        "mapData": {
+          "todosTodo": {
+            "op": "read",
+            "schema": "@schema/data/todos",
+            "filter": { "done": false }
+          },
+          "todosDone": {
+            "op": "read",
+            "schema": "@schema/data/todos",
+            "filter": { "done": true }
+          }
+        }
+      },
       "on": {
         "DRAG_START": {
           "target": "dragging",

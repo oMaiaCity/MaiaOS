@@ -2,7 +2,7 @@
   "$schema": "@schema/meta",
   "$id": "@schema/action",
   "title": "@schema/action",
-  "description": "Action (tool invocation or context update)",
+  "description": "Action (tool invocation, context update, or data mapping)",
   "cotype": "comap",
   "indexing": true,
   "oneOf": [
@@ -31,6 +31,28 @@
         }
       },
       "required": ["updateContext"]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "mapData": {
+          "type": "object",
+          "description": "Map operations engine configs to context keys (universal API)",
+          "additionalProperties": {
+            "type": "object",
+            "description": "Operations engine config (op, schema, filter, key, keys, etc.)",
+            "properties": {
+              "op": {
+                "type": "string",
+                "description": "Operation type (read, create, update, delete, schema, resolve, etc.)",
+                "default": "read"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": ["mapData"]
     }
   ]
 }

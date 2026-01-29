@@ -9,10 +9,13 @@
  * and appends items through the proper API to ensure reactive store updates.
  */
 
+import { ValidationUtility } from '../utils/validation.js';
+
 export class AppendOperation {
   constructor(backend, dbEngine = null) {
     this.backend = backend;
     this.dbEngine = dbEngine;
+    this.validation = dbEngine ? new ValidationUtility(dbEngine) : null;
   }
   
   async execute(params) {
@@ -48,35 +51,22 @@ export class AppendOperation {
       }
     }
     
-    // Get schema co-id from headerMeta.$schema
-    const header = this.backend.getHeader(coValueCore);
-    const headerMeta = header?.meta || null;
-    const schemaCoId = headerMeta?.$schema;
-    
-    if (!schemaCoId) {
-      throw new Error(`[AppendOperation] CoValue ${coId} doesn't have $schema in headerMeta`);
-    }
-    
-    // Load schema and check cotype property
-    if (!this.dbEngine) {
+    // Load schema and check cotype property using centralized validation utility
+    if (!this.validation) {
       throw new Error('[AppendOperation] dbEngine required to check schema cotype');
     }
     
-    const schemaStore = await this.dbEngine.execute({
-      op: 'schema',
-      coId: schemaCoId
-    });
+    // Resolve schema co-id from CoValue headerMeta
+    const schemaCoId = await this.validation.resolveSchemaCoId(coId);
     
-    const schema = schemaStore.value;
-    if (!schema) {
-      throw new Error(`[AppendOperation] Schema not found: ${schemaCoId}`);
+    // Check cotype using centralized validation utility
+    const isColist = await this.validation.checkCotype(schemaCoId, 'colist');
+    if (!isColist) {
+      throw new Error(`[AppendOperation] CoValue ${coId} is not a CoList (schema cotype check failed)`);
     }
     
-    // Check schema's cotype property (all schemas have cotype: 'comap' | 'colist' | 'costream')
-    const cotype = schema.cotype || 'comap'; // Default to comap if not specified
-    if (cotype !== 'colist') {
-      throw new Error(`[AppendOperation] CoValue ${coId} is not a CoList (schema cotype: ${cotype})`);
-    }
+    // Load schema for item validation
+    const schema = await this.validation.loadSchema(schemaCoId);
     
     // Get CoList content
     const content = this.backend.getCurrentContent(coValueCore);
@@ -90,19 +80,8 @@ export class AppendOperation {
       throw new Error('[AppendOperation] At least one item required (use item or items parameter)');
     }
     
-    // Validate items when schema specifies items.$co (items must be co-id references)
-    if (schema.items && schema.items.$co) {
-      // Schema specifies that items should be co-id references
-      for (const itemToAppend of itemsToAppend) {
-        if (typeof itemToAppend !== 'string' || !itemToAppend.startsWith('co_z')) {
-          throw new Error(
-            `[AppendOperation] Items must be co-id references (co_z...) when schema specifies items.$co. ` +
-            `Got: ${typeof itemToAppend === 'object' ? JSON.stringify(itemToAppend).substring(0, 100) : itemToAppend}. ` +
-            `Schema expects: ${schema.items.$co}`
-          );
-        }
-      }
-    }
+    // Validate items using centralized validation utility
+    this.validation.validateItems(schema, itemsToAppend);
     
     // Check if items already exist to prevent duplicates
     let existingItems = [];

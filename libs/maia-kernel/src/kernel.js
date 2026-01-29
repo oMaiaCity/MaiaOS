@@ -18,7 +18,7 @@ import { StateEngine } from '@MaiaOS/script';
 import { MaiaScriptEvaluator } from '@MaiaOS/script';
 import { ModuleRegistry } from '@MaiaOS/script';
 import { ToolEngine } from '@MaiaOS/script';
-import { SubscriptionEngine } from '@MaiaOS/script';
+// SubscriptionEngine eliminated - all subscriptions handled via direct read() + ReactiveStore
 import { DBEngine } from '@MaiaOS/script';
 // Import validation helper
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
@@ -318,12 +318,10 @@ export class MaiaOS {
     await MaiaOS._validateSchemas(schemas, validationEngine);
     
     // Seed database
-    // Merge registry default data with any existing data (don't override, merge)
+    // Use registry default data if available
+    // Note: data.todos is deprecated - items are automatically indexed into account.os.{schemaCoId}
     const defaultData = config.registry?.data || {};
-    const seedData = {
-      todos: defaultData.todos || [], // Use registry default todos if available
-      ...defaultData // Include any other default data from registry
-    };
+    const seedData = defaultData;
     
     await os.dbEngine.execute({
       op: 'seed',
@@ -337,7 +335,7 @@ export class MaiaOS {
     // Set schema resolver on validation helper singleton for engines to use
     // Pass dbEngine to use operations API (preferred over resolver function)
     const { setSchemaResolver } = await import('@MaiaOS/schemata/validation.helper');
-    setSchemaResolver(null, os.dbEngine); // Pass dbEngine to use operations API
+    setSchemaResolver({ dbEngine: os.dbEngine }); // Pass dbEngine to use operations API
   }
 
   /**
@@ -375,24 +373,13 @@ export class MaiaOS {
       os.stateEngine
     );
     
-    // Initialize SubscriptionEngine (context-driven reactive subscriptions)
-    os.subscriptionEngine = new SubscriptionEngine(os.dbEngine, os.actorEngine);
+    // SubscriptionEngine eliminated - all subscriptions handled via direct read() + ReactiveStore
     
     // Pass database engine to engines (for internal config loading)
     os.actorEngine.dbEngine = os.dbEngine;
     os.viewEngine.dbEngine = os.dbEngine;
     os.styleEngine.dbEngine = os.dbEngine;
     os.stateEngine.dbEngine = os.dbEngine;
-    
-    // Pass engines to SubscriptionEngine (for config subscriptions)
-    os.subscriptionEngine.setEngines({
-      viewEngine: os.viewEngine,
-      styleEngine: os.styleEngine,
-      stateEngine: os.stateEngine
-    });
-    
-    // Pass SubscriptionEngine to ActorEngine
-    os.actorEngine.subscriptionEngine = os.subscriptionEngine;
     
     // Store reference to MaiaOS in actorEngine (for @db tool access)
     os.actorEngine.os = os;

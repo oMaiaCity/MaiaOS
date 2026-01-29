@@ -51,6 +51,101 @@ The state machine is like a traffic controller - it decides what happens next!
 2. Using `updateContext` action (infrastructure, not a tool) to update context
 3. Handling tool success/failure via SUCCESS/ERROR events (routed through inbox)
 
+## Separation of Concerns: Context vs State Machine
+
+**CRITICAL PRINCIPLE:** Clean separation between **data storage** (context) and **logic/computation** (state machine).
+
+### Context = Pure Data Storage
+
+**Context files (`*.context.maia`) should contain:**
+- ✅ Simple values (strings, numbers, booleans)
+- ✅ Simple references (`@actor/list`, `@view/kanban`)
+- ✅ Default/initial values
+- ❌ **NO complex MaiaScript expressions** (`$if`, `$eq`, nested logic)
+- ❌ **NO computation or conditional logic**
+
+**Example - Good Context:**
+```json
+{
+  "$schema": "@schema/context",
+  "$id": "@context/composite",
+  "viewMode": "list",
+  "currentView": "@list",
+  "listButtonActive": true,
+  "kanbanButtonActive": false,
+  "newTodoText": ""
+}
+```
+
+### State Machine = All Logic & Computation
+
+**State machines (`*.state.maia`) handle:**
+- ✅ All conditional logic (`$if`, `$eq`, `$and`, `$or`)
+- ✅ All value computation
+- ✅ All expressions that determine what values to set
+- ✅ Complex nested logic
+
+**When updating context, structure actions for clarity:**
+
+**❌ Bad - Complex expressions in one action:**
+```json
+{
+  "updateContext": {
+    "viewMode": "$$viewMode",
+    "currentView": {
+      "$if": {
+        "condition": { "$eq": ["$$viewMode", "list"] },
+        "then": "@list",
+        "else": { /* nested $if */ }
+      }
+    },
+    "listButtonActive": { "$eq": ["$$viewMode", "list"] },
+    "kanbanButtonActive": { "$eq": ["$$viewMode", "kanban"] }
+  }
+}
+```
+
+**✅ Good - Separate actions, one expression per update:**
+```json
+{
+  "actions": [
+    {
+      "updateContext": { "viewMode": "$$viewMode" }
+    },
+    {
+      "updateContext": {
+        "currentView": {
+          "$if": {
+            "condition": { "$eq": ["$$viewMode", "list"] },
+            "then": "@list",
+            "else": { /* nested $if */ }
+          }
+        }
+      }
+    },
+    {
+      "updateContext": {
+        "listButtonActive": { "$eq": ["$$viewMode", "list"] }
+      }
+    },
+    {
+      "updateContext": {
+        "kanbanButtonActive": { "$eq": ["$$viewMode", "kanban"] }
+      }
+    }
+  ]
+}
+```
+
+**Why this matters:**
+- **Clear separation:** Context = data, State = logic
+- **Easier debugging:** Each action computes one value
+- **Better readability:** One expression per action is easier to understand
+- **Maintainable:** Changes to logic don't affect context structure
+- **Testable:** Can test state machine logic independently
+
+**Remember:** Expressions ARE evaluated in the state machine (that's fine!), but structure them clearly with separate actions for each computed value.
+
 ## Inbox as Single Source of Truth for Events
 
 **CRITICAL PRINCIPLE:** Actor inbox is the **single source of truth** for ALL events (internal, external, SUCCESS, ERROR).

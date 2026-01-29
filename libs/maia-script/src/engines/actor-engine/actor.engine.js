@@ -6,8 +6,6 @@
  * Generic and universal - no domain-specific logic
  */
 
-// Import config loader utilities
-import { subscribeConfig, subscribeConfigsBatch, loadConfigOrUseProvided } from '../../utils/config-loader.js';
 // Import message helper
 import { createAndPushMessage } from '@MaiaOS/db';
 
@@ -46,31 +44,29 @@ export class ActorEngine {
   }
 
   async loadActor(coIdOrConfig) {
+    // Use direct read() API - no wrapper needed
     if (typeof coIdOrConfig === 'object' && coIdOrConfig !== null) {
-      return await loadConfigOrUseProvided(this.dbEngine, null, coIdOrConfig, 'actor');
+      // Already have config object - just return it
+      return coIdOrConfig;
     }
     if (typeof coIdOrConfig === 'string' && coIdOrConfig.startsWith('co_z')) {
+      // Load actor config using read() directly
       const actorSchemaCoId = await this._getSchemaCoId(coIdOrConfig);
-      return await loadConfigOrUseProvided(this.dbEngine, actorSchemaCoId, coIdOrConfig, 'actor');
+      const store = await this.dbEngine.execute({ op: 'read', schema: actorSchemaCoId, key: coIdOrConfig });
+      return store.value;
     }
     throw new Error(`[ActorEngine] loadActor expects co-id (co_z...) or config object, got: ${typeof coIdOrConfig}`);
   }
   
 
-  async loadContext(coId, onUpdate = null) {
+  async loadContext(coId) {
+    // Use direct read() API - no wrapper needed
     const contextSchemaCoId = await this._getSchemaCoId(coId);
-    const { config: contextDef } = await subscribeConfig(
-      this.dbEngine,
-      contextSchemaCoId,
-      coId,
-      'context',
-      onUpdate ? (updatedContextDef) => {
-        const { $schema, $id, ...context } = updatedContextDef;
-        onUpdate(context);
-      } : () => {} // Always pass a function, even if no-op
-    );
+    const store = await this.dbEngine.execute({ op: 'read', schema: contextSchemaCoId, key: coId });
+    
+    const contextDef = store.value;
     const { $schema, $id, ...context } = contextDef;
-    return { context, contextCoId: coId, contextSchemaCoId };
+    return { context, contextCoId: coId, contextSchemaCoId, store };
   }
 
   async updateContextCoValue(actor, updates) {
@@ -94,84 +90,277 @@ export class ActorEngine {
 
   async _loadActorConfigs(actorConfig) {
     if (!actorConfig.view) throw new Error(`[ActorEngine] Actor config must have 'view' property`);
-    const viewDef = await this.viewEngine.loadView(actorConfig.view);
+    
+    // Use direct read() API for view config
+    const viewStore = await this.dbEngine.execute({ op: 'read', schema: null, key: actorConfig.view });
+    const viewData = viewStore.value;
+    const viewSchemaCoId = viewData?.$schema;
+    if (!viewSchemaCoId) {
+      throw new Error(`[ActorEngine] Failed to extract schema co-id from view CoValue ${actorConfig.view}`);
+    }
+    const viewStore2 = await this.dbEngine.execute({ op: 'read', schema: viewSchemaCoId, key: actorConfig.view });
+    const viewDef = viewStore2.value;
+    
+    // Set up subscription for view updates (direct subscription, no SubscriptionEngine)
+    // Store unsubscribe functions temporarily, will be moved to actor._subscriptions in createActor
+    const actorId = actorConfig.id || 'temp';
+    if (!this._tempSubscriptions) this._tempSubscriptions = new Map(); // actorId -> Array<unsubscribe>
+    if (!this._tempSubscriptions.has(actorId)) {
+      this._tempSubscriptions.set(actorId, []);
+    }
+    const tempSubscriptions = this._tempSubscriptions.get(actorId);
+    
+    const unsubscribeView = viewStore2.subscribe((updatedView) => {
+      const actor = this.actors.get(actorId);
+      if (actor) {
+        actor.viewDef = updatedView;
+        if (actor._initialRenderComplete) this.rerender(actor.id);
+      }
+    }, { skipInitial: true });
+    tempSubscriptions.push(unsubscribeView);
+    
     let context = {}, contextCoId = null, contextSchemaCoId = null;
     if (actorConfig.context) {
       const result = await this.loadContext(actorConfig.context);
       context = result.context;
       contextCoId = result.contextCoId;
       contextSchemaCoId = result.contextSchemaCoId;
+      const contextStore = result.store;
+      
+      // Set up subscription for context updates (direct subscription, same pattern as view)
+      const unsubscribeContext = contextStore.subscribe((updatedContextDef) => {
+        const actor = this.actors.get(actorId);
+        if (actor) {
+          const { $schema, $id, ...newContext } = updatedContextDef;
+          // Merge new context into actor.context
+          actor.context = { ...actor.context, ...newContext };
+          if (actor._initialRenderComplete) {
+            this.rerender(actor.id);
+          }
+        }
+      }, { skipInitial: true });
+      tempSubscriptions.push(unsubscribeContext);
     }
-    let topics = [];
-    if (actorConfig.topics) {
-      const topicsSchemaCoId = await this._getSchemaCoId(actorConfig.topics);
-      const topicsStore = await this.dbEngine.execute({ op: 'read', schema: topicsSchemaCoId, key: actorConfig.topics });
-      topics = topicsStore.value?.items || [];
+    // Set up subscriptions for style and brand configs (direct read() + ReactiveStore pattern)
+    if (actorConfig.brand) {
+      try {
+        const brandSchemaCoId = await this._getSchemaCoId(actorConfig.brand);
+        const brandStore = await this.dbEngine.execute({ op: 'read', schema: brandSchemaCoId, key: actorConfig.brand });
+        const unsubscribeBrand = brandStore.subscribe(async (updatedBrand) => {
+          const actor = this.actors.get(actorId);
+          if (actor && this.styleEngine) {
+            try {
+              // Reload stylesheets when brand changes
+              const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
+              actor.shadowRoot.adoptedStyleSheets = styleSheets;
+              if (actor._initialRenderComplete) {
+                this.rerender(actor.id);
+              }
+            } catch (error) {
+              console.error(`[ActorEngine] Failed to update stylesheets after brand change:`, error);
+            }
+          }
+        }, { skipInitial: true });
+        tempSubscriptions.push(unsubscribeBrand);
+      } catch (error) {
+        console.error(`[ActorEngine] Failed to subscribe to brand:`, error);
+      }
     }
+    
+    if (actorConfig.style) {
+      try {
+        const styleSchemaCoId = await this._getSchemaCoId(actorConfig.style);
+        const styleStore = await this.dbEngine.execute({ op: 'read', schema: styleSchemaCoId, key: actorConfig.style });
+        const unsubscribeStyle = styleStore.subscribe(async (updatedStyle) => {
+          const actor = this.actors.get(actorId);
+          if (actor && this.styleEngine) {
+            try {
+              // Reload stylesheets when style changes
+              const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
+              actor.shadowRoot.adoptedStyleSheets = styleSheets;
+              if (actor._initialRenderComplete) {
+                this.rerender(actor.id);
+              }
+            } catch (error) {
+              console.error(`[ActorEngine] Failed to update stylesheets after style change:`, error);
+            }
+          }
+        }, { skipInitial: true });
+        tempSubscriptions.push(unsubscribeStyle);
+      } catch (error) {
+        console.error(`[ActorEngine] Failed to subscribe to style:`, error);
+      }
+    }
+    
     let inbox = null, inboxCoId = null;
     if (actorConfig.inbox) {
       inboxCoId = actorConfig.inbox;
       const inboxSchemaCoId = await this._getSchemaCoId(actorConfig.inbox);
       inbox = await this.dbEngine.execute({ op: 'read', schema: inboxSchemaCoId, key: actorConfig.inbox });
     }
-    return { viewDef, context, contextCoId, contextSchemaCoId, topics, inbox, inboxCoId };
+    return { viewDef, context, contextCoId, contextSchemaCoId, inbox, inboxCoId, tempSubscriptions };
   }
 
   /**
-   * Set up reactive subscriptions for topics colist and inbox costream (batch)
+   * Set up reactive subscriptions for inbox costream
    * @param {Object} actor - Actor instance
    * @param {Object} actorConfig - The actor configuration
    * @returns {Promise<void>}
    * @private
    */
   async _setupMessageSubscriptions(actor, actorConfig) {
-    const messageSubscriptionRequests = [];
-    
-    if (actorConfig.topics) {
-      try {
-        const topicsSchemaCoId = await this._getSchemaCoId(actorConfig.topics);
-        messageSubscriptionRequests.push({
-          schemaRef: topicsSchemaCoId,
-          coId: actorConfig.topics,
-          configType: 'topics',
-          onUpdate: (updatedColist) => {
-            if (updatedColist?.items) actor.topics = updatedColist.items;
-          },
-          cache: null
-        });
-      } catch (error) {
-        console.error(`[ActorEngine] Failed to subscribe to topics:`, error);
-      }
-    }
-    
+    // Use direct read() API - no wrapper needed
     if (actorConfig.inbox) {
       try {
         const inboxSchemaCoId = await this._getSchemaCoId(actorConfig.inbox);
-        messageSubscriptionRequests.push({
-          schemaRef: inboxSchemaCoId,
-          coId: actorConfig.inbox,
-          configType: 'inbox',
-          onUpdate: (updatedCostream) => {
-            if (this.actors.has(actor.id) && updatedCostream?.items) {
-              this.processMessages(actor.id);
-            }
-          },
-          cache: null
+        const store = await this.dbEngine.execute({ 
+          op: 'read', 
+          schema: inboxSchemaCoId, 
+          key: actorConfig.inbox 
         });
+        
+        // Set up subscription for inbox updates
+        const unsubscribe = store.subscribe((updatedCostream) => {
+          if (this.actors.has(actor.id) && updatedCostream?.items) {
+            this.processMessages(actor.id);
+          }
+        });
+        
+        if (!actor._subscriptions) actor._subscriptions = [];
+        actor._subscriptions.push(unsubscribe);
       } catch (error) {
         console.error(`[ActorEngine] Failed to subscribe to inbox:`, error);
       }
     }
+  }
+
+  /**
+   * Recursively parse JSON strings in nested objects (CoJSON might serialize nested objects as strings)
+   * @param {any} obj - Object that may contain JSON strings
+   * @returns {any} Object with JSON strings parsed
+   * @private
+   */
+  _parseNestedJsonStrings(obj) {
+    if (!obj || typeof obj !== 'object') {
+      return obj;
+    }
     
-    if (messageSubscriptionRequests.length > 0) {
+    if (Array.isArray(obj)) {
+      return obj.map(item => this._parseNestedJsonStrings(item));
+    }
+    
+    // Check if this is a JSON string
+    if (typeof obj === 'string' && (obj.startsWith('{') || obj.startsWith('['))) {
       try {
-        const results = await subscribeConfigsBatch(this.dbEngine, messageSubscriptionRequests);
-        if (!actor._subscriptions) actor._subscriptions = [];
-        results.forEach(({ unsubscribe }) => actor._subscriptions.push(unsubscribe));
-      } catch (error) {
-        console.error(`[ActorEngine] Batch subscription failed:`, error);
+        const parsed = JSON.parse(obj);
+        // Recursively parse nested JSON strings in the parsed object
+        return this._parseNestedJsonStrings(parsed);
+      } catch (e) {
+        // Not valid JSON, return as-is
+        return obj;
       }
     }
+    
+    // Recursively parse all properties
+    const parsed = {};
+    for (const [key, value] of Object.entries(obj)) {
+      parsed[key] = this._parseNestedJsonStrings(value);
+    }
+    
+    return parsed;
+  }
+
+  /**
+   * Recursively resolve co-id strings in nested objects to actual CoValue data
+   * @param {any} obj - Object that may contain co-id strings
+   * @param {Set<string>} visited - Set of visited co-ids to prevent circular references
+   * @returns {Promise<any>} Object with co-id strings replaced with actual data
+   * @private
+   */
+  async _resolveNestedCoValueReferences(obj, visited = new Set(), depth = 0) {
+    if (!obj || typeof obj !== 'object') {
+      return obj;
+    }
+    
+    if (Array.isArray(obj)) {
+      return Promise.all(obj.map(item => this._resolveNestedCoValueReferences(item, visited, depth + 1)));
+    }
+    
+    // Check if this is a co-id string
+    if (typeof obj === 'string' && obj.startsWith('co_')) {
+      // Skip if already visited (circular reference)
+      if (visited.has(obj)) {
+        console.log(`[ActorEngine] Circular reference detected, skipping: ${obj.substring(0, 20)}...`);
+        return obj; // Return co-id to prevent infinite loop
+      }
+      visited.add(obj);
+      
+      console.log(`[ActorEngine] Resolving co-id reference (depth ${depth}): ${obj.substring(0, 20)}...`);
+      
+      try {
+        // Try to load this as a CoValue using schema operation
+        const schemaStore = await this.dbEngine.execute({ op: 'schema', fromCoValue: obj });
+        const schemaCoId = schemaStore.value?.$id;
+        if (schemaCoId) {
+          // Read the CoValue data (returns ReactiveStore)
+          const coValueStore = await this.dbEngine.execute({ op: 'read', schema: schemaCoId, key: obj });
+          let coValueData = coValueStore.value;
+          
+          // CRITICAL: CoJSON backend may return objects with properties array format
+          // Convert to plain object if needed
+          if (coValueData && coValueData.properties && Array.isArray(coValueData.properties)) {
+            const plainData = {};
+            for (const prop of coValueData.properties) {
+              if (prop && prop.key !== undefined) {
+                // Parse JSON strings back to objects if needed
+                let value = prop.value;
+                if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
+                  try {
+                    value = JSON.parse(value);
+                  } catch (e) {
+                    // Keep as string if not valid JSON
+                  }
+                }
+                plainData[prop.key] = value;
+              }
+            }
+            // Preserve metadata
+            if (coValueData.id) plainData.id = coValueData.id;
+            if (coValueData.$schema) plainData.$schema = coValueData.$schema;
+            if (coValueData.type) plainData.type = coValueData.type;
+            coValueData = plainData;
+          }
+          
+          console.log(`[ActorEngine] Successfully resolved co-id to object with keys: ${Object.keys(coValueData).join(', ')}`);
+          
+          // Recursively resolve nested references in the resolved data
+          return await this._resolveNestedCoValueReferences(coValueData, visited, depth + 1);
+        }
+      } catch (error) {
+        // Not a CoValue reference or failed to load, return as-is
+        console.warn('[ActorEngine] Failed to resolve co-id reference:', obj.substring(0, 20), error.message);
+        return obj;
+      }
+    }
+    
+    // Recursively resolve all properties
+    const resolved = {};
+    for (const [key, value] of Object.entries(obj)) {
+      // Skip internal properties that should remain as strings
+      if (key === 'id' || key === '$schema' || key === 'type' || key === 'loading' || key === 'error') {
+        resolved[key] = value;
+        continue;
+      }
+      
+      // Log when resolving nested objects that might be co-ids
+      if (typeof value === 'string' && value.startsWith('co_')) {
+        console.log(`[ActorEngine] Found co-id in property "${key}" (depth ${depth}): ${value.substring(0, 20)}...`);
+      }
+      
+      resolved[key] = await this._resolveNestedCoValueReferences(value, visited, depth + 1);
+    }
+    
+    return resolved;
   }
 
   /**
@@ -184,7 +373,132 @@ export class ActorEngine {
   async _initializeActorState(actor, actorConfig) {
     if (this.stateEngine && actorConfig.state && !actor.machine) {
       try {
-        const stateDef = await this.stateEngine.loadStateDef(actorConfig.state);
+        // Use direct read() API for state config
+        const stateSchemaStore = await this.dbEngine.execute({ 
+          op: 'schema', 
+          fromCoValue: actorConfig.state 
+        });
+        const stateSchemaCoId = stateSchemaStore.value?.$id;
+        if (!stateSchemaCoId) {
+          throw new Error(`[ActorEngine] Failed to extract schema co-id from state CoValue ${actorConfig.state}`);
+        }
+        const stateStore = await this.dbEngine.execute({ 
+          op: 'read', 
+          schema: stateSchemaCoId, 
+          key: actorConfig.state 
+        });
+        let stateDef = stateStore.value;
+        
+        // CRITICAL: CoJSON backend may return objects with properties array format
+        // Convert to plain object if needed (extractCoValueDataFlat should handle this, but double-check)
+        if (stateDef && stateDef.properties && Array.isArray(stateDef.properties)) {
+          console.warn('[ActorEngine] State definition has properties array format, converting...', { actorId: actor.id });
+          const plainStateDef = {};
+          for (const prop of stateDef.properties) {
+            let value = prop.value;
+            // CRITICAL: If value is a JSON string, parse it (CoJSON might serialize nested objects as strings)
+            if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
+              try {
+                value = JSON.parse(value);
+              } catch (e) {
+                // Keep as string if not valid JSON
+              }
+            }
+            plainStateDef[prop.key] = value;
+          }
+          // Preserve metadata
+          if (stateDef.id) plainStateDef.id = stateDef.id;
+          if (stateDef.$schema) plainStateDef.$schema = stateDef.$schema;
+          if (stateDef.type) plainStateDef.type = stateDef.type;
+          stateDef = plainStateDef;
+        }
+        
+        // Debug: Log raw stateDef structure directly from database
+        console.log('[ActorEngine] Raw stateDef from database', {
+          actorId: actor.id,
+          hasStates: !!stateDef?.states,
+          statesType: typeof stateDef?.states,
+          statesKeys: stateDef?.states && typeof stateDef?.states === 'object' ? Object.keys(stateDef.states) : [],
+          idleStateExists: !!stateDef?.states?.idle,
+          idleStateType: typeof stateDef?.states?.idle,
+          idleStateKeys: stateDef?.states?.idle && typeof stateDef?.states?.idle === 'object' ? Object.keys(stateDef.states.idle) : [],
+          entryExists: !!stateDef?.states?.idle?.entry,
+          entryValue: stateDef?.states?.idle?.entry,
+          fullIdleState: JSON.stringify(stateDef?.states?.idle, null, 2).substring(0, 500),
+          fullStates: JSON.stringify(stateDef?.states, null, 2).substring(0, 1000)
+        });
+        
+        // Debug: Log BEFORE resolution
+        console.log('[ActorEngine] State definition BEFORE resolution', {
+          actorId: actor.id,
+          statesType: typeof stateDef?.states,
+          statesIsString: typeof stateDef?.states === 'string',
+          statesValue: typeof stateDef?.states === 'string' ? stateDef.states : 'object',
+          idleStateType: typeof stateDef?.states?.idle,
+          idleStateIsString: typeof stateDef?.states?.idle === 'string',
+          idleStateValue: typeof stateDef?.states?.idle === 'string' ? stateDef.states.idle : 'object'
+        });
+        
+        // CRITICAL: Only resolve co-id references if states is a co-id string
+        // If states is already an object, preserve it as-is (it's already correctly structured)
+        // The deep resolution in read() operation should have already loaded any nested CoValues
+        // DO NOT call _resolveNestedCoValueReferences on the entire stateDef - it might modify the structure
+        // Only resolve if states itself is a co-id string (which shouldn't happen for state definitions)
+        if (stateDef?.states && typeof stateDef.states === 'string' && stateDef.states.startsWith('co_')) {
+          // states is a co-id reference - resolve it (unlikely, but handle it)
+          console.log('[ActorEngine] Resolving states as co-id reference', { actorId: actor.id, statesCoId: stateDef.states });
+          stateDef = await this._resolveNestedCoValueReferences(stateDef);
+        } else {
+          // states is already an object - preserve it as-is, don't modify
+          console.log('[ActorEngine] States is already an object, preserving structure (no resolution needed)', { 
+            actorId: actor.id, 
+            statesType: typeof stateDef?.states,
+            statesKeys: stateDef?.states ? Object.keys(stateDef.states) : [],
+            idleStateKeys: stateDef?.states?.idle ? Object.keys(stateDef.states.idle) : [],
+            idleStateHasEntry: !!stateDef?.states?.idle?.entry
+          });
+          // Don't call _resolveNestedCoValueReferences - it might modify nested objects incorrectly
+          // Co-id references within states (like in tool payloads) should already be resolved by transformForSeeding
+        }
+        
+        // Debug: Log AFTER resolution
+        const idleState = stateDef?.states?.idle;
+        const entry = stateDef?.states?.[stateDef?.initial]?.entry;
+        console.log('[ActorEngine] Loaded state definition AFTER resolution', { 
+          actorId: actor.id, 
+          stateDefKeys: stateDef ? Object.keys(stateDef) : [],
+          hasStates: !!stateDef?.states,
+          statesType: typeof stateDef?.states,
+          statesKeys: stateDef?.states ? Object.keys(stateDef.states) : [],
+          initialState: stateDef?.initial,
+          idleStateExists: !!idleState,
+          idleStateType: typeof idleState,
+          idleStateKeys: idleState ? Object.keys(idleState) : [],
+          idleStateValue: idleState,
+          entry: entry,
+          entryType: typeof entry,
+          entryKeys: entry ? Object.keys(entry) : [],
+          entryValue: entry,
+          fullIdleState: JSON.stringify(idleState, null, 2).substring(0, 500)
+        });
+        
+        // Set up subscription for state updates (direct subscription, same pattern as view/context/style)
+        // Store directly in actor._subscriptions since actor already exists
+        if (!actor._subscriptions) actor._subscriptions = [];
+        const unsubscribeState = stateStore.subscribe(async (updatedStateDef) => {
+          const actor = this.actors.get(actor.id);
+          if (actor && this.stateEngine) {
+            try {
+              if (actor.machine) this.stateEngine.destroyMachine(actor.machine.id);
+              actor.machine = await this.stateEngine.createMachine(updatedStateDef, actor);
+              if (actor._initialRenderComplete) this.rerender(actor.id);
+            } catch (error) {
+              console.error(`[ActorEngine] Failed to update state machine:`, error);
+            }
+          }
+        }, { skipInitial: true });
+        actor._subscriptions.push(unsubscribeState);
+        
         actor.machine = await this.stateEngine.createMachine(stateDef, actor);
       } catch (error) {
         console.error(`[ActorEngine] Failed to load state machine:`, error);
@@ -205,7 +519,15 @@ export class ActorEngine {
     if (actorConfig.role === 'agent' || !actorConfig.view) return true;
     if (!viewDef) {
       try {
-        viewDef = await this.viewEngine.loadView(actorConfig.view);
+        // Use direct read() API for view config
+        const viewStore = await this.dbEngine.execute({ op: 'read', schema: null, key: actorConfig.view });
+        const viewData = viewStore.value;
+        const viewSchemaCoId = viewData?.$schema;
+        if (!viewSchemaCoId) {
+          throw new Error(`[ActorEngine] Failed to extract schema co-id from view CoValue ${actorConfig.view}`);
+        }
+        const viewStore2 = await this.dbEngine.execute({ op: 'read', schema: viewSchemaCoId, key: actorConfig.view });
+        viewDef = viewStore2.value;
       } catch {
         return false;
       }
@@ -258,7 +580,7 @@ export class ActorEngine {
     }
     const shadowRoot = containerElement.attachShadow({ mode: 'open' });
     const styleSheets = await this.styleEngine.getStyleSheets(actorConfig);
-    const { viewDef, context, contextCoId, contextSchemaCoId, topics, inbox, inboxCoId } = await this._loadActorConfigs(actorConfig);
+    const { viewDef, context, contextCoId, contextSchemaCoId, inbox, inboxCoId, tempSubscriptions } = await this._loadActorConfigs(actorConfig);
     const actorType = await this._isServiceActor(actorConfig, viewDef) ? 'service' : 'ui';
     const actor = {
       id: actorId,
@@ -274,22 +596,24 @@ export class ActorEngine {
       vibeKey,
       inbox,
       inboxCoId,
-      topics,
       _subscriptions: [],
       _initialRenderComplete: false,
       children: {}
     };
-    await this._setupMessageSubscriptions(actor, actorConfig);
-    this.actors.set(actorId, actor);
-    if (actor.topics?.length) {
-      for (const topicCoId of actor.topics) {
-        try {
-          await this.subscribeToTopic(actorId, topicCoId);
-        } catch (error) {
-          console.warn(`[ActorEngine] Failed to subscribe to topic:`, error);
+    
+    // Store config subscriptions in actor._subscriptions for cleanup
+    if (tempSubscriptions && Array.isArray(tempSubscriptions)) {
+      for (const unsubscribe of tempSubscriptions) {
+        if (typeof unsubscribe === 'function') {
+          actor._subscriptions.push(unsubscribe);
         }
       }
+      // Clean up temporary storage
+      this._tempSubscriptions?.delete(actorId);
     }
+    
+    await this._setupMessageSubscriptions(actor, actorConfig);
+    this.actors.set(actorId, actor);
     if (containerElement) {
       if (!this._containerActors.has(containerElement)) {
         this._containerActors.set(containerElement, new Set());
@@ -297,7 +621,7 @@ export class ActorEngine {
       this._containerActors.get(containerElement).add(actorId);
     }
     if (vibeKey) this.registerActorForVibe(actorId, vibeKey);
-    if (this.subscriptionEngine) await this.subscriptionEngine.initialize(actor);
+    // SubscriptionEngine eliminated - all subscriptions handled via direct read() + ReactiveStore
     await this._initializeActorState(actor, actorConfig);
     await this.viewEngine.render(viewDef, actor.context, shadowRoot, styleSheets, actorId);
     actor._initialRenderComplete = true;
@@ -307,7 +631,7 @@ export class ActorEngine {
         await this.rerender(actorId);
       } catch (error) {
         console.error(`[ActorEngine] Post-init rerender failed:`, error);
-        if (this.subscriptionEngine) this.subscriptionEngine._scheduleRerender(actorId);
+        // SubscriptionEngine eliminated - rerender handled directly
       }
     }
     if (this.pendingMessages.has(actorId)) {
@@ -322,7 +646,19 @@ export class ActorEngine {
 
   async rerender(actorId) {
     const actor = this.actors.get(actorId);
-    if (!actor) return;
+    if (!actor) {
+      console.warn(`[ActorEngine] rerender called for non-existent actor: ${actorId}`);
+      return;
+    }
+    
+    console.log(`[ActorEngine] rerender called`, {
+      actorId,
+      hasViewDef: !!actor.viewDef,
+      hasContext: !!actor.context,
+      currentView: actor.context?.currentView,
+      viewMode: actor.context?.viewMode
+    });
+    
     const activeElement = actor.shadowRoot.activeElement;
     const focusInfo = activeElement ? {
       tagName: activeElement.tagName,
@@ -332,7 +668,15 @@ export class ActorEngine {
       selectionEnd: activeElement.selectionEnd,
       selectionDirection: activeElement.selectionDirection
     } : null;
-    const viewDef = await this.viewEngine.loadView(actor.config.view);
+    // Use direct read() API for view config
+    const viewStore = await this.dbEngine.execute({ op: 'read', schema: null, key: actor.config.view });
+    const viewData = viewStore.value;
+    const viewSchemaCoId = viewData?.$schema;
+    if (!viewSchemaCoId) {
+      throw new Error(`[ActorEngine] Failed to extract schema co-id from view CoValue ${actor.config.view}`);
+    }
+    const viewStore2 = await this.dbEngine.execute({ op: 'read', schema: viewSchemaCoId, key: actor.config.view });
+    const viewDef = viewStore2.value;
     const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
     await this.viewEngine.render(viewDef, actor.context, actor.shadowRoot, styleSheets, actorId);
     if (focusInfo) {
@@ -430,7 +774,20 @@ export class ActorEngine {
     const actor = this.actors.get(actorId);
     if (!actor) return;
     actor.shadowRoot.innerHTML = '';
-    if (this.subscriptionEngine) this.subscriptionEngine.cleanup(actor);
+    // SubscriptionEngine eliminated - cleanup handled by viewEngine and direct store subscriptions
+    if (this.viewEngine) this.viewEngine.cleanupActor(actorId);
+    
+    // Clean up all subscriptions (stored in actor._subscriptions)
+    if (actor._subscriptions?.length > 0) {
+      actor._subscriptions.forEach(u => typeof u === 'function' && u());
+      actor._subscriptions = [];
+    }
+    // Clean up temporary subscriptions storage (if actor was destroyed before creation completed)
+    if (this._tempSubscriptions?.has(actorId)) {
+      const tempSubs = this._tempSubscriptions.get(actorId);
+      tempSubs.forEach(u => typeof u === 'function' && u());
+      this._tempSubscriptions.delete(actorId);
+    }
     if (actor.machine && this.stateEngine) this.stateEngine.destroyMachine(actor.machine.id);
     if (actor._processedMessageKeys) {
       actor._processedMessageKeys.clear();
@@ -526,7 +883,7 @@ export class ActorEngine {
    * Send a message to an actor's inbox
    * CRDT handles persistence and sync automatically - no MessageQueue needed
    * @param {string} actorId - Target actor ID
-   * @param {Object} message - Message object { type, payload, from, timestamp, topic? }
+   * @param {Object} message - Message object { type, payload, from, timestamp }
    */
   async sendMessage(actorId, message) {
     const actor = this.actors.get(actorId);
@@ -548,7 +905,6 @@ export class ActorEngine {
           target: actorId,
           processed: false
         };
-        if (message.topic?.startsWith('co_z')) messageData.topic = message.topic;
         await createAndPushMessage(this.dbEngine, actor.inboxCoId, messageData);
       } catch (error) {
         console.error(`[ActorEngine] Failed to send message:`, error);
@@ -556,70 +912,6 @@ export class ActorEngine {
     }
   }
 
-  /**
-   * Subscribe an actor to a topic CoValue
-   * Adds the actor to the topic's subscribers CoList
-   * @param {string} actorId - Actor ID to subscribe
-   * @param {string} topicCoId - Topic CoValue ID (e.g., '@topic/todos-created')
-   */
-  async subscribeToTopic(actorId, topicCoId) {
-    const actor = this.actors.get(actorId);
-    if (!actor || !this.dbEngine) return;
-    try {
-      const topicSchemaCoId = await this._getSchemaCoId(topicCoId);
-      const topic = (await this.dbEngine.execute({ op: 'read', schema: topicSchemaCoId, key: topicCoId })).value;
-      if (!topic?.subscribers) throw new Error(`[ActorEngine] Topic ${topicCoId} has no subscribers CoList`);
-      const subscribersSchemaCoId = await this._getSchemaCoId(topic.subscribers);
-      const subscribers = (await this.dbEngine.execute({ op: 'read', schema: subscribersSchemaCoId, key: topic.subscribers })).value;
-      if (!subscribers.items?.includes(actorId)) {
-        await this.dbEngine.execute({ op: 'append', coId: topic.subscribers, item: actorId });
-      }
-      if (actor.topics && !actor.topics.includes(topicCoId) && actor.config.topics) {
-        await this.dbEngine.execute({ op: 'append', coId: actor.config.topics, item: topicCoId });
-      }
-    } catch (error) {
-      console.error(`[ActorEngine] Failed to subscribe to topic:`, error);
-    }
-  }
-
-  /**
-   * Publish a message to a topic CoValue
-   * Routes message to all actors subscribed to the topic
-   * 
-   * TOPIC ROUTING: Messages are routed to all actors in the topic's subscribers CoList.
-   * Each subscriber receives a unique copy with a unique message ID (base ID + subscriber suffix).
-   * 
-   * Flow: publishToTopic() → read topic subscribers → sendMessage() → inbox CoStream → processMessages() → StateEngine.send()
-   * 
-   * @param {string} topicCoId - Topic CoValue ID (e.g., '@topic/todos-created')
-   * @param {Object} message - Message object { type, payload }
-   * @param {string} [fromActorId] - Optional source actor ID (for metadata)
-   */
-  async publishToTopic(topicCoId, message, fromActorId = null) {
-    if (!this.dbEngine) return;
-    try {
-      let resolvedTopicCoId = topicCoId;
-      if (!topicCoId.startsWith('co_z')) {
-        const resolved = await this.dbEngine.execute({ op: 'resolve', humanReadableKey: topicCoId });
-        if (resolved?.startsWith('co_z')) resolvedTopicCoId = resolved;
-        else throw new Error(`[ActorEngine] Failed to resolve topic ${topicCoId}`);
-      }
-      const topicSchemaCoId = await this._getSchemaCoId(resolvedTopicCoId);
-      const topic = (await this.dbEngine.execute({ op: 'read', schema: topicSchemaCoId, key: resolvedTopicCoId })).value;
-      if (!topic?.subscribers) throw new Error(`[ActorEngine] Topic has no subscribers`);
-      const subscribersSchemaCoId = await this._getSchemaCoId(topic.subscribers);
-      const subscribers = (await this.dbEngine.execute({ op: 'read', schema: subscribersSchemaCoId, key: topic.subscribers })).value;
-      if (!subscribers?.items?.length) return;
-      message.from = fromActorId;
-      message.topic = resolvedTopicCoId;
-      if (!message.id) message.id = `${message.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      for (const subscriberId of subscribers.items) {
-        await this.sendMessage(subscriberId, { ...message, id: `${message.id}_${subscriberId}` });
-      }
-    } catch (error) {
-      console.error(`[ActorEngine] Failed to publish to topic:`, error);
-    }
-  }
 
   async sendInternalEvent(actorId, eventType, payload = {}) {
     const actor = this.actors.get(actorId);

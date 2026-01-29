@@ -9,8 +9,10 @@
           "target": "idle",
           "actions": [
             {
+              "updateContext": { "viewMode": "$$viewMode" }
+            },
+            {
               "updateContext": {
-                "viewMode": "$$viewMode",
                 "currentView": {
                   "$if": {
                     "condition": { "$eq": ["$$viewMode", "list"] },
@@ -23,13 +25,25 @@
                       }
                     }
                   }
-                },
+                }
+              }
+            },
+            {
+              "updateContext": {
                 "listButtonActive": {
                   "$eq": ["$$viewMode", "list"]
-                },
+                }
+              }
+            },
+            {
+              "updateContext": {
                 "kanbanButtonActive": {
                   "$eq": ["$$viewMode", "kanban"]
-                },
+                }
+              }
+            },
+            {
+              "updateContext": {
                 "inboxLogsButtonActive": {
                   "$eq": ["$$viewMode", "inbox-logs"]
                 }

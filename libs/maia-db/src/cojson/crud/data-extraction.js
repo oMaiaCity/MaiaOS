@@ -323,7 +323,17 @@ export function extractCoValueDataFlat(backend, coValueCore, schemaHint = null) 
       ? content.keys() 
       : Object.keys(content);
     for (const key of keys) {
-      result[key] = content.get(key);
+      let value = content.get(key);
+      // CRITICAL: CoJSON might serialize nested objects as JSON strings
+      // Parse JSON strings back to objects (especially for nested structures like states)
+      if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
+        try {
+          value = JSON.parse(value);
+        } catch (e) {
+          // Keep as string if not valid JSON
+        }
+      }
+      result[key] = value;
     }
     return result;
   }

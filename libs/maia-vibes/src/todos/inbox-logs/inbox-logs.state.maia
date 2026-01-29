@@ -1,34 +1,39 @@
 {
   "$schema": "@schema/state",
   "$id": "@state/inbox-logs",
-  "initial": "loading",
+  "initial": "idle",
   "states": {
-    "loading": {
+    "idle": {
       "entry": {
-        "tool": "@core/queryInboxLogs",
-        "payload": {
-          "vibeKey": "todos"
-        },
-        "onSuccess": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": {
-                "messages": "$$result.messages"
-              }
-            }
-          ]
-        },
-        "onError": {
-          "target": "error"
+        "mapData": {
+          "allActors": {
+            "op": "read",
+            "schema": "@schema/actor",
+            "filter": null
+          }
         }
       }
     },
-    "idle": {},
     "error": {
+      "entry": {
+        "updateContext": { "error": "$$error" }
+      },
       "on": {
         "RETRY": {
-          "target": "loading"
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "error": null }
+            }
+          ]
+        },
+        "DISMISS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "error": null }
+            }
+          ]
         }
       }
     }

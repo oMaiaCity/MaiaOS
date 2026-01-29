@@ -30,10 +30,6 @@
       "$co": "@schema/style",
       "description": "Co-id reference to local style definition"
     },
-    "topics": {
-      "$co": "@schema/topics",
-      "description": "Co-id reference to topics colist (list of topic CoValue references this actor subscribes to)"
-    },
     "inbox": {
       "$co": "@schema/inbox",
       "description": "Co-id reference to message inbox costream (append-only message feed)"

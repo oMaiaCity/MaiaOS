@@ -36,13 +36,6 @@ import listState from './list/list.state.maia';
 import kanbanState from './kanban/kanban.state.maia';
 import inboxLogsState from './inbox-logs/inbox-logs.state.maia';
 
-// Import all topics colists
-import agentTopics from './agent/agent.topics.maia';
-import compositeTopics from './composite/composite.topics.maia';
-import listTopics from './list/list.topics.maia';
-import kanbanTopics from './kanban/kanban.topics.maia';
-import inboxLogsTopics from './inbox-logs/inbox-logs.topics.maia';
-
 // Topics infrastructure removed - using direct messaging instead
 
 // Import all inbox costreams
@@ -98,14 +91,6 @@ export const TodosVibeRegistry = {
     '@state/inbox-logs': inboxLogsState,
   },
   
-  topics: {
-    '@topics/agent': agentTopics,
-    '@topics/composite': compositeTopics,
-    '@topics/list': listTopics,
-    '@topics/kanban': kanbanTopics,
-    '@topics/inbox-logs': inboxLogsTopics,
-  },
-  
   inboxes: {
     '@inbox/agent': agentInbox,
     '@inbox/composite': compositeInbox,
@@ -117,7 +102,9 @@ export const TodosVibeRegistry = {
   // Note: Children are now stored in context.actors (not separate children CoList files)
   // See agent.context.maia and composite.context.maia for children definitions
   
-  // Default data to seed
+  // Initial data for seeding (creates individual todo CoMap items)
+  // NOTE: These todos are automatically indexed into account.os.{schemaCoId} via storage hooks
+  // The read() query reads from account.os.{schemaCoId}, NOT from account.data.todos (which is deprecated)
   data: {
     todos: [
       {

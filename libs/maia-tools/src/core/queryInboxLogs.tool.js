@@ -197,8 +197,8 @@ export default {
                 actor.context.messages = updatedMessages;
                 
                 // Trigger re-render if actor is already rendered
-                if (actor._initialRenderComplete && actor.actorEngine.subscriptionEngine) {
-                  actor.actorEngine.subscriptionEngine._scheduleRerender(actor.id);
+                if (actor._initialRenderComplete && actor.actorEngine) {
+                  actor.actorEngine.rerender(actor.id);
                 }
               }
             });

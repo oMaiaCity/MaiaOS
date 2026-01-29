@@ -38,10 +38,10 @@ import { getMetaSchemaCoMapDefinition } from '@MaiaOS/schemata/meta-schema';
  * @returns {Promise<Object>} Summary of what was seeded
  */
 export async function seed(account, node, configs, schemas, data, existingBackend = null) {
-  // Import co-id generator and transformer
-  const { generateCoId, CoIdRegistry } = 
+  // Import co-id registry and transformer
+  const { CoIdRegistry } = 
     await import('@MaiaOS/schemata/co-id-generator');
-  const { transformSchemaForSeeding, transformInstanceForSeeding, validateNoNestedCoTypes, verifyNoSchemaReferences } = 
+  const { transformForSeeding, validateSchemaStructure } = 
     await import('@MaiaOS/schemata/schema-transformer');
   
   const coIdRegistry = new CoIdRegistry();
@@ -329,11 +329,11 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     const schemaCoMap = schemaCoMaps.get(schemaKey);
     
     // Transform schema with actual co-ids (includes @schema/meta → metaSchemaCoId mapping)
-    const transformedSchema = transformSchemaForSeeding(schema, schemaCoIdMap);
+    const transformedSchema = transformForSeeding(schema, schemaCoIdMap);
     transformedSchema.$id = `https://maia.city/${schemaCoId}`;
     
     // Verify no @schema/... references remain after transformation
-    const verificationErrors = verifyNoSchemaReferences(transformedSchema, schemaKey);
+    const verificationErrors = validateSchemaStructure(transformedSchema, schemaKey, { checkSchemaReferences: true, checkNestedCoTypes: false });
     if (verificationErrors.length > 0) {
       const errorMsg = `[Seed] Schema ${schemaKey} still contains @schema/ references after transformation:\n${verificationErrors.join('\n')}`;
       console.error(errorMsg);
@@ -368,100 +368,6 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     });
   }
   
-  // Phase 4-5: Data collections and config instances (COMMENTED OUT - focusing on schemas and registry only)
-  // TODO: Re-enable once schema/registry seeding is stable
-  /*
-  // Phase 4: Create data collections first (CoJSON assigns IDs automatically)
-  // Then register their co-ids for transformation
-  const dataCollectionCoIds = new Map(); // Map: collectionName → co-id
-  if (data) {
-    // TODO: Create data collections as CoLists (will be implemented in Milestone 4)
-    // For now, just register placeholder co-ids for transformation
-    for (const [collectionName, collection] of Object.entries(data)) {
-      const schemaKey = `@schema/${collectionName}`;
-      const dataSchemaKey = `@schema/data/${collectionName}`;
-      
-      // Check if schema already exists (from Phase 1)
-      let collectionCoId = coIdRegistry.registry.get(schemaKey) || coIdRegistry.registry.get(dataSchemaKey);
-      
-      if (!collectionCoId) {
-        // Will be assigned when we create the CoList in Milestone 4
-        // For now, generate placeholder (will be replaced with actual CoList.id)
-        collectionCoId = generateCoId({ collection: collectionName });
-      }
-      
-      coIdRegistry.register(schemaKey, collectionCoId);
-      coIdRegistry.register(collectionName, collectionCoId);
-      dataCollectionCoIds.set(collectionName, collectionCoId);
-    }
-  }
-  
-  // Phase 5: Create config/instance CoMaps (CoJSON assigns IDs automatically)
-  // Strategy: Create CoMaps first, then get their IDs, then update references
-  const instanceCoIdMap = new Map(); // Maps instance key → co-id
-  const instanceByIdMap = new Map(); // Maps $id → { key, instance }
-  const instanceCoMaps = new Map(); // Store CoMap instances for later updates
-  
-  const collectInstances = (configObj, prefix = '') => {
-    const instances = [];
-    for (const [key, value] of Object.entries(configObj)) {
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
-        if (value.$schema || value.$id || (prefix === '' && key === 'vibe')) {
-          // This is an instance (including vibe at root level)
-          const instanceKey = prefix ? `${prefix}.${key}` : key;
-          const instanceId = value.$id || instanceKey;
-          
-          // Deduplicate by $id
-          if (!instanceByIdMap.has(instanceId)) {
-            instanceByIdMap.set(instanceId, { key: instanceKey, instance: value });
-            instances.push({ key: instanceKey, instance: value, instanceId });
-          } else {
-            const existing = instanceByIdMap.get(instanceId);
-            instances.push({ key: instanceKey, instance: value, instanceId, reuseCoId: existing.key });
-          }
-        } else {
-          // Recurse into nested objects
-          instances.push(...collectInstances(value, prefix ? `${prefix}.${key}` : key));
-        }
-      } else if (Array.isArray(value)) {
-        // Handle arrays of instances
-        value.forEach((item, index) => {
-          if (item && typeof item === 'object' && (item.$schema || item.$id)) {
-            const instanceKey = prefix ? `${prefix}.${key}[${index}]` : `${key}[${index}]`;
-            const instanceId = item.$id || instanceKey;
-            
-            // Deduplicate by $id
-            if (!instanceByIdMap.has(instanceId)) {
-              instanceByIdMap.set(instanceId, { key: instanceKey, instance: item });
-              instances.push({ key: instanceKey, instance: item, instanceId });
-            } else {
-              const existing = instanceByIdMap.get(instanceId);
-              instances.push({ key: instanceKey, instance: item, instanceId, reuseCoId: existing.key });
-            }
-          }
-        });
-      }
-    }
-    return instances;
-  };
-  
-  const allInstances = collectInstances(configs);
-  
-  // Generate co-ids for all unique $id values first
-  const uniqueInstanceIds = new Set();
-  for (const { instanceId } of allInstances) {
-    if (instanceId && !uniqueInstanceIds.has(instanceId)) {
-      uniqueInstanceIds.add(instanceId);
-    }
-  }
-  
-  // Phase 5: Handle duplicate $id detection
-  for (const { key, instance, instanceId, reuseCoId } of allInstances) {
-    if (reuseCoId) {
-      console.error(`[CoJSONSeed] ❌ DUPLICATE $id DETECTED: "${instanceId}" is used in multiple files (key: ${key}, original: ${reuseCoId}). Each .maia file must have a unique $id.`);
-    }
-  }
-  */
   
   // Empty maps for now (data is commented out)
   const instanceCoIdMap = new Map();
@@ -626,18 +532,13 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   };
   
   // Seed all config types in dependency order (same as IndexedDB)
-  // Order: styles → topics → actors → views → contexts → states → interfaces → subscriptions → inboxes → tool
-  // Note: subscribers and topicCoValues removed - using direct messaging instead
+  // Order: styles → actors → views → contexts → states → interfaces → subscriptions → inboxes → tool
+  // Note: topics removed - topics infrastructure deprecated, use direct messaging with target instead
   if (configs) {
     const stylesSeeded = await seedConfigTypeAndRegister('styles', configs.styles, 'style');
     seededConfigs.configs.push(...(stylesSeeded.configs || []));
     seededConfigs.count += stylesSeeded.count || 0;
     combinedRegistry = refreshCombinedRegistry(); // REFRESH: styles now available
-
-    const topicsSeeded = await seedConfigTypeAndRegister('topics', configs.topics, 'topics');
-    seededConfigs.configs.push(...(topicsSeeded.configs || []));
-    seededConfigs.count += topicsSeeded.count || 0;
-    combinedRegistry = refreshCombinedRegistry(); // REFRESH: topics now available
 
     const actorsSeeded = await seedConfigTypeAndRegister('actors', configs.actors, 'actor');
     seededConfigs.configs.push(...(actorsSeeded.configs || []));
@@ -709,7 +610,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
       }
 
       // Transform with full registry (all co-ids now available)
-      const fullyTransformed = transformInstanceForSeeding(originalConfig, latestRegistry);
+      const fullyTransformed = transformForSeeding(originalConfig, latestRegistry);
 
       // Use the stored CoValue reference (CoMap, CoList, or CoStream)
       const coValue = configInfo.coMap;
@@ -745,18 +646,54 @@ export async function seed(account, node, configs, schemas, data, existingBacken
           // Skip $id and $schema (those are in metadata, not properties)
           const { $id, $schema, ...propsToSet } = fullyTransformed;
 
-          // For state machines, log the transformation
+          // For state machines, log the transformation and check for entry
           if (propsToSet.states && typeof propsToSet.states === 'object') {
             // Check if any entry has schema that was transformed
             for (const [stateName, stateDef] of Object.entries(propsToSet.states)) {
               if (stateDef?.entry?.payload?.schema) {
                 // Updating state machine schema references
               }
+              // Debug: Log entry structure for state machines
+              if (stateDef?.entry) {
+                console.log(`[Seed] State ${stateName} has entry:`, {
+                  entryType: typeof stateDef.entry,
+                  entryKeys: Object.keys(stateDef.entry),
+                  hasMapData: !!stateDef.entry.mapData,
+                  entryValue: JSON.stringify(stateDef.entry, null, 2).substring(0, 200)
+                });
+              } else {
+                console.warn(`[Seed] ⚠️ State ${stateName} MISSING entry property!`, {
+                  stateKeys: Object.keys(stateDef),
+                  stateValue: JSON.stringify(stateDef, null, 2).substring(0, 200)
+                });
+              }
             }
           }
 
           for (const [key, value] of Object.entries(propsToSet)) {
+            // Debug: Log what we're setting for states
+            if (key === 'states' && typeof value === 'object') {
+              console.log(`[Seed] Setting states property:`, {
+                statesType: typeof value,
+                statesKeys: Object.keys(value),
+                idleStateKeys: value?.idle ? Object.keys(value.idle) : [],
+                idleStateHasEntry: !!value?.idle?.entry,
+                idleStateEntryKeys: value?.idle?.entry ? Object.keys(value.idle.entry) : []
+              });
+            }
             coValue.set(key, value);
+            
+            // Debug: Verify what was actually set (read it back immediately)
+            if (key === 'states' && coValue.get) {
+              const readBack = coValue.get('states');
+              console.log(`[Seed] Read back states property:`, {
+                readBackType: typeof readBack,
+                readBackKeys: readBack && typeof readBack === 'object' ? Object.keys(readBack) : [],
+                idleStateKeys: readBack?.idle && typeof readBack.idle === 'object' ? Object.keys(readBack.idle) : [],
+                idleStateHasEntry: !!readBack?.idle?.entry,
+                idleStateEntryKeys: readBack?.idle?.entry && typeof readBack.idle.entry === 'object' ? Object.keys(readBack.idle.entry) : []
+              });
+            }
           }
 
           updatedCount++;
@@ -777,15 +714,6 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     const inboxesToUpdate = seededConfigs.configs.filter(c => c.type === 'inbox');
     await updateConfigReferences(inboxesToUpdate, configs.inboxes);
 
-    // Update topics BEFORE actors (actors reference topics)
-    // Note: subscribers and topicCoValues removed - using direct messaging instead
-    // Note: topics CoLists are typically empty initially, but we update them to ensure they're registered
-    const topicsToUpdate = seededConfigs.configs.filter(c => c.type === 'topics');
-    await updateConfigReferences(topicsToUpdate, configs.topics);
-    
-    // Refresh registry after topics are updated (so actor updates can resolve topics references)
-    refreshCombinedRegistry();
-
     // Update children BEFORE actors (actors reference children)
     const childrenToUpdate = seededConfigs.configs.filter(c => c.type === 'children');
     await updateConfigReferences(childrenToUpdate, configs.children);
@@ -793,7 +721,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     // Refresh registry after children are updated (so actor updates can resolve children references)
     refreshCombinedRegistry();
 
-    // 2. Update actors AFTER topics and children are registered (actors reference topics and children)
+    // 2. Update actors AFTER children are registered (actors reference children)
     const actorsToUpdate = seededConfigs.configs.filter(c => c.type === 'actor');
     await updateConfigReferences(actorsToUpdate, configs.actors);
     
@@ -820,8 +748,27 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     // REFRESH REGISTRY before transforming vibe (actors are now registered)
     combinedRegistry = refreshCombinedRegistry();
 
+    // Debug: Check if actor is in registry
+    const actorRef = configs.vibe.actor;
+    if (actorRef && !actorRef.startsWith('co_z')) {
+      const actorCoId = combinedRegistry.get(actorRef);
+      if (!actorCoId) {
+        const availableKeys = Array.from(combinedRegistry.keys())
+          .filter(k => k.startsWith('@actor/'))
+          .slice(0, 10)
+          .join(', ');
+        console.warn(`[CoJSONSeed] Actor reference ${actorRef} not found in registry. Available actor keys (first 10): ${availableKeys}`);
+      }
+    }
+
     // Re-transform vibe now that actors are registered
-    const retransformedVibe = transformInstanceForSeeding(configs.vibe, combinedRegistry);
+    const retransformedVibe = transformForSeeding(configs.vibe, combinedRegistry);
+    
+    // Debug: Verify transformation worked
+    if (retransformedVibe.actor && !retransformedVibe.actor.startsWith('co_z')) {
+      console.error(`[CoJSONSeed] ❌ Vibe actor transformation failed! Expected co-id, got: ${retransformedVibe.actor}`);
+      console.error(`[CoJSONSeed] Original actor: ${configs.vibe.actor}, Registry has: ${combinedRegistry.has(configs.vibe.actor)}`);
+    }
     
     // Extract vibe key from original $id BEFORE transformation
     const originalVibeId = configs.vibe.$id || '';
@@ -876,12 +823,8 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   }
   
   // Phase 8: Seed data entities to CoJSON
-  // NOTE: account.data seeding is deprecated - data is now indexed via schema indexes in account.os
-  // Skip seeding account.data entirely
-  const seededData = {
-    collections: [],
-    totalItems: 0
-  };
+  // Creates individual CoMap items - storage hooks automatically index them into account.os.{schemaCoId}
+  const seededData = await seedData(account, node, universalGroup, data, coIdRegistry);
   
   // Phase 9: Store registry in account.os.schematas CoMap
   await storeRegistry(account, node, universalGroup, coIdRegistry, schemaCoIdMap, instanceCoIdMap, configs || {}, seededSchemas);
@@ -1016,9 +959,8 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
   };
   
   // Seed all config types
-  // Note: subscribers and topicCoValues removed - using direct messaging instead
+  // Note: topics removed - topics infrastructure deprecated, use direct messaging with target instead
   totalCount += await seedConfigType('style', transformedConfigs.styles);
-  totalCount += await seedConfigType('topics', transformedConfigs.topics);
   totalCount += await seedConfigType('actor', transformedConfigs.actors);
   totalCount += await seedConfigType('view', transformedConfigs.views);
   totalCount += await seedConfigType('context', transformedConfigs.contexts);
@@ -1038,17 +980,17 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
 /**
  * Seed data entities to CoJSON
  * 
- * LEGACY: Creates account.data CoMap and account.data.{collectionName} CoLists for backward compatibility.
+ * Creates individual CoMap items for each data entity. Items are automatically indexed
+ * into account.os.{schemaCoId} via storage hooks (schema-index-manager.js).
  * 
- * NOTE: With automatic schema indexing, items are now automatically indexed in account.os.{schemaCoId}
- * via storage hooks. The account.data colists are legacy and may be removed in the future.
- * New code should use schema indexes from account.os instead of account.data colists.
+ * The read() query reads from account.os.{schemaCoId} schema index CoLists, not from
+ * account.data.{collectionName} CoLists (which are deprecated).
  * 
  * @private
  */
-async function seedData(account, node, universalGroup, data, generateCoId, coIdRegistry, dataCollectionCoIds) {
+async function seedData(account, node, universalGroup, data, coIdRegistry) {
   // Import transformer for data items
-  const { transformInstanceForSeeding } = await import('@MaiaOS/schemata/schema-transformer');
+  const { transformForSeeding } = await import('@MaiaOS/schemata/schema-transformer');
   
   if (!data || Object.keys(data).length === 0) {
     return {
@@ -1057,32 +999,11 @@ async function seedData(account, node, universalGroup, data, generateCoId, coIdR
     };
   }
   
-  // Create account.data CoMap if not exists
-  let dataId = account.get("data");
-  let dataCoMap;
-  
-  if (dataId) {
-    const dataCore = node.getCoValue(dataId);
-    if (dataCore && dataCore.type === 'comap') {
-      const dataContent = dataCore.getCurrentContent?.();
-      if (dataContent && typeof dataContent.get === 'function') {
-        dataCoMap = dataContent;
-      }
-    }
-  }
-  
-  if (!dataCoMap) {
-    // Create data CoMap directly using universalGroup (already resolved)
-    // Use GenesisSchema exception (no schema validation needed for container)
-    const dataMeta = { $schema: 'GenesisSchema' };
-    dataCoMap = universalGroup.createMap({}, dataMeta);
-    account.set("data", dataCoMap.id);
-  }
-  
   const seededCollections = [];
   let totalItems = 0;
   
-  // Create each data collection as a CoList
+  // Create individual CoMap items for each collection
+  // Storage hooks will automatically index them into account.os.{schemaCoId}
   for (const [collectionName, collectionItems] of Object.entries(data)) {
     if (!Array.isArray(collectionItems)) {
       console.warn(`[CoJSONSeed] Skipping ${collectionName}: not an array`);
@@ -1107,89 +1028,27 @@ async function seedData(account, node, universalGroup, data, generateCoId, coIdR
       continue;
     }
     
-    // Create CoList for this collection
-    let collectionListId = dataCoMap.get(collectionName);
-    let collectionList;
-    
-    if (collectionListId) {
-      const listCore = node.getCoValue(collectionListId);
-      if (listCore && listCore.type === 'colist') {
-        const listContent = listCore.getCurrentContent?.();
-        if (listContent && typeof listContent.append === 'function') {
-          collectionList = listContent;
-        }
-      }
-    }
-    
-    if (!collectionList) {
-      // Create CoList directly with schema co-id in headerMeta (not through createCoList which expects schema name)
-      const listMeta = { $schema: schemaCoId }; // Use actual co-id
-      collectionList = universalGroup.createList([], listMeta);
-      dataCoMap.set(collectionName, collectionList.id);
-      
-      // Update registry with actual CoList ID
-      // Use collection-specific key to avoid conflicts with schema registrations
-      const collectionKey = `collection/${collectionName}`;
-      
-      // Register collection key (for CoList lookup) - this is the primary key
-      try {
-        coIdRegistry.register(collectionKey, collectionList.id);
-      } catch (error) {
-        // If already registered with same ID, that's fine
-        const existingId = coIdRegistry.registry.get(collectionKey);
-        if (existingId !== collectionList.id) {
-          throw error; // Re-throw if different ID
-        }
-      }
-      
-      // Also register under collection name ONLY if not already registered
-      // This avoids conflicts if "todos" was already registered with schema CoMap ID
-      if (!coIdRegistry.registry.has(collectionName)) {
-        try {
-          coIdRegistry.register(collectionName, collectionList.id);
-        } catch (error) {
-          // If registration fails (e.g., already registered with schema CoMap), that's OK
-          // We'll use collectionKey for CoList lookup
-          console.log(`[CoJSONSeed] Collection name ${collectionName} already registered, using collection key ${collectionKey} for CoList`);
-        }
-      } else {
-        const existingId = coIdRegistry.registry.get(collectionName);
-        if (existingId === schemaCoId) {
-          // It's registered with the schema CoMap ID, that's fine - we'll use collectionKey for CoList
-          console.log(`[CoJSONSeed] Collection name ${collectionName} already registered with schema CoMap ${existingId}, using collection key ${collectionKey} for CoList`);
-        } else if (existingId === collectionList.id) {
-          // Already registered with same ID, that's fine
-        } else {
-          // Different ID - don't register, use collectionKey instead
-          console.warn(`[CoJSONSeed] Collection ${collectionName} already registered with ${existingId}, using collection key ${collectionKey} for CoList ${collectionList.id}`);
-        }
-      }
-      
-      dataCollectionCoIds.set(collectionName, collectionList.id);
-      
-    }
-    
-    // Create CoMaps for each item and append to list
+    // Create CoMaps for each item
+    // Storage hooks will automatically index them into account.os.{schemaCoId}
     let itemCount = 0;
     for (const item of collectionItems) {
       // Transform item references
-      const transformedItem = transformInstanceForSeeding(item, coIdRegistry.getAll());
+      const transformedItem = transformForSeeding(item, coIdRegistry.getAll());
       
       // Remove $id if present (CoJSON will assign ID when creating CoMap)
       const { $id, ...itemWithoutId } = transformedItem;
       
-      // Create CoMap directly with schema co-id in headerMeta (not through createCoMap which expects schema name)
-      const itemMeta = { $schema: schemaCoId }; // Use actual co-id
+      // Create CoMap directly with schema co-id in headerMeta
+      // Storage hook will automatically index this into account.os.{schemaCoId}
+      const itemMeta = { $schema: schemaCoId };
       const itemCoMap = universalGroup.createMap(itemWithoutId, itemMeta);
       
-      // Append to collection list
-      collectionList.append(itemCoMap.id);
       itemCount++;
     }
     
     seededCollections.push({
       name: collectionName,
-      coListId: collectionList.id,
+      schemaCoId: schemaCoId,
       itemCount
     });
     
@@ -1288,7 +1147,7 @@ async function ensureAccountOs(account, node, universalGroup) {
  */
 async function storeRegistry(account, node, universalGroup, coIdRegistry, schemaCoIdMap, instanceCoIdMap, configs, seededSchemas) {
   // account.os should already exist (created by ensureAccountOs in Phase 0)
-  // Just get it and register topics (schemas are auto-registered by storage hook)
+  // Schemas are auto-registered by storage hook
   const osId = account.get("os");
   if (!osId) {
     console.warn(`[Seed] account.os not found - should have been created in Phase 0`);
@@ -1354,14 +1213,11 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
   
   // CRITICAL: Storage hook automatically registers ALL schemas when they're created via CRUD API
   // However, metaschema is created directly (not via CRUD API) so it needs manual registration
-  // Topics (@topic/*) are NOT schemas and also need manual registration
   const allMappings = coIdRegistry.getAll();
-  let topicCount = 0;
   let metaschemaRegistered = false;
   
   for (const [humanReadableKey, coId] of allMappings) {
     const isMetaschema = humanReadableKey === '@schema/meta';
-    const isTopic = humanReadableKey.startsWith('@topic/');
     
     if (isMetaschema) {
       // Metaschema is created directly (not via CRUD API), so storage hook won't register it
@@ -1377,23 +1233,13 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
       } else {
         console.log(`[Seed] Metaschema ${humanReadableKey} already registered`);
       }
-    } else if (isTopic) {
-      // Topics are NOT schemas - they need manual registration
-      const existingCoId = schematas.get(humanReadableKey);
-      if (!existingCoId) {
-        schematas.set(humanReadableKey, coId);
-        topicCount++;
-      } else if (existingCoId !== coId) {
-        // Different topic already registered - don't overwrite
-        console.warn(`[Seed] Topic ${humanReadableKey} already registered with different co-id: ${existingCoId.substring(0, 12)}... (new: ${coId.substring(0, 12)}...). Skipping.`);
-      }
     }
     // Note: All other schemas (@schema/* except @schema/meta) are auto-registered by storage hook
     // They're created via CRUD API, so the hook fires automatically
   }
   
-  if (metaschemaRegistered || topicCount > 0) {
-    console.log(`[Seed] Manually registered: ${metaschemaRegistered ? 'metaschema' : ''}${metaschemaRegistered && topicCount > 0 ? ' + ' : ''}${topicCount > 0 ? `${topicCount} topics` : ''} in account.os.schematas`);
+  if (metaschemaRegistered) {
+    console.log(`[Seed] Manually registered metaschema in account.os.schematas`);
   }
   
 }

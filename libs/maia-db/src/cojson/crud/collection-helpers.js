@@ -61,66 +61,6 @@ export async function getSchemaIndexColistId(backend, schema) {
   return null;
 }
 
-/**
- * Resolve collection name from schema (co-id or human-readable)
- * DEPRECATED: Use getSchemaIndexColistId() instead
- * Kept for backward compatibility - resolves to schema co-id and looks up colist
- * @param {Object} backend - Backend instance
- * @param {string} schema - Schema co-id (co_z...) or human-readable (@schema/data/todos)
- * @returns {Promise<string|null>} Collection name (e.g., "todos") or null if not found
- */
-export async function resolveCollectionName(backend, schema) {
-  // For backward compatibility, try to extract collection name from human-readable schema
-  if (schema.startsWith('@schema/data/')) {
-    // Extract "todos" from "@schema/data/todos"
-    return schema.replace('@schema/data/', '');
-  }
-  if (schema.startsWith('@schema/')) {
-    // Extract collection name from "@schema/<name>" (backward compatibility)
-    return schema.replace('@schema/', '');
-  }
-  
-  // If schema is a co-id, try to resolve via registry to get human-readable name
-  if (schema.startsWith('co_z')) {
-    const osId = backend.account.get('os');
-    if (osId) {
-      const osCore = await ensureCoValueLoaded(backend, osId);
-      if (osCore && backend.isAvailable(osCore)) {
-        const osContent = backend.getCurrentContent(osCore);
-        if (osContent && typeof osContent.get === 'function') {
-          const schematasId = osContent.get('schematas');
-          if (schematasId) {
-            const schematasCore = await ensureCoValueLoaded(backend, schematasId);
-            if (schematasCore && backend.isAvailable(schematasCore)) {
-              const schematasContent = backend.getCurrentContent(schematasCore);
-              if (schematasContent && typeof schematasContent.get === 'function') {
-                // Find schema title by reverse lookup
-                const keys = schematasContent.keys && typeof schematasContent.keys === 'function'
-                  ? schematasContent.keys()
-                  : Object.keys(schematasContent);
-                
-                for (const key of keys) {
-                  if (schematasContent.get(key) === schema) {
-                    // Found schema title - extract collection name if data schema
-                    if (key.startsWith('@schema/data/')) {
-                      return key.replace('@schema/data/', '');
-                    }
-                    // For OS schemas, return the schema name without @schema/ prefix
-                    if (key.startsWith('@schema/')) {
-                      return key.replace('@schema/', '');
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  
-  return null;
-}
 
 /**
  * Get CoList ID from account.os.<schemaCoId> (all schema indexes in account.os)
@@ -219,30 +159,3 @@ export async function ensureCoValueLoaded(backend, coId, options = {}) {
   return coValueCore;
 }
 
-/**
- * Ensure CoList is loaded from IndexedDB (jazz-tools pattern)
- * DEPRECATED: Use ensureCoValueLoaded() instead
- * Kept for backward compatibility - delegates to generic method
- * @param {Object} backend - Backend instance
- * @param {string} schema - Schema co-id (co_z...) or human-readable (@schema/data/todos)
- * @returns {Promise<void>}
- */
-export async function ensureCoListLoaded(backend, schema) {
-  // Resolve collection name from schema
-  const collectionName = await resolveCollectionName(backend, schema);
-  if (!collectionName) {
-    // Can't resolve collection name - skip loading (might be a non-collection schema)
-    return;
-  }
-  
-  // Get CoList ID from schema index (account.os.<schemaCoId>)
-  // Supports schema co-ids, human-readable schema names, or collection names (legacy fallback)
-  const coListId = await getCoListId(backend, collectionName);
-  if (!coListId) {
-    // CoList doesn't exist yet - skip loading (will be created on first item)
-    return;
-  }
-  
-  // Use generic method to load CoList
-  await ensureCoValueLoaded(backend, coListId, { waitForAvailable: true, timeoutMs: 1000 });
-}

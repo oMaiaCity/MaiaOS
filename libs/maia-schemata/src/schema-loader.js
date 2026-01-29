@@ -144,35 +144,3 @@ export async function loadSchemasFromAccount(node, account) {
   }
 }
 
-/**
- * Get schema definition by co-id from account.os.schemata (MIGRATIONS ONLY)
- * 
- * @param {LocalNode} node - LocalNode instance
- * @param {RawAccount} account - Account CoMap
- * @param {string} schemaCoId - Schema co-id
- * @returns {Promise<Object|null>} Schema definition or null if not found
- */
-export async function getSchemaByCoId(node, account, schemaCoId) {
-  const schemas = await loadSchemasFromAccount(node, account);
-  return schemas[schemaCoId] || null;
-}
-
-/**
- * Get schema definition by name from account.os.schemata (MIGRATIONS ONLY)
- * 
- * @param {LocalNode} node - LocalNode instance
- * @param {RawAccount} account - Account CoMap
- * @param {string} schemaName - Schema name (e.g., "AccountSchema", "ProfileSchema")
- * @returns {Promise<Object|null>} Schema definition or null if not found
- */
-export async function getSchemaByName(node, account, schemaName) {
-  const schemas = await loadSchemasFromAccount(node, account);
-  // Note: This function searches by name, but schemas are stored by co-id
-  // This is a migration helper - in practice, use getSchemaByCoId with the actual co-id
-  for (const [coId, schema] of Object.entries(schemas)) {
-    if (schema.title === schemaName || schema.$id?.includes(schemaName)) {
-      return schema;
-    }
-  }
-  return null;
-}

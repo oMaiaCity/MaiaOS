@@ -6,12 +6,78 @@
  */
 
 /**
+ * Transform a schema or instance for seeding (replace human-readable refs with co-ids)
+ * Single source of truth for all transformation logic
+ * @param {Object} schemaOrInstance - Schema object or instance object
+ * @param {Map<string, string>} coIdMap - Map of human-readable ID → co-id
+ * @param {Object} [options] - Optional transformation options
+ * @param {Function} [options.schemaResolver] - Optional function to resolve schema definitions by co-id (for instances only)
+ * @returns {Object} Transformed schema or instance
+ */
+export function transformForSeeding(schemaOrInstance, coIdMap, options = {}) {
+  if (!schemaOrInstance || typeof schemaOrInstance !== 'object') {
+    return schemaOrInstance;
+  }
+  
+  // Detect if this is a schema or instance
+  // KEY DIFFERENCE:
+  // - Schemas have $schema: "@schema/meta" (or "https://json-schema.org/...")
+  // - Instances have $schema: "@schema/vibe", "@schema/actor", etc. (pointing to their schema)
+  const schemaRef = schemaOrInstance.$schema;
+  
+  // Check if $schema points to meta-schema (indicates this IS a schema definition)
+  const isMetaSchema = schemaRef === '@schema/meta' || 
+                       (typeof schemaRef === 'string' && schemaRef.startsWith('https://json-schema.org/')) ||
+                       (typeof schemaRef === 'string' && schemaRef.startsWith('https://'));
+  
+  // If $schema points to meta-schema, it's a schema definition
+  if (isMetaSchema) {
+    return transformSchemaForSeeding(schemaOrInstance, coIdMap);
+  }
+  
+  // If $schema points to a data schema (e.g., "@schema/vibe", "@schema/actor"), it's an instance
+  // Also check for instance-specific properties as additional confirmation
+  const hasInstanceProperties = schemaOrInstance.actor !== undefined ||
+                                schemaOrInstance.context !== undefined ||
+                                schemaOrInstance.view !== undefined ||
+                                schemaOrInstance.state !== undefined ||
+                                schemaOrInstance.brand !== undefined ||
+                                schemaOrInstance.style !== undefined ||
+                                schemaOrInstance.inbox !== undefined ||
+                                schemaOrInstance.subscribers !== undefined ||
+                                (schemaOrInstance.name !== undefined && schemaOrInstance.description !== undefined);
+  
+  // If $schema points to a data schema (not meta-schema), it's an instance
+  const isDataSchema = schemaRef && typeof schemaRef === 'string' && 
+                       schemaRef.startsWith('@schema/') && schemaRef !== '@schema/meta';
+  
+  if (isDataSchema || hasInstanceProperties) {
+    return transformInstanceForSeeding(schemaOrInstance, coIdMap, options);
+  }
+  
+  // Fallback: Check for schema structure properties (properties, $defs, cotype)
+  // These indicate it's a schema definition even if $schema isn't set yet
+  const hasSchemaStructure = schemaOrInstance.properties !== undefined ||
+                             schemaOrInstance.$defs !== undefined ||
+                             (schemaOrInstance.items !== undefined && typeof schemaOrInstance.items === 'object' && !Array.isArray(schemaOrInstance.items)) ||
+                             schemaOrInstance.cotype !== undefined;
+  
+  if (hasSchemaStructure) {
+    return transformSchemaForSeeding(schemaOrInstance, coIdMap);
+  }
+  
+  // Default: treat as instance if unclear (safer - instances are more common)
+  return transformInstanceForSeeding(schemaOrInstance, coIdMap, options);
+}
+
+/**
  * Transform a schema for seeding (replace human-readable refs with co-ids)
+ * @private
  * @param {Object} schema - Schema object
  * @param {Map<string, string>} coIdMap - Map of human-readable ID → co-id
  * @returns {Object} Transformed schema
  */
-export function transformSchemaForSeeding(schema, coIdMap) {
+function transformSchemaForSeeding(schema, coIdMap) {
   if (!schema || typeof schema !== 'object') {
     return schema;
   }
@@ -159,13 +225,14 @@ function transformCoReferences(obj, coIdMap, path = '') {
 
 /**
  * Transform an instance for seeding (replace human-readable refs with co-ids)
+ * @private
  * @param {Object} instance - Instance object (config, actor, view, etc.)
  * @param {Map<string, string>} coIdMap - Map of human-readable ID → co-id
  * @param {Object} options - Optional transformation options
  * @param {Function} options.schemaResolver - Optional function to resolve schema definitions by co-id: (schemaCoId) => Promise<Object|null>
  * @returns {Object} Transformed instance
  */
-export function transformInstanceForSeeding(instance, coIdMap, options = {}) {
+function transformInstanceForSeeding(instance, coIdMap, options = {}) {
   if (!instance || typeof instance !== 'object') {
     return instance;
   }
@@ -214,12 +281,12 @@ export function transformInstanceForSeeding(instance, coIdMap, options = {}) {
   }
   // Note: If $id doesn't exist, it will be generated in _seedConfigs
 
-  // Transform reference properties (actor, context, view, state, brand, style, topics, inbox, subscribers)
+  // Transform reference properties (actor, context, view, state, brand, style, inbox, subscribers)
   // Note: tokens and components are now embedded objects in styles, not separate CoValue references
   // Note: children property removed - children are now stored in context.actors
-  // Note: interface and subscriptions removed - topics handle message routing now
-  // Note: subscribers is a property of topic CoValues (references subscribers CoList)
-  const referenceProps = ['actor', 'context', 'view', 'state', 'brand', 'style', 'topics', 'inbox', 'subscribers'];
+  // Note: topics removed - topics infrastructure deprecated, use direct messaging with target instead
+  // Note: subscribers is still used for other CoValue types (not just topics)
+  const referenceProps = ['actor', 'context', 'view', 'state', 'brand', 'style', 'inbox', 'subscribers'];
   for (const prop of referenceProps) {
     if (transformed[prop] && typeof transformed[prop] === 'string') {
       const ref = transformed[prop];
@@ -377,7 +444,7 @@ export function transformInstanceForSeeding(instance, coIdMap, options = {}) {
         continue;
       }
 
-      // Transform entry (can be object with tool/payload OR array of actions)
+      // Transform entry (can be object with tool/payload, mapData, updateContext OR array of actions)
       if (stateDef.entry) {
         if (stateDef.entry.tool && stateDef.entry.payload) {
           // Entry is an object with tool and payload - transform payload
@@ -385,6 +452,23 @@ export function transformInstanceForSeeding(instance, coIdMap, options = {}) {
           transformToolPayload(stateDef.entry.payload, coIdMap, transformQueryObjects);
           if (originalSchema && originalSchema !== stateDef.entry.payload.schema) {
             console.log(`[SchemaTransformer] ✅ Transformed state machine entry schema: ${originalSchema} → ${stateDef.entry.payload.schema}`);
+          }
+        } else if (stateDef.entry.mapData && typeof stateDef.entry.mapData === 'object') {
+          // Entry is a mapData action - transform schema references in each operation config
+          const mapData = stateDef.entry.mapData;
+          for (const [contextKey, operationConfig] of Object.entries(mapData)) {
+            if (operationConfig && typeof operationConfig === 'object' && operationConfig.schema && typeof operationConfig.schema === 'string') {
+              const originalSchema = operationConfig.schema;
+              const coId = transformSchemaReference(operationConfig.schema, coIdMap, `mapData.${contextKey}.schema`);
+              if (coId) {
+                operationConfig.schema = coId;
+                console.log(`[SchemaTransformer] ✅ Transformed mapData schema for ${contextKey}: ${originalSchema} → ${operationConfig.schema}`);
+              }
+            }
+            // Recursively transform other properties (filter, key, keys, etc.) if they contain schema references
+            if (operationConfig && typeof operationConfig === 'object') {
+              transformQueryObjects(operationConfig, coIdMap);
+            }
           }
         } else if (Array.isArray(stateDef.entry)) {
           // Entry is an array of actions - transform each action
@@ -480,6 +564,14 @@ function transformTargetReference(targetRef, coIdMap, context = '') {
  * @param {Map} coIdMap - Map of human-readable IDs to co-ids
  */
 function transformQueryObjectSchema(queryObj, coIdMap) {
+  // CRITICAL: Don't transform mapData operation configs - they have a 'key' property that must be preserved
+  // mapData operation configs can have structure: {op: 'read', key: string, schema: string, filter?: object}
+  // Query objects have structure: {schema: string, filter?: object} (no 'key' property)
+  if ('key' in queryObj && !('op' in queryObj)) {
+    // This might be a mapData operation config, not a query object - don't transform it here
+    return;
+  }
+  
   if (queryObj.schema && typeof queryObj.schema === 'string') {
     const coId = transformSchemaReference(queryObj.schema, coIdMap, 'query object');
     if (coId) {
@@ -579,8 +671,26 @@ function transformArrayItems(arr, coIdMap, transformRecursive) {
   for (let i = 0; i < arr.length; i++) {
     const item = arr[i];
     if (item && typeof item === 'object') {
+      // Check if this is a mapData action
+      if (item.mapData && typeof item.mapData === 'object') {
+        // Transform schema references in each operation config
+        for (const [contextKey, operationConfig] of Object.entries(item.mapData)) {
+          if (operationConfig && typeof operationConfig === 'object' && operationConfig.schema && typeof operationConfig.schema === 'string') {
+            const originalSchema = operationConfig.schema;
+            const coId = transformSchemaReference(operationConfig.schema, coIdMap, `mapData.${contextKey}.schema in array`);
+            if (coId) {
+              operationConfig.schema = coId;
+              console.log(`[SchemaTransformer] ✅ Transformed mapData schema for ${contextKey} in array: ${originalSchema} → ${operationConfig.schema}`);
+            }
+          }
+          // Recursively transform other properties
+          if (operationConfig && typeof operationConfig === 'object') {
+            transformRecursive(operationConfig, coIdMap);
+          }
+        }
+      }
       // Check if this is a tool action object (has 'tool' and 'payload' properties)
-      if (item.tool && typeof item.tool === 'string' && item.payload && typeof item.payload === 'object') {
+      else if (item.tool && typeof item.tool === 'string' && item.payload && typeof item.payload === 'object') {
         // Transform action payload (handles both schema and target references)
         transformActionPayload(item, coIdMap, transformRecursive);
         // Also transform tool payload schema references
@@ -595,8 +705,10 @@ function transformArrayItems(arr, coIdMap, transformRecursive) {
         }
         // Transform tool payload schema references
         transformToolPayload(item.payload, coIdMap, transformRecursive);
+      } else {
+        // Recursively transform other objects
+        transformRecursive(item, coIdMap);
       }
-      transformRecursive(item, coIdMap);
     } else if (typeof item === 'string' && item.startsWith('@actor/') && !item.startsWith('co_z')) {
       // Handle case where array contains actor references directly (e.g., subscriptions arrays)
       const coId = coIdMap.get(item);
@@ -667,10 +779,35 @@ function transformQueryObjects(obj, coIdMap, depth = 0) {
       continue; // Skip further processing of this property
     }
 
-    // Check if this is a query object, tool payload, or action
+    // Check if this is a query object, tool payload, mapData action, or other action
     if (value && typeof value === 'object' && !Array.isArray(value)) {
+      // Check for mapData action pattern: {mapData: {contextKey: {op: 'read', schema: string, ...}}}
+      if (value.mapData && typeof value.mapData === 'object') {
+        const mapData = value.mapData;
+        // Transform schema references in each operation config
+        for (const [contextKey, operationConfig] of Object.entries(mapData)) {
+          if (operationConfig && typeof operationConfig === 'object' && operationConfig.schema && typeof operationConfig.schema === 'string') {
+            const originalSchema = operationConfig.schema;
+            const coId = transformSchemaReference(operationConfig.schema, coIdMap, `mapData.${contextKey}.schema`);
+            if (coId) {
+              operationConfig.schema = coId;
+              console.log(`[SchemaTransformer] ✅ Transformed mapData schema for ${contextKey}: ${originalSchema} → ${operationConfig.schema}`);
+            }
+          }
+          // Recursively transform other properties (filter, key, keys, etc.) if they contain schema references
+          if (operationConfig && typeof operationConfig === 'object') {
+            transformQueryObjects(operationConfig, coIdMap, depth + 1);
+          }
+        }
+        // Don't process mapData object further - it's not a query object
+        continue;
+      }
       // Check for query object pattern: {schema: string, filter?: object}
-      if (value.schema && typeof value.schema === 'string') {
+      // NOTE: Query objects don't have 'key' or 'op' properties - they're just schema/filter
+      // mapData operation configs have {op, schema, filter, key?, keys?} structure
+      else if (value.schema && typeof value.schema === 'string' && !('key' in value) && !('op' in value)) {
+        // Only transform as query object if it doesn't have 'key' or 'op' properties
+        // mapData operation configs should be handled separately
         transformQueryObjectSchema(value, coIdMap);
       } 
       // Check for tool payload pattern: {tool: "@db", payload: {...}} or any object with payload
@@ -692,46 +829,65 @@ function transformQueryObjects(obj, coIdMap, depth = 0) {
 }
 
 /**
- * Verify that no @schema/... references remain in transformed schema
- * @param {Object} schema - Transformed schema to verify
+ * Validate schema structure (single source of truth for all schema validation)
+ * Checks both for @schema/ references and nested co-types
+ * @param {Object} schema - Schema to validate
  * @param {string} path - Current path (for error messages)
+ * @param {Object} [options] - Validation options
+ * @param {boolean} [options.checkSchemaReferences=true] - Check for @schema/ references
+ * @param {boolean} [options.checkNestedCoTypes=true] - Check for nested co-types
  * @returns {Array<string>} Array of error messages (empty if valid)
  */
-export function verifyNoSchemaReferences(schema, path = '') {
+export function validateSchemaStructure(schema, path = '', options = {}) {
+  const { checkSchemaReferences = true, checkNestedCoTypes = true } = options;
   const errors = [];
 
   if (!schema || typeof schema !== 'object') {
     return errors;
   }
 
-  // Check if this object has a $co keyword with @schema/ reference
-  if (schema.$co && typeof schema.$co === 'string') {
-    if (schema.$co.startsWith('@schema/')) {
-      errors.push(`Found @schema/ reference in $co at ${path || 'root'}: ${schema.$co}. All $co references must be transformed to co-ids.`);
+  // Check for @schema/ references
+  if (checkSchemaReferences) {
+    // Check if this object has a $co keyword with @schema/ reference
+    if (schema.$co && typeof schema.$co === 'string') {
+      if (schema.$co.startsWith('@schema/')) {
+        errors.push(`Found @schema/ reference in $co at ${path || 'root'}: ${schema.$co}. All $co references must be transformed to co-ids.`);
+      }
+    }
+
+    // Check $schema reference
+    if (schema.$schema && typeof schema.$schema === 'string' && schema.$schema.startsWith('@schema/')) {
+      errors.push(`Found @schema/ reference in $schema at ${path || 'root'}: ${schema.$schema}. $schema must be transformed to co-id.`);
+    }
+
+    // Check $id reference
+    if (schema.$id && typeof schema.$id === 'string' && schema.$id.startsWith('@schema/')) {
+      errors.push(`Found @schema/ reference in $id at ${path || 'root'}: ${schema.$id}. $id must be transformed to co-id.`);
     }
   }
 
-  // Check $schema reference
-  if (schema.$schema && typeof schema.$schema === 'string' && schema.$schema.startsWith('@schema/')) {
-    errors.push(`Found @schema/ reference in $schema at ${path || 'root'}: ${schema.$schema}. $schema must be transformed to co-id.`);
-  }
-
-  // Check $id reference
-  if (schema.$id && typeof schema.$id === 'string' && schema.$id.startsWith('@schema/')) {
-    errors.push(`Found @schema/ reference in $id at ${path || 'root'}: ${schema.$id}. $id must be transformed to co-id.`);
+  // Check for nested co-types
+  if (checkNestedCoTypes) {
+    if (schema.cotype) {
+      // If we're not at root, this is a nested co-type (error!)
+      if (path !== '') {
+        errors.push(`Nested co-type detected at ${path}. Use \`$co\` keyword to reference a separate CoValue entity instead.`);
+        return errors; // Don't recurse further
+      }
+    }
   }
 
   // Recursively check nested objects
   for (const [key, value] of Object.entries(schema)) {
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       const nestedPath = path ? `${path}.${key}` : key;
-      const nestedErrors = verifyNoSchemaReferences(value, nestedPath);
+      const nestedErrors = validateSchemaStructure(value, nestedPath, options);
       errors.push(...nestedErrors);
     } else if (Array.isArray(value)) {
       value.forEach((item, index) => {
         if (item && typeof item === 'object') {
           const arrayPath = path ? `${path}.${key}[${index}]` : `${key}[${index}]`;
-          const arrayErrors = verifyNoSchemaReferences(item, arrayPath);
+          const arrayErrors = validateSchemaStructure(item, arrayPath, options);
           errors.push(...arrayErrors);
         }
       });
@@ -742,69 +898,23 @@ export function verifyNoSchemaReferences(schema, path = '') {
 }
 
 /**
+ * Verify that no @schema/... references remain in transformed schema
+ * Convenience function that calls validateSchemaStructure with checkSchemaReferences=true
+ * @param {Object} schema - Transformed schema to verify
+ * @param {string} path - Current path (for error messages)
+ * @returns {Array<string>} Array of error messages (empty if valid)
+ */
+export function verifyNoSchemaReferences(schema, path = '') {
+  return validateSchemaStructure(schema, path, { checkSchemaReferences: true, checkNestedCoTypes: false });
+}
+
+/**
  * Validate that no nested co-types exist (must use $co keyword instead)
+ * Convenience function that calls validateSchemaStructure with checkNestedCoTypes=true
  * @param {Object} schema - Schema to validate
  * @param {string} path - Current path (for error messages)
  * @returns {Array<string>} Array of error messages (empty if valid)
  */
 export function validateNoNestedCoTypes(schema, path = '') {
-  const errors = [];
-
-  if (!schema || typeof schema !== 'object') {
-    return errors;
-  }
-
-  // Check if this schema has a cotype
-  if (schema.cotype) {
-    // If we're not at root, this is a nested co-type (error!)
-    if (path !== '') {
-      errors.push(`Nested co-type detected at ${path}. Use \`$co\` keyword to reference a separate CoValue entity instead.`);
-      return errors; // Don't recurse further
-    }
-  }
-
-  // Recursively check properties
-  if (schema.properties) {
-    for (const [propName, propSchema] of Object.entries(schema.properties)) {
-      const propPath = path ? `${path}.${propName}` : propName;
-      const propErrors = validateNoNestedCoTypes(propSchema, propPath);
-      errors.push(...propErrors);
-    }
-  }
-
-  // Check $defs
-  if (schema.$defs) {
-    for (const [defName, defSchema] of Object.entries(schema.$defs)) {
-      const defPath = path ? `${path}.$defs.${defName}` : `$defs.${defName}`;
-      const defErrors = validateNoNestedCoTypes(defSchema, defPath);
-      errors.push(...defErrors);
-    }
-  }
-
-  // Check items
-  if (schema.items) {
-    const itemsPath = path ? `${path}.items` : 'items';
-    const itemsErrors = validateNoNestedCoTypes(schema.items, itemsPath);
-    errors.push(...itemsErrors);
-  }
-
-  // Check additionalProperties
-  if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
-    const addPropsPath = path ? `${path}.additionalProperties` : 'additionalProperties';
-    const addPropsErrors = validateNoNestedCoTypes(schema.additionalProperties, addPropsPath);
-    errors.push(...addPropsErrors);
-  }
-
-  // Check allOf, anyOf, oneOf
-  ['allOf', 'anyOf', 'oneOf'].forEach(keyword => {
-    if (schema[keyword] && Array.isArray(schema[keyword])) {
-      schema[keyword].forEach((item, index) => {
-        const itemPath = path ? `${path}.${keyword}[${index}]` : `${keyword}[${index}]`;
-        const itemErrors = validateNoNestedCoTypes(item, itemPath);
-        errors.push(...itemErrors);
-      });
-    }
-  });
-
-  return errors;
+  return validateSchemaStructure(schema, path, { checkSchemaReferences: false, checkNestedCoTypes: true });
 }
