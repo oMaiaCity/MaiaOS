@@ -74,7 +74,8 @@
           "class": "input",
           "attrs": {
             "type": "text",
-            "placeholder": "$inputPlaceholder"
+            "placeholder": "$inputPlaceholder",
+            "data-auto-focus": "true"
           },
           "value": "$newTodoText",
           "$on": {
@@ -100,7 +101,7 @@
           "$on": {
             "click": {
               "send": "CREATE_BUTTON",
-              "payload": { "text": "@inputValue" }
+              "payload": { "text": "$newTodoText" }
             }
           }
         }

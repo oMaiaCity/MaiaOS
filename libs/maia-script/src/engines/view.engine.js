@@ -1,8 +1,8 @@
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
-import { getContextValue } from '../../utils/context-helpers.js';
-import { sanitizeAttribute, containsDangerousHTML } from '../../utils/html-sanitizer.js';
+import { sanitizeAttribute, containsDangerousHTML } from '../utils/html-sanitizer.js';
 import { extractDOMValues } from '@MaiaOS/schemata/payload-resolver.js';
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
+import { getContextValue } from '../utils/context-helpers.js';
 
 export class ViewEngine {
   constructor(evaluator, actorEngine, moduleRegistry) {
@@ -37,8 +37,9 @@ export class ViewEngine {
   }
 
   async render(viewDef, context, shadowRoot, styleSheets, actorId) {
+    // Detect ReactiveStore objects in context and subscribe for reactivity
     if (!this.actorStoreSubscriptions) {
-      this.actorStoreSubscriptions = new Map();
+      this.actorStoreSubscriptions = new Map(); // actorId -> Map<key, unsubscribe>
     }
     
     if (!this.actorStoreSubscriptions.has(actorId)) {
@@ -47,29 +48,16 @@ export class ViewEngine {
     
     const storeSubscriptions = this.actorStoreSubscriptions.get(actorId);
     
-    let contextValue = context;
-    if (context instanceof ReactiveStore) {
-      const contextKey = '__context__';
-      if (!storeSubscriptions.has(contextKey)) {
-        const unsubscribe = context.subscribe(() => {
-          if (this.actorEngine) {
-            const actor = this.actorEngine.getActor(actorId);
-            if (actor && !actor._isRerendering) {
-              this.actorEngine._scheduleRerender(actorId);
-            }
-          }
-        });
-        storeSubscriptions.set(contextKey, unsubscribe);
-      }
-      const actor = this.actorEngine?.getActor(actorId);
-      contextValue = getContextValue(context, actor);
-      
-      const queryStores = (actor && actor._queryStores && typeof actor._queryStores === 'object') 
-        ? actor._queryStores 
-        : {};
-      for (const [key, queryStore] of Object.entries(queryStores)) {
-        if (queryStore instanceof ReactiveStore && !storeSubscriptions.has(key)) {
-          const unsubscribe = queryStore.subscribe(() => {
+    // Clean up old subscriptions for keys that no longer exist
+    const currentStoreKeys = new Set();
+    for (const [key, value] of Object.entries(context || {})) {
+      if (value instanceof ReactiveStore) {
+        currentStoreKeys.add(key);
+        
+        // Subscribe if not already subscribed
+        if (!storeSubscriptions.has(key)) {
+          const unsubscribe = value.subscribe(() => {
+            // Trigger rerender when store updates
             if (this.actorEngine) {
               this.actorEngine._scheduleRerender(actorId);
             }
@@ -77,40 +65,46 @@ export class ViewEngine {
           storeSubscriptions.set(key, unsubscribe);
         }
       }
-    } else if (context && typeof context === 'object') {
-      const currentStoreKeys = new Set();
-      for (const [key, value] of Object.entries(context)) {
-        if (value instanceof ReactiveStore) {
-          currentStoreKeys.add(key);
-          if (!storeSubscriptions.has(key)) {
-            const unsubscribe = value.subscribe(() => {
-              if (this.actorEngine) {
-                this.actorEngine._scheduleRerender(actorId);
-              }
-            });
-            storeSubscriptions.set(key, unsubscribe);
-          }
-        }
-      }
-      
-      for (const [key, unsubscribe] of storeSubscriptions.entries()) {
-        if (key !== '__context__' && !currentStoreKeys.has(key)) {
-          unsubscribe();
-          storeSubscriptions.delete(key);
-        }
+    }
+    
+    // Unsubscribe from stores that are no longer in context
+    for (const [key, unsubscribe] of storeSubscriptions.entries()) {
+      if (!currentStoreKeys.has(key)) {
+        unsubscribe();
+        storeSubscriptions.delete(key);
       }
     }
     
+    // Reset input counter for this actor at start of render
+    // This ensures inputs get consistent IDs across re-renders (same position = same ID)
     this.actorInputCounters.set(actorId, 0);
+    
+    // CRITICAL: Clear shadow root on re-render (prevents duplicates)
     shadowRoot.innerHTML = '';
+    
+    // Attach stylesheets to shadow root FIRST (before rendering)
+    // This ensures styles are available when elements are created
     shadowRoot.adoptedStyleSheets = styleSheets;
+    
+    // Store actor ID for event handling
     this.currentActorId = actorId;
     
+    // Extract view content from wrapper (new schema structure: { content: { ... } })
+    // Support both old format (viewDef is the node directly) and new format (viewDef.content is the node)
     const viewNode = viewDef.content || viewDef;
-    const element = await this.renderNode(viewNode, { context: contextValue }, actorId);
+    
+    // CRITICAL: Always use the context passed in (reactive updates)
+    // Extract ReactiveStore value if needed - evaluator handles ReactiveStore in expressions,
+    // but for direct property access (like in _renderSlot), we need plain object
+    let contextForRender = context;
+    if (context instanceof ReactiveStore) {
+      // Get actor to merge query stores if available
+      const actor = this.actorEngine?.getActor(actorId);
+      contextForRender = getContextValue(context, actor);
+    }
+    const element = await this.renderNode(viewNode, { context: contextForRender }, actorId);
     
     if (element) {
-      shadowRoot.innerHTML = '';
       element.style.containerType = 'inline-size';
       element.style.containerName = 'actor-root';
       element.dataset.actorId = actorId;
@@ -182,18 +176,25 @@ export class ViewEngine {
     if (node.value !== undefined) {
       const resolvedValue = await this.evaluator.evaluate(node.value, data);
       if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+        // CLEAN ARCHITECTURE: State machine is single source of truth
+        // Views are purely reactive - always sync with context (state machine controls context)
+        // No defensive logic - trust state machine updates completely
         const newValue = resolvedValue || '';
+        
         if (element.tagName === 'INPUT') {
           element.value = newValue;
         } else {
           element.textContent = newValue;
         }
         
+        // Add stable unique identifier for focus restoration
+        // Use a counter per actor to ensure same input gets same ID across re-renders
         if (!this.actorInputCounters.has(actorId)) {
           this.actorInputCounters.set(actorId, 0);
         }
         const inputIndex = this.actorInputCounters.get(actorId);
         this.actorInputCounters.set(actorId, inputIndex + 1);
+        
         const inputId = `${actorId}_input_${inputIndex}`;
         element.setAttribute('data-actor-input', inputId);
       }
@@ -284,11 +285,19 @@ export class ViewEngine {
     }
     
     const contextKey = slotKey.slice(1);
-    const contextValue = data.context[contextKey];
+    
+    // Handle ReactiveStore context - extract value if needed
+    let context = data.context;
+    if (context instanceof ReactiveStore) {
+      context = context.value || {};
+    }
+    
+    const contextValue = context[contextKey];
     
     if (!contextValue) {
       console.warn(`[ViewEngine] No context value for slot key: ${contextKey}`, {
-        availableKeys: Object.keys(data.context || {})
+        availableKeys: Object.keys(context || {}),
+        contextType: data.context instanceof ReactiveStore ? 'ReactiveStore' : typeof data.context
       });
       return;
     }
@@ -297,7 +306,13 @@ export class ViewEngine {
     if (typeof contextValue === 'string' && contextValue.startsWith('@')) {
       namekey = contextValue.slice(1);
       
-      const actorsMap = data.context["@actors"];
+      // Handle ReactiveStore context - extract value if needed
+      let contextForActors = data.context;
+      if (contextForActors instanceof ReactiveStore) {
+        contextForActors = contextForActors.value || {};
+      }
+      
+      const actorsMap = contextForActors["@actors"];
       if (actorsMap && !actorsMap[namekey]) {
         console.warn(`[ViewEngine] Namekey "${namekey}" not found in context["@actors"]`, {
           actorId,
@@ -434,7 +449,7 @@ export class ViewEngine {
       if (actor && actor.machine) {
         payload = extractDOMValues(payload, element);
         
-        const { getContextValue } = await import('../../utils/context-helpers.js');
+        const { getContextValue } = await import('../utils/context-helpers.js');
         const currentContext = getContextValue(actor.context, actor);
         
         const expressionData = {
@@ -442,20 +457,6 @@ export class ViewEngine {
           item: data.item || {}
         };
         payload = await resolveExpressions(payload, this.evaluator, expressionData);
-        
-        if (eventName === 'UPDATE_INPUT' && e.type === 'blur' && payload && typeof payload === 'object') {
-          let allMatch = true;
-          for (const [key, value] of Object.entries(payload)) {
-            const contextValue = currentContext[key];
-            if (value !== contextValue) {
-              allMatch = false;
-              break;
-            }
-          }
-          if (allMatch) {
-            return;
-          }
-        }
         
         await this.actorEngine.sendInternalEvent(actorId, eventName, payload);
       } else {

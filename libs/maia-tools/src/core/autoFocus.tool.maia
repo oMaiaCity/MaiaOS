@@ -1,0 +1,11 @@
+{
+  "$schema": "@schema/tool",
+  "$id": "tool_autoFocus_001",
+  "name": "@core/autoFocus",
+  "description": "Focuses elements with data-auto-focus attribute in the actor's shadow DOM after render completes",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  }
+}

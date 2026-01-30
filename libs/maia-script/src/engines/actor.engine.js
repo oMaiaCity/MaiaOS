@@ -9,8 +9,8 @@
 // Import message helper
 import { createAndPushMessage } from '@MaiaOS/db';
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
-import { getSchemaCoIdSafe } from '../../utils/subscription-helpers.js';
-import { getContextValue } from '../../utils/context-helpers.js';
+import { getSchemaCoIdSafe } from '../utils/subscription-helpers.js';
+import { getContextValue } from '../utils/context-helpers.js';
 
 export class ActorEngine {
   constructor(styleEngine, viewEngine, moduleRegistry, toolEngine, stateEngine = null) {

@@ -11,7 +11,7 @@
 
 // Export all engines
 export { ActorEngine } from "./engines/actor-engine/actor.engine.js";
-export { ViewEngine } from "./engines/view-engine/index.js";
+export { ViewEngine } from "./engines/view-engine/view.engine.js";
 export { StyleEngine } from "./engines/style-engine/style.engine.js";
 export { StateEngine } from "./engines/state-engine/state.engine.js";
 export { ToolEngine } from "./engines/tool-engine/tool.engine.js";

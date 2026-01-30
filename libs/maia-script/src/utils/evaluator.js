@@ -1,17 +1,17 @@
-import { resolvePath } from '../utils/path-resolver.js';
+import { resolvePath } from './path-resolver.js';
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
 
 /**
- * MaiaScriptEvaluator - Minimal DSL evaluator for prototype
+ * Evaluator - Minimal DSL evaluator for MaiaScript expressions
  * v0.2 Syntax: $key (context), $$key (item)
  * Supports: $context, $item, $if, $$shorthand
  * Registry-aware for extensible DSL operations
  * 
  * Security: Validates expressions before evaluation and enforces depth limits
  */
-export class MaiaScriptEvaluator {
+export class Evaluator {
   constructor(moduleRegistry = null, options = {}) {
     this.registry = moduleRegistry;
     this.maxDepth = options.maxDepth || 50; // Maximum recursion depth to prevent DoS
@@ -29,7 +29,7 @@ export class MaiaScriptEvaluator {
   async evaluate(expression, data, depth = 0) {
     // Enforce depth limit to prevent DoS via deeply nested expressions
     if (depth > this.maxDepth) {
-      throw new Error(`[MaiaScriptEvaluator] Maximum recursion depth (${this.maxDepth}) exceeded. Expression may be malicious or too complex.`);
+      throw new Error(`[Evaluator] Maximum recursion depth (${this.maxDepth}) exceeded. Expression may be malicious or too complex.`);
     }
     
     // Validate expression against schema before evaluation (if validation enabled)
@@ -48,8 +48,8 @@ export class MaiaScriptEvaluator {
           await validateAgainstSchemaOrThrow(expressionSchema, expression, 'maia-script-expression');
         }
       } catch (error) {
-        console.error('[MaiaScriptEvaluator] Expression validation failed:', error);
-        throw new Error(`[MaiaScriptEvaluator] Invalid MaiaScript expression: ${error.message}`);
+        console.error('[Evaluator] Expression validation failed:', error);
+        throw new Error(`[Evaluator] Invalid MaiaScript expression: ${error.message}`);
       }
     }
     // Primitives pass through (except strings starting with $)

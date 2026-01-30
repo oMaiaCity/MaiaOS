@@ -1,5 +1,5 @@
-import { getSchemaCoIdSafe } from '../../utils/subscription-helpers.js';
-import { resolvePath } from '../../utils/path-resolver.js';
+import { getSchemaCoIdSafe } from '../utils/subscription-helpers.js';
+import { resolvePath } from '../utils/path-resolver.js';
 
 export class StyleEngine {
   constructor() {

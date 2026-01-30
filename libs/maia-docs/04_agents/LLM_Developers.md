@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Developers
 
-**Auto-generated:** 2026-01-30T12:38:33.998Z
+**Auto-generated:** 2026-01-30T14:38:25.516Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -6492,6 +6492,8 @@ const actor = await actorEngine.createActor(
 - Manages event handlers (`$on`)
 - Uses Shadow DOM for style isolation
 - Sanitizes HTML to prevent XSS
+- **Reactive rendering** - Automatically re-renders when context changes
+- **Auto-focus support** - Focuses elements with `data-auto-focus="true"` after render
 
 **Key Methods:**
 - `loadView(coId)` - Load view definition from database
@@ -6502,6 +6504,14 @@ const actor = await actorEngine.createActor(
 - `MaiaScriptEvaluator` - For expression evaluation
 - `ActorEngine` - For action handling
 - `ModuleRegistry` - For module access
+
+**Architectural Boundaries:**
+- ✅ **ONLY displays current state** - Views read from context reactively (ReactiveStore subscriptions)
+- ✅ **ONLY sends events** - Views send events via `send` syntax, never update context directly
+- ✅ **ONLY manipulates DOM reactively** - DOM updates happen in response to context changes
+- ❌ **SHOULD NOT update context directly** - All context updates flow through state machines
+- ❌ **SHOULD NOT trigger state transitions directly** - Views send events, state machines handle transitions
+- **Reactive UI behavior** - Use data attributes (e.g., `data-auto-focus="true"`) for declarative UI behavior
 
 **Example:**
 ```javascript
@@ -6588,6 +6598,13 @@ const styleSheets = await styleEngine.compile(
 - `MaiaScriptEvaluator` - For evaluating guards
 - `ActorEngine` - For unified event flow and sequential processing
 
+**Architectural Boundaries:**
+- ✅ **ONLY updates state transitions and context** - State machines are the single source of truth for context changes
+- ✅ **ONLY calls tools that update state/context** - Tools should update state, not manipulate views
+- ❌ **SHOULD NOT manipulate views directly** - No DOM operations, no focus calls, no view manipulation
+- ❌ **SHOULD NOT call view manipulation tools** - Tools like `@core/focus` should not be called from state machines
+- **For reactive UI behavior** (like auto-focus), use data attributes in views (e.g., `data-auto-focus="true"`) and let ViewEngine handle it reactively
+
 **Deterministic State Machines:**
 - State machines are deterministic - only ONE state at a time
 - Events process sequentially (guarded by ActorEngine)
@@ -6646,6 +6663,124 @@ const result = await toolEngine.executeTool(
 ```
 
 **Source:** `libs/maia-script/src/engines/tool-engine/tool.engine.js`
+
+---
+
+## Tool Call Architecture
+
+**CRITICAL PRINCIPLE:** **100% State Machine Pattern - All tool calls MUST flow through state machines.**
+
+### Architecture: Everything Through State Machines
+
+**Strict Rule:** All tool calls MUST flow through state machines. No exceptions.
+
+**Event Flow Pattern:**
+```
+Infrastructure (ActorEngine, ViewEngine) → sends events → inbox (CRDT) → processMessages() → StateEngine.send() → state machine → tool
+```
+
+**Key Principles:**
+- ✅ **Single source of truth**: State machines
+- ✅ **Fully traceable**: All operations flow through inbox → state machine → tool
+- ✅ **Consistent**: One pattern for everything
+- ✅ **Declarative**: All behavior defined in state machine configs
+- ✅ **CRDT-aligned**: Events persisted in inbox costream, context updates via operations API
+
+### What Flows Through State Machines
+
+**✅ All Tool Calls:**
+- All `tool:` actions in state machine definitions
+- All business logic operations (`@db`, `@core/publishMessage`, `@dragdrop/*`)
+- All UI manipulation tools (`@core/autoFocus`, `@core/restoreFocus`)
+- All lifecycle hooks (RENDER_COMPLETE events)
+
+**✅ All Context Updates:**
+- All context updates via `updateContext` action (infrastructure, not a tool)
+- Context updates flow: state machine → `updateContextCoValue()` → operations API → CRDT
+
+**❌ NO Infrastructure Tool Calls:**
+- ❌ NO direct tool calls from engines (ActorEngine, ViewEngine, etc.)
+- ❌ NO fallback patterns - all actors must have state machines
+- ❌ NO hardcoded workarounds - everything declarative via state machines
+
+### Infrastructure Actions vs Tools
+
+**Infrastructure Actions** (not tools):
+- `updateContext` - Infrastructure action, directly calls `updateContextCoValue()` → operations API
+- SubscriptionEngine updates - Read-only reactive subscriptions (infrastructure)
+- Config subscriptions - View/style/state changes (infrastructure)
+
+**State Machine Actions:**
+- All `tool:` actions in state machine definitions
+- All business logic operations
+- All context updates via `updateContext` action
+
+### RENDER_COMPLETE Event Pattern
+
+**Lifecycle Hook Pattern:**
+- ActorEngine sends `RENDER_COMPLETE` event to inbox after render completes
+- State machine handles `RENDER_COMPLETE` event and calls tools as needed
+- Focus info passed in event payload (temporary state, not stored in context)
+- Persistent UI state (like `shouldAutoFocus`) stored in context co-value
+
+**Example:**
+```json
+{
+  "RENDER_COMPLETE": {
+    "target": "idle",
+    "actions": [
+      {
+        "tool": "@core/autoFocus",
+        "payload": {}
+      },
+      {
+        "updateContext": { "shouldAutoFocus": false }
+      },
+      {
+        "tool": "@core/restoreFocus",
+        "payload": {
+          "focusInfo": "$$focusInfo"
+        }
+      }
+    ]
+  }
+}
+```
+
+### All Actors Must Have State Machines
+
+**Requirement:** All actors MUST have state machines. No exceptions.
+
+**Enforcement:**
+- If actor has no state machine, `processMessages()` logs error and skips message
+- No fallback pattern - all messages MUST flow through state machines
+- Single pattern: inbox → state machine → tool
+
+**Why This Matters:**
+- **Predictable:** All behavior flows through one path
+- **Debuggable:** Easy to trace where operations come from
+- **Testable:** State machines define clear contracts
+- **AI-friendly:** LLMs can understand and generate correct patterns
+
+### CRDT Alignment
+
+**Single Source of Truth:**
+- Co-values are ALWAYS the single source of truth (under the hood)
+- ReactiveStore pattern: Stores subscribe to co-value changes
+- 100% reactive: Everything updates reactively when co-values change
+- All mutations via operations API (`dbEngine.execute({ op: 'update', ... })`)
+
+**Context Updates:**
+- `updateContext` action → `updateContextCoValue()` → `dbEngine.execute({ op: 'update', ... })`
+- Operations API → `update()` → `content.set(key, value)` on CoMap CRDT
+- Context co-value changes → ReactiveStore updates → Views re-render
+
+**Event Flow:**
+- Events sent to inbox costream (CRDT)
+- Events persisted for traceability
+- Events marked as `processed: true` after handling
+- Temporary state (focus info) passed in event payload, not stored in context
+- Persistent state (shouldAutoFocus) stored in context co-value
 
 ---
 
@@ -6836,6 +6971,108 @@ await registry.loadModule('db');
 - At-least-once delivery semantics
 
 **Source:** `libs/maia-script/src/engines/message-queue/message.queue.js`
+
+---
+
+---
+
+## Separation of Concerns
+
+**CRITICAL ARCHITECTURAL PRINCIPLE:** Each engine has a single, well-defined responsibility. Engines should NOT cross boundaries into other engines' responsibilities.
+
+### Event Flow
+
+```
+User Action (DOM Event)
+  ↓
+ViewEngine.handleEvent() - Extracts DOM values, resolves expressions
+  ↓
+ActorEngine.sendInternalEvent() - Routes to actor's inbox
+  ↓
+ActorEngine.processMessages() - Processes inbox sequentially
+  ↓
+StateEngine.send() - Triggers state machine transition
+  ↓
+StateEngine._executeTransition() - Executes actions
+  ↓
+StateEngine._executeActions() - Updates context via updateContextCoValue()
+  ↓
+Context CoValue updated (CRDT)
+  ↓
+ReactiveStore subscription triggers
+  ↓
+ViewEngine.render() - Re-renders view reactively
+```
+
+### Engine Responsibilities
+
+**StateEngine:**
+- ✅ Updates state transitions
+- ✅ Updates context (single source of truth)
+- ✅ Executes guards and actions
+- ❌ Should NOT manipulate views directly
+- ❌ Should NOT call view manipulation tools
+
+**ViewEngine:**
+- ✅ Renders DOM from context reactively
+- ✅ Sends events (never updates context directly)
+- ✅ Handles DOM manipulation reactively
+- ❌ Should NOT update context directly
+- ❌ Should NOT trigger state transitions directly
+
+**ActorEngine:**
+- ✅ Orchestrates actors and engines
+- ✅ Routes messages (inbox → state machine)
+- ✅ Schedules rerenders
+- ❌ Should NOT update state transitions directly
+- ❌ Should NOT manipulate views directly
+
+**Context:**
+- ✅ Holds current state (ReactiveStore)
+- ✅ Updated ONLY by state machines via `updateContext` actions
+- ✅ Read reactively by views
+- ❌ Should NOT be mutated directly outside state machines
+
+### Common Violations to Avoid
+
+**❌ State Machine Calling View Manipulation Tool:**
+```json
+// BAD - State machine manipulating view
+{
+  "actions": [
+    { "tool": "@core/focus", "payload": { "selector": "input" } }
+  ]
+}
+```
+
+**✅ Correct Pattern - Reactive UI Behavior:**
+```json
+// GOOD - View declares auto-focus, ViewEngine handles it
+{
+  "tag": "input",
+  "attrs": { "data-auto-focus": "true" }
+}
+```
+
+**❌ View Updating Context Directly:**
+```json
+// BAD - View updating context
+{
+  "$on": {
+    "click": { "updateContext": { "isOpen": true } }
+  }
+}
+```
+
+**✅ Correct Pattern - View Sends Event:**
+```json
+// GOOD - View sends event, state machine updates context
+{
+  "$on": {
+    "click": { "send": "OPEN_MODAL" }
+  }
+}
+```
 
 ---
 

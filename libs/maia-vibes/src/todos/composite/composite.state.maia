@@ -77,9 +77,6 @@
                 "payload": { "text": "$$text" },
                 "target": "@actor/agent"
               }
-            },
-            {
-              "updateContext": { "newTodoText": "" }
             }
           ]
         },
@@ -90,8 +87,7 @@
               "updateContext": { "newTodoText": "" }
             },
             {
-              "tool": "@core/focus",
-              "payload": { "selector": "input.input" }
+              "updateContext": { "shouldAutoFocus": true }
             }
           ]
         },

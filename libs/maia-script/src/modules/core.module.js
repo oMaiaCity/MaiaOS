@@ -3,7 +3,7 @@ import { getToolEngine, registerToolsFromRegistry, registerModuleConfig } from '
 export class CoreModule {
   static async register(registry) {
     const toolEngine = getToolEngine(registry, 'CoreModule');
-    const toolNames = ['noop', 'preventDefault', 'publishMessage', 'focus'];
+    const toolNames = ['noop', 'preventDefault', 'publishMessage', 'focus', 'autoFocus', 'restoreFocus'];
     await registerToolsFromRegistry(registry, toolEngine, 'core', toolNames, '@core', { silent: true });
     registerModuleConfig(registry, 'core', CoreModule, {
       version: '1.0.0',

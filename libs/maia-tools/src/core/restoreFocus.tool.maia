@@ -1,0 +1,17 @@
+{
+  "$schema": "@schema/tool",
+  "$id": "@tool/core/restoreFocus",
+  "name": "@core/restoreFocus",
+  "description": "Restores focus to elements after rerender based on focus info from RENDER_COMPLETE event",
+  "namespace": "@core",
+  "category": "ui",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "focusInfo": {
+        "type": "object",
+        "description": "Focus information captured before rerender (id, dataset.key, selectionStart, selectionEnd, selectionDirection)"
+      }
+    }
+  }
+}

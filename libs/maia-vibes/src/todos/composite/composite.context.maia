@@ -10,6 +10,8 @@
   "kanbanButtonActive": false,
   "inboxLogsButtonActive": false,
   "newTodoText": "",
+  "shouldAutoFocus": false,
+  "focusInfo": null,
   "@actors": {
     "list": "@actor/list",
     "kanban": "@actor/kanban",

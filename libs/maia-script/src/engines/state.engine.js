@@ -1,7 +1,7 @@
-import { getSchemaCoIdSafe } from '../../utils/subscription-helpers.js';
+import { getSchemaCoIdSafe } from '../utils/subscription-helpers.js';
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
-import { ReactiveStore } from '@MaiaOS/operations/reactive-store.js';
-import { getContextValue } from '../../utils/context-helpers.js';
+import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
+import { getContextValue } from '../utils/context-helpers.js';
 
 /**
  * StateEngine - XState-like State Machine Interpreter
@@ -337,7 +337,6 @@ export class StateEngine {
 
   async _executeNamedAction(machine, actionName, payload) {
     const commonActions = {
-      clearInput: { newTodoText: '' },
       resetError: { error: null },
       setLoading: { isLoading: true },
       clearLoading: { isLoading: false }
