@@ -6,7 +6,7 @@
  */
 
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
-import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
+import { loadSchemaFromDB } from '../schema/resolver.js';
 
 /**
  * Create a message CoMap and push its co-id to an inbox CoStream

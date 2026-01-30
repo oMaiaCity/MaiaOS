@@ -5,7 +5,7 @@
 
 import { truncate } from './utils.js'
 // Import getSchema and getAllSchemas from schemas registry (hardcoded schemas)
-import { getSchema, getAllSchemas } from '../../libs/maia-db/src/schemas/index.js'
+import { getSchema, getAllSchemas } from '../../libs/maia-db/src/schemas/registry.js'
 
 // Helper function to escape HTML
 function escapeHtml(text) {

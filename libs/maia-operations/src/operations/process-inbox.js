@@ -1,4 +1,4 @@
-import { requireParam, validateCoId } from '../utils/validation-helpers.js';
+import { requireParam, validateCoId } from '@MaiaOS/schemata/validation.helper';
 
 /**
  * Process Inbox Operation - Process actor inbox with session-based watermarks

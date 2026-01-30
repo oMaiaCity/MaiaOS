@@ -1,5 +1,5 @@
 import { resolveHumanReadableKey } from '@MaiaOS/db';
-import { requireParam } from '../utils/validation-helpers.js';
+import { requireParam } from '@MaiaOS/schemata/validation.helper';
 
 /**
  * Resolve Operation - Resolve human-readable keys to co-ids

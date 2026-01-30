@@ -16,7 +16,7 @@
 
 import { ReactiveStore } from '../reactive-store.js';
 import { getSchemaCoId } from '@MaiaOS/db';
-import { validateCoId } from '../utils/validation-helpers.js';
+import { validateCoId } from '@MaiaOS/schemata/validation.helper';
 
 export class SchemaOperation {
   constructor(backend, dbEngine = null) {

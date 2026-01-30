@@ -17,11 +17,8 @@ export { getValidationEngine, validateAgainstSchema, validateAgainstSchemaOrThro
 // Export meta schema functions
 export { getMetaSchemaDefinition, getMetaSchemaCoMapDefinition } from './meta-schema.js';
 
-// Export schema loader functions (runtime)
-export { loadSchemaFromDB } from './schema-loader.js';
-
-// Export schema loader functions (migrations/seeding only)
-export { loadSchemasFromAccount } from './schema-loader.js';
+// Export schema loader functions (runtime) - consolidated into resolver.js
+export { loadSchemaFromDB, loadSchemasFromAccount } from '@MaiaOS/db';
 
 // Export schema transformer functions (seeding only)
 export { transformForSeeding, validateSchemaStructure, verifyNoSchemaReferences, validateNoNestedCoTypes } from './schema-transformer.js';

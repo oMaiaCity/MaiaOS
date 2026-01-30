@@ -337,3 +337,12 @@ export function getCoTypeDefs() {
 export function getMetaSchema(metaSchemaCoId = null) {
   return getMetaSchemaDefinition(metaSchemaCoId);
 }
+
+// Re-export schema metadata utilities
+export { createSchemaMeta, isExceptionSchema, validateHeaderMetaSchema, EXCEPTION_SCHEMAS } from './meta.js';
+
+// Re-export meta-schema functions
+export { getMetaSchemaDefinition, getMetaSchemaCoMapDefinition } from '@MaiaOS/schemata/meta-schema';
+
+// Re-export schema loader functions (migrations/seeding only)
+export { loadSchemasFromAccount } from '../cojson/schema/resolver.js';

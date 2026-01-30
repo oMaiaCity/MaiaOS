@@ -9,7 +9,7 @@
  */
 
 import { getSchemaCoId } from '@MaiaOS/db';
-import { requireParam, validateCoId, requireDbEngine } from '../utils/validation-helpers.js';
+import { requireParam, validateCoId, requireDbEngine } from '@MaiaOS/schemata/validation.helper';
 
 export class DeleteOperation {
   constructor(backend, dbEngine = null) {

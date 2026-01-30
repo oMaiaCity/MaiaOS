@@ -6,9 +6,8 @@
  * Note: Schema is now a co-id (transformed during seeding), not a human-readable reference
  */
 
-import { getSchemaCoId } from '@MaiaOS/db';
-import { validateData } from '@MaiaOS/db';
-import { requireParam, requireDbEngine } from '../utils/validation-helpers.js';
+import { getSchemaCoId, resolveSchema } from '@MaiaOS/db';
+import { validateAgainstSchemaOrThrow, requireParam, requireDbEngine } from '@MaiaOS/schemata/validation.helper';
 
 /**
  * Create Operation - Create new records
@@ -43,8 +42,12 @@ export class CreateOperation {
       throw new Error(`[CreateOperation] Could not resolve schema: ${schema}`);
     }
     
-    // Validate data using universal validation utility
-    await validateData(this.dbEngine, schemaCoId, data, `create operation for schema ${schemaCoId}`);
+    // Load schema and validate data
+    const schemaDef = await resolveSchema(this.backend, schemaCoId);
+    if (!schemaDef) {
+      throw new Error(`[CreateOperation] Schema ${schemaCoId} not found`);
+    }
+    await validateAgainstSchemaOrThrow(schemaDef, data, `create operation for schema ${schemaCoId}`);
     
     // Pass resolved co-id to backend
     return await this.backend.create(schemaCoId, data);

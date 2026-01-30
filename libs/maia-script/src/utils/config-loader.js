@@ -1,5 +1,5 @@
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
-import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
+import { loadSchemaFromDB } from '@MaiaOS/db';
 
 function validateCoId(coId, context = 'item') {
   if (!coId || typeof coId !== 'string') {

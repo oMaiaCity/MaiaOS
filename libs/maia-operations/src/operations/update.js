@@ -12,8 +12,8 @@
  */
 
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
-import { getSchemaCoId, validateUpdate } from '@MaiaOS/db';
-import { requireParam, validateCoId, requireDbEngine } from '../utils/validation-helpers.js';
+import { getSchemaCoId, resolveSchema } from '@MaiaOS/db';
+import { validateAgainstSchemaOrThrow, requireParam, validateCoId, requireDbEngine } from '@MaiaOS/schemata/validation.helper';
 
 /**
  * Update Operation - Update existing records (unified for data collections and configs)
@@ -70,8 +70,20 @@ export class UpdateOperation {
     // Evaluate MaiaScript expressions in data payload
     const evaluatedData = await this._evaluateDataWithExisting(data, existingDataWithoutMetadata);
     
-    // Validate merged result using universal validation utility
-    await validateUpdate(this.dbEngine, id, evaluatedData, this.backend);
+    // Load schema and validate merged result
+    const schema = await resolveSchema(this.backend, schemaCoId);
+    if (!schema) {
+      throw new Error(`[UpdateOperation] Schema ${schemaCoId} not found`);
+    }
+    
+    // Merge existing data with update data
+    const mergedData = {
+      ...existingDataWithoutMetadata,
+      ...evaluatedData
+    };
+    
+    // Validate merged result against schema
+    await validateAgainstSchemaOrThrow(schema, mergedData, `update operation for schema ${schemaCoId}`);
     
     // Use unified update() method that handles both data and configs
     return await this.backend.update(schemaCoId, id, evaluatedData);

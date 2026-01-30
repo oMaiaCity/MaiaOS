@@ -60,17 +60,8 @@ export {
   loadSchemaDefinition,
   resolveHumanReadableKey,
   getSchemaCoIdFromCoValue,
-  loadSchemaByCoId
-} from "./cojson/schema/resolver.js";
-
-// Universal Validation Utility (single source of truth)
-export {
-  loadSchema,
-  validateOrThrow,
-  loadAndValidate,
-  resolveSchemaCoId,
+  loadSchemaByCoId,
   checkCotype,
-  validateItems,
-  validateData,
-  validateUpdate
-} from "./cojson/utils/validation.js";
+  loadSchemaFromDB,
+  loadSchemasFromAccount
+} from "./cojson/schema/resolver.js";

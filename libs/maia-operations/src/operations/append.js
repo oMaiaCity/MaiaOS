@@ -10,8 +10,8 @@
  * CoLists check for duplicates, CoStreams allow duplicates (append-only logs).
  */
 
-import { getSchemaCoId, checkCotype, loadSchema, validateItems } from '@MaiaOS/db';
-import { requireParam, validateCoId, requireDbEngine, ensureCoValueAvailable } from '../utils/validation-helpers.js';
+import { getSchemaCoId, checkCotype, resolveSchema } from '@MaiaOS/db';
+import { validateAgainstSchemaOrThrow, validateItems, requireParam, validateCoId, requireDbEngine, ensureCoValueAvailable } from '@MaiaOS/schemata/validation.helper';
 
 export class AppendOperation {
   constructor(backend, dbEngine = null) {
@@ -39,8 +39,8 @@ export class AppendOperation {
     let targetCotype = cotype;
     if (!targetCotype) {
       // Infer from schema: check if it's colist or costream
-      const isColist = await checkCotype(this.dbEngine, schemaCoId, 'colist');
-      const isCoStream = await checkCotype(this.dbEngine, schemaCoId, 'costream');
+      const isColist = await checkCotype(this.backend, schemaCoId, 'colist');
+      const isCoStream = await checkCotype(this.backend, schemaCoId, 'costream');
       
       if (isColist) {
         targetCotype = 'colist';
@@ -52,13 +52,16 @@ export class AppendOperation {
     }
     
     // Validate cotype matches schema
-    const isValidCotype = await checkCotype(this.dbEngine, schemaCoId, targetCotype);
+    const isValidCotype = await checkCotype(this.backend, schemaCoId, targetCotype);
     if (!isValidCotype) {
       throw new Error(`[AppendOperation] CoValue ${coId} is not a ${targetCotype} (schema cotype check failed)`);
     }
     
     // Load schema for item validation
-    const schema = await loadSchema(this.dbEngine, schemaCoId);
+    const schema = await resolveSchema(this.backend, schemaCoId);
+    if (!schema) {
+      throw new Error(`[AppendOperation] Schema ${schemaCoId} not found`);
+    }
     
     // Get content and determine method name
     const content = this.backend.getCurrentContent(coValueCore);
