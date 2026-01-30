@@ -49,16 +49,9 @@ const AccountSchema = {
       ]
     },
     examples: {
-      allOf: [
-        {
-          type: "string",
-          pattern: "^co_z[a-zA-Z0-9]+$",
-          description: "Co-id reference to Examples CoMap"
-        },
-        {
-          $ref: "https://maia.city/ExamplesSchema"
-        }
-      ]
+      type: "string",
+      pattern: "^co_z[a-zA-Z0-9]+$",
+      description: "Co-id reference to Examples CoMap (optional)"
     }
   },
   required: ["profile"],
@@ -100,6 +93,11 @@ const ProfileSchema = {
       type: "string",
       minLength: 1,
       description: "User's display name"
+    },
+    group: {
+      type: "string",
+      pattern: "^co_z[a-zA-Z0-9]+$",
+      description: "Co-id reference to universal group (set by migration)"
     }
   },
   required: ["name"],
@@ -107,185 +105,15 @@ const ProfileSchema = {
 };
 
 /**
- * ExamplesSchema - CoMap schema for examples container
- * Contains references to example CoValues: plainText, stream, notes
- */
-const ExamplesSchema = {
-  $schema: "https://json-schema.org/draft/2020-12/schema",
-  $id: "https://maia.city/ExamplesSchema",
-  title: "Examples",
-  description: "Schema for examples container CoMap",
-  allOf: [
-    { $ref: "#/$defs/comap" }
-  ],
-  properties: {
-    plainText: {
-      type: "string",
-      pattern: "^co_z[a-zA-Z0-9]+$",
-      description: "Co-id reference to CoText example (cotext type)"
-    },
-    stream: {
-      type: "string",
-      pattern: "^co_z[a-zA-Z0-9]+$",
-      description: "Co-id reference to CoStream example (costream type)"
-    },
-    notes: {
-      type: "string",
-      pattern: "^co_z[a-zA-Z0-9]+$",
-      description: "Co-id reference to CoList example (colist type)"
-    },
-    pureJson: {
-      type: "string",
-      pattern: "^co_z[a-zA-Z0-9]+$",
-      description: "Co-id reference to PureJsonSchema CoMap (comap type)"
-    }
-  },
-  $defs: coTypesDefs.$defs
-};
-
-/**
- * ActivityStreamSchema - CoStream schema for activity streams
- */
-const ActivityStreamSchema = {
-  $schema: "https://json-schema.org/draft/2020-12/schema",
-  $id: "https://maia.city/ActivityStreamSchema",
-  title: "Activity Stream",
-  description: "Schema for activity stream CoStream",
-  allOf: [
-    { $ref: "#/$defs/costream" }
-  ],
-  items: {
-    type: "object",
-    properties: {
-      type: {
-        type: "string",
-        description: "Activity type"
-      },
-      message: {
-        type: "string",
-        description: "Activity message"
-      },
-      name: {
-        type: "string",
-        description: "Activity name"
-      },
-      timestamp: {
-        type: "string",
-        format: "date-time",
-        description: "Activity timestamp"
-      }
-    }
-  },
-  $defs: coTypesDefs.$defs
-};
-
-/**
- * NotesSchema - CoList schema for notes
- */
-const NotesSchema = {
-  $schema: "https://json-schema.org/draft/2020-12/schema",
-  $id: "https://maia.city/NotesSchema",
-  title: "Notes",
-  description: "Schema for notes CoList",
-  allOf: [
-    { $ref: "#/$defs/colist" }
-  ],
-  items: {
-    type: "object",
-    properties: {
-      title: {
-        type: "string",
-        minLength: 1,
-        description: "Note title"
-      },
-      content: {
-        type: "string",
-        description: "Note content"
-      },
-      created: {
-        type: "string",
-        format: "date-time",
-        description: "Creation timestamp"
-      }
-    },
-    required: ["title", "content", "created"],
-    additionalProperties: false
-  },
-  $defs: coTypesDefs.$defs
-};
-
-/**
- * PureJsonSchema - CoMap schema demonstrating all 7 JSON Schema standard types
- */
-const PureJsonSchema = {
-  $schema: "https://json-schema.org/draft/2020-12/schema",
-  $id: "https://maia.city/PureJsonSchema",
-  title: "Pure JSON",
-  description: "Schema demonstrating all 7 JSON Schema standard types plus $ref co-id",
-  allOf: [
-    { $ref: "#/$defs/comap" }
-  ],
-  properties: {
-    string: {
-      type: "string",
-      description: "Standard string type"
-    },
-    number: {
-      type: "number",
-      description: "Standard number type"
-    },
-    integer: {
-      type: "integer",
-      description: "Standard integer type"
-    },
-    boolean: {
-      type: "boolean",
-      description: "Standard boolean type"
-    },
-    nullValue: {
-      type: "null",
-      description: "Null value"
-    },
-    object: {
-      type: "object",
-      description: "Nested object",
-      additionalProperties: true
-    },
-    array: {
-      type: "array",
-      description: "Array of values",
-      items: {
-        anyOf: [
-          { type: "string" },
-          { type: "number" },
-          { type: "integer" },
-          { type: "boolean" },
-          { type: "null" },
-          { type: "object" },
-          { type: "array" }
-        ]
-      }
-    },
-    author: {
-      type: "string",
-      pattern: "^co_z[a-zA-Z0-9]+$",
-      description: "Co-id reference to Profile CoMap (demonstrates co-id references - actual value is string, not object)"
-    }
-  },
-  $defs: coTypesDefs.$defs
-};
-
-/**
  * Schema Registry - Maps schema names to schema definitions
+ * 
+ * Only contains schemas needed for migrations/seeding (before account.os.schemata exists).
+ * All runtime schema access MUST load from account.os.schemata CoList.
  */
 export const SCHEMA_REGISTRY = {
   AccountSchema,
   GroupSchema,
-  ProfileSchema,
-  ExamplesSchema,
-  ActivityStreamSchema,
-  NotesSchema,
-  PureJsonSchema
+  ProfileSchema
 };
 
 /**

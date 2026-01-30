@@ -14,18 +14,16 @@
 // Re-export services for external use
 // STRICT: No createAccount() - only createAccountWithSecret() and loadAccount()
 export { createAccountWithSecret, loadAccount } from "./cojson/groups/coID.js";
-export { createGroup } from "./cojson/groups/coGroup.js";
+export { createGroup, createProfile } from "./cojson/groups/create.js";
 export { createCoMap } from "./cojson/cotypes/coMap.js";
 export { createCoList } from "./cojson/cotypes/coList.js";
 export { createCoStream } from "./cojson/cotypes/coStream.js";
-export { createProfile } from "./cojson/groups/coProfile.js";
 export { createSchemaMeta, hasSchema, getSchema } from "./schemas/meta.js";
 export { schemaMigration } from "./migrations/schema.migration.js";
 
 // Subscription management (NEW)
 export { 
 	subscribe, 
-	subscribeToLinked, 
 	getSubscription, 
 	hasSubscription, 
 	unsubscribe,

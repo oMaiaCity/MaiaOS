@@ -239,7 +239,7 @@ async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVi
 	});
 }
 
-export async function renderApp(maia, cojsonAPI, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen, registerSubscription) {
+export async function renderApp(maia, cojsonAPI, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen) {
 	// Route to appropriate screen based on currentScreen
 	if (currentScreen === 'dashboard') {
 		// Dashboard uses clean read() API - no subscription handling needed
@@ -423,8 +423,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 			data = contextData;
 			
 			// Subscribe to ReactiveStore updates for reactivity
-			if (registerSubscription && typeof store.subscribe === 'function') {
-				const subscriptionKey = `coValue:${currentContextCoValueId}`;
+			if (typeof store.subscribe === 'function') {
 				// Count properties from flat object (exclude metadata keys)
 				const flatPropertyCount = contextData && typeof contextData === 'object' && !Array.isArray(contextData) 
 					? Object.keys(contextData).filter(k => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$schema' && k !== 'type').length 
@@ -437,7 +436,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 					hasError: !!contextData?.error
 				});
 				
-				const unsubscribe = store.subscribe((updatedData) => {
+				store.subscribe((updatedData) => {
 					// Check if data actually changed (properties appeared, loading state changed, etc.)
 					// Count properties from flat object (exclude metadata keys)
 					const currentFlatPropertyCount = updatedData && typeof updatedData === 'object' && !Array.isArray(updatedData)
@@ -459,11 +458,11 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 						lastDataHash = currentDataHash;
 						// Use setTimeout to prevent infinite loops and batch updates
 						setTimeout(() => {
-							renderApp(maia, cojsonAPI, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen, registerSubscription);
+							renderApp(maia, cojsonAPI, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen);
 						}, 0);
 					}
 				});
-				registerSubscription(subscriptionKey, unsubscribe);
+				// ReactiveStore handles cleanup automatically
 			}
 			// Use ID as title (no displayName logic)
 			viewTitle = contextData.id ? truncate(contextData.id, 24) : 'CoValue';
@@ -487,21 +486,20 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 				data = Array.isArray(result) ? result : [];
 				
 				// Subscribe to ReactiveStore updates for reactivity
-				if (registerSubscription && typeof store.subscribe === 'function') {
-					const subscriptionKey = `schema:${currentView}`;
+				if (typeof store.subscribe === 'function') {
 					let lastLength = result.length;
-					const unsubscribe = store.subscribe((updatedResult) => {
+					store.subscribe((updatedResult) => {
 						// Re-render when store updates (check if data actually changed)
 						if (updatedResult && Array.isArray(updatedResult) && updatedResult.length !== lastLength) {
 							console.log(`🔄 [DB Viewer] Store updated for schema ${currentView.substring(0, 12)}..., re-rendering...`);
 							lastLength = updatedResult.length;
 							// Use setTimeout to prevent infinite loops and batch updates
 							setTimeout(() => {
-								renderApp(maia, cojsonAPI, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen, registerSubscription);
+								renderApp(maia, cojsonAPI, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen);
 							}, 0);
 						}
 					});
-					registerSubscription(subscriptionKey, unsubscribe);
+					// ReactiveStore handles cleanup automatically
 				}
 			} else {
 				// Human-readable schema name - get all CoValues and filter by schema

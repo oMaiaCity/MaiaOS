@@ -7,7 +7,7 @@ import { hasSchema } from "../../schemas/registry.js";
  * Automatically uses universal group from account as owner/admin.
  * 
  * @param {RawAccount|RawGroup} accountOrGroup - Account (to get universal group) or Group (for backward compatibility)
- * @param {string} schemaName - Schema name for headerMeta.$schema (REQUIRED - e.g., "ActivityStreamSchema")
+ * @param {string} schemaName - Schema name for headerMeta.$schema (REQUIRED - e.g., schema co-id or "@meta-schema")
  * @param {LocalNode} [node] - LocalNode instance (required if accountOrGroup is account)
  * @returns {RawCoStream} The created CoStream
  * @throws {Error} If schema is missing
@@ -67,12 +67,12 @@ export function createCoStream(accountOrGroup, schemaName, node = null) {
 	}
 	// STRICT: Schema is MANDATORY
 	if (!schemaName || typeof schemaName !== 'string') {
-		throw new Error('[createCoStream] Schema name is REQUIRED. Provide a valid schema name (e.g., "ActivityStreamSchema")');
+		throw new Error('[createCoStream] Schema name is REQUIRED. Provide a valid schema name (e.g., schema co-id or "@meta-schema")');
 	}
 	
 	// Validate schema exists in registry
 	if (!hasSchema(schemaName)) {
-		throw new Error(`[createCoStream] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema, ExamplesSchema, ActivityStreamSchema, NotesSchema, PureJsonSchema`);
+		throw new Error(`[createCoStream] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema`);
 	}
 	
 	const meta = createSchemaMeta(schemaName);

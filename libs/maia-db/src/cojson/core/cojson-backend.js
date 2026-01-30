@@ -8,11 +8,7 @@
 import { DBAdapter } from '@MaiaOS/operations/db-adapter';
 import { getGlobalCache } from '../subscriptions/coSubscriptionCache.js';
 import { seed } from '../schema/seed.js';
-import * as coValueAccess from './co-value-access.js';
-import { resetCaches } from '../subscriptions/cache-management.js';
-import * as groupAccess from '../groups/group-access.js';
-import * as groupInfo from '../groups/group-info.js';
-import * as groupMembers from '../groups/group-members.js';
+import * as groups from '../groups/groups.js';
 import { waitForStoreReady } from '../crud/read-operations.js';
 import { read as universalRead } from '../crud/read.js';
 import * as collectionHelpers from '../crud/collection-helpers.js';
@@ -32,14 +28,15 @@ export class CoJSONBackend extends DBAdapter {
     this.account = account;
     this.dbEngine = dbEngine; // Store dbEngine for runtime schema validation
     
-    // CRITICAL FIX: Reset subscription caches when new backend is created
-    // This prevents stale subscriptions from previous session after re-login
-    resetCaches(this);
-    
     // Get node-aware subscription cache (auto-clears if node changed)
     this.subscriptionCache = getGlobalCache(node);
     // Cache universal group after first resolution (performance optimization)
     this._cachedUniversalGroup = null;
+    
+    // CRITICAL FIX: Invalidate cached universal group on backend reset (account change)
+    // This prevents stale group references after re-login
+    // Note: Global subscription cache is cleared automatically by getGlobalCache(node)
+    // when it detects a node change, so we don't need to reset it here
     // Note: _storeSubscriptions removed - using subscriptionCache only for subscription tracking
     
     // Wrap storage with indexing hooks (MORE RESILIENT than API hooks!)
@@ -58,10 +55,16 @@ export class CoJSONBackend extends DBAdapter {
    * Reset all subscription-related caches
    * 
    * Called when new backend is created to clear stale subscriptions from previous session.
-   * Centralized cache management following DRY principle.
    */
   _resetCaches() {
-    resetCaches(this);
+    // Invalidate cached universal group on backend reset (account change)
+    // This prevents stale group references after re-login
+    if (this._cachedUniversalGroup) {
+      this._cachedUniversalGroup = null;
+      console.log(`[CoJSONBackend] Invalidated cached universal group on backend reset`);
+    }
+    // Note: Global subscription cache is cleared automatically by getGlobalCache(node)
+    // when it detects a node change, so we don't need to reset it here
   }
   
   /**
@@ -70,7 +73,7 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {CoValueCore|null} CoValueCore or null if not found
    */
   getCoValue(coId) {
-    return coValueAccess.getCoValue(this.node, coId);
+    return this.node.getCoValue(coId);
   }
   
   /**
@@ -78,7 +81,7 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {Map<string, CoValueCore>} Map of CoValue IDs to CoValueCore instances
    */
   getAllCoValues() {
-    return coValueAccess.getAllCoValues(this.node);
+    return this.node.coValues || new Map();
   }
   
   /**
@@ -87,7 +90,7 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {boolean} True if available
    */
   isAvailable(coValueCore) {
-    return coValueAccess.isAvailable(coValueCore);
+    return coValueCore?.isAvailable() || false;
   }
   
   /**
@@ -96,7 +99,10 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {RawCoValue|null} Current content or null
    */
   getCurrentContent(coValueCore) {
-    return coValueAccess.getCurrentContent(coValueCore);
+    if (!coValueCore || !coValueCore.isAvailable()) {
+      return null;
+    }
+    return coValueCore.getCurrentContent();
   }
   
   /**
@@ -105,7 +111,7 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {Object|null} Header object or null
    */
   getHeader(coValueCore) {
-    return coValueAccess.getHeader(coValueCore);
+    return coValueCore?.verified?.header || null;
   }
   
   /**
@@ -113,7 +119,7 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {RawAccount} Account CoMap
    */
   getAccount() {
-    return coValueAccess.getAccount(this.account);
+    return this.account;
   }
   
   /**
@@ -151,7 +157,7 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {RawGroup|null} Universal group or account as fallback
    */
   async getDefaultGroup() {
-    return await groupAccess.getDefaultGroup(this);
+    return await groups.getDefaultGroup(this);
   }
   
   /**
@@ -213,8 +219,7 @@ export class CoJSONBackend extends DBAdapter {
         return null;
       }
       
-      // Use consolidated group info extraction
-      return groupInfo.getGroupInfoFromGroup(ownerGroupContent);
+      return groups.getGroupInfoFromGroup(ownerGroupContent);
     } catch (error) {
       console.warn('[CoJSONBackend] Error getting group info:', error);
       return null;
@@ -227,16 +232,16 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {Promise<RawGroup|null>} Group CoValue or null if not found
    */
   async getGroup(groupId) {
-    return await groupAccess.getGroup(this.node, groupId);
+    return await groups.getGroup(this.node, groupId);
   }
   
   /**
-   * Get group info from a RawGroup (helper for GroupOperation)
+   * Get group info from a RawGroup
    * @param {RawGroup} group - RawGroup instance
    * @returns {Object|null} Group info object
    */
   getGroupInfoFromGroup(group) {
-    return groupInfo.getGroupInfoFromGroup(group);
+    return groups.getGroupInfoFromGroup(group);
   }
   
   /**
@@ -247,7 +252,7 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {Promise<void>}
    */
   async addGroupMember(group, memberId, role) {
-    return await groupMembers.addGroupMember(this.node, group, memberId, role);
+    return await groups.addGroupMember(this.node, group, memberId, role);
   }
   
   /**
@@ -257,7 +262,7 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {Promise<void>}
    */
   async removeGroupMember(group, memberId) {
-    return await groupMembers.removeGroupMember(group, memberId);
+    return await groups.removeGroupMember(group, memberId);
   }
   
   /**
@@ -268,7 +273,7 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {Promise<void>}
    */
   async setGroupMemberRole(group, memberId, role) {
-    return await groupMembers.setGroupMemberRole(this.node, group, memberId, role);
+    return await groups.setGroupMemberRole(this.node, group, memberId, role);
   }
 
   // ============================================================================

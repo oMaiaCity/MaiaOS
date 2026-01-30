@@ -104,7 +104,7 @@ export class SubscriptionCache {
 			try {
 				subscription.unsubscribe();
 			} catch (error) {
-				console.error(`❌ [SUB CACHE] Error unsubscribing from ${id.substring(0, 12)}...`, error);
+				// Silently handle unsubscribe errors
 			}
 		}
 
@@ -194,22 +194,18 @@ export function getGlobalCache(node, cleanupTimeout) {
 	if (typeof node === 'number') {
 		cleanupTimeout = node;
 		node = null;
-		console.warn('[oSubscriptionCache] getGlobalCache called without node parameter. Node-aware caching disabled.');
 	}
 	
 	// Detect node change: if node instance is different, clear stale cache
 	if (node && currentNode !== node) {
 		if (globalCache) {
-			const cacheSize = globalCache.size;
 			// Clear old cache tied to previous node
 			globalCache.clear();
-			console.log(`[oSubscriptionCache] Node changed - cleared ${cacheSize} stale subscriptions`);
 		}
 		// Track new node instance
 		currentNode = node;
 		// Create fresh cache for new node
 		globalCache = new SubscriptionCache(cleanupTimeout);
-		console.log(`[oSubscriptionCache] Created new subscription cache for new node`);
 	} else if (!globalCache) {
 		// First time initialization
 		if (node) {

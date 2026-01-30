@@ -35,7 +35,6 @@ MaiaDB includes a powerful subscription management system that automatically han
 
 - **SubscriptionCache**: Caches active subscriptions, prevents duplicates, auto-cleanup after 5s
 - **subscribe(node, id, options)**: Subscribe to a CoValue by ID with auto-loading
-- **subscribeToLinked(node, parent, property)**: Subscribe to linked CoValues and their children
 - **Automatic Cleanup**: Unused subscriptions cleaned up automatically to prevent memory leaks
 
 **Key Insight**: Jazz requires active subscriptions to load CoValues from IndexedDB. Simply linking CoValues (e.g., `account.examples`) isn't enough - you need subscriptions. MaiaDB handles this automatically!

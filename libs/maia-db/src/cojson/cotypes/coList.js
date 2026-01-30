@@ -77,7 +77,7 @@ export async function createCoList(accountOrGroup, init = [], schemaName, node =
 	
 	// Skip validation for exception schemas or co-ids
 	if (!isExceptionSchema(schemaName) && !schemaName.startsWith('co_z') && !hasSchema(schemaName)) {
-		throw new Error(`[createCoList] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema, ExamplesSchema, ActivityStreamSchema, NotesSchema, PureJsonSchema`);
+		throw new Error(`[createCoList] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema`);
 	}
 	
 	// Validate data against schema BEFORE creating CoValue

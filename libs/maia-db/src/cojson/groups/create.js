@@ -1,10 +1,28 @@
 /**
- * CoProfile Service - Profile CoMap
+ * Group and Profile Creation
  * 
- * Handles Profile creation with schema metadata
+ * Handles creation of Groups and Profiles.
  */
 
 import { createSchemaMeta } from "../../schemas/meta.js";
+
+/**
+ * Create a new Group
+ * 
+ * @param {LocalNode} node - LocalNode instance
+ * @param {Object} options
+ * @param {string} options.name - Group name (optional, for logging only)
+ * @returns {RawGroup}
+ */
+export function createGroup(node, { name = "MaiaGroup" } = {}) {
+	const group = node.createGroup();
+	
+	console.log("✅ Group created:", group.id);
+	console.log("   Type:", group.type);
+	console.log("   HeaderMeta:", group.headerMeta);
+	
+	return group;
+}
 
 /**
  * Create a new Profile CoMap with ProfileSchema in headerMeta
@@ -16,8 +34,6 @@ import { createSchemaMeta } from "../../schemas/meta.js";
  */
 export function createProfile(group, { name = "User" } = {}) {
 	const meta = createSchemaMeta("ProfileSchema");
-	
-	// Create Profile as a CoMap with metadata
 	const profile = group.createMap({ name }, meta);
 	
 	console.log("✅ Profile created:", profile.id);

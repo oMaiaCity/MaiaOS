@@ -157,7 +157,7 @@ export async function createCoMap(accountOrGroup, init = {}, schemaName, node = 
 	}
 	// STRICT: Schema is MANDATORY - no exceptions
 	if (!schemaName || typeof schemaName !== 'string') {
-		throw new Error('[createCoMap] Schema name is REQUIRED. Provide a valid schema name (e.g., "ProfileSchema", "ExamplesSchema", "@meta-schema")');
+		throw new Error('[createCoMap] Schema name is REQUIRED. Provide a valid schema name (e.g., "ProfileSchema", "@meta-schema")');
 	}
 	
 	// Special case: GenesisSchema (metaschema) uses hardcoded "GenesisSchema" reference (no validation needed)
@@ -174,7 +174,7 @@ export async function createCoMap(accountOrGroup, init = {}, schemaName, node = 
 	// Validate schema exists in registry (skip for exception schemas and co-ids)
 	// Co-ids (starting with "co_z") are actual schema CoValue IDs and don't need registry validation
 	if (!isExceptionSchema(schemaName) && !schemaName.startsWith('co_z') && !hasSchema(schemaName)) {
-		throw new Error(`[createCoMap] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema, ExamplesSchema, ActivityStreamSchema, NotesSchema, PureJsonSchema`);
+		throw new Error(`[createCoMap] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema`);
 	}
 	
 	// Validate data against schema BEFORE creating CoValue

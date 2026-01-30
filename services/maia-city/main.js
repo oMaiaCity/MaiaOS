@@ -34,8 +34,7 @@ let syncState = {
 	error: null,
 };
 
-// Subscription management for ReactiveStore updates
-let activeStoreSubscriptions = new Map(); // coId/queryKey → unsubscribe function
+// Subscription management for sync state
 let unsubscribeSync = null;
 let syncStateRenderTimeout = null; // Debounce sync state renders
 
@@ -468,9 +467,6 @@ function navigateToScreen(screen) {
 // switchView moved above selectCoValue
 
 function selectCoValue(coId, skipHistory = false) {
-	// Clean up old subscriptions when navigating away
-	cleanupStoreSubscriptions();
-
 	// If we're in vibe mode and selecting account, exit vibe mode first
 	if (currentVibe !== null && coId === maia?.id?.maiaId?.id) {
 		currentVibe = null;
@@ -492,26 +488,7 @@ function selectCoValue(coId, skipHistory = false) {
 	currentContextCoValueId = coId;
 	currentScreen = 'db-viewer'; // Navigate to DB viewer when selecting a CoValue
 	renderAppInternal();
-
-	// If selecting a CoValue, subscribe to its loading state
-	if (coId && maia?.id?.node) {
-		const coValueCore = maia.id.node.getCoValue(coId);
-		if (coValueCore && !coValueCore.isAvailable()) {
-			// Subscribe to updates and re-render when available
-			const unsubscribe = coValueCore.subscribe((core) => {
-				if (core.isAvailable()) {
-					renderAppInternal();
-					unsubscribe(); // Unsubscribe after first load
-				}
-			});
-
-			// Trigger loading from IndexedDB
-			maia.id.node.loadCoValueCore(coId).catch(err => {
-				console.error(`❌ Failed to load ${coId.substring(0, 12)}...`, err);
-				renderAppInternal(); // Re-render to show error
-			});
-		}
-	}
+	// read() API in db-view.js handles loading and reactivity automatically
 }
 
 function goBack() {
@@ -537,26 +514,11 @@ function goBack() {
 }
 
 function switchView(view) {
-	// Clean up old subscriptions when switching views
-	cleanupStoreSubscriptions();
-
 	currentView = view;
 	currentContextCoValueId = null; // Reset context when switching views
 	navigationHistory = []; // Clear navigation history when switching views
 	currentScreen = 'db-viewer'; // Ensure we're in DB viewer when switching views
 	renderAppInternal();
-}
-
-function cleanupStoreSubscriptions() {
-	// Clean up all active ReactiveStore subscriptions
-	for (const [key, unsubscribe] of activeStoreSubscriptions.entries()) {
-		try {
-			unsubscribe();
-		} catch (e) {
-			console.warn(`[DB Viewer] Error cleaning up subscription for ${key}:`, e);
-		}
-	}
-	activeStoreSubscriptions.clear();
 }
 
 async function renderAppInternal() {
@@ -568,22 +530,7 @@ async function renderAppInternal() {
 	isRendering = true;
 	
 	try {
-		// Register subscription callback to track ReactiveStore subscriptions
-		const registerSubscription = (key, unsubscribe) => {
-			// Clean up old subscription for this key if it exists
-			const oldUnsubscribe = activeStoreSubscriptions.get(key);
-			if (oldUnsubscribe) {
-				try {
-					oldUnsubscribe();
-				} catch (e) {
-					console.warn(`[DB Viewer] Error cleaning up old subscription for ${key}:`, e);
-				}
-			}
-			// Store new subscription
-			activeStoreSubscriptions.set(key, unsubscribe);
-		};
-		
-		await renderApp(maia, cojsonAPI, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen, registerSubscription);
+		await renderApp(maia, cojsonAPI, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen);
 	} finally {
 		isRendering = false;
 	}
