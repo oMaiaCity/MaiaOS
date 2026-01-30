@@ -16,6 +16,7 @@
 
 import { ReactiveStore } from '../reactive-store.js';
 import { getSchemaCoId } from '@MaiaOS/db';
+import { validateCoId } from '../utils/validation-helpers.js';
 
 export class SchemaOperation {
   constructor(backend, dbEngine = null) {
@@ -114,17 +115,13 @@ export class SchemaOperation {
     
     // Case 1: Direct co-id
     if (coId) {
-      if (!coId.startsWith('co_z')) {
-        throw new Error(`[SchemaOperation] coId must be a valid co-id (co_z...), got: ${coId}`);
-      }
+      validateCoId(coId, 'SchemaOperation');
       schemaCoId = coId;
     }
     
     // Case 2: From CoValue - extract headerMeta.$schema internally (PREFERRED - single source of truth)
     if (fromCoValue) {
-      if (!fromCoValue.startsWith('co_z')) {
-        throw new Error(`[SchemaOperation] fromCoValue must be a valid co-id (co_z...), got: ${fromCoValue}`);
-      }
+      validateCoId(fromCoValue, 'SchemaOperation');
       // Extract schema co-id from CoValue's headerMeta using universal resolver
       schemaCoId = await getSchemaCoId(this.backend, { fromCoValue });
       if (!schemaCoId) {

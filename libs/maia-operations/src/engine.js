@@ -22,7 +22,6 @@ import { DeleteOperation } from './operations/delete.js';
 import { SeedOperation } from './operations/seed.js';
 import { SchemaOperation } from './operations/schema.js';
 import { ResolveOperation } from './operations/resolve.js';
-import { PushOperation } from './operations/push.js';
 import { AppendOperation } from './operations/append.js';
 import { ProcessInboxOperation } from './operations/process-inbox.js';
 
@@ -46,6 +45,7 @@ export class DBEngine {
     }
     
     // Initialize modular operations (pass dbEngine for validation and inter-operation calls)
+    const appendOp = new AppendOperation(this.backend, this);  // Handles both CoList and CoStream
     this.operations = {
       read: new ReadOperation(this.backend),  // Unified reactive read operation
       create: new CreateOperation(this.backend, this),
@@ -54,8 +54,8 @@ export class DBEngine {
       seed: new SeedOperation(this.backend),
       schema: new SchemaOperation(this.backend, this),  // Schema loading operation (needs dbEngine for resolve operation)
       resolve: new ResolveOperation(this.backend),  // Co-id resolution operation
-      push: new PushOperation(this.backend, this),  // CoStream append operation
-      append: new AppendOperation(this.backend, this),  // CoList append operation
+      append: appendOp,  // CoList append operation
+      push: appendOp,  // CoStream append operation (routed to append with cotype='costream')
       processInbox: new ProcessInboxOperation(this.backend, this)  // Inbox processing with session-based watermarks
     };
   }
@@ -71,7 +71,12 @@ export class DBEngine {
     const { op, ...params } = payload;
     
     if (!op) {
-      throw new Error('[DBEngine] Operation required: {op: "read|create|update|delete|seed|schema|resolve"}');
+      throw new Error('[DBEngine] Operation required: {op: "read|create|update|delete|seed|schema|resolve|append|push"}');
+    }
+    
+    // Route 'push' operation to 'append' with cotype='costream'
+    if (op === 'push') {
+      return await this.operations.append.execute({ ...params, cotype: 'costream' });
     }
     
     const operation = this.operations[op];

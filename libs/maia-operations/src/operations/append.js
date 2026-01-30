@@ -1,15 +1,17 @@
 /**
- * Append Operation - Append items to CoLists
+ * Append Operation - Append items to CoLists and CoStreams
  * 
  * Usage:
- *   await dbEngine.execute({op: 'append', coId: 'co_z...', items: [item1, item2]})
+ *   await dbEngine.execute({op: 'append', coId: 'co_z...', items: [item1, item2]})  // CoList
+ *   await dbEngine.execute({op: 'push', coId: 'co_z...', items: [item1, item2]})     // CoStream (routed to append)
  *   await dbEngine.execute({op: 'append', coId: 'co_z...', item: item})
  * 
- * Note: CoLists are append-only. This operation validates the CoValue is a CoList
- * and appends items through the proper API to ensure reactive store updates.
+ * Note: Supports both CoLists (colist) and CoStreams (costream).
+ * CoLists check for duplicates, CoStreams allow duplicates (append-only logs).
  */
 
 import { getSchemaCoId, checkCotype, loadSchema, validateItems } from '@MaiaOS/db';
+import { requireParam, validateCoId, requireDbEngine, ensureCoValueAvailable } from '../utils/validation-helpers.js';
 
 export class AppendOperation {
   constructor(backend, dbEngine = null) {
@@ -18,41 +20,14 @@ export class AppendOperation {
   }
   
   async execute(params) {
-    const { coId, item, items } = params;
+    const { coId, item, items, cotype } = params;
     
-    if (!coId) {
-      throw new Error('[AppendOperation] coId required');
-    }
+    requireParam(coId, 'coId', 'AppendOperation');
+    validateCoId(coId, 'AppendOperation');
+    requireDbEngine(this.dbEngine, 'AppendOperation', 'check schema cotype');
     
-    // Validate coId format
-    if (!coId.startsWith('co_z')) {
-      throw new Error(`[AppendOperation] coId must be a valid co-id (co_z...), got: ${coId}`);
-    }
-    
-    // Get CoValue and verify it's a CoList by checking schema's cotype property
-    const coValueCore = this.backend.getCoValue(coId);
-    if (!coValueCore) {
-      throw new Error(`[AppendOperation] CoValue not found: ${coId}`);
-    }
-    
-    // Ensure CoValue is available
-    if (!coValueCore.isAvailable()) {
-      // Try to load it
-      await this.backend.node.loadCoValueCore(coId);
-      // Wait a bit for it to become available
-      let attempts = 0;
-      while (!coValueCore.isAvailable() && attempts < 10) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-      }
-      if (!coValueCore.isAvailable()) {
-        throw new Error(`[AppendOperation] CoValue ${coId} is not available (may still be loading)`);
-      }
-    }
-    
-    if (!this.dbEngine) {
-      throw new Error('[AppendOperation] dbEngine required to check schema cotype');
-    }
+    // Ensure CoValue is loaded and available
+    const coValueCore = await ensureCoValueAvailable(this.backend, coId, 'AppendOperation');
     
     // Resolve schema co-id from CoValue headerMeta using universal resolver
     const schemaCoId = await getSchemaCoId(this.backend, { fromCoValue: coId });
@@ -60,22 +35,40 @@ export class AppendOperation {
       throw new Error(`[AppendOperation] Failed to extract schema from CoValue ${coId} headerMeta`);
     }
     
-    // Check cotype using universal validation utility
-    const isColist = await checkCotype(this.dbEngine, schemaCoId, 'colist');
-    if (!isColist) {
-      throw new Error(`[AppendOperation] CoValue ${coId} is not a CoList (schema cotype check failed)`);
+    // Determine cotype (from params or infer from schema)
+    let targetCotype = cotype;
+    if (!targetCotype) {
+      // Infer from schema: check if it's colist or costream
+      const isColist = await checkCotype(this.dbEngine, schemaCoId, 'colist');
+      const isCoStream = await checkCotype(this.dbEngine, schemaCoId, 'costream');
+      
+      if (isColist) {
+        targetCotype = 'colist';
+      } else if (isCoStream) {
+        targetCotype = 'costream';
+      } else {
+        throw new Error(`[AppendOperation] CoValue ${coId} must be a CoList (colist) or CoStream (costream), got schema cotype: ${schemaCoId}`);
+      }
+    }
+    
+    // Validate cotype matches schema
+    const isValidCotype = await checkCotype(this.dbEngine, schemaCoId, targetCotype);
+    if (!isValidCotype) {
+      throw new Error(`[AppendOperation] CoValue ${coId} is not a ${targetCotype} (schema cotype check failed)`);
     }
     
     // Load schema for item validation
     const schema = await loadSchema(this.dbEngine, schemaCoId);
     
-    // Get CoList content
+    // Get content and determine method name
     const content = this.backend.getCurrentContent(coValueCore);
-    if (!content || typeof content.append !== 'function') {
-      throw new Error(`[AppendOperation] CoList ${coId} doesn't have append method`);
+    const methodName = targetCotype === 'colist' ? 'append' : 'push';
+    
+    if (!content || typeof content[methodName] !== 'function') {
+      throw new Error(`[AppendOperation] ${targetCotype === 'colist' ? 'CoList' : 'CoStream'} ${coId} doesn't have ${methodName} method`);
     }
     
-    // Append items (support both single item and array)
+    // Prepare items (support both single item and array)
     const itemsToAppend = items || (item ? [item] : []);
     if (itemsToAppend.length === 0) {
       throw new Error('[AppendOperation] At least one item required (use item or items parameter)');
@@ -84,22 +77,30 @@ export class AppendOperation {
     // Validate items using universal validation utility
     validateItems(schema, itemsToAppend);
     
-    // Check if items already exist to prevent duplicates
-    let existingItems = [];
-    try {
-      if (typeof content.toJSON === 'function') {
-        existingItems = content.toJSON() || [];
-      }
-    } catch (e) {
-      // If toJSON fails, assume empty and proceed
-      console.warn(`[AppendOperation] Error checking existing items:`, e);
-    }
-    
-    // Append each item (skip if already exists)
+    // Handle duplicates: CoLists check for duplicates, CoStreams allow duplicates
     let appendedCount = 0;
-    for (const itemToAppend of itemsToAppend) {
-      if (!existingItems.includes(itemToAppend)) {
-        content.append(itemToAppend);
+    if (targetCotype === 'colist') {
+      // CoList: Check for duplicates before appending
+      let existingItems = [];
+      try {
+        if (typeof content.toJSON === 'function') {
+          existingItems = content.toJSON() || [];
+        }
+      } catch (e) {
+        console.warn(`[AppendOperation] Error checking existing items:`, e);
+      }
+      
+      // Append each item (skip if already exists)
+      for (const itemToAppend of itemsToAppend) {
+        if (!existingItems.includes(itemToAppend)) {
+          content.append(itemToAppend);
+          appendedCount++;
+        }
+      }
+    } else {
+      // CoStream: Push all items (no duplicate checking - logs allow duplicates)
+      for (const itemToAppend of itemsToAppend) {
+        content.push(itemToAppend);
         appendedCount++;
       }
     }
@@ -110,11 +111,12 @@ export class AppendOperation {
     }
     
     // Return success with item count
+    const resultKey = targetCotype === 'colist' ? 'itemsAppended' : 'itemsPushed';
     return {
       success: true,
       coId,
-      itemsAppended: appendedCount,
-      itemsSkipped: itemsToAppend.length - appendedCount
+      [resultKey]: appendedCount,
+      ...(targetCotype === 'colist' && { itemsSkipped: itemsToAppend.length - appendedCount })
     };
   }
 }

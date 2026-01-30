@@ -1,4 +1,5 @@
 import { resolveHumanReadableKey } from '@MaiaOS/db';
+import { requireParam } from '../utils/validation-helpers.js';
 
 /**
  * Resolve Operation - Resolve human-readable keys to co-ids
@@ -24,8 +25,9 @@ export class ResolveOperation {
   async execute(params) {
     const { humanReadableKey } = params;
     
-    if (!humanReadableKey || typeof humanReadableKey !== 'string') {
-      throw new Error('[ResolveOperation] humanReadableKey must be a non-empty string');
+    requireParam(humanReadableKey, 'humanReadableKey', 'ResolveOperation');
+    if (typeof humanReadableKey !== 'string') {
+      throw new Error('[ResolveOperation] humanReadableKey must be a string');
     }
     
     // Warn if called at runtime (not during seeding)

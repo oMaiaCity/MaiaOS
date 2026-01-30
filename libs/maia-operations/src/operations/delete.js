@@ -9,6 +9,7 @@
  */
 
 import { getSchemaCoId } from '@MaiaOS/db';
+import { requireParam, validateCoId, requireDbEngine } from '../utils/validation-helpers.js';
 
 export class DeleteOperation {
   constructor(backend, dbEngine = null) {
@@ -27,18 +28,9 @@ export class DeleteOperation {
   async execute(params) {
     const { id } = params;
     
-    if (!id) {
-      throw new Error('[DeleteOperation] ID required');
-    }
-    
-    // Validate id is a co-id
-    if (!id.startsWith('co_z')) {
-      throw new Error(`[DeleteOperation] ID must be a co-id (co_z...), got: ${id}`);
-    }
-    
-    if (!this.dbEngine) {
-      throw new Error('[DeleteOperation] dbEngine required to extract schema from CoValue headerMeta');
-    }
+    requireParam(id, 'id', 'DeleteOperation');
+    validateCoId(id, 'DeleteOperation');
+    requireDbEngine(this.dbEngine, 'DeleteOperation', 'extract schema from CoValue headerMeta');
     
     // Extract schema co-id from CoValue headerMeta using universal resolver
     // This is the ONLY place to get schema - single source of truth

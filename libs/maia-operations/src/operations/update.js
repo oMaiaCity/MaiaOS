@@ -13,6 +13,7 @@
 
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
 import { getSchemaCoId, validateUpdate } from '@MaiaOS/db';
+import { requireParam, validateCoId, requireDbEngine } from '../utils/validation-helpers.js';
 
 /**
  * Update Operation - Update existing records (unified for data collections and configs)
@@ -45,22 +46,10 @@ export class UpdateOperation {
   async execute(params) {
     const { id, data } = params;
     
-    if (!id) {
-      throw new Error('[UpdateOperation] ID required');
-    }
-    
-    // Validate id is a co-id
-    if (!id.startsWith('co_z')) {
-      throw new Error(`[UpdateOperation] ID must be a co-id (co_z...), got: ${id}`);
-    }
-    
-    if (!data) {
-      throw new Error('[UpdateOperation] Data required');
-    }
-    
-    if (!this.dbEngine) {
-      throw new Error('[UpdateOperation] dbEngine required for schema validation');
-    }
+    requireParam(id, 'id', 'UpdateOperation');
+    validateCoId(id, 'UpdateOperation');
+    requireParam(data, 'data', 'UpdateOperation');
+    requireDbEngine(this.dbEngine, 'UpdateOperation', 'schema validation');
     
     // Get raw stored data (without normalization - no id field, but has $schema metadata)
     const rawExistingData = await this.backend.getRawRecord(id);

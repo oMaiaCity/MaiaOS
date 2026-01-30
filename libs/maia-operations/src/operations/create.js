@@ -8,6 +8,7 @@
 
 import { getSchemaCoId } from '@MaiaOS/db';
 import { validateData } from '@MaiaOS/db';
+import { requireParam, requireDbEngine } from '../utils/validation-helpers.js';
 
 /**
  * Create Operation - Create new records
@@ -32,17 +33,9 @@ export class CreateOperation {
   async execute(params) {
     const { schema, data } = params;
     
-    if (!schema) {
-      throw new Error('[CreateOperation] Schema required');
-    }
-    
-    if (!data) {
-      throw new Error('[CreateOperation] Data required');
-    }
-    
-    if (!this.dbEngine) {
-      throw new Error('[CreateOperation] dbEngine is REQUIRED for runtime schema validation. No fallbacks allowed.');
-    }
+    requireParam(schema, 'schema', 'CreateOperation');
+    requireParam(data, 'data', 'CreateOperation');
+    requireDbEngine(this.dbEngine, 'CreateOperation', 'runtime schema validation');
     
     // Resolve schema co-id using universal resolver (handles co-id and human-readable patterns)
     const schemaCoId = await getSchemaCoId(this.backend, schema);

@@ -1,3 +1,5 @@
+import { requireParam, validateCoId } from '../utils/validation-helpers.js';
+
 /**
  * Process Inbox Operation - Process actor inbox with session-based watermarks
  * 
@@ -30,22 +32,10 @@ export class ProcessInboxOperation {
   async execute(params) {
     const { actorId, inboxCoId } = params;
     
-    if (!actorId) {
-      throw new Error('[ProcessInboxOperation] actorId is required');
-    }
-    
-    if (!inboxCoId) {
-      throw new Error('[ProcessInboxOperation] inboxCoId is required');
-    }
-    
-    // Validate co-ids
-    if (!actorId.startsWith('co_z')) {
-      throw new Error(`[ProcessInboxOperation] actorId must be a valid co-id (co_z...), got: ${actorId}`);
-    }
-    
-    if (!inboxCoId.startsWith('co_z')) {
-      throw new Error(`[ProcessInboxOperation] inboxCoId must be a valid co-id (co_z...), got: ${inboxCoId}`);
-    }
+    requireParam(actorId, 'actorId', 'ProcessInboxOperation');
+    requireParam(inboxCoId, 'inboxCoId', 'ProcessInboxOperation');
+    validateCoId(actorId, 'ProcessInboxOperation');
+    validateCoId(inboxCoId, 'ProcessInboxOperation');
     
     // Use backend's processInbox function (backend-to-backend)
     // Import dynamically to avoid circular dependencies
