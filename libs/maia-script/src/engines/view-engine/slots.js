@@ -26,15 +26,6 @@ export async function renderSlot(viewEngine, node, data, wrapperElement, actorId
   // 1. Look up context property (could be "currentView" or any other key - same logic)
   const contextValue = data.context[contextKey];
   
-  console.log(`[ViewEngine] renderSlot called`, {
-    slotKey,
-    contextKey,
-    contextValue,
-    contextValueType: typeof contextValue,
-    actorId,
-    availableContextKeys: Object.keys(data.context || {})
-  });
-  
   if (!contextValue) {
     // No value mapped - wrapper element is already created, just leave it empty
     console.warn(`[ViewEngine] No context value for slot key: ${contextKey}`, {
@@ -60,7 +51,6 @@ export async function renderSlot(viewEngine, node, data, wrapperElement, actorId
     }
   } else {
     // Plain value - render as text (not an actor reference)
-    console.log(`[ViewEngine] Rendering plain value: ${contextValue}`);
     wrapperElement.textContent = String(contextValue);
     return;
   }
@@ -102,15 +92,6 @@ export async function renderSlot(viewEngine, node, data, wrapperElement, actorId
   
   // Child actor exists - attach to slot
   if (childActor.containerElement) {
-    console.log(`[ViewEngine] Attaching child actor to slot`, {
-      namekey,
-      childActorId: childActor.id,
-      currentParent: childActor.containerElement.parentNode?.tagName || 'none',
-      wrapperElement: wrapperElement.tagName,
-      isAlreadyAttached: childActor.containerElement.parentNode === wrapperElement,
-      existingChildren: actor?.children ? Object.keys(actor.children) : []
-    });
-    
     // Proper lifecycle management: Destroy inactive UI child actors when switching views
     // Service actors persist, UI actors are created/destroyed on demand
     if (actor?.children) {
@@ -120,7 +101,6 @@ export async function renderSlot(viewEngine, node, data, wrapperElement, actorId
         
         // Destroy inactive UI child actors (service actors persist)
         if (child.actorType === 'ui') {
-          console.log(`[ViewEngine] Destroying inactive UI child actor: ${key} (${child.id})`);
           viewEngine.actorEngine.destroyActor(child.id);
           delete actor.children[key];
         }
@@ -135,12 +115,6 @@ export async function renderSlot(viewEngine, node, data, wrapperElement, actorId
     
     // CRITICAL: Only append if not already in wrapper (prevents duplicates during re-renders)
     if (childActor.containerElement.parentNode !== wrapperElement) {
-      console.log(`[ViewEngine] Swapping child actor in slot`, {
-        namekey,
-        oldParent: childActor.containerElement.parentNode?.tagName || 'none',
-        newParent: wrapperElement.tagName
-      });
-      
       // Remove from old parent if attached elsewhere
       if (childActor.containerElement.parentNode) {
         childActor.containerElement.parentNode.removeChild(childActor.containerElement);
@@ -149,16 +123,6 @@ export async function renderSlot(viewEngine, node, data, wrapperElement, actorId
       // Clear wrapper and attach new child
       wrapperElement.innerHTML = '';
       wrapperElement.appendChild(childActor.containerElement);
-      
-      console.log(`[ViewEngine] Child actor swapped successfully`, {
-        namekey,
-        childActorId: childActor.id
-      });
-    } else {
-      console.log(`[ViewEngine] Child actor already attached to slot, skipping swap`, {
-        namekey,
-        childActorId: childActor.id
-      });
     }
   } else {
     // Child actor exists but has no container - this shouldn't happen, but handle gracefully

@@ -143,18 +143,13 @@
       }
     },
     "deleting": {
-      "entry": [
-        {
-          "updateContext": { "deletingId": "$$id" }
-        },
-        {
-          "tool": "@db",
-          "payload": { 
-            "op": "delete",
-            "id": "$$id"
-          }
+      "entry": {
+        "tool": "@db",
+        "payload": { 
+          "op": "delete",
+          "id": "$$id"
         }
-      ],
+      },
       "on": {
         "DELETE_BUTTON": {
           "target": "deleting"
@@ -178,7 +173,7 @@
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "TODO_DELETED",
-                "payload": { "id": "$context.deletingId" },
+                "payload": { "id": "$$id" },
                 "target": "@actor/composite"
               }
             },
@@ -186,22 +181,14 @@
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "TODO_DELETED",
-                "payload": { "id": "$context.deletingId" },
+                "payload": { "id": "$$id" },
                 "target": "@actor/kanban"
               }
-            },
-            {
-              "updateContext": { "deletingId": null }
             }
           ]
         },
         "ERROR": {
-          "target": "error",
-          "actions": [
-            {
-              "updateContext": { "deletingId": null }
-            }
-          ]
+          "target": "error"
         }
       }
     },

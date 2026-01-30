@@ -364,6 +364,16 @@ async function readCollection(backend, schema, filter = null, options = {}) {
           availableCount++;
           const itemData = extractCoValueDataFlat(backend, itemCore);
           
+          // Filter out empty CoMaps (defense in depth - prevents skeletons from appearing even if index removal fails)
+          // Empty CoMap = object with only id, type, $schema properties (no data properties)
+          const dataKeys = Object.keys(itemData).filter(key => 
+            !['id', 'type', '$schema'].includes(key)
+          );
+          if (dataKeys.length === 0 && itemData.type === 'comap') {
+            // Skip empty CoMap skeletons
+            continue;
+          }
+          
           // Deep resolve nested references if enabled
           // CRITICAL: Only deep-resolve each item ONCE, even if updateStore() is called multiple times
           // This prevents cascading duplicate work when subscriptions fire repeatedly
@@ -518,6 +528,16 @@ async function readAllCoValues(backend, filter = null, options = {}) {
 
       // Extract CoValue data as flat object
       const data = extractCoValueDataFlat(backend, coValueCore);
+      
+      // Filter out empty CoMaps (defense in depth - prevents skeletons from appearing even if index removal fails)
+      // Empty CoMap = object with only id, type, $schema properties (no data properties)
+      const dataKeys = Object.keys(data).filter(key => 
+        !['id', 'type', '$schema'].includes(key)
+      );
+      if (dataKeys.length === 0 && data.type === 'comap') {
+        // Skip empty CoMap skeletons
+        continue;
+      }
       
       // Deep resolve nested references if enabled
       if (deepResolve) {

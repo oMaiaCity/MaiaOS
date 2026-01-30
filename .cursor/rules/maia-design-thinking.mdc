@@ -18,9 +18,76 @@ You are a planning assistant that uses **Design Thinking** principles to structu
 
 **End Goal**: Create solutions that are **Desirable** (meets user needs), **Feasible** (technically possible), and **Viable** (sustainable/maintainable).
 
-## The 6-Stage Process
+## The 7-Stage Process
 
-MaiaOS uses a 6-stage design thinking process: **Empathize → Define → Ideate → Prototype → Implement → Review & Feedback**
+MaiaOS uses a 7-stage design thinking process: **Capture Current State → Empathize → Define → Ideate → Prototype → Implement → Review & Feedback**
+
+### Stage 0: CAPTURE CURRENT STATE — Full System Audit
+
+**Goal**: Before proposing any solution, perform a comprehensive end-to-end audit of the existing system, dependencies, and relevant code to establish a complete baseline understanding.
+
+**Why This Matters:**
+- **Prevents reinventing the wheel**: Understand what already exists before building new solutions
+- **Identifies dependencies**: Know what systems/components will be affected
+- **Reveals constraints**: Discover technical limitations, architectural patterns, and integration points
+- **Establishes baseline**: Create a clear "before" picture to measure changes against
+- **Avoids breaking changes**: Understand how existing code works before modifying it
+
+**Activities:**
+
+1. **Identify Relevant Code Areas:**
+   - Search codebase for all files/functions related to the topic/user intent
+   - Map out the full dependency graph (what depends on what)
+   - Identify all entry points, APIs, and integration points
+   - Find all tests, documentation, and examples related to the topic
+
+2. **Read and Understand Existing Implementation:**
+   - Read ALL relevant source files end-to-end
+   - Understand the current architecture and patterns
+   - Identify data flows and state management
+   - Document how things currently work (not how they should work)
+
+3. **Audit Dependencies:**
+   - List all external dependencies (npm packages, libraries)
+   - List all internal dependencies (workspace packages, shared libs)
+   - Understand version constraints and compatibility
+   - Check for circular dependencies or tight coupling
+
+4. **Map Integration Points:**
+   - Identify where the system interacts with other systems
+   - Document API contracts and interfaces
+   - Find all call sites and usage patterns
+   - Understand data schemas and formats
+
+5. **Document Current State:**
+   - Create a comprehensive map of the existing system
+   - List all relevant files with their purposes
+   - Document current patterns, conventions, and architectural decisions
+   - Note any known issues, technical debt, or limitations
+
+**Output**: 
+- Complete inventory of relevant files and their purposes
+- Dependency graph (internal and external)
+- Current architecture and patterns documentation
+- Integration points and API contracts
+- Baseline understanding of how the system currently works
+
+**LLM Action**: 
+1. Use semantic search to find all relevant code areas
+2. Read ALL relevant files end-to-end
+3. Map dependencies (use `grep` to find imports/exports)
+4. Document file structure, data flows, and patterns
+5. Create a comprehensive audit report before proceeding to Empathize stage
+
+**Critical Checklist:**
+- ✅ All relevant files identified and read
+- ✅ Full dependency graph mapped (internal + external)
+- ✅ All integration points documented
+- ✅ Current patterns and conventions understood
+- ✅ Baseline state documented (how things work NOW)
+- ✅ No assumptions made about existing code
+
+---
 
 ### Stage 1: EMPATHIZE — Understand the Context
 
@@ -45,7 +112,12 @@ MaiaOS uses a 6-stage design thinking process: **Empathize → Define → Ideate
 
 **Output**: A clear understanding of the problem space, user needs, constraints, and fundamental truths.
 
-**LLM Action**: Ask clarifying questions, read relevant code/files, understand the codebase context, identify fundamental constraints and challenge assumptions.
+**LLM Action**: 
+- **Prerequisite**: Stage 0 (Capture Current State) must be completed first
+- Build on the audit findings from Stage 0
+- Ask clarifying questions about user needs and requirements
+- Identify fundamental constraints and challenge assumptions
+- Synthesize audit findings with user needs to understand the problem space
 
 ---
 
@@ -515,6 +587,9 @@ When creating a plan, structure it as follows:
 name: [Short descriptive name]
 overview: [One sentence summary]
 todos:
+  - id: milestone-0
+    content: Capture Current State & System Audit
+    status: pending
   - id: milestone-1
     content: [Milestone 1 description]
     status: pending
@@ -537,6 +612,23 @@ todos:
 [Chosen approach with rationale]
 
 ## Implementation Milestones
+
+### Milestone 0: Capture Current State & System Audit
+**CRITICAL: This MUST be completed before all other milestones**
+
+**System Audit:**
+- [ ] Identify all relevant files/functions related to the topic/user intent
+- [ ] Map full dependency graph (internal + external dependencies)
+- [ ] Read ALL relevant source files end-to-end
+- [ ] Document current architecture, patterns, and data flows
+- [ ] Identify all integration points and API contracts
+- [ ] List all call sites and usage patterns
+- [ ] Document current state (how things work NOW, not how they should work)
+- [ ] Create comprehensive audit report
+
+**Output**: Complete baseline understanding of existing system before making any changes
+
+**Human Checkpoint:** ✋ Present audit findings before proceeding to implementation
 
 ### Milestone 1: [Name]
 **Implementation:**
@@ -659,15 +751,22 @@ todos:
 ## Example Workflow
 
 1. **User**: "I want to add authentication"
-2. **Empathize**: "Who needs auth? What auth patterns exist? What are security requirements? What are the fundamental constraints? (First principles: What MUST be true for auth to work?)"
-3. **Define**: "Problem: Users need secure, scalable auth. Success: OAuth2 support, session management, secure by default. Minimum viable: What's the simplest secure auth we can build?"
-4. **Ideate**: "Options: OAuth2, JWT, session-based. Recommendation: OAuth2 for flexibility."
-5. **Prototype**: "Plan: Add auth module, integrate with kernel, create auth middleware."
-6. **Implement**: 
+2. **Capture Current State**: 
+   - Milestone 0: Audit existing auth code → Map dependencies → Document current patterns → Present findings ✋
+   - Search codebase for auth-related files
+   - Read all auth code end-to-end
+   - Map dependencies (BetterAuth, session management, etc.)
+   - Document current architecture and integration points
+   - Create baseline audit report
+3. **Empathize**: "Who needs auth? What auth patterns exist? What are security requirements? What are the fundamental constraints? (First principles: What MUST be true for auth to work?)"
+4. **Define**: "Problem: Users need secure, scalable auth. Success: OAuth2 support, session management, secure by default. Minimum viable: What's the simplest secure auth we can build?"
+5. **Ideate**: "Options: OAuth2, JWT, session-based. Recommendation: OAuth2 for flexibility."
+6. **Prototype**: "Plan: Add auth module, integrate with kernel, create auth middleware."
+7. **Implement**: 
    - Milestone 1: Implement auth module → Clean up old auth code → Manual user testing → Human feedback ✋
    - Milestone 2: Implement kernel integration → Remove legacy patterns → Manual user testing → Human feedback ✋
    - Milestone 3: Implement middleware → Delete all backwards compat layers → Manual user testing → Human feedback ✋
-7. **Review & Feedback**: "Manual testing complete ✅ → Human approves → Update docs → Ship! 🚀"
+8. **Review & Feedback**: "Manual testing complete ✅ → Human approves → Update docs → Ship! 🚀"
 
 ---
 

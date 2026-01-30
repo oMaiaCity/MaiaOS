@@ -336,12 +336,9 @@ export class ActorEngine {
     if (typeof obj === 'string' && obj.startsWith('co_')) {
       // Skip if already visited (circular reference)
       if (visited.has(obj)) {
-        console.log(`[ActorEngine] Circular reference detected, skipping: ${obj.substring(0, 20)}...`);
         return obj; // Return co-id to prevent infinite loop
       }
       visited.add(obj);
-      
-      console.log(`[ActorEngine] Resolving co-id reference (depth ${depth}): ${obj.substring(0, 20)}...`);
       
       try {
         // Try to load this as a CoValue using schema operation
@@ -377,8 +374,6 @@ export class ActorEngine {
             coValueData = plainData;
           }
           
-          console.log(`[ActorEngine] Successfully resolved co-id to object with keys: ${Object.keys(coValueData).join(', ')}`);
-          
           // Recursively resolve nested references in the resolved data
           return await this._resolveNestedCoValueReferences(coValueData, visited, depth + 1);
         }
@@ -396,11 +391,6 @@ export class ActorEngine {
       if (key === 'id' || key === '$schema' || key === 'type' || key === 'loading' || key === 'error') {
         resolved[key] = value;
         continue;
-      }
-      
-      // Log when resolving nested objects that might be co-ids
-      if (typeof value === 'string' && value.startsWith('co_')) {
-        console.log(`[ActorEngine] Found co-id in property "${key}" (depth ${depth}): ${value.substring(0, 20)}...`);
       }
       
       resolved[key] = await this._resolveNestedCoValueReferences(value, visited, depth + 1);
@@ -459,32 +449,6 @@ export class ActorEngine {
           stateDef = plainStateDef;
         }
         
-        // Debug: Log raw stateDef structure directly from database
-        console.log('[ActorEngine] Raw stateDef from database', {
-          actorId: actor.id,
-          hasStates: !!stateDef?.states,
-          statesType: typeof stateDef?.states,
-          statesKeys: stateDef?.states && typeof stateDef?.states === 'object' ? Object.keys(stateDef.states) : [],
-          idleStateExists: !!stateDef?.states?.idle,
-          idleStateType: typeof stateDef?.states?.idle,
-          idleStateKeys: stateDef?.states?.idle && typeof stateDef?.states?.idle === 'object' ? Object.keys(stateDef.states.idle) : [],
-          entryExists: !!stateDef?.states?.idle?.entry,
-          entryValue: stateDef?.states?.idle?.entry,
-          fullIdleState: JSON.stringify(stateDef?.states?.idle, null, 2).substring(0, 500),
-          fullStates: JSON.stringify(stateDef?.states, null, 2).substring(0, 1000)
-        });
-        
-        // Debug: Log BEFORE resolution
-        console.log('[ActorEngine] State definition BEFORE resolution', {
-          actorId: actor.id,
-          statesType: typeof stateDef?.states,
-          statesIsString: typeof stateDef?.states === 'string',
-          statesValue: typeof stateDef?.states === 'string' ? stateDef.states : 'object',
-          idleStateType: typeof stateDef?.states?.idle,
-          idleStateIsString: typeof stateDef?.states?.idle === 'string',
-          idleStateValue: typeof stateDef?.states?.idle === 'string' ? stateDef.states.idle : 'object'
-        });
-        
         // CRITICAL: Only resolve co-id references if states is a co-id string
         // If states is already an object, preserve it as-is (it's already correctly structured)
         // The deep resolution in read() operation should have already loaded any nested CoValues
@@ -492,41 +456,12 @@ export class ActorEngine {
         // Only resolve if states itself is a co-id string (which shouldn't happen for state definitions)
         if (stateDef?.states && typeof stateDef.states === 'string' && stateDef.states.startsWith('co_')) {
           // states is a co-id reference - resolve it (unlikely, but handle it)
-          console.log('[ActorEngine] Resolving states as co-id reference', { actorId: actor.id, statesCoId: stateDef.states });
           stateDef = await this._resolveNestedCoValueReferences(stateDef);
         } else {
           // states is already an object - preserve it as-is, don't modify
-          console.log('[ActorEngine] States is already an object, preserving structure (no resolution needed)', { 
-            actorId: actor.id, 
-            statesType: typeof stateDef?.states,
-            statesKeys: stateDef?.states ? Object.keys(stateDef.states) : [],
-            idleStateKeys: stateDef?.states?.idle ? Object.keys(stateDef.states.idle) : [],
-            idleStateHasEntry: !!stateDef?.states?.idle?.entry
-          });
           // Don't call _resolveNestedCoValueReferences - it might modify nested objects incorrectly
           // Co-id references within states (like in tool payloads) should already be resolved by transformForSeeding
         }
-        
-        // Debug: Log AFTER resolution
-        const idleState = stateDef?.states?.idle;
-        const entry = stateDef?.states?.[stateDef?.initial]?.entry;
-        console.log('[ActorEngine] Loaded state definition AFTER resolution', { 
-          actorId: actor.id, 
-          stateDefKeys: stateDef ? Object.keys(stateDef) : [],
-          hasStates: !!stateDef?.states,
-          statesType: typeof stateDef?.states,
-          statesKeys: stateDef?.states ? Object.keys(stateDef.states) : [],
-          initialState: stateDef?.initial,
-          idleStateExists: !!idleState,
-          idleStateType: typeof idleState,
-          idleStateKeys: idleState ? Object.keys(idleState) : [],
-          idleStateValue: idleState,
-          entry: entry,
-          entryType: typeof entry,
-          entryKeys: entry ? Object.keys(entry) : [],
-          entryValue: entry,
-          fullIdleState: JSON.stringify(idleState, null, 2).substring(0, 500)
-        });
         
         // Set up subscription for state updates (direct subscription, same pattern as view/context/style)
         // Store directly in actor._subscriptions since actor already exists
@@ -726,13 +661,6 @@ export class ActorEngine {
       return;
     }
     
-    console.log(`[ActorEngine] rerender called`, {
-      actorId,
-      hasViewDef: !!actor.viewDef,
-      hasContext: !!actor.context,
-      currentView: actor.context?.currentView,
-      viewMode: actor.context?.viewMode
-    });
     
     const activeElement = actor.shadowRoot.activeElement;
     const focusInfo = activeElement ? {

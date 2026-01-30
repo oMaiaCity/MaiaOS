@@ -23,23 +23,6 @@ export class StateEngine {
   }
 
   async createMachine(stateDef, actor) {
-    console.log('[StateEngine] createMachine called', { actorId: actor.id, initialState: stateDef.initial });
-    
-    // Debug: Log the actual structure of states.idle BEFORE creating machine
-    const initialStateName = stateDef.initial;
-    const initialStateDef = stateDef.states?.[initialStateName];
-    console.log('[StateEngine] Initial state structure BEFORE machine creation', {
-      initialStateName,
-      initialStateExists: !!initialStateDef,
-      initialStateKeys: initialStateDef ? Object.keys(initialStateDef) : [],
-      entryExists: !!initialStateDef?.entry,
-      entryType: typeof initialStateDef?.entry,
-      entryKeys: initialStateDef?.entry ? Object.keys(initialStateDef.entry) : [],
-      entryValue: initialStateDef?.entry,
-      fullInitialState: JSON.stringify(initialStateDef, null, 2).substring(0, 500),
-      fullStates: JSON.stringify(stateDef.states, null, 2).substring(0, 1000)
-    });
-    
     const machineId = `${actor.id}_machine`;
     const machine = {
       id: machineId, definition: stateDef, actor, currentState: stateDef.initial,
@@ -47,10 +30,8 @@ export class StateEngine {
     };
     this.machines.set(machineId, machine);
     machine._isInitialCreation = true;
-    console.log('[StateEngine] Executing entry actions for initial state', { initialState: stateDef.initial });
     await this._executeEntry(machine, stateDef.initial);
     machine._isInitialCreation = false;
-    console.log('[StateEngine] Machine created', { machineId, currentState: machine.currentState });
     return machine;
   }
 
@@ -61,24 +42,12 @@ export class StateEngine {
     if (!currentStateDef) return;
     const transition = (currentStateDef.on || {})[event];
     if (!transition) return;
-    console.log('[StateEngine] send called', { 
-      machineId, 
-      event, 
-      payload, 
-      payloadKeys: Object.keys(payload || {}),
-      actorId: machine.actor.id 
-    });
     await this._executeTransition(machine, transition, event, payload);
   }
 
   async _executeTransition(machine, transition, event, payload) {
-    console.log('[StateEngine] _executeTransition called', { 
-      event, 
-      payload, 
-      payloadKeys: Object.keys(payload || {}),
-      currentState: machine.currentState,
-      actorId: machine.actor.id 
-    });
+    // ARCHITECTURE: Event payload flows from co-value (inbox) -> $store (state machine) -> actions
+    // SUCCESS events include original event payload (id, etc.) merged with tool result
     machine.eventPayload = payload || {};
     if (event === 'SUCCESS') machine.lastToolResult = payload.result || null;
     
@@ -100,15 +69,6 @@ export class StateEngine {
     // CRITICAL: Preserve eventPayload for entry actions - entry actions need access to the original event payload
     // Store it before executing entry to ensure it's available for $$id and other event payload references
     const entryPayload = machine.eventPayload;
-    console.log('[StateEngine] About to execute entry', { 
-      previousState, 
-      targetState, 
-      entryPayload, 
-      entryPayloadKeys: Object.keys(entryPayload || {}),
-      machineEventPayload: machine.eventPayload,
-      machineEventPayloadKeys: Object.keys(machine.eventPayload || {}),
-      actorId: machine.actor.id 
-    });
     if (previousState !== targetState) {
       // Ensure eventPayload is set before entry actions run
       machine.eventPayload = entryPayload;
@@ -133,44 +93,42 @@ export class StateEngine {
   async _executeStateActions(machine, stateName, type) {
     const stateDef = machine.definition.states[stateName];
     const actions = stateDef?.[type];
-    console.log('[StateEngine] _executeStateActions called', { 
-      stateName, 
-      type, 
-      actions, 
-      actionsType: typeof actions,
-      stateDefExists: !!stateDef,
-      stateDefKeys: stateDef ? Object.keys(stateDef) : [],
-      stateDefValue: stateDef,
-      actorId: machine.actor.id 
-    });
     if (!actions) {
-      console.log('[StateEngine] No actions found', { stateName, type, stateDef, fullStateDef: JSON.stringify(stateDef, null, 2) });
       return;
     }
     if (actions.tool) {
       const result = await this._invokeTool(machine, actions.tool, actions.payload);
       if (result) machine.lastToolResult = result;
     } else if (Array.isArray(actions)) {
+      // ARCHITECTURE: Preserve original eventPayload for SUCCESS events so $$id references work
+      // Flow: co-value (inbox) -> $store (state machine) -> actions
+      const originalEventPayload = machine.eventPayload || {};
       await this._executeActions(machine, actions, machine.eventPayload);
       if (type === 'entry' && stateDef.on?.SUCCESS) {
-        await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', {});
+        // Include original event payload AND tool result in SUCCESS so $$id and $$result references work
+        const successPayload = {
+          result: machine.lastToolResult || null,
+          ...originalEventPayload
+        };
+        await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', successPayload);
       }
     } else if (typeof actions === 'object' && actions !== null) {
       // Handle single action object (e.g., { mapData: {...} })
+      // ARCHITECTURE: Preserve original eventPayload for SUCCESS events so $$id references work
+      const originalEventPayload = machine.eventPayload || {};
       await this._executeActions(machine, actions, machine.eventPayload);
       if (type === 'entry' && stateDef.on?.SUCCESS) {
-        await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', {});
+        // Include original event payload AND tool result in SUCCESS so $$id and $$result references work
+        const successPayload = {
+          result: machine.lastToolResult || null,
+          ...originalEventPayload
+        };
+        await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', successPayload);
       }
     }
   }
 
   async _executeEntry(machine, stateName) { 
-    console.log('[StateEngine] _executeEntry called', { 
-      stateName, 
-      actorId: machine.actor.id,
-      eventPayload: machine.eventPayload,
-      eventPayloadKeys: Object.keys(machine.eventPayload || {})
-    });
     await this._executeStateActions(machine, stateName, 'entry'); 
   }
   async _executeExit(machine, stateName) { await this._executeStateActions(machine, stateName, 'exit'); }
@@ -183,43 +141,24 @@ export class StateEngine {
 
   async _executeActions(machine, actions, payload = {}) {
     if (!Array.isArray(actions)) actions = [actions];
-    console.log('[StateEngine] _executeActions called', { actions, actorId: machine.actor.id });
     
     // Batch all context updates - collect all updateContext actions and write once at the end
     const contextUpdates = {};
     
     for (const action of actions) {
-      console.log('[StateEngine] Processing action', { action, hasMapData: !!action?.mapData });
       if (typeof action === 'string') {
         await this._executeNamedAction(machine, action, payload);
       } else if (action?.mapData) {
         await this._executeMapData(machine, action.mapData, payload);
       } else if (action?.updateContext) {
-        console.log('[StateEngine] Evaluating updateContext', { 
-          updateContext: action.updateContext, 
-          payload, 
-          actorId: machine.actor.id 
-        });
         const updates = await this._evaluatePayload(action.updateContext, machine.actor.context, payload, machine.lastToolResult);
-        console.log('[StateEngine] Evaluated updateContext result', { 
-          updates, 
-          actorId: machine.actor.id,
-          updateKeys: Object.keys(updates || {}),
-          updateValues: Object.entries(updates || {}).map(([key, value]) => ({
-            key,
-            value,
-            type: typeof value,
-            isPrimitive: value === null || (typeof value !== 'object' && typeof value !== 'function'),
-            isString: typeof value === 'string',
-            isBoolean: typeof value === 'boolean'
-          }))
-        });
         // Collect updates in batch instead of writing immediately
         Object.assign(contextUpdates, this._sanitizeUpdates(updates, machine.lastToolResult || {}));
       } else if (action?.tool) {
         const result = await this._invokeTool(machine, action.tool, action.payload, false);
+        // CRITICAL: Store tool result so it's available in SUCCESS event payload
+        if (result) machine.lastToolResult = result;
         if (action.onSuccess?.updateContext && result) {
-          machine.lastToolResult = result;
           const updates = await this._evaluatePayload(action.onSuccess.updateContext, machine.actor.context, machine.eventPayload, result);
           // Collect updates in batch instead of writing immediately
           Object.assign(contextUpdates, this._sanitizeUpdates(updates, result || {}));
@@ -241,8 +180,6 @@ export class StateEngine {
    * @param {Object} payload - Event payload for expression evaluation
    */
   async _executeMapData(machine, mapData, payload = {}) {
-    console.log('[StateEngine] _executeMapData called', { mapData, actorId: machine.actor.id });
-    
     if (!this.dbEngine) {
       console.error('[StateEngine] Cannot execute mapData: dbEngine not available');
       return;
@@ -255,7 +192,6 @@ export class StateEngine {
 
     // Process each context key mapping
     for (const [contextKey, operationConfig] of Object.entries(mapData)) {
-      console.log('[StateEngine] Processing mapData entry', { contextKey, operationConfig });
       if (!contextKey || typeof contextKey !== 'string') {
         console.error('[StateEngine] mapData context keys must be strings', { contextKey, operationConfig });
         continue;
@@ -304,9 +240,7 @@ export class StateEngine {
 
       // Execute operation via operations engine
       try {
-        console.log(`[StateEngine] Executing ${op} operation for context key ${contextKey}`, { op, params });
         const result = await this.dbEngine.execute({ op, ...params });
-        console.log(`[StateEngine] Operation result for ${contextKey}`, { result, isReactiveStore: result && typeof result.subscribe === 'function' });
 
         // mapData operations are read-only (mutations belong in tool calls)
         if (op === 'read') {
@@ -339,11 +273,19 @@ export class StateEngine {
 
   async _invokeTool(machine, toolName, payload = {}, autoTransition = true) {
     try {
+      // ARCHITECTURE: Preserve original eventPayload by including it in SUCCESS event payload
+      // This ensures $$id and other references work correctly without in-memory hacks
+      // Flow: co-value (inbox) -> $store (state machine) -> actions
+      const originalEventPayload = machine.eventPayload || {};
       const evaluatedPayload = await this._evaluatePayload(payload, machine.actor.context, machine.eventPayload || {}, machine.lastToolResult);
       const result = await this.toolEngine.execute(toolName, machine.actor, evaluatedPayload);
       if (autoTransition) {
         const stateDef = machine.definition.states[machine.currentState];
-        if (stateDef.on?.SUCCESS) await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', { result });
+        // Include original event payload in SUCCESS event so $$id references work
+        await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', { 
+          result,
+          ...originalEventPayload 
+        });
       }
       return result;
     } catch (error) {
@@ -356,15 +298,7 @@ export class StateEngine {
 
   async _evaluatePayload(payload, context, eventPayload = {}, lastToolResult = null) {
     const data = { context, item: eventPayload || {}, result: lastToolResult || null };
-    console.log('[StateEngine] _evaluatePayload called', { 
-      payload, 
-      eventPayload, 
-      data,
-      hasViewMode: !!eventPayload?.viewMode,
-      viewModeValue: eventPayload?.viewMode
-    });
     const result = await resolveExpressions(payload, this.evaluator, data);
-    console.log('[StateEngine] _evaluatePayload result', { result });
     return result;
   }
 
