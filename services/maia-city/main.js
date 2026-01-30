@@ -406,7 +406,7 @@ function renderUnsupportedBrowser(message) {
 }
 
 /**
- * Handle seed button click - seed database with schemas and configs
+ * Handle seed button click - reseed database (idempotent: preserves schemata, recreates configs/data)
  */
 async function handleSeed() {
 	if (!maia || !maia.id) {
@@ -415,7 +415,7 @@ async function handleSeed() {
 	}
 	
 	try {
-		showToast("🌱 Seeding database...", 'info', 2000);
+		showToast("🌱 Reseeding database (preserving schemata)...", 'info', 2000);
 		
 		// Get node and account from maia
 		const { node, maiaId: account } = maia.id;
@@ -440,7 +440,7 @@ async function handleSeed() {
 		// Re-render
 		renderAppInternal();
 		
-		showToast("✅ Database seeded successfully!", 'success', 3000);
+		showToast("✅ Database reseeded successfully!", 'success', 3000);
 	} catch (error) {
 		console.error("Seeding failed:", error);
 		showToast(`Seeding failed: ${error.message}`, 'error', 5000);

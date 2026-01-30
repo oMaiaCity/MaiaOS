@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-01-29T23:27:04.234Z
+**Auto-generated:** 2026-01-30T12:38:33.988Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -5964,7 +5964,12 @@ const updated = await maia.db({
 
 ### `seed` - Seed Database (Dev Only)
 
-Flush and seed the database with initial data (development only).
+Reseed the database with initial data. **Idempotent** - can be called multiple times safely.
+
+**Behavior:**
+- **First seed**: Creates all schemata, configs, and data from scratch
+- **Reseed**: Preserves schemata (updates if definitions changed), deletes and recreates all configs and data
+- **Idempotent**: Safe to call multiple times - schemata co-ids remain stable across reseeds
 
 ```javascript
 await maia.db({
@@ -5993,7 +5998,12 @@ await maia.db({
 **Returns:**
 - `true` when seeding completes
 
-**Note:** This operation clears existing data. Use only in development!
+**Idempotent Seeding:**
+- **Schemata**: Checked against `account.os.schematas` registry - if exists, updated in-place (preserves co-id); if not, created new
+- **Configs & Data**: Always deleted and recreated (ensures clean state)
+- **Schema Index Colists**: Automatically managed - deleted co-values are removed from indexes, new co-values are added to indexes
+
+**Note:** Use only in development! Reseeding preserves schemata but recreates all configs and data.
 
 ## Tool Invocation Pattern
 

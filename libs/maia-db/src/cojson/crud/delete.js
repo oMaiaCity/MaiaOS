@@ -81,12 +81,12 @@ export async function deleteRecord(backend, schema, id) {
     }
     deletionSuccessful = true;
   } else if (rawType === 'costream') {
-    // CoStream: Append-only, cannot delete items
-    // Mark as deleted by clearing if possible, or log warning
-    // Note: CoStreams are immutable append-only logs, so we can't delete items
-    // The index removal above is sufficient - the stream itself remains but is no longer indexed
-    console.warn(`[CoJSONBackend] CoStream ${id.substring(0, 12)}... is append-only. Removed from index, but items cannot be deleted.`);
-    deletionSuccessful = true; // Consider it "deleted" since it's removed from index
+    // CoStream: Append-only immutable logs
+    // Note: CoStream items cannot be deleted (they're append-only), but the CoStream co-value itself
+    // is "deleted" by removing it from schema indexes (done in Step 1 above)
+    // This effectively hides the stream from queries while preserving the immutable log
+    // No content clearing needed - CoStreams don't have clearable properties like CoMaps/CoLists
+    deletionSuccessful = true; // Successfully "deleted" (removed from index in Step 1)
   } else if (rawType === 'coplaintext' && content.delete) {
     // CoPlainText: Clear all text content
     // CoPlainText has delete method for characters, but we need to clear all

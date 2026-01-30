@@ -909,6 +909,56 @@ export async function reconcileIndexes(backend, options = {}) {
 }
 
 /**
+ * Get schema index colist for removal (doesn't check indexing property)
+ * Used when removing co-values from indexes - we need to remove even if indexing is currently disabled
+ * This is different from ensureSchemaIndexColist which only returns colists for schemas with indexing: true
+ * @param {Object} backend - Backend instance
+ * @param {string} schemaCoId - Schema co-id (e.g., "co_z123...")
+ * @returns {Promise<RawCoList|null>} Schema index colist or null if not found
+ */
+async function getSchemaIndexColistForRemoval(backend, schemaCoId) {
+  if (!schemaCoId || !schemaCoId.startsWith('co_z')) {
+    return null;
+  }
+
+  if (!backend.account) {
+    return null;
+  }
+
+  // Get account.os CoMap using ensureOsCoMap helper
+  const container = await ensureOsCoMap(backend);
+  if (!container) {
+    return null;
+  }
+
+  // Get index colist ID from account.os (keyed by schema co-id)
+  const indexColistId = container.get(schemaCoId);
+  if (!indexColistId || typeof indexColistId !== 'string' || !indexColistId.startsWith('co_')) {
+    return null;
+  }
+
+  // Load index colist
+  const indexColistCore = await ensureCoValueLoaded(backend, indexColistId, {
+    waitForAvailable: true,
+    timeoutMs: 2000
+  });
+
+  if (!indexColistCore || !backend.isAvailable(indexColistCore)) {
+    return null;
+  }
+
+  const indexColistContent = backend.getCurrentContent(indexColistCore);
+  if (indexColistContent && typeof indexColistContent.toJSON === 'function' && typeof indexColistContent.delete === 'function') {
+    const contentType = indexColistContent.cotype || indexColistContent.type;
+    if (contentType === 'colist') {
+      return indexColistContent;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Remove a co-value from its schema's index colist or from unknown colist
  * @param {Object} backend - Backend instance
  * @param {string} coId - Co-value co-id to remove
@@ -933,8 +983,9 @@ export async function removeFromIndex(backend, coId, schemaCoId = null) {
 
   // Remove from schema index if schema exists
   if (schemaCoId && typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
-    // Get schema index colist (in account.os, keyed by schema co-id)
-    const indexColist = await ensureSchemaIndexColist(backend, schemaCoId);
+    // Get schema index colist for removal (doesn't check indexing property)
+    // We need to remove co-values even if indexing is currently disabled
+    const indexColist = await getSchemaIndexColistForRemoval(backend, schemaCoId);
     
     // Remove co-value co-id from index colist
     if (indexColist && typeof indexColist.toJSON === 'function' && typeof indexColist.delete === 'function') {

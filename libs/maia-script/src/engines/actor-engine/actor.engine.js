@@ -466,13 +466,17 @@ export class ActorEngine {
         // Set up subscription for state updates (direct subscription, same pattern as view/context/style)
         // Store directly in actor._subscriptions since actor already exists
         if (!actor._subscriptions) actor._subscriptions = [];
+        // Capture actor.id in a local variable to avoid closure/TDZ issues
+        const actorId = actor.id;
         const unsubscribeState = stateStore.subscribe(async (updatedStateDef) => {
-          const actor = this.actors.get(actor.id);
-          if (actor && this.stateEngine) {
+          // Use captured actorId instead of accessing actor.id from closure
+          // This prevents "Cannot access 'actor' before initialization" errors during cleanup
+          const currentActor = this.actors.get(actorId);
+          if (currentActor && this.stateEngine) {
             try {
-              if (actor.machine) this.stateEngine.destroyMachine(actor.machine.id);
-              actor.machine = await this.stateEngine.createMachine(updatedStateDef, actor);
-              if (actor._initialRenderComplete) this._scheduleRerender(actor.id);
+              if (currentActor.machine) this.stateEngine.destroyMachine(currentActor.machine.id);
+              currentActor.machine = await this.stateEngine.createMachine(updatedStateDef, currentActor);
+              if (currentActor._initialRenderComplete) this._scheduleRerender(actorId);
             } catch (error) {
               console.error(`[ActorEngine] Failed to update state machine:`, error);
             }
