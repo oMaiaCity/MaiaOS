@@ -2,6 +2,8 @@
  * Registry - Central plugin system for MaiaScript module extensions
  */
 
+import { getTool } from '@MaiaOS/tools';
+
 export class Registry {
   constructor() {
     this.modules = new Map(); // moduleName → module instance
@@ -119,29 +121,61 @@ export class Registry {
 
   /**
    * Query module for configuration/data
-   * Generic method for modules to expose queryable data
    * @param {string} moduleName - Module name
-   * @param {string} query - Query string (e.g., 'dragConfig', 'allowedTags')
+   * @param {string} query - Query string
    * @returns {any} Query result or null
    */
   query(moduleName, query) {
     const module = this.getModule(moduleName);
-    if (!module) {
-      console.warn(`[Registry] Module "${moduleName}" not found for query: ${query}`);
-      return null;
-    }
-
-    // Module can implement a query method
-    if (typeof module.query === 'function') {
-      return module.query(query);
+    if (!module) return null;
+    if (typeof module.query === 'function') return module.query(query);
+    if (module.config && query in module.config) return module.config[query];
+    return null;
   }
 
-    // Or expose config directly
-    if (module.config && query in module.config) {
-      return module.config[query];
+  /**
+   * Get tool engine from registry
+   * @param {string} moduleName - Module name for error messages
+   * @returns {Object} ToolEngine instance
+   */
+  _getToolEngine(moduleName) {
+    const toolEngine = this._toolEngine;
+    if (!toolEngine) {
+      throw new Error(`[${moduleName}] ToolEngine not available in registry`);
     }
+    return toolEngine;
+  }
 
-    console.warn(`[Registry] Module "${moduleName}" does not support query: ${query}`);
-    return null;
+  /**
+   * Register tools from tools registry
+   * @param {string} moduleName - Module name
+   * @param {Array<string>} toolNames - Array of tool names
+   * @param {string} namespace - Namespace prefix (e.g., '@core')
+   * @param {Object} options - Options (silent, etc.)
+   * @returns {Promise<Array<string>>} Array of registered tool names
+   */
+  async _registerToolsFromRegistry(moduleName, toolNames, namespace, options = {}) {
+    const { silent = false } = options;
+    const toolEngine = this._getToolEngine(moduleName);
+    const registeredTools = [];
+    
+    for (const toolName of toolNames) {
+      try {
+        const tool = getTool(`${moduleName}/${toolName}`);
+        if (tool) {
+          await toolEngine.registerTool(`${moduleName}/${toolName}`, `${namespace}/${toolName}`, {
+            definition: tool.definition,
+            function: tool.function
+          });
+          registeredTools.push(`${namespace}/${toolName}`);
+        }
+      } catch (error) {
+        if (!silent) {
+          console.error(`[${moduleName}] Failed to register ${namespace}/${toolName}:`, error.message);
+        }
+      }
+    }
+    
+    return registeredTools;
   }
 }

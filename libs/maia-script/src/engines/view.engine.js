@@ -1,8 +1,23 @@
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
-import { sanitizeAttribute, containsDangerousHTML } from '../utils/html-sanitizer.js';
 import { extractDOMValues } from '@MaiaOS/schemata/payload-resolver.js';
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
-import { getContextValue } from '../utils/context-helpers.js';
+import { getContextValue } from '../utils/utils.js';
+
+function sanitizeAttribute(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+}
+
+function containsDangerousHTML(str) {
+  if (typeof str !== 'string') return false;
+  return [/<script/i, /javascript:/i, /on\w+\s*=/i, /<iframe/i, /<object/i, /<embed/i, /<link/i, /<meta/i, /<style/i]
+    .some(pattern => pattern.test(str));
+}
 
 export class ViewEngine {
   constructor(evaluator, actorEngine, moduleRegistry) {
@@ -37,41 +52,63 @@ export class ViewEngine {
   }
 
   async render(viewDef, context, shadowRoot, styleSheets, actorId) {
-    // Detect ReactiveStore objects in context and subscribe for reactivity
-    if (!this.actorStoreSubscriptions) {
-      this.actorStoreSubscriptions = new Map(); // actorId -> Map<key, unsubscribe>
+    // CLEAN ARCHITECTURE: Subscribe ONCE to context ReactiveStore
+    // Context is always ReactiveStore - when it updates, rerender automatically
+    if (!this.actorContextSubscriptions) {
+      this.actorContextSubscriptions = new Map(); // actorId -> unsubscribe
     }
     
-    if (!this.actorStoreSubscriptions.has(actorId)) {
-      this.actorStoreSubscriptions.set(actorId, new Map());
+    // Subscribe to context ReactiveStore if not already subscribed
+    if (!this.actorContextSubscriptions.has(actorId)) {
+      const unsubscribe = context.subscribe(() => {
+        // Trigger rerender when context updates
+        if (this.actorEngine) {
+          this.actorEngine._scheduleRerender(actorId);
+        }
+      });
+      this.actorContextSubscriptions.set(actorId, unsubscribe);
     }
     
-    const storeSubscriptions = this.actorStoreSubscriptions.get(actorId);
+    // CLEAN ARCHITECTURE: Subscribe to query stores marked in context.@stores
+    // Query stores are stored in actor._queryStores and marked in context.@stores
+    if (!this.actorQueryStoreSubscriptions) {
+      this.actorQueryStoreSubscriptions = new Map(); // actorId -> Map<key, unsubscribe>
+    }
     
-    // Clean up old subscriptions for keys that no longer exist
+    if (!this.actorQueryStoreSubscriptions.has(actorId)) {
+      this.actorQueryStoreSubscriptions.set(actorId, new Map());
+    }
+    
+    const queryStoreSubscriptions = this.actorQueryStoreSubscriptions.get(actorId);
+    const actor = this.actorEngine?.getActor(actorId);
+    const contextValue = context.value || {};
+    const storesMarker = contextValue['@stores'] || {};
+    
+    // Subscribe to query stores marked in context.@stores
     const currentStoreKeys = new Set();
-    for (const [key, value] of Object.entries(context || {})) {
-      if (value instanceof ReactiveStore) {
-        currentStoreKeys.add(key);
+    for (const [storeKey] of Object.entries(storesMarker)) {
+      if (actor?._queryStores?.[storeKey] instanceof ReactiveStore) {
+        currentStoreKeys.add(storeKey);
         
         // Subscribe if not already subscribed
-        if (!storeSubscriptions.has(key)) {
-          const unsubscribe = value.subscribe(() => {
-            // Trigger rerender when store updates
+        if (!queryStoreSubscriptions.has(storeKey)) {
+          const store = actor._queryStores[storeKey];
+          const unsubscribe = store.subscribe(() => {
+            // Trigger rerender when query store updates
             if (this.actorEngine) {
               this.actorEngine._scheduleRerender(actorId);
             }
           });
-          storeSubscriptions.set(key, unsubscribe);
+          queryStoreSubscriptions.set(storeKey, unsubscribe);
         }
       }
     }
     
-    // Unsubscribe from stores that are no longer in context
-    for (const [key, unsubscribe] of storeSubscriptions.entries()) {
-      if (!currentStoreKeys.has(key)) {
+    // Unsubscribe from stores that are no longer in context.@stores
+    for (const [storeKey, unsubscribe] of queryStoreSubscriptions.entries()) {
+      if (!currentStoreKeys.has(storeKey)) {
         unsubscribe();
-        storeSubscriptions.delete(key);
+        queryStoreSubscriptions.delete(storeKey);
       }
     }
     
@@ -89,19 +126,9 @@ export class ViewEngine {
     // Store actor ID for event handling
     this.currentActorId = actorId;
     
-    // Extract view content from wrapper (new schema structure: { content: { ... } })
-    // Support both old format (viewDef is the node directly) and new format (viewDef.content is the node)
     const viewNode = viewDef.content || viewDef;
-    
-    // CRITICAL: Always use the context passed in (reactive updates)
-    // Extract ReactiveStore value if needed - evaluator handles ReactiveStore in expressions,
-    // but for direct property access (like in _renderSlot), we need plain object
-    let contextForRender = context;
-    if (context instanceof ReactiveStore) {
-      // Get actor to merge query stores if available
-      const actor = this.actorEngine?.getActor(actorId);
-      contextForRender = getContextValue(context, actor);
-    }
+    // CLEAN ARCHITECTURE: Context is always ReactiveStore
+    const contextForRender = getContextValue(context, this.actorEngine?.getActor(actorId));
     const element = await this.renderNode(viewNode, { context: contextForRender }, actorId);
     
     if (element) {
@@ -176,27 +203,13 @@ export class ViewEngine {
     if (node.value !== undefined) {
       const resolvedValue = await this.evaluator.evaluate(node.value, data);
       if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-        // CLEAN ARCHITECTURE: State machine is single source of truth
-        // Views are purely reactive - always sync with context (state machine controls context)
-        // No defensive logic - trust state machine updates completely
         const newValue = resolvedValue || '';
-        
-        if (element.tagName === 'INPUT') {
-          element.value = newValue;
-        } else {
-          element.textContent = newValue;
-        }
-        
-        // Add stable unique identifier for focus restoration
-        // Use a counter per actor to ensure same input gets same ID across re-renders
-        if (!this.actorInputCounters.has(actorId)) {
-          this.actorInputCounters.set(actorId, 0);
-        }
+        if (element.tagName === 'INPUT') element.value = newValue;
+        else element.textContent = newValue;
+        if (!this.actorInputCounters.has(actorId)) this.actorInputCounters.set(actorId, 0);
         const inputIndex = this.actorInputCounters.get(actorId);
         this.actorInputCounters.set(actorId, inputIndex + 1);
-        
-        const inputId = `${actorId}_input_${inputIndex}`;
-        element.setAttribute('data-actor-input', inputId);
+        element.setAttribute('data-actor-input', `${actorId}_input_${inputIndex}`);
       }
     }
 
@@ -278,41 +291,30 @@ export class ViewEngine {
 
   async _renderSlot(node, data, wrapperElement, actorId) {
     const slotKey = node.$slot;
-    
     if (!slotKey || !slotKey.startsWith('$')) {
       console.warn(`[ViewEngine] Slot key must start with $: ${slotKey}`);
       return;
     }
-    
     const contextKey = slotKey.slice(1);
     
-    // Handle ReactiveStore context - extract value if needed
-    let context = data.context;
-    if (context instanceof ReactiveStore) {
-      context = context.value || {};
-    }
+    // CLEAN ARCHITECTURE: Context is always ReactiveStore
+    const contextValue = getContextValue(data.context, this.actorEngine?.getActor(actorId));
+    const slotValue = contextValue[contextKey];
     
-    const contextValue = context[contextKey];
-    
-    if (!contextValue) {
+    if (!slotValue) {
       console.warn(`[ViewEngine] No context value for slot key: ${contextKey}`, {
-        availableKeys: Object.keys(context || {}),
-        contextType: data.context instanceof ReactiveStore ? 'ReactiveStore' : typeof data.context
+        availableKeys: Object.keys(contextValue || {}),
+        contextType: 'ReactiveStore'
       });
       return;
     }
     
     let namekey;
-    if (typeof contextValue === 'string' && contextValue.startsWith('@')) {
-      namekey = contextValue.slice(1);
+    if (typeof slotValue === 'string' && slotValue.startsWith('@')) {
+      namekey = slotValue.slice(1);
       
-      // Handle ReactiveStore context - extract value if needed
-      let contextForActors = data.context;
-      if (contextForActors instanceof ReactiveStore) {
-        contextForActors = contextForActors.value || {};
-      }
-      
-      const actorsMap = contextForActors["@actors"];
+      // CLEAN ARCHITECTURE: Context is always ReactiveStore
+      const actorsMap = contextValue["@actors"];
       if (actorsMap && !actorsMap[namekey]) {
         console.warn(`[ViewEngine] Namekey "${namekey}" not found in context["@actors"]`, {
           actorId,
@@ -449,7 +451,9 @@ export class ViewEngine {
       if (actor && actor.machine) {
         payload = extractDOMValues(payload, element);
         
-        const { getContextValue } = await import('../utils/context-helpers.js');
+        // CLEAN ARCHITECTURE: Read CURRENT context from actor.context.value (not stale snapshot)
+        // actor.context IS the ReactiveStore, so read store.value for current data
+        // Merge with query stores (mapData) for complete context
         const currentContext = getContextValue(actor.context, actor);
         
         const expressionData = {
@@ -457,6 +461,25 @@ export class ViewEngine {
           item: data.item || {}
         };
         payload = await resolveExpressions(payload, this.evaluator, expressionData);
+        
+        // CLEAN ARCHITECTURE: For UPDATE_INPUT on blur, only send if DOM value differs from CURRENT context
+        // This prevents repopulation after state machine explicitly clears the field
+        // State machine is single source of truth - if context already matches DOM, no update needed
+        if (eventName === 'UPDATE_INPUT' && e.type === 'blur' && payload && typeof payload === 'object') {
+          // Check if all payload fields match their corresponding CURRENT context values
+          let allMatch = true;
+          for (const [key, value] of Object.entries(payload)) {
+            const contextValue = currentContext[key];
+            if (value !== contextValue) {
+              allMatch = false;
+              break;
+            }
+          }
+          // If all values match, don't send UPDATE_INPUT (prevents repopulation after explicit clears)
+          if (allMatch) {
+            return; // No change, don't send event
+          }
+        }
         
         await this.actorEngine.sendInternalEvent(actorId, eventName, payload);
       } else {
@@ -472,14 +495,24 @@ export class ViewEngine {
   }
 
   cleanupActor(actorId) {
-    if (this.actorStoreSubscriptions?.has(actorId)) {
-      const storeSubscriptions = this.actorStoreSubscriptions.get(actorId);
-      for (const unsubscribe of storeSubscriptions.values()) {
+    // Clean up context subscription
+    if (this.actorContextSubscriptions?.has(actorId)) {
+      const unsubscribe = this.actorContextSubscriptions.get(actorId);
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+      this.actorContextSubscriptions.delete(actorId);
+    }
+    
+    // Clean up query store subscriptions
+    if (this.actorQueryStoreSubscriptions?.has(actorId)) {
+      const queryStoreSubscriptions = this.actorQueryStoreSubscriptions.get(actorId);
+      for (const unsubscribe of queryStoreSubscriptions.values()) {
         if (typeof unsubscribe === 'function') {
           unsubscribe();
         }
       }
-      this.actorStoreSubscriptions.delete(actorId);
+      this.actorQueryStoreSubscriptions.delete(actorId);
     }
   }
 }

@@ -1,7 +1,6 @@
-import { getSchemaCoIdSafe } from '../utils/subscription-helpers.js';
+import { getSchemaCoIdSafe, getContextValue } from '../utils/utils.js';
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
-import { getContextValue } from '../utils/context-helpers.js';
 
 /**
  * StateEngine - XState-like State Machine Interpreter
@@ -309,20 +308,28 @@ export class StateEngine {
         // mapData operations are read-only (mutations belong in tool calls)
         if (op === 'read') {
           // Read operations return ReactiveStore
-          // CLEAN ARCHITECTURE: Store query stores separately from context CoValue
-          // Query stores are computed on-the-fly and stored on actor object
-          // They're merged with context.value when views/evaluators read context
+          // CLEAN ARCHITECTURE: Store query stores in actor._queryStores AND mark in context CoValue
+          // Query stores are ReactiveStore objects (can't be stored in CoValues directly)
+          // Store them in actor._queryStores and mark their existence in context.@stores
           const store = result;
-          if (machine.actor.context instanceof ReactiveStore) {
-            // Store query store on actor object (separate from context CoValue)
-            // This ensures query stores persist across CoValue updates
-            if (!machine.actor._queryStores) {
-              machine.actor._queryStores = {};
-            }
-            machine.actor._queryStores[contextKey] = store;
-          } else {
-            // Legacy: context is plain object
-            machine.actor.context[contextKey] = store;
+          // CLEAN ARCHITECTURE: Context is always ReactiveStore
+          // Store query store on actor object (for direct access)
+          if (!machine.actor._queryStores) {
+            machine.actor._queryStores = {};
+          }
+          machine.actor._queryStores[contextKey] = store;
+          
+          // Mark query store existence in context CoValue's @stores field
+          // This allows ViewEngine to discover and subscribe to query stores reactively
+          const currentStores = machine.actor.context.value?.['@stores'] || {};
+          if (!currentStores[contextKey]) {
+            // Update context CoValue to mark this query store exists
+            await machine.actor.actorEngine.updateContextCoValue(machine.actor, {
+              '@stores': {
+                ...currentStores,
+                [contextKey]: true // Marker indicating this query store exists
+              }
+            });
           }
         } else {
           // mapData should only contain read operations

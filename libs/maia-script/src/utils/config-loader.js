@@ -1,6 +1,14 @@
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
-import { validateCoId } from './co-id-validator.js';
+
+function validateCoId(coId, context = 'item') {
+  if (!coId || typeof coId !== 'string') {
+    throw new Error(`[${context}] Co-id is required and must be a string, got: ${coId}`);
+  }
+  if (!coId.startsWith('co_z')) {
+    throw new Error(`[${context}] Co-id must start with 'co_z', got: ${coId}`);
+  }
+}
 
 function stripMetadataForValidation(config) {
   if (!config || typeof config !== 'object') return config;
@@ -61,32 +69,24 @@ function convertPropertiesArrayToPlainObject(config, requireSchema = true) {
   
   if (config.type === 'colist' || config.type === 'costream') {
     const result = { id: config.id, type: config.type, items: config.items || [] };
-    if (config.$schema) result.$schema = config.$schema;
-    else if (config.schema) result.$schema = config.schema;
-    else throw new Error(`[convertPropertiesArrayToPlainObject] CoList/CoStream config must have $schema in headerMeta. Config keys: ${JSON.stringify(Object.keys(config))}`);
+    result.$schema = config.$schema || config.schema;
+    if (!result.$schema) throw new Error(`[convertPropertiesArrayToPlainObject] CoList/CoStream config must have $schema. Config keys: ${JSON.stringify(Object.keys(config))}`);
     return result;
   }
   
   if (Array.isArray(config.properties)) {
-    const plainConfig = {};
-    if (config.id) plainConfig.id = config.id;
-    if (config.$schema) plainConfig.$schema = config.$schema;
-    else throw new Error(`[convertPropertiesArrayToPlainObject] Config must have $schema in headerMeta. Got: ${JSON.stringify(Object.keys(config))}`);
-    if (config.type) plainConfig.type = config.type;
-    if (config.headerMeta) plainConfig.headerMeta = config.headerMeta;
+    const plainConfig = { id: config.id, type: config.type, headerMeta: config.headerMeta };
+    plainConfig.$schema = config.$schema;
+    if (!plainConfig.$schema) throw new Error(`[convertPropertiesArrayToPlainObject] Config must have $schema. Got: ${JSON.stringify(Object.keys(config))}`);
     
     for (const prop of config.properties) {
-      if (prop && prop.key !== undefined) {
+      if (prop?.key !== undefined) {
         let value = prop.value;
         if (value && typeof value === 'object' && !Array.isArray(value)) {
           if (value.get && typeof value.get === 'function' && value.keys && typeof value.keys === 'function') {
             const nestedObj = {};
-            try {
-              for (const key of value.keys()) {
-                nestedObj[key] = convertPropertiesArrayToPlainObject({ properties: [{ key, value: value.get(key) }] }, false);
-              }
-            } catch (e) {
-              console.warn(`[convertPropertiesArrayToPlainObject] Error converting CoMap for key ${prop.key}:`, e);
+            for (const key of value.keys()) {
+              nestedObj[key] = convertPropertiesArrayToPlainObject({ properties: [{ key, value: value.get(key) }] }, false);
             }
             value = nestedObj;
           } else if (Array.isArray(value.properties)) {
@@ -97,11 +97,13 @@ function convertPropertiesArrayToPlainObject(config, requireSchema = true) {
         }
         if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
           try {
-            value = JSON.parse(value);
-            if (value && typeof value === 'object' && !Array.isArray(value)) {
-              value = convertPropertiesArrayToPlainObject(value, false);
+            const parsed = JSON.parse(value);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+              value = convertPropertiesArrayToPlainObject(parsed, false);
+            } else {
+              value = parsed;
             }
-          } catch (e) {}
+          } catch {}
         }
         plainConfig[prop.key] = value;
       }
@@ -129,9 +131,9 @@ function convertPropertiesArrayToPlainObject(config, requireSchema = true) {
   }
   
   const isCoValue = config.id || config.type || config.$schema || config.headerMeta;
-  if (isCoValue && requireSchema) {
-    if (config.$schema && !result.$schema) result.$schema = config.$schema;
-    else if (!result.$schema) throw new Error(`[convertPropertiesArrayToPlainObject] Config must have $schema in headerMeta. Config keys: ${JSON.stringify(Object.keys(config))}`);
+  if (isCoValue && requireSchema && !result.$schema) {
+    result.$schema = config.$schema;
+    if (!result.$schema) throw new Error(`[convertPropertiesArrayToPlainObject] Config must have $schema. Config keys: ${JSON.stringify(Object.keys(config))}`);
   } else if (config.$schema && !result.$schema) {
     result.$schema = config.$schema;
   }

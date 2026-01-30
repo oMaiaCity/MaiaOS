@@ -1,23 +1,17 @@
-import { getToolEngine, registerToolsFromRegistry, registerModuleConfig } from '../utils/module-registration.js';
-
-export class CoreModule {
-  static async register(registry) {
-    const toolEngine = getToolEngine(registry, 'CoreModule');
-    const toolNames = ['noop', 'preventDefault', 'publishMessage', 'focus', 'autoFocus', 'restoreFocus'];
-    await registerToolsFromRegistry(registry, toolEngine, 'core', toolNames, '@core', { silent: true });
-    registerModuleConfig(registry, 'core', CoreModule, {
-      version: '1.0.0',
-      description: 'Core UI tools (view modes, modals, utilities)',
-      namespace: '@core',
-      tools: toolNames.map(t => `@core/${t}`)
-    });
-  }
-
-  static query(query) {
-    return null;
-  }
-}
+export const config = {
+  version: '1.0.0',
+  description: 'Core UI tools (view modes, modals, utilities)',
+  namespace: '@core',
+  tools: ['noop', 'preventDefault', 'publishMessage', 'focus', 'autoFocus', 'restoreFocus']
+};
 
 export async function register(registry) {
-  await CoreModule.register(registry);
+  const toolNames = config.tools;
+  const registeredTools = await registry._registerToolsFromRegistry('core', toolNames, config.namespace, { silent: true });
+  registry.registerModule('core', { config, query: () => null }, {
+    version: config.version,
+    description: config.description,
+    namespace: config.namespace,
+    tools: registeredTools
+  });
 }

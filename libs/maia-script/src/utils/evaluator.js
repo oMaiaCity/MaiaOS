@@ -1,7 +1,12 @@
-import { resolvePath } from './path-resolver.js';
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 import { loadSchemaFromDB } from '@MaiaOS/schemata/schema-loader';
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
+import { getContextValue } from './utils.js';
+
+function resolvePath(obj, path) {
+  if (!obj || !path) return undefined;
+  return path.split('.').reduce((acc, key) => acc?.[key], obj);
+}
 
 /**
  * Evaluator - Minimal DSL evaluator for MaiaScript expressions
@@ -32,19 +37,11 @@ export class Evaluator {
       throw new Error(`[Evaluator] Maximum recursion depth (${this.maxDepth}) exceeded. Expression may be malicious or too complex.`);
     }
     
-    // Validate expression against schema before evaluation (if validation enabled)
-    // Only validate complex expressions (objects), not primitives (they're safe)
-    // NOTE: Expressions are DSL operations (code), not data - validate against hardcoded schema definition
-    // Expressions don't need runtime schema validation from database (they're not CoValues)
     if (this.validateExpressions && depth === 0 && typeof expression === 'object' && expression !== null && !Array.isArray(expression)) {
-      // Only validate at top level to avoid performance issues
-      // Only validate objects (DSL operations), not primitives
-      // Use hardcoded schema definition (expressions are code, not runtime data)
       try {
         const { getSchema } = await import('@MaiaOS/schemata');
         const expressionSchema = getSchema('maia-script-expression');
         if (expressionSchema) {
-          const { validateAgainstSchemaOrThrow } = await import('@MaiaOS/schemata/validation.helper');
           await validateAgainstSchemaOrThrow(expressionSchema, expression, 'maia-script-expression');
         }
       } catch (error) {
@@ -52,10 +49,9 @@ export class Evaluator {
         throw new Error(`[Evaluator] Invalid MaiaScript expression: ${error.message}`);
       }
     }
-    // Primitives pass through (except strings starting with $)
-    if (typeof expression === 'number') return expression;
-    if (typeof expression === 'boolean') return expression;
-    if (expression === null || expression === undefined) return expression;
+    if (typeof expression === 'number' || typeof expression === 'boolean' || expression === null || expression === undefined) {
+      return expression;
+    }
     
     // Handle compact shortcut syntax: $key (context) or $$key (item)
     if (typeof expression === 'string' && expression.startsWith('$')) {
@@ -63,9 +59,6 @@ export class Evaluator {
     }
     
     if (typeof expression !== 'object') return expression;
-
-    // Note: DSL operations are handled directly in this evaluator
-    // Module registry is for tool registration, not DSL operations
 
     // Handle $context operation
     if ('$context' in expression) {
@@ -132,36 +125,25 @@ export class Evaluator {
       return value; // Return as-is if not a string
     }
 
-    // Handle $if operation
     if ('$if' in expression) {
-      // Evaluate condition (supports shortcuts like "$item.done" or DSL operations like "$eq")
       let condition = expression.$if.condition;
       if (typeof condition === 'string' && condition.startsWith('$')) {
         condition = this.evaluateShortcut(condition, data);
       } else {
         condition = await this.evaluate(condition, data, depth + 1);
       }
-      
       return condition 
         ? await this.evaluate(expression.$if.then, data, depth + 1)
         : await this.evaluate(expression.$if.else, data, depth + 1);
     }
 
-    // Handle ternary operator: "condition ? then : else"
     if (typeof expression === 'string' && expression.includes('?') && expression.includes(':')) {
-      const parts = expression.split('?').map(s => s.trim());
-      if (parts.length === 2) {
-        const [conditionStr, rest] = parts;
+      const [conditionStr, rest] = expression.split('?').map(s => s.trim());
+      if (rest) {
         const [thenStr, elseStr] = rest.split(':').map(s => s.trim());
-        
-        // Evaluate condition (supports shortcuts)
-        let condition;
-        if (conditionStr.startsWith('$')) {
-          condition = this.evaluateShortcut(conditionStr, data);
-        } else {
-          condition = await this.evaluate(conditionStr, data, depth + 1);
-        }
-        
+        const condition = conditionStr.startsWith('$') 
+          ? this.evaluateShortcut(conditionStr, data)
+          : await this.evaluate(conditionStr, data, depth + 1);
         return condition ? await this.evaluate(thenStr, data, depth + 1) : await this.evaluate(elseStr, data, depth + 1);
       }
     }
@@ -181,48 +163,20 @@ export class Evaluator {
    * @returns {any} The evaluated result
    */
   evaluateShortcut(shortcut, data) {
-    // $$result → result (special case for tool results)
     if (shortcut.startsWith('$$result')) {
-      const path = shortcut.substring(8); // Remove "$$result"
-      if (path.startsWith('.')) {
-        // $$result.property → result.property
-        return resolvePath(data.result, path.substring(1));
-      } else if (path === '') {
-        // $$result → result (entire object)
-        return data.result;
-      }
-      // Fall through to item resolution if path doesn't start with .
+      const path = shortcut.substring(8);
+      if (path.startsWith('.')) return resolvePath(data.result, path.substring(1));
+      if (path === '') return data.result;
     }
-    
-    // $$ prefix = item (double-dollar for iteration items)
     if (shortcut.startsWith('$$')) {
-      const path = shortcut.substring(2); // Remove $$
-      const result = resolvePath(data.item, path);
-      
-      return result;
+      return resolvePath(data.item, shortcut.substring(2));
     }
-    
-    // $ prefix = context (single-dollar for context)
-    const path = shortcut.substring(1); // Remove $
-    
-    // CLEAN ARCHITECTURE: Handle context as ReactiveStore or plain object
-    // If context is ReactiveStore, read from store.value
-    // Note: Query stores are merged by views/events before passing to evaluator
-    let contextToResolve = data.context;
-    if (data.context instanceof ReactiveStore) {
-      contextToResolve = data.context.value || {};
-    }
-    
-    // Resolve to context (supports dot notation like "$existing.done")
+    const path = shortcut.substring(1);
+    // CLEAN ARCHITECTURE: Context is always ReactiveStore, but getContextValue handles merging query stores
+    const contextToResolve = getContextValue(data.context, data.actor || null);
     const resolved = resolvePath(contextToResolve, path);
-    
-    // Normalize ReactiveStore to its value automatically
-    // This allows views to use $todos directly instead of $todos.value
-    if (resolved instanceof ReactiveStore) {
-      return resolved.value;
-    }
-    
-    return resolved;
+    // Query stores are ReactiveStore objects - unwrap them for evaluation
+    return resolved instanceof ReactiveStore ? resolved.value : resolved;
   }
 
   /**

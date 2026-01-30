@@ -10,16 +10,16 @@
  */
 
 // Export all engines
-export { ActorEngine } from "./engines/actor-engine/actor.engine.js";
-export { ViewEngine } from "./engines/view-engine/view.engine.js";
-export { StyleEngine } from "./engines/style-engine/style.engine.js";
-export { StateEngine } from "./engines/state-engine/state.engine.js";
-export { ToolEngine } from "./engines/tool-engine/tool.engine.js";
-export { MaiaScriptEvaluator } from "./engines/MaiaScriptEvaluator.js";
-export { ModuleRegistry } from "./engines/ModuleRegistry.js";
+export { ActorEngine } from "./engines/actor.engine.js";
+export { ViewEngine } from "./engines/view.engine.js";
+export { StyleEngine } from "./engines/style.engine.js";
+export { StateEngine } from "./engines/state.engine.js";
+export { ToolEngine } from "./engines/tool.engine.js";
+export { Evaluator as MaiaScriptEvaluator } from "./utils/evaluator.js";
+export { Registry as ModuleRegistry } from "./modules/registry.js";
 
 // Export DB Engine (unified database operation engine)
-export { DBEngine } from "./engines/db-engine/db.engine.js";
+export { DBEngine } from "./engines/db.engine.js";
 
 // SubscriptionEngine eliminated - all subscriptions handled via direct read() + ReactiveStore
 
