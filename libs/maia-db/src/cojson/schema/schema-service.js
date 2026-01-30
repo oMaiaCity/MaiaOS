@@ -6,7 +6,33 @@
  */
 
 import { createCoMap } from '../cotypes/coMap.js';
-import { getMetaSchemaCoMapDefinition } from '@MaiaOS/schemata/meta-schema';
+import mergedMetaSchema from '@MaiaOS/schemata/os/meta.schema.json';
+
+/**
+ * Build metaschema definition for seeding
+ * Loads merged meta.schema.json and updates $id/$schema with actual co-id
+ * 
+ * @param {string} metaSchemaCoId - The co-id of the meta schema CoMap (for self-reference)
+ * @returns {Object} Schema CoMap structure with definition property
+ */
+function buildMetaSchemaForSeeding(metaSchemaCoId) {
+  const metaSchemaId = metaSchemaCoId 
+    ? `https://maia.city/${metaSchemaCoId}` 
+    : 'https://json-schema.org/draft/2020-12/schema';
+  
+  // Clone merged meta.schema.json and update $id/$schema with actual co-id
+  // Everything else is already complete in the merged JSON file
+  const fullMetaSchema = {
+    ...mergedMetaSchema,
+    $id: metaSchemaId,
+    $schema: metaSchemaId
+  };
+  
+  // Return structure for CoMap creation (wrapped in definition property)
+  return {
+    definition: fullMetaSchema
+  };
+}
 
 /**
  * Create meta schema CoMap
@@ -20,7 +46,7 @@ export async function createMetaSchemaCoMap(group) {
   }
   
   // Create meta schema with temporary co-id (will be updated after creation)
-  const metaSchemaDef = getMetaSchemaCoMapDefinition('co_zTEMP');
+  const metaSchemaDef = buildMetaSchemaForSeeding('co_zTEMP');
   
   // Create the meta schema CoMap with headerMeta.$schema = "GenesisSchema"
   // SPECIAL: Can't self-reference co-id in read-only headerMeta, so use "GenesisSchema" exception
@@ -32,7 +58,7 @@ export async function createMetaSchemaCoMap(group) {
   
   // Update meta schema with actual co-id for self-reference
   const actualCoId = metaSchemaCoMap.id;
-  const updatedMetaSchemaDef = getMetaSchemaCoMapDefinition(actualCoId);
+  const updatedMetaSchemaDef = buildMetaSchemaForSeeding(actualCoId);
   
   // Update the CoMap with correct self-referencing $schema in definition
   metaSchemaCoMap.set('definition', updatedMetaSchemaDef.definition);

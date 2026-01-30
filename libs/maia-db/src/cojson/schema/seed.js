@@ -24,7 +24,7 @@
 
 import { createCoMap } from '../cotypes/coMap.js';
 import { createCoList } from '../cotypes/coList.js';
-import { getMetaSchemaCoMapDefinition } from '@MaiaOS/schemata/meta-schema';
+import mergedMetaSchema from '@MaiaOS/schemata/os/meta.schema.json';
 import { deleteRecord } from '../crud/delete.js';
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js';
 import { resolveHumanReadableKey, loadSchemaDefinition } from '../schema/resolver.js';
@@ -381,6 +381,32 @@ async function deleteSeededCoValues(account, node, backend) {
 }
 
 /**
+ * Build metaschema definition for seeding
+ * Loads merged meta.schema.json and updates $id/$schema with actual co-id
+ * 
+ * @param {string} metaSchemaCoId - The co-id of the meta schema CoMap (for self-reference)
+ * @returns {Object} Schema CoMap structure with definition property
+ */
+function buildMetaSchemaForSeeding(metaSchemaCoId) {
+  const metaSchemaId = metaSchemaCoId 
+    ? `https://maia.city/${metaSchemaCoId}` 
+    : 'https://json-schema.org/draft/2020-12/schema';
+  
+  // Clone merged meta.schema.json and update $id/$schema with actual co-id
+  // Everything else is already complete in the merged JSON file
+  const fullMetaSchema = {
+    ...mergedMetaSchema,
+    $id: metaSchemaId,
+    $schema: metaSchemaId
+  };
+  
+  // Return structure for CoMap creation (wrapped in definition property)
+  return {
+    definition: fullMetaSchema
+  };
+}
+
+/**
  * Seed CoJSON database with configs, schemas, and data
  * 
  * @param {RawAccount} account - The account (must have universalGroup)
@@ -645,13 +671,13 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     // Create metaschema with "GenesisSchema" exception (can't self-reference co-id in read-only headerMeta)
     const metaSchemaMeta = { $schema: 'GenesisSchema' }; // Special exception for metaschema
     const metaSchemaCoMap = universalGroup.createMap(
-      getMetaSchemaCoMapDefinition('co_zTEMP'), // Will update $id after creation
+      buildMetaSchemaForSeeding('co_zTEMP'), // Will update $id after creation
       metaSchemaMeta
     );
     
     // Update metaschema with direct properties (flattened structure)
     const actualMetaSchemaCoId = metaSchemaCoMap.id;
-    const updatedMetaSchemaDef = getMetaSchemaCoMapDefinition(actualMetaSchemaCoId);
+    const updatedMetaSchemaDef = buildMetaSchemaForSeeding(actualMetaSchemaCoId);
     
     // Extract direct properties (exclude $schema and $id - they go in metadata only)
     const { $schema, $id, ...directProperties } = updatedMetaSchemaDef.definition || updatedMetaSchemaDef;
@@ -665,7 +691,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   } else {
     // Metaschema exists - update it with latest definition
     console.log(`[Seed] Updating existing metaschema (${metaSchemaCoId.substring(0, 12)}...)`);
-    const updatedMetaSchemaDef = getMetaSchemaCoMapDefinition(metaSchemaCoId);
+    const updatedMetaSchemaDef = buildMetaSchemaForSeeding(metaSchemaCoId);
     const { $schema, $id, ...directProperties } = updatedMetaSchemaDef.definition || updatedMetaSchemaDef;
     
     // Get metaschema CoMap and update it
@@ -1648,33 +1674,23 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
   
   // CRITICAL: Storage hook automatically registers ALL schemas when they're created via CRUD API
   // However, metaschema is created directly (not via CRUD API) so it needs manual registration
-  const allMappings = coIdRegistry.getAll();
-  let metaschemaRegistered = false;
+  // All other schemas (@schema/* except @schema/meta) are auto-registered by storage hook
+  // They're created via CRUD API, so the hook fires automatically
+  const metaschemaCoId = coIdRegistry.get('@schema/meta');
   
-  for (const [humanReadableKey, coId] of allMappings) {
-    const isMetaschema = humanReadableKey === '@schema/meta';
-    
-    if (isMetaschema) {
-      // Metaschema is created directly (not via CRUD API), so storage hook won't register it
-      // Manually register it here as a fallback
-      const existingCoId = schematas.get(humanReadableKey);
-      if (!existingCoId) {
-        schematas.set(humanReadableKey, coId);
-        metaschemaRegistered = true;
-        console.log(`[Seed] Manually registered metaschema ${humanReadableKey} → ${coId.substring(0, 12)}... (created directly, not via CRUD API)`);
-      } else if (existingCoId !== coId) {
-        // Different metaschema already registered - don't overwrite
-        console.warn(`[Seed] Metaschema already registered with different co-id: ${existingCoId.substring(0, 12)}... (new: ${coId.substring(0, 12)}...). Skipping.`);
-      } else {
-        console.log(`[Seed] Metaschema ${humanReadableKey} already registered`);
-      }
+  if (metaschemaCoId) {
+    // Metaschema is created directly (not via CRUD API), so storage hook won't register it
+    // Manually register it here as a fallback
+    const existingCoId = schematas.get('@schema/meta');
+    if (!existingCoId) {
+      schematas.set('@schema/meta', metaschemaCoId);
+      console.log(`[Seed] Manually registered metaschema @schema/meta → ${metaschemaCoId.substring(0, 12)}... (created directly, not via CRUD API)`);
+    } else if (existingCoId !== metaschemaCoId) {
+      // Different metaschema already registered - don't overwrite
+      console.warn(`[Seed] Metaschema already registered with different co-id: ${existingCoId.substring(0, 12)}... (new: ${metaschemaCoId.substring(0, 12)}...). Skipping.`);
+    } else {
+      console.log(`[Seed] Metaschema @schema/meta already registered`);
     }
-    // Note: All other schemas (@schema/* except @schema/meta) are auto-registered by storage hook
-    // They're created via CRUD API, so the hook fires automatically
-  }
-  
-  if (metaschemaRegistered) {
-    console.log(`[Seed] Manually registered metaschema in account.os.schematas`);
   }
   
 }

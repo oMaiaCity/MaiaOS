@@ -158,19 +158,39 @@ export function getCoTypeDefs() {
 }
 
 /**
- * Get meta schema definition
- * @param {string} metaSchemaCoId - Optional co-id for self-reference
- * @returns {Object} Meta schema definition
+ * Get meta schema definition from backend (runtime access)
+ * Always reads from CoJSON backend - single source of truth after seeding
+ * 
+ * @param {Object} backend - Backend instance
+ * @returns {Promise<Object>} Meta schema definition
  */
-export function getMetaSchema(metaSchemaCoId = null) {
-  return getMetaSchemaDefinition(metaSchemaCoId);
+export async function getMetaSchemaFromBackend(backend) {
+  if (!backend) {
+    throw new Error('[getMetaSchemaFromBackend] Backend required');
+  }
+  
+  // Import resolver dynamically to avoid circular dependencies
+  const { resolveHumanReadableKey } = await import('../cojson/schema/resolver.js');
+  
+  // Resolve metaschema co-id from registry
+  const metaSchemaCoId = await resolveHumanReadableKey(backend, '@schema/meta');
+  if (!metaSchemaCoId) {
+    throw new Error('[getMetaSchemaFromBackend] Metaschema not found in registry');
+  }
+  
+  // Read metaschema CoMap from backend using universal read() API
+  const metaSchemaStore = await backend.read(null, metaSchemaCoId);
+  if (!metaSchemaStore || metaSchemaStore.value?.error) {
+    throw new Error('[getMetaSchemaFromBackend] Failed to read metaschema from backend');
+  }
+  
+  // Extract definition from CoMap content
+  const metaSchemaCoMap = metaSchemaStore.value;
+  return metaSchemaCoMap.definition || metaSchemaCoMap;
 }
 
 // Re-export schema metadata utilities
 export { createSchemaMeta, isExceptionSchema, validateHeaderMetaSchema, EXCEPTION_SCHEMAS } from './meta.js';
-
-// Re-export meta-schema functions
-export { getMetaSchemaDefinition, getMetaSchemaCoMapDefinition } from '@MaiaOS/schemata/meta-schema';
 
 // Re-export schema loader functions (migrations/seeding only)
 export { loadSchemasFromAccount } from '../cojson/schema/resolver.js';

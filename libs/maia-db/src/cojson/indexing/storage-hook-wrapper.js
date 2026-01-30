@@ -193,23 +193,14 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
           return;
         }
         
-        // CRITICAL: Check if this co-value should be indexed (skips internal co-values like account.os, index colists, etc.)
-        // This prevents infinite loops where indexing writes to account.os, which triggers indexing again
-        const { shouldIndex } = await shouldIndexCoValue(backend, updatedCoValueCore);
-        if (!shouldIndex) {
-          // Internal co-value - skip indexing (prevents infinite loop)
-          return;
-        }
-        
-        // Check if it's a schema co-value (auto-register) or regular co-value (index)
+        // CRITICAL: Check if it's a schema co-value FIRST (before checking if it's internal)
+        // Schemas need to be registered even if they're "internal" (they shouldn't be, but check first)
+        console.log(`[StorageHook] Checking if co-value is schema: ${coId.substring(0, 12)}...`);
         const isSchema = await isSchemaCoValue(backend, updatedCoValueCore);
+        console.log(`[StorageHook] isSchema result for ${coId.substring(0, 12)}...: ${isSchema}`);
         
-        // CRITICAL: Don't await indexing - fire and forget to avoid blocking UI
-        // Indexing is non-critical for immediate correctness (co-value is already stored)
-        // Use setTimeout to defer to next event loop tick, allowing UI to update first
-        // The pendingIndexing check above prevents duplicate indexing even with setTimeout
         if (isSchema) {
-          // Schema co-value - auto-register in account.os.schemata
+          // Schema co-value - auto-register in account.os.schemata (skip indexing check)
           console.log(`[StorageHook] Registering schema co-value: ${coId.substring(0, 12)}...`);
           setTimeout(() => {
             // Double-check pendingIndexing (defensive - should already be set)
@@ -228,30 +219,44 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
                 pendingIndexing.delete(coId);
               });
           }, 0);
-        } else {
-          // Regular co-value - index it (or add to unknown if no schema)
-          // Reduced logging - only log if not already pending (indicates potential issue)
-          if (!pendingIndexing.has(coId)) {
-            console.log(`[StorageHook] Indexing co-value: ${coId.substring(0, 12)}...`);
-          }
-          setTimeout(() => {
-            // Double-check pendingIndexing (defensive - should already be set)
-            if (!pendingIndexing.has(coId)) {
-              // This shouldn't happen - indicates race condition
-              return;
-            }
-            indexCoValue(backend, updatedCoValueCore)
-              .then(() => {
-                // Remove from pending set after indexing completes
-                pendingIndexing.delete(coId);
-              })
-              .catch(err => {
-                console.warn(`[StorageHook] Failed to index co-value ${coId.substring(0, 12)}...:`, err);
-                // Remove from pending set even on error
-                pendingIndexing.delete(coId);
-              });
-          }, 0);
+          return; // Don't proceed to indexing - schemas are registered, not indexed
         }
+        
+        // CRITICAL: Check if this co-value should be indexed (skips internal co-values like account.os, index colists, etc.)
+        // This prevents infinite loops where indexing writes to account.os, which triggers indexing again
+        const { shouldIndex } = await shouldIndexCoValue(backend, updatedCoValueCore);
+        if (!shouldIndex) {
+          // Internal co-value - skip indexing (prevents infinite loop)
+          console.log(`[StorageHook] Skipping internal co-value: ${coId.substring(0, 12)}...`);
+          return;
+        }
+        
+        // CRITICAL: Don't await indexing - fire and forget to avoid blocking UI
+        // Indexing is non-critical for immediate correctness (co-value is already stored)
+        // Use setTimeout to defer to next event loop tick, allowing UI to update first
+        // The pendingIndexing check above prevents duplicate indexing even with setTimeout
+        // Regular co-value - index it (or add to unknown if no schema)
+        // Reduced logging - only log if not already pending (indicates potential issue)
+        if (!pendingIndexing.has(coId)) {
+          console.log(`[StorageHook] Indexing co-value: ${coId.substring(0, 12)}...`);
+        }
+        setTimeout(() => {
+          // Double-check pendingIndexing (defensive - should already be set)
+          if (!pendingIndexing.has(coId)) {
+            // This shouldn't happen - indicates race condition
+            return;
+          }
+          indexCoValue(backend, updatedCoValueCore)
+            .then(() => {
+              // Remove from pending set after indexing completes
+              pendingIndexing.delete(coId);
+            })
+            .catch(err => {
+              console.warn(`[StorageHook] Failed to index co-value ${coId.substring(0, 12)}...:`, err);
+              // Remove from pending set even on error
+              pendingIndexing.delete(coId);
+            });
+        }, 0);
       } catch (error) {
         // Don't fail storage if indexing fails
         console.warn(`[StorageHook] Error in indexing check for co-value ${coId?.substring(0, 12)}...:`, error);

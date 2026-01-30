@@ -46,5 +46,123 @@
       "description": "Whether instances of this schema should be indexed in account.os.{schemaCoId}"
     }
   },
-  "required": ["title", "cotype"]
+  "required": ["title", "cotype"],
+  "$defs": {
+    "comap": {
+      "description": "CoMap - CRDT-based collaborative map/object",
+      "type": "object",
+      "properties": {},
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string",
+            "description": "Standard string value"
+          },
+          {
+            "type": "number",
+            "description": "Standard number value"
+          },
+          {
+            "type": "integer",
+            "description": "Standard integer value"
+          },
+          {
+            "type": "boolean",
+            "description": "Standard boolean value"
+          },
+          {
+            "type": "null",
+            "description": "Null value"
+          },
+          {
+            "type": "object",
+            "description": "Nested object value"
+          },
+          {
+            "type": "array",
+            "description": "Array value"
+          },
+          {
+            "type": "string",
+            "pattern": "^co_z[a-zA-Z0-9]+$",
+            "description": "Co-id reference to another CoValue"
+          },
+          {
+            "type": "string",
+            "pattern": "^key_[a-zA-Z0-9_]+$",
+            "description": "Key reference"
+          },
+          {
+            "type": "string",
+            "pattern": "^sealed_",
+            "description": "Sealed/encrypted value"
+          }
+        ]
+      }
+    },
+    "costream": {
+      "description": "CoStream - CRDT-based append-only stream",
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "description": "Stream item object"
+          },
+          {
+            "type": "string",
+            "description": "Stream item string"
+          },
+          {
+            "type": "number",
+            "description": "Stream item number"
+          },
+          {
+            "type": "boolean",
+            "description": "Stream item boolean"
+          },
+          {
+            "type": "null",
+            "description": "Stream item null"
+          }
+        ]
+      }
+    },
+    "colist": {
+      "description": "CoList - CRDT-based collaborative list/array",
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "description": "List item object"
+          },
+          {
+            "type": "string",
+            "description": "List item string (can be co-id reference)"
+          },
+          {
+            "type": "number",
+            "description": "List item number"
+          },
+          {
+            "type": "integer",
+            "description": "List item integer"
+          },
+          {
+            "type": "boolean",
+            "description": "List item boolean"
+          },
+          {
+            "type": "null",
+            "description": "List item null"
+          },
+          {
+            "type": "array",
+            "description": "Nested array"
+          }
+        ]
+      }
+    }
+  }
 }

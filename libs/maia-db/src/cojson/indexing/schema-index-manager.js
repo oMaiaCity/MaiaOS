@@ -11,7 +11,7 @@
 
 import { EXCEPTION_SCHEMAS } from '../../schemas/meta.js';
 import { createCoList } from '../cotypes/coList.js';
-import { ensureCoValueLoaded } from '../crud/collection-helpers.js';
+import { read as universalRead } from '../crud/read.js';
 import { resolveHumanReadableKey, loadSchemaDefinition } from '../schema/resolver.js';
 import { create } from '../crud/create.js';
 
@@ -30,27 +30,28 @@ async function ensureOsCoMap(backend) {
   let osId = backend.account.get('os');
   
   if (osId) {
-    // account.os exists - use ensureCoValueLoaded to wait for it to be available
-    // This directly checks coValueCore.isAvailable() instead of relying on store state
+    // account.os exists - use universal read() API to load and resolve it
     try {
-      // Load and wait for account.os to become available
-      const osCore = await ensureCoValueLoaded(backend, osId, {
-        waitForAvailable: true,
+      // Use universal read() API to ensure account.os is loaded and resolved
+      const osStore = await universalRead(backend, osId, null, null, null, {
+        deepResolve: false, // Don't need deep resolution for infrastructure
         timeoutMs: 10000 // 10 second timeout for critical infrastructure
       });
       
-      if (!osCore) {
-        console.warn(`[SchemaIndexManager] account.os CoValueCore not found: ${osId.substring(0, 12)}...`);
+      // Check if read succeeded (store has data, not error)
+      if (!osStore || osStore.value?.error) {
+        console.warn(`[SchemaIndexManager] account.os CoValue not found or error: ${osId.substring(0, 12)}...`);
         return null;
       }
       
-      // Check if it's available
-      if (!osCore.isAvailable()) {
-        console.warn(`[SchemaIndexManager] account.os (${osId.substring(0, 12)}...) is not available after waiting`);
+      // Get the raw CoValueCore and content after read() has loaded it
+      const osCore = backend.getCoValue(osId);
+      if (!osCore || !osCore.isAvailable()) {
+        console.warn(`[SchemaIndexManager] account.os (${osId.substring(0, 12)}...) is not available after read()`);
         return null;
       }
       
-      // Get the content - should work now since isAvailable() returned true
+      // Get the content - should work now since read() ensured it's loaded
       const osContent = osCore.getCurrentContent?.();
       if (!osContent) {
         console.warn(`[SchemaIndexManager] account.os (${osId.substring(0, 12)}...) is available but getCurrentContent() returned nothing`);
@@ -228,21 +229,31 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
   // Check if index colist already exists (using schema co-id as key)
   let indexColistId = container.get(schemaCoId);
   if (indexColistId) {
-    // Try to load and wait for index colist to become available
-    const indexColistCore = await ensureCoValueLoaded(backend, indexColistId, {
-      waitForAvailable: true,
-      timeoutMs: 5000
-    });
-    
-    if (indexColistCore && indexColistCore.isAvailable()) {
-      const indexColistContent = indexColistCore.getCurrentContent?.();
-      if (indexColistContent && typeof indexColistContent.append === 'function') {
-        // Verify it's a CoList using content.cotype
-        const contentType = indexColistContent.cotype || indexColistContent.type;
-        if (contentType === 'colist') {
-          return indexColistContent;
+    // Use universal read() API to load and resolve index colist
+    try {
+      const indexColistStore = await universalRead(backend, indexColistId, null, null, null, {
+        deepResolve: false, // Don't need deep resolution for index colists
+        timeoutMs: 5000
+      });
+      
+      // Check if read succeeded
+      if (indexColistStore && !indexColistStore.value?.error) {
+        // Get the raw CoValueCore and content after read() has loaded it
+        const indexColistCore = backend.getCoValue(indexColistId);
+        if (indexColistCore && indexColistCore.isAvailable()) {
+          const indexColistContent = indexColistCore.getCurrentContent?.();
+          if (indexColistContent && typeof indexColistContent.append === 'function') {
+            // Verify it's a CoList using content.cotype
+            const contentType = indexColistContent.cotype || indexColistContent.type;
+            if (contentType === 'colist') {
+              return indexColistContent;
+            }
+          }
         }
       }
+    } catch (e) {
+      // Read failed - continue to create new one if needed
+      console.warn(`[SchemaIndexManager] Failed to read index colist (${indexColistId.substring(0, 12)}...):`, e.message);
     }
     
     // If indexColistId exists but couldn't be loaded, DON'T create a new one
@@ -521,21 +532,31 @@ async function ensureSchemataRegistry(backend) {
   // Check if schematas registry already exists
   const schematasId = osCoMap.get('schematas');
   if (schematasId) {
-    // Try to load and wait for schematas registry to become available
-    const schematasCore = await ensureCoValueLoaded(backend, schematasId, {
-      waitForAvailable: true,
-      timeoutMs: 5000
-    });
-    
-    if (schematasCore && schematasCore.isAvailable()) {
-      const schematasContent = schematasCore.getCurrentContent?.();
-      if (schematasContent && typeof schematasContent.set === 'function') {
-        // Verify it's a CoMap using content.cotype
-        const contentType = schematasContent.cotype || schematasContent.type;
-        if (contentType === 'comap') {
-          return schematasContent;
+    // Use universal read() API to load and resolve schematas registry
+    try {
+      const schematasStore = await universalRead(backend, schematasId, null, null, null, {
+        deepResolve: false, // Don't need deep resolution for registry
+        timeoutMs: 5000
+      });
+      
+      // Check if read succeeded
+      if (schematasStore && !schematasStore.value?.error) {
+        // Get the raw CoValueCore and content after read() has loaded it
+        const schematasCore = backend.getCoValue(schematasId);
+        if (schematasCore && schematasCore.isAvailable()) {
+          const schematasContent = schematasCore.getCurrentContent?.();
+          if (schematasContent && typeof schematasContent.set === 'function') {
+            // Verify it's a CoMap using content.cotype
+            const contentType = schematasContent.cotype || schematasContent.type;
+            if (contentType === 'comap') {
+              return schematasContent;
+            }
+          }
         }
       }
+    } catch (e) {
+      // Read failed - continue to create new one if needed
+      console.warn(`[SchemaIndexManager] Failed to read schematas registry (${schematasId.substring(0, 12)}...):`, e.message);
     }
     
     // If schematasId exists but couldn't be loaded, DON'T create a new one
@@ -664,24 +685,10 @@ export async function isSchemaCoValue(backend, coValueCore) {
     return false;
   }
 
-  // Get content to check for schema-like properties FIRST (most reliable check)
-  const content = backend.getCurrentContent(coValueCore);
-  
-  // Heuristic 1: Check if content has schema-like properties (title starting with @schema/ and cotype)
-  // This is the PRIMARY check - works even if metaschema isn't registered yet
-  if (content && typeof content.get === 'function') {
-    const title = content.get('title');
-    const cotype = content.get('cotype');
-    
-    // If it has a title starting with @schema/ and has cotype, it's likely a schema
-    if (title && typeof title === 'string' && title.startsWith('@schema/') && cotype) {
-      console.log(`[SchemaIndexing] Detected schema by content: ${title} (co-id: ${coValueCore.id.substring(0, 12)}...)`);
-      return true;
-    }
-  }
-
+  // PRIMARY: Check headerMeta.$schema FIRST (always available immediately, most reliable)
   const header = backend.getHeader(coValueCore);
   if (!header || !header.meta) {
+    console.log(`[SchemaIndexing] isSchemaCoValue: ${coValueCore.id.substring(0, 12)}... - no header or meta`);
     return false;
   }
 
@@ -690,12 +697,17 @@ export async function isSchemaCoValue(backend, coValueCore) {
 
   // Skip if no schema in headerMeta
   if (!schema) {
+    console.log(`[SchemaIndexing] isSchemaCoValue: ${coValueCore.id.substring(0, 12)}... - no $schema in headerMeta`);
     return false;
   }
 
+  console.log(`[SchemaIndexing] isSchemaCoValue: ${coValueCore.id.substring(0, 12)}... - checking schema: ${schema.substring ? schema.substring(0, 20) : schema}`);
+
   // Metaschema itself uses GenesisSchema exception (can't self-reference)
+  // Special case: Check content.title to confirm it's metaschema
+  // Uses "@schema/meta" (schema namekey from JSON definition - single source of truth)
   if (schema === EXCEPTION_SCHEMAS.META_SCHEMA) {
-    // Check if it has a title property starting with @schema/ (metaschema has title "@schema/meta")
+    const content = backend.getCurrentContent(coValueCore);
     if (content && typeof content.get === 'function') {
       const title = content.get('title');
       if (title === '@schema/meta') {
@@ -705,12 +717,63 @@ export async function isSchemaCoValue(backend, coValueCore) {
     return false; // GenesisSchema but not metaschema - might be other exception
   }
 
-  // Schema co-values have metaschema co-id as their $schema
-  // Get metaschema co-id and compare (if available)
+  // PRIMARY CHECK: Schema co-values have metaschema co-id as their $schema
+  // Check if headerMeta.$schema points to metaschema directly (via content check)
+  // This works during seeding when registry doesn't exist yet
   if (schema && typeof schema === 'string' && schema.startsWith('co_z')) {
+    // PRIMARY: Check if headerMeta.$schema points to metaschema directly
+    // Use universal read() API to load and resolve the referenced co-value
+    console.log(`[SchemaIndexing] Checking if ${schema.substring(0, 12)}... is metaschema (for schema ${coValueCore.id.substring(0, 12)}...)`);
+    try {
+      // Use universal read() API to ensure referenced co-value is loaded and resolved
+      const referencedStore = await universalRead(backend, schema, null, null, null, {
+        deepResolve: false, // Don't need deep resolution for schema detection
+        timeoutMs: 5000 // 5 second timeout - metaschema should be available but may need more time during seeding
+      });
+      
+      // Check if read succeeded
+      if (referencedStore && !referencedStore.value?.error) {
+        // Get the raw CoValueCore and content after read() has loaded it
+        const referencedCoValueCore = backend.getCoValue(schema);
+        console.log(`[SchemaIndexing] Loaded referenced co-value ${schema.substring(0, 12)}...: available=${referencedCoValueCore?.isAvailable()}`);
+        
+        if (referencedCoValueCore && referencedCoValueCore.isAvailable()) {
+          const referencedContent = backend.getCurrentContent(referencedCoValueCore);
+          console.log(`[SchemaIndexing] Referenced content type: ${typeof referencedContent}, has get: ${typeof referencedContent?.get}`);
+          
+          if (referencedContent && typeof referencedContent.get === 'function') {
+            const referencedTitle = referencedContent.get('title');
+            console.log(`[SchemaIndexing] Referenced title: ${referencedTitle}`);
+            
+            // Check if it's the metaschema by title
+            // - "@schema/meta" (schema namekey from JSON definition - single source of truth)
+            if (referencedTitle === '@schema/meta') {
+              // headerMeta.$schema points to metaschema - this is a schema!
+              console.log(`[SchemaIndexing] ✅ Detected schema by metaschema reference: ${coValueCore.id.substring(0, 12)}... (points to metaschema ${schema.substring(0, 12)}...)`);
+              return true;
+            } else {
+              console.log(`[SchemaIndexing] Referenced co-value ${schema.substring(0, 12)}... has title "${referencedTitle}", not metaschema`);
+            }
+          } else {
+            console.log(`[SchemaIndexing] Referenced co-value ${schema.substring(0, 12)}... content not available or not a CoMap`);
+          }
+        } else {
+          console.log(`[SchemaIndexing] Referenced co-value ${schema.substring(0, 12)}... not available after read()`);
+        }
+      } else {
+        console.log(`[SchemaIndexing] Failed to read referenced co-value ${schema.substring(0, 12)}...`);
+      }
+    } catch (e) {
+      // Metaschema not available yet - fall through to registry lookup
+      console.log(`[SchemaIndexing] ⚠️ Metaschema ${schema.substring(0, 12)}... not available yet (error: ${e.message}), trying registry lookup...`);
+    }
+    
+    // FALLBACK: Try registry lookup (for runtime cases when registry exists)
+    // This is a fallback for cases where metaschema co-value isn't available yet
     const metaSchemaCoId = await getMetaschemaCoId(backend);
     if (metaSchemaCoId && schema === metaSchemaCoId) {
       // This co-value's $schema points to metaschema - it's a schema co-value
+      console.log(`[SchemaIndexing] Detected schema by registry lookup: ${coValueCore.id.substring(0, 12)}... (points to metaschema ${schema.substring(0, 12)}...)`);
       return true;
     }
   }
@@ -879,15 +942,27 @@ export async function reconcileIndexes(backend, options = {}) {
     if (key.startsWith('co_z')) {
       const indexColistId = osCoMap.get(key);
       if (indexColistId) {
-        const indexColistCore = await ensureCoValueLoaded(backend, indexColistId, {
-          waitForAvailable: true,
-          timeoutMs: 2000
-        });
-        if (indexColistCore && indexColistCore.isAvailable()) {
-          const indexColistContent = indexColistCore.getCurrentContent?.();
-          if (indexColistContent && typeof indexColistContent.toJSON === 'function') {
-            schemaIndexColists.set(key, indexColistContent);
+        // Use universal read() API to load and resolve index colist
+        try {
+          const indexColistStore = await universalRead(backend, indexColistId, null, null, null, {
+            deepResolve: false, // Don't need deep resolution for reconciliation
+            timeoutMs: 2000
+          });
+          
+          // Check if read succeeded
+          if (indexColistStore && !indexColistStore.value?.error) {
+            // Get the raw CoValueCore and content after read() has loaded it
+            const indexColistCore = backend.getCoValue(indexColistId);
+            if (indexColistCore && indexColistCore.isAvailable()) {
+              const indexColistContent = indexColistCore.getCurrentContent?.();
+              if (indexColistContent && typeof indexColistContent.toJSON === 'function') {
+                schemaIndexColists.set(key, indexColistContent);
+              }
+            }
           }
+        } catch (e) {
+          // Skip this index colist if read fails
+          console.warn(`[SchemaIndexing] Failed to read index colist ${indexColistId.substring(0, 12)}... for reconciliation:`, e.message);
         }
       }
     }
@@ -936,22 +1011,30 @@ async function getSchemaIndexColistForRemoval(backend, schemaCoId) {
     return null;
   }
 
-  // Load index colist
-  const indexColistCore = await ensureCoValueLoaded(backend, indexColistId, {
-    waitForAvailable: true,
-    timeoutMs: 2000
-  });
-
-  if (!indexColistCore || !backend.isAvailable(indexColistCore)) {
-    return null;
-  }
-
-  const indexColistContent = backend.getCurrentContent(indexColistCore);
-  if (indexColistContent && typeof indexColistContent.toJSON === 'function' && typeof indexColistContent.delete === 'function') {
-    const contentType = indexColistContent.cotype || indexColistContent.type;
-    if (contentType === 'colist') {
-      return indexColistContent;
+  // Use universal read() API to load and resolve index colist
+  try {
+    const indexColistStore = await universalRead(backend, indexColistId, null, null, null, {
+      deepResolve: false, // Don't need deep resolution for removal
+      timeoutMs: 2000
+    });
+    
+    // Check if read succeeded
+    if (indexColistStore && !indexColistStore.value?.error) {
+      // Get the raw CoValueCore and content after read() has loaded it
+      const indexColistCore = backend.getCoValue(indexColistId);
+      if (indexColistCore && backend.isAvailable(indexColistCore)) {
+        const indexColistContent = backend.getCurrentContent(indexColistCore);
+        if (indexColistContent && typeof indexColistContent.toJSON === 'function' && typeof indexColistContent.delete === 'function') {
+          const contentType = indexColistContent.cotype || indexColistContent.type;
+          if (contentType === 'colist') {
+            return indexColistContent;
+          }
+        }
+      }
     }
+  } catch (e) {
+    // Read failed - return null
+    console.warn(`[SchemaIndexing] Failed to read index colist ${indexColistId.substring(0, 12)}... for removal:`, e.message);
   }
 
   return null;

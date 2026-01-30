@@ -7,8 +7,9 @@
  * Supports CoJSON types via custom meta-schema and AJV plugin.
  */
 import { ajvCoTypesPlugin } from './ajv-co-types-plugin.js';
+// Use merged meta.schema.json (contains everything: base JSON Schema 2020-12 + MaiaOS extensions)
+// This is the single source of truth for metaschema
 import customMetaSchema from './os/meta.schema.json';
-import baseMetaSchema from './os/base-meta-schema.json';
 import { formatValidationErrors, withSchemaValidationDisabled } from './validation.helper.js';
 
 export class ValidationEngine {
@@ -187,7 +188,9 @@ export class ValidationEngine {
     // This is the foundation schema that validates all other schemas
     // The metaschema itself validates against the hardcoded standard (breaks circular dependency)
     // All OTHER schemas validate against @schema/meta-schema (dynamically loaded)
-    return baseMetaSchema;
+    // Use merged meta.schema.json - it contains all base JSON Schema 2020-12 properties
+    // The MaiaOS extensions (cotype, $co, indexing) don't interfere with base schema validation
+    return customMetaSchema;
   }
 
   /**
