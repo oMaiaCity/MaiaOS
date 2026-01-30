@@ -4,7 +4,7 @@
  * Handles creation of Groups and Profiles.
  */
 
-import { createSchemaMeta } from "../../schemas/meta.js";
+import { createSchemaMeta } from "../../schemas/registry.js";
 
 /**
  * Create a new Group

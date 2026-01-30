@@ -1,5 +1,5 @@
-import { createSchemaMeta } from "../../schemas/meta.js";
-import { hasSchema } from "../../schemas/registry.js";
+import { createSchemaMeta } from "../../schemas/registry.js";
+import { hasSchemaInRegistry } from "../../schemas/registry.js";
 
 /**
  * Create a CoStream with MANDATORY schema validation
@@ -71,7 +71,7 @@ export function createCoStream(accountOrGroup, schemaName, node = null) {
 	}
 	
 	// Validate schema exists in registry
-	if (!hasSchema(schemaName)) {
+	if (!hasSchemaInRegistry(schemaName)) {
 		throw new Error(`[createCoStream] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema`);
 	}
 	

@@ -1,7 +1,7 @@
-import { createSchemaMeta, isExceptionSchema } from "../../schemas/meta.js";
+import { createSchemaMeta, isExceptionSchema } from "../../schemas/registry.js";
 import { getValidationEngine } from '@MaiaOS/schemata/validation.helper';
 import { getAllSchemas } from "../../schemas/registry.js";
-import { hasSchema } from "../../schemas/registry.js";
+import { hasSchemaInRegistry } from "../../schemas/registry.js";
 import { resolve } from '../schema/resolver.js';
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 
@@ -76,7 +76,7 @@ export async function createCoList(accountOrGroup, init = [], schemaName, node =
 	}
 	
 	// Skip validation for exception schemas or co-ids
-	if (!isExceptionSchema(schemaName) && !schemaName.startsWith('co_z') && !hasSchema(schemaName)) {
+	if (!isExceptionSchema(schemaName) && !schemaName.startsWith('co_z') && !hasSchemaInRegistry(schemaName)) {
 		throw new Error(`[createCoList] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema`);
 	}
 	

@@ -10,7 +10,7 @@
  */
 
 import { isSchemaCoValue, registerSchemaCoValue, indexCoValue, shouldIndexCoValue } from './schema-index-manager.js';
-import { EXCEPTION_SCHEMAS } from '../../schemas/meta.js';
+import { EXCEPTION_SCHEMAS } from '../../schemas/registry.js';
 
 // Track pending indexing operations to prevent duplicates
 const pendingIndexing = new Set();

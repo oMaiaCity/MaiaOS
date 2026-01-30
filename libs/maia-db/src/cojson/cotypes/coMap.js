@@ -5,10 +5,10 @@
  * Schema is REQUIRED - no fallbacks or defaults
  */
 
-import { createSchemaMeta, isExceptionSchema } from "../../schemas/meta.js";
+import { createSchemaMeta, isExceptionSchema } from "../../schemas/registry.js";
 import { getValidationEngine } from '@MaiaOS/schemata/validation.helper';
 import { getAllSchemas } from "../../schemas/registry.js";
-import { hasSchema } from "../../schemas/registry.js";
+import { hasSchemaInRegistry } from "../../schemas/registry.js";
 import { resolve } from '../schema/resolver.js';
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 
@@ -173,7 +173,7 @@ export async function createCoMap(accountOrGroup, init = {}, schemaName, node = 
 	
 	// Validate schema exists in registry (skip for exception schemas and co-ids)
 	// Co-ids (starting with "co_z") are actual schema CoValue IDs and don't need registry validation
-	if (!isExceptionSchema(schemaName) && !schemaName.startsWith('co_z') && !hasSchema(schemaName)) {
+	if (!isExceptionSchema(schemaName) && !schemaName.startsWith('co_z') && !hasSchemaInRegistry(schemaName)) {
 		throw new Error(`[createCoMap] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema`);
 	}
 	

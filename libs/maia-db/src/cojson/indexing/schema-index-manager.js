@@ -9,7 +9,7 @@
  * - account.os: schema-co-id → colist of instance co-ids (index)
  */
 
-import { EXCEPTION_SCHEMAS } from '../../schemas/meta.js';
+import { EXCEPTION_SCHEMAS } from '../../schemas/registry.js';
 import { createCoList } from '../cotypes/coList.js';
 import { read as universalRead } from '../crud/read.js';
 import { resolve } from '../schema/resolver.js';
