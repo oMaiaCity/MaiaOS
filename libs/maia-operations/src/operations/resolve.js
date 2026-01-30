@@ -1,3 +1,5 @@
+import { resolveHumanReadableKey } from '@MaiaOS/db';
+
 /**
  * Resolve Operation - Resolve human-readable keys to co-ids
  * 
@@ -7,7 +9,6 @@
  * Usage (seeding only):
  *   const coId = await dbEngine.execute({op: 'resolve', humanReadableKey: '@schema/actor'})
  */
-
 export class ResolveOperation {
   constructor(backend) {
     this.backend = backend;
@@ -28,12 +29,11 @@ export class ResolveOperation {
     }
     
     // Warn if called at runtime (not during seeding)
-    // We can't detect seeding context perfectly, but we can warn on common runtime patterns
     if (humanReadableKey.startsWith('@schema/') || humanReadableKey.startsWith('@actor/') || humanReadableKey.startsWith('@vibe/')) {
       console.warn(`[ResolveOperation] resolve() called with human-readable key: ${humanReadableKey}. This should only be used during seeding. At runtime, all IDs should already be co-ids.`);
     }
     
-    // Use backend's resolveHumanReadableKey method (operations ARE the abstraction layer)
-    return await this.backend.resolveHumanReadableKey(humanReadableKey);
+    // Use universal resolver from maia-db
+    return await resolveHumanReadableKey(this.backend, humanReadableKey);
   }
 }

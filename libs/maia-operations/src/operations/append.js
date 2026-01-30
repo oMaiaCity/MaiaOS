@@ -9,13 +9,12 @@
  * and appends items through the proper API to ensure reactive store updates.
  */
 
-import { ValidationUtility } from '../utils/validation.js';
+import { getSchemaCoId, checkCotype, loadSchema, validateItems } from '@MaiaOS/db';
 
 export class AppendOperation {
   constructor(backend, dbEngine = null) {
     this.backend = backend;
     this.dbEngine = dbEngine;
-    this.validation = dbEngine ? new ValidationUtility(dbEngine) : null;
   }
   
   async execute(params) {
@@ -51,22 +50,24 @@ export class AppendOperation {
       }
     }
     
-    // Load schema and check cotype property using centralized validation utility
-    if (!this.validation) {
+    if (!this.dbEngine) {
       throw new Error('[AppendOperation] dbEngine required to check schema cotype');
     }
     
-    // Resolve schema co-id from CoValue headerMeta
-    const schemaCoId = await this.validation.resolveSchemaCoId(coId);
+    // Resolve schema co-id from CoValue headerMeta using universal resolver
+    const schemaCoId = await getSchemaCoId(this.backend, { fromCoValue: coId });
+    if (!schemaCoId) {
+      throw new Error(`[AppendOperation] Failed to extract schema from CoValue ${coId} headerMeta`);
+    }
     
-    // Check cotype using centralized validation utility
-    const isColist = await this.validation.checkCotype(schemaCoId, 'colist');
+    // Check cotype using universal validation utility
+    const isColist = await checkCotype(this.dbEngine, schemaCoId, 'colist');
     if (!isColist) {
       throw new Error(`[AppendOperation] CoValue ${coId} is not a CoList (schema cotype check failed)`);
     }
     
     // Load schema for item validation
-    const schema = await this.validation.loadSchema(schemaCoId);
+    const schema = await loadSchema(this.dbEngine, schemaCoId);
     
     // Get CoList content
     const content = this.backend.getCurrentContent(coValueCore);
@@ -80,8 +81,8 @@ export class AppendOperation {
       throw new Error('[AppendOperation] At least one item required (use item or items parameter)');
     }
     
-    // Validate items using centralized validation utility
-    this.validation.validateItems(schema, itemsToAppend);
+    // Validate items using universal validation utility
+    validateItems(schema, itemsToAppend);
     
     // Check if items already exist to prevent duplicates
     let existingItems = [];

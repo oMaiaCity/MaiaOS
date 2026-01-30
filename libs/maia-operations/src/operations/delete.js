@@ -8,7 +8,7 @@
  * NO schema parameter needed - universal schema resolver handles it
  */
 
-import { resolveSchema } from '../utils/schema-resolver.js';
+import { getSchemaCoId } from '@MaiaOS/db';
 
 export class DeleteOperation {
   constructor(backend, dbEngine = null) {
@@ -42,7 +42,10 @@ export class DeleteOperation {
     
     // Extract schema co-id from CoValue headerMeta using universal resolver
     // This is the ONLY place to get schema - single source of truth
-    const schemaCoId = await resolveSchema(id, this.dbEngine);
+    const schemaCoId = await getSchemaCoId(this.dbEngine.backend, { fromCoValue: id });
+    if (!schemaCoId) {
+      throw new Error(`[DeleteOperation] Failed to extract schema from CoValue ${id} headerMeta`);
+    }
     
     return await this.backend.delete(schemaCoId, id);
   }

@@ -15,6 +15,7 @@
  */
 
 import { ReactiveStore } from '../reactive-store.js';
+import { getSchemaCoId } from '@MaiaOS/db';
 
 export class SchemaOperation {
   constructor(backend, dbEngine = null) {
@@ -125,7 +126,7 @@ export class SchemaOperation {
         throw new Error(`[SchemaOperation] fromCoValue must be a valid co-id (co_z...), got: ${fromCoValue}`);
       }
       // Extract schema co-id from CoValue's headerMeta using universal resolver
-      schemaCoId = await this.backend.getSchemaCoIdUniversal({ fromCoValue });
+      schemaCoId = await getSchemaCoId(this.backend, { fromCoValue });
       if (!schemaCoId) {
         console.warn(`[SchemaOperation] Could not extract schema co-id from CoValue ${fromCoValue} headerMeta`);
         // Return ReactiveStore with null value

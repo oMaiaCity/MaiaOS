@@ -52,3 +52,25 @@ export { createAndPushMessage } from "./cojson/crud/message-helpers.js";
 
 // Collection Helpers (schema index lookup)
 export { getSchemaIndexColistId, getCoListId } from "./cojson/crud/collection-helpers.js";
+
+// Universal Schema Resolver (single source of truth)
+export { 
+  resolveSchema,
+  getSchemaCoId,
+  loadSchemaDefinition,
+  resolveHumanReadableKey,
+  getSchemaCoIdFromCoValue,
+  loadSchemaByCoId
+} from "./cojson/schema/resolver.js";
+
+// Universal Validation Utility (single source of truth)
+export {
+  loadSchema,
+  validateOrThrow,
+  loadAndValidate,
+  resolveSchemaCoId,
+  checkCotype,
+  validateItems,
+  validateData,
+  validateUpdate
+} from "./cojson/utils/validation.js";

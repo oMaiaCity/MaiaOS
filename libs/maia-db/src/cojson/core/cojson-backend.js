@@ -22,9 +22,7 @@ import * as filterHelpers from '../crud/filter-helpers.js';
 import * as crudCreate from '../crud/create.js';
 import * as crudUpdate from '../crud/update.js';
 import * as crudDelete from '../crud/delete.js';
-import { resolveHumanReadableKey as resolveKey } from '../schema/resolve-key.js';
-import { getSchemaCoIdFromCoValue, loadSchemaByCoId as loadSchema } from '../schema/schema-loading.js';
-import { resolveSchema as universalResolveSchema, getSchemaCoId as universalGetSchemaCoId, loadSchemaDefinition as universalLoadSchemaDefinition } from '../schema/schema-resolver.js';
+import { resolveHumanReadableKey as resolveKey, getSchemaCoIdFromCoValue, loadSchemaByCoId as loadSchema, resolveSchema as universalResolveSchema, getSchemaCoId as universalGetSchemaCoId, loadSchemaDefinition as universalLoadSchemaDefinition } from '../schema/resolver.js';
 import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.js';
 
 export class CoJSONBackend extends DBAdapter {

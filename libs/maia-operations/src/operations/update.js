@@ -12,14 +12,25 @@
  */
 
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
-import { ValidationUtility } from '../utils/validation.js';
+import { getSchemaCoId, validateUpdate } from '@MaiaOS/db';
 
+/**
+ * Update Operation - Update existing records (unified for data collections and configs)
+ * 
+ * Usage:
+ *   maia.db({op: 'update', id: 'co_z...', data: {done: true}})  // Schema extracted from CoValue headerMeta
+ * 
+ * Schema is ALWAYS extracted from CoValue headerMeta (single source of truth)
+ * NO schema parameter needed - universal schema resolver handles it
+ * 
+ * This operation handles ALL CoValues uniformly - no distinction between configs and data.
+ * Everything is just co-ids. Always validates against schema (100% migration - no fallbacks).
+ */
 export class UpdateOperation {
   constructor(backend, dbEngine = null, evaluator = null) {
     this.backend = backend;
     this.dbEngine = dbEngine;
     this.evaluator = evaluator; // Optional: for evaluating MaiaScript expressions with $existing
-    this.validation = dbEngine ? new ValidationUtility(dbEngine) : null;
   }
   
   /**
@@ -47,13 +58,10 @@ export class UpdateOperation {
       throw new Error('[UpdateOperation] Data required');
     }
     
-    // Always validate against schema (100% migration - NO fallbacks)
-    // Schema MUST exist or throw error
-    if (!this.validation) {
+    if (!this.dbEngine) {
       throw new Error('[UpdateOperation] dbEngine required for schema validation');
     }
     
-    // For updates, we need to validate the merged result (existing + update data), not just the update data
     // Get raw stored data (without normalization - no id field, but has $schema metadata)
     const rawExistingData = await this.backend.getRawRecord(id);
     
@@ -62,31 +70,19 @@ export class UpdateOperation {
     }
     
     // Extract schema co-id from CoValue headerMeta using universal resolver
-    // This is the ONLY place to get schema - single source of truth
-    const schemaCoId = await this.validation.resolveSchemaCoId(id);
+    const schemaCoId = await getSchemaCoId(this.backend, { fromCoValue: id });
+    if (!schemaCoId) {
+      throw new Error(`[UpdateOperation] Failed to extract schema from CoValue ${id} headerMeta`);
+    }
     
     // Exclude $schema (metadata, stored for querying but not part of schema validation)
-    // Note: id is never stored (it's the key), so no need to filter it
     const { $schema: _schema, ...existingDataWithoutMetadata } = rawExistingData;
     
     // Evaluate MaiaScript expressions in data payload
-    // Expressions are evaluated by state engine before reaching here, so data should already be evaluated
-    // But we still need to handle any remaining expressions that reference existing data
     const evaluatedData = await this._evaluateDataWithExisting(data, existingDataWithoutMetadata);
     
-    // Merge existing data with evaluated update data
-    const mergedData = {
-      ...existingDataWithoutMetadata,
-      ...evaluatedData
-    };
-    
-    // Load schema and validate merged result against schema (ensures all required fields are present)
-    // Use fromCoValue pattern (single source of truth)
-    await this.validation.loadAndValidate(
-      { fromCoValue: id },
-      mergedData,
-      `update operation for schema ${schemaCoId}`
-    );
+    // Validate merged result using universal validation utility
+    await validateUpdate(this.dbEngine, id, evaluatedData, this.backend);
     
     // Use unified update() method that handles both data and configs
     return await this.backend.update(schemaCoId, id, evaluatedData);
@@ -106,7 +102,6 @@ export class UpdateOperation {
     }
     
     // Create evaluation context with existing data available as $existing in context
-    // This allows expressions like "$existing.done" or {"$not": "$existing.done"}
     const dataContext = {
       context: { existing: existingData },
       item: {}

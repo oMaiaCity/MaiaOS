@@ -27,8 +27,7 @@ import { createCoList } from '../cotypes/coList.js';
 import { getMetaSchemaCoMapDefinition } from '@MaiaOS/schemata/meta-schema';
 import { deleteRecord } from '../crud/delete.js';
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js';
-import { resolveHumanReadableKey } from '../schema/resolve-key.js';
-import { loadSchemaDefinition } from '../schema/schema-resolver.js';
+import { resolveHumanReadableKey, loadSchemaDefinition } from '../schema/resolver.js';
 
 /**
  * Delete all seeded co-values (configs and data) but preserve schemata

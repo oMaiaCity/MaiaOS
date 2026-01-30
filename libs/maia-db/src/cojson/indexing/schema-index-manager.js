@@ -12,8 +12,7 @@
 import { EXCEPTION_SCHEMAS } from '../../schemas/meta.js';
 import { createCoList } from '../cotypes/coList.js';
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js';
-import { resolveHumanReadableKey } from '../schema/resolve-key.js';
-import { loadSchemaDefinition } from '../schema/schema-resolver.js';
+import { resolveHumanReadableKey, loadSchemaDefinition } from '../schema/resolver.js';
 import { create } from '../crud/create.js';
 
 /**

@@ -9,13 +9,12 @@
  * and pushes items through the proper API to ensure reactive store updates.
  */
 
-import { ValidationUtility } from '../utils/validation.js';
+import { getSchemaCoId, checkCotype, loadSchema, validateItems } from '@MaiaOS/db';
 
 export class PushOperation {
   constructor(backend, dbEngine = null) {
     this.backend = backend;
     this.dbEngine = dbEngine;
-    this.validation = dbEngine ? new ValidationUtility(dbEngine) : null;
   }
   
   async execute(params) {
@@ -51,22 +50,24 @@ export class PushOperation {
       }
     }
     
-    // Load schema and check cotype property using centralized validation utility
-    if (!this.validation) {
+    if (!this.dbEngine) {
       throw new Error('[PushOperation] dbEngine required to check schema cotype');
     }
     
-    // Resolve schema co-id from CoValue headerMeta
-    const schemaCoId = await this.validation.resolveSchemaCoId(coId);
+    // Resolve schema co-id from CoValue headerMeta using universal resolver
+    const schemaCoId = await getSchemaCoId(this.backend, { fromCoValue: coId });
+    if (!schemaCoId) {
+      throw new Error(`[PushOperation] Failed to extract schema from CoValue ${coId} headerMeta`);
+    }
     
-    // Check cotype using centralized validation utility
-    const isCoStream = await this.validation.checkCotype(schemaCoId, 'costream');
+    // Check cotype using universal validation utility
+    const isCoStream = await checkCotype(this.dbEngine, schemaCoId, 'costream');
     if (!isCoStream) {
       throw new Error(`[PushOperation] CoValue ${coId} is not a CoStream (schema cotype check failed)`);
     }
     
     // Load schema for item validation
-    const schema = await this.validation.loadSchema(schemaCoId);
+    const schema = await loadSchema(this.dbEngine, schemaCoId);
     
     // Get CoStream content
     const content = this.backend.getCurrentContent(coValueCore);
@@ -80,8 +81,8 @@ export class PushOperation {
       throw new Error('[PushOperation] At least one item required (use item or items parameter)');
     }
     
-    // Validate items using centralized validation utility
-    this.validation.validateItems(schema, itemsToPush);
+    // Validate items using universal validation utility
+    validateItems(schema, itemsToPush);
     
     // Push each item
     for (const itemToPush of itemsToPush) {
