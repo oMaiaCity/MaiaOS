@@ -482,12 +482,51 @@ export class ViewEngine {
         }
         
         await this.actorEngine.sendInternalEvent(actorId, eventName, payload);
+        
+        // AUTO-CLEAR INPUTS: After form submission (any event except UPDATE_INPUT), clear all input fields
+        // This ensures forms reset after submission without manual clearing workarounds
+        if (eventName !== 'UPDATE_INPUT') {
+          this._clearInputFields(element, actorId);
+        }
       } else {
         console.warn(`Cannot send event ${eventName}: Actor has no state machine`);
       }
     } else {
       console.warn('No actorEngine set, cannot handle event:', eventName);
     }
+  }
+
+  /**
+   * Clear all input and textarea fields in the form containing the element
+   * If no form found, clears inputs in the actor's shadow root
+   * @param {HTMLElement} element - The element that triggered the event
+   * @param {string} actorId - The actor ID
+   * @private
+   */
+  _clearInputFields(element, actorId) {
+    // Find the closest form element, or fall back to actor's shadow root
+    let container = element.closest('form');
+    if (!container && this.actorEngine) {
+      const actor = this.actorEngine.getActor(actorId);
+      if (actor && actor.shadowRoot) {
+        container = actor.shadowRoot;
+      }
+    }
+    
+    if (!container) return;
+    
+    // Clear all input and textarea fields within the container
+    const inputs = container.querySelectorAll('input, textarea');
+    inputs.forEach(input => {
+      // Only clear if input has data-actor-input attribute (managed by view engine)
+      if (input.hasAttribute('data-actor-input')) {
+        if (input.tagName === 'INPUT') {
+          input.value = '';
+        } else if (input.tagName === 'TEXTAREA') {
+          input.value = '';
+        }
+      }
+    });
   }
 
   setActorEngine(actorEngine) {

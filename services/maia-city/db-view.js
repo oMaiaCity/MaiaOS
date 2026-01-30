@@ -136,6 +136,11 @@ async function renderDashboard(maia, cojsonAPI, authState, syncState, navigateTo
 							</span>
 						</div>
 						${authState.signedIn ? `
+							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database (idempotent - preserves schemata, recreates configs/data)">
+								Seed
+							</button>
+						` : ''}
+						${authState.signedIn ? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
 								Sign Out
 							</button>
@@ -184,6 +189,11 @@ async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVi
 								  syncState.error || 'Offline'}
 							</span>
 						</div>
+						${authState.signedIn ? `
+							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database (idempotent - preserves schemata, recreates configs/data)">
+								Seed
+							</button>
+						` : ''}
 						${authState.signedIn ? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
 								Sign Out
@@ -836,6 +846,11 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 							</span>
 						</div>
 						${authState.signedIn ? `
+							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database (idempotent - preserves schemata, recreates configs/data)">
+								Seed
+							</button>
+						` : ''}
+						${authState.signedIn ? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
 								Sign Out
 							</button>
@@ -865,17 +880,6 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 											</svg>
 											<span class="sidebar-name">Back</span>
-										</div>
-									</div>
-								` : ''}
-								${authState.signedIn ? `
-									<div class="sidebar-item seed-sidebar-item" onclick="window.handleSeed()" title="Reseed database (idempotent - preserves schemata, recreates configs/data)">
-										<div class="sidebar-label">
-											<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
-												<path d="M12 22V12M12 12C12 12 12 7 7 7C7 7 2 7 2 12C2 12 2 17 7 17C12 17 12 12 12 12ZM12 12C12 12 12 7 17 7C17 7 22 7 22 12C22 12 22 17 17 17C12 17 12 12 12 12Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-												<path d="M12 12C12 12 12 9 12 9M12 9C12 6.5 10 4.5 7.5 4.5C5 4.5 3 6.5 3 9C3 9 3 11.5 5.5 11.5C8 11.5 10 9.5 10 7M12 9C12 6.5 14 4.5 16.5 4.5C19 4.5 21 6.5 21 9C21 9 21 11.5 18.5 11.5C16 11.5 14 9.5 14 7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
-											</svg>
-											<span class="sidebar-name">Reseed</span>
 										</div>
 									</div>
 								` : ''}
