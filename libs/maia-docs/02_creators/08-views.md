@@ -22,7 +22,7 @@ Create a file named `{name}.view.maia`:
   "$schema": "@schema/view",
   "$id": "@view/todo",
   
-  "root": {
+  "content": {
     "tag": "div",
     "attrs": {
       "class": "todo-app"
@@ -504,7 +504,7 @@ The wrapper element (with tag, class, attrs) wraps the child actor, allowing you
   "$type": "view",
   "$id": "view_todo_001",
   
-  "root": {
+  "content": {
     "tag": "div",
     "class": "todo-app",
     "children": [

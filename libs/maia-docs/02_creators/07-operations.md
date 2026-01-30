@@ -123,23 +123,23 @@ console.log("Created:", newTodo.id); // Auto-generated ID (co-id)
 
 ### `update` - Update Existing Records
 
-Update an existing record with partial validation.
+Update an existing record with partial validation. Supports MaiaScript expressions in data.
 
 ```javascript
 const updated = await maia.db({
   op: "update",
-  schema: "@schema/todos",
-  id: "123",
+  id: "co_z...",  // Co-id of record to update
   data: {
-    text: "Buy groceries and cook dinner"
+    text: "Buy groceries and cook dinner",
+    done: { "$not": "$existing.done" }  // Toggle using expression
   }
 });
 ```
 
 **Parameters:**
-- `schema` (required) - Schema reference
-- `id` (required) - Record ID to update
+- `id` (required) - Co-id of record to update
 - `data` (required) - Partial data object (only fields to update)
+- `schema` (optional) - **Not required** - Schema is extracted from CoValue headerMeta automatically
 
 **Returns:**
 - Updated record
@@ -147,7 +147,21 @@ const updated = await maia.db({
 **Validation:**
 - Validates only the fields you're updating (partial validation)
 - Doesn't require all schema fields
+- Supports MaiaScript expressions (e.g., `{"$not": "$existing.done"}` for toggling)
 - Throws error if validation fails
+
+**Toggle Example:**
+Toggle is not a separate operation. Use `update` with an expression:
+
+```javascript
+const updated = await maia.db({
+  op: "update",
+  id: "co_z...",
+  data: {
+    done: { "$not": "$existing.done" }  // Toggles boolean field
+  }
+});
+```
 
 ### `delete` - Delete Records
 
@@ -156,47 +170,18 @@ Delete a record from the database.
 ```javascript
 const deleted = await maia.db({
   op: "delete",
-  schema: "@schema/todos",
-  id: "123"
+  id: "co_z..."  // Co-id of record to delete
 });
 
 console.log("Deleted:", deleted); // true
 ```
 
 **Parameters:**
-- `schema` (required) - Schema reference
-- `id` (required) - Record ID to delete
+- `id` (required) - Co-id of record to delete
+- `schema` (optional) - **Not required** - Schema is extracted from CoValue headerMeta automatically
 
 **Returns:**
 - `true` if deleted successfully
-
-### `toggle` - Toggle Boolean Field
-
-Toggle a boolean field (convenience operation).
-
-```javascript
-const updated = await maia.db({
-  op: "toggle",
-  schema: "@schema/todos",
-  id: "123",
-  field: "done"
-});
-
-// If done was false, now it's true (and vice versa)
-```
-
-**Parameters:**
-- `schema` (required) - Schema reference
-- `id` (required) - Record ID
-- `field` (required) - Boolean field name to toggle
-
-**Returns:**
-- Updated record with toggled field
-
-**Validation:**
-- Validates that the field exists in schema
-- Validates that the field is a boolean type
-- Throws error if field doesn't exist or isn't boolean
 
 ### `seed` - Seed Database (Dev Only)
 
@@ -240,6 +225,110 @@ await maia.db({
 - **Schema Index Colists**: Automatically managed - deleted co-values are removed from indexes, new co-values are added to indexes
 
 **Note:** Use only in development! Reseeding preserves schemata but recreates all configs and data.
+
+### `schema` - Load Schema Definitions
+
+Load schema definitions by co-id, schema name, or from CoValue headerMeta.
+
+```javascript
+const schemaStore = await maia.db({
+  op: "schema",
+  coId: "co_zActor123"  // Co-id of schema or CoValue
+});
+
+// Or resolve from human-readable ID (during seeding only)
+const schemaStore = await maia.db({
+  op: "schema",
+  humanReadableKey: "@schema/actor"
+});
+```
+
+**Parameters:**
+- `coId` (optional) - Co-id of schema or CoValue
+- `humanReadableKey` (optional) - Human-readable schema ID (only during seeding)
+
+**Returns:**
+- `ReactiveStore` containing schema definition
+
+### `resolve` - Resolve Human-Readable Keys to Co-IDs
+
+Resolve human-readable keys (like `@schema/todos`) to co-ids. **Only for use during seeding.**
+
+```javascript
+const coId = await maia.db({
+  op: "resolve",
+  humanReadableKey: "@schema/todos"
+});
+
+console.log("Resolved:", coId); // "co_zTodos123..."
+```
+
+**Parameters:**
+- `humanReadableKey` (required) - Human-readable key to resolve
+
+**Returns:**
+- Co-id string (`co_z...`)
+
+**Note:** At runtime, all IDs should already be co-ids. This operation is primarily for seeding/transformation.
+
+### `append` - Append to CoList
+
+Append items to a CoList (ordered array).
+
+```javascript
+const result = await maia.db({
+  op: "append",
+  id: "co_zList123",  // Co-id of CoList
+  items: ["item1", "item2"]
+});
+```
+
+**Parameters:**
+- `id` (required) - Co-id of CoList
+- `items` (required) - Array of items to append
+
+**Returns:**
+- Updated CoList
+
+### `push` - Append to CoStream
+
+Append items to a CoStream (append-only stream). This is an alias for `append` with `cotype: "costream"`.
+
+```javascript
+const result = await maia.db({
+  op: "push",
+  id: "co_zStream123",  // Co-id of CoStream
+  items: ["message1", "message2"]
+});
+```
+
+**Parameters:**
+- `id` (required) - Co-id of CoStream
+- `items` (required) - Array of items to append
+
+**Returns:**
+- Updated CoStream
+
+### `processInbox` - Process Actor Inbox
+
+Process messages in an actor's inbox with session-based watermarks.
+
+```javascript
+const processed = await maia.db({
+  op: "processInbox",
+  actorId: "co_zActor123",
+  sessionId: "session-abc"
+});
+```
+
+**Parameters:**
+- `actorId` (required) - Co-id of actor
+- `sessionId` (required) - Session identifier for watermark tracking
+
+**Returns:**
+- Number of messages processed
+
+**Note:** This is typically handled automatically by ActorEngine. Manual use is rare.
 
 ## Tool Invocation Pattern
 
@@ -313,10 +402,11 @@ Use the `@db` tool in your state machine definitions:
       "entry": {
         "tool": "@db",
         "payload": {
-          "op": "toggle",
-          "schema": "@schema/todos",
+          "op": "update",
           "id": "$$id",
-          "field": "done"
+          "data": {
+            "done": { "$not": "$existing.done" }
+          }
         }
       },
       "on": {
@@ -354,13 +444,16 @@ Database
    - Routes operations to handlers
    - Supports swappable backends
 
-2. **Operation Handlers** (`libs/maia-script/src/engines/db-engine/operations/`)
+2. **Operation Handlers** (`libs/maia-operations/src/operations/`)
    - `read.js` - Read operation handler (always returns reactive store)
    - `create.js` - Create operation handler
-   - `update.js` - Update operation handler
+   - `update.js` - Update operation handler (supports MaiaScript expressions)
    - `delete.js` - Delete operation handler
-   - `toggle.js` - Toggle operation handler
    - `seed.js` - Seed operation handler
+   - `schema.js` - Schema loading operation handler
+   - `resolve.js` - Co-id resolution operation handler
+   - `append.js` - CoList/CoStream append operation handler
+   - `process-inbox.js` - Inbox processing operation handler
 
 3. **Backend** (`libs/maia-script/src/engines/db-engine/backend/`)
    - `indexeddb/` - IndexedDB backend (current)
@@ -401,22 +494,32 @@ Database
 actor.actorEngine.toolEngine.execute('@db', actor, payload);
 ```
 
-### 2. Use Reactive Queries in Context
+### 2. Use mapData Action for Reactive Queries
 
-**✅ DO:** Define query objects in context (automatic reactivity)
+**✅ DO:** Use `mapData` action in state machines to create reactive query stores
 
 ```json
 {
-  "context": {
-    "todos": {
-      "schema": "@schema/todos",
-      "filter": null
+  "idle": {
+    "entry": {
+      "mapData": {
+        "todos": {
+          "op": "read",
+          "schema": "co_zTodos123",
+          "filter": null
+        },
+        "todosTodo": {
+          "op": "read",
+          "schema": "co_zTodos123",
+          "filter": { "done": false }
+        }
+      }
     }
   }
 }
 ```
 
-**❌ DON'T:** Manually subscribe in state machines
+**❌ DON'T:** Manually call read operations in tools
 
 ```json
 {
@@ -425,11 +528,13 @@ actor.actorEngine.toolEngine.execute('@db', actor, payload);
     "payload": {
       "op": "read",
       "schema": "co_zTodos123"
-      // Don't manually subscribe - use context query objects instead!
+      // Don't do this - use mapData action instead!
     }
   }
 }
 ```
+
+**Why:** `mapData` creates reactive query stores that are automatically subscribed to by ViewEngine. Tools should be used for mutations, not queries.
 
 ### 3. Always Use Operations for Mutations
 
@@ -494,34 +599,32 @@ actor.actorEngine.toolEngine.execute('@db', actor, payload);
 actor.context.error = error.message;
 ```
 
-### 5. Use Toggle for Boolean Fields
+### 5. Toggle Boolean Fields with Update Expression
 
-**✅ DO:** Use `toggle` operation for boolean fields
-
-```json
-{
-  "tool": "@db",
-  "payload": {
-    "op": "toggle",
-    "schema": "@schema/todos",
-    "id": "$$id",
-    "field": "done"
-  }
-}
-```
-
-**❌ DON'T:** Manually read, flip, and update
+**✅ DO:** Use `update` operation with expression to toggle boolean fields
 
 ```json
 {
   "tool": "@db",
   "payload": {
     "op": "update",
-    "schema": "@schema/todos",
     "id": "$$id",
     "data": {
-      "done": {"$not": "$done"} // Don't do this - use toggle!
+      "done": { "$not": "$existing.done" }
     }
+  }
+}
+```
+
+**❌ DON'T:** Use non-existent toggle operation
+
+```json
+{
+  "tool": "@db",
+  "payload": {
+    "op": "toggle",  // ❌ Toggle is not a separate operation
+    "id": "$$id",
+    "field": "done"
   }
 }
 ```
@@ -533,10 +636,6 @@ actor.context.error = error.message;
 **Context:**
 ```json
 {
-  "todos": {
-    "schema": "@schema/todos",
-    "filter": null
-  },
   "newTodoText": ""
 }
 ```
@@ -547,6 +646,15 @@ actor.context.error = error.message;
   "initial": "idle",
   "states": {
     "idle": {
+      "entry": {
+        "mapData": {
+          "todos": {
+            "op": "read",
+            "schema": "co_zTodos123",
+            "filter": null
+          }
+        }
+      },
       "on": {
         "CREATE_TODO": {
           "target": "creating",
@@ -586,10 +694,11 @@ actor.context.error = error.message;
       "entry": {
         "tool": "@db",
         "payload": {
-          "op": "toggle",
-          "schema": "@schema/todos",
+          "op": "update",
           "id": "$$id",
-          "field": "done"
+          "data": {
+            "done": { "$not": "$existing.done" }
+          }
         }
       },
       "on": {
@@ -629,40 +738,60 @@ The `@db` tool validates operations against this schema:
 {
   "op": {
     "type": "string",
-    "enum": ["read", "create", "update", "delete", "toggle", "seed"]
+    "enum": ["read", "create", "update", "delete", "seed", "schema", "resolve", "append", "push", "processInbox"]
   },
   "schema": {
     "type": "string",
-    "description": "Schema reference (@schema/actor, @schema/todos, etc.)"
+    "description": "Schema co-id (co_z...) - Required for create, optional for update/delete (extracted from CoValue)"
   },
   "key": {
     "type": "string",
-    "description": "Optional: Specific key for config queries"
+    "description": "Optional: Specific key (co-id) for read queries"
+  },
+  "keys": {
+    "type": "array",
+    "description": "Optional: Array of co-ids for batch reads"
   },
   "filter": {
     "type": "object",
-    "description": "Optional: Filter criteria for data queries"
+    "description": "Optional: Filter criteria for read queries"
   },
   "id": {
     "type": "string",
-    "description": "Optional: Record ID for update/delete/toggle operations"
-  },
-  "field": {
-    "type": "string",
-    "description": "Optional: Field name for toggle operations"
+    "description": "Co-id for update/delete/append/push operations"
   },
   "data": {
     "type": "object",
-    "description": "Optional: Data for create/update operations"
+    "description": "Data for create/update operations (supports MaiaScript expressions)"
+  },
+  "items": {
+    "type": "array",
+    "description": "Items to append/push to CoList/CoStream"
+  },
+  "coId": {
+    "type": "string",
+    "description": "Co-id for schema operation"
+  },
+  "humanReadableKey": {
+    "type": "string",
+    "description": "Human-readable key for resolve/schema operations (seeding only)"
+  },
+  "actorId": {
+    "type": "string",
+    "description": "Actor co-id for processInbox operation"
+  },
+  "sessionId": {
+    "type": "string",
+    "description": "Session ID for processInbox operation"
   }
 }
 ```
 
 ## References
 
-- **DBEngine:** `libs/maia-script/src/engines/db-engine/db.engine.js`
-- **Operation Handlers:** `libs/maia-script/src/engines/db-engine/operations/`
-- **Backend:** `libs/maia-script/src/engines/db-engine/backend/indexeddb/`
+- **DBEngine:** `libs/maia-operations/src/engine.js`
+- **Operation Handlers:** `libs/maia-operations/src/operations/`
+- **Backend:** `libs/maia-script/src/backends/indexeddb/`
 - **Tool Definition:** `libs/maia-tools/src/db/db.tool.js`
 - **Example Vibe:** `libs/maia-vibes/src/todos/`
 

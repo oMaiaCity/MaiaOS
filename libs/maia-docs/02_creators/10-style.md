@@ -70,7 +70,10 @@ Create a file named `{name}.style.maia`:
 }
 ```
 
-**Note:** Use `components` section (not `styles`) for component definitions with nested data-attribute syntax. Use `selectors` section for advanced CSS selectors.
+**Note:** 
+- Use `components` section for component definitions with nested data-attribute syntax (e.g., `.todoItem`, `.card`)
+- Use `selectors` section for advanced CSS selectors (e.g., `:host`, `h1`, `@media` queries)
+- The old `styles` section is deprecated - use `components` or `selectors` instead
 
 ## Linking Style to Actors
 
@@ -107,25 +110,37 @@ Local styles → CSS rules (override/extend)
 Inject into Shadow DOM
 ```
 
+## Components vs Selectors
+
+**Components Section:**
+- Use for component definitions (e.g., `.todoItem`, `.card`, `.button`)
+- Supports nested data-attribute syntax for conditional styling
+- Component names map to CSS classes (camelCase → kebab-case)
+
+**Selectors Section:**
+- Use for advanced CSS selectors (e.g., `:host`, `h1`, `button:hover`)
+- Use for pseudo-classes, pseudo-elements, and media queries
+- Typically used in brand styles for global element styling
+
 ## Common Patterns
 
-### Layout Styles
+### Layout Styles (Components Section)
 ```json
 {
-  "styles": {
-    ".todo-app": {
+  "components": {
+    "todoApp": {
       "display": "flex",
       "flexDirection": "column",
       "gap": "var(--spacing-lg)",
       "maxWidth": "800px",
       "margin": "0 auto"
     },
-    ".kanban-board": {
+    "kanbanBoard": {
       "display": "grid",
       "gridTemplateColumns": "repeat(2, 1fr)",
       "gap": "var(--spacing-md)"
     },
-    ".column": {
+    "column": {
       "backgroundColor": "var(--color-surface)",
       "borderRadius": "var(--border-radius-lg)",
       "padding": "var(--spacing-md)"
@@ -217,10 +232,10 @@ Inject into Shadow DOM
 }
 ```
 
-### Animation Styles
+### Animation Styles (Selectors Section)
 ```json
 {
-  "styles": {
+  "selectors": {
     "@keyframes fadeIn": {
       "from": {"opacity": "0", "transform": "translateY(-10px)"},
       "to": {"opacity": "1", "transform": "translateY(0)"}
@@ -244,12 +259,12 @@ Local styles can override brand styles:
 
 ```json
 {
-  "styles": {
-    ".btn-primary": {
+  "components": {
+    "buttonPrimary": {
       "backgroundColor": "#ef4444",  // Override brand primary color
       "borderRadius": "0"             // Override brand border radius
     },
-    ".input": {
+    "input": {
       "fontSize": "18px",             // Larger input text
       "padding": "1rem"               // More padding
     }
@@ -263,8 +278,8 @@ Reference brand tokens:
 
 ```json
 {
-  "styles": {
-    ".custom-element": {
+  "components": {
+    "customElement": {
       "color": "var(--color-primary)",
       "padding": "var(--spacing-md)",
       "borderRadius": "var(--border-radius-lg)",
@@ -274,16 +289,18 @@ Reference brand tokens:
 }
 ```
 
-Define local custom properties:
+Define local custom properties (use selectors for `:host`):
 
 ```json
 {
-  "styles": {
+  "selectors": {
     ":host": {
       "--local-accent": "#f59e0b",
       "--local-spacing": "0.75rem"
-    },
-    ".custom-element": {
+    }
+  },
+  "components": {
+    "customElement": {
       "color": "var(--local-accent)",
       "padding": "var(--local-spacing)"
     }
@@ -291,14 +308,19 @@ Define local custom properties:
 }
 ```
 
-## Responsive Styles
+## Responsive Styles (Selectors Section)
 
 ```json
 {
-  "styles": {
-    ".todo-app": {
+  "components": {
+    "todoApp": {
       "padding": "var(--spacing-md)"
     },
+    "kanbanBoard": {
+      "gridTemplateColumns": "repeat(2, 1fr)"
+    }
+  },
+  "selectors": {
     "@media (min-width: 768px)": {
       ".todo-app": {
         "padding": "var(--spacing-xl)"
@@ -316,11 +338,11 @@ Define local custom properties:
 }
 ```
 
-## Pseudo-classes and Pseudo-elements
+## Pseudo-classes and Pseudo-elements (Selectors Section)
 
 ```json
 {
-  "styles": {
+  "selectors": {
     ".todo-item:hover": {
       "backgroundColor": "var(--color-surface)"
     },
@@ -411,16 +433,17 @@ For conditional styling, use nested `data` syntax in component definitions:
 ### ✅ DO:
 
 - **Use brand tokens** - Reference CSS custom properties
-- **Use `components` section** - For component definitions with nested data syntax
-- **Use `selectors` section** - For advanced CSS selectors
+- **Use `components` section** - For component definitions with nested data-attribute syntax
+- **Use `selectors` section** - For advanced CSS selectors (pseudo-classes, media queries, `:host`)
 - **Keep styles scoped** - Shadow DOM provides isolation
-- **Use semantic names** - `todoItem` not `item123`
+- **Use semantic names** - `todoItem` not `item123` (camelCase → kebab-case in CSS)
 - **Leverage transitions** - Smooth state changes
-- **Support responsive** - Use media queries
-- **Use nested data syntax** - For conditional styling via data-attributes
+- **Support responsive** - Use media queries in `selectors` section
+- **Use nested data syntax** - For conditional styling via data-attributes in `components`
 
 ### ❌ DON'T:
 
+- **Don't use `styles` section** - Use `components` or `selectors` instead
 - **Don't use class-based conditionals** - Use data-attributes instead (`.active`, `.dragging`, etc.)
 - **Don't use IDs** - Use classes for styling
 - **Don't use `!important`** - Shadow DOM provides isolation

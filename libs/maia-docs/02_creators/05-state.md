@@ -212,11 +212,14 @@ State machine handles SUCCESS/ERROR
 
 **Note:** `updateContext` is infrastructure (not a tool). It directly calls `updateContextCoValue()` to persist changes to the context CoValue (CRDT).
 
+**Batching:** All `updateContext` actions in a single transition are batched together and written to the context CoValue once at the end. This ensures efficient CRDT updates.
+
 **Why this matters:**
 - **Predictable:** All context changes happen in state machines
 - **Debuggable:** Easy to trace context changes
 - **Testable:** State machines define clear contracts
 - **AI-friendly:** LLMs understand this pattern
+- **Efficient:** Batched updates reduce CRDT write operations
 
 **Remember:** Views send events, state machines update context, tools execute operations. Never update context directly from views or tools!
 
@@ -352,6 +355,12 @@ Create a file named `{name}.state.maia`:
 
 ### Entry/Exit Actions
 
+Entry and exit actions can be:
+- **Single action object** - One tool or updateContext action
+- **Array of actions** - Multiple actions executed in order
+- **Co-id reference** - Reference to an action CoValue
+
+**Single action:**
 ```json
 {
   "creating": {
@@ -363,18 +372,20 @@ Create a file named `{name}.state.maia`:
 }
 ```
 
-Or multiple actions:
-
+**Multiple actions (array):**
 ```json
 {
   "creating": {
     "entry": [
       {"tool": "@core/showLoading", "payload": {}},
-      {"tool": "@db", "payload": { "op": "create", ... }}
+      {"tool": "@db", "payload": { "op": "create", ... }},
+      {"updateContext": { "newTodoText": "" }}
     ]
   }
 }
 ```
+
+**Important:** All `updateContext` actions in a single transition are batched together and written to the context CoValue once at the end. This ensures efficient CRDT updates.
 
 ## Transitions
 
@@ -554,9 +565,9 @@ actor.context.draggedItemIds[id] = true;  // Set this item as dragged
 }
 ```
 
-## Working with Data (Automatic Reactive Queries)
+## Working with Data (Reactive Queries with mapData)
 
-MaiaOS automatically keeps your data in sync - no tools needed! Just define what data you want in your context, and MaiaOS handles the rest.
+MaiaOS provides reactive data access through the `mapData` action in state machines. This creates reactive query stores that automatically update when data changes.
 
 ### Think of it like a spreadsheet:
 - You write formulas that reference other cells
@@ -565,58 +576,62 @@ MaiaOS automatically keeps your data in sync - no tools needed! Just define what
 
 **That's how reactive queries work!**
 
-### Quick Start: Getting Data
+### Using mapData Action
 
-In your context file, define **query objects** that tell MaiaOS what data you want:
-
-**`todos.context.maia`:**
-```json
-{
-  "$type": "context",
-  "todos": {
-    "schema": "@schema/todos",
-    "filter": null
-  },
-  "newTodoText": ""
-}
-```
-
-**What happens:**
-1. MaiaOS sees `todos` is a query object (has `schema` property)
-2. MaiaOS automatically subscribes to the database
-3. Data flows into `context.todos`
-4. When data changes, MaiaOS updates `context.todos` automatically
-5. Your view re-renders with fresh data
-
-**No tools, no manual subscriptions - it just works!**
-
-### Filtering Data
-
-Want only incomplete todos? Use a filter:
+The `mapData` action maps operations engine configs to context keys, creating reactive query stores:
 
 ```json
 {
-  "todos": {
-    "schema": "@schema/todos",
-    "filter": null
-  },
-  "todosTodo": {
-    "schema": "@schema/todos",
-    "filter": { "done": false }
-  },
-  "todosDone": {
-    "schema": "@schema/todos",
-    "filter": { "done": true }
+  "idle": {
+    "entry": {
+      "mapData": {
+        "todos": {
+          "op": "read",
+          "schema": "co_zTodos123",
+          "filter": null
+        },
+        "todosTodo": {
+          "op": "read",
+          "schema": "co_zTodos123",
+          "filter": { "done": false }
+        },
+        "todosDone": {
+          "op": "read",
+          "schema": "co_zTodos123",
+          "filter": { "done": true }
+        }
+      }
+    }
   }
 }
 ```
 
-**Result:**
-- `context.todos` = All todos
-- `context.todosTodo` = Only incomplete todos (`done: false`)
-- `context.todosDone` = Only completed todos (`done: true`)
+**What happens:**
+1. State machine executes `mapData` action on entry
+2. Operations engine executes `read` operations
+3. Each operation returns a `ReactiveStore`
+4. Stores are stored in `actor._queryStores[contextKey]`
+5. Stores are marked in `context.@stores` for ViewEngine discovery
+6. ViewEngine subscribes to stores and re-renders when data changes
 
-All three automatically update when you create, update, or delete a todo!
+**Accessing data in views:**
+```json
+{
+  "$each": {
+    "items": "$todos",
+    "template": {
+      "tag": "div",
+      "text": "$$text"
+    }
+  }
+}
+```
+
+**Important:**
+- `mapData` only supports `read` operations (mutations use `@db` tool)
+- Schema must be a co-id (`co_z...`) at runtime
+- Query stores are ReactiveStore objects (can't be stored in CoValues)
+- Stores are stored in `actor._queryStores` and marked in `context.@stores`
 
 ### Creating, Updating, Deleting Data
 
@@ -667,37 +682,30 @@ Use the `@db` tool with different `op` values:
 }
 ```
 
-#### Toggle
+#### Toggle (Using Update with Expression)
+
+Toggle is not a separate operation. Use `update` with an expression:
 
 ```json
 {
   "tool": "@db",
   "payload": {
-    "op": "toggle",
-    "schema": "@schema/todos",
+    "op": "update",
     "id": "$$id",
-    "field": "done"
+    "data": {
+      "done": { "$not": "$existing.done" }
+    }
   }
 }
 ```
+
+**Note:** For `update` and `delete` operations, `schema` is not required - it's extracted from the CoValue's headerMeta automatically.
 
 ### Complete Example: Todo List
 
 **Context:**
 ```json
 {
-  "todos": {
-    "schema": "@schema/todos",
-    "filter": null
-  },
-  "todosTodo": {
-    "schema": "@schema/todos",
-    "filter": { "done": false }
-  },
-  "todosDone": {
-    "schema": "@schema/todos",
-    "filter": { "done": true }
-  },
   "newTodoText": "",
   "viewMode": "list"
 }
@@ -709,6 +717,25 @@ Use the `@db` tool with different `op` values:
   "initial": "idle",
   "states": {
     "idle": {
+      "entry": {
+        "mapData": {
+          "todos": {
+            "op": "read",
+            "schema": "co_zTodos123",
+            "filter": null
+          },
+          "todosTodo": {
+            "op": "read",
+            "schema": "co_zTodos123",
+            "filter": { "done": false }
+          },
+          "todosDone": {
+            "op": "read",
+            "schema": "co_zTodos123",
+            "filter": { "done": true }
+          }
+        }
+      },
       "on": {
         "UPDATE_INPUT": {
           "target": "idle",
@@ -728,7 +755,7 @@ Use the `@db` tool with different `op` values:
           "tool": "@db",
           "payload": {
             "op": "create",
-            "schema": "@schema/todos",
+            "schema": "co_zTodos123",
             "data": {
               "text": "$newTodoText",
               "done": false
@@ -752,6 +779,12 @@ Use the `@db` tool with different `op` values:
   }
 }
 ```
+
+**What happens:**
+1. On entry to `idle`, `mapData` creates reactive query stores for `todos`, `todosTodo`, and `todosDone`
+2. Stores are stored in `actor._queryStores` and marked in `context.@stores`
+3. ViewEngine subscribes to stores and re-renders when data changes
+4. When creating a todo, the `@db` tool creates it, and all query stores automatically update
 
 **View:**
 ```json
@@ -790,28 +823,30 @@ Use the `@db` tool with different `op` values:
 ### Best Practices
 
 **✅ DO:**
-- Define query objects in context (with `schema` property)
-- Use `@db` tool for all data changes
+- Use `mapData` action in state machines to create reactive query stores
+- Use `@db` tool for all data mutations (create, update, delete)
 - Use descriptive names (`todosTodo`, not `data1`)
-- Filter in context, not in views
+- Filter in `mapData` operations, not in views
 - Test with empty data (handle empty arrays gracefully)
+- Use co-ids (`co_z...`) for schemas at runtime
 
 **❌ DON'T:**
-- Don't manually modify `context.todos` directly
-- Don't use old `@mutation/*` or `@query/*` tools (deprecated)
-- Don't filter data in views (use context filters instead)
+- Don't manually modify query stores directly
+- Don't use `mapData` for mutations (only for read operations)
+- Don't filter data in views (use `mapData` filters instead)
 - Don't forget to handle SUCCESS/ERROR events
+- Don't use human-readable schema references (`@schema/...`) at runtime
 
 ### Troubleshooting
 
 **Data Not Appearing:**
-1. Is your context property a query object? (has `schema` property)
+1. Is `mapData` action defined in state machine entry?
 2. Check browser console for errors
-3. Is the schema name correct? (e.g., `@schema/todos`)
+3. Is the schema co-id correct? (must be `co_z...`)
 
 **Data Not Updating:**
 1. Are you using `@db` tool to modify data?
-2. Is the schema name consistent between context and tool?
+2. Are query stores properly subscribed? (check `context.@stores`)
 3. Check console logs for SUCCESS/ERROR events
 
 ## Complete Example: Todo State Machine
@@ -881,10 +916,11 @@ Use the `@db` tool with different `op` values:
       "entry": {
         "tool": "@db",
         "payload": {
-          "op": "toggle",
-          "schema": "@schema/todos",
+          "op": "update",
           "id": "$$id",
-          "field": "done"
+          "data": {
+            "done": { "$not": "$existing.done" }
+          }
         }
       },
       "on": {

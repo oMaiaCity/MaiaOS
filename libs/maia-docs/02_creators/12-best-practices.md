@@ -51,7 +51,8 @@
 - ✅ Be triggered by events from inbox (never directly)
 
 **The ONLY exception:**
-- ✅ SubscriptionEngine automatically updates reactive query objects (infrastructure)
+- ✅ Universal `read()` API automatically updates reactive query objects (infrastructure)
+- ✅ Query objects use `read()` internally - returns ReactiveStore that auto-updates
 
 **Correct Pattern:**
 ```json
@@ -554,11 +555,8 @@ App Service Actor
   "context": "@context/agent",
   "state": "@state/agent",
   "view": "@view/agent",
-  "interface": "@interface/agent",
   "brand": "@style/brand",
-  "subscriptions": "@subscriptions/agent",
-  "inbox": "@inbox/agent",
-  "inboxWatermark": 0
+  "inbox": "@inbox/agent"
 }
 ```
 
@@ -602,16 +600,12 @@ App Composite Actor
   "context": "@context/composite",
   "view": "@view/composite",
   "state": "@state/composite",
-  "interface": "@interface/composite",
   "brand": "@style/brand",
-  "children": {
-    "list": "@actor/list",
-    "kanban": "@actor/kanban"
-  },
-  "subscriptions": "@subscriptions/composite",
-  "inbox": "@inbox/composite",
-  "inboxWatermark": 0
+  "inbox": "@inbox/composite"
 }
+```
+
+**Note:** Children are defined in `composite.context.maia` via `@actors` system property. See [Actors](./03-actors.md#system-properties-in-context) for details.
 ```
 
 ---

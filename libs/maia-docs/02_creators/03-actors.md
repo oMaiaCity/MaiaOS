@@ -18,6 +18,137 @@ An actor is just a small file (`.actor.maia`) that says:
 
 **That's it!** The actor file just points to other files. The engines do the actual work.
 
+## Architectural Roles: Single Source of Truth
+
+**CRITICAL:** MaiaOS follows a strict single source of truth architecture. Everything is persisted to CoValues under the hood, accessed reactively via the universal `read()` API.
+
+### Clear Separation of Responsibilities
+
+**State Machine** → Defines ALL state transitions
+- ✅ **Single source of truth** for behavior
+- ✅ Defines when and how state changes
+- ✅ All transitions flow through state machine
+- ✅ Never bypassed - all changes go through state machine
+
+**Context** → Contains ALL data and current state
+- ✅ **Single source of truth** for data
+- ✅ Stores runtime data (todos, form values, UI state)
+- ✅ Always persisted to CoValue under the hood
+- ✅ Accessed reactively via ReactiveStore (universal `read()` API)
+- ✅ Never mutated directly - always through state machine
+
+**View** → Renders from context variables
+- ✅ **Read-only** - only reads from context
+- ✅ Sends events to state machine (never updates context directly)
+- ✅ Automatically re-renders when context changes
+- ✅ Pure presentation - no business logic
+
+### Single Source of Truth: CoValue Under the Hood
+
+**CRITICAL PRINCIPLE:** Everything is persisted to CoValues under the hood. No in-memory mutation hacks!
+
+**How it works:**
+```
+State Machine Action
+  ↓
+updateContextCoValue() → Persists to Context CoValue (CRDT)
+  ↓
+Context ReactiveStore automatically updates
+  ↓
+View subscribes to ReactiveStore → Re-renders
+```
+
+**Key Points:**
+- ✅ **Context is a CoValue** - Always persisted, never in-memory only
+- ✅ **Accessed via ReactiveStore** - Universal `read()` API pattern
+- ✅ **No mutation hacks** - Everything goes through persisted CoValues
+- ✅ **Automatic reactivity** - ReactiveStore notifies subscribers when CoValue changes
+- ✅ **Single source of truth** - CoValue is the authoritative data store
+
+**Example Flow:**
+```json
+// State machine defines transition
+{
+  "idle": {
+    "on": {
+      "UPDATE_INPUT": {
+        "target": "idle",
+        "actions": [
+          {
+            "updateContext": { "newTodoText": "$$newTodoText" }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+**What happens:**
+1. View sends `UPDATE_INPUT` event → inbox → state machine
+2. State machine executes `updateContext` action
+3. `updateContextCoValue()` persists to Context CoValue (CRDT)
+4. Context ReactiveStore automatically updates (read-only derived data)
+5. View subscribes to ReactiveStore → sees update → re-renders
+
+**No shortcuts, no hacks:**
+- ❌ Never mutate context directly: `actor.context.field = value`
+- ❌ Never bypass CoValue persistence
+- ❌ Never use in-memory only data structures
+- ✅ Always go through persisted CoValues
+- ✅ Always access via ReactiveStore (universal `read()` API)
+
+**Visual Flow:**
+```
+┌─────────────────────────────────────────────────────────┐
+│                    USER INTERACTION                      │
+│              (clicks button, types text)                │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│                      VIEW (Read-Only)                    │
+│  • Reads from context ReactiveStore                      │
+│  • Sends events to state machine                         │
+│  • Never mutates context directly                        │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼ (sends event)
+┌─────────────────────────────────────────────────────────┐
+│                  INBOX COSTREAM                         │
+│  • Single source of truth for ALL events                │
+│  • Routes events to state machine                        │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼ (processes event)
+┌─────────────────────────────────────────────────────────┐
+│                 STATE MACHINE                            │
+│  • Defines ALL state transitions                         │
+│  • Executes updateContext action                         │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼ (persists to CoValue)
+┌─────────────────────────────────────────────────────────┐
+│              CONTEXT COVALUE (CRDT)                      │
+│  ← SINGLE SOURCE OF TRUTH                               │
+│  • Always persisted                                      │
+│  • Never in-memory only                                  │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼ (accessed via ReactiveStore)
+┌─────────────────────────────────────────────────────────┐
+│            CONTEXT REACTIVESTORE                        │
+│  • Reactive access layer                                │
+│  • Notifies subscribers when CoValue changes             │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼ (subscribes)
+┌─────────────────────────────────────────────────────────┐
+│                      VIEW                                │
+│  • Re-renders automatically                              │
+└─────────────────────────────────────────────────────────┘
+```
+
 ## Why This Is Cool
 
 **Simple:** Each file does one thing. Easy to understand!
@@ -40,16 +171,13 @@ Create a file named `{name}.actor.maia`:
   "context": "@context/todo",
   "state": "@state/todo",
   "view": "@view/todo",
-  "interface": "@interface/todo",
   "brand": "@style/brand",
   "style": "@style/todo",
-  "subscriptions": "@subscriptions/todo",
-  "inbox": "@inbox/todo",
-  "inboxWatermark": 0
+  "inbox": "@inbox/todo"
 }
 ```
 
-**Note:** All references (`context`, `view`, `state`, `interface`, `brand`, `style`, `subscriptions`, `inbox`) use schema/instance references (like `@context/todo`) that are transformed to co-ids (`co_z...`) during seeding. The `$schema` and `$id` properties also use schema references.
+**Note:** All references (`context`, `view`, `state`, `brand`, `style`, `inbox`) use schema/instance references (like `@context/todo`) that are transformed to co-ids (`co_z...`) during seeding. The `$schema` and `$id` properties also use schema references.
 
 ### Properties
 
@@ -61,13 +189,11 @@ Create a file named `{name}.actor.maia`:
 | `context` | string | No | Co-id reference to context (`@context/todo`) - transformed during seeding |
 | `state` | string | Yes | Co-id reference to state machine (`@state/todo`) - transformed during seeding |
 | `view` | string | No | Co-id reference to view (`@view/todo`) - optional for service actors |
-| `interface` | string | No | Co-id reference to interface (`@interface/todo`) - message contract |
 | `brand` | string | Yes | Co-id reference to brand style (`@style/brand`) - shared design system |
 | `style` | string | No | Co-id reference to local style (`@style/todo`) - actor-specific overrides |
-| `children` | object | No | Map of slot names to child actor references (`{"composite": "@actor/composite"}`) |
-| `subscriptions` | string | No | Co-id reference to subscriptions colist (`@subscriptions/todo`) |
-| `inbox` | string | No | Co-id reference to inbox costream (`@inbox/todo`) |
-| `inboxWatermark` | number | No | **DEPRECATED** - Use per-message `processed` flags instead (default: 0) |
+| `inbox` | string | No | Co-id reference to inbox costream (`@inbox/todo`) - message inbox for events |
+
+**Note:** Children are defined in context files via the `@actors` system property, not in the actor schema. See [Children Architecture](#system-properties-in-context) below.
 
 **Style Properties:**
 - `brand` is **required** - shared design system (tokens, components) used by all actors
@@ -115,16 +241,12 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
   "context": "@context/agent",
   "view": "@view/agent",        // ← Minimal view (only renders child)
   "state": "@state/agent",
-  "interface": "@interface/agent",
   "brand": "@style/brand",
-  "children": {
-    "composite": "@actor/composite"  // ← Loads first UI actor
-  },
-  "subscriptions": "@subscriptions/agent",
-  "inbox": "@inbox/agent",
-  "inboxWatermark": 0
+  "inbox": "@inbox/agent"
 }
 ```
+
+**Note:** Children are defined in the context file via `@actors` system property, not in the actor definition. See [Children Architecture](#system-properties-in-context) below.
 
 **Best Practice:** Always define the agent service actor first when creating a vibe. This is your app's orchestrator.
 
@@ -185,11 +307,8 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
   "context": "@context/list",
   "view": "@view/list",        // ← Full UI view
   "state": "@state/list",
-  "interface": "@interface/list",
   "brand": "@style/brand",
-  "subscriptions": "@subscriptions/list",  // ← Subscribes to agent
-  "inbox": "@inbox/list",
-  "inboxWatermark": 0
+  "inbox": "@inbox/list"
 }
 ```
 
@@ -214,17 +333,12 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
   "context": "@context/composite",
   "view": "@view/composite",
   "state": "@state/composite",
-  "interface": "@interface/composite",
   "brand": "@style/brand",
-  "children": {
-    "list": "@actor/list",        // ← Child UI actors
-    "kanban": "@actor/kanban"
-  },
-  "subscriptions": "@subscriptions/composite",  // ← Subscribes to agent
-  "inbox": "@inbox/composite",
-  "inboxWatermark": 0
+  "inbox": "@inbox/composite"
 }
 ```
+
+**Note:** Children are defined in the context file via `@actors` system property. See the context example below.
 
 **Composite View:**
 ```json
@@ -299,7 +413,7 @@ Every vibe's entry point is an **agent service actor** that orchestrates the app
 1. View sends event to state machine (via inbox)
 2. State machine uses `updateContext` action (infrastructure, not a tool)
 3. `updateContextCoValue()` persists to context CoValue (CRDT)
-4. SubscriptionEngine reactively updates `actor.context` (read-only derived data)
+4. Context ReactiveStore automatically updates (read-only derived data)
 5. View re-renders with new context
 
 **Example:**
@@ -343,24 +457,19 @@ The agent loads a **composite actor** as its first child:
   "context": "@context/agent",
   "view": "@view/agent",        // ← Minimal view
   "state": "@state/agent",      // ← Orchestrates queries/mutations
-  "interface": "@interface/agent",
   "brand": "@style/brand",
-  "children": {
-    "composite": "@actor/composite"  // ← First UI actor
-  },
-  "subscriptions": "@subscriptions/agent",
-  "inbox": "@inbox/agent",
-  "inboxWatermark": 0
+  "inbox": "@inbox/agent"
 }
 ```
 
+**Note:** Children are defined in `agent.context.maia` via `@actors` system property. See [Children Architecture](#system-properties-in-context) below.
+
 **Agent Service Actor Responsibilities:**
-- Orchestrate data queries (send `SUBSCRIBE_TO_TODOS` messages to UI actors)
+- Orchestrate data queries using universal `read()` API
 - Handle mutations (`CREATE_BUTTON`, `TOGGLE_BUTTON`, `DELETE_BUTTON`)
 - Manage application-level state
-- Coordinate between UI actors via messages
-- Load composite actor as first child
-- Define message contracts via interface
+- Coordinate between UI actors via messages (inbox costream)
+- Load composite actor as first child (defined in context)
 
 **Why Start with Agent?**
 1. **Clear Architecture** - Agent defines the app's structure
@@ -381,17 +490,12 @@ The composite actor provides shared UI structure and slots child UI actors:
   "context": "@context/composite",
   "view": "@view/composite",
   "state": "@state/composite",
-  "interface": "@interface/composite",
   "brand": "@style/brand",
-  "children": {
-    "list": "@actor/list",        // ← UI actors
-    "kanban": "@actor/kanban"
-  },
-  "subscriptions": "@subscriptions/composite",
-  "inbox": "@inbox/composite",
-  "inboxWatermark": 0
+  "inbox": "@inbox/composite"
 }
 ```
+
+**Note:** Children are defined in `composite.context.maia` via `@actors` system property. See the context example below.
 
 **Composite Actor Responsibilities:**
 - Render shared UI (header, form, view switcher)
@@ -412,11 +516,8 @@ Leaf UI actors render specific components:
   "context": "@context/list",
   "view": "@view/list",
   "state": "@state/list",
-  "interface": "@interface/list",
   "brand": "@style/brand",
-  "subscriptions": "@subscriptions/list",
-  "inbox": "@inbox/list",
-  "inboxWatermark": 0
+  "inbox": "@inbox/list"
 }
 ```
 
@@ -538,7 +639,7 @@ Referenced in actor:
 }
 ```
 
-**Note:** Context is always in a separate file. The `context` property references it via co-id (`@context/todo`), which gets transformed to an actual co-id (`co_z...`) during seeding.
+**Note:** Context is always in a separate file. The `context` property references it via co-id (`@context/todo`), which gets transformed to an actual co-id (`co_z...`) during seeding. **Context is always persisted to a CoValue under the hood - accessed reactively via ReactiveStore. No in-memory mutation hacks!**
 
 **Example Context Structure:**
 ```json
@@ -574,6 +675,8 @@ Referenced in actor:
 - Store only serializable data (no functions)
 - **Update context via state machines** - State machines are the single source of truth
 - **Use `updateContext` infrastructure action** - Always update context through state machine actions
+- **Always go through CoValue persistence** - Everything must be persisted, no in-memory hacks
+- **Access via ReactiveStore** - Context is a ReactiveStore backed by persisted CoValue
 
 ❌ **DON'T:**
 - Store UI elements or DOM references
@@ -581,6 +684,8 @@ Referenced in actor:
 - Mix concerns (separate data from UI state)
 - **Don't mutate context directly** - Always use state machines and tools
 - **Don't update context from views** - Views send events, state machines update context
+- **Don't bypass CoValue persistence** - Never mutate `actor.context.value` directly
+- **Don't use in-memory mutation hacks** - Everything must go through persisted CoValues
 
 ## Actor Lifecycle
 
@@ -730,22 +835,9 @@ actor.actorEngine.sendMessage(targetActorId, message);
 
 **Internal events** (from views) automatically route through inbox via `sendInternalEvent()`.
 
-### Subscribing to Messages
+### Receiving Messages
 
-In the actor definition:
-
-```json
-{
-  "id": "actor_todo_001",
-  "subscriptions": ["actor_calendar_001", "actor_sync_service"]
-}
-```
-
-Or at runtime:
-
-```javascript
-actor.actorEngine.subscribe('actor_todo_001', 'actor_calendar_001');
-```
+Messages are sent to actors via their inbox costream. Actors automatically process messages from their inbox and route them to their state machine. No explicit subscription configuration is needed - messages are sent directly to the target actor's inbox.
 
 ### Processing Messages
 
@@ -825,12 +917,9 @@ maia/
   "context": "@context/todo",
   "state": "@state/todo",
   "view": "@view/todo",
-  "interface": "@interface/todo",
   "brand": "@style/brand",
   "style": "@style/todo",
-  "subscriptions": "@subscriptions/todo",
-  "inbox": "@inbox/todo",
-  "inboxWatermark": 0
+  "inbox": "@inbox/todo"
 }
 ```
 
@@ -864,17 +953,22 @@ maia/
 **Example: `todo_input.actor.maia`**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_todo_input_001",
-  "viewRef": "todo_input",
-  "stateRef": "todo_input"
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo-input",
+  "role": "todo-input",
+  "context": "@context/todo-input",
+  "view": "@view/todo-input",
+  "state": "@state/todo-input",
+  "brand": "@style/brand",
+  "inbox": "@inbox/todo-input"
 }
 ```
 
 **Leaf View: `todo_input.view.maia`**
 ```json
 {
-  "$type": "view",
+  "$schema": "@schema/view",
+  "$id": "@view/todo-input",
   "root": {
     "tag": "div",
     "children": [
@@ -902,25 +996,28 @@ maia/
 
 **Composite actors** are containers that hold other actors in slots.
 
-**Example: `vibe_root.actor.maia`**
+**Example: `agent.actor.maia`**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_vibe_root_001",
-  "viewRef": "vibe_root",
-  "children": {
-    "header": "actor_view_switcher_001",
-    "input": "actor_todo_input_001",
-    "list": "actor_todo_list_001"
-  }
+  "$schema": "@schema/actor",
+  "$id": "@actor/agent",
+  "role": "agent",
+  "context": "@context/agent",
+  "view": "@view/agent",
+  "state": "@state/agent",
+  "brand": "@style/brand",
+  "inbox": "@inbox/agent"
 }
 ```
 
-**Composite View: `vibe_root.view.maia`**
+**Note:** Children are defined in the context file, not in the actor definition. See the context example below.
+
+**Composite View: `app.view.maia`**
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/app",
+  "root": {
     "tag": "div",
     "attrs": {
       "class": "app-layout"
@@ -928,15 +1025,15 @@ maia/
     "children": [
       {
         "tag": "header",
-        "$slot": "$headerView"  // Renders child actor from context.headerView
+        "$slot": "$header"  // Renders child actor from @actors.header
       },
       {
         "tag": "main",
-        "$slot": "$inputView"   // Renders child actor from context.inputView
+        "$slot": "$input"   // Renders child actor from @actors.input
       },
       {
         "tag": "section",
-        "$slot": "$listView"    // Renders child actor from context.listView
+        "$slot": "$currentView"    // Renders active child actor
       }
     ]
   }
@@ -1039,24 +1136,38 @@ Create a root actor that composes all pieces:
 **`app.actor.maia`**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_app_001",
-  "viewRef": "app",
-  "stateRef": "app",
-  "children": {
-    "header": "actor_header_001",
-    "input": "actor_input_001",
-    "list": "actor_list_001",
-    "footer": "actor_footer_001"
-  }
+  "$schema": "@schema/actor",
+  "$id": "@actor/app",
+  "role": "composite",
+  "context": "@context/app",
+  "view": "@view/app",
+  "state": "@state/app",
+  "brand": "@style/brand",
+  "inbox": "@inbox/app"
+}
+```
+
+**`app.context.maia`** (defines children):
+```json
+{
+  "$schema": "@schema/context",
+  "$id": "@context/app",
+  "@actors": {
+    "header": "@actor/header",
+    "input": "@actor/input",
+    "list": "@actor/list",
+    "footer": "@actor/footer"
+  },
+  "currentView": "@list"
 }
 ```
 
 **`app.view.maia`**
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/app",
+  "root": {
     "tag": "div",
     "attrs": {
       "class": "app"
@@ -1064,19 +1175,19 @@ Create a root actor that composes all pieces:
     "children": [
       {
         "tag": "header",
-        "$slot": "$headerView"
+        "$slot": "$header"
       },
       {
         "tag": "main",
-        "$slot": "$inputView"
+        "$slot": "$input"
       },
       {
         "tag": "section",
-        "$slot": "$listView"
+        "$slot": "$currentView"
       },
       {
         "tag": "footer",
-        "$slot": "$footerView"
+        "$slot": "$footer"
       }
     ]
   }
@@ -1086,17 +1197,14 @@ Create a root actor that composes all pieces:
 **`app.state.maia`** - Sets context values for slots:
 ```json
 {
-  "$type": "state",
+  "$schema": "@schema/state",
+  "$id": "@state/app",
   "initial": "idle",
   "states": {
     "idle": {
       "entry": {
-        "tool": "@core/updateContext",
-        "payload": {
-          "headerView": "@header",
-          "inputView": "@input",
-          "listView": "@list",
-          "footerView": "@footer"
+        "updateContext": {
+          "currentView": "@list"
         }
       }
     }
@@ -1104,40 +1212,13 @@ Create a root actor that composes all pieces:
 }
 ```
 
+**Note:** The `@actors` system property in context defines which children exist. The `currentView` context property references which child to display.
+
 ### Message Passing Between Actors
 
-Actors communicate via **messages**, not props.
+Actors communicate via **messages** sent to inbox costreams, not props.
 
-#### Define Interfaces
-
-Create `actor.interface.maia` for each actor:
-
-**`todo_input.interface.maia`**
-```json
-{
-  "$type": "actor.interface",
-  "publishes": {
-    "TODO_CREATED": {
-      "payload": { "id": "string", "text": "string" }
-    }
-  },
-  "subscriptions": ["actor_todo_list_001"]
-}
-```
-
-**`todo_list.interface.maia`**
-```json
-{
-  "$type": "actor.interface",
-  "inbox": {
-    "TODO_CREATED": {
-      "payload": { "id": "string", "text": "string" }
-    }
-  }
-}
-```
-
-#### Publish Messages
+#### Sending Messages
 
 When an event happens, publish a message:
 
@@ -1169,19 +1250,9 @@ When an event happens, publish a message:
 }
 ```
 
-#### Subscribe to Messages
+#### Receiving Messages
 
-Parent actors auto-subscribe to children:
-
-```json
-{
-  "$type": "actor",
-  "children": {
-    "input": "actor_todo_input_001"
-  },
-  "subscriptions": ["actor_todo_input_001"]  // ← Auto-added
-}
-```
+Messages are automatically processed from the actor's inbox costream and routed to the state machine. Actors handle messages by defining event handlers in their state machines.
 
 ### Real Example: Todo App
 
@@ -1208,21 +1279,22 @@ vibe_root (composite)
 #### Layout Container
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/layout",
+  "root": {
     "tag": "div",
     "children": [
       {
         "tag": "header",
-        "$slot": "$headerView"
+        "$slot": "$header"
       },
       {
         "tag": "main",
-        "$slot": "$mainView"
+        "$slot": "$currentView"
       },
       {
         "tag": "footer",
-        "$slot": "$footerView"
+        "$slot": "$footer"
       }
     ]
   }
@@ -1232,14 +1304,15 @@ vibe_root (composite)
 #### List with Items
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/list",
+  "root": {
     "tag": "ul",
     "$each": {
       "items": "$todos",
       "template": {
         "tag": "li",
-        "$slot": "@item"
+        "text": "$$item.text"
       }
     }
   }
@@ -1249,8 +1322,9 @@ vibe_root (composite)
 #### Conditional View Switching
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/composite",
+  "root": {
     "tag": "div",
     "children": [
       {
@@ -1265,6 +1339,9 @@ vibe_root (composite)
 **State machine handles switching:**
 ```json
 {
+  "$schema": "@schema/state",
+  "$id": "@state/composite",
+  "initial": "idle",
   "states": {
     "idle": {
       "on": {
@@ -1272,8 +1349,7 @@ vibe_root (composite)
           "target": "idle",
           "actions": [
             {
-              "tool": "@core/updateContext",
-              "payload": {
+              "updateContext": {
                 "currentView": "$viewMode === 'list' ? '@list' : '@kanban'"  // ← Updates context property (CRDT CoValue)
               }
             }
@@ -1290,18 +1366,18 @@ vibe_root (composite)
 **✅ DO:**
 - Keep actors small and focused
 - Use clear slot names (`@header`, not `@h`)
-- Define interfaces for all actors
-- Publish messages for important events
+- Send messages via inbox costreams for actor-to-actor communication
 - Keep context internal (don't expose)
 - Use state machine to set slot context values
+- Define children in context files via `@actors` system property
 
 **❌ DON'T:**
 - Don't create giant monolithic actors
 - Don't use prop drilling
-- Don't skip interface definitions
 - Don't expose context directly
 - Don't create circular dependencies
 - Don't put conditional logic in views (use state machine instead)
+- Don't define children in actor schema (use context `@actors` instead)
 
 ## Next Steps
 
@@ -1318,11 +1394,11 @@ vibe_root (composite)
 window.actor = actor;
 
 // Inspect in console
-actor.context           // Runtime data
+actor.context           // Runtime data (ReactiveStore)
+actor.context.value     // Current context value
 actor.machine          // State machine instance
 actor.machine.currentState  // Current state
-actor.inbox            // Message queue
-actor.subscriptions    // Subscribed actors
+actor.inbox            // Inbox costream (messages)
 
 // Inspect Shadow DOM
 // In DevTools: click the actor container, expand #shadow-root

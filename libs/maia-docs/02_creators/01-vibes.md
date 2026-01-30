@@ -68,15 +68,15 @@ Create a file named `manifest.vibe.maia`:
 
 ### Field Details
 
-**`$type`:** Discriminator field that identifies this as a vibe manifest.
+**`$schema`:** Schema reference (`@schema/vibe`) - identifies this as a vibe manifest and is transformed to co-id during seeding.
 
-**`$id`:** Unique identifier following the pattern `vibe_{name}_{number}`. Used for internal references.
+**`$id`:** Unique vibe identifier (`@vibe/todos`) - transformed to co-id during seeding. Used for internal references.
 
 **`name`:** The human-readable name that appears in marketplace listings, app launchers, etc.
 
 **`description`:** A brief (1-3 sentence) description of what the app does. This appears in marketplace cards and search results.
 
-**`actor`:** Relative path to the root actor file. The path is resolved relative to the vibe manifest location.
+**`actor`:** Co-id reference to the agent service actor (`@actor/agent`) - transformed to co-id during seeding. When loading from file, the path is resolved relative to the vibe manifest location.
 
 ## Creating a Vibe
 
@@ -109,9 +109,8 @@ todos/
 │   ├── agent.context.maia
 │   ├── agent.state.maia
 │   ├── agent.view.maia
-│   ├── agent.interface.maia
-│   ├── agent.subscriptions.maia
-│   └── agent.inbox.maia
+│   ├── agent.inbox.maia
+│   └── brand.style.maia
 ├── composite/            # Composite actor (first UI actor)
 │   ├── composite.actor.maia
 │   └── ...
@@ -150,16 +149,12 @@ todos/
   "context": "@context/agent",
   "state": "@state/agent",
   "view": "@view/agent",
-  "interface": "@interface/agent",
   "brand": "@style/brand",
-  "children": {
-    "composite": "@actor/composite"
-  },
-  "subscriptions": "@subscriptions/agent",
-  "inbox": "@inbox/agent",
-  "inboxWatermark": 0
+  "inbox": "@inbox/agent"
 }
 ```
+
+**Note:** Children are defined in `agent.context.maia` via `@actors` system property. See [Actors](./03-actors.md#system-properties-in-context) for details.
 
 **Agent Responsibilities:**
 - Orchestrate data queries and mutations
@@ -245,8 +240,8 @@ os.loadVibe(path, container)
 
 The `loadVibe()` method:
 - Fetches the vibe manifest from the specified path
-- Validates that it's a proper vibe (`$type: "vibe"`)
-- Resolves the actor path relative to the vibe location
+- Validates that it's a proper vibe (`$schema: "@schema/vibe"`)
+- Resolves the actor path relative to the vibe location (when loading from file)
 - Calls `os.createActor()` with the resolved path
 - Returns both the vibe metadata and the created actor
 
@@ -292,11 +287,9 @@ vibes/todos/
 ├── index.html              # App launcher
 ├── agent/                  # Agent service actor (ALWAYS CREATE FIRST)
 │   ├── agent.actor.maia    # Agent actor definition
-│   ├── agent.context.maia  # Agent context
+│   ├── agent.context.maia  # Agent context (defines children via @actors)
 │   ├── agent.state.maia    # Agent state machine
 │   ├── agent.view.maia    # Minimal view (renders child)
-│   ├── agent.interface.maia # Message interface
-│   ├── agent.subscriptions.maia # Subscriptions colist
 │   ├── agent.inbox.maia   # Inbox costream
 │   └── brand.style.maia   # Shared design system
 ├── composite/              # Composite actor (first UI actor)
@@ -304,24 +297,18 @@ vibes/todos/
 │   ├── composite.context.maia
 │   ├── composite.state.maia
 │   ├── composite.view.maia
-│   ├── composite.interface.maia
-│   ├── composite.subscriptions.maia
 │   └── composite.inbox.maia
 ├── list/                   # UI actor
 │   ├── list.actor.maia
 │   ├── list.context.maia
 │   ├── list.state.maia
 │   ├── list.view.maia
-│   ├── list.interface.maia
-│   ├── list.subscriptions.maia
 │   └── list.inbox.maia
 └── kanban/                 # UI actor
     ├── kanban.actor.maia
     ├── kanban.context.maia
     ├── kanban.state.maia
     ├── kanban.view.maia
-    ├── kanban.interface.maia
-    ├── kanban.subscriptions.maia
     └── kanban.inbox.maia
 ```
 
@@ -418,11 +405,11 @@ Vibes are designed to support future marketplace features:
 **Example Future Vibe:**
 ```json
 {
-  "$type": "vibe",
-  "$id": "vibe_todos_001",
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/todos",
   "name": "Todo List",
   "description": "A complete todo list application...",
-  "actor": "./todo.actor.maia",
+  "actor": "@actor/agent",
   "icon": "./icon.svg",
   "screenshots": ["./screenshots/list.png", "./screenshots/kanban.png"],
   "tags": ["productivity", "task-management"],
@@ -458,9 +445,9 @@ console.log(actor.context);    // Runtime state
 - Check that the vibe file exists at the specified path
 - Verify the path is correct relative to your HTML file
 
-**Error: "Invalid vibe manifest: $type must be 'vibe'"**
-- Ensure your JSON has `"$type": "vibe"`
-- Check for typos in the $type field
+**Error: "Invalid vibe manifest"**
+- Ensure your JSON has `"$schema": "@schema/vibe"`
+- Check for typos in the $schema field
 
 **Error: "Vibe manifest missing 'actor' field"**
 - Add the `"actor"` field with path to your actor file

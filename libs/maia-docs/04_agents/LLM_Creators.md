@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-01-30T20:38:53.531Z
+**Auto-generated:** 2026-01-30T21:34:44.542Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -1305,6 +1305,8 @@ Read the documentation in the following order for a complete understanding:
 ### 3. [Actors](./03-actors.md)
 **Actor-Based Component System**
 - What are Actors?
+- **Architectural roles:** State machine defines transitions, context contains data, view renders from context
+- **Single source of truth:** Everything persisted to CoValues, accessed via ReactiveStore
 - **Agent-first development** (create agent service actor first!)
 - Actor lifecycle
 - Actor composition
@@ -1313,7 +1315,8 @@ Read the documentation in the following order for a complete understanding:
 
 ### 4. [Context](./04-context.md)
 **Context Management**
-- Context system
+- Context system (ReactiveStore pattern)
+- Universal `read()` API - Every CoValue accessible as ReactiveStore
 - Context passing
 - Context composition
 - Data flow
@@ -1332,11 +1335,12 @@ Read the documentation in the following order for a complete understanding:
 - Tool composition
 - Custom tools
 
-### 7. [Operations](./07_operations.md)
+### 7. [Operations](./07-operations.md)
 **Database Operations API**
+- Universal `read()` API - Every CoValue accessible as ReactiveStore
 - Unified database operations (`maia.db()`)
 - Query, create, update, delete, toggle operations
-- Reactive subscriptions
+- Reactive subscriptions via ReactiveStore pattern
 - Co-id usage and schema transformation
 
 ### 8. [Views](./08-views.md)
@@ -1385,6 +1389,8 @@ This documentation is for **creators** who want to:
 - How to create AI-powered features with skills
 - How to manage state and context
 - How to build reactive, collaborative applications
+- **Architectural roles:** State machine defines transitions, context contains data, view renders from context
+- **Single source of truth:** Everything is persisted to CoValues, accessed reactively via universal `read()` API
 
 ---
 
@@ -1485,15 +1491,15 @@ Create a file named `manifest.vibe.maia`:
 
 ### Field Details
 
-**`$type`:** Discriminator field that identifies this as a vibe manifest.
+**`$schema`:** Schema reference (`@schema/vibe`) - identifies this as a vibe manifest and is transformed to co-id during seeding.
 
-**`$id`:** Unique identifier following the pattern `vibe_{name}_{number}`. Used for internal references.
+**`$id`:** Unique vibe identifier (`@vibe/todos`) - transformed to co-id during seeding. Used for internal references.
 
 **`name`:** The human-readable name that appears in marketplace listings, app launchers, etc.
 
 **`description`:** A brief (1-3 sentence) description of what the app does. This appears in marketplace cards and search results.
 
-**`actor`:** Relative path to the root actor file. The path is resolved relative to the vibe manifest location.
+**`actor`:** Co-id reference to the agent service actor (`@actor/agent`) - transformed to co-id during seeding. When loading from file, the path is resolved relative to the vibe manifest location.
 
 ## Creating a Vibe
 
@@ -1526,9 +1532,8 @@ todos/
 │   ├── agent.context.maia
 │   ├── agent.state.maia
 │   ├── agent.view.maia
-│   ├── agent.interface.maia
-│   ├── agent.subscriptions.maia
-│   └── agent.inbox.maia
+│   ├── agent.inbox.maia
+│   └── brand.style.maia
 ├── composite/            # Composite actor (first UI actor)
 │   ├── composite.actor.maia
 │   └── ...
@@ -1567,16 +1572,12 @@ todos/
   "context": "@context/agent",
   "state": "@state/agent",
   "view": "@view/agent",
-  "interface": "@interface/agent",
   "brand": "@style/brand",
-  "children": {
-    "composite": "@actor/composite"
-  },
-  "subscriptions": "@subscriptions/agent",
-  "inbox": "@inbox/agent",
-  "inboxWatermark": 0
+  "inbox": "@inbox/agent"
 }
 ```
+
+**Note:** Children are defined in `agent.context.maia` via `@actors` system property. See [Actors](./03-actors.md#system-properties-in-context) for details.
 
 **Agent Responsibilities:**
 - Orchestrate data queries and mutations
@@ -1662,8 +1663,8 @@ os.loadVibe(path, container)
 
 The `loadVibe()` method:
 - Fetches the vibe manifest from the specified path
-- Validates that it's a proper vibe (`$type: "vibe"`)
-- Resolves the actor path relative to the vibe location
+- Validates that it's a proper vibe (`$schema: "@schema/vibe"`)
+- Resolves the actor path relative to the vibe location (when loading from file)
 - Calls `os.createActor()` with the resolved path
 - Returns both the vibe metadata and the created actor
 
@@ -1709,11 +1710,9 @@ vibes/todos/
 ├── index.html              # App launcher
 ├── agent/                  # Agent service actor (ALWAYS CREATE FIRST)
 │   ├── agent.actor.maia    # Agent actor definition
-│   ├── agent.context.maia  # Agent context
+│   ├── agent.context.maia  # Agent context (defines children via @actors)
 │   ├── agent.state.maia    # Agent state machine
 │   ├── agent.view.maia    # Minimal view (renders child)
-│   ├── agent.interface.maia # Message interface
-│   ├── agent.subscriptions.maia # Subscriptions colist
 │   ├── agent.inbox.maia   # Inbox costream
 │   └── brand.style.maia   # Shared design system
 ├── composite/              # Composite actor (first UI actor)
@@ -1721,24 +1720,18 @@ vibes/todos/
 │   ├── composite.context.maia
 │   ├── composite.state.maia
 │   ├── composite.view.maia
-│   ├── composite.interface.maia
-│   ├── composite.subscriptions.maia
 │   └── composite.inbox.maia
 ├── list/                   # UI actor
 │   ├── list.actor.maia
 │   ├── list.context.maia
 │   ├── list.state.maia
 │   ├── list.view.maia
-│   ├── list.interface.maia
-│   ├── list.subscriptions.maia
 │   └── list.inbox.maia
 └── kanban/                 # UI actor
     ├── kanban.actor.maia
     ├── kanban.context.maia
     ├── kanban.state.maia
     ├── kanban.view.maia
-    ├── kanban.interface.maia
-    ├── kanban.subscriptions.maia
     └── kanban.inbox.maia
 ```
 
@@ -1835,11 +1828,11 @@ Vibes are designed to support future marketplace features:
 **Example Future Vibe:**
 ```json
 {
-  "$type": "vibe",
-  "$id": "vibe_todos_001",
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/todos",
   "name": "Todo List",
   "description": "A complete todo list application...",
-  "actor": "./todo.actor.maia",
+  "actor": "@actor/agent",
   "icon": "./icon.svg",
   "screenshots": ["./screenshots/list.png", "./screenshots/kanban.png"],
   "tags": ["productivity", "task-management"],
@@ -1875,9 +1868,9 @@ console.log(actor.context);    // Runtime state
 - Check that the vibe file exists at the specified path
 - Verify the path is correct relative to your HTML file
 
-**Error: "Invalid vibe manifest: $type must be 'vibe'"**
-- Ensure your JSON has `"$type": "vibe"`
-- Check for typos in the $type field
+**Error: "Invalid vibe manifest"**
+- Ensure your JSON has `"$schema": "@schema/vibe"`
+- Check for typos in the $schema field
 
 **Error: "Vibe manifest missing 'actor' field"**
 - Add the `"actor"` field with path to your actor file
@@ -1929,7 +1922,7 @@ The **Kernel** is the single entry point for MaiaOS. It boots the operating syst
     async function boot() {
       // Boot the operating system
       const os = await MaiaOS.boot({
-        modules: ['db', 'core', 'dragdrop', 'interface']
+        modules: ['db', 'core']  // Default modules
       });
       
       // Create an actor
@@ -1951,33 +1944,36 @@ The **Kernel** is the single entry point for MaiaOS. It boots the operating syst
 
 ```javascript
 const os = await MaiaOS.boot({
-  // Modules to load (default: ['db', 'core', 'dragdrop'])
-  modules: ['db', 'core', 'dragdrop']
+  // Modules to load (default: ['db', 'core'])
+  modules: ['db', 'core']  // Add 'dragdrop' if needed
 });
 ```
 
 ## What Happens During Boot?
 
-1. **Initialize Module Registry** - Prepares dynamic module loading
-2. **Initialize Engines** - Boots all execution engines:
+1. **Initialize Database** - Sets up database backend (CoJSON or IndexedDB)
+2. **Initialize Module Registry** - Prepares dynamic module loading
+3. **Initialize Engines** - Boots all execution engines:
    - `ActorEngine` - Manages actor lifecycle
    - `StateEngine` - Interprets state machines
    - `ViewEngine` - Renders views
    - `ToolEngine` - Executes tools
    - `StyleEngine` - Compiles styles
    - `MaiaScriptEvaluator` - Evaluates DSL expressions
-3. **Load Modules** - Dynamically loads specified modules
-4. **Register Tools** - Each module registers its tools
+   - `DBEngine` - Unified database operations (universal `read()` API)
+4. **Load Modules** - Dynamically loads specified modules (default: `['db', 'core']`)
+5. **Register Tools** - Each module registers its tools
 
 ## Available Modules
 
 ### Database Module (`db`)
 Unified database operations through a single `@db` tool:
-- All operations use `op` parameter (`create`, `update`, `delete`, `toggle`, `query`, `seed`)
+- All operations use `op` parameter (`create`, `update`, `delete`, `toggle`, `read`, `seed`)
+- **Universal `read()` API** - Every CoValue is accessible as a reactive store
 - Example: `{ tool: "@db", payload: { op: "create", schema: "co_z...", data: {...} } }`
 - **Note:** Schema must be a co-id (`co_z...`) - schema references (`@schema/todos`) are transformed to co-ids during seeding
-- Reactive query objects automatically keep data in sync
-- See [State Machines](./05-state.md) for data patterns
+- All `read()` operations return ReactiveStore with `.value` and `.subscribe()` methods
+- See [Operations](./07-operations.md) for the universal read() API pattern
 
 ### Core Module (`core`)
 UI utilities and message publishing:
@@ -2159,6 +2155,137 @@ An actor is just a small file (`.actor.maia`) that says:
 
 **That's it!** The actor file just points to other files. The engines do the actual work.
 
+## Architectural Roles: Single Source of Truth
+
+**CRITICAL:** MaiaOS follows a strict single source of truth architecture. Everything is persisted to CoValues under the hood, accessed reactively via the universal `read()` API.
+
+### Clear Separation of Responsibilities
+
+**State Machine** → Defines ALL state transitions
+- ✅ **Single source of truth** for behavior
+- ✅ Defines when and how state changes
+- ✅ All transitions flow through state machine
+- ✅ Never bypassed - all changes go through state machine
+
+**Context** → Contains ALL data and current state
+- ✅ **Single source of truth** for data
+- ✅ Stores runtime data (todos, form values, UI state)
+- ✅ Always persisted to CoValue under the hood
+- ✅ Accessed reactively via ReactiveStore (universal `read()` API)
+- ✅ Never mutated directly - always through state machine
+
+**View** → Renders from context variables
+- ✅ **Read-only** - only reads from context
+- ✅ Sends events to state machine (never updates context directly)
+- ✅ Automatically re-renders when context changes
+- ✅ Pure presentation - no business logic
+
+### Single Source of Truth: CoValue Under the Hood
+
+**CRITICAL PRINCIPLE:** Everything is persisted to CoValues under the hood. No in-memory mutation hacks!
+
+**How it works:**
+```
+State Machine Action
+  ↓
+updateContextCoValue() → Persists to Context CoValue (CRDT)
+  ↓
+Context ReactiveStore automatically updates
+  ↓
+View subscribes to ReactiveStore → Re-renders
+```
+
+**Key Points:**
+- ✅ **Context is a CoValue** - Always persisted, never in-memory only
+- ✅ **Accessed via ReactiveStore** - Universal `read()` API pattern
+- ✅ **No mutation hacks** - Everything goes through persisted CoValues
+- ✅ **Automatic reactivity** - ReactiveStore notifies subscribers when CoValue changes
+- ✅ **Single source of truth** - CoValue is the authoritative data store
+
+**Example Flow:**
+```json
+// State machine defines transition
+{
+  "idle": {
+    "on": {
+      "UPDATE_INPUT": {
+        "target": "idle",
+        "actions": [
+          {
+            "updateContext": { "newTodoText": "$$newTodoText" }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+**What happens:**
+1. View sends `UPDATE_INPUT` event → inbox → state machine
+2. State machine executes `updateContext` action
+3. `updateContextCoValue()` persists to Context CoValue (CRDT)
+4. Context ReactiveStore automatically updates (read-only derived data)
+5. View subscribes to ReactiveStore → sees update → re-renders
+
+**No shortcuts, no hacks:**
+- ❌ Never mutate context directly: `actor.context.field = value`
+- ❌ Never bypass CoValue persistence
+- ❌ Never use in-memory only data structures
+- ✅ Always go through persisted CoValues
+- ✅ Always access via ReactiveStore (universal `read()` API)
+
+**Visual Flow:**
+```
+┌─────────────────────────────────────────────────────────┐
+│                    USER INTERACTION                      │
+│              (clicks button, types text)                │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│                      VIEW (Read-Only)                    │
+│  • Reads from context ReactiveStore                      │
+│  • Sends events to state machine                         │
+│  • Never mutates context directly                        │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼ (sends event)
+┌─────────────────────────────────────────────────────────┐
+│                  INBOX COSTREAM                         │
+│  • Single source of truth for ALL events                │
+│  • Routes events to state machine                        │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼ (processes event)
+┌─────────────────────────────────────────────────────────┐
+│                 STATE MACHINE                            │
+│  • Defines ALL state transitions                         │
+│  • Executes updateContext action                         │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼ (persists to CoValue)
+┌─────────────────────────────────────────────────────────┐
+│              CONTEXT COVALUE (CRDT)                      │
+│  ← SINGLE SOURCE OF TRUTH                               │
+│  • Always persisted                                      │
+│  • Never in-memory only                                  │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼ (accessed via ReactiveStore)
+┌─────────────────────────────────────────────────────────┐
+│            CONTEXT REACTIVESTORE                        │
+│  • Reactive access layer                                │
+│  • Notifies subscribers when CoValue changes             │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼ (subscribes)
+┌─────────────────────────────────────────────────────────┐
+│                      VIEW                                │
+│  • Re-renders automatically                              │
+└─────────────────────────────────────────────────────────┘
+```
+
 ## Why This Is Cool
 
 **Simple:** Each file does one thing. Easy to understand!
@@ -2181,16 +2308,13 @@ Create a file named `{name}.actor.maia`:
   "context": "@context/todo",
   "state": "@state/todo",
   "view": "@view/todo",
-  "interface": "@interface/todo",
   "brand": "@style/brand",
   "style": "@style/todo",
-  "subscriptions": "@subscriptions/todo",
-  "inbox": "@inbox/todo",
-  "inboxWatermark": 0
+  "inbox": "@inbox/todo"
 }
 ```
 
-**Note:** All references (`context`, `view`, `state`, `interface`, `brand`, `style`, `subscriptions`, `inbox`) use schema/instance references (like `@context/todo`) that are transformed to co-ids (`co_z...`) during seeding. The `$schema` and `$id` properties also use schema references.
+**Note:** All references (`context`, `view`, `state`, `brand`, `style`, `inbox`) use schema/instance references (like `@context/todo`) that are transformed to co-ids (`co_z...`) during seeding. The `$schema` and `$id` properties also use schema references.
 
 ### Properties
 
@@ -2202,13 +2326,11 @@ Create a file named `{name}.actor.maia`:
 | `context` | string | No | Co-id reference to context (`@context/todo`) - transformed during seeding |
 | `state` | string | Yes | Co-id reference to state machine (`@state/todo`) - transformed during seeding |
 | `view` | string | No | Co-id reference to view (`@view/todo`) - optional for service actors |
-| `interface` | string | No | Co-id reference to interface (`@interface/todo`) - message contract |
 | `brand` | string | Yes | Co-id reference to brand style (`@style/brand`) - shared design system |
 | `style` | string | No | Co-id reference to local style (`@style/todo`) - actor-specific overrides |
-| `children` | object | No | Map of slot names to child actor references (`{"composite": "@actor/composite"}`) |
-| `subscriptions` | string | No | Co-id reference to subscriptions colist (`@subscriptions/todo`) |
-| `inbox` | string | No | Co-id reference to inbox costream (`@inbox/todo`) |
-| `inboxWatermark` | number | No | **DEPRECATED** - Use per-message `processed` flags instead (default: 0) |
+| `inbox` | string | No | Co-id reference to inbox costream (`@inbox/todo`) - message inbox for events |
+
+**Note:** Children are defined in context files via the `@actors` system property, not in the actor schema. See [Children Architecture](#system-properties-in-context) below.
 
 **Style Properties:**
 - `brand` is **required** - shared design system (tokens, components) used by all actors
@@ -2256,16 +2378,12 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
   "context": "@context/agent",
   "view": "@view/agent",        // ← Minimal view (only renders child)
   "state": "@state/agent",
-  "interface": "@interface/agent",
   "brand": "@style/brand",
-  "children": {
-    "composite": "@actor/composite"  // ← Loads first UI actor
-  },
-  "subscriptions": "@subscriptions/agent",
-  "inbox": "@inbox/agent",
-  "inboxWatermark": 0
+  "inbox": "@inbox/agent"
 }
 ```
+
+**Note:** Children are defined in the context file via `@actors` system property, not in the actor definition. See [Children Architecture](#system-properties-in-context) below.
 
 **Best Practice:** Always define the agent service actor first when creating a vibe. This is your app's orchestrator.
 
@@ -2326,11 +2444,8 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
   "context": "@context/list",
   "view": "@view/list",        // ← Full UI view
   "state": "@state/list",
-  "interface": "@interface/list",
   "brand": "@style/brand",
-  "subscriptions": "@subscriptions/list",  // ← Subscribes to agent
-  "inbox": "@inbox/list",
-  "inboxWatermark": 0
+  "inbox": "@inbox/list"
 }
 ```
 
@@ -2355,17 +2470,12 @@ MaiaOS distinguishes between two fundamental actor types based on their responsi
   "context": "@context/composite",
   "view": "@view/composite",
   "state": "@state/composite",
-  "interface": "@interface/composite",
   "brand": "@style/brand",
-  "children": {
-    "list": "@actor/list",        // ← Child UI actors
-    "kanban": "@actor/kanban"
-  },
-  "subscriptions": "@subscriptions/composite",  // ← Subscribes to agent
-  "inbox": "@inbox/composite",
-  "inboxWatermark": 0
+  "inbox": "@inbox/composite"
 }
 ```
+
+**Note:** Children are defined in the context file via `@actors` system property. See the context example below.
 
 **Composite View:**
 ```json
@@ -2440,7 +2550,7 @@ Every vibe's entry point is an **agent service actor** that orchestrates the app
 1. View sends event to state machine (via inbox)
 2. State machine uses `updateContext` action (infrastructure, not a tool)
 3. `updateContextCoValue()` persists to context CoValue (CRDT)
-4. SubscriptionEngine reactively updates `actor.context` (read-only derived data)
+4. Context ReactiveStore automatically updates (read-only derived data)
 5. View re-renders with new context
 
 **Example:**
@@ -2484,24 +2594,19 @@ The agent loads a **composite actor** as its first child:
   "context": "@context/agent",
   "view": "@view/agent",        // ← Minimal view
   "state": "@state/agent",      // ← Orchestrates queries/mutations
-  "interface": "@interface/agent",
   "brand": "@style/brand",
-  "children": {
-    "composite": "@actor/composite"  // ← First UI actor
-  },
-  "subscriptions": "@subscriptions/agent",
-  "inbox": "@inbox/agent",
-  "inboxWatermark": 0
+  "inbox": "@inbox/agent"
 }
 ```
 
+**Note:** Children are defined in `agent.context.maia` via `@actors` system property. See [Children Architecture](#system-properties-in-context) below.
+
 **Agent Service Actor Responsibilities:**
-- Orchestrate data queries (send `SUBSCRIBE_TO_TODOS` messages to UI actors)
+- Orchestrate data queries using universal `read()` API
 - Handle mutations (`CREATE_BUTTON`, `TOGGLE_BUTTON`, `DELETE_BUTTON`)
 - Manage application-level state
-- Coordinate between UI actors via messages
-- Load composite actor as first child
-- Define message contracts via interface
+- Coordinate between UI actors via messages (inbox costream)
+- Load composite actor as first child (defined in context)
 
 **Why Start with Agent?**
 1. **Clear Architecture** - Agent defines the app's structure
@@ -2522,17 +2627,12 @@ The composite actor provides shared UI structure and slots child UI actors:
   "context": "@context/composite",
   "view": "@view/composite",
   "state": "@state/composite",
-  "interface": "@interface/composite",
   "brand": "@style/brand",
-  "children": {
-    "list": "@actor/list",        // ← UI actors
-    "kanban": "@actor/kanban"
-  },
-  "subscriptions": "@subscriptions/composite",
-  "inbox": "@inbox/composite",
-  "inboxWatermark": 0
+  "inbox": "@inbox/composite"
 }
 ```
+
+**Note:** Children are defined in `composite.context.maia` via `@actors` system property. See the context example below.
 
 **Composite Actor Responsibilities:**
 - Render shared UI (header, form, view switcher)
@@ -2553,11 +2653,8 @@ Leaf UI actors render specific components:
   "context": "@context/list",
   "view": "@view/list",
   "state": "@state/list",
-  "interface": "@interface/list",
   "brand": "@style/brand",
-  "subscriptions": "@subscriptions/list",
-  "inbox": "@inbox/list",
-  "inboxWatermark": 0
+  "inbox": "@inbox/list"
 }
 ```
 
@@ -2679,7 +2776,7 @@ Referenced in actor:
 }
 ```
 
-**Note:** Context is always in a separate file. The `context` property references it via co-id (`@context/todo`), which gets transformed to an actual co-id (`co_z...`) during seeding.
+**Note:** Context is always in a separate file. The `context` property references it via co-id (`@context/todo`), which gets transformed to an actual co-id (`co_z...`) during seeding. **Context is always persisted to a CoValue under the hood - accessed reactively via ReactiveStore. No in-memory mutation hacks!**
 
 **Example Context Structure:**
 ```json
@@ -2715,6 +2812,8 @@ Referenced in actor:
 - Store only serializable data (no functions)
 - **Update context via state machines** - State machines are the single source of truth
 - **Use `updateContext` infrastructure action** - Always update context through state machine actions
+- **Always go through CoValue persistence** - Everything must be persisted, no in-memory hacks
+- **Access via ReactiveStore** - Context is a ReactiveStore backed by persisted CoValue
 
 ❌ **DON'T:**
 - Store UI elements or DOM references
@@ -2722,6 +2821,8 @@ Referenced in actor:
 - Mix concerns (separate data from UI state)
 - **Don't mutate context directly** - Always use state machines and tools
 - **Don't update context from views** - Views send events, state machines update context
+- **Don't bypass CoValue persistence** - Never mutate `actor.context.value` directly
+- **Don't use in-memory mutation hacks** - Everything must go through persisted CoValues
 
 ## Actor Lifecycle
 
@@ -2871,22 +2972,9 @@ actor.actorEngine.sendMessage(targetActorId, message);
 
 **Internal events** (from views) automatically route through inbox via `sendInternalEvent()`.
 
-### Subscribing to Messages
+### Receiving Messages
 
-In the actor definition:
-
-```json
-{
-  "id": "actor_todo_001",
-  "subscriptions": ["actor_calendar_001", "actor_sync_service"]
-}
-```
-
-Or at runtime:
-
-```javascript
-actor.actorEngine.subscribe('actor_todo_001', 'actor_calendar_001');
-```
+Messages are sent to actors via their inbox costream. Actors automatically process messages from their inbox and route them to their state machine. No explicit subscription configuration is needed - messages are sent directly to the target actor's inbox.
 
 ### Processing Messages
 
@@ -2966,12 +3054,9 @@ maia/
   "context": "@context/todo",
   "state": "@state/todo",
   "view": "@view/todo",
-  "interface": "@interface/todo",
   "brand": "@style/brand",
   "style": "@style/todo",
-  "subscriptions": "@subscriptions/todo",
-  "inbox": "@inbox/todo",
-  "inboxWatermark": 0
+  "inbox": "@inbox/todo"
 }
 ```
 
@@ -3005,17 +3090,22 @@ maia/
 **Example: `todo_input.actor.maia`**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_todo_input_001",
-  "viewRef": "todo_input",
-  "stateRef": "todo_input"
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo-input",
+  "role": "todo-input",
+  "context": "@context/todo-input",
+  "view": "@view/todo-input",
+  "state": "@state/todo-input",
+  "brand": "@style/brand",
+  "inbox": "@inbox/todo-input"
 }
 ```
 
 **Leaf View: `todo_input.view.maia`**
 ```json
 {
-  "$type": "view",
+  "$schema": "@schema/view",
+  "$id": "@view/todo-input",
   "root": {
     "tag": "div",
     "children": [
@@ -3043,25 +3133,28 @@ maia/
 
 **Composite actors** are containers that hold other actors in slots.
 
-**Example: `vibe_root.actor.maia`**
+**Example: `agent.actor.maia`**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_vibe_root_001",
-  "viewRef": "vibe_root",
-  "children": {
-    "header": "actor_view_switcher_001",
-    "input": "actor_todo_input_001",
-    "list": "actor_todo_list_001"
-  }
+  "$schema": "@schema/actor",
+  "$id": "@actor/agent",
+  "role": "agent",
+  "context": "@context/agent",
+  "view": "@view/agent",
+  "state": "@state/agent",
+  "brand": "@style/brand",
+  "inbox": "@inbox/agent"
 }
 ```
 
-**Composite View: `vibe_root.view.maia`**
+**Note:** Children are defined in the context file, not in the actor definition. See the context example below.
+
+**Composite View: `app.view.maia`**
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/app",
+  "root": {
     "tag": "div",
     "attrs": {
       "class": "app-layout"
@@ -3069,15 +3162,15 @@ maia/
     "children": [
       {
         "tag": "header",
-        "$slot": "$headerView"  // Renders child actor from context.headerView
+        "$slot": "$header"  // Renders child actor from @actors.header
       },
       {
         "tag": "main",
-        "$slot": "$inputView"   // Renders child actor from context.inputView
+        "$slot": "$input"   // Renders child actor from @actors.input
       },
       {
         "tag": "section",
-        "$slot": "$listView"    // Renders child actor from context.listView
+        "$slot": "$currentView"    // Renders active child actor
       }
     ]
   }
@@ -3180,24 +3273,38 @@ Create a root actor that composes all pieces:
 **`app.actor.maia`**
 ```json
 {
-  "$type": "actor",
-  "$id": "actor_app_001",
-  "viewRef": "app",
-  "stateRef": "app",
-  "children": {
-    "header": "actor_header_001",
-    "input": "actor_input_001",
-    "list": "actor_list_001",
-    "footer": "actor_footer_001"
-  }
+  "$schema": "@schema/actor",
+  "$id": "@actor/app",
+  "role": "composite",
+  "context": "@context/app",
+  "view": "@view/app",
+  "state": "@state/app",
+  "brand": "@style/brand",
+  "inbox": "@inbox/app"
+}
+```
+
+**`app.context.maia`** (defines children):
+```json
+{
+  "$schema": "@schema/context",
+  "$id": "@context/app",
+  "@actors": {
+    "header": "@actor/header",
+    "input": "@actor/input",
+    "list": "@actor/list",
+    "footer": "@actor/footer"
+  },
+  "currentView": "@list"
 }
 ```
 
 **`app.view.maia`**
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/app",
+  "root": {
     "tag": "div",
     "attrs": {
       "class": "app"
@@ -3205,19 +3312,19 @@ Create a root actor that composes all pieces:
     "children": [
       {
         "tag": "header",
-        "$slot": "$headerView"
+        "$slot": "$header"
       },
       {
         "tag": "main",
-        "$slot": "$inputView"
+        "$slot": "$input"
       },
       {
         "tag": "section",
-        "$slot": "$listView"
+        "$slot": "$currentView"
       },
       {
         "tag": "footer",
-        "$slot": "$footerView"
+        "$slot": "$footer"
       }
     ]
   }
@@ -3227,17 +3334,14 @@ Create a root actor that composes all pieces:
 **`app.state.maia`** - Sets context values for slots:
 ```json
 {
-  "$type": "state",
+  "$schema": "@schema/state",
+  "$id": "@state/app",
   "initial": "idle",
   "states": {
     "idle": {
       "entry": {
-        "tool": "@core/updateContext",
-        "payload": {
-          "headerView": "@header",
-          "inputView": "@input",
-          "listView": "@list",
-          "footerView": "@footer"
+        "updateContext": {
+          "currentView": "@list"
         }
       }
     }
@@ -3245,40 +3349,13 @@ Create a root actor that composes all pieces:
 }
 ```
 
+**Note:** The `@actors` system property in context defines which children exist. The `currentView` context property references which child to display.
+
 ### Message Passing Between Actors
 
-Actors communicate via **messages**, not props.
+Actors communicate via **messages** sent to inbox costreams, not props.
 
-#### Define Interfaces
-
-Create `actor.interface.maia` for each actor:
-
-**`todo_input.interface.maia`**
-```json
-{
-  "$type": "actor.interface",
-  "publishes": {
-    "TODO_CREATED": {
-      "payload": { "id": "string", "text": "string" }
-    }
-  },
-  "subscriptions": ["actor_todo_list_001"]
-}
-```
-
-**`todo_list.interface.maia`**
-```json
-{
-  "$type": "actor.interface",
-  "inbox": {
-    "TODO_CREATED": {
-      "payload": { "id": "string", "text": "string" }
-    }
-  }
-}
-```
-
-#### Publish Messages
+#### Sending Messages
 
 When an event happens, publish a message:
 
@@ -3310,19 +3387,9 @@ When an event happens, publish a message:
 }
 ```
 
-#### Subscribe to Messages
+#### Receiving Messages
 
-Parent actors auto-subscribe to children:
-
-```json
-{
-  "$type": "actor",
-  "children": {
-    "input": "actor_todo_input_001"
-  },
-  "subscriptions": ["actor_todo_input_001"]  // ← Auto-added
-}
-```
+Messages are automatically processed from the actor's inbox costream and routed to the state machine. Actors handle messages by defining event handlers in their state machines.
 
 ### Real Example: Todo App
 
@@ -3349,21 +3416,22 @@ vibe_root (composite)
 #### Layout Container
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/layout",
+  "root": {
     "tag": "div",
     "children": [
       {
         "tag": "header",
-        "$slot": "$headerView"
+        "$slot": "$header"
       },
       {
         "tag": "main",
-        "$slot": "$mainView"
+        "$slot": "$currentView"
       },
       {
         "tag": "footer",
-        "$slot": "$footerView"
+        "$slot": "$footer"
       }
     ]
   }
@@ -3373,14 +3441,15 @@ vibe_root (composite)
 #### List with Items
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/list",
+  "root": {
     "tag": "ul",
     "$each": {
       "items": "$todos",
       "template": {
         "tag": "li",
-        "$slot": "@item"
+        "text": "$$item.text"
       }
     }
   }
@@ -3390,8 +3459,9 @@ vibe_root (composite)
 #### Conditional View Switching
 ```json
 {
-  "$type": "view",
-  "container": {
+  "$schema": "@schema/view",
+  "$id": "@view/composite",
+  "root": {
     "tag": "div",
     "children": [
       {
@@ -3406,6 +3476,9 @@ vibe_root (composite)
 **State machine handles switching:**
 ```json
 {
+  "$schema": "@schema/state",
+  "$id": "@state/composite",
+  "initial": "idle",
   "states": {
     "idle": {
       "on": {
@@ -3413,8 +3486,7 @@ vibe_root (composite)
           "target": "idle",
           "actions": [
             {
-              "tool": "@core/updateContext",
-              "payload": {
+              "updateContext": {
                 "currentView": "$viewMode === 'list' ? '@list' : '@kanban'"  // ← Updates context property (CRDT CoValue)
               }
             }
@@ -3431,18 +3503,18 @@ vibe_root (composite)
 **✅ DO:**
 - Keep actors small and focused
 - Use clear slot names (`@header`, not `@h`)
-- Define interfaces for all actors
-- Publish messages for important events
+- Send messages via inbox costreams for actor-to-actor communication
 - Keep context internal (don't expose)
 - Use state machine to set slot context values
+- Define children in context files via `@actors` system property
 
 **❌ DON'T:**
 - Don't create giant monolithic actors
 - Don't use prop drilling
-- Don't skip interface definitions
 - Don't expose context directly
 - Don't create circular dependencies
 - Don't put conditional logic in views (use state machine instead)
+- Don't define children in actor schema (use context `@actors` instead)
 
 ## Next Steps
 
@@ -3459,11 +3531,11 @@ vibe_root (composite)
 window.actor = actor;
 
 // Inspect in console
-actor.context           // Runtime data
+actor.context           // Runtime data (ReactiveStore)
+actor.context.value     // Current context value
 actor.machine          // State machine instance
 actor.machine.currentState  // Current state
-actor.inbox            // Message queue
-actor.subscriptions    // Subscribed actors
+actor.inbox            // Inbox costream (messages)
 
 // Inspect Shadow DOM
 // In DevTools: click the actor container, expand #shadow-root
@@ -3496,6 +3568,50 @@ Your actor looks at this notebook to know what to show and what to do!
 
 **The magic:** Your view automatically shows whatever is in context. Change the context, change what you see!
 
+## Architectural Roles: Single Source of Truth
+
+**CRITICAL PRINCIPLE:** MaiaOS follows a strict single source of truth architecture. Everything is persisted to CoValues under the hood, accessed reactively via the universal `read()` API.
+
+### Clear Separation of Responsibilities
+
+**State Machine** → Defines ALL state transitions
+- ✅ **Single source of truth** for behavior
+- ✅ Defines when and how state changes
+- ✅ All transitions flow through state machine
+
+**Context** → Contains ALL data and current state
+- ✅ **Single source of truth** for data
+- ✅ Always persisted to CoValue under the hood
+- ✅ Accessed reactively via ReactiveStore (universal `read()` API)
+- ✅ Never mutated directly - always through state machine
+
+**View** → Renders from context variables
+- ✅ **Read-only** - only reads from context
+- ✅ Sends events to state machine (never updates context directly)
+- ✅ Automatically re-renders when context changes
+
+### Single Source of Truth: CoValue Under the Hood
+
+**CRITICAL:** Everything is persisted to CoValues under the hood. No in-memory mutation hacks!
+
+**How it works:**
+```
+State Machine Action
+  ↓
+updateContextCoValue() → Persists to Context CoValue (CRDT)
+  ↓
+Context ReactiveStore automatically updates
+  ↓
+View subscribes to ReactiveStore → Re-renders
+```
+
+**Key Points:**
+- ✅ **Context is a CoValue** - Always persisted, never in-memory only
+- ✅ **Accessed via ReactiveStore** - Universal `read()` API pattern
+- ✅ **No mutation hacks** - Everything goes through persisted CoValues
+- ✅ **Automatic reactivity** - ReactiveStore notifies subscribers when CoValue changes
+- ✅ **Single source of truth** - CoValue is the authoritative data store
+
 ## State Machine as Single Source of Truth
 
 **CRITICAL PRINCIPLE:** State machines are the **single source of truth** for all context changes.
@@ -3504,12 +3620,13 @@ Your actor looks at this notebook to know what to show and what to do!
 - ✅ All context updates MUST flow through state machines
 - ✅ State machines use `updateContext` action (infrastructure, not a tool) to update context
 - ✅ Views send events to state machines, never update context directly
-- ✅ Context updates are infrastructure (like SubscriptionEngine) - pure CRDT persistence
+- ✅ Context updates are infrastructure - pure CRDT persistence via ReactiveStore pattern
 
-**Infrastructure updates (read-only reactive):**
-- ✅ **SubscriptionEngine** automatically updates reactive query objects (infrastructure)
-- This is infrastructure that keeps database queries in sync - not manual context updates
-- SubscriptionEngine updates are read-only derived data (reactive subscriptions)
+**Universal read() API Pattern (read-only reactive):**
+- ✅ **Every CoValue is accessible as ReactiveStore** via universal `read()` API
+- ✅ Query objects use `read()` internally - automatic reactivity
+- ✅ Context itself is a ReactiveStore - automatic updates when data changes
+- ✅ All updates are read-only derived data (reactive subscriptions via ReactiveStore)
 
 **Why this matters:**
 - **Predictable:** All context changes happen in one place (state machines)
@@ -3517,7 +3634,7 @@ Your actor looks at this notebook to know what to show and what to do!
 - **Testable:** State machines define clear contracts for context updates
 - **AI-friendly:** LLMs can understand and generate correct patterns
 
-**Correct Pattern:**
+**Correct Pattern (Single Source of Truth):**
 ```
 User clicks button
   ↓
@@ -3525,19 +3642,28 @@ View sends event to state machine (via inbox)
   ↓
 State machine uses updateContext action (infrastructure)
   ↓
-updateContextCoValue() persists to context CoValue (CRDT)
+updateContextCoValue() persists to Context CoValue (CRDT) ← SINGLE SOURCE OF TRUTH
   ↓
-SubscriptionEngine reactively updates actor.context
+Context ReactiveStore automatically updates (read-only derived data)
   ↓
-View re-renders with new context
+View subscribes to ReactiveStore → sees update → re-renders
 ```
 
+**No shortcuts, no hacks:**
+- ❌ Never mutate context directly: `actor.context.field = value`
+- ❌ Never bypass CoValue persistence
+- ❌ Never use in-memory only data structures
+- ✅ Always go through persisted CoValues
+- ✅ Always access via ReactiveStore (universal `read()` API)
+
 **Anti-Patterns (DON'T DO THIS):**
-- ❌ Direct context mutation: `actor.context.field = value`
+- ❌ Direct context mutation: `actor.context.field = value` (bypasses CoValue persistence)
+- ❌ In-memory mutation hacks: `actor.context.value.todos.push(...)` (bypasses CoValue)
 - ❌ Using `@context/update` tool (removed - context updates are infrastructure)
 - ❌ Calling `ActorEngine.updateContextCoValue()` directly from views
 - ❌ Setting error context directly in ToolEngine (should use ERROR events)
 - ❌ Mutating context outside of state machines
+- ❌ Bypassing CoValue persistence - everything must go through persisted CoValues
 
 **Error Handling:**
 When tools fail, state machines receive ERROR events (via inbox) and can update context accordingly:
@@ -3572,9 +3698,9 @@ Context can be defined inline in the actor file or in a separate `.context.maia`
 
 ```json
 {
-  "$type": "actor",
-  "id": "actor_todo_001",
-  "stateRef": "todo",
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo",
+  "state": "@state/todo",
   
   "context": {
     "todos": [],
@@ -3584,13 +3710,15 @@ Context can be defined inline in the actor file or in a separate `.context.maia`
 }
 ```
 
+**Note:** Inline context is rarely used. It's recommended to use separate context files.
+
 ### Option 2: Separate Context File (Recommended)
 
 **`todo.context.maia`:**
 ```json
 {
-  "$type": "context",
-  "$id": "context_todo_001",
+  "$schema": "@schema/context",
+  "$id": "@context/todo",
   
   // Collections
   "todos": [],
@@ -3622,10 +3750,10 @@ Context can be defined inline in the actor file or in a separate `.context.maia`
 **`todo.actor.maia`:**
 ```json
 {
-  "$type": "actor",
-  "id": "actor_todo_001",
-  "contextRef": "todo",  // ← References todo.context.maia
-  "stateRef": "todo"
+  "$schema": "@schema/actor",
+  "$id": "@actor/todo",
+  "context": "@context/todo",  // ← References todo.context.maia (co-id reference)
+  "state": "@state/todo"
 }
 ```
 
@@ -3634,6 +3762,59 @@ Context can be defined inline in the actor file or in a separate `.context.maia`
 - ✅ Easier to maintain large contexts
 - ✅ Better separation of concerns
 - ✅ Context can be shared or versioned independently
+
+## Universal read() API Pattern: Single Source of Truth
+
+**CRITICAL:** Every CoValue in MaiaOS is accessible as a ReactiveStore via the universal `read()` API. This is the foundational pattern for all data access. **Everything is persisted to CoValues under the hood - no in-memory mutation hacks!**
+
+**How it works:**
+```javascript
+// Read any CoValue as ReactiveStore
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: 'co_zTodos123',  // Schema co-id (co_z...)
+  key: 'co_zItem456'       // Item co-id (optional - omit for collections)
+});
+
+// Access current value (read-only!)
+console.log('Current data:', store.value);
+
+// Subscribe to updates (automatic when CoValue changes)
+const unsubscribe = store.subscribe((data) => {
+  console.log('Data updated:', data);
+});
+```
+
+**Key Points:**
+- ✅ **Every CoValue → ReactiveStore** - Single, unified pattern
+- ✅ **CoValue is single source of truth** - Always persisted, never in-memory only
+- ✅ **ReactiveStore is access layer** - Read-only reactive interface to CoValue
+- ✅ **Automatic reactivity** - Subscribe once, get updates forever when CoValue changes
+- ✅ **Progressive loading** - Store has initial value, updates as data loads
+- ✅ **Context is a ReactiveStore** - `actor.context` is itself a ReactiveStore backed by Context CoValue
+- ✅ **Query objects use read() internally** - They're just a convenient way to declare queries
+- ✅ **No mutation hacks** - Everything goes through persisted CoValues
+
+**This pattern applies to:**
+- Context (actor runtime data) - Persisted to Context CoValue
+- Database collections (todos, notes, etc.) - Persisted to Collection CoValues
+- Individual items (single todo, single note) - Persisted to Item CoValues
+- Configs (actor definitions, views, states) - Persisted to Config CoValues
+- Schemas (schema definitions) - Persisted to Schema CoValues
+- Everything! Every CoValue is accessible this way.
+
+**Single Source of Truth Flow:**
+```
+CoValue (persisted, CRDT) ← SINGLE SOURCE OF TRUTH
+  ↓
+Universal read() API
+  ↓
+ReactiveStore (reactive access layer)
+  ↓
+Context/View (read-only, subscribes to ReactiveStore)
+```
+
+See [Operations](./07-operations.md) for complete documentation on the universal `read()` API.
 
 ## Context Types
 
@@ -3653,13 +3834,20 @@ Context can be defined inline in the actor file or in a separate `.context.maia`
 
 **What this means:** "Give me all items from the 'todos' collection, and automatically update me when they change."
 
-**How it works:**
+**How it works internally:**
 1. You declare the query object in context
-2. MaiaOS automatically subscribes to the database
-3. When data changes, MaiaOS updates your context
-4. Your view automatically re-renders
+2. MaiaOS uses universal `read()` API to get a ReactiveStore for that data
+3. The ReactiveStore automatically updates when data changes
+4. Context ReactiveStore subscribes to the data ReactiveStore
+5. Your view subscribes to context ReactiveStore and re-renders automatically
 
-**Think of it like:** Subscribing to a newsletter - you tell them what you want, they send you updates automatically.
+**Think of it like:** Subscribing to a newsletter - you tell them what you want, they send you updates automatically. The universal `read()` API is like the subscription service - every CoValue becomes a reactive store you can subscribe to.
+
+**Behind the scenes:** Query objects are just a convenient way to declare queries. They use the universal `read()` API internally, which:
+1. Reads from persisted CoValue (single source of truth)
+2. Returns a ReactiveStore (reactive access layer)
+3. Automatically keeps your context updated when CoValue changes
+4. **No in-memory mutation hacks** - everything goes through persisted CoValues
 
 **Examples:**
 
@@ -3813,18 +4001,24 @@ Use `$` prefix in expressions:
 ```
 
 ### From JavaScript
-Direct property access:
+Context is a ReactiveStore - access current value and subscribe to changes:
 
 ```javascript
-// Read context
-console.log(actor.context.todos);
-console.log(actor.context.viewMode);
+// Read current context value (read-only!)
+console.log(actor.context.value.todos);
+console.log(actor.context.value.viewMode);
 
-// Mutate context (via tools only!)
-// ❌ Don't do this:
-// actor.context.todos.push({...});
+// Subscribe to context changes
+const unsubscribe = actor.context.subscribe((context) => {
+  console.log('Context updated:', context);
+});
 
-// ✅ Do this instead:
+// Mutate context (via state machines only - goes through CoValue persistence!)
+// ❌ Don't do this (bypasses CoValue persistence):
+// actor.context.value.todos.push({...});
+// actor.context.value.newTodoText = "New text";
+
+// ✅ Do this instead (goes through persisted CoValue):
 actor.actorEngine.stateEngine.send(
   actor.machine.id,
   'CREATE_TODO',
@@ -3832,23 +4026,38 @@ actor.actorEngine.stateEngine.send(
 );
 ```
 
+**Key Pattern:** 
+- Context is a ReactiveStore backed by a persisted CoValue
+- Use `.value` to read current data (read-only!)
+- Use `.subscribe()` to watch for changes
+- **Never mutate `.value` directly** - always go through state machine → CoValue persistence
+- This is the universal pattern - every CoValue is accessible as a ReactiveStore via `read()` API
+- **Single source of truth** - CoValue is the authoritative data store, ReactiveStore is the reactive access layer
+
 ## Context Updates
 
-### Via Tools
-The ONLY way to mutate context:
+### Universal read() API Pattern
+
+**CRITICAL:** Every CoValue is accessible as a ReactiveStore via the universal `read()` API:
 
 ```javascript
-// @db tool with op: "create"
-export default {
-  async execute(actor, payload) {
-    const { op, schema, data } = payload;
-    if (op === "create") {
-      const entity = { id: Date.now().toString(), ...data };
-      actor.context[schema].push(entity);
-    }
-  }
-};
+// Read any CoValue as ReactiveStore
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: 'co_zTodos123',  // Schema co-id
+  key: 'co_zItem456'       // Item co-id (optional)
+});
+
+// Access current value
+console.log('Current data:', store.value);
+
+// Subscribe to updates
+const unsubscribe = store.subscribe((data) => {
+  console.log('Data updated:', data);
+});
 ```
+
+**This is the foundational pattern** - all data access uses this unified API. Context itself is a ReactiveStore, query objects use `read()` internally, and all CoValues are accessible this way.
 
 ### Via updateContext (Infrastructure Action)
 Generic context field update (infrastructure, not a tool):
@@ -3862,13 +4071,14 @@ Generic context field update (infrastructure, not a tool):
 }
 ```
 
-**Note:** `updateContext` is infrastructure that directly calls `updateContextCoValue()` to persist changes to the context CoValue (CRDT). It's not a tool - it's pure infrastructure like SubscriptionEngine.
+**Note:** `updateContext` is infrastructure that directly calls `updateContextCoValue()` to persist changes to the context CoValue (CRDT). It's not a tool - it's pure infrastructure.
 
 **How it works:**
 1. State machine action evaluates payload (resolves `$` and `$$` references)
 2. Calls `actor.actorEngine.updateContextCoValue(actor, updates)` directly
 3. Persists changes to context CoValue (CRDT)
-4. SubscriptionEngine reactively updates `actor.context` (read-only derived data)
+4. Context ReactiveStore automatically updates (read-only derived data)
+5. Views subscribe to context ReactiveStore and re-render automatically
 
 ## Context Best Practices
 
@@ -3882,15 +4092,19 @@ Generic context field update (infrastructure, not a tool):
 - **Use consistent naming** - `todosTodo`, `notesTodo` (pattern: `{schema}Todo`)
 - **Compute boolean flags** - State machine computes, context stores, views reference
 - **Use item lookup objects** - For item-specific conditional styling (e.g., `draggedItemIds`)
+- **Always go through CoValue persistence** - Everything must be persisted, no in-memory hacks
+- **Access via ReactiveStore** - Use universal `read()` API pattern
 
 ### ❌ DON'T:
 
 - **Don't mutate directly** - Always use `updateContext` action in state machines
+- **Don't bypass CoValue persistence** - Never mutate `actor.context.value` directly
+- **Don't use in-memory mutation hacks** - Everything must go through persisted CoValues
 - **Don't use `@context/update` tool** - Removed, use `updateContext` infrastructure action instead
 - **Don't store UI elements** - No DOM references
 - **Don't store functions** - Only JSON-serializable data
 - **Don't mix concerns** - Separate data from UI state
-- **Don't use reserved keys** - Avoid `$type`, `$id`, `inbox`, etc.
+- **Don't use reserved keys** - Avoid `$schema`, `$id`, `@actors`, `inbox`, etc.
 - **Don't compute in views** - All computation happens in state machine
 
 ## Context Schema Design
@@ -3973,22 +4187,24 @@ User creates a todo (via @db tool)
   ↓
 Database stores the new todo
   ↓
-Database notifies observers: "Data changed!"
+Database ReactiveStore notifies subscribers: "Data changed!"
   ↓
-SubscriptionEngine receives notification
+Context ReactiveStore (from query object) receives update
   ↓
-SubscriptionEngine updates context.todos = [new data]
+Context ReactiveStore updates context.todos = [new data]
   ↓
-SubscriptionEngine schedules re-render (batched)
-  ↓
-ActorEngine.rerender(actor)
-  ↓
-ViewEngine re-renders with new context
+ViewEngine re-renders (batched via ReactiveStore subscriptions)
   ↓
 User sees new todo in the list! ✨
 ```
 
-**Key insight:** You never manually update `context.todos`. SubscriptionEngine does it automatically when the database changes.
+**Key insight:** You never manually update `context.todos`. The universal `read()` API:
+1. Reads from persisted CoValue (single source of truth)
+2. Returns a ReactiveStore that automatically updates when the CoValue changes
+3. Context ReactiveStore subscribes to the data ReactiveStore
+4. View subscribes to context ReactiveStore and re-renders
+
+**Everything is persisted to CoValues under the hood - no in-memory mutation hacks!** Every CoValue is accessible as a reactive store via `read()` API.
 
 ### 2. UI State - Manual (via Tools)
 
@@ -4024,9 +4240,10 @@ User sees updated UI
 
 ### Summary
 
-- **Query objects** → Automatic reactivity (SubscriptionEngine watches for changes)
+- **Query objects** → Automatic reactivity via universal `read()` API (ReactiveStore watches for changes)
 - **UI state** → Manual updates (you explicitly update via `updateContext` infrastructure action)
 - **Both trigger re-renders** → Your view stays in sync
+- **Universal Pattern** → Every CoValue is accessible as ReactiveStore via `read()` API
 
 See [Reactive Data System](../developers/06_reactive-queries.md) for detailed examples.
 
@@ -4136,18 +4353,16 @@ Use client-side filtering for dynamic UI filtering (search, sort):
 // Expose actor globally
 window.actor = actor;
 
-// Inspect context
-console.log(actor.context);
+// Inspect context (ReactiveStore)
+console.log('Current context:', actor.context.value);
 
-// Watch for changes
-const originalRerender = actor.actorEngine.rerender;
-actor.actorEngine.rerender = function(actor) {
-  console.log('Context changed:', actor.context);
-  return originalRerender.call(this, actor);
-};
+// Subscribe to context changes
+const unsubscribe = actor.context.subscribe((context) => {
+  console.log('Context changed:', context);
+});
 
 // Serialize context
-console.log(JSON.stringify(actor.context, null, 2));
+console.log(JSON.stringify(actor.context.value, null, 2));
 ```
 
 ## Context Persistence
@@ -4158,24 +4373,32 @@ Context can be serialized and persisted:
 // Save to localStorage
 localStorage.setItem(
   `actor_${actor.id}`,
-  JSON.stringify(actor.context)
+  JSON.stringify(actor.context.value)
 );
 
 // Restore from localStorage
 const saved = localStorage.getItem(`actor_${actor.id}`);
 if (saved) {
-  Object.assign(actor.context, JSON.parse(saved));
-  actor.actorEngine.rerender(actor);
+  // Update context via state machine, not direct mutation
+  actor.actorEngine.stateEngine.send(
+    actor.machine.id,
+    'RESTORE_CONTEXT',
+    JSON.parse(saved)
+  );
 }
 
 // Export/import
 function exportContext(actor) {
-  return JSON.stringify(actor.context);
+  return JSON.stringify(actor.context.value);
 }
 
 function importContext(actor, jsonString) {
-  Object.assign(actor.context, JSON.parse(jsonString));
-  actor.actorEngine.rerender(actor);
+  // Update context via state machine, not direct mutation
+  actor.actorEngine.stateEngine.send(
+    actor.machine.id,
+    'RESTORE_CONTEXT',
+    JSON.parse(jsonString)
+  );
 }
 ```
 
@@ -4201,7 +4424,7 @@ function validateContext(context, schema) {
 }
 
 // Usage
-validateContext(actor.context, {
+validateContext(actor.context.value, {
   todos: 'array',
   newTodoText: 'string',
   viewMode: 'string',
@@ -4436,11 +4659,14 @@ State machine handles SUCCESS/ERROR
 
 **Note:** `updateContext` is infrastructure (not a tool). It directly calls `updateContextCoValue()` to persist changes to the context CoValue (CRDT).
 
+**Batching:** All `updateContext` actions in a single transition are batched together and written to the context CoValue once at the end. This ensures efficient CRDT updates.
+
 **Why this matters:**
 - **Predictable:** All context changes happen in state machines
 - **Debuggable:** Easy to trace context changes
 - **Testable:** State machines define clear contracts
 - **AI-friendly:** LLMs understand this pattern
+- **Efficient:** Batched updates reduce CRDT write operations
 
 **Remember:** Views send events, state machines update context, tools execute operations. Never update context directly from views or tools!
 
@@ -4576,6 +4802,12 @@ Create a file named `{name}.state.maia`:
 
 ### Entry/Exit Actions
 
+Entry and exit actions can be:
+- **Single action object** - One tool or updateContext action
+- **Array of actions** - Multiple actions executed in order
+- **Co-id reference** - Reference to an action CoValue
+
+**Single action:**
 ```json
 {
   "creating": {
@@ -4587,18 +4819,20 @@ Create a file named `{name}.state.maia`:
 }
 ```
 
-Or multiple actions:
-
+**Multiple actions (array):**
 ```json
 {
   "creating": {
     "entry": [
       {"tool": "@core/showLoading", "payload": {}},
-      {"tool": "@db", "payload": { "op": "create", ... }}
+      {"tool": "@db", "payload": { "op": "create", ... }},
+      {"updateContext": { "newTodoText": "" }}
     ]
   }
 }
 ```
+
+**Important:** All `updateContext` actions in a single transition are batched together and written to the context CoValue once at the end. This ensures efficient CRDT updates.
 
 ## Transitions
 
@@ -4778,9 +5012,9 @@ actor.context.draggedItemIds[id] = true;  // Set this item as dragged
 }
 ```
 
-## Working with Data (Automatic Reactive Queries)
+## Working with Data (Reactive Queries with mapData)
 
-MaiaOS automatically keeps your data in sync - no tools needed! Just define what data you want in your context, and MaiaOS handles the rest.
+MaiaOS provides reactive data access through the `mapData` action in state machines. This creates reactive query stores that automatically update when data changes.
 
 ### Think of it like a spreadsheet:
 - You write formulas that reference other cells
@@ -4789,58 +5023,62 @@ MaiaOS automatically keeps your data in sync - no tools needed! Just define what
 
 **That's how reactive queries work!**
 
-### Quick Start: Getting Data
+### Using mapData Action
 
-In your context file, define **query objects** that tell MaiaOS what data you want:
-
-**`todos.context.maia`:**
-```json
-{
-  "$type": "context",
-  "todos": {
-    "schema": "@schema/todos",
-    "filter": null
-  },
-  "newTodoText": ""
-}
-```
-
-**What happens:**
-1. MaiaOS sees `todos` is a query object (has `schema` property)
-2. MaiaOS automatically subscribes to the database
-3. Data flows into `context.todos`
-4. When data changes, MaiaOS updates `context.todos` automatically
-5. Your view re-renders with fresh data
-
-**No tools, no manual subscriptions - it just works!**
-
-### Filtering Data
-
-Want only incomplete todos? Use a filter:
+The `mapData` action maps operations engine configs to context keys, creating reactive query stores:
 
 ```json
 {
-  "todos": {
-    "schema": "@schema/todos",
-    "filter": null
-  },
-  "todosTodo": {
-    "schema": "@schema/todos",
-    "filter": { "done": false }
-  },
-  "todosDone": {
-    "schema": "@schema/todos",
-    "filter": { "done": true }
+  "idle": {
+    "entry": {
+      "mapData": {
+        "todos": {
+          "op": "read",
+          "schema": "co_zTodos123",
+          "filter": null
+        },
+        "todosTodo": {
+          "op": "read",
+          "schema": "co_zTodos123",
+          "filter": { "done": false }
+        },
+        "todosDone": {
+          "op": "read",
+          "schema": "co_zTodos123",
+          "filter": { "done": true }
+        }
+      }
+    }
   }
 }
 ```
 
-**Result:**
-- `context.todos` = All todos
-- `context.todosTodo` = Only incomplete todos (`done: false`)
-- `context.todosDone` = Only completed todos (`done: true`)
+**What happens:**
+1. State machine executes `mapData` action on entry
+2. Operations engine executes `read` operations
+3. Each operation returns a `ReactiveStore`
+4. Stores are stored in `actor._queryStores[contextKey]`
+5. Stores are marked in `context.@stores` for ViewEngine discovery
+6. ViewEngine subscribes to stores and re-renders when data changes
 
-All three automatically update when you create, update, or delete a todo!
+**Accessing data in views:**
+```json
+{
+  "$each": {
+    "items": "$todos",
+    "template": {
+      "tag": "div",
+      "text": "$$text"
+    }
+  }
+}
+```
+
+**Important:**
+- `mapData` only supports `read` operations (mutations use `@db` tool)
+- Schema must be a co-id (`co_z...`) at runtime
+- Query stores are ReactiveStore objects (can't be stored in CoValues)
+- Stores are stored in `actor._queryStores` and marked in `context.@stores`
 
 ### Creating, Updating, Deleting Data
 
@@ -4891,37 +5129,30 @@ Use the `@db` tool with different `op` values:
 }
 ```
 
-#### Toggle
+#### Toggle (Using Update with Expression)
+
+Toggle is not a separate operation. Use `update` with an expression:
 
 ```json
 {
   "tool": "@db",
   "payload": {
-    "op": "toggle",
-    "schema": "@schema/todos",
+    "op": "update",
     "id": "$$id",
-    "field": "done"
+    "data": {
+      "done": { "$not": "$existing.done" }
+    }
   }
 }
 ```
+
+**Note:** For `update` and `delete` operations, `schema` is not required - it's extracted from the CoValue's headerMeta automatically.
 
 ### Complete Example: Todo List
 
 **Context:**
 ```json
 {
-  "todos": {
-    "schema": "@schema/todos",
-    "filter": null
-  },
-  "todosTodo": {
-    "schema": "@schema/todos",
-    "filter": { "done": false }
-  },
-  "todosDone": {
-    "schema": "@schema/todos",
-    "filter": { "done": true }
-  },
   "newTodoText": "",
   "viewMode": "list"
 }
@@ -4933,6 +5164,25 @@ Use the `@db` tool with different `op` values:
   "initial": "idle",
   "states": {
     "idle": {
+      "entry": {
+        "mapData": {
+          "todos": {
+            "op": "read",
+            "schema": "co_zTodos123",
+            "filter": null
+          },
+          "todosTodo": {
+            "op": "read",
+            "schema": "co_zTodos123",
+            "filter": { "done": false }
+          },
+          "todosDone": {
+            "op": "read",
+            "schema": "co_zTodos123",
+            "filter": { "done": true }
+          }
+        }
+      },
       "on": {
         "UPDATE_INPUT": {
           "target": "idle",
@@ -4952,7 +5202,7 @@ Use the `@db` tool with different `op` values:
           "tool": "@db",
           "payload": {
             "op": "create",
-            "schema": "@schema/todos",
+            "schema": "co_zTodos123",
             "data": {
               "text": "$newTodoText",
               "done": false
@@ -4976,6 +5226,12 @@ Use the `@db` tool with different `op` values:
   }
 }
 ```
+
+**What happens:**
+1. On entry to `idle`, `mapData` creates reactive query stores for `todos`, `todosTodo`, and `todosDone`
+2. Stores are stored in `actor._queryStores` and marked in `context.@stores`
+3. ViewEngine subscribes to stores and re-renders when data changes
+4. When creating a todo, the `@db` tool creates it, and all query stores automatically update
 
 **View:**
 ```json
@@ -5014,28 +5270,30 @@ Use the `@db` tool with different `op` values:
 ### Best Practices
 
 **✅ DO:**
-- Define query objects in context (with `schema` property)
-- Use `@db` tool for all data changes
+- Use `mapData` action in state machines to create reactive query stores
+- Use `@db` tool for all data mutations (create, update, delete)
 - Use descriptive names (`todosTodo`, not `data1`)
-- Filter in context, not in views
+- Filter in `mapData` operations, not in views
 - Test with empty data (handle empty arrays gracefully)
+- Use co-ids (`co_z...`) for schemas at runtime
 
 **❌ DON'T:**
-- Don't manually modify `context.todos` directly
-- Don't use old `@mutation/*` or `@query/*` tools (deprecated)
-- Don't filter data in views (use context filters instead)
+- Don't manually modify query stores directly
+- Don't use `mapData` for mutations (only for read operations)
+- Don't filter data in views (use `mapData` filters instead)
 - Don't forget to handle SUCCESS/ERROR events
+- Don't use human-readable schema references (`@schema/...`) at runtime
 
 ### Troubleshooting
 
 **Data Not Appearing:**
-1. Is your context property a query object? (has `schema` property)
+1. Is `mapData` action defined in state machine entry?
 2. Check browser console for errors
-3. Is the schema name correct? (e.g., `@schema/todos`)
+3. Is the schema co-id correct? (must be `co_z...`)
 
 **Data Not Updating:**
 1. Are you using `@db` tool to modify data?
-2. Is the schema name consistent between context and tool?
+2. Are query stores properly subscribed? (check `context.@stores`)
 3. Check console logs for SUCCESS/ERROR events
 
 ## Complete Example: Todo State Machine
@@ -5105,10 +5363,11 @@ Use the `@db` tool with different `op` values:
       "entry": {
         "tool": "@db",
         "payload": {
-          "op": "toggle",
-          "schema": "@schema/todos",
+          "op": "update",
           "id": "$$id",
-          "field": "done"
+          "data": {
+            "done": { "$not": "$existing.done" }
+          }
         }
       },
       "on": {
@@ -5423,32 +5682,24 @@ The `@db` tool returns the created/updated/deleted record. Access the result in 
 
 **Note:** For `update` and `delete` operations, `schema` is not required. The schema is automatically extracted from the CoValue's headerMeta internally by the operation.
 
-#### Toggle Operation
+#### Toggle (Using Update with Expression)
+
+Toggle is not a separate operation. Use `update` with an expression:
+
 ```json
 {
   "tool": "@db",
   "payload": {
-    "op": "toggle",
-    "schema": "@schema/todos",
-    "id": "123",
-    "field": "done"
+    "op": "update",
+    "id": "co_z...",
+    "data": {
+      "done": { "$not": "$existing.done" }
+    }
   }
 }
 ```
 
-#### Read Operation
-```json
-{
-  "tool": "@db",
-  "payload": {
-    "op": "read",
-    "schema": "co_zTodos123",  // Schema co-id (co_z...)
-    "filter": {"done": false}
-  }
-}
-```
-
-**Note:** `read()` always returns a reactive store. Use `store.value` for current value and `store.subscribe()` for updates.
+**Note:** For `update` and `delete` operations, `schema` is not required - it's extracted from the CoValue's headerMeta automatically.
 
 #### Seed Operation
 ```json
@@ -5547,7 +5798,7 @@ The `@db` tool returns the created/updated/deleted record. Access the result in 
 **How it works:**
 - `updateContext` is infrastructure that directly calls `updateContextCoValue()` 
 - Persists changes to context CoValue (CRDT)
-- SubscriptionEngine reactively updates `actor.context` (read-only derived data)
+- Context ReactiveStore automatically updates (read-only derived data)
 
 ## Creating Custom Tools
 
@@ -5654,11 +5905,12 @@ const os = await MaiaOS.boot({
 
 ### ❌ DON'T:
 
-- **Don't mutate actor properties** (except `context`)
+- **Don't mutate context directly** - Return results, let state machines update context
 - **Don't call other tools directly** (use state machine)
-- **Don't store state in tool** (use actor.context)
+- **Don't store state in tool** - Return results instead
 - **Don't make assumptions** about schema structure
 - **Don't block** - Keep async operations fast
+- **Don't update context from tools** - All context updates flow through state machines
 
 ## Tool Execution Flow
 
@@ -5675,12 +5927,14 @@ ToolEngine finds tool by name
   ↓
 Tool function executes
   ↓
-Tool mutates actor.context
+Tool returns result (does NOT mutate context directly)
   ↓
-Tool succeeds → StateEngine sends SUCCESS event
+Tool succeeds → StateEngine sends SUCCESS event with result in payload
 Tool fails → StateEngine sends ERROR event
   ↓
 State machine handles SUCCESS/ERROR
+  ↓
+State machine updates context via updateContext action (if needed)
   ↓
 ActorEngine.rerender() (if state changed)
 ```
@@ -5879,23 +6133,23 @@ console.log("Created:", newTodo.id); // Auto-generated ID (co-id)
 
 ### `update` - Update Existing Records
 
-Update an existing record with partial validation.
+Update an existing record with partial validation. Supports MaiaScript expressions in data.
 
 ```javascript
 const updated = await maia.db({
   op: "update",
-  schema: "@schema/todos",
-  id: "123",
+  id: "co_z...",  // Co-id of record to update
   data: {
-    text: "Buy groceries and cook dinner"
+    text: "Buy groceries and cook dinner",
+    done: { "$not": "$existing.done" }  // Toggle using expression
   }
 });
 ```
 
 **Parameters:**
-- `schema` (required) - Schema reference
-- `id` (required) - Record ID to update
+- `id` (required) - Co-id of record to update
 - `data` (required) - Partial data object (only fields to update)
+- `schema` (optional) - **Not required** - Schema is extracted from CoValue headerMeta automatically
 
 **Returns:**
 - Updated record
@@ -5903,7 +6157,21 @@ const updated = await maia.db({
 **Validation:**
 - Validates only the fields you're updating (partial validation)
 - Doesn't require all schema fields
+- Supports MaiaScript expressions (e.g., `{"$not": "$existing.done"}` for toggling)
 - Throws error if validation fails
+
+**Toggle Example:**
+Toggle is not a separate operation. Use `update` with an expression:
+
+```javascript
+const updated = await maia.db({
+  op: "update",
+  id: "co_z...",
+  data: {
+    done: { "$not": "$existing.done" }  // Toggles boolean field
+  }
+});
+```
 
 ### `delete` - Delete Records
 
@@ -5912,47 +6180,18 @@ Delete a record from the database.
 ```javascript
 const deleted = await maia.db({
   op: "delete",
-  schema: "@schema/todos",
-  id: "123"
+  id: "co_z..."  // Co-id of record to delete
 });
 
 console.log("Deleted:", deleted); // true
 ```
 
 **Parameters:**
-- `schema` (required) - Schema reference
-- `id` (required) - Record ID to delete
+- `id` (required) - Co-id of record to delete
+- `schema` (optional) - **Not required** - Schema is extracted from CoValue headerMeta automatically
 
 **Returns:**
 - `true` if deleted successfully
-
-### `toggle` - Toggle Boolean Field
-
-Toggle a boolean field (convenience operation).
-
-```javascript
-const updated = await maia.db({
-  op: "toggle",
-  schema: "@schema/todos",
-  id: "123",
-  field: "done"
-});
-
-// If done was false, now it's true (and vice versa)
-```
-
-**Parameters:**
-- `schema` (required) - Schema reference
-- `id` (required) - Record ID
-- `field` (required) - Boolean field name to toggle
-
-**Returns:**
-- Updated record with toggled field
-
-**Validation:**
-- Validates that the field exists in schema
-- Validates that the field is a boolean type
-- Throws error if field doesn't exist or isn't boolean
 
 ### `seed` - Seed Database (Dev Only)
 
@@ -5996,6 +6235,110 @@ await maia.db({
 - **Schema Index Colists**: Automatically managed - deleted co-values are removed from indexes, new co-values are added to indexes
 
 **Note:** Use only in development! Reseeding preserves schemata but recreates all configs and data.
+
+### `schema` - Load Schema Definitions
+
+Load schema definitions by co-id, schema name, or from CoValue headerMeta.
+
+```javascript
+const schemaStore = await maia.db({
+  op: "schema",
+  coId: "co_zActor123"  // Co-id of schema or CoValue
+});
+
+// Or resolve from human-readable ID (during seeding only)
+const schemaStore = await maia.db({
+  op: "schema",
+  humanReadableKey: "@schema/actor"
+});
+```
+
+**Parameters:**
+- `coId` (optional) - Co-id of schema or CoValue
+- `humanReadableKey` (optional) - Human-readable schema ID (only during seeding)
+
+**Returns:**
+- `ReactiveStore` containing schema definition
+
+### `resolve` - Resolve Human-Readable Keys to Co-IDs
+
+Resolve human-readable keys (like `@schema/todos`) to co-ids. **Only for use during seeding.**
+
+```javascript
+const coId = await maia.db({
+  op: "resolve",
+  humanReadableKey: "@schema/todos"
+});
+
+console.log("Resolved:", coId); // "co_zTodos123..."
+```
+
+**Parameters:**
+- `humanReadableKey` (required) - Human-readable key to resolve
+
+**Returns:**
+- Co-id string (`co_z...`)
+
+**Note:** At runtime, all IDs should already be co-ids. This operation is primarily for seeding/transformation.
+
+### `append` - Append to CoList
+
+Append items to a CoList (ordered array).
+
+```javascript
+const result = await maia.db({
+  op: "append",
+  id: "co_zList123",  // Co-id of CoList
+  items: ["item1", "item2"]
+});
+```
+
+**Parameters:**
+- `id` (required) - Co-id of CoList
+- `items` (required) - Array of items to append
+
+**Returns:**
+- Updated CoList
+
+### `push` - Append to CoStream
+
+Append items to a CoStream (append-only stream). This is an alias for `append` with `cotype: "costream"`.
+
+```javascript
+const result = await maia.db({
+  op: "push",
+  id: "co_zStream123",  // Co-id of CoStream
+  items: ["message1", "message2"]
+});
+```
+
+**Parameters:**
+- `id` (required) - Co-id of CoStream
+- `items` (required) - Array of items to append
+
+**Returns:**
+- Updated CoStream
+
+### `processInbox` - Process Actor Inbox
+
+Process messages in an actor's inbox with session-based watermarks.
+
+```javascript
+const processed = await maia.db({
+  op: "processInbox",
+  actorId: "co_zActor123",
+  sessionId: "session-abc"
+});
+```
+
+**Parameters:**
+- `actorId` (required) - Co-id of actor
+- `sessionId` (required) - Session identifier for watermark tracking
+
+**Returns:**
+- Number of messages processed
+
+**Note:** This is typically handled automatically by ActorEngine. Manual use is rare.
 
 ## Tool Invocation Pattern
 
@@ -6069,10 +6412,11 @@ Use the `@db` tool in your state machine definitions:
       "entry": {
         "tool": "@db",
         "payload": {
-          "op": "toggle",
-          "schema": "@schema/todos",
+          "op": "update",
           "id": "$$id",
-          "field": "done"
+          "data": {
+            "done": { "$not": "$existing.done" }
+          }
         }
       },
       "on": {
@@ -6110,13 +6454,16 @@ Database
    - Routes operations to handlers
    - Supports swappable backends
 
-2. **Operation Handlers** (`libs/maia-script/src/engines/db-engine/operations/`)
+2. **Operation Handlers** (`libs/maia-operations/src/operations/`)
    - `read.js` - Read operation handler (always returns reactive store)
    - `create.js` - Create operation handler
-   - `update.js` - Update operation handler
+   - `update.js` - Update operation handler (supports MaiaScript expressions)
    - `delete.js` - Delete operation handler
-   - `toggle.js` - Toggle operation handler
    - `seed.js` - Seed operation handler
+   - `schema.js` - Schema loading operation handler
+   - `resolve.js` - Co-id resolution operation handler
+   - `append.js` - CoList/CoStream append operation handler
+   - `process-inbox.js` - Inbox processing operation handler
 
 3. **Backend** (`libs/maia-script/src/engines/db-engine/backend/`)
    - `indexeddb/` - IndexedDB backend (current)
@@ -6157,22 +6504,32 @@ Database
 actor.actorEngine.toolEngine.execute('@db', actor, payload);
 ```
 
-### 2. Use Reactive Queries in Context
+### 2. Use mapData Action for Reactive Queries
 
-**✅ DO:** Define query objects in context (automatic reactivity)
+**✅ DO:** Use `mapData` action in state machines to create reactive query stores
 
 ```json
 {
-  "context": {
-    "todos": {
-      "schema": "@schema/todos",
-      "filter": null
+  "idle": {
+    "entry": {
+      "mapData": {
+        "todos": {
+          "op": "read",
+          "schema": "co_zTodos123",
+          "filter": null
+        },
+        "todosTodo": {
+          "op": "read",
+          "schema": "co_zTodos123",
+          "filter": { "done": false }
+        }
+      }
     }
   }
 }
 ```
 
-**❌ DON'T:** Manually subscribe in state machines
+**❌ DON'T:** Manually call read operations in tools
 
 ```json
 {
@@ -6181,11 +6538,13 @@ actor.actorEngine.toolEngine.execute('@db', actor, payload);
     "payload": {
       "op": "read",
       "schema": "co_zTodos123"
-      // Don't manually subscribe - use context query objects instead!
+      // Don't do this - use mapData action instead!
     }
   }
 }
 ```
+
+**Why:** `mapData` creates reactive query stores that are automatically subscribed to by ViewEngine. Tools should be used for mutations, not queries.
 
 ### 3. Always Use Operations for Mutations
 
@@ -6250,34 +6609,32 @@ actor.actorEngine.toolEngine.execute('@db', actor, payload);
 actor.context.error = error.message;
 ```
 
-### 5. Use Toggle for Boolean Fields
+### 5. Toggle Boolean Fields with Update Expression
 
-**✅ DO:** Use `toggle` operation for boolean fields
-
-```json
-{
-  "tool": "@db",
-  "payload": {
-    "op": "toggle",
-    "schema": "@schema/todos",
-    "id": "$$id",
-    "field": "done"
-  }
-}
-```
-
-**❌ DON'T:** Manually read, flip, and update
+**✅ DO:** Use `update` operation with expression to toggle boolean fields
 
 ```json
 {
   "tool": "@db",
   "payload": {
     "op": "update",
-    "schema": "@schema/todos",
     "id": "$$id",
     "data": {
-      "done": {"$not": "$done"} // Don't do this - use toggle!
+      "done": { "$not": "$existing.done" }
     }
+  }
+}
+```
+
+**❌ DON'T:** Use non-existent toggle operation
+
+```json
+{
+  "tool": "@db",
+  "payload": {
+    "op": "toggle",  // ❌ Toggle is not a separate operation
+    "id": "$$id",
+    "field": "done"
   }
 }
 ```
@@ -6289,10 +6646,6 @@ actor.context.error = error.message;
 **Context:**
 ```json
 {
-  "todos": {
-    "schema": "@schema/todos",
-    "filter": null
-  },
   "newTodoText": ""
 }
 ```
@@ -6303,6 +6656,15 @@ actor.context.error = error.message;
   "initial": "idle",
   "states": {
     "idle": {
+      "entry": {
+        "mapData": {
+          "todos": {
+            "op": "read",
+            "schema": "co_zTodos123",
+            "filter": null
+          }
+        }
+      },
       "on": {
         "CREATE_TODO": {
           "target": "creating",
@@ -6342,10 +6704,11 @@ actor.context.error = error.message;
       "entry": {
         "tool": "@db",
         "payload": {
-          "op": "toggle",
-          "schema": "@schema/todos",
+          "op": "update",
           "id": "$$id",
-          "field": "done"
+          "data": {
+            "done": { "$not": "$existing.done" }
+          }
         }
       },
       "on": {
@@ -6385,40 +6748,60 @@ The `@db` tool validates operations against this schema:
 {
   "op": {
     "type": "string",
-    "enum": ["read", "create", "update", "delete", "toggle", "seed"]
+    "enum": ["read", "create", "update", "delete", "seed", "schema", "resolve", "append", "push", "processInbox"]
   },
   "schema": {
     "type": "string",
-    "description": "Schema reference (@schema/actor, @schema/todos, etc.)"
+    "description": "Schema co-id (co_z...) - Required for create, optional for update/delete (extracted from CoValue)"
   },
   "key": {
     "type": "string",
-    "description": "Optional: Specific key for config queries"
+    "description": "Optional: Specific key (co-id) for read queries"
+  },
+  "keys": {
+    "type": "array",
+    "description": "Optional: Array of co-ids for batch reads"
   },
   "filter": {
     "type": "object",
-    "description": "Optional: Filter criteria for data queries"
+    "description": "Optional: Filter criteria for read queries"
   },
   "id": {
     "type": "string",
-    "description": "Optional: Record ID for update/delete/toggle operations"
-  },
-  "field": {
-    "type": "string",
-    "description": "Optional: Field name for toggle operations"
+    "description": "Co-id for update/delete/append/push operations"
   },
   "data": {
     "type": "object",
-    "description": "Optional: Data for create/update operations"
+    "description": "Data for create/update operations (supports MaiaScript expressions)"
+  },
+  "items": {
+    "type": "array",
+    "description": "Items to append/push to CoList/CoStream"
+  },
+  "coId": {
+    "type": "string",
+    "description": "Co-id for schema operation"
+  },
+  "humanReadableKey": {
+    "type": "string",
+    "description": "Human-readable key for resolve/schema operations (seeding only)"
+  },
+  "actorId": {
+    "type": "string",
+    "description": "Actor co-id for processInbox operation"
+  },
+  "sessionId": {
+    "type": "string",
+    "description": "Session ID for processInbox operation"
   }
 }
 ```
 
 ## References
 
-- **DBEngine:** `libs/maia-script/src/engines/db-engine/db.engine.js`
-- **Operation Handlers:** `libs/maia-script/src/engines/db-engine/operations/`
-- **Backend:** `libs/maia-script/src/engines/db-engine/backend/indexeddb/`
+- **DBEngine:** `libs/maia-operations/src/engine.js`
+- **Operation Handlers:** `libs/maia-operations/src/operations/`
+- **Backend:** `libs/maia-script/src/backends/indexeddb/`
 - **Tool Definition:** `libs/maia-tools/src/db/db.tool.js`
 - **Example Vibe:** `libs/maia-vibes/src/todos/`
 
@@ -6461,7 +6844,7 @@ Create a file named `{name}.view.maia`:
   "$schema": "@schema/view",
   "$id": "@view/todo",
   
-  "root": {
+  "content": {
     "tag": "div",
     "attrs": {
       "class": "todo-app"
@@ -6943,7 +7326,7 @@ The wrapper element (with tag, class, attrs) wraps the child actor, allowing you
   "$type": "view",
   "$id": "view_todo_001",
   
-  "root": {
+  "content": {
     "tag": "div",
     "class": "todo-app",
     "children": [
@@ -7310,6 +7693,44 @@ Create a file named `brand.style.maia`:
   }
 }
 ```
+
+## Selectors Section
+
+The `selectors` section allows you to define CSS selector-based styles (typically used in brand styles for global element styling).
+
+**Use selectors for:**
+- Global element styles (`h1`, `p`, `button`, etc.)
+- Pseudo-classes (`:host`, `:hover`, `:focus`)
+- Media queries (`@media (min-width: 768px)`)
+- Advanced CSS selectors
+
+**Example:**
+```json
+{
+  "selectors": {
+    ":host": {
+      "fontFamily": "var(--font-family)",
+      "fontSize": "var(--font-size-base)",
+      "color": "var(--color-text)"
+    },
+    "h1": {
+      "fontSize": "var(--font-size-h1)",
+      "fontWeight": "var(--font-weight-bold)",
+      "marginBottom": "var(--spacing-lg)"
+    },
+    "button:hover": {
+      "opacity": "0.9"
+    },
+    "@media (min-width: 768px)": {
+      "h1": {
+        "fontSize": "var(--font-size-h1-large)"
+      }
+    }
+  }
+}
+```
+
+**Note:** The `selectors` section is typically used in brand styles for global application styling. Actor-specific styles usually use the `components` section with nested data-attribute syntax.
 
 ## Design Tokens
 
@@ -7695,7 +8116,8 @@ For conditional styling, use nested `data` syntax in component definitions:
 - **Use tokens consistently** - Don't hardcode colors/spacing
 - **Keep tokens semantic** - `primary` not `blue`
 - **Define component patterns** - Reusable components in `components` section
-- **Use nested data syntax** - For conditional styling via data-attributes
+- **Use `selectors` section** - For global element styles and advanced CSS selectors
+- **Use nested data syntax** - For conditional styling via data-attributes in `components`
 - **Support dark mode** - Add `colorsDark` tokens
 - **Use CSS custom properties** - Easy runtime theming
 - **Document your tokens** - Add comments explaining usage
@@ -7871,7 +8293,10 @@ Create a file named `{name}.style.maia`:
 }
 ```
 
-**Note:** Use `components` section (not `styles`) for component definitions with nested data-attribute syntax. Use `selectors` section for advanced CSS selectors.
+**Note:** 
+- Use `components` section for component definitions with nested data-attribute syntax (e.g., `.todoItem`, `.card`)
+- Use `selectors` section for advanced CSS selectors (e.g., `:host`, `h1`, `@media` queries)
+- The old `styles` section is deprecated - use `components` or `selectors` instead
 
 ## Linking Style to Actors
 
@@ -7908,25 +8333,37 @@ Local styles → CSS rules (override/extend)
 Inject into Shadow DOM
 ```
 
+## Components vs Selectors
+
+**Components Section:**
+- Use for component definitions (e.g., `.todoItem`, `.card`, `.button`)
+- Supports nested data-attribute syntax for conditional styling
+- Component names map to CSS classes (camelCase → kebab-case)
+
+**Selectors Section:**
+- Use for advanced CSS selectors (e.g., `:host`, `h1`, `button:hover`)
+- Use for pseudo-classes, pseudo-elements, and media queries
+- Typically used in brand styles for global element styling
+
 ## Common Patterns
 
-### Layout Styles
+### Layout Styles (Components Section)
 ```json
 {
-  "styles": {
-    ".todo-app": {
+  "components": {
+    "todoApp": {
       "display": "flex",
       "flexDirection": "column",
       "gap": "var(--spacing-lg)",
       "maxWidth": "800px",
       "margin": "0 auto"
     },
-    ".kanban-board": {
+    "kanbanBoard": {
       "display": "grid",
       "gridTemplateColumns": "repeat(2, 1fr)",
       "gap": "var(--spacing-md)"
     },
-    ".column": {
+    "column": {
       "backgroundColor": "var(--color-surface)",
       "borderRadius": "var(--border-radius-lg)",
       "padding": "var(--spacing-md)"
@@ -8018,10 +8455,10 @@ Inject into Shadow DOM
 }
 ```
 
-### Animation Styles
+### Animation Styles (Selectors Section)
 ```json
 {
-  "styles": {
+  "selectors": {
     "@keyframes fadeIn": {
       "from": {"opacity": "0", "transform": "translateY(-10px)"},
       "to": {"opacity": "1", "transform": "translateY(0)"}
@@ -8045,12 +8482,12 @@ Local styles can override brand styles:
 
 ```json
 {
-  "styles": {
-    ".btn-primary": {
+  "components": {
+    "buttonPrimary": {
       "backgroundColor": "#ef4444",  // Override brand primary color
       "borderRadius": "0"             // Override brand border radius
     },
-    ".input": {
+    "input": {
       "fontSize": "18px",             // Larger input text
       "padding": "1rem"               // More padding
     }
@@ -8064,8 +8501,8 @@ Reference brand tokens:
 
 ```json
 {
-  "styles": {
-    ".custom-element": {
+  "components": {
+    "customElement": {
       "color": "var(--color-primary)",
       "padding": "var(--spacing-md)",
       "borderRadius": "var(--border-radius-lg)",
@@ -8075,16 +8512,18 @@ Reference brand tokens:
 }
 ```
 
-Define local custom properties:
+Define local custom properties (use selectors for `:host`):
 
 ```json
 {
-  "styles": {
+  "selectors": {
     ":host": {
       "--local-accent": "#f59e0b",
       "--local-spacing": "0.75rem"
-    },
-    ".custom-element": {
+    }
+  },
+  "components": {
+    "customElement": {
       "color": "var(--local-accent)",
       "padding": "var(--local-spacing)"
     }
@@ -8092,14 +8531,19 @@ Define local custom properties:
 }
 ```
 
-## Responsive Styles
+## Responsive Styles (Selectors Section)
 
 ```json
 {
-  "styles": {
-    ".todo-app": {
+  "components": {
+    "todoApp": {
       "padding": "var(--spacing-md)"
     },
+    "kanbanBoard": {
+      "gridTemplateColumns": "repeat(2, 1fr)"
+    }
+  },
+  "selectors": {
     "@media (min-width: 768px)": {
       ".todo-app": {
         "padding": "var(--spacing-xl)"
@@ -8117,11 +8561,11 @@ Define local custom properties:
 }
 ```
 
-## Pseudo-classes and Pseudo-elements
+## Pseudo-classes and Pseudo-elements (Selectors Section)
 
 ```json
 {
-  "styles": {
+  "selectors": {
     ".todo-item:hover": {
       "backgroundColor": "var(--color-surface)"
     },
@@ -8212,16 +8656,17 @@ For conditional styling, use nested `data` syntax in component definitions:
 ### ✅ DO:
 
 - **Use brand tokens** - Reference CSS custom properties
-- **Use `components` section** - For component definitions with nested data syntax
-- **Use `selectors` section** - For advanced CSS selectors
+- **Use `components` section** - For component definitions with nested data-attribute syntax
+- **Use `selectors` section** - For advanced CSS selectors (pseudo-classes, media queries, `:host`)
 - **Keep styles scoped** - Shadow DOM provides isolation
-- **Use semantic names** - `todoItem` not `item123`
+- **Use semantic names** - `todoItem` not `item123` (camelCase → kebab-case in CSS)
 - **Leverage transitions** - Smooth state changes
-- **Support responsive** - Use media queries
-- **Use nested data syntax** - For conditional styling via data-attributes
+- **Support responsive** - Use media queries in `selectors` section
+- **Use nested data syntax** - For conditional styling via data-attributes in `components`
 
 ### ❌ DON'T:
 
+- **Don't use `styles` section** - Use `components` or `selectors` instead
 - **Don't use class-based conditionals** - Use data-attributes instead (`.active`, `.dragging`, etc.)
 - **Don't use IDs** - Use classes for styling
 - **Don't use `!important`** - Shadow DOM provides isolation
@@ -8442,12 +8887,14 @@ Every schema must have:
 {
   "$schema": "@schema/meta",
   "$id": "@schema/actor",
-  "title": "Actor Definition",
+  "title": "@schema/actor",
+  "description": "Pure declarative actor specification",
   "cotype": "comap",
+  "indexing": true,
   "properties": {
-    "$id": {
+    "role": {
       "type": "string",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
+      "description": "Actor role (e.g., 'kanban-view', 'vibe', 'composite', 'leaf')"
     },
     "context": {
       "$co": "@schema/context",  // ← CoValue reference
@@ -8457,11 +8904,21 @@ Every schema must have:
       "$co": "@schema/view",  // ← CoValue reference
       "description": "Co-id reference to view definition"
     },
-    "children": {
-      "type": "object",
-      "additionalProperties": {
-        "$co": "@schema/actor"  // ← Each child is a co-id reference
-      }
+    "state": {
+      "$co": "@schema/state",  // ← CoValue reference
+      "description": "Co-id reference to state machine definition"
+    },
+    "brand": {
+      "$co": "@schema/style",  // ← CoValue reference
+      "description": "Co-id reference to brand style definition"
+    },
+    "style": {
+      "$co": "@schema/style",  // ← CoValue reference
+      "description": "Co-id reference to local style definition"
+    },
+    "inbox": {
+      "$co": "@schema/inbox",  // ← CoValue reference
+      "description": "Co-id reference to message inbox costream"
     }
   }
 }
@@ -8492,61 +8949,90 @@ Every schema must have:
 }
 ```
 
-#### Example 3: Guard Schema (comap with allOf)
+#### Example 3: Guard Schema (comap - accepts any MaiaScript expression)
 ```json
 {
   "$schema": "@schema/meta",
   "$id": "@schema/guard",
-  "title": "Guard",
+  "title": "@schema/guard",
+  "description": "Guard condition for state machine transitions",
   "cotype": "comap",
-  "properties": {
-    "$id": {
-      "type": "string",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
-    }
-  },
-  "allOf": [
-    {
-      "$co": "@schema/maia-script-expression"  // ← Uses $co for schema reference
-    }
-  ]
+  "indexing": true,
+  "properties": {},
+  "additionalProperties": true  // ← Accepts any MaiaScript expression properties
 }
 ```
 
-**Note**: The `guard` schema uses `$co` in `allOf` to reference another schema. This is the correct pattern - `allOf` merges schemas, and `$co` ensures the reference is properly resolved during seeding and validation.
+**Note**: The `guard` schema accepts any properties (via `additionalProperties: true`), allowing any MaiaScript expression to be used as a guard condition. Guards are validated against the MaiaScript expression schema at runtime.
 
 #### Example 4: View Schema (comap with internal $defs)
 ```json
 {
   "$schema": "@schema/meta",
   "$id": "@schema/view",
-  "title": "View Definition",
+  "title": "@schema/view",
+  "description": "UI structure definition with DOM tree, expressions, loops, and event handlers",
   "cotype": "comap",
+  "indexing": true,
   "properties": {
-    "tag": { "type": "string" },
-    "text": {
-      "$co": "@schema/maia-script-expression"  // ← CoValue reference
-    },
-    "children": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/viewNode"  // ← OK: Internal reference to $defs
-      }
+    "content": {
+      "type": "object",
+      "description": "View content structure (recursive viewNode)",
+      "$ref": "#/$defs/viewNode"  // ← OK: Internal reference to $defs
     }
   },
   "$defs": {
     "viewNode": {
       "type": "object",
+      "description": "Recursive DOM node structure",
       "properties": {
+        "tag": { "type": "string" },
+        "class": { "type": "string" },
+        "text": {
+          "anyOf": [
+            { "type": "string", "pattern": "^\\$\\$" },
+            { "type": "string", "pattern": "^@" },
+            { "type": "string", "pattern": "^\\$[^$]" },
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "boolean" },
+            { "type": "null" }
+          ]
+        },
         "children": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/viewNode"  // ← OK: Recursive internal reference
           }
+        },
+        "$on": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "send": { "type": "string" },
+              "payload": { "type": "object", "additionalProperties": true },
+              "key": { "type": "string" }
+            },
+            "required": ["send"]
+          }
+        },
+        "$each": {
+          "type": "object",
+          "properties": {
+            "items": { "anyOf": [/* expression patterns */] },
+            "template": { "$ref": "#/$defs/viewNode" }
+          },
+          "required": ["items", "template"]
+        },
+        "$slot": {
+          "anyOf": [/* expression patterns */]
         }
-      }
+      },
+      "additionalProperties": false
     }
-  }
+  },
+  "additionalProperties": false
 }
 ```
 
@@ -8857,19 +9343,19 @@ When validating, `$co` references are resolved:
 4. **Don't skip `cotype`** - Every schema/instance must specify its CoJSON type
 5. **Don't use human-readable IDs at runtime** - All IDs must be co-ids after seeding
 
-### Special Contexts: `allOf` and `additionalProperties`
-
-**`allOf` and Schema Composition:**
-- `allOf` is a JSON Schema composition keyword that merges multiple schemas
-- When using `allOf` to extend another schema, **use `$co`** (e.g., `guard` schema extending `maia-script-expression`)
-- Example: `guard.schema.json` correctly uses `$co` in `allOf`
+### Special Contexts: `additionalProperties` and `oneOf`
 
 **`additionalProperties` and Dynamic Keys:**
 - `additionalProperties` defines the schema for dynamic object keys
-- When referencing external schemas, **use `$co`** (e.g., `action.payload` referencing `maia-script-expression`)
-- Example: `action.schema.json` correctly uses `$co` in `additionalProperties`
+- When referencing external schemas, **use `$co`** for CoValue references
+- Example: `guard.schema.json` uses `additionalProperties: true` to accept any MaiaScript expression properties
 
-**Consistency**: All schemas in the codebase consistently use `$co` for external schema references, even in `allOf` and `additionalProperties` contexts.
+**`oneOf` and Schema Alternatives:**
+- `oneOf` allows a value to match one of several schema alternatives
+- Used in `action.schema.json` to support tool invocations, context updates, or data mapping
+- Each alternative can use `$co` for CoValue references
+
+**Consistency**: All schemas in the codebase consistently use `$co` for external CoValue references. Use `$ref` only for internal schema definitions within `$defs`.
 
 ## Examples from Codebase
 
@@ -9078,7 +9564,8 @@ This ensures type-safe, validated, and properly referenced CoJSON data structure
 - ✅ Be triggered by events from inbox (never directly)
 
 **The ONLY exception:**
-- ✅ SubscriptionEngine automatically updates reactive query objects (infrastructure)
+- ✅ Universal `read()` API automatically updates reactive query objects (infrastructure)
+- ✅ Query objects use `read()` internally - returns ReactiveStore that auto-updates
 
 **Correct Pattern:**
 ```json
@@ -9581,11 +10068,8 @@ App Service Actor
   "context": "@context/agent",
   "state": "@state/agent",
   "view": "@view/agent",
-  "interface": "@interface/agent",
   "brand": "@style/brand",
-  "subscriptions": "@subscriptions/agent",
-  "inbox": "@inbox/agent",
-  "inboxWatermark": 0
+  "inbox": "@inbox/agent"
 }
 ```
 
@@ -9629,16 +10113,12 @@ App Composite Actor
   "context": "@context/composite",
   "view": "@view/composite",
   "state": "@state/composite",
-  "interface": "@interface/composite",
   "brand": "@style/brand",
-  "children": {
-    "list": "@actor/list",
-    "kanban": "@actor/kanban"
-  },
-  "subscriptions": "@subscriptions/composite",
-  "inbox": "@inbox/composite",
-  "inboxWatermark": 0
+  "inbox": "@inbox/composite"
 }
+```
+
+**Note:** Children are defined in `composite.context.maia` via `@actors` system property. See [Actors](./03-actors.md#system-properties-in-context) for details.
 ```
 
 ---

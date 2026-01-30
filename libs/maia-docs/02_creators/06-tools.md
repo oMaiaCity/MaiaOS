@@ -155,32 +155,24 @@ The `@db` tool returns the created/updated/deleted record. Access the result in 
 
 **Note:** For `update` and `delete` operations, `schema` is not required. The schema is automatically extracted from the CoValue's headerMeta internally by the operation.
 
-#### Toggle Operation
+#### Toggle (Using Update with Expression)
+
+Toggle is not a separate operation. Use `update` with an expression:
+
 ```json
 {
   "tool": "@db",
   "payload": {
-    "op": "toggle",
-    "schema": "@schema/todos",
-    "id": "123",
-    "field": "done"
+    "op": "update",
+    "id": "co_z...",
+    "data": {
+      "done": { "$not": "$existing.done" }
+    }
   }
 }
 ```
 
-#### Read Operation
-```json
-{
-  "tool": "@db",
-  "payload": {
-    "op": "read",
-    "schema": "co_zTodos123",  // Schema co-id (co_z...)
-    "filter": {"done": false}
-  }
-}
-```
-
-**Note:** `read()` always returns a reactive store. Use `store.value` for current value and `store.subscribe()` for updates.
+**Note:** For `update` and `delete` operations, `schema` is not required - it's extracted from the CoValue's headerMeta automatically.
 
 #### Seed Operation
 ```json
@@ -279,7 +271,7 @@ The `@db` tool returns the created/updated/deleted record. Access the result in 
 **How it works:**
 - `updateContext` is infrastructure that directly calls `updateContextCoValue()` 
 - Persists changes to context CoValue (CRDT)
-- SubscriptionEngine reactively updates `actor.context` (read-only derived data)
+- Context ReactiveStore automatically updates (read-only derived data)
 
 ## Creating Custom Tools
 
@@ -386,11 +378,12 @@ const os = await MaiaOS.boot({
 
 ### ❌ DON'T:
 
-- **Don't mutate actor properties** (except `context`)
+- **Don't mutate context directly** - Return results, let state machines update context
 - **Don't call other tools directly** (use state machine)
-- **Don't store state in tool** (use actor.context)
+- **Don't store state in tool** - Return results instead
 - **Don't make assumptions** about schema structure
 - **Don't block** - Keep async operations fast
+- **Don't update context from tools** - All context updates flow through state machines
 
 ## Tool Execution Flow
 
@@ -407,12 +400,14 @@ ToolEngine finds tool by name
   ↓
 Tool function executes
   ↓
-Tool mutates actor.context
+Tool returns result (does NOT mutate context directly)
   ↓
-Tool succeeds → StateEngine sends SUCCESS event
+Tool succeeds → StateEngine sends SUCCESS event with result in payload
 Tool fails → StateEngine sends ERROR event
   ↓
 State machine handles SUCCESS/ERROR
+  ↓
+State machine updates context via updateContext action (if needed)
   ↓
 ActorEngine.rerender() (if state changed)
 ```

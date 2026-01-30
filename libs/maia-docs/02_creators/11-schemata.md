@@ -96,12 +96,14 @@ Every schema must have:
 {
   "$schema": "@schema/meta",
   "$id": "@schema/actor",
-  "title": "Actor Definition",
+  "title": "@schema/actor",
+  "description": "Pure declarative actor specification",
   "cotype": "comap",
+  "indexing": true,
   "properties": {
-    "$id": {
+    "role": {
       "type": "string",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
+      "description": "Actor role (e.g., 'kanban-view', 'vibe', 'composite', 'leaf')"
     },
     "context": {
       "$co": "@schema/context",  // ← CoValue reference
@@ -111,11 +113,21 @@ Every schema must have:
       "$co": "@schema/view",  // ← CoValue reference
       "description": "Co-id reference to view definition"
     },
-    "children": {
-      "type": "object",
-      "additionalProperties": {
-        "$co": "@schema/actor"  // ← Each child is a co-id reference
-      }
+    "state": {
+      "$co": "@schema/state",  // ← CoValue reference
+      "description": "Co-id reference to state machine definition"
+    },
+    "brand": {
+      "$co": "@schema/style",  // ← CoValue reference
+      "description": "Co-id reference to brand style definition"
+    },
+    "style": {
+      "$co": "@schema/style",  // ← CoValue reference
+      "description": "Co-id reference to local style definition"
+    },
+    "inbox": {
+      "$co": "@schema/inbox",  // ← CoValue reference
+      "description": "Co-id reference to message inbox costream"
     }
   }
 }
@@ -146,61 +158,90 @@ Every schema must have:
 }
 ```
 
-#### Example 3: Guard Schema (comap with allOf)
+#### Example 3: Guard Schema (comap - accepts any MaiaScript expression)
 ```json
 {
   "$schema": "@schema/meta",
   "$id": "@schema/guard",
-  "title": "Guard",
+  "title": "@schema/guard",
+  "description": "Guard condition for state machine transitions",
   "cotype": "comap",
-  "properties": {
-    "$id": {
-      "type": "string",
-      "pattern": "^co_z[a-zA-Z0-9]+$"
-    }
-  },
-  "allOf": [
-    {
-      "$co": "@schema/maia-script-expression"  // ← Uses $co for schema reference
-    }
-  ]
+  "indexing": true,
+  "properties": {},
+  "additionalProperties": true  // ← Accepts any MaiaScript expression properties
 }
 ```
 
-**Note**: The `guard` schema uses `$co` in `allOf` to reference another schema. This is the correct pattern - `allOf` merges schemas, and `$co` ensures the reference is properly resolved during seeding and validation.
+**Note**: The `guard` schema accepts any properties (via `additionalProperties: true`), allowing any MaiaScript expression to be used as a guard condition. Guards are validated against the MaiaScript expression schema at runtime.
 
 #### Example 4: View Schema (comap with internal $defs)
 ```json
 {
   "$schema": "@schema/meta",
   "$id": "@schema/view",
-  "title": "View Definition",
+  "title": "@schema/view",
+  "description": "UI structure definition with DOM tree, expressions, loops, and event handlers",
   "cotype": "comap",
+  "indexing": true,
   "properties": {
-    "tag": { "type": "string" },
-    "text": {
-      "$co": "@schema/maia-script-expression"  // ← CoValue reference
-    },
-    "children": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/viewNode"  // ← OK: Internal reference to $defs
-      }
+    "content": {
+      "type": "object",
+      "description": "View content structure (recursive viewNode)",
+      "$ref": "#/$defs/viewNode"  // ← OK: Internal reference to $defs
     }
   },
   "$defs": {
     "viewNode": {
       "type": "object",
+      "description": "Recursive DOM node structure",
       "properties": {
+        "tag": { "type": "string" },
+        "class": { "type": "string" },
+        "text": {
+          "anyOf": [
+            { "type": "string", "pattern": "^\\$\\$" },
+            { "type": "string", "pattern": "^@" },
+            { "type": "string", "pattern": "^\\$[^$]" },
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "boolean" },
+            { "type": "null" }
+          ]
+        },
         "children": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/viewNode"  // ← OK: Recursive internal reference
           }
+        },
+        "$on": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "send": { "type": "string" },
+              "payload": { "type": "object", "additionalProperties": true },
+              "key": { "type": "string" }
+            },
+            "required": ["send"]
+          }
+        },
+        "$each": {
+          "type": "object",
+          "properties": {
+            "items": { "anyOf": [/* expression patterns */] },
+            "template": { "$ref": "#/$defs/viewNode" }
+          },
+          "required": ["items", "template"]
+        },
+        "$slot": {
+          "anyOf": [/* expression patterns */]
         }
-      }
+      },
+      "additionalProperties": false
     }
-  }
+  },
+  "additionalProperties": false
 }
 ```
 
@@ -511,19 +552,19 @@ When validating, `$co` references are resolved:
 4. **Don't skip `cotype`** - Every schema/instance must specify its CoJSON type
 5. **Don't use human-readable IDs at runtime** - All IDs must be co-ids after seeding
 
-### Special Contexts: `allOf` and `additionalProperties`
-
-**`allOf` and Schema Composition:**
-- `allOf` is a JSON Schema composition keyword that merges multiple schemas
-- When using `allOf` to extend another schema, **use `$co`** (e.g., `guard` schema extending `maia-script-expression`)
-- Example: `guard.schema.json` correctly uses `$co` in `allOf`
+### Special Contexts: `additionalProperties` and `oneOf`
 
 **`additionalProperties` and Dynamic Keys:**
 - `additionalProperties` defines the schema for dynamic object keys
-- When referencing external schemas, **use `$co`** (e.g., `action.payload` referencing `maia-script-expression`)
-- Example: `action.schema.json` correctly uses `$co` in `additionalProperties`
+- When referencing external schemas, **use `$co`** for CoValue references
+- Example: `guard.schema.json` uses `additionalProperties: true` to accept any MaiaScript expression properties
 
-**Consistency**: All schemas in the codebase consistently use `$co` for external schema references, even in `allOf` and `additionalProperties` contexts.
+**`oneOf` and Schema Alternatives:**
+- `oneOf` allows a value to match one of several schema alternatives
+- Used in `action.schema.json` to support tool invocations, context updates, or data mapping
+- Each alternative can use `$co` for CoValue references
+
+**Consistency**: All schemas in the codebase consistently use `$co` for external CoValue references. Use `$ref` only for internal schema definitions within `$defs`.
 
 ## Examples from Codebase
 

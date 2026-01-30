@@ -115,6 +115,44 @@ Create a file named `brand.style.maia`:
 }
 ```
 
+## Selectors Section
+
+The `selectors` section allows you to define CSS selector-based styles (typically used in brand styles for global element styling).
+
+**Use selectors for:**
+- Global element styles (`h1`, `p`, `button`, etc.)
+- Pseudo-classes (`:host`, `:hover`, `:focus`)
+- Media queries (`@media (min-width: 768px)`)
+- Advanced CSS selectors
+
+**Example:**
+```json
+{
+  "selectors": {
+    ":host": {
+      "fontFamily": "var(--font-family)",
+      "fontSize": "var(--font-size-base)",
+      "color": "var(--color-text)"
+    },
+    "h1": {
+      "fontSize": "var(--font-size-h1)",
+      "fontWeight": "var(--font-weight-bold)",
+      "marginBottom": "var(--spacing-lg)"
+    },
+    "button:hover": {
+      "opacity": "0.9"
+    },
+    "@media (min-width: 768px)": {
+      "h1": {
+        "fontSize": "var(--font-size-h1-large)"
+      }
+    }
+  }
+}
+```
+
+**Note:** The `selectors` section is typically used in brand styles for global application styling. Actor-specific styles usually use the `components` section with nested data-attribute syntax.
+
 ## Design Tokens
 
 ### Colors
@@ -499,7 +537,8 @@ For conditional styling, use nested `data` syntax in component definitions:
 - **Use tokens consistently** - Don't hardcode colors/spacing
 - **Keep tokens semantic** - `primary` not `blue`
 - **Define component patterns** - Reusable components in `components` section
-- **Use nested data syntax** - For conditional styling via data-attributes
+- **Use `selectors` section** - For global element styles and advanced CSS selectors
+- **Use nested data syntax** - For conditional styling via data-attributes in `components`
 - **Support dark mode** - Add `colorsDark` tokens
 - **Use CSS custom properties** - Easy runtime theming
 - **Document your tokens** - Add comments explaining usage

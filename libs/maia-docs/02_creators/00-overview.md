@@ -22,6 +22,8 @@ Read the documentation in the following order for a complete understanding:
 ### 3. [Actors](./03-actors.md)
 **Actor-Based Component System**
 - What are Actors?
+- **Architectural roles:** State machine defines transitions, context contains data, view renders from context
+- **Single source of truth:** Everything persisted to CoValues, accessed via ReactiveStore
 - **Agent-first development** (create agent service actor first!)
 - Actor lifecycle
 - Actor composition
@@ -30,7 +32,8 @@ Read the documentation in the following order for a complete understanding:
 
 ### 4. [Context](./04-context.md)
 **Context Management**
-- Context system
+- Context system (ReactiveStore pattern)
+- Universal `read()` API - Every CoValue accessible as ReactiveStore
 - Context passing
 - Context composition
 - Data flow
@@ -49,11 +52,12 @@ Read the documentation in the following order for a complete understanding:
 - Tool composition
 - Custom tools
 
-### 7. [Operations](./07_operations.md)
+### 7. [Operations](./07-operations.md)
 **Database Operations API**
+- Universal `read()` API - Every CoValue accessible as ReactiveStore
 - Unified database operations (`maia.db()`)
 - Query, create, update, delete, toggle operations
-- Reactive subscriptions
+- Reactive subscriptions via ReactiveStore pattern
 - Co-id usage and schema transformation
 
 ### 8. [Views](./08-views.md)
@@ -102,6 +106,8 @@ This documentation is for **creators** who want to:
 - How to create AI-powered features with skills
 - How to manage state and context
 - How to build reactive, collaborative applications
+- **Architectural roles:** State machine defines transitions, context contains data, view renders from context
+- **Single source of truth:** Everything is persisted to CoValues, accessed reactively via universal `read()` API
 
 ---
 

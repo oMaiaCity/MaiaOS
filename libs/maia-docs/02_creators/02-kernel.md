@@ -23,7 +23,7 @@ The **Kernel** is the single entry point for MaiaOS. It boots the operating syst
     async function boot() {
       // Boot the operating system
       const os = await MaiaOS.boot({
-        modules: ['db', 'core', 'dragdrop', 'interface']
+        modules: ['db', 'core']  // Default modules
       });
       
       // Create an actor
@@ -45,33 +45,36 @@ The **Kernel** is the single entry point for MaiaOS. It boots the operating syst
 
 ```javascript
 const os = await MaiaOS.boot({
-  // Modules to load (default: ['db', 'core', 'dragdrop'])
-  modules: ['db', 'core', 'dragdrop']
+  // Modules to load (default: ['db', 'core'])
+  modules: ['db', 'core']  // Add 'dragdrop' if needed
 });
 ```
 
 ## What Happens During Boot?
 
-1. **Initialize Module Registry** - Prepares dynamic module loading
-2. **Initialize Engines** - Boots all execution engines:
+1. **Initialize Database** - Sets up database backend (CoJSON or IndexedDB)
+2. **Initialize Module Registry** - Prepares dynamic module loading
+3. **Initialize Engines** - Boots all execution engines:
    - `ActorEngine` - Manages actor lifecycle
    - `StateEngine` - Interprets state machines
    - `ViewEngine` - Renders views
    - `ToolEngine` - Executes tools
    - `StyleEngine` - Compiles styles
    - `MaiaScriptEvaluator` - Evaluates DSL expressions
-3. **Load Modules** - Dynamically loads specified modules
-4. **Register Tools** - Each module registers its tools
+   - `DBEngine` - Unified database operations (universal `read()` API)
+4. **Load Modules** - Dynamically loads specified modules (default: `['db', 'core']`)
+5. **Register Tools** - Each module registers its tools
 
 ## Available Modules
 
 ### Database Module (`db`)
 Unified database operations through a single `@db` tool:
-- All operations use `op` parameter (`create`, `update`, `delete`, `toggle`, `query`, `seed`)
+- All operations use `op` parameter (`create`, `update`, `delete`, `toggle`, `read`, `seed`)
+- **Universal `read()` API** - Every CoValue is accessible as a reactive store
 - Example: `{ tool: "@db", payload: { op: "create", schema: "co_z...", data: {...} } }`
 - **Note:** Schema must be a co-id (`co_z...`) - schema references (`@schema/todos`) are transformed to co-ids during seeding
-- Reactive query objects automatically keep data in sync
-- See [State Machines](./05-state.md) for data patterns
+- All `read()` operations return ReactiveStore with `.value` and `.subscribe()` methods
+- See [Operations](./07-operations.md) for the universal read() API pattern
 
 ### Core Module (`core`)
 UI utilities and message publishing:
