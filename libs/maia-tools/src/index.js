@@ -9,28 +9,16 @@
 import noopDef from './core/noop.tool.maia';
 import publishMessageDef from './core/publishMessage.tool.maia';
 
-import dragStartDef from './dragdrop/start.tool.maia';
-import dropDef from './dragdrop/drop.tool.maia';
-import dragOverDef from './dragdrop/dragOver.tool.maia';
-
 // Import tool functions
 import noopFn from './core/noop.tool.js';
 import publishMessageFn from './core/publishMessage.tool.js';
-
-import dragStartFn from './dragdrop/start.tool.js';
-import dropFn from './dragdrop/drop.tool.js';
-import dragOverFn from './dragdrop/dragOver.tool.js';
 
 /**
  * Tool registry organized by namespace
  */
 export const TOOLS = {
   'core/noop': { definition: noopDef, function: noopFn },
-  'core/publishMessage': { definition: publishMessageDef, function: publishMessageFn },
-  
-  'dragdrop/start': { definition: dragStartDef, function: dragStartFn },
-  'dragdrop/drop': { definition: dropDef, function: dropFn },
-  'dragdrop/dragOver': { definition: dragOverDef, function: dragOverFn }
+  'core/publishMessage': { definition: publishMessageDef, function: publishMessageFn }
 };
 
 /**

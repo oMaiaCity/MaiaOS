@@ -1,6 +1,6 @@
 {
   "$schema": "@schema/context",
-  "$id": "@context/inbox-logs",
+  "$id": "@context/logs",
   "allActors": {
     "schema": "@schema/actor",
     "filter": null

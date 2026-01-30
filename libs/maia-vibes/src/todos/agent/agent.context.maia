@@ -1,9 +1,16 @@
 {
   "$schema": "@schema/context",
   "$id": "@context/agent",
-  "currentView": "@composite",
+  "currentView": "@list",
+  "viewMode": "list",
+  "listButtonActive": true,
+  "logsButtonActive": false,
+  "inputPlaceholder": "Add a new todo...",
+  "addButtonText": "Add",
+  "newTodoText": "",
   "error": null,
   "@actors": {
-    "composite": "@actor/composite"
+    "list": "@actor/list",
+    "logs": "@actor/logs"
   }
 }

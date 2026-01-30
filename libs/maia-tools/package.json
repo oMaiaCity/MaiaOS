@@ -7,7 +7,6 @@
     ".": "./src/index.js",
     "./db/*": "./src/db/*",
     "./core/*": "./src/core/*",
-    "./dragdrop/*": "./src/dragdrop/*",
     "./context/*": "./src/context/*"
   },
   "dependencies": {

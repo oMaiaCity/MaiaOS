@@ -1,5 +1,5 @@
 {
   "$schema": "@schema/inbox",
-  "$id": "@inbox/kanban",
+  "$id": "@inbox/logs",
   "items": []
 }

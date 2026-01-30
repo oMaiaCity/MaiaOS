@@ -396,8 +396,8 @@ export class MaiaOS {
    * @param {Object} config - Boot configuration
    */
   static async _loadModules(os, config) {
-    // Load modules (default: db, core, dragdrop)
-    const modules = config.modules || ['db', 'core', 'dragdrop'];
+    // Load modules (default: db, core)
+    const modules = config.modules || ['db', 'core'];
     
     for (const moduleName of modules) {
       try {

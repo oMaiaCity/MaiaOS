@@ -1,8 +1,8 @@
 {
   "$schema": "@schema/view",
-  "$id": "@view/inbox-logs",
+  "$id": "@view/logs",
   "content": {
-    "class": "inbox-logs",
+    "class": "logs",
     "$each": {
       "items": "$allActors",
       "template": {

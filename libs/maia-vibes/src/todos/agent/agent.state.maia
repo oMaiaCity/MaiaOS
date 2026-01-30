@@ -21,10 +21,45 @@
           "target": "deleting"
         },
         "SWITCH_VIEW": {
-          "target": "idle"
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "viewMode": "$$viewMode" }
+            },
+            {
+              "updateContext": {
+                "currentView": {
+                  "$if": {
+                    "condition": { "$eq": ["$$viewMode", "list"] },
+                    "then": "@list",
+                    "else": "@logs"
+                  }
+                }
+              }
+            },
+            {
+              "updateContext": {
+                "listButtonActive": {
+                  "$eq": ["$$viewMode", "list"]
+                }
+              }
+            },
+            {
+              "updateContext": {
+                "logsButtonActive": {
+                  "$eq": ["$$viewMode", "logs"]
+                }
+              }
+            }
+          ]
         },
         "UPDATE_INPUT": {
-          "target": "idle"
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "newTodoText": "$$newTodoText" }
+            }
+          ]
         }
       }
     },
@@ -54,35 +89,7 @@
           "target": "idle",
           "actions": [
             {
-              "tool": "@core/publishMessage",
-              "payload": {
-                "type": "TODO_CREATED",
-                "payload": {
-                  "id": "$$result.id",
-                  "text": "$$result.text",
-                  "done": false
-                },
-                "target": "@actor/composite"
-              }
-            },
-            {
-              "tool": "@core/publishMessage",
-              "payload": {
-                "type": "TODO_CREATED",
-                "payload": {
-                  "id": "$$result.id",
-                  "text": "$$result.text",
-                  "done": false
-                },
-                "target": "@actor/kanban"
-              }
-            },
-            {
-              "tool": "@core/publishMessage",
-              "payload": {
-                "type": "INPUT_CLEARED",
-                "target": "@actor/composite"
-              }
+              "updateContext": { "newTodoText": "" }
             }
           ]
         },
@@ -119,25 +126,7 @@
           "target": "idle"
         },
         "SUCCESS": {
-          "target": "idle",
-          "actions": [
-            {
-              "tool": "@core/publishMessage",
-              "payload": {
-                "type": "TODO_COMPLETED",
-                "payload": { "id": "$$id" },
-                "target": "@actor/composite"
-              }
-            },
-            {
-              "tool": "@core/publishMessage",
-              "payload": {
-                "type": "TODO_COMPLETED",
-                "payload": { "id": "$$id" },
-                "target": "@actor/kanban"
-              }
-            }
-          ]
+          "target": "idle"
         },
         "ERROR": "error"
       }
@@ -167,25 +156,7 @@
           "target": "toggling"
         },
         "SUCCESS": {
-          "target": "idle",
-          "actions": [
-            {
-              "tool": "@core/publishMessage",
-              "payload": {
-                "type": "TODO_DELETED",
-                "payload": { "id": "$$id" },
-                "target": "@actor/composite"
-              }
-            },
-            {
-              "tool": "@core/publishMessage",
-              "payload": {
-                "type": "TODO_DELETED",
-                "payload": { "id": "$$id" },
-                "target": "@actor/kanban"
-              }
-            }
-          ]
+          "target": "idle"
         },
         "ERROR": {
           "target": "error"

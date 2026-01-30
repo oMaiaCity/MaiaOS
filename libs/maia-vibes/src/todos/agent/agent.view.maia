@@ -3,7 +3,97 @@
   "$id": "@view/agent",
   "content": {
     "tag": "div",
-    "class": "service-container",
-    "$slot": "$currentView"
+    "class": "stack",
+    "children": [
+      {
+        "class": "header-section",
+        "children": [
+          {
+            "class": "view-switcher",
+            "children": [
+              {
+                "tag": "button",
+                "class": "button-view-switch",
+                "attrs": {
+                  "data-view": "list",
+                  "data": {
+                    "active": "$listButtonActive"
+                  }
+                },
+                "text": "List",
+                "$on": {
+                  "click": {
+                    "send": "SWITCH_VIEW",
+                    "payload": { "viewMode": "list" }
+                  }
+                }
+              },
+              {
+                "tag": "button",
+                "class": "button-view-switch",
+                "attrs": {
+                  "data-view": "logs",
+                  "data": {
+                    "active": "$logsButtonActive"
+                  }
+                },
+                "text": "Logs",
+                "$on": {
+                  "click": {
+                    "send": "SWITCH_VIEW",
+                    "payload": { "viewMode": "logs" }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "class": "form",
+        "children": [
+          {
+            "tag": "input",
+            "class": "input",
+            "attrs": {
+              "type": "text",
+              "placeholder": "$inputPlaceholder"
+            },
+            "value": "$newTodoText",
+            "$on": {
+              "input": {
+                "send": "UPDATE_INPUT",
+                "payload": { "newTodoText": "@inputValue" }
+              },
+              "blur": {
+                "send": "UPDATE_INPUT",
+                "payload": { "newTodoText": "@inputValue" }
+              },
+              "keydown": {
+                "send": "CREATE_BUTTON",
+                "payload": { "text": "@inputValue" },
+                "key": "Enter"
+              }
+            }
+          },
+          {
+            "tag": "button",
+            "class": "button",
+            "text": "$addButtonText",
+            "$on": {
+              "click": {
+                "send": "CREATE_BUTTON",
+                "payload": { "text": "$newTodoText" }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "tag": "main",
+        "class": "content-area",
+        "$slot": "$currentView"
+      }
+    ]
   }
 }
