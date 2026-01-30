@@ -2,7 +2,7 @@ export const config = {
   version: '1.0.0',
   description: 'Core UI tools (view modes, modals, utilities)',
   namespace: '@core',
-  tools: ['noop', 'preventDefault', 'publishMessage', 'focus', 'autoFocus', 'restoreFocus']
+  tools: ['noop', 'preventDefault', 'publishMessage']
 };
 
 export async function register(registry) {

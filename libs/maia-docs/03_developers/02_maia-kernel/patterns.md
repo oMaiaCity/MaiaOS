@@ -19,7 +19,7 @@ async function setupApp() {
   
   // Boot OS
   const os = await MaiaOS.boot({
-    modules: ['db', 'core', 'dragdrop', 'interface']
+    modules: ['db', 'core', 'dragdrop']
   });
   
   // Load app

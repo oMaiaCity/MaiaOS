@@ -369,7 +369,7 @@ export async function register(registry) {
 
 ```javascript
 const os = await MaiaOS.boot({
-  modules: ['db', 'core', 'dragdrop', 'interface', 'custom']
+  modules: ['db', 'core', 'dragdrop', 'custom']
 });
 ```
 

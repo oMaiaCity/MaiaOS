@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-01-30T14:38:25.514Z
+**Auto-generated:** 2026-01-30T15:15:10.824Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -72,7 +72,7 @@ MaiaOS:       Write .maia → Run
 **How It Works:**
 1. Browser loads `o/kernel.js` (single entry point)
 2. Kernel initializes engines (Actor, View, State, Tool, DB, Subscription, etc.)
-3. Kernel loads modules (db, core, dragdrop, interface)
+3. Kernel loads modules (db, core, dragdrop)
 4. Kernel seeds database with configs, schemas, and tool definitions
 5. Kernel loads `.maia` files via `fetch()` or database queries
 6. Engines interpret and execute
@@ -343,7 +343,7 @@ A collection of related tools (`.module.js`). Modules register tools with the To
 **Built-in Modules:**
 
 - `db` - Database operations (unified API: `@db`)
-- `core` - UI utilities (modals, focus, preventDefault)
+- `core` - UI utilities (modals, preventDefault, publishMessage)
 - `dragdrop` - Drag-and-drop handlers
 - `interface` - Interface validation
 
@@ -719,7 +719,7 @@ export default {
 
 **Built-in Modules:**
 - **db** - Database operations (replaces mutation module)
-- **core** - UI utilities (modals, focus, preventDefault)
+- **core** - UI utilities (modals, preventDefault, publishMessage)
 - **dragdrop** - Drag-and-drop handlers
 - **interface** - Interface validation
 
@@ -890,14 +890,12 @@ libs/maia-script/src/
 │   ├── modules/                # Tool modules
 │   │   ├── db.module.js        # Database operations
 │   │   ├── core.module.js      # UI utilities
-│   │   ├── dragdrop.module.js  # Drag-and-drop
-│   │   └── interface.module.js # Interface validation
+│   │   └── dragdrop.module.js  # Drag-and-drop
 │   └── tools/                  # Tool implementations
 │       ├── db/                 # Database tool (@db)
 │       ├── core/               # UI utilities
 │       ├── dragdrop/           # Drag-and-drop handlers
-│       ├── context/            # Context manipulation
-│       └── interface/          # Interface validation
+│       └── context/            # Context manipulation
 │
 ├── index.html                  # App marketplace entry point
 ├── index.js                    # Main export file
@@ -975,8 +973,8 @@ Same tool, different schema. Zero hardcoded domain knowledge. All schemas are co
 
 ### Modular Everything
 
-- **Tools** grouped into modules (`@db`, `@core/*`, `@dragdrop/*`, `@interface/*`)
-- **Modules** loaded dynamically at boot (db, core, dragdrop, interface)
+- **Tools** grouped into modules (`@db`, `@core/*`, `@dragdrop/*`)
+- **Modules** loaded dynamically at boot (db, core, dragdrop)
 - **Engines** pluggable (ActorEngine, ViewEngine, StateEngine, DBEngine, etc.)
 - **Database** unified operation engine with swappable backends (IndexedDB, CoJSON CRDT)
 - **Skills** describe capabilities without implementation
@@ -1627,7 +1625,7 @@ The agent orchestrates the application and loads UI actors as children. See [Act
     async function boot() {
       // Boot MaiaOS
       const os = await MaiaOS.boot({
-        modules: ['db', 'core', 'dragdrop', 'interface']
+        modules: ['db', 'core', 'dragdrop']
       });
       
       // Load vibe
@@ -1779,7 +1777,7 @@ vibes/todos/
     
     async function boot() {
       const os = await MaiaOS.boot({
-        modules: ['db', 'core', 'dragdrop', 'interface']
+        modules: ['db', 'core', 'dragdrop']
       });
       
       // Load the vibe
@@ -1953,8 +1951,8 @@ The **Kernel** is the single entry point for MaiaOS. It boots the operating syst
 
 ```javascript
 const os = await MaiaOS.boot({
-  // Modules to load (default: ['db', 'core', 'dragdrop', 'interface'])
-  modules: ['db', 'core', 'dragdrop', 'interface']
+  // Modules to load (default: ['db', 'core', 'dragdrop'])
+  modules: ['db', 'core', 'dragdrop']
 });
 ```
 
@@ -1994,11 +1992,6 @@ Generic drag-and-drop for any schema/field:
 - `@dragdrop/drop` - Handle drop with field update
 - `@dragdrop/dragEnter` - Visual feedback on enter
 - `@dragdrop/dragLeave` - Visual feedback on leave
-
-### Interface Module (`interface`)
-Actor interface validation:
-- `@interface/validate` - Validate actor message contracts
-- Ensures actors communicate with correct message structures
 
 ## Creating Actors
 
@@ -2108,9 +2101,8 @@ On successful boot, you'll see:
 [DBModule] Registering 1 tool (@db)...
 [CoreModule] Registering 5 tools...
 [DragDropModule] Registering 5 tools...
-[InterfaceModule] Registering 1 tool...
-✅ Loaded 4 modules
-✅ Registered 12 tools
+✅ Loaded 3 modules
+✅ Registered 11 tools
 ✅ MaiaOS booted successfully
 ```
 
@@ -5645,7 +5637,7 @@ export async function register(registry) {
 
 ```javascript
 const os = await MaiaOS.boot({
-  modules: ['db', 'core', 'dragdrop', 'interface', 'custom']
+  modules: ['db', 'core', 'dragdrop', 'custom']
 });
 ```
 

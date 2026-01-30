@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Developers
 
-**Auto-generated:** 2026-01-30T14:38:25.516Z
+**Auto-generated:** 2026-01-30T15:15:10.824Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -72,7 +72,7 @@ MaiaOS:       Write .maia → Run
 **How It Works:**
 1. Browser loads `o/kernel.js` (single entry point)
 2. Kernel initializes engines (Actor, View, State, Tool, DB, Subscription, etc.)
-3. Kernel loads modules (db, core, dragdrop, interface)
+3. Kernel loads modules (db, core, dragdrop)
 4. Kernel seeds database with configs, schemas, and tool definitions
 5. Kernel loads `.maia` files via `fetch()` or database queries
 6. Engines interpret and execute
@@ -343,7 +343,7 @@ A collection of related tools (`.module.js`). Modules register tools with the To
 **Built-in Modules:**
 
 - `db` - Database operations (unified API: `@db`)
-- `core` - UI utilities (modals, focus, preventDefault)
+- `core` - UI utilities (modals, preventDefault, publishMessage)
 - `dragdrop` - Drag-and-drop handlers
 - `interface` - Interface validation
 
@@ -719,7 +719,7 @@ export default {
 
 **Built-in Modules:**
 - **db** - Database operations (replaces mutation module)
-- **core** - UI utilities (modals, focus, preventDefault)
+- **core** - UI utilities (modals, preventDefault, publishMessage)
 - **dragdrop** - Drag-and-drop handlers
 - **interface** - Interface validation
 
@@ -890,14 +890,12 @@ libs/maia-script/src/
 │   ├── modules/                # Tool modules
 │   │   ├── db.module.js        # Database operations
 │   │   ├── core.module.js      # UI utilities
-│   │   ├── dragdrop.module.js  # Drag-and-drop
-│   │   └── interface.module.js # Interface validation
+│   │   └── dragdrop.module.js  # Drag-and-drop
 │   └── tools/                  # Tool implementations
 │       ├── db/                 # Database tool (@db)
 │       ├── core/               # UI utilities
 │       ├── dragdrop/           # Drag-and-drop handlers
-│       ├── context/            # Context manipulation
-│       └── interface/          # Interface validation
+│       └── context/            # Context manipulation
 │
 ├── index.html                  # App marketplace entry point
 ├── index.js                    # Main export file
@@ -975,8 +973,8 @@ Same tool, different schema. Zero hardcoded domain knowledge. All schemas are co
 
 ### Modular Everything
 
-- **Tools** grouped into modules (`@db`, `@core/*`, `@dragdrop/*`, `@interface/*`)
-- **Modules** loaded dynamically at boot (db, core, dragdrop, interface)
+- **Tools** grouped into modules (`@db`, `@core/*`, `@dragdrop/*`)
+- **Modules** loaded dynamically at boot (db, core, dragdrop)
 - **Engines** pluggable (ActorEngine, ViewEngine, StateEngine, DBEngine, etc.)
 - **Database** unified operation engine with swappable backends (IndexedDB, CoJSON CRDT)
 - **Skills** describe capabilities without implementation
@@ -3337,7 +3335,7 @@ console.log("CoValues:", coValues);
 Boots the MaiaOS operating system (execution layer).
 
 **Parameters:**
-- `config.modules` (optional, default: `['db', 'core', 'dragdrop', 'interface']`) - Modules to load
+- `config.modules` (optional, default: `['db', 'core', 'dragdrop']`) - Modules to load
 - `config.registry` (optional) - Config registry for seeding database
 - `config.isDevelopment` (optional) - Development mode flag
 
@@ -3346,7 +3344,7 @@ Boots the MaiaOS operating system (execution layer).
 **Example:**
 ```javascript
 const os = await MaiaOS.boot({
-  modules: ['db', 'core', 'dragdrop', 'interface'],
+  modules: ['db', 'core', 'dragdrop'],
   registry: {
     // Your configs here
   }
@@ -3679,7 +3677,7 @@ import { MaiaOS } from '@MaiaOS/kernel';
 
 // Boot the operating system
 const os = await MaiaOS.boot({
-  modules: ['db', 'core', 'dragdrop', 'interface'],
+  modules: ['db', 'core', 'dragdrop'],
   registry: { /* configs */ }
 });
 
@@ -3723,7 +3721,7 @@ When you call `MaiaOS.boot()`, here's what happens:
    └─> Store engines in registry
 
 5. Load Modules
-   └─> Loads specified modules (db, core, dragdrop, interface)
+   └─> Loads specified modules (db, core, dragdrop)
    └─> Each module registers its tools
    └─> Tools become available for use
 
@@ -3887,7 +3885,7 @@ async function setupApp() {
   
   // Boot OS
   const os = await MaiaOS.boot({
-    modules: ['db', 'core', 'dragdrop', 'interface']
+    modules: ['db', 'core', 'dragdrop']
   });
   
   // Load app
@@ -4057,7 +4055,7 @@ import { MaiaOS } from '@MaiaOS/kernel';
 
 // Boot the operating system
 const os = await MaiaOS.boot({
-  modules: ['db', 'core', 'dragdrop', 'interface'],
+  modules: ['db', 'core', 'dragdrop'],
   registry: { /* configs */ }
 });
 
@@ -4108,7 +4106,7 @@ async function startApp() {
   
   // STEP 2: Boot OS (Execution Layer)
   const os = await MaiaOS.boot({
-    modules: ['db', 'core', 'dragdrop', 'interface']
+    modules: ['db', 'core', 'dragdrop']
   });
   
   // STEP 3: Load your app
@@ -6493,7 +6491,6 @@ const actor = await actorEngine.createActor(
 - Uses Shadow DOM for style isolation
 - Sanitizes HTML to prevent XSS
 - **Reactive rendering** - Automatically re-renders when context changes
-- **Auto-focus support** - Focuses elements with `data-auto-focus="true"` after render
 
 **Key Methods:**
 - `loadView(coId)` - Load view definition from database
@@ -6601,9 +6598,8 @@ const styleSheets = await styleEngine.compile(
 **Architectural Boundaries:**
 - ✅ **ONLY updates state transitions and context** - State machines are the single source of truth for context changes
 - ✅ **ONLY calls tools that update state/context** - Tools should update state, not manipulate views
-- ❌ **SHOULD NOT manipulate views directly** - No DOM operations, no focus calls, no view manipulation
-- ❌ **SHOULD NOT call view manipulation tools** - Tools like `@core/focus` should not be called from state machines
-- **For reactive UI behavior** (like auto-focus), use data attributes in views (e.g., `data-auto-focus="true"`) and let ViewEngine handle it reactively
+- ❌ **SHOULD NOT manipulate views directly** - No DOM operations, no view manipulation
+- ❌ **SHOULD NOT call view manipulation tools** - State machines should not manipulate views directly
 
 **Deterministic State Machines:**
 - State machines are deterministic - only ONE state at a time
@@ -6691,7 +6687,6 @@ Infrastructure (ActorEngine, ViewEngine) → sends events → inbox (CRDT) → p
 **✅ All Tool Calls:**
 - All `tool:` actions in state machine definitions
 - All business logic operations (`@db`, `@core/publishMessage`, `@dragdrop/*`)
-- All UI manipulation tools (`@core/autoFocus`, `@core/restoreFocus`)
 - All lifecycle hooks (RENDER_COMPLETE events)
 
 **✅ All Context Updates:**
@@ -6720,32 +6715,7 @@ Infrastructure (ActorEngine, ViewEngine) → sends events → inbox (CRDT) → p
 **Lifecycle Hook Pattern:**
 - ActorEngine sends `RENDER_COMPLETE` event to inbox after render completes
 - State machine handles `RENDER_COMPLETE` event and calls tools as needed
-- Focus info passed in event payload (temporary state, not stored in context)
-- Persistent UI state (like `shouldAutoFocus`) stored in context co-value
-
-**Example:**
-```json
-{
-  "RENDER_COMPLETE": {
-    "target": "idle",
-    "actions": [
-      {
-        "tool": "@core/autoFocus",
-        "payload": {}
-      },
-      {
-        "updateContext": { "shouldAutoFocus": false }
-      },
-      {
-        "tool": "@core/restoreFocus",
-        "payload": {
-          "focusInfo": "$$focusInfo"
-        }
-      }
-    ]
-  }
-}
-```
+- Use for post-render actions like cleanup or state updates
 
 ### All Actors Must Have State Machines
 
@@ -6779,8 +6749,6 @@ Infrastructure (ActorEngine, ViewEngine) → sends events → inbox (CRDT) → p
 - Events sent to inbox costream (CRDT)
 - Events persisted for traceability
 - Events marked as `processed: true` after handling
-- Temporary state (focus info) passed in event payload, not stored in context
-- Persistent state (shouldAutoFocus) stored in context co-value
 
 ---
 
@@ -7035,22 +7003,23 @@ ViewEngine.render() - Re-renders view reactively
 
 ### Common Violations to Avoid
 
-**❌ State Machine Calling View Manipulation Tool:**
+**❌ State Machine Manipulating View:**
 ```json
-// BAD - State machine manipulating view
+// BAD - State machine should not manipulate views directly
 {
   "actions": [
-    { "tool": "@core/focus", "payload": { "selector": "input" } }
+    { "tool": "@some/viewManipulationTool", "payload": {} }
   ]
 }
 ```
 
-**✅ Correct Pattern - Reactive UI Behavior:**
+**✅ Correct Pattern - Views Handle UI Reactively:**
 ```json
-// GOOD - View declares auto-focus, ViewEngine handles it
+// GOOD - Views react to context changes, no direct manipulation needed
 {
   "tag": "input",
-  "attrs": { "data-auto-focus": "true" }
+  "value": "$inputValue",
+  "class": { "$if": { "condition": "$hasError", "then": "error", "else": "" } }
 }
 ```
 
@@ -7322,7 +7291,6 @@ store.subscribe((todos) => {
 - `@core/noop` - No-operation (for testing)
 - `@core/preventDefault` - Prevent default events
 - `@core/publishMessage` - Publish messages to subscribed actors
-- `@core/focus` - Focus an element
 
 ---
 
@@ -7342,15 +7310,6 @@ store.subscribe((todos) => {
 // Access module config
 const config = registry.getModule('dragdrop').query('config');
 ```
-
----
-
-### interface.module.js
-
-**Purpose:** Actor interface validation module.
-
-**Tools:**
-- `@interface/validateInterface` - Validate actor interface
 
 ---
 
@@ -7637,8 +7596,7 @@ libs/maia-script/src/
 ├── modules/              # Module definitions
 │   ├── db.module.js               # Database module
 │   ├── core.module.js             # Core UI tools
-│   ├── dragdrop.module.js         # Drag-and-drop
-│   └── interface.module.js        # Interface validation
+│   └── dragdrop.module.js         # Drag-and-drop
 ├── utils/                # Shared utilities
 │   ├── module-registration.js     # Module helpers
 │   ├── config-loader.js            # Config loading

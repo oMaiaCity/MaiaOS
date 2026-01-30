@@ -19,7 +19,7 @@ import { MaiaOS } from '@MaiaOS/kernel';
 
 // Boot the operating system
 const os = await MaiaOS.boot({
-  modules: ['db', 'core', 'dragdrop', 'interface'],
+  modules: ['db', 'core', 'dragdrop'],
   registry: { /* configs */ }
 });
 
@@ -63,7 +63,7 @@ When you call `MaiaOS.boot()`, here's what happens:
    └─> Store engines in registry
 
 5. Load Modules
-   └─> Loads specified modules (db, core, dragdrop, interface)
+   └─> Loads specified modules (db, core, dragdrop)
    └─> Each module registers its tools
    └─> Tools become available for use
 

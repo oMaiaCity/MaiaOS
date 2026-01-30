@@ -74,8 +74,7 @@
           "class": "input",
           "attrs": {
             "type": "text",
-            "placeholder": "$inputPlaceholder",
-            "data-auto-focus": "true"
+            "placeholder": "$inputPlaceholder"
           },
           "value": "$newTodoText",
           "$on": {

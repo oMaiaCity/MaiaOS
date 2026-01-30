@@ -8,7 +8,6 @@
     "./db/*": "./src/db/*",
     "./core/*": "./src/core/*",
     "./dragdrop/*": "./src/dragdrop/*",
-    "./interface/*": "./src/interface/*",
     "./context/*": "./src/context/*"
   },
   "dependencies": {

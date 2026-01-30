@@ -59,8 +59,7 @@ libs/maia-script/src/
 ├── modules/              # Module definitions
 │   ├── db.module.js               # Database module
 │   ├── core.module.js             # Core UI tools
-│   ├── dragdrop.module.js         # Drag-and-drop
-│   └── interface.module.js        # Interface validation
+│   └── dragdrop.module.js         # Drag-and-drop
 ├── utils/                # Shared utilities
 │   ├── module-registration.js     # Module helpers
 │   ├── config-loader.js            # Config loading

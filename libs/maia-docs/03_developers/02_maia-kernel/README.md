@@ -69,7 +69,7 @@ import { MaiaOS } from '@MaiaOS/kernel';
 
 // Boot the operating system
 const os = await MaiaOS.boot({
-  modules: ['db', 'core', 'dragdrop', 'interface'],
+  modules: ['db', 'core', 'dragdrop'],
   registry: { /* configs */ }
 });
 
@@ -120,7 +120,7 @@ async function startApp() {
   
   // STEP 2: Boot OS (Execution Layer)
   const os = await MaiaOS.boot({
-    modules: ['db', 'core', 'dragdrop', 'interface']
+    modules: ['db', 'core', 'dragdrop']
   });
   
   // STEP 3: Load your app

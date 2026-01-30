@@ -97,7 +97,7 @@ src/
 │   ├── tool-engine/           # Tool execution
 │   ├── db-engine/             # Database operations
 │   └── subscription-engine/   # Reactive subscriptions
-├── modules/                   # Module definitions (db, core, dragdrop, interface)
+├── modules/                   # Module definitions (db, core, dragdrop)
 ├── utils/                     # Shared utilities (module-registration, etc.)
 └── index.js                   # Public API exports (engines only)
 ```

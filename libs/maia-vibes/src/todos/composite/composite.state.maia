@@ -85,9 +85,6 @@
           "actions": [
             {
               "updateContext": { "newTodoText": "" }
-            },
-            {
-              "updateContext": { "shouldAutoFocus": true }
             }
           ]
         },

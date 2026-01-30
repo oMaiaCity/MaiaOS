@@ -46,7 +46,7 @@ console.log("CoValues:", coValues);
 Boots the MaiaOS operating system (execution layer).
 
 **Parameters:**
-- `config.modules` (optional, default: `['db', 'core', 'dragdrop', 'interface']`) - Modules to load
+- `config.modules` (optional, default: `['db', 'core', 'dragdrop']`) - Modules to load
 - `config.registry` (optional) - Config registry for seeding database
 - `config.isDevelopment` (optional) - Development mode flag
 
@@ -55,7 +55,7 @@ Boots the MaiaOS operating system (execution layer).
 **Example:**
 ```javascript
 const os = await MaiaOS.boot({
-  modules: ['db', 'core', 'dragdrop', 'interface'],
+  modules: ['db', 'core', 'dragdrop'],
   registry: {
     // Your configs here
   }

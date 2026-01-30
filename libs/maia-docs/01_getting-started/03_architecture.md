@@ -188,7 +188,7 @@ export default {
 
 **Built-in Modules:**
 - **db** - Database operations (replaces mutation module)
-- **core** - UI utilities (modals, focus, preventDefault)
+- **core** - UI utilities (modals, preventDefault, publishMessage)
 - **dragdrop** - Drag-and-drop handlers
 - **interface** - Interface validation
 
@@ -359,14 +359,12 @@ libs/maia-script/src/
 │   ├── modules/                # Tool modules
 │   │   ├── db.module.js        # Database operations
 │   │   ├── core.module.js      # UI utilities
-│   │   ├── dragdrop.module.js  # Drag-and-drop
-│   │   └── interface.module.js # Interface validation
+│   │   └── dragdrop.module.js  # Drag-and-drop
 │   └── tools/                  # Tool implementations
 │       ├── db/                 # Database tool (@db)
 │       ├── core/               # UI utilities
 │       ├── dragdrop/           # Drag-and-drop handlers
-│       ├── context/            # Context manipulation
-│       └── interface/          # Interface validation
+│       └── context/            # Context manipulation
 │
 ├── index.html                  # App marketplace entry point
 ├── index.js                    # Main export file
@@ -444,8 +442,8 @@ Same tool, different schema. Zero hardcoded domain knowledge. All schemas are co
 
 ### Modular Everything
 
-- **Tools** grouped into modules (`@db`, `@core/*`, `@dragdrop/*`, `@interface/*`)
-- **Modules** loaded dynamically at boot (db, core, dragdrop, interface)
+- **Tools** grouped into modules (`@db`, `@core/*`, `@dragdrop/*`)
+- **Modules** loaded dynamically at boot (db, core, dragdrop)
 - **Engines** pluggable (ActorEngine, ViewEngine, StateEngine, DBEngine, etc.)
 - **Database** unified operation engine with swappable backends (IndexedDB, CoJSON CRDT)
 - **Skills** describe capabilities without implementation

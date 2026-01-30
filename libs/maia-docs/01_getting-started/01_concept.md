@@ -61,7 +61,7 @@ MaiaOS:       Write .maia → Run
 **How It Works:**
 1. Browser loads `o/kernel.js` (single entry point)
 2. Kernel initializes engines (Actor, View, State, Tool, DB, Subscription, etc.)
-3. Kernel loads modules (db, core, dragdrop, interface)
+3. Kernel loads modules (db, core, dragdrop)
 4. Kernel seeds database with configs, schemas, and tool definitions
 5. Kernel loads `.maia` files via `fetch()` or database queries
 6. Engines interpret and execute

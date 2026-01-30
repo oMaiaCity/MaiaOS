@@ -45,8 +45,8 @@ The **Kernel** is the single entry point for MaiaOS. It boots the operating syst
 
 ```javascript
 const os = await MaiaOS.boot({
-  // Modules to load (default: ['db', 'core', 'dragdrop', 'interface'])
-  modules: ['db', 'core', 'dragdrop', 'interface']
+  // Modules to load (default: ['db', 'core', 'dragdrop'])
+  modules: ['db', 'core', 'dragdrop']
 });
 ```
 
@@ -86,11 +86,6 @@ Generic drag-and-drop for any schema/field:
 - `@dragdrop/drop` - Handle drop with field update
 - `@dragdrop/dragEnter` - Visual feedback on enter
 - `@dragdrop/dragLeave` - Visual feedback on leave
-
-### Interface Module (`interface`)
-Actor interface validation:
-- `@interface/validate` - Validate actor message contracts
-- Ensures actors communicate with correct message structures
 
 ## Creating Actors
 
@@ -200,9 +195,8 @@ On successful boot, you'll see:
 [DBModule] Registering 1 tool (@db)...
 [CoreModule] Registering 5 tools...
 [DragDropModule] Registering 5 tools...
-[InterfaceModule] Registering 1 tool...
-✅ Loaded 4 modules
-✅ Registered 12 tools
+✅ Loaded 3 modules
+✅ Registered 11 tools
 ✅ MaiaOS booted successfully
 ```
 

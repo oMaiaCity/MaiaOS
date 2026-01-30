@@ -86,7 +86,7 @@ A collection of related tools (`.module.js`). Modules register tools with the To
 **Built-in Modules:**
 
 - `db` - Database operations (unified API: `@db`)
-- `core` - UI utilities (modals, focus, preventDefault)
+- `core` - UI utilities (modals, preventDefault, publishMessage)
 - `dragdrop` - Drag-and-drop handlers
 - `interface` - Interface validation
 

@@ -4,7 +4,7 @@ MaiaOS tools package - centralized registry for all MaiaScript tools.
 
 ## Overview
 
-This package contains all tool definitions and implementations for MaiaOS. Tools are organized by namespace (core, db, dragdrop, interface, context) and provide reusable functionality for MaiaScript expressions.
+This package contains all tool definitions and implementations for MaiaOS. Tools are organized by namespace (core, db, dragdrop, context) and provide reusable functionality for MaiaScript expressions.
 
 ## Installation
 
@@ -33,10 +33,9 @@ const definitions = getAllToolDefinitions();
 ```
 src/
 ├── index.js          # Main entry point (tool registry)
-├── core/             # Core UI tools (noop, focus, modals, etc.)
+├── core/             # Core UI tools (noop, publishMessage, etc.)
 ├── db/               # Database tools
 ├── dragdrop/         # Drag and drop tools
-├── interface/        # Interface validation tools
 └── context/          # Context update tools
 ```
 

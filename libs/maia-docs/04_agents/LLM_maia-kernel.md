@@ -1,6 +1,6 @@
 # MaiaOS Documentation for maia-kernel
 
-**Auto-generated:** 2026-01-30T14:38:25.531Z
+**Auto-generated:** 2026-01-30T15:15:10.831Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -57,7 +57,7 @@ console.log("CoValues:", coValues);
 Boots the MaiaOS operating system (execution layer).
 
 **Parameters:**
-- `config.modules` (optional, default: `['db', 'core', 'dragdrop', 'interface']`) - Modules to load
+- `config.modules` (optional, default: `['db', 'core', 'dragdrop']`) - Modules to load
 - `config.registry` (optional) - Config registry for seeding database
 - `config.isDevelopment` (optional) - Development mode flag
 
@@ -66,7 +66,7 @@ Boots the MaiaOS operating system (execution layer).
 **Example:**
 ```javascript
 const os = await MaiaOS.boot({
-  modules: ['db', 'core', 'dragdrop', 'interface'],
+  modules: ['db', 'core', 'dragdrop'],
   registry: {
     // Your configs here
   }
@@ -399,7 +399,7 @@ import { MaiaOS } from '@MaiaOS/kernel';
 
 // Boot the operating system
 const os = await MaiaOS.boot({
-  modules: ['db', 'core', 'dragdrop', 'interface'],
+  modules: ['db', 'core', 'dragdrop'],
   registry: { /* configs */ }
 });
 
@@ -443,7 +443,7 @@ When you call `MaiaOS.boot()`, here's what happens:
    └─> Store engines in registry
 
 5. Load Modules
-   └─> Loads specified modules (db, core, dragdrop, interface)
+   └─> Loads specified modules (db, core, dragdrop)
    └─> Each module registers its tools
    └─> Tools become available for use
 
@@ -607,7 +607,7 @@ async function setupApp() {
   
   // Boot OS
   const os = await MaiaOS.boot({
-    modules: ['db', 'core', 'dragdrop', 'interface']
+    modules: ['db', 'core', 'dragdrop']
   });
   
   // Load app
@@ -777,7 +777,7 @@ import { MaiaOS } from '@MaiaOS/kernel';
 
 // Boot the operating system
 const os = await MaiaOS.boot({
-  modules: ['db', 'core', 'dragdrop', 'interface'],
+  modules: ['db', 'core', 'dragdrop'],
   registry: { /* configs */ }
 });
 
@@ -828,7 +828,7 @@ async function startApp() {
   
   // STEP 2: Boot OS (Execution Layer)
   const os = await MaiaOS.boot({
-    modules: ['db', 'core', 'dragdrop', 'interface']
+    modules: ['db', 'core', 'dragdrop']
   });
   
   // STEP 3: Load your app

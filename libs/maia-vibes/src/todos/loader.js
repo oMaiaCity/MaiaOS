@@ -59,7 +59,7 @@ export async function loadTodosVibe(container) {
     os = await MaiaOS.boot({
       node,
       account,
-      modules: ['db', 'core', 'dragdrop', 'interface'], // db module provides @db tool
+      modules: ['db', 'core', 'dragdrop'], // db module provides @db tool
       registry: TodosVibeRegistry  // Registry passed but seeding skipped for CoJSON backend
     });
   }

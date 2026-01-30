@@ -208,7 +208,7 @@ The agent orchestrates the application and loads UI actors as children. See [Act
     async function boot() {
       // Boot MaiaOS
       const os = await MaiaOS.boot({
-        modules: ['db', 'core', 'dragdrop', 'interface']
+        modules: ['db', 'core', 'dragdrop']
       });
       
       // Load vibe
@@ -360,7 +360,7 @@ vibes/todos/
     
     async function boot() {
       const os = await MaiaOS.boot({
-        modules: ['db', 'core', 'dragdrop', 'interface']
+        modules: ['db', 'core', 'dragdrop']
       });
       
       // Load the vibe

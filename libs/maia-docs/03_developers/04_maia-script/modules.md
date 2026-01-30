@@ -78,7 +78,6 @@ store.subscribe((todos) => {
 - `@core/noop` - No-operation (for testing)
 - `@core/preventDefault` - Prevent default events
 - `@core/publishMessage` - Publish messages to subscribed actors
-- `@core/focus` - Focus an element
 
 ---
 
@@ -98,15 +97,6 @@ store.subscribe((todos) => {
 // Access module config
 const config = registry.getModule('dragdrop').query('config');
 ```
-
----
-
-### interface.module.js
-
-**Purpose:** Actor interface validation module.
-
-**Tools:**
-- `@interface/validateInterface` - Validate actor interface
 
 ---
 
