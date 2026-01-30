@@ -4,7 +4,7 @@
  * Provides helpers for resolving schema co-ids, getting CoList IDs using schema co-id keys in account.os, and ensuring CoValues are loaded.
  */
 
-import { getSchemaCoId as universalGetSchemaCoId } from '../schema/resolver.js';
+import { resolve } from '../schema/resolver.js';
 
 /**
  * Resolve schema co-id from human-readable schema name or return co-id as-is
@@ -19,7 +19,7 @@ async function resolveSchemaCoId(backend, schema) {
   }
   
   // Use universal schema resolver (single source of truth)
-  return await universalGetSchemaCoId(backend, schema);
+  return await resolve(backend, schema, { returnType: 'coId' });
 }
 
 /**

@@ -1,359 +1,320 @@
 /**
- * Universal Schema Resolver - Single Source of Truth
+ * Universal Resolver - Single Source of Truth
  * 
- * Consolidates ALL schema resolution logic from multiple scattered files.
- * Handles ALL schema resolution patterns:
- * - Co-id (co_z...)
- * - Human-readable (@schema/...)
- * - From CoValue (extracts headerMeta.$schema)
+ * ONE universal utility function that replaces ALL resolver functions.
+ * Uses read() API internally for all lookups (registry, schemas, co-values).
  * 
- * Used by: operations, backend, validation utilities
+ * Replaces:
+ * - resolveHumanReadableKey()
+ * - getSchemaCoId()
+ * - loadSchemaDefinition()
+ * - resolveSchema()
+ * - loadSchemaByCoId()
+ * - getSchemaCoIdFromCoValue()
+ * - loadSchemaFromDB()
+ * 
+ * All consumers use resolve() directly - no wrappers, no scattered functions.
  */
 
 import { read as universalRead } from '../crud/read.js';
 import { waitForStoreReady } from '../crud/read-operations.js';
-import * as collectionHelpers from '../crud/collection-helpers.js';
 
 /**
- * Resolve human-readable key to co-id
- * Uses CoJSON's node.load() to ensure CoValues are loaded before accessing content.
- * Registry-only lookup - no fallback search.
+ * Recursively remove 'id' fields from schema objects (AJV only accepts $id, not id)
+ * @param {any} obj - Object to clean
+ * @returns {any} Cleaned object without 'id' fields
+ */
+function removeIdFields(obj) {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  
+  if (typeof obj !== 'object') {
+    return obj;
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(item => removeIdFields(item));
+  }
+  
+  const cleaned = {};
+  for (const [key, value] of Object.entries(obj)) {
+    // Skip 'id' field (AJV only accepts $id)
+    if (key === 'id') {
+      continue;
+    }
+    
+    // Recursively clean nested objects/arrays
+    if (value !== null && value !== undefined && typeof value === 'object') {
+      cleaned[key] = removeIdFields(value);
+    } else {
+      cleaned[key] = value;
+    }
+  }
+  
+  return cleaned;
+}
+
+/**
+ * Universal resolver - handles ALL identifier types and return types
+ * Single source of truth for all schema/co-value lookups
  * 
  * @param {Object} backend - Backend instance
- * @param {string} humanReadableKey - Human-readable ID (e.g., '@schema/todos', '@schema/actor', 'vibe/vibe')
- * @returns {Promise<string|null>} Co-id (co_z...) or null if not found
+ * @param {string|Object} identifier - Identifier:
+ *   - Co-id: 'co_z...' → returns co-value/schema
+ *   - Registry key: '@schema/...' or '@vibe/...' → resolves to co-id, then returns co-value/schema
+ *   - Options: {fromCoValue: 'co_z...'} → extracts schema from headerMeta, then returns schema
+ * @param {Object} [options] - Options
+ * @param {string} [options.returnType='schema'] - Return type: 'coId' | 'schema' | 'coValue'
+ * @param {boolean} [options.deepResolve=false] - Enable deep resolution (default: false for resolvers)
+ * @param {number} [options.timeoutMs=5000] - Timeout for waiting for stores
+ * @returns {Promise<string|Object|ReactiveStore|null>} Result based on returnType
+ *   - 'coId': returns string (co-id)
+ *   - 'schema': returns Object (schema definition)
+ *   - 'coValue': returns ReactiveStore (full co-value data)
  */
-export async function resolveHumanReadableKey(backend, humanReadableKey) {
-  // Normalize key format for schemas (if not already prefixed)
-  let normalizedKey = humanReadableKey;
-  if (!normalizedKey.startsWith('@schema/') && !normalizedKey.startsWith('@')) {
-    normalizedKey = `@schema/${normalizedKey}`;
-  }
+export async function resolve(backend, identifier, options = {}) {
+  const {
+    returnType = 'schema',
+    deepResolve = false,
+    timeoutMs = 5000
+  } = options;
 
-  // Check appropriate registry based on key type
-  // - @schema/* keys → account.os.schematas (schema registry)
-  // - @vibe/* keys or vibe instance names → account.vibes (vibes instance registry)
-  try {
-    if (!backend.account || typeof backend.account.get !== 'function') {
-      console.warn('[CoJSONBackend] Account not available for registry lookup');
-      return null;
-    }
-
-    const isSchemaKey = normalizedKey.startsWith('@schema/');
-    
-    if (isSchemaKey) {
-      // Schema keys → check account.os.schematas registry
-      const osId = backend.account.get('os');
-      if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
-        console.warn(`[CoJSONBackend] account.os not found for schema key: ${humanReadableKey}`);
-        return null;
-      }
-
-      // Load os CoMap (ensures it's available before accessing)
-      const osContent = await backend.node.load(osId);
-      if (osContent === 'unavailable') {
-        console.warn(`[CoJSONBackend] account.os CoMap unavailable: ${osId}`);
-        return null;
-      }
-      if (!osContent || typeof osContent.get !== 'function') {
-        console.warn(`[CoJSONBackend] account.os CoMap invalid: ${osId}`);
-        return null;
-      }
-
-      // Get schematas registry co-id
-      const schematasId = osContent.get('schematas');
-      if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
-        console.warn(`[CoJSONBackend] account.os.schematas not found`);
-        return null;
-      }
-
-      // Load schematas registry CoMap (ensures it's available before accessing)
-      const schematasContent = await backend.node.load(schematasId);
-      if (schematasContent === 'unavailable') {
-        console.warn(`[CoJSONBackend] os.schematas registry unavailable: ${schematasId}`);
-        return null;
-      }
-      if (!schematasContent || typeof schematasContent.get !== 'function') {
-        console.warn(`[CoJSONBackend] os.schematas registry invalid: ${schematasId}`);
-        return null;
-      }
-
-      // Lookup key in registry (try normalizedKey first, then original)
-      const registryCoId = schematasContent.get(normalizedKey) || schematasContent.get(humanReadableKey);
-      if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
-        console.log(`[CoJSONBackend] ✅ Resolved schema ${humanReadableKey} (normalized: ${normalizedKey}) → ${registryCoId} from os.schematas registry`);
-        return registryCoId;
-      }
-
-      // Don't warn for index schemas - they're created on-demand and may not exist yet
-      // Index schemas follow the pattern @schema/index/*
-      const isIndexSchema = normalizedKey.startsWith('@schema/index/');
-      if (!isIndexSchema) {
-        console.warn(`[CoJSONBackend] schema key ${humanReadableKey} (normalized: ${normalizedKey}) not found in os.schematas registry. Available keys:`, Array.from(schematasContent.keys()));
-      }
-      return null;
-
-    } else if (humanReadableKey.startsWith('@vibe/') || !humanReadableKey.startsWith('@')) {
-      // Vibe instance keys → check account.vibes registry
-      const vibesId = backend.account.get('vibes');
-      if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_z')) {
-        console.warn(`[CoJSONBackend] account.vibes not found for vibe key: ${humanReadableKey}`);
-        return null;
-      }
-
-      // Load vibes registry CoMap (ensures it's available before accessing)
-      const vibesContent = await backend.node.load(vibesId);
-      if (vibesContent === 'unavailable') {
-        console.warn(`[CoJSONBackend] account.vibes registry unavailable: ${vibesId}`);
-        return null;
-      }
-      if (!vibesContent || typeof vibesContent.get !== 'function') {
-        console.warn(`[CoJSONBackend] account.vibes registry invalid: ${vibesId}`);
-        return null;
-      }
-
-      // Extract vibe name (remove @vibe/ prefix if present)
-      const vibeName = humanReadableKey.startsWith('@vibe/') 
-        ? humanReadableKey.replace('@vibe/', '')
-        : humanReadableKey;
-      
-      // Lookup vibe in registry
-      const registryCoId = vibesContent.get(vibeName);
-      if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
-        console.log(`[CoJSONBackend] ✅ Resolved vibe ${humanReadableKey} → ${registryCoId} from account.vibes registry`);
-        return registryCoId;
-      }
-
-      console.warn(`[CoJSONBackend] Vibe ${humanReadableKey} not found in account.vibes registry. Available vibes:`, Array.from(vibesContent.keys()));
-      return null;
-    }
-
-    // Unknown key format
-    console.warn(`[CoJSONBackend] Unknown key format: ${humanReadableKey}`);
-    return null;
-
-  } catch (error) {
-    console.error(`[CoJSONBackend] Error resolving key ${humanReadableKey}:`, error);
-    return null;
-  }
-}
-
-/**
- * Get schema co-id from a CoValue's headerMeta
- * Uses reactive store layer to ensure CoValue is loaded before reading schema
- * @param {Object} backend - Backend instance
- * @param {string} coId - CoValue co-id
- * @returns {Promise<string|null>} Schema co-id or null if not found
- */
-export async function getSchemaCoIdFromCoValue(backend, coId) {
-  // Use reactive store layer to ensure CoValue is loaded before reading schema
-  // universalRead returns store immediately (progressive loading), so we need to wait for it to be ready
-  const store = await universalRead(backend, coId);
-  
-  // Wait for store to be ready (since we need synchronous access to store.value)
-  // This ensures the CoValue is loaded before we access store.value
-  try {
-    await waitForStoreReady(store, coId, 5000);
-  } catch (error) {
-    // Store has error - return null
-    return null;
-  }
-  
-  const coValueData = store.value;
-  
-  // Extract $schema from store value (already populated by extractCoValueDataFlat)
-  // extractCoValueDataFlat extracts headerMeta.$schema and stores it as $schema field
-  if (!coValueData || coValueData.error) {
-    return null;
-  }
-  
-  return coValueData.$schema || null;
-}
-
-/**
- * Load schema definition by co-id (pure co-id, no human-readable key resolution)
- * @param {Object} backend - Backend instance
- * @param {string} schemaCoId - Schema co-id (co_z...)
- * @returns {Promise<Object|null>} Schema definition or null if not found
- */
-export async function loadSchemaByCoId(backend, schemaCoId) {
-  if (!schemaCoId || !schemaCoId.startsWith('co_z')) {
-    throw new Error(`[CoJSONBackend] loadSchemaByCoId requires a valid co-id (co_z...), got: ${schemaCoId}`);
-  }
-  
-  try {
-    // Load schema CoMap directly from node
-    const schemaCoMap = await backend.node.load(schemaCoId);
-    if (schemaCoMap === 'unavailable') {
-      console.warn(`[CoJSONBackend] Schema ${schemaCoId} is unavailable (not synced yet)`);
-      return null;
-    }
-    if (!schemaCoMap) {
-      console.warn(`[CoJSONBackend] Schema ${schemaCoId} not found in node`);
-      return null;
-    }
-    
-    // Extract definition property from schema CoMap
-    // Schema CoMaps store their definition in the 'definition' property (legacy) OR directly as properties (current)
-    const definition = schemaCoMap.get('definition');
-    if (!definition) {
-      // If no definition property, the schema CoMap itself IS the definition (current approach)
-      // Check if it has schema-like properties (cotype, properties, title, items, etc.)
-      // CRITICAL: All schemas have cotype (comap, colist, costream), so check for that first
-      const cotype = schemaCoMap.get('cotype');
-      const properties = schemaCoMap.get('properties');
-      const items = schemaCoMap.get('items');
-      const title = schemaCoMap.get('title');
-      const description = schemaCoMap.get('description');
-      const hasSchemaProps = cotype || properties || items || title || description;
-      
-      if (hasSchemaProps) {
-        // Convert CoMap to plain object (schema is stored directly on CoMap, not in definition property)
-        const schemaObj = {};
-        const keys = schemaCoMap.keys();
-        for (const key of keys) {
-          schemaObj[key] = schemaCoMap.get(key);
-        }
-        // Add $id back for compatibility (co-id is the schema's identity)
-        schemaObj.$id = schemaCoId;
-        return schemaObj;
-      }
-      
-      // No schema properties found - log what we did find
-      const keys = Array.from(schemaCoMap.keys());
-      console.warn(`[CoJSONBackend] Schema ${schemaCoId} has no schema-like properties. Keys found: ${keys.join(', ')}`);
-      return null;
-    }
-    
-    // Return definition with $id added for compatibility (legacy format)
-    return {
-      ...definition,
-      $id: schemaCoId
-    };
-  } catch (error) {
-    console.error(`[CoJSONBackend] Error loading schema ${schemaCoId}:`, error);
-    return null;
-  }
-}
-
-/**
- * Get schema co-id only (does not load schema definition)
- * 
- * @param {Object} backend - Backend instance
- * @param {string|Object} identifier - Schema identifier:
- *   - Co-id string: 'co_z...' → returns as-is
- *   - Registry string: '@schema/...' → resolves to co-id
- *   - Options object: { fromCoValue: 'co_z...' } → extracts schema co-id from headerMeta
- * @returns {Promise<string|null>} Schema co-id (co_z...) or null if not found
- */
-export async function getSchemaCoId(backend, identifier) {
   if (!backend) {
-    throw new Error('[getSchemaCoId] backend is required');
+    throw new Error('[resolve] backend is required');
   }
 
   // Handle options object (fromCoValue pattern)
   if (identifier && typeof identifier === 'object' && !Array.isArray(identifier)) {
     if (identifier.fromCoValue) {
       if (!identifier.fromCoValue.startsWith('co_z')) {
-        throw new Error(`[getSchemaCoId] fromCoValue must be a valid co-id (co_z...), got: ${identifier.fromCoValue}`);
+        throw new Error(`[resolve] fromCoValue must be a valid co-id (co_z...), got: ${identifier.fromCoValue}`);
       }
-      return await getSchemaCoIdFromCoValue(backend, identifier.fromCoValue);
-    }
-    throw new Error('[getSchemaCoId] Invalid identifier object. Expected { fromCoValue: "co_z..." }');
-  }
-
-  // Handle string identifiers
-  if (typeof identifier !== 'string') {
-    throw new Error(`[getSchemaCoId] Invalid identifier type. Expected string or object, got: ${typeof identifier}`);
-  }
-
-  // If it's already a co-id, return as-is
-  if (identifier.startsWith('co_z')) {
-    return identifier;
-  }
-
-  // If it's a registry string, resolve to co-id
-  if (identifier.startsWith('@schema/')) {
-    return await resolveHumanReadableKey(backend, identifier);
-  }
-
-  // Try normalizing as schema key
-  const normalizedKey = identifier.startsWith('@') ? identifier : `@schema/${identifier}`;
-  return await resolveHumanReadableKey(backend, normalizedKey);
-}
-
-/**
- * Load schema definition by co-id (pure co-id, no resolution)
- * 
- * @param {Object} backend - Backend instance
- * @param {string} coId - Schema co-id (co_z...)
- * @returns {Promise<Object|null>} Schema definition object or null if not found
- */
-export async function loadSchemaDefinition(backend, coId) {
-  if (!backend) {
-    throw new Error('[loadSchemaDefinition] backend is required');
-  }
-
-  if (!coId || !coId.startsWith('co_z')) {
-    throw new Error(`[loadSchemaDefinition] coId must be a valid co-id (co_z...), got: ${coId}`);
-  }
-
-  return await loadSchemaByCoId(backend, coId);
-}
-
-/**
- * Universal schema resolver - resolves schema definition by various identifier types
- * 
- * @param {Object} backend - Backend instance
- * @param {string|Object} identifier - Schema identifier:
- *   - Co-id string: 'co_z...' → returns schema definition
- *   - Registry string: '@schema/...' → resolves to co-id, then returns schema definition
- *   - Options object: { fromCoValue: 'co_z...' } → extracts schema from headerMeta, then returns schema definition
- * @returns {Promise<Object|null>} Schema definition object or null if not found
- */
-export async function resolveSchema(backend, identifier) {
-  if (!backend) {
-    throw new Error('[resolveSchema] backend is required');
-  }
-
-  // Handle options object (fromCoValue pattern)
-  if (identifier && typeof identifier === 'object' && !Array.isArray(identifier)) {
-    if (identifier.fromCoValue) {
-      const schemaCoId = await getSchemaCoId(backend, { fromCoValue: identifier.fromCoValue });
+      
+      // Extract schema co-id from co-value's headerMeta using read() API
+      const coValueStore = await universalRead(backend, identifier.fromCoValue, null, null, null, {
+        deepResolve: false,
+        timeoutMs
+      });
+      
+      try {
+        await waitForStoreReady(coValueStore, identifier.fromCoValue, timeoutMs);
+      } catch (error) {
+        return null;
+      }
+      
+      const coValueData = coValueStore.value;
+      if (!coValueData || coValueData.error) {
+        return null;
+      }
+      
+      const schemaCoId = coValueData.$schema || null;
+      
       if (!schemaCoId) {
         return null;
       }
-      return await loadSchemaDefinition(backend, schemaCoId);
+      
+      // If returnType is 'coId', return schema co-id
+      if (returnType === 'coId') {
+        return schemaCoId;
+      }
+      
+      // Otherwise, resolve the schema definition
+      return await resolve(backend, schemaCoId, { returnType, deepResolve, timeoutMs });
     }
-    throw new Error('[resolveSchema] Invalid identifier object. Expected { fromCoValue: "co_z..." }');
+    throw new Error('[resolve] Invalid identifier object. Expected { fromCoValue: "co_z..." }');
   }
 
   // Handle string identifiers
   if (typeof identifier !== 'string') {
-    throw new Error(`[resolveSchema] Invalid identifier type. Expected string or object, got: ${typeof identifier}`);
+    throw new Error(`[resolve] Invalid identifier type. Expected string or object, got: ${typeof identifier}`);
   }
 
-  // If it's a co-id, load directly
+  // If it's already a co-id, load directly
   if (identifier.startsWith('co_z')) {
-    return await loadSchemaDefinition(backend, identifier);
-  }
-
-  // If it's a registry string, resolve to co-id first
-  if (identifier.startsWith('@schema/')) {
-    const schemaCoId = await getSchemaCoId(backend, identifier);
-    if (!schemaCoId) {
+    // Load co-value using read() API
+    const store = await universalRead(backend, identifier, null, null, null, {
+      deepResolve,
+      timeoutMs
+    });
+    
+    // Wait for store to be ready
+    try {
+      await waitForStoreReady(store, identifier, timeoutMs);
+    } catch (error) {
       return null;
     }
-    return await loadSchemaDefinition(backend, schemaCoId);
-  }
-
-  // Try normalizing as schema key
-  const normalizedKey = identifier.startsWith('@') ? identifier : `@schema/${identifier}`;
-  const schemaCoId = await getSchemaCoId(backend, normalizedKey);
-  if (!schemaCoId) {
+    
+    const data = store.value;
+    if (!data || data.error) {
+      return null;
+    }
+    
+    // Return based on returnType
+    if (returnType === 'coValue') {
+      return store; // Return reactive store
+    }
+    
+    if (returnType === 'coId') {
+      return identifier; // Return co-id as-is
+    }
+    
+    // returnType === 'schema' - extract schema definition
+    // Check if this is a schema co-value (has schema-like properties)
+    const cotype = data.cotype;
+    const properties = data.properties;
+    const items = data.items;
+    const title = data.title;
+    const hasSchemaProps = cotype || properties || items || title;
+    
+    if (hasSchemaProps) {
+      // This is a schema - return it as schema definition
+      // Exclude 'id' and 'type' fields (schemas use 'cotype' for CoJSON types, not 'type')
+      // Recursively remove nested 'id' fields (AJV only accepts $id, not id)
+      const { id, type, ...schemaData } = data;
+      const cleanedSchema = removeIdFields(schemaData);
+      return {
+        ...cleanedSchema,
+        $id: identifier // Ensure $id is set
+      };
+    }
+    
+    // Not a schema - return null for schema returnType
     return null;
   }
-  return await loadSchemaDefinition(backend, schemaCoId);
+
+  // Registry key lookup (@schema/... or @vibe/...)
+  if (identifier.startsWith('@schema/') || identifier.startsWith('@vibe/') || (!identifier.startsWith('@') && !identifier.startsWith('co_z'))) {
+    // Normalize key format
+    let normalizedKey = identifier;
+    if (!normalizedKey.startsWith('@schema/') && !normalizedKey.startsWith('@vibe/') && !normalizedKey.startsWith('@')) {
+      normalizedKey = `@schema/${normalizedKey}`;
+    }
+
+    // Use read() API to load account.os or account.vibes registry
+    if (!backend.account || typeof backend.account.get !== 'function') {
+      console.warn('[resolve] Account not available for registry lookup');
+      return null;
+    }
+
+    const isSchemaKey = normalizedKey.startsWith('@schema/');
+    
+    if (isSchemaKey) {
+      // Schema keys → check account.os.schematas registry using read() API
+      const osId = backend.account.get('os');
+      if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
+        console.warn(`[resolve] account.os not found for schema key: ${identifier}`);
+        return null;
+      }
+
+      // Load account.os using read() API
+      const osStore = await universalRead(backend, osId, null, null, null, {
+        deepResolve: false,
+        timeoutMs
+      });
+      
+      try {
+        await waitForStoreReady(osStore, osId, timeoutMs);
+      } catch (error) {
+        return null;
+      }
+      
+      const osData = osStore.value;
+      if (!osData || osData.error) {
+        return null;
+      }
+
+      // Get schematas registry co-id from os data (flat object from read() API)
+      const schematasId = osData.schematas;
+      if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
+        console.warn(`[resolve] account.os.schematas not found`);
+        return null;
+      }
+
+      // Load schematas registry using read() API
+      const schematasStore = await universalRead(backend, schematasId, null, null, null, {
+        deepResolve: false,
+        timeoutMs
+      });
+      
+      try {
+        await waitForStoreReady(schematasStore, schematasId, timeoutMs);
+      } catch (error) {
+        return null;
+      }
+      
+      const schematasData = schematasStore.value;
+      if (!schematasData || schematasData.error) {
+        return null;
+      }
+
+      // Lookup key in registry (flat object from read() API - properties directly accessible)
+      const registryCoId = schematasData[normalizedKey] || schematasData[identifier];
+      if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
+        // Found registry entry - resolve the co-id
+        if (returnType === 'coId') {
+          return registryCoId;
+        }
+        // Resolve the actual schema/co-value
+        return await resolve(backend, registryCoId, { returnType, deepResolve, timeoutMs });
+      }
+
+      // Don't warn for index schemas - they're created on-demand
+      const isIndexSchema = normalizedKey.startsWith('@schema/index/');
+      if (!isIndexSchema) {
+        console.warn(`[resolve] schema key ${identifier} (normalized: ${normalizedKey}) not found in os.schematas registry`);
+      }
+      return null;
+
+    } else if (identifier.startsWith('@vibe/') || !identifier.startsWith('@')) {
+      // Vibe instance keys → check account.vibes registry using read() API
+      const vibesId = backend.account.get('vibes');
+      if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_z')) {
+        console.warn(`[resolve] account.vibes not found for vibe key: ${identifier}`);
+        return null;
+      }
+
+      // Load account.vibes using read() API
+      const vibesStore = await universalRead(backend, vibesId, null, null, null, {
+        deepResolve: false,
+        timeoutMs
+      });
+      
+      try {
+        await waitForStoreReady(vibesStore, vibesId, timeoutMs);
+      } catch (error) {
+        return null;
+      }
+      
+      const vibesData = vibesStore.value;
+      if (!vibesData || vibesData.error) {
+        return null;
+      }
+
+      // Extract vibe name (remove @vibe/ prefix if present)
+      const vibeName = identifier.startsWith('@vibe/') 
+        ? identifier.replace('@vibe/', '')
+        : identifier;
+      
+      // Lookup vibe in registry (flat object from read() API - properties directly accessible)
+      const registryCoId = vibesData[vibeName];
+      if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
+        // Found registry entry - resolve the co-id
+        if (returnType === 'coId') {
+          return registryCoId;
+        }
+        // Resolve the actual co-value
+        return await resolve(backend, registryCoId, { returnType, deepResolve, timeoutMs });
+      }
+
+      console.warn(`[resolve] Vibe ${identifier} not found in account.vibes registry`);
+      return null;
+    }
+  }
+
+  // Unknown key format
+  console.warn(`[resolve] Unknown key format: ${identifier}`);
+  return null;
 }
 
 /**
@@ -365,66 +326,12 @@ export async function resolveSchema(backend, identifier) {
  * @throws {Error} If schema cannot be loaded
  */
 export async function checkCotype(backend, schemaCoId, expectedCotype) {
-  const schema = await loadSchemaDefinition(backend, schemaCoId);
+  const schema = await resolve(backend, schemaCoId, { returnType: 'schema' });
   if (!schema) {
     throw new Error(`[checkCotype] Schema ${schemaCoId} not found`);
   }
   const cotype = schema.cotype || 'comap'; // Default to comap if not specified
   return cotype === expectedCotype;
-}
-
-/**
- * Load schema from database using operations API (convenience wrapper for dbEngine)
- * Supports co-ids, human-readable keys, and CoValue header metadata
- * 
- * CRITICAL: Always use fromCoValue when validating CoJSON values to ensure
- * schema comes from the value's header metadata (single source of truth)
- * 
- * @param {Object} dbEngine - Database engine instance
- * @param {string|Object} schemaTypeOrCoIdOrOptions - Schema type, co-id, or options object
- * @param {Object} [options] - Options object (if first param is string, this is ignored)
- * @param {string} [options.fromCoValue] - CoValue co-id - extracts headerMeta.$schema internally (PREFERRED)
- * @returns {Promise<Object|null>} Schema object or null if not found
- */
-export async function loadSchemaFromDB(dbEngine, schemaTypeOrCoIdOrOptions, options = {}) {
-  if (!dbEngine) return null;
-  
-  if (!dbEngine.backend) {
-    throw new Error('[loadSchemaFromDB] dbEngine.backend is required');
-  }
-  
-  // Handle options object as first parameter
-  let schemaTypeOrCoId = schemaTypeOrCoIdOrOptions;
-  let fromCoValue = options?.fromCoValue;
-  
-  if (schemaTypeOrCoIdOrOptions && typeof schemaTypeOrCoIdOrOptions === 'object' && !Array.isArray(schemaTypeOrCoIdOrOptions)) {
-    // First parameter is options object
-    schemaTypeOrCoId = schemaTypeOrCoIdOrOptions.schemaType || schemaTypeOrCoIdOrOptions.schemaName || schemaTypeOrCoIdOrOptions.coId;
-    fromCoValue = schemaTypeOrCoIdOrOptions.fromCoValue;
-  }
-  
-  try {
-    // PREFERRED: Load schema from CoValue's header metadata (single source of truth)
-    if (fromCoValue) {
-      if (!fromCoValue.startsWith('co_z')) {
-        throw new Error(`[loadSchemaFromDB] fromCoValue must be a valid co-id (co_z...), got: ${fromCoValue}`);
-      }
-      return await resolveSchema(dbEngine.backend, { fromCoValue });
-    }
-    
-    // Check if it's a co-id
-    if (schemaTypeOrCoId && schemaTypeOrCoId.startsWith('co_z')) {
-      // Load schema directly by co-id
-      return await resolveSchema(dbEngine.backend, schemaTypeOrCoId);
-    }
-    
-    // Human-readable schema name - NOT SUPPORTED at runtime
-    // All schema loading must use co-id or fromCoValue pattern
-    throw new Error(`[loadSchemaFromDB] Schema name resolution not supported at runtime: ${schemaTypeOrCoId}. Use co-id or fromCoValue pattern instead.`);
-  } catch (error) {
-    console.warn(`[loadSchemaFromDB] Failed to load schema ${schemaTypeOrCoId || fromCoValue}:`, error);
-    return null;
-  }
 }
 
 /**
@@ -439,43 +346,79 @@ export async function loadSchemasFromAccount(node, account) {
     throw new Error('[loadSchemasFromAccount] Node and account required');
   }
   
+  // Create a minimal backend-like object for resolve() to work
+  // This is a migration-only function, so we need to work with node directly
+  const backend = {
+    account,
+    node,
+    getCoValue: (coId) => node.getCoValue(coId),
+    isAvailable: (coValueCore) => coValueCore?.isAvailable() || false,
+    getCurrentContent: (coValueCore) => coValueCore?.getCurrentContent() || null,
+    getHeader: (coValueCore) => coValueCore?.verified?.header || null
+  };
+  
   try {
-    // Get account.os (CoJSON pattern: account has "profile" and "os" only)
+    // Get account.os using read() API
     const osId = account.get("os");
     if (!osId) {
       console.warn('[loadSchemasFromAccount] account.os not found, returning empty schemas');
       return {};
     }
     
-    // Load account.os CoMap
-    const os = await node.load(osId);
-    if (os === 'unavailable') {
+    // Use resolve() to load account.os
+    const osStore = await universalRead(backend, osId, null, null, null, {
+      deepResolve: false,
+      timeoutMs: 5000
+    });
+    
+    try {
+      await waitForStoreReady(osStore, osId, 5000);
+    } catch (error) {
       console.warn('[loadSchemasFromAccount] account.os unavailable, returning empty schemas');
       return {};
     }
     
-    // Get os.schemata CoList
-    const osSchemataId = os.get("schemata");
+    const osData = osStore.value;
+    if (!osData || osData.error) {
+      console.warn('[loadSchemasFromAccount] account.os error, returning empty schemas');
+      return {};
+    }
+    
+    // Get os.schemata CoList co-id (flat object from read() API)
+    const osSchemataId = osData.schemata;
     if (!osSchemataId) {
       console.warn('[loadSchemasFromAccount] os.schemata not found, returning empty schemas');
       return {};
     }
     
-    // Load os.schemata CoList
-    const osSchemata = await node.load(osSchemataId);
-    if (osSchemata === 'unavailable') {
+    // Load os.schemata CoList using read() API
+    const schemataStore = await universalRead(backend, osSchemataId, null, null, null, {
+      deepResolve: false,
+      timeoutMs: 5000
+    });
+    
+    try {
+      await waitForStoreReady(schemataStore, osSchemataId, 5000);
+    } catch (error) {
       console.warn('[loadSchemasFromAccount] os.schemata unavailable, returning empty schemas');
       return {};
     }
     
-    const schemaCoIds = osSchemata.toJSON();
+    const schemataData = schemataStore.value;
+    if (!schemataData || schemataData.error) {
+      console.warn('[loadSchemasFromAccount] os.schemata error, returning empty schemas');
+      return {};
+    }
+    
+    // Extract schema co-ids from CoList data
+    const schemaCoIds = schemataData.items || schemataData.toJSON?.() || [];
     
     if (!Array.isArray(schemaCoIds) || schemaCoIds.length === 0) {
       console.warn('[loadSchemasFromAccount] account.os.schemata is empty, returning empty schemas');
       return {};
     }
     
-    // Load each schema CoMap and extract definition
+    // Load each schema using resolve()
     const schemas = {};
     
     for (const schemaCoId of schemaCoIds) {
@@ -485,22 +428,10 @@ export async function loadSchemasFromAccount(node, account) {
       }
       
       try {
-        // Note: node.load() returns the content directly (already calls getCurrentContent())
-        const schemaCoMap = await node.load(schemaCoId);
-        if (schemaCoMap === 'unavailable') {
-          console.warn(`[loadSchemasFromAccount] Schema CoMap unavailable: ${schemaCoId}`);
-          continue;
+        const schema = await resolve(backend, schemaCoId, { returnType: 'schema' });
+        if (schema) {
+          schemas[schemaCoId] = schema;
         }
-        
-        // Extract definition property
-        const definition = schemaCoMap.get('definition');
-        if (!definition) {
-          console.warn(`[loadSchemasFromAccount] Schema CoMap missing definition: ${schemaCoId}`);
-          continue;
-        }
-        
-        // Store schema by co-id
-        schemas[schemaCoId] = definition;
       } catch (error) {
         console.warn(`[loadSchemasFromAccount] Failed to load schema ${schemaCoId}:`, error);
       }
@@ -513,4 +444,3 @@ export async function loadSchemasFromAccount(node, account) {
     return {};
   }
 }
-

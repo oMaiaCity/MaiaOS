@@ -448,23 +448,17 @@ function transformInstanceForSeeding(instance, coIdMap, options = {}) {
       if (stateDef.entry) {
         if (stateDef.entry.tool && stateDef.entry.payload) {
           // Entry is an object with tool and payload - transform payload
-          const originalSchema = stateDef.entry.payload.schema;
           transformToolPayload(stateDef.entry.payload, coIdMap, transformQueryObjects);
-          if (originalSchema && originalSchema !== stateDef.entry.payload.schema) {
-            console.log(`[SchemaTransformer] ✅ Transformed state machine entry schema: ${originalSchema} → ${stateDef.entry.payload.schema}`);
-          }
         } else if (stateDef.entry.mapData && typeof stateDef.entry.mapData === 'object') {
           // Entry is a mapData action - transform schema references in each operation config
           const mapData = stateDef.entry.mapData;
           for (const [contextKey, operationConfig] of Object.entries(mapData)) {
-            if (operationConfig && typeof operationConfig === 'object' && operationConfig.schema && typeof operationConfig.schema === 'string') {
-              const originalSchema = operationConfig.schema;
-              const coId = transformSchemaReference(operationConfig.schema, coIdMap, `mapData.${contextKey}.schema`);
-              if (coId) {
-                operationConfig.schema = coId;
-                console.log(`[SchemaTransformer] ✅ Transformed mapData schema for ${contextKey}: ${originalSchema} → ${operationConfig.schema}`);
-              }
+          if (operationConfig && typeof operationConfig === 'object' && operationConfig.schema && typeof operationConfig.schema === 'string') {
+            const coId = transformSchemaReference(operationConfig.schema, coIdMap, `mapData.${contextKey}.schema`);
+            if (coId) {
+              operationConfig.schema = coId;
             }
+          }
             // Recursively transform other properties (filter, key, keys, etc.) if they contain schema references
             if (operationConfig && typeof operationConfig === 'object') {
               transformQueryObjects(operationConfig, coIdMap);
@@ -475,11 +469,7 @@ function transformInstanceForSeeding(instance, coIdMap, options = {}) {
           transformArrayItems(stateDef.entry, coIdMap, transformQueryObjects);
         } else if (stateDef.entry.payload) {
           // Entry might be just a payload object
-          const originalSchema = stateDef.entry.payload.schema;
           transformToolPayload(stateDef.entry.payload, coIdMap, transformQueryObjects);
-          if (originalSchema && originalSchema !== stateDef.entry.payload.schema) {
-            console.log(`[SchemaTransformer] ✅ Transformed state machine entry schema: ${originalSchema} → ${stateDef.entry.payload.schema}`);
-          }
         }
       }
 
@@ -676,11 +666,9 @@ function transformArrayItems(arr, coIdMap, transformRecursive) {
         // Transform schema references in each operation config
         for (const [contextKey, operationConfig] of Object.entries(item.mapData)) {
           if (operationConfig && typeof operationConfig === 'object' && operationConfig.schema && typeof operationConfig.schema === 'string') {
-            const originalSchema = operationConfig.schema;
             const coId = transformSchemaReference(operationConfig.schema, coIdMap, `mapData.${contextKey}.schema in array`);
             if (coId) {
               operationConfig.schema = coId;
-              console.log(`[SchemaTransformer] ✅ Transformed mapData schema for ${contextKey} in array: ${originalSchema} → ${operationConfig.schema}`);
             }
           }
           // Recursively transform other properties
@@ -787,11 +775,9 @@ function transformQueryObjects(obj, coIdMap, depth = 0) {
         // Transform schema references in each operation config
         for (const [contextKey, operationConfig] of Object.entries(mapData)) {
           if (operationConfig && typeof operationConfig === 'object' && operationConfig.schema && typeof operationConfig.schema === 'string') {
-            const originalSchema = operationConfig.schema;
             const coId = transformSchemaReference(operationConfig.schema, coIdMap, `mapData.${contextKey}.schema`);
             if (coId) {
               operationConfig.schema = coId;
-              console.log(`[SchemaTransformer] ✅ Transformed mapData schema for ${contextKey}: ${originalSchema} → ${operationConfig.schema}`);
             }
           }
           // Recursively transform other properties (filter, key, keys, etc.) if they contain schema references

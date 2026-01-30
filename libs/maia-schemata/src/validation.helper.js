@@ -58,44 +58,25 @@ export function setSchemaResolver(options) {
     throw new Error('[setSchemaResolver] dbEngine is REQUIRED. No fallbacks allowed.');
   }
   
-  // Create resolver that uses universal schema resolver via operations API (single source of truth)
+  // Create resolver that uses universal resolve() API (single source of truth)
   const operationsResolver = async (schemaKey) => {
-    // Use universal schema resolver via backend (single source of truth)
+    // Use universal resolve() API directly (single source of truth)
     try {
-      // Prefer backend's universal resolver if available (direct access, more efficient)
-      if (dbEngine.backend && typeof dbEngine.backend.resolveSchema === 'function') {
-        return await dbEngine.backend.resolveSchema(schemaKey);
+      if (!dbEngine.backend) {
+        throw new Error('[SchemaResolver] dbEngine.backend is required');
       }
       
-      // Use operations API (which uses universal resolver internally)
-      // Universal resolver handles: co-id, registry string (@schema/...)
-      let identifier = schemaKey;
+      // Import resolve() dynamically to avoid circular dependencies
+      const { resolve } = await import('@MaiaOS/db');
       
-      // Require proper format: co-id or @schema/... pattern
-      if (!identifier.startsWith('co_z') && !identifier.startsWith('@schema/')) {
-        throw new Error(`[SchemaResolver] Invalid schema identifier format: ${identifier}. Must be co-id (co_z...) or registry string (@schema/...)`);
+      // Use universal resolve() API - handles co-id, registry string (@schema/...), etc.
+      const schema = await resolve(dbEngine.backend, schemaKey, { returnType: 'schema' });
+      
+      if (!schema) {
+        throw new Error(`[SchemaResolver] Schema ${schemaKey} not found`);
       }
       
-      // If it's a registry string, resolve to co-id first, then load schema
-      if (identifier.startsWith('@schema/')) {
-        const resolvedCoId = await dbEngine.execute({ op: 'resolve', humanReadableKey: identifier });
-        if (!resolvedCoId) {
-          throw new Error(`[SchemaResolver] Could not resolve registry string ${identifier} to co-id`);
-        }
-        identifier = resolvedCoId;
-      }
-      
-      // Load schema by co-id via operations API
-      if (identifier.startsWith('co_z')) {
-        const schemaStore = await dbEngine.execute({ op: 'schema', coId: identifier });
-        const schema = schemaStore.value; // Extract value from ReactiveStore
-        if (!schema) {
-          throw new Error(`[SchemaResolver] Schema ${schemaKey} (co-id: ${identifier}) not found via operations API`);
-        }
-        return schema;
-      }
-      
-      throw new Error(`[SchemaResolver] Invalid schema identifier: ${schemaKey}`);
+      return schema;
     } catch (error) {
       // Fail fast - no fallbacks
       throw new Error(`[SchemaResolver] Failed to load schema ${schemaKey}: ${error.message}`);

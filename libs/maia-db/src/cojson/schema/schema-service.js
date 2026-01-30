@@ -28,9 +28,14 @@ function buildMetaSchemaForSeeding(metaSchemaCoId) {
     $schema: metaSchemaId
   };
   
+  // Recursively remove any 'id' fields (AJV only accepts $id, not id)
+  // Note: This function is defined in seed.js, but we need to clean here too
+  // For now, just exclude top-level 'id' if present
+  const { id, ...cleanedMetaSchema } = fullMetaSchema;
+  
   // Return structure for CoMap creation (wrapped in definition property)
   return {
-    definition: fullMetaSchema
+    definition: cleanedMetaSchema
   };
 }
 

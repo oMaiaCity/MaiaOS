@@ -27,7 +27,7 @@ import { createCoList } from '../cotypes/coList.js';
 import mergedMetaSchema from '@MaiaOS/schemata/os/meta.schema.json';
 import { deleteRecord } from '../crud/delete.js';
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js';
-import { resolveHumanReadableKey, loadSchemaDefinition } from '../schema/resolver.js';
+import { resolve } from '../schema/resolver.js';
 
 /**
  * Delete all seeded co-values (configs and data) but preserve schemata
@@ -53,7 +53,6 @@ async function deleteSeededCoValues(account, node, backend) {
     // Get account.os CoMap
     const osId = account.get('os');
     if (!osId) {
-      console.log('[Seed] account.os not found, skipping cleanup (first seed)');
       return { deleted: 0, errors: 0 };
     }
     
@@ -63,13 +62,11 @@ async function deleteSeededCoValues(account, node, backend) {
     });
     
     if (!osCore || !backend.isAvailable(osCore)) {
-      console.log('[Seed] account.os not available, skipping cleanup (first seed)');
       return { deleted: 0, errors: 0 };
     }
     
     const osCoMap = backend.getCurrentContent(osCore);
     if (!osCoMap || typeof osCoMap.get !== 'function') {
-      console.log('[Seed] account.os content not available, skipping cleanup');
       return { deleted: 0, errors: 0 };
     }
     
@@ -184,7 +181,6 @@ async function deleteSeededCoValues(account, node, backend) {
     });
     
     // Delete all non-schema co-values
-    console.log(`[Seed] Deleting ${coValuesToDeleteFiltered.length} seeded co-values...`);
     for (const coId of coValuesToDeleteFiltered) {
       try {
         // Get schema co-id from co-value headerMeta
@@ -221,7 +217,6 @@ async function deleteSeededCoValues(account, node, backend) {
           )) {
             // Subscription error during cleanup - expected and safe to ignore
             // The co-value deletion still succeeded (index removed, content cleared)
-            console.log(`[Seed] Deleted co-value ${coId.substring(0, 12)}... (subscription error during cleanup, expected)`);
             deletedCount++;
           } else {
             // Real deletion error - rethrow to be caught by outer catch
@@ -287,7 +282,6 @@ async function deleteSeededCoValues(account, node, backend) {
     
     // Delete index colist co-values themselves (not just clear them)
     // Index colists will be recreated automatically when new co-values are created
-    console.log(`[Seed] Deleting index colist co-values...`);
     const osKeys = osCoMap.keys && typeof osCoMap.keys === 'function' ? osCoMap.keys() : [];
     const indexColistsToDelete = [];
     
@@ -310,7 +304,7 @@ async function deleteSeededCoValues(account, node, backend) {
     for (const { schemaCoId, indexColistId } of indexColistsToDelete) {
       try {
         // Get the schema definition to construct the index colist schema title
-        const schemaDef = await loadSchemaDefinition(backend, schemaCoId);
+        const schemaDef = await resolve(backend, schemaCoId, { returnType: 'schema' });
         if (!schemaDef || !schemaDef.title) {
           console.warn(`[Seed] Cannot get schema title for ${schemaCoId.substring(0, 12)}..., skipping index colist deletion`);
           continue;
@@ -327,7 +321,7 @@ async function deleteSeededCoValues(account, node, backend) {
         const indexColistSchemaTitle = `@schema/index/${schemaNamePart}`;
         
         // Resolve the index colist schema co-id
-        const indexColistSchemaCoId = await resolveHumanReadableKey(backend, indexColistSchemaTitle);
+        const indexColistSchemaCoId = await resolve(backend, indexColistSchemaTitle, { returnType: 'coId' });
         if (!indexColistSchemaCoId) {
           console.warn(`[Seed] Cannot resolve index colist schema ${indexColistSchemaTitle}, skipping index colist deletion`);
           continue;
@@ -350,7 +344,6 @@ async function deleteSeededCoValues(account, node, backend) {
             deleteError.message.includes('ReferenceError')
           )) {
             // Subscription error during cleanup - expected and safe to ignore
-            console.log(`[Seed] Deleted index colist ${indexColistId.substring(0, 12)}... (subscription error during cleanup, expected)`);
             deletedCount++;
             
             // Still remove from account.os even if subscription error occurred
@@ -369,10 +362,8 @@ async function deleteSeededCoValues(account, node, backend) {
     }
     
     if (indexColistsToDelete.length > 0) {
-      console.log(`[Seed] Deleted ${indexColistsToDelete.length} index colist co-values`);
     }
     
-    console.log(`[Seed] Cleanup complete: deleted ${deletedCount} co-values, ${errorCount} errors`);
     return { deleted: deletedCount, errors: errorCount };
   } catch (e) {
     console.error(`[Seed] Error during cleanup:`, e);
@@ -418,6 +409,41 @@ function buildMetaSchemaForSeeding(metaSchemaCoId) {
  * @returns {Promise<Object>} Summary of what was seeded
  */
 export async function seed(account, node, configs, schemas, data, existingBackend = null) {
+  /**
+   * Recursively remove 'id' fields from schema objects (AJV only accepts $id, not id)
+   * @param {any} obj - Object to clean
+   * @returns {any} Cleaned object without 'id' fields
+   */
+  function removeIdFields(obj) {
+    if (obj === null || obj === undefined) {
+      return obj;
+    }
+    
+    if (typeof obj !== 'object') {
+      return obj;
+    }
+    
+    if (Array.isArray(obj)) {
+      return obj.map(item => removeIdFields(item));
+    }
+    
+    const cleaned = {};
+    for (const [key, value] of Object.entries(obj)) {
+      // Skip 'id' field (AJV only accepts $id)
+      if (key === 'id') {
+        continue;
+      }
+      
+      // Recursively clean nested objects/arrays
+      if (value !== null && value !== undefined && typeof value === 'object') {
+        cleaned[key] = removeIdFields(value);
+      } else {
+        cleaned[key] = value;
+      }
+    }
+    
+    return cleaned;
+  }
   // Import co-id registry and transformer
   const { CoIdRegistry } = 
     await import('@MaiaOS/schemata/co-id-generator');
@@ -437,9 +463,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   // - deleteRecord() automatically removes co-values from schema indexes via removeFromIndex()
   // - create() operations automatically add co-values to schema indexes via storage hooks
   // No manual index management needed during reseeding
-  console.log('[Seed] Starting cleanup of seeded co-values...');
   const cleanupResult = await deleteSeededCoValues(account, node, backend);
-  console.log(`[Seed] Cleanup complete: deleted ${cleanupResult.deleted} co-values, ${cleanupResult.errors} errors`);
   
   // Resolve universal group via account.profile.group using read() API
   const profileId = account.get("profile");
@@ -670,8 +694,13 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   if (!metaSchemaCoId) {
     // Create metaschema with "GenesisSchema" exception (can't self-reference co-id in read-only headerMeta)
     const metaSchemaMeta = { $schema: 'GenesisSchema' }; // Special exception for metaschema
+    const tempMetaSchemaDef = buildMetaSchemaForSeeding('co_zTEMP');
+    // Clean the initial meta-schema definition to remove any 'id' fields
+    const cleanedTempDef = {
+      definition: removeIdFields(tempMetaSchemaDef.definition || tempMetaSchemaDef)
+    };
     const metaSchemaCoMap = universalGroup.createMap(
-      buildMetaSchemaForSeeding('co_zTEMP'), // Will update $id after creation
+      cleanedTempDef, // Will update $id after creation
       metaSchemaMeta
     );
     
@@ -679,20 +708,28 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     const actualMetaSchemaCoId = metaSchemaCoMap.id;
     const updatedMetaSchemaDef = buildMetaSchemaForSeeding(actualMetaSchemaCoId);
     
-    // Extract direct properties (exclude $schema and $id - they go in metadata only)
-    const { $schema, $id, ...directProperties } = updatedMetaSchemaDef.definition || updatedMetaSchemaDef;
+    // Extract direct properties (exclude $schema, $id, and id - they go in metadata only)
+    // Note: AJV only accepts $id, not id, so we must exclude both
+    const { $schema, $id, id, ...directProperties } = updatedMetaSchemaDef.definition || updatedMetaSchemaDef;
+    
+    // Recursively remove any nested 'id' fields (AJV validation will fail if any 'id' exists)
+    const cleanedProperties = removeIdFields(directProperties);
     
     // Set each property directly on the CoMap (flattened, no nested definition object)
-    for (const [key, value] of Object.entries(directProperties)) {
+    for (const [key, value] of Object.entries(cleanedProperties)) {
       metaSchemaCoMap.set(key, value);
     }
     
     metaSchemaCoId = actualMetaSchemaCoId;
   } else {
     // Metaschema exists - update it with latest definition
-    console.log(`[Seed] Updating existing metaschema (${metaSchemaCoId.substring(0, 12)}...)`);
     const updatedMetaSchemaDef = buildMetaSchemaForSeeding(metaSchemaCoId);
-    const { $schema, $id, ...directProperties } = updatedMetaSchemaDef.definition || updatedMetaSchemaDef;
+    // Extract direct properties (exclude $schema, $id, and id - they go in metadata only)
+    // Note: AJV only accepts $id, not id, so we must exclude both
+    const { $schema, $id, id, ...directProperties } = updatedMetaSchemaDef.definition || updatedMetaSchemaDef;
+    
+    // Recursively remove any nested 'id' fields (AJV validation will fail if any 'id' exists)
+    const cleanedProperties = removeIdFields(directProperties);
     
     // Get metaschema CoMap and update it
     const metaSchemaCore = await ensureCoValueLoaded(backend, metaSchemaCoId, {
@@ -703,7 +740,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
       const metaSchemaCoMap = backend.getCurrentContent(metaSchemaCore);
       if (metaSchemaCoMap && typeof metaSchemaCoMap.set === 'function') {
         // Update all properties
-        for (const [key, value] of Object.entries(directProperties)) {
+        for (const [key, value] of Object.entries(cleanedProperties)) {
           metaSchemaCoMap.set(key, value);
         }
       }
@@ -774,8 +811,12 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   for (const schemaKey of sortedSchemaKeys) {
     const { name, schema } = uniqueSchemasBy$id.get(schemaKey);
     
-    // Extract direct properties (exclude $schema and $id - they go in metadata only)
-    const { $schema, $id, ...directProperties } = schema;
+    // Extract direct properties (exclude $schema, $id, and id - they go in metadata only)
+    // Note: AJV only accepts $id, not id, so we must exclude both
+    const { $schema, $id, id, ...directProperties } = schema;
+    
+    // Recursively remove any nested 'id' fields (AJV validation will fail if any 'id' exists)
+    const cleanedProperties = removeIdFields(directProperties);
     
     // Check if schema already exists
     const existingSchemaCoId = existingSchemaRegistry.get(schemaKey);
@@ -783,19 +824,17 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     
     if (existingSchemaCoId) {
       // Schema exists - update it instead of creating new one
-      console.log(`[Seed] Updating existing schema ${schemaKey} (${existingSchemaCoId.substring(0, 12)}...)`);
       
       // Update schema CoMap with new definition
-      await crudUpdate.update(backend, metaSchemaCoId, existingSchemaCoId, directProperties);
+      await crudUpdate.update(backend, metaSchemaCoId, existingSchemaCoId, cleanedProperties);
       
       actualCoId = existingSchemaCoId;
     } else {
       // Schema doesn't exist - create new one
-      console.log(`[Seed] Creating new schema ${schemaKey}`);
       
       // Create schema CoMap using CRUD API (hooks will fire automatically)
       // Pass metaSchema co-id as schema parameter (CRUD will use it in headerMeta)
-      const createdSchema = await crudCreate.create(backend, metaSchemaCoId, directProperties);
+      const createdSchema = await crudCreate.create(backend, metaSchemaCoId, cleanedProperties);
       
       // CRUD API returns the created record with id
       actualCoId = createdSchema.id;
@@ -844,12 +883,16 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     transformedSchemas[name] = transformedSchema;
     transformedSchemasByKey.set(schemaKey, transformedSchema);
     
-    // Extract direct properties (exclude $schema and $id - they go in metadata only)
-    const { $schema, $id, ...directProperties } = transformedSchema;
+    // Extract direct properties (exclude $schema, $id, and id - they go in metadata only)
+    // Note: AJV only accepts $id, not id, so we must exclude both
+    const { $schema, $id, id, ...directProperties } = transformedSchema;
     
-    // Update the CoMap with direct properties (flattened, no nested definition object)
+    // Recursively remove any nested 'id' fields (AJV validation will fail if any 'id' exists)
+    const cleanedProperties = removeIdFields(directProperties);
+    
+    // Update the CoMap with cleaned properties (flattened, no nested definition object)
     // Set each property directly on the CoMap
-    for (const [key, value] of Object.entries(directProperties)) {
+    for (const [key, value] of Object.entries(cleanedProperties)) {
       schemaCoMap.set(key, value);
     }
   }
@@ -1127,7 +1170,6 @@ export async function seed(account, node, configs, schemas, data, existingBacken
           }
           updatedCount++;
         } else {
-          console.log(`   ⚠️  Cannot update CoList: append method not available`);
         }
       } else if (cotype === 'costream') {
         // CoStream: Append-only, add items with resolved references
@@ -1139,7 +1181,6 @@ export async function seed(account, node, configs, schemas, data, existingBacken
           }
           updatedCount++;
         } else {
-          console.log(`   ⚠️  Cannot update CoStream: push method not available`);
         }
       } else {
         // CoMap: Update all properties
@@ -1159,7 +1200,6 @@ export async function seed(account, node, configs, schemas, data, existingBacken
 
           updatedCount++;
         } else {
-          console.log(`   ⚠️  Cannot update CoMap: set method not available`);
         }
       }
     }
@@ -1684,12 +1724,10 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
     const existingCoId = schematas.get('@schema/meta');
     if (!existingCoId) {
       schematas.set('@schema/meta', metaschemaCoId);
-      console.log(`[Seed] Manually registered metaschema @schema/meta → ${metaschemaCoId.substring(0, 12)}... (created directly, not via CRUD API)`);
     } else if (existingCoId !== metaschemaCoId) {
       // Different metaschema already registered - don't overwrite
       console.warn(`[Seed] Metaschema already registered with different co-id: ${existingCoId.substring(0, 12)}... (new: ${metaschemaCoId.substring(0, 12)}...). Skipping.`);
     } else {
-      console.log(`[Seed] Metaschema @schema/meta already registered`);
     }
   }
   

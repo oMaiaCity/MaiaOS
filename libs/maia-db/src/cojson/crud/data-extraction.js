@@ -314,9 +314,23 @@ export function extractCoValueDataFlat(backend, coValueCore, schemaHint = null) 
   
   // CoMap: return flat object with properties directly accessible, including type and $schema
   if (content && content.get && typeof content.get === 'function') {
+    // Check if this is a schema co-value (schemas shouldn't have 'id' or 'type' fields)
+    // Schemas are identified by: headerMeta.$schema === 'GenesisSchema' OR content has schema-like properties
+    // Schemas use 'cotype' for CoJSON types, not 'type' (which AJV expects to be JSON Schema types)
+    const hasCotype = content.get('cotype');
+    const hasTitle = content.get('title');
+    const hasProperties = content.get('properties');
+    const hasItems = content.get('items');
+    const isSchema = schema === 'GenesisSchema' || 
+                     (hasCotype || hasTitle || hasProperties || hasItems);
+    
     const result = { 
-      id: coValueCore.id,
-      type: rawType === 'comap' ? 'comap' : rawType, // Ensure type is set
+      // Only include 'id' and 'type' for non-schema co-values
+      // Schemas are content-addressable by co-ID and use 'cotype', not 'type'
+      ...(isSchema ? {} : { 
+        id: coValueCore.id,
+        type: rawType === 'comap' ? 'comap' : rawType
+      }),
       $schema: schema // Include $schema for metadata lookup
     };
     const keys = content.keys && typeof content.keys === 'function' 

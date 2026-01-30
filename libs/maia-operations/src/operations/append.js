@@ -10,7 +10,7 @@
  * CoLists check for duplicates, CoStreams allow duplicates (append-only logs).
  */
 
-import { getSchemaCoId, checkCotype, resolveSchema } from '@MaiaOS/db';
+import { resolve, checkCotype } from '@MaiaOS/db';
 import { validateAgainstSchemaOrThrow, validateItems, requireParam, validateCoId, requireDbEngine, ensureCoValueAvailable } from '@MaiaOS/schemata/validation.helper';
 
 export class AppendOperation {
@@ -30,7 +30,7 @@ export class AppendOperation {
     const coValueCore = await ensureCoValueAvailable(this.backend, coId, 'AppendOperation');
     
     // Resolve schema co-id from CoValue headerMeta using universal resolver
-    const schemaCoId = await getSchemaCoId(this.backend, { fromCoValue: coId });
+    const schemaCoId = await resolve(this.backend, { fromCoValue: coId }, { returnType: 'coId' });
     if (!schemaCoId) {
       throw new Error(`[AppendOperation] Failed to extract schema from CoValue ${coId} headerMeta`);
     }
@@ -58,7 +58,7 @@ export class AppendOperation {
     }
     
     // Load schema for item validation
-    const schema = await resolveSchema(this.backend, schemaCoId);
+    const schema = await resolve(this.backend, schemaCoId, { returnType: 'schema' });
     if (!schema) {
       throw new Error(`[AppendOperation] Schema ${schemaCoId} not found`);
     }

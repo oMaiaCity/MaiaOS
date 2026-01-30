@@ -6,7 +6,7 @@
  * Note: Schema is now a co-id (transformed during seeding), not a human-readable reference
  */
 
-import { getSchemaCoId, resolveSchema } from '@MaiaOS/db';
+import { resolve } from '@MaiaOS/db';
 import { validateAgainstSchemaOrThrow, requireParam, requireDbEngine } from '@MaiaOS/schemata/validation.helper';
 
 /**
@@ -37,13 +37,13 @@ export class CreateOperation {
     requireDbEngine(this.dbEngine, 'CreateOperation', 'runtime schema validation');
     
     // Resolve schema co-id using universal resolver (handles co-id and human-readable patterns)
-    const schemaCoId = await getSchemaCoId(this.backend, schema);
+    const schemaCoId = await resolve(this.backend, schema, { returnType: 'coId' });
     if (!schemaCoId) {
       throw new Error(`[CreateOperation] Could not resolve schema: ${schema}`);
     }
     
     // Load schema and validate data
-    const schemaDef = await resolveSchema(this.backend, schemaCoId);
+    const schemaDef = await resolve(this.backend, schemaCoId, { returnType: 'schema' });
     if (!schemaDef) {
       throw new Error(`[CreateOperation] Schema ${schemaCoId} not found`);
     }

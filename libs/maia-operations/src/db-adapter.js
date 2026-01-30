@@ -16,11 +16,13 @@
  * - update(): Update existing records (unified for data + configs)
  * - delete(): Delete records
  * - getRawRecord(): Get raw stored data without normalization (for validation)
- * - resolveHumanReadableKey(): Resolve human-readable IDs to co-ids
  * 
  * Optional methods (backend-specific):
- * - seed(): Seed database with initial data (IndexedDB only)
+ * - seed(): Seed database with initial data (CoJSON only)
  * - init(): Initialize backend connection
+ * 
+ * Note: All schema/co-value resolution uses the universal resolve() API from @MaiaOS/db.
+ * Use resolve() directly: import { resolve } from '@MaiaOS/db';
  */
 export class DBAdapter {
   /**
@@ -74,15 +76,6 @@ export class DBAdapter {
    */
   async getRawRecord(id) {
     throw new Error('[DBAdapter] getRawRecord() must be implemented by backend');
-  }
-
-  /**
-   * Resolve human-readable key to co-id
-   * @param {string} humanReadableKey - Human-readable ID (e.g., '@schema/todos', 'vibe/vibe')
-   * @returns {Promise<string|null>} Co-id (co_z...) or null if not found
-   */
-  async resolveHumanReadableKey(humanReadableKey) {
-    throw new Error('[DBAdapter] resolveHumanReadableKey() must be implemented by backend');
   }
 
   /**

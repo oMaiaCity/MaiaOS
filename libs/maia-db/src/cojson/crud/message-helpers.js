@@ -6,7 +6,7 @@
  */
 
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
-import { loadSchemaFromDB } from '../schema/resolver.js';
+import { resolve } from '../schema/resolver.js';
 
 /**
  * Create a message CoMap and push its co-id to an inbox CoStream
@@ -82,7 +82,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
   
   // 2. CRITICAL: Load and validate message data against message schema before creating
   //    This ensures type, payload, source, target, processed fields are valid
-  const messageSchema = await loadSchemaFromDB(dbEngine, messageSchemaCoId);
+  const messageSchema = await resolve(dbEngine.backend, messageSchemaCoId, { returnType: 'schema' });
   if (!messageSchema) {
     throw new Error(`[createAndPushMessage] Message schema not found: ${messageSchemaCoId}`);
   }

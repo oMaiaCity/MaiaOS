@@ -1,5 +1,5 @@
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
-import { loadSchemaFromDB } from '@MaiaOS/db';
+import { resolve } from '@MaiaOS/db';
 
 function validateCoId(coId, context = 'item') {
   if (!coId || typeof coId !== 'string') {
@@ -154,7 +154,7 @@ export async function loadConfigOrUseProvided(dbEngine, schemaRef, coIdOrConfig,
     if (!configCoId.startsWith('co_z')) {
       throw new Error(`[${configType}] Config $id must be a co-id (co_z...), got: ${configCoId}`);
     }
-    const schema = await loadSchemaFromDB(dbEngine, { fromCoValue: configCoId });
+    const schema = await resolve(dbEngine.backend, { fromCoValue: configCoId }, { returnType: 'schema' });
     if (schema) {
       await validateAgainstSchemaOrThrow(schema, stripMetadataForValidation(plainConfig), configType);
     }

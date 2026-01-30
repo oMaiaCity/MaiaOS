@@ -18,7 +18,7 @@ export { getValidationEngine, validateAgainstSchema, validateAgainstSchemaOrThro
 // No exports needed - use ValidationEngine.getMetaSchema() for validation engine, or getMetaSchemaFromBackend() for runtime access
 
 // Export schema loader functions (runtime) - consolidated into resolver.js
-export { loadSchemaFromDB, loadSchemasFromAccount } from '@MaiaOS/db';
+export { resolve, loadSchemasFromAccount } from '@MaiaOS/db';
 
 // Export schema transformer functions (seeding only)
 export { transformForSeeding, validateSchemaStructure, verifyNoSchemaReferences, validateNoNestedCoTypes } from './schema-transformer.js';

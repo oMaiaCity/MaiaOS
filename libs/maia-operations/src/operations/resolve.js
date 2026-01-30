@@ -1,4 +1,4 @@
-import { resolveHumanReadableKey } from '@MaiaOS/db';
+import { resolve } from '@MaiaOS/db';
 import { requireParam } from '@MaiaOS/schemata/validation.helper';
 
 /**
@@ -36,6 +36,6 @@ export class ResolveOperation {
     }
     
     // Use universal resolver from maia-db
-    return await resolveHumanReadableKey(this.backend, humanReadableKey);
+    return await resolve(this.backend, humanReadableKey, { returnType: 'coId' });
   }
 }

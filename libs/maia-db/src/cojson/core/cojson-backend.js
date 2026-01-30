@@ -18,7 +18,7 @@ import * as filterHelpers from '../crud/filter-helpers.js';
 import * as crudCreate from '../crud/create.js';
 import * as crudUpdate from '../crud/update.js';
 import * as crudDelete from '../crud/delete.js';
-import { resolveHumanReadableKey as resolveKey, getSchemaCoIdFromCoValue, loadSchemaByCoId as loadSchema, resolveSchema as universalResolveSchema, getSchemaCoId as universalGetSchemaCoId, loadSchemaDefinition as universalLoadSchemaDefinition } from '../schema/resolver.js';
+import { resolve } from '../schema/resolver.js';
 import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.js';
 
 export class CoJSONBackend extends DBAdapter {
@@ -43,7 +43,6 @@ export class CoJSONBackend extends DBAdapter {
     // This catches ALL writes: CRUD API, sync, direct CoJSON ops, etc.
     if (node.storage) {
       node.storage = wrapStorageWithIndexingHooks(node.storage, this);
-      console.log('[CoJSONBackend] Storage wrapped with indexing hooks');
     }
     
     // Schema indexing is handled ONLY via storage-level hooks (most resilient approach)
@@ -61,7 +60,6 @@ export class CoJSONBackend extends DBAdapter {
     // This prevents stale group references after re-login
     if (this._cachedUniversalGroup) {
       this._cachedUniversalGroup = null;
-      console.log(`[CoJSONBackend] Invalidated cached universal group on backend reset`);
     }
     // Note: Global subscription cache is cleared automatically by getGlobalCache(node)
     // when it detects a node change, so we don't need to reset it here
@@ -525,65 +523,6 @@ export class CoJSONBackend extends DBAdapter {
     return null;
   }
 
-  /**
-   * Resolve human-readable key to co-id
-   * Uses CoJSON's node.load() to ensure CoValues are loaded before accessing content.
-   * Registry-only lookup - no fallback search.
-   * 
-   * @param {string} humanReadableKey - Human-readable ID (e.g., '@schema/todos', '@schema/actor', 'vibe/vibe')
-   * @returns {Promise<string|null>} Co-id (co_z...) or null if not found
-   */
-  async resolveHumanReadableKey(humanReadableKey) {
-    return await resolveKey(this, humanReadableKey);
-  }
-  
-  /**
-   * Get schema co-id from a CoValue's headerMeta
-   * Internal helper method - called by SchemaOperation
-   * Uses reactive store layer to ensure CoValue is loaded before reading schema
-   * @param {string} coId - CoValue co-id
-   * @returns {Promise<string|null>} Schema co-id or null if not found
-   */
-  async getSchemaCoIdFromCoValue(coId) {
-    return await getSchemaCoIdFromCoValue(this, coId);
-  }
-  
-  /**
-   * Load schema definition by co-id (pure co-id, no human-readable key resolution)
-   * Internal helper method - called by SchemaOperation
-   * @param {string} schemaCoId - Schema co-id (co_z...)
-   * @returns {Promise<Object|null>} Schema definition or null if not found
-   */
-  async loadSchemaByCoId(schemaCoId) {
-    return await loadSchema(this, schemaCoId);
-  }
-  
-  /**
-   * Universal schema resolver - resolves schema definition by various identifier types
-   * Single source of truth for schema resolution across the codebase
-   * @param {string|Object} identifier - Schema identifier:
-   *   - Co-id string: 'co_z...' → returns schema definition
-   *   - Registry string: '@schema/...' → resolves to co-id, then returns schema definition
-   *   - Options object: { fromCoValue: 'co_z...' } → extracts schema from headerMeta, then returns schema definition
-   * @returns {Promise<Object|null>} Schema definition object or null if not found
-   */
-  async resolveSchema(identifier) {
-    return await universalResolveSchema(this, identifier);
-  }
-  
-  /**
-   * Get schema co-id only (does not load schema definition)
-   * Universal resolver for schema co-id extraction
-   * @param {string|Object} identifier - Schema identifier:
-   *   - Co-id string: 'co_z...' → returns as-is
-   *   - Registry string: '@schema/...' → resolves to co-id
-   *   - Options object: { fromCoValue: 'co_z...' } → extracts schema co-id from headerMeta
-   * @returns {Promise<string|null>} Schema co-id (co_z...) or null if not found
-   */
-  async getSchemaCoIdUniversal(identifier) {
-    return await universalGetSchemaCoId(this, identifier);
-  }
-  
   /**
    * Seed database with configs, schemas, and initial data
    * @param {Object} configs - Config registry {vibe, styles, actors, views, contexts, states, interfaces}

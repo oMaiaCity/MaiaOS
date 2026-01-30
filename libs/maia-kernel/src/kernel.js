@@ -26,8 +26,7 @@ import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper
 import * as schemata from '@MaiaOS/schemata';
 // Import ValidationEngine for meta schema validation
 import { ValidationEngine } from '@MaiaOS/schemata/validation.engine';
-// Import schema loader utility
-import { loadSchemaFromDB } from '@MaiaOS/db';
+// Schema loading now uses resolve() from @MaiaOS/db if needed
 
 /**
  * MaiaOS - Operating System for Actor-based Applications

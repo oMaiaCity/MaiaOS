@@ -12,7 +12,7 @@
  */
 
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
-import { getSchemaCoId, resolveSchema } from '@MaiaOS/db';
+import { resolve } from '@MaiaOS/db';
 import { validateAgainstSchemaOrThrow, requireParam, validateCoId, requireDbEngine } from '@MaiaOS/schemata/validation.helper';
 
 /**
@@ -59,7 +59,7 @@ export class UpdateOperation {
     }
     
     // Extract schema co-id from CoValue headerMeta using universal resolver
-    const schemaCoId = await getSchemaCoId(this.backend, { fromCoValue: id });
+    const schemaCoId = await resolve(this.backend, { fromCoValue: id }, { returnType: 'coId' });
     if (!schemaCoId) {
       throw new Error(`[UpdateOperation] Failed to extract schema from CoValue ${id} headerMeta`);
     }
@@ -71,7 +71,7 @@ export class UpdateOperation {
     const evaluatedData = await this._evaluateDataWithExisting(data, existingDataWithoutMetadata);
     
     // Load schema and validate merged result
-    const schema = await resolveSchema(this.backend, schemaCoId);
+    const schema = await resolve(this.backend, schemaCoId, { returnType: 'schema' });
     if (!schema) {
       throw new Error(`[UpdateOperation] Schema ${schemaCoId} not found`);
     }

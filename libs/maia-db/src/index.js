@@ -53,13 +53,7 @@ export { getSchemaIndexColistId, getCoListId } from "./cojson/crud/collection-he
 
 // Universal Schema Resolver (single source of truth)
 export { 
-  resolveSchema,
-  getSchemaCoId,
-  loadSchemaDefinition,
-  resolveHumanReadableKey,
-  getSchemaCoIdFromCoValue,
-  loadSchemaByCoId,
+  resolve,
   checkCotype,
-  loadSchemaFromDB,
   loadSchemasFromAccount
 } from "./cojson/schema/resolver.js";

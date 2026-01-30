@@ -15,7 +15,7 @@
  */
 
 import { ReactiveStore } from '../reactive-store.js';
-import { getSchemaCoId } from '@MaiaOS/db';
+import { resolve } from '@MaiaOS/db';
 import { validateCoId } from '@MaiaOS/schemata/validation.helper';
 
 export class SchemaOperation {
@@ -25,7 +25,7 @@ export class SchemaOperation {
   }
   
   /**
-   * Extract schema definition from CoValue data (same logic as loadSchemaByCoId)
+   * Extract schema definition from CoValue data
    * @private
    * @param {Object} coValueData - CoValue data from read() operation (has properties array format)
    * @param {string} schemaCoId - Schema co-id
@@ -123,7 +123,7 @@ export class SchemaOperation {
     if (fromCoValue) {
       validateCoId(fromCoValue, 'SchemaOperation');
       // Extract schema co-id from CoValue's headerMeta using universal resolver
-      schemaCoId = await getSchemaCoId(this.backend, { fromCoValue });
+      schemaCoId = await resolve(this.backend, { fromCoValue }, { returnType: 'coId' });
       if (!schemaCoId) {
         console.warn(`[SchemaOperation] Could not extract schema co-id from CoValue ${fromCoValue} headerMeta`);
         // Return ReactiveStore with null value

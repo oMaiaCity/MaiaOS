@@ -2,7 +2,7 @@ import { createSchemaMeta, isExceptionSchema } from "../../schemas/meta.js";
 import { getValidationEngine } from '@MaiaOS/schemata/validation.helper';
 import { getAllSchemas } from "../../schemas/registry.js";
 import { hasSchema } from "../../schemas/registry.js";
-import { loadSchemaFromDB } from '../schema/resolver.js';
+import { resolve } from '../schema/resolver.js';
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 
 /**
@@ -90,7 +90,7 @@ export async function createCoList(accountOrGroup, init = [], schemaName, node =
 			}
 			
 			// Load schema from database (runtime schema - single source of truth)
-			const schemaDef = await loadSchemaFromDB(dbEngine, schemaName);
+			const schemaDef = await resolve(dbEngine.backend, schemaName, { returnType: 'schema' });
 			if (!schemaDef) {
 				throw new Error(`[createCoList] Schema not found in database: ${schemaName}`);
 			}

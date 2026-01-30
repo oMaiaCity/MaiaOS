@@ -1,5 +1,5 @@
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
-import { loadSchemaFromDB } from '@MaiaOS/db';
+// loadSchemaFromDB removed - use resolve() from @MaiaOS/db if needed
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
 import { getContextValue } from './utils.js';
 

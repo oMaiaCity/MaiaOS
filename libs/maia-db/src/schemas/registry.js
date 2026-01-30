@@ -170,10 +170,10 @@ export async function getMetaSchemaFromBackend(backend) {
   }
   
   // Import resolver dynamically to avoid circular dependencies
-  const { resolveHumanReadableKey } = await import('../cojson/schema/resolver.js');
+  const { resolve } = await import('../cojson/schema/resolver.js');
   
   // Resolve metaschema co-id from registry
-  const metaSchemaCoId = await resolveHumanReadableKey(backend, '@schema/meta');
+  const metaSchemaCoId = await resolve(backend, '@schema/meta', { returnType: 'coId' });
   if (!metaSchemaCoId) {
     throw new Error('[getMetaSchemaFromBackend] Metaschema not found in registry');
   }

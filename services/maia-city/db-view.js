@@ -123,9 +123,13 @@ async function renderDashboard(maia, cojsonAPI, authState, syncState, navigateTo
 				<div class="header-content">
 					<div class="header-left">
 						<h1>Maia City</h1>
-						<code class="db-status">Connected • ${truncate(accountId, 12)}</code>
 					</div>
 					<div class="header-right">
+						${authState.signedIn ? `
+							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database (idempotent - preserves schemata, recreates configs/data)">
+								Seed
+							</button>
+						` : ''}
 						<!-- Sync Status Indicator -->
 						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
 							<span class="sync-dot"></span>
@@ -136,9 +140,7 @@ async function renderDashboard(maia, cojsonAPI, authState, syncState, navigateTo
 							</span>
 						</div>
 						${authState.signedIn ? `
-							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database (idempotent - preserves schemata, recreates configs/data)">
-								Seed
-							</button>
+							<code class="db-status">${truncate(accountId, 12)}</code>
 						` : ''}
 						${authState.signedIn ? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
@@ -177,9 +179,13 @@ async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVi
 							<span class="back-label">Back</span>
 						</button>
 						<h1>${escapeHtml(vibeLabel)}</h1>
-						<code class="db-status">Connected • ${truncate(accountId, 12)}</code>
 					</div>
 					<div class="header-right">
+						${authState.signedIn ? `
+							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database (idempotent - preserves schemata, recreates configs/data)">
+								Seed
+							</button>
+						` : ''}
 						<!-- Sync Status Indicator -->
 						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
 							<span class="sync-dot"></span>
@@ -190,9 +196,7 @@ async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVi
 							</span>
 						</div>
 						${authState.signedIn ? `
-							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database (idempotent - preserves schemata, recreates configs/data)">
-								Seed
-							</button>
+							<code class="db-status">${truncate(accountId, 12)}</code>
 						` : ''}
 						${authState.signedIn ? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
@@ -831,9 +835,13 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 							<span class="back-label">Back</span>
 						</button>
 						<h1>Maia DB</h1>
-						<code class="db-status">Connected • ${truncate(accountId, 12)}</code>
 					</div>
 					<div class="header-right">
+						${authState.signedIn ? `
+							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database (idempotent - preserves schemata, recreates configs/data)">
+								Seed
+							</button>
+						` : ''}
 						<!-- Sync Status Indicator -->
 						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
 							<span class="sync-dot"></span>
@@ -844,9 +852,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 							</span>
 						</div>
 						${authState.signedIn ? `
-							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database (idempotent - preserves schemata, recreates configs/data)">
-								Seed
-							</button>
+							<code class="db-status">${truncate(accountId, 12)}</code>
 						` : ''}
 						${authState.signedIn ? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
