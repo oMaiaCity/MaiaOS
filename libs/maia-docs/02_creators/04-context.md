@@ -335,8 +335,145 @@ See [Operations](./07-operations.md) for complete documentation on the universal
 - Use descriptive names (`todosTodo`, not `t1`)
 - Use filters to get only what you need
 - Don't manually update these arrays (MaiaOS does it automatically)
+- Use generic reusable names that fit your view template slots (e.g., `list` for list views, `messages` for message logs)
 
 See [Reactive Data System](../developers/06_reactive-queries.md) for detailed examples.
+
+#### Map Transformations in Query Objects
+
+**Map transformations** let you reshape data when reading it. Think of it like a translator - you take data in one format and transform it into the format your views need.
+
+**Format:**
+```json
+{
+  "messages": {
+    "schema": "@schema/message",
+    "options": {
+      "map": {
+        "fromRole": "$$source.role",
+        "toRole": "$$target.role",
+        "fromId": "$$source.id",
+        "toId": "$$target.id"
+      }
+    }
+  }
+}
+```
+
+**What this means:** "Give me all messages, but transform each item so that `source.role` becomes `fromRole`, `target.role` becomes `toRole`, etc."
+
+**Key Rules:**
+- ✅ **Strict `$$` syntax required** - All map expressions MUST use `$$` prefix (e.g., `$$source.role`, not `source.role`)
+- ✅ **Generic placeholder names** - Use reusable names that fit your view template slots (e.g., `fromRole`, `toRole`, `fromId`, `toId` for log entries)
+- ✅ **Works with any property path** - You can map nested properties like `$$nested.deep.property`
+
+**Example: Log View with Generic Placeholders**
+
+**Context:**
+```json
+{
+  "messages": {
+    "schema": "@schema/message",
+    "options": {
+      "map": {
+        "fromRole": "$$source.role",
+        "toRole": "$$target.role",
+        "fromId": "$$source.id",
+        "toId": "$$target.id"
+      }
+    }
+  },
+  "payloadLabel": "payload"
+}
+```
+
+**View:**
+```json
+{
+  "$each": {
+    "items": "$messages",
+    "template": {
+      "tag": "div",
+      "children": [
+        {
+          "tag": "span",
+          "text": "$$fromRole"
+        },
+        {
+          "tag": "span",
+          "text": "$$toRole"
+        },
+        {
+          "tag": "summary",
+          "text": "$payloadLabel"
+        }
+      ]
+    }
+  }
+}
+```
+
+**Why this pattern?**
+- ✅ **Generic reusable names** - `fromRole`/`toRole` work for any log entry, not just messages
+- ✅ **No hardcoded strings** - `payloadLabel` is extracted to context variable
+- ✅ **Consistent template slots** - View template variables match context keys
+- ✅ **Strict syntax** - `$$` prefix ensures consistency with MaiaScript expressions
+
+**Common Patterns:**
+
+**1. Flattening nested structures:**
+```json
+{
+  "list": {
+    "schema": "@schema/todos",
+    "options": {
+      "map": {
+        "authorName": "$$author.name",
+        "authorEmail": "$$author.email"
+      }
+    }
+  }
+}
+```
+
+**2. Renaming for generic template slots:**
+```json
+{
+  "list": {
+    "schema": "@schema/todos",
+    "options": {
+      "map": {
+        "itemText": "$$text",
+        "itemId": "$$id",
+        "isComplete": "$$done"
+      }
+    }
+  }
+}
+```
+
+**3. Combining with filters:**
+```json
+{
+  "messages": {
+    "schema": "@schema/message",
+    "options": {
+      "filter": { "type": "notification" },
+      "map": {
+        "fromRole": "$$source.role",
+        "toRole": "$$target.role"
+      }
+    }
+  }
+}
+```
+
+**Best Practices:**
+- ✅ Use generic placeholder names (`fromRole`, `toRole`, `list`, `messages`) that fit your view template slots
+- ✅ Extract hardcoded strings to context variables (`payloadLabel`, `toggleButtonText`, etc.)
+- ✅ Always use strict `$$` syntax in map expressions
+- ✅ Keep mapped property names consistent across your app
+- ✅ Use descriptive names that indicate the perspective (e.g., `fromRole`/`toRole` for log entries)
 
 ### 2. Collections (Arrays)
 Static array data (not reactive):
@@ -545,6 +682,9 @@ Generic context field update (infrastructure, not a tool):
 - **Use item lookup objects** - For item-specific conditional styling (e.g., `draggedItemIds`)
 - **Always go through CoValue persistence** - Everything must be persisted, no in-memory hacks
 - **Access via ReactiveStore** - Use universal `read()` API pattern
+- **Use generic reusable context keys** - Names like `list`, `messages` that fit view template slots
+- **Extract hardcoded strings** - Put all UI text in context variables (e.g., `toggleButtonText`, `payloadLabel`)
+- **Use strict `$$` syntax** - All map expressions must use `$$` prefix for item properties
 
 ### ❌ DON'T:
 
@@ -557,6 +697,97 @@ Generic context field update (infrastructure, not a tool):
 - **Don't mix concerns** - Separate data from UI state
 - **Don't use reserved keys** - Avoid `$schema`, `$id`, `@actors`, `inbox`, etc.
 - **Don't compute in views** - All computation happens in state machine
+- **Don't hardcode strings in views** - Extract all UI text to context variables
+- **Don't use specific names** - Avoid `todos`, `allMessages` - use generic `list`, `messages` instead
+- **Don't skip `$$` prefix** - Map expressions must use strict `$$` syntax (e.g., `$$source.role`, not `source.role`)
+
+## Extracting Hardcoded Strings to Context Variables
+
+**CRITICAL:** Never hardcode strings in views. Always extract them to context variables!
+
+**Why?**
+- ✅ **Reusable** - Same view can work with different text
+- ✅ **Maintainable** - Change text in one place (context)
+- ✅ **Consistent** - Same variable names across your app
+- ✅ **AI-friendly** - LLMs can understand and generate correct patterns
+
+**Example: List View**
+
+**Context:**
+```json
+{
+  "list": {
+    "schema": "@schema/todos"
+  },
+  "toggleButtonText": "✓",
+  "deleteButtonText": "✕"
+}
+```
+
+**View:**
+```json
+{
+  "$each": {
+    "items": "$list",
+    "template": {
+      "children": [
+        {
+          "tag": "button",
+          "text": "$toggleButtonText"
+        },
+        {
+          "tag": "button",
+          "text": "$deleteButtonText"
+        }
+      ]
+    }
+  }
+}
+```
+
+**Example: Agent View with Labels**
+
+**Context:**
+```json
+{
+  "listViewLabel": "List",
+  "logsViewLabel": "Logs",
+  "inputPlaceholder": "Add a new todo...",
+  "addButtonText": "Add"
+}
+```
+
+**View:**
+```json
+{
+  "children": [
+    {
+      "tag": "button",
+      "text": "$listViewLabel"
+    },
+    {
+      "tag": "button",
+      "text": "$logsViewLabel"
+    },
+    {
+      "tag": "input",
+      "attrs": {
+        "placeholder": "$inputPlaceholder"
+      }
+    },
+    {
+      "tag": "button",
+      "text": "$addButtonText"
+    }
+  ]
+}
+```
+
+**Pattern:**
+- ✅ Extract all UI text to context variables
+- ✅ Use descriptive names (`toggleButtonText`, not `btn1`)
+- ✅ Keep variable names consistent across views
+- ✅ Use generic names that can be reused (`listViewLabel`, not `todoListViewLabel`)
 
 ## Context Schema Design
 
@@ -565,21 +796,27 @@ Generic context field update (infrastructure, not a tool):
 ```json
 {
   "context": {
-    // Reactive data (query objects)
-    "todos": {
+    // Reactive data (query objects) - use generic names
+    "list": {
       "schema": "@schema/todos",
       "filter": null
     },
     
     // Derived/filtered reactive data
-    "todosTodo": {
+    "listTodo": {
       "schema": "@schema/todos",
       "filter": { "done": false }
     },
-    "todosDone": {
+    "listDone": {
       "schema": "@schema/todos",
       "filter": { "done": true }
     },
+    
+    // UI text (extracted from views)
+    "toggleButtonText": "✓",
+    "deleteButtonText": "✕",
+    "addButtonText": "Add",
+    "inputPlaceholder": "Add a new todo...",
     
     // UI state
     "viewMode": "list",             // "list" | "kanban"

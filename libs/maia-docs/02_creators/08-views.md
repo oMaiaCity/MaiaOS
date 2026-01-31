@@ -324,8 +324,14 @@ Data-attributes are the primary mechanism for conditional styling. The state mac
 ```
 
 **Note:** Inside `$each` templates:
-- `$$fieldName` accesses item properties (e.g., `$$id`, `$$text`)
-- `$fieldName` accesses actor context (e.g., `$viewMode`, `$draggedItemId`)
+- `$$fieldName` accesses item properties (e.g., `$$id`, `$$text`, `$$fromRole`, `$$toRole`)
+- `$fieldName` accesses actor context (e.g., `$viewMode`, `$draggedItemId`, `$toggleButtonText`)
+
+**Generic Template Variables:**
+When using map transformations in query objects, use generic placeholder names that fit your view template slots:
+- `$$fromRole`, `$$toRole` - For log entries (generic "from/to" perspective)
+- `$$fromId`, `$$toId` - For log entry IDs
+- `$$itemText`, `$$itemId` - For list items (generic item properties)
 
 ### List with Events
 ```json
@@ -626,6 +632,8 @@ The wrapper element (with tag, class, attrs) wraps the child actor, allowing you
 - **Use `$on` for events** - Consistent with other DSL operations
 - **Use `$slot` for composition** - Consistent with other DSL operations
 - **Reference context values directly** - `"data": "$listButtonActive"`
+- **Extract hardcoded strings** - Use context variables for all UI text (e.g., `"text": "$toggleButtonText"`)
+- **Use generic template variables** - Match context key names (e.g., `$$fromRole`, `$$toRole` for log entries)
 
 ### ❌ DON'T:
 
@@ -637,6 +645,8 @@ The wrapper element (with tag, class, attrs) wraps the child actor, allowing you
 - **Don't use `slot` (use `$slot`)** - Maintain DSL consistency
 - **Don't create deep nesting** - Extract to sub-views (future feature)
 - **Don't mix concerns** - Separate layout from data
+- **Don't hardcode strings** - Extract all UI text to context variables (e.g., don't use `"text": "✓"`, use `"text": "$toggleButtonText"`)
+- **Don't use specific names** - Use generic template variable names that match context keys
 
 ## Shadow DOM Isolation
 
