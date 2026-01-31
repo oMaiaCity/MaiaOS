@@ -1,0 +1,120 @@
+{
+  "$schema": "@schema/view",
+  "$id": "@maia/view/agent",
+  "content": {
+    "tag": "div",
+    "class": "chat-container",
+    "children": [
+      {
+        "tag": "div",
+        "class": "messages-container",
+        "children": [
+          {
+            "tag": "div",
+            "class": "message message-assistant welcome-message",
+            "attrs": {
+              "data": {
+                "hasConversations": "$hasConversations"
+              }
+            },
+            "text": "Hello! I'm Maia, your CTO-level AI assistant. I understand the MaiaOS codebase and learn alongside your coding sessions. How can I help you today?"
+          },
+          {
+            "$each": {
+              "items": "$conversations",
+              "template": {
+                "tag": "div",
+                "class": "message",
+                "attrs": {
+                  "data": {
+                    "role": "$$role"
+                  }
+                },
+                "text": "$$content"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "class": "loading",
+        "attrs": {
+          "data": {
+            "isLoading": "$isLoading"
+          }
+        },
+        "text": "Maia is thinking..."
+      },
+      {
+        "tag": "div",
+        "class": "error",
+        "attrs": {
+          "data": {
+            "hasError": "$hasError"
+          }
+        },
+        "children": [
+          {
+            "tag": "strong",
+            "text": "Error: "
+          },
+          {
+            "text": "$error"
+          },
+          {
+            "tag": "button",
+            "class": "button",
+            "text": "Dismiss",
+            "$on": {
+              "click": {
+                "send": "DISMISS"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "class": "input-container",
+        "children": [
+          {
+            "tag": "input",
+            "class": "input",
+            "attrs": {
+              "type": "text",
+              "placeholder": "Type your message...",
+              "disabled": "$isLoading"
+            },
+            "value": "$inputText",
+            "$on": {
+              "input": {
+                "send": "UPDATE_INPUT",
+                "payload": { "inputText": "@inputValue" }
+              },
+              "keydown": {
+                "send": "SEND_MESSAGE",
+                "payload": { "inputText": "@inputValue" },
+                "key": "Enter"
+              }
+            }
+          },
+          {
+            "tag": "button",
+            "class": "button",
+            "attrs": {
+              "disabled": "$isLoading"
+            },
+            "text": "Send",
+            "$on": {
+              "click": {
+                "send": "SEND_MESSAGE",
+                "payload": { "inputText": "$inputText" }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

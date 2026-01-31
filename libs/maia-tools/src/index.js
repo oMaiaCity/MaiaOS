@@ -8,17 +8,23 @@
 // Import tool definitions directly as JSON
 import noopDef from './core/noop.tool.maia';
 import publishMessageDef from './core/publishMessage.tool.maia';
+import memoryDef from './memory/memory.tool.maia';
+import llmDef from './llm/llm.tool.maia';
 
 // Import tool functions
 import noopFn from './core/noop.tool.js';
 import publishMessageFn from './core/publishMessage.tool.js';
+import memoryFn from './memory/memory.tool.js';
+import llmFn from './llm/llm.tool.js';
 
 /**
  * Tool registry organized by namespace
  */
 export const TOOLS = {
   'core/noop': { definition: noopDef, function: noopFn },
-  'core/publishMessage': { definition: publishMessageDef, function: publishMessageFn }
+  'core/publishMessage': { definition: publishMessageDef, function: publishMessageFn },
+  'memory/memory': { definition: memoryDef, function: memoryFn },
+  'llm/llm': { definition: llmDef, function: llmFn }
 };
 
 /**

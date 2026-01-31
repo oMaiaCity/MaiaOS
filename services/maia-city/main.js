@@ -419,14 +419,45 @@ async function handleSeed() {
 		// Get node and account from maia
 		const { node, maiaId: account } = maia.id;
 		
-		// Import TodosVibeRegistry to seed vibes
-		const { TodosVibeRegistry } = await import('@MaiaOS/vibes/todos/registry.js');
+		// Automatically discover and import all vibe registries
+		const { getAllVibeRegistries } = await import('@MaiaOS/vibes/index.js');
+		const vibeRegistries = await getAllVibeRegistries();
 		
-		// Boot with registry to trigger seeding (includes vibe)
+		console.log(`[Seed] Found ${vibeRegistries.length} vibe registries:`, vibeRegistries.map(r => r.vibe?.$id || r.vibe?.name || 'unknown'));
+		
+		if (vibeRegistries.length === 0) {
+			showToast("No vibe registries found to seed", 'warning', 3000);
+			return;
+		}
+		
+		// Merge all configs from all vibes
+		const mergedConfigs = {
+			styles: {},
+			actors: {},
+			views: {},
+			contexts: {},
+			states: {},
+			inboxes: {},
+			vibes: vibeRegistries.map(r => r.vibe), // Pass vibes as array
+			data: {}
+		};
+		
+		// Merge configs from all vibe registries
+		for (const registry of vibeRegistries) {
+			Object.assign(mergedConfigs.styles, registry.styles || {});
+			Object.assign(mergedConfigs.actors, registry.actors || {});
+			Object.assign(mergedConfigs.views, registry.views || {});
+			Object.assign(mergedConfigs.contexts, registry.contexts || {});
+			Object.assign(mergedConfigs.states, registry.states || {});
+			Object.assign(mergedConfigs.inboxes, registry.inboxes || {});
+			Object.assign(mergedConfigs.data, registry.data || {});
+		}
+		
+		// Single seed call - seed function handles everything
 		maia = await MaiaOS.boot({ 
 			node, 
 			account,
-			registry: TodosVibeRegistry // Include vibe registry for seeding
+			registry: mergedConfigs
 		});
 		
 		// Re-create CoJSON API instance
@@ -571,6 +602,12 @@ async function loadVibe(vibeKey) {
 			// Navigate back to dashboard when exiting vibe
 			navigateToScreen('dashboard');
 		} else {
+			// Detach actors from previous vibe BEFORE switching (if switching vibes)
+			if (currentVibe && currentVibe !== vibeKey && maia && maia.actorEngine) {
+				console.log(`[MaiaCity] Detaching actors from previous vibe: ${currentVibe}`);
+				maia.actorEngine.detachActorsForVibe(currentVibe);
+			}
+			
 			// Save current context to history before entering vibe mode
 			if (currentContextCoValueId !== null) {
 				navigationHistory.push(currentContextCoValueId);

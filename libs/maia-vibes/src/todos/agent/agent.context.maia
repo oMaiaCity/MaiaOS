@@ -1,6 +1,6 @@
 {
   "$schema": "@schema/context",
-  "$id": "@context/agent",
+  "$id": "@todos/context/agent",
   "currentView": "@list",
   "viewMode": "list",
   "listButtonActive": true,
@@ -12,7 +12,7 @@
   "newTodoText": "",
   "error": null,
   "@actors": {
-    "list": "@actor/list",
-    "logs": "@actor/logs"
+    "list": "@todos/actor/list",
+    "logs": "@todos/actor/logs"
   }
 }

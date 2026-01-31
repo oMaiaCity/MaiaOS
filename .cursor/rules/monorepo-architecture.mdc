@@ -181,13 +181,13 @@ import { apiClient } from "app"; // If app depends on another service
 **From root (recommended - single command for everything):**
 ```bash
 bun install                    # Install dependencies for all workspaces
-bun dev                        # Run both website (4200) and app (4202) dev servers in parallel
-bun dev:website                # Run only website service dev server (port 4200)
-bun dev:wallet                 # Run only wallet service dev server (port 4201)
+bun dev                        # Run both maia-city (4200) and api (4201) dev servers in parallel
+bun dev:city                   # Run only maia-city service dev server (port 4200)
+bun dev:api                    # Run only API service dev server (port 4201)
 bun dev:app                    # Run only app dev server (port 4202)
 bun build                      # Build app (delegates to services/app)
-bun build:website              # Build website service (delegates to services/website)
-bun build:wallet               # Build wallet service (delegates to services/wallet)
+bun build:city                 # Build maia-city service (delegates to services/maia-city)
+bun build:api                  # Build API service (delegates to services/api)
 bun release                    # Run semantic-release (delegates to services/app)
 bun tauri:dev                  # Run Tauri dev (delegates to services/app)
 ```
@@ -205,9 +205,9 @@ cd services/website
 bun run dev                    # Run website service dev server
 bun run build                  # Build website service
 
-cd services/wallet
-bun run dev                    # Run wallet service dev server
-bun run build                  # Build wallet service
+cd services/api
+bun run dev                    # Run API service dev server
+bun run build                  # Build API service
 ```
 
 ### Building
@@ -278,8 +278,8 @@ Each service in the monorepo has a **hardcoded development port** to avoid confl
 **Current Port Assignments:**
 | Service | Port | Notes |
 |---------|------|-------|
-| `services/website` | `4200` | Landing page (default `bun dev`) |
-| `services/wallet` | `4201` | Auth service (BetterAuth API) |
+| `services/maia-city` | `4200` | Landing page (default `bun dev`) |
+| `services/api` | `4201` | API proxy service (Honcho, RedPill, Voice) |
 | `services/app` | `4202` | Main application (Tauri-compatible) |
 | `services/[next-service]` | `4203` | Next service port (e.g., sync) |
 | `services/[service-4]` | `4204` | Reserved |
@@ -335,8 +335,8 @@ hominio/
 NODE_ENV=development
 
 # Service-specific ports (hardcoded in config, documented here)
-# PUBLIC_DOMAIN_ROOT=localhost:4200 (website service)
-# PUBLIC_DOMAIN_WALLET=localhost:4201 (wallet service)
+# PUBLIC_DOMAIN_ME=localhost:4200 (maia-city service)
+# PUBLIC_DOMAIN_API=localhost:4201 (api service - Honcho, RedPill, Voice)
 # PUBLIC_DOMAIN_APP=localhost:4202 (app service)
 # PUBLIC_DOMAIN_SYNC=localhost:4203 (sync service, future)
 

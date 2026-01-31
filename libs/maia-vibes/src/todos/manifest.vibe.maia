@@ -3,5 +3,5 @@
   "$id": "@vibe/todos",
   "name": "Todo List",
   "description": "A complete todo list application with state machines and AI-compatible tools. Showcases MaiaOS actor system, message passing, and declarative UI.",
-  "actor": "@actor/agent"
+  "actor": "@todos/actor/agent"
 }

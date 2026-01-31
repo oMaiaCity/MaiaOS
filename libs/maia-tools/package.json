@@ -7,7 +7,9 @@
     ".": "./src/index.js",
     "./db/*": "./src/db/*",
     "./core/*": "./src/core/*",
-    "./context/*": "./src/context/*"
+    "./context/*": "./src/context/*",
+    "./memory/*": "./src/memory/*",
+    "./llm/*": "./src/llm/*"
   },
   "dependencies": {
     "@MaiaOS/schemata": "workspace:*"

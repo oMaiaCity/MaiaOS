@@ -1,6 +1,6 @@
 {
   "$schema": "@schema/view",
-  "$id": "@view/agent",
+  "$id": "@todos/view/agent",
   "content": {
     "tag": "div",
     "class": "stack",

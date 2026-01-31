@@ -1,6 +1,7 @@
 /* Maia DB Dashboard Styles */
 .db-container {
   min-height: 100vh;
+  height: 100vh; /* Explicit height for proper child height propagation */
   display: flex;
   flex-direction: column;
   background-image: url('/brand/images/maia-db.png');
@@ -10,6 +11,7 @@
   padding: 1rem;
   gap: 0.75rem;
   font-family: 'Inter', system-ui, -apple-system, sans-serif; /* Cleaner font preference */
+  overflow: hidden; /* Prevent scrolling on container level */
 }
 
 .db-container::before {
@@ -1731,14 +1733,14 @@ pre {
 /* Vibe Card - Container for vibe with card styling (rounded corners and border enforced here) */
 .vibe-card {
 	flex: 1;
+	height: 100%;
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
-	min-height: 400px;
+	min-height: 0; /* Allow flex item to shrink below content size */
 	background: transparent !important;
 	border-radius: var(--radius);
 	border: 1px solid var(--slate-200);
-	overflow: hidden;
 }
 
 /* Vibe Container - Full width/height for inline vibe rendering */
@@ -1746,9 +1748,11 @@ pre {
 	width: 100%;
 	height: 100%;
 	flex: 1;
-	overflow: auto;
-	min-height: 400px;
+	overflow: hidden; /* Changed from auto to hidden - let inner content handle scrolling */
+	min-height: 0; /* Allow flex item to shrink below content size */
 	background: transparent;
+	display: flex;
+	flex-direction: column;
 }
 
 /* Dashboard Styles */
@@ -1815,9 +1819,12 @@ pre {
 /* Vibe Viewer Main */
 .vibe-viewer-main {
 	flex: 1;
+	height: 100%;
 	overflow: hidden;
 	z-index: 10;
 	padding: 1rem;
 	display: flex;
 	flex-direction: column;
+	min-height: 0; /* Allow flex item to shrink below content size */
+	/* Removed max-height to allow proper height propagation */
 }

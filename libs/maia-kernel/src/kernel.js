@@ -512,11 +512,15 @@ export class MaiaOS {
     
     // Operations API returns flat objects: {id: '...', todos: 'co_...', ...}
     // Extract vibe co-id directly from flat object
+    console.log(`[Kernel] Looking up vibe key '${vibeKey}' in account.vibes:`, vibesData);
     const vibeCoId = vibesData[vibeKey];
     if (!vibeCoId || typeof vibeCoId !== 'string' || !vibeCoId.startsWith('co_')) {
-      const availableVibes = Object.keys(vibesData).filter(k => k !== 'id' && typeof vibesData[k] === 'string' && vibesData[k].startsWith('co_'));
+      const availableVibes = Object.keys(vibesData).filter(k => k !== 'id' && k !== '$schema' && k !== 'type' && typeof vibesData[k] === 'string' && vibesData[k].startsWith('co_'));
+      console.error(`[Kernel] Vibe '${vibeKey}' not found in account.vibes. Available vibes:`, availableVibes);
       throw new Error(`[Kernel] Vibe '${vibeKey}' not found in account.vibes. Available vibes: ${availableVibes.join(', ')}`);
     }
+    
+    console.log(`[Kernel] ✅ Found vibe co-id for '${vibeKey}': ${vibeCoId}`);
     
     // Step 5: Load vibe using co-id (reuse existing loadVibeFromDatabase logic)
     return await this.loadVibeFromDatabase(vibeCoId, container, vibeKey);
@@ -614,6 +618,13 @@ export class MaiaOS {
     // If not co-id, it's a seeding error - fail fast
     let actorCoId = vibe.actor; // Should be "co_z..." (already transformed)
     
+    console.log(`[Kernel] Loading vibe '${vibeKey || vibeCoId}':`, {
+      vibeCoId,
+      vibeName: vibe.name || vibe.$id,
+      actorCoId,
+      vibeKeys: Object.keys(vibe)
+    });
+    
     if (!actorCoId) {
       throw new Error(`[MaiaOS] Vibe ${vibeId} (${vibeCoId}) does not have an 'actor' property. Vibe structure: ${JSON.stringify(Object.keys(vibe))}`);
     }
@@ -621,6 +632,8 @@ export class MaiaOS {
     if (!actorCoId.startsWith('co_z')) {
       throw new Error(`[Kernel] Actor ID must be co-id at runtime: ${actorCoId}. This should have been resolved during seeding.`);
     }
+    
+    console.log(`[Kernel] ✅ Extracted actor co-id from vibe: ${actorCoId}`);
     
     // Extract actor schema co-id from actor's headerMeta.$schema using fromCoValue pattern
     const actorSchemaStore = await this.dbEngine.execute({
@@ -645,16 +658,32 @@ export class MaiaOS {
     }
     
     // Check if actors already exist for this vibe (reuse-based lifecycle)
+    // IMPORTANT: Only reuse if the actors are actually for THIS vibe's actor co-id
+    // This prevents reusing wrong actors when switching between vibes
     if (vibeKey) {
-      const existingActors = this.actorEngine.getActorsForVibe(vibeKey);
-      if (existingActors && existingActors.size > 0) {
-        // Reuse existing actors - reattach to new container
-        console.log(`[Kernel] Reusing existing actors for vibe: ${vibeKey}`);
-        const rootActor = await this.actorEngine.reattachActorsForVibe(vibeKey, container);
-        if (rootActor) {
-          console.log(`✅ Vibe reattached: ${vibe.name}`);
-          return { vibe, actor: rootActor };
+      const existingActorIds = this.actorEngine.getActorsForVibe(vibeKey);
+      console.log(`[Kernel] Checking for existing actors for vibe '${vibeKey}':`, existingActorIds ? `${existingActorIds.size} found` : 'none');
+      if (existingActorIds && existingActorIds.size > 0) {
+        // Get the first actor ID and verify it matches this vibe's actor co-id
+        const firstActorId = Array.from(existingActorIds)[0];
+        const firstActor = this.actorEngine.actors.get(firstActorId);
+        const existingActorCoId = firstActor?.config?.id || 'unknown';
+        console.log(`[Kernel] Existing actor co-id: ${existingActorCoId}, Expected: ${actorCoId}`);
+        if (firstActor && firstActor.config && firstActor.config.id === actorCoId) {
+          // Actors match - reuse existing actors - reattach to new container
+          console.log(`[Kernel] ✅ Reusing existing actors for vibe: ${vibeKey} (actor: ${actorCoId})`);
+          const rootActor = await this.actorEngine.reattachActorsForVibe(vibeKey, container);
+          if (rootActor) {
+            console.log(`✅ Vibe reattached: ${vibe.name}`);
+            return { vibe, actor: rootActor };
+          }
+        } else {
+          // Actors don't match - detach old ones and create new
+          console.log(`[Kernel] ❌ Existing actors for vibe '${vibeKey}' don't match actor ${actorCoId} (existing: ${existingActorCoId}), detaching and recreating`);
+          this.actorEngine.detachActorsForVibe(vibeKey);
         }
+      } else {
+        console.log(`[Kernel] No existing actors for vibe '${vibeKey}', creating new actors`);
       }
     }
     

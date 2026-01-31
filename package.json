@@ -9,7 +9,7 @@
 	"scripts": {
 		"dev": "bun scripts/dev.js",
 		"dev:city": "bun --filter maia-city dev",
-		"dev:voice-call": "bun --env-file=.env --filter voice-call dev",
+		"dev:api": "bun --env-file=.env --filter api dev",
 		"docs:generate": "bun scripts/generate-llm-docs.js",
 		"docs:watch": "bun scripts/generate-llm-docs.js --watch",
 		"version:sync": "node scripts/sync-version.js",

@@ -1,10 +1,10 @@
 {
   "$schema": "@schema/actor",
-  "$id": "@actor/list",
+  "$id": "@todos/actor/list",
   "role": "todo-list",
-  "context": "@context/list",
-  "view": "@view/list",
-  "state": "@state/list",
-  "brand": "@style/brand",
-  "inbox": "@inbox/list"
+  "context": "@todos/context/list",
+  "view": "@todos/view/list",
+  "state": "@todos/state/list",
+  "brand": "@todos/style/brand",
+  "inbox": "@todos/inbox/list"
 }

@@ -143,12 +143,27 @@ export class ViewEngine {
         } else {
           const resolvedValue = await this.evaluator.evaluate(attrValue, data);
           if (resolvedValue !== undefined && resolvedValue !== null) {
-            let stringValue = typeof resolvedValue === 'boolean' ? String(resolvedValue) : String(resolvedValue);
-            if (containsDangerousHTML(stringValue)) {
-              console.warn(`[ViewEngine] Potentially dangerous HTML detected in attribute ${attrName}, sanitizing`);
-              stringValue = sanitizeAttribute(stringValue);
+            // CRITICAL: Handle boolean attributes (disabled, readonly, checked, etc.) as properties, not attributes
+            // setAttribute('disabled', 'false') still sets the attribute (makes it disabled)
+            // We need to use the property instead: element.disabled = false
+            const booleanAttributes = ['disabled', 'readonly', 'checked', 'selected', 'autofocus', 'required', 'multiple'];
+            if (booleanAttributes.includes(attrName.toLowerCase())) {
+              const boolValue = Boolean(resolvedValue);
+              element[attrName] = boolValue;
+              // Also set/remove attribute for proper HTML representation
+              if (boolValue) {
+                element.setAttribute(attrName, '');
+              } else {
+                element.removeAttribute(attrName);
+              }
+            } else {
+              let stringValue = typeof resolvedValue === 'boolean' ? String(resolvedValue) : String(resolvedValue);
+              if (containsDangerousHTML(stringValue)) {
+                console.warn(`[ViewEngine] Potentially dangerous HTML detected in attribute ${attrName}, sanitizing`);
+                stringValue = sanitizeAttribute(stringValue);
+              }
+              element.setAttribute(attrName, stringValue);
             }
-            element.setAttribute(attrName, stringValue);
           }
         }
       }
@@ -158,8 +173,13 @@ export class ViewEngine {
       const resolvedValue = await this.evaluator.evaluate(node.value, data);
       if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
         const newValue = resolvedValue || '';
-        if (element.tagName === 'INPUT') element.value = newValue;
-        else element.textContent = newValue;
+        // CRITICAL: Don't overwrite input value if user is currently typing (element has focus)
+        // This prevents race conditions where rerenders reset user input mid-typing
+        const isFocused = document.activeElement === element;
+        if (!isFocused) {
+          if (element.tagName === 'INPUT') element.value = newValue;
+          else element.textContent = newValue;
+        }
         if (!this.actorInputCounters.has(actorId)) this.actorInputCounters.set(actorId, 0);
         const inputIndex = this.actorInputCounters.get(actorId);
         this.actorInputCounters.set(actorId, inputIndex + 1);

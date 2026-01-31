@@ -2,7 +2,7 @@
 
 /**
  * Development script for MaiaOS
- * Runs maia-city (4200) and voice-call services
+ * Runs maia-city (4200) and api services
  */
 
 import { spawn } from 'node:child_process'
@@ -13,7 +13,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')
 
 let maiaCityProcess = null
-let voiceCallProcess = null
+let apiProcess = null
 let docsWatcherProcess = null
 let assetSyncProcess = null
 let faviconProcess = null
@@ -39,21 +39,21 @@ function startMaiaCity() {
 	})
 }
 
-function startVoiceCall() {
-	console.log('[voice-call] Starting voice call service...\n')
+function startApi() {
+	console.log('[api] Starting API service...\n')
 
-	voiceCallProcess = spawn('bun', ['--env-file=.env', '--filter', 'voice-call', 'dev'], {
+	apiProcess = spawn('bun', ['--env-file=.env', '--filter', 'api', 'dev'], {
 		cwd: rootDir,
 		stdio: 'inherit',
 		shell: false,
 		env: { ...process.env },
 	})
 
-	voiceCallProcess.on('error', (_error) => {
-		// Non-fatal - voice-call is optional
+	apiProcess.on('error', (_error) => {
+		// Non-fatal - api service is optional
 	})
 
-	voiceCallProcess.on('exit', (code) => {
+	apiProcess.on('exit', (code) => {
 		if (code !== 0 && code !== null) {
 			// Non-fatal
 		}
@@ -141,8 +141,8 @@ function setupSignalHandlers() {
 		if (docsWatcherProcess && !docsWatcherProcess.killed) {
 			docsWatcherProcess.kill('SIGTERM')
 		}
-		if (voiceCallProcess && !voiceCallProcess.killed) {
-			voiceCallProcess.kill('SIGTERM')
+		if (apiProcess && !apiProcess.killed) {
+			apiProcess.kill('SIGTERM')
 		}
 		if (maiaCityProcess && !maiaCityProcess.killed) {
 			maiaCityProcess.kill('SIGTERM')
@@ -161,8 +161,8 @@ function setupSignalHandlers() {
 		if (docsWatcherProcess && !docsWatcherProcess.killed) {
 			docsWatcherProcess.kill('SIGTERM')
 		}
-		if (voiceCallProcess && !voiceCallProcess.killed) {
-			voiceCallProcess.kill('SIGTERM')
+		if (apiProcess && !apiProcess.killed) {
+			apiProcess.kill('SIGTERM')
 		}
 		if (maiaCityProcess && !maiaCityProcess.killed) {
 			maiaCityProcess.kill('SIGTERM')
@@ -184,7 +184,7 @@ function main() {
 	setTimeout(() => {
 		startAssetSync()
 		startDocsWatcher()
-		startVoiceCall()
+		startApi()
 		startMaiaCity()
 	}, 1000)
 

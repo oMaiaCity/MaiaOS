@@ -1,6 +1,6 @@
 {
   "$schema": "@schema/state",
-  "$id": "@state/list",
+  "$id": "@todos/state/list",
   "initial": "idle",
   "states": {
     "idle": {
@@ -13,7 +13,7 @@
               "payload": {
                 "type": "TOGGLE_BUTTON",
                 "payload": { "id": "$$id", "done": "$$done" },
-                "target": "@actor/agent"
+                "target": "@todos/actor/agent"
               }
             }
           ]
@@ -26,7 +26,7 @@
               "payload": {
                 "type": "DELETE_BUTTON",
                 "payload": { "id": "$$id" },
-                "target": "@actor/agent"
+                "target": "@todos/actor/agent"
               }
             }
           ]

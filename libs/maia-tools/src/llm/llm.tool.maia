@@ -1,0 +1,41 @@
+{
+  "$schema": "@schema/tool",
+  "$id": "tool_llm_001",
+  "name": "@llm/chat",
+  "description": "LLM chat tool using RedPill API (OpenAI-compatible)",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "messages": {
+        "type": "array",
+        "description": "Array of messages with role and content",
+        "items": {
+          "type": "object",
+          "properties": {
+            "role": {
+              "type": "string",
+              "enum": ["system", "user", "assistant"],
+              "description": "Message role"
+            },
+            "content": {
+              "type": "string",
+              "description": "Message content"
+            }
+          },
+          "required": ["role", "content"]
+        }
+      },
+      "model": {
+        "type": "string",
+        "description": "Model to use (default: moonshotai/kimi-k2.5)",
+        "default": "moonshotai/kimi-k2.5"
+      },
+      "temperature": {
+        "type": "number",
+        "description": "Temperature for response (0-2, default: 1)",
+        "default": 1
+      }
+    },
+    "required": ["messages"]
+  }
+}

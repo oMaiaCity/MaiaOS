@@ -1,6 +1,6 @@
 {
   "$schema": "@schema/view",
-  "$id": "@view/list",
+  "$id": "@todos/view/list",
   "content": {
     "class": "list",
     "$each": {

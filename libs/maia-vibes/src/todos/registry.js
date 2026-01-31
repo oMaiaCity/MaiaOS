@@ -47,38 +47,38 @@ export const TodosVibeRegistry = {
   vibe: todosVibe,
   
   styles: {
-    '@style/brand': brandStyle,
-    '@style/logs': logsStyle,
+    '@todos/style/brand': brandStyle,
+    '@todos/style/logs': logsStyle,
   },
   
   actors: {
-    '@actor/agent': agentActor,
-    '@actor/list': listActor,
-    '@actor/logs': logsActor,
+    '@todos/actor/agent': agentActor,
+    '@todos/actor/list': listActor,
+    '@todos/actor/logs': logsActor,
   },
   
   views: {
-    '@view/agent': agentView,
-    '@view/list': listView,
-    '@view/logs': logsView,
+    '@todos/view/agent': agentView,
+    '@todos/view/list': listView,
+    '@todos/view/logs': logsView,
   },
   
   contexts: {
-    '@context/agent': agentContext,
-    '@context/list': listContext,
-    '@context/logs': logsContext,
+    '@todos/context/agent': agentContext,
+    '@todos/context/list': listContext,
+    '@todos/context/logs': logsContext,
   },
   
   states: {
-    '@state/agent': agentState,
-    '@state/list': listState,
-    '@state/logs': logsState,
+    '@todos/state/agent': agentState,
+    '@todos/state/list': listState,
+    '@todos/state/logs': logsState,
   },
   
   inboxes: {
-    '@inbox/agent': agentInbox,
-    '@inbox/list': listInbox,
-    '@inbox/logs': logsInbox,
+    '@todos/inbox/agent': agentInbox,
+    '@todos/inbox/list': listInbox,
+    '@todos/inbox/logs': logsInbox,
   },
   
   // Note: Children are now stored in context.actors (not separate children CoList files)

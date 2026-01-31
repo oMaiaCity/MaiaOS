@@ -1,0 +1,14 @@
+{
+  "$schema": "@schema/context",
+  "$id": "@maia/context/agent",
+  "honchoSessionId": null,
+  "workspaceId": "maiaos-dev",
+  "conversations": [],
+  "inputText": "",
+  "isLoading": false,
+  "error": null,
+  "context": null,
+  "assistantResponse": null,
+  "hasConversations": false,
+  "hasError": false
+}

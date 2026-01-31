@@ -46,6 +46,7 @@ async function loadVibesFromAccount(maia, cojsonAPI) {
 			
 			// Operations API returns flat objects: {id: '...', todos: 'co_...', ...}
 			if (vibesData && typeof vibesData === 'object' && !Array.isArray(vibesData)) {
+				console.log('[Dashboard] account.vibes data:', vibesData);
 				// Extract vibe keys (exclude metadata keys)
 				const vibeKeys = Object.keys(vibesData).filter(k => 
 					k !== 'id' && 
@@ -54,6 +55,7 @@ async function loadVibesFromAccount(maia, cojsonAPI) {
 					k !== '$schema' && 
 					k !== 'type'
 				);
+				console.log('[Dashboard] Found vibe keys:', vibeKeys);
 				
 				// Add each vibe from account.vibes
 				for (const vibeKey of vibeKeys) {
@@ -66,6 +68,7 @@ async function loadVibesFromAccount(maia, cojsonAPI) {
 						});
 					}
 				}
+				console.log('[Dashboard] Loaded vibes:', vibes.map(v => v.key));
 			}
 		}
 	} catch (error) {
@@ -167,7 +170,18 @@ async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVi
 	const accountId = maia?.id?.maiaId?.id || '';
 	const vibeLabel = currentVibe ? `${currentVibe.charAt(0).toUpperCase() + currentVibe.slice(1)} Vibe` : 'Vibe';
 	
-	document.getElementById("app").innerHTML = `
+	// Clear any existing vibe containers before rendering new one
+	// This ensures we don't have multiple vibe containers stacked
+	const app = document.getElementById("app");
+	if (app) {
+		// Find and remove any existing vibe containers
+		const existingContainers = app.querySelectorAll('.vibe-container');
+		for (const container of existingContainers) {
+			container.remove();
+		}
+	}
+	
+	app.innerHTML = `
 		<div class="db-container">
 			<header class="db-header db-card whitish-card">
 				<div class="header-content">
@@ -220,6 +234,19 @@ async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVi
 		try {
 			await new Promise(resolve => setTimeout(resolve, 10));
 			
+			// Ensure only one vibe container exists (cleanup any duplicates)
+			const allContainers = document.querySelectorAll('.vibe-container');
+			if (allContainers.length > 1) {
+				console.warn(`[Vibe Viewer] Found ${allContainers.length} vibe containers, removing duplicates`);
+				const targetContainer = document.getElementById(`vibe-container-${currentVibe}`);
+				for (const container of allContainers) {
+					if (container !== targetContainer) {
+						console.log(`[Vibe Viewer] Removing duplicate container: ${container.id}`);
+						container.remove();
+					}
+				}
+			}
+			
 			const container = document.getElementById(`vibe-container-${currentVibe}`);
 			if (!container) {
 				console.error(`[Vibe Viewer] Container not found: vibe-container-${currentVibe}`);
@@ -229,9 +256,16 @@ async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVi
 				console.error(`[Vibe Viewer] MaiaOS instance not available`);
 				return;
 			}
+			
+			console.log(`[Vibe Viewer] Loading vibe: ${currentVibe} into container: vibe-container-${currentVibe}`);
+			
+			// Clear container before loading new vibe (remove any existing content)
+			// The kernel will handle actor detachment and reuse logic
+			container.innerHTML = '';
+			
 			// Store container reference for cleanup on unload
 			window.currentVibeContainer = container;
-			// Load vibe directly
+			// Load vibe directly - pass the vibeKey to ensure correct vibe is loaded
 			await maia.loadVibeFromAccount(currentVibe, container);
 		} catch (error) {
 			console.error(`❌ Failed to load vibe ${currentVibe}:`, error);

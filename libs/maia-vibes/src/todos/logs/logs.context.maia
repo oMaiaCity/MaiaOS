@@ -1,6 +1,6 @@
 {
   "$schema": "@schema/context",
-  "$id": "@context/logs",
+  "$id": "@todos/context/logs",
   "messages": {
     "schema": "@schema/message",
     "options": {

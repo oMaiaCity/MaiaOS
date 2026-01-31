@@ -1,6 +1,6 @@
 {
   "$schema": "@schema/style",
-  "$id": "@style/brand",
+  "$id": "@todos/style/brand",
   "tokens": {
     "colors": {
       "primary": "#8fa89b",

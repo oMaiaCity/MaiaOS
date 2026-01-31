@@ -1,6 +1,6 @@
 {
   "$schema": "@schema/view",
-  "$id": "@view/logs",
+  "$id": "@todos/view/logs",
   "content": {
     "class": "logs",
     "attrs": {

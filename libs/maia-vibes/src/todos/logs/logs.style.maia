@@ -1,6 +1,6 @@
 {
   "$schema": "@schema/style",
-  "$id": "@style/logs",
+  "$id": "@todos/style/logs",
   
   "components": {
     "logs": {

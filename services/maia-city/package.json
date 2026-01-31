@@ -11,7 +11,8 @@
   "dependencies": {
     "@MaiaOS/kernel": "workspace:*",
     "@MaiaOS/script": "workspace:*",
-    "@MaiaOS/vibes": "workspace:*"
+    "@MaiaOS/vibes": "workspace:*",
+    "buffer": "^6.0.3"
   },
   "devDependencies": {
     "vite": "^7.2.4"

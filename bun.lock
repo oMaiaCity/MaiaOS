@@ -30,18 +30,11 @@
         "tailwindcss": "^4.0.0",
       },
     },
-    "libs/maia-core": {
-      "name": "@MaiaOS/core",
-      "version": "0.1.23",
-      "dependencies": {
-        "@MaiaOS/db": "workspace:*",
-        "@MaiaOS/ssi": "workspace:*",
-      },
-    },
     "libs/maia-db": {
       "name": "@MaiaOS/db",
       "version": "0.1.23",
       "dependencies": {
+        "@MaiaOS/operations": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
         "cojson": "^0.19.21",
       },
@@ -49,6 +42,27 @@
     "libs/maia-docs": {
       "name": "@MaiaOS/docs",
       "version": "0.1.23",
+    },
+    "libs/maia-kernel": {
+      "name": "@MaiaOS/kernel",
+      "version": "0.1.23",
+      "dependencies": {
+        "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/schemata": "workspace:*",
+        "@MaiaOS/script": "workspace:*",
+        "@MaiaOS/self": "workspace:*",
+      },
+    },
+    "libs/maia-language": {
+      "name": "@maia/language",
+      "version": "0.17.0",
+    },
+    "libs/maia-operations": {
+      "name": "@MaiaOS/operations",
+      "version": "0.17.0",
+      "dependencies": {
+        "@MaiaOS/schemata": "workspace:*",
+      },
     },
     "libs/maia-schemata": {
       "name": "@MaiaOS/schemata",
@@ -62,14 +76,16 @@
       "version": "0.17.0",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/operations": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
+        "@MaiaOS/tools": "workspace:*",
       },
       "devDependencies": {
         "cojson": "^0.19.21",
       },
     },
-    "libs/maia-ssi": {
-      "name": "@MaiaOS/ssi",
+    "libs/maia-self": {
+      "name": "@MaiaOS/self",
       "version": "0.1.23",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
@@ -77,11 +93,18 @@
         "cojson-transport-ws": "0.19.21",
       },
     },
+    "libs/maia-tools": {
+      "name": "@MaiaOS/tools",
+      "version": "0.17.0",
+      "dependencies": {
+        "@MaiaOS/schemata": "workspace:*",
+      },
+    },
     "libs/maia-vibes": {
       "name": "@MaiaOS/vibes",
       "version": "0.17.0",
       "dependencies": {
-        "@MaiaOS/script": "workspace:*",
+        "@MaiaOS/kernel": "workspace:*",
       },
     },
     "libs/maia-voice": {
@@ -94,44 +117,50 @@
         "svelte": "^5.0.0",
       },
     },
-    "services/maia-city": {
-      "name": "maia-city",
-      "version": "0.1.23",
-      "dependencies": {
-        "@MaiaOS/core": "workspace:*",
-        "@MaiaOS/script": "workspace:*",
-        "@MaiaOS/vibes": "workspace:*",
-      },
-      "devDependencies": {
-        "vite": "^7.2.4",
-      },
-    },
-    "services/voice-call": {
-      "name": "voice-call",
+    "services/api": {
+      "name": "api",
       "version": "0.0.0",
       "dependencies": {
         "@MaiaOS/voice": "workspace:*",
+        "@honcho-ai/sdk": "^2.0.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
         "typescript": "^5.9.3",
       },
     },
+    "services/maia-city": {
+      "name": "maia-city",
+      "version": "0.1.23",
+      "dependencies": {
+        "@MaiaOS/kernel": "workspace:*",
+        "@MaiaOS/script": "workspace:*",
+        "@MaiaOS/vibes": "workspace:*",
+        "buffer": "^6.0.3",
+      },
+      "devDependencies": {
+        "vite": "^7.2.4",
+      },
+    },
   },
   "packages": {
     "@MaiaOS/brand": ["@MaiaOS/brand@workspace:libs/maia-brand"],
-
-    "@MaiaOS/core": ["@MaiaOS/core@workspace:libs/maia-core"],
 
     "@MaiaOS/db": ["@MaiaOS/db@workspace:libs/maia-db"],
 
     "@MaiaOS/docs": ["@MaiaOS/docs@workspace:libs/maia-docs"],
 
+    "@MaiaOS/kernel": ["@MaiaOS/kernel@workspace:libs/maia-kernel"],
+
+    "@MaiaOS/operations": ["@MaiaOS/operations@workspace:libs/maia-operations"],
+
     "@MaiaOS/schemata": ["@MaiaOS/schemata@workspace:libs/maia-schemata"],
 
     "@MaiaOS/script": ["@MaiaOS/script@workspace:libs/maia-script"],
 
-    "@MaiaOS/ssi": ["@MaiaOS/ssi@workspace:libs/maia-ssi"],
+    "@MaiaOS/self": ["@MaiaOS/self@workspace:libs/maia-self"],
+
+    "@MaiaOS/tools": ["@MaiaOS/tools@workspace:libs/maia-tools"],
 
     "@MaiaOS/vibes": ["@MaiaOS/vibes@workspace:libs/maia-vibes"],
 
@@ -299,6 +328,8 @@
 
     "@google/genai": ["@google/genai@1.31.0", "", { "dependencies": { "google-auth-library": "^10.3.0", "ws": "^8.18.0" }, "peerDependencies": { "@modelcontextprotocol/sdk": "^1.20.1" }, "optionalPeers": ["@modelcontextprotocol/sdk"] }, "sha512-rK0RKXxNkbK35eDl+G651SxtxwHNEOogjyeZJUJe+Ed4yxu3xy5ufCiU0+QLT7xo4M9Spey8OAYfD8LPRlYBKw=="],
 
+    "@honcho-ai/sdk": ["@honcho-ai/sdk@2.0.0", "", { "dependencies": { "@types/node": "^24.0.1", "zod": "4.0.0" } }, "sha512-9FkdoiNJOI1FlMpzPmgzaUxX1BVSqPaEPbzU+XsojJdkww0MFFtRNgKl7SmWQhxt6SIrZ4LFA83haZQZJsYBww=="],
+
     "@img/colour": ["@img/colour@1.0.0", "", {}, "sha512-A5P/LfWGFSl6nsckYtjw9da+19jB8hkJ6ACTGcDfEJ0aE+l2n2El7dsVM7UVHZQ9s2lmYMWlrS21YLy2IR1LUw=="],
 
     "@img/sharp-darwin-arm64": ["@img/sharp-darwin-arm64@0.34.5", "", { "optionalDependencies": { "@img/sharp-libvips-darwin-arm64": "1.2.4" }, "os": "darwin", "cpu": "arm64" }, "sha512-imtQ3WMJXbMY4fxb/Ndp6HBTNVtWCUI0WdobyheGf5+ad6xX8VIDO8u2xE4qc/fr08CKG/7dDseFtn6M6g/r3w=="],
@@ -380,6 +411,8 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
+
+    "@maia/language": ["@maia/language@workspace:libs/maia-language"],
 
     "@manuscripts/prosemirror-recreate-steps": ["@manuscripts/prosemirror-recreate-steps@0.1.4", "", { "dependencies": { "@types/prosemirror-model": "^1.5.0", "@types/prosemirror-schema-basic": "^1.0.1", "@types/prosemirror-schema-list": "^1.0.1", "@types/prosemirror-state": "^1.2.0", "@types/prosemirror-transform": "^1.1.0", "diff": "^3.5.0", "prosemirror-changeset": "^1.0.5", "prosemirror-example-setup": "^1.0.1", "prosemirror-model": "^1.6.1", "prosemirror-schema-basic": "^1.0.0", "prosemirror-schema-list": "^1.0.1", "prosemirror-state": "^1.2.2", "prosemirror-transform": "^1.1.3", "prosemirror-view": "^1.5.3", "rfc6902": "^3.0.1" } }, "sha512-z3/PGcWB3SbOzhUkiZKAAMeWVz3jR1uacUXuYfJfSE+XgTUCtxB/xnbmx7SpTvtBEtw9EFXomTqjoG6DGlC2nQ=="],
 
@@ -581,7 +614,7 @@
 
     "@types/babel__traverse": ["@types/babel__traverse@7.28.0", "", { "dependencies": { "@babel/types": "^7.28.2" } }, "sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q=="],
 
-    "@types/bun": ["@types/bun@1.3.6", "", { "dependencies": { "bun-types": "1.3.6" } }, "sha512-uWCv6FO/8LcpREhenN1d1b6fcspAB+cefwD7uti8C8VffIv0Um08TKMn98FynpTiU38+y2dUO55T11NgDt8VAA=="],
+    "@types/bun": ["@types/bun@1.3.8", "", { "dependencies": { "bun-types": "1.3.8" } }, "sha512-3LvWJ2q5GerAXYxO2mffLTqOzEu5qnhEAlh48Vnu8WQfnmSwbgagjGZV6BoHKJztENYEDn6QmVd949W4uESRJA=="],
 
     "@types/cookie": ["@types/cookie@0.6.0", "", {}, "sha512-4Kh9a6B2bQciAhf7FSuMRRkUWecJgJu9nPnx3yzpsfXX/c50REIqpHY4C82bXP90qrLtXtkDxTZosYO3UpOwlA=="],
 
@@ -645,6 +678,8 @@
 
     "anymatch": ["anymatch@3.1.3", "", { "dependencies": { "normalize-path": "^3.0.0", "picomatch": "^2.0.4" } }, "sha512-KMReFUr0B4t+D+OBkjR3KYqvocp2XaSzO55UcB6mgQMd3KbcE+mWTyvVV7D/zsdEbNnV6acZUutkiHQXvTr1Rw=="],
 
+    "api": ["api@workspace:services/api"],
+
     "argparse": ["argparse@2.0.1", "", {}, "sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q=="],
 
     "argv-formatter": ["argv-formatter@1.0.0", "", {}, "sha512-F2+Hkm9xFaRg+GkaNnbwXNDV5O6pnCFEmqyhvfC/Ic5LbgOWjJh3L+mN/s91rxVL3znE7DYVpW0GJFT+4YBgWw=="],
@@ -697,11 +732,13 @@
 
     "bser": ["bser@2.1.1", "", { "dependencies": { "node-int64": "^0.4.0" } }, "sha512-gQxTNE/GAfIIrmHLUE3oJyp5FO6HRBfhjnw4/wMmA63ZGDJnWBmgY/lyQBpnDUkGmAhbSe39tx2d/iTOAfglwQ=="],
 
+    "buffer": ["buffer@6.0.3", "", { "dependencies": { "base64-js": "^1.3.1", "ieee754": "^1.2.1" } }, "sha512-FTiCpNxtwiZZHEZbcbTIcZjERVICn9yq/pDFkTl95/AxzD1naBctN7YO68riM/gLSDY7sdrMby8hofADYuuqOA=="],
+
     "buffer-equal-constant-time": ["buffer-equal-constant-time@1.0.1", "", {}, "sha512-zRpUiDwd/xk6ADqPMATG8vc9VPrkck7T07OIx0gnjmJAnHnTVXNQG3vfvWNuiZIkwu9KrKdA1iJKfsfTVxE6NA=="],
 
     "buffer-from": ["buffer-from@1.1.2", "", {}, "sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ=="],
 
-    "bun-types": ["bun-types@1.3.6", "", { "dependencies": { "@types/node": "*" } }, "sha512-OlFwHcnNV99r//9v5IIOgQ9Uk37gZqrNMCcqEaExdkVq3Avwqok1bJFmvGMCkCE0FqzdY8VMOZpfpR3lwI+CsQ=="],
+    "bun-types": ["bun-types@1.3.8", "", { "dependencies": { "@types/node": "*" } }, "sha512-fL99nxdOWvV4LqjmC+8Q9kW3M4QTtTR1eePs94v5ctGqU8OeceWrSUaRw3JYb7tU3FkMIAjkueehrHPPPGKi5Q=="],
 
     "callsites": ["callsites@3.1.0", "", {}, "sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ=="],
 
@@ -978,6 +1015,8 @@
     "https-proxy-agent": ["https-proxy-agent@7.0.6", "", { "dependencies": { "agent-base": "^7.1.2", "debug": "4" } }, "sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw=="],
 
     "human-signals": ["human-signals@8.0.1", "", {}, "sha512-eKCa6bwnJhvxj14kZk5NCPc6Hb6BdsU9DZcOnmQKSnO1VKrfV0zCvtttPZUsBvjmNDn8rpcJfpwSYnHBjc95MQ=="],
+
+    "ieee754": ["ieee754@1.2.1", "", {}, "sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA=="],
 
     "image-size": ["image-size@1.2.1", "", { "dependencies": { "queue": "6.0.2" }, "bin": { "image-size": "bin/image-size.js" } }, "sha512-rH+46sQJ2dlwfjfhCyNx5thzrv+dtmBIhPHk0zgRUukHzZ/kRueTJXoYYsclBaKcSMBWuGbOFXtioLpzTb5euw=="],
 
@@ -1617,8 +1656,6 @@
 
     "vlq": ["vlq@1.0.1", "", {}, "sha512-gQpnTgkubC6hQgdIcRdYGDSDc+SaujOdyesZQMv6JlfQee/9Mp0Qhnys6WxDWvQnL5WZdT7o2Ul187aSt0Rq+w=="],
 
-    "voice-call": ["voice-call@workspace:services/voice-call"],
-
     "w3c-keyname": ["w3c-keyname@2.2.8", "", {}, "sha512-dpojBhNsCNN7T82Tm7k26A6G9ML3NkhDsnw9n/eoxSRlVBB4CEtIQ/KTCLI2Fwf3ataSXRhYFkQi3SlnFwPvPQ=="],
 
     "walker": ["walker@1.0.8", "", { "dependencies": { "makeerror": "1.0.12" } }, "sha512-ts/8E8l5b7kY0vlWLewOkDXMmPdLcVV4GmOQLyxuSswIJsweeFZtAsMF7k1Nszz+TYBQrlYRmzOnr398y1JemQ=="],
@@ -1670,6 +1707,8 @@
     "@babel/helper-compilation-targets/semver": ["semver@6.3.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA=="],
 
     "@better-auth/core/zod": ["zod@4.1.13", "", {}, "sha512-AvvthqfqrAhNH9dnfmrfKzX5upOdjUVJYFqNSlkmGf64gRaTzlPwz99IHYnVs28qYAybvAlBV+H7pn0saFY4Ig=="],
+
+    "@honcho-ai/sdk/zod": ["zod@4.0.0", "", {}, "sha512-9diLdTPc/L7w/5jI4C3gHYNiGHDV9IZYxo1e5LSD8cabi65WVTWWb+g2BGPEpUUCOxR4D+6O5B0AzyMdUAXwrw=="],
 
     "@isaacs/cliui/string-width": ["string-width@5.1.2", "", { "dependencies": { "eastasianwidth": "^0.2.0", "emoji-regex": "^9.2.2", "strip-ansi": "^7.0.1" } }, "sha512-HnLOCR3vjcY8beoNLtcjZ5/nxn2afmME6lhrDrebokqMap+XbeW8n9TXpPDOqdGK5qcI3oT0GKTW6wC7EMiVqA=="],
 

@@ -1,0 +1,10 @@
+{
+  "$schema": "@schema/actor",
+  "$id": "@maia/actor/agent",
+  "role": "agent",
+  "context": "@maia/context/agent",
+  "view": "@maia/view/agent",
+  "state": "@maia/state/agent",
+  "brand": "@maia/style/brand",
+  "inbox": "@maia/inbox/agent"
+}

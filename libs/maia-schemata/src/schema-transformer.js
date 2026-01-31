@@ -330,9 +330,9 @@ function transformInstanceForSeeding(instance, coIdMap, options = {}) {
           continue;
         }
         
-        // Must be @actor/instance format
-        if (!actorRef.startsWith('@actor/')) {
-          throw new Error(`[SchemaTransformer] context.actors[${namekey}] must use @actor/instance format, got: ${actorRef}`);
+        // Must be @namespace/actor/instance format (e.g., @todos/actor/list, @maia/actor/agent)
+        if (!actorRef.match(/^@[^/]+\/actor\//)) {
+          throw new Error(`[SchemaTransformer] context.actors[${namekey}] must use @namespace/actor/instance format, got: ${actorRef}`);
         }
         
         const coId = coIdMap.get(actorRef);
@@ -352,9 +352,9 @@ function transformInstanceForSeeding(instance, coIdMap, options = {}) {
   if (transformed.children && typeof transformed.children === 'object') {
     for (const [key, childRef] of Object.entries(transformed.children)) {
       if (typeof childRef === 'string' && !childRef.startsWith('co_z')) {
-        // Must be new @actor/instance format
-        if (!childRef.startsWith('@')) {
-          throw new Error(`[SchemaTransformer] children[${key}] reference must use @actor/instance format, got: ${childRef}`);
+        // Must be new @namespace/actor/instance format (e.g., @todos/actor/list, @maia/actor/agent)
+        if (!childRef.match(/^@[^/]+\/actor\//)) {
+          throw new Error(`[SchemaTransformer] children[${key}] reference must use @namespace/actor/instance format, got: ${childRef}`);
         }
         
         const coId = coIdMap.get(childRef);
@@ -421,9 +421,9 @@ function transformInstanceForSeeding(instance, coIdMap, options = {}) {
     }
   }
   if (transformed.target && typeof transformed.target === 'string' && !transformed.target.startsWith('co_z')) {
-    // Must be new @actor/instance format
-    if (!transformed.target.startsWith('@')) {
-      throw new Error(`[SchemaTransformer] target reference must use @actor/instance format, got: ${transformed.target}`);
+    // Must be new @namespace/actor/instance format (e.g., @todos/actor/list, @maia/actor/agent)
+    if (!transformed.target.match(/^@[^/]+\/actor\//)) {
+      throw new Error(`[SchemaTransformer] target reference must use @namespace/actor/instance format, got: ${transformed.target}`);
     }
     
     const coId = coIdMap.get(transformed.target);
@@ -530,7 +530,8 @@ function transformSchemaReference(schemaRef, coIdMap, context = '') {
  * @returns {string|null} Co-id or null if not found
  */
 function transformTargetReference(targetRef, coIdMap, context = '') {
-  if (targetRef.startsWith('@actor/') && !targetRef.startsWith('co_z')) {
+  // Support namespaced actor references: @namespace/actor/instance (e.g., @todos/actor/list, @maia/actor/agent)
+  if (targetRef.match(/^@[^/]+\/actor\//) && !targetRef.startsWith('co_z')) {
     const coId = coIdMap.get(targetRef);
     if (coId) {
       return coId;
@@ -720,9 +721,9 @@ function transformQueryObjects(obj, coIdMap, depth = 0) {
             continue;
           }
           
-          // Must be @actor/instance format
-          if (!actorRef.startsWith('@actor/')) {
-            throw new Error(`[SchemaTransformer] context.@actors[${namekey}] must use @actor/instance format, got: ${actorRef}`);
+          // Must be @namespace/actor/instance format (e.g., @todos/actor/list, @maia/actor/agent)
+          if (!actorRef.match(/^@[^/]+\/actor\//)) {
+            throw new Error(`[SchemaTransformer] context.@actors[${namekey}] must use @namespace/actor/instance format, got: ${actorRef}`);
           }
           
           const coId = transformTargetReference(actorRef, coIdMap, `context.@actors[${namekey}]`);

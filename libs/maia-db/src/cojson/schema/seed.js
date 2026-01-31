@@ -1242,84 +1242,131 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   }
   
   
-  // Seed vibe (depends on actors, so seed after actors)
+  // Seed vibes (depends on actors, so seed after actors)
   // Now that actors are registered, we can transform vibe references properly
-  if (configs && configs.vibe) {
-
-    // REFRESH REGISTRY before transforming vibe (actors are now registered)
+  // Support both configs.vibe (single, backward compat) and configs.vibes (array)
+  const allVibes = configs?.vibes || (configs?.vibe ? [configs.vibe] : []);
+  
+  if (allVibes.length > 0) {
+    // REFRESH REGISTRY before transforming vibes (actors are now registered)
     combinedRegistry = refreshCombinedRegistry();
 
-    // Debug: Check if actor is in registry
-    const actorRef = configs.vibe.actor;
-    if (actorRef && !actorRef.startsWith('co_z')) {
-      const actorCoId = combinedRegistry.get(actorRef);
-      if (!actorCoId) {
-        const availableKeys = Array.from(combinedRegistry.keys())
-          .filter(k => k.startsWith('@actor/'))
-          .slice(0, 10)
-          .join(', ');
-        console.warn(`[CoJSONSeed] Actor reference ${actorRef} not found in registry. Available actor keys (first 10): ${availableKeys}`);
-      }
-    }
-
-    // Re-transform vibe now that actors are registered
-    const retransformedVibe = transformForSeeding(configs.vibe, combinedRegistry);
+    // Create or get account.vibes CoMap ONCE before the loop (reuse for all vibes)
+    let vibesId = account.get("vibes");
+    let vibes;
     
-    // Debug: Verify transformation worked
-    if (retransformedVibe.actor && !retransformedVibe.actor.startsWith('co_z')) {
-      console.error(`[CoJSONSeed] ❌ Vibe actor transformation failed! Expected co-id, got: ${retransformedVibe.actor}`);
-      console.error(`[CoJSONSeed] Original actor: ${configs.vibe.actor}, Registry has: ${combinedRegistry.has(configs.vibe.actor)}`);
-    }
-    
-    // Extract vibe key from original $id BEFORE transformation
-    const originalVibeId = configs.vibe.$id || '';
-    const vibeKey = originalVibeId.startsWith('@vibe/') 
-      ? originalVibeId.replace('@vibe/', '')
-      : (configs.vibe.name || 'default').toLowerCase().replace(/\s+/g, '-');
-    
-    const vibeConfigs = { vibe: retransformedVibe };
-    const vibeSeeded = await seedConfigs(account, node, universalGroup, vibeConfigs, instanceCoIdMap, schemaCoMaps, schemaCoIdMap);
-    seededConfigs.configs.push(...(vibeSeeded.configs || []));
-    seededConfigs.count += vibeSeeded.count || 0;
-    
-    // Store vibe in account.vibes CoMap (simplified structure: account.vibes.todos = co-id)
-    if (vibeSeeded.configs && vibeSeeded.configs.length > 0) {
-      const vibeInfo = vibeSeeded.configs[0]; // First config should be the vibe
-      const vibeCoId = vibeInfo.coId;
-      
-      // Create or get account.vibes CoMap
-      let vibesId = account.get("vibes");
-      let vibes;
-      
-      if (vibesId) {
-        const vibesCore = node.getCoValue(vibesId);
-        if (vibesCore && vibesCore.type === 'comap') {
-          const vibesContent = vibesCore.getCurrentContent?.();
-          if (vibesContent && typeof vibesContent.set === 'function') {
-            vibes = vibesContent;
-          }
+    if (vibesId) {
+      const vibesCore = node.getCoValue(vibesId);
+      if (vibesCore && vibesCore.type === 'comap') {
+        const vibesContent = vibesCore.getCurrentContent?.();
+        if (vibesContent && typeof vibesContent.set === 'function') {
+          vibes = vibesContent;
         }
       }
+    }
+    
+    if (!vibes) {
+      // Create vibes CoMap directly using universalGroup
+      const vibesMeta = { $schema: 'GenesisSchema' };
+      vibes = universalGroup.createMap({}, vibesMeta);
+      account.set("vibes", vibes.id);
+      console.log(`[CoJSONSeed] Created new account.vibes CoMap: ${vibes.id}`);
+    } else {
+      console.log(`[CoJSONSeed] Using existing account.vibes CoMap: ${vibesId}`);
+    }
+
+    // Seed each vibe
+    for (const vibe of allVibes) {
+      // Debug: Check if actor is in registry
+      const actorRef = vibe.actor;
+      if (actorRef && !actorRef.startsWith('co_z')) {
+        const actorCoId = combinedRegistry.get(actorRef);
+        if (!actorCoId) {
+          const availableKeys = Array.from(combinedRegistry.keys())
+            .filter(k => k.startsWith('@actor/'))
+            .slice(0, 10)
+            .join(', ');
+          console.warn(`[CoJSONSeed] Actor reference ${actorRef} not found in registry for vibe ${vibe.$id || vibe.name}. Available actor keys (first 10): ${availableKeys}`);
+        }
+      }
+
+      // Re-transform vibe now that actors are registered
+      const retransformedVibe = transformForSeeding(vibe, combinedRegistry);
       
-      if (!vibes) {
-        // Create vibes CoMap directly using universalGroup
-        const vibesMeta = { $schema: 'GenesisSchema' };
-        vibes = universalGroup.createMap({}, vibesMeta);
-        account.set("vibes", vibes.id);
+      // Debug: Verify transformation worked
+      console.log(`[CoJSONSeed] Transforming vibe '${vibe.$id || vibe.name}':`, {
+        originalActor: vibe.actor,
+        transformedActor: retransformedVibe.actor,
+        isCoId: retransformedVibe.actor?.startsWith('co_z')
+      });
+      
+      if (retransformedVibe.actor && !retransformedVibe.actor.startsWith('co_z')) {
+        console.error(`[CoJSONSeed] ❌ Vibe actor transformation failed! Expected co-id, got: ${retransformedVibe.actor}`);
+        console.error(`[CoJSONSeed] Original actor: ${vibe.actor}, Registry has: ${combinedRegistry.has(vibe.actor)}`);
       }
       
-      // Store vibe co-id in account.vibes CoMap
-      vibes.set(vibeKey, vibeCoId);
+      // Extract vibe key from original $id BEFORE transformation
+      const originalVibeId = vibe.$id || '';
+      const vibeKey = originalVibeId.startsWith('@vibe/') 
+        ? originalVibeId.replace('@vibe/', '')
+        : (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-');
       
-      // Register REAL co-id from CoJSON (never pre-generate!)
-      const originalVibeIdForRegistry = configs.vibe.$id; // Original $id (e.g., @vibe/todos)
-      instanceCoIdMap.set('vibe', vibeCoId);
-      if (originalVibeIdForRegistry) {
-        instanceCoIdMap.set(originalVibeIdForRegistry, vibeCoId);
-        combinedRegistry.set(originalVibeIdForRegistry, vibeCoId); // Add to registry for future transformations
-        coIdRegistry.register(originalVibeIdForRegistry, vibeCoId);
+      const vibeConfigs = { vibe: retransformedVibe };
+      const vibeSeeded = await seedConfigs(account, node, universalGroup, vibeConfigs, instanceCoIdMap, schemaCoMaps, schemaCoIdMap);
+      seededConfigs.configs.push(...(vibeSeeded.configs || []));
+      seededConfigs.count += vibeSeeded.count || 0;
+      
+      // Store vibe in account.vibes CoMap (simplified structure: account.vibes.todos = co-id)
+      if (vibeSeeded.configs && vibeSeeded.configs.length > 0) {
+        const vibeInfo = vibeSeeded.configs[0]; // First config should be the vibe
+        const vibeCoId = vibeInfo.coId;
+        
+        // Use the vibes CoMap created before the loop
+        if (vibes && typeof vibes.set === 'function') {
+          vibes.set(vibeKey, vibeCoId);
+          console.log(`[CoJSONSeed] Stored vibe in account.vibes: ${vibeKey} = ${vibeCoId}`);
+          
+          // Verify it was stored (read back immediately)
+          const storedValue = vibes.get(vibeKey);
+          if (storedValue !== vibeCoId) {
+            console.warn(`[CoJSONSeed] ⚠️ Vibe ${vibeKey} storage verification failed! Expected ${vibeCoId}, got ${storedValue}`);
+          }
+        } else {
+          console.error(`[CoJSONSeed] ❌ Cannot store vibe ${vibeKey}: vibes CoMap not available`);
+        }
+        
+        // Register REAL co-id from CoJSON (never pre-generate!)
+        const originalVibeIdForRegistry = vibe.$id; // Original $id (e.g., @vibe/todos)
+        // Only set 'vibe' key for the last vibe (backward compat for single vibe case)
+        if (allVibes.length === 1 || allVibes.indexOf(vibe) === allVibes.length - 1) {
+          instanceCoIdMap.set('vibe', vibeCoId);
+        }
+        if (originalVibeIdForRegistry) {
+          instanceCoIdMap.set(originalVibeIdForRegistry, vibeCoId);
+          combinedRegistry.set(originalVibeIdForRegistry, vibeCoId); // Add to registry for future transformations
+          coIdRegistry.register(originalVibeIdForRegistry, vibeCoId);
+        }
+        if (allVibes.length === 1 || allVibes.indexOf(vibe) === allVibes.length - 1) {
+          coIdRegistry.register('vibe', vibeCoId);
+        }
       }
-      coIdRegistry.register('vibe', vibeCoId);
+    }
+    
+    // Verify all vibes were stored correctly
+    if (vibes && typeof vibes.get === 'function') {
+      console.log(`[CoJSONSeed] Verifying stored vibes in account.vibes:`);
+      for (const vibe of allVibes) {
+        const originalVibeId = vibe.$id || '';
+        const vibeKey = originalVibeId.startsWith('@vibe/') 
+          ? originalVibeId.replace('@vibe/', '')
+          : (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-');
+        const storedValue = vibes.get(vibeKey);
+        if (storedValue) {
+          console.log(`[CoJSONSeed] ✅ Verified: ${vibeKey} = ${storedValue}`);
+        } else {
+          console.error(`[CoJSONSeed] ❌ Missing: ${vibeKey} not found in account.vibes!`);
+        }
+      }
     }
   }
   

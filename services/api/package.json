@@ -1,5 +1,5 @@
 {
-  "name": "voice-call",
+  "name": "api",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,11 +8,11 @@
     "start": "bun run src/index.ts"
   },
   "dependencies": {
-    "@MaiaOS/voice": "workspace:*"
+    "@MaiaOS/voice": "workspace:*",
+    "@honcho-ai/sdk": "^2.0.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "^5.9.3"
   }
 }
-

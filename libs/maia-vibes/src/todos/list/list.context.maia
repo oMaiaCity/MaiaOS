@@ -1,6 +1,6 @@
 {
   "$schema": "@schema/context",
-  "$id": "@context/list",
+  "$id": "@todos/context/list",
   "list": {
     "schema": "@schema/data/todos"
   },
