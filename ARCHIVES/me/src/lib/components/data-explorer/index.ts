@@ -1,5 +1,0 @@
-export { default as Badge } from './Badge.svelte'
-export { default as Context } from './Context.svelte'
-export { default as ListItem } from './ListItem.svelte'
-export { default as ListView } from './ListView.svelte'
-export { default as MetadataSidebar } from './MetadataSidebar.svelte'

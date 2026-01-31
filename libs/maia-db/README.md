@@ -20,7 +20,7 @@ A collaborative database layer built on Jazz/cojson with automatic subscription 
 ```
 User Code (createCoMap, seedExampleCoValues, etc.)
         ↓
-  Subscription Layer (oSubscription, oSubscriptionCache)
+  Unified Cache Layer (CoCache - subscriptions, stores, resolutions, resolved data)
         ↓
   MaiaDB Services (oMap, oList, oStream, oSeeding, etc.)
         ↓
@@ -29,13 +29,14 @@ User Code (createCoMap, seedExampleCoValues, etc.)
     cojson (from jazz-tools)
 ```
 
-### Subscription Layer (NEW!)
+### Unified Cache Layer
 
-MaiaDB includes a powerful subscription management system that automatically handles CoValue loading:
+MaiaDB includes a unified caching system that handles all CoValue operations:
 
-- **SubscriptionCache**: Caches active subscriptions, prevents duplicates, auto-cleanup after 5s
-- **subscribe(node, id, options)**: Subscribe to a CoValue by ID with auto-loading
-- **Automatic Cleanup**: Unused subscriptions cleaned up automatically to prevent memory leaks
+- **CoCache**: Unified cache for subscriptions, stores, resolutions, and resolved+mapped data
+- **Automatic Cleanup**: Unused entries cleaned up automatically after 5s to prevent memory leaks
+- **Node-aware**: Cache automatically clears when node changes (e.g., after re-login)
+- **Performance Optimized**: Caches resolved+mapped data to avoid duplicate processing
 
 **Key Insight**: Jazz requires active subscriptions to load CoValues from IndexedDB. Simply linking CoValues (e.g., `account.examples`) isn't enough - you need subscriptions. MaiaDB handles this automatically!
 

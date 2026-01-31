@@ -7,25 +7,27 @@
 
 import { ensureCoValueLoaded } from './collection-helpers.js';
 import { extractCoValueDataFlat } from './data-extraction.js';
-
-/**
- * Global cache to track ongoing and completed deep resolution operations
- * Prevents duplicate work when multiple calls try to resolve the same CoValue
- * 
- * Structure: coId → Promise<void> (ongoing) or true (completed)
- * - Promise: Resolution is in progress, wait for it
- * - true: Resolution already completed, skip
- */
-const resolutionCache = new Map(); // coId → Promise<void> | true
+import { getGlobalCoCache } from '../cache/coCache.js';
 
 /**
  * Check if a CoValue is already resolved or being resolved
  * @param {string} coId - CoValue ID
+ * @param {Object} [backend] - Backend instance (optional, for cache access)
  * @returns {boolean} True if already resolved or being resolved
  */
-export function isDeepResolvedOrResolving(coId) {
-  const cached = resolutionCache.get(coId);
-  return cached === true || (cached && typeof cached.then === 'function');
+export function isDeepResolvedOrResolving(coId, backend = null) {
+  if (backend && backend.subscriptionCache) {
+    // Use unified cache from backend
+    return backend.subscriptionCache.isResolved(coId);
+  }
+  // Fallback: try to get global cache (may not work without node)
+  // This is for backward compatibility when called without backend
+  try {
+    const cache = getGlobalCoCache(null);
+    return cache.isResolved(coId);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -190,7 +192,7 @@ export async function resolveNestedReferences(backend, data, visited = new Set()
       });
       
       // Store subscription in cache
-      backend.subscriptionCache.getOrCreate(coId, () => ({ unsubscribe }));
+      backend.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe }));
       
     } catch (error) {
       // Silently continue - errors are logged at top level if needed
@@ -225,55 +227,56 @@ export async function deepResolveCoValue(backend, coId, options = {}) {
     return; // Deep resolution disabled
   }
   
+  // Use unified cache for resolution tracking
+  const cache = backend.subscriptionCache;
+  
   // CRITICAL OPTIMIZATION: Check if resolution is already completed or in progress
-  const cached = resolutionCache.get(coId);
-  if (cached === true) {
+  if (cache.isResolved(coId)) {
     // Already resolved - skip silently (no log to reduce noise)
     return;
   }
-  if (cached && typeof cached.then === 'function') {
-    // Resolution in progress - wait for it
-    await cached;
+  
+  // Get or create resolution promise
+  const resolutionPromise = cache.getOrCreateResolution(coId, () => {
+    return (async () => {
+      try {
+        const startTime = Date.now();
+        
+        // Ensure the main CoValue is loaded
+        await ensureCoValueLoaded(backend, coId, { waitForAvailable: true, timeoutMs });
+        
+        const coValueCore = backend.getCoValue(coId);
+        if (!coValueCore || !backend.isAvailable(coValueCore)) {
+          throw new Error(`CoValue ${coId} failed to load`);
+        }
+        
+        // Extract data from CoValue
+        const data = extractCoValueDataFlat(backend, coValueCore);
+        
+        // Resolve nested references
+        // Start with the root CoValue in visited set to prevent resolving it again
+        const visited = new Set([coId]);
+        
+        await resolveNestedReferences(backend, data, visited, {
+          maxDepth,
+          timeoutMs,
+          currentDepth: 0
+        });
+        
+        // Mark as completed in cache (permanent - don't delete)
+        cache.markResolved(coId);
+      } catch (error) {
+        // On error, remove from cache so it can be retried
+        cache.destroy(`resolution:${coId}`);
+        throw error;
+      }
+    })();
+  });
+  
+  // If it's already resolved (returned true), skip
+  if (resolutionPromise === true) {
     return;
   }
-  
-  // Create resolution promise and store it
-  const resolutionPromise = (async () => {
-    try {
-      const startTime = Date.now();
-      
-      // Ensure the main CoValue is loaded
-      await ensureCoValueLoaded(backend, coId, { waitForAvailable: true, timeoutMs });
-      
-      const coValueCore = backend.getCoValue(coId);
-      if (!coValueCore || !backend.isAvailable(coValueCore)) {
-        throw new Error(`CoValue ${coId} failed to load`);
-      }
-      
-      // Extract data from CoValue
-      const data = extractCoValueDataFlat(backend, coValueCore);
-      
-      // Resolve nested references
-      // Start with the root CoValue in visited set to prevent resolving it again
-      const visited = new Set([coId]);
-      
-      await resolveNestedReferences(backend, data, visited, {
-        maxDepth,
-        timeoutMs,
-        currentDepth: 0
-      });
-      
-      // Mark as completed in cache (permanent - don't delete)
-      resolutionCache.set(coId, true);
-    } catch (error) {
-      // On error, remove from cache so it can be retried
-      resolutionCache.delete(coId);
-      throw error;
-    }
-  })();
-  
-  // Store the promise so other calls can wait for it
-  resolutionCache.set(coId, resolutionPromise);
   
   // Wait for resolution to complete
   await resolutionPromise;

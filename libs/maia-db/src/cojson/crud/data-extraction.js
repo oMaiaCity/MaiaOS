@@ -551,26 +551,51 @@ export async function resolveCoValueReferences(backend, data, options = {}, visi
 async function resolveCoId(backend, coId, options = {}, visited = new Set(), maxDepth = 10, currentDepth = 0) {
   const { schemas = null, timeoutMs = 2000 } = options;
   
+  // CRITICAL: Check visited set first to prevent circular references within this resolution pass
   if (visited.has(coId)) {
     return { id: coId }; // Already processing this co-id, return object with id to prevent circular reference
   }
   
+  // CRITICAL OPTIMIZATION: Check cache BEFORE calling backend.read() to prevent expensive re-resolution
+  // Use the same cache key format as read.js so we can reuse cached resolved data
+  const cache = backend.subscriptionCache;
+  const cacheOptions = {
+    deepResolve: false, // We don't need deep resolution here
+    resolveReferences: options, // Use the same resolution options
+    map: null, // No map transform in resolveCoId
+    maxDepth,
+    timeoutMs
+  };
+  const cachedResolved = cache.getResolvedData(coId, cacheOptions);
+  
+  if (cachedResolved) {
+    // Return cached result immediately - no need to re-resolve
+    // But we still need to check schema filter if provided
+    if (schemas !== null && schemas.length > 0) {
+      const dataSchema = cachedResolved.$schema;
+      if (!schemas.includes(dataSchema)) {
+        return { id: coId }; // Schema not in filter
+      }
+    }
+    return cachedResolved;
+  }
+  
   try {
     // Use backend.read() directly (same universal API used everywhere)
-    // This avoids circular dependency and uses the same read() API as all other code
+    // CRITICAL: Do NOT use resolveReferences here to avoid infinite loop
+    // (resolveCoId -> backend.read(resolveReferences) -> resolveCoValueReferences -> resolveCoId)
     const { waitForStoreReady } = await import('./read-operations.js');
     
-    // Read the co-value directly using backend.read() API
-    // Signature: read(schema, key, keys, filter, options)
-    // CRITICAL: Use deepResolve: false to get raw data, then we'll resolve nested co-ids ourselves
+    // Read the co-value using backend.read() API (reuses its caching)
+    // Use deepResolve: false to get raw data, then we'll resolve nested co-ids ourselves
     const coValueStore = await backend.read(null, coId, null, null, {
-      deepResolve: false, // Don't deep resolve here - we just want the flat data
+      deepResolve: false, // Don't deep resolve here - we'll resolve nested refs ourselves
       timeoutMs
     });
     
     if (!coValueStore) {
       console.warn(`[resolveCoId] No store returned for ${coId.substring(0, 12)}...`);
-      return { id: coId }; // No store returned - return object with id
+      return { id: coId };
     }
     
     // Wait for store to be ready
@@ -578,28 +603,27 @@ async function resolveCoId(backend, coId, options = {}, visited = new Set(), max
       await waitForStoreReady(coValueStore, coId, timeoutMs);
     } catch (err) {
       console.warn(`[resolveCoId] Store not ready for ${coId.substring(0, 12)}...:`, err.message);
-      // Store not ready within timeout - return object with id
       return { id: coId };
     }
     
     const coValueData = coValueStore.value;
     
-    if (!coValueData || coValueData.error || typeof coValueData !== 'object') {
-      console.warn(`[resolveCoId] Invalid data for ${coId.substring(0, 12)}...:`, coValueData);
-      return { id: coId }; // Invalid data - return object with id
+    // Validate data before processing
+    if (!coValueData) {
+      console.warn(`[resolveCoId] No data in store for ${coId.substring(0, 12)}...`);
+      return { id: coId };
     }
     
-    // Debug: Log what we got from extractCoValueDataFlat
-    const isActor = coValueData.$schema && (coValueData.$schema.includes('actor') || coValueData.$schema.includes('Actor'));
-    if (isActor) {
-      console.log(`[resolveCoId] 🔍 Reading actor ${coId.substring(0, 12)}...`, {
-        keys: Object.keys(coValueData),
-        hasRole: 'role' in coValueData,
-        roleValue: coValueData.role,
-        hasId: 'id' in coValueData,
-        idValue: coValueData.id,
-        sample: JSON.stringify(coValueData).substring(0, 200)
-      });
+    // Handle error objects
+    if (coValueData.error) {
+      console.warn(`[resolveCoId] Store has error for ${coId.substring(0, 12)}...:`, coValueData.error);
+      return { id: coId, error: coValueData.error };
+    }
+    
+    // Ensure data is an object
+    if (typeof coValueData !== 'object' || Array.isArray(coValueData)) {
+      console.warn(`[resolveCoId] Invalid data type for ${coId.substring(0, 12)}...:`, typeof coValueData);
+      return { id: coId };
     }
     
     // Check if we should resolve based on schema filter
@@ -610,13 +634,11 @@ async function resolveCoId(backend, coId, options = {}, visited = new Set(), max
       }
     }
     
-    // Resolve the CoValue - include id and all properties
+    // Mark as visited to prevent circular references
     visited.add(coId);
     
-    // CRITICAL: coValueData from extractCoValueDataFlat is already a flat object
-    // (e.g., { id: "...", role: "agent", context: "co_z...", ... })
-    // We just need to recursively resolve nested co-id references within it
-    const recursivelyResolved = await resolveCoValueReferences(
+    // Resolve nested co-id references recursively
+    const resolved = await resolveCoValueReferences(
       backend, 
       coValueData, 
       options, 
@@ -625,34 +647,18 @@ async function resolveCoId(backend, coId, options = {}, visited = new Set(), max
       currentDepth + 1
     );
     
-    // CRITICAL FIX: Ensure id is always preserved, and all properties from recursivelyResolved are included
-    // recursivelyResolved already contains all properties including id (from coValueData)
-    // But we want to ensure the original coId is used as id if not present
-    const resolved = {
-      ...recursivelyResolved, // Include all properties (recursively resolved) - this includes id from coValueData
-      id: recursivelyResolved.id || coValueData.id || coId // Ensure id is always present
+    // Ensure id is always present
+    const finalResolved = {
+      ...resolved,
+      id: resolved.id || coValueData.id || coId
     };
     
-    // Enhanced debug logging for actor resolution
-    if (isActor) {
-      console.log(`[resolveCoId] ✅ Resolved actor ${coId.substring(0, 12)}...`, {
-        originalKeys: Object.keys(coValueData),
-        resolvedKeys: Object.keys(resolved),
-        hasRole: 'role' in resolved,
-        roleValue: resolved.role,
-        hasId: 'id' in resolved,
-        idValue: resolved.id,
-        recursivelyResolvedKeys: Object.keys(recursivelyResolved),
-        sample: JSON.stringify(resolved).substring(0, 300)
-      });
-    } else {
-      console.log(`[resolveCoId] ✅ Resolved ${coId.substring(0, 12)}... to object with keys:`, Object.keys(resolved));
-    }
-    return resolved;
+    // Cache the resolved result for future use (prevents expensive re-resolution)
+    cache.setResolvedData(coId, cacheOptions, finalResolved);
+    
+    return finalResolved;
   } catch (err) {
     console.error(`[resolveCoId] ❌ Error resolving ${coId.substring(0, 12)}...:`, err);
-    // If we can't resolve it, return object with just id (so view can access .id)
-    // This ensures the view always gets an object, not a string
     return { id: coId };
   }
 }

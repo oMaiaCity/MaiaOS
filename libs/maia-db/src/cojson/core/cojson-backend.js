@@ -6,7 +6,7 @@
  */
 
 import { DBAdapter } from '@MaiaOS/operations/db-adapter';
-import { getGlobalCache } from '../subscriptions/coSubscriptionCache.js';
+import { getGlobalCoCache } from '../cache/coCache.js';
 import { seed } from '../schema/seed.js';
 import * as groups from '../groups/groups.js';
 import { waitForStoreReady } from '../crud/read-operations.js';
@@ -28,16 +28,16 @@ export class CoJSONBackend extends DBAdapter {
     this.account = account;
     this.dbEngine = dbEngine; // Store dbEngine for runtime schema validation
     
-    // Get node-aware subscription cache (auto-clears if node changed)
-    this.subscriptionCache = getGlobalCache(node);
+    // Get node-aware unified cache (auto-clears if node changed)
+    this.subscriptionCache = getGlobalCoCache(node);
     // Cache universal group after first resolution (performance optimization)
     this._cachedUniversalGroup = null;
     
     // CRITICAL FIX: Invalidate cached universal group on backend reset (account change)
     // This prevents stale group references after re-login
-    // Note: Global subscription cache is cleared automatically by getGlobalCache(node)
+    // Note: Global unified cache is cleared automatically by getGlobalCoCache(node)
     // when it detects a node change, so we don't need to reset it here
-    // Note: _storeSubscriptions removed - using subscriptionCache only for subscription tracking
+    // Note: _storeSubscriptions removed - using unified cache for all caching
     
     // Wrap storage with indexing hooks (MORE RESILIENT than API hooks!)
     // This catches ALL writes: CRUD API, sync, direct CoJSON ops, etc.
@@ -61,7 +61,7 @@ export class CoJSONBackend extends DBAdapter {
     if (this._cachedUniversalGroup) {
       this._cachedUniversalGroup = null;
     }
-    // Note: Global subscription cache is cleared automatically by getGlobalCache(node)
+    // Note: Global unified cache is cleared automatically by getGlobalCoCache(node)
     // when it detects a node change, so we don't need to reset it here
   }
   

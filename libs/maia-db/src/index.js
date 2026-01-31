@@ -21,20 +21,12 @@ export { createCoStream } from "./cojson/cotypes/coStream.js";
 export { createSchemaMeta, hasSchema, getSchema } from "./schemas/registry.js";
 export { schemaMigration } from "./migrations/schema.migration.js";
 
-// Subscription management (NEW)
+// Unified cache (subscriptions, stores, resolutions, resolved data)
 export { 
-	subscribe, 
-	getSubscription, 
-	hasSubscription, 
-	unsubscribe,
-	getSubscriptionStats 
-} from "./cojson/subscriptions/coSubscription.js";
-
-export { 
-	SubscriptionCache,
-	getGlobalCache,
-	resetGlobalCache 
-} from "./cojson/subscriptions/coSubscriptionCache.js";
+	CoCache,
+	getGlobalCoCache,
+	resetGlobalCoCache 
+} from "./cojson/cache/coCache.js";
 
 // CoJSON Mini CRUD API (database-level wrapper)
 export { createCoJSONAPI } from "./cojson/core/factory.js";

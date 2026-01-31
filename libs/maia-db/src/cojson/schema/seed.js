@@ -1393,24 +1393,6 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
 
     // Remove $id and $schema from config (they're stored in metadata, not as properties)
     const { $id, $schema, ...configWithoutId } = config;
-    
-    // DEBUG: Log context seeding to see if query objects are present
-    if (path && path.includes('context') && (path.includes('logs') || path.includes('list'))) {
-      console.log(`[CoJSONSeed.createConfig] 🔍 Creating context:`, {
-        path,
-        $id,
-        configKeys: Object.keys(config),
-        configWithoutIdKeys: Object.keys(configWithoutId),
-        hasAllMessages: !!configWithoutId.allMessages,
-        allMessagesType: typeof configWithoutId.allMessages,
-        allMessagesKeys: configWithoutId.allMessages && typeof configWithoutId.allMessages === 'object' ? Object.keys(configWithoutId.allMessages) : [],
-        hasOptions: configWithoutId.allMessages && typeof configWithoutId.allMessages === 'object' ? !!configWithoutId.allMessages.options : false,
-        optionsKeys: configWithoutId.allMessages?.options ? Object.keys(configWithoutId.allMessages.options) : [],
-        hasMap: configWithoutId.allMessages?.options?.map ? true : false,
-        mapKeys: configWithoutId.allMessages?.options?.map ? Object.keys(configWithoutId.allMessages.options.map) : [],
-        fullAllMessages: configWithoutId.allMessages ? JSON.stringify(configWithoutId.allMessages).substring(0, 500) : 'undefined'
-      });
-    }
 
     // Create the appropriate CoJSON type based on schema's cotype
     const meta = { $schema: schemaCoId }; // Set schema co-id in headerMeta
@@ -1441,62 +1423,6 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
       // This matches how views work - nested objects like attrs.data are stored directly
       for (const [key, value] of Object.entries(configWithoutId)) {
         coValue.set(key, value);
-      }
-      
-      // DEBUG: After setting all properties, verify nested objects are stored correctly
-      if (path && path.includes('context') && (path.includes('logs') || path.includes('list'))) {
-        // Check what's actually stored in CoJSON
-        const storedAllMessages = coValue.get('allMessages');
-        console.log(`[CoJSONSeed.createConfig] ✅ After explicit set, stored "allMessages":`, {
-          type: typeof storedAllMessages,
-          isString: typeof storedAllMessages === 'string',
-          isObject: typeof storedAllMessages === 'object' && storedAllMessages !== null,
-          isCoMap: storedAllMessages && typeof storedAllMessages.get === 'function',
-          keys: typeof storedAllMessages === 'object' && storedAllMessages !== null && typeof storedAllMessages.get !== 'function' ? Object.keys(storedAllMessages) : (storedAllMessages && typeof storedAllMessages.get === 'function' ? Array.from(storedAllMessages.keys()) : []),
-          hasOptions: typeof storedAllMessages === 'object' && storedAllMessages !== null && typeof storedAllMessages.get !== 'function' ? 'options' in storedAllMessages : false,
-          optionsKeys: typeof storedAllMessages === 'object' && storedAllMessages !== null && typeof storedAllMessages.get !== 'function' && 'options' in storedAllMessages ? Object.keys(storedAllMessages.options) : [],
-          hasMap: typeof storedAllMessages === 'object' && storedAllMessages !== null && typeof storedAllMessages.get !== 'function' && 'options' in storedAllMessages ? 'map' in storedAllMessages.options : false,
-          sample: typeof storedAllMessages === 'string' ? storedAllMessages.substring(0, 300) : (storedAllMessages && typeof storedAllMessages.get !== 'function' ? JSON.stringify(storedAllMessages).substring(0, 300) : 'CoMap instance')
-        });
-        
-        // Also check the raw config to see what we're trying to store
-        if (configWithoutId.allMessages) {
-          console.log(`[CoJSONSeed.createConfig] 🔍 Original configWithoutId.allMessages:`, {
-            type: typeof configWithoutId.allMessages,
-            keys: typeof configWithoutId.allMessages === 'object' ? Object.keys(configWithoutId.allMessages) : [],
-            hasOptions: typeof configWithoutId.allMessages === 'object' && 'options' in configWithoutId.allMessages,
-            optionsKeys: typeof configWithoutId.allMessages === 'object' && 'options' in configWithoutId.allMessages ? Object.keys(configWithoutId.allMessages.options) : [],
-            fullValue: JSON.stringify(configWithoutId.allMessages).substring(0, 500)
-          });
-        }
-      }
-      
-      // DEBUG: After creation, verify nested objects are stored correctly
-      if (path && path.includes('context') && (path.includes('logs') || path.includes('list'))) {
-        // Check what's actually stored in CoJSON
-        const storedAllMessages = coValue.get('allMessages');
-        console.log(`[CoJSONSeed.createConfig] ✅ After createMap + explicit set, stored "allMessages":`, {
-          type: typeof storedAllMessages,
-          isString: typeof storedAllMessages === 'string',
-          isObject: typeof storedAllMessages === 'object' && storedAllMessages !== null,
-          isCoMap: storedAllMessages && typeof storedAllMessages.get === 'function',
-          keys: typeof storedAllMessages === 'object' && storedAllMessages !== null && typeof storedAllMessages.get !== 'function' ? Object.keys(storedAllMessages) : (storedAllMessages && typeof storedAllMessages.get === 'function' ? storedAllMessages.keys() : []),
-          hasOptions: typeof storedAllMessages === 'object' && storedAllMessages !== null && typeof storedAllMessages.get !== 'function' ? 'options' in storedAllMessages : false,
-          optionsKeys: typeof storedAllMessages === 'object' && storedAllMessages !== null && typeof storedAllMessages.get !== 'function' && 'options' in storedAllMessages ? Object.keys(storedAllMessages.options) : [],
-          hasMap: typeof storedAllMessages === 'object' && storedAllMessages !== null && typeof storedAllMessages.get !== 'function' && 'options' in storedAllMessages ? 'map' in storedAllMessages.options : false,
-          sample: typeof storedAllMessages === 'string' ? storedAllMessages.substring(0, 300) : (storedAllMessages && typeof storedAllMessages.get !== 'function' ? JSON.stringify(storedAllMessages).substring(0, 300) : 'CoMap instance')
-        });
-        
-        // Also check the raw config to see what we're trying to store
-        if (configWithoutId.allMessages) {
-          console.log(`[CoJSONSeed.createConfig] 🔍 Original configWithoutId.allMessages:`, {
-            type: typeof configWithoutId.allMessages,
-            keys: typeof configWithoutId.allMessages === 'object' ? Object.keys(configWithoutId.allMessages) : [],
-            hasOptions: typeof configWithoutId.allMessages === 'object' && 'options' in configWithoutId.allMessages,
-            optionsKeys: typeof configWithoutId.allMessages === 'object' && 'options' in configWithoutId.allMessages ? Object.keys(configWithoutId.allMessages.options) : [],
-            fullValue: JSON.stringify(configWithoutId.allMessages).substring(0, 500)
-          });
-        }
       }
     }
 

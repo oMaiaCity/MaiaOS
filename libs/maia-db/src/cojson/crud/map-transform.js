@@ -161,9 +161,6 @@ export async function applyMapTransform(backend, item, mapConfig, options = {}) 
         // Use direct access as fallback if available
         mappedItem[targetField] = directValue !== undefined ? directValue : undefined;
       }
-      
-      // Generic debug logging (no hardcoded property checks)
-      console.log(`[applyMapTransform] Mapped "${targetField}" = "${expression}" (processed: "${processedExpression}") →`, mappedValue);
     } catch (err) {
       console.warn(`[applyMapTransform] Failed to evaluate expression "${expression}" for field "${targetField}":`, err);
       console.warn(`[applyMapTransform] Resolved item keys:`, Object.keys(resolvedItem));

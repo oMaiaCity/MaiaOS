@@ -18,13 +18,6 @@ import { applyMapTransform, applyMapTransformToArray } from './map-transform.js'
 import { resolve as resolveSchema } from '../schema/resolver.js';
 
 /**
- * Store cache - caches stores by schema+filter to allow multiple actors to share the same store
- * Key format: `${schema}:${JSON.stringify(filter)}`
- * This prevents creating duplicate stores when multiple actors subscribe to the same collection
- */
-const storeCache = new Map(); // cacheKey → ReactiveStore
-
-/**
  * Universal read() function - works for ANY CoValue type
  * 
  * Handles:
@@ -149,20 +142,6 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
       return;
     }
 
-    // Debug: Log the full context value to see what we're working with
-    console.log(`[createUnifiedStore] 🔍 resolveQueries called with contextValue:`, {
-      keys: Object.keys(contextValue),
-      allMessages: contextValue.allMessages ? {
-        hasSchema: !!contextValue.allMessages.schema,
-        schema: contextValue.allMessages.schema,
-        hasOptions: !!contextValue.allMessages.options,
-        optionsKeys: contextValue.allMessages.options ? Object.keys(contextValue.allMessages.options) : [],
-        hasMap: contextValue.allMessages.options ? !!contextValue.allMessages.options.map : false,
-        mapKeys: contextValue.allMessages.options?.map ? Object.keys(contextValue.allMessages.options.map) : null,
-        fullValue: JSON.stringify(contextValue.allMessages).substring(0, 400)
-      } : 'not found'
-    });
-
     const currentQueryKeys = new Set();
 
     // Detect and resolve query objects
@@ -173,17 +152,6 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
       // Check if this is a query object (has schema property)
       if (value && typeof value === 'object' && !Array.isArray(value) && value.schema) {
         currentQueryKeys.add(key);
-        
-        // Debug: Log the full query object to see what we're working with
-        console.log(`[createUnifiedStore] 🔍 Processing query "${key}":`, {
-          hasSchema: !!value.schema,
-          schema: value.schema,
-          hasOptions: !!value.options,
-          optionsKeys: value.options ? Object.keys(value.options) : [],
-          hasMap: value.options ? !!value.options.map : false,
-          mapKeys: value.options?.map ? Object.keys(value.options.map) : null,
-          fullValue: JSON.stringify(value).substring(0, 300)
-        });
         
         // Check if we already have this query store
         const existingStore = queryStores.get(key);
@@ -208,32 +176,12 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
           // CRITICAL: Extract map and other options from the query object itself (value.options)
           // The query object can have its own options.map that needs to be passed to read()
           
-          // Debug: Check what value.options actually contains
-          console.log(`[createUnifiedStore] 🔍 Checking value.options for "${key}":`, {
-            hasOptions: !!value.options,
-            optionsType: typeof value.options,
-            optionsValue: value.options,
-            optionsKeys: value.options ? Object.keys(value.options) : [],
-            hasMap: value.options ? !!value.options.map : false,
-            mapValue: value.options?.map,
-            fullValue: JSON.stringify(value).substring(0, 500)
-          });
-          
           const queryOptions = {
             ...options,
             timeoutMs,
             // Extract options from query object (e.g., value.options.map)
             ...(value.options || {})
           };
-          
-          console.log(`[createUnifiedStore] ✅ Executing query "${key}" with options:`, {
-            schema: schemaCoId.substring(0, 12) + '...',
-            filter: value.filter,
-            map: queryOptions.map ? Object.keys(queryOptions.map) : null,
-            hasMap: !!queryOptions.map,
-            queryOptionsKeys: Object.keys(queryOptions),
-            fullQueryOptions: JSON.stringify(queryOptions).substring(0, 400)
-          });
           
           const queryStore = await read(backend, null, schemaCoId, value.filter || null, null, queryOptions);
 
@@ -299,27 +247,65 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
     queryStores.clear();
   };
 
-  // Debug: Log the raw context store value before processing
-  console.log(`[createUnifiedStore] 🔍 Raw contextStore.value:`, {
-    keys: Object.keys(contextStore.value || {}),
-    allMessages: contextStore.value?.allMessages ? {
-      type: typeof contextStore.value.allMessages,
-      isObject: typeof contextStore.value.allMessages === 'object',
-      isArray: Array.isArray(contextStore.value.allMessages),
-      keys: Object.keys(contextStore.value.allMessages),
-      hasSchema: 'schema' in contextStore.value.allMessages,
-      hasOptions: 'options' in contextStore.value.allMessages,
-      schema: contextStore.value.allMessages.schema,
-      options: contextStore.value.allMessages.options,
-      fullValue: JSON.stringify(contextStore.value.allMessages, null, 2)
-    } : 'not found',
-    fullContextValue: JSON.stringify(contextStore.value, null, 2).substring(0, 1000)
-  });
-
   // Initial resolve
   await resolveQueries(contextStore.value);
 
   return unifiedStore;
+}
+
+/**
+ * Process CoValue data: extract, resolve, and map
+ * Helper function to avoid duplication and enable caching
+ * 
+ * @param {Object} backend - Backend instance
+ * @param {CoValueCore} coValueCore - CoValueCore instance
+ * @param {string} [schemaHint] - Schema hint for special types
+ * @param {Object} [options] - Options for processing
+ * @param {Set<string>} [visited] - Visited set for circular reference detection
+ * @returns {Promise<Object>} Processed CoValue data
+ */
+async function processCoValueData(backend, coValueCore, schemaHint, options, visited = new Set()) {
+  const {
+    deepResolve = true,
+    maxDepth = 10,
+    timeoutMs = 5000,
+    resolveReferences = null,
+    map = null
+  } = options;
+  
+  // Extract CoValue data as flat object
+  let data = extractCoValueDataFlat(backend, coValueCore, schemaHint);
+  
+  // Deep resolve nested references if enabled
+  if (deepResolve) {
+    try {
+      await deepResolveCoValue(backend, coValueCore.id, { deepResolve, maxDepth, timeoutMs });
+    } catch (err) {
+      // Silently continue - deep resolution failure shouldn't block display
+    }
+  }
+  
+  // Resolve CoValue references (if option enabled)
+  if (resolveReferences) {
+    try {
+      const resolutionOptions = { ...resolveReferences, timeoutMs };
+      data = await resolveCoValueReferences(backend, data, resolutionOptions, visited, maxDepth, 0);
+    } catch (err) {
+      // Silently continue - resolution failure shouldn't block display
+    }
+  }
+  
+  // Apply map transformation (if option enabled)
+  if (map) {
+    try {
+      data = await applyMapTransform(backend, data, map, { timeoutMs });
+    } catch (err) {
+      console.warn(`[processCoValueData] Failed to apply map transform:`, err);
+      // Continue with unmapped data
+    }
+  }
+  
+  return data;
 }
 
 /**
@@ -340,6 +326,36 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
     map = null
   } = options;
   
+  // CRITICAL OPTIMIZATION: Check cache for resolved+mapped data before processing
+  const cache = backend.subscriptionCache;
+  const cacheOptions = { deepResolve, resolveReferences, map, maxDepth, timeoutMs };
+  const cachedData = cache.getResolvedData(coId, cacheOptions);
+  
+  if (cachedData) {
+    // Return cached data immediately - no processing needed
+    const store = new ReactiveStore(cachedData);
+    // Still set up subscription for updates, but use cached data initially
+    const coValueCore = backend.getCoValue(coId);
+    if (coValueCore) {
+      const unsubscribe = coValueCore.subscribe(async (core) => {
+        if (core.isAvailable()) {
+          // Re-process and update cache when CoValue changes
+          const newData = await processCoValueData(backend, core, schemaHint, options, new Set());
+          cache.setResolvedData(coId, cacheOptions, newData);
+          store._set(newData);
+        }
+      });
+      backend.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe }));
+      
+      const originalUnsubscribe = store._unsubscribe;
+      store._unsubscribe = () => {
+        if (originalUnsubscribe) originalUnsubscribe();
+        backend.subscriptionCache.scheduleCleanup(`subscription:${coId}`);
+      };
+    }
+    return store;
+  }
+  
   const store = new ReactiveStore(null);
   const coValueCore = backend.getCoValue(coId);
   
@@ -348,149 +364,72 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
     return store;
   }
 
-  // Helper to do deep resolution (relies on global resolutionCache in deepResolveCoValue)
-  const doDeepResolution = async () => {
-    if (!deepResolve) {
-      return; // Deep resolution disabled
-    }
+  // Shared visited set for this read operation (prevents circular references)
+  const sharedVisited = new Set();
+  
+  // Helper to process and cache CoValue data
+  const processAndCache = async (core) => {
+    const processedData = await processCoValueData(backend, core, schemaHint, options, sharedVisited);
     
-    // CRITICAL OPTIMIZATION: Check global cache BEFORE calling deepResolveCoValue
-    // This prevents unnecessary function calls even if the cache would catch them
-    if (isDeepResolvedOrResolving(coId)) {
-      // Already resolved or being resolved - skip silently (cache hit!)
-      // No log to reduce noise - this is the expected path for already-resolved CoValues
-      return;
-    }
+    // Cache the processed data
+    cache.setResolvedData(coId, cacheOptions, processedData);
     
-    try {
-      // deepResolveCoValue has its own global cache to prevent duplicate work
-      // But we check here first to avoid the function call overhead
-      await deepResolveCoValue(backend, coId, { deepResolve, maxDepth, timeoutMs });
-    } catch (err) {
-      console.error(`[readSingleCoValue] ❌ Deep resolution failed for ${coId.substring(0, 12)}...:`, err.message);
-      // Continue even if deep resolution fails
-    }
+    return processedData;
   };
   
-  // Track if we've triggered deep resolution for this readSingleCoValue call
-  // This prevents calling it multiple times within the same function call
-  // (e.g., both in initial load path AND subscription callback)
-  let deepResolutionTriggered = false;
-  
-  // Subscribe to CoValueCore (same pattern for all types)
+  // Subscribe to CoValueCore updates
   const unsubscribe = coValueCore.subscribe(async (core) => {
     if (!core.isAvailable()) {
       store._set({ id: coId, loading: true });
       return;
     }
 
-    // Extract CoValue data as flat object
-    let data = extractCoValueDataFlat(backend, core, schemaHint);
+    // Process and cache data (cache prevents duplicate work)
+    const data = await processAndCache(core);
     
-    // CRITICAL: Only trigger deep resolution ONCE per readSingleCoValue call
-    // The global resolutionCache in deepResolveCoValue prevents duplicate work across calls
-    // This local flag prevents duplicate work within the same call
-    if (!deepResolutionTriggered) {
-      deepResolutionTriggered = true;
-      await doDeepResolution();
-    }
+    // Check if data contains query objects (objects with schema property)
+    const hasQueryObjects = data && typeof data === 'object' && 
+      Object.values(data).some(value => 
+        value && typeof value === 'object' && !Array.isArray(value) && value.schema
+      );
     
-    // Resolve CoValue references (if option enabled)
-    // This allows views to access nested properties like $$source.role
-    if (resolveReferences) {
-      try {
-        const resolutionOptions = { ...resolveReferences, timeoutMs };
-        data = await resolveCoValueReferences(backend, data, resolutionOptions, new Set(), maxDepth, 0);
-      } catch (err) {
-        // Silently continue - resolution failure shouldn't block display
-      }
+    // If query objects detected, create unified store that merges queries
+    if (hasQueryObjects) {
+      store._set(data);
+      // Note: createUnifiedStore will be handled by the caller if needed
+      return;
     }
     
     store._set(data);
   });
 
-  // Use subscriptionCache (same pattern for all types)
-  backend.subscriptionCache.getOrCreate(coId, () => ({ unsubscribe }));
+  // Use unified cache for subscription
+  backend.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe }));
 
   // Set initial value immediately with available data (progressive loading)
   if (coValueCore.isAvailable()) {
-    let data = extractCoValueDataFlat(backend, coValueCore, schemaHint);
+    // Process and cache data
+    const data = await processAndCache(coValueCore);
     
-    // Trigger deep resolution once (will be skipped by global cache if already done)
-    if (!deepResolutionTriggered) {
-      deepResolutionTriggered = true;
-      await doDeepResolution();
-    }
+    // Check if data contains query objects (objects with schema property)
+    const hasQueryObjects = data && typeof data === 'object' && 
+      Object.values(data).some(value => 
+        value && typeof value === 'object' && !Array.isArray(value) && value.schema
+      );
     
-    // Re-extract data after deep resolution (may have changed)
-    const updatedCore = backend.getCoValue(coId);
-    if (updatedCore && backend.isAvailable(updatedCore)) {
-      let updatedData = extractCoValueDataFlat(backend, updatedCore, schemaHint);
-      
-      // Replace actor co-id references with resolved actor objects (if deep resolution enabled)
-      if (deepResolve) {
-        try {
-          updatedData = await replaceActorReferences(backend, updatedData, new Set(), maxDepth, 0);
-        } catch (err) {
-          // Silently continue - actor resolution failure shouldn't block display
-        }
-      }
-      
-      // Check if data contains query objects (objects with schema property)
-      const hasQueryObjects = updatedData && typeof updatedData === 'object' && 
-        Object.values(updatedData).some(value => 
-          value && typeof value === 'object' && !Array.isArray(value) && value.schema
-        );
-      
-      // If query objects detected, create unified store that merges queries
-      if (hasQueryObjects) {
-        store._set(updatedData);
-        return await createUnifiedStore(backend, store, options);
-      }
-      
-      store._set(updatedData);
-      return store;
-    }
-    
-      // Resolve CoValue references (if option enabled)
-      if (resolveReferences) {
-        try {
-          const resolutionOptions = { ...resolveReferences, timeoutMs };
-          data = await resolveCoValueReferences(backend, data, resolutionOptions, new Set(), maxDepth, 0);
-        } catch (err) {
-          // Silently continue - resolution failure shouldn't block display
-        }
-      }
-      
-      // Apply map transformation (if option enabled)
-      if (map) {
-        try {
-          data = await applyMapTransform(backend, data, map, { timeoutMs });
-        } catch (err) {
-          console.warn(`[readSingleCoValue] Failed to apply map transform:`, err);
-          // Continue with unmapped data
-        }
-      }
-      
-      // Check if data contains query objects (objects with schema property)
-      const hasQueryObjects = data && typeof data === 'object' && 
-        Object.values(data).some(value => 
-          value && typeof value === 'object' && !Array.isArray(value) && value.schema
-        );
-      
-      // If query objects detected, create unified store that merges queries
-      if (hasQueryObjects) {
-        store._set(data);
-        return await createUnifiedStore(backend, store, options);
-      }
-      
+    // If query objects detected, create unified store that merges queries
+    if (hasQueryObjects) {
       store._set(data);
+      return await createUnifiedStore(backend, store, options);
+    }
+    
+    store._set(data);
+    return store;
   } else {
     // Set loading state, trigger load (subscription will fire when available)
     store._set({ id: coId, loading: true });
     ensureCoValueLoaded(backend, coId).then(async () => {
-      // Deep resolution will happen in subscription callback (if not already triggered)
-      // No need to do it here - subscription will fire when loaded
+      // Processing will happen in subscription callback
     }).catch(err => {
       store._set({ error: err.message, id: coId });
     });
@@ -500,7 +439,7 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
   const originalUnsubscribe = store._unsubscribe;
   store._unsubscribe = () => {
     if (originalUnsubscribe) originalUnsubscribe();
-    backend.subscriptionCache.scheduleCleanup(coId);
+    backend.subscriptionCache.scheduleCleanup(`subscription:${coId}`);
   };
 
   return store;
@@ -529,19 +468,6 @@ async function readCollection(backend, schema, filter = null, options = {}) {
     map = null
   } = options;
   
-  // Debug logging
-  console.log(`[readCollection] Called with:`, {
-    schema,
-    filter,
-    options: {
-      deepResolve,
-      maxDepth,
-      timeoutMs,
-      resolveReferences: resolveReferences ? Object.keys(resolveReferences) : null,
-      map: map ? Object.keys(map) : null
-    }
-  });
-  
   // CRITICAL FIX: Cache stores by schema+filter+options to allow multiple actors to share the same store
   // This prevents creating duplicate stores when navigating back to a vibe
   // IMPORTANT: Include options in cache key so queries with different map/resolveReferences get different stores
@@ -549,18 +475,11 @@ async function readCollection(backend, schema, filter = null, options = {}) {
     ? JSON.stringify({ map: options.map || null, resolveReferences: options.resolveReferences || null })
     : '';
   const cacheKey = `${schema}:${JSON.stringify(filter || {})}:${optionsKey}`;
-  let store = storeCache.get(cacheKey);
   
-  if (store) {
-    console.log(`[readCollection] Using cached store for key: ${cacheKey.substring(0, 50)}...`);
-    return store;
-  }
-  
-  console.log(`[readCollection] Creating new store for key: ${cacheKey.substring(0, 50)}...`);
-  
-  // Create new store
-  store = new ReactiveStore([]);
-  storeCache.set(cacheKey, store);
+  // Use unified cache for store caching
+  const store = backend.subscriptionCache.getOrCreateStore(cacheKey, () => {
+    return new ReactiveStore([]);
+  });
   
   // Get schema index colist ID from account.os (keyed by schema co-id)
   // Supports both schema co-ids (co_z...) and human-readable names (@schema/data/todos)
@@ -593,7 +512,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
           });
         }
       });
-      backend.subscriptionCache.getOrCreate(coListId, () => ({ unsubscribe: unsubscribeColist }));
+      backend.subscriptionCache.getOrCreate(`subscription:${coListId}`, () => ({ unsubscribe: unsubscribeColist }));
     }
     
     // Return store immediately (empty array) - will update reactively when colist loads
@@ -604,14 +523,13 @@ async function readCollection(backend, schema, filter = null, options = {}) {
   // Track item IDs we've subscribed to (for cleanup)
   const subscribedItemIds = new Set();
   
-  // CRITICAL OPTIMIZATION: Track which items have already been deep-resolved
-  // Prevents duplicate deep resolution work when updateStore() is called multiple times
-  const deepResolvedItems = new Set();
-  
   // CRITICAL OPTIMIZATION: Persistent shared visited set across ALL updateStore() calls
   // This prevents duplicate deep resolution work when updateStore() is called multiple times
   // (e.g., from subscription callbacks firing repeatedly)
   const sharedVisited = new Set();
+  
+  // Cache for resolved+mapped item data (keyed by itemId)
+  const cache = backend.subscriptionCache;
   
   // Helper to subscribe to an item CoValue
   const subscribeToItem = (itemId) => {
@@ -630,7 +548,11 @@ async function readCollection(backend, schema, filter = null, options = {}) {
         const loadedItemCore = backend.getCoValue(itemId);
         if (loadedItemCore && backend.isAvailable(loadedItemCore)) {
           // Subscribe to item changes (fires when item becomes available or updates)
+          // CRITICAL: Invalidate cache BEFORE processing to ensure fresh data is processed
+          // The promise-based cache in getOrCreateResolvedData() will handle concurrent calls
           const unsubscribeItem = loadedItemCore.subscribe(() => {
+            // Invalidate cache BEFORE processing - ensures getOrCreateResolvedData() processes fresh data
+            cache.invalidateResolvedData(itemId);
             // Fire and forget - don't await async updateStore in subscription callback
             updateStore().catch(err => {
               console.warn(`[CoJSONBackend] Error updating store:`, err);
@@ -638,7 +560,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
           });
           
           // Use subscriptionCache for each item (same pattern for all CoValue references)
-          backend.subscriptionCache.getOrCreate(itemId, () => ({ unsubscribe: unsubscribeItem }));
+          backend.subscriptionCache.getOrCreate(`subscription:${itemId}`, () => ({ unsubscribe: unsubscribeItem }));
           
           // CRITICAL FIX: Trigger updateStore immediately after item is available
           // This ensures items that just loaded are included in the store
@@ -653,18 +575,19 @@ async function readCollection(backend, schema, filter = null, options = {}) {
     }
     
     // Subscribe to item changes (fires when item becomes available or updates)
-    // CRITICAL: Only trigger updateStore, don't re-do deep resolution
-    // Deep resolution is already done once when item is first loaded
+    // CRITICAL: Invalidate cache BEFORE processing to ensure fresh data is processed
+    // The promise-based cache in getOrCreateResolvedData() will handle concurrent calls
     const unsubscribeItem = itemCore.subscribe(() => {
+      // Invalidate cache BEFORE processing - ensures getOrCreateResolvedData() processes fresh data
+      cache.invalidateResolvedData(itemId);
       // Fire and forget - don't await async updateStore in subscription callback
-      // Note: updateStore will skip deep resolution for items already in deepResolvedItems
       updateStore().catch(err => {
         console.warn(`[CoJSONBackend] Error updating store:`, err);
       });
     });
     
     // Use subscriptionCache for each item (same pattern for all CoValue references)
-    backend.subscriptionCache.getOrCreate(itemId, () => ({ unsubscribe: unsubscribeItem }));
+    backend.subscriptionCache.getOrCreate(`subscription:${itemId}`, () => ({ unsubscribe: unsubscribeItem }));
   };
   
   // Helper to update store with current items
@@ -711,58 +634,79 @@ async function readCollection(backend, schema, filter = null, options = {}) {
         // Extract item if available (progressive loading - show available items immediately)
         if (backend.isAvailable(itemCore)) {
           availableCount++;
-          let itemData = extractCoValueDataFlat(backend, itemCore);
           
-          // Filter out empty CoMaps (defense in depth - prevents skeletons from appearing even if index removal fails)
-          // Empty CoMap = object with only id, type, $schema properties (no data properties)
+          // CRITICAL OPTIMIZATION: Use getOrCreateResolvedData to prevent concurrent processing
+          // This ensures that if updateStore is called multiple times, only one processing happens
+          const itemCacheOptions = { deepResolve, resolveReferences, map, maxDepth, timeoutMs };
+          
+          // CRITICAL: Get fresh itemCore reference each time to ensure we read latest data
+          // The itemCore reference might be stale if item changed between subscription and processing
+          const currentItemCore = backend.getCoValue(itemId);
+          if (!currentItemCore || !backend.isAvailable(currentItemCore)) {
+            // Item no longer available - skip it (will be handled by subscription)
+            continue;
+          }
+          
+          const itemData = await cache.getOrCreateResolvedData(itemId, itemCacheOptions, async () => {
+            // Process and cache the item data using fresh CoValueCore reference
+            let processedData = extractCoValueDataFlat(backend, currentItemCore);
+            
+            // Filter out empty CoMaps (defense in depth - prevents skeletons from appearing even if index removal fails)
+            // Empty CoMap = object with only id, type, $schema properties (no data properties)
+            const dataKeys = Object.keys(processedData).filter(key => 
+              !['id', 'type', '$schema'].includes(key)
+            );
+            if (dataKeys.length === 0 && processedData.type === 'comap') {
+              // Return empty object for empty CoMap (will be filtered out later)
+              return processedData;
+            }
+            
+            // Deep resolve nested references if enabled
+            // CRITICAL: Use unified cache to prevent duplicate resolution work
+            if (deepResolve && !cache.isResolved(itemId)) {
+              try {
+                await resolveNestedReferences(backend, processedData, sharedVisited, {
+                  maxDepth,
+                  timeoutMs,
+                  currentDepth: 0
+                });
+              } catch (err) {
+                // Silently continue - deep resolution failure shouldn't block item display
+              }
+            }
+            
+            // Resolve CoValue references (if option enabled)
+            // This allows views to access nested properties like $$source.role
+            if (resolveReferences) {
+              try {
+                const resolutionOptions = { ...resolveReferences, timeoutMs };
+                const resolvedData = await resolveCoValueReferences(backend, processedData, resolutionOptions, sharedVisited, maxDepth, 0);
+                // Replace processedData with resolved version
+                Object.assign(processedData, resolvedData);
+              } catch (err) {
+                // Silently continue - resolution failure shouldn't block item display
+              }
+            }
+            
+            // Apply map transformation (if option enabled)
+            // This transforms data using MaiaScript expressions (e.g., { sender: "$$source.role" })
+            if (map) {
+              try {
+                processedData = await applyMapTransform(backend, processedData, map, { timeoutMs });
+              } catch (err) {
+                console.warn(`[readCollection] Failed to apply map transform:`, err);
+              }
+            }
+            
+            return processedData;
+          });
+          
+          // Skip empty CoMaps
           const dataKeys = Object.keys(itemData).filter(key => 
             !['id', 'type', '$schema'].includes(key)
           );
           if (dataKeys.length === 0 && itemData.type === 'comap') {
-            // Skip empty CoMap skeletons
             continue;
-          }
-          
-          // Deep resolve nested references if enabled
-          // CRITICAL: Only deep-resolve each item ONCE, even if updateStore() is called multiple times
-          // This prevents cascading duplicate work when subscriptions fire repeatedly
-          if (deepResolve && !deepResolvedItems.has(itemId)) {
-            try {
-              await resolveNestedReferences(backend, itemData, sharedVisited, {
-                maxDepth,
-                timeoutMs,
-                currentDepth: 0
-              });
-              // Mark as resolved to prevent duplicate work
-              deepResolvedItems.add(itemId);
-            } catch (err) {
-              // Silently continue - deep resolution failure shouldn't block item display
-            }
-          }
-          
-          // Resolve CoValue references (if option enabled)
-          // This allows views to access nested properties like $$source.role
-          if (resolveReferences) {
-            try {
-              const resolutionOptions = { ...resolveReferences, timeoutMs };
-              const resolvedData = await resolveCoValueReferences(backend, itemData, resolutionOptions, new Set(), maxDepth, 0);
-              // Replace itemData with resolved version
-              Object.assign(itemData, resolvedData);
-            } catch (err) {
-              // Silently continue - resolution failure shouldn't block item display
-            }
-          }
-          
-          // Apply map transformation (if option enabled)
-          // This transforms data using MaiaScript expressions (e.g., { sender: "$$source.role" })
-          if (map) {
-            try {
-              console.log(`[readCollection] Applying map transform to item ${itemId.substring(0, 12)}...`, { map });
-              itemData = await applyMapTransform(backend, itemData, map, { timeoutMs });
-              console.log(`[readCollection] Map transform result:`, itemData);
-            } catch (err) {
-              console.warn(`[readCollection] Failed to apply map transform:`, err);
-            }
           }
           
           // Apply filter if provided
@@ -792,7 +736,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
   });
   
   // Use subscriptionCache for CoList
-  backend.subscriptionCache.getOrCreate(coListId, () => ({ unsubscribe: unsubscribeCoList }));
+  backend.subscriptionCache.getOrCreate(`subscription:${coListId}`, () => ({ unsubscribe: unsubscribeCoList }));
   
   // CRITICAL FIX: Trigger immediate loading of all items before initial updateStore()
   // This ensures items are loaded synchronously, not reactively after view renders
@@ -829,11 +773,11 @@ async function readCollection(backend, schema, filter = null, options = {}) {
   const originalUnsubscribe = store._unsubscribe;
   store._unsubscribe = () => {
     // Remove from cache when store is cleaned up
-    storeCache.delete(cacheKey);
+    backend.subscriptionCache.scheduleCleanup(`store:${cacheKey}`);
     if (originalUnsubscribe) originalUnsubscribe();
-    backend.subscriptionCache.scheduleCleanup(coListId);
+    backend.subscriptionCache.scheduleCleanup(`subscription:${coListId}`);
     for (const itemId of subscribedItemIds) {
-      backend.subscriptionCache.scheduleCleanup(itemId);
+      backend.subscriptionCache.scheduleCleanup(`subscription:${itemId}`);
     }
   };
   
@@ -875,7 +819,7 @@ async function readAllCoValues(backend, filter = null, options = {}) {
     });
 
     // Use subscriptionCache (same pattern for all types)
-    backend.subscriptionCache.getOrCreate(coId, () => ({ unsubscribe }));
+    backend.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe }));
   };
   
   // Helper to update store with all CoValues
@@ -940,7 +884,7 @@ async function readAllCoValues(backend, filter = null, options = {}) {
     if (originalUnsubscribe) originalUnsubscribe();
     // Schedule cleanup for all subscribed CoValues
     for (const coId of subscribedCoIds) {
-      backend.subscriptionCache.scheduleCleanup(coId);
+      backend.subscriptionCache.scheduleCleanup(`subscription:${coId}`);
     }
   };
 

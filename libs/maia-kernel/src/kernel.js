@@ -460,8 +460,6 @@ export class MaiaOS {
     // Create root actor
     const actor = await this.createActor(actorPath, container);
     
-    console.log(`✅ Vibe loaded: ${vibe.name}`);
-    
     return { vibe, actor };
   }
 
@@ -667,8 +665,6 @@ export class MaiaOS {
     
     // Create root actor with vibeKey for tracking
     const actor = await this.actorEngine.createActor(actorConfig, container, vibeKey);
-    
-    console.log(`✅ Vibe loaded: ${vibe.name}`);
     
     return { vibe, actor };
   }
