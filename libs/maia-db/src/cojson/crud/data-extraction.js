@@ -174,6 +174,35 @@ export function extractCoValueData(backend, coValueCore, schemaHint = null) {
 }
 
 /**
+ * Recursively parse JSON strings within an object/array
+ * Handles cases where nested objects are stored as JSON strings in CoJSON
+ * @param {any} data - Data to parse (object, array, or primitive)
+ * @returns {any} Data with JSON strings parsed recursively
+ */
+function parseNestedJsonStrings(data) {
+  if (typeof data === 'string' && (data.startsWith('{') || data.startsWith('['))) {
+    try {
+      const parsed = JSON.parse(data);
+      // Recursively parse nested JSON strings
+      return parseNestedJsonStrings(parsed);
+    } catch (e) {
+      return data; // Keep as string if not valid JSON
+    }
+  } else if (Array.isArray(data)) {
+    return data.map(item => parseNestedJsonStrings(item));
+  } else if (typeof data === 'object' && data !== null) {
+    const result = {};
+    for (const [key, val] of Object.entries(data)) {
+      // CRITICAL: Recursively parse each value - this handles cases where
+      // nested properties like 'options' are stored as JSON strings
+      result[key] = parseNestedJsonStrings(val);
+    }
+    return result;
+  }
+  return data; // Primitives (numbers, booleans, null) pass through
+}
+
+/**
  * Extract CoValue data as flat object (for SubscriptionEngine and UI)
  * Returns flat objects like {id: '...', text: '...', done: false} instead of normalized format
  * @param {Object} backend - Backend instance
@@ -338,13 +367,82 @@ export function extractCoValueDataFlat(backend, coValueCore, schemaHint = null) 
       : Object.keys(content);
     for (const key of keys) {
       let value = content.get(key);
+      
+      // Debug: Log raw value for context objects (to diagnose options.map issue)
+      if (key === 'allMessages' || (schema && schema.includes('context'))) {
+        console.log(`[extractCoValueDataFlat] 🔍 Raw value for key "${key}":`, {
+          type: typeof value,
+          isString: typeof value === 'string',
+          isObject: typeof value === 'object' && value !== null,
+          startsWithBrace: typeof value === 'string' && value.startsWith('{'),
+          valueSample: typeof value === 'string' ? value.substring(0, 200) : (typeof value === 'object' ? JSON.stringify(value).substring(0, 200) : value),
+          hasOptions: typeof value === 'object' && value !== null ? 'options' in value : false,
+          optionsType: typeof value === 'object' && value !== null && 'options' in value ? typeof value.options : 'N/A'
+        });
+      }
+      
       // CRITICAL: CoJSON might serialize nested objects as JSON strings
-      // Parse JSON strings back to objects (especially for nested structures like states)
+      // Parse JSON strings back to objects (especially for nested structures like states, query options)
       if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
         try {
-          value = JSON.parse(value);
+          const parsed = JSON.parse(value);
+          console.log(`[extractCoValueDataFlat] ✅ Parsed JSON string for "${key}":`, {
+            parsedType: typeof parsed,
+            parsedKeys: typeof parsed === 'object' && parsed !== null ? Object.keys(parsed) : [],
+            hasOptions: typeof parsed === 'object' && parsed !== null ? 'options' in parsed : false,
+            optionsType: typeof parsed === 'object' && parsed !== null && 'options' in parsed ? typeof parsed.options : 'N/A',
+            parsedSample: JSON.stringify(parsed).substring(0, 300)
+          });
+          // CRITICAL: Recursively parse nested JSON strings within the parsed object
+          // This handles cases where nested objects like options.map are also stored as JSON strings
+          value = parseNestedJsonStrings(parsed);
+          console.log(`[extractCoValueDataFlat] ✅ After recursive parse for "${key}":`, {
+            finalType: typeof value,
+            finalKeys: typeof value === 'object' && value !== null ? Object.keys(value) : [],
+            hasOptions: typeof value === 'object' && value !== null ? 'options' in value : false,
+            optionsKeys: typeof value === 'object' && value !== null && 'options' in value && typeof value.options === 'object' ? Object.keys(value.options) : [],
+            hasMap: typeof value === 'object' && value !== null && 'options' in value && typeof value.options === 'object' ? 'map' in value.options : false,
+            finalSample: JSON.stringify(value).substring(0, 400)
+          });
         } catch (e) {
+          console.warn(`[extractCoValueDataFlat] Failed to parse JSON string for "${key}":`, e);
           // Keep as string if not valid JSON
+        }
+      } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        // Also check if object properties are JSON strings (for nested structures)
+        // CRITICAL: Check if 'options' property is a JSON string that needs parsing
+        if (key === 'allMessages' || (schema && schema.includes('context'))) {
+          const hasOptionsBefore = 'options' in value;
+          const optionsTypeBefore = hasOptionsBefore ? typeof value.options : 'N/A';
+          const optionsIsString = hasOptionsBefore && typeof value.options === 'string' && (value.options.startsWith('{') || value.options.startsWith('['));
+          
+          console.log(`[extractCoValueDataFlat] 🔍 Before recursive parse for "${key}":`, {
+            hasOptions: hasOptionsBefore,
+            optionsType: optionsTypeBefore,
+            optionsIsString,
+            optionsValue: hasOptionsBefore ? (typeof value.options === 'string' ? value.options.substring(0, 200) : JSON.stringify(value.options).substring(0, 200)) : 'N/A',
+            allKeys: Object.keys(value)
+          });
+        }
+        
+        const beforeParse = JSON.stringify(value).substring(0, 200);
+        value = parseNestedJsonStrings(value);
+        const afterParse = JSON.stringify(value).substring(0, 200);
+        
+        if (key === 'allMessages' || (schema && schema.includes('context'))) {
+          const hasOptionsAfter = 'options' in value;
+          const optionsTypeAfter = hasOptionsAfter ? typeof value.options : 'N/A';
+          const hasMap = hasOptionsAfter && typeof value.options === 'object' && value.options !== null ? 'map' in value.options : false;
+          
+          console.log(`[extractCoValueDataFlat] ✅ After recursive parse for "${key}":`, {
+            hasOptions: hasOptionsAfter,
+            optionsType: optionsTypeAfter,
+            hasMap,
+            optionsKeys: hasOptionsAfter && typeof value.options === 'object' && value.options !== null ? Object.keys(value.options) : [],
+            mapKeys: hasMap ? Object.keys(value.options.map) : [],
+            changed: beforeParse !== afterParse,
+            finalSample: JSON.stringify(value).substring(0, 400)
+          });
         }
       }
       result[key] = value;
@@ -389,7 +487,8 @@ export async function resolveCoValueReferences(backend, data, options = {}, visi
     if (typeof data !== 'object') {
       // Check if it's a co-id string that should be resolved
       if (typeof data === 'string' && data.startsWith('co_z')) {
-        const resolved = await resolveCoId(backend, data, options, visited);
+        // CRITICAL: Pass maxDepth and currentDepth to ensure recursive resolution works
+        const resolved = await resolveCoId(backend, data, options, visited, maxDepth, currentDepth);
         // resolveCoId always returns an object now, so return it directly
         return resolved;
       }
@@ -406,7 +505,9 @@ export async function resolveCoValueReferences(backend, data, options = {}, visi
   // Handle objects
   const result = {};
   for (const [key, value] of Object.entries(data)) {
-    // Skip internal properties
+    // Always preserve internal properties (don't skip them - they're part of the data)
+    // CRITICAL: Preserve ALL properties, including id, $schema, type, etc.
+    // Skip resolution for internal properties (they're not co-ids to resolve)
     if (key === 'id' || key === '$schema' || key === 'type' || key === 'loading' || key === 'error') {
       result[key] = value;
       continue;
@@ -422,15 +523,17 @@ export async function resolveCoValueReferences(backend, data, options = {}, visi
     }
     
     if (shouldResolve && typeof value === 'string' && value.startsWith('co_z')) {
-      // Resolve this co-id reference
-      const resolved = await resolveCoId(backend, value, { ...options, timeoutMs }, visited);
+      // Resolve this co-id reference (with depth tracking for recursion)
+      const resolved = await resolveCoId(backend, value, { ...options, timeoutMs, maxDepth, currentDepth }, visited, maxDepth, currentDepth + 1);
       result[key] = resolved;
     } else {
-      // Recursively process nested values
+      // Recursively process nested values (preserves non-co-id values like strings, numbers, etc.)
       result[key] = await resolveCoValueReferences(backend, value, options, visited, maxDepth, currentDepth + 1);
     }
   }
   
+  // CRITICAL: Ensure we preserve ALL properties from the original data object
+  // This is especially important for actor objects where properties like 'role' must be preserved
   return result;
 }
 
@@ -445,7 +548,7 @@ export async function resolveCoValueReferences(backend, data, options = {}, visi
  * @param {Set<string>} visited - Set of already visited co-ids
  * @returns {Promise<any>} Resolved CoValue data or original co-id if not resolved
  */
-async function resolveCoId(backend, coId, options = {}, visited = new Set()) {
+async function resolveCoId(backend, coId, options = {}, visited = new Set(), maxDepth = 10, currentDepth = 0) {
   const { schemas = null, timeoutMs = 2000 } = options;
   
   if (visited.has(coId)) {
@@ -459,8 +562,9 @@ async function resolveCoId(backend, coId, options = {}, visited = new Set()) {
     
     // Read the co-value directly using backend.read() API
     // Signature: read(schema, key, keys, filter, options)
+    // CRITICAL: Use deepResolve: false to get raw data, then we'll resolve nested co-ids ourselves
     const coValueStore = await backend.read(null, coId, null, null, {
-      deepResolve: false, // Don't deep resolve here - we just want the data
+      deepResolve: false, // Don't deep resolve here - we just want the flat data
       timeoutMs
     });
     
@@ -485,6 +589,19 @@ async function resolveCoId(backend, coId, options = {}, visited = new Set()) {
       return { id: coId }; // Invalid data - return object with id
     }
     
+    // Debug: Log what we got from extractCoValueDataFlat
+    const isActor = coValueData.$schema && (coValueData.$schema.includes('actor') || coValueData.$schema.includes('Actor'));
+    if (isActor) {
+      console.log(`[resolveCoId] 🔍 Reading actor ${coId.substring(0, 12)}...`, {
+        keys: Object.keys(coValueData),
+        hasRole: 'role' in coValueData,
+        roleValue: coValueData.role,
+        hasId: 'id' in coValueData,
+        idValue: coValueData.id,
+        sample: JSON.stringify(coValueData).substring(0, 200)
+      });
+    }
+    
     // Check if we should resolve based on schema filter
     if (schemas !== null && schemas.length > 0) {
       const dataSchema = coValueData.$schema;
@@ -495,12 +612,42 @@ async function resolveCoId(backend, coId, options = {}, visited = new Set()) {
     
     // Resolve the CoValue - include id and all properties
     visited.add(coId);
+    
+    // CRITICAL: coValueData from extractCoValueDataFlat is already a flat object
+    // (e.g., { id: "...", role: "agent", context: "co_z...", ... })
+    // We just need to recursively resolve nested co-id references within it
+    const recursivelyResolved = await resolveCoValueReferences(
+      backend, 
+      coValueData, 
+      options, 
+      visited, 
+      maxDepth, 
+      currentDepth + 1
+    );
+    
+    // CRITICAL FIX: Ensure id is always preserved, and all properties from recursivelyResolved are included
+    // recursivelyResolved already contains all properties including id (from coValueData)
+    // But we want to ensure the original coId is used as id if not present
     const resolved = {
-      id: coValueData.id || coId, // Keep original co-id as id
-      ...coValueData // Include all properties
+      ...recursivelyResolved, // Include all properties (recursively resolved) - this includes id from coValueData
+      id: recursivelyResolved.id || coValueData.id || coId // Ensure id is always present
     };
     
-    console.log(`[resolveCoId] ✅ Resolved ${coId.substring(0, 12)}... to object with keys:`, Object.keys(resolved));
+    // Enhanced debug logging for actor resolution
+    if (isActor) {
+      console.log(`[resolveCoId] ✅ Resolved actor ${coId.substring(0, 12)}...`, {
+        originalKeys: Object.keys(coValueData),
+        resolvedKeys: Object.keys(resolved),
+        hasRole: 'role' in resolved,
+        roleValue: resolved.role,
+        hasId: 'id' in resolved,
+        idValue: resolved.id,
+        recursivelyResolvedKeys: Object.keys(recursivelyResolved),
+        sample: JSON.stringify(resolved).substring(0, 300)
+      });
+    } else {
+      console.log(`[resolveCoId] ✅ Resolved ${coId.substring(0, 12)}... to object with keys:`, Object.keys(resolved));
+    }
     return resolved;
   } catch (err) {
     console.error(`[resolveCoId] ❌ Error resolving ${coId.substring(0, 12)}...:`, err);

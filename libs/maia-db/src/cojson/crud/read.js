@@ -15,6 +15,7 @@ import { getCoListId } from './collection-helpers.js';
 import { matchesFilter } from './filter-helpers.js';
 import { deepResolveCoValue, resolveNestedReferencesPublic, resolveNestedReferences, isDeepResolvedOrResolving } from './deep-resolution.js';
 import { applyMapTransform, applyMapTransformToArray } from './map-transform.js';
+import { resolve as resolveSchema } from '../schema/resolver.js';
 
 /**
  * Store cache - caches stores by schema+filter to allow multiple actors to share the same store
@@ -53,10 +54,11 @@ export async function read(backend, coId = null, schema = null, filter = null, s
     maxDepth = 10,
     timeoutMs = 5000,
     resolveReferences = null,
-    map = null
+    map = null,
+    onChange = null
   } = options;
   
-  const readOptions = { deepResolve, maxDepth, timeoutMs, resolveReferences, map };
+  const readOptions = { deepResolve, maxDepth, timeoutMs, resolveReferences, map, onChange };
   
   // Single item read (by coId)
   if (coId) {
@@ -74,13 +76,260 @@ export async function read(backend, coId = null, schema = null, filter = null, s
 }
 
 /**
+ * Create unified store that merges context value with query results
+ * Detects query objects (objects with `schema` property) and merges their results
+ * @param {Object} backend - Backend instance
+ * @param {ReactiveStore} contextStore - Context CoValue ReactiveStore
+ * @param {Object} options - Options for query resolution
+ * @param {Function} [options.onChange] - Callback called when unified value changes (for triggering rerenders)
+ * @returns {Promise<ReactiveStore>} Unified ReactiveStore with merged data
+ * @private
+ */
+async function createUnifiedStore(backend, contextStore, options = {}) {
+  const unifiedStore = new ReactiveStore({});
+  const queryStores = new Map(); // key -> ReactiveStore
+  const queryDefinitions = new Map(); // key -> query definition object (for $op)
+  const { timeoutMs = 5000, onChange } = options;
+
+  // Helper to update unified value by merging context + query results
+  // CRITICAL: Debounce updates to prevent render loops from multiple rapid calls
+  let lastUnifiedValue = null;
+  let updateTimer = null;
+  const updateUnifiedValue = () => {
+    // Debounce: batch multiple rapid calls into a single update
+    if (updateTimer) {
+      return; // Already scheduled
+    }
+    
+    updateTimer = queueMicrotask(() => {
+      updateTimer = null;
+      
+      const contextValue = contextStore.value || {};
+      const mergedValue = { ...contextValue };
+      
+      // Remove special fields
+      delete mergedValue['@stores'];
+      
+      // Build $op object with query definitions (keyed by query name)
+      const $op = {};
+      for (const [key, queryDef] of queryDefinitions.entries()) {
+        $op[key] = queryDef;
+      }
+      
+      // Add $op to merged value if there are any query definitions
+      if (Object.keys($op).length > 0) {
+        mergedValue.$op = $op;
+      }
+      
+      // Merge query store values (resolved arrays at root level, same key as query name)
+      for (const [key, queryStore] of queryStores.entries()) {
+        if (queryStore && typeof queryStore.subscribe === 'function' && 'value' in queryStore) {
+          // Remove the query object from mergedValue (if present) and replace with resolved array
+          delete mergedValue[key];
+          mergedValue[key] = queryStore.value;
+        }
+      }
+      
+      // Only update if value actually changed (deep comparison)
+      const currentValueStr = JSON.stringify(mergedValue);
+      const lastValueStr = lastUnifiedValue ? JSON.stringify(lastUnifiedValue) : null;
+      
+      if (currentValueStr !== lastValueStr) {
+        lastUnifiedValue = mergedValue;
+        // _set() automatically notifies all subscribers (including the one set up in ActorEngine)
+        unifiedStore._set(mergedValue);
+      }
+    });
+  };
+
+  // Helper to resolve and subscribe to query objects
+  const resolveQueries = async (contextValue) => {
+    if (!contextValue || typeof contextValue !== 'object' || Array.isArray(contextValue)) {
+      updateUnifiedValue();
+      return;
+    }
+
+    // Debug: Log the full context value to see what we're working with
+    console.log(`[createUnifiedStore] 🔍 resolveQueries called with contextValue:`, {
+      keys: Object.keys(contextValue),
+      allMessages: contextValue.allMessages ? {
+        hasSchema: !!contextValue.allMessages.schema,
+        schema: contextValue.allMessages.schema,
+        hasOptions: !!contextValue.allMessages.options,
+        optionsKeys: contextValue.allMessages.options ? Object.keys(contextValue.allMessages.options) : [],
+        hasMap: contextValue.allMessages.options ? !!contextValue.allMessages.options.map : false,
+        mapKeys: contextValue.allMessages.options?.map ? Object.keys(contextValue.allMessages.options.map) : null,
+        fullValue: JSON.stringify(contextValue.allMessages).substring(0, 400)
+      } : 'not found'
+    });
+
+    const currentQueryKeys = new Set();
+
+    // Detect and resolve query objects
+    for (const [key, value] of Object.entries(contextValue)) {
+      // Skip special fields
+      if (key === '$schema' || key === '$id' || key === '@stores') continue;
+      
+      // Check if this is a query object (has schema property)
+      if (value && typeof value === 'object' && !Array.isArray(value) && value.schema) {
+        currentQueryKeys.add(key);
+        
+        // Debug: Log the full query object to see what we're working with
+        console.log(`[createUnifiedStore] 🔍 Processing query "${key}":`, {
+          hasSchema: !!value.schema,
+          schema: value.schema,
+          hasOptions: !!value.options,
+          optionsKeys: value.options ? Object.keys(value.options) : [],
+          hasMap: value.options ? !!value.options.map : false,
+          mapKeys: value.options?.map ? Object.keys(value.options.map) : null,
+          fullValue: JSON.stringify(value).substring(0, 300)
+        });
+        
+        // Check if we already have this query store
+        const existingStore = queryStores.get(key);
+        
+        try {
+          // Resolve schema reference to co-id if needed
+          let schemaCoId = value.schema;
+          if (typeof schemaCoId === 'string' && !schemaCoId.startsWith('co_z')) {
+            if (schemaCoId.startsWith('@schema/')) {
+              schemaCoId = await resolveSchema(backend, schemaCoId, { returnType: 'coId', timeoutMs });
+              if (!schemaCoId || !schemaCoId.startsWith('co_z')) {
+                console.error(`[createUnifiedStore] Failed to resolve schema ${value.schema} for query "${key}"`);
+                continue;
+              }
+            } else {
+              console.error(`[createUnifiedStore] Invalid schema format for query "${key}": ${schemaCoId}`);
+              continue;
+            }
+          }
+
+          // Execute read operation for query (call exported read function)
+          // CRITICAL: Extract map and other options from the query object itself (value.options)
+          // The query object can have its own options.map that needs to be passed to read()
+          
+          // Debug: Check what value.options actually contains
+          console.log(`[createUnifiedStore] 🔍 Checking value.options for "${key}":`, {
+            hasOptions: !!value.options,
+            optionsType: typeof value.options,
+            optionsValue: value.options,
+            optionsKeys: value.options ? Object.keys(value.options) : [],
+            hasMap: value.options ? !!value.options.map : false,
+            mapValue: value.options?.map,
+            fullValue: JSON.stringify(value).substring(0, 500)
+          });
+          
+          const queryOptions = {
+            ...options,
+            timeoutMs,
+            // Extract options from query object (e.g., value.options.map)
+            ...(value.options || {})
+          };
+          
+          console.log(`[createUnifiedStore] ✅ Executing query "${key}" with options:`, {
+            schema: schemaCoId.substring(0, 12) + '...',
+            filter: value.filter,
+            map: queryOptions.map ? Object.keys(queryOptions.map) : null,
+            hasMap: !!queryOptions.map,
+            queryOptionsKeys: Object.keys(queryOptions),
+            fullQueryOptions: JSON.stringify(queryOptions).substring(0, 400)
+          });
+          
+          const queryStore = await read(backend, null, schemaCoId, value.filter || null, null, queryOptions);
+
+          // Store query definition for $op (preserve original query object as source of truth)
+          queryDefinitions.set(key, {
+            schema: value.schema,
+            ...(value.options ? { options: value.options } : {}),
+            ...(value.filter ? { filter: value.filter } : {})
+          });
+
+          // Subscribe to query store if not already subscribed
+          if (!existingStore || existingStore !== queryStore) {
+            // Unsubscribe from old store if it exists
+            if (existingStore && existingStore._queryUnsubscribe) {
+              existingStore._queryUnsubscribe();
+            }
+            
+            // Subscribe to query store updates
+            const unsubscribe = queryStore.subscribe(() => {
+              updateUnifiedValue();
+            });
+            queryStore._queryUnsubscribe = unsubscribe;
+            queryStores.set(key, queryStore);
+            updateUnifiedValue();
+          }
+        } catch (error) {
+          console.error(`[createUnifiedStore] Failed to resolve query "${key}":`, error);
+        }
+      }
+    }
+
+    // Clean up query stores and definitions that are no longer in context
+    for (const [key, store] of queryStores.entries()) {
+      if (!currentQueryKeys.has(key)) {
+        if (store._queryUnsubscribe) {
+          store._queryUnsubscribe();
+          delete store._queryUnsubscribe;
+        }
+        queryStores.delete(key);
+        queryDefinitions.delete(key);
+      }
+    }
+
+    updateUnifiedValue();
+  };
+
+  // Subscribe to context store changes
+  const contextUnsubscribe = contextStore.subscribe(async (newContextValue) => {
+    await resolveQueries(newContextValue);
+  });
+
+  // Set up cleanup
+  const originalUnsubscribe = unifiedStore._unsubscribe;
+  unifiedStore._unsubscribe = () => {
+    if (originalUnsubscribe) originalUnsubscribe();
+    contextUnsubscribe();
+    for (const store of queryStores.values()) {
+      if (store._queryUnsubscribe) {
+        store._queryUnsubscribe();
+        delete store._queryUnsubscribe;
+      }
+    }
+    queryStores.clear();
+  };
+
+  // Debug: Log the raw context store value before processing
+  console.log(`[createUnifiedStore] 🔍 Raw contextStore.value:`, {
+    keys: Object.keys(contextStore.value || {}),
+    allMessages: contextStore.value?.allMessages ? {
+      type: typeof contextStore.value.allMessages,
+      isObject: typeof contextStore.value.allMessages === 'object',
+      isArray: Array.isArray(contextStore.value.allMessages),
+      keys: Object.keys(contextStore.value.allMessages),
+      hasSchema: 'schema' in contextStore.value.allMessages,
+      hasOptions: 'options' in contextStore.value.allMessages,
+      schema: contextStore.value.allMessages.schema,
+      options: contextStore.value.allMessages.options,
+      fullValue: JSON.stringify(contextStore.value.allMessages, null, 2)
+    } : 'not found',
+    fullContextValue: JSON.stringify(contextStore.value, null, 2).substring(0, 1000)
+  });
+
+  // Initial resolve
+  await resolveQueries(contextStore.value);
+
+  return unifiedStore;
+}
+
+/**
  * Read a single CoValue by ID
  * 
  * @param {Object} backend - Backend instance
  * @param {string} coId - CoValue ID
  * @param {string} [schemaHint] - Schema hint for special types
  * @param {Object} [options] - Options for deep resolution
- * @returns {Promise<ReactiveStore>} ReactiveStore with CoValue data
+ * @returns {Promise<ReactiveStore>} ReactiveStore with CoValue data (with query objects merged if present)
  */
 async function readSingleCoValue(backend, coId, schemaHint = null, options = {}) {
   const {
@@ -187,6 +436,18 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
         }
       }
       
+      // Check if data contains query objects (objects with schema property)
+      const hasQueryObjects = updatedData && typeof updatedData === 'object' && 
+        Object.values(updatedData).some(value => 
+          value && typeof value === 'object' && !Array.isArray(value) && value.schema
+        );
+      
+      // If query objects detected, create unified store that merges queries
+      if (hasQueryObjects) {
+        store._set(updatedData);
+        return await createUnifiedStore(backend, store, options);
+      }
+      
       store._set(updatedData);
       return store;
     }
@@ -209,6 +470,18 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
           console.warn(`[readSingleCoValue] Failed to apply map transform:`, err);
           // Continue with unmapped data
         }
+      }
+      
+      // Check if data contains query objects (objects with schema property)
+      const hasQueryObjects = data && typeof data === 'object' && 
+        Object.values(data).some(value => 
+          value && typeof value === 'object' && !Array.isArray(value) && value.schema
+        );
+      
+      // If query objects detected, create unified store that merges queries
+      if (hasQueryObjects) {
+        store._set(data);
+        return await createUnifiedStore(backend, store, options);
       }
       
       store._set(data);

@@ -301,10 +301,11 @@ export class CoJSONBackend extends DBAdapter {
       maxDepth = 10,
       timeoutMs = 5000,
       resolveReferences = null,
-      map = null
+      map = null,
+      onChange = null
     } = options;
     
-    const readOptions = { deepResolve, maxDepth, timeoutMs, resolveReferences, map };
+    const readOptions = { deepResolve, maxDepth, timeoutMs, resolveReferences, map, onChange };
     
     // Batch read (multiple keys)
     if (keys && Array.isArray(keys)) {

@@ -1,7 +1,9 @@
 {
   "$schema": "@schema/context",
   "$id": "@context/list",
-  "todos": {
+  "list": {
     "schema": "@schema/data/todos"
-  }
+  },
+  "toggleButtonText": "✓",
+  "deleteButtonText": "✕"
 }

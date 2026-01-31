@@ -1,15 +1,16 @@
 {
   "$schema": "@schema/context",
   "$id": "@context/logs",
-  "allMessages": {
+  "messages": {
     "schema": "@schema/message",
     "options": {
       "map": {
-        "sender": "$$source.role",
-        "recipient": "$$target.role",
-        "sourceId": "$$source.id",
-        "targetId": "$$target.id"
+        "fromRole": "$$source.role",
+        "toRole": "$$target.role",
+        "fromId": "$$source.id",
+        "toId": "$$target.id"
       }
     }
-  }
+  },
+  "payloadLabel": "payload"
 }

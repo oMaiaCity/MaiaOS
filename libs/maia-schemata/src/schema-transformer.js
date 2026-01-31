@@ -549,19 +549,20 @@ function transformTargetReference(targetRef, coIdMap, context = '') {
 
 /**
  * Transform a query object schema reference
- * Ensures query objects only have schema and filter properties (strict validation)
+ * Preserves all properties including options (map, resolveReferences, etc.)
  * @param {Object} queryObj - Query object with schema property
  * @param {Map} coIdMap - Map of human-readable IDs to co-ids
  */
 function transformQueryObjectSchema(queryObj, coIdMap) {
   // CRITICAL: Don't transform mapData operation configs - they have a 'key' property that must be preserved
   // mapData operation configs can have structure: {op: 'read', key: string, schema: string, filter?: object}
-  // Query objects have structure: {schema: string, filter?: object} (no 'key' property)
+  // Query objects have structure: {schema: string, filter?: object, options?: {...}} (no 'key' property)
   if ('key' in queryObj && !('op' in queryObj)) {
     // This might be a mapData operation config, not a query object - don't transform it here
     return;
   }
   
+  // Transform schema reference from human-readable ID to co-id
   if (queryObj.schema && typeof queryObj.schema === 'string') {
     const coId = transformSchemaReference(queryObj.schema, coIdMap, 'query object');
     if (coId) {
@@ -569,31 +570,11 @@ function transformQueryObjectSchema(queryObj, coIdMap) {
     }
   }
   
-  // CRITICAL: Ensure query object only has schema and filter properties (strict validation)
-  // Remove any extra properties that might have been added
-  // Query objects must match schema exactly: {schema: "co_z...", filter: {...}|null}
-  const cleanedQueryObj = {
-    schema: queryObj.schema
-  };
-  if ('filter' in queryObj) {
-    cleanedQueryObj.filter = queryObj.filter;
-  }
-  
-  // Replace original object properties with cleaned version
-  Object.keys(queryObj).forEach(key => {
-    if (key !== 'schema' && key !== 'filter') {
-      delete queryObj[key];
-    }
-  });
-  
-  // Ensure schema and filter are set correctly
-  queryObj.schema = cleanedQueryObj.schema;
-  if ('filter' in cleanedQueryObj) {
-    queryObj.filter = cleanedQueryObj.filter;
-  } else {
-    // Filter is optional, but if not present, don't add it (let schema default handle it)
-    delete queryObj.filter;
-  }
+  // CRITICAL: Preserve ALL properties including options (map, resolveReferences, etc.)
+  // Query objects can have: {schema: "co_z...", filter?: {...}, options?: {map: {...}, ...}}
+  // Options can contain map, resolveReferences, etc. - these must be preserved
+  // Only transform the schema field, preserve all other properties (filter, options, etc.)
+  // No cleaning/deletion needed - just transform schema reference
 }
 
 /**

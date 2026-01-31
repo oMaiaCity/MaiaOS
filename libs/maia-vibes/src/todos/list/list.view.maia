@@ -4,7 +4,7 @@
   "content": {
     "class": "list",
     "$each": {
-    "items": "$todos",
+    "items": "$list",
     "template": {
       "class": "card",
       "attrs": {
@@ -30,7 +30,7 @@
         {
           "tag": "button",
           "class": "button-small button-danger",
-          "text": "✕",
+          "text": "$deleteButtonText",
           "$on": {
             "click": {
               "send": "DELETE_BUTTON",

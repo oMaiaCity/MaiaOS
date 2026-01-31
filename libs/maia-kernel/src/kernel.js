@@ -18,6 +18,7 @@ import { StateEngine } from '@MaiaOS/script';
 import { MaiaScriptEvaluator } from '@MaiaOS/script';
 import { ModuleRegistry } from '@MaiaOS/script';
 import { ToolEngine } from '@MaiaOS/script';
+import { resolve } from '@MaiaOS/db';
 // SubscriptionEngine eliminated - all subscriptions handled via direct read() + ReactiveStore
 import { DBEngine } from '@MaiaOS/script';
 // Import validation helper
@@ -415,7 +416,19 @@ export class MaiaOS {
    * @returns {Promise<Object>} Created actor
    */
   async createActor(actorPath, container) {
-    const actorConfig = await this.actorEngine.loadActor(actorPath);
+    // Use universal API directly - no wrapper needed
+    let actorConfig;
+    if (typeof actorPath === 'object' && actorPath !== null) {
+      // Already have config object - just use it
+      actorConfig = actorPath;
+    } else if (typeof actorPath === 'string' && actorPath.startsWith('co_z')) {
+      // Load actor config using read() directly
+      const actorSchemaCoId = await resolve(this.actorEngine.dbEngine.backend, { fromCoValue: actorPath }, { returnType: 'coId' });
+      const store = await this.actorEngine.dbEngine.execute({ op: 'read', schema: actorSchemaCoId, key: actorPath });
+      actorConfig = store.value;
+    } else {
+      throw new Error(`[MaiaOS] createActor expects co-id (co_z...) or config object, got: ${typeof actorPath}`);
+    }
     const actor = await this.actorEngine.createActor(actorConfig, container);
     return actor;
   }
@@ -648,8 +661,9 @@ export class MaiaOS {
     }
     
     // First time loading or no vibeKey - create actors normally
-    // Load actor config via loadActor (which uses maia.db())
-    const actorConfig = await this.actorEngine.loadActor(actorCoId);
+    // Use universal API directly - actorSchemaCoId already resolved above
+    // Reuse actorStore that was already loaded for verification
+    const actorConfig = actorStore.value;
     
     // Create root actor with vibeKey for tracking
     const actor = await this.actorEngine.createActor(actorConfig, container, vibeKey);

@@ -135,7 +135,7 @@ async function deleteSeededCoValues(account, node, backend) {
               }
             }
           } catch (e) {
-            console.warn(`[Seed] Failed to read index colist ${key.substring(0, 12)}...:`, e.message);
+            console.warn(`[Seed] Failed to read index colist ${key ? key.substring(0, 12) : 'undefined'}...:`, e.message);
             errorCount++;
           }
         }
@@ -224,7 +224,7 @@ async function deleteSeededCoValues(account, node, backend) {
           }
         }
       } catch (e) {
-        console.warn(`[Seed] Failed to delete co-value ${coId.substring(0, 12)}...:`, e.message);
+        console.warn(`[Seed] Failed to delete co-value ${coId ? coId.substring(0, 12) : 'undefined'}...:`, e.message);
         errorCount++;
       }
     }
@@ -260,7 +260,7 @@ async function deleteSeededCoValues(account, node, backend) {
                     deletedCount++;
                   }
                 } catch (e) {
-                  console.warn(`[Seed] Failed to delete vibe ${vibeCoId.substring(0, 12)}...:`, e.message);
+                  console.warn(`[Seed] Failed to delete vibe ${vibeCoId ? vibeCoId.substring(0, 12) : 'undefined'}...:`, e.message);
                   errorCount++;
                 }
               }
@@ -306,7 +306,7 @@ async function deleteSeededCoValues(account, node, backend) {
         // Get the schema definition to construct the index colist schema title
         const schemaDef = await resolve(backend, schemaCoId, { returnType: 'schema' });
         if (!schemaDef || !schemaDef.title) {
-          console.warn(`[Seed] Cannot get schema title for ${schemaCoId.substring(0, 12)}..., skipping index colist deletion`);
+          console.warn(`[Seed] Cannot get schema title for ${schemaCoId ? schemaCoId.substring(0, 12) : 'undefined'}..., skipping index colist deletion`);
           continue;
         }
         
@@ -356,7 +356,7 @@ async function deleteSeededCoValues(account, node, backend) {
           }
         }
       } catch (e) {
-        console.warn(`[Seed] Failed to delete index colist ${indexColistId.substring(0, 12)}...:`, e.message);
+        console.warn(`[Seed] Failed to delete index colist ${indexColistId ? indexColistId.substring(0, 12) : 'undefined'}...:`, e.message);
         errorCount++;
       }
     }
@@ -1388,21 +1388,27 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
       
       // Debug: log all properties to see what's actually stored
     } else {
-      console.warn(`   ⚠️  Cannot read schema CoMap for ${schemaCoId.substring(0, 12)}... (config: ${path}), schemaCoMap type: ${typeof schemaCoMap}`);
+      console.warn(`   ⚠️  Cannot read schema CoMap for ${schemaCoId ? schemaCoId.substring(0, 12) : 'undefined'}... (config: ${path}), schemaCoMap type: ${typeof schemaCoMap}`);
     }
 
     // Remove $id and $schema from config (they're stored in metadata, not as properties)
     const { $id, $schema, ...configWithoutId } = config;
     
     // DEBUG: Log context seeding to see if query objects are present
-    if (path && path.includes('context') && path.includes('list')) {
-      console.log(`[CoJSONSeed.createConfig] Creating list context:`, {
+    if (path && path.includes('context') && (path.includes('logs') || path.includes('list'))) {
+      console.log(`[CoJSONSeed.createConfig] 🔍 Creating context:`, {
         path,
         $id,
         configKeys: Object.keys(config),
         configWithoutIdKeys: Object.keys(configWithoutId),
-        hasTodosQuery: !!configWithoutId.todos,
-        todosQuery: configWithoutId.todos
+        hasAllMessages: !!configWithoutId.allMessages,
+        allMessagesType: typeof configWithoutId.allMessages,
+        allMessagesKeys: configWithoutId.allMessages && typeof configWithoutId.allMessages === 'object' ? Object.keys(configWithoutId.allMessages) : [],
+        hasOptions: configWithoutId.allMessages && typeof configWithoutId.allMessages === 'object' ? !!configWithoutId.allMessages.options : false,
+        optionsKeys: configWithoutId.allMessages?.options ? Object.keys(configWithoutId.allMessages.options) : [],
+        hasMap: configWithoutId.allMessages?.options?.map ? true : false,
+        mapKeys: configWithoutId.allMessages?.options?.map ? Object.keys(configWithoutId.allMessages.options.map) : [],
+        fullAllMessages: configWithoutId.allMessages ? JSON.stringify(configWithoutId.allMessages).substring(0, 500) : 'undefined'
       });
     }
 
@@ -1426,8 +1432,72 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
       // INIT messages are skipped - they were only for debugging display issues
     } else {
       // CoMap: Default behavior
-      coValue = universalGroup.createMap(configWithoutId, meta);
+      // CoJSON supports nested plain objects/arrays (like views with nested attrs.data, children, etc.)
+      // Set all properties explicitly to ensure nested objects are stored correctly
+      coValue = universalGroup.createMap({}, meta); // Create empty map first
       actualCoId = coValue.id;
+      
+      // Set all properties explicitly (including nested objects) - CoJSON supports nested plain objects
+      // This matches how views work - nested objects like attrs.data are stored directly
+      for (const [key, value] of Object.entries(configWithoutId)) {
+        coValue.set(key, value);
+      }
+      
+      // DEBUG: After setting all properties, verify nested objects are stored correctly
+      if (path && path.includes('context') && (path.includes('logs') || path.includes('list'))) {
+        // Check what's actually stored in CoJSON
+        const storedAllMessages = coValue.get('allMessages');
+        console.log(`[CoJSONSeed.createConfig] ✅ After explicit set, stored "allMessages":`, {
+          type: typeof storedAllMessages,
+          isString: typeof storedAllMessages === 'string',
+          isObject: typeof storedAllMessages === 'object' && storedAllMessages !== null,
+          isCoMap: storedAllMessages && typeof storedAllMessages.get === 'function',
+          keys: typeof storedAllMessages === 'object' && storedAllMessages !== null && typeof storedAllMessages.get !== 'function' ? Object.keys(storedAllMessages) : (storedAllMessages && typeof storedAllMessages.get === 'function' ? Array.from(storedAllMessages.keys()) : []),
+          hasOptions: typeof storedAllMessages === 'object' && storedAllMessages !== null && typeof storedAllMessages.get !== 'function' ? 'options' in storedAllMessages : false,
+          optionsKeys: typeof storedAllMessages === 'object' && storedAllMessages !== null && typeof storedAllMessages.get !== 'function' && 'options' in storedAllMessages ? Object.keys(storedAllMessages.options) : [],
+          hasMap: typeof storedAllMessages === 'object' && storedAllMessages !== null && typeof storedAllMessages.get !== 'function' && 'options' in storedAllMessages ? 'map' in storedAllMessages.options : false,
+          sample: typeof storedAllMessages === 'string' ? storedAllMessages.substring(0, 300) : (storedAllMessages && typeof storedAllMessages.get !== 'function' ? JSON.stringify(storedAllMessages).substring(0, 300) : 'CoMap instance')
+        });
+        
+        // Also check the raw config to see what we're trying to store
+        if (configWithoutId.allMessages) {
+          console.log(`[CoJSONSeed.createConfig] 🔍 Original configWithoutId.allMessages:`, {
+            type: typeof configWithoutId.allMessages,
+            keys: typeof configWithoutId.allMessages === 'object' ? Object.keys(configWithoutId.allMessages) : [],
+            hasOptions: typeof configWithoutId.allMessages === 'object' && 'options' in configWithoutId.allMessages,
+            optionsKeys: typeof configWithoutId.allMessages === 'object' && 'options' in configWithoutId.allMessages ? Object.keys(configWithoutId.allMessages.options) : [],
+            fullValue: JSON.stringify(configWithoutId.allMessages).substring(0, 500)
+          });
+        }
+      }
+      
+      // DEBUG: After creation, verify nested objects are stored correctly
+      if (path && path.includes('context') && (path.includes('logs') || path.includes('list'))) {
+        // Check what's actually stored in CoJSON
+        const storedAllMessages = coValue.get('allMessages');
+        console.log(`[CoJSONSeed.createConfig] ✅ After createMap + explicit set, stored "allMessages":`, {
+          type: typeof storedAllMessages,
+          isString: typeof storedAllMessages === 'string',
+          isObject: typeof storedAllMessages === 'object' && storedAllMessages !== null,
+          isCoMap: storedAllMessages && typeof storedAllMessages.get === 'function',
+          keys: typeof storedAllMessages === 'object' && storedAllMessages !== null && typeof storedAllMessages.get !== 'function' ? Object.keys(storedAllMessages) : (storedAllMessages && typeof storedAllMessages.get === 'function' ? storedAllMessages.keys() : []),
+          hasOptions: typeof storedAllMessages === 'object' && storedAllMessages !== null && typeof storedAllMessages.get !== 'function' ? 'options' in storedAllMessages : false,
+          optionsKeys: typeof storedAllMessages === 'object' && storedAllMessages !== null && typeof storedAllMessages.get !== 'function' && 'options' in storedAllMessages ? Object.keys(storedAllMessages.options) : [],
+          hasMap: typeof storedAllMessages === 'object' && storedAllMessages !== null && typeof storedAllMessages.get !== 'function' && 'options' in storedAllMessages ? 'map' in storedAllMessages.options : false,
+          sample: typeof storedAllMessages === 'string' ? storedAllMessages.substring(0, 300) : (storedAllMessages && typeof storedAllMessages.get !== 'function' ? JSON.stringify(storedAllMessages).substring(0, 300) : 'CoMap instance')
+        });
+        
+        // Also check the raw config to see what we're trying to store
+        if (configWithoutId.allMessages) {
+          console.log(`[CoJSONSeed.createConfig] 🔍 Original configWithoutId.allMessages:`, {
+            type: typeof configWithoutId.allMessages,
+            keys: typeof configWithoutId.allMessages === 'object' ? Object.keys(configWithoutId.allMessages) : [],
+            hasOptions: typeof configWithoutId.allMessages === 'object' && 'options' in configWithoutId.allMessages,
+            optionsKeys: typeof configWithoutId.allMessages === 'object' && 'options' in configWithoutId.allMessages ? Object.keys(configWithoutId.allMessages.options) : [],
+            fullValue: JSON.stringify(configWithoutId.allMessages).substring(0, 500)
+          });
+        }
+      }
     }
 
     // Update instanceCoIdMap with actual co-id (CoJSON generates random co-ids, so they won't match human-readable IDs)
@@ -1675,7 +1745,7 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
   }
   
   if (!osCore || !osCore.isAvailable()) {
-    console.warn(`[Seed] account.os (${osId.substring(0, 12)}...) not available`);
+    console.warn(`[Seed] account.os (${osId ? osId.substring(0, 12) : 'undefined'}...) not available`);
     return;
   }
   
@@ -1738,7 +1808,7 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
       schematas.set('@schema/meta', metaschemaCoId);
     } else if (existingCoId !== metaschemaCoId) {
       // Different metaschema already registered - don't overwrite
-      console.warn(`[Seed] Metaschema already registered with different co-id: ${existingCoId.substring(0, 12)}... (new: ${metaschemaCoId.substring(0, 12)}...). Skipping.`);
+      console.warn(`[Seed] Metaschema already registered with different co-id: ${existingCoId ? existingCoId.substring(0, 12) : 'undefined'}... (new: ${metaschemaCoId ? metaschemaCoId.substring(0, 12) : 'undefined'}...). Skipping.`);
     } else {
     }
   }

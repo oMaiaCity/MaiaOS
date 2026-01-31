@@ -20,7 +20,7 @@
                     "active": "$listButtonActive"
                   }
                 },
-                "text": "List",
+                "text": "$listViewLabel",
                 "$on": {
                   "click": {
                     "send": "SWITCH_VIEW",
@@ -37,7 +37,7 @@
                     "active": "$logsButtonActive"
                   }
                 },
-                "text": "Logs",
+                "text": "$logsViewLabel",
                 "$on": {
                   "click": {
                     "send": "SWITCH_VIEW",

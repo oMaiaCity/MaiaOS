@@ -18,15 +18,6 @@ export class StyleEngine {
     return ref;
   }
 
-  async loadStyle(coId) {
-    const styleSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: coId }, { returnType: 'coId' });
-    const store = await this.dbEngine.execute({
-      op: 'read',
-      schema: styleSchemaCoId,
-      key: coId
-    });
-    return store;
-  }
 
   deepMerge(target, source) {
     const output = { ...target };

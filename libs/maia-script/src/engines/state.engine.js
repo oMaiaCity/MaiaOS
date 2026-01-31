@@ -22,13 +22,6 @@ export class StateEngine {
     this.dbEngine = null; // Database operation engine (set by kernel)
   }
 
-  async loadStateDef(stateRef) {
-    // Use direct read() API - no wrapper needed
-    const stateSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: stateRef }, { returnType: 'coId' });
-    const store = await this.dbEngine.execute({ op: 'read', schema: stateSchemaCoId, key: stateRef });
-    
-    return store; // Return store directly - caller subscribes (pure stores pattern)
-  }
 
   async createMachine(stateDef, actor) {
     const machineId = `${actor.id}_machine`;
@@ -92,7 +85,7 @@ export class StateEngine {
   async _evaluateGuard(guard, context, payload, actor = null) {
     if (typeof guard === 'boolean') return guard;
     try {
-      // CLEAN ARCHITECTURE: Context is UnifiedReactiveContext - value is already merged and resolved
+      // $stores Architecture: Context is ReactiveStore with merged query results from backend
       const contextValue = context.value;
       return Boolean(await this.evaluator.evaluate(guard, { context: contextValue, item: payload }));
     } catch (error) {
@@ -326,16 +319,24 @@ export class StateEngine {
         // mapData operations are read-only (mutations belong in tool calls)
         // Check if result is a ReactiveStore (read operations and read-like operations return ReactiveStore)
         if (result && typeof result === 'object' && typeof result.subscribe === 'function' && 'value' in result) {
-          // Read operations and read-like operations (e.g., aggregateMessages) return ReactiveStore
-          // CLEAN ARCHITECTURE: UnifiedReactiveContext handles dynamic queries from mapData
-          // Add query store to UnifiedReactiveContext - it handles merging and subscriptions automatically
-          const store = result;
-          
-          // UnifiedReactiveContext handles dynamic queries from mapData
-          if (machine.actor.context && typeof machine.actor.context.addDynamicQuery === 'function') {
-            await machine.actor.context.addDynamicQuery(contextKey, store);
-          } else {
-            console.warn(`[StateEngine] Actor context is not UnifiedReactiveContext, cannot add dynamic query "${contextKey}"`);
+          // Read operations return ReactiveStore
+          // For dynamic queries from mapData, we need to update the context CoValue with the query object
+          // Backend unified store will then handle merging automatically
+          const actor = machine.actor;
+          if (actor && actor.contextCoId && actor.contextSchemaCoId && this.actorEngine) {
+            // Extract query object from mapData config
+            const queryConfig = mapData[contextKey];
+            if (queryConfig && queryConfig.op === 'read' && queryConfig.schema) {
+              // Update context CoValue with query object
+              // Backend unified store will detect it and merge results automatically
+              await this.actorEngine.updateContextCoValue(actor, {
+                [contextKey]: {
+                  schema: queryConfig.schema,
+                  filter: queryConfig.filter || null,
+                  options: queryConfig.options || null
+                }
+              });
+            }
           }
         } else {
           // mapData should only contain read operations (operations that return ReactiveStore)
@@ -384,7 +385,7 @@ export class StateEngine {
   }
 
   async _evaluatePayload(payload, context, eventPayload = {}, lastToolResult = null, actor = null) {
-    // CLEAN ARCHITECTURE: Context is UnifiedReactiveContext - value is already merged and resolved
+    // $stores Architecture: Context is ReactiveStore with merged query results from backend
     const contextValue = context.value;
     const data = { context: contextValue, item: eventPayload || {}, result: lastToolResult || null };
     const result = await resolveExpressions(payload, this.evaluator, data);

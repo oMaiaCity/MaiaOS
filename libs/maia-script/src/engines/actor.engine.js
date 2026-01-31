@@ -8,8 +8,6 @@
 
 // Import message helper
 import { createAndPushMessage, resolve } from '@MaiaOS/db';
-import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
-import { UnifiedReactiveContext } from '../utils/unified-reactive-context.js';
 
 export class ActorEngine {
   constructor(styleEngine, viewEngine, moduleRegistry, toolEngine, stateEngine = null) {
@@ -31,125 +29,6 @@ export class ActorEngine {
     this.batchTimer = null; // Track if microtask is scheduled
   }
 
-  async loadActor(coIdOrConfig) {
-    // Use direct read() API - no wrapper needed
-    if (typeof coIdOrConfig === 'object' && coIdOrConfig !== null) {
-      // Already have config object - just return it
-      return coIdOrConfig;
-    }
-    if (typeof coIdOrConfig === 'string' && coIdOrConfig.startsWith('co_z')) {
-      // Load actor config using read() directly
-      const actorSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: coIdOrConfig }, { returnType: 'coId' });
-      const store = await this.dbEngine.execute({ op: 'read', schema: actorSchemaCoId, key: coIdOrConfig });
-      return store.value;
-    }
-    throw new Error(`[ActorEngine] loadActor expects co-id (co_z...) or config object, got: ${typeof coIdOrConfig}`);
-  }
-  
-
-  async loadContext(coId) {
-    console.log(`[ActorEngine.loadContext] Called with:`, { coId, isContextRef: coId?.startsWith?.('@context/') });
-    
-    // Store original context reference before resolving (needed for query object initialization)
-    const originalContextRef = typeof coId === 'string' && coId.startsWith('@context/') ? coId : null;
-    
-    // Resolve context reference to actual co-id (handles both co-ids and human-readable refs like "@context/list")
-    let actualContextCoId = coId;
-    if (typeof coId === 'string' && !coId.startsWith('co_z')) {
-      // Human-readable reference - resolve to actual co-id
-      const resolved = await this.dbEngine.execute({ op: 'resolve', humanReadableKey: coId });
-      if (resolved && resolved.startsWith('co_z')) {
-        actualContextCoId = resolved;
-      } else {
-        throw new Error(`[ActorEngine] Failed to resolve context reference "${coId}"`);
-      }
-    }
-    
-    // Use direct read() API - no wrapper needed
-    const contextSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: actualContextCoId }, { returnType: 'coId' });
-    const contextStore = await this.dbEngine.execute({ op: 'read', schema: contextSchemaCoId, key: actualContextCoId });
-    const contextValue = contextStore.value;
-    
-    console.log(`[ActorEngine.loadContext] Loaded context:`, {
-      contextCoId: actualContextCoId,
-      contextKeys: Object.keys(contextValue || {}),
-      contextValue: contextValue
-    });
-
-    // Check if context has query objects
-    const hasQueryObjects = contextValue && typeof contextValue === 'object' && 
-      Object.values(contextValue).some(value => 
-        value && typeof value === 'object' && !Array.isArray(value) && value.schema
-      );
-    
-    // If query objects are missing and we have a context reference, initialize them
-    // This handles cases where contexts were seeded without query objects or lost them during updates
-    if (!hasQueryObjects && originalContextRef) {
-      // Known context definitions with their query objects
-      // This is a fallback for contexts that should have query objects but don't
-      const knownQueryObjects = {
-        '@context/list': {
-          todos: { schema: '@schema/data/todos' }
-        },
-        '@context/logs': {
-          allMessages: { schema: '@schema/data/messages' }
-        }
-      };
-      
-      const queryObjects = knownQueryObjects[originalContextRef];
-      if (queryObjects) {
-        console.log(`[ActorEngine] Initializing query objects for ${originalContextRef}`);
-        
-        // Resolve schema references in query objects to actual schema co-ids
-        const resolvedQueryObjects = {};
-        for (const [key, queryObj] of Object.entries(queryObjects)) {
-          if (queryObj.schema) {
-            const schemaCoId = await this.dbEngine.execute({ op: 'resolve', humanReadableKey: queryObj.schema });
-            if (schemaCoId && schemaCoId.startsWith('co_z')) {
-              resolvedQueryObjects[key] = { schema: schemaCoId };
-            } else {
-              // Fallback: use original schema reference if resolution fails
-              resolvedQueryObjects[key] = queryObj;
-            }
-          } else {
-            resolvedQueryObjects[key] = queryObj;
-          }
-        }
-        
-        // Initialize context CoValue with query objects
-        await this.dbEngine.execute({
-          op: 'update',
-          schema: contextSchemaCoId,
-          id: actualContextCoId,
-          data: resolvedQueryObjects
-        });
-        
-        // Reload context store after initialization
-        const updatedStore = await this.dbEngine.execute({ op: 'read', schema: contextSchemaCoId, key: actualContextCoId });
-        const updatedContext = new UnifiedReactiveContext(
-          updatedStore,
-          this.dbEngine,
-          actualContextCoId,
-          contextSchemaCoId
-        );
-        await updatedContext.initialize();
-        return { context: updatedContext, contextCoId: actualContextCoId, contextSchemaCoId, store: updatedContext };
-      }
-    }
-    
-    // Create UnifiedReactiveContext that automatically resolves queries
-    const unifiedContext = new UnifiedReactiveContext(
-      contextStore,
-      this.dbEngine,
-      actualContextCoId,
-      contextSchemaCoId
-    );
-    
-    // Initialize queries asynchronously
-    await unifiedContext.initialize();
-    
-    return { context: unifiedContext, contextCoId: actualContextCoId, contextSchemaCoId, store: unifiedContext };
-  }
 
   async updateContextCoValue(actor, updates) {
     if (!actor.contextCoId || !this.dbEngine) {
@@ -173,13 +52,7 @@ export class ActorEngine {
   async _loadActorConfigs(actorConfig) {
     if (!actorConfig.view) throw new Error(`[ActorEngine] Actor config must have 'view' property`);
     
-    // Set up subscription storage
     const actorId = actorConfig.id || 'temp';
-    if (!this._tempSubscriptions) this._tempSubscriptions = new Map(); // actorId -> Array<unsubscribe>
-    if (!this._tempSubscriptions.has(actorId)) {
-      this._tempSubscriptions.set(actorId, []);
-    }
-    const tempSubscriptions = this._tempSubscriptions.get(actorId);
     
     // Load view config (needs two sequential reads: first to get schema, then to get view)
     const viewStore = await this.dbEngine.execute({ op: 'read', schema: null, key: actorConfig.view });
@@ -191,22 +64,46 @@ export class ActorEngine {
     const viewStore2 = await this.dbEngine.execute({ op: 'read', schema: viewSchemaCoId, key: actorConfig.view });
     const viewDef = viewStore2.value;
     
-    const unsubscribeView = viewStore2.subscribe((updatedView) => {
+    // $stores Architecture: Backend handles subscriptions automatically via subscriptionCache
+    // Subscribe for reactivity (rerender on view changes) - backend handles cleanup
+    viewStore2.subscribe((updatedView) => {
       const actor = this.actors.get(actorId);
       if (actor) {
         actor.viewDef = updatedView;
         if (actor._initialRenderComplete) this._scheduleRerender(actor.id);
       }
     }, { skipInitial: true });
-    tempSubscriptions.push(unsubscribeView);
     
     // Parallelize loading of context, style, brand, and inbox configs
     const loadPromises = [];
     
-    // Context loading
+    // Context loading - use universal API directly
     let contextPromise = null;
     if (actorConfig.context) {
-      contextPromise = this.loadContext(actorConfig.context);
+      contextPromise = (async () => {
+        const coId = actorConfig.context;
+        // Resolve context reference to actual co-id (handles both co-ids and human-readable refs)
+        let actualContextCoId = coId;
+        if (typeof coId === 'string' && !coId.startsWith('co_z')) {
+          const resolved = await this.dbEngine.execute({ op: 'resolve', humanReadableKey: coId });
+          if (resolved && resolved.startsWith('co_z')) {
+            actualContextCoId = resolved;
+          } else {
+            throw new Error(`[ActorEngine] Failed to resolve context reference "${coId}"`);
+          }
+        }
+        
+        // Backend read() automatically detects query objects and returns unified store with merged data
+        const contextSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: actualContextCoId }, { returnType: 'coId' });
+        const contextStore = await this.dbEngine.execute({ 
+          op: 'read', 
+          schema: contextSchemaCoId, 
+          key: actualContextCoId
+        });
+        
+        // Backend handles query merging automatically - just use store directly
+        return { context: contextStore, contextCoId: actualContextCoId, contextSchemaCoId, store: contextStore };
+      })();
       loadPromises.push(contextPromise);
     }
     
@@ -218,7 +115,8 @@ export class ActorEngine {
         try {
           const styleSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: actorConfig.style }, { returnType: 'coId' });
           const styleStore = await this.dbEngine.execute({ op: 'read', schema: styleSchemaCoId, key: actorConfig.style });
-          const unsubscribeStyle = styleStore.subscribe(async (updatedStyle) => {
+          // $stores Architecture: Backend handles subscriptions automatically via subscriptionCache
+          styleStore.subscribe(async (updatedStyle) => {
             const actor = this.actors.get(actorId);
             if (actor && this.styleEngine) {
               try {
@@ -232,10 +130,9 @@ export class ActorEngine {
               }
             }
           }, { skipInitial: true });
-          tempSubscriptions.push(unsubscribeStyle);
           return styleStore;
         } catch (error) {
-          console.error(`[ActorEngine] Failed to subscribe to style:`, error);
+          console.error(`[ActorEngine] Failed to load style:`, error);
           return null;
         }
       })();
@@ -247,7 +144,8 @@ export class ActorEngine {
         try {
           const brandSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: actorConfig.brand }, { returnType: 'coId' });
           const brandStore = await this.dbEngine.execute({ op: 'read', schema: brandSchemaCoId, key: actorConfig.brand });
-          const unsubscribeBrand = brandStore.subscribe(async (updatedBrand) => {
+          // $stores Architecture: Backend handles subscriptions automatically via subscriptionCache
+          brandStore.subscribe(async (updatedBrand) => {
             const actor = this.actors.get(actorId);
             if (actor && this.styleEngine) {
               try {
@@ -261,10 +159,9 @@ export class ActorEngine {
               }
             }
           }, { skipInitial: true });
-          tempSubscriptions.push(unsubscribeBrand);
           return brandStore;
         } catch (error) {
-          console.error(`[ActorEngine] Failed to subscribe to brand:`, error);
+          console.error(`[ActorEngine] Failed to load brand:`, error);
           return null;
         }
       })();
@@ -288,13 +185,10 @@ export class ActorEngine {
     let context = null, contextCoId = null, contextSchemaCoId = null;
     if (contextPromise) {
       const result = await contextPromise;
-      // CLEAN ARCHITECTURE: actor.context IS UnifiedReactiveContext
-      // UnifiedReactiveContext automatically resolves queries and merges values
-      // Views subscribe directly to unified context - no getContextValue() needed
-      context = result.store; // UnifiedReactiveContext instance
+      // $stores Architecture: Backend unified store handles query merging automatically
+      context = result.store; // ReactiveStore with merged query results
       contextCoId = result.contextCoId;
       contextSchemaCoId = result.contextSchemaCoId;
-      // UnifiedReactiveContext handles all query resolution and merging internally
     }
     
     let inbox = null, inboxCoId = null;
@@ -303,7 +197,7 @@ export class ActorEngine {
       inbox = await inboxPromise;
     }
     
-    return { viewDef, context, contextCoId, contextSchemaCoId, inbox, inboxCoId, tempSubscriptions };
+    return { viewDef, context, contextCoId, contextSchemaCoId, inbox, inboxCoId };
   }
 
   /**
@@ -324,15 +218,12 @@ export class ActorEngine {
           key: actorConfig.inbox 
         });
         
-        // Set up subscription for inbox updates
-        const unsubscribe = store.subscribe((updatedCostream) => {
+        // $stores Architecture: Backend handles subscriptions automatically via subscriptionCache
+        store.subscribe((updatedCostream) => {
           if (this.actors.has(actor.id) && updatedCostream?.items) {
             this.processMessages(actor.id);
           }
         });
-        
-        if (!actor._subscriptions) actor._subscriptions = [];
-        actor._subscriptions.push(unsubscribe);
       } catch (error) {
         console.error(`[ActorEngine] Failed to subscribe to inbox:`, error);
       }
@@ -368,14 +259,9 @@ export class ActorEngine {
         // Backend's read() operation handles deep resolution automatically (deepResolve: true by default)
         // State definitions should already be fully resolved - no manual resolution needed
         
-        // Set up subscription for state updates (direct subscription, same pattern as view/context/style)
-        // Store directly in actor._subscriptions since actor already exists
-        if (!actor._subscriptions) actor._subscriptions = [];
-        // Capture actor.id in a local variable to avoid closure/TDZ issues
+        // $stores Architecture: Backend handles subscriptions automatically via subscriptionCache
         const actorId = actor.id;
-        const unsubscribeState = stateStore.subscribe(async (updatedStateDef) => {
-          // Use captured actorId instead of accessing actor.id from closure
-          // This prevents "Cannot access 'actor' before initialization" errors during cleanup
+        stateStore.subscribe(async (updatedStateDef) => {
           const currentActor = this.actors.get(actorId);
           if (currentActor && this.stateEngine) {
             try {
@@ -387,7 +273,6 @@ export class ActorEngine {
             }
           }
         }, { skipInitial: true });
-        actor._subscriptions.push(unsubscribeState);
         
         actor.machine = await this.stateEngine.createMachine(stateDef, actor);
       } catch (error) {
@@ -396,7 +281,7 @@ export class ActorEngine {
     }
   }
 
-  // _resolveContextQueries removed - UnifiedReactiveContext handles query resolution internally
+  // Query resolution handled by backend unified store automatically
 
   /**
    * Determine if an actor is a service actor (orchestrator) vs UI actor (presentation)
@@ -444,7 +329,7 @@ export class ActorEngine {
     if (actor.children?.[namekey]) return actor.children[namekey];
     if (!actor.children) actor.children = {};
     
-    // CLEAN ARCHITECTURE: actor.context IS UnifiedReactiveContext, read from store.value (already merged)
+    // $stores Architecture: actor.context IS ReactiveStore with merged query results from backend
     const contextValue = actor.context.value;
     
     if (!contextValue["@actors"]?.[namekey]) return null;
@@ -453,7 +338,10 @@ export class ActorEngine {
       throw new Error(`[ActorEngine] Child actor ID must be co-id: ${childActorCoId}`);
     }
     try {
-      const childActorConfig = await this.loadActor(childActorCoId);
+      // Use universal API directly - no wrapper needed
+      const actorSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: childActorCoId }, { returnType: 'coId' });
+      const store = await this.dbEngine.execute({ op: 'read', schema: actorSchemaCoId, key: childActorCoId });
+      const childActorConfig = store.value;
       if (childActorConfig.$id !== childActorCoId) childActorConfig.$id = childActorCoId;
       const childContainer = document.createElement('div');
       childContainer.dataset.namekey = namekey;
@@ -491,24 +379,34 @@ export class ActorEngine {
       vibeKey,
       inbox,
       inboxCoId,
-      _subscriptions: [],
       _initialRenderComplete: false,
       children: {}
     };
     
-    // Store config subscriptions in actor._subscriptions for cleanup
-    if (tempSubscriptions && Array.isArray(tempSubscriptions)) {
-      for (const unsubscribe of tempSubscriptions) {
-        if (typeof unsubscribe === 'function') {
-          actor._subscriptions.push(unsubscribe);
-        }
-      }
-      // Clean up temporary storage
-      this._tempSubscriptions?.delete(actorId);
-    }
-    
     await this._setupMessageSubscriptions(actor, actorConfig);
     this.actors.set(actorId, actor);
+    
+    // $stores Architecture: Subscribe to context changes AFTER actor is created
+    // Backend unified store handles query merging, we just need to trigger rerenders on changes
+    // Subscribe with skipInitial to avoid triggering rerender during initial load
+    if (actor.context && typeof actor.context.subscribe === 'function') {
+      // Store last context value to prevent unnecessary rerenders
+      let lastContextValue = JSON.stringify(actor.context.value || {});
+      
+      actor.context.subscribe(() => {
+        // Only rerender if context actually changed (deep comparison via JSON)
+        const currentContextValue = JSON.stringify(actor.context.value || {});
+        const contextChanged = currentContextValue !== lastContextValue;
+        lastContextValue = currentContextValue;
+        
+        // Trigger rerender when context updates (e.g., currentView changes)
+        // Only rerender if initial render is complete, not currently rendering, and context actually changed
+        if (actor._initialRenderComplete && !actor._isRerendering && contextChanged) {
+          this._scheduleRerender(actorId);
+        }
+      }, { skipInitial: true });
+    }
+    
     if (containerElement) {
       if (!this._containerActors.has(containerElement)) {
         this._containerActors.set(containerElement, new Set());
@@ -517,11 +415,8 @@ export class ActorEngine {
     }
     if (vibeKey) this.registerActorForVibe(actorId, vibeKey);
     
-    // UnifiedReactiveContext handles all query resolution and merging internally
-    // No manual query resolution or context subscription needed here
-    // Views subscribe directly to UnifiedReactiveContext - it handles everything
-    
-    // SubscriptionEngine eliminated - all subscriptions handled via UnifiedReactiveContext
+    // Backend unified store handles all query resolution and merging automatically
+    // Views use context.value directly - backend handles reactivity via subscriptionCache
     await this._initializeActorState(actor, actorConfig);
     await this.viewEngine.render(viewDef, actor.context, shadowRoot, styleSheets, actorId);
     
@@ -676,20 +571,10 @@ export class ActorEngine {
     const actor = this.actors.get(actorId);
     if (!actor) return;
     actor.shadowRoot.innerHTML = '';
-    // SubscriptionEngine eliminated - cleanup handled by viewEngine and direct store subscriptions
     if (this.viewEngine) this.viewEngine.cleanupActor(actorId);
     
-    // Clean up all subscriptions (stored in actor._subscriptions)
-    if (actor._subscriptions?.length > 0) {
-      actor._subscriptions.forEach(u => typeof u === 'function' && u());
-      actor._subscriptions = [];
-    }
-    // Clean up temporary subscriptions storage (if actor was destroyed before creation completed)
-    if (this._tempSubscriptions?.has(actorId)) {
-      const tempSubs = this._tempSubscriptions.get(actorId);
-      tempSubs.forEach(u => typeof u === 'function' && u());
-      this._tempSubscriptions.delete(actorId);
-    }
+    // $stores Architecture: Backend handles all subscription cleanup automatically via subscriptionCache
+    // No manual cleanup needed
     if (actor.machine && this.stateEngine) this.stateEngine.destroyMachine(actor.machine.id);
     if (actor._processedMessageKeys) {
       actor._processedMessageKeys.clear();

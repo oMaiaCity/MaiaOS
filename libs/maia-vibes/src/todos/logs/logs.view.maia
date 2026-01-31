@@ -9,78 +9,74 @@
     "children": [
       {
         "tag": "div",
-        "class": "log-header",
-        "children": [
-          {
-            "tag": "h2",
-            "text": "System Logs"
-          }
-        ]
-      },
-      {
-        "tag": "div",
         "class": "log-entries",
         "$each": {
-          "items": "$allMessages",
+          "items": "$messages",
           "template": {
-            "class": "log-entry",
-            "attrs": {
-              "data": {
-                "eventType": "$$type",
-                "processed": "$$processed"
-              }
-            },
+            "class": "log-entry-container",
             "children": [
               {
-                "tag": "span",
-                "class": "log-type",
-                "text": "$$type"
-              },
-              {
-                "tag": "span",
-                "class": "log-source",
-                "children": [
-                  {
-                    "tag": "span",
-                    "class": "log-source-role",
-                    "text": "$$sender"
-                  },
-                  {
-                    "tag": "span",
-                    "class": "log-source-id",
-                    "text": "$$sourceId"
+                "tag": "div",
+                "class": "log-entry",
+                "attrs": {
+                  "data": {
+                    "eventType": "$$type",
+                    "processed": "$$processed"
                   }
-                ]
-              },
-              {
-                "tag": "span",
-                "class": "log-target",
+                },
                 "children": [
                   {
                     "tag": "span",
-                    "class": "log-target-role",
-                    "text": "$$recipient"
+                    "class": "log-type",
+                    "text": "$$type"
                   },
                   {
                     "tag": "span",
-                    "class": "log-target-id",
-                    "text": "$$targetId"
-                  }
-                ]
-              },
-              {
-                "tag": "details",
-                "class": "log-payload-details",
-                "children": [
-                  {
-                    "tag": "summary",
-                    "class": "log-payload-toggle",
-                    "text": "payload"
+                    "class": "log-source",
+                    "children": [
+                      {
+                        "tag": "span",
+                        "class": "log-source-role",
+                        "text": "$$fromRole"
+                      },
+                      {
+                        "tag": "span",
+                        "class": "log-source-id",
+                        "text": "$$fromId"
+                      }
+                    ]
                   },
                   {
-                    "tag": "pre",
-                    "class": "log-payload",
-                    "text": "$$payload"
+                    "tag": "span",
+                    "class": "log-target",
+                    "children": [
+                      {
+                        "tag": "span",
+                        "class": "log-target-role",
+                        "text": "$$recipient"
+                      },
+                      {
+                        "tag": "span",
+                        "class": "log-target-id",
+                        "text": "$$targetId"
+                      }
+                    ]
+                  },
+                  {
+                    "tag": "details",
+                    "class": "log-payload-details",
+                    "children": [
+                      {
+                        "tag": "summary",
+                        "class": "log-payload-toggle",
+                        "text": "$payloadLabel"
+                      },
+                      {
+                        "tag": "pre",
+                        "class": "log-payload",
+                        "text": "$$payload"
+                      }
+                    ]
                   }
                 ]
               }

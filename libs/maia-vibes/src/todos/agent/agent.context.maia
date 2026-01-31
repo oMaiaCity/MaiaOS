@@ -7,6 +7,8 @@
   "logsButtonActive": false,
   "inputPlaceholder": "Add a new todo...",
   "addButtonText": "Add",
+  "listViewLabel": "List",
+  "logsViewLabel": "Logs",
   "newTodoText": "",
   "error": null,
   "@actors": {
