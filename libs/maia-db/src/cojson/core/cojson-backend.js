@@ -291,16 +291,20 @@ export class CoJSONBackend extends DBAdapter {
    * @param {boolean} [options.deepResolve=true] - Enable/disable deep resolution (default: true)
    * @param {number} [options.maxDepth=10] - Maximum depth for recursive resolution (default: 10)
    * @param {number} [options.timeoutMs=5000] - Timeout for waiting for nested CoValues (default: 5000)
+   * @param {Object} [options.resolveReferences] - Configuration for resolving CoValue references (e.g., { fields: ['source', 'target'] })
+   * @param {Object} [options.map] - Map transformation config (e.g., { sender: '$$source.role', recipient: '$$target.role' })
    * @returns {Promise<ReactiveStore|ReactiveStore[]>} Reactive store(s) that hold current value and notify on updates
    */
   async read(schema, key, keys, filter, options = {}) {
     const {
       deepResolve = true,
       maxDepth = 10,
-      timeoutMs = 5000
+      timeoutMs = 5000,
+      resolveReferences = null,
+      map = null
     } = options;
     
-    const readOptions = { deepResolve, maxDepth, timeoutMs };
+    const readOptions = { deepResolve, maxDepth, timeoutMs, resolveReferences, map };
     
     // Batch read (multiple keys)
     if (keys && Array.isArray(keys)) {

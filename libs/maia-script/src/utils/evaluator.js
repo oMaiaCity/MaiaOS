@@ -1,7 +1,7 @@
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 // loadSchemaFromDB removed - use resolve() from @MaiaOS/db if needed
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
-import { getContextValue } from './utils.js';
+// getContextValue removed - UnifiedReactiveContext provides merged value directly
 
 function resolvePath(obj, path) {
   if (!obj || !path) return undefined;
@@ -172,11 +172,14 @@ export class Evaluator {
       return resolvePath(data.item, shortcut.substring(2));
     }
     const path = shortcut.substring(1);
-    // CLEAN ARCHITECTURE: Context is always ReactiveStore, but getContextValue handles merging query stores
-    const contextToResolve = getContextValue(data.context, data.actor || null);
-    const resolved = resolvePath(contextToResolve, path);
+    // CLEAN ARCHITECTURE: data.context is already the unwrapped value from UnifiedReactiveContext
+    // ViewEngine passes context.value as data.context, so we use it directly
+    const resolved = resolvePath(data.context, path);
     // Query stores are ReactiveStore objects - unwrap them for evaluation
-    return resolved instanceof ReactiveStore ? resolved.value : resolved;
+    if (resolved instanceof ReactiveStore) {
+      return resolved.value;
+    }
+    return resolved;
   }
 
   /**

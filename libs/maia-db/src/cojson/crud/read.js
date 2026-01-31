@@ -10,10 +10,11 @@
 
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
 import { ensureCoValueLoaded } from './collection-helpers.js';
-import { extractCoValueDataFlat } from './data-extraction.js';
+import { extractCoValueDataFlat, resolveCoValueReferences } from './data-extraction.js';
 import { getCoListId } from './collection-helpers.js';
 import { matchesFilter } from './filter-helpers.js';
 import { deepResolveCoValue, resolveNestedReferencesPublic, resolveNestedReferences, isDeepResolvedOrResolving } from './deep-resolution.js';
+import { applyMapTransform, applyMapTransformToArray } from './map-transform.js';
 
 /**
  * Store cache - caches stores by schema+filter to allow multiple actors to share the same store
@@ -37,28 +38,35 @@ const storeCache = new Map(); // cacheKey → ReactiveStore
  * @param {string} [schema] - Schema co-id (for collection read, or schemaHint for single item)
  * @param {Object} [filter] - Filter criteria (for collection/all reads)
  * @param {string} [schemaHint] - Schema hint for special types (@group, @account, @meta-schema)
- * @param {Object} [options] - Options for deep resolution
+ * @param {Object} [options] - Options for deep resolution and transformations
  * @param {boolean} [options.deepResolve=true] - Enable/disable deep resolution (default: true)
  * @param {number} [options.maxDepth=10] - Maximum depth for recursive resolution (default: 10)
  * @param {number} [options.timeoutMs=5000] - Timeout for waiting for nested CoValues (default: 5000)
+ * @param {Object} [options.resolveReferences] - Options for resolving CoValue references
+ * @param {string[]} [options.resolveReferences.fields] - Specific field names to resolve (e.g., ['source', 'target']). If not provided, resolves all co-id references
+ * @param {string[]} [options.resolveReferences.schemas] - Specific schema co-ids to resolve. If not provided, resolves all CoValues
  * @returns {Promise<ReactiveStore>} ReactiveStore with CoValue data (progressive loading)
  */
 export async function read(backend, coId = null, schema = null, filter = null, schemaHint = null, options = {}) {
   const {
     deepResolve = true,
     maxDepth = 10,
-    timeoutMs = 5000
+    timeoutMs = 5000,
+    resolveReferences = null,
+    map = null
   } = options;
+  
+  const readOptions = { deepResolve, maxDepth, timeoutMs, resolveReferences, map };
   
   // Single item read (by coId)
   if (coId) {
     // Use schema as schemaHint if provided
-    return await readSingleCoValue(backend, coId, schemaHint || schema, { deepResolve, maxDepth, timeoutMs });
+    return await readSingleCoValue(backend, coId, schemaHint || schema, readOptions);
   }
   
   // Collection read (by schema) - returns array of items from CoList
   if (schema) {
-    return await readCollection(backend, schema, filter, { deepResolve, maxDepth, timeoutMs });
+    return await readCollection(backend, schema, filter, readOptions);
   }
   
   // All CoValues read (no schema) - returns array of all CoValues
@@ -78,7 +86,9 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
   const {
     deepResolve = true,
     maxDepth = 10,
-    timeoutMs = 5000
+    timeoutMs = 5000,
+    resolveReferences = null,
+    map = null
   } = options;
   
   const store = new ReactiveStore(null);
@@ -126,7 +136,7 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
     }
 
     // Extract CoValue data as flat object
-    const data = extractCoValueDataFlat(backend, core, schemaHint);
+    let data = extractCoValueDataFlat(backend, core, schemaHint);
     
     // CRITICAL: Only trigger deep resolution ONCE per readSingleCoValue call
     // The global resolutionCache in deepResolveCoValue prevents duplicate work across calls
@@ -134,6 +144,17 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
     if (!deepResolutionTriggered) {
       deepResolutionTriggered = true;
       await doDeepResolution();
+    }
+    
+    // Resolve CoValue references (if option enabled)
+    // This allows views to access nested properties like $$source.role
+    if (resolveReferences) {
+      try {
+        const resolutionOptions = { ...resolveReferences, timeoutMs };
+        data = await resolveCoValueReferences(backend, data, resolutionOptions, new Set(), maxDepth, 0);
+      } catch (err) {
+        // Silently continue - resolution failure shouldn't block display
+      }
     }
     
     store._set(data);
@@ -144,7 +165,7 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
 
   // Set initial value immediately with available data (progressive loading)
   if (coValueCore.isAvailable()) {
-    const data = extractCoValueDataFlat(backend, coValueCore, schemaHint);
+    let data = extractCoValueDataFlat(backend, coValueCore, schemaHint);
     
     // Trigger deep resolution once (will be skipped by global cache if already done)
     if (!deepResolutionTriggered) {
@@ -155,12 +176,42 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
     // Re-extract data after deep resolution (may have changed)
     const updatedCore = backend.getCoValue(coId);
     if (updatedCore && backend.isAvailable(updatedCore)) {
-      const updatedData = extractCoValueDataFlat(backend, updatedCore, schemaHint);
+      let updatedData = extractCoValueDataFlat(backend, updatedCore, schemaHint);
+      
+      // Replace actor co-id references with resolved actor objects (if deep resolution enabled)
+      if (deepResolve) {
+        try {
+          updatedData = await replaceActorReferences(backend, updatedData, new Set(), maxDepth, 0);
+        } catch (err) {
+          // Silently continue - actor resolution failure shouldn't block display
+        }
+      }
+      
       store._set(updatedData);
       return store;
     }
     
-    store._set(data);
+      // Resolve CoValue references (if option enabled)
+      if (resolveReferences) {
+        try {
+          const resolutionOptions = { ...resolveReferences, timeoutMs };
+          data = await resolveCoValueReferences(backend, data, resolutionOptions, new Set(), maxDepth, 0);
+        } catch (err) {
+          // Silently continue - resolution failure shouldn't block display
+        }
+      }
+      
+      // Apply map transformation (if option enabled)
+      if (map) {
+        try {
+          data = await applyMapTransform(backend, data, map, { timeoutMs });
+        } catch (err) {
+          console.warn(`[readSingleCoValue] Failed to apply map transform:`, err);
+          // Continue with unmapped data
+        }
+      }
+      
+      store._set(data);
   } else {
     // Set loading state, trigger load (subscription will fire when available)
     store._set({ id: coId, loading: true });
@@ -190,24 +241,49 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
  * @param {Object} backend - Backend instance
  * @param {string} schema - Schema co-id (co_z...)
  * @param {Object} [filter] - Filter criteria
- * @param {Object} [options] - Options for deep resolution
+ * @param {Object} [options] - Options for deep resolution and transformations
+ * @param {Object} [options.resolveReferences] - Options for resolving CoValue references
+ * @param {string[]} [options.resolveReferences.fields] - Specific field names to resolve (e.g., ['source', 'target'])
+ * @param {string[]} [options.resolveReferences.schemas] - Specific schema co-ids to resolve
  * @returns {Promise<ReactiveStore>} ReactiveStore with array of CoValue data
  */
 async function readCollection(backend, schema, filter = null, options = {}) {
   const {
     deepResolve = true,
     maxDepth = 10,
-    timeoutMs = 5000
+    timeoutMs = 5000,
+    resolveReferences = null,
+    map = null
   } = options;
   
-  // CRITICAL FIX: Cache stores by schema+filter to allow multiple actors to share the same store
+  // Debug logging
+  console.log(`[readCollection] Called with:`, {
+    schema,
+    filter,
+    options: {
+      deepResolve,
+      maxDepth,
+      timeoutMs,
+      resolveReferences: resolveReferences ? Object.keys(resolveReferences) : null,
+      map: map ? Object.keys(map) : null
+    }
+  });
+  
+  // CRITICAL FIX: Cache stores by schema+filter+options to allow multiple actors to share the same store
   // This prevents creating duplicate stores when navigating back to a vibe
-  const cacheKey = `${schema}:${JSON.stringify(filter || {})}`;
+  // IMPORTANT: Include options in cache key so queries with different map/resolveReferences get different stores
+  const optionsKey = options && (options.map || options.resolveReferences) 
+    ? JSON.stringify({ map: options.map || null, resolveReferences: options.resolveReferences || null })
+    : '';
+  const cacheKey = `${schema}:${JSON.stringify(filter || {})}:${optionsKey}`;
   let store = storeCache.get(cacheKey);
   
   if (store) {
+    console.log(`[readCollection] Using cached store for key: ${cacheKey.substring(0, 50)}...`);
     return store;
   }
+  
+  console.log(`[readCollection] Creating new store for key: ${cacheKey.substring(0, 50)}...`);
   
   // Create new store
   store = new ReactiveStore([]);
@@ -362,7 +438,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
         // Extract item if available (progressive loading - show available items immediately)
         if (backend.isAvailable(itemCore)) {
           availableCount++;
-          const itemData = extractCoValueDataFlat(backend, itemCore);
+          let itemData = extractCoValueDataFlat(backend, itemCore);
           
           // Filter out empty CoMaps (defense in depth - prevents skeletons from appearing even if index removal fails)
           // Empty CoMap = object with only id, type, $schema properties (no data properties)
@@ -388,6 +464,31 @@ async function readCollection(backend, schema, filter = null, options = {}) {
               deepResolvedItems.add(itemId);
             } catch (err) {
               // Silently continue - deep resolution failure shouldn't block item display
+            }
+          }
+          
+          // Resolve CoValue references (if option enabled)
+          // This allows views to access nested properties like $$source.role
+          if (resolveReferences) {
+            try {
+              const resolutionOptions = { ...resolveReferences, timeoutMs };
+              const resolvedData = await resolveCoValueReferences(backend, itemData, resolutionOptions, new Set(), maxDepth, 0);
+              // Replace itemData with resolved version
+              Object.assign(itemData, resolvedData);
+            } catch (err) {
+              // Silently continue - resolution failure shouldn't block item display
+            }
+          }
+          
+          // Apply map transformation (if option enabled)
+          // This transforms data using MaiaScript expressions (e.g., { sender: "$$source.role" })
+          if (map) {
+            try {
+              console.log(`[readCollection] Applying map transform to item ${itemId.substring(0, 12)}...`, { map });
+              itemData = await applyMapTransform(backend, itemData, map, { timeoutMs });
+              console.log(`[readCollection] Map transform result:`, itemData);
+            } catch (err) {
+              console.warn(`[readCollection] Failed to apply map transform:`, err);
             }
           }
           

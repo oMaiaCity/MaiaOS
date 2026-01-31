@@ -1735,7 +1735,7 @@ pre {
 	flex-direction: column;
 	overflow: hidden;
 	min-height: 400px;
-	background: transparent;
+	background: transparent !important;
 	border-radius: var(--radius);
 	border: 1px solid var(--slate-200);
 	overflow: hidden;
@@ -1748,6 +1748,7 @@ pre {
 	flex: 1;
 	overflow: auto;
 	min-height: 400px;
+	background: transparent;
 }
 
 /* Dashboard Styles */

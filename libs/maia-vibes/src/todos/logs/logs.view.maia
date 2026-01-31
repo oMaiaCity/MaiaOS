@@ -3,26 +3,91 @@
   "$id": "@view/logs",
   "content": {
     "class": "logs",
-    "$each": {
-      "items": "$allActors",
-      "template": {
-        "class": "card",
-        "attrs": {
-          "data-role": "$$role"
-        },
+    "attrs": {
+      "data": "log-viewer"
+    },
+    "children": [
+      {
+        "tag": "div",
+        "class": "log-header",
         "children": [
           {
-            "tag": "span",
-            "class": "role",
-            "text": "$$role"
-          },
-          {
-            "tag": "span",
-            "class": "id",
-            "text": "$$id"
+            "tag": "h2",
+            "text": "System Logs"
           }
         ]
+      },
+      {
+        "tag": "div",
+        "class": "log-entries",
+        "$each": {
+          "items": "$allMessages",
+          "template": {
+            "class": "log-entry",
+            "attrs": {
+              "data": {
+                "eventType": "$$type",
+                "processed": "$$processed"
+              }
+            },
+            "children": [
+              {
+                "tag": "span",
+                "class": "log-type",
+                "text": "$$type"
+              },
+              {
+                "tag": "span",
+                "class": "log-source",
+                "children": [
+                  {
+                    "tag": "span",
+                    "class": "log-source-role",
+                    "text": "$$sender"
+                  },
+                  {
+                    "tag": "span",
+                    "class": "log-source-id",
+                    "text": "$$sourceId"
+                  }
+                ]
+              },
+              {
+                "tag": "span",
+                "class": "log-target",
+                "children": [
+                  {
+                    "tag": "span",
+                    "class": "log-target-role",
+                    "text": "$$recipient"
+                  },
+                  {
+                    "tag": "span",
+                    "class": "log-target-id",
+                    "text": "$$targetId"
+                  }
+                ]
+              },
+              {
+                "tag": "details",
+                "class": "log-payload-details",
+                "children": [
+                  {
+                    "tag": "summary",
+                    "class": "log-payload-toggle",
+                    "text": "payload"
+                  },
+                  {
+                    "tag": "pre",
+                    "class": "log-payload",
+                    "text": "$$payload"
+                  }
+                ]
+              }
+            ]
+          }
+        }
       }
-    }
+    ]
   }
 }

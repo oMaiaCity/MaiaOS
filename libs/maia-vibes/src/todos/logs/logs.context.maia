@@ -1,8 +1,15 @@
 {
   "$schema": "@schema/context",
   "$id": "@context/logs",
-  "allActors": {
-    "schema": "@schema/actor",
-    "filter": null
+  "allMessages": {
+    "schema": "@schema/message",
+    "options": {
+      "map": {
+        "sender": "$$source.role",
+        "recipient": "$$target.role",
+        "sourceId": "$$source.id",
+        "targetId": "$$target.id"
+      }
+    }
   }
 }

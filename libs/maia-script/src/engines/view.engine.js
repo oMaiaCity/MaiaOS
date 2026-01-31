@@ -1,7 +1,6 @@
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
 import { extractDOMValues } from '@MaiaOS/schemata/payload-resolver.js';
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
-import { getContextValue } from '../utils/utils.js';
 
 function sanitizeAttribute(value) {
   if (value === null || value === undefined) return '';
@@ -52,64 +51,30 @@ export class ViewEngine {
   }
 
   async render(viewDef, context, shadowRoot, styleSheets, actorId) {
-    // CLEAN ARCHITECTURE: Subscribe ONCE to context ReactiveStore
-    // Context is always ReactiveStore - when it updates, rerender automatically
+    console.log(`[ViewEngine.render] Called for actor ${actorId}`, {
+      hasViewDef: !!viewDef,
+      hasContext: !!context,
+      contextType: context?.constructor?.name,
+      contextValueKeys: context?.value ? Object.keys(context.value) : [],
+      contextValue: context?.value
+    });
+    
+    // CLEAN ARCHITECTURE: Subscribe ONCE to UnifiedReactiveContext
+    // UnifiedReactiveContext handles all query resolution and merging internally
+    // Single subscription point - no manual query store subscriptions needed
     if (!this.actorContextSubscriptions) {
       this.actorContextSubscriptions = new Map(); // actorId -> unsubscribe
     }
     
-    // Subscribe to context ReactiveStore if not already subscribed
+    // Subscribe to UnifiedReactiveContext if not already subscribed
     if (!this.actorContextSubscriptions.has(actorId)) {
       const unsubscribe = context.subscribe(() => {
-        // Trigger rerender when context updates
+        // Trigger rerender when unified context updates (includes query updates)
         if (this.actorEngine) {
           this.actorEngine._scheduleRerender(actorId);
         }
       });
       this.actorContextSubscriptions.set(actorId, unsubscribe);
-    }
-    
-    // CLEAN ARCHITECTURE: Subscribe to query stores marked in context.@stores
-    // Query stores are stored in actor._queryStores and marked in context.@stores
-    if (!this.actorQueryStoreSubscriptions) {
-      this.actorQueryStoreSubscriptions = new Map(); // actorId -> Map<key, unsubscribe>
-    }
-    
-    if (!this.actorQueryStoreSubscriptions.has(actorId)) {
-      this.actorQueryStoreSubscriptions.set(actorId, new Map());
-    }
-    
-    const queryStoreSubscriptions = this.actorQueryStoreSubscriptions.get(actorId);
-    const actor = this.actorEngine?.getActor(actorId);
-    const contextValue = context.value || {};
-    const storesMarker = contextValue['@stores'] || {};
-    
-    // Subscribe to query stores marked in context.@stores
-    const currentStoreKeys = new Set();
-    for (const [storeKey] of Object.entries(storesMarker)) {
-      if (actor?._queryStores?.[storeKey] instanceof ReactiveStore) {
-        currentStoreKeys.add(storeKey);
-        
-        // Subscribe if not already subscribed
-        if (!queryStoreSubscriptions.has(storeKey)) {
-          const store = actor._queryStores[storeKey];
-          const unsubscribe = store.subscribe(() => {
-            // Trigger rerender when query store updates
-            if (this.actorEngine) {
-              this.actorEngine._scheduleRerender(actorId);
-            }
-          });
-          queryStoreSubscriptions.set(storeKey, unsubscribe);
-        }
-      }
-    }
-    
-    // Unsubscribe from stores that are no longer in context.@stores
-    for (const [storeKey, unsubscribe] of queryStoreSubscriptions.entries()) {
-      if (!currentStoreKeys.has(storeKey)) {
-        unsubscribe();
-        queryStoreSubscriptions.delete(storeKey);
-      }
     }
     
     // Reset input counter for this actor at start of render
@@ -127,15 +92,40 @@ export class ViewEngine {
     this.currentActorId = actorId;
     
     const viewNode = viewDef.content || viewDef;
-    // CLEAN ARCHITECTURE: Context is always ReactiveStore
-    const contextForRender = getContextValue(context, this.actorEngine?.getActor(actorId));
+    // CLEAN ARCHITECTURE: Context is UnifiedReactiveContext - value is already merged and resolved
+    if (!context) {
+      console.error(`[ViewEngine] Context is null/undefined for actor ${actorId}`);
+      return;
+    }
+    const contextForRender = context.value || {};
+    console.log(`[ViewEngine.render] Context for render:`, {
+      actorId,
+      contextKeys: Object.keys(contextForRender),
+      contextValue: contextForRender
+    });
     const element = await this.renderNode(viewNode, { context: contextForRender }, actorId);
+    console.log(`[ViewEngine.render] Render complete for actor ${actorId}`, {
+      hasElement: !!element,
+      elementTag: element?.tagName,
+      elementChildren: element?.children?.length || 0
+    });
     
     if (element) {
       element.style.containerType = 'inline-size';
       element.style.containerName = 'actor-root';
       element.dataset.actorId = actorId;
       shadowRoot.appendChild(element);
+      console.log(`[ViewEngine.render] Element appended to shadowRoot for actor ${actorId}`, {
+        elementTag: element.tagName,
+        elementChildren: element.children.length,
+        shadowRootChildren: shadowRoot.children.length,
+        shadowRootHTML: shadowRoot.innerHTML.substring(0, 200)
+      });
+    } else {
+      console.error(`[ViewEngine.render] renderNode returned null for actor ${actorId}`, {
+        viewNode: viewNode ? { tag: viewNode.tag, hasContent: !!viewNode.content } : null,
+        contextKeys: Object.keys(contextForRender)
+      });
     }
   }
 
@@ -166,7 +156,10 @@ export class ViewEngine {
       throw new Error('[ViewEngine] Old "slot" syntax is no longer supported. Use "$slot" instead.');
     }
 
-    await this._renderNodeChildren(element, node, data, actorId);
+    // Don't render children if $each is present (children would overwrite $each content)
+    if (!node.$each) {
+      await this._renderNodeChildren(element, node, data, actorId);
+    }
 
     return element;
   }
@@ -215,7 +208,27 @@ export class ViewEngine {
 
     if (node.text !== undefined) {
       const textValue = await this.evaluator.evaluate(node.text, data);
-      element.textContent = textValue || '';
+      // Format objects/arrays as JSON strings for display
+      if (textValue && typeof textValue === 'object') {
+        // Special handling for resolved actor objects (has role and id)
+        if (textValue.role && textValue.id && textValue.id.startsWith('co_z')) {
+          const truncatedId = textValue.id.substring(0, 15) + '...';
+          element.textContent = `${textValue.role} (${truncatedId})`;
+        } else {
+          try {
+            element.textContent = JSON.stringify(textValue, null, 2);
+          } catch (e) {
+            element.textContent = String(textValue);
+          }
+        }
+      } else {
+        let displayText = String(textValue || '');
+        // Format co-ids: truncate to first 15 characters
+        if (displayText.startsWith('co_z') && displayText.length > 15) {
+          displayText = displayText.substring(0, 15) + '...';
+        }
+        element.textContent = displayText;
+      }
     }
   }
 
@@ -297,14 +310,25 @@ export class ViewEngine {
     }
     const contextKey = slotKey.slice(1);
     
-    // CLEAN ARCHITECTURE: Context is always ReactiveStore
-    const contextValue = getContextValue(data.context, this.actorEngine?.getActor(actorId));
+    // CLEAN ARCHITECTURE: Context is UnifiedReactiveContext - value is already merged and resolved
+    // data.context is already the resolved value (plain object), not a ReactiveStore
+    const contextValue = data.context || {};
+    console.log(`[ViewEngine._renderSlot] Rendering slot for key: ${contextKey}`, {
+      actorId,
+      slotKey,
+      contextKey,
+      contextValueKeys: Object.keys(contextValue),
+      contextValue,
+      hasSlotValue: contextKey in contextValue
+    });
     const slotValue = contextValue[contextKey];
     
     if (!slotValue) {
       console.warn(`[ViewEngine] No context value for slot key: ${contextKey}`, {
+        actorId,
         availableKeys: Object.keys(contextValue || {}),
-        contextType: 'ReactiveStore'
+        contextType: 'UnifiedReactiveContext',
+        contextValue
       });
       return;
     }
@@ -452,9 +476,8 @@ export class ViewEngine {
         payload = extractDOMValues(payload, element);
         
         // CLEAN ARCHITECTURE: Read CURRENT context from actor.context.value (not stale snapshot)
-        // actor.context IS the ReactiveStore, so read store.value for current data
-        // Merge with query stores (mapData) for complete context
-        const currentContext = getContextValue(actor.context, actor);
+        // actor.context IS UnifiedReactiveContext - value is already merged and resolved
+        const currentContext = actor.context.value;
         
         const expressionData = {
           context: currentContext,
@@ -534,24 +557,14 @@ export class ViewEngine {
   }
 
   cleanupActor(actorId) {
-    // Clean up context subscription
+    // Clean up UnifiedReactiveContext subscription
+    // UnifiedReactiveContext handles all internal subscriptions and cleanup automatically
     if (this.actorContextSubscriptions?.has(actorId)) {
       const unsubscribe = this.actorContextSubscriptions.get(actorId);
       if (typeof unsubscribe === 'function') {
         unsubscribe();
       }
       this.actorContextSubscriptions.delete(actorId);
-    }
-    
-    // Clean up query store subscriptions
-    if (this.actorQueryStoreSubscriptions?.has(actorId)) {
-      const queryStoreSubscriptions = this.actorQueryStoreSubscriptions.get(actorId);
-      for (const unsubscribe of queryStoreSubscriptions.values()) {
-        if (typeof unsubscribe === 'function') {
-          unsubscribe();
-        }
-      }
-      this.actorQueryStoreSubscriptions.delete(actorId);
     }
   }
 }

@@ -4,15 +4,6 @@
   "initial": "idle",
   "states": {
     "idle": {
-      "entry": {
-        "mapData": {
-          "allActors": {
-            "op": "read",
-            "schema": "@schema/actor",
-            "filter": null
-          }
-        }
-      }
     },
     "error": {
       "entry": {

@@ -1,4 +1,4 @@
-import { getSchemaCoIdSafe } from '../utils/utils.js';
+import { resolve } from '@MaiaOS/db';
 
 function resolvePath(obj, path) {
   if (!obj || !path) return undefined;
@@ -19,7 +19,7 @@ export class StyleEngine {
   }
 
   async loadStyle(coId) {
-    const styleSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: coId });
+    const styleSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: coId }, { returnType: 'coId' });
     const store = await this.dbEngine.execute({
       op: 'read',
       schema: styleSchemaCoId,
@@ -208,14 +208,14 @@ export class StyleEngine {
     }
 
     const brandResolved = this.resolveStyleRef(brandCoId);
-    const brandSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: brandResolved });
+    const brandSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: brandResolved }, { returnType: 'coId' });
     const brandStore = await this.dbEngine.execute({ op: 'read', schema: brandSchemaCoId, key: brandResolved });
     const brand = brandStore.value;
     
     let actor = { tokens: {}, components: {} };
     if (styleCoId) {
       const styleResolved = this.resolveStyleRef(styleCoId);
-      const styleSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: styleResolved });
+      const styleSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: styleResolved }, { returnType: 'coId' });
       const styleStore = await this.dbEngine.execute({ op: 'read', schema: styleSchemaCoId, key: styleResolved });
       actor = styleStore.value;
     }

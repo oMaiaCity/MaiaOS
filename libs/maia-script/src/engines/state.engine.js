@@ -1,4 +1,4 @@
-import { getSchemaCoIdSafe, getContextValue } from '../utils/utils.js';
+import { resolve } from '@MaiaOS/db';
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
 
@@ -24,7 +24,7 @@ export class StateEngine {
 
   async loadStateDef(stateRef) {
     // Use direct read() API - no wrapper needed
-    const stateSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: stateRef });
+    const stateSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: stateRef }, { returnType: 'coId' });
     const store = await this.dbEngine.execute({ op: 'read', schema: stateSchemaCoId, key: stateRef });
     
     return store; // Return store directly - caller subscribes (pure stores pattern)
@@ -92,7 +92,8 @@ export class StateEngine {
   async _evaluateGuard(guard, context, payload, actor = null) {
     if (typeof guard === 'boolean') return guard;
     try {
-      const contextValue = getContextValue(context, actor);
+      // CLEAN ARCHITECTURE: Context is UnifiedReactiveContext - value is already merged and resolved
+      const contextValue = context.value;
       return Boolean(await this.evaluator.evaluate(guard, { context: contextValue, item: payload }));
     } catch (error) {
       return false;
@@ -252,6 +253,8 @@ export class StateEngine {
       return;
     }
 
+    console.log(`[StateEngine._executeMapData] Executing mapData:`, mapData);
+
     // Process each context key mapping
     for (const [contextKey, operationConfig] of Object.entries(mapData)) {
       if (!contextKey || typeof contextKey !== 'string') {
@@ -303,38 +306,41 @@ export class StateEngine {
 
       // Execute operation via operations engine
       try {
-        const result = await this.dbEngine.execute({ op, ...params });
+        const operationParams = { op, ...params };
+        console.log(`[StateEngine._executeMapData] Executing operation for ${contextKey}:`, {
+          op,
+          params: {
+            ...params,
+            options: params.options ? {
+              ...params.options,
+              map: params.options.map ? Object.keys(params.options.map) : null
+            } : null
+          }
+        });
+        const result = await this.dbEngine.execute(operationParams);
+        console.log(`[StateEngine._executeMapData] Operation result for ${contextKey}:`, {
+          isReactiveStore: result && typeof result.subscribe === 'function',
+          hasValue: result && 'value' in result
+        });
 
         // mapData operations are read-only (mutations belong in tool calls)
-        if (op === 'read') {
-          // Read operations return ReactiveStore
-          // CLEAN ARCHITECTURE: Store query stores in actor._queryStores AND mark in context CoValue
-          // Query stores are ReactiveStore objects (can't be stored in CoValues directly)
-          // Store them in actor._queryStores and mark their existence in context.@stores
+        // Check if result is a ReactiveStore (read operations and read-like operations return ReactiveStore)
+        if (result && typeof result === 'object' && typeof result.subscribe === 'function' && 'value' in result) {
+          // Read operations and read-like operations (e.g., aggregateMessages) return ReactiveStore
+          // CLEAN ARCHITECTURE: UnifiedReactiveContext handles dynamic queries from mapData
+          // Add query store to UnifiedReactiveContext - it handles merging and subscriptions automatically
           const store = result;
-          // CLEAN ARCHITECTURE: Context is always ReactiveStore
-          // Store query store on actor object (for direct access)
-          if (!machine.actor._queryStores) {
-            machine.actor._queryStores = {};
-          }
-          machine.actor._queryStores[contextKey] = store;
           
-          // Mark query store existence in context CoValue's @stores field
-          // This allows ViewEngine to discover and subscribe to query stores reactively
-          const currentStores = machine.actor.context.value?.['@stores'] || {};
-          if (!currentStores[contextKey]) {
-            // Update context CoValue to mark this query store exists
-            await machine.actor.actorEngine.updateContextCoValue(machine.actor, {
-              '@stores': {
-                ...currentStores,
-                [contextKey]: true // Marker indicating this query store exists
-              }
-            });
+          // UnifiedReactiveContext handles dynamic queries from mapData
+          if (machine.actor.context && typeof machine.actor.context.addDynamicQuery === 'function') {
+            await machine.actor.context.addDynamicQuery(contextKey, store);
+          } else {
+            console.warn(`[StateEngine] Actor context is not UnifiedReactiveContext, cannot add dynamic query "${contextKey}"`);
           }
         } else {
-          // mapData should only contain read operations
+          // mapData should only contain read operations (operations that return ReactiveStore)
           // Mutations belong in tool calls, not mapData
-          console.warn(`[StateEngine] mapData operation "${op}" is not a read operation. Mutations should use tool calls instead.`);
+          console.warn(`[StateEngine] mapData operation "${op}" did not return a ReactiveStore. Mutations should use tool calls instead.`);
         }
       } catch (error) {
         console.error(`[StateEngine] Failed to execute ${op} operation for context key ${contextKey}:`, error);
@@ -378,7 +384,8 @@ export class StateEngine {
   }
 
   async _evaluatePayload(payload, context, eventPayload = {}, lastToolResult = null, actor = null) {
-    const contextValue = getContextValue(context, actor);
+    // CLEAN ARCHITECTURE: Context is UnifiedReactiveContext - value is already merged and resolved
+    const contextValue = context.value;
     const data = { context: contextValue, item: eventPayload || {}, result: lastToolResult || null };
     const result = await resolveExpressions(payload, this.evaluator, data);
     return result;

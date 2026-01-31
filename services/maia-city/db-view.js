@@ -208,7 +208,7 @@ async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVi
 			</header>
 			
 			<div class="vibe-viewer-main">
-				<div class="vibe-card db-card whitish-card">
+				<div class="vibe-card">
 					<div id="vibe-container-${escapeHtml(currentVibe)}" class="vibe-container"></div>
 				</div>
 			</div>

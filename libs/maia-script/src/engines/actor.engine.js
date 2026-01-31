@@ -7,9 +7,9 @@
  */
 
 // Import message helper
-import { createAndPushMessage } from '@MaiaOS/db';
+import { createAndPushMessage, resolve } from '@MaiaOS/db';
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
-import { getSchemaCoIdSafe, getContextValue } from '../utils/utils.js';
+import { UnifiedReactiveContext } from '../utils/unified-reactive-context.js';
 
 export class ActorEngine {
   constructor(styleEngine, viewEngine, moduleRegistry, toolEngine, stateEngine = null) {
@@ -39,7 +39,7 @@ export class ActorEngine {
     }
     if (typeof coIdOrConfig === 'string' && coIdOrConfig.startsWith('co_z')) {
       // Load actor config using read() directly
-      const actorSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: coIdOrConfig });
+      const actorSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: coIdOrConfig }, { returnType: 'coId' });
       const store = await this.dbEngine.execute({ op: 'read', schema: actorSchemaCoId, key: coIdOrConfig });
       return store.value;
     }
@@ -48,13 +48,107 @@ export class ActorEngine {
   
 
   async loadContext(coId) {
-    // Use direct read() API - no wrapper needed
-    const contextSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: coId });
-    const store = await this.dbEngine.execute({ op: 'read', schema: contextSchemaCoId, key: coId });
+    console.log(`[ActorEngine.loadContext] Called with:`, { coId, isContextRef: coId?.startsWith?.('@context/') });
     
-    const contextDef = store.value;
-    const { $schema, $id, ...context } = contextDef;
-    return { context, contextCoId: coId, contextSchemaCoId, store };
+    // Store original context reference before resolving (needed for query object initialization)
+    const originalContextRef = typeof coId === 'string' && coId.startsWith('@context/') ? coId : null;
+    
+    // Resolve context reference to actual co-id (handles both co-ids and human-readable refs like "@context/list")
+    let actualContextCoId = coId;
+    if (typeof coId === 'string' && !coId.startsWith('co_z')) {
+      // Human-readable reference - resolve to actual co-id
+      const resolved = await this.dbEngine.execute({ op: 'resolve', humanReadableKey: coId });
+      if (resolved && resolved.startsWith('co_z')) {
+        actualContextCoId = resolved;
+      } else {
+        throw new Error(`[ActorEngine] Failed to resolve context reference "${coId}"`);
+      }
+    }
+    
+    // Use direct read() API - no wrapper needed
+    const contextSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: actualContextCoId }, { returnType: 'coId' });
+    const contextStore = await this.dbEngine.execute({ op: 'read', schema: contextSchemaCoId, key: actualContextCoId });
+    const contextValue = contextStore.value;
+    
+    console.log(`[ActorEngine.loadContext] Loaded context:`, {
+      contextCoId: actualContextCoId,
+      contextKeys: Object.keys(contextValue || {}),
+      contextValue: contextValue
+    });
+
+    // Check if context has query objects
+    const hasQueryObjects = contextValue && typeof contextValue === 'object' && 
+      Object.values(contextValue).some(value => 
+        value && typeof value === 'object' && !Array.isArray(value) && value.schema
+      );
+    
+    // If query objects are missing and we have a context reference, initialize them
+    // This handles cases where contexts were seeded without query objects or lost them during updates
+    if (!hasQueryObjects && originalContextRef) {
+      // Known context definitions with their query objects
+      // This is a fallback for contexts that should have query objects but don't
+      const knownQueryObjects = {
+        '@context/list': {
+          todos: { schema: '@schema/data/todos' }
+        },
+        '@context/logs': {
+          allMessages: { schema: '@schema/data/messages' }
+        }
+      };
+      
+      const queryObjects = knownQueryObjects[originalContextRef];
+      if (queryObjects) {
+        console.log(`[ActorEngine] Initializing query objects for ${originalContextRef}`);
+        
+        // Resolve schema references in query objects to actual schema co-ids
+        const resolvedQueryObjects = {};
+        for (const [key, queryObj] of Object.entries(queryObjects)) {
+          if (queryObj.schema) {
+            const schemaCoId = await this.dbEngine.execute({ op: 'resolve', humanReadableKey: queryObj.schema });
+            if (schemaCoId && schemaCoId.startsWith('co_z')) {
+              resolvedQueryObjects[key] = { schema: schemaCoId };
+            } else {
+              // Fallback: use original schema reference if resolution fails
+              resolvedQueryObjects[key] = queryObj;
+            }
+          } else {
+            resolvedQueryObjects[key] = queryObj;
+          }
+        }
+        
+        // Initialize context CoValue with query objects
+        await this.dbEngine.execute({
+          op: 'update',
+          schema: contextSchemaCoId,
+          id: actualContextCoId,
+          data: resolvedQueryObjects
+        });
+        
+        // Reload context store after initialization
+        const updatedStore = await this.dbEngine.execute({ op: 'read', schema: contextSchemaCoId, key: actualContextCoId });
+        const updatedContext = new UnifiedReactiveContext(
+          updatedStore,
+          this.dbEngine,
+          actualContextCoId,
+          contextSchemaCoId
+        );
+        await updatedContext.initialize();
+        return { context: updatedContext, contextCoId: actualContextCoId, contextSchemaCoId, store: updatedContext };
+      }
+    }
+    
+    // Create UnifiedReactiveContext that automatically resolves queries
+    const unifiedContext = new UnifiedReactiveContext(
+      contextStore,
+      this.dbEngine,
+      actualContextCoId,
+      contextSchemaCoId
+    );
+    
+    // Initialize queries asynchronously
+    await unifiedContext.initialize();
+    
+    return { context: unifiedContext, contextCoId: actualContextCoId, contextSchemaCoId, store: unifiedContext };
   }
 
   async updateContextCoValue(actor, updates) {
@@ -62,7 +156,7 @@ export class ActorEngine {
       if (!actor.contextCoId) console.warn(`[ActorEngine] Actor ${actor.id} has no contextCoId`);
       return;
     }
-    const contextSchemaCoId = actor.contextSchemaCoId || await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: actor.contextCoId });
+    const contextSchemaCoId = actor.contextSchemaCoId || await resolve(this.dbEngine.backend, { fromCoValue: actor.contextCoId }, { returnType: 'coId' });
     const sanitizedUpdates = {};
     for (const [key, value] of Object.entries(updates)) {
       sanitizedUpdates[key] = value === undefined ? null : value;
@@ -122,7 +216,7 @@ export class ActorEngine {
     if (actorConfig.style) {
       stylePromise = (async () => {
         try {
-          const styleSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: actorConfig.style });
+          const styleSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: actorConfig.style }, { returnType: 'coId' });
           const styleStore = await this.dbEngine.execute({ op: 'read', schema: styleSchemaCoId, key: actorConfig.style });
           const unsubscribeStyle = styleStore.subscribe(async (updatedStyle) => {
             const actor = this.actors.get(actorId);
@@ -151,7 +245,7 @@ export class ActorEngine {
     if (actorConfig.brand) {
       brandPromise = (async () => {
         try {
-          const brandSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: actorConfig.brand });
+          const brandSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: actorConfig.brand }, { returnType: 'coId' });
           const brandStore = await this.dbEngine.execute({ op: 'read', schema: brandSchemaCoId, key: actorConfig.brand });
           const unsubscribeBrand = brandStore.subscribe(async (updatedBrand) => {
             const actor = this.actors.get(actorId);
@@ -181,7 +275,7 @@ export class ActorEngine {
     let inboxPromise = null;
     if (actorConfig.inbox) {
       inboxPromise = (async () => {
-        const inboxSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: actorConfig.inbox });
+        const inboxSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: actorConfig.inbox }, { returnType: 'coId' });
         return await this.dbEngine.execute({ op: 'read', schema: inboxSchemaCoId, key: actorConfig.inbox });
       })();
       loadPromises.push(inboxPromise);
@@ -194,12 +288,13 @@ export class ActorEngine {
     let context = null, contextCoId = null, contextSchemaCoId = null;
     if (contextPromise) {
       const result = await contextPromise;
-      // CLEAN ARCHITECTURE: actor.context IS the ReactiveStore itself
-      // No manual mutations - views subscribe directly to the store
-      context = result.store; // Store itself, not plain object
+      // CLEAN ARCHITECTURE: actor.context IS UnifiedReactiveContext
+      // UnifiedReactiveContext automatically resolves queries and merges values
+      // Views subscribe directly to unified context - no getContextValue() needed
+      context = result.store; // UnifiedReactiveContext instance
       contextCoId = result.contextCoId;
       contextSchemaCoId = result.contextSchemaCoId;
-      // No manual subscription needed - views subscribe directly to actor.context store
+      // UnifiedReactiveContext handles all query resolution and merging internally
     }
     
     let inbox = null, inboxCoId = null;
@@ -222,7 +317,7 @@ export class ActorEngine {
     // Use direct read() API - no wrapper needed
     if (actorConfig.inbox) {
       try {
-        const inboxSchemaCoId = await getSchemaCoIdSafe(this.dbEngine, { fromCoValue: actorConfig.inbox });
+        const inboxSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: actorConfig.inbox }, { returnType: 'coId' });
         const store = await this.dbEngine.execute({ 
           op: 'read', 
           schema: inboxSchemaCoId, 
@@ -301,6 +396,8 @@ export class ActorEngine {
     }
   }
 
+  // _resolveContextQueries removed - UnifiedReactiveContext handles query resolution internally
+
   /**
    * Determine if an actor is a service actor (orchestrator) vs UI actor (presentation)
    * Service actors: Have role "agent" OR have minimal view (only renders child actors via $slot)
@@ -347,8 +444,8 @@ export class ActorEngine {
     if (actor.children?.[namekey]) return actor.children[namekey];
     if (!actor.children) actor.children = {};
     
-    // CLEAN ARCHITECTURE: actor.context IS ReactiveStore, read from store.value
-    const contextValue = getContextValue(actor.context, actor);
+    // CLEAN ARCHITECTURE: actor.context IS UnifiedReactiveContext, read from store.value (already merged)
+    const contextValue = actor.context.value;
     
     if (!contextValue["@actors"]?.[namekey]) return null;
     const childActorCoId = contextValue["@actors"][namekey];
@@ -419,7 +516,12 @@ export class ActorEngine {
       this._containerActors.get(containerElement).add(actorId);
     }
     if (vibeKey) this.registerActorForVibe(actorId, vibeKey);
-    // SubscriptionEngine eliminated - all subscriptions handled via direct read() + ReactiveStore
+    
+    // UnifiedReactiveContext handles all query resolution and merging internally
+    // No manual query resolution or context subscription needed here
+    // Views subscribe directly to UnifiedReactiveContext - it handles everything
+    
+    // SubscriptionEngine eliminated - all subscriptions handled via UnifiedReactiveContext
     await this._initializeActorState(actor, actorConfig);
     await this.viewEngine.render(viewDef, actor.context, shadowRoot, styleSheets, actorId);
     

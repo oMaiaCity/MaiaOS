@@ -1393,6 +1393,18 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
 
     // Remove $id and $schema from config (they're stored in metadata, not as properties)
     const { $id, $schema, ...configWithoutId } = config;
+    
+    // DEBUG: Log context seeding to see if query objects are present
+    if (path && path.includes('context') && path.includes('list')) {
+      console.log(`[CoJSONSeed.createConfig] Creating list context:`, {
+        path,
+        $id,
+        configKeys: Object.keys(config),
+        configWithoutIdKeys: Object.keys(configWithoutId),
+        hasTodosQuery: !!configWithoutId.todos,
+        todosQuery: configWithoutId.todos
+      });
+    }
 
     // Create the appropriate CoJSON type based on schema's cotype
     const meta = { $schema: schemaCoId }; // Set schema co-id in headerMeta

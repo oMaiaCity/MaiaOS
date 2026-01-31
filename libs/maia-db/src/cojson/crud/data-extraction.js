@@ -361,6 +361,156 @@ export function extractCoValueDataFlat(backend, coValueCore, schemaHint = null) 
 }
 
 /**
+ * Resolve CoValue references in data object
+ * Replaces co-id strings with resolved CoValue objects based on configuration
+ * @param {Object} backend - Backend instance
+ * @param {any} data - Data object to process (may contain co-id references)
+ * @param {Object} options - Resolution options
+ * @param {string[]} [options.fields] - Specific field names to resolve (e.g., ['source', 'target']). If not provided, resolves all co-id references
+ * @param {string[]} [options.schemas] - Specific schema co-ids to resolve. If not provided, resolves all CoValues
+ * @param {Set<string>} visited - Set of already visited co-ids (prevents circular references)
+ * @param {number} maxDepth - Maximum recursion depth
+ * @param {number} currentDepth - Current recursion depth
+ * @returns {Promise<any>} Data object with CoValue references resolved
+ */
+export async function resolveCoValueReferences(backend, data, options = {}, visited = new Set(), maxDepth = 10, currentDepth = 0) {
+  const { fields = null, schemas = null, timeoutMs = 2000 } = options;
+  
+  if (currentDepth > maxDepth) {
+    return data; // Prevent infinite recursion
+  }
+  
+  // Handle null/undefined
+  if (data === null || data === undefined) {
+    return data;
+  }
+  
+    // Handle primitives (strings, numbers, booleans)
+    if (typeof data !== 'object') {
+      // Check if it's a co-id string that should be resolved
+      if (typeof data === 'string' && data.startsWith('co_z')) {
+        const resolved = await resolveCoId(backend, data, options, visited);
+        // resolveCoId always returns an object now, so return it directly
+        return resolved;
+      }
+      return data;
+    }
+  
+  // Handle arrays - process each item
+  if (Array.isArray(data)) {
+    return Promise.all(data.map(item => 
+      resolveCoValueReferences(backend, item, options, visited, maxDepth, currentDepth + 1)
+    ));
+  }
+  
+  // Handle objects
+  const result = {};
+  for (const [key, value] of Object.entries(data)) {
+    // Skip internal properties
+    if (key === 'id' || key === '$schema' || key === 'type' || key === 'loading' || key === 'error') {
+      result[key] = value;
+      continue;
+    }
+    
+    // Check if this field should be resolved
+    const shouldResolve = fields === null || fields.includes(key);
+    
+    // Handle null/undefined - keep as-is (don't try to resolve)
+    if (value === null || value === undefined) {
+      result[key] = value;
+      continue;
+    }
+    
+    if (shouldResolve && typeof value === 'string' && value.startsWith('co_z')) {
+      // Resolve this co-id reference
+      const resolved = await resolveCoId(backend, value, { ...options, timeoutMs }, visited);
+      result[key] = resolved;
+    } else {
+      // Recursively process nested values
+      result[key] = await resolveCoValueReferences(backend, value, options, visited, maxDepth, currentDepth + 1);
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Resolve a single co-id to its CoValue data using the universal resolver
+ * Uses the same read() API as all other co-id resolution in the codebase
+ * @param {Object} backend - Backend instance
+ * @param {string} coId - Co-id to resolve
+ * @param {Object} options - Resolution options
+ * @param {string[]} [options.schemas] - Specific schema co-ids to resolve
+ * @param {number} [options.timeoutMs=2000] - Timeout for waiting for CoValue to be available
+ * @param {Set<string>} visited - Set of already visited co-ids
+ * @returns {Promise<any>} Resolved CoValue data or original co-id if not resolved
+ */
+async function resolveCoId(backend, coId, options = {}, visited = new Set()) {
+  const { schemas = null, timeoutMs = 2000 } = options;
+  
+  if (visited.has(coId)) {
+    return { id: coId }; // Already processing this co-id, return object with id to prevent circular reference
+  }
+  
+  try {
+    // Use backend.read() directly (same universal API used everywhere)
+    // This avoids circular dependency and uses the same read() API as all other code
+    const { waitForStoreReady } = await import('./read-operations.js');
+    
+    // Read the co-value directly using backend.read() API
+    // Signature: read(schema, key, keys, filter, options)
+    const coValueStore = await backend.read(null, coId, null, null, {
+      deepResolve: false, // Don't deep resolve here - we just want the data
+      timeoutMs
+    });
+    
+    if (!coValueStore) {
+      console.warn(`[resolveCoId] No store returned for ${coId.substring(0, 12)}...`);
+      return { id: coId }; // No store returned - return object with id
+    }
+    
+    // Wait for store to be ready
+    try {
+      await waitForStoreReady(coValueStore, coId, timeoutMs);
+    } catch (err) {
+      console.warn(`[resolveCoId] Store not ready for ${coId.substring(0, 12)}...:`, err.message);
+      // Store not ready within timeout - return object with id
+      return { id: coId };
+    }
+    
+    const coValueData = coValueStore.value;
+    
+    if (!coValueData || coValueData.error || typeof coValueData !== 'object') {
+      console.warn(`[resolveCoId] Invalid data for ${coId.substring(0, 12)}...:`, coValueData);
+      return { id: coId }; // Invalid data - return object with id
+    }
+    
+    // Check if we should resolve based on schema filter
+    if (schemas !== null && schemas.length > 0) {
+      const dataSchema = coValueData.$schema;
+      if (!schemas.includes(dataSchema)) {
+        return { id: coId }; // Schema not in filter - return object with id
+      }
+    }
+    
+    // Resolve the CoValue - include id and all properties
+    visited.add(coId);
+    const resolved = {
+      id: coValueData.id || coId, // Keep original co-id as id
+      ...coValueData // Include all properties
+    };
+    
+    console.log(`[resolveCoId] ✅ Resolved ${coId.substring(0, 12)}... to object with keys:`, Object.keys(resolved));
+    return resolved;
+  } catch (err) {
+    console.error(`[resolveCoId] ❌ Error resolving ${coId.substring(0, 12)}...:`, err);
+    // If we can't resolve it, return object with just id (so view can access .id)
+    // This ensures the view always gets an object, not a string
+    return { id: coId };
+  }
+}
+
+/**
  * Extract CoStream with session structure preserved and CRDT metadata
  * Backend-to-backend helper for inbox processing
  * @param {Object} backend - Backend instance

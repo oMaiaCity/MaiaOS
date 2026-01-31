@@ -4,15 +4,6 @@
   "initial": "idle",
   "states": {
     "idle": {
-      "entry": {
-        "mapData": {
-          "todos": {
-            "op": "read",
-            "schema": "@schema/data/todos",
-            "filter": null
-          }
-        }
-      },
       "on": {
         "TOGGLE_BUTTON": {
           "target": "idle",

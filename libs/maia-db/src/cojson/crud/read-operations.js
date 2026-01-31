@@ -17,7 +17,15 @@ export async function waitForStoreReady(store, coId, timeoutMs = 5000) {
   const initialValue = store.value;
   
   // If already loaded and not in error/loading state, return immediately
-  if (initialValue && !initialValue.loading && !initialValue.error && (initialValue.hasProperties !== false || initialValue.properties)) {
+  // Check for both normalized format (hasProperties/properties) and flat format (direct properties)
+  const isReady = initialValue && 
+                  !initialValue.loading && 
+                  !initialValue.error && 
+                  (initialValue.hasProperties !== false || 
+                   initialValue.properties || 
+                   (typeof initialValue === 'object' && Object.keys(initialValue).length > 0 && initialValue.id));
+  
+  if (isReady) {
     return;
   }
   
@@ -39,8 +47,14 @@ export async function waitForStoreReady(store, coId, timeoutMs = 5000) {
         return;
       }
       
-      // Ready when not loading and has properties
-      if (!data?.loading && data !== null && (data?.hasProperties !== false || data?.properties)) {
+      // Ready when not loading and has data (either normalized format or flat format)
+      const hasData = !data?.loading && 
+                      data !== null && 
+                      (data?.hasProperties !== false || 
+                       data?.properties || 
+                       (typeof data === 'object' && Object.keys(data).length > 0 && data.id));
+      
+      if (hasData) {
         resolved = true;
         unsubscribe();
         resolve();
@@ -53,10 +67,18 @@ export async function waitForStoreReady(store, coId, timeoutMs = 5000) {
       resolved = true;
       unsubscribe();
       reject(new Error(`CoValue error (co-id: ${coId}): ${current.error}`));
-    } else if (!current?.loading && current !== null && (current?.hasProperties !== false || current?.properties)) {
-      resolved = true;
-      unsubscribe();
-      resolve();
+    } else {
+      const currentHasData = !current?.loading && 
+                             current !== null && 
+                             (current?.hasProperties !== false || 
+                              current?.properties || 
+                              (typeof current === 'object' && Object.keys(current).length > 0 && current.id));
+      
+      if (currentHasData) {
+        resolved = true;
+        unsubscribe();
+        resolve();
+      }
     }
     
     // Timeout

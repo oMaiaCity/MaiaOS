@@ -74,6 +74,8 @@ export class DBEngine {
       throw new Error('[DBEngine] Operation required: {op: "read|create|update|delete|seed|schema|resolve|append|push"}');
     }
     
+    // Debug logging removed - too verbose
+    
     // Route 'push' operation to 'append' with cotype='costream'
     if (op === 'push') {
       return await this.operations.append.execute({ ...params, cotype: 'costream' });
