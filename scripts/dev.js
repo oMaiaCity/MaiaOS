@@ -6,6 +6,7 @@
  */
 
 import { spawn } from 'node:child_process'
+import { execSync } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -41,6 +42,20 @@ function startMaiaCity() {
 
 function startApi() {
 	console.log('[api] Starting API service...\n')
+	
+	// Check for port conflicts before starting
+	try {
+		const portCheck = execSync(`lsof -ti:4201 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
+		if (portCheck) {
+			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, { encoding: 'utf-8' }).trim()
+			if (processInfo && !processInfo.includes('bun') && !processInfo.includes('api')) {
+				console.warn(`[api] ⚠️  WARNING: Port 4201 is already in use by: ${processInfo}`)
+				console.warn(`[api] Please kill process ${portCheck} before starting: kill ${portCheck}`)
+			}
+		}
+	} catch (e) {
+		// Port is free or check failed - continue
+	}
 
 	apiProcess = spawn('bun', ['--env-file=.env', '--filter', 'api', 'dev'], {
 		cwd: rootDir,

@@ -13,7 +13,14 @@ export class ToolEngine {
 
   async execute(actionName, actor, payload) {
     const tool = this.tools.get(actionName);
-    if (!tool) throw new Error(`Tool not found: ${actionName}`);
+    if (!tool) {
+      const availableTools = Array.from(this.tools.keys());
+      console.error(`[ToolEngine] Tool not found: ${actionName}`, {
+        availableTools,
+        totalTools: availableTools.length
+      });
+      throw new Error(`Tool not found: ${actionName}. Available tools: ${availableTools.join(', ')}`);
+    }
     const parametersSchema = tool.definition.parameters || tool.definition.params;
     if (parametersSchema) {
       await validateAgainstSchemaOrThrow(this._normalizeToolSchema(parametersSchema), payload, 'tool-payload');

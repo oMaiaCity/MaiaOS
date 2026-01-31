@@ -104,6 +104,9 @@ Bun.serve({
 	port: PORT,
 	fetch(req: Request, server: any) {
 		const url = new URL(req.url)
+		
+		// Log all incoming requests for debugging
+		console.log(`[api] ${req.method} ${url.pathname}`)
 
 		// Handle CORS preflight
 		if (req.method === 'OPTIONS') {
@@ -134,6 +137,7 @@ Bun.serve({
 
 		// LLM endpoint
 		if (url.pathname === '/api/v0/llm/chat' && req.method === 'POST') {
+			console.log('[api] Handling LLM chat request')
 			return handleLLMChat(req)
 		}
 

@@ -132,6 +132,100 @@
           "additionalProperties": false
         },
         {
+          "description": "$gt operation - greater than comparison",
+          "properties": {
+            "$gt": {
+              "type": "array",
+              "description": "Array of two expressions to compare (left > right)",
+              "items": {
+                "$ref": "#"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": ["$gt"],
+          "additionalProperties": false
+        },
+        {
+          "description": "$length operation - get array or string length",
+          "properties": {
+            "$length": {
+              "$ref": "#",
+              "description": "Expression to get length of (evaluated to array or string)"
+            }
+          },
+          "required": ["$length"],
+          "additionalProperties": false
+        },
+        {
+          "description": "$concat operation - concatenate arrays",
+          "properties": {
+            "$concat": {
+              "type": "array",
+              "description": "Array of expressions, arrays, or objects to concatenate (all evaluated to arrays, then flattened)",
+              "items": {
+                "anyOf": [
+                  {
+                    "$ref": "#"
+                  },
+                  {
+                    "type": ["array", "object", "string", "number", "boolean", "null"]
+                  }
+                ]
+              },
+              "minItems": 1
+            }
+          },
+          "required": ["$concat"],
+          "additionalProperties": false
+        },
+        {
+          "description": "$map operation - map over array",
+          "properties": {
+            "$map": {
+              "type": "object",
+              "description": "Map configuration object",
+              "properties": {
+                "array": {
+                  "$ref": "#",
+                  "description": "Expression evaluating to array to map over"
+                },
+                "as": {
+                  "type": "string",
+                  "description": "Variable name for each item in the array (default: 'item')"
+                },
+                "return": {
+                  "description": "Expression, object, or array to evaluate for each item (result becomes item in returned array). 'do' is also supported as an alias.",
+                  "anyOf": [
+                    {
+                      "$ref": "#"
+                    },
+                    {
+                      "type": ["object", "array", "string", "number", "boolean", "null"]
+                    }
+                  ]
+                },
+                "do": {
+                  "description": "Alias for 'return' - expression, object, or array to evaluate for each item",
+                  "anyOf": [
+                    {
+                      "$ref": "#"
+                    },
+                    {
+                      "type": ["object", "array", "string", "number", "boolean", "null"]
+                    }
+                  ]
+                }
+              },
+              "required": ["array"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["$map"],
+          "additionalProperties": false
+        },
+        {
           "description": "$if operation - conditional expression",
           "properties": {
             "$if": {

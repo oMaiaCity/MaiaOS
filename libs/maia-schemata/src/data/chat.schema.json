@@ -1,0 +1,21 @@
+{
+  "$id": "@schema/data/chat",
+  "$schema": "@schema/meta",
+  "title": "@schema/data/chat",
+  "cotype": "comap",
+  "indexing": true,
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": ["user", "assistant", "system"],
+      "description": "The role of the message sender"
+    },
+    "content": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The message content"
+    }
+  },
+  "required": ["role", "content"],
+  "additionalProperties": false
+}

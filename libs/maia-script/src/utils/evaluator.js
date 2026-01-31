@@ -125,6 +125,61 @@ export class Evaluator {
       return value; // Return as-is if not a string
     }
 
+    // Handle $gt operation (greater than comparison)
+    if ('$gt' in expression) {
+      const [left, right] = expression.$gt;
+      const leftValue = await this.evaluate(left, data, depth + 1);
+      const rightValue = await this.evaluate(right, data, depth + 1);
+      return leftValue > rightValue;
+    }
+
+    // Handle $length operation (get array length)
+    if ('$length' in expression) {
+      const value = await this.evaluate(expression.$length, data, depth + 1);
+      return Array.isArray(value) ? value.length : (typeof value === 'string' ? value.length : 0);
+    }
+
+    // Handle $concat operation (concatenate arrays)
+    if ('$concat' in expression) {
+      const arrays = Array.isArray(expression.$concat) ? expression.$concat : [expression.$concat];
+      const evaluatedArrays = await Promise.all(arrays.map(arr => this.evaluate(arr, data, depth + 1)));
+      // Filter out null/undefined and ensure all items are arrays before flattening
+      const validArrays = evaluatedArrays
+        .filter(arr => arr != null)
+        .map(arr => Array.isArray(arr) ? arr : [arr]);
+      return validArrays.flat();
+    }
+
+    // Handle $map operation (map over array)
+    if ('$map' in expression) {
+      const mapConfig = expression.$map;
+      const array = await this.evaluate(mapConfig.array, data, depth + 1);
+      // Handle null/undefined or non-array values - return empty array
+      if (!array || !Array.isArray(array)) {
+        return [];
+      }
+      const itemKey = mapConfig.as || 'item';
+      const returnExpr = mapConfig.return || mapConfig.do; // Support both "return" and "do"
+      if (!returnExpr) {
+        throw new Error('[Evaluator] $map operation requires either "return" or "do" property');
+      }
+      const results = [];
+      for (const item of array) {
+        // Create item data with the current item
+        // The item is available as data.item for $$ shortcuts
+        // Also make it available under the 'as' key name for nested access patterns
+        const itemData = { 
+          ...data, 
+          item: item
+        };
+        // For shortcuts like $$msg.role when as="msg", we need to handle it specially
+        // We'll create a wrapper evaluator that handles $$itemKey.path patterns
+        const result = await this.evaluateMapReturn(returnExpr, itemData, itemKey, item, depth + 1);
+        results.push(result);
+      }
+      return results;
+    }
+
     if ('$if' in expression) {
       let condition = expression.$if.condition;
       if (typeof condition === 'string' && condition.startsWith('$')) {
@@ -150,6 +205,42 @@ export class Evaluator {
 
     // If no DSL operation, return as-is
     return expression;
+  }
+
+  /**
+   * Evaluate return expression in $map context with custom item key
+   * Handles shortcuts like $$msg.role when as="msg" by treating $$itemKey.path as item.path
+   * @param {any} returnExpr - The return expression to evaluate
+   * @param {Object} data - The data context { context, item, result }
+   * @param {string} itemKey - The 'as' variable name (e.g., "msg")
+   * @param {any} currentItem - The current array item being mapped
+   * @param {number} depth - Current recursion depth
+   * @returns {Promise<any>} The evaluated result
+   */
+  async evaluateMapReturn(returnExpr, data, itemKey, currentItem, depth) {
+    // If returnExpr is a string shortcut, handle $$itemKey.path patterns
+    if (typeof returnExpr === 'string' && returnExpr.startsWith('$$' + itemKey + '.')) {
+      // $$msg.role -> item.role when as="msg"
+      const path = returnExpr.substring(2 + itemKey.length + 1); // Skip "$$msg."
+      return resolvePath(currentItem, path);
+    }
+    // For objects, recursively evaluate with special handling for $$itemKey shortcuts
+    if (typeof returnExpr === 'object' && returnExpr !== null && !Array.isArray(returnExpr)) {
+      const result = {};
+      for (const [key, value] of Object.entries(returnExpr)) {
+        if (typeof value === 'string' && value.startsWith('$$' + itemKey + '.')) {
+          // Handle $$msg.role patterns
+          const path = value.substring(2 + itemKey.length + 1);
+          result[key] = resolvePath(currentItem, path);
+        } else {
+          // Recursively evaluate other expressions
+          result[key] = await this.evaluate(value, data, depth + 1);
+        }
+      }
+      return result;
+    }
+    // For arrays or other types, use normal evaluation
+    return await this.evaluate(returnExpr, data, depth + 1);
   }
 
   /**
@@ -194,6 +285,8 @@ export class Evaluator {
     if (typeof expression !== 'object' || expression === null) return false;
     return '$context' in expression || '$item' in expression || '$if' in expression || 
            '$eq' in expression || '$ne' in expression || '$not' in expression ||
-           '$and' in expression || '$or' in expression || '$trim' in expression;
+           '$and' in expression || '$or' in expression || '$trim' in expression ||
+           '$gt' in expression || '$length' in expression || '$concat' in expression ||
+           '$map' in expression;
   }
 }

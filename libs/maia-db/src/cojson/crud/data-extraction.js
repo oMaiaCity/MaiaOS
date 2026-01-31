@@ -383,7 +383,9 @@ export function extractCoValueDataFlat(backend, coValueCore, schemaHint = null) 
       
       // CRITICAL: CoJSON might serialize nested objects as JSON strings
       // Parse JSON strings back to objects (especially for nested structures like states, query options)
-      if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
+      // Skip JSON parsing for certain fields that should always be plain strings (like error messages)
+      const skipJsonParsingFields = ['error', 'message', 'content'];
+      if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('[')) && !skipJsonParsingFields.includes(key)) {
         try {
           const parsed = JSON.parse(value);
           console.log(`[extractCoValueDataFlat] ✅ Parsed JSON string for "${key}":`, {

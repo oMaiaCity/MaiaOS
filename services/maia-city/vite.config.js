@@ -8,11 +8,19 @@ const __dirname = dirname(__filename);
 export default defineConfig({
 	server: {
 		port: 4200,
+		strictPort: true, // Fail if port 4200 is taken instead of trying another port
 		open: false,
 		hmr: false, // Disable HMR - configs are in IndexedDB, just refresh manually
 		fs: {
 			// Allow serving files from entire monorepo
 			allow: ['../..']
+		},
+		proxy: {
+			'/api': {
+				target: 'http://localhost:4201',
+				changeOrigin: true,
+				secure: false
+			}
 		}
 	},
 	appType: 'mpa', // Multi-page app mode - prevents SPA fallback

@@ -254,7 +254,11 @@ async function register() {
 		});
 		
 		// Boot MaiaOS with node and account (using CoJSON backend)
-		maia = await MaiaOS.boot({ node, account });
+		maia = await MaiaOS.boot({ 
+			node, 
+			account,
+			modules: ['db', 'core', 'private-llm'] // Include private-llm module for RedPill chat
+		});
 		window.maia = maia;
 		
 		// Create CoJSON API instance
@@ -457,6 +461,7 @@ async function handleSeed() {
 		maia = await MaiaOS.boot({ 
 			node, 
 			account,
+			modules: ['db', 'core', 'private-llm'], // Include private-llm module for RedPill chat
 			registry: mergedConfigs
 		});
 		

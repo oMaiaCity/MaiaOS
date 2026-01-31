@@ -58,6 +58,7 @@ import childrenSchema from './os/children.schema.json';
 import schematasRegistrySchema from './os/schematas-registry.schema.json';
 // Import data schemas
 import todosDataSchema from './data/todos.schema.json';
+import chatDataSchema from './data/chat.schema.json';
 
 // Schema registry
 const SCHEMAS = {
@@ -89,7 +90,8 @@ const SCHEMAS = {
 
 // Data schemas registry (for application data validation)
 const DATA_SCHEMAS = {
-  'data/todos': todosDataSchema
+  'data/todos': todosDataSchema,
+  'data/chat': chatDataSchema
 };
 
 /**
