@@ -10,7 +10,18 @@
  * Port: 4203 (hardcoded per monorepo port assignments)
  */
 
-import { createSyncServer } from '@MaiaOS/sync'
+// Import sync server dynamically (local in Docker, workspace in dev)
+async function loadSyncServer() {
+	try {
+		// Try local copy first (Docker - sync is at /app/sync/, we're at /app/src/)
+		const sync = await import('../sync/index.js');
+		return sync.createSyncServer;
+	} catch {
+		// Fallback to workspace import (dev)
+		const sync = await import('@MaiaOS/sync');
+		return sync.createSyncServer;
+	}
+}
 
 const PORT = process.env.PORT || 4203
 
@@ -21,11 +32,15 @@ console.log(`[server] Storage: in-memory (no persistence)`)
 // Initialize sync server (async)
 async function startServer() {
 	try {
+		// Load sync server module
+		const createSyncServer = await loadSyncServer();
+		
 		// Start with in-memory storage for now (Bun compatibility)
 		const syncServerHandler = await createSyncServer({ inMemory: true })
 		console.log('[server] Sync server initialized (in-memory mode)')
 
 		Bun.serve({
+			hostname: '0.0.0.0',
 			port: PORT,
 			fetch(req, server) {
 				const url = new URL(req.url)

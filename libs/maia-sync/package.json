@@ -1,0 +1,17 @@
+{
+  "name": "@MaiaOS/sync",
+  "version": "0.1.23",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "description": "Self-hosted sync server library for MaiaOS using cojson LocalNode. Based on jazz-run's clean reference implementation, adapted for Bun.",
+  "dependencies": {
+    "cojson": "0.20.7",
+    "cojson-transport-ws": "0.20.7"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

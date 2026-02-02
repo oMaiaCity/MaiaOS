@@ -335,14 +335,20 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 	// Get IndexedDB storage for persistence (BEFORE account creation!)
 	const storage = await getStorage();
 	
-	// Setup Jazz sync peers BEFORE account creation (jazz-tools pattern!)
+	// Setup sync peers BEFORE account creation (jazz-tools pattern!)
+	// Check sync mode: 'local' (default, self-hosted) or 'jazz' (Jazz cloud)
+	const syncMode = import.meta.env?.VITE_SYNC_MODE || 'local';
 	const apiKey = import.meta.env?.VITE_JAZZ_API_KEY;
 	let syncSetup = null;
-	if (apiKey) {
-		console.log("🔌 [SYNC] Setting up Jazz sync...");
+	
+	if (syncMode === 'jazz' && apiKey) {
+		console.log("🔌 [SYNC] Setting up Jazz cloud sync...");
 		syncSetup = setupJazzSyncPeers(apiKey);
+	} else if (syncMode === 'local') {
+		console.log("🔌 [SYNC] Setting up self-hosted sync...");
+		syncSetup = setupSyncPeers();
 	} else {
-		console.log("⚠️ [SYNC] VITE_JAZZ_API_KEY not set - proceeding without sync");
+		console.log("⚠️ [SYNC] Sync disabled - proceeding without sync");
 	}
 	
 	// Schema migration: Creates profile + hierarchical account structure (account.os.schemata, etc.)
@@ -444,14 +450,20 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 	console.log("🔓 Loading account...");
 	const storage = await getStorage();
 	
-	// Setup Jazz sync peers BEFORE loading account (jazz-tools pattern!)
+	// Setup sync peers BEFORE loading account (jazz-tools pattern!)
+	// Check sync mode: 'local' (default, self-hosted) or 'jazz' (Jazz cloud)
+	const syncMode = import.meta.env?.VITE_SYNC_MODE || 'local';
 	const apiKey = import.meta.env?.VITE_JAZZ_API_KEY;
 	let syncSetup = null;
-	if (apiKey) {
-		console.log("🔌 [SYNC] Setting up Jazz sync...");
+	
+	if (syncMode === 'jazz' && apiKey) {
+		console.log("🔌 [SYNC] Setting up Jazz cloud sync...");
 		syncSetup = setupJazzSyncPeers(apiKey);
+	} else if (syncMode === 'local') {
+		console.log("🔌 [SYNC] Setting up self-hosted sync...");
+		syncSetup = setupSyncPeers();
 	} else {
-		console.log("⚠️ [SYNC] VITE_JAZZ_API_KEY not set - proceeding without sync");
+		console.log("⚠️ [SYNC] Sync disabled - proceeding without sync");
 	}
 	
 	const { LocalNode } = await import("cojson");

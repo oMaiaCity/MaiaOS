@@ -58,15 +58,15 @@ The client determines the sync server URL based on:
 
 ## Storage
 
-The sync server stores all CoValue transactions in a SQLite database:
-- **Default location**: `./sync.db` (in server directory)
-- **Custom location**: Set `DB_PATH` environment variable
-- **In-memory**: Use `DB_PATH=:memory:` for testing (data lost on restart)
+The sync server currently uses **in-memory storage** (no persistence):
+- **Current**: In-memory storage (data lost on server restart)
+- **Future**: SQLite storage support when Bun supports `better-sqlite3`
+- **Note**: This is fine for development and testing. For production, consider deploying with persistent storage when SQLite support is available.
 
 ## How It Works
 
 1. **Server-side LocalNode**: Creates a LocalNode instance without an account (server is relay, not participant)
-2. **SQLite Storage**: All CoValue transactions are persisted to SQLite database
+2. **In-Memory Storage**: Currently uses in-memory storage (no persistence)
 3. **WebSocket Peers**: Each client connection creates a peer via `createWebSocketPeer`
 4. **Automatic Sync**: cojson's `SyncManager` handles all sync protocol automatically
 5. **Message Routing**: cojson routes messages between peers based on what they need
@@ -75,4 +75,4 @@ The sync server stores all CoValue transactions in a SQLite database:
 
 Deploy the server service separately from the frontend. The frontend connects to it via WebSocket.
 
-**Important**: Ensure the SQLite database file is persisted (use volumes in containerized deployments).
+**Note**: Currently using in-memory storage. Data is lost on server restart. This is fine for development and testing.

@@ -20,6 +20,12 @@ export default defineConfig({
 				target: 'http://localhost:4201',
 				changeOrigin: true,
 				secure: false
+			},
+			'/sync': {
+				target: 'ws://localhost:4203',
+				ws: true,
+				changeOrigin: true,
+				secure: false
 			}
 		}
 	},

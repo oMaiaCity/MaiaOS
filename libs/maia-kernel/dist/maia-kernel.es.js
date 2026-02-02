@@ -10239,12 +10239,13 @@ async function ensureCoValueLoaded(backend, coId, options = {}) {
   });
   if (waitForAvailable) {
     await new Promise((resolve2, reject) => {
+      let unsubscribe;
       const timeout = setTimeout(() => {
         console.warn(`[CoJSONBackend] Timeout waiting for CoValue ${coId} to load`);
         unsubscribe();
         reject(new Error(`Timeout waiting for CoValue ${coId} to load after ${timeoutMs}ms`));
       }, timeoutMs);
-      const unsubscribe = coValueCore.subscribe((core2) => {
+      unsubscribe = coValueCore.subscribe((core2) => {
         if (core2.isAvailable()) {
           clearTimeout(timeout);
           unsubscribe();
@@ -11639,6 +11640,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
   const subscribedItemIds = /* @__PURE__ */ new Set();
   const sharedVisited = /* @__PURE__ */ new Set();
   const cache = backend.subscriptionCache;
+  let updateStore;
   const subscribeToItem = (itemId) => {
     if (subscribedItemIds.has(itemId)) {
       return;
@@ -11673,7 +11675,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
     });
     backend.subscriptionCache.getOrCreate(`subscription:${itemId}`, () => ({ unsubscribe: unsubscribeItem }));
   };
-  const updateStore = async () => {
+  updateStore = async () => {
     const results = [];
     if (!backend.isAvailable(coListCore)) {
       ensureCoValueLoaded(backend, coListId).catch((err) => {
@@ -11804,6 +11806,7 @@ async function readAllCoValues(backend, filter = null, options = {}) {
   } = options;
   const store = new ReactiveStore([]);
   const subscribedCoIds = /* @__PURE__ */ new Set();
+  let updateStore;
   const subscribeToCoValue = (coId, coValueCore) => {
     if (subscribedCoIds.has(coId)) {
       return;
@@ -11814,7 +11817,7 @@ async function readAllCoValues(backend, filter = null, options = {}) {
     });
     backend.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe }));
   };
-  const updateStore = async () => {
+  updateStore = async () => {
     const allCoValues = backend.getAllCoValues();
     const results = [];
     for (const [coId, coValueCore] of allCoValues.entries()) {
@@ -11868,7 +11871,8 @@ async function waitForStoreReady(store, coId, timeoutMs = 5e3) {
   }
   return new Promise((resolve2, reject) => {
     let resolved = false;
-    const unsubscribe = store.subscribe((data2) => {
+    let unsubscribe;
+    unsubscribe = store.subscribe((data2) => {
       if (resolved) return;
       if (data2?.error) {
         resolved = true;
@@ -15915,10 +15919,11 @@ async function seed(account, node, configs, schemas, data2, existingBackend = nu
   const profileStore = await backend.read(null, profileId);
   if (profileStore.loading) {
     await new Promise((resolve2, reject) => {
+      let unsubscribe;
       const timeout = setTimeout(() => {
         reject(new Error(`Timeout waiting for profile ${profileId} to be available`));
       }, 1e4);
-      const unsubscribe = profileStore.subscribe(() => {
+      unsubscribe = profileStore.subscribe(() => {
         if (!profileStore.loading) {
           clearTimeout(timeout);
           unsubscribe();
@@ -15946,10 +15951,11 @@ async function seed(account, node, configs, schemas, data2, existingBackend = nu
   const groupStore = await backend.read("@group", universalGroupId);
   if (groupStore.loading) {
     await new Promise((resolve2, reject) => {
+      let unsubscribe;
       const timeout = setTimeout(() => {
         reject(new Error(`Timeout waiting for universal group ${universalGroupId} to be available`));
       }, 1e4);
-      const unsubscribe = groupStore.subscribe(() => {
+      unsubscribe = groupStore.subscribe(() => {
         if (!groupStore.loading) {
           clearTimeout(timeout);
           unsubscribe();
@@ -16678,8 +16684,9 @@ async function ensureAccountOs(account, node, universalGroup) {
   let osCore = node.getCoValue(os.id);
   if (osCore && !osCore.isAvailable()) {
     await new Promise((resolve2) => {
+      let unsubscribe;
       const timeout = setTimeout(resolve2, 5e3);
-      const unsubscribe = osCore.subscribe((core2) => {
+      unsubscribe = osCore.subscribe((core2) => {
         if (core2 && core2.isAvailable()) {
           clearTimeout(timeout);
           unsubscribe();
@@ -16791,10 +16798,11 @@ async function getDefaultGroup(backend) {
       resolve2();
       return;
     }
+    let unsubscribe;
     const timeout = setTimeout(() => {
       reject(new Error("[CoJSONBackend] Timeout waiting for profile to be available"));
     }, 1e4);
-    const unsubscribe = profileStore.subscribe(() => {
+    unsubscribe = profileStore.subscribe(() => {
       if (!profileStore.loading) {
         clearTimeout(timeout);
         unsubscribe();
@@ -16834,10 +16842,11 @@ async function getDefaultGroup(backend) {
       resolve2();
       return;
     }
+    let unsubscribe;
     const timeout = setTimeout(() => {
       reject(new Error(`[CoJSONBackend] Timeout waiting for universal group ${universalGroupId} to be available`));
     }, 1e4);
-    const unsubscribe = groupStore.subscribe(() => {
+    unsubscribe = groupStore.subscribe(() => {
       if (!groupStore.loading) {
         clearTimeout(timeout);
         unsubscribe();
@@ -22037,6 +22046,7 @@ async function getStorage() {
     return void 0;
   }
 }
+const __vite_import_meta_env__ = {};
 const { accountHeaderForInitialAgentSecret, idforHeader } = cojsonInternals;
 let syncState = {
   connected: false,
@@ -22054,21 +22064,48 @@ function notifySyncStateChange() {
     listener(syncState);
   }
 }
-function setupJazzSyncPeers(apiKey) {
-  const jazzCloudUrl = `wss://cloud.jazz.tools/?key=${apiKey}`;
+function setupSyncPeers(syncDomain = null) {
+  const isDev = window.location.hostname === "localhost";
+  const apiDomain = syncDomain || typeof window !== "undefined" && window.__PUBLIC_API_DOMAIN__ || __vite_import_meta_env__?.PUBLIC_API_DOMAIN;
+  let syncServerUrl;
+  if (isDev) {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    syncServerUrl = `${protocol}//${window.location.host}/sync`;
+  } else if (apiDomain) {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    syncServerUrl = `${protocol}//${apiDomain}/sync`;
+  } else {
+    console.warn("⚠️ [SYNC] Sync domain not set! Falling back to same origin. Sync may not work.");
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    syncServerUrl = `${protocol}//${window.location.host}/sync`;
+  }
+  console.log(`🔌 [SYNC] Connecting to sync server: ${syncServerUrl}`);
+  if (isDev) {
+    console.log(`   Mode: Development (using Vite proxy)`);
+  } else {
+    console.log(`   Sync Domain: ${apiDomain || "(not set - using same origin fallback)"}`);
+    console.log(`   Source: ${syncDomain ? "kernel" : typeof window !== "undefined" && window.__PUBLIC_API_DOMAIN__ ? "runtime env" : __vite_import_meta_env__?.PUBLIC_API_DOMAIN ? "build-time env" : "fallback"}`);
+  }
   let node = void 0;
   const peers = [];
-  console.log(`🔌 [SYNC] Connecting directly to Jazz cloud: wss://cloud.jazz.tools/?key=...`);
+  let connectionTimeout = null;
+  let websocketConnected = false;
+  let websocketConnectedResolve = null;
+  const websocketConnectedPromise = new Promise((resolve2) => {
+    websocketConnectedResolve = resolve2;
+  });
   const wsPeer = new WebSocketPeerWithReconnection({
-    peer: jazzCloudUrl,
+    peer: syncServerUrl,
     reconnectionTimeout: 5e3,
     addPeer: (peer) => {
+      if (connectionTimeout) {
+        clearTimeout(connectionTimeout);
+        connectionTimeout = null;
+      }
+      console.log("✅ [SYNC] Peer added to array");
+      peers.push(peer);
       if (node) {
         node.syncManager.addPeer(peer);
-        syncState = { connected: true, syncing: true, error: null };
-        notifySyncStateChange();
-      } else {
-        peers.push(peer);
       }
     },
     removePeer: (peer) => {
@@ -22076,26 +22113,83 @@ function setupJazzSyncPeers(apiKey) {
       if (index2 > -1) {
         peers.splice(index2, 1);
       }
+      if (syncState.connected) {
+        console.warn("⚠️ [SYNC] Peer removed, connection lost");
+      }
+      websocketConnected = false;
       syncState = { connected: false, syncing: false, error: "Disconnected" };
       notifySyncStateChange();
     }
   });
   wsPeer.subscribe((connected) => {
-    syncState = { connected, syncing: connected, error: connected ? null : "Offline" };
-    notifySyncStateChange();
+    if (connected && !websocketConnected) {
+      console.log("✅ [SYNC] WebSocket connection successful");
+      websocketConnected = true;
+      syncState = { connected: true, syncing: true, error: null };
+      notifySyncStateChange();
+      if (websocketConnectedResolve) {
+        websocketConnectedResolve();
+        websocketConnectedResolve = null;
+      }
+    } else if (!connected && websocketConnected) {
+      console.warn("⚠️ [SYNC] WebSocket connection lost");
+      websocketConnected = false;
+      syncState = { connected: false, syncing: false, error: "Offline" };
+      notifySyncStateChange();
+    }
   });
+  connectionTimeout = setTimeout(() => {
+    if (!syncState.connected) {
+      console.error(`❌ [SYNC] Connection timeout after 10s. Check:`);
+      console.error(`   1. Server service is running: curl https://${apiDomain || window.location.hostname}/health`);
+      console.error(`   2. PUBLIC_API_DOMAIN is set correctly: ${apiDomain || "NOT SET"}`);
+      console.error(`   3. WebSocket URL: ${syncServerUrl}`);
+      syncState = { connected: false, syncing: false, error: "Connection timeout" };
+      notifySyncStateChange();
+    }
+  }, 1e4);
   wsPeer.enable();
   return {
     peers,
+    wsPeer,
+    // Wait for WebSocket to be actually connected (not just peer object created)
+    waitForPeer: () => {
+      return new Promise((resolve2) => {
+        if (websocketConnected && peers.length > 0) {
+          resolve2(true);
+          return;
+        }
+        let resolved = false;
+        const timeout = setTimeout(() => {
+          if (!resolved) {
+            resolved = true;
+            resolve2(false);
+          }
+        }, 1e4);
+        websocketConnectedPromise.then(() => {
+          if (!resolved && peers.length > 0) {
+            resolved = true;
+            clearTimeout(timeout);
+            resolve2(true);
+          }
+        }).catch(() => {
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(timeout);
+            resolve2(false);
+          }
+        });
+      });
+    },
     setNode: (n) => {
       node = n;
       if (peers.length > 0) {
+        console.log(`[SYNC] Adding ${peers.length} queued peer(s) to node`);
         for (const peer of peers) {
           node.syncManager.addPeer(peer);
         }
       }
-    },
-    wsPeer
+    }
   };
 }
 async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = {}) {
@@ -22126,11 +22220,10 @@ async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = {}) {
   console.log("🏗️ Step 3/3: Creating account...");
   const { LocalNode: LocalNode2 } = await Promise.resolve().then(() => index$3);
   const storage = await getStorage();
-  const apiKey = "Y29felN5ckxFUHhDQXRVajN6U2p0bXNDcFd2RkpEfGNvX3pCb1huYlRYRFlQeXJ6dktUNWNDeTd5b2VuV3xjb196VFJLYWlUV2t1cDhrRWkxeGFZTlRLZmN6d1g";
   let syncSetup = null;
   {
-    console.log("🔌 [SYNC] Setting up Jazz sync...");
-    syncSetup = setupJazzSyncPeers(apiKey);
+    console.log("🔌 [SYNC] Setting up self-hosted sync...");
+    syncSetup = setupSyncPeers();
   }
   const { schemaMigration: schemaMigration2 } = await Promise.resolve().then(() => index$1);
   const result = await LocalNode2.withNewlyCreatedAccount({
@@ -22191,11 +22284,10 @@ async function signInWithPasskey({ salt = "maia.city" } = {}) {
   console.log("   ♻️  No storage needed - computed on the fly!");
   console.log("🔓 Loading account...");
   const storage = await getStorage();
-  const apiKey = "Y29felN5ckxFUHhDQXRVajN6U2p0bXNDcFd2RkpEfGNvX3pCb1huYlRYRFlQeXJ6dktUNWNDeTd5b2VuV3xjb196VFJLYWlUV2t1cDhrRWkxeGFZTlRLZmN6d1g";
   let syncSetup = null;
   {
-    console.log("🔌 [SYNC] Setting up Jazz sync...");
-    syncSetup = setupJazzSyncPeers(apiKey);
+    console.log("🔌 [SYNC] Setting up self-hosted sync...");
+    syncSetup = setupSyncPeers();
   }
   const { LocalNode: LocalNode2 } = await Promise.resolve().then(() => index$3);
   const withLoadedAccountPromise = LocalNode2.withLoadedAccount({

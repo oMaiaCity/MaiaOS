@@ -531,6 +531,10 @@ async function readCollection(backend, schema, filter = null, options = {}) {
   // Cache for resolved+mapped item data (keyed by itemId)
   const cache = backend.subscriptionCache;
   
+  // Fix: Declare updateStore before subscribeToItem to avoid temporal dead zone
+  // updateStore is referenced in subscribeToItem callbacks, so it must be declared first
+  let updateStore;
+  
   // Helper to subscribe to an item CoValue
   const subscribeToItem = (itemId) => {
     // Skip if already subscribed
@@ -591,7 +595,8 @@ async function readCollection(backend, schema, filter = null, options = {}) {
   };
   
   // Helper to update store with current items
-  const updateStore = async () => {
+  // Fix: Assign to pre-declared variable (declared above to avoid temporal dead zone)
+  updateStore = async () => {
     const results = [];
     
     // Get current CoList content (should be available now, but check anyway)
@@ -805,6 +810,10 @@ async function readAllCoValues(backend, filter = null, options = {}) {
   // Track CoValue IDs we've subscribed to (for cleanup)
   const subscribedCoIds = new Set();
   
+  // Fix: Declare updateStore before subscribeToCoValue to avoid temporal dead zone
+  // updateStore is referenced in subscribeToCoValue callbacks, so it must be declared first
+  let updateStore;
+  
   // Helper to subscribe to a CoValue
   const subscribeToCoValue = (coId, coValueCore) => {
     // Skip if already subscribed
@@ -823,7 +832,8 @@ async function readAllCoValues(backend, filter = null, options = {}) {
   };
   
   // Helper to update store with all CoValues
-  const updateStore = async () => {
+  // Fix: Assign to pre-declared variable (declared above to avoid temporal dead zone)
+  updateStore = async () => {
     const allCoValues = backend.getAllCoValues();
     const results = [];
 
