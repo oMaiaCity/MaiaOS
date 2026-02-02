@@ -24,7 +24,18 @@ export default defineConfig({
 		}
 	},
 	appType: 'spa', // Single-page app mode - enables SPA fallback for client-side routing
-		resolve: {
+	build: {
+		outDir: 'dist',
+		emptyOutDir: true,
+		sourcemap: false, // Disable sourcemaps for production
+		minify: 'esbuild',
+		rollupOptions: {
+			output: {
+				manualChunks: undefined, // Single bundle for simplicity
+			},
+		},
+	},
+	resolve: {
 			alias: {
 				// Use bundled ESM kernel instead of source - dogfooding our own bundle!
 				// This ensures maia-city uses the same bundle that external users would use

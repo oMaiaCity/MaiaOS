@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "cd ../.. && bun run kernel:build && cd services/maia-city && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "bun server.js",
+    "deploy": "cd ../.. && flyctl deploy --dockerfile services/maia-city/Dockerfile"
   },
   "dependencies": {
     "@MaiaOS/kernel": "workspace:*",
