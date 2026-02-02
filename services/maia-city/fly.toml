@@ -1,5 +1,6 @@
 # Fly.io configuration for maia-city
 app = "maia-city"
+org = "maia-city"
 primary_region = "fra"
 
 [build]

@@ -18,7 +18,8 @@ flyctl auth login
 
 From the **monorepo root**:
 ```bash
-flyctl apps create maia-city
+# Create app in maia-city organization
+flyctl apps create maia-city --org maia-city
 ```
 
 ### 2. Deploy
