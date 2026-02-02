@@ -26,10 +26,10 @@ flyctl apps create maia-city --org maia-city
 
 From the **monorepo root**:
 ```bash
-flyctl deploy --dockerfile services/maia-city/Dockerfile
+flyctl deploy --dockerfile services/maia-city/Dockerfile --org maia-city
 ```
 
-Or use the deploy script:
+Or use the deploy script (automatically uses org):
 ```bash
 cd services/maia-city
 bun run deploy
@@ -58,7 +58,8 @@ Then open http://localhost:8080
 ## Configuration
 
 - **Port**: 8080 (internal)
-- **Region**: iad (Washington, D.C.)
+- **Region**: fra (Frankfurt, Germany)
+- **Organization**: maia-city
 - **HTTPS**: Enabled automatically
 - **SPA Routing**: All routes serve `index.html` for client-side routing
 
