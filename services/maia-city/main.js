@@ -106,19 +106,66 @@ function showToast(message, type = 'info', duration = 5000) {
 	}, duration);
 }
 
-async function init() {
+/**
+ * Navigation helper function
+ */
+function navigateTo(path) {
 	try {
-		// STRICT: Check PRF support first
+		window.history.pushState({}, '', path);
+		handleRoute().catch((error) => {
+			console.error("Route handling error:", error);
+			showToast("Navigation error: " + error.message, 'error');
+		});
+	} catch (error) {
+		console.error("Navigation error:", error);
+		showToast("Navigation error: " + error.message, 'error');
+	}
+}
+
+/**
+ * Handle route changes
+ */
+async function handleRoute() {
+	const path = window.location.pathname;
+	
+	if (path === '/signin' || path === '/signup') {
+		// Check PRF support before showing sign-in
 		try {
 			await isPRFSupported();
+			renderSignInPrompt();
 		} catch (error) {
 			console.error("❌ PRF not supported:", error);
 			renderUnsupportedBrowser(error.message);
-			return;
 		}
+	} else if (path === '/me' || path === '/dashboard') {
+		// If authenticated, show dashboard; otherwise redirect to signin
+		if (authState.signedIn && maia) {
+			renderAppInternal();
+		} else {
+			navigateTo('/signin');
+		}
+	} else {
+		// Default route: landing page
+		// If already authenticated, redirect to dashboard
+		if (authState.signedIn && maia) {
+			navigateTo('/me');
+		} else {
+			renderLandingPage();
+		}
+	}
+}
+
+async function init() {
+	try {
+		// Handle initial route
+		await handleRoute();
 		
-		// Show sign-in prompt (no localStorage check)
-		renderSignInPrompt();
+		// Listen for browser back/forward navigation
+		window.addEventListener('popstate', () => {
+			handleRoute().catch((error) => {
+				console.error("Route handling error:", error);
+			});
+		});
 	} catch (error) {
 		console.error("Failed to initialize:", error);
 		showToast("Failed to initialize: " + error.message, 'error', 10000);
@@ -174,7 +221,8 @@ async function signIn() {
 		currentScreen = 'dashboard';
 		currentContextCoValueId = null;
 		
-		renderAppInternal();
+		// Navigate to /me after successful sign-in
+		navigateTo('/me');
 		
 	} catch (error) {
 		console.error("Sign in failed:", error);
@@ -296,7 +344,8 @@ async function register() {
 		currentScreen = 'dashboard';
 		currentContextCoValueId = null;
 
-		renderAppInternal();
+		// Navigate to /me after successful registration
+		navigateTo('/me');
 		
 	} catch (error) {
 		console.error("Registration failed:", error);
@@ -334,6 +383,76 @@ function signOut() {
 	window.location.reload();
 }
 
+/**
+ * Render landing page
+ */
+function renderLandingPage() {
+	document.getElementById("app").innerHTML = `
+		<div class="landing-container">
+			<div class="landing-content">
+				<h1 class="landing-hook">Watch 1.3 million humans building world's most beautiful city in just 16 years.</h1>
+				<div class="landing-subheadline-card liquid-glass">
+					<div class="liquid-glass--bend"></div>
+					<div class="liquid-glass--face"></div>
+					<div class="liquid-glass--edge"></div>
+					<p class="landing-subheadline liquid-glass-inner">Discover the future of living, where you enjoy the time of your life<br>while your visions become reality at 100x speed.</p>
+				</div>
+				<button class="landing-cta" onclick="event.preventDefault(); window.navigateTo('/signin'); return false;">Subscribe to Follow</button>
+			</div>
+		</div>
+	`;
+}
+
+/**
+ * Open video popup with YouTube embed
+ */
+function openVideoPopup(videoId = 'PeBZIe6kPMg') {
+	const popup = document.createElement('div');
+	popup.className = 'video-popup-overlay';
+	popup.innerHTML = `
+		<div class="video-popup-container">
+			<button class="video-popup-close" onclick="window.closeVideoPopup()">×</button>
+			<div class="video-popup-content">
+				<iframe 
+					width="560" 
+					height="315" 
+					src="https://www.youtube.com/embed/${videoId}" 
+					title="MaiaCity Video" 
+					frameborder="0" 
+					allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+					allowfullscreen>
+				</iframe>
+			</div>
+		</div>
+	`;
+	document.body.appendChild(popup);
+	
+	// Close on overlay click
+	popup.addEventListener('click', (e) => {
+		if (e.target === popup) {
+			closeVideoPopup();
+		}
+	});
+	
+	// Close on Escape key
+	document.addEventListener('keydown', function escapeHandler(e) {
+		if (e.key === 'Escape') {
+			closeVideoPopup();
+			document.removeEventListener('keydown', escapeHandler);
+		}
+	});
+}
+
+/**
+ * Close video popup
+ */
+function closeVideoPopup() {
+	const popup = document.querySelector('.video-popup-overlay');
+	if (popup) {
+		popup.remove();
+	}
+}
+
 function renderSignInPrompt() {
 	const hasAccount = hasExistingAccount();
 	
@@ -358,7 +477,7 @@ function renderSignInPrompt() {
 					<p class="sign-in-subtitle">you were always meant to be</p>
 					${!hasAccount ? `
 						<p class="sign-in-description">
-							Create your new sovereign self now. Only you will own and control your maia identity and data.
+							Create your new sovereign self now.
 						</p>
 					` : ''}
 					<div class="sign-in-buttons">
@@ -485,6 +604,9 @@ async function handleSeed() {
 // Expose globally for onclick handlers
 window.handleSignIn = signIn;
 window.handleRegister = register;
+window.navigateTo = navigateTo;
+window.openVideoPopup = openVideoPopup;
+window.closeVideoPopup = closeVideoPopup;
 window.handleSignOut = signOut;
 window.handleSeed = handleSeed;
 window.showToast = showToast; // Expose for debugging

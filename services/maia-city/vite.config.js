@@ -23,7 +23,7 @@ export default defineConfig({
 			}
 		}
 	},
-	appType: 'mpa', // Multi-page app mode - prevents SPA fallback
+	appType: 'spa', // Single-page app mode - enables SPA fallback for client-side routing
 	resolve: {
 		alias: {
 			"@MaiaOS/kernel": resolve(__dirname, "../../libs/maia-kernel/src/index.js"),
