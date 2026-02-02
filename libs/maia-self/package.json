@@ -8,8 +8,8 @@
   },
   "dependencies": {
     "@MaiaOS/db": "workspace:*",
-    "cojson-storage-indexeddb": "0.19.21",
-    "cojson-transport-ws": "0.19.21"
+    "cojson-storage-indexeddb": "0.20.7",
+    "cojson-transport-ws": "0.20.7"
   },
   "description": "Self-Sovereign Identity (SSI) via WebAuthn PRF for MaiaOS"
 }

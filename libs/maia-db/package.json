@@ -7,7 +7,7 @@
     ".": "./src/index.js"
   },
   "dependencies": {
-    "cojson": "^0.19.21",
+    "cojson": "^0.20.7",
     "@MaiaOS/operations": "workspace:*",
     "@MaiaOS/schemata": "workspace:*"
   }

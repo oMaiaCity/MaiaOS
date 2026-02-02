@@ -15,7 +15,7 @@
     "@MaiaOS/tools": "workspace:*"
   },
   "devDependencies": {
-    "cojson": "^0.19.21"
+    "cojson": "^0.20.7"
   },
   "scripts": {
     "dev:docs": "bun run scripts/generate-llm-docs.js --watch",

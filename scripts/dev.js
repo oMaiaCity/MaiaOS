@@ -43,12 +43,29 @@ function startMaiaCity() {
 function startApi() {
 	console.log('[api] Starting API service...\n')
 	
-	// Check for port conflicts before starting
+	// Check for port conflicts and kill existing API processes
 	try {
 		const portCheck = execSync(`lsof -ti:4201 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
 		if (portCheck) {
 			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, { encoding: 'utf-8' }).trim()
-			if (processInfo && !processInfo.includes('bun') && !processInfo.includes('api')) {
+			if (processInfo && (processInfo.includes('bun') || processInfo.includes('api') || processInfo.includes('src/index.ts'))) {
+				// It's a bun/api process - kill it automatically
+				console.log(`[api] Killing existing process ${portCheck} on port 4201...`)
+				try {
+					execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
+					// Wait a moment for the port to be released
+					setTimeout(() => {}, 500)
+				} catch (e) {
+					// If kill fails, try force kill
+					try {
+						execSync(`kill -9 ${portCheck} 2>/dev/null`, { timeout: 2000 })
+						setTimeout(() => {}, 500)
+					} catch (e2) {
+						console.warn(`[api] ⚠️  Could not kill process ${portCheck}, port may still be in use`)
+					}
+				}
+			} else if (processInfo) {
+				// It's a different process - warn user
 				console.warn(`[api] ⚠️  WARNING: Port 4201 is already in use by: ${processInfo}`)
 				console.warn(`[api] Please kill process ${portCheck} before starting: kill ${portCheck}`)
 			}
