@@ -53,7 +53,7 @@ serve({
 				const stats = statSync(filePath);
 				if (stats.isFile()) {
 					const content = readFileSync(filePath);
-					const ext = extname(pathname);
+					const ext = extname(filePath); // Use filePath, not pathname, to get correct extension
 					const mimeType = MIME_TYPES[ext] || "application/octet-stream";
 
 					return new Response(content, {

@@ -8,3 +8,6 @@ export {
 	subscribeSyncState, // NEW: Sync state observable
 	// NO LOCALSTORAGE: Removed signOut, isSignedIn, getCurrentAccount, inspectStorage
 } from "@MaiaOS/self";
+
+// Re-export db functions (bundled in kernel)
+export { createCoJSONAPI, getSchemaIndexColistId } from "@MaiaOS/db";

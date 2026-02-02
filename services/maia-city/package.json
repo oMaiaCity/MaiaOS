@@ -5,14 +5,13 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "cd ../.. && bun run kernel:build && cd services/maia-city && vite build",
+    "build": "cd ../.. && bun run bundles:build && cd services/maia-city && vite build",
     "preview": "vite preview",
     "start": "bun server.js",
-    "deploy": "cd ../.. && flyctl deploy --dockerfile services/maia-city/Dockerfile --org maia-city"
+    "deploy": "cd ../.. && flyctl deploy --dockerfile services/maia-city/Dockerfile --config services/maia-city/fly.toml"
   },
   "dependencies": {
     "@MaiaOS/kernel": "workspace:*",
-    "@MaiaOS/script": "workspace:*",
     "@MaiaOS/vibes": "workspace:*",
     "buffer": "^6.0.3"
   },

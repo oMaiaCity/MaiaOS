@@ -133,7 +133,7 @@ function _makeCompatibilityCheck(ownVersion) {
 }
 var isCompatible = _makeCompatibilityCheck(VERSION);
 var major = VERSION.split(".")[0];
-var GLOBAL_OPENTELEMETRY_API_KEY = Symbol.for("opentelemetry.js.api." + major);
+var GLOBAL_OPENTELEMETRY_API_KEY = /* @__PURE__ */ Symbol.for("opentelemetry.js.api." + major);
 var _global = _globalThis;
 function registerGlobal(type2, instance, diag, allowOverride) {
   var _a;
@@ -17595,6 +17595,29 @@ const cojsonBackend = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defin
   __proto__: null,
   CoJSONBackend
 }, Symbol.toStringTag, { value: "Module" }));
+function createCoJSONAPI(node, account) {
+  if (!node) {
+    throw new Error("[createCoJSONAPI] Node required");
+  }
+  if (!account) {
+    throw new Error("[createCoJSONAPI] Account required");
+  }
+  const backend = new CoJSONBackend(node, account);
+  const dbEngine = new DBEngine$1(backend);
+  backend.dbEngine = dbEngine;
+  return {
+    /**
+     * Execute a database operation
+     * @param {Object} payload - Operation payload
+     * @param {string} payload.op - Operation name (read, create, update, delete)
+     * @param {Object} payload params - Operation-specific parameters
+     * @returns {Promise<any>} Operation result
+     */
+    cojson: async (payload) => {
+      return await dbEngine.execute(payload);
+    }
+  };
+}
 async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
   if (!dbEngine) {
     throw new Error("[createAndPushMessage] dbEngine is required");
@@ -17802,6 +17825,7 @@ const index$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
   CoJSONBackend,
   checkCotype,
   createAndPushMessage,
+  createCoJSONAPI,
   createCoList,
   createCoMap,
   createCoStream,
@@ -22000,7 +22024,6 @@ async function getStorage() {
     return void 0;
   }
 }
-const __vite_import_meta_env__ = {};
 const { accountHeaderForInitialAgentSecret, idforHeader } = cojsonInternals;
 let jazzSyncState = {
   connected: false,
@@ -22084,9 +22107,9 @@ async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = {}) {
   console.log("🏗️ Step 3/3: Creating account...");
   const { LocalNode: LocalNode2 } = await Promise.resolve().then(() => index$3);
   const storage = await getStorage();
-  const apiKey = __vite_import_meta_env__?.VITE_JAZZ_API_KEY;
+  const apiKey = "Y29felN5ckxFUHhDQXRVajN6U2p0bXNDcFd2RkpEfGNvX3pCb1huYlRYRFlQeXJ6dktUNWNDeTd5b2VuV3xjb196VFJLYWlUV2t1cDhrRWkxeGFZTlRLZmN6d1g";
   let syncSetup = null;
-  if (apiKey) {
+  {
     syncSetup = setupJazzSyncPeers(apiKey);
   }
   const { schemaMigration: schemaMigration2 } = await Promise.resolve().then(() => index$1);
@@ -22148,9 +22171,9 @@ async function signInWithPasskey({ salt = "maia.city" } = {}) {
   console.log("   ♻️  No storage needed - computed on the fly!");
   console.log("🔓 Loading account...");
   const storage = await getStorage();
-  const apiKey = __vite_import_meta_env__?.VITE_JAZZ_API_KEY;
+  const apiKey = "Y29felN5ckxFUHhDQXRVajN6U2p0bXNDcFd2RkpEfGNvX3pCb1huYlRYRFlQeXJ6dktUNWNDeTd5b2VuV3xjb196VFJLYWlUV2t1cDhrRWkxeGFZTlRLZmN6d1g";
   let syncSetup = null;
-  if (apiKey) {
+  {
     console.log("🔌 [SYNC] Setting up Jazz sync...");
     syncSetup = setupJazzSyncPeers(apiKey);
   }
@@ -22177,9 +22200,6 @@ async function signInWithPasskey({ salt = "maia.city" } = {}) {
   console.log("   📱 1 biometric prompt");
   console.log("   💾 0 secrets retrieved from storage");
   console.log("   ⚡ Everything computed deterministically!");
-  if (!apiKey) {
-    console.warn("⚠️  [SYNC] No VITE_JAZZ_API_KEY - running offline");
-  }
   return {
     accountID: account.id,
     agentSecret,
@@ -29111,6 +29131,8 @@ const ajv$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePropert
 }, Symbol.toStringTag, { value: "Module" }));
 export {
   MaiaOS,
+  createCoJSONAPI,
+  getSchemaIndexColistId,
   isPRFSupported,
   signInWithPasskey,
   signUpWithPasskey,

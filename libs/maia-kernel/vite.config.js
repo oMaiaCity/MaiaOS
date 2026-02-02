@@ -29,18 +29,22 @@ export default defineConfig({
 		// Don't minify for now - easier to debug
 		minify: false,
 	},
-	resolve: {
-		alias: {
-			// Resolve workspace dependencies to their source files
-			"@MaiaOS/db": resolve(__dirname, "../maia-db/src/index.js"),
-			"@MaiaOS/self": resolve(__dirname, "../maia-self/src/index.js"),
-			"@MaiaOS/script": resolve(__dirname, "../maia-script/src"),
-			"@MaiaOS/schemata": resolve(__dirname, "../maia-schemata/src"),
-			"@MaiaOS/operations": resolve(__dirname, "../maia-operations/src"),
-			"@MaiaOS/tools": resolve(__dirname, "../maia-tools/src"),
+		resolve: {
+			alias: {
+				// Resolve workspace dependencies to their source files
+				"@MaiaOS/db": resolve(__dirname, "../maia-db/src/index.js"),
+				"@MaiaOS/self": resolve(__dirname, "../maia-self/src/index.js"),
+				"@MaiaOS/script": resolve(__dirname, "../maia-script/src"),
+				"@MaiaOS/schemata": resolve(__dirname, "../maia-schemata/src"),
+				"@MaiaOS/operations": resolve(__dirname, "../maia-operations/src"),
+				// Subpath exports for operations
+				"@MaiaOS/operations/reactive-store": resolve(__dirname, "../maia-operations/src/reactive-store.js"),
+				"@MaiaOS/operations/db-adapter": resolve(__dirname, "../maia-operations/src/db-adapter.js"),
+				"@MaiaOS/operations/operations": resolve(__dirname, "../maia-operations/src/operations/index.js"),
+				"@MaiaOS/tools": resolve(__dirname, "../maia-tools/src"),
 			// Resolve cojson and its subpaths for bundling
+			// Note: PureJSCrypto removed in cojson 0.20+ - only native Rust crypto (WasmCrypto) is supported
 			"cojson/crypto/WasmCrypto": resolve(__dirname, "../maia-db/node_modules/cojson/dist/crypto/WasmCrypto.js"),
-			"cojson/crypto/PureJSCrypto": resolve(__dirname, "../maia-db/node_modules/cojson/dist/crypto/PureJSCrypto.js"),
 			cojson: resolve(__dirname, "../maia-db/node_modules/cojson/dist"),
 			"cojson-storage-indexeddb": resolve(__dirname, "../maia-self/node_modules/cojson-storage-indexeddb"),
 			"cojson-transport-ws": resolve(__dirname, "../maia-self/node_modules/cojson-transport-ws"),
@@ -61,6 +65,8 @@ export default defineConfig({
 						map: null
 					};
 				}
+				// Vite handles .json files natively, no transformation needed
+				return null;
 			}
 		}
 	]

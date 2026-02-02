@@ -102,7 +102,7 @@ jobs:
             GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
             GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
             BETTER_AUTH_SECRET="${{ secrets.BETTER_AUTH_SECRET }}" \
-            PUBLIC_JAZZ_API_KEY="${{ secrets.PUBLIC_JAZZ_API_KEY }}" \
+            VITE_JAZZ_API_KEY="${{ secrets.VITE_JAZZ_API_KEY }}" \
             JAZZ_WORKER_ACCOUNT="${{ secrets.JAZZ_WORKER_ACCOUNT }}" \
             JAZZ_WORKER_SECRET="${{ secrets.JAZZ_WORKER_SECRET }}" \
             NODE_ENV="production" \

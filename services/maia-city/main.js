@@ -9,8 +9,15 @@
  * - No manual re-seeding needed - Jazz handles persistence and loading
  */
 
-import { MaiaOS, signInWithPasskey, signUpWithPasskey, isPRFSupported, subscribeSyncState } from "@MaiaOS/kernel";
-import { createCoJSONAPI } from "@MaiaOS/db";
+import { 
+	MaiaOS, 
+	signInWithPasskey, 
+	signUpWithPasskey, 
+	isPRFSupported, 
+	subscribeSyncState,
+	createCoJSONAPI
+} from "@MaiaOS/kernel";
+import { getAllVibeRegistries } from "@MaiaOS/vibes";
 import { renderApp } from './db-view.js';
 
 let maia;
@@ -543,7 +550,6 @@ async function handleSeed() {
 		const { node, maiaId: account } = maia.id;
 		
 		// Automatically discover and import all vibe registries
-		const { getAllVibeRegistries } = await import('@MaiaOS/vibes/index.js');
 		const vibeRegistries = await getAllVibeRegistries();
 		
 		console.log(`[Seed] Found ${vibeRegistries.length} vibe registries:`, vibeRegistries.map(r => r.vibe?.$id || r.vibe?.name || 'unknown'));
@@ -837,7 +843,7 @@ window.debugTodos = async function() {
 	if (backend) {
 		try {
 			// Get todos schema index colist from account.os (new indexing system)
-			const { getSchemaIndexColistId } = await import('@MaiaOS/db');
+			const { getSchemaIndexColistId } = await import('@MaiaOS/kernel');
 			const todosSchemaIndexColistId = await getSchemaIndexColistId(backend, '@schema/data/todos');
 			
 			if (todosSchemaIndexColistId) {

@@ -20,17 +20,17 @@ let assetSyncProcess = null
 let faviconProcess = null
 
 function startMaiaCity() {
-	console.log('[maia-city] Building kernel bundle first (dogfooding)...\n')
+	console.log('[maia-city] Building kernel and vibes bundles first (dogfooding)...\n')
 	
-	// Build kernel bundle before starting maia-city (dogfooding!)
+	// Build both bundles before starting maia-city (dogfooding!)
 	try {
-		execSync('bun run kernel:build', {
+		execSync('bun run bundles:build', {
 			cwd: rootDir,
 			stdio: 'inherit',
 		})
-		console.log('[maia-city] ✅ Kernel bundle built!\n')
+		console.log('[maia-city] ✅ Bundles built!\n')
 	} catch (error) {
-		console.warn('[maia-city] ⚠️  Kernel bundle build failed, continuing anyway...\n')
+		console.warn('[maia-city] ⚠️  Bundle build failed, continuing anyway...\n')
 	}
 	
 	// Check for port conflicts and kill existing maia-city processes

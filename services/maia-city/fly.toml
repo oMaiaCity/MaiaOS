@@ -1,13 +1,12 @@
 # Fly.io configuration for maia-city
-app = "maia-city"
+app = "next-maia-city"
 org = "maia-city"
 primary_region = "fra"
 
 [build]
   # Build from monorepo root with Dockerfile in services/maia-city/
-  # Use: flyctl deploy --dockerfile services/maia-city/Dockerfile
-  # Or set build context in fly.toml
-  dockerfile = "services/maia-city/Dockerfile"
+  # Use: flyctl deploy --dockerfile services/maia-city/Dockerfile --config services/maia-city/fly.toml
+  # Note: dockerfile path must be specified via --dockerfile flag (relative to root)
 
 [env]
   PORT = "8080"

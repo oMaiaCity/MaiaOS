@@ -11,6 +11,8 @@
 		"dev:city": "bun --filter maia-city dev",
 		"dev:api": "bun --env-file=.env --filter api dev",
 		"kernel:build": "cd libs/maia-kernel && bun run build",
+		"vibes:build": "cd libs/maia-vibes && bun run build",
+		"bundles:build": "bun run kernel:build && bun run vibes:build",
 		"docs:generate": "bun scripts/generate-llm-docs.js",
 		"docs:watch": "bun scripts/generate-llm-docs.js --watch",
 		"version:sync": "node scripts/sync-version.js",

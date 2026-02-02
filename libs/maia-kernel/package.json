@@ -18,7 +18,8 @@
     "@MaiaOS/db": "workspace:*",
     "@MaiaOS/self": "workspace:*",
     "@MaiaOS/script": "workspace:*",
-    "@MaiaOS/schemata": "workspace:*"
+    "@MaiaOS/schemata": "workspace:*",
+    "@MaiaOS/operations": "workspace:*"
   },
   "devDependencies": {
     "vite": "^7.2.4"
