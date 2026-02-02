@@ -48,10 +48,12 @@ export async function getDefaultGroup(backend) {
       resolve();
       return;
     }
+    // Fix: Declare unsubscribe before subscribe call to avoid temporal dead zone
+    let unsubscribe;
     const timeout = setTimeout(() => {
       reject(new Error('[CoJSONBackend] Timeout waiting for profile to be available'));
     }, 10000);
-    const unsubscribe = profileStore.subscribe(() => {
+    unsubscribe = profileStore.subscribe(() => {
       if (!profileStore.loading) {
         clearTimeout(timeout);
         unsubscribe();
@@ -97,10 +99,12 @@ export async function getDefaultGroup(backend) {
       resolve();
       return;
     }
+    // Fix: Declare unsubscribe before subscribe call to avoid temporal dead zone
+    let unsubscribe;
     const timeout = setTimeout(() => {
       reject(new Error(`[CoJSONBackend] Timeout waiting for universal group ${universalGroupId} to be available`));
     }, 10000);
-    const unsubscribe = groupStore.subscribe(() => {
+    unsubscribe = groupStore.subscribe(() => {
       if (!groupStore.loading) {
         clearTimeout(timeout);
         unsubscribe();

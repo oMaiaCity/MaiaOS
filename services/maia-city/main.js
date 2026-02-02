@@ -134,8 +134,17 @@ function navigateTo(path) {
  */
 async function handleRoute() {
 	const path = window.location.pathname;
+	console.log(`📍 [ROUTE] Handling route: ${path}`);
+	console.log(`   authState.signedIn: ${authState.signedIn}`);
+	console.log(`   maia: ${maia ? 'ready' : 'not ready'}`);
 	
 	if (path === '/signin' || path === '/signup') {
+		// If already signed in, redirect to dashboard
+		if (authState.signedIn && maia) {
+			console.log("   → Already signed in, redirecting to /me");
+			navigateTo('/me');
+			return;
+		}
 		// Check PRF support before showing sign-in
 		try {
 			await isPRFSupported();
@@ -147,14 +156,53 @@ async function handleRoute() {
 	} else if (path === '/me' || path === '/dashboard') {
 		// If authenticated, show dashboard; otherwise redirect to signin
 		if (authState.signedIn && maia) {
-			renderAppInternal();
+			// Both auth state and maia are ready - show dashboard
+			console.log("   → Rendering dashboard (both auth and maia ready)");
+			try {
+				await renderAppInternal();
+			} catch (error) {
+				console.error("❌ [ROUTE] Error rendering app:", error);
+				showToast("Failed to render app: " + error.message, 'error');
+			}
+		} else if (authState.signedIn && !maia) {
+			// Signed in but maia not ready yet - might be initializing
+			// Show loading/connecting screen with sync status (prevents redirect loop on mobile)
+			console.log("⏳ Auth state says signed in but maia not ready. Waiting for initialization...");
+			renderLoadingConnectingScreen();
+			// Wait for maia to be initialized (with timeout)
+			let waitCount = 0;
+			const checkMaia = setInterval(() => {
+				waitCount++;
+				if (maia) {
+					clearInterval(checkMaia);
+					cleanupLoadingScreenSync(); // Clean up loading screen sync subscription
+					console.log("✅ Maia ready, rendering dashboard");
+					renderAppInternal().catch((error) => {
+						console.error("❌ [ROUTE] Error rendering app after maia ready:", error);
+						showToast("Failed to render app: " + error.message, 'error');
+					});
+				} else if (waitCount > 20) {
+					// 10 seconds timeout (20 * 500ms)
+					clearInterval(checkMaia);
+					cleanupLoadingScreenSync(); // Clean up loading screen sync subscription
+					console.error("❌ Maia still not ready after 10s. Something went wrong.");
+					authState = { signedIn: false, accountID: null };
+					navigateTo('/signin');
+				} else {
+					// Update loading screen with current sync status
+					updateLoadingConnectingScreen();
+				}
+			}, 500); // Check every 500ms
 		} else {
+			// Not signed in - redirect to signin
+			console.log("   → Not signed in, redirecting to /signin");
 			navigateTo('/signin');
 		}
 	} else {
 		// Default route: landing page
 		// If already authenticated, redirect to dashboard
 		if (authState.signedIn && maia) {
+			console.log("   → Already signed in, redirecting to /me");
 			navigateTo('/me');
 		} else {
 			renderLandingPage();
@@ -180,20 +228,81 @@ async function init() {
 }
 
 /**
+ * Determine sync domain from environment (runtime injection or build-time env var)
+ * Single source of truth for sync domain configuration
+ * In dev mode, returns null (uses relative path via Vite proxy)
+ * In production, returns domain or null (fallback to same origin)
+ * @returns {string|null} Sync domain or null if not set
+ */
+function getSyncDomain() {
+	const isDev = import.meta.env?.DEV || window.location.hostname === 'localhost';
+	
+	// In dev mode, we don't need a sync domain - Vite proxy handles it
+	if (isDev) {
+		return null; // Dev mode uses relative path /sync (proxied by Vite)
+	}
+	
+	// In production, try to get sync domain from env vars
+	// Priority: 1) Runtime-injected (from server.js), 2) Build-time env var, 3) null
+	const runtimeDomain = typeof window !== 'undefined' && window.__PUBLIC_API_DOMAIN__;
+	const buildTimeDomain = import.meta.env?.PUBLIC_API_DOMAIN;
+	return runtimeDomain || buildTimeDomain || null;
+}
+
+/**
  * Sign in with existing passkey
  */
 async function signIn() {
 	try {
-		const { accountID, node, account } = await signInWithPasskey({ salt: "maia.city" });
+		console.log("🔐 Starting sign-in flow...");
 		
-		// Boot MaiaOS with node and account (using CoJSON backend)
-		maia = await MaiaOS.boot({ node, account });
-		window.maia = maia;
+		// Determine sync domain (single source of truth - passed through kernel)
+		const syncDomain = getSyncDomain();
+		if (syncDomain) {
+			console.log(`🔌 [SYNC] Using sync domain: ${syncDomain}`);
+		} else {
+			console.warn('⚠️ [SYNC] Sync domain not set - will use fallback');
+		}
+		
+		console.log("⏳ Calling signInWithPasskey()...");
+		const signInResult = await signInWithPasskey({ 
+			salt: "maia.city"
+		});
+		console.log("✅ signInWithPasskey() returned successfully");
+		console.log("   Result keys:", Object.keys(signInResult));
+		const { accountID, node, account } = signInResult;
+		console.log("✅ Sign-in authentication successful, booting MaiaOS...");
+		console.log(`   accountID: ${accountID}`);
+		console.log(`   node: ${node ? 'ready' : 'not ready'}`);
+		console.log(`   account: ${account ? 'ready' : 'not ready'}`);
+		
+		// Boot MaiaOS with node, account, and sync domain (using CoJSON backend)
+		// Sync domain stored in kernel as single source of truth
+		// This must succeed before we mark as signed in
+		try {
+			maia = await MaiaOS.boot({ 
+				node, 
+				account,
+				syncDomain // Pass sync domain to kernel (single source of truth)
+			});
+			window.maia = maia;
+			console.log("✅ MaiaOS booted successfully");
+		} catch (bootError) {
+			console.error("❌ MaiaOS.boot() failed:", bootError);
+			throw new Error(`Failed to initialize MaiaOS: ${bootError.message}`);
+		}
 		
 		// Create CoJSON API instance
-		cojsonAPI = createCoJSONAPI(node, account);
-		window.cojsonAPI = cojsonAPI; // Expose for debugging
+		try {
+			cojsonAPI = createCoJSONAPI(node, account);
+			window.cojsonAPI = cojsonAPI; // Expose for debugging
+			console.log("✅ CoJSON API created");
+		} catch (apiError) {
+			console.error("⚠️ CoJSON API creation failed (non-fatal):", apiError);
+			// Continue even if API creation fails
+		}
 		
+		// Set auth state AFTER maia is successfully booted
 		authState = {
 			signedIn: true,
 			accountID: accountID,
@@ -203,36 +312,61 @@ async function signIn() {
 		markAccountExists();
 		
 		// Subscribe to sync state changes
-		unsubscribeSync = subscribeSyncState((state) => {
-			// Only update if state actually changed
-			const stateChanged = JSON.stringify(syncState) !== JSON.stringify(state);
-			syncState = state;
-			
-			// Debounce re-renders to prevent loops
-			if (stateChanged && !isRendering) {
-				if (syncStateRenderTimeout) {
-					clearTimeout(syncStateRenderTimeout);
-				}
-				syncStateRenderTimeout = setTimeout(() => {
-					if (!isRendering) {
-						renderAppInternal(); // Re-render when sync state changes
+		try {
+			unsubscribeSync = subscribeSyncState((state) => {
+				// Only update if state actually changed
+				const stateChanged = JSON.stringify(syncState) !== JSON.stringify(state);
+				syncState = state;
+				
+				// Debounce re-renders to prevent loops
+				if (stateChanged && !isRendering) {
+					if (syncStateRenderTimeout) {
+						clearTimeout(syncStateRenderTimeout);
 					}
-				}, 100); // Small debounce
-			}
-		});
-		
-		// Explicitly load linked CoValues from IndexedDB
-		await loadLinkedCoValues();
+					syncStateRenderTimeout = setTimeout(() => {
+						if (!isRendering) {
+							renderAppInternal(); // Re-render when sync state changes
+						}
+					}, 100); // Small debounce
+				}
+			});
+		} catch (syncError) {
+			console.error("⚠️ Sync subscription failed (non-fatal):", syncError);
+		}
 		
 		// Start with dashboard screen (don't set default context)
 		currentScreen = 'dashboard';
 		currentContextCoValueId = null;
 		
-		// Navigate to /me after successful sign-in
-		navigateTo('/me');
+		// Navigate to /me IMMEDIATELY - don't wait for data loading
+		// This ensures UI shows right away, especially important on mobile
+		console.log("🚀 Navigating to /me...");
+		console.log(`   authState.signedIn: ${authState.signedIn}`);
+		console.log(`   maia: ${maia ? 'ready' : 'not ready'}`);
+		
+		// Update URL first
+		window.history.pushState({}, '', '/me');
+		
+		// Then handle route (which will render the app)
+		handleRoute().catch((error) => {
+			console.error("❌ [SIGNIN] Route handling error:", error);
+			showToast("Navigation error: " + error.message, 'error');
+		});
+		
+		// Load linked CoValues in background (non-blocking)
+		// This allows the UI to show immediately while data loads progressively
+		loadLinkedCoValues().catch((error) => {
+			console.error("⚠️ Failed to load linked CoValues (non-fatal):", error);
+			// Non-fatal - UI is already shown, data will load progressively via sync
+		});
 		
 	} catch (error) {
-		console.error("Sign in failed:", error);
+		console.error("❌ Sign in failed:", error);
+		
+		// Reset state on error to prevent stuck state
+		authState = { signedIn: false, accountID: null };
+		maia = null;
+		cojsonAPI = null;
 		
 		if (error.message.includes("PRF not supported") || error.message.includes("WebAuthn")) {
 			renderUnsupportedBrowser(error.message);
@@ -303,23 +437,52 @@ async function loadLinkedCoValues() {
  */
 async function register() {
 	try {
+		console.log("🔐 Starting sign-up flow...");
+		
+		// Determine sync domain (single source of truth - passed through kernel)
+		const syncDomain = getSyncDomain();
+		const isDev = import.meta.env?.DEV || window.location.hostname === 'localhost';
+		if (syncDomain) {
+			console.log(`🔌 [SYNC] Using sync domain: ${syncDomain}`);
+		} else if (!isDev) {
+			// Only warn in production if sync domain is not set
+			console.warn('⚠️ [SYNC] Sync domain not set in production - will use fallback');
+		}
+		
 		const { accountID, node, account } = await signUpWithPasskey({ 
 			name: "maia",
-			salt: "maia.city" 
+			salt: "maia.city"
 		});
+		console.log("✅ Sign-up authentication successful, booting MaiaOS...");
 		
-		// Boot MaiaOS with node and account (using CoJSON backend)
-		maia = await MaiaOS.boot({ 
-			node, 
-			account,
-			modules: ['db', 'core', 'private-llm'] // Include private-llm module for RedPill chat
-		});
-		window.maia = maia;
+		// Boot MaiaOS with node, account, and sync domain (using CoJSON backend)
+		// Sync domain stored in kernel as single source of truth
+		// This must succeed before we mark as signed in
+		try {
+			maia = await MaiaOS.boot({ 
+				node, 
+				account,
+				syncDomain, // Pass sync domain to kernel (single source of truth)
+				modules: ['db', 'core', 'private-llm'] // Include private-llm module for RedPill chat
+			});
+			window.maia = maia;
+			console.log("✅ MaiaOS booted successfully");
+		} catch (bootError) {
+			console.error("❌ MaiaOS.boot() failed:", bootError);
+			throw new Error(`Failed to initialize MaiaOS: ${bootError.message}`);
+		}
 		
 		// Create CoJSON API instance
-		cojsonAPI = createCoJSONAPI(node, account);
-		window.cojsonAPI = cojsonAPI; // Expose for debugging
+		try {
+			cojsonAPI = createCoJSONAPI(node, account);
+			window.cojsonAPI = cojsonAPI; // Expose for debugging
+			console.log("✅ CoJSON API created");
+		} catch (apiError) {
+			console.error("⚠️ CoJSON API creation failed (non-fatal):", apiError);
+			// Continue even if API creation fails
+		}
 		
+		// Set auth state AFTER maia is successfully booted
 		authState = {
 			signedIn: true,
 			accountID: accountID,
@@ -329,30 +492,53 @@ async function register() {
 		markAccountExists();
 		
 		// Subscribe to sync state changes
-		unsubscribeSync = subscribeSyncState((state) => {
-			// Only update if state actually changed
-			const stateChanged = JSON.stringify(syncState) !== JSON.stringify(state);
-			syncState = state;
-			
-			// Debounce re-renders to prevent loops
-			if (stateChanged && !isRendering) {
-				if (syncStateRenderTimeout) {
-					clearTimeout(syncStateRenderTimeout);
-				}
-				syncStateRenderTimeout = setTimeout(() => {
-					if (!isRendering) {
-						renderAppInternal(); // Re-render when sync state changes
+		try {
+			unsubscribeSync = subscribeSyncState((state) => {
+				// Only update if state actually changed
+				const stateChanged = JSON.stringify(syncState) !== JSON.stringify(state);
+				syncState = state;
+				
+				// Debounce re-renders to prevent loops
+				if (stateChanged && !isRendering) {
+					if (syncStateRenderTimeout) {
+						clearTimeout(syncStateRenderTimeout);
 					}
-				}, 100); // Small debounce
-			}
-		});
+					syncStateRenderTimeout = setTimeout(() => {
+						if (!isRendering) {
+							renderAppInternal(); // Re-render when sync state changes
+						}
+					}, 100); // Small debounce
+				}
+			});
+		} catch (syncError) {
+			console.error("⚠️ Sync subscription failed (non-fatal):", syncError);
+		}
 
 		// Start with dashboard screen (don't set default context)
 		currentScreen = 'dashboard';
 		currentContextCoValueId = null;
 
-		// Navigate to /me after successful registration
-		navigateTo('/me');
+		// Navigate to /me IMMEDIATELY - don't wait for data loading
+		// This ensures UI shows right away, especially important on mobile
+		console.log("🚀 Navigating to /me...");
+		console.log(`   authState.signedIn: ${authState.signedIn}`);
+		console.log(`   maia: ${maia ? 'ready' : 'not ready'}`);
+		
+		// Update URL first
+		window.history.pushState({}, '', '/me');
+		
+		// Then handle route (which will render the app)
+		handleRoute().catch((error) => {
+			console.error("❌ [REGISTER] Route handling error:", error);
+			showToast("Navigation error: " + error.message, 'error');
+		});
+		
+		// Load linked CoValues in background (non-blocking)
+		// This allows the UI to show immediately while data loads progressively
+		loadLinkedCoValues().catch((error) => {
+			console.error("⚠️ Failed to load linked CoValues (non-fatal):", error);
+			// Non-fatal - UI is already shown, data will load progressively via sync
+		});
 		
 	} catch (error) {
 		console.error("Registration failed:", error);
@@ -457,6 +643,148 @@ function closeVideoPopup() {
 	const popup = document.querySelector('.video-popup-overlay');
 	if (popup) {
 		popup.remove();
+	}
+}
+
+// Store loading screen sync subscription
+let loadingScreenSyncUnsubscribe = null;
+
+/**
+ * Render loading/connecting screen while MaiaOS initializes
+ * Shows app structure with loading overlay and sync status
+ * Sets up sync state listener to update the screen in real-time
+ */
+function renderLoadingConnectingScreen() {
+	const syncMessage = syncState.connected 
+		? 'Connected' 
+		: syncState.error 
+			? syncState.error 
+			: 'Connecting to sync...';
+	
+	document.getElementById("app").innerHTML = `
+		<div class="app-container" style="opacity: 0.5; pointer-events: none;">
+			<!-- Show app structure (dashboard skeleton) -->
+			<div class="dashboard-container">
+				<div class="dashboard-header">
+					<h1>Maia City</h1>
+				</div>
+				<div class="dashboard-grid">
+					<div class="dashboard-card whitish-card">
+						<div class="dashboard-card-content">
+							<div class="dashboard-card-icon">📊</div>
+							<h3 class="dashboard-card-title">Loading...</h3>
+						</div>
+					</div>
+					<div class="dashboard-card whitish-card">
+						<div class="dashboard-card-content">
+							<div class="dashboard-card-icon">📋</div>
+							<h3 class="dashboard-card-title">Loading...</h3>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- Loading/Connecting Overlay -->
+		<div class="loading-connecting-overlay" style="
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: rgba(0, 0, 0, 0.85);
+			backdrop-filter: blur(10px);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-direction: column;
+			gap: 2rem;
+			z-index: 1000;
+		">
+			<div class="loading-spinner" style="
+				width: 64px;
+				height: 64px;
+				border: 4px solid rgba(255, 255, 255, 0.2);
+				border-top-color: rgba(255, 255, 255, 0.8);
+				border-radius: 50%;
+				animation: spin 1s linear infinite;
+			"></div>
+			<div style="text-align: center; color: white;">
+				<h2 style="font-size: 1.5rem; margin: 0 0 0.5rem 0; font-weight: 600;">Initializing your account</h2>
+				<div style="font-size: 1rem; opacity: 0.8; margin-bottom: 1rem;">Setting up your sovereign self...</div>
+				<div class="sync-status" style="
+					display: inline-flex;
+					align-items: center;
+					gap: 0.5rem;
+					padding: 0.5rem 1rem;
+					background: rgba(255, 255, 255, 0.1);
+					border-radius: 8px;
+					font-size: 0.875rem;
+					margin-top: 1rem;
+				">
+					<div class="sync-indicator" style="
+						width: 8px;
+						height: 8px;
+						border-radius: 50%;
+						background: ${syncState.connected ? '#4ade80' : syncState.error ? '#ef4444' : '#fbbf24'};
+						animation: ${syncState.connected ? 'none' : 'pulse 2s ease-in-out infinite'};
+					"></div>
+					<span class="sync-message">${syncMessage}</span>
+				</div>
+			</div>
+		</div>
+		<style>
+			@keyframes spin {
+				to { transform: rotate(360deg); }
+			}
+			@keyframes pulse {
+				0%, 100% { opacity: 1; }
+				50% { opacity: 0.5; }
+			}
+		</style>
+	`;
+	
+	// Set up sync state listener to update loading screen in real-time
+	if (!loadingScreenSyncUnsubscribe) {
+		loadingScreenSyncUnsubscribe = subscribeSyncState((state) => {
+			syncState = state;
+			updateLoadingConnectingScreen();
+		});
+	}
+}
+
+/**
+ * Update loading/connecting screen with current sync status
+ */
+function updateLoadingConnectingScreen() {
+	const syncStatusElement = document.querySelector('.sync-status');
+	const syncIndicator = document.querySelector('.sync-indicator');
+	const syncMessageElement = document.querySelector('.sync-message');
+	const syncMessage = syncState.connected 
+		? 'Connected' 
+		: syncState.error 
+			? syncState.error 
+			: 'Connecting to sync...';
+	
+	if (syncStatusElement && syncIndicator && syncMessageElement) {
+		syncMessageElement.textContent = syncMessage;
+		syncIndicator.style.background = syncState.connected 
+			? '#4ade80' 
+			: syncState.error 
+				? '#ef4444' 
+				: '#fbbf24';
+		syncIndicator.style.animation = syncState.connected 
+			? 'none' 
+			: 'pulse 2s ease-in-out infinite';
+	}
+}
+
+/**
+ * Clean up loading screen sync subscription
+ */
+function cleanupLoadingScreenSync() {
+	if (loadingScreenSyncUnsubscribe) {
+		loadingScreenSyncUnsubscribe();
+		loadingScreenSyncUnsubscribe = null;
 	}
 }
 

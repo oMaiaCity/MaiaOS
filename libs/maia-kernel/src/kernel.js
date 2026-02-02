@@ -60,6 +60,9 @@ export class MaiaOS {
     // CoJSON backend support (for maia-city compatibility)
     this._node = null;
     this._account = null;
+    
+    // Sync configuration - single source of truth
+    this._syncDomain = null;
   }
   
   /**
@@ -194,6 +197,7 @@ export class MaiaOS {
    * @param {Object} [config.account] - RawAccount instance (required for CoJSON backend if backend not provided)
    * @param {Object} [config.backend] - Pre-initialized backend (alternative to node+account)
    * @param {Object} [config.registry] - Config registry for seeding
+   * @param {string} [config.syncDomain] - Sync service domain (overrides env vars, single source of truth)
    * @returns {Promise<MaiaOS>} Booted OS instance
    * @throws {Error} If neither backend nor node+account is provided
    */
@@ -201,6 +205,12 @@ export class MaiaOS {
     const os = new MaiaOS();
     
     // Booting MaiaOS
+    
+    // Store sync domain (single source of truth for sync configuration)
+    // If provided, use it; otherwise will be determined from env vars when needed
+    if (config.syncDomain) {
+      os._syncDomain = config.syncDomain;
+    }
     
     // Store node and account for CoJSON backend compatibility
     if (config.node && config.account) {
@@ -768,6 +778,15 @@ export class MaiaOS {
    */
   async db(payload) {
     return await this.dbEngine.execute(payload);
+  }
+  
+  /**
+   * Get sync domain (single source of truth)
+   * Returns the sync domain configured during boot, or null if not set
+   * @returns {string|null} Sync domain or null
+   */
+  getSyncDomain() {
+    return this._syncDomain;
   }
   
   /**

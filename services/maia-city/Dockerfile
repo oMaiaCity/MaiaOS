@@ -41,6 +41,7 @@ RUN bun run bundles:build
 
 # Copy maia-city source and build it (uses both kernel and vibes bundles)
 COPY services/maia-city/ services/maia-city/
+# Build with Vite - no API key needed (server handles sync)
 RUN cd services/maia-city && bun run build
 
 # Production stage

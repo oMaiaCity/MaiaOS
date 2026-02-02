@@ -52,9 +52,29 @@ serve({
 			try {
 				const stats = statSync(filePath);
 				if (stats.isFile()) {
-					const content = readFileSync(filePath);
+					let content = readFileSync(filePath);
 					const ext = extname(filePath); // Use filePath, not pathname, to get correct extension
 					const mimeType = MIME_TYPES[ext] || "application/octet-stream";
+
+					// Inject runtime env vars into HTML files
+					if (ext === ".html" && content instanceof Buffer) {
+						let htmlContent = content.toString("utf-8");
+						let PUBLIC_API_DOMAIN = process.env.PUBLIC_API_DOMAIN || '';
+						
+						// If on custom domain and no explicit API domain, infer it
+						// This handles the case where we're on next.maia.city but PUBLIC_API_DOMAIN isn't set
+						// The client-side code will also infer, but setting it here ensures consistency
+						if (!PUBLIC_API_DOMAIN) {
+							// Note: We can't access req.headers.host here easily, so let client-side handle inference
+							// But we can still inject empty string which triggers client-side inference
+						}
+						
+						if (PUBLIC_API_DOMAIN) {
+							const envScript = `<script>window.__PUBLIC_API_DOMAIN__="${PUBLIC_API_DOMAIN}";</script>`;
+							htmlContent = htmlContent.replace('</head>', `${envScript}</head>`);
+							content = htmlContent;
+						}
+					}
 
 					return new Response(content, {
 						headers: {
@@ -70,7 +90,23 @@ serve({
 
 		// SPA fallback: serve index.html for all routes (client-side routing)
 		try {
-			const indexHtml = readFileSync(join(DIST_DIR, "index.html"), "utf-8");
+			let indexHtml = readFileSync(join(DIST_DIR, "index.html"), "utf-8");
+			
+			// Inject runtime environment variables into HTML
+			// This allows Fly.io secrets to be used at runtime
+			// PUBLIC_API_DOMAIN is REQUIRED for production sync to work
+			const PUBLIC_API_DOMAIN = process.env.PUBLIC_API_DOMAIN || '';
+			if (PUBLIC_API_DOMAIN) {
+				// Inject script before closing </head> tag to set env var
+				const envScript = `<script>window.__PUBLIC_API_DOMAIN__="${PUBLIC_API_DOMAIN}";</script>`;
+				indexHtml = indexHtml.replace('</head>', `${envScript}</head>`);
+			} else {
+				// Warn in production if PUBLIC_API_DOMAIN is not set
+				if (process.env.NODE_ENV === 'production') {
+					console.warn('⚠️  WARNING: PUBLIC_API_DOMAIN not set! Sync will use same-origin fallback (may not work).');
+				}
+			}
+			
 			return new Response(indexHtml, {
 				headers: {
 					"Content-Type": "text/html",

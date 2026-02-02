@@ -18,7 +18,7 @@ import { schemaMigration } from '../../maia-db/src/migrations/schema.migration.j
 const { accountHeaderForInitialAgentSecret, idforHeader, rawCoIDtoBytes, rawCoIDfromBytes } = cojsonInternals;
 
 // Global state for connection monitoring
-let jazzSyncState = {
+let syncState = {
 	connected: false,
 	syncing: false,
 	error: null,
@@ -32,21 +32,192 @@ const syncStateListeners = new Set();
  */
 export function subscribeSyncState(listener) {
 	syncStateListeners.add(listener);
-	listener(jazzSyncState); // Call immediately with current state
+	listener(syncState); // Call immediately with current state
 	return () => syncStateListeners.delete(listener);
 }
 
 function notifySyncStateChange() {
 	for (const listener of syncStateListeners) {
-		listener(jazzSyncState);
+		listener(syncState);
 	}
 }
 
 /**
- * Create Jazz sync peer array (jazz-tools pattern)
- * Creates WebSocketPeer that will be passed to LocalNode during creation
+ * Create sync peer array
+ * Creates WebSocketPeer that connects to the sync server
  * 
- * @param {string} apiKey - Jazz API key
+ * @param {string} [syncDomain] - Sync domain from kernel (single source of truth, overrides env vars)
+ * @returns {{peers: Array, setNode: Function, wsPeer: Object}} Peers array and node setter
+ */
+function setupSyncPeers(syncDomain = null) {
+	// Determine sync server URL based on environment
+	// Priority: 1) syncDomain from kernel, 2) runtime-injected env var, 3) build-time env var, 4) fallback
+	const isDev = import.meta.env?.DEV || window.location.hostname === 'localhost';
+	
+	// Use syncDomain from kernel if provided (single source of truth)
+	// Otherwise fall back to env vars for backward compatibility
+	const apiDomain = syncDomain || (typeof window !== 'undefined' && window.__PUBLIC_API_DOMAIN__) || import.meta.env?.PUBLIC_API_DOMAIN;
+	
+	let syncServerUrl;
+	if (isDev) {
+		// Dev: Use relative path, Vite proxy forwards to localhost:4203
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		syncServerUrl = `${protocol}//${window.location.host}/sync`;
+	} else if (apiDomain) {
+		// Production: Use configured API domain (from kernel or env var)
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		syncServerUrl = `${protocol}//${apiDomain}/sync`;
+	} else {
+		// Production without sync domain: Fallback to same origin (may not work if server is separate)
+		console.warn('⚠️ [SYNC] Sync domain not set! Falling back to same origin. Sync may not work.');
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		syncServerUrl = `${protocol}//${window.location.host}/sync`;
+	}
+	
+	console.log(`🔌 [SYNC] Connecting to sync server: ${syncServerUrl}`);
+	if (isDev) {
+		console.log(`   Mode: Development (using Vite proxy)`);
+	} else {
+		console.log(`   Sync Domain: ${apiDomain || '(not set - using same origin fallback)'}`);
+		console.log(`   Source: ${syncDomain ? 'kernel' : (typeof window !== 'undefined' && window.__PUBLIC_API_DOMAIN__ ? 'runtime env' : (import.meta.env?.PUBLIC_API_DOMAIN ? 'build-time env' : 'fallback'))}`);
+	}
+	
+	let node = undefined;
+	const peers = [];
+	let connectionTimeout = null;
+	let websocketConnected = false;
+	let websocketConnectedResolve = null;
+	const websocketConnectedPromise = new Promise((resolve) => {
+		websocketConnectedResolve = resolve;
+	});
+	
+	// Setting up sync peer to connect to sync server
+	
+	const wsPeer = new WebSocketPeerWithReconnection({
+		peer: syncServerUrl,
+		reconnectionTimeout: 5000,
+		addPeer: (peer) => {
+			if (connectionTimeout) {
+				clearTimeout(connectionTimeout);
+				connectionTimeout = null;
+			}
+			console.log('✅ [SYNC] Peer added to array');
+			// Always add to peers array first (for waitForPeer to detect)
+			peers.push(peer);
+			if (node) {
+				// If node is already set, also add to node's sync manager
+				node.syncManager.addPeer(peer);
+			}
+			// Note: WebSocket might not be connected yet - wait for subscribe callback
+		},
+		removePeer: (peer) => {
+			const index = peers.indexOf(peer);
+			if (index > -1) {
+				peers.splice(index, 1);
+			}
+			// Only log warning if we actually had a connection before
+			if (syncState.connected) {
+				console.warn('⚠️ [SYNC] Peer removed, connection lost');
+			}
+			websocketConnected = false;
+			syncState = { connected: false, syncing: false, error: "Disconnected" };
+			notifySyncStateChange();
+		},
+	});
+	
+	// Subscribe to connection changes (for WebSocket-level status)
+	// This fires when WebSocket is ACTUALLY connected, not just when peer object is created
+	wsPeer.subscribe((connected) => {
+		if (connected && !websocketConnected) {
+			console.log('✅ [SYNC] WebSocket connection successful');
+			websocketConnected = true;
+			syncState = { connected: true, syncing: true, error: null };
+			notifySyncStateChange();
+			// Resolve the promise when WebSocket is actually connected
+			if (websocketConnectedResolve) {
+				websocketConnectedResolve();
+				websocketConnectedResolve = null;
+			}
+		} else if (!connected && websocketConnected) {
+			// Only log if we were previously connected
+			console.warn('⚠️ [SYNC] WebSocket connection lost');
+			websocketConnected = false;
+			syncState = { connected: false, syncing: false, error: "Offline" };
+			notifySyncStateChange();
+		}
+	});
+	
+	// Set a timeout to detect if connection never establishes
+	connectionTimeout = setTimeout(() => {
+		if (!syncState.connected) {
+			console.error(`❌ [SYNC] Connection timeout after 10s. Check:`);
+			console.error(`   1. Server service is running: curl https://${apiDomain || window.location.hostname}/health`);
+			console.error(`   2. PUBLIC_API_DOMAIN is set correctly: ${apiDomain || 'NOT SET'}`);
+			console.error(`   3. WebSocket URL: ${syncServerUrl}`);
+			syncState = { connected: false, syncing: false, error: "Connection timeout" };
+			notifySyncStateChange();
+		}
+	}, 10000);
+	
+	// Enable the peer immediately
+	wsPeer.enable();
+	
+	return {
+		peers,
+		wsPeer,
+		// Wait for WebSocket to be actually connected (not just peer object created)
+		waitForPeer: () => {
+			return new Promise((resolve) => {
+				// If WebSocket already connected, resolve immediately
+				if (websocketConnected && peers.length > 0) {
+					resolve(true);
+					return;
+				}
+				
+				let resolved = false;
+				const timeout = setTimeout(() => {
+					if (!resolved) {
+						resolved = true;
+						resolve(false); // Resolve with false if timeout
+					}
+				}, 10000); // 10 second timeout
+				
+				// Wait for WebSocket connection promise
+				websocketConnectedPromise.then(() => {
+					if (!resolved && peers.length > 0) {
+						resolved = true;
+						clearTimeout(timeout);
+						resolve(true);
+					}
+				}).catch(() => {
+					if (!resolved) {
+						resolved = true;
+						clearTimeout(timeout);
+						resolve(false);
+					}
+				});
+			});
+		},
+		setNode: (n) => {
+			node = n;
+			// Add any peers that were queued before node was available
+			// This happens asynchronously as peers connect
+			if (peers.length > 0) {
+				console.log(`[SYNC] Adding ${peers.length} queued peer(s) to node`);
+				for (const peer of peers) {
+					node.syncManager.addPeer(peer);
+				}
+				// Don't clear peers array - peers remain available for future use
+			}
+		},
+	};
+}
+
+/**
+ * Create Jazz sync peer array (direct connection to Jazz cloud)
+ * Creates WebSocketPeer that connects directly to Jazz cloud using API key
+ * 
+ * @param {string} apiKey - Jazz API key from VITE_JAZZ_API_KEY
  * @returns {{peers: Array, setNode: Function, wsPeer: Object}} Peers array and node setter
  */
 function setupJazzSyncPeers(apiKey) {
@@ -54,15 +225,16 @@ function setupJazzSyncPeers(apiKey) {
 	let node = undefined;
 	const peers = [];
 	
-	// Setting up Jazz sync peer
+	console.log(`🔌 [SYNC] Connecting directly to Jazz cloud: wss://cloud.jazz.tools/?key=...`);
 	
+	// Setting up Jazz sync peer
 	const wsPeer = new WebSocketPeerWithReconnection({
 		peer: jazzCloudUrl,
 		reconnectionTimeout: 5000,
 		addPeer: (peer) => {
 			if (node) {
 				node.syncManager.addPeer(peer);
-				jazzSyncState = { connected: true, syncing: true, error: null };
+				syncState = { connected: true, syncing: true, error: null };
 				notifySyncStateChange();
 			} else {
 				peers.push(peer);
@@ -73,14 +245,14 @@ function setupJazzSyncPeers(apiKey) {
 			if (index > -1) {
 				peers.splice(index, 1);
 			}
-			jazzSyncState = { connected: false, syncing: false, error: "Disconnected" };
+			syncState = { connected: false, syncing: false, error: "Disconnected" };
 			notifySyncStateChange();
 		},
 	});
 	
 	// Subscribe to connection changes
 	wsPeer.subscribe((connected) => {
-		jazzSyncState = { connected, syncing: connected, error: connected ? null : "Offline" };
+		syncState = { connected, syncing: connected, error: connected ? null : "Offline" };
 		notifySyncStateChange();
 	});
 	
@@ -91,6 +263,11 @@ function setupJazzSyncPeers(apiKey) {
 		peers,
 		setNode: (n) => {
 			node = n;
+			if (peers.length > 0) {
+				for (const peer of peers) {
+					node.syncManager.addPeer(peer);
+				}
+			}
 		},
 		wsPeer,
 	};
@@ -162,7 +339,10 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 	const apiKey = import.meta.env?.VITE_JAZZ_API_KEY;
 	let syncSetup = null;
 	if (apiKey) {
+		console.log("🔌 [SYNC] Setting up Jazz sync...");
 		syncSetup = setupJazzSyncPeers(apiKey);
+	} else {
+		console.log("⚠️ [SYNC] VITE_JAZZ_API_KEY not set - proceeding without sync");
 	}
 	
 	// Schema migration: Creates profile + hierarchical account structure (account.os.schemata, etc.)
@@ -197,7 +377,7 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 	}
 	
 	if (!syncSetup) {
-		console.warn("⚠️  [SYNC] No Jazz API key - account won't sync to cloud!");
+		console.warn("⚠️  [SYNC] Sync service unavailable - account won't sync to cloud!");
 	}
 	
 	return { 
@@ -264,16 +444,20 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 	console.log("🔓 Loading account...");
 	const storage = await getStorage();
 	
+	// Setup Jazz sync peers BEFORE loading account (jazz-tools pattern!)
 	const apiKey = import.meta.env?.VITE_JAZZ_API_KEY;
 	let syncSetup = null;
 	if (apiKey) {
 		console.log("🔌 [SYNC] Setting up Jazz sync...");
 		syncSetup = setupJazzSyncPeers(apiKey);
+	} else {
+		console.log("⚠️ [SYNC] VITE_JAZZ_API_KEY not set - proceeding without sync");
 	}
 	
 	const { LocalNode } = await import("cojson");
 	
-	const node = await LocalNode.withLoadedAccount({
+	// Add timeout wrapper to detect if withLoadedAccount hangs
+	const withLoadedAccountPromise = LocalNode.withLoadedAccount({
 		accountID,
 		accountSecret: agentSecret,
 		crypto,
@@ -281,6 +465,29 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 		storage,
 		migration: schemaMigration,  // ← Runs on every load, idempotent
 	});
+	
+	const timeoutPromise = new Promise((_, reject) => {
+		setTimeout(() => {
+			reject(new Error(`withLoadedAccount() timed out after 30 seconds. AccountID: ${accountID}. This might indicate the account doesn't exist on the sync server or sync isn't working.`));
+		}, 30000); // 30 second timeout
+	});
+	
+	let node;
+	try {
+		console.log("⏳ Waiting for account to load (this may take a moment if loading from cloud)...");
+		node = await Promise.race([withLoadedAccountPromise, timeoutPromise]);
+		console.log("✅ LocalNode.withLoadedAccount() completed successfully");
+	} catch (loadError) {
+		console.error("❌ LocalNode.withLoadedAccount() failed:", loadError);
+		console.error("   Error message:", loadError.message);
+		console.error("   Error stack:", loadError.stack);
+		console.error("   AccountID:", accountID);
+		console.error("   Peers available:", syncSetup ? syncSetup.peers.length : 0);
+		if (syncSetup && syncSetup.peers.length > 0) {
+			console.error("   Peer IDs:", syncSetup.peers.map(p => p.id || 'unknown'));
+		}
+		throw loadError;
+	}
 	
 	if (syncSetup) {
 		syncSetup.setNode(node);
@@ -291,6 +498,7 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 		console.log("💾 [STORAGE] Account loaded from IndexedDB");
 	}
 	
+	console.log("📋 Getting account from node...");
 	const account = node.expectCurrentAccount("signInWithPasskey");
 	
 	console.log("✅ Account loaded! ID:", account.id);
@@ -299,10 +507,9 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 	console.log("   💾 0 secrets retrieved from storage");
 	console.log("   ⚡ Everything computed deterministically!");
 	
-	if (!apiKey) {
-		console.warn("⚠️  [SYNC] No VITE_JAZZ_API_KEY - running offline");
-	}
+	// Sync server always available (handles offline state internally)
 	
+	console.log("🔄 Returning from signInWithPasskey()...");
 	return { 
 		accountID: account.id, 
 		agentSecret,
@@ -314,5 +521,5 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 /**
  * NO LOCALSTORAGE: Session-only authentication
  * All state is in memory only. Passkeys stored in hardware.
- * Account data synced to Jazz cloud server.
+ * Account data synced to sync cloud server.
  */

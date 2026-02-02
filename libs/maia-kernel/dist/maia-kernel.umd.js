@@ -6876,20 +6876,20 @@
       if (!globalListeners.size && !coValueListeners?.size && !coValueAndPeerListeners?.size) {
         return;
       }
-      const syncState = {
+      const syncState2 = {
         uploaded: this.getIsCoValueFullyUploadedIntoPeer(knownState, id2)
       };
       for (const listener of this.listeners) {
-        listener(peer, knownState, syncState);
+        listener(peer, knownState, syncState2);
       }
       if (coValueListeners) {
         for (const listener of coValueListeners) {
-          listener(peer, knownState, syncState);
+          listener(peer, knownState, syncState2);
         }
       }
       if (coValueAndPeerListeners) {
         for (const listener of coValueAndPeerListeners) {
-          listener(knownState, syncState);
+          listener(knownState, syncState2);
         }
       }
     }
@@ -7850,8 +7850,8 @@
       const isSyncRequired = this.local.syncWhen !== "never";
       if (isSyncRequired && peers.length === 0) {
         this.unsyncedTracker.add(coValueId);
-        const unsubscribe = this.syncState.subscribeToCoValueUpdates(coValueId, (peer, _knownState, syncState) => {
-          if (isPersistentServerPeer(peer) && syncState.uploaded) {
+        const unsubscribe = this.syncState.subscribeToCoValueUpdates(coValueId, (peer, _knownState, syncState2) => {
+          if (isPersistentServerPeer(peer) && syncState2.uploaded) {
             this.unsyncedTracker.remove(coValueId);
             unsubscribe();
           }
@@ -7866,8 +7866,8 @@
         if (alreadyTracked) {
           continue;
         }
-        const unsubscribe = this.syncState.subscribeToPeerUpdates(peer.id, coValueId, (_knownState, syncState) => {
-          if (syncState.uploaded) {
+        const unsubscribe = this.syncState.subscribeToPeerUpdates(peer.id, coValueId, (_knownState, syncState2) => {
+          if (syncState2.uploaded) {
             this.unsyncedTracker.remove(coValueId, peer.id);
             unsubscribe();
           }
@@ -7917,8 +7917,8 @@
         return;
       }
       return new Promise((resolve2, reject) => {
-        const unsubscribe = this.syncState.subscribeToPeerUpdates(peerId, id2, (_knownState, syncState) => {
-          if (syncState.uploaded) {
+        const unsubscribe = this.syncState.subscribeToPeerUpdates(peerId, id2, (_knownState, syncState2) => {
+          if (syncState2.uploaded) {
             resolve2(true);
             unsubscribe?.();
             clearTimeout(timeoutId);
@@ -20577,6 +20577,7 @@ ${rawCSS}`;
       this.dbEngine = null;
       this._node = null;
       this._account = null;
+      this._syncDomain = null;
     }
     /**
      * Compatibility property for maia-city and other tools
@@ -20697,11 +20698,15 @@ ${rawCSS}`;
      * @param {Object} [config.account] - RawAccount instance (required for CoJSON backend if backend not provided)
      * @param {Object} [config.backend] - Pre-initialized backend (alternative to node+account)
      * @param {Object} [config.registry] - Config registry for seeding
+     * @param {string} [config.syncDomain] - Sync service domain (overrides env vars, single source of truth)
      * @returns {Promise<MaiaOS>} Booted OS instance
      * @throws {Error} If neither backend nor node+account is provided
      */
     static async boot(config2 = {}) {
       const os = new MaiaOS();
+      if (config2.syncDomain) {
+        os._syncDomain = config2.syncDomain;
+      }
       if (config2.node && config2.account) {
         os._node = config2.node;
         os._account = config2.account;
@@ -21099,6 +21104,14 @@ ${errorDetails}`);
      */
     async db(payload) {
       return await this.dbEngine.execute(payload);
+    }
+    /**
+     * Get sync domain (single source of truth)
+     * Returns the sync domain configured during boot, or null if not set
+     * @returns {string|null} Sync domain or null
+     */
+    getSyncDomain() {
+      return this._syncDomain;
     }
     /**
      * Expose engines for debugging
@@ -22029,7 +22042,7 @@ ${errorDetails}`);
     }
   }
   const { accountHeaderForInitialAgentSecret, idforHeader } = cojsonInternals;
-  let jazzSyncState = {
+  let syncState = {
     connected: false,
     syncing: false,
     error: null
@@ -22037,25 +22050,26 @@ ${errorDetails}`);
   const syncStateListeners = /* @__PURE__ */ new Set();
   function subscribeSyncState(listener) {
     syncStateListeners.add(listener);
-    listener(jazzSyncState);
+    listener(syncState);
     return () => syncStateListeners.delete(listener);
   }
   function notifySyncStateChange() {
     for (const listener of syncStateListeners) {
-      listener(jazzSyncState);
+      listener(syncState);
     }
   }
   function setupJazzSyncPeers(apiKey) {
     const jazzCloudUrl = `wss://cloud.jazz.tools/?key=${apiKey}`;
     let node = void 0;
     const peers = [];
+    console.log(`🔌 [SYNC] Connecting directly to Jazz cloud: wss://cloud.jazz.tools/?key=...`);
     const wsPeer = new WebSocketPeerWithReconnection({
       peer: jazzCloudUrl,
       reconnectionTimeout: 5e3,
       addPeer: (peer) => {
         if (node) {
           node.syncManager.addPeer(peer);
-          jazzSyncState = { connected: true, syncing: true, error: null };
+          syncState = { connected: true, syncing: true, error: null };
           notifySyncStateChange();
         } else {
           peers.push(peer);
@@ -22066,12 +22080,12 @@ ${errorDetails}`);
         if (index2 > -1) {
           peers.splice(index2, 1);
         }
-        jazzSyncState = { connected: false, syncing: false, error: "Disconnected" };
+        syncState = { connected: false, syncing: false, error: "Disconnected" };
         notifySyncStateChange();
       }
     });
     wsPeer.subscribe((connected) => {
-      jazzSyncState = { connected, syncing: connected, error: connected ? null : "Offline" };
+      syncState = { connected, syncing: connected, error: connected ? null : "Offline" };
       notifySyncStateChange();
     });
     wsPeer.enable();
@@ -22079,6 +22093,11 @@ ${errorDetails}`);
       peers,
       setNode: (n) => {
         node = n;
+        if (peers.length > 0) {
+          for (const peer of peers) {
+            node.syncManager.addPeer(peer);
+          }
+        }
       },
       wsPeer
     };
@@ -22114,6 +22133,7 @@ ${errorDetails}`);
     const apiKey = "Y29felN5ckxFUHhDQXRVajN6U2p0bXNDcFd2RkpEfGNvX3pCb1huYlRYRFlQeXJ6dktUNWNDeTd5b2VuV3xjb196VFJLYWlUV2t1cDhrRWkxeGFZTlRLZmN6d1g";
     let syncSetup = null;
     {
+      console.log("🔌 [SYNC] Setting up Jazz sync...");
       syncSetup = setupJazzSyncPeers(apiKey);
     }
     const { schemaMigration: schemaMigration2 } = await Promise.resolve().then(() => index$1);
@@ -22142,7 +22162,7 @@ This should never happen - deterministic computation failed!`
       );
     }
     if (!syncSetup) {
-      console.warn("⚠️  [SYNC] No Jazz API key - account won't sync to cloud!");
+      console.warn("⚠️  [SYNC] Sync service unavailable - account won't sync to cloud!");
     }
     return {
       accountID: createdAccountID,
@@ -22182,7 +22202,7 @@ This should never happen - deterministic computation failed!`
       syncSetup = setupJazzSyncPeers(apiKey);
     }
     const { LocalNode: LocalNode2 } = await Promise.resolve().then(() => index$3);
-    const node = await LocalNode2.withLoadedAccount({
+    const withLoadedAccountPromise = LocalNode2.withLoadedAccount({
       accountID,
       accountSecret: agentSecret,
       crypto: crypto2,
@@ -22191,6 +22211,27 @@ This should never happen - deterministic computation failed!`
       migration: schemaMigration
       // ← Runs on every load, idempotent
     });
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`withLoadedAccount() timed out after 30 seconds. AccountID: ${accountID}. This might indicate the account doesn't exist on the sync server or sync isn't working.`));
+      }, 3e4);
+    });
+    let node;
+    try {
+      console.log("⏳ Waiting for account to load (this may take a moment if loading from cloud)...");
+      node = await Promise.race([withLoadedAccountPromise, timeoutPromise]);
+      console.log("✅ LocalNode.withLoadedAccount() completed successfully");
+    } catch (loadError) {
+      console.error("❌ LocalNode.withLoadedAccount() failed:", loadError);
+      console.error("   Error message:", loadError.message);
+      console.error("   Error stack:", loadError.stack);
+      console.error("   AccountID:", accountID);
+      console.error("   Peers available:", syncSetup ? syncSetup.peers.length : 0);
+      if (syncSetup && syncSetup.peers.length > 0) {
+        console.error("   Peer IDs:", syncSetup.peers.map((p) => p.id || "unknown"));
+      }
+      throw loadError;
+    }
     if (syncSetup) {
       syncSetup.setNode(node);
       console.log("✅ [SYNC] Jazz sync peer connected");
@@ -22198,12 +22239,14 @@ This should never happen - deterministic computation failed!`
     if (storage) {
       console.log("💾 [STORAGE] Account loaded from IndexedDB");
     }
+    console.log("📋 Getting account from node...");
     const account = node.expectCurrentAccount("signInWithPasskey");
     console.log("✅ Account loaded! ID:", account.id);
     console.log("🎉 Sign-in complete! TRUE single-passkey flow!");
     console.log("   📱 1 biometric prompt");
     console.log("   💾 0 secrets retrieved from storage");
     console.log("   ⚡ Everything computed deterministically!");
+    console.log("🔄 Returning from signInWithPasskey()...");
     return {
       accountID: account.id,
       agentSecret,

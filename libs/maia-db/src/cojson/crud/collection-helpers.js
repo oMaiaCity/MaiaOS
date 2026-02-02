@@ -140,13 +140,15 @@ export async function ensureCoValueLoaded(backend, coId, options = {}) {
   // If waitForAvailable is true, wait for it to become available
   if (waitForAvailable) {
     await new Promise((resolve, reject) => {
+      // Fix: Declare unsubscribe before subscribe call to avoid temporal dead zone
+      let unsubscribe;
       const timeout = setTimeout(() => {
         console.warn(`[CoJSONBackend] Timeout waiting for CoValue ${coId} to load`);
         unsubscribe();
         reject(new Error(`Timeout waiting for CoValue ${coId} to load after ${timeoutMs}ms`));
       }, timeoutMs);
       
-      const unsubscribe = coValueCore.subscribe((core) => {
+      unsubscribe = coValueCore.subscribe((core) => {
         if (core.isAvailable()) {
           clearTimeout(timeout);
           unsubscribe();

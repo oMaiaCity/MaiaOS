@@ -476,11 +476,13 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   // Wait for profile to be available
   if (profileStore.loading) {
     await new Promise((resolve, reject) => {
+      // Fix: Declare unsubscribe before subscribe call to avoid temporal dead zone
+      let unsubscribe;
       const timeout = setTimeout(() => {
         reject(new Error(`Timeout waiting for profile ${profileId} to be available`));
       }, 10000);
       
-      const unsubscribe = profileStore.subscribe(() => {
+      unsubscribe = profileStore.subscribe(() => {
         if (!profileStore.loading) {
           clearTimeout(timeout);
           unsubscribe();
@@ -520,11 +522,13 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   // Wait for group to be available
   if (groupStore.loading) {
     await new Promise((resolve, reject) => {
+      // Fix: Declare unsubscribe before subscribe call to avoid temporal dead zone
+      let unsubscribe;
       const timeout = setTimeout(() => {
         reject(new Error(`Timeout waiting for universal group ${universalGroupId} to be available`));
       }, 10000);
       
-      const unsubscribe = groupStore.subscribe(() => {
+      unsubscribe = groupStore.subscribe(() => {
         if (!groupStore.loading) {
           clearTimeout(timeout);
           unsubscribe();
@@ -1658,8 +1662,10 @@ async function ensureAccountOs(account, node, universalGroup) {
   let osCore = node.getCoValue(os.id);
   if (osCore && !osCore.isAvailable()) {
     await new Promise((resolve) => {
+      // Fix: Declare unsubscribe before subscribe call to avoid temporal dead zone
+      let unsubscribe;
       const timeout = setTimeout(resolve, 5000);
-      const unsubscribe = osCore.subscribe((core) => {
+      unsubscribe = osCore.subscribe((core) => {
         if (core && core.isAvailable()) {
           clearTimeout(timeout);
           unsubscribe();

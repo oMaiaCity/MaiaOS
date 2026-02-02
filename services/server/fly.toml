@@ -1,22 +1,19 @@
-# Fly.io configuration for maia-city
-app = "next-maia-city"
+# Fly.io configuration for server service
+app = "api-next-maia-city"
 org = "maia-city"
 primary_region = "fra"
 
 [build]
-  # Build from monorepo root with Dockerfile in services/maia-city/
-  # Use: flyctl deploy --dockerfile services/maia-city/Dockerfile --config services/maia-city/fly.toml
+  # Build from monorepo root with Dockerfile in services/server/
+  # Use: flyctl deploy --dockerfile services/server/Dockerfile --config services/server/fly.toml
   # Note: dockerfile path must be specified via --dockerfile flag (relative to root)
 
 [env]
-  PORT = "8080"
+  PORT = "4203"
   NODE_ENV = "production"
-  # PUBLIC_API_DOMAIN MUST be set via Fly.io secrets for sync to work:
-  # For Fly.io domain: flyctl secrets set PUBLIC_API_DOMAIN="api-next-maia-city.fly.dev" --app next-maia-city
-  # For custom domain: flyctl secrets set PUBLIC_API_DOMAIN="api.next.maia.city" --app next-maia-city
 
 [[services]]
-  internal_port = 8080
+  internal_port = 4203
   protocol = "tcp"
   processes = ["app"]
 
@@ -39,6 +36,6 @@ primary_region = "fra"
     timeout = "2s"
     grace_period = "5s"
     method = "GET"
-    path = "/"
+    path = "/health"
     protocol = "http"
     tls_skip_verify = false

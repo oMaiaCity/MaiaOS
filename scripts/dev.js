@@ -15,6 +15,7 @@ const rootDir = resolve(__dirname, '..')
 
 let maiaCityProcess = null
 let apiProcess = null
+let serverProcess = null
 let docsWatcherProcess = null
 let assetSyncProcess = null
 let faviconProcess = null
@@ -136,6 +137,55 @@ function startApi() {
 	})
 }
 
+function startServer() {
+	console.log('[server] Starting server service...\n')
+	
+	// Check for port conflicts and kill existing server processes
+	try {
+		const portCheck = execSync(`lsof -ti:4203 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
+		if (portCheck) {
+			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, { encoding: 'utf-8' }).trim()
+			if (processInfo && (processInfo.includes('bun') || processInfo.includes('server') || processInfo.includes('src/index.ts'))) {
+				// It's a bun/server process - kill it automatically
+				console.log(`[server] Killing existing process ${portCheck} on port 4203...`)
+				try {
+					execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
+					setTimeout(() => {}, 500)
+				} catch (e) {
+					try {
+						execSync(`kill -9 ${portCheck} 2>/dev/null`, { timeout: 2000 })
+						setTimeout(() => {}, 500)
+					} catch (e2) {
+						console.warn(`[server] ⚠️  Could not kill process ${portCheck}, port may still be in use`)
+					}
+				}
+			} else if (processInfo) {
+				console.warn(`[server] ⚠️  WARNING: Port 4203 is already in use by: ${processInfo}`)
+				console.warn(`[server] Please kill process ${portCheck} before starting: kill ${portCheck}`)
+			}
+		}
+	} catch (e) {
+		// Port is free or check failed - continue
+	}
+
+	serverProcess = spawn('bun', ['--env-file=.env', '--filter', 'server', 'dev'], {
+		cwd: rootDir,
+		stdio: 'inherit',
+		shell: false,
+		env: { ...process.env },
+	})
+
+	serverProcess.on('error', (_error) => {
+		// Non-fatal - server service is optional
+	})
+
+	serverProcess.on('exit', (code) => {
+		if (code !== 0 && code !== null) {
+			// Non-fatal
+		}
+	})
+}
+
 function startDocsWatcher() {
 	console.log('[docs] Starting LLM docs watcher...\n')
 
@@ -217,6 +267,9 @@ function setupSignalHandlers() {
 		if (docsWatcherProcess && !docsWatcherProcess.killed) {
 			docsWatcherProcess.kill('SIGTERM')
 		}
+		if (serverProcess && !serverProcess.killed) {
+			serverProcess.kill('SIGTERM')
+		}
 		if (apiProcess && !apiProcess.killed) {
 			apiProcess.kill('SIGTERM')
 		}
@@ -236,6 +289,9 @@ function setupSignalHandlers() {
 		}
 		if (docsWatcherProcess && !docsWatcherProcess.killed) {
 			docsWatcherProcess.kill('SIGTERM')
+		}
+		if (serverProcess && !serverProcess.killed) {
+			serverProcess.kill('SIGTERM')
 		}
 		if (apiProcess && !apiProcess.killed) {
 			apiProcess.kill('SIGTERM')
@@ -261,6 +317,7 @@ function main() {
 		startAssetSync()
 		startDocsWatcher()
 		startApi()
+		startServer()
 		startMaiaCity()
 	}, 1000)
 

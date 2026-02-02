@@ -37,7 +37,9 @@ export async function waitForStoreReady(store, coId, timeoutMs = 5000) {
   // Wait for store to be ready
   return new Promise((resolve, reject) => {
     let resolved = false;
-    const unsubscribe = store.subscribe((data) => {
+    // Fix: Declare unsubscribe before subscribe call to avoid temporal dead zone
+    let unsubscribe;
+    unsubscribe = store.subscribe((data) => {
       if (resolved) return;
       
       if (data?.error) {

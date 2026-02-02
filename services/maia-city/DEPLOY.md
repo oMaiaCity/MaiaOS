@@ -33,12 +33,23 @@ flyctl apps create next-maia-city --org maia-city
 
 This creates the app in your organization (not personal account).
 
-### Step 2: Deploy
+### Step 2: Set Environment Variables
+
+Configure the API domain so maia-city can connect to the server service:
+
+```bash
+# Use Fly.io domain
+flyctl secrets set PUBLIC_API_DOMAIN="api-next-maia-city.fly.dev" --app next-maia-city
+
+# Or use custom domain (after setting up DNS)
+flyctl secrets set PUBLIC_API_DOMAIN="api.next.maia.city" --app next-maia-city
+```
+
+### Step 3: Deploy
 
 From the **monorepo root**:
 ```bash
-
-
+flyctl deploy --dockerfile services/maia-city/Dockerfile --config services/maia-city/fly.toml --app next-maia-city
 ```
 
 Or use the deploy script (from maia-city directory):
@@ -47,7 +58,7 @@ cd services/maia-city
 bun run deploy
 ```
 
-### Step 3: Verify Deployment
+### Step 4: Verify Deployment
 
 ```bash
 # Check app status
@@ -71,6 +82,39 @@ flyctl open --app next-maia-city
 - Check logs: `flyctl logs --app next-maia-city`
 - Verify Dockerfile builds locally first
 - Make sure you're in the monorepo root when deploying
+
+## Domain Configuration
+
+The maia-city service needs to know where the server service is located. Set the `PUBLIC_API_DOMAIN` secret:
+
+```bash
+# Fly.io domain
+flyctl secrets set API_DOMAIN="api-next-maia-city.fly.dev" --app next-maia-city
+
+# Custom domain (requires DNS setup)
+flyctl secrets set API_DOMAIN="api.next.maia.city" --app next-maia-city
+```
+
+The client code will automatically use this domain to connect to the sync proxy.
+
+## Custom Domains
+
+To use custom domains:
+
+1. **Set up DNS** for your domains:
+   - `next.maia.city` → points to `next-maia-city.fly.dev`
+   - `api.next.maia.city` → points to `api-next-maia-city.fly.dev`
+
+2. **Add certificates**:
+   ```bash
+   flyctl certs create next.maia.city --app next-maia-city
+   flyctl certs create api.next.maia.city --app api-next-maia-city
+   ```
+
+3. **Update secrets**:
+   ```bash
+   flyctl secrets set PUBLIC_API_DOMAIN="api.next.maia.city" --app next-maia-city
+   ```
 
 ## Subsequent Deployments
 
