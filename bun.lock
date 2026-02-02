@@ -49,6 +49,9 @@
         "@MaiaOS/script": "workspace:*",
         "@MaiaOS/self": "workspace:*",
       },
+      "devDependencies": {
+        "vite": "^7.2.4",
+      },
     },
     "libs/maia-language": {
       "name": "@maia/language",

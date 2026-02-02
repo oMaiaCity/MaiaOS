@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "cd ../.. && bun run kernel:build && cd services/maia-city && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

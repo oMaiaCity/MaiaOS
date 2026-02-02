@@ -29,6 +29,19 @@ import * as schemata from '@MaiaOS/schemata';
 import { ValidationEngine } from '@MaiaOS/schemata/validation.engine';
 // Schema loading now uses resolve() from @MaiaOS/db if needed
 
+// Pre-import default modules so they're bundled (for standalone bundle)
+// This ensures db, core, and private-llm modules are included in the bundle
+import * as dbModule from '@MaiaOS/script/modules/db.module.js';
+import * as coreModule from '@MaiaOS/script/modules/core.module.js';
+import * as privateLlmModule from '@MaiaOS/script/modules/private-llm.module.js';
+
+// Store pre-loaded modules for registry
+const preloadedModules = {
+  'db': dbModule,
+  'core': coreModule,
+  'private-llm': privateLlmModule,
+};
+
 /**
  * MaiaOS - Operating System for Actor-based Applications
  */
@@ -51,7 +64,7 @@ export class MaiaOS {
   
   /**
    * Compatibility property for maia-city and other tools
-   * Exposes node and account in the same structure as createMaiaOS()
+   * Exposes node and account for CoJSON backend access
    */
   get id() {
     if (!this._node || !this._account) {
@@ -402,7 +415,19 @@ export class MaiaOS {
     
     for (const moduleName of modules) {
       try {
-        await os.moduleRegistry.loadModule(moduleName);
+        // Check if module is pre-loaded (for bundled standalone kernel)
+        if (preloadedModules[moduleName]) {
+          const module = preloadedModules[moduleName];
+          // Register the pre-loaded module directly
+          if (module.default && typeof module.default.register === 'function') {
+            await module.default.register(os.moduleRegistry);
+          } else if (typeof module.register === 'function') {
+            await module.register(os.moduleRegistry);
+          }
+        } else {
+          // Fallback to dynamic import (for development)
+          await os.moduleRegistry.loadModule(moduleName);
+        }
       } catch (error) {
         console.error(`Failed to load module "${moduleName}":`, error);
       }

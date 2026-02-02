@@ -4,12 +4,26 @@
   "type": "module",
   "main": "./src/index.js",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./bundle": {
+      "import": "./dist/maia-kernel.es.js",
+      "require": "./dist/maia-kernel.umd.js"
+    }
   },
+  "files": [
+    "src",
+    "dist"
+  ],
   "dependencies": {
     "@MaiaOS/db": "workspace:*",
     "@MaiaOS/self": "workspace:*",
     "@MaiaOS/script": "workspace:*",
     "@MaiaOS/schemata": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^7.2.4"
+  },
+  "scripts": {
+    "build": "vite build"
   }
 }

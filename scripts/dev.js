@@ -20,6 +20,50 @@ let assetSyncProcess = null
 let faviconProcess = null
 
 function startMaiaCity() {
+	console.log('[maia-city] Building kernel bundle first (dogfooding)...\n')
+	
+	// Build kernel bundle before starting maia-city (dogfooding!)
+	try {
+		execSync('bun run kernel:build', {
+			cwd: rootDir,
+			stdio: 'inherit',
+		})
+		console.log('[maia-city] ✅ Kernel bundle built!\n')
+	} catch (error) {
+		console.warn('[maia-city] ⚠️  Kernel bundle build failed, continuing anyway...\n')
+	}
+	
+	// Check for port conflicts and kill existing maia-city processes
+	try {
+		const portCheck = execSync(`lsof -ti:4200 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
+		if (portCheck) {
+			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, { encoding: 'utf-8' }).trim()
+			if (processInfo && (processInfo.includes('vite') || processInfo.includes('maia-city') || processInfo.includes('bun'))) {
+				// It's a vite/maia-city process - kill it automatically
+				console.log(`[maia-city] Killing existing process ${portCheck} on port 4200...`)
+				try {
+					execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
+					// Wait a moment for the port to be released
+					setTimeout(() => {}, 500)
+				} catch (e) {
+					// If kill fails, try force kill
+					try {
+						execSync(`kill -9 ${portCheck} 2>/dev/null`, { timeout: 2000 })
+						setTimeout(() => {}, 500)
+					} catch (e2) {
+						console.warn(`[maia-city] ⚠️  Could not kill process ${portCheck}, port may still be in use`)
+					}
+				}
+			} else if (processInfo) {
+				// It's a different process - warn user
+				console.warn(`[maia-city] ⚠️  WARNING: Port 4200 is already in use by: ${processInfo}`)
+				console.warn(`[maia-city] Please kill process ${portCheck} before starting: kill ${portCheck}`)
+			}
+		}
+	} catch (e) {
+		// Port is free or check failed - continue
+	}
+	
 	console.log('[maia-city] Starting on port 4200...\n')
 
 	maiaCityProcess = spawn('bun', ['--filter', 'maia-city', 'dev'], {

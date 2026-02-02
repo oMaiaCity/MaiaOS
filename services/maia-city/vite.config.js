@@ -24,9 +24,11 @@ export default defineConfig({
 		}
 	},
 	appType: 'spa', // Single-page app mode - enables SPA fallback for client-side routing
-	resolve: {
-		alias: {
-			"@MaiaOS/kernel": resolve(__dirname, "../../libs/maia-kernel/src/index.js"),
+		resolve: {
+			alias: {
+				// Use bundled ESM kernel instead of source - dogfooding our own bundle!
+				// This ensures maia-city uses the same bundle that external users would use
+				"@MaiaOS/kernel": resolve(__dirname, "../../libs/maia-kernel/dist/maia-kernel.es.js"),
 			"@MaiaOS/db": resolve(__dirname, "../../libs/maia-db/src/index.js"),
 			"@MaiaOS/operations": resolve(__dirname, "../../libs/maia-operations/src"),
 			"@MaiaOS/operations/reactive-store": resolve(__dirname, "../../libs/maia-operations/src/reactive-store.js"),
