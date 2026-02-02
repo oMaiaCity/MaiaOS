@@ -1,6 +1,6 @@
 # Fly.io configuration for maia-city
 app = "maia-city"
-primary_region = "iad"
+primary_region = "fra"
 
 [build]
   # Build from monorepo root with Dockerfile in services/maia-city/
