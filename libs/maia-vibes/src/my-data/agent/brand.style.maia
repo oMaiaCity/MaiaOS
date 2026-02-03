@@ -1,0 +1,266 @@
+{
+  "$schema": "@schema/style",
+  "$id": "@my-data/style/brand",
+  "tokens": {
+    "colors": {
+      "marineBlue": "#001F33",
+      "marineBlueMuted": "#2D4A5C",
+      "marineBlueLight": "#5E7A8C",
+      "paradiseWater": "#00BDD6",
+      "lushGreen": "#4E9A58",
+      "terracotta": "#C27B66",
+      "sunYellow": "#E6B94D",
+      "softClay": "#E8E1D9",
+      "tintedWhite": "#F0EDE6",
+      "background": "#E8E1D9",
+      "foreground": "#001F33",
+      "primary": "#00BDD6",
+      "secondary": "#2D4A5C",
+      "border": "rgba(0, 31, 51, 0.1)",
+      "surface": "rgba(255, 255, 255, 0.3)",
+      "text": {
+        "marine": "#D1E8F7",
+        "water": "#004D59",
+        "green": "#F0F9F1",
+        "terracotta": "#FDF2EF",
+        "yellow": "#4D3810"
+      }
+    },
+    "spacing": {
+      "xs": "0.5rem",
+      "sm": "0.75rem",
+      "md": "1rem",
+      "lg": "1.5rem",
+      "xl": "2rem",
+      "2xl": "3rem"
+    },
+    "typography": {
+      "fontFamily": {
+        "heading": "'Alice', serif",
+        "body": "'Plus Jakarta Sans', sans-serif"
+      },
+      "fontFaces": [
+        {
+          "fontFamily": "Alice",
+          "src": "url('/brand/fonts/Alice/Alice-Regular.ttf') format('truetype')",
+          "fontWeight": "400",
+          "fontStyle": "normal",
+          "fontDisplay": "swap"
+        },
+        {
+          "fontFamily": "Plus Jakarta Sans",
+          "src": "url('/brand/fonts/Jarkata/PlusJakartaSans-VariableFont_wght.ttf') format('truetype')",
+          "fontWeight": "100 900",
+          "fontStyle": "normal",
+          "fontDisplay": "swap"
+        },
+        {
+          "fontFamily": "Plus Jakarta Sans",
+          "src": "url('/brand/fonts/Jarkata/PlusJakartaSans-Italic-VariableFont_wght.ttf') format('truetype')",
+          "fontWeight": "100 900",
+          "fontStyle": "italic",
+          "fontDisplay": "swap"
+        }
+      ],
+      "fontSize": {
+        "xs": "0.75rem",
+        "sm": "0.85rem",
+        "base": "1rem",
+        "lg": "1.15rem",
+        "xl": "1.5rem",
+        "2xl": "2rem"
+      },
+      "fontWeight": {
+        "normal": "400",
+        "medium": "500",
+        "semibold": "600",
+        "bold": "700"
+      }
+    },
+    "radii": {
+      "sm": "4px",
+      "md": "12px",
+      "apple": "18px",
+      "full": "9999px"
+    },
+    "shadows": {
+      "sm": "0 4px 30px rgba(0, 0, 0, 0.05)",
+      "md": "0 10px 30px rgba(0, 0, 0, 0.05)",
+      "lg": "0 10px 40px rgba(0, 0, 0, 0.1)"
+    },
+    "transitions": {
+      "fast": "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      "standard": "all 0.5s cubic-bezier(0.2, 0, 0.2, 1)"
+    }
+  },
+  "components": {
+    "dbViewer": {
+      "display": "grid",
+      "gridTemplateColumns": "280px 1fr 380px",
+      "height": "100vh",
+      "width": "100%",
+      "background": "{colors.softClay}",
+      "fontFamily": "{typography.fontFamily.body}",
+      "color": "{colors.marineBlue}",
+      "position": "relative",
+      "overflow": "hidden"
+    },
+    "navAside": {
+      "background": "rgba(255, 255, 255, 0.2)",
+      "backdropFilter": "blur(8px)",
+      "borderRight": "1px solid {colors.border}",
+      "padding": "{spacing.xl}",
+      "overflowY": "auto",
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "{spacing.xl}",
+      "zIndex": "10"
+    },
+    "navTitle": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "{typography.fontSize.2xl}",
+      "fontWeight": "{typography.fontWeight.bold}",
+      "color": "{colors.marineBlue}",
+      "marginBottom": "{spacing.lg}",
+      "marginTop": "0"
+    },
+    "navItem": {
+      "display": "flex",
+      "alignItems": "center",
+      "gap": "{spacing.md}",
+      "width": "100%",
+      "padding": "{spacing.md} {spacing.lg}",
+      "background": "transparent",
+      "border": "none",
+      "borderRadius": "{radii.full}",
+      "cursor": "pointer",
+      "transition": "{transitions.fast}",
+      "fontFamily": "{typography.fontFamily.body}",
+      "fontSize": "{typography.fontSize.base}",
+      "color": "{colors.marineBlueMuted}",
+      "textAlign": "left",
+      ":hover": {
+        "background": "rgba(255, 255, 255, 0.4)",
+        "color": "{colors.marineBlue}"
+      }
+    },
+    "navIcon": {
+      "width": "20px",
+      "height": "20px",
+      "stroke": "currentColor",
+      "strokeWidth": "1.5"
+    },
+    "tableArea": {
+      "padding": "{spacing.2xl}",
+      "overflowY": "auto",
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "{spacing.xl}",
+      "zIndex": "5",
+      "containerType": "inline-size"
+    },
+    "tableContainer": {
+      "background": "{colors.surface}",
+      "backdropFilter": "blur(6px)",
+      "borderRadius": "{radii.apple}",
+      "boxShadow": "{shadows.sm}",
+      "overflow": "hidden",
+      "border": "1px solid {colors.border}",
+      "transition": "{transitions.standard}"
+    },
+    "dataTable": {
+      "width": "100%",
+      "borderCollapse": "separate",
+      "borderSpacing": "0",
+      "fontFamily": "{typography.fontFamily.body}",
+      "fontSize": "{typography.fontSize.sm}"
+    },
+    "dataTable th": {
+      "background": "rgba(255, 255, 255, 0.4)",
+      "padding": "{spacing.lg}",
+      "textAlign": "left",
+      "fontWeight": "{typography.fontWeight.semibold}",
+      "color": "{colors.marineBlue}",
+      "borderBottom": "1px solid {colors.border}",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.1em",
+      "fontSize": "0.7rem"
+    },
+    "dataTable td": {
+      "padding": "{spacing.lg}",
+      "borderBottom": "1px solid {colors.border}",
+      "color": "{colors.marineBlueMuted}",
+      "transition": "{transitions.fast}"
+    },
+    "tableRow": {
+      "cursor": "pointer",
+      "transition": "{transitions.fast}",
+      ":hover": {
+        "background": "rgba(255, 255, 255, 0.5)"
+      }
+    },
+    "detailAside": {
+      "background": "rgba(255, 255, 255, 0.2)",
+      "backdropFilter": "blur(8px)",
+      "borderLeft": "1px solid {colors.border}",
+      "padding": "{spacing.xl}",
+      "overflowY": "auto",
+      "zIndex": "10"
+    },
+    "detailTitle": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "{typography.fontSize.2xl}",
+      "fontWeight": "{typography.fontWeight.bold}",
+      "color": "{colors.marineBlue}",
+      "marginBottom": "{spacing.lg}",
+      "marginTop": "0"
+    },
+    "detailItem": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "0.25rem",
+      "paddingBottom": "{spacing.md}",
+      "borderBottom": "1px solid {colors.border}"
+    },
+    "detailLabel": {
+      "fontSize": "0.7rem",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.1em",
+      "color": "{colors.marineBlueLight}",
+      "fontWeight": "{typography.fontWeight.bold}"
+    },
+    "detailValue": {
+      "fontSize": "{typography.fontSize.base}",
+      "color": "{colors.marineBlue}",
+      "fontWeight": "500"
+    }
+  },
+  "selectors": {
+    ":host": {
+      "position": "relative",
+      "background": "{colors.background}",
+      "fontFamily": "{typography.fontFamily.body}",
+      "color": "{colors.foreground}"
+    },
+    ".nav-item[data-selected='true']": {
+      "background": "{colors.marineBlue}",
+      "color": "{colors.softClay}",
+      "fontWeight": "700"
+    },
+    ".table-row[data-selected='true']": {
+      "background": "rgba(0, 189, 214, 0.1)",
+      "color": "{colors.marineBlue}"
+    },
+    "@container (max-width: 1000px)": {
+      ".db-viewer": {
+        "gridTemplateColumns": "200px 1fr 300px"
+      }
+    },
+    "@container (max-width: 700px)": {
+      ".db-viewer": {
+        "gridTemplateColumns": "1fr",
+        "gridTemplateRows": "auto 1fr auto"
+      }
+    }
+  }
+}

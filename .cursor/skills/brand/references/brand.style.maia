@@ -3,15 +3,30 @@
   "$id": "@brand/style/brand",
   "tokens": {
     "colors": {
-      "background": "#F9F8F4",
-      "foreground": "#2D3A31",
-      "primary": "#8C9A84",
-      "secondary": "#DCCFC2",
-      "border": "#E6E2DA",
-      "interactive": "#C27B66",
-      "interactiveHover": "#B06A55",
-      "surface": "#FFFFFF",
-      "surfaceAlt": "#F2F0EB"
+      "marineBlue": "#001F33",
+      "marineBlueMuted": "#2D4A5C",
+      "marineBlueLight": "#5E7A8C",
+      "paradiseWater": "#00BDD6",
+      "lushGreen": "#4E9A58",
+      "terracotta": "#C27B66",
+      "sunYellow": "#E6B94D",
+      "softClay": "#E8E1D9",
+      "tintedWhite": "#F0EDE6",
+      "background": "transparent",
+      "foreground": "#F0EDE6",
+      "primary": "#00BDD6",
+      "secondary": "#E8E1D9",
+      "border": "rgba(255, 255, 255, 0.1)",
+      "interactive": "#00BDD6",
+      "surface": "rgba(255, 255, 255, 0.0005)",
+      "overlay": "rgba(0, 0, 0, 0.40)",
+      "text": {
+        "marine": "#D1E8F7",
+        "water": "#004D59",
+        "green": "#F0F9F1",
+        "terracotta": "#FDF2EF",
+        "yellow": "#4D3810"
+      }
     },
     "spacing": {
       "xs": "0.5rem",
@@ -20,29 +35,49 @@
       "lg": "1.5rem",
       "xl": "2rem",
       "2xl": "3rem",
-      "3xl": "4rem"
+      "3xl": "4rem",
+      "hero": "10vh"
     },
     "typography": {
       "fontFamily": {
-        "heading": "'Playfair Display', serif",
-        "body": "'Source Sans 3', sans-serif"
+        "heading": "'Alice', serif",
+        "body": "'Plus Jakarta Sans', sans-serif"
       },
+      "fontFaces": [
+        {
+          "fontFamily": "Alice",
+          "src": "url('/brand/fonts/Alice/Alice-Regular.ttf') format('truetype')",
+          "fontWeight": "400",
+          "fontStyle": "normal",
+          "fontDisplay": "swap"
+        },
+        {
+          "fontFamily": "Plus Jakarta Sans",
+          "src": "url('/brand/fonts/Jarkata/PlusJakartaSans-VariableFont_wght.ttf') format('truetype')",
+          "fontWeight": "100 900",
+          "fontStyle": "normal",
+          "fontDisplay": "swap"
+        },
+        {
+          "fontFamily": "Plus Jakarta Sans",
+          "src": "url('/brand/fonts/Jarkata/PlusJakartaSans-Italic-VariableFont_wght.ttf') format('truetype')",
+          "fontWeight": "100 900",
+          "fontStyle": "italic",
+          "fontDisplay": "swap"
+        }
+      ],
       "fontSize": {
         "xs": "0.75rem",
-        "sm": "0.875rem",
+        "sm": "0.85rem",
         "base": "1rem",
-        "lg": "1.125rem",
+        "lg": "1.15rem",
         "xl": "1.5rem",
         "2xl": "2rem",
         "3xl": "3rem",
-        "4xl": "4rem",
-        "5xl": "5rem",
-        "6xl": "6rem",
-        "7xl": "7rem",
-        "8xl": "8rem",
-        "h1": "clamp(3rem, 8vw, 8rem)",
+        "h1": "clamp(3.5rem, 12vw, 8rem)",
         "h2": "clamp(2rem, 5vw, 4rem)",
-        "h3": "clamp(1.5rem, 4vw, 2.5rem)"
+        "h3": "clamp(1.5rem, 4vw, 2.5rem)",
+        "subheading": "clamp(1.5rem, 4vw, 2.5rem)"
       },
       "fontWeight": {
         "normal": "400",
@@ -51,270 +86,156 @@
         "bold": "700"
       },
       "lineHeight": {
-        "tight": "1.1",
+        "tight": "0.9",
         "normal": "1.5",
-        "relaxed": "1.75"
+        "relaxed": "1.6"
       },
       "letterSpacing": {
         "normal": "0",
-        "wide": "0.1em",
-        "wider": "0.15em"
+        "tight": "-0.02em",
+        "wide": "0.05em",
+        "wider": "0.1em",
+        "widest": "0.2em"
+      },
+      "shadows": {
+        "textGlow": "0 0 30px rgba(232, 225, 217, 0.2)",
+        "textGlowStrong": "0 0 30px rgba(240, 237, 230, 0.3)"
       }
     },
     "radii": {
-      "sm": "0.5rem",
-      "md": "1rem",
-      "lg": "1.5rem",
-      "xl": "2rem",
-      "2xl": "2.5rem",
-      "full": "9999px",
-      "arch": "200px 200px 0 0"
+      "sm": "4px",
+      "md": "12px",
+      "apple": "18px",
+      "full": "9999px"
     },
     "shadows": {
-      "sm": "0 4px 6px -1px rgba(45, 58, 49, 0.05)",
-      "md": "0 10px 15px -3px rgba(45, 58, 49, 0.05)",
-      "lg": "0 20px 40px -10px rgba(45, 58, 49, 0.05)",
-      "xl": "0 25px 50px -12px rgba(45, 58, 49, 0.15)"
+      "sm": "0 4px 30px rgba(0, 0, 0, 0.05)",
+      "md": "0 10px 30px rgba(0, 0, 0, 0.05)",
+      "lg": "0 10px 40px rgba(0, 0, 0, 0.15)",
+      "glassGlow": "inset 0 1px 1px 0 rgba(255, 255, 255, 0.05)"
+    },
+    "effects": {
+      "liquidMembrane": {
+        "background": "rgba(255, 255, 255, 0.0005)",
+        "backdropFilter": "blur(8px) saturate(150%) contrast(101%)",
+        "border": "1px solid rgba(255, 255, 255, 0.05)"
+      },
+      "underwritingGlass": {
+        "background": "rgba(255, 255, 255, 0.15)",
+        "backdropFilter": "blur(12px) saturate(140%)"
+      },
+      "underwritingSubtle": {
+        "background": "rgba(255, 255, 255, 0.02)",
+        "backdropFilter": "blur(4px) saturate(120%)"
+      },
+      "navNotch": {
+        "background": "rgba(232, 225, 217, 0.75)",
+        "backdropFilter": "blur(12px) saturate(120%)",
+        "border": "1px solid rgba(255, 255, 255, 0.4)"
+      }
     },
     "transitions": {
-      "fast": "all 0.3s ease-out",
-      "standard": "all 0.5s ease-out",
-      "slow": "all 0.7s ease-out",
-      "slower": "all 1s ease-out"
+      "fast": "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      "standard": "all 0.5s cubic-bezier(0.2, 0, 0.2, 1)",
+      "slow": "all 0.7s ease-out"
     }
   },
   "components": {
-    "buttonPrimary": {
-      "padding": "{spacing.md} {spacing.xl}",
-      "background": "{colors.foreground}",
-      "color": "white",
-      "border": "none",
-      "borderRadius": "{radii.full}",
-      "fontSize": "{typography.fontSize.sm}",
-      "fontWeight": "{typography.fontWeight.semibold}",
-      "fontFamily": "{typography.fontFamily.body}",
-      "textTransform": "uppercase",
-      "letterSpacing": "{typography.letterSpacing.wide}",
-      "cursor": "pointer",
-      "transition": "{transitions.fast}",
-      "minHeight": "44px",
-      ":hover": {
-        "opacity": "0.9"
-      },
-      ":focus": {
-        "outline": "none",
-        "boxShadow": "0 0 0 2px {colors.primary}"
-      }
-    },
-    "buttonSecondary": {
-      "padding": "{spacing.md} {spacing.xl}",
-      "background": "transparent",
-      "color": "{colors.primary}",
-      "border": "1px solid {colors.primary}",
-      "borderRadius": "{radii.full}",
-      "fontSize": "{typography.fontSize.sm}",
-      "fontWeight": "{typography.fontWeight.medium}",
-      "fontFamily": "{typography.fontFamily.body}",
-      "textTransform": "uppercase",
-      "letterSpacing": "{typography.letterSpacing.wide}",
-      "cursor": "pointer",
-      "transition": "{transitions.fast}",
-      "minHeight": "44px",
-      ":hover": {
-        "background": "{colors.primary}",
-        "color": "white"
-      },
-      ":focus": {
-        "outline": "none",
-        "boxShadow": "0 0 0 2px {colors.primary}"
-      }
-    },
-    "buttonCTA": {
-      "padding": "{spacing.md} {spacing.xl}",
-      "background": "{colors.interactive}",
-      "color": "white",
-      "border": "none",
-      "borderRadius": "{radii.full}",
-      "fontSize": "{typography.fontSize.sm}",
-      "fontWeight": "{typography.fontWeight.semibold}",
-      "fontFamily": "{typography.fontFamily.body}",
-      "textTransform": "uppercase",
-      "letterSpacing": "{typography.letterSpacing.wide}",
-      "cursor": "pointer",
-      "transition": "{transitions.fast}",
-      "minHeight": "44px",
-      ":hover": {
-        "background": "{colors.interactiveHover}"
-      },
-      ":focus": {
-        "outline": "none",
-        "boxShadow": "0 0 0 2px {colors.interactive}"
-      }
-    },
-    "card": {
-      "background": "{colors.surface}",
-      "borderRadius": "{radii.lg}",
-      "padding": "{spacing.xl}",
-      "boxShadow": "{shadows.sm}",
-      "transition": "{transitions.standard}",
-      ":hover": {
-        "transform": "translateY(-4px)",
-        "boxShadow": "{shadows.md}"
-      }
-    },
-    "cardAlt": {
-      "background": "{colors.surfaceAlt}",
-      "borderRadius": "{radii.lg}",
-      "padding": "{spacing.xl}",
-      "boxShadow": "{shadows.sm}",
-      "transition": "{transitions.standard}",
-      ":hover": {
-        "transform": "translateY(-4px)",
-        "boxShadow": "{shadows.md}"
-      }
-    },
-    "cardIcon": {
-      "width": "3rem",
-      "height": "3rem",
-      "borderRadius": "{radii.full}",
-      "background": "{colors.secondary}",
-      "display": "flex",
+    "btn": {
+      "display": "inline-flex",
       "alignItems": "center",
       "justifyContent": "center",
-      "marginBottom": "{spacing.md}"
-    },
-    "cardTitle": {
-      "fontFamily": "{typography.fontFamily.heading}",
-      "fontSize": "{typography.fontSize.h3}",
-      "fontWeight": "{typography.fontWeight.semibold}",
-      "color": "{colors.foreground}",
-      "marginBottom": "{spacing.sm}",
-      "marginTop": "0"
-    },
-    "cardBody": {
-      "fontFamily": "{typography.fontFamily.body}",
-      "fontSize": "{typography.fontSize.lg}",
-      "color": "{colors.foreground}",
-      "lineHeight": "{typography.lineHeight.relaxed}"
-    },
-    "inputUnderlined": {
-      "width": "100%",
-      "background": "transparent",
-      "border": "none",
-      "borderBottom": "1px solid {colors.border}",
-      "color": "{colors.foreground}",
-      "padding": "{spacing.sm} 0",
-      "fontSize": "{typography.fontSize.base}",
-      "fontFamily": "{typography.fontFamily.body}",
-      "outline": "none",
-      "transition": "border-color 0.3s ease-out",
-      ":focus": {
-        "borderBottomColor": "{colors.primary}"
-      }
-    },
-    "inputPill": {
-      "width": "100%",
+      "padding": "0.9rem 2.5rem",
       "borderRadius": "{radii.full}",
-      "background": "{colors.surfaceAlt}",
-      "border": "1px solid {colors.border}",
-      "color": "{colors.foreground}",
-      "padding": "{spacing.md} {spacing.lg}",
-      "fontSize": "{typography.fontSize.base}",
       "fontFamily": "{typography.fontFamily.body}",
-      "outline": "none",
+      "fontWeight": "{typography.fontWeight.semibold}",
+      "fontSize": "{typography.fontSize.sm}",
+      "letterSpacing": "{typography.letterSpacing.wide}",
+      "textTransform": "uppercase",
+      "cursor": "pointer",
       "transition": "{transitions.fast}",
-      ":focus": {
-        "borderColor": "{colors.primary}",
-        "boxShadow": "0 0 0 2px {colors.primary}"
-      }
-    },
-    "headingHero": {
-      "fontFamily": "{typography.fontFamily.heading}",
-      "fontSize": "{typography.fontSize.h1}",
-      "fontWeight": "{typography.fontWeight.bold}",
-      "color": "{colors.foreground}",
-      "lineHeight": "{typography.lineHeight.tight}",
-      "marginBottom": "{spacing.lg}",
-      "marginTop": "0"
-    },
-    "headingHeroItalic": {
-      "fontStyle": "italic"
-    },
-    "headingSection": {
-      "fontFamily": "{typography.fontFamily.heading}",
-      "fontSize": "{typography.fontSize.h2}",
-      "fontWeight": "{typography.fontWeight.semibold}",
-      "color": "{colors.foreground}",
-      "marginBottom": "{spacing.md}",
-      "marginTop": "0"
-    },
-    "headingSubsection": {
-      "fontFamily": "{typography.fontFamily.heading}",
-      "fontSize": "{typography.fontSize.h3}",
-      "fontWeight": "{typography.fontWeight.semibold}",
-      "color": "{colors.foreground}",
-      "marginBottom": "{spacing.sm}",
-      "marginTop": "0"
-    },
-    "bodyText": {
-      "fontFamily": "{typography.fontFamily.body}",
-      "fontSize": "{typography.fontSize.lg}",
-      "color": "{colors.foreground}",
-      "lineHeight": "{typography.lineHeight.relaxed}"
-    },
-    "bodyTextSmall": {
-      "fontFamily": "{typography.fontFamily.body}",
-      "fontSize": "{typography.fontSize.base}",
-      "color": "{colors.foreground}",
-      "lineHeight": "{typography.lineHeight.normal}"
-    },
-    "imageArch": {
-      "position": "relative",
-      "overflow": "hidden",
-      "borderTopLeftRadius": "{radii.full}",
-      "borderTopRightRadius": "{radii.full}",
-      "borderBottomLeftRadius": "0",
-      "borderBottomRightRadius": "0"
-    },
-    "imageArch img": {
-      "width": "100%",
-      "height": "100%",
-      "objectFit": "cover",
-      "transition": "{transitions.slow}",
+      "border": "1.5px solid transparent",
+      "@container (max-width: 400px)": {
+        "padding": "0.6rem 1.5rem",
+        "fontSize": "0.75rem"
+      },
       ":hover": {
-        "transform": "scale(1.05)"
+        "transform": "translateY(-2px)",
+        "filter": "brightness(1.1)",
+        "boxShadow": "0 10px 30px rgba(0,0,0,0.1)"
+      },
+      ":active": {
+        "transform": "scale(0.97)"
       }
     },
-    "imageBlob": {
-      "position": "relative",
+    "btnSolidMarine": {
+      "extends": "btn",
+      "background": "{colors.marineBlue}",
+      "color": "{colors.text.marine}",
+      "borderColor": "rgba(255,255,255,0.1)"
+    },
+    "btnSolidWater": {
+      "extends": "btn",
+      "background": "{colors.paradiseWater}",
+      "color": "{colors.text.water}",
+      "borderColor": "rgba(255,255,255,0.2)"
+    },
+    "btnOutlineMarine": {
+      "extends": "btn",
+      "background": "transparent",
+      "color": "{colors.marineBlue}",
+      "borderColor": "{colors.marineBlue}"
+    },
+    "btnGlassWater": {
+      "extends": "btn",
+      "background": "rgba(0, 189, 214, 0.2)",
+      "backdropFilter": "blur(8px)",
+      "borderColor": "rgba(0, 189, 214, 0.3)",
+      "color": "{colors.paradiseWater}",
+      "boxShadow": "inset 0 1px 1px rgba(255, 255, 255, 0.2)"
+    },
+    "card": {
+      "containerType": "inline-size",
+      "borderRadius": "{radii.apple}",
       "overflow": "hidden",
-      "borderRadius": "2.5rem"
+      "transition": "{transitions.standard}"
     },
-    "imageBlob img": {
-      "width": "100%",
-      "height": "100%",
-      "objectFit": "cover",
-      "transition": "{transitions.slow}",
-      ":hover": {
-        "transform": "scale(1.05)"
+    "liquidMembrane": {
+      "extends": "card",
+      "background": "{effects.liquidMembrane.background}",
+      "backdropFilter": "{effects.liquidMembrane.backdropFilter}",
+      "border": "{effects.liquidMembrane.border}",
+      "padding": "{spacing.2xl}",
+      "boxShadow": "{shadows.lg}",
+      "position": "relative",
+      "@container (max-width: 600px)": {
+        "padding": "{spacing.xl}"
       }
     },
-    "section": {
-      "paddingTop": "{spacing.xl}",
-      "paddingBottom": "{spacing.xl}",
-      "background": "{colors.background}",
-      "@media (min-width: 768px)": {
-        "paddingTop": "{spacing.2xl}",
-        "paddingBottom": "{spacing.2xl}"
-      }
+    "navNotch": {
+      "position": "fixed",
+      "top": "2rem",
+      "left": "50%",
+      "transform": "translateX(-50%)",
+      "zIndex": "1000",
+      "display": "flex",
+      "alignItems": "center",
+      "padding": "0.6rem 1.2rem",
+      "background": "{effects.navNotch.background}",
+      "backdropFilter": "{effects.navNotch.backdropFilter}",
+      "border": "{effects.navNotch.border}",
+      "borderRadius": "{radii.full}",
+      "boxShadow": "{shadows.lg}",
+      "width": "fit-content"
     },
     "container": {
+      "containerType": "inline-size",
       "maxWidth": "80rem",
       "marginLeft": "auto",
       "marginRight": "auto",
       "paddingLeft": "{spacing.md}",
       "paddingRight": "{spacing.md}",
-      "@media (min-width: 768px)": {
+      "@container (min-width: 768px)": {
         "paddingLeft": "{spacing.xl}",
         "paddingRight": "{spacing.xl}"
       }
@@ -323,78 +244,36 @@
       "display": "grid",
       "gridTemplateColumns": "1fr",
       "gap": "{spacing.xl}",
-      "@media (min-width: 768px)": {
+      "@container (min-width: 700px)": {
         "gridTemplateColumns": "repeat(3, 1fr)",
         "gap": "{spacing.2xl}"
       }
-    },
-    "gridStaggered": {
-      "display": "grid",
-      "gridTemplateColumns": "1fr",
-      "gap": "{spacing.xl}",
-      "@media (min-width: 768px)": {
-        "gridTemplateColumns": "repeat(3, 1fr)",
-        "gap": "{spacing.2xl}"
-      }
-    },
-    "fadeUp": {
-      "opacity": "0",
-      "transform": "translateY(1rem)",
-      "animation": "fadeUp 0.5s ease-out 0.2s forwards"
-    },
-    "icon": {
-      "strokeWidth": "1.5",
-      "color": "{colors.foreground}",
-      "transition": "{transitions.fast}"
-    },
-    "iconPrimary": {
-      "strokeWidth": "1.5",
-      "color": "{colors.primary}",
-      "transition": "{transitions.fast}"
     }
   },
   "selectors": {
     ":host": {
       "position": "relative",
-      "background": "{colors.background}",
+      "minHeight": "100vh",
       "fontFamily": "{typography.fontFamily.body}",
-      "color": "{colors.foreground}"
+      "color": "{colors.foreground}",
+      "background": "#000"
     },
     ":host::before": {
       "content": "\"\"",
       "position": "fixed",
-      "top": "0",
-      "left": "0",
-      "right": "0",
-      "bottom": "0",
-      "pointerEvents": "none",
-      "zIndex": "50",
-      "opacity": "0.015",
-      "backgroundImage": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E\")",
-      "backgroundRepeat": "repeat"
+      "inset": "0",
+      "zIndex": "-1",
+      "backgroundImage": "url('$backgroundImage')",
+      "backgroundSize": "cover",
+      "backgroundPosition": "center",
+      "backgroundAttachment": "fixed"
     },
-    "@keyframes fadeUp": {
-      "to": {
-        "opacity": "1",
-        "transform": "translateY(0)"
-      }
-    },
-    ".grid-staggered .card:nth-child(even)": {
-      "@media (min-width: 768px)": {
-        "transform": "translateY(3rem)"
-      }
-    },
-    "@media (max-width: 767px)": {
-      ".heading-hero": {
-        "fontSize": "{typography.fontSize.5xl}"
-      },
-      ".section": {
-        "paddingTop": "{spacing.lg}",
-        "paddingBottom": "{spacing.lg}"
-      },
-      ".grid": {
-        "gap": "{spacing.lg}"
-      }
+    ":host::after": {
+      "content": "\"\"",
+      "position": "fixed",
+      "inset": "0",
+      "zIndex": "0",
+      "background": "{colors.overlay}"
     }
   }
 }

@@ -19013,7 +19013,19 @@ ${verificationErrors.join("\n")}`;
     compileTokensToCSS(tokens) {
       const flatTokens = this._flattenTokens(tokens);
       const cssVars = Object.entries(flatTokens).map(([name, value]) => `  ${name}: ${value};`).join("\n");
-      return `:host {
+      let fontFacesCSS = "";
+      if (tokens.typography?.fontFaces && Array.isArray(tokens.typography.fontFaces)) {
+        fontFacesCSS = tokens.typography.fontFaces.map((face) => {
+          const props = Object.entries(face).map(([prop, value]) => {
+            const cssProp = prop.replace(/([A-Z])/g, "-$1").toLowerCase();
+            return `  ${cssProp}: ${value};`;
+          }).join("\n");
+          return `@font-face {
+${props}
+}`;
+        }).join("\n\n") + "\n\n";
+      }
+      return `${fontFacesCSS}:host {
 ${cssVars}
 }
 `;

@@ -2,9 +2,52 @@
 
 All examples use maiascript syntax (`.style.maia` and `.view.maia` files) with the maia-script and maia-vibes libraries.
 
+**Design Concept**: These components implement the **Botanical Organic Serif & Liquid Glass (iOS 26 Evolution)** aesthetic. UI elements are treated as translucent, premium liquid glass layers—highly polished, crystal-clear, and viscous—floating over an immersive fullscreen background image.
+
+**Key Features (iOS 26 Evolution)**:
+- **Viscous Molten Flow**: Soft, organic shapes that feel like fluid glass with subtle, dynamic ripples.
+- **Heavy Refraction & Caustics**: High backdrop-blur (35px+) with saturation boosts (200%) and caustic light bending.
+- **Chromatic Aberration**: Subtle RGB splitting on edges for a hyper-realistic lens effect.
+- **Prismatic & Rim Lighting**: Inner and outer glows with dramatic rim lighting that mimic light bending through crystal.
+- **Glossy Wet-Look**: High-contrast specular highlights and ray-traced global illumination effects.
+- **Layered Translucent Depth**: Multiple glass layers with floating refractive bubbles.
+
+**Icon Philosophy**: Icons should be minimal line art SVGs with thin strokes (1.5px), or omitted entirely if typography alone communicates the meaning. Never use emojis or heavy filled icons.
+
+## Immersive Background & Paper Grain (CRITICAL)
+
+The foundation of every view is a fullscreen background image with a paper grain overlay.
+
+**Style (`brand.style.maia`):**
+```json
+"selectors": {
+  ":host": {
+    "position": "relative",
+    "minHeight": "100vh",
+    "backgroundImage": "url('$backgroundImage')",
+    "backgroundSize": "cover",
+    "backgroundPosition": "center",
+    "backgroundAttachment": "fixed"
+  },
+  ":host::before": {
+    "content": "\"\"",
+    "position": "fixed",
+    "top": "0",
+    "left": "0",
+    "right": "0",
+    "bottom": "0",
+    "pointerEvents": "none",
+    "zIndex": "50",
+    "opacity": "0.015",
+    "backgroundImage": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E\")",
+    "backgroundRepeat": "repeat"
+  }
+}
+```
+
 ## Button Components
 
-### Primary Button
+### Primary Button (Solid)
 
 **Style (`brand.style.maia`):**
 ```json
@@ -22,32 +65,21 @@ All examples use maiascript syntax (`.style.maia` and `.view.maia` files) with t
   "transition": "all 0.3s ease-out",
   ":hover": {
     "opacity": "0.9"
-  },
-  ":focus": {
-    "outline": "none",
-    "boxShadow": "0 0 0 2px {colors.primary}"
   }
 }
 ```
 
-**View (`.view.maia`):**
-```json
-{
-  "tag": "button",
-  "class": "button-primary",
-  "text": "Get Started"
-}
-```
-
-### Secondary Button
+### Secondary Button (Liquid Glass)
 
 **Style (`brand.style.maia`):**
 ```json
 "buttonSecondary": {
   "padding": "{spacing.md} {spacing.xl}",
-  "background": "transparent",
-  "color": "{colors.primary}",
-  "border": "1px solid {colors.primary}",
+  "background": "rgba(255, 255, 255, 0.1)",
+  "backdropFilter": "blur(10px)",
+  "-webkit-backdrop-filter": "blur(10px)",
+  "color": "{colors.foreground}",
+  "border": "1px solid {colors.border}",
   "borderRadius": "{radii.full}",
   "fontSize": "{typography.fontSize.sm}",
   "textTransform": "uppercase",
@@ -55,76 +87,35 @@ All examples use maiascript syntax (`.style.maia` and `.view.maia` files) with t
   "cursor": "pointer",
   "transition": "all 0.3s ease-out",
   ":hover": {
-    "background": "{colors.primary}",
-    "color": "white"
-  },
-  ":focus": {
-    "outline": "none",
-    "boxShadow": "0 0 0 2px {colors.primary}"
+    "background": "rgba(255, 255, 255, 0.2)"
   }
-}
-```
-
-**View (`.view.maia`):**
-```json
-{
-  "tag": "button",
-  "class": "button-secondary",
-  "text": "Learn More"
-}
-```
-
-### Terracotta CTA Button
-
-**Style (`brand.style.maia`):**
-```json
-"buttonCTA": {
-  "padding": "{spacing.md} {spacing.xl}",
-  "background": "{colors.interactive}",
-  "color": "white",
-  "border": "none",
-  "borderRadius": "{radii.full}",
-  "fontSize": "{typography.fontSize.sm}",
-  "textTransform": "uppercase",
-  "letterSpacing": "0.1em",
-  "cursor": "pointer",
-  "transition": "all 0.3s ease-out",
-  ":hover": {
-    "background": "#B06A55"
-  },
-  ":focus": {
-    "outline": "none",
-    "boxShadow": "0 0 0 2px {colors.interactive}"
-  }
-}
-```
-
-**View (`.view.maia`):**
-```json
-{
-  "tag": "button",
-  "class": "button-cta",
-  "text": "Sign Up Now"
 }
 ```
 
 ## Card Components
 
-### Feature Card
+### Liquid Glass Card (iOS 26 Evolution)
 
 **Style (`brand.style.maia`):**
 ```json
 "card": {
-  "background": "white",
+  "background": "rgba(255, 255, 255, 0.12)",
+  "backdropFilter": "blur(30px) saturate(160%)",
+  "-webkit-backdrop-filter": "blur(30px) saturate(160%)",
   "borderRadius": "{radii.lg}",
   "padding": "{spacing.xl}",
-  "boxShadow": "{shadows.sm}",
+  "boxShadow": "{shadows.glassGlow}",
+  "border": "1px solid rgba(255, 255, 255, 0.25)",
   "transition": "all 0.5s ease-out",
+  "position": "relative",
+  "overflow": "hidden",
   ":hover": {
     "transform": "translateY(-4px)",
+    "background": "rgba(255, 255, 255, 0.18)",
     "boxShadow": "{shadows.md}"
   }
-},
+}
+```
 "cardIcon": {
   "width": "3rem",
   "height": "3rem",
@@ -169,8 +160,18 @@ All examples use maiascript syntax (`.style.maia` and `.view.maia` files) with t
             "viewBox": "0 0 24 24",
             "fill": "none",
             "stroke": "{colors.foreground}",
-            "strokeWidth": "1.5"
-          }
+            "strokeWidth": "1.5",
+            "strokeLinecap": "round",
+            "strokeLinejoin": "round"
+          },
+          "children": [
+            {
+              "tag": "path",
+              "attrs": {
+                "d": "M12 2L2 7l10 5 10-5-10-5z"
+              }
+            }
+          ]
         }
       ]
     },
@@ -187,6 +188,8 @@ All examples use maiascript syntax (`.style.maia` and `.view.maia` files) with t
   ]
 }
 ```
+
+**Note**: Icons are optional. If the title and description clearly communicate the feature, omit the icon entirely. Only include icons when they add essential meaning that typography cannot convey.
 
 ### Staggered Grid Card (Every Second Card)
 
@@ -731,3 +734,82 @@ All examples use maiascript syntax (`.style.maia` and `.view.maia` files) with t
   }
 }
 ```
+
+## Line Art SVG Icon Examples
+
+### Simple Icon (Leaf/Plant)
+
+**View (`.view.maia`):**
+```json
+{
+  "tag": "svg",
+  "attrs": {
+    "width": "24",
+    "height": "24",
+    "viewBox": "0 0 24 24",
+    "fill": "none",
+    "stroke": "{colors.foreground}",
+    "strokeWidth": "1.5",
+    "strokeLinecap": "round",
+    "strokeLinejoin": "round"
+  },
+  "children": [
+    {
+      "tag": "path",
+      "attrs": {
+        "d": "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+      }
+    }
+  ]
+}
+```
+
+### Minimal Navigation Icon
+
+**View (`.view.maia`):**
+```json
+{
+  "tag": "svg",
+  "attrs": {
+    "width": "20",
+    "height": "20",
+    "viewBox": "0 0 24 24",
+    "fill": "none",
+    "stroke": "{colors.primary}",
+    "strokeWidth": "1.5",
+    "strokeLinecap": "round",
+    "strokeLinejoin": "round"
+  },
+  "children": [
+    {
+      "tag": "line",
+      "attrs": {
+        "x1": "3",
+        "y1": "12",
+        "x2": "21",
+        "y2": "12"
+      }
+    },
+    {
+      "tag": "line",
+      "attrs": {
+        "x1": "3",
+        "y1": "6",
+        "x2": "21",
+        "y2": "6"
+      }
+    },
+    {
+      "tag": "line",
+      "attrs": {
+        "x1": "3",
+        "y1": "18",
+        "x2": "21",
+        "y2": "18"
+      }
+    }
+  ]
+}
+```
+
+**Remember**: Only include icons when they add essential meaning. Prefer typography and whitespace over decorative icons.

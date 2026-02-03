@@ -1,0 +1,10 @@
+{
+  "$schema": "@schema/actor",
+  "$id": "@my-data/actor/agent",
+  "role": "agent",
+  "context": "@my-data/context/agent",
+  "view": "@my-data/view/agent",
+  "state": "@my-data/state/agent",
+  "brand": "@my-data/style/brand",
+  "inbox": "@my-data/inbox/agent"
+}

@@ -1,0 +1,8 @@
+{
+  "$schema": "@schema/state",
+  "$id": "@my-data/state/detail",
+  "initial": "idle",
+  "states": {
+    "idle": {}
+  }
+}

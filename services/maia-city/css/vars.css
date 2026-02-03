@@ -6,6 +6,29 @@
   --brand-yellow: #ffb703;
   --brand-red: #ef4444;
   
+  /* Design System Brand Colors */
+  --color-lush-green: #4E9A58;
+  --color-marine-blue: #001F33;
+  --color-marine-blue-muted: #2D4A5C;
+  --color-marine-blue-light: #5E7A8C;
+  --color-paradise-water: #00BDD6;
+  --color-soft-clay: #E8E1D9;
+  --color-terracotta: #C27B66;
+  --color-sun-yellow: #E6B94D;
+  --color-sun-yellow-text: #5C4314;
+  --color-tinted-white: #F0EDE6;
+  
+  /* Typography */
+  --font-heading: 'Alice', serif;
+  --font-body: 'Plus Jakarta Sans', sans-serif;
+  
+  /* Button Text Colors (Tone-on-Tone) */
+  --color-marine-text: #D1E8F7;
+  --color-water-text: #004D59;
+  --color-green-text: #F0F9F1;
+  --color-terracotta-text: #FDF2EF;
+  --color-yellow-text: #4D3810;
+  
   /* Liquid Glass Config */
   --glass-border: rgba(255, 255, 255, 0.25);
   --glass-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.15);

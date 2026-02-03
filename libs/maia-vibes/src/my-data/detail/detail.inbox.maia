@@ -1,0 +1,5 @@
+{
+  "$schema": "@schema/inbox",
+  "$id": "@my-data/inbox/detail",
+  "cotype": "costream"
+}

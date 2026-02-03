@@ -581,69 +581,256 @@ function signOut() {
  */
 function renderLandingPage() {
 	document.getElementById("app").innerHTML = `
-		<div class="landing-container">
-			<div class="landing-content">
-				<h1 class="landing-hook">Watch 1.3 million humans building world's most beautiful city in just 16 years.</h1>
-				<div class="landing-subheadline-card liquid-glass">
-					<div class="liquid-glass--bend"></div>
-					<div class="liquid-glass--face"></div>
-					<div class="liquid-glass--edge"></div>
-					<p class="landing-subheadline liquid-glass-inner">Discover the future of living, where you enjoy the time of your life<br>while your visions become reality at 100x speed.</p>
+		<main class="container">
+			<!-- THE MASTER HOOK -->
+			<section class="hero" style="
+				min-height: 92vh;
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				padding-top: 0;
+				margin-top: 0;
+				position: relative;
+			">
+				<!-- The Contrast Hook -->
+				<div style="
+					display: flex;
+					flex-direction: row;
+					gap: 1rem;
+					margin-bottom: 1.5rem;
+					font-family: var(--font-body);
+					font-size: clamp(0.95rem, 2.2vw, 1.3rem);
+					line-height: 1.5;
+					font-weight: 500;
+					letter-spacing: 0.01em;
+					align-items: center;
+					justify-content: center;
+					flex-wrap: wrap;
+				">
+					<div style="
+						color: var(--color-tinted-white);
+						padding: 0.5rem 1.5rem;
+						background: rgba(78, 154, 88, 0.3);
+						backdrop-filter: blur(12px) saturate(140%);
+						border-radius: 12px;
+						border: 1px solid rgba(78, 154, 88, 0.5);
+						text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+						white-space: nowrap;
+					">
+						You were born <strong style="font-weight: 700; font-size: 1.15em; color: #F0EDE6; text-shadow: 0 0 20px rgba(78, 154, 88, 1), 0 2px 4px rgba(0, 0, 0, 0.5);">100% divine creator</strong>
+					</div>
+					<div style="
+						color: var(--color-soft-clay);
+						font-size: 1.2em;
+						font-weight: 400;
+						opacity: 0.8;
+						font-style: italic;
+					">yet</div>
+					<div style="
+						color: var(--color-tinted-white);
+						padding: 0.5rem 1.5rem;
+						background: rgba(194, 123, 102, 0.3);
+						backdrop-filter: blur(12px) saturate(140%);
+						border-radius: 12px;
+						border: 1px solid rgba(194, 123, 102, 0.5);
+						text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+						white-space: nowrap;
+					">
+						you chose to die, using less than <strong style="font-weight: 700; font-size: 1.15em; color: #F0EDE6; text-shadow: 0 0 20px rgba(194, 123, 102, 1), 0 2px 4px rgba(0, 0, 0, 0.5);">2%</strong>
+					</div>
 				</div>
-				<button class="landing-cta" onclick="event.preventDefault(); window.navigateTo('/signin'); return false;">Subscribe to Follow</button>
-			</div>
-		</div>
-	`;
-}
 
-/**
- * Open video popup with YouTube embed
- */
-function openVideoPopup(videoId = 'PeBZIe6kPMg') {
-	const popup = document.createElement('div');
-	popup.className = 'video-popup-overlay';
-	popup.innerHTML = `
-		<div class="video-popup-container">
-			<button class="video-popup-close" onclick="window.closeVideoPopup()">×</button>
-			<div class="video-popup-content">
-				<iframe 
-					width="560" 
-					height="315" 
-					src="https://www.youtube.com/embed/${videoId}" 
-					title="MaiaCity Video" 
-					frameborder="0" 
-					allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-					allowfullscreen>
-				</iframe>
-			</div>
-		</div>
-	`;
-	document.body.appendChild(popup);
-	
-	// Close on overlay click
-	popup.addEventListener('click', (e) => {
-		if (e.target === popup) {
-			closeVideoPopup();
-		}
-	});
-	
-	// Close on Escape key
-	document.addEventListener('keydown', function escapeHandler(e) {
-		if (e.key === 'Escape') {
-			closeVideoPopup();
-			document.removeEventListener('keydown', escapeHandler);
-		}
-	});
-}
+				<!-- Main Headline -->
+				<h1 style="font-size: clamp(2.5rem, 6vw, 4.5rem); margin-bottom: 0;">
+					°MaiaCity is where we reclaim the<br>
+					98% of our <span style="
+						display: inline-block;
+						padding: 0.2rem 1.2rem;
+						background: rgba(0, 189, 214, 0.25);
+						backdrop-filter: blur(8px);
+						border-radius: 8px;
+						margin-top: 0.5rem;
+						border: 1px solid rgba(0, 189, 214, 0.3);
+						box-shadow: 0 0 30px rgba(0, 189, 214, 0.2);
+					"><em>magnificence</em></span>
+				</h1>
 
-/**
- * Close video popup
- */
-function closeVideoPopup() {
-	const popup = document.querySelector('.video-popup-overlay');
-	if (popup) {
-		popup.remove();
-	}
+				<!-- Story Opener - Positioned at bottom of hero -->
+				<div style="
+					position: absolute;
+					bottom: 10%;
+					left: 50%;
+					transform: translateX(-50%);
+					font-family: var(--font-body);
+					font-size: clamp(0.75rem, 1.5vw, 0.85rem);
+					color: var(--color-marine-blue);
+					letter-spacing: 0.3em;
+					text-transform: uppercase;
+					font-weight: 800;
+					padding: 0.5rem 2rem;
+					background: var(--color-soft-clay);
+					border-radius: 50px;
+					box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+					z-index: 10;
+				">This is the story of</div>
+			</section>
+
+			<!-- THE STORY SECTION -->
+			<section style="
+				margin-top: 0;
+				padding-top: 2rem;
+				display: grid;
+				grid-template-columns: repeat(12, 1fr);
+				gap: 1.5rem;
+				max-width: 1100px;
+				margin-left: auto;
+				margin-right: auto;
+				align-items: center;
+			">
+				<!-- Chunk 1: Who - Left Aligned -->
+				<div style="
+					grid-column: 2 / span 7;
+					justify-self: start;
+					width: fit-content;
+					white-space: nowrap;
+					font-family: var(--font-heading);
+					font-style: italic;
+					font-size: clamp(1.6rem, 4vw, 2.8rem);
+					line-height: 1.2;
+					padding: 2rem;
+					background: rgba(255, 255, 255, 0.12);
+					backdrop-filter: blur(20px) saturate(160%);
+					border-radius: 24px;
+					border: 1px solid rgba(255, 255, 255, 0.25);
+					color: var(--color-tinted-white);
+					text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+					transform: rotate(-1deg);
+					margin-left: 1rem;
+				">
+					how <strong style="color: var(--color-terracotta); text-shadow: 0 0 20px rgba(194, 123, 102, 0.4);">1.3 million</strong> maia citizens
+				</div>
+
+				<!-- Chunk 3: What - Right Aligned Offset -->
+				<div style="
+					grid-column: 4 / -1;
+					justify-self: end;
+					width: fit-content;
+					font-family: var(--font-heading);
+					font-style: italic;
+					font-size: clamp(1.6rem, 4vw, 2.8rem);
+					line-height: 1.2;
+					padding: 2rem;
+					background: rgba(255, 255, 255, 0.18);
+					backdrop-filter: blur(25px) saturate(180%);
+					border-radius: 24px;
+					border: 1px solid rgba(255, 255, 255, 0.35);
+					color: var(--color-tinted-white);
+					text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+					margin-top: -1rem;
+					z-index: 2;
+					transform: rotate(1deg);
+					margin-right: 1rem;
+				">
+					<strong style="color: var(--color-sun-yellow); font-weight: 700; text-shadow: 0 0 30px rgba(230, 185, 77, 0.5);">craft</strong> from the ground up
+				</div>
+
+				<!-- Chunk 3: Timeline - Centered -->
+				<div style="
+					grid-column: 1 / -1;
+					justify-self: center;
+					font-family: var(--font-heading);
+					font-style: italic;
+					font-size: clamp(1.4rem, 3.2vw, 2.2rem);
+					line-height: 1.2;
+					padding: 1.5rem 3rem;
+					background: rgba(255, 255, 255, 0.15);
+					backdrop-filter: blur(20px) saturate(160%);
+					border-radius: 24px;
+					border: 1px solid rgba(255, 255, 255, 0.25);
+					color: var(--color-tinted-white);
+					text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+					z-index: 1;
+					margin-top: -0.5rem;
+				">
+					in less than <strong style="color: var(--color-paradise-water); text-shadow: 0 0 20px rgba(0, 189, 214, 0.5);">16 years</strong>
+				</div>
+
+				<!-- LOGO STANDALONE -->
+				<div style="grid-column: 1 / -1; justify-self: center; margin: 3rem 0;">
+					<img src="/brand/logo.svg" alt="MaiaCity Logo" style="height: clamp(8rem, 18vw, 14rem); filter: drop-shadow(0 0 50px rgba(0, 189, 214, 0.7));" />
+				</div>
+
+				<!-- Chunk 3: Why - Centered Large -->
+				<div style="
+					grid-column: 2 / 12;
+					font-family: var(--font-heading);
+					font-style: italic;
+					font-size: clamp(1.2rem, 3vw, 2rem);
+					line-height: 1.5;
+					text-align: center;
+					padding: 3rem 2.5rem;
+					background: rgba(0, 31, 51, 0.4);
+					backdrop-filter: blur(15px);
+					border-radius: 30px;
+					border: 1px solid rgba(0, 189, 214, 0.3);
+					color: var(--color-tinted-white);
+					margin-top: 0;
+					position: relative;
+				">
+					<span>Earth's new capital, where <strong style="color: var(--color-paradise-water); font-weight: 700; text-shadow: 0 0 20px rgba(0, 189, 214, 0.6);">civilization-shaping</strong> visions become reality at <strong style="color: var(--color-lush-green); font-weight: 700; text-shadow: 0 0 20px rgba(78, 154, 88, 0.6);">100x growth</strong></span>
+				</div>
+
+				<!-- Chunk 4: How - Small Floating -->
+				<div style="
+					grid-column: 8 / span 4;
+					justify-self: end;
+					font-family: var(--font-body);
+					font-size: clamp(1rem, 2vw, 1.4rem);
+					padding: 1rem 2rem;
+					background: var(--color-soft-clay);
+					color: var(--color-marine-blue);
+					border-radius: 50px;
+					font-weight: 700;
+					margin-top: -2rem;
+					z-index: 3;
+					box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+					transform: rotate(-2deg);
+				">
+					with just <span style="border-bottom: 2px solid var(--color-paradise-water);">1€ / day</span>
+				</div>
+
+				<!-- CTA Button Area -->
+				<div style="grid-column: 1 / -1; justify-self: center; margin-top: 4rem; margin-bottom: 8rem; display: flex; flex-direction: column; align-items: center; gap: 1.2rem;">
+					<div style="
+						font-family: var(--font-body);
+						color: var(--color-tinted-white);
+						letter-spacing: 0.15em;
+						text-transform: uppercase;
+						font-weight: 800;
+						text-shadow: 0 0 30px rgba(232, 225, 217, 0.4);
+						text-align: center;
+						display: flex;
+						flex-direction: column;
+						gap: 0.4rem;
+					">
+						<span style="font-size: clamp(1.2rem, 2.5vw, 1.8rem);">Reclaim your sovereignty</span>
+						<span style="color: var(--color-tinted-white); font-size: 1.2em; font-family: var(--font-heading); font-style: italic; opacity: 0.9;">&</span>
+						<span style="font-size: clamp(0.9rem, 1.8vw, 1.3rem); opacity: 0.9;">become a maia citizen</span>
+					</div>
+					<button class="btn" style="
+						background: rgba(78, 154, 88, 0.8);
+						color: #F0EDE6;
+						font-size: 1.2rem; 
+						padding: 1.2rem 5rem; 
+						letter-spacing: 0.15em; 
+						box-shadow: 0 0 40px rgba(78, 154, 88, 0.4);
+						border: 1px solid rgba(255, 255, 255, 0.2);
+						backdrop-filter: blur(8px);
+					" onclick="event.preventDefault(); window.navigateTo('/signin'); return false;">JOIN NOW</button>
+				</div>
+			</section>
+		</main>
+	`;
 }
 
 // Store loading screen sync subscription
@@ -806,7 +993,7 @@ function renderSignInPrompt() {
 					<h1>
 						<span>is where you become</span>
 						<span class="h1-main-text">
-							<span class="h1-line-1">the human</span>
+							the human
 						</span>
 					</h1>
 					<p class="sign-in-subtitle">you were always meant to be</p>
@@ -817,17 +1004,17 @@ function renderSignInPrompt() {
 					` : ''}
 					<div class="sign-in-buttons">
 						${hasAccount ? `
-							<button class="sign-in-btn" onclick="window.handleSignIn()">
+							<button class="btn btn-solid-water" onclick="window.handleSignIn()">
 								Unlock your Self
 							</button>
-							<button class="sign-in-btn secondary" onclick="window.handleRegister()">
+							<button class="btn btn-glass" onclick="window.handleRegister()">
 								Create new Self
 							</button>
 						` : `
-							<button class="sign-in-btn" onclick="window.handleRegister()">
+							<button class="btn btn-solid-water" onclick="window.handleRegister()">
 								Create new Self
 							</button>
-							<button class="sign-in-btn secondary" onclick="window.handleSignIn()">
+							<button class="btn btn-glass" onclick="window.handleSignIn()">
 								Unlock your Self
 							</button>
 						`}
@@ -939,8 +1126,6 @@ async function handleSeed() {
 window.handleSignIn = signIn;
 window.handleRegister = register;
 window.navigateTo = navigateTo;
-window.openVideoPopup = openVideoPopup;
-window.closeVideoPopup = closeVideoPopup;
 window.handleSignOut = signOut;
 window.handleSeed = handleSeed;
 window.showToast = showToast; // Expose for debugging

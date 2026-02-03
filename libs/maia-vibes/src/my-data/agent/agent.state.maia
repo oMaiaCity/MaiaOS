@@ -1,0 +1,30 @@
+{
+  "$schema": "@schema/state",
+  "$id": "@my-data/state/agent",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "SELECT_NAV": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "selectedNavId": "$$navId" }
+            },
+            {
+              "updateContext": { "selectedRowId": null }
+            }
+          ]
+        },
+        "SELECT_ROW": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "selectedRowId": "$$rowId" }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

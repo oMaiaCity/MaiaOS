@@ -1,0 +1,19 @@
+{
+  "$schema": "@schema/state",
+  "$id": "@my-data/state/table",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "SELECT_ROW": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "selectedRowId": "$$rowId" }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

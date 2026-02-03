@@ -1,0 +1,7 @@
+{
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/my-data",
+  "name": "My Data",
+  "description": "A database viewer interface with navigation, table view, and detail panel. Demonstrates mocked data and options.map transformations.",
+  "actor": "@my-data/actor/agent"
+}

@@ -1,20 +1,54 @@
 /* Common UI Components */
 
-/* Buttons */
+/* Buttons - Design System */
 .btn {
-  font-family: "SF Pro Display", "Inter", sans-serif;
-  padding: 1rem 2rem;
-  border-radius: 1.25rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-  font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  padding: 0.9rem 2.5rem;
+  border-radius: 9999px; /* Fully rounded buttons */
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   text-decoration: none;
+  border: 1.5px solid transparent;
 }
 
+.btn:hover { 
+  transform: translateY(-2px); 
+  filter: brightness(1.1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+}
+
+.btn:active { transform: scale(0.97); }
+
+/* SOLID VARIANTS (Tone-on-Tone) */
+.btn-solid-marine { background: var(--color-marine-blue); color: var(--color-marine-text); border-color: rgba(255,255,255,0.1); }
+.btn-solid-water { background: var(--color-paradise-water); color: var(--color-water-text); border-color: rgba(255,255,255,0.2); }
+.btn-solid-green { background: var(--color-lush-green); color: var(--color-green-text); border-color: rgba(255,255,255,0.1); }
+.btn-solid-terracotta { background: var(--color-terracotta); color: var(--color-terracotta-text); border-color: rgba(255,255,255,0.1); }
+.btn-solid-yellow { background: var(--color-sun-yellow); color: var(--color-yellow-text); border-color: rgba(255,255,255,0.1); }
+
+/* OUTLINE VARIANTS (Tone-on-Tone) */
+.btn-outline-marine { border-color: var(--color-marine-blue); color: var(--color-marine-blue); background: transparent; }
+.btn-outline-water { border-color: var(--color-paradise-water); color: var(--color-paradise-water); background: transparent; }
+.btn-outline-green { border-color: var(--color-lush-green); color: var(--color-lush-green); background: transparent; }
+.btn-outline-terracotta { border-color: var(--color-terracotta); color: var(--color-terracotta); background: transparent; }
+.btn-outline-yellow { border-color: var(--color-sun-yellow); color: var(--color-sun-yellow); background: transparent; }
+
+/* GLASS VARIANTS (Dark Context - Tone-on-Tone) */
+.btn-glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: rgba(255, 255, 255, 0.2); color: var(--color-soft-clay); }
+.btn-glass-marine { background: rgba(0, 31, 51, 0.3); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: rgba(0, 31, 51, 0.4); color: var(--color-marine-text); }
+.btn-glass-water { background: rgba(0, 189, 214, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: rgba(0, 189, 214, 0.3); color: var(--color-paradise-water); }
+.btn-glass-green { background: rgba(78, 154, 88, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: rgba(78, 154, 88, 0.3); color: var(--color-lush-green); }
+.btn-glass-terracotta { background: rgba(194, 123, 102, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: rgba(194, 123, 102, 0.3); color: var(--color-terracotta); }
+.btn-glass-yellow { background: rgba(230, 185, 77, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: rgba(230, 185, 77, 0.3); color: var(--color-sun-yellow); }
+
+/* Legacy button classes for backward compatibility */
 .btn-primary {
   background: var(--brand-green);
   color: #fff;

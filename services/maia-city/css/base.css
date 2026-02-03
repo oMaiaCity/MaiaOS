@@ -14,6 +14,30 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Alice';
+  src: url('/brand/fonts/Alice/Alice-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/brand/fonts/Jarkata/PlusJakartaSans-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/brand/fonts/Jarkata/PlusJakartaSans-Italic-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -21,40 +45,37 @@
 }
 
 body {
-  font-family: "SF Pro Display", "Inter", sans-serif;
+  font-family: var(--font-body);
   line-height: 1.6;
-  color: var(--text-primary);
+  color: var(--color-tinted-white);
   min-height: 100vh;
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
   background: #000;
   position: relative;
+  overflow-x: hidden;
 }
 
-/* Watermark logo background */
-body::before {
-  content: '';
+/* FOUNDATION */
+.bg-foundation {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 20vw;
-  height: 20vw;
-  background-image: url('/brand/logo.svg');
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  opacity: 0.35;
-  pointer-events: none;
-  z-index: 0;
+  inset: 0;
+  z-index: -1;
+  background: url('/brand/images/banner.png') center/cover no-repeat;
+  background-attachment: fixed;
 }
 
-/* Utils */
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
+.bg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: rgba(0, 0, 0, 0.40); /* Atmospheric depth */
 }
+
+/* Watermark logo background - Removed for hero banner */
+
+/* Utils - Container moved to hero.css */
 
 pre, code {
   font-family: 'Monaco', 'Menlo', 'Courier New', monospace;

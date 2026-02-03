@@ -1,0 +1,28 @@
+{
+  "$schema": "@schema/context",
+  "$id": "@my-data/context/detail",
+  "detail": {
+    "id": "1",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role": "admin",
+    "status": "active",
+    "createdAt": "2024-01-15",
+    "lastLogin": "2024-02-20",
+    "bio": "System administrator with 5 years of experience.",
+    "department": "IT",
+    "phone": "+1 (555) 123-4567"
+  },
+  "detailLabels": {
+    "id": "ID",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "status": "Status",
+    "createdAt": "Created",
+    "lastLogin": "Last Login",
+    "bio": "Bio",
+    "department": "Department",
+    "phone": "Phone"
+  }
+}

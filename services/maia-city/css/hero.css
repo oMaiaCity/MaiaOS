@@ -1,0 +1,73 @@
+/* Hero Section - Ported from Design System */
+
+.container {
+  position: relative;
+  z-index: 10;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 4rem;
+}
+
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding-top: 120px; /* Space for nav */
+  padding-bottom: 10vh;
+}
+
+/* TYPOGRAPHY */
+.hero h1 {
+  font-family: var(--font-heading);
+  font-size: clamp(3.5rem, 12vw, 8rem);
+  line-height: 0.9;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: var(--color-soft-clay);
+  letter-spacing: -0.02em;
+  text-shadow: 0 0 30px rgba(232, 225, 217, 0.2); /* Subtle glow for readability */
+}
+
+.hero h1 em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--color-tinted-white);
+  text-shadow: 0 0 30px rgba(240, 237, 230, 0.3);
+}
+
+.hero .subheading {
+  font-family: 'Indie Flower', cursive;
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-style: normal;
+  margin-bottom: 2rem;
+  color: var(--color-soft-clay);
+  opacity: 0.9;
+  text-shadow: 0 0 20px rgba(232, 225, 217, 0.2);
+}
+
+.underwriting-glass {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: none;
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  display: inline;
+}
+
+/* Responsive Hero Buttons */
+@media (max-width: 768px) {
+  .hero > div:last-child {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .hero > div:last-child .btn {
+    width: 100%;
+  }
+}

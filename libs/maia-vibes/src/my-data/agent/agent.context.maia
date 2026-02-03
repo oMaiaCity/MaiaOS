@@ -1,0 +1,19 @@
+{
+  "$schema": "@schema/context",
+  "$id": "@my-data/context/agent",
+  "navItems": [
+    { "id": "users", "label": "Users" },
+    { "id": "products", "label": "Products" },
+    { "id": "orders", "label": "Orders" },
+    { "id": "categories", "label": "Categories" },
+    { "id": "reviews", "label": "Reviews" }
+  ],
+  "selectedNavId": "users",
+  "selectedRowId": "1",
+  "currentTable": "@table",
+  "currentDetail": "@detail",
+  "@actors": {
+    "table": "@my-data/actor/table",
+    "detail": "@my-data/actor/detail"
+  }
+}
