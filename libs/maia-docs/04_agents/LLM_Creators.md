@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-02-03T11:55:41.274Z
+**Auto-generated:** 2026-02-03T12:42:00.685Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -3888,11 +3888,13 @@ See [Operations](./07-operations.md) for complete documentation on the universal
 
 See [Reactive Data System](../developers/06_reactive-queries.md) for detailed examples.
 
-#### Map Transformations in Query Objects
+#### Map Transformations in Query Objects ⭐ PRIMARY PATTERN
+
+**CRITICAL:** Map transformations are defined **directly in context query objects** using the `options.map` syntax. This is the **PRIMARY and RECOMMENDED** pattern for data transformations.
 
 **Map transformations** let you reshape data when reading it. Think of it like a translator - you take data in one format and transform it into the format your views need.
 
-**Format:**
+**Format (in context file):**
 ```json
 {
   "messages": {
@@ -5249,54 +5251,39 @@ actor.context.draggedItemIds[id] = true;  // Set this item as dragged
 }
 ```
 
-## Working with Data (Reactive Queries with mapData)
+## Working with Data (Reactive Queries)
 
-MaiaOS provides reactive data access through the `mapData` action in state machines. This creates reactive query stores that automatically update when data changes.
+**CRITICAL:** Reactive data queries are defined **directly in context files**, not in state machines. State machines handle **mutations** (create, update, delete), while **queries** are declared in context.
 
-### Think of it like a spreadsheet:
-- You write formulas that reference other cells
-- When you change a cell, all formulas update automatically
-- You never have to manually "refresh" the spreadsheet
+### The Correct Pattern: Query Objects in Context
 
-**That's how reactive queries work!**
-
-### Using mapData Action
-
-The `mapData` action maps operations engine configs to context keys, creating reactive query stores:
+**✅ DO:** Define query objects directly in your context file (`.context.maia`):
 
 ```json
 {
-  "idle": {
-    "entry": {
-      "mapData": {
-        "todos": {
-          "op": "read",
-          "schema": "co_zTodos123",
-          "filter": null
-        },
-        "todosTodo": {
-          "op": "read",
-          "schema": "co_zTodos123",
-          "filter": { "done": false }
-        },
-        "todosDone": {
-          "op": "read",
-          "schema": "co_zTodos123",
-          "filter": { "done": true }
-        }
-      }
-    }
+  "$schema": "@schema/context",
+  "$id": "@context/todo",
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  },
+  "todosTodo": {
+    "schema": "@schema/todos",
+    "filter": { "done": false }
+  },
+  "todosDone": {
+    "schema": "@schema/todos",
+    "filter": { "done": true }
   }
 }
 ```
 
 **What happens:**
-1. State machine executes `mapData` action on entry
-2. Operations engine executes `read` operations
-3. Each operation returns a `ReactiveStore`
-4. Stores are stored in `actor._queryStores[contextKey]`
-5. Stores are marked in `context.@stores` for ViewEngine discovery
-6. ViewEngine subscribes to stores and re-renders when data changes
+1. Query objects are declared in context (`.context.maia` file)
+2. MaiaOS automatically creates reactive query stores from these declarations
+3. Stores are stored in `actor._queryStores[contextKey]`
+4. Stores are marked in `context.@stores` for ViewEngine discovery
+5. ViewEngine subscribes to stores and re-renders when data changes
 
 **Accessing data in views:**
 ```json
@@ -5312,10 +5299,13 @@ The `mapData` action maps operations engine configs to context keys, creating re
 ```
 
 **Important:**
-- `mapData` only supports `read` operations (mutations use `@db` tool)
-- Schema must be a co-id (`co_z...`) at runtime
+- Query objects are defined in **context files**, not state machines
+- State machines handle **mutations only** (create, update, delete via `@db` tool)
+- Schema can be a schema reference (`@schema/todos`) or co-id (`co_z...`) - references are resolved automatically
 - Query stores are ReactiveStore objects (can't be stored in CoValues)
 - Stores are stored in `actor._queryStores` and marked in `context.@stores`
+
+**See [Context - Reactive Data](./04-context.md#1-reactive-data-query-objects-) for complete documentation on query objects.**
 
 ### Creating, Updating, Deleting Data
 
@@ -5387,39 +5377,36 @@ Toggle is not a separate operation. Use `update` with an expression:
 
 ### Complete Example: Todo List
 
-**Context:**
+**Context (`todo.context.maia`):**
 ```json
 {
+  "$schema": "@schema/context",
+  "$id": "@context/todo",
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  },
+  "todosTodo": {
+    "schema": "@schema/todos",
+    "filter": { "done": false }
+  },
+  "todosDone": {
+    "schema": "@schema/todos",
+    "filter": { "done": true }
+  },
   "newTodoText": "",
   "viewMode": "list"
 }
 ```
 
-**State Machine:**
+**State Machine (`todo.state.maia`):**
 ```json
 {
+  "$schema": "@schema/state",
+  "$id": "@state/todo",
   "initial": "idle",
   "states": {
     "idle": {
-      "entry": {
-        "mapData": {
-          "todos": {
-            "op": "read",
-            "schema": "co_zTodos123",
-            "filter": null
-          },
-          "todosTodo": {
-            "op": "read",
-            "schema": "co_zTodos123",
-            "filter": { "done": false }
-          },
-          "todosDone": {
-            "op": "read",
-            "schema": "co_zTodos123",
-            "filter": { "done": true }
-          }
-        }
-      },
       "on": {
         "UPDATE_INPUT": {
           "target": "idle",
@@ -5439,7 +5426,7 @@ Toggle is not a separate operation. Use `update` with an expression:
           "tool": "@db",
           "payload": {
             "op": "create",
-            "schema": "co_zTodos123",
+            "schema": "@schema/todos",
             "data": {
               "text": "$newTodoText",
               "done": false
@@ -5465,10 +5452,11 @@ Toggle is not a separate operation. Use `update` with an expression:
 ```
 
 **What happens:**
-1. On entry to `idle`, `mapData` creates reactive query stores for `todos`, `todosTodo`, and `todosDone`
-2. Stores are stored in `actor._queryStores` and marked in `context.@stores`
-3. ViewEngine subscribes to stores and re-renders when data changes
-4. When creating a todo, the `@db` tool creates it, and all query stores automatically update
+1. Query objects (`todos`, `todosTodo`, `todosDone`) are declared in context file
+2. MaiaOS automatically creates reactive query stores from these declarations
+3. Stores are stored in `actor._queryStores` and marked in `context.@stores`
+4. ViewEngine subscribes to stores and re-renders when data changes
+5. When creating a todo via `@db` tool, all query stores automatically update
 
 **View:**
 ```json
@@ -5507,29 +5495,30 @@ Toggle is not a separate operation. Use `update` with an expression:
 ### Best Practices
 
 **✅ DO:**
-- Use `mapData` action in state machines to create reactive query stores
-- Use `@db` tool for all data mutations (create, update, delete)
+- Define query objects **in context files** (`.context.maia`), not state machines
+- Use `@db` tool in state machines for all data mutations (create, update, delete)
 - Use descriptive names (`todosTodo`, not `data1`)
-- Filter in `mapData` operations, not in views
+- Filter in query objects (context), not in views
 - Test with empty data (handle empty arrays gracefully)
-- Use co-ids (`co_z...`) for schemas at runtime
+- Use schema references (`@schema/todos`) in context - they're resolved automatically
 
 **❌ DON'T:**
+- Don't define queries in state machines (use context files instead)
 - Don't manually modify query stores directly
-- Don't use `mapData` for mutations (only for read operations)
-- Don't filter data in views (use `mapData` filters instead)
-- Don't forget to handle SUCCESS/ERROR events
-- Don't use human-readable schema references (`@schema/...`) at runtime
+- Don't use state machines for queries (only for mutations)
+- Don't filter data in views (use query object filters in context instead)
+- Don't forget to handle SUCCESS/ERROR events for mutations
+- Don't use `mapData` action in state machines (deprecated pattern)
 
 ### Troubleshooting
 
 **Data Not Appearing:**
-1. Is `mapData` action defined in state machine entry?
+1. Are query objects defined in your context file (`.context.maia`)?
 2. Check browser console for errors
-3. Is the schema co-id correct? (must be `co_z...`)
+3. Is the schema reference correct? (`@schema/todos` or `co_z...`)
 
 **Data Not Updating:**
-1. Are you using `@db` tool to modify data?
+1. Are you using `@db` tool in state machines to modify data?
 2. Are query stores properly subscribed? (check `context.@stores`)
 3. Check console logs for SUCCESS/ERROR events
 
@@ -6741,32 +6730,26 @@ Database
 actor.actorEngine.toolEngine.execute('@db', actor, payload);
 ```
 
-### 2. Use mapData Action for Reactive Queries
+### 2. Define Query Objects in Context (Not State Machines)
 
-**✅ DO:** Use `mapData` action in state machines to create reactive query stores
+**✅ DO:** Define query objects directly in your context file (`.context.maia`)
 
 ```json
 {
-  "idle": {
-    "entry": {
-      "mapData": {
-        "todos": {
-          "op": "read",
-          "schema": "co_zTodos123",
-          "filter": null
-        },
-        "todosTodo": {
-          "op": "read",
-          "schema": "co_zTodos123",
-          "filter": { "done": false }
-        }
-      }
-    }
+  "$schema": "@schema/context",
+  "$id": "@context/todo",
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  },
+  "todosTodo": {
+    "schema": "@schema/todos",
+    "filter": { "done": false }
   }
 }
 ```
 
-**❌ DON'T:** Manually call read operations in tools
+**❌ DON'T:** Define queries in state machines or call read operations in tools
 
 ```json
 {
@@ -6775,13 +6758,15 @@ actor.actorEngine.toolEngine.execute('@db', actor, payload);
     "payload": {
       "op": "read",
       "schema": "co_zTodos123"
-      // Don't do this - use mapData action instead!
+      // Don't do this - define query objects in context instead!
     }
   }
 }
 ```
 
-**Why:** `mapData` creates reactive query stores that are automatically subscribed to by ViewEngine. Tools should be used for mutations, not queries.
+**Why:** Query objects in context automatically create reactive query stores that are subscribed to by ViewEngine. State machines should only handle mutations (create, update, delete), not queries.
+
+**See [Context - Reactive Data](./04-context.md#1-reactive-data-query-objects-) for complete documentation on query objects.**
 
 ### 3. Always Use Operations for Mutations
 
@@ -6880,28 +6865,27 @@ actor.context.error = error.message;
 
 ### Complete Todo List Example
 
-**Context:**
+**Context (`todo.context.maia`):**
 ```json
 {
+  "$schema": "@schema/context",
+  "$id": "@context/todo",
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  },
   "newTodoText": ""
 }
 ```
 
-**State Machine:**
+**State Machine (`todo.state.maia`):**
 ```json
 {
+  "$schema": "@schema/state",
+  "$id": "@state/todo",
   "initial": "idle",
   "states": {
     "idle": {
-      "entry": {
-        "mapData": {
-          "todos": {
-            "op": "read",
-            "schema": "co_zTodos123",
-            "filter": null
-          }
-        }
-      },
       "on": {
         "CREATE_TODO": {
           "target": "creating",

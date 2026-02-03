@@ -494,32 +494,26 @@ Database
 actor.actorEngine.toolEngine.execute('@db', actor, payload);
 ```
 
-### 2. Use mapData Action for Reactive Queries
+### 2. Define Query Objects in Context (Not State Machines)
 
-**✅ DO:** Use `mapData` action in state machines to create reactive query stores
+**✅ DO:** Define query objects directly in your context file (`.context.maia`)
 
 ```json
 {
-  "idle": {
-    "entry": {
-      "mapData": {
-        "todos": {
-          "op": "read",
-          "schema": "co_zTodos123",
-          "filter": null
-        },
-        "todosTodo": {
-          "op": "read",
-          "schema": "co_zTodos123",
-          "filter": { "done": false }
-        }
-      }
-    }
+  "$schema": "@schema/context",
+  "$id": "@context/todo",
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  },
+  "todosTodo": {
+    "schema": "@schema/todos",
+    "filter": { "done": false }
   }
 }
 ```
 
-**❌ DON'T:** Manually call read operations in tools
+**❌ DON'T:** Define queries in state machines or call read operations in tools
 
 ```json
 {
@@ -528,13 +522,15 @@ actor.actorEngine.toolEngine.execute('@db', actor, payload);
     "payload": {
       "op": "read",
       "schema": "co_zTodos123"
-      // Don't do this - use mapData action instead!
+      // Don't do this - define query objects in context instead!
     }
   }
 }
 ```
 
-**Why:** `mapData` creates reactive query stores that are automatically subscribed to by ViewEngine. Tools should be used for mutations, not queries.
+**Why:** Query objects in context automatically create reactive query stores that are subscribed to by ViewEngine. State machines should only handle mutations (create, update, delete), not queries.
+
+**See [Context - Reactive Data](./04-context.md#1-reactive-data-query-objects-) for complete documentation on query objects.**
 
 ### 3. Always Use Operations for Mutations
 
@@ -633,28 +629,27 @@ actor.context.error = error.message;
 
 ### Complete Todo List Example
 
-**Context:**
+**Context (`todo.context.maia`):**
 ```json
 {
+  "$schema": "@schema/context",
+  "$id": "@context/todo",
+  "todos": {
+    "schema": "@schema/todos",
+    "filter": null
+  },
   "newTodoText": ""
 }
 ```
 
-**State Machine:**
+**State Machine (`todo.state.maia`):**
 ```json
 {
+  "$schema": "@schema/state",
+  "$id": "@state/todo",
   "initial": "idle",
   "states": {
     "idle": {
-      "entry": {
-        "mapData": {
-          "todos": {
-            "op": "read",
-            "schema": "co_zTodos123",
-            "filter": null
-          }
-        }
-      },
       "on": {
         "CREATE_TODO": {
           "target": "creating",

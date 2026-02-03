@@ -339,11 +339,13 @@ See [Operations](./07-operations.md) for complete documentation on the universal
 
 See [Reactive Data System](../developers/06_reactive-queries.md) for detailed examples.
 
-#### Map Transformations in Query Objects
+#### Map Transformations in Query Objects ⭐ PRIMARY PATTERN
+
+**CRITICAL:** Map transformations are defined **directly in context query objects** using the `options.map` syntax. This is the **PRIMARY and RECOMMENDED** pattern for data transformations.
 
 **Map transformations** let you reshape data when reading it. Think of it like a translator - you take data in one format and transform it into the format your views need.
 
-**Format:**
+**Format (in context file):**
 ```json
 {
   "messages": {
