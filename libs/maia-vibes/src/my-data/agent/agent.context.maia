@@ -4,7 +4,7 @@
   "navTitle": "MaiaDB",
   "navCategories": [
     {
-      "category": "ME",
+      "category": "Account",
       "items": [
         { "id": "account", "label": "Owner" },
         { "id": "group", "label": "Avatar" }

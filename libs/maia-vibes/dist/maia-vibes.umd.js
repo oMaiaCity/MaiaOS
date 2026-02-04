@@ -257,6 +257,43 @@
       "[data-done=true] .body": {
         "textDecoration": "line-through",
         "opacity": "0.7"
+      },
+      "@container (max-width: 600px)": {
+        ".stack": {
+          "padding": "{spacing.md}",
+          "gap": "{spacing.md}"
+        },
+        ".headerSection": {
+          "gap": "{spacing.sm}"
+        },
+        ".todoTitle": {
+          "fontSize": "{typography.fontSize.lg}"
+        },
+        ".form": {
+          "flexDirection": "column",
+          "padding": "{spacing.sm}",
+          "gap": "{spacing.sm}"
+        },
+        ".input": {
+          "width": "100%",
+          "padding": "{spacing.xs} {spacing.md}"
+        },
+        ".button": {
+          "width": "100%",
+          "padding": "{spacing.xs} {spacing.md}"
+        },
+        ".card": {
+          "padding": "{spacing.sm} {spacing.md}",
+          "gap": "{spacing.sm}"
+        },
+        ".body": {
+          "fontSize": "0.9rem"
+        },
+        ".buttonSmall": {
+          "width": "28px",
+          "height": "28px",
+          "fontSize": "0.75rem"
+        }
       }
     }
   };
@@ -1296,7 +1333,35 @@
         "gap": "{spacing.md}",
         "zIndex": "10",
         "height": "fit-content",
-        "maxHeight": "100%"
+        "maxHeight": "100%",
+        "position": "relative"
+      },
+      "sidebarToggle": {
+        "display": "none",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "width": "100%",
+        "padding": "{spacing.sm}",
+        "background": "rgba(255, 255, 255, 0.2)",
+        "border": "1px solid rgba(255, 255, 255, 0.2)",
+        "borderRadius": "{radii.md}",
+        "cursor": "pointer",
+        "marginBottom": "{spacing.sm}",
+        "fontSize": "0.7rem",
+        "fontWeight": "700",
+        "textTransform": "uppercase",
+        "color": "{colors.marineBlue}",
+        "fontFamily": "{typography.fontFamily.body}",
+        "transition": "{transitions.fast}",
+        ":hover": {
+          "background": "rgba(255, 255, 255, 0.4)"
+        }
+      },
+      "detailContentWrapper": {
+        "display": "flex",
+        "flexDirection": "column",
+        "height": "100%",
+        "overflowY": "auto"
       },
       "navTitle": {
         "fontFamily": "{typography.fontFamily.heading}",
@@ -1521,7 +1586,75 @@
       "@container (max-width: 700px)": {
         ".db-viewer": {
           "gridTemplateColumns": "1fr",
-          "gridTemplateRows": "auto 1fr auto"
+          "gridTemplateRows": "auto 1fr auto",
+          "position": "relative",
+          "overflow": "hidden"
+        },
+        ".sidebar-toggle": {
+          "display": "flex"
+        },
+        ".nav-aside": {
+          "position": "absolute",
+          "left": "0",
+          "top": "0",
+          "bottom": "0",
+          "width": "280px",
+          "maxWidth": "85vw",
+          "zIndex": "100",
+          "transform": "translateX(-100%)",
+          "opacity": "0",
+          "pointerEvents": "none",
+          "transition": "none",
+          "boxShadow": "2px 0 20px rgba(0, 0, 0, 0.1)"
+        },
+        ".nav-aside.sidebar-ready": {
+          "transition": "{transitions.standard}"
+        },
+        ".nav-aside:not(.collapsed)": {
+          "transform": "translateX(0)",
+          "opacity": "1",
+          "pointerEvents": "auto"
+        },
+        ".detail-aside": {
+          "position": "absolute",
+          "right": "0",
+          "top": "0",
+          "bottom": "0",
+          "width": "320px",
+          "maxWidth": "85vw",
+          "zIndex": "100",
+          "transform": "translateX(100%)",
+          "opacity": "0",
+          "pointerEvents": "none",
+          "transition": "none",
+          "boxShadow": "-2px 0 20px rgba(0, 0, 0, 0.1)"
+        },
+        ".detail-aside.sidebar-ready": {
+          "transition": "{transitions.standard}"
+        },
+        ".detail-aside:not(.collapsed)": {
+          "transform": "translateX(0)",
+          "opacity": "1",
+          "pointerEvents": "auto"
+        },
+        ".nav-aside.collapsed": {
+          "transform": "translateX(-100%)",
+          "opacity": "0",
+          "pointerEvents": "none"
+        },
+        ".detail-aside.collapsed": {
+          "transform": "translateX(100%)",
+          "opacity": "0",
+          "pointerEvents": "none"
+        },
+        ".nav-aside.collapsed .nav-title": {
+          "display": "none"
+        },
+        ".nav-aside.collapsed .nav-list": {
+          "display": "none"
+        },
+        ".detail-aside.collapsed .detail-content-wrapper": {
+          "display": "none"
         }
       }
     }
@@ -1567,6 +1700,14 @@
           "tag": "aside",
           "class": "nav-aside",
           "children": [
+            {
+              "tag": "button",
+              "class": "sidebar-toggle nav-toggle",
+              "attrs": {
+                "aria-label": "Toggle navigation sidebar"
+              },
+              "text": "Navigation"
+            },
             {
               "tag": "h2",
               "class": "nav-title",
@@ -1633,7 +1774,21 @@
         {
           "tag": "aside",
           "class": "detail-aside",
-          "$slot": "$currentDetail"
+          "children": [
+            {
+              "tag": "button",
+              "class": "sidebar-toggle detail-toggle",
+              "attrs": {
+                "aria-label": "Toggle detail sidebar"
+              },
+              "text": "Details"
+            },
+            {
+              "tag": "div",
+              "class": "detail-content-wrapper",
+              "$slot": "$currentDetail"
+            }
+          ]
         }
       ]
     }
@@ -1841,10 +1996,10 @@
     "navTitle": "MaiaDB",
     "navCategories": [
       {
-        "category": "ME",
+        "category": "Account",
         "items": [
-          { "id": "account", "label": "Account" },
-          { "id": "group", "label": "Group" }
+          { "id": "account", "label": "Owner" },
+          { "id": "group", "label": "Avatar" }
         ]
       },
       {

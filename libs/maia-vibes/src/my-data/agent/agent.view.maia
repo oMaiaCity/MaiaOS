@@ -10,6 +10,14 @@
         "class": "nav-aside",
         "children": [
           {
+            "tag": "button",
+            "class": "sidebar-toggle nav-toggle",
+            "attrs": {
+              "aria-label": "Toggle navigation sidebar"
+            },
+            "text": "Navigation"
+          },
+          {
             "tag": "h2",
             "class": "nav-title",
             "text": "$navTitle"
@@ -75,7 +83,21 @@
       {
         "tag": "aside",
         "class": "detail-aside",
-        "$slot": "$currentDetail"
+        "children": [
+          {
+            "tag": "button",
+            "class": "sidebar-toggle detail-toggle",
+            "attrs": {
+              "aria-label": "Toggle detail sidebar"
+            },
+            "text": "Details"
+          },
+          {
+            "tag": "div",
+            "class": "detail-content-wrapper",
+            "$slot": "$currentDetail"
+          }
+        ]
       }
     ]
   }

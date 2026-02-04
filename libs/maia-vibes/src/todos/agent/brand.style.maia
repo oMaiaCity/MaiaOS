@@ -246,6 +246,43 @@
     "[data-done=true] .body": {
       "textDecoration": "line-through",
       "opacity": "0.7"
+    },
+    "@container (max-width: 600px)": {
+      ".stack": {
+        "padding": "{spacing.md}",
+        "gap": "{spacing.md}"
+      },
+      ".headerSection": {
+        "gap": "{spacing.sm}"
+      },
+      ".todoTitle": {
+        "fontSize": "{typography.fontSize.lg}"
+      },
+      ".form": {
+        "flexDirection": "column",
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.sm}"
+      },
+      ".input": {
+        "width": "100%",
+        "padding": "{spacing.xs} {spacing.md}"
+      },
+      ".button": {
+        "width": "100%",
+        "padding": "{spacing.xs} {spacing.md}"
+      },
+      ".card": {
+        "padding": "{spacing.sm} {spacing.md}",
+        "gap": "{spacing.sm}"
+      },
+      ".body": {
+        "fontSize": "0.9rem"
+      },
+      ".buttonSmall": {
+        "width": "28px",
+        "height": "28px",
+        "fontSize": "0.75rem"
+      }
     }
   }
 }

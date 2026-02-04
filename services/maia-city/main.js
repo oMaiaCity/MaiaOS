@@ -1144,6 +1144,9 @@ function navigateToScreen(screen) {
 // switchView moved above selectCoValue
 
 function selectCoValue(coId, skipHistory = false) {
+	// Collapse sidebars when selecting a co-value
+	collapseAllSidebars();
+	
 	// If we're in vibe mode and selecting account, exit vibe mode first
 	if (currentVibe !== null && coId === maia?.id?.maiaId?.id) {
 		currentVibe = null;
@@ -1166,6 +1169,34 @@ function selectCoValue(coId, skipHistory = false) {
 	currentScreen = 'db-viewer'; // Navigate to DB viewer when selecting a CoValue
 	renderAppInternal();
 	// read() API in db-view.js handles loading and reactivity automatically
+}
+
+/**
+ * Collapse all sidebars (both DB viewer and vibe viewer)
+ */
+function collapseAllSidebars() {
+	// Collapse DB viewer sidebars
+	const dbSidebar = document.querySelector('.db-sidebar');
+	const dbMetadata = document.querySelector('.db-metadata');
+	if (dbSidebar) {
+		dbSidebar.classList.add('collapsed');
+	}
+	if (dbMetadata) {
+		dbMetadata.classList.add('collapsed');
+	}
+	
+	// Collapse vibe viewer sidebars (in Shadow DOM)
+	const vibeContainer = document.querySelector('.vibe-container');
+	if (vibeContainer && vibeContainer.shadowRoot) {
+		const navAside = vibeContainer.shadowRoot.querySelector('.nav-aside');
+		const detailAside = vibeContainer.shadowRoot.querySelector('.detail-aside');
+		if (navAside) {
+			navAside.classList.add('collapsed');
+		}
+		if (detailAside) {
+			detailAside.classList.add('collapsed');
+		}
+	}
 }
 
 function goBack() {
@@ -1405,5 +1436,88 @@ window.goBack = goBack;
 window.loadVibe = loadVibe;
 window.navigateToScreen = navigateToScreen;
 window.toggleExpand = toggleExpand;
+
+// Mobile menu toggle
+window.toggleMobileMenu = function() {
+	const menu = document.getElementById('mobile-menu');
+	if (menu) {
+		menu.classList.toggle('active');
+		const hamburger = document.querySelector('.hamburger-btn');
+		if (hamburger) {
+			hamburger.classList.toggle('active');
+		}
+	}
+};
+
+
+// Toggle DB viewer left sidebar (navigation)
+window.toggleDBLeftSidebar = function() {
+	const sidebar = document.querySelector('.db-sidebar');
+	if (sidebar) {
+		// Enable transitions when user explicitly toggles
+		sidebar.classList.add('sidebar-ready');
+		sidebar.classList.toggle('collapsed');
+		// Also collapse right sidebar when opening left (optional - can remove if you want both open)
+		const rightSidebar = document.querySelector('.db-metadata');
+		if (rightSidebar && !sidebar.classList.contains('collapsed')) {
+			rightSidebar.classList.add('sidebar-ready');
+			rightSidebar.classList.add('collapsed');
+		}
+	}
+};
+
+// Toggle DB viewer right sidebar (metadata)
+window.toggleDBRightSidebar = function() {
+	const sidebar = document.querySelector('.db-metadata');
+	if (sidebar) {
+		// Enable transitions when user explicitly toggles
+		sidebar.classList.add('sidebar-ready');
+		sidebar.classList.toggle('collapsed');
+		// Also collapse left sidebar when opening right (optional - can remove if you want both open)
+		const leftSidebar = document.querySelector('.db-sidebar');
+		if (leftSidebar && !sidebar.classList.contains('collapsed')) {
+			leftSidebar.classList.add('sidebar-ready');
+			leftSidebar.classList.add('collapsed');
+		}
+	}
+};
+
+// Toggle vibe viewer left sidebar (navigation)
+window.toggleLeftSidebar = function() {
+	const vibeContainer = document.querySelector('.vibe-container');
+	if (vibeContainer && vibeContainer.shadowRoot) {
+		const navAside = vibeContainer.shadowRoot.querySelector('.nav-aside');
+		if (navAside) {
+			// Enable transitions when user explicitly toggles
+			navAside.classList.add('sidebar-ready');
+			navAside.classList.toggle('collapsed');
+			// Also collapse right sidebar when opening left
+			const detailAside = vibeContainer.shadowRoot.querySelector('.detail-aside');
+			if (detailAside && !navAside.classList.contains('collapsed')) {
+				detailAside.classList.add('sidebar-ready');
+				detailAside.classList.add('collapsed');
+			}
+		}
+	}
+};
+
+// Toggle vibe viewer right sidebar (detail)
+window.toggleRightSidebar = function() {
+	const vibeContainer = document.querySelector('.vibe-container');
+	if (vibeContainer && vibeContainer.shadowRoot) {
+		const detailAside = vibeContainer.shadowRoot.querySelector('.detail-aside');
+		if (detailAside) {
+			// Enable transitions when user explicitly toggles
+			detailAside.classList.add('sidebar-ready');
+			detailAside.classList.toggle('collapsed');
+			// Also collapse left sidebar when opening right
+			const navAside = vibeContainer.shadowRoot.querySelector('.nav-aside');
+			if (navAside && !detailAside.classList.contains('collapsed')) {
+				navAside.classList.add('sidebar-ready');
+				navAside.classList.add('collapsed');
+			}
+		}
+	}
+};
 
 init();

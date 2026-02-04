@@ -18,6 +18,31 @@ function escapeHtml(text) {
 }
 
 /**
+ * Toggle sidebar in Shadow DOM
+ * Finds the sidebar element within any Shadow DOM in the vibe container
+ */
+function toggleSidebarInShadowDOM(selector) {
+	const vibeContainer = document.querySelector('.vibe-container');
+	if (!vibeContainer) return;
+	
+	// Try to find sidebar in Shadow DOM
+	const shadowRoot = vibeContainer.shadowRoot;
+	if (shadowRoot) {
+		const sidebar = shadowRoot.querySelector(selector);
+		if (sidebar) {
+			sidebar.classList.toggle('collapsed');
+			return;
+		}
+	}
+	
+	// Fallback: try to find in regular DOM (for non-Shadow DOM vibes)
+	const sidebar = document.querySelector(selector);
+	if (sidebar) {
+		sidebar.classList.toggle('collapsed');
+	}
+}
+
+/**
  * Load vibes from account.vibes registry dynamically using read() API
  * The read() API handles reactivity internally - we just read the current data
  * @param {Object} maia - MaiaOS instance
@@ -131,10 +156,22 @@ async function renderDashboard(maia, cojsonAPI, authState, syncState, navigateTo
 			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
-						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo" />
-						<h1>Maia City</h1>
+						<h1>Me</h1>
+					</div>
+					<div class="header-center">
+						<!-- Logo centered in navbar -->
+						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
+						${authState.signedIn ? `
+							<code class="db-status">${truncate(accountId, 12)}</code>
+						` : ''}
+						<!-- Hamburger menu button (mobile only) -->
+						<button class="hamburger-btn" onclick="window.toggleMobileMenu()" aria-label="Toggle menu">
+							<span></span>
+							<span></span>
+							<span></span>
+						</button>
 						${authState.signedIn ? `
 							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database (idempotent - preserves schemata, recreates configs/data)">
 								Seed
@@ -150,14 +187,32 @@ async function renderDashboard(maia, cojsonAPI, authState, syncState, navigateTo
 							</span>
 						</div>
 						${authState.signedIn ? `
-							<code class="db-status">${truncate(accountId, 12)}</code>
-						` : ''}
-						${authState.signedIn ? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
 								Sign Out
 							</button>
 						` : ''}
 					</div>
+				</div>
+				<!-- Mobile menu (collapsed by default) -->
+				<div class="mobile-menu" id="mobile-menu">
+					${authState.signedIn ? `
+						<button class="mobile-menu-item seed-btn" onclick="window.handleSeed(); window.toggleMobileMenu();" title="Seed database">
+							Seed
+						</button>
+					` : ''}
+					<div class="mobile-menu-item sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
+						<span class="sync-dot"></span>
+						<span class="sync-text">
+							${syncState.connected && syncState.syncing ? 'Syncing' : 
+							  syncState.connected ? 'Connected' : 
+							  syncState.error || 'Offline'}
+						</span>
+					</div>
+					${authState.signedIn ? `
+						<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
+							Sign Out
+						</button>
+					` : ''}
 				</div>
 			</header>
 			
@@ -199,15 +254,22 @@ async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVi
 				<div class="header-content">
 					<div class="header-left">
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo" />
-						<button class="back-btn" onclick="window.navigateToScreen('dashboard')" title="Back to Dashboard">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-							</svg>
-							<span class="back-label">Back</span>
-						</button>
 						<h1>${escapeHtml(vibeLabel)}</h1>
 					</div>
+					<div class="header-center">
+						<!-- Logo centered in navbar -->
+						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
+					</div>
 					<div class="header-right">
+						${authState.signedIn ? `
+							<code class="db-status">${truncate(accountId, 12)}</code>
+						` : ''}
+						<!-- Hamburger menu button (mobile only) -->
+						<button class="hamburger-btn" onclick="window.toggleMobileMenu()" aria-label="Toggle menu">
+							<span></span>
+							<span></span>
+							<span></span>
+						</button>
 						${authState.signedIn ? `
 							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database (idempotent - preserves schemata, recreates configs/data)">
 								Seed
@@ -223,14 +285,32 @@ async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVi
 							</span>
 						</div>
 						${authState.signedIn ? `
-							<code class="db-status">${truncate(accountId, 12)}</code>
-						` : ''}
-						${authState.signedIn ? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
 								Sign Out
 							</button>
 						` : ''}
 					</div>
+				</div>
+				<!-- Mobile menu (collapsed by default) -->
+				<div class="mobile-menu" id="mobile-menu">
+					${authState.signedIn ? `
+						<button class="mobile-menu-item seed-btn" onclick="window.handleSeed(); window.toggleMobileMenu();" title="Seed database">
+							Seed
+						</button>
+					` : ''}
+					<div class="mobile-menu-item sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
+						<span class="sync-dot"></span>
+						<span class="sync-text">
+							${syncState.connected && syncState.syncing ? 'Syncing' : 
+							  syncState.connected ? 'Connected' : 
+							  syncState.error || 'Offline'}
+						</span>
+					</div>
+					${authState.signedIn ? `
+						<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
+							Sign Out
+						</button>
+					` : ''}
 				</div>
 			</header>
 			
@@ -238,9 +318,109 @@ async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVi
 				<div class="vibe-card">
 					<div id="vibe-container-${escapeHtml(currentVibe)}" class="vibe-container"></div>
 				</div>
+				<!-- Bottom navbar area for mobile -->
+				<div class="bottom-navbar">
+					<div class="bottom-navbar-left">
+						<button class="sidebar-toggle-btn sidebar-toggle-left" onclick="window.toggleLeftSidebar()" aria-label="Toggle navigation sidebar">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<line x1="3" y1="12" x2="21" y2="12"></line>
+								<line x1="3" y1="6" x2="21" y2="6"></line>
+								<line x1="3" y1="18" x2="21" y2="18"></line>
+							</svg>
+						</button>
+					</div>
+					<div class="bottom-navbar-center">
+						<button class="home-btn bottom-home-btn" onclick="window.navigateToScreen('dashboard')" title="Home">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+								<polyline points="9 22 9 12 15 12 15 22"></polyline>
+							</svg>
+							<span class="home-label">Home</span>
+						</button>
+					</div>
+					<div class="bottom-navbar-right">
+						<button class="sidebar-toggle-btn sidebar-toggle-right" onclick="window.toggleRightSidebar()" aria-label="Toggle detail sidebar">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<circle cx="12" cy="12" r="10"></circle>
+								<path d="M12 16v-4M12 8h.01"/>
+							</svg>
+						</button>
+					</div>
+				</div>
+			</div>
+			
+			<!-- Bottom navbar area for mobile -->
+			<div class="bottom-navbar">
+				<div class="bottom-navbar-left">
+					<button class="sidebar-toggle-btn sidebar-toggle-left" onclick="window.toggleLeftSidebar()" aria-label="Toggle navigation sidebar">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<line x1="3" y1="12" x2="21" y2="12"></line>
+							<line x1="3" y1="6" x2="21" y2="6"></line>
+							<line x1="3" y1="18" x2="21" y2="18"></line>
+						</svg>
+					</button>
+				</div>
+				<div class="bottom-navbar-center">
+					<button class="home-btn bottom-home-btn" onclick="window.navigateToScreen('dashboard')" title="Home">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+							<polyline points="9 22 9 12 15 12 15 22"></polyline>
+						</svg>
+						<span class="home-label">Home</span>
+					</button>
+				</div>
+				<div class="bottom-navbar-right">
+					<button class="sidebar-toggle-btn sidebar-toggle-right" onclick="window.toggleRightSidebar()" aria-label="Toggle detail sidebar">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<circle cx="12" cy="12" r="10"></circle>
+							<path d="M12 16v-4M12 8h.01"/>
+						</svg>
+					</button>
+				</div>
 			</div>
 		</div>
 	`;
+	
+	// Add sidebar toggle handlers for maiadb vibe
+	setTimeout(() => {
+		const vibeContainer = document.querySelector('.vibe-container');
+		if (vibeContainer && vibeContainer.shadowRoot) {
+			const navAside = vibeContainer.shadowRoot.querySelector('.nav-aside');
+			const detailAside = vibeContainer.shadowRoot.querySelector('.detail-aside');
+			
+			// Start collapsed by default, no transitions
+			if (navAside) {
+				navAside.classList.add('collapsed');
+			}
+			if (detailAside) {
+				detailAside.classList.add('collapsed');
+			}
+			
+			// Add toggle handlers
+			const navToggle = vibeContainer.shadowRoot.querySelector('.nav-toggle');
+			const detailToggle = vibeContainer.shadowRoot.querySelector('.detail-toggle');
+			
+			if (navToggle) {
+				navToggle.addEventListener('click', () => {
+					if (navAside) {
+						// Enable transitions when user explicitly toggles
+						navAside.classList.add('sidebar-ready');
+						navAside.classList.toggle('collapsed');
+					}
+				});
+			}
+			
+			if (detailToggle) {
+				detailToggle.addEventListener('click', () => {
+					if (detailAside) {
+						// Enable transitions when user explicitly toggles
+						detailAside.classList.add('sidebar-ready');
+						detailAside.classList.toggle('collapsed');
+					}
+				});
+			}
+		}
+	}, 100);
 	
 	// Load vibe asynchronously after DOM is updated
 	requestAnimationFrame(async () => {
@@ -276,10 +456,71 @@ async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVi
 			// The kernel will handle actor detachment and reuse logic
 			container.innerHTML = '';
 			
+			// Load vibe from account
+			await maia.loadVibeFromAccount(currentVibe, container);
+			
+			// Add sidebar toggle handlers for maiadb vibe (after vibe loads)
+			setTimeout(() => {
+				// Use shadow root if vibe is in shadow DOM
+				const vibeContainer = document.getElementById(`vibe-container-${currentVibe}`);
+				if (vibeContainer) {
+					const shadowRoot = vibeContainer.shadowRoot || vibeContainer;
+					const navToggle = shadowRoot.querySelector('.nav-toggle');
+					const detailToggle = shadowRoot.querySelector('.detail-toggle');
+					
+					if (navToggle) {
+						navToggle.addEventListener('click', () => {
+							const navAside = navToggle.closest('.nav-aside');
+							if (navAside) {
+								navAside.classList.toggle('collapsed');
+							}
+						});
+					}
+					
+					if (detailToggle) {
+						detailToggle.addEventListener('click', () => {
+							const detailAside = detailToggle.closest('.detail-aside');
+							if (detailAside) {
+								detailAside.classList.toggle('collapsed');
+							}
+						});
+					}
+				}
+			}, 500);
+			
 			// Store container reference for cleanup on unload
 			window.currentVibeContainer = container;
 			// Load vibe directly - pass the vibeKey to ensure correct vibe is loaded
 			await maia.loadVibeFromAccount(currentVibe, container);
+			
+			// Add sidebar toggle handlers for maiadb vibe (after vibe loads)
+			setTimeout(() => {
+				// Use shadow root if vibe is in shadow DOM
+				const vibeContainer = document.getElementById(`vibe-container-${currentVibe}`);
+				if (vibeContainer) {
+					const shadowRoot = vibeContainer.shadowRoot || vibeContainer;
+					const navToggle = shadowRoot.querySelector('.nav-toggle');
+					const detailToggle = shadowRoot.querySelector('.detail-toggle');
+					
+					if (navToggle) {
+						navToggle.addEventListener('click', () => {
+							const navAside = navToggle.closest('.nav-aside');
+							if (navAside) {
+								navAside.classList.toggle('collapsed');
+							}
+						});
+					}
+					
+					if (detailToggle) {
+						detailToggle.addEventListener('click', () => {
+							const detailAside = detailToggle.closest('.detail-aside');
+							if (detailAside) {
+								detailAside.classList.toggle('collapsed');
+							}
+						});
+					}
+				}
+			}, 500);
 		} catch (error) {
 			console.error(`❌ Failed to load vibe ${currentVibe}:`, error);
 			const container = document.getElementById(`vibe-container-${currentVibe}`);
@@ -875,16 +1116,22 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
-						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo" />
-						<button class="back-btn" onclick="window.navigateToScreen('dashboard')" title="Back to Dashboard">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-							</svg>
-							<span class="back-label">Back</span>
-						</button>
 						<h1>Maia DB</h1>
 					</div>
+					<div class="header-center">
+						<!-- Logo centered in navbar -->
+						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
+					</div>
 					<div class="header-right">
+						${authState.signedIn ? `
+							<code class="db-status">${truncate(accountId, 12)}</code>
+						` : ''}
+						<!-- Hamburger menu button (mobile only) -->
+						<button class="hamburger-btn" onclick="window.toggleMobileMenu()" aria-label="Toggle menu">
+							<span></span>
+							<span></span>
+							<span></span>
+						</button>
 						${authState.signedIn ? `
 							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database (idempotent - preserves schemata, recreates configs/data)">
 								Seed
@@ -900,14 +1147,32 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 							</span>
 						</div>
 						${authState.signedIn ? `
-							<code class="db-status">${truncate(accountId, 12)}</code>
-						` : ''}
-						${authState.signedIn ? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
 								Sign Out
 							</button>
 						` : ''}
 					</div>
+				</div>
+				<!-- Mobile menu (collapsed by default) -->
+				<div class="mobile-menu" id="mobile-menu">
+					${authState.signedIn ? `
+						<button class="mobile-menu-item seed-btn" onclick="window.handleSeed(); window.toggleMobileMenu();" title="Seed database">
+							Seed
+						</button>
+					` : ''}
+					<div class="mobile-menu-item sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
+						<span class="sync-dot"></span>
+						<span class="sync-text">
+							${syncState.connected && syncState.syncing ? 'Syncing' : 
+							  syncState.connected ? 'Connected' : 
+							  syncState.error || 'Offline'}
+						</span>
+					</div>
+					${authState.signedIn ? `
+						<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
+							Sign Out
+						</button>
+					` : ''}
 				</div>
 			</header>
 			
@@ -920,53 +1185,93 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 						<div class="sidebar-content">
 							${sidebarItems}
 						</div>
-						<div class="sidebar-back-widget">
-							<div class="sidebar-header">
-								<h3>Actions</h3>
-							</div>
-							<div class="sidebar-content sidebar-actions-row">
-								${currentContextCoValueId ? `
-									<div class="sidebar-item back-sidebar-item" onclick="goBack()" title="Back">
-										<div class="sidebar-label">
-											<svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-											</svg>
-											<span class="sidebar-name">Back</span>
-										</div>
-									</div>
-								` : ''}
-							</div>
-						</div>
 					</div>
 				</aside>
 				
 				<main class="db-main">
 					<div class="inspector">
 						<div class="inspector-content-inner">
-						<div class="inspector-header">
-							<div class="flex items-center gap-3 flex-grow">
-								${currentContextCoValueId && data?.id ? `
-									<code class="co-id-header">${truncate(data.id, 32)}</code>
-								` : `
-									<h2>${viewTitle}</h2>
-								`}
-								${headerInfo ? `
-									<span class="badge badge-type badge-${headerInfo.type} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${headerInfo.typeLabel}</span>
-									<span class="text-sm font-semibold text-marine-blue">${headerInfo.itemCount} ${headerInfo.itemCount === 1 ? 'Item' : 'Items'}</span>
-									<span class="text-xs text-marine-blue-light font-medium italic">${headerInfo.description}</span>
-								` : ''}
-								${!headerInfo && data?.type ? `
-									<span class="badge badge-type badge-${String(data.type || 'comap').replace(/-/g, '')} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${data.type === 'colist' ? 'COLIST' : data.type === 'costream' ? 'COSTREAM' : String(data.type || 'COMAP').toUpperCase()}</span>
-								` : ''}
+							<div class="inspector-header">
+								<div class="flex items-center gap-3 flex-grow">
+									${currentContextCoValueId && data?.id ? `
+										<code class="co-id-header">${truncate(data.id, 32)}</code>
+									` : `
+										<h2>${viewTitle}</h2>
+									`}
+									${headerInfo ? `
+										<span class="badge badge-type badge-${headerInfo.type} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${headerInfo.typeLabel}</span>
+										<span class="text-sm font-semibold text-marine-blue">${headerInfo.itemCount} ${headerInfo.itemCount === 1 ? 'Item' : 'Items'}</span>
+										<span class="text-xs text-marine-blue-light font-medium italic">${headerInfo.description}</span>
+									` : ''}
+									${!headerInfo && data?.type ? `
+										<span class="badge badge-type badge-${String(data.type || 'comap').replace(/-/g, '')} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${data.type === 'colist' ? 'COLIST' : data.type === 'costream' ? 'COSTREAM' : String(data.type || 'COMAP').toUpperCase()}</span>
+									` : ''}
+								</div>
 							</div>
-						</div>
-							${tableContent}
+							<div class="inspector-content">
+								${tableContent}
+							</div>
 						</div>
 					</div>
 				</main>
 				
 				${metadataSidebar}
 			</div>
+			
+			<!-- Bottom navbar area for mobile -->
+			<div class="bottom-navbar">
+				<div class="bottom-navbar-left">
+					<button class="sidebar-toggle-btn sidebar-toggle-left" onclick="window.toggleDBLeftSidebar()" aria-label="Toggle navigation sidebar">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<line x1="3" y1="12" x2="21" y2="12"></line>
+							<line x1="3" y1="6" x2="21" y2="6"></line>
+							<line x1="3" y1="18" x2="21" y2="18"></line>
+						</svg>
+					</button>
+					${currentContextCoValueId ? `
+						<button class="back-btn bottom-back-btn" onclick="goBack()" title="Back in navigation">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M19 12H5M12 19l-7-7 7-7"/>
+							</svg>
+							<span class="back-label">Back</span>
+						</button>
+					` : ''}
+				</div>
+				<div class="bottom-navbar-center">
+					<button class="home-btn bottom-home-btn" onclick="window.navigateToScreen('dashboard')" title="Home">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+							<polyline points="9 22 9 12 15 12 15 22"></polyline>
+						</svg>
+						<span class="home-label">Home</span>
+					</button>
+				</div>
+				<div class="bottom-navbar-right">
+					<button class="sidebar-toggle-btn sidebar-toggle-right" onclick="window.toggleDBRightSidebar()" aria-label="Toggle detail sidebar">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<circle cx="12" cy="12" r="10"></circle>
+							<path d="M12 16v-4M12 8h.01"/>
+						</svg>
+					</button>
+				</div>
+			</div>
 		</div>
 	`;
+	
+	// Add sidebar toggle handlers for DB viewer
+	setTimeout(() => {
+		// Ensure sidebars are initialized with collapsed class by default
+		// Don't add sidebar-ready class initially to prevent ghost animations
+		const leftSidebar = document.querySelector('.db-sidebar');
+		const rightSidebar = document.querySelector('.db-metadata');
+		
+		if (leftSidebar) {
+			// Start collapsed by default, no transitions
+			leftSidebar.classList.add('collapsed');
+		}
+		if (rightSidebar) {
+			// Start collapsed by default, no transitions
+			rightSidebar.classList.add('collapsed');
+		}
+	}, 100);
 }
