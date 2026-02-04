@@ -40,12 +40,11 @@ The interface is treated as a series of **highly translucent, premium liquid gla
 
 ### Typography
 
-*   **Headings**: **"Playfair Display"** (Google Font). 
-    *   Weight: 600/700 for headlines.
-    *   Style: Italicize key words for emphasis.
+*   **Headings**: **"Indie Flower"** (Google Font). 
+    *   Weight: Regular.
     *   Readability: Use `text-shadow: 0 0 30px rgba(232, 225, 217, 0.2)` on glass.
 *   **Body**: **"Plus Jakarta Sans"** (Google Font). 
-    *   Weight: 600 for labels, 400/500 for prose.
+    *   Weight: 300 for normal text, 600 for labels.
 *   **Scaling**: Large, architectural scale. Headlines use `clamp(3.5rem, 12vw, 8rem)`.
 
 ### Radius & Shapes

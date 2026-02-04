@@ -61,9 +61,15 @@ async function loadVibesFromAccount(maia, cojsonAPI) {
 				for (const vibeKey of vibeKeys) {
 					const vibeCoId = vibesData[vibeKey];
 					if (typeof vibeCoId === 'string' && vibeCoId.startsWith('co_')) {
+						// Map vibe keys to display names
+						const vibeNameMap = {
+							'my-data': 'MaiaDB',
+							'todos': 'Todos'
+						};
+						const displayName = vibeNameMap[vibeKey] || `${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)} Vibe`;
 						vibes.push({
 							key: vibeKey,
-							label: `${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)} Vibe`,
+							label: displayName,
 							coId: vibeCoId
 						});
 					}
@@ -93,7 +99,7 @@ async function renderDashboard(maia, cojsonAPI, authState, syncState, navigateTo
 		<div class="dashboard-card whitish-card" onclick="window.navigateToScreen('db-viewer')">
 			<div class="dashboard-card-content">
 				<div class="dashboard-card-icon">
-					<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 						<path d="M4 7h16M4 12h16M4 17h16"/>
 					</svg>
 				</div>
@@ -108,7 +114,7 @@ async function renderDashboard(maia, cojsonAPI, authState, syncState, navigateTo
 		<div class="dashboard-card whitish-card" onclick="window.loadVibe('${escapeHtml(vibe.key)}')">
 			<div class="dashboard-card-content">
 				<div class="dashboard-card-icon">
-					<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 						<path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
 					</svg>
 				</div>
@@ -122,9 +128,10 @@ async function renderDashboard(maia, cojsonAPI, authState, syncState, navigateTo
 	
 	document.getElementById("app").innerHTML = `
 		<div class="db-container">
-			<header class="db-header db-card whitish-card">
+			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
+						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo" />
 						<h1>Maia City</h1>
 					</div>
 					<div class="header-right">
@@ -168,7 +175,12 @@ async function renderDashboard(maia, cojsonAPI, authState, syncState, navigateTo
  */
 async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVibe, navigateToScreen) {
 	const accountId = maia?.id?.maiaId?.id || '';
-	const vibeLabel = currentVibe ? `${currentVibe.charAt(0).toUpperCase() + currentVibe.slice(1)} Vibe` : 'Vibe';
+	// Map vibe keys to display names
+	const vibeNameMap = {
+		'my-data': 'MaiaDB',
+		'todos': 'Todos'
+	};
+	const vibeLabel = currentVibe ? (vibeNameMap[currentVibe] || `${currentVibe.charAt(0).toUpperCase() + currentVibe.slice(1)} Vibe`) : 'Vibe';
 	
 	// Clear any existing vibe containers before rendering new one
 	// This ensures we don't have multiple vibe containers stacked
@@ -183,9 +195,10 @@ async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVi
 	
 	app.innerHTML = `
 		<div class="db-container">
-			<header class="db-header db-card whitish-card">
+			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
+						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo" />
 						<button class="back-btn" onclick="window.navigateToScreen('dashboard')" title="Back to Dashboard">
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
@@ -299,33 +312,33 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 		
 		if (typeof value === 'string') {
 			if (value.startsWith('co_')) {
-				return `<code class="co-id text-xs text-slate-600 hover:underline clickable" onclick="selectCoValue('${value}')" title="${value}">${truncate(value, 12)}</code>`;
+				return `<code class="co-id text-xs text-marine-blue-muted hover:underline clickable" onclick="selectCoValue('${value}')" title="${value}">${truncate(value, 12)}</code>`;
 			}
 			if (value.startsWith('key_')) {
-				return `<code class="key-value text-xs text-slate-600" title="${value}">${truncate(value, 30)}</code>`;
+				return `<code class="key-value text-xs text-marine-blue-muted" title="${value}">${truncate(value, 30)}</code>`;
 			}
 			if (value.startsWith('sealed_')) {
-				return '<code class="sealed-value text-xs text-slate-600 italic">sealed_***</code>';
+				return '<code class="sealed-value text-xs text-marine-blue-muted italic">sealed_***</code>';
 			}
 			
 			const maxLength = 100;
 			const truncated = value.length > maxLength ? value.substring(0, maxLength) + '...' : value;
-			return `<span class="string-value text-xs text-slate-600 break-all min-w-0 text-right" title="${value}">"${escapeHtml(truncated)}"</span>`;
+			return `<span class="string-value text-xs text-marine-blue-muted break-all min-w-0 text-right" title="${value}">"${escapeHtml(truncated)}"</span>`;
 		}
 		
 		if (typeof value === 'boolean') {
-			return `<span class="boolean-value ${value ? 'true' : 'false'} text-xs font-semibold ${value ? 'text-emerald-600 bg-emerald-50' : 'text-slate-600 bg-slate-50'} px-1.5 py-0.5 rounded">${value}</span>`;
+			return `<span class="boolean-value ${value ? 'true' : 'false'} text-xs font-semibold ${value ? 'text-lush-green bg-lush-green/10' : 'text-marine-blue-muted bg-white/10'} px-1.5 py-0.5 rounded">${value}</span>`;
 		}
 		
 		if (typeof value === 'number') {
-			return `<span class="number-value text-xs text-slate-600 font-medium">${value}</span>`;
+			return `<span class="number-value text-xs text-marine-blue-muted font-medium">${value}</span>`;
 		}
 		
 		if (Array.isArray(value)) {
 			// Truncate array preview to max 24 characters
 			const preview = `[${value.length} ${value.length === 1 ? 'item' : 'items'}]`;
 			const truncated = preview.length > 24 ? preview.substring(0, 21) + '...' : preview;
-			return `<span class="array-value text-xs text-slate-500 italic" title="${escapeHtml(JSON.stringify(value))}">${escapeHtml(truncated)}</span>`;
+			return `<span class="array-value text-xs text-marine-blue-light italic" title="${escapeHtml(JSON.stringify(value))}">${escapeHtml(truncated)}</span>`;
 		}
 		
 		if (typeof value === 'object' && value !== null) {
@@ -339,7 +352,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 				if (jsonString.length > maxJsonLength) {
 					truncated = jsonString.substring(0, maxJsonLength - 3) + '...';
 				}
-				return `<span class="object-value text-xs text-slate-500 italic" title="${escapeHtml(jsonString)}">${escapeHtml(truncated)}<span class="text-slate-400">${objectIndicator}</span></span>`;
+				return `<span class="object-value text-xs text-marine-blue-light italic" title="${escapeHtml(jsonString)}">${escapeHtml(truncated)}<span class="text-marine-blue-light/50">${objectIndicator}</span></span>`;
 			} catch (e) {
 				// Fallback if JSON.stringify fails
 				const keys = Object.keys(value);
@@ -348,11 +361,11 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 				if (preview.length > maxJsonLength) {
 					truncated = preview.substring(0, maxJsonLength - 3) + '...';
 				}
-				return `<span class="object-value text-xs text-slate-500 italic">${escapeHtml(truncated)}<span class="text-slate-400">${objectIndicator}</span></span>`;
+				return `<span class="object-value text-xs text-marine-blue-light italic">${escapeHtml(truncated)}<span class="text-marine-blue-light/50">${objectIndicator}</span></span>`;
 			}
 		}
 		
-		return `<span class="text-xs text-slate-600">${escapeHtml(String(value))}</span>`;
+		return `<span class="text-xs text-marine-blue-muted">${escapeHtml(String(value))}</span>`;
 	};
 
 	// Helper to format JSON properly (parse if string, then stringify with indentation)
@@ -400,10 +413,10 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 					<div class="flex justify-between items-center gap-3">
 						<!-- Left side: Property Key -->
 						<div class="flex items-center gap-2 flex-shrink-0 min-w-0">
-							<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate group-hover:text-slate-600 transition-colors" title="${key}">
+							<span class="text-[10px] font-bold text-marine-blue-light uppercase tracking-widest truncate group-hover:text-marine-blue transition-colors" title="${key}">
 								${label}
 							</span>
-							${isExpandable ? `<svg class="w-3 h-3 text-slate-300 group-hover:text-slate-500 transition-colors expand-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>` : ''}
+							${isExpandable ? `<svg class="w-3 h-3 text-marine-blue-light/50 group-hover:text-marine-blue transition-colors expand-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>` : ''}
 						</div>
 						
 						<!-- Right side: Value and Badge -->
@@ -413,7 +426,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 							</div>
 							<span class="badge badge-type badge-${typeClass} text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-tighter rounded-md border border-white/50 shadow-sm">${type.toUpperCase()}</span>
 							${isClickable ? `
-								<svg class="w-3 h-3 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<svg class="w-3 h-3 text-marine-blue-light/50 group-hover:text-marine-blue transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
 								</svg>
 							` : ''}
@@ -421,8 +434,8 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 					</div>
 				</button>
 				${isExpandable ? `
-					<div id="${expandId}" class="expanded-content bg-slate-50/80 border-t border-slate-100 p-3 mt-1 rounded-b-xl" style="display: none;">
-						<pre class="json-display text-[11px] font-mono text-slate-600 leading-relaxed whitespace-pre-wrap break-words">${escapeHtml(formatJSON(value))}</pre>
+					<div id="${expandId}" class="expanded-content bg-white/20 backdrop-blur-md border-t border-white/10 p-3 mt-1 rounded-b-xl" style="display: none;">
+						<pre class="json-display text-[11px] font-mono text-marine-blue-muted leading-relaxed whitespace-pre-wrap break-words">${escapeHtml(formatJSON(value))}</pre>
 					</div>
 				` : ''}
 			</div>
@@ -744,7 +757,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 		}
 		
 		metadataSidebar = `
-			<aside class="db-metadata db-card whitish-card">
+			<aside class="db-metadata">
 				<div class="metadata-content">
 					<!-- Consolidated Metadata View (no tabs) -->
 					<div class="metadata-info-list">
@@ -859,9 +872,10 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 
 	document.getElementById("app").innerHTML = `
 		<div class="db-container">
-			<header class="db-header db-card whitish-card">
+			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
+						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo" />
 						<button class="back-btn" onclick="window.navigateToScreen('dashboard')" title="Back to Dashboard">
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
@@ -898,7 +912,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 			</header>
 			
 			<div class="db-layout">
-				<aside class="db-sidebar db-card whitish-card">
+				<aside class="db-sidebar">
 					<div class="sidebar-content-inner">
 						<div class="sidebar-header">
 							<h3>Navigation</h3>
@@ -927,7 +941,7 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 				</aside>
 				
 				<main class="db-main">
-					<div class="inspector db-card whitish-card">
+					<div class="inspector">
 						<div class="inspector-content-inner">
 						<div class="inspector-header">
 							<div class="flex items-center gap-3 flex-grow">
@@ -938,8 +952,8 @@ export async function renderApp(maia, cojsonAPI, authState, syncState, currentSc
 								`}
 								${headerInfo ? `
 									<span class="badge badge-type badge-${headerInfo.type} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${headerInfo.typeLabel}</span>
-									<span class="text-sm font-semibold text-slate-700">${headerInfo.itemCount} ${headerInfo.itemCount === 1 ? 'Item' : 'Items'}</span>
-									<span class="text-xs text-slate-400 font-medium italic">${headerInfo.description}</span>
+									<span class="text-sm font-semibold text-marine-blue">${headerInfo.itemCount} ${headerInfo.itemCount === 1 ? 'Item' : 'Items'}</span>
+									<span class="text-xs text-marine-blue-light font-medium italic">${headerInfo.description}</span>
 								` : ''}
 								${!headerInfo && data?.type ? `
 									<span class="badge badge-type badge-${String(data.type || 'comap').replace(/-/g, '')} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${data.type === 'colist' ? 'COLIST' : data.type === 'costream' ? 'COSTREAM' : String(data.type || 'COMAP').toUpperCase()}</span>

@@ -19,8 +19,10 @@
   --color-tinted-white: #F0EDE6;
   
   /* Typography */
-  --font-heading: 'Alice', serif;
+  --font-heading: 'Indie Flower', cursive;
   --font-body: 'Plus Jakarta Sans', sans-serif;
+  --font-weight-normal: 300;
+  --font-weight-label: 600;
   
   /* Button Text Colors (Tone-on-Tone) */
   --color-marine-text: #D1E8F7;

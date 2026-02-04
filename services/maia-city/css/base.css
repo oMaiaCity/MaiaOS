@@ -7,34 +7,10 @@
 }
 
 @font-face {
-  font-family: 'IndieFlower';
-  src: url('/brand/fonts/IndieFlower/IndieFlower-Regular.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
   font-family: 'Alice';
   src: url('/brand/fonts/Alice/Alice-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Plus Jakarta Sans';
-  src: url('/brand/fonts/Jarkata/PlusJakartaSans-VariableFont_wght.ttf') format('truetype');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Plus Jakarta Sans';
-  src: url('/brand/fonts/Jarkata/PlusJakartaSans-Italic-VariableFont_wght.ttf') format('truetype');
-  font-weight: 100 900;
-  font-style: italic;
   font-display: swap;
 }
 
@@ -46,13 +22,14 @@
 
 body {
   font-family: var(--font-body);
+  font-weight: var(--font-weight-normal);
   line-height: 1.6;
-  color: var(--color-tinted-white);
+  color: var(--color-marine-blue);
   min-height: 100vh;
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
-  background: #000;
+  background: var(--color-soft-clay);
   position: relative;
   overflow-x: hidden;
 }

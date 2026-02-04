@@ -6,6 +6,11 @@
     "class": "detail-container",
     "children": [
       {
+        "tag": "span",
+        "class": "detail-category",
+        "text": "Metadata"
+      },
+      {
         "tag": "h2",
         "class": "detail-title",
         "text": "Entity Insight"

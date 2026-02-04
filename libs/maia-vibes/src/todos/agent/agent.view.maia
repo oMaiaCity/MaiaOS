@@ -6,9 +6,21 @@
     "class": "stack",
     "children": [
       {
+        "tag": "div",
         "class": "header-section",
         "children": [
           {
+            "tag": "span",
+            "class": "todo-category",
+            "text": "Task Management"
+          },
+          {
+            "tag": "h2",
+            "class": "todo-title",
+            "text": "Daily Focus"
+          },
+          {
+            "tag": "div",
             "class": "view-switcher",
             "children": [
               {

@@ -17,10 +17,15 @@ This skill ensures all UI/UX work follows the **Botanical Organic Serif & Liquid
     *   **Interactive Elements**: Always fully rounded pill shapes (`9999px`).
     *   **Cards/Containers**: Use the **Apple-standard 18px radius** for structure.
 6.  **Typographic Elegance**: 
-    *   **Headlines**: Alice (Bold/Italic pairing). Use `text-shadow: 0 0 30px rgba(232, 225, 217, 0.2)` for readability on glass.
-    *   **Body**: Plus Jakarta Sans (Weight 600 for labels, 400/500 for prose).
+    *   **Headlines**: Indie Flower (Regular). Use `text-shadow: 0 0 30px rgba(232, 225, 217, 0.2)` for readability on glass.
+    *   **Body**: Plus Jakarta Sans (Weight 300 for prose, 600 for labels).
 7.  **Soft Clay Foundation**: Use `Soft Clay (#E8E1D9)` as a warm, artisanal alternative to white for sections and secondary backgrounds.
 8.  **Atmospheric Depth**: Always use a dark overlay (`rgba(0, 0, 0, 0.40)`) on background renders to create a cinematic foundation.
+9.  **Typography Tokens**:
+    *   `--font-heading`: 'Indie Flower', cursive;
+    *   `--font-body`: 'Plus Jakarta Sans', sans-serif;
+    *   `--font-weight-normal`: 300;
+    *   `--font-weight-label`: 600;
 
 ## Color Palette (The Earthbound Spectrum)
 
@@ -92,7 +97,7 @@ This skill ensures all UI/UX work follows the **Botanical Organic Serif & Liquid
 
 ## Best Practices
 
-*   **DO** use `em` and `italic` for Alice headlines to create "intentional emergence" in the text.
+*   **DO** use `Indie Flower` for headlines to create a hand-touched, artisanal feel.
 *   **DO** use `Soft Clay` for sections that need a grounded, tactile feel.
 *   **DO** add a subtle `text-shadow` glow to text on complex glass backgrounds to ensure readability.
 *   **DON'T** use pure white or pure black for text on brand colors; always use the tone-on-tone derived shades.

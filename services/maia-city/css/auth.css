@@ -73,20 +73,22 @@ h1 em, .landing-hook em {
 }
 
 .sign-in-content h1 {
-  font-family: var(--font-heading);
+  font-family: 'Indie Flower', var(--font-heading), cursive;
   font-size: 3.5rem;
   color: var(--color-soft-clay);
   line-height: 0.9;
   margin-bottom: 1.5rem;
-  font-weight: 700;
+  font-weight: 400;
+  font-style: normal;
   text-shadow: 0 0 30px rgba(232, 225, 217, 0.2);
 }
 
 .sign-in-content h1 span:first-child {
   display: block;
-  font-family: 'IndieFlower', cursive !important;
+  font-family: 'Indie Flower', var(--font-heading), cursive !important;
   font-size: 1.1rem;
-  font-weight: 700;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 0.15em;
   text-transform: none;
   margin-bottom: 1rem;
@@ -96,16 +98,17 @@ h1 em, .landing-hook em {
 
 .h1-main-text {
   display: block;
-  font-family: 'Alice', serif !important;
-  font-style: italic;
-  font-weight: 700;
+  font-family: 'Indie Flower', var(--font-heading), cursive !important;
+  font-style: normal;
+  font-weight: 400;
   font-size: 4.5rem;
   color: var(--color-tinted-white);
   text-transform: none;
 }
 
 .sign-in-subtitle {
-  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-family: var(--font-body) !important;
+  font-weight: var(--font-weight-normal);
   font-style: normal;
   font-size: 1.5rem;
   color: var(--color-soft-clay);
@@ -168,12 +171,13 @@ h1 em, .landing-hook em {
 }
 
 .landing-hook {
-  font-family: var(--font-heading);
+  font-family: 'Indie Flower', var(--font-heading), cursive;
   font-size: clamp(2.5rem, 8vw, 5rem);
   color: var(--color-soft-clay);
   line-height: 0.9;
   margin-bottom: 2.5rem;
-  font-weight: 700;
+  font-weight: 400;
+  font-style: normal;
   text-shadow: 0 0 30px rgba(232, 225, 217, 0.2);
 }
 
@@ -190,7 +194,7 @@ h1 em, .landing-hook em {
   font-family: var(--font-body);
   font-size: 1.2rem;
   color: var(--color-tinted-white);
-  font-weight: 400;
+  font-weight: var(--font-weight-normal);
   line-height: 1.6;
   margin: 0;
 }
@@ -201,7 +205,7 @@ h1 em, .landing-hook em {
   padding: 1.2rem 3.5rem;
   border-radius: 9999px;
   font-family: var(--font-body);
-  font-weight: 600;
+  font-weight: var(--font-weight-label);
   font-size: 0.9rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;

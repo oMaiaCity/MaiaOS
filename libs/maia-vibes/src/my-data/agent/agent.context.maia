@@ -1,14 +1,31 @@
 {
   "$schema": "@schema/context",
   "$id": "@my-data/context/agent",
-  "navItems": [
-    { "id": "users", "label": "Users" },
-    { "id": "products", "label": "Products" },
-    { "id": "orders", "label": "Orders" },
-    { "id": "categories", "label": "Categories" },
-    { "id": "reviews", "label": "Reviews" }
+  "navTitle": "MaiaDB",
+  "navCategories": [
+    {
+      "category": "ME",
+      "items": [
+        { "id": "account", "label": "Owner" },
+        { "id": "group", "label": "Avatar" }
+      ]
+    },
+    {
+      "category": "Vibes",
+      "items": [
+        { "id": "maia-db", "label": "MaiaDB" },
+        { "id": "todos", "label": "Todos" }
+      ]
+    },
+    {
+      "category": "OS",
+      "items": [
+        { "id": "schemata", "label": "Schemata" },
+        { "id": "indexes", "label": "Indexes" }
+      ]
+    }
   ],
-  "selectedNavId": "users",
+  "selectedNavId": "account",
   "selectedRowId": "1",
   "currentTable": "@table",
   "currentDetail": "@detail",

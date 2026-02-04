@@ -16,8 +16,10 @@
       "foreground": "#001F33",
       "primary": "#00BDD6",
       "secondary": "#2D4A5C",
-      "border": "rgba(0, 31, 51, 0.1)",
+      "border": "rgba(255, 255, 255, 0.1)",
       "surface": "rgba(255, 255, 255, 0.3)",
+      "glass": "rgba(255, 255, 255, 0.0005)",
+      "glassStrong": "rgba(255, 255, 255, 0.15)",
       "text": {
         "marine": "#D1E8F7",
         "water": "#004D59",
@@ -36,13 +38,13 @@
     },
     "typography": {
       "fontFamily": {
-        "heading": "'Alice', serif",
+        "heading": "'Indie Flower', cursive",
         "body": "'Plus Jakarta Sans', sans-serif"
       },
       "fontFaces": [
         {
-          "fontFamily": "Alice",
-          "src": "url('/brand/fonts/Alice/Alice-Regular.ttf') format('truetype')",
+          "fontFamily": "Indie Flower",
+          "src": "url('/brand/fonts/IndieFlower/IndieFlower-Regular.ttf') format('truetype')",
           "fontWeight": "400",
           "fontStyle": "normal",
           "fontDisplay": "swap"
@@ -52,13 +54,6 @@
           "src": "url('/brand/fonts/Jarkata/PlusJakartaSans-VariableFont_wght.ttf') format('truetype')",
           "fontWeight": "100 900",
           "fontStyle": "normal",
-          "fontDisplay": "swap"
-        },
-        {
-          "fontFamily": "Plus Jakarta Sans",
-          "src": "url('/brand/fonts/Jarkata/PlusJakartaSans-Italic-VariableFont_wght.ttf') format('truetype')",
-          "fontWeight": "100 900",
-          "fontStyle": "italic",
           "fontDisplay": "swap"
         }
       ],
@@ -71,6 +66,7 @@
         "2xl": "2rem"
       },
       "fontWeight": {
+        "light": "300",
         "normal": "400",
         "medium": "500",
         "semibold": "600",
@@ -96,77 +92,112 @@
   "components": {
     "dbViewer": {
       "display": "grid",
-      "gridTemplateColumns": "280px 1fr 380px",
+      "gridTemplateColumns": "220px 1fr 400px",
       "height": "100vh",
       "width": "100%",
-      "background": "{colors.softClay}",
+      "background": "transparent",
       "fontFamily": "{typography.fontFamily.body}",
       "color": "{colors.marineBlue}",
       "position": "relative",
-      "overflow": "hidden"
+      "overflow": "hidden",
+      "padding": "{spacing.md}",
+      "gap": "{spacing.md}"
     },
     "navAside": {
-      "background": "rgba(255, 255, 255, 0.2)",
-      "backdropFilter": "blur(8px)",
-      "borderRight": "1px solid {colors.border}",
-      "padding": "{spacing.xl}",
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(12px) saturate(160%)",
+      "borderRadius": "{radii.apple}",
+      "border": "1px solid rgba(255, 255, 255, 0.2)",
+      "boxShadow": "{shadows.md}",
+      "padding": "{spacing.md}",
       "overflowY": "auto",
       "display": "flex",
       "flexDirection": "column",
-      "gap": "{spacing.xl}",
-      "zIndex": "10"
+      "gap": "{spacing.md}",
+      "zIndex": "10",
+      "height": "fit-content",
+      "maxHeight": "100%"
     },
     "navTitle": {
       "fontFamily": "{typography.fontFamily.heading}",
-      "fontSize": "{typography.fontSize.2xl}",
-      "fontWeight": "{typography.fontWeight.bold}",
+      "fontSize": "{typography.fontSize.lg}",
+      "fontWeight": "{typography.fontWeight.normal}",
+      "fontStyle": "normal",
       "color": "{colors.marineBlue}",
-      "marginBottom": "{spacing.lg}",
-      "marginTop": "0"
+      "marginBottom": "{spacing.sm}",
+      "marginTop": "0",
+      "padding": "0 {spacing.xs}",
+      "letterSpacing": "-0.02em"
+    },
+    "navList": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "{spacing.sm}"
+    },
+    "navCategory": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "{spacing.sm}"
+    },
+    "navCategoryDivider": {
+      "fontFamily": "{typography.fontFamily.body}",
+      "fontSize": "0.6rem",
+      "fontWeight": "700",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.15em",
+      "color": "{colors.marineBlueLight}",
+      "padding": "0.5rem {spacing.xs} 0.25rem {spacing.xs}",
+      "marginTop": "{spacing.sm}",
+      "marginBottom": "0"
     },
     "navItem": {
       "display": "flex",
       "alignItems": "center",
-      "gap": "{spacing.md}",
       "width": "100%",
-      "padding": "{spacing.md} {spacing.lg}",
-      "background": "transparent",
+      "padding": "0.6rem 1.2rem",
+      "marginBottom": "{spacing.xs}",
+      "background": "rgba(255, 255, 255, 0.1)",
+      "backdropFilter": "blur(8px) saturate(150%)",
       "border": "none",
       "borderRadius": "{radii.full}",
       "cursor": "pointer",
       "transition": "{transitions.fast}",
       "fontFamily": "{typography.fontFamily.body}",
-      "fontSize": "{typography.fontSize.base}",
+      "fontSize": "0.75rem",
+      "fontWeight": "{typography.fontWeight.semibold}",
       "color": "{colors.marineBlueMuted}",
       "textAlign": "left",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.05em",
+      "boxShadow": "0 2px 8px rgba(0, 0, 0, 0.05)",
       ":hover": {
-        "background": "rgba(255, 255, 255, 0.4)",
-        "color": "{colors.marineBlue}"
+        "background": "rgba(255, 255, 255, 0.2)",
+        "color": "{colors.marineBlue}",
+        "transform": "translateX(2px)",
+        "boxShadow": "0 4px 12px rgba(0, 0, 0, 0.1)"
       }
     },
-    "navIcon": {
-      "width": "20px",
-      "height": "20px",
-      "stroke": "currentColor",
-      "strokeWidth": "1.5"
-    },
     "tableArea": {
-      "padding": "{spacing.2xl}",
       "overflowY": "auto",
       "display": "flex",
       "flexDirection": "column",
-      "gap": "{spacing.xl}",
       "zIndex": "5",
-      "containerType": "inline-size"
+      "containerType": "inline-size",
+      "background": "transparent",
+      "padding": "0"
     },
     "tableContainer": {
-      "background": "{colors.surface}",
-      "backdropFilter": "blur(6px)",
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(12px) saturate(160%)",
       "borderRadius": "{radii.apple}",
-      "boxShadow": "{shadows.sm}",
-      "overflow": "hidden",
-      "border": "1px solid {colors.border}",
-      "transition": "{transitions.standard}"
+      "boxShadow": "{shadows.md}",
+      "overflow": "auto",
+      "border": "1px solid rgba(255, 255, 255, 0.2)",
+      "transition": "{transitions.standard}",
+      "height": "100%",
+      "display": "flex",
+      "flexDirection": "column",
+      "padding": "{spacing.md}"
     },
     "dataTable": {
       "width": "100%",
@@ -179,18 +210,20 @@
       "background": "rgba(255, 255, 255, 0.4)",
       "padding": "{spacing.lg}",
       "textAlign": "left",
-      "fontWeight": "{typography.fontWeight.semibold}",
+      "fontWeight": "700",
       "color": "{colors.marineBlue}",
       "borderBottom": "1px solid {colors.border}",
       "textTransform": "uppercase",
-      "letterSpacing": "0.1em",
-      "fontSize": "0.7rem"
+      "letterSpacing": "0.12em",
+      "fontSize": "0.65rem"
     },
     "dataTable td": {
       "padding": "{spacing.lg}",
       "borderBottom": "1px solid {colors.border}",
       "color": "{colors.marineBlueMuted}",
-      "transition": "{transitions.fast}"
+      "transition": "{transitions.fast}",
+      "fontSize": "{typography.fontSize.sm}",
+      "fontWeight": "{typography.fontWeight.light}"
     },
     "tableRow": {
       "cursor": "pointer",
@@ -200,60 +233,109 @@
       }
     },
     "detailAside": {
-      "background": "rgba(255, 255, 255, 0.2)",
-      "backdropFilter": "blur(8px)",
-      "borderLeft": "1px solid {colors.border}",
-      "padding": "{spacing.xl}",
       "overflowY": "auto",
-      "zIndex": "10"
+      "display": "flex",
+      "flexDirection": "column",
+      "zIndex": "10",
+      "containerType": "inline-size",
+      "background": "transparent",
+      "padding": "0"
+    },
+    "detailContainer": {
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(12px) saturate(160%)",
+      "borderRadius": "{radii.apple}",
+      "boxShadow": "{shadows.md}",
+      "overflow": "auto",
+      "border": "1px solid rgba(255, 255, 255, 0.2)",
+      "transition": "{transitions.standard}",
+      "height": "100%",
+      "display": "flex",
+      "flexDirection": "column",
+      "padding": "{spacing.md}"
     },
     "detailTitle": {
       "fontFamily": "{typography.fontFamily.heading}",
-      "fontSize": "{typography.fontSize.2xl}",
+      "fontSize": "{typography.fontSize.xl}",
       "fontWeight": "{typography.fontWeight.bold}",
       "color": "{colors.marineBlue}",
-      "marginBottom": "{spacing.lg}",
-      "marginTop": "0"
+      "marginBottom": "{spacing.md}",
+      "marginTop": "0",
+      "letterSpacing": "-0.02em"
+    },
+    "detailCategory": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "0.85rem",
+      "fontStyle": "italic",
+      "color": "{colors.paradiseWater}",
+      "marginBottom": "0.5rem",
+      "display": "block",
+      "textShadow": "0 0 10px rgba(0, 189, 214, 0.2)"
+    },
+    "detailList": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "{spacing.sm}"
     },
     "detailItem": {
       "display": "flex",
       "flexDirection": "column",
-      "gap": "0.25rem",
-      "paddingBottom": "{spacing.md}",
-      "borderBottom": "1px solid {colors.border}"
+      "gap": "0.15rem",
+      "padding": "{spacing.md}",
+      "background": "rgba(255, 255, 255, 0.2)",
+      "borderRadius": "{radii.md}",
+      "border": "1px solid {colors.border}",
+      "transition": "{transitions.fast}",
+      ":hover": {
+        "background": "rgba(255, 255, 255, 0.4)",
+        "transform": "translateY(-2px)",
+        "boxShadow": "{shadows.sm}"
+      }
     },
     "detailLabel": {
-      "fontSize": "0.7rem",
+      "fontSize": "0.65rem",
       "textTransform": "uppercase",
-      "letterSpacing": "0.1em",
+      "letterSpacing": "0.08em",
       "color": "{colors.marineBlueLight}",
-      "fontWeight": "{typography.fontWeight.bold}"
+      "fontWeight": "700"
     },
     "detailValue": {
       "fontSize": "{typography.fontSize.base}",
       "color": "{colors.marineBlue}",
-      "fontWeight": "500"
+      "fontWeight": "{typography.fontWeight.light}"
     }
   },
   "selectors": {
     ":host": {
       "position": "relative",
-      "background": "{colors.background}",
+      "background": "transparent",
       "fontFamily": "{typography.fontFamily.body}",
       "color": "{colors.foreground}"
     },
     ".nav-item[data-selected='true']": {
-      "background": "{colors.marineBlue}",
-      "color": "{colors.softClay}",
-      "fontWeight": "700"
+      "background": "rgba(0, 189, 214, 0.2)",
+      "backdropFilter": "blur(12px) saturate(160%)",
+      "color": "{colors.marineBlue}",
+      "fontWeight": "{typography.fontWeight.semibold}",
+      "boxShadow": "0 4px 12px rgba(0, 189, 214, 0.2)",
+      "transform": "translateX(2px)",
+      "textShadow": "0 0 10px rgba(0, 189, 214, 0.3)",
+      "marginBottom": "{spacing.xs}"
+    },
+    ".nav-item:last-child": {
+      "marginBottom": "0"
+    },
+    ".nav-category:first-child .nav-category-divider": {
+      "marginTop": "0"
     },
     ".table-row[data-selected='true']": {
-      "background": "rgba(0, 189, 214, 0.1)",
-      "color": "{colors.marineBlue}"
+      "background": "rgba(0, 189, 214, 0.15)",
+      "color": "{colors.marineBlue}",
+      "backdropFilter": "blur(4px)"
     },
     "@container (max-width: 1000px)": {
       ".db-viewer": {
-        "gridTemplateColumns": "200px 1fr 300px"
+        "gridTemplateColumns": "180px 1fr 300px"
       }
     },
     "@container (max-width: 700px)": {

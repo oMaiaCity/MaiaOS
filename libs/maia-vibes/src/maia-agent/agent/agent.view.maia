@@ -11,13 +11,29 @@
         "children": [
           {
             "tag": "div",
-            "class": "message message-assistant welcome-message",
-            "attrs": {
-              "data": {
-                "hasConversations": "$hasConversations"
+            "class": "welcome-section",
+            "children": [
+              {
+                "tag": "span",
+                "class": "agent-category",
+                "text": "Sovereign Assistant"
+              },
+              {
+                "tag": "h2",
+                "class": "agent-title",
+                "text": "Maia"
+              },
+              {
+                "tag": "div",
+                "class": "message message-assistant welcome-message",
+                "attrs": {
+                  "data": {
+                    "hasConversations": "$hasConversations"
+                  }
+                },
+                "text": "Hello! I'm Maia, your CTO-level AI assistant. I understand the MaiaOS codebase and learn alongside your coding sessions. How can I help you today?"
               }
-            },
-            "text": "Hello! I'm Maia, your CTO-level AI assistant. I understand the MaiaOS codebase and learn alongside your coding sessions. How can I help you today?"
+            ]
           },
           {
             "$each": {
