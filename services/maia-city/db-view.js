@@ -253,7 +253,6 @@ async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVi
 			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
-						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo" />
 						<h1>${escapeHtml(vibeLabel)}</h1>
 					</div>
 					<div class="header-center">
@@ -490,37 +489,6 @@ async function renderVibeViewer(maia, cojsonAPI, authState, syncState, currentVi
 			
 			// Store container reference for cleanup on unload
 			window.currentVibeContainer = container;
-			// Load vibe directly - pass the vibeKey to ensure correct vibe is loaded
-			await maia.loadVibeFromAccount(currentVibe, container);
-			
-			// Add sidebar toggle handlers for maiadb vibe (after vibe loads)
-			setTimeout(() => {
-				// Use shadow root if vibe is in shadow DOM
-				const vibeContainer = document.getElementById(`vibe-container-${currentVibe}`);
-				if (vibeContainer) {
-					const shadowRoot = vibeContainer.shadowRoot || vibeContainer;
-					const navToggle = shadowRoot.querySelector('.nav-toggle');
-					const detailToggle = shadowRoot.querySelector('.detail-toggle');
-					
-					if (navToggle) {
-						navToggle.addEventListener('click', () => {
-							const navAside = navToggle.closest('.nav-aside');
-							if (navAside) {
-								navAside.classList.toggle('collapsed');
-							}
-						});
-					}
-					
-					if (detailToggle) {
-						detailToggle.addEventListener('click', () => {
-							const detailAside = detailToggle.closest('.detail-aside');
-							if (detailAside) {
-								detailAside.classList.toggle('collapsed');
-							}
-						});
-					}
-				}
-			}, 500);
 		} catch (error) {
 			console.error(`❌ Failed to load vibe ${currentVibe}:`, error);
 			const container = document.getElementById(`vibe-container-${currentVibe}`);

@@ -18172,7 +18172,7 @@ class ActorEngine {
     this.actors.set(actorId, actor);
     if (actor.context && typeof actor.context.subscribe === "function") {
       let lastContextValue = JSON.stringify(actor.context.value || {});
-      actor.context.subscribe(() => {
+      actor._contextUnsubscribe = actor.context.subscribe(() => {
         const currentContextValue = JSON.stringify(actor.context.value || {});
         const contextChanged = currentContextValue !== lastContextValue;
         lastContextValue = currentContextValue;
@@ -18321,6 +18321,10 @@ class ActorEngine {
     if (!actor) return;
     actor.shadowRoot.innerHTML = "";
     if (this.viewEngine) this.viewEngine.cleanupActor(actorId);
+    if (actor._contextUnsubscribe && typeof actor._contextUnsubscribe === "function") {
+      actor._contextUnsubscribe();
+      delete actor._contextUnsubscribe;
+    }
     if (actor.machine && this.stateEngine) this.stateEngine.destroyMachine(actor.machine.id);
     if (actor._processedMessageKeys) {
       actor._processedMessageKeys.clear();
@@ -18836,7 +18840,7 @@ class ViewEngine {
   async renderEach(eachDef, data2, actorId) {
     const fragment = document.createDocumentFragment();
     const items2 = await this.evaluator.evaluate(eachDef.items, data2);
-    if (!Array.isArray(items2) || items2.length === 0) {
+    if (!items2 || !Array.isArray(items2) || items2.length === 0) {
       return fragment;
     }
     for (let i = 0; i < items2.length; i++) {

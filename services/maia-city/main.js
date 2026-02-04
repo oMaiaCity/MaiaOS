@@ -394,40 +394,32 @@ async function signIn() {
 async function loadLinkedCoValues() {
 	const { node, maiaId: account } = maia.id;
 	
-	
-	// Get the examples ID
-	const examplesId = account.get("examples");
-	if (!examplesId) {
-		// No examples linked to account
-		return;
-	}
-	
-	// Examples ID available
-	
-	// Explicitly load the examples CoMap from IndexedDB
-	try {
-		const examplesCore = await node.loadCoValueCore(examplesId);
-		if (examplesCore.isAvailable()) {
-			
-			// Now load the child CoValues referenced by examples
-			const examplesContent = examplesCore.getCurrentContent();
-			const childIds = [];
-			
-			// Get all property values from the examples CoMap
-			for (const key of examplesContent.keys()) {
-				const childId = examplesContent.get(key);
-				if (childId && typeof childId === "string" && childId.startsWith("co_")) {
-					childIds.push({ key, id: childId });
+	// Load account.vibes and its referenced vibe CoValues
+	const vibesId = account.get("vibes");
+	if (vibesId) {
+		try {
+			const vibesCore = await node.loadCoValueCore(vibesId);
+			if (vibesCore.isAvailable()) {
+				// Now load the vibe CoValues referenced by account.vibes
+				const vibesContent = vibesCore.getCurrentContent();
+				const vibeIds = [];
+				
+				// Get all property values from the vibes CoMap
+				for (const key of vibesContent.keys()) {
+					const vibeCoId = vibesContent.get(key);
+					if (vibeCoId && typeof vibeCoId === "string" && vibeCoId.startsWith("co_")) {
+						vibeIds.push({ key, id: vibeCoId });
+					}
+				}
+				
+				// Load each vibe CoValue
+				for (const { key, id } of vibeIds) {
+					await node.loadCoValueCore(id);
 				}
 			}
-			
-			// Load each child CoValue
-			for (const { key, id } of childIds) {
-				await node.loadCoValueCore(id);
-			}
+		} catch (error) {
+			console.error("   ❌ Failed to load vibes:", error);
 		}
-	} catch (error) {
-		console.error("   ❌ Failed to load examples:", error);
 	}
 }
 

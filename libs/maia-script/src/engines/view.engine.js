@@ -385,8 +385,10 @@ export class ViewEngine {
     const fragment = document.createDocumentFragment();
     const items = await this.evaluator.evaluate(eachDef.items, data);
     
-    if (!Array.isArray(items) || items.length === 0) {
-      return fragment;
+    // $stores Architecture: Progressive loading - render immediately with current data (even if empty/undefined)
+    // ReactiveStore updates will trigger rerenders automatically as data loads
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return fragment; // Return empty fragment - will update reactively when data loads
     }
 
     for (let i = 0; i < items.length; i++) {

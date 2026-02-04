@@ -398,7 +398,8 @@ export class ActorEngine {
       // Store last context value to prevent unnecessary rerenders
       let lastContextValue = JSON.stringify(actor.context.value || {});
       
-      actor.context.subscribe(() => {
+      // Store unsubscribe function for cleanup when actor is destroyed
+      actor._contextUnsubscribe = actor.context.subscribe(() => {
         // Only rerender if context actually changed (deep comparison via JSON)
         const currentContextValue = JSON.stringify(actor.context.value || {});
         const contextChanged = currentContextValue !== lastContextValue;
@@ -578,8 +579,14 @@ export class ActorEngine {
     actor.shadowRoot.innerHTML = '';
     if (this.viewEngine) this.viewEngine.cleanupActor(actorId);
     
-    // $stores Architecture: Backend handles all subscription cleanup automatically via subscriptionCache
-    // No manual cleanup needed
+    // Clean up context subscription if it exists
+    if (actor._contextUnsubscribe && typeof actor._contextUnsubscribe === 'function') {
+      actor._contextUnsubscribe();
+      delete actor._contextUnsubscribe;
+    }
+    
+    // $stores Architecture: Backend handles subscription cleanup automatically via subscriptionCache
+    // But we also explicitly unsubscribe to ensure immediate cleanup
     if (actor.machine && this.stateEngine) this.stateEngine.destroyMachine(actor.machine.id);
     if (actor._processedMessageKeys) {
       actor._processedMessageKeys.clear();
