@@ -15,15 +15,17 @@
  * - resolve: Resolve human-readable keys to co-ids
  */
 
-import { ReadOperation } from './operations/read.js';
-import { CreateOperation } from './operations/create.js';
-import { UpdateOperation } from './operations/update.js';
-import { DeleteOperation } from './operations/delete.js';
-import { SeedOperation } from './operations/seed.js';
-import { SchemaOperation } from './operations/schema.js';
-import { ResolveOperation } from './operations/resolve.js';
-import { AppendOperation } from './operations/append.js';
-import { ProcessInboxOperation } from './operations/process-inbox.js';
+import {
+  readOperation,
+  createOperation,
+  updateOperation,
+  deleteOperation,
+  seedOperation,
+  schemaOperation,
+  resolveOperation,
+  appendOperation,
+  processInboxOperation
+} from './operations.js';
 
 export class DBEngine {
   /**
@@ -44,19 +46,18 @@ export class DBEngine {
       backend.dbEngine = this;
     }
     
-    // Initialize modular operations (pass dbEngine for validation and inter-operation calls)
-    const appendOp = new AppendOperation(this.backend, this);  // Handles both CoList and CoStream
+    // Initialize operations as execute wrappers (maintains same interface)
     this.operations = {
-      read: new ReadOperation(this.backend),  // Unified reactive read operation
-      create: new CreateOperation(this.backend, this),
-      update: new UpdateOperation(this.backend, this, evaluator),  // Unified for data + configs, optional evaluator
-      delete: new DeleteOperation(this.backend, this),  // Needs dbEngine to extract schema from CoValue headerMeta
-      seed: new SeedOperation(this.backend),
-      schema: new SchemaOperation(this.backend, this),  // Schema loading operation (needs dbEngine for resolve operation)
-      resolve: new ResolveOperation(this.backend),  // Co-id resolution operation
-      append: appendOp,  // CoList append operation
-      push: appendOp,  // CoStream append operation (routed to append with cotype='costream')
-      processInbox: new ProcessInboxOperation(this.backend, this)  // Inbox processing with session-based watermarks
+      read: { execute: (params) => readOperation(this.backend, params) },
+      create: { execute: (params) => createOperation(this.backend, this, params) },
+      update: { execute: (params) => updateOperation(this.backend, this, evaluator, params) },
+      delete: { execute: (params) => deleteOperation(this.backend, this, params) },
+      seed: { execute: (params) => seedOperation(this.backend, params) },
+      schema: { execute: (params) => schemaOperation(this.backend, this, params) },
+      resolve: { execute: (params) => resolveOperation(this.backend, params) },
+      append: { execute: (params) => appendOperation(this.backend, this, params) },
+      push: { execute: (params) => appendOperation(this.backend, this, { ...params, cotype: 'costream' }) },
+      processInbox: { execute: (params) => processInboxOperation(this.backend, this, params) }
     };
   }
   

@@ -14384,71 +14384,6 @@ function createCoStream(accountOrGroup, schemaName, node = null) {
   console.log("   HeaderMeta:", costream.headerMeta);
   return costream;
 }
-class ReadOperation {
-  constructor(backend) {
-    this.backend = backend;
-  }
-  /**
-   * Execute read operation - always returns reactive store (or array of stores for batch reads)
-   * @param {Object} params
-   * @param {string} params.schema - Schema co-id (co_z...) - MUST be a co-id, not '@schema/...'
-   * @param {string} [params.key] - Specific key (co-id) for single item
-   * @param {string[]} [params.keys] - Array of co-ids for batch reads (consolidates getBatch)
-   * @param {Object} [params.filter] - Filter criteria for collection queries
-   * @param {Object} [params.options] - Options for deep resolution and transformations
-   * @param {boolean} [params.options.deepResolve=true] - Enable/disable deep resolution (default: true)
-   * @param {number} [params.options.maxDepth=10] - Maximum depth for recursive resolution (default: 10)
-   * @param {number} [params.options.timeoutMs=5000] - Timeout for waiting for nested CoValues (default: 5000)
-   * @param {Object} [params.options.resolveReferences] - Options for resolving CoValue references
-   * @param {string[]} [params.options.resolveReferences.fields] - Specific field names to resolve (e.g., ['source', 'target']). If not provided, resolves all co-id references
-   * @param {string[]} [params.options.resolveReferences.schemas] - Specific schema co-ids to resolve. If not provided, resolves all CoValues
-   * @param {Object} [params.options.map] - Map configuration for transforming data during read (e.g., { "sender": "$item.source.role", "recipient": "$item.target.role" })
-   * @returns {Promise<ReactiveStore|ReactiveStore[]>} Reactive store(s) that hold current value and notify on updates
-   */
-  async execute(params) {
-    const { schema, key, keys, filter, options } = params;
-    if (schema && !schema.startsWith("co_z") && !["@account", "@group", "@meta-schema"].includes(schema)) {
-      throw new Error(`[ReadOperation] Schema must be a co-id (co_z...) or special schema hint (@account, @group, @meta-schema), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
-    }
-    if (keys !== void 0 && !Array.isArray(keys)) {
-      throw new Error("[ReadOperation] keys parameter must be an array of co-ids");
-    }
-    if (key && keys) {
-      throw new Error("[ReadOperation] Cannot provide both key and keys parameters");
-    }
-    const result = await this.backend.read(schema, key, keys, filter, options);
-    return result;
-  }
-}
-class CreateOperation {
-  constructor(backend, dbEngine = null) {
-    this.backend = backend;
-    this.dbEngine = dbEngine;
-  }
-  /**
-   * Execute create operation
-   * @param {Object} params
-   * @param {string} params.schema - Schema co-id (co_z...) or human-readable reference (@schema/...)
-   * @param {Object} params.data - Data to create
-   * @returns {Promise<Object>} Created record with generated co-id
-   */
-  async execute(params) {
-    const { schema, data: data2 } = params;
-    requireParam(schema, "schema", "CreateOperation");
-    requireParam(data2, "data", "CreateOperation");
-    requireDbEngine(this.dbEngine, "CreateOperation", "runtime schema validation");
-    const schemaCoId = await resolve$1(this.backend, schema, { returnType: "coId" });
-    if (!schemaCoId) {
-      throw new Error(`[CreateOperation] Could not resolve schema: ${schema}`);
-    }
-    const schemaDef = await resolve$1(this.backend, schemaCoId, { returnType: "schema" });
-    if (!schemaDef) {
-      throw new Error(`[CreateOperation] Schema ${schemaCoId} not found`);
-    }
-    await validateAgainstSchemaOrThrow(schemaDef, data2, `create operation for schema ${schemaCoId}`);
-    return await this.backend.create(schemaCoId, data2);
-  }
-}
 async function resolveExpressions(payload, evaluator2, data2) {
   if (typeof payload === "string" && payload.startsWith("$")) {
     return await evaluator2.evaluate(payload, data2);
@@ -14477,335 +14412,181 @@ async function resolveExpressions(payload, evaluator2, data2) {
   }
   return resolved;
 }
-class UpdateOperation {
-  constructor(backend, dbEngine = null, evaluator2 = null) {
-    this.backend = backend;
-    this.dbEngine = dbEngine;
-    this.evaluator = evaluator2;
-  }
-  /**
-   * Execute update operation - handles ALL CoValues uniformly (data + configs)
-   * @param {Object} params
-   * @param {string} params.id - Record co-id to update
-   * @param {Object} params.data - Data to update
-   * @returns {Promise<Object>} Updated record
-   * 
-   * Schema is ALWAYS extracted from CoValue headerMeta using universal resolver
-   */
-  async execute(params) {
-    const { id: id2, data: data2 } = params;
-    requireParam(id2, "id", "UpdateOperation");
-    validateCoId(id2, "UpdateOperation");
-    requireParam(data2, "data", "UpdateOperation");
-    requireDbEngine(this.dbEngine, "UpdateOperation", "schema validation");
-    const rawExistingData = await this.backend.getRawRecord(id2);
-    if (!rawExistingData) {
-      throw new Error(`[UpdateOperation] Record not found: ${id2}`);
-    }
-    const schemaCoId = await resolve$1(this.backend, { fromCoValue: id2 }, { returnType: "coId" });
-    if (!schemaCoId) {
-      throw new Error(`[UpdateOperation] Failed to extract schema from CoValue ${id2} headerMeta`);
-    }
-    const { $schema: _schema, ...existingDataWithoutMetadata } = rawExistingData;
-    const evaluatedData = await this._evaluateDataWithExisting(data2, existingDataWithoutMetadata);
-    const schema = await resolve$1(this.backend, schemaCoId, { returnType: "schema" });
-    if (!schema) {
-      throw new Error(`[UpdateOperation] Schema ${schemaCoId} not found`);
-    }
-    const mergedData = {
-      ...existingDataWithoutMetadata,
-      ...evaluatedData
-    };
-    await validateAgainstSchemaOrThrow(schema, mergedData, `update operation for schema ${schemaCoId}`);
-    return await this.backend.update(schemaCoId, id2, evaluatedData);
-  }
-  /**
-   * Evaluate MaiaScript expressions in data payload with access to existing data
-   * Allows expressions like {"done": {"$not": "$existing.done"}} to toggle values
-   * @param {Object} data - Update data (may contain MaiaScript expressions)
-   * @param {Object} existingData - Existing record data (without $schema metadata)
-   * @returns {Promise<Object>} Evaluated data
-   */
-  async _evaluateDataWithExisting(data2, existingData) {
-    if (!this.evaluator) {
-      return data2;
-    }
-    const dataContext = {
-      context: { existing: existingData },
-      item: {}
-    };
-    return await resolveExpressions(data2, this.evaluator, dataContext);
-  }
+async function resolveSchemaFromCoValue(backend, coId, opName) {
+  const schemaCoId = await resolve$1(backend, { fromCoValue: coId }, { returnType: "coId" });
+  if (!schemaCoId) throw new Error(`[${opName}] Failed to extract schema from CoValue ${coId} headerMeta`);
+  return schemaCoId;
 }
-class DeleteOperation {
-  constructor(backend, dbEngine = null) {
-    this.backend = backend;
-    this.dbEngine = dbEngine;
-  }
-  /**
-   * Execute delete operation
-   * @param {Object} params
-   * @param {string} params.id - Record co-id to delete
-   * @returns {Promise<boolean>} true if deleted successfully
-   * 
-   * Schema is ALWAYS extracted from CoValue headerMeta using universal resolver
-   */
-  async execute(params) {
-    const { id: id2 } = params;
-    requireParam(id2, "id", "DeleteOperation");
-    validateCoId(id2, "DeleteOperation");
-    requireDbEngine(this.dbEngine, "DeleteOperation", "extract schema from CoValue headerMeta");
-    const schemaCoId = await resolve$1(this.dbEngine.backend, { fromCoValue: id2 }, { returnType: "coId" });
-    if (!schemaCoId) {
-      throw new Error(`[DeleteOperation] Failed to extract schema from CoValue ${id2} headerMeta`);
-    }
-    return await this.backend.delete(schemaCoId, id2);
-  }
+async function loadAndValidateSchema(backend, schemaCoId, data2, opName, mergedData = null) {
+  const schema = await resolve$1(backend, schemaCoId, { returnType: "schema" });
+  if (!schema) throw new Error(`[${opName}] Schema ${schemaCoId} not found`);
+  await validateAgainstSchemaOrThrow(schema, mergedData || data2, `${opName} for schema ${schemaCoId}`);
+  return schema;
 }
-class SeedOperation {
-  constructor(backend) {
-    this.backend = backend;
-  }
-  /**
-   * Execute seed operation
-   * @param {Object} params
-   * @param {Object} params.configs - Config registry (actors, views, styles, etc.)
-   * @param {Object} params.schemas - Schema definitions
-   * @param {Object} params.data - Initial application data
-   * @returns {Promise<void>}
-   */
-  async execute(params) {
-    const { configs, schemas, data: data2 } = params;
-    if (!configs) {
-      throw new Error("[SeedOperation] Configs required");
-    }
-    if (!schemas) {
-      throw new Error("[SeedOperation] Schemas required");
-    }
-    return await this.backend.seed(configs, schemas, data2 || {});
-  }
+async function evaluateDataWithExisting(data2, existingData, evaluator2) {
+  if (!evaluator2) return data2;
+  return await resolveExpressions(data2, evaluator2, { context: { existing: existingData }, item: {} });
 }
-class SchemaOperation {
-  constructor(backend, dbEngine = null) {
-    this.backend = backend;
-    this.dbEngine = dbEngine;
-  }
-  /**
-   * Extract schema definition from CoValue data
-   * @private
-   * @param {Object} coValueData - CoValue data from read() operation (has properties array format)
-   * @param {string} schemaCoId - Schema co-id
-   * @returns {Object|null} Schema definition or null if not found
-   */
-  _extractSchemaDefinition(coValueData, schemaCoId) {
-    if (!coValueData || coValueData.error) {
-      return null;
-    }
-    const schemaObj = {};
-    if (coValueData.properties && Array.isArray(coValueData.properties)) {
-      for (const prop of coValueData.properties) {
-        if (prop && prop.key !== void 0) {
-          let value = prop.value;
-          if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
-            try {
-              value = JSON.parse(value);
-            } catch (e) {
-            }
+function extractSchemaDefinition(coValueData, schemaCoId) {
+  if (!coValueData || coValueData.error) return null;
+  const schemaObj = {};
+  if (coValueData.properties?.length) {
+    for (const prop of coValueData.properties) {
+      if (prop?.key !== void 0) {
+        let value = prop.value;
+        if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
           }
-          schemaObj[prop.key] = value;
         }
-      }
-    } else {
-      Object.assign(schemaObj, coValueData);
-    }
-    const { id: id2, loading, error, type: type2, ...schemaOnly } = schemaObj;
-    if (schemaOnly.definition) {
-      const { id: defId, type: defType, ...definitionOnly } = schemaOnly.definition;
-      return {
-        ...definitionOnly,
-        $id: schemaCoId
-      };
-    }
-    const hasSchemaProps = schemaOnly.cotype || schemaOnly.properties || schemaOnly.items || schemaOnly.title || schemaOnly.description;
-    if (hasSchemaProps) {
-      return {
-        ...schemaOnly,
-        $id: schemaCoId
-      };
-    }
-    return null;
-  }
-  /**
-   * Execute schema operation - always returns ReactiveStore
-   * CRITICAL: Uses operations API exclusively - read operation for reactive schema loading
-   * @param {Object} params
-   * @param {string} [params.coId] - Schema co-id (co_z...) - direct load
-   * @param {string} [params.fromCoValue] - CoValue co-id - extracts headerMeta.$schema internally (PREFERRED)
-   * @returns {Promise<ReactiveStore>} ReactiveStore with schema definition (or null if not found)
-   */
-  async execute(params) {
-    const { coId, fromCoValue } = params;
-    const paramCount = [coId, fromCoValue].filter(Boolean).length;
-    if (paramCount === 0) {
-      throw new Error("[SchemaOperation] One of coId or fromCoValue must be provided");
-    }
-    if (paramCount > 1) {
-      throw new Error("[SchemaOperation] Only one of coId or fromCoValue can be provided");
-    }
-    let schemaCoId = null;
-    if (coId) {
-      validateCoId(coId, "SchemaOperation");
-      schemaCoId = coId;
-    }
-    if (fromCoValue) {
-      validateCoId(fromCoValue, "SchemaOperation");
-      schemaCoId = await resolve$1(this.backend, { fromCoValue }, { returnType: "coId" });
-      if (!schemaCoId) {
-        console.warn(`[SchemaOperation] Could not extract schema co-id from CoValue ${fromCoValue} headerMeta`);
-        return new ReactiveStore(null);
+        schemaObj[prop.key] = value;
       }
     }
-    const schemaCoMapStore = await this.backend.read(null, schemaCoId);
-    const schemaStore = new ReactiveStore(null);
-    const updateSchema = (coValueData) => {
-      const schema = this._extractSchemaDefinition(coValueData, schemaCoId);
-      schemaStore._set(schema);
-    };
-    const unsubscribe = schemaCoMapStore.subscribe((coValueData) => {
-      updateSchema(coValueData);
-    });
-    updateSchema(schemaCoMapStore.value);
-    const originalUnsubscribe = schemaStore._unsubscribe;
-    schemaStore._unsubscribe = () => {
-      if (originalUnsubscribe) originalUnsubscribe();
-      unsubscribe();
-    };
-    return schemaStore;
+  } else Object.assign(schemaObj, coValueData);
+  const { id: id2, loading, error, type: type2, ...schemaOnly } = schemaObj;
+  if (schemaOnly.definition) {
+    const { id: defId, type: defType, ...definitionOnly } = schemaOnly.definition;
+    return { ...definitionOnly, $id: schemaCoId };
   }
+  const hasSchemaProps = schemaOnly.cotype || schemaOnly.properties || schemaOnly.items || schemaOnly.title || schemaOnly.description;
+  return hasSchemaProps ? { ...schemaOnly, $id: schemaCoId } : null;
 }
-class ResolveOperation {
-  constructor(backend) {
-    this.backend = backend;
+async function readOperation(backend, params) {
+  const { schema, key, keys, filter, options } = params;
+  if (schema && !schema.startsWith("co_z") && !["@account", "@group", "@meta-schema"].includes(schema)) {
+    throw new Error(`[ReadOperation] Schema must be a co-id (co_z...) or special schema hint (@account, @group, @meta-schema), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
   }
-  /**
-   * Execute resolve operation - resolves human-readable key to co-id
-   * @deprecated This operation should only be used during seeding. At runtime, all IDs should already be co-ids.
-   * @param {Object} params
-   * @param {string} params.humanReadableKey - Human-readable ID (e.g., '@schema/actor', '@vibe/todos')
-   * @returns {Promise<string|null>} Co-id (co_z...) or null if not found
-   */
-  async execute(params) {
-    const { humanReadableKey } = params;
-    requireParam(humanReadableKey, "humanReadableKey", "ResolveOperation");
-    if (typeof humanReadableKey !== "string") {
-      throw new Error("[ResolveOperation] humanReadableKey must be a string");
-    }
-    if (humanReadableKey.startsWith("@schema/") || humanReadableKey.startsWith("@actor/") || humanReadableKey.startsWith("@vibe/")) {
-      console.warn(`[ResolveOperation] resolve() called with human-readable key: ${humanReadableKey}. This should only be used during seeding. At runtime, all IDs should already be co-ids.`);
-    }
-    return await resolve$1(this.backend, humanReadableKey, { returnType: "coId" });
-  }
+  if (keys !== void 0 && !Array.isArray(keys)) throw new Error("[ReadOperation] keys parameter must be an array of co-ids");
+  if (key && keys) throw new Error("[ReadOperation] Cannot provide both key and keys parameters");
+  return await backend.read(schema, key, keys, filter, options);
 }
-class AppendOperation {
-  constructor(backend, dbEngine = null) {
-    this.backend = backend;
-    this.dbEngine = dbEngine;
-  }
-  async execute(params) {
-    const { coId, item, items: items2, cotype: cotype2 } = params;
-    requireParam(coId, "coId", "AppendOperation");
-    validateCoId(coId, "AppendOperation");
-    requireDbEngine(this.dbEngine, "AppendOperation", "check schema cotype");
-    const coValueCore = await ensureCoValueAvailable(this.backend, coId, "AppendOperation");
-    const schemaCoId = await resolve$1(this.backend, { fromCoValue: coId }, { returnType: "coId" });
+async function createOperation(backend, dbEngine, params) {
+  const { schema, data: data2 } = params;
+  requireParam(schema, "schema", "CreateOperation");
+  requireParam(data2, "data", "CreateOperation");
+  requireDbEngine(dbEngine, "CreateOperation", "runtime schema validation");
+  const schemaCoId = await resolve$1(backend, schema, { returnType: "coId" });
+  if (!schemaCoId) throw new Error(`[CreateOperation] Could not resolve schema: ${schema}`);
+  await loadAndValidateSchema(backend, schemaCoId, data2, "CreateOperation");
+  return await backend.create(schemaCoId, data2);
+}
+async function updateOperation(backend, dbEngine, evaluator2, params) {
+  const { id: id2, data: data2 } = params;
+  requireParam(id2, "id", "UpdateOperation");
+  validateCoId(id2, "UpdateOperation");
+  requireParam(data2, "data", "UpdateOperation");
+  requireDbEngine(dbEngine, "UpdateOperation", "schema validation");
+  const rawExistingData = await backend.getRawRecord(id2);
+  if (!rawExistingData) throw new Error(`[UpdateOperation] Record not found: ${id2}`);
+  const schemaCoId = await resolveSchemaFromCoValue(backend, id2, "UpdateOperation");
+  const { $schema: _schema, ...existingDataWithoutMetadata } = rawExistingData;
+  const evaluatedData = await evaluateDataWithExisting(data2, existingDataWithoutMetadata, evaluator2);
+  const mergedData = { ...existingDataWithoutMetadata, ...evaluatedData };
+  await loadAndValidateSchema(backend, schemaCoId, evaluatedData, "UpdateOperation", mergedData);
+  return await backend.update(schemaCoId, id2, evaluatedData);
+}
+async function deleteOperation(backend, dbEngine, params) {
+  const { id: id2 } = params;
+  requireParam(id2, "id", "DeleteOperation");
+  validateCoId(id2, "DeleteOperation");
+  requireDbEngine(dbEngine, "DeleteOperation", "extract schema from CoValue headerMeta");
+  const schemaCoId = await resolveSchemaFromCoValue(dbEngine.backend, id2, "DeleteOperation");
+  return await backend.delete(schemaCoId, id2);
+}
+async function seedOperation(backend, params) {
+  const { configs, schemas, data: data2 } = params;
+  if (!configs) throw new Error("[SeedOperation] Configs required");
+  if (!schemas) throw new Error("[SeedOperation] Schemas required");
+  return await backend.seed(configs, schemas, data2 || {});
+}
+async function schemaOperation(backend, dbEngine, params) {
+  const { coId, fromCoValue } = params;
+  const paramCount = [coId, fromCoValue].filter(Boolean).length;
+  if (paramCount === 0) throw new Error("[SchemaOperation] One of coId or fromCoValue must be provided");
+  if (paramCount > 1) throw new Error("[SchemaOperation] Only one of coId or fromCoValue can be provided");
+  let schemaCoId = coId ? (validateCoId(coId, "SchemaOperation"), coId) : null;
+  if (fromCoValue) {
+    validateCoId(fromCoValue, "SchemaOperation");
+    schemaCoId = await resolve$1(backend, { fromCoValue }, { returnType: "coId" });
     if (!schemaCoId) {
-      throw new Error(`[AppendOperation] Failed to extract schema from CoValue ${coId} headerMeta`);
+      console.warn(`[SchemaOperation] Could not extract schema co-id from CoValue ${fromCoValue} headerMeta`);
+      return new ReactiveStore(null);
     }
-    let targetCotype = cotype2;
-    if (!targetCotype) {
-      const isColist = await checkCotype(this.backend, schemaCoId, "colist");
-      const isCoStream = await checkCotype(this.backend, schemaCoId, "costream");
-      if (isColist) {
-        targetCotype = "colist";
-      } else if (isCoStream) {
-        targetCotype = "costream";
-      } else {
-        throw new Error(`[AppendOperation] CoValue ${coId} must be a CoList (colist) or CoStream (costream), got schema cotype: ${schemaCoId}`);
-      }
+  }
+  const schemaCoMapStore = await backend.read(null, schemaCoId);
+  const schemaStore = new ReactiveStore(null);
+  const updateSchema = (coValueData) => schemaStore._set(extractSchemaDefinition(coValueData, schemaCoId));
+  const unsubscribe = schemaCoMapStore.subscribe(updateSchema);
+  updateSchema(schemaCoMapStore.value);
+  const originalUnsubscribe = schemaStore._unsubscribe;
+  schemaStore._unsubscribe = () => {
+    if (originalUnsubscribe) originalUnsubscribe();
+    unsubscribe();
+  };
+  return schemaStore;
+}
+async function resolveOperation(backend, params) {
+  const { humanReadableKey } = params;
+  requireParam(humanReadableKey, "humanReadableKey", "ResolveOperation");
+  if (typeof humanReadableKey !== "string") throw new Error("[ResolveOperation] humanReadableKey must be a string");
+  if (humanReadableKey.startsWith("@schema/") || humanReadableKey.startsWith("@actor/") || humanReadableKey.startsWith("@vibe/")) {
+    console.warn(`[ResolveOperation] resolve() called with human-readable key: ${humanReadableKey}. This should only be used during seeding. At runtime, all IDs should already be co-ids.`);
+  }
+  return await resolve$1(backend, humanReadableKey, { returnType: "coId" });
+}
+async function appendOperation(backend, dbEngine, params) {
+  const { coId, item, items: items2, cotype: cotype2 } = params;
+  requireParam(coId, "coId", "AppendOperation");
+  validateCoId(coId, "AppendOperation");
+  requireDbEngine(dbEngine, "AppendOperation", "check schema cotype");
+  const coValueCore = await ensureCoValueAvailable(backend, coId, "AppendOperation");
+  const schemaCoId = await resolveSchemaFromCoValue(backend, coId, "AppendOperation");
+  let targetCotype = cotype2;
+  if (!targetCotype) {
+    const isColist = await checkCotype(backend, schemaCoId, "colist");
+    const isCoStream = await checkCotype(backend, schemaCoId, "costream");
+    if (isColist) targetCotype = "colist";
+    else if (isCoStream) targetCotype = "costream";
+    else throw new Error(`[AppendOperation] CoValue ${coId} must be a CoList (colist) or CoStream (costream), got schema cotype: ${schemaCoId}`);
+  }
+  if (!await checkCotype(backend, schemaCoId, targetCotype)) throw new Error(`[AppendOperation] CoValue ${coId} is not a ${targetCotype} (schema cotype check failed)`);
+  const schema = await resolve$1(backend, schemaCoId, { returnType: "schema" });
+  if (!schema) throw new Error(`[AppendOperation] Schema ${schemaCoId} not found`);
+  const content = backend.getCurrentContent(coValueCore);
+  const methodName = targetCotype === "colist" ? "append" : "push";
+  if (!content || typeof content[methodName] !== "function") throw new Error(`[AppendOperation] ${targetCotype === "colist" ? "CoList" : "CoStream"} ${coId} doesn't have ${methodName} method`);
+  const itemsToAppend = items2 || (item ? [item] : []);
+  if (itemsToAppend.length === 0) throw new Error("[AppendOperation] At least one item required (use item or items parameter)");
+  validateItems(schema, itemsToAppend);
+  let appendedCount = 0;
+  if (targetCotype === "colist") {
+    let existingItems = [];
+    try {
+      if (typeof content.toJSON === "function") existingItems = content.toJSON() || [];
+    } catch (e) {
+      console.warn(`[AppendOperation] Error checking existing items:`, e);
     }
-    const isValidCotype = await checkCotype(this.backend, schemaCoId, targetCotype);
-    if (!isValidCotype) {
-      throw new Error(`[AppendOperation] CoValue ${coId} is not a ${targetCotype} (schema cotype check failed)`);
-    }
-    const schema = await resolve$1(this.backend, schemaCoId, { returnType: "schema" });
-    if (!schema) {
-      throw new Error(`[AppendOperation] Schema ${schemaCoId} not found`);
-    }
-    const content = this.backend.getCurrentContent(coValueCore);
-    const methodName = targetCotype === "colist" ? "append" : "push";
-    if (!content || typeof content[methodName] !== "function") {
-      throw new Error(`[AppendOperation] ${targetCotype === "colist" ? "CoList" : "CoStream"} ${coId} doesn't have ${methodName} method`);
-    }
-    const itemsToAppend = items2 || (item ? [item] : []);
-    if (itemsToAppend.length === 0) {
-      throw new Error("[AppendOperation] At least one item required (use item or items parameter)");
-    }
-    validateItems(schema, itemsToAppend);
-    let appendedCount = 0;
-    if (targetCotype === "colist") {
-      let existingItems = [];
-      try {
-        if (typeof content.toJSON === "function") {
-          existingItems = content.toJSON() || [];
-        }
-      } catch (e) {
-        console.warn(`[AppendOperation] Error checking existing items:`, e);
-      }
-      for (const itemToAppend of itemsToAppend) {
-        if (!existingItems.includes(itemToAppend)) {
-          content.append(itemToAppend);
-          appendedCount++;
-        }
-      }
-    } else {
-      for (const itemToAppend of itemsToAppend) {
-        content.push(itemToAppend);
+    for (const itemToAppend of itemsToAppend) {
+      if (!existingItems.includes(itemToAppend)) {
+        content.append(itemToAppend);
         appendedCount++;
       }
     }
-    if (this.backend.node && this.backend.node.storage) {
-      await this.backend.node.syncManager.waitForStorageSync(coId);
-    }
-    const resultKey = targetCotype === "colist" ? "itemsAppended" : "itemsPushed";
-    return {
-      success: true,
-      coId,
-      [resultKey]: appendedCount,
-      ...targetCotype === "colist" && { itemsSkipped: itemsToAppend.length - appendedCount }
-    };
+  } else {
+    for (const itemToAppend of itemsToAppend) content.push(itemToAppend), appendedCount++;
   }
+  if (backend.node?.storage) await backend.node.syncManager.waitForStorageSync(coId);
+  return { success: true, coId, [targetCotype === "colist" ? "itemsAppended" : "itemsPushed"]: appendedCount, ...targetCotype === "colist" && { itemsSkipped: itemsToAppend.length - appendedCount } };
 }
-class ProcessInboxOperation {
-  constructor(backend, dbEngine = null) {
-    this.backend = backend;
-    this.dbEngine = dbEngine;
-  }
-  /**
-   * Execute process inbox operation
-   * @param {Object} params
-   * @param {string} params.actorId - Actor co-id
-   * @param {string} params.inboxCoId - Inbox CoStream co-id
-   * @returns {Promise<Object>} Object with messages array and updatedWatermarks map
-   */
-  async execute(params) {
-    const { actorId, inboxCoId } = params;
-    requireParam(actorId, "actorId", "ProcessInboxOperation");
-    requireParam(inboxCoId, "inboxCoId", "ProcessInboxOperation");
-    validateCoId(actorId, "ProcessInboxOperation");
-    validateCoId(inboxCoId, "ProcessInboxOperation");
-    const { processInbox: processInbox2 } = await Promise.resolve().then(() => index$1);
-    return await processInbox2(this.backend, actorId, inboxCoId);
-  }
+async function processInboxOperation(backend, dbEngine, params) {
+  const { actorId, inboxCoId } = params;
+  requireParam(actorId, "actorId", "ProcessInboxOperation");
+  requireParam(inboxCoId, "inboxCoId", "ProcessInboxOperation");
+  validateCoId(actorId, "ProcessInboxOperation");
+  validateCoId(inboxCoId, "ProcessInboxOperation");
+  const { processInbox: processInbox2 } = await Promise.resolve().then(() => index$1);
+  return await processInbox2(backend, actorId, inboxCoId);
 }
 let DBEngine$1 = class DBEngine {
   /**
@@ -14822,26 +14603,17 @@ let DBEngine$1 = class DBEngine {
     } else if (backend && backend.constructor.name === "CoJSONBackend") {
       backend.dbEngine = this;
     }
-    const appendOp = new AppendOperation(this.backend, this);
     this.operations = {
-      read: new ReadOperation(this.backend),
-      // Unified reactive read operation
-      create: new CreateOperation(this.backend, this),
-      update: new UpdateOperation(this.backend, this, evaluator2),
-      // Unified for data + configs, optional evaluator
-      delete: new DeleteOperation(this.backend, this),
-      // Needs dbEngine to extract schema from CoValue headerMeta
-      seed: new SeedOperation(this.backend),
-      schema: new SchemaOperation(this.backend, this),
-      // Schema loading operation (needs dbEngine for resolve operation)
-      resolve: new ResolveOperation(this.backend),
-      // Co-id resolution operation
-      append: appendOp,
-      // CoList append operation
-      push: appendOp,
-      // CoStream append operation (routed to append with cotype='costream')
-      processInbox: new ProcessInboxOperation(this.backend, this)
-      // Inbox processing with session-based watermarks
+      read: { execute: (params) => readOperation(this.backend, params) },
+      create: { execute: (params) => createOperation(this.backend, this, params) },
+      update: { execute: (params) => updateOperation(this.backend, this, evaluator2, params) },
+      delete: { execute: (params) => deleteOperation(this.backend, this, params) },
+      seed: { execute: (params) => seedOperation(this.backend, params) },
+      schema: { execute: (params) => schemaOperation(this.backend, this, params) },
+      resolve: { execute: (params) => resolveOperation(this.backend, params) },
+      append: { execute: (params) => appendOperation(this.backend, this, params) },
+      push: { execute: (params) => appendOperation(this.backend, this, { ...params, cotype: "costream" }) },
+      processInbox: { execute: (params) => processInboxOperation(this.backend, this, params) }
     };
   }
   /**
