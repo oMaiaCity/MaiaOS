@@ -11,8 +11,8 @@ COPY services/server/ ./
 # Copy maia-sync library source directly into server
 COPY libs/maia-sync/src/ ./sync/
 
-# Create minimal package.json with cojson dependencies
-RUN echo '{"name":"server","type":"module","dependencies":{"cojson":"0.20.7","cojson-transport-ws":"0.20.7"}}' > package.json
+# Create minimal package.json with cojson and PGlite dependencies
+RUN echo '{"name":"server","type":"module","dependencies":{"cojson":"0.20.7","cojson-transport-ws":"0.20.7","@electric-sql/pglite":"latest"}}' > package.json
 
 # Install dependencies
 RUN bun install

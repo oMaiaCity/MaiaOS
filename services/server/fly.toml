@@ -11,6 +11,11 @@ primary_region = "fra"
 [env]
   PORT = "4203"
   NODE_ENV = "production"
+  DB_PATH = "/data/sync.db"
+
+[mounts]
+  source = "sync_data"
+  destination = "/data"
 
 [[services]]
   internal_port = 4203

@@ -9,7 +9,8 @@
   "description": "Self-hosted sync server library for MaiaOS using cojson LocalNode. Based on jazz-run's clean reference implementation, adapted for Bun.",
   "dependencies": {
     "cojson": "0.20.7",
-    "cojson-transport-ws": "0.20.7"
+    "cojson-transport-ws": "0.20.7",
+    "@electric-sql/pglite": "latest"
   },
   "devDependencies": {
     "@types/bun": "latest"

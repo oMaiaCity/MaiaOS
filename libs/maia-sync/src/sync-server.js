@@ -3,12 +3,14 @@
  * 
  * Adapted from jazz-run's startSyncServer for Bun.
  * Uses Bun's native WebSocket API instead of Node.js ws library.
- * Uses in-memory storage (no SQLite for now).
+ * Supports PGlite (PostgreSQL) for persistent storage.
  */
 
 import { LocalNode } from 'cojson';
 import { WasmCrypto } from 'cojson/crypto/WasmCrypto';
 import { createWebSocketPeer } from 'cojson-transport-ws';
+import { StorageApiAsync } from 'cojson/dist/storage/storageAsync.js';
+import { createPGliteAdapter } from './pglite-adapter.js';
 
 /**
  * Create a sync server handler for Bun.serve()
@@ -41,17 +43,30 @@ export async function createSyncServer(options = {}) {
     crypto
   );
 
-  // Set up storage (in-memory mode for now - Bun doesn't support better-sqlite3)
+  // Set up storage
+  let storage = undefined;
+  
   if (!inMemory && dbPath) {
-    console.warn('[sync-server] File-based storage not yet supported in Bun. Using in-memory storage.');
-    // For now, skip storage setup - LocalNode will use in-memory by default
+    try {
+      console.log(`[sync-server] Initializing PGlite storage at ${dbPath}...`);
+      const dbClient = await createPGliteAdapter(dbPath);
+      storage = new StorageApiAsync(dbClient);
+      localNode.setStorage(storage);
+      storage.enableDeletedCoValuesErasure();
+      console.log(`[sync-server] Storage: PGlite at ${dbPath}`);
+    } catch (error) {
+      console.error('[sync-server] Failed to initialize PGlite storage:', error);
+      console.warn('[sync-server] Falling back to in-memory storage');
+      storage = undefined;
+    }
+  } else {
+    console.log(`[sync-server] Storage: in-memory (no persistence)`);
   }
 
   // Enable garbage collector
   localNode.enableGarbageCollector();
 
   console.log('[sync-server] Initialized sync server');
-  console.log(`[sync-server] Storage: in-memory (no persistence)`);
   console.log(`[sync-server] LocalNode ready for peer connections`);
 
   // Return WebSocket handler for Bun.serve()

@@ -24,10 +24,12 @@ async function loadSyncServer() {
 }
 
 const PORT = process.env.PORT || 4203
+// Default to local-sync.db for local development, use env var if set (e.g., '/data/sync.db' for Fly.io)
+const DB_PATH = process.env.DB_PATH || './local-sync.db'
 
 console.log('[server] Starting self-hosted sync server...')
 console.log(`[server] Port: ${PORT}`)
-console.log(`[server] Storage: in-memory (no persistence)`)
+console.log(`[server] Storage: PGlite at ${DB_PATH}`)
 
 // Initialize sync server (async)
 async function startServer() {
@@ -35,9 +37,13 @@ async function startServer() {
 		// Load sync server module
 		const createSyncServer = await loadSyncServer();
 		
-		// Start with in-memory storage for now (Bun compatibility)
-		const syncServerHandler = await createSyncServer({ inMemory: true })
-		console.log('[server] Sync server initialized (in-memory mode)')
+		// Initialize sync server with PGlite storage (always enabled now)
+		const syncServerHandler = await createSyncServer({ 
+			inMemory: false,
+			dbPath: DB_PATH 
+		})
+		
+		console.log('[server] Sync server initialized (PGlite persistence enabled)')
 
 		Bun.serve({
 			hostname: '0.0.0.0',
