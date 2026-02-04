@@ -5,7 +5,7 @@ Complete guide for deploying MaiaOS services to Fly.io.
 ## Services Overview
 
 1. **next-maia-city** (`services/maia-city/`) - Frontend SPA
-2. **api-next-maia-city** (`services/server/`) - Sync proxy service
+2. **api-next-maia-city** (`services/server/`) - Self-hosted sync server
 
 ## Quick Start
 
@@ -34,9 +34,6 @@ flyctl apps create api-next-maia-city --org maia-city
 flyctl apps create next-maia-city --org maia-city
 
 # Set secrets (REQUIRED)
-# Server service needs Jazz API key
-flyctl secrets set JAZZ_API_KEY="your-jazz-api-key" --app api-next-maia-city
-
 # Frontend service needs API domain (REQUIRED for sync to work)
 # For Fly.io domain:
 flyctl secrets set PUBLIC_API_DOMAIN="api-next-maia-city.fly.dev" --app next-maia-city
@@ -96,8 +93,8 @@ See `services/DNS_SETUP.md` for detailed DNS configuration instructions, especia
 
 ### Server Service (`api-next-maia-city`)
 
-- `JAZZ_API_KEY` - Jazz API key (set via secrets)
 - `PORT` - Server port (default: 4203, set in fly.toml)
+- `DB_PATH` - PGlite database path (default: `/data/sync.db`, set in fly.toml)
 
 ### Maia City (`next-maia-city`)
 
@@ -117,18 +114,13 @@ See `services/DNS_SETUP.md` for detailed DNS configuration instructions, especia
          │ /sync
          ▼
 ┌─────────────────┐
-│  server         │  (Sync Proxy)
+│  server         │  (Self-Hosted Sync Server)
 │  (Port 4203)    │
-└────────┬────────┘
-         │ WebSocket
-         │ wss://cloud.jazz.tools
-         ▼
-┌─────────────────┐
-│  Jazz Cloud     │
+│  PGlite Storage │
 └─────────────────┘
 ```
 
-The frontend connects to the server service via WebSocket, and the server service proxies to Jazz cloud with the API key kept server-side.
+The frontend connects directly to the self-hosted sync server via WebSocket. The server uses cojson LocalNode to handle sync protocol and stores all data persistently in PGlite (PostgreSQL-compatible database).
 
 ## Health Checks
 
@@ -170,12 +162,7 @@ flyctl status --app api-next-maia-city
 
 ### Server service not working
 
-1. Verify `JAZZ_API_KEY` is set:
-   ```bash
-   flyctl secrets list --app api-next-maia-city
-   ```
-
-2. Check logs:
+1. Check logs:
    ```bash
    flyctl logs --app api-next-maia-city
    ```

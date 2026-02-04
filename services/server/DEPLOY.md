@@ -1,6 +1,6 @@
 # Server Service Deployment Guide
 
-Deployment guide for the server service (sync proxy) on Fly.io.
+Deployment guide for the self-hosted sync server service on Fly.io.
 
 ## Prerequisites
 
@@ -17,13 +17,20 @@ cd /path/to/MaiaOS
 flyctl apps create api-next-maia-city --org maia-city
 ```
 
-### 2. Set Secrets
+### 2. Create Volume for PGlite Persistence
 
-Set the Jazz API key (server-side only):
+Create a volume to persist PGlite database data:
 
 ```bash
-flyctl secrets set JAZZ_API_KEY="your-jazz-api-key" --app api-next-maia-city
+flyctl volumes create sync_data --app api-next-maia-city --region fra --size 3
 ```
+
+**Notes:**
+- `sync_data` - Volume name (must match `source` in fly.toml `[mounts]` section)
+- `--region fra` - Region (must match `primary_region` in fly.toml)
+- `--size 3` - Volume size in GB (adjust as needed, minimum is 3GB)
+
+**Important:** Volumes are region-specific. If you change the primary region, you'll need to create a new volume in that region.
 
 ### 3. Configure Domain (Optional)
 
@@ -56,9 +63,37 @@ bun run deploy
 
 The following environment variables are configured:
 
-- `JAZZ_API_KEY` - Set via Fly.io secrets (never commit to git)
 - `PORT` - Set to `4203` in fly.toml
 - `NODE_ENV` - Set to `production` in fly.toml
+- `DB_PATH` - Set to `/data/sync.db` in fly.toml (PGlite database path on volume)
+
+## Volume Configuration
+
+The service uses a Fly.io volume for PGlite persistence:
+
+- **Volume name**: `sync_data` (configured in `fly.toml` `[mounts]` section)
+- **Mount point**: `/data` (database stored at `/data/sync.db`)
+- **Region**: Must match `primary_region` in `fly.toml` (currently `fra`)
+
+**Volume Management:**
+
+```bash
+# List volumes
+flyctl volumes list --app api-next-maia-city
+
+# Check volume status
+flyctl volumes status sync_data --app api-next-maia-city
+
+# Extend volume size (if needed)
+flyctl volumes extend sync_data --app api-next-maia-city --size 10
+
+# Note: Volumes cannot be shrunk, only extended
+```
+
+**Important:** 
+- Volumes persist data across deployments and restarts
+- If you need to migrate to a different region, you'll need to create a new volume and migrate data
+- Volume data persists even if you destroy and recreate the app (as long as you use the same volume name)
 
 ## Health Check
 
@@ -77,7 +112,7 @@ Expected response:
 
 ## WebSocket Endpoint
 
-Clients connect to the sync proxy via WebSocket:
+Clients connect to the self-hosted sync server via WebSocket:
 
 - **Fly.io domain**: `wss://api-next-maia-city.fly.dev/sync`
 - **Custom domain**: `wss://api.next.maia.city/sync`
@@ -93,7 +128,7 @@ flyctl secrets set PUBLIC_API_DOMAIN="api-next-maia-city.fly.dev" --app next-mai
 flyctl secrets set PUBLIC_API_DOMAIN="api.next.maia.city" --app next-maia-city
 ```
 
-The client code in `@MaiaOS/self` will automatically use this domain to connect to the sync proxy.
+The client code in `@MaiaOS/self` will automatically use this domain to connect to the self-hosted sync server.
 
 ## Monitoring
 
@@ -117,14 +152,38 @@ Check logs:
 flyctl logs --app api-next-maia-city
 ```
 
-### WebSocket Connection Issues
+### Volume Not Mounted
 
-1. Verify `JAZZ_API_KEY` is set:
+If the service can't access the database:
+
+1. Verify volume exists:
    ```bash
-   flyctl secrets list --app api-next-maia-city
+   flyctl volumes list --app api-next-maia-city
    ```
 
-2. Check health endpoint:
+2. Check volume is attached (should show in `flyctl status`):
+   ```bash
+   flyctl status --app api-next-maia-city
+   ```
+
+3. Verify volume name matches `fly.toml`:
+   - Volume name in Fly.io: `sync_data`
+   - `source` in `fly.toml` `[mounts]` section: `sync_data`
+   - These must match exactly
+
+4. If volume doesn't exist, create it:
+   ```bash
+   flyctl volumes create sync_data --app api-next-maia-city --region fra --size 3
+   ```
+
+5. Redeploy after creating volume:
+   ```bash
+   flyctl deploy --dockerfile services/server/Dockerfile --config services/server/fly.toml --app api-next-maia-city
+   ```
+
+### WebSocket Connection Issues
+
+1. Check health endpoint:
    ```bash
    curl https://api-next-maia-city.fly.dev/health
    ```

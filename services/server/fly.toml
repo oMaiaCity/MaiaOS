@@ -3,6 +3,11 @@ app = "api-next-maia-city"
 org = "maia-city"
 primary_region = "fra"
 
+# IMPORTANT: Single machine deployment required for PGlite volume persistence
+# PGlite uses a single volume mounted at /data - multiple machines would cause data inconsistency
+# To enforce single machine: flyctl scale count 1 --app api-next-maia-city
+# Note: Machine count is managed via flyctl scale, not in this config file
+
 [build]
   # Build from monorepo root with Dockerfile in services/server/
   # Use: flyctl deploy --dockerfile services/server/Dockerfile --config services/server/fly.toml
