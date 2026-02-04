@@ -59,6 +59,8 @@ export class ViewEngine {
     this.actorInputCounters.set(actorId, 0);
     
     // CRITICAL: Clear shadow root on re-render (prevents duplicates)
+    // This ensures that when rerender is triggered by context subscription, old DOM is cleared first
+    // Combined with batching system, this prevents doubled rendering
     shadowRoot.innerHTML = '';
     
     // Attach stylesheets to shadow root FIRST (before rendering)

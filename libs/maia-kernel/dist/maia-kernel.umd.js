@@ -17948,8 +17948,8 @@ ${verificationErrors.join("\n")}`;
       this.actors.set(actorId, actor);
       if (actor.context && typeof actor.context.subscribe === "function") {
         let lastContextValue = JSON.stringify(actor.context.value || {});
-        actor._contextUnsubscribe = actor.context.subscribe(() => {
-          const currentContextValue = JSON.stringify(actor.context.value || {});
+        actor._contextUnsubscribe = actor.context.subscribe((newValue) => {
+          const currentContextValue = JSON.stringify(newValue || {});
           const contextChanged = currentContextValue !== lastContextValue;
           lastContextValue = currentContextValue;
           if (actor._initialRenderComplete && !actor._isRerendering && contextChanged) {
@@ -17982,12 +17982,15 @@ ${verificationErrors.join("\n")}`;
     /**
      * Schedule a rerender for an actor (batched via microtask queue)
      * Following Svelte's batching pattern: multiple updates in same tick = one rerender
+     * CRITICAL: Set-based deduplication ensures each actor only rerenders once per batch
+     * This prevents doubled rendering when multiple subscriptions fire simultaneously
      * @param {string} actorId - The actor ID to rerender
      */
     _scheduleRerender(actorId) {
       this.pendingRerenders.add(actorId);
       if (!this.batchTimer) {
         this.batchTimer = queueMicrotask(async () => {
+          this.batchTimer = null;
           await this._flushRerenders();
         });
       }
@@ -17995,11 +17998,12 @@ ${verificationErrors.join("\n")}`;
     /**
      * Flush all pending rerenders in batch
      * Processes all actors that need rerendering in one microtask
+     * CRITICAL: Set-based deduplication ensures each actor only rerenders once
+     * This prevents doubled rendering when multiple subscriptions fire simultaneously
      */
     async _flushRerenders() {
       const actorIds = Array.from(this.pendingRerenders);
       this.pendingRerenders.clear();
-      this.batchTimer = null;
       await Promise.all(actorIds.map((actorId) => this.rerender(actorId)));
     }
     /**

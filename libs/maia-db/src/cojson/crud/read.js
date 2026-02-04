@@ -115,15 +115,20 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
       }
       
       // Merge query store values (resolved arrays at root level, same key as query name)
+      // CRITICAL: Always merge query store values, even if they're empty arrays
+      // This ensures progressive loading works - empty arrays become populated arrays reactively
       for (const [key, queryStore] of queryStores.entries()) {
         if (queryStore && typeof queryStore.subscribe === 'function' && 'value' in queryStore) {
           // Remove the query object from mergedValue (if present) and replace with resolved array
           delete mergedValue[key];
+          // CRITICAL: Always set query store value, even if it's undefined/null/empty array
+          // This ensures reactivity works - when query store updates from [] to [items], unified store updates
           mergedValue[key] = queryStore.value;
         }
       }
       
       // Only update if value actually changed (deep comparison)
+      // CRITICAL: JSON.stringify comparison detects array content changes ([] vs [item1, item2])
       const currentValueStr = JSON.stringify(mergedValue);
       const lastValueStr = lastUnifiedValue ? JSON.stringify(lastUnifiedValue) : null;
       
@@ -729,6 +734,8 @@ async function readCollection(backend, schema, filter = null, options = {}) {
     }
     
     // Update store with current results (progressive loading - may be partial, updates reactively)
+    // CRITICAL: Always update store, even if results array is empty, to ensure reactivity works
+    // This ensures that when items become available later, the store update triggers subscribers
     store._set(results);
   };
   

@@ -396,16 +396,20 @@ export class ActorEngine {
     // Subscribe with skipInitial to avoid triggering rerender during initial load
     if (actor.context && typeof actor.context.subscribe === 'function') {
       // Store last context value to prevent unnecessary rerenders
+      // CRITICAL: Initialize with current value to ensure first change after initial render is detected
       let lastContextValue = JSON.stringify(actor.context.value || {});
       
       // Store unsubscribe function for cleanup when actor is destroyed
-      actor._contextUnsubscribe = actor.context.subscribe(() => {
-        // Only rerender if context actually changed (deep comparison via JSON)
-        const currentContextValue = JSON.stringify(actor.context.value || {});
+      actor._contextUnsubscribe = actor.context.subscribe((newValue) => {
+        // CRITICAL: Always check for changes, even if skipInitial is true
+        // This ensures that when query stores update (e.g., [] -> [items]), context subscription fires
+        const currentContextValue = JSON.stringify(newValue || {});
         const contextChanged = currentContextValue !== lastContextValue;
+        
+        // Update lastContextValue BEFORE checking conditions to prevent double updates
         lastContextValue = currentContextValue;
         
-        // Trigger rerender when context updates (e.g., currentView changes)
+        // Trigger rerender when context updates (e.g., query results change from [] to [items])
         // Only rerender if initial render is complete, not currently rendering, and context actually changed
         if (actor._initialRenderComplete && !actor._isRerendering && contextChanged) {
           this._scheduleRerender(actorId);
@@ -446,13 +450,21 @@ export class ActorEngine {
   /**
    * Schedule a rerender for an actor (batched via microtask queue)
    * Following Svelte's batching pattern: multiple updates in same tick = one rerender
+   * CRITICAL: Set-based deduplication ensures each actor only rerenders once per batch
+   * This prevents doubled rendering when multiple subscriptions fire simultaneously
    * @param {string} actorId - The actor ID to rerender
    */
   _scheduleRerender(actorId) {
-    this.pendingRerenders.add(actorId); // Deduplicates automatically (Set)
+    // CRITICAL: Set.add() automatically deduplicates - if actorId already in Set, it's ignored
+    // This ensures that even if multiple subscriptions fire (context + query stores), actor only rerenders once
+    this.pendingRerenders.add(actorId);
     
+    // CRITICAL: Only schedule one microtask per event loop tick
+    // Multiple _scheduleRerender() calls in same tick will all be batched together
     if (!this.batchTimer) {
       this.batchTimer = queueMicrotask(async () => {
+        // Clear timer BEFORE flushing to allow new batches to be scheduled
+        this.batchTimer = null;
         await this._flushRerenders();
       });
     }
@@ -461,13 +473,17 @@ export class ActorEngine {
   /**
    * Flush all pending rerenders in batch
    * Processes all actors that need rerendering in one microtask
+   * CRITICAL: Set-based deduplication ensures each actor only rerenders once
+   * This prevents doubled rendering when multiple subscriptions fire simultaneously
    */
   async _flushRerenders() {
+    // CRITICAL: Extract actor IDs BEFORE clearing Set
+    // This ensures we process all actors that were scheduled, even if new ones are added during processing
     const actorIds = Array.from(this.pendingRerenders);
     this.pendingRerenders.clear();
-    this.batchTimer = null;
     
     // Parallelize rerenders - they're independent operations
+    // Each actor rerenders exactly once, even if it was scheduled multiple times
     await Promise.all(actorIds.map(actorId => this.rerender(actorId)));
   }
 
