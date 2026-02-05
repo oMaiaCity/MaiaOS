@@ -40,12 +40,22 @@ export { processInbox } from "./cojson/crud/process-inbox.js";
 // Message Helpers (create and push message CoMaps)
 export { createAndPushMessage } from "./cojson/crud/message-helpers.js";
 
-// Collection Helpers (schema index lookup)
-export { getSchemaIndexColistId, getCoListId } from "./cojson/crud/collection-helpers.js";
+// Collection Helpers (schema index lookup, CoValue loading)
+export { getSchemaIndexColistId, getCoListId, ensureCoValueLoaded } from "./cojson/crud/collection-helpers.js";
 
 // Universal Schema Resolver (single source of truth)
 export { 
   resolve,
+  resolveReactive,
   checkCotype,
   loadSchemasFromAccount
 } from "./cojson/schema/resolver.js";
+
+// Reactive Dependency Resolver (universal progressive reactive resolution)
+// Note: resolveReactive is exported from resolver.js (wraps reactive-resolver.js)
+export {
+  resolveSchemaReactive,
+  resolveCoValueReactive,
+  resolveQueryReactive,
+  waitForReactiveResolution
+} from "./cojson/crud/reactive-resolver.js";

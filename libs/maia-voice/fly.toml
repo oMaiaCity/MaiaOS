@@ -1,0 +1,38 @@
+# Fly.io configuration for PersonaPlex voice service
+app = "voice-maia-city"
+org = "maia-city"
+primary_region = "ord"  # Chicago - L40S GPU available
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NO_TORCH_COMPILE = "1"
+
+[[services]]
+  internal_port = 8998
+  protocol = "tcp"
+  processes = ["app"]
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+    force_https = true
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 1000
+    soft_limit = 500
+
+  [[services.http_checks]]
+    interval = "10s"
+    timeout = "2s"
+    grace_period = "5s"
+    method = "GET"
+    path = "/"
+    protocol = "http"
+    tls_skip_verify = false

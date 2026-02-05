@@ -231,6 +231,28 @@ export async function loadAccount({ accountID, agentSecret, peers = [], storage 
 		phaseTimings.profileLoadTotal = 0;
 	}
 	
+	// OPTIMIZATION: Prefetch account.os during account loading to avoid 5+ second delay later
+	// This ensures account.os is syncing in parallel with account/profile, not sequentially
+	const osLoadRequestStartTime = performance.now();
+	const osID = rawAccount.get("os");
+	if (osID && typeof osID === 'string' && osID.startsWith('co_z')) {
+		console.log(`   ⏳ [PERF] Prefetching account.os at ${osLoadRequestStartTime.toFixed(2)}ms`);
+		// Trigger loading of account.os (non-blocking - let it sync in background)
+		// This ensures account.os is syncing while we continue, reducing wait time in ensureAccountOsReady
+		const osCoValue = node.getCoValue(osID);
+		if (osCoValue && !osCoValue.isAvailable()) {
+			// account.os not loaded yet - trigger load (non-blocking)
+			node.loadCoValueCore(osID).catch(err => {
+				console.warn(`[loadAccount] Failed to prefetch account.os:`, err);
+			});
+			console.log(`   ✅ [PERF] account.os prefetch triggered (non-blocking)`);
+		} else if (osCoValue && osCoValue.isAvailable()) {
+			console.log(`   ✅ [PERF] account.os already available (loaded with account)`);
+		}
+	} else {
+		console.log(`   ℹ️  [PERF] account.os does not exist yet (will be created on first use)`);
+	}
+	
 	const loadDuration = performance.now() - loadStartTime;
 	phaseTimings.total = loadDuration;
 	

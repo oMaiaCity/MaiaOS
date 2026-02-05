@@ -1,6 +1,7 @@
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
 import { extractDOMValues } from '@MaiaOS/schemata/payload-resolver.js';
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
+import { resolveReactive, waitForReactiveResolution } from '@MaiaOS/db';
 import { RENDER_STATES } from './actor.engine.js';
 
 function sanitizeAttribute(value) {
@@ -29,18 +30,20 @@ export class ViewEngine {
   }
 
   async loadView(coId) {
+    // UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
+    const viewSchemaStore = resolveReactive(this.dbEngine.backend, { fromCoValue: coId }, { returnType: 'coId' });
+    const viewSchemaState = await waitForReactiveResolution(viewSchemaStore, { timeoutMs: 10000 });
+    const viewSchemaCoId = viewSchemaState.schemaCoId;
+    
+    if (!viewSchemaCoId) {
+      throw new Error(`[ViewEngine] Failed to extract schema co-id from view CoValue ${coId}: ${viewSchemaState.error || 'Schema not found'}`);
+    }
+    
     const viewStore = await this.dbEngine.execute({
       op: 'read',
       schema: null,
       key: coId
     });
-    
-    const viewData = viewStore.value;
-    const viewSchemaCoId = viewData?.$schema || null;
-    
-    if (!viewSchemaCoId) {
-      throw new Error(`[ViewEngine] Failed to extract schema co-id from view CoValue ${coId}. View must have $schema in headerMeta. View data: ${JSON.stringify({ id: viewData?.id, loading: viewData?.loading, hasProperties: viewData?.hasProperties, properties: viewData?.properties?.length })}`);
-    }
     
     const store = await this.dbEngine.execute({
       op: 'read',

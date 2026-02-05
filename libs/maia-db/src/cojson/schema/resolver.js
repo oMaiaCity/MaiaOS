@@ -18,6 +18,7 @@
 
 import { read as universalRead } from '../crud/read.js';
 import { waitForStoreReady } from '../crud/read-operations.js';
+import { resolveReactive as resolveReactiveBase, resolveSchemaReactive, resolveCoValueReactive } from '../crud/reactive-resolver.js';
 
 /**
  * Recursively remove 'id' fields from schema objects (AJV only accepts $id, not id)
@@ -202,8 +203,8 @@ export async function resolve(backend, identifier, options = {}) {
     if (isSchemaKey) {
       console.log(`[resolve] Resolving schema namekey: "${identifier}" (normalized: "${normalizedKey}")`);
       
-      // Architectural upgrade: account.os is guaranteed ready during boot via ensureAccountOsReady()
-      // Simple readiness check: if not ready, wait (with timeout) - no retry logic needed
+      // Progressive loading: account.os loads in background during boot (non-blocking)
+      // If not ready yet, wait (with timeout) - schema resolution will return null until ready
       // Schema keys → check account.os.schematas registry using read() API
       const osId = backend.account.get('os');
       if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
@@ -327,6 +328,90 @@ export async function resolve(backend, identifier, options = {}) {
   // Unknown key format
   console.warn(`[resolve] Unknown key format: ${identifier}`);
   return null;
+}
+
+/**
+ * Reactive resolver - returns ReactiveStore that updates when schema/co-value becomes available
+ * 
+ * @param {Object} backend - Backend instance
+ * @param {string|Object} identifier - Identifier (co-id, schema key, or {fromCoValue: 'co_z...'})
+ * @param {Object} [options] - Options
+ * @param {string} [options.returnType='coId'] - Return type: 'coId' | 'schema' | 'coValue'
+ * @returns {ReactiveStore} ReactiveStore that updates when dependency resolves
+ */
+export function resolveReactive(backend, identifier, options = {}) {
+  const { returnType = 'coId' } = options;
+  
+  // Use base reactive resolver
+  const store = resolveReactiveBase(backend, identifier, options);
+  
+  // Transform store value based on returnType
+  if (returnType === 'schema' || returnType === 'coValue') {
+    const transformedStore = new ReactiveStore({ loading: true });
+    
+    const unsubscribe = store.subscribe(async (state) => {
+      if (state.loading) {
+        transformedStore._set({ loading: true });
+        return;
+      }
+      
+      if (state.error) {
+        transformedStore._set({ loading: false, error: state.error });
+        unsubscribe();
+        return;
+      }
+      
+      if (state.schemaCoId) {
+        // Resolve schema or co-value based on returnType
+        if (returnType === 'coId') {
+          transformedStore._set({ loading: false, schemaCoId: state.schemaCoId });
+          unsubscribe();
+        } else {
+          // Resolve schema definition or co-value
+          try {
+            const resolved = await resolve(backend, state.schemaCoId, { returnType });
+            if (resolved) {
+              transformedStore._set({ loading: false, [returnType === 'schema' ? 'schema' : 'coValue']: resolved });
+            } else {
+              transformedStore._set({ loading: false, error: 'Schema not found' });
+            }
+            unsubscribe();
+          } catch (error) {
+            transformedStore._set({ loading: false, error: error.message });
+            unsubscribe();
+          }
+        }
+      } else if (state.coValueCore) {
+        // CoValue resolved - extract schema if needed
+        if (returnType === 'coId') {
+          const header = backend.getHeader(state.coValueCore);
+          const headerMeta = header?.meta || null;
+          const schemaCoId = headerMeta?.$schema || null;
+          if (schemaCoId) {
+            transformedStore._set({ loading: false, schemaCoId });
+          } else {
+            transformedStore._set({ loading: false, error: 'Schema not found in headerMeta' });
+          }
+          unsubscribe();
+        } else {
+          transformedStore._set({ loading: false, coValue: state.coValueCore });
+          unsubscribe();
+        }
+      }
+    });
+    
+    // Cleanup
+    const originalUnsubscribe = transformedStore._unsubscribe;
+    transformedStore._unsubscribe = () => {
+      if (originalUnsubscribe) originalUnsubscribe();
+      unsubscribe();
+    };
+    
+    return transformedStore;
+  }
+  
+  // returnType === 'coId' - return store as-is
+  return store;
 }
 
 /**

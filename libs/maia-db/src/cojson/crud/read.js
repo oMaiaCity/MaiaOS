@@ -15,7 +15,7 @@ import { getCoListId } from './collection-helpers.js';
 import { matchesFilter } from './filter-helpers.js';
 import { deepResolveCoValue, resolveNestedReferencesPublic, resolveNestedReferences, isDeepResolvedOrResolving } from './deep-resolution.js';
 import { applyMapTransform, applyMapTransformToArray } from './map-transform.js';
-import { resolve as resolveSchema } from '../schema/resolver.js';
+import { resolve as resolveSchema, resolveReactive as resolveSchemaReactive } from '../schema/resolver.js';
 
 /**
  * Universal read() function - works for ANY CoValue type
@@ -82,6 +82,7 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
   const unifiedStore = new ReactiveStore({});
   const queryStores = new Map(); // key -> ReactiveStore
   const queryDefinitions = new Map(); // key -> query definition object (for $op)
+  const schemaSubscriptions = new Map(); // key -> unsubscribe function for schema resolution
   const { timeoutMs = 5000, onChange } = options;
 
   // Update Queue: batches all updates within a single event loop tick
@@ -170,64 +171,114 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
         const existingStore = queryStores.get(key);
         
         try {
-          // Resolve schema reference to co-id if needed
+          // UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema resolution for queries
           let schemaCoId = value.schema;
+          
           if (typeof schemaCoId === 'string' && !schemaCoId.startsWith('co_z')) {
             if (schemaCoId.startsWith('@schema/')) {
-              console.log(`[createUnifiedStore] Resolving schema namekey "${schemaCoId}" for query "${key}"...`);
-              const startTime = Date.now();
-              schemaCoId = await resolveSchema(backend, schemaCoId, { returnType: 'coId', timeoutMs });
-              const duration = Date.now() - startTime;
-              if (!schemaCoId || !schemaCoId.startsWith('co_z')) {
-                console.error(`[createUnifiedStore] ❌ Failed to resolve schema ${value.schema} for query "${key}" (took ${duration}ms)`);
-                continue;
-              }
-              console.log(`[createUnifiedStore] ✅ Resolved schema "${value.schema}" → "${schemaCoId.substring(0, 12)}..." for query "${key}" (took ${duration}ms)`);
+              console.log(`[createUnifiedStore] Resolving schema namekey "${schemaCoId}" reactively for query "${key}"...`);
+              
+              // Use reactive schema resolution - returns ReactiveStore that updates when schema becomes available
+              const schemaStore = resolveSchemaReactive(backend, schemaCoId, { timeoutMs });
+              
+              // Subscribe to schema resolution - execute query when schema becomes available
+              const schemaUnsubscribe = schemaStore.subscribe(async (schemaState) => {
+                if (schemaState.loading) {
+                  // Still loading - create empty query store to show loading state
+                  if (!queryStores.has(key)) {
+                    const loadingStore = new ReactiveStore([]);
+                    queryStores.set(key, loadingStore);
+                    queryDefinitions.set(key, {
+                      schema: value.schema,
+                      ...(value.options ? { options: value.options } : {}),
+                      ...(value.filter ? { filter: value.filter } : {})
+                    });
+                    enqueueUpdate();
+                  }
+                  return;
+                }
+                
+                if (schemaState.error || !schemaState.schemaCoId) {
+                  console.error(`[createUnifiedStore] ❌ Failed to resolve schema ${value.schema} for query "${key}": ${schemaState.error || 'Schema not found'}`);
+                  schemaUnsubscribe();
+                  return;
+                }
+                
+                // Schema resolved - execute query
+                const resolvedSchemaCoId = schemaState.schemaCoId;
+                console.log(`[createUnifiedStore] ✅ Resolved schema "${value.schema}" → "${resolvedSchemaCoId.substring(0, 12)}..." for query "${key}"`);
+                
+                try {
+                  const queryOptions = {
+                    ...options,
+                    timeoutMs,
+                    ...(value.options || {})
+                  };
+                  
+                  const queryStore = await read(backend, null, resolvedSchemaCoId, value.filter || null, null, queryOptions);
+                  
+                  // Store query definition for $op
+                  queryDefinitions.set(key, {
+                    schema: value.schema,
+                    ...(value.options ? { options: value.options } : {}),
+                    ...(value.filter ? { filter: value.filter } : {})
+                  });
+                  
+                  // Subscribe to query store updates
+                  const queryUnsubscribe = queryStore.subscribe(() => {
+                    enqueueUpdate();
+                  });
+                  queryStore._queryUnsubscribe = queryUnsubscribe;
+                  queryStores.set(key, queryStore);
+                  
+                  // Initial update now that query is ready
+                  enqueueUpdate();
+                  schemaUnsubscribe();
+                } catch (error) {
+                  console.error(`[createUnifiedStore] Failed to execute query "${key}" after schema resolution:`, error);
+                  schemaUnsubscribe();
+                }
+              });
+              
+              // Store schema subscription for cleanup
+              schemaSubscriptions.set(key, schemaUnsubscribe);
+              
+              continue; // Skip to next query - this one will resolve reactively
             } else {
               console.error(`[createUnifiedStore] Invalid schema format for query "${key}": ${schemaCoId}`);
               continue;
             }
           } else if (schemaCoId && schemaCoId.startsWith('co_z')) {
             console.log(`[createUnifiedStore] Query "${key}" already has co-id: "${schemaCoId.substring(0, 12)}..."`);
-          }
-
-          // Execute read operation for query (call exported read function)
-          // CRITICAL: Extract map and other options from the query object itself (value.options)
-          // The query object can have its own options.map that needs to be passed to read()
-          
-          const queryOptions = {
-            ...options,
-            timeoutMs,
-            // Extract options from query object (e.g., value.options.map)
-            ...(value.options || {})
-          };
-          
-          const queryStore = await read(backend, null, schemaCoId, value.filter || null, null, queryOptions);
-
-          // Store query definition for $op (preserve original query object as source of truth)
-          queryDefinitions.set(key, {
-            schema: value.schema,
-            ...(value.options ? { options: value.options } : {}),
-            ...(value.filter ? { filter: value.filter } : {})
-          });
-
-          // Subscribe to query store if not already subscribed
-          if (!existingStore || existingStore !== queryStore) {
-            // Unsubscribe from old store if it exists
-            if (existingStore && existingStore._queryUnsubscribe) {
-              existingStore._queryUnsubscribe();
-            }
             
-            // Subscribe to query store updates
-            // CRITICAL: Subscription callback will call enqueueUpdate() when query store updates
-            // Don't call enqueueUpdate() immediately here - let the subscription callback handle it
-            // This prevents duplicate updates (subscription callback + immediate call)
-            const unsubscribe = queryStore.subscribe(() => {
-              enqueueUpdate();
+            // Schema is already a co-id - execute query immediately
+            const queryOptions = {
+              ...options,
+              timeoutMs,
+              ...(value.options || {})
+            };
+            
+            const queryStore = await read(backend, null, schemaCoId, value.filter || null, null, queryOptions);
+            
+            // Store query definition for $op
+            queryDefinitions.set(key, {
+              schema: value.schema,
+              ...(value.options ? { options: value.options } : {}),
+              ...(value.filter ? { filter: value.filter } : {})
             });
-            queryStore._queryUnsubscribe = unsubscribe;
-            queryStores.set(key, queryStore);
-            // Removed immediate enqueueUpdate() call - subscription callback handles updates
+            
+            // Subscribe to query store if not already subscribed
+            if (!existingStore || existingStore !== queryStore) {
+              if (existingStore && existingStore._queryUnsubscribe) {
+                existingStore._queryUnsubscribe();
+              }
+              
+              const unsubscribe = queryStore.subscribe(() => {
+                enqueueUpdate();
+              });
+              queryStore._queryUnsubscribe = unsubscribe;
+              queryStores.set(key, queryStore);
+            }
           }
         } catch (error) {
           console.error(`[createUnifiedStore] Failed to resolve query "${key}":`, error);
@@ -246,6 +297,14 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
         queryDefinitions.delete(key);
       }
     }
+    
+    // Clean up schema subscriptions for queries that are no longer in context
+    for (const [key, unsubscribe] of schemaSubscriptions.entries()) {
+      if (!currentQueryKeys.has(key)) {
+        if (unsubscribe) unsubscribe();
+        schemaSubscriptions.delete(key);
+      }
+    }
 
     // Enqueue update after resolving all queries
     // This ensures unified store reflects current query state
@@ -262,6 +321,12 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
   unifiedStore._unsubscribe = () => {
     if (originalUnsubscribe) originalUnsubscribe();
     contextUnsubscribe();
+    // Clean up schema subscriptions
+    for (const unsubscribe of schemaSubscriptions.values()) {
+      if (unsubscribe) unsubscribe();
+    }
+    schemaSubscriptions.clear();
+    // Clean up query stores
     for (const store of queryStores.values()) {
       if (store._queryUnsubscribe) {
         store._queryUnsubscribe();
@@ -300,10 +365,16 @@ async function processCoValueData(backend, coValueCore, schemaHint, options, vis
   // Extract CoValue data as flat object
   let data = extractCoValueDataFlat(backend, coValueCore, schemaHint);
   
-  // Deep resolve nested references if enabled
+  // PROGRESSIVE DEEP RESOLUTION: Resolve nested references progressively (non-blocking)
+  // Main CoValue is already available (required for processCoValueData to be called)
+  // Nested CoValues will be resolved progressively if available, skipped if not ready yet
   if (deepResolve) {
     try {
-      await deepResolveCoValue(backend, coValueCore.id, { deepResolve, maxDepth, timeoutMs });
+      // Don't await - let deep resolution happen progressively in background
+      // This prevents blocking on nested CoValues that need to sync from server
+      deepResolveCoValue(backend, coValueCore.id, { deepResolve, maxDepth, timeoutMs }).catch(err => {
+        // Silently handle errors - progressive resolution doesn't block on failures
+      });
     } catch (err) {
       // Silently continue - deep resolution failure shouldn't block display
     }
@@ -518,6 +589,22 @@ async function readCollection(backend, schema, filter = null, options = {}) {
     return store;
   }
   
+  // Track item IDs we've subscribed to (for cleanup)
+  const subscribedItemIds = new Set();
+  
+  // CRITICAL OPTIMIZATION: Persistent shared visited set across ALL updateStore() calls
+  // This prevents duplicate deep resolution work when updateStore() is called multiple times
+  // (e.g., from subscription callbacks firing repeatedly)
+  const sharedVisited = new Set();
+  
+  // Cache for resolved+mapped item data (keyed by itemId)
+  const cache = backend.subscriptionCache;
+  
+  // Fix: Declare updateStore BEFORE any subscriptions to avoid temporal dead zone
+  // updateStore is referenced in subscription callbacks (both colist and item subscriptions)
+  // Initialize to no-op function to prevent temporal dead zone errors when subscriptions fire synchronously
+  let updateStore = async () => {}; // Will be reassigned below
+  
   // CRITICAL: Progressive loading - don't block if index colist isn't available yet
   // Trigger loading (fire and forget) - subscription will update store when ready
   if (!backend.isAvailable(coListCore)) {
@@ -544,21 +631,6 @@ async function readCollection(backend, schema, filter = null, options = {}) {
     return store;
   }
   
-  // Track item IDs we've subscribed to (for cleanup)
-  const subscribedItemIds = new Set();
-  
-  // CRITICAL OPTIMIZATION: Persistent shared visited set across ALL updateStore() calls
-  // This prevents duplicate deep resolution work when updateStore() is called multiple times
-  // (e.g., from subscription callbacks firing repeatedly)
-  const sharedVisited = new Set();
-  
-  // Cache for resolved+mapped item data (keyed by itemId)
-  const cache = backend.subscriptionCache;
-  
-  // Fix: Declare updateStore before subscribeToItem to avoid temporal dead zone
-  // updateStore is referenced in subscribeToItem callbacks, so it must be declared first
-  let updateStore;
-  
   // Helper to subscribe to an item CoValue
   const subscribeToItem = (itemId) => {
     // Skip if already subscribed
@@ -582,9 +654,12 @@ async function readCollection(backend, schema, filter = null, options = {}) {
             // Invalidate cache BEFORE processing - ensures getOrCreateResolvedData() processes fresh data
             cache.invalidateResolvedData(itemId);
             // Fire and forget - don't await async updateStore in subscription callback
-            updateStore().catch(err => {
-              console.warn(`[CoJSONBackend] Error updating store:`, err);
-            });
+            // Guard: Check if updateStore is defined (may not be initialized yet if subscription fires synchronously)
+            if (updateStore) {
+              updateStore().catch(err => {
+                console.warn(`[CoJSONBackend] Error updating store:`, err);
+              });
+            }
           });
           
           // Use subscriptionCache for each item (same pattern for all CoValue references)
@@ -592,9 +667,12 @@ async function readCollection(backend, schema, filter = null, options = {}) {
           
           // CRITICAL FIX: Trigger updateStore immediately after item is available
           // This ensures items that just loaded are included in the store
-          updateStore().catch(err => {
-            console.warn(`[CoJSONBackend] Error updating store after item load:`, err);
-          });
+          // Guard: Check if updateStore is defined (may not be initialized yet)
+          if (updateStore) {
+            updateStore().catch(err => {
+              console.warn(`[CoJSONBackend] Error updating store after item load:`, err);
+            });
+          }
         }
       }).catch(err => {
         console.error(`[CoJSONBackend] Failed to load item ${itemId}:`, err);
@@ -609,9 +687,12 @@ async function readCollection(backend, schema, filter = null, options = {}) {
       // Invalidate cache BEFORE processing - ensures getOrCreateResolvedData() processes fresh data
       cache.invalidateResolvedData(itemId);
       // Fire and forget - don't await async updateStore in subscription callback
-      updateStore().catch(err => {
-        console.warn(`[CoJSONBackend] Error updating store:`, err);
-      });
+      // Guard: Check if updateStore is assigned before calling (prevents temporal dead zone error)
+      if (updateStore) {
+        updateStore().catch(err => {
+          console.warn(`[CoJSONBackend] Error updating store:`, err);
+        });
+      }
     });
     
     // Use subscriptionCache for each item (same pattern for all CoValue references)
@@ -838,7 +919,8 @@ async function readAllCoValues(backend, filter = null, options = {}) {
   
   // Fix: Declare updateStore before subscribeToCoValue to avoid temporal dead zone
   // updateStore is referenced in subscribeToCoValue callbacks, so it must be declared first
-  let updateStore;
+  // Initialize to no-op function to prevent temporal dead zone errors when subscriptions fire synchronously
+  let updateStore = async () => {}; // Will be reassigned below
   
   // Helper to subscribe to a CoValue
   const subscribeToCoValue = (coId, coValueCore) => {

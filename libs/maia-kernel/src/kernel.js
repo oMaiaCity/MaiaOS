@@ -18,7 +18,8 @@ import { StateEngine } from '@MaiaOS/script';
 import { MaiaScriptEvaluator } from '@MaiaOS/script';
 import { ModuleRegistry } from '@MaiaOS/script';
 import { ToolEngine } from '@MaiaOS/script';
-import { resolve } from '@MaiaOS/db';
+import { resolve, resolveReactive } from '@MaiaOS/db';
+import { ensureCoValueLoaded } from '@MaiaOS/db';
 // SubscriptionEngine eliminated - all subscriptions handled via direct read() + ReactiveStore
 import { DBEngine } from '@MaiaOS/script';
 // Import validation helper
@@ -221,17 +222,22 @@ export class MaiaOS {
     // Initialize database (requires CoJSON backend via node+account or pre-initialized backend)
     const backend = await MaiaOS._initializeDatabase(os, config);
     
-    // CRITICAL: Ensure account.os is ready before any schema-dependent operations
-    // This is a dependency ordering guarantee - account.os must be ready before:
-    // - Schema resolution (in resolve())
-    // - Context CoValues are read (which contain query objects)
-    // - Actors are initialized (which process query objects)
-    // Architectural upgrade: Proactively loads account.os during boot instead of reactively during resolution
+    // OPTIMIZATION: Start loading account.os in background (non-blocking)
+    // account.os is NOT required for account loading - it's only needed for schema resolution
+    // Schema resolution can happen progressively as account.os becomes available
+    // This allows MaiaOS to boot immediately without waiting 5+ seconds for account.os to sync
     if (backend && typeof backend.ensureAccountOsReady === 'function') {
-      const accountOsReady = await backend.ensureAccountOsReady({ timeoutMs: 10000 });
-      if (!accountOsReady) {
-        console.warn('[MaiaOS.boot] account.os readiness check failed - schema resolution may fail');
-      }
+      // Start loading account.os in background (non-blocking)
+      backend.ensureAccountOsReady({ timeoutMs: 10000 }).then(accountOsReady => {
+        if (accountOsReady) {
+          console.log('[MaiaOS.boot] ✅ account.os ready (loaded progressively)');
+        } else {
+          console.warn('[MaiaOS.boot] ⚠️ account.os readiness check failed - schema resolution may fail until it loads');
+        }
+      }).catch(err => {
+        console.warn('[MaiaOS.boot] ⚠️ account.os loading error (non-blocking):', err);
+      });
+      // Don't await - let it load in background while we continue booting
     }
     
     // Seed database if registry provided
@@ -683,16 +689,33 @@ export class MaiaOS {
     
     console.log(`[Kernel] ✅ Extracted actor co-id from vibe: ${actorCoId}`);
     
-    // Extract actor schema co-id from actor's headerMeta.$schema using fromCoValue pattern
-    const actorSchemaStore = await this.dbEngine.execute({
-      op: 'schema',
-      fromCoValue: actorCoId // ✅ Extracts headerMeta.$schema from actor instance
-    });
-    const actorSchemaCoId = actorSchemaStore.value?.$id;
+    // UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
+    // Returns ReactiveStore that updates when schema becomes available
+    const actorSchemaStore = resolveReactive(this.dbEngine.backend, { fromCoValue: actorCoId }, { returnType: 'coId' });
     
-    if (!actorSchemaCoId) {
-      throw new Error(`[Kernel] Failed to extract schema co-id from actor ${actorCoId}. Actor must have $schema in headerMeta.`);
-    }
+    // Subscribe and wait for schema to resolve (reactive - uses subscriptions, not blocking waits)
+    let unsubscribe; // Declare before Promise to avoid temporal dead zone
+    const actorSchemaCoId = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        if (unsubscribe) unsubscribe();
+        reject(new Error(`[Kernel] Timeout waiting for actor schema to resolve for ${actorCoId} after 10000ms`));
+      }, 10000);
+      
+      unsubscribe = actorSchemaStore.subscribe((state) => {
+        if (state.loading) {
+          return; // Still loading
+        }
+        
+        clearTimeout(timeout);
+        if (unsubscribe) unsubscribe();
+        
+        if (state.error || !state.schemaCoId) {
+          reject(new Error(`[Kernel] Failed to extract schema co-id from actor ${actorCoId}: ${state.error || 'Schema not found'}`));
+        } else {
+          resolve(state.schemaCoId);
+        }
+      });
+    });
     
     // Verify actor exists in database (using read operation with reactive store)
     const actorStore = await this.dbEngine.execute({

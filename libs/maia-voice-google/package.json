@@ -1,5 +1,5 @@
 {
-	"name": "@MaiaOS/voice",
+	"name": "@MaiaOS/voice-google",
 	"version": "0.17.0",
 	"private": true,
 	"type": "module",

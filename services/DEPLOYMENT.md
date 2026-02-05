@@ -6,6 +6,7 @@ Complete guide for deploying MaiaOS services to Fly.io.
 
 1. **next-maia-city** (`services/maia-city/`) - Frontend SPA
 2. **api-next-maia-city** (`services/server/`) - Self-hosted sync server
+3. **voice-maia-city** (`libs/maia-voice/`) - PersonaPlex voice backend (GPU-enabled, see `libs/maia-voice/DEPLOY.md`)
 
 ## Quick Start
 

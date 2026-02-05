@@ -123,8 +123,8 @@
         "vite": "^7.3.1",
       },
     },
-    "libs/maia-voice": {
-      "name": "@MaiaOS/voice",
+    "libs/maia-voice-google": {
+      "name": "@MaiaOS/voice-google",
       "version": "0.17.0",
       "dependencies": {
         "@google/genai": "^1.30.0",
@@ -137,7 +137,7 @@
       "name": "api",
       "version": "0.0.0",
       "dependencies": {
-        "@MaiaOS/voice": "workspace:*",
+        "@MaiaOS/voice-google": "workspace:*",
         "@honcho-ai/sdk": "^2.0.0",
       },
       "devDependencies": {
@@ -191,7 +191,7 @@
 
     "@MaiaOS/vibes": ["@MaiaOS/vibes@workspace:libs/maia-vibes"],
 
-    "@MaiaOS/voice": ["@MaiaOS/voice@workspace:libs/maia-voice"],
+    "@MaiaOS/voice-google": ["@MaiaOS/voice-google@workspace:libs/maia-voice-google"],
 
     "@actions/core": ["@actions/core@1.11.1", "", { "dependencies": { "@actions/exec": "^1.1.1", "@actions/http-client": "^2.0.1" } }, "sha512-hXJCSrkwfA46Vd9Z3q4cpEpHB1rL5NG04+/rbqW9d3+CSvtB1tYe8UTpAlixa1vj0m/ULglfEK2UKxMGxCxv5A=="],
 

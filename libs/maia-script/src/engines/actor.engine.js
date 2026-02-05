@@ -7,7 +7,7 @@
  */
 
 // Import message helper
-import { createAndPushMessage, resolve } from '@MaiaOS/db';
+import { createAndPushMessage, resolve, resolveReactive, waitForReactiveResolution } from '@MaiaOS/db';
 
 // Render state machine - prevents race conditions by ensuring renders only happen when state allows
 export const RENDER_STATES = {
@@ -62,13 +62,17 @@ export class ActorEngine {
     
     const actorId = actorConfig.id || 'temp';
     
-    // Load view config (needs two sequential reads: first to get schema, then to get view)
-    const viewStore = await this.dbEngine.execute({ op: 'read', schema: null, key: actorConfig.view });
-    const viewData = viewStore.value;
-    const viewSchemaCoId = viewData?.$schema;
+    // UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
+    const viewSchemaStore = resolveReactive(this.dbEngine.backend, { fromCoValue: actorConfig.view }, { returnType: 'coId' });
+    const viewSchemaState = await waitForReactiveResolution(viewSchemaStore, { timeoutMs: 10000 });
+    const viewSchemaCoId = viewSchemaState.schemaCoId;
+    
     if (!viewSchemaCoId) {
-      throw new Error(`[ActorEngine] Failed to extract schema co-id from view CoValue ${actorConfig.view}`);
+      throw new Error(`[ActorEngine] Failed to extract schema co-id from view CoValue ${actorConfig.view}: ${viewSchemaState.error || 'Schema not found'}`);
     }
+    
+    // Load view config with resolved schema
+    const viewStore = await this.dbEngine.execute({ op: 'read', schema: null, key: actorConfig.view });
     const viewStore2 = await this.dbEngine.execute({ op: 'read', schema: viewSchemaCoId, key: actorConfig.view });
     const viewDef = viewStore2.value;
     
@@ -261,14 +265,13 @@ export class ActorEngine {
   async _initializeActorState(actor, actorConfig) {
     if (this.stateEngine && actorConfig.state && !actor.machine) {
       try {
-        // Use direct read() API for state config
-        const stateSchemaStore = await this.dbEngine.execute({ 
-          op: 'schema', 
-          fromCoValue: actorConfig.state 
-        });
-        const stateSchemaCoId = stateSchemaStore.value?.$id;
+        // UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
+        const stateSchemaStore = resolveReactive(this.dbEngine.backend, { fromCoValue: actorConfig.state }, { returnType: 'coId' });
+        const stateSchemaState = await waitForReactiveResolution(stateSchemaStore, { timeoutMs: 10000 });
+        const stateSchemaCoId = stateSchemaState.schemaCoId;
+        
         if (!stateSchemaCoId) {
-          throw new Error(`[ActorEngine] Failed to extract schema co-id from state CoValue ${actorConfig.state}`);
+          throw new Error(`[ActorEngine] Failed to extract schema co-id from state CoValue ${actorConfig.state}: ${stateSchemaState.error || 'Schema not found'}`);
         }
         const stateStore = await this.dbEngine.execute({ 
           op: 'read', 
@@ -321,13 +324,19 @@ export class ActorEngine {
     if (actorConfig.role === 'agent' || !actorConfig.view) return true;
     if (!viewDef) {
       try {
-        // Use direct read() API for view config
-        const viewStore = await this.dbEngine.execute({ op: 'read', schema: null, key: actorConfig.view });
-        const viewData = viewStore.value;
-        const viewSchemaCoId = viewData?.$schema;
-        if (!viewSchemaCoId) {
-          throw new Error(`[ActorEngine] Failed to extract schema co-id from view CoValue ${actorConfig.view}`);
+        // UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
+        try {
+          const viewSchemaStore = resolveReactive(this.dbEngine.backend, { fromCoValue: actorConfig.view }, { returnType: 'coId' });
+          const viewSchemaState = await waitForReactiveResolution(viewSchemaStore, { timeoutMs: 10000 });
+          const viewSchemaCoId = viewSchemaState.schemaCoId;
+          
+          if (!viewSchemaCoId) {
+            return false; // Silently fail for service actor detection
+          }
+        } catch {
+          return false; // Silently fail for service actor detection
         }
+        
         const viewStore2 = await this.dbEngine.execute({ op: 'read', schema: viewSchemaCoId, key: actorConfig.view });
         viewDef = viewStore2.value;
       } catch {
@@ -363,8 +372,15 @@ export class ActorEngine {
       throw new Error(`[ActorEngine] Child actor ID must be co-id: ${childActorCoId}`);
     }
     try {
-      // Use universal API directly - no wrapper needed
-      const actorSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: childActorCoId }, { returnType: 'coId' });
+      // UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
+      const actorSchemaStore = resolveReactive(this.dbEngine.backend, { fromCoValue: childActorCoId }, { returnType: 'coId' });
+      const actorSchemaState = await waitForReactiveResolution(actorSchemaStore, { timeoutMs: 10000 });
+      const actorSchemaCoId = actorSchemaState.schemaCoId;
+      
+      if (!actorSchemaCoId) {
+        throw new Error(`[ActorEngine] Failed to extract schema co-id from child actor CoValue ${childActorCoId}: ${actorSchemaState.error || 'Schema not found'}`);
+      }
+      
       const store = await this.dbEngine.execute({ op: 'read', schema: actorSchemaCoId, key: childActorCoId });
       const childActorConfig = store.value;
       if (childActorConfig.$id !== childActorCoId) childActorConfig.$id = childActorCoId;
@@ -536,13 +552,15 @@ export class ActorEngine {
     // Transition to RENDERING state to prevent nested renders
     actor._renderState = RENDER_STATES.RENDERING;
     
-    // Use direct read() API for view config
-    const viewStore = await this.dbEngine.execute({ op: 'read', schema: null, key: actor.config.view });
-    const viewData = viewStore.value;
-    const viewSchemaCoId = viewData?.$schema;
+    // UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
+    const viewSchemaStore = resolveReactive(this.dbEngine.backend, { fromCoValue: actor.config.view }, { returnType: 'coId' });
+    const viewSchemaState = await waitForReactiveResolution(viewSchemaStore, { timeoutMs: 10000 });
+    const viewSchemaCoId = viewSchemaState.schemaCoId;
+    
     if (!viewSchemaCoId) {
-      throw new Error(`[ActorEngine] Failed to extract schema co-id from view CoValue ${actor.config.view}`);
+      throw new Error(`[ActorEngine] Failed to extract schema co-id from view CoValue ${actor.config.view}: ${viewSchemaState.error || 'Schema not found'}`);
     }
+    
     const viewStore2 = await this.dbEngine.execute({ op: 'read', schema: viewSchemaCoId, key: actor.config.view });
     const viewDef = viewStore2.value;
     const styleSheets = await this.styleEngine.getStyleSheets(actor.config);

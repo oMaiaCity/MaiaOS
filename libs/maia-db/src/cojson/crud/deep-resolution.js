@@ -114,19 +114,26 @@ async function waitForCoValueAvailable(backend, coId, timeoutMs = 5000) {
 
 /**
  * Recursively resolve nested CoValue references in data
+ * 
+ * ROOT-CAUSE ARCHITECTURAL FIX: Progressive, non-blocking resolution
+ * - Only resolves nested CoValues that are ALREADY available
+ * - Triggers loading for unavailable CoValues but doesn't wait
+ * - Subscriptions handle progressive updates as CoValues become available
+ * - This prevents timeouts in fresh browser instances where CoValues need to sync from server
+ * 
  * @param {Object} backend - Backend instance
  * @param {any} data - Data object containing CoValue references
  * @param {Set<string>} visited - Set of already visited CoValue IDs (prevents infinite loops)
  * @param {Object} options - Options
  * @param {number} options.maxDepth - Maximum recursion depth (default: 10)
- * @param {number} options.timeoutMs - Timeout for waiting for CoValues (default: 5000)
+ * @param {number} options.timeoutMs - Timeout for waiting for CoValues (default: 5000) - UNUSED in progressive mode
  * @param {number} options.currentDepth - Current recursion depth (internal)
- * @returns {Promise<void>} Resolves when all nested CoValues are loaded
+ * @returns {Promise<void>} Resolves immediately (progressive resolution doesn't block)
  */
 export async function resolveNestedReferences(backend, data, visited = new Set(), options = {}) {
   const {
     maxDepth = 10,
-    timeoutMs = 5000,
+    timeoutMs = 5000, // Kept for API compatibility but not used in progressive mode
     currentDepth = 0
   } = options;
   
@@ -145,7 +152,7 @@ export async function resolveNestedReferences(backend, data, visited = new Set()
     return; // No nested references found
   }
   
-  // Load all nested CoValues in parallel
+  // PROGRESSIVE RESOLUTION: Process all nested CoValues in parallel, but only resolve what's available
   const loadPromises = Array.from(coIds).map(async (coId) => {
     // CRITICAL: Mark as visited BEFORE loading to prevent circular resolution
     // This ensures that if A→B→A, we stop at the second A
@@ -157,15 +164,50 @@ export async function resolveNestedReferences(backend, data, visited = new Set()
     visited.add(coId);
     
     try {
-      // Load and wait for CoValue to be available
-      await waitForCoValueAvailable(backend, coId, timeoutMs);
-      
-      // Get the CoValue data
+      // Get CoValueCore (creates if doesn't exist)
       const coValueCore = backend.getCoValue(coId);
-      if (!coValueCore || !backend.isAvailable(coValueCore)) {
-        return;
+      if (!coValueCore) {
+        return; // CoValueCore doesn't exist
       }
       
+      // REACTIVE PROGRESSIVE RESOLUTION: Subscribe to CoValue for reactive updates
+      // When CoValue becomes available, automatically resolve it
+      if (!backend.isAvailable(coValueCore)) {
+        // Not available - trigger loading and subscribe for reactive resolution
+        ensureCoValueLoaded(backend, coId, { waitForAvailable: false }).catch(err => {
+          // Silently handle errors - loading will retry via subscription
+        });
+        
+        // Subscribe to CoValueCore for reactive resolution when it becomes available
+        const loadingUnsubscribe = coValueCore.subscribe(async (core) => {
+          if (backend.isAvailable(core)) {
+            // CoValue became available - reactively resolve it
+            try {
+              const nestedData = extractCoValueDataFlat(backend, core);
+              // Recursively resolve nested references reactively (non-blocking)
+              await resolveNestedReferences(backend, nestedData, visited, {
+                maxDepth,
+                timeoutMs,
+                currentDepth: currentDepth + 1
+              });
+              
+              // Subscribe to nested CoValue to ensure it stays loaded
+              const nestedUnsubscribe = core.subscribe(() => {
+                // Keep subscription active for updates
+              });
+              backend.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe: nestedUnsubscribe }));
+              
+              loadingUnsubscribe(); // Clean up loading subscription
+            } catch (err) {
+              // Silently continue - errors are logged at top level if needed
+            }
+          }
+        });
+        
+        return; // Skip for now - will be resolved reactively when available
+      }
+      
+      // CoValue is available - resolve it
       // Extract data from nested CoValue
       const nestedData = extractCoValueDataFlat(backend, coValueCore);
       
@@ -177,12 +219,25 @@ export async function resolveNestedReferences(backend, data, visited = new Set()
         currentDepth: currentDepth + 1
       });
       
-      // Subscribe to nested CoValue to ensure it stays loaded
-      // Note: We don't re-resolve in subscription callback to avoid infinite loops
-      // The subscription just ensures the CoValue stays in memory
-      const unsubscribe = coValueCore.subscribe(() => {
-        // Subscription ensures CoValue stays loaded, but we don't re-resolve here
-        // to avoid potential infinite loops and performance issues
+      // REACTIVE PROGRESSIVE RESOLUTION: Subscribe to nested CoValue for reactive updates
+      // When CoValue becomes available, automatically resolve its nested references
+      const unsubscribe = coValueCore.subscribe(async (core) => {
+        if (backend.isAvailable(core)) {
+          // CoValue became available - reactively resolve its nested references
+          try {
+            const nestedData = extractCoValueDataFlat(backend, core);
+            // Recursively resolve nested references reactively (non-blocking)
+            resolveNestedReferences(backend, nestedData, visited, {
+              maxDepth,
+              timeoutMs,
+              currentDepth: currentDepth + 1
+            }).catch(err => {
+              // Silently handle errors - progressive resolution doesn't block on failures
+            });
+          } catch (err) {
+            // Silently continue - errors are logged at top level if needed
+          }
+        }
       });
       
       // Store subscription in cache
@@ -194,19 +249,28 @@ export async function resolveNestedReferences(backend, data, visited = new Set()
     }
   });
   
-  // Wait for all nested CoValues to be loaded
-  await Promise.all(loadPromises);
+  // Don't wait for all promises - progressive resolution returns immediately
+  // Process what's available now, let subscriptions handle the rest
+  Promise.all(loadPromises).catch(err => {
+    // Silently handle errors - progressive resolution doesn't block on failures
+  });
 }
 
 /**
  * Deeply resolve a CoValue and all its nested references
+ * 
+ * ROOT-CAUSE ARCHITECTURAL FIX: Progressive, non-blocking resolution
+ * - Only waits for the main CoValue to be available (required for read)
+ * - Nested CoValues are resolved progressively (only if already available)
+ * - This prevents timeouts in fresh browser instances where nested CoValues need to sync from server
+ * 
  * @param {Object} backend - Backend instance
  * @param {string} coId - CoValue ID to resolve
  * @param {Object} options - Options
  * @param {boolean} options.deepResolve - Enable/disable deep resolution (default: true)
  * @param {number} options.maxDepth - Maximum depth for recursive resolution (default: 10)
- * @param {number} options.timeoutMs - Timeout for waiting for nested CoValues (default: 5000)
- * @returns {Promise<void>} Resolves when CoValue and all nested references are loaded
+ * @param {number} options.timeoutMs - Timeout for waiting for main CoValue (default: 5000)
+ * @returns {Promise<void>} Resolves when main CoValue is available (nested resolution is progressive)
  */
 export async function deepResolveCoValue(backend, coId, options = {}) {
   const {
@@ -236,7 +300,8 @@ export async function deepResolveCoValue(backend, coId, options = {}) {
       try {
         const startTime = Date.now();
         
-        // Ensure the main CoValue is loaded
+        // PROGRESSIVE: Only wait for main CoValue (required for read operation)
+        // Nested CoValues will be resolved progressively if available
         await ensureCoValueLoaded(backend, coId, { waitForAvailable: true, timeoutMs });
         
         const coValueCore = backend.getCoValue(coId);
@@ -247,17 +312,21 @@ export async function deepResolveCoValue(backend, coId, options = {}) {
         // Extract data from CoValue
         const data = extractCoValueDataFlat(backend, coValueCore);
         
-        // Resolve nested references
+        // PROGRESSIVE RESOLUTION: Resolve nested references progressively (non-blocking)
         // Start with the root CoValue in visited set to prevent resolving it again
         const visited = new Set([coId]);
         
-        await resolveNestedReferences(backend, data, visited, {
+        // Don't await - let nested resolution happen progressively in background
+        resolveNestedReferences(backend, data, visited, {
           maxDepth,
           timeoutMs,
           currentDepth: 0
+        }).catch(err => {
+          // Silently handle errors - progressive resolution doesn't block on failures
         });
         
         // Mark as completed in cache (permanent - don't delete)
+        // Note: This marks the main CoValue as resolved, nested resolution is progressive
         cache.markResolved(coId);
       } catch (error) {
         // On error, remove from cache so it can be retried
@@ -272,7 +341,7 @@ export async function deepResolveCoValue(backend, coId, options = {}) {
     return;
   }
   
-  // Wait for resolution to complete
+  // Wait for main CoValue resolution to complete (nested resolution is progressive)
   await resolutionPromise;
 }
 

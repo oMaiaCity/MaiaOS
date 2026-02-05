@@ -15,7 +15,7 @@
  * Port: From PUBLIC_DOMAIN_API env var (default: 4201)
  */
 
-import { createVoiceSessionManager } from '@MaiaOS/voice'
+import { createVoiceSessionManager } from '@MaiaOS/voice-google'
 import { Honcho } from '@honcho-ai/sdk'
 
 // Read environment variables

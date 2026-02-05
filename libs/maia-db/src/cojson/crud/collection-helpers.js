@@ -158,3 +158,86 @@ export async function ensureCoValueLoaded(backend, coId, options = {}) {
   return coValueCore;
 }
 
+/**
+ * Wait for headerMeta.$schema to become available in a CoValue
+ * 
+ * ROOT-CAUSE ARCHITECTURAL FIX: Direct headerMeta access
+ * - Ensures headerMeta.$schema is actually available, not just that CoValue is "available"
+ * - Subscribes to CoValueCore updates and checks headerMeta.$schema on each update
+ * - This prevents race conditions where isAvailable() returns true but headerMeta isn't synced yet
+ * 
+ * @param {Object} backend - Backend instance
+ * @param {string} coId - CoValue ID (co-id)
+ * @param {Object} [options] - Options
+ * @param {number} [options.timeoutMs=10000] - Timeout in milliseconds (default: 10 seconds for fresh browser instances)
+ * @returns {Promise<string>} Schema co-id from headerMeta.$schema
+ * @throws {Error} If headerMeta.$schema doesn't become available within timeout
+ */
+export async function waitForHeaderMetaSchema(backend, coId, options = {}) {
+  const { timeoutMs = 10000 } = options;
+  
+  if (!coId || !coId.startsWith('co_')) {
+    throw new Error(`[waitForHeaderMetaSchema] Invalid co-id: ${coId}`);
+  }
+  
+  // Get CoValueCore (creates if doesn't exist)
+  const coValueCore = backend.getCoValue(coId);
+  if (!coValueCore) {
+    throw new Error(`[waitForHeaderMetaSchema] CoValueCore not found: ${coId}`);
+  }
+  
+  // Ensure CoValue is loaded first
+  await ensureCoValueLoaded(backend, coId, { waitForAvailable: true, timeoutMs });
+  
+  // Check if headerMeta.$schema is already available
+  const header = backend.getHeader(coValueCore);
+  const headerMeta = header?.meta || null;
+  const schemaCoId = headerMeta?.$schema || null;
+  
+  if (schemaCoId && typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
+    return schemaCoId; // Already available
+  }
+  
+  // Not available yet - wait for it by subscribing to CoValueCore updates
+  return new Promise((resolve, reject) => {
+    let resolved = false;
+    let unsubscribe;
+    
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        if (unsubscribe) unsubscribe();
+        reject(new Error(`[waitForHeaderMetaSchema] Timeout waiting for headerMeta.$schema in CoValue ${coId} after ${timeoutMs}ms`));
+      }
+    }, timeoutMs);
+    
+    unsubscribe = coValueCore.subscribe((core) => {
+      if (resolved) return;
+      
+      // Check headerMeta.$schema on each update
+      const updatedHeader = backend.getHeader(core);
+      const updatedHeaderMeta = updatedHeader?.meta || null;
+      const updatedSchemaCoId = updatedHeaderMeta?.$schema || null;
+      
+      if (updatedSchemaCoId && typeof updatedSchemaCoId === 'string' && updatedSchemaCoId.startsWith('co_z')) {
+        resolved = true;
+        clearTimeout(timeout);
+        unsubscribe();
+        resolve(updatedSchemaCoId);
+      }
+    });
+    
+    // Check one more time after subscription setup (might have changed during setup)
+    const currentHeader = backend.getHeader(coValueCore);
+    const currentHeaderMeta = currentHeader?.meta || null;
+    const currentSchemaCoId = currentHeaderMeta?.$schema || null;
+    
+    if (currentSchemaCoId && typeof currentSchemaCoId === 'string' && currentSchemaCoId.startsWith('co_z')) {
+      resolved = true;
+      clearTimeout(timeout);
+      unsubscribe();
+      resolve(currentSchemaCoId);
+    }
+  });
+}
+

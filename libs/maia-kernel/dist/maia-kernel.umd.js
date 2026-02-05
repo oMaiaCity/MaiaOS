@@ -10239,6 +10239,22 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
     } else {
       phaseTimings.profileLoadTotal = 0;
     }
+    const osLoadRequestStartTime = performance.now();
+    const osID = rawAccount.get("os");
+    if (osID && typeof osID === "string" && osID.startsWith("co_z")) {
+      console.log(`   ⏳ [PERF] Prefetching account.os at ${osLoadRequestStartTime.toFixed(2)}ms`);
+      const osCoValue = node.getCoValue(osID);
+      if (osCoValue && !osCoValue.isAvailable()) {
+        node.loadCoValueCore(osID).catch((err) => {
+          console.warn(`[loadAccount] Failed to prefetch account.os:`, err);
+        });
+        console.log(`   ✅ [PERF] account.os prefetch triggered (non-blocking)`);
+      } else if (osCoValue && osCoValue.isAvailable()) {
+        console.log(`   ✅ [PERF] account.os already available (loaded with account)`);
+      }
+    } else {
+      console.log(`   ℹ️  [PERF] account.os does not exist yet (will be created on first use)`);
+    }
     const loadDuration = performance.now() - loadStartTime;
     phaseTimings.total = loadDuration;
     const likelySource = loadDuration < 200 ? "IndexedDB (local)" : loadDuration < 1e3 ? "sync server (fast)" : "sync server (slow)";
@@ -10300,7 +10316,7 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
     $defs: $defs$6,
     default: coTypesDefs
   }, Symbol.toStringTag, { value: "Module" }));
-  class ReactiveStore {
+  let ReactiveStore$1 = class ReactiveStore {
     constructor(initialValue) {
       this._value = initialValue;
       this._subscribers = /* @__PURE__ */ new Set();
@@ -10344,7 +10360,7 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
       this._value = newValue;
       this._subscribers.forEach((cb) => cb(newValue));
     }
-  }
+  };
   async function resolveSchemaCoId(backend, schema) {
     if (!schema || typeof schema !== "string") {
       return null;
@@ -11329,24 +11345,11 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
     }
     return coIds;
   }
-  async function waitForCoValueAvailable(backend, coId, timeoutMs = 5e3) {
-    const coValueCore = backend.getCoValue(coId);
-    if (!coValueCore) {
-      throw new Error(`CoValue ${coId} not found`);
-    }
-    if (backend.isAvailable(coValueCore)) {
-      return;
-    }
-    await ensureCoValueLoaded(backend, coId, { waitForAvailable: true, timeoutMs });
-    const updatedCore = backend.getCoValue(coId);
-    if (!updatedCore || !backend.isAvailable(updatedCore)) {
-      throw new Error(`CoValue ${coId} failed to load within ${timeoutMs}ms`);
-    }
-  }
   async function resolveNestedReferences(backend, data2, visited = /* @__PURE__ */ new Set(), options = {}) {
     const {
       maxDepth = 10,
       timeoutMs = 5e3,
+      // Kept for API compatibility but not used in progressive mode
       currentDepth = 0
     } = options;
     const depthPrefix = `[DeepResolution:depth${currentDepth}]`;
@@ -11364,9 +11367,30 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
       }
       visited.add(coId);
       try {
-        await waitForCoValueAvailable(backend, coId, timeoutMs);
         const coValueCore = backend.getCoValue(coId);
-        if (!coValueCore || !backend.isAvailable(coValueCore)) {
+        if (!coValueCore) {
+          return;
+        }
+        if (!backend.isAvailable(coValueCore)) {
+          ensureCoValueLoaded(backend, coId, { waitForAvailable: false }).catch((err) => {
+          });
+          const loadingUnsubscribe = coValueCore.subscribe(async (core2) => {
+            if (backend.isAvailable(core2)) {
+              try {
+                const nestedData2 = extractCoValueDataFlat(backend, core2);
+                await resolveNestedReferences(backend, nestedData2, visited, {
+                  maxDepth,
+                  timeoutMs,
+                  currentDepth: currentDepth + 1
+                });
+                const nestedUnsubscribe = core2.subscribe(() => {
+                });
+                backend.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe: nestedUnsubscribe }));
+                loadingUnsubscribe();
+              } catch (err) {
+              }
+            }
+          });
           return;
         }
         const nestedData = extractCoValueDataFlat(backend, coValueCore);
@@ -11375,13 +11399,26 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
           timeoutMs,
           currentDepth: currentDepth + 1
         });
-        const unsubscribe = coValueCore.subscribe(() => {
+        const unsubscribe = coValueCore.subscribe(async (core2) => {
+          if (backend.isAvailable(core2)) {
+            try {
+              const nestedData2 = extractCoValueDataFlat(backend, core2);
+              resolveNestedReferences(backend, nestedData2, visited, {
+                maxDepth,
+                timeoutMs,
+                currentDepth: currentDepth + 1
+              }).catch((err) => {
+              });
+            } catch (err) {
+            }
+          }
         });
         backend.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe }));
       } catch (error) {
       }
     });
-    await Promise.all(loadPromises);
+    Promise.all(loadPromises).catch((err) => {
+    });
   }
   async function deepResolveCoValue(backend, coId, options = {}) {
     const {
@@ -11408,10 +11445,11 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
           }
           const data2 = extractCoValueDataFlat(backend, coValueCore);
           const visited = /* @__PURE__ */ new Set([coId]);
-          await resolveNestedReferences(backend, data2, visited, {
+          resolveNestedReferences(backend, data2, visited, {
             maxDepth,
             timeoutMs,
             currentDepth: 0
+          }).catch((err) => {
           });
           cache.markResolved(coId);
         } catch (error) {
@@ -11540,9 +11578,10 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
     return await readAllCoValues(backend, filter, { deepResolve, maxDepth, timeoutMs });
   }
   async function createUnifiedStore(backend, contextStore, options = {}) {
-    const unifiedStore = new ReactiveStore({});
+    const unifiedStore = new ReactiveStore$1({});
     const queryStores = /* @__PURE__ */ new Map();
     const queryDefinitions = /* @__PURE__ */ new Map();
+    const schemaSubscriptions = /* @__PURE__ */ new Map();
     const { timeoutMs = 5e3, onChange } = options;
     let lastUnifiedValue = null;
     let queueTimer = null;
@@ -11590,43 +11629,82 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
             let schemaCoId = value.schema;
             if (typeof schemaCoId === "string" && !schemaCoId.startsWith("co_z")) {
               if (schemaCoId.startsWith("@schema/")) {
-                console.log(`[createUnifiedStore] Resolving schema namekey "${schemaCoId}" for query "${key}"...`);
-                const startTime = Date.now();
-                schemaCoId = await resolve$1(backend, schemaCoId, { returnType: "coId", timeoutMs });
-                const duration = Date.now() - startTime;
-                if (!schemaCoId || !schemaCoId.startsWith("co_z")) {
-                  console.error(`[createUnifiedStore] ❌ Failed to resolve schema ${value.schema} for query "${key}" (took ${duration}ms)`);
-                  continue;
-                }
-                console.log(`[createUnifiedStore] ✅ Resolved schema "${value.schema}" → "${schemaCoId.substring(0, 12)}..." for query "${key}" (took ${duration}ms)`);
+                console.log(`[createUnifiedStore] Resolving schema namekey "${schemaCoId}" reactively for query "${key}"...`);
+                const schemaStore = resolveReactive(backend, schemaCoId, { timeoutMs });
+                const schemaUnsubscribe = schemaStore.subscribe(async (schemaState) => {
+                  if (schemaState.loading) {
+                    if (!queryStores.has(key)) {
+                      const loadingStore = new ReactiveStore$1([]);
+                      queryStores.set(key, loadingStore);
+                      queryDefinitions.set(key, {
+                        schema: value.schema,
+                        ...value.options ? { options: value.options } : {},
+                        ...value.filter ? { filter: value.filter } : {}
+                      });
+                      enqueueUpdate();
+                    }
+                    return;
+                  }
+                  if (schemaState.error || !schemaState.schemaCoId) {
+                    console.error(`[createUnifiedStore] ❌ Failed to resolve schema ${value.schema} for query "${key}": ${schemaState.error || "Schema not found"}`);
+                    schemaUnsubscribe();
+                    return;
+                  }
+                  const resolvedSchemaCoId = schemaState.schemaCoId;
+                  console.log(`[createUnifiedStore] ✅ Resolved schema "${value.schema}" → "${resolvedSchemaCoId.substring(0, 12)}..." for query "${key}"`);
+                  try {
+                    const queryOptions = {
+                      ...options,
+                      timeoutMs,
+                      ...value.options || {}
+                    };
+                    const queryStore = await read(backend, null, resolvedSchemaCoId, value.filter || null, null, queryOptions);
+                    queryDefinitions.set(key, {
+                      schema: value.schema,
+                      ...value.options ? { options: value.options } : {},
+                      ...value.filter ? { filter: value.filter } : {}
+                    });
+                    const queryUnsubscribe = queryStore.subscribe(() => {
+                      enqueueUpdate();
+                    });
+                    queryStore._queryUnsubscribe = queryUnsubscribe;
+                    queryStores.set(key, queryStore);
+                    enqueueUpdate();
+                    schemaUnsubscribe();
+                  } catch (error) {
+                    console.error(`[createUnifiedStore] Failed to execute query "${key}" after schema resolution:`, error);
+                    schemaUnsubscribe();
+                  }
+                });
+                schemaSubscriptions.set(key, schemaUnsubscribe);
+                continue;
               } else {
                 console.error(`[createUnifiedStore] Invalid schema format for query "${key}": ${schemaCoId}`);
                 continue;
               }
             } else if (schemaCoId && schemaCoId.startsWith("co_z")) {
               console.log(`[createUnifiedStore] Query "${key}" already has co-id: "${schemaCoId.substring(0, 12)}..."`);
-            }
-            const queryOptions = {
-              ...options,
-              timeoutMs,
-              // Extract options from query object (e.g., value.options.map)
-              ...value.options || {}
-            };
-            const queryStore = await read(backend, null, schemaCoId, value.filter || null, null, queryOptions);
-            queryDefinitions.set(key, {
-              schema: value.schema,
-              ...value.options ? { options: value.options } : {},
-              ...value.filter ? { filter: value.filter } : {}
-            });
-            if (!existingStore || existingStore !== queryStore) {
-              if (existingStore && existingStore._queryUnsubscribe) {
-                existingStore._queryUnsubscribe();
-              }
-              const unsubscribe = queryStore.subscribe(() => {
-                enqueueUpdate();
+              const queryOptions = {
+                ...options,
+                timeoutMs,
+                ...value.options || {}
+              };
+              const queryStore = await read(backend, null, schemaCoId, value.filter || null, null, queryOptions);
+              queryDefinitions.set(key, {
+                schema: value.schema,
+                ...value.options ? { options: value.options } : {},
+                ...value.filter ? { filter: value.filter } : {}
               });
-              queryStore._queryUnsubscribe = unsubscribe;
-              queryStores.set(key, queryStore);
+              if (!existingStore || existingStore !== queryStore) {
+                if (existingStore && existingStore._queryUnsubscribe) {
+                  existingStore._queryUnsubscribe();
+                }
+                const unsubscribe = queryStore.subscribe(() => {
+                  enqueueUpdate();
+                });
+                queryStore._queryUnsubscribe = unsubscribe;
+                queryStores.set(key, queryStore);
+              }
             }
           } catch (error) {
             console.error(`[createUnifiedStore] Failed to resolve query "${key}":`, error);
@@ -11643,6 +11721,12 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
           queryDefinitions.delete(key);
         }
       }
+      for (const [key, unsubscribe] of schemaSubscriptions.entries()) {
+        if (!currentQueryKeys.has(key)) {
+          if (unsubscribe) unsubscribe();
+          schemaSubscriptions.delete(key);
+        }
+      }
       enqueueUpdate();
     };
     const contextUnsubscribe = contextStore.subscribe(async (newContextValue) => {
@@ -11652,6 +11736,10 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
     unifiedStore._unsubscribe = () => {
       if (originalUnsubscribe) originalUnsubscribe();
       contextUnsubscribe();
+      for (const unsubscribe of schemaSubscriptions.values()) {
+        if (unsubscribe) unsubscribe();
+      }
+      schemaSubscriptions.clear();
       for (const store of queryStores.values()) {
         if (store._queryUnsubscribe) {
           store._queryUnsubscribe();
@@ -11674,7 +11762,8 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
     let data2 = extractCoValueDataFlat(backend, coValueCore, schemaHint);
     if (deepResolve) {
       try {
-        await deepResolveCoValue(backend, coValueCore.id, { deepResolve, maxDepth, timeoutMs });
+        deepResolveCoValue(backend, coValueCore.id, { deepResolve, maxDepth, timeoutMs }).catch((err) => {
+        });
       } catch (err) {
       }
     }
@@ -11706,7 +11795,7 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
     const cacheOptions = { deepResolve, resolveReferences, map, maxDepth, timeoutMs };
     const cachedData = cache.getResolvedData(coId, cacheOptions);
     if (cachedData) {
-      const store2 = new ReactiveStore(cachedData);
+      const store2 = new ReactiveStore$1(cachedData);
       const coValueCore2 = backend.getCoValue(coId);
       if (coValueCore2) {
         const unsubscribe2 = coValueCore2.subscribe(async (core2) => {
@@ -11725,7 +11814,7 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
       }
       return store2;
     }
-    const store = new ReactiveStore(null);
+    const store = new ReactiveStore$1(null);
     const coValueCore = backend.getCoValue(coId);
     if (!coValueCore) {
       store._set({ error: "CoValue not found", id: coId });
@@ -11789,7 +11878,7 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
     const optionsKey = options && (options.map || options.resolveReferences) ? JSON.stringify({ map: options.map || null, resolveReferences: options.resolveReferences || null }) : "";
     const cacheKey = `${schema}:${JSON.stringify(filter || {})}:${optionsKey}`;
     const store = backend.subscriptionCache.getOrCreateStore(cacheKey, () => {
-      return new ReactiveStore([]);
+      return new ReactiveStore$1([]);
     });
     const coListId = await getCoListId(backend, schema);
     if (!coListId) {
@@ -11799,6 +11888,11 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
     if (!coListCore) {
       return store;
     }
+    const subscribedItemIds = /* @__PURE__ */ new Set();
+    const sharedVisited = /* @__PURE__ */ new Set();
+    const cache = backend.subscriptionCache;
+    let updateStore = async () => {
+    };
     if (!backend.isAvailable(coListCore)) {
       ensureCoValueLoaded(backend, coListId, { waitForAvailable: false }).catch((err) => {
         console.warn(`[readCollection] Failed to load CoList ${coListId.substring(0, 12)}...:`, err);
@@ -11815,10 +11909,6 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
       }
       return store;
     }
-    const subscribedItemIds = /* @__PURE__ */ new Set();
-    const sharedVisited = /* @__PURE__ */ new Set();
-    const cache = backend.subscriptionCache;
-    let updateStore;
     const subscribeToItem = (itemId) => {
       if (subscribedItemIds.has(itemId)) {
         return;
@@ -11831,14 +11921,18 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
           if (loadedItemCore && backend.isAvailable(loadedItemCore)) {
             const unsubscribeItem2 = loadedItemCore.subscribe(() => {
               cache.invalidateResolvedData(itemId);
-              updateStore().catch((err) => {
-                console.warn(`[CoJSONBackend] Error updating store:`, err);
-              });
+              if (updateStore) {
+                updateStore().catch((err) => {
+                  console.warn(`[CoJSONBackend] Error updating store:`, err);
+                });
+              }
             });
             backend.subscriptionCache.getOrCreate(`subscription:${itemId}`, () => ({ unsubscribe: unsubscribeItem2 }));
-            updateStore().catch((err) => {
-              console.warn(`[CoJSONBackend] Error updating store after item load:`, err);
-            });
+            if (updateStore) {
+              updateStore().catch((err) => {
+                console.warn(`[CoJSONBackend] Error updating store after item load:`, err);
+              });
+            }
           }
         }).catch((err) => {
           console.error(`[CoJSONBackend] Failed to load item ${itemId}:`, err);
@@ -11847,9 +11941,11 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
       }
       const unsubscribeItem = itemCore.subscribe(() => {
         cache.invalidateResolvedData(itemId);
-        updateStore().catch((err) => {
-          console.warn(`[CoJSONBackend] Error updating store:`, err);
-        });
+        if (updateStore) {
+          updateStore().catch((err) => {
+            console.warn(`[CoJSONBackend] Error updating store:`, err);
+          });
+        }
       });
       backend.subscriptionCache.getOrCreate(`subscription:${itemId}`, () => ({ unsubscribe: unsubscribeItem }));
     };
@@ -11982,9 +12078,10 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
       maxDepth = 10,
       timeoutMs = 5e3
     } = options;
-    const store = new ReactiveStore([]);
+    const store = new ReactiveStore$1([]);
     const subscribedCoIds = /* @__PURE__ */ new Set();
-    let updateStore;
+    let updateStore = async () => {
+    };
     const subscribeToCoValue = (coId, coValueCore) => {
       if (subscribedCoIds.has(coId)) {
         return;
@@ -12091,6 +12188,258 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
     __proto__: null,
     waitForStoreReady
   }, Symbol.toStringTag, { value: "Module" }));
+  function waitForReactiveResolution(store, options = {}) {
+    const { timeoutMs = 1e4 } = options;
+    return new Promise((resolve2, reject) => {
+      let unsubscribe;
+      const timeout = setTimeout(() => {
+        if (unsubscribe) unsubscribe();
+        reject(new Error(`Timeout waiting for reactive resolution after ${timeoutMs}ms`));
+      }, timeoutMs);
+      unsubscribe = store.subscribe((state) => {
+        if (state.loading) {
+          return;
+        }
+        clearTimeout(timeout);
+        if (unsubscribe) unsubscribe();
+        if (state.error) {
+          reject(new Error(state.error));
+        } else {
+          resolve2(state);
+        }
+      });
+    });
+  }
+  function resolveSchemaReactive(backend, schemaKey, options = {}) {
+    const { timeoutMs = 1e4 } = options;
+    const store = new ReactiveStore$1({ loading: true });
+    if (schemaKey.startsWith("co_z")) {
+      store._set({ loading: false, schemaCoId: schemaKey });
+      return store;
+    }
+    let osUnsubscribe = null;
+    let schematasUnsubscribe = null;
+    const setupReactiveSubscription = async () => {
+      if (!backend.account || typeof backend.account.get !== "function") {
+        store._set({ loading: false, error: "Account not available" });
+        return;
+      }
+      const osId = backend.account.get("os");
+      if (!osId || typeof osId !== "string" || !osId.startsWith("co_z")) {
+        store._set({ loading: false, error: "account.os not found" });
+        return;
+      }
+      const osStore = await read(backend, osId, null, null, null, {
+        deepResolve: false,
+        timeoutMs
+      });
+      osUnsubscribe = osStore.subscribe(async (osData) => {
+        if (!osData || osData.error) {
+          return;
+        }
+        const schematasId = osData.schematas;
+        if (!schematasId || typeof schematasId !== "string" || !schematasId.startsWith("co_z")) {
+          return;
+        }
+        if (!schematasUnsubscribe) {
+          const schematasStore = await read(backend, schematasId, null, null, null, {
+            deepResolve: false,
+            timeoutMs
+          });
+          schematasUnsubscribe = schematasStore.subscribe((schematasData) => {
+            if (!schematasData || schematasData.error) {
+              return;
+            }
+            const normalizedKey = schemaKey.startsWith("@schema/") ? schemaKey : `@schema/${schemaKey}`;
+            const registryCoId = schematasData[normalizedKey] || schematasData[schemaKey];
+            if (registryCoId && typeof registryCoId === "string" && registryCoId.startsWith("co_z")) {
+              store._set({ loading: false, schemaCoId: registryCoId });
+              if (schematasUnsubscribe) {
+                schematasUnsubscribe();
+                schematasUnsubscribe = null;
+              }
+              if (osUnsubscribe) {
+                osUnsubscribe();
+                osUnsubscribe = null;
+              }
+            }
+          });
+        }
+      });
+      const originalUnsubscribe = store._unsubscribe;
+      store._unsubscribe = () => {
+        if (originalUnsubscribe) originalUnsubscribe();
+        if (schematasUnsubscribe) {
+          schematasUnsubscribe();
+          schematasUnsubscribe = null;
+        }
+        if (osUnsubscribe) {
+          osUnsubscribe();
+          osUnsubscribe = null;
+        }
+      };
+    };
+    resolve$1(backend, schemaKey, { returnType: "coId", timeoutMs: 2e3 }).then((schemaCoId) => {
+      if (schemaCoId && schemaCoId.startsWith("co_z")) {
+        store._set({ loading: false, schemaCoId });
+      } else {
+        setupReactiveSubscription().catch((error) => {
+          store._set({ loading: false, error: error.message });
+        });
+      }
+    }).catch(() => {
+      setupReactiveSubscription().catch((error) => {
+        store._set({ loading: false, error: error.message });
+      });
+    });
+    return store;
+  }
+  function resolveCoValueReactive(backend, coId, options = {}) {
+    const store = new ReactiveStore$1({ loading: true });
+    if (!coId || !coId.startsWith("co_z")) {
+      store._set({ loading: false, error: "Invalid co-id" });
+      return store;
+    }
+    const coValueCore = backend.getCoValue(coId);
+    if (!coValueCore) {
+      store._set({ loading: false, error: "CoValueCore not found" });
+      return store;
+    }
+    if (backend.isAvailable(coValueCore)) {
+      store._set({ loading: false, coValueCore });
+      return store;
+    }
+    ensureCoValueLoaded(backend, coId, { waitForAvailable: false }).catch((err) => {
+    });
+    const unsubscribe = coValueCore.subscribe((core2) => {
+      if (backend.isAvailable(core2)) {
+        store._set({ loading: false, coValueCore: core2 });
+        unsubscribe();
+      }
+    });
+    const originalUnsubscribe = store._unsubscribe;
+    store._unsubscribe = () => {
+      if (originalUnsubscribe) originalUnsubscribe();
+      unsubscribe();
+    };
+    return store;
+  }
+  function resolveQueryReactive(backend, queryDef, options = {}) {
+    const store = new ReactiveStore$1({ loading: true, items: [] });
+    if (!queryDef || !queryDef.schema) {
+      store._set({ loading: false, items: [], error: "Invalid query definition" });
+      return store;
+    }
+    const schemaStore = resolveSchemaReactive(backend, queryDef.schema, options);
+    const schemaUnsubscribe = schemaStore.subscribe(async (schemaState) => {
+      if (schemaState.loading) {
+        return;
+      }
+      if (schemaState.error || !schemaState.schemaCoId) {
+        store._set({ loading: false, items: [], error: schemaState.error || "Schema not found" });
+        schemaUnsubscribe();
+        return;
+      }
+      try {
+        const queryStore = await read(
+          backend,
+          null,
+          schemaState.schemaCoId,
+          queryDef.filter || null,
+          null,
+          {
+            ...options,
+            ...queryDef.options || {}
+          }
+        );
+        const queryUnsubscribe = queryStore.subscribe((queryResults) => {
+          const items2 = Array.isArray(queryResults) ? queryResults : queryResults?.items || [];
+          store._set({ loading: false, items: items2 });
+        });
+        const originalUnsubscribe = store._unsubscribe;
+        store._unsubscribe = () => {
+          if (originalUnsubscribe) originalUnsubscribe();
+          queryUnsubscribe();
+          schemaUnsubscribe();
+        };
+      } catch (error) {
+        store._set({ loading: false, items: [], error: error.message });
+        schemaUnsubscribe();
+      }
+    });
+    return store;
+  }
+  function resolveReactive$1(backend, identifier, options = {}) {
+    if (identifier && typeof identifier === "object" && !Array.isArray(identifier)) {
+      if (identifier.schema) {
+        return resolveQueryReactive(backend, identifier, options);
+      }
+      if (identifier.fromCoValue) {
+        const coValueStore = resolveCoValueReactive(backend, identifier.fromCoValue, options);
+        const schemaStore = new ReactiveStore$1({ loading: true });
+        let coValueUnsubscribe;
+        let schemaResolveUnsubscribe;
+        let headerUnsubscribe;
+        coValueUnsubscribe = coValueStore.subscribe(async (coValueState) => {
+          if (coValueState.loading) {
+            return;
+          }
+          if (coValueState.error || !coValueState.coValueCore) {
+            schemaStore._set({ loading: false, error: coValueState.error || "CoValue not found" });
+            if (coValueUnsubscribe) coValueUnsubscribe();
+            return;
+          }
+          const header = backend.getHeader(coValueState.coValueCore);
+          const headerMeta = header?.meta || null;
+          const schemaCoId = headerMeta?.$schema || null;
+          if (schemaCoId && typeof schemaCoId === "string" && schemaCoId.startsWith("co_z")) {
+            const resolvedSchemaStore = resolveSchemaReactive(backend, schemaCoId, options);
+            schemaResolveUnsubscribe = resolvedSchemaStore.subscribe((schemaState) => {
+              schemaStore._set(schemaState);
+              if (!schemaState.loading) {
+                if (schemaResolveUnsubscribe) schemaResolveUnsubscribe();
+                if (coValueUnsubscribe) coValueUnsubscribe();
+              }
+            });
+          } else {
+            headerUnsubscribe = coValueState.coValueCore.subscribe((core2) => {
+              const updatedHeader = backend.getHeader(core2);
+              const updatedHeaderMeta = updatedHeader?.meta || null;
+              const updatedSchemaCoId = updatedHeaderMeta?.$schema || null;
+              if (updatedSchemaCoId && typeof updatedSchemaCoId === "string" && updatedSchemaCoId.startsWith("co_z")) {
+                const resolvedSchemaStore = resolveSchemaReactive(backend, updatedSchemaCoId, options);
+                schemaResolveUnsubscribe = resolvedSchemaStore.subscribe((schemaState) => {
+                  schemaStore._set(schemaState);
+                  if (!schemaState.loading) {
+                    if (schemaResolveUnsubscribe) schemaResolveUnsubscribe();
+                    if (headerUnsubscribe) headerUnsubscribe();
+                    if (coValueUnsubscribe) coValueUnsubscribe();
+                  }
+                });
+              }
+            });
+          }
+        });
+        const originalUnsubscribe = schemaStore._unsubscribe;
+        schemaStore._unsubscribe = () => {
+          if (originalUnsubscribe) originalUnsubscribe();
+          if (coValueUnsubscribe) coValueUnsubscribe();
+          if (schemaResolveUnsubscribe) schemaResolveUnsubscribe();
+          if (headerUnsubscribe) headerUnsubscribe();
+        };
+        return schemaStore;
+      }
+    }
+    if (typeof identifier === "string") {
+      if (identifier.startsWith("co_z")) {
+        return resolveCoValueReactive(backend, identifier, options);
+      } else {
+        return resolveSchemaReactive(backend, identifier, options);
+      }
+    }
+    const store = new ReactiveStore$1({ loading: false, error: "Invalid identifier" });
+    return store;
+  }
   function removeIdFields(obj) {
     if (obj === null || obj === void 0) {
       return obj;
@@ -12292,6 +12641,65 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
     }
     console.warn(`[resolve] Unknown key format: ${identifier}`);
     return null;
+  }
+  function resolveReactive(backend, identifier, options = {}) {
+    const { returnType = "coId" } = options;
+    const store = resolveReactive$1(backend, identifier, options);
+    if (returnType === "schema" || returnType === "coValue") {
+      const transformedStore = new ReactiveStore({ loading: true });
+      const unsubscribe = store.subscribe(async (state) => {
+        if (state.loading) {
+          transformedStore._set({ loading: true });
+          return;
+        }
+        if (state.error) {
+          transformedStore._set({ loading: false, error: state.error });
+          unsubscribe();
+          return;
+        }
+        if (state.schemaCoId) {
+          if (returnType === "coId") {
+            transformedStore._set({ loading: false, schemaCoId: state.schemaCoId });
+            unsubscribe();
+          } else {
+            try {
+              const resolved = await resolve$1(backend, state.schemaCoId, { returnType });
+              if (resolved) {
+                transformedStore._set({ loading: false, [returnType === "schema" ? "schema" : "coValue"]: resolved });
+              } else {
+                transformedStore._set({ loading: false, error: "Schema not found" });
+              }
+              unsubscribe();
+            } catch (error) {
+              transformedStore._set({ loading: false, error: error.message });
+              unsubscribe();
+            }
+          }
+        } else if (state.coValueCore) {
+          if (returnType === "coId") {
+            const header = backend.getHeader(state.coValueCore);
+            const headerMeta = header?.meta || null;
+            const schemaCoId = headerMeta?.$schema || null;
+            if (schemaCoId) {
+              transformedStore._set({ loading: false, schemaCoId });
+            } else {
+              transformedStore._set({ loading: false, error: "Schema not found in headerMeta" });
+            }
+            unsubscribe();
+          } else {
+            transformedStore._set({ loading: false, coValue: state.coValueCore });
+            unsubscribe();
+          }
+        }
+      });
+      const originalUnsubscribe = transformedStore._unsubscribe;
+      transformedStore._unsubscribe = () => {
+        if (originalUnsubscribe) originalUnsubscribe();
+        unsubscribe();
+      };
+      return transformedStore;
+    }
+    return store;
   }
   async function checkCotype(backend, schemaCoId, expectedCotype) {
     const schema = await resolve$1(backend, schemaCoId, { returnType: "schema" });
@@ -14698,11 +15106,11 @@ ${errorDetails}`);
       schemaCoId = await resolve$1(backend, { fromCoValue }, { returnType: "coId" });
       if (!schemaCoId) {
         console.warn(`[SchemaOperation] Could not extract schema co-id from CoValue ${fromCoValue} headerMeta`);
-        return new ReactiveStore(null);
+        return new ReactiveStore$1(null);
       }
     }
     const schemaCoMapStore = await backend.read(null, schemaCoId);
-    const schemaStore = new ReactiveStore(null);
+    const schemaStore = new ReactiveStore$1(null);
     const updateSchema = (coValueData) => schemaStore._set(extractSchemaDefinition(coValueData, schemaCoId));
     const unsubscribe = schemaCoMapStore.subscribe(updateSchema);
     updateSchema(schemaCoMapStore.value);
@@ -17544,11 +17952,13 @@ ${verificationErrors.join("\n")}`;
       return await seed(this.account, this.node, configs, schemas, data2 || {}, this);
     }
     /**
-     * Ensure account.os is loaded and ready before schema-dependent operations
-     * This is a dependency ordering guarantee - account.os must be ready before schema resolution
+     * Ensure account.os is loaded and ready for schema-dependent operations
      * 
-     * Architectural upgrade: Proactively loads account.os during boot instead of reactively during resolution
-     * This eliminates the need for retry logic in schema resolution
+     * Progressive loading: account.os is NOT required for account loading itself
+     * It's only needed for schema resolution, which can happen progressively as account.os becomes available
+     * 
+     * This function is called non-blocking during boot - MaiaOS boots immediately without waiting
+     * Schema resolution will return null until account.os is ready, then progressively start working
      * 
      * @param {Object} [options] - Options
      * @param {number} [options.timeoutMs=10000] - Timeout for waiting for account.os to be ready
@@ -17561,25 +17971,61 @@ ${verificationErrors.join("\n")}`;
         return false;
       }
       console.log("[CoJSONBackend.ensureAccountOsReady] Ensuring account.os is ready...");
-      const startTime = Date.now();
+      const startTime = performance.now();
+      const phaseTimings = {
+        getOsId: 0,
+        createOs: 0,
+        osReadRequest: 0,
+        osReadResponse: 0,
+        osWaitForReady: 0,
+        osReadTotal: 0,
+        getSchematasId: 0,
+        createSchematas: 0,
+        schematasReadRequest: 0,
+        schematasReadResponse: 0,
+        schematasWaitForReady: 0,
+        schematasReadTotal: 0,
+        total: 0
+      };
+      const getOsIdStartTime = performance.now();
       let osId = this.account.get("os");
+      phaseTimings.getOsId = performance.now() - getOsIdStartTime;
       if (!osId || typeof osId !== "string" || !osId.startsWith("co_z")) {
         console.log("[CoJSONBackend.ensureAccountOsReady] account.os does not exist, creating...");
+        const createOsStartTime = performance.now();
         const group = await this.getDefaultGroup();
         const osMeta = { $schema: "GenesisSchema" };
         const osCoMap = group.createMap({}, osMeta);
         this.account.set("os", osCoMap.id);
         osId = osCoMap.id;
+        phaseTimings.createOs = performance.now() - createOsStartTime;
         console.log(`[CoJSONBackend.ensureAccountOsReady] Created account.os: ${osId.substring(0, 12)}...`);
       }
+      const osReadRequestStartTime = performance.now();
+      console.log(`   ⏳ [PERF] Starting account.os read request at ${osReadRequestStartTime.toFixed(2)}ms`);
       const osStore = await read(this, osId, null, null, null, {
         deepResolve: false,
         timeoutMs
       });
+      const osReadResponseTime = performance.now();
+      phaseTimings.osReadRequest = osReadRequestStartTime - startTime;
+      phaseTimings.osReadResponse = osReadResponseTime - startTime;
+      phaseTimings.osReadTotal = osReadResponseTime - osReadRequestStartTime;
+      console.log(`   ✅ [PERF] account.os read response received at ${osReadResponseTime.toFixed(2)}ms`);
+      console.log(`   ⏱️  [PERF] account.os read total: ${phaseTimings.osReadTotal.toFixed(0)}ms`);
+      const osWaitForReadyStartTime = performance.now();
+      console.log(`   ⏳ [PERF] Starting waitForStoreReady for account.os at ${osWaitForReadyStartTime.toFixed(2)}ms`);
       try {
         await waitForStoreReady(osStore, osId, timeoutMs);
+        const osWaitForReadyEndTime = performance.now();
+        phaseTimings.osWaitForReady = osWaitForReadyEndTime - osWaitForReadyStartTime;
+        console.log(`   ✅ [PERF] account.os waitForStoreReady completed at ${osWaitForReadyEndTime.toFixed(2)}ms`);
+        console.log(`   ⏱️  [PERF] account.os waitForStoreReady: ${phaseTimings.osWaitForReady.toFixed(0)}ms`);
       } catch (error) {
+        const osWaitForReadyEndTime = performance.now();
+        phaseTimings.osWaitForReady = osWaitForReadyEndTime - osWaitForReadyStartTime;
         console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ Timeout waiting for account.os to load: ${error.message}`);
+        console.error(`   ⏱️  [PERF] account.os waitForStoreReady failed after: ${phaseTimings.osWaitForReady.toFixed(0)}ms`);
         return false;
       }
       const osData = osStore.value;
@@ -17587,9 +18033,12 @@ ${verificationErrors.join("\n")}`;
         console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ account.os data not available or has error`);
         return false;
       }
+      const getSchematasIdStartTime = performance.now();
       let schematasId = osData.schematas;
+      phaseTimings.getSchematasId = performance.now() - getSchematasIdStartTime;
       if (!schematasId || typeof schematasId !== "string" || !schematasId.startsWith("co_z")) {
         console.log("[CoJSONBackend.ensureAccountOsReady] account.os.schematas does not exist, creating...");
+        const createSchematasStartTime = performance.now();
         const osCore = this.getCoValue(osId);
         if (!osCore || !osCore.isAvailable()) {
           console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ account.os not available for creating schematas`);
@@ -17605,6 +18054,7 @@ ${verificationErrors.join("\n")}`;
         const schematasCoMap = group.createMap({}, schematasMeta);
         osContent.set("schematas", schematasCoMap.id);
         schematasId = schematasCoMap.id;
+        phaseTimings.createSchematas = performance.now() - createSchematasStartTime;
         console.log(`[CoJSONBackend.ensureAccountOsReady] Created account.os.schematas: ${schematasId.substring(0, 12)}...`);
         const osStore2 = await read(this, osId, null, null, null, {
           deepResolve: false,
@@ -17623,14 +18073,31 @@ ${verificationErrors.join("\n")}`;
         console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ Failed to ensure schematas registry exists`);
         return false;
       }
+      const schematasReadRequestStartTime = performance.now();
+      console.log(`   ⏳ [PERF] Starting schematas read request at ${schematasReadRequestStartTime.toFixed(2)}ms`);
       const schematasStore = await read(this, schematasId, null, null, null, {
         deepResolve: false,
         timeoutMs
       });
+      const schematasReadResponseTime = performance.now();
+      phaseTimings.schematasReadRequest = schematasReadRequestStartTime - startTime;
+      phaseTimings.schematasReadResponse = schematasReadResponseTime - startTime;
+      phaseTimings.schematasReadTotal = schematasReadResponseTime - schematasReadRequestStartTime;
+      console.log(`   ✅ [PERF] schematas read response received at ${schematasReadResponseTime.toFixed(2)}ms`);
+      console.log(`   ⏱️  [PERF] schematas read total: ${phaseTimings.schematasReadTotal.toFixed(0)}ms`);
+      const schematasWaitForReadyStartTime = performance.now();
+      console.log(`   ⏳ [PERF] Starting waitForStoreReady for schematas at ${schematasWaitForReadyStartTime.toFixed(2)}ms`);
       try {
         await waitForStoreReady(schematasStore, schematasId, timeoutMs);
+        const schematasWaitForReadyEndTime = performance.now();
+        phaseTimings.schematasWaitForReady = schematasWaitForReadyEndTime - schematasWaitForReadyStartTime;
+        console.log(`   ✅ [PERF] schematas waitForStoreReady completed at ${schematasWaitForReadyEndTime.toFixed(2)}ms`);
+        console.log(`   ⏱️  [PERF] schematas waitForStoreReady: ${phaseTimings.schematasWaitForReady.toFixed(0)}ms`);
       } catch (error) {
+        const schematasWaitForReadyEndTime = performance.now();
+        phaseTimings.schematasWaitForReady = schematasWaitForReadyEndTime - schematasWaitForReadyStartTime;
         console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ Timeout waiting for schematas registry to load: ${error.message}`);
+        console.error(`   ⏱️  [PERF] schematas waitForStoreReady failed after: ${phaseTimings.schematasWaitForReady.toFixed(0)}ms`);
         return false;
       }
       const schematasData = schematasStore.value;
@@ -17638,10 +18105,30 @@ ${verificationErrors.join("\n")}`;
         console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ schematas registry data not available or has error`);
         return false;
       }
-      const duration = Date.now() - startTime;
-      console.log(`[CoJSONBackend.ensureAccountOsReady] ✅ account.os ready (took ${duration}ms)`);
+      const endTime = performance.now();
+      phaseTimings.total = endTime - startTime;
+      console.log(`[CoJSONBackend.ensureAccountOsReady] ✅ account.os ready (took ${phaseTimings.total.toFixed(0)}ms)`);
       console.log(`[CoJSONBackend.ensureAccountOsReady]   - account.os: ${osId.substring(0, 12)}...`);
       console.log(`[CoJSONBackend.ensureAccountOsReady]   - schematas: ${schematasId.substring(0, 12)}...`);
+      console.log(`   📊 [PERF] Phase timings:`);
+      console.log(`      - Get osId: ${phaseTimings.getOsId.toFixed(0)}ms`);
+      if (phaseTimings.createOs > 0) {
+        console.log(`      - Create os: ${phaseTimings.createOs.toFixed(0)}ms`);
+      }
+      console.log(`      - account.os read:`);
+      console.log(`         * Request sent: ${phaseTimings.osReadRequest.toFixed(0)}ms`);
+      console.log(`         * Response received: ${phaseTimings.osReadResponse.toFixed(0)}ms`);
+      console.log(`         * Read total: ${phaseTimings.osReadTotal.toFixed(0)}ms`);
+      console.log(`         * waitForStoreReady: ${phaseTimings.osWaitForReady.toFixed(0)}ms`);
+      console.log(`      - Get schematasId: ${phaseTimings.getSchematasId.toFixed(0)}ms`);
+      if (phaseTimings.createSchematas > 0) {
+        console.log(`      - Create schematas: ${phaseTimings.createSchematas.toFixed(0)}ms`);
+      }
+      console.log(`      - schematas read:`);
+      console.log(`         * Request sent: ${phaseTimings.schematasReadRequest.toFixed(0)}ms`);
+      console.log(`         * Response received: ${phaseTimings.schematasReadResponse.toFixed(0)}ms`);
+      console.log(`         * Read total: ${phaseTimings.schematasReadTotal.toFixed(0)}ms`);
+      console.log(`         * waitForStoreReady: ${phaseTimings.schematasWaitForReady.toFixed(0)}ms`);
       return true;
     }
   }
@@ -17885,13 +18372,19 @@ ${verificationErrors.join("\n")}`;
     createCoMap,
     createCoStream,
     createSchemaMeta,
+    ensureCoValueLoaded,
     getCoListId,
     getGlobalCoCache,
     getSchemaIndexColistId,
     loadAccount,
     processInbox,
     resolve: resolve$1,
-    schemaMigration
+    resolveCoValueReactive,
+    resolveQueryReactive,
+    resolveReactive,
+    resolveSchemaReactive,
+    schemaMigration,
+    waitForReactiveResolution
   }, Symbol.toStringTag, { value: "Module" }));
   const RENDER_STATES = {
     INITIALIZING: "initializing",
@@ -17940,13 +18433,14 @@ ${verificationErrors.join("\n")}`;
     async _loadActorConfigs(actorConfig) {
       if (!actorConfig.view) throw new Error(`[ActorEngine] Actor config must have 'view' property`);
       const actorId = actorConfig.id || "temp";
-      const viewStore = await this.dbEngine.execute({ op: "read", schema: null, key: actorConfig.view });
-      const viewData = viewStore.value;
-      const viewSchemaCoId = viewData?.$schema;
-      if (!viewSchemaCoId) {
-        throw new Error(`[ActorEngine] Failed to extract schema co-id from view CoValue ${actorConfig.view}`);
+      const viewSchemaStore = resolveReactive(this.dbEngine.backend, { fromCoValue: actorConfig.view }, { returnType: "coId" });
+      const viewSchemaState = await waitForReactiveResolution(viewSchemaStore, { timeoutMs: 1e4 });
+      const viewSchemaCoId2 = viewSchemaState.schemaCoId;
+      if (!viewSchemaCoId2) {
+        throw new Error(`[ActorEngine] Failed to extract schema co-id from view CoValue ${actorConfig.view}: ${viewSchemaState.error || "Schema not found"}`);
       }
-      const viewStore2 = await this.dbEngine.execute({ op: "read", schema: viewSchemaCoId, key: actorConfig.view });
+      await this.dbEngine.execute({ op: "read", schema: null, key: actorConfig.view });
+      const viewStore2 = await this.dbEngine.execute({ op: "read", schema: viewSchemaCoId2, key: actorConfig.view });
       const viewDef = viewStore2.value;
       viewStore2.subscribe((updatedView) => {
         const actor = this.actors.get(actorId);
@@ -18104,13 +18598,11 @@ ${verificationErrors.join("\n")}`;
     async _initializeActorState(actor, actorConfig) {
       if (this.stateEngine && actorConfig.state && !actor.machine) {
         try {
-          const stateSchemaStore = await this.dbEngine.execute({
-            op: "schema",
-            fromCoValue: actorConfig.state
-          });
-          const stateSchemaCoId = stateSchemaStore.value?.$id;
+          const stateSchemaStore = resolveReactive(this.dbEngine.backend, { fromCoValue: actorConfig.state }, { returnType: "coId" });
+          const stateSchemaState = await waitForReactiveResolution(stateSchemaStore, { timeoutMs: 1e4 });
+          const stateSchemaCoId = stateSchemaState.schemaCoId;
           if (!stateSchemaCoId) {
-            throw new Error(`[ActorEngine] Failed to extract schema co-id from state CoValue ${actorConfig.state}`);
+            throw new Error(`[ActorEngine] Failed to extract schema co-id from state CoValue ${actorConfig.state}: ${stateSchemaState.error || "Schema not found"}`);
           }
           const stateStore = await this.dbEngine.execute({
             op: "read",
@@ -18154,11 +18646,15 @@ ${verificationErrors.join("\n")}`;
       if (actorConfig.role === "agent" || !actorConfig.view) return true;
       if (!viewDef) {
         try {
-          const viewStore = await this.dbEngine.execute({ op: "read", schema: null, key: actorConfig.view });
-          const viewData = viewStore.value;
-          const viewSchemaCoId = viewData?.$schema;
-          if (!viewSchemaCoId) {
-            throw new Error(`[ActorEngine] Failed to extract schema co-id from view CoValue ${actorConfig.view}`);
+          try {
+            const viewSchemaStore = resolveReactive(this.dbEngine.backend, { fromCoValue: actorConfig.view }, { returnType: "coId" });
+            const viewSchemaState = await waitForReactiveResolution(viewSchemaStore, { timeoutMs: 1e4 });
+            const viewSchemaCoId2 = viewSchemaState.schemaCoId;
+            if (!viewSchemaCoId2) {
+              return false;
+            }
+          } catch {
+            return false;
           }
           const viewStore2 = await this.dbEngine.execute({ op: "read", schema: viewSchemaCoId, key: actorConfig.view });
           viewDef = viewStore2.value;
@@ -18191,7 +18687,12 @@ ${verificationErrors.join("\n")}`;
         throw new Error(`[ActorEngine] Child actor ID must be co-id: ${childActorCoId}`);
       }
       try {
-        const actorSchemaCoId = await resolve$1(this.dbEngine.backend, { fromCoValue: childActorCoId }, { returnType: "coId" });
+        const actorSchemaStore = resolveReactive(this.dbEngine.backend, { fromCoValue: childActorCoId }, { returnType: "coId" });
+        const actorSchemaState = await waitForReactiveResolution(actorSchemaStore, { timeoutMs: 1e4 });
+        const actorSchemaCoId = actorSchemaState.schemaCoId;
+        if (!actorSchemaCoId) {
+          throw new Error(`[ActorEngine] Failed to extract schema co-id from child actor CoValue ${childActorCoId}: ${actorSchemaState.error || "Schema not found"}`);
+        }
         const store = await this.dbEngine.execute({ op: "read", schema: actorSchemaCoId, key: childActorCoId });
         const childActorConfig = store.value;
         if (childActorConfig.$id !== childActorCoId) childActorConfig.$id = childActorCoId;
@@ -18313,13 +18814,13 @@ ${verificationErrors.join("\n")}`;
         return;
       }
       actor._renderState = RENDER_STATES.RENDERING;
-      const viewStore = await this.dbEngine.execute({ op: "read", schema: null, key: actor.config.view });
-      const viewData = viewStore.value;
-      const viewSchemaCoId = viewData?.$schema;
-      if (!viewSchemaCoId) {
-        throw new Error(`[ActorEngine] Failed to extract schema co-id from view CoValue ${actor.config.view}`);
+      const viewSchemaStore = resolveReactive(this.dbEngine.backend, { fromCoValue: actor.config.view }, { returnType: "coId" });
+      const viewSchemaState = await waitForReactiveResolution(viewSchemaStore, { timeoutMs: 1e4 });
+      const viewSchemaCoId2 = viewSchemaState.schemaCoId;
+      if (!viewSchemaCoId2) {
+        throw new Error(`[ActorEngine] Failed to extract schema co-id from view CoValue ${actor.config.view}: ${viewSchemaState.error || "Schema not found"}`);
       }
-      const viewStore2 = await this.dbEngine.execute({ op: "read", schema: viewSchemaCoId, key: actor.config.view });
+      const viewStore2 = await this.dbEngine.execute({ op: "read", schema: viewSchemaCoId2, key: actor.config.view });
       const viewDef = viewStore2.value;
       const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
       await this.viewEngine.render(viewDef, actor.context, actor.shadowRoot, styleSheets, actorId);
@@ -18628,19 +19129,20 @@ ${verificationErrors.join("\n")}`;
       this.actorInputCounters = /* @__PURE__ */ new Map();
     }
     async loadView(coId) {
-      const viewStore = await this.dbEngine.execute({
+      const viewSchemaStore = resolveReactive(this.dbEngine.backend, { fromCoValue: coId }, { returnType: "coId" });
+      const viewSchemaState = await waitForReactiveResolution(viewSchemaStore, { timeoutMs: 1e4 });
+      const viewSchemaCoId2 = viewSchemaState.schemaCoId;
+      if (!viewSchemaCoId2) {
+        throw new Error(`[ViewEngine] Failed to extract schema co-id from view CoValue ${coId}: ${viewSchemaState.error || "Schema not found"}`);
+      }
+      await this.dbEngine.execute({
         op: "read",
         schema: null,
         key: coId
       });
-      const viewData = viewStore.value;
-      const viewSchemaCoId = viewData?.$schema || null;
-      if (!viewSchemaCoId) {
-        throw new Error(`[ViewEngine] Failed to extract schema co-id from view CoValue ${coId}. View must have $schema in headerMeta. View data: ${JSON.stringify({ id: viewData?.id, loading: viewData?.loading, hasProperties: viewData?.hasProperties, properties: viewData?.properties?.length })}`);
-      }
       const store = await this.dbEngine.execute({
         op: "read",
-        schema: viewSchemaCoId,
+        schema: viewSchemaCoId2,
         key: coId
       });
       return store;
@@ -19952,7 +20454,7 @@ ${rawCSS}`;
       }
       const path = shortcut.substring(1);
       const resolved = resolvePath(data2.context, path);
-      if (resolved instanceof ReactiveStore) {
+      if (resolved instanceof ReactiveStore$1) {
         return resolved.value;
       }
       return resolved;
@@ -20813,10 +21315,15 @@ ${rawCSS}`;
       }
       const backend = await MaiaOS._initializeDatabase(os, config2);
       if (backend && typeof backend.ensureAccountOsReady === "function") {
-        const accountOsReady = await backend.ensureAccountOsReady({ timeoutMs: 1e4 });
-        if (!accountOsReady) {
-          console.warn("[MaiaOS.boot] account.os readiness check failed - schema resolution may fail");
-        }
+        backend.ensureAccountOsReady({ timeoutMs: 1e4 }).then((accountOsReady) => {
+          if (accountOsReady) {
+            console.log("[MaiaOS.boot] ✅ account.os ready (loaded progressively)");
+          } else {
+            console.warn("[MaiaOS.boot] ⚠️ account.os readiness check failed - schema resolution may fail until it loads");
+          }
+        }).catch((err) => {
+          console.warn("[MaiaOS.boot] ⚠️ account.os loading error (non-blocking):", err);
+        });
       }
       if (config2.registry) {
         await MaiaOS._seedDatabase(os, backend, config2);
@@ -21124,15 +21631,26 @@ ${errorDetails}`);
         throw new Error(`[Kernel] Actor ID must be co-id at runtime: ${actorCoId}. This should have been resolved during seeding.`);
       }
       console.log(`[Kernel] ✅ Extracted actor co-id from vibe: ${actorCoId}`);
-      const actorSchemaStore = await this.dbEngine.execute({
-        op: "schema",
-        fromCoValue: actorCoId
-        // ✅ Extracts headerMeta.$schema from actor instance
+      const actorSchemaStore = resolveReactive(this.dbEngine.backend, { fromCoValue: actorCoId }, { returnType: "coId" });
+      let unsubscribe;
+      const actorSchemaCoId = await new Promise((resolve2, reject) => {
+        const timeout = setTimeout(() => {
+          if (unsubscribe) unsubscribe();
+          reject(new Error(`[Kernel] Timeout waiting for actor schema to resolve for ${actorCoId} after 10000ms`));
+        }, 1e4);
+        unsubscribe = actorSchemaStore.subscribe((state) => {
+          if (state.loading) {
+            return;
+          }
+          clearTimeout(timeout);
+          if (unsubscribe) unsubscribe();
+          if (state.error || !state.schemaCoId) {
+            reject(new Error(`[Kernel] Failed to extract schema co-id from actor ${actorCoId}: ${state.error || "Schema not found"}`));
+          } else {
+            resolve2(state.schemaCoId);
+          }
+        });
       });
-      const actorSchemaCoId = actorSchemaStore.value?.$id;
-      if (!actorSchemaCoId) {
-        throw new Error(`[Kernel] Failed to extract schema co-id from actor ${actorCoId}. Actor must have $schema in headerMeta.`);
-      }
       const actorStore = await this.dbEngine.execute({
         op: "read",
         schema: actorSchemaCoId,
