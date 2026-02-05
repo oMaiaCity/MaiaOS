@@ -9096,36 +9096,6 @@ Marked as errored: "${erroredInPeer}"`;
     getContentMessageSize: getContentMessageSize$2,
     WEBSOCKET_CONFIG: WEBSOCKET_CONFIG$1
   };
-  const index$3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-    __proto__: null,
-    CoValueCore,
-    ControlledAccount,
-    ControlledAgent,
-    CryptoProvider,
-    get DeletedCoValueDeletionStatus() {
-      return DeletedCoValueDeletionStatus;
-    },
-    EVERYONE,
-    LocalNode,
-    LogLevel,
-    PriorityBasedMessageQueue,
-    RawAccount,
-    RawBinaryCoStream,
-    RawCoList,
-    RawCoMap,
-    RawCoPlainText,
-    RawCoStream,
-    RawGroup,
-    StorageApiAsync,
-    base64URLtoBytes,
-    bytesToBase64url,
-    cojsonInternals,
-    emptyKnownState,
-    isAccountRole,
-    isRawCoID,
-    logger,
-    stringifyOpID
-  }, Symbol.toStringTag, { value: "Module" }));
   let wasm;
   let WASM_VECTOR_LEN = 0;
   let cachedUint8ArrayMemory0 = null;
@@ -10121,6 +10091,206 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
       }
     }
   }
+  async function createAccountWithSecret({ agentSecret, name = "Maia", peers = [], storage = void 0 }) {
+    if (!agentSecret) {
+      throw new Error("agentSecret is required. Use signInWithPasskey() to get agentSecret.");
+    }
+    const crypto2 = await WasmCrypto.create();
+    console.log("🚀 Creating Account with passkey-derived secret...");
+    console.log("   Sync peers:", peers.length > 0 ? `${peers.length} peer(s)` : "none");
+    console.log("   Storage:", storage ? "IndexedDB available" : "no storage");
+    const result = await LocalNode.withNewlyCreatedAccount({
+      creationProps: { name },
+      crypto: crypto2,
+      initialAgentSecret: agentSecret,
+      // Use provided secret from passkey!
+      peers,
+      // Use provided sync peers
+      storage,
+      // Use provided storage (if any)
+      migration: schemaMigration
+      // Handles profile + schemata + Data
+    });
+    const rawAccount = result.node.expectCurrentAccount("oID/createAccountWithSecret");
+    const profileValue = rawAccount.get("profile");
+    if (!profileValue) {
+      throw new Error("Profile not created by account creation migration");
+    }
+    console.log("✅ Account created with passkey:");
+    console.log("   Account ID:", rawAccount.id);
+    console.log("   Account type:", rawAccount.type);
+    console.log("   Profile value:", profileValue);
+    console.log("   ℹ️  Full migration will run on first load");
+    return {
+      node: result.node,
+      account: rawAccount,
+      accountID: rawAccount.id,
+      profile: profileValue,
+      group: null
+      // No group in minimal setup
+    };
+  }
+  async function loadAccount({ accountID, agentSecret, peers = [], storage = void 0 }) {
+    if (!agentSecret) {
+      throw new Error("agentSecret is required. Use signInWithPasskey() to get agentSecret.");
+    }
+    if (!accountID) {
+      throw new Error("accountID is required.");
+    }
+    const crypto2 = await WasmCrypto.create();
+    const loadStartTime = performance.now();
+    const phaseTimings = {
+      setup: 0,
+      storageCheck: 0,
+      accountLoadRequest: 0,
+      accountLoadResponse: 0,
+      accountLoadTotal: 0,
+      profileLoadRequest: 0,
+      profileLoadResponse: 0,
+      profileLoadTotal: 0,
+      migration: 0,
+      total: 0
+    };
+    console.log("🔑 Loading existing account with passkey...");
+    console.log("   Account ID:", accountID);
+    console.log("   Sync peers:", peers.length > 0 ? `${peers.length} peer(s)` : "none");
+    console.log("   Storage:", storage ? "IndexedDB available (local-first)" : "no storage (sync-only)");
+    const setupStartTime = performance.now();
+    const storageCheckStartTime = performance.now();
+    if (storage) {
+      console.log("   💾 Storage available - will check IndexedDB first");
+    }
+    phaseTimings.storageCheck = performance.now() - storageCheckStartTime;
+    let migrationPromise = null;
+    const deferredMigration = async (account, node2) => {
+      migrationPromise = schemaMigration(account, node2).catch((err) => {
+        console.error("[loadAccount] Migration error (non-blocking):", err);
+      });
+      return Promise.resolve();
+    };
+    const accountLoadRequestStartTime = performance.now();
+    console.log(`   ⏳ [PERF] Starting account load request at ${accountLoadRequestStartTime.toFixed(2)}ms`);
+    const INITIAL_LOAD_TIMEOUT = 3e3;
+    const loadPromise = LocalNode.withLoadedAccount({
+      crypto: crypto2,
+      accountID,
+      accountSecret: agentSecret,
+      sessionID: crypto2.newRandomSessionID(accountID),
+      peers,
+      // Use provided sync peers (sync happens in background if storage has data)
+      storage,
+      // Use provided storage (if any) - enables local-first loading
+      migration: deferredMigration
+      // ← Runs after account loads, non-blocking
+    });
+    const timeoutPromise = new Promise((resolve2) => {
+      setTimeout(() => {
+        const elapsed = performance.now() - accountLoadRequestStartTime;
+        console.warn(`   ⚠️ [PERF] Account load taking longer than expected: ${elapsed.toFixed(0)}ms (timeout: ${INITIAL_LOAD_TIMEOUT}ms)`);
+        console.warn(`   💡 This is normal for fresh browser - account loading from sync server`);
+        resolve2(null);
+      }, INITIAL_LOAD_TIMEOUT);
+    });
+    const node = await Promise.race([loadPromise, timeoutPromise]).then((result) => {
+      if (result === null) {
+        console.log(`   ⏳ [PERF] Timeout reached, waiting for account load to complete...`);
+        return loadPromise;
+      }
+      return result;
+    });
+    const accountLoadResponseTime = performance.now();
+    phaseTimings.setup = setupStartTime - loadStartTime;
+    phaseTimings.accountLoadRequest = accountLoadRequestStartTime - loadStartTime;
+    phaseTimings.accountLoadResponse = accountLoadResponseTime - loadStartTime;
+    phaseTimings.accountLoadTotal = accountLoadResponseTime - accountLoadRequestStartTime;
+    console.log(`   ✅ [PERF] Account load response received at ${accountLoadResponseTime.toFixed(2)}ms`);
+    console.log(`   ⏱️  [PERF] Account load total: ${phaseTimings.accountLoadTotal.toFixed(0)}ms`);
+    if (migrationPromise) {
+      const migrationStartTime = performance.now();
+      migrationPromise.then(() => {
+        phaseTimings.migration = performance.now() - migrationStartTime;
+        console.log(`   ✅ Migration completed (${phaseTimings.migration.toFixed(0)}ms, non-blocking)`);
+      }).catch(() => {
+      });
+    }
+    const rawAccount = node.expectCurrentAccount("oID/loadAccount");
+    const profileLoadRequestStartTime = performance.now();
+    const profileID = rawAccount.get("profile");
+    if (profileID) {
+      console.log(`   ⏳ [PERF] Checking profile load status at ${profileLoadRequestStartTime.toFixed(2)}ms`);
+      const profileCoValue = node.getCoValue(profileID);
+      if (profileCoValue && !profileCoValue.isAvailable()) {
+        console.log(`   ⏳ [PERF] Profile not available, loading from sync/storage...`);
+        await node.load(profileID);
+        const profileLoadResponseTime = performance.now();
+        phaseTimings.profileLoadRequest = profileLoadRequestStartTime - loadStartTime;
+        phaseTimings.profileLoadResponse = profileLoadResponseTime - loadStartTime;
+        phaseTimings.profileLoadTotal = profileLoadResponseTime - profileLoadRequestStartTime;
+        console.log(`   ✅ [PERF] Profile load response received at ${profileLoadResponseTime.toFixed(2)}ms`);
+        console.log(`   ⏱️  [PERF] Profile load total: ${phaseTimings.profileLoadTotal.toFixed(0)}ms`);
+      } else {
+        const profileLoadResponseTime = performance.now();
+        phaseTimings.profileLoadRequest = profileLoadRequestStartTime - loadStartTime;
+        phaseTimings.profileLoadResponse = profileLoadResponseTime - loadStartTime;
+        phaseTimings.profileLoadTotal = profileLoadResponseTime - profileLoadRequestStartTime;
+        console.log(`   ✅ [PERF] Profile already available (loaded with account)`);
+        console.log(`   ⏱️  [PERF] Profile load total: ${phaseTimings.profileLoadTotal.toFixed(0)}ms`);
+      }
+    } else {
+      phaseTimings.profileLoadTotal = 0;
+    }
+    const loadDuration = performance.now() - loadStartTime;
+    phaseTimings.total = loadDuration;
+    const likelySource = loadDuration < 200 ? "IndexedDB (local)" : loadDuration < 1e3 ? "sync server (fast)" : "sync server (slow)";
+    console.log("✅ Account loaded:");
+    console.log("   Account ID:", rawAccount.id);
+    console.log("   Account type:", rawAccount.type);
+    console.log(`   ⏱️  Load duration: ${loadDuration.toFixed(0)}ms`);
+    console.log(`   📊 Phase timings:`);
+    console.log(`      - Setup: ${phaseTimings.setup.toFixed(0)}ms`);
+    console.log(`      - Storage check: ${phaseTimings.storageCheck.toFixed(0)}ms`);
+    console.log(`      - Account load:`);
+    console.log(`         * Request sent: ${phaseTimings.accountLoadRequest.toFixed(0)}ms`);
+    console.log(`         * Response received: ${phaseTimings.accountLoadResponse.toFixed(0)}ms`);
+    console.log(`         * Total: ${phaseTimings.accountLoadTotal.toFixed(0)}ms`);
+    if (phaseTimings.profileLoadTotal > 0) {
+      console.log(`      - Profile load:`);
+      console.log(`         * Request sent: ${phaseTimings.profileLoadRequest.toFixed(0)}ms`);
+      console.log(`         * Response received: ${phaseTimings.profileLoadResponse.toFixed(0)}ms`);
+      console.log(`         * Total: ${phaseTimings.profileLoadTotal.toFixed(0)}ms`);
+    }
+    if (phaseTimings.migration > 0) {
+      console.log(`      - Migration: ${phaseTimings.migration.toFixed(0)}ms (deferred, non-blocking)`);
+    } else {
+      console.log(`      - Migration: running in background (deferred, non-blocking)`);
+    }
+    console.log(`   📍 Likely source: ${likelySource}`);
+    if (phaseTimings.accountLoadTotal > 200) {
+      const syncRoundtripTime = phaseTimings.accountLoadTotal;
+      console.log(`   🔄 [PERF] Sync roundtrip time: ${syncRoundtripTime.toFixed(0)}ms`);
+      if (syncRoundtripTime > 1e3) {
+        console.warn(`   ⚠️  [PERF] Slow sync roundtrip: ${syncRoundtripTime.toFixed(0)}ms (target: <1000ms)`);
+        console.warn(`   💡 Check sync server response time and network latency`);
+      }
+    }
+    if (loadDuration > 1e3) {
+      console.warn(`   ⚠️  [PERF] Account load took ${loadDuration.toFixed(0)}ms (target: <1000ms)`);
+      if (storage && loadDuration > 500) {
+        console.warn(`   💡 Account exists in storage but load was slow - check sync peer connection`);
+      } else if (!storage) {
+        console.warn(`   💡 No storage available - account loaded from sync server`);
+      } else {
+        console.warn(`   💡 Check if account exists on sync server, or if sync is working properly`);
+      }
+    } else if (loadDuration < 200 && storage) {
+      console.log(`   ✅ Fast load from IndexedDB (local-first strategy working!)`);
+    }
+    return {
+      node,
+      account: rawAccount,
+      accountID: rawAccount.id
+    };
+  }
   const $defs$6 = { "comap": { "description": "CoMap - CRDT-based collaborative map/object", "type": "object", "properties": {}, "additionalProperties": { "anyOf": [{ "type": "string", "description": "Standard string value" }, { "type": "number", "description": "Standard number value" }, { "type": "integer", "description": "Standard integer value" }, { "type": "boolean", "description": "Standard boolean value" }, { "type": "null", "description": "Null value" }, { "type": "object", "description": "Nested object value" }, { "type": "array", "description": "Array value" }, { "type": "string", "pattern": "^co_z[a-zA-Z0-9]+$", "description": "Co-id reference to another CoValue" }, { "type": "string", "pattern": "^key_[a-zA-Z0-9_]+$", "description": "Key reference" }, { "type": "string", "pattern": "^sealed_", "description": "Sealed/encrypted value" }] } }, "costream": { "description": "CoStream - CRDT-based append-only stream", "type": "array", "items": { "anyOf": [{ "type": "object", "description": "Stream item object" }, { "type": "string", "description": "Stream item string" }, { "type": "number", "description": "Stream item number" }, { "type": "boolean", "description": "Stream item boolean" }, { "type": "null", "description": "Stream item null" }] } }, "colist": { "description": "CoList - CRDT-based collaborative list/array", "type": "array", "items": { "anyOf": [{ "type": "object", "description": "List item object" }, { "type": "string", "description": "List item string (can be co-id reference)" }, { "type": "number", "description": "List item number" }, { "type": "integer", "description": "List item integer" }, { "type": "boolean", "description": "List item boolean" }, { "type": "null", "description": "List item null" }, { "type": "array", "description": "Nested array" }] } } };
   const coTypesDefs = {
     $defs: $defs$6
@@ -10213,33 +10383,21 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
     return null;
   }
   async function getCoListId(backend, collectionNameOrSchema) {
-    if (collectionNameOrSchema && typeof collectionNameOrSchema === "string" && (collectionNameOrSchema.startsWith("co_z") || collectionNameOrSchema.startsWith("@schema/"))) {
-      console.log(`[getCoListId] Looking up colist for schema: "${collectionNameOrSchema.substring(0, 30)}..."`);
-      const colistId = await getSchemaIndexColistId(backend, collectionNameOrSchema);
-      if (colistId) {
-        console.log(`[getCoListId] ✅ Found colist: "${colistId.substring(0, 12)}..." for schema "${collectionNameOrSchema.substring(0, 30)}..."`);
-      } else {
-        console.warn(`[getCoListId] ❌ No colist found for schema "${collectionNameOrSchema.substring(0, 30)}..."`);
-      }
-      return colistId;
-    }
-    const osId = backend.account.get("os");
-    if (!osId) {
+    if (!collectionNameOrSchema || typeof collectionNameOrSchema !== "string") {
       return null;
     }
-    const osCore = await ensureCoValueLoaded(backend, osId);
-    if (!osCore || !backend.isAvailable(osCore)) {
+    if (!collectionNameOrSchema.startsWith("co_z") && !collectionNameOrSchema.startsWith("@schema/")) {
+      console.warn(`[getCoListId] ❌ Invalid collection identifier: "${collectionNameOrSchema}". Must be schema co-id (co_z...) or namekey (@schema/...). Use schema registry to resolve collection names.`);
       return null;
     }
-    const osContent = backend.getCurrentContent(osCore);
-    if (!osContent || typeof osContent.get !== "function") {
-      return null;
+    console.log(`[getCoListId] Looking up colist for schema: "${collectionNameOrSchema.substring(0, 30)}..."`);
+    const colistId = await getSchemaIndexColistId(backend, collectionNameOrSchema);
+    if (colistId) {
+      console.log(`[getCoListId] ✅ Found colist: "${colistId.substring(0, 12)}..." for schema "${collectionNameOrSchema.substring(0, 30)}..."`);
+    } else {
+      console.warn(`[getCoListId] ❌ No colist found for schema "${collectionNameOrSchema.substring(0, 30)}..."`);
     }
-    const collectionListId = osContent.get(collectionNameOrSchema);
-    if (collectionListId && typeof collectionListId === "string" && collectionListId.startsWith("co_")) {
-      return collectionListId;
-    }
-    return null;
+    return colistId;
   }
   async function ensureCoValueLoaded(backend, coId, options = {}) {
     const { waitForAvailable = false, timeoutMs = 2e3 } = options;
@@ -11118,20 +11276,17 @@ A native crypto module is required for Jazz to work. See https://jazz.tools/docs
   let globalCache = null;
   let currentNode = null;
   function getGlobalCoCache(node, cleanupTimeout) {
-    if (typeof node === "number") {
-      cleanupTimeout = node;
-      node = null;
+    if (!node) {
+      throw new Error("[getGlobalCoCache] node is required for node-aware caching");
     }
-    if (node && currentNode !== node) {
+    if (currentNode !== node) {
       if (globalCache) {
         globalCache.clear();
       }
       currentNode = node;
       globalCache = new CoCache(cleanupTimeout);
     } else if (!globalCache) {
-      if (node) {
-        currentNode = node;
-      }
+      currentNode = node;
       globalCache = new CoCache(cleanupTimeout);
     }
     return globalCache;
@@ -15740,18 +15895,10 @@ ${errorDetails}`);
       throw new Error(`[CoJSONSeed] Profile not available: ${profileId}`);
     }
     const profileData = profileStore.value;
-    let universalGroupId;
-    if (profileData.properties && Array.isArray(profileData.properties)) {
-      const groupProperty = profileData.properties.find((p) => p.key === "group");
-      if (!groupProperty || !groupProperty.value) {
-        throw new Error("[CoJSONSeed] Universal group not found in profile.group. Ensure identity migration has run.");
-      }
-      universalGroupId = groupProperty.value;
-    } else if (profileData.group && typeof profileData.group === "string") {
-      universalGroupId = profileData.group;
-    } else {
+    if (!profileData.group || typeof profileData.group !== "string") {
       throw new Error("[CoJSONSeed] Universal group not found in profile.group. Ensure identity migration has run.");
     }
+    const universalGroupId = profileData.group;
     const groupStore = await backend.read("@group", universalGroupId);
     if (groupStore.loading) {
       await new Promise((resolve2, reject) => {
@@ -15859,7 +16006,6 @@ ${errorDetails}`);
       if (osCore && backend.isAvailable(osCore)) {
         const osContent = backend.getCurrentContent(osCore);
         if (osContent && typeof osContent.get === "function") {
-          metaSchemaCoId = osContent.get("metaSchema");
           if (!metaSchemaCoId) {
             const schematasId = osContent.get("schematas");
             if (schematasId) {
@@ -16226,7 +16372,7 @@ ${verificationErrors.join("\n")}`;
       const interfacesToUpdate = seededConfigs.configs.filter((c) => c.type === "interface");
       await updateConfigReferences(interfacesToUpdate, configs.interfaces);
     }
-    const allVibes = configs?.vibes || (configs?.vibe ? [configs.vibe] : []);
+    const allVibes = configs?.vibes || [];
     if (allVibes.length > 0) {
       combinedRegistry = refreshCombinedRegistry();
       let vibesId = account.get("vibes");
@@ -16287,16 +16433,10 @@ ${verificationErrors.join("\n")}`;
             console.error(`[CoJSONSeed] ❌ Cannot store vibe ${vibeKey}: vibes CoMap not available`);
           }
           const originalVibeIdForRegistry = vibe.$id;
-          if (allVibes.length === 1 || allVibes.indexOf(vibe) === allVibes.length - 1) {
-            instanceCoIdMap.set("vibe", vibeCoId);
-          }
           if (originalVibeIdForRegistry) {
             instanceCoIdMap.set(originalVibeIdForRegistry, vibeCoId);
             combinedRegistry.set(originalVibeIdForRegistry, vibeCoId);
             coIdRegistry.register(originalVibeIdForRegistry, vibeCoId);
-          }
-          if (allVibes.length === 1 || allVibes.indexOf(vibe) === allVibes.length - 1) {
-            coIdRegistry.register("vibe", vibeCoId);
           }
         }
       }
@@ -17738,6 +17878,7 @@ ${verificationErrors.join("\n")}`;
     CoCache,
     CoJSONBackend,
     checkCotype,
+    createAccountWithSecret,
     createAndPushMessage,
     createCoJSONAPI,
     createCoList,
@@ -17747,6 +17888,7 @@ ${verificationErrors.join("\n")}`;
     getCoListId,
     getGlobalCoCache,
     getSchemaIndexColistId,
+    loadAccount,
     processInbox,
     resolve: resolve$1,
     schemaMigration
@@ -22010,7 +22152,9 @@ ${errorDetails}`);
   let syncState = {
     connected: false,
     syncing: false,
-    error: null
+    error: null,
+    status: null
+    // 'authenticating' | 'loading-account' | 'syncing' | 'connected' | 'error'
   };
   const syncStateListeners = /* @__PURE__ */ new Set();
   function subscribeSyncState(listener) {
@@ -22076,7 +22220,7 @@ ${errorDetails}`);
           console.warn("⚠️ [SYNC] Peer removed, connection lost");
         }
         websocketConnected = false;
-        syncState = { connected: false, syncing: false, error: "Disconnected" };
+        syncState = { connected: false, syncing: false, error: "Disconnected", status: "error" };
         notifySyncStateChange();
       }
     });
@@ -22084,7 +22228,7 @@ ${errorDetails}`);
       if (connected && !websocketConnected) {
         console.log("✅ [SYNC] WebSocket connection successful");
         websocketConnected = true;
-        syncState = { connected: true, syncing: true, error: null };
+        syncState = { connected: true, syncing: true, error: null, status: "syncing" };
         notifySyncStateChange();
         if (websocketConnectedResolve) {
           websocketConnectedResolve();
@@ -22093,7 +22237,7 @@ ${errorDetails}`);
       } else if (!connected && websocketConnected) {
         console.warn("⚠️ [SYNC] WebSocket connection lost");
         websocketConnected = false;
-        syncState = { connected: false, syncing: false, error: "Offline" };
+        syncState = { connected: false, syncing: false, error: "Offline", status: "error" };
         notifySyncStateChange();
       }
     });
@@ -22103,7 +22247,7 @@ ${errorDetails}`);
         console.error(`   1. Server service is running: curl https://${apiDomain || window.location.hostname}/health`);
         console.error(`   2. PUBLIC_API_DOMAIN is set correctly: ${apiDomain || "NOT SET"}`);
         console.error(`   3. WebSocket URL: ${syncServerUrl}`);
-        syncState = { connected: false, syncing: false, error: "Connection timeout" };
+        syncState = { connected: false, syncing: false, error: "Connection timeout", status: "error" };
         notifySyncStateChange();
       }
     }, 1e4);
@@ -22124,7 +22268,7 @@ ${errorDetails}`);
               resolved = true;
               resolve2(false);
             }
-          }, 1e4);
+          }, 2e3);
           websocketConnectedPromise.then(() => {
             if (!resolved && peers.length > 0) {
               resolved = true;
@@ -22177,30 +22321,22 @@ ${errorDetails}`);
     console.log("   🔑 Chain: PRF → agentSecret → header → accountID");
     console.log("   ♻️  Same passkey + salt = same accountID (always!)");
     console.log("🏗️ Step 3/3: Creating account...");
-    const { LocalNode: LocalNode2 } = await Promise.resolve().then(() => index$3);
     const storage = await getStorage();
     let syncSetup = null;
     {
       console.log("🔌 [SYNC] Setting up self-hosted sync...");
       syncSetup = setupSyncPeers();
     }
-    const { schemaMigration: schemaMigration2 } = await Promise.resolve().then(() => index$1);
-    const result = await LocalNode2.withNewlyCreatedAccount({
-      creationProps: { name },
-      crypto: crypto2,
-      initialAgentSecret: agentSecret,
+    const createResult = await createAccountWithSecret({
+      agentSecret,
+      name,
       peers: syncSetup ? syncSetup.peers : [],
-      // Pass peers array directly!
-      storage,
-      // Pass storage directly! (jazz-tools pattern)
-      migration: schemaMigration2
-      // Schema migration: profile + hierarchical structure
+      storage
     });
+    const { node, account, accountID: createdAccountID } = createResult;
     if (syncSetup) {
-      syncSetup.setNode(result.node);
+      syncSetup.setNode(node);
     }
-    const account = result.node.expectCurrentAccount("signUpWithPasskey");
-    const createdAccountID = account.id;
     if (createdAccountID !== computedAccountID) {
       throw new Error(
         `CRITICAL: AccountID mismatch!
@@ -22209,13 +22345,17 @@ ${errorDetails}`);
 This should never happen - deterministic computation failed!`
       );
     }
-    if (!syncSetup) {
+    if (syncSetup) {
+      syncState = { connected: true, syncing: false, error: null, status: "connected" };
+      notifySyncStateChange();
+      console.log("✅ [SYNC] Initial handshake complete");
+    } else {
       console.warn("⚠️  [SYNC] Sync service unavailable - account won't sync to cloud!");
     }
     return {
       accountID: createdAccountID,
       agentSecret,
-      node: result.node,
+      node,
       account,
       credentialId: arrayBufferToBase64(credentialId)
     };
@@ -22223,6 +22363,8 @@ This should never happen - deterministic computation failed!`
   async function signInWithPasskey({ salt = "maia.city" } = {}) {
     console.log("🔐 Starting passkey sign-in (TRUE single-passkey flow)...");
     console.log("   🎯 ONE biometric prompt, ZERO storage reads!");
+    syncState = { connected: false, syncing: false, error: null, status: "authenticating" };
+    notifySyncStateChange();
     await requirePRFSupport();
     const saltBytes = stringToUint8Array(salt);
     console.log("📱 Authenticating and re-evaluating PRF...");
@@ -22241,64 +22383,92 @@ This should never happen - deterministic computation failed!`
     console.log("✅ AccountID re-computed:", accountID);
     console.log("   🔑 Chain: PRF → agentSecret → header → accountID");
     console.log("   ♻️  No storage needed - computed on the fly!");
-    console.log("🔓 Loading account...");
+    console.log("🔓 Setting up sync and storage for account loading...");
     const storage = await getStorage();
     let syncSetup = null;
     {
       console.log("🔌 [SYNC] Setting up self-hosted sync...");
       syncSetup = setupSyncPeers();
     }
-    const { LocalNode: LocalNode2 } = await Promise.resolve().then(() => index$3);
-    const withLoadedAccountPromise = LocalNode2.withLoadedAccount({
-      accountID,
-      accountSecret: agentSecret,
-      crypto: crypto2,
-      peers: syncSetup ? syncSetup.peers : [],
-      storage,
-      migration: schemaMigration
-      // ← Runs on every load, idempotent
-    });
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(`withLoadedAccount() timed out after 30 seconds. AccountID: ${accountID}. This might indicate the account doesn't exist on the sync server or sync isn't working.`));
-      }, 3e4);
-    });
-    let node;
-    try {
-      console.log("⏳ Waiting for account to load (this may take a moment if loading from cloud)...");
-      node = await Promise.race([withLoadedAccountPromise, timeoutPromise]);
-      console.log("✅ LocalNode.withLoadedAccount() completed successfully");
-    } catch (loadError) {
-      console.error("❌ LocalNode.withLoadedAccount() failed:", loadError);
-      console.error("   Error message:", loadError.message);
-      console.error("   Error stack:", loadError.stack);
-      console.error("   AccountID:", accountID);
-      console.error("   Peers available:", syncSetup ? syncSetup.peers.length : 0);
-      if (syncSetup && syncSetup.peers.length > 0) {
-        console.error("   Peer IDs:", syncSetup.peers.map((p) => p.id || "unknown"));
-      }
-      throw loadError;
-    }
     if (syncSetup) {
-      syncSetup.setNode(node);
-      console.log("✅ [SYNC] Jazz sync peer connected");
+      syncState = { connected: false, syncing: true, error: null, status: "loading-account" };
+      notifySyncStateChange();
     }
-    if (storage) {
-      console.log("💾 [STORAGE] Account loaded from IndexedDB");
-    }
-    console.log("📋 Getting account from node...");
-    const account = node.expectCurrentAccount("signInWithPasskey");
-    console.log("✅ Account loaded! ID:", account.id);
-    console.log("🎉 Sign-in complete! TRUE single-passkey flow!");
-    console.log("   📱 1 biometric prompt");
-    console.log("   💾 0 secrets retrieved from storage");
-    console.log("   ⚡ Everything computed deterministically!");
-    console.log("🔄 Returning from signInWithPasskey()...");
+    const handshakeStartTime = performance.now();
+    console.log("⏳ Starting account load (initial sync handshake) in background...");
+    const accountLoadingPromise = (async () => {
+      try {
+        let websocketReady = false;
+        if (syncSetup && syncSetup.waitForPeer) {
+          const websocketWaitStartTime = performance.now();
+          console.log("🔌 [SYNC] Waiting for WebSocket connection before account load...");
+          websocketReady = await syncSetup.waitForPeer();
+          const websocketWaitDuration = performance.now() - websocketWaitStartTime;
+          if (websocketReady) {
+            console.log(`✅ [SYNC] WebSocket connected (${websocketWaitDuration.toFixed(0)}ms) - proceeding with account load`);
+            if (websocketWaitDuration > 500) {
+              console.warn(`⚠️ [PERF] WebSocket connection took ${websocketWaitDuration.toFixed(0)}ms (target: <500ms)`);
+            }
+          } else {
+            console.warn(`⚠️ [SYNC] WebSocket connection timeout (${websocketWaitDuration.toFixed(0)}ms) - proceeding anyway (will load from storage or wait)`);
+          }
+        }
+        const loadResult = await loadAccount({
+          accountID,
+          agentSecret,
+          peers: syncSetup ? syncSetup.peers : [],
+          storage
+        });
+        const { node, account } = loadResult;
+        const handshakeDuration = performance.now() - handshakeStartTime;
+        console.log(`✅ Account loaded via loadAccount() abstraction (${handshakeDuration.toFixed(0)}ms)`);
+        if (handshakeDuration > 1e3) {
+          console.warn(`⚠️ [PERF] Initial handshake took ${handshakeDuration.toFixed(0)}ms (target: <1000ms)`);
+        }
+        if (syncSetup) {
+          syncSetup.setNode(node);
+          console.log("✅ [SYNC] Sync peer connected");
+        }
+        if (syncSetup) {
+          syncState = { connected: true, syncing: false, error: null, status: "connected" };
+          notifySyncStateChange();
+          console.log("✅ [SYNC] Initial handshake complete");
+        }
+        if (storage) {
+          console.log("💾 [STORAGE] Account loaded from IndexedDB");
+        }
+        console.log("✅ Account loaded! ID:", account.id);
+        console.log("🎉 Sign-in complete! TRUE single-passkey flow!");
+        console.log("   📱 1 biometric prompt");
+        console.log("   💾 0 secrets retrieved from storage");
+        console.log("   ⚡ Everything computed deterministically!");
+        return {
+          accountID: account.id,
+          agentSecret,
+          node,
+          account
+        };
+      } catch (loadError) {
+        console.error("❌ Account loading failed:", loadError);
+        console.error("   Error message:", loadError.message);
+        console.error("   Error stack:", loadError.stack);
+        console.error("   AccountID:", accountID);
+        console.error("   Peers available:", syncSetup ? syncSetup.peers.length : 0);
+        if (syncSetup && syncSetup.peers.length > 0) {
+          console.error("   Peer IDs:", syncSetup.peers.map((p) => p.id || "unknown"));
+        }
+        if (syncSetup) {
+          syncState = { connected: false, syncing: false, error: loadError.message, status: "error" };
+          notifySyncStateChange();
+        }
+        throw loadError;
+      }
+    })();
+    console.log("🔄 Returning from signInWithPasskey() immediately (account loading in background)...");
     return {
-      accountID: account.id,
+      accountID,
       agentSecret,
-      node,
-      account
+      loadingPromise: accountLoadingPromise
     };
   }
   function getDefaultExportFromCjs(x) {

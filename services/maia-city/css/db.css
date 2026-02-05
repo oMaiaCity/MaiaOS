@@ -2155,11 +2155,15 @@ pre {
 		display: flex;
 	}
 	
-	/* Hide right-side items except account info and hamburger */
+	/* Hide right-side items except account info, sync status, and hamburger */
 	.header-right .seed-btn,
-	.header-right .sync-status,
 	.header-right .sign-out-btn {
 		display: none !important;
+	}
+	
+	/* Keep sync status visible on mobile - it's now in header */
+	.header-right .sync-status {
+		display: flex !important;
 	}
 	
 	/* Keep account info and hamburger visible */

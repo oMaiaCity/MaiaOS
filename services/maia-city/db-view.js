@@ -3,7 +3,7 @@
  * Liquid glass design with widget-based layout
  */
 
-import { truncate } from './utils.js'
+import { truncate, getSyncStatusMessage } from './utils.js'
 // Import getSchema and getAllSchemas from schemas registry (hardcoded schemas)
 import { getSchema, getAllSchemas } from '../../libs/maia-db/src/schemas/registry.js'
 import { renderDashboard, renderVibeViewer } from './dashboard.js'
@@ -286,13 +286,13 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 				data = allCoValues
 					.filter(cv => {
 						// Match schema name (can be in various formats)
-						const schema = cv.$schema || cv.schema; // Prefer $schema, fallback to schema
+						const schema = cv.$schema; // STRICT: Only $schema, no fallback
 						return schema === currentView || 
 							   schema === `@schema/${currentView}` ||
 							   (cv.headerMeta?.$schema === currentView);
 					})
 					.map(cv => ({
-						displayName: cv.$schema || cv.schema || cv.id, // Prefer $schema
+						displayName: cv.$schema || cv.id, // STRICT: Only $schema, no fallback
 						...cv
 					}));
 			}
@@ -378,7 +378,7 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 		} else if (data && typeof data === 'object' && !Array.isArray(data) && !data.error && !data.loading) {
 			// CoMap: Display properties from flat object format (operations API)
 			// Convert flat object to normalized format for display
-			const schemaCoId = data.$schema || data.schema; // Prefer $schema, fallback to schema
+			const schemaCoId = data.$schema; // STRICT: Only $schema, no fallback
 			const schemaDef = schemaCoId ? getSchema(schemaCoId) : null;
 			
 			// Extract properties from flat object (exclude metadata keys)
@@ -610,6 +610,13 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
+						<!-- Sync Status Indicator - moved to header, left of account ID -->
+						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
+							<span class="sync-dot"></span>
+							<span class="sync-text">
+								${getSyncStatusMessage(syncState)}
+							</span>
+						</div>
 						${authState.signedIn ? `
 							<code class="db-status">${truncate(accountId, 12)}</code>
 						` : ''}
@@ -624,15 +631,6 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 								Seed
 							</button>
 						` : ''}
-						<!-- Sync Status Indicator -->
-						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
-							<span class="sync-dot"></span>
-							<span class="sync-text">
-								${syncState.connected && syncState.syncing ? 'Syncing' : 
-								  syncState.connected ? 'Connected' : 
-								  syncState.error || 'Offline'}
-							</span>
-						</div>
 						${authState.signedIn ? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
 								Sign Out
@@ -647,14 +645,6 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 							Seed
 						</button>
 					` : ''}
-					<div class="mobile-menu-item sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
-						<span class="sync-dot"></span>
-						<span class="sync-text">
-							${syncState.connected && syncState.syncing ? 'Syncing' : 
-							  syncState.connected ? 'Connected' : 
-							  syncState.error || 'Offline'}
-						</span>
-					</div>
 					${authState.signedIn ? `
 						<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
 							Sign Out

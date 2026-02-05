@@ -20,14 +20,8 @@ export function isDeepResolvedOrResolving(coId, backend = null) {
     // Use unified cache from backend
     return backend.subscriptionCache.isResolved(coId);
   }
-  // Fallback: try to get global cache (may not work without node)
-  // This is for backward compatibility when called without backend
-  try {
-    const cache = getGlobalCoCache(null);
-    return cache.isResolved(coId);
-  } catch {
-    return false;
-  }
+  // No fallback - backend is required
+  return false;
 }
 
 /**

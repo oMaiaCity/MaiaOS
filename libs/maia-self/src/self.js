@@ -13,6 +13,7 @@ import { createPasskeyWithPRF, evaluatePRF, getExistingPasskey } from './prf-eva
 import { arrayBufferToBase64, base64ToArrayBuffer, stringToUint8Array, isValidAccountID, uint8ArrayToHex } from './utils.js';
 import { getStorage } from './storage.js';
 import { schemaMigration } from '../../maia-db/src/migrations/schema.migration.js';
+import { loadAccount, createAccountWithSecret } from '../../maia-db/src/cojson/groups/coID.js';
 
 // Extract functions from cojsonInternals for cleaner code
 const { accountHeaderForInitialAgentSecret, idforHeader, rawCoIDtoBytes, rawCoIDfromBytes } = cojsonInternals;
@@ -22,6 +23,7 @@ let syncState = {
 	connected: false,
 	syncing: false,
 	error: null,
+	status: null, // 'authenticating' | 'loading-account' | 'syncing' | 'connected' | 'error'
 };
 const syncStateListeners = new Set();
 
@@ -55,7 +57,7 @@ function setupSyncPeers(syncDomain = null) {
 	const isDev = import.meta.env?.DEV || window.location.hostname === 'localhost';
 	
 	// Use syncDomain from kernel if provided (single source of truth)
-	// Otherwise fall back to env vars for backward compatibility
+	// Fall back to env vars if syncDomain not provided
 	const apiDomain = syncDomain || (typeof window !== 'undefined' && window.__PUBLIC_API_DOMAIN__) || import.meta.env?.PUBLIC_API_DOMAIN;
 	
 	let syncServerUrl;
@@ -120,7 +122,7 @@ function setupSyncPeers(syncDomain = null) {
 				console.warn('⚠️ [SYNC] Peer removed, connection lost');
 			}
 			websocketConnected = false;
-			syncState = { connected: false, syncing: false, error: "Disconnected" };
+			syncState = { connected: false, syncing: false, error: "Disconnected", status: 'error' };
 			notifySyncStateChange();
 		},
 	});
@@ -131,7 +133,7 @@ function setupSyncPeers(syncDomain = null) {
 		if (connected && !websocketConnected) {
 			console.log('✅ [SYNC] WebSocket connection successful');
 			websocketConnected = true;
-			syncState = { connected: true, syncing: true, error: null };
+			syncState = { connected: true, syncing: true, error: null, status: 'syncing' };
 			notifySyncStateChange();
 			// Resolve the promise when WebSocket is actually connected
 			if (websocketConnectedResolve) {
@@ -142,7 +144,7 @@ function setupSyncPeers(syncDomain = null) {
 			// Only log if we were previously connected
 			console.warn('⚠️ [SYNC] WebSocket connection lost');
 			websocketConnected = false;
-			syncState = { connected: false, syncing: false, error: "Offline" };
+			syncState = { connected: false, syncing: false, error: "Offline", status: 'error' };
 			notifySyncStateChange();
 		}
 	});
@@ -154,7 +156,7 @@ function setupSyncPeers(syncDomain = null) {
 			console.error(`   1. Server service is running: curl https://${apiDomain || window.location.hostname}/health`);
 			console.error(`   2. PUBLIC_API_DOMAIN is set correctly: ${apiDomain || 'NOT SET'}`);
 			console.error(`   3. WebSocket URL: ${syncServerUrl}`);
-			syncState = { connected: false, syncing: false, error: "Connection timeout" };
+			syncState = { connected: false, syncing: false, error: "Connection timeout", status: 'error' };
 			notifySyncStateChange();
 		}
 	}, 10000);
@@ -180,7 +182,7 @@ function setupSyncPeers(syncDomain = null) {
 						resolved = true;
 						resolve(false); // Resolve with false if timeout
 					}
-				}, 10000); // 10 second timeout
+				}, 2000); // 2 second timeout (optimized for initial load - proceed if not connected)
 				
 				// Wait for WebSocket connection promise
 				websocketConnectedPromise.then(() => {
@@ -234,7 +236,7 @@ function setupJazzSyncPeers(apiKey) {
 		addPeer: (peer) => {
 			if (node) {
 				node.syncManager.addPeer(peer);
-				syncState = { connected: true, syncing: true, error: null };
+				syncState = { connected: true, syncing: true, error: null, status: 'syncing' };
 				notifySyncStateChange();
 			} else {
 				peers.push(peer);
@@ -245,14 +247,14 @@ function setupJazzSyncPeers(apiKey) {
 			if (index > -1) {
 				peers.splice(index, 1);
 			}
-			syncState = { connected: false, syncing: false, error: "Disconnected" };
+			syncState = { connected: false, syncing: false, error: "Disconnected", status: 'error' };
 			notifySyncStateChange();
 		},
 	});
 	
 	// Subscribe to connection changes
 	wsPeer.subscribe((connected) => {
-		syncState = { connected, syncing: connected, error: connected ? null : "Offline" };
+		syncState = { connected, syncing: connected, error: connected ? null : "Offline", status: connected ? 'syncing' : 'error' };
 		notifySyncStateChange();
 	});
 	
@@ -328,9 +330,8 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 	console.log("   🔑 Chain: PRF → agentSecret → header → accountID");
 	console.log("   ♻️  Same passkey + salt = same accountID (always!)");
 	
-	// STEP 3: Create account
+	// STEP 3: Create account using abstraction layer
 	console.log("🏗️ Step 3/3: Creating account...");
-	const { LocalNode } = await import("cojson");
 	
 	// Get IndexedDB storage for persistence (BEFORE account creation!)
 	const storage = await getStorage();
@@ -351,26 +352,21 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 		console.log("⚠️ [SYNC] Sync disabled - proceeding without sync");
 	}
 	
-	// Schema migration: Creates profile + hierarchical account structure (account.os.schemata, etc.)
-	// All other example CoValues created later by seeding service, reusing same group
-	const { schemaMigration } = await import("@MaiaOS/db");
-	
-	const result = await LocalNode.withNewlyCreatedAccount({
-		creationProps: { name },
-		crypto,
-		initialAgentSecret: agentSecret,
-		peers: syncSetup ? syncSetup.peers : [], // Pass peers array directly!
-		storage, // Pass storage directly! (jazz-tools pattern)
-		migration: schemaMigration, // Schema migration: profile + hierarchical structure
+	// Use createAccountWithSecret() abstraction from @MaiaOS/db
+	// This ensures consistent account creation through the abstraction layer
+	const createResult = await createAccountWithSecret({
+		agentSecret,
+		name,
+		peers: syncSetup ? syncSetup.peers : [],
+		storage: storage,
 	});
+	
+	const { node, account, accountID: createdAccountID } = createResult;
 	
 	// Assign node to peer callbacks
 	if (syncSetup) {
-		syncSetup.setNode(result.node);
+		syncSetup.setNode(node);
 	}
-	
-	const account = result.node.expectCurrentAccount("signUpWithPasskey");
-	const createdAccountID = account.id;
 	
 	// VERIFICATION: Computed accountID MUST match created accountID!
 	if (createdAccountID !== computedAccountID) {
@@ -382,14 +378,21 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 		);
 	}
 	
-	if (!syncSetup) {
+	// Initial sync handshake complete - set syncing to false
+	// This marks the initial connection and account creation as complete
+	// Data will continue loading progressively in the background (expected behavior)
+	if (syncSetup) {
+		syncState = { connected: true, syncing: false, error: null, status: 'connected' };
+		notifySyncStateChange();
+		console.log("✅ [SYNC] Initial handshake complete");
+	} else {
 		console.warn("⚠️  [SYNC] Sync service unavailable - account won't sync to cloud!");
 	}
 	
 	return { 
 		accountID: createdAccountID, 
 		agentSecret,
-		node: result.node,
+		node,
 		account,
 		credentialId: arrayBufferToBase64(credentialId),
 	};
@@ -416,6 +419,10 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 	console.log("🔐 Starting passkey sign-in (TRUE single-passkey flow)...");
 	console.log("   🎯 ONE biometric prompt, ZERO storage reads!");
+	
+	// Update sync state to indicate we're authenticating
+	syncState = { connected: false, syncing: false, error: null, status: 'authenticating' };
+	notifySyncStateChange();
 	
 	await requirePRFSupport();
 	
@@ -446,8 +453,8 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 	console.log("   🔑 Chain: PRF → agentSecret → header → accountID");
 	console.log("   ♻️  No storage needed - computed on the fly!");
 	
-	// STEP 4: Load account
-	console.log("🔓 Loading account...");
+	// STEP 4: Setup sync peers and storage (for background account loading)
+	console.log("🔓 Setting up sync and storage for account loading...");
 	const storage = await getStorage();
 	
 	// Setup sync peers BEFORE loading account (jazz-tools pattern!)
@@ -466,67 +473,111 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 		console.log("⚠️ [SYNC] Sync disabled - proceeding without sync");
 	}
 	
-	const { LocalNode } = await import("cojson");
-	
-	// Add timeout wrapper to detect if withLoadedAccount hangs
-	const withLoadedAccountPromise = LocalNode.withLoadedAccount({
-		accountID,
-		accountSecret: agentSecret,
-		crypto,
-		peers: syncSetup ? syncSetup.peers : [],
-		storage,
-		migration: schemaMigration,  // ← Runs on every load, idempotent
-	});
-	
-	const timeoutPromise = new Promise((_, reject) => {
-		setTimeout(() => {
-			reject(new Error(`withLoadedAccount() timed out after 30 seconds. AccountID: ${accountID}. This might indicate the account doesn't exist on the sync server or sync isn't working.`));
-		}, 30000); // 30 second timeout
-	});
-	
-	let node;
-	try {
-		console.log("⏳ Waiting for account to load (this may take a moment if loading from cloud)...");
-		node = await Promise.race([withLoadedAccountPromise, timeoutPromise]);
-		console.log("✅ LocalNode.withLoadedAccount() completed successfully");
-	} catch (loadError) {
-		console.error("❌ LocalNode.withLoadedAccount() failed:", loadError);
-		console.error("   Error message:", loadError.message);
-		console.error("   Error stack:", loadError.stack);
-		console.error("   AccountID:", accountID);
-		console.error("   Peers available:", syncSetup ? syncSetup.peers.length : 0);
-		if (syncSetup && syncSetup.peers.length > 0) {
-			console.error("   Peer IDs:", syncSetup.peers.map(p => p.id || 'unknown'));
-		}
-		throw loadError;
-	}
-	
+	// Update sync state to indicate we're loading account
 	if (syncSetup) {
-		syncSetup.setNode(node);
-		console.log("✅ [SYNC] Jazz sync peer connected");
+		syncState = { connected: false, syncing: true, error: null, status: 'loading-account' };
+		notifySyncStateChange();
 	}
 	
-	if (storage) {
-		console.log("💾 [STORAGE] Account loaded from IndexedDB");
-	}
+	// Start account loading in background (non-blocking)
+	// Use loadAccount() abstraction from @MaiaOS/db instead of direct withLoadedAccount()
+	const handshakeStartTime = performance.now();
+	console.log("⏳ Starting account load (initial sync handshake) in background...");
 	
-	console.log("📋 Getting account from node...");
-	const account = node.expectCurrentAccount("signInWithPasskey");
+	const accountLoadingPromise = (async () => {
+		try {
+			// OPTIMIZATION: Wait for WebSocket connection before loading account (or timeout gracefully)
+			// This ensures sync server is ready before we try to load, reducing unnecessary waits
+			let websocketReady = false;
+			if (syncSetup && syncSetup.waitForPeer) {
+				const websocketWaitStartTime = performance.now();
+				console.log("🔌 [SYNC] Waiting for WebSocket connection before account load...");
+				websocketReady = await syncSetup.waitForPeer();
+				const websocketWaitDuration = performance.now() - websocketWaitStartTime;
+				
+				if (websocketReady) {
+					console.log(`✅ [SYNC] WebSocket connected (${websocketWaitDuration.toFixed(0)}ms) - proceeding with account load`);
+					if (websocketWaitDuration > 500) {
+						console.warn(`⚠️ [PERF] WebSocket connection took ${websocketWaitDuration.toFixed(0)}ms (target: <500ms)`);
+					}
+				} else {
+					console.warn(`⚠️ [SYNC] WebSocket connection timeout (${websocketWaitDuration.toFixed(0)}ms) - proceeding anyway (will load from storage or wait)`);
+				}
+			}
+			
+			// Use loadAccount() abstraction - goes through proper abstraction layer
+			const loadResult = await loadAccount({
+				accountID,
+				agentSecret,
+				peers: syncSetup ? syncSetup.peers : [],
+				storage: storage,
+			});
+			
+			const { node, account } = loadResult;
+			const handshakeDuration = performance.now() - handshakeStartTime;
+			console.log(`✅ Account loaded via loadAccount() abstraction (${handshakeDuration.toFixed(0)}ms)`);
+			if (handshakeDuration > 1000) {
+				console.warn(`⚠️ [PERF] Initial handshake took ${handshakeDuration.toFixed(0)}ms (target: <1000ms)`);
+			}
+			
+			// Assign node to peer callbacks
+			if (syncSetup) {
+				syncSetup.setNode(node);
+				console.log("✅ [SYNC] Sync peer connected");
+			}
+			
+			// Initial sync handshake complete - set syncing to false
+			// This marks the initial connection and account load as complete
+			// Data will continue loading progressively in the background (expected behavior)
+			if (syncSetup) {
+				syncState = { connected: true, syncing: false, error: null, status: 'connected' };
+				notifySyncStateChange();
+				console.log("✅ [SYNC] Initial handshake complete");
+			}
+			
+			if (storage) {
+				console.log("💾 [STORAGE] Account loaded from IndexedDB");
+			}
+			
+			console.log("✅ Account loaded! ID:", account.id);
+			console.log("🎉 Sign-in complete! TRUE single-passkey flow!");
+			console.log("   📱 1 biometric prompt");
+			console.log("   💾 0 secrets retrieved from storage");
+			console.log("   ⚡ Everything computed deterministically!");
+			
+			return {
+				accountID: account.id,
+				agentSecret,
+				node,
+				account,
+			};
+		} catch (loadError) {
+			console.error("❌ Account loading failed:", loadError);
+			console.error("   Error message:", loadError.message);
+			console.error("   Error stack:", loadError.stack);
+			console.error("   AccountID:", accountID);
+			console.error("   Peers available:", syncSetup ? syncSetup.peers.length : 0);
+			if (syncSetup && syncSetup.peers.length > 0) {
+				console.error("   Peer IDs:", syncSetup.peers.map(p => p.id || 'unknown'));
+			}
+			
+			// Update sync state to show error
+			if (syncSetup) {
+				syncState = { connected: false, syncing: false, error: loadError.message, status: 'error' };
+				notifySyncStateChange();
+			}
+			
+			throw loadError;
+		}
+	})();
 	
-	console.log("✅ Account loaded! ID:", account.id);
-	console.log("🎉 Sign-in complete! TRUE single-passkey flow!");
-	console.log("   📱 1 biometric prompt");
-	console.log("   💾 0 secrets retrieved from storage");
-	console.log("   ⚡ Everything computed deterministically!");
-	
-	// Sync server always available (handles offline state internally)
-	
-	console.log("🔄 Returning from signInWithPasskey()...");
-	return { 
-		accountID: account.id, 
+	// Return immediately with loading promise (non-blocking)
+	// Caller can await loadingPromise if they need the account/node
+	console.log("🔄 Returning from signInWithPasskey() immediately (account loading in background)...");
+	return {
+		accountID,
 		agentSecret,
-		node,
-		account,
+		loadingPromise: accountLoadingPromise,
 	};
 }
 

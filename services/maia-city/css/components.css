@@ -48,31 +48,6 @@
 .btn-glass-terracotta { background: rgba(194, 123, 102, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: rgba(194, 123, 102, 0.3); color: var(--color-terracotta); }
 .btn-glass-yellow { background: rgba(230, 185, 77, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: rgba(230, 185, 77, 0.3); color: var(--color-sun-yellow); }
 
-/* Legacy button classes for backward compatibility */
-.btn-primary {
-  background: var(--brand-green);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.btn-primary:hover {
-  background: #5dbb72;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-}
-
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(15px);
-  color: var(--text-accent);
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  transform: translateY(-1px);
-}
-
 .btn-danger {
   color: var(--brand-red);
   border-color: rgba(239, 68, 68, 0.3);

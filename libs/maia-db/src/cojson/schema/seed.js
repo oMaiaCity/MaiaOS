@@ -500,21 +500,11 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   // Note: read() API returns flat objects (not normalized format with properties array)
   const profileData = profileStore.value;
   
-  // Handle both flat object format (from operations API) and normalized format (legacy)
-  let universalGroupId;
-  if (profileData.properties && Array.isArray(profileData.properties)) {
-    // Normalized format (legacy) - extract from properties array
-    const groupProperty = profileData.properties.find(p => p.key === 'group');
-    if (!groupProperty || !groupProperty.value) {
-      throw new Error('[CoJSONSeed] Universal group not found in profile.group. Ensure identity migration has run.');
-    }
-    universalGroupId = groupProperty.value;
-  } else if (profileData.group && typeof profileData.group === 'string') {
-    // Flat object format (operations API) - direct property access
-    universalGroupId = profileData.group;
-  } else {
+  // STRICT: Only flat object format (operations API) - no legacy normalized format
+  if (!profileData.group || typeof profileData.group !== 'string') {
     throw new Error('[CoJSONSeed] Universal group not found in profile.group. Ensure identity migration has run.');
   }
+  const universalGroupId = profileData.group;
   
   // Use read() API with @group exception (groups don't have $schema)
   const groupStore = await backend.read('@group', universalGroupId);
@@ -672,10 +662,8 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     if (osCore && backend.isAvailable(osCore)) {
       const osContent = backend.getCurrentContent(osCore);
       if (osContent && typeof osContent.get === 'function') {
-        // Check account.os.metaSchema (legacy)
-        metaSchemaCoId = osContent.get("metaSchema");
-        
-        // Also check account.os.schematas registry
+        // STRICT: Only check account.os.schematas registry - no legacy metaSchema
+        // Check account.os.schematas registry
         if (!metaSchemaCoId) {
           const schematasId = osContent.get("schematas");
           if (schematasId) {
@@ -1248,8 +1236,8 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   
   // Seed vibes (depends on actors, so seed after actors)
   // Now that actors are registered, we can transform vibe references properly
-  // Support both configs.vibe (single, backward compat) and configs.vibes (array)
-  const allVibes = configs?.vibes || (configs?.vibe ? [configs.vibe] : []);
+  // STRICT: Only configs.vibes (array) - no backward compatibility for configs.vibe
+  const allVibes = configs?.vibes || [];
   
   if (allVibes.length > 0) {
     // REFRESH REGISTRY before transforming vibes (actors are now registered)
@@ -1341,17 +1329,11 @@ export async function seed(account, node, configs, schemas, data, existingBacken
         
         // Register REAL co-id from CoJSON (never pre-generate!)
         const originalVibeIdForRegistry = vibe.$id; // Original $id (e.g., @vibe/todos)
-        // Only set 'vibe' key for the last vibe (backward compat for single vibe case)
-        if (allVibes.length === 1 || allVibes.indexOf(vibe) === allVibes.length - 1) {
-          instanceCoIdMap.set('vibe', vibeCoId);
-        }
+        // STRICT: Only register by original vibe ID - no backward compat 'vibe' key
         if (originalVibeIdForRegistry) {
           instanceCoIdMap.set(originalVibeIdForRegistry, vibeCoId);
           combinedRegistry.set(originalVibeIdForRegistry, vibeCoId); // Add to registry for future transformations
           coIdRegistry.register(originalVibeIdForRegistry, vibeCoId);
-        }
-        if (allVibes.length === 1 || allVibes.indexOf(vibe) === allVibes.length - 1) {
-          coIdRegistry.register('vibe', vibeCoId);
         }
       }
     }

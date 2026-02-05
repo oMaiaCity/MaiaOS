@@ -77,44 +77,26 @@ export async function getSchemaIndexColistId(backend, schema) {
  * @returns {Promise<string|null>} CoList ID or null if not found
  */
 export async function getCoListId(backend, collectionNameOrSchema) {
-  // If it's a schema co-id or human-readable schema name, use schema index lookup
-  if (collectionNameOrSchema && typeof collectionNameOrSchema === 'string' && 
-      (collectionNameOrSchema.startsWith('co_z') || collectionNameOrSchema.startsWith('@schema/'))) {
-    console.log(`[getCoListId] Looking up colist for schema: "${collectionNameOrSchema.substring(0, 30)}..."`);
-    const colistId = await getSchemaIndexColistId(backend, collectionNameOrSchema);
-    if (colistId) {
-      console.log(`[getCoListId] ✅ Found colist: "${colistId.substring(0, 12)}..." for schema "${collectionNameOrSchema.substring(0, 30)}..."`);
-    } else {
-      console.warn(`[getCoListId] ❌ No colist found for schema "${collectionNameOrSchema.substring(0, 30)}..."`);
-    }
-    return colistId;
-  }
-  
-  // Fallback: Try old-style human-readable collection name lookup in account.os
-  // (for backward compatibility, but all indexes should be in account.os now)
-  const osId = backend.account.get("os");
-  if (!osId) {
+  // STRICT: Only schema-based lookup - no backward compatibility layers
+  // All collections must be resolved via schema registry
+  if (!collectionNameOrSchema || typeof collectionNameOrSchema !== 'string') {
     return null;
   }
   
-  // Trigger loading for account.os
-  const osCore = await ensureCoValueLoaded(backend, osId);
-  if (!osCore || !backend.isAvailable(osCore)) {
+  // Must be a schema co-id or human-readable schema name
+  if (!collectionNameOrSchema.startsWith('co_z') && !collectionNameOrSchema.startsWith('@schema/')) {
+    console.warn(`[getCoListId] ❌ Invalid collection identifier: "${collectionNameOrSchema}". Must be schema co-id (co_z...) or namekey (@schema/...). Use schema registry to resolve collection names.`);
     return null;
   }
   
-  const osContent = backend.getCurrentContent(osCore);
-  if (!osContent || typeof osContent.get !== 'function') {
-    return null;
+  console.log(`[getCoListId] Looking up colist for schema: "${collectionNameOrSchema.substring(0, 30)}..."`);
+  const colistId = await getSchemaIndexColistId(backend, collectionNameOrSchema);
+  if (colistId) {
+    console.log(`[getCoListId] ✅ Found colist: "${colistId.substring(0, 12)}..." for schema "${collectionNameOrSchema.substring(0, 30)}..."`);
+  } else {
+    console.warn(`[getCoListId] ❌ No colist found for schema "${collectionNameOrSchema.substring(0, 30)}..."`);
   }
-  
-  // Try to find by collection name (backward compatibility - should resolve via schema registry)
-  const collectionListId = osContent.get(collectionNameOrSchema);
-  if (collectionListId && typeof collectionListId === 'string' && collectionListId.startsWith('co_')) {
-    return collectionListId;
-  }
-  
-  return null;
+  return colistId;
 }
 
 /**

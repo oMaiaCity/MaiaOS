@@ -3,7 +3,7 @@
  * Handles dashboard screen and vibe viewer rendering
  */
 
-import { truncate } from './utils.js';
+import { truncate, getSyncStatusMessage } from './utils.js';
 
 // Helper function to escape HTML
 function escapeHtml(text) {
@@ -135,6 +135,13 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
+						<!-- Sync Status Indicator - moved to header, left of account ID -->
+						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
+							<span class="sync-dot"></span>
+							<span class="sync-text">
+								${getSyncStatusMessage(syncState)}
+							</span>
+						</div>
 						${authState.signedIn ? `
 							<code class="db-status">${truncate(accountId, 12)}</code>
 						` : ''}
@@ -149,15 +156,6 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 								Seed
 							</button>
 						` : ''}
-						<!-- Sync Status Indicator -->
-						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
-							<span class="sync-dot"></span>
-							<span class="sync-text">
-								${syncState.connected && syncState.syncing ? 'Syncing' : 
-								  syncState.connected ? 'Connected' : 
-								  syncState.error || 'Offline'}
-							</span>
-						</div>
 						${authState.signedIn ? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
 								Sign Out
@@ -172,14 +170,6 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 							Seed
 						</button>
 					` : ''}
-					<div class="mobile-menu-item sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
-						<span class="sync-dot"></span>
-						<span class="sync-text">
-							${syncState.connected && syncState.syncing ? 'Syncing' : 
-							  syncState.connected ? 'Connected' : 
-							  syncState.error || 'Offline'}
-						</span>
-					</div>
 					${authState.signedIn ? `
 						<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
 							Sign Out
@@ -232,6 +222,13 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
+						<!-- Sync Status Indicator - moved to header, left of account ID -->
+						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
+							<span class="sync-dot"></span>
+							<span class="sync-text">
+								${getSyncStatusMessage(syncState)}
+							</span>
+						</div>
 						${authState.signedIn ? `
 							<code class="db-status">${truncate(accountId, 12)}</code>
 						` : ''}
@@ -246,15 +243,6 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 								Seed
 							</button>
 						` : ''}
-						<!-- Sync Status Indicator -->
-						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
-							<span class="sync-dot"></span>
-							<span class="sync-text">
-								${syncState.connected && syncState.syncing ? 'Syncing' : 
-								  syncState.connected ? 'Connected' : 
-								  syncState.error || 'Offline'}
-							</span>
-						</div>
 						${authState.signedIn ? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
 								Sign Out
@@ -269,14 +257,6 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 							Seed
 						</button>
 					` : ''}
-					<div class="mobile-menu-item sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
-						<span class="sync-dot"></span>
-						<span class="sync-text">
-							${syncState.connected && syncState.syncing ? 'Syncing' : 
-							  syncState.connected ? 'Connected' : 
-							  syncState.error || 'Offline'}
-						</span>
-					</div>
 					${authState.signedIn ? `
 						<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
 							Sign Out

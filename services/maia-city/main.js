@@ -39,6 +39,7 @@ let syncState = {
 	connected: false,
 	syncing: false,
 	error: null,
+	status: null, // 'authenticating' | 'loading-account' | 'syncing' | 'connected' | 'error'
 };
 
 // Subscription management for sync state
@@ -268,31 +269,14 @@ async function signIn() {
 		const signInResult = await signInWithPasskey({ 
 			salt: "maia.city"
 		});
-		console.log("✅ signInWithPasskey() returned successfully");
+		console.log("✅ signInWithPasskey() returned immediately (non-blocking)");
 		console.log("   Result keys:", Object.keys(signInResult));
-		const { accountID, node, account } = signInResult;
-		console.log("✅ Sign-in authentication successful, booting MaiaOS...");
+		const { accountID, agentSecret, loadingPromise } = signInResult;
+		console.log("✅ Sign-in authentication successful (account loading in background)");
 		console.log(`   accountID: ${accountID}`);
-		console.log(`   node: ${node ? 'ready' : 'not ready'}`);
-		console.log(`   account: ${account ? 'ready' : 'not ready'}`);
 		
-		// Boot MaiaOS with node, account, and sync domain (using CoJSON backend)
-		// Sync domain stored in kernel as single source of truth
-		// This must succeed before we mark as signed in
-		try {
-			maia = await MaiaOS.boot({ 
-				node, 
-				account,
-				syncDomain // Pass sync domain to kernel (single source of truth)
-			});
-			window.maia = maia;
-			console.log("✅ MaiaOS booted successfully");
-		} catch (bootError) {
-			console.error("❌ MaiaOS.boot() failed:", bootError);
-			throw new Error(`Failed to initialize MaiaOS: ${bootError.message}`);
-		}
-		
-		// Set auth state AFTER maia is successfully booted
+		// Set auth state IMMEDIATELY after auth (before account loads)
+		// This allows UI to show right away
 		authState = {
 			signedIn: true,
 			accountID: accountID,
@@ -300,6 +284,42 @@ async function signIn() {
 		
 		// Mark that user has successfully authenticated
 		markAccountExists();
+		
+		// Await account loading in background and boot MaiaOS when ready
+		loadingPromise.then(async (accountResult) => {
+			const { node, account } = accountResult;
+			console.log("✅ Account loading completed, booting MaiaOS...");
+			console.log(`   node: ${node ? 'ready' : 'not ready'}`);
+			console.log(`   account: ${account ? 'ready' : 'not ready'}`);
+			
+			try {
+				maia = await MaiaOS.boot({ 
+					node, 
+					account,
+					syncDomain // Pass sync domain to kernel (single source of truth)
+				});
+				window.maia = maia;
+				console.log("✅ MaiaOS booted successfully");
+				
+				// Re-render app now that maia is ready
+				if (authState.signedIn) {
+					renderAppInternal().catch((error) => {
+						console.error("❌ [SIGNIN] Error rendering app after maia ready:", error);
+						showToast("Failed to render app: " + error.message, 'error');
+					});
+				}
+			} catch (bootError) {
+				console.error("❌ MaiaOS.boot() failed:", bootError);
+				showToast("Failed to initialize MaiaOS: " + bootError.message, 'error');
+				// Don't throw - UI is already shown, user can retry
+			}
+		}).catch((loadError) => {
+			console.error("❌ Account loading failed:", loadError);
+			showToast("Failed to load account: " + loadError.message, 'error');
+			// Reset auth state on error
+			authState = { signedIn: false, accountID: null };
+			maia = null;
+		});
 		
 		// Subscribe to sync state changes
 		try {
@@ -529,7 +549,7 @@ function signOut() {
 		unsubscribeSync = null;
 	}
 	authState = { signedIn: false, accountID: null };
-	syncState = { connected: false, syncing: false, error: null };
+	syncState = { connected: false, syncing: false, error: null, status: null };
 	maia = null;
 	
 	// DON'T clear the account flag - passkey still exists on device!
@@ -547,11 +567,7 @@ let loadingScreenSyncUnsubscribe = null;
  * Sets up sync state listener to update the screen in real-time
  */
 function renderLoadingConnectingScreen() {
-	const syncMessage = syncState.connected 
-		? 'Connected' 
-		: syncState.error 
-			? syncState.error 
-			: 'Connecting to sync...';
+	const syncMessage = getSyncStatusMessage();
 	
 	document.getElementById("app").innerHTML = `
 		<div class="app-container" style="opacity: 0.5; pointer-events: none;">
@@ -645,26 +661,47 @@ function renderLoadingConnectingScreen() {
 }
 
 /**
+ * Get sync status message based on status field (for loading screen)
+ */
+function getSyncStatusMessage() {
+	if (syncState.status === 'authenticating') {
+		return 'Authenticating...';
+	} else if (syncState.status === 'loading-account') {
+		return 'Loading your account...';
+	} else if (syncState.status === 'syncing') {
+		return 'Syncing data...';
+	} else if (syncState.status === 'connected') {
+		return 'Connected';
+	} else if (syncState.status === 'error') {
+		return syncState.error || 'Error';
+	} else if (syncState.connected) {
+		return syncState.syncing ? 'Syncing' : 'Connected';
+	} else if (syncState.error) {
+		return syncState.error;
+	} else {
+		return 'Connecting to sync...';
+	}
+}
+
+/**
  * Update loading/connecting screen with current sync status
  */
 function updateLoadingConnectingScreen() {
 	const syncStatusElement = document.querySelector('.sync-status');
 	const syncIndicator = document.querySelector('.sync-indicator');
 	const syncMessageElement = document.querySelector('.sync-message');
-	const syncMessage = syncState.connected 
-		? 'Connected' 
-		: syncState.error 
-			? syncState.error 
-			: 'Connecting to sync...';
+	const syncMessage = getSyncStatusMessage();
 	
 	if (syncStatusElement && syncIndicator && syncMessageElement) {
 		syncMessageElement.textContent = syncMessage;
-		syncIndicator.style.background = syncState.connected 
+		const isConnected = syncState.connected && syncState.status === 'connected';
+		const hasError = syncState.status === 'error' || syncState.error;
+		syncIndicator.style.background = isConnected 
 			? '#4ade80' 
-			: syncState.error 
+			: hasError 
 				? '#ef4444' 
 				: '#fbbf24';
-		syncIndicator.style.animation = syncState.connected 
+		syncIndicator.style.animation = isConnected 
 			? 'none' 
 			: 'pulse 2s ease-in-out infinite';
 	}

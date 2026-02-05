@@ -74,8 +74,10 @@ export async function createSyncServer(options = {}) {
     /**
      * Handle WebSocket open event
      * Called when a client connects
+     * OPTIMIZED: Minimize synchronous operations, defer non-critical setup
      */
     async open(ws) {
+      const connectionStartTime = performance.now();
       const clientId = `client_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
       console.log(`[sync-server] Client connected: ${clientId}`);
 
@@ -129,28 +131,8 @@ export async function createSyncServer(options = {}) {
       ws._messageListeners = messageListeners;
       ws._adaptedWs = adaptedWs;
 
-      // Set up ping/pong for connection liveness (matching jazz-run pattern)
-      const pinging = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          try {
-            ws.send(JSON.stringify({
-              type: 'ping',
-              time: Date.now(),
-              dc: 'unknown'
-            }));
-          } catch (e) {
-            console.error(`[sync-server] Error sending ping to ${clientId}:`, e);
-            clearInterval(pinging);
-          }
-        } else {
-          clearInterval(pinging);
-        }
-      }, 1500);
-
-      // Store ping interval and client ID on ws.data
-      ws.data = { pingInterval: pinging, clientId };
-
-      // Create WebSocket peer using cojson-transport-ws
+      // Create WebSocket peer IMMEDIATELY (critical path - don't defer)
+      const peerCreationStartTime = performance.now();
       const peer = createWebSocketPeer({
         id: clientId,
         role: 'client',
@@ -159,7 +141,11 @@ export async function createSyncServer(options = {}) {
         batchingByDefault: false,
         deletePeerStateOnClose: true,
         onSuccess: () => {
-          console.log(`[sync-server] ✅ WebSocket peer ready: ${clientId}`);
+          const peerReadyTime = performance.now() - connectionStartTime;
+          console.log(`[sync-server] ✅ WebSocket peer ready: ${clientId} (${peerReadyTime.toFixed(0)}ms)`);
+          if (peerReadyTime > 100) {
+            console.warn(`[sync-server] ⚠️ [PERF] Peer creation took ${peerReadyTime.toFixed(0)}ms (target: <100ms)`);
+          }
         },
         onClose: () => {
           console.log(`[sync-server] WebSocket peer closed: ${clientId}`);
@@ -168,14 +154,15 @@ export async function createSyncServer(options = {}) {
           }
         }
       });
+      const peerCreationDuration = performance.now() - peerCreationStartTime;
 
-      // Add peer to sync manager
+      // Add peer to sync manager IMMEDIATELY (critical path)
       localNode.syncManager.addPeer(peer);
-      ws.data = { ...ws.data, peer };
+      ws.data = { clientId, peer };
 
-      console.log(`[sync-server] Peer added to sync manager: ${clientId}`);
+      console.log(`[sync-server] Peer added to sync manager: ${clientId} (peer creation: ${peerCreationDuration.toFixed(0)}ms)`);
 
-      // Fire open event asynchronously (mimic browser behavior)
+      // Fire open event asynchronously (non-blocking)
       queueMicrotask(() => {
         for (const listener of openListeners) {
           try {
@@ -186,25 +173,63 @@ export async function createSyncServer(options = {}) {
         }
       });
 
-      // Send initial ping immediately to trigger client connection detection
-      if (ws.readyState === WebSocket.OPEN) {
-        try {
-          ws.send(JSON.stringify({
-            type: 'ping',
-            time: Date.now(),
-            dc: 'unknown'
-          }));
-        } catch (e) {
-          console.error(`[sync-server] Error sending initial ping:`, e);
+      // DEFER ping setup (non-critical, can happen after connection is established)
+      // This reduces initial connection delay
+      queueMicrotask(() => {
+        const pinging = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            try {
+              ws.send(JSON.stringify({
+                type: 'ping',
+                time: Date.now(),
+                dc: 'unknown'
+              }));
+            } catch (e) {
+              console.error(`[sync-server] Error sending ping to ${clientId}:`, e);
+              clearInterval(pinging);
+            }
+          } else {
+            clearInterval(pinging);
+          }
+        }, 1500);
+
+        // Store ping interval on ws.data (after initial setup)
+        ws.data = { ...ws.data, pingInterval: pinging };
+
+        // Send initial ping after setup (non-blocking)
+        if (ws.readyState === WebSocket.OPEN) {
+          try {
+            ws.send(JSON.stringify({
+              type: 'ping',
+              time: Date.now(),
+              dc: 'unknown'
+            }));
+          } catch (e) {
+            console.error(`[sync-server] Error sending initial ping:`, e);
+          }
         }
+      });
+
+      const connectionDuration = performance.now() - connectionStartTime;
+      console.log(`[sync-server] ⏱️  Connection setup complete: ${connectionDuration.toFixed(0)}ms`);
+      if (connectionDuration > 100) {
+        console.warn(`[sync-server] ⚠️ [PERF] Connection setup took ${connectionDuration.toFixed(0)}ms (target: <100ms)`);
       }
     },
 
     /**
      * Handle WebSocket message event
      * Called when a message is received from the client
+     * OPTIMIZED: Add performance logging to track response times
      */
     async message(ws, message) {
+      const messageReceivedTime = performance.now();
+      const clientId = ws.data?.clientId || 'unknown';
+      
+      // Check if this is a load request (cojson-transport-ws handles this internally)
+      // We can't directly intercept load requests, but we can log message processing time
+      const messageProcessingStartTime = performance.now();
+      
       // Route message to peer's message listeners
       if (ws._messageListeners && ws._messageListeners.length > 0) {
         const event = { type: 'message', data: message, target: ws._adaptedWs };
@@ -215,6 +240,11 @@ export async function createSyncServer(options = {}) {
             console.error(`[sync-server] Error in message listener:`, e);
           }
         }
+      }
+      
+      const messageProcessingDuration = performance.now() - messageProcessingStartTime;
+      if (messageProcessingDuration > 50) {
+        console.log(`[sync-server] ⏱️  Message processing: ${messageProcessingDuration.toFixed(0)}ms (client: ${clientId})`);
       }
     },
 

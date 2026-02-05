@@ -369,15 +369,13 @@ let currentNode = null;
  * @returns {CoCache}
  */
 export function getGlobalCoCache(node, cleanupTimeout) {
-	// Handle backward compatibility: if first arg is number, treat as cleanupTimeout (old signature)
-	// This allows old code to still work, but node-aware caching won't work without node
-	if (typeof node === 'number') {
-		cleanupTimeout = node;
-		node = null;
+	// STRICT: Node is required - no backward compatibility layers
+	if (!node) {
+		throw new Error("[getGlobalCoCache] node is required for node-aware caching");
 	}
 	
 	// Detect node change: if node instance is different, clear stale cache
-	if (node && currentNode !== node) {
+	if (currentNode !== node) {
 		if (globalCache) {
 			// Clear old cache tied to previous node
 			globalCache.clear();
@@ -388,9 +386,7 @@ export function getGlobalCoCache(node, cleanupTimeout) {
 		globalCache = new CoCache(cleanupTimeout);
 	} else if (!globalCache) {
 		// First time initialization
-		if (node) {
-			currentNode = node;
-		}
+		currentNode = node;
 		globalCache = new CoCache(cleanupTimeout);
 	}
 	return globalCache;
