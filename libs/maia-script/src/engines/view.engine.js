@@ -1,6 +1,7 @@
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
 import { extractDOMValues } from '@MaiaOS/schemata/payload-resolver.js';
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
+import { RENDER_STATES } from './actor.engine.js';
 
 function sanitizeAttribute(value) {
   if (value === null || value === undefined) return '';
@@ -340,7 +341,8 @@ export class ViewEngine {
       childActor = await this.actorEngine._createChildActorIfNeeded(actor, namekey, vibeKey);
       
       if (!childActor) {
-        if (actor._initialRenderComplete) {
+        // Only warn if actor is READY (initial render complete)
+        if (actor._renderState === RENDER_STATES.READY) {
           console.warn(`[ViewEngine] Failed to create child actor for namekey: ${namekey}`, {
             actorId,
             availableChildren: actor?.children ? Object.keys(actor.children) : [],
@@ -363,7 +365,9 @@ export class ViewEngine {
         }
       }
       
-      if (childActor._initialRenderComplete && this.actorEngine) {
+      // Only rerender child if its state is READY (initial render complete)
+      if (childActor._renderState === RENDER_STATES.READY && this.actorEngine) {
+        childActor._renderState = RENDER_STATES.UPDATING;
         this.actorEngine._scheduleRerender(childActor.id);
       }
       

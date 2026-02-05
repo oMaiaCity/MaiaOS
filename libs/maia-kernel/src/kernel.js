@@ -221,6 +221,19 @@ export class MaiaOS {
     // Initialize database (requires CoJSON backend via node+account or pre-initialized backend)
     const backend = await MaiaOS._initializeDatabase(os, config);
     
+    // CRITICAL: Ensure account.os is ready before any schema-dependent operations
+    // This is a dependency ordering guarantee - account.os must be ready before:
+    // - Schema resolution (in resolve())
+    // - Context CoValues are read (which contain query objects)
+    // - Actors are initialized (which process query objects)
+    // Architectural upgrade: Proactively loads account.os during boot instead of reactively during resolution
+    if (backend && typeof backend.ensureAccountOsReady === 'function') {
+      const accountOsReady = await backend.ensureAccountOsReady({ timeoutMs: 10000 });
+      if (!accountOsReady) {
+        console.warn('[MaiaOS.boot] account.os readiness check failed - schema resolution may fail');
+      }
+    }
+    
     // Seed database if registry provided
     if (config.registry) {
       await MaiaOS._seedDatabase(os, backend, config);

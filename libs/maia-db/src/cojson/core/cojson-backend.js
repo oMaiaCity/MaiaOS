@@ -543,4 +543,136 @@ export class CoJSONBackend extends DBAdapter {
     // Pass backend instance so dbEngine is available for schema validation during seeding
     return await seed(this.account, this.node, configs, schemas, data || {}, this);
   }
+
+  /**
+   * Ensure account.os is loaded and ready before schema-dependent operations
+   * This is a dependency ordering guarantee - account.os must be ready before schema resolution
+   * 
+   * Architectural upgrade: Proactively loads account.os during boot instead of reactively during resolution
+   * This eliminates the need for retry logic in schema resolution
+   * 
+   * @param {Object} [options] - Options
+   * @param {number} [options.timeoutMs=10000] - Timeout for waiting for account.os to be ready
+   * @returns {Promise<boolean>} True if account.os is ready, false if failed
+   */
+  async ensureAccountOsReady(options = {}) {
+    const { timeoutMs = 10000 } = options;
+    
+    if (!this.account) {
+      console.warn('[CoJSONBackend.ensureAccountOsReady] Account not available');
+      return false;
+    }
+
+    console.log('[CoJSONBackend.ensureAccountOsReady] Ensuring account.os is ready...');
+    const startTime = Date.now();
+
+    // Get account.os co-id
+    let osId = this.account.get('os');
+    
+    // If account.os doesn't exist, create it
+    if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
+      console.log('[CoJSONBackend.ensureAccountOsReady] account.os does not exist, creating...');
+      const group = await this.getDefaultGroup();
+      const osMeta = { $schema: 'GenesisSchema' };
+      const osCoMap = group.createMap({}, osMeta);
+      this.account.set('os', osCoMap.id);
+      osId = osCoMap.id;
+      console.log(`[CoJSONBackend.ensureAccountOsReady] Created account.os: ${osId.substring(0, 12)}...`);
+    }
+
+    // Load account.os using read() API
+    const osStore = await universalRead(this, osId, null, null, null, {
+      deepResolve: false,
+      timeoutMs
+    });
+
+    try {
+      await waitForStoreReady(osStore, osId, timeoutMs);
+    } catch (error) {
+      console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ Timeout waiting for account.os to load: ${error.message}`);
+      return false;
+    }
+
+    const osData = osStore.value;
+    if (!osData || osData.error) {
+      console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ account.os data not available or has error`);
+      return false;
+    }
+
+    // Ensure schematas registry exists
+    let schematasId = osData.schematas;
+    if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
+      console.log('[CoJSONBackend.ensureAccountOsReady] account.os.schematas does not exist, creating...');
+      
+      // Get account.os CoValueCore to update it
+      const osCore = this.getCoValue(osId);
+      if (!osCore || !osCore.isAvailable()) {
+        console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ account.os not available for creating schematas`);
+        return false;
+      }
+      
+      const osContent = this.getCurrentContent(osCore);
+      if (!osContent || typeof osContent.set !== 'function') {
+        console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ account.os content not available for creating schematas`);
+        return false;
+      }
+      
+      // Create schematas registry CoMap
+      // Use GenesisSchema during boot (schematas-registry schema might not be registered yet)
+      const group = await this.getDefaultGroup();
+      const schematasMeta = { $schema: 'GenesisSchema' }; // Use GenesisSchema during boot
+      const schematasCoMap = group.createMap({}, schematasMeta);
+      
+      // Store in account.os.schematas
+      osContent.set('schematas', schematasCoMap.id);
+      schematasId = schematasCoMap.id;
+      console.log(`[CoJSONBackend.ensureAccountOsReady] Created account.os.schematas: ${schematasId.substring(0, 12)}...`);
+      
+      // Reload osData to get updated schematasId
+      const osStore2 = await universalRead(this, osId, null, null, null, {
+        deepResolve: false,
+        timeoutMs: 2000
+      });
+      try {
+        await waitForStoreReady(osStore2, osId, 2000);
+        const osData2 = osStore2.value;
+        if (osData2 && !osData2.error) {
+          schematasId = osData2.schematas || schematasId;
+        }
+      } catch (error) {
+        // Continue with schematasId we created
+      }
+    }
+
+    if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
+      console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ Failed to ensure schematas registry exists`);
+      return false;
+    }
+
+    // Load schematas registry using read() API
+    const schematasStore = await universalRead(this, schematasId, null, null, null, {
+      deepResolve: false,
+      timeoutMs
+    });
+
+    try {
+      await waitForStoreReady(schematasStore, schematasId, timeoutMs);
+    } catch (error) {
+      console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ Timeout waiting for schematas registry to load: ${error.message}`);
+      return false;
+    }
+
+    const schematasData = schematasStore.value;
+    if (!schematasData || schematasData.error) {
+      console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ schematas registry data not available or has error`);
+      return false;
+    }
+
+    const duration = Date.now() - startTime;
+    console.log(`[CoJSONBackend.ensureAccountOsReady] ✅ account.os ready (took ${duration}ms)`);
+    console.log(`[CoJSONBackend.ensureAccountOsReady]   - account.os: ${osId.substring(0, 12)}...`);
+    console.log(`[CoJSONBackend.ensureAccountOsReady]   - schematas: ${schematasId.substring(0, 12)}...`);
+
+    return true;
+  }
 }

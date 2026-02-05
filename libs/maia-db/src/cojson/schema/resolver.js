@@ -200,12 +200,17 @@ export async function resolve(backend, identifier, options = {}) {
     const isSchemaKey = normalizedKey.startsWith('@schema/');
     
     if (isSchemaKey) {
+      console.log(`[resolve] Resolving schema namekey: "${identifier}" (normalized: "${normalizedKey}")`);
+      
+      // Architectural upgrade: account.os is guaranteed ready during boot via ensureAccountOsReady()
+      // Simple readiness check: if not ready, wait (with timeout) - no retry logic needed
       // Schema keys → check account.os.schematas registry using read() API
       const osId = backend.account.get('os');
       if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
-        console.warn(`[resolve] account.os not found for schema key: ${identifier}`);
+        console.warn(`[resolve] ❌ account.os not found for schema key: ${identifier}`);
         return null;
       }
+      console.log(`[resolve] Found account.os: ${osId.substring(0, 12)}...`);
 
       // Load account.os using read() API
       const osStore = await universalRead(backend, osId, null, null, null, {
@@ -216,20 +221,23 @@ export async function resolve(backend, identifier, options = {}) {
       try {
         await waitForStoreReady(osStore, osId, timeoutMs);
       } catch (error) {
+        console.warn(`[resolve] ❌ Timeout waiting for account.os to load: ${error.message}`);
         return null;
       }
       
       const osData = osStore.value;
       if (!osData || osData.error) {
+        console.warn(`[resolve] ❌ account.os data not available or has error`);
         return null;
       }
 
       // Get schematas registry co-id from os data (flat object from read() API)
       const schematasId = osData.schematas;
       if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
-        console.warn(`[resolve] account.os.schematas not found`);
+        console.warn(`[resolve] ❌ account.os.schematas not found in osData`);
         return null;
       }
+      console.log(`[resolve] Found schematas registry: ${schematasId.substring(0, 12)}...`);
 
       // Load schematas registry using read() API
       const schematasStore = await universalRead(backend, schematasId, null, null, null, {
@@ -240,31 +248,35 @@ export async function resolve(backend, identifier, options = {}) {
       try {
         await waitForStoreReady(schematasStore, schematasId, timeoutMs);
       } catch (error) {
+        console.warn(`[resolve] ❌ Timeout waiting for schematas registry to load: ${error.message}`);
         return null;
       }
       
       const schematasData = schematasStore.value;
       if (!schematasData || schematasData.error) {
+        console.warn(`[resolve] ❌ schematas registry data not available or has error`);
         return null;
       }
 
       // Lookup key in registry (flat object from read() API - properties directly accessible)
       const registryCoId = schematasData[normalizedKey] || schematasData[identifier];
       if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
+        console.log(`[resolve] ✅ Found schema "${identifier}" → "${registryCoId.substring(0, 12)}..." in registry`);
         // Found registry entry - resolve the co-id
         if (returnType === 'coId') {
           return registryCoId;
         }
         // Resolve the actual schema/co-value
         return await resolve(backend, registryCoId, { returnType, deepResolve, timeoutMs });
+      } else {
+        // Schema not found in registry - this is a permanent failure
+        // Don't warn for index schemas - they're created on-demand
+        const isIndexSchema = normalizedKey.startsWith('@schema/index/');
+        if (!isIndexSchema) {
+          console.warn(`[resolve] ❌ Schema "${identifier}" not found in registry. Available keys:`, Object.keys(schematasData).slice(0, 10));
+        }
+        return null;
       }
-
-      // Don't warn for index schemas - they're created on-demand
-      const isIndexSchema = normalizedKey.startsWith('@schema/index/');
-      if (!isIndexSchema) {
-        console.warn(`[resolve] schema key ${identifier} (normalized: ${normalizedKey}) not found in os.schematas registry`);
-      }
-      return null;
 
     } else if (identifier.startsWith('@vibe/') || !identifier.startsWith('@')) {
       // Vibe instance keys → check account.vibes registry using read() API

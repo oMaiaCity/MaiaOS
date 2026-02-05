@@ -14,14 +14,14 @@ import {
 	signInWithPasskey, 
 	signUpWithPasskey, 
 	isPRFSupported, 
-	subscribeSyncState,
-	createCoJSONAPI
+	subscribeSyncState
 } from "@MaiaOS/kernel";
 import { getAllVibeRegistries } from "@MaiaOS/vibes";
 import { renderApp } from './db-view.js';
+import { renderLandingPage } from './landing.js';
+import { renderSignInPrompt, renderUnsupportedBrowser } from './signin.js';
 
 let maia;
-let cojsonAPI = null; // CoJSON API instance
 let currentScreen = 'dashboard'; // Current screen: 'dashboard' | 'db-viewer' | 'vibe-viewer'
 let currentView = 'account'; // Current schema filter (default: 'account')
 let currentContextCoValueId = null; // Currently loaded CoValue in main context (explorer-style navigation)
@@ -148,7 +148,7 @@ async function handleRoute() {
 		// Check PRF support before showing sign-in
 		try {
 			await isPRFSupported();
-			renderSignInPrompt();
+			renderSignInPrompt(hasExistingAccount);
 		} catch (error) {
 			console.error("❌ PRF not supported:", error);
 			renderUnsupportedBrowser(error.message);
@@ -292,16 +292,6 @@ async function signIn() {
 			throw new Error(`Failed to initialize MaiaOS: ${bootError.message}`);
 		}
 		
-		// Create CoJSON API instance
-		try {
-			cojsonAPI = createCoJSONAPI(node, account);
-			window.cojsonAPI = cojsonAPI; // Expose for debugging
-			console.log("✅ CoJSON API created");
-		} catch (apiError) {
-			console.error("⚠️ CoJSON API creation failed (non-fatal):", apiError);
-			// Continue even if API creation fails
-		}
-		
 		// Set auth state AFTER maia is successfully booted
 		authState = {
 			signedIn: true,
@@ -366,7 +356,6 @@ async function signIn() {
 		// Reset state on error to prevent stuck state
 		authState = { signedIn: false, accountID: null };
 		maia = null;
-		cojsonAPI = null;
 		
 		if (error.message.includes("PRF not supported") || error.message.includes("WebAuthn")) {
 			renderUnsupportedBrowser(error.message);
@@ -374,13 +363,13 @@ async function signIn() {
 		           error.message.includes("User denied permission") || 
 		           error.message.includes("denied permission")) {
 			showToast("You cancelled the passkey prompt. Click the button again when you're ready.", 'info', 5000);
-			renderSignInPrompt();
+			renderSignInPrompt(hasExistingAccount);
 		} else {
 			const friendlyMessage = error.message.includes("Failed to evaluate PRF") 
 				? "Unable to authenticate with your passkey. Please try again."
 				: error.message;
 			showToast(friendlyMessage, 'error', 7000);
-			renderSignInPrompt();
+			renderSignInPrompt(hasExistingAccount);
 		}
 	}
 }
@@ -388,38 +377,29 @@ async function signIn() {
 /**
  * Load linked CoValues from account
  * 
- * Jazz uses lazy-loading - CoValues are only loaded when explicitly requested.
- * This function triggers loading of all CoValues linked to the account.
+ * Uses maia.db() operations API with deep resolution to automatically load nested CoValues.
+ * Deep resolution ensures all referenced CoValues are loaded progressively.
  */
 async function loadLinkedCoValues() {
-	const { node, maiaId: account } = maia.id;
+	if (!maia) {
+		return;
+	}
 	
-	// Load account.vibes and its referenced vibe CoValues
-	const vibesId = account.get("vibes");
-	if (vibesId) {
-		try {
-			const vibesCore = await node.loadCoValueCore(vibesId);
-			if (vibesCore.isAvailable()) {
-				// Now load the vibe CoValues referenced by account.vibes
-				const vibesContent = vibesCore.getCurrentContent();
-				const vibeIds = [];
-				
-				// Get all property values from the vibes CoMap
-				for (const key of vibesContent.keys()) {
-					const vibeCoId = vibesContent.get(key);
-					if (vibeCoId && typeof vibeCoId === "string" && vibeCoId.startsWith("co_")) {
-						vibeIds.push({ key, id: vibeCoId });
-					}
-				}
-				
-				// Load each vibe CoValue
-				for (const { key, id } of vibeIds) {
-					await node.loadCoValueCore(id);
-				}
-			}
-		} catch (error) {
-			console.error("   ❌ Failed to load vibes:", error);
+	try {
+		const account = maia.id.maiaId;
+		// Read account using operations API
+		const accountStore = await maia.db({op: 'read', schema: '@account', key: account.id});
+		const accountData = accountStore.value || accountStore;
+		
+		// Load account.vibes and its referenced vibe CoValues with deep resolution
+		if (accountData && accountData.vibes && typeof accountData.vibes === 'string' && accountData.vibes.startsWith('co_')) {
+			const vibesId = accountData.vibes;
+			// Use deepResolve to automatically load nested CoValues
+			await maia.db({op: 'read', schema: vibesId, key: vibesId, deepResolve: true});
+			// Deep resolution automatically loads all referenced vibe CoValues
 		}
+	} catch (error) {
+		console.error("   ❌ Failed to load linked CoValues:", error);
 	}
 }
 
@@ -462,16 +442,6 @@ async function register() {
 		} catch (bootError) {
 			console.error("❌ MaiaOS.boot() failed:", bootError);
 			throw new Error(`Failed to initialize MaiaOS: ${bootError.message}`);
-		}
-		
-		// Create CoJSON API instance
-		try {
-			cojsonAPI = createCoJSONAPI(node, account);
-			window.cojsonAPI = cojsonAPI; // Expose for debugging
-			console.log("✅ CoJSON API created");
-		} catch (apiError) {
-			console.error("⚠️ CoJSON API creation failed (non-fatal):", apiError);
-			// Continue even if API creation fails
 		}
 		
 		// Set auth state AFTER maia is successfully booted
@@ -541,13 +511,13 @@ async function register() {
 		           error.message.includes("User denied permission") || 
 		           error.message.includes("denied permission")) {
 			showToast("You cancelled the passkey prompt. Click the button again when you're ready.", 'info', 5000);
-			renderSignInPrompt();
+			renderSignInPrompt(hasExistingAccount);
 		} else {
 			const friendlyMessage = error.message.includes("Failed to create passkey")
 				? "Unable to create passkey. Please try again."
 				: error.message;
 			showToast(friendlyMessage, 'error', 7000);
-			renderSignInPrompt();
+			renderSignInPrompt(hasExistingAccount);
 		}
 	}
 }
@@ -561,269 +531,12 @@ function signOut() {
 	authState = { signedIn: false, accountID: null };
 	syncState = { connected: false, syncing: false, error: null };
 	maia = null;
-	cojsonAPI = null;
 	
 	// DON'T clear the account flag - passkey still exists on device!
 	// User can still sign back in, so UI should show "Sign In" as primary
 	window.location.reload();
 }
 
-/**
- * Render landing page
- */
-function renderLandingPage() {
-	document.getElementById("app").innerHTML = `
-		<main class="container">
-			<!-- THE MASTER HOOK -->
-			<section class="hero" style="
-				min-height: 92vh;
-				display: flex;
-				flex-direction: column;
-				justify-content: center;
-				padding-top: 0;
-				margin-top: 0;
-				position: relative;
-			">
-				<!-- The Contrast Hook -->
-				<div style="
-					display: flex;
-					flex-direction: row;
-					gap: 1rem;
-					margin-bottom: 1.5rem;
-					font-family: var(--font-body);
-					font-size: clamp(0.95rem, 2.2vw, 1.3rem);
-					line-height: 1.5;
-					font-weight: 500;
-					letter-spacing: 0.01em;
-					align-items: center;
-					justify-content: center;
-					flex-wrap: wrap;
-				">
-					<div style="
-						color: var(--color-tinted-white);
-						padding: 0.5rem 1.5rem;
-						background: rgba(78, 154, 88, 0.3);
-						backdrop-filter: blur(12px) saturate(140%);
-						border-radius: 12px;
-						border: 1px solid rgba(78, 154, 88, 0.5);
-						text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-						white-space: nowrap;
-					">
-						You were born <strong style="font-weight: 700; font-size: 1.15em; color: #F0EDE6; text-shadow: 0 0 20px rgba(78, 154, 88, 1), 0 2px 4px rgba(0, 0, 0, 0.5);">100% divine creator</strong>
-					</div>
-					<div style="
-						color: var(--color-soft-clay);
-						font-size: 1.2em;
-						font-weight: 400;
-						opacity: 0.8;
-						font-style: italic;
-					">yet</div>
-					<div style="
-						color: var(--color-tinted-white);
-						padding: 0.5rem 1.5rem;
-						background: rgba(194, 123, 102, 0.3);
-						backdrop-filter: blur(12px) saturate(140%);
-						border-radius: 12px;
-						border: 1px solid rgba(194, 123, 102, 0.5);
-						text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-						white-space: nowrap;
-					">
-						you chose to die, using less than <strong style="font-weight: 700; font-size: 1.15em; color: #F0EDE6; text-shadow: 0 0 20px rgba(194, 123, 102, 1), 0 2px 4px rgba(0, 0, 0, 0.5);">2%</strong>
-					</div>
-				</div>
-
-				<!-- Main Headline -->
-				<h1 style="font-size: clamp(2.5rem, 6vw, 4.5rem); margin-bottom: 0;">
-					°MaiaCity is where we reclaim the<br>
-					98% of our <span style="
-						display: inline-block;
-						padding: 0.2rem 1.2rem;
-						background: rgba(0, 189, 214, 0.25);
-						backdrop-filter: blur(8px);
-						border-radius: 8px;
-						margin-top: 0.5rem;
-						border: 1px solid rgba(0, 189, 214, 0.3);
-						box-shadow: 0 0 30px rgba(0, 189, 214, 0.2);
-					"><em>magnificence</em></span>
-				</h1>
-
-				<!-- Story Opener - Positioned at bottom of hero -->
-				<div style="
-					position: absolute;
-					bottom: 10%;
-					left: 50%;
-					transform: translateX(-50%);
-					font-family: var(--font-body);
-					font-size: clamp(0.75rem, 1.5vw, 0.85rem);
-					color: var(--color-marine-blue);
-					letter-spacing: 0.3em;
-					text-transform: uppercase;
-					font-weight: 800;
-					padding: 0.5rem 2rem;
-					background: var(--color-soft-clay);
-					border-radius: 50px;
-					box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-					z-index: 10;
-				">This is the story of</div>
-			</section>
-
-			<!-- THE STORY SECTION -->
-			<section style="
-				margin-top: 0;
-				padding-top: 2rem;
-				display: grid;
-				grid-template-columns: repeat(12, 1fr);
-				gap: 1.5rem;
-				max-width: 1100px;
-				margin-left: auto;
-				margin-right: auto;
-				align-items: center;
-			">
-				<!-- Chunk 1: Who - Left Aligned -->
-				<div style="
-					grid-column: 2 / span 7;
-					justify-self: start;
-					width: fit-content;
-					white-space: nowrap;
-					font-family: var(--font-heading);
-					font-style: italic;
-					font-size: clamp(1.6rem, 4vw, 2.8rem);
-					line-height: 1.2;
-					padding: 2rem;
-					background: rgba(255, 255, 255, 0.12);
-					backdrop-filter: blur(20px) saturate(160%);
-					border-radius: 24px;
-					border: 1px solid rgba(255, 255, 255, 0.25);
-					color: var(--color-tinted-white);
-					text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-					transform: rotate(-1deg);
-					margin-left: 1rem;
-				">
-					how <strong style="color: var(--color-terracotta); text-shadow: 0 0 20px rgba(194, 123, 102, 0.4);">1.3 million</strong> maia citizens
-				</div>
-
-				<!-- Chunk 3: What - Right Aligned Offset -->
-				<div style="
-					grid-column: 4 / -1;
-					justify-self: end;
-					width: fit-content;
-					font-family: var(--font-heading);
-					font-style: italic;
-					font-size: clamp(1.6rem, 4vw, 2.8rem);
-					line-height: 1.2;
-					padding: 2rem;
-					background: rgba(255, 255, 255, 0.18);
-					backdrop-filter: blur(25px) saturate(180%);
-					border-radius: 24px;
-					border: 1px solid rgba(255, 255, 255, 0.35);
-					color: var(--color-tinted-white);
-					text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-					margin-top: -1rem;
-					z-index: 2;
-					transform: rotate(1deg);
-					margin-right: 1rem;
-				">
-					<strong style="color: var(--color-sun-yellow); font-weight: 700; text-shadow: 0 0 30px rgba(230, 185, 77, 0.5);">craft</strong> from the ground up
-				</div>
-
-				<!-- Chunk 3: Timeline - Centered -->
-				<div style="
-					grid-column: 1 / -1;
-					justify-self: center;
-					font-family: var(--font-heading);
-					font-style: italic;
-					font-size: clamp(1.4rem, 3.2vw, 2.2rem);
-					line-height: 1.2;
-					padding: 1.5rem 3rem;
-					background: rgba(255, 255, 255, 0.15);
-					backdrop-filter: blur(20px) saturate(160%);
-					border-radius: 24px;
-					border: 1px solid rgba(255, 255, 255, 0.25);
-					color: var(--color-tinted-white);
-					text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-					z-index: 1;
-					margin-top: -0.5rem;
-				">
-					in less than <strong style="color: var(--color-paradise-water); text-shadow: 0 0 20px rgba(0, 189, 214, 0.5);">16 years</strong>
-				</div>
-
-				<!-- LOGO STANDALONE -->
-				<div style="grid-column: 1 / -1; justify-self: center; margin: 3rem 0;">
-					<img src="/brand/logo.svg" alt="MaiaCity Logo" style="height: clamp(8rem, 18vw, 14rem); filter: drop-shadow(0 0 50px rgba(0, 189, 214, 0.7));" />
-				</div>
-
-				<!-- Chunk 3: Why - Centered Large -->
-				<div style="
-					grid-column: 2 / 12;
-					font-family: var(--font-heading);
-					font-style: italic;
-					font-size: clamp(1.2rem, 3vw, 2rem);
-					line-height: 1.5;
-					text-align: center;
-					padding: 3rem 2.5rem;
-					background: rgba(0, 31, 51, 0.4);
-					backdrop-filter: blur(15px);
-					border-radius: 30px;
-					border: 1px solid rgba(0, 189, 214, 0.3);
-					color: var(--color-tinted-white);
-					margin-top: 0;
-					position: relative;
-				">
-					<span>Earth's new capital, where <strong style="color: var(--color-paradise-water); font-weight: 700; text-shadow: 0 0 20px rgba(0, 189, 214, 0.6);">civilization-shaping</strong> visions become reality at <strong style="color: var(--color-lush-green); font-weight: 700; text-shadow: 0 0 20px rgba(78, 154, 88, 0.6);">100x growth</strong></span>
-				</div>
-
-				<!-- Chunk 4: How - Small Floating -->
-				<div style="
-					grid-column: 8 / span 4;
-					justify-self: end;
-					font-family: var(--font-body);
-					font-size: clamp(1rem, 2vw, 1.4rem);
-					padding: 1rem 2rem;
-					background: var(--color-soft-clay);
-					color: var(--color-marine-blue);
-					border-radius: 50px;
-					font-weight: 700;
-					margin-top: -2rem;
-					z-index: 3;
-					box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
-					transform: rotate(-2deg);
-				">
-					with just <span style="border-bottom: 2px solid var(--color-paradise-water);">1€ / day</span>
-				</div>
-
-				<!-- CTA Button Area -->
-				<div style="grid-column: 1 / -1; justify-self: center; margin-top: 4rem; margin-bottom: 8rem; display: flex; flex-direction: column; align-items: center; gap: 1.2rem;">
-					<div style="
-						font-family: var(--font-body);
-						color: var(--color-tinted-white);
-						letter-spacing: 0.15em;
-						text-transform: uppercase;
-						font-weight: 800;
-						text-shadow: 0 0 30px rgba(232, 225, 217, 0.4);
-						text-align: center;
-						display: flex;
-						flex-direction: column;
-						gap: 0.4rem;
-					">
-						<span style="font-size: clamp(1.2rem, 2.5vw, 1.8rem);">Reclaim your sovereignty</span>
-						<span style="color: var(--color-tinted-white); font-size: 1.2em; font-family: var(--font-heading); font-style: italic; opacity: 0.9;">&</span>
-						<span style="font-size: clamp(0.9rem, 1.8vw, 1.3rem); opacity: 0.9;">become a maia citizen</span>
-					</div>
-					<button class="btn" style="
-						background: rgba(78, 154, 88, 0.8);
-						color: #F0EDE6;
-						font-size: 1.2rem; 
-						padding: 1.2rem 5rem; 
-						letter-spacing: 0.15em; 
-						box-shadow: 0 0 40px rgba(78, 154, 88, 0.4);
-						border: 1px solid rgba(255, 255, 255, 0.2);
-						backdrop-filter: blur(8px);
-					" onclick="event.preventDefault(); window.navigateTo('/signin'); return false;">JOIN NOW</button>
-				</div>
-			</section>
-		</main>
-	`;
-}
 
 // Store loading screen sync subscription
 let loadingScreenSyncUnsubscribe = null;
@@ -967,79 +680,6 @@ function cleanupLoadingScreenSync() {
 	}
 }
 
-function renderSignInPrompt() {
-	const hasAccount = hasExistingAccount();
-	
-	// Rendering sign-in prompt
-	
-	document.getElementById("app").innerHTML = `
-		<div class="sign-in-container">
-			<div class="sign-in-content liquid-glass">
-				<div class="liquid-glass--bend"></div>
-				<div class="liquid-glass--face"></div>
-				<div class="liquid-glass--edge"></div>
-				<div class="sign-in-inner liquid-glass-inner">
-					<div class="logo-container">
-						<img src="/brand/logo.svg" alt="Maia City" class="sign-in-logo" />
-					</div>
-					<h1>
-						<span>is where you become</span>
-						<span class="h1-main-text">
-							the human
-						</span>
-					</h1>
-					<p class="sign-in-subtitle">you were always meant to be</p>
-					${!hasAccount ? `
-						<p class="sign-in-description">
-							Create your new sovereign self now.
-						</p>
-					` : ''}
-					<div class="sign-in-buttons">
-						${hasAccount ? `
-							<button class="btn btn-solid-water" onclick="window.handleSignIn()">
-								Unlock your Self
-							</button>
-							<button class="btn btn-glass" onclick="window.handleRegister()">
-								Create new Self
-							</button>
-						` : `
-							<button class="btn btn-solid-water" onclick="window.handleRegister()">
-								Create new Self
-							</button>
-							<button class="btn btn-glass" onclick="window.handleSignIn()">
-								Unlock your Self
-							</button>
-						`}
-					</div>
-				</div>
-			</div>
-		</div>
-	`;
-}
-
-function renderUnsupportedBrowser(message) {
-	document.getElementById("app").innerHTML = `
-		<div class="unsupported-browser">
-			<div class="unsupported-content">
-				<h1>⚠️ Browser Not Supported</h1>
-				<p class="unsupported-message">${message}</p>
-				<div class="unsupported-requirements">
-					<h3>Please use:</h3>
-					<ul>
-						<li>✅ Chrome on macOS, Linux, or Windows 11</li>
-						<li>✅ Safari on macOS 13+ or iOS 16+</li>
-					</ul>
-					<h3>Not supported:</h3>
-					<ul>
-						<li>❌ Firefox (all platforms)</li>
-						<li>❌ Windows 10 (any browser)</li>
-						<li>❌ Older browsers</li>
-					</ul>
-				</div>
-			</div>
-		</div>
-	`;
-}
 
 /**
  * Handle seed button click - reseed database (idempotent: preserves schemata, recreates configs/data)
@@ -1097,9 +737,6 @@ async function handleSeed() {
 			registry: mergedConfigs
 		});
 		
-		// Re-create CoJSON API instance
-		cojsonAPI = createCoJSONAPI(node, account);
-		window.cojsonAPI = cojsonAPI;
 		
 		// Reload linked CoValues to see seeded data
 		await loadLinkedCoValues();
@@ -1230,7 +867,7 @@ async function renderAppInternal() {
 	isRendering = true;
 	
 	try {
-		await renderApp(maia, cojsonAPI, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen);
+		await renderApp(maia, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen);
 	} finally {
 		isRendering = false;
 	}
@@ -1374,41 +1011,42 @@ window.debugTodos = async function() {
 		console.log(`Needs post-init rerender: ${actor._needsPostInitRerender}`);
 	}
 	
-	// Check backend for todos schema index (from account.os, not account.data.todos)
-	const backend = maia.dbEngine?.backend;
-	if (backend) {
+	// Check todos schema index using operations API (from account.os, not account.data.todos)
+	if (maia) {
 		try {
 			// Get todos schema index colist from account.os (new indexing system)
 			const { getSchemaIndexColistId } = await import('@MaiaOS/kernel');
-			const todosSchemaIndexColistId = await getSchemaIndexColistId(backend, '@schema/data/todos');
+			const backend = maia.dbEngine?.backend;
+			const todosSchemaIndexColistId = backend ? await getSchemaIndexColistId(backend, '@schema/data/todos') : null;
 			
 			if (todosSchemaIndexColistId) {
 				console.log(`\n--- Todos Schema Index Colist (from account.os) ---`);
 				console.log(`Index Colist ID: ${todosSchemaIndexColistId}`);
-				const indexColistCore = backend.getCoValue(todosSchemaIndexColistId);
-				if (indexColistCore) {
-					const isAvailable = backend.isAvailable(indexColistCore);
-					console.log(`Index Colist available: ${isAvailable}`);
-					if (isAvailable) {
-						const content = backend.getCurrentContent(indexColistCore);
-						if (content && content.toJSON) {
-							const itemIds = content.toJSON();
-							console.log(`Indexed todo IDs: ${itemIds.length} items`, itemIds);
-							
-							// Check each item
-							for (const itemId of itemIds) {
-								const itemCore = backend.getCoValue(itemId);
-								if (itemCore) {
-									const itemAvailable = backend.isAvailable(itemCore);
-									console.log(`  Todo ${itemId.substring(0, 12)}...: available=${itemAvailable}`);
-								} else {
-									console.log(`  Todo ${itemId.substring(0, 12)}...: not in memory`);
-								}
+				// Use operations API to read the index colist
+				const indexStore = await maia.db({op: 'read', schema: todosSchemaIndexColistId, key: todosSchemaIndexColistId});
+				const indexData = indexStore.value || indexStore;
+				
+				if (indexData && !indexData.error && !indexData.loading) {
+					console.log(`Index Colist available: true`);
+					// Operations API returns items array for colists
+					const items = indexData.items || [];
+					console.log(`Indexed todo IDs: ${items.length} items`, items);
+					
+					// Check each item using operations API
+					for (const itemId of items) {
+						if (typeof itemId === 'string' && itemId.startsWith('co_')) {
+							try {
+								const itemStore = await maia.db({op: 'read', schema: itemId, key: itemId});
+								const itemData = itemStore.value || itemStore;
+								const itemAvailable = !itemData.error && !itemData.loading;
+								console.log(`  Todo ${itemId.substring(0, 12)}...: available=${itemAvailable}`);
+							} catch (itemError) {
+								console.log(`  Todo ${itemId.substring(0, 12)}...: error loading - ${itemError.message}`);
 							}
 						}
 					}
 				} else {
-					console.log(`Index Colist CoValueCore not found`);
+					console.log(`Index Colist not available or still loading`);
 				}
 			} else {
 				console.log(`\nTodos schema index colist not found in account.os (schema may not be registered yet)`);

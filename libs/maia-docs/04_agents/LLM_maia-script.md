@@ -1,6 +1,6 @@
 # MaiaOS Documentation for maia-script
 
-**Auto-generated:** 2026-02-04T23:23:55.628Z
+**Auto-generated:** 2026-02-05T11:27:43.162Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---

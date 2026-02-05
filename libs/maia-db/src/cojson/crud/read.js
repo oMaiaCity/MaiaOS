@@ -84,66 +84,74 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
   const queryDefinitions = new Map(); // key -> query definition object (for $op)
   const { timeoutMs = 5000, onChange } = options;
 
-  // Helper to update unified value by merging context + query results
-  // CRITICAL: Debounce updates to prevent render loops from multiple rapid calls
+  // Update Queue: batches all updates within a single event loop tick
+  // Prevents duplicate renders when multiple query stores update simultaneously
   let lastUnifiedValue = null;
-  let updateTimer = null;
-  const updateUnifiedValue = () => {
-    // Debounce: batch multiple rapid calls into a single update
-    if (updateTimer) {
-      return; // Already scheduled
-    }
+  let updateQueuePending = false;
+  let queueTimer = null;
+  
+  const enqueueUpdate = () => {
+    // Mark that an update is pending
+    updateQueuePending = true;
     
-    updateTimer = queueMicrotask(() => {
-      updateTimer = null;
-      
-      const contextValue = contextStore.value || {};
-      const mergedValue = { ...contextValue };
-      
-      // Remove special fields
-      delete mergedValue['@stores'];
-      
-      // Build $op object with query definitions (keyed by query name)
-      const $op = {};
-      for (const [key, queryDef] of queryDefinitions.entries()) {
-        $op[key] = queryDef;
-      }
-      
-      // Add $op to merged value if there are any query definitions
-      if (Object.keys($op).length > 0) {
-        mergedValue.$op = $op;
-      }
-      
-      // Merge query store values (resolved arrays at root level, same key as query name)
-      // CRITICAL: Always merge query store values, even if they're empty arrays
-      // This ensures progressive loading works - empty arrays become populated arrays reactively
-      for (const [key, queryStore] of queryStores.entries()) {
-        if (queryStore && typeof queryStore.subscribe === 'function' && 'value' in queryStore) {
-          // Remove the query object from mergedValue (if present) and replace with resolved array
-          delete mergedValue[key];
-          // CRITICAL: Always set query store value, even if it's undefined/null/empty array
-          // This ensures reactivity works - when query store updates from [] to [items], unified store updates
-          mergedValue[key] = queryStore.value;
+    // Schedule batch processing if not already scheduled
+    // CRITICAL: Only one microtask per event loop tick, even if multiple stores update
+    if (!queueTimer) {
+      queueTimer = queueMicrotask(() => {
+        queueTimer = null;
+        
+        // Process single batched update (all pending updates are processed together)
+        const contextValue = contextStore.value || {};
+        const mergedValue = { ...contextValue };
+        
+        // Remove special fields
+        delete mergedValue['@stores'];
+        
+        // Build $op object with query definitions (keyed by query name)
+        const $op = {};
+        for (const [key, queryDef] of queryDefinitions.entries()) {
+          $op[key] = queryDef;
         }
-      }
-      
-      // Only update if value actually changed (deep comparison)
-      // CRITICAL: JSON.stringify comparison detects array content changes ([] vs [item1, item2])
-      const currentValueStr = JSON.stringify(mergedValue);
-      const lastValueStr = lastUnifiedValue ? JSON.stringify(lastUnifiedValue) : null;
-      
-      if (currentValueStr !== lastValueStr) {
-        lastUnifiedValue = mergedValue;
-        // _set() automatically notifies all subscribers (including the one set up in ActorEngine)
-        unifiedStore._set(mergedValue);
-      }
-    });
+        
+        // Add $op to merged value if there are any query definitions
+        if (Object.keys($op).length > 0) {
+          mergedValue.$op = $op;
+        }
+        
+        // Merge query store values (resolved arrays at root level, same key as query name)
+        // CRITICAL: Always merge query store values, even if they're empty arrays
+        // This ensures progressive loading works - empty arrays become populated arrays reactively
+        for (const [key, queryStore] of queryStores.entries()) {
+          if (queryStore && typeof queryStore.subscribe === 'function' && 'value' in queryStore) {
+            // Remove the query object from mergedValue (if present) and replace with resolved array
+            delete mergedValue[key];
+            // CRITICAL: Always set query store value, even if it's undefined/null/empty array
+            // This ensures reactivity works - when query store updates from [] to [items], unified store updates
+            mergedValue[key] = queryStore.value;
+          }
+        }
+        
+        // Only update if value actually changed (deep comparison)
+        // CRITICAL: JSON.stringify comparison detects array content changes ([] vs [item1, item2])
+        const currentValueStr = JSON.stringify(mergedValue);
+        const lastValueStr = lastUnifiedValue ? JSON.stringify(lastUnifiedValue) : null;
+        
+        if (currentValueStr !== lastValueStr) {
+          lastUnifiedValue = mergedValue;
+          // _set() automatically notifies all subscribers (including the one set up in ActorEngine)
+          unifiedStore._set(mergedValue);
+        }
+        
+        // Clear pending flag after processing
+        updateQueuePending = false;
+      });
+    }
   };
 
   // Helper to resolve and subscribe to query objects
   const resolveQueries = async (contextValue) => {
     if (!contextValue || typeof contextValue !== 'object' || Array.isArray(contextValue)) {
-      updateUnifiedValue();
+      enqueueUpdate();
       return;
     }
 
@@ -166,15 +174,21 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
           let schemaCoId = value.schema;
           if (typeof schemaCoId === 'string' && !schemaCoId.startsWith('co_z')) {
             if (schemaCoId.startsWith('@schema/')) {
+              console.log(`[createUnifiedStore] Resolving schema namekey "${schemaCoId}" for query "${key}"...`);
+              const startTime = Date.now();
               schemaCoId = await resolveSchema(backend, schemaCoId, { returnType: 'coId', timeoutMs });
+              const duration = Date.now() - startTime;
               if (!schemaCoId || !schemaCoId.startsWith('co_z')) {
-                console.error(`[createUnifiedStore] Failed to resolve schema ${value.schema} for query "${key}"`);
+                console.error(`[createUnifiedStore] ❌ Failed to resolve schema ${value.schema} for query "${key}" (took ${duration}ms)`);
                 continue;
               }
+              console.log(`[createUnifiedStore] ✅ Resolved schema "${value.schema}" → "${schemaCoId.substring(0, 12)}..." for query "${key}" (took ${duration}ms)`);
             } else {
               console.error(`[createUnifiedStore] Invalid schema format for query "${key}": ${schemaCoId}`);
               continue;
             }
+          } else if (schemaCoId && schemaCoId.startsWith('co_z')) {
+            console.log(`[createUnifiedStore] Query "${key}" already has co-id: "${schemaCoId.substring(0, 12)}..."`);
           }
 
           // Execute read operation for query (call exported read function)
@@ -205,12 +219,15 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
             }
             
             // Subscribe to query store updates
+            // CRITICAL: Subscription callback will call enqueueUpdate() when query store updates
+            // Don't call enqueueUpdate() immediately here - let the subscription callback handle it
+            // This prevents duplicate updates (subscription callback + immediate call)
             const unsubscribe = queryStore.subscribe(() => {
-              updateUnifiedValue();
+              enqueueUpdate();
             });
             queryStore._queryUnsubscribe = unsubscribe;
             queryStores.set(key, queryStore);
-            updateUnifiedValue();
+            // Removed immediate enqueueUpdate() call - subscription callback handles updates
           }
         } catch (error) {
           console.error(`[createUnifiedStore] Failed to resolve query "${key}":`, error);
@@ -230,7 +247,9 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
       }
     }
 
-    updateUnifiedValue();
+    // Enqueue update after resolving all queries
+    // This ensures unified store reflects current query state
+    enqueueUpdate();
   };
 
   // Subscribe to context store changes

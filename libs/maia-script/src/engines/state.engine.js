@@ -1,6 +1,7 @@
 import { resolve } from '@MaiaOS/db';
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
+import { RENDER_STATES } from './actor.engine.js';
 
 /**
  * StateEngine - XState-like State Machine Interpreter
@@ -96,8 +97,11 @@ export class StateEngine {
     
     const shouldRerender = previousState !== targetState && targetState !== 'dragging' && 
       !machine._isInitialCreation && !(previousState === 'init' && targetState === 'idle') &&
-      machine.actor._initialRenderComplete && machine.actor.actorEngine;
-    if (shouldRerender) machine.actor.actorEngine._scheduleRerender(machine.actor.id);
+      machine.actor._renderState === RENDER_STATES.READY && machine.actor.actorEngine;
+    if (shouldRerender) {
+      machine.actor._renderState = RENDER_STATES.UPDATING;
+      machine.actor.actorEngine._scheduleRerender(machine.actor.id);
+    }
   }
 
   async _evaluateGuard(guard, context, payload, actor = null) {

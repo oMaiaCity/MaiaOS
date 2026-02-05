@@ -9,6 +9,14 @@
 // Import message helper
 import { createAndPushMessage, resolve } from '@MaiaOS/db';
 
+// Render state machine - prevents race conditions by ensuring renders only happen when state allows
+export const RENDER_STATES = {
+  INITIALIZING: 'initializing',  // Setting up subscriptions, loading initial data
+  RENDERING: 'rendering',        // Currently rendering (prevents nested renders)
+  READY: 'ready',                // Initial render complete, ready for updates
+  UPDATING: 'updating'           // Data changed, queued for rerender
+};
+
 export class ActorEngine {
   constructor(styleEngine, viewEngine, moduleRegistry, toolEngine, stateEngine = null) {
     this.styleEngine = styleEngine;
@@ -70,7 +78,11 @@ export class ActorEngine {
       const actor = this.actors.get(actorId);
       if (actor) {
         actor.viewDef = updatedView;
-        if (actor._initialRenderComplete) this._scheduleRerender(actor.id);
+        // Only rerender if state is READY (initial render complete)
+        if (actor._renderState === RENDER_STATES.READY) {
+          actor._renderState = RENDER_STATES.UPDATING;
+          this._scheduleRerender(actor.id);
+        }
       }
     }, { skipInitial: true });
     
@@ -122,7 +134,9 @@ export class ActorEngine {
               try {
                 const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
                 actor.shadowRoot.adoptedStyleSheets = styleSheets;
-                if (actor._initialRenderComplete) {
+                // Only rerender if state is READY (initial render complete)
+                if (actor._renderState === RENDER_STATES.READY) {
+                  actor._renderState = RENDER_STATES.UPDATING;
                   this._scheduleRerender(actor.id);
                 }
               } catch (error) {
@@ -151,7 +165,9 @@ export class ActorEngine {
               try {
                 const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
                 actor.shadowRoot.adoptedStyleSheets = styleSheets;
-                if (actor._initialRenderComplete) {
+                // Only rerender if state is READY (initial render complete)
+                if (actor._renderState === RENDER_STATES.READY) {
+                  actor._renderState = RENDER_STATES.UPDATING;
                   this._scheduleRerender(actor.id);
                 }
               } catch (error) {
@@ -272,7 +288,11 @@ export class ActorEngine {
             try {
               if (currentActor.machine) this.stateEngine.destroyMachine(currentActor.machine.id);
               currentActor.machine = await this.stateEngine.createMachine(updatedStateDef, currentActor);
-              if (currentActor._initialRenderComplete) this._scheduleRerender(actorId);
+              // Only rerender if state is READY (initial render complete)
+              if (currentActor._renderState === RENDER_STATES.READY) {
+                currentActor._renderState = RENDER_STATES.UPDATING;
+                this._scheduleRerender(actorId);
+              }
             } catch (error) {
               console.error(`[ActorEngine] Failed to update state machine:`, error);
             }
@@ -384,7 +404,7 @@ export class ActorEngine {
       vibeKey,
       inbox,
       inboxCoId,
-      _initialRenderComplete: false,
+      _renderState: RENDER_STATES.INITIALIZING, // Start in INITIALIZING state
       children: {}
     };
     
@@ -394,6 +414,7 @@ export class ActorEngine {
     // $stores Architecture: Subscribe to context changes AFTER actor is created
     // Backend unified store handles query merging, we just need to trigger rerenders on changes
     // Subscribe with skipInitial to avoid triggering rerender during initial load
+    // CRITICAL: State is INITIALIZING, so subscriptions won't trigger renders yet
     if (actor.context && typeof actor.context.subscribe === 'function') {
       // Store last context value to prevent unnecessary rerenders
       // CRITICAL: Initialize with current value to ensure first change after initial render is detected
@@ -410,8 +431,10 @@ export class ActorEngine {
         lastContextValue = currentContextValue;
         
         // Trigger rerender when context updates (e.g., query results change from [] to [items])
-        // Only rerender if initial render is complete, not currently rendering, and context actually changed
-        if (actor._initialRenderComplete && !actor._isRerendering && contextChanged) {
+        // Only rerender if state is READY (initial render complete) and context actually changed
+        // State machine prevents renders during INITIALIZING or RENDERING states
+        if (actor._renderState === RENDER_STATES.READY && contextChanged) {
+          actor._renderState = RENDER_STATES.UPDATING;
           this._scheduleRerender(actorId);
         }
       }, { skipInitial: true });
@@ -428,9 +451,14 @@ export class ActorEngine {
     // Backend unified store handles all query resolution and merging automatically
     // Views use context.value directly - backend handles reactivity via subscriptionCache
     await this._initializeActorState(actor, actorConfig);
+    
+    // Transition to RENDERING state before render
+    actor._renderState = RENDER_STATES.RENDERING;
     await this.viewEngine.render(viewDef, actor.context, shadowRoot, styleSheets, actorId);
     
-    actor._initialRenderComplete = true;
+    // Transition to READY state after initial render completes
+    // This allows context subscriptions to trigger rerenders
+    actor._renderState = RENDER_STATES.READY;
     
     if (actor._needsPostInitRerender) {
       delete actor._needsPostInitRerender;
@@ -499,8 +527,14 @@ export class ActorEngine {
       return;
     }
     
-    // Mark that we're in a rerender to prevent reactive updates from triggering another rerender
-    actor._isRerendering = true;
+    // State machine: Only rerender if state is UPDATING (data changed) or READY (post-init rerender)
+    // Prevents renders during INITIALIZING or RENDERING states
+    if (actor._renderState !== RENDER_STATES.UPDATING && actor._renderState !== RENDER_STATES.READY) {
+      return; // Skip rerender if not in valid state
+    }
+    
+    // Transition to RENDERING state to prevent nested renders
+    actor._renderState = RENDER_STATES.RENDERING;
     
     // Use direct read() API for view config
     const viewStore = await this.dbEngine.execute({ op: 'read', schema: null, key: actor.config.view });
@@ -514,8 +548,8 @@ export class ActorEngine {
     const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
     await this.viewEngine.render(viewDef, actor.context, actor.shadowRoot, styleSheets, actorId);
     
-    // Clear rerender flag
-    actor._isRerendering = false;
+    // Transition back to READY state after render completes
+    actor._renderState = RENDER_STATES.READY;
   }
 
   /**
