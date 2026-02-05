@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-02-05T13:10:38.138Z
+**Auto-generated:** 2026-02-05T14:41:21.546Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -8706,6 +8706,149 @@ Inject into Shadow DOM
   }
 }
 ```
+
+## Container Queries (Responsive Design)
+
+**Container queries** allow elements to respond to their parent container's size, not just the viewport size. This is perfect for responsive components that work anywhere.
+
+### How It Works
+
+Every actor's shadow host **automatically** has `container-type: inline-size` enabled via the StyleEngine. This means:
+
+- Your actor's root element becomes a container
+- All elements inside can use `@container` queries
+- Works in ALL contexts: maia-city, standalone apps, embedded actors
+- **Zero configuration required** - it just works everywhere
+
+### Semantic Breakpoints
+
+Use these standard breakpoint tokens in your container queries:
+
+- `{containers.3xs}` - 20rem (320px)
+- `{containers.2xs}` - 24rem (384px)
+- `{containers.xs}` - 32rem (512px)
+- `{containers.sm}` - 40rem (640px)
+- `{containers.md}` - 48rem (768px)
+- `{containers.lg}` - 64rem (1024px)
+- `{containers.xl}` - 80rem (1280px)
+
+### Example: Responsive Card Grid
+
+```json
+{
+  "components": {
+    "cardGrid": {
+      "display": "grid",
+      "gridTemplateColumns": "repeat(4, 1fr)",
+      "gap": "1rem"
+    },
+    "card": {
+      "padding": "1.5rem",
+      "fontSize": "1rem"
+    }
+  },
+  "selectors": {
+    "@container (max-width: {containers.lg})": {
+      ".card-grid": {
+        "gridTemplateColumns": "repeat(3, 1fr)"
+      }
+    },
+    "@container (max-width: {containers.md})": {
+      ".card-grid": {
+        "gridTemplateColumns": "repeat(2, 1fr)"
+      },
+      ".card": {
+        "padding": "1rem"
+      }
+    },
+    "@container (max-width: {containers.xs})": {
+      ".card-grid": {
+        "gridTemplateColumns": "1fr"
+      },
+      ".card": {
+        "padding": "0.75rem",
+        "fontSize": "0.875rem"
+      }
+    }
+  }
+}
+```
+
+### Example: Responsive Form Layout
+
+```json
+{
+  "components": {
+    "form": {
+      "display": "flex",
+      "flexDirection": "row",
+      "gap": "1rem"
+    },
+    "input": {
+      "padding": "0.75rem",
+      "fontSize": "1rem"
+    },
+    "button": {
+      "padding": "0.75rem 1.5rem",
+      "fontSize": "1rem"
+    }
+  },
+  "selectors": {
+    "@container (max-width: {containers.sm})": {
+      ".form": {
+        "flexDirection": "column",
+        "gap": "0.5rem"
+      },
+      ".input": {
+        "padding": "0.5rem",
+        "fontSize": "0.875rem"
+      },
+      ".button": {
+        "padding": "0.5rem 1rem",
+        "fontSize": "0.875rem",
+        "width": "100%"
+      }
+    }
+  }
+}
+```
+
+### Nested Containers (Advanced)
+
+If you need a nested element to be its own container (e.g., for a sidebar), set `containerType: "inline-size"` in the component definition:
+
+```json
+{
+  "components": {
+    "sidebar": {
+      "containerType": "inline-size",
+      "width": "300px",
+      "display": "flex",
+      "flexDirection": "column"
+    },
+    "sidebarItem": {
+      "display": "flex",
+      "alignItems": "center",
+      "gap": "0.5rem"
+    }
+  },
+  "selectors": {
+    "@container (max-width: 250px)": {
+      ".sidebar-item": {
+        "flexDirection": "column",
+        "alignItems": "flex-start"
+      }
+    }
+  }
+}
+```
+
+### Best Practices
+
+- **Use semantic breakpoints** - `{containers.xs}` instead of hardcoded values like `32rem`
+- **Mobile-first approach** - Define base styles for mobile, then override for larger sizes
+- **Scale everything** - Not just layout, but also padding, gap, font sizes, etc.
+- **Test at all sizes** - Resize your browser from mobile (320px) to desktop (1920px)
 
 ## Overriding Brand Styles
 

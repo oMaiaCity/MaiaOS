@@ -78,15 +78,14 @@
     },
     "components": {
       "stack": {
-        "containerType": "inline-size",
         "display": "flex",
         "flexDirection": "column",
-        "gap": "{spacing.xl}",
+        "gap": "0.375rem",
         "width": "100%",
         "maxWidth": "100%",
         "height": "100vh",
         "background": "{colors.softClay}",
-        "padding": "{spacing.xl}",
+        "padding": "0.375rem",
         "overflowY": "auto",
         "overflowX": "hidden",
         "fontFamily": "{typography.fontFamily.body}",
@@ -96,11 +95,12 @@
       "headerSection": {
         "display": "flex",
         "flexDirection": "column",
-        "gap": "{spacing.md}"
+        "gap": "0.375rem",
+        "marginBottom": "0.375rem"
       },
       "todoCategory": {
         "fontFamily": "{typography.fontFamily.heading}",
-        "fontSize": "0.85rem",
+        "fontSize": "0.65rem",
         "fontStyle": "italic",
         "color": "{colors.paradiseWater}",
         "marginBottom": "0.25rem",
@@ -109,27 +109,28 @@
       },
       "todoTitle": {
         "fontFamily": "{typography.fontFamily.heading}",
-        "fontSize": "{typography.fontSize.xl}",
+        "fontSize": "0.95rem",
         "fontWeight": "{typography.fontWeight.bold}",
         "color": "{colors.marineBlue}",
         "margin": "0",
+        "marginBottom": "0.375rem",
         "letterSpacing": "-0.02em"
       },
       "viewSwitcher": {
         "display": "flex",
-        "gap": "{spacing.sm}",
+        "gap": "0.25rem",
         "background": "rgba(255, 255, 255, 0.2)",
-        "padding": "0.25rem",
+        "padding": "0.2rem",
         "borderRadius": "{radii.full}",
         "width": "fit-content",
         "border": "1px solid {colors.border}"
       },
       "buttonViewSwitch": {
-        "padding": "0.4rem 1.2rem",
+        "padding": "0.3rem 0.7rem",
         "background": "transparent",
         "border": "none",
         "borderRadius": "{radii.full}",
-        "fontSize": "0.75rem",
+        "fontSize": "0.6rem",
         "fontWeight": "600",
         "textTransform": "uppercase",
         "letterSpacing": "0.05em",
@@ -148,40 +149,50 @@
       },
       "form": {
         "display": "flex",
-        "gap": "{spacing.md}",
-        "padding": "{spacing.md}",
+        "flexDirection": "row",
+        "alignItems": "center",
+        "gap": "0.375rem",
+        "padding": "0.375rem",
         "background": "rgba(255, 255, 255, 0.4)",
         "backdropFilter": "blur(8px) saturate(150%)",
         "borderRadius": "{radii.full}",
         "border": "1px solid {colors.border}",
         "boxShadow": "{shadows.md}",
         "width": "100%",
-        "boxSizing": "border-box"
+        "boxSizing": "border-box",
+        "marginBottom": "0.375rem"
       },
       "input": {
         "flex": "1",
-        "padding": "{spacing.sm} {spacing.lg}",
+        "width": "100%",
+        "padding": "0.375rem 0.625rem",
         "border": "none",
         "background": "transparent",
-        "fontSize": "1rem",
+        "fontSize": "0.7rem",
         "color": "{colors.marineBlue}",
         "fontFamily": "{typography.fontFamily.body}",
         "fontWeight": "{typography.fontWeight.light}",
-        "outline": "none"
+        "outline": "none",
+        "minHeight": "0",
+        "minWidth": "0",
+        "lineHeight": "1.4"
       },
       "button": {
-        "padding": "{spacing.sm} {spacing.xl}",
+        "width": "auto",
+        "padding": "0.375rem 0.625rem",
         "background": "{colors.lushGreen}",
         "color": "{colors.text.green}",
         "border": "none",
         "borderRadius": "{radii.full}",
         "cursor": "pointer",
-        "fontSize": "0.85rem",
+        "fontSize": "0.6rem",
         "fontWeight": "600",
         "textTransform": "uppercase",
         "letterSpacing": "0.05em",
         "transition": "{transitions.fast}",
         "boxShadow": "0 4px 12px rgba(78, 154, 88, 0.2)",
+        "whiteSpace": "nowrap",
+        "flexShrink": "0",
         ":hover": {
           "filter": "brightness(1.1)",
           "transform": "translateY(-1px)",
@@ -191,7 +202,7 @@
       "list": {
         "display": "flex",
         "flexDirection": "column",
-        "gap": "{spacing.sm}",
+        "gap": "0.375rem",
         "overflowY": "auto",
         "width": "100%",
         "boxSizing": "border-box"
@@ -199,32 +210,31 @@
       "card": {
         "display": "flex",
         "alignItems": "center",
-        "gap": "{spacing.md}",
-        "padding": "{spacing.md} {spacing.lg}",
+        "gap": "0.5rem",
+        "padding": "0.5rem",
         "background": "rgba(255, 255, 255, 0.3)",
         "backdropFilter": "blur(8px) saturate(150%)",
         "borderRadius": "{radii.apple}",
         "border": "1px solid {colors.border}",
         "transition": "{transitions.fast}",
+        "marginBottom": "0.375rem",
         ":hover": {
           "background": "rgba(255, 255, 255, 0.5)",
           "transform": "translateY(-2px)",
           "boxShadow": "{shadows.sm}"
-        },
-        "[data-done=true]": {
-          "opacity": "0.6",
-          "background": "rgba(255, 255, 255, 0.1)"
         }
       },
       "body": {
         "flex": "1",
-        "fontSize": "1rem",
+        "fontSize": "0.75rem",
         "fontWeight": "{typography.fontWeight.light}",
-        "color": "{colors.marineBlue}"
+        "color": "{colors.marineBlue}",
+        "lineHeight": "1.35"
       },
       "buttonSmall": {
-        "width": "32px",
-        "height": "32px",
+        "width": "22px",
+        "height": "22px",
+        "minWidth": "22px",
         "display": "flex",
         "alignItems": "center",
         "justifyContent": "center",
@@ -234,6 +244,7 @@
         "borderRadius": "{radii.full}",
         "cursor": "pointer",
         "transition": "{transitions.fast}",
+        "fontSize": "0.6rem",
         ":hover": {
           "background": "{colors.marineBlue}",
           "color": "{colors.softClay}",
@@ -258,42 +269,9 @@
         "textDecoration": "line-through",
         "opacity": "0.7"
       },
-      "@container (max-width: 600px)": {
-        ".stack": {
-          "padding": "{spacing.md}",
-          "gap": "{spacing.md}"
-        },
-        ".headerSection": {
-          "gap": "{spacing.sm}"
-        },
-        ".todoTitle": {
-          "fontSize": "{typography.fontSize.lg}"
-        },
-        ".form": {
-          "flexDirection": "column",
-          "padding": "{spacing.sm}",
-          "gap": "{spacing.sm}"
-        },
-        ".input": {
-          "width": "100%",
-          "padding": "{spacing.xs} {spacing.md}"
-        },
-        ".button": {
-          "width": "100%",
-          "padding": "{spacing.xs} {spacing.md}"
-        },
-        ".card": {
-          "padding": "{spacing.sm} {spacing.md}",
-          "gap": "{spacing.sm}"
-        },
-        ".body": {
-          "fontSize": "0.9rem"
-        },
-        ".buttonSmall": {
-          "width": "28px",
-          "height": "28px",
-          "fontSize": "0.75rem"
-        }
+      "[data-done=true]": {
+        "opacity": "0.6",
+        "background": "rgba(255, 255, 255, 0.1)"
       }
     }
   };

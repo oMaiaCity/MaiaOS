@@ -156,7 +156,8 @@ export class StyleEngine {
             return `  ${cssProp}: ${this._interpolateTokens(value, tokens)};`;
           })
           .join('\n');
-        cssRules.push(`.${kebabClassName} {\n${cssProperties}\n}`);
+        const compiledRule = `.${kebabClassName} {\n${cssProperties}\n}`;
+        cssRules.push(compiledRule);
       }
       
       for (const [modifier, modifierStyles] of Object.entries(modifiers)) {
@@ -180,13 +181,49 @@ export class StyleEngine {
     if (!selectors || Object.keys(selectors).length === 0) return '';
     const cssRules = [];
     for (const [selector, styles] of Object.entries(selectors)) {
-      const cssProperties = Object.entries(styles)
-        .map(([prop, value]) => {
-          const cssProp = prop.replace(/([A-Z])/g, '-$1').toLowerCase();
-          return `  ${cssProp}: ${this._interpolateTokens(value, tokens)};`;
-        })
-        .join('\n');
-      cssRules.push(`${selector} {\n${cssProperties}\n}`);
+      // Interpolate tokens in the selector itself (for container query breakpoints)
+      const interpolatedSelector = this._interpolateTokens(selector, tokens);
+      
+      // Check if this is a container query or media query (starts with @)
+      const isAtRule = interpolatedSelector.startsWith('@container') || interpolatedSelector.startsWith('@media');
+      
+      if (isAtRule) {
+        // For container/media queries, styles contains nested selectors (e.g., ".stack", ".form")
+        const nestedRules = [];
+        for (const [nestedSelector, nestedStyles] of Object.entries(styles)) {
+          if (typeof nestedStyles === 'object' && nestedStyles !== null && !Array.isArray(nestedStyles)) {
+            // Check if this is another at-rule (nested container/media query)
+            const isNestedAtRule = nestedSelector.startsWith('@container') || nestedSelector.startsWith('@media');
+            
+            if (isNestedAtRule) {
+              // Interpolate tokens in nested at-rule selector
+              const interpolatedNestedSelector = this._interpolateTokens(nestedSelector, tokens);
+              // Recursively compile nested at-rules
+              const nestedAtRuleCSS = this.compileSelectors({ [interpolatedNestedSelector]: nestedStyles }, tokens);
+              nestedRules.push(nestedAtRuleCSS.split('\n').map(line => `  ${line}`).join('\n'));
+            } else {
+              // Regular nested selector with CSS properties
+              const cssProperties = Object.entries(nestedStyles)
+                .map(([prop, value]) => {
+                  const cssProp = prop.replace(/([A-Z])/g, '-$1').toLowerCase();
+                  return `    ${cssProp}: ${this._interpolateTokens(value, tokens)};`;
+                })
+                .join('\n');
+              nestedRules.push(`  ${nestedSelector} {\n${cssProperties}\n  }`);
+            }
+          }
+        }
+        cssRules.push(`${interpolatedSelector} {\n${nestedRules.join('\n')}\n}`);
+      } else {
+        // Regular selector with CSS properties
+        const cssProperties = Object.entries(styles)
+          .map(([prop, value]) => {
+            const cssProp = prop.replace(/([A-Z])/g, '-$1').toLowerCase();
+            return `  ${cssProp}: ${this._interpolateTokens(value, tokens)};`;
+          })
+          .join('\n');
+        cssRules.push(`${selector} {\n${cssProperties}\n}`);
+      }
     }
     return cssRules.join('\n\n');
   }
@@ -196,6 +233,7 @@ export class StyleEngine {
     const selectorCSS = this.compileSelectors(selectors, tokens);
     if (selectorCSS) css += `\n\n/* State-based selectors */\n${selectorCSS}`;
     if (rawCSS) css += `\n\n/* Raw CSS fallback */\n${rawCSS}`;
+    
     return css;
   }
 

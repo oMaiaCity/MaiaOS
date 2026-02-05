@@ -3,6 +3,9 @@ ARG BASE_IMAGE_TAG="12.4.1-runtime-ubuntu22.04"
 
 FROM ${BASE_IMAGE}:${BASE_IMAGE_TAG} AS base
 
+# Copy uv from official image (matching original PersonaPlex Dockerfile exactly)
+# Note: If this fails due to network issues, wait a few minutes and retry
+# The network connectivity issues are usually temporary
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

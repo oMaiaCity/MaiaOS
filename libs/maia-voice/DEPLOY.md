@@ -79,6 +79,14 @@ The `deploy.sh` script handles:
 
 **CRITICAL:** Scale to zero immediately after deployment to prevent costs!
 
+### Auto-Stop Configuration
+
+The machine is configured to:
+- **Auto-stop**: Stops automatically when idle (saves costs)
+- **Manual start only**: Does NOT auto-start (you must manually start it)
+
+This ensures maximum cost control - the machine will stop when idle but won't automatically start on requests.
+
 ### Stop Machine (Scale to Zero)
 
 ```bash
@@ -87,15 +95,17 @@ flyctl scale count 0 --app voice-maia-city
 
 This stops the machine completely. **No charges apply when scaled to zero.**
 
-### Start Machine
+The machine will also auto-stop when idle (configured in `fly.toml`).
 
-When you want to test or use the service:
+### Start Machine (Manual Only)
+
+When you want to test or use the service, you must manually start it:
 
 ```bash
 flyctl scale count 1 --app voice-maia-city
 ```
 
-The machine will start and be ready in ~1-2 minutes.
+The machine will start and be ready in ~1-2 minutes (GPU cold start may take 30-60s).
 
 ### After Testing
 
@@ -104,6 +114,8 @@ Always scale back to zero after testing:
 ```bash
 flyctl scale count 0 --app voice-maia-city
 ```
+
+Or let it auto-stop when idle (configured in `fly.toml`).
 
 ## Costs
 
@@ -128,9 +140,11 @@ The PersonaPlex web UI will be available at the Fly.io domain.
 ## GPU Machine Configuration
 
 - **Machine Type**: `gpu-l40s` (NVIDIA L40S 48GB)
-- **Region**: `ord` (Chicago)
+- **Region**: `ord` (Chicago, Illinois)
 - **Cost**: $1.25/hour when running
-- **Set via**: `flyctl machine update --vm-size gpu-l40s --app voice-maia-city`
+- **Set via**: `flyctl machine update --vm-size gpu-l40s --region ord --app voice-maia-city`
+
+**Note**: L40S GPU is currently only available in ORD (Chicago) region. The deploy script automatically configures this.
 
 ## Troubleshooting
 
@@ -166,11 +180,11 @@ flyctl secrets set HF_TOKEN=new-token --app voice-maia-city
 If GPU is not allocated:
 
 ```bash
-# Update machine to GPU type
-flyctl machine update --vm-size gpu-l40s --app voice-maia-city
+# Update machine to GPU type (L40S in ORD)
+flyctl machine update <MACHINE_ID> --vm-size gpu-l40s --region ord --app voice-maia-city
 
-# Or use A100 if L40S unavailable
-flyctl machine update --vm-size gpu-a100-40gb --app voice-maia-city
+# Check GPU availability
+flyctl platform regions --size gpu-l40s
 ```
 
 ## Environment Variables

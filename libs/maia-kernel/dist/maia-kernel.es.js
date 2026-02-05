@@ -18570,11 +18570,6 @@ class ActorEngine {
           key: actorConfig.inbox
         });
         store.subscribe((updatedCostream) => {
-          console.log(`[ActorEngine] Inbox subscription fired for actor ${actor.id}:`, {
-            hasActor: this.actors.has(actor.id),
-            hasItems: !!updatedCostream?.items,
-            itemsCount: updatedCostream?.items?.length || 0
-          });
           if (this.actors.has(actor.id) && updatedCostream?.items) {
             this.processMessages(actor.id);
           }
@@ -19014,12 +19009,6 @@ class ActorEngine {
     }
   }
   async sendInternalEvent(actorId, eventType, payload = {}) {
-    console.log(`[ActorEngine] sendInternalEvent called:`, {
-      actorId,
-      eventType,
-      payloadKeys: Object.keys(payload || {}),
-      hasResult: !!payload?.result
-    });
     const actor = this.actors.get(actorId);
     if (!actor || !actor.inboxCoId || !this.dbEngine) {
       console.warn(`[ActorEngine] Cannot send internal event:`, {
@@ -19030,11 +19019,6 @@ class ActorEngine {
       return;
     }
     try {
-      console.log(`[ActorEngine] Creating message in inbox:`, {
-        inboxCoId: actor.inboxCoId,
-        eventType,
-        payloadKeys: Object.keys(payload || {})
-      });
       await createAndPushMessage(this.dbEngine, actor.inboxCoId, {
         type: eventType,
         payload,
@@ -19042,10 +19026,7 @@ class ActorEngine {
         target: actorId,
         processed: false
       });
-      console.log(`[ActorEngine] Message created successfully in inbox`);
-      console.log(`[ActorEngine] Scheduling deferred message processing for ${eventType} event`);
       setTimeout(() => {
-        console.log(`[ActorEngine] Processing deferred messages for actor ${actorId}`);
         this.processMessages(actorId).catch((err) => {
           console.error(`[ActorEngine] Error processing deferred messages:`, err);
         });
@@ -19061,14 +19042,8 @@ class ActorEngine {
     try {
       const result = await this.dbEngine.execute({ op: "processInbox", actorId, inboxCoId: actor.inboxCoId });
       const messages = result.messages || [];
-      console.log(`[ActorEngine] processMessages: Found ${messages.length} messages for actor ${actorId}`);
       for (const message of messages) {
         if (message.type === "INIT" || message.from === "system") continue;
-        console.log(`[ActorEngine] Processing message:`, {
-          type: message.type,
-          hasPayload: !!message.payload,
-          payloadKeys: message.payload ? Object.keys(message.payload) : []
-        });
         try {
           const payload = message.payload || {};
           if (actor.machine && this.stateEngine) {
@@ -19156,8 +19131,6 @@ class ViewEngine {
     const contextForRender = context.value || {};
     const element = await this.renderNode(viewNode, { context: contextForRender }, actorId);
     if (element) {
-      element.style.containerType = "inline-size";
-      element.style.containerName = "actor-root";
       element.dataset.actorId = actorId;
       shadowRoot.appendChild(element);
     } else {
@@ -19660,9 +19633,10 @@ ${this.compileModifierStyles(pseudoStyles, tokens)}
           const cssProp = prop.replace(/([A-Z])/g, "-$1").toLowerCase();
           return `  ${cssProp}: ${this._interpolateTokens(value, tokens)};`;
         }).join("\n");
-        cssRules.push(`.${kebabClassName} {
+        const compiledRule = `.${kebabClassName} {
 ${cssProperties}
-}`);
+}`;
+        cssRules.push(compiledRule);
       }
       for (const [modifier, modifierStyles] of Object.entries(modifiers)) {
         let selector;
@@ -19684,13 +19658,40 @@ ${this.compileModifierStyles(modifierStyles, tokens)}
     if (!selectors || Object.keys(selectors).length === 0) return "";
     const cssRules = [];
     for (const [selector, styles] of Object.entries(selectors)) {
-      const cssProperties = Object.entries(styles).map(([prop, value]) => {
-        const cssProp = prop.replace(/([A-Z])/g, "-$1").toLowerCase();
-        return `  ${cssProp}: ${this._interpolateTokens(value, tokens)};`;
-      }).join("\n");
-      cssRules.push(`${selector} {
+      const interpolatedSelector = this._interpolateTokens(selector, tokens);
+      const isAtRule = interpolatedSelector.startsWith("@container") || interpolatedSelector.startsWith("@media");
+      if (isAtRule) {
+        const nestedRules = [];
+        for (const [nestedSelector, nestedStyles] of Object.entries(styles)) {
+          if (typeof nestedStyles === "object" && nestedStyles !== null && !Array.isArray(nestedStyles)) {
+            const isNestedAtRule = nestedSelector.startsWith("@container") || nestedSelector.startsWith("@media");
+            if (isNestedAtRule) {
+              const interpolatedNestedSelector = this._interpolateTokens(nestedSelector, tokens);
+              const nestedAtRuleCSS = this.compileSelectors({ [interpolatedNestedSelector]: nestedStyles }, tokens);
+              nestedRules.push(nestedAtRuleCSS.split("\n").map((line) => `  ${line}`).join("\n"));
+            } else {
+              const cssProperties = Object.entries(nestedStyles).map(([prop, value]) => {
+                const cssProp = prop.replace(/([A-Z])/g, "-$1").toLowerCase();
+                return `    ${cssProp}: ${this._interpolateTokens(value, tokens)};`;
+              }).join("\n");
+              nestedRules.push(`  ${nestedSelector} {
+${cssProperties}
+  }`);
+            }
+          }
+        }
+        cssRules.push(`${interpolatedSelector} {
+${nestedRules.join("\n")}
+}`);
+      } else {
+        const cssProperties = Object.entries(styles).map(([prop, value]) => {
+          const cssProp = prop.replace(/([A-Z])/g, "-$1").toLowerCase();
+          return `  ${cssProp}: ${this._interpolateTokens(value, tokens)};`;
+        }).join("\n");
+        cssRules.push(`${selector} {
 ${cssProperties}
 }`);
+      }
     }
     return cssRules.join("\n\n");
   }
@@ -19769,7 +19770,6 @@ class StateEngine {
     return machine;
   }
   async send(machineId, event, payload = {}) {
-    console.log(`[StateEngine] send() called:`, { machineId, event, payloadKeys: Object.keys(payload || {}) });
     const machine = this.machines.get(machineId);
     if (!machine) {
       console.warn(`[StateEngine] Machine not found: ${machineId}`);
@@ -19793,14 +19793,8 @@ class StateEngine {
     const targetState = typeof transition === "string" ? transition : transition.target;
     const guard = typeof transition === "object" ? transition.guard : null;
     const actions = typeof transition === "object" ? transition.actions : null;
-    console.log(`[StateEngine] Transition: ${machine.currentState} --${event}--> ${targetState}`, {
-      actorId: machine.actor?.id,
-      hasGuard: guard !== void 0 && guard !== null,
-      hasActions: !!actions
-    });
     if (guard !== void 0 && guard !== null) {
       const guardResult = await this._evaluateGuard(guard, machine.actor.context, machine.eventPayload, machine.actor);
-      console.log(`[StateEngine] Guard evaluated: ${guardResult}`);
       if (!guardResult) return;
     }
     await this._executeExit(machine, machine.currentState);
@@ -19852,17 +19846,7 @@ class StateEngine {
         return;
       }
       const actions = stateDef?.[type2];
-      console.log(`[StateEngine] _executeStateActions:`, {
-        stateName,
-        type: type2,
-        hasActions: !!actions,
-        actionsType: actions ? Array.isArray(actions) ? "array" : typeof actions : "null",
-        actionsLength: Array.isArray(actions) ? actions.length : "N/A",
-        hasTool: !!(actions && actions.tool),
-        actionsValue: actions
-      });
       if (!actions) {
-        console.log(`[StateEngine] No actions found for ${type2} in state ${stateName}`);
         return;
       }
       if (!machine.actor) {
@@ -19870,57 +19854,22 @@ class StateEngine {
         return;
       }
       if (actions.tool) {
-        console.log(`[StateEngine] Processing single tool action: ${actions.tool}`);
         const result = await this._invokeTool(machine, actions.tool, actions.payload);
         if (result) machine.lastToolResult = result;
       } else if (Array.isArray(actions)) {
         const originalEventPayload = machine.eventPayload || {};
-        console.log(`[StateEngine] Executing array of actions (${actions.length} actions) for ${type2} in state ${stateName}`);
         await this._executeActions(machine, actions, machine.eventPayload);
-        console.log(`[StateEngine] Actions completed, checking for SUCCESS handler:`, {
-          type: type2,
-          isEntry: type2 === "entry",
-          hasSuccessHandler: !!stateDef.on?.SUCCESS,
-          hasActorEngine: !!machine.actor?.actorEngine,
-          lastToolResult: machine.lastToolResult ? Object.keys(machine.lastToolResult) : null,
-          stateDefOn: stateDef.on,
-          stateDefOnSuccess: stateDef.on?.SUCCESS
-        });
         const conditionCheck = type2 === "entry" && stateDef.on?.SUCCESS && machine.actor?.actorEngine;
-        console.log(`[StateEngine] 🔍 Condition check result:`, {
-          conditionCheck,
-          typeIsEntry: type2 === "entry",
-          stateDefOnSuccess: stateDef.on?.SUCCESS,
-          hasActorEngine: !!machine.actor?.actorEngine,
-          stateDefOnType: typeof stateDef.on,
-          stateDefOnValue: stateDef.on
-        });
         if (conditionCheck) {
           const successPayload = {
             result: machine.lastToolResult || null,
             ...originalEventPayload
           };
-          console.log(`[StateEngine] ✅ Sending SUCCESS event after entry actions`, {
-            actorId: machine.actor.id,
-            stateName,
-            hasResult: !!successPayload.result,
-            resultKeys: successPayload.result ? Object.keys(successPayload.result) : [],
-            resultContent: successPayload.result?.content?.substring(0, 50)
-          });
           try {
             await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, "SUCCESS", successPayload);
-            console.log(`[StateEngine] ✅ SUCCESS event sent successfully`);
           } catch (error) {
             console.error(`[StateEngine] ❌ Failed to send SUCCESS event:`, error);
           }
-        } else {
-          console.warn(`[StateEngine] ❌ NOT sending SUCCESS event:`, {
-            type: type2,
-            isEntry: type2 === "entry",
-            hasSuccessHandler: !!stateDef.on?.SUCCESS,
-            hasActorEngine: !!machine.actor?.actorEngine,
-            stateDefOnKeys: stateDef.on ? Object.keys(stateDef.on) : null
-          });
         }
       } else if (typeof actions === "object" && actions !== null) {
         const originalEventPayload = machine.eventPayload || {};
@@ -19945,17 +19894,7 @@ class StateEngine {
     }
   }
   async _executeEntry(machine, stateName) {
-    console.log(`[StateEngine] Executing entry for state: ${stateName}`, {
-      actorId: machine.actor?.id,
-      hasEntry: !!machine.definition.states[stateName]?.entry,
-      eventPayloadKeys: machine.eventPayload ? Object.keys(machine.eventPayload) : [],
-      eventPayloadHasResult: !!machine.eventPayload?.result,
-      eventPayloadResultContent: machine.eventPayload?.result?.content?.substring(0, 50),
-      lastToolResultKeys: machine.lastToolResult ? Object.keys(machine.lastToolResult) : [],
-      lastToolResultContent: machine.lastToolResult?.content?.substring(0, 50)
-    });
     await this._executeStateActions(machine, stateName, "entry");
-    console.log(`[StateEngine] Entry completed for state: ${stateName}`);
   }
   async _executeExit(machine, stateName) {
     await this._executeStateActions(machine, stateName, "exit");
@@ -19981,16 +19920,9 @@ class StateEngine {
         const updates = await this._evaluatePayload(action.updateContext, machine.actor.context, payload, machine.lastToolResult, machine.actor);
         Object.assign(contextUpdates, this._sanitizeUpdates(updates, machine.lastToolResult || {}));
       } else if (action?.tool) {
-        console.log(`[StateEngine] Executing tool action in _executeActions: ${action.tool}`);
         const result = await this._invokeTool(machine, action.tool, action.payload, false);
-        console.log(`[StateEngine] Tool action completed, storing result:`, {
-          tool: action.tool,
-          hasResult: !!result,
-          resultKeys: result ? Object.keys(result) : []
-        });
         if (result) {
           machine.lastToolResult = result;
-          console.log(`[StateEngine] Stored lastToolResult:`, Object.keys(machine.lastToolResult));
         }
         if (action.onSuccess?.updateContext && result) {
           const updates = await this._evaluatePayload(action.onSuccess.updateContext, machine.actor.context, machine.eventPayload, result, machine.actor);
@@ -20022,7 +19954,6 @@ class StateEngine {
       console.error("[StateEngine] mapData must be an object mapping context keys to operation configs", { mapData });
       return;
     }
-    console.log(`[StateEngine._executeMapData] Executing mapData:`, mapData);
     for (const [contextKey, operationConfig] of Object.entries(mapData)) {
       if (!contextKey || typeof contextKey !== "string") {
         console.error("[StateEngine] mapData context keys must be strings", { contextKey, operationConfig });
@@ -20065,21 +19996,7 @@ class StateEngine {
       }
       try {
         const operationParams = { op, ...params };
-        console.log(`[StateEngine._executeMapData] Executing operation for ${contextKey}:`, {
-          op,
-          params: {
-            ...params,
-            options: params.options ? {
-              ...params.options,
-              map: params.options.map ? Object.keys(params.options.map) : null
-            } : null
-          }
-        });
         const result = await this.dbEngine.execute(operationParams);
-        console.log(`[StateEngine._executeMapData] Operation result for ${contextKey}:`, {
-          isReactiveStore: result && typeof result.subscribe === "function",
-          hasValue: result && "value" in result
-        });
         if (result && typeof result === "object" && typeof result.subscribe === "function" && "value" in result) {
           const actor = machine.actor;
           if (actor && actor.contextCoId && actor.contextSchemaCoId && this.actorEngine) {
@@ -20112,33 +20029,12 @@ class StateEngine {
     if (updates) await machine.actor.actorEngine.updateContextCoValue(machine.actor, updates);
   }
   async _invokeTool(machine, toolName, payload = {}, autoTransition = true) {
-    console.log(`[StateEngine] Invoking tool: ${toolName}`, {
-      actorId: machine.actor?.id,
-      currentState: machine.currentState,
-      autoTransition,
-      payloadKeys: Object.keys(payload || {})
-    });
     try {
       const originalEventPayload = machine.eventPayload || {};
       const evaluatedPayload = await this._evaluatePayload(payload, machine.actor.context, machine.eventPayload || {}, machine.lastToolResult, machine.actor);
-      console.log(`[StateEngine] Tool payload evaluated:`, {
-        toolName,
-        evaluatedPayloadKeys: Object.keys(evaluatedPayload || {}),
-        hasMessages: !!evaluatedPayload?.messages,
-        messagesLength: evaluatedPayload?.messages?.length
-      });
       const result = await this.toolEngine.execute(toolName, machine.actor, evaluatedPayload);
-      console.log(`[StateEngine] Tool executed successfully: ${toolName}`, {
-        hasResult: !!result,
-        resultKeys: result ? Object.keys(result) : [],
-        resultContent: result?.content?.substring(0, 100)
-      });
       if (autoTransition) {
         const stateDef = machine.definition.states[machine.currentState];
-        console.log(`[StateEngine] Sending SUCCESS event for ${toolName}`, {
-          currentState: machine.currentState,
-          hasSuccessHandler: !!stateDef.on?.SUCCESS
-        });
         await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, "SUCCESS", {
           ...originalEventPayload,
           result
@@ -20156,7 +20052,6 @@ class StateEngine {
       if (autoTransition) {
         const stateDef = machine.definition.states[machine.currentState];
         if (stateDef.on?.ERROR) {
-          console.log(`[StateEngine] Sending ERROR event for ${toolName}`);
           await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, "ERROR", { error: error.message });
         } else {
           console.warn(`[StateEngine] No ERROR handler for ${toolName} in state ${machine.currentState}`);
@@ -20168,20 +20063,6 @@ class StateEngine {
   async _evaluatePayload(payload, context, eventPayload = {}, lastToolResult = null, actor = null) {
     const contextValue = context.value;
     const result = eventPayload?.result || lastToolResult || null;
-    if (payload && typeof payload === "object" && JSON.stringify(payload).includes("result")) {
-      console.log(`[StateEngine] _evaluatePayload:`, {
-        hasEventPayloadResult: !!eventPayload?.result,
-        eventPayloadResultType: eventPayload?.result ? typeof eventPayload.result : null,
-        eventPayloadResultKeys: eventPayload?.result ? Object.keys(eventPayload.result) : null,
-        eventPayloadResultContent: eventPayload?.result?.content?.substring(0, 50),
-        hasLastToolResult: !!lastToolResult,
-        lastToolResultType: lastToolResult ? typeof lastToolResult : null,
-        lastToolResultKeys: lastToolResult ? Object.keys(lastToolResult) : null,
-        lastToolResultContent: lastToolResult?.content?.substring(0, 50),
-        usingResult: result ? Object.keys(result) : null,
-        resultContent: result?.content?.substring(0, 50)
-      });
-    }
     const data2 = { context: contextValue, item: eventPayload || {}, result };
     const resolved = await resolveExpressions(payload, this.evaluator, data2);
     return resolved;

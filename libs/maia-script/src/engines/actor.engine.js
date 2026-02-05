@@ -240,11 +240,6 @@ export class ActorEngine {
         
         // $stores Architecture: Backend handles subscriptions automatically via subscriptionCache
         store.subscribe((updatedCostream) => {
-          console.log(`[ActorEngine] Inbox subscription fired for actor ${actor.id}:`, {
-            hasActor: this.actors.has(actor.id),
-            hasItems: !!updatedCostream?.items,
-            itemsCount: updatedCostream?.items?.length || 0
-          });
           if (this.actors.has(actor.id) && updatedCostream?.items) {
             this.processMessages(actor.id);
           }
@@ -781,12 +776,6 @@ export class ActorEngine {
 
 
   async sendInternalEvent(actorId, eventType, payload = {}) {
-    console.log(`[ActorEngine] sendInternalEvent called:`, {
-      actorId,
-      eventType,
-      payloadKeys: Object.keys(payload || {}),
-      hasResult: !!payload?.result
-    });
     const actor = this.actors.get(actorId);
     if (!actor || !actor.inboxCoId || !this.dbEngine) {
       console.warn(`[ActorEngine] Cannot send internal event:`, {
@@ -797,11 +786,6 @@ export class ActorEngine {
       return;
     }
     try {
-      console.log(`[ActorEngine] Creating message in inbox:`, {
-        inboxCoId: actor.inboxCoId,
-        eventType,
-        payloadKeys: Object.keys(payload || {})
-      });
       await createAndPushMessage(this.dbEngine, actor.inboxCoId, {
         type: eventType,
         payload,
@@ -809,12 +793,9 @@ export class ActorEngine {
         target: actorId,
         processed: false
       });
-      console.log(`[ActorEngine] Message created successfully in inbox`);
       // Defer message processing to next tick to avoid blocking current processing
       // This ensures the current processMessages call completes before processing the new event
-      console.log(`[ActorEngine] Scheduling deferred message processing for ${eventType} event`);
       setTimeout(() => {
-        console.log(`[ActorEngine] Processing deferred messages for actor ${actorId}`);
         this.processMessages(actorId).catch(err => {
           console.error(`[ActorEngine] Error processing deferred messages:`, err);
         });
@@ -831,14 +812,8 @@ export class ActorEngine {
     try {
       const result = await this.dbEngine.execute({ op: 'processInbox', actorId, inboxCoId: actor.inboxCoId });
       const messages = result.messages || [];
-      console.log(`[ActorEngine] processMessages: Found ${messages.length} messages for actor ${actorId}`);
       for (const message of messages) {
         if (message.type === 'INIT' || message.from === 'system') continue;
-        console.log(`[ActorEngine] Processing message:`, {
-          type: message.type,
-          hasPayload: !!message.payload,
-          payloadKeys: message.payload ? Object.keys(message.payload) : []
-        });
         try {
           // Ensure payload is always an object (never undefined/null)
           const payload = message.payload || {};

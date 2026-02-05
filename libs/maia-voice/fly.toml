@@ -9,10 +9,17 @@ primary_region = "ord"  # Chicago - L40S GPU available
 [env]
   NO_TORCH_COMPILE = "1"
 
+# GPU configuration - L40S preset
+# Note: vm.size must be set at top level, not in [[vm]] table
+# The "l40s" preset includes GPU + performance-8x CPU + 32GB RAM
+vm.size = "l40s"
+
 [[services]]
   internal_port = 8998
   protocol = "tcp"
   processes = ["app"]
+  auto_stop_machines = true
+  auto_start_machines = false  # Manual start only for cost control
 
   [[services.ports]]
     handlers = ["http"]

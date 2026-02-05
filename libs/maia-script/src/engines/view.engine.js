@@ -84,8 +84,8 @@ export class ViewEngine {
     const element = await this.renderNode(viewNode, { context: contextForRender }, actorId);
     
     if (element) {
-      element.style.containerType = 'inline-size';
-      element.style.containerName = 'actor-root';
+      // Container-type and container-name are set via CSS in component definition
+      // Only set dataset for identification
       element.dataset.actorId = actorId;
       shadowRoot.appendChild(element);
     } else {
