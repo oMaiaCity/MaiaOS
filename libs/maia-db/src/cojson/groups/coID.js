@@ -122,7 +122,7 @@ export async function createAccountWithSecret({ agentSecret, name = "Maia", peer
 			data: mergedConfigs.data || {}
 		});
 		
-		console.log('✅ Auto-seeding complete');
+		// Auto-seeding complete
 	} catch (error) {
 		// Don't fail account creation if seeding fails - log error but continue
 		console.error('[createAccountWithSecret] Auto-seeding failed (non-blocking):', error);

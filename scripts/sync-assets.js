@@ -37,10 +37,10 @@ function removeAssetFromServices(relativePath) {
 				const stat = statSync(targetPath)
 				if (stat.isFile()) {
 					unlinkSync(targetPath)
-					console.log(`🗑️ Removed: ${relativePath}`)
+					// Individual removal logs removed - only show summary at end
 				} else if (stat.isDirectory()) {
 					rmSync(targetPath, { recursive: true, force: true })
-					console.log(`🗑️ Removed directory: ${relativePath}`)
+					// Individual removal logs removed - only show summary at end
 				}
 			}
 		} catch (_err) {}
@@ -76,11 +76,8 @@ function copyAssetToServices(relativePath) {
 			}
 
 			copyFileSync(sourcePath, targetPath)
-
-			if (!copied) {
-				console.log(`✅ Synced: ${relativePath}`)
-				copied = true
-			}
+			copied = true
+			// Individual file logs removed - only show summary at end
 		} catch (_err) {}
 	})
 }
@@ -114,8 +111,7 @@ function getAllFiles(dirPath, basePath = '') {
  * Sync all assets from brand package to maia-city service (preserves folder structure)
  */
 function syncAllAssets() {
-	console.log('🔄 Syncing brand assets to maia-city...')
-
+	// Sync status handled by dev.js logger
 	if (!existsSync(brandAssetsDir)) {
 		return
 	}
@@ -137,24 +133,23 @@ function syncAllAssets() {
 				const destPath = join(staticDir, relativePath)
 				try {
 					unlinkSync(destPath)
-					console.log(`🗑️ Cleaned up (orphaned): ${relativePath}`)
+					// Individual cleanup logs removed - only show summary at end
 				} catch (_err) {}
 			}
 		})
 	})
 
-	console.log('✅ All brand assets synced!\n')
+	// Success message handled by dev.js logger
 }
 
 /**
  * Watch assets directory for changes (recursive)
  */
 function watchAssets() {
-	console.log('👀 Watching brand assets for changes...\n')
-
+	// Watch status handled by dev.js logger
 	watch(brandAssetsDir, { recursive: true }, (_eventType, filename) => {
 		if (filename && !filename.startsWith('.')) {
-			console.log(`📁 Asset changed: ${filename}`)
+			// Sync silently
 			copyAssetToServices(filename)
 		}
 	})
@@ -170,7 +165,7 @@ syncAllAssets()
 // Watch mode (enabled by default)
 if (!isNoWatch) {
 	watchAssets()
-	console.log('Press Ctrl+C to stop watching.\n')
+	// Status handled by dev.js
 } else {
 	process.exit(0)
 }

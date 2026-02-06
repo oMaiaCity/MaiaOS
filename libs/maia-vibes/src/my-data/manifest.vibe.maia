@@ -2,6 +2,6 @@
   "$schema": "@schema/vibe",
   "$id": "@vibe/my-data",
   "name": "MaiaDB",
-  "description": "A database viewer interface with navigation, table view, and detail panel. Demonstrates mocked data and options.map transformations.",
+  "description": "Database viewer with navigation and detail panels",
   "actor": "@my-data/actor/agent"
 }

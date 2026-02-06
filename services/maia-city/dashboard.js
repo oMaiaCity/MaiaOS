@@ -4,6 +4,7 @@
  */
 
 import { truncate, getSyncStatusMessage } from './utils.js';
+import { getAllVibeRegistries } from '@MaiaOS/vibes';
 
 // Helper function to escape HTML
 function escapeHtml(text) {
@@ -16,10 +17,29 @@ function escapeHtml(text) {
 }
 
 /**
+ * Helper function to truncate description to max words
+ */
+function truncateDescription(text, maxWords = 10) {
+	if (!text) return '';
+	const words = text.trim().split(/\s+/);
+	if (words.length <= maxWords) return text;
+	return words.slice(0, maxWords).join(' ') + '...';
+}
+
+/**
+ * Extract vibe key from vibe $id (e.g., "@vibe/todos" -> "todos")
+ */
+function getVibeKeyFromId(vibeId) {
+	if (!vibeId) return null;
+	const match = vibeId.match(/@vibe\/(.+)/);
+	return match ? match[1] : null;
+}
+
+/**
  * Load vibes from account.vibes registry dynamically using read() API
- * The read() API handles reactivity internally - we just read the current data
+ * Also loads vibe manifests to get name and description
  * @param {Object} maia - MaiaOS instance
- * @returns {Promise<Array>} Array of vibe objects with {key, label, coId}
+ * @returns {Promise<Array>} Array of vibe objects with {key, name, description, coId}
  */
 async function loadVibesFromAccount(maia) {
 	const vibes = [];
@@ -29,9 +49,24 @@ async function loadVibesFromAccount(maia) {
 	}
 	
 	try {
+		// Load vibe registries to get manifest data (name, description)
+		const vibeRegistries = await getAllVibeRegistries();
+		const vibeManifestMap = new Map();
+		
+		for (const registry of vibeRegistries) {
+			if (registry.vibe) {
+				const vibeKey = getVibeKeyFromId(registry.vibe.$id);
+				if (vibeKey) {
+					vibeManifestMap.set(vibeKey, {
+						name: registry.vibe.name || vibeKey,
+						description: registry.vibe.description || ''
+					});
+				}
+			}
+		}
+		
 		const account = maia.id.maiaId;
 		// Read account.vibes CoMap using read() API operations
-		// The read() API handles reactivity internally - we just read the current value
 		const accountStore = await maia.db({op: 'read', schema: '@account', key: account.id});
 		const accountData = accountStore.value || accountStore;
 		
@@ -56,15 +91,15 @@ async function loadVibesFromAccount(maia) {
 				for (const vibeKey of vibeKeys) {
 					const vibeCoId = vibesData[vibeKey];
 					if (typeof vibeCoId === 'string' && vibeCoId.startsWith('co_')) {
-						// Map vibe keys to display names
-						const vibeNameMap = {
-							'my-data': 'MaiaDB',
-							'todos': 'Todos'
-						};
-						const displayName = vibeNameMap[vibeKey] || `${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)} Vibe`;
+						// Get manifest data if available
+						const manifest = vibeManifestMap.get(vibeKey);
+						const name = manifest?.name || `${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)}`;
+						const description = manifest?.description ? truncateDescription(manifest.description, 10) : `Open ${name}`;
+						
 						vibes.push({
 							key: vibeKey,
-							label: displayName,
+							name: name,
+							description: description,
 							coId: vibeCoId
 						});
 					}
@@ -112,8 +147,8 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 						<path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
 					</svg>
 				</div>
-				<h3 class="dashboard-card-title">${escapeHtml(vibe.label)}</h3>
-				<p class="dashboard-card-description">Open ${escapeHtml(vibe.label)}</p>
+				<h3 class="dashboard-card-title">${escapeHtml(vibe.name)}</h3>
+				<p class="dashboard-card-description">${escapeHtml(vibe.description)}</p>
 			</div>
 		</div>
 	`).join('');

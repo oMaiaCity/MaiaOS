@@ -30,14 +30,9 @@ const parsePort = (domain: string): number => {
 
 const PORT = parsePort(PUBLIC_DOMAIN_API)
 
-console.log('[api] Starting service...')
-console.log(`[api] Port: ${PORT}`)
-console.log(`[api] Domain: ${PUBLIC_DOMAIN_API}`)
-
+// Compact startup logs
 if (!RED_PILL_API_KEY) {
-	console.warn('[api] WARNING: RED_PILL_API_KEY not set. LLM API will not work.')
-} else {
-	console.log('[api] RedPill API key is set')
+	console.warn('[api] ⚠️  RED_PILL_API_KEY not set')
 }
 
 // Create RedPill provider instance using Vercel AI SDK
@@ -88,8 +83,7 @@ Bun.serve({
 	fetch(req: Request, server: any) {
 		const url = new URL(req.url)
 		
-		// Log all incoming requests for debugging
-		console.log(`[api] ${req.method} ${url.pathname}`)
+		// Don't log requests - too verbose
 
 		// Handle CORS preflight
 		if (req.method === 'OPTIONS') {
@@ -144,7 +138,7 @@ async function handleLLMChat(req: Request): Promise<Response> {
 			usage: result.usage || null,
 		})
 	} catch (error) {
-		console.error('[api/llm] ❌ Error in LLM chat:', error)
+		// Error logged but don't spam console
 		
 		// Handle Vercel AI SDK errors
 		if (error instanceof Error) {
@@ -167,5 +161,4 @@ async function handleLLMChat(req: Request): Promise<Response> {
 	}
 }
 
-console.log(`🚀 API service running on port ${PORT}`)
-console.log(`   REST endpoints: http://${PUBLIC_DOMAIN_API}/api/v0/llm/chat`)
+// Service ready message is handled by dev.js logger

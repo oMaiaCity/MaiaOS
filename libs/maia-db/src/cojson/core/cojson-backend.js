@@ -188,12 +188,18 @@ export class CoJSONBackend extends DBAdapter {
         ownerGroupId = coValueCore.id;
         ownerGroupCore = coValueCore;
         ownerGroupContent = content;
+      } else if (ruleset.type === 'ownedByGroup' && ruleset.group) {
+        // Method 2: For co-values owned by a group, extract owner from ruleset.group
+        // This is the "ultimate" owner group that controls access to this co-value
+        ownerGroupId = ruleset.group;
+        ownerGroupCore = this.getCoValue(ownerGroupId);
+        if (ownerGroupCore && this.isAvailable(ownerGroupCore)) {
+          ownerGroupContent = this.getCurrentContent(ownerGroupCore);
+        }
       } else {
-        // Method 2: For non-group CoValues, try to get owner from content
-        // RawCoValue might have a group property or we need to extract from ruleset
-        // Check if content has a group reference
+        // Method 3: Fallback - try to get owner from content.group (RawCoValue.group property)
+        // This is less reliable but may work for some legacy cases
         if (content && content.group) {
-          // Content has a group property (RawCoValue.group)
           const groupRef = content.group;
           ownerGroupId = typeof groupRef === 'string' ? groupRef : (groupRef.id || (groupRef.$jazz && groupRef.$jazz.id));
           
@@ -204,10 +210,7 @@ export class CoJSONBackend extends DBAdapter {
             }
           }
         } else {
-          // Method 3: Try to extract owner from ruleset
-          // Ruleset might have owner information encoded
-          // For now, if we can't determine owner, return null
-          // TODO: Implement ruleset owner extraction if needed
+          // No owner group found
           return null;
         }
       }
@@ -217,7 +220,14 @@ export class CoJSONBackend extends DBAdapter {
         return null;
       }
       
-      return groups.getGroupInfoFromGroup(ownerGroupContent);
+      // Get group info and include owner group ID
+      const groupInfo = groups.getGroupInfoFromGroup(ownerGroupContent);
+      if (groupInfo && ownerGroupId) {
+        // Ensure groupId is set (it should be, but make it explicit)
+        groupInfo.groupId = ownerGroupId;
+      }
+      
+      return groupInfo;
     } catch (error) {
       console.warn('[CoJSONBackend] Error getting group info:', error);
       return null;

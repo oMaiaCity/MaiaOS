@@ -589,7 +589,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     console.warn('[Seed] Idempotency check failed, proceeding with seeding:', e.message);
   }
   
-  console.log('🌱 Seeding account...');
+  // Seeding account data
   
   /**
    * Recursively remove 'id' fields from schema objects (AJV only accepts $id, not id)
@@ -1554,7 +1554,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   // No manual registration needed - hooks fire when schemas are created via CRUD API
   
   // CoJSON seeding complete
-  console.log('✅ Auto-seeding complete');
+  // Auto-seeding complete
 
   return {
     metaSchema: metaSchemaCoId,

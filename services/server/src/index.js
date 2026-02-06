@@ -27,9 +27,7 @@ const PORT = process.env.PORT || 4203
 // Default to local-sync.db for local development, use env var if set (e.g., '/data/sync.db' for Fly.io)
 const DB_PATH = process.env.DB_PATH || './local-sync.db'
 
-console.log('[server] Starting self-hosted sync server...')
-console.log(`[server] Port: ${PORT}`)
-console.log(`[server] Storage: PGlite at ${DB_PATH}`)
+// Compact startup - logs handled by dev.js
 
 // Initialize sync server (async)
 async function startServer() {
@@ -43,7 +41,7 @@ async function startServer() {
 			dbPath: DB_PATH 
 		})
 		
-		console.log('[server] Sync server initialized (PGlite persistence enabled)')
+		// Initialization complete - ready message handled by dev.js
 
 		Bun.serve({
 			hostname: '0.0.0.0',
@@ -65,18 +63,15 @@ async function startServer() {
 						return new Response('Expected WebSocket upgrade', { status: 426 })
 					}
 
-					console.log(`[server] WebSocket upgrade request from ${req.headers.get('origin') || 'unknown origin'}`)
-
 					const upgraded = server.upgrade(req, {
 						data: {},
 					})
 
-					if (!upgraded) {
-						console.error('[server] Failed to upgrade WebSocket connection')
-						return new Response('Failed to upgrade to WebSocket', { status: 500 })
-					}
+				if (!upgraded) {
+					// Error logged but don't spam console
+					return new Response('Failed to upgrade to WebSocket', { status: 500 })
+				}
 
-					console.log('[server] WebSocket upgrade successful')
 					return undefined
 				}
 
@@ -85,10 +80,9 @@ async function startServer() {
 			websocket: syncServerHandler,
 		})
 
-		console.log(`🚀 Server service running on port ${PORT}`)
-		console.log(`   WebSocket endpoint: ws://localhost:${PORT}/sync`)
+		// Service ready - message handled by dev.js logger
 	} catch (error) {
-		console.error('[server] Failed to initialize sync server:', error)
+		console.error('[server] ✗ Failed to initialize:', error.message)
 		process.exit(1)
 	}
 }

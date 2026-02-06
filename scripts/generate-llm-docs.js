@@ -105,8 +105,8 @@ function extractPackageName(dirName) {
 async function generatePackageDoc(packageDir, packageName) {
   const packageDocs = await readMarkdownFiles(packageDir);
   
-  if (packageDocs.length === 0) {
-    console.log(`⚠️  No docs found for ${packageName}, skipping...`);
+    if (packageDocs.length === 0) {
+    // Skip silently - no need to log
     return;
   }
   
@@ -124,15 +124,14 @@ async function generatePackageDoc(packageDir, packageName) {
   const packageLLM = await generateLLMDoc(packageName, sections);
   const outputFile = join(OUTPUT_AGENTS_DIR, `LLM_${packageName}.md`);
   await writeFile(outputFile, packageLLM, 'utf-8');
-  console.log(`✅ Generated LLM_${packageName}.md`);
+  // Individual file logs removed - only show summary at end
 }
 
 /**
  * Main generation function
  */
 async function generate() {
-  console.log('📝 Generating LLM documentation...');
-  
+  // Compact log - status handled by dev.js
   try {
     // Ensure agents directory exists
     await mkdir(OUTPUT_AGENTS_DIR, { recursive: true });
@@ -166,7 +165,7 @@ async function generate() {
       creatorLLM,
       'utf-8'
     );
-    console.log('✅ Generated LLM_Creators.md');
+    // Individual file logs removed - only show summary at end
     
     // Generate Developer LLM doc
     const developerSections = [
@@ -198,7 +197,7 @@ async function generate() {
       developerLLM,
       'utf-8'
     );
-    console.log('✅ Generated LLM_Developers.md');
+    // Individual file logs removed - only show summary at end
     
     // Generate package-specific docs
     const developersDir = join(DOCS_DIR, '03_developers');
@@ -212,10 +211,9 @@ async function generate() {
       }
     }
     
-    console.log('🎉 LLM documentation generated successfully!');
-    console.log(`📍 Output: ${OUTPUT_AGENTS_DIR}`);
+    // Success message handled by dev.js logger
   } catch (error) {
-    console.error('❌ Error generating LLM docs:', error);
+    console.error('[docs] ✗ Error:', error.message);
     throw error;
   }
 }
@@ -224,8 +222,7 @@ async function generate() {
  * Watch mode
  */
 async function watchMode() {
-  console.log('👀 Watching for documentation changes...');
-  
+  // Watch status handled by dev.js
   // Initial generation
   await generate();
   
@@ -253,7 +250,7 @@ async function watchMode() {
     try {
       watch(dir, { recursive: true }, async (eventType, filename) => {
         if (filename && filename.endsWith('.md')) {
-          console.log(`\n🔄 Detected change: ${filename}`);
+          // Regenerate silently
           await generate();
         }
       });
@@ -262,7 +259,7 @@ async function watchMode() {
     }
   }
   
-  console.log('✨ Watch mode active. Press Ctrl+C to stop.\n');
+  // Watch mode active - status handled by dev.js
 }
 
 // CLI

@@ -10046,7 +10046,7 @@ class SessionLogAdapter {
   }
 }
 async function schemaMigration(account, node, creationProps) {
-  const accountName = creationProps?.name || "maia";
+  const PROFILE_NAME = "passkey";
   let profileId = account.get("profile");
   let profile;
   let universalGroup;
@@ -10056,7 +10056,6 @@ async function schemaMigration(account, node, creationProps) {
       const profileContent = node.getCoValue(profileId)?.getCurrentContent?.();
       if (profileContent && typeof profileContent.get === "function") {
         profile = profileContent;
-        console.log("   ℹ️  Profile already exists:", profileId);
         const existingGroupId = profile.get("group");
         if (existingGroupId) {
           const loadedGroup = node.getCoValue(existingGroupId);
@@ -10064,7 +10063,6 @@ async function schemaMigration(account, node, creationProps) {
             const groupContent = loadedGroup.getCurrentContent?.();
             if (groupContent && typeof groupContent.createMap === "function") {
               universalGroup = groupContent;
-              console.log("   ℹ️  Universal group already exists (from profile):", existingGroupId);
             }
           }
         }
@@ -10076,7 +10074,8 @@ async function schemaMigration(account, node, creationProps) {
   }
   if (!profile) {
     profile = account.createMap({
-      name: accountName,
+      name: PROFILE_NAME,
+      // Hardcoded: "passkey" (represents EOA identity)
       group: universalGroup.id
       // Reference to universal group (single source of truth)
     }, { $schema: "ProfileSchema" });
@@ -10084,6 +10083,11 @@ async function schemaMigration(account, node, creationProps) {
   } else {
     if (!profile.get("group")) {
       profile.set("group", universalGroup.id);
+    }
+    const currentProfileName = profile.get("name");
+    if (currentProfileName !== PROFILE_NAME) {
+      profile.set("name", PROFILE_NAME);
+      console.log(`   🔄 Updated profile name from "${currentProfileName}" to "${PROFILE_NAME}"`);
     }
   }
 }
@@ -10591,13 +10595,33 @@ function extractCoValueDataFlat(backend, coValueCore, schemaHint = null) {
       }
       result[key] = value;
     }
+    try {
+      if (typeof backend.getGroupInfo === "function") {
+        const groupInfo = backend.getGroupInfo(coValueCore);
+        if (groupInfo) {
+          result.groupInfo = groupInfo;
+        }
+      }
+    } catch (e) {
+      console.warn("[extractCoValueDataFlat] Failed to get group info:", e);
+    }
     return result;
   }
-  return {
+  const fallbackResult = {
     id: coValueCore.id,
     type: rawType,
     $schema: schema
   };
+  try {
+    if (typeof backend.getGroupInfo === "function") {
+      const groupInfo = backend.getGroupInfo(coValueCore);
+      if (groupInfo) {
+        fallbackResult.groupInfo = groupInfo;
+      }
+    }
+  } catch (e) {
+  }
+  return fallbackResult;
 }
 async function resolveCoValueReferences(backend, data2, options = {}, visited = /* @__PURE__ */ new Set(), maxDepth = 10, currentDepth = 0) {
   const { fields = null, schemas = null, timeoutMs = 2e3 } = options;
@@ -15911,7 +15935,6 @@ async function seed(account, node, configs, schemas, data2, existingBackend = nu
   } catch (e) {
     console.warn("[Seed] Idempotency check failed, proceeding with seeding:", e.message);
   }
-  console.log("🌱 Seeding account...");
   function removeIdFields2(obj) {
     if (obj === null || obj === void 0) {
       return obj;
@@ -16533,7 +16556,6 @@ ${verificationErrors.join("\n")}`;
   }
   const seededData = await seedData(account, node, universalGroup, data2, coIdRegistry);
   await storeRegistry(account, node, universalGroup, coIdRegistry, schemaCoIdMap);
-  console.log("✅ Auto-seeding complete");
   return {
     metaSchema: metaSchemaCoId,
     schemas: seededSchemas,
@@ -16875,7 +16897,6 @@ async function createAccountWithSecret({ agentSecret, name = "Maia", peers = [],
       schemas,
       data: mergedConfigs.data || {}
     });
-    console.log("✅ Auto-seeding complete");
   } catch (error) {
     console.error("[createAccountWithSecret] Auto-seeding failed (non-blocking):", error);
   }
@@ -17401,23 +17422,62 @@ async function getDefaultGroup(backend) {
 }
 function extractAccountMembers(groupContent) {
   const accountMembers = [];
+  const seenMembers = /* @__PURE__ */ new Set();
   try {
-    if (groupContent.members && typeof groupContent.members[Symbol.iterator] === "function") {
+    if (typeof groupContent.getMemberKeys === "function") {
+      const memberKeys = groupContent.getMemberKeys();
+      for (const memberId of memberKeys) {
+        if (seenMembers.has(memberId)) continue;
+        seenMembers.add(memberId);
+        let role = null;
+        if (typeof groupContent.roleOf === "function") {
+          try {
+            role = groupContent.roleOf(memberId);
+          } catch (e) {
+            try {
+              const directRole = groupContent.get(memberId);
+              if (directRole && directRole !== "revoked") {
+                role = directRole;
+              }
+            } catch (e2) {
+            }
+          }
+        } else if (typeof groupContent.get === "function") {
+          const directRole = groupContent.get(memberId);
+          if (directRole && directRole !== "revoked") {
+            role = directRole;
+          }
+        }
+        if (role && role !== "revoked") {
+          const directRole = groupContent.get ? groupContent.get(memberId) : null;
+          const isInherited = directRole !== role && directRole !== "revoked";
+          accountMembers.push({
+            id: memberId,
+            role,
+            isInherited: isInherited || false
+          });
+        }
+      }
+    }
+    if (accountMembers.length === 0 && groupContent.members && typeof groupContent.members[Symbol.iterator] === "function") {
       for (const member of groupContent.members) {
         if (member && member.account) {
           const accountRef = member.account;
           const memberId = typeof accountRef === "string" ? accountRef : accountRef.id || accountRef.$jazz && accountRef.$jazz.id || "unknown";
+          if (seenMembers.has(memberId)) continue;
+          seenMembers.add(memberId);
           let role = null;
-          if (typeof groupContent.getRoleOf === "function") {
+          if (typeof groupContent.roleOf === "function") {
             try {
-              role = groupContent.getRoleOf(memberId);
+              role = groupContent.roleOf(memberId);
             } catch (e) {
             }
           }
           if (role && role !== "revoked") {
             accountMembers.push({
               id: memberId,
-              role: role || "unknown"
+              role,
+              isInherited: false
             });
           }
         }
@@ -17468,16 +17528,34 @@ function extractGroupMembers(groupContent) {
       if (parentGroups && typeof parentGroups[Symbol.iterator] === "function") {
         for (const parentGroup of parentGroups) {
           const parentId = typeof parentGroup === "string" ? parentGroup : parentGroup.id || parentGroup.$jazz && parentGroup.$jazz.id || "unknown";
-          let role = null;
-          if (typeof groupContent.getRoleOf === "function") {
+          let delegationRole = null;
+          const parentKey = `parent_${parentId}`;
+          if (typeof groupContent.get === "function") {
             try {
-              role = groupContent.getRoleOf(parentId);
+              delegationRole = groupContent.get(parentKey);
             } catch (e) {
             }
           }
+          let roleDescription = "";
+          if (delegationRole === "extend") {
+            roleDescription = "Inherits roles from parent group";
+          } else if (delegationRole === "reader") {
+            roleDescription = "All parent members get reader access";
+          } else if (delegationRole === "writer") {
+            roleDescription = "All parent members get writer access";
+          } else if (delegationRole === "manager") {
+            roleDescription = "All parent members get manager access";
+          } else if (delegationRole === "admin") {
+            roleDescription = "All parent members get admin access";
+          } else if (delegationRole === "revoked") {
+            roleDescription = "Delegation revoked";
+          } else {
+            roleDescription = "Delegated access";
+          }
           groupMembers.push({
             id: parentId,
-            role: role || "admin"
+            role: delegationRole || "extend",
+            roleDescription
           });
         }
       }
@@ -17849,6 +17927,12 @@ class CoJSONBackend extends DBAdapter {
         ownerGroupId = coValueCore.id;
         ownerGroupCore = coValueCore;
         ownerGroupContent = content;
+      } else if (ruleset.type === "ownedByGroup" && ruleset.group) {
+        ownerGroupId = ruleset.group;
+        ownerGroupCore = this.getCoValue(ownerGroupId);
+        if (ownerGroupCore && this.isAvailable(ownerGroupCore)) {
+          ownerGroupContent = this.getCurrentContent(ownerGroupCore);
+        }
       } else {
         if (content && content.group) {
           const groupRef = content.group;
@@ -17866,7 +17950,11 @@ class CoJSONBackend extends DBAdapter {
       if (!ownerGroupContent || typeof ownerGroupContent.addMember !== "function") {
         return null;
       }
-      return getGroupInfoFromGroup(ownerGroupContent);
+      const groupInfo = getGroupInfoFromGroup(ownerGroupContent);
+      if (groupInfo && ownerGroupId) {
+        groupInfo.groupId = ownerGroupId;
+      }
+      return groupInfo;
     } catch (error) {
       console.warn("[CoJSONBackend] Error getting group info:", error);
       return null;
@@ -29837,8 +29925,8 @@ const ajv$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePropert
 const todosVibe = {
   "$schema": "@schema/vibe",
   "$id": "@vibe/todos",
-  "name": "Todo List",
-  "description": "A complete todo list application with state machines and AI-compatible tools. Showcases MaiaOS actor system, message passing, and declarative UI.",
+  "name": "Todos",
+  "description": "Complete todo list with state machines and AI tools",
   "actor": "@todos/actor/agent"
 };
 const brandStyle$2 = {
@@ -31339,7 +31427,7 @@ const myDataVibe = {
   "$schema": "@schema/vibe",
   "$id": "@vibe/my-data",
   "name": "MaiaDB",
-  "description": "A database viewer interface with navigation, table view, and detail panel. Demonstrates mocked data and options.map transformations.",
+  "description": "Database viewer with navigation and detail panels",
   "actor": "@my-data/actor/agent"
 };
 const brandStyle$1 = {
@@ -32350,7 +32438,7 @@ const maiaAgentVibe = {
   "$schema": "@schema/vibe",
   "$id": "@vibe/maia",
   "name": "Maia Agent",
-  "description": "CTO-level AI assistant that understands the entire MaiaOS codebase, architecture, and all packages. Learns alongside coding sessions.",
+  "description": "CTO-level AI assistant for MaiaOS codebase",
   "actor": "@maia/actor/agent"
 };
 const brandStyle = {

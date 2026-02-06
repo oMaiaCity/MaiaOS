@@ -9,6 +9,8 @@ import { spawn } from 'node:child_process'
 import { execSync } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { existsSync } from 'node:fs'
+import { createLogger, bootHeader, bootFooter, buildProgress, buildComplete } from './logger.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')
@@ -19,19 +21,207 @@ let serverProcess = null
 let docsWatcherProcess = null
 let assetSyncProcess = null
 let faviconProcess = null
+let kernelWatchProcess = null
+let vibesWatchProcess = null
 
-function startMaiaCity() {
-	console.log('[maia-city] Building kernel and vibes bundles first (dogfooding)...\n')
+// Track service readiness
+const serviceStatus = {
+	favicons: false,
+	assets: false,
+	docs: false,
+	api: false,
+	server: false,
+	'maia-city': false,
+}
+
+// Filter verbose output from child processes
+function shouldFilterLine(line) {
+	if (!line) return true
 	
-	// Build both bundles before starting maia-city (dogfooding!)
+	const trimmed = line.trim()
+	if (trimmed === '') return true
+	
+	// Filter vite build verbose output
+	if (trimmed.includes('modules transformed') || 
+	    trimmed.includes('built in') ||
+	    trimmed.includes('dist/') ||
+	    trimmed.includes('│') ||
+	    trimmed === '└─ Running...' ||
+	    trimmed.includes('$ bun') ||
+	    trimmed.includes('$ vite') ||
+	    trimmed.includes('$ cd') ||
+	    (trimmed.includes('vite v') && !trimmed.includes('Local:')) ||
+	    (trimmed.includes('✓') && trimmed.includes('modules')) ||
+	    (trimmed.includes('ready in') && !trimmed.includes('Local:'))) {
+		return true
+	}
+	
+	return false
+}
+
+// Process output line by line
+function processOutput(service, data, isError = false) {
+	const lines = data.toString().split('\n')
+	for (const line of lines) {
+		const trimmed = line.trim()
+		const logger = createLogger(service)
+		
+		// Check for Vite "Local:" line FIRST (before filtering) - this contains the URL
+		if ((trimmed.includes('Local:') || trimmed.includes('➜')) && trimmed.includes('http://')) {
+			// Match http:// followed by hostname:port (allow trailing slash)
+			const urlMatch = trimmed.match(/http:\/\/[^\s]+/)
+			if (urlMatch && !serviceStatus[service]) {
+				// Remove trailing slash if present
+				const url = urlMatch[0].replace(/\/$/, '')
+				logger.success(`Running on ${url}`)
+				serviceStatus[service] = true
+				checkAllReady()
+				continue
+			}
+		}
+		
+		// Skip filtered lines after checking for Vite URL
+		if (shouldFilterLine(line)) continue
+		
+		// Extract meaningful messages
+		if (trimmed.includes('ready') || trimmed.includes('Ready') || trimmed.includes('VITE')) {
+			// Generic ready message
+			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
+			if (portMatch && !serviceStatus[service]) {
+				const port = portMatch[1]
+				logger.success(`Ready on port ${port}`)
+				serviceStatus[service] = true
+				checkAllReady()
+				continue
+			}
+		}
+		
+		// Server/API ready messages
+		if (trimmed.includes('running on port') || trimmed.includes('Server service running')) {
+			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
+			if (portMatch && !serviceStatus[service]) {
+				const port = portMatch[1]
+				logger.success(`Ready on port ${port}`)
+				serviceStatus[service] = true
+				checkAllReady()
+				continue
+			}
+		}
+		
+		// Error messages
+		if (isError || trimmed.includes('error') || trimmed.includes('Error') || trimmed.includes('Failed')) {
+			if (!trimmed.includes('stack') && !trimmed.includes('at ')) {
+				logger.error(trimmed)
+			}
+			continue
+		}
+		
+		// Skip remaining verbose output
+		if (trimmed.includes('$') || trimmed.includes('│') || trimmed.includes('└─')) {
+			continue
+		}
+	}
+}
+
+function checkAllReady() {
+	// Main services that need to be ready
+	const mainServices = ['api', 'server', 'maia-city']
+	const mainReady = mainServices.every(service => serviceStatus[service] === true)
+	
+	// Helper services (nice to have but not critical)
+	const helperServices = ['favicons', 'assets', 'docs']
+	const helpersReady = helperServices.every(service => serviceStatus[service] === true)
+	
+	// Show footer when main services are ready (helpers are optional)
+	if (mainReady && !serviceStatus._footerShown) {
+		serviceStatus._footerShown = true
+		setTimeout(() => bootFooter(), 500)
+	}
+}
+
+async function startMaiaCity() {
+	const logger = createLogger('maia-city')
+	
+	// Build kernel and vibes bundles before starting maia-city (maia-city depends on them)
+	// Each package handles its own build via root-level scripts
 	try {
-		execSync('bun run bundles:build', {
+		// Build kernel first (vibes depends on it)
+		buildProgress('kernel', 'Building...')
+		execSync('bun run kernel:build', {
 			cwd: rootDir,
-			stdio: 'inherit',
+			stdio: 'pipe', // Capture output to filter
 		})
-		console.log('[maia-city] ✅ Bundles built!\n')
+		buildComplete('kernel')
+		
+		// Then build vibes (depends on kernel)
+		buildProgress('vibes', 'Building...')
+		execSync('bun run vibes:build', {
+			cwd: rootDir,
+			stdio: 'pipe', // Capture output to filter
+		})
+		buildComplete('vibes')
+		
+		// Verify bundle files exist before starting maia-city
+		const kernelBundlePath = resolve(rootDir, 'libs/maia-kernel/dist/maia-kernel.es.js')
+		const vibesBundlePath = resolve(rootDir, 'libs/maia-vibes/dist/maia-vibes.es.js')
+		
+		// Wait for files to be fully written (with retries)
+		let retries = 10
+		while (retries > 0 && (!existsSync(kernelBundlePath) || !existsSync(vibesBundlePath))) {
+			await new Promise(resolve => setTimeout(resolve, 100))
+			retries--
+		}
+		
+		if (!existsSync(kernelBundlePath)) {
+			logger.error(`Kernel bundle not found at ${kernelBundlePath}`)
+			return
+		}
+		if (!existsSync(vibesBundlePath)) {
+			logger.error(`Vibes bundle not found at ${vibesBundlePath}`)
+			return
+		}
+		
+		// Additional small delay to ensure files are fully flushed to disk
+		await new Promise(resolve => setTimeout(resolve, 200))
+		
+		// Start watch mode for both bundles (hot reload)
+		const kernelLogger = createLogger('kernel')
+		kernelLogger.status('Watching for changes...')
+		kernelWatchProcess = spawn('bun', ['run', 'kernel:build:watch'], {
+			cwd: rootDir,
+			stdio: ['ignore', 'pipe', 'pipe'],
+			shell: false,
+			env: { ...process.env },
+		})
+		
+		const vibesLogger = createLogger('vibes')
+		vibesLogger.status('Watching for changes...')
+		vibesWatchProcess = spawn('bun', ['run', 'vibes:build:watch'], {
+			cwd: rootDir,
+			stdio: ['ignore', 'pipe', 'pipe'],
+			shell: false,
+			env: { ...process.env },
+		})
+		
+		// Suppress watch output - bundles rebuild silently
+		kernelWatchProcess.stdout.on('data', () => {
+			// Silent rebuilds - no logs needed
+		})
+		
+		vibesWatchProcess.stdout.on('data', () => {
+			// Silent rebuilds - no logs needed
+		})
+		
+		kernelWatchProcess.on('error', () => {
+			// Non-fatal - watch mode is optional
+		})
+		
+		vibesWatchProcess.on('error', () => {
+			// Non-fatal - watch mode is optional
+		})
 	} catch (error) {
-		console.warn('[maia-city] ⚠️  Bundle build failed, continuing anyway...\n')
+		logger.warn('Dependencies build failed, continuing anyway...')
+		return // Don't start maia-city if bundles failed
 	}
 	
 	// Check for port conflicts and kill existing maia-city processes
@@ -65,13 +255,21 @@ function startMaiaCity() {
 		// Port is free or check failed - continue
 	}
 	
-	console.log('[maia-city] Starting on port 4200...\n')
+	logger.status('Starting on port 4200...')
 
 	maiaCityProcess = spawn('bun', ['--filter', 'maia-city', 'dev'], {
 		cwd: rootDir,
-		stdio: 'inherit',
+		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
 		env: { ...process.env },
+	})
+	
+	maiaCityProcess.stdout.on('data', (data) => {
+		processOutput('maia-city', data)
+	})
+	
+	maiaCityProcess.stderr.on('data', (data) => {
+		processOutput('maia-city', data, true)
 	})
 
 	maiaCityProcess.on('error', (_error) => {
@@ -86,7 +284,8 @@ function startMaiaCity() {
 }
 
 function startApi() {
-	console.log('[api] Starting API service...\n')
+	const logger = createLogger('api')
+	logger.status('Starting...')
 	
 	// Check for port conflicts and kill existing API processes
 	try {
@@ -95,24 +294,19 @@ function startApi() {
 			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, { encoding: 'utf-8' }).trim()
 			if (processInfo && (processInfo.includes('bun') || processInfo.includes('api') || processInfo.includes('src/index.ts'))) {
 				// It's a bun/api process - kill it automatically
-				console.log(`[api] Killing existing process ${portCheck} on port 4201...`)
 				try {
 					execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
-					// Wait a moment for the port to be released
 					setTimeout(() => {}, 500)
 				} catch (e) {
-					// If kill fails, try force kill
 					try {
 						execSync(`kill -9 ${portCheck} 2>/dev/null`, { timeout: 2000 })
 						setTimeout(() => {}, 500)
 					} catch (e2) {
-						console.warn(`[api] ⚠️  Could not kill process ${portCheck}, port may still be in use`)
+						logger.warn(`Could not kill process ${portCheck}`)
 					}
 				}
 			} else if (processInfo) {
-				// It's a different process - warn user
-				console.warn(`[api] ⚠️  WARNING: Port 4201 is already in use by: ${processInfo}`)
-				console.warn(`[api] Please kill process ${portCheck} before starting: kill ${portCheck}`)
+				logger.warn(`Port 4201 in use by: ${processInfo}`)
 			}
 		}
 	} catch (e) {
@@ -121,9 +315,17 @@ function startApi() {
 
 	apiProcess = spawn('bun', ['--env-file=.env', '--filter', 'api', 'dev'], {
 		cwd: rootDir,
-		stdio: 'inherit',
+		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
 		env: { ...process.env },
+	})
+	
+	apiProcess.stdout.on('data', (data) => {
+		processOutput('api', data)
+	})
+	
+	apiProcess.stderr.on('data', (data) => {
+		processOutput('api', data, true)
 	})
 
 	apiProcess.on('error', (_error) => {
@@ -138,7 +340,8 @@ function startApi() {
 }
 
 function startServer() {
-	console.log('[server] Starting server service...\n')
+	const logger = createLogger('server')
+	logger.status('Starting...')
 	
 	// Check for port conflicts and kill existing server processes
 	try {
@@ -147,7 +350,6 @@ function startServer() {
 			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, { encoding: 'utf-8' }).trim()
 			if (processInfo && (processInfo.includes('bun') || processInfo.includes('server') || processInfo.includes('src/index.ts'))) {
 				// It's a bun/server process - kill it automatically
-				console.log(`[server] Killing existing process ${portCheck} on port 4203...`)
 				try {
 					execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
 					setTimeout(() => {}, 500)
@@ -156,12 +358,11 @@ function startServer() {
 						execSync(`kill -9 ${portCheck} 2>/dev/null`, { timeout: 2000 })
 						setTimeout(() => {}, 500)
 					} catch (e2) {
-						console.warn(`[server] ⚠️  Could not kill process ${portCheck}, port may still be in use`)
+						logger.warn(`Could not kill process ${portCheck}`)
 					}
 				}
 			} else if (processInfo) {
-				console.warn(`[server] ⚠️  WARNING: Port 4203 is already in use by: ${processInfo}`)
-				console.warn(`[server] Please kill process ${portCheck} before starting: kill ${portCheck}`)
+				logger.warn(`Port 4203 in use by: ${processInfo}`)
 			}
 		}
 	} catch (e) {
@@ -170,9 +371,17 @@ function startServer() {
 
 	serverProcess = spawn('bun', ['--env-file=.env', '--filter', 'server', 'dev'], {
 		cwd: rootDir,
-		stdio: 'inherit',
+		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
 		env: { ...process.env },
+	})
+	
+	serverProcess.stdout.on('data', (data) => {
+		processOutput('server', data)
+	})
+	
+	serverProcess.stderr.on('data', (data) => {
+		processOutput('server', data, true)
 	})
 
 	serverProcess.on('error', (_error) => {
@@ -187,77 +396,137 @@ function startServer() {
 }
 
 function startDocsWatcher() {
-	console.log('[docs] Starting LLM docs watcher...\n')
+	const logger = createLogger('docs')
+	logger.status('Starting watcher...')
 
 	docsWatcherProcess = spawn('bun', ['scripts/generate-llm-docs.js', '--watch'], {
 		cwd: rootDir,
-		stdio: 'inherit',
+		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
 		env: { ...process.env },
 	})
+	
+	docsWatcherProcess.stdout.on('data', (data) => {
+		const output = data.toString()
+		if (output.includes('generated successfully') || output.includes('LLM documentation generated')) {
+			if (!serviceStatus.docs) {
+				logger.success('Docs generated')
+				serviceStatus.docs = true
+				checkAllReady()
+			}
+		} else if (output.includes('Watching') && !serviceStatus.docs) {
+			logger.status('Watching for changes...')
+			// Mark as ready since watcher is running
+			serviceStatus.docs = true
+			checkAllReady()
+		} else if (!shouldFilterLine(output)) {
+			processOutput('docs', data)
+		}
+	})
+	
+	docsWatcherProcess.stderr.on('data', (data) => {
+		processOutput('docs', data, true)
+	})
 
 	docsWatcherProcess.on('error', (_error) => {
-		// Non-fatal - docs watcher is optional
-		console.warn('[docs] Failed to start docs watcher')
+		logger.warn('Failed to start')
 	})
 
 	docsWatcherProcess.on('exit', (code) => {
 		if (code !== 0 && code !== null) {
-			// Non-fatal
-			console.warn('[docs] Docs watcher exited with code', code)
+			logger.warn(`Exited with code ${code}`)
 		}
 	})
 }
 
 function generateFavicons() {
-	console.log('[favicons] Generating favicons from logo...\n')
-
+	const logger = createLogger('favicons')
+	logger.status('Generating...')
+	
 	faviconProcess = spawn('bun', ['scripts/generate-favicons.js'], {
 		cwd: rootDir,
-		stdio: 'inherit',
+		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
 		env: { ...process.env },
 	})
+	
+	faviconProcess.stdout.on('data', (data) => {
+		const output = data.toString()
+		if (output.includes('generated successfully')) {
+			logger.success('Generated')
+			serviceStatus.favicons = true
+			checkAllReady()
+		}
+	})
+	
+	faviconProcess.stderr.on('data', (data) => {
+		const output = data.toString()
+		if (output.includes('Failed')) {
+			logger.error('Generation failed')
+		}
+	})
 
 	faviconProcess.on('error', (_error) => {
-		// Non-fatal - favicon generation is optional
-		console.warn('[favicons] Failed to generate favicons')
+		logger.warn('Failed to start')
 	})
 
 	faviconProcess.on('exit', (code) => {
-		if (code !== 0 && code !== null) {
-			// Non-fatal
-			console.warn('[favicons] Favicon generation exited with code', code)
+		if (code === 0) {
+			serviceStatus.favicons = true
+			checkAllReady()
 		}
 	})
 }
 
 function startAssetSync() {
-	console.log('[assets] Starting brand asset sync...\n')
+	const logger = createLogger('assets')
+	logger.status('Syncing...')
 
 	assetSyncProcess = spawn('node', ['scripts/sync-assets.js'], {
 		cwd: rootDir,
-		stdio: 'inherit',
+		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
 		env: { ...process.env },
 	})
+	
+	assetSyncProcess.stdout.on('data', (data) => {
+		const output = data.toString()
+		if (output.includes('synced') || output.includes('All brand assets synced')) {
+			if (!serviceStatus.assets) {
+				logger.success('Synced')
+				serviceStatus.assets = true
+				checkAllReady()
+			}
+		} else if (output.includes('Watching') && !serviceStatus.assets) {
+			logger.status('Watching for changes...')
+			// Mark as ready since watcher is running
+			serviceStatus.assets = true
+			checkAllReady()
+		}
+	})
+	
+	assetSyncProcess.stderr.on('data', (data) => {
+		processOutput('assets', data, true)
+	})
 
 	assetSyncProcess.on('error', (_error) => {
-		// Non-fatal - asset sync is optional
-		console.warn('[assets] Failed to start asset sync')
+		logger.warn('Failed to start')
 	})
 
 	assetSyncProcess.on('exit', (code) => {
-		if (code !== 0 && code !== null) {
-			// Non-fatal
-			console.warn('[assets] Asset sync exited with code', code)
+		if (code === 0) {
+			serviceStatus.assets = true
+			checkAllReady()
 		}
 	})
 }
 
 function setupSignalHandlers() {
+	const logger = createLogger('dev')
+	
 	process.on('SIGINT', () => {
-		console.log('\n[Dev] Shutting down...')
+		console.log()
+		logger.status('Shutting down...')
 		if (faviconProcess && !faviconProcess.killed) {
 			faviconProcess.kill('SIGTERM')
 		}
@@ -266,6 +535,12 @@ function setupSignalHandlers() {
 		}
 		if (docsWatcherProcess && !docsWatcherProcess.killed) {
 			docsWatcherProcess.kill('SIGTERM')
+		}
+		if (kernelWatchProcess && !kernelWatchProcess.killed) {
+			kernelWatchProcess.kill('SIGTERM')
+		}
+		if (vibesWatchProcess && !vibesWatchProcess.killed) {
+			vibesWatchProcess.kill('SIGTERM')
 		}
 		if (serverProcess && !serverProcess.killed) {
 			serverProcess.kill('SIGTERM')
@@ -280,7 +555,8 @@ function setupSignalHandlers() {
 	})
 
 	process.on('SIGTERM', () => {
-		console.log('\n[Dev] Shutting down...')
+		console.log()
+		logger.status('Shutting down...')
 		if (faviconProcess && !faviconProcess.killed) {
 			faviconProcess.kill('SIGTERM')
 		}
@@ -289,6 +565,12 @@ function setupSignalHandlers() {
 		}
 		if (docsWatcherProcess && !docsWatcherProcess.killed) {
 			docsWatcherProcess.kill('SIGTERM')
+		}
+		if (kernelWatchProcess && !kernelWatchProcess.killed) {
+			kernelWatchProcess.kill('SIGTERM')
+		}
+		if (vibesWatchProcess && !vibesWatchProcess.killed) {
+			vibesWatchProcess.kill('SIGTERM')
 		}
 		if (serverProcess && !serverProcess.killed) {
 			serverProcess.kill('SIGTERM')
@@ -303,22 +585,20 @@ function setupSignalHandlers() {
 	})
 }
 
-function main() {
-	console.log('[Dev] Starting MaiaOS services...\n')
-	console.log('Press Ctrl+C to stop\n')
-
+async function main() {
+	bootHeader()
 	setupSignalHandlers()
 
 	// Generate favicons first (runs once, then exits)
 	generateFavicons()
 	
 	// Wait a bit for favicon generation to start, then start other services
-	setTimeout(() => {
+	setTimeout(async () => {
 		startAssetSync()
 		startDocsWatcher()
 		startApi()
 		startServer()
-		startMaiaCity()
+		await startMaiaCity()
 	}, 1000)
 
 	process.stdin.resume()

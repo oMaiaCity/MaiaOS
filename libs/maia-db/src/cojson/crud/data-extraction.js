@@ -365,6 +365,7 @@ export function extractCoValueDataFlat(backend, coValueCore, schemaHint = null) 
     const keys = content.keys && typeof content.keys === 'function' 
       ? content.keys() 
       : Object.keys(content);
+    
     for (const key of keys) {
       let value = content.get(key);
       
@@ -449,15 +450,44 @@ export function extractCoValueDataFlat(backend, coValueCore, schemaHint = null) 
       }
       result[key] = value;
     }
+    
+    // Add group info for ownership and access display
+    // This shows who owns the co-value and who has access to it
+    try {
+      if (typeof backend.getGroupInfo === 'function') {
+        const groupInfo = backend.getGroupInfo(coValueCore);
+        if (groupInfo) {
+          result.groupInfo = groupInfo;
+        }
+      }
+    } catch (e) {
+      // Silently ignore errors - groupInfo is optional metadata
+      console.warn('[extractCoValueDataFlat] Failed to get group info:', e);
+    }
+    
     return result;
   }
   
   // Fallback
-  return { 
+  const fallbackResult = { 
     id: coValueCore.id,
     type: rawType,
     $schema: schema
   };
+  
+  // Try to add group info even for fallback cases
+  try {
+    if (typeof backend.getGroupInfo === 'function') {
+      const groupInfo = backend.getGroupInfo(coValueCore);
+      if (groupInfo) {
+        fallbackResult.groupInfo = groupInfo;
+      }
+    }
+  } catch (e) {
+    // Silently ignore errors
+  }
+  
+  return fallbackResult;
 }
 
 /**

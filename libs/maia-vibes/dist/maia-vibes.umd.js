@@ -5,8 +5,8 @@
   const todosVibe = {
     "$schema": "@schema/vibe",
     "$id": "@vibe/todos",
-    "name": "Todo List",
-    "description": "A complete todo list application with state machines and AI-compatible tools. Showcases MaiaOS actor system, message passing, and declarative UI.",
+    "name": "Todos",
+    "description": "Complete todo list with state machines and AI tools",
     "actor": "@todos/actor/agent"
   };
   const brandStyle$2 = {
@@ -1551,7 +1551,7 @@
     "$schema": "@schema/vibe",
     "$id": "@vibe/my-data",
     "name": "MaiaDB",
-    "description": "A database viewer interface with navigation, table view, and detail panel. Demonstrates mocked data and options.map transformations.",
+    "description": "Database viewer with navigation and detail panels",
     "actor": "@my-data/actor/agent"
   };
   const brandStyle$1 = {
@@ -2597,7 +2597,7 @@
     "$schema": "@schema/vibe",
     "$id": "@vibe/maia",
     "name": "Maia Agent",
-    "description": "CTO-level AI assistant that understands the entire MaiaOS codebase, architecture, and all packages. Learns alongside coding sessions.",
+    "description": "CTO-level AI assistant for MaiaOS codebase",
     "actor": "@maia/actor/agent"
   };
   const brandStyle = {

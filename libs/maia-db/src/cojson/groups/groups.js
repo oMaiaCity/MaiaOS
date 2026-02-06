@@ -128,14 +128,63 @@ export async function getDefaultGroup(backend) {
 }
 
 /**
- * Extract account members from a group
+ * Extract account members from a group with their effective roles
+ * Uses roleOf() to get effective roles including inherited roles from parent groups
  * @param {RawGroup} groupContent - RawGroup instance
- * @returns {Array<{id: string, role: string}>} Array of account members
+ * @returns {Array<{id: string, role: string, isInherited?: boolean}>} Array of account members with effective roles
  */
 export function extractAccountMembers(groupContent) {
   const accountMembers = [];
+  const seenMembers = new Set();
+  
   try {
-    if (groupContent.members && typeof groupContent.members[Symbol.iterator] === 'function') {
+    // Method 1: Get direct members using getMemberKeys() (more reliable)
+    if (typeof groupContent.getMemberKeys === 'function') {
+      const memberKeys = groupContent.getMemberKeys();
+      for (const memberId of memberKeys) {
+        if (seenMembers.has(memberId)) continue;
+        seenMembers.add(memberId);
+        
+        // Get effective role using roleOf() - this includes inherited roles from parent groups
+        let role = null;
+        if (typeof groupContent.roleOf === 'function') {
+          try {
+            role = groupContent.roleOf(memberId);
+          } catch (e) {
+            // Fallback to direct get
+            try {
+              const directRole = groupContent.get(memberId);
+              if (directRole && directRole !== 'revoked') {
+                role = directRole;
+              }
+            } catch (e2) {
+              // Ignore
+            }
+          }
+        } else if (typeof groupContent.get === 'function') {
+          // Fallback: use direct get if roleOf not available
+          const directRole = groupContent.get(memberId);
+          if (directRole && directRole !== 'revoked') {
+            role = directRole;
+          }
+        }
+        
+        if (role && role !== 'revoked') {
+          // Check if this is a direct role or inherited
+          const directRole = groupContent.get ? groupContent.get(memberId) : null;
+          const isInherited = directRole !== role && directRole !== 'revoked';
+          
+          accountMembers.push({
+            id: memberId,
+            role: role,
+            isInherited: isInherited || false
+          });
+        }
+      }
+    }
+    
+    // Method 2: Fallback - try members iterator (legacy support)
+    if (accountMembers.length === 0 && groupContent.members && typeof groupContent.members[Symbol.iterator] === 'function') {
       for (const member of groupContent.members) {
         if (member && member.account) {
           const accountRef = member.account;
@@ -143,10 +192,13 @@ export function extractAccountMembers(groupContent) {
             ? accountRef 
             : (accountRef.id || (accountRef.$jazz && accountRef.$jazz.id) || 'unknown');
           
+          if (seenMembers.has(memberId)) continue;
+          seenMembers.add(memberId);
+          
           let role = null;
-          if (typeof groupContent.getRoleOf === 'function') {
+          if (typeof groupContent.roleOf === 'function') {
             try {
-              role = groupContent.getRoleOf(memberId);
+              role = groupContent.roleOf(memberId);
             } catch (e) {
               // Ignore
             }
@@ -155,7 +207,8 @@ export function extractAccountMembers(groupContent) {
           if (role && role !== 'revoked') {
             accountMembers.push({
               id: memberId,
-              role: role || 'unknown'
+              role: role,
+              isInherited: false
             });
           }
         }
@@ -212,9 +265,60 @@ export function extractEveryoneRole(groupContent) {
 }
 
 /**
- * Extract group members (parent groups) from a group
+ * Extract group members (parent groups) from a group with their delegation roles
+ * 
+ * GROUP-IN-GROUP ACCESS / DELEGATED ACCESS EXPLANATION:
+ * 
+ * CoJSON supports hierarchical group access through "parent groups". When a group extends
+ * a parent group, all members of the parent group automatically get access to the child group.
+ * 
+ * How it works:
+ * 1. A group can "extend" one or more parent groups by setting `parent_{groupId}` to a role
+ * 2. When a parent group is extended, all members of the parent group get access to the child group
+ * 3. The access level depends on the delegation role:
+ * 
+ * Delegation Roles:
+ * - "extend": Inherits role from parent group
+ *   → If parent member has "admin" in parent, they get "admin" in child
+ *   → If parent member has "reader" in parent, they get "reader" in child
+ *   → Most flexible - respects individual member roles in parent
+ * 
+ * - "reader": All parent members get "reader" access in child
+ *   → Everyone in parent group can read child group's co-values
+ *   → Useful for sharing read-only access to a group
+ * 
+ * - "writer": All parent members get "writer" access in child
+ *   → Everyone in parent group can read and write child group's co-values
+ *   → Useful for collaborative groups
+ * 
+ * - "manager": All parent members get "manager" access in child
+ *   → Everyone in parent group can manage members (except admins)
+ *   → Useful for delegating member management
+ * 
+ * - "admin": All parent members get "admin" access in child
+ *   → Everyone in parent group gets full control
+ *   → Use with caution - grants full access to all parent members
+ * 
+ * - "revoked": Delegation is revoked
+ *   → Parent group members lose access (unless they have direct membership)
+ * 
+ * Example Scenario:
+ * - Group A (Company) has members: Alice (admin), Bob (writer)
+ * - Group B (Project) extends Group A with role "extend"
+ *   → Alice gets admin access to Group B (inherited from her admin role in A)
+ *   → Bob gets writer access to Group B (inherited from his writer role in A)
+ * 
+ * - Group C (Public) extends Group A with role "reader"
+ *   → Alice gets reader access to Group C (not admin, because delegation is "reader")
+ *   → Bob gets reader access to Group C (not writer, because delegation is "reader")
+ * 
+ * This enables powerful organizational structures:
+ * - Company → Department → Project hierarchies
+ * - Team → Sub-team → Task delegation
+ * - Organization → Workspace → Resource access
+ * 
  * @param {RawGroup} groupContent - RawGroup instance
- * @returns {Array<{id: string, role: string}>} Array of parent group members
+ * @returns {Array<{id: string, role: string, roleDescription: string}>} Array of parent group members with delegation roles
  */
 export function extractGroupMembers(groupContent) {
   const groupMembers = [];
@@ -227,18 +331,41 @@ export function extractGroupMembers(groupContent) {
             ? parentGroup 
             : (parentGroup.id || (parentGroup.$jazz && parentGroup.$jazz.id) || 'unknown');
           
-          let role = null;
-          if (typeof groupContent.getRoleOf === 'function') {
+          // Get the delegation role from the group
+          // Parent groups are stored as "parent_{groupId}" keys
+          let delegationRole = null;
+          const parentKey = `parent_${parentId}`;
+          
+          if (typeof groupContent.get === 'function') {
             try {
-              role = groupContent.getRoleOf(parentId);
+              delegationRole = groupContent.get(parentKey);
             } catch (e) {
               // Ignore
             }
           }
           
+          // Map delegation role to description
+          let roleDescription = '';
+          if (delegationRole === 'extend') {
+            roleDescription = 'Inherits roles from parent group';
+          } else if (delegationRole === 'reader') {
+            roleDescription = 'All parent members get reader access';
+          } else if (delegationRole === 'writer') {
+            roleDescription = 'All parent members get writer access';
+          } else if (delegationRole === 'manager') {
+            roleDescription = 'All parent members get manager access';
+          } else if (delegationRole === 'admin') {
+            roleDescription = 'All parent members get admin access';
+          } else if (delegationRole === 'revoked') {
+            roleDescription = 'Delegation revoked';
+          } else {
+            roleDescription = 'Delegated access';
+          }
+          
           groupMembers.push({
             id: parentId,
-            role: role || 'admin'
+            role: delegationRole || 'extend',
+            roleDescription: roleDescription
           });
         }
       }

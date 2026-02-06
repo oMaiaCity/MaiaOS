@@ -381,6 +381,7 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 			const schemaDef = schemaCoId ? getSchema(schemaCoId) : null;
 			
 			// Extract properties from flat object (exclude metadata keys)
+			// groupInfo is backend-derived metadata (not a co-value property) - only show in metadata sidebar
 			const propertyKeys = Object.keys(data).filter(k => 
 				k !== 'id' && 
 				k !== 'loading' && 
@@ -389,7 +390,8 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 				k !== 'schema' && 
 				k !== 'type' &&
 				k !== 'displayName' &&
-				k !== 'headerMeta'
+				k !== 'headerMeta' &&
+				k !== 'groupInfo'  // Backend metadata - displayed in metadata sidebar, not as a property
 			);
 			
 			if (propertyKeys.length === 0) {
@@ -483,6 +485,51 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 			}
 		}
 		
+		// Fetch group name if group ID is available (groups are CoMaps, so they can have a "name" property)
+		let groupName = null;
+		if (groupInfo?.groupId && maia) {
+			try {
+				// Use unified read API with @group schema hint (groups don't have $schema)
+				const groupStore = await maia.db({op: 'read', schema: '@group', key: groupInfo.groupId});
+				
+				// Wait for group data to be available (if it's loading)
+				if (groupStore.loading) {
+					await new Promise((resolve, reject) => {
+						const timeout = setTimeout(() => {
+							reject(new Error('Timeout waiting for group data'));
+						}, 5000);
+						const unsubscribe = groupStore.subscribe(() => {
+							if (!groupStore.loading) {
+								clearTimeout(timeout);
+								unsubscribe();
+								resolve();
+							}
+						});
+					});
+				}
+				
+				const groupData = groupStore.value || groupStore;
+				
+				if (groupData && !groupData.error && !groupData.loading) {
+					// Groups are CoMaps, so they can have a "name" property
+					// Check both direct property access and properties array (for normalized format)
+					if (groupData.name && typeof groupData.name === 'string') {
+						groupName = groupData.name;
+					} else if (groupData.properties && Array.isArray(groupData.properties)) {
+						// Check properties array format (from extractCoValueData)
+						const nameProp = groupData.properties.find(p => p.key === 'name');
+						if (nameProp && nameProp.value && typeof nameProp.value === 'string') {
+							groupName = nameProp.value;
+						}
+					}
+					
+					// Group name will be available after sync if not immediately visible
+				}
+			} catch (e) {
+				console.warn('[DB Viewer] Failed to fetch group name:', e);
+			}
+		}
+		
 		metadataSidebar = `
 			<aside class="db-metadata">
 				<div class="metadata-content">
@@ -522,8 +569,24 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 						</div>
 						${groupInfo?.groupId ? `
 							<div class="metadata-info-item">
-								<span class="metadata-info-key">GROUP</span>
-								<code class="metadata-info-value co-id" onclick="selectCoValue('${groupInfo.groupId}')" title="${groupInfo.groupId}">${truncate(groupInfo.groupId, 24)}</code>
+								<span class="metadata-info-key">OWNER GROUP</span>
+								${groupName ? `
+									<div style="display: flex; flex-direction: column; gap: 2px;">
+										<span class="metadata-info-value" style="font-weight: 600; color: #1e293b;">
+											${escapeHtml(groupName)}
+										</span>
+										<code class="co-id" onclick="selectCoValue('${groupInfo.groupId}')" title="${groupInfo.groupId}" style="cursor: pointer; text-decoration: underline; font-size: 11px; color: #64748b;">
+											${truncate(groupInfo.groupId, 24)}
+										</code>
+									</div>
+								` : `
+									<code class="metadata-info-value co-id" onclick="selectCoValue('${groupInfo.groupId}')" title="${groupInfo.groupId}" style="cursor: pointer; text-decoration: underline;">
+										${truncate(groupInfo.groupId, 24)}
+									</code>
+								`}
+								<div class="metadata-info-hint" style="font-size: 10px; color: #64748b; margin-top: 2px;">
+									Ultimate owner - controls access to this co-value
+								</div>
 							</div>
 						` : ''}
 					</div>
@@ -535,15 +598,32 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 								${sortedAccountMembers.length > 0 ? `
 									<div class="metadata-section">
 										<h4 class="metadata-section-title">Account Members</h4>
+										<div class="metadata-info-hint" style="font-size: 10px; color: #64748b; margin-bottom: 8px;">
+											Effective roles (includes inherited from parent groups)
+										</div>
 										<div class="metadata-members-list">
 											${sortedAccountMembers.map(member => {
 												const isEveryone = member.id === 'everyone';
 												const isAdmin = member.role?.toLowerCase() === 'admin';
+												const isManager = member.role?.toLowerCase() === 'manager';
+												const isWriter = member.role?.toLowerCase() === 'writer';
+												const isReader = member.role?.toLowerCase() === 'reader';
 												const roleClass = member.role?.toLowerCase() || 'member';
+												const isInherited = member.isInherited || false;
+												
+												// Role descriptions
+												let roleDescription = '';
+												if (isAdmin) roleDescription = 'Full control: read, write, manage members';
+												else if (isManager) roleDescription = 'Can read, write, invite/revoke (except admins)';
+												else if (isWriter) roleDescription = 'Can read and write';
+												else if (isReader) roleDescription = 'Can read only';
+												else roleDescription = 'Limited access';
+												
 												return `
-													<div class="metadata-member-item ${isEveryone ? 'everyone' : ''} ${isAdmin ? 'admin' : ''}">
+													<div class="metadata-member-item ${isEveryone ? 'everyone' : ''} ${isAdmin ? 'admin' : ''}" title="${roleDescription}${isInherited ? ' (inherited from parent group)' : ''}">
 														<div class="metadata-member-info">
 															<span class="metadata-member-id">${isEveryone ? 'Everyone' : truncate(member.id, 16)}</span>
+															${isInherited ? '<span style="font-size: 9px; color: #94a3b8; margin-left: 4px;">(inherited)</span>' : ''}
 														</div>
 														<span class="badge badge-role badge-${roleClass}">${member.role || 'member'}</span>
 													</div>
@@ -554,16 +634,27 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 								` : ''}
 								${groupInfo.groupMembers && groupInfo.groupMembers.length > 0 ? `
 									<div class="metadata-section">
-										<h4 class="metadata-section-title">Group Members</h4>
+										<h4 class="metadata-section-title">Parent Groups (Delegated Access)</h4>
+										<div class="metadata-info-hint" style="font-size: 10px; color: #64748b; margin-bottom: 8px;">
+											Groups that delegate access to their members
+										</div>
 										<div class="metadata-members-list">
 											${groupInfo.groupMembers.map(member => {
-												const roleClass = member.role?.toLowerCase() || 'admin';
+												const roleClass = member.role?.toLowerCase() || 'extend';
+												const roleDescription = member.roleDescription || 'Delegated access';
 												return `
-													<div class="metadata-member-item">
+													<div class="metadata-member-item" title="${roleDescription}">
 														<div class="metadata-member-info">
-															<code class="metadata-member-id co-id" onclick="selectCoValue('${member.id}')" title="${member.id}">${truncate(member.id, 16)}</code>
+															<code class="metadata-member-id co-id" onclick="selectCoValue('${member.id}')" title="${member.id}" style="cursor: pointer; text-decoration: underline;">
+																${truncate(member.id, 16)}
+															</code>
 														</div>
-														<span class="badge badge-role badge-${roleClass}">${member.role || 'admin'}</span>
+														<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+															<span class="badge badge-role badge-${roleClass}">${member.role || 'extend'}</span>
+															<span style="font-size: 9px; color: #94a3b8; max-width: 120px; text-align: right; line-height: 1.2;">
+																${roleDescription}
+															</span>
+														</div>
 													</div>
 												`;
 											}).join('')}

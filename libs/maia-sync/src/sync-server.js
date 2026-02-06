@@ -141,14 +141,9 @@ export async function createSyncServer(options = {}) {
         batchingByDefault: false,
         deletePeerStateOnClose: true,
         onSuccess: () => {
-          const peerReadyTime = performance.now() - connectionStartTime;
-          console.log(`[sync-server] ✅ WebSocket peer ready: ${clientId} (${peerReadyTime.toFixed(0)}ms)`);
-          if (peerReadyTime > 100) {
-            console.warn(`[sync-server] ⚠️ [PERF] Peer creation took ${peerReadyTime.toFixed(0)}ms (target: <100ms)`);
-          }
+          // Peer ready - no logging needed
         },
         onClose: () => {
-          console.log(`[sync-server] WebSocket peer closed: ${clientId}`);
           if (ws.data?.pingInterval) {
             clearInterval(ws.data.pingInterval);
           }
@@ -159,8 +154,6 @@ export async function createSyncServer(options = {}) {
       // Add peer to sync manager IMMEDIATELY (critical path)
       localNode.syncManager.addPeer(peer);
       ws.data = { clientId, peer };
-
-      console.log(`[sync-server] Peer added to sync manager: ${clientId} (peer creation: ${peerCreationDuration.toFixed(0)}ms)`);
 
       // Fire open event asynchronously (non-blocking)
       queueMicrotask(() => {
@@ -210,11 +203,7 @@ export async function createSyncServer(options = {}) {
         }
       });
 
-      const connectionDuration = performance.now() - connectionStartTime;
-      console.log(`[sync-server] ⏱️  Connection setup complete: ${connectionDuration.toFixed(0)}ms`);
-      if (connectionDuration > 100) {
-        console.warn(`[sync-server] ⚠️ [PERF] Connection setup took ${connectionDuration.toFixed(0)}ms (target: <100ms)`);
-      }
+      // Connection setup complete - no logging needed
     },
 
     /**
@@ -242,10 +231,7 @@ export async function createSyncServer(options = {}) {
         }
       }
       
-      const messageProcessingDuration = performance.now() - messageProcessingStartTime;
-      if (messageProcessingDuration > 50) {
-        console.log(`[sync-server] ⏱️  Message processing: ${messageProcessingDuration.toFixed(0)}ms (client: ${clientId})`);
-      }
+      // Message processing - no logging needed
     },
 
     /**

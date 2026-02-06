@@ -1,7 +1,7 @@
 {
   "$schema": "@schema/vibe",
   "$id": "@vibe/todos",
-  "name": "Todo List",
-  "description": "A complete todo list application with state machines and AI-compatible tools. Showcases MaiaOS actor system, message passing, and declarative UI.",
+  "name": "Todos",
+  "description": "Complete todo list with state machines and AI tools",
   "actor": "@todos/actor/agent"
 }

@@ -2,6 +2,6 @@
   "$schema": "@schema/vibe",
   "$id": "@vibe/maia",
   "name": "Maia Agent",
-  "description": "CTO-level AI assistant that understands the entire MaiaOS codebase, architecture, and all packages. Learns alongside coding sessions.",
+  "description": "CTO-level AI assistant for MaiaOS codebase",
   "actor": "@maia/actor/agent"
 }
