@@ -2,11 +2,12 @@
  * Schema Index Manager
  * 
  * Provides helper functions for automatic schema-based indexing of co-values.
- * Manages schema index colists keyed by schema co-id in account.os.
+ * Manages schema index colists keyed by schema co-id in account.os.indexes.
  * 
  * Structure:
- * - account.os.schemata: "@schema/namekey" → schema co-id (registry)
- * - account.os: schema-co-id → colist of instance co-ids (index)
+ * - account.os.schematas: "@schema/namekey" → schema co-id (registry)
+ * - account.os.indexes: schema-co-id → colist of instance co-ids (index)
+ * - account.os.unknown: colist of co-values without schemas
  */
 
 import { EXCEPTION_SCHEMAS } from '../../schemas/registry.js';
@@ -88,6 +89,111 @@ async function ensureOsCoMap(backend) {
   backend.account.set('os', osCoMap.id);
   
   return osCoMap;
+}
+
+/**
+ * Ensure account.os.indexes CoMap exists (dedicated container for schema indexes)
+ * @param {Object} backend - Backend instance
+ * @returns {Promise<RawCoMap>} account.os.indexes CoMap
+ */
+export async function ensureIndexesCoMap(backend) {
+  // First ensure account.os exists
+  const osCoMap = await ensureOsCoMap(backend);
+  if (!osCoMap) {
+    return null;
+  }
+
+  // Check if account.os.indexes already exists
+  const indexesId = osCoMap.get('indexes');
+  if (indexesId) {
+    // Use universal read() API to load and resolve it
+    try {
+      const indexesStore = await universalRead(backend, indexesId, null, null, null, {
+        deepResolve: false,
+        timeoutMs: 10000
+      });
+      
+      if (!indexesStore || indexesStore.value?.error) {
+        console.warn(`[SchemaIndexManager] account.os.indexes CoValue not found or error: ${indexesId.substring(0, 12)}...`);
+        return null;
+      }
+      
+      const indexesCore = backend.getCoValue(indexesId);
+      if (!indexesCore || !indexesCore.isAvailable()) {
+        console.warn(`[SchemaIndexManager] account.os.indexes (${indexesId.substring(0, 12)}...) is not available after read()`);
+        return null;
+      }
+      
+      const indexesContent = indexesCore.getCurrentContent?.();
+      if (!indexesContent) {
+        console.warn(`[SchemaIndexManager] account.os.indexes (${indexesId.substring(0, 12)}...) is available but getCurrentContent() returned nothing`);
+        return null;
+      }
+      
+      const contentType = indexesContent.cotype || indexesContent.type;
+      const header = backend.getHeader(indexesCore);
+      const headerMeta = header?.meta || null;
+      const schema = headerMeta?.$schema || null;
+      
+      const isCoMap = contentType === 'comap' && typeof indexesContent.get === 'function';
+      if (!isCoMap) {
+        console.warn(`[SchemaIndexManager] account.os.indexes (${indexesId.substring(0, 12)}...) is not a CoMap (cotype: ${contentType}, schema: ${schema}, has get: ${typeof indexesContent.get})`);
+        return null;
+      }
+      
+      return indexesContent;
+    } catch (e) {
+      console.warn(`[SchemaIndexManager] Failed to load account.os.indexes (${indexesId.substring(0, 12)}...):`, e.message);
+      return null;
+    }
+  }
+
+  // Create new account.os.indexes CoMap
+  // Use proper runtime validation with dbEngine when schema is available
+  // GenesisSchema fallback ONLY for initial setup before schema registry exists
+  const group = await backend.getDefaultGroup();
+  let indexesSchemaCoId = await resolve(backend, '@schema/os/indexes-registry', { returnType: 'coId' });
+  
+  let indexesCoMapId;
+  if (indexesSchemaCoId && indexesSchemaCoId.startsWith('co_z') && backend.dbEngine) {
+    // Proper runtime validation: Use CRUD create() with dbEngine for schema validation
+    const { create } = await import('../crud/create.js');
+    const created = await create(backend, indexesSchemaCoId, {});
+    indexesCoMapId = created.id;
+  } else {
+    // Initial setup fallback: Use GenesisSchema ONLY when schema registry doesn't exist yet
+    // This happens during first account creation before schemas are seeded
+    // After seeding, all new indexes will use proper schema validation
+    const indexesMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
+    const indexesCoMap = group.createMap({}, indexesMeta);
+    indexesCoMapId = indexesCoMap.id;
+  }
+  
+  // Store in account.os.indexes
+  osCoMap.set('indexes', indexesCoMapId);
+  
+  // Use universal read() API to load and resolve the newly created indexes CoMap
+  try {
+    const indexesStore = await universalRead(backend, indexesCoMapId, null, null, null, {
+      deepResolve: false,
+      timeoutMs: 5000
+    });
+    
+    if (indexesStore && !indexesStore.value?.error) {
+      const indexesCore = backend.getCoValue(indexesCoMapId);
+      if (indexesCore && backend.isAvailable(indexesCore)) {
+        const indexesContent = indexesCore.getCurrentContent?.();
+        if (indexesContent && typeof indexesContent.get === 'function') {
+          return indexesContent;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn(`[SchemaIndexManager] Failed to load newly created account.os.indexes:`, e.message);
+  }
+  
+  // Fallback: return null if not available yet (caller should handle this gracefully)
+  return null;
 }
 
 /**
@@ -189,7 +295,7 @@ async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSc
 
 /**
  * Ensure schema index colist exists for a given schema co-id
- * Creates the colist in account.os[<schemaCoId>] (all schemas indexed in account.os)
+ * Creates the colist in account.os.indexes[<schemaCoId>] (all schemas indexed in account.os.indexes)
  * Uses schema-specific index colist schema for type safety
  * @param {Object} backend - Backend instance
  * @param {string} schemaCoId - Schema co-id (e.g., "co_z123...")
@@ -214,18 +320,18 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
     return null;
   }
 
-  // All schema indexes go in account.os, keyed by schema co-id
-  const container = await ensureOsCoMap(backend);
+  // All schema indexes go in account.os.indexes, keyed by schema co-id
+  const indexesCoMap = await ensureIndexesCoMap(backend);
   
-  if (!container) {
-    // account.os exists but couldn't be loaded - skip indexing for now
-    // Will be indexed when account.os becomes available
-    console.warn(`[SchemaIndexManager] Cannot create index colist - account.os not available`);
+  if (!indexesCoMap) {
+    // account.os.indexes exists but couldn't be loaded - skip indexing for now
+    // Will be indexed when account.os.indexes becomes available
+    console.warn(`[SchemaIndexManager] Cannot create index colist - account.os.indexes not available`);
     return null;
   }
 
   // Check if index colist already exists (using schema co-id as key)
-  let indexColistId = container.get(schemaCoId);
+  let indexColistId = indexesCoMap.get(schemaCoId);
   if (indexColistId) {
     // Use universal read() API to load and resolve index colist
     try {
@@ -273,8 +379,8 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
   const indexColistRaw = group.createList([], indexMeta);
   indexColistId = indexColistRaw.id;
   
-  // Store in account.os using schema co-id as key
-  container.set(schemaCoId, indexColistId);
+  // Store in account.os.indexes using schema co-id as key
+  indexesCoMap.set(schemaCoId, indexColistId);
   
   // CRITICAL: Don't wait for storage sync - it blocks the UI!
   // The set() operation is already queued in CoJSON's CRDT
@@ -354,7 +460,7 @@ async function isInternalCoValue(backend, coId) {
     return true;
   }
 
-  // Check if it's inside account.os (schema index colists, schematas registry, etc.)
+  // Check if it's inside account.os (schematas registry, unknown colist, or indexes container)
   if (osId) {
     const osCore = backend.node.getCoValue(osId);
     if (osCore && osCore.type === 'comap') {
@@ -372,14 +478,28 @@ async function isInternalCoValue(backend, coId) {
           return true;
         }
         
-        // Check if it's any schema index colist (all values in os except 'schematas' and 'unknown' are schema index colists)
-        // Schema indexes are keyed by schema co-id
-        const keys = osContent.keys && typeof osContent.keys === 'function'
-          ? osContent.keys()
-          : Object.keys(osContent);
-        for (const key of keys) {
-          if (key !== 'schematas' && key !== 'unknown' && osContent.get(key) === coId) {
-            return true; // This is a schema index colist
+        // Check if it's account.os.indexes itself
+        const indexesId = osContent.get('indexes');
+        if (coId === indexesId) {
+          return true;
+        }
+        
+        // Check if it's inside account.os.indexes (any schema index colist)
+        if (indexesId) {
+          const indexesCore = backend.node.getCoValue(indexesId);
+          if (indexesCore && indexesCore.type === 'comap') {
+            const indexesContent = indexesCore.getCurrentContent?.();
+            if (indexesContent && typeof indexesContent.get === 'function') {
+              // Check if it's any schema index colist (all values in indexes are schema index colists)
+              const keys = indexesContent.keys && typeof indexesContent.keys === 'function'
+                ? indexesContent.keys()
+                : Object.keys(indexesContent);
+              for (const key of keys) {
+                if (indexesContent.get(key) === coId) {
+                  return true; // This is a schema index colist
+                }
+              }
+            }
           }
         }
       }
@@ -879,22 +999,19 @@ export async function reconcileIndexes(backend, options = {}) {
     return { indexed: 0, skipped: 0, errors: 0 };
   }
   
-  const osCoMap = await ensureOsCoMap(backend);
-  if (!osCoMap) {
+  const indexesCoMap = await ensureIndexesCoMap(backend);
+  if (!indexesCoMap) {
     return { indexed: 0, skipped: 0, errors: 0 };
   }
   
-  // Get all schema index colists from account.os
+  // Get all schema index colists from account.os.indexes
   const schemaIndexColists = new Map(); // schemaCoId → indexColist
-  const keys = osCoMap.keys && typeof osCoMap.keys === 'function' ? osCoMap.keys() : [];
+  const keys = indexesCoMap.keys && typeof indexesCoMap.keys === 'function' ? indexesCoMap.keys() : [];
   
   for (const key of keys) {
-    // Skip internal keys
-    if (key === 'schematas' || key === 'unknown') continue;
-    
-    // Check if it's a schema co-id (starts with co_z)
+    // All keys in indexes are schema co-ids (starts with co_z)
     if (key.startsWith('co_z')) {
-      const indexColistId = osCoMap.get(key);
+      const indexColistId = indexesCoMap.get(key);
       if (indexColistId) {
         // Use universal read() API to load and resolve index colist
         try {
@@ -951,14 +1068,14 @@ async function getSchemaIndexColistForRemoval(backend, schemaCoId) {
     return null;
   }
 
-  // Get account.os CoMap using ensureOsCoMap helper
-  const container = await ensureOsCoMap(backend);
-  if (!container) {
+  // Get account.os.indexes CoMap using ensureIndexesCoMap helper
+  const indexesCoMap = await ensureIndexesCoMap(backend);
+  if (!indexesCoMap) {
     return null;
   }
 
-  // Get index colist ID from account.os (keyed by schema co-id)
-  const indexColistId = container.get(schemaCoId);
+  // Get index colist ID from account.os.indexes (keyed by schema co-id)
+  const indexColistId = indexesCoMap.get(schemaCoId);
   if (!indexColistId || typeof indexColistId !== 'string' || !indexColistId.startsWith('co_')) {
     return null;
   }

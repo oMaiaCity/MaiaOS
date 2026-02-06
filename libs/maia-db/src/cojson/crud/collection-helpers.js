@@ -23,10 +23,11 @@ async function resolveSchemaCoId(backend, schema) {
 }
 
 /**
- * Get schema index colist ID using schema co-id as key (all schemas indexed in account.os)
+ * Get schema index colist ID using schema co-id as key (all schemas indexed in account.os.indexes)
+ * Lazily creates the index colist if it doesn't exist and the schema has indexing: true
  * @param {Object} backend - Backend instance
  * @param {string} schema - Schema co-id (co_z...) or human-readable (@schema/data/todos)
- * @returns {Promise<string|null>} Schema index colist ID or null if not found
+ * @returns {Promise<string|null>} Schema index colist ID or null if not found/not indexable
  */
 export async function getSchemaIndexColistId(backend, schema) {
   // Resolve schema to co-id
@@ -36,7 +37,7 @@ export async function getSchemaIndexColistId(backend, schema) {
     return null;
   }
   
-  // All schema indexes are in account.os, keyed by schema co-id
+  // All schema indexes are in account.os.indexes, keyed by schema co-id
   const osId = backend.account.get('os');
   if (!osId) {
     console.warn(`[getSchemaIndexColistId] ❌ account.os not found`);
@@ -56,19 +57,56 @@ export async function getSchemaIndexColistId(backend, schema) {
     return null;
   }
   
+  // Get account.os.indexes CoMap
+  const indexesId = osContent.get('indexes');
+  if (!indexesId) {
+    console.warn(`[getSchemaIndexColistId] ❌ account.os.indexes not found`);
+    return null;
+  }
+  
+  // Load account.os.indexes CoMap
+  const indexesCore = await ensureCoValueLoaded(backend, indexesId);
+  if (!indexesCore || !backend.isAvailable(indexesCore)) {
+    console.warn(`[getSchemaIndexColistId] ❌ account.os.indexes not available (loaded: ${!!indexesCore}, available: ${indexesCore ? backend.isAvailable(indexesCore) : false})`);
+    return null;
+  }
+  
+  const indexesContent = backend.getCurrentContent(indexesCore);
+  if (!indexesContent || typeof indexesContent.get !== 'function') {
+    console.warn(`[getSchemaIndexColistId] ❌ account.os.indexes content not available`);
+    return null;
+  }
+  
   // Get schema index colist using schema co-id as key
-  const indexColistId = osContent.get(schemaCoId);
+  let indexColistId = indexesContent.get(schemaCoId);
   if (indexColistId && typeof indexColistId === 'string' && indexColistId.startsWith('co_')) {
     return indexColistId;
   }
   
-  console.warn(`[getSchemaIndexColistId] ❌ No index colist found in account.os for schema co-id "${schemaCoId.substring(0, 12)}..."`);
-  return null;
+  // Index colist doesn't exist - try to create it lazily if schema has indexing: true
+  // This handles the case where index colists were deleted during reseeding
+  // and haven't been recreated yet (they're normally created when first co-value is created)
+  try {
+    const { ensureSchemaIndexColist } = await import('../indexing/schema-index-manager.js');
+    const indexColist = await ensureSchemaIndexColist(backend, schemaCoId);
+    
+    if (indexColist && indexColist.id) {
+      // Index colist was created - return its ID
+      return indexColist.id;
+    }
+    
+    // Schema doesn't have indexing: true or creation failed - return null silently
+    // This is expected for schemas that shouldn't be indexed
+    return null;
+  } catch (e) {
+    // Creation failed - return null silently (don't warn, this is expected in some cases)
+    return null;
+  }
 }
 
 
 /**
- * Get CoList ID from account.os.<schemaCoId> (all schema indexes in account.os)
+ * Get CoList ID from account.os.indexes.<schemaCoId> (all schema indexes in account.os.indexes)
  * @param {Object} backend - Backend instance
  * @param {string} collectionNameOrSchema - Collection name (e.g., "todos"), schema co-id (co_z...), or namekey (@schema/data/todos)
  * @returns {Promise<string|null>} CoList ID or null if not found
@@ -87,9 +125,8 @@ export async function getCoListId(backend, collectionNameOrSchema) {
   }
   
   const colistId = await getSchemaIndexColistId(backend, collectionNameOrSchema);
-  if (!colistId) {
-    console.warn(`[getCoListId] ❌ No colist found for schema "${collectionNameOrSchema.substring(0, 30)}..."`);
-  }
+  // Don't warn if colistId is null - getSchemaIndexColistId already handles creation
+  // and will return null silently if schema doesn't have indexing: true (which is expected)
   return colistId;
 }
 

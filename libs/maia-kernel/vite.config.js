@@ -41,8 +41,9 @@ export default defineConfig({
 				"@MaiaOS/operations/reactive-store": resolve(__dirname, "../maia-operations/src/reactive-store.js"),
 				"@MaiaOS/operations/db-adapter": resolve(__dirname, "../maia-operations/src/db-adapter.js"),
 				"@MaiaOS/operations/operations": resolve(__dirname, "../maia-operations/src/operations/index.js"),
-				"@MaiaOS/tools": resolve(__dirname, "../maia-tools/src"),
-				"@MaiaOS/voice-google/client": resolve(__dirname, "../maia-voice-google/src/client/index.ts"),
+			"@MaiaOS/tools": resolve(__dirname, "../maia-tools/src"),
+			"@MaiaOS/vibes": resolve(__dirname, "../maia-vibes/src"),
+			"@MaiaOS/voice-google/client": resolve(__dirname, "../maia-voice-google/src/client/index.ts"),
 			// Resolve cojson and its subpaths for bundling
 			// Note: PureJSCrypto removed in cojson 0.20+ - only native Rust crypto (WasmCrypto) is supported
 			"cojson/crypto/WasmCrypto": resolve(__dirname, "../maia-db/node_modules/cojson/dist/crypto/WasmCrypto.js"),

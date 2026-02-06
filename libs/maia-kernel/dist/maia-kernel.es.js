@@ -10087,124 +10087,6 @@ async function schemaMigration(account, node, creationProps) {
     }
   }
 }
-async function createAccountWithSecret({ agentSecret, name = "Maia", peers = [], storage = void 0 }) {
-  if (!agentSecret) {
-    throw new Error("agentSecret is required. Use signInWithPasskey() to get agentSecret.");
-  }
-  const crypto2 = await WasmCrypto.create();
-  const result = await LocalNode.withNewlyCreatedAccount({
-    creationProps: { name },
-    crypto: crypto2,
-    initialAgentSecret: agentSecret,
-    // Use provided secret from passkey!
-    peers,
-    // Use provided sync peers
-    storage,
-    // Use provided storage (if any)
-    migration: schemaMigration
-    // Handles profile + schemata + Data
-  });
-  const rawAccount = result.node.expectCurrentAccount("oID/createAccountWithSecret");
-  const profileValue = rawAccount.get("profile");
-  if (!profileValue) {
-    throw new Error("Profile not created by account creation migration");
-  }
-  return {
-    node: result.node,
-    account: rawAccount,
-    accountID: rawAccount.id,
-    profile: profileValue,
-    group: null
-    // No group in minimal setup
-  };
-}
-async function loadAccount({ accountID, agentSecret, peers = [], storage = void 0 }) {
-  if (!agentSecret) {
-    throw new Error("agentSecret is required. Use signInWithPasskey() to get agentSecret.");
-  }
-  if (!accountID) {
-    throw new Error("accountID is required.");
-  }
-  const crypto2 = await WasmCrypto.create();
-  const loadStartTime = performance.now();
-  console.log("   Sync peers:", peers.length > 0 ? `${peers.length} peer(s)` : "none");
-  console.log("   Storage:", storage ? "IndexedDB available (local-first)" : "no storage (sync-only)");
-  performance.now();
-  const storageCheckStartTime = performance.now();
-  if (storage) {
-    console.log("   💾 Storage available - will check IndexedDB first");
-  }
-  performance.now() - storageCheckStartTime;
-  let migrationPromise = null;
-  const deferredMigration = async (account, node2) => {
-    migrationPromise = schemaMigration(account, node2).catch((err) => {
-      console.error("[loadAccount] Migration error (non-blocking):", err);
-    });
-    return Promise.resolve();
-  };
-  const accountLoadRequestStartTime = performance.now();
-  const INITIAL_LOAD_TIMEOUT = 3e3;
-  const loadPromise = LocalNode.withLoadedAccount({
-    crypto: crypto2,
-    accountID,
-    accountSecret: agentSecret,
-    sessionID: crypto2.newRandomSessionID(accountID),
-    peers,
-    // Use provided sync peers (sync happens in background if storage has data)
-    storage,
-    // Use provided storage (if any) - enables local-first loading
-    migration: deferredMigration
-    // ← Runs after account loads, non-blocking
-  });
-  const timeoutPromise = new Promise((resolve2) => {
-    setTimeout(() => {
-      performance.now() - accountLoadRequestStartTime;
-      resolve2(null);
-    }, INITIAL_LOAD_TIMEOUT);
-  });
-  const node = await Promise.race([loadPromise, timeoutPromise]).then((result) => {
-    if (result === null) {
-      return loadPromise;
-    }
-    return result;
-  });
-  performance.now();
-  if (migrationPromise) {
-    const migrationStartTime = performance.now();
-    migrationPromise.then(() => {
-      performance.now() - migrationStartTime;
-    }).catch(() => {
-    });
-  }
-  const rawAccount = node.expectCurrentAccount("oID/loadAccount");
-  performance.now();
-  const profileID = rawAccount.get("profile");
-  if (profileID) {
-    const profileCoValue = node.getCoValue(profileID);
-    if (profileCoValue && !profileCoValue.isAvailable()) {
-      await node.load(profileID);
-      performance.now();
-    } else {
-      performance.now();
-    }
-  }
-  performance.now();
-  const osID = rawAccount.get("os");
-  if (osID && typeof osID === "string" && osID.startsWith("co_z")) {
-    const osCoValue = node.getCoValue(osID);
-    if (osCoValue && !osCoValue.isAvailable()) {
-      node.loadCoValueCore(osID).catch((err) => {
-        console.warn(`[loadAccount] Failed to prefetch account.os:`, err);
-      });
-    } else if (osCoValue && osCoValue.isAvailable()) ;
-  }
-  performance.now() - loadStartTime;
-  return {
-    node,
-    account: rawAccount,
-    accountID: rawAccount.id
-  };
-}
 const $defs$6 = { "comap": { "description": "CoMap - CRDT-based collaborative map/object", "type": "object", "properties": {}, "additionalProperties": { "anyOf": [{ "type": "string", "description": "Standard string value" }, { "type": "number", "description": "Standard number value" }, { "type": "integer", "description": "Standard integer value" }, { "type": "boolean", "description": "Standard boolean value" }, { "type": "null", "description": "Null value" }, { "type": "object", "description": "Nested object value" }, { "type": "array", "description": "Array value" }, { "type": "string", "pattern": "^co_z[a-zA-Z0-9]+$", "description": "Co-id reference to another CoValue" }, { "type": "string", "pattern": "^key_[a-zA-Z0-9_]+$", "description": "Key reference" }, { "type": "string", "pattern": "^sealed_", "description": "Sealed/encrypted value" }] } }, "costream": { "description": "CoStream - CRDT-based append-only stream", "type": "array", "items": { "anyOf": [{ "type": "object", "description": "Stream item object" }, { "type": "string", "description": "Stream item string" }, { "type": "number", "description": "Stream item number" }, { "type": "boolean", "description": "Stream item boolean" }, { "type": "null", "description": "Stream item null" }] } }, "colist": { "description": "CoList - CRDT-based collaborative list/array", "type": "array", "items": { "anyOf": [{ "type": "object", "description": "List item object" }, { "type": "string", "description": "List item string (can be co-id reference)" }, { "type": "number", "description": "List item number" }, { "type": "integer", "description": "List item integer" }, { "type": "boolean", "description": "List item boolean" }, { "type": "null", "description": "List item null" }, { "type": "array", "description": "Nested array" }] } } };
 const coTypesDefs = {
   $defs: $defs$6
@@ -10286,12 +10168,35 @@ async function getSchemaIndexColistId(backend, schema) {
     console.warn(`[getSchemaIndexColistId] ❌ account.os content not available`);
     return null;
   }
-  const indexColistId = osContent.get(schemaCoId);
+  const indexesId = osContent.get("indexes");
+  if (!indexesId) {
+    console.warn(`[getSchemaIndexColistId] ❌ account.os.indexes not found`);
+    return null;
+  }
+  const indexesCore = await ensureCoValueLoaded(backend, indexesId);
+  if (!indexesCore || !backend.isAvailable(indexesCore)) {
+    console.warn(`[getSchemaIndexColistId] ❌ account.os.indexes not available (loaded: ${!!indexesCore}, available: ${indexesCore ? backend.isAvailable(indexesCore) : false})`);
+    return null;
+  }
+  const indexesContent = backend.getCurrentContent(indexesCore);
+  if (!indexesContent || typeof indexesContent.get !== "function") {
+    console.warn(`[getSchemaIndexColistId] ❌ account.os.indexes content not available`);
+    return null;
+  }
+  let indexColistId = indexesContent.get(schemaCoId);
   if (indexColistId && typeof indexColistId === "string" && indexColistId.startsWith("co_")) {
     return indexColistId;
   }
-  console.warn(`[getSchemaIndexColistId] ❌ No index colist found in account.os for schema co-id "${schemaCoId.substring(0, 12)}..."`);
-  return null;
+  try {
+    const { ensureSchemaIndexColist: ensureSchemaIndexColist2 } = await Promise.resolve().then(() => schemaIndexManager);
+    const indexColist = await ensureSchemaIndexColist2(backend, schemaCoId);
+    if (indexColist && indexColist.id) {
+      return indexColist.id;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
 }
 async function getCoListId(backend, collectionNameOrSchema) {
   if (!collectionNameOrSchema || typeof collectionNameOrSchema !== "string") {
@@ -10302,9 +10207,6 @@ async function getCoListId(backend, collectionNameOrSchema) {
     return null;
   }
   const colistId = await getSchemaIndexColistId(backend, collectionNameOrSchema);
-  if (!colistId) {
-    console.warn(`[getCoListId] ❌ No colist found for schema "${collectionNameOrSchema.substring(0, 30)}..."`);
-  }
   return colistId;
 }
 async function ensureCoValueLoaded(backend, coId, options = {}) {
@@ -14383,7 +14285,7 @@ function getSchema(type2) {
 function getAllSchemas() {
   return { ...SCHEMAS, ...DATA_SCHEMAS };
 }
-const index$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const index$4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   CoIdRegistry,
   ValidationEngine,
@@ -14432,7 +14334,7 @@ function setSchemaResolver(options) {
       if (!dbEngine.backend) {
         throw new Error("[SchemaResolver] dbEngine.backend is required");
       }
-      const { resolve: resolve2 } = await Promise.resolve().then(() => index$1);
+      const { resolve: resolve2 } = await Promise.resolve().then(() => index$2);
       const schema = await resolve2(dbEngine.backend, schemaKey, { returnType: "schema" });
       if (!schema) {
         throw new Error(`[SchemaResolver] Schema ${schemaKey} not found`);
@@ -14855,333 +14757,6 @@ function createCoStream(accountOrGroup, schemaName, node = null) {
   console.log("   HeaderMeta:", costream.headerMeta);
   return costream;
 }
-async function resolveExpressions(payload, evaluator2, data2) {
-  if (typeof payload === "string" && payload.startsWith("$")) {
-    return await evaluator2.evaluate(payload, data2);
-  }
-  if (payload === null || typeof payload !== "object") {
-    return payload;
-  }
-  if (Array.isArray(payload)) {
-    return Promise.all(payload.map((item) => resolveExpressions(item, evaluator2, data2)));
-  }
-  const keys = Object.keys(payload);
-  if (keys.length === 1 && keys[0].startsWith("$")) {
-    return await evaluator2.evaluate(payload, data2);
-  }
-  const resolved = {};
-  for (const [key, value] of Object.entries(payload)) {
-    if (value && typeof value === "object") {
-      if (evaluator2.isDSLOperation(value)) {
-        resolved[key] = await evaluator2.evaluate(value, data2);
-      } else {
-        resolved[key] = await resolveExpressions(value, evaluator2, data2);
-      }
-    } else {
-      resolved[key] = await evaluator2.evaluate(value, data2);
-    }
-  }
-  return resolved;
-}
-async function resolveSchemaFromCoValue(backend, coId, opName) {
-  const schemaCoId = await resolve$1(backend, { fromCoValue: coId }, { returnType: "coId" });
-  if (!schemaCoId) throw new Error(`[${opName}] Failed to extract schema from CoValue ${coId} headerMeta`);
-  return schemaCoId;
-}
-async function loadAndValidateSchema(backend, schemaCoId, data2, opName, mergedData = null) {
-  const schema = await resolve$1(backend, schemaCoId, { returnType: "schema" });
-  if (!schema) throw new Error(`[${opName}] Schema ${schemaCoId} not found`);
-  await validateAgainstSchemaOrThrow(schema, mergedData || data2, `${opName} for schema ${schemaCoId}`);
-  return schema;
-}
-async function evaluateDataWithExisting(data2, existingData, evaluator2) {
-  if (!evaluator2) return data2;
-  return await resolveExpressions(data2, evaluator2, { context: { existing: existingData }, item: {} });
-}
-function extractSchemaDefinition(coValueData, schemaCoId) {
-  if (!coValueData || coValueData.error) return null;
-  const schemaObj = {};
-  if (coValueData.properties?.length) {
-    for (const prop of coValueData.properties) {
-      if (prop?.key !== void 0) {
-        let value = prop.value;
-        if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
-          try {
-            value = JSON.parse(value);
-          } catch (e) {
-          }
-        }
-        schemaObj[prop.key] = value;
-      }
-    }
-  } else Object.assign(schemaObj, coValueData);
-  const { id: id2, loading, error, type: type2, ...schemaOnly } = schemaObj;
-  if (schemaOnly.definition) {
-    const { id: defId, type: defType, ...definitionOnly } = schemaOnly.definition;
-    return { ...definitionOnly, $id: schemaCoId };
-  }
-  const hasSchemaProps = schemaOnly.cotype || schemaOnly.properties || schemaOnly.items || schemaOnly.title || schemaOnly.description;
-  return hasSchemaProps ? { ...schemaOnly, $id: schemaCoId } : null;
-}
-async function readOperation(backend, params) {
-  const { schema, key, keys, filter, options } = params;
-  if (schema && !schema.startsWith("co_z") && !["@account", "@group", "@meta-schema"].includes(schema)) {
-    throw new Error(`[ReadOperation] Schema must be a co-id (co_z...) or special schema hint (@account, @group, @meta-schema), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
-  }
-  if (keys !== void 0 && !Array.isArray(keys)) throw new Error("[ReadOperation] keys parameter must be an array of co-ids");
-  if (key && keys) throw new Error("[ReadOperation] Cannot provide both key and keys parameters");
-  return await backend.read(schema, key, keys, filter, options);
-}
-async function createOperation(backend, dbEngine, params) {
-  const { schema, data: data2 } = params;
-  requireParam(schema, "schema", "CreateOperation");
-  requireParam(data2, "data", "CreateOperation");
-  requireDbEngine(dbEngine, "CreateOperation", "runtime schema validation");
-  const schemaCoId = await resolve$1(backend, schema, { returnType: "coId" });
-  if (!schemaCoId) throw new Error(`[CreateOperation] Could not resolve schema: ${schema}`);
-  await loadAndValidateSchema(backend, schemaCoId, data2, "CreateOperation");
-  return await backend.create(schemaCoId, data2);
-}
-async function updateOperation(backend, dbEngine, evaluator2, params) {
-  const { id: id2, data: data2 } = params;
-  requireParam(id2, "id", "UpdateOperation");
-  validateCoId(id2, "UpdateOperation");
-  requireParam(data2, "data", "UpdateOperation");
-  requireDbEngine(dbEngine, "UpdateOperation", "schema validation");
-  const rawExistingData = await backend.getRawRecord(id2);
-  if (!rawExistingData) throw new Error(`[UpdateOperation] Record not found: ${id2}`);
-  const schemaCoId = await resolveSchemaFromCoValue(backend, id2, "UpdateOperation");
-  const { $schema: _schema, ...existingDataWithoutMetadata } = rawExistingData;
-  const evaluatedData = await evaluateDataWithExisting(data2, existingDataWithoutMetadata, evaluator2);
-  const mergedData = { ...existingDataWithoutMetadata, ...evaluatedData };
-  await loadAndValidateSchema(backend, schemaCoId, evaluatedData, "UpdateOperation", mergedData);
-  return await backend.update(schemaCoId, id2, evaluatedData);
-}
-async function deleteOperation(backend, dbEngine, params) {
-  const { id: id2 } = params;
-  requireParam(id2, "id", "DeleteOperation");
-  validateCoId(id2, "DeleteOperation");
-  requireDbEngine(dbEngine, "DeleteOperation", "extract schema from CoValue headerMeta");
-  const schemaCoId = await resolveSchemaFromCoValue(dbEngine.backend, id2, "DeleteOperation");
-  return await backend.delete(schemaCoId, id2);
-}
-async function seedOperation(backend, params) {
-  const { configs, schemas, data: data2 } = params;
-  if (!configs) throw new Error("[SeedOperation] Configs required");
-  if (!schemas) throw new Error("[SeedOperation] Schemas required");
-  return await backend.seed(configs, schemas, data2 || {});
-}
-async function schemaOperation(backend, dbEngine, params) {
-  const { coId, fromCoValue } = params;
-  const paramCount = [coId, fromCoValue].filter(Boolean).length;
-  if (paramCount === 0) throw new Error("[SchemaOperation] One of coId or fromCoValue must be provided");
-  if (paramCount > 1) throw new Error("[SchemaOperation] Only one of coId or fromCoValue can be provided");
-  let schemaCoId = coId ? (validateCoId(coId, "SchemaOperation"), coId) : null;
-  if (fromCoValue) {
-    validateCoId(fromCoValue, "SchemaOperation");
-    schemaCoId = await resolve$1(backend, { fromCoValue }, { returnType: "coId" });
-    if (!schemaCoId) {
-      console.warn(`[SchemaOperation] Could not extract schema co-id from CoValue ${fromCoValue} headerMeta`);
-      return new ReactiveStore$1(null);
-    }
-  }
-  const schemaCoMapStore = await backend.read(null, schemaCoId);
-  const schemaStore = new ReactiveStore$1(null);
-  const updateSchema = (coValueData) => schemaStore._set(extractSchemaDefinition(coValueData, schemaCoId));
-  const unsubscribe = schemaCoMapStore.subscribe(updateSchema);
-  updateSchema(schemaCoMapStore.value);
-  const originalUnsubscribe = schemaStore._unsubscribe;
-  schemaStore._unsubscribe = () => {
-    if (originalUnsubscribe) originalUnsubscribe();
-    unsubscribe();
-  };
-  return schemaStore;
-}
-async function resolveOperation(backend, params) {
-  const { humanReadableKey } = params;
-  requireParam(humanReadableKey, "humanReadableKey", "ResolveOperation");
-  if (typeof humanReadableKey !== "string") throw new Error("[ResolveOperation] humanReadableKey must be a string");
-  if (humanReadableKey.startsWith("@schema/") || humanReadableKey.startsWith("@actor/") || humanReadableKey.startsWith("@vibe/")) {
-    console.warn(`[ResolveOperation] resolve() called with human-readable key: ${humanReadableKey}. This should only be used during seeding. At runtime, all IDs should already be co-ids.`);
-  }
-  return await resolve$1(backend, humanReadableKey, { returnType: "coId" });
-}
-async function appendOperation(backend, dbEngine, params) {
-  const { coId, item, items: items2, cotype: cotype2 } = params;
-  requireParam(coId, "coId", "AppendOperation");
-  validateCoId(coId, "AppendOperation");
-  requireDbEngine(dbEngine, "AppendOperation", "check schema cotype");
-  const coValueCore = await ensureCoValueAvailable(backend, coId, "AppendOperation");
-  const schemaCoId = await resolveSchemaFromCoValue(backend, coId, "AppendOperation");
-  let targetCotype = cotype2;
-  if (!targetCotype) {
-    const isColist = await checkCotype(backend, schemaCoId, "colist");
-    const isCoStream = await checkCotype(backend, schemaCoId, "costream");
-    if (isColist) targetCotype = "colist";
-    else if (isCoStream) targetCotype = "costream";
-    else throw new Error(`[AppendOperation] CoValue ${coId} must be a CoList (colist) or CoStream (costream), got schema cotype: ${schemaCoId}`);
-  }
-  if (!await checkCotype(backend, schemaCoId, targetCotype)) throw new Error(`[AppendOperation] CoValue ${coId} is not a ${targetCotype} (schema cotype check failed)`);
-  const schema = await resolve$1(backend, schemaCoId, { returnType: "schema" });
-  if (!schema) throw new Error(`[AppendOperation] Schema ${schemaCoId} not found`);
-  const content = backend.getCurrentContent(coValueCore);
-  const methodName = targetCotype === "colist" ? "append" : "push";
-  if (!content || typeof content[methodName] !== "function") throw new Error(`[AppendOperation] ${targetCotype === "colist" ? "CoList" : "CoStream"} ${coId} doesn't have ${methodName} method`);
-  const itemsToAppend = items2 || (item ? [item] : []);
-  if (itemsToAppend.length === 0) throw new Error("[AppendOperation] At least one item required (use item or items parameter)");
-  validateItems(schema, itemsToAppend);
-  let appendedCount = 0;
-  if (targetCotype === "colist") {
-    let existingItems = [];
-    try {
-      if (typeof content.toJSON === "function") existingItems = content.toJSON() || [];
-    } catch (e) {
-      console.warn(`[AppendOperation] Error checking existing items:`, e);
-    }
-    for (const itemToAppend of itemsToAppend) {
-      if (!existingItems.includes(itemToAppend)) {
-        content.append(itemToAppend);
-        appendedCount++;
-      }
-    }
-  } else {
-    for (const itemToAppend of itemsToAppend) content.push(itemToAppend), appendedCount++;
-  }
-  if (backend.node?.storage) await backend.node.syncManager.waitForStorageSync(coId);
-  return { success: true, coId, [targetCotype === "colist" ? "itemsAppended" : "itemsPushed"]: appendedCount, ...targetCotype === "colist" && { itemsSkipped: itemsToAppend.length - appendedCount } };
-}
-async function processInboxOperation(backend, dbEngine, params) {
-  const { actorId, inboxCoId } = params;
-  requireParam(actorId, "actorId", "ProcessInboxOperation");
-  requireParam(inboxCoId, "inboxCoId", "ProcessInboxOperation");
-  validateCoId(actorId, "ProcessInboxOperation");
-  validateCoId(inboxCoId, "ProcessInboxOperation");
-  const { processInbox: processInbox2 } = await Promise.resolve().then(() => index$1);
-  return await processInbox2(backend, actorId, inboxCoId);
-}
-let DBEngine$1 = class DBEngine {
-  /**
-   * Create a new DBEngine instance
-   * @param {DBAdapter} backend - Backend adapter instance (must implement DBAdapter interface)
-   * @param {Object} [options] - Optional configuration
-   * @param {Object} [options.evaluator] - Optional MaiaScript evaluator for expression evaluation in updates
-   */
-  constructor(backend, options = {}) {
-    this.backend = backend;
-    const { evaluator: evaluator2 } = options;
-    if (backend && typeof backend.setDbEngine === "function") {
-      backend.setDbEngine(this);
-    } else if (backend && backend.constructor.name === "CoJSONBackend") {
-      backend.dbEngine = this;
-    }
-    this.operations = {
-      read: { execute: (params) => readOperation(this.backend, params) },
-      create: { execute: (params) => createOperation(this.backend, this, params) },
-      update: { execute: (params) => updateOperation(this.backend, this, evaluator2, params) },
-      delete: { execute: (params) => deleteOperation(this.backend, this, params) },
-      seed: { execute: (params) => seedOperation(this.backend, params) },
-      schema: { execute: (params) => schemaOperation(this.backend, this, params) },
-      resolve: { execute: (params) => resolveOperation(this.backend, params) },
-      append: { execute: (params) => appendOperation(this.backend, this, params) },
-      push: { execute: (params) => appendOperation(this.backend, this, { ...params, cotype: "costream" }) },
-      processInbox: { execute: (params) => processInboxOperation(this.backend, this, params) }
-    };
-  }
-  /**
-   * Execute a database operation
-   * @param {Object} payload - Operation payload
-   * @param {string} payload.op - Operation name (read, create, update, delete, seed)
-   * @param {Object} payload params - Operation-specific parameters
-   * @returns {Promise<any>} Operation result
-   */
-  async execute(payload) {
-    const { op, ...params } = payload;
-    if (!op) {
-      throw new Error('[DBEngine] Operation required: {op: "read|create|update|delete|seed|schema|resolve|append|push"}');
-    }
-    if (op === "push") {
-      return await this.operations.append.execute({ ...params, cotype: "costream" });
-    }
-    const operation = this.operations[op];
-    if (!operation) {
-      throw new Error(`[DBEngine] Unknown operation: ${op}`);
-    }
-    try {
-      const result = await operation.execute(params);
-      return result;
-    } catch (error) {
-      console.error(`[DBEngine] Operation ${op} failed:`, error);
-      throw error;
-    }
-  }
-  /**
-   * Resolve a human-readable ID to a co-id
-   * DEPRECATED: This method should only be used during seeding. At runtime, all IDs should already be co-ids.
-   * @deprecated Use co-ids directly at runtime. This method is only for seeding/backward compatibility.
-   * @param {string} humanReadableId - Human-readable ID (e.g., '@vibe/todos', 'vibe/vibe')
-   * @returns {Promise<string|null>} Co-id (co_z...) or null if not found
-   */
-};
-class DBAdapter {
-  /**
-   * Read data from database
-   * @param {string} schema - Schema co-id (co_z...)
-   * @param {string} [key] - Specific key (co-id) for single item
-   * @param {string[]} [keys] - Array of co-ids for batch reads
-   * @param {Object} [filter] - Filter criteria for collection queries
-   * @returns {Promise<ReactiveStore|ReactiveStore[]>} Reactive store(s) that hold current value and notify on updates
-   */
-  async read(schema, key, keys, filter) {
-    throw new Error("[DBAdapter] read() must be implemented by backend");
-  }
-  /**
-   * Create new record
-   * @param {string} schema - Schema co-id (co_z...) for data collections
-   * @param {Object} data - Data to create
-   * @returns {Promise<Object>} Created record with generated co-id
-   */
-  async create(schema, data2) {
-    throw new Error("[DBAdapter] create() must be implemented by backend");
-  }
-  /**
-   * Update existing record (unified for data collections and configs)
-   * @param {string} schema - Schema co-id (co_z...) - MUST be a co-id, not '@schema/...'
-   * @param {string} id - Record co-id to update
-   * @param {Object} data - Data to update
-   * @returns {Promise<Object>} Updated record
-   */
-  async update(schema, id2, data2) {
-    throw new Error("[DBAdapter] update() must be implemented by backend");
-  }
-  /**
-   * Delete record
-   * @param {string} schema - Schema co-id (co_z...)
-   * @param {string} id - Record co-id to delete
-   * @returns {Promise<boolean>} true if deleted successfully
-   */
-  async delete(schema, id2) {
-    throw new Error("[DBAdapter] delete() must be implemented by backend");
-  }
-  /**
-   * Get raw record from database (without normalization)
-   * Used for validation - returns stored data as-is (with $schema metadata, without id)
-   * @param {string} id - Record co-id
-   * @returns {Promise<Object|null>} Raw stored record or null if not found
-   */
-  async getRawRecord(id2) {
-    throw new Error("[DBAdapter] getRawRecord() must be implemented by backend");
-  }
-  /**
-   * Seed database with configs, schemas, and initial data (optional - backend-specific)
-   * @param {Object} configs - Config registry
-   * @param {Object} schemas - Schema definitions
-   * @param {Object} data - Initial application data
-   * @returns {Promise<void>}
-   */
-  async seed(configs, schemas, data2) {
-    throw new Error("[DBAdapter] seed() is optional - backend may not implement this");
-  }
-}
 async function determineCotype(backend, schema, data2) {
   try {
     const schemaCore = await ensureCoValueLoaded(backend, schema, { waitForAvailable: true });
@@ -15310,6 +14885,79 @@ async function ensureOsCoMap(backend) {
   backend.account.set("os", osCoMap.id);
   return osCoMap;
 }
+async function ensureIndexesCoMap(backend) {
+  const osCoMap = await ensureOsCoMap(backend);
+  if (!osCoMap) {
+    return null;
+  }
+  const indexesId = osCoMap.get("indexes");
+  if (indexesId) {
+    try {
+      const indexesStore = await read(backend, indexesId, null, null, null, {
+        deepResolve: false,
+        timeoutMs: 1e4
+      });
+      if (!indexesStore || indexesStore.value?.error) {
+        console.warn(`[SchemaIndexManager] account.os.indexes CoValue not found or error: ${indexesId.substring(0, 12)}...`);
+        return null;
+      }
+      const indexesCore = backend.getCoValue(indexesId);
+      if (!indexesCore || !indexesCore.isAvailable()) {
+        console.warn(`[SchemaIndexManager] account.os.indexes (${indexesId.substring(0, 12)}...) is not available after read()`);
+        return null;
+      }
+      const indexesContent = indexesCore.getCurrentContent?.();
+      if (!indexesContent) {
+        console.warn(`[SchemaIndexManager] account.os.indexes (${indexesId.substring(0, 12)}...) is available but getCurrentContent() returned nothing`);
+        return null;
+      }
+      const contentType = indexesContent.cotype || indexesContent.type;
+      const header = backend.getHeader(indexesCore);
+      const headerMeta = header?.meta || null;
+      const schema = headerMeta?.$schema || null;
+      const isCoMap = contentType === "comap" && typeof indexesContent.get === "function";
+      if (!isCoMap) {
+        console.warn(`[SchemaIndexManager] account.os.indexes (${indexesId.substring(0, 12)}...) is not a CoMap (cotype: ${contentType}, schema: ${schema}, has get: ${typeof indexesContent.get})`);
+        return null;
+      }
+      return indexesContent;
+    } catch (e) {
+      console.warn(`[SchemaIndexManager] Failed to load account.os.indexes (${indexesId.substring(0, 12)}...):`, e.message);
+      return null;
+    }
+  }
+  const group = await backend.getDefaultGroup();
+  let indexesSchemaCoId = await resolve$1(backend, "@schema/os/indexes-registry", { returnType: "coId" });
+  let indexesCoMapId;
+  if (indexesSchemaCoId && indexesSchemaCoId.startsWith("co_z") && backend.dbEngine) {
+    const { create: create2 } = await Promise.resolve().then(() => create$1);
+    const created = await create2(backend, indexesSchemaCoId, {});
+    indexesCoMapId = created.id;
+  } else {
+    const indexesMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
+    const indexesCoMap = group.createMap({}, indexesMeta);
+    indexesCoMapId = indexesCoMap.id;
+  }
+  osCoMap.set("indexes", indexesCoMapId);
+  try {
+    const indexesStore = await read(backend, indexesCoMapId, null, null, null, {
+      deepResolve: false,
+      timeoutMs: 5e3
+    });
+    if (indexesStore && !indexesStore.value?.error) {
+      const indexesCore = backend.getCoValue(indexesCoMapId);
+      if (indexesCore && backend.isAvailable(indexesCore)) {
+        const indexesContent = indexesCore.getCurrentContent?.();
+        if (indexesContent && typeof indexesContent.get === "function") {
+          return indexesContent;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn(`[SchemaIndexManager] Failed to load newly created account.os.indexes:`, e.message);
+  }
+  return null;
+}
 async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSchemaCoId = null) {
   if (!schemaCoId || !schemaCoId.startsWith("co_z")) {
     throw new Error(`[SchemaIndexManager] Invalid schema co-id: ${schemaCoId}`);
@@ -15384,12 +15032,12 @@ async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoId = nul
   if (schemaDef.indexing !== true) {
     return null;
   }
-  const container = await ensureOsCoMap(backend);
-  if (!container) {
-    console.warn(`[SchemaIndexManager] Cannot create index colist - account.os not available`);
+  const indexesCoMap = await ensureIndexesCoMap(backend);
+  if (!indexesCoMap) {
+    console.warn(`[SchemaIndexManager] Cannot create index colist - account.os.indexes not available`);
     return null;
   }
-  let indexColistId = container.get(schemaCoId);
+  let indexColistId = indexesCoMap.get(schemaCoId);
   if (indexColistId) {
     try {
       const indexColistStore = await read(backend, indexColistId, null, null, null, {
@@ -15424,7 +15072,7 @@ async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoId = nul
   const indexMeta = { $schema: indexSchemaCoId };
   const indexColistRaw = group.createList([], indexMeta);
   indexColistId = indexColistRaw.id;
-  container.set(schemaCoId, indexColistId);
+  indexesCoMap.set(schemaCoId, indexColistId);
   const indexColistCore = backend.node.getCoValue(indexColistId);
   if (indexColistCore && indexColistCore.type === "colist") {
     const indexColistContent = indexColistCore.getCurrentContent?.();
@@ -15477,10 +15125,22 @@ async function isInternalCoValue(backend, coId) {
         if (coId === unknownId) {
           return true;
         }
-        const keys = osContent.keys && typeof osContent.keys === "function" ? osContent.keys() : Object.keys(osContent);
-        for (const key of keys) {
-          if (key !== "schematas" && key !== "unknown" && osContent.get(key) === coId) {
-            return true;
+        const indexesId = osContent.get("indexes");
+        if (coId === indexesId) {
+          return true;
+        }
+        if (indexesId) {
+          const indexesCore = backend.node.getCoValue(indexesId);
+          if (indexesCore && indexesCore.type === "comap") {
+            const indexesContent = indexesCore.getCurrentContent?.();
+            if (indexesContent && typeof indexesContent.get === "function") {
+              const keys = indexesContent.keys && typeof indexesContent.keys === "function" ? indexesContent.keys() : Object.keys(indexesContent);
+              for (const key of keys) {
+                if (indexesContent.get(key) === coId) {
+                  return true;
+                }
+              }
+            }
           }
         }
       }
@@ -15761,11 +15421,11 @@ async function getSchemaIndexColistForRemoval(backend, schemaCoId) {
   if (!backend.account) {
     return null;
   }
-  const container = await ensureOsCoMap(backend);
-  if (!container) {
+  const indexesCoMap = await ensureIndexesCoMap(backend);
+  if (!indexesCoMap) {
     return null;
   }
-  const indexColistId = container.get(schemaCoId);
+  const indexColistId = indexesCoMap.get(schemaCoId);
   if (!indexColistId || typeof indexColistId !== "string" || !indexColistId.startsWith("co_")) {
     return null;
   }
@@ -15824,6 +15484,17 @@ async function removeFromIndex(backend, coId, schemaCoId = null) {
     }
   }
 }
+const schemaIndexManager = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  ensureIndexesCoMap,
+  ensureSchemaIndexColist,
+  ensureUnknownColist,
+  indexCoValue,
+  isSchemaCoValue,
+  registerSchemaCoValue,
+  removeFromIndex,
+  shouldIndexCoValue
+}, Symbol.toStringTag, { value: "Module" }));
 async function deleteRecord(backend, schema, id2) {
   const coValueCore = await ensureCoValueLoaded(backend, id2, { waitForAvailable: true });
   if (!coValueCore) {
@@ -15913,8 +15584,8 @@ async function deleteSeededCoValues(account, node, backend) {
       if (schematasCore && backend.isAvailable(schematasCore)) {
         const schematasContent = backend.getCurrentContent(schematasCore);
         if (schematasContent && typeof schematasContent.get === "function") {
-          const keys2 = schematasContent.keys && typeof schematasContent.keys === "function" ? schematasContent.keys() : Object.keys(schematasContent);
-          for (const key of keys2) {
+          const keys = schematasContent.keys && typeof schematasContent.keys === "function" ? schematasContent.keys() : Object.keys(schematasContent);
+          for (const key of keys) {
             const schemaCoId = schematasContent.get(key);
             if (schemaCoId && typeof schemaCoId === "string" && schemaCoId.startsWith("co_z")) {
               schemaCoIds.add(schemaCoId);
@@ -15928,35 +15599,54 @@ async function deleteSeededCoValues(account, node, backend) {
       schemaCoIds.add(metaSchemaId);
     }
     const coValuesToDelete = /* @__PURE__ */ new Set();
-    const keys = osCoMap.keys && typeof osCoMap.keys === "function" ? osCoMap.keys() : [];
-    for (const key of keys) {
-      if (key === "schematas" || key === "unknown" || key === "metaSchema") continue;
-      if (key.startsWith("co_z")) {
-        const indexColistId = osCoMap.get(key);
-        if (indexColistId) {
-          try {
-            const indexColistCore = await ensureCoValueLoaded(backend, indexColistId, {
-              waitForAvailable: true,
-              timeoutMs: 2e3
-            });
-            if (indexColistCore && backend.isAvailable(indexColistCore)) {
-              const indexColistContent = backend.getCurrentContent(indexColistCore);
-              if (indexColistContent && typeof indexColistContent.toJSON === "function") {
-                const items2 = indexColistContent.toJSON();
-                for (const item of items2) {
-                  if (item && typeof item === "string" && item.startsWith("co_z")) {
-                    coValuesToDelete.add(item);
+    let indexesContentForCollection = null;
+    const indexesId = osCoMap.get("indexes");
+    if (indexesId) {
+      try {
+        const indexesCore = await ensureCoValueLoaded(backend, indexesId, {
+          waitForAvailable: true,
+          timeoutMs: 5e3
+        });
+        if (indexesCore && backend.isAvailable(indexesCore)) {
+          indexesContentForCollection = backend.getCurrentContent(indexesCore);
+          if (indexesContentForCollection && typeof indexesContentForCollection.get === "function") {
+            const keys = indexesContentForCollection.keys && typeof indexesContentForCollection.keys === "function" ? indexesContentForCollection.keys() : Object.keys(indexesContentForCollection);
+            console.log(`[Seed] Found ${keys.length} schema index colists in account.os.indexes`);
+            for (const key of keys) {
+              if (key.startsWith("co_z")) {
+                const indexColistId = indexesContentForCollection.get(key);
+                if (indexColistId) {
+                  try {
+                    const indexColistCore = await ensureCoValueLoaded(backend, indexColistId, {
+                      waitForAvailable: true,
+                      timeoutMs: 2e3
+                    });
+                    if (indexColistCore && backend.isAvailable(indexColistCore)) {
+                      const indexColistContent = backend.getCurrentContent(indexColistCore);
+                      if (indexColistContent && typeof indexColistContent.toJSON === "function") {
+                        const items2 = indexColistContent.toJSON();
+                        for (const item of items2) {
+                          if (item && typeof item === "string" && item.startsWith("co_z")) {
+                            coValuesToDelete.add(item);
+                          }
+                        }
+                      }
+                    }
+                  } catch (e) {
+                    console.warn(`[Seed] Failed to read index colist ${key ? key.substring(0, 12) : "undefined"}...:`, e.message);
+                    errorCount++;
                   }
                 }
               }
             }
-          } catch (e) {
-            console.warn(`[Seed] Failed to read index colist ${key ? key.substring(0, 12) : "undefined"}...:`, e.message);
-            errorCount++;
           }
         }
+      } catch (e) {
+        console.warn(`[Seed] Failed to read account.os.indexes:`, e.message);
+        errorCount++;
       }
     }
+    let unknownContentForClearing = null;
     const unknownId = osCoMap.get("unknown");
     if (unknownId) {
       try {
@@ -15965,9 +15655,10 @@ async function deleteSeededCoValues(account, node, backend) {
           timeoutMs: 2e3
         });
         if (unknownCore && backend.isAvailable(unknownCore)) {
-          const unknownContent = backend.getCurrentContent(unknownCore);
-          if (unknownContent && typeof unknownContent.toJSON === "function") {
-            const items2 = unknownContent.toJSON();
+          unknownContentForClearing = backend.getCurrentContent(unknownCore);
+          if (unknownContentForClearing && typeof unknownContentForClearing.toJSON === "function") {
+            const items2 = unknownContentForClearing.toJSON();
+            console.log(`[Seed] Found ${items2.length} co-values in account.os.unknown`);
             for (const item of items2) {
               if (item && typeof item === "string" && item.startsWith("co_z")) {
                 coValuesToDelete.add(item);
@@ -15986,6 +15677,7 @@ async function deleteSeededCoValues(account, node, backend) {
       }
       return true;
     });
+    console.log(`[Seed] Deleting ${coValuesToDeleteFiltered.length} co-values (filtered from ${coValuesToDelete.size} total, preserving ${schemaCoIds.size} schemas)`);
     for (const coId of coValuesToDeleteFiltered) {
       try {
         const coValueCore = backend.getCoValue(coId);
@@ -16013,6 +15705,7 @@ async function deleteSeededCoValues(account, node, backend) {
         errorCount++;
       }
     }
+    let vibesContentForClearing = null;
     const vibesId = account.get("vibes");
     if (vibesId) {
       try {
@@ -16021,11 +15714,12 @@ async function deleteSeededCoValues(account, node, backend) {
           timeoutMs: 2e3
         });
         if (vibesCore && backend.isAvailable(vibesCore)) {
-          const vibesContent = backend.getCurrentContent(vibesCore);
-          if (vibesContent && typeof vibesContent.get === "function") {
-            const vibeKeys = vibesContent.keys && typeof vibesContent.keys === "function" ? vibesContent.keys() : Object.keys(vibesContent);
+          vibesContentForClearing = backend.getCurrentContent(vibesCore);
+          if (vibesContentForClearing && typeof vibesContentForClearing.get === "function") {
+            const vibeKeys = vibesContentForClearing.keys && typeof vibesContentForClearing.keys === "function" ? vibesContentForClearing.keys() : Object.keys(vibesContentForClearing);
+            console.log(`[Seed] Deleting ${vibeKeys.length} vibes from account.vibes`);
             for (const vibeKey of vibeKeys) {
-              const vibeCoId = vibesContent.get(vibeKey);
+              const vibeCoId = vibesContentForClearing.get(vibeKey);
               if (vibeCoId && typeof vibeCoId === "string" && vibeCoId.startsWith("co_z")) {
                 try {
                   const vibeCore = backend.getCoValue(vibeCoId);
@@ -16043,8 +15737,8 @@ async function deleteSeededCoValues(account, node, backend) {
               }
             }
             for (const vibeKey of vibeKeys) {
-              if (typeof vibesContent.delete === "function") {
-                vibesContent.delete(vibeKey);
+              if (typeof vibesContentForClearing.delete === "function") {
+                vibesContentForClearing.delete(vibeKey);
               }
             }
           }
@@ -16054,15 +15748,37 @@ async function deleteSeededCoValues(account, node, backend) {
         errorCount++;
       }
     }
-    const osKeys = osCoMap.keys && typeof osCoMap.keys === "function" ? osCoMap.keys() : [];
     const indexColistsToDelete = [];
-    for (const key of osKeys) {
-      if (key === "schematas" || key === "unknown" || key === "metaSchema") continue;
-      if (key.startsWith("co_z")) {
-        const indexColistId = osCoMap.get(key);
-        if (indexColistId && typeof indexColistId === "string" && indexColistId.startsWith("co_z")) {
-          const schemaCoId = key;
-          indexColistsToDelete.push({ schemaCoId, indexColistId });
+    let indexesContentForDeletion = null;
+    if (indexesContentForCollection) {
+      indexesContentForDeletion = indexesContentForCollection;
+    } else {
+      const indexesIdForDeletion = osCoMap.get("indexes");
+      if (indexesIdForDeletion) {
+        try {
+          const indexesCore = await ensureCoValueLoaded(backend, indexesIdForDeletion, {
+            waitForAvailable: true,
+            timeoutMs: 5e3
+          });
+          if (indexesCore && backend.isAvailable(indexesCore)) {
+            indexesContentForDeletion = backend.getCurrentContent(indexesCore);
+          }
+        } catch (e) {
+          console.warn(`[Seed] Failed to read account.os.indexes for index colist deletion:`, e.message);
+          errorCount++;
+        }
+      }
+    }
+    if (indexesContentForDeletion && typeof indexesContentForDeletion.get === "function") {
+      const keys = indexesContentForDeletion.keys && typeof indexesContentForDeletion.keys === "function" ? indexesContentForDeletion.keys() : Object.keys(indexesContentForDeletion);
+      console.log(`[Seed] Deleting ${keys.length} index colists from account.os.indexes`);
+      for (const key of keys) {
+        if (key.startsWith("co_z")) {
+          const indexColistId = indexesContentForDeletion.get(key);
+          if (indexColistId && typeof indexColistId === "string" && indexColistId.startsWith("co_z")) {
+            const schemaCoId = key;
+            indexColistsToDelete.push({ schemaCoId, indexColistId });
+          }
         }
       }
     }
@@ -16088,14 +15804,14 @@ async function deleteSeededCoValues(account, node, backend) {
         try {
           await deleteRecord(backend, indexColistSchemaCoId, indexColistId);
           deletedCount++;
-          if (typeof osCoMap.delete === "function") {
-            osCoMap.delete(schemaCoId);
+          if (indexesContentForDeletion && typeof indexesContentForDeletion.delete === "function") {
+            indexesContentForDeletion.delete(schemaCoId);
           }
         } catch (deleteError) {
           if (deleteError.message && (deleteError.message.includes("Cannot access") || deleteError.message.includes("before initialization") || deleteError.message.includes("ReferenceError"))) {
             deletedCount++;
-            if (typeof osCoMap.delete === "function") {
-              osCoMap.delete(schemaCoId);
+            if (indexesContentForDeletion && typeof indexesContentForDeletion.delete === "function") {
+              indexesContentForDeletion.delete(schemaCoId);
             }
           } else {
             throw deleteError;
@@ -16106,8 +15822,40 @@ async function deleteSeededCoValues(account, node, backend) {
         errorCount++;
       }
     }
-    if (indexColistsToDelete.length > 0) {
+    if (indexesContentForDeletion && typeof indexesContentForDeletion.delete === "function") {
+      try {
+        const remainingKeys = indexesContentForDeletion.keys && typeof indexesContentForDeletion.keys === "function" ? Array.from(indexesContentForDeletion.keys()) : Object.keys(indexesContentForDeletion);
+        if (remainingKeys.length > 0) {
+          console.log(`[Seed] Clearing ${remainingKeys.length} remaining entries from account.os.indexes`);
+          for (const key of remainingKeys) {
+            indexesContentForDeletion.delete(key);
+          }
+        }
+      } catch (e) {
+        console.warn(`[Seed] Failed to clear account.os.indexes:`, e.message);
+        errorCount++;
+      }
     }
+    if (unknownContentForClearing && typeof unknownContentForClearing.delete === "function") {
+      try {
+        const currentItems = unknownContentForClearing.toJSON ? unknownContentForClearing.toJSON() : [];
+        if (currentItems.length > 0) {
+          console.log(`[Seed] Clearing ${currentItems.length} remaining entries from account.os.unknown`);
+        }
+      } catch (e) {
+        console.warn(`[Seed] Failed to clear account.os.unknown:`, e.message);
+        errorCount++;
+      }
+    }
+    if (vibesContentForClearing && typeof vibesContentForClearing.get === "function") {
+      const remainingVibeKeys = vibesContentForClearing.keys && typeof vibesContentForClearing.keys === "function" ? Array.from(vibesContentForClearing.keys()) : Object.keys(vibesContentForClearing);
+      if (remainingVibeKeys.length > 0) {
+        console.warn(`[Seed] Warning: ${remainingVibeKeys.length} entries still remain in account.vibes after clearing`);
+      } else {
+        console.log(`[Seed] account.vibes cleared successfully`);
+      }
+    }
+    console.log(`[Seed] Cleanup complete: deleted ${deletedCount} co-values, ${errorCount} errors`);
     return { deleted: deletedCount, errors: errorCount };
   } catch (e) {
     console.error(`[Seed] Error during cleanup:`, e);
@@ -16126,6 +15874,44 @@ function buildMetaSchemaForSeeding(metaSchemaCoId) {
   };
 }
 async function seed(account, node, configs, schemas, data2, existingBackend = null) {
+  const { CoJSONBackend: CoJSONBackend2 } = await Promise.resolve().then(() => cojsonBackend);
+  const backend = existingBackend || new CoJSONBackend2(node, account);
+  try {
+    const osId2 = account.get("os");
+    if (osId2) {
+      const osCore = await ensureCoValueLoaded(backend, osId2, {
+        waitForAvailable: true,
+        timeoutMs: 2e3
+      });
+      if (osCore && backend.isAvailable(osCore)) {
+        const osContent = backend.getCurrentContent(osCore);
+        if (osContent && typeof osContent.get === "function") {
+          const schematasId = osContent.get("schematas");
+          if (schematasId) {
+            const schematasCore = await ensureCoValueLoaded(backend, schematasId, {
+              waitForAvailable: true,
+              timeoutMs: 2e3
+            });
+            if (schematasCore && backend.isAvailable(schematasCore)) {
+              const schematasContent = backend.getCurrentContent(schematasCore);
+              if (schematasContent && typeof schematasContent.get === "function") {
+                const keys = schematasContent.keys && typeof schematasContent.keys === "function" ? schematasContent.keys() : Object.keys(schematasContent);
+                if (keys.length > 0) {
+                  if (!configs || !configs.vibes?.length && Object.keys(configs.actors || {}).length === 0) {
+                    console.log("ℹ️  Account already seeded and no configs provided, skipping");
+                    return { skipped: true, reason: "already_seeded_no_configs" };
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("[Seed] Idempotency check failed, proceeding with seeding:", e.message);
+  }
+  console.log("🌱 Seeding account...");
   function removeIdFields2(obj) {
     if (obj === null || obj === void 0) {
       return obj;
@@ -16152,9 +15938,28 @@ async function seed(account, node, configs, schemas, data2, existingBackend = nu
   const { CoIdRegistry: CoIdRegistry2 } = await Promise.resolve().then(() => coIdGenerator);
   const { transformForSeeding: transformForSeeding2, validateSchemaStructure: validateSchemaStructure2 } = await Promise.resolve().then(() => schemaTransformer);
   const coIdRegistry = new CoIdRegistry2();
-  const { CoJSONBackend: CoJSONBackend2 } = await Promise.resolve().then(() => cojsonBackend);
-  const backend = existingBackend || new CoJSONBackend2(node, account);
-  await deleteSeededCoValues(account, node, backend);
+  const osIdForCleanup = account.get("os");
+  if (osIdForCleanup) {
+    try {
+      const osCoreForCleanup = await ensureCoValueLoaded(backend, osIdForCleanup, {
+        waitForAvailable: true,
+        timeoutMs: 2e3
+      });
+      if (osCoreForCleanup && backend.isAvailable(osCoreForCleanup)) {
+        const osContentForCleanup = backend.getCurrentContent(osCoreForCleanup);
+        if (osContentForCleanup && typeof osContentForCleanup.get === "function") {
+          const schematasIdForCleanup = osContentForCleanup.get("schematas");
+          if (schematasIdForCleanup) {
+            console.log("🌱 Cleaning up existing seeded data before reseeding...");
+            const cleanupResult = await deleteSeededCoValues(account, node, backend);
+            console.log(`[Seed] Cleanup complete: deleted ${cleanupResult.deleted} co-values, ${cleanupResult.errors} errors`);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[Seed] Cleanup check failed, proceeding with seeding:", e.message);
+    }
+  }
   const profileId = account.get("profile");
   if (!profileId) {
     throw new Error("[CoJSONSeed] Profile not found on account. Ensure identity migration has run.");
@@ -16279,7 +16084,7 @@ async function seed(account, node, configs, schemas, data2, existingBackend = nu
       visitSchema(schemaKey);
     }
   }
-  await ensureAccountOs(account, node, universalGroup);
+  await ensureAccountOs(account, node, universalGroup, backend);
   let metaSchemaCoId = null;
   const osId = account.get("os");
   if (osId) {
@@ -16728,6 +16533,7 @@ ${verificationErrors.join("\n")}`;
   }
   const seededData = await seedData(account, node, universalGroup, data2, coIdRegistry);
   await storeRegistry(account, node, universalGroup, coIdRegistry, schemaCoIdMap);
+  console.log("✅ Auto-seeding complete");
   return {
     metaSchema: metaSchemaCoId,
     schemas: seededSchemas,
@@ -16874,7 +16680,7 @@ async function seedData(account, node, universalGroup, data2, coIdRegistry) {
     totalItems
   };
 }
-async function ensureAccountOs(account, node, universalGroup) {
+async function ensureAccountOs(account, node, universalGroup, backend) {
   let osId = account.get("os");
   if (osId) {
     let osCore2 = node.getCoValue(osId);
@@ -16928,6 +16734,10 @@ async function ensureAccountOs(account, node, universalGroup) {
             console.warn(`[Seed] Storage sync wait failed for account.os.schematas:`, e);
           }
         }
+      }
+      const indexesId = osContent.get("indexes");
+      if (!indexesId && backend) {
+        await ensureIndexesCoMap(backend);
       }
     }
   }
@@ -16990,6 +16800,514 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
     } else ;
   }
 }
+async function createAccountWithSecret({ agentSecret, name = "Maia", peers = [], storage = void 0 }) {
+  if (!agentSecret) {
+    throw new Error("agentSecret is required. Use signInWithPasskey() to get agentSecret.");
+  }
+  const crypto2 = await WasmCrypto.create();
+  const result = await LocalNode.withNewlyCreatedAccount({
+    creationProps: { name },
+    crypto: crypto2,
+    initialAgentSecret: agentSecret,
+    // Use provided secret from passkey!
+    peers,
+    // Use provided sync peers
+    storage,
+    // Use provided storage (if any)
+    migration: schemaMigration
+    // Handles profile + schemata + Data
+  });
+  const rawAccount = result.node.expectCurrentAccount("oID/createAccountWithSecret");
+  const profileValue = rawAccount.get("profile");
+  if (!profileValue) {
+    throw new Error("Profile not created by account creation migration");
+  }
+  try {
+    const { getAllVibeRegistries: getAllVibeRegistries2 } = await Promise.resolve().then(() => index);
+    const vibeRegistries = await getAllVibeRegistries2();
+    if (vibeRegistries.length === 0) {
+      console.log("ℹ️  No vibe registries found, skipping auto-seeding");
+      return {
+        node: result.node,
+        account: rawAccount,
+        accountID: rawAccount.id,
+        profile: profileValue,
+        group: null
+      };
+    }
+    const mergedConfigs = {
+      styles: {},
+      actors: {},
+      views: {},
+      contexts: {},
+      states: {},
+      inboxes: {},
+      vibes: vibeRegistries.map((r) => r.vibe),
+      // Pass vibes as array
+      data: {}
+    };
+    for (const registry2 of vibeRegistries) {
+      Object.assign(mergedConfigs.styles, registry2.styles || {});
+      Object.assign(mergedConfigs.actors, registry2.actors || {});
+      Object.assign(mergedConfigs.views, registry2.views || {});
+      Object.assign(mergedConfigs.contexts, registry2.contexts || {});
+      Object.assign(mergedConfigs.states, registry2.states || {});
+      Object.assign(mergedConfigs.inboxes, registry2.inboxes || {});
+      Object.assign(mergedConfigs.data, registry2.data || {});
+    }
+    const { CoJSONBackend: CoJSONBackend2 } = await Promise.resolve().then(() => cojsonBackend);
+    const backend = new CoJSONBackend2(result.node, rawAccount);
+    const { DBEngine: DBEngine3 } = await Promise.resolve().then(() => index$3);
+    const dbEngine = new DBEngine3(backend);
+    backend.dbEngine = dbEngine;
+    const { getAllToolDefinitions: getAllToolDefinitions2 } = await Promise.resolve().then(() => index$1);
+    const toolDefs = getAllToolDefinitions2();
+    const configsWithTools = {
+      ...mergedConfigs,
+      tool: toolDefs
+      // Add tool definitions under 'tool' key
+    };
+    const { getAllSchemas: getAllSchemas2 } = await Promise.resolve().then(() => index$4);
+    const schemas = getAllSchemas2();
+    await dbEngine.execute({
+      op: "seed",
+      configs: configsWithTools,
+      schemas,
+      data: mergedConfigs.data || {}
+    });
+    console.log("✅ Auto-seeding complete");
+  } catch (error) {
+    console.error("[createAccountWithSecret] Auto-seeding failed (non-blocking):", error);
+  }
+  return {
+    node: result.node,
+    account: rawAccount,
+    accountID: rawAccount.id,
+    profile: profileValue,
+    group: null
+    // No group in minimal setup
+  };
+}
+async function loadAccount({ accountID, agentSecret, peers = [], storage = void 0 }) {
+  if (!agentSecret) {
+    throw new Error("agentSecret is required. Use signInWithPasskey() to get agentSecret.");
+  }
+  if (!accountID) {
+    throw new Error("accountID is required.");
+  }
+  const crypto2 = await WasmCrypto.create();
+  const loadStartTime = performance.now();
+  console.log("   Sync peers:", peers.length > 0 ? `${peers.length} peer(s)` : "none");
+  console.log("   Storage:", storage ? "IndexedDB available (local-first)" : "no storage (sync-only)");
+  performance.now();
+  const storageCheckStartTime = performance.now();
+  if (storage) {
+    console.log("   💾 Storage available - will check IndexedDB first");
+  }
+  performance.now() - storageCheckStartTime;
+  let migrationPromise = null;
+  const deferredMigration = async (account, node2) => {
+    migrationPromise = schemaMigration(account, node2).catch((err) => {
+      console.error("[loadAccount] Migration error (non-blocking):", err);
+    });
+    return Promise.resolve();
+  };
+  const accountLoadRequestStartTime = performance.now();
+  const INITIAL_LOAD_TIMEOUT = 3e3;
+  const loadPromise = LocalNode.withLoadedAccount({
+    crypto: crypto2,
+    accountID,
+    accountSecret: agentSecret,
+    sessionID: crypto2.newRandomSessionID(accountID),
+    peers,
+    // Use provided sync peers (sync happens in background if storage has data)
+    storage,
+    // Use provided storage (if any) - enables local-first loading
+    migration: deferredMigration
+    // ← Runs after account loads, non-blocking
+  });
+  const timeoutPromise = new Promise((resolve2) => {
+    setTimeout(() => {
+      performance.now() - accountLoadRequestStartTime;
+      resolve2(null);
+    }, INITIAL_LOAD_TIMEOUT);
+  });
+  const node = await Promise.race([loadPromise, timeoutPromise]).then((result) => {
+    if (result === null) {
+      return loadPromise;
+    }
+    return result;
+  });
+  performance.now();
+  if (migrationPromise) {
+    const migrationStartTime = performance.now();
+    migrationPromise.then(() => {
+      performance.now() - migrationStartTime;
+    }).catch(() => {
+    });
+  }
+  const rawAccount = node.expectCurrentAccount("oID/loadAccount");
+  performance.now();
+  const profileID = rawAccount.get("profile");
+  if (profileID) {
+    const profileCoValue = node.getCoValue(profileID);
+    if (profileCoValue && !profileCoValue.isAvailable()) {
+      await node.load(profileID);
+      performance.now();
+    } else {
+      performance.now();
+    }
+  }
+  performance.now();
+  const osID = rawAccount.get("os");
+  if (osID && typeof osID === "string" && osID.startsWith("co_z")) {
+    const osCoValue = node.getCoValue(osID);
+    if (osCoValue && !osCoValue.isAvailable()) {
+      node.loadCoValueCore(osID).catch((err) => {
+        console.warn(`[loadAccount] Failed to prefetch account.os:`, err);
+      });
+    } else if (osCoValue && osCoValue.isAvailable()) ;
+  }
+  performance.now() - loadStartTime;
+  return {
+    node,
+    account: rawAccount,
+    accountID: rawAccount.id
+  };
+}
+async function resolveExpressions(payload, evaluator2, data2) {
+  if (typeof payload === "string" && payload.startsWith("$")) {
+    return await evaluator2.evaluate(payload, data2);
+  }
+  if (payload === null || typeof payload !== "object") {
+    return payload;
+  }
+  if (Array.isArray(payload)) {
+    return Promise.all(payload.map((item) => resolveExpressions(item, evaluator2, data2)));
+  }
+  const keys = Object.keys(payload);
+  if (keys.length === 1 && keys[0].startsWith("$")) {
+    return await evaluator2.evaluate(payload, data2);
+  }
+  const resolved = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (value && typeof value === "object") {
+      if (evaluator2.isDSLOperation(value)) {
+        resolved[key] = await evaluator2.evaluate(value, data2);
+      } else {
+        resolved[key] = await resolveExpressions(value, evaluator2, data2);
+      }
+    } else {
+      resolved[key] = await evaluator2.evaluate(value, data2);
+    }
+  }
+  return resolved;
+}
+async function resolveSchemaFromCoValue(backend, coId, opName) {
+  const schemaCoId = await resolve$1(backend, { fromCoValue: coId }, { returnType: "coId" });
+  if (!schemaCoId) throw new Error(`[${opName}] Failed to extract schema from CoValue ${coId} headerMeta`);
+  return schemaCoId;
+}
+async function loadAndValidateSchema(backend, schemaCoId, data2, opName, mergedData = null) {
+  const schema = await resolve$1(backend, schemaCoId, { returnType: "schema" });
+  if (!schema) throw new Error(`[${opName}] Schema ${schemaCoId} not found`);
+  await validateAgainstSchemaOrThrow(schema, mergedData || data2, `${opName} for schema ${schemaCoId}`);
+  return schema;
+}
+async function evaluateDataWithExisting(data2, existingData, evaluator2) {
+  if (!evaluator2) return data2;
+  return await resolveExpressions(data2, evaluator2, { context: { existing: existingData }, item: {} });
+}
+function extractSchemaDefinition(coValueData, schemaCoId) {
+  if (!coValueData || coValueData.error) return null;
+  const schemaObj = {};
+  if (coValueData.properties?.length) {
+    for (const prop of coValueData.properties) {
+      if (prop?.key !== void 0) {
+        let value = prop.value;
+        if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+          }
+        }
+        schemaObj[prop.key] = value;
+      }
+    }
+  } else Object.assign(schemaObj, coValueData);
+  const { id: id2, loading, error, type: type2, ...schemaOnly } = schemaObj;
+  if (schemaOnly.definition) {
+    const { id: defId, type: defType, ...definitionOnly } = schemaOnly.definition;
+    return { ...definitionOnly, $id: schemaCoId };
+  }
+  const hasSchemaProps = schemaOnly.cotype || schemaOnly.properties || schemaOnly.items || schemaOnly.title || schemaOnly.description;
+  return hasSchemaProps ? { ...schemaOnly, $id: schemaCoId } : null;
+}
+async function readOperation(backend, params) {
+  const { schema, key, keys, filter, options } = params;
+  if (schema && !schema.startsWith("co_z") && !["@account", "@group", "@meta-schema"].includes(schema)) {
+    throw new Error(`[ReadOperation] Schema must be a co-id (co_z...) or special schema hint (@account, @group, @meta-schema), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
+  }
+  if (keys !== void 0 && !Array.isArray(keys)) throw new Error("[ReadOperation] keys parameter must be an array of co-ids");
+  if (key && keys) throw new Error("[ReadOperation] Cannot provide both key and keys parameters");
+  return await backend.read(schema, key, keys, filter, options);
+}
+async function createOperation(backend, dbEngine, params) {
+  const { schema, data: data2 } = params;
+  requireParam(schema, "schema", "CreateOperation");
+  requireParam(data2, "data", "CreateOperation");
+  requireDbEngine(dbEngine, "CreateOperation", "runtime schema validation");
+  const schemaCoId = await resolve$1(backend, schema, { returnType: "coId" });
+  if (!schemaCoId) throw new Error(`[CreateOperation] Could not resolve schema: ${schema}`);
+  await loadAndValidateSchema(backend, schemaCoId, data2, "CreateOperation");
+  return await backend.create(schemaCoId, data2);
+}
+async function updateOperation(backend, dbEngine, evaluator2, params) {
+  const { id: id2, data: data2 } = params;
+  requireParam(id2, "id", "UpdateOperation");
+  validateCoId(id2, "UpdateOperation");
+  requireParam(data2, "data", "UpdateOperation");
+  requireDbEngine(dbEngine, "UpdateOperation", "schema validation");
+  const rawExistingData = await backend.getRawRecord(id2);
+  if (!rawExistingData) throw new Error(`[UpdateOperation] Record not found: ${id2}`);
+  const schemaCoId = await resolveSchemaFromCoValue(backend, id2, "UpdateOperation");
+  const { $schema: _schema, ...existingDataWithoutMetadata } = rawExistingData;
+  const evaluatedData = await evaluateDataWithExisting(data2, existingDataWithoutMetadata, evaluator2);
+  const mergedData = { ...existingDataWithoutMetadata, ...evaluatedData };
+  await loadAndValidateSchema(backend, schemaCoId, evaluatedData, "UpdateOperation", mergedData);
+  return await backend.update(schemaCoId, id2, evaluatedData);
+}
+async function deleteOperation(backend, dbEngine, params) {
+  const { id: id2 } = params;
+  requireParam(id2, "id", "DeleteOperation");
+  validateCoId(id2, "DeleteOperation");
+  requireDbEngine(dbEngine, "DeleteOperation", "extract schema from CoValue headerMeta");
+  const schemaCoId = await resolveSchemaFromCoValue(dbEngine.backend, id2, "DeleteOperation");
+  return await backend.delete(schemaCoId, id2);
+}
+async function seedOperation(backend, params) {
+  const { configs, schemas, data: data2 } = params;
+  if (!configs) throw new Error("[SeedOperation] Configs required");
+  if (!schemas) throw new Error("[SeedOperation] Schemas required");
+  return await backend.seed(configs, schemas, data2 || {});
+}
+async function schemaOperation(backend, dbEngine, params) {
+  const { coId, fromCoValue } = params;
+  const paramCount = [coId, fromCoValue].filter(Boolean).length;
+  if (paramCount === 0) throw new Error("[SchemaOperation] One of coId or fromCoValue must be provided");
+  if (paramCount > 1) throw new Error("[SchemaOperation] Only one of coId or fromCoValue can be provided");
+  let schemaCoId = coId ? (validateCoId(coId, "SchemaOperation"), coId) : null;
+  if (fromCoValue) {
+    validateCoId(fromCoValue, "SchemaOperation");
+    schemaCoId = await resolve$1(backend, { fromCoValue }, { returnType: "coId" });
+    if (!schemaCoId) {
+      console.warn(`[SchemaOperation] Could not extract schema co-id from CoValue ${fromCoValue} headerMeta`);
+      return new ReactiveStore$1(null);
+    }
+  }
+  const schemaCoMapStore = await backend.read(null, schemaCoId);
+  const schemaStore = new ReactiveStore$1(null);
+  const updateSchema = (coValueData) => schemaStore._set(extractSchemaDefinition(coValueData, schemaCoId));
+  const unsubscribe = schemaCoMapStore.subscribe(updateSchema);
+  updateSchema(schemaCoMapStore.value);
+  const originalUnsubscribe = schemaStore._unsubscribe;
+  schemaStore._unsubscribe = () => {
+    if (originalUnsubscribe) originalUnsubscribe();
+    unsubscribe();
+  };
+  return schemaStore;
+}
+async function resolveOperation(backend, params) {
+  const { humanReadableKey } = params;
+  requireParam(humanReadableKey, "humanReadableKey", "ResolveOperation");
+  if (typeof humanReadableKey !== "string") throw new Error("[ResolveOperation] humanReadableKey must be a string");
+  if (humanReadableKey.startsWith("@schema/") || humanReadableKey.startsWith("@actor/") || humanReadableKey.startsWith("@vibe/")) {
+    console.warn(`[ResolveOperation] resolve() called with human-readable key: ${humanReadableKey}. This should only be used during seeding. At runtime, all IDs should already be co-ids.`);
+  }
+  return await resolve$1(backend, humanReadableKey, { returnType: "coId" });
+}
+async function appendOperation(backend, dbEngine, params) {
+  const { coId, item, items: items2, cotype: cotype2 } = params;
+  requireParam(coId, "coId", "AppendOperation");
+  validateCoId(coId, "AppendOperation");
+  requireDbEngine(dbEngine, "AppendOperation", "check schema cotype");
+  const coValueCore = await ensureCoValueAvailable(backend, coId, "AppendOperation");
+  const schemaCoId = await resolveSchemaFromCoValue(backend, coId, "AppendOperation");
+  let targetCotype = cotype2;
+  if (!targetCotype) {
+    const isColist = await checkCotype(backend, schemaCoId, "colist");
+    const isCoStream = await checkCotype(backend, schemaCoId, "costream");
+    if (isColist) targetCotype = "colist";
+    else if (isCoStream) targetCotype = "costream";
+    else throw new Error(`[AppendOperation] CoValue ${coId} must be a CoList (colist) or CoStream (costream), got schema cotype: ${schemaCoId}`);
+  }
+  if (!await checkCotype(backend, schemaCoId, targetCotype)) throw new Error(`[AppendOperation] CoValue ${coId} is not a ${targetCotype} (schema cotype check failed)`);
+  const schema = await resolve$1(backend, schemaCoId, { returnType: "schema" });
+  if (!schema) throw new Error(`[AppendOperation] Schema ${schemaCoId} not found`);
+  const content = backend.getCurrentContent(coValueCore);
+  const methodName = targetCotype === "colist" ? "append" : "push";
+  if (!content || typeof content[methodName] !== "function") throw new Error(`[AppendOperation] ${targetCotype === "colist" ? "CoList" : "CoStream"} ${coId} doesn't have ${methodName} method`);
+  const itemsToAppend = items2 || (item ? [item] : []);
+  if (itemsToAppend.length === 0) throw new Error("[AppendOperation] At least one item required (use item or items parameter)");
+  validateItems(schema, itemsToAppend);
+  let appendedCount = 0;
+  if (targetCotype === "colist") {
+    let existingItems = [];
+    try {
+      if (typeof content.toJSON === "function") existingItems = content.toJSON() || [];
+    } catch (e) {
+      console.warn(`[AppendOperation] Error checking existing items:`, e);
+    }
+    for (const itemToAppend of itemsToAppend) {
+      if (!existingItems.includes(itemToAppend)) {
+        content.append(itemToAppend);
+        appendedCount++;
+      }
+    }
+  } else {
+    for (const itemToAppend of itemsToAppend) content.push(itemToAppend), appendedCount++;
+  }
+  if (backend.node?.storage) await backend.node.syncManager.waitForStorageSync(coId);
+  return { success: true, coId, [targetCotype === "colist" ? "itemsAppended" : "itemsPushed"]: appendedCount, ...targetCotype === "colist" && { itemsSkipped: itemsToAppend.length - appendedCount } };
+}
+async function processInboxOperation(backend, dbEngine, params) {
+  const { actorId, inboxCoId } = params;
+  requireParam(actorId, "actorId", "ProcessInboxOperation");
+  requireParam(inboxCoId, "inboxCoId", "ProcessInboxOperation");
+  validateCoId(actorId, "ProcessInboxOperation");
+  validateCoId(inboxCoId, "ProcessInboxOperation");
+  const { processInbox: processInbox2 } = await Promise.resolve().then(() => index$2);
+  return await processInbox2(backend, actorId, inboxCoId);
+}
+let DBEngine$1 = class DBEngine {
+  /**
+   * Create a new DBEngine instance
+   * @param {DBAdapter} backend - Backend adapter instance (must implement DBAdapter interface)
+   * @param {Object} [options] - Optional configuration
+   * @param {Object} [options.evaluator] - Optional MaiaScript evaluator for expression evaluation in updates
+   */
+  constructor(backend, options = {}) {
+    this.backend = backend;
+    const { evaluator: evaluator2 } = options;
+    if (backend && typeof backend.setDbEngine === "function") {
+      backend.setDbEngine(this);
+    } else if (backend && backend.constructor.name === "CoJSONBackend") {
+      backend.dbEngine = this;
+    }
+    this.operations = {
+      read: { execute: (params) => readOperation(this.backend, params) },
+      create: { execute: (params) => createOperation(this.backend, this, params) },
+      update: { execute: (params) => updateOperation(this.backend, this, evaluator2, params) },
+      delete: { execute: (params) => deleteOperation(this.backend, this, params) },
+      seed: { execute: (params) => seedOperation(this.backend, params) },
+      schema: { execute: (params) => schemaOperation(this.backend, this, params) },
+      resolve: { execute: (params) => resolveOperation(this.backend, params) },
+      append: { execute: (params) => appendOperation(this.backend, this, params) },
+      push: { execute: (params) => appendOperation(this.backend, this, { ...params, cotype: "costream" }) },
+      processInbox: { execute: (params) => processInboxOperation(this.backend, this, params) }
+    };
+  }
+  /**
+   * Execute a database operation
+   * @param {Object} payload - Operation payload
+   * @param {string} payload.op - Operation name (read, create, update, delete, seed)
+   * @param {Object} payload params - Operation-specific parameters
+   * @returns {Promise<any>} Operation result
+   */
+  async execute(payload) {
+    const { op, ...params } = payload;
+    if (!op) {
+      throw new Error('[DBEngine] Operation required: {op: "read|create|update|delete|seed|schema|resolve|append|push"}');
+    }
+    if (op === "push") {
+      return await this.operations.append.execute({ ...params, cotype: "costream" });
+    }
+    const operation = this.operations[op];
+    if (!operation) {
+      throw new Error(`[DBEngine] Unknown operation: ${op}`);
+    }
+    try {
+      const result = await operation.execute(params);
+      return result;
+    } catch (error) {
+      console.error(`[DBEngine] Operation ${op} failed:`, error);
+      throw error;
+    }
+  }
+  /**
+   * Resolve a human-readable ID to a co-id
+   * DEPRECATED: This method should only be used during seeding. At runtime, all IDs should already be co-ids.
+   * @deprecated Use co-ids directly at runtime. This method is only for seeding/backward compatibility.
+   * @param {string} humanReadableId - Human-readable ID (e.g., '@vibe/todos', 'vibe/vibe')
+   * @returns {Promise<string|null>} Co-id (co_z...) or null if not found
+   */
+};
+class DBAdapter {
+  /**
+   * Read data from database
+   * @param {string} schema - Schema co-id (co_z...)
+   * @param {string} [key] - Specific key (co-id) for single item
+   * @param {string[]} [keys] - Array of co-ids for batch reads
+   * @param {Object} [filter] - Filter criteria for collection queries
+   * @returns {Promise<ReactiveStore|ReactiveStore[]>} Reactive store(s) that hold current value and notify on updates
+   */
+  async read(schema, key, keys, filter) {
+    throw new Error("[DBAdapter] read() must be implemented by backend");
+  }
+  /**
+   * Create new record
+   * @param {string} schema - Schema co-id (co_z...) for data collections
+   * @param {Object} data - Data to create
+   * @returns {Promise<Object>} Created record with generated co-id
+   */
+  async create(schema, data2) {
+    throw new Error("[DBAdapter] create() must be implemented by backend");
+  }
+  /**
+   * Update existing record (unified for data collections and configs)
+   * @param {string} schema - Schema co-id (co_z...) - MUST be a co-id, not '@schema/...'
+   * @param {string} id - Record co-id to update
+   * @param {Object} data - Data to update
+   * @returns {Promise<Object>} Updated record
+   */
+  async update(schema, id2, data2) {
+    throw new Error("[DBAdapter] update() must be implemented by backend");
+  }
+  /**
+   * Delete record
+   * @param {string} schema - Schema co-id (co_z...)
+   * @param {string} id - Record co-id to delete
+   * @returns {Promise<boolean>} true if deleted successfully
+   */
+  async delete(schema, id2) {
+    throw new Error("[DBAdapter] delete() must be implemented by backend");
+  }
+  /**
+   * Get raw record from database (without normalization)
+   * Used for validation - returns stored data as-is (with $schema metadata, without id)
+   * @param {string} id - Record co-id
+   * @returns {Promise<Object|null>} Raw stored record or null if not found
+   */
+  async getRawRecord(id2) {
+    throw new Error("[DBAdapter] getRawRecord() must be implemented by backend");
+  }
+  /**
+   * Seed database with configs, schemas, and initial data (optional - backend-specific)
+   * @param {Object} configs - Config registry
+   * @param {Object} schemas - Schema definitions
+   * @param {Object} data - Initial application data
+   * @returns {Promise<void>}
+   */
+  async seed(configs, schemas, data2) {
+    throw new Error("[DBAdapter] seed() is optional - backend may not implement this");
+  }
+}
+const index$3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  DBAdapter,
+  DBEngine: DBEngine$1,
+  ReactiveStore: ReactiveStore$1
+}, Symbol.toStringTag, { value: "Module" }));
 async function getGroup(node, groupId) {
   const groupCore = node.getCoValue(groupId);
   if (!groupCore || !(groupCore?.isAvailable() || false)) {
@@ -17310,19 +17628,29 @@ function wrapStorageWithIndexingHooks(storage, backend) {
             if (coId === unknownId) {
               shouldSkipIndexing = true;
             }
-            try {
-              const keys = osContent.keys && typeof osContent.keys === "function" ? osContent.keys() : Object.keys(osContent);
-              for (const key of keys) {
-                if (key !== "schematas" && key !== "unknown") {
-                  const valueId = osContent.get(key);
-                  if (valueId === coId) {
+            const indexesId = osContent.get("indexes");
+            if (coId === indexesId) {
+              shouldSkipIndexing = true;
+            }
+            if (indexesId && !shouldSkipIndexing) {
+              const indexesCore = backend.node.getCoValue(indexesId);
+              if (indexesCore && backend.isAvailable(indexesCore) && indexesCore.type === "comap") {
+                const indexesContent = indexesCore.getCurrentContent?.();
+                if (indexesContent && typeof indexesContent.get === "function") {
+                  try {
+                    const keys = indexesContent.keys && typeof indexesContent.keys === "function" ? indexesContent.keys() : Object.keys(indexesContent);
+                    for (const key of keys) {
+                      const valueId = indexesContent.get(key);
+                      if (valueId === coId) {
+                        shouldSkipIndexing = true;
+                        break;
+                      }
+                    }
+                  } catch (e) {
                     shouldSkipIndexing = true;
-                    break;
                   }
                 }
               }
-            } catch (e) {
-              shouldSkipIndexing = true;
             }
           }
         } else if (!osCore || !backend.isAvailable(osCore)) {
@@ -18183,7 +18511,7 @@ async function processInbox(backend, actorId, inboxCoId) {
     messages: unprocessedMessages
   };
 }
-const index$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const index$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   CoCache,
   CoJSONBackend,
@@ -20028,7 +20356,7 @@ class Evaluator {
     }
     if (this.validateExpressions && depth === 0 && typeof expression === "object" && expression !== null && !Array.isArray(expression)) {
       try {
-        const { getSchema: getSchema2 } = await Promise.resolve().then(() => index$2);
+        const { getSchema: getSchema2 } = await Promise.resolve().then(() => index$4);
         const expressionSchema2 = getSchema2("maia-script-expression");
         if (expressionSchema2) {
           await validateAgainstSchemaOrThrow(expressionSchema2, expression, "maia-script-expression");
@@ -20535,7 +20863,7 @@ function getAllToolDefinitions() {
   }
   return definitions2;
 }
-const index = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const index$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   TOOLS,
   getAllToolDefinitions,
@@ -20767,14 +21095,14 @@ const config$2 = {
   namespace: "@db",
   tools: ["@db"]
 };
-async function register$2(registry) {
-  const toolEngine = registry._getToolEngine("DBModule");
+async function register$2(registry2) {
+  const toolEngine = registry2._getToolEngine("DBModule");
   toolEngine.tools.set("@db", {
     definition: dbToolDef,
     function: dbTool,
     namespacePath: "db/db"
   });
-  registry.registerModule("db", { config: config$2, query: (q) => q === "tools" ? ["@db"] : null }, {
+  registry2.registerModule("db", { config: config$2, query: (q) => q === "tools" ? ["@db"] : null }, {
     version: config$2.version,
     description: config$2.description,
     namespace: config$2.namespace,
@@ -20792,10 +21120,10 @@ const config$1 = {
   namespace: "@core",
   tools: ["noop", "preventDefault", "publishMessage"]
 };
-async function register$1(registry) {
+async function register$1(registry2) {
   const toolNames = config$1.tools;
-  const registeredTools = await registry._registerToolsFromRegistry("core", toolNames, config$1.namespace, { silent: true });
-  registry.registerModule("core", { config: config$1, query: () => null }, {
+  const registeredTools = await registry2._registerToolsFromRegistry("core", toolNames, config$1.namespace, { silent: true });
+  registry2.registerModule("core", { config: config$1, query: () => null }, {
     version: config$1.version,
     description: config$1.description,
     namespace: config$1.namespace,
@@ -20813,14 +21141,14 @@ const config = {
   namespace: "@agent",
   tools: ["@agent/chat"]
 };
-async function register(registry) {
-  const toolEngine = registry._getToolEngine("AgentModule");
+async function register(registry2) {
+  const toolEngine = registry2._getToolEngine("AgentModule");
   toolEngine.tools.set("@agent/chat", {
     definition: agentToolDef,
     function: agentTool,
     namespacePath: "agent/chat"
   });
-  registry.registerModule("agent", { config, query: (q) => q === "tools" ? ["@agent/chat"] : null }, {
+  registry2.registerModule("agent", { config, query: (q) => q === "tools" ? ["@agent/chat"] : null }, {
     version: config.version,
     description: config.description,
     namespace: config.namespace,
@@ -21018,7 +21346,7 @@ class MaiaOS {
       return config2.backend;
     }
     if (config2.node && config2.account) {
-      const { CoJSONBackend: CoJSONBackend2 } = await Promise.resolve().then(() => index$1);
+      const { CoJSONBackend: CoJSONBackend2 } = await Promise.resolve().then(() => index$2);
       const backend = new CoJSONBackend2(config2.node, config2.account);
       os.dbEngine = new DBEngine2(backend);
       backend.dbEngine = os.dbEngine;
@@ -21066,7 +21394,7 @@ ${errorDetails}`);
    * @param {Object} config - Boot configuration
    */
   static async _seedDatabase(os, backend, config2) {
-    const { getAllToolDefinitions: getAllToolDefinitions2 } = await Promise.resolve().then(() => index);
+    const { getAllToolDefinitions: getAllToolDefinitions2 } = await Promise.resolve().then(() => index$1);
     const toolDefs = getAllToolDefinitions2();
     const configsWithTools = {
       ...config2.registry,
@@ -29505,6 +29833,3469 @@ const ajv = /* @__PURE__ */ getDefaultExportFromCjs(ajvExports);
 const ajv$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: ajv
+}, Symbol.toStringTag, { value: "Module" }));
+const todosVibe = {
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/todos",
+  "name": "Todo List",
+  "description": "A complete todo list application with state machines and AI-compatible tools. Showcases MaiaOS actor system, message passing, and declarative UI.",
+  "actor": "@todos/actor/agent"
+};
+const brandStyle$2 = {
+  "$schema": "@schema/style",
+  "$id": "@todos/style/brand",
+  "tokens": {
+    "colors": {
+      "marineBlue": "#001F33",
+      "marineBlueMuted": "#2D4A5C",
+      "marineBlueLight": "#5E7A8C",
+      "paradiseWater": "#00BDD6",
+      "lushGreen": "#4E9A58",
+      "terracotta": "#C27B66",
+      "sunYellow": "#E6B94D",
+      "softClay": "#E8E1D9",
+      "tintedWhite": "#F0EDE6",
+      "background": "transparent",
+      "foreground": "#001F33",
+      "primary": "#00BDD6",
+      "secondary": "#2D4A5C",
+      "border": "rgba(255, 255, 255, 0.1)",
+      "surface": "rgba(255, 255, 255, 0.3)",
+      "glass": "rgba(255, 255, 255, 0.0005)",
+      "glassStrong": "rgba(255, 255, 255, 0.15)",
+      "text": {
+        "marine": "#D1E8F7",
+        "water": "#004D59",
+        "green": "#F0F9F1",
+        "terracotta": "#FDF2EF",
+        "yellow": "#4D3810"
+      }
+    },
+    "spacing": {
+      "xs": "0.5rem",
+      "sm": "0.75rem",
+      "md": "1rem",
+      "lg": "1.5rem",
+      "xl": "2rem",
+      "2xl": "3rem"
+    },
+    "typography": {
+      "fontFamily": {
+        "heading": "'Indie Flower', cursive",
+        "body": "'Plus Jakarta Sans', sans-serif"
+      },
+      "fontWeight": {
+        "light": "300",
+        "normal": "400",
+        "medium": "500",
+        "semibold": "600",
+        "bold": "700"
+      }
+    },
+    "radii": {
+      "sm": "4px",
+      "md": "12px",
+      "apple": "18px",
+      "full": "9999px"
+    },
+    "shadows": {
+      "sm": "0 4px 30px rgba(0, 0, 0, 0.05)",
+      "md": "0 10px 30px rgba(0, 0, 0, 0.05)",
+      "lg": "0 10px 40px rgba(0, 0, 0, 0.1)"
+    },
+    "transitions": {
+      "fast": "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      "standard": "all 0.5s cubic-bezier(0.2, 0, 0.2, 1)"
+    }
+  },
+  "components": {
+    "stack": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "0.25rem",
+      "width": "100%",
+      "maxWidth": "100%",
+      "height": "100vh",
+      "background": "{colors.softClay}",
+      "padding": "0.375rem",
+      "overflowY": "auto",
+      "overflowX": "hidden",
+      "fontFamily": "{typography.fontFamily.body}",
+      "color": "{colors.marineBlue}",
+      "boxSizing": "border-box"
+    },
+    "headerSection": {
+      "display": "flex",
+      "flexDirection": "column",
+      "alignItems": "center",
+      "gap": "0.25rem",
+      "marginBottom": "0.25rem",
+      "width": "100%"
+    },
+    "todoCategory": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "0.6rem",
+      "fontStyle": "italic",
+      "color": "{colors.paradiseWater}",
+      "marginBottom": "0.25rem",
+      "display": "block",
+      "textAlign": "center",
+      "width": "100%",
+      "textShadow": "0 0 10px rgba(0, 189, 214, 0.2)"
+    },
+    "todoTitle": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "0.9rem",
+      "fontWeight": "{typography.fontWeight.bold}",
+      "color": "{colors.marineBlue}",
+      "margin": "0",
+      "marginBottom": "0.375rem",
+      "textAlign": "center",
+      "width": "100%",
+      "letterSpacing": "-0.02em"
+    },
+    "viewSwitcher": {
+      "display": "flex",
+      "gap": "0.2rem",
+      "background": "rgba(255, 255, 255, 0.2)",
+      "padding": "0.15rem",
+      "borderRadius": "{radii.full}",
+      "margin": "0 auto",
+      "border": "1px solid {colors.border}"
+    },
+    "buttonViewSwitch": {
+      "padding": "0.25rem 0.6rem",
+      "background": "transparent",
+      "border": "none",
+      "borderRadius": "{radii.full}",
+      "fontSize": "0.55rem",
+      "fontWeight": "600",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.05em",
+      "color": "{colors.marineBlueMuted}",
+      "cursor": "pointer",
+      "transition": "{transitions.fast}",
+      "data": {
+        "active": {
+          "true": {
+            "background": "{colors.marineBlue}",
+            "color": "{colors.softClay}",
+            "boxShadow": "0 4px 12px rgba(0, 31, 51, 0.2)"
+          }
+        }
+      }
+    },
+    "form": {
+      "display": "flex",
+      "flexDirection": "row",
+      "alignItems": "center",
+      "gap": "0.25rem",
+      "padding": "0.25rem 0.375rem",
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(8px) saturate(150%)",
+      "borderRadius": "{radii.full}",
+      "border": "1px solid {colors.border}",
+      "boxShadow": "{shadows.md}",
+      "width": "100%",
+      "boxSizing": "border-box",
+      "marginBottom": "0.25rem"
+    },
+    "input": {
+      "flex": "1",
+      "width": "100%",
+      "padding": "0.25rem 0.5rem",
+      "border": "none",
+      "background": "transparent",
+      "fontSize": "0.6rem",
+      "color": "{colors.marineBlue}",
+      "fontFamily": "{typography.fontFamily.body}",
+      "fontWeight": "{typography.fontWeight.light}",
+      "outline": "none",
+      "minHeight": "0",
+      "minWidth": "0",
+      "lineHeight": "1.35"
+    },
+    "button": {
+      "width": "auto",
+      "padding": "0.25rem 0.5rem",
+      "background": "{colors.lushGreen}",
+      "color": "{colors.text.green}",
+      "border": "none",
+      "borderRadius": "{radii.full}",
+      "cursor": "pointer",
+      "fontSize": "0.5rem",
+      "fontWeight": "600",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.05em",
+      "transition": "{transitions.fast}",
+      "boxShadow": "0 4px 12px rgba(78, 154, 88, 0.2)",
+      "whiteSpace": "nowrap",
+      "flexShrink": "0",
+      ":hover": {
+        "filter": "brightness(1.1)",
+        "transform": "translateY(-1px)",
+        "boxShadow": "0 6px 16px rgba(78, 154, 88, 0.3)"
+      }
+    }
+  },
+  "selectors": {
+    ":host": {
+      "display": "block",
+      "height": "100%",
+      "background": "transparent"
+    },
+    "@container {containerName} (min-width: {containers.xs})": {
+      ".stack": {
+        "padding": "0.625rem",
+        "gap": "0.375rem"
+      },
+      ".headerSection": {
+        "gap": "0.375rem",
+        "marginBottom": "0.375rem"
+      },
+      ".todoCategory": {
+        "fontSize": "0.8rem"
+      },
+      ".todoTitle": {
+        "fontSize": "1.15rem"
+      },
+      ".viewSwitcher": {
+        "gap": "0.375rem",
+        "padding": "0.25rem",
+        "minWidth": "fit-content"
+      },
+      ".buttonViewSwitch": {
+        "padding": "0.4rem 0.8rem",
+        "fontSize": "0.7rem"
+      },
+      ".form": {
+        "gap": "0.375rem",
+        "padding": "0.375rem 0.5rem"
+      },
+      ".input": {
+        "padding": "0.375rem 0.625rem",
+        "fontSize": "0.7rem"
+      },
+      ".button": {
+        "padding": "0.375rem 0.625rem",
+        "fontSize": "0.6rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.sm})": {
+      ".stack": {
+        "padding": "0.75rem",
+        "gap": "0.5rem"
+      },
+      ".headerSection": {
+        "gap": "0.5rem",
+        "marginBottom": "0.5rem"
+      },
+      ".todoCategory": {
+        "fontSize": "0.95rem"
+      },
+      ".todoTitle": {
+        "fontSize": "1.3rem"
+      },
+      ".viewSwitcher": {
+        "gap": "0.5rem",
+        "padding": "0.3rem",
+        "minWidth": "fit-content"
+      },
+      ".buttonViewSwitch": {
+        "padding": "0.4rem 0.8rem",
+        "fontSize": "0.7rem"
+      },
+      ".form": {
+        "gap": "0.5rem",
+        "padding": "0.5rem 0.625rem"
+      },
+      ".input": {
+        "padding": "0.5rem 0.75rem",
+        "fontSize": "0.75rem"
+      },
+      ".button": {
+        "padding": "0.5rem 0.75rem",
+        "fontSize": "0.65rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.md})": {
+      ".stack": {
+        "padding": "1rem",
+        "gap": "0.625rem"
+      },
+      ".headerSection": {
+        "gap": "0.625rem",
+        "marginBottom": "0.625rem"
+      },
+      ".todoCategory": {
+        "fontSize": "1.1rem"
+      },
+      ".todoTitle": {
+        "fontSize": "1.45rem"
+      },
+      ".viewSwitcher": {
+        "gap": "0.625rem",
+        "padding": "0.375rem",
+        "minWidth": "fit-content"
+      },
+      ".buttonViewSwitch": {
+        "padding": "0.6rem 1rem",
+        "fontSize": "0.85rem"
+      },
+      ".form": {
+        "gap": "0.625rem",
+        "padding": "0.625rem 0.75rem"
+      },
+      ".input": {
+        "padding": "0.625rem 0.875rem",
+        "fontSize": "0.8rem"
+      },
+      ".button": {
+        "padding": "0.625rem 0.875rem",
+        "fontSize": "0.7rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.lg})": {
+      ".stack": {
+        "padding": "1.25rem",
+        "gap": "0.75rem"
+      },
+      ".headerSection": {
+        "gap": "0.75rem",
+        "marginBottom": "0.75rem"
+      },
+      ".todoCategory": {
+        "fontSize": "1.2rem"
+      },
+      ".todoTitle": {
+        "fontSize": "1.55rem"
+      },
+      ".viewSwitcher": {
+        "gap": "0.75rem",
+        "padding": "0.45rem",
+        "minWidth": "fit-content"
+      },
+      ".buttonViewSwitch": {
+        "padding": "0.7rem 1.1rem",
+        "fontSize": "0.9rem"
+      },
+      ".form": {
+        "gap": "0.75rem",
+        "padding": "0.75rem 0.875rem"
+      },
+      ".input": {
+        "padding": "0.75rem 1rem",
+        "fontSize": "0.85rem"
+      },
+      ".button": {
+        "padding": "0.75rem 1rem",
+        "fontSize": "0.75rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.xl})": {
+      ".stack": {
+        "padding": "1.5rem",
+        "gap": "0.875rem"
+      },
+      ".headerSection": {
+        "gap": "0.875rem",
+        "marginBottom": "0.875rem"
+      },
+      ".todoCategory": {
+        "fontSize": "1.3rem"
+      },
+      ".todoTitle": {
+        "fontSize": "1.65rem"
+      },
+      ".viewSwitcher": {
+        "gap": "0.875rem",
+        "padding": "0.5rem",
+        "minWidth": "fit-content"
+      },
+      ".buttonViewSwitch": {
+        "padding": "0.8rem 1.2rem",
+        "fontSize": "1rem"
+      },
+      ".form": {
+        "gap": "0.875rem",
+        "padding": "0.875rem 1rem"
+      },
+      ".input": {
+        "padding": "0.875rem 1.125rem",
+        "fontSize": "0.9rem"
+      },
+      ".button": {
+        "padding": "0.875rem 1.125rem",
+        "fontSize": "0.8rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.2xl})": {
+      ".stack": {
+        "padding": "1.75rem",
+        "gap": "1rem"
+      },
+      ".headerSection": {
+        "gap": "1rem",
+        "marginBottom": "1rem"
+      },
+      ".todoCategory": {
+        "fontSize": "1.4rem"
+      },
+      ".todoTitle": {
+        "fontSize": "1.75rem"
+      },
+      ".viewSwitcher": {
+        "gap": "1rem",
+        "padding": "0.55rem",
+        "minWidth": "fit-content"
+      },
+      ".buttonViewSwitch": {
+        "padding": "0.9rem 1.3rem",
+        "fontSize": "1.1rem"
+      },
+      ".form": {
+        "gap": "1rem",
+        "padding": "1rem 1.125rem"
+      },
+      ".input": {
+        "padding": "1rem 1.25rem",
+        "fontSize": "0.95rem"
+      },
+      ".button": {
+        "padding": "1rem 1.25rem",
+        "fontSize": "0.85rem"
+      }
+    }
+  }
+};
+const listStyle = {
+  "$schema": "@schema/style",
+  "$id": "@todos/style/list",
+  "components": {
+    "list": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "0.25rem",
+      "overflowY": "auto",
+      "width": "100%",
+      "boxSizing": "border-box",
+      "padding": "0.375rem"
+    },
+    "card": {
+      "display": "flex",
+      "flexDirection": "column",
+      "alignItems": "flex-start",
+      "gap": "0.25rem",
+      "padding": "0.25rem 0.375rem",
+      "background": "rgba(255, 255, 255, 0.3)",
+      "backdropFilter": "blur(8px) saturate(150%)",
+      "borderRadius": "{radii.apple}",
+      "border": "1px solid {colors.border}",
+      "transition": "{transitions.fast}",
+      "marginBottom": "0.25rem",
+      ":hover": {
+        "background": "rgba(255, 255, 255, 0.5)",
+        "transform": "translateY(-2px)",
+        "boxShadow": "{shadows.sm}"
+      }
+    },
+    "body": {
+      "flex": "1",
+      "fontSize": "0.75rem",
+      "fontWeight": "{typography.fontWeight.light}",
+      "color": "{colors.marineBlue}",
+      "lineHeight": "1.3",
+      "width": "100%"
+    },
+    "buttonSmall": {
+      "width": "12px",
+      "height": "12px",
+      "minWidth": "12px",
+      "display": "flex",
+      "alignItems": "center",
+      "justifyContent": "center",
+      "background": "rgba(255, 255, 255, 0.2)",
+      "color": "{colors.marineBlueMuted}",
+      "border": "1px solid {colors.border}",
+      "borderRadius": "{radii.full}",
+      "cursor": "pointer",
+      "transition": "{transitions.fast}",
+      "fontSize": "0.5rem",
+      ":hover": {
+        "background": "{colors.marineBlue}",
+        "color": "{colors.softClay}",
+        "borderColor": "{colors.marineBlue}"
+      }
+    },
+    "buttonDanger": {
+      ":hover": {
+        "background": "{colors.terracotta}",
+        "color": "{colors.text.terracotta}",
+        "borderColor": "{colors.terracotta}"
+      }
+    }
+  },
+  "selectors": {
+    "@container {containerName} (min-width: {containers.xs})": {
+      ".list": {
+        "gap": "0.375rem",
+        "padding": "0.5rem"
+      },
+      ".card": {
+        "padding": "0.375rem 0.5rem",
+        "gap": "0.375rem"
+      },
+      ".body": {
+        "fontSize": "0.8rem"
+      },
+      ".buttonSmall": {
+        "width": "14px",
+        "height": "14px",
+        "minWidth": "14px",
+        "fontSize": "0.6rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.sm})": {
+      ".list": {
+        "gap": "0.5rem",
+        "padding": "0.625rem"
+      },
+      ".card": {
+        "flexDirection": "row",
+        "alignItems": "center",
+        "padding": "0.5rem 0.625rem",
+        "gap": "0.5rem"
+      },
+      ".body": {
+        "fontSize": "0.85rem",
+        "width": "auto"
+      },
+      ".buttonSmall": {
+        "width": "16px",
+        "height": "16px",
+        "minWidth": "16px",
+        "fontSize": "0.65rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.md})": {
+      ".list": {
+        "gap": "0.625rem",
+        "padding": "0.75rem"
+      },
+      ".card": {
+        "padding": "0.625rem 0.75rem",
+        "gap": "0.625rem"
+      },
+      ".body": {
+        "fontSize": "0.9rem"
+      },
+      ".buttonSmall": {
+        "width": "18px",
+        "height": "18px",
+        "minWidth": "18px",
+        "fontSize": "0.7rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.lg})": {
+      ".list": {
+        "gap": "0.75rem",
+        "padding": "1rem"
+      },
+      ".card": {
+        "padding": "0.75rem 0.875rem",
+        "gap": "0.75rem"
+      },
+      ".body": {
+        "fontSize": "0.95rem"
+      },
+      ".buttonSmall": {
+        "width": "20px",
+        "height": "20px",
+        "minWidth": "20px",
+        "fontSize": "0.75rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.xl})": {
+      ".list": {
+        "gap": "0.875rem",
+        "padding": "1.25rem"
+      },
+      ".card": {
+        "padding": "0.875rem 1rem",
+        "gap": "0.875rem"
+      },
+      ".body": {
+        "fontSize": "1rem",
+        "fontWeight": "{typography.fontWeight.medium}"
+      },
+      ".buttonSmall": {
+        "width": "22px",
+        "height": "22px",
+        "minWidth": "22px",
+        "fontSize": "0.8rem"
+      },
+      ".card:hover": {
+        "transform": "translateY(-1px)",
+        "boxShadow": "{shadows.md}"
+      }
+    },
+    "@container {containerName} (min-width: {containers.2xl})": {
+      ".list": {
+        "gap": "1rem",
+        "padding": "1.5rem"
+      },
+      ".card": {
+        "padding": "1rem 1.25rem",
+        "gap": "1rem"
+      },
+      ".body": {
+        "fontSize": "1.05rem",
+        "fontWeight": "{typography.fontWeight.medium}"
+      },
+      ".buttonSmall": {
+        "width": "24px",
+        "height": "24px",
+        "minWidth": "24px",
+        "fontSize": "0.85rem"
+      },
+      ".card:hover": {
+        "transform": "translateY(-2px)",
+        "boxShadow": "{shadows.lg}"
+      }
+    },
+    "[data-done=true] .body": {
+      "textDecoration": "line-through",
+      "opacity": "0.7"
+    },
+    "[data-done=true]": {
+      "opacity": "0.6",
+      "background": "rgba(255, 255, 255, 0.1)"
+    }
+  }
+};
+const logsStyle = {
+  "$schema": "@schema/style",
+  "$id": "@todos/style/logs",
+  "components": {
+    "logs": {
+      "padding": "0",
+      "margin": "0",
+      "background": "transparent",
+      "color": "#001F33",
+      "fontFamily": "'Plus Jakarta Sans', sans-serif",
+      "fontSize": "0.85rem",
+      "lineHeight": "1.5"
+    },
+    "logEntryContainer": {
+      "display": "flex",
+      "flexDirection": "column",
+      "width": "100%",
+      "maxWidth": "100%",
+      "boxSizing": "border-box",
+      "overflow": "hidden"
+    },
+    "logEntries": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "0.2rem",
+      "width": "100%",
+      "maxWidth": "100%",
+      "boxSizing": "border-box"
+    },
+    "logEntry": {
+      "padding": "0.1rem 0.75rem",
+      "margin": "0",
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(8px) saturate(150%)",
+      "-webkit-backdrop-filter": "blur(8px) saturate(150%)",
+      "border": "1px solid rgba(0, 31, 51, 0.05)",
+      "borderLeft": "4px solid #00BDD6",
+      "borderRadius": "8px",
+      "display": "grid",
+      "gridTemplateColumns": "auto auto auto 1fr auto",
+      "gridTemplateRows": "auto auto",
+      "alignItems": "center",
+      "minHeight": "1.3rem",
+      "transition": "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+      "width": "100%",
+      "maxWidth": "100%",
+      "boxSizing": "border-box",
+      "color": "#001F33",
+      "position": "relative",
+      "boxShadow": "0 2px 8px rgba(0, 0, 0, 0.02)",
+      "overflow": "visible",
+      ":hover": {
+        "background": "rgba(255, 255, 255, 0.6)",
+        "transform": "translateX(4px)",
+        "boxShadow": "0 4px 12px rgba(0, 0, 0, 0.04)"
+      }
+    },
+    "logType": {
+      "color": "#001F33",
+      "fontWeight": "700",
+      "fontSize": "0.6rem",
+      "textTransform": "uppercase",
+      "minWidth": "5rem",
+      "textAlign": "left",
+      "letterSpacing": "0.1em",
+      "opacity": "0.8"
+    },
+    "logSource": {
+      "color": "#2D4A5C",
+      "fontSize": "0.65rem",
+      "fontFamily": "monospace",
+      "minWidth": "8rem",
+      "flexShrink": "0",
+      "fontWeight": "500",
+      "display": "flex",
+      "alignItems": "center",
+      "gap": "0.3rem",
+      "background": "rgba(0, 31, 51, 0.05)",
+      "padding": "0.1rem 0.4rem",
+      "borderRadius": "4px"
+    },
+    "logSourceRole": {
+      "color": "#001F33",
+      "fontWeight": "700",
+      "textTransform": "lowercase",
+      "opacity": "0.6"
+    },
+    "logSourceId": {
+      "color": "#5E7A8C",
+      "fontSize": "0.6rem"
+    },
+    "logTarget": {
+      "color": "#2D4A5C",
+      "fontSize": "0.65rem",
+      "fontFamily": "monospace",
+      "minWidth": "8rem",
+      "flexShrink": "0",
+      "fontWeight": "500",
+      "display": "flex",
+      "alignItems": "center",
+      "gap": "0.3rem",
+      "background": "rgba(0, 189, 214, 0.05)",
+      "padding": "0.1rem 0.4rem",
+      "borderRadius": "4px"
+    },
+    "logTargetRole": {
+      "color": "#004D59",
+      "fontWeight": "700",
+      "textTransform": "lowercase",
+      "opacity": "0.6"
+    },
+    "logTargetId": {
+      "color": "#00BDD6",
+      "fontSize": "0.6rem"
+    },
+    "logPayloadDetails": {
+      "display": "contents"
+    },
+    "logPayloadToggle": {
+      "gridColumn": "5",
+      "gridRow": "1",
+      "color": "#004D59",
+      "fontSize": "0.6rem",
+      "fontWeight": "700",
+      "cursor": "pointer",
+      "userSelect": "none",
+      "padding": "0.15rem 0.5rem",
+      "borderRadius": "9999px",
+      "background": "rgba(0, 189, 214, 0.15)",
+      "border": "1px solid rgba(0, 189, 214, 0.2)",
+      "transition": "all 0.2s ease",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.05em",
+      "justifySelf": "end",
+      ":hover": {
+        "background": "rgba(0, 189, 214, 0.25)",
+        "transform": "scale(1.05)"
+      }
+    },
+    "logPayload": {
+      "gridRow": "2",
+      "gridColumn": "4 / 6",
+      "margin": "0.3rem 0 0.2rem 0",
+      "padding": "0.6rem 0.8rem",
+      "background": "rgba(0, 31, 51, 0.03)",
+      "borderRadius": "8px",
+      "border": "1px solid rgba(0, 31, 51, 0.05)",
+      "color": "#2D4A5C",
+      "fontSize": "0.65rem",
+      "fontFamily": "monospace",
+      "whiteSpace": "pre-wrap",
+      "wordBreak": "break-all",
+      "overflow": "auto",
+      "maxHeight": "400px",
+      "width": "fit-content",
+      "minWidth": "180px",
+      "maxWidth": "100%",
+      "boxSizing": "border-box",
+      "boxShadow": "inset 0 2px 4px rgba(0, 0, 0, 0.02)",
+      "textAlign": "left",
+      "justifySelf": "end",
+      "display": "flex",
+      "alignItems": "center"
+    }
+  },
+  "selectors": {
+    ".log-entry[data-event-type='SUCCESS']": {
+      "borderLeftColor": "#4E9A58",
+      "background": "rgba(78, 154, 88, 0.05)"
+    },
+    ".log-entry[data-event-type='ERROR']": {
+      "borderLeftColor": "#C27B66",
+      "background": "rgba(194, 123, 102, 0.05)"
+    },
+    ".log-entry[data-event-type='SWITCH_VIEW']": {
+      "borderLeftColor": "#00BDD6"
+    },
+    "summary::-webkit-details-marker": {
+      "display": "none"
+    },
+    "summary::marker": {
+      "display": "none"
+    },
+    "details:not([open]) .log-payload": {
+      "display": "none"
+    }
+  }
+};
+const agentActor$2 = {
+  "$schema": "@schema/actor",
+  "$id": "@todos/actor/agent",
+  "role": "agent",
+  "context": "@todos/context/agent",
+  "view": "@todos/view/agent",
+  "state": "@todos/state/agent",
+  "brand": "@todos/style/brand",
+  "inbox": "@todos/inbox/agent"
+};
+const listActor = {
+  "$schema": "@schema/actor",
+  "$id": "@todos/actor/list",
+  "role": "todo-list",
+  "context": "@todos/context/list",
+  "view": "@todos/view/list",
+  "state": "@todos/state/list",
+  "brand": "@todos/style/brand",
+  "style": "@todos/style/list",
+  "inbox": "@todos/inbox/list"
+};
+const logsActor = {
+  "$schema": "@schema/actor",
+  "$id": "@todos/actor/logs",
+  "role": "logs",
+  "context": "@todos/context/logs",
+  "view": "@todos/view/logs",
+  "state": "@todos/state/logs",
+  "brand": "@todos/style/brand",
+  "style": "@todos/style/logs",
+  "inbox": "@todos/inbox/logs"
+};
+const agentView$2 = {
+  "$schema": "@schema/view",
+  "$id": "@todos/view/agent",
+  "content": {
+    "tag": "div",
+    "class": "stack",
+    "children": [
+      {
+        "tag": "div",
+        "class": "header-section",
+        "children": [
+          {
+            "tag": "h2",
+            "class": "todo-title",
+            "text": "Daily Focus"
+          },
+          {
+            "tag": "div",
+            "class": "view-switcher",
+            "children": [
+              {
+                "tag": "button",
+                "class": "button-view-switch",
+                "attrs": {
+                  "data-view": "list",
+                  "data": {
+                    "active": "$listButtonActive"
+                  }
+                },
+                "text": "$listViewLabel",
+                "$on": {
+                  "click": {
+                    "send": "SWITCH_VIEW",
+                    "payload": { "viewMode": "list" }
+                  }
+                }
+              },
+              {
+                "tag": "button",
+                "class": "button-view-switch",
+                "attrs": {
+                  "data-view": "logs",
+                  "data": {
+                    "active": "$logsButtonActive"
+                  }
+                },
+                "text": "$logsViewLabel",
+                "$on": {
+                  "click": {
+                    "send": "SWITCH_VIEW",
+                    "payload": { "viewMode": "logs" }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "class": "form",
+        "children": [
+          {
+            "tag": "input",
+            "class": "input",
+            "attrs": {
+              "type": "text",
+              "placeholder": "$inputPlaceholder"
+            },
+            "value": "$newTodoText",
+            "$on": {
+              "input": {
+                "send": "UPDATE_INPUT",
+                "payload": { "newTodoText": "@inputValue" }
+              },
+              "blur": {
+                "send": "UPDATE_INPUT",
+                "payload": { "newTodoText": "@inputValue" }
+              },
+              "keydown": {
+                "send": "CREATE_BUTTON",
+                "payload": { "text": "@inputValue" },
+                "key": "Enter"
+              }
+            }
+          },
+          {
+            "tag": "button",
+            "class": "button",
+            "text": "$addButtonText",
+            "$on": {
+              "click": {
+                "send": "CREATE_BUTTON",
+                "payload": { "text": "$newTodoText" }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "tag": "main",
+        "class": "content-area",
+        "$slot": "$currentView"
+      }
+    ]
+  }
+};
+const listView = {
+  "$schema": "@schema/view",
+  "$id": "@todos/view/list",
+  "content": {
+    "class": "list",
+    "$each": {
+      "items": "$list",
+      "template": {
+        "class": "card",
+        "attrs": {
+          "data-done": "$$done"
+        },
+        "children": [
+          {
+            "tag": "span",
+            "class": "body",
+            "text": "$$text"
+          },
+          {
+            "tag": "button",
+            "class": "button-small",
+            "text": "✓",
+            "$on": {
+              "click": {
+                "send": "TOGGLE_BUTTON",
+                "payload": { "id": "$$id", "done": "$$done" }
+              }
+            }
+          },
+          {
+            "tag": "button",
+            "class": "button-small button-danger",
+            "text": "$deleteButtonText",
+            "$on": {
+              "click": {
+                "send": "DELETE_BUTTON",
+                "payload": { "id": "$$id" }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+};
+const logsView = {
+  "$schema": "@schema/view",
+  "$id": "@todos/view/logs",
+  "content": {
+    "class": "logs",
+    "attrs": {
+      "data": "log-viewer"
+    },
+    "children": [
+      {
+        "tag": "div",
+        "class": "log-entries",
+        "$each": {
+          "items": "$messages",
+          "template": {
+            "class": "log-entry-container",
+            "children": [
+              {
+                "tag": "div",
+                "class": "log-entry",
+                "attrs": {
+                  "data": {
+                    "eventType": "$$type",
+                    "processed": "$$processed"
+                  }
+                },
+                "children": [
+                  {
+                    "tag": "span",
+                    "class": "log-type",
+                    "text": "$$type"
+                  },
+                  {
+                    "tag": "span",
+                    "class": "log-source",
+                    "children": [
+                      {
+                        "tag": "span",
+                        "class": "log-source-role",
+                        "text": "$$fromRole"
+                      },
+                      {
+                        "tag": "span",
+                        "class": "log-source-id",
+                        "text": "$$fromId"
+                      }
+                    ]
+                  },
+                  {
+                    "tag": "span",
+                    "class": "log-target",
+                    "children": [
+                      {
+                        "tag": "span",
+                        "class": "log-target-role",
+                        "text": "$$recipient"
+                      },
+                      {
+                        "tag": "span",
+                        "class": "log-target-id",
+                        "text": "$$targetId"
+                      }
+                    ]
+                  },
+                  {
+                    "tag": "details",
+                    "class": "log-payload-details",
+                    "children": [
+                      {
+                        "tag": "summary",
+                        "class": "log-payload-toggle",
+                        "text": "$payloadLabel"
+                      },
+                      {
+                        "tag": "pre",
+                        "class": "log-payload",
+                        "text": "$$payload"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+};
+const agentContext$2 = {
+  "$schema": "@schema/context",
+  "$id": "@todos/context/agent",
+  "currentView": "@list",
+  "viewMode": "list",
+  "listButtonActive": true,
+  "logsButtonActive": false,
+  "inputPlaceholder": "Add a new todo...",
+  "addButtonText": "Add",
+  "listViewLabel": "List",
+  "logsViewLabel": "Logs",
+  "newTodoText": "",
+  "error": null,
+  "@actors": {
+    "list": "@todos/actor/list",
+    "logs": "@todos/actor/logs"
+  }
+};
+const listContext = {
+  "$schema": "@schema/context",
+  "$id": "@todos/context/list",
+  "list": {
+    "schema": "@schema/data/todos"
+  },
+  "toggleButtonText": "✓",
+  "deleteButtonText": "✕"
+};
+const logsContext = {
+  "$schema": "@schema/context",
+  "$id": "@todos/context/logs",
+  "messages": {
+    "schema": "@schema/message",
+    "options": {
+      "map": {
+        "fromRole": "$$source.role",
+        "toRole": "$$target.role",
+        "fromId": "$$source.id",
+        "toId": "$$target.id"
+      }
+    }
+  },
+  "payloadLabel": "payload"
+};
+const agentState$2 = {
+  "$schema": "@schema/state",
+  "$id": "@todos/state/agent",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "CREATE_BUTTON": {
+          "target": "creating",
+          "guard": {
+            "$and": [
+              { "$ne": ["$$text", null] },
+              { "$ne": [{ "$trim": "$$text" }, ""] }
+            ]
+          }
+        },
+        "TOGGLE_BUTTON": {
+          "target": "toggling"
+        },
+        "DELETE_BUTTON": {
+          "target": "deleting"
+        },
+        "SWITCH_VIEW": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "viewMode": "$$viewMode" }
+            },
+            {
+              "updateContext": {
+                "currentView": {
+                  "$if": {
+                    "condition": { "$eq": ["$$viewMode", "list"] },
+                    "then": "@list",
+                    "else": "@logs"
+                  }
+                }
+              }
+            },
+            {
+              "updateContext": {
+                "listButtonActive": {
+                  "$eq": ["$$viewMode", "list"]
+                }
+              }
+            },
+            {
+              "updateContext": {
+                "logsButtonActive": {
+                  "$eq": ["$$viewMode", "logs"]
+                }
+              }
+            }
+          ]
+        },
+        "UPDATE_INPUT": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "newTodoText": "$$newTodoText" }
+            }
+          ]
+        }
+      }
+    },
+    "creating": {
+      "entry": {
+        "tool": "@db",
+        "payload": {
+          "op": "create",
+          "schema": "@schema/data/todos",
+          "data": { "text": "$$text", "done": false }
+        }
+      },
+      "on": {
+        "UPDATE_INPUT": {
+          "target": "idle"
+        },
+        "CREATE_BUTTON": {
+          "target": "creating"
+        },
+        "TOGGLE_BUTTON": {
+          "target": "toggling"
+        },
+        "DELETE_BUTTON": {
+          "target": "deleting"
+        },
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "newTodoText": "" }
+            }
+          ]
+        },
+        "ERROR": "error"
+      }
+    },
+    "toggling": {
+      "entry": {
+        "tool": "@db",
+        "payload": {
+          "op": "update",
+          "id": "$$id",
+          "data": {
+            "done": {
+              "$not": "$$done"
+            }
+          }
+        }
+      },
+      "on": {
+        "TOGGLE_BUTTON": {
+          "target": "toggling"
+        },
+        "DELETE_BUTTON": {
+          "target": "deleting"
+        },
+        "UPDATE_INPUT": {
+          "target": "idle"
+        },
+        "CREATE_BUTTON": {
+          "target": "creating"
+        },
+        "SWITCH_VIEW": {
+          "target": "idle"
+        },
+        "SUCCESS": {
+          "target": "idle"
+        },
+        "ERROR": "error"
+      }
+    },
+    "deleting": {
+      "entry": {
+        "tool": "@db",
+        "payload": {
+          "op": "delete",
+          "id": "$$id"
+        }
+      },
+      "on": {
+        "DELETE_BUTTON": {
+          "target": "deleting"
+        },
+        "UPDATE_INPUT": {
+          "target": "idle"
+        },
+        "CREATE_BUTTON": {
+          "target": "creating"
+        },
+        "SWITCH_VIEW": {
+          "target": "idle"
+        },
+        "TOGGLE_BUTTON": {
+          "target": "toggling"
+        },
+        "SUCCESS": {
+          "target": "idle"
+        },
+        "ERROR": {
+          "target": "error"
+        }
+      }
+    },
+    "error": {
+      "entry": {
+        "updateContext": { "error": "$$error" }
+      },
+      "on": {
+        "TOGGLE_BUTTON": {
+          "target": "toggling"
+        },
+        "DELETE_BUTTON": {
+          "target": "deleting"
+        },
+        "RETRY": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "error": null }
+            }
+          ]
+        },
+        "DISMISS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "error": null }
+            }
+          ]
+        }
+      }
+    }
+  }
+};
+const listState = {
+  "$schema": "@schema/state",
+  "$id": "@todos/state/list",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "TOGGLE_BUTTON": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "TOGGLE_BUTTON",
+                "payload": { "id": "$$id", "done": "$$done" },
+                "target": "@todos/actor/agent"
+              }
+            }
+          ]
+        },
+        "DELETE_BUTTON": {
+          "target": "idle",
+          "actions": [
+            {
+              "tool": "@core/publishMessage",
+              "payload": {
+                "type": "DELETE_BUTTON",
+                "payload": { "id": "$$id" },
+                "target": "@todos/actor/agent"
+              }
+            }
+          ]
+        },
+        "SUCCESS": {
+          "target": "idle"
+        }
+      }
+    },
+    "error": {
+      "entry": {
+        "updateContext": { "error": "$$error" }
+      },
+      "on": {
+        "RETRY": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "error": null }
+            }
+          ]
+        },
+        "DISMISS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "error": null }
+            }
+          ]
+        }
+      }
+    }
+  }
+};
+const logsState = {
+  "$schema": "@schema/state",
+  "$id": "@todos/state/logs",
+  "initial": "idle",
+  "states": {
+    "idle": {},
+    "error": {
+      "entry": {
+        "updateContext": { "error": "$$error" }
+      },
+      "on": {
+        "RETRY": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "error": null }
+            }
+          ]
+        },
+        "DISMISS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "error": null }
+            }
+          ]
+        }
+      }
+    }
+  }
+};
+const agentInbox$2 = {
+  "$schema": "@schema/inbox",
+  "$id": "@todos/inbox/agent",
+  "items": []
+};
+const listInbox = {
+  "$schema": "@schema/inbox",
+  "$id": "@todos/inbox/list",
+  "items": []
+};
+const logsInbox = {
+  "$schema": "@schema/inbox",
+  "$id": "@todos/inbox/logs",
+  "items": []
+};
+const TodosVibeRegistry = {
+  vibe: todosVibe,
+  styles: {
+    "@todos/style/brand": brandStyle$2,
+    "@todos/style/list": listStyle,
+    "@todos/style/logs": logsStyle
+  },
+  actors: {
+    "@todos/actor/agent": agentActor$2,
+    "@todos/actor/list": listActor,
+    "@todos/actor/logs": logsActor
+  },
+  views: {
+    "@todos/view/agent": agentView$2,
+    "@todos/view/list": listView,
+    "@todos/view/logs": logsView
+  },
+  contexts: {
+    "@todos/context/agent": agentContext$2,
+    "@todos/context/list": listContext,
+    "@todos/context/logs": logsContext
+  },
+  states: {
+    "@todos/state/agent": agentState$2,
+    "@todos/state/list": listState,
+    "@todos/state/logs": logsState
+  },
+  inboxes: {
+    "@todos/inbox/agent": agentInbox$2,
+    "@todos/inbox/list": listInbox,
+    "@todos/inbox/logs": logsInbox
+  },
+  // Note: Children are now stored in context.actors (not separate children CoList files)
+  // See agent.context.maia and composite.context.maia for children definitions
+  // Initial data for seeding (creates individual todo CoMap items)
+  // NOTE: These todos are automatically indexed into account.os.{schemaCoId} via storage hooks
+  // The read() query reads from account.os.{schemaCoId}, NOT from account.data.todos (which is deprecated)
+  data: {
+    todos: [
+      {
+        text: "Welcome to MaiaOS! 🎉",
+        done: false
+      },
+      {
+        text: "Toggle me to mark as complete",
+        done: false
+      }
+    ]
+  }
+};
+const registry$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  TodosVibeRegistry
+}, Symbol.toStringTag, { value: "Module" }));
+const myDataVibe = {
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/my-data",
+  "name": "MaiaDB",
+  "description": "A database viewer interface with navigation, table view, and detail panel. Demonstrates mocked data and options.map transformations.",
+  "actor": "@my-data/actor/agent"
+};
+const brandStyle$1 = {
+  "$schema": "@schema/style",
+  "$id": "@my-data/style/brand",
+  "tokens": {
+    "colors": {
+      "marineBlue": "#001F33",
+      "marineBlueMuted": "#2D4A5C",
+      "marineBlueLight": "#5E7A8C",
+      "paradiseWater": "#00BDD6",
+      "lushGreen": "#4E9A58",
+      "terracotta": "#C27B66",
+      "sunYellow": "#E6B94D",
+      "softClay": "#E8E1D9",
+      "tintedWhite": "#F0EDE6",
+      "background": "#E8E1D9",
+      "foreground": "#001F33",
+      "primary": "#00BDD6",
+      "secondary": "#2D4A5C",
+      "border": "rgba(255, 255, 255, 0.1)",
+      "surface": "rgba(255, 255, 255, 0.3)",
+      "glass": "rgba(255, 255, 255, 0.0005)",
+      "glassStrong": "rgba(255, 255, 255, 0.15)",
+      "text": {
+        "marine": "#D1E8F7",
+        "water": "#004D59",
+        "green": "#F0F9F1",
+        "terracotta": "#FDF2EF",
+        "yellow": "#4D3810"
+      }
+    },
+    "spacing": {
+      "xs": "0.5rem",
+      "sm": "0.75rem",
+      "md": "1rem",
+      "lg": "1.5rem",
+      "xl": "2rem",
+      "2xl": "3rem"
+    },
+    "typography": {
+      "fontFamily": {
+        "heading": "'Indie Flower', cursive",
+        "body": "'Plus Jakarta Sans', sans-serif"
+      },
+      "fontFaces": [
+        {
+          "fontFamily": "Indie Flower",
+          "src": "url('/brand/fonts/IndieFlower/IndieFlower-Regular.ttf') format('truetype')",
+          "fontWeight": "400",
+          "fontStyle": "normal",
+          "fontDisplay": "swap"
+        },
+        {
+          "fontFamily": "Plus Jakarta Sans",
+          "src": "url('/brand/fonts/Jarkata/PlusJakartaSans-VariableFont_wght.ttf') format('truetype')",
+          "fontWeight": "100 900",
+          "fontStyle": "normal",
+          "fontDisplay": "swap"
+        }
+      ],
+      "fontSize": {
+        "xs": "0.75rem",
+        "sm": "0.85rem",
+        "base": "1rem",
+        "lg": "1.15rem",
+        "xl": "1.5rem",
+        "2xl": "2rem"
+      },
+      "fontWeight": {
+        "light": "300",
+        "normal": "400",
+        "medium": "500",
+        "semibold": "600",
+        "bold": "700"
+      }
+    },
+    "radii": {
+      "sm": "4px",
+      "md": "12px",
+      "apple": "18px",
+      "full": "9999px"
+    },
+    "shadows": {
+      "sm": "0 4px 30px rgba(0, 0, 0, 0.05)",
+      "md": "0 10px 30px rgba(0, 0, 0, 0.05)",
+      "lg": "0 10px 40px rgba(0, 0, 0, 0.1)"
+    },
+    "transitions": {
+      "fast": "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      "standard": "all 0.5s cubic-bezier(0.2, 0, 0.2, 1)"
+    }
+  },
+  "components": {
+    "dbViewer": {
+      "display": "grid",
+      "gridTemplateColumns": "220px 1fr 400px",
+      "height": "100vh",
+      "width": "100%",
+      "background": "transparent",
+      "fontFamily": "{typography.fontFamily.body}",
+      "color": "{colors.marineBlue}",
+      "position": "relative",
+      "overflow": "hidden",
+      "padding": "{spacing.md}",
+      "gap": "{spacing.md}"
+    },
+    "navAside": {
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(12px) saturate(160%)",
+      "borderRadius": "{radii.apple}",
+      "border": "1px solid rgba(255, 255, 255, 0.2)",
+      "boxShadow": "{shadows.md}",
+      "padding": "{spacing.md}",
+      "overflowY": "auto",
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "{spacing.md}",
+      "zIndex": "10",
+      "height": "fit-content",
+      "maxHeight": "100%",
+      "position": "relative"
+    },
+    "sidebarToggle": {
+      "display": "none",
+      "alignItems": "center",
+      "justifyContent": "center",
+      "width": "100%",
+      "padding": "{spacing.sm}",
+      "background": "rgba(255, 255, 255, 0.2)",
+      "border": "1px solid rgba(255, 255, 255, 0.2)",
+      "borderRadius": "{radii.md}",
+      "cursor": "pointer",
+      "marginBottom": "{spacing.sm}",
+      "fontSize": "0.7rem",
+      "fontWeight": "700",
+      "textTransform": "uppercase",
+      "color": "{colors.marineBlue}",
+      "fontFamily": "{typography.fontFamily.body}",
+      "transition": "{transitions.fast}",
+      ":hover": {
+        "background": "rgba(255, 255, 255, 0.4)"
+      }
+    },
+    "detailContentWrapper": {
+      "display": "flex",
+      "flexDirection": "column",
+      "height": "100%",
+      "overflowY": "auto"
+    },
+    "navTitle": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "{typography.fontSize.lg}",
+      "fontWeight": "{typography.fontWeight.normal}",
+      "fontStyle": "normal",
+      "color": "{colors.marineBlue}",
+      "marginBottom": "{spacing.sm}",
+      "marginTop": "0",
+      "padding": "0 {spacing.xs}",
+      "letterSpacing": "-0.02em"
+    },
+    "navList": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "{spacing.sm}"
+    },
+    "navCategory": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "{spacing.sm}"
+    },
+    "navCategoryDivider": {
+      "fontFamily": "{typography.fontFamily.body}",
+      "fontSize": "0.6rem",
+      "fontWeight": "700",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.15em",
+      "color": "{colors.marineBlueLight}",
+      "padding": "0.5rem {spacing.xs} 0.25rem {spacing.xs}",
+      "marginTop": "{spacing.sm}",
+      "marginBottom": "0"
+    },
+    "navItem": {
+      "display": "flex",
+      "alignItems": "center",
+      "width": "100%",
+      "padding": "0.6rem 1.2rem",
+      "marginBottom": "{spacing.xs}",
+      "background": "rgba(255, 255, 255, 0.1)",
+      "backdropFilter": "blur(8px) saturate(150%)",
+      "border": "none",
+      "borderRadius": "{radii.full}",
+      "cursor": "pointer",
+      "transition": "{transitions.fast}",
+      "fontFamily": "{typography.fontFamily.body}",
+      "fontSize": "0.75rem",
+      "fontWeight": "{typography.fontWeight.semibold}",
+      "color": "{colors.marineBlueMuted}",
+      "textAlign": "left",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.05em",
+      "boxShadow": "0 2px 8px rgba(0, 0, 0, 0.05)",
+      ":hover": {
+        "background": "rgba(255, 255, 255, 0.2)",
+        "color": "{colors.marineBlue}",
+        "transform": "translateX(2px)",
+        "boxShadow": "0 4px 12px rgba(0, 0, 0, 0.1)"
+      }
+    },
+    "tableArea": {
+      "overflowY": "auto",
+      "display": "flex",
+      "flexDirection": "column",
+      "zIndex": "5",
+      "containerType": "inline-size",
+      "background": "transparent",
+      "padding": "0"
+    },
+    "tableContainer": {
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(12px) saturate(160%)",
+      "borderRadius": "{radii.apple}",
+      "boxShadow": "{shadows.md}",
+      "overflow": "auto",
+      "border": "1px solid rgba(255, 255, 255, 0.2)",
+      "transition": "{transitions.standard}",
+      "height": "100%",
+      "display": "flex",
+      "flexDirection": "column",
+      "padding": "{spacing.md}"
+    },
+    "dataTable": {
+      "width": "100%",
+      "borderCollapse": "separate",
+      "borderSpacing": "0",
+      "fontFamily": "{typography.fontFamily.body}",
+      "fontSize": "{typography.fontSize.sm}"
+    },
+    "dataTable th": {
+      "background": "rgba(255, 255, 255, 0.4)",
+      "padding": "{spacing.lg}",
+      "textAlign": "left",
+      "fontWeight": "700",
+      "color": "{colors.marineBlue}",
+      "borderBottom": "1px solid {colors.border}",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.12em",
+      "fontSize": "0.65rem"
+    },
+    "dataTable td": {
+      "padding": "{spacing.lg}",
+      "borderBottom": "1px solid {colors.border}",
+      "color": "{colors.marineBlueMuted}",
+      "transition": "{transitions.fast}",
+      "fontSize": "{typography.fontSize.sm}",
+      "fontWeight": "{typography.fontWeight.light}"
+    },
+    "tableRow": {
+      "cursor": "pointer",
+      "transition": "{transitions.fast}",
+      ":hover": {
+        "background": "rgba(255, 255, 255, 0.5)"
+      }
+    },
+    "detailAside": {
+      "overflowY": "auto",
+      "display": "flex",
+      "flexDirection": "column",
+      "zIndex": "10",
+      "containerType": "inline-size",
+      "background": "transparent",
+      "padding": "0"
+    },
+    "detailContainer": {
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(12px) saturate(160%)",
+      "borderRadius": "{radii.apple}",
+      "boxShadow": "{shadows.md}",
+      "overflow": "auto",
+      "border": "1px solid rgba(255, 255, 255, 0.2)",
+      "transition": "{transitions.standard}",
+      "height": "100%",
+      "display": "flex",
+      "flexDirection": "column",
+      "padding": "{spacing.md}"
+    },
+    "detailTitle": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "{typography.fontSize.xl}",
+      "fontWeight": "{typography.fontWeight.bold}",
+      "color": "{colors.marineBlue}",
+      "marginBottom": "{spacing.md}",
+      "marginTop": "0",
+      "letterSpacing": "-0.02em"
+    },
+    "detailCategory": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "0.85rem",
+      "fontStyle": "italic",
+      "color": "{colors.paradiseWater}",
+      "marginBottom": "0.5rem",
+      "display": "block",
+      "textShadow": "0 0 10px rgba(0, 189, 214, 0.2)"
+    },
+    "detailList": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "{spacing.sm}"
+    },
+    "detailItem": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "0.15rem",
+      "padding": "{spacing.md}",
+      "background": "rgba(255, 255, 255, 0.2)",
+      "borderRadius": "{radii.md}",
+      "border": "1px solid {colors.border}",
+      "transition": "{transitions.fast}",
+      ":hover": {
+        "background": "rgba(255, 255, 255, 0.4)",
+        "transform": "translateY(-2px)",
+        "boxShadow": "{shadows.sm}"
+      }
+    },
+    "detailLabel": {
+      "fontSize": "0.65rem",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.08em",
+      "color": "{colors.marineBlueLight}",
+      "fontWeight": "700"
+    },
+    "detailValue": {
+      "fontSize": "{typography.fontSize.base}",
+      "color": "{colors.marineBlue}",
+      "fontWeight": "{typography.fontWeight.light}"
+    }
+  },
+  "selectors": {
+    ":host": {
+      "position": "relative",
+      "background": "transparent",
+      "fontFamily": "{typography.fontFamily.body}",
+      "color": "{colors.foreground}"
+    },
+    ".nav-item[data-selected='true']": {
+      "background": "rgba(0, 189, 214, 0.2)",
+      "backdropFilter": "blur(12px) saturate(160%)",
+      "color": "{colors.marineBlue}",
+      "fontWeight": "{typography.fontWeight.semibold}",
+      "boxShadow": "0 4px 12px rgba(0, 189, 214, 0.2)",
+      "transform": "translateX(2px)",
+      "textShadow": "0 0 10px rgba(0, 189, 214, 0.3)",
+      "marginBottom": "{spacing.xs}"
+    },
+    ".nav-item:last-child": {
+      "marginBottom": "0"
+    },
+    ".nav-category:first-child .nav-category-divider": {
+      "marginTop": "0"
+    },
+    ".table-row[data-selected='true']": {
+      "background": "rgba(0, 189, 214, 0.15)",
+      "color": "{colors.marineBlue}",
+      "backdropFilter": "blur(4px)"
+    },
+    "@container (max-width: 1000px)": {
+      ".db-viewer": {
+        "gridTemplateColumns": "180px 1fr 300px"
+      }
+    },
+    "@container (max-width: 700px)": {
+      ".db-viewer": {
+        "gridTemplateColumns": "1fr",
+        "gridTemplateRows": "auto 1fr auto",
+        "position": "relative",
+        "overflow": "hidden"
+      },
+      ".sidebar-toggle": {
+        "display": "flex"
+      },
+      ".nav-aside": {
+        "position": "absolute",
+        "left": "0",
+        "top": "0",
+        "bottom": "0",
+        "width": "280px",
+        "maxWidth": "85vw",
+        "zIndex": "100",
+        "transform": "translateX(-100%)",
+        "opacity": "0",
+        "pointerEvents": "none",
+        "transition": "none",
+        "boxShadow": "2px 0 20px rgba(0, 0, 0, 0.1)"
+      },
+      ".nav-aside.sidebar-ready": {
+        "transition": "{transitions.standard}"
+      },
+      ".nav-aside:not(.collapsed)": {
+        "transform": "translateX(0)",
+        "opacity": "1",
+        "pointerEvents": "auto"
+      },
+      ".detail-aside": {
+        "position": "absolute",
+        "right": "0",
+        "top": "0",
+        "bottom": "0",
+        "width": "320px",
+        "maxWidth": "85vw",
+        "zIndex": "100",
+        "transform": "translateX(100%)",
+        "opacity": "0",
+        "pointerEvents": "none",
+        "transition": "none",
+        "boxShadow": "-2px 0 20px rgba(0, 0, 0, 0.1)"
+      },
+      ".detail-aside.sidebar-ready": {
+        "transition": "{transitions.standard}"
+      },
+      ".detail-aside:not(.collapsed)": {
+        "transform": "translateX(0)",
+        "opacity": "1",
+        "pointerEvents": "auto"
+      },
+      ".nav-aside.collapsed": {
+        "transform": "translateX(-100%)",
+        "opacity": "0",
+        "pointerEvents": "none"
+      },
+      ".detail-aside.collapsed": {
+        "transform": "translateX(100%)",
+        "opacity": "0",
+        "pointerEvents": "none"
+      },
+      ".nav-aside.collapsed .nav-title": {
+        "display": "none"
+      },
+      ".nav-aside.collapsed .nav-list": {
+        "display": "none"
+      },
+      ".detail-aside.collapsed .detail-content-wrapper": {
+        "display": "none"
+      }
+    }
+  }
+};
+const agentActor$1 = {
+  "$schema": "@schema/actor",
+  "$id": "@my-data/actor/agent",
+  "role": "agent",
+  "context": "@my-data/context/agent",
+  "view": "@my-data/view/agent",
+  "state": "@my-data/state/agent",
+  "brand": "@my-data/style/brand",
+  "inbox": "@my-data/inbox/agent"
+};
+const tableActor = {
+  "$schema": "@schema/actor",
+  "$id": "@my-data/actor/table",
+  "role": "ui",
+  "context": "@my-data/context/table",
+  "view": "@my-data/view/table",
+  "state": "@my-data/state/table",
+  "brand": "@my-data/style/brand",
+  "inbox": "@my-data/inbox/table"
+};
+const detailActor = {
+  "$schema": "@schema/actor",
+  "$id": "@my-data/actor/detail",
+  "role": "ui",
+  "context": "@my-data/context/detail",
+  "view": "@my-data/view/detail",
+  "state": "@my-data/state/detail",
+  "brand": "@my-data/style/brand",
+  "inbox": "@my-data/inbox/detail"
+};
+const agentView$1 = {
+  "$schema": "@schema/view",
+  "$id": "@my-data/view/agent",
+  "content": {
+    "tag": "div",
+    "class": "db-viewer",
+    "children": [
+      {
+        "tag": "aside",
+        "class": "nav-aside",
+        "children": [
+          {
+            "tag": "button",
+            "class": "sidebar-toggle nav-toggle",
+            "attrs": {
+              "aria-label": "Toggle navigation sidebar"
+            },
+            "text": "Navigation"
+          },
+          {
+            "tag": "h2",
+            "class": "nav-title",
+            "text": "$navTitle"
+          },
+          {
+            "tag": "nav",
+            "class": "nav-list",
+            "children": [
+              {
+                "$each": {
+                  "items": "$navCategories",
+                  "template": {
+                    "tag": "div",
+                    "class": "nav-category",
+                    "children": [
+                      {
+                        "tag": "div",
+                        "class": "nav-category-divider",
+                        "text": "$$category"
+                      },
+                      {
+                        "$each": {
+                          "items": "$$items",
+                          "template": {
+                            "tag": "button",
+                            "class": "nav-item",
+                            "attrs": {
+                              "data": {
+                                "selected": {
+                                  "$eq": ["$$id", "$selectedNavId"]
+                                }
+                              }
+                            },
+                            "children": [
+                              {
+                                "tag": "span",
+                                "class": "nav-label",
+                                "text": "$$label"
+                              }
+                            ],
+                            "$on": {
+                              "click": {
+                                "send": "SELECT_NAV",
+                                "payload": { "navId": "$$id" }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "tag": "main",
+        "class": "table-area",
+        "$slot": "$currentTable"
+      },
+      {
+        "tag": "aside",
+        "class": "detail-aside",
+        "children": [
+          {
+            "tag": "button",
+            "class": "sidebar-toggle detail-toggle",
+            "attrs": {
+              "aria-label": "Toggle detail sidebar"
+            },
+            "text": "Details"
+          },
+          {
+            "tag": "div",
+            "class": "detail-content-wrapper",
+            "$slot": "$currentDetail"
+          }
+        ]
+      }
+    ]
+  }
+};
+const tableView = {
+  "$schema": "@schema/view",
+  "$id": "@my-data/view/table",
+  "content": {
+    "tag": "div",
+    "class": "table-container",
+    "children": [
+      {
+        "tag": "table",
+        "class": "data-table",
+        "children": [
+          {
+            "tag": "thead",
+            "children": [
+              {
+                "tag": "tr",
+                "children": [
+                  {
+                    "tag": "th",
+                    "text": "$tableHeaders.name"
+                  },
+                  {
+                    "tag": "th",
+                    "text": "$tableHeaders.email"
+                  },
+                  {
+                    "tag": "th",
+                    "text": "$tableHeaders.role"
+                  },
+                  {
+                    "tag": "th",
+                    "text": "$tableHeaders.status"
+                  },
+                  {
+                    "tag": "th",
+                    "text": "$tableHeaders.createdAt"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "tag": "tbody",
+            "$each": {
+              "items": "$table",
+              "template": {
+                "tag": "tr",
+                "class": "table-row",
+                "attrs": {
+                  "data": {
+                    "selected": {
+                      "$eq": ["$$id", "$selectedRowId"]
+                    }
+                  }
+                },
+                "children": [
+                  {
+                    "tag": "td",
+                    "text": "$$name"
+                  },
+                  {
+                    "tag": "td",
+                    "text": "$$email"
+                  },
+                  {
+                    "tag": "td",
+                    "text": "$$role"
+                  },
+                  {
+                    "tag": "td",
+                    "text": "$$status"
+                  },
+                  {
+                    "tag": "td",
+                    "text": "$$createdAt"
+                  }
+                ],
+                "$on": {
+                  "click": {
+                    "send": "SELECT_ROW",
+                    "payload": { "rowId": "$$id" }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+};
+const detailView = {
+  "$schema": "@schema/view",
+  "$id": "@my-data/view/detail",
+  "content": {
+    "tag": "div",
+    "class": "detail-container",
+    "children": [
+      {
+        "tag": "span",
+        "class": "detail-category",
+        "text": "Metadata"
+      },
+      {
+        "tag": "h2",
+        "class": "detail-title",
+        "text": "Entity Insight"
+      },
+      {
+        "tag": "div",
+        "class": "detail-list",
+        "children": [
+          {
+            "tag": "div",
+            "class": "detail-item",
+            "children": [
+              { "tag": "span", "class": "detail-label", "text": "$detailLabels.id" },
+              { "tag": "span", "class": "detail-value", "text": "$detail.id" }
+            ]
+          },
+          {
+            "tag": "div",
+            "class": "detail-item",
+            "children": [
+              { "tag": "span", "class": "detail-label", "text": "$detailLabels.name" },
+              { "tag": "span", "class": "detail-value", "text": "$detail.name" }
+            ]
+          },
+          {
+            "tag": "div",
+            "class": "detail-item",
+            "children": [
+              { "tag": "span", "class": "detail-label", "text": "$detailLabels.email" },
+              { "tag": "span", "class": "detail-value", "text": "$detail.email" }
+            ]
+          },
+          {
+            "tag": "div",
+            "class": "detail-item",
+            "children": [
+              { "tag": "span", "class": "detail-label", "text": "$detailLabels.role" },
+              { "tag": "span", "class": "detail-value", "text": "$detail.role" }
+            ]
+          },
+          {
+            "tag": "div",
+            "class": "detail-item",
+            "children": [
+              { "tag": "span", "class": "detail-label", "text": "$detailLabels.status" },
+              { "tag": "span", "class": "detail-value", "text": "$detail.status" }
+            ]
+          },
+          {
+            "tag": "div",
+            "class": "detail-item",
+            "children": [
+              { "tag": "span", "class": "detail-label", "text": "$detailLabels.createdAt" },
+              { "tag": "span", "class": "detail-value", "text": "$detail.createdAt" }
+            ]
+          },
+          {
+            "tag": "div",
+            "class": "detail-item",
+            "children": [
+              { "tag": "span", "class": "detail-label", "text": "$detailLabels.lastLogin" },
+              { "tag": "span", "class": "detail-value", "text": "$detail.lastLogin" }
+            ]
+          },
+          {
+            "tag": "div",
+            "class": "detail-item",
+            "children": [
+              { "tag": "span", "class": "detail-label", "text": "$detailLabels.bio" },
+              { "tag": "span", "class": "detail-value", "text": "$detail.bio" }
+            ]
+          },
+          {
+            "tag": "div",
+            "class": "detail-item",
+            "children": [
+              { "tag": "span", "class": "detail-label", "text": "$detailLabels.department" },
+              { "tag": "span", "class": "detail-value", "text": "$detail.department" }
+            ]
+          },
+          {
+            "tag": "div",
+            "class": "detail-item",
+            "children": [
+              { "tag": "span", "class": "detail-label", "text": "$detailLabels.phone" },
+              { "tag": "span", "class": "detail-value", "text": "$detail.phone" }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+};
+const agentContext$1 = {
+  "$schema": "@schema/context",
+  "$id": "@my-data/context/agent",
+  "navTitle": "MaiaDB",
+  "navCategories": [
+    {
+      "category": "Account",
+      "items": [
+        { "id": "account", "label": "Owner" },
+        { "id": "group", "label": "Avatar" }
+      ]
+    },
+    {
+      "category": "Vibes",
+      "items": [
+        { "id": "maia-db", "label": "MaiaDB" },
+        { "id": "todos", "label": "Todos" }
+      ]
+    },
+    {
+      "category": "OS",
+      "items": [
+        { "id": "schemata", "label": "Schemata" },
+        { "id": "indexes", "label": "Indexes" }
+      ]
+    }
+  ],
+  "selectedNavId": "account",
+  "selectedRowId": "1",
+  "currentTable": "@table",
+  "currentDetail": "@detail",
+  "@actors": {
+    "table": "@my-data/actor/table",
+    "detail": "@my-data/actor/detail"
+  }
+};
+const tableContext = {
+  "$schema": "@schema/context",
+  "$id": "@my-data/context/table",
+  "table": [
+    { "id": "1", "name": "John Doe", "email": "john@example.com", "role": "admin", "status": "active", "createdAt": "2024-01-15" },
+    { "id": "2", "name": "Jane Smith", "email": "jane@example.com", "role": "user", "status": "active", "createdAt": "2024-01-20" },
+    { "id": "3", "name": "Bob Johnson", "email": "bob@example.com", "role": "user", "status": "inactive", "createdAt": "2024-02-01" },
+    { "id": "4", "name": "Alice Williams", "email": "alice@example.com", "role": "moderator", "status": "active", "createdAt": "2024-02-10" },
+    { "id": "5", "name": "Charlie Brown", "email": "charlie@example.com", "role": "user", "status": "pending", "createdAt": "2024-02-15" }
+  ],
+  "selectedRowId": null,
+  "tableHeaders": {
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "status": "Status",
+    "createdAt": "Created"
+  }
+};
+const detailContext = {
+  "$schema": "@schema/context",
+  "$id": "@my-data/context/detail",
+  "detail": {
+    "id": "1",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role": "admin",
+    "status": "active",
+    "createdAt": "2024-01-15",
+    "lastLogin": "2024-02-20",
+    "bio": "System administrator with 5 years of experience.",
+    "department": "IT",
+    "phone": "+1 (555) 123-4567"
+  },
+  "detailLabels": {
+    "id": "ID",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "status": "Status",
+    "createdAt": "Created",
+    "lastLogin": "Last Login",
+    "bio": "Bio",
+    "department": "Department",
+    "phone": "Phone"
+  }
+};
+const agentState$1 = {
+  "$schema": "@schema/state",
+  "$id": "@my-data/state/agent",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "SELECT_NAV": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "selectedNavId": "$$navId" }
+            },
+            {
+              "updateContext": { "selectedRowId": null }
+            }
+          ]
+        },
+        "SELECT_ROW": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "selectedRowId": "$$rowId" }
+            }
+          ]
+        }
+      }
+    }
+  }
+};
+const tableState = {
+  "$schema": "@schema/state",
+  "$id": "@my-data/state/table",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "SELECT_ROW": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "selectedRowId": "$$rowId" }
+            }
+          ]
+        }
+      }
+    }
+  }
+};
+const detailState = {
+  "$schema": "@schema/state",
+  "$id": "@my-data/state/detail",
+  "initial": "idle",
+  "states": {
+    "idle": {}
+  }
+};
+const agentInbox$1 = {
+  "$schema": "@schema/inbox",
+  "$id": "@my-data/inbox/agent",
+  "cotype": "costream"
+};
+const tableInbox = {
+  "$schema": "@schema/inbox",
+  "$id": "@my-data/inbox/table",
+  "cotype": "costream"
+};
+const detailInbox = {
+  "$schema": "@schema/inbox",
+  "$id": "@my-data/inbox/detail",
+  "cotype": "costream"
+};
+const MyDataVibeRegistry = {
+  vibe: myDataVibe,
+  styles: {
+    "@my-data/style/brand": brandStyle$1
+  },
+  actors: {
+    "@my-data/actor/agent": agentActor$1,
+    "@my-data/actor/table": tableActor,
+    "@my-data/actor/detail": detailActor
+  },
+  views: {
+    "@my-data/view/agent": agentView$1,
+    "@my-data/view/table": tableView,
+    "@my-data/view/detail": detailView
+  },
+  contexts: {
+    "@my-data/context/agent": agentContext$1,
+    "@my-data/context/table": tableContext,
+    "@my-data/context/detail": detailContext
+  },
+  states: {
+    "@my-data/state/agent": agentState$1,
+    "@my-data/state/table": tableState,
+    "@my-data/state/detail": detailState
+  },
+  inboxes: {
+    "@my-data/inbox/agent": agentInbox$1,
+    "@my-data/inbox/table": tableInbox,
+    "@my-data/inbox/detail": detailInbox
+  },
+  // No initial data - this vibe uses mocked data in context
+  data: {}
+};
+const registry$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  MyDataVibeRegistry
+}, Symbol.toStringTag, { value: "Module" }));
+async function getAllVibeRegistries() {
+  const vibeRegistries = [];
+  try {
+    const { TodosVibeRegistry: TodosVibeRegistry2 } = await Promise.resolve().then(() => registry$2);
+    if (TodosVibeRegistry2 && TodosVibeRegistry2.vibe) {
+      vibeRegistries.push(TodosVibeRegistry2);
+    }
+  } catch (error) {
+    console.warn("[Vibes] Could not load TodosVibeRegistry:", error.message);
+  }
+  try {
+    const { MaiaAgentVibeRegistry: MaiaAgentVibeRegistry2 } = await Promise.resolve().then(() => registry);
+    if (MaiaAgentVibeRegistry2 && MaiaAgentVibeRegistry2.vibe) {
+      vibeRegistries.push(MaiaAgentVibeRegistry2);
+    }
+  } catch (error) {
+    console.warn("[Vibes] Could not load MaiaAgentVibeRegistry:", error.message);
+  }
+  try {
+    const { MyDataVibeRegistry: MyDataVibeRegistry2 } = await Promise.resolve().then(() => registry$1);
+    if (MyDataVibeRegistry2 && MyDataVibeRegistry2.vibe) {
+      vibeRegistries.push(MyDataVibeRegistry2);
+    }
+  } catch (error) {
+    console.warn("[Vibes] Could not load MyDataVibeRegistry:", error.message);
+  }
+  return vibeRegistries;
+}
+const index = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  MaiaOS,
+  MyDataRegistry: MyDataVibeRegistry,
+  MyDataVibeRegistry,
+  TodosRegistry: TodosVibeRegistry,
+  TodosVibeRegistry,
+  getAllVibeRegistries
+}, Symbol.toStringTag, { value: "Module" }));
+const maiaAgentVibe = {
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/maia",
+  "name": "Maia Agent",
+  "description": "CTO-level AI assistant that understands the entire MaiaOS codebase, architecture, and all packages. Learns alongside coding sessions.",
+  "actor": "@maia/actor/agent"
+};
+const brandStyle = {
+  "$schema": "@schema/style",
+  "$id": "@maia/style/brand",
+  "tokens": {
+    "colors": {
+      "marineBlue": "#001F33",
+      "marineBlueMuted": "#2D4A5C",
+      "marineBlueLight": "#5E7A8C",
+      "paradiseWater": "#00BDD6",
+      "lushGreen": "#4E9A58",
+      "terracotta": "#C27B66",
+      "sunYellow": "#E6B94D",
+      "softClay": "#E8E1D9",
+      "tintedWhite": "#F0EDE6",
+      "background": "transparent",
+      "foreground": "#001F33",
+      "primary": "#00BDD6",
+      "secondary": "#2D4A5C",
+      "border": "rgba(255, 255, 255, 0.1)",
+      "surface": "rgba(255, 255, 255, 0.3)",
+      "glass": "rgba(255, 255, 255, 0.0005)",
+      "glassStrong": "rgba(255, 255, 255, 0.15)",
+      "text": {
+        "marine": "#D1E8F7",
+        "water": "#004D59",
+        "green": "#F0F9F1",
+        "terracotta": "#FDF2EF",
+        "yellow": "#4D3810"
+      }
+    },
+    "spacing": {
+      "xs": "0.5rem",
+      "sm": "0.75rem",
+      "md": "1rem",
+      "lg": "1.5rem",
+      "xl": "2rem",
+      "2xl": "3rem"
+    },
+    "typography": {
+      "fontFamily": {
+        "heading": "'Indie Flower', cursive",
+        "body": "'Plus Jakarta Sans', sans-serif"
+      },
+      "fontWeight": {
+        "light": "300",
+        "normal": "400",
+        "medium": "500",
+        "semibold": "600",
+        "bold": "700"
+      }
+    },
+    "radii": {
+      "sm": "4px",
+      "md": "12px",
+      "apple": "18px",
+      "full": "9999px"
+    },
+    "shadows": {
+      "sm": "0 4px 30px rgba(0, 0, 0, 0.05)",
+      "md": "0 10px 30px rgba(0, 0, 0, 0.05)",
+      "lg": "0 10px 40px rgba(0, 0, 0, 0.1)"
+    },
+    "transitions": {
+      "fast": "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      "standard": "all 0.5s cubic-bezier(0.2, 0, 0.2, 1)"
+    }
+  },
+  "selectors": {
+    ":host": {
+      "display": "block",
+      "height": "100%",
+      "background": "{colors.background}",
+      "fontFamily": "{typography.fontFamily.body}",
+      "color": "{colors.marineBlue}"
+    },
+    ".chatContainer": {
+      "display": "grid",
+      "gridTemplateRows": "1fr auto",
+      "height": "100%",
+      "minHeight": "0",
+      "maxHeight": "100%",
+      "position": "relative",
+      "overflow": "hidden",
+      "background": "{colors.softClay}",
+      "padding": "{spacing.sm}",
+      "gap": "{spacing.sm}"
+    },
+    ".messagesContainer": {
+      "gridRow": "1",
+      "overflowY": "auto",
+      "overflowX": "hidden",
+      "padding": "{spacing.sm}",
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "{spacing.md}",
+      "minHeight": "0",
+      "maxHeight": "100%",
+      "position": "relative",
+      "zIndex": "1",
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(8px) saturate(150%)",
+      "borderRadius": "{radii.apple}",
+      "border": "1px solid {colors.border}",
+      "boxShadow": "{shadows.md}"
+    },
+    ".message-wrapper": {
+      "display": "flex",
+      "flexDirection": "column",
+      "marginBottom": "{spacing.md}"
+    },
+    ".message-wrapper[data-role='user']": {
+      "alignItems": "flex-end"
+    },
+    ".message-wrapper[data-role='assistant']": {
+      "alignItems": "flex-start"
+    },
+    ".message-name": {
+      "fontSize": "0.65rem",
+      "fontWeight": "{typography.fontWeight.semibold}",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.05em",
+      "marginBottom": "0.25rem",
+      "opacity": "0.7"
+    },
+    ".message-wrapper[data-role='user'] .message-name": {
+      "color": "{colors.marineBlue}",
+      "textAlign": "right"
+    },
+    ".message-wrapper[data-role='assistant'] .message-name": {
+      "color": "{colors.marineBlue}",
+      "textAlign": "left"
+    },
+    ".message": {
+      "padding": "{spacing.sm} {spacing.md}",
+      "borderRadius": "{radii.apple}",
+      "maxWidth": "85%",
+      "wordWrap": "break-word",
+      "fontSize": "0.75rem",
+      "fontWeight": "{typography.fontWeight.light}",
+      "lineHeight": "1.4",
+      "transition": "{transitions.fast}"
+    },
+    ".messageAssistant": {
+      "alignSelf": "flex-start",
+      "background": "rgba(255, 255, 255, 0.6)",
+      "color": "{colors.marineBlue}",
+      "border": "1px solid {colors.border}",
+      "boxShadow": "{shadows.sm}"
+    },
+    ".messageUser": {
+      "alignSelf": "flex-end",
+      "background": "{colors.marineBlue}",
+      "color": "{colors.text.marine}",
+      "boxShadow": "0 4px 12px rgba(0, 31, 51, 0.2)"
+    },
+    ".message[data-role='assistant']": {
+      "alignSelf": "flex-start",
+      "background": "rgba(255, 255, 255, 0.6)",
+      "color": "{colors.marineBlue}",
+      "border": "1px solid {colors.border}"
+    },
+    ".message[data-role='user']": {
+      "alignSelf": "flex-end",
+      "background": "{colors.marineBlue}",
+      "color": "{colors.text.marine}"
+    },
+    ".welcomeMessage": {
+      "fontFamily": "{typography.fontFamily.body}",
+      "fontSize": "0.75rem",
+      "background": "rgba(0, 189, 214, 0.05)",
+      "border": "1px solid rgba(0, 189, 214, 0.1)",
+      "color": "{colors.marineBlue}",
+      "marginTop": "{spacing.sm}",
+      "marginBottom": "{spacing.md}",
+      "data": {
+        "hasConversations": {
+          "true": {
+            "display": "none"
+          }
+        }
+      }
+    },
+    ".welcomeSection": {
+      "display": "flex",
+      "flexDirection": "column",
+      "marginBottom": "{spacing.md}"
+    },
+    ".agentCategory": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "0.6rem",
+      "fontStyle": "italic",
+      "color": "{colors.paradiseWater}",
+      "marginBottom": "0.25rem",
+      "display": "block",
+      "textShadow": "0 0 10px rgba(0, 189, 214, 0.2)"
+    },
+    ".agentTitle": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "0.9rem",
+      "fontWeight": "{typography.fontWeight.bold}",
+      "color": "{colors.marineBlue}",
+      "margin": "0",
+      "letterSpacing": "-0.02em"
+    },
+    ".inputContainer": {
+      "gridRow": "2",
+      "display": "flex",
+      "gap": "{spacing.sm}",
+      "padding": "{spacing.sm}",
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(8px) saturate(150%)",
+      "borderRadius": "{radii.full}",
+      "border": "1px solid {colors.border}",
+      "boxShadow": "{shadows.md}",
+      "flexShrink": "0",
+      "position": "relative",
+      "zIndex": "100"
+    },
+    ".input": {
+      "flex": "1",
+      "padding": "{spacing.xs} {spacing.md}",
+      "border": "none",
+      "background": "transparent",
+      "fontSize": "0.7rem",
+      "color": "{colors.marineBlue}",
+      "fontFamily": "{typography.fontFamily.body}",
+      "fontWeight": "{typography.fontWeight.light}",
+      "outline": "none",
+      "cursor": "text"
+    },
+    ".button": {
+      "padding": "{spacing.xs} {spacing.md}",
+      "background": "{colors.paradiseWater}",
+      "color": "{colors.text.water}",
+      "border": "none",
+      "borderRadius": "{radii.full}",
+      "cursor": "pointer",
+      "fontSize": "0.6rem",
+      "fontWeight": "600",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.05em",
+      "transition": "{transitions.fast}",
+      "boxShadow": "0 4px 12px rgba(0, 189, 214, 0.2)",
+      ":hover": {
+        "filter": "brightness(1.1)",
+        "transform": "translateY(-1px)",
+        "boxShadow": "0 6px 16px rgba(0, 189, 214, 0.3)"
+      },
+      ":active": {
+        "transform": "translateY(0)"
+      }
+    },
+    ".button:disabled": {
+      "background": "{colors.marineBlueLight}",
+      "opacity": "0.5",
+      "cursor": "not-allowed",
+      "boxShadow": "none"
+    },
+    ".loading": {
+      "padding": "{spacing.sm} {spacing.md}",
+      "color": "{colors.marineBlueLight}",
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontStyle": "italic",
+      "display": "none",
+      "position": "absolute",
+      "top": "{spacing.xl}",
+      "left": "50%",
+      "transform": "translateX(-50%)",
+      "zIndex": "10",
+      "background": "rgba(232, 225, 217, 0.8)",
+      "backdropFilter": "blur(4px)",
+      "borderRadius": "{radii.full}",
+      "border": "1px solid {colors.border}",
+      "data": {
+        "isLoading": {
+          "true": {
+            "display": "block"
+          }
+        }
+      }
+    },
+    ".error": {
+      "padding": "{spacing.md}",
+      "background": "rgba(194, 123, 102, 0.1)",
+      "color": "{colors.terracotta}",
+      "borderRadius": "{radii.apple}",
+      "border": "1px solid rgba(194, 123, 102, 0.2)",
+      "margin": "{spacing.md}",
+      "display": "none",
+      "data": {
+        "hasError": {
+          "true": {
+            "display": "block"
+          }
+        }
+      }
+    },
+    "@container {containerName} (min-width: {containers.xs})": {
+      ".chatContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.sm}"
+      },
+      ".messagesContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.md}"
+      },
+      ".message": {
+        "padding": "{spacing.sm} {spacing.md}",
+        "fontSize": "0.7rem"
+      },
+      ".agentCategory": {
+        "fontSize": "0.65rem"
+      },
+      ".agentTitle": {
+        "fontSize": "0.85rem"
+      },
+      ".inputContainer": {
+        "gap": "{spacing.sm}",
+        "padding": "{spacing.sm}"
+      },
+      ".input": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.7rem"
+      },
+      ".button": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.65rem"
+      },
+      ".welcomeMessage": {
+        "fontSize": "0.7rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.sm})": {
+      ".chatContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.sm}"
+      },
+      ".messagesContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.md}"
+      },
+      ".message": {
+        "padding": "{spacing.sm} {spacing.md}",
+        "fontSize": "0.75rem"
+      },
+      ".agentCategory": {
+        "fontSize": "0.7rem"
+      },
+      ".agentTitle": {
+        "fontSize": "0.9rem"
+      },
+      ".inputContainer": {
+        "gap": "{spacing.sm}",
+        "padding": "{spacing.sm}"
+      },
+      ".input": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.7rem"
+      },
+      ".button": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.65rem"
+      },
+      ".welcomeMessage": {
+        "fontSize": "0.75rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.md})": {
+      ".chatContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.sm}"
+      },
+      ".messagesContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.md}"
+      },
+      ".message": {
+        "padding": "{spacing.sm} {spacing.md}",
+        "fontSize": "0.8rem"
+      },
+      ".agentCategory": {
+        "fontSize": "0.75rem"
+      },
+      ".agentTitle": {
+        "fontSize": "0.95rem"
+      },
+      ".inputContainer": {
+        "gap": "{spacing.sm}",
+        "padding": "{spacing.sm}"
+      },
+      ".input": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.75rem"
+      },
+      ".button": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.7rem"
+      },
+      ".welcomeMessage": {
+        "fontSize": "0.8rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.lg})": {
+      ".chatContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.sm}"
+      },
+      ".messagesContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.md}"
+      },
+      ".message": {
+        "padding": "{spacing.sm} {spacing.md}",
+        "fontSize": "0.85rem"
+      },
+      ".agentCategory": {
+        "fontSize": "0.8rem"
+      },
+      ".agentTitle": {
+        "fontSize": "1rem"
+      },
+      ".inputContainer": {
+        "gap": "{spacing.sm}",
+        "padding": "{spacing.sm}"
+      },
+      ".input": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.8rem"
+      },
+      ".button": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.75rem"
+      },
+      ".welcomeMessage": {
+        "fontSize": "0.85rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.xl})": {
+      ".chatContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.sm}"
+      },
+      ".messagesContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.md}"
+      },
+      ".message": {
+        "padding": "{spacing.sm} {spacing.md}",
+        "fontSize": "0.9rem"
+      },
+      ".agentCategory": {
+        "fontSize": "0.85rem"
+      },
+      ".agentTitle": {
+        "fontSize": "1.05rem"
+      },
+      ".inputContainer": {
+        "gap": "{spacing.sm}",
+        "padding": "{spacing.sm}"
+      },
+      ".input": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.85rem"
+      },
+      ".button": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.8rem"
+      },
+      ".welcomeMessage": {
+        "fontSize": "0.9rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.2xl})": {
+      ".chatContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.sm}"
+      },
+      ".messagesContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.md}"
+      },
+      ".message": {
+        "padding": "{spacing.sm} {spacing.md}",
+        "fontSize": "0.95rem"
+      },
+      ".agentCategory": {
+        "fontSize": "0.9rem"
+      },
+      ".agentTitle": {
+        "fontSize": "1.1rem"
+      },
+      ".inputContainer": {
+        "gap": "{spacing.sm}",
+        "padding": "{spacing.sm}"
+      },
+      ".input": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.9rem"
+      },
+      ".button": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.85rem"
+      },
+      ".welcomeMessage": {
+        "fontSize": "0.95rem"
+      }
+    }
+  }
+};
+const agentActor = {
+  "$schema": "@schema/actor",
+  "$id": "@maia/actor/agent",
+  "role": "agent",
+  "context": "@maia/context/agent",
+  "view": "@maia/view/agent",
+  "state": "@maia/state/agent",
+  "brand": "@maia/style/brand",
+  "inbox": "@maia/inbox/agent"
+};
+const agentView = {
+  "$schema": "@schema/view",
+  "$id": "@maia/view/agent",
+  "content": {
+    "tag": "div",
+    "class": "chat-container",
+    "children": [
+      {
+        "tag": "div",
+        "class": "messages-container",
+        "children": [
+          {
+            "tag": "div",
+            "class": "welcome-section",
+            "children": [
+              {
+                "tag": "h2",
+                "class": "agent-title",
+                "text": "Maia"
+              },
+              {
+                "tag": "div",
+                "class": "message message-assistant welcome-message",
+                "attrs": {
+                  "data": {
+                    "hasConversations": "$hasConversations"
+                  }
+                },
+                "text": "Hello! I'm Maia, your CTO-level AI assistant. I understand the MaiaOS codebase and learn alongside your coding sessions. How can I help you today?"
+              }
+            ]
+          },
+          {
+            "$each": {
+              "items": "$conversations",
+              "template": {
+                "tag": "div",
+                "class": "message-wrapper",
+                "attrs": {
+                  "data": {
+                    "role": "$$role"
+                  }
+                },
+                "children": [
+                  {
+                    "tag": "div",
+                    "class": "message-name",
+                    "text": {
+                      "$if": {
+                        "condition": { "$eq": ["$$role", "user"] },
+                        "then": "me",
+                        "else": "Maia"
+                      }
+                    }
+                  },
+                  {
+                    "tag": "div",
+                    "class": "message",
+                    "attrs": {
+                      "data": {
+                        "role": "$$role"
+                      }
+                    },
+                    "text": "$$content"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "class": "loading",
+        "attrs": {
+          "data": {
+            "isLoading": "$isLoading"
+          }
+        },
+        "text": "Maia is thinking..."
+      },
+      {
+        "tag": "div",
+        "class": "error",
+        "attrs": {
+          "data": {
+            "hasError": "$hasError"
+          }
+        },
+        "children": [
+          {
+            "tag": "strong",
+            "text": "Error: "
+          },
+          {
+            "text": "$error"
+          },
+          {
+            "tag": "button",
+            "class": "button",
+            "text": "Dismiss",
+            "$on": {
+              "click": {
+                "send": "DISMISS"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "class": "input-container",
+        "children": [
+          {
+            "tag": "input",
+            "class": "input",
+            "attrs": {
+              "type": "text",
+              "placeholder": "Type your message...",
+              "disabled": "$isLoading"
+            },
+            "value": "$inputText",
+            "$on": {
+              "input": {
+                "send": "UPDATE_INPUT",
+                "payload": { "inputText": "@inputValue" }
+              },
+              "keydown": {
+                "send": "SEND_MESSAGE",
+                "payload": { "inputText": "@inputValue" },
+                "key": "Enter"
+              }
+            }
+          },
+          {
+            "tag": "button",
+            "class": "button",
+            "attrs": {
+              "disabled": "$isLoading"
+            },
+            "text": "Send",
+            "$on": {
+              "click": {
+                "send": "SEND_MESSAGE",
+                "payload": { "inputText": "$inputText" }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+};
+const agentContext = {
+  "$schema": "@schema/context",
+  "$id": "@maia/context/agent",
+  "conversations": {
+    "schema": "@schema/data/chat"
+  },
+  "inputText": "",
+  "assistantResponse": null,
+  "isLoading": false,
+  "error": null,
+  "hasConversations": false,
+  "hasError": false
+};
+const agentState = {
+  "$schema": "@schema/state",
+  "$id": "@maia/state/agent",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "entry": [
+        {
+          "updateContext": {
+            "isLoading": false
+          }
+        }
+      ],
+      "on": {
+        "RENDER_COMPLETE": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "hasConversations": {
+                  "$gt": [{ "$length": "$conversations" }, 0]
+                }
+              }
+            }
+          ]
+        },
+        "SEND_MESSAGE": {
+          "target": "chatting",
+          "guard": {
+            "$and": [
+              { "$ne": ["$$inputText", null] },
+              { "$ne": [{ "$trim": "$$inputText" }, ""] }
+            ]
+          }
+        },
+        "UPDATE_INPUT": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "inputText": "$$inputText" }
+            }
+          ]
+        }
+      }
+    },
+    "chatting": {
+      "entry": [
+        {
+          "updateContext": {
+            "isLoading": true,
+            "hasError": false
+          }
+        },
+        {
+          "tool": "@db",
+          "payload": {
+            "op": "create",
+            "schema": "@schema/data/chat",
+            "data": {
+              "role": "user",
+              "content": "$$inputText"
+            }
+          }
+        }
+      ],
+      "on": {
+        "SUCCESS": {
+          "target": "calling_llm",
+          "actions": [
+            {
+              "updateContext": {
+                "inputText": ""
+              }
+            }
+          ]
+        },
+        "ERROR": {
+          "target": "error",
+          "actions": [
+            {
+              "updateContext": {
+                "isLoading": false
+              }
+            }
+          ]
+        }
+      }
+    },
+    "calling_llm": {
+      "entry": {
+        "tool": "@agent/chat",
+        "payload": {
+          "model": "qwen/qwen3-30b-a3b-instruct-2507",
+          "temperature": 1,
+          "context": {
+            "$concat": [
+              [
+                {
+                  "role": "system",
+                  "content": "You are Maia, a CTO-level AI assistant that understands the entire MaiaOS codebase, architecture, and all packages. You learn alongside coding sessions. Be helpful, technical, and concise. Never use emoticons in your responses."
+                }
+              ],
+              {
+                "$map": {
+                  "array": "$conversations",
+                  "as": "msg",
+                  "return": {
+                    "role": "$$msg.role",
+                    "content": "$$msg.content"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "saving_response"
+        },
+        "ERROR": {
+          "target": "error",
+          "actions": [
+            {
+              "updateContext": {
+                "isLoading": false
+              }
+            }
+          ]
+        }
+      }
+    },
+    "saving_response": {
+      "entry": [
+        {
+          "tool": "@db",
+          "payload": {
+            "op": "create",
+            "schema": "@schema/data/chat",
+            "data": {
+              "role": "assistant",
+              "content": "$$result.content"
+            }
+          }
+        }
+      ],
+      "on": {
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "assistantResponse": null,
+                "isLoading": false,
+                "hasError": false
+              }
+            },
+            {
+              "updateContext": {
+                "hasConversations": {
+                  "$gt": [{ "$length": "$conversations" }, 0]
+                }
+              }
+            }
+          ]
+        },
+        "ERROR": {
+          "target": "error",
+          "actions": [
+            {
+              "updateContext": {
+                "isLoading": false
+              }
+            }
+          ]
+        }
+      }
+    },
+    "error": {
+      "entry": {
+        "updateContext": {
+          "error": "$$error",
+          "isLoading": false,
+          "hasError": true
+        }
+      },
+      "on": {
+        "SEND_MESSAGE": {
+          "target": "chatting",
+          "guard": {
+            "$and": [
+              { "$ne": ["$$inputText", null] },
+              { "$ne": [{ "$trim": "$$inputText" }, ""] }
+            ]
+          },
+          "actions": [
+            {
+              "updateContext": {
+                "error": null,
+                "hasError": false
+              }
+            }
+          ]
+        },
+        "RETRY": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "error": null,
+                "hasError": false
+              }
+            }
+          ]
+        },
+        "DISMISS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "error": null,
+                "hasError": false
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+};
+const agentInbox = {
+  "$schema": "@schema/inbox",
+  "$id": "@maia/inbox/agent"
+};
+const MaiaAgentVibeRegistry = {
+  vibe: maiaAgentVibe,
+  styles: {
+    "@maia/style/brand": brandStyle
+  },
+  actors: {
+    "@maia/actor/agent": agentActor
+  },
+  views: {
+    "@maia/view/agent": agentView
+  },
+  contexts: {
+    "@maia/context/agent": agentContext
+  },
+  states: {
+    "@maia/state/agent": agentState
+  },
+  inboxes: {
+    "@maia/inbox/agent": agentInbox
+  }
+};
+const registry = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  MaiaAgentVibeRegistry
 }, Symbol.toStringTag, { value: "Module" }));
 export {
   MaiaOS,

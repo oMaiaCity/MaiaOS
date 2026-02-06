@@ -80,7 +80,7 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
       }
     }
     
-    // 2. Skip indexing if this is account.os or account.os.schemata (they're internal)
+    // 2. Skip indexing if this is account.os, account.os.schematas, account.os.indexes, or any index colist (they're internal)
     // Only check if account.os is already loaded (don't trigger loading!)
     if (!shouldSkipIndexing && backend.account) {
       const osId = backend.account.get('os');
@@ -105,26 +105,38 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
               shouldSkipIndexing = true;
             }
             
-            // Check if it's any schema index colist (all values in os except 'schematas' and 'unknown')
-            // Only check if we can do it synchronously without triggering loads
-            try {
-              const keys = osContent.keys && typeof osContent.keys === 'function'
-                ? osContent.keys()
-                : Object.keys(osContent);
-              for (const key of keys) {
-                if (key !== 'schematas' && key !== 'unknown') {
-                  const valueId = osContent.get(key);
-                  if (valueId === coId) {
-                    // This is a schema index colist - skip indexing to prevent infinite loop
+            // Check if it's account.os.indexes itself
+            const indexesId = osContent.get('indexes');
+            if (coId === indexesId) {
+              shouldSkipIndexing = true;
+            }
+            
+            // Check if it's inside account.os.indexes (any schema index colist)
+            if (indexesId && !shouldSkipIndexing) {
+              const indexesCore = backend.node.getCoValue(indexesId);
+              if (indexesCore && backend.isAvailable(indexesCore) && indexesCore.type === 'comap') {
+                const indexesContent = indexesCore.getCurrentContent?.();
+                if (indexesContent && typeof indexesContent.get === 'function') {
+                  // Only check if we can do it synchronously without triggering loads
+                  try {
+                    const keys = indexesContent.keys && typeof indexesContent.keys === 'function'
+                      ? indexesContent.keys()
+                      : Object.keys(indexesContent);
+                    for (const key of keys) {
+                      const valueId = indexesContent.get(key);
+                      if (valueId === coId) {
+                        // This is a schema index colist - skip indexing to prevent infinite loop
+                        shouldSkipIndexing = true;
+                        break;
+                      }
+                    }
+                  } catch (e) {
+                    // If checking fails, err on the side of caution and skip indexing
+                    // This prevents potential infinite loops
                     shouldSkipIndexing = true;
-                    break;
                   }
                 }
               }
-            } catch (e) {
-              // If checking fails, err on the side of caution and skip indexing
-              // This prevents potential infinite loops
-              shouldSkipIndexing = true;
             }
           }
         }

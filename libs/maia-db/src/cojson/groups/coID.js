@@ -7,6 +7,7 @@
 import { LocalNode } from "cojson";
 import { WasmCrypto } from "cojson/crypto/WasmCrypto";
 import { schemaMigration } from "../../migrations/schema.migration.js";
+import { seed } from "../schema/seed.js";
 
 /**
  * Create a new MaiaID (Account) with provided agentSecret
@@ -49,6 +50,83 @@ export async function createAccountWithSecret({ agentSecret, name = "Maia", peer
 		throw new Error("Profile not created by account creation migration");
 	}
 	
+	// Auto-seeding (auto-dosoding): Seed schemas, tools, and vibes automatically on account creation
+	// This runs once on new account signup, idempotency check ensures it doesn't run again
+	// Works exactly like manual seed button - replicates the exact same seeding flow
+	try {
+		// Get vibe registries (same as manual seed button)
+		const { getAllVibeRegistries } = await import('@MaiaOS/vibes');
+		const vibeRegistries = await getAllVibeRegistries();
+		
+		if (vibeRegistries.length === 0) {
+			console.log('ℹ️  No vibe registries found, skipping auto-seeding');
+			return {
+				node: result.node,
+				account: rawAccount,
+				accountID: rawAccount.id,
+				profile: profileValue,
+				group: null,
+			};
+		}
+		
+		// Merge all configs from all vibes (EXACT same structure as manual seed)
+		const mergedConfigs = {
+			styles: {},
+			actors: {},
+			views: {},
+			contexts: {},
+			states: {},
+			inboxes: {},
+			vibes: vibeRegistries.map(r => r.vibe), // Pass vibes as array
+			data: {}
+		};
+		
+		// Merge configs from all vibe registries (EXACT same logic as manual seed)
+		for (const registry of vibeRegistries) {
+			Object.assign(mergedConfigs.styles, registry.styles || {});
+			Object.assign(mergedConfigs.actors, registry.actors || {});
+			Object.assign(mergedConfigs.views, registry.views || {});
+			Object.assign(mergedConfigs.contexts, registry.contexts || {});
+			Object.assign(mergedConfigs.states, registry.states || {});
+			Object.assign(mergedConfigs.inboxes, registry.inboxes || {});
+			Object.assign(mergedConfigs.data, registry.data || {});
+		}
+		
+		// Create backend and dbEngine (same setup as MaiaOS.boot)
+		const { CoJSONBackend } = await import('../core/cojson-backend.js');
+		const backend = new CoJSONBackend(result.node, rawAccount);
+		const { DBEngine } = await import('@MaiaOS/operations');
+		const dbEngine = new DBEngine(backend);
+		backend.dbEngine = dbEngine;
+		
+		// Use the exact same seeding flow as MaiaOS._seedDatabase
+		const { getAllToolDefinitions } = await import('@MaiaOS/tools');
+		const toolDefs = getAllToolDefinitions();
+		
+		// Merge tool definitions into registry (same as _seedDatabase)
+		const configsWithTools = {
+			...mergedConfigs,
+			tool: toolDefs // Add tool definitions under 'tool' key
+		};
+		
+		// Collect schemas (same as _seedDatabase)
+		// Use getAllSchemas directly to avoid circular dependency with MaiaOS
+		const { getAllSchemas } = await import('@MaiaOS/schemata');
+		const schemas = getAllSchemas();
+		
+		// Use dbEngine.execute() with seed operation (EXACT same as manual seed)
+		await dbEngine.execute({
+			op: 'seed',
+			configs: configsWithTools,
+			schemas: schemas,
+			data: mergedConfigs.data || {}
+		});
+		
+		console.log('✅ Auto-seeding complete');
+	} catch (error) {
+		// Don't fail account creation if seeding fails - log error but continue
+		console.error('[createAccountWithSecret] Auto-seeding failed (non-blocking):', error);
+	}
 	
 	return {
 		node: result.node,
