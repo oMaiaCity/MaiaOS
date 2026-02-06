@@ -1262,9 +1262,6 @@ export async function seed(account, node, configs, schemas, data, existingBacken
       const vibesMeta = { $schema: 'GenesisSchema' };
       vibes = universalGroup.createMap({}, vibesMeta);
       account.set("vibes", vibes.id);
-      console.log(`[CoJSONSeed] Created new account.vibes CoMap: ${vibes.id}`);
-    } else {
-      console.log(`[CoJSONSeed] Using existing account.vibes CoMap: ${vibesId}`);
     }
 
     // Seed each vibe
@@ -1284,13 +1281,6 @@ export async function seed(account, node, configs, schemas, data, existingBacken
 
       // Re-transform vibe now that actors are registered
       const retransformedVibe = transformForSeeding(vibe, combinedRegistry);
-      
-      // Debug: Verify transformation worked
-      console.log(`[CoJSONSeed] Transforming vibe '${vibe.$id || vibe.name}':`, {
-        originalActor: vibe.actor,
-        transformedActor: retransformedVibe.actor,
-        isCoId: retransformedVibe.actor?.startsWith('co_z')
-      });
       
       if (retransformedVibe.actor && !retransformedVibe.actor.startsWith('co_z')) {
         console.error(`[CoJSONSeed] ❌ Vibe actor transformation failed! Expected co-id, got: ${retransformedVibe.actor}`);
@@ -1316,12 +1306,11 @@ export async function seed(account, node, configs, schemas, data, existingBacken
         // Use the vibes CoMap created before the loop
         if (vibes && typeof vibes.set === 'function') {
           vibes.set(vibeKey, vibeCoId);
-          console.log(`[CoJSONSeed] Stored vibe in account.vibes: ${vibeKey} = ${vibeCoId}`);
           
           // Verify it was stored (read back immediately)
           const storedValue = vibes.get(vibeKey);
           if (storedValue !== vibeCoId) {
-            console.warn(`[CoJSONSeed] ⚠️ Vibe ${vibeKey} storage verification failed! Expected ${vibeCoId}, got ${storedValue}`);
+            console.warn(`[CoJSONSeed] Vibe ${vibeKey} storage verification failed! Expected ${vibeCoId}, got ${storedValue}`);
           }
         } else {
           console.error(`[CoJSONSeed] ❌ Cannot store vibe ${vibeKey}: vibes CoMap not available`);
@@ -1340,17 +1329,14 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     
     // Verify all vibes were stored correctly
     if (vibes && typeof vibes.get === 'function') {
-      console.log(`[CoJSONSeed] Verifying stored vibes in account.vibes:`);
       for (const vibe of allVibes) {
         const originalVibeId = vibe.$id || '';
         const vibeKey = originalVibeId.startsWith('@vibe/') 
           ? originalVibeId.replace('@vibe/', '')
           : (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-');
         const storedValue = vibes.get(vibeKey);
-        if (storedValue) {
-          console.log(`[CoJSONSeed] ✅ Verified: ${vibeKey} = ${storedValue}`);
-        } else {
-          console.error(`[CoJSONSeed] ❌ Missing: ${vibeKey} not found in account.vibes!`);
+        if (!storedValue) {
+          console.error(`[CoJSONSeed] Missing: ${vibeKey} not found in account.vibes!`);
         }
       }
     }

@@ -70,8 +70,6 @@ export async function loadTodosVibe(container) {
     container
   );
   
-  console.log('✅ Vibe loaded:', vibe.name);
-  console.log('✅ Todo Actor with State Machine:', todoActor.machine?.currentState);
   
   return { os, vibe, actor: todoActor };
 }

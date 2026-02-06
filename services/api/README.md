@@ -83,6 +83,8 @@ Body: { messages: Array<{role: string, content: string}>, model?: string, temper
 Response: { content: string, role: string, usage?: object }
 ```
 
+**Note:** This endpoint uses Vercel AI SDK with RedPill provider configured as an OpenAI-compatible API. The model can be configured dynamically per request, while the RedPill API endpoint (`https://api.redpill.ai/v1`) is hardcoded.
+
 ## WebSocket Endpoint
 
 **Voice (Google Live API):**
@@ -122,6 +124,7 @@ Error response format:
 - REST endpoints for Honcho and RedPill
 - WebSocket proxy for Google Voice API
 - Error handling and logging
+- Vercel AI SDK integration for better streaming support and unified provider API
 
 ## Port Configuration
 

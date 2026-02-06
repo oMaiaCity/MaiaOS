@@ -201,17 +201,13 @@ export async function resolve(backend, identifier, options = {}) {
     const isSchemaKey = normalizedKey.startsWith('@schema/');
     
     if (isSchemaKey) {
-      console.log(`[resolve] Resolving schema namekey: "${identifier}" (normalized: "${normalizedKey}")`);
-      
       // Progressive loading: account.os loads in background during boot (non-blocking)
       // If not ready yet, wait (with timeout) - schema resolution will return null until ready
       // Schema keys → check account.os.schematas registry using read() API
       const osId = backend.account.get('os');
       if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
-        console.warn(`[resolve] ❌ account.os not found for schema key: ${identifier}`);
         return null;
       }
-      console.log(`[resolve] Found account.os: ${osId.substring(0, 12)}...`);
 
       // Load account.os using read() API
       const osStore = await universalRead(backend, osId, null, null, null, {
@@ -222,23 +218,19 @@ export async function resolve(backend, identifier, options = {}) {
       try {
         await waitForStoreReady(osStore, osId, timeoutMs);
       } catch (error) {
-        console.warn(`[resolve] ❌ Timeout waiting for account.os to load: ${error.message}`);
         return null;
       }
       
       const osData = osStore.value;
       if (!osData || osData.error) {
-        console.warn(`[resolve] ❌ account.os data not available or has error`);
         return null;
       }
 
       // Get schematas registry co-id from os data (flat object from read() API)
       const schematasId = osData.schematas;
       if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
-        console.warn(`[resolve] ❌ account.os.schematas not found in osData`);
         return null;
       }
-      console.log(`[resolve] Found schematas registry: ${schematasId.substring(0, 12)}...`);
 
       // Load schematas registry using read() API
       const schematasStore = await universalRead(backend, schematasId, null, null, null, {
@@ -249,20 +241,17 @@ export async function resolve(backend, identifier, options = {}) {
       try {
         await waitForStoreReady(schematasStore, schematasId, timeoutMs);
       } catch (error) {
-        console.warn(`[resolve] ❌ Timeout waiting for schematas registry to load: ${error.message}`);
         return null;
       }
       
       const schematasData = schematasStore.value;
       if (!schematasData || schematasData.error) {
-        console.warn(`[resolve] ❌ schematas registry data not available or has error`);
         return null;
       }
 
       // Lookup key in registry (flat object from read() API - properties directly accessible)
       const registryCoId = schematasData[normalizedKey] || schematasData[identifier];
       if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
-        console.log(`[resolve] ✅ Found schema "${identifier}" → "${registryCoId.substring(0, 12)}..." in registry`);
         // Found registry entry - resolve the co-id
         if (returnType === 'coId') {
           return registryCoId;
@@ -274,7 +263,7 @@ export async function resolve(backend, identifier, options = {}) {
         // Don't warn for index schemas - they're created on-demand
         const isIndexSchema = normalizedKey.startsWith('@schema/index/');
         if (!isIndexSchema) {
-          console.warn(`[resolve] ❌ Schema "${identifier}" not found in registry. Available keys:`, Object.keys(schematasData).slice(0, 10));
+          console.warn(`[resolve] Schema "${identifier}" not found in registry`);
         }
         return null;
       }
@@ -283,7 +272,6 @@ export async function resolve(backend, identifier, options = {}) {
       // Vibe instance keys → check account.vibes registry using read() API
       const vibesId = backend.account.get('vibes');
       if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_z')) {
-        console.warn(`[resolve] account.vibes not found for vibe key: ${identifier}`);
         return null;
       }
 
@@ -320,13 +308,11 @@ export async function resolve(backend, identifier, options = {}) {
         return await resolve(backend, registryCoId, { returnType, deepResolve, timeoutMs });
       }
 
-      console.warn(`[resolve] Vibe ${identifier} not found in account.vibes registry`);
       return null;
     }
   }
 
   // Unknown key format
-  console.warn(`[resolve] Unknown key format: ${identifier}`);
   return null;
 }
 
@@ -534,7 +520,6 @@ export async function loadSchemasFromAccount(node, account) {
       }
     }
     
-    console.log(`[loadSchemasFromAccount] Loaded ${Object.keys(schemas).length} schemas from account.os.schemata`);
     return schemas;
   } catch (error) {
     console.error('[loadSchemasFromAccount] Error loading schemas:', error);

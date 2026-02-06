@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Container Queries - Dynamic Resize Example</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="demo-container">
+    <h1>Container Queries: Dynamic Resize Demo</h1>
+    <p>Drag the bottom-right corner to resize the container and watch the todo list adapt in real-time!</p>
+
+    <!-- Resizable Container with Live Info -->
+    <div class="container-demo resizable" id="resizableContainer">
+      <div class="container-header">
+        <h2>Resize Me!</h2>
+        <div class="size-indicator">
+          <span class="current-size">Width: <span id="currentWidth">0</span>px</span>
+          <span class="breakpoint-badge" id="breakpointBadge">Base</span>
+        </div>
+      </div>
+      <div class="todo-container">
+        <div class="todo-list">
+          <div class="todo-item">
+            <input type="checkbox" id="todo1">
+            <label for="todo1">Buy groceries</label>
+          </div>
+          <div class="todo-item">
+            <input type="checkbox" id="todo2" checked>
+            <label for="todo2">Finish project</label>
+          </div>
+          <div class="todo-item">
+            <input type="checkbox" id="todo3">
+            <label for="todo3">Call mom</label>
+          </div>
+          <div class="todo-item">
+            <input type="checkbox" id="todo4">
+            <label for="todo4">Exercise</label>
+          </div>
+          <div class="todo-item">
+            <input type="checkbox" id="todo5">
+            <label for="todo5">Read a book</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    
+  <script>
+    // Update size indicator dynamically
+    const container = document.getElementById('resizableContainer');
+    const widthDisplay = document.getElementById('currentWidth');
+    const breakpointBadge = document.getElementById('breakpointBadge');
+
+    function updateSize() {
+      const width = container.offsetWidth;
+      widthDisplay.textContent = width;
+
+      // Update breakpoint badge using mobile-first breakpoints
+      if (width < 240) {
+        breakpointBadge.textContent = 'Base';
+        breakpointBadge.className = 'breakpoint-badge base';
+      } else if (width < 360) {
+        breakpointBadge.textContent = 'XS';
+        breakpointBadge.className = 'breakpoint-badge xs';
+      } else if (width < 480) {
+        breakpointBadge.textContent = 'SM';
+        breakpointBadge.className = 'breakpoint-badge sm';
+      } else if (width < 640) {
+        breakpointBadge.textContent = 'MD';
+        breakpointBadge.className = 'breakpoint-badge md';
+      } else if (width < 768) {
+        breakpointBadge.textContent = 'LG';
+        breakpointBadge.className = 'breakpoint-badge lg';
+      } else if (width < 1024) {
+        breakpointBadge.textContent = 'XL';
+        breakpointBadge.className = 'breakpoint-badge xl';
+      } else {
+        breakpointBadge.textContent = '2XL';
+        breakpointBadge.className = 'breakpoint-badge tw-2xl';
+      }
+    }
+
+    // Use ResizeObserver for better performance
+    const resizeObserver = new ResizeObserver(entries => {
+      updateSize();
+    });
+
+    resizeObserver.observe(container);
+
+    // Initial update
+    updateSize();
+  </script>
+</body>
+</html>

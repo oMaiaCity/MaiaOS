@@ -59,7 +59,7 @@ export async function loadMaiaAgentVibe(container) {
     os = await MaiaOS.boot({
       node,
       account,
-      modules: ['db', 'core', 'private-llm'], // Include private-llm module for RedPill chat
+      modules: ['db', 'core', 'agent'], // Include agent module for LLM chat
       registry: MaiaAgentVibeRegistry  // Registry passed but seeding skipped for CoJSON backend
     });
   }
@@ -70,8 +70,6 @@ export async function loadMaiaAgentVibe(container) {
     container
   );
   
-  console.log('✅ Vibe loaded:', vibe.name);
-  console.log('✅ Maia Agent Actor with State Machine:', maiaActor.machine?.currentState);
   
   return { os, vibe, actor: maiaActor };
 }

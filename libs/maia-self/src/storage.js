@@ -19,7 +19,6 @@ import { getIndexedDBStorage } from "cojson-storage-indexeddb";
 export async function getStorage() {
 	try {
 		const storage = await getIndexedDBStorage();
-		console.log("✅ [STORAGE] IndexedDB initialized");
 		return storage;
 	} catch (error) {
 		console.warn("⚠️  [STORAGE] IndexedDB unavailable, running without persistence:", error);

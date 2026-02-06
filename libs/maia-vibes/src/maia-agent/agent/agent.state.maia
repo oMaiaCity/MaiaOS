@@ -4,6 +4,13 @@
   "initial": "idle",
   "states": {
     "idle": {
+      "entry": [
+        {
+          "updateContext": {
+            "isLoading": false
+          }
+        }
+      ],
       "on": {
         "RENDER_COMPLETE": {
           "target": "idle",
@@ -41,8 +48,7 @@
         {
           "updateContext": { 
             "isLoading": true,
-            "hasError": false,
-            "inputText": "$$inputText"
+            "hasError": false
           }
         },
         {
@@ -59,7 +65,14 @@
       ],
       "on": {
         "SUCCESS": {
-          "target": "calling_llm"
+          "target": "calling_llm",
+          "actions": [
+            {
+              "updateContext": {
+                "inputText": ""
+              }
+            }
+          ]
         },
         "ERROR": {
           "target": "error",
@@ -75,14 +88,16 @@
     },
     "calling_llm": {
       "entry": {
-        "tool": "@private-llm/chat",
+        "tool": "@agent/chat",
         "payload": {
-          "messages": {
+          "model": "qwen/qwen3-30b-a3b-instruct-2507",
+          "temperature": 1,
+          "context": {
             "$concat": [
               [
                 {
                   "role": "system",
-                  "content": "You are Maia, a CTO-level AI assistant that understands the entire MaiaOS codebase, architecture, and all packages. You learn alongside coding sessions. Be helpful, technical, and concise."
+                  "content": "You are Maia, a CTO-level AI assistant that understands the entire MaiaOS codebase, architecture, and all packages. You learn alongside coding sessions. Be helpful, technical, and concise. Never use emoticons in your responses."
                 }
               ],
               {
@@ -94,13 +109,7 @@
                     "content": "$$msg.content"
                   }
                 }
-              },
-              [
-                {
-                  "role": "user",
-                  "content": "$inputText"
-                }
-              ]
+              }
             ]
           }
         }
@@ -141,7 +150,6 @@
           "actions": [
             {
               "updateContext": { 
-                "inputText": "",
                 "assistantResponse": null,
                 "isLoading": false,
                 "hasError": false

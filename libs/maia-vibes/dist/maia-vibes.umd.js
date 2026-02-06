@@ -80,7 +80,7 @@
       "stack": {
         "display": "flex",
         "flexDirection": "column",
-        "gap": "0.375rem",
+        "gap": "0.25rem",
         "width": "100%",
         "maxWidth": "100%",
         "height": "100vh",
@@ -95,42 +95,48 @@
       "headerSection": {
         "display": "flex",
         "flexDirection": "column",
-        "gap": "0.375rem",
-        "marginBottom": "0.375rem"
+        "alignItems": "center",
+        "gap": "0.25rem",
+        "marginBottom": "0.25rem",
+        "width": "100%"
       },
       "todoCategory": {
         "fontFamily": "{typography.fontFamily.heading}",
-        "fontSize": "0.65rem",
+        "fontSize": "0.6rem",
         "fontStyle": "italic",
         "color": "{colors.paradiseWater}",
         "marginBottom": "0.25rem",
         "display": "block",
+        "textAlign": "center",
+        "width": "100%",
         "textShadow": "0 0 10px rgba(0, 189, 214, 0.2)"
       },
       "todoTitle": {
         "fontFamily": "{typography.fontFamily.heading}",
-        "fontSize": "0.95rem",
+        "fontSize": "0.9rem",
         "fontWeight": "{typography.fontWeight.bold}",
         "color": "{colors.marineBlue}",
         "margin": "0",
         "marginBottom": "0.375rem",
+        "textAlign": "center",
+        "width": "100%",
         "letterSpacing": "-0.02em"
       },
       "viewSwitcher": {
         "display": "flex",
-        "gap": "0.25rem",
+        "gap": "0.2rem",
         "background": "rgba(255, 255, 255, 0.2)",
-        "padding": "0.2rem",
+        "padding": "0.15rem",
         "borderRadius": "{radii.full}",
-        "width": "fit-content",
+        "margin": "0 auto",
         "border": "1px solid {colors.border}"
       },
       "buttonViewSwitch": {
-        "padding": "0.3rem 0.7rem",
+        "padding": "0.25rem 0.6rem",
         "background": "transparent",
         "border": "none",
         "borderRadius": "{radii.full}",
-        "fontSize": "0.6rem",
+        "fontSize": "0.55rem",
         "fontWeight": "600",
         "textTransform": "uppercase",
         "letterSpacing": "0.05em",
@@ -151,8 +157,8 @@
         "display": "flex",
         "flexDirection": "row",
         "alignItems": "center",
-        "gap": "0.375rem",
-        "padding": "0.375rem",
+        "gap": "0.25rem",
+        "padding": "0.25rem 0.375rem",
         "background": "rgba(255, 255, 255, 0.4)",
         "backdropFilter": "blur(8px) saturate(150%)",
         "borderRadius": "{radii.full}",
@@ -160,32 +166,32 @@
         "boxShadow": "{shadows.md}",
         "width": "100%",
         "boxSizing": "border-box",
-        "marginBottom": "0.375rem"
+        "marginBottom": "0.25rem"
       },
       "input": {
         "flex": "1",
         "width": "100%",
-        "padding": "0.375rem 0.625rem",
+        "padding": "0.25rem 0.5rem",
         "border": "none",
         "background": "transparent",
-        "fontSize": "0.7rem",
+        "fontSize": "0.6rem",
         "color": "{colors.marineBlue}",
         "fontFamily": "{typography.fontFamily.body}",
         "fontWeight": "{typography.fontWeight.light}",
         "outline": "none",
         "minHeight": "0",
         "minWidth": "0",
-        "lineHeight": "1.4"
+        "lineHeight": "1.35"
       },
       "button": {
         "width": "auto",
-        "padding": "0.375rem 0.625rem",
+        "padding": "0.25rem 0.5rem",
         "background": "{colors.lushGreen}",
         "color": "{colors.text.green}",
         "border": "none",
         "borderRadius": "{radii.full}",
         "cursor": "pointer",
-        "fontSize": "0.6rem",
+        "fontSize": "0.5rem",
         "fontWeight": "600",
         "textTransform": "uppercase",
         "letterSpacing": "0.05em",
@@ -198,26 +204,263 @@
           "transform": "translateY(-1px)",
           "boxShadow": "0 6px 16px rgba(78, 154, 88, 0.3)"
         }
+      }
+    },
+    "selectors": {
+      ":host": {
+        "display": "block",
+        "height": "100%",
+        "background": "transparent"
       },
+      "@container {containerName} (min-width: {containers.xs})": {
+        ".stack": {
+          "padding": "0.625rem",
+          "gap": "0.375rem"
+        },
+        ".headerSection": {
+          "gap": "0.375rem",
+          "marginBottom": "0.375rem"
+        },
+        ".todoCategory": {
+          "fontSize": "0.8rem"
+        },
+        ".todoTitle": {
+          "fontSize": "1.15rem"
+        },
+        ".viewSwitcher": {
+          "gap": "0.375rem",
+          "padding": "0.25rem",
+          "minWidth": "fit-content"
+        },
+        ".buttonViewSwitch": {
+          "padding": "0.4rem 0.8rem",
+          "fontSize": "0.7rem"
+        },
+        ".form": {
+          "gap": "0.375rem",
+          "padding": "0.375rem 0.5rem"
+        },
+        ".input": {
+          "padding": "0.375rem 0.625rem",
+          "fontSize": "0.7rem"
+        },
+        ".button": {
+          "padding": "0.375rem 0.625rem",
+          "fontSize": "0.6rem"
+        }
+      },
+      "@container {containerName} (min-width: {containers.sm})": {
+        ".stack": {
+          "padding": "0.75rem",
+          "gap": "0.5rem"
+        },
+        ".headerSection": {
+          "gap": "0.5rem",
+          "marginBottom": "0.5rem"
+        },
+        ".todoCategory": {
+          "fontSize": "0.95rem"
+        },
+        ".todoTitle": {
+          "fontSize": "1.3rem"
+        },
+        ".viewSwitcher": {
+          "gap": "0.5rem",
+          "padding": "0.3rem",
+          "minWidth": "fit-content"
+        },
+        ".buttonViewSwitch": {
+          "padding": "0.4rem 0.8rem",
+          "fontSize": "0.7rem"
+        },
+        ".form": {
+          "gap": "0.5rem",
+          "padding": "0.5rem 0.625rem"
+        },
+        ".input": {
+          "padding": "0.5rem 0.75rem",
+          "fontSize": "0.75rem"
+        },
+        ".button": {
+          "padding": "0.5rem 0.75rem",
+          "fontSize": "0.65rem"
+        }
+      },
+      "@container {containerName} (min-width: {containers.md})": {
+        ".stack": {
+          "padding": "1rem",
+          "gap": "0.625rem"
+        },
+        ".headerSection": {
+          "gap": "0.625rem",
+          "marginBottom": "0.625rem"
+        },
+        ".todoCategory": {
+          "fontSize": "1.1rem"
+        },
+        ".todoTitle": {
+          "fontSize": "1.45rem"
+        },
+        ".viewSwitcher": {
+          "gap": "0.625rem",
+          "padding": "0.375rem",
+          "minWidth": "fit-content"
+        },
+        ".buttonViewSwitch": {
+          "padding": "0.6rem 1rem",
+          "fontSize": "0.85rem"
+        },
+        ".form": {
+          "gap": "0.625rem",
+          "padding": "0.625rem 0.75rem"
+        },
+        ".input": {
+          "padding": "0.625rem 0.875rem",
+          "fontSize": "0.8rem"
+        },
+        ".button": {
+          "padding": "0.625rem 0.875rem",
+          "fontSize": "0.7rem"
+        }
+      },
+      "@container {containerName} (min-width: {containers.lg})": {
+        ".stack": {
+          "padding": "1.25rem",
+          "gap": "0.75rem"
+        },
+        ".headerSection": {
+          "gap": "0.75rem",
+          "marginBottom": "0.75rem"
+        },
+        ".todoCategory": {
+          "fontSize": "1.2rem"
+        },
+        ".todoTitle": {
+          "fontSize": "1.55rem"
+        },
+        ".viewSwitcher": {
+          "gap": "0.75rem",
+          "padding": "0.45rem",
+          "minWidth": "fit-content"
+        },
+        ".buttonViewSwitch": {
+          "padding": "0.7rem 1.1rem",
+          "fontSize": "0.9rem"
+        },
+        ".form": {
+          "gap": "0.75rem",
+          "padding": "0.75rem 0.875rem"
+        },
+        ".input": {
+          "padding": "0.75rem 1rem",
+          "fontSize": "0.85rem"
+        },
+        ".button": {
+          "padding": "0.75rem 1rem",
+          "fontSize": "0.75rem"
+        }
+      },
+      "@container {containerName} (min-width: {containers.xl})": {
+        ".stack": {
+          "padding": "1.5rem",
+          "gap": "0.875rem"
+        },
+        ".headerSection": {
+          "gap": "0.875rem",
+          "marginBottom": "0.875rem"
+        },
+        ".todoCategory": {
+          "fontSize": "1.3rem"
+        },
+        ".todoTitle": {
+          "fontSize": "1.65rem"
+        },
+        ".viewSwitcher": {
+          "gap": "0.875rem",
+          "padding": "0.5rem",
+          "minWidth": "fit-content"
+        },
+        ".buttonViewSwitch": {
+          "padding": "0.8rem 1.2rem",
+          "fontSize": "1rem"
+        },
+        ".form": {
+          "gap": "0.875rem",
+          "padding": "0.875rem 1rem"
+        },
+        ".input": {
+          "padding": "0.875rem 1.125rem",
+          "fontSize": "0.9rem"
+        },
+        ".button": {
+          "padding": "0.875rem 1.125rem",
+          "fontSize": "0.8rem"
+        }
+      },
+      "@container {containerName} (min-width: {containers.2xl})": {
+        ".stack": {
+          "padding": "1.75rem",
+          "gap": "1rem"
+        },
+        ".headerSection": {
+          "gap": "1rem",
+          "marginBottom": "1rem"
+        },
+        ".todoCategory": {
+          "fontSize": "1.4rem"
+        },
+        ".todoTitle": {
+          "fontSize": "1.75rem"
+        },
+        ".viewSwitcher": {
+          "gap": "1rem",
+          "padding": "0.55rem",
+          "minWidth": "fit-content"
+        },
+        ".buttonViewSwitch": {
+          "padding": "0.9rem 1.3rem",
+          "fontSize": "1.1rem"
+        },
+        ".form": {
+          "gap": "1rem",
+          "padding": "1rem 1.125rem"
+        },
+        ".input": {
+          "padding": "1rem 1.25rem",
+          "fontSize": "0.95rem"
+        },
+        ".button": {
+          "padding": "1rem 1.25rem",
+          "fontSize": "0.85rem"
+        }
+      }
+    }
+  };
+  const listStyle = {
+    "$schema": "@schema/style",
+    "$id": "@todos/style/list",
+    "components": {
       "list": {
         "display": "flex",
         "flexDirection": "column",
-        "gap": "0.375rem",
+        "gap": "0.25rem",
         "overflowY": "auto",
         "width": "100%",
-        "boxSizing": "border-box"
+        "boxSizing": "border-box",
+        "padding": "0.375rem"
       },
       "card": {
         "display": "flex",
-        "alignItems": "center",
-        "gap": "0.5rem",
-        "padding": "0.5rem",
+        "flexDirection": "column",
+        "alignItems": "flex-start",
+        "gap": "0.25rem",
+        "padding": "0.25rem 0.375rem",
         "background": "rgba(255, 255, 255, 0.3)",
         "backdropFilter": "blur(8px) saturate(150%)",
         "borderRadius": "{radii.apple}",
         "border": "1px solid {colors.border}",
         "transition": "{transitions.fast}",
-        "marginBottom": "0.375rem",
+        "marginBottom": "0.25rem",
         ":hover": {
           "background": "rgba(255, 255, 255, 0.5)",
           "transform": "translateY(-2px)",
@@ -229,12 +472,13 @@
         "fontSize": "0.75rem",
         "fontWeight": "{typography.fontWeight.light}",
         "color": "{colors.marineBlue}",
-        "lineHeight": "1.35"
+        "lineHeight": "1.3",
+        "width": "100%"
       },
       "buttonSmall": {
-        "width": "22px",
-        "height": "22px",
-        "minWidth": "22px",
+        "width": "12px",
+        "height": "12px",
+        "minWidth": "12px",
         "display": "flex",
         "alignItems": "center",
         "justifyContent": "center",
@@ -244,7 +488,7 @@
         "borderRadius": "{radii.full}",
         "cursor": "pointer",
         "transition": "{transitions.fast}",
-        "fontSize": "0.6rem",
+        "fontSize": "0.5rem",
         ":hover": {
           "background": "{colors.marineBlue}",
           "color": "{colors.softClay}",
@@ -260,10 +504,132 @@
       }
     },
     "selectors": {
-      ":host": {
-        "display": "block",
-        "height": "100%",
-        "background": "transparent"
+      "@container {containerName} (min-width: {containers.xs})": {
+        ".list": {
+          "gap": "0.375rem",
+          "padding": "0.5rem"
+        },
+        ".card": {
+          "padding": "0.375rem 0.5rem",
+          "gap": "0.375rem"
+        },
+        ".body": {
+          "fontSize": "0.8rem"
+        },
+        ".buttonSmall": {
+          "width": "14px",
+          "height": "14px",
+          "minWidth": "14px",
+          "fontSize": "0.6rem"
+        }
+      },
+      "@container {containerName} (min-width: {containers.sm})": {
+        ".list": {
+          "gap": "0.5rem",
+          "padding": "0.625rem"
+        },
+        ".card": {
+          "flexDirection": "row",
+          "alignItems": "center",
+          "padding": "0.5rem 0.625rem",
+          "gap": "0.5rem"
+        },
+        ".body": {
+          "fontSize": "0.85rem",
+          "width": "auto"
+        },
+        ".buttonSmall": {
+          "width": "16px",
+          "height": "16px",
+          "minWidth": "16px",
+          "fontSize": "0.65rem"
+        }
+      },
+      "@container {containerName} (min-width: {containers.md})": {
+        ".list": {
+          "gap": "0.625rem",
+          "padding": "0.75rem"
+        },
+        ".card": {
+          "padding": "0.625rem 0.75rem",
+          "gap": "0.625rem"
+        },
+        ".body": {
+          "fontSize": "0.9rem"
+        },
+        ".buttonSmall": {
+          "width": "18px",
+          "height": "18px",
+          "minWidth": "18px",
+          "fontSize": "0.7rem"
+        }
+      },
+      "@container {containerName} (min-width: {containers.lg})": {
+        ".list": {
+          "gap": "0.75rem",
+          "padding": "1rem"
+        },
+        ".card": {
+          "padding": "0.75rem 0.875rem",
+          "gap": "0.75rem"
+        },
+        ".body": {
+          "fontSize": "0.95rem"
+        },
+        ".buttonSmall": {
+          "width": "20px",
+          "height": "20px",
+          "minWidth": "20px",
+          "fontSize": "0.75rem"
+        }
+      },
+      "@container {containerName} (min-width: {containers.xl})": {
+        ".list": {
+          "gap": "0.875rem",
+          "padding": "1.25rem"
+        },
+        ".card": {
+          "padding": "0.875rem 1rem",
+          "gap": "0.875rem"
+        },
+        ".body": {
+          "fontSize": "1rem",
+          "fontWeight": "{typography.fontWeight.medium}"
+        },
+        ".buttonSmall": {
+          "width": "22px",
+          "height": "22px",
+          "minWidth": "22px",
+          "fontSize": "0.8rem"
+        },
+        ".card:hover": {
+          "transform": "translateY(-1px)",
+          "boxShadow": "{shadows.md}"
+        }
+      },
+      "@container {containerName} (min-width: {containers.2xl})": {
+        ".list": {
+          "gap": "1rem",
+          "padding": "1.5rem"
+        },
+        ".card": {
+          "padding": "1rem 1.25rem",
+          "gap": "1rem"
+        },
+        ".body": {
+          "fontSize": "1.05rem",
+          "fontWeight": "{typography.fontWeight.medium}"
+        },
+        ".buttonSmall": {
+          "width": "24px",
+          "height": "24px",
+          "minWidth": "24px",
+          "fontSize": "0.85rem"
+        },
+        ".card:hover": {
+          "transform": "translateY(-2px)",
+          "boxShadow": "{shadows.lg}"
+        }
       },
       "[data-done=true] .body": {
         "textDecoration": "line-through",
@@ -481,6 +847,7 @@
     "view": "@todos/view/list",
     "state": "@todos/state/list",
     "brand": "@todos/style/brand",
+    "style": "@todos/style/list",
     "inbox": "@todos/inbox/list"
   };
   const logsActor = {
@@ -505,11 +872,6 @@
           "tag": "div",
           "class": "header-section",
           "children": [
-            {
-              "tag": "span",
-              "class": "todo-category",
-              "text": "Task Management"
-            },
             {
               "tag": "h2",
               "class": "todo-title",
@@ -1091,6 +1453,7 @@
     vibe: todosVibe,
     styles: {
       "@todos/style/brand": brandStyle$2,
+      "@todos/style/list": listStyle,
       "@todos/style/logs": logsStyle
     },
     actors: {
@@ -1182,8 +1545,6 @@
       // Vibe key in account.vibes
       container
     );
-    console.log("✅ Vibe loaded:", vibe.name);
-    console.log("✅ Todo Actor with State Machine:", todoActor.machine?.currentState);
     return { os, vibe, actor: todoActor };
   }
   const myDataVibe = {
@@ -2202,8 +2563,6 @@
       // Vibe key in account.vibes
       container
     );
-    console.log("✅ Vibe loaded:", vibe.name);
-    console.log("✅ My Data Actor with State Machine:", myDataActor.machine?.currentState);
     return { os, vibe, actor: myDataActor };
   }
   async function getAllVibeRegistries() {
@@ -2212,7 +2571,6 @@
       const { TodosVibeRegistry: TodosVibeRegistry2 } = await Promise.resolve().then(() => registry$2);
       if (TodosVibeRegistry2 && TodosVibeRegistry2.vibe) {
         vibeRegistries.push(TodosVibeRegistry2);
-        console.log("[Vibes] Loaded TodosVibeRegistry");
       }
     } catch (error) {
       console.warn("[Vibes] Could not load TodosVibeRegistry:", error.message);
@@ -2221,7 +2579,6 @@
       const { MaiaAgentVibeRegistry: MaiaAgentVibeRegistry2 } = await Promise.resolve().then(() => registry);
       if (MaiaAgentVibeRegistry2 && MaiaAgentVibeRegistry2.vibe) {
         vibeRegistries.push(MaiaAgentVibeRegistry2);
-        console.log("[Vibes] Loaded MaiaAgentVibeRegistry");
       }
     } catch (error) {
       console.warn("[Vibes] Could not load MaiaAgentVibeRegistry:", error.message);
@@ -2230,12 +2587,10 @@
       const { MyDataVibeRegistry: MyDataVibeRegistry2 } = await Promise.resolve().then(() => registry$1);
       if (MyDataVibeRegistry2 && MyDataVibeRegistry2.vibe) {
         vibeRegistries.push(MyDataVibeRegistry2);
-        console.log("[Vibes] Loaded MyDataVibeRegistry");
       }
     } catch (error) {
       console.warn("[Vibes] Could not load MyDataVibeRegistry:", error.message);
     }
-    console.log(`[Vibes] Total registries loaded: ${vibeRegistries.length}`);
     return vibeRegistries;
   }
   const maiaAgentVibe = {
@@ -2320,7 +2675,7 @@
         "fontFamily": "{typography.fontFamily.body}",
         "color": "{colors.marineBlue}"
       },
-      ".chat-container": {
+      ".chatContainer": {
         "display": "grid",
         "gridTemplateRows": "1fr auto",
         "height": "100%",
@@ -2329,14 +2684,14 @@
         "position": "relative",
         "overflow": "hidden",
         "background": "{colors.softClay}",
-        "padding": "{spacing.xl}",
-        "gap": "{spacing.xl}"
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.sm}"
       },
-      ".messages-container": {
+      ".messagesContainer": {
         "gridRow": "1",
         "overflowY": "auto",
         "overflowX": "hidden",
-        "padding": "{spacing.md}",
+        "padding": "{spacing.sm}",
         "display": "flex",
         "flexDirection": "column",
         "gap": "{spacing.md}",
@@ -2350,24 +2705,51 @@
         "border": "1px solid {colors.border}",
         "boxShadow": "{shadows.md}"
       },
+      ".message-wrapper": {
+        "display": "flex",
+        "flexDirection": "column",
+        "marginBottom": "{spacing.md}"
+      },
+      ".message-wrapper[data-role='user']": {
+        "alignItems": "flex-end"
+      },
+      ".message-wrapper[data-role='assistant']": {
+        "alignItems": "flex-start"
+      },
+      ".message-name": {
+        "fontSize": "0.65rem",
+        "fontWeight": "{typography.fontWeight.semibold}",
+        "textTransform": "uppercase",
+        "letterSpacing": "0.05em",
+        "marginBottom": "0.25rem",
+        "opacity": "0.7"
+      },
+      ".message-wrapper[data-role='user'] .message-name": {
+        "color": "{colors.marineBlue}",
+        "textAlign": "right"
+      },
+      ".message-wrapper[data-role='assistant'] .message-name": {
+        "color": "{colors.marineBlue}",
+        "textAlign": "left"
+      },
       ".message": {
-        "padding": "{spacing.md} {spacing.lg}",
+        "padding": "{spacing.sm} {spacing.md}",
         "borderRadius": "{radii.apple}",
         "maxWidth": "85%",
         "wordWrap": "break-word",
-        "fontSize": "0.95rem",
+        "fontSize": "0.75rem",
         "fontWeight": "{typography.fontWeight.light}",
-        "lineHeight": "1.5",
+        "lineHeight": "1.4",
         "transition": "{transitions.fast}"
       },
-      ".message-assistant": {
+      ".messageAssistant": {
         "alignSelf": "flex-start",
         "background": "rgba(255, 255, 255, 0.6)",
         "color": "{colors.marineBlue}",
         "border": "1px solid {colors.border}",
         "boxShadow": "{shadows.sm}"
       },
-      ".message-user": {
+      ".messageUser": {
         "alignSelf": "flex-end",
         "background": "{colors.marineBlue}",
         "color": "{colors.text.marine}",
@@ -2384,13 +2766,14 @@
         "background": "{colors.marineBlue}",
         "color": "{colors.text.marine}"
       },
-      ".welcome-message": {
+      ".welcomeMessage": {
         "fontFamily": "{typography.fontFamily.body}",
-        "fontSize": "1rem",
+        "fontSize": "0.75rem",
         "background": "rgba(0, 189, 214, 0.05)",
         "border": "1px solid rgba(0, 189, 214, 0.1)",
         "color": "{colors.marineBlue}",
-        "marginTop": "{spacing.md}",
+        "marginTop": "{spacing.sm}",
+        "marginBottom": "{spacing.md}",
         "data": {
           "hasConversations": {
             "true": {
@@ -2399,33 +2782,33 @@
           }
         }
       },
-      ".welcome-section": {
+      ".welcomeSection": {
         "display": "flex",
         "flexDirection": "column",
-        "marginBottom": "{spacing.lg}"
+        "marginBottom": "{spacing.md}"
       },
-      ".agent-category": {
+      ".agentCategory": {
         "fontFamily": "{typography.fontFamily.heading}",
-        "fontSize": "0.85rem",
+        "fontSize": "0.6rem",
         "fontStyle": "italic",
         "color": "{colors.paradiseWater}",
         "marginBottom": "0.25rem",
         "display": "block",
         "textShadow": "0 0 10px rgba(0, 189, 214, 0.2)"
       },
-      ".agent-title": {
+      ".agentTitle": {
         "fontFamily": "{typography.fontFamily.heading}",
-        "fontSize": "{typography.fontSize.xl}",
+        "fontSize": "0.9rem",
         "fontWeight": "{typography.fontWeight.bold}",
         "color": "{colors.marineBlue}",
         "margin": "0",
         "letterSpacing": "-0.02em"
       },
-      ".input-container": {
+      ".inputContainer": {
         "gridRow": "2",
         "display": "flex",
-        "gap": "{spacing.md}",
-        "padding": "{spacing.md}",
+        "gap": "{spacing.sm}",
+        "padding": "{spacing.sm}",
         "background": "rgba(255, 255, 255, 0.4)",
         "backdropFilter": "blur(8px) saturate(150%)",
         "borderRadius": "{radii.full}",
@@ -2437,10 +2820,10 @@
       },
       ".input": {
         "flex": "1",
-        "padding": "{spacing.sm} {spacing.lg}",
+        "padding": "{spacing.xs} {spacing.md}",
         "border": "none",
         "background": "transparent",
-        "fontSize": "1rem",
+        "fontSize": "0.7rem",
         "color": "{colors.marineBlue}",
         "fontFamily": "{typography.fontFamily.body}",
         "fontWeight": "{typography.fontWeight.light}",
@@ -2448,13 +2831,13 @@
         "cursor": "text"
       },
       ".button": {
-        "padding": "{spacing.sm} {spacing.xl}",
+        "padding": "{spacing.xs} {spacing.md}",
         "background": "{colors.paradiseWater}",
         "color": "{colors.text.water}",
         "border": "none",
         "borderRadius": "{radii.full}",
         "cursor": "pointer",
-        "fontSize": "0.85rem",
+        "fontSize": "0.6rem",
         "fontWeight": "600",
         "textTransform": "uppercase",
         "letterSpacing": "0.05em",
@@ -2513,6 +2896,216 @@
             }
           }
         }
+      },
+      "@container {containerName} (min-width: {containers.xs})": {
+        ".chatContainer": {
+          "padding": "{spacing.sm}",
+          "gap": "{spacing.sm}"
+        },
+        ".messagesContainer": {
+          "padding": "{spacing.sm}",
+          "gap": "{spacing.md}"
+        },
+        ".message": {
+          "padding": "{spacing.sm} {spacing.md}",
+          "fontSize": "0.7rem"
+        },
+        ".agentCategory": {
+          "fontSize": "0.65rem"
+        },
+        ".agentTitle": {
+          "fontSize": "0.85rem"
+        },
+        ".inputContainer": {
+          "gap": "{spacing.sm}",
+          "padding": "{spacing.sm}"
+        },
+        ".input": {
+          "padding": "{spacing.xs} {spacing.md}",
+          "fontSize": "0.7rem"
+        },
+        ".button": {
+          "padding": "{spacing.xs} {spacing.md}",
+          "fontSize": "0.65rem"
+        },
+        ".welcomeMessage": {
+          "fontSize": "0.7rem"
+        }
+      },
+      "@container {containerName} (min-width: {containers.sm})": {
+        ".chatContainer": {
+          "padding": "{spacing.sm}",
+          "gap": "{spacing.sm}"
+        },
+        ".messagesContainer": {
+          "padding": "{spacing.sm}",
+          "gap": "{spacing.md}"
+        },
+        ".message": {
+          "padding": "{spacing.sm} {spacing.md}",
+          "fontSize": "0.75rem"
+        },
+        ".agentCategory": {
+          "fontSize": "0.7rem"
+        },
+        ".agentTitle": {
+          "fontSize": "0.9rem"
+        },
+        ".inputContainer": {
+          "gap": "{spacing.sm}",
+          "padding": "{spacing.sm}"
+        },
+        ".input": {
+          "padding": "{spacing.xs} {spacing.md}",
+          "fontSize": "0.7rem"
+        },
+        ".button": {
+          "padding": "{spacing.xs} {spacing.md}",
+          "fontSize": "0.65rem"
+        },
+        ".welcomeMessage": {
+          "fontSize": "0.75rem"
+        }
+      },
+      "@container {containerName} (min-width: {containers.md})": {
+        ".chatContainer": {
+          "padding": "{spacing.sm}",
+          "gap": "{spacing.sm}"
+        },
+        ".messagesContainer": {
+          "padding": "{spacing.sm}",
+          "gap": "{spacing.md}"
+        },
+        ".message": {
+          "padding": "{spacing.sm} {spacing.md}",
+          "fontSize": "0.8rem"
+        },
+        ".agentCategory": {
+          "fontSize": "0.75rem"
+        },
+        ".agentTitle": {
+          "fontSize": "0.95rem"
+        },
+        ".inputContainer": {
+          "gap": "{spacing.sm}",
+          "padding": "{spacing.sm}"
+        },
+        ".input": {
+          "padding": "{spacing.xs} {spacing.md}",
+          "fontSize": "0.75rem"
+        },
+        ".button": {
+          "padding": "{spacing.xs} {spacing.md}",
+          "fontSize": "0.7rem"
+        },
+        ".welcomeMessage": {
+          "fontSize": "0.8rem"
+        }
+      },
+      "@container {containerName} (min-width: {containers.lg})": {
+        ".chatContainer": {
+          "padding": "{spacing.sm}",
+          "gap": "{spacing.sm}"
+        },
+        ".messagesContainer": {
+          "padding": "{spacing.sm}",
+          "gap": "{spacing.md}"
+        },
+        ".message": {
+          "padding": "{spacing.sm} {spacing.md}",
+          "fontSize": "0.85rem"
+        },
+        ".agentCategory": {
+          "fontSize": "0.8rem"
+        },
+        ".agentTitle": {
+          "fontSize": "1rem"
+        },
+        ".inputContainer": {
+          "gap": "{spacing.sm}",
+          "padding": "{spacing.sm}"
+        },
+        ".input": {
+          "padding": "{spacing.xs} {spacing.md}",
+          "fontSize": "0.8rem"
+        },
+        ".button": {
+          "padding": "{spacing.xs} {spacing.md}",
+          "fontSize": "0.75rem"
+        },
+        ".welcomeMessage": {
+          "fontSize": "0.85rem"
+        }
+      },
+      "@container {containerName} (min-width: {containers.xl})": {
+        ".chatContainer": {
+          "padding": "{spacing.sm}",
+          "gap": "{spacing.sm}"
+        },
+        ".messagesContainer": {
+          "padding": "{spacing.sm}",
+          "gap": "{spacing.md}"
+        },
+        ".message": {
+          "padding": "{spacing.sm} {spacing.md}",
+          "fontSize": "0.9rem"
+        },
+        ".agentCategory": {
+          "fontSize": "0.85rem"
+        },
+        ".agentTitle": {
+          "fontSize": "1.05rem"
+        },
+        ".inputContainer": {
+          "gap": "{spacing.sm}",
+          "padding": "{spacing.sm}"
+        },
+        ".input": {
+          "padding": "{spacing.xs} {spacing.md}",
+          "fontSize": "0.85rem"
+        },
+        ".button": {
+          "padding": "{spacing.xs} {spacing.md}",
+          "fontSize": "0.8rem"
+        },
+        ".welcomeMessage": {
+          "fontSize": "0.9rem"
+        }
+      },
+      "@container {containerName} (min-width: {containers.2xl})": {
+        ".chatContainer": {
+          "padding": "{spacing.sm}",
+          "gap": "{spacing.sm}"
+        },
+        ".messagesContainer": {
+          "padding": "{spacing.sm}",
+          "gap": "{spacing.md}"
+        },
+        ".message": {
+          "padding": "{spacing.sm} {spacing.md}",
+          "fontSize": "0.95rem"
+        },
+        ".agentCategory": {
+          "fontSize": "0.9rem"
+        },
+        ".agentTitle": {
+          "fontSize": "1.1rem"
+        },
+        ".inputContainer": {
+          "gap": "{spacing.sm}",
+          "padding": "{spacing.sm}"
+        },
+        ".input": {
+          "padding": "{spacing.xs} {spacing.md}",
+          "fontSize": "0.9rem"
+        },
+        ".button": {
+          "padding": "{spacing.xs} {spacing.md}",
+          "fontSize": "0.85rem"
+        },
+        ".welcomeMessage": {
+          "fontSize": "0.95rem"
+        }
       }
     }
   };
@@ -2542,11 +3135,6 @@
               "class": "welcome-section",
               "children": [
                 {
-                  "tag": "span",
-                  "class": "agent-category",
-                  "text": "Sovereign Assistant"
-                },
-                {
                   "tag": "h2",
                   "class": "agent-title",
                   "text": "Maia"
@@ -2568,13 +3156,35 @@
                 "items": "$conversations",
                 "template": {
                   "tag": "div",
-                  "class": "message",
+                  "class": "message-wrapper",
                   "attrs": {
                     "data": {
                       "role": "$$role"
                     }
                   },
-                  "text": "$$content"
+                  "children": [
+                    {
+                      "tag": "div",
+                      "class": "message-name",
+                      "text": {
+                        "$if": {
+                          "condition": { "$eq": ["$$role", "user"] },
+                          "then": "me",
+                          "else": "Maia"
+                        }
+                      }
+                    },
+                    {
+                      "tag": "div",
+                      "class": "message",
+                      "attrs": {
+                        "data": {
+                          "role": "$$role"
+                        }
+                      },
+                      "text": "$$content"
+                    }
+                  ]
                 }
               }
             }
@@ -2681,6 +3291,13 @@
     "initial": "idle",
     "states": {
       "idle": {
+        "entry": [
+          {
+            "updateContext": {
+              "isLoading": false
+            }
+          }
+        ],
         "on": {
           "RENDER_COMPLETE": {
             "target": "idle",
@@ -2718,8 +3335,7 @@
           {
             "updateContext": {
               "isLoading": true,
-              "hasError": false,
-              "inputText": "$$inputText"
+              "hasError": false
             }
           },
           {
@@ -2736,7 +3352,14 @@
         ],
         "on": {
           "SUCCESS": {
-            "target": "calling_llm"
+            "target": "calling_llm",
+            "actions": [
+              {
+                "updateContext": {
+                  "inputText": ""
+                }
+              }
+            ]
           },
           "ERROR": {
             "target": "error",
@@ -2752,14 +3375,16 @@
       },
       "calling_llm": {
         "entry": {
-          "tool": "@private-llm/chat",
+          "tool": "@agent/chat",
           "payload": {
-            "messages": {
+            "model": "qwen/qwen3-30b-a3b-instruct-2507",
+            "temperature": 1,
+            "context": {
               "$concat": [
                 [
                   {
                     "role": "system",
-                    "content": "You are Maia, a CTO-level AI assistant that understands the entire MaiaOS codebase, architecture, and all packages. You learn alongside coding sessions. Be helpful, technical, and concise."
+                    "content": "You are Maia, a CTO-level AI assistant that understands the entire MaiaOS codebase, architecture, and all packages. You learn alongside coding sessions. Be helpful, technical, and concise. Never use emoticons in your responses."
                   }
                 ],
                 {
@@ -2771,13 +3396,7 @@
                       "content": "$$msg.content"
                     }
                   }
-                },
-                [
-                  {
-                    "role": "user",
-                    "content": "$inputText"
-                  }
-                ]
+                }
               ]
             }
           }
@@ -2818,7 +3437,6 @@
             "actions": [
               {
                 "updateContext": {
-                  "inputText": "",
                   "assistantResponse": null,
                   "isLoading": false,
                   "hasError": false

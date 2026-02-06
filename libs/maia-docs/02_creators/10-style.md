@@ -115,12 +115,14 @@ Inject into Shadow DOM
 **Components Section:**
 - Use for component definitions (e.g., `.todoItem`, `.card`, `.button`)
 - Supports nested data-attribute syntax for conditional styling
-- Component names map to CSS classes (camelCase → kebab-case)
+- Component names map to CSS classes (camelCase → kebab-case automatically)
 
 **Selectors Section:**
 - Use for advanced CSS selectors (e.g., `:host`, `h1`, `button:hover`)
 - Use for pseudo-classes, pseudo-elements, and media queries
 - Typically used in brand styles for global element styling
+- **Class selectors are automatically converted** from camelCase to kebab-case (e.g., `.todoCategory` → `.todo-category`) to match DOM class names
+- Special selectors (`:host`, `@container`, `@media`) are preserved without conversion
 
 ## Common Patterns
 
@@ -259,24 +261,26 @@ Inject into Shadow DOM
 
 ### How It Works
 
-Every actor's shadow host **automatically** has `container-type: inline-size` enabled via the StyleEngine. This means:
+Every actor's shadow host **automatically** has `container-type: inline-size` and a unique `container-name` enabled via the StyleEngine. This means:
 
-- Your actor's root element becomes a container
+- Your actor's root element (`:host`) becomes a container automatically
 - All elements inside can use `@container` queries
 - Works in ALL contexts: maia-city, standalone apps, embedded actors
 - **Zero configuration required** - it just works everywhere
+- Breakpoint tokens are automatically available to all actors
 
-### Semantic Breakpoints
+### Mobile-First Breakpoint Tokens
 
-Use these standard breakpoint tokens in your container queries:
+Use these standard mobile-first breakpoint tokens in your container queries (automatically injected by StyleEngine):
 
-- `{containers.3xs}` - 20rem (320px)
-- `{containers.2xs}` - 24rem (384px)
-- `{containers.xs}` - 32rem (512px)
-- `{containers.sm}` - 40rem (640px)
-- `{containers.md}` - 48rem (768px)
-- `{containers.lg}` - 64rem (1024px)
-- `{containers.xl}` - 80rem (1280px)
+- `{containers.xs}` - 240px (small phones)
+- `{containers.sm}` - 360px (standard phones)
+- `{containers.md}` - 480px (large phones/small tablets)
+- `{containers.lg}` - 640px (tablets)
+- `{containers.xl}` - 768px (large tablets/small desktop)
+- `{containers.2xl}` - 1024px (desktop)
+
+**Note:** These tokens are automatically available to all actors. Brands can override them if needed, but all actors get these defaults.
 
 ### Example: Responsive Card Grid
 

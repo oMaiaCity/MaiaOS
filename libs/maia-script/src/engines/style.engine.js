@@ -43,6 +43,33 @@ export class StyleEngine {
     return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
   }
 
+  /**
+   * Convert camelCase class selectors to kebab-case
+   * Preserves special selectors (:host, @container, @media, pseudo-selectors)
+   * @param {string} selector - CSS selector (e.g., ".todoCategory", ":host", ".buttonViewSwitch:hover")
+   * @returns {string} Converted selector (e.g., ".todo-category", ":host", ".button-view-switch:hover")
+   */
+  _toKebabCaseSelector(selector) {
+    if (!selector || typeof selector !== 'string') return selector;
+    
+    // Preserve special selectors without conversion
+    if (selector.startsWith(':host') || 
+        selector.startsWith('@container') || 
+        selector.startsWith('@media') ||
+        selector.startsWith('@')) {
+      return selector;
+    }
+    
+    // Handle class selectors (starting with .)
+    // Split by spaces, combinators, and pseudo-selectors to handle complex selectors
+    // Example: ".todoCategory:hover" or ".buttonViewSwitch.active"
+    return selector.replace(/\.([a-zA-Z][a-zA-Z0-9]*)/g, (match, className) => {
+      // Convert camelCase class name to kebab-case
+      const kebabClassName = className.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+      return `.${kebabClassName}`;
+    });
+  }
+
   compileModifierStyles(styles, tokens) {
     if (typeof styles !== 'object' || styles === null || Array.isArray(styles)) return '';
     return Object.entries(styles)
@@ -67,7 +94,7 @@ export class StyleEngine {
     return result;
   }
 
-  compileTokensToCSS(tokens) {
+  compileTokensToCSS(tokens, containerName = null) {
     const flatTokens = this._flattenTokens(tokens);
     const cssVars = Object.entries(flatTokens)
       .map(([name, value]) => `  ${name}: ${value};`)
@@ -86,7 +113,19 @@ export class StyleEngine {
       }).join('\n\n') + '\n\n';
     }
 
-    return `${fontFacesCSS}:host {\n${cssVars}\n}\n`;
+    // Automatically enable container queries for all actors
+    // Add container-type and container-name to :host selector
+    let containerProps = '';
+    if (containerName) {
+      // Sanitize container name for CSS (replace special chars with hyphens)
+      const sanitizedName = containerName.replace(/[^a-zA-Z0-9-_]/g, '-').replace(/-+/g, '-');
+      containerProps = `  container-type: inline-size;\n  container-name: ${sanitizedName};\n`;
+    } else {
+      // Still enable container-type even without name (unnamed container)
+      containerProps = `  container-type: inline-size;\n`;
+    }
+
+    return `${fontFacesCSS}:host {\n${containerProps}${cssVars}\n}\n`;
   }
 
   _compileDataAttributeSelectors(baseSelector, dataTree, tokens, currentPath = '') {
@@ -203,33 +242,37 @@ export class StyleEngine {
               nestedRules.push(nestedAtRuleCSS.split('\n').map(line => `  ${line}`).join('\n'));
             } else {
               // Regular nested selector with CSS properties
+              // Convert camelCase class selectors to kebab-case to match DOM class names
+              const kebabNestedSelector = this._toKebabCaseSelector(nestedSelector);
               const cssProperties = Object.entries(nestedStyles)
                 .map(([prop, value]) => {
                   const cssProp = prop.replace(/([A-Z])/g, '-$1').toLowerCase();
                   return `    ${cssProp}: ${this._interpolateTokens(value, tokens)};`;
                 })
                 .join('\n');
-              nestedRules.push(`  ${nestedSelector} {\n${cssProperties}\n  }`);
+              nestedRules.push(`  ${kebabNestedSelector} {\n${cssProperties}\n  }`);
             }
           }
         }
         cssRules.push(`${interpolatedSelector} {\n${nestedRules.join('\n')}\n}`);
       } else {
         // Regular selector with CSS properties
+        // Convert camelCase class selectors to kebab-case to match DOM class names
+        const kebabSelector = this._toKebabCaseSelector(interpolatedSelector);
         const cssProperties = Object.entries(styles)
           .map(([prop, value]) => {
             const cssProp = prop.replace(/([A-Z])/g, '-$1').toLowerCase();
             return `  ${cssProp}: ${this._interpolateTokens(value, tokens)};`;
           })
           .join('\n');
-        cssRules.push(`${selector} {\n${cssProperties}\n}`);
+        cssRules.push(`${kebabSelector} {\n${cssProperties}\n}`);
       }
     }
     return cssRules.join('\n\n');
   }
 
-  compileToCSS(tokens, components, selectors = {}, rawCSS = '') {
-    let css = `${this.compileTokensToCSS(tokens)}\n${this.compileComponentsToCSS(components, tokens)}`;
+  compileToCSS(tokens, components, selectors = {}, rawCSS = '', containerName = null) {
+    let css = `${this.compileTokensToCSS(tokens, containerName)}\n${this.compileComponentsToCSS(components, tokens)}`;
     const selectorCSS = this.compileSelectors(selectors, tokens);
     if (selectorCSS) css += `\n\n/* State-based selectors */\n${selectorCSS}`;
     if (rawCSS) css += `\n\n/* Raw CSS fallback */\n${rawCSS}`;
@@ -237,7 +280,7 @@ export class StyleEngine {
     return css;
   }
 
-  async getStyleSheets(actorConfig) {
+  async getStyleSheets(actorConfig, actorId = null) {
     const brandCoId = actorConfig.brand;
     const styleCoId = actorConfig.style;
     
@@ -245,7 +288,10 @@ export class StyleEngine {
       throw new Error(`[StyleEngine] Actor config must have 'brand' property with co-id. Config keys: ${Object.keys(actorConfig).join(', ')}. Config: ${JSON.stringify(actorConfig, null, 2)}`);
     }
     
-    const cacheKey = `${brandCoId}_${styleCoId || 'none'}`;
+    // Extract actor ID from config if not provided
+    const finalActorId = actorId || actorConfig.$id || actorConfig.id || 'actor';
+    
+    const cacheKey = `${brandCoId}_${styleCoId || 'none'}_${finalActorId}`;
     if (this.cache.has(cacheKey)) {
       return this.cache.get(cacheKey);
     }
@@ -263,12 +309,31 @@ export class StyleEngine {
       actor = styleStore.value;
     }
     
-    const mergedTokens = this.deepMerge(brand.tokens || {}, actor.tokens || {});
+    // Generate container name from actor ID (sanitized for CSS)
+    const containerName = finalActorId.replace(/[^a-zA-Z0-9-_]/g, '-').replace(/-+/g, '-');
+    
+    // Inject default container breakpoint tokens if missing (fully generic - available to ALL actors)
+    // Also inject the container name as a token so it can be referenced in queries
+    const defaultContainerTokens = {
+      containers: {
+        xs: '240px',
+        sm: '360px',
+        md: '480px',
+        lg: '640px',
+        xl: '768px',
+        '2xl': '1024px'
+      },
+      containerName: containerName  // Inject container name so queries can reference root :host container
+    };
+    
+    // Merge: default containers -> brand tokens -> actor tokens (actor can override)
+    const brandTokensWithDefaults = this.deepMerge(defaultContainerTokens, brand.tokens || {});
+    const mergedTokens = this.deepMerge(brandTokensWithDefaults, actor.tokens || {});
     const mergedComponents = this.deepMerge(brand.components || {}, actor.components || {});
     const mergedSelectors = this.deepMerge(brand.selectors || {}, actor.selectors || {});
     const rawCSS = [brand.rawCSS, actor.rawCSS].filter(Boolean).join('\n\n');
     
-    const css = this.compileToCSS(mergedTokens, mergedComponents, mergedSelectors, rawCSS);
+    const css = this.compileToCSS(mergedTokens, mergedComponents, mergedSelectors, rawCSS, containerName);
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(css);
     

@@ -11,9 +11,6 @@
 	"dependencies": {
 		"@google/genai": "^1.30.0"
 	},
-	"peerDependencies": {
-		"svelte": "^5.0.0"
-	},
 	"files": [
 		"src"
 	],

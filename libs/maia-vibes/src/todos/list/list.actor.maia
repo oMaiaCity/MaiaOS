@@ -6,5 +6,6 @@
   "view": "@todos/view/list",
   "state": "@todos/state/list",
   "brand": "@todos/style/brand",
+  "style": "@todos/style/list",
   "inbox": "@todos/inbox/list"
 }

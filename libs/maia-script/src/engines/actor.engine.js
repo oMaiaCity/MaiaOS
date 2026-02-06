@@ -136,7 +136,7 @@ export class ActorEngine {
             const actor = this.actors.get(actorId);
             if (actor && this.styleEngine) {
               try {
-                const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
+                const styleSheets = await this.styleEngine.getStyleSheets(actor.config, actor.id);
                 actor.shadowRoot.adoptedStyleSheets = styleSheets;
                 // Only rerender if state is READY (initial render complete)
                 if (actor._renderState === RENDER_STATES.READY) {
@@ -167,7 +167,7 @@ export class ActorEngine {
             const actor = this.actors.get(actorId);
             if (actor && this.styleEngine) {
               try {
-                const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
+                const styleSheets = await this.styleEngine.getStyleSheets(actor.config, actor.id);
                 actor.shadowRoot.adoptedStyleSheets = styleSheets;
                 // Only rerender if state is READY (initial render complete)
                 if (actor._renderState === RENDER_STATES.READY) {
@@ -398,7 +398,7 @@ export class ActorEngine {
       return vibeKey ? await this.reuseActor(actorId, containerElement, vibeKey) : this.actors.get(actorId);
     }
     const shadowRoot = containerElement.attachShadow({ mode: 'open' });
-    const styleSheets = await this.styleEngine.getStyleSheets(actorConfig);
+    const styleSheets = await this.styleEngine.getStyleSheets(actorConfig, actorId);
     const { viewDef, context, contextCoId, contextSchemaCoId, inbox, inboxCoId, tempSubscriptions } = await this._loadActorConfigs(actorConfig);
     const actorType = await this._isServiceActor(actorConfig, viewDef) ? 'service' : 'ui';
     const actor = {
@@ -558,7 +558,7 @@ export class ActorEngine {
     
     const viewStore2 = await this.dbEngine.execute({ op: 'read', schema: viewSchemaCoId, key: actor.config.view });
     const viewDef = viewStore2.value;
-    const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
+    const styleSheets = await this.styleEngine.getStyleSheets(actor.config, actorId);
     await this.viewEngine.render(viewDef, actor.context, actor.shadowRoot, styleSheets, actorId);
     
     // Transition back to READY state after render completes

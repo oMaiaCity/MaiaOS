@@ -70,8 +70,6 @@ export async function loadMyDataVibe(container) {
     container
   );
   
-  console.log('✅ Vibe loaded:', vibe.name);
-  console.log('✅ My Data Actor with State Machine:', myDataActor.machine?.currentState);
   
   return { os, vibe, actor: myDataActor };
 }

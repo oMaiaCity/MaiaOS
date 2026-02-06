@@ -26,6 +26,7 @@ export interface VoiceSessionManager {
 	handleGoogleMessage(message: any): void
 	sendAudio(data: string, mimeType?: string): void
 	sendText(text: string, turnComplete?: boolean): void
+	sendActivityEnd(): void
 	getContextIngest(): ContextIngestService
 	close(): void
 }
@@ -95,26 +96,60 @@ export async function createVoiceSessionManager(
 		},
 		callbacks: {
 			onopen: () => {
-				// Silent - don't log (too verbose)
+				console.log(`[VoiceSession] Google Live API connection opened`)
 				onStatus?.('connected')
 			},
 			onmessage: async (message: any) => {
 				try {
+					// Log ALL messages from Google for debugging
+					console.log(`[VoiceSession] Received message from Google:`, JSON.stringify(message, null, 2).substring(0, 500))
+					
 					// Handle user interruption
 					if (message.serverContent?.interrupted) {
-						// Silent - don't log (too verbose)
+						console.log(`[VoiceSession] User interrupted`)
 						onInterrupted?.()
 					}
 
 					// Handle server content (model responses)
 					if (message.serverContent) {
+						console.log(`[VoiceSession] Processing serverContent:`, {
+							hasModelTurn: !!message.serverContent.modelTurn,
+							hasParts: !!message.serverContent.modelTurn?.parts,
+							turnComplete: message.serverContent.turnComplete
+						})
+						
 						const parts = message.serverContent?.modelTurn?.parts || []
+						
+						// Debug: log parts structure
+						if (parts.length > 0) {
+							console.log(`[VoiceSession] Received ${parts.length} parts from Google`)
+							parts.forEach((part: any, idx: number) => {
+								console.log(`[VoiceSession] Part ${idx}:`, {
+									hasText: !!part.text,
+									textPreview: part.text?.substring(0, 50),
+									hasInlineData: !!part.inlineData,
+									hasFunctionCall: !!part.functionCall,
+									inlineDataType: part.inlineData?.mimeType,
+									inlineDataLength: part.inlineData?.data?.length,
+									partKeys: Object.keys(part)
+								})
+							})
+						} else {
+							console.log(`[VoiceSession] No parts found in modelTurn`)
+						}
 
 						// Process audio first (highest priority)
+						let audioFound = false
 						for (const part of parts) {
 							if (part.inlineData?.data) {
+								audioFound = true
+								console.log(`[VoiceSession] ✅ Sending audio to callback: ${part.inlineData.data.length} chars, mimeType: ${part.inlineData.mimeType}`)
 								onAudio?.(part.inlineData.data, part.inlineData.mimeType)
 							}
+						}
+						
+						if (!audioFound && parts.length > 0) {
+							console.log(`[VoiceSession] ⚠️ No audio found in ${parts.length} parts`)
 						}
 
 						// Process text transcripts
@@ -166,11 +201,12 @@ export async function createVoiceSessionManager(
 				}
 			},
 			onclose: () => {
-				// Silent - don't log (too verbose)
+				console.log(`[VoiceSession] Google Live API connection closed`)
 				onStatus?.('disconnected')
 			},
 			onerror: (err: any) => {
-				const _errorMessage = err instanceof Error ? err.message : String(err)
+				const errorMessage = err instanceof Error ? err.message : String(err)
+				console.error(`[VoiceSession] Google Live API error:`, errorMessage)
 				onError?.(err instanceof Error ? err : new Error(String(err)))
 			},
 		},
@@ -284,12 +320,34 @@ export async function createVoiceSessionManager(
 		},
 
 		sendAudio(data: string, mimeType: string = 'audio/pcm;rate=16000') {
-			session.sendRealtimeInput({
-				media: {
-					data,
-					mimeType,
-				},
-			})
+			console.log(`[VoiceSession] sendAudio called: ${data.length} chars, mimeType: ${mimeType}`)
+			try {
+				session.sendRealtimeInput({
+					media: {
+						data,
+						mimeType,
+					},
+				})
+				console.log(`[VoiceSession] Audio sent to Google Live API successfully`)
+			} catch (error) {
+				console.error(`[VoiceSession] Error sending audio:`, error)
+				throw error
+			}
+		},
+
+		sendActivityEnd() {
+			console.log(`[VoiceSession] Sending activityEnd event to signal turn complete`)
+			try {
+				// Send activityEnd event to signal that user has finished speaking
+				// This triggers Google to process the audio and generate a response
+				session.sendRealtimeInput({
+					event: 'activityEnd',
+				})
+				console.log(`[VoiceSession] activityEnd event sent successfully`)
+			} catch (error) {
+				console.error(`[VoiceSession] Error sending activityEnd:`, error)
+				throw error
+			}
 		},
 
 		sendText(text: string, turnComplete: boolean = false) {

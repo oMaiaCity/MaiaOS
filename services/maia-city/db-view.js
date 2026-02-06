@@ -270,7 +270,6 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 					store.subscribe((updatedResult) => {
 						// Re-render when store updates (check if data actually changed)
 						if (updatedResult && Array.isArray(updatedResult) && updatedResult.length !== lastLength) {
-							console.log(`🔄 [DB Viewer] Store updated for schema ${currentView.substring(0, 12)}..., re-rendering...`);
 							lastLength = updatedResult.length;
 							// Use setTimeout to prevent infinite loops and batch updates
 							setTimeout(() => {

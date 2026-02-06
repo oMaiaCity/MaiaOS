@@ -869,15 +869,24 @@ Each actor with a view renders into its own **Shadow DOM**, providing:
 
 ✅ **Style isolation** - Actor styles don't leak  
 ✅ **Encapsulation** - Internal DOM is private  
-✅ **Reusability** - Multiple instances don't conflict
+✅ **Reusability** - Multiple instances don't conflict  
+✅ **Automatic container queries** - `:host` automatically has `container-type: inline-size` enabled
 
 ```html
 <div id="actor-todo">
   #shadow-root
-    <style>/* Actor-specific styles */</style>
+    <style>
+      :host {
+        container-type: inline-size;
+        container-name: actor-todo;
+        /* ... other styles ... */
+      }
+    </style>
     <div>/* Actor UI */</div>
 </div>
 ```
+
+**Container Queries:** Every actor's `:host` element automatically becomes a container, enabling responsive components that adapt to their container size (not just viewport size). Use `@container` queries in your style files with breakpoint tokens like `{containers.xs}`, `{containers.sm}`, etc. See [Style Guide](./10-style.md#container-queries-responsive-design) for details.
 
 ## Multiple Actor Instances
 

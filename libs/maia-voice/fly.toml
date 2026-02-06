@@ -9,10 +9,17 @@ primary_region = "ord"  # Chicago - L40S GPU available
 [env]
   NO_TORCH_COMPILE = "1"
 
-# GPU configuration - L40S preset
-# Note: vm.size must be set at top level, not in [[vm]] table
-# The "l40s" preset includes GPU + performance-8x CPU + 32GB RAM
-vm.size = "l40s"
+# GPU configuration - L40S (per Fly.io GPU quickstart docs)
+# Using [vm] section with gpu_kind for proper GPU allocation
+[vm]
+  size = "performance-8x"  # High CPU/RAM (L40S requires this)
+  gpu_kind = "l40s"        # L40S GPU specification
+
+# Volume for storing ML models (recommended for GPU machines)
+# Volume will be created automatically by fly deploy
+[[mounts]]
+  source = "personaplex_data"
+  destination = "/data"
 
 [[services]]
   internal_port = 8998

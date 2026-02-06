@@ -10092,9 +10092,6 @@ async function createAccountWithSecret({ agentSecret, name = "Maia", peers = [],
     throw new Error("agentSecret is required. Use signInWithPasskey() to get agentSecret.");
   }
   const crypto2 = await WasmCrypto.create();
-  console.log("🚀 Creating Account with passkey-derived secret...");
-  console.log("   Sync peers:", peers.length > 0 ? `${peers.length} peer(s)` : "none");
-  console.log("   Storage:", storage ? "IndexedDB available" : "no storage");
   const result = await LocalNode.withNewlyCreatedAccount({
     creationProps: { name },
     crypto: crypto2,
@@ -10112,11 +10109,6 @@ async function createAccountWithSecret({ agentSecret, name = "Maia", peers = [],
   if (!profileValue) {
     throw new Error("Profile not created by account creation migration");
   }
-  console.log("✅ Account created with passkey:");
-  console.log("   Account ID:", rawAccount.id);
-  console.log("   Account type:", rawAccount.type);
-  console.log("   Profile value:", profileValue);
-  console.log("   ℹ️  Full migration will run on first load");
   return {
     node: result.node,
     account: rawAccount,
@@ -10135,28 +10127,14 @@ async function loadAccount({ accountID, agentSecret, peers = [], storage = void 
   }
   const crypto2 = await WasmCrypto.create();
   const loadStartTime = performance.now();
-  const phaseTimings = {
-    setup: 0,
-    storageCheck: 0,
-    accountLoadRequest: 0,
-    accountLoadResponse: 0,
-    accountLoadTotal: 0,
-    profileLoadRequest: 0,
-    profileLoadResponse: 0,
-    profileLoadTotal: 0,
-    migration: 0,
-    total: 0
-  };
-  console.log("🔑 Loading existing account with passkey...");
-  console.log("   Account ID:", accountID);
   console.log("   Sync peers:", peers.length > 0 ? `${peers.length} peer(s)` : "none");
   console.log("   Storage:", storage ? "IndexedDB available (local-first)" : "no storage (sync-only)");
-  const setupStartTime = performance.now();
+  performance.now();
   const storageCheckStartTime = performance.now();
   if (storage) {
     console.log("   💾 Storage available - will check IndexedDB first");
   }
-  phaseTimings.storageCheck = performance.now() - storageCheckStartTime;
+  performance.now() - storageCheckStartTime;
   let migrationPromise = null;
   const deferredMigration = async (account, node2) => {
     migrationPromise = schemaMigration(account, node2).catch((err) => {
@@ -10165,7 +10143,6 @@ async function loadAccount({ accountID, agentSecret, peers = [], storage = void 
     return Promise.resolve();
   };
   const accountLoadRequestStartTime = performance.now();
-  console.log(`   ⏳ [PERF] Starting account load request at ${accountLoadRequestStartTime.toFixed(2)}ms`);
   const INITIAL_LOAD_TIMEOUT = 3e3;
   const loadPromise = LocalNode.withLoadedAccount({
     crypto: crypto2,
@@ -10181,122 +10158,47 @@ async function loadAccount({ accountID, agentSecret, peers = [], storage = void 
   });
   const timeoutPromise = new Promise((resolve2) => {
     setTimeout(() => {
-      const elapsed = performance.now() - accountLoadRequestStartTime;
-      console.warn(`   ⚠️ [PERF] Account load taking longer than expected: ${elapsed.toFixed(0)}ms (timeout: ${INITIAL_LOAD_TIMEOUT}ms)`);
-      console.warn(`   💡 This is normal for fresh browser - account loading from sync server`);
+      performance.now() - accountLoadRequestStartTime;
       resolve2(null);
     }, INITIAL_LOAD_TIMEOUT);
   });
   const node = await Promise.race([loadPromise, timeoutPromise]).then((result) => {
     if (result === null) {
-      console.log(`   ⏳ [PERF] Timeout reached, waiting for account load to complete...`);
       return loadPromise;
     }
     return result;
   });
-  const accountLoadResponseTime = performance.now();
-  phaseTimings.setup = setupStartTime - loadStartTime;
-  phaseTimings.accountLoadRequest = accountLoadRequestStartTime - loadStartTime;
-  phaseTimings.accountLoadResponse = accountLoadResponseTime - loadStartTime;
-  phaseTimings.accountLoadTotal = accountLoadResponseTime - accountLoadRequestStartTime;
-  console.log(`   ✅ [PERF] Account load response received at ${accountLoadResponseTime.toFixed(2)}ms`);
-  console.log(`   ⏱️  [PERF] Account load total: ${phaseTimings.accountLoadTotal.toFixed(0)}ms`);
+  performance.now();
   if (migrationPromise) {
     const migrationStartTime = performance.now();
     migrationPromise.then(() => {
-      phaseTimings.migration = performance.now() - migrationStartTime;
-      console.log(`   ✅ Migration completed (${phaseTimings.migration.toFixed(0)}ms, non-blocking)`);
+      performance.now() - migrationStartTime;
     }).catch(() => {
     });
   }
   const rawAccount = node.expectCurrentAccount("oID/loadAccount");
-  const profileLoadRequestStartTime = performance.now();
+  performance.now();
   const profileID = rawAccount.get("profile");
   if (profileID) {
-    console.log(`   ⏳ [PERF] Checking profile load status at ${profileLoadRequestStartTime.toFixed(2)}ms`);
     const profileCoValue = node.getCoValue(profileID);
     if (profileCoValue && !profileCoValue.isAvailable()) {
-      console.log(`   ⏳ [PERF] Profile not available, loading from sync/storage...`);
       await node.load(profileID);
-      const profileLoadResponseTime = performance.now();
-      phaseTimings.profileLoadRequest = profileLoadRequestStartTime - loadStartTime;
-      phaseTimings.profileLoadResponse = profileLoadResponseTime - loadStartTime;
-      phaseTimings.profileLoadTotal = profileLoadResponseTime - profileLoadRequestStartTime;
-      console.log(`   ✅ [PERF] Profile load response received at ${profileLoadResponseTime.toFixed(2)}ms`);
-      console.log(`   ⏱️  [PERF] Profile load total: ${phaseTimings.profileLoadTotal.toFixed(0)}ms`);
+      performance.now();
     } else {
-      const profileLoadResponseTime = performance.now();
-      phaseTimings.profileLoadRequest = profileLoadRequestStartTime - loadStartTime;
-      phaseTimings.profileLoadResponse = profileLoadResponseTime - loadStartTime;
-      phaseTimings.profileLoadTotal = profileLoadResponseTime - profileLoadRequestStartTime;
-      console.log(`   ✅ [PERF] Profile already available (loaded with account)`);
-      console.log(`   ⏱️  [PERF] Profile load total: ${phaseTimings.profileLoadTotal.toFixed(0)}ms`);
+      performance.now();
     }
-  } else {
-    phaseTimings.profileLoadTotal = 0;
   }
-  const osLoadRequestStartTime = performance.now();
+  performance.now();
   const osID = rawAccount.get("os");
   if (osID && typeof osID === "string" && osID.startsWith("co_z")) {
-    console.log(`   ⏳ [PERF] Prefetching account.os at ${osLoadRequestStartTime.toFixed(2)}ms`);
     const osCoValue = node.getCoValue(osID);
     if (osCoValue && !osCoValue.isAvailable()) {
       node.loadCoValueCore(osID).catch((err) => {
         console.warn(`[loadAccount] Failed to prefetch account.os:`, err);
       });
-      console.log(`   ✅ [PERF] account.os prefetch triggered (non-blocking)`);
-    } else if (osCoValue && osCoValue.isAvailable()) {
-      console.log(`   ✅ [PERF] account.os already available (loaded with account)`);
-    }
-  } else {
-    console.log(`   ℹ️  [PERF] account.os does not exist yet (will be created on first use)`);
+    } else if (osCoValue && osCoValue.isAvailable()) ;
   }
-  const loadDuration = performance.now() - loadStartTime;
-  phaseTimings.total = loadDuration;
-  const likelySource = loadDuration < 200 ? "IndexedDB (local)" : loadDuration < 1e3 ? "sync server (fast)" : "sync server (slow)";
-  console.log("✅ Account loaded:");
-  console.log("   Account ID:", rawAccount.id);
-  console.log("   Account type:", rawAccount.type);
-  console.log(`   ⏱️  Load duration: ${loadDuration.toFixed(0)}ms`);
-  console.log(`   📊 Phase timings:`);
-  console.log(`      - Setup: ${phaseTimings.setup.toFixed(0)}ms`);
-  console.log(`      - Storage check: ${phaseTimings.storageCheck.toFixed(0)}ms`);
-  console.log(`      - Account load:`);
-  console.log(`         * Request sent: ${phaseTimings.accountLoadRequest.toFixed(0)}ms`);
-  console.log(`         * Response received: ${phaseTimings.accountLoadResponse.toFixed(0)}ms`);
-  console.log(`         * Total: ${phaseTimings.accountLoadTotal.toFixed(0)}ms`);
-  if (phaseTimings.profileLoadTotal > 0) {
-    console.log(`      - Profile load:`);
-    console.log(`         * Request sent: ${phaseTimings.profileLoadRequest.toFixed(0)}ms`);
-    console.log(`         * Response received: ${phaseTimings.profileLoadResponse.toFixed(0)}ms`);
-    console.log(`         * Total: ${phaseTimings.profileLoadTotal.toFixed(0)}ms`);
-  }
-  if (phaseTimings.migration > 0) {
-    console.log(`      - Migration: ${phaseTimings.migration.toFixed(0)}ms (deferred, non-blocking)`);
-  } else {
-    console.log(`      - Migration: running in background (deferred, non-blocking)`);
-  }
-  console.log(`   📍 Likely source: ${likelySource}`);
-  if (phaseTimings.accountLoadTotal > 200) {
-    const syncRoundtripTime = phaseTimings.accountLoadTotal;
-    console.log(`   🔄 [PERF] Sync roundtrip time: ${syncRoundtripTime.toFixed(0)}ms`);
-    if (syncRoundtripTime > 1e3) {
-      console.warn(`   ⚠️  [PERF] Slow sync roundtrip: ${syncRoundtripTime.toFixed(0)}ms (target: <1000ms)`);
-      console.warn(`   💡 Check sync server response time and network latency`);
-    }
-  }
-  if (loadDuration > 1e3) {
-    console.warn(`   ⚠️  [PERF] Account load took ${loadDuration.toFixed(0)}ms (target: <1000ms)`);
-    if (storage && loadDuration > 500) {
-      console.warn(`   💡 Account exists in storage but load was slow - check sync peer connection`);
-    } else if (!storage) {
-      console.warn(`   💡 No storage available - account loaded from sync server`);
-    } else {
-      console.warn(`   💡 Check if account exists on sync server, or if sync is working properly`);
-    }
-  } else if (loadDuration < 200 && storage) {
-    console.log(`   ✅ Fast load from IndexedDB (local-first strategy working!)`);
-  }
+  performance.now() - loadStartTime;
   return {
     node,
     account: rawAccount,
@@ -10364,13 +10266,11 @@ async function resolveSchemaCoId(backend, schema) {
   return await resolve$1(backend, schema, { returnType: "coId" });
 }
 async function getSchemaIndexColistId(backend, schema) {
-  console.log(`[getSchemaIndexColistId] Resolving schema to co-id: "${schema.substring(0, 30)}..."`);
   const schemaCoId = await resolveSchemaCoId(backend, schema);
   if (!schemaCoId) {
     console.warn(`[getSchemaIndexColistId] ❌ Failed to resolve schema "${schema.substring(0, 30)}..." to co-id`);
     return null;
   }
-  console.log(`[getSchemaIndexColistId] Resolved schema → "${schemaCoId.substring(0, 12)}..."`);
   const osId = backend.account.get("os");
   if (!osId) {
     console.warn(`[getSchemaIndexColistId] ❌ account.os not found`);
@@ -10388,7 +10288,6 @@ async function getSchemaIndexColistId(backend, schema) {
   }
   const indexColistId = osContent.get(schemaCoId);
   if (indexColistId && typeof indexColistId === "string" && indexColistId.startsWith("co_")) {
-    console.log(`[getSchemaIndexColistId] ✅ Found index colist "${indexColistId.substring(0, 12)}..." for schema co-id "${schemaCoId.substring(0, 12)}..."`);
     return indexColistId;
   }
   console.warn(`[getSchemaIndexColistId] ❌ No index colist found in account.os for schema co-id "${schemaCoId.substring(0, 12)}..."`);
@@ -10402,11 +10301,8 @@ async function getCoListId(backend, collectionNameOrSchema) {
     console.warn(`[getCoListId] ❌ Invalid collection identifier: "${collectionNameOrSchema}". Must be schema co-id (co_z...) or namekey (@schema/...). Use schema registry to resolve collection names.`);
     return null;
   }
-  console.log(`[getCoListId] Looking up colist for schema: "${collectionNameOrSchema.substring(0, 30)}..."`);
   const colistId = await getSchemaIndexColistId(backend, collectionNameOrSchema);
-  if (colistId) {
-    console.log(`[getCoListId] ✅ Found colist: "${colistId.substring(0, 12)}..." for schema "${collectionNameOrSchema.substring(0, 30)}..."`);
-  } else {
+  if (!colistId) {
     console.warn(`[getCoListId] ❌ No colist found for schema "${collectionNameOrSchema.substring(0, 30)}..."`);
   }
   return colistId;
@@ -11625,7 +11521,6 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
           let schemaCoId = value.schema;
           if (typeof schemaCoId === "string" && !schemaCoId.startsWith("co_z")) {
             if (schemaCoId.startsWith("@schema/")) {
-              console.log(`[createUnifiedStore] Resolving schema namekey "${schemaCoId}" reactively for query "${key}"...`);
               const schemaStore = resolveReactive(backend, schemaCoId, { timeoutMs });
               const schemaUnsubscribe = schemaStore.subscribe(async (schemaState) => {
                 if (schemaState.loading) {
@@ -11642,12 +11537,11 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
                   return;
                 }
                 if (schemaState.error || !schemaState.schemaCoId) {
-                  console.error(`[createUnifiedStore] ❌ Failed to resolve schema ${value.schema} for query "${key}": ${schemaState.error || "Schema not found"}`);
+                  console.error(`[createUnifiedStore] Failed to resolve schema ${value.schema} for query "${key}": ${schemaState.error || "Schema not found"}`);
                   schemaUnsubscribe();
                   return;
                 }
                 const resolvedSchemaCoId = schemaState.schemaCoId;
-                console.log(`[createUnifiedStore] ✅ Resolved schema "${value.schema}" → "${resolvedSchemaCoId.substring(0, 12)}..." for query "${key}"`);
                 try {
                   const queryOptions = {
                     ...options,
@@ -11679,7 +11573,6 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
               continue;
             }
           } else if (schemaCoId && schemaCoId.startsWith("co_z")) {
-            console.log(`[createUnifiedStore] Query "${key}" already has co-id: "${schemaCoId.substring(0, 12)}..."`);
             const queryOptions = {
               ...options,
               timeoutMs,
@@ -12547,13 +12440,10 @@ async function resolve$1(backend, identifier, options = {}) {
     }
     const isSchemaKey = normalizedKey.startsWith("@schema/");
     if (isSchemaKey) {
-      console.log(`[resolve] Resolving schema namekey: "${identifier}" (normalized: "${normalizedKey}")`);
       const osId = backend.account.get("os");
       if (!osId || typeof osId !== "string" || !osId.startsWith("co_z")) {
-        console.warn(`[resolve] ❌ account.os not found for schema key: ${identifier}`);
         return null;
       }
-      console.log(`[resolve] Found account.os: ${osId.substring(0, 12)}...`);
       const osStore = await read(backend, osId, null, null, null, {
         deepResolve: false,
         timeoutMs
@@ -12561,20 +12451,16 @@ async function resolve$1(backend, identifier, options = {}) {
       try {
         await waitForStoreReady(osStore, osId, timeoutMs);
       } catch (error) {
-        console.warn(`[resolve] ❌ Timeout waiting for account.os to load: ${error.message}`);
         return null;
       }
       const osData = osStore.value;
       if (!osData || osData.error) {
-        console.warn(`[resolve] ❌ account.os data not available or has error`);
         return null;
       }
       const schematasId = osData.schematas;
       if (!schematasId || typeof schematasId !== "string" || !schematasId.startsWith("co_z")) {
-        console.warn(`[resolve] ❌ account.os.schematas not found in osData`);
         return null;
       }
-      console.log(`[resolve] Found schematas registry: ${schematasId.substring(0, 12)}...`);
       const schematasStore = await read(backend, schematasId, null, null, null, {
         deepResolve: false,
         timeoutMs
@@ -12582,17 +12468,14 @@ async function resolve$1(backend, identifier, options = {}) {
       try {
         await waitForStoreReady(schematasStore, schematasId, timeoutMs);
       } catch (error) {
-        console.warn(`[resolve] ❌ Timeout waiting for schematas registry to load: ${error.message}`);
         return null;
       }
       const schematasData = schematasStore.value;
       if (!schematasData || schematasData.error) {
-        console.warn(`[resolve] ❌ schematas registry data not available or has error`);
         return null;
       }
       const registryCoId = schematasData[normalizedKey] || schematasData[identifier];
       if (registryCoId && typeof registryCoId === "string" && registryCoId.startsWith("co_z")) {
-        console.log(`[resolve] ✅ Found schema "${identifier}" → "${registryCoId.substring(0, 12)}..." in registry`);
         if (returnType === "coId") {
           return registryCoId;
         }
@@ -12600,14 +12483,13 @@ async function resolve$1(backend, identifier, options = {}) {
       } else {
         const isIndexSchema = normalizedKey.startsWith("@schema/index/");
         if (!isIndexSchema) {
-          console.warn(`[resolve] ❌ Schema "${identifier}" not found in registry. Available keys:`, Object.keys(schematasData).slice(0, 10));
+          console.warn(`[resolve] Schema "${identifier}" not found in registry`);
         }
         return null;
       }
     } else if (identifier.startsWith("@vibe/") || !identifier.startsWith("@")) {
       const vibesId = backend.account.get("vibes");
       if (!vibesId || typeof vibesId !== "string" || !vibesId.startsWith("co_z")) {
-        console.warn(`[resolve] account.vibes not found for vibe key: ${identifier}`);
         return null;
       }
       const vibesStore = await read(backend, vibesId, null, null, null, {
@@ -12631,11 +12513,9 @@ async function resolve$1(backend, identifier, options = {}) {
         }
         return await resolve$1(backend, registryCoId, { returnType, deepResolve, timeoutMs });
       }
-      console.warn(`[resolve] Vibe ${identifier} not found in account.vibes registry`);
       return null;
     }
   }
-  console.warn(`[resolve] Unknown key format: ${identifier}`);
   return null;
 }
 function resolveReactive(backend, identifier, options = {}) {
@@ -16794,9 +16674,6 @@ ${verificationErrors.join("\n")}`;
       const vibesMeta = { $schema: "GenesisSchema" };
       vibes = universalGroup.createMap({}, vibesMeta);
       account.set("vibes", vibes.id);
-      console.log(`[CoJSONSeed] Created new account.vibes CoMap: ${vibes.id}`);
-    } else {
-      console.log(`[CoJSONSeed] Using existing account.vibes CoMap: ${vibesId}`);
     }
     for (const vibe of allVibes) {
       const actorRef = vibe.actor;
@@ -16808,11 +16685,6 @@ ${verificationErrors.join("\n")}`;
         }
       }
       const retransformedVibe = transformForSeeding2(vibe, combinedRegistry);
-      console.log(`[CoJSONSeed] Transforming vibe '${vibe.$id || vibe.name}':`, {
-        originalActor: vibe.actor,
-        transformedActor: retransformedVibe.actor,
-        isCoId: retransformedVibe.actor?.startsWith("co_z")
-      });
       if (retransformedVibe.actor && !retransformedVibe.actor.startsWith("co_z")) {
         console.error(`[CoJSONSeed] ❌ Vibe actor transformation failed! Expected co-id, got: ${retransformedVibe.actor}`);
         console.error(`[CoJSONSeed] Original actor: ${vibe.actor}, Registry has: ${combinedRegistry.has(vibe.actor)}`);
@@ -16828,10 +16700,9 @@ ${verificationErrors.join("\n")}`;
         const vibeCoId = vibeInfo.coId;
         if (vibes && typeof vibes.set === "function") {
           vibes.set(vibeKey, vibeCoId);
-          console.log(`[CoJSONSeed] Stored vibe in account.vibes: ${vibeKey} = ${vibeCoId}`);
           const storedValue = vibes.get(vibeKey);
           if (storedValue !== vibeCoId) {
-            console.warn(`[CoJSONSeed] ⚠️ Vibe ${vibeKey} storage verification failed! Expected ${vibeCoId}, got ${storedValue}`);
+            console.warn(`[CoJSONSeed] Vibe ${vibeKey} storage verification failed! Expected ${vibeCoId}, got ${storedValue}`);
           }
         } else {
           console.error(`[CoJSONSeed] ❌ Cannot store vibe ${vibeKey}: vibes CoMap not available`);
@@ -16845,15 +16716,12 @@ ${verificationErrors.join("\n")}`;
       }
     }
     if (vibes && typeof vibes.get === "function") {
-      console.log(`[CoJSONSeed] Verifying stored vibes in account.vibes:`);
       for (const vibe of allVibes) {
         const originalVibeId = vibe.$id || "";
         const vibeKey = originalVibeId.startsWith("@vibe/") ? originalVibeId.replace("@vibe/", "") : (vibe.name || "default").toLowerCase().replace(/\s+/g, "-");
         const storedValue = vibes.get(vibeKey);
-        if (storedValue) {
-          console.log(`[CoJSONSeed] ✅ Verified: ${vibeKey} = ${storedValue}`);
-        } else {
-          console.error(`[CoJSONSeed] ❌ Missing: ${vibeKey} not found in account.vibes!`);
+        if (!storedValue) {
+          console.error(`[CoJSONSeed] Missing: ${vibeKey} not found in account.vibes!`);
         }
       }
     }
@@ -17966,7 +17834,6 @@ class CoJSONBackend extends DBAdapter {
       console.warn("[CoJSONBackend.ensureAccountOsReady] Account not available");
       return false;
     }
-    console.log("[CoJSONBackend.ensureAccountOsReady] Ensuring account.os is ready...");
     const startTime = performance.now();
     const phaseTimings = {
       getOsId: 0,
@@ -17987,7 +17854,6 @@ class CoJSONBackend extends DBAdapter {
     let osId = this.account.get("os");
     phaseTimings.getOsId = performance.now() - getOsIdStartTime;
     if (!osId || typeof osId !== "string" || !osId.startsWith("co_z")) {
-      console.log("[CoJSONBackend.ensureAccountOsReady] account.os does not exist, creating...");
       const createOsStartTime = performance.now();
       const group = await this.getDefaultGroup();
       const osMeta = { $schema: "GenesisSchema" };
@@ -17995,10 +17861,8 @@ class CoJSONBackend extends DBAdapter {
       this.account.set("os", osCoMap.id);
       osId = osCoMap.id;
       phaseTimings.createOs = performance.now() - createOsStartTime;
-      console.log(`[CoJSONBackend.ensureAccountOsReady] Created account.os: ${osId.substring(0, 12)}...`);
     }
     const osReadRequestStartTime = performance.now();
-    console.log(`   ⏳ [PERF] Starting account.os read request at ${osReadRequestStartTime.toFixed(2)}ms`);
     const osStore = await read(this, osId, null, null, null, {
       deepResolve: false,
       timeoutMs
@@ -18007,42 +17871,35 @@ class CoJSONBackend extends DBAdapter {
     phaseTimings.osReadRequest = osReadRequestStartTime - startTime;
     phaseTimings.osReadResponse = osReadResponseTime - startTime;
     phaseTimings.osReadTotal = osReadResponseTime - osReadRequestStartTime;
-    console.log(`   ✅ [PERF] account.os read response received at ${osReadResponseTime.toFixed(2)}ms`);
-    console.log(`   ⏱️  [PERF] account.os read total: ${phaseTimings.osReadTotal.toFixed(0)}ms`);
     const osWaitForReadyStartTime = performance.now();
-    console.log(`   ⏳ [PERF] Starting waitForStoreReady for account.os at ${osWaitForReadyStartTime.toFixed(2)}ms`);
     try {
       await waitForStoreReady(osStore, osId, timeoutMs);
       const osWaitForReadyEndTime = performance.now();
       phaseTimings.osWaitForReady = osWaitForReadyEndTime - osWaitForReadyStartTime;
-      console.log(`   ✅ [PERF] account.os waitForStoreReady completed at ${osWaitForReadyEndTime.toFixed(2)}ms`);
-      console.log(`   ⏱️  [PERF] account.os waitForStoreReady: ${phaseTimings.osWaitForReady.toFixed(0)}ms`);
     } catch (error) {
       const osWaitForReadyEndTime = performance.now();
       phaseTimings.osWaitForReady = osWaitForReadyEndTime - osWaitForReadyStartTime;
-      console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ Timeout waiting for account.os to load: ${error.message}`);
-      console.error(`   ⏱️  [PERF] account.os waitForStoreReady failed after: ${phaseTimings.osWaitForReady.toFixed(0)}ms`);
+      console.error(`[CoJSONBackend.ensureAccountOsReady] Timeout waiting for account.os to load: ${error.message}`);
       return false;
     }
     const osData = osStore.value;
     if (!osData || osData.error) {
-      console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ account.os data not available or has error`);
+      console.error(`[CoJSONBackend.ensureAccountOsReady] account.os data not available or has error`);
       return false;
     }
     const getSchematasIdStartTime = performance.now();
     let schematasId = osData.schematas;
     phaseTimings.getSchematasId = performance.now() - getSchematasIdStartTime;
     if (!schematasId || typeof schematasId !== "string" || !schematasId.startsWith("co_z")) {
-      console.log("[CoJSONBackend.ensureAccountOsReady] account.os.schematas does not exist, creating...");
       const createSchematasStartTime = performance.now();
       const osCore = this.getCoValue(osId);
       if (!osCore || !osCore.isAvailable()) {
-        console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ account.os not available for creating schematas`);
+        console.error(`[CoJSONBackend.ensureAccountOsReady] account.os not available for creating schematas`);
         return false;
       }
       const osContent = this.getCurrentContent(osCore);
       if (!osContent || typeof osContent.set !== "function") {
-        console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ account.os content not available for creating schematas`);
+        console.error(`[CoJSONBackend.ensureAccountOsReady] account.os content not available for creating schematas`);
         return false;
       }
       const group = await this.getDefaultGroup();
@@ -18051,7 +17908,6 @@ class CoJSONBackend extends DBAdapter {
       osContent.set("schematas", schematasCoMap.id);
       schematasId = schematasCoMap.id;
       phaseTimings.createSchematas = performance.now() - createSchematasStartTime;
-      console.log(`[CoJSONBackend.ensureAccountOsReady] Created account.os.schematas: ${schematasId.substring(0, 12)}...`);
       const osStore2 = await read(this, osId, null, null, null, {
         deepResolve: false,
         timeoutMs: 2e3
@@ -18066,11 +17922,10 @@ class CoJSONBackend extends DBAdapter {
       }
     }
     if (!schematasId || typeof schematasId !== "string" || !schematasId.startsWith("co_z")) {
-      console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ Failed to ensure schematas registry exists`);
+      console.error(`[CoJSONBackend.ensureAccountOsReady] Failed to ensure schematas registry exists`);
       return false;
     }
     const schematasReadRequestStartTime = performance.now();
-    console.log(`   ⏳ [PERF] Starting schematas read request at ${schematasReadRequestStartTime.toFixed(2)}ms`);
     const schematasStore = await read(this, schematasId, null, null, null, {
       deepResolve: false,
       timeoutMs
@@ -18079,52 +17934,24 @@ class CoJSONBackend extends DBAdapter {
     phaseTimings.schematasReadRequest = schematasReadRequestStartTime - startTime;
     phaseTimings.schematasReadResponse = schematasReadResponseTime - startTime;
     phaseTimings.schematasReadTotal = schematasReadResponseTime - schematasReadRequestStartTime;
-    console.log(`   ✅ [PERF] schematas read response received at ${schematasReadResponseTime.toFixed(2)}ms`);
-    console.log(`   ⏱️  [PERF] schematas read total: ${phaseTimings.schematasReadTotal.toFixed(0)}ms`);
     const schematasWaitForReadyStartTime = performance.now();
-    console.log(`   ⏳ [PERF] Starting waitForStoreReady for schematas at ${schematasWaitForReadyStartTime.toFixed(2)}ms`);
     try {
       await waitForStoreReady(schematasStore, schematasId, timeoutMs);
       const schematasWaitForReadyEndTime = performance.now();
       phaseTimings.schematasWaitForReady = schematasWaitForReadyEndTime - schematasWaitForReadyStartTime;
-      console.log(`   ✅ [PERF] schematas waitForStoreReady completed at ${schematasWaitForReadyEndTime.toFixed(2)}ms`);
-      console.log(`   ⏱️  [PERF] schematas waitForStoreReady: ${phaseTimings.schematasWaitForReady.toFixed(0)}ms`);
     } catch (error) {
       const schematasWaitForReadyEndTime = performance.now();
       phaseTimings.schematasWaitForReady = schematasWaitForReadyEndTime - schematasWaitForReadyStartTime;
-      console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ Timeout waiting for schematas registry to load: ${error.message}`);
-      console.error(`   ⏱️  [PERF] schematas waitForStoreReady failed after: ${phaseTimings.schematasWaitForReady.toFixed(0)}ms`);
+      console.error(`[CoJSONBackend.ensureAccountOsReady] Timeout waiting for schematas registry to load: ${error.message}`);
       return false;
     }
     const schematasData = schematasStore.value;
     if (!schematasData || schematasData.error) {
-      console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ schematas registry data not available or has error`);
+      console.error(`[CoJSONBackend.ensureAccountOsReady] schematas registry data not available or has error`);
       return false;
     }
     const endTime = performance.now();
     phaseTimings.total = endTime - startTime;
-    console.log(`[CoJSONBackend.ensureAccountOsReady] ✅ account.os ready (took ${phaseTimings.total.toFixed(0)}ms)`);
-    console.log(`[CoJSONBackend.ensureAccountOsReady]   - account.os: ${osId.substring(0, 12)}...`);
-    console.log(`[CoJSONBackend.ensureAccountOsReady]   - schematas: ${schematasId.substring(0, 12)}...`);
-    console.log(`   📊 [PERF] Phase timings:`);
-    console.log(`      - Get osId: ${phaseTimings.getOsId.toFixed(0)}ms`);
-    if (phaseTimings.createOs > 0) {
-      console.log(`      - Create os: ${phaseTimings.createOs.toFixed(0)}ms`);
-    }
-    console.log(`      - account.os read:`);
-    console.log(`         * Request sent: ${phaseTimings.osReadRequest.toFixed(0)}ms`);
-    console.log(`         * Response received: ${phaseTimings.osReadResponse.toFixed(0)}ms`);
-    console.log(`         * Read total: ${phaseTimings.osReadTotal.toFixed(0)}ms`);
-    console.log(`         * waitForStoreReady: ${phaseTimings.osWaitForReady.toFixed(0)}ms`);
-    console.log(`      - Get schematasId: ${phaseTimings.getSchematasId.toFixed(0)}ms`);
-    if (phaseTimings.createSchematas > 0) {
-      console.log(`      - Create schematas: ${phaseTimings.createSchematas.toFixed(0)}ms`);
-    }
-    console.log(`      - schematas read:`);
-    console.log(`         * Request sent: ${phaseTimings.schematasReadRequest.toFixed(0)}ms`);
-    console.log(`         * Response received: ${phaseTimings.schematasReadResponse.toFixed(0)}ms`);
-    console.log(`         * Read total: ${phaseTimings.schematasReadTotal.toFixed(0)}ms`);
-    console.log(`         * waitForStoreReady: ${phaseTimings.schematasWaitForReady.toFixed(0)}ms`);
     return true;
   }
 }
@@ -18483,7 +18310,7 @@ class ActorEngine {
             const actor = this.actors.get(actorId);
             if (actor && this.styleEngine) {
               try {
-                const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
+                const styleSheets = await this.styleEngine.getStyleSheets(actor.config, actor.id);
                 actor.shadowRoot.adoptedStyleSheets = styleSheets;
                 if (actor._renderState === RENDER_STATES.READY) {
                   actor._renderState = RENDER_STATES.UPDATING;
@@ -18511,7 +18338,7 @@ class ActorEngine {
             const actor = this.actors.get(actorId);
             if (actor && this.styleEngine) {
               try {
-                const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
+                const styleSheets = await this.styleEngine.getStyleSheets(actor.config, actor.id);
                 actor.shadowRoot.adoptedStyleSheets = styleSheets;
                 if (actor._renderState === RENDER_STATES.READY) {
                   actor._renderState = RENDER_STATES.UPDATING;
@@ -18705,7 +18532,7 @@ class ActorEngine {
       return vibeKey ? await this.reuseActor(actorId, containerElement, vibeKey) : this.actors.get(actorId);
     }
     const shadowRoot = containerElement.attachShadow({ mode: "open" });
-    const styleSheets = await this.styleEngine.getStyleSheets(actorConfig);
+    const styleSheets = await this.styleEngine.getStyleSheets(actorConfig, actorId);
     const { viewDef, context, contextCoId, contextSchemaCoId, inbox, inboxCoId, tempSubscriptions } = await this._loadActorConfigs(actorConfig);
     const actorType = await this._isServiceActor(actorConfig, viewDef) ? "service" : "ui";
     const actor = {
@@ -18813,7 +18640,7 @@ class ActorEngine {
     }
     const viewStore2 = await this.dbEngine.execute({ op: "read", schema: viewSchemaCoId2, key: actor.config.view });
     const viewDef = viewStore2.value;
-    const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
+    const styleSheets = await this.styleEngine.getStyleSheets(actor.config, actorId);
     await this.viewEngine.render(viewDef, actor.context, actor.shadowRoot, styleSheets, actorId);
     actor._renderState = RENDER_STATES.READY;
   }
@@ -19537,6 +19364,22 @@ class StyleEngine {
   _toKebabCase(str) {
     return str.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
   }
+  /**
+   * Convert camelCase class selectors to kebab-case
+   * Preserves special selectors (:host, @container, @media, pseudo-selectors)
+   * @param {string} selector - CSS selector (e.g., ".todoCategory", ":host", ".buttonViewSwitch:hover")
+   * @returns {string} Converted selector (e.g., ".todo-category", ":host", ".button-view-switch:hover")
+   */
+  _toKebabCaseSelector(selector) {
+    if (!selector || typeof selector !== "string") return selector;
+    if (selector.startsWith(":host") || selector.startsWith("@container") || selector.startsWith("@media") || selector.startsWith("@")) {
+      return selector;
+    }
+    return selector.replace(/\.([a-zA-Z][a-zA-Z0-9]*)/g, (match, className) => {
+      const kebabClassName = className.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+      return `.${kebabClassName}`;
+    });
+  }
   compileModifierStyles(styles, tokens) {
     if (typeof styles !== "object" || styles === null || Array.isArray(styles)) return "";
     return Object.entries(styles).map(([prop, value]) => {
@@ -19557,7 +19400,7 @@ class StyleEngine {
     }
     return result;
   }
-  compileTokensToCSS(tokens) {
+  compileTokensToCSS(tokens, containerName = null) {
     const flatTokens = this._flattenTokens(tokens);
     const cssVars = Object.entries(flatTokens).map(([name, value]) => `  ${name}: ${value};`).join("\n");
     let fontFacesCSS = "";
@@ -19572,8 +19415,18 @@ ${props}
 }`;
       }).join("\n\n") + "\n\n";
     }
+    let containerProps = "";
+    if (containerName) {
+      const sanitizedName = containerName.replace(/[^a-zA-Z0-9-_]/g, "-").replace(/-+/g, "-");
+      containerProps = `  container-type: inline-size;
+  container-name: ${sanitizedName};
+`;
+    } else {
+      containerProps = `  container-type: inline-size;
+`;
+    }
     return `${fontFacesCSS}:host {
-${cssVars}
+${containerProps}${cssVars}
 }
 `;
   }
@@ -19670,11 +19523,12 @@ ${this.compileModifierStyles(modifierStyles, tokens)}
               const nestedAtRuleCSS = this.compileSelectors({ [interpolatedNestedSelector]: nestedStyles }, tokens);
               nestedRules.push(nestedAtRuleCSS.split("\n").map((line) => `  ${line}`).join("\n"));
             } else {
+              const kebabNestedSelector = this._toKebabCaseSelector(nestedSelector);
               const cssProperties = Object.entries(nestedStyles).map(([prop, value]) => {
                 const cssProp = prop.replace(/([A-Z])/g, "-$1").toLowerCase();
                 return `    ${cssProp}: ${this._interpolateTokens(value, tokens)};`;
               }).join("\n");
-              nestedRules.push(`  ${nestedSelector} {
+              nestedRules.push(`  ${kebabNestedSelector} {
 ${cssProperties}
   }`);
             }
@@ -19684,19 +19538,20 @@ ${cssProperties}
 ${nestedRules.join("\n")}
 }`);
       } else {
+        const kebabSelector = this._toKebabCaseSelector(interpolatedSelector);
         const cssProperties = Object.entries(styles).map(([prop, value]) => {
           const cssProp = prop.replace(/([A-Z])/g, "-$1").toLowerCase();
           return `  ${cssProp}: ${this._interpolateTokens(value, tokens)};`;
         }).join("\n");
-        cssRules.push(`${selector} {
+        cssRules.push(`${kebabSelector} {
 ${cssProperties}
 }`);
       }
     }
     return cssRules.join("\n\n");
   }
-  compileToCSS(tokens, components, selectors = {}, rawCSS = "") {
-    let css = `${this.compileTokensToCSS(tokens)}
+  compileToCSS(tokens, components, selectors = {}, rawCSS = "", containerName = null) {
+    let css = `${this.compileTokensToCSS(tokens, containerName)}
 ${this.compileComponentsToCSS(components, tokens)}`;
     const selectorCSS = this.compileSelectors(selectors, tokens);
     if (selectorCSS) css += `
@@ -19709,13 +19564,14 @@ ${selectorCSS}`;
 ${rawCSS}`;
     return css;
   }
-  async getStyleSheets(actorConfig) {
+  async getStyleSheets(actorConfig, actorId = null) {
     const brandCoId = actorConfig.brand;
     const styleCoId = actorConfig.style;
     if (!brandCoId) {
       throw new Error(`[StyleEngine] Actor config must have 'brand' property with co-id. Config keys: ${Object.keys(actorConfig).join(", ")}. Config: ${JSON.stringify(actorConfig, null, 2)}`);
     }
-    const cacheKey = `${brandCoId}_${styleCoId || "none"}`;
+    const finalActorId = actorId || actorConfig.$id || actorConfig.id || "actor";
+    const cacheKey = `${brandCoId}_${styleCoId || "none"}_${finalActorId}`;
     if (this.cache.has(cacheKey)) {
       return this.cache.get(cacheKey);
     }
@@ -19730,11 +19586,25 @@ ${rawCSS}`;
       const styleStore = await this.dbEngine.execute({ op: "read", schema: styleSchemaCoId, key: styleResolved });
       actor = styleStore.value;
     }
-    const mergedTokens = this.deepMerge(brand.tokens || {}, actor.tokens || {});
+    const containerName = finalActorId.replace(/[^a-zA-Z0-9-_]/g, "-").replace(/-+/g, "-");
+    const defaultContainerTokens = {
+      containers: {
+        xs: "240px",
+        sm: "360px",
+        md: "480px",
+        lg: "640px",
+        xl: "768px",
+        "2xl": "1024px"
+      },
+      containerName
+      // Inject container name so queries can reference root :host container
+    };
+    const brandTokensWithDefaults = this.deepMerge(defaultContainerTokens, brand.tokens || {});
+    const mergedTokens = this.deepMerge(brandTokensWithDefaults, actor.tokens || {});
     const mergedComponents = this.deepMerge(brand.components || {}, actor.components || {});
     const mergedSelectors = this.deepMerge(brand.selectors || {}, actor.selectors || {});
     const rawCSS = [brand.rawCSS, actor.rawCSS].filter(Boolean).join("\n\n");
-    const css = this.compileToCSS(mergedTokens, mergedComponents, mergedSelectors, rawCSS);
+    const css = this.compileToCSS(mergedTokens, mergedComponents, mergedSelectors, rawCSS, containerName);
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(css);
     const sheets = [sheet];
@@ -20425,17 +20295,17 @@ const memoryDef = {
     "required": ["op"]
   }
 };
-const llmDef = {
+const agentToolDef = {
   "$schema": "@schema/tool",
-  "$id": "tool_llm_001",
-  "name": "@llm/chat",
-  "description": "LLM chat tool using RedPill API (OpenAI-compatible)",
+  "$id": "tool_agent_001",
+  "name": "@agent/chat",
+  "description": "Unified agent chat tool using OpenAI-compatible API (RedPill) for LLM interactions. Model can be configured dynamically via payload - RedPill API endpoint is hardcoded, but each call can specify which LLM model to query. LLMs are stateless - each request sends the full context (complete conversation history).",
   "parameters": {
     "type": "object",
     "properties": {
-      "messages": {
+      "context": {
         "type": "array",
-        "description": "Array of messages with role and content",
+        "description": "Complete conversation context to send to the LLM. LLMs are stateless - this represents the full context/history for this request. Each request can have completely different context.",
         "items": {
           "type": "object",
           "properties": {
@@ -20454,8 +20324,8 @@ const llmDef = {
       },
       "model": {
         "type": "string",
-        "description": "Model to use (default: moonshotai/kimi-k2.5)",
-        "default": "moonshotai/kimi-k2.5"
+        "description": "LLM model to query (dynamically configurable per call). Default: qwen/qwen3-30b-a3b-instruct-2507. The RedPill API endpoint is hardcoded, but you can specify any model available on RedPill.",
+        "default": "qwen/qwen3-30b-a3b-instruct-2507"
       },
       "temperature": {
         "type": "number",
@@ -20463,48 +20333,7 @@ const llmDef = {
         "default": 1
       }
     },
-    "required": ["messages"]
-  }
-};
-const privateLlmToolDef = {
-  "$schema": "@schema/tool",
-  "$id": "tool_private_llm_001",
-  "name": "@private-llm/chat",
-  "description": "Private LLM chat tool using RedPill API (OpenAI-compatible) for RedPill models",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "messages": {
-        "type": "array",
-        "description": "Array of messages with role and content",
-        "items": {
-          "type": "object",
-          "properties": {
-            "role": {
-              "type": "string",
-              "enum": ["system", "user", "assistant"],
-              "description": "Message role"
-            },
-            "content": {
-              "type": "string",
-              "description": "Message content"
-            }
-          },
-          "required": ["role", "content"]
-        }
-      },
-      "model": {
-        "type": "string",
-        "description": "RedPill model to use (default: moonshotai/kimi-k2.5)",
-        "default": "moonshotai/kimi-k2.5"
-      },
-      "temperature": {
-        "type": "number",
-        "description": "Temperature for response (0-2, default: 1)",
-        "default": 1
-      }
-    },
-    "required": ["messages"]
+    "required": ["context"]
   }
 };
 const noopFn = {
@@ -20536,16 +20365,16 @@ const publishMessageFn = {
     }
   }
 };
-const getApiBaseUrl$2 = () => {
+const getApiBaseUrl$1 = () => {
   const domain = "localhost:4201";
   if (domain.startsWith("http://") || domain.startsWith("https://")) {
     return domain;
   }
   return `http://${domain}`;
 };
-const API_BASE_URL$2 = getApiBaseUrl$2();
+const API_BASE_URL$1 = getApiBaseUrl$1();
 async function callApi(endpoint, body) {
-  const url = `${API_BASE_URL$2}${endpoint}`;
+  const url = `${API_BASE_URL$1}${endpoint}`;
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -20622,48 +20451,6 @@ const memoryFn = {
     }
   }
 };
-const getApiBaseUrl$1 = () => {
-  const domain = "localhost:4201";
-  if (domain.startsWith("http://") || domain.startsWith("https://")) {
-    return domain;
-  }
-  return `http://${domain}`;
-};
-const API_BASE_URL$1 = getApiBaseUrl$1();
-const llmFn = {
-  async execute(actor, payload) {
-    const { messages, model = "moonshotai/kimi-k2.5", temperature = 1 } = payload;
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      throw new Error("[@llm/chat] messages array is required");
-    }
-    try {
-      const response = await fetch(`${API_BASE_URL$1}/api/v0/llm/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          temperature
-        })
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(`[@llm/chat] API request failed: ${errorData.error || errorData.message || response.statusText}`);
-      }
-      const data2 = await response.json();
-      return {
-        content: data2.content,
-        role: data2.role || "assistant",
-        usage: data2.usage || null
-      };
-    } catch (error) {
-      console.error("[@llm/chat] Error:", error);
-      throw error;
-    }
-  }
-};
 const getApiBaseUrl = () => {
   const domain = "localhost:4201";
   if (domain.startsWith("http://") || domain.startsWith("https://")) {
@@ -20672,42 +20459,51 @@ const getApiBaseUrl = () => {
   return `http://${domain}`;
 };
 const API_BASE_URL = getApiBaseUrl();
-const privateLlmTool = {
+const agentTool = {
   async execute(actor, payload) {
-    console.log("[@private-llm/chat] Tool called with payload:", {
-      messagesCount: payload?.messages?.length,
-      model: payload?.model,
-      temperature: payload?.temperature,
-      messages: payload?.messages
-    });
-    const { messages, model = "moonshotai/kimi-k2.5", temperature = 1 } = payload;
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      console.error("[@private-llm/chat] Invalid messages:", messages);
-      throw new Error("[@private-llm/chat] messages array is required");
+    const context = payload?.context || payload?.messages;
+    const { model = "qwen/qwen3-30b-a3b-instruct-2507", temperature = 1 } = payload;
+    if (!context || !Array.isArray(context) || context.length === 0) {
+      console.error("[@agent/chat] Invalid context:", context);
+      throw new Error("[@agent/chat] context array is required");
     }
     try {
-      console.log("[@private-llm/chat] Calling API:", `${API_BASE_URL}/api/v0/llm/chat`);
-      const response = await fetch(`${API_BASE_URL}/api/v0/llm/chat`, {
+      const requestPayload = {
+        model,
+        messages: context,
+        // Map context to messages for API
+        temperature
+      };
+      const apiUrl = `${API_BASE_URL}/api/v0/llm/chat`;
+      console.log("[@agent/chat] 📤 Sending request to:", apiUrl);
+      console.log("[@agent/chat] Request payload:", {
+        model,
+        temperature,
+        messageCount: context.length,
+        lastMessage: context[context.length - 1]?.content?.substring(0, 100) || "N/A"
+      });
+      const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          model,
-          messages,
-          temperature
-        })
+        body: JSON.stringify(requestPayload)
       });
-      console.log("[@private-llm/chat] API response status:", response.status, response.statusText);
+      console.log("[@agent/chat] 📥 Response received:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-        console.error("[@private-llm/chat] API error:", errorData);
-        throw new Error(`[@private-llm/chat] API request failed: ${errorData.error || errorData.message || response.statusText}`);
+        console.error("[@agent/chat] ❌ API error:", errorData);
+        throw new Error(`[@agent/chat] API request failed: ${errorData.error || errorData.message || response.statusText}`);
       }
       const data2 = await response.json();
-      console.log("[@private-llm/chat] API response data:", {
-        hasContent: !!data2.content,
-        contentLength: data2.content?.length,
+      console.log("[@agent/chat] ✅ Response data:", {
+        contentLength: data2.content?.length || 0,
+        contentPreview: data2.content?.substring(0, 200) || "N/A",
         role: data2.role,
         usage: data2.usage
       });
@@ -20716,10 +20512,9 @@ const privateLlmTool = {
         role: data2.role || "assistant",
         usage: data2.usage || null
       };
-      console.log("[@private-llm/chat] Returning result:", result);
       return result;
     } catch (error) {
-      console.error("[@private-llm/chat] Error:", error);
+      console.error("[@agent/chat] Error:", error);
       throw error;
     }
   }
@@ -20728,8 +20523,7 @@ const TOOLS = {
   "core/noop": { definition: noopDef, function: noopFn },
   "core/publishMessage": { definition: publishMessageDef, function: publishMessageFn },
   "memory/memory": { definition: memoryDef, function: memoryFn },
-  "llm/llm": { definition: llmDef, function: llmFn },
-  "private-llm/chat": { definition: privateLlmToolDef, function: privateLlmTool }
+  "agent/chat": { definition: agentToolDef, function: agentTool }
 };
 function getTool(namespacePath) {
   return TOOLS[namespacePath] || null;
@@ -21015,25 +20809,25 @@ const coreModule = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePr
 }, Symbol.toStringTag, { value: "Module" }));
 const config = {
   version: "1.0.0",
-  description: "Private LLM tool for RedPill API integration",
-  namespace: "@private-llm",
-  tools: ["@private-llm/chat"]
+  description: "Unified agent tool for OpenAI-compatible API integration (RedPill)",
+  namespace: "@agent",
+  tools: ["@agent/chat"]
 };
 async function register(registry) {
-  const toolEngine = registry._getToolEngine("PrivateLLMModule");
-  toolEngine.tools.set("@private-llm/chat", {
-    definition: privateLlmToolDef,
-    function: privateLlmTool,
-    namespacePath: "private-llm/chat"
+  const toolEngine = registry._getToolEngine("AgentModule");
+  toolEngine.tools.set("@agent/chat", {
+    definition: agentToolDef,
+    function: agentTool,
+    namespacePath: "agent/chat"
   });
-  registry.registerModule("private-llm", { config, query: (q) => q === "tools" ? ["@private-llm/chat"] : null }, {
+  registry.registerModule("agent", { config, query: (q) => q === "tools" ? ["@agent/chat"] : null }, {
     version: config.version,
     description: config.description,
     namespace: config.namespace,
     tools: config.tools
   });
 }
-const privateLlmModule = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const agentModule = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   config,
   register
@@ -21041,7 +20835,7 @@ const privateLlmModule = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.de
 const preloadedModules = {
   "db": dbModule,
   "core": coreModule,
-  "private-llm": privateLlmModule
+  "agent": agentModule
 };
 class MaiaOS {
   constructor() {
@@ -21193,9 +20987,7 @@ class MaiaOS {
     const backend = await MaiaOS._initializeDatabase(os, config2);
     if (backend && typeof backend.ensureAccountOsReady === "function") {
       backend.ensureAccountOsReady({ timeoutMs: 1e4 }).then((accountOsReady) => {
-        if (accountOsReady) {
-          console.log("[MaiaOS.boot] ✅ account.os ready (loaded progressively)");
-        } else {
+        if (!accountOsReady) {
           console.warn("[MaiaOS.boot] ⚠️ account.os readiness check failed - schema resolution may fail until it loads");
         }
       }).catch((err) => {
@@ -21422,14 +21214,12 @@ ${errorDetails}`);
     if (!vibesData || vibesData.error) {
       throw new Error(`[Kernel] account.vibes CoMap not found or error (co-id: ${vibesId}): ${vibesData?.error || "Unknown error"}. Make sure the vibe was seeded correctly.`);
     }
-    console.log(`[Kernel] Looking up vibe key '${vibeKey}' in account.vibes:`, vibesData);
     const vibeCoId = vibesData[vibeKey];
     if (!vibeCoId || typeof vibeCoId !== "string" || !vibeCoId.startsWith("co_")) {
       const availableVibes = Object.keys(vibesData).filter((k) => k !== "id" && k !== "$schema" && k !== "type" && typeof vibesData[k] === "string" && vibesData[k].startsWith("co_"));
       console.error(`[Kernel] Vibe '${vibeKey}' not found in account.vibes. Available vibes:`, availableVibes);
       throw new Error(`[Kernel] Vibe '${vibeKey}' not found in account.vibes. Available vibes: ${availableVibes.join(", ")}`);
     }
-    console.log(`[Kernel] ✅ Found vibe co-id for '${vibeKey}': ${vibeCoId}`);
     return await this.loadVibeFromDatabase(vibeCoId, container, vibeKey);
   }
   /**
@@ -21488,26 +21278,18 @@ ${errorDetails}`);
       if (vibe.$schema) plainVibe.$schema = vibe.$schema;
       if (vibe.type) plainVibe.type = vibe.type;
       vibe = plainVibe;
-      console.log(`[Kernel] Converted vibe from properties array format. Actor: ${vibe.actor}`);
     }
     const schema = schemaStore.value;
     if (schema) {
       await validateAgainstSchemaOrThrow(schema, vibe, "vibe");
     }
     let actorCoId = vibe.actor;
-    console.log(`[Kernel] Loading vibe '${vibeKey || vibeCoId}':`, {
-      vibeCoId,
-      vibeName: vibe.name || vibe.$id,
-      actorCoId,
-      vibeKeys: Object.keys(vibe)
-    });
     if (!actorCoId) {
       throw new Error(`[MaiaOS] Vibe ${vibeId} (${vibeCoId}) does not have an 'actor' property. Vibe structure: ${JSON.stringify(Object.keys(vibe))}`);
     }
     if (!actorCoId.startsWith("co_z")) {
       throw new Error(`[Kernel] Actor ID must be co-id at runtime: ${actorCoId}. This should have been resolved during seeding.`);
     }
-    console.log(`[Kernel] ✅ Extracted actor co-id from vibe: ${actorCoId}`);
     const actorSchemaStore = resolveReactive(this.dbEngine.backend, { fromCoValue: actorCoId }, { returnType: "coId" });
     let unsubscribe;
     const actorSchemaCoId = await new Promise((resolve2, reject) => {
@@ -21539,25 +21321,18 @@ ${errorDetails}`);
     }
     if (vibeKey) {
       const existingActorIds = this.actorEngine.getActorsForVibe(vibeKey);
-      console.log(`[Kernel] Checking for existing actors for vibe '${vibeKey}':`, existingActorIds ? `${existingActorIds.size} found` : "none");
       if (existingActorIds && existingActorIds.size > 0) {
         const firstActorId = Array.from(existingActorIds)[0];
         const firstActor = this.actorEngine.actors.get(firstActorId);
-        const existingActorCoId = firstActor?.config?.id || "unknown";
-        console.log(`[Kernel] Existing actor co-id: ${existingActorCoId}, Expected: ${actorCoId}`);
+        firstActor?.config?.id || "unknown";
         if (firstActor && firstActor.config && firstActor.config.id === actorCoId) {
-          console.log(`[Kernel] ✅ Reusing existing actors for vibe: ${vibeKey} (actor: ${actorCoId})`);
           const rootActor = await this.actorEngine.reattachActorsForVibe(vibeKey, container);
           if (rootActor) {
-            console.log(`✅ Vibe reattached: ${vibe.name}`);
             return { vibe, actor: rootActor };
           }
         } else {
-          console.log(`[Kernel] ❌ Existing actors for vibe '${vibeKey}' don't match actor ${actorCoId} (existing: ${existingActorCoId}), detaching and recreating`);
           this.actorEngine.detachActorsForVibe(vibeKey);
         }
-      } else {
-        console.log(`[Kernel] No existing actors for vibe '${vibeKey}', creating new actors`);
       }
     }
     const actorConfig = actorStore.value;
@@ -22534,7 +22309,6 @@ async function getIndexedDBStorage(name = DATABASE_NAME) {
 async function getStorage() {
   try {
     const storage = await getIndexedDBStorage();
-    console.log("✅ [STORAGE] IndexedDB initialized");
     return storage;
   } catch (error) {
     console.warn("⚠️  [STORAGE] IndexedDB unavailable, running without persistence:", error);
@@ -22577,10 +22351,8 @@ function setupSyncPeers(syncDomain = null) {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     syncServerUrl = `${protocol}//${window.location.host}/sync`;
   }
-  console.log(`🔌 [SYNC] Connecting to sync server: ${syncServerUrl}`);
-  if (isDev) {
-    console.log(`   Mode: Development (using Vite proxy)`);
-  } else {
+  if (isDev) ;
+  else {
     console.log(`   Sync Domain: ${apiDomain || "(not set - using same origin fallback)"}`);
     console.log(`   Source: ${syncDomain ? "kernel" : typeof window !== "undefined" && window.__PUBLIC_API_DOMAIN__ ? "runtime env" : __vite_import_meta_env__?.PUBLIC_API_DOMAIN ? "build-time env" : "fallback"}`);
   }
@@ -22600,7 +22372,6 @@ function setupSyncPeers(syncDomain = null) {
         clearTimeout(connectionTimeout);
         connectionTimeout = null;
       }
-      console.log("✅ [SYNC] Peer added to array");
       peers.push(peer);
       if (node) {
         node.syncManager.addPeer(peer);
@@ -22621,7 +22392,6 @@ function setupSyncPeers(syncDomain = null) {
   });
   wsPeer.subscribe((connected) => {
     if (connected && !websocketConnected) {
-      console.log("✅ [SYNC] WebSocket connection successful");
       websocketConnected = true;
       syncState = { connected: true, syncing: true, error: null, status: "syncing" };
       notifySyncStateChange();
@@ -22682,7 +22452,6 @@ function setupSyncPeers(syncDomain = null) {
     setNode: (n) => {
       node = n;
       if (peers.length > 0) {
-        console.log(`[SYNC] Adding ${peers.length} queued peer(s) to node`);
         for (const peer of peers) {
           node.syncManager.addPeer(peer);
         }
@@ -22691,12 +22460,9 @@ function setupSyncPeers(syncDomain = null) {
   };
 }
 async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = {}) {
-  console.log("🔐 Starting passkey sign-up (TRUE single-passkey flow)...");
-  console.log("   🎯 ONE passkey, ONE biometric prompt, ZERO storage!");
   await requirePRFSupport();
   const saltBytes = stringToUint8Array(salt);
   const crypto2 = await WasmCrypto.create();
-  console.log("📱 Step 1/3: Creating passkey and deriving secret...");
   const { credentialId, prfOutput } = await createPasskeyWithPRF({
     name,
     userId: globalThis.crypto.getRandomValues(new Uint8Array(32)),
@@ -22706,20 +22472,12 @@ async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = {}) {
   if (!prfOutput) {
     throw new Error("PRF evaluation failed");
   }
-  console.log("✅ Passkey created and secret derived!");
-  console.log("   💡 AccountID will be re-computed on every login!");
-  console.log("🧮 Step 2/3: Computing accountID deterministically...");
   const agentSecret = crypto2.agentSecretFromSecretSeed(prfOutput);
   const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto2);
   const computedAccountID = idforHeader(accountHeader, crypto2);
-  console.log("✅ AccountID computed:", computedAccountID);
-  console.log("   🔑 Chain: PRF → agentSecret → header → accountID");
-  console.log("   ♻️  Same passkey + salt = same accountID (always!)");
-  console.log("🏗️ Step 3/3: Creating account...");
   const storage = await getStorage();
   let syncSetup = null;
   {
-    console.log("🔌 [SYNC] Setting up self-hosted sync...");
     syncSetup = setupSyncPeers();
   }
   const createResult = await createAccountWithSecret({
@@ -22743,9 +22501,6 @@ This should never happen - deterministic computation failed!`
   if (syncSetup) {
     syncState = { connected: true, syncing: false, error: null, status: "connected" };
     notifySyncStateChange();
-    console.log("✅ [SYNC] Initial handshake complete");
-  } else {
-    console.warn("⚠️  [SYNC] Sync service unavailable - account won't sync to cloud!");
   }
   return {
     accountID: createdAccountID,
@@ -22756,57 +22511,33 @@ This should never happen - deterministic computation failed!`
   };
 }
 async function signInWithPasskey({ salt = "maia.city" } = {}) {
-  console.log("🔐 Starting passkey sign-in (TRUE single-passkey flow)...");
-  console.log("   🎯 ONE biometric prompt, ZERO storage reads!");
   syncState = { connected: false, syncing: false, error: null, status: "authenticating" };
   notifySyncStateChange();
   await requirePRFSupport();
   const saltBytes = stringToUint8Array(salt);
-  console.log("📱 Authenticating and re-evaluating PRF...");
   const { prfOutput } = await evaluatePRF({ salt: saltBytes });
   if (!prfOutput) {
     throw new Error("PRF evaluation failed during sign-in");
   }
-  console.log("✅ Passkey authenticated and PRF re-evaluated!");
-  console.log("   💡 Same passkey + salt → same prfOutput (deterministic!)");
-  console.log("🔑 Deriving agentSecret...");
   const crypto2 = await WasmCrypto.create();
   const agentSecret = crypto2.agentSecretFromSecretSeed(prfOutput);
-  console.log("🧮 Computing accountID deterministically...");
   const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto2);
   const accountID = idforHeader(accountHeader, crypto2);
-  console.log("✅ AccountID re-computed:", accountID);
-  console.log("   🔑 Chain: PRF → agentSecret → header → accountID");
-  console.log("   ♻️  No storage needed - computed on the fly!");
-  console.log("🔓 Setting up sync and storage for account loading...");
   const storage = await getStorage();
   let syncSetup = null;
   {
-    console.log("🔌 [SYNC] Setting up self-hosted sync...");
     syncSetup = setupSyncPeers();
   }
   if (syncSetup) {
     syncState = { connected: false, syncing: true, error: null, status: "loading-account" };
     notifySyncStateChange();
   }
-  const handshakeStartTime = performance.now();
-  console.log("⏳ Starting account load (initial sync handshake) in background...");
+  performance.now();
   const accountLoadingPromise = (async () => {
     try {
       let websocketReady = false;
       if (syncSetup && syncSetup.waitForPeer) {
-        const websocketWaitStartTime = performance.now();
-        console.log("🔌 [SYNC] Waiting for WebSocket connection before account load...");
         websocketReady = await syncSetup.waitForPeer();
-        const websocketWaitDuration = performance.now() - websocketWaitStartTime;
-        if (websocketReady) {
-          console.log(`✅ [SYNC] WebSocket connected (${websocketWaitDuration.toFixed(0)}ms) - proceeding with account load`);
-          if (websocketWaitDuration > 500) {
-            console.warn(`⚠️ [PERF] WebSocket connection took ${websocketWaitDuration.toFixed(0)}ms (target: <500ms)`);
-          }
-        } else {
-          console.warn(`⚠️ [SYNC] WebSocket connection timeout (${websocketWaitDuration.toFixed(0)}ms) - proceeding anyway (will load from storage or wait)`);
-        }
       }
       const loadResult = await loadAccount({
         accountID,
@@ -22815,26 +22546,13 @@ async function signInWithPasskey({ salt = "maia.city" } = {}) {
         storage
       });
       const { node, account } = loadResult;
-      const handshakeDuration = performance.now() - handshakeStartTime;
-      console.log(`✅ Account loaded via loadAccount() abstraction (${handshakeDuration.toFixed(0)}ms)`);
-      if (handshakeDuration > 1e3) {
-        console.warn(`⚠️ [PERF] Initial handshake took ${handshakeDuration.toFixed(0)}ms (target: <1000ms)`);
-      }
       if (syncSetup) {
         syncSetup.setNode(node);
-        console.log("✅ [SYNC] Sync peer connected");
       }
       if (syncSetup) {
         syncState = { connected: true, syncing: false, error: null, status: "connected" };
         notifySyncStateChange();
-        console.log("✅ [SYNC] Initial handshake complete");
       }
-      if (storage) {
-        console.log("💾 [STORAGE] Account loaded from IndexedDB");
-      }
-      console.log("✅ Account loaded! ID:", account.id);
-      console.log("🎉 Sign-in complete! TRUE single-passkey flow!");
-      console.log("   📱 1 biometric prompt");
       console.log("   💾 0 secrets retrieved from storage");
       console.log("   ⚡ Everything computed deterministically!");
       return {

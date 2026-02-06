@@ -9,7 +9,7 @@
     "./core/*": "./src/core/*",
     "./context/*": "./src/context/*",
     "./memory/*": "./src/memory/*",
-    "./llm/*": "./src/llm/*"
+    "./agent/*": "./src/agent/*"
   },
   "dependencies": {
     "@MaiaOS/schemata": "workspace:*"

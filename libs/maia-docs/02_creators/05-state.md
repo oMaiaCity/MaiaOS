@@ -36,6 +36,11 @@ State: idle (with your new todo!)
 
 The state machine is like a traffic controller - it decides what happens next!
 
+**CRITICAL ARCHITECTURE:**
+- **State Machines define the state** - All logic, computation, and state transitions
+- **Context is the realtime reactive snapshot** - Current reflection of state, automatically updated
+- **Templates are "dumb"** - Pure declarative structure, zero logic, just render context
+
 ## State Machine Responsibility: Single Source of Truth
 
 **CRITICAL:** State machines are the **single source of truth** for all context changes.

@@ -28,7 +28,6 @@ export async function getAllVibeRegistries() {
 		const { TodosVibeRegistry } = await import('./todos/registry.js');
 		if (TodosVibeRegistry && TodosVibeRegistry.vibe) {
 			vibeRegistries.push(TodosVibeRegistry);
-			console.log('[Vibes] Loaded TodosVibeRegistry');
 		}
 	} catch (error) {
 		console.warn('[Vibes] Could not load TodosVibeRegistry:', error.message);
@@ -38,7 +37,6 @@ export async function getAllVibeRegistries() {
 		const { MaiaAgentVibeRegistry } = await import('./maia-agent/registry.js');
 		if (MaiaAgentVibeRegistry && MaiaAgentVibeRegistry.vibe) {
 			vibeRegistries.push(MaiaAgentVibeRegistry);
-			console.log('[Vibes] Loaded MaiaAgentVibeRegistry');
 		}
 	} catch (error) {
 		console.warn('[Vibes] Could not load MaiaAgentVibeRegistry:', error.message);
@@ -48,12 +46,10 @@ export async function getAllVibeRegistries() {
 		const { MyDataVibeRegistry } = await import('./my-data/registry.js');
 		if (MyDataVibeRegistry && MyDataVibeRegistry.vibe) {
 			vibeRegistries.push(MyDataVibeRegistry);
-			console.log('[Vibes] Loaded MyDataVibeRegistry');
 		}
 	} catch (error) {
 		console.warn('[Vibes] Could not load MyDataVibeRegistry:', error.message);
 	}
 	
-	console.log(`[Vibes] Total registries loaded: ${vibeRegistries.length}`);
 	return vibeRegistries;
 }

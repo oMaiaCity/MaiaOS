@@ -31,16 +31,16 @@ import { ValidationEngine } from '@MaiaOS/schemata/validation.engine';
 // Schema loading now uses resolve() from @MaiaOS/db if needed
 
 // Pre-import default modules so they're bundled (for standalone bundle)
-// This ensures db, core, and private-llm modules are included in the bundle
+// This ensures db, core, and agent modules are included in the bundle
 import * as dbModule from '@MaiaOS/script/modules/db.module.js';
 import * as coreModule from '@MaiaOS/script/modules/core.module.js';
-import * as privateLlmModule from '@MaiaOS/script/modules/private-llm.module.js';
+import * as agentModule from '@MaiaOS/script/modules/agent.module.js';
 
 // Store pre-loaded modules for registry
 const preloadedModules = {
   'db': dbModule,
   'core': coreModule,
-  'private-llm': privateLlmModule,
+  'agent': agentModule,
 };
 
 /**
@@ -229,9 +229,7 @@ export class MaiaOS {
     if (backend && typeof backend.ensureAccountOsReady === 'function') {
       // Start loading account.os in background (non-blocking)
       backend.ensureAccountOsReady({ timeoutMs: 10000 }).then(accountOsReady => {
-        if (accountOsReady) {
-          console.log('[MaiaOS.boot] ✅ account.os ready (loaded progressively)');
-        } else {
+        if (!accountOsReady) {
           console.warn('[MaiaOS.boot] ⚠️ account.os readiness check failed - schema resolution may fail until it loads');
         }
       }).catch(err => {
@@ -566,15 +564,12 @@ export class MaiaOS {
     
     // Operations API returns flat objects: {id: '...', todos: 'co_...', ...}
     // Extract vibe co-id directly from flat object
-    console.log(`[Kernel] Looking up vibe key '${vibeKey}' in account.vibes:`, vibesData);
     const vibeCoId = vibesData[vibeKey];
     if (!vibeCoId || typeof vibeCoId !== 'string' || !vibeCoId.startsWith('co_')) {
       const availableVibes = Object.keys(vibesData).filter(k => k !== 'id' && k !== '$schema' && k !== 'type' && typeof vibesData[k] === 'string' && vibesData[k].startsWith('co_'));
       console.error(`[Kernel] Vibe '${vibeKey}' not found in account.vibes. Available vibes:`, availableVibes);
       throw new Error(`[Kernel] Vibe '${vibeKey}' not found in account.vibes. Available vibes: ${availableVibes.join(', ')}`);
     }
-    
-    console.log(`[Kernel] ✅ Found vibe co-id for '${vibeKey}': ${vibeCoId}`);
     
     // Step 5: Load vibe using co-id (reuse existing loadVibeFromDatabase logic)
     return await this.loadVibeFromDatabase(vibeCoId, container, vibeKey);
@@ -659,7 +654,6 @@ export class MaiaOS {
       if (vibe.$schema) plainVibe.$schema = vibe.$schema; // Use $schema from headerMeta
       if (vibe.type) plainVibe.type = vibe.type;
       vibe = plainVibe;
-      console.log(`[Kernel] Converted vibe from properties array format. Actor: ${vibe.actor}`);
     }
     
     // Validate vibe structure using schema (load from schemaStore we already have)
@@ -672,13 +666,6 @@ export class MaiaOS {
     // If not co-id, it's a seeding error - fail fast
     let actorCoId = vibe.actor; // Should be "co_z..." (already transformed)
     
-    console.log(`[Kernel] Loading vibe '${vibeKey || vibeCoId}':`, {
-      vibeCoId,
-      vibeName: vibe.name || vibe.$id,
-      actorCoId,
-      vibeKeys: Object.keys(vibe)
-    });
-    
     if (!actorCoId) {
       throw new Error(`[MaiaOS] Vibe ${vibeId} (${vibeCoId}) does not have an 'actor' property. Vibe structure: ${JSON.stringify(Object.keys(vibe))}`);
     }
@@ -686,8 +673,6 @@ export class MaiaOS {
     if (!actorCoId.startsWith('co_z')) {
       throw new Error(`[Kernel] Actor ID must be co-id at runtime: ${actorCoId}. This should have been resolved during seeding.`);
     }
-    
-    console.log(`[Kernel] ✅ Extracted actor co-id from vibe: ${actorCoId}`);
     
     // UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
     // Returns ReactiveStore that updates when schema becomes available
@@ -733,28 +718,21 @@ export class MaiaOS {
     // This prevents reusing wrong actors when switching between vibes
     if (vibeKey) {
       const existingActorIds = this.actorEngine.getActorsForVibe(vibeKey);
-      console.log(`[Kernel] Checking for existing actors for vibe '${vibeKey}':`, existingActorIds ? `${existingActorIds.size} found` : 'none');
       if (existingActorIds && existingActorIds.size > 0) {
         // Get the first actor ID and verify it matches this vibe's actor co-id
         const firstActorId = Array.from(existingActorIds)[0];
         const firstActor = this.actorEngine.actors.get(firstActorId);
         const existingActorCoId = firstActor?.config?.id || 'unknown';
-        console.log(`[Kernel] Existing actor co-id: ${existingActorCoId}, Expected: ${actorCoId}`);
         if (firstActor && firstActor.config && firstActor.config.id === actorCoId) {
           // Actors match - reuse existing actors - reattach to new container
-          console.log(`[Kernel] ✅ Reusing existing actors for vibe: ${vibeKey} (actor: ${actorCoId})`);
           const rootActor = await this.actorEngine.reattachActorsForVibe(vibeKey, container);
           if (rootActor) {
-            console.log(`✅ Vibe reattached: ${vibe.name}`);
             return { vibe, actor: rootActor };
           }
         } else {
           // Actors don't match - detach old ones and create new
-          console.log(`[Kernel] ❌ Existing actors for vibe '${vibeKey}' don't match actor ${actorCoId} (existing: ${existingActorCoId}), detaching and recreating`);
           this.actorEngine.detachActorsForVibe(vibeKey);
         }
-      } else {
-        console.log(`[Kernel] No existing actors for vibe '${vibeKey}', creating new actors`);
       }
     }
     

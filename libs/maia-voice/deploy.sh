@@ -23,7 +23,20 @@ fi
 # Uncomment and set your token:
 # flyctl secrets set HF_TOKEN=your-token-here --app $APP_NAME
 
-# Destroy existing machines to ensure fresh start with GPU config
+# Create volume if it doesn't exist (required by fly.toml mounts section)
+# Volume will be created automatically by fly deploy, but we check/create it here to be safe
+echo ""
+echo "📦 Checking for required volume..."
+if ! flyctl volumes list --app "$APP_NAME" 2>/dev/null | grep -q "personaplex_data"; then
+    echo "Creating volume 'personaplex_data' (10GB) in $REGION..."
+    flyctl volumes create personaplex_data --size 10 --region "$REGION" --app "$APP_NAME" || {
+        echo "⚠️  Volume creation failed (may already exist or will be created by fly deploy)"
+    }
+else
+    echo "✓ Volume 'personaplex_data' already exists"
+fi
+
+# Destroy existing machines to ensure fresh start with GPU config from fly.toml
 echo ""
 echo "🗑️  Destroying existing machines (if any) to ensure fresh GPU configuration..."
 MACHINE_IDS=$(flyctl machine list --app "$APP_NAME" --json 2>/dev/null | grep -o '"id":"[^"]*"' | cut -d'"' -f4 || true)
@@ -39,48 +52,39 @@ else
     echo "No existing machines to destroy"
 fi
 
-# Deploy
+# Deploy - vm.size="l40s" in fly.toml should automatically create GPU machine
 echo ""
 echo "🚀 Deploying to Fly.io..."
 echo "   Using --ha=false to ensure only 1 machine is created..."
+echo "   GPU configuration (L40S) is set in fly.toml (vm.size = 'l40s')"
+echo "   Machine should be created with GPU automatically..."
 flyctl deploy --dockerfile Dockerfile --config fly.toml --app "$APP_NAME" --ha=false
 
 echo ""
 echo "Deployment complete!"
 echo ""
-echo "🔧 Configuring GPU machine (L40S) - fly.toml vm.size may not apply automatically..."
+echo "✅ Verifying GPU configuration..."
 MACHINE_ID=$(flyctl machine list --app "$APP_NAME" --json 2>/dev/null | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
 
 if [ -n "$MACHINE_ID" ]; then
     echo "Found machine: $MACHINE_ID"
-    echo "Stopping machine before GPU update..."
-    flyctl machine stop "$MACHINE_ID" --app "$APP_NAME" || true
+    MACHINE_INFO=$(flyctl machine show "$MACHINE_ID" --app "$APP_NAME" --json 2>/dev/null || echo "")
     
-    echo "Updating machine to L40S GPU in ORD region..."
-    echo "   This will change from shared-cpu-1x@256MB to L40S GPU with performance-8x CPU + 32GB RAM"
-    flyctl machine update "$MACHINE_ID" --vm-size "$GPU_TYPE" --region "$REGION" --app "$APP_NAME" || {
-        echo "⚠️  Failed to update machine. Destroying and recreating with GPU..."
-        flyctl machine destroy "$MACHINE_ID" --app "$APP_NAME" --force || true
-        sleep 3
-        
-        # Get the latest image
-        IMAGE=$(flyctl image show --app "$APP_NAME" 2>/dev/null | grep "Image:" | awk '{print $2}' || echo "")
-        if [ -n "$IMAGE" ]; then
-            echo "Creating new GPU machine with image: $IMAGE"
-            flyctl machine run "$IMAGE" \
-                --app "$APP_NAME" \
-                --region "$REGION" \
-                --vm-size "$GPU_TYPE" \
-                --name "${APP_NAME}-gpu" || {
-                echo "⚠️  Failed to create GPU machine. Check GPU availability:"
-                echo "   flyctl platform vm-sizes | grep l40s"
+    # Check if machine has GPU (should be automatic from fly.toml)
+    if echo "$MACHINE_INFO" | grep -q "gpu\|l40s" || echo "$MACHINE_INFO" | grep -qi "performance-8x"; then
+        echo "✓ Machine has GPU configured correctly (from fly.toml)"
+    else
+        echo "⚠️  Machine doesn't appear to have GPU. Checking size..."
+        MACHINE_SIZE=$(echo "$MACHINE_INFO" | grep -o '"size":"[^"]*"' | cut -d'"' -f4 || echo "unknown")
+        if [ "$MACHINE_SIZE" != "gpu-l40s" ] && [ "$MACHINE_SIZE" != "l40s" ]; then
+            echo "   Current size: $MACHINE_SIZE (should be l40s/gpu-l40s)"
+            echo "   Updating machine to GPU..."
+            flyctl machine stop "$MACHINE_ID" --app "$APP_NAME" || true
+            flyctl machine update "$MACHINE_ID" --vm-size "$GPU_TYPE" --region "$REGION" --app "$APP_NAME" || {
+                echo "⚠️  Failed to update. This shouldn't happen if fly.toml is correct."
             }
-        else
-            echo "⚠️  Could not determine image. Please manually create GPU machine:"
-            echo "   flyctl machine run <image> --app $APP_NAME --region $REGION --vm-size $GPU_TYPE"
         fi
-    }
-    echo "✓ GPU configuration complete"
+    fi
 else
     echo "⚠️  No machine found. The deployment may have failed or machine creation is pending."
     echo "   Check status with: flyctl status --app $APP_NAME"

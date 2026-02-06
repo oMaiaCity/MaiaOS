@@ -176,8 +176,6 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
           
           if (typeof schemaCoId === 'string' && !schemaCoId.startsWith('co_z')) {
             if (schemaCoId.startsWith('@schema/')) {
-              console.log(`[createUnifiedStore] Resolving schema namekey "${schemaCoId}" reactively for query "${key}"...`);
-              
               // Use reactive schema resolution - returns ReactiveStore that updates when schema becomes available
               const schemaStore = resolveSchemaReactive(backend, schemaCoId, { timeoutMs });
               
@@ -199,14 +197,13 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
                 }
                 
                 if (schemaState.error || !schemaState.schemaCoId) {
-                  console.error(`[createUnifiedStore] ❌ Failed to resolve schema ${value.schema} for query "${key}": ${schemaState.error || 'Schema not found'}`);
+                  console.error(`[createUnifiedStore] Failed to resolve schema ${value.schema} for query "${key}": ${schemaState.error || 'Schema not found'}`);
                   schemaUnsubscribe();
                   return;
                 }
                 
                 // Schema resolved - execute query
                 const resolvedSchemaCoId = schemaState.schemaCoId;
-                console.log(`[createUnifiedStore] ✅ Resolved schema "${value.schema}" → "${resolvedSchemaCoId.substring(0, 12)}..." for query "${key}"`);
                 
                 try {
                   const queryOptions = {
@@ -249,7 +246,6 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
               continue;
             }
           } else if (schemaCoId && schemaCoId.startsWith('co_z')) {
-            console.log(`[createUnifiedStore] Query "${key}" already has co-id: "${schemaCoId.substring(0, 12)}..."`);
             
             // Schema is already a co-id - execute query immediately
             const queryOptions = {

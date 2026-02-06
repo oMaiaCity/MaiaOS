@@ -6,12 +6,24 @@
 
 > Views are the EYES of an actor. They visualize context and capture user events.
 
-- **Views** define WHAT to render (declarative, zero logic)
+**CRITICAL ARCHITECTURE:**
+- **Templates are "dumb"** - Pure declarative structure, zero logic, zero conditionals
+- **State Machines define the state** - All logic, computation, and state transitions happen here
+- **Context is the realtime reactive snapshot** - The current reflection of state, automatically updated when state changes
 - **ViewEngine** handles HOW to render (imperative)
-- **Context** provides the DATA to display
-- **State Machine** computes all conditional values (no `$if` in views!)
-- **CSS** handles conditional styling via data-attributes
+- **CSS** handles conditional styling via data-attributes (no `$if` in views!)
 - **Events** trigger state machine transitions
+
+**The Flow:**
+```
+State Machine (defines state) 
+  ↓
+Updates Context (realtime reactive snapshot)
+  ↓
+View Template (dumb, just renders context)
+  ↓
+CSS (handles conditional styling via data-attributes)
+```
 
 ## View Definition
 
@@ -72,10 +84,13 @@ Create a file named `{name}.view.maia`:
 }
 ```
 
-**Important:** Views contain **zero conditional logic**. All conditionals are handled by:
-- **State Machine** → computes boolean flags → stores in context
-- **View** → references context values → maps to data-attributes
+**CRITICAL:** Views are **"dumb" templates** - they contain **zero conditional logic**. All conditionals are handled by:
+- **State Machine** → defines state, computes boolean flags → stores in context
+- **Context** → realtime reactive snapshot of current state reflection
+- **View** → dumb template, just references context values → maps to data-attributes
 - **CSS** → matches data-attributes → applies conditional styles
+
+**Remember:** Templates don't think, they just render. State machines think. Context reflects.
 
 ## HTML Tags
 
@@ -265,7 +280,13 @@ Data-attributes are the primary mechanism for conditional styling. The state mac
 
 ## Conditional Styling (No `$if` in Views!)
 
-**Views contain zero conditional logic.** All conditionals are handled by the state machine and CSS:
+**CRITICAL:** Views are **"dumb" templates** - they contain **zero conditional logic**. All conditionals are handled by the state machine and CSS:
+
+**Architecture:**
+- **State Machine** → Defines state, computes boolean flags
+- **Context** → Realtime reactive snapshot of current state reflection  
+- **View Template** → Dumb, just references context → maps to data-attributes
+- **CSS** → Handles conditional styling via data-attributes
 
 ### Pattern: State Machine → Context → Data-Attributes → CSS
 
@@ -748,9 +769,14 @@ Views support only these operations:
 | `$contextKey` | `"$viewMode"`, `"$$id"` | Variable references |
 
 **Removed Operations:**
-- ❌ `$if` - Use state machine + data-attributes + CSS instead
+- ❌ `$if` - **Templates are dumb!** Use state machine + data-attributes + CSS instead
 - ❌ `slot` - Migrated to `$slot` for consistency
 - ❌ `on` - Migrated to `$on` for consistency
+
+**Remember the Architecture:**
+- **State Machines** → Define state (all logic)
+- **Context** → Realtime reactive snapshot of current state reflection
+- **Templates** → Dumb, just render context (zero logic)
 
 ## Next Steps
 

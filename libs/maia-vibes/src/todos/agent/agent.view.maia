@@ -10,11 +10,6 @@
         "class": "header-section",
         "children": [
           {
-            "tag": "span",
-            "class": "todo-category",
-            "text": "Task Management"
-          },
-          {
             "tag": "h2",
             "class": "todo-title",
             "text": "Daily Focus"

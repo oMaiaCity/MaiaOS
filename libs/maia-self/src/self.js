@@ -76,9 +76,7 @@ function setupSyncPeers(syncDomain = null) {
 		syncServerUrl = `${protocol}//${window.location.host}/sync`;
 	}
 	
-	console.log(`🔌 [SYNC] Connecting to sync server: ${syncServerUrl}`);
 	if (isDev) {
-		console.log(`   Mode: Development (using Vite proxy)`);
 	} else {
 		console.log(`   Sync Domain: ${apiDomain || '(not set - using same origin fallback)'}`);
 		console.log(`   Source: ${syncDomain ? 'kernel' : (typeof window !== 'undefined' && window.__PUBLIC_API_DOMAIN__ ? 'runtime env' : (import.meta.env?.PUBLIC_API_DOMAIN ? 'build-time env' : 'fallback'))}`);
@@ -103,7 +101,6 @@ function setupSyncPeers(syncDomain = null) {
 				clearTimeout(connectionTimeout);
 				connectionTimeout = null;
 			}
-			console.log('✅ [SYNC] Peer added to array');
 			// Always add to peers array first (for waitForPeer to detect)
 			peers.push(peer);
 			if (node) {
@@ -131,7 +128,6 @@ function setupSyncPeers(syncDomain = null) {
 	// This fires when WebSocket is ACTUALLY connected, not just when peer object is created
 	wsPeer.subscribe((connected) => {
 		if (connected && !websocketConnected) {
-			console.log('✅ [SYNC] WebSocket connection successful');
 			websocketConnected = true;
 			syncState = { connected: true, syncing: true, error: null, status: 'syncing' };
 			notifySyncStateChange();
@@ -205,7 +201,6 @@ function setupSyncPeers(syncDomain = null) {
 			// Add any peers that were queued before node was available
 			// This happens asynchronously as peers connect
 			if (peers.length > 0) {
-				console.log(`[SYNC] Adding ${peers.length} queued peer(s) to node`);
 				for (const peer of peers) {
 					node.syncManager.addPeer(peer);
 				}
@@ -227,7 +222,6 @@ function setupJazzSyncPeers(apiKey) {
 	let node = undefined;
 	const peers = [];
 	
-	console.log(`🔌 [SYNC] Connecting directly to Jazz cloud: wss://cloud.jazz.tools/?key=...`);
 	
 	// Setting up Jazz sync peer
 	const wsPeer = new WebSocketPeerWithReconnection({
@@ -297,16 +291,12 @@ function setupJazzSyncPeers(apiKey) {
  * @returns {Promise<{accountID: string, agentSecret: Object, node: Object, account: Object}>}
  */
 export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = {}) {
-	console.log("🔐 Starting passkey sign-up (TRUE single-passkey flow)...");
-	console.log("   🎯 ONE passkey, ONE biometric prompt, ZERO storage!");
-	
 	await requirePRFSupport();
 	
 	const saltBytes = stringToUint8Array(salt);
 	const crypto = await WasmCrypto.create();
 	
 	// STEP 1: Create single passkey and evaluate PRF
-	console.log("📱 Step 1/3: Creating passkey and deriving secret...");
 	const { credentialId, prfOutput } = await createPasskeyWithPRF({
 		name,
 		userId: globalThis.crypto.getRandomValues(new Uint8Array(32)), // Random userID - we don't store anything!
@@ -317,22 +307,12 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 		throw new Error("PRF evaluation failed");
 	}
 	
-	console.log("✅ Passkey created and secret derived!");
-	console.log("   💡 AccountID will be re-computed on every login!");
-	
 	// STEP 2: Compute accountID deterministically
-	console.log("🧮 Step 2/3: Computing accountID deterministically...");
 	const agentSecret = crypto.agentSecretFromSecretSeed(prfOutput);
 	const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto);
 	const computedAccountID = idforHeader(accountHeader, crypto);
 	
-	console.log("✅ AccountID computed:", computedAccountID);
-	console.log("   🔑 Chain: PRF → agentSecret → header → accountID");
-	console.log("   ♻️  Same passkey + salt = same accountID (always!)");
-	
 	// STEP 3: Create account using abstraction layer
-	console.log("🏗️ Step 3/3: Creating account...");
-	
 	// Get IndexedDB storage for persistence (BEFORE account creation!)
 	const storage = await getStorage();
 	
@@ -343,13 +323,9 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 	let syncSetup = null;
 	
 	if (syncMode === 'jazz' && apiKey) {
-		console.log("🔌 [SYNC] Setting up Jazz cloud sync...");
 		syncSetup = setupJazzSyncPeers(apiKey);
 	} else if (syncMode === 'local') {
-		console.log("🔌 [SYNC] Setting up self-hosted sync...");
 		syncSetup = setupSyncPeers();
-	} else {
-		console.log("⚠️ [SYNC] Sync disabled - proceeding without sync");
 	}
 	
 	// Use createAccountWithSecret() abstraction from @MaiaOS/db
@@ -384,9 +360,6 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 	if (syncSetup) {
 		syncState = { connected: true, syncing: false, error: null, status: 'connected' };
 		notifySyncStateChange();
-		console.log("✅ [SYNC] Initial handshake complete");
-	} else {
-		console.warn("⚠️  [SYNC] Sync service unavailable - account won't sync to cloud!");
 	}
 	
 	return { 
@@ -417,9 +390,6 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
  * @returns {Promise<{accountID: string, agentSecret: Object, node: Object, account: Object}>}
  */
 export async function signInWithPasskey({ salt = "maia.city" } = {}) {
-	console.log("🔐 Starting passkey sign-in (TRUE single-passkey flow)...");
-	console.log("   🎯 ONE biometric prompt, ZERO storage reads!");
-	
 	// Update sync state to indicate we're authenticating
 	syncState = { connected: false, syncing: false, error: null, status: 'authenticating' };
 	notifySyncStateChange();
@@ -429,32 +399,21 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 	const saltBytes = stringToUint8Array(salt);
 	
 	// Re-evaluate PRF to get prfOutput (same as signup!)
-	console.log("📱 Authenticating and re-evaluating PRF...");
 	const { prfOutput } = await evaluatePRF({ salt: saltBytes });
 	
 	if (!prfOutput) {
 		throw new Error("PRF evaluation failed during sign-in");
 	}
 	
-	console.log("✅ Passkey authenticated and PRF re-evaluated!");
-	console.log("   💡 Same passkey + salt → same prfOutput (deterministic!)");
-	
 	// STEP 2: Derive agentSecret from prfOutput
-	console.log("🔑 Deriving agentSecret...");
 	const crypto = await WasmCrypto.create();
 	const agentSecret = crypto.agentSecretFromSecretSeed(prfOutput);
 	
 	// STEP 3: ⚡ COMPUTE ACCOUNT ID DETERMINISTICALLY (same as signup!)
-	console.log("🧮 Computing accountID deterministically...");
 	const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto);
 	const accountID = idforHeader(accountHeader, crypto);
 	
-	console.log("✅ AccountID re-computed:", accountID);
-	console.log("   🔑 Chain: PRF → agentSecret → header → accountID");
-	console.log("   ♻️  No storage needed - computed on the fly!");
-	
 	// STEP 4: Setup sync peers and storage (for background account loading)
-	console.log("🔓 Setting up sync and storage for account loading...");
 	const storage = await getStorage();
 	
 	// Setup sync peers BEFORE loading account (jazz-tools pattern!)
@@ -464,13 +423,9 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 	let syncSetup = null;
 	
 	if (syncMode === 'jazz' && apiKey) {
-		console.log("🔌 [SYNC] Setting up Jazz cloud sync...");
 		syncSetup = setupJazzSyncPeers(apiKey);
 	} else if (syncMode === 'local') {
-		console.log("🔌 [SYNC] Setting up self-hosted sync...");
 		syncSetup = setupSyncPeers();
-	} else {
-		console.log("⚠️ [SYNC] Sync disabled - proceeding without sync");
 	}
 	
 	// Update sync state to indicate we're loading account
@@ -482,7 +437,6 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 	// Start account loading in background (non-blocking)
 	// Use loadAccount() abstraction from @MaiaOS/db instead of direct withLoadedAccount()
 	const handshakeStartTime = performance.now();
-	console.log("⏳ Starting account load (initial sync handshake) in background...");
 	
 	const accountLoadingPromise = (async () => {
 		try {
@@ -490,19 +444,7 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 			// This ensures sync server is ready before we try to load, reducing unnecessary waits
 			let websocketReady = false;
 			if (syncSetup && syncSetup.waitForPeer) {
-				const websocketWaitStartTime = performance.now();
-				console.log("🔌 [SYNC] Waiting for WebSocket connection before account load...");
 				websocketReady = await syncSetup.waitForPeer();
-				const websocketWaitDuration = performance.now() - websocketWaitStartTime;
-				
-				if (websocketReady) {
-					console.log(`✅ [SYNC] WebSocket connected (${websocketWaitDuration.toFixed(0)}ms) - proceeding with account load`);
-					if (websocketWaitDuration > 500) {
-						console.warn(`⚠️ [PERF] WebSocket connection took ${websocketWaitDuration.toFixed(0)}ms (target: <500ms)`);
-					}
-				} else {
-					console.warn(`⚠️ [SYNC] WebSocket connection timeout (${websocketWaitDuration.toFixed(0)}ms) - proceeding anyway (will load from storage or wait)`);
-				}
 			}
 			
 			// Use loadAccount() abstraction - goes through proper abstraction layer
@@ -514,16 +456,10 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 			});
 			
 			const { node, account } = loadResult;
-			const handshakeDuration = performance.now() - handshakeStartTime;
-			console.log(`✅ Account loaded via loadAccount() abstraction (${handshakeDuration.toFixed(0)}ms)`);
-			if (handshakeDuration > 1000) {
-				console.warn(`⚠️ [PERF] Initial handshake took ${handshakeDuration.toFixed(0)}ms (target: <1000ms)`);
-			}
 			
 			// Assign node to peer callbacks
 			if (syncSetup) {
 				syncSetup.setNode(node);
-				console.log("✅ [SYNC] Sync peer connected");
 			}
 			
 			// Initial sync handshake complete - set syncing to false
@@ -532,16 +468,7 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 			if (syncSetup) {
 				syncState = { connected: true, syncing: false, error: null, status: 'connected' };
 				notifySyncStateChange();
-				console.log("✅ [SYNC] Initial handshake complete");
 			}
-			
-			if (storage) {
-				console.log("💾 [STORAGE] Account loaded from IndexedDB");
-			}
-			
-			console.log("✅ Account loaded! ID:", account.id);
-			console.log("🎉 Sign-in complete! TRUE single-passkey flow!");
-			console.log("   📱 1 biometric prompt");
 			console.log("   💾 0 secrets retrieved from storage");
 			console.log("   ⚡ Everything computed deterministically!");
 			

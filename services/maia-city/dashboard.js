@@ -43,7 +43,6 @@ async function loadVibesFromAccount(maia) {
 			
 			// Operations API returns flat objects: {id: '...', todos: 'co_...', ...}
 			if (vibesData && typeof vibesData === 'object' && !Array.isArray(vibesData)) {
-				console.log('[Dashboard] account.vibes data:', vibesData);
 				// Extract vibe keys (exclude metadata keys)
 				const vibeKeys = Object.keys(vibesData).filter(k => 
 					k !== 'id' && 
@@ -52,7 +51,6 @@ async function loadVibesFromAccount(maia) {
 					k !== '$schema' && 
 					k !== 'type'
 				);
-				console.log('[Dashboard] Found vibe keys:', vibeKeys);
 				
 				// Add each vibe from account.vibes
 				for (const vibeKey of vibeKeys) {
@@ -71,7 +69,6 @@ async function loadVibesFromAccount(maia) {
 						});
 					}
 				}
-				console.log('[Dashboard] Loaded vibes:', vibes.map(v => v.key));
 			}
 		}
 	} catch (error) {
@@ -385,7 +382,6 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 				const targetContainer = document.getElementById(`vibe-container-${currentVibe}`);
 				for (const container of allContainers) {
 					if (container !== targetContainer) {
-						console.log(`[Vibe Viewer] Removing duplicate container: ${container.id}`);
 						container.remove();
 					}
 				}
@@ -400,8 +396,6 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 				console.error(`[Vibe Viewer] MaiaOS instance not available`);
 				return;
 			}
-			
-			console.log(`[Vibe Viewer] Loading vibe: ${currentVibe} into container: vibe-container-${currentVibe}`);
 			
 			// Clear container before loading new vibe (remove any existing content)
 			// The kernel will handle actor detachment and reuse logic

@@ -20,6 +20,7 @@ import { getAllVibeRegistries } from "@MaiaOS/vibes";
 import { renderApp } from './db-view.js';
 import { renderLandingPage } from './landing.js';
 import { renderSignInPrompt, renderUnsupportedBrowser } from './signin.js';
+import { renderAgentChat } from './agent.js';
 
 let maia;
 let currentScreen = 'dashboard'; // Current screen: 'dashboard' | 'db-viewer' | 'vibe-viewer'
@@ -135,9 +136,6 @@ function navigateTo(path) {
  */
 async function handleRoute() {
 	const path = window.location.pathname;
-	console.log(`📍 [ROUTE] Handling route: ${path}`);
-	console.log(`   authState.signedIn: ${authState.signedIn}`);
-	console.log(`   maia: ${maia ? 'ready' : 'not ready'}`);
 	
 	if (path === '/signin' || path === '/signup') {
 		// If already signed in, redirect to dashboard
@@ -158,7 +156,6 @@ async function handleRoute() {
 		// If authenticated, show dashboard; otherwise redirect to signin
 		if (authState.signedIn && maia) {
 			// Both auth state and maia are ready - show dashboard
-			console.log("   → Rendering dashboard (both auth and maia ready)");
 			try {
 				await renderAppInternal();
 			} catch (error) {
@@ -168,7 +165,6 @@ async function handleRoute() {
 		} else if (authState.signedIn && !maia) {
 			// Signed in but maia not ready yet - might be initializing
 			// Show loading/connecting screen with sync status (prevents redirect loop on mobile)
-			console.log("⏳ Auth state says signed in but maia not ready. Waiting for initialization...");
 			renderLoadingConnectingScreen();
 			// Wait for maia to be initialized (with timeout)
 			let waitCount = 0;
@@ -177,7 +173,6 @@ async function handleRoute() {
 				if (maia) {
 					clearInterval(checkMaia);
 					cleanupLoadingScreenSync(); // Clean up loading screen sync subscription
-					console.log("✅ Maia ready, rendering dashboard");
 					renderAppInternal().catch((error) => {
 						console.error("❌ [ROUTE] Error rendering app after maia ready:", error);
 						showToast("Failed to render app: " + error.message, 'error');
@@ -199,6 +194,9 @@ async function handleRoute() {
 			console.log("   → Not signed in, redirecting to /signin");
 			navigateTo('/signin');
 		}
+	} else if (path === '/agent') {
+		// Agent chat interface (open, no auth required)
+		renderAgentChat();
 	} else {
 		// Default route: landing page
 		// If already authenticated, redirect to dashboard
@@ -255,25 +253,17 @@ function getSyncDomain() {
  */
 async function signIn() {
 	try {
-		console.log("🔐 Starting sign-in flow...");
 		
 		// Determine sync domain (single source of truth - passed through kernel)
 		const syncDomain = getSyncDomain();
-		if (syncDomain) {
-			console.log(`🔌 [SYNC] Using sync domain: ${syncDomain}`);
-		} else {
+		if (!syncDomain) {
 			console.warn('⚠️ [SYNC] Sync domain not set - will use fallback');
 		}
 		
-		console.log("⏳ Calling signInWithPasskey()...");
 		const signInResult = await signInWithPasskey({ 
 			salt: "maia.city"
 		});
-		console.log("✅ signInWithPasskey() returned immediately (non-blocking)");
-		console.log("   Result keys:", Object.keys(signInResult));
 		const { accountID, agentSecret, loadingPromise } = signInResult;
-		console.log("✅ Sign-in authentication successful (account loading in background)");
-		console.log(`   accountID: ${accountID}`);
 		
 		// Set auth state IMMEDIATELY after auth (before account loads)
 		// This allows UI to show right away
@@ -288,7 +278,6 @@ async function signIn() {
 		// Await account loading in background and boot MaiaOS when ready
 		loadingPromise.then(async (accountResult) => {
 			const { node, account } = accountResult;
-			console.log("✅ Account loading completed, booting MaiaOS...");
 			console.log(`   node: ${node ? 'ready' : 'not ready'}`);
 			console.log(`   account: ${account ? 'ready' : 'not ready'}`);
 			
@@ -296,10 +285,10 @@ async function signIn() {
 				maia = await MaiaOS.boot({ 
 					node, 
 					account,
-					syncDomain // Pass sync domain to kernel (single source of truth)
+					syncDomain, // Pass sync domain to kernel (single source of truth)
+					modules: ['db', 'core', 'agent'] // Include all modules
 				});
 				window.maia = maia;
-				console.log("✅ MaiaOS booted successfully");
 				
 				// Re-render app now that maia is ready
 				if (authState.signedIn) {
@@ -350,9 +339,6 @@ async function signIn() {
 		
 		// Navigate to /me IMMEDIATELY - don't wait for data loading
 		// This ensures UI shows right away, especially important on mobile
-		console.log("🚀 Navigating to /me...");
-		console.log(`   authState.signedIn: ${authState.signedIn}`);
-		console.log(`   maia: ${maia ? 'ready' : 'not ready'}`);
 		
 		// Update URL first
 		window.history.pushState({}, '', '/me');
@@ -429,14 +415,11 @@ async function loadLinkedCoValues() {
  */
 async function register() {
 	try {
-		console.log("🔐 Starting sign-up flow...");
 		
 		// Determine sync domain (single source of truth - passed through kernel)
 		const syncDomain = getSyncDomain();
 		const isDev = import.meta.env?.DEV || window.location.hostname === 'localhost';
-		if (syncDomain) {
-			console.log(`🔌 [SYNC] Using sync domain: ${syncDomain}`);
-		} else if (!isDev) {
+		if (!syncDomain && !isDev) {
 			// Only warn in production if sync domain is not set
 			console.warn('⚠️ [SYNC] Sync domain not set in production - will use fallback');
 		}
@@ -445,7 +428,6 @@ async function register() {
 			name: "maia",
 			salt: "maia.city"
 		});
-		console.log("✅ Sign-up authentication successful, booting MaiaOS...");
 		
 		// Boot MaiaOS with node, account, and sync domain (using CoJSON backend)
 		// Sync domain stored in kernel as single source of truth
@@ -455,10 +437,9 @@ async function register() {
 				node, 
 				account,
 				syncDomain, // Pass sync domain to kernel (single source of truth)
-				modules: ['db', 'core', 'private-llm'] // Include private-llm module for RedPill chat
+				modules: ['db', 'core', 'agent'] // Include all modules
 			});
 			window.maia = maia;
-			console.log("✅ MaiaOS booted successfully");
 		} catch (bootError) {
 			console.error("❌ MaiaOS.boot() failed:", bootError);
 			throw new Error(`Failed to initialize MaiaOS: ${bootError.message}`);
@@ -502,9 +483,6 @@ async function register() {
 
 		// Navigate to /me IMMEDIATELY - don't wait for data loading
 		// This ensures UI shows right away, especially important on mobile
-		console.log("🚀 Navigating to /me...");
-		console.log(`   authState.signedIn: ${authState.signedIn}`);
-		console.log(`   maia: ${maia ? 'ready' : 'not ready'}`);
 		
 		// Update URL first
 		window.history.pushState({}, '', '/me');
@@ -736,7 +714,6 @@ async function handleSeed() {
 		// Automatically discover and import all vibe registries
 		const vibeRegistries = await getAllVibeRegistries();
 		
-		console.log(`[Seed] Found ${vibeRegistries.length} vibe registries:`, vibeRegistries.map(r => r.vibe?.$id || r.vibe?.name || 'unknown'));
 		
 		if (vibeRegistries.length === 0) {
 			showToast("No vibe registries found to seed", 'warning', 3000);
@@ -770,7 +747,7 @@ async function handleSeed() {
 		maia = await MaiaOS.boot({ 
 			node, 
 			account,
-			modules: ['db', 'core', 'private-llm'], // Include private-llm module for RedPill chat
+			modules: ['db', 'core', 'agent'], // Include all modules
 			registry: mergedConfigs
 		});
 		
@@ -947,7 +924,6 @@ async function loadVibe(vibeKey) {
 		} else {
 			// Detach actors from previous vibe BEFORE switching (if switching vibes)
 			if (currentVibe && currentVibe !== vibeKey && maia && maia.actorEngine) {
-				console.log(`[MaiaCity] Detaching actors from previous vibe: ${currentVibe}`);
 				maia.actorEngine.detachActorsForVibe(currentVibe);
 			}
 			

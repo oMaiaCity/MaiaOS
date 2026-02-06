@@ -2,10 +2,17 @@
 
 Think of context as your actor's **memory** - like a notebook where it writes things down!
 
+**CRITICAL:** Context is the **realtime reactive snapshot** of the current reflection of state. It's automatically updated when the state machine changes state.
+
 **What's in the notebook?**
 - What todos you have (`todos: [...]`)
 - Whether a modal is open (`isModalOpen: false`)
 - What text is in the input field (`newTodoText: "Buy milk"`)
+
+**The Architecture:**
+- **State Machine** → Defines the state (all logic and transitions)
+- **Context** → Realtime reactive snapshot of current state reflection
+- **View Template** → Dumb template that just renders context (zero logic)
 
 Your actor looks at this notebook to know what to show and what to do!
 
@@ -36,10 +43,11 @@ Your actor looks at this notebook to know what to show and what to do!
 - ✅ Accessed reactively via ReactiveStore (universal `read()` API)
 - ✅ Never mutated directly - always through state machine
 
-**View** → Renders from context variables
+**View** → Dumb template that renders from context variables
 - ✅ **Read-only** - only reads from context
+- ✅ **Zero logic** - pure declarative structure, no conditionals
 - ✅ Sends events to state machine (never updates context directly)
-- ✅ Automatically re-renders when context changes
+- ✅ Automatically re-renders when context changes (realtime reactive snapshot)
 
 ### Single Source of Truth: CoValue Under the Hood
 

@@ -565,7 +565,6 @@ export class CoJSONBackend extends DBAdapter {
       return false;
     }
 
-    console.log('[CoJSONBackend.ensureAccountOsReady] Ensuring account.os is ready...');
     const startTime = performance.now();
     const phaseTimings = {
       getOsId: 0,
@@ -590,7 +589,6 @@ export class CoJSONBackend extends DBAdapter {
     
     // If account.os doesn't exist, create it
     if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
-      console.log('[CoJSONBackend.ensureAccountOsReady] account.os does not exist, creating...');
       const createOsStartTime = performance.now();
       const group = await this.getDefaultGroup();
       const osMeta = { $schema: 'GenesisSchema' };
@@ -598,12 +596,10 @@ export class CoJSONBackend extends DBAdapter {
       this.account.set('os', osCoMap.id);
       osId = osCoMap.id;
       phaseTimings.createOs = performance.now() - createOsStartTime;
-      console.log(`[CoJSONBackend.ensureAccountOsReady] Created account.os: ${osId.substring(0, 12)}...`);
     }
 
     // Load account.os using read() API
     const osReadRequestStartTime = performance.now();
-    console.log(`   ⏳ [PERF] Starting account.os read request at ${osReadRequestStartTime.toFixed(2)}ms`);
     const osStore = await universalRead(this, osId, null, null, null, {
       deepResolve: false,
       timeoutMs
@@ -612,28 +608,22 @@ export class CoJSONBackend extends DBAdapter {
     phaseTimings.osReadRequest = osReadRequestStartTime - startTime;
     phaseTimings.osReadResponse = osReadResponseTime - startTime;
     phaseTimings.osReadTotal = osReadResponseTime - osReadRequestStartTime;
-    console.log(`   ✅ [PERF] account.os read response received at ${osReadResponseTime.toFixed(2)}ms`);
-    console.log(`   ⏱️  [PERF] account.os read total: ${phaseTimings.osReadTotal.toFixed(0)}ms`);
 
     const osWaitForReadyStartTime = performance.now();
-    console.log(`   ⏳ [PERF] Starting waitForStoreReady for account.os at ${osWaitForReadyStartTime.toFixed(2)}ms`);
     try {
       await waitForStoreReady(osStore, osId, timeoutMs);
       const osWaitForReadyEndTime = performance.now();
       phaseTimings.osWaitForReady = osWaitForReadyEndTime - osWaitForReadyStartTime;
-      console.log(`   ✅ [PERF] account.os waitForStoreReady completed at ${osWaitForReadyEndTime.toFixed(2)}ms`);
-      console.log(`   ⏱️  [PERF] account.os waitForStoreReady: ${phaseTimings.osWaitForReady.toFixed(0)}ms`);
     } catch (error) {
       const osWaitForReadyEndTime = performance.now();
       phaseTimings.osWaitForReady = osWaitForReadyEndTime - osWaitForReadyStartTime;
-      console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ Timeout waiting for account.os to load: ${error.message}`);
-      console.error(`   ⏱️  [PERF] account.os waitForStoreReady failed after: ${phaseTimings.osWaitForReady.toFixed(0)}ms`);
+      console.error(`[CoJSONBackend.ensureAccountOsReady] Timeout waiting for account.os to load: ${error.message}`);
       return false;
     }
 
     const osData = osStore.value;
     if (!osData || osData.error) {
-      console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ account.os data not available or has error`);
+      console.error(`[CoJSONBackend.ensureAccountOsReady] account.os data not available or has error`);
       return false;
     }
 
@@ -643,19 +633,18 @@ export class CoJSONBackend extends DBAdapter {
     phaseTimings.getSchematasId = performance.now() - getSchematasIdStartTime;
     
     if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
-      console.log('[CoJSONBackend.ensureAccountOsReady] account.os.schematas does not exist, creating...');
       const createSchematasStartTime = performance.now();
       
       // Get account.os CoValueCore to update it
       const osCore = this.getCoValue(osId);
       if (!osCore || !osCore.isAvailable()) {
-        console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ account.os not available for creating schematas`);
+        console.error(`[CoJSONBackend.ensureAccountOsReady] account.os not available for creating schematas`);
         return false;
       }
       
       const osContent = this.getCurrentContent(osCore);
       if (!osContent || typeof osContent.set !== 'function') {
-        console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ account.os content not available for creating schematas`);
+        console.error(`[CoJSONBackend.ensureAccountOsReady] account.os content not available for creating schematas`);
         return false;
       }
       
@@ -669,7 +658,6 @@ export class CoJSONBackend extends DBAdapter {
       osContent.set('schematas', schematasCoMap.id);
       schematasId = schematasCoMap.id;
       phaseTimings.createSchematas = performance.now() - createSchematasStartTime;
-      console.log(`[CoJSONBackend.ensureAccountOsReady] Created account.os.schematas: ${schematasId.substring(0, 12)}...`);
       
       // Reload osData to get updated schematasId
       const osStore2 = await universalRead(this, osId, null, null, null, {
@@ -688,13 +676,12 @@ export class CoJSONBackend extends DBAdapter {
     }
 
     if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
-      console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ Failed to ensure schematas registry exists`);
+      console.error(`[CoJSONBackend.ensureAccountOsReady] Failed to ensure schematas registry exists`);
       return false;
     }
 
     // Load schematas registry using read() API
     const schematasReadRequestStartTime = performance.now();
-    console.log(`   ⏳ [PERF] Starting schematas read request at ${schematasReadRequestStartTime.toFixed(2)}ms`);
     const schematasStore = await universalRead(this, schematasId, null, null, null, {
       deepResolve: false,
       timeoutMs
@@ -703,56 +690,27 @@ export class CoJSONBackend extends DBAdapter {
     phaseTimings.schematasReadRequest = schematasReadRequestStartTime - startTime;
     phaseTimings.schematasReadResponse = schematasReadResponseTime - startTime;
     phaseTimings.schematasReadTotal = schematasReadResponseTime - schematasReadRequestStartTime;
-    console.log(`   ✅ [PERF] schematas read response received at ${schematasReadResponseTime.toFixed(2)}ms`);
-    console.log(`   ⏱️  [PERF] schematas read total: ${phaseTimings.schematasReadTotal.toFixed(0)}ms`);
 
     const schematasWaitForReadyStartTime = performance.now();
-    console.log(`   ⏳ [PERF] Starting waitForStoreReady for schematas at ${schematasWaitForReadyStartTime.toFixed(2)}ms`);
     try {
       await waitForStoreReady(schematasStore, schematasId, timeoutMs);
       const schematasWaitForReadyEndTime = performance.now();
       phaseTimings.schematasWaitForReady = schematasWaitForReadyEndTime - schematasWaitForReadyStartTime;
-      console.log(`   ✅ [PERF] schematas waitForStoreReady completed at ${schematasWaitForReadyEndTime.toFixed(2)}ms`);
-      console.log(`   ⏱️  [PERF] schematas waitForStoreReady: ${phaseTimings.schematasWaitForReady.toFixed(0)}ms`);
     } catch (error) {
       const schematasWaitForReadyEndTime = performance.now();
       phaseTimings.schematasWaitForReady = schematasWaitForReadyEndTime - schematasWaitForReadyStartTime;
-      console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ Timeout waiting for schematas registry to load: ${error.message}`);
-      console.error(`   ⏱️  [PERF] schematas waitForStoreReady failed after: ${phaseTimings.schematasWaitForReady.toFixed(0)}ms`);
+      console.error(`[CoJSONBackend.ensureAccountOsReady] Timeout waiting for schematas registry to load: ${error.message}`);
       return false;
     }
 
     const schematasData = schematasStore.value;
     if (!schematasData || schematasData.error) {
-      console.error(`[CoJSONBackend.ensureAccountOsReady] ❌ schematas registry data not available or has error`);
+      console.error(`[CoJSONBackend.ensureAccountOsReady] schematas registry data not available or has error`);
       return false;
     }
 
     const endTime = performance.now();
     phaseTimings.total = endTime - startTime;
-    
-    console.log(`[CoJSONBackend.ensureAccountOsReady] ✅ account.os ready (took ${phaseTimings.total.toFixed(0)}ms)`);
-    console.log(`[CoJSONBackend.ensureAccountOsReady]   - account.os: ${osId.substring(0, 12)}...`);
-    console.log(`[CoJSONBackend.ensureAccountOsReady]   - schematas: ${schematasId.substring(0, 12)}...`);
-    console.log(`   📊 [PERF] Phase timings:`);
-    console.log(`      - Get osId: ${phaseTimings.getOsId.toFixed(0)}ms`);
-    if (phaseTimings.createOs > 0) {
-      console.log(`      - Create os: ${phaseTimings.createOs.toFixed(0)}ms`);
-    }
-    console.log(`      - account.os read:`);
-    console.log(`         * Request sent: ${phaseTimings.osReadRequest.toFixed(0)}ms`);
-    console.log(`         * Response received: ${phaseTimings.osReadResponse.toFixed(0)}ms`);
-    console.log(`         * Read total: ${phaseTimings.osReadTotal.toFixed(0)}ms`);
-    console.log(`         * waitForStoreReady: ${phaseTimings.osWaitForReady.toFixed(0)}ms`);
-    console.log(`      - Get schematasId: ${phaseTimings.getSchematasId.toFixed(0)}ms`);
-    if (phaseTimings.createSchematas > 0) {
-      console.log(`      - Create schematas: ${phaseTimings.createSchematas.toFixed(0)}ms`);
-    }
-    console.log(`      - schematas read:`);
-    console.log(`         * Request sent: ${phaseTimings.schematasReadRequest.toFixed(0)}ms`);
-    console.log(`         * Response received: ${phaseTimings.schematasReadResponse.toFixed(0)}ms`);
-    console.log(`         * Read total: ${phaseTimings.schematasReadTotal.toFixed(0)}ms`);
-    console.log(`         * waitForStoreReady: ${phaseTimings.schematasWaitForReady.toFixed(0)}ms`);
 
     return true;
   }

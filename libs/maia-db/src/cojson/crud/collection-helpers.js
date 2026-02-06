@@ -29,14 +29,12 @@ async function resolveSchemaCoId(backend, schema) {
  * @returns {Promise<string|null>} Schema index colist ID or null if not found
  */
 export async function getSchemaIndexColistId(backend, schema) {
-  console.log(`[getSchemaIndexColistId] Resolving schema to co-id: "${schema.substring(0, 30)}..."`);
   // Resolve schema to co-id
   const schemaCoId = await resolveSchemaCoId(backend, schema);
   if (!schemaCoId) {
     console.warn(`[getSchemaIndexColistId] ❌ Failed to resolve schema "${schema.substring(0, 30)}..." to co-id`);
     return null;
   }
-  console.log(`[getSchemaIndexColistId] Resolved schema → "${schemaCoId.substring(0, 12)}..."`);
   
   // All schema indexes are in account.os, keyed by schema co-id
   const osId = backend.account.get('os');
@@ -61,7 +59,6 @@ export async function getSchemaIndexColistId(backend, schema) {
   // Get schema index colist using schema co-id as key
   const indexColistId = osContent.get(schemaCoId);
   if (indexColistId && typeof indexColistId === 'string' && indexColistId.startsWith('co_')) {
-    console.log(`[getSchemaIndexColistId] ✅ Found index colist "${indexColistId.substring(0, 12)}..." for schema co-id "${schemaCoId.substring(0, 12)}..."`);
     return indexColistId;
   }
   
@@ -89,11 +86,8 @@ export async function getCoListId(backend, collectionNameOrSchema) {
     return null;
   }
   
-  console.log(`[getCoListId] Looking up colist for schema: "${collectionNameOrSchema.substring(0, 30)}..."`);
   const colistId = await getSchemaIndexColistId(backend, collectionNameOrSchema);
-  if (colistId) {
-    console.log(`[getCoListId] ✅ Found colist: "${colistId.substring(0, 12)}..." for schema "${collectionNameOrSchema.substring(0, 30)}..."`);
-  } else {
+  if (!colistId) {
     console.warn(`[getCoListId] ❌ No colist found for schema "${collectionNameOrSchema.substring(0, 30)}..."`);
   }
   return colistId;

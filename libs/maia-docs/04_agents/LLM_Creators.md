@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-02-05T14:41:21.546Z
+**Auto-generated:** 2026-02-06T13:59:28.862Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -3006,15 +3006,24 @@ Each actor with a view renders into its own **Shadow DOM**, providing:
 
 ✅ **Style isolation** - Actor styles don't leak  
 ✅ **Encapsulation** - Internal DOM is private  
-✅ **Reusability** - Multiple instances don't conflict
+✅ **Reusability** - Multiple instances don't conflict  
+✅ **Automatic container queries** - `:host` automatically has `container-type: inline-size` enabled
 
 ```html
 <div id="actor-todo">
   #shadow-root
-    <style>/* Actor-specific styles */</style>
+    <style>
+      :host {
+        container-type: inline-size;
+        container-name: actor-todo;
+        /* ... other styles ... */
+      }
+    </style>
     <div>/* Actor UI */</div>
 </div>
 ```
+
+**Container Queries:** Every actor's `:host` element automatically becomes a container, enabling responsive components that adapt to their container size (not just viewport size). Use `@container` queries in your style files with breakpoint tokens like `{containers.xs}`, `{containers.sm}`, etc. See [Style Guide](./10-style.md#container-queries-responsive-design) for details.
 
 ## Multiple Actor Instances
 
@@ -3551,10 +3560,17 @@ actor.inbox            // Inbox costream (messages)
 
 Think of context as your actor's **memory** - like a notebook where it writes things down!
 
+**CRITICAL:** Context is the **realtime reactive snapshot** of the current reflection of state. It's automatically updated when the state machine changes state.
+
 **What's in the notebook?**
 - What todos you have (`todos: [...]`)
 - Whether a modal is open (`isModalOpen: false`)
 - What text is in the input field (`newTodoText: "Buy milk"`)
+
+**The Architecture:**
+- **State Machine** → Defines the state (all logic and transitions)
+- **Context** → Realtime reactive snapshot of current state reflection
+- **View Template** → Dumb template that just renders context (zero logic)
 
 Your actor looks at this notebook to know what to show and what to do!
 
@@ -3585,10 +3601,11 @@ Your actor looks at this notebook to know what to show and what to do!
 - ✅ Accessed reactively via ReactiveStore (universal `read()` API)
 - ✅ Never mutated directly - always through state machine
 
-**View** → Renders from context variables
+**View** → Dumb template that renders from context variables
 - ✅ **Read-only** - only reads from context
+- ✅ **Zero logic** - pure declarative structure, no conditionals
 - ✅ Sends events to state machine (never updates context directly)
-- ✅ Automatically re-renders when context changes
+- ✅ Automatically re-renders when context changes (realtime reactive snapshot)
 
 ### Single Source of Truth: CoValue Under the Hood
 
@@ -4721,6 +4738,11 @@ State: idle (with your new todo!)
 ```
 
 The state machine is like a traffic controller - it decides what happens next!
+
+**CRITICAL ARCHITECTURE:**
+- **State Machines define the state** - All logic, computation, and state transitions
+- **Context is the realtime reactive snapshot** - Current reflection of state, automatically updated
+- **Templates are "dumb"** - Pure declarative structure, zero logic, just render context
 
 ## State Machine Responsibility: Single Source of Truth
 
@@ -7049,12 +7071,24 @@ Potential future operations:
 
 > Views are the EYES of an actor. They visualize context and capture user events.
 
-- **Views** define WHAT to render (declarative, zero logic)
+**CRITICAL ARCHITECTURE:**
+- **Templates are "dumb"** - Pure declarative structure, zero logic, zero conditionals
+- **State Machines define the state** - All logic, computation, and state transitions happen here
+- **Context is the realtime reactive snapshot** - The current reflection of state, automatically updated when state changes
 - **ViewEngine** handles HOW to render (imperative)
-- **Context** provides the DATA to display
-- **State Machine** computes all conditional values (no `$if` in views!)
-- **CSS** handles conditional styling via data-attributes
+- **CSS** handles conditional styling via data-attributes (no `$if` in views!)
 - **Events** trigger state machine transitions
+
+**The Flow:**
+```
+State Machine (defines state) 
+  ↓
+Updates Context (realtime reactive snapshot)
+  ↓
+View Template (dumb, just renders context)
+  ↓
+CSS (handles conditional styling via data-attributes)
+```
 
 ## View Definition
 
@@ -7115,10 +7149,13 @@ Create a file named `{name}.view.maia`:
 }
 ```
 
-**Important:** Views contain **zero conditional logic**. All conditionals are handled by:
-- **State Machine** → computes boolean flags → stores in context
-- **View** → references context values → maps to data-attributes
+**CRITICAL:** Views are **"dumb" templates** - they contain **zero conditional logic**. All conditionals are handled by:
+- **State Machine** → defines state, computes boolean flags → stores in context
+- **Context** → realtime reactive snapshot of current state reflection
+- **View** → dumb template, just references context values → maps to data-attributes
 - **CSS** → matches data-attributes → applies conditional styles
+
+**Remember:** Templates don't think, they just render. State machines think. Context reflects.
 
 ## HTML Tags
 
@@ -7308,7 +7345,13 @@ Data-attributes are the primary mechanism for conditional styling. The state mac
 
 ## Conditional Styling (No `$if` in Views!)
 
-**Views contain zero conditional logic.** All conditionals are handled by the state machine and CSS:
+**CRITICAL:** Views are **"dumb" templates** - they contain **zero conditional logic**. All conditionals are handled by the state machine and CSS:
+
+**Architecture:**
+- **State Machine** → Defines state, computes boolean flags
+- **Context** → Realtime reactive snapshot of current state reflection  
+- **View Template** → Dumb, just references context → maps to data-attributes
+- **CSS** → Handles conditional styling via data-attributes
 
 ### Pattern: State Machine → Context → Data-Attributes → CSS
 
@@ -7791,9 +7834,14 @@ Views support only these operations:
 | `$contextKey` | `"$viewMode"`, `"$$id"` | Variable references |
 
 **Removed Operations:**
-- ❌ `$if` - Use state machine + data-attributes + CSS instead
+- ❌ `$if` - **Templates are dumb!** Use state machine + data-attributes + CSS instead
 - ❌ `slot` - Migrated to `$slot` for consistency
 - ❌ `on` - Migrated to `$on` for consistency
+
+**Remember the Architecture:**
+- **State Machines** → Define state (all logic)
+- **Context** → Realtime reactive snapshot of current state reflection
+- **Templates** → Dumb, just render context (zero logic)
 
 ## Next Steps
 
@@ -8569,12 +8617,14 @@ Inject into Shadow DOM
 **Components Section:**
 - Use for component definitions (e.g., `.todoItem`, `.card`, `.button`)
 - Supports nested data-attribute syntax for conditional styling
-- Component names map to CSS classes (camelCase → kebab-case)
+- Component names map to CSS classes (camelCase → kebab-case automatically)
 
 **Selectors Section:**
 - Use for advanced CSS selectors (e.g., `:host`, `h1`, `button:hover`)
 - Use for pseudo-classes, pseudo-elements, and media queries
 - Typically used in brand styles for global element styling
+- **Class selectors are automatically converted** from camelCase to kebab-case (e.g., `.todoCategory` → `.todo-category`) to match DOM class names
+- Special selectors (`:host`, `@container`, `@media`) are preserved without conversion
 
 ## Common Patterns
 
@@ -8713,24 +8763,26 @@ Inject into Shadow DOM
 
 ### How It Works
 
-Every actor's shadow host **automatically** has `container-type: inline-size` enabled via the StyleEngine. This means:
+Every actor's shadow host **automatically** has `container-type: inline-size` and a unique `container-name` enabled via the StyleEngine. This means:
 
-- Your actor's root element becomes a container
+- Your actor's root element (`:host`) becomes a container automatically
 - All elements inside can use `@container` queries
 - Works in ALL contexts: maia-city, standalone apps, embedded actors
 - **Zero configuration required** - it just works everywhere
+- Breakpoint tokens are automatically available to all actors
 
-### Semantic Breakpoints
+### Mobile-First Breakpoint Tokens
 
-Use these standard breakpoint tokens in your container queries:
+Use these standard mobile-first breakpoint tokens in your container queries (automatically injected by StyleEngine):
 
-- `{containers.3xs}` - 20rem (320px)
-- `{containers.2xs}` - 24rem (384px)
-- `{containers.xs}` - 32rem (512px)
-- `{containers.sm}` - 40rem (640px)
-- `{containers.md}` - 48rem (768px)
-- `{containers.lg}` - 64rem (1024px)
-- `{containers.xl}` - 80rem (1280px)
+- `{containers.xs}` - 240px (small phones)
+- `{containers.sm}` - 360px (standard phones)
+- `{containers.md}` - 480px (large phones/small tablets)
+- `{containers.lg}` - 640px (tablets)
+- `{containers.xl}` - 768px (large tablets/small desktop)
+- `{containers.2xl}` - 1024px (desktop)
+
+**Note:** These tokens are automatically available to all actors. Brands can override them if needed, but all actors get these defaults.
 
 ### Example: Responsive Card Grid
 

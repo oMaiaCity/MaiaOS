@@ -7,6 +7,7 @@
 // Import vibe manifest
 import todosVibe from './manifest.vibe.maia';
 import brandStyle from './agent/brand.style.maia';
+import listStyle from './list/list.style.maia';
 import logsStyle from './logs/logs.style.maia';
 
 // Import all actors
@@ -48,6 +49,7 @@ export const TodosVibeRegistry = {
   
   styles: {
     '@todos/style/brand': brandStyle,
+    '@todos/style/list': listStyle,
     '@todos/style/logs': logsStyle,
   },
   

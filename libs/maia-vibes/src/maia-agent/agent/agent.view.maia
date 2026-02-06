@@ -14,11 +14,6 @@
             "class": "welcome-section",
             "children": [
               {
-                "tag": "span",
-                "class": "agent-category",
-                "text": "Sovereign Assistant"
-              },
-              {
                 "tag": "h2",
                 "class": "agent-title",
                 "text": "Maia"
@@ -40,13 +35,35 @@
               "items": "$conversations",
               "template": {
                 "tag": "div",
-                "class": "message",
+                "class": "message-wrapper",
                 "attrs": {
                   "data": {
                     "role": "$$role"
                   }
                 },
-                "text": "$$content"
+                "children": [
+                  {
+                    "tag": "div",
+                    "class": "message-name",
+                    "text": {
+                      "$if": {
+                        "condition": { "$eq": ["$$role", "user"] },
+                        "then": "me",
+                        "else": "Maia"
+                      }
+                    }
+                  },
+                  {
+                    "tag": "div",
+                    "class": "message",
+                    "attrs": {
+                      "data": {
+                        "role": "$$role"
+                      }
+                    },
+                    "text": "$$content"
+                  }
+                ]
               }
             }
           }
