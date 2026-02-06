@@ -301,16 +301,10 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 				<div class="vibe-card">
 					<div id="vibe-container-${escapeHtml(currentVibe)}" class="vibe-container"></div>
 				</div>
-				<!-- Bottom navbar area for mobile -->
+				<!-- Bottom navbar area for mobile - only home button (vibe-specific buttons handled by vibes) -->
 				<div class="bottom-navbar">
 					<div class="bottom-navbar-left">
-						<button class="sidebar-toggle-btn sidebar-toggle-left" onclick="window.toggleLeftSidebar()" aria-label="Toggle navigation sidebar">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<line x1="3" y1="12" x2="21" y2="12"></line>
-								<line x1="3" y1="6" x2="21" y2="6"></line>
-								<line x1="3" y1="18" x2="21" y2="18"></line>
-							</svg>
-						</button>
+						<!-- Left buttons are vibe-specific, not global -->
 					</div>
 					<div class="bottom-navbar-center">
 						<button class="home-btn bottom-home-btn" onclick="window.navigateToScreen('dashboard')" title="Home">
@@ -322,43 +316,8 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 						</button>
 					</div>
 					<div class="bottom-navbar-right">
-						<button class="sidebar-toggle-btn sidebar-toggle-right" onclick="window.toggleRightSidebar()" aria-label="Toggle detail sidebar">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<circle cx="12" cy="12" r="10"></circle>
-								<path d="M12 16v-4M12 8h.01"/>
-							</svg>
-						</button>
+						<!-- Right buttons are vibe-specific, not global -->
 					</div>
-				</div>
-			</div>
-			
-			<!-- Bottom navbar area for mobile -->
-			<div class="bottom-navbar">
-				<div class="bottom-navbar-left">
-					<button class="sidebar-toggle-btn sidebar-toggle-left" onclick="window.toggleLeftSidebar()" aria-label="Toggle navigation sidebar">
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<line x1="3" y1="12" x2="21" y2="12"></line>
-							<line x1="3" y1="6" x2="21" y2="6"></line>
-							<line x1="3" y1="18" x2="21" y2="18"></line>
-						</svg>
-					</button>
-				</div>
-				<div class="bottom-navbar-center">
-					<button class="home-btn bottom-home-btn" onclick="window.navigateToScreen('dashboard')" title="Home">
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-							<polyline points="9 22 9 12 15 12 15 22"></polyline>
-						</svg>
-						<span class="home-label">Home</span>
-					</button>
-				</div>
-				<div class="bottom-navbar-right">
-					<button class="sidebar-toggle-btn sidebar-toggle-right" onclick="window.toggleRightSidebar()" aria-label="Toggle detail sidebar">
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<circle cx="12" cy="12" r="10"></circle>
-							<path d="M12 16v-4M12 8h.01"/>
-						</svg>
-					</button>
 				</div>
 			</div>
 		</div>

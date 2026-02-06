@@ -1932,31 +1932,33 @@ pre {
 	position: relative;
 }
 
-/* Bottom Navbar Area */
+/* Bottom Navbar Area - Floating buttons, no background */
 .bottom-navbar {
 	display: none; /* Hidden on desktop */
 	position: fixed;
-	bottom: 0;
+	bottom: 1rem;
 	left: 0;
 	right: 0;
 	padding: 0;
 	margin: 0;
-	min-height: 60px;
-	background: rgba(255, 255, 255, 0.4);
-	backdrop-filter: blur(12px) saturate(160%);
-	border-top: 1px solid rgba(255, 255, 255, 0.2);
-	box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+	min-height: auto;
+	background: transparent;
+	border: none;
+	box-shadow: none;
 	z-index: 1000;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 0;
 	border-radius: 0;
-	border-bottom-left-radius: 0;
-	border-bottom-right-radius: 0;
 	width: 100vw;
 	margin-left: 0;
 	margin-right: 0;
+	pointer-events: none; /* Allow clicks to pass through empty areas */
+}
+
+.bottom-navbar > * {
+	pointer-events: auto; /* Re-enable pointer events for buttons */
 }
 
 .bottom-navbar-left {
