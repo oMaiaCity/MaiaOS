@@ -69,6 +69,10 @@ import switchViewMessageSchema from './message/SWITCH_VIEW.schema.json';
 import successMessageSchema from './message/SUCCESS.schema.json';
 import errorMessageSchema from './message/ERROR.schema.json';
 import sendMessageMessageSchema from './message/SEND_MESSAGE.schema.json';
+import retryMessageSchema from './message/RETRY.schema.json';
+import dismissMessageSchema from './message/DISMISS.schema.json';
+import selectNavMessageSchema from './message/SELECT_NAV.schema.json';
+import selectRowMessageSchema from './message/SELECT_ROW.schema.json';
 
 // Schema registry
 const SCHEMAS = {
@@ -114,7 +118,11 @@ const MESSAGE_SCHEMAS = {
   'message/SWITCH_VIEW': switchViewMessageSchema,
   'message/SUCCESS': successMessageSchema,
   'message/ERROR': errorMessageSchema,
-  'message/SEND_MESSAGE': sendMessageMessageSchema
+  'message/SEND_MESSAGE': sendMessageMessageSchema,
+  'message/RETRY': retryMessageSchema,
+  'message/DISMISS': dismissMessageSchema,
+  'message/SELECT_NAV': selectNavMessageSchema,
+  'message/SELECT_ROW': selectRowMessageSchema
 };
 
 /**

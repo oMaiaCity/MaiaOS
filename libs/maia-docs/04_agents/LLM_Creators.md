@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-02-07T22:05:32.860Z
+**Auto-generated:** 2026-02-07T22:32:10.620Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -1128,8 +1128,7 @@ my-app/
     "idle": {
       "on": {
         "CREATE_TODO": {
-          "target": "creating",
-          "guard": { "$ne": ["$newTodoText", ""] }
+          "target": "creating"
         }
       }
     },
@@ -2359,6 +2358,9 @@ Create a file named `{name}.actor.maia`:
 - **Self-Documenting**: Anyone can see what messages an actor accepts
 - **Early Rejection**: Invalid message types are rejected immediately with clear errors
 - **Distributed-Friendly**: Remote actors know what messages to send/receive
+
+**Message Type Schemas:**
+Each message type (e.g., `CREATE_BUTTON`, `TOGGLE_BUTTON`) must have a corresponding schema definition (`@schema/message/CREATE_BUTTON`, `@schema/message/TOGGLE_BUTTON`) that validates the message payload. The message type schema IS the payload schema - they're the same thing (merged concept). These schemas are automatically validated by ActorEngine before messages reach the state machine.
 
 **Style Properties:**
 - `brand` is **required** - shared design system (tokens, components) used by all actors
@@ -4179,13 +4181,14 @@ Use `$` prefix to reference context fields:
 
 ```json
 {
-  "guard": {"$ne": ["$newTodoText", ""]},
   "payload": {
     "text": "$newTodoText",
     "mode": "$viewMode"
   }
 }
 ```
+
+**Note:** Guards are schema-based and validate against state/context conditions only. Payload validation happens in ActorEngine via message type schemas before messages reach the state machine.
 
 ### From Views
 Use `$` prefix in expressions:
@@ -5058,8 +5061,7 @@ Create a file named `{name}.state.maia`:
     "idle": {
       "on": {
         "CREATE_TODO": {
-          "target": "creating",
-          "guard": {"$ne": ["$newTodoText", ""]}
+          "target": "creating"
         }
       }
     },
@@ -5156,11 +5158,22 @@ Entry and exit actions can be:
   "on": {
     "SUBMIT": {
       "target": "submitting",
-      "guard": {"$ne": ["$formData.email", ""]}  // Only if email not empty
+      "guard": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "canSubmit": { "const": true },
+            "status": { "const": "ready" }
+          },
+          "required": ["canSubmit", "status"]
+        }
+      }
     }
   }
 }
 ```
+
+**Note:** Guards validate against state/context conditions only. Payload validation (e.g., checking if email is not empty) happens in ActorEngine via message type schemas before the message reaches the state machine.
 
 ### Self-Transition (No State Change)
 ```json
@@ -5553,7 +5566,6 @@ Toggle is not a separate operation. Use `update` with an expression:
         },
         "CREATE_TODO": {
           "target": "creating",
-          "guard": {"$ne": ["$newTodoText", ""]}
         }
       }
     },
@@ -5678,11 +5690,9 @@ Toggle is not a separate operation. Use `update` with an expression:
         },
         "CREATE_TODO": {
           "target": "creating",
-          "guard": {"$ne": ["$newTodoText", ""]}
         },
         "TOGGLE_TODO": {
           "target": "toggling",
-          "guard": {"$ne": ["$$id", null]}
         },
         "DELETE_TODO": {
           "target": "deleting"
@@ -7025,8 +7035,7 @@ actor.context.error = error.message;
     "idle": {
       "on": {
         "CREATE_TODO": {
-          "target": "creating",
-          "guard": {"$ne": ["$newTodoText", ""]}
+          "target": "creating"
         },
         "TOGGLE_TODO": {
           "target": "toggling"
@@ -9500,21 +9509,28 @@ Every schema must have:
 }
 ```
 
-#### Example 3: Guard Schema (comap - accepts any MaiaScript expression)
+#### Example 3: Guard Schema (comap - schema-based conditional logic)
 ```json
 {
   "$schema": "@schema/meta",
   "$id": "@schema/guard",
   "title": "@schema/guard",
-  "description": "Guard condition for state machine transitions",
+  "description": "JSON Schema guard for conditional logic - checks state/context conditions (NOT payload validation)",
   "cotype": "comap",
   "indexing": true,
-  "properties": {},
-  "additionalProperties": true  // ← Accepts any MaiaScript expression properties
+  "required": ["schema"],
+  "properties": {
+    "schema": {
+      "type": "object",
+      "description": "JSON Schema to validate against current state/context (for conditional logic only, NOT payload validation)",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
 }
 ```
 
-**Note**: The `guard` schema accepts any properties (via `additionalProperties: true`), allowing any MaiaScript expression to be used as a guard condition. Guards are validated against the MaiaScript expression schema at runtime.
+**Note**: Guards are **schema-based only** - they use JSON Schema to validate against the current state and context. Guards are for conditional logic (should this transition happen?), NOT payload validation. Payload validation happens in ActorEngine before messages reach the state machine.
 
 #### Example 4: View Schema (comap with internal $defs)
 ```json

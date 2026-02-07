@@ -6,5 +6,6 @@
   "view": "@my-data/view/detail",
   "state": "@my-data/state/detail",
   "brand": "@my-data/style/brand",
-  "inbox": "@my-data/inbox/detail"
+  "inbox": "@my-data/inbox/detail",
+  "messageTypes": []
 }

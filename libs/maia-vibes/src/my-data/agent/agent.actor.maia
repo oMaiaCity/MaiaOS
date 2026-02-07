@@ -6,5 +6,9 @@
   "view": "@my-data/view/agent",
   "state": "@my-data/state/agent",
   "brand": "@my-data/style/brand",
-  "inbox": "@my-data/inbox/agent"
+  "inbox": "@my-data/inbox/agent",
+  "messageTypes": [
+    "SELECT_NAV",
+    "SELECT_ROW"
+  ]
 }

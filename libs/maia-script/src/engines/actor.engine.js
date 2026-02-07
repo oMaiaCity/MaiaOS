@@ -828,14 +828,18 @@ export class ActorEngine {
    * @returns {boolean} True if message type is accepted, false otherwise
    */
   _validateMessageType(actor, messageType) {
-    // If actor has messageTypes array, check if message type is in contract
-    if (actor.messageTypes && Array.isArray(actor.messageTypes)) {
-      if (!actor.messageTypes.includes(messageType)) {
-        console.error(`[ActorEngine] Message type "${messageType}" not in actor's message contract. Actor: ${actor.id}, Accepted types: ${actor.messageTypes.join(', ')}`);
-        return false;
-      }
+    // REQUIRED: All actors must declare messageTypes (exhaustive list - like sealed protocol)
+    if (!actor.messageTypes || !Array.isArray(actor.messageTypes)) {
+      console.error(`[ActorEngine] Actor "${actor.id}" missing required "messageTypes" array. All actors must declare their message contracts.`);
+      return false;
     }
-    // If no messageTypes declared, accept all (backward compatibility during migration)
+    
+    // Check if message type is in contract
+    if (!actor.messageTypes.includes(messageType)) {
+      console.error(`[ActorEngine] Message type "${messageType}" not in actor's message contract. Actor: ${actor.id}, Accepted types: ${actor.messageTypes.join(', ')}`);
+      return false;
+    }
+    
     return true;
   }
 
@@ -851,14 +855,14 @@ export class ActorEngine {
     }
 
     try {
-      // Try to resolve message type schema from registry
+      // Resolve message type schema from registry
       // Format: @schema/message/{MESSAGE_TYPE}
       const schemaKey = `@schema/message/${messageType}`;
       const schema = await resolve(this.dbEngine.backend, schemaKey, { returnType: 'schema' });
       return schema;
     } catch (error) {
-      // Schema not found - this is expected during migration
-      // In final implementation, all message types MUST have schemas
+      // Schema not found - all message types MUST have schemas registered
+      console.error(`[ActorEngine] Message type schema not found for "${messageType}". All message types must have schemas registered.`, error);
       return null;
     }
   }
@@ -873,16 +877,11 @@ export class ActorEngine {
    */
   async _validateMessagePayload(messageTypeSchema, payload, messageType) {
     if (!messageTypeSchema) {
-      // No schema defined - skip validation (backward compatibility during migration)
-      return { valid: true, errors: null };
+      // Schema is required - this should never happen if _loadMessageTypeSchema is called first
+      return { valid: false, errors: [`Message type schema is required for ${messageType}`] };
     }
 
     try {
-      // DEBUG: Log schema structure for troubleshooting
-      if (messageType === 'TOGGLE_BUTTON' || messageType === 'DELETE_BUTTON') {
-        console.log(`[ActorEngine] Schema for ${messageType}:`, JSON.stringify(messageTypeSchema, null, 2));
-      }
-      
       // Filter out CoJSON metadata properties that shouldn't be validated
       // These are added by the CoMap structure but aren't part of the JSON Schema
       const { groupInfo, ...schemaForValidation } = messageTypeSchema;
@@ -925,10 +924,6 @@ export class ActorEngine {
           // Step 3: Validate payload against message type schema (REQUIRED)
           // Ensure payload is always an object (never undefined/null)
           const payload = message.payload || {};
-          // DEBUG: Log payload structure for troubleshooting
-          if (message.type === 'TOGGLE_BUTTON' || message.type === 'DELETE_BUTTON') {
-            console.log(`[ActorEngine] Validating ${message.type} payload:`, JSON.stringify(payload, null, 2));
-          }
           const validation = await this._validateMessagePayload(messageTypeSchema, payload, message.type);
           if (!validation.valid) {
             const errorDetails = validation.errors?.map(err => `  - ${err.instancePath || err.path || 'root'}: ${err.message || err}`).join('\n') || 'Unknown validation error';

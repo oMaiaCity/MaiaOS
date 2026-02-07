@@ -107,6 +107,33 @@ export class StateEngine {
   }
 
   /**
+   * Clean tool result by removing CoJSON metadata (groupInfo)
+   * Tool results from database operations include groupInfo which is metadata, not data
+   * @param {any} result - Tool result (can be any type)
+   * @returns {any} Cleaned result without groupInfo
+   */
+  _cleanToolResult(result) {
+    if (!result || typeof result !== 'object') {
+      return result; // Primitives, null, undefined pass through
+    }
+    
+    if (Array.isArray(result)) {
+      return result.map(item => this._cleanToolResult(item));
+    }
+    
+    // Remove groupInfo from object
+    const { groupInfo, ...cleaned } = result;
+    
+    // Recursively clean nested objects
+    const finalCleaned = {};
+    for (const [key, value] of Object.entries(cleaned)) {
+      finalCleaned[key] = this._cleanToolResult(value);
+    }
+    
+    return finalCleaned;
+  }
+
+  /**
    * Evaluate guard using JSON Schema validation
    * Guards check state/context conditions (NOT payload validation)
    * 
@@ -189,8 +216,26 @@ export class StateEngine {
       }
     
     if (actions.tool) {
-      const result = await this._invokeTool(machine, actions.tool, actions.payload);
+      // Single tool action: For entry actions, _executeStateActions handles SUCCESS sending
+      // For non-entry actions, _invokeTool handles SUCCESS sending
+      const isEntry = type === 'entry';
+      const result = await this._invokeTool(machine, actions.tool, actions.payload, true, isEntry);
       if (result) machine.lastToolResult = result;
+      
+      // For entry actions, send SUCCESS here (not in _invokeTool) to avoid duplicates
+      if (isEntry && stateDef.on?.SUCCESS && machine.actor?.actorEngine) {
+        const originalEventPayload = machine.eventPayload || {};
+        const cleanedResult = machine.lastToolResult ? this._cleanToolResult(machine.lastToolResult) : null;
+        const successPayload = {
+          result: cleanedResult,
+          ...originalEventPayload
+        };
+        try {
+          await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', successPayload);
+        } catch (error) {
+          console.error(`[StateEngine] ❌ Failed to send SUCCESS event:`, error);
+        }
+      }
     } else if (Array.isArray(actions)) {
       // ARCHITECTURE: Preserve original eventPayload for SUCCESS events so $$id references work
       // Flow: co-value (inbox) -> $store (state machine) -> actions
@@ -202,8 +247,10 @@ export class StateEngine {
       
       if (conditionCheck) {
         // Include original event payload AND tool result in SUCCESS so $$id and $$result references work
+        // Clean tool result to remove CoJSON metadata (groupInfo) - it's metadata, not data
+        const cleanedResult = machine.lastToolResult ? this._cleanToolResult(machine.lastToolResult) : null;
         const successPayload = {
-          result: machine.lastToolResult || null,
+          result: cleanedResult,
           ...originalEventPayload
         };
         try {
@@ -219,8 +266,10 @@ export class StateEngine {
       await this._executeActions(machine, actions, machine.eventPayload);
       if (type === 'entry' && stateDef.on?.SUCCESS && machine.actor?.actorEngine) {
         // Include original event payload AND tool result in SUCCESS so $$id and $$result references work
+        // Clean tool result to remove CoJSON metadata (groupInfo) - it's metadata, not data
+        const cleanedResult = machine.lastToolResult ? this._cleanToolResult(machine.lastToolResult) : null;
         const successPayload = {
-          result: machine.lastToolResult || null,
+          result: cleanedResult,
           ...originalEventPayload
         };
         await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', successPayload);
@@ -412,7 +461,7 @@ export class StateEngine {
     if (updates) await machine.actor.actorEngine.updateContextCoValue(machine.actor, updates);
   }
 
-  async _invokeTool(machine, toolName, payload = {}, autoTransition = true) {
+  async _invokeTool(machine, toolName, payload = {}, autoTransition = true, isEntryAction = false) {
     try {
       // ARCHITECTURE: Preserve original eventPayload by including it in SUCCESS event payload
       // This ensures $$id and other references work correctly without in-memory hacks
@@ -424,14 +473,21 @@ export class StateEngine {
       // (views send events, not tool calls directly). So we always evaluate tool payloads from action configs.
       const evaluatedPayload = await this._evaluatePayload(payload, machine.actor.context, machine.eventPayload || {}, machine.lastToolResult, machine.actor);
       const result = await this.toolEngine.execute(toolName, machine.actor, evaluatedPayload);
-      if (autoTransition) {
+      // For entry actions, SUCCESS is handled by _executeStateActions, not here
+      // This prevents duplicate SUCCESS events
+      if (autoTransition && !isEntryAction) {
         const stateDef = machine.definition.states[machine.currentState];
-        // Include original event payload in SUCCESS event so $$id references work
-        // CRITICAL: Put result AFTER spread so it takes precedence over any result in originalEventPayload
-        await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', { 
-          ...originalEventPayload,
-          result  // This must come last to override any result from originalEventPayload
-        });
+        // Only send SUCCESS if there's a SUCCESS handler in the current state
+        if (stateDef?.on?.SUCCESS && machine.actor?.actorEngine) {
+          // Include original event payload in SUCCESS event so $$id references work
+          // Clean tool result to remove CoJSON metadata (groupInfo) - it's metadata, not data
+          // CRITICAL: Put result AFTER spread so it takes precedence over any result in originalEventPayload
+          const cleanedResult = result ? this._cleanToolResult(result) : null;
+          await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', { 
+            ...originalEventPayload,
+            result: cleanedResult  // This must come last to override any result from originalEventPayload
+          });
+        }
       }
       return result;
     } catch (error) {

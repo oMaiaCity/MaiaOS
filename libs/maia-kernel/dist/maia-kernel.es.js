@@ -12700,26 +12700,26 @@ function ajvCoTypesPlugin(ajv2) {
     }
   });
 }
-const $schema$B = "https://json-schema.org/draft/2020-12/schema";
-const $id$C = "@schema/meta";
+const $schema$F = "https://json-schema.org/draft/2020-12/schema";
+const $id$G = "@schema/meta";
 const $vocabulary$8 = { "https://json-schema.org/draft/2020-12/vocab/core": true, "https://json-schema.org/draft/2020-12/vocab/applicator": true, "https://json-schema.org/draft/2020-12/vocab/unevaluated": true, "https://json-schema.org/draft/2020-12/vocab/validation": true, "https://json-schema.org/draft/2020-12/vocab/meta-data": true, "https://json-schema.org/draft/2020-12/vocab/format-annotation": true, "https://json-schema.org/draft/2020-12/vocab/content": true, "https://maiaos.dev/vocab/cojson": true };
 const allOf$2 = [{ "$ref": "https://json-schema.org/draft/2020-12/schema" }];
-const title$B = "@schema/meta";
-const type$j = ["object", "boolean"];
-const indexing$s = false;
-const properties$x = { "title": { "type": "string", "description": "Human-readable schema title (required)" }, "cotype": { "enum": ["comap", "colist", "costream"], "description": "CRDT type at schema root. Schemas can be comap (with properties), colist (with items), or costream (with items). CoText is modeled as colist with string items." }, "$co": { "type": "string", "anyOf": [{ "pattern": "^co_z[a-zA-Z0-9]+$", "description": "Co-id reference (after transformation)" }, { "pattern": "^@schema/", "description": "Human-readable schema ID (before transformation)" }], "description": "Reference to schema that this property value must conform to (human-readable ID or co-id). Use $co in properties to reference separate CoValues, never use cotype in properties." }, "indexing": { "type": "boolean", "default": false, "description": "Whether instances of this schema should be indexed in account.os.{schemaCoId}" } };
-const required$f = ["title", "cotype"];
+const title$F = "@schema/meta";
+const type$n = ["object", "boolean"];
+const indexing$w = false;
+const properties$B = { "title": { "type": "string", "description": "Human-readable schema title (required)" }, "cotype": { "enum": ["comap", "colist", "costream"], "description": "CRDT type at schema root. Schemas can be comap (with properties), colist (with items), or costream (with items). CoText is modeled as colist with string items." }, "$co": { "type": "string", "anyOf": [{ "pattern": "^co_z[a-zA-Z0-9]+$", "description": "Co-id reference (after transformation)" }, { "pattern": "^@schema/", "description": "Human-readable schema ID (before transformation)" }], "description": "Reference to schema that this property value must conform to (human-readable ID or co-id). Use $co in properties to reference separate CoValues, never use cotype in properties." }, "indexing": { "type": "boolean", "default": false, "description": "Whether instances of this schema should be indexed in account.os.{schemaCoId}" } };
+const required$h = ["title", "cotype"];
 const $defs$5 = { "comap": { "description": "CoMap - CRDT-based collaborative map/object", "type": "object", "properties": {}, "additionalProperties": { "anyOf": [{ "type": "string", "description": "Standard string value" }, { "type": "number", "description": "Standard number value" }, { "type": "integer", "description": "Standard integer value" }, { "type": "boolean", "description": "Standard boolean value" }, { "type": "null", "description": "Null value" }, { "type": "object", "description": "Nested object value" }, { "type": "array", "description": "Array value" }, { "type": "string", "pattern": "^co_z[a-zA-Z0-9]+$", "description": "Co-id reference to another CoValue" }, { "type": "string", "pattern": "^key_[a-zA-Z0-9_]+$", "description": "Key reference" }, { "type": "string", "pattern": "^sealed_", "description": "Sealed/encrypted value" }] } }, "costream": { "description": "CoStream - CRDT-based append-only stream", "type": "array", "items": { "anyOf": [{ "type": "object", "description": "Stream item object" }, { "type": "string", "description": "Stream item string" }, { "type": "number", "description": "Stream item number" }, { "type": "boolean", "description": "Stream item boolean" }, { "type": "null", "description": "Stream item null" }] } }, "colist": { "description": "CoList - CRDT-based collaborative list/array", "type": "array", "items": { "anyOf": [{ "type": "object", "description": "List item object" }, { "type": "string", "description": "List item string (can be co-id reference)" }, { "type": "number", "description": "List item number" }, { "type": "integer", "description": "List item integer" }, { "type": "boolean", "description": "List item boolean" }, { "type": "null", "description": "List item null" }, { "type": "array", "description": "Nested array" }] } } };
 const mergedMetaSchema = {
-  $schema: $schema$B,
-  $id: $id$C,
+  $schema: $schema$F,
+  $id: $id$G,
   $vocabulary: $vocabulary$8,
   allOf: allOf$2,
-  title: title$B,
-  type: type$j,
-  indexing: indexing$s,
-  properties: properties$x,
-  required: required$f,
+  title: title$F,
+  type: type$n,
+  indexing: indexing$w,
+  properties: properties$B,
+  required: required$h,
   $defs: $defs$5
 };
 class ValidationEngine {
@@ -13965,47 +13965,119 @@ const coIdGenerator = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defin
   __proto__: null,
   CoIdRegistry
 }, Symbol.toStringTag, { value: "Module" }));
+const $schema$E = "@schema/meta";
+const $id$F = "@schema/actor";
+const title$E = "@schema/actor";
+const description$u = "Pure declarative actor specification";
+const cotype$v = "comap";
+const indexing$v = true;
+const properties$A = { "role": { "type": "string", "description": "Actor role (e.g., 'kanban-view', 'vibe', 'composite', 'leaf')" }, "context": { "$co": "@schema/context", "description": "Co-id reference to context definition" }, "view": { "$co": "@schema/view", "description": "Co-id reference to view definition" }, "state": { "$co": "@schema/state", "description": "Co-id reference to state machine definition" }, "brand": { "$co": "@schema/style", "description": "Co-id reference to brand style definition (uses style schema)" }, "style": { "$co": "@schema/style", "description": "Co-id reference to local style definition" }, "inbox": { "$co": "@schema/inbox", "description": "Co-id reference to message inbox costream (append-only message feed)" }, "messageTypes": { "type": "array", "items": { "type": "string" }, "description": "REQUIRED: Message types this actor accepts (exhaustive list - like sealed protocol). All actors must declare their message contracts." } };
+const actorSchema = {
+  $schema: $schema$E,
+  $id: $id$F,
+  title: title$E,
+  description: description$u,
+  cotype: cotype$v,
+  indexing: indexing$v,
+  properties: properties$A
+};
+const $schema$D = "@schema/meta";
+const $id$E = "@schema/context";
+const title$D = "@schema/context";
+const description$t = "Runtime data for an actor (flexible JSON structure). The context itself is a comap CoValue (for CRDT sync/versioning), but all inner properties are plain JS objects/arrays/strings - NOT CoJSON types.";
+const cotype$u = "comap";
+const indexing$u = true;
+const additionalProperties$m = { "description": "Any context fields (query objects, collections, UI state, form values, etc.). Query objects have schema + options properties. All inner properties are plain JS types (objects/arrays/strings/primitives) - NOT CoJSON types.", "anyOf": [{ "type": "object", "description": "Query object for reactive subscription (has schema property). Can include nested options object with map, filter, etc.", "properties": { "schema": { "type": "string", "description": "Schema reference (e.g., '@schema/message' or co-id)" }, "options": { "type": "object", "description": "Query options (map, filter, etc.)", "properties": { "map": { "type": "object", "description": "Map transformation expressions (e.g., { sender: '$$source.role' })", "additionalProperties": { "type": "string" } }, "filter": { "description": "Filter criteria", "oneOf": [{ "type": "object" }, { "type": "null" }] } }, "additionalProperties": true }, "filter": { "description": "Filter criteria (legacy - use options.filter instead)", "oneOf": [{ "type": "object" }, { "type": "null" }] } }, "required": ["schema"], "additionalProperties": true }, { "type": "array", "description": "Array of data items (after SubscriptionEngine processes the query object)" }, { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }, { "type": "object", "description": "Any other nested object (UI state, form values, etc.)" }] };
+const contextSchema = {
+  $schema: $schema$D,
+  $id: $id$E,
+  title: title$D,
+  description: description$t,
+  cotype: cotype$u,
+  indexing: indexing$u,
+  additionalProperties: additionalProperties$m
+};
+const $schema$C = "@schema/meta";
+const $id$D = "@schema/state";
+const title$C = "@schema/state";
+const description$s = "XState-like state machine with states, transitions, guards, and actions";
+const cotype$t = "comap";
+const indexing$t = true;
+const required$g = ["initial", "states"];
+const properties$z = { "initial": { "type": "string", "description": "Initial state name" }, "states": { "type": "object", "description": "State definitions", "additionalProperties": { "type": "object", "properties": { "entry": { "oneOf": [{ "type": "object", "description": "Inline tool action object", "properties": { "tool": { "type": "string", "description": "Tool identifier" }, "payload": { "type": "object", "description": "Tool payload", "additionalProperties": true } }, "required": ["tool"] }, { "type": "object", "description": "Infrastructure context update action", "properties": { "updateContext": { "type": "object", "description": "Context updates (infrastructure, not a tool)", "additionalProperties": true } }, "required": ["updateContext"] }, { "type": "object", "description": "Map operations engine configs to context keys (universal API)", "properties": { "mapData": { "type": "object", "description": "Map operations engine configs to context keys (universal API)", "additionalProperties": { "type": "object", "description": "Operations engine config (op, schema, filter, key, keys, etc.)", "properties": { "op": { "type": "string", "description": "Operation type (read, create, update, delete, schema, resolve, etc.)", "default": "read" } }, "additionalProperties": true } } }, "required": ["mapData"] }, { "type": "array", "description": "Array of inline action objects", "items": { "oneOf": [{ "type": "object", "properties": { "tool": { "type": "string", "description": "Tool identifier" }, "payload": { "type": "object", "description": "Tool payload", "additionalProperties": true } }, "required": ["tool"] }, { "type": "object", "properties": { "updateContext": { "type": "object", "description": "Context updates (infrastructure, not a tool)", "additionalProperties": true } }, "required": ["updateContext"] }, { "type": "object", "properties": { "mapData": { "type": "object", "description": "Map operations engine configs to context keys (universal API)", "additionalProperties": { "type": "object", "description": "Operations engine config (op, schema, filter, key, keys, etc.)", "properties": { "op": { "type": "string", "description": "Operation type (read, create, update, delete, schema, resolve, etc.)", "default": "read" } }, "additionalProperties": true } } }, "required": ["mapData"] }] } }, { "$co": "@schema/action", "description": "Co-id reference to action CoValue" }, { "type": "array", "description": "Array of action co-id references", "items": { "$co": "@schema/action" } }] }, "exit": { "oneOf": [{ "type": "object", "description": "Inline tool action object", "properties": { "tool": { "type": "string", "description": "Tool identifier" }, "payload": { "type": "object", "description": "Tool payload", "additionalProperties": true } }, "required": ["tool"] }, { "type": "object", "description": "Infrastructure context update action", "properties": { "updateContext": { "type": "object", "description": "Context updates (infrastructure, not a tool)", "additionalProperties": true } }, "required": ["updateContext"] }, { "type": "object", "description": "Map operations engine configs to context keys (universal API)", "properties": { "mapData": { "type": "object", "description": "Map operations engine configs to context keys (universal API)", "additionalProperties": { "type": "object", "description": "Operations engine config (op, schema, filter, key, keys, etc.)", "properties": { "op": { "type": "string", "description": "Operation type (read, create, update, delete, schema, resolve, etc.)", "default": "read" } }, "additionalProperties": true } } }, "required": ["mapData"] }, { "type": "array", "description": "Array of inline action objects", "items": { "oneOf": [{ "type": "object", "properties": { "tool": { "type": "string", "description": "Tool identifier" }, "payload": { "type": "object", "description": "Tool payload", "additionalProperties": true } }, "required": ["tool"] }, { "type": "object", "properties": { "updateContext": { "type": "object", "description": "Context updates (infrastructure, not a tool)", "additionalProperties": true } }, "required": ["updateContext"] }, { "type": "object", "properties": { "mapData": { "type": "object", "description": "Map operations engine configs to context keys (universal API)", "additionalProperties": { "type": "object", "description": "Operations engine config (op, schema, filter, key, keys, etc.)", "properties": { "op": { "type": "string", "description": "Operation type (read, create, update, delete, schema, resolve, etc.)", "default": "read" } }, "additionalProperties": true } } }, "required": ["mapData"] }] } }, { "$co": "@schema/action", "description": "Co-id reference to action CoValue" }, { "type": "array", "description": "Array of action co-id references", "items": { "$co": "@schema/action" } }] }, "on": { "type": "object", "description": "Event handlers (transitions)", "additionalProperties": { "oneOf": [{ "type": "string", "description": "Simple target state name" }, { "type": "object", "description": "Inline transition object", "properties": { "target": { "type": "string", "description": "Target state name" }, "guard": { "type": "object", "description": "Guard condition", "additionalProperties": true }, "actions": { "type": "array", "description": "Transition actions", "items": { "oneOf": [{ "type": "object", "properties": { "tool": { "type": "string", "description": "Tool identifier" }, "payload": { "type": "object", "additionalProperties": true } }, "required": ["tool"] }, { "type": "object", "properties": { "updateContext": { "type": "object", "description": "Context updates (infrastructure, not a tool)", "additionalProperties": true } }, "required": ["updateContext"] }, { "$co": "@schema/action" }] } } }, "required": ["target"] }, { "$co": "@schema/transition", "description": "Co-id reference to transition CoValue" }] } } }, "additionalProperties": false } } };
+const stateSchema = {
+  $schema: $schema$C,
+  $id: $id$D,
+  title: title$C,
+  description: description$s,
+  cotype: cotype$t,
+  indexing: indexing$t,
+  required: required$g,
+  properties: properties$z
+};
+const $schema$B = "@schema/meta";
+const $id$C = "@schema/view";
+const title$B = "@schema/view";
+const description$r = "UI structure definition with DOM tree, expressions, loops, and event handlers (recursive viewNode structure)";
+const cotype$s = "comap";
+const indexing$s = true;
+const properties$y = { "content": { "type": "object", "description": "View content structure (recursive viewNode)", "$ref": "#/$defs/viewNode" } };
+const $defs$4 = { "viewNode": { "type": "object", "description": "Recursive DOM node structure", "properties": { "tag": { "type": "string" }, "class": { "type": "string" }, "text": { "anyOf": [{ "type": "string", "pattern": "^\\$\\$" }, { "type": "string", "pattern": "^@" }, { "type": "string", "pattern": "^\\$[^$]" }, { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] }, "value": { "anyOf": [{ "type": "string", "pattern": "^\\$\\$" }, { "type": "string", "pattern": "^@" }, { "type": "string", "pattern": "^\\$[^$]" }, { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] }, "attrs": { "type": "object", "additionalProperties": { "anyOf": [{ "type": "string", "pattern": "^\\$\\$" }, { "type": "string", "pattern": "^@" }, { "type": "string", "pattern": "^\\$[^$]" }, { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }, { "type": "object", "additionalProperties": { "anyOf": [{ "type": "string", "pattern": "^\\$\\$" }, { "type": "string", "pattern": "^@" }, { "type": "string", "pattern": "^\\$[^$]" }, { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] } }] } }, "children": { "type": "array", "items": { "$ref": "#/$defs/viewNode" } }, "$on": { "type": "object", "additionalProperties": { "type": "object", "properties": { "send": { "type": "string" }, "payload": { "type": "object", "additionalProperties": true }, "key": { "type": "string" } }, "required": ["send"] } }, "$each": { "type": "object", "properties": { "items": { "anyOf": [{ "type": "string", "pattern": "^\\$\\$" }, { "type": "string", "pattern": "^@" }, { "type": "string", "pattern": "^\\$[^$]" }, { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] }, "template": { "$ref": "#/$defs/viewNode" } }, "required": ["items", "template"] }, "$slot": { "anyOf": [{ "type": "string", "pattern": "^\\$\\$" }, { "type": "string", "pattern": "^@" }, { "type": "string", "pattern": "^\\$[^$]" }, { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] } }, "additionalProperties": false } };
+const additionalProperties$l = false;
+const viewSchema = {
+  $schema: $schema$B,
+  $id: $id$C,
+  title: title$B,
+  description: description$r,
+  cotype: cotype$s,
+  indexing: indexing$s,
+  properties: properties$y,
+  $defs: $defs$4,
+  additionalProperties: additionalProperties$l
+};
 const $schema$A = "@schema/meta";
-const $id$B = "@schema/actor";
-const title$A = "@schema/actor";
-const description$q = "Pure declarative actor specification";
+const $id$B = "@schema/style";
+const title$A = "@schema/style";
+const description$q = "Style definition (brand or actor-specific). Brand styles typically include selectors, actor styles are overrides.";
 const cotype$r = "comap";
 const indexing$r = true;
-const properties$w = { "role": { "type": "string", "description": "Actor role (e.g., 'kanban-view', 'vibe', 'composite', 'leaf')" }, "context": { "$co": "@schema/context", "description": "Co-id reference to context definition" }, "view": { "$co": "@schema/view", "description": "Co-id reference to view definition" }, "state": { "$co": "@schema/state", "description": "Co-id reference to state machine definition" }, "brand": { "$co": "@schema/style", "description": "Co-id reference to brand style definition (uses style schema)" }, "style": { "$co": "@schema/style", "description": "Co-id reference to local style definition" }, "inbox": { "$co": "@schema/inbox", "description": "Co-id reference to message inbox costream (append-only message feed)" }, "messageTypes": { "type": "array", "items": { "type": "string" }, "description": "REQUIRED: Message types this actor accepts (exhaustive list - like sealed protocol). If not provided, actor accepts all message types." } };
-const actorSchema = {
+const properties$x = { "tokens": { "type": "object", "description": "Design tokens (colors, spacing, typography, etc.)", "additionalProperties": true }, "components": { "type": "object", "description": "Component styles", "additionalProperties": true }, "selectors": { "type": "object", "description": "CSS selector-based styles (typically used in brand styles)", "additionalProperties": { "type": "object", "description": "CSS properties and values", "additionalProperties": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "object", "additionalProperties": true }] } } } };
+const styleSchema = {
   $schema: $schema$A,
   $id: $id$B,
   title: title$A,
   description: description$q,
   cotype: cotype$r,
   indexing: indexing$r,
-  properties: properties$w
+  properties: properties$x
 };
 const $schema$z = "@schema/meta";
-const $id$A = "@schema/context";
-const title$z = "@schema/context";
-const description$p = "Runtime data for an actor (flexible JSON structure). The context itself is a comap CoValue (for CRDT sync/versioning), but all inner properties are plain JS objects/arrays/strings - NOT CoJSON types.";
+const $id$A = "@schema/tool";
+const title$z = "@schema/tool";
+const description$p = "Tool metadata (AI-compatible JSON schema)";
 const cotype$q = "comap";
 const indexing$q = true;
-const additionalProperties$i = { "description": "Any context fields (query objects, collections, UI state, form values, etc.). Query objects have schema + options properties. All inner properties are plain JS types (objects/arrays/strings/primitives) - NOT CoJSON types.", "anyOf": [{ "type": "object", "description": "Query object for reactive subscription (has schema property). Can include nested options object with map, filter, etc.", "properties": { "schema": { "type": "string", "description": "Schema reference (e.g., '@schema/message' or co-id)" }, "options": { "type": "object", "description": "Query options (map, filter, etc.)", "properties": { "map": { "type": "object", "description": "Map transformation expressions (e.g., { sender: '$$source.role' })", "additionalProperties": { "type": "string" } }, "filter": { "description": "Filter criteria", "oneOf": [{ "type": "object" }, { "type": "null" }] } }, "additionalProperties": true }, "filter": { "description": "Filter criteria (legacy - use options.filter instead)", "oneOf": [{ "type": "object" }, { "type": "null" }] } }, "required": ["schema"], "additionalProperties": true }, { "type": "array", "description": "Array of data items (after SubscriptionEngine processes the query object)" }, { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }, { "type": "object", "description": "Any other nested object (UI state, form values, etc.)" }] };
-const contextSchema = {
+const required$f = ["name", "description", "parameters"];
+const properties$w = { "name": { "type": "string", "description": "Tool identifier (e.g., '@mutation/create')", "pattern": "^@" }, "description": { "type": "string", "description": "Tool description" }, "parameters": { "type": "object", "description": "JSON Schema for tool parameters (standard JSON Schema format)", "properties": { "type": { "type": "string", "enum": ["object", "array", "string", "number", "boolean", "null"] }, "properties": { "type": "object", "additionalProperties": { "type": "object", "description": "Parameter property schema", "properties": { "type": { "type": "string" }, "description": { "type": "string" }, "required": { "type": "boolean" }, "properties": { "type": "object", "additionalProperties": true } }, "additionalProperties": true } }, "required": { "type": "array", "items": { "type": "string" } } }, "required": ["type"], "additionalProperties": true } };
+const toolSchema = {
   $schema: $schema$z,
   $id: $id$A,
   title: title$z,
   description: description$p,
   cotype: cotype$q,
   indexing: indexing$q,
-  additionalProperties: additionalProperties$i
+  required: required$f,
+  properties: properties$w
 };
 const $schema$y = "@schema/meta";
-const $id$z = "@schema/state";
-const title$y = "@schema/state";
-const description$o = "XState-like state machine with states, transitions, guards, and actions";
+const $id$z = "@schema/vibe";
+const title$y = "@schema/vibe";
+const description$o = "Vibe manifest/metadata";
 const cotype$p = "comap";
 const indexing$p = true;
-const required$e = ["initial", "states"];
-const properties$v = { "initial": { "type": "string", "description": "Initial state name" }, "states": { "type": "object", "description": "State definitions", "additionalProperties": { "type": "object", "properties": { "entry": { "oneOf": [{ "type": "object", "description": "Inline tool action object", "properties": { "tool": { "type": "string", "description": "Tool identifier" }, "payload": { "type": "object", "description": "Tool payload", "additionalProperties": true } }, "required": ["tool"] }, { "type": "object", "description": "Infrastructure context update action", "properties": { "updateContext": { "type": "object", "description": "Context updates (infrastructure, not a tool)", "additionalProperties": true } }, "required": ["updateContext"] }, { "type": "object", "description": "Map operations engine configs to context keys (universal API)", "properties": { "mapData": { "type": "object", "description": "Map operations engine configs to context keys (universal API)", "additionalProperties": { "type": "object", "description": "Operations engine config (op, schema, filter, key, keys, etc.)", "properties": { "op": { "type": "string", "description": "Operation type (read, create, update, delete, schema, resolve, etc.)", "default": "read" } }, "additionalProperties": true } } }, "required": ["mapData"] }, { "type": "array", "description": "Array of inline action objects", "items": { "oneOf": [{ "type": "object", "properties": { "tool": { "type": "string", "description": "Tool identifier" }, "payload": { "type": "object", "description": "Tool payload", "additionalProperties": true } }, "required": ["tool"] }, { "type": "object", "properties": { "updateContext": { "type": "object", "description": "Context updates (infrastructure, not a tool)", "additionalProperties": true } }, "required": ["updateContext"] }, { "type": "object", "properties": { "mapData": { "type": "object", "description": "Map operations engine configs to context keys (universal API)", "additionalProperties": { "type": "object", "description": "Operations engine config (op, schema, filter, key, keys, etc.)", "properties": { "op": { "type": "string", "description": "Operation type (read, create, update, delete, schema, resolve, etc.)", "default": "read" } }, "additionalProperties": true } } }, "required": ["mapData"] }] } }, { "$co": "@schema/action", "description": "Co-id reference to action CoValue" }, { "type": "array", "description": "Array of action co-id references", "items": { "$co": "@schema/action" } }] }, "exit": { "oneOf": [{ "type": "object", "description": "Inline tool action object", "properties": { "tool": { "type": "string", "description": "Tool identifier" }, "payload": { "type": "object", "description": "Tool payload", "additionalProperties": true } }, "required": ["tool"] }, { "type": "object", "description": "Infrastructure context update action", "properties": { "updateContext": { "type": "object", "description": "Context updates (infrastructure, not a tool)", "additionalProperties": true } }, "required": ["updateContext"] }, { "type": "object", "description": "Map operations engine configs to context keys (universal API)", "properties": { "mapData": { "type": "object", "description": "Map operations engine configs to context keys (universal API)", "additionalProperties": { "type": "object", "description": "Operations engine config (op, schema, filter, key, keys, etc.)", "properties": { "op": { "type": "string", "description": "Operation type (read, create, update, delete, schema, resolve, etc.)", "default": "read" } }, "additionalProperties": true } } }, "required": ["mapData"] }, { "type": "array", "description": "Array of inline action objects", "items": { "oneOf": [{ "type": "object", "properties": { "tool": { "type": "string", "description": "Tool identifier" }, "payload": { "type": "object", "description": "Tool payload", "additionalProperties": true } }, "required": ["tool"] }, { "type": "object", "properties": { "updateContext": { "type": "object", "description": "Context updates (infrastructure, not a tool)", "additionalProperties": true } }, "required": ["updateContext"] }, { "type": "object", "properties": { "mapData": { "type": "object", "description": "Map operations engine configs to context keys (universal API)", "additionalProperties": { "type": "object", "description": "Operations engine config (op, schema, filter, key, keys, etc.)", "properties": { "op": { "type": "string", "description": "Operation type (read, create, update, delete, schema, resolve, etc.)", "default": "read" } }, "additionalProperties": true } } }, "required": ["mapData"] }] } }, { "$co": "@schema/action", "description": "Co-id reference to action CoValue" }, { "type": "array", "description": "Array of action co-id references", "items": { "$co": "@schema/action" } }] }, "on": { "type": "object", "description": "Event handlers (transitions)", "additionalProperties": { "oneOf": [{ "type": "string", "description": "Simple target state name" }, { "type": "object", "description": "Inline transition object", "properties": { "target": { "type": "string", "description": "Target state name" }, "guard": { "type": "object", "description": "Guard condition", "additionalProperties": true }, "actions": { "type": "array", "description": "Transition actions", "items": { "oneOf": [{ "type": "object", "properties": { "tool": { "type": "string", "description": "Tool identifier" }, "payload": { "type": "object", "additionalProperties": true } }, "required": ["tool"] }, { "type": "object", "properties": { "updateContext": { "type": "object", "description": "Context updates (infrastructure, not a tool)", "additionalProperties": true } }, "required": ["updateContext"] }, { "$co": "@schema/action" }] } } }, "required": ["target"] }, { "$co": "@schema/transition", "description": "Co-id reference to transition CoValue" }] } } }, "additionalProperties": false } } };
-const stateSchema = {
+const required$e = ["name", "description", "actor"];
+const properties$v = { "name": { "type": "string", "description": "Vibe name" }, "description": { "type": "string", "description": "Vibe description" }, "actor": { "$co": "@schema/actor", "description": "Co-id reference to actor definition (root actor for this vibe)" } };
+const vibeSchema = {
   $schema: $schema$y,
   $id: $id$z,
   title: title$y,
@@ -14016,318 +14088,332 @@ const stateSchema = {
   properties: properties$v
 };
 const $schema$x = "@schema/meta";
-const $id$y = "@schema/view";
-const title$x = "@schema/view";
-const description$n = "UI structure definition with DOM tree, expressions, loops, and event handlers (recursive viewNode structure)";
+const $id$y = "@schema/message";
+const title$x = "@schema/message";
+const description$n = "Actor message for state machine transitions";
 const cotype$o = "comap";
 const indexing$o = true;
-const properties$u = { "content": { "type": "object", "description": "View content structure (recursive viewNode)", "$ref": "#/$defs/viewNode" } };
-const $defs$4 = { "viewNode": { "type": "object", "description": "Recursive DOM node structure", "properties": { "tag": { "type": "string" }, "class": { "type": "string" }, "text": { "anyOf": [{ "type": "string", "pattern": "^\\$\\$" }, { "type": "string", "pattern": "^@" }, { "type": "string", "pattern": "^\\$[^$]" }, { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] }, "value": { "anyOf": [{ "type": "string", "pattern": "^\\$\\$" }, { "type": "string", "pattern": "^@" }, { "type": "string", "pattern": "^\\$[^$]" }, { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] }, "attrs": { "type": "object", "additionalProperties": { "anyOf": [{ "type": "string", "pattern": "^\\$\\$" }, { "type": "string", "pattern": "^@" }, { "type": "string", "pattern": "^\\$[^$]" }, { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }, { "type": "object", "additionalProperties": { "anyOf": [{ "type": "string", "pattern": "^\\$\\$" }, { "type": "string", "pattern": "^@" }, { "type": "string", "pattern": "^\\$[^$]" }, { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] } }] } }, "children": { "type": "array", "items": { "$ref": "#/$defs/viewNode" } }, "$on": { "type": "object", "additionalProperties": { "type": "object", "properties": { "send": { "type": "string" }, "payload": { "type": "object", "additionalProperties": true }, "key": { "type": "string" } }, "required": ["send"] } }, "$each": { "type": "object", "properties": { "items": { "anyOf": [{ "type": "string", "pattern": "^\\$\\$" }, { "type": "string", "pattern": "^@" }, { "type": "string", "pattern": "^\\$[^$]" }, { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] }, "template": { "$ref": "#/$defs/viewNode" } }, "required": ["items", "template"] }, "$slot": { "anyOf": [{ "type": "string", "pattern": "^\\$\\$" }, { "type": "string", "pattern": "^@" }, { "type": "string", "pattern": "^\\$[^$]" }, { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] } }, "additionalProperties": false } };
-const additionalProperties$h = false;
-const viewSchema = {
+const required$d = ["type"];
+const properties$u = { "type": { "type": "string", "description": "Message type (event name)" }, "payload": { "type": "object", "description": "Message payload data" }, "source": { "$co": "@schema/actor", "description": "Co-id reference to source actor" }, "target": { "$co": "@schema/actor", "description": "Co-id reference to target actor (required for direct messaging)" }, "processed": { "type": "boolean", "description": "Whether this message has been processed", "default": false } };
+const messageSchema = {
   $schema: $schema$x,
   $id: $id$y,
   title: title$x,
   description: description$n,
   cotype: cotype$o,
   indexing: indexing$o,
-  properties: properties$u,
-  $defs: $defs$4,
-  additionalProperties: additionalProperties$h
+  required: required$d,
+  properties: properties$u
 };
 const $schema$w = "@schema/meta";
-const $id$x = "@schema/style";
-const title$w = "@schema/style";
-const description$m = "Style definition (brand or actor-specific). Brand styles typically include selectors, actor styles are overrides.";
+const $id$x = "@schema/guard";
+const title$w = "@schema/guard";
+const description$m = "JSON Schema guard for conditional logic - checks state/context conditions (NOT payload validation)";
 const cotype$n = "comap";
 const indexing$n = true;
-const properties$t = { "tokens": { "type": "object", "description": "Design tokens (colors, spacing, typography, etc.)", "additionalProperties": true }, "components": { "type": "object", "description": "Component styles", "additionalProperties": true }, "selectors": { "type": "object", "description": "CSS selector-based styles (typically used in brand styles)", "additionalProperties": { "type": "object", "description": "CSS properties and values", "additionalProperties": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "object", "additionalProperties": true }] } } } };
-const styleSchema = {
+const required$c = ["schema"];
+const properties$t = { "schema": { "type": "object", "description": "JSON Schema to validate against current state/context (for conditional logic only, NOT payload validation)", "additionalProperties": true } };
+const additionalProperties$k = false;
+const guardSchema = {
   $schema: $schema$w,
   $id: $id$x,
   title: title$w,
   description: description$m,
   cotype: cotype$n,
   indexing: indexing$n,
-  properties: properties$t
+  required: required$c,
+  properties: properties$t,
+  additionalProperties: additionalProperties$k
 };
 const $schema$v = "@schema/meta";
-const $id$w = "@schema/tool";
-const title$v = "@schema/tool";
-const description$l = "Tool metadata (AI-compatible JSON schema)";
+const $id$w = "@schema/action";
+const title$v = "@schema/action";
+const description$l = "Action (tool invocation, context update, or data mapping)";
 const cotype$m = "comap";
 const indexing$m = true;
-const required$d = ["name", "description", "parameters"];
-const properties$s = { "name": { "type": "string", "description": "Tool identifier (e.g., '@mutation/create')", "pattern": "^@" }, "description": { "type": "string", "description": "Tool description" }, "parameters": { "type": "object", "description": "JSON Schema for tool parameters (standard JSON Schema format)", "properties": { "type": { "type": "string", "enum": ["object", "array", "string", "number", "boolean", "null"] }, "properties": { "type": "object", "additionalProperties": { "type": "object", "description": "Parameter property schema", "properties": { "type": { "type": "string" }, "description": { "type": "string" }, "required": { "type": "boolean" }, "properties": { "type": "object", "additionalProperties": true } }, "additionalProperties": true } }, "required": { "type": "array", "items": { "type": "string" } } }, "required": ["type"], "additionalProperties": true } };
-const toolSchema = {
+const oneOf$1 = [{ "type": "object", "properties": { "tool": { "type": "string", "description": "Tool identifier (e.g., '@mutation/create')" }, "payload": { "description": "Tool payload (can contain expressions)", "type": "object", "additionalProperties": true } }, "required": ["tool"] }, { "type": "object", "properties": { "updateContext": { "type": "object", "description": "Context updates (infrastructure, not a tool)", "additionalProperties": true } }, "required": ["updateContext"] }, { "type": "object", "properties": { "mapData": { "type": "object", "description": "Map operations engine configs to context keys (universal API)", "additionalProperties": { "type": "object", "description": "Operations engine config (op, schema, filter, key, keys, etc.)", "properties": { "op": { "type": "string", "description": "Operation type (read, create, update, delete, schema, resolve, etc.)", "default": "read" } }, "additionalProperties": true } } }, "required": ["mapData"] }];
+const actionSchema = {
   $schema: $schema$v,
   $id: $id$w,
   title: title$v,
   description: description$l,
   cotype: cotype$m,
   indexing: indexing$m,
-  required: required$d,
-  properties: properties$s
+  oneOf: oneOf$1
 };
 const $schema$u = "@schema/meta";
-const $id$v = "@schema/vibe";
-const title$u = "@schema/vibe";
-const description$k = "Vibe manifest/metadata";
+const $id$v = "@schema/transition";
+const title$u = "@schema/transition";
+const description$k = "State machine transition";
 const cotype$l = "comap";
 const indexing$l = true;
-const required$c = ["name", "description", "actor"];
-const properties$r = { "name": { "type": "string", "description": "Vibe name" }, "description": { "type": "string", "description": "Vibe description" }, "actor": { "$co": "@schema/actor", "description": "Co-id reference to actor definition (root actor for this vibe)" } };
-const vibeSchema = {
+const properties$s = { "target": { "type": "string", "description": "Target state name" }, "guard": { "$co": "@schema/guard" }, "actions": { "type": "array", "items": { "$co": "@schema/action" } } };
+const required$b = ["target"];
+const transitionSchema = {
   $schema: $schema$u,
   $id: $id$v,
   title: title$u,
   description: description$k,
   cotype: cotype$l,
   indexing: indexing$l,
-  required: required$c,
-  properties: properties$r
+  properties: properties$s,
+  required: required$b
 };
 const $schema$t = "@schema/meta";
-const $id$u = "@schema/message";
-const title$t = "@schema/message";
-const description$j = "Actor message for state machine transitions";
+const $id$u = "@schema/messagePayload";
+const title$t = "@schema/messagePayload";
+const description$j = "Message payload definition";
 const cotype$k = "comap";
 const indexing$k = true;
-const required$b = ["type"];
-const properties$q = { "type": { "type": "string", "description": "Message type (event name)" }, "payload": { "type": "object", "description": "Message payload data" }, "source": { "$co": "@schema/actor", "description": "Co-id reference to source actor" }, "target": { "$co": "@schema/actor", "description": "Co-id reference to target actor (required for direct messaging)" }, "processed": { "type": "boolean", "description": "Whether this message has been processed", "default": false } };
-const messageSchema = {
+const properties$r = {};
+const additionalProperties$j = true;
+const messagePayloadSchema = {
   $schema: $schema$t,
   $id: $id$u,
   title: title$t,
   description: description$j,
   cotype: cotype$k,
   indexing: indexing$k,
-  required: required$b,
-  properties: properties$q
+  properties: properties$r,
+  additionalProperties: additionalProperties$j
 };
 const $schema$s = "@schema/meta";
-const $id$t = "@schema/guard";
-const title$s = "@schema/guard";
-const description$i = "JSON Schema guard for conditional logic - checks state/context conditions (NOT payload validation)";
+const $id$t = "@schema/messageType";
+const title$s = "@schema/messageType";
+const description$i = "Message type schemas are standard JSON Schemas that validate message payloads. The schema ID (e.g., '@schema/message/CREATE_BUTTON') identifies the message type.";
 const cotype$j = "comap";
 const indexing$j = true;
-const required$a = ["schema"];
-const properties$p = { "schema": { "type": "object", "description": "JSON Schema to validate against current state/context (for conditional logic only, NOT payload validation)", "additionalProperties": true } };
-const additionalProperties$g = false;
-const guardSchema = {
+const type$m = "object";
+const additionalProperties$i = true;
+const messageTypeSchema = {
   $schema: $schema$s,
   $id: $id$t,
   title: title$s,
   description: description$i,
   cotype: cotype$j,
   indexing: indexing$j,
-  required: required$a,
-  properties: properties$p,
-  additionalProperties: additionalProperties$g
+  type: type$m,
+  additionalProperties: additionalProperties$i
 };
 const $schema$r = "@schema/meta";
-const $id$s = "@schema/action";
-const title$r = "@schema/action";
-const description$h = "Action (tool invocation, context update, or data mapping)";
+const $id$s = "@schema/maia-script-expression";
+const title$r = "@schema/maia-script-expression";
 const cotype$i = "comap";
-const indexing$i = true;
-const oneOf$1 = [{ "type": "object", "properties": { "tool": { "type": "string", "description": "Tool identifier (e.g., '@mutation/create')" }, "payload": { "description": "Tool payload (can contain expressions)", "type": "object", "additionalProperties": true } }, "required": ["tool"] }, { "type": "object", "properties": { "updateContext": { "type": "object", "description": "Context updates (infrastructure, not a tool)", "additionalProperties": true } }, "required": ["updateContext"] }, { "type": "object", "properties": { "mapData": { "type": "object", "description": "Map operations engine configs to context keys (universal API)", "additionalProperties": { "type": "object", "description": "Operations engine config (op, schema, filter, key, keys, etc.)", "properties": { "op": { "type": "string", "description": "Operation type (read, create, update, delete, schema, resolve, etc.)", "default": "read" } }, "additionalProperties": true } } }, "required": ["mapData"] }];
-const actionSchema = {
+const indexing$i = false;
+const description$h = "JSON-based DSL expression schema for MaiaScript runtime logic. Supports data access, comparisons, logical operations, control flow, and nested expressions.";
+const anyOf$1 = [{ "description": "Primitive value", "type": ["number", "boolean", "null"] }, { "description": "String value (including shortcut syntax $key or $$key)", "type": "string" }, { "$ref": "#/$defs/expressionObject" }];
+const $defs$3 = { "expressionObject": { "description": "MaiaScript expression object (DSL operation)", "type": "object", "oneOf": [{ "description": "$context operation - access context data", "properties": { "$context": { "type": "string", "description": "Dot-separated path in context object (e.g., 'user.name')", "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$" } }, "required": ["$context"], "additionalProperties": false }, { "description": "$item operation - access item data", "properties": { "$item": { "type": "string", "description": "Dot-separated path in item object (e.g., 'id', 'status.value')", "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$" } }, "required": ["$item"], "additionalProperties": false }, { "description": "$eq operation - equality comparison", "properties": { "$eq": { "type": "array", "description": "Array of two expressions to compare", "items": { "$ref": "#" }, "minItems": 2, "maxItems": 2 } }, "required": ["$eq"], "additionalProperties": false }, { "description": "$ne operation - inequality comparison", "properties": { "$ne": { "type": "array", "description": "Array of two expressions to compare", "items": { "$ref": "#" }, "minItems": 2, "maxItems": 2 } }, "required": ["$ne"], "additionalProperties": false }, { "description": "$not operation - logical NOT (negate boolean)", "properties": { "$not": { "$ref": "#", "description": "Expression to negate (evaluated to boolean, then negated)" } }, "required": ["$not"], "additionalProperties": false }, { "description": "$and operation - logical AND (all operands must be truthy)", "properties": { "$and": { "type": "array", "description": "Array of expressions to evaluate (all must be truthy)", "items": { "$ref": "#" }, "minItems": 1 } }, "required": ["$and"], "additionalProperties": false }, { "description": "$or operation - logical OR (at least one operand must be truthy)", "properties": { "$or": { "type": "array", "description": "Array of expressions to evaluate (at least one must be truthy)", "items": { "$ref": "#" }, "minItems": 1 } }, "required": ["$or"], "additionalProperties": false }, { "description": "$trim operation - trim whitespace from string", "properties": { "$trim": { "$ref": "#", "description": "Expression to trim (evaluated to string, then trimmed of leading/trailing whitespace)" } }, "required": ["$trim"], "additionalProperties": false }, { "description": "$gt operation - greater than comparison", "properties": { "$gt": { "type": "array", "description": "Array of two expressions to compare (left > right)", "items": { "$ref": "#" }, "minItems": 2, "maxItems": 2 } }, "required": ["$gt"], "additionalProperties": false }, { "description": "$length operation - get array or string length", "properties": { "$length": { "$ref": "#", "description": "Expression to get length of (evaluated to array or string)" } }, "required": ["$length"], "additionalProperties": false }, { "description": "$concat operation - concatenate arrays", "properties": { "$concat": { "type": "array", "description": "Array of expressions, arrays, or objects to concatenate (all evaluated to arrays, then flattened)", "items": { "anyOf": [{ "$ref": "#" }, { "type": ["array", "object", "string", "number", "boolean", "null"] }] }, "minItems": 1 } }, "required": ["$concat"], "additionalProperties": false }, { "description": "$map operation - map over array", "properties": { "$map": { "type": "object", "description": "Map configuration object", "properties": { "array": { "$ref": "#", "description": "Expression evaluating to array to map over" }, "as": { "type": "string", "description": "Variable name for each item in the array (default: 'item')" }, "return": { "description": "Expression, object, or array to evaluate for each item (result becomes item in returned array). 'do' is also supported as an alias.", "anyOf": [{ "$ref": "#" }, { "type": ["object", "array", "string", "number", "boolean", "null"] }] }, "do": { "description": "Alias for 'return' - expression, object, or array to evaluate for each item", "anyOf": [{ "$ref": "#" }, { "type": ["object", "array", "string", "number", "boolean", "null"] }] } }, "required": ["array"], "additionalProperties": false } }, "required": ["$map"], "additionalProperties": false }, { "description": "$if operation - conditional expression", "properties": { "$if": { "type": "object", "description": "Conditional expression object", "properties": { "condition": { "$ref": "#", "description": "Condition expression (evaluated to boolean)" }, "then": { "$ref": "#", "description": "Expression to evaluate if condition is true" }, "else": { "$ref": "#", "description": "Expression to evaluate if condition is false" } }, "required": ["condition", "then", "else"], "additionalProperties": false } }, "required": ["$if"], "additionalProperties": false }] } };
+const expressionSchema = {
   $schema: $schema$r,
   $id: $id$s,
   title: title$r,
-  description: description$h,
   cotype: cotype$i,
   indexing: indexing$i,
-  oneOf: oneOf$1
+  description: description$h,
+  anyOf: anyOf$1,
+  $defs: $defs$3
 };
 const $schema$q = "@schema/meta";
-const $id$r = "@schema/transition";
-const title$q = "@schema/transition";
-const description$g = "State machine transition";
-const cotype$h = "comap";
+const $id$r = "@schema/subscribers";
+const title$q = "@schema/subscribers";
+const description$g = "A colist of actor co-ids subscribed to a topic";
+const cotype$h = "colist";
 const indexing$h = true;
-const properties$o = { "target": { "type": "string", "description": "Target state name" }, "guard": { "$co": "@schema/guard" }, "actions": { "type": "array", "items": { "$co": "@schema/action" } } };
-const required$9 = ["target"];
-const transitionSchema = {
+const items$2 = { "$co": "@schema/actor", "description": "Each item is a co-id reference to an actor subscribed to this topic" };
+const subscribersSchema = {
   $schema: $schema$q,
   $id: $id$r,
   title: title$q,
   description: description$g,
   cotype: cotype$h,
   indexing: indexing$h,
-  properties: properties$o,
-  required: required$9
+  items: items$2
 };
 const $schema$p = "@schema/meta";
-const $id$q = "@schema/messagePayload";
-const title$p = "@schema/messagePayload";
-const description$f = "Message payload definition";
-const cotype$g = "comap";
+const $id$q = "@schema/inbox";
+const title$p = "@schema/inbox";
+const description$f = "A costream (append-only stream) of messages received by this actor";
+const cotype$g = "costream";
 const indexing$g = true;
-const properties$n = {};
-const additionalProperties$f = true;
-const messagePayloadSchema = {
+const items$1 = { "$co": "@schema/message", "description": "Each item is a co-id reference to a message" };
+const inboxSchema = {
   $schema: $schema$p,
   $id: $id$q,
   title: title$p,
   description: description$f,
   cotype: cotype$g,
   indexing: indexing$g,
-  properties: properties$n,
-  additionalProperties: additionalProperties$f
+  items: items$1
 };
 const $schema$o = "@schema/meta";
-const $id$p = "@schema/messageType";
-const title$o = "@schema/messageType";
-const description$e = "Message type schemas are standard JSON Schemas that validate message payloads. The schema ID (e.g., '@schema/message/CREATE_BUTTON') identifies the message type.";
+const $id$p = "@schema/children";
+const title$o = "@schema/children";
+const description$e = "A comap of child actors (namekey → actor co-id)";
 const cotype$f = "comap";
 const indexing$f = true;
-const type$i = "object";
-const additionalProperties$e = true;
-const messageTypeSchema = {
+const properties$q = {};
+const additionalProperties$h = { "$co": "@schema/actor", "description": "Each value is a co-id reference to a child actor" };
+const childrenSchema = {
   $schema: $schema$o,
   $id: $id$p,
   title: title$o,
   description: description$e,
   cotype: cotype$f,
   indexing: indexing$f,
-  type: type$i,
-  additionalProperties: additionalProperties$e
+  properties: properties$q,
+  additionalProperties: additionalProperties$h
 };
 const $schema$n = "@schema/meta";
-const $id$o = "@schema/maia-script-expression";
-const title$n = "@schema/maia-script-expression";
+const $id$o = "@schema/os/schematas-registry";
+const title$n = "@schema/os/schematas-registry";
+const description$d = "Schema registry CoMap - maps schema namekeys (e.g., @schema/data/todos) to schema co-ids (co_z...). Stored in account.os.schematas";
 const cotype$e = "comap";
 const indexing$e = false;
-const description$d = "JSON-based DSL expression schema for MaiaScript runtime logic. Supports data access, comparisons, logical operations, control flow, and nested expressions.";
-const anyOf$1 = [{ "description": "Primitive value", "type": ["number", "boolean", "null"] }, { "description": "String value (including shortcut syntax $key or $$key)", "type": "string" }, { "$ref": "#/$defs/expressionObject" }];
-const $defs$3 = { "expressionObject": { "description": "MaiaScript expression object (DSL operation)", "type": "object", "oneOf": [{ "description": "$context operation - access context data", "properties": { "$context": { "type": "string", "description": "Dot-separated path in context object (e.g., 'user.name')", "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$" } }, "required": ["$context"], "additionalProperties": false }, { "description": "$item operation - access item data", "properties": { "$item": { "type": "string", "description": "Dot-separated path in item object (e.g., 'id', 'status.value')", "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$" } }, "required": ["$item"], "additionalProperties": false }, { "description": "$eq operation - equality comparison", "properties": { "$eq": { "type": "array", "description": "Array of two expressions to compare", "items": { "$ref": "#" }, "minItems": 2, "maxItems": 2 } }, "required": ["$eq"], "additionalProperties": false }, { "description": "$ne operation - inequality comparison", "properties": { "$ne": { "type": "array", "description": "Array of two expressions to compare", "items": { "$ref": "#" }, "minItems": 2, "maxItems": 2 } }, "required": ["$ne"], "additionalProperties": false }, { "description": "$not operation - logical NOT (negate boolean)", "properties": { "$not": { "$ref": "#", "description": "Expression to negate (evaluated to boolean, then negated)" } }, "required": ["$not"], "additionalProperties": false }, { "description": "$and operation - logical AND (all operands must be truthy)", "properties": { "$and": { "type": "array", "description": "Array of expressions to evaluate (all must be truthy)", "items": { "$ref": "#" }, "minItems": 1 } }, "required": ["$and"], "additionalProperties": false }, { "description": "$or operation - logical OR (at least one operand must be truthy)", "properties": { "$or": { "type": "array", "description": "Array of expressions to evaluate (at least one must be truthy)", "items": { "$ref": "#" }, "minItems": 1 } }, "required": ["$or"], "additionalProperties": false }, { "description": "$trim operation - trim whitespace from string", "properties": { "$trim": { "$ref": "#", "description": "Expression to trim (evaluated to string, then trimmed of leading/trailing whitespace)" } }, "required": ["$trim"], "additionalProperties": false }, { "description": "$gt operation - greater than comparison", "properties": { "$gt": { "type": "array", "description": "Array of two expressions to compare (left > right)", "items": { "$ref": "#" }, "minItems": 2, "maxItems": 2 } }, "required": ["$gt"], "additionalProperties": false }, { "description": "$length operation - get array or string length", "properties": { "$length": { "$ref": "#", "description": "Expression to get length of (evaluated to array or string)" } }, "required": ["$length"], "additionalProperties": false }, { "description": "$concat operation - concatenate arrays", "properties": { "$concat": { "type": "array", "description": "Array of expressions, arrays, or objects to concatenate (all evaluated to arrays, then flattened)", "items": { "anyOf": [{ "$ref": "#" }, { "type": ["array", "object", "string", "number", "boolean", "null"] }] }, "minItems": 1 } }, "required": ["$concat"], "additionalProperties": false }, { "description": "$map operation - map over array", "properties": { "$map": { "type": "object", "description": "Map configuration object", "properties": { "array": { "$ref": "#", "description": "Expression evaluating to array to map over" }, "as": { "type": "string", "description": "Variable name for each item in the array (default: 'item')" }, "return": { "description": "Expression, object, or array to evaluate for each item (result becomes item in returned array). 'do' is also supported as an alias.", "anyOf": [{ "$ref": "#" }, { "type": ["object", "array", "string", "number", "boolean", "null"] }] }, "do": { "description": "Alias for 'return' - expression, object, or array to evaluate for each item", "anyOf": [{ "$ref": "#" }, { "type": ["object", "array", "string", "number", "boolean", "null"] }] } }, "required": ["array"], "additionalProperties": false } }, "required": ["$map"], "additionalProperties": false }, { "description": "$if operation - conditional expression", "properties": { "$if": { "type": "object", "description": "Conditional expression object", "properties": { "condition": { "$ref": "#", "description": "Condition expression (evaluated to boolean)" }, "then": { "$ref": "#", "description": "Expression to evaluate if condition is true" }, "else": { "$ref": "#", "description": "Expression to evaluate if condition is false" } }, "required": ["condition", "then", "else"], "additionalProperties": false } }, "required": ["$if"], "additionalProperties": false }] } };
-const expressionSchema = {
+const properties$p = { "@schema/meta": { "type": "string", "description": "Metaschema co-id (co_z...)" } };
+const additionalProperties$g = { "type": "string", "description": "Schema namekey → schema co-id mapping (e.g., @schema/data/todos → co_z123...)" };
+const schematasRegistrySchema = {
   $schema: $schema$n,
   $id: $id$o,
   title: title$n,
+  description: description$d,
   cotype: cotype$e,
   indexing: indexing$e,
-  description: description$d,
-  anyOf: anyOf$1,
-  $defs: $defs$3
+  properties: properties$p,
+  additionalProperties: additionalProperties$g
 };
+const $id$n = "@schema/data/todos";
 const $schema$m = "@schema/meta";
-const $id$n = "@schema/subscribers";
-const title$m = "@schema/subscribers";
-const description$c = "A colist of actor co-ids subscribed to a topic";
-const cotype$d = "colist";
+const title$m = "@schema/data/todos";
+const cotype$d = "comap";
 const indexing$d = true;
-const items$2 = { "$co": "@schema/actor", "description": "Each item is a co-id reference to an actor subscribed to this topic" };
-const subscribersSchema = {
-  $schema: $schema$m,
+const properties$o = { "text": { "type": "string", "minLength": 1, "pattern": ".*\\S.*", "description": "The todo item text content (must contain at least one non-whitespace character)" }, "done": { "type": "boolean", "description": "Whether the todo item is completed" } };
+const required$a = ["text", "done"];
+const additionalProperties$f = false;
+const todosDataSchema = {
   $id: $id$n,
+  $schema: $schema$m,
   title: title$m,
-  description: description$c,
   cotype: cotype$d,
   indexing: indexing$d,
-  items: items$2
+  properties: properties$o,
+  required: required$a,
+  additionalProperties: additionalProperties$f
 };
+const $id$m = "@schema/data/chat";
 const $schema$l = "@schema/meta";
-const $id$m = "@schema/inbox";
-const title$l = "@schema/inbox";
-const description$b = "A costream (append-only stream) of messages received by this actor";
-const cotype$c = "costream";
+const title$l = "@schema/data/chat";
+const cotype$c = "comap";
 const indexing$c = true;
-const items$1 = { "$co": "@schema/message", "description": "Each item is a co-id reference to a message" };
-const inboxSchema = {
-  $schema: $schema$l,
+const properties$n = { "role": { "type": "string", "enum": ["user", "assistant", "system"], "description": "The role of the message sender" }, "content": { "type": "string", "minLength": 1, "description": "The message content" } };
+const required$9 = ["role", "content"];
+const additionalProperties$e = false;
+const chatDataSchema = {
   $id: $id$m,
+  $schema: $schema$l,
   title: title$l,
-  description: description$b,
   cotype: cotype$c,
   indexing: indexing$c,
-  items: items$1
+  properties: properties$n,
+  required: required$9,
+  additionalProperties: additionalProperties$e
 };
 const $schema$k = "@schema/meta";
-const $id$l = "@schema/children";
-const title$k = "@schema/children";
-const description$a = "A comap of child actors (namekey → actor co-id)";
+const $id$l = "@schema/message/CREATE_BUTTON";
+const title$k = "@schema/message/CREATE_BUTTON";
+const description$c = "Message type for creating a new todo item";
 const cotype$b = "comap";
 const indexing$b = true;
-const properties$m = {};
-const additionalProperties$d = { "$co": "@schema/actor", "description": "Each value is a co-id reference to a child actor" };
-const childrenSchema = {
+const type$l = "object";
+const properties$m = { "text": { "type": "string", "minLength": 1, "pattern": "^\\S", "description": "Todo text (required, non-empty, must contain at least one non-whitespace character)" } };
+const required$8 = ["text"];
+const additionalProperties$d = false;
+const createButtonMessageSchema = {
   $schema: $schema$k,
   $id: $id$l,
   title: title$k,
-  description: description$a,
+  description: description$c,
   cotype: cotype$b,
   indexing: indexing$b,
+  type: type$l,
   properties: properties$m,
+  required: required$8,
   additionalProperties: additionalProperties$d
 };
 const $schema$j = "@schema/meta";
-const $id$k = "@schema/os/schematas-registry";
-const title$j = "@schema/os/schematas-registry";
-const description$9 = "Schema registry CoMap - maps schema namekeys (e.g., @schema/data/todos) to schema co-ids (co_z...). Stored in account.os.schematas";
+const $id$k = "@schema/message/TOGGLE_BUTTON";
+const title$j = "@schema/message/TOGGLE_BUTTON";
+const description$b = "Message type for toggling a todo item's done status";
 const cotype$a = "comap";
-const indexing$a = false;
-const properties$l = { "@schema/meta": { "type": "string", "description": "Metaschema co-id (co_z...)" } };
-const additionalProperties$c = { "type": "string", "description": "Schema namekey → schema co-id mapping (e.g., @schema/data/todos → co_z123...)" };
-const schematasRegistrySchema = {
+const indexing$a = true;
+const type$k = "object";
+const properties$l = { "id": { "type": "string", "pattern": "^co_z", "description": "Todo item co-id (required)" }, "done": { "type": "boolean", "description": "Current done status (optional, will be toggled)" } };
+const required$7 = ["id"];
+const additionalProperties$c = false;
+const toggleButtonMessageSchema = {
   $schema: $schema$j,
   $id: $id$k,
   title: title$j,
-  description: description$9,
+  description: description$b,
   cotype: cotype$a,
   indexing: indexing$a,
+  type: type$k,
   properties: properties$l,
+  required: required$7,
   additionalProperties: additionalProperties$c
 };
-const $id$j = "@schema/data/todos";
 const $schema$i = "@schema/meta";
-const title$i = "@schema/data/todos";
+const $id$j = "@schema/message/DELETE_BUTTON";
+const title$i = "@schema/message/DELETE_BUTTON";
+const description$a = "Message type for deleting a todo item";
 const cotype$9 = "comap";
 const indexing$9 = true;
-const properties$k = { "text": { "type": "string", "minLength": 1, "pattern": ".*\\S.*", "description": "The todo item text content (must contain at least one non-whitespace character)" }, "done": { "type": "boolean", "description": "Whether the todo item is completed" } };
-const required$8 = ["text", "done"];
+const type$j = "object";
+const properties$k = { "id": { "type": "string", "pattern": "^co_z", "description": "Todo item co-id (required)" } };
+const required$6 = ["id"];
 const additionalProperties$b = false;
-const todosDataSchema = {
-  $id: $id$j,
+const deleteButtonMessageSchema = {
   $schema: $schema$i,
+  $id: $id$j,
   title: title$i,
+  description: description$a,
   cotype: cotype$9,
   indexing: indexing$9,
+  type: type$j,
   properties: properties$k,
-  required: required$8,
+  required: required$6,
   additionalProperties: additionalProperties$b
 };
-const $id$i = "@schema/data/chat";
 const $schema$h = "@schema/meta";
-const title$h = "@schema/data/chat";
+const $id$i = "@schema/message/UPDATE_INPUT";
+const title$h = "@schema/message/UPDATE_INPUT";
+const description$9 = "Message type for updating input field value";
 const cotype$8 = "comap";
 const indexing$8 = true;
-const properties$j = { "role": { "type": "string", "enum": ["user", "assistant", "system"], "description": "The role of the message sender" }, "content": { "type": "string", "minLength": 1, "description": "The message content" } };
-const required$7 = ["role", "content"];
+const type$i = "object";
+const properties$j = { "newTodoText": { "type": "string", "description": "New input text value" } };
 const additionalProperties$a = false;
-const chatDataSchema = {
-  $id: $id$i,
+const updateInputMessageSchema = {
   $schema: $schema$h,
+  $id: $id$i,
   title: title$h,
+  description: description$9,
   cotype: cotype$8,
   indexing: indexing$8,
+  type: type$i,
   properties: properties$j,
-  required: required$7,
   additionalProperties: additionalProperties$a
 };
 const $schema$g = "@schema/meta";
-const $id$h = "@schema/message/CREATE_BUTTON";
-const title$g = "@schema/message/CREATE_BUTTON";
-const description$8 = "Message type for creating a new todo item";
+const $id$h = "@schema/message/SWITCH_VIEW";
+const title$g = "@schema/message/SWITCH_VIEW";
+const description$8 = "Message type for switching view mode";
 const cotype$7 = "comap";
 const indexing$7 = true;
 const type$h = "object";
-const properties$i = { "text": { "type": "string", "minLength": 1, "pattern": "^\\S", "description": "Todo text (required, non-empty, must contain at least one non-whitespace character)" } };
-const required$6 = ["text"];
+const properties$i = { "viewMode": { "type": "string", "enum": ["list", "logs"], "description": "View mode to switch to (required)" } };
+const required$5 = ["viewMode"];
 const additionalProperties$9 = false;
-const createButtonMessageSchema = {
+const switchViewMessageSchema = {
   $schema: $schema$g,
   $id: $id$h,
   title: title$g,
@@ -14336,20 +14422,19 @@ const createButtonMessageSchema = {
   indexing: indexing$7,
   type: type$h,
   properties: properties$i,
-  required: required$6,
+  required: required$5,
   additionalProperties: additionalProperties$9
 };
 const $schema$f = "@schema/meta";
-const $id$g = "@schema/message/TOGGLE_BUTTON";
-const title$f = "@schema/message/TOGGLE_BUTTON";
-const description$7 = "Message type for toggling a todo item's done status";
+const $id$g = "@schema/message/SUCCESS";
+const title$f = "@schema/message/SUCCESS";
+const description$7 = "Message type for successful operation completion";
 const cotype$6 = "comap";
 const indexing$6 = true;
 const type$g = "object";
-const properties$h = { "id": { "type": "string", "pattern": "^co_z", "description": "Todo item co-id (required)" }, "done": { "type": "boolean", "description": "Current done status (optional, will be toggled)" } };
-const required$5 = ["id"];
-const additionalProperties$8 = false;
-const toggleButtonMessageSchema = {
+const properties$h = { "result": { "description": "Tool execution result (optional, can be any type - object, boolean, string, etc.)" }, "text": { "type": "string", "description": "Original event payload property (optional, for CREATE_BUTTON)" }, "id": { "type": "string", "pattern": "^co_z", "description": "Original event payload property (optional, for TOGGLE_BUTTON, DELETE_BUTTON)" }, "done": { "type": "boolean", "description": "Original event payload property (optional, for TOGGLE_BUTTON)" }, "viewMode": { "type": "string", "enum": ["list", "logs"], "description": "Original event payload property (optional, for SWITCH_VIEW)" }, "newTodoText": { "type": "string", "description": "Original event payload property (optional, for UPDATE_INPUT)" } };
+const additionalProperties$8 = true;
+const successMessageSchema = {
   $schema: $schema$f,
   $id: $id$g,
   title: title$f,
@@ -14358,20 +14443,18 @@ const toggleButtonMessageSchema = {
   indexing: indexing$6,
   type: type$g,
   properties: properties$h,
-  required: required$5,
   additionalProperties: additionalProperties$8
 };
 const $schema$e = "@schema/meta";
-const $id$f = "@schema/message/DELETE_BUTTON";
-const title$e = "@schema/message/DELETE_BUTTON";
-const description$6 = "Message type for deleting a todo item";
+const $id$f = "@schema/message/ERROR";
+const title$e = "@schema/message/ERROR";
+const description$6 = "Message type for operation errors";
 const cotype$5 = "comap";
 const indexing$5 = true;
 const type$f = "object";
-const properties$g = { "id": { "type": "string", "pattern": "^co_z", "description": "Todo item co-id (required)" } };
-const required$4 = ["id"];
+const properties$g = { "error": { "type": "string", "description": "Error message (optional)" } };
 const additionalProperties$7 = false;
-const deleteButtonMessageSchema = {
+const errorMessageSchema = {
   $schema: $schema$e,
   $id: $id$f,
   title: title$e,
@@ -14380,19 +14463,19 @@ const deleteButtonMessageSchema = {
   indexing: indexing$5,
   type: type$f,
   properties: properties$g,
-  required: required$4,
   additionalProperties: additionalProperties$7
 };
 const $schema$d = "@schema/meta";
-const $id$e = "@schema/message/UPDATE_INPUT";
-const title$d = "@schema/message/UPDATE_INPUT";
-const description$5 = "Message type for updating input field value";
+const $id$e = "@schema/message/SEND_MESSAGE";
+const title$d = "@schema/message/SEND_MESSAGE";
+const description$5 = "Message type for sending a chat message";
 const cotype$4 = "comap";
 const indexing$4 = true;
 const type$e = "object";
-const properties$f = { "newTodoText": { "type": "string", "description": "New input text value" } };
+const properties$f = { "inputText": { "type": "string", "minLength": 1, "description": "Message text (required, non-empty)" } };
+const required$4 = ["inputText"];
 const additionalProperties$6 = false;
-const updateInputMessageSchema = {
+const sendMessageMessageSchema = {
   $schema: $schema$d,
   $id: $id$e,
   title: title$d,
@@ -14401,19 +14484,19 @@ const updateInputMessageSchema = {
   indexing: indexing$4,
   type: type$e,
   properties: properties$f,
+  required: required$4,
   additionalProperties: additionalProperties$6
 };
 const $schema$c = "@schema/meta";
-const $id$d = "@schema/message/SWITCH_VIEW";
-const title$c = "@schema/message/SWITCH_VIEW";
-const description$4 = "Message type for switching view mode";
+const $id$d = "@schema/message/RETRY";
+const title$c = "@schema/message/RETRY";
+const description$4 = "Message type for retrying a failed operation";
 const cotype$3 = "comap";
 const indexing$3 = true;
 const type$d = "object";
-const properties$e = { "viewMode": { "type": "string", "enum": ["list", "logs"], "description": "View mode to switch to (required)" } };
-const required$3 = ["viewMode"];
+const properties$e = {};
 const additionalProperties$5 = false;
-const switchViewMessageSchema = {
+const retryMessageSchema = {
   $schema: $schema$c,
   $id: $id$d,
   title: title$c,
@@ -14422,19 +14505,18 @@ const switchViewMessageSchema = {
   indexing: indexing$3,
   type: type$d,
   properties: properties$e,
-  required: required$3,
   additionalProperties: additionalProperties$5
 };
 const $schema$b = "@schema/meta";
-const $id$c = "@schema/message/SUCCESS";
-const title$b = "@schema/message/SUCCESS";
-const description$3 = "Message type for successful operation completion";
+const $id$c = "@schema/message/DISMISS";
+const title$b = "@schema/message/DISMISS";
+const description$3 = "Message type for dismissing an error or notification";
 const cotype$2 = "comap";
 const indexing$2 = true;
 const type$c = "object";
-const properties$d = { "result": { "description": "Tool execution result (optional, can be any type - object, boolean, string, etc.)" }, "text": { "type": "string", "description": "Original event payload property (optional, for CREATE_BUTTON)" }, "id": { "type": "string", "pattern": "^co_z", "description": "Original event payload property (optional, for TOGGLE_BUTTON, DELETE_BUTTON)" }, "done": { "type": "boolean", "description": "Original event payload property (optional, for TOGGLE_BUTTON)" }, "viewMode": { "type": "string", "enum": ["list", "logs"], "description": "Original event payload property (optional, for SWITCH_VIEW)" }, "newTodoText": { "type": "string", "description": "Original event payload property (optional, for UPDATE_INPUT)" } };
-const additionalProperties$4 = true;
-const successMessageSchema = {
+const properties$d = {};
+const additionalProperties$4 = false;
+const dismissMessageSchema = {
   $schema: $schema$b,
   $id: $id$c,
   title: title$b,
@@ -14446,15 +14528,16 @@ const successMessageSchema = {
   additionalProperties: additionalProperties$4
 };
 const $schema$a = "@schema/meta";
-const $id$b = "@schema/message/ERROR";
-const title$a = "@schema/message/ERROR";
-const description$2 = "Message type for operation errors";
+const $id$b = "@schema/message/SELECT_NAV";
+const title$a = "@schema/message/SELECT_NAV";
+const description$2 = "Message type for selecting a navigation item";
 const cotype$1 = "comap";
 const indexing$1 = true;
 const type$b = "object";
-const properties$c = { "error": { "type": "string", "description": "Error message (optional)" } };
+const properties$c = { "navId": { "type": "string", "description": "Navigation item ID (required)" } };
+const required$3 = ["navId"];
 const additionalProperties$3 = false;
-const errorMessageSchema = {
+const selectNavMessageSchema = {
   $schema: $schema$a,
   $id: $id$b,
   title: title$a,
@@ -14463,19 +14546,20 @@ const errorMessageSchema = {
   indexing: indexing$1,
   type: type$b,
   properties: properties$c,
+  required: required$3,
   additionalProperties: additionalProperties$3
 };
 const $schema$9 = "@schema/meta";
-const $id$a = "@schema/message/SEND_MESSAGE";
-const title$9 = "@schema/message/SEND_MESSAGE";
-const description$1 = "Message type for sending a chat message";
+const $id$a = "@schema/message/SELECT_ROW";
+const title$9 = "@schema/message/SELECT_ROW";
+const description$1 = "Message type for selecting a table row";
 const cotype = "comap";
 const indexing = true;
 const type$a = "object";
-const properties$b = { "inputText": { "type": "string", "minLength": 1, "description": "Message text (required, non-empty)" } };
-const required$2 = ["inputText"];
+const properties$b = { "rowId": { "type": "string", "description": "Row ID (required)" } };
+const required$2 = ["rowId"];
 const additionalProperties$2 = false;
-const sendMessageMessageSchema = {
+const selectRowMessageSchema = {
   $schema: $schema$9,
   $id: $id$a,
   title: title$9,
@@ -14529,7 +14613,11 @@ const MESSAGE_SCHEMAS = {
   "message/SWITCH_VIEW": switchViewMessageSchema,
   "message/SUCCESS": successMessageSchema,
   "message/ERROR": errorMessageSchema,
-  "message/SEND_MESSAGE": sendMessageMessageSchema
+  "message/SEND_MESSAGE": sendMessageMessageSchema,
+  "message/RETRY": retryMessageSchema,
+  "message/DISMISS": dismissMessageSchema,
+  "message/SELECT_NAV": selectNavMessageSchema,
+  "message/SELECT_ROW": selectRowMessageSchema
 };
 function getSchema(type2) {
   if (type2.startsWith("message/")) {
@@ -19762,11 +19850,13 @@ class ActorEngine {
    * @returns {boolean} True if message type is accepted, false otherwise
    */
   _validateMessageType(actor, messageType) {
-    if (actor.messageTypes && Array.isArray(actor.messageTypes)) {
-      if (!actor.messageTypes.includes(messageType)) {
-        console.error(`[ActorEngine] Message type "${messageType}" not in actor's message contract. Actor: ${actor.id}, Accepted types: ${actor.messageTypes.join(", ")}`);
-        return false;
-      }
+    if (!actor.messageTypes || !Array.isArray(actor.messageTypes)) {
+      console.error(`[ActorEngine] Actor "${actor.id}" missing required "messageTypes" array. All actors must declare their message contracts.`);
+      return false;
+    }
+    if (!actor.messageTypes.includes(messageType)) {
+      console.error(`[ActorEngine] Message type "${messageType}" not in actor's message contract. Actor: ${actor.id}, Accepted types: ${actor.messageTypes.join(", ")}`);
+      return false;
     }
     return true;
   }
@@ -19785,6 +19875,7 @@ class ActorEngine {
       const schema = await resolve$1(this.dbEngine.backend, schemaKey, { returnType: "schema" });
       return schema;
     } catch (error) {
+      console.error(`[ActorEngine] Message type schema not found for "${messageType}". All message types must have schemas registered.`, error);
       return null;
     }
   }
@@ -19798,12 +19889,9 @@ class ActorEngine {
    */
   async _validateMessagePayload(messageTypeSchema2, payload, messageType) {
     if (!messageTypeSchema2) {
-      return { valid: true, errors: null };
+      return { valid: false, errors: [`Message type schema is required for ${messageType}`] };
     }
     try {
-      if (messageType === "TOGGLE_BUTTON" || messageType === "DELETE_BUTTON") {
-        console.log(`[ActorEngine] Schema for ${messageType}:`, JSON.stringify(messageTypeSchema2, null, 2));
-      }
       const { groupInfo, ...schemaForValidation } = messageTypeSchema2;
       const result = await validateAgainstSchema(schemaForValidation, payload || {}, `message payload for ${messageType}`);
       return result;
@@ -19832,9 +19920,6 @@ class ActorEngine {
             continue;
           }
           const payload = message.payload || {};
-          if (message.type === "TOGGLE_BUTTON" || message.type === "DELETE_BUTTON") {
-            console.log(`[ActorEngine] Validating ${message.type} payload:`, JSON.stringify(payload, null, 2));
-          }
           const validation2 = await this._validateMessagePayload(messageTypeSchema2, payload, message.type);
           if (!validation2.valid) {
             const errorDetails = validation2.errors?.map((err) => `  - ${err.instancePath || err.path || "root"}: ${err.message || err}`).join("\n") || "Unknown validation error";
@@ -20717,6 +20802,26 @@ class StateEngine {
     }
   }
   /**
+   * Clean tool result by removing CoJSON metadata (groupInfo)
+   * Tool results from database operations include groupInfo which is metadata, not data
+   * @param {any} result - Tool result (can be any type)
+   * @returns {any} Cleaned result without groupInfo
+   */
+  _cleanToolResult(result) {
+    if (!result || typeof result !== "object") {
+      return result;
+    }
+    if (Array.isArray(result)) {
+      return result.map((item) => this._cleanToolResult(item));
+    }
+    const { groupInfo, ...cleaned } = result;
+    const finalCleaned = {};
+    for (const [key, value] of Object.entries(cleaned)) {
+      finalCleaned[key] = this._cleanToolResult(value);
+    }
+    return finalCleaned;
+  }
+  /**
    * Evaluate guard using JSON Schema validation
    * Guards check state/context conditions (NOT payload validation)
    * 
@@ -20781,15 +20886,30 @@ class StateEngine {
         return;
       }
       if (actions.tool) {
-        const result = await this._invokeTool(machine, actions.tool, actions.payload);
+        const isEntry = type2 === "entry";
+        const result = await this._invokeTool(machine, actions.tool, actions.payload, true, isEntry);
         if (result) machine.lastToolResult = result;
+        if (isEntry && stateDef.on?.SUCCESS && machine.actor?.actorEngine) {
+          const originalEventPayload = machine.eventPayload || {};
+          const cleanedResult = machine.lastToolResult ? this._cleanToolResult(machine.lastToolResult) : null;
+          const successPayload = {
+            result: cleanedResult,
+            ...originalEventPayload
+          };
+          try {
+            await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, "SUCCESS", successPayload);
+          } catch (error) {
+            console.error(`[StateEngine] ❌ Failed to send SUCCESS event:`, error);
+          }
+        }
       } else if (Array.isArray(actions)) {
         const originalEventPayload = machine.eventPayload || {};
         await this._executeActions(machine, actions, machine.eventPayload);
         const conditionCheck = type2 === "entry" && stateDef.on?.SUCCESS && machine.actor?.actorEngine;
         if (conditionCheck) {
+          const cleanedResult = machine.lastToolResult ? this._cleanToolResult(machine.lastToolResult) : null;
           const successPayload = {
-            result: machine.lastToolResult || null,
+            result: cleanedResult,
             ...originalEventPayload
           };
           try {
@@ -20802,8 +20922,9 @@ class StateEngine {
         const originalEventPayload = machine.eventPayload || {};
         await this._executeActions(machine, actions, machine.eventPayload);
         if (type2 === "entry" && stateDef.on?.SUCCESS && machine.actor?.actorEngine) {
+          const cleanedResult = machine.lastToolResult ? this._cleanToolResult(machine.lastToolResult) : null;
           const successPayload = {
-            result: machine.lastToolResult || null,
+            result: cleanedResult,
             ...originalEventPayload
           };
           await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, "SUCCESS", successPayload);
@@ -20955,18 +21076,21 @@ class StateEngine {
     const updates = commonActions[actionName];
     if (updates) await machine.actor.actorEngine.updateContextCoValue(machine.actor, updates);
   }
-  async _invokeTool(machine, toolName, payload = {}, autoTransition = true) {
+  async _invokeTool(machine, toolName, payload = {}, autoTransition = true, isEntryAction = false) {
     try {
       const originalEventPayload = machine.eventPayload || {};
       const evaluatedPayload = await this._evaluatePayload(payload, machine.actor.context, machine.eventPayload || {}, machine.lastToolResult, machine.actor);
       const result = await this.toolEngine.execute(toolName, machine.actor, evaluatedPayload);
-      if (autoTransition) {
+      if (autoTransition && !isEntryAction) {
         const stateDef = machine.definition.states[machine.currentState];
-        await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, "SUCCESS", {
-          ...originalEventPayload,
-          result
-          // This must come last to override any result from originalEventPayload
-        });
+        if (stateDef?.on?.SUCCESS && machine.actor?.actorEngine) {
+          const cleanedResult = result ? this._cleanToolResult(result) : null;
+          await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, "SUCCESS", {
+            ...originalEventPayload,
+            result: cleanedResult
+            // This must come last to override any result from originalEventPayload
+          });
+        }
       }
       return result;
     } catch (error) {
@@ -31450,7 +31574,14 @@ const listActor = {
   "state": "@todos/state/list",
   "brand": "@todos/style/brand",
   "style": "@todos/style/list",
-  "inbox": "@todos/inbox/list"
+  "inbox": "@todos/inbox/list",
+  "messageTypes": [
+    "TOGGLE_BUTTON",
+    "DELETE_BUTTON",
+    "SUCCESS",
+    "RETRY",
+    "DISMISS"
+  ]
 };
 const logsActor = {
   "$schema": "@schema/actor",
@@ -31461,7 +31592,11 @@ const logsActor = {
   "state": "@todos/state/logs",
   "brand": "@todos/style/brand",
   "style": "@todos/style/logs",
-  "inbox": "@todos/inbox/logs"
+  "inbox": "@todos/inbox/logs",
+  "messageTypes": [
+    "RETRY",
+    "DISMISS"
+  ]
 };
 const agentView$2 = {
   "$schema": "@schema/view",
@@ -32591,7 +32726,11 @@ const agentActor$1 = {
   "view": "@my-data/view/agent",
   "state": "@my-data/state/agent",
   "brand": "@my-data/style/brand",
-  "inbox": "@my-data/inbox/agent"
+  "inbox": "@my-data/inbox/agent",
+  "messageTypes": [
+    "SELECT_NAV",
+    "SELECT_ROW"
+  ]
 };
 const tableActor = {
   "$schema": "@schema/actor",
@@ -32601,7 +32740,10 @@ const tableActor = {
   "view": "@my-data/view/table",
   "state": "@my-data/state/table",
   "brand": "@my-data/style/brand",
-  "inbox": "@my-data/inbox/table"
+  "inbox": "@my-data/inbox/table",
+  "messageTypes": [
+    "SELECT_ROW"
+  ]
 };
 const detailActor = {
   "$schema": "@schema/actor",
@@ -32611,7 +32753,8 @@ const detailActor = {
   "view": "@my-data/view/detail",
   "state": "@my-data/state/detail",
   "brand": "@my-data/style/brand",
-  "inbox": "@my-data/inbox/detail"
+  "inbox": "@my-data/inbox/detail",
+  "messageTypes": []
 };
 const agentView$1 = {
   "$schema": "@schema/view",

@@ -652,8 +652,7 @@ actor.context.error = error.message;
     "idle": {
       "on": {
         "CREATE_TODO": {
-          "target": "creating",
-          "guard": {"$ne": ["$newTodoText", ""]}
+          "target": "creating"
         },
         "TOGGLE_TODO": {
           "target": "toggling"

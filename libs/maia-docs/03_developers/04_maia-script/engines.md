@@ -70,9 +70,11 @@ const result = await evaluator.evaluate(
 **Message Validation Pipeline:**
 - **Step 1: Message Contract Validation** - Checks if message type is in actor's `messageTypes` array
 - **Step 2: Message Type Schema Loading** - Loads message type schema from registry (`@schema/message/{TYPE}`)
-- **Step 3: Payload Validation** - Validates message payload against message type's `payloadSchema` using JSON Schema
+- **Step 3: Payload Validation** - Validates message payload against the message type schema (the schema IS the payload schema - merged concept)
 - **Step 4: State Machine Routing** - If validation passes, routes validated message to StateEngine
 - Invalid messages are rejected early with clear error messages before reaching the state machine
+
+**Note:** Message type schemas directly represent the payload schema. There is no separate `payloadSchema` property - the message type schema itself validates the payload.
 
 **Dependencies:**
 - `StyleEngine` - For style compilation

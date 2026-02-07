@@ -81,8 +81,7 @@ my-app/
     "idle": {
       "on": {
         "CREATE_TODO": {
-          "target": "creating",
-          "guard": { "$ne": ["$newTodoText", ""] }
+          "target": "creating"
         }
       }
     },

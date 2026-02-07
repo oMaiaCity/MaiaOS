@@ -577,13 +577,14 @@ Use `$` prefix to reference context fields:
 
 ```json
 {
-  "guard": {"$ne": ["$newTodoText", ""]},
   "payload": {
     "text": "$newTodoText",
     "mode": "$viewMode"
   }
 }
 ```
+
+**Note:** Guards are schema-based and validate against state/context conditions only. Payload validation happens in ActorEngine via message type schemas before messages reach the state machine.
 
 ### From Views
 Use `$` prefix in expressions:

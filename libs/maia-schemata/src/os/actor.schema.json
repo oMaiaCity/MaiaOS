@@ -39,7 +39,7 @@
       "items": {
         "type": "string"
       },
-      "description": "REQUIRED: Message types this actor accepts (exhaustive list - like sealed protocol). If not provided, actor accepts all message types."
+      "description": "REQUIRED: Message types this actor accepts (exhaustive list - like sealed protocol). All actors must declare their message contracts."
     }
   }
 }

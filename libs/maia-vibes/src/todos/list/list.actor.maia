@@ -7,5 +7,12 @@
   "state": "@todos/state/list",
   "brand": "@todos/style/brand",
   "style": "@todos/style/list",
-  "inbox": "@todos/inbox/list"
+  "inbox": "@todos/inbox/list",
+  "messageTypes": [
+    "TOGGLE_BUTTON",
+    "DELETE_BUTTON",
+    "SUCCESS",
+    "RETRY",
+    "DISMISS"
+  ]
 }

@@ -223,6 +223,9 @@ Create a file named `{name}.actor.maia`:
 - **Early Rejection**: Invalid message types are rejected immediately with clear errors
 - **Distributed-Friendly**: Remote actors know what messages to send/receive
 
+**Message Type Schemas:**
+Each message type (e.g., `CREATE_BUTTON`, `TOGGLE_BUTTON`) must have a corresponding schema definition (`@schema/message/CREATE_BUTTON`, `@schema/message/TOGGLE_BUTTON`) that validates the message payload. The message type schema IS the payload schema - they're the same thing (merged concept). These schemas are automatically validated by ActorEngine before messages reach the state machine.
+
 **Style Properties:**
 - `brand` is **required** - shared design system (tokens, components) used by all actors
 - `style` is **optional** - actor-specific style overrides that merge with brand

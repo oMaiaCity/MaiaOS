@@ -7,5 +7,9 @@
   "state": "@todos/state/logs",
   "brand": "@todos/style/brand",
   "style": "@todos/style/logs",
-  "inbox": "@todos/inbox/logs"
+  "inbox": "@todos/inbox/logs",
+  "messageTypes": [
+    "RETRY",
+    "DISMISS"
+  ]
 }

@@ -311,8 +311,7 @@ Create a file named `{name}.state.maia`:
     "idle": {
       "on": {
         "CREATE_TODO": {
-          "target": "creating",
-          "guard": {"$ne": ["$newTodoText", ""]}
+          "target": "creating"
         }
       }
     },
@@ -409,11 +408,22 @@ Entry and exit actions can be:
   "on": {
     "SUBMIT": {
       "target": "submitting",
-      "guard": {"$ne": ["$formData.email", ""]}  // Only if email not empty
+      "guard": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "canSubmit": { "const": true },
+            "status": { "const": "ready" }
+          },
+          "required": ["canSubmit", "status"]
+        }
+      }
     }
   }
 }
 ```
+
+**Note:** Guards validate against state/context conditions only. Payload validation (e.g., checking if email is not empty) happens in ActorEngine via message type schemas before the message reaches the state machine.
 
 ### Self-Transition (No State Change)
 ```json
@@ -806,7 +816,6 @@ Toggle is not a separate operation. Use `update` with an expression:
         },
         "CREATE_TODO": {
           "target": "creating",
-          "guard": {"$ne": ["$newTodoText", ""]}
         }
       }
     },
@@ -931,11 +940,9 @@ Toggle is not a separate operation. Use `update` with an expression:
         },
         "CREATE_TODO": {
           "target": "creating",
-          "guard": {"$ne": ["$newTodoText", ""]}
         },
         "TOGGLE_TODO": {
           "target": "toggling",
-          "guard": {"$ne": ["$$id", null]}
         },
         "DELETE_TODO": {
           "target": "deleting"

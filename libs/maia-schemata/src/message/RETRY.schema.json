@@ -1,0 +1,11 @@
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/message/RETRY",
+  "title": "@schema/message/RETRY",
+  "description": "Message type for retrying a failed operation",
+  "cotype": "comap",
+  "indexing": true,
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

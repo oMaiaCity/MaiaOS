@@ -158,21 +158,28 @@ Every schema must have:
 }
 ```
 
-#### Example 3: Guard Schema (comap - accepts any MaiaScript expression)
+#### Example 3: Guard Schema (comap - schema-based conditional logic)
 ```json
 {
   "$schema": "@schema/meta",
   "$id": "@schema/guard",
   "title": "@schema/guard",
-  "description": "Guard condition for state machine transitions",
+  "description": "JSON Schema guard for conditional logic - checks state/context conditions (NOT payload validation)",
   "cotype": "comap",
   "indexing": true,
-  "properties": {},
-  "additionalProperties": true  // ← Accepts any MaiaScript expression properties
+  "required": ["schema"],
+  "properties": {
+    "schema": {
+      "type": "object",
+      "description": "JSON Schema to validate against current state/context (for conditional logic only, NOT payload validation)",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
 }
 ```
 
-**Note**: The `guard` schema accepts any properties (via `additionalProperties: true`), allowing any MaiaScript expression to be used as a guard condition. Guards are validated against the MaiaScript expression schema at runtime.
+**Note**: Guards are **schema-based only** - they use JSON Schema to validate against the current state and context. Guards are for conditional logic (should this transition happen?), NOT payload validation. Payload validation happens in ActorEngine before messages reach the state machine.
 
 #### Example 4: View Schema (comap with internal $defs)
 ```json

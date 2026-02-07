@@ -855,7 +855,14 @@ const listActor = {
   "state": "@todos/state/list",
   "brand": "@todos/style/brand",
   "style": "@todos/style/list",
-  "inbox": "@todos/inbox/list"
+  "inbox": "@todos/inbox/list",
+  "messageTypes": [
+    "TOGGLE_BUTTON",
+    "DELETE_BUTTON",
+    "SUCCESS",
+    "RETRY",
+    "DISMISS"
+  ]
 };
 const logsActor = {
   "$schema": "@schema/actor",
@@ -866,7 +873,11 @@ const logsActor = {
   "state": "@todos/state/logs",
   "brand": "@todos/style/brand",
   "style": "@todos/style/logs",
-  "inbox": "@todos/inbox/logs"
+  "inbox": "@todos/inbox/logs",
+  "messageTypes": [
+    "RETRY",
+    "DISMISS"
+  ]
 };
 const agentView$2 = {
   "$schema": "@schema/view",
@@ -2040,7 +2051,11 @@ const agentActor$1 = {
   "view": "@my-data/view/agent",
   "state": "@my-data/state/agent",
   "brand": "@my-data/style/brand",
-  "inbox": "@my-data/inbox/agent"
+  "inbox": "@my-data/inbox/agent",
+  "messageTypes": [
+    "SELECT_NAV",
+    "SELECT_ROW"
+  ]
 };
 const tableActor = {
   "$schema": "@schema/actor",
@@ -2050,7 +2065,10 @@ const tableActor = {
   "view": "@my-data/view/table",
   "state": "@my-data/state/table",
   "brand": "@my-data/style/brand",
-  "inbox": "@my-data/inbox/table"
+  "inbox": "@my-data/inbox/table",
+  "messageTypes": [
+    "SELECT_ROW"
+  ]
 };
 const detailActor = {
   "$schema": "@schema/actor",
@@ -2060,7 +2078,8 @@ const detailActor = {
   "view": "@my-data/view/detail",
   "state": "@my-data/state/detail",
   "brand": "@my-data/style/brand",
-  "inbox": "@my-data/inbox/detail"
+  "inbox": "@my-data/inbox/detail",
+  "messageTypes": []
 };
 const agentView$1 = {
   "$schema": "@schema/view",
