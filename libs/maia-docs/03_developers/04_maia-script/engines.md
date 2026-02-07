@@ -67,6 +67,13 @@ const result = await evaluator.evaluate(
 - Unhandled events are marked as processed (not rejected)
 - Sequential processing handled generically in engine - no need to handle in state configs
 
+**Message Validation Pipeline:**
+- **Step 1: Message Contract Validation** - Checks if message type is in actor's `messageTypes` array
+- **Step 2: Message Type Schema Loading** - Loads message type schema from registry (`@schema/message/{TYPE}`)
+- **Step 3: Payload Validation** - Validates message payload against message type's `payloadSchema` using JSON Schema
+- **Step 4: State Machine Routing** - If validation passes, routes validated message to StateEngine
+- Invalid messages are rejected early with clear error messages before reaching the state machine
+
 **Dependencies:**
 - `StyleEngine` - For style compilation
 - `ViewEngine` - For view rendering
@@ -240,7 +247,7 @@ const styleSheets = await styleEngine.compile(
 **What it does:**
 - Loads state machine definitions from `.state.maia` files
 - Creates state machine instances
-- Handles state transitions with guards
+- Handles state transitions with schema-based guards (JSON Schema validation)
 - Executes entry/exit actions
 - Processes events (`send('EVENT_NAME')`)
 - Supports side effects (invoke, after delays)
@@ -250,11 +257,17 @@ const styleSheets = await styleEngine.compile(
 - `loadStateDef(stateRef)` - Load state definition
 - `createMachine(stateDef, actor)` - Create state machine instance
 - `send(machineId, event, payload)` - Send event to state machine (called only from ActorEngine.processMessages())
+- `_evaluateGuard(guard, context, payload, actor)` - Evaluate guard using JSON Schema validation
 
 **Dependencies:**
 - `ToolEngine` - For executing actions
-- `MaiaScriptEvaluator` - For evaluating guards
+- `ValidationEngine` - For schema-based guard evaluation (JSON Schema validation)
 - `ActorEngine` - For unified event flow and sequential processing
+
+**Guard Evaluation:**
+- Guards use JSON Schema to validate against current state and context
+- Guards check conditional logic (should transition happen?), NOT payload validation
+- Payload validation happens in ActorEngine BEFORE messages reach the state machine
 
 **Architectural Boundaries:**
 - ✅ **ONLY updates state transitions and context** - State machines are the single source of truth for context changes

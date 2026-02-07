@@ -1,0 +1,19 @@
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/message/CREATE_BUTTON",
+  "title": "@schema/message/CREATE_BUTTON",
+  "description": "Message type for creating a new todo item",
+  "cotype": "comap",
+  "indexing": true,
+  "type": "object",
+  "properties": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^\\S",
+      "description": "Todo text (required, non-empty, must contain at least one non-whitespace character)"
+    }
+  },
+  "required": ["text"],
+  "additionalProperties": false
+}

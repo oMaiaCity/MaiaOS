@@ -154,8 +154,9 @@ export async function ensureIndexesCoMap(backend) {
   const group = await backend.getDefaultGroup();
   let indexesSchemaCoId = await resolve(backend, '@schema/os/indexes-registry', { returnType: 'coId' });
   
+  // Validate indexesSchemaCoId is a string (resolve() may return null if schema not found)
   let indexesCoMapId;
-  if (indexesSchemaCoId && indexesSchemaCoId.startsWith('co_z') && backend.dbEngine) {
+  if (indexesSchemaCoId && typeof indexesSchemaCoId === 'string' && indexesSchemaCoId.startsWith('co_z') && backend.dbEngine) {
     // Proper runtime validation: Use CRUD create() with dbEngine for schema validation
     const { create } = await import('../crud/create.js');
     const created = await create(backend, indexesSchemaCoId, {});
@@ -303,8 +304,9 @@ async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSc
  * @returns {Promise<RawCoList>} Schema index colist
  */
 export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoId = null) {
-  if (!schemaCoId || !schemaCoId.startsWith('co_z')) {
-    throw new Error(`[SchemaIndexManager] Invalid schema co-id: ${schemaCoId}`);
+  // Validate schemaCoId is a string
+  if (!schemaCoId || typeof schemaCoId !== 'string' || !schemaCoId.startsWith('co_z')) {
+    throw new Error(`[SchemaIndexManager] Invalid schema co-id: expected string starting with 'co_z', got ${typeof schemaCoId}: ${schemaCoId}`);
   }
 
   // Check indexing property from schema definition

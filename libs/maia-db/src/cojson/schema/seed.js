@@ -593,10 +593,13 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   
   /**
    * Recursively remove 'id' fields from schema objects (AJV only accepts $id, not id)
+   * BUT: Preserve 'id' fields in properties/items (those are valid property names in JSON Schema)
+   * Only remove top-level 'id' and nested 'id' in schema structure (not in property definitions)
    * @param {any} obj - Object to clean
-   * @returns {any} Cleaned object without 'id' fields
+   * @param {boolean} inPropertiesOrItems - Whether we're inside properties/items (preserve 'id' here)
+   * @returns {any} Cleaned object without 'id' fields (except in properties/items)
    */
-  function removeIdFields(obj) {
+  function removeIdFields(obj, inPropertiesOrItems = false) {
     if (obj === null || obj === undefined) {
       return obj;
     }
@@ -606,19 +609,22 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     }
     
     if (Array.isArray(obj)) {
-      return obj.map(item => removeIdFields(item));
+      return obj.map(item => removeIdFields(item, inPropertiesOrItems));
     }
     
     const cleaned = {};
     for (const [key, value] of Object.entries(obj)) {
-      // Skip 'id' field (AJV only accepts $id)
-      if (key === 'id') {
+      // Skip 'id' field ONLY if we're NOT in properties/items
+      // Properties named 'id' are valid in JSON Schema (e.g., properties.id)
+      if (key === 'id' && !inPropertiesOrItems) {
         continue;
       }
       
       // Recursively clean nested objects/arrays
+      // If we're entering properties or items, preserve 'id' fields there
       if (value !== null && value !== undefined && typeof value === 'object') {
-        cleaned[key] = removeIdFields(value);
+        const isPropertiesOrItems = key === 'properties' || key === 'items';
+        cleaned[key] = removeIdFields(value, isPropertiesOrItems || inPropertiesOrItems);
       } else {
         cleaned[key] = value;
       }

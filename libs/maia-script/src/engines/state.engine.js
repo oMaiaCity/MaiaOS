@@ -1,5 +1,6 @@
 import { resolve } from '@MaiaOS/db';
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
+import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper.js';
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
 import { RENDER_STATES } from './actor.engine.js';
 
@@ -105,13 +106,48 @@ export class StateEngine {
     }
   }
 
+  /**
+   * Evaluate guard using JSON Schema validation
+   * Guards check state/context conditions (NOT payload validation)
+   * 
+   * CRITICAL ARCHITECTURAL SEPARATION:
+   * - Guards are for CONDITIONAL LOGIC (should transition happen given current state/context?)
+   * - Payload validation happens in ActorEngine BEFORE reaching state machine
+   * 
+   * @param {Object} guard - Guard definition with schema property
+   * @param {ReactiveStore} context - Actor context (ReactiveStore)
+   * @param {Object} payload - Event payload (NOT validated here - already validated in ActorEngine)
+   * @param {Object} actor - Actor instance (for state access)
+   * @returns {Promise<boolean>} True if guard passes, false otherwise
+   */
   async _evaluateGuard(guard, context, payload, actor = null) {
     if (typeof guard === 'boolean') return guard;
+    
+    // Guard must have schema property (schema-based guards only)
+    if (!guard || typeof guard !== 'object' || !guard.schema) {
+      console.warn('[StateEngine] Guard must be an object with a "schema" property. Guards are schema-based only (no MaiaScript expressions).', { guard });
+      return false;
+    }
+    
     try {
       // $stores Architecture: Context is ReactiveStore with merged query results from backend
       const contextValue = context.value;
-      return Boolean(await this.evaluator.evaluate(guard, { context: contextValue, item: payload }));
+      
+      // Guards validate against state/context ONLY (NOT payload)
+      // Payload validation happens in ActorEngine before reaching state machine
+      // Guards are for conditional logic: "Should this transition happen given current state/context?"
+      // Create validation object with current state and context
+      const validationData = {
+        state: actor?.machine?.currentState || null,
+        ...contextValue
+      };
+      
+      // Validate using JSON Schema
+      const result = await validateAgainstSchema(guard.schema, validationData, 'guard');
+      
+      return result.valid;
     } catch (error) {
+      console.error('[StateEngine] Guard evaluation error:', error);
       return false;
     }
   }

@@ -10,10 +10,8 @@ primary_region = "ord"  # Chicago - L40S GPU available
   NO_TORCH_COMPILE = "1"
 
 # GPU configuration - L40S (per Fly.io GPU quickstart docs)
-# Using [vm] section with gpu_kind for proper GPU allocation
-[vm]
-  size = "performance-8x"  # High CPU/RAM (L40S requires this)
-  gpu_kind = "l40s"        # L40S GPU specification
+# Use vm.size directly (not [vm] section)
+vm.size = "l40s"  # L40S GPU (available in ord region only)
 
 # Volume for storing ML models (recommended for GPU machines)
 # Volume will be created automatically by fly deploy

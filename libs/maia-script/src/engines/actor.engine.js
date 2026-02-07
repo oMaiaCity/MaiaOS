@@ -9,6 +9,7 @@
 // Import message helper
 import { createAndPushMessage, resolve, resolveReactive, waitForReactiveResolution } from '@MaiaOS/db';
 import { containsExpressions } from '@MaiaOS/schemata/expression-resolver.js';
+import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper.js';
 
 // Render state machine - prevents race conditions by ensuring renders only happen when state allows
 export const RENDER_STATES = {
@@ -416,6 +417,7 @@ export class ActorEngine {
       vibeKey,
       inbox,
       inboxCoId,
+      messageTypes: actorConfig.messageTypes || null, // REQUIRED: Message types this actor accepts
       _renderState: RENDER_STATES.INITIALIZING, // Start in INITIALIZING state
       children: {}
     };
@@ -819,6 +821,82 @@ export class ActorEngine {
     }
   }
 
+  /**
+   * Validate message type against actor's message contract
+   * @param {Object} actor - Actor instance
+   * @param {string} messageType - Message type to validate
+   * @returns {boolean} True if message type is accepted, false otherwise
+   */
+  _validateMessageType(actor, messageType) {
+    // If actor has messageTypes array, check if message type is in contract
+    if (actor.messageTypes && Array.isArray(actor.messageTypes)) {
+      if (!actor.messageTypes.includes(messageType)) {
+        console.error(`[ActorEngine] Message type "${messageType}" not in actor's message contract. Actor: ${actor.id}, Accepted types: ${actor.messageTypes.join(', ')}`);
+        return false;
+      }
+    }
+    // If no messageTypes declared, accept all (backward compatibility during migration)
+    return true;
+  }
+
+  /**
+   * Load message type schema from registry
+   * @param {string} messageType - Message type name (e.g., 'CREATE_BUTTON')
+   * @returns {Promise<Object|null>} Message type schema or null if not found
+   */
+  async _loadMessageTypeSchema(messageType) {
+    if (!this.dbEngine || !this.dbEngine.backend) {
+      console.warn('[ActorEngine] Cannot load message type schema: dbEngine not available');
+      return null;
+    }
+
+    try {
+      // Try to resolve message type schema from registry
+      // Format: @schema/message/{MESSAGE_TYPE}
+      const schemaKey = `@schema/message/${messageType}`;
+      const schema = await resolve(this.dbEngine.backend, schemaKey, { returnType: 'schema' });
+      return schema;
+    } catch (error) {
+      // Schema not found - this is expected during migration
+      // In final implementation, all message types MUST have schemas
+      return null;
+    }
+  }
+
+  /**
+   * Validate message payload against message type schema
+   * Message type schema IS the payload schema (merged concept)
+   * @param {Object} messageTypeSchema - Message type schema definition (this IS the payload schema)
+   * @param {Object} payload - Message payload to validate
+   * @param {string} messageType - Message type name (for error messages)
+   * @returns {Promise<{valid: boolean, errors: Array|null}>} Validation result
+   */
+  async _validateMessagePayload(messageTypeSchema, payload, messageType) {
+    if (!messageTypeSchema) {
+      // No schema defined - skip validation (backward compatibility during migration)
+      return { valid: true, errors: null };
+    }
+
+    try {
+      // DEBUG: Log schema structure for troubleshooting
+      if (messageType === 'TOGGLE_BUTTON' || messageType === 'DELETE_BUTTON') {
+        console.log(`[ActorEngine] Schema for ${messageType}:`, JSON.stringify(messageTypeSchema, null, 2));
+      }
+      
+      // Filter out CoJSON metadata properties that shouldn't be validated
+      // These are added by the CoMap structure but aren't part of the JSON Schema
+      const { groupInfo, ...schemaForValidation } = messageTypeSchema;
+      
+      // Message type schema IS the payload schema - validate directly
+      // Note: indexing is now registered as an AJV keyword, so no need to filter it out
+      const result = await validateAgainstSchema(schemaForValidation, payload || {}, `message payload for ${messageType}`);
+      return result;
+    } catch (error) {
+      console.error(`[ActorEngine] Error validating message payload for ${messageType}:`, error);
+      return { valid: false, errors: [error.message] };
+    }
+  }
+
   async processMessages(actorId) {
     const actor = this.actors.get(actorId);
     if (!actor || !actor.inboxCoId || !this.dbEngine || actor._isProcessing) return;
@@ -829,8 +907,36 @@ export class ActorEngine {
       for (const message of messages) {
         if (message.type === 'INIT' || message.from === 'system') continue;
         try {
+          // VALIDATION LAYER: Validate message before state machine
+          // Step 1: Check actor message contract
+          if (!this._validateMessageType(actor, message.type)) {
+            console.error(`[ActorEngine] Message type "${message.type}" rejected by actor "${actorId}" - not in message contract`);
+            continue; // Skip invalid message
+          }
+
+          // Step 2: Load message type schema (REQUIRED)
+          const messageTypeSchema = await this._loadMessageTypeSchema(message.type);
+          if (!messageTypeSchema) {
+            // REQUIRED: All message types MUST have schemas
+            console.error(`[ActorEngine] Message type schema not found for "${message.type}". All message types must have schemas registered.`);
+            continue; // Reject message - schema is required
+          }
+
+          // Step 3: Validate payload against message type schema (REQUIRED)
           // Ensure payload is always an object (never undefined/null)
           const payload = message.payload || {};
+          // DEBUG: Log payload structure for troubleshooting
+          if (message.type === 'TOGGLE_BUTTON' || message.type === 'DELETE_BUTTON') {
+            console.log(`[ActorEngine] Validating ${message.type} payload:`, JSON.stringify(payload, null, 2));
+          }
+          const validation = await this._validateMessagePayload(messageTypeSchema, payload, message.type);
+          if (!validation.valid) {
+            const errorDetails = validation.errors?.map(err => `  - ${err.instancePath || err.path || 'root'}: ${err.message || err}`).join('\n') || 'Unknown validation error';
+            console.error(`[ActorEngine] Message payload validation failed for "${message.type}":\n${errorDetails}\nPayload:`, JSON.stringify(payload, null, 2));
+            continue; // Skip invalid message
+          }
+
+          // Step 4: If validation passes, send to state machine
           if (actor.machine && this.stateEngine) {
             await this.stateEngine.send(actor.machine.id, message.type, payload);
           } else {

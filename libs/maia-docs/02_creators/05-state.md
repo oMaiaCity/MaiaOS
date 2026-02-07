@@ -427,42 +427,93 @@ Entry and exit actions can be:
 }
 ```
 
-## Guards (Conditions)
+## Guards (Conditional Logic)
 
-Guards determine if a transition should occur:
+**CRITICAL ARCHITECTURAL SEPARATION:**
+
+Guards are for **conditional logic** based on state/context conditions. They answer: "Should this transition happen given the current state?"
+
+**Guards are NOT for payload validation** - payload validation happens in ActorEngine BEFORE the message reaches the state machine.
+
+### Schema-Based Guards
+
+Guards use JSON Schema to validate against the current state and context:
 
 ```json
 {
-  "guard": {"$ne": ["$field", ""]}  // Field not empty
-}
-
-{
-  "guard": {"$eq": ["$status", "ready"]}  // Status equals "ready"
-}
-
-{
   "guard": {
-    "$and": [
-      {"$ne": ["$email", ""]},
-      {"$gt": ["$email.length", 5]}
-    ]
+    "schema": {
+      "type": "object",
+      "properties": {
+        "status": { "const": "ready" },
+        "canSubmit": { "const": true }
+      },
+      "required": ["status", "canSubmit"]
+    }
   }
 }
 ```
 
-### Guard Operators
+This guard checks if `context.status` equals "ready" AND `context.canSubmit` is true.
 
-| Operator | Description | Example |
-|----------|-------------|---------|
-| `$eq` | Equal | `{"$eq": ["$status", "active"]}` |
-| `$ne` | Not equal | `{"$ne": ["$text", ""]}` |
-| `$gt` | Greater than | `{"$gt": ["$count", 0]}` |
-| `$lt` | Less than | `{"$lt": ["$count", 100]}` |
-| `$gte` | Greater/equal | `{"$gte": ["$age", 18]}` |
-| `$lte` | Less/equal | `{"$lte": ["$length", 500]}` |
-| `$and` | Logical AND | `{"$and": [guard1, guard2]}` |
-| `$or` | Logical OR | `{"$or": [guard1, guard2]}` |
-| `$not` | Logical NOT | `{"$not": guard}` |
+### Guard Examples
+
+**Check context state:**
+```json
+{
+  "guard": {
+    "schema": {
+      "type": "object",
+      "properties": {
+        "status": { "const": "ready" }
+      },
+      "required": ["status"]
+    }
+  }
+}
+```
+
+**Check multiple context conditions:**
+```json
+{
+  "guard": {
+    "schema": {
+      "type": "object",
+      "properties": {
+        "canCreate": { "const": true },
+        "isNotCreating": { "const": true }
+      },
+      "required": ["canCreate", "isNotCreating"]
+    }
+  }
+}
+```
+
+**Check numeric context values:**
+```json
+{
+  "guard": {
+    "schema": {
+      "type": "object",
+      "properties": {
+        "count": { "type": "number", "minimum": 1 }
+      },
+      "required": ["count"]
+    }
+  }
+}
+```
+
+### When to Use Guards
+
+**✅ Use guards for:**
+- Checking if actor is in the right state to handle a message
+- Checking context conditions (e.g., `context.canSubmit === true`)
+- Conditional logic based on runtime state
+
+**❌ Do NOT use guards for:**
+- Payload validation (e.g., checking if `$$text` is not empty) - this belongs in message type schemas
+- Data structure validation - this happens in ActorEngine before the state machine
 
 ## Payload Resolution
 

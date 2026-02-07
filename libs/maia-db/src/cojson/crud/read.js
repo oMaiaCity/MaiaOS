@@ -160,8 +160,11 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
 
     // Detect and resolve query objects
     for (const [key, value] of Object.entries(contextValue)) {
-      // Skip special fields
-      if (key === '$schema' || key === '$id' || key === '@stores') continue;
+      // Skip special fields and schema definition properties (not queries)
+      // Schema definition properties like 'properties', 'items', '$defs' are part of schema structure, not queries
+      if (key === '$schema' || key === '$id' || key === '@stores' || 
+          key === 'properties' || key === 'items' || key === '$defs' || 
+          key === 'cotype' || key === 'indexing' || key === 'title' || key === 'description') continue;
       
       // Check if this is a query object (has schema property)
       if (value && typeof value === 'object' && !Array.isArray(value) && value.schema) {
@@ -174,7 +177,19 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
           // UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema resolution for queries
           let schemaCoId = value.schema;
           
-          if (typeof schemaCoId === 'string' && !schemaCoId.startsWith('co_z')) {
+          // Ensure schemaCoId is a string (might be an object if deep resolution happened)
+          if (schemaCoId && typeof schemaCoId === 'object' && schemaCoId.$id) {
+            // Schema was resolved to an object - use its $id
+            schemaCoId = schemaCoId.$id;
+          }
+          
+          // Validate schemaCoId is a string
+          if (typeof schemaCoId !== 'string') {
+            console.error(`[createUnifiedStore] Invalid schema type for query "${key}": expected string, got ${typeof schemaCoId}`, schemaCoId);
+            continue;
+          }
+          
+          if (!schemaCoId.startsWith('co_z')) {
             if (schemaCoId.startsWith('@schema/')) {
               // Use reactive schema resolution - returns ReactiveStore that updates when schema becomes available
               const schemaStore = resolveSchemaReactive(backend, schemaCoId, { timeoutMs });
@@ -245,7 +260,7 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
               console.error(`[createUnifiedStore] Invalid schema format for query "${key}": ${schemaCoId}`);
               continue;
             }
-          } else if (schemaCoId && schemaCoId.startsWith('co_z')) {
+          } else if (schemaCoId && typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
             
             // Schema is already a co-id - execute query immediately
             const queryOptions = {

@@ -48,6 +48,7 @@ import guardSchema from './os/guard.schema.json';
 import actionSchema from './os/action.schema.json';
 import transitionSchema from './os/transition.schema.json';
 import messagePayloadSchema from './os/messagePayload.schema.json';
+import messageTypeSchema from './os/messageType.schema.json';
 // Import MaiaScript expression schema
 import expressionSchema from './os/maia-script-expression.schema.json';
 // Import CoValue schemas
@@ -59,6 +60,15 @@ import schematasRegistrySchema from './os/schematas-registry.schema.json';
 // Import data schemas
 import todosDataSchema from './data/todos.schema.json';
 import chatDataSchema from './data/chat.schema.json';
+// Import message type schemas
+import createButtonMessageSchema from './message/CREATE_BUTTON.schema.json';
+import toggleButtonMessageSchema from './message/TOGGLE_BUTTON.schema.json';
+import deleteButtonMessageSchema from './message/DELETE_BUTTON.schema.json';
+import updateInputMessageSchema from './message/UPDATE_INPUT.schema.json';
+import switchViewMessageSchema from './message/SWITCH_VIEW.schema.json';
+import successMessageSchema from './message/SUCCESS.schema.json';
+import errorMessageSchema from './message/ERROR.schema.json';
+import sendMessageMessageSchema from './message/SEND_MESSAGE.schema.json';
 
 // Schema registry
 const SCHEMAS = {
@@ -78,6 +88,7 @@ const SCHEMAS = {
   action: actionSchema,
   transition: transitionSchema,
   messagePayload: messagePayloadSchema,
+  messageType: messageTypeSchema,
   // MaiaScript expression schema (for validating DSL expressions)
   'maia-script-expression': expressionSchema,
   // CoValue schemas (separate CoValues referenced via $co)
@@ -94,22 +105,49 @@ const DATA_SCHEMAS = {
   'data/chat': chatDataSchema
 };
 
+// Message type schemas registry (for message payload validation)
+const MESSAGE_SCHEMAS = {
+  'message/CREATE_BUTTON': createButtonMessageSchema,
+  'message/TOGGLE_BUTTON': toggleButtonMessageSchema,
+  'message/DELETE_BUTTON': deleteButtonMessageSchema,
+  'message/UPDATE_INPUT': updateInputMessageSchema,
+  'message/SWITCH_VIEW': switchViewMessageSchema,
+  'message/SUCCESS': successMessageSchema,
+  'message/ERROR': errorMessageSchema,
+  'message/SEND_MESSAGE': sendMessageMessageSchema
+};
+
 /**
  * Get schema for a given type (SEEDING/MIGRATIONS ONLY - synchronous)
  * Used to build registrySchemas for seeding
- * @param {string} type - Data type (e.g., 'actor', 'context', 'state')
+ * @param {string} type - Data type (e.g., 'actor', 'context', 'state', 'message/CREATE_BUTTON')
  * @returns {object|null} Schema object or null if not found
  */
 export function getSchema(type) {
+  // Check message schemas first (they use @schema/message/{TYPE} format)
+  if (type.startsWith('message/')) {
+    return MESSAGE_SCHEMAS[type] || null;
+  }
+  // Check if it's @schema/message/{TYPE} format
+  if (type.startsWith('@schema/message/')) {
+    const messageType = type.replace('@schema/message/', '');
+    return MESSAGE_SCHEMAS[`message/${messageType}`] || null;
+  }
   return SCHEMAS[type] || DATA_SCHEMAS[type] || null;
 }
 
 /**
- * Get all schemas including data schemas (SEEDING/MIGRATIONS ONLY)
+ * Get all schemas including data schemas and message schemas (SEEDING/MIGRATIONS ONLY)
  * Used to build registrySchemas for seeding
  * @returns {object} All schema definitions
  */
 export function getAllSchemas() {
-  return { ...SCHEMAS, ...DATA_SCHEMAS };
+  // Merge all schemas, converting message schemas to @schema/message/{TYPE} format
+  const allMessageSchemas = {};
+  for (const [key, schema] of Object.entries(MESSAGE_SCHEMAS)) {
+    // Convert 'message/CREATE_BUTTON' to '@schema/message/CREATE_BUTTON'
+    allMessageSchemas[`@schema/${key}`] = schema;
+  }
+  return { ...SCHEMAS, ...DATA_SCHEMAS, ...allMessageSchemas };
 }
 

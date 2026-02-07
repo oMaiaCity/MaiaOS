@@ -835,7 +835,16 @@ const agentActor$2 = {
   "view": "@todos/view/agent",
   "state": "@todos/state/agent",
   "brand": "@todos/style/brand",
-  "inbox": "@todos/inbox/agent"
+  "inbox": "@todos/inbox/agent",
+  "messageTypes": [
+    "CREATE_BUTTON",
+    "TOGGLE_BUTTON",
+    "DELETE_BUTTON",
+    "UPDATE_INPUT",
+    "SWITCH_VIEW",
+    "SUCCESS",
+    "ERROR"
+  ]
 };
 const listActor = {
   "$schema": "@schema/actor",
@@ -1150,13 +1159,7 @@ const agentState$2 = {
     "idle": {
       "on": {
         "CREATE_BUTTON": {
-          "target": "creating",
-          "guard": {
-            "$and": [
-              { "$ne": ["$$text", null] },
-              { "$ne": [{ "$trim": "$$text" }, ""] }
-            ]
-          }
+          "target": "creating"
         },
         "TOGGLE_BUTTON": {
           "target": "toggling"
@@ -1228,6 +1231,39 @@ const agentState$2 = {
         },
         "DELETE_BUTTON": {
           "target": "deleting"
+        },
+        "SWITCH_VIEW": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "viewMode": "$$viewMode" }
+            },
+            {
+              "updateContext": {
+                "currentView": {
+                  "$if": {
+                    "condition": { "$eq": ["$$viewMode", "list"] },
+                    "then": "@list",
+                    "else": "@logs"
+                  }
+                }
+              }
+            },
+            {
+              "updateContext": {
+                "listButtonActive": {
+                  "$eq": ["$$viewMode", "list"]
+                }
+              }
+            },
+            {
+              "updateContext": {
+                "logsButtonActive": {
+                  "$eq": ["$$viewMode", "logs"]
+                }
+              }
+            }
+          ]
         },
         "SUCCESS": {
           "target": "idle",
@@ -3122,7 +3158,16 @@ const agentActor = {
   "view": "@maia/view/agent",
   "state": "@maia/state/agent",
   "brand": "@maia/style/brand",
-  "inbox": "@maia/inbox/agent"
+  "inbox": "@maia/inbox/agent",
+  "messageTypes": [
+    "SEND_MESSAGE",
+    "UPDATE_INPUT",
+    "RENDER_COMPLETE",
+    "SUCCESS",
+    "ERROR",
+    "RETRY",
+    "DISMISS"
+  ]
 };
 const agentView = {
   "$schema": "@schema/view",
@@ -3334,13 +3379,7 @@ const agentState = {
           ]
         },
         "SEND_MESSAGE": {
-          "target": "chatting",
-          "guard": {
-            "$and": [
-              { "$ne": ["$$inputText", null] },
-              { "$ne": [{ "$trim": "$$inputText" }, ""] }
-            ]
-          }
+          "target": "chatting"
         },
         "UPDATE_INPUT": {
           "target": "idle",
@@ -3507,12 +3546,6 @@ const agentState = {
       "on": {
         "SEND_MESSAGE": {
           "target": "chatting",
-          "guard": {
-            "$and": [
-              { "$ne": ["$$inputText", null] },
-              { "$ne": [{ "$trim": "$$inputText" }, ""] }
-            ]
-          },
           "actions": [
             {
               "updateContext": {

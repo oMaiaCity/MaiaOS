@@ -1,6 +1,6 @@
 # MaiaOS Documentation for maia-db
 
-**Auto-generated:** 2026-02-07T21:11:21.434Z
+**Auto-generated:** 2026-02-07T22:05:32.865Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---

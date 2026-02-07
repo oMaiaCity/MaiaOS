@@ -6,13 +6,7 @@
     "idle": {
       "on": {
         "CREATE_BUTTON": {
-          "target": "creating",
-          "guard": {
-            "$and": [
-              { "$ne": ["$$text", null] },
-              { "$ne": [{ "$trim": "$$text" }, ""] }
-            ]
-          }
+          "target": "creating"
         },
         "TOGGLE_BUTTON": {
           "target": "toggling"
@@ -84,6 +78,39 @@
         },
         "DELETE_BUTTON": {
           "target": "deleting"
+        },
+        "SWITCH_VIEW": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "viewMode": "$$viewMode" }
+            },
+            {
+              "updateContext": {
+                "currentView": {
+                  "$if": {
+                    "condition": { "$eq": ["$$viewMode", "list"] },
+                    "then": "@list",
+                    "else": "@logs"
+                  }
+                }
+              }
+            },
+            {
+              "updateContext": {
+                "listButtonActive": {
+                  "$eq": ["$$viewMode", "list"]
+                }
+              }
+            },
+            {
+              "updateContext": {
+                "logsButtonActive": {
+                  "$eq": ["$$viewMode", "logs"]
+                }
+              }
+            }
+          ]
         },
         "SUCCESS": {
           "target": "idle",

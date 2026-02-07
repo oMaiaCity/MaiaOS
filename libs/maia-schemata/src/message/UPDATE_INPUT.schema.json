@@ -1,0 +1,16 @@
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/message/UPDATE_INPUT",
+  "title": "@schema/message/UPDATE_INPUT",
+  "description": "Message type for updating input field value",
+  "cotype": "comap",
+  "indexing": true,
+  "type": "object",
+  "properties": {
+    "newTodoText": {
+      "type": "string",
+      "description": "New input text value"
+    }
+  },
+  "additionalProperties": false
+}

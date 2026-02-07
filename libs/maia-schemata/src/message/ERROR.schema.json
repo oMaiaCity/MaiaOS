@@ -1,0 +1,16 @@
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/message/ERROR",
+  "title": "@schema/message/ERROR",
+  "description": "Message type for operation errors",
+  "cotype": "comap",
+  "indexing": true,
+  "type": "object",
+  "properties": {
+    "error": {
+      "type": "string",
+      "description": "Error message (optional)"
+    }
+  },
+  "additionalProperties": false
+}

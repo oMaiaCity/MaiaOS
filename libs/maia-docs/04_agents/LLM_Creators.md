@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-02-07T21:11:21.420Z
+**Auto-generated:** 2026-02-07T22:05:32.860Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -2329,8 +2329,36 @@ Create a file named `{name}.actor.maia`:
 | `brand` | string | Yes | Co-id reference to brand style (`@style/brand`) - shared design system |
 | `style` | string | No | Co-id reference to local style (`@style/todo`) - actor-specific overrides |
 | `inbox` | string | No | Co-id reference to inbox costream (`@inbox/todo`) - message inbox for events |
+| `messageTypes` | array | No | **REQUIRED**: Array of message type strings this actor accepts (exhaustive list - like sealed protocol). If not provided, actor accepts all message types. |
 
 **Note:** Children are defined in context files via the `@actors` system property, not in the actor schema. See [Children Architecture](#system-properties-in-context) below.
+
+### Message Contracts
+
+**REQUIRED:** Actors should declare what message types they accept using the `messageTypes` property. This creates an explicit API contract, similar to sealed protocols in typed languages.
+
+**Example:**
+```json
+{
+  "$schema": "@schema/actor",
+  "$id": "@todos/actor/agent",
+  "messageTypes": [
+    "CREATE_BUTTON",
+    "TOGGLE_BUTTON",
+    "DELETE_BUTTON",
+    "UPDATE_INPUT",
+    "SWITCH_VIEW",
+    "SUCCESS",
+    "ERROR"
+  ]
+}
+```
+
+**Why message contracts matter:**
+- **Type Safety**: Messages are validated before reaching the state machine
+- **Self-Documenting**: Anyone can see what messages an actor accepts
+- **Early Rejection**: Invalid message types are rejected immediately with clear errors
+- **Distributed-Friendly**: Remote actors know what messages to send/receive
 
 **Style Properties:**
 - `brand` is **required** - shared design system (tokens, components) used by all actors
@@ -5146,42 +5174,93 @@ Entry and exit actions can be:
 }
 ```
 
-## Guards (Conditions)
+## Guards (Conditional Logic)
 
-Guards determine if a transition should occur:
+**CRITICAL ARCHITECTURAL SEPARATION:**
+
+Guards are for **conditional logic** based on state/context conditions. They answer: "Should this transition happen given the current state?"
+
+**Guards are NOT for payload validation** - payload validation happens in ActorEngine BEFORE the message reaches the state machine.
+
+### Schema-Based Guards
+
+Guards use JSON Schema to validate against the current state and context:
 
 ```json
 {
-  "guard": {"$ne": ["$field", ""]}  // Field not empty
-}
-
-{
-  "guard": {"$eq": ["$status", "ready"]}  // Status equals "ready"
-}
-
-{
   "guard": {
-    "$and": [
-      {"$ne": ["$email", ""]},
-      {"$gt": ["$email.length", 5]}
-    ]
+    "schema": {
+      "type": "object",
+      "properties": {
+        "status": { "const": "ready" },
+        "canSubmit": { "const": true }
+      },
+      "required": ["status", "canSubmit"]
+    }
   }
 }
 ```
 
-### Guard Operators
+This guard checks if `context.status` equals "ready" AND `context.canSubmit` is true.
 
-| Operator | Description | Example |
-|----------|-------------|---------|
-| `$eq` | Equal | `{"$eq": ["$status", "active"]}` |
-| `$ne` | Not equal | `{"$ne": ["$text", ""]}` |
-| `$gt` | Greater than | `{"$gt": ["$count", 0]}` |
-| `$lt` | Less than | `{"$lt": ["$count", 100]}` |
-| `$gte` | Greater/equal | `{"$gte": ["$age", 18]}` |
-| `$lte` | Less/equal | `{"$lte": ["$length", 500]}` |
-| `$and` | Logical AND | `{"$and": [guard1, guard2]}` |
-| `$or` | Logical OR | `{"$or": [guard1, guard2]}` |
-| `$not` | Logical NOT | `{"$not": guard}` |
+### Guard Examples
+
+**Check context state:**
+```json
+{
+  "guard": {
+    "schema": {
+      "type": "object",
+      "properties": {
+        "status": { "const": "ready" }
+      },
+      "required": ["status"]
+    }
+  }
+}
+```
+
+**Check multiple context conditions:**
+```json
+{
+  "guard": {
+    "schema": {
+      "type": "object",
+      "properties": {
+        "canCreate": { "const": true },
+        "isNotCreating": { "const": true }
+      },
+      "required": ["canCreate", "isNotCreating"]
+    }
+  }
+}
+```
+
+**Check numeric context values:**
+```json
+{
+  "guard": {
+    "schema": {
+      "type": "object",
+      "properties": {
+        "count": { "type": "number", "minimum": 1 }
+      },
+      "required": ["count"]
+    }
+  }
+}
+```
+
+### When to Use Guards
+
+**✅ Use guards for:**
+- Checking if actor is in the right state to handle a message
+- Checking context conditions (e.g., `context.canSubmit === true`)
+- Conditional logic based on runtime state
+
+**❌ Do NOT use guards for:**
+- Payload validation (e.g., checking if `$$text` is not empty) - this belongs in message type schemas
+- Data structure validation - this happens in ActorEngine before the state machine
 
 ## Payload Resolution
 

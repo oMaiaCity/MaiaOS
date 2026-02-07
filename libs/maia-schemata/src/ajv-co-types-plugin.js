@@ -75,4 +75,15 @@ export function ajvCoTypesPlugin(ajv) {
       enum: ["comap", "colist", "costream"]
     }
   })
+  
+  // Add indexing keyword - metadata property (not a validation rule)
+  // Always passes validation since it's just metadata about whether instances should be indexed
+  ajv.addKeyword({
+    keyword: 'indexing',
+    validate: () => true, // Always pass - it's metadata, not a validation rule
+    metaSchema: {
+      type: 'boolean',
+      description: 'Whether instances of this schema should be indexed in account.os.{schemaCoId}'
+    }
+  })
 }

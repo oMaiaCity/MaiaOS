@@ -192,8 +192,36 @@ Create a file named `{name}.actor.maia`:
 | `brand` | string | Yes | Co-id reference to brand style (`@style/brand`) - shared design system |
 | `style` | string | No | Co-id reference to local style (`@style/todo`) - actor-specific overrides |
 | `inbox` | string | No | Co-id reference to inbox costream (`@inbox/todo`) - message inbox for events |
+| `messageTypes` | array | No | **REQUIRED**: Array of message type strings this actor accepts (exhaustive list - like sealed protocol). If not provided, actor accepts all message types. |
 
 **Note:** Children are defined in context files via the `@actors` system property, not in the actor schema. See [Children Architecture](#system-properties-in-context) below.
+
+### Message Contracts
+
+**REQUIRED:** Actors should declare what message types they accept using the `messageTypes` property. This creates an explicit API contract, similar to sealed protocols in typed languages.
+
+**Example:**
+```json
+{
+  "$schema": "@schema/actor",
+  "$id": "@todos/actor/agent",
+  "messageTypes": [
+    "CREATE_BUTTON",
+    "TOGGLE_BUTTON",
+    "DELETE_BUTTON",
+    "UPDATE_INPUT",
+    "SWITCH_VIEW",
+    "SUCCESS",
+    "ERROR"
+  ]
+}
+```
+
+**Why message contracts matter:**
+- **Type Safety**: Messages are validated before reaching the state machine
+- **Self-Documenting**: Anyone can see what messages an actor accepts
+- **Early Rejection**: Invalid message types are rejected immediately with clear errors
+- **Distributed-Friendly**: Remote actors know what messages to send/receive
 
 **Style Properties:**
 - `brand` is **required** - shared design system (tokens, components) used by all actors

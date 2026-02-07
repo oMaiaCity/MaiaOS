@@ -1,0 +1,18 @@
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/message/DELETE_BUTTON",
+  "title": "@schema/message/DELETE_BUTTON",
+  "description": "Message type for deleting a todo item",
+  "cotype": "comap",
+  "indexing": true,
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^co_z",
+      "description": "Todo item co-id (required)"
+    }
+  },
+  "required": ["id"],
+  "additionalProperties": false
+}

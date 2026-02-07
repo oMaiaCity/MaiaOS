@@ -1,0 +1,18 @@
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/message/SWITCH_VIEW",
+  "title": "@schema/message/SWITCH_VIEW",
+  "description": "Message type for switching view mode",
+  "cotype": "comap",
+  "indexing": true,
+  "type": "object",
+  "properties": {
+    "viewMode": {
+      "type": "string",
+      "enum": ["list", "logs"],
+      "description": "View mode to switch to (required)"
+    }
+  },
+  "required": ["viewMode"],
+  "additionalProperties": false
+}
