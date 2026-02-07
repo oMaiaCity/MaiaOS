@@ -4,23 +4,25 @@ The `@MaiaOS/script` package provides 10 core engines that work together to exec
 
 ---
 
-## MaiaScriptEvaluator
+## Evaluator (MaiaScriptEvaluator)
 
 **Purpose:** Evaluates MaiaScript expressions safely.
 
 **What it does:**
-- Evaluates JSON-based expressions (`$if`, `$eq`, `$context`, etc.)
-- Resolves data paths (`$context.title`, `$item.id`)
-- Validates expressions against schema
+- Evaluates JSON-based expressions (`$if`, `$eq`, `$context`, `$$item`, etc.)
+- Resolves data paths (`$context.title`, `$$item.id`)
+- Validates expressions against schema before evaluation
 - Enforces depth limits to prevent DoS attacks
+- Supports shortcut syntax: `$key` (context) and `$$key` (item)
 
 **Key Methods:**
 - `evaluate(expression, data, depth)` - Evaluate an expression
-- `evaluateShortcut(expression, data)` - Handle `$key` shortcuts
+- `evaluateShortcut(expression, data)` - Handle `$key` and `$$key` shortcuts
+- `isDSLOperation(value)` - Check if value is a DSL operation
 
 **Example:**
 ```javascript
-import { MaiaScriptEvaluator } from '@MaiaOS/script';
+import { Evaluator as MaiaScriptEvaluator } from '@MaiaOS/script';
 
 const evaluator = new MaiaScriptEvaluator();
 
@@ -30,14 +32,19 @@ const result = await evaluator.evaluate(
   { context: { status: 'active' } }
 );
 // Returns: 'green'
+
+// Shortcut syntax
+const title = await evaluator.evaluate('$context.title', { context: { title: 'Hello' } });
+// Returns: 'Hello'
 ```
 
 **Security:**
-- Validates expressions before evaluation
-- Enforces maximum recursion depth (default: 50)
+- Validates expressions against `maia-script-expression` schema before evaluation
+- Enforces maximum recursion depth (default: 50) to prevent DoS
 - Sandboxed - only whitelisted operations allowed
+- No code execution - pure JSON expression evaluation
 
-**Source:** `libs/maia-script/src/engines/MaiaScriptEvaluator.js`
+**Source:** `libs/maia-script/src/utils/evaluator.js`
 
 ---
 
@@ -131,7 +138,7 @@ const actor = await actorEngine.createActor(
 - `_handleEvent(event, element, actorId)` - Handle view events, resolves expressions, validates payloads
 
 **Dependencies:**
-- `MaiaScriptEvaluator` - For expression evaluation
+- `Evaluator` - For expression evaluation
 - `ActorEngine` - For action handling
 - `ModuleRegistry` - For module access
 
@@ -501,7 +508,7 @@ const updated = await dbEngine.execute({
 
 **Dependencies:**
 - `@MaiaOS/operations` - Shared operations layer (DBEngine, operations, ReactiveStore)
-- `MaiaScriptEvaluator` - For expression evaluation in updates
+- `Evaluator` - For expression evaluation in updates
 
 **Source:** 
 - `libs/maia-script/src/engines/db-engine/db.engine.js` - maia-script wrapper

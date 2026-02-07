@@ -1,6 +1,6 @@
 # MaiaOS Documentation for maia-schemata
 
-**Auto-generated:** 2026-02-07T22:32:10.624Z
+**Auto-generated:** 2026-02-07T22:50:11.714Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -779,6 +779,9 @@ The `maia-schemata` package is MaiaOS's centralized schema validation and transf
 - ✅ Transforms human-readable references to co-ids during seeding
 - ✅ Provides runtime validation for application data
 - ✅ Supports CoJSON types (CoMap, CoList, CoStream) via custom AJV plugin
+- ✅ Resolves MaiaScript expressions in payloads (expression-resolver)
+- ✅ Extracts DOM values and resolves MaiaScript expressions (payload-resolver)
+- ✅ Validates message payloads against message type schemas
 
 **Why it matters:**
 Without schema validation, a typo in a `.maia` file could cause your entire app to break in mysterious ways. The validation system catches these errors early with clear, helpful messages.
@@ -823,7 +826,8 @@ libs/maia-schemata/src/
 ├── validation.helper.js        # Convenience functions (singleton, error formatting)
 ├── schema-transformer.js       # Transform schemas/instances for seeding
 ├── co-id-generator.js          # Generate co-ids for seeding
-├── schema-loader.js            # Load schemas from IndexedDB
+├── expression-resolver.js      # Universal MaiaScript expression resolver
+├── payload-resolver.js         # DOM value extraction + MaiaScript resolution
 ├── ajv-co-types-plugin.js     # AJV plugin for CoJSON types
 ├── os/                         # Operating system schemas
 │   ├── actor.schema.json
@@ -831,9 +835,16 @@ libs/maia-schemata/src/
 │   ├── state.schema.json
 │   ├── view.schema.json
 │   ├── meta.schema.json        # CoJSON meta-schema
-│   └── base-meta-schema.json   # JSON Schema Draft 2020-12 meta-schema
-└── data/                       # Application data schemas
-    └── todos.schema.json
+│   └── maia-script-expression.schema.json  # MaiaScript expression schema
+├── data/                       # Application data schemas
+│   ├── todos.schema.json
+│   └── chat.schema.json
+└── message/                    # Message type schemas
+    ├── CREATE_BUTTON.schema.json
+    ├── DELETE_BUTTON.schema.json
+    ├── UPDATE_INPUT.schema.json
+    ├── SEND_MESSAGE.schema.json
+    └── ... (other message types)
 ```
 
 ---
@@ -874,7 +885,37 @@ Generates deterministic co-ids for schemas, instances, and data entities.
 
 **See:** [Co-ID Generation](./co-id-generation.md)
 
-### 4. AJV CoJSON Plugin
+### 4. Expression Resolver
+
+Universal resolver for MaiaScript expressions in payloads.
+
+**What it does:**
+- Resolves MaiaScript expressions (`$context`, `$$item`, `$if`, `$eq`, etc.)
+- Handles recursive resolution in arrays and objects
+- Used by ViewEngine, StateEngine, and Operations to eliminate duplication
+
+**Key Functions:**
+- `resolveExpressions(payload, evaluator, data)` - Resolve all expressions in payload
+- `containsExpressions(payload)` - Check if payload contains unresolved expressions
+
+**See:** `libs/maia-schemata/src/expression-resolver.js`
+
+### 5. Payload Resolver
+
+Two-stage payload resolution: DOM markers → MaiaScript expressions.
+
+**What it does:**
+- Extracts DOM marker values (`@inputValue`, `@dataColumn`) - view layer only
+- Resolves MaiaScript expressions (`$context`, `$$item`, `$$result`) - state machine layer
+- Eliminates dual resolution - View extracts DOM, State resolves MaiaScript
+
+**Key Functions:**
+- `extractDOMValues(payload, element)` - Extract DOM markers only, preserve MaiaScript
+- `resolveMaiaScript(payload, evaluator, context, item, result)` - Resolve MaiaScript expressions
+
+**See:** `libs/maia-schemata/src/payload-resolver.js`
+
+### 6. AJV CoJSON Plugin
 
 Custom AJV plugin that adds support for CoJSON types.
 
@@ -884,6 +925,23 @@ Custom AJV plugin that adds support for CoJSON types.
 - Handles both direct arrays and wrapped objects for colist/costream
 
 **See:** [CoJSON Integration](./cojson-integration.md)
+
+### 7. Message Type Schemas
+
+Schemas for validating message payloads in actor communication.
+
+**What it does:**
+- Defines payload structure for each message type (CREATE_BUTTON, UPDATE_INPUT, etc.)
+- Used by ActorEngine to validate messages before routing to state machines
+- Message type schema IS the payload schema (merged concept)
+
+**Available Message Types:**
+- `CREATE_BUTTON`, `DELETE_BUTTON`, `TOGGLE_BUTTON`
+- `UPDATE_INPUT`, `SWITCH_VIEW`
+- `SEND_MESSAGE`, `SELECT_NAV`, `SELECT_ROW`
+- `SUCCESS`, `ERROR`, `RETRY`, `DISMISS`
+
+**See:** `libs/maia-schemata/src/message/`
 
 ---
 
@@ -1028,7 +1086,12 @@ The `maia-operations` package uses `maia-schemata` for:
 **Data Schemas** (`data/`):
 - Define application data types (todos, notes, etc.)
 - Used for runtime validation of user data
-- Examples: `todos.schema.json`
+- Examples: `todos.schema.json`, `chat.schema.json`
+
+**Message Type Schemas** (`message/`):
+- Define payload structure for actor-to-actor messages
+- Used by ActorEngine for message validation before state machine routing
+- Examples: `CREATE_BUTTON.schema.json`, `UPDATE_INPUT.schema.json`
 
 ### Meta-Schemas
 
@@ -1116,7 +1179,10 @@ transformInstanceForSeeding(instance, coIdMap);
 - Validation helper: `libs/maia-schemata/src/validation.helper.js`
 - Schema transformer: `libs/maia-schemata/src/schema-transformer.js`
 - Co-ID generator: `libs/maia-schemata/src/co-id-generator.js`
+- Expression resolver: `libs/maia-schemata/src/expression-resolver.js`
+- Payload resolver: `libs/maia-schemata/src/payload-resolver.js`
 - AJV plugin: `libs/maia-schemata/src/ajv-co-types-plugin.js`
+- Message schemas: `libs/maia-schemata/src/message/`
 
 ---
 

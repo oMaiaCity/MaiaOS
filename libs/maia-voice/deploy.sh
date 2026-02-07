@@ -64,9 +64,44 @@ else
     fi
 fi
 
-# Set HuggingFace token (if not already set)
-# Uncomment and set your token:
-# flyctl secrets set HF_TOKEN=your-token-here --app $APP_NAME
+# Check if HF_TOKEN secret is set
+echo ""
+echo "🔐 Checking HuggingFace token..."
+HF_TOKEN_SET=$(flyctl secrets list --app "$APP_NAME" 2>/dev/null | grep "HF_TOKEN" || echo "")
+
+if [ -z "$HF_TOKEN_SET" ]; then
+    echo "⚠️  HF_TOKEN secret is not set!"
+    echo ""
+    echo "   PersonaPlex requires a HuggingFace token to access the gated model."
+    echo "   Steps to get your token:"
+    echo "   1. Visit https://huggingface.co/nvidia/personaplex-7b-v1"
+    echo "   2. Accept the model license"
+    echo "   3. Visit https://huggingface.co/settings/tokens"
+    echo "   4. Create a new token (read access is sufficient)"
+    echo ""
+    read -p "   Enter your HuggingFace token (or press Enter to skip): " HF_TOKEN_INPUT
+    
+    if [ -n "$HF_TOKEN_INPUT" ]; then
+        echo "   Setting HF_TOKEN secret..."
+        flyctl secrets set HF_TOKEN="$HF_TOKEN_INPUT" --app "$APP_NAME" || {
+            echo "⚠️  Failed to set HF_TOKEN secret"
+            exit 1
+        }
+        echo "✓ HF_TOKEN secret set"
+    else
+        echo "⚠️  Skipping HF_TOKEN setup. You can set it later with:"
+        echo "   flyctl secrets set HF_TOKEN=your-token --app $APP_NAME"
+        echo ""
+        read -p "   Continue deployment anyway? (y/n): " CONTINUE_DEPLOY
+        
+        if [ "$CONTINUE_DEPLOY" != "y" ] && [ "$CONTINUE_DEPLOY" != "Y" ]; then
+            echo "   Deployment cancelled. Set HF_TOKEN and run deploy.sh again."
+            exit 1
+        fi
+    fi
+else
+    echo "✓ HF_TOKEN secret is already set"
+fi
 
 # Ensure 40GB volume exists (fly deploy requires it to exist before creating machine)
 echo ""

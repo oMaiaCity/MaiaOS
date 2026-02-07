@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Developers
 
-**Auto-generated:** 2026-02-07T22:32:10.622Z
+**Auto-generated:** 2026-02-07T22:50:11.706Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -4920,6 +4920,9 @@ The `maia-schemata` package is MaiaOS's centralized schema validation and transf
 - ✅ Transforms human-readable references to co-ids during seeding
 - ✅ Provides runtime validation for application data
 - ✅ Supports CoJSON types (CoMap, CoList, CoStream) via custom AJV plugin
+- ✅ Resolves MaiaScript expressions in payloads (expression-resolver)
+- ✅ Extracts DOM values and resolves MaiaScript expressions (payload-resolver)
+- ✅ Validates message payloads against message type schemas
 
 **Why it matters:**
 Without schema validation, a typo in a `.maia` file could cause your entire app to break in mysterious ways. The validation system catches these errors early with clear, helpful messages.
@@ -4964,7 +4967,8 @@ libs/maia-schemata/src/
 ├── validation.helper.js        # Convenience functions (singleton, error formatting)
 ├── schema-transformer.js       # Transform schemas/instances for seeding
 ├── co-id-generator.js          # Generate co-ids for seeding
-├── schema-loader.js            # Load schemas from IndexedDB
+├── expression-resolver.js      # Universal MaiaScript expression resolver
+├── payload-resolver.js         # DOM value extraction + MaiaScript resolution
 ├── ajv-co-types-plugin.js     # AJV plugin for CoJSON types
 ├── os/                         # Operating system schemas
 │   ├── actor.schema.json
@@ -4972,9 +4976,16 @@ libs/maia-schemata/src/
 │   ├── state.schema.json
 │   ├── view.schema.json
 │   ├── meta.schema.json        # CoJSON meta-schema
-│   └── base-meta-schema.json   # JSON Schema Draft 2020-12 meta-schema
-└── data/                       # Application data schemas
-    └── todos.schema.json
+│   └── maia-script-expression.schema.json  # MaiaScript expression schema
+├── data/                       # Application data schemas
+│   ├── todos.schema.json
+│   └── chat.schema.json
+└── message/                    # Message type schemas
+    ├── CREATE_BUTTON.schema.json
+    ├── DELETE_BUTTON.schema.json
+    ├── UPDATE_INPUT.schema.json
+    ├── SEND_MESSAGE.schema.json
+    └── ... (other message types)
 ```
 
 ---
@@ -5015,7 +5026,37 @@ Generates deterministic co-ids for schemas, instances, and data entities.
 
 **See:** [Co-ID Generation](./co-id-generation.md)
 
-### 4. AJV CoJSON Plugin
+### 4. Expression Resolver
+
+Universal resolver for MaiaScript expressions in payloads.
+
+**What it does:**
+- Resolves MaiaScript expressions (`$context`, `$$item`, `$if`, `$eq`, etc.)
+- Handles recursive resolution in arrays and objects
+- Used by ViewEngine, StateEngine, and Operations to eliminate duplication
+
+**Key Functions:**
+- `resolveExpressions(payload, evaluator, data)` - Resolve all expressions in payload
+- `containsExpressions(payload)` - Check if payload contains unresolved expressions
+
+**See:** `libs/maia-schemata/src/expression-resolver.js`
+
+### 5. Payload Resolver
+
+Two-stage payload resolution: DOM markers → MaiaScript expressions.
+
+**What it does:**
+- Extracts DOM marker values (`@inputValue`, `@dataColumn`) - view layer only
+- Resolves MaiaScript expressions (`$context`, `$$item`, `$$result`) - state machine layer
+- Eliminates dual resolution - View extracts DOM, State resolves MaiaScript
+
+**Key Functions:**
+- `extractDOMValues(payload, element)` - Extract DOM markers only, preserve MaiaScript
+- `resolveMaiaScript(payload, evaluator, context, item, result)` - Resolve MaiaScript expressions
+
+**See:** `libs/maia-schemata/src/payload-resolver.js`
+
+### 6. AJV CoJSON Plugin
 
 Custom AJV plugin that adds support for CoJSON types.
 
@@ -5025,6 +5066,23 @@ Custom AJV plugin that adds support for CoJSON types.
 - Handles both direct arrays and wrapped objects for colist/costream
 
 **See:** [CoJSON Integration](./cojson-integration.md)
+
+### 7. Message Type Schemas
+
+Schemas for validating message payloads in actor communication.
+
+**What it does:**
+- Defines payload structure for each message type (CREATE_BUTTON, UPDATE_INPUT, etc.)
+- Used by ActorEngine to validate messages before routing to state machines
+- Message type schema IS the payload schema (merged concept)
+
+**Available Message Types:**
+- `CREATE_BUTTON`, `DELETE_BUTTON`, `TOGGLE_BUTTON`
+- `UPDATE_INPUT`, `SWITCH_VIEW`
+- `SEND_MESSAGE`, `SELECT_NAV`, `SELECT_ROW`
+- `SUCCESS`, `ERROR`, `RETRY`, `DISMISS`
+
+**See:** `libs/maia-schemata/src/message/`
 
 ---
 
@@ -5169,7 +5227,12 @@ The `maia-operations` package uses `maia-schemata` for:
 **Data Schemas** (`data/`):
 - Define application data types (todos, notes, etc.)
 - Used for runtime validation of user data
-- Examples: `todos.schema.json`
+- Examples: `todos.schema.json`, `chat.schema.json`
+
+**Message Type Schemas** (`message/`):
+- Define payload structure for actor-to-actor messages
+- Used by ActorEngine for message validation before state machine routing
+- Examples: `CREATE_BUTTON.schema.json`, `UPDATE_INPUT.schema.json`
 
 ### Meta-Schemas
 
@@ -5257,7 +5320,10 @@ transformInstanceForSeeding(instance, coIdMap);
 - Validation helper: `libs/maia-schemata/src/validation.helper.js`
 - Schema transformer: `libs/maia-schemata/src/schema-transformer.js`
 - Co-ID generator: `libs/maia-schemata/src/co-id-generator.js`
+- Expression resolver: `libs/maia-schemata/src/expression-resolver.js`
+- Payload resolver: `libs/maia-schemata/src/payload-resolver.js`
 - AJV plugin: `libs/maia-schemata/src/ajv-co-types-plugin.js`
+- Message schemas: `libs/maia-schemata/src/message/`
 
 ---
 
@@ -6382,23 +6448,25 @@ The `@MaiaOS/script` package provides 10 core engines that work together to exec
 
 ---
 
-## MaiaScriptEvaluator
+## Evaluator (MaiaScriptEvaluator)
 
 **Purpose:** Evaluates MaiaScript expressions safely.
 
 **What it does:**
-- Evaluates JSON-based expressions (`$if`, `$eq`, `$context`, etc.)
-- Resolves data paths (`$context.title`, `$item.id`)
-- Validates expressions against schema
+- Evaluates JSON-based expressions (`$if`, `$eq`, `$context`, `$$item`, etc.)
+- Resolves data paths (`$context.title`, `$$item.id`)
+- Validates expressions against schema before evaluation
 - Enforces depth limits to prevent DoS attacks
+- Supports shortcut syntax: `$key` (context) and `$$key` (item)
 
 **Key Methods:**
 - `evaluate(expression, data, depth)` - Evaluate an expression
-- `evaluateShortcut(expression, data)` - Handle `$key` shortcuts
+- `evaluateShortcut(expression, data)` - Handle `$key` and `$$key` shortcuts
+- `isDSLOperation(value)` - Check if value is a DSL operation
 
 **Example:**
 ```javascript
-import { MaiaScriptEvaluator } from '@MaiaOS/script';
+import { Evaluator as MaiaScriptEvaluator } from '@MaiaOS/script';
 
 const evaluator = new MaiaScriptEvaluator();
 
@@ -6408,14 +6476,19 @@ const result = await evaluator.evaluate(
   { context: { status: 'active' } }
 );
 // Returns: 'green'
+
+// Shortcut syntax
+const title = await evaluator.evaluate('$context.title', { context: { title: 'Hello' } });
+// Returns: 'Hello'
 ```
 
 **Security:**
-- Validates expressions before evaluation
-- Enforces maximum recursion depth (default: 50)
+- Validates expressions against `maia-script-expression` schema before evaluation
+- Enforces maximum recursion depth (default: 50) to prevent DoS
 - Sandboxed - only whitelisted operations allowed
+- No code execution - pure JSON expression evaluation
 
-**Source:** `libs/maia-script/src/engines/MaiaScriptEvaluator.js`
+**Source:** `libs/maia-script/src/utils/evaluator.js`
 
 ---
 
@@ -6509,7 +6582,7 @@ const actor = await actorEngine.createActor(
 - `_handleEvent(event, element, actorId)` - Handle view events, resolves expressions, validates payloads
 
 **Dependencies:**
-- `MaiaScriptEvaluator` - For expression evaluation
+- `Evaluator` - For expression evaluation
 - `ActorEngine` - For action handling
 - `ModuleRegistry` - For module access
 
@@ -6879,7 +6952,7 @@ const updated = await dbEngine.execute({
 
 **Dependencies:**
 - `@MaiaOS/operations` - Shared operations layer (DBEngine, operations, ReactiveStore)
-- `MaiaScriptEvaluator` - For expression evaluation in updates
+- `Evaluator` - For expression evaluation in updates
 
 **Source:** 
 - `libs/maia-script/src/engines/db-engine/db.engine.js` - maia-script wrapper
@@ -10166,6 +10239,943 @@ export class DBEngine extends SharedDBEngine {
 
 **Dependencies:**
 - `@MaiaOS/schemata` - Schema validation
+
+---
+
+# MAIA VIBES/README
+
+*Source: developers/07_maia-vibes/README.md*
+
+# maia-vibes: Vibe Package System
+
+## Overview
+
+The `@MaiaOS/vibes` package contains pre-built vibe configurations (`.maia` files) for MaiaOS applications. Think of it as a library of ready-to-use app templates that you can load and run immediately.
+
+**What it is:**
+- ✅ **Vibe registry** - Pre-loaded vibe configurations as ES modules
+- ✅ **Vibe loaders** - Convenience functions to boot and load vibes
+- ✅ **Example apps** - Reference implementations (Todos, MyData, MaiaAgent)
+
+**What it isn't:**
+- ❌ **Not the kernel** - Boot process is in `@MaiaOS/kernel`
+- ❌ **Not the vibe system** - Vibe concept is documented in creator docs
+- ❌ **Not a build tool** - Vibes are just JSON configs, no compilation needed
+
+---
+
+## The Simple Version
+
+Think of `maia-vibes` like a library of app templates:
+
+- **Vibe Registry** = The catalog (lists all available vibes)
+- **Vibe Loader** = The installer (loads and boots a vibe)
+- **Vibe Configs** = The templates (pre-built `.maia` files)
+
+**Analogy:**
+Imagine you're building a house:
+- Vibes are like pre-designed house plans (blueprints)
+- The registry is like a catalog showing all available plans
+- The loader is like a contractor who reads the plan and builds the house
+
+---
+
+## Package Structure
+
+```
+libs/maia-vibes/src/
+├── index.js                    # Main exports (loaders, registries)
+├── todos/                      # Todos vibe
+│   ├── manifest.vibe.maia     # Vibe manifest
+│   ├── loader.js              # Vibe loader function
+│   ├── registry.js            # Vibe registry (pre-loaded configs)
+│   ├── index.html             # Example launcher HTML
+│   ├── agent/                 # Agent service actor
+│   │   ├── agent.actor.maia
+│   │   ├── agent.context.maia
+│   │   ├── agent.state.maia
+│   │   ├── agent.view.maia
+│   │   ├── agent.inbox.maia
+│   │   └── brand.style.maia
+│   ├── list/                  # List UI actor
+│   └── logs/                  # Logs UI actor
+├── my-data/                    # MyData vibe
+│   └── ... (similar structure)
+└── maia-agent/                # MaiaAgent vibe
+    └── ... (similar structure)
+```
+
+---
+
+## Key Components
+
+### 1. Vibe Registry
+
+Pre-loads all `.maia` configs as ES module imports. No runtime file loading needed.
+
+**What it does:**
+- Imports all vibe configs at build time
+- Exports structured registry object
+- Provides vibe manifest and all actor/view/context/state configs
+
+**Example:**
+```javascript
+// todos/registry.js
+import vibe from './manifest.vibe.maia';
+import agentActor from './agent/agent.actor.maia';
+import agentView from './agent/agent.view.maia';
+// ... more imports
+
+export const TodosVibeRegistry = {
+  vibe: vibe,
+  actors: {
+    '@todos/actor/agent': agentActor,
+    // ... more actors
+  },
+  views: {
+    '@todos/view/agent': agentView,
+    // ... more views
+  },
+  // ... contexts, states, inboxes, styles
+};
+```
+
+**See:** `libs/maia-vibes/src/todos/registry.js`
+
+### 2. Vibe Loader
+
+Convenience function that boots MaiaOS and loads a vibe.
+
+**What it does:**
+- Authenticates user (or reuses existing session)
+- Boots MaiaOS with CoJSON backend
+- Loads vibe from account.vibes.{vibeKey}
+- Returns vibe metadata and root actor
+
+**Example:**
+```javascript
+import { loadTodosVibe } from '@MaiaOS/vibes/todos/loader';
+
+const container = document.getElementById('app');
+const { os, vibe, actor } = await loadTodosVibe(container);
+
+console.log('Vibe loaded:', vibe.name);
+console.log('Actor ready:', actor.id);
+```
+
+**See:** `libs/maia-vibes/src/todos/loader.js`
+
+### 3. Vibe Manifest
+
+The vibe manifest (`manifest.vibe.maia`) defines the app metadata and entry point.
+
+**Structure:**
+```json
+{
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/todos",
+  "name": "Todo List",
+  "description": "A complete todo list application",
+  "actor": "@todos/actor/agent"
+}
+```
+
+**Fields:**
+- `$schema` - Schema reference (`@schema/vibe`)
+- `$id` - Unique vibe identifier (`@vibe/todos`)
+- `name` - Display name for marketplace
+- `description` - Brief description
+- `actor` - Reference to agent service actor (entry point)
+
+---
+
+## How It Works
+
+### The Loading Flow
+
+```
+1. Import Loader
+   └─> import { loadTodosVibe } from '@MaiaOS/vibes/todos/loader'
+
+2. Call Loader
+   └─> loadTodosVibe(container)
+   └─> Checks for existing MaiaOS session
+   └─> If none, authenticates and boots MaiaOS
+   └─> Loads vibe from account.vibes.todos
+
+3. Vibe Loaded
+   └─> Returns { os, vibe, actor }
+   └─> Actor is ready to use
+```
+
+### The Registry Flow
+
+```
+1. Build Time
+   └─> All .maia files imported as ES modules
+   └─> Registry object created with all configs
+
+2. Runtime
+   └─> Registry passed to MaiaOS.boot()
+   └─> Kernel seeds configs to database (if needed)
+   └─> Configs available via database operations
+
+3. Loading
+   └─> Kernel loads vibe from account.vibes.{key}
+   └─> Creates root actor from vibe.actor reference
+```
+
+---
+
+## Common Patterns
+
+### Loading a Vibe
+
+```javascript
+import { loadTodosVibe } from '@MaiaOS/vibes/todos/loader';
+
+const container = document.getElementById('app');
+const { os, vibe, actor } = await loadTodosVibe(container);
+```
+
+### Getting All Vibe Registries
+
+```javascript
+import { getAllVibeRegistries } from '@MaiaOS/vibes';
+
+const registries = await getAllVibeRegistries();
+// Returns: [{ vibe: {...}, actors: {...}, ... }, ...]
+```
+
+### Using Registry Directly
+
+```javascript
+import { TodosVibeRegistry } from '@MaiaOS/vibes/todos/registry';
+
+// Boot MaiaOS with registry
+const os = await MaiaOS.boot({
+  registry: TodosVibeRegistry
+});
+
+// Load vibe
+const { vibe, actor } = await os.loadVibeFromAccount('todos', container);
+```
+
+---
+
+## Integration Points
+
+### With maia-kernel
+
+The `maia-kernel` package uses vibes for:
+- Loading apps from account.vibes
+- Seeding vibe configs during boot (if needed)
+- Creating root actors from vibe manifests
+
+**See:** `libs/maia-kernel/src/kernel.js`
+
+### With maia-script
+
+The `maia-script` package uses vibes for:
+- Loading actor configs from database
+- Creating actors from vibe registries
+- Executing vibe state machines
+
+**See:** `libs/maia-script/src/engines/actor.engine.js`
+
+---
+
+## Key Concepts
+
+### Vibe Structure
+
+Every vibe follows this structure:
+
+```
+vibe-name/
+├── manifest.vibe.maia      # Vibe manifest (required)
+├── loader.js               # Vibe loader (optional, convenience)
+├── registry.js             # Vibe registry (required for seeding)
+├── index.html              # Example launcher (optional)
+└── [actors]/               # Actor directories
+    ├── [actor].actor.maia
+    ├── [actor].context.maia
+    ├── [actor].state.maia
+    ├── [actor].view.maia
+    ├── [actor].inbox.maia
+    └── brand.style.maia    # Shared brand style
+```
+
+### Agent-First Pattern
+
+**Every vibe MUST have an "agent" service actor** as its entry point.
+
+**Structure:**
+```
+Vibe → Agent (Service Actor) → Composite Actor → UI Actors
+```
+
+**Why:**
+- Clear separation of concerns (service logic vs. UI)
+- Scalable architecture (add UI actors as needed)
+- Message-based communication (loose coupling)
+- Consistent structure across all vibes
+
+**See:** [Creator Docs: Vibes](../../02_creators/01-vibes.md) for details
+
+---
+
+## Available Vibes
+
+### Todos Vibe
+
+A complete todo list application with drag-and-drop kanban view.
+
+**Features:**
+- Todo CRUD operations
+- Drag-and-drop organization
+- Multiple views (list, kanban)
+- State machine-based state management
+
+**Load:**
+```javascript
+import { loadTodosVibe } from '@MaiaOS/vibes/todos/loader';
+```
+
+### MyData Vibe
+
+A data management application for viewing and editing structured data.
+
+**Features:**
+- Table view for data
+- Detail view for editing
+- Schema-based validation
+
+**Load:**
+```javascript
+import { loadMyDataVibe } from '@MaiaOS/vibes/my-data/loader';
+```
+
+### MaiaAgent Vibe
+
+An AI agent interface for LLM interactions.
+
+**Features:**
+- Chat interface
+- LLM integration (RedPill API)
+- Conversation history
+
+**Load:**
+```javascript
+import { loadMaiaAgentVibe } from '@MaiaOS/vibes/maia-agent/loader';
+```
+
+---
+
+## Creating a New Vibe
+
+### Step 1: Create Directory Structure
+
+```
+my-vibe/
+├── manifest.vibe.maia
+├── loader.js
+├── registry.js
+├── index.html
+└── agent/
+    ├── agent.actor.maia
+    ├── agent.context.maia
+    ├── agent.state.maia
+    ├── agent.view.maia
+    ├── agent.inbox.maia
+    └── brand.style.maia
+```
+
+### Step 2: Create Vibe Manifest
+
+**`manifest.vibe.maia`:**
+```json
+{
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/my-vibe",
+  "name": "My Vibe",
+  "description": "A description of my vibe",
+  "actor": "@my-vibe/actor/agent"
+}
+```
+
+### Step 3: Create Registry
+
+**`registry.js`:**
+```javascript
+import vibe from './manifest.vibe.maia';
+import agentActor from './agent/agent.actor.maia';
+import agentView from './agent/agent.view.maia';
+// ... more imports
+
+export const MyVibeRegistry = {
+  vibe: vibe,
+  actors: {
+    '@my-vibe/actor/agent': agentActor,
+  },
+  views: {
+    '@my-vibe/view/agent': agentView,
+  },
+  // ... contexts, states, inboxes, styles
+};
+```
+
+### Step 4: Create Loader
+
+**`loader.js`:**
+```javascript
+import { MaiaOS, signInWithPasskey } from '@MaiaOS/kernel';
+import { MyVibeRegistry } from './registry.js';
+
+export async function loadMyVibe(container) {
+  // Check for existing session
+  let os;
+  if (window.maia && window.maia.id && window.maia.id.node) {
+    os = window.maia;
+  } else {
+    const { node, account } = await signInWithPasskey({ salt: "maia.city" });
+    os = await MaiaOS.boot({
+      node,
+      account,
+      modules: ['db', 'core'],
+      registry: MyVibeRegistry
+    });
+  }
+  
+  const { vibe, actor } = await os.loadVibeFromAccount('my-vibe', container);
+  return { os, vibe, actor };
+}
+
+export { MaiaOS, MyVibeRegistry };
+```
+
+### Step 5: Export from Package
+
+**`src/index.js`:**
+```javascript
+export { loadMyVibe, MyVibeRegistry } from './my-vibe/loader.js';
+```
+
+---
+
+## Troubleshooting
+
+### Problem: "Vibe not found in account.vibes"
+
+**Solution:** Make sure the vibe is seeded to the account:
+```javascript
+// During boot, registry is automatically seeded
+const os = await MaiaOS.boot({
+  registry: MyVibeRegistry
+});
+```
+
+### Problem: "Failed to load actor"
+
+**Solution:** Check that the actor reference in vibe manifest exists:
+```json
+{
+  "actor": "@my-vibe/actor/agent"  // Must match actor $id in registry
+}
+```
+
+### Problem: "Registry not found"
+
+**Solution:** Make sure registry is exported from package:
+```javascript
+// src/index.js
+export { MyVibeRegistry } from './my-vibe/registry.js';
+```
+
+---
+
+## Related Documentation
+
+- [Creator Docs: Vibes](../../02_creators/01-vibes.md) - How to use vibes as a creator
+- [maia-kernel Package](../02_maia-kernel/README.md) - Boot process and vibe loading
+- [maia-script Package](../04_maia-script/README.md) - Actor execution engines
+
+---
+
+## Source Files
+
+- Main entry: `libs/maia-vibes/src/index.js`
+- Todos vibe: `libs/maia-vibes/src/todos/`
+- MyData vibe: `libs/maia-vibes/src/my-data/`
+- MaiaAgent vibe: `libs/maia-vibes/src/maia-agent/`
+
+---
+
+# MAIA TOOLS/README
+
+*Source: developers/08_maia-tools/README.md*
+
+# maia-tools: Tool Registry and Definitions
+
+## Overview
+
+The `@MaiaOS/tools` package provides a centralized registry for all MaiaScript tools. Think of it as a toolbox where all available tools are stored, organized, and ready to use.
+
+**What it is:**
+- ✅ **Tool registry** - Central catalog of all available tools
+- ✅ **Tool definitions** - JSON schema definitions for each tool
+- ✅ **Tool implementations** - JavaScript functions that execute tools
+
+**What it isn't:**
+- ❌ **Not the tool engine** - Tool execution is in `maia-script` (ToolEngine)
+- ❌ **Not tool registration** - Tools are registered by modules in `maia-script`
+- ❌ **Not business logic** - Tools are generic, reusable operations
+
+---
+
+## The Simple Version
+
+Think of `maia-tools` like a hardware store:
+
+- **Tool Registry** = The catalog (lists all available tools)
+- **Tool Definition** = The instruction manual (what the tool does, what it needs)
+- **Tool Function** = The actual tool (the thing that does the work)
+
+**Analogy:**
+Imagine you're building a house:
+- Tool definitions are like product descriptions (what each tool does)
+- Tool functions are like the actual tools (hammer, saw, drill)
+- The registry is like the store's inventory system (knows where everything is)
+
+---
+
+## Package Structure
+
+```
+libs/maia-tools/src/
+├── index.js                    # Main exports (registry, getTool, etc.)
+├── core/                       # Core UI tools
+│   ├── noop.tool.maia         # Tool definition (JSON schema)
+│   ├── noop.tool.js           # Tool implementation (function)
+│   ├── publishMessage.tool.maia
+│   ├── publishMessage.tool.js
+│   └── computeMessageNames.tool.maia
+│   └── computeMessageNames.tool.js
+├── db/                         # Database tools (deprecated - use @db unified API)
+│   ├── db.tool.maia
+│   └── db.tool.js
+├── memory/                     # Memory tools
+│   ├── memory.tool.maia
+│   └── memory.tool.js
+└── agent/                      # Agent tools
+    ├── agent.tool.maia
+    └── agent.tool.js
+```
+
+---
+
+## Key Components
+
+### 1. Tool Registry
+
+Central registry that maps namespace paths to tool definitions and functions.
+
+**What it does:**
+- Imports all tool definitions as JSON modules
+- Imports all tool functions as JavaScript modules
+- Provides lookup functions (`getTool`, `getToolsByNamespace`)
+
+**Structure:**
+```javascript
+export const TOOLS = {
+  'core/noop': { 
+    definition: noopDef,    // JSON schema definition
+    function: noopFn        // JavaScript function
+  },
+  'core/publishMessage': { 
+    definition: publishMessageDef,
+    function: publishMessageFn
+  },
+  // ... more tools
+};
+```
+
+**See:** `libs/maia-tools/src/index.js`
+
+### 2. Tool Definition
+
+JSON schema that describes what a tool does and what parameters it needs.
+
+**Structure:**
+```json
+{
+  "$schema": "@schema/tool",
+  "$id": "tool_noop_001",
+  "name": "@core/noop",
+  "description": "No-op tool that does nothing",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "message": {
+        "type": "string",
+        "description": "Optional message to log"
+      }
+    }
+  }
+}
+```
+
+**Fields:**
+- `$schema` - Schema reference (`@schema/tool`)
+- `$id` - Unique tool identifier
+- `name` - Tool namespace path (`@core/noop`)
+- `description` - What the tool does
+- `parameters` - JSON Schema for tool parameters
+
+**See:** `libs/maia-tools/src/core/noop.tool.maia`
+
+### 3. Tool Function
+
+JavaScript function that executes the tool logic.
+
+**Structure:**
+```javascript
+export default {
+  async execute(actor, payload) {
+    // Tool logic here
+    // actor: Actor instance (has context, state, etc.)
+    // payload: Validated payload (matches tool definition parameters)
+    return result;
+  }
+};
+```
+
+**Parameters:**
+- `actor` - Actor instance executing the tool
+- `payload` - Validated payload matching tool definition parameters
+
+**See:** `libs/maia-tools/src/core/noop.tool.js`
+
+---
+
+## How It Works
+
+### The Tool Execution Flow
+
+```
+1. State Machine Calls Tool
+   └─> { tool: "@core/publishMessage", payload: {...} }
+
+2. ToolEngine Looks Up Tool
+   └─> getTool("@core/publishMessage")
+   └─> Returns { definition, function }
+
+3. ToolEngine Validates Payload
+   └─> Validates payload against tool definition parameters
+   └─> Throws error if invalid
+
+4. ToolEngine Executes Tool
+   └─> tool.function.execute(actor, payload)
+   └─> Returns result
+
+5. Result Used in State Machine
+   └─> Result available as $$result in expressions
+   └─> Can be used in updateContext or other actions
+```
+
+### The Registration Flow
+
+```
+1. Module Registers Tools
+   └─> Module calls toolEngine.registerTool()
+   └─> Gets tool from registry: getTool("core/noop")
+   └─> Registers with namespace: "@core/noop"
+
+2. Tool Available in State Machines
+   └─> Can be called via { tool: "@core/noop", payload: {...} }
+   └─> ToolEngine validates and executes
+```
+
+---
+
+## Common Patterns
+
+### Getting a Tool
+
+```javascript
+import { getTool } from '@MaiaOS/tools';
+
+const tool = getTool('core/noop');
+// Returns: { definition: {...}, function: execute(...) }
+```
+
+### Getting All Tools in a Namespace
+
+```javascript
+import { getToolsByNamespace } from '@MaiaOS/tools';
+
+const coreTools = getToolsByNamespace('core');
+// Returns: { 'core/noop': {...}, 'core/publishMessage': {...} }
+```
+
+### Getting All Tool Definitions
+
+```javascript
+import { getAllToolDefinitions } from '@MaiaOS/tools';
+
+const definitions = getAllToolDefinitions();
+// Returns: { 'core/noop': {...}, 'core/publishMessage': {...}, ... }
+// Useful for seeding tools into database
+```
+
+---
+
+## Available Tools
+
+### Core Tools
+
+**`@core/noop`**
+- Does nothing (useful for testing)
+- Parameters: `{ message?: string }`
+
+**`@core/publishMessage`**
+- Publishes a message to a target actor
+- Parameters: `{ type: string, payload: object, target: string }`
+- **Note:** Topics infrastructure removed - use direct messaging with `target` parameter
+
+**`@core/computeMessageNames`**
+- Computes message names from context
+- Parameters: `{ context: object }`
+
+### Memory Tools
+
+**`@memory/memory`**
+- Manages actor memory (conversation history, etc.)
+- Parameters: `{ operation: string, ... }`
+
+### Agent Tools
+
+**`@agent/chat`**
+- Unified agent chat tool using OpenAI-compatible API (RedPill)
+- Parameters: `{ context: Array<Message>, model?: string, temperature?: number }`
+- **Note:** LLMs are stateless - each request sends full context
+
+### Database Tools
+
+**`@db/*`** (Deprecated)
+- Database tools have been replaced by the unified `@db` API
+- Use `maia.db({ op: 'read', ... })` instead
+- See: [maia-script DBEngine](../04_maia-script/engines.md#dbengine)
+
+---
+
+## Creating a New Tool
+
+### Step 1: Create Tool Definition
+
+**`src/my-namespace/myTool.tool.maia`:**
+```json
+{
+  "$schema": "@schema/tool",
+  "$id": "tool_mytool_001",
+  "name": "@my-namespace/myTool",
+  "description": "What my tool does",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "input": {
+        "type": "string",
+        "description": "Input parameter"
+      }
+    },
+    "required": ["input"]
+  }
+}
+```
+
+### Step 2: Create Tool Function
+
+**`src/my-namespace/myTool.tool.js`:**
+```javascript
+export default {
+  async execute(actor, payload) {
+    const { input } = payload;
+    
+    // Tool logic here
+    const result = `Processed: ${input}`;
+    
+    return result;
+  }
+};
+```
+
+### Step 3: Register Tool in Index
+
+**`src/index.js`:**
+```javascript
+import myToolDef from './my-namespace/myTool.tool.maia';
+import myToolFn from './my-namespace/myTool.tool.js';
+
+export const TOOLS = {
+  // ... existing tools
+  'my-namespace/myTool': { 
+    definition: myToolDef, 
+    function: myToolFn 
+  },
+};
+```
+
+### Step 4: Register Tool in Module
+
+**`libs/maia-script/src/modules/my-namespace.module.js`:**
+```javascript
+import { getTool } from '@MaiaOS/tools';
+
+export async function register(registry) {
+  const tool = getTool('my-namespace/myTool');
+  if (tool) {
+    await registry._getToolEngine('my-namespace').registerTool(
+      'my-namespace/myTool',
+      '@my-namespace/myTool',
+      {
+        definition: tool.definition,
+        function: tool.function
+      }
+    );
+  }
+}
+```
+
+---
+
+## Integration Points
+
+### With maia-script
+
+The `maia-script` package uses tools for:
+- Tool execution via ToolEngine
+- Tool registration via modules
+- Tool validation against definitions
+
+**See:** `libs/maia-script/src/engines/tool.engine.js`
+
+### With maia-schemata
+
+The `maia-schemata` package uses tools for:
+- Validating tool definitions against `@schema/tool` schema
+- Validating tool parameters against tool definition parameters
+
+**See:** `libs/maia-schemata/src/os/tool.schema.json`
+
+---
+
+## Key Concepts
+
+### Tool Namespaces
+
+Tools are organized by namespace:
+
+- `core/` - Core UI tools (noop, publishMessage, etc.)
+- `memory/` - Memory management tools
+- `agent/` - Agent/LLM interaction tools
+- `db/` - Database tools (deprecated, use `@db` unified API)
+
+### Tool Execution Context
+
+When a tool executes, it receives:
+
+- **`actor`** - Actor instance executing the tool
+  - `actor.id` - Actor ID
+  - `actor.context` - Actor context (read-only)
+  - `actor.actorEngine` - ActorEngine reference (for sending messages, etc.)
+  - `actor.dbEngine` - DBEngine reference (for data operations)
+
+- **`payload`** - Validated payload matching tool definition parameters
+
+### Tool Results
+
+Tool results are available in state machines as `$$result`:
+
+```json
+{
+  "tool": "@core/publishMessage",
+  "payload": { "type": "CLICK", "target": "@actor/button" }
+},
+{
+  "updateContext": {
+    "lastMessage": "$$result"
+  }
+}
+```
+
+---
+
+## Troubleshooting
+
+### Problem: "Tool not found"
+
+**Solution:** Make sure tool is registered in module:
+```javascript
+// In module registration
+const tool = getTool('my-namespace/myTool');
+await toolEngine.registerTool('my-namespace/myTool', '@my-namespace/myTool', tool);
+```
+
+### Problem: "Tool parameter validation failed"
+
+**Solution:** Check tool definition parameters match payload:
+```json
+// Tool definition
+{
+  "parameters": {
+    "properties": {
+      "input": { "type": "string" }
+    },
+    "required": ["input"]
+  }
+}
+
+// Payload must match
+{
+  "input": "value"  // Required, must be string
+}
+```
+
+### Problem: "Tool execution failed"
+
+**Solution:** Check tool function implementation:
+```javascript
+export default {
+  async execute(actor, payload) {
+    // Make sure to handle errors
+    try {
+      // Tool logic
+      return result;
+    } catch (error) {
+      console.error('[MyTool] Error:', error);
+      throw error; // Re-throw to surface error
+    }
+  }
+};
+```
+
+---
+
+## Related Documentation
+
+- [maia-script: ToolEngine](../04_maia-script/engines.md#toolengine) - How tools are executed
+- [maia-script: Modules](../04_maia-script/modules.md) - How tools are registered
+- [Creator Docs: Tools](../../02_creators/06-tools.md) - How to use tools as a creator
+
+---
+
+## Source Files
+
+- Main entry: `libs/maia-tools/src/index.js`
+- Core tools: `libs/maia-tools/src/core/`
+- Memory tools: `libs/maia-tools/src/memory/`
+- Agent tools: `libs/maia-tools/src/agent/`
+- Database tools: `libs/maia-tools/src/db/` (deprecated)
 
 ---
 
