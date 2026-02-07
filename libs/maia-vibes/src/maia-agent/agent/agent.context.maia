@@ -9,5 +9,6 @@
   "isLoading": false,
   "error": null,
   "hasConversations": false,
-  "hasError": false
+  "hasError": false,
+  "messageNames": {}
 }

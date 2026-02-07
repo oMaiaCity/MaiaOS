@@ -45,13 +45,7 @@
                   {
                     "tag": "div",
                     "class": "message-name",
-                    "text": {
-                      "$if": {
-                        "condition": { "$eq": ["$$role", "user"] },
-                        "then": "me",
-                        "else": "Maia"
-                      }
-                    }
+                    "text": "$messageNames.$$id"
                   },
                   {
                     "tag": "div",

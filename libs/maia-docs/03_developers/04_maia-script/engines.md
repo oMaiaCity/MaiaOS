@@ -112,11 +112,14 @@ const actor = await actorEngine.createActor(
 - Uses Shadow DOM for style isolation
 - Sanitizes HTML to prevent XSS
 - **Reactive rendering** - Automatically re-renders when context changes
+- **Resolves ALL expressions before sending to inbox** - Only resolved values (clean JS objects/JSON) are sent
+- **Rejects conditional logic** - Views are "dumb" templates, no `$if`, `$eq`, ternary operators allowed
 
 **Key Methods:**
 - `loadView(coId)` - Load view definition from database
 - `render(viewDef, context, shadowRoot, styleSheets, actorId)` - Render view
 - `renderNode(nodeDef, data, actorId)` - Render a single node
+- `_handleEvent(event, element, actorId)` - Handle view events, resolves expressions, validates payloads
 
 **Dependencies:**
 - `MaiaScriptEvaluator` - For expression evaluation
@@ -127,9 +130,46 @@ const actor = await actorEngine.createActor(
 - ✅ **ONLY displays current state** - Views read from context reactively (ReactiveStore subscriptions)
 - ✅ **ONLY sends events** - Views send events via `send` syntax, never update context directly
 - ✅ **ONLY manipulates DOM reactively** - DOM updates happen in response to context changes
+- ✅ **Resolves ALL expressions before sending** - ViewEngine fully resolves all expressions before sending to inbox (only clean JS objects/JSON persist to CoJSON)
+- ✅ **Validates payloads are resolved** - Throws error if unresolved expressions found in payloads
 - ❌ **SHOULD NOT update context directly** - All context updates flow through state machines
 - ❌ **SHOULD NOT trigger state transitions directly** - Views send events, state machines handle transitions
+- ❌ **Should NOT contain conditional logic** (`$if`, `$eq`, ternary operators) - All conditionals belong in state machines
+- ❌ **Should NOT contain DSL operations** - Views only resolve simple context/item references (`$key`, `$$key`)
 - **Reactive UI behavior** - Use data attributes (e.g., `data-auto-focus="true"`) for declarative UI behavior
+
+**Expression Resolution:**
+- Views resolve ALL expressions before sending to inbox via `resolveExpressions()`
+- Only resolved values (clean JS objects/JSON) are persisted to CoJSON
+- State machines receive pre-resolved payloads (no re-evaluation needed)
+- Action configs in state machines still support expressions (evaluated in state machine context)
+
+**Correct Pattern - Views Handle UI Reactively:**
+```json
+// State machine computes boolean flag
+{
+  "updateContext": {
+    "isSelected": {"$eq": ["$$id", "$selectedId"]}
+  }
+}
+
+// View references resolved context value
+{
+  "tag": "div",
+  "attrs": {
+    "data-selected": "$isSelected"  // Simple context reference, resolved to true/false
+  }
+}
+
+// CSS handles conditional styling
+{
+  "div": {
+    "data-selected": {
+      "true": { "background": "blue" }
+    }
+  }
+}
+```
 
 **Example:**
 ```javascript
@@ -606,8 +646,11 @@ ViewEngine.render() - Re-renders view reactively
 - ✅ Renders DOM from context reactively
 - ✅ Sends events (never updates context directly)
 - ✅ Handles DOM manipulation reactively
+- ✅ Resolves ALL expressions before sending to inbox (only resolved values)
 - ❌ Should NOT update context directly
 - ❌ Should NOT trigger state transitions directly
+- ❌ Should NOT contain conditional logic (`$if`, `$eq`, ternary operators)
+- ❌ Should NOT contain DSL operations (views are dumb templates)
 
 **ActorEngine:**
 - ✅ Orchestrates actors and engines
@@ -637,11 +680,17 @@ ViewEngine.render() - Re-renders view reactively
 **✅ Correct Pattern - Views Handle UI Reactively:**
 ```json
 // GOOD - Views react to context changes, no direct manipulation needed
+// State machine computes boolean flags, view references them
 {
   "tag": "input",
   "value": "$inputValue",
-  "class": { "$if": { "condition": "$hasError", "then": "error", "else": "" } }
+  "attrs": {
+    "data": {
+      "hasError": "$hasError"  // State machine computed this flag, view just references it
+    }
+  }
 }
+// CSS handles styling: input[data-has-error="true"] { border-color: red; }
 ```
 
 **❌ View Updating Context Directly:**

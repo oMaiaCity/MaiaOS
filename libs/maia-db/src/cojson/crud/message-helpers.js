@@ -6,6 +6,7 @@
  */
 
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
+import { containsExpressions } from '@MaiaOS/schemata/expression-resolver.js';
 import { resolve } from '../schema/resolver.js';
 
 /**
@@ -92,6 +93,13 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
     processed: false,
     ...messageData
   };
+  
+  // CRITICAL: Validate payload is fully resolved before persisting to CoJSON
+  // In distributed systems, only resolved clean JS objects/JSON can be persisted
+  // Expressions require evaluation context that may not exist on remote actors
+  if (messageDataWithDefaults.payload && containsExpressions(messageDataWithDefaults.payload)) {
+    throw new Error(`[createAndPushMessage] Payload contains unresolved expressions. Only resolved values can be persisted to CoJSON. Payload: ${JSON.stringify(messageDataWithDefaults.payload).substring(0, 200)}`);
+  }
   
   // Validate message data against message schema
   await validateAgainstSchemaOrThrow(messageSchema, messageDataWithDefaults, 'createAndPushMessage');

@@ -805,11 +805,17 @@ console.log(actor.machine.currentState); // 'idle', 'creating', etc.
 
 **Event Flow Pattern:**
 ```
-View Event → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
-External Message → inbox → processMessages() → StateEngine.send()
-Tool SUCCESS → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
-Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+View Event → resolveExpressions() (FULLY resolve) → sendInternalEvent() → inbox (CoJSON - only clean JSON) → processMessages() → StateEngine.send() (payload already resolved)
+External Message → inbox → processMessages() → StateEngine.send() (payload already resolved)
+Tool SUCCESS → sendInternalEvent() → inbox → processMessages() → StateEngine.send() (payload already resolved)
+Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngine.send() (payload already resolved)
 ```
+
+**CRITICAL: Expression Resolution**
+- **Views resolve ALL expressions** before sending to inbox (only resolved clean JS objects/JSON)
+- **Messages persist only resolved values** to CoJSON (no expressions - they can't be evaluated remotely)
+- **State machines receive resolved payloads** (no re-evaluation needed for message payloads)
+- **Action configs still support expressions** (e.g., `updateContext: { title: "$context.title" }` - these are evaluated in state machine)
 
 **Why inbox for all events:**
 - **Unified Event Log:** Complete traceability of all events
@@ -819,21 +825,31 @@ Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngi
 
 ### Sending Messages
 
+**CRITICAL: Only Resolved Values in Messages**
+
+In distributed/decentralized systems, **expressions cannot be passed around** because:
+- Expressions require evaluation context (context, item, result) that may not exist on remote actors
+- CoJSON persistence stores messages that sync across devices - expressions can't be evaluated remotely
+- Only resolved clean JS objects/JSON can be persisted and synced
+
+**Views automatically resolve all expressions** before sending to inbox. You don't need to do anything - it happens automatically.
+
 **External messages** (actor-to-actor):
 
 ```javascript
 // Send to specific actor
+// Payload must be resolved values (no expressions)
 os.sendMessage('actor_todo_001', {
   type: 'notification',
   from: 'actor_calendar_001',
-  data: {text: 'Reminder: Meeting at 3pm'}
+  payload: {text: 'Reminder: Meeting at 3pm'}  // Resolved value, not "$context.reminder"
 });
 
 // Actors can send to each other
 actor.actorEngine.sendMessage(targetActorId, message);
 ```
 
-**Internal events** (from views) automatically route through inbox via `sendInternalEvent()`.
+**Internal events** (from views) automatically route through inbox via `sendInternalEvent()`. Views resolve all expressions before sending.
 
 ### Receiving Messages
 

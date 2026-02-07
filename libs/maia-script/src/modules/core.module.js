@@ -2,7 +2,7 @@ export const config = {
   version: '1.0.0',
   description: 'Core UI tools (view modes, modals, utilities)',
   namespace: '@core',
-  tools: ['noop', 'preventDefault', 'publishMessage']
+  tools: ['noop', 'preventDefault', 'publishMessage', 'computeMessageNames']
 };
 
 export async function register(registry) {

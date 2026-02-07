@@ -2076,9 +2076,7 @@
                               "class": "nav-item",
                               "attrs": {
                                 "data": {
-                                  "selected": {
-                                    "$eq": ["$$id", "$selectedNavId"]
-                                  }
+                                  "selected": "$selectedNavItems.$$id"
                                 }
                               },
                               "children": [
@@ -2182,9 +2180,7 @@
                   "class": "table-row",
                   "attrs": {
                     "data": {
-                      "selected": {
-                        "$eq": ["$$id", "$selectedRowId"]
-                      }
+                      "selected": "$selectedRowItems.$$id"
                     }
                   },
                   "children": [
@@ -2358,6 +2354,8 @@
     ],
     "selectedNavId": "account",
     "selectedRowId": "1",
+    "selectedNavItems": { "account": true },
+    "selectedRowItems": { "1": true },
     "currentTable": "@table",
     "currentDetail": "@detail",
     "@actors": {
@@ -2423,10 +2421,16 @@
             "target": "idle",
             "actions": [
               {
-                "updateContext": { "selectedNavId": "$$navId" }
+                "updateContext": {
+                  "selectedNavId": "$$navId",
+                  "selectedNavItems": { "$$navId": true }
+                }
               },
               {
-                "updateContext": { "selectedRowId": null }
+                "updateContext": {
+                  "selectedRowId": null,
+                  "selectedRowItems": {}
+                }
               }
             ]
           },
@@ -2434,7 +2438,10 @@
             "target": "idle",
             "actions": [
               {
-                "updateContext": { "selectedRowId": "$$rowId" }
+                "updateContext": {
+                  "selectedRowId": "$$rowId",
+                  "selectedRowItems": { "$$rowId": true }
+                }
               }
             ]
           }
@@ -3166,13 +3173,7 @@
                     {
                       "tag": "div",
                       "class": "message-name",
-                      "text": {
-                        "$if": {
-                          "condition": { "$eq": ["$$role", "user"] },
-                          "then": "me",
-                          "else": "Maia"
-                        }
-                      }
+                      "text": "$messageNames.$$id"
                     },
                     {
                       "tag": "div",
@@ -3283,7 +3284,8 @@
     "isLoading": false,
     "error": null,
     "hasConversations": false,
-    "hasError": false
+    "hasError": false,
+    "messageNames": {}
   };
   const agentState = {
     "$schema": "@schema/state",
@@ -3296,6 +3298,17 @@
             "updateContext": {
               "isLoading": false
             }
+          },
+          {
+            "tool": "@core/computeMessageNames",
+            "payload": {
+              "conversations": "$conversations"
+            },
+            "onSuccess": {
+              "updateContext": {
+                "messageNames": "$$result"
+              }
+            }
           }
         ],
         "on": {
@@ -3306,6 +3319,17 @@
                 "updateContext": {
                   "hasConversations": {
                     "$gt": [{ "$length": "$conversations" }, 0]
+                  }
+                }
+              },
+              {
+                "tool": "@core/computeMessageNames",
+                "payload": {
+                  "conversations": "$conversations"
+                },
+                "onSuccess": {
+                  "updateContext": {
+                    "messageNames": "$$result"
                   }
                 }
               }
@@ -3446,6 +3470,17 @@
                 "updateContext": {
                   "hasConversations": {
                     "$gt": [{ "$length": "$conversations" }, 0]
+                  }
+                }
+              },
+              {
+                "tool": "@core/computeMessageNames",
+                "payload": {
+                  "conversations": "$conversations"
+                },
+                "onSuccess": {
+                  "updateContext": {
+                    "messageNames": "$$result"
                   }
                 }
               }

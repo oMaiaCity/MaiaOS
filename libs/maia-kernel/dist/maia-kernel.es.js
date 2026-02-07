@@ -17040,6 +17040,36 @@ async function resolveExpressions(payload, evaluator2, data2) {
   }
   return resolved;
 }
+function containsExpressions(payload) {
+  if (payload === null || payload === void 0) {
+    return false;
+  }
+  if (typeof payload === "string") {
+    if (payload.startsWith("$")) {
+      return true;
+    }
+    if (payload.includes("?") && payload.includes(":")) {
+      return true;
+    }
+    return false;
+  }
+  if (typeof payload !== "object") {
+    return false;
+  }
+  if (Array.isArray(payload)) {
+    return payload.some((item) => containsExpressions(item));
+  }
+  const keys = Object.keys(payload);
+  if (keys.length === 1 && keys[0].startsWith("$")) {
+    return true;
+  }
+  for (const [key, value] of Object.entries(payload)) {
+    if (containsExpressions(value)) {
+      return true;
+    }
+  }
+  return false;
+}
 async function resolveSchemaFromCoValue(backend, coId, opName) {
   try {
     const schemaCoId = await resolve$1(backend, { fromCoValue: coId }, { returnType: "coId" });
@@ -18657,6 +18687,9 @@ async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
     processed: false,
     ...messageData
   };
+  if (messageDataWithDefaults.payload && containsExpressions(messageDataWithDefaults.payload)) {
+    throw new Error(`[createAndPushMessage] Payload contains unresolved expressions. Only resolved values can be persisted to CoJSON. Payload: ${JSON.stringify(messageDataWithDefaults.payload).substring(0, 200)}`);
+  }
   await validateAgainstSchemaOrThrow(messageSchema2, messageDataWithDefaults, "createAndPushMessage");
   const createResult = await dbEngine.execute({
     op: "create",
@@ -19432,6 +19465,9 @@ class ActorEngine {
    * @param {Object} message - Message object { type, payload, from, timestamp }
    */
   async sendMessage(actorId, message) {
+    if (message.payload && containsExpressions(message.payload)) {
+      throw new Error(`[ActorEngine] Message payload contains unresolved expressions. Only resolved values can be sent between actors. Payload: ${JSON.stringify(message.payload).substring(0, 200)}`);
+    }
     const actor = this.actors.get(actorId);
     if (!actor) {
       if (!this.pendingMessages.has(actorId)) this.pendingMessages.set(actorId, []);
@@ -19458,6 +19494,9 @@ class ActorEngine {
     }
   }
   async sendInternalEvent(actorId, eventType, payload = {}) {
+    if (containsExpressions(payload)) {
+      throw new Error(`[ActorEngine] Payload contains unresolved expressions. Views must resolve all expressions before sending to inbox. Payload: ${JSON.stringify(payload).substring(0, 200)}`);
+    }
     const actor = this.actors.get(actorId);
     if (!actor || !actor.inboxCoId || !this.dbEngine) {
       console.warn(`[ActorEngine] Cannot send internal event:`, {
@@ -19616,8 +19655,12 @@ class ViewEngine {
   }
   async _applyNodeAttributes(element, node, data2, actorId) {
     if (node.class) {
-      if (typeof node.class === "object" && node.class.$if) {
-        throw new Error('[ViewEngine] "$if" is no longer supported in class property. Use data-attributes and CSS instead.');
+      if (typeof node.class === "object" && this._isDSLOperation(node.class)) {
+        const opName = Object.keys(node.class)[0];
+        throw new Error(`[ViewEngine] Conditional logic (${opName}) is not allowed in class property. Use state machines to compute boolean flags and reference them via context, then use data-attributes and CSS.`);
+      }
+      if (typeof node.class === "string" && node.class.includes("?") && node.class.includes(":")) {
+        throw new Error("[ViewEngine] Ternary operators are not allowed in class property. Use state machines to compute values and reference them via context.");
       }
       const classValue = await this.evaluator.evaluate(node.class, data2);
       if (classValue) {
@@ -19629,6 +19672,13 @@ class ViewEngine {
         if (attrName === "data") {
           await this._resolveDataAttributes(attrValue, data2, element);
         } else {
+          if (typeof attrValue === "object" && this._isDSLOperation(attrValue)) {
+            const opName = Object.keys(attrValue)[0];
+            throw new Error(`[ViewEngine] Conditional logic (${opName}) is not allowed in attributes. Use state machines to compute values and reference them via context.`);
+          }
+          if (typeof attrValue === "string" && attrValue.includes("?") && attrValue.includes(":")) {
+            throw new Error("[ViewEngine] Ternary operators are not allowed in attributes. Use state machines to compute values and reference them via context.");
+          }
           const resolvedValue = await this.evaluator.evaluate(attrValue, data2);
           if (resolvedValue !== void 0 && resolvedValue !== null) {
             const booleanAttributes = ["disabled", "readonly", "checked", "selected", "autofocus", "required", "multiple"];
@@ -19653,6 +19703,13 @@ class ViewEngine {
       }
     }
     if (node.value !== void 0) {
+      if (typeof node.value === "object" && this._isDSLOperation(node.value)) {
+        const opName = Object.keys(node.value)[0];
+        throw new Error(`[ViewEngine] Conditional logic (${opName}) is not allowed in value property. Use state machines to compute values and reference them via context.`);
+      }
+      if (typeof node.value === "string" && node.value.includes("?") && node.value.includes(":")) {
+        throw new Error("[ViewEngine] Ternary operators are not allowed in value property. Use state machines to compute values and reference them via context.");
+      }
       const resolvedValue = await this.evaluator.evaluate(node.value, data2);
       if (element.tagName === "INPUT" || element.tagName === "TEXTAREA") {
         const newValue = resolvedValue || "";
@@ -19668,6 +19725,13 @@ class ViewEngine {
       }
     }
     if (node.text !== void 0) {
+      if (typeof node.text === "object" && this._isDSLOperation(node.text)) {
+        const opName = Object.keys(node.text)[0];
+        throw new Error(`[ViewEngine] Conditional logic (${opName}) is not allowed in text property. Use state machines to compute values and reference them via context.`);
+      }
+      if (typeof node.text === "string" && node.text.includes("?") && node.text.includes(":")) {
+        throw new Error("[ViewEngine] Ternary operators are not allowed in text property. Use state machines to compute values and reference them via context.");
+      }
       const textValue = await this.evaluator.evaluate(node.text, data2);
       if (textValue && typeof textValue === "object") {
         if (textValue.role && textValue.id && textValue.id.startsWith("co_z")) {
@@ -19692,8 +19756,9 @@ class ViewEngine {
   async _renderNodeChildren(element, node, data2, actorId) {
     if (node.children && Array.isArray(node.children)) {
       for (const child of node.children) {
-        if (child && typeof child === "object" && child.$if) {
-          throw new Error('[ViewEngine] "$if" is no longer supported in view templates. Use data-attributes and CSS instead.');
+        if (child && typeof child === "object" && this._isDSLOperation(child)) {
+          const opName = Object.keys(child)[0];
+          throw new Error(`[ViewEngine] Conditional logic (${opName}) is not allowed in view templates. Use state machines to compute boolean flags and reference them via context, then use data-attributes and CSS.`);
         }
         const childElement = await this.renderNode(child, data2, actorId);
         if (childElement) {
@@ -19704,6 +19769,9 @@ class ViewEngine {
   }
   async _resolveDataAttributes(dataSpec, data2, element) {
     if (typeof dataSpec === "string") {
+      if (this._containsConditionalLogic(dataSpec)) {
+        throw new Error(`[ViewEngine] Conditional logic is not allowed in data attributes. Use state machines to compute boolean flags and reference them via context. Found: ${dataSpec}`);
+      }
       if (dataSpec.includes(".$$")) {
         const [contextKey, itemKey] = dataSpec.split(".");
         const contextObj = await this.evaluator.evaluate(contextKey, data2);
@@ -19726,11 +19794,16 @@ class ViewEngine {
       }
     } else if (typeof dataSpec === "object" && dataSpec !== null) {
       for (const [key, valueSpec] of Object.entries(dataSpec)) {
+        if (typeof valueSpec === "object" && valueSpec !== null) {
+          if (this._isDSLOperation(valueSpec)) {
+            throw new Error(`[ViewEngine] Conditional logic (${Object.keys(valueSpec)[0]}) is not allowed in data attributes. Use state machines to compute boolean flags and reference them via context.`);
+          }
+        }
+        if (typeof valueSpec === "string" && valueSpec.includes("?") && valueSpec.includes(":")) {
+          throw new Error(`[ViewEngine] Ternary operators are not allowed in views. Use state machines to compute values and reference them via context.`);
+        }
         let value;
-        if (typeof valueSpec === "object" && valueSpec !== null && valueSpec.$eq) {
-          const comparisonResult = await this.evaluator.evaluate(valueSpec, data2);
-          value = comparisonResult ? "true" : null;
-        } else if (typeof valueSpec === "string" && valueSpec.includes(".$$")) {
+        if (typeof valueSpec === "string" && valueSpec.includes(".$$")) {
           const [contextKey, itemKey] = valueSpec.split(".");
           const contextObj = await this.evaluator.evaluate(contextKey, data2);
           const itemId = await this.evaluator.evaluate(itemKey, data2);
@@ -19746,6 +19819,27 @@ class ViewEngine {
         }
       }
     }
+  }
+  /**
+   * Check if a value contains conditional logic (DSL operations or ternary operators)
+   * Views should only contain simple context/item references
+   */
+  _containsConditionalLogic(value) {
+    if (typeof value !== "string") return false;
+    if (value.includes("?") && value.includes(":")) return true;
+    return false;
+  }
+  /**
+   * Check if a value is a DSL operation (conditional logic)
+   */
+  _isDSLOperation(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const keys = Object.keys(value);
+    if (keys.length === 0) return false;
+    const firstKey = keys[0];
+    if (!firstKey.startsWith("$")) return false;
+    const conditionalOps = ["$if", "$eq", "$ne", "$and", "$or", "$not", "$switch", "$gt", "$lt", "$gte", "$lte"];
+    return conditionalOps.includes(firstKey);
   }
   _toKebabCase(str) {
     return str.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
@@ -19890,9 +19984,14 @@ class ViewEngine {
         const currentContext = actor.context.value;
         const expressionData = {
           context: currentContext,
-          item: data2.item || {}
+          item: data2.item || {},
+          result: null
+          // $$result not available in view events (only in state machine actions after tool execution)
         };
         payload = await resolveExpressions(payload, this.evaluator, expressionData);
+        if (containsExpressions(payload)) {
+          throw new Error(`[ViewEngine] Payload contains unresolved expressions. Views must resolve all expressions before sending to inbox. Payload: ${JSON.stringify(payload).substring(0, 200)}`);
+        }
         if (eventName === "UPDATE_INPUT" && e.type === "blur" && payload && typeof payload === "object") {
           let allMatch = true;
           for (const [key, value] of Object.entries(payload)) {
@@ -20267,6 +20366,7 @@ class StateEngine {
       console.warn(`[StateEngine] Machine not found: ${machineId}`);
       return;
     }
+    machine.eventPayload = payload || {};
     const currentStateDef = machine.definition.states[machine.currentState];
     if (!currentStateDef) {
       console.warn(`[StateEngine] State definition not found for state: ${machine.currentState}`);
@@ -20280,7 +20380,9 @@ class StateEngine {
     await this._executeTransition(machine, transition, event, payload);
   }
   async _executeTransition(machine, transition, event, payload) {
-    machine.eventPayload = payload || {};
+    if (!machine.eventPayload) {
+      machine.eventPayload = payload || {};
+    }
     if (event === "SUCCESS") machine.lastToolResult = payload.result || null;
     const targetState = typeof transition === "string" ? transition : transition.target;
     const guard = typeof transition === "object" ? transition.guard : null;
@@ -20876,6 +20978,22 @@ const publishMessageDef = {
     "required": ["type"]
   }
 };
+const computeMessageNamesDef = {
+  "$schema": "@schema/tool",
+  "$id": "@tool/core/computeMessageNames",
+  "name": "computeMessageNames",
+  "description": "Computes a lookup object mapping message IDs to display names based on role",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "conversations": {
+        "type": "array",
+        "description": "Array of conversation messages with id and role properties"
+      }
+    },
+    "required": ["conversations"]
+  }
+};
 const memoryDef = {
   "$schema": "@schema/tool",
   "$id": "tool_memory_001",
@@ -20985,6 +21103,21 @@ const publishMessageFn = {
     } else {
       console.warn("[publishMessage] Actor has no actorEngine reference");
     }
+  }
+};
+const computeMessageNamesFn = {
+  async execute(actor, payload) {
+    const { conversations = [] } = payload;
+    if (!Array.isArray(conversations)) {
+      return {};
+    }
+    const messageNames = {};
+    for (const msg of conversations) {
+      if (msg && msg.id) {
+        messageNames[msg.id] = msg.role === "user" ? "me" : "Maia";
+      }
+    }
+    return messageNames;
   }
 };
 const getApiBaseUrl$1 = () => {
@@ -21144,6 +21277,7 @@ const agentTool = {
 const TOOLS = {
   "core/noop": { definition: noopDef, function: noopFn },
   "core/publishMessage": { definition: publishMessageDef, function: publishMessageFn },
+  "core/computeMessageNames": { definition: computeMessageNamesDef, function: computeMessageNamesFn },
   "memory/memory": { definition: memoryDef, function: memoryFn },
   "agent/chat": { definition: agentToolDef, function: agentTool }
 };
@@ -21412,7 +21546,7 @@ const config$1 = {
   version: "1.0.0",
   description: "Core UI tools (view modes, modals, utilities)",
   namespace: "@core",
-  tools: ["noop", "preventDefault", "publishMessage"]
+  tools: ["noop", "preventDefault", "publishMessage", "computeMessageNames"]
 };
 async function register$1(registry2) {
   const toolNames = config$1.tools;
@@ -32158,9 +32292,7 @@ const agentView$1 = {
                             "class": "nav-item",
                             "attrs": {
                               "data": {
-                                "selected": {
-                                  "$eq": ["$$id", "$selectedNavId"]
-                                }
+                                "selected": "$selectedNavItems.$$id"
                               }
                             },
                             "children": [
@@ -32264,9 +32396,7 @@ const tableView = {
                 "class": "table-row",
                 "attrs": {
                   "data": {
-                    "selected": {
-                      "$eq": ["$$id", "$selectedRowId"]
-                    }
+                    "selected": "$selectedRowItems.$$id"
                   }
                 },
                 "children": [
@@ -32440,6 +32570,8 @@ const agentContext$1 = {
   ],
   "selectedNavId": "account",
   "selectedRowId": "1",
+  "selectedNavItems": { "account": true },
+  "selectedRowItems": { "1": true },
   "currentTable": "@table",
   "currentDetail": "@detail",
   "@actors": {
@@ -32505,10 +32637,16 @@ const agentState$1 = {
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "selectedNavId": "$$navId" }
+              "updateContext": {
+                "selectedNavId": "$$navId",
+                "selectedNavItems": { "$$navId": true }
+              }
             },
             {
-              "updateContext": { "selectedRowId": null }
+              "updateContext": {
+                "selectedRowId": null,
+                "selectedRowItems": {}
+              }
             }
           ]
         },
@@ -32516,7 +32654,10 @@ const agentState$1 = {
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "selectedRowId": "$$rowId" }
+              "updateContext": {
+                "selectedRowId": "$$rowId",
+                "selectedRowItems": { "$$rowId": true }
+              }
             }
           ]
         }
@@ -33213,13 +33354,7 @@ const agentView = {
                   {
                     "tag": "div",
                     "class": "message-name",
-                    "text": {
-                      "$if": {
-                        "condition": { "$eq": ["$$role", "user"] },
-                        "then": "me",
-                        "else": "Maia"
-                      }
-                    }
+                    "text": "$messageNames.$$id"
                   },
                   {
                     "tag": "div",
@@ -33330,7 +33465,8 @@ const agentContext = {
   "isLoading": false,
   "error": null,
   "hasConversations": false,
-  "hasError": false
+  "hasError": false,
+  "messageNames": {}
 };
 const agentState = {
   "$schema": "@schema/state",
@@ -33343,6 +33479,17 @@ const agentState = {
           "updateContext": {
             "isLoading": false
           }
+        },
+        {
+          "tool": "@core/computeMessageNames",
+          "payload": {
+            "conversations": "$conversations"
+          },
+          "onSuccess": {
+            "updateContext": {
+              "messageNames": "$$result"
+            }
+          }
         }
       ],
       "on": {
@@ -33353,6 +33500,17 @@ const agentState = {
               "updateContext": {
                 "hasConversations": {
                   "$gt": [{ "$length": "$conversations" }, 0]
+                }
+              }
+            },
+            {
+              "tool": "@core/computeMessageNames",
+              "payload": {
+                "conversations": "$conversations"
+              },
+              "onSuccess": {
+                "updateContext": {
+                  "messageNames": "$$result"
                 }
               }
             }
@@ -33493,6 +33651,17 @@ const agentState = {
               "updateContext": {
                 "hasConversations": {
                   "$gt": [{ "$length": "$conversations" }, 0]
+                }
+              }
+            },
+            {
+              "tool": "@core/computeMessageNames",
+              "payload": {
+                "conversations": "$conversations"
+              },
+              "onSuccess": {
+                "updateContext": {
+                  "messageNames": "$$result"
                 }
               }
             }

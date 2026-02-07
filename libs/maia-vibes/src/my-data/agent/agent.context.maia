@@ -27,6 +27,8 @@
   ],
   "selectedNavId": "account",
   "selectedRowId": "1",
+  "selectedNavItems": { "account": true },
+  "selectedRowItems": { "1": true },
   "currentTable": "@table",
   "currentDetail": "@detail",
   "@actors": {

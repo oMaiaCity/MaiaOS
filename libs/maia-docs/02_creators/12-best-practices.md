@@ -111,6 +111,150 @@ Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngi
 - ❌ Sending SUCCESS/ERROR directly to state machine
 - ❌ Bypassing inbox for any events
 
+### Separation of Concerns: Views, State Machines, and Message Passing
+
+**CRITICAL ARCHITECTURE:** MaiaOS enforces strict separation of concerns between views, state machines, and message passing to enable clean distributed systems.
+
+#### Views: "Dumb" Templates (Zero Logic)
+
+**Views are pure presentation layers** - they contain **zero conditional logic** and **zero state changes**.
+
+**What Views CAN Do:**
+- ✅ Resolve simple context references: `$key`, `$$key`
+- ✅ Extract DOM values: `@inputValue`, `@dataColumn`
+- ✅ Send events with resolved payloads
+- ✅ Reference pre-computed context values (boolean flags, lookup objects)
+
+**What Views CANNOT Do:**
+- ❌ Conditional logic: `$if`, `$eq`, `$ne`, `$and`, `$or`, ternary operators (`? :`)
+- ❌ State changes: Views never update context directly
+- ❌ Complex expressions: Only simple data resolution allowed
+- ❌ DSL operations: No `$if`, `$eq`, etc. in view definitions
+
+**Pattern: State Machine → Context → View → CSS**
+
+1. **State Machine** computes boolean flags and lookup objects:
+```json
+{
+  "updateContext": {
+    "isSelected": {"$eq": ["$$id", "$selectedId"]},
+    "selectedItems": {"$$id": true}  // Lookup object
+  }
+}
+```
+
+2. **View** references resolved context values:
+```json
+{
+  "tag": "div",
+  "attrs": {
+    "data-selected": "$isSelected",  // Simple reference, resolved to true/false
+    "data-selected-item": "$selectedItems.$$id"  // Lookup object reference
+  }
+}
+```
+
+3. **CSS** handles conditional styling via data-attributes:
+```json
+{
+  "div": {
+    "data-selected": {
+      "true": { "background": "blue" }
+    }
+  }
+}
+```
+
+#### State Machines: All Logic & Computation
+
+**State machines are the single source of truth** for all logic, computation, and state transitions.
+
+**State Machines Handle:**
+- ✅ All conditional logic (`$if`, `$eq`, `$and`, `$or`)
+- ✅ All value computation
+- ✅ All expressions that determine what values to set
+- ✅ Complex nested logic
+- ✅ Computing boolean flags for views
+- ✅ Computing lookup objects for views
+
+**State Machines Update Context:**
+- State machines compute values and store them in context
+- Views reference these pre-computed values
+- No conditional logic in views - all conditionals in state machines
+
+#### Message Passing: Only Resolved Values
+
+**CRITICAL:** In distributed/decentralized systems, **expressions cannot be passed around**.
+
+**Why:**
+- Expressions require evaluation context (context, item, result) that may not exist on remote actors
+- CoJSON persistence stores messages that sync across devices - expressions can't be evaluated remotely
+- Only resolved clean JS objects/JSON can be persisted and synced
+
+**How It Works:**
+1. **ViewEngine resolves ALL expressions** before sending to inbox
+2. **Only resolved values** (clean JS objects/JSON) persist to CoJSON
+3. **State machines receive pre-resolved payloads** (no re-evaluation needed for message payloads)
+4. **Action configs still support expressions** (e.g., `updateContext: { title: "$context.title" }` - evaluated in state machine context)
+
+**Event Flow:**
+```
+View Event → resolveExpressions() (FULLY resolve) → sendInternalEvent() → inbox (CoJSON - only clean JSON) → processMessages() → StateEngine.send() (payload already resolved)
+```
+
+**Validation:**
+- ViewEngine validates payloads are fully resolved before sending to inbox
+- ActorEngine validates payloads are resolved before persisting to CoJSON
+- Errors thrown if unresolved expressions found (fail fast)
+
+**Example:**
+```json
+// ✅ Good - View resolves expressions before sending
+{
+  "$on": {
+    "click": {
+      "send": "CREATE_TODO",
+      "payload": {
+        "text": "@inputValue",  // DOM extraction, resolved to string
+        "userId": "$userId"      // Context reference, resolved to value
+      }
+    }
+  }
+}
+
+// ❌ Bad - Expression in payload (will be rejected)
+{
+  "$on": {
+    "click": {
+      "send": "CREATE_TODO",
+      "payload": {
+        "text": {"$if": {"condition": {"$eq": ["$mode", "urgent"]}, "then": "URGENT: ", "else": ""}}  // Conditional logic - NOT ALLOWED
+      }
+    }
+  }
+}
+
+// ✅ Correct - State machine computes value
+// State machine:
+{
+  "updateContext": {
+    "todoPrefix": {"$if": {"condition": {"$eq": ["$mode", "urgent"]}, "then": "URGENT: ", "else": ""}}
+  }
+}
+
+// View:
+{
+  "$on": {
+    "click": {
+      "send": "CREATE_TODO",
+      "payload": {
+        "text": "$todoPrefix"  // Reference to pre-computed value
+      }
+    }
+  }
+}
+```
+
 ### Three-Layer Architecture
 
 #### Layer 1: Agent Service Actor (Business Logic)

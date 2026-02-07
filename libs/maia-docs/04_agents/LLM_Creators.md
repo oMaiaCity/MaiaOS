@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-02-07T21:01:30.927Z
+**Auto-generated:** 2026-02-07T21:11:21.420Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -2942,11 +2942,17 @@ console.log(actor.machine.currentState); // 'idle', 'creating', etc.
 
 **Event Flow Pattern:**
 ```
-View Event → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
-External Message → inbox → processMessages() → StateEngine.send()
-Tool SUCCESS → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
-Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+View Event → resolveExpressions() (FULLY resolve) → sendInternalEvent() → inbox (CoJSON - only clean JSON) → processMessages() → StateEngine.send() (payload already resolved)
+External Message → inbox → processMessages() → StateEngine.send() (payload already resolved)
+Tool SUCCESS → sendInternalEvent() → inbox → processMessages() → StateEngine.send() (payload already resolved)
+Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngine.send() (payload already resolved)
 ```
+
+**CRITICAL: Expression Resolution**
+- **Views resolve ALL expressions** before sending to inbox (only resolved clean JS objects/JSON)
+- **Messages persist only resolved values** to CoJSON (no expressions - they can't be evaluated remotely)
+- **State machines receive resolved payloads** (no re-evaluation needed for message payloads)
+- **Action configs still support expressions** (e.g., `updateContext: { title: "$context.title" }` - these are evaluated in state machine)
 
 **Why inbox for all events:**
 - **Unified Event Log:** Complete traceability of all events
@@ -2956,21 +2962,31 @@ Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngi
 
 ### Sending Messages
 
+**CRITICAL: Only Resolved Values in Messages**
+
+In distributed/decentralized systems, **expressions cannot be passed around** because:
+- Expressions require evaluation context (context, item, result) that may not exist on remote actors
+- CoJSON persistence stores messages that sync across devices - expressions can't be evaluated remotely
+- Only resolved clean JS objects/JSON can be persisted and synced
+
+**Views automatically resolve all expressions** before sending to inbox. You don't need to do anything - it happens automatically.
+
 **External messages** (actor-to-actor):
 
 ```javascript
 // Send to specific actor
+// Payload must be resolved values (no expressions)
 os.sendMessage('actor_todo_001', {
   type: 'notification',
   from: 'actor_calendar_001',
-  data: {text: 'Reminder: Meeting at 3pm'}
+  payload: {text: 'Reminder: Meeting at 3pm'}  // Resolved value, not "$context.reminder"
 });
 
 // Actors can send to each other
 actor.actorEngine.sendMessage(targetActorId, message);
 ```
 
-**Internal events** (from views) automatically route through inbox via `sendInternalEvent()`.
+**Internal events** (from views) automatically route through inbox via `sendInternalEvent()`. Views resolve all expressions before sending.
 
 ### Receiving Messages
 
@@ -5207,7 +5223,9 @@ Use MaiaScript expressions in payloads:
 
 ## Computing Boolean Flags for Conditional Styling
 
-**Views contain zero conditional logic.** State machines compute boolean flags that views reference:
+**CRITICAL: Views contain zero conditional logic.** State machines compute boolean flags and lookup objects that views reference. This ensures clean separation of concerns and enables distributed message passing (only resolved values can be persisted to CoJSON).
+
+**Pattern: State Machine Computes → View References → CSS Styles**
 
 ```json
 {
@@ -5241,37 +5259,55 @@ Use MaiaScript expressions in payloads:
 
 ## Managing Item Lookup Objects
 
-For item-specific conditional styling, tools maintain lookup objects in context:
+For item-specific conditional styling, **state machines compute lookup objects** in context:
 
+**State Machine:**
 ```json
 {
-  "DRAG_START": {
-    "target": "dragging",
-    "actions": [{
-      "tool": "@dragdrop/start",
-      "payload": {"schema": "$$schema", "id": "$$id"}
-    }]
+  "SELECT_ITEM": {
+    "target": "idle",
+    "actions": [
+      {
+        "updateContext": {
+          "selectedItems": { "$$itemId": true }  // Lookup object: { "co_z123": true }
+        }
+      }
+    ]
   }
 }
 ```
 
-**Tool maintains lookup object:**
-```javascript
-// In @dragdrop/start tool
-actor.context.draggedItemIds = actor.context.draggedItemIds || {};
-actor.context.draggedItemIds[id] = true;  // Set this item as dragged
-```
-
-**View uses item lookup:**
+**View uses lookup (simple reference - no conditionals!):**
 ```json
 {
   "attrs": {
     "data": {
-      "isDragged": "$draggedItemIds.$$id"  // Looks up draggedItemIds[item.id]
+      "selected": "$selectedItems.$$id"  // Looks up selectedItems[item.id] → true/false
     }
   }
 }
 ```
+
+**CSS handles styling:**
+```json
+{
+  "item": {
+    "data": {
+      "selected": {
+        "true": {
+          "background": "{colors.primary}",
+          "color": "white"
+        }
+      }
+    }
+  }
+}
+```
+
+**Why lookup objects instead of `$eq` in views?**
+- Views are dumb templates - no conditional logic allowed
+- Lookup objects are resolved values (can be persisted to CoJSON)
+- State machines handle all logic, views just reference computed values
 
 ## Working with Data (Reactive Queries)
 
@@ -7343,15 +7379,25 @@ Data-attributes are the primary mechanism for conditional styling. The state mac
 - `@checked` - Checkbox/radio checked state
 - `@selectedValue` - Select element value
 
-## Conditional Styling (No `$if` in Views!)
+## Conditional Styling (No Conditional Logic in Views!)
 
 **CRITICAL:** Views are **"dumb" templates** - they contain **zero conditional logic**. All conditionals are handled by the state machine and CSS:
 
 **Architecture:**
-- **State Machine** → Defines state, computes boolean flags
+- **State Machine** → Defines state, computes boolean flags and lookup objects
 - **Context** → Realtime reactive snapshot of current state reflection  
 - **View Template** → Dumb, just references context → maps to data-attributes
 - **CSS** → Handles conditional styling via data-attributes
+
+**What Views CAN Do:**
+- ✅ Resolve simple context references: `$key`, `$$key`
+- ✅ Extract DOM values: `@inputValue`, `@dataColumn`
+- ✅ Send events with resolved payloads
+
+**What Views CANNOT Do:**
+- ❌ Conditional logic: `$if`, `$eq`, `$ne`, `$and`, `$or`, ternary operators (`? :`)
+- ❌ State changes: Views never update context directly
+- ❌ Complex expressions: Only simple data resolution allowed
 
 ### Pattern: State Machine → Context → Data-Attributes → CSS
 
@@ -10049,6 +10095,150 @@ Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngi
 - ❌ Calling StateEngine.send() directly (bypasses inbox)
 - ❌ Sending SUCCESS/ERROR directly to state machine
 - ❌ Bypassing inbox for any events
+
+### Separation of Concerns: Views, State Machines, and Message Passing
+
+**CRITICAL ARCHITECTURE:** MaiaOS enforces strict separation of concerns between views, state machines, and message passing to enable clean distributed systems.
+
+#### Views: "Dumb" Templates (Zero Logic)
+
+**Views are pure presentation layers** - they contain **zero conditional logic** and **zero state changes**.
+
+**What Views CAN Do:**
+- ✅ Resolve simple context references: `$key`, `$$key`
+- ✅ Extract DOM values: `@inputValue`, `@dataColumn`
+- ✅ Send events with resolved payloads
+- ✅ Reference pre-computed context values (boolean flags, lookup objects)
+
+**What Views CANNOT Do:**
+- ❌ Conditional logic: `$if`, `$eq`, `$ne`, `$and`, `$or`, ternary operators (`? :`)
+- ❌ State changes: Views never update context directly
+- ❌ Complex expressions: Only simple data resolution allowed
+- ❌ DSL operations: No `$if`, `$eq`, etc. in view definitions
+
+**Pattern: State Machine → Context → View → CSS**
+
+1. **State Machine** computes boolean flags and lookup objects:
+```json
+{
+  "updateContext": {
+    "isSelected": {"$eq": ["$$id", "$selectedId"]},
+    "selectedItems": {"$$id": true}  // Lookup object
+  }
+}
+```
+
+2. **View** references resolved context values:
+```json
+{
+  "tag": "div",
+  "attrs": {
+    "data-selected": "$isSelected",  // Simple reference, resolved to true/false
+    "data-selected-item": "$selectedItems.$$id"  // Lookup object reference
+  }
+}
+```
+
+3. **CSS** handles conditional styling via data-attributes:
+```json
+{
+  "div": {
+    "data-selected": {
+      "true": { "background": "blue" }
+    }
+  }
+}
+```
+
+#### State Machines: All Logic & Computation
+
+**State machines are the single source of truth** for all logic, computation, and state transitions.
+
+**State Machines Handle:**
+- ✅ All conditional logic (`$if`, `$eq`, `$and`, `$or`)
+- ✅ All value computation
+- ✅ All expressions that determine what values to set
+- ✅ Complex nested logic
+- ✅ Computing boolean flags for views
+- ✅ Computing lookup objects for views
+
+**State Machines Update Context:**
+- State machines compute values and store them in context
+- Views reference these pre-computed values
+- No conditional logic in views - all conditionals in state machines
+
+#### Message Passing: Only Resolved Values
+
+**CRITICAL:** In distributed/decentralized systems, **expressions cannot be passed around**.
+
+**Why:**
+- Expressions require evaluation context (context, item, result) that may not exist on remote actors
+- CoJSON persistence stores messages that sync across devices - expressions can't be evaluated remotely
+- Only resolved clean JS objects/JSON can be persisted and synced
+
+**How It Works:**
+1. **ViewEngine resolves ALL expressions** before sending to inbox
+2. **Only resolved values** (clean JS objects/JSON) persist to CoJSON
+3. **State machines receive pre-resolved payloads** (no re-evaluation needed for message payloads)
+4. **Action configs still support expressions** (e.g., `updateContext: { title: "$context.title" }` - evaluated in state machine context)
+
+**Event Flow:**
+```
+View Event → resolveExpressions() (FULLY resolve) → sendInternalEvent() → inbox (CoJSON - only clean JSON) → processMessages() → StateEngine.send() (payload already resolved)
+```
+
+**Validation:**
+- ViewEngine validates payloads are fully resolved before sending to inbox
+- ActorEngine validates payloads are resolved before persisting to CoJSON
+- Errors thrown if unresolved expressions found (fail fast)
+
+**Example:**
+```json
+// ✅ Good - View resolves expressions before sending
+{
+  "$on": {
+    "click": {
+      "send": "CREATE_TODO",
+      "payload": {
+        "text": "@inputValue",  // DOM extraction, resolved to string
+        "userId": "$userId"      // Context reference, resolved to value
+      }
+    }
+  }
+}
+
+// ❌ Bad - Expression in payload (will be rejected)
+{
+  "$on": {
+    "click": {
+      "send": "CREATE_TODO",
+      "payload": {
+        "text": {"$if": {"condition": {"$eq": ["$mode", "urgent"]}, "then": "URGENT: ", "else": ""}}  // Conditional logic - NOT ALLOWED
+      }
+    }
+  }
+}
+
+// ✅ Correct - State machine computes value
+// State machine:
+{
+  "updateContext": {
+    "todoPrefix": {"$if": {"condition": {"$eq": ["$mode", "urgent"]}, "then": "URGENT: ", "else": ""}}
+  }
+}
+
+// View:
+{
+  "$on": {
+    "click": {
+      "send": "CREATE_TODO",
+      "payload": {
+        "text": "$todoPrefix"  // Reference to pre-computed value
+      }
+    }
+  }
+}
+```
 
 ### Three-Layer Architecture
 

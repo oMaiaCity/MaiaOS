@@ -2074,9 +2074,7 @@ const agentView$1 = {
                             "class": "nav-item",
                             "attrs": {
                               "data": {
-                                "selected": {
-                                  "$eq": ["$$id", "$selectedNavId"]
-                                }
+                                "selected": "$selectedNavItems.$$id"
                               }
                             },
                             "children": [
@@ -2180,9 +2178,7 @@ const tableView = {
                 "class": "table-row",
                 "attrs": {
                   "data": {
-                    "selected": {
-                      "$eq": ["$$id", "$selectedRowId"]
-                    }
+                    "selected": "$selectedRowItems.$$id"
                   }
                 },
                 "children": [
@@ -2356,6 +2352,8 @@ const agentContext$1 = {
   ],
   "selectedNavId": "account",
   "selectedRowId": "1",
+  "selectedNavItems": { "account": true },
+  "selectedRowItems": { "1": true },
   "currentTable": "@table",
   "currentDetail": "@detail",
   "@actors": {
@@ -2421,10 +2419,16 @@ const agentState$1 = {
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "selectedNavId": "$$navId" }
+              "updateContext": {
+                "selectedNavId": "$$navId",
+                "selectedNavItems": { "$$navId": true }
+              }
             },
             {
-              "updateContext": { "selectedRowId": null }
+              "updateContext": {
+                "selectedRowId": null,
+                "selectedRowItems": {}
+              }
             }
           ]
         },
@@ -2432,7 +2436,10 @@ const agentState$1 = {
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "selectedRowId": "$$rowId" }
+              "updateContext": {
+                "selectedRowId": "$$rowId",
+                "selectedRowItems": { "$$rowId": true }
+              }
             }
           ]
         }
@@ -3164,13 +3171,7 @@ const agentView = {
                   {
                     "tag": "div",
                     "class": "message-name",
-                    "text": {
-                      "$if": {
-                        "condition": { "$eq": ["$$role", "user"] },
-                        "then": "me",
-                        "else": "Maia"
-                      }
-                    }
+                    "text": "$messageNames.$$id"
                   },
                   {
                     "tag": "div",
@@ -3281,7 +3282,8 @@ const agentContext = {
   "isLoading": false,
   "error": null,
   "hasConversations": false,
-  "hasError": false
+  "hasError": false,
+  "messageNames": {}
 };
 const agentState = {
   "$schema": "@schema/state",
@@ -3294,6 +3296,17 @@ const agentState = {
           "updateContext": {
             "isLoading": false
           }
+        },
+        {
+          "tool": "@core/computeMessageNames",
+          "payload": {
+            "conversations": "$conversations"
+          },
+          "onSuccess": {
+            "updateContext": {
+              "messageNames": "$$result"
+            }
+          }
         }
       ],
       "on": {
@@ -3304,6 +3317,17 @@ const agentState = {
               "updateContext": {
                 "hasConversations": {
                   "$gt": [{ "$length": "$conversations" }, 0]
+                }
+              }
+            },
+            {
+              "tool": "@core/computeMessageNames",
+              "payload": {
+                "conversations": "$conversations"
+              },
+              "onSuccess": {
+                "updateContext": {
+                  "messageNames": "$$result"
                 }
               }
             }
@@ -3444,6 +3468,17 @@ const agentState = {
               "updateContext": {
                 "hasConversations": {
                   "$gt": [{ "$length": "$conversations" }, 0]
+                }
+              }
+            },
+            {
+              "tool": "@core/computeMessageNames",
+              "payload": {
+                "conversations": "$conversations"
+              },
+              "onSuccess": {
+                "updateContext": {
+                  "messageNames": "$$result"
                 }
               }
             }

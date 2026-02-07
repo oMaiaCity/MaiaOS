@@ -62,3 +62,58 @@ export async function resolveExpressions(payload, evaluator, data) {
 
   return resolved;
 }
+
+/**
+ * Check if a payload contains any unresolved expressions
+ * Used to validate that payloads are fully resolved before persisting to CoJSON or sending between actors
+ * 
+ * @param {any} payload - The payload to check
+ * @returns {boolean} True if payload contains expressions, false if fully resolved
+ */
+export function containsExpressions(payload) {
+  // Handle primitives - no expressions possible
+  if (payload === null || payload === undefined) {
+    return false;
+  }
+  
+  // Handle strings - check for expression patterns
+  if (typeof payload === 'string') {
+    // Check for MaiaScript expression shortcuts ($key, $$key)
+    if (payload.startsWith('$')) {
+      return true;
+    }
+    // Check for ternary operators
+    if (payload.includes('?') && payload.includes(':')) {
+      return true;
+    }
+    return false;
+  }
+  
+  // Handle numbers, booleans - no expressions possible
+  if (typeof payload !== 'object') {
+    return false;
+  }
+  
+  // Handle arrays - recursively check each element
+  if (Array.isArray(payload)) {
+    return payload.some(item => containsExpressions(item));
+  }
+  
+  // Handle objects - check for DSL operations or expression strings
+  const keys = Object.keys(payload);
+  
+  // Check if this is a DSL operation (single key starting with $)
+  if (keys.length === 1 && keys[0].startsWith('$')) {
+    return true;
+  }
+  
+  // Check all properties recursively
+  for (const [key, value] of Object.entries(payload)) {
+    // Check if value contains expressions
+    if (containsExpressions(value)) {
+      return true;
+    }
+  }
+  
+  return false;
+}

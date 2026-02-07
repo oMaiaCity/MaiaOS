@@ -9,6 +9,17 @@
           "updateContext": {
             "isLoading": false
           }
+        },
+        {
+          "tool": "@core/computeMessageNames",
+          "payload": {
+            "conversations": "$conversations"
+          },
+          "onSuccess": {
+            "updateContext": {
+              "messageNames": "$$result"
+            }
+          }
         }
       ],
       "on": {
@@ -19,6 +30,17 @@
               "updateContext": {
                 "hasConversations": {
                   "$gt": [{ "$length": "$conversations" }, 0]
+                }
+              }
+            },
+            {
+              "tool": "@core/computeMessageNames",
+              "payload": {
+                "conversations": "$conversations"
+              },
+              "onSuccess": {
+                "updateContext": {
+                  "messageNames": "$$result"
                 }
               }
             }
@@ -159,6 +181,17 @@
               "updateContext": {
                 "hasConversations": {
                   "$gt": [{ "$length": "$conversations" }, 0]
+                }
+              }
+            },
+            {
+              "tool": "@core/computeMessageNames",
+              "payload": {
+                "conversations": "$conversations"
+              },
+              "onSuccess": {
+                "updateContext": {
+                  "messageNames": "$$result"
                 }
               }
             }

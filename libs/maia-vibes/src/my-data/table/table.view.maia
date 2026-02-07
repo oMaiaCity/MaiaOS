@@ -48,9 +48,7 @@
                 "class": "table-row",
                 "attrs": {
                   "data": {
-                    "selected": {
-                      "$eq": ["$$id", "$selectedRowId"]
-                    }
+                    "selected": "$selectedRowItems.$$id"
                   }
                 },
                 "children": [

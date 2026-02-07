@@ -8,6 +8,7 @@
 
 // Import message helper
 import { createAndPushMessage, resolve, resolveReactive, waitForReactiveResolution } from '@MaiaOS/db';
+import { containsExpressions } from '@MaiaOS/schemata/expression-resolver.js';
 
 // Render state machine - prevents race conditions by ensuring renders only happen when state allows
 export const RENDER_STATES = {
@@ -748,6 +749,12 @@ export class ActorEngine {
    * @param {Object} message - Message object { type, payload, from, timestamp }
    */
   async sendMessage(actorId, message) {
+    // CRITICAL: Validate payload is resolved before sending between actors
+    // In distributed systems, only resolved clean JS objects/JSON can be sent
+    if (message.payload && containsExpressions(message.payload)) {
+      throw new Error(`[ActorEngine] Message payload contains unresolved expressions. Only resolved values can be sent between actors. Payload: ${JSON.stringify(message.payload).substring(0, 200)}`);
+    }
+    
     const actor = this.actors.get(actorId);
     if (!actor) {
       if (!this.pendingMessages.has(actorId)) this.pendingMessages.set(actorId, []);
@@ -776,6 +783,13 @@ export class ActorEngine {
 
 
   async sendInternalEvent(actorId, eventType, payload = {}) {
+    // CRITICAL: Validate payload is resolved before sending to inbox
+    // Views must resolve all expressions before calling sendInternalEvent()
+    // In distributed systems, only resolved clean JS objects/JSON can be persisted to CoJSON
+    if (containsExpressions(payload)) {
+      throw new Error(`[ActorEngine] Payload contains unresolved expressions. Views must resolve all expressions before sending to inbox. Payload: ${JSON.stringify(payload).substring(0, 200)}`);
+    }
+    
     const actor = this.actors.get(actorId);
     if (!actor || !actor.inboxCoId || !this.dbEngine) {
       console.warn(`[ActorEngine] Cannot send internal event:`, {

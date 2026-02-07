@@ -1,6 +1,6 @@
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
 import { extractDOMValues } from '@MaiaOS/schemata/payload-resolver.js';
-import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
+import { resolveExpressions, containsExpressions } from '@MaiaOS/schemata/expression-resolver.js';
 import { resolveReactive, waitForReactiveResolution } from '@MaiaOS/db';
 import { RENDER_STATES } from './actor.engine.js';
 
@@ -133,8 +133,14 @@ export class ViewEngine {
 
   async _applyNodeAttributes(element, node, data, actorId) {
     if (node.class) {
-      if (typeof node.class === 'object' && node.class.$if) {
-        throw new Error('[ViewEngine] "$if" is no longer supported in class property. Use data-attributes and CSS instead.');
+      // CRITICAL: Reject all conditional logic in class property
+      if (typeof node.class === 'object' && this._isDSLOperation(node.class)) {
+        const opName = Object.keys(node.class)[0];
+        throw new Error(`[ViewEngine] Conditional logic (${opName}) is not allowed in class property. Use state machines to compute boolean flags and reference them via context, then use data-attributes and CSS.`);
+      }
+      // Reject ternary operators
+      if (typeof node.class === 'string' && node.class.includes('?') && node.class.includes(':')) {
+        throw new Error('[ViewEngine] Ternary operators are not allowed in class property. Use state machines to compute values and reference them via context.');
       }
       const classValue = await this.evaluator.evaluate(node.class, data);
       if (classValue) {
@@ -147,6 +153,15 @@ export class ViewEngine {
         if (attrName === 'data') {
           await this._resolveDataAttributes(attrValue, data, element);
         } else {
+          // CRITICAL: Reject conditional logic in regular attributes
+          if (typeof attrValue === 'object' && this._isDSLOperation(attrValue)) {
+            const opName = Object.keys(attrValue)[0];
+            throw new Error(`[ViewEngine] Conditional logic (${opName}) is not allowed in attributes. Use state machines to compute values and reference them via context.`);
+          }
+          // Reject ternary operators
+          if (typeof attrValue === 'string' && attrValue.includes('?') && attrValue.includes(':')) {
+            throw new Error('[ViewEngine] Ternary operators are not allowed in attributes. Use state machines to compute values and reference them via context.');
+          }
           const resolvedValue = await this.evaluator.evaluate(attrValue, data);
           if (resolvedValue !== undefined && resolvedValue !== null) {
             // CRITICAL: Handle boolean attributes (disabled, readonly, checked, etc.) as properties, not attributes
@@ -176,6 +191,15 @@ export class ViewEngine {
     }
 
     if (node.value !== undefined) {
+      // CRITICAL: Reject conditional logic in value property
+      if (typeof node.value === 'object' && this._isDSLOperation(node.value)) {
+        const opName = Object.keys(node.value)[0];
+        throw new Error(`[ViewEngine] Conditional logic (${opName}) is not allowed in value property. Use state machines to compute values and reference them via context.`);
+      }
+      // Reject ternary operators
+      if (typeof node.value === 'string' && node.value.includes('?') && node.value.includes(':')) {
+        throw new Error('[ViewEngine] Ternary operators are not allowed in value property. Use state machines to compute values and reference them via context.');
+      }
       const resolvedValue = await this.evaluator.evaluate(node.value, data);
       if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
         const newValue = resolvedValue || '';
@@ -194,6 +218,15 @@ export class ViewEngine {
     }
 
     if (node.text !== undefined) {
+      // CRITICAL: Reject conditional logic in text property
+      if (typeof node.text === 'object' && this._isDSLOperation(node.text)) {
+        const opName = Object.keys(node.text)[0];
+        throw new Error(`[ViewEngine] Conditional logic (${opName}) is not allowed in text property. Use state machines to compute values and reference them via context.`);
+      }
+      // Reject ternary operators
+      if (typeof node.text === 'string' && node.text.includes('?') && node.text.includes(':')) {
+        throw new Error('[ViewEngine] Ternary operators are not allowed in text property. Use state machines to compute values and reference them via context.');
+      }
       const textValue = await this.evaluator.evaluate(node.text, data);
       // Format objects/arrays as JSON strings for display
       if (textValue && typeof textValue === 'object') {
@@ -222,8 +255,10 @@ export class ViewEngine {
   async _renderNodeChildren(element, node, data, actorId) {
     if (node.children && Array.isArray(node.children)) {
       for (const child of node.children) {
-        if (child && typeof child === 'object' && child.$if) {
-          throw new Error('[ViewEngine] "$if" is no longer supported in view templates. Use data-attributes and CSS instead.');
+        // CRITICAL: Reject all conditional logic in children
+        if (child && typeof child === 'object' && this._isDSLOperation(child)) {
+          const opName = Object.keys(child)[0];
+          throw new Error(`[ViewEngine] Conditional logic (${opName}) is not allowed in view templates. Use state machines to compute boolean flags and reference them via context, then use data-attributes and CSS.`);
         }
         const childElement = await this.renderNode(child, data, actorId);
         if (childElement) {
@@ -235,6 +270,12 @@ export class ViewEngine {
 
   async _resolveDataAttributes(dataSpec, data, element) {
     if (typeof dataSpec === 'string') {
+      // CRITICAL: Views are dumb templates - only allow simple context/item references
+      // Reject conditional logic (expressions starting with $ that aren't simple references)
+      if (this._containsConditionalLogic(dataSpec)) {
+        throw new Error(`[ViewEngine] Conditional logic is not allowed in data attributes. Use state machines to compute boolean flags and reference them via context. Found: ${dataSpec}`);
+      }
+      
       if (dataSpec.includes('.$$')) {
         const [contextKey, itemKey] = dataSpec.split('.');
         const contextObj = await this.evaluator.evaluate(contextKey, data);
@@ -260,12 +301,22 @@ export class ViewEngine {
       }
     } else if (typeof dataSpec === 'object' && dataSpec !== null) {
       for (const [key, valueSpec] of Object.entries(dataSpec)) {
+        // CRITICAL: Reject conditional logic in data attributes
+        // $eq, $if, ternary operators, etc. are not allowed - state machines must compute flags
+        if (typeof valueSpec === 'object' && valueSpec !== null) {
+          if (this._isDSLOperation(valueSpec)) {
+            throw new Error(`[ViewEngine] Conditional logic (${Object.keys(valueSpec)[0]}) is not allowed in data attributes. Use state machines to compute boolean flags and reference them via context.`);
+          }
+        }
+        
+        // Reject ternary operators in strings
+        if (typeof valueSpec === 'string' && valueSpec.includes('?') && valueSpec.includes(':')) {
+          throw new Error(`[ViewEngine] Ternary operators are not allowed in views. Use state machines to compute values and reference them via context.`);
+        }
+        
         let value;
         
-        if (typeof valueSpec === 'object' && valueSpec !== null && valueSpec.$eq) {
-          const comparisonResult = await this.evaluator.evaluate(valueSpec, data);
-          value = comparisonResult ? 'true' : null;
-        } else if (typeof valueSpec === 'string' && valueSpec.includes('.$$')) {
+        if (typeof valueSpec === 'string' && valueSpec.includes('.$$')) {
           const [contextKey, itemKey] = valueSpec.split('.');
           const contextObj = await this.evaluator.evaluate(contextKey, data);
           const itemId = await this.evaluator.evaluate(itemKey, data);
@@ -274,6 +325,7 @@ export class ViewEngine {
             value = contextObj[itemId];
           }
         } else {
+          // Only evaluate simple context/item references - no DSL operations
           value = await this.evaluator.evaluate(valueSpec, data);
         }
         
@@ -283,6 +335,36 @@ export class ViewEngine {
         }
       }
     }
+  }
+  
+  /**
+   * Check if a value contains conditional logic (DSL operations or ternary operators)
+   * Views should only contain simple context/item references
+   */
+  _containsConditionalLogic(value) {
+    if (typeof value !== 'string') return false;
+    // Check for ternary operators
+    if (value.includes('?') && value.includes(':')) return true;
+    // Check for DSL operation patterns (but allow simple $key and $$key references)
+    // Simple references: $key, $$key, $context.key, $$item.key
+    // Conditional logic: $if, $eq, $and, etc. (but these would be objects, not strings)
+    return false; // String values are simple references, objects are checked separately
+  }
+  
+  /**
+   * Check if a value is a DSL operation (conditional logic)
+   */
+  _isDSLOperation(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const keys = Object.keys(value);
+    if (keys.length === 0) return false;
+    // DSL operations have keys starting with $ (except simple $context, $item which are data access)
+    const firstKey = keys[0];
+    if (!firstKey.startsWith('$')) return false;
+    // Simple data access operations are allowed (but shouldn't appear in views anyway)
+    // Conditional logic operations: $if, $eq, $ne, $and, $or, $not, $switch, etc.
+    const conditionalOps = ['$if', '$eq', '$ne', '$and', '$or', '$not', '$switch', '$gt', '$lt', '$gte', '$lte'];
+    return conditionalOps.includes(firstKey);
   }
 
   _toKebabCase(str) {
@@ -463,9 +545,16 @@ export class ViewEngine {
         
         const expressionData = {
           context: currentContext,
-          item: data.item || {}
+          item: data.item || {},
+          result: null // $$result not available in view events (only in state machine actions after tool execution)
         };
         payload = await resolveExpressions(payload, this.evaluator, expressionData);
+        
+        // CRITICAL: Validate payload is fully resolved before sending to inbox
+        // In distributed systems, only resolved clean JS objects/JSON can be persisted to CoJSON
+        if (containsExpressions(payload)) {
+          throw new Error(`[ViewEngine] Payload contains unresolved expressions. Views must resolve all expressions before sending to inbox. Payload: ${JSON.stringify(payload).substring(0, 200)}`);
+        }
         
         // CLEAN ARCHITECTURE: For UPDATE_INPUT on blur, only send if DOM value differs from CURRENT context
         // This prevents repopulation after state machine explicitly clears the field

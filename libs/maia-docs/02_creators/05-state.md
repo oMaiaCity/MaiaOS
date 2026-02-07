@@ -504,7 +504,9 @@ Use MaiaScript expressions in payloads:
 
 ## Computing Boolean Flags for Conditional Styling
 
-**Views contain zero conditional logic.** State machines compute boolean flags that views reference:
+**CRITICAL: Views contain zero conditional logic.** State machines compute boolean flags and lookup objects that views reference. This ensures clean separation of concerns and enables distributed message passing (only resolved values can be persisted to CoJSON).
+
+**Pattern: State Machine Computes → View References → CSS Styles**
 
 ```json
 {
@@ -538,37 +540,55 @@ Use MaiaScript expressions in payloads:
 
 ## Managing Item Lookup Objects
 
-For item-specific conditional styling, tools maintain lookup objects in context:
+For item-specific conditional styling, **state machines compute lookup objects** in context:
 
+**State Machine:**
 ```json
 {
-  "DRAG_START": {
-    "target": "dragging",
-    "actions": [{
-      "tool": "@dragdrop/start",
-      "payload": {"schema": "$$schema", "id": "$$id"}
-    }]
+  "SELECT_ITEM": {
+    "target": "idle",
+    "actions": [
+      {
+        "updateContext": {
+          "selectedItems": { "$$itemId": true }  // Lookup object: { "co_z123": true }
+        }
+      }
+    ]
   }
 }
 ```
 
-**Tool maintains lookup object:**
-```javascript
-// In @dragdrop/start tool
-actor.context.draggedItemIds = actor.context.draggedItemIds || {};
-actor.context.draggedItemIds[id] = true;  // Set this item as dragged
-```
-
-**View uses item lookup:**
+**View uses lookup (simple reference - no conditionals!):**
 ```json
 {
   "attrs": {
     "data": {
-      "isDragged": "$draggedItemIds.$$id"  // Looks up draggedItemIds[item.id]
+      "selected": "$selectedItems.$$id"  // Looks up selectedItems[item.id] → true/false
     }
   }
 }
 ```
+
+**CSS handles styling:**
+```json
+{
+  "item": {
+    "data": {
+      "selected": {
+        "true": {
+          "background": "{colors.primary}",
+          "color": "white"
+        }
+      }
+    }
+  }
+}
+```
+
+**Why lookup objects instead of `$eq` in views?**
+- Views are dumb templates - no conditional logic allowed
+- Lookup objects are resolved values (can be persisted to CoJSON)
+- State machines handle all logic, views just reference computed values
 
 ## Working with Data (Reactive Queries)
 

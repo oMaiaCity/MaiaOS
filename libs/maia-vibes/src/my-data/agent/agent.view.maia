@@ -46,9 +46,7 @@
                             "class": "nav-item",
                             "attrs": {
                               "data": {
-                                "selected": {
-                                  "$eq": ["$$id", "$selectedNavId"]
-                                }
+                                "selected": "$selectedNavItems.$$id"
                               }
                             },
                             "children": [

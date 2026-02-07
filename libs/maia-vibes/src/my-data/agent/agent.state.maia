@@ -9,10 +9,16 @@
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "selectedNavId": "$$navId" }
+              "updateContext": { 
+                "selectedNavId": "$$navId",
+                "selectedNavItems": { "$$navId": true }
+              }
             },
             {
-              "updateContext": { "selectedRowId": null }
+              "updateContext": { 
+                "selectedRowId": null,
+                "selectedRowItems": {}
+              }
             }
           ]
         },
@@ -20,7 +26,10 @@
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "selectedRowId": "$$rowId" }
+              "updateContext": { 
+                "selectedRowId": "$$rowId",
+                "selectedRowItems": { "$$rowId": true }
+              }
             }
           ]
         }

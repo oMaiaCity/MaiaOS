@@ -278,15 +278,25 @@ Data-attributes are the primary mechanism for conditional styling. The state mac
 - `@checked` - Checkbox/radio checked state
 - `@selectedValue` - Select element value
 
-## Conditional Styling (No `$if` in Views!)
+## Conditional Styling (No Conditional Logic in Views!)
 
 **CRITICAL:** Views are **"dumb" templates** - they contain **zero conditional logic**. All conditionals are handled by the state machine and CSS:
 
 **Architecture:**
-- **State Machine** → Defines state, computes boolean flags
+- **State Machine** → Defines state, computes boolean flags and lookup objects
 - **Context** → Realtime reactive snapshot of current state reflection  
 - **View Template** → Dumb, just references context → maps to data-attributes
 - **CSS** → Handles conditional styling via data-attributes
+
+**What Views CAN Do:**
+- ✅ Resolve simple context references: `$key`, `$$key`
+- ✅ Extract DOM values: `@inputValue`, `@dataColumn`
+- ✅ Send events with resolved payloads
+
+**What Views CANNOT Do:**
+- ❌ Conditional logic: `$if`, `$eq`, `$ne`, `$and`, `$or`, ternary operators (`? :`)
+- ❌ State changes: Views never update context directly
+- ❌ Complex expressions: Only simple data resolution allowed
 
 ### Pattern: State Machine → Context → Data-Attributes → CSS
 

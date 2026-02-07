@@ -43,6 +43,11 @@ export class StateEngine {
       console.warn(`[StateEngine] Machine not found: ${machineId}`);
       return;
     }
+    // CRITICAL: Payload is already resolved from view - no evaluation needed
+    // Views resolve all expressions before sending to inbox, so payloads here are clean JS objects/JSON
+    // Store as eventPayload for action evaluation (actions may contain expressions in their configs)
+    machine.eventPayload = payload || {};
+    
     const currentStateDef = machine.definition.states[machine.currentState];
     if (!currentStateDef) {
       console.warn(`[StateEngine] State definition not found for state: ${machine.currentState}`);
@@ -58,8 +63,12 @@ export class StateEngine {
 
   async _executeTransition(machine, transition, event, payload) {
     // ARCHITECTURE: Event payload flows from co-value (inbox) -> $store (state machine) -> actions
+    // Payload is already resolved from view (no expressions) - stored as eventPayload for action evaluation
     // SUCCESS events include original event payload (id, etc.) merged with tool result
-    machine.eventPayload = payload || {};
+    // Note: eventPayload was already set in send() method, but we ensure it's set here for consistency
+    if (!machine.eventPayload) {
+      machine.eventPayload = payload || {};
+    }
     if (event === 'SUCCESS') machine.lastToolResult = payload.result || null;
     
     const targetState = typeof transition === 'string' ? transition : transition.target;
@@ -373,6 +382,10 @@ export class StateEngine {
       // This ensures $$id and other references work correctly without in-memory hacks
       // Flow: co-value (inbox) -> $store (state machine) -> actions
       const originalEventPayload = machine.eventPayload || {};
+      
+      // CRITICAL: Tool payloads from action configs may contain expressions (e.g., { text: "$context.title" })
+      // These need evaluation. Tool payloads from views are already resolved, but they don't reach here
+      // (views send events, not tool calls directly). So we always evaluate tool payloads from action configs.
       const evaluatedPayload = await this._evaluatePayload(payload, machine.actor.context, machine.eventPayload || {}, machine.lastToolResult, machine.actor);
       const result = await this.toolEngine.execute(toolName, machine.actor, evaluatedPayload);
       if (autoTransition) {

@@ -8,12 +8,14 @@
 // Import tool definitions directly as JSON
 import noopDef from './core/noop.tool.maia';
 import publishMessageDef from './core/publishMessage.tool.maia';
+import computeMessageNamesDef from './core/computeMessageNames.tool.maia';
 import memoryDef from './memory/memory.tool.maia';
 import agentDef from './agent/agent.tool.maia';
 
 // Import tool functions
 import noopFn from './core/noop.tool.js';
 import publishMessageFn from './core/publishMessage.tool.js';
+import computeMessageNamesFn from './core/computeMessageNames.tool.js';
 import memoryFn from './memory/memory.tool.js';
 import agentFn from './agent/agent.tool.js';
 
@@ -23,6 +25,7 @@ import agentFn from './agent/agent.tool.js';
 export const TOOLS = {
   'core/noop': { definition: noopDef, function: noopFn },
   'core/publishMessage': { definition: publishMessageDef, function: publishMessageFn },
+  'core/computeMessageNames': { definition: computeMessageNamesDef, function: computeMessageNamesFn },
   'memory/memory': { definition: memoryDef, function: memoryFn },
   'agent/chat': { definition: agentDef, function: agentFn }
 };
